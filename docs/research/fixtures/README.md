@@ -11,6 +11,8 @@ RD2 540/180/2; ARC3/SP3 480/160/1; RD3 960/320/2 (riders: 5% double damage). Mon
 SG 15,600/5,200 (8), ED 13,500/4,500 (7), BB 11,700/3,900 (6), WE 5,700/1,900 (3). Bear V 66,000/22,000, authority 21.
 
 Files: `totalstack-2026-09-12-runs.json` (zero-bonus runs), `totalstack-2026-09-12-bonus-runs.json` (army +25/+25,
-guardsmen +20/+20 via Aydae; engineers E1–E2; events Ragnarok and Arachne's), `totalstack-2026-09-12-journal-*.txt` (battle journals).
+guardsmen +20/+20 via Aydae; engineers E1–E2; events Ragnarok and Arachne's), `totalstack-2026-09-12-mechanics-runs.json`
+(title Battlemaster with double-damage/strike-two chances, captain Bernard ranged +10 and Monsters Boost beast +10,
+temple 20 with training reductions and all three recovery plans, M's Preservation with mercenaries and army +25% HP), `totalstack-2026-09-12-journal-*.txt` (battle journals).
 The earlier fixture from the author's own account (bonuses ≠ 0, Elite Preservation) is described in
 `docs/research/totalstack-review.md` §3.

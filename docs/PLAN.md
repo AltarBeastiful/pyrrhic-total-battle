@@ -267,7 +267,9 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 - S-31 **Investigation**: what TotalStack's "Total Optimization" actually trades (housing/HP trades that break
       preservation when damage improves) and whether it is worth reproducing; write findings + proposal.
 - S-32 Damage model (min/avg/max, double damage, strike-two-squads, strength-against with enemy formation).
-- S-33 Recovery model (retrain/revive/selective, temple table, training reduction/speed, dragon coins).
+- S-33 Recovery model (retrain/revive/selective, temple table, training reduction/speed, dragon coins). Open
+      equations from the captures (retrain silver constant, gold composition, revive silver, time) to be settled
+      against the in-game retrain/revive screens, which show exact costs.
 - S-34 Battle Summary cards + journal drawer (in-game-style hit list, enemy-first / army-first toggle).
 
 ### M4 — Optimisation
@@ -330,4 +332,8 @@ order, manual counts) so adding them later is UI work, not a redesign.
   and both events (Ragnarok strength, Arachne's 8-stack formation). Per-unit HP rounding to an integer and the
   "strength-against on base strength" rule were found this way. Still uncovered: mercenaries with bonuses, temple
   level ≠ 0, training reductions, titles/artifacts/equipment values (data tables exist, application rule is the
-  same additive one). The battle turn model is derived from TotalStack's journals but unvalidated in game.
+  same additive one). Third capture added title special keys (double damage / strike two), a category bonus, a
+  monster-race bonus (with an anomaly to re-check), temple 20 + training reductions with all recovery plans, and MP
+  with mercenaries under a bonus. Not captured: Custom Kill Order with a reordered list, Manual HP Order edits,
+  equipment/artifact popups (additive tables, low risk). The battle turn model is derived from TotalStack's
+  journals but unvalidated in game; recovery-cost composition has four open equations (battle-model-observations §4).

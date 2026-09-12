@@ -56,16 +56,21 @@ reports).
 - `DAMAGE / SILVER|GOLD|DRAGON COIN` = average damage ÷ the recovery-plan cost of the same resource
   (2,515,830 / 1,435,200 = 1.753 ✓; / 2,752 = 914 ✓; / 1,080 = 2,329 ✓).
 
-## 4. Recovery cost (verified for "Retrain all", temple 0, no reductions)
-- Silver = Σ count × trainingCost.silver over troops **and** monsters (ep-8stacks: troops 1,183,600 + monsters
-  251,600 = 1,435,200 ✓). Dragon coins = Σ monsters count × dragonCoins (1,080 ✓). Gold (retrain all) = Σ over
-  monsters of count × revivalCost.gold? — 2,752 = SG 6×128 + ED 7×112 + BB 8×96 + WE 18×48 = 768+784+768+864 = 3,184 ✗;
-  troops Σ count×gold = 655×4+361×4+361×4+327×8+202×4+203×4+181×8+101×8 = 12,168 ✗. **Gold composition not
-  yet explained** (2,752 for retrain-all, 13,520 for revive-all = 12,168 + ? … check with temple table). Open.
-- Time = Σ count × trainingTime (troops + monsters), displayed as days/hours (5d 23h ✓ order of magnitude; exact
-  formula to confirm — parallel queues?).
-- "Revive all": silver 216,000, gold 13,520, time 1d 2h for the same army — revival is priced in gold with the
-  temple multiplier; silver 216,000 = ? (open).
+## 4. Recovery cost (partly verified; fixtures `totalstack-2026-09-12-mechanics-runs.json`, run temple20-training-reductions)
+- **Retrain-all silver** = Σ troops count × trainingCost.silver × (1 − trainingCostReduction[group]) + M, where for the
+  8-stack army Σ troops = 1,359,600 exactly and M = 75,600 (temple 0 and temple 20 give the same M; a 30% guardsmen
+  reduction removes exactly 0.3 × 1,359,600). M is *not* the monsters' training silver (557,200) and does not change
+  between WE 18 and WE 17 → **unexplained constant, open**.
+- **Retrain-all gold** = 2,752 at temple 0 → 1,520 at temple 20 = 2,752 / 1.81 ✓ (temple multiplier applies).
+  2,752 is not Σ revivalCost.gold of troops (12,000) nor monsters (3,184) → composition open.
+- **Revive-all gold** = 13,520 at temple 0 → 7,470 at temple 20 = 13,520 / 1.81 ✓. 13,520 ≠ 12,000 + 3,184 → open.
+- **Revive-all silver** = 216,000 at temple 0 (= 1,080 dragon coins × 200?) → 173,880 at temple 20 (×0.805) → open.
+- Dragon coins = Σ monsters count × trainingCost.dragonCoins = 1,080 ✓ in every run (retrain and revive alike).
+- Time: 5d 23h (retrain all) → 4d 3h with +50% guardsmen training speed; 1d 2h (revive all) → 21h 40m at temple 20.
+  Formula open (sum of training times ≈ 655×15 s + … is far below 5d 23h → probably per-unit time × count without
+  parallel queues, to be fitted).
+- "Selective" recovery offers TOP 1 / TOP 2 / TOP 3 / CUSTOM (revive the top-N troop tiers, retrain the rest).
+These open points are cheap to settle in game (the retrain/revive screens show the exact cost) — folded into S-33.
 
 ## 5. Stacking observations (all bonuses 0)
 - Elite Preservation: flat HP profile, exact leadership fill, kill order tier-ascending; within a tier
@@ -81,6 +86,14 @@ reports).
 - Priority "Maximum Damage" kept all ten troop types (average 2,131,530) although the eight-type army scores
   2,515,830; "Damage / Silver" removed SW1 and SP1. Their search is not exhaustive — our S-40 can do better
   simply by evaluating "drop tier-1 types" candidates.
+- Special strength keys (double damage 5%, strike two squads 5% from title Battlemaster): journal lines and the
+  MINIMUM are unaffected; only AVERAGE (and the implied maximum) grow (AVG/MIN 1.121 vs 1.036 without them).
+- Category bonus (captain Bernard, ranged +10/+10) changes the flat-HP solution as expected (ARC1 706 × 165 vs RD1
+  388 × 300, both ≈116k). **Anomaly**: setting "Monsters Boost → Beast health 10" raised Battle Boar (beast) *and*
+  Water Elemental (elemental) by 10% (E>BB 102,960 = 8×12,870; E>WE 100,320 = 16×6,270) while Emerald Dragon and
+  Stone Gargoyle were unchanged. Either the first two race fields are coupled in TotalStack or the input I set was
+  not the one I think; re-check by hand before copying the race-key mapping (open item for S-20).
+- A uniform army-wide bonus (title +150/+150) leaves the stack counts identical to the zero-bonus run.
 - Enemy formation N (4 or 8) generalises the round structure exactly (Arachne's run: 26 entries, 14 hits with
   12 stacks and N = 8).
 - Round to 10s: only mercenaries/monsters are rounded (to multiples of 10); troops are re-sized around them;

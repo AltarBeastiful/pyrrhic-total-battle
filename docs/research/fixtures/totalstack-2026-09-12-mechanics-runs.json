@@ -1,0 +1,50 @@
+{
+  "common": {"guardsmen": [1, 3], "specialists": [1, 1], "engineers": null, "monsters": [3, 3], "leadership": 3000, "authority": 1200, "dominance": 200,
+             "method": "Elite Preservation unless stated", "priority": "none", "enemyFormation": "4 standard",
+             "note": "Account state kept SP1/SW1 (and sometimes SP2) in 'removed from formation'; troop sets are listed per run."},
+  "runs": [
+    {
+      "id": "title-battlemaster",
+      "bonuses": {"healthArmy": 150, "strengthArmy": 150, "doubleDamageChance": 5, "strikeTwoSquadsChance": 5, "source": "title Battlemaster"},
+      "troops": {"ARC1": 655, "SP2": 361, "ARC2": 361, "RD1": 327, "SP3": 202, "ARC3": 203, "RD2": 181, "RD3": 101},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6},
+      "note": "Counts identical to the zero-bonus run: a uniform army bonus does not change the flat-HP solution. Journal per-hit = base x 2.5 + features (ARC1 81,875 + 21,943 = 103,818). MINIMUM = enemy-first with (base + 2 x features): 3,435,392 computed vs 3,435,390 shown -> the 5% double-damage and 5% strike-two chances do NOT enter the minimum. They enter the average: AVG/MIN = 1.121 here vs 1.036 without them.",
+      "summary": {"stacks": 12, "damageByTroops": 1949273, "damageByMonsters": 1902227, "minimumDamage": 3435390, "averageDamage": 3851500, "damagePerSilver": 2.684, "damagePerDragonCoin": 3566, "damagePerGold": 1400,
+        "recoveryRetrainAll": {"time": "5d 23h", "silver": 1435200, "dragonCoins": 1080, "gold": 2752}},
+      "journalEnemyFirstHead": "1:0H E>WE 256500; 2:1H ARC1>fly 103818; 3:1H E>ARC1 245625; 4:1H RD1>rng 103005; 5:1H E>RD1 245250; 6:1H RD2>rng 113378; 7:1H E>RD2 244350; 8:1H ARC2>fly 114040; 9:2H SP2>mnt 100394; 10:2H ARC3>fly 130245; 11:2H SP3>mnt 109242; 12:2H RD3>rng 127987; 13:3H ED>mnt 137025"
+    },
+    {
+      "id": "captain-bernard-ranged-and-beast-boost",
+      "bonuses": {"healthRanged": 10, "strengthRanged": 10, "healthBeast": 10, "source": "captain Bernard base 10 star 0; permanent 'Monsters Boost' beast health 10"},
+      "troops": {"ARC1": 706, "ARC2": 390, "RD1": 388, "SP3": 240, "ARC3": 218, "RD2": 215, "RD3": 120},
+      "monsters": {"WE": 16, "BB": 8, "ED": 8, "SG": 6}, "dominanceUsed": 200,
+      "note": "SP2 was also in 'removed' state, so 7 troop stacks. Ranged units get more units-per-HP: ARC1 706 x round(150x1.1)=165 -> 116,490 (E>ARC1 line) vs RD1 388x300 = 116,400. Beast race bonus applied to Battle Boar: 8 x round(11700x1.1)=12,870 -> 102,960 (E>BB line); WE (elemental) unchanged 16x5700=91,200? shown 100,320 -> WE 16 x 6270?? no: 100,320/16 = 6,270 = 5700 x 1.1 -> the beast field affected WE too?! CHECK: possibly the input I set was 'Beast' health but TotalStack applies race boosts... see open item.",
+      "summary": {"stacks": 11, "damageByTroops": 1076064, "damageByMonsters": 1383408, "minimumDamage": 2391163, "averageDamage": 2459472, "damagePerSilver": 1.733, "damagePerDragonCoin": 2277, "damagePerGold": 889,
+        "recoveryRetrainAll": {"time": "5d 21h", "silver": 1418800, "dragonCoins": 1080, "gold": 2768}},
+      "journalEnemyFirst": "29 rounds, 18 hits :: 1:0H E>ARC1 116490; 2:1H RD1>rng 64020; 3:1H E>RD1 116400; 4:1H RD2>rng 76626; 5:1H E>RD2 116100; 6:1H ARC2>fly 74061; 7:1H E>ARC2 115830; 8:1H SP3>mnt 72192; 9:2H RD3>rng 94464; 10:2H ARC3>fly 91037; 11:2H ED>mnt 102600; 12:3H WE>fly 77216; 13:2H BB>mnt 76128; 14:3H SG>mel 88920; 15:1H E>SP3 115200; 16:2H RD3>rng 94464; 17:2H E>RD3 115200; 18:2H ARC3>fly 91037; 19:2H E>ARC3 115104; 20:2H ED>mnt 102600; 21:2H E>ED 108000; 22:3H WE>fly 77216; 23:2H BB>mnt 76128; 24:3H SG>mel 88920; 25:2H E>BB 102960; 26:3H WE>fly 77216; 27:3H E>WE 100320; 28:3H SG>mel 88920; 29:3H E>SG 93600"
+    },
+    {
+      "id": "temple20-training-reductions",
+      "bonuses": {"templeLevel": 20, "revivalMultiplierShown": "1.81x", "trainingCostReductionGuardsmen": 30, "trainingSpeedBonusGuardsmen": 50},
+      "troops": {"ARC1": 655, "SP2": 361, "ARC2": 361, "RD1": 327, "SP3": 202, "ARC3": 203, "RD2": 181, "RD3": 101},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6},
+      "note": "Damage identical to the zero-bonus run (2,428,230 / 2,515,830). Only recovery changes. Compare with temple 0: retrain-all silver 1,435,200 -> 1,027,320, gold 2,752 -> 1,520 (= 2,752 / 1.81), time 5d 23h -> 4d 3h; revive-all silver 216,000 -> 173,880, gold 13,520 -> 7,470 (= 13,520 / 1.81), time 1d 2h -> 21h 40m.",
+      "recovery": {
+        "retrainAll": {"time": "4d 3h", "silver": 1027320, "dragonCoins": 1080, "gold": 1520, "damagePerSilver": 2.449, "damagePerGold": 1655},
+        "reviveAll": {"time": "21h 40m", "silver": 173880, "dragonCoins": 1080, "gold": 7470, "damagePerSilver": 14.47, "damagePerGold": 337},
+        "selective": "options TOP 1 / TOP 2 / TOP 3 / CUSTOM, label 'REVIVING G3'"
+      }
+    },
+    {
+      "id": "mp-bear-army-health-25", "method": "M's Preservation",
+      "bonuses": {"healthArmy": 25, "source": "pill Personal Health Bonus"},
+      "mercenaries": [{"id": "bear-5", "cap": 6}, {"id": "cyclops-5", "cap": null}],
+      "troops": {"ARC1": 653, "SP2": 361, "ARC2": 361, "RD1": 328, "SP3": 202, "ARC3": 203, "RD2": 181, "RD3": 101},
+      "mercenaryCounts": {"BER5": 1}, "monsters": {"WE": 17, "BB": 8, "ED": 7, "SG": 6}, "dominanceUsed": 196,
+      "note": "Same shape as the zero-bonus mp-bear run scaled by 1.25: RD3 101x1200=121,200; WE 17x7125=121,125 just below; Bear 82,500; Cyclops dropped. Bonus does not change which units survive the MP ceiling because everything scales together.",
+      "summary": {"stacks": 13, "damageByTroops": 1091817, "damageByMercenaries": 158400, "damageByMonsters": 1497886, "minimumDamage": 2691006, "averageDamage": 2748103, "damagePerSilver": 1.915, "damagePerDragonCoin": 2545, "damagePerGold": 1016,
+        "recoveryRetrainAll": {"time": "5d 23h", "silver": 1435200, "dragonCoins": 1080, "gold": 2704}},
+      "journalEnemyFirst": "37 rounds, 24 hits :: 1:0H E>RD1 123000; 2:1H ARC1>fly 54526; 3:1H E>ARC1 122764; 4:1H RD2>rng 64508; 5:1H E>RD2 122175; 6:1H ARC2>fly 65305; 7:1H E>ARC2 122018; 8:1H SP2>mnt 51659; 9:2H ARC3>fly 81525; 10:2H SP3>mnt 60762; 11:2H RD3>rng 79507; 12:2H WE>fly 78812; 13:3H ED>mnt 89775; 14:3H BB>mnt 76128; 15:3H SG>mel 88920; 16:3H BER>mnt 37400; 17:1H E>SP2 122018; ... 29:2H E>WE 121125; 31:3H E>ED 118125; 33:3H E>BB 117000; 35:3H E>SG 117000; 37:3H E>BER 82500"
+    }
+  ]
+}
