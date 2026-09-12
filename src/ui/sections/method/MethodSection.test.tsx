@@ -1,0 +1,156 @@
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, expect, test } from 'vitest';
+
+import { newRoot } from '@/state/defaults';
+import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+
+import { MethodSection } from './MethodSection';
+
+beforeEach(() => {
+  useStore.getState().replaceDocument(newRoot());
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+const options = () => selectActiveSetup(useStore.getState())?.options;
+
+/** Elite-Preservation order of the default account (guardsmen I–III, specialists I). */
+const DEFAULT_ORDER = [
+  'swordsman-1',
+  'archer-1',
+  'spearman-1',
+  'rider-1',
+  'archer-2',
+  'spearman-2',
+  'rider-2',
+  'archer-3',
+  'spearman-3',
+  'rider-3',
+];
+
+function chooseCustom(): void {
+  fireEvent.click(screen.getByRole('radio', { name: 'Custom kill order' }));
+}
+
+test('choosing a method writes it to the active battle setup', () => {
+  render(<MethodSection />);
+  expect(screen.getByRole('radio', { name: 'Elite Preservation' })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('radio', { name: "M's Preservation" }));
+  expect(options()?.method).toBe('ms');
+
+  chooseCustom();
+  expect(options()?.method).toBe('custom');
+});
+
+test('each preservation flag is only offered with the method it belongs to, and is cleared otherwise', () => {
+  render(<MethodSection />);
+  const monstersLast = screen.getByRole('switch', { name: 'Monsters last' });
+  const strict = screen.getByRole('switch', { name: 'Mercenaries above monsters' });
+
+  expect(strict.hasAttribute('disabled')).toBe(true);
+  fireEvent.click(monstersLast);
+  expect(options()?.monstersLast).toBe(true);
+
+  fireEvent.click(screen.getByRole('radio', { name: "M's Preservation" }));
+  expect(options()?.monstersLast).toBe(false);
+  expect(screen.getByRole('switch', { name: 'Monsters last' }).hasAttribute('disabled')).toBe(true);
+
+  fireEvent.click(screen.getByRole('switch', { name: 'Mercenaries above monsters' }));
+  expect(options()?.strictMercsAboveMonsters).toBe(true);
+
+  fireEvent.click(screen.getByRole('radio', { name: 'Elite Preservation' }));
+  expect(options()?.strictMercsAboveMonsters).toBe(false);
+});
+
+test('round to 10s is available whatever the method is', () => {
+  render(<MethodSection />);
+  fireEvent.click(screen.getByRole('switch', { name: 'Round to 10s' }));
+  expect(options()?.roundTo10).toBe(true);
+});
+
+test('the custom list starts in Elite-Preservation order, first to die on top', () => {
+  render(<MethodSection />);
+  expect(screen.queryByRole('button', { name: 'Move Archer I down' })).toBeNull();
+
+  chooseCustom();
+  const names = screen
+    .getAllByRole('button', { name: /^Reorder / })
+    .map((node) => node.getAttribute('aria-label')?.replace('Reorder ', ''));
+  expect(names).toEqual([
+    'Swordsman I',
+    'Archer I',
+    'Spearman I',
+    'Rider I',
+    'Archer II',
+    'Spearman II',
+    'Rider II',
+    'Archer III',
+    'Spearman III',
+    'Rider III',
+  ]);
+});
+
+test('the up and down buttons reorder the list and store the whole order', () => {
+  render(<MethodSection />);
+  chooseCustom();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Move Rider III up' }));
+  expect(options()?.customOrder).toEqual([
+    'swordsman-1',
+    'archer-1',
+    'spearman-1',
+    'rider-1',
+    'archer-2',
+    'spearman-2',
+    'rider-2',
+    'archer-3',
+    'rider-3',
+    'spearman-3',
+  ]);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Move Swordsman I down' }));
+  expect(options()?.customOrder?.slice(0, 2)).toEqual(['archer-1', 'swordsman-1']);
+
+  // The ends of the list cannot move any further.
+  expect(screen.getByRole('button', { name: 'Move Archer I up' }).hasAttribute('disabled')).toBe(true);
+  expect(screen.getByRole('button', { name: 'Move Spearman III down' }).hasAttribute('disabled')).toBe(true);
+});
+
+test('reset puts the Elite-Preservation order back and is disabled once it is the default', () => {
+  render(<MethodSection />);
+  chooseCustom();
+  expect(screen.getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled')).toBe(true);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Move Rider III up' }));
+  const reset = screen.getByRole('button', { name: 'Reset to default' });
+  expect(reset.hasAttribute('disabled')).toBe(false);
+
+  fireEvent.click(reset);
+  expect(options()?.customOrder).toEqual(DEFAULT_ORDER);
+  expect(screen.getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled')).toBe(true);
+});
+
+test('a stored order survives a change of army: gone units drop out, new ones join at the end', () => {
+  render(<MethodSection />);
+  chooseCustom();
+  fireEvent.click(screen.getByRole('button', { name: 'Move Rider III up' }));
+
+  // The account unlocks specialists II while keeping its custom order.
+  const profile = selectActiveProfile(useStore.getState());
+  act(() => {
+    useStore.getState().updateProfile(profile?.id ?? '', (current) => ({
+      troops: { ...current.troops, specialists: { min: 1, max: 2 }, excludedUnitIds: ['archer-1'] },
+    }));
+  });
+
+  const names = screen
+    .getAllByRole('button', { name: /^Reorder / })
+    .map((node) => node.getAttribute('aria-label')?.replace('Reorder ', ''));
+  expect(names).not.toContain('Archer I');
+  expect(names[names.length - 1]).toBe('Swordsman II');
+  expect(names.indexOf('Rider III')).toBeLessThan(names.indexOf('Spearman III'));
+});
