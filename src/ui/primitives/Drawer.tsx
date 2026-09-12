@@ -5,6 +5,7 @@ import { CloseIcon } from '../icons';
 import { cn } from './cn';
 import { OVERLAY_CLASS } from './Dialog';
 import { IconButton } from './IconButton';
+import { useReturnFocus } from './useReturnFocus';
 
 export interface DrawerProps {
   open: boolean;
@@ -30,11 +31,14 @@ export function Drawer({
   footer,
   side = 'right',
 }: DrawerProps) {
+  const onCloseAutoFocus = useReturnFocus(open);
+
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className={OVERLAY_CLASS} />
         <RadixDialog.Content
+          onCloseAutoFocus={onCloseAutoFocus}
           className={cn(
             'border-line bg-surface text-fg fixed z-50 flex flex-col border shadow-xl',
             'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl',

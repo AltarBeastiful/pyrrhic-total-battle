@@ -74,7 +74,7 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
   return (
     <Block
       title="Other"
-      note="The sources that live on their own screens: VIP, your dragon, your hero, the three +25 % bonuses, and whatever is left over."
+      note="The sources that live on their own screens: VIP, your dragon, your hero, the clan, kingdom and personal +25 % bonuses, and anything left over."
       actions={
         <Button icon={<PlusIcon />} onClick={addCustom}>
           Add a custom source
@@ -271,7 +271,7 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
                 const name = event.target.value;
                 patchCustom(customEntry.id, (current) => ({ ...current, name }));
               }}
-              className="tap border-line bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
+              className="tap border-field bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
             />
           </label>
           <BonusKeyGrid

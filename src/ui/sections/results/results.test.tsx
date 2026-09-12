@@ -111,13 +111,15 @@ test('the journal drawer lists the numbered hits of both strike orders', async (
   const drawer = await screen.findByRole('dialog');
   expect(within(drawer).getByText(/rounds · .* friendly hits · 4 enemy squads/)).toBeTruthy();
 
-  const entries = within(drawer).getAllByRole('listitem');
+  // One row per hit, each numbered by its own row header.
+  const entries = within(drawer).getAllByRole('rowheader');
   expect(entries.length).toBe(lastResult()?.summary.journals.enemyFirst.entries.length);
-  expect(entries[0]?.textContent).toMatch(/Your .* squad dealt|The monster's .* squad destroyed/);
+  const firstRow = entries[0]?.closest('tr');
+  expect(firstRow?.textContent).toMatch(/Your .* squad dealt|The monster's .* squad destroyed/);
 
   // Radix activates a tab on mouse-down, not on click.
   fireEvent.mouseDown(within(drawer).getByRole('tab', { name: 'Army first' }), { button: 0 });
-  expect(within(drawer).getAllByRole('listitem').length).toBe(
+  expect(within(drawer).getAllByRole('rowheader').length).toBe(
     lastResult()?.summary.journals.armyFirst.entries.length,
   );
 });

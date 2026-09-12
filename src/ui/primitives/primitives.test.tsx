@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 
+import { Dialog } from './Dialog';
 import { Drawer } from './Drawer';
 import { NumberField } from './NumberField';
 import { Pill } from './Pill';
@@ -125,4 +126,94 @@ test('Drawer renders a titled dialog when open', () => {
   const dialog = screen.getByRole('dialog');
   expect(dialog.textContent).toContain('Bonus breakdown');
   expect(dialog.textContent).toContain('rows');
+});
+
+function DrawerHost() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
+        Open journal
+      </button>
+      <Drawer open={open} onOpenChange={setOpen} title="Battle journal">
+        <p>rows</p>
+      </Drawer>
+    </>
+  );
+}
+
+test('Drawer closes on Escape and hands focus back to the button that opened it', async () => {
+  render(<DrawerHost />);
+  const trigger = screen.getByRole('button', { name: 'Open journal' });
+  trigger.focus();
+  fireEvent.click(trigger);
+
+  expect(await screen.findByRole('dialog')).toBeTruthy();
+  fireEvent.keyDown(document.body, { key: 'Escape' });
+
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  await waitFor(() => {
+    expect(document.activeElement).toBe(trigger);
+  });
+});
+
+test('a Dialog opened from a gear gives focus back to that gear', async () => {
+  function DialogHost() {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(true);
+          }}
+        >
+          Edit Aydae
+        </button>
+        <Dialog open={open} onOpenChange={setOpen} title="Aydae">
+          <p>fields</p>
+        </Dialog>
+      </>
+    );
+  }
+
+  render(<DialogHost />);
+  const gear = screen.getByRole('button', { name: 'Edit Aydae' });
+  gear.focus();
+  fireEvent.click(gear);
+
+  const dialog = await screen.findByRole('dialog');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  await waitFor(() => {
+    expect(document.activeElement).toBe(gear);
+  });
+});
+
+test('a Pill carries a tick when it is on, so state is never colour alone', () => {
+  const { rerender } = render(<Pill label="Dragon" on={false} onToggle={vi.fn()} />);
+  const off = screen.getByRole('button', { name: 'Dragon' });
+  expect(off.querySelector('svg')).toBeNull();
+
+  rerender(<Pill label="Dragon" on onToggle={vi.fn()} />);
+  const on = screen.getByRole('button', { name: 'Dragon' });
+  expect(on.querySelector('svg')).not.toBeNull();
+  // The glyph is decorative: it must not reach the accessible name.
+  expect(on.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+});
+
+test('Toggle keeps a full-height row so the switch is a real touch target', () => {
+  const { container } = render(<Toggle label="Round to 10s" checked={false} onChange={vi.fn()} />);
+  expect(container.firstElementChild?.className).toContain('tap');
+  expect(screen.getByRole('switch').className).toContain('tap-area');
 });

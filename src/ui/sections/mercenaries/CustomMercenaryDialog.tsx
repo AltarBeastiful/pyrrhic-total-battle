@@ -105,12 +105,13 @@ export function CustomMercenaryDialog({ initial, onSubmit, onClose }: CustomMerc
         <TextField
           label="Name"
           value={draft.name}
+          hint="Required — it is how the mercenary shows up in your list."
           onChange={(value) => {
             set('name', value);
           }}
           placeholder="Spider Queen"
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <NumberField
             label="Health"
             value={draft.health}

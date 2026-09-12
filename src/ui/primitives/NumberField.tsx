@@ -78,7 +78,7 @@ export function NumberField({
       </label>
       <div
         className={cn(
-          'tap border-line bg-surface flex items-center rounded-lg border px-3',
+          'tap border-field bg-surface flex items-center rounded-lg border px-3',
           disabled && 'opacity-50',
         )}
       >

@@ -135,7 +135,7 @@ function SortableRow({ unit, index, total, onMove }: SortableRowProps) {
       <button
         type="button"
         aria-label={`Reorder ${unit.name}`}
-        className="text-muted hover:text-fg tap flex w-7 shrink-0 cursor-grab items-center justify-center"
+        className="text-muted hover:text-fg tap flex w-11 shrink-0 cursor-grab items-center justify-center sm:w-7"
         {...attributes}
         {...listeners}
       >

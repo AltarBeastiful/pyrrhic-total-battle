@@ -77,19 +77,19 @@ export function HousingSection() {
       help={
         <>
           <p>
-            Where to find it in game: open the march window on the epic monster. The three capacities are
-            printed above the unit list — leadership for troops, authority for mercenaries, dominance for
-            monsters. They change with your castle, so check them before a big hit.
+            <strong>Where to find it in game:</strong> open the march window on the epic monster. The three
+            capacities sit above the unit list — leadership pays for troops, authority for mercenaries,
+            dominance for monsters. They change with your castle, so check them before a big hit.
           </p>
           <p>
-            A priority makes the calculator try formations instead of taking all your unit types: it drops the
-            types that cost more than they add, keeps the best one it finds inside a{' '}
-            {String(Math.round(SEARCH_BUDGET_MS / 1000))}-second budget, and tells you what it left out.
+            Without a priority you march with every unit type you own. Pick one and the calculator instead
+            tries combinations, drops the types that cost more than they add, keeps the best it finds inside{' '}
+            {String(Math.round(SEARCH_BUDGET_MS / 1000))} seconds, and tells you what it left out.
           </p>
           <p>
             The recovery plan decides what the summary charges you after the fight: retraining pays silver
-            (and the monsters&apos; revive gold, since monsters cannot be retrained), reviving pays gold
-            through your temple.
+            (plus revive gold for monsters, which cannot be retrained), reviving pays gold through your
+            temple.
           </p>
         </>
       }
@@ -127,9 +127,9 @@ export function HousingSection() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <span className="text-muted text-xs font-medium">Priority</span>
             <NativeSelect
               label="Priority"
+              hideLabel={false}
               value={priority}
               options={(Object.keys(PRIORITY_LABELS) as Priority[]).map((value) => ({
                 value,
@@ -143,9 +143,9 @@ export function HousingSection() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-muted text-xs font-medium">Recovery plan</span>
             <NativeSelect
               label="Recovery plan"
+              hideLabel={false}
               value={recoveryPlan.mode}
               options={RECOVERY_MODES.map((value) => ({
                 value,
@@ -184,7 +184,11 @@ export function HousingSection() {
           </HelpNote>
         )}
 
-        {error !== null && <HelpNote tone="danger">{error}</HelpNote>}
+        {error !== null && (
+          <div role="alert">
+            <HelpNote tone="danger">{error}</HelpNote>
+          </div>
+        )}
 
         <HelpNote>
           Model confidence: stack sizes and per-hit damage reproduce the captured runs and both in-game
@@ -211,7 +215,8 @@ export function HousingSection() {
         <div
           className={
             'border-line bg-surface sticky bottom-0 z-20 -mx-3 -mb-3 border-t px-3 py-3 ' +
-            'sm:-mx-4 sm:-mb-4 sm:px-4 md:static md:m-0 md:border-0 md:bg-transparent md:p-0'
+            'pb-[max(0.75rem,env(safe-area-inset-bottom))] ' +
+            'sm:-mx-4 sm:-mb-4 sm:px-4 md:static md:m-0 md:border-0 md:bg-transparent md:p-0 md:pb-0'
           }
         >
           <div className="flex flex-wrap items-center gap-2">
@@ -227,13 +232,15 @@ export function HousingSection() {
                 Cancel
               </Button>
             )}
-            {searching && (
-              <p className="text-muted text-xs" role="status">
-                {progress === null
-                  ? 'Trying formations…'
-                  : `Tried ${amount(progress.evaluated)} formations — best ${score(progress.bestScore)}`}
-              </p>
-            )}
+            <p className="text-muted text-xs" role="status">
+              {!running
+                ? ''
+                : !searching
+                  ? 'Generating…'
+                  : progress === null
+                    ? 'Trying formations…'
+                    : `Tried ${amount(progress.evaluated)} formations — best ${score(progress.bestScore)}`}
+            </p>
           </div>
         </div>
       </div>

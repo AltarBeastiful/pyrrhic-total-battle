@@ -69,7 +69,7 @@ export function BonusKeyGrid({ value, onChange, scope, withSpecial = true }: Bon
       </div>
       {withSpecial && (
         <details className="border-line rounded-lg border px-3 py-2">
-          <summary className="text-muted cursor-pointer text-xs font-semibold tracking-wide uppercase">
+          <summary className="text-muted tap flex cursor-pointer items-center text-xs font-semibold tracking-wide uppercase">
             Special strength
           </summary>
           <div className="mt-2">

@@ -20,19 +20,39 @@ function JournalList({ journal, request }: { journal: BattleJournal; request: St
   const lines = journalLines(journal, request.enemy, (unitId) => unitLabel(unitId, request.units));
   return (
     <div className="space-y-2">
-      <p className="text-muted text-xs" role="status">
-        {journalHeader(journal, request.enemy)}
-      </p>
-      <ol className="space-y-1.5 text-xs leading-relaxed">
-        {lines.map((line) => (
-          <li key={line.n} className="border-line flex gap-2 border-b pb-1.5 last:border-0">
-            <span className="text-muted w-6 shrink-0 text-right tabular-nums">{String(line.n)}</span>
-            <span className="min-w-0 flex-1">
-              {line.text} <span className="text-muted whitespace-nowrap">({String(line.hits)} hits)</span>
-            </span>
-          </li>
-        ))}
-      </ol>
+      {/* A numbered hit list with a count per row is a table, and reads as one: every cell says
+          which hit it belongs to, the same way the report in game numbers them. */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs leading-relaxed">
+          <caption className="text-muted pb-1 text-left text-xs">
+            {journalHeader(journal, request.enemy)}
+          </caption>
+          <thead>
+            <tr className="text-muted text-left">
+              <th scope="col" className="w-8 pr-2 pb-1 text-right font-medium">
+                Hit
+              </th>
+              <th scope="col" className="pb-1 font-medium">
+                What happens
+              </th>
+              <th scope="col" className="w-14 pb-1 pl-2 text-right font-medium">
+                Hits
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => (
+              <tr key={line.n} className="border-line border-t align-top">
+                <th scope="row" className="text-muted py-1.5 pr-2 text-right font-normal tabular-nums">
+                  {String(line.n)}
+                </th>
+                <td className="py-1.5">{line.text}</td>
+                <td className="text-muted py-1.5 pl-2 text-right tabular-nums">{String(line.hits)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="text-muted text-xs">Total damage {amount(journal.totalDamage)}.</p>
     </div>
   );
@@ -53,21 +73,26 @@ export function JournalDrawer({ open, onOpenChange, request, journals }: Journal
       title="Battle journal"
       description="Who hits what, in order, so you can hold it next to the report in game."
       footer={
-        <Button
-          icon={copied ? <CheckIcon /> : <CopyIcon />}
-          onClick={() => {
-            void copyText(
-              journalText(title, journal, request.enemy, (unitId) => unitLabel(unitId, request.units)),
-            ).then((ok) => {
-              setCopied(ok);
-              setTimeout(() => {
-                setCopied(false);
-              }, 2000);
-            });
-          }}
-        >
-          {copied ? 'Copied' : 'Copy as text'}
-        </Button>
+        <>
+          <span role="status" className="sr-only">
+            {copied ? 'The battle journal is on your clipboard.' : ''}
+          </span>
+          <Button
+            icon={copied ? <CheckIcon /> : <CopyIcon />}
+            onClick={() => {
+              void copyText(
+                journalText(title, journal, request.enemy, (unitId) => unitLabel(unitId, request.units)),
+              ).then((ok) => {
+                setCopied(ok);
+                setTimeout(() => {
+                  setCopied(false);
+                }, 2000);
+              });
+            }}
+          >
+            {copied ? 'Copied' : 'Copy as text'}
+          </Button>
+        </>
       }
     >
       <Tabs

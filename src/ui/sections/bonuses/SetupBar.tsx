@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type { BattleSetup, Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
@@ -26,6 +26,7 @@ function SetupNameDialog({
   onConfirm: (name: string) => void;
   onCancel: () => void;
 }) {
+  const fieldId = useId();
   const [name, setName] = useState(initialName);
   const [seed, setSeed] = useState(initialName);
 
@@ -51,17 +52,17 @@ function SetupNameDialog({
           if (trimmed !== '') onConfirm(trimmed);
         }}
       >
-        <label className="text-muted text-xs font-medium" htmlFor="setup-name">
+        <label className="text-muted text-xs font-medium" htmlFor={fieldId}>
           Setup name
         </label>
         <input
-          id="setup-name"
+          id={fieldId}
           autoFocus
           value={name}
           onChange={(event) => {
             setName(event.target.value);
           }}
-          className="tap border-line bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
+          className="tap border-field bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
         />
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <Button onClick={onCancel}>Cancel</Button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import type { Profile, SavedStack } from '@/state/schema';
@@ -35,6 +35,7 @@ export function StackNameDialog({
   onConfirm,
   onCancel,
 }: StackNameDialogProps) {
+  const fieldId = useId();
   const [name, setName] = useState(initialName);
   const [seed, setSeed] = useState(initialName);
   if (seed !== initialName) {
@@ -59,17 +60,17 @@ export function StackNameDialog({
           if (trimmed !== '') onConfirm(trimmed);
         }}
       >
-        <label className="text-muted text-xs font-medium" htmlFor="saved-stack-name">
+        <label className="text-muted text-xs font-medium" htmlFor={fieldId}>
           Stack name
         </label>
         <input
-          id="saved-stack-name"
+          id={fieldId}
           autoFocus
           value={name}
           onChange={(event) => {
             setName(event.target.value);
           }}
-          className="tap border-line bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
+          className="tap border-field bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
         />
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <Button onClick={onCancel}>Cancel</Button>
@@ -253,9 +254,12 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
                 onChange={() => {
                   toggle(stack.id);
                 }}
-                className="h-4 w-4 shrink-0"
+                className="tap-area h-4.5 w-4.5 shrink-0"
               />
-              <label htmlFor={`compare-${stack.id}`} className="min-w-0 flex-1 cursor-pointer">
+              <label
+                htmlFor={`compare-${stack.id}`}
+                className="tap flex min-w-0 flex-1 cursor-pointer flex-col justify-center py-1"
+              >
                 <span className="block truncate text-sm font-medium">{stack.name}</span>
                 <span className="text-muted block text-xs tabular-nums">
                   {DATE.format(stack.createdAt)} · {amount(stack.summary.avgDamage)} average damage ·{' '}

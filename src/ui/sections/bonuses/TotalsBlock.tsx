@@ -15,7 +15,7 @@ function Rows({ rows, empty }: { rows: TotalRow[]; empty: string }) {
       {rows.map((row) => (
         <li key={row.key}>
           <details>
-            <summary className="flex cursor-pointer items-center justify-between gap-2 py-1.5">
+            <summary className="tap flex cursor-pointer items-center justify-between gap-2 py-1.5">
               <span>{row.label}</span>
               <span className="font-medium tabular-nums">{formatPercent(row.value)}</span>
             </summary>

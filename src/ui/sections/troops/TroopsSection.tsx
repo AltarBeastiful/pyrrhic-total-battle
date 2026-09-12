@@ -25,19 +25,18 @@ const HELP = (
   <>
     <p>
       A tier is the roman numeral on a unit&apos;s card: Archer I is tier 1, Archer II tier 2. Set the lowest
-      and the highest tier you can actually train for each family. Engineers and monsters can be switched off
-      completely when your account has none.
+      and the highest tier you can train for each family. Switch engineers or monsters off when your account
+      has none.
     </p>
     <p>
-      The highest tier is rarely unlocked all at once, so its categories get their own chips: turn off the
-      ones you have not upgraded. For anything finer — &ldquo;I trained the archers but not the
-      spearmen&rdquo; — tap the unit in the grid below and it drops out of every calculation until you tap it
-      again.
+      You rarely unlock a whole tier at once, so the highest one gets a chip per category: switch off the ones
+      you have not upgraded. For anything finer — you trained the archers but not the spearmen — tap that unit
+      in the grid below and it stays out until you tap it again.
     </p>
     <p>
-      <strong>Where to find this in game:</strong> open the Barracks and look at the unit list — every tier
-      you can train is shown there, and tapping a unit opens its sheet with the health, strength and
-      leadership cost we repeat in the grid. Monsters have the same sheet in their own training building.
+      <strong>Where to find it in game:</strong> the Barracks lists every tier you can train, and tapping a
+      unit opens the sheet with the health, strength and leadership cost we repeat in the grid. Monsters have
+      the same sheet in their own training building.
     </p>
   </>
 );

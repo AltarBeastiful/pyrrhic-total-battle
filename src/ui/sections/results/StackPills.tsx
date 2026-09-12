@@ -48,8 +48,8 @@ function StackPill({ stack, unit, generated, onCount, onRemove }: StackPillProps
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center rounded-full border text-sm',
-        changed ? 'border-accent bg-accent-soft' : 'border-line bg-surface',
+        'tap inline-flex max-w-full items-center rounded-full border text-sm',
+        changed ? 'border-accent bg-accent-soft' : 'border-field bg-surface',
         stack.count === 0 && 'opacity-60',
       )}
     >
@@ -58,7 +58,7 @@ function StackPill({ stack, unit, generated, onCount, onRemove }: StackPillProps
         trigger={
           <button
             type="button"
-            className="flex min-h-9 items-center gap-1.5 rounded-l-full py-1 pr-1 pl-3 font-medium"
+            className="flex min-h-11 items-center gap-1.5 rounded-l-full py-1 pr-1 pl-3 font-medium sm:min-h-9"
           >
             {/* The spaces matter: without them the accessible name would read "ARC1930". */}
             <span className="truncate">{label}</span>{' '}
@@ -131,9 +131,9 @@ function StackPill({ stack, unit, generated, onCount, onRemove }: StackPillProps
           onClick={() => {
             onCount(stack.unitId, Math.max(0, stack.count - 1));
           }}
-          className="text-muted hover:text-fg flex h-9 w-7 items-center justify-center disabled:opacity-40"
+          className="text-muted hover:text-fg flex h-11 w-9 items-center justify-center disabled:opacity-40 sm:h-9 sm:w-7"
         >
-          −
+          <span aria-hidden="true">−</span>
         </button>
         <button
           type="button"
@@ -141,9 +141,9 @@ function StackPill({ stack, unit, generated, onCount, onRemove }: StackPillProps
           onClick={() => {
             onCount(stack.unitId, stack.count + 1);
           }}
-          className="text-muted hover:text-fg flex h-9 w-7 items-center justify-center rounded-r-full"
+          className="text-muted hover:text-fg flex h-11 w-9 items-center justify-center rounded-r-full sm:h-9 sm:w-7"
         >
-          +
+          <span aria-hidden="true">+</span>
         </button>
       </span>
     </span>
@@ -177,10 +177,11 @@ export function StackPills({ request, stacks, pools, generated, onCount, onRemov
               <span
                 className={cn(
                   'rounded-full border px-2 py-0.5 text-xs tabular-nums',
-                  over ? 'border-danger/40 bg-danger/10 text-fg' : 'border-line bg-raised text-muted',
+                  over ? 'border-danger bg-danger/10 text-fg' : 'border-line bg-raised text-muted',
                 )}
               >
                 {amount(usage.used)} / {amount(usage.capacity)}
+                {over && <span className="font-semibold"> — over capacity</span>}
               </span>
             </div>
             {inPool.length === 0 ? (

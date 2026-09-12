@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { CATEGORIES, type Category } from '@/data/types';
 import { eventEnemyFormation } from '@/state/derive';
 import { selectActiveSetup, useStore } from '@/state/store';
+import { CheckIcon } from '@/ui/icons';
 import { Button, HelpNote, Section } from '@/ui/primitives';
 
 import { IntegerField } from '../results/IntegerField';
@@ -89,8 +90,8 @@ export function EnemySection() {
             units is worth nothing when the monster fields no flying squad.
           </p>
           <p>
-            Where to find it in game: tap the epic monster on the map and read the squads shown on its
-            information card before you march. Most epic monsters field four, one of each kind.
+            <strong>Where to find it in game:</strong> tap the epic monster on the map and read the squads on
+            its information card before you march. Most epic monsters field four, one of each kind.
           </p>
         </>
       }
@@ -119,6 +120,7 @@ export function EnemySection() {
                   key={value}
                   aria-pressed={mode === value}
                   variant={mode === value ? 'primary' : 'secondary'}
+                  icon={mode === value ? <CheckIcon /> : undefined}
                   onClick={() => {
                     if (value === 'custom') {
                       setManual(true);

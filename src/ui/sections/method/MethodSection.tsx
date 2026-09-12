@@ -64,6 +64,11 @@ const HELP = (
       revival happen in chunks of ten and one unit per chunk comes back free, so round numbers are cheaper to
       bring back; the capacity that no longer fits simply stays unused.
     </p>
+    <p>
+      <strong>Where to find it in game:</strong> nothing here is a screen you can read — the order is only
+      visible after the fight, in the battle report, where the stacks fall one by one. Compare that report
+      with our journal in Results to check the order came out the way you asked.
+    </p>
   </>
 );
 
@@ -138,7 +143,7 @@ export function MethodSection() {
                   checked ? 'border-accent bg-accent-soft' : 'border-line bg-surface',
                 )}
               >
-                <label className="flex items-center gap-2">
+                <label className="tap flex cursor-pointer items-center gap-2">
                   <input
                     type="radio"
                     name={radioName}
@@ -212,7 +217,8 @@ export function MethodSection() {
               </Button>
             </div>
             <p className="text-muted text-xs">
-              First to die at the top. Drag a row, or use its up and down buttons.
+              First to die at the top. Drag a row, use its up and down buttons, or focus the drag handle and
+              press Space then the arrow keys.
             </p>
             {order.length === 0 ? (
               <HelpNote tone="warn">

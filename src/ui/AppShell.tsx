@@ -18,7 +18,31 @@ function isTheme(value: string): value is Theme {
   return (THEMES as readonly string[]).includes(value);
 }
 
-/** Header, profile bar and the seven sections of PLAN §4, in order. */
+/**
+ * The seven sections are a long page on a phone, so the shell carries a jump bar: one link per
+ * section, a horizontal scroller when they do not fit. It rides in the same sticky strip as the
+ * profile bar, and `scroll-mt` on the sections keeps a jumped-to heading clear of it.
+ */
+function SectionNav() {
+  return (
+    <nav aria-label="Jump to a section" className="border-line bg-bg border-b">
+      <ul className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-3 sm:px-4">
+        {SECTIONS.map(({ id, title }) => (
+          <li key={id} className="shrink-0">
+            <a
+              href={`#${id}`}
+              className="text-muted hover:bg-raised hover:text-fg tap inline-flex items-center rounded-lg px-2.5 text-xs font-medium whitespace-nowrap"
+            >
+              {title}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** Header, profile bar, section jump bar and the seven sections of PLAN §4, in order. */
 export function AppShell() {
   const theme = useStore(selectTheme);
   const setTheme = useStore((state) => state.setTheme);
@@ -41,14 +65,14 @@ export function AppShell() {
     <div className="min-h-dvh">
       <a
         href="#main"
-        className="focus:bg-surface sr-only focus:not-sr-only focus:absolute focus:m-2 focus:rounded-lg focus:px-3 focus:py-2"
+        className="focus:bg-surface focus:text-fg sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-lg focus:px-3 focus:py-2"
       >
         Skip to the calculator
       </a>
 
       <header className="border-line bg-bg border-b">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-3 py-3 sm:px-4">
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <h1 className="text-lg font-semibold tracking-tight">Pyrrhic</h1>
             <p className="text-muted text-xs">Epic monster stacking for Total Battle</p>
           </div>
@@ -73,7 +97,11 @@ export function AppShell() {
         </div>
       </header>
 
-      <ProfileBar />
+      {/* One sticky strip: the profile bar sticks inside it, the jump bar under it. */}
+      <div className="sticky top-0 z-30">
+        <ProfileBar />
+        <SectionNav />
+      </div>
 
       <main id="main" className="mx-auto max-w-5xl space-y-3 px-3 py-4 sm:px-4">
         {SECTIONS.map(({ id, Component }) => (

@@ -57,7 +57,7 @@ export function Section({
     <section
       id={id}
       aria-labelledby={titleId}
-      className={cn('border-line bg-surface scroll-mt-4 rounded-xl border', className)}
+      className={cn('border-line bg-surface scroll-mt-28 rounded-xl border', className)}
     >
       <div className="flex items-start gap-2 p-3 sm:p-4">
         <div className="min-w-0 flex-1">
@@ -69,7 +69,7 @@ export function Section({
                   onClick={toggle}
                   aria-expanded={isOpen}
                   aria-controls={bodyId}
-                  className="flex items-center gap-1 text-left"
+                  className="tap flex items-center gap-1 text-left"
                 >
                   {title}
                   <span className="text-muted" aria-hidden="true">

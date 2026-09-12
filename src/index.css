@@ -14,6 +14,7 @@
   --color-fg: var(--pyr-fg);
   --color-muted: var(--pyr-muted);
   --color-line: var(--pyr-line);
+  --color-field: var(--pyr-field);
   --color-accent: var(--pyr-accent);
   --color-accent-fg: var(--pyr-accent-fg);
   --color-accent-soft: var(--pyr-accent-soft);
@@ -24,7 +25,13 @@
 }
 
 /* Light is the base palette; dark is applied by the attribute the theme toggle sets and,
-   when no attribute is present (first paint, JS disabled), by the OS preference. */
+   when no attribute is present (first paint, JS disabled), by the OS preference.
+
+   Every value below is checked against WCAG 2.2: text tokens (`fg`, `muted`, `accent`,
+   `danger`, `warn`, `ok`) clear 4.5:1 on `bg`, `surface`, `raised` and `accent-soft` in
+   both themes, and `field` — the border of anything you can type in or press — clears 3:1
+   on `surface` and `bg` (1.4.11). `line` stays low-contrast on purpose: it only ever draws
+   decorative dividers and card edges, never the boundary of a control. */
 :root {
   --pyr-bg: oklch(0.985 0.003 250);
   --pyr-surface: oklch(1 0 0);
@@ -32,13 +39,14 @@
   --pyr-fg: oklch(0.23 0.02 265);
   --pyr-muted: oklch(0.52 0.02 265);
   --pyr-line: oklch(0.9 0.008 265);
+  --pyr-field: oklch(0.65 0.012 265);
   --pyr-accent: oklch(0.53 0.16 265);
   --pyr-accent-fg: oklch(0.99 0 0);
   --pyr-accent-soft: oklch(0.94 0.03 265);
   --pyr-danger: oklch(0.55 0.18 25);
   --pyr-danger-fg: oklch(0.99 0 0);
-  --pyr-warn: oklch(0.62 0.14 75);
-  --pyr-ok: oklch(0.58 0.13 150);
+  --pyr-warn: oklch(0.56 0.14 75);
+  --pyr-ok: oklch(0.52 0.13 150);
   color-scheme: light;
 }
 
@@ -50,6 +58,7 @@
     --pyr-fg: oklch(0.95 0.005 265);
     --pyr-muted: oklch(0.72 0.015 265);
     --pyr-line: oklch(0.35 0.02 265);
+    --pyr-field: oklch(0.55 0.02 265);
     --pyr-accent: oklch(0.72 0.13 265);
     --pyr-accent-fg: oklch(0.18 0.02 265);
     --pyr-accent-soft: oklch(0.33 0.05 265);
@@ -68,6 +77,7 @@
   --pyr-fg: oklch(0.95 0.005 265);
   --pyr-muted: oklch(0.72 0.015 265);
   --pyr-line: oklch(0.35 0.02 265);
+  --pyr-field: oklch(0.55 0.02 265);
   --pyr-accent: oklch(0.72 0.13 265);
   --pyr-accent-fg: oklch(0.18 0.02 265);
   --pyr-accent-soft: oklch(0.33 0.05 265);
@@ -79,13 +89,39 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-bg text-fg antialiased;
   }
 
-  /* One ring recipe for every interactive element, so focus is always visible. */
-  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  /* One ring recipe for every interactive element, so focus is always visible. `summary`
+     is in the list because the bonus editors and the TOTAL rows are disclosures. */
+  :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
     @apply ring-accent ring-offset-bg ring-2 ring-offset-2 outline-none;
+  }
+
+  /* Checkboxes and radios keep the accent colour in both themes. */
+  :where(input[type='checkbox'], input[type='radio']) {
+    accent-color: var(--pyr-accent);
+  }
+
+  /* Someone who asked the system for less movement gets none of ours: no sliding drawers,
+     no colour fades, no smooth jump to a section. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -93,5 +129,24 @@
   /* Comfortable touch target on phones; desktop keeps the compact size. */
   .tap {
     @apply min-h-11 sm:min-h-9;
+  }
+
+  /* Grows a small control's touch target to the 44px of the row around it without changing
+     how it looks. Only put it on a control whose row is at least as tall (`.tap`), so the
+     grown area never reaches into a neighbour. */
+  .tap-area {
+    position: relative;
+  }
+
+  .tap-area::after {
+    content: '';
+    position: absolute;
+    inset: -0.625rem 0;
+  }
+
+  @media (min-width: 640px) {
+    .tap-area::after {
+      content: none;
+    }
   }
 }

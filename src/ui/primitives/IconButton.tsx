@@ -12,7 +12,7 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-accent text-accent-fg border-transparent hover:opacity-90',
-  secondary: 'bg-surface text-fg border-line hover:bg-raised',
+  secondary: 'bg-surface text-fg border-field hover:bg-raised',
   ghost: 'bg-transparent text-muted border-transparent hover:bg-raised hover:text-fg',
   danger: 'bg-transparent text-danger border-transparent hover:bg-raised',
 };

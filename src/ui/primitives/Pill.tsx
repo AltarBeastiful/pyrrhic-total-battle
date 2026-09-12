@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { GearIcon } from '../icons';
+import { CheckIcon, GearIcon } from '../icons';
 import { cn } from './cn';
 
 export interface PillProps {
@@ -23,6 +23,10 @@ export interface PillProps {
 /**
  * The bonus-source pill: tap the body to turn the source on or off for this march, tap the gear to
  * edit its values. Two separate buttons, never nested, so both are reachable by keyboard.
+ *
+ * On/off is never carried by colour alone: an "on" pill shows a tick, an "off" one an empty box of
+ * the same size, so the row does not reflow when you toggle it and a colour-blind player still reads
+ * the state. Screen readers get `aria-pressed`.
  */
 export function Pill({
   label,
@@ -38,6 +42,9 @@ export function Pill({
   // The space matters: without it the accessible name would read "Aydaelvl 20".
   const body = (
     <>
+      <span aria-hidden="true" className="flex h-4 w-4 shrink-0 items-center justify-center">
+        {on && <CheckIcon />}
+      </span>
       <span className="truncate">{label}</span>
       {detail !== undefined && (
         <>
@@ -51,13 +58,15 @@ export function Pill({
     <span
       className={cn(
         'tap inline-flex max-w-full items-center rounded-full border text-sm transition-colors',
-        on ? 'border-accent bg-accent-soft text-fg' : 'border-line bg-surface text-muted',
+        on ? 'border-accent bg-accent-soft text-fg' : 'border-field bg-surface text-muted',
         disabled && 'opacity-50',
         className,
       )}
     >
       {locked ? (
-        <span className="flex items-center gap-1.5 py-1.5 pr-2 pl-3 font-medium">{body}</span>
+        <span className="flex min-h-11 items-center gap-1.5 py-1.5 pr-2 pl-2.5 font-medium sm:min-h-0">
+          {body}
+        </span>
       ) : (
         <button
           type="button"
@@ -66,7 +75,7 @@ export function Pill({
           onClick={() => {
             onToggle(!on);
           }}
-          className="flex min-h-11 items-center gap-1.5 rounded-full py-1.5 pr-2 pl-3 font-medium disabled:cursor-not-allowed sm:min-h-0"
+          className="flex min-h-11 items-center gap-1.5 rounded-full py-1.5 pr-2 pl-2.5 font-medium disabled:cursor-not-allowed sm:min-h-0"
         >
           {body}
         </button>
@@ -78,7 +87,7 @@ export function Pill({
           title={editLabel ?? `Edit ${label}`}
           disabled={disabled}
           onClick={onEdit}
-          className="text-muted hover:text-fg flex h-11 w-9 items-center justify-center rounded-r-full disabled:cursor-not-allowed sm:h-8"
+          className="text-muted hover:text-fg flex h-11 w-11 items-center justify-center rounded-r-full disabled:cursor-not-allowed sm:h-8 sm:w-9"
         >
           <GearIcon />
         </button>

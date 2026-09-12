@@ -23,7 +23,7 @@ export interface SelectProps {
 }
 
 const TRIGGER_CLASS =
-  'tap border-line bg-surface text-fg flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50';
+  'tap border-field bg-surface text-fg flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50';
 
 /** Styled listbox (Radix). Use `NativeSelect` for short, dense option lists such as tier pickers. */
 export function Select({

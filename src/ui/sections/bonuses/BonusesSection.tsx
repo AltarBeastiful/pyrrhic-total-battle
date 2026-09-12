@@ -23,8 +23,12 @@ const HELP = (
       Permanent sources have no switch — they always count.
     </p>
     <p>
-      The totals at the bottom are what the game should show you. If they do not match a battle report, put
-      the difference into Unknown sources and the rest of the calculation stays honest.
+      The totals at the bottom are what the game should show you. If they do not match, put the difference
+      into Unknown sources and the rest of the calculation stays honest.
+    </p>
+    <p>
+      <strong>Where to find it in game:</strong> each block below names the screen its numbers come from. To
+      check the totals, open the march window on a monster — the army bonuses it lists are the same ones.
     </p>
   </>
 );

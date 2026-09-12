@@ -26,7 +26,7 @@ export function Toggle({
 }: ToggleProps) {
   const labelId = useId();
   return (
-    <div className={cn('flex items-center gap-3', className)}>
+    <div className={cn('tap flex items-center gap-3', className)}>
       <button
         type="button"
         role="switch"
@@ -38,9 +38,9 @@ export function Toggle({
           onChange(!checked);
         }}
         className={cn(
-          'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors',
+          'tap-area inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          checked ? 'bg-accent border-transparent' : 'bg-raised border-line',
+          checked ? 'bg-accent border-accent' : 'bg-raised border-field',
         )}
       >
         <span

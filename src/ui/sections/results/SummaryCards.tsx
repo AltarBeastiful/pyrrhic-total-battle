@@ -45,6 +45,7 @@ export function SummaryCards({ summary, baseline }: SummaryCardsProps) {
 
   return (
     <div className="space-y-3">
+      <h3 className="text-sm font-semibold">Battle summary</h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metric
           label="Stacks"
@@ -89,7 +90,7 @@ export function SummaryCards({ summary, baseline }: SummaryCardsProps) {
       </div>
 
       <Card padded={false} className="p-3">
-        <p className="text-muted mb-2 text-xs font-medium">Recovery</p>
+        <h4 className="text-muted mb-2 text-xs font-medium">Recovery</h4>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Metric
             label="Silver"
@@ -111,7 +112,7 @@ export function SummaryCards({ summary, baseline }: SummaryCardsProps) {
       </Card>
 
       <Card padded={false} className="p-3">
-        <p className="text-muted mb-2 text-xs font-medium">Damage by pool</p>
+        <h4 className="text-muted mb-2 text-xs font-medium">Damage by pool</h4>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {(Object.keys(POOL_LABELS) as Pool[]).map((pool) => (
             <Metric

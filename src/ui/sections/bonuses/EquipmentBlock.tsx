@@ -165,7 +165,7 @@ export function EquipmentBlock({ profile, setup }: { profile: Profile; setup: Ba
                 const name = event.target.value;
                 patch(entry.id, (current) => ({ ...current, name }));
               }}
-              className="tap border-line bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
+              className="tap border-field bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
             />
           </label>
 
@@ -178,7 +178,7 @@ export function EquipmentBlock({ profile, setup }: { profile: Profile; setup: Ba
           </FieldGroup>
 
           <details className="border-line rounded-lg border px-3 py-2">
-            <summary className="text-muted cursor-pointer text-xs font-semibold tracking-wide uppercase">
+            <summary className="text-muted tap flex cursor-pointer items-center text-xs font-semibold tracking-wide uppercase">
               Gem and enchantment
             </summary>
             <div className="mt-2">

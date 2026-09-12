@@ -31,17 +31,16 @@ const HELP = (
   <>
     <p>
       Mercenaries are paid for out of authority, not leadership. Pick the ones sitting in your camp, then type
-      how many you own next to each: that number caps the stack, and the calculator will never ask you to
-      field more than you have. Leave the field empty when you do not want a limit.
+      how many you own next to each: that number caps the stack, so you are never asked to field more than you
+      have. Leave the field empty for no limit.
     </p>
     <p>
-      A capped stack can end up smaller than the stack that should die after it. That is unavoidable — you
-      cannot field units you do not own — and the result will point it out.
+      A capped stack can end up smaller than the stack that is meant to die after it. That is unavoidable —
+      you cannot field units you do not own — and the result says so when it happens.
     </p>
     <p>
-      <strong>Where to find this in game:</strong> open the mercenary camp (the tent where you hire them) and
-      tap a mercenary to open its sheet — health, strength, authority cost and revival gold are all on it, and
-      the quantity you own is on the camp screen itself.
+      <strong>Where to find it in game:</strong> the mercenary camp shows how many of each you own, and
+      tapping one opens its sheet with the health, strength, authority cost and revival gold.
     </p>
   </>
 );
@@ -215,6 +214,7 @@ export function MercenariesSection() {
                   />
                   <Button
                     size="sm"
+                    className="shrink-0"
                     icon={<PlusIcon />}
                     aria-label={`Add ${merc.name}`}
                     onClick={() => {
@@ -352,8 +352,14 @@ export function MercenariesSection() {
 
 function FilterRow({ caption, children }: { caption: string; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-muted w-16 text-xs">{caption}</span>
+    <div
+      role="group"
+      aria-label={`Filter by ${caption.toLowerCase()}`}
+      className="flex flex-wrap items-center gap-1.5"
+    >
+      <span aria-hidden="true" className="text-muted w-16 text-xs">
+        {caption}
+      </span>
       {children}
     </div>
   );

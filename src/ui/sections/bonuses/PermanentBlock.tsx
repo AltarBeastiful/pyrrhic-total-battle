@@ -132,7 +132,7 @@ export function PermanentBlock({ profile }: { profile: Profile }) {
                   const name = event.target.value;
                   patch(entry.id, (current) => ({ ...current, name }));
                 }}
-                className="tap border-line bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
+                className="tap border-field bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
               />
             </label>
           )}

@@ -349,6 +349,13 @@ export function ResultsSection() {
     );
   };
 
+  const announcement =
+    last === null
+      ? ''
+      : `Stack generated: ${amount(last.result.stacks.length)} stacks, ${amount(
+          last.summary.avgDamage,
+        )} average damage.`;
+
   return (
     <Section
       id="results"
@@ -368,12 +375,15 @@ export function ResultsSection() {
             unit count; open it for the effective stats behind that count and for the manual edit.
           </p>
           <p>
-            Where to find it in game: after the march, the battle report in your Journal lists the same
-            numbered hits. Compare it with our journal to check the bonuses you entered.
+            <strong>Where to find it in game:</strong> after the march, the battle report in your Journal
+            lists the same numbered hits. Hold it next to our journal to check the bonuses you typed.
           </p>
         </>
       }
     >
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
       <div className="space-y-4 xl:grid xl:grid-cols-[minmax(0,1fr)_14rem] xl:gap-4 xl:space-y-0">
         <div className="space-y-4">
           {body()}

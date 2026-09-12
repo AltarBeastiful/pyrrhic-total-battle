@@ -56,8 +56,10 @@ export function RangeSelect({
   };
 
   return (
-    <div className={cn('flex flex-wrap items-end gap-2', className)}>
-      <span className="text-fg min-w-24 text-sm font-medium">{label}</span>
+    <div role="group" aria-label={label} className={cn('flex flex-wrap items-end gap-2', className)}>
+      <span aria-hidden="true" className="text-fg min-w-24 text-sm font-medium">
+        {label}
+      </span>
       {allowNone && (
         <Toggle
           label={`${label} unlocked`}

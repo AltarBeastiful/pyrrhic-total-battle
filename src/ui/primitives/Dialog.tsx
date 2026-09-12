@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { CloseIcon } from '../icons';
 import { cn } from './cn';
 import { IconButton } from './IconButton';
+import { useReturnFocus } from './useReturnFocus';
 
 export type DialogSize = 'sm' | 'md' | 'lg';
 
@@ -37,11 +38,14 @@ export function Dialog({
   footer,
   size = 'md',
 }: DialogProps) {
+  const onCloseAutoFocus = useReturnFocus(open);
+
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className={OVERLAY_CLASS} />
         <RadixDialog.Content
+          onCloseAutoFocus={onCloseAutoFocus}
           className={cn(
             'border-line bg-surface text-fg fixed top-1/2 left-1/2 z-50 max-h-[85dvh] w-[calc(100vw-2rem)]',
             '-translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border p-4 shadow-xl sm:p-5',
