@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+LICENSE
+
+# Hand-written prose, captured TotalStack output and in-game battle-report
+# transcripts: line breaks there are meaningful, Prettier must not rewrap them.
+docs/

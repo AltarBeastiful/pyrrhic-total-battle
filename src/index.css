@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+/* Dark mode is driven by the app, not by the OS alone: Tailwind's `dark:` variant
+   applies when `.dark` or `data-theme="dark"` is set on an ancestor (we put it on
+   <html>). The theme toggle in the profile bar flips that attribute. */
+@custom-variant dark (&:where(.dark, .dark *, [data-theme='dark'], [data-theme='dark'] *));
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html:where(.dark, [data-theme='dark']) {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  }
+}

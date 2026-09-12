@@ -286,8 +286,13 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 - S-41 Priority search: damage per silver / gold / dragon coin.
 - S-43 Compare saved stacks side by side (summary metrics).
 - S-44 Sync adapter interface + explicit Pull/Push UI with per-profile conflict dialog (investigation 0001).
-- S-45 GitHub Gist sync adapter (fine-grained token, gist scope), optional client-side encryption.
-- S-46 Google Drive appData sync adapter (GIS token model). Gated by investigation 0002: requires a custom domain
+- S-45 GitHub Gist sync adapter (investigation 0001, option B1): the first real sync adapter, ahead of Google Drive
+      because it needs no OAuth app, no domain and no verification. User pastes a fine-grained personal access token
+      (gist scope only) in Settings; the app creates one *secret* gist holding one file per profile plus an index file,
+      and implements `RemoteStore` on top of the Gist REST API (ETag/`rev` check on put, tombstones respected). Token
+      stored locally only, never in share links or exports. Optional client-side encryption (WebCrypto AES-GCM, key from
+      a passphrase) behind one checkbox. Explicit Pull/Push from S-44, "last synced" shown per profile.
+- S-46 Google Drive appData sync adapter (GIS token model). **Gated** by investigation 0002: requires a custom domain
       for the official site with homepage + privacy policy, Search Console verification, brand verification, and a
       long-term owner for the Google Cloud project. Dropbox (app-folder, PKCE, no domain requirement) is the
       alternative if the domain is refused.
@@ -324,6 +329,8 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Implementation started. Backlog: S-45 (Gist sync) written out as the first sync adapter since S-46
+  (Google Drive) stays gated on a custom domain; S-46 unchanged.
 - 2026-09-12 — Second in-game report read (enemy first, 4 squads, one double-damage proc): round structure and
   all per-hit numbers match; attack-order nuance recorded as an observation only. Rule adopted for the plan:
   rely on TotalStack's verified model as the reference; treat report-derived deviations as hypotheses until

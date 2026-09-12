@@ -10,6 +10,7 @@ They are the starting point for story S-05 (CI data-drift check). Not wired to C
   CI version must locate tables by content, e.g. the array containing `"id":"archer-1"`, not by name).
 
 Manual procedure used:
+
 1. `curl https://totalstack.ca/` → find `assets/index-*.js`; the lazy chunks are listed inside it (`"./Home-*.js"` etc.).
 2. Download the chunks, run `extract_all.py index-*.js Home-*.js`.
 3. Copy the relevant tables to `docs/research/totalstack-data/` with stable names.
