@@ -218,6 +218,23 @@ most, repeat), then local swaps; time-boxed in a Web Worker with progress and ca
 when the pool is small (≤ 12 types). "Total Optimization" (relaxing preservation when it improves damage)
 is a separate investigation story (S-31).
 
+### 3.7 Best captains for a march (S-48, planned)
+
+Captains carry bonuses keyed to one unit family or category (`captains.json`: a health key and a strength key,
+per-level and per-star values), so the best march can change with the captains sent: a mounted-strength captain
+may make a mounted-heavy tier-3 march beat the default. A march carries **0 to 3 captain slots** (hero only,
+one captain, or several — the player sets the slot count per battle setup, `captainSlots: 0 | 1 | 2 | 3`).
+
+Search: candidates are the profile's captain entries (each with its level and stars). For k slots, evaluate
+captain sets of size ≤ k: build the bonus totals with that set active (everything else as configured), run
+the stacking for the chosen method, score with the setup's objective. Exhaustive while the number of sets is
+≤ 600 (e.g. 12 captains choose 3 = 220), otherwise greedy per slot with pairwise swap improvement — the same
+shape as the unit-type search, and combinable with it (best captains × best types). Output: the best set,
+its march, and the delta against the current captains; one action applies it to the setup ("Use these
+captains", which toggles the captain sources). Runs in the worker with progress and cancel; reports when the
+current captains are already best. Prerequisite: none in the engine (bonus aggregation and search are pure);
+UI: a slot count on the Battle card and a "Best captains" action in the March card.
+
 ## 4. UI flow (one page, sections in this order)
 1. **Profile bar**: active profile switcher, New / Duplicate / Rename / Delete, Export, Import, Share link,
    "unsaved changes" indicator. Theme toggle.
@@ -357,6 +374,12 @@ floating Generate, group colours from the game, unit tiles, march table, unit sh
 `docs/plans/ui-foundation.md` (measured state of the UI code, framework options, recommendation: owned kit on
 React Aria Components + Tailwind v4 + tailwind-variants after a one-day spike; stories T-00…T-09; ADR-0008).
 
+### M7 — Best captains (S-48) and March card (planned, prioritised)
+Order agreed 2026-09-12: finish the Army cards (in flight) → March card in the amended order (design plan §7.5:
+recap first, army as tiles that are also the form) → S-48 best captains (§3.7: engine search + slot count on the
+Battle card + "Best captains" in the March card) → Bonuses and Battle cards → Phase A2 finish pass if not done
+earlier (fonts, icon sets, surfaces).
+
 ### Deferred — not planned, kept for reference
 Features TotalStack has that we are not interested in for now. They stay out of every milestone; pull one back
 into a milestone only on explicit request. The engine and config schema keep room for them (bonus keys, kill
@@ -384,6 +407,11 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Owner's third review: (1) new story S-48 best captains for a march (§3.7); (2) Troops and
+  Mercenaries do not collapse — the form is the summary, TotalStack-style; (3) revised frame accepted, app bar
+  also carries a troop recap; (4) March card reordered: recap figures and the army-as-form first, dying order
+  demoted to details. Asked why the UI still looks unpolished: system fonts, hand-drawn icons and border-heavy
+  surfaces named as causes; Phase A2 (fonts, Lucide + Game Icons, surface pass) added to the design plan.
 - 2026-09-12 — Independent design review of the overhaul frame (Material 3 canonical layouts, Apple HIG, five
   measured comparables): two independently scrolling columns withdrawn; one page scroll, sticky 56 px app bar
   carrying the answer, March as a sticky supporting pane from 1280 px, floating Generate below that. Plan §5.1,

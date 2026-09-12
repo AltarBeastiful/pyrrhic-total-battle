@@ -27,3 +27,10 @@ Licence: AGPL-3.0 (already in the repo). A hosted fork must publish its source, 
 - No server-side secrets, so the engine and all data are inspectable — good for trust and contributions.
 - Limits: no short links (fragment can be long, see ADR-0005), no automatic sync, no usage statistics.
 - Hash-based routing only (GitHub Pages has no rewrites); the app is effectively one page anyway.
+
+## Amendment 2026-09-12 — bundled fonts
+
+"No third-party font, no CDN" meant no network request for a font. Fonts bundled with the app (OFL-licensed
+variable fonts installed from npm and served from our own origin, subject to the same offline precache as the
+rest of the assets) keep the property that matters — nothing leaves the browser, nothing is fetched from a
+third party at run time — and are allowed. Loading a font from a CDN remains forbidden.

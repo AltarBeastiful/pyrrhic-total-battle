@@ -183,8 +183,9 @@ Three regions:
 - **One page scroll at every width.** No nested scrollers, except that the supporting pane may scroll inside
   itself when it is taller than the viewport (sticky with a max height).
 - **App bar (sticky, 56 px)**: brand mark; the live answer (average, minimum, hits) once a result exists,
-  muted with a "changed" dot when the setup moved since; on wide screens the primary Generate button; the
-  account avatar and menu. It is the only sticky element besides the floating button, and it sticks the
+  muted with a "changed" dot when the setup moved since, and beside it a recap of the march's troops as a
+  row of `sm` tiles (owner's request; hidden under 600 px where the figures alone fit); on wide screens the
+  primary Generate button; the account avatar and menu. It is the only sticky element besides the floating button, and it sticks the
   *answer*, not a toolbar — principle 5 is amended accordingly.
 - **≥ 1280 px:** setup (Army, Bonuses, Battle) fluid on the left; MARCH as a 27 rem supporting pane on the
   right, sticky under the app bar. Generate lives in the app bar; no floating button.
@@ -309,13 +310,9 @@ unlocked yet. Simple, efficient, readable. We keep that exact flow and do it in 
 controls and a clearer summary. What we drop is our chip grid of every unit in the range: lower tiers are
 always in, and leaving a lower-tier type out is done from the March, where you see what it costs.
 
-Collapsed (default once configured):
-
-```
- Troops    ▮ G1–G4   ▮ S1–S2   ▮ no engineers   ▮ M3–M5      ⌄
-```
-
-Expanded, one row per group:
+**Amended again the same day:** the card does not collapse. The form *is* the summary, as in TotalStack:
+four short rows, always visible, readable at a glance and editable in place. No separate summary line, no
+expand/collapse state. One row per group:
 
 ```
  ▮ Guardsmen     from [◀ G1 ▶]   to [◀ G4 ▶]      at G4:  ⚔4  🏹4  🐎4  🦅4
@@ -334,21 +331,20 @@ Expanded, one row per group:
   of a tier are rarely all owned.
 - Lower tiers: always in. A type left out from the March (existing `excludedUnitIds`) shows as a muted note
   under the row: "Left out: Swordsman 1, Rider 2 · Put back", so nothing is hidden.
-- Rows for engineers and monsters collapse to their stepper alone when set to none, so the card stays four
+- Rows for engineers and monsters shrink to their stepper alone when set to none, so the card stays four
   short lines and Mercenaries sits right under it (R4).
 - The row's group marker and the tiles carry the group colour; the tier numeral is the biggest thing on a tile.
 
 ### 7.2 Army — Mercenaries
 
-Collapsed: `Mercenaries   ABM6 ×22 · ABT6 ×24 · BER5 ×∞ · BGM6 ×12   +3 more ⌄` — codes are `xs` tiles with
-the count beside them; overflow is counted, never truncated.
-
-Expanded:
-- **Selected list first**, one row each: tile · name · tier · role · owned count as a stepper (`∞` toggle) ·
-  pin. The row is a checkbox row: tapping anywhere on it except the stepper deselects it.
-- **Picker below**: search field, filter chips (tier, role, race), then rows in the same shape; tapping a row
-  adds it (checkbox semantics; the whole row is the target, R6). Recently used first.
-- Custom mercenary: a "+ Custom…" row at the end of the picker opens the existing dialog restyled as a sheet.
+**Amended 2026-09-12:** no collapse here either. The selected mercenaries are the summary and the form,
+TotalStack-style: one compact row each, always visible — `sm` tile · name · tier and role in muted text ·
+owned count as a stepper with an "unlimited" toggle · pin marker. Tapping the row itself deselects it.
+- **Picker** behind one "Add mercenaries" button under the list (inline on desktop, a sheet on phones):
+  search field, filter chips (tier, role, race), rows in the same shape; pressing a row adds it (checkbox
+  semantics, the whole row is the target, R6). Recently used first.
+- Custom mercenary: a "+ Custom…" row at the end of the picker opens the existing form as a sheet.
+- Empty: the search field shows directly with one line of guidance.
 
 ### 7.3 Bonuses
 
@@ -368,20 +364,24 @@ by 10, `Ctrl/⌘` by 100 (R2).
 
 ### 7.5 March (results)
 
-- **Header line**: average damage as the largest number on the page, min and hits beside it, silver and gold
-  cost under; a delta against the previous run in muted text when there is one.
-- **March table**: one row per stack in kill order (the order they fall). Columns: tile · name · **count** (xl,
-  tap to copy) · hits · lost · revive cost. Row left edge in the group colour. Mercenary rows carry a small
-  "falls last" marker when the method placed them last. Under 600 px the rows stack as cards (tile, name and
-  count on one line, the rest under). Manual editing is a separate mode: an "Edit counts" toggle in the
-  header turns the counts into steppers; the header recomputes live; Undo appears in the header. Tapping a
-  count outside that mode only copies it.
-- **Left out**: a row of `md` tiles, each with its own "Keep in march" action (no multi-select).
-- **Trade-off**: "Compared with all types" as a two-column strip under the header, not a table.
-- **Battle story**: a collapsible narrative ("Round 1: the monster hits Archer 3 for 412 …") replacing the
-  journal drawer's raw list; the raw journal stays behind a "Details" toggle.
-- **HP profile**: the chart, collapsed by default on phone, open on desktop.
-- **Copy all counts** and **Save this march** and **Share** at the bottom of the card.
+**Amended 2026-09-12 (owner):** the most useful things come first, and the army shown is also the form to
+change it. Order inside the card:
+
+1. **Recap line**: average and minimum damage, hits taken, silver and gold to recover, damage per silver —
+   the figures a player compares marches by — with the delta against the previous run.
+2. **The march as tiles**: the selected unit types laid out like the Troops form (group rows of `md` tiles
+   with the stack count under each tile); the left-out types of the range sit in the same rows, dimmed, so
+   putting one back or leaving one out is the same gesture as in the Troops card (tap the tile). Pinned
+   types carry the pin mark. This block is both the readable summary and the control.
+3. **The march table** (counts to copy): one row per stack in kill order — tile · name · **count** (xl, tap to
+   copy) · hits · lost · revive cost; row left edge in the group colour; mercenary rows carry a "falls last"
+   marker. Under 600 px the rows stack as cards. Manual editing is an explicit "Edit counts" mode in the
+   table header (counts become steppers, the recap recomputes live, Undo appears); outside that mode a tap on a
+   count only copies it. "Copy all counts" lives in the header.
+4. **Compared with all types**: a two-column strip, only when the search left types out.
+5. **Details, folded by default**: the battle story (narrative, raw journal behind a further toggle) and the
+   HP profile chart. The order stacks fall in is here, not above the fold.
+6. Actions at the bottom: Save this march · Share.
 
 ### 7.6 The unit sheet (replaces the popover, R9)
 
@@ -436,6 +436,19 @@ starts.
 - D-13 New neutral palette and type scale applied to the shell and cards. Accept: no text under 13 px; contrast
   checks pass in both themes.
 
+**Phase A2 — Finish (why the UI still looks unpolished, and the fixes)**
+- D-15 Typography: self-hosted variable fonts bundled with the app (Inter for text and figures with tabular
+  numerals, Fraunces for the display face), no CDN (ADR-0002 amended: bundled OFL fonts are allowed, network
+  fonts are not). System serif/sans on Linux and Android was the single biggest cause of the dated look.
+- D-16 Icons: replace the hand-drawn UI glyphs with Lucide (consistent 2 px stroke, optical sizes) behind the
+  same export names, and the unit and race silhouettes with Game Icons (CC BY 3.0, attribution in About)
+  chosen per category and race; the tile keeps its layout.
+- D-17 Surfaces: fewer borders — controls get a border *or* a fill, never both; cards separate by surface
+  step and one hairline, not by border + shadow; one radius per level; consistent 8 px rhythm; hover and
+  pressed states by surface step. Verified on the kit page in both themes before any section changes.
+- D-18 A named visual reference for finish (restraint of Linear/Vercel-class dark UIs; the game's warmth only
+  in the group colours and the accent) recorded in `docs/design.md`, so parallel workers stop inventing.
+
 **Phase B — Army**
 - D-20 Unit tile component in three sizes with all states (§6.2), group colours, bolder silhouettes.
 - D-21 Tier stepper with arrows, keyboard, the jump strip and the "none" position. Accept: G1–G3 → G1–G4 in one
@@ -453,7 +466,8 @@ starts.
   `Shift`/`Ctrl` multipliers, paste of "84 300" and "84,300".
 
 **Phase D — March**
-- D-40 March header and table with copyable counts, group edge colour, inline editing with live header and Undo.
+- D-40 March card in the amended order (§7.5): recap line first, the march as tiles (summary = form), then
+  the table with copyable counts and the explicit Edit counts mode; details folded.
 - D-41 Left-out row with Keep in march; trade-off strip; delta against previous run.
 - D-42 Unit sheet replacing the popover (§7.6).
 - D-43 Battle story narrative with the raw journal behind Details; HP profile placement rules.
