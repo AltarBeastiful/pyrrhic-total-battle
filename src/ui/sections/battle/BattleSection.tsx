@@ -21,7 +21,7 @@ import { RECOVERY_MODES } from '@/state/schema';
 import { selectActiveSetup, useStore } from '@/state/store';
 import { PoolBadge } from '@/ui/icons';
 import { Banner, Card, NumberStepper, OptionList, Segmented, Select, Switch } from '@/ui/kit';
-import { Grid, Stack } from '@/ui/layout';
+import { Cluster, Grid, Stack } from '@/ui/layout';
 import { useResultStore } from '@/ui/resultStore';
 import { MEDIUM, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
@@ -100,14 +100,18 @@ export function BattleSection() {
   };
 
   return (
-    <Card as="section" id="battle" aria-labelledby={titleId}>
+    <Card as="section" id="battle" aria-labelledby={titleId} className="@container">
       <Stack gap={4}>
         <h2 id={titleId} className="font-display text-lg">
           Battle
         </h2>
 
-        {/* Who you are fighting, and what you may bring. */}
-        <Grid cols={{ base: 1, lg: 2 }} gap={4}>
+        {/*
+          Who you are fighting, and what you may bring. The two sit on one row only while the card
+          itself is wide enough for both — under that, the capacities drop under the formation rather
+          than squeezing six figures into a third of half a card.
+        */}
+        <Grid cols={1} gap={4} className="@5xl:grid-cols-2">
           <Stack gap={3}>
             {forced === undefined ? (
               <Segmented
@@ -154,10 +158,16 @@ export function BattleSection() {
             </p>
           </Stack>
 
-          <Grid cols={{ base: 1, sm: 3 }} gap={3}>
+          {/*
+            A capacity runs to eight figures, and the field has to hold the glyph, the number and
+            both step buttons: each one keeps 12 rem of its own and the row wraps rather than cutting
+            "84,300" down to "84,".
+          */}
+          <Cluster gap={3} align="start">
             {POOLS.map((pool) => (
               <NumberStepper
                 key={pool}
+                className="min-w-48 flex-1"
                 label={POOL_LABELS[pool]}
                 description={POOL_HINTS[pool]}
                 prefix={<PoolBadge pool={pool} size="sm" />}
@@ -174,11 +184,11 @@ export function BattleSection() {
                 }}
               />
             ))}
-          </Grid>
+          </Cluster>
         </Grid>
 
         {/* The rule the stacks are sized by, and the rules that ride on it. */}
-        <Grid cols={{ base: 1, lg: 2 }} gap={4}>
+        <Grid cols={1} gap={4} className="@3xl:grid-cols-2">
           <OptionList
             label="Stacking method"
             value={options.method}
@@ -212,7 +222,7 @@ export function BattleSection() {
         </Grid>
 
         {/* What a Generate aims at, and what the losses are paid with. */}
-        <Grid cols={{ base: 1, lg: 2 }} gap={4}>
+        <Grid cols={1} gap={4} className="@3xl:grid-cols-2">
           <OptionList
             label="Objective"
             collapsible={!isMedium}
