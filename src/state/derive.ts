@@ -592,6 +592,7 @@ export function buildStackRequest(
   tables: DeriveTables = DEFAULT_TABLES,
 ): StackRequest {
   const { units, caps } = buildUnits(profile);
+  const available = new Set(units.map((unit) => unit.id));
   return {
     units,
     caps,
@@ -601,6 +602,9 @@ export function buildStackRequest(
     enemy: eventEnemyFormation(setup, tables) ?? normalizeEnemy(setup.enemy),
     activeEvents: [...setup.active.events],
     recovery: recoverySettings(profile, setup),
+    // A pin survives a tier range or exclusion that hides its unit: it is kept in the setup and simply not
+    // forwarded, so it comes back when the unit does.
+    pinned: setup.pinnedUnitIds.filter((id) => available.has(id)),
   };
 }
 

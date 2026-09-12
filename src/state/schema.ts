@@ -261,6 +261,12 @@ export const battleSetupSchema = syncMetaSchema.extend({
   /** `'none'` = plain Generate, no priority search (PLAN §3.6). */
   priority: z.union([z.enum(OBJECTIVES), z.literal('none')]),
   recoveryPlan: recoveryPlanSchema,
+  /**
+   * Unit types forced into the march: the sizer keeps them even when the flat profile or a preservation
+   * ceiling would leave them out, and the priority search never eliminates them.
+   * Added after v1 shipped: defaulted so stored setups keep parsing without a schema bump (ADR-0004).
+   */
+  pinnedUnitIds: z.array(z.string()).default([]),
 });
 export type BattleSetup = z.infer<typeof battleSetupSchema>;
 

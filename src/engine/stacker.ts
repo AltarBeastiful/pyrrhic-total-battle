@@ -121,6 +121,79 @@ function dropReason(slot: Slot, pool: Pool, ceiling: number | undefined, rounded
   return `no ${pool} capacity left for this unit type`;
 }
 
+// ---- Pinned unit types ---------------------------------------------------------------------------
+/**
+ * A pinned type is forced to the smallest stack that still makes sense: one unit, or a whole chunk of ten
+ * under "round to 10s" (mercenaries and monsters only), because revival and training work in tens.
+ */
+function pinnedMinimum(round: boolean): number {
+  return round ? CHUNK : 1;
+}
+
+/** Pinned slots whose minimum does not fit at all, with the reason to drop them for. */
+type Refusals = { slot: Slot; reason: string }[];
+
+/**
+ * Size one pool while honouring the pinned unit types.
+ *
+ * A pinned type the normal solve leaves empty takes its minimum count **out of the pool capacity first**;
+ * the rest of the pool is then re-solved with what is left, so the flat profile is rebalanced around the
+ * pin instead of being broken after the fact. Forcing one pin can starve another, hence the loop — it runs
+ * at most once per slot. A forced stack ignores the preservation ceiling (that is what pinning is for) but
+ * never its own cap, and a pin whose minimum does not fit the housing is refused so the caller can drop it
+ * with a reason that says why.
+ */
+function sizePoolPinned(
+  slots: Slot[],
+  capacity: number,
+  options: PoolOptions,
+  pinned: ReadonlySet<string>,
+  round: boolean,
+): Refusals {
+  if (slots.length === 0) {
+    sizePool(slots, capacity, options);
+    return [];
+  }
+  const minimum = pinnedMinimum(round);
+  const forced = new Map<Slot, number>();
+  const refused: Refusals = [];
+  const settled = new Set<Slot>();
+  const pool = slots[0]!.unit.pool;
+
+  for (let pass = 0; pass <= slots.length; pass += 1) {
+    let reserved = 0;
+    for (const [slot, count] of forced) reserved += count * slot.cost;
+    const free = slots.filter((slot) => !forced.has(slot));
+    const used = sizePool(free, capacity - reserved, options);
+    if (round) roundDownToChunks(free, used);
+    for (const [slot, count] of forced) slot.count = count;
+
+    const short = slots.find(
+      (slot) => pinned.has(slot.unit.id) && !forced.has(slot) && !settled.has(slot) && slot.count < minimum,
+    );
+    if (!short) break;
+    settled.add(short);
+    // A cap below the minimum is still worth honouring: the user pinned what they own, so give them all of
+    // it rather than nothing — only an empty cap leaves us with nothing to force.
+    const target = Math.min(minimum, short.cap);
+    if (target < 1) {
+      refused.push({ slot: short, reason: 'pinned, but its cap leaves no units to add' });
+      short.count = 0;
+      continue;
+    }
+    if (target * short.cost > capacity - reserved) {
+      refused.push({
+        slot: short,
+        reason: `pinned, but even ${target} ${target === 1 ? 'unit does' : 'units do'} not fit in the ${pool} housing`,
+      });
+      short.count = 0;
+      continue;
+    }
+    forced.set(short, target);
+  }
+  return refused;
+}
+
 /** Safety valve for the relaxed-preservation post-pass; it normally halts after two or three steps. */
 export const MAX_RELAX_STEPS = 500;
 
@@ -233,8 +306,14 @@ export function sizeStacks(request: StackRequest): StackResult {
   const pools = {} as Record<Pool, PoolUsage>;
   const warnings: string[] = [];
   const ceilings: Partial<Record<Pool, number>> = {};
+  const pinned = new Set(request.pinned ?? []);
+  const labelOf = new Map(request.units.map((unit) => [unit.id, unit.label]));
+  const pinnedDrops = new Map<string, string>();
+  const collect = (refusals: Refusals): void => {
+    for (const { slot, reason } of refusals) pinnedDrops.set(slot.unit.id, reason);
+  };
 
-  sizePool(byPool.leadership, housing.leadership, {});
+  collect(sizePoolPinned(byPool.leadership, housing.leadership, {}, pinned, false));
 
   const lowest = (pool: Slot[]): number | undefined => {
     const live = pool.filter((slot) => slot.count > 0).map((slot) => slot.count * slot.hp);
@@ -244,10 +323,15 @@ export function sizeStacks(request: StackRequest): StackResult {
   const troopFloor = lowest(byPool.leadership);
   const mercCeiling = options.method === 'ms' && troopFloor !== undefined ? troopFloor - 1 : undefined;
   if (mercCeiling !== undefined) ceilings.authority = mercCeiling;
-  const usedAuthority = sizePool(byPool.authority, housing.authority, {
-    ...(mercCeiling === undefined ? {} : { ceiling: mercCeiling }),
-  });
-  if (options.roundTo10) roundDownToChunks(byPool.authority, usedAuthority);
+  collect(
+    sizePoolPinned(
+      byPool.authority,
+      housing.authority,
+      { ...(mercCeiling === undefined ? {} : { ceiling: mercCeiling }) },
+      pinned,
+      options.roundTo10,
+    ),
+  );
 
   let monsterCeiling: number | undefined;
   if (options.method === 'ms' && troopFloor !== undefined) monsterCeiling = troopFloor - 1;
@@ -259,10 +343,15 @@ export function sizeStacks(request: StackRequest): StackResult {
     }
   }
   if (monsterCeiling !== undefined) ceilings.dominance = monsterCeiling;
-  const usedDominance = sizePool(byPool.dominance, housing.dominance, {
-    ...(monsterCeiling === undefined ? {} : { ceiling: monsterCeiling }),
-  });
-  if (options.roundTo10) roundDownToChunks(byPool.dominance, usedDominance);
+  collect(
+    sizePoolPinned(
+      byPool.dominance,
+      housing.dominance,
+      { ...(monsterCeiling === undefined ? {} : { ceiling: monsterCeiling }) },
+      pinned,
+      options.roundTo10,
+    ),
+  );
 
   let relaxed = 0;
   if (options.method === 'ms' && options.relaxedPreservation === true) {
@@ -281,15 +370,31 @@ export function sizeStacks(request: StackRequest): StackResult {
     if (slot.count > 0) continue;
     dropped.push({
       unitId: slot.unit.id,
-      reason: dropReason(
-        slot,
-        slot.unit.pool,
-        ceilings[slot.unit.pool],
-        options.roundTo10 && slot.unit.pool !== 'leadership',
-      ),
+      reason:
+        pinnedDrops.get(slot.unit.id) ??
+        dropReason(
+          slot,
+          slot.unit.pool,
+          ceilings[slot.unit.pool],
+          options.roundTo10 && slot.unit.pool !== 'leadership',
+        ),
     });
   }
   const stacks = buildStacks(slots);
+
+  // A pin that had to break its pool's preservation ceiling keeps its true place in the kill order (it is
+  // the highest-HP stack, so the enemy takes it first) — say so, because that is the promise MP is chosen for.
+  if (troopFloor !== undefined) {
+    for (const stack of stacks) {
+      if (!pinned.has(stack.unitId) || stack.pool === 'leadership') continue;
+      const ceiling = ceilings[stack.pool];
+      if (ceiling === undefined || stack.totalHp <= ceiling || stack.totalHp < troopFloor) continue;
+      const label = labelOf.get(stack.unitId) ?? stack.unitId;
+      warnings.push(
+        `${label} is kept in the march but its stack (${stack.totalHp}) is larger than your smallest troop stack, so it will fall before your last troops.`,
+      );
+    }
+  }
 
   if (relaxed > 0 && troopFloor !== undefined) {
     const above = stacks

@@ -25,8 +25,13 @@ function scoreOf(units: UnitDef[], objective: Objective): number {
   return objectiveScore(simulateBattle(sizeStacks(request), request), objective);
 }
 
-function search(units: UnitDef[], objective: Objective, budgetMs = 10_000) {
-  return searchPriority({ request: makeRequest({ units }), objective, budgetMs, seed: 1 });
+function search(units: UnitDef[], objective: Objective, budgetMs = 10_000, pinned?: string[]) {
+  return searchPriority({
+    request: makeRequest({ units, ...(pinned === undefined ? {} : { pinned }) }),
+    objective,
+    budgetMs,
+    seed: 1,
+  });
 }
 
 describe('maximum average damage', () => {
@@ -151,5 +156,50 @@ describe('budget, cancellation and determinism', () => {
     expect(second.includedUnitIds).toEqual(first.includedUnitIds);
     expect(second.score).toBe(first.score);
     expect(second.evaluated).toBe(first.evaluated);
+  });
+});
+
+describe('pinned unit types', () => {
+  it('keeps the pinned type and still drops the one the objective does not want', () => {
+    const found = search(ALL, 'avgDamage', 10_000, ['swordsman-1']);
+
+    expect(found.includedUnitIds).toContain('swordsman-1');
+    expect(found.includedUnitIds).not.toContain('spearman-1');
+    // The pin costs damage — it takes the tier-1 slot the free search gives to Archer I.
+    expect(found.includedUnitIds).not.toContain('archer-1');
+    expect(found.score).toBeLessThan(search(ALL, 'avgDamage').score);
+    // ... but it is still the best formation that contains it.
+    expect(found.score).toBeGreaterThan(scoreOf(ALL, 'avgDamage'));
+    expect(found.result.stacks.some((stack) => stack.unitId === 'swordsman-1')).toBe(true);
+  });
+
+  it('counts only the free types when deciding whether it can enumerate exhaustively', () => {
+    const thirteen = [...TROOPS, ...monsterSet('WE', 'BB', 'ED')];
+    const found = searchPriority({
+      request: makeRequest({ units: thirteen, pinned: ['swordsman-1'] }),
+      objective: 'avgDamage',
+      budgetMs: 30_000,
+      seed: 1,
+    });
+
+    // 12 free types, and the pins-only subset is a candidate too, so 2^12 evaluations.
+    expect(found.exhaustive).toBe(true);
+    expect(found.evaluated).toBe(4096);
+    expect(found.includedUnitIds).toContain('swordsman-1');
+  });
+
+  it('returns the pinned types alone when every free type hurts the objective', () => {
+    const found = searchPriority({
+      request: makeRequest({ units: ALL, pinned: ['water-elemental'] }),
+      objective: 'damagePerDragonCoin',
+      budgetMs: 10_000,
+      seed: 1,
+    });
+    expect(found.includedUnitIds).toContain('water-elemental');
+  });
+
+  it('ignores pinned ids that are not in the formation', () => {
+    const found = search(ALL, 'avgDamage', 10_000, ['not-a-unit']);
+    expect(found.includedUnitIds).toEqual(search(ALL, 'avgDamage').includedUnitIds);
   });
 });

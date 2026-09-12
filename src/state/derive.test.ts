@@ -449,6 +449,19 @@ describe('buildStackRequest', () => {
     expect(request.recovery.trainingCostReduction).toEqual({ guardsmen: 12 });
     expect(request.recovery.plan).toEqual({ mode: 'selective', selectiveTop: 3 });
   });
+
+  it('forwards the pinned unit types, keeping only the ones the formation still contains', () => {
+    const { profile, setup } = fixture();
+    expect(buildStackRequest(profile, setup).pinned).toEqual([]);
+
+    profile.troops.excludedUnitIds = ['rider-1'];
+    setup.pinnedUnitIds = ['archer-1', 'rider-1', 'not-a-unit'];
+
+    // `rider-1` is excluded and `not-a-unit` does not exist, so neither reaches the engine — but both stay
+    // on the setup, so the pin comes back if the exclusion does.
+    expect(buildStackRequest(profile, setup).pinned).toEqual(['archer-1']);
+    expect(setup.pinnedUnitIds).toEqual(['archer-1', 'rider-1', 'not-a-unit']);
+  });
 });
 
 describe('describeTotals', () => {
