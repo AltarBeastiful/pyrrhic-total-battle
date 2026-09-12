@@ -1,117 +1,194 @@
-import { useMemo } from 'react';
+/**
+ * Bonuses (design plan §7.3, journey J3) — every health and strength source the account owns, and
+ * which of them count for this march.
+ *
+ * The card is **one line until you open it**: the TOTAL as three labelled figures — health, strength
+ * and double damage for the whole army — plus how many sources feed them and how many of those are
+ * switched on with nothing typed in. That is what a player checks after changing a captain's level,
+ * and it is above the fold on a phone (J3: open, find, change, see the TOTAL move).
+ *
+ * Unfolded, the sources are grouped the way the game groups them and each one is a **row**, not a
+ * chip: a switch carrying its name, what it is worth on the right, a gear at the end. Editing never
+ * happens inline — the gear opens a sheet that repeats the TOTAL, so the figures are visible while
+ * they move. Whether the card is open is remembered per device (decision D7), never in the document.
+ */
+import { useId, useMemo, useState } from 'react';
 
-import { events as eventTable } from '@/data';
-import { aggregateBonuses } from '@/engine/bonuses';
-import { resolveSources } from '@/state/derive';
-import type { BattleSetup, Profile } from '@/state/schema';
+import { artifacts as artifactTable, equipment as equipmentTable, titles as titleTable } from '@/data';
+import { mintSourceId, setTitleOwned, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { Card, Disclosure } from '@/ui/kit';
+import { Stack } from '@/ui/layout';
 
-import { BonusesIcon } from '../../icons';
-import { Section } from '../../primitives';
-import { ArtifactsBlock } from './ArtifactsBlock';
-import { CaptainsBlock } from './CaptainsBlock';
-import { EquipmentBlock } from './EquipmentBlock';
-import { EventsBlock } from './EventsBlock';
-import { count, firstKey, formatPercent } from './labels';
-import { OtherBlock } from './OtherBlock';
-import { PermanentBlock } from './PermanentBlock';
+import { ArtifactSheet } from './ArtifactSheet';
+import { CaptainSheet } from './CaptainSheet';
+import { EquipmentSheet } from './EquipmentSheet';
+import { CustomSheet, DragonSheet, PermanentSheet, RemainderSheet } from './FreeFormSheets';
+import { HeroSheet, VipSheet } from './OtherSheets';
+import { RecoverySheet } from './RecoverySheet';
+import {
+  firstQuality,
+  MAX_ACTIVE_ARTIFACTS,
+  MAX_ACTIVE_CAPTAINS,
+  SORTED_CAPTAINS,
+  sourceGroups,
+  starKeys,
+  totalsSummary,
+} from './rows';
+import type { AddKind, EditorTarget } from './rows';
 import { SetupBar } from './SetupBar';
-import { TempleBlock } from './TempleBlock';
-import { TitlesBlock } from './TitlesBlock';
-import { TotalsBlock } from './TotalsBlock';
+import { SourceList } from './SourceList';
+import { TitleSheet } from './TitleSheet';
+import { TotalsBreakdown } from './TotalsBreakdown';
+import { TotalsFigures } from './TotalsFigures';
+import { readExpanded, writeExpanded } from './uiPrefs';
 
-const HELP = (
-  <>
-    <p>
-      Type every bonus your account has once: the profile remembers the values. A battle setup then decides
-      which of them are switched on for the march you are calculating.
-    </p>
-    <p>
-      A source is a chip. Tap it to switch it on or off for this march, or tap its gear to edit what it is
-      worth. Permanent sources have no switch — they always count.
-    </p>
-    <p>
-      The totals at the bottom are what the game should show you. If they do not match, put the difference
-      into the unexplained remainder and the rest of the calculation stays honest.
-    </p>
-    <p>
-      <strong>Where to find it in game:</strong> each block names the screen its figures come from. To check
-      the totals, open the march window on a monster — the army bonuses it lists are these ones.
-    </p>
-  </>
-);
-
-/**
- * The header line, always visible: what this march is worth to the whole army, then how many sources
- * feed it, block by block, and the events running. Two lines at most, so it never pushes the section
- * open.
- */
-function headerSummary(profile: Profile, setup: BattleSetup): string {
-  const totals = aggregateBonuses(resolveSources(profile, setup));
-  const { sources } = profile;
-  const { active } = setup;
-  const parts = [
-    `Army health ${formatPercent(totals.health.army)}`,
-    `Army strength ${formatPercent(totals.strength.army)}`,
-  ];
-
-  const permanent = sources.permanent.filter((entry) => firstKey(entry) !== undefined).length;
-  const other =
-    (active.vip ? 1 : 0) +
-    (active.dragon ? 1 : 0) +
-    (active.hero && sources.hero !== undefined ? 1 : 0) +
-    (active.unknown ? 1 : 0) +
-    active.otherPills.length +
-    active.custom.length;
-
-  if (permanent > 0) parts.push(`${String(permanent)} permanent`);
-  if (active.captains.length > 0) parts.push(count(active.captains.length, 'captain', 'captains'));
-  if (active.equipment.length > 0) parts.push(count(active.equipment.length, 'piece', 'pieces'));
-  if (active.artifacts.length > 0) parts.push(count(active.artifacts.length, 'artifact', 'artifacts'));
-  if (active.titles.length > 0) parts.push(count(active.titles.length, 'title', 'titles'));
-  if (other > 0) parts.push(`${String(other)} other`);
-  for (const id of active.events) {
-    const record = eventTable.find((entry) => entry.id === id);
-    if (record) parts.push(record.name);
-  }
-
-  return parts.join(' · ');
-}
-
-/**
- * The Bonuses section (S-14 … S-18, and the temple/training half of S-17): every health and strength
- * source of the account, what is switched on for this march, the totals they add up to, and the recovery
- * settings that decide what losses cost.
- */
 export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
-  const summary = useMemo(() => (profile && setup ? headerSummary(profile, setup) : ''), [profile, setup]);
-  if (!profile || !setup) return null;
+  const titleId = useId();
+  const [expanded, setExpanded] = useState(readExpanded);
+  const [editor, setEditor] = useState<EditorTarget | null>(null);
+
+  const summary = useMemo(() => (profile && setup ? totalsSummary(profile, setup) : null), [profile, setup]);
+  const groups = useMemo(() => (profile && setup ? sourceGroups(profile, setup) : []), [profile, setup]);
+
+  if (profile === undefined || setup === undefined || summary === null) return null;
+  const profileId = profile.id;
+
+  /** Every "Add …" button creates the entry with the game's own defaults and opens its editor. */
+  const add = (kind: AddKind): void => {
+    if (kind === 'captain') {
+      const owned = new Set(profile.sources.captains.map((entry) => entry.captainId));
+      const pick = SORTED_CAPTAINS.find((record) => !owned.has(record.id));
+      if (pick === undefined) return;
+      const id = mintSourceId();
+      updateSources(profileId, (sources) => ({
+        ...sources,
+        captains: [...sources.captains, { id, captainId: pick.id, level: 0, star: 0 }],
+      }));
+      if (setup.active.captains.length < MAX_ACTIVE_CAPTAINS) toggleActiveSource('captains', id, true);
+      setEditor({ kind: 'captain', id });
+      return;
+    }
+
+    if (kind === 'equipment') {
+      const first = equipmentTable[0];
+      if (first === undefined) return;
+      const id = mintSourceId();
+      updateSources(profileId, (sources) => ({
+        ...sources,
+        equipment: [...sources.equipment, { id, equipmentId: first.id, quality: firstQuality(first) }],
+      }));
+      toggleActiveSource('equipment', id, true);
+      setEditor({ kind: 'equipment', id });
+      return;
+    }
+
+    if (kind === 'artifact') {
+      const owned = new Set(profile.sources.artifacts.map((entry) => entry.artifactId));
+      const pick = artifactTable.find((record) => !owned.has(record.id)) ?? artifactTable[0];
+      if (pick === undefined) return;
+      const id = mintSourceId();
+      const star = starKeys(pick)[0] ?? '0.0';
+      updateSources(profileId, (sources) => ({
+        ...sources,
+        artifacts: [...sources.artifacts, { id, artifactId: pick.id, level: 1, star }],
+      }));
+      if (setup.active.artifacts.length < MAX_ACTIVE_ARTIFACTS) toggleActiveSource('artifacts', id, true);
+      setEditor({ kind: 'artifact', id });
+      return;
+    }
+
+    if (kind === 'title') {
+      const held = new Set(profile.sources.titles);
+      const pick = titleTable.find((record) => !held.has(record.id));
+      if (pick === undefined) return;
+      setTitleOwned(profileId, pick.id, true);
+      toggleActiveSource('titles', pick.id, true);
+      setEditor({ kind: 'title', id: pick.id });
+      return;
+    }
+
+    if (kind === 'permanent') {
+      const id = mintSourceId();
+      updateSources(profileId, (sources) => ({
+        ...sources,
+        permanent: [...sources.permanent, { id, name: 'New permanent source', health: {}, strength: {} }],
+      }));
+      setEditor({ kind: 'permanent', id });
+      return;
+    }
+
+    const id = mintSourceId();
+    updateSources(profileId, (sources) => ({
+      ...sources,
+      custom: [...sources.custom, { id, name: 'New source', health: {}, strength: {} }],
+    }));
+    toggleActiveSource('custom', id, true);
+    setEditor({ kind: 'custom', id });
+  };
+
+  const close = (): void => {
+    setEditor(null);
+  };
+  const sheet = { profile, summary, onClose: close };
 
   return (
-    <Section
-      id="bonuses"
-      title="Bonuses"
-      icon={<BonusesIcon />}
-      description="Every health and strength source you own, and what this march adds up to."
-      summary={<p className="text-muted nums line-clamp-2">{summary}</p>}
-      help={HELP}
-    >
-      <div className="space-y-4">
-        <SetupBar profile={profile} setup={setup} />
-        <div className="divide-line divide-y">
-          <PermanentBlock profile={profile} />
-          <CaptainsBlock profile={profile} setup={setup} />
-          <EquipmentBlock profile={profile} setup={setup} />
-          <ArtifactsBlock profile={profile} setup={setup} />
-          <TitlesBlock profile={profile} setup={setup} />
-          <OtherBlock profile={profile} setup={setup} />
-          <EventsBlock setup={setup} />
-          <TotalsBlock profile={profile} setup={setup} />
-          <TempleBlock profile={profile} />
-        </div>
-      </div>
-    </Section>
+    <Card as="section" id="bonuses" aria-labelledby={titleId}>
+      <Stack gap={3}>
+        <Stack gap={2}>
+          <h2 id={titleId} className="font-display text-lg">
+            Bonuses
+          </h2>
+          <TotalsFigures summary={summary} />
+        </Stack>
+
+        <Disclosure
+          title="Sources"
+          summary="Switch on what counts for this march"
+          isExpanded={expanded}
+          onExpandedChange={(next) => {
+            setExpanded(next);
+            writeExpanded(next);
+          }}
+        >
+          <Stack gap={6}>
+            <SetupBar profile={profile} setup={setup} />
+            {groups.map((group) => (
+              <SourceList
+                key={group.id}
+                group={group}
+                onEdit={setEditor}
+                onAdd={(entry) => {
+                  if (entry.add !== undefined) add(entry.add.kind);
+                }}
+              />
+            ))}
+            <TotalsBreakdown profile={profile} setup={setup} />
+          </Stack>
+        </Disclosure>
+      </Stack>
+
+      {editor?.kind === 'captain' && <CaptainSheet {...sheet} entryId={editor.id} />}
+      {editor?.kind === 'equipment' && <EquipmentSheet {...sheet} entryId={editor.id} />}
+      {editor?.kind === 'artifact' && <ArtifactSheet {...sheet} entryId={editor.id} />}
+      {editor?.kind === 'title' && (
+        <TitleSheet
+          {...sheet}
+          titleId={editor.id}
+          onRetarget={(id) => {
+            setEditor({ kind: 'title', id });
+          }}
+        />
+      )}
+      {editor?.kind === 'permanent' && <PermanentSheet {...sheet} entryId={editor.id} />}
+      {editor?.kind === 'custom' && <CustomSheet {...sheet} entryId={editor.id} />}
+      {editor?.kind === 'vip' && <VipSheet {...sheet} />}
+      {editor?.kind === 'hero' && <HeroSheet {...sheet} />}
+      {editor?.kind === 'dragon' && <DragonSheet {...sheet} />}
+      {editor?.kind === 'remainder' && <RemainderSheet {...sheet} />}
+      {editor?.kind === 'recovery' && <RecoverySheet {...sheet} />}
+    </Card>
   );
 }

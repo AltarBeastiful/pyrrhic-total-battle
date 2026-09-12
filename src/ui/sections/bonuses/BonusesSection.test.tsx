@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * The Bonuses card, checked the way a player uses it (design plan §7.3, journey J3): the TOTAL is
+ * three labelled figures in the header, the sources are rows with a switch and a gear, and every
+ * editor is a sheet that repeats the TOTAL so the figures are visible while they move.
+ *
+ * Everything is selected by role and by accessible name, so a class, a layout or a glyph can change
+ * without a test noticing.
+ */
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -7,11 +15,12 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 
 import { BonusesSection } from './BonusesSection';
 
-// The section pulls in every data table and renders nine blocks; under full-suite load the first
+// The card pulls in every data table and renders eight groups; under full-suite load the first
 // render can exceed the default 5 s budget, which is the cost of the import, not a hang.
 vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
+  globalThis.localStorage.clear();
   useStore.getState().replaceDocument(newRoot());
 });
 
@@ -22,149 +31,256 @@ afterEach(() => {
 const profile = () => selectActiveProfile(useStore.getState());
 const setup = () => selectActiveSetup(useStore.getState());
 
-type CardName = 'Health totals' | 'Strength totals' | 'Special totals';
-
-/** The TOTAL row for one key, as text ("Guardsmen+20 %"); rows nothing feeds are not rendered at all. */
-function totalRow(card: CardName, key: string): string {
-  const region = screen.getByRole('region', { name: card });
-  const row = within(region).getByText(key).closest('summary');
-  return row?.textContent ?? '';
+/** The card itself; the sheets render in a portal, outside it. */
+function card(): HTMLElement {
+  const node = document.querySelector('#bonuses');
+  if (node === null) throw new Error('the Bonuses card is not on screen');
+  return node as HTMLElement;
 }
 
-function hasTotalRow(card: CardName, key: string): boolean {
-  const region = screen.getByRole('region', { name: card });
-  return within(region).queryByText(key) !== null;
+/** The four labelled figures of a TOTAL header, as a name → value map. */
+function totals(scope: HTMLElement): Record<string, string> {
+  const list = within(scope).getByLabelText('Army bonus totals');
+  const out: Record<string, string> = {};
+  for (const term of list.querySelectorAll('dt')) {
+    out[term.textContent ?? ''] = term.nextElementSibling?.textContent ?? '';
+  }
+  return out;
 }
 
-/** Opens the editor behind a chip's gear and returns its dialog. */
-function openDialog(name: string): HTMLElement {
-  fireEvent.click(screen.getByRole('button', { name }));
+/** The line that unfolds the sources. */
+function disclosure(): HTMLElement {
+  return within(card()).getByRole('button', { name: /^Sources/ });
+}
+
+function expand(): void {
+  const trigger = disclosure();
+  if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
+}
+
+/** Opens one row's editor and returns its sheet. */
+function openEditor(name: string): HTMLElement {
+  fireEvent.click(screen.getByRole('button', { name: `Edit ${name}` }));
   return screen.getByRole('dialog');
 }
 
-function done(dialog: HTMLElement): void {
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+/** A kit Select's trigger; its accessible name is the chosen value, then the field's own label. */
+function selectTrigger(scope: HTMLElement, label: string): HTMLElement {
+  return within(scope).getByRole('button', { name: new RegExp(`${label}$`) });
 }
 
-/** Adds Aydae at the given base level; she gives guardsmen health and strength, 1 % per level. */
-function addAydae(level: string): void {
-  fireEvent.change(screen.getByLabelText('Captain to add'), { target: { value: 'aydae' } });
-  const dialog = openDialog('Add captain');
-  fireEvent.change(within(dialog).getByLabelText('Base level'), { target: { value: level } });
-  done(dialog);
+function done(sheet: HTMLElement): void {
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Done' }));
 }
 
-/** The header line, which stays visible when the section is folded. */
-function headerSummary(): string {
-  return screen.getByText(/^Army health/).textContent ?? '';
+/** Types into a stepper the way the field expects it: a change, then leaving the field. */
+function typeNumber(scope: HTMLElement, label: string, value: string): void {
+  const field = within(scope).getByLabelText(label);
+  fireEvent.change(field, { target: { value } });
+  fireEvent.blur(field);
 }
 
-test('the header summary carries the army totals and what is switched on', () => {
+/**
+ * Adds a captain, picks the one named and sets its base level. Beowulf gives the *whole army* 1 %
+ * of health and of strength per level, which is the figure the header carries; Aydae gives the same
+ * to guardsmen only, which is what a row says and the header deliberately does not.
+ */
+function addCaptain(name: string, level: string): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Add captain' }));
+  const sheet = screen.getByRole('dialog');
+  fireEvent.click(selectTrigger(sheet, 'Captain'));
+  fireEvent.click(screen.getByRole('option', { name }));
+  typeNumber(sheet, 'Base level', level);
+  done(sheet);
+}
+
+test('the header carries the TOTAL as three labelled figures and the count of sources on', () => {
   render(<BonusesSection />);
-  expect(headerSummary()).toContain('Army health 0 %');
 
-  const permanent = openDialog('Edit Hall of Fame');
-  fireEvent.change(within(permanent).getByLabelText('Hall of Fame Army health'), {
-    target: { value: '40' },
+  expect(within(card()).getByRole('heading', { level: 2, name: 'Bonuses' })).toBeTruthy();
+  expect(totals(card())).toEqual({
+    Health: '0 %',
+    Strength: '0 %',
+    Special: '0 %',
+    'Sources on': '3',
   });
-  done(permanent);
-  addAydae('20');
-
-  const summary = headerSummary();
-  expect(summary).toContain('Army health +40 %');
-  expect(summary).toContain('1 permanent');
-  expect(summary).toContain('1 captain');
-  expect(summary).not.toContain('2 captains');
 });
 
-test('a captain at level 20 shows up in the guardsmen totals', () => {
+test('a source switched on with nothing typed in it is counted in the header', () => {
   render(<BonusesSection />);
-  addAydae('20');
+
+  // VIP, the dragon and the unexplained remainder start switched on and empty.
+  expect(within(card()).getByText('3 on but empty')).toBeTruthy();
+
+  expand();
+  fireEvent.click(within(card()).getByRole('switch', { name: 'Dragon' }));
+
+  expect(setup()?.active.dragon).toBe(false);
+  expect(within(card()).getByText('2 on but empty')).toBeTruthy();
+});
+
+test('the sources are folded away by default and the choice is remembered per device', () => {
+  const first = render(<BonusesSection />);
+  expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+
+  fireEvent.click(disclosure());
+  expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+  expect(globalThis.localStorage.getItem('pyrrhic.ui.v1')).toContain('"bonusesExpanded":true');
+
+  first.unmount();
+  render(<BonusesSection />);
+  expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+});
+
+test('a row switch takes its source in and out of the march', () => {
+  render(<BonusesSection />);
+  expand();
+  addCaptain('Beowulf', '20');
 
   expect(profile()?.sources.captains).toHaveLength(1);
   expect(setup()?.active.captains).toHaveLength(1);
-  expect(totalRow('Health totals', 'Guardsmen')).toContain('+20 %');
-  expect(totalRow('Strength totals', 'Guardsmen')).toContain('+20 %');
-});
+  expect(totals(card()).Health).toBe('+20 %');
 
-test('switching a chip off takes its source out of the totals', () => {
-  render(<BonusesSection />);
-  addAydae('20');
-
-  fireEvent.click(screen.getByRole('button', { name: /^Aydae/ }));
+  const beowulf = within(card()).getByRole('switch', { name: 'Beowulf' });
+  expect((beowulf as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(beowulf);
 
   expect(setup()?.active.captains).toEqual([]);
   expect(profile()?.sources.captains).toHaveLength(1);
-  expect(hasTotalRow('Health totals', 'Guardsmen')).toBe(false);
+  expect(totals(card()).Health).toBe('0 %');
 });
 
-test('the breakdown names the source that feeds a key', () => {
+test('a row says what its source is worth, key named', () => {
   render(<BonusesSection />);
-  addAydae('20');
+  expand();
+  addCaptain('Aydae', '20');
 
-  const region = screen.getByRole('region', { name: 'Health totals' });
-  expect(within(region).getByText(/^Aydae L20/)).toBeTruthy();
+  const row = within(card()).getByRole('switch', { name: 'Aydae' }).closest('li');
+  expect(row?.textContent).toContain('+20 % health and strength (guardsmen)');
 });
 
-test('a permanent editor is always on and feeds the totals', () => {
+test('a permanent source has no switch, wears a gear, and always counts', () => {
   render(<BonusesSection />);
-  const dialog = openDialog('Edit Hall of Fame');
-  fireEvent.change(within(dialog).getByLabelText('Hall of Fame Army health'), { target: { value: '40' } });
-  done(dialog);
+  expand();
 
-  expect(totalRow('Health totals', 'Army')).toContain('+40 %');
-  expect(screen.queryByRole('button', { name: /^Hall of Fame$/ })).toBeNull();
+  expect(within(card()).queryByRole('switch', { name: 'Hall of Fame' })).toBeNull();
+
+  const sheet = openEditor('Hall of Fame');
+  expect(within(sheet).getByRole('heading', { name: 'Hall of Fame' })).toBeTruthy();
+  typeNumber(sheet, 'Army health', '40');
+  done(sheet);
+
+  expect(totals(card()).Health).toBe('+40 %');
 });
 
-test('changing an equipment quality moves the totals', () => {
+test('the gear opens a sheet named after the source, and the TOTAL moves in both places', () => {
   render(<BonusesSection />);
-  const dialog = openDialog('Add a piece');
-  expect(within(dialog).getByLabelText('Equipment type')).toBeTruthy();
-  done(dialog);
-  expect(totalRow('Health totals', 'Melee')).toContain('+16 %');
+  expand();
+  addCaptain('Beowulf', '20');
 
-  const again = openDialog('Edit Emerald Guardian');
-  fireEvent.change(within(again).getByLabelText('Quality'), { target: { value: 'godlike' } });
-  done(again);
+  const sheet = openEditor('Beowulf');
+  expect(within(sheet).getByRole('heading', { name: 'Beowulf' })).toBeTruthy();
+  expect(totals(sheet).Health).toBe('+20 %');
+
+  typeNumber(sheet, 'Base level', '30');
+
+  expect(profile()?.sources.captains[0]?.level).toBe(30);
+  expect(totals(sheet).Health).toBe('+30 %');
+  expect(totals(card()).Health).toBe('+30 %');
+
+  done(sheet);
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+test('the sheet says where the figures are read in game', () => {
+  render(<BonusesSection />);
+  expand();
+  addCaptain('Aydae', '0');
+
+  const sheet = openEditor('Aydae');
+  expect(within(sheet).getByText(/the Captains screen/)).toBeTruthy();
+});
+
+test('adding a piece of equipment puts it in the list, switched on', () => {
+  render(<BonusesSection />);
+  expand();
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
+  const sheet = screen.getByRole('dialog');
+  expect(within(sheet).getByLabelText('Equipment type')).toBeTruthy();
+  done(sheet);
+
+  expect(profile()?.sources.equipment).toHaveLength(1);
+  expect(setup()?.active.equipment).toHaveLength(1);
+  expect(within(card()).getByRole('switch', { name: 'Emerald Guardian' })).toBeTruthy();
+  expect(totals(card()).Health).toBe('0 %');
+});
+
+test('changing an equipment quality moves the TOTAL', () => {
+  render(<BonusesSection />);
+  expand();
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
+  done(screen.getByRole('dialog'));
+
+  const sheet = openEditor('Emerald Guardian');
+  fireEvent.click(selectTrigger(sheet, 'Quality'));
+  fireEvent.click(screen.getByRole('option', { name: 'Godlike' }));
+  done(sheet);
 
   expect(profile()?.sources.equipment[0]?.quality).toBe('godlike');
-  expect(totalRow('Health totals', 'Melee')).toContain('+128 %');
+  const row = within(card()).getByRole('switch', { name: 'Emerald Guardian' }).closest('li');
+  expect(row?.textContent).toContain('+128 % health and strength (melee)');
 });
 
-test('an artifact without a level table uses the value typed by hand', () => {
+test('a group says the cap the game puts on it', () => {
   render(<BonusesSection />);
-  const dialog = openDialog('Add an artifact');
-  fireEvent.change(within(dialog).getByLabelText('Artifact'), { target: { value: 'forest-crown' } });
-  fireEvent.change(within(dialog).getByLabelText('Hand-typed Army health'), { target: { value: '30' } });
-  done(dialog);
+  expand();
+  addCaptain('Aydae', '10');
 
-  expect(profile()?.sources.artifacts[0]?.manual?.health).toEqual({ army: 30 });
-  expect(totalRow('Health totals', 'Army')).toContain('+30 %');
-  expect(screen.getByText(/no level table yet/)).toBeTruthy();
+  expect(within(card()).getByText('1 of 3 captains on')).toBeTruthy();
 });
 
-test('a title has to be owned before it can be worn on a march', () => {
+test('a title has to be added before it can be worn, and giving it up removes the row', () => {
   render(<BonusesSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Manage titles' }));
-  fireEvent.click(screen.getByRole('switch', { name: 'Battlemaster' }));
-  fireEvent.keyDown(document.body, { key: 'Escape' });
+  expand();
 
-  expect(profile()?.sources.titles).toEqual(['battlemaster']);
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add title' }));
+  const sheet = screen.getByRole('dialog');
+  const name = within(sheet).getByRole('heading', { level: 2 }).textContent ?? '';
+  done(sheet);
+
+  expect(profile()?.sources.titles).toEqual([expect.any(String)]);
+  expect(setup()?.active.titles).toHaveLength(1);
+
+  fireEvent.click(within(card()).getByRole('button', { name: `Edit ${name}` }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Give up this title' }));
+
+  expect(profile()?.sources.titles).toEqual([]);
   expect(setup()?.active.titles).toEqual([]);
+});
 
-  fireEvent.click(screen.getByRole('button', { name: /^Battlemaster/ }));
+test('deleting a source switches it off in every battle setup', () => {
+  render(<BonusesSection />);
+  expand();
+  addCaptain('Aydae', '20');
+  fireEvent.click(within(card()).getByRole('button', { name: 'Duplicate battle setup' }));
+  expect(profile()?.setups.every((entry) => entry.active.captains.length === 1)).toBe(true);
 
-  expect(setup()?.active.titles).toEqual(['battlemaster']);
-  expect(totalRow('Health totals', 'Army')).toContain('+150 %');
-  expect(totalRow('Special totals', 'Double damage chance')).toContain('+5 %');
+  const sheet = openEditor('Aydae');
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Remove captain' }));
+
+  expect(profile()?.sources.captains).toEqual([]);
+  expect(profile()?.setups.every((entry) => entry.active.captains.length === 0)).toBe(true);
 });
 
 test('every battle setup keeps its own selection of sources', () => {
   render(<BonusesSection />);
-  addAydae('20');
+  expand();
+  addCaptain('Beowulf', '20');
   const first = setup();
 
-  const dialog = openDialog('New battle setup');
+  fireEvent.click(within(card()).getByRole('button', { name: 'New battle setup' }));
+  const dialog = screen.getByRole('dialog');
   fireEvent.change(within(dialog).getByLabelText('Setup name'), { target: { value: 'Solo' } });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
 
@@ -172,43 +288,26 @@ test('every battle setup keeps its own selection of sources', () => {
   expect(setup()?.name).toBe('Solo');
   expect(setup()?.active.captains).toHaveLength(1);
 
-  fireEvent.click(screen.getByRole('button', { name: /^Aydae/ }));
+  fireEvent.click(within(card()).getByRole('switch', { name: 'Beowulf' }));
   expect(setup()?.active.captains).toEqual([]);
 
-  fireEvent.change(screen.getByLabelText('Battle setup'), { target: { value: first?.id ?? '' } });
+  fireEvent.click(selectTrigger(card(), 'Battle setup'));
+  fireEvent.click(screen.getByRole('option', { name: first?.name ?? '' }));
 
   expect(setup()?.id).toBe(first?.id);
-  expect(setup()?.active.captains).toHaveLength(1);
-  expect(totalRow('Health totals', 'Guardsmen')).toContain('+20 %');
+  expect(totals(card()).Health).toBe('+20 %');
 });
 
-test('deleting a source switches it off in every setup', () => {
+test('the temple and training row keeps the recovery settings behind its gear', () => {
   render(<BonusesSection />);
-  addAydae('20');
-  fireEvent.click(screen.getByRole('button', { name: 'Duplicate battle setup' }));
-  expect(profile()?.setups.every((entry) => entry.active.captains.length === 1)).toBe(true);
+  expand();
 
-  const dialog = openDialog('Edit Aydae');
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Remove captain' }));
-
-  expect(profile()?.sources.captains).toEqual([]);
-  expect(profile()?.setups.every((entry) => entry.active.captains.length === 0)).toBe(true);
-});
-
-test('the temple level shows the divisor it applies to revival costs', () => {
-  render(<BonusesSection />);
-  fireEvent.change(screen.getByLabelText('Temple level'), { target: { value: '30' } });
+  const sheet = openEditor('Temple and training');
+  typeNumber(sheet, 'Temple level', '30');
+  typeNumber(sheet, 'Guardsmen training cost reduction', '12.5');
+  done(sheet);
 
   expect(profile()?.recovery.templeLevel).toBe(30);
-  expect(screen.getByText('Revival costs divided by')).toBeTruthy();
-  expect(screen.getByText('3.84')).toBeTruthy();
-});
-
-test('training reduction and speed are stored per group', () => {
-  render(<BonusesSection />);
-  fireEvent.change(screen.getByLabelText('Guardsmen training cost reduction'), { target: { value: '12.5' } });
-  fireEvent.change(screen.getByLabelText('Monsters training speed'), { target: { value: '40' } });
-
   expect(profile()?.recovery.trainingCostReduction).toEqual({ guardsmen: 12.5 });
-  expect(profile()?.recovery.trainingSpeed).toEqual({ monster: 40 });
+  expect(within(card()).getByText(/revival costs divided by 3.84/)).toBeTruthy();
 });

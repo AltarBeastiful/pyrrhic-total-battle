@@ -275,13 +275,26 @@ export async function openBonuses(page: Page): Promise<void> {
  */
 export async function bonusTotal(page: Page, label: string): Promise<string> {
   const figures = bonusesCard(page).locator('[aria-label="Army bonus totals"]').first();
-  const value = figures.locator(`xpath=.//dt[normalize-space()=${JSON.stringify(label)}]/following-sibling::dd[1]`);
+  const value = figures.locator(
+    `xpath=.//dt[normalize-space()=${JSON.stringify(label)}]/following-sibling::dd[1]`,
+  );
   return (await value.innerText()).trim();
 }
 
 /** A source row's switch: its accessible name is the source itself. */
 export function sourceSwitch(page: Page, name: string): Locator {
   return bonusesCard(page).getByRole('switch', { name, exact: true });
+}
+
+/**
+ * Flip a source row's switch. The control itself is a visually hidden input behind the track it
+ * draws, so it is pressed from the keyboard — which is how a player on a keyboard does it, and
+ * which never collides with the sticky app bar the way a scrolled click can.
+ */
+export async function toggleSource(page: Page, name: string): Promise<void> {
+  const control = sourceSwitch(page, name);
+  await control.focus();
+  await page.keyboard.press('Space');
 }
 
 /** One source row, as a player reads it: the name, then what it is worth. */

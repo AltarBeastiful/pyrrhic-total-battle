@@ -217,3 +217,80 @@ export function humanizeOption(option: string): string {
     .trim();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
+
+/**
+ * What a source is worth, as a **row** says it: "+25 % health (guardsmen)". The key's name rides in
+ * the brackets because the row's own name is the source, not what it feeds; health and strength of
+ * the same key and the same size share one line, because that is how the game writes them.
+ *
+ * A source that feeds more than one key says the first line and counts the rest, so every row of a
+ * list is one line tall whatever is behind it. The whole thing is in the editor behind the gear.
+ */
+function valueLines(bonus: BonusLike): string[] {
+  const byKey = new Map<string, { label: string; health?: number; strength?: number }>();
+  const line = (key: string, label: string) => {
+    const found = byKey.get(key) ?? { label };
+    byKey.set(key, found);
+    return found;
+  };
+
+  for (const [key, value] of Object.entries(bonus.health ?? {})) {
+    if (value) line(key, BONUS_LABELS[key as BonusKey]).health = value;
+  }
+  for (const [key, value] of Object.entries(bonus.strength ?? {})) {
+    if (value) line(key, BONUS_LABELS[key as BonusKey]).strength = value;
+  }
+
+  const lines: string[] = [];
+  for (const entry of byKey.values()) {
+    const where = entry.label.toLowerCase();
+    if (entry.health !== undefined && entry.health === entry.strength) {
+      lines.push(`${formatPercent(entry.health)} health and strength (${where})`);
+      continue;
+    }
+    if (entry.health !== undefined) lines.push(`${formatPercent(entry.health)} health (${where})`);
+    if (entry.strength !== undefined) lines.push(`${formatPercent(entry.strength)} strength (${where})`);
+  }
+  for (const [key, value] of Object.entries(bonus.special ?? {})) {
+    if (value) lines.push(`${formatPercent(value)} ${SPECIAL_LABELS[key as SpecialKey].toLowerCase()}`);
+  }
+  for (const entry of bonus.matchup ?? []) {
+    const against = `${BONUS_LABELS[entry.attacker].toLowerCase()} against ${AGAINST_LABELS[entry.target]}`;
+    lines.push(`${formatPercent(entry.value)} strength (${against})`);
+  }
+  return lines;
+}
+
+/** The one line a source row carries; empty when nothing is typed yet. */
+export function rowValue(bonus: BonusLike): string {
+  const lines = valueLines(bonus);
+  const first = lines[0];
+  if (first === undefined) return '';
+  return lines.length === 1 ? first : `${first} and ${String(lines.length - 1)} more`;
+}
+
+/** Is this source switched on for nothing? The header counts these and warns about them. */
+export function isEmptyBonus(bonus: BonusLike): boolean {
+  return valueLines(bonus).length === 0;
+}
+
+/** Two contributions on one source (an equipment quality row plus its gem), added key by key. */
+export function mergeBonus(base: BonusLike, extra: BonusLike): BonusLike {
+  const add = <K extends string>(
+    a: Partial<Record<K, number>> | undefined,
+    b: Partial<Record<K, number>> | undefined,
+  ): Partial<Record<K, number>> => {
+    const out: Partial<Record<K, number>> = { ...a };
+    for (const [key, value] of Object.entries(b ?? {})) {
+      if (typeof value !== 'number') continue;
+      out[key as K] = round2((out[key as K] ?? 0) + value);
+    }
+    return out;
+  };
+  return {
+    health: add(base.health, extra.health),
+    strength: add(base.strength, extra.strength),
+    special: add(base.special, extra.special),
+    matchup: [...(base.matchup ?? []), ...(extra.matchup ?? [])],
+  };
+}
