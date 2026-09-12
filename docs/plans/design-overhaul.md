@@ -383,8 +383,10 @@ One card, Material 3 anatomy throughout (owner's note 2026-09-12: the old Stacki
 of cards and a select; the whole option must be the target).
 
 - **Enemy formation**: M3 segmented button (Standard / Double / Custom); Custom reveals four steppers.
-- **Housing**: leadership · authority · dominance as outlined number fields with the pool glyph, steppers,
-  arrow keys, `Shift`/`Ctrl` multipliers (R2).
+- **Housing**: leadership, authority and dominance as **plain outlined number inputs** with the pool glyph —
+  no step buttons (owner, 2026-09-13: nobody steps to 11 000), the whole value selected on click or focus so
+  typing replaces it; arrow keys and `Shift`/`Ctrl` still step for fine adjustment; locale parsing of
+  "84 300" and "84,300".
 - **Stacking method**: an M3 **single-select list** — three full-width list items (Tier ladder / Troops first /
   Your own order), each tappable anywhere on the row (`role="radio"` in a `radiogroup`), with a leading radio
   mark, the title, and a one-line supporting text in the glossary's words. No select, no nested cards. The
