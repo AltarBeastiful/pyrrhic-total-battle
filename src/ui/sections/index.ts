@@ -4,15 +4,13 @@
  */
 import type { ComponentType } from 'react';
 
-import {
-  BonusesSection,
-  EnemySection,
-  HousingSection,
-  MercenariesSection,
-  MethodSection,
-  ResultsSection,
-  TroopsSection,
-} from './Placeholder';
+import { BonusesSection } from './bonuses/BonusesSection';
+import { EnemySection } from './enemy/EnemySection';
+import { HousingSection } from './housing/HousingSection';
+import { MercenariesSection } from './mercenaries/MercenariesSection';
+import { MethodSection } from './method/MethodSection';
+import { ResultsSection } from './results/ResultsSection';
+import { TroopsSection } from './troops/TroopsSection';
 
 export const SECTION_IDS = [
   'troops',
