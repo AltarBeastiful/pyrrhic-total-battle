@@ -131,9 +131,11 @@ A kill order is an ordered list of *stacks* (unit types), first to die first. So
   specialists before guardsmen, and by category ranged → melee → mounted → flying (verified on the fixture:
   ARC1 > SP1 > RD1 > ARC2 > SP2 > RD3 by total HP); monsters and mercenaries ordered the same way inside their own
   pools (tier ascending) but pools are independent (no cross-pool constraint).
-- **M's Preservation**: EP order, then the constraint chain *every leadership stack HP > every mercenary
-  stack HP > every monster stack HP* (mercs die after troops, monsters after mercs). Option "Monsters Last"
-  variant (monsters after troops, mercs unconstrained) kept as a flag.
+- **M's Preservation**: EP order, then every mercenary stack and every monster stack is sized below the lowest
+  leadership stack (capacity left unused, or a unit type dropped when a single unit already exceeds the ceiling).
+  The finer chain "mercs above monsters" is what the help text claims but the captured run does not enforce it
+  (see battle-model-observations §5); we implement it as an optional strictness toggle, default off, so that the
+  fixture reproduces. "Monsters Last" (monsters after troops, mercs unconstrained) kept as a flag.
 - **Custom**: user-ordered list (drag & drop), mixing all pools.
 The pool a stack belongs to (leadership / authority / dominance) and its unit cost are fixed by data.
 
@@ -258,8 +260,10 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 
 ### M3 — Battle Summary
 - S-30 **Investigation**: turn structure, attack order and targeting of the in-game epic-monster battle.
-      Collect 3+ real battle reports (with known stacks and bonuses) and fit the model; document it in
-      `docs/battle-model.md`. Includes the unexplained "Damage 215,530" pill value for Rider 3.
+      TotalStack's own model is now fully derived (`docs/research/battle-model-observations.md`): round structure,
+      hit counts, per-hit formulas, summary totals. Remaining: (a) confirm against 3+ real in-game reports,
+      (b) explain the "2 × strength-against" in the summary vs "1 ×" in the journal, (c) the ≈42,500 troop-only
+      extra in the maximum, (d) the gold/time composition of recovery costs.
 - S-31 **Investigation**: what TotalStack's "Total Optimization" actually trades (housing/HP trades that break
       preservation when damage improves) and whether it is worth reproducing; write findings + proposal.
 - S-32 Damage model (min/avg/max, double damage, strike-two-squads, strength-against with enemy formation).
@@ -309,6 +313,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Pro-trial capture session: seven runs and three journals saved as fixtures; TotalStack's battle
+  model reverse-engineered and written up (`docs/research/battle-model-observations.md`); MP rule corrected in
+  §3.3; S-30 narrowed to in-game validation and three open discrepancies.
 - 2026-09-12 — Google Drive adapter requirements checked (investigation 0002): scope is non-sensitive, but
   brand verification needs a domain we own (GitHub Pages not accepted), a privacy policy page, and one-hour tokens
   without refresh, so only explicit Pull/Push fits. S-46 gated accordingly; Gist and generic endpoint go first.
@@ -317,6 +324,7 @@ order, manual counts) so adding them later is UI work, not a redesign.
   share-link size budget added (Discord 2,000-char limit). Technical choices recorded as ADRs in `docs/decisions/`
   (0001 TotalStack fetching — pending; 0002 client-only architecture; 0003 application stack; 0004 local
   persistence and schema; 0005 share-link encoding; 0006 engine design; 0007 game-data format and contributions).
-  Known thin spots: only one stacking fixture (guardsmen G1–G3, no engineers/monsters, M's Preservation not
-  exercised) — S-22 needs at least one fixture with monsters + MP before the engine is called done; the battle
-  turn model is unvalidated (S-30).
+  Fixtures now cover EP with monsters, MP with monsters and a capped mercenary, Total Optimization, both priority
+  searches and Round-to-10s (`docs/research/fixtures/`, captured on a Pro trial with all bonuses at 0); the
+  bonus-bearing fixture from the author's account remains the only one with non-zero bonuses. Engineers and
+  events are still uncovered. The battle turn model is derived from TotalStack's journals but unvalidated in game.
