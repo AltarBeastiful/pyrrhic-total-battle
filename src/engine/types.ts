@@ -184,7 +184,14 @@ export interface BattleSummary {
 }
 
 // ---- Priority search -----------------------------------------------------------------------------
-export type Objective = 'avgDamage' | 'damagePerSilver' | 'damagePerGold' | 'damagePerDragonCoin';
+/**
+ * `avgDamage` maximises the expected damage, `minDamage` the *worst* case (the enemy striking first). They
+ * disagree sharply once bonuses are large: the average rewards a few enormous stacks that only pay off when
+ * we strike first, while the minimum keeps the army wide. `SearchResult.baseline` carries the all-types
+ * army so the UI can put the trade-off (hits, min, avg, recovery cost) in front of the user.
+ */
+export type Objective =
+  'avgDamage' | 'minDamage' | 'damagePerSilver' | 'damagePerGold' | 'damagePerDragonCoin';
 
 export interface SearchRequest {
   request: StackRequest;
@@ -207,6 +214,13 @@ export interface SearchResult {
   score: number;
   evaluated: number;
   exhaustive: boolean;
+  /**
+   * The army the user would get without the search — every requested unit type, sized from the same request.
+   * Always present (it is the search's first evaluation) so the UI can show what the winner traded away:
+   * friendly hits are `summary.journals.enemyFirst.friendlyHits` / `.armyFirst.friendlyHits`, the rest is
+   * `minDamage` / `avgDamage` / `recovery`.
+   */
+  baseline: { includedUnitIds: string[]; result: StackResult; summary: BattleSummary };
 }
 
 export type { BonusKey, Category, Group, Pool, SpecialKey, StrengthAgainstKey, UnitDef };

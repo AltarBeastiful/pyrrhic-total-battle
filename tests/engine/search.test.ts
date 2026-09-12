@@ -11,7 +11,7 @@ import { simulateBattle } from '../../src/engine/battle';
 import { objectiveScore, searchPriority } from '../../src/engine/search';
 import { sizeStacks } from '../../src/engine/stacker';
 import type { Objective, SearchProgress, UnitDef } from '../../src/engine/types';
-import { makeRequest } from '../helpers/request';
+import { makeRequest, totalsFrom } from '../helpers/request';
 import { monsterSet, troopSet } from '../helpers/units';
 
 const TROOPS = troopSet('SW1', 'ARC1', 'SP1', 'SP2', 'ARC2', 'RD1', 'SP3', 'ARC3', 'RD2', 'RD3');
@@ -201,5 +201,101 @@ describe('pinned unit types', () => {
   it('ignores pinned ids that are not in the formation', () => {
     const found = search(ALL, 'avgDamage', 10_000, ['not-a-unit']);
     expect(found.includedUnitIds).toEqual(search(ALL, 'avgDamage').includedUnitIds);
+  });
+});
+
+/**
+ * The bonus army that makes the two damage objectives disagree: Guardsmen I–III and Specialists I–III with
+ * +39.5 % health / +76 % strength on guardsmen and 4,100 leadership. Maximising the *average* buys three
+ * enormous tier-3 stacks that only pay off when we strike first; maximising the *minimum* keeps the army
+ * wide, because the worst case is the enemy striking first.
+ */
+const BONUS_ARMY = troopSet(
+  'ARC1',
+  'SP1',
+  'RD1',
+  'ARC2',
+  'SP2',
+  'RD2',
+  'ARC3',
+  'SP3',
+  'RD3',
+  'SW1',
+  'SW2',
+  'SW3',
+);
+
+function bonusRequest() {
+  return makeRequest({
+    units: BONUS_ARMY,
+    housing: { leadership: 4100, authority: 0, dominance: 0 },
+    totals: totalsFrom({ health: { guardsmen: 39.5 }, strength: { guardsmen: 76 } }),
+  });
+}
+
+describe('minimum damage', () => {
+  const worstCase = searchPriority({
+    request: bonusRequest(),
+    objective: 'minDamage',
+    budgetMs: 30_000,
+    seed: 1,
+  });
+  const average = searchPriority({
+    request: bonusRequest(),
+    objective: 'avgDamage',
+    budgetMs: 30_000,
+    seed: 1,
+  });
+
+  it('reads the worst case off the summary', () => {
+    const request = bonusRequest();
+    const summary = simulateBattle(sizeStacks(request), request);
+    expect(objectiveScore(summary, 'minDamage')).toBe(summary.minDamage);
+  });
+
+  it('keeps a wider army than the average does, and never a worse worst case than doing nothing', () => {
+    expect(average.includedUnitIds).toEqual(['archer-3', 'spearman-3', 'rider-3']);
+    expect(worstCase.includedUnitIds.length).toBeGreaterThan(average.includedUnitIds.length);
+    expect(worstCase.summary.minDamage).toBeGreaterThan(average.summary.minDamage);
+    expect(worstCase.summary.minDamage).toBeGreaterThanOrEqual(worstCase.baseline.summary.minDamage);
+    // The trade the UI has to show: three stacks survive two enemy hits, the wide army survives ten.
+    expect(average.summary.journals.enemyFirst.friendlyHits).toBe(2);
+    expect(worstCase.summary.journals.enemyFirst.friendlyHits).toBeGreaterThan(
+      average.summary.journals.enemyFirst.friendlyHits,
+    );
+    // Maximising the average really does cost the worst case, which is why the objective exists.
+    expect(average.summary.minDamage).toBeLessThan(average.baseline.summary.minDamage);
+    expect(average.summary.avgDamage).toBeGreaterThan(worstCase.summary.avgDamage);
+  });
+});
+
+describe('baseline', () => {
+  it('is the all-types army sized from the same request', () => {
+    const request = bonusRequest();
+    const direct = sizeStacks(request);
+    const summary = simulateBattle(direct, request);
+    const found = searchPriority({ request, objective: 'avgDamage', budgetMs: 30_000, seed: 1 });
+
+    expect(found.baseline.includedUnitIds).toEqual(BONUS_ARMY.map((unit) => unit.id));
+    expect(found.baseline.result).toEqual(direct);
+    expect(found.baseline.summary).toEqual(summary);
+    // It is the first evaluation, not an extra one.
+    expect(found.evaluated).toBe(4095);
+  });
+
+  it('is present even when the search never gets to run', () => {
+    const found = searchPriority(
+      { request: makeRequest({ units: ALL }), objective: 'avgDamage', budgetMs: 10_000, seed: 1 },
+      undefined,
+      () => true,
+    );
+    expect(found.baseline.includedUnitIds).toEqual(ALL.map((unit) => unit.id));
+    expect(found.baseline.summary).toEqual(found.summary);
+  });
+
+  it('is the whole formation even when types are pinned', () => {
+    const found = search(ALL, 'avgDamage', 10_000, ['swordsman-1']);
+    expect(found.baseline.includedUnitIds).toEqual(ALL.map((unit) => unit.id));
+    expect(found.score).toBeGreaterThan(objectiveScore(found.baseline.summary, 'avgDamage'));
   });
 });

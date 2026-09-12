@@ -194,6 +194,7 @@ export const RECOVERY_MODES = ['retrain', 'revive', 'selective'] as const satisf
 export const METHODS = ['elite', 'ms', 'custom'] as const satisfies readonly Method[];
 export const OBJECTIVES = [
   'avgDamage',
+  'minDamage',
   'damagePerSilver',
   'damagePerGold',
   'damagePerDragonCoin',

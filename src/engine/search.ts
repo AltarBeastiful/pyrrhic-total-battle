@@ -57,6 +57,8 @@ export function objectiveScore(summary: BattleSummary, objective: Objective): nu
   switch (objective) {
     case 'avgDamage':
       return summary.avgDamage;
+    case 'minDamage':
+      return summary.minDamage;
     case 'damagePerSilver':
       return summary.recovery.silver > 0 ? summary.damagePerSilver : -Infinity;
     case 'damagePerGold':
@@ -121,8 +123,10 @@ export function searchPriority(
     if (!best || candidate.score > best.score) best = candidate;
   };
 
-  // Always score the full formation first, so a zero budget still returns something usable.
-  consider(evaluate(ids));
+  // Always score the full formation first, so a zero budget still returns something usable — and keep it as
+  // the baseline the winner is compared against.
+  const baseline = evaluate(ids);
+  consider(baseline);
 
   let exhaustive = false;
   if (free.length === 0) {
@@ -222,5 +226,10 @@ export function searchPriority(
     score: winner.score,
     evaluated,
     exhaustive,
+    baseline: {
+      includedUnitIds: baseline.subset,
+      result: baseline.result,
+      summary: baseline.summary,
+    },
   };
 }
