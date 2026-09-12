@@ -9,6 +9,20 @@
       content="Pyrrhic - a free, fully client-side epic-monster stacking calculator for Total Battle."
     />
     <title>Pyrrhic</title>
+    <script>
+      // Paint the right theme immediately: the stored preference is read before React starts, so a
+      // dark-mode user never sees a white flash. Failing here is harmless (the app re-applies it).
+      try {
+        var stored = localStorage.getItem('pyrrhic.v1');
+        var theme = stored ? (JSON.parse(stored).ui || {}).theme : 'system';
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = theme;
+      } catch (error) {
+        /* no stored preference, no problem */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

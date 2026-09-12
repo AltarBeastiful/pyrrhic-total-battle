@@ -2,19 +2,96 @@
 
 /* Dark mode is driven by the app, not by the OS alone: Tailwind's `dark:` variant
    applies when `.dark` or `data-theme="dark"` is set on an ancestor (we put it on
-   <html>). The theme toggle in the profile bar flips that attribute. */
+   <html>). The theme toggle in the header flips that attribute. */
 @custom-variant dark (&:where(.dark, .dark *, [data-theme='dark'], [data-theme='dark'] *));
 
-@layer base {
-  html {
-    color-scheme: light;
-  }
+/* Semantic tokens. Components only ever use these (`bg-surface`, `text-muted`,
+   `border-line`…), so a palette change happens here and nowhere else. */
+@theme inline {
+  --color-bg: var(--pyr-bg);
+  --color-surface: var(--pyr-surface);
+  --color-raised: var(--pyr-raised);
+  --color-fg: var(--pyr-fg);
+  --color-muted: var(--pyr-muted);
+  --color-line: var(--pyr-line);
+  --color-accent: var(--pyr-accent);
+  --color-accent-fg: var(--pyr-accent-fg);
+  --color-accent-soft: var(--pyr-accent-soft);
+  --color-danger: var(--pyr-danger);
+  --color-danger-fg: var(--pyr-danger-fg);
+  --color-warn: var(--pyr-warn);
+  --color-ok: var(--pyr-ok);
+}
 
-  html:where(.dark, [data-theme='dark']) {
+/* Light is the base palette; dark is applied by the attribute the theme toggle sets and,
+   when no attribute is present (first paint, JS disabled), by the OS preference. */
+:root {
+  --pyr-bg: oklch(0.985 0.003 250);
+  --pyr-surface: oklch(1 0 0);
+  --pyr-raised: oklch(0.965 0.005 250);
+  --pyr-fg: oklch(0.23 0.02 265);
+  --pyr-muted: oklch(0.52 0.02 265);
+  --pyr-line: oklch(0.9 0.008 265);
+  --pyr-accent: oklch(0.53 0.16 265);
+  --pyr-accent-fg: oklch(0.99 0 0);
+  --pyr-accent-soft: oklch(0.94 0.03 265);
+  --pyr-danger: oklch(0.55 0.18 25);
+  --pyr-danger-fg: oklch(0.99 0 0);
+  --pyr-warn: oklch(0.62 0.14 75);
+  --pyr-ok: oklch(0.58 0.13 150);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --pyr-bg: oklch(0.19 0.015 265);
+    --pyr-surface: oklch(0.24 0.018 265);
+    --pyr-raised: oklch(0.28 0.02 265);
+    --pyr-fg: oklch(0.95 0.005 265);
+    --pyr-muted: oklch(0.72 0.015 265);
+    --pyr-line: oklch(0.35 0.02 265);
+    --pyr-accent: oklch(0.72 0.13 265);
+    --pyr-accent-fg: oklch(0.18 0.02 265);
+    --pyr-accent-soft: oklch(0.33 0.05 265);
+    --pyr-danger: oklch(0.68 0.16 25);
+    --pyr-danger-fg: oklch(0.18 0.02 265);
+    --pyr-warn: oklch(0.78 0.13 75);
+    --pyr-ok: oklch(0.74 0.12 150);
     color-scheme: dark;
   }
+}
 
+:root[data-theme='dark'] {
+  --pyr-bg: oklch(0.19 0.015 265);
+  --pyr-surface: oklch(0.24 0.018 265);
+  --pyr-raised: oklch(0.28 0.02 265);
+  --pyr-fg: oklch(0.95 0.005 265);
+  --pyr-muted: oklch(0.72 0.015 265);
+  --pyr-line: oklch(0.35 0.02 265);
+  --pyr-accent: oklch(0.72 0.13 265);
+  --pyr-accent-fg: oklch(0.18 0.02 265);
+  --pyr-accent-soft: oklch(0.33 0.05 265);
+  --pyr-danger: oklch(0.68 0.16 25);
+  --pyr-danger-fg: oklch(0.18 0.02 265);
+  --pyr-warn: oklch(0.78 0.13 75);
+  --pyr-ok: oklch(0.74 0.12 150);
+  color-scheme: dark;
+}
+
+@layer base {
   body {
-    @apply bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    @apply bg-bg text-fg antialiased;
+  }
+
+  /* One ring recipe for every interactive element, so focus is always visible. */
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    @apply ring-accent ring-offset-bg ring-2 ring-offset-2 outline-none;
+  }
+}
+
+@layer utilities {
+  /* Comfortable touch target on phones; desktop keeps the compact size. */
+  .tap {
+    @apply min-h-11 sm:min-h-9;
   }
 }
