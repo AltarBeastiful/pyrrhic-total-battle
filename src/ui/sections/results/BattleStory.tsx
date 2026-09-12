@@ -40,7 +40,7 @@ export function BattleStory({ request, summary }: BattleStoryProps) {
   return (
     <Stack gap={2}>
       <Cluster gap={2} justify="between">
-        <h4 className="font-display text-lg">Battle story</h4>
+        <h4 className="text-lg">Battle story</h4>
         <Segmented
           size="sm"
           label="Who strikes first"

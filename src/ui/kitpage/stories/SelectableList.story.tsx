@@ -4,14 +4,14 @@ import { NumberStepper, SelectableItem, SelectableList, Switch } from '../../kit
 import type { KitStory } from '../story';
 
 const OWNED = [
-  { id: 'abomination-6', name: 'Abomination VI', facts: 'Tier 6 · Monster · Beast' },
-  { id: 'arbalester-6', name: 'Arbalester VI', facts: 'Tier 6 · Guardsmen · Ranged' },
+  { id: 'abomination-6', name: 'Abomination VI', facts: 'Tier 6, monster, beast' },
+  { id: 'arbalester-6', name: 'Arbalester VI', facts: 'Tier 6, guardsmen, ranged' },
 ];
 
 const PICKER = [
-  { id: 'bear-5', name: 'Bear V', facts: 'Tier 5 · Monster · Beast' },
-  { id: 'bone-golem-6', name: 'Bone Golem VI', facts: 'Tier 6 · Monster' },
-  { id: 'archdemon-6', name: 'Archdemon VI', facts: 'Tier 6 · Monster · Giant' },
+  { id: 'bear-5', name: 'Bear V', facts: 'Tier 5, monster, beast' },
+  { id: 'bone-golem-6', name: 'Bone Golem VI', facts: 'Tier 6, monster' },
+  { id: 'archdemon-6', name: 'Archdemon VI', facts: 'Tier 6, monster, giant' },
 ];
 
 function Row({ name, facts }: { name: string; facts: string }) {
@@ -102,7 +102,7 @@ const story: KitStory = {
       </SelectableList>
       <SelectableList label="Unavailable" selectedKeys={['bear-5']} onSelectionChange={() => {}} isDisabled>
         <SelectableItem id="bear-5" label="Bear V, tier 5">
-          <Row name="Bear V" facts="Tier 5 · Monster · Beast" />
+          <Row name="Bear V" facts="Tier 5, monster, beast" />
         </SelectableItem>
       </SelectableList>
     </div>

@@ -1,6 +1,8 @@
 /**
- * "Your own order", edited in a sheet (design plan §7.4): the Battle card shows the rule, and the
- * list of stacks — which is long, draggable and nothing like a row of options — opens beside it.
+ * The body of "Your own order" (design plan §7.4): the Battle card shows the rule, and the list of
+ * stacks — which is long, draggable and nothing like a row of options — opens beside it. The whole
+ * file sits behind `React.lazy`, which is what keeps the engine and the kit's drag and drop out of
+ * the first load; `OrderSheet.tsx` is the button that asks for it.
  *
  * The order is stored as a plain list of unit ids; what the sheet shows is always the stored list
  * re-merged with the units currently in the march (ids that no longer exist are dropped, new ones
@@ -20,7 +22,12 @@ import { Stack } from '@/ui/layout';
 import { ResetIcon } from '../../icons';
 import { KillOrderList } from './KillOrderList';
 
-export function OrderSheet() {
+export interface OrderSheetPanelProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+}
+
+export function OrderSheetPanel({ isOpen, onOpenChange }: OrderSheetPanelProps) {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const updateActiveSetup = useStore((state) => state.updateActiveSetup);
@@ -51,9 +58,10 @@ export function OrderSheet() {
   return (
     <Sheet
       size="lg"
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
       title="Order of the fall"
-      description="First to fall at the top. Drag a row, use its arrows, or pick the handle up with Space and move it with the arrow keys."
-      trigger={<Button size="sm">Edit order</Button>}
+      description="First to fall at the top. Drag a row, use its arrows, or pick a row up from its handle with Enter and move it with the arrow keys."
       footer={
         <Button
           variant="quiet"

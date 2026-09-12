@@ -1,6 +1,6 @@
 import type { ImportMode, ParsedImport } from '@/share/exportImport';
 
-import { Button, Dialog, HelpNote } from '../primitives';
+import { Banner, Button, Dialog } from '../kit';
 
 export interface ImportDialogProps {
   /** The validated file, or null while only an error has to be shown. */
@@ -26,7 +26,7 @@ export function ImportDialog({ parsed, error, onApply, onClose }: ImportDialogPr
   const open = parsed !== null || error !== null;
   return (
     <Dialog
-      open={open}
+      isOpen={open}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
@@ -35,12 +35,12 @@ export function ImportDialog({ parsed, error, onApply, onClose }: ImportDialogPr
       size="sm"
       footer={
         parsed === null ? (
-          <Button onClick={onClose}>Close</Button>
+          <Button onPress={onClose}>Close</Button>
         ) : (
           <>
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onPress={onClose}>Cancel</Button>
             <Button
-              onClick={() => {
+              onPress={() => {
                 onApply('replace');
               }}
             >
@@ -48,7 +48,7 @@ export function ImportDialog({ parsed, error, onApply, onClose }: ImportDialogPr
             </Button>
             <Button
               variant="primary"
-              onClick={() => {
+              onPress={() => {
                 onApply('add');
               }}
             >
@@ -58,7 +58,7 @@ export function ImportDialog({ parsed, error, onApply, onClose }: ImportDialogPr
         )
       }
     >
-      {error !== null && <HelpNote tone="danger">{error}</HelpNote>}
+      {error !== null && <Banner tone="danger">{error}</Banner>}
       {parsed !== null && (
         <div className="divide-line divide-y">
           <Row label="Kind" value={parsed.kind === 'profile' ? 'Profile' : 'Saved stack'} />

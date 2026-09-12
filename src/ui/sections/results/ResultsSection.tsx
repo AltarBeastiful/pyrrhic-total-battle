@@ -11,7 +11,7 @@
  * editing a count by hand. Every one of them re-sizes the march, because numbers on screen must
  * always answer the question that is in the form.
  */
-import { useEffect, useId, useMemo, useState } from 'react';
+import { lazy, useEffect, useId, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { version as gameData } from '@/data';
@@ -23,24 +23,34 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { PoolField } from '@/ui/domain';
 import { Banner, Button, Card, Disclosure } from '@/ui/kit';
 import { Cluster, Grid, Stack } from '@/ui/layout';
+import { LazySurface } from '@/ui/lazy';
 import { copyText } from '@/ui/profile/download';
 import { initResultPersistence, resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 
 import { ShareIcon } from '../../icons';
-import { BattleStory } from './BattleStory';
 import { amount, relativeTime } from './format';
 import { restoreLastResult } from './generate';
-import { HpProfile } from './HpProfile';
 import { applyCounts, hasEdits } from './manual';
 import { MarchCounts } from './MarchCounts';
 import { MarchTiles } from './MarchTiles';
 import { Recap } from './Recap';
 import { marchRows, tileRows } from './rows';
-import { SavedStacksPanel, StackNameDialog } from './SavedStacks';
 import { TradeoffPanel } from './TradeoffPanel';
 import { UnitSheet } from './UnitSheet';
 import { useRunStore } from './runStore';
 import { unitName } from './units';
+
+// Three surfaces nobody sees until they ask for them, and each one is heavy in its own way: the
+// journal, the HP chart and the saved-march comparison (ui-foundation plan §6). `StackNameDialog`
+// lives in the saved-marches chunk, so saving a march and opening the list share one fetch.
+const BattleStory = lazy(() => import('./BattleStory').then((module) => ({ default: module.BattleStory })));
+const HpProfile = lazy(() => import('./HpProfile').then((module) => ({ default: module.HpProfile })));
+const SavedStacksPanel = lazy(() =>
+  import('./SavedStacks').then((module) => ({ default: module.SavedStacksPanel })),
+);
+const StackNameDialog = lazy(() =>
+  import('./SavedStacks').then((module) => ({ default: module.StackNameDialog })),
+);
 
 const POOLS: Pool[] = ['leadership', 'authority', 'dominance'];
 
@@ -73,6 +83,10 @@ export function ResultsSection() {
   const [saving, setSaving] = useState(false);
   const [sheetUnit, setSheetUnit] = useState<UnitDef | null>(null);
   const [notice, setNotice] = useState('');
+  // The two folded surfaces are controlled, because what is inside them is only fetched once the
+  // player opens them.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [savedOpen, setSavedOpen] = useState(false);
   const titleId = useId();
 
   // Bring back the cached result of this march, then keep the cache in step with the store.
@@ -230,10 +244,17 @@ export function ResultsSection() {
 
         {tradeoff !== null && tradeoff.excludedUnitIds.length > 0 && <TradeoffPanel tradeoff={tradeoff} />}
 
-        <Disclosure title="Details" summary="The battle story and the HP profile">
+        <Disclosure
+          title="Details"
+          summary="The battle story and the HP profile"
+          isExpanded={detailsOpen}
+          onExpandedChange={setDetailsOpen}
+        >
           <Stack gap={4}>
-            <BattleStory request={last.request} summary={summary} />
-            <HpProfile stacks={result.stacks} units={last.request.units} kept={kept} />
+            <LazySurface isOpen={detailsOpen} reserve="panel">
+              <BattleStory request={last.request} summary={summary} />
+              <HpProfile stacks={result.stacks} units={last.request.units} kept={kept} />
+            </LazySurface>
           </Stack>
         </Disclosure>
 
@@ -267,9 +288,9 @@ export function ResultsSection() {
           }}
         />
 
-        {saving && (
+        <LazySurface isOpen={saving}>
           <StackNameDialog
-            open
+            open={saving}
             title="Save this march"
             description="It is kept inside the active profile, with the march it came from."
             confirmLabel="Save this march"
@@ -279,7 +300,7 @@ export function ResultsSection() {
               setSaving(false);
             }}
           />
-        )}
+        </LazySurface>
       </Stack>
     );
   };
@@ -292,10 +313,10 @@ export function ResultsSection() {
         )} expected damage.`;
 
   return (
-    <Card as="section" id="results" aria-labelledby={titleId} className="@container">
+    <Card as="section" id="results" elevation="card" aria-labelledby={titleId} className="@container">
       <Stack gap={4}>
         <Cluster gap={2} justify="between">
-          <h2 id={titleId} className="font-display text-lg">
+          <h2 id={titleId} className="text-lg">
             March
           </h2>
           {last !== null && (
@@ -315,8 +336,12 @@ export function ResultsSection() {
                 ? 'Nothing saved yet'
                 : `${amount(profile.savedStacks.length)} saved`
             }
+            isExpanded={savedOpen}
+            onExpandedChange={setSavedOpen}
           >
-            <SavedStacksPanel profile={profile} />
+            <LazySurface isOpen={savedOpen} reserve="panel">
+              <SavedStacksPanel profile={profile} />
+            </LazySurface>
           </Disclosure>
         )}
       </Stack>

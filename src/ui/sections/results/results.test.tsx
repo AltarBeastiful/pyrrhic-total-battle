@@ -216,10 +216,12 @@ test('edit counts turns every count into a stepper, and Undo puts the generated 
   expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
 
   fireEvent.click(screen.getByRole('button', { name: 'Edit counts' }));
-  const stepper = within(countsTable()).getByLabelText(`${unit.name} count`);
-  expect(stepper).toHaveProperty('value', amount(count));
+  const field = within(countsTable()).getByLabelText(`${unit.name} count`);
+  expect(field).toHaveProperty('value', amount(count));
 
-  fireEvent.click(within(countsTable()).getByRole('button', { name: `Increase ${unit.name} count` }));
+  // A count is typed, not walked to: the field has no step buttons, and the keyboard still steps.
+  expect(within(countsTable()).queryByRole('button', { name: `Increase ${unit.name} count` })).toBeNull();
+  fireEvent.keyDown(field, { key: 'ArrowUp' });
 
   // The march on screen is recomputed on the hand-typed counts; the generated result is untouched.
   await waitFor(() => {
@@ -247,11 +249,12 @@ test('the details are folded away until they are asked for', async () => {
   await waitFor(() => {
     expect(details.getAttribute('aria-expanded')).toBe('true');
   });
-  expect(screen.getByRole('heading', { name: 'Battle story' })).toBeTruthy();
+  // The story and the chart are chunks of their own (T-06); Vitest transforms them on demand.
+  expect(await screen.findByRole('heading', { name: 'Battle story' }, { timeout: 10_000 })).toBeTruthy();
   expect(screen.getByRole('radiogroup', { name: 'Who strikes first' })).toBeTruthy();
   expect(screen.getByRole('list', { name: /Total HP per stack/ })).toBeTruthy();
   expect(screen.getByRole('button', { name: /Raw journal/ }).getAttribute('aria-expanded')).toBe('false');
-});
+}, 20_000);
 
 test('the unit sheet opens from a row and says what the stack does', async () => {
   render(<Page />);
@@ -293,7 +296,7 @@ test('the last result and its hand edits come back after a reload', async () => 
   const { unit, count } = stackAt();
 
   fireEvent.click(screen.getByRole('button', { name: 'Edit counts' }));
-  fireEvent.click(within(countsTable()).getByRole('button', { name: `Increase ${unit.name} count` }));
+  fireEvent.keyDown(within(countsTable()).getByLabelText(`${unit.name} count`), { key: 'ArrowUp' });
   await waitFor(() => {
     expect(useResultStore.getState().manualCounts[unit.id]).toBe(count + 1);
   });
@@ -346,7 +349,8 @@ test('two saved marches can be compared side by side', async () => {
 
   const save = async (name: string): Promise<void> => {
     fireEvent.click(screen.getByRole('button', { name: 'Save this march' }));
-    const dialog = await screen.findByRole('dialog');
+    // Saving, the saved list and the comparison are one chunk of their own (T-06).
+    const dialog = await screen.findByRole('dialog', {}, { timeout: 10_000 });
     fireEvent.change(within(dialog).getByLabelText('March name'), { target: { value: name } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save this march' }));
   };
@@ -363,14 +367,17 @@ test('two saved marches can be compared side by side', async () => {
 
   // The saved marches are folded away under the card, as a list you go and get.
   fireEvent.click(screen.getByRole('button', { name: /^Saved marches/ }));
-  await waitFor(() => {
-    expect(screen.getByRole('checkbox', { name: /Wide march/ })).toBeTruthy();
-  });
+  await waitFor(
+    () => {
+      expect(screen.getByRole('checkbox', { name: /Wide march/ })).toBeTruthy();
+    },
+    { timeout: 10_000 },
+  );
   fireEvent.click(screen.getByRole('checkbox', { name: /Wide march/ }));
   fireEvent.click(screen.getByRole('checkbox', { name: /Small march/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Compare (2)' }));
 
-  const dialog = await screen.findByRole('dialog');
+  const dialog = await screen.findByRole('dialog', {}, { timeout: 10_000 });
   expect(within(dialog).getByRole('columnheader', { name: 'Wide march' })).toBeTruthy();
   expect(within(dialog).getByRole('rowheader', { name: 'Expected damage' })).toBeTruthy();
-});
+}, 30_000);

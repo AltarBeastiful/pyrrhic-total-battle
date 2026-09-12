@@ -6,15 +6,15 @@
  * action). Nothing is sent or applied until the user presses a button, and a conflict always opens the
  * per-profile dialog first.
  */
-import { useId, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 import { useStore } from '@/state/store';
 import type { SyncAction, SyncPlanEntry } from '@/sync/engine';
 import { TOKEN_PAGE } from '@/sync/gist';
 import { useSyncStore } from '@/sync/syncStore';
 
-import { Button, Dialog, HelpNote, Tabs, Toggle } from '../primitives';
+import { Badge, Banner, Button, Card, Dialog, Switch, Tabs, TextField } from '../kit';
+import { Cluster, Stack } from '../layout';
 import { ConflictDialog } from './ConflictDialog';
 import { formatWhen } from './format';
 import { useSync } from './useSync';
@@ -33,13 +33,14 @@ const ACTION_LABEL: Record<SyncAction, string> = {
   'in-sync': 'Up to date',
 };
 
-const ACTION_CLASS: Record<SyncAction, string> = {
-  push: 'bg-accent/15 text-fg',
-  pull: 'bg-ok/15 text-fg',
-  conflict: 'bg-warn/20 text-fg',
-  'delete-remote': 'bg-danger/15 text-fg',
-  'delete-local': 'bg-danger/15 text-fg',
-  'in-sync': 'bg-raised text-muted',
+/** The badge tone that says what would happen to a profile, so colour is never the only cue. */
+const ACTION_TONE: Record<SyncAction, 'accent' | 'ok' | 'warn' | 'danger' | 'neutral'> = {
+  push: 'accent',
+  pull: 'ok',
+  conflict: 'warn',
+  'delete-remote': 'danger',
+  'delete-local': 'danger',
+  'in-sync': 'neutral',
 };
 
 const CHOICE_LABEL = {
@@ -47,56 +48,6 @@ const CHOICE_LABEL = {
   theirs: 'keep theirs',
   both: 'keep both',
 } as const;
-
-const INPUT_CLASS =
-  'tap border-line bg-surface text-fg w-full rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50';
-
-/** A labelled text input; the shared primitives only cover numbers and selects. */
-function Field({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  hint,
-  placeholder,
-  autoComplete = 'off',
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: 'text' | 'password';
-  hint?: ReactNode;
-  placeholder?: string;
-  autoComplete?: string;
-}) {
-  const id = useId();
-  const hintId = `${id}-hint`;
-  return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        className={INPUT_CLASS}
-        value={value}
-        autoComplete={autoComplete}
-        spellCheck={false}
-        {...(hint === undefined ? {} : { 'aria-describedby': hintId })}
-        {...(placeholder === undefined ? {} : { placeholder })}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-      />
-      {hint !== undefined && (
-        <p id={hintId} className="text-muted text-xs">
-          {hint}
-        </p>
-      )}
-    </div>
-  );
-}
 
 function SettingsPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
   const settings = useSyncStore((state) => state.settings);
@@ -107,21 +58,22 @@ function SettingsPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
   const setDeviceName = useStore((state) => state.setDeviceName);
 
   return (
-    <div className="space-y-4">
-      <HelpNote>
+    <Stack gap={4}>
+      <Banner tone="info">
         Your profile JSON is stored in a secret gist on your GitHub account; nothing else is contacted. The
         token stays in this browser and is only ever sent to api.github.com, in the request header.
-      </HelpNote>
+      </Banner>
 
-      <Field
+      <TextField
         label="GitHub token"
         type="password"
+        autoComplete="off"
         value={settings.token}
         placeholder="github_pat_…"
         onChange={(token) => {
           setSettings({ token });
         }}
-        hint={
+        description={
           <>
             Create a{' '}
             <a className="underline" href={TOKEN_PAGE} target="_blank" rel="noreferrer noopener">
@@ -133,65 +85,67 @@ function SettingsPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
         }
       />
 
-      <div className="flex flex-wrap gap-2">
+      <Cluster gap={2}>
         <Button
-          onClick={() => {
+          onPress={() => {
             void sync.testConnection();
           }}
-          disabled={!sync.ready || sync.status !== 'idle'}
+          isDisabled={!sync.ready || sync.status !== 'idle'}
         >
           {sync.status === 'testing' ? 'Testing…' : 'Test connection'}
         </Button>
-        <Button variant="ghost" onClick={sync.forget}>
+        <Button variant="quiet" onPress={sync.forget}>
           Forget token and sync state
         </Button>
-      </div>
+      </Cluster>
 
-      <Field
+      <TextField
         label="Gist id"
+        autoComplete="off"
         value={settings.gistId}
         placeholder="created on the first push"
         onChange={(gistId) => {
           setSettings({ gistId });
         }}
-        hint="Filled in automatically. Clear it to let the app find or create the pyrrhic-sync gist again."
+        description="Filled in automatically. Clear it to let the app find or create the pyrrhic-sync gist again."
       />
 
-      <div className="space-y-2">
-        <Toggle
+      <Stack gap={2}>
+        <Switch
           label="Encrypt the gist"
           description="AES-GCM with a key derived from a passphrase. GitHub then stores ciphertext only."
-          checked={settings.encrypt}
+          isSelected={settings.encrypt}
           onChange={(encrypt) => {
             setSettings({ encrypt });
           }}
         />
         {settings.encrypt && (
           <>
-            <Field
+            <TextField
               label="Passphrase"
               type="password"
               value={passphrase}
               autoComplete="new-password"
               onChange={setPassphrase}
-              hint="Kept for this tab only, never written to disk and never sent anywhere."
+              description="Kept for this tab only, never written to disk and never sent anywhere."
             />
-            <HelpNote tone="warn">
+            <Banner tone="warn">
               There is no recovery: without this passphrase the gist cannot be read, on any device. Profiles
               already in the gist stay in clear until each one is sent again.
-            </HelpNote>
+            </Banner>
           </>
         )}
-      </div>
+      </Stack>
 
-      <Field
+      <TextField
         label="Device name"
+        autoComplete="off"
         value={deviceName}
         placeholder="Rémi's phone"
         onChange={setDeviceName}
-        hint="Shown on your other devices when two versions of a profile disagree."
+        description="Shown on your other devices when two versions of a profile disagree."
       />
-    </div>
+    </Stack>
   );
 }
 
@@ -225,11 +179,9 @@ function PlanRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_CLASS[entry.action]}`}>
-          {ACTION_LABEL[entry.action]}
-        </span>
+        <Badge tone={ACTION_TONE[entry.action]}>{ACTION_LABEL[entry.action]}</Badge>
         {entry.action === 'conflict' && (
-          <Button size="sm" variant={choice === undefined ? 'primary' : 'secondary'} onClick={onResolve}>
+          <Button size="sm" variant={choice === undefined ? 'primary' : 'secondary'} onPress={onResolve}>
             {choice === undefined ? `Resolve ${entry.name}` : `Will ${CHOICE_LABEL[choice]}`}
           </Button>
         )}
@@ -249,22 +201,22 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
   const conflict = entries.find((entry) => entry.id === conflictId) ?? null;
 
   return (
-    <div className="space-y-3">
-      {!sync.ready && <HelpNote tone="warn">Add a GitHub token in Settings first.</HelpNote>}
+    <Stack gap={3}>
+      {!sync.ready && <Banner tone="warn">Add a GitHub token in Settings first.</Banner>}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <Cluster gap={2}>
         <Button
           variant="primary"
-          disabled={!sync.ready || sync.status !== 'idle'}
-          onClick={() => {
+          isDisabled={!sync.ready || sync.status !== 'idle'}
+          onPress={() => {
             void sync.check();
           }}
         >
           {sync.status === 'checking' ? 'Checking…' : sync.plan === null ? 'Check the gist' : 'Check again'}
         </Button>
         <Button
-          disabled={sync.plan === null || todo === 0 || sync.status !== 'idle'}
-          onClick={() => {
+          isDisabled={sync.plan === null || todo === 0 || sync.status !== 'idle'}
+          onPress={() => {
             void sync.run();
           }}
         >
@@ -276,10 +228,10 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
             {counts.conflict === 1 ? '' : 's'}
           </span>
         )}
-      </div>
+      </Cluster>
 
-      {sync.error !== null && <HelpNote tone="danger">{sync.error}</HelpNote>}
-      {sync.notice !== null && <HelpNote>{sync.notice}</HelpNote>}
+      {sync.error !== null && <Banner tone="danger">{sync.error}</Banner>}
+      {sync.notice !== null && <Banner tone="info">{sync.notice}</Banner>}
 
       {sync.plan !== null && (
         <ul className="divide-line divide-y" aria-label="Sync plan">
@@ -298,7 +250,7 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
       )}
 
       {sync.results !== null && sync.results.length > 0 && (
-        <div className="border-line rounded-lg border p-3">
+        <Card tone="sunken" padding="sm">
           <p className="text-sm font-medium">Last run</p>
           <ul className="text-muted mt-1 space-y-1 text-xs">
             {sync.results.map((result) => (
@@ -308,7 +260,7 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       <ConflictDialog
@@ -322,7 +274,7 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
           setConflictId(null);
         }}
       />
-    </div>
+    </Stack>
   );
 }
 
@@ -355,7 +307,7 @@ export function SyncDialog({ open, onOpenChange }: SyncDialogProps) {
 
   return (
     <Dialog
-      open={open}
+      isOpen={open}
       onOpenChange={onOpenChange}
       title="Sync across devices"
       description="Explicit Pull and Push through one secret GitHub gist. Nothing is sent automatically."
@@ -363,7 +315,7 @@ export function SyncDialog({ open, onOpenChange }: SyncDialogProps) {
     >
       <Tabs
         value={tab}
-        onValueChange={setTab}
+        onChange={setTab}
         label="Sync"
         items={[
           { value: 'sync', label: 'Pull / Push', content: <SyncPanel sync={sync} /> },

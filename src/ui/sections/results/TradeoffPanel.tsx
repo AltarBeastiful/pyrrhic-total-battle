@@ -45,7 +45,7 @@ export function TradeoffPanel({ tradeoff }: TradeoffPanelProps) {
   return (
     <Card tone="raised" padding="sm">
       <Stack gap={2}>
-        <h3 className="font-display text-lg">Compared with all types</h3>
+        <h3 className="text-lg">Compared with all types</h3>
         <p className="text-muted text-sm">
           {`The priority kept ${String(kept)} unit ${kept === 1 ? 'type' : 'types'} and left ${String(
             dropped,

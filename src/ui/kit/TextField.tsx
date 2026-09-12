@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Input, Label, TextField as RACTextField, Text } from 'react-aria-components';
 import { tv } from 'tailwind-variants';
 
@@ -9,7 +10,8 @@ export interface TextFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  description?: string;
+  /** A hint under the field; a sentence, which may carry a link to where the value is found. */
+  description?: ReactNode;
   errorMessage?: string;
   /** The HTML input type: `text` unless it is an address, an e-mail or a password. */
   type?: 'text' | 'email' | 'password' | 'tel' | 'url';
@@ -17,6 +19,8 @@ export interface TextFieldProps {
   inputMode?: 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url' | 'search';
   /** An example of what to type. Never a substitute for the label. */
   placeholder?: string;
+  /** What the browser may fill in; `off` for a secret this app is not asking the browser to keep. */
+  autoComplete?: string;
   isDisabled?: boolean;
   className?: string;
 }
@@ -55,6 +59,7 @@ export function TextField({
   type = 'text',
   inputMode,
   placeholder,
+  autoComplete,
   isDisabled = false,
   className,
 }: TextFieldProps) {
@@ -74,6 +79,7 @@ export function TextField({
         className={styles.input()}
         {...(placeholder === undefined ? {} : { placeholder })}
         {...(inputMode === undefined ? {} : { inputMode })}
+        {...(autoComplete === undefined ? {} : { autoComplete })}
       />
       {description !== undefined && (
         <Text slot="description" className={styles.description()}>

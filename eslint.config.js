@@ -19,16 +19,7 @@ const pyrrhic = {
  * deleted section by section in Phases B–D; the kit rules apply to everything else from today and
  * this list shrinks to nothing at T-08.
  */
-const LEGACY_STYLING = [
-  'src/ui/sections/**',
-  'src/ui/primitives/**',
-  'src/ui/profile/**',
-  'src/ui/sync/**',
-  'src/ui/pwa/**',
-  'src/ui/AppShell.tsx',
-  'src/ui/Hero.tsx',
-  'src/pwa/**',
-];
+const LEGACY_STYLING = ['src/ui/sections/**', 'src/ui/profile/**', 'src/ui/sync/**', 'src/pwa/**'];
 
 export default tseslint.config(
   {

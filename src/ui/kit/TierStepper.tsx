@@ -54,7 +54,7 @@ const tierStyles = tv({
     box: cn(fieldBox, fieldHeight, 'w-fit overflow-hidden', ringWithin),
     arrow: cn(fieldButton, 'disabled:opacity-30'),
     value: cn(
-      'font-display nums text-fg rounded-control flex shrink-0 items-center justify-center px-2 text-center',
+      'nums text-fg rounded-control flex shrink-0 items-center justify-center px-2 text-center font-semibold',
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
       stateLayer,
       'outline-none focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2',
@@ -62,7 +62,7 @@ const tierStyles = tv({
     popover: 'rounded-card bg-raised shadow-pop max-w-full p-3',
     strip: 'flex flex-wrap gap-2',
     chip: cn(
-      'font-display nums rounded-control border-field/60 text-fg flex min-h-11 min-w-11 items-center',
+      'nums rounded-control border-field/60 text-fg flex min-h-11 min-w-11 items-center font-semibold',
       'justify-center border bg-transparent px-2 sm:min-h-10 sm:min-w-10',
       'selected:bg-accent-soft selected:border-transparent selected:text-fg',
       stateLayer,

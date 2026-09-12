@@ -80,8 +80,10 @@ MenuSection  { title?: string; children }   MenuItem { id; icon?; description?; 
 MenuSegment  { label; value; onChange; options: {value,label,icon?}[] }  // a segmented row inside a menu
 Sheet        { trigger?: ReactNode; isOpen?; onOpenChange?; title: string; description?; children;
                footer?: ReactNode; size?: 'md'|'lg' }
-Dialog       { trigger?; isOpen?; onOpenChange?; title; description?; children; footer?; role?: 'dialog'|'alertdialog' }
+Dialog       { trigger?; isOpen?; onOpenChange?; title; description?; children; footer?; size?: 'sm'|'md'|'lg';
+               role?: 'dialog'|'alertdialog' }
 Popover      { trigger: ReactNode; label?: string; children; placement? }
+Tabs         { label: string; value; onChange; items: {value,label,content}[] }  // only the chosen panel mounts
 Tooltip      { content: ReactNode; children: trigger element }  // repeats visible text only
 Card         { tone?: 'surface'|'raised'|'sunken'|'accent'|'info'|'warn'|'danger'; padding?: 'none'|'sm'|'md';
                as?: 'div'|'section'|'article'; children }

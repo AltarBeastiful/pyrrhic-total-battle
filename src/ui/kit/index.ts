@@ -24,14 +24,16 @@ export { Popover } from './Popover';
 export type { PopoverProps } from './Popover';
 export { Sheet } from './Sheet';
 export type { SheetProps } from './Sheet';
+export { Tabs } from './Tabs';
+export type { TabItem, TabsProps } from './Tabs';
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
 
 // Form controls.
 export { Checkbox } from './Checkbox';
 export type { CheckboxProps } from './Checkbox';
-export { NumberStepper } from './NumberStepper';
-export type { NumberStepperProps } from './NumberStepper';
+export { NumberInput, NumberStepper } from './NumberStepper';
+export type { NumberInputProps } from './NumberStepper';
 export { SearchField } from './SearchField';
 export type { SearchFieldProps } from './SearchField';
 export { Segmented } from './Segmented';
@@ -46,6 +48,10 @@ export { TierStepper } from './TierStepper';
 export type { TierStepperProps } from './TierStepper';
 export { ToggleGroup, ToggleItem } from './ToggleGroup';
 export type { ToggleGroupProps, ToggleItemProps } from './ToggleGroup';
+
+// A list whose order is the data (the kill order).
+export { ReorderItem, ReorderList } from './ReorderList';
+export type { ReorderItemProps, ReorderListProps } from './ReorderList';
 
 // Rows you tick (the mercenaries card).
 export { SelectableItem, SelectableList } from './SelectableList';

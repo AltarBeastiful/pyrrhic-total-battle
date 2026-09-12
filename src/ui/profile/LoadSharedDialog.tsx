@@ -4,7 +4,7 @@ import { cloneProfileWithNewIds, uniqueProfileName } from '@/state/defaults';
 import { useStore } from '@/state/store';
 import type { BattleSetup } from '@/state/schema';
 
-import { Button, Dialog, HelpNote } from '../primitives';
+import { Banner, Button, Dialog } from '../kit';
 
 export interface LoadSharedDialogProps {
   /** Decoded payload from the address bar; null when nothing is pending. */
@@ -71,7 +71,7 @@ export function LoadSharedDialog({ payload, error, onClose }: LoadSharedDialogPr
 
   return (
     <Dialog
-      open={open}
+      isOpen={open}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
@@ -80,27 +80,27 @@ export function LoadSharedDialog({ payload, error, onClose }: LoadSharedDialogPr
       size="sm"
       footer={
         payload === null ? (
-          <Button onClick={onClose}>Close</Button>
+          <Button onPress={onClose}>Close</Button>
         ) : isProfile ? (
           <>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button onClick={replaceProfile}>Replace active profile</Button>
-            <Button variant="primary" onClick={addProfile}>
+            <Button onPress={onClose}>Cancel</Button>
+            <Button onPress={replaceProfile}>Replace active profile</Button>
+            <Button variant="primary" onPress={addProfile}>
               Add as new profile
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button onClick={replaceSetup}>Replace active march</Button>
-            <Button variant="primary" onClick={addSetup}>
+            <Button onPress={onClose}>Cancel</Button>
+            <Button onPress={replaceSetup}>Replace active march</Button>
+            <Button variant="primary" onPress={addSetup}>
               Add as new march
             </Button>
           </>
         )
       }
     >
-      {error !== null && <HelpNote tone="danger">{error}</HelpNote>}
+      {error !== null && <Banner tone="danger">{error}</Banner>}
       {payload?.kind === 'profile' && (
         <p className="text-sm">
           Profile <span className="font-medium">{payload.profile.name}</span> with{' '}
@@ -119,10 +119,10 @@ export function LoadSharedDialog({ payload, error, onClose }: LoadSharedDialogPr
         </p>
       )}
       {staleData && (
-        <HelpNote tone="warn">
+        <Banner tone="warn">
           This link was made with game data version {String(payload.dataVersion)}; this build ships version{' '}
           {String(gameData.dataVersion)}. Values may have changed since.
-        </HelpNote>
+        </Banner>
       )}
     </Dialog>
   );

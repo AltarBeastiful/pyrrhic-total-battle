@@ -47,7 +47,7 @@ export function KitPage() {
   return (
     <div className="bg-bg text-fg min-h-dvh">
       <header className="border-line border-b px-4 py-4 sm:px-6">
-        <h1 className="font-display text-xl">Pyrrhic kit</h1>
+        <h1 className="text-xl">Pyrrhic kit</h1>
         <p className="text-muted text-sm">
           {entries.length} stories, each shown light and dark. Development build only.
         </p>
@@ -67,7 +67,7 @@ export function KitPage() {
       </header>
 
       <nav aria-labelledby="kit-contents" className="border-line border-b px-4 py-4 sm:px-6">
-        <h2 id="kit-contents" className="font-display text-lg">
+        <h2 id="kit-contents" className="text-lg">
           Contents
         </h2>
         <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -88,7 +88,7 @@ export function KitPage() {
           ) : (
             entries.map(({ id, story }) => (
               <section key={id} id={id} data-story={id} aria-labelledby={`${id}-label`}>
-                <h2 id={`${id}-label`} className="font-display mb-2 text-lg">
+                <h2 id={`${id}-label`} className="mb-2 text-lg">
                   {story.name} <span className="text-muted font-sans text-xs">{story.group}</span>
                 </h2>
                 <div className="grid gap-3 lg:grid-cols-2">

@@ -57,6 +57,7 @@ export {
   DuplicateIcon,
   GearIcon,
   GenerateIcon,
+  GripIcon,
   InfoIcon,
   MinusIcon,
   MoonIcon,

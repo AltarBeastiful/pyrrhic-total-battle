@@ -1,9 +1,10 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 import type { Profile, SavedStack } from '@/state/schema';
 import { useStore } from '@/state/store';
-import { Button, Card, Dialog, HelpNote, IconButton } from '@/ui/primitives';
+import { Banner, Button, Card, Checkbox, Dialog, IconButton, TextField } from '@/ui/kit';
+import { Cluster, Stack } from '@/ui/layout';
 import { PencilIcon, TrashIcon } from '@/ui/icons';
 
 import { amount, duration, ratio } from './format';
@@ -35,7 +36,6 @@ export function StackNameDialog({
   onConfirm,
   onCancel,
 }: StackNameDialogProps) {
-  const fieldId = useId();
   const [name, setName] = useState(initialName);
   const [seed, setSeed] = useState(initialName);
   if (seed !== initialName) {
@@ -46,39 +46,29 @@ export function StackNameDialog({
 
   return (
     <Dialog
-      open={open}
+      isOpen={open}
       onOpenChange={(next) => {
         if (!next) onCancel();
       }}
       title={title}
       {...(description === undefined ? {} : { description })}
       size="sm"
-    >
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (trimmed !== '') onConfirm(trimmed);
-        }}
-      >
-        <label className="text-muted text-xs font-medium" htmlFor={fieldId}>
-          March name
-        </label>
-        <input
-          id={fieldId}
-          autoFocus
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-          }}
-          className="tap border-field bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
-        />
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button onClick={onCancel}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={trimmed === ''}>
+      footer={
+        <>
+          <Button onPress={onCancel}>Cancel</Button>
+          <Button
+            variant="primary"
+            isDisabled={trimmed === ''}
+            onPress={() => {
+              if (trimmed !== '') onConfirm(trimmed);
+            }}
+          >
             {confirmLabel}
           </Button>
-        </div>
-      </form>
+        </>
+      }
+    >
+      <TextField label="March name" value={name} onChange={setName} autoComplete="off" />
     </Dialog>
   );
 }
@@ -224,138 +214,134 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
   };
 
   return (
-    <Card tone="raised" padded={false} className="p-3">
-      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
-        <Button
-          size="sm"
-          disabled={chosen.length < 2}
-          onClick={() => {
-            setComparing(true);
-          }}
-        >
-          Compare ({String(chosen.length)})
-        </Button>
-      </div>
+    <Card tone="raised" padding="sm">
+      <Stack gap={2}>
+        <Cluster gap={2} justify="end">
+          <Button
+            size="sm"
+            isDisabled={chosen.length < 2}
+            onPress={() => {
+              setComparing(true);
+            }}
+          >
+            Compare ({String(chosen.length)})
+          </Button>
+        </Cluster>
 
-      {stacks.length === 0 ? (
-        <p className="text-muted text-xs">
-          Nothing saved yet. Generate a march and use “Save this march” to keep it for later.
-        </p>
-      ) : (
-        <ul className="space-y-1.5">
-          {stacks.map((stack) => (
-            <li
-              key={stack.id}
-              className="border-line bg-surface flex items-center gap-2 rounded-lg border px-2 py-1.5"
-            >
-              <input
-                type="checkbox"
-                id={`compare-${stack.id}`}
-                checked={selected.includes(stack.id)}
-                disabled={!selected.includes(stack.id) && selected.length >= MAX_COMPARED}
-                onChange={() => {
-                  toggle(stack.id);
-                }}
-                className="tap-area h-4.5 w-4.5 shrink-0"
-              />
-              <label
-                htmlFor={`compare-${stack.id}`}
-                className="tap flex min-w-0 flex-1 cursor-pointer flex-col justify-center py-1"
-              >
-                <span className="block truncate text-sm font-medium">{stack.name}</span>
-                <span className="text-muted nums block text-xs">
-                  {DATE.format(stack.createdAt)} · {amount(stack.summary.avgDamage)} expected damage ·{' '}
-                  {String(stack.counts.length)} stacks
-                </span>
-              </label>
-              <IconButton
-                label={`Rename ${stack.name}`}
-                icon={<PencilIcon />}
-                onClick={() => {
-                  setRenaming(stack);
-                }}
-              />
-              <IconButton
-                label={`Delete ${stack.name}`}
-                icon={<TrashIcon />}
-                variant="danger"
-                onClick={() => {
-                  setDeleting(stack);
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {stacks.length > 1 && chosen.length < 2 && (
-        <p className="text-muted mt-2 text-xs">Tick two or three marches to compare them side by side.</p>
-      )}
-
-      <StackNameDialog
-        open={renaming !== null}
-        title="Rename saved march"
-        confirmLabel="Save"
-        initialName={renaming?.name ?? ''}
-        onConfirm={(name) => {
-          if (renaming) renameSavedStack(renaming.id, name);
-          setRenaming(null);
-        }}
-        onCancel={() => {
-          setRenaming(null);
-        }}
-      />
-
-      <Dialog
-        open={deleting !== null}
-        onOpenChange={(next) => {
-          if (!next) setDeleting(null);
-        }}
-        title="Delete saved march"
-        description={`“${deleting?.name ?? ''}” will be removed from this profile.`}
-        size="sm"
-        footer={
-          <>
-            <Button
-              onClick={() => {
-                setDeleting(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                if (deleting) {
-                  removeSavedStack(deleting.id);
-                  setSelected((current) => current.filter((id) => id !== deleting.id));
-                }
-                setDeleting(null);
-              }}
-            >
-              Delete march
-            </Button>
-          </>
-        }
-      >
-        <HelpNote tone="warn">
-          The result itself is not stored anywhere else — this cannot be undone.
-        </HelpNote>
-      </Dialog>
-
-      <Dialog
-        open={comparing}
-        onOpenChange={setComparing}
-        title="Compare saved marches"
-        description="The best figure in each row is marked."
-        size="lg"
-      >
-        {chosen.length >= 2 ? (
-          <CompareTable stacks={chosen} />
+        {stacks.length === 0 ? (
+          <p className="text-muted text-sm">
+            Nothing saved yet. Generate a march and use “Save this march” to keep it for later.
+          </p>
         ) : (
-          <HelpNote>Pick at least two saved stacks.</HelpNote>
+          <ul className="divide-line divide-y">
+            {stacks.map((stack) => (
+              <li key={stack.id} className="flex items-center gap-2 py-1">
+                <span className="min-w-0 flex-1">
+                  <Checkbox
+                    label={stack.name}
+                    isSelected={selected.includes(stack.id)}
+                    isDisabled={!selected.includes(stack.id) && selected.length >= MAX_COMPARED}
+                    onChange={() => {
+                      toggle(stack.id);
+                    }}
+                  />
+                  <span className="text-muted nums block truncate text-xs">
+                    {`${DATE.format(stack.createdAt)}, ${amount(stack.summary.avgDamage)} expected damage`}
+                    {`, ${String(stack.counts.length)} stacks`}
+                  </span>
+                </span>
+                <IconButton
+                  label={`Rename ${stack.name}`}
+                  size="sm"
+                  onPress={() => {
+                    setRenaming(stack);
+                  }}
+                >
+                  <PencilIcon />
+                </IconButton>
+                <IconButton
+                  label={`Delete ${stack.name}`}
+                  size="sm"
+                  className="text-danger"
+                  onPress={() => {
+                    setDeleting(stack);
+                  }}
+                >
+                  <TrashIcon />
+                </IconButton>
+              </li>
+            ))}
+          </ul>
         )}
-      </Dialog>
+
+        {stacks.length > 1 && chosen.length < 2 && (
+          <p className="text-muted text-xs">Tick two or three marches to compare them side by side.</p>
+        )}
+
+        <StackNameDialog
+          open={renaming !== null}
+          title="Rename saved march"
+          confirmLabel="Save"
+          initialName={renaming?.name ?? ''}
+          onConfirm={(name) => {
+            if (renaming) renameSavedStack(renaming.id, name);
+            setRenaming(null);
+          }}
+          onCancel={() => {
+            setRenaming(null);
+          }}
+        />
+
+        <Dialog
+          role="alertdialog"
+          isOpen={deleting !== null}
+          onOpenChange={(next) => {
+            if (!next) setDeleting(null);
+          }}
+          title="Delete saved march"
+          description={`“${deleting?.name ?? ''}” will be removed from this profile.`}
+          size="sm"
+          footer={
+            <>
+              <Button
+                onPress={() => {
+                  setDeleting(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onPress={() => {
+                  if (deleting) {
+                    removeSavedStack(deleting.id);
+                    setSelected((current) => current.filter((id) => id !== deleting.id));
+                  }
+                  setDeleting(null);
+                }}
+              >
+                Delete march
+              </Button>
+            </>
+          }
+        >
+          <Banner tone="warn">The result itself is not stored anywhere else — this cannot be undone.</Banner>
+        </Dialog>
+
+        <Dialog
+          isOpen={comparing}
+          onOpenChange={setComparing}
+          title="Compare saved marches"
+          description="The best figure in each row is marked."
+          size="lg"
+        >
+          {chosen.length >= 2 ? (
+            <CompareTable stacks={chosen} />
+          ) : (
+            <Banner tone="info">Pick at least two saved stacks.</Banner>
+          )}
+        </Dialog>
+      </Stack>
     </Card>
   );
 }

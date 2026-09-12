@@ -69,11 +69,12 @@ test('the About panel names the game data version and the privacy promise', asyn
   await openAccountMenu();
   fireEvent.click(screen.getByRole('menuitem', { name: /^About Pyrrhic/ }));
 
-  const dialog = await screen.findByRole('dialog');
+  // About is a chunk of its own (T-06); Vitest transforms it on demand, so it may take a moment.
+  const dialog = await screen.findByRole('dialog', {}, { timeout: 10_000 });
   expect(dialog.textContent).toContain(String(gameData.dataVersion));
   expect(dialog.textContent).toContain(gameData.verifiedOn);
   expect(dialog.textContent).toContain('Nothing leaves your browser');
-});
+}, 20_000);
 
 test('the theme row writes the choice to the store and to the document', async () => {
   render(<App />);

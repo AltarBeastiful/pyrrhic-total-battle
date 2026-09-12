@@ -7,7 +7,7 @@
  */
 import type { ComponentType } from 'react';
 
-import { cn } from '../primitives/cn';
+import { cn } from '../kit/cn';
 import type { IconProps } from './Icon';
 import {
   AuthorityIcon,

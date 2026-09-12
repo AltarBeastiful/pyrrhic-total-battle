@@ -25,17 +25,26 @@ const dialog = tv({
       'motion-safe:transition-opacity motion-safe:duration-fast entering:opacity-0 exiting:opacity-0',
     ],
     modal: [
-      'flex max-h-dvh w-full max-w-md flex-col overflow-hidden rounded-card bg-raised shadow-modal',
+      'flex max-h-dvh w-full flex-col overflow-hidden rounded-card bg-raised shadow-modal',
       'motion-safe:transition-all motion-safe:duration-fast',
       'entering:scale-95 entering:opacity-0 exiting:scale-95 exiting:opacity-0',
     ],
     panel: 'flex min-h-0 flex-col outline-none',
     header: 'flex items-start gap-3 px-5 pt-5',
-    title: 'font-display text-lg text-fg',
+    title: 'title-face text-lg text-fg',
     description: 'mt-2 block text-sm text-muted',
     body: 'min-h-0 overflow-y-auto px-5 py-4',
     footer: 'flex flex-wrap justify-end gap-2 px-5 pb-5',
   },
+  variants: {
+    /** How wide the card is allowed to get: a question, a form, a table to read across. */
+    size: {
+      sm: { modal: 'max-w-sm' },
+      md: { modal: 'max-w-md' },
+      lg: { modal: 'max-w-2xl' },
+    },
+  },
+  defaultVariants: { size: 'md' },
 });
 
 export interface DialogProps {
@@ -47,6 +56,7 @@ export interface DialogProps {
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
+  size?: 'sm' | 'md' | 'lg';
   role?: 'dialog' | 'alertdialog';
   className?: string;
 }
@@ -59,10 +69,11 @@ export function Dialog({
   description,
   children,
   footer,
+  size = 'md',
   role = 'dialog',
   className,
 }: DialogProps) {
-  const d = dialog();
+  const d = dialog({ size });
   const open = {
     ...(isOpen === undefined ? {} : { isOpen }),
     ...(onOpenChange === undefined ? {} : { onOpenChange }),

@@ -16,6 +16,7 @@ import {
   Copy,
   CopyPlus,
   Download,
+  GripVertical,
   Info,
   Minus,
   Moon,
@@ -78,6 +79,9 @@ export const ResetIcon = (props: IconProps) => <LucideGlyph icon={RotateCcw} {..
 
 /** Sort — reorder a list. */
 export const SortIcon = (props: IconProps) => <LucideGlyph icon={ArrowUpDown} {...props} />;
+
+/** Grip — the handle a row is picked up by. */
+export const GripIcon = (props: IconProps) => <LucideGlyph icon={GripVertical} {...props} />;
 
 /** Search — the mercenary picker's filter field. */
 export const SearchIcon = (props: IconProps) => <LucideGlyph icon={Search} {...props} />;

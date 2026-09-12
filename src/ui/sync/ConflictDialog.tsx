@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import type { Profile } from '@/state/schema';
 import type { ConflictChoice, SyncPlanEntry } from '@/sync/engine';
 
-import { Button, Dialog, HelpNote } from '../primitives';
+import { Banner, Button, Card, Dialog } from '../kit';
 import { formatWhen } from './format';
 
 export interface ConflictDialogProps {
@@ -40,7 +40,7 @@ function Side({
   loading?: boolean;
 }) {
   return (
-    <div className="border-line bg-raised rounded-lg border p-3">
+    <Card tone="sunken" padding="sm">
       <p className="text-muted text-xs font-medium tracking-wide uppercase">{title}</p>
       {missing === undefined ? (
         <dl className="mt-2 space-y-1 text-sm">
@@ -63,7 +63,7 @@ function Side({
       ) : (
         <p className="text-muted mt-2 text-sm">{missing}</p>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -96,7 +96,7 @@ export function ConflictDialog({ entry, fetchRemote, onChoose, onClose }: Confli
 
   return (
     <Dialog
-      open
+      isOpen
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
@@ -105,16 +105,16 @@ export function ConflictDialog({ entry, fetchRemote, onChoose, onClose }: Confli
       size="lg"
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onPress={onClose}>Cancel</Button>
           <Button
-            onClick={() => {
+            onPress={() => {
               onChoose('mine');
             }}
           >
             {mineLabel}
           </Button>
           <Button
-            onClick={() => {
+            onPress={() => {
               onChoose('theirs');
             }}
           >
@@ -123,7 +123,7 @@ export function ConflictDialog({ entry, fetchRemote, onChoose, onClose }: Confli
           {kind === 'both-edited' && (
             <Button
               variant="primary"
-              onClick={() => {
+              onPress={() => {
                 onChoose('both');
               }}
             >
@@ -155,10 +155,10 @@ export function ConflictDialog({ entry, fetchRemote, onChoose, onClose }: Confli
         />
       </div>
       {kind === 'both-edited' && (
-        <HelpNote className="mt-3">
+        <Banner tone="info" className="mt-3">
           Keep both leaves your version where it is and adds the gist's version as a new profile, which is
           sent to the gist on the next sync.
-        </HelpNote>
+        </Banner>
       )}
     </Dialog>
   );

@@ -1,7 +1,7 @@
 import { version as gameData } from '@/data';
 
 import { GuardsmenIcon } from './icons';
-import { Card, Dialog, HelpNote } from './primitives';
+import { Banner, Card, Dialog } from './kit';
 
 export interface AboutDialogProps {
   open: boolean;
@@ -11,7 +11,7 @@ export interface AboutDialogProps {
 /** What this is, which game data it ships, and the one privacy promise that matters (ADR-0002). */
 export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="About Pyrrhic" size="sm">
+    <Dialog isOpen={open} onOpenChange={onOpenChange} title="About Pyrrhic" size="sm">
       <div className="space-y-3 text-sm">
         <div className="flex items-start gap-3">
           <span
@@ -25,12 +25,12 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
             the stack sizes and the damage they should do.
           </p>
         </div>
-        <HelpNote tone="info">
+        <Banner tone="info">
           Nothing leaves your browser. No account, no server, no analytics: your profiles live in this
           browser&apos;s storage until you export or share them yourself, and a share link keeps its data
           after the <code>#</code>, which browsers never send anywhere.
-        </HelpNote>
-        <Card tone="raised" padded={false} className="px-3 py-1">
+        </Banner>
+        <Card tone="sunken" padding="sm">
           <dl className="divide-line divide-y">
             <div className="flex justify-between gap-4 py-1.5">
               <dt className="text-muted">Game data version</dt>
