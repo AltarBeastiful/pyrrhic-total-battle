@@ -143,8 +143,9 @@ Target: all of it lives in the **account menu** (§5.2). None of it takes perman
    Results are never below the fold once they exist; on desktop they sit beside the setup.
 2. **Two lines tell the army.** Troops and mercenaries are always readable together in ≤ 4 lines total, on a
    phone, before opening anything.
-3. **Every number has arrows.** Tiers, levels, counts and housing move by keyboard arrows and by visible
-   step buttons. Selects only for lists of unlike things (a captain, a monster, a profile).
+3. **Typed numbers are plain inputs.** Housing, owned counts and stack counts are inputs that select their
+   value on focus so typing replaces it; arrow keys still step. Visible step buttons only where values are
+   small and stepped (tiers, levels, stars). Selects only for lists of unlike things (a captain, a profile).
 4. **Colour means group, not decoration.** Green guardsmen, blue specialists, amber engineers, violet monsters,
    red mercenaries (§6.1). The accent colour is for the one primary action and for focus. Text is never accent
    coloured except the primary action.
@@ -363,8 +364,8 @@ expand/collapse state. One row per group:
 **Amended 2026-09-13 (owner):** players know mercenaries by name and tier; role and race filters are noise.
 
 - The owned list is the summary and the form, TotalStack-style: one compact row each, **ordered by tier
-  (highest first), then name** — `sm` tile · name · a tier badge in the tier colour · owned count as a stepper
-  with an "unlimited" toggle · pin marker. Tapping the row itself deselects it.
+  (highest first), then name** — `sm` tile · name · a tier badge in the tier colour · owned count as a **plain input** (select-all on
+  focus, no step buttons) with an "unlimited" toggle · pin marker. Tapping the row itself deselects it.
 - **Adding** is a **combobox** (type a name, or open the list): the list is grouped by tier, highest first, each
   group headed "Tier VI" in that tier's colour, rows = tile · name · tier badge; picking a row adds it and keeps
   the combobox open for the next one. No Tier/Role/Race chips. "Custom mercenary…" is the last row.
