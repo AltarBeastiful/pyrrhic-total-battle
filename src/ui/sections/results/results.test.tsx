@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { unitById } from '@/data';
 import { newRoot } from '@/state/defaults';
-import { selectActiveProfile, useStore } from '@/state/store';
+import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
 import type * as WorkerClient from '@/worker/client';
 
@@ -57,6 +57,15 @@ function pillName(index = 0): string {
   return `${unitById(stack.unitId)?.label ?? stack.unitId} ${amount(stack.count)}`;
 }
 
+/** Accessible name of the chip of one unit id. */
+function pillNameOf(unitId: string): string {
+  const stack = lastResult()?.result.stacks.find((entry) => entry.unitId === unitId);
+  if (!stack) throw new Error(`${unitId} is not in the march`);
+  return `${unitById(unitId)?.label ?? unitId} ${amount(stack.count)}`;
+}
+
+const setup = () => selectActiveSetup(useStore.getState());
+
 function unitNameOf(index = 0): string {
   const stack = lastResult()?.result.stacks[index];
   return unitById(stack?.unitId ?? '')?.name ?? '';
@@ -71,8 +80,8 @@ test('Generate sizes the default profile and shows pills and a summary', async (
   expect(result?.result.pools.leadership.capacity).toBe(4100);
 
   expect(screen.getByRole('button', { name: pillName() })).toBeTruthy();
-  expect(screen.getByText('Average damage')).toBeTruthy();
-  expect(screen.getByText('Damage / silver')).toBeTruthy();
+  expect(screen.getByText('Expected damage')).toBeTruthy();
+  expect(screen.getByText('Value per silver')).toBeTruthy();
   expect(screen.getByText(`${amount(result?.result.pools.leadership.used ?? 0)} / 4,100`)).toBeTruthy();
 });
 
@@ -82,9 +91,12 @@ test('a pill popover shows the effective stats behind the count', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: pillName() }));
   const panel = await screen.findByLabelText(`${unitNameOf()} stack`);
-  expect(within(panel).getByText('HP per unit')).toBeTruthy();
-  expect(within(panel).getByText('Damage per hit')).toBeTruthy();
-  expect(within(panel).getByRole('button', { name: 'Remove from formation' })).toBeTruthy();
+  expect(within(panel).getByText('This march')).toBeTruthy();
+  expect(within(panel).getByText('HP each')).toBeTruthy();
+  expect(within(panel).getByText('One hit')).toBeTruthy();
+  expect(within(panel).getByText('Unit')).toBeTruthy();
+  expect(within(panel).getByText('After the battle')).toBeTruthy();
+  expect(within(panel).getByRole('button', { name: /Remove from march/ })).toBeTruthy();
 });
 
 test('editing a count by hand shows the delta and Undo puts it back', async () => {
@@ -119,7 +131,7 @@ test('the journal drawer lists the numbered hits of both strike orders', async (
   expect(firstRow?.textContent).toMatch(/Your .* squad dealt|The monster's .* squad destroyed/);
 
   // Radix activates a tab on mouse-down, not on click.
-  fireEvent.mouseDown(within(drawer).getByRole('tab', { name: 'Army first' }), { button: 0 });
+  fireEvent.mouseDown(within(drawer).getByRole('tab', { name: 'You first' }), { button: 0 });
   expect(within(drawer).getAllByRole('rowheader').length).toBe(
     lastResult()?.summary.journals.armyFirst.entries.length,
   );
@@ -156,7 +168,7 @@ test('two saved stacks can be compared side by side', async () => {
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByRole('columnheader', { name: 'Wide march' })).toBeTruthy();
   expect(within(dialog).getByRole('columnheader', { name: 'Small march' })).toBeTruthy();
-  expect(within(dialog).getByRole('rowheader', { name: 'Average damage' })).toBeTruthy();
+  expect(within(dialog).getByRole('rowheader', { name: 'Expected damage' })).toBeTruthy();
   expect(within(dialog).getByRole('rowheader', { name: 'Unit counts' })).toBeTruthy();
 });
 
@@ -168,7 +180,7 @@ test('removing a unit type from the formation excludes it and generates again', 
   const name = unitNameOf();
   fireEvent.click(screen.getByRole('button', { name: pillName() }));
   const panel = await screen.findByLabelText(`${name} stack`);
-  fireEvent.click(within(panel).getByRole('button', { name: 'Remove from formation' }));
+  fireEvent.click(within(panel).getByRole('button', { name: /Remove from march/ }));
 
   await waitFor(() => {
     expect(selectActiveProfile(useStore.getState())?.troops.excludedUnitIds).toContain(removed);
@@ -238,4 +250,83 @@ test('a result older than the profile is flagged as possibly stale', async () =>
 
   expect(screen.getByText(/Generated 1 minute ago/)).toBeTruthy();
   expect(screen.getByText(/may be stale/)).toBeTruthy();
+});
+
+test('the HP profile draws one bar per stack', async () => {
+  render(<Page />);
+  await generate();
+
+  const chart = screen.getByRole('list', { name: /Total HP per stack/ });
+  expect(within(chart).getAllByRole('listitem')).toHaveLength(lastResult()?.result.stacks.length ?? 0);
+});
+
+test('keeping a left-out unit type in puts it back and remembers it', async () => {
+  // 20 leadership is enough for nine of the ten types the default profile owns: exactly one is left out.
+  useStore.getState().updateActiveSetup({ housing: { leadership: 20, authority: 0, dominance: 0 } });
+  render(<Page />);
+  await generate();
+
+  const left = lastResult()?.result.dropped[0]?.unitId ?? '';
+  expect(left).not.toBe('');
+  const name = unitById(left)?.name ?? left;
+
+  fireEvent.click(screen.getByRole('button', { name: `Keep in march: ${name}` }));
+
+  await waitFor(() => {
+    expect(setup()?.pinnedUnitIds).toContain(left);
+  });
+  await waitFor(() => {
+    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === left)).toBe(true);
+  });
+  expect(screen.getByText(/Pinned:/)).toBeTruthy();
+  expect(screen.getByRole('img', { name: `${name} is kept in the march` })).toBeTruthy();
+
+  // Unpinning from the stack's own popover hands it back to the sizer.
+  const count = lastResult()?.result.stacks.find((stack) => stack.unitId === left)?.count ?? 0;
+  fireEvent.click(screen.getByRole('button', { name: `${unitById(left)?.label ?? left} ${amount(count)}` }));
+  const panel = await screen.findByLabelText(`${name} stack`);
+  fireEvent.click(within(panel).getByRole('button', { name: `Stop keeping it: ${name}` }));
+
+  await waitFor(() => {
+    expect(setup()?.pinnedUnitIds).not.toContain(left);
+  });
+});
+
+test('keeping a removed unit type in un-removes it as well as pinning it', async () => {
+  render(<Page />);
+  await generate();
+
+  const removed = lastResult()?.result.stacks[0]?.unitId ?? '';
+  const name = unitNameOf();
+  fireEvent.click(screen.getByRole('button', { name: pillName() }));
+  const panel = await screen.findByLabelText(`${name} stack`);
+  fireEvent.click(within(panel).getByRole('button', { name: /Remove from march/ }));
+
+  await waitFor(() => {
+    expect(selectActiveProfile(useStore.getState())?.troops.excludedUnitIds).toContain(removed);
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: `Keep in march: ${name}` }));
+
+  await waitFor(() => {
+    expect(selectActiveProfile(useStore.getState())?.troops.excludedUnitIds).not.toContain(removed);
+  });
+  expect(setup()?.pinnedUnitIds).toContain(removed);
+  await waitFor(() => {
+    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === removed)).toBe(true);
+  });
+});
+
+test('removing a unit type stops keeping it in, so the two never fight', async () => {
+  useStore.getState().updateActiveSetup({ pinnedUnitIds: ['archer-1'] });
+  render(<Page />);
+  await generate();
+
+  fireEvent.click(screen.getByRole('button', { name: pillNameOf('archer-1') }));
+  const panel = await screen.findByLabelText(`${unitById('archer-1')?.name ?? ''} stack`);
+  fireEvent.click(within(panel).getByRole('button', { name: /Remove from march/ }));
+
+  await waitFor(() => {
+    expect(setup()?.pinnedUnitIds).not.toContain('archer-1');
+  });
 });

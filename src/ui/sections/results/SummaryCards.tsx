@@ -1,31 +1,58 @@
+import type { ReactNode } from 'react';
+
 import type { BattleSummary, Pool } from '@/engine/types';
+import { PoolBadge } from '@/ui/icons';
 import { Card } from '@/ui/primitives';
 
 import { amount, delta, deltaRatio, duration, ratio } from './format';
 
+/** What each pool pays for — the words the summary uses for the damage split. */
 const POOL_LABELS: Record<Pool, string> = {
   leadership: 'Troops',
   authority: 'Mercenaries',
   dominance: 'Monsters',
 };
 
+const POOLS = Object.keys(POOL_LABELS) as Pool[];
+
 interface MetricProps {
   label: string;
   value: string;
   /** Difference against the generated result, shown only while counts are edited by hand. */
   change?: string | undefined;
-  hint?: string;
+  caption?: string;
+  badge?: ReactNode;
 }
 
-function Metric({ label, value, change, hint }: MetricProps) {
+/** A headline figure: a small caption, a big tabular number. */
+function Metric({ label, value, change, caption, badge }: MetricProps) {
   return (
-    <div className="border-line bg-raised rounded-lg border px-3 py-2">
-      <p className="text-muted text-xs font-medium">{label}</p>
-      <p className="text-sm font-semibold tabular-nums">{value}</p>
+    <Card tone="raised" padded={false} className="px-3 py-2">
+      <p className="text-muted flex items-center gap-1.5 text-xs font-medium">
+        {badge}
+        {label}
+      </p>
+      <p className="nums mt-0.5 text-lg leading-tight font-semibold sm:text-xl">{value}</p>
       {change !== undefined && change !== '0' && (
-        <p className="text-accent text-xs tabular-nums">{change} vs generated</p>
+        <p className="text-accent nums text-xs">{change} vs generated</p>
       )}
-      {hint !== undefined && <p className="text-muted text-xs">{hint}</p>}
+      {caption !== undefined && <p className="text-muted text-xs">{caption}</p>}
+    </Card>
+  );
+}
+
+/** A figure inside a grouped card (recovery, damage by pool): no box of its own. */
+function Figure({ label, value, change, badge }: MetricProps) {
+  return (
+    <div>
+      <p className="text-muted flex items-center gap-1.5 text-xs font-medium">
+        {badge}
+        {label}
+      </p>
+      <p className="nums text-sm font-semibold">{value}</p>
+      {change !== undefined && change !== '0' && (
+        <p className="text-accent nums text-xs">{change} vs generated</p>
+      )}
     </div>
   );
 }
@@ -36,88 +63,95 @@ export interface SummaryCardsProps {
   baseline?: BattleSummary | undefined;
 }
 
-/** Battle Summary (S-34): what the march does, and what getting it back costs. */
+/** Battle summary (S-34): what the march does, and what getting it back costs. */
 export function SummaryCards({ summary, baseline }: SummaryCardsProps) {
   const diff = (pick: (value: BattleSummary) => number): string | undefined =>
     baseline === undefined ? undefined : delta(pick(summary) - pick(baseline));
   const diffRatio = (pick: (value: BattleSummary) => number): string | undefined =>
     baseline === undefined ? undefined : deltaRatio(pick(summary) - pick(baseline));
+  const stackChange = diff((value) => value.stackCount);
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold">Battle summary</h3>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <h3 className="text-sm font-semibold">Battle summary</h3>
+        <p className="text-muted nums text-xs">
+          {amount(summary.stackCount)} stacks
+          {stackChange !== undefined && stackChange !== '0' && (
+            <span className="text-accent"> ({stackChange} vs generated)</span>
+          )}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Metric
-          label="Stacks"
-          value={amount(summary.stackCount)}
-          change={diff((value) => value.stackCount)}
-        />
-        <Metric
-          label="Minimum damage"
+          label="Damage if the monster strikes first"
           value={amount(summary.minDamage)}
           change={diff((value) => value.minDamage)}
-          hint="The monster strikes first"
+          caption="The worst case: it hits before you do."
         />
         <Metric
-          label="Average damage"
-          value={amount(summary.avgDamage)}
-          change={diff((value) => value.avgDamage)}
-        />
-        <Metric
-          label="Maximum damage"
+          label="Damage if you strike first"
           value={amount(summary.maxDamage)}
           change={diff((value) => value.maxDamage)}
-          hint="Your army strikes first"
+          caption="The best case: you open the fight."
+        />
+        <Metric
+          label="Expected damage"
+          value={amount(summary.avgDamage)}
+          change={diff((value) => value.avgDamage)}
+          caption="Who strikes first is a coin flip."
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Metric
-          label="Damage / silver"
+          label="Value per silver"
           value={ratio(summary.damagePerSilver)}
           change={diffRatio((value) => value.damagePerSilver)}
         />
         <Metric
-          label="Damage / gold"
+          label="Value per gold"
           value={ratio(summary.damagePerGold)}
           change={diffRatio((value) => value.damagePerGold)}
         />
         <Metric
-          label="Damage / dragon coin"
+          label="Value per dragon coin"
           value={ratio(summary.damagePerDragonCoin)}
           change={diffRatio((value) => value.damagePerDragonCoin)}
         />
       </div>
 
-      <Card padded={false} className="p-3">
-        <h4 className="text-muted mb-2 text-xs font-medium">Recovery</h4>
+      <Card tone="raised" padded={false} className="p-3">
+        <h4 className="mb-2 text-sm font-semibold">Recovery</h4>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Metric
+          <Figure
             label="Silver"
             value={amount(summary.recovery.silver)}
             change={diff((value) => value.recovery.silver)}
           />
-          <Metric
+          <Figure
             label="Gold"
             value={amount(summary.recovery.gold)}
             change={diff((value) => value.recovery.gold)}
           />
-          <Metric
+          <Figure
             label="Dragon coins"
             value={amount(summary.recovery.dragonCoins)}
             change={diff((value) => value.recovery.dragonCoins)}
           />
-          <Metric label="Time" value={duration(summary.recovery.seconds)} />
+          <Figure label="Time" value={duration(summary.recovery.seconds)} />
         </div>
       </Card>
 
-      <Card padded={false} className="p-3">
-        <h4 className="text-muted mb-2 text-xs font-medium">Damage by pool</h4>
+      <Card tone="raised" padded={false} className="p-3">
+        <h4 className="mb-2 text-sm font-semibold">Damage by pool</h4>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {(Object.keys(POOL_LABELS) as Pool[]).map((pool) => (
-            <Metric
+          {POOLS.map((pool) => (
+            <Figure
               key={pool}
               label={POOL_LABELS[pool]}
+              badge={<PoolBadge pool={pool} size="sm" />}
               value={amount(summary.damageByPool[pool])}
               change={diff((value) => value.damageByPool[pool])}
             />

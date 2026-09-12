@@ -29,7 +29,7 @@ test('switching to the double preset writes eight squads to the march', () => {
 
   expect(enemy()).toEqual({ melee: 2, ranged: 2, mounted: 2, flying: 2 });
   expect(screen.getByRole('button', { name: 'Double 8' }).getAttribute('aria-pressed')).toBe('true');
-  expect(screen.getByText(/8 squads in total/)).toBeTruthy();
+  expect(screen.getByText(/8 squads in total: 2 melee · 2 ranged · 2 mounted · 2 flying/)).toBeTruthy();
 });
 
 test('custom reveals one field per category and writes what is typed', () => {
@@ -49,5 +49,7 @@ test('an event that forces a formation locks the section', () => {
   render(<EnemySection />);
 
   expect(screen.queryByRole('button', { name: 'Double 8' })).toBeNull();
-  expect(screen.getByText(/An active event sets the formation/)).toBeTruthy();
+  expect(screen.getByText(/fixes the formation for this march/)).toBeTruthy();
+  // The header says who decided it, so a collapsed section still explains itself.
+  expect(screen.getByText(/forced by Arachne's Invasion/)).toBeTruthy();
 });

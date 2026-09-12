@@ -6,24 +6,31 @@ import type { BonusKey, Pool, SpecialKey } from '@/engine/types';
 import { newSavedStack } from '@/state/defaults';
 import type { SavedStack } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { PinIcon, PoolBadge, ResultsIcon, WarningIcon } from '@/ui/icons';
 import { Button, Card, HelpNote, Section, Toggle } from '@/ui/primitives';
 import { initResultPersistence, resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 
 import { amount, relativeTime } from './format';
-import { restoreLastResult, runGenerate } from './generate';
+import { removeFromFormation, restoreToFormation, stopKeepingAll } from './formation';
+import { restoreLastResult } from './generate';
+import { HpProfile } from './HpProfile';
 import { JournalDrawer } from './JournalDrawer';
+import { KeepButton } from './KeepButton';
 import { applyCounts, hasEdits } from './manual';
 import { SavedStacksPanel, StackNameDialog } from './SavedStacks';
 import { StackPills } from './StackPills';
 import { SummaryCards } from './SummaryCards';
+import { TradeoffPanel } from './TradeoffPanel';
 import { useRunStore } from './runStore';
-import { unitName } from './units';
+import { unitLabel, unitName } from './units';
 
 const POOL_LABELS: Record<Pool, string> = {
   leadership: 'Leadership',
   authority: 'Authority',
   dominance: 'Dominance',
 };
+
+const POOLS = Object.keys(POOL_LABELS) as Pool[];
 
 /** Saved stacks keep the aggregated bonus maps; the zeroes would triple the stored document. */
 function stripZeros<K extends string>(map: Record<K, number>): Partial<Record<K, number>> {
@@ -36,84 +43,29 @@ function stripZeros<K extends string>(map: Record<K, number>): Partial<Record<K,
 
 /**
  * The same reason repeated for ten unit types is one fact, not ten: an empty pool drops every type it
- * pays for. Identical reasons are collapsed into one line, the unit names kept underneath.
+ * pays for. Identical reasons are collapsed into one line, the unit types kept underneath so each one
+ * still gets its own "Keep in march".
  */
 function groupDropped(
   dropped: readonly { unitId: string; reason: string }[],
-  nameOf: (unitId: string) => string,
-): { reason: string; names: string[] }[] {
+): { reason: string; unitIds: string[] }[] {
   const groups = new Map<string, string[]>();
   for (const entry of dropped) {
-    const names = groups.get(entry.reason) ?? [];
-    names.push(nameOf(entry.unitId));
-    groups.set(entry.reason, names);
+    const ids = groups.get(entry.reason) ?? [];
+    ids.push(entry.unitId);
+    groups.set(entry.reason, ids);
   }
-  return [...groups].map(([reason, names]) => ({ reason, names }));
+  return [...groups].map(([reason, unitIds]) => ({ reason, unitIds }));
 }
 
-/**
- * Take a unit type out of the formation and generate again. A mercenary leaves the owned list (its cap is
- * remembered so it can come back); anything else is added to the profile's per-unit exclusions, which is
- * where the Troops section reads them from too.
- */
-function removeFromFormation(unitId: string): void {
-  const state = useStore.getState();
-  const profile = selectActiveProfile(state);
-  if (!profile) return;
-  const owned = profile.mercenaries.selected.find((entry) => entry.id === unitId);
-  if (owned) {
-    useRunStore.getState().rememberMercenary({ id: owned.id, cap: owned.cap });
-    state.updateProfile(profile.id, (current) => ({
-      mercenaries: {
-        ...current.mercenaries,
-        selected: current.mercenaries.selected.filter((entry) => entry.id !== unitId),
-      },
-    }));
-  } else {
-    state.updateProfile(profile.id, (current) => ({
-      troops: {
-        ...current.troops,
-        excludedUnitIds: current.troops.excludedUnitIds.includes(unitId)
-          ? current.troops.excludedUnitIds
-          : [...current.troops.excludedUnitIds, unitId],
-      },
-    }));
-  }
-  void runGenerate();
-}
-
-function restoreToFormation(unitId: string): void {
-  const state = useStore.getState();
-  const profile = selectActiveProfile(state);
-  if (!profile) return;
-  const removed = useRunStore.getState().removedMercenaries.find((entry) => entry.id === unitId);
-  if (removed) {
-    useRunStore.getState().forgetMercenary(unitId);
-    state.updateProfile(profile.id, (current) => ({
-      mercenaries: {
-        ...current.mercenaries,
-        selected: current.mercenaries.selected.some((entry) => entry.id === unitId)
-          ? current.mercenaries.selected
-          : [...current.mercenaries.selected, { id: removed.id, cap: removed.cap }],
-      },
-    }));
-  }
-  state.updateProfile(profile.id, (current) => ({
-    troops: {
-      ...current.troops,
-      excludedUnitIds: current.troops.excludedUnitIds.filter((id) => id !== unitId),
-    },
-  }));
-  void runGenerate();
-}
-
-/** Results (PLAN §4.8): summary cards, the stacks themselves, the journal, saved stacks. */
+/** Results (PLAN §4.8): summary cards, the HP profile, the stacks, the journal, saved stacks. */
 export function ResultsSection() {
   const last = useResultStore((state) => state.last);
   const running = useResultStore((state) => state.running);
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const removedMercenaries = useRunStore((state) => state.removedMercenaries);
+  const tradeoff = useRunStore((state) => state.tradeoff);
 
   // Manual edits live in the result store so they survive a reload with the result they belong to.
   const counts = useResultStore((state) => state.manualCounts);
@@ -132,6 +84,7 @@ export function ResultsSection() {
     [last, counts],
   );
 
+  const kept = setup?.pinnedUnitIds ?? [];
   const excludedIds = profile?.troops.excludedUnitIds ?? [];
   const removedIds = [...excludedIds, ...removedMercenaries.map((entry) => entry.id)];
 
@@ -186,6 +139,8 @@ export function ResultsSection() {
     if (sortByHp) pills.sort((a, b) => b.totalHp - a.totalHp);
 
     const outdated = profile !== undefined && profile.updatedAt > last.at;
+    const keptHere = kept.filter((unitId) => result.stacks.some((stack) => stack.unitId === unitId));
+    const keptElsewhere = kept.filter((unitId) => !keptHere.includes(unitId));
 
     return (
       <div className="space-y-4">
@@ -206,8 +161,30 @@ export function ResultsSection() {
 
         <SummaryCards summary={summary} baseline={edited ? last.summary : undefined} />
 
+        {kept.length > 0 && (
+          <p className="text-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+            <PinIcon aria-hidden="true" className="text-accent" />
+            <span>Pinned: {kept.map((unitId) => unitLabel(unitId, last.request.units)).join(', ')}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={running}
+              onClick={() => {
+                stopKeepingAll();
+              }}
+            >
+              Clear all
+              <span className="sr-only">{': stop keeping every unit type in'}</span>
+            </Button>
+          </p>
+        )}
+
+        {tradeoff !== null && (
+          <TradeoffPanel tradeoff={tradeoff} units={last.request.units} kept={kept} busy={running} />
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="mr-auto text-sm font-semibold">Stacks, in the order they die</h3>
+          <h3 className="mr-auto text-sm font-semibold">Stacks, in the order they fall</h3>
           <Toggle label="Sort by total HP" checked={sortByHp} onChange={setSortByHp} className="text-sm" />
           {sortByHp && (
             <Button
@@ -216,16 +193,20 @@ export function ResultsSection() {
                 setSortByHp(false);
               }}
             >
-              Reset order
+              Back to the order they fall
             </Button>
           )}
         </div>
+
+        <HpProfile stacks={pills} units={last.request.units} kept={kept} />
 
         <StackPills
           request={last.request}
           stacks={pills}
           pools={result.pools}
           generated={generated}
+          kept={kept}
+          busy={running}
           onCount={(unitId, count) => {
             useResultStore.getState().editCount(unitId, count);
           }}
@@ -256,30 +237,75 @@ export function ResultsSection() {
         )}
 
         {result.warnings.length > 0 && (
-          <div className="space-y-1">
-            {result.warnings.map((warning) => (
-              <HelpNote key={warning} tone="warn">
-                {warning}
-              </HelpNote>
-            ))}
-          </div>
+          <Card tone="warn" padded={false} className="p-3">
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+              <WarningIcon aria-hidden="true" className="text-warn" />
+              Worth a look
+            </h3>
+            <ul className="mt-1.5 space-y-1 text-xs leading-relaxed">
+              {result.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
+        {keptElsewhere.length > 0 && (
+          <HelpNote tone="warn">
+            {keptElsewhere.map((unitId) => unitName(unitId, last.request.units)).join(', ')} stayed out of
+            this march even though you keep {keptElsewhere.length === 1 ? 'it' : 'them'} in. Check that the
+            tier is still switched on in Troops or Mercenaries, and that the capacity paying for{' '}
+            {keptElsewhere.length === 1 ? 'it' : 'them'} is not zero.
+          </HelpNote>
         )}
 
         {result.dropped.length > 0 && (
           <Card padded={false} className="p-3">
             <h3 className="mb-1.5 text-sm font-semibold">Unit types left out</h3>
-            <ul className="text-muted space-y-1 text-xs">
-              {groupDropped(result.dropped, (unitId) => unitName(unitId, last.request.units)).map((group) => (
-                <li key={group.reason}>
-                  <span className="text-fg font-medium">
-                    {group.names.length === 1
-                      ? group.names[0]
-                      : `${String(group.names.length)} unit types left out`}
-                  </span>{' '}
-                  — {group.reason}
-                  {group.names.length > 1 && <span className="block">{group.names.join(', ')}</span>}
-                </li>
-              ))}
+            <ul className="space-y-2">
+              {groupDropped(result.dropped).map((group) => {
+                const only = group.unitIds.length === 1 ? (group.unitIds[0] ?? '') : null;
+                return (
+                  <li key={group.reason} className="text-muted text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="min-w-0">
+                        <span className="text-fg font-medium">
+                          {only === null
+                            ? `${String(group.unitIds.length)} unit types left out`
+                            : unitName(only, last.request.units)}
+                        </span>{' '}
+                        — {group.reason}
+                      </p>
+                      {only !== null && (
+                        <KeepButton
+                          unitId={only}
+                          name={unitName(only, last.request.units)}
+                          kept={kept.includes(only)}
+                          disabled={running}
+                        />
+                      )}
+                    </div>
+                    {only === null && (
+                      <ul className="mt-1.5 space-y-1.5">
+                        {group.unitIds.map((unitId) => {
+                          const name = unitName(unitId, last.request.units);
+                          return (
+                            <li key={unitId} className="flex items-center justify-between gap-2">
+                              <span className="truncate">{name}</span>
+                              <KeepButton
+                                unitId={unitId}
+                                name={name}
+                                kept={kept.includes(unitId)}
+                                disabled={running}
+                              />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </Card>
         )}
@@ -295,15 +321,25 @@ export function ResultsSection() {
                     {profile?.mercenaries.custom.find((entry) => entry.id === unitId)?.name ??
                       unitName(unitId, last.request.units)}
                   </span>
-                  <Button
-                    size="sm"
-                    disabled={running}
-                    onClick={() => {
-                      restoreToFormation(unitId);
-                    }}
-                  >
-                    Restore
-                  </Button>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <Button
+                      size="sm"
+                      disabled={running}
+                      onClick={() => {
+                        restoreToFormation(unitId);
+                      }}
+                    >
+                      Put it back
+                      <span className="sr-only">{`: ${unitName(unitId, last.request.units)}`}</span>
+                    </Button>
+                    {/* Keeping it in does both: it comes back *and* nothing may drop it again. */}
+                    <KeepButton
+                      unitId={unitId}
+                      name={unitName(unitId, last.request.units)}
+                      kept={kept.includes(unitId)}
+                      disabled={running}
+                    />
+                  </span>
                 </li>
               ))}
             </ul>
@@ -340,7 +376,7 @@ export function ResultsSection() {
             title="Save this stack"
             description="It is kept inside the active profile, with the march it came from."
             confirmLabel="Save stack"
-            initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} avg`}
+            initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
             onConfirm={saveStack}
             onCancel={() => {
               setSaving(false);
@@ -356,20 +392,29 @@ export function ResultsSection() {
     const result = edited?.result ?? last.result;
     return (
       <aside className="hidden xl:block">
-        <div className="border-line bg-raised sticky top-4 rounded-xl border p-3">
-          <h3 className="mb-2 text-sm font-semibold">Formation</h3>
-          {(Object.keys(POOL_LABELS) as Pool[]).map((pool) => {
+        <Card tone="raised" padded={false} className="sticky top-4 p-3">
+          <h3 className="mb-2 text-sm font-semibold">This march</h3>
+          {POOLS.map((pool) => {
             const stacks = result.stacks.filter((stack) => stack.pool === pool);
             if (stacks.length === 0) return null;
             return (
               <div key={pool} className="mb-2 last:mb-0">
-                <p className="text-muted text-xs font-medium">
+                <p className="text-muted nums flex items-center gap-1.5 text-xs font-medium">
+                  <PoolBadge pool={pool} size="sm" />
                   {POOL_LABELS[pool]} {amount(result.pools[pool].used)}/{amount(result.pools[pool].capacity)}
                 </p>
-                <ul className="text-xs tabular-nums">
+                <ul className="nums text-xs">
                   {stacks.map((stack) => (
                     <li key={stack.unitId} className="flex justify-between gap-2">
-                      <span className="truncate">{unitName(stack.unitId, last.request.units)}</span>
+                      <span className="truncate">
+                        {unitName(stack.unitId, last.request.units)}
+                        {kept.includes(stack.unitId) && (
+                          <PinIcon
+                            title="Kept in march"
+                            className="text-accent ml-1 inline-block align-[-0.1em]"
+                          />
+                        )}
+                      </span>
                       <span className="font-medium">{amount(stack.count)}</span>
                     </li>
                   ))}
@@ -377,7 +422,7 @@ export function ResultsSection() {
               </div>
             );
           })}
-        </div>
+        </Card>
       </aside>
     );
   };
@@ -385,31 +430,34 @@ export function ResultsSection() {
   const announcement =
     last === null
       ? ''
-      : `Stack generated: ${amount(last.result.stacks.length)} stacks, ${amount(
+      : `Stacks generated: ${amount(last.result.stacks.length)} stacks, ${amount(
           last.summary.avgDamage,
-        )} average damage.`;
+        )} expected damage.`;
 
   return (
     <Section
       id="results"
       title="Results"
+      icon={<ResultsIcon />}
       description="Stack sizes, the battle summary and the journal."
       summary={
         last === null ? undefined : (
-          <span className="text-muted">
-            {amount(last.result.stacks.length)} stacks · {amount(last.summary.avgDamage)} average damage
+          <span className="text-muted nums">
+            {amount(last.result.stacks.length)} stacks · {amount(last.summary.avgDamage)} expected damage
           </span>
         )
       }
       help={
         <>
           <p>
-            Stacks are listed in the order the enemy destroys them: highest total HP first. The pill shows the
-            unit count; open it for the effective stats behind that count and for the manual edit.
+            The monster always hits the stack with the most health left, so the HP profile is the order the
+            battle destroys your army in: first to fall on top. A chip shows the unit count; open it for the
+            stats behind that count, to edit it by hand, or to keep that type in the march for good.
           </p>
           <p>
             <strong>Where to find it in game:</strong> after the march, the battle report in your Journal
-            lists the same numbered hits. Hold it next to our journal to check the bonuses you typed.
+            lists the same numbered hits, so you can hold it next to our journal and check the bonuses you
+            typed.
           </p>
         </>
       }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 
 import { NumberField } from '@/ui/primitives';
 
@@ -10,6 +11,8 @@ export interface IntegerFieldProps {
   min?: number;
   max?: number;
   hint?: string;
+  /** A glyph inside the field, before the value (a pool badge, a category glyph). Decorative. */
+  prefix?: ReactNode;
   hideLabel?: boolean;
   className?: string;
 }
@@ -28,6 +31,7 @@ export function IntegerField({
   min = 0,
   max,
   hint,
+  prefix,
   hideLabel = false,
   className,
 }: IntegerFieldProps) {
@@ -47,6 +51,7 @@ export function IntegerField({
       min={min}
       {...(max === undefined ? {} : { max })}
       {...(hint === undefined ? {} : { hint })}
+      {...(prefix === undefined ? {} : { prefix })}
       hideLabel={hideLabel}
       {...(className === undefined ? {} : { className })}
       onChange={(next) => {

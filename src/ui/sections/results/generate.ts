@@ -11,7 +11,7 @@ import { getCalcClient } from '@/ui/calcClient';
 import { readStoredResult, useResultStore } from '@/ui/resultStore';
 import { isAbortError } from '@/worker/client';
 
-import { useRunStore } from './runStore';
+import { tradeoffFigures, useRunStore } from './runStore';
 
 /**
  * Wall-clock budget of a priority search. Long enough for the greedy descent and a few restarts on a
@@ -56,8 +56,17 @@ export async function runGenerate(): Promise<void> {
       controller.signal,
     );
     const kept = new Set(found.includedUnitIds);
+    const left = request.units.map((unit) => unit.id).filter((id) => !kept.has(id));
     useResultStore.getState().setResult({ ...common, result: found.result, summary: found.summary });
-    useRunStore.getState().finish(request.units.map((unit) => unit.id).filter((id) => !kept.has(id)));
+    // The search's own first evaluation is the army with every type in it: keep it, it is the only way to
+    // show what the winning selection gave up (PLAN §3.6).
+    useRunStore.getState().finish(left, {
+      objective: setup.priority,
+      includedUnitIds: [...found.includedUnitIds],
+      excludedUnitIds: left,
+      selection: tradeoffFigures(found.summary),
+      baseline: tradeoffFigures(found.baseline.summary),
+    });
   } catch (error) {
     useRunStore.getState().finish([]);
     if (isAbortError(error)) {

@@ -1,6 +1,7 @@
-import type { RecoveryMode } from '@/engine/types';
+import type { Pool, RecoveryMode } from '@/engine/types';
 import { OBJECTIVES, RECOVERY_MODES } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { GenerateIcon, HousingIcon, PoolBadge } from '@/ui/icons';
 import { useResultStore } from '@/ui/resultStore';
 import { Button, HelpNote, NativeSelect, Popover, Section } from '@/ui/primitives';
 
@@ -12,13 +13,23 @@ import { unitName } from '../results/units';
 
 type Priority = (typeof OBJECTIVES)[number] | 'none';
 
+/** What the priority select offers, and the short form the section header shows. */
 const PRIORITY_LABELS: Record<Priority, string> = {
-  none: 'No priority — just size the stacks',
-  avgDamage: 'Highest average damage',
-  minDamage: 'Best worst case (highest minimum damage)',
-  damagePerSilver: 'Most damage per silver',
-  damagePerGold: 'Most damage per gold',
-  damagePerDragonCoin: 'Most damage per dragon coin',
+  none: 'No priority — march with every unit type',
+  avgDamage: 'Best expected damage',
+  minDamage: 'Best worst case — most damage if the monster strikes first',
+  damagePerSilver: 'Best value per silver',
+  damagePerGold: 'Best value per gold',
+  damagePerDragonCoin: 'Best value per dragon coin',
+};
+
+const PRIORITY_SHORT: Record<Priority, string> = {
+  none: 'No priority',
+  avgDamage: 'Best expected damage',
+  minDamage: 'Best worst case',
+  damagePerSilver: 'Best value per silver',
+  damagePerGold: 'Best value per gold',
+  damagePerDragonCoin: 'Best value per dragon coin',
 };
 
 const RECOVERY_LABELS: Record<RecoveryMode, string> = {
@@ -27,11 +38,19 @@ const RECOVERY_LABELS: Record<RecoveryMode, string> = {
   selective: 'Revive the top types, retrain the rest',
 };
 
-const POOL_HINTS = {
+const POOL_LABELS: Record<Pool, string> = {
+  leadership: 'Leadership',
+  authority: 'Authority',
+  dominance: 'Dominance',
+};
+
+const POOL_HINTS: Record<Pool, string> = {
   leadership: 'Pays for troops.',
   authority: 'Pays for mercenaries.',
   dominance: 'Pays for monsters.',
-} as const;
+};
+
+const POOLS = Object.keys(POOL_LABELS) as Pool[];
 
 const isPriority = (value: string): value is Priority =>
   value === 'none' || (OBJECTIVES as readonly string[]).includes(value);
@@ -53,7 +72,7 @@ export function HousingSection() {
 
   if (!profile || !setup) {
     return (
-      <Section id="housing" title="Housing and march">
+      <Section id="housing" title="Housing and march" icon={<HousingIcon />}>
         <HelpNote tone="warn">No march is selected.</HelpNote>
       </Section>
     );
@@ -70,24 +89,30 @@ export function HousingSection() {
     <Section
       id="housing"
       title="Housing and march"
-      description="What this march can carry, what to optimise for, and how you will pay for the losses."
+      icon={<HousingIcon />}
+      description="What this march can carry, what to aim for, and how you will pay for the losses."
       summary={
-        <span className="text-muted">
-          {amount(housing.leadership)} leadership · {amount(housing.authority)} authority ·{' '}
-          {amount(housing.dominance)} dominance
+        <span className="text-muted nums">
+          {POOLS.map((pool) => `${POOL_LABELS[pool]} ${amount(housing[pool])}`).join(' · ')} ·{' '}
+          {PRIORITY_SHORT[priority]}
         </span>
       }
       help={
         <>
           <p>
-            <strong>Where to find it in game:</strong> open the march window on the epic monster. The three
-            capacities sit above the unit list — leadership pays for troops, authority for mercenaries,
-            dominance for monsters. They change with your castle, so check them before a big hit.
+            <strong>Where to find it in game:</strong> open the march window on the epic monster — the three
+            capacities sit above the unit list, and they change with your castle.
           </p>
           <p>
-            Without a priority you march with every unit type you own. Pick one and the calculator instead
-            tries combinations, drops the types that cost more than they add, keeps the best it finds inside{' '}
-            {String(Math.round(SEARCH_BUDGET_MS / 1000))} seconds, and tells you what it left out.
+            Leadership pays for troops, authority for mercenaries, dominance for monsters. Without a priority
+            you march with every unit type you own; pick one and the calculator tries combinations instead,
+            drops the types that cost more than they add, keeps the best it finds inside{' '}
+            {String(Math.round(SEARCH_BUDGET_MS / 1000))} seconds, and shows you what that choice cost you.
+          </p>
+          <p>
+            <strong>Best worst case</strong> is the cautious one: it maximises the damage you do when the
+            monster strikes first, which keeps the army wide instead of betting everything on winning the coin
+            flip.
           </p>
           <p>
             The recovery plan decides what the summary charges you after the fight: retraining pays silver
@@ -99,33 +124,19 @@ export function HousingSection() {
     >
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <IntegerField
-            label="Leadership"
-            hint={POOL_HINTS.leadership}
-            value={housing.leadership}
-            max={100_000_000}
-            onChange={(value) => {
-              updateActiveSetup({ housing: { ...housing, leadership: value } });
-            }}
-          />
-          <IntegerField
-            label="Authority"
-            hint={POOL_HINTS.authority}
-            value={housing.authority}
-            max={100_000_000}
-            onChange={(value) => {
-              updateActiveSetup({ housing: { ...housing, authority: value } });
-            }}
-          />
-          <IntegerField
-            label="Dominance"
-            hint={POOL_HINTS.dominance}
-            value={housing.dominance}
-            max={100_000_000}
-            onChange={(value) => {
-              updateActiveSetup({ housing: { ...housing, dominance: value } });
-            }}
-          />
+          {POOLS.map((pool) => (
+            <IntegerField
+              key={pool}
+              label={POOL_LABELS[pool]}
+              hint={POOL_HINTS[pool]}
+              prefix={<PoolBadge pool={pool} size="sm" />}
+              value={housing[pool]}
+              max={100_000_000}
+              onChange={(value) => {
+                updateActiveSetup({ housing: { ...housing, [pool]: value } });
+              }}
+            />
+          ))}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -182,8 +193,9 @@ export function HousingSection() {
         {searchExcluded.length > 0 && !running && (
           <HelpNote>
             The search left {String(searchExcluded.length)} unit type
-            {searchExcluded.length === 1 ? '' : 's'} out of this formation:{' '}
-            {searchExcluded.map((id) => unitName(id, requestUnits)).join(', ')}.
+            {searchExcluded.length === 1 ? '' : 's'} out of this march:{' '}
+            {searchExcluded.map((id) => unitName(id, requestUnits)).join(', ')}. Results shows what that
+            bought you, and lets you keep any of them in.
           </HelpNote>
         )}
 
@@ -195,8 +207,8 @@ export function HousingSection() {
 
         <HelpNote>
           Model confidence: stack sizes and per-hit damage reproduce the captured runs and both in-game
-          reports; the average, the strike-two-squads chance and part of the recovery cost are still modelled
-          rather than measured.{' '}
+          reports; the expected damage, the strike-two-squads chance and part of the recovery cost are still
+          modelled rather than measured.{' '}
           <Popover
             label="What the battle model is sure of"
             trigger={
@@ -207,7 +219,7 @@ export function HousingSection() {
           >
             <ul className="text-muted list-disc space-y-1 pl-4 text-xs">
               {(
-                modelNotes ?? ['Generate a stack to see the notes the engine attaches to its own numbers.']
+                modelNotes ?? ['Generate a march to see the notes the engine attaches to its own numbers.']
               ).map((note) => (
                 <li key={note}>{note}</li>
               ))}
@@ -229,7 +241,15 @@ export function HousingSection() {
             </HelpNote>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" disabled={running || noHousing} onClick={() => void runGenerate()}>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              icon={<GenerateIcon />}
+              disabled={running || noHousing}
+              className="md:w-auto"
+              onClick={() => void runGenerate()}
+            >
               {running ? 'Generating…' : 'Generate'}
             </Button>
             {running && (
@@ -241,7 +261,7 @@ export function HousingSection() {
                 Cancel
               </Button>
             )}
-            <p className="text-muted text-xs" role="status">
+            <p className="text-muted nums text-xs" role="status">
               {!running
                 ? ''
                 : !searching

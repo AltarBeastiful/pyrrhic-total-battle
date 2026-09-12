@@ -114,12 +114,12 @@ function compareRows(stacks: SavedStack[]): { metrics: Row[]; counts: Row[] } {
 
   const metrics: Row[] = [
     pick('Stacks', (stack) => stack.counts.length, amount, 'none'),
-    pick('Average damage', (stack) => stack.summary.avgDamage, amount, 'high'),
-    pick('Minimum damage', (stack) => stack.summary.minDamage, amount, 'high'),
-    pick('Maximum damage', (stack) => stack.summary.maxDamage, amount, 'high'),
-    pick('Damage / silver', (stack) => stack.summary.damagePerSilver, ratio, 'high'),
-    pick('Damage / gold', (stack) => stack.summary.damagePerGold, ratio, 'high'),
-    pick('Damage / dragon coin', (stack) => stack.summary.damagePerDragonCoin, ratio, 'high'),
+    pick('Expected damage', (stack) => stack.summary.avgDamage, amount, 'high'),
+    pick('Damage if the monster strikes first', (stack) => stack.summary.minDamage, amount, 'high'),
+    pick('Damage if you strike first', (stack) => stack.summary.maxDamage, amount, 'high'),
+    pick('Value per silver', (stack) => stack.summary.damagePerSilver, ratio, 'high'),
+    pick('Value per gold', (stack) => stack.summary.damagePerGold, ratio, 'high'),
+    pick('Value per dragon coin', (stack) => stack.summary.damagePerDragonCoin, ratio, 'high'),
     pick('Recovery silver', (stack) => stack.summary.recovery.silver, amount, 'low'),
     pick('Recovery gold', (stack) => stack.summary.recovery.gold, amount, 'low'),
     pick('Recovery dragon coins', (stack) => stack.summary.recovery.dragonCoins, amount, 'low'),
@@ -155,8 +155,8 @@ function CompareTable({ stacks }: { stacks: SavedStack[] }) {
               key={`${row.label}-${String(index)}`}
               className={
                 winners.has(index)
-                  ? 'text-accent py-1.5 text-right font-semibold tabular-nums'
-                  : 'py-1.5 text-right tabular-nums'
+                  ? 'text-accent nums py-1.5 text-right font-semibold'
+                  : 'nums py-1.5 text-right'
               }
             >
               {row.format(value)}
@@ -224,7 +224,7 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
   };
 
   return (
-    <Card padded={false} className="p-3">
+    <Card tone="raised" padded={false} className="p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Saved stacks</h3>
         <Button
@@ -240,12 +240,15 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
 
       {stacks.length === 0 ? (
         <p className="text-muted text-xs">
-          Nothing saved yet. Generate a stack and use “Save stack” to keep it for later.
+          Nothing saved yet. Generate a march and use “Save stack” to keep it for later.
         </p>
       ) : (
         <ul className="space-y-1.5">
           {stacks.map((stack) => (
-            <li key={stack.id} className="border-line flex items-center gap-2 rounded-lg border px-2 py-1.5">
+            <li
+              key={stack.id}
+              className="border-line bg-surface flex items-center gap-2 rounded-lg border px-2 py-1.5"
+            >
               <input
                 type="checkbox"
                 id={`compare-${stack.id}`}
@@ -261,8 +264,8 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
                 className="tap flex min-w-0 flex-1 cursor-pointer flex-col justify-center py-1"
               >
                 <span className="block truncate text-sm font-medium">{stack.name}</span>
-                <span className="text-muted block text-xs tabular-nums">
-                  {DATE.format(stack.createdAt)} · {amount(stack.summary.avgDamage)} average damage ·{' '}
+                <span className="text-muted nums block text-xs">
+                  {DATE.format(stack.createdAt)} · {amount(stack.summary.avgDamage)} expected damage ·{' '}
                   {String(stack.counts.length)} stacks
                 </span>
               </label>
@@ -345,7 +348,7 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
         open={comparing}
         onOpenChange={setComparing}
         title="Compare saved stacks"
-        description="Best value in each row is highlighted."
+        description="The best figure in each row is marked."
         size="lg"
       >
         {chosen.length >= 2 ? (

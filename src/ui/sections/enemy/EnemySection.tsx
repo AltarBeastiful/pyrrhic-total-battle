@@ -1,10 +1,20 @@
 import { useState } from 'react';
+import type { ComponentType } from 'react';
 
+import { events as eventTable } from '@/data';
 import { CATEGORIES, type Category } from '@/data/types';
 import { eventEnemyFormation } from '@/state/derive';
 import { selectActiveSetup, useStore } from '@/state/store';
-import { CheckIcon } from '@/ui/icons';
-import { Button, HelpNote, Section } from '@/ui/primitives';
+import {
+  CheckIcon,
+  EnemyIcon,
+  FlyingIcon,
+  MeleeIcon,
+  MountedIcon,
+  RangedIcon,
+  type IconProps,
+} from '@/ui/icons';
+import { Card, cn, HelpNote, Section } from '@/ui/primitives';
 
 import { IntegerField } from '../results/IntegerField';
 
@@ -13,6 +23,13 @@ const CATEGORY_LABEL: Record<Category, string> = {
   ranged: 'Ranged',
   mounted: 'Mounted',
   flying: 'Flying',
+};
+
+const CATEGORY_GLYPH: Record<Category, ComponentType<IconProps>> = {
+  melee: MeleeIcon,
+  ranged: RangedIcon,
+  mounted: MountedIcon,
+  flying: FlyingIcon,
 };
 
 /** Squads per category, in the order the game lists them. */
@@ -31,6 +48,8 @@ const MODE_LABELS: Record<Mode, string> = {
   custom: 'Custom',
 };
 
+const MODES = Object.keys(MODE_LABELS) as Mode[];
+
 const squadCount = (formation: Formation): number =>
   CATEGORIES.reduce((sum, category) => sum + Math.max(0, formation[category]), 0);
 
@@ -42,11 +61,22 @@ function detectMode(formation: Formation): Mode {
   return 'custom';
 }
 
+/** "1 melee · 1 ranged · 1 mounted · 1 flying", kinds with no squad left out. */
 function describe(formation: Formation): string {
   const parts = CATEGORIES.filter((category) => formation[category] > 0).map(
     (category) => `${String(formation[category])} ${CATEGORY_LABEL[category].toLowerCase()}`,
   );
-  return parts.length === 0 ? 'no squads' : parts.join(', ');
+  return parts.length === 0 ? 'no squads' : parts.join(' · ');
+}
+
+/** The name of the active event that fixes the formation, for the header line. */
+function forcingEvent(eventIds: readonly string[]): string | undefined {
+  let name: string | undefined;
+  for (const id of eventIds) {
+    const record = eventTable.find((event) => event.id === id);
+    if (record?.enemyFormation) name = record.name;
+  }
+  return name;
 }
 
 /** Enemy formation (PLAN §4.6): how many squads the monster fields, and of which kind. */
@@ -57,7 +87,7 @@ export function EnemySection() {
 
   if (!setup) {
     return (
-      <Section id="enemy" title="Enemy formation">
+      <Section id="enemy" title="Enemy formation" icon={<EnemyIcon />}>
         <HelpNote tone="warn">No march is selected.</HelpNote>
       </Section>
     );
@@ -67,6 +97,7 @@ export function EnemySection() {
   const formation: Formation = forced ?? setup.enemy;
   const mode: Mode = manual ? 'custom' : detectMode(formation);
   const total = squadCount(formation);
+  const eventName = forced ? forcingEvent(setup.active.events) : undefined;
 
   const write = (next: Formation): void => {
     updateActiveSetup({ enemy: next });
@@ -76,22 +107,24 @@ export function EnemySection() {
     <Section
       id="enemy"
       title="Enemy formation"
+      icon={<EnemyIcon />}
       description="How many squads the monster fields, and of which kind."
       summary={
-        <span className="text-muted">
-          {String(total)} squads — {describe(formation)}
+        <span className="text-muted nums">
+          {String(total)} squads: {describe(formation)}
+          {eventName === undefined ? '' : ` — forced by ${eventName}`}
         </span>
       }
       help={
         <>
           <p>
-            Every squad in the formation attacks once per round, so the number of squads decides how fast your
-            stacks fall — and which of your strength-against bonuses count at all: a bonus against flying
-            units is worth nothing when the monster fields no flying squad.
+            Every squad attacks once a round, so the number of squads decides how fast your stacks fall — and
+            which of your strength-against bonuses count at all: a bonus against flying units is worth nothing
+            when the monster fields no flying squad.
           </p>
           <p>
-            <strong>Where to find it in game:</strong> tap the epic monster on the map and read the squads on
-            its information card before you march. Most epic monsters field four, one of each kind.
+            <strong>Where to find it in game:</strong> tap the epic monster on the map and count the squads on
+            its information card before you march.
           </p>
         </>
       }
@@ -100,60 +133,88 @@ export function EnemySection() {
         {forced ? (
           <>
             <HelpNote>
-              An active event sets the formation for this march: {describe(forced)} ({String(total)} squads).
-              Turn the event off in the Bonuses section to choose the formation yourself.
+              {eventName ?? 'An active event'} fixes the formation for this march: {describe(forced)} (
+              {String(total)} squads). Turn the event off in Bonuses to choose it yourself.
             </HelpNote>
             <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {CATEGORIES.map((category) => (
-                <div key={category} className="border-line bg-raised rounded-lg border px-3 py-2">
-                  <dt className="text-muted text-xs font-medium">{CATEGORY_LABEL[category]}</dt>
-                  <dd className="text-sm font-semibold">{String(forced[category])}</dd>
-                </div>
-              ))}
+              {CATEGORIES.map((category) => {
+                const Glyph = CATEGORY_GLYPH[category];
+                return (
+                  <Card key={category} tone="raised" padded={false} className="px-3 py-2">
+                    <dt className="text-muted flex items-center gap-1.5 text-xs font-medium">
+                      <Glyph aria-hidden="true" />
+                      {CATEGORY_LABEL[category]}
+                    </dt>
+                    <dd className="nums text-lg font-semibold">{String(forced[category])}</dd>
+                  </Card>
+                );
+              })}
             </dl>
           </>
         ) : (
           <>
-            <div role="group" aria-label="Enemy preset" className="flex flex-wrap gap-2">
-              {(Object.keys(MODE_LABELS) as Mode[]).map((value) => (
-                <Button
-                  key={value}
-                  aria-pressed={mode === value}
-                  variant={mode === value ? 'primary' : 'secondary'}
-                  icon={mode === value ? <CheckIcon /> : undefined}
-                  onClick={() => {
-                    if (value === 'custom') {
-                      setManual(true);
-                      return;
-                    }
-                    setManual(false);
-                    write({ ...PRESETS[value] });
-                  }}
-                >
-                  {MODE_LABELS[value]}
-                </Button>
-              ))}
+            {/* One segmented control: three chips welded together, the chosen one carrying the accent. */}
+            <div
+              role="group"
+              aria-label="Enemy formation preset"
+              className="border-field bg-surface inline-flex w-full max-w-sm overflow-hidden rounded-lg border"
+            >
+              {MODES.map((value, index) => {
+                const on = mode === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => {
+                      if (value === 'custom') {
+                        setManual(true);
+                        return;
+                      }
+                      setManual(false);
+                      write({ ...PRESETS[value] });
+                    }}
+                    className={cn(
+                      'tap flex flex-1 items-center justify-center gap-1.5 px-3 text-sm font-medium transition-colors',
+                      index > 0 && 'border-field border-l',
+                      on ? 'bg-accent text-accent-fg' : 'text-muted hover:bg-raised',
+                    )}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={cn('flex h-4 w-4 items-center justify-center', !on && 'opacity-0')}
+                    >
+                      <CheckIcon />
+                    </span>
+                    {MODE_LABELS[value]}
+                  </button>
+                );
+              })}
             </div>
 
             {mode === 'custom' && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {CATEGORIES.map((category) => (
-                  <IntegerField
-                    key={category}
-                    label={CATEGORY_LABEL[category]}
-                    value={formation[category]}
-                    min={0}
-                    max={20}
-                    onChange={(value) => {
-                      write({ ...formation, [category]: value });
-                    }}
-                  />
-                ))}
+                {CATEGORIES.map((category) => {
+                  const Glyph = CATEGORY_GLYPH[category];
+                  return (
+                    <IntegerField
+                      key={category}
+                      label={CATEGORY_LABEL[category]}
+                      prefix={<Glyph />}
+                      value={formation[category]}
+                      min={0}
+                      max={20}
+                      onChange={(value) => {
+                        write({ ...formation, [category]: value });
+                      }}
+                    />
+                  );
+                })}
               </div>
             )}
 
-            <p className="text-muted text-xs">
-              {String(total)} squads in total — {describe(formation)}.
+            <p className="text-muted nums text-xs">
+              {String(total)} squads in total: {describe(formation)}.
             </p>
           </>
         )}
