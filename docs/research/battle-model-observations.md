@@ -4,9 +4,9 @@ Source: fixtures in `docs/research/fixtures/` (2026-09-12, Pro trial, all bonuse
 reproduces TotalStack's number exactly. **In-game validation (2026-09-12, one real epic-monster report, see
 `fixtures/ingame-2026-09-11-epic-ancient-report.md`)**: HP per stack, per-hit damage incl. strength-against on base
 strength, enemy targeting by highest HP, and the round structure all match the game exactly. A second report (enemy first,
-N = 4) confirmed the structure and settled the friendly attack order well enough to implement: foot troops by HP
-descending, then mounted, then monsters, then mercenaries by HP descending (rule B in the fixture file); the enemy
-kill order is pure HP descending. Double damage is a ×2 on a single hit with the unit's own chance plus the bonus.
+N = 4) confirmed the structure and showed the same attack-order nuance (Rider I killed before its turn). Two candidate
+rules are recorded in the fixture file; the engine keeps TotalStack's HP-order rule until confirmed. The enemy kill
+order is pure HP descending in both reports. Double damage is a ×2 on a single hit with the unit's own chance plus the bonus.
 
 ## 1. Turn structure (verified on two journals, enemy-first and army-first)
 - Our stacks are ordered by **total HP descending** (ties keep the display order). This order is used both as the

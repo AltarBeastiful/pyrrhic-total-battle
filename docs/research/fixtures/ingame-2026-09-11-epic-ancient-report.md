@@ -117,11 +117,13 @@ Defenders: helmet III (melee) 1,420, lion II (mounted) 1,398, eagle II (flying) 
   "double dégâts". Rider 3 had 5% (unit) + 3% (bonus) = 8%; one proc in 16 friendly hits across both reports.
 - **Friendly attack order** (the open question): in both fights the sequence was SP1, ARC1, ARC2, SP2, RD3, CHR, EMH,
   merc-A, merc-B with **RD1 never attacking**, although RD1 is 3rd by HP. RD1 died at the 3rd enemy attack, i.e.
-  after only 2–3 friendly slots, so its slot is ≥ 4 (report 1) and ≥ 3 (report 2). Two rules fit every observation:
-  - **B (adopted)**: leadership troops first — foot units (melee, ranged) by total HP descending, then mounted units
+  after only 2–3 friendly slots, so its slot is ≥ 4 (report 1) and ≥ 3 (report 2). Two candidate rules fit every observation (**neither is adopted yet**; the engine keeps TotalStack's
+  HP-order rule until more reports confirm one of these):
+  - B: leadership troops first — foot units (melee, ranged) by total HP descending, then mounted units
     by HP descending — then monsters, then mercenaries by HP descending. (Matches the community rule "troops →
     monsters → mercenaries"; monsters not present in these fights.)
   - A: leadership troops by unit count descending, mercenaries by HP descending. Indistinguishable from B here.
+  Impact if wrong: one hit of one stack per round.
   To separate them: a fight where a rider stack has more units than a foot stack, or foot stacks whose count order
   differs from their HP order. Either way the enemy's kill order is pure HP-descending.
 - The ranged "swarm" squad (55,719 units) loses 91–183 units per hit and still one-shots our stacks; monster HP

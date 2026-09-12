@@ -159,9 +159,15 @@ Troop Type Allocation percentages when no preservation order is chosen (weights 
 ### 3.5 Battle model and Battle Summary
 Enemy: 4 stacks (flying/melee/ranged/mounted), 8 for Arachne's, or custom counts. Each enemy hit removes our
 highest-total-HP living stack. Sides alternate; whoever strikes first is a coin flip in game, so we compute the
-**Minimum** (enemy first), **Maximum** (we strike first) and **Average** damage. Our stacks attack in an
-"attack order" (to be validated: by strength / by tier) and each stack targets the enemy stack it has the best
-`strengthAgainst` for, else round-robin. Damage per hit from 3.2; expected damage adds double-damage and
+**Minimum** (enemy first), **Maximum** (we strike first) and **Average** damage. Our stacks attack in
+HP-descending order, the same order the enemy kills them in — this is TotalStack's verified model and it reproduces
+the round structure of two real reports exactly. (The two reports also show one stack, Rider I, being killed before
+its turn while the next stack attacked; a possible refinement — foot troops before mounted, then monsters, then
+mercenaries — is recorded as an observation in the fixture file, not implemented until confirmed.) Each stack targets
+the enemy stack it has the best `strengthAgainst` for, else the melee squad. Within a round the enemy's N attacks
+(each killing our highest-HP living stack) alternate with single friendly attacks; after the N-th enemy attack every
+surviving stack attacks once. "Army first" only changes round 1. Double damage is a ×2 on a single hit (seen once in
+game, labelled as such); strike-two-squads is not modelled until observed. Damage per hit from 3.2; expected damage adds double-damage and
 strike-two-squads probabilities. Total damage = Σ over hits until all our stacks are dead or the round cap.
 Journal output = the same numbered hit list as the in-game report so users can compare 1:1.
 
@@ -261,8 +267,9 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 ### M3 — Battle Summary
 - S-30 **Investigation**: turn structure, attack order and targeting of the in-game epic-monster battle.
       TotalStack's model derived and **validated against one real in-game epic report** (HP lines, per-hit damage,
-      targeting, round structure all exact; `fixtures/ingame-2026-09-11-epic-ancient-report.md`). Remaining:
-      (a) the friendly attack order when the next victim is not the next attacker (needs 1–2 more reports),
+      targeting, round structure all exact; `fixtures/ingame-2026-09-11-epic-ancient-report.md`). Second report captured (enemy first, 4 squads). Remaining:
+      (a) the friendly attack order nuance (Rider I skipped) — keep TotalStack's rule unless more reports confirm
+      the refinement,
       (b) TotalStack's "2 × strength-against" in its summary is NOT what the game shows — our summary uses the
       journal formula (1 ×), (c) the ≈42,500 troop-only extra in TotalStack's maximum (irrelevant if we use our own
       min/avg/max), (d) recovery-cost composition (S-33).
@@ -317,6 +324,10 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Second in-game report read (enemy first, 4 squads, one double-damage proc): round structure and
+  all per-hit numbers match; attack-order nuance recorded as an observation only. Rule adopted for the plan:
+  rely on TotalStack's verified model as the reference; treat report-derived deviations as hypotheses until
+  confirmed by several reports.
 - 2026-09-12 — First real in-game report read from the Journal: engine formulas confirmed exactly; TotalStack's
   doubled strength-against in Battle Summary identified as their artefact, not the game's; one attack-order
   discrepancy left open.
