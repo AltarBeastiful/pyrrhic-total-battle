@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@plugin 'tailwindcss-react-aria-components';
 
 /* Dark mode is driven by the app, not by the OS alone: Tailwind's `dark:` variant
    applies when `.dark` or `data-theme="dark"` is set on an ancestor (we put it on

@@ -1,6 +1,6 @@
 # Pyrrhic — design overhaul plan (UX first)
 
-Status: **draft for review** (2026-09-12). Nothing in this document is built. Read it, amend it, tick the
+Status: **validated by the owner on 2026-09-12** with the starred options; §7.1 amended the same day (TotalStack-inspired troop flow). Implementation in progress. Nothing in this document is built. Read it, amend it, tick the
 decisions in §11, and only then does implementation start. The technical side (component framework, how we stop
 writing CSS by hand) is a separate plan: `docs/plans/ui-foundation.md`. The two plans ship together; the
 technical foundation is the first phase of this one.
@@ -303,29 +303,40 @@ Spacing on a 4 px grid; cards have 16 px padding on phone, 20 px on desktop. Mot
 
 ### 7.1 Army — Troops
 
+**Amended 2026-09-12 after the owner's review.** This is the first form any user sees, and TotalStack gets it
+right: choose the lowest and highest tier you own, then click out the icons of the top-tier units you have not
+unlocked yet. Simple, efficient, readable. We keep that exact flow and do it in our own design, with better
+controls and a clearer summary. What we drop is our chip grid of every unit in the range: lower tiers are
+always in, and leaving a lower-tier type out is done from the March, where you see what it costs.
+
 Collapsed (default once configured):
 
 ```
- Troops    ▮ G1–G4   ▮ S1–S2   ▮ no engineers   ▮ M3–M5      25 types, 2 off  ⌄
+ Troops    ▮ G1–G4   ▮ S1–S2   ▮ no engineers   ▮ M3–M5      ⌄
 ```
 
-Each group marker is the group colour; the text is the range in the game's own shorthand. Tap the line to
-expand; the summary stays as the card header when expanded.
-
-Expanded, one row per group, each row two lines tall at most:
+Expanded, one row per group:
 
 ```
- ▮ Guardsmen     lowest [◀ G1 ▶]  highest [◀ G4 ▶]      ⚔3 🏹3 🐎3 ⚔4 🏹4 🐎4 …
+ ▮ Guardsmen     from [◀ G1 ▶]   to [◀ G4 ▶]      at G4:  ⚔4  🏹4  🐎4  🦅4
+ ▮ Specialists   from [◀ S1 ▶]   to [◀ S2 ▶]      at S2:  ⚔2
+ ▮ Engineers     [ none ▶ ]
+ ▮ Monsters      from [◀ M3 ▶]   to [◀ M5 ▶]      at M5:  🐾5  💧5  🐉5  ✊5
 ```
 
-- The **tier picker** is a stepper: a value between two arrow buttons; `←`/`→` and `↑`/`↓` step it when
-  focused; it also opens a small strip of all tiers on tap for a direct jump. Lowest can never pass highest;
-  the other end follows.
-- The **tile grid** for the row shows every unit in the range as `sm` tiles; tap toggles the type off or on.
-  Long-press or right-click pins. The grid wraps; on phone it is a horizontal scroller with a fade edge and a
-  "12 types" count so nothing hides silently.
-- Engineers and monsters rows show only when the profile has them, otherwise a single "Add engineers ·
-  Add monsters" line closes the card (this answers R4: two empty rows no longer push Mercenaries away).
+- **Tier steppers** ("from", "to"): value between two arrow buttons; arrow keys step when focused; tap the value
+  to open a strip of every tier for a direct jump. "From" can never pass "to"; the other end follows. Engineers
+  and monsters have a "none" position below their first tier.
+- **"at G4" tiles**: one `md` unit tile per unit type of the top tier (three or four for guardsmen and
+  specialists, four monsters per tier, one engineer). Tap a tile to leave that type out ("I have not upgraded
+  riders yet"); it dims with a strike. This is TotalStack's per-category toggle, made per unit and drawn as a
+  tile so the type is recognisable. Monsters get the same row (TotalStack has none), since the four monsters
+  of a tier are rarely all owned.
+- Lower tiers: always in. A type left out from the March (existing `excludedUnitIds`) shows as a muted note
+  under the row: "Left out: Swordsman 1, Rider 2 · Put back", so nothing is hidden.
+- Rows for engineers and monsters collapse to their stepper alone when set to none, so the card stays four
+  short lines and Mercenaries sits right under it (R4).
+- The row's group marker and the tiles carry the group colour; the tier numeral is the biggest thing on a tile.
 
 ### 7.2 Army — Mercenaries
 
@@ -425,8 +436,11 @@ starts.
 
 **Phase B — Army**
 - D-20 Unit tile component in three sizes with all states (§6.2), group colours, bolder silhouettes.
-- D-21 Tier stepper with arrows, keyboard and the jump strip. Accept: G1–G3 → G1–G4 in one click or one key.
-- D-22 Troops card: collapsed two-line summary, expanded rows with tile grids; empty groups collapse to one line.
+- D-21 Tier stepper with arrows, keyboard, the jump strip and the "none" position. Accept: G1–G3 → G1–G4 in one
+  click or one key; from never passes to.
+- D-22 Troops card in the TotalStack-inspired flow (§7.1): from/to steppers per group and top-tier tiles to
+  click out; collapsed one-line summary; none rows collapse to one line. Accept: the whole card at 390 px is
+  four rows tall with all four groups set; a newcomer configures G1–G4 without riders in four taps.
 - D-23 Mercenaries card: selected list first, whole-row selection, steppers, picker with search and filters.
   Accept: Troops and Mercenaries collapsed summaries visible together at 390×844 without scrolling.
 
