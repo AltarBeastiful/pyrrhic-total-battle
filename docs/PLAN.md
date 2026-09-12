@@ -384,6 +384,11 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Independent design review of the overhaul frame (Material 3 canonical layouts, Apple HIG, five
+  measured comparables): two independently scrolling columns withdrawn; one page scroll, sticky 56 px app bar
+  carrying the answer, March as a sticky supporting pane from 1280 px, floating Generate below that. Plan §5.1,
+  principle 5 and §7.5 amended. Foundation (tokens, kit on React Aria Components, layout, domain, kit page,
+  lint gates) built the same day; shell, Troops and Mercenaries in progress.
 - 2026-09-12 — Owner rejected the second-pass design ("hurts the eyes, unpractical"). Written up as two plans for
   review: `docs/plans/design-overhaul.md` and `docs/plans/ui-foundation.md` (M6). Nothing built yet.
 - 2026-09-12 — Second pass after the owner's review: design overhaul (docs/design.md: palette, icons, hero, wording

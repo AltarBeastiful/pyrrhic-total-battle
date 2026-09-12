@@ -148,7 +148,8 @@ Target: all of it lives in the **account menu** (§5.2). None of it takes perman
 4. **Colour means group, not decoration.** Green guardsmen, blue specialists, amber engineers, violet monsters,
    red mercenaries (§6.1). The accent colour is for the one primary action and for focus. Text is never accent
    coloured except the primary action.
-5. **Nothing sticks except Generate.** No sticky bars. One floating action button.
+5. **Stick the answer, not the toolbar.** One thin app bar carrying the result figures, one floating Generate
+   button below desktop width; nothing else is sticky and nothing scrolls inside anything else.
 6. **Density where the data is, air where the eye rests.** Information (unit codes, counts, totals) at 15–16
    px minimum; controls sized for a thumb but not padded like billboards; secondary text never below 13 px.
 7. **Our own picture.** Unit tiles, the march table, the unit sheet and the HP profile are our layouts, not a
@@ -158,41 +159,40 @@ Target: all of it lives in the **account menu** (§5.2). None of it takes perman
 
 ### 5.1 Page structure
 
-Three regions instead of seven cards:
+**Revised 2026-09-12 after an independent design review** (Material 3 supporting-pane guidance; measured
+comparables — Apple's MacBook configurator, Google Cloud's pricing calculator, AWS's calculator, Raidbots,
+Wowhead — none scrolls two panes independently; all scroll one page and keep the *answer* sticky). The first
+draft's two independently scrolling columns is withdrawn.
+
+Three regions:
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│ Pyrrhic ◆                          [Aydael ▾]  (account menu) │  top bar, scrolls away
-├───────────────────────────────────────────────────────────────┤
-│ ARMY                                                          │
-│  Troops       G1–G4 · S1–S2 · E–   · M3–M5      25 types ⓘ    │  two-line summaries,
-│  Mercenaries  ABM6 ×22 · ABT6 ×24 · BER5 ×∞ · BGM6 ×12   +3   │  tap a line to expand
-│ BONUSES  Health +312 % · Strength +198 % · Special +40 %  ⌄   │
-│ BATTLE   Enemy [Standard ▾]  Leadership [ 84 300 ]  Objective │  the per-march inputs
-│          Method: Tier ladder ▾   Allow damage trades ☐        │
-├───────────────────────────────────────────────────────────────┤
-│ MARCH  ─ last generated 2 min ago                             │  the result
-│  avg 1.67 M  ·  min 1.29 M  ·  2 hits  ·  2.87 M silver       │
-│  ┌────┬──────────────┬───────┬──────┬─────────┐               │
-│  │ ▣  │ Archer 3     │ 2 310 │ 1 hit│ 412 lost│  …            │
-│  │ ▣  │ Spearman 3   │ 2 296 │  —   │   —     │               │
-│  …                                                            │
-│  Left out: Guardsmen 1, Guardsmen 2 …   [Keep in march]        │
-│  Battle story ▸   HP profile ▸   Save this march   Share       │
-└───────────────────────────────────────────────────────────────┘
-                                               (⚔ Generate)  ← floating
+│ ◆ Pyrrhic     avg 1.67 M · min 1.29 M · 2 hits   [Generate] (A)│  app bar, sticky, 56 px
+├──────────────────────────────────┬────────────────────────────┤
+│ ARMY                             │ MARCH  (supporting pane)   │
+│  Troops       G1–G4 · S1–S2 …    │  avg 1.67 M · min · hits   │
+│  Mercenaries  ABM6 ×22 · …       │  ┌────┬──────────┬───────┐ │
+│ BONUSES  Health +312 % …     ⌄   │  │ ▣  │ Archer 3 │ 2 310 │ │
+│ BATTLE   Enemy · Leadership …    │  …                         │
+│          Method · Objective      │  Left out … Keep in march  │
+│                                  │  Story ▸  Profile ▸  Save  │
+└──────────────────────────────────┴────────────────────────────┘
 ```
 
-- **Phone (< 768 px):** one column in that order. The floating Generate button sits bottom-right above the
-  safe area. Generating scrolls to MARCH. A small "Setup ▲" link at the top of MARCH scrolls back.
-- **Desktop (≥ 1024 px):** two columns. Setup (Army, Bonuses, Battle) left, 5/12 wide; MARCH right, 7/12,
-  each column scrolling on its own so the result never leaves the screen. The floating button stays; on
-  desktop it docks at the top of the MARCH column as a normal primary button.
-- **Tablet / phone landscape (768–1023 px):** one column, MARCH first when a result exists and the setup is
-  unchanged since; setup first otherwise. To validate (§11 D5).
+- **One page scroll at every width.** No nested scrollers, except that the supporting pane may scroll inside
+  itself when it is taller than the viewport (sticky with a max height).
+- **App bar (sticky, 56 px)**: brand mark; the live answer (average, minimum, hits) once a result exists,
+  muted with a "changed" dot when the setup moved since; on wide screens the primary Generate button; the
+  account avatar and menu. It is the only sticky element besides the floating button, and it sticks the
+  *answer*, not a toolbar — principle 5 is amended accordingly.
+- **≥ 1280 px:** setup (Army, Bonuses, Battle) fluid on the left; MARCH as a 27 rem supporting pane on the
+  right, sticky under the app bar. Generate lives in the app bar; no floating button.
+- **< 1280 px:** one column in the order Army, Bonuses, Battle, March; the floating Generate button
+  (bottom-right, label collapses while scrolling down); generating scrolls to MARCH.
 
-The section jump bar is removed. The hero illustration is removed from the frame and kept only on the empty
-state and the About dialog (§11 D8).
+The section jump bar, the profile bar and the hero illustration leave the frame (the hero survives on the
+empty state and About only).
 
 ### 5.2 Account menu
 
@@ -372,9 +372,11 @@ by 10, `Ctrl/⌘` by 100 (R2).
   cost under; a delta against the previous run in muted text when there is one.
 - **March table**: one row per stack in kill order (the order they fall). Columns: tile · name · **count** (xl,
   tap to copy) · hits · lost · revive cost. Row left edge in the group colour. Mercenary rows carry a small
-  "falls last" marker when the method placed them last. Manual editing: tap a count to get a stepper inline;
-  the header recomputes live; Undo appears in the header.
-- **Left out**: a row of `sm` tiles with a "Keep in march" button that acts on the selected tile(s).
+  "falls last" marker when the method placed them last. Under 600 px the rows stack as cards (tile, name and
+  count on one line, the rest under). Manual editing is a separate mode: an "Edit counts" toggle in the
+  header turns the counts into steppers; the header recomputes live; Undo appears in the header. Tapping a
+  count outside that mode only copies it.
+- **Left out**: a row of `md` tiles, each with its own "Keep in march" action (no multi-select).
 - **Trade-off**: "Compared with all types" as a two-column strip under the header, not a table.
 - **Battle story**: a collapsible narrative ("Round 1: the monster hits Archer 3 for 412 …") replacing the
   journal drawer's raw list; the raw journal stays behind a "Details" toggle.
@@ -475,8 +477,9 @@ Tick, strike or amend. Recommendations are marked ★.
 - **D3 Frame.** ★ No sticky bars; top bar scrolls away; account menu holds every profile action.
 - **D4 Generate.** ★ Floating button, not a menu item; `Ctrl/⌘ + Enter`. Fallback: menu item if the button is in
   the way.
-- **D5 Desktop split.** ★ Setup left 5/12, March right 7/12 from 1024 px; single column below. Alternative:
-  March under Setup with a sticky result header (rejected by principle 5).
+- **D5 Desktop split.** ~~Setup left 5/12, March right 7/12 from 1024 px, two scrollers~~ → **revised:** one
+  page scroll, March as a sticky 27 rem supporting pane from 1280 px, figures and Generate in the sticky app
+  bar (design review 2026-09-12).
 - **D6 Tablet order.** March first when a result exists and nothing changed; setup first otherwise. Or always
   setup first?
 - **D7 Bonuses collapsed by default.** ★ Yes, TOTAL line only; expanded state remembered per device.
