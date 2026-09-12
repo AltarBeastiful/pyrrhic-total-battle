@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The trade-off table is fed straight from `SearchResult.baseline`, so it is tested on its own: a real
+ * The trade-off strip is fed straight from `SearchResult.baseline`, so it is tested on its own: a real
  * priority search would spend its whole wall-clock budget to produce two summaries this test can write
  * by hand.
  */
@@ -34,41 +34,41 @@ const tradeoff: SearchTradeoff = {
   baseline: figures(),
 };
 
-function row(label: string): HTMLElement {
-  const header = screen.getByRole('rowheader', { name: label });
-  const tr = header.closest('tr');
-  if (tr === null) throw new Error(`${label} is not in a row`);
-  return tr;
+/** The block of one figure: its label, the selection's value, and the all-types value under it. */
+function block(label: string): HTMLElement {
+  const name = screen.getByText(label);
+  const parent = name.parentElement;
+  if (parent === null) throw new Error(`${label} is not in a block`);
+  return parent;
 }
 
-test('every figure is shown against the all-types army, with a signed difference', () => {
-  render(<TradeoffPanel tradeoff={tradeoff} units={[]} kept={[]} />);
+test('every figure is shown against the all-types army, with the change spelled out', () => {
+  render(<TradeoffPanel tradeoff={tradeoff} />);
 
-  expect(screen.getByText('This selection vs all types')).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Compared with all types' })).toBeTruthy();
+  expect(screen.getByText(/kept 1 unit type and left 1 out/)).toBeTruthy();
 
-  const hits = within(row('Hits your army lands (monster first)'));
+  const hits = within(block('Hits your army lands'));
   expect(hits.getByText('32')).toBeTruthy();
-  expect(hits.getByText('40')).toBeTruthy();
-  expect(hits.getByText('-8')).toBeTruthy();
+  expect(hits.getByText('All types 40')).toBeTruthy();
+  // Fewer hits than the whole army would land: a loss, said in words as well as in colour.
+  expect(hits.getByText('worse')).toBeTruthy();
 
-  const expected = within(row('Expected damage'));
+  const expected = within(block('Expected damage'));
   expect(expected.getByText('1,800')).toBeTruthy();
-  expect(expected.getByText('+300')).toBeTruthy();
-
-  expect(within(row('Damage if the monster strikes first')).getByText('-100')).toBeTruthy();
-  expect(within(row('Damage if you strike first')).getByText('0')).toBeTruthy();
-  // Spending less silver is an improvement, so the drop is the good colour.
-  const silver = within(row('Retrain silver')).getByText('-100');
-  expect(silver.className).toContain('text-ok');
-  // Losing damage is not.
-  expect(within(row('Expected damage')).getByText('+300').className).toContain('text-ok');
-  expect(within(row('Damage if the monster strikes first')).getByText('-100').className).toContain(
-    'text-warn',
-  );
+  expect(expected.getByText('All types 1,500')).toBeTruthy();
+  expect(expected.getByText('better')).toBeTruthy();
 });
 
-test('a type the priority left out can be kept in from the panel', () => {
-  render(<TradeoffPanel tradeoff={tradeoff} units={[]} kept={[]} />);
-  expect(screen.getByRole('button', { name: /Keep in march/ })).toBeTruthy();
-  expect(screen.getByText('Left out by the priority')).toBeTruthy();
+test('a cheaper recovery counts as an improvement, not as a fall', () => {
+  render(<TradeoffPanel tradeoff={tradeoff} />);
+
+  const silver = within(block('Retrain silver'));
+  expect(silver.getByText('400')).toBeTruthy();
+  expect(silver.getByText('better')).toBeTruthy();
+
+  // Nothing moved on the dragon coins, so nothing is claimed about them.
+  const coins = within(block('Dragon coins'));
+  expect(coins.queryByText('better')).toBeNull();
+  expect(coins.queryByText('worse')).toBeNull();
 });

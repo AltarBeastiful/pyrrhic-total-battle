@@ -11,16 +11,8 @@ import { expect, type Locator, type Page } from '@playwright/test';
  * anything declared out here.
  */
 
-/** The seven sections of PLAN §4, in the order the shell renders them. */
-export const SECTION_TITLES = [
-  'Troops',
-  'Mercenaries',
-  'Stacking method',
-  'Bonuses',
-  'Enemy formation',
-  'Housing and march',
-  'Results',
-] as const;
+/** The sections of the design plan §5.1, in the order the shell renders them. */
+export const SECTION_TITLES = ['Troops', 'Mercenaries', 'Bonuses', 'Battle', 'March'] as const;
 
 /**
  * Open the app and wait until it has stopped moving.
@@ -74,74 +66,113 @@ export function generateState(page: Page): Locator {
   return generateButton(page).locator('xpath=..');
 }
 
+/**
+ * Type one housing capacity and commit it: the Battle card's steppers keep what you type to
+ * themselves until the field is left or `Enter` is pressed, so a `fill` alone never reaches the march.
+ */
+export async function fillHousing(
+  page: Page,
+  pool: 'Leadership' | 'Authority' | 'Dominance',
+  value: number,
+): Promise<void> {
+  const field = housingField(page, pool);
+  await field.fill(String(value));
+  await field.press('Enter');
+}
+
 /** Fill the three housing capacities and run the engine, waiting for the summary to settle. */
 export async function generate(
   page: Page,
   housing: { leadership?: number; authority?: number; dominance?: number } = {},
 ): Promise<void> {
-  if (housing.leadership !== undefined) {
-    await housingField(page, 'Leadership').fill(String(housing.leadership));
-  }
-  if (housing.authority !== undefined) {
-    await housingField(page, 'Authority').fill(String(housing.authority));
-  }
-  if (housing.dominance !== undefined) {
-    await housingField(page, 'Dominance').fill(String(housing.dominance));
-  }
+  if (housing.leadership !== undefined) await fillHousing(page, 'Leadership', housing.leadership);
+  if (housing.authority !== undefined) await fillHousing(page, 'Authority', housing.authority);
+  if (housing.dominance !== undefined) await fillHousing(page, 'Dominance', housing.dominance);
   await generateButton(page).click();
   await settle(page);
 }
 
-/** The shape of a stack chip's accessible name: "<short label> <count>", e.g. "ARC1 624". */
-const STACK_CHIP = /^[A-Z]{2,5}\d+ [\d,]+$/;
-
 /**
- * The result chips, matched on that name shape, which keeps the helper independent of which unit types
- * the formation happens to contain.
+ * The march as tiles (design plan §7.5): one tile per unit type of the profile's range, the ones
+ * marching named "… in the march — leave out" and the ones left out "… left out — keep in march".
  */
 export function stackPills(page: Page): Locator {
-  return page.locator('#results').getByRole('button', { name: STACK_CHIP });
+  return page.locator('#results').getByRole('button', { name: /in the march\b/ });
+}
+
+/** The dimmed tiles: the types the search or the player left out of the march. */
+export function leftOutTiles(page: Page): Locator {
+  return page.locator('#results').getByRole('button', { name: /left out/ });
 }
 
 /**
- * The chips as a player hears them: "ARC1 624".
+ * The march as a player would read it off the card: "ARC1 624", one entry per marching stack.
  *
- * Not `innerText` — a chip carries a decorative `UnitBadge` that prints the tier as its own line, so the
- * visible text reads "3 / ARC3 / 192". The accessible name leaves the badge out (it is `aria-hidden`),
- * which is exactly the label the specs reason about.
+ * Read from the `data-stack` / `data-count` pair each tile carries rather than from its drawing: the
+ * tile writes its code and its tier as two separate pieces of text, which is right on screen and
+ * unreadable from here.
  */
 export async function stackLabels(page: Page): Promise<string[]> {
-  const snapshot = await page.locator('#results').ariaSnapshot();
-  return [...snapshot.matchAll(/- button "([A-Z]{2,5}\d+ [\d,]+)"/g)].map((match) => match[1] ?? '');
+  const tiles = page.locator('#results [data-stack]');
+  const total = await tiles.count();
+  const labels: string[] = [];
+  for (let index = 0; index < total; index += 1) {
+    const tile = tiles.nth(index);
+    const label = await tile.getAttribute('data-stack');
+    const count = Number(await tile.getAttribute('data-count'));
+    if (label !== null && count > 0) labels.push(`${label} ${count.toLocaleString('en-US')}`);
+  }
+  return labels;
 }
 
-/** How many stacks the battle summary reports ("10 stacks", under the "Battle summary" heading). */
+/** How many stacks the march fields. */
 export async function stackCount(page: Page): Promise<number> {
-  const text = await page
-    .locator('#results')
-    .getByText(/^[\d,]+ stacks/)
-    .first()
-    .innerText();
-  return Number((/[\d,]+/.exec(text)?.[0] ?? '0').replaceAll(',', ''));
+  return (await stackLabels(page)).length;
 }
 
 /**
- * The battle-summary card value under `label`, as the number it displays. The cards are titled in the
- * player's own words ("Damage if the monster strikes first"), so pass the title as it is written.
+ * The recap figure under `label`, as the number it displays. The recap is written in the player's own
+ * words ("Damage if the monster strikes first"), so pass the label as it is written.
  */
 export async function summaryValue(page: Page, label: string): Promise<number> {
-  const card = page
+  // The innermost block that holds the label is the figure itself: its label and its number.
+  const figure = page
     .locator('#results div')
-    .filter({ hasText: new RegExp(`^${label}[\\d,]`) })
-    .first();
-  const text = await card.innerText();
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .last();
+  const text = await figure.innerText();
   const value = /[\d,]+/.exec(text.replace(label, ''))?.[0] ?? '0';
   return Number(value.replaceAll(',', ''));
 }
 
-/** The priority select of the Housing section. */
+/** The counts to copy, in the table shape a card wider than 36 rem shows. */
+export function countsTable(page: Page): Locator {
+  return page.locator('#results').getByRole('table', { name: /in the order the stacks fall/ });
+}
+
+/** The same counts as stacked rows: a phone, and the 360 dp supporting pane at any width. */
+export function countsList(page: Page): Locator {
+  return page.locator('#results').getByRole('list', { name: /in the order the stacks fall/ });
+}
+
+/**
+ * What a Generate aims at, in the Battle card: a radio group whose options are named by their title
+ * ("Best worst case" is the worst-case objective).
+ */
 export function priorityField(page: Page): Locator {
-  return page.getByRole('combobox', { name: 'Priority' });
+  return page.getByRole('radiogroup', { name: 'Objective' });
+}
+
+/**
+ * Choose one objective by the words it is written in. The press lands on the row's own text: the
+ * radio itself sits under the mark the row draws, which is what a player presses too.
+ */
+export async function chooseObjective(page: Page, title: string): Promise<void> {
+  // Under Material 3's medium window the list is folded to the chosen row; unfold it first.
+  const change = priorityField(page).getByRole('button', { name: 'Change Objective' });
+  if (await change.isVisible()) await change.click();
+  await priorityField(page).getByText(title, { exact: true }).click();
+  await expect(priorityField(page).getByRole('radio', { name: title, exact: true })).toBeChecked();
 }
 
 /** Wait until no Generate run is in flight (a priority search runs for up to eight seconds). */

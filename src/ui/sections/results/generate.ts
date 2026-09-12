@@ -30,6 +30,10 @@ export async function runGenerate(): Promise<void> {
     return;
   }
 
+  // What is on screen now becomes "the previous run" the moment a new result lands, and only then:
+  // a cancelled or failed run must not make the recap compare a result with itself.
+  const previous = results.last?.summary ?? null;
+
   const run = useRunStore.getState();
   run.cancel();
   const controller = new AbortController();
@@ -45,6 +49,7 @@ export async function runGenerate(): Promise<void> {
 
     if (setup.priority === 'none') {
       const { result, summary } = await client.stack(request, controller.signal);
+      useRunStore.getState().rememberPrevious(previous);
       useResultStore.getState().setResult({ ...common, result, summary });
       useRunStore.getState().finish([]);
       return;
@@ -59,6 +64,7 @@ export async function runGenerate(): Promise<void> {
     );
     const kept = new Set(found.includedUnitIds);
     const left = request.units.map((unit) => unit.id).filter((id) => !kept.has(id));
+    useRunStore.getState().rememberPrevious(previous);
     useResultStore.getState().setResult({ ...common, result: found.result, summary: found.summary });
     // The search's own first evaluation is the army with every type in it: keep it, it is the only way to
     // show what the winning selection gave up (PLAN §3.6).

@@ -7,13 +7,38 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
 
-import type { Stack } from '@/engine/types';
+import type { Stack, UnitDef } from '@/engine/types';
 
 import { HpProfile } from './HpProfile';
 
 afterEach(() => {
   cleanup();
 });
+
+/** The chart names units, so the test hands it its own three rather than the whole table. */
+const unit = (id: string, name: string, label: string, kind: UnitDef['kind']): UnitDef => ({
+  id,
+  name,
+  label,
+  kind,
+  pool: kind === 'mercenary' ? 'authority' : 'leadership',
+  tier: 3,
+  ...(kind === 'troop' ? { group: 'guardsmen' as const } : {}),
+  category: 'melee',
+  keys: [],
+  cost: 1,
+  health: 100,
+  strength: 100,
+  strengthAgainst: {},
+  doubleDamageChance: 0,
+  revival: { gold: 1 },
+});
+
+const units: UnitDef[] = [
+  unit('mercenary', 'Berserker', 'BSK3', 'mercenary'),
+  unit('troop', 'Archer', 'ARC3', 'troop'),
+  unit('sliver', 'Spearman', 'SPR3', 'troop'),
+];
 
 const stack = (unitId: string, pool: Stack['pool'], totalHp: number): Stack => ({
   unitId,
@@ -47,7 +72,7 @@ function bars(): HTMLElement[] {
 }
 
 test('a stack 25 times smaller still draws a bar you can see', () => {
-  render(<HpProfile stacks={stacks} units={[]} kept={[]} />);
+  render(<HpProfile stacks={stacks} units={units} kept={[]} />);
   const [merc, troop] = bars().map((bar) => Number(bar.dataset.hpBar));
 
   expect(merc).toBe(100);
@@ -56,22 +81,24 @@ test('a stack 25 times smaller still draws a bar you can see', () => {
 });
 
 test('bars shorten from top to bottom, so the order they fall in still reads', () => {
-  render(<HpProfile stacks={stacks} units={[]} kept={[]} />);
+  render(<HpProfile stacks={stacks} units={units} kept={[]} />);
   const widths = bars().map((bar) => Number(bar.dataset.hpBar));
   expect([...widths].sort((a, b) => b - a)).toEqual(widths);
 });
 
 test('an empty stack keeps a 2 px bar rather than disappearing', () => {
-  render(<HpProfile stacks={stacks} units={[]} kept={[]} />);
+  render(<HpProfile stacks={stacks} units={units} kept={[]} />);
   const last = bars().at(-1);
   expect(last?.dataset.hpBar).toBe('2');
-  expect(last?.className).toContain('min-w-[2px]');
+  expect(last?.className).toContain('min-w-0.5');
 });
 
 test('the caption says the bars are scaled and the figures are not', () => {
-  render(<HpProfile stacks={stacks} units={[]} kept={[]} />);
+  render(<HpProfile stacks={stacks} units={units} kept={['troop']} />);
   expect(screen.getByText(/square-root scale/)).toBeTruthy();
   // The numbers beside the bars stay exact.
   expect(screen.getByText('6,500,000')).toBeTruthy();
   expect(screen.getByText('260,000')).toBeTruthy();
+  // A type kept in the march says so where its bar is.
+  expect(screen.getByText('Archer, kept in the march')).toBeTruthy();
 });

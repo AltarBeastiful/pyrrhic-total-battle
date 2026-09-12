@@ -1,16 +1,20 @@
 /**
- * The calculator itself, end to end: housing in, stacks and a battle summary out, the two ways a player
- * changes the formation (a tier range, a single unit type left out), and the way a player overrules the
- * priority search — keeping a type it dropped in the march for good.
+ * The calculator itself, end to end: housing in, a march out, the two ways a player changes what it
+ * fields (a tier range in Troops, a tile in the March card), the way they overrule the priority
+ * search — keeping a type it dropped in for good — and the two things they do with the answer:
+ * read the counts and edit one by hand.
  */
 import { expect, test } from '@playwright/test';
 
 import {
+  chooseObjective,
+  countsList,
+  countsTable,
   generate,
   generateButton,
+  leftOutTiles,
   openApp,
   pageOverflowsSideways,
-  priorityField,
   settle,
   stackCount,
   stackLabels,
@@ -19,7 +23,7 @@ import {
   watchConsole,
 } from './helpers';
 
-test('Generate fills the pools and produces a battle summary', async ({ page }) => {
+test('Generate fills the pools and produces the recap and the counts', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
@@ -27,22 +31,33 @@ test('Generate fills the pools and produces a battle summary', async ({ page }) 
 
   await generate(page, { leadership: 4100 });
 
-  // One chip per unit type, each with a non-zero count.
-  const pills = stackPills(page);
-  await expect(pills.first()).toBeVisible();
-  expect(await pills.count()).toBeGreaterThan(1);
+  // One tile per unit type of the march, each with a non-zero count.
+  const tiles = stackPills(page);
+  await expect(tiles.first()).toBeVisible();
+  expect(await tiles.count()).toBeGreaterThan(1);
   for (const label of await stackLabels(page)) {
     expect(Number(label.split(' ')[1]?.replaceAll(',', '') ?? '0')).toBeGreaterThan(0);
   }
-
-  // Summary cards: a march that fields units always does damage, whoever strikes first.
   expect(await stackCount(page)).toBeGreaterThan(0);
-  expect(await summaryValue(page, 'Damage if the monster strikes first')).toBeGreaterThan(0);
+
+  // The recap: a march that fields units always does damage, whoever strikes first.
   expect(await summaryValue(page, 'Expected damage')).toBeGreaterThan(0);
-  expect(await summaryValue(page, 'Damage if you strike first')).toBeGreaterThan(0);
+  expect(await summaryValue(page, 'Damage if the monster strikes first')).toBeGreaterThan(0);
+  expect(await summaryValue(page, 'Silver to recover')).toBeGreaterThan(0);
+
+  // The counts to copy carry the same stacks, in the order they fall. At 1280 px the March is the
+  // 360 dp supporting pane, so the card is in its stacked shape whatever the window says.
+  await expect(countsTable(page)).toBeHidden();
+  await expect(countsList(page).getByRole('listitem')).toHaveCount(await stackCount(page));
 
   // The leadership pool is spent, not merely allocated.
   await expect(page.locator('#results').getByText('4,100 / 4,100')).toBeVisible();
+
+  // The story and the chart are folded away until they are asked for.
+  await expect(page.getByRole('button', { name: /^Details/ }).last()).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
 
   expect(problems).toEqual([]);
 });
@@ -73,16 +88,40 @@ test('leaving a unit type out changes the stacks', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
+test('a tile in the March card leaves a type out, and puts it back', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+
+  await generate(page, { leadership: 4100 });
+  const before = await stackLabels(page);
+  const code = before[0]?.split(' ')[0] ?? '';
+  expect(code).not.toBe('');
+
+  // The tile is the control: a tap on a marching one leaves that type out and re-sizes the march.
+  await stackPills(page).first().click();
+  await settle(page);
+  const without = await stackLabels(page);
+  expect(without.some((label) => label.startsWith(`${code} `))).toBe(false);
+  expect(without.length).toBe(before.length - 1);
+
+  // The same tile, now dimmed, puts it back — and keeps it in for good.
+  await leftOutTiles(page).first().click();
+  await settle(page);
+  expect((await stackLabels(page)).length).toBe(before.length);
+
+  expect(problems).toEqual([]);
+});
+
 test('a type the priority left out can be kept in the march, and stays in', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
-  await priorityField(page).selectOption('minDamage');
+  await chooseObjective(page, 'Best worst case');
   await generate(page, { leadership: 4100 });
 
-  // A search wins by marching with fewer types, and the trade-off panel says what that bought (PLAN §3.6).
-  await expect(page.getByRole('heading', { name: 'This selection vs all types' })).toBeVisible();
-  const leftOut = page.locator('#results').getByRole('button', { name: /^Keep in march\b/ });
+  // A search wins by marching with fewer types, and the strip says what that bought (PLAN §3.6).
+  await expect(page.getByRole('heading', { name: 'Compared with all types' })).toBeVisible();
+  const leftOut = leftOutTiles(page);
   await expect(leftOut.first()).toBeVisible();
 
   const before = await stackLabels(page);
@@ -94,15 +133,80 @@ test('a type the priority left out can be kept in the march, and stays in', asyn
   expect(kept.length).toBe(before.length + 1);
   const added = kept.find((label) => !before.includes(label));
   expect(added).toBeDefined();
-  const pinned = page.locator('#results').getByText(/^Pinned:/);
-  await expect(pinned).toContainText(added?.split(' ')[0] ?? '');
+  const code = added?.split(' ')[0] ?? '';
 
-  // …and the next search may not drop it again.
+  // …and it says so on its own tile: kept in, whatever the next search would prefer.
+  await expect(page.locator('#results').getByRole('button', { name: /kept in — leave out$/ })).toBeVisible();
+
   await generate(page);
   const again = await stackLabels(page);
   expect(again.length).toBe(kept.length);
-  expect(again.some((label) => label.startsWith(added?.split(' ')[0] ?? ''))).toBe(true);
-  await expect(pinned).toContainText(added?.split(' ')[0] ?? '');
+  expect(again.some((label) => label.startsWith(`${code} `))).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a card wider than 36 rem draws the counts as a table', async ({ page }) => {
+  const problems = watchConsole(page);
+  // One column, so the card is as wide as the page: the container query gives it the table.
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await openApp(page);
+  await generate(page, { leadership: 4100 });
+
+  const table = countsTable(page);
+  await expect(table).toBeVisible();
+  await expect(table.getByRole('row')).toHaveCount((await stackCount(page)) + 1);
+  await expect(table.getByRole('columnheader', { name: 'Count' })).toBeVisible();
+  await expect(countsList(page)).toBeHidden();
+
+  expect(problems).toEqual([]);
+});
+
+test('counts are edited in an explicit mode, and put back with Undo', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+  await generate(page, { leadership: 4100 });
+
+  const damage = await summaryValue(page, 'Expected damage');
+  const rows = countsList(page);
+  await expect(rows.getByRole('textbox').first()).toBeHidden();
+
+  await page.getByRole('button', { name: 'Edit counts' }).click();
+  await expect(rows.getByRole('textbox').first()).toBeVisible();
+
+  // One press of a stepper re-plays the battle on the hand-typed counts.
+  await rows
+    .getByRole('button', { name: /^Increase / })
+    .first()
+    .click();
+  const undo = page.getByRole('button', { name: 'Undo' });
+  await expect(undo).toBeVisible();
+  expect(await summaryValue(page, 'Expected damage')).not.toBe(damage);
+
+  await undo.click();
+  await expect(undo).toBeHidden();
+  expect(await summaryValue(page, 'Expected damage')).toBe(damage);
+
+  expect(problems).toEqual([]);
+});
+
+test('the unit sheet opens from a row and acts on that one type', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+  await generate(page, { leadership: 4100 });
+
+  await countsList(page)
+    .getByRole('button', { name: /^Details: / })
+    .first()
+    .click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('In this march')).toBeVisible();
+  await expect(sheet.getByText('Why this size')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Keep in march' })).toBeVisible();
+
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(sheet).toBeHidden();
 
   expect(problems).toEqual([]);
 });
@@ -120,6 +224,11 @@ test('mobile: nothing overflows sideways and Generate stays reachable', async ({
   expect(await pageOverflowsSideways(page)).toBe(false);
   await expect(stackPills(page).first()).toBeVisible();
   await expect(generateButton(page)).toBeVisible();
+  // The narrow card stacks its rows instead of drawing the table.
+  await expect(countsTable(page)).toBeHidden();
+  await expect(
+    page.locator('#results').getByRole('list', { name: /in the order the stacks fall/ }),
+  ).toBeVisible();
 
   expect(problems).toEqual([]);
 });

@@ -81,6 +81,12 @@ export interface RunState {
   /** Last progress tick of a priority search; `null` outside a search. */
   progress: SearchProgress | null;
   /**
+   * The summary of the run *before* the one on screen, so the recap can say which way every figure
+   * moved (design plan §7.5). It belongs to the run, not to the document: a reload starts again
+   * with nothing to compare against rather than with a comparison nobody remembers making.
+   */
+  previousSummary: BattleSummary | null;
+  /**
    * The setup fingerprint the last run was started with; `null` when nothing has run yet or the run
    * was cancelled. A different fingerprint now means the result on screen is stale.
    */
@@ -96,6 +102,8 @@ export interface RunState {
   setProgress: (progress: SearchProgress) => void;
   finish: (searchExcluded: string[], tradeoff?: SearchTradeoff | null) => void;
   cancel: () => void;
+  /** Keep the summary a new result replaces; called with `null` when there is nothing to keep. */
+  rememberPrevious: (summary: BattleSummary | null) => void;
   rememberMercenary: (mercenary: RemovedMercenary) => void;
   forgetMercenary: (id: string) => void;
   reset: () => void;
@@ -103,6 +111,7 @@ export interface RunState {
 
 export const useRunStore = create<RunState>()((set, get) => ({
   progress: null,
+  previousSummary: null,
   lastRunFingerprint: null,
   searchExcluded: [],
   tradeoff: null,
@@ -129,6 +138,9 @@ export const useRunStore = create<RunState>()((set, get) => ({
     // button goes back to "ready" rather than claiming the setup changed under an answer.
     set({ controller: null, progress: null, lastRunFingerprint: null });
   },
+  rememberPrevious: (summary) => {
+    set({ previousSummary: summary });
+  },
   rememberMercenary: (mercenary) => {
     set((state) =>
       state.removedMercenaries.some((entry) => entry.id === mercenary.id)
@@ -142,6 +154,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   reset: () => {
     set({
       progress: null,
+      previousSummary: null,
       lastRunFingerprint: null,
       searchExcluded: [],
       tradeoff: null,

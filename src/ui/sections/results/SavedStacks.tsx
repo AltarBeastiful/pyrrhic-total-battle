@@ -61,7 +61,7 @@ export function StackNameDialog({
         }}
       >
         <label className="text-muted text-xs font-medium" htmlFor={fieldId}>
-          Stack name
+          March name
         </label>
         <input
           id={fieldId}
@@ -201,7 +201,7 @@ export interface SavedStacksPanelProps {
   profile: Profile;
 }
 
-/** The saved stacks of the active profile, with rename, delete and side-by-side comparison (S-43). */
+/** The saved marches of the active profile, with rename, delete and side-by-side comparison (S-43). */
 export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
   const renameSavedStack = useStore((state) => state.renameSavedStack);
   const removeSavedStack = useStore((state) => state.removeSavedStack);
@@ -225,8 +225,7 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
 
   return (
     <Card tone="raised" padded={false} className="p-3">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Saved stacks</h3>
+      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
         <Button
           size="sm"
           disabled={chosen.length < 2}
@@ -240,7 +239,7 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
 
       {stacks.length === 0 ? (
         <p className="text-muted text-xs">
-          Nothing saved yet. Generate a march and use “Save stack” to keep it for later.
+          Nothing saved yet. Generate a march and use “Save this march” to keep it for later.
         </p>
       ) : (
         <ul className="space-y-1.5">
@@ -290,12 +289,12 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
       )}
 
       {stacks.length > 1 && chosen.length < 2 && (
-        <p className="text-muted mt-2 text-xs">Tick two or three stacks to compare them side by side.</p>
+        <p className="text-muted mt-2 text-xs">Tick two or three marches to compare them side by side.</p>
       )}
 
       <StackNameDialog
         open={renaming !== null}
-        title="Rename saved stack"
+        title="Rename saved march"
         confirmLabel="Save"
         initialName={renaming?.name ?? ''}
         onConfirm={(name) => {
@@ -312,7 +311,7 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
         onOpenChange={(next) => {
           if (!next) setDeleting(null);
         }}
-        title="Delete saved stack"
+        title="Delete saved march"
         description={`“${deleting?.name ?? ''}” will be removed from this profile.`}
         size="sm"
         footer={
@@ -334,7 +333,7 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
                 setDeleting(null);
               }}
             >
-              Delete stack
+              Delete march
             </Button>
           </>
         }
@@ -347,7 +346,7 @@ export function SavedStacksPanel({ profile }: SavedStacksPanelProps) {
       <Dialog
         open={comparing}
         onOpenChange={setComparing}
-        title="Compare saved stacks"
+        title="Compare saved marches"
         description="The best figure in each row is marked."
         size="lg"
       >

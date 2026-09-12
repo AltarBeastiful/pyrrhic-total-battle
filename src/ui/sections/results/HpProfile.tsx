@@ -1,101 +1,82 @@
-import type { Pool, Stack, UnitDef } from '@/engine/types';
-import { PinIcon, PoolBadge, UnitBadge } from '@/ui/icons';
-import { cn } from '@/ui/primitives';
+/**
+ * The HP profile: one bar per stack, total HP, first to fall on top.
+ *
+ * The enemy always hits the stack with the most health left, so the bars fall from top to bottom in
+ * the order the battle destroys the army, and a profile whose bars are nearly the same length is a
+ * march where every stack gets to hit before it dies. It lives inside the folded Details now — it
+ * explains the counts, it is not one of them.
+ *
+ * The bars use a square-root scale so a 260 K troop stack stays visible next to a 6.5 M mercenary
+ * one; the figures beside them are exact.
+ */
+import type { Stack as StackType, UnitDef } from '@/engine/types';
+import { GROUP_LABEL, GROUP_TONE, GroupMarker, unitGroupOf, UnitTile } from '@/ui/domain';
+import { cn } from '@/ui/kit';
+import { Cluster, Stack } from '@/ui/layout';
 
 import { amount } from './format';
-import { findUnit, unitBadge } from './units';
-
-/** One bar colour per housing pool — the same three the pool badges use. */
-const POOL_BAR: Record<Pool, string> = {
-  leadership: 'border-group-guardsmen bg-group-guardsmen/20',
-  authority: 'border-accent bg-accent/20',
-  dominance: 'border-group-monster bg-group-monster/20',
-};
-
-const POOL_LABELS: Record<Pool, string> = {
-  leadership: 'Troops',
-  authority: 'Mercenaries',
-  dominance: 'Monsters',
-};
-
-const POOLS = Object.keys(POOL_LABELS) as Pool[];
+import { findUnit } from './units';
 
 export interface HpProfileProps {
   /** Stacks in kill order: the first to fall first. */
-  stacks: readonly Stack[];
+  stacks: readonly StackType[];
   units: readonly UnitDef[];
   /** Unit ids kept in the march by hand; they carry the pin mark. */
   kept: readonly string[];
   className?: string;
 }
 
-/**
- * The HP profile: one bar per stack, total HP, first to fall on top.
- *
- * This is the picture the whole calculator is about. The enemy always hits the stack with the most
- * health left, so the bars fall from top to bottom in the order the battle will destroy them, and a
- * profile whose bars are nearly the same length is a march where every stack gets to hit before it dies.
- * Pure CSS: a tinted bar with its pool's colour on the leading edge, the label and the count written on
- * it, and the figure at the end of the row.
- */
 export function HpProfile({ stacks, units, kept, className }: HpProfileProps) {
   if (stacks.length === 0) return null;
   const widest = Math.max(...stacks.map((stack) => stack.totalHp), 1);
-  const pools = POOLS.filter((pool) => stacks.some((stack) => stack.pool === pool));
+  const rows = stacks.flatMap((stack) => {
+    const unit = findUnit(stack.unitId, units);
+    return unit === undefined ? [] : [{ stack, unit }];
+  });
+  const groups = [...new Set(rows.map((row) => unitGroupOf(row.unit)))];
 
   return (
-    <figure className={cn('m-0 space-y-2', className)}>
-      <figcaption className="text-muted text-xs">
-        Total HP per stack, first to fall on top. The monster always hits the stack with the most health left,
-        so bars of similar length mean every stack gets to strike before it falls. The bars use a square-root
-        scale so small stacks stay visible; the figures beside them are exact.
+    <figure className={cn('m-0', className)}>
+      <figcaption className="text-muted text-sm">
+        Total health per stack, first to fall on top. The bars are drawn on a square-root scale so the small
+        stacks stay visible; the figures beside them are exact.
       </figcaption>
-      <ul aria-label="Total HP per stack, first to fall first" className="space-y-1">
-        {stacks.map((stack) => {
-          const unit = findUnit(stack.unitId, units);
-          // One scale for the whole list, so the bars still shorten from top to bottom in kill order —
-          // two per-group scales would put a short bar above a long one and lie about who falls first.
-          // The root keeps a 260 K troop stack readable next to a 6.5 M mercenary one (20 % against 100 %).
+      <Stack as="ul" gap={1} aria-label="Total HP per stack, first to fall first">
+        {rows.map(({ stack, unit }) => {
+          const group = unitGroupOf(unit);
+          // One scale for the whole list: two per-group scales would put a short bar above a long
+          // one and lie about who falls first.
           const width = Math.max(2, Math.round(Math.sqrt(Math.max(0, stack.totalHp) / widest) * 100));
-          const isKept = kept.includes(stack.unitId);
           return (
-            <li key={stack.unitId} className="relative flex items-center gap-2">
-              <span className="bg-sunken border-line relative h-8 min-w-0 flex-1 overflow-hidden rounded-lg border">
+            <Cluster as="li" key={stack.unitId} gap={2} wrap={false}>
+              <span className="bg-sunken relative min-w-0 flex-1">
                 <span
                   aria-hidden="true"
                   data-hp-bar={String(width)}
                   style={{ width: `${String(width)}%` }}
-                  className={cn('absolute inset-y-0 left-0 min-w-[2px] border-l-4', POOL_BAR[stack.pool])}
+                  className={cn('absolute inset-y-0 left-0 min-w-0.5 border-l-4', GROUP_TONE[group])}
                 />
-                <span className="relative flex h-full min-w-0 items-center gap-1.5 pr-2 pl-3 text-xs">
-                  <UnitBadge {...unitBadge(unit, stack.pool)} size="sm" />
-                  <span className="truncate font-medium">{unit?.label ?? stack.unitId}</span>
-                  <span className="nums text-muted">{amount(stack.count)}</span>
-                  {isKept && (
-                    <PinIcon
-                      title="Kept in march"
-                      className="text-accent shrink-0"
-                      width="0.9em"
-                      height="0.9em"
-                    />
-                  )}
-                </span>
+                <Cluster gap={1} wrap={false} className="relative min-h-8 min-w-0">
+                  <UnitTile
+                    unit={unit}
+                    size="sm"
+                    state={kept.includes(stack.unitId) ? 'pinned' : 'on'}
+                    label={`${unit.name}${kept.includes(stack.unitId) ? ', kept in the march' : ''}`}
+                  />
+                  <span className="min-w-0 truncate">{unit.name}</span>
+                  <span className="text-muted nums text-sm">{amount(stack.count)}</span>
+                </Cluster>
               </span>
-              <span className="nums text-muted w-20 shrink-0 text-right text-xs">
-                {amount(stack.totalHp)}
-              </span>
-            </li>
+              <span className="text-muted nums text-sm">{amount(stack.totalHp)}</span>
+            </Cluster>
           );
         })}
-      </ul>
-      <p className="text-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        {pools.map((pool) => (
-          <span key={pool} className="inline-flex items-center gap-1.5">
-            <PoolBadge pool={pool} size="sm" />
-            {POOL_LABELS[pool]}
-          </span>
+      </Stack>
+      <Cluster gap={3}>
+        {groups.map((group) => (
+          <GroupMarker key={group} group={group} label={GROUP_LABEL[group]} />
         ))}
-      </p>
+      </Cluster>
     </figure>
   );
 }

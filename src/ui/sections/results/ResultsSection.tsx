@@ -1,28 +1,48 @@
-import { useEffect, useMemo, useState } from 'react';
+/**
+ * The March card (design plan §7.5, amended by the owner): the answer, then the army, then the
+ * counts, then everything that explains them.
+ *
+ * The order is the order a player reads in: the figures they compare marches by first, the army as
+ * tiles they can change with one tap second, the counts they retype into the game third. What is
+ * left — the trade-off of a priority search, the battle story, the HP profile — sits under it, and
+ * the story and the profile are folded away.
+ *
+ * The card is the answer *and* the controls that shape it: leaving a type out, keeping one in,
+ * editing a count by hand. Every one of them re-sizes the march, because numbers on screen must
+ * always answer the question that is in the form.
+ */
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { version as gameData } from '@/data';
-import type { BonusKey, Pool, SpecialKey } from '@/engine/types';
+import type { BonusKey, Pool, SpecialKey, UnitDef } from '@/engine/types';
+import { buildBattleLink } from '@/share/codec';
 import { newSavedStack } from '@/state/defaults';
 import type { SavedStack } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { PinIcon, PoolBadge, ResultsIcon, WarningIcon } from '@/ui/icons';
-import { Button, Card, HelpNote, Section, Toggle } from '@/ui/primitives';
+import { PoolField } from '@/ui/domain';
+import { Banner, Button, Card, Disclosure } from '@/ui/kit';
+import { Cluster, Grid, Stack } from '@/ui/layout';
+import { copyText } from '@/ui/profile/download';
 import { initResultPersistence, resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 
+import { ShareIcon } from '../../icons';
+import { BattleStory } from './BattleStory';
 import { amount, relativeTime } from './format';
-import { removeFromFormation, restoreToFormation, stopKeepingAll } from './formation';
 import { restoreLastResult } from './generate';
 import { HpProfile } from './HpProfile';
-import { JournalDrawer } from './JournalDrawer';
-import { KeepButton } from './KeepButton';
 import { applyCounts, hasEdits } from './manual';
+import { MarchCounts } from './MarchCounts';
+import { MarchTiles } from './MarchTiles';
+import { Recap } from './Recap';
+import { marchRows, tileRows } from './rows';
 import { SavedStacksPanel, StackNameDialog } from './SavedStacks';
-import { StackPills } from './StackPills';
-import { SummaryCards } from './SummaryCards';
 import { TradeoffPanel } from './TradeoffPanel';
+import { UnitSheet } from './UnitSheet';
 import { useRunStore } from './runStore';
-import { unitLabel, unitName } from './units';
+import { unitName } from './units';
+
+const POOLS: Pool[] = ['leadership', 'authority', 'dominance'];
 
 const POOL_LABELS: Record<Pool, string> = {
   leadership: 'Leadership',
@@ -30,9 +50,7 @@ const POOL_LABELS: Record<Pool, string> = {
   dominance: 'Dominance',
 };
 
-const POOLS = Object.keys(POOL_LABELS) as Pool[];
-
-/** Saved stacks keep the aggregated bonus maps; the zeroes would triple the stored document. */
+/** Saved marches keep the aggregated bonus maps; the zeroes would triple the stored document. */
 function stripZeros<K extends string>(map: Record<K, number>): Partial<Record<K, number>> {
   const out: Partial<Record<K, number>> = {};
   for (const [key, value] of Object.entries(map) as [K, number][]) {
@@ -41,37 +59,21 @@ function stripZeros<K extends string>(map: Record<K, number>): Partial<Record<K,
   return out;
 }
 
-/**
- * The same reason repeated for ten unit types is one fact, not ten: an empty pool drops every type it
- * pays for. Identical reasons are collapsed into one line, the unit types kept underneath so each one
- * still gets its own "Keep in march".
- */
-function groupDropped(
-  dropped: readonly { unitId: string; reason: string }[],
-): { reason: string; unitIds: string[] }[] {
-  const groups = new Map<string, string[]>();
-  for (const entry of dropped) {
-    const ids = groups.get(entry.reason) ?? [];
-    ids.push(entry.unitId);
-    groups.set(entry.reason, ids);
-  }
-  return [...groups].map(([reason, unitIds]) => ({ reason, unitIds }));
-}
-
-/** Results (PLAN §4.8): summary cards, the HP profile, the stacks, the journal, saved stacks. */
 export function ResultsSection() {
   const last = useResultStore((state) => state.last);
-  const running = useResultStore((state) => state.running);
+  // Manual edits live in the result store so they survive a reload with the result they belong to.
+  const counts = useResultStore((state) => state.manualCounts);
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const removedMercenaries = useRunStore((state) => state.removedMercenaries);
   const tradeoff = useRunStore((state) => state.tradeoff);
+  const previousSummary = useRunStore((state) => state.previousSummary);
 
-  // Manual edits live in the result store so they survive a reload with the result they belong to.
-  const counts = useResultStore((state) => state.manualCounts);
-  const [sortByHp, setSortByHp] = useState(false);
-  const [journalOpen, setJournalOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sheetUnit, setSheetUnit] = useState<UnitDef | null>(null);
+  const [notice, setNotice] = useState('');
+  const titleId = useId();
 
   // Bring back the cached result of this march, then keep the cache in step with the store.
   useEffect(() => {
@@ -85,393 +87,239 @@ export function ResultsSection() {
   );
 
   const kept = setup?.pinnedUnitIds ?? [];
-  const excludedIds = profile?.troops.excludedUnitIds ?? [];
-  const removedIds = [...excludedIds, ...removedMercenaries.map((entry) => entry.id)];
-
-  const saveStack = (name: string): void => {
-    if (!last || !setup) return;
-    const state = useStore.getState();
-    const result = edited?.result ?? last.result;
-    const summary = edited?.summary ?? last.summary;
-    const saved: SavedStack = {
-      ...newSavedStack(name, setup, state.doc.deviceId),
-      totals: {
-        health: stripZeros<BonusKey>(last.request.totals.health),
-        strength: stripZeros<BonusKey>(last.request.totals.strength),
-        special: stripZeros<SpecialKey>(last.request.totals.special),
-      },
-      counts: resultCounts(result),
-      summary: toSavedSummary(summary),
-      dataVersion: gameData.dataVersion,
-    };
-    state.addSavedStack(saved);
-    setSaving(false);
-  };
+  const leftOutIds = [
+    ...(profile?.troops.excludedUnitIds ?? []),
+    ...removedMercenaries.map((entry) => entry.id),
+  ];
 
   const body = (): ReactNode => {
-    if (!last) {
+    if (last === null) {
       return (
-        <HelpNote>
-          Nothing generated yet. Enter your housing above and press Generate; the stacks, the battle summary
-          and the journal appear here.
-        </HelpNote>
+        <p className="text-muted">
+          Nothing generated yet. Set your housing above and press Generate; the counts to copy, the figures
+          and the battle story appear here.
+        </p>
       );
     }
+
+    const result = edited?.result ?? last.result;
+    const summary = edited?.summary ?? last.summary;
+    const rows = marchRows(last.request, last.result, result, summary);
+    const tiles = tileRows({
+      units: last.request.units,
+      counts: new Map(result.stacks.map((stack) => [stack.unitId, stack.count])),
+      pinned: kept,
+      leftOutIds,
+    });
 
     const stale =
       profile !== undefined &&
       setup !== undefined &&
       (last.profileId !== profile.id || last.setupId !== setup.id);
-    const result = edited?.result ?? last.result;
-    const summary = edited?.summary ?? last.summary;
-    const generated = new Map(last.result.stacks.map((stack) => [stack.unitId, stack.count]));
-    const byId = new Map(result.stacks.map((stack) => [stack.unitId, stack]));
-    const pills = last.result.stacks.map(
-      (stack) =>
-        byId.get(stack.unitId) ?? {
-          ...stack,
-          count: 0,
-          totalHp: 0,
-          damagePerHit: 0,
-          featuresDamage: 0,
-        },
-    );
-    if (sortByHp) pills.sort((a, b) => b.totalHp - a.totalHp);
-
     const outdated = profile !== undefined && profile.updatedAt > last.at;
-    const keptHere = kept.filter((unitId) => result.stacks.some((stack) => stack.unitId === unitId));
-    const keptElsewhere = kept.filter((unitId) => !keptHere.includes(unitId));
+    const keptElsewhere = kept.filter((unitId) => !result.stacks.some((s) => s.unitId === unitId));
+
+    const saveMarch = (name: string): void => {
+      if (!setup) return;
+      const state = useStore.getState();
+      const saved: SavedStack = {
+        ...newSavedStack(name, setup, state.doc.deviceId),
+        totals: {
+          health: stripZeros<BonusKey>(last.request.totals.health),
+          strength: stripZeros<BonusKey>(last.request.totals.strength),
+          special: stripZeros<SpecialKey>(last.request.totals.special),
+        },
+        counts: resultCounts(result),
+        summary: toSavedSummary(summary),
+        dataVersion: gameData.dataVersion,
+      };
+      state.addSavedStack(saved);
+      setSaving(false);
+    };
+
+    const share = (): void => {
+      if (!setup) return;
+      const baseUrl = typeof window === 'undefined' ? '' : window.location.href;
+      void buildBattleLink(setup, resultCounts(result), toSavedSummary(summary), {
+        baseUrl,
+        dataVersion: gameData.dataVersion,
+      })
+        .then(copyText)
+        .then((ok) => {
+          setNotice(ok ? 'Link copied' : 'The link could not be copied');
+        })
+        .catch(() => {
+          setNotice('The link could not be built');
+        });
+    };
 
     return (
-      <div className="space-y-4">
+      <Stack gap={4}>
+        <Recap summary={summary} {...(previousSummary === null ? {} : { previous: previousSummary })} />
+
         {stale && (
-          <HelpNote tone="warn">
+          <Banner tone="warn">
             This result was generated for another profile or march. Generate again to refresh it.
-          </HelpNote>
+          </Banner>
         )}
-
-        <p className="text-muted text-xs">Generated {relativeTime(last.at)}.</p>
-
         {outdated && !stale && (
-          <HelpNote tone="warn">
+          <Banner tone="warn">
             Your profile has changed since this result was generated, so it may be stale. Generate again to
             bring it up to date.
-          </HelpNote>
+          </Banner>
+        )}
+        {edited && edited.overflow.length > 0 && (
+          <Banner tone="danger">
+            {`Over capacity in ${edited.overflow
+              .map((pool) => POOL_LABELS[pool].toLowerCase())
+              .join(', ')}. The game will refuse a march that does not fit.`}
+          </Banner>
+        )}
+        {result.warnings.map((warning) => (
+          <Banner key={warning} tone="warn" title="Worth a look">
+            {warning}
+          </Banner>
+        ))}
+        {keptElsewhere.length > 0 && (
+          <Banner tone="warn">
+            {`${keptElsewhere
+              .map((unitId) => unitName(unitId, last.request.units))
+              .join(', ')} stayed out of this march even though you keep ${
+              keptElsewhere.length === 1 ? 'it' : 'them'
+            } in. Check that the tier is still switched on, and that the capacity paying for ${
+              keptElsewhere.length === 1 ? 'it' : 'them'
+            } is not zero.`}
+          </Banner>
         )}
 
-        <SummaryCards summary={summary} baseline={edited ? last.summary : undefined} />
+        <MarchTiles rows={tiles} onDetails={setSheetUnit} />
 
-        {kept.length > 0 && (
-          <p className="text-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-            <PinIcon aria-hidden="true" className="text-accent" />
-            <span>Pinned: {kept.map((unitId) => unitLabel(unitId, last.request.units)).join(', ')}</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={running}
-              onClick={() => {
-                stopKeepingAll();
-              }}
-            >
-              Clear all
-              <span className="sr-only">{': stop keeping every unit type in'}</span>
-            </Button>
-          </p>
-        )}
-
-        {tradeoff !== null && (
-          <TradeoffPanel tradeoff={tradeoff} units={last.request.units} kept={kept} busy={running} />
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="mr-auto text-sm font-semibold">Stacks, in the order they fall</h3>
-          <Toggle label="Sort by total HP" checked={sortByHp} onChange={setSortByHp} className="text-sm" />
-          {sortByHp && (
-            <Button
-              size="sm"
-              onClick={() => {
-                setSortByHp(false);
-              }}
-            >
-              Back to the order they fall
-            </Button>
+        <Grid cols={{ base: 1, sm: 3 }} gap={2}>
+          {POOLS.filter((pool) => result.pools[pool].capacity > 0 || result.pools[pool].used > 0).map(
+            (pool) => (
+              <PoolField
+                key={pool}
+                pool={pool}
+                used={result.pools[pool].used}
+                total={result.pools[pool].capacity}
+              />
+            ),
           )}
-        </div>
+        </Grid>
 
-        <HpProfile stacks={pills} units={last.request.units} kept={kept} />
-
-        <StackPills
-          request={last.request}
-          stacks={pills}
-          pools={result.pools}
-          generated={generated}
-          kept={kept}
-          busy={running}
+        <MarchCounts
+          rows={rows}
+          editing={editing}
+          onEditing={setEditing}
+          edited={edited !== null}
           onCount={(unitId, count) => {
             useResultStore.getState().editCount(unitId, count);
           }}
-          onRemove={removeFromFormation}
+          onUndo={() => {
+            useResultStore.getState().resetCounts();
+          }}
+          onDetails={setSheetUnit}
         />
 
         {edited && (
-          <div className="flex flex-wrap items-center gap-2">
-            <HelpNote className="mr-auto">
-              Counts edited by hand. The summary above compares them with the generated stacks; nothing is
-              re-sized, so the housing is yours to balance.
-            </HelpNote>
-            <Button
-              onClick={() => {
-                useResultStore.getState().resetCounts();
-              }}
-            >
-              Back to generated
-            </Button>
-          </div>
+          <p className="text-muted text-sm">
+            Counts edited by hand. The figures above are recomputed on them; nothing is re-sized, so the
+            housing is yours to balance.
+          </p>
         )}
 
-        {edited && edited.overflow.length > 0 && (
-          <HelpNote tone="danger">
-            Over capacity in {edited.overflow.map((pool) => POOL_LABELS[pool].toLowerCase()).join(', ')}. The
-            game will refuse a march that does not fit.
-          </HelpNote>
-        )}
+        {tradeoff !== null && tradeoff.excludedUnitIds.length > 0 && <TradeoffPanel tradeoff={tradeoff} />}
 
-        {result.warnings.length > 0 && (
-          <Card tone="warn" padded={false} className="p-3">
-            <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-              <WarningIcon aria-hidden="true" className="text-warn" />
-              Worth a look
-            </h3>
-            <ul className="mt-1.5 space-y-1 text-xs leading-relaxed">
-              {result.warnings.map((warning) => (
-                <li key={warning}>{warning}</li>
-              ))}
-            </ul>
-          </Card>
-        )}
+        <Disclosure title="Details" summary="The battle story and the HP profile">
+          <Stack gap={4}>
+            <BattleStory request={last.request} summary={summary} />
+            <HpProfile stacks={result.stacks} units={last.request.units} kept={kept} />
+          </Stack>
+        </Disclosure>
 
-        {keptElsewhere.length > 0 && (
-          <HelpNote tone="warn">
-            {keptElsewhere.map((unitId) => unitName(unitId, last.request.units)).join(', ')} stayed out of
-            this march even though you keep {keptElsewhere.length === 1 ? 'it' : 'them'} in. Check that the
-            tier is still switched on in Troops or Mercenaries, and that the capacity paying for{' '}
-            {keptElsewhere.length === 1 ? 'it' : 'them'} is not zero.
-          </HelpNote>
-        )}
-
-        {result.dropped.length > 0 && (
-          <Card padded={false} className="p-3">
-            <h3 className="mb-1.5 text-sm font-semibold">Unit types left out</h3>
-            <ul className="space-y-2">
-              {groupDropped(result.dropped).map((group) => {
-                const only = group.unitIds.length === 1 ? (group.unitIds[0] ?? '') : null;
-                return (
-                  <li key={group.reason} className="text-muted text-xs">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="min-w-0">
-                        <span className="text-fg font-medium">
-                          {only === null
-                            ? `${String(group.unitIds.length)} unit types left out`
-                            : unitName(only, last.request.units)}
-                        </span>{' '}
-                        — {group.reason}
-                      </p>
-                      {only !== null && (
-                        <KeepButton
-                          unitId={only}
-                          name={unitName(only, last.request.units)}
-                          kept={kept.includes(only)}
-                          disabled={running}
-                        />
-                      )}
-                    </div>
-                    {only === null && (
-                      <ul className="mt-1.5 space-y-1.5">
-                        {group.unitIds.map((unitId) => {
-                          const name = unitName(unitId, last.request.units);
-                          return (
-                            <li key={unitId} className="flex items-center justify-between gap-2">
-                              <span className="truncate">{name}</span>
-                              <KeepButton
-                                unitId={unitId}
-                                name={name}
-                                kept={kept.includes(unitId)}
-                                disabled={running}
-                              />
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-        )}
-
-        {removedIds.length > 0 && (
-          <Card padded={false} className="p-3">
-            <h3 className="mb-1.5 text-sm font-semibold">Removed by you</h3>
-            <ul className="space-y-1.5">
-              {removedIds.map((unitId) => (
-                <li key={unitId} className="flex items-center justify-between gap-2 text-xs">
-                  {/* A removed unit type is out of the request, so a custom mercenary is named here. */}
-                  <span className="truncate">
-                    {profile?.mercenaries.custom.find((entry) => entry.id === unitId)?.name ??
-                      unitName(unitId, last.request.units)}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <Button
-                      size="sm"
-                      disabled={running}
-                      onClick={() => {
-                        restoreToFormation(unitId);
-                      }}
-                    >
-                      Put it back
-                      <span className="sr-only">{`: ${unitName(unitId, last.request.units)}`}</span>
-                    </Button>
-                    {/* Keeping it in does both: it comes back *and* nothing may drop it again. */}
-                    <KeepButton
-                      unitId={unitId}
-                      name={unitName(unitId, last.request.units)}
-                      kept={kept.includes(unitId)}
-                      disabled={running}
-                    />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => {
-              setJournalOpen(true);
-            }}
-          >
-            Battle journal
-          </Button>
+        <Cluster gap={2}>
           <Button
             variant="primary"
-            onClick={() => {
+            onPress={() => {
               setSaving(true);
             }}
           >
-            Save stack
+            Save this march
           </Button>
-        </div>
+          <Button icon={<ShareIcon />} onPress={share}>
+            Share
+          </Button>
+          <span role="status" className="text-muted text-sm">
+            {notice}
+          </span>
+        </Cluster>
 
-        <JournalDrawer
-          open={journalOpen}
-          onOpenChange={setJournalOpen}
-          request={last.request}
-          journals={summary.journals}
+        <UnitSheet
+          unit={sheetUnit}
+          row={rows.find((row) => row.unit.id === sheetUnit?.id)}
+          totalDamage={summary.journals.enemyFirst.totalDamage}
+          pinned={sheetUnit !== null && kept.includes(sheetUnit.id)}
+          onOpenChange={(open) => {
+            if (!open) setSheetUnit(null);
+          }}
+          onEditCount={() => {
+            setEditing(true);
+          }}
         />
+
         {saving && (
           <StackNameDialog
             open
-            title="Save this stack"
+            title="Save this march"
             description="It is kept inside the active profile, with the march it came from."
-            confirmLabel="Save stack"
+            confirmLabel="Save this march"
             initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
-            onConfirm={saveStack}
+            onConfirm={saveMarch}
             onCancel={() => {
               setSaving(false);
             }}
           />
         )}
-      </div>
-    );
-  };
-
-  const aside = (): ReactNode => {
-    if (!last) return null;
-    const result = edited?.result ?? last.result;
-    return (
-      <aside className="hidden xl:block">
-        <Card tone="raised" padded={false} className="p-3">
-          <h3 className="mb-2 text-sm font-semibold">This march</h3>
-          {POOLS.map((pool) => {
-            const stacks = result.stacks.filter((stack) => stack.pool === pool);
-            if (stacks.length === 0) return null;
-            return (
-              <div key={pool} className="mb-2 last:mb-0">
-                <p className="text-muted nums flex items-center gap-1.5 text-xs font-medium">
-                  <PoolBadge pool={pool} size="sm" />
-                  {POOL_LABELS[pool]} {amount(result.pools[pool].used)}/{amount(result.pools[pool].capacity)}
-                </p>
-                <ul className="nums text-xs">
-                  {stacks.map((stack) => (
-                    <li key={stack.unitId} className="flex justify-between gap-2">
-                      <span className="truncate">
-                        {unitName(stack.unitId, last.request.units)}
-                        {kept.includes(stack.unitId) && (
-                          <PinIcon
-                            title="Kept in march"
-                            className="text-accent ml-1 inline-block align-[-0.1em]"
-                          />
-                        )}
-                      </span>
-                      <span className="font-medium">{amount(stack.count)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </Card>
-      </aside>
+      </Stack>
     );
   };
 
   const announcement =
     last === null
       ? ''
-      : `Stacks generated: ${amount(last.result.stacks.length)} stacks, ${amount(
+      : `March generated: ${amount(last.result.stacks.length)} stacks, ${amount(
           last.summary.avgDamage,
         )} expected damage.`;
 
   return (
-    <Section
-      id="results"
-      title="Results"
-      icon={<ResultsIcon />}
-      description="Stack sizes, the battle summary and the journal."
-      summary={
-        last === null ? undefined : (
-          <span className="text-muted nums">
-            {amount(last.result.stacks.length)} stacks · {amount(last.summary.avgDamage)} expected damage
-          </span>
-        )
-      }
-      help={
-        <>
-          <p>
-            The monster always hits the stack with the most health left, so the HP profile is the order the
-            battle destroys your army in: first to fall on top. A chip shows the unit count; open it for the
-            stats behind that count, to edit it by hand, or to keep that type in the march for good.
-          </p>
-          <p>
-            <strong>Where to find it in game:</strong> after the march, the battle report in your Journal
-            lists the same numbered hits, so you can hold it next to our journal and check the bonuses you
-            typed.
-          </p>
-        </>
-      }
-    >
-      <p aria-live="polite" className="sr-only">
-        {announcement}
-      </p>
-      <div className="space-y-4 xl:grid xl:grid-cols-[minmax(0,1fr)_14rem] xl:gap-4 xl:space-y-0">
-        <div className="space-y-4">
-          {body()}
-          {profile !== undefined && <SavedStacksPanel profile={profile} />}
-        </div>
-        {aside()}
-      </div>
-    </Section>
+    <Card as="section" id="results" aria-labelledby={titleId} className="@container">
+      <Stack gap={4}>
+        <Cluster gap={2} justify="between">
+          <h2 id={titleId} className="font-display text-lg">
+            March
+          </h2>
+          {last !== null && (
+            <span className="text-muted text-sm">{`Generated ${relativeTime(last.at)}`}</span>
+          )}
+        </Cluster>
+        <p aria-live="polite" className="sr-only">
+          {announcement}
+        </p>
+        {body()}
+
+        {profile !== undefined && (
+          <Disclosure
+            title="Saved marches"
+            summary={
+              profile.savedStacks.length === 0
+                ? 'Nothing saved yet'
+                : `${amount(profile.savedStacks.length)} saved`
+            }
+          >
+            <SavedStacksPanel profile={profile} />
+          </Disclosure>
+        )}
+      </Stack>
+    </Card>
   );
 }

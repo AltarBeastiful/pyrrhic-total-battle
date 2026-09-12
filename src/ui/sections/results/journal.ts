@@ -68,6 +68,30 @@ export function journalLines(
   });
 }
 
+export interface StoryLine extends JournalLine {
+  /** Which round of the battle the hit belongs to. */
+  round: number;
+}
+
+/**
+ * The same hits, told as a story (design plan §7.5 step 5): one line per hit, grouped by the round
+ * it happens in. A round is one attack per enemy squad, so the counter turns over every time the
+ * enemy has struck as many times as it has squads. Engine data only — nothing here is invented.
+ */
+export function storyLines(
+  journal: BattleJournal,
+  enemy: EnemyFormation,
+  labelOf: (unitId: string) => string,
+): StoryLine[] {
+  const squads = Math.max(1, enemySquads(enemy).length);
+  let enemyAttacks = 0;
+  return journalLines(journal, enemy, labelOf).map((line) => {
+    const round = Math.floor(enemyAttacks / squads) + 1;
+    if (line.actor === 'enemy') enemyAttacks += 1;
+    return { ...line, round };
+  });
+}
+
 /** The journal header the drawer shows and the copied text repeats. */
 export function journalHeader(journal: BattleJournal, enemy: EnemyFormation): string {
   const squads = enemySquads(enemy).length;
