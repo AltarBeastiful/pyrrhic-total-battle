@@ -13,6 +13,7 @@
     "scripts",
     "tools",
     "src/data/types.ts",
-    "src/data/schema.ts"
+    "src/data/schema.ts",
+    "src/pwa/precache.ts"
   ]
 }

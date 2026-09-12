@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from '@/App';
 import '@/index.css';
+import { captureInstallPrompt } from '@/pwa/install';
+import { registerServiceWorker } from '@/pwa/register';
 import { createLocalStorageAdapter } from '@/state/storage';
 import { initPersistence, useStore } from '@/state/store';
 import { consumeShareFragment } from '@/ui/shareFragment';
@@ -15,6 +17,11 @@ const adapter = withSaveTracking(createLocalStorageAdapter());
 initPersistence(adapter);
 trackUnsavedChanges();
 applyTheme(useStore.getState().doc.ui.theme);
+
+// Offline support (S-50): the worker is registered on `load` and skipped in `pnpm dev` unless
+// VITE_PWA_DEV=1; the install event is captured here because the browser fires it once, early.
+registerServiceWorker();
+captureInstallPrompt();
 
 // A share link is decoded before the first paint and parked in the UI store; `LoadSharedDialog` asks
 // what to do with it, and the fragment is stripped from the address bar straight away (ADR-0005).

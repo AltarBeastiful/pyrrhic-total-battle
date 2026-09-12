@@ -9,6 +9,17 @@
       content="Pyrrhic - a free, fully client-side epic-monster stacking calculator for Total Battle."
     />
     <title>Pyrrhic</title>
+
+    <!-- Installable / offline (S-50). Relative URLs so the same bundle works at a domain root,
+         under a GitHub Pages sub-path and from disk. The two theme colours are the `--pyr-bg`
+         token of src/index.css in each palette. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9fafc" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#10141b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Pyrrhic" />
     <script>
       // Paint the right theme immediately: the stored preference is read before React starts, so a
       // dark-mode user never sees a white flash. Failing here is harmless (the app re-applies it).

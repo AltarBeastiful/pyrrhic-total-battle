@@ -22,6 +22,7 @@
     "data:format": "node scripts/data-format.ts",
     "data:check": "node scripts/data-check.ts",
     "data:compare": "node tools/totalstack-sync/compare.ts",
+    "icons": "node src/pwa/generate-icons.mjs",
     "e2e": "playwright test"
   },
   "dependencies": {
