@@ -1,111 +1,206 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
+import type { ProfileTroops } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 
 import { TroopsSection } from './TroopsSection';
+import { TROOPS_EXPANDED } from './uiPrefs';
 
 beforeEach(() => {
+  globalThis.localStorage.clear();
   useStore.getState().replaceDocument(newRoot());
 });
 
-afterEach(() => {
-  cleanup();
+afterEach(cleanup);
+
+const troops = (): ProfileTroops => {
+  const profile = selectActiveProfile(useStore.getState());
+  if (profile === undefined) throw new Error('no active profile');
+  return profile.troops;
+};
+
+/** Edit the account the way the rest of the app does, to set a test up. */
+function setTroops(next: Partial<ProfileTroops>): void {
+  const state = useStore.getState();
+  const profile = selectActiveProfile(state);
+  if (profile === undefined) throw new Error('no active profile');
+  state.updateProfile(profile.id, (current) => ({ troops: { ...current.troops, ...next } }));
+}
+
+/** The one line the card always shows: the card's own button carries it. */
+const header = () => screen.getByRole('button', { name: /^Troops/ });
+
+const summaryHas = (text: string): boolean => within(header()).queryByText(text) !== null;
+
+/** Open the card; it starts closed for an account that already has troops. */
+async function open(): Promise<void> {
+  const trigger = header();
+  if (trigger.getAttribute('aria-expanded') === 'true') return;
+  fireEvent.click(trigger);
+  await waitFor(() => {
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  });
+}
+
+const stepper = (name: string) => screen.getByRole('group', { name });
+
+test('the collapsed card sums every group up in game shorthand', () => {
+  render(<TroopsSection />);
+
+  // The first-run account: guardsmen I–III, specialists I, nothing else.
+  expect(summaryHas('G1–G3')).toBe(true);
+  expect(summaryHas('S1')).toBe(true);
+  expect(summaryHas('no engineers')).toBe(true);
+  expect(summaryHas('no monsters')).toBe(true);
+  expect(header().getAttribute('aria-expanded')).toBe('false');
 });
 
-const troops = () => selectActiveProfile(useStore.getState())?.troops;
-
-/** The header line, as a player reads it: it stays in the header whether the body is open or not. */
-const summary = () =>
-  (document.querySelector('#troops-summary')?.textContent ?? '').replace(/\s+/g, ' ').trim();
-
-test('the header sums the account up in one line: tiers, what was dropped, how many types', () => {
+test('the arrow keys move one end of a range, and the two ends clamp each other', async () => {
   render(<TroopsSection />);
-  expect(summary()).toBe(
-    'Guardsmen G1\u2013G3 \u00b7 Specialists S1 \u00b7 no engineers \u00b7 no monsters \u00b7 10 types',
-  );
+  await open();
 
-  fireEvent.click(screen.getByRole('button', { name: 'G3 Mounted', pressed: true }));
-  fireEvent.click(screen.getByRole('button', { name: 'Archer I', pressed: true }));
+  // G1–G3 becomes G1–G4 with a single key, which is the whole point of the stepper (R2, D-22).
+  fireEvent.keyDown(stepper('Guardsmen to'), { key: 'ArrowRight' });
+  expect(troops().guardsmen).toEqual({ min: 1, max: 4 });
+  expect(summaryHas('G1–G4')).toBe(true);
 
-  expect(summary()).toBe(
-    'Guardsmen G1\u2013G3 (no mounted at G3) \u00b7 Specialists S1 \u00b7 no engineers \u00b7 no monsters \u00b7 9 types, 1 left out',
-  );
+  // "From" cannot pass "to": it stops on the tier "to" sits on.
+  for (let press = 0; press < 6; press += 1) {
+    fireEvent.keyDown(stepper('Guardsmen from'), { key: 'ArrowRight' });
+  }
+  expect(troops().guardsmen).toEqual({ min: 4, max: 4 });
+
+  // …and "to" cannot drop below "from" either.
+  fireEvent.keyDown(stepper('Guardsmen to'), { key: 'ArrowLeft' });
+  fireEvent.keyDown(stepper('Guardsmen to'), { key: 'ArrowLeft' });
+  expect(troops().guardsmen).toEqual({ min: 4, max: 4 });
+
+  // A single tier reads as one code, not as a range.
+  expect(summaryHas('G4')).toBe(true);
 });
 
-test('a fresh profile shows its unlocked tiers and every unit they contain', () => {
+test('a guardsmen tile drops the category of the top tier, and only of the top tier', async () => {
   render(<TroopsSection />);
-  // Default account: guardsmen I–III and specialists I, so ten unit types.
-  expect(screen.getByText('(10 in, 0 out)')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Archer I', pressed: true })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Swordsman II' })).toBeNull();
+  await open();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rider III, tier 3, on' }));
+
+  expect(troops().topTierExcluded.guardsmen).toEqual(['mounted']);
+  expect(troops().excludedUnitIds).toEqual([]);
+  expect(screen.getByRole('button', { name: 'Rider III, tier 3, off' })).toBeTruthy();
+  // Rider I and Rider II are lower tiers: always in, and never drawn as a tile.
+  expect(screen.queryByRole('button', { name: /^Rider II,/ })).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rider III, tier 3, off' }));
+  expect(troops().topTierExcluded.guardsmen).toEqual([]);
 });
 
-test('raising the highest tier widens the range and adds the new units', () => {
+test('a monster tile drops that one monster, because a tier has four unrelated ones', async () => {
+  setTroops({ monsters: { min: 3, max: 3 } });
   render(<TroopsSection />);
-  fireEvent.change(screen.getByLabelText('Specialists highest tier'), { target: { value: '3' } });
+  await open();
 
-  expect(troops()?.specialists).toEqual({ min: 1, max: 3 });
-  expect(screen.getByRole('button', { name: 'Swordsman III', pressed: true })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Battle Boar, tier 3, on' }));
+
+  expect(troops().excludedUnitIds).toEqual(['battle-boar']);
+  expect(troops().topTierExcluded).toEqual({ guardsmen: [], specialists: [] });
+  expect(screen.getByRole('button', { name: 'Emerald Dragon, tier 3, on' })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Battle Boar, tier 3, off' }));
+  expect(troops().excludedUnitIds).toEqual([]);
 });
 
-test('lowering the lowest tier past the highest one pushes it instead of inverting the range', () => {
+test('a type the March left out below the top tier is named, and can be put back', async () => {
+  setTroops({ excludedUnitIds: ['archer-1', 'rider-2'] });
   render(<TroopsSection />);
-  fireEvent.change(screen.getByLabelText('Guardsmen lowest tier'), { target: { value: '5' } });
+  await open();
 
-  expect(troops()?.guardsmen).toEqual({ min: 5, max: 5 });
+  expect(screen.getByText('Left out:')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Put back Archer I' }));
+  expect(troops().excludedUnitIds).toEqual(['rider-2']);
+
+  // One name left, so the "all" shortcut goes with it.
+  expect(screen.queryByRole('button', { name: /^Put back all/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Put back Rider II' }));
+  expect(troops().excludedUnitIds).toEqual([]);
+  expect(screen.queryByText('Left out:')).toBeNull();
 });
 
-test('switching a family off stores null and switching it back on starts at its lowest tier', () => {
+test('"put back all" clears the whole group at once', async () => {
+  setTroops({ excludedUnitIds: ['archer-1', 'rider-2', 'battle-boar'] });
   render(<TroopsSection />);
-  expect(troops()?.monsters).toBeNull();
+  await open();
 
-  fireEvent.click(screen.getByRole('switch', { name: 'Monsters unlocked' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Put back all guardsmen' }));
+
+  // Only the guardsmen went back: the monster the March left out is not this row's business.
+  expect(troops().excludedUnitIds).toEqual(['battle-boar']);
+});
+
+test('a group at none is one stepper, and stepping up opens the rest of the row', async () => {
+  render(<TroopsSection />);
+  await open();
+
+  expect(troops().monsters).toBeNull();
+  expect(stepper('Monsters from')).toBeTruthy();
+  expect(screen.queryByRole('group', { name: 'Monsters to' })).toBeNull();
+  expect(screen.queryByRole('group', { name: /^Monsters at/ })).toBeNull();
 
   // Monsters only exist from tier 3 in the tables, so "on" cannot mean tier 1.
-  expect(troops()?.monsters).toEqual({ min: 3, max: 3 });
+  fireEvent.keyDown(stepper('Monsters from'), { key: 'ArrowRight' });
+  expect(troops().monsters).toEqual({ min: 3, max: 3 });
+  expect(screen.getByRole('group', { name: 'Monsters to' })).toBeTruthy();
+  expect(screen.getByRole('group', { name: 'Monsters at M3' })).toBeTruthy();
+
+  // Stepping back below the first tier switches the group off again.
+  fireEvent.keyDown(stepper('Monsters from'), { key: 'ArrowLeft' });
+  expect(troops().monsters).toBeNull();
+  expect(summaryHas('no monsters')).toBe(true);
 });
 
-test('a top-tier category chip drops that category from the highest tier only', () => {
+test('engineers have a range but no tiles: one type per tier means nothing to click out', async () => {
+  setTroops({ engineers: { min: 1, max: 4 } });
   render(<TroopsSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'G3 Melee', pressed: true }));
+  await open();
 
-  expect(troops()?.topTierExcluded.guardsmen).toEqual(['melee']);
-  expect(screen.queryByRole('button', { name: 'Spearman III' })).toBeNull();
-  // Lower tiers keep their melee unit.
-  expect(screen.getByRole('button', { name: 'Spearman II', pressed: true })).toBeTruthy();
+  expect(stepper('Engineers from')).toBeTruthy();
+  expect(stepper('Engineers to')).toBeTruthy();
+  expect(screen.queryByRole('group', { name: /^Engineers at/ })).toBeNull();
+  expect(summaryHas('E1–E4')).toBe(true);
 });
 
-test('moving the highest tier clears the chips, which described the old tier', () => {
+test('an account with nothing in it opens the card and says what to do', () => {
+  setTroops({ guardsmen: null, specialists: null, engineers: null, monsters: null });
   render(<TroopsSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'G3 Mounted', pressed: true }));
-  expect(troops()?.topTierExcluded.guardsmen).toEqual(['mounted']);
 
-  fireEvent.change(screen.getByLabelText('Guardsmen highest tier'), { target: { value: '4' } });
+  expect(header().getAttribute('aria-expanded')).toBe('true');
+  expect(screen.getByText('Add your troops: pick the lowest and highest tier you own.')).toBeTruthy();
+  expect(summaryHas('no guardsmen')).toBe(true);
 
-  expect(troops()?.topTierExcluded.guardsmen).toEqual([]);
-  expect(screen.getByRole('button', { name: 'Rider III', pressed: true })).toBeTruthy();
+  // Every group can be stepped out of "none", guardsmen included.
+  fireEvent.keyDown(stepper('Guardsmen from'), { key: 'ArrowRight' });
+  expect(troops().guardsmen).toEqual({ min: 1, max: 1 });
 });
 
-test('a single unit can be left out and restored, one by one or all at once', () => {
+test('the card remembers whether it is open on this device', async () => {
+  const { unmount } = render(<TroopsSection />);
+  await open();
+  expect(globalThis.localStorage.getItem('pyrrhic.ui.v1')).toContain(TROOPS_EXPANDED);
+
+  fireEvent.click(header());
+  await waitFor(() => {
+    expect(header().getAttribute('aria-expanded')).toBe('false');
+  });
+  unmount();
+
   render(<TroopsSection />);
-  const restoreAll = screen.getByRole('button', { name: 'Restore all units' });
-  expect(restoreAll.hasAttribute('disabled')).toBe(true);
+  expect(header().getAttribute('aria-expanded')).toBe('false');
+  cleanup();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Archer I', pressed: true }));
-  expect(troops()?.excludedUnitIds).toEqual(['archer-1']);
-  expect(screen.getByRole('button', { name: 'Archer I', pressed: false })).toBeTruthy();
-  expect(screen.getByText('(9 in, 1 out)')).toBeTruthy();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Rider II', pressed: true }));
-  expect(troops()?.excludedUnitIds).toEqual(['archer-1', 'rider-2']);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Archer I', pressed: false }));
-  expect(troops()?.excludedUnitIds).toEqual(['rider-2']);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Restore all units' }));
-  expect(troops()?.excludedUnitIds).toEqual([]);
-  expect(screen.getByText('(10 in, 0 out)')).toBeTruthy();
+  globalThis.localStorage.setItem('pyrrhic.ui.v1', JSON.stringify({ [TROOPS_EXPANDED]: true }));
+  render(<TroopsSection />);
+  expect(header().getAttribute('aria-expanded')).toBe('true');
 });

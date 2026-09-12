@@ -1,336 +1,254 @@
 /**
- * S-11 — Troops section (PLAN §4.2).
+ * Troops (design plan §7.1, amended) — the first form a player meets, and the one TotalStack gets
+ * right: for each group, pick the lowest and the highest tier you own, then click out the top-tier
+ * types you have not unlocked yet.
  *
- * Four tier ranges, per-category chips for the highest tier of guardsmen and specialists, and a grid of
- * every unit type the march can field, where a single tap drops a unit the account has not upgraded yet.
- * Everything is written straight to the active profile: this section describes the *account*, not one
- * march, so it never touches the battle setup — the only thing it reads from the setup is the list of
- * pinned units, to mark them.
+ * Lower tiers are always in. A type the March left out below the top tier is named under its row
+ * with a way to put it back, so nothing the account fields is ever hidden. The card describes the
+ * *account*, not one march: everything here is written straight to the active profile.
  */
-import { Fragment, useId } from 'react';
-import type { ReactNode } from 'react';
+import { useState } from 'react';
 
-import type { Category, UnitDef } from '@/data/types';
-import type { ProfileTroops } from '@/state/schema';
-import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import type { UnitDef } from '@/data/types';
+import type { ProfileTroops, TierRange } from '@/state/schema';
+import { selectActiveProfile, useStore } from '@/state/store';
+import { GroupMarker, SummaryLine, UnitTile } from '@/ui/domain';
+import type { SummaryPart } from '@/ui/domain';
+import { Button, Disclosure, TierStepper } from '@/ui/kit';
+import { Cluster, Stack } from '@/ui/layout';
 
 import {
-  CheckIcon,
-  CloseIcon,
-  EngineersIcon,
-  GuardsmenIcon,
-  MonstersIcon,
-  PinIcon,
-  ResetIcon,
-  SpecialistsIcon,
-  TroopsIcon,
-  UnitBadge,
-} from '../../icons';
-import { Button, HelpNote, Pill, RangeSelect, Section, cn } from '../../primitives';
-import {
-  CATEGORY_LABELS,
-  ROW_GROUP,
-  categoriesAtTier,
   isChipRow,
+  isEmptyArmy,
+  leftOutUnits,
   rowBounds,
-  selectionByRow,
-  troopsCountText,
+  rowTiers,
+  topTierIncluded,
+  topTierUnits,
+  TROOP_ROWS,
   troopsSummary,
 } from './rows';
-import type { ChipRowId, TroopRowId } from './rows';
-import type { TierRangeValue } from '../../primitives';
-
-const number = new Intl.NumberFormat('en-US');
-
-const POOL_WORDS = { leadership: 'leadership', authority: 'authority', dominance: 'dominance' } as const;
-
-const GROUP_WORDS = {
-  guardsmen: 'guardsman',
-  specialists: 'specialist',
-  engineers: 'engineer',
-  monsters: 'monster',
-} as const;
-
-const ROW_ICONS: Record<TroopRowId, ReactNode> = {
-  guardsmen: <GuardsmenIcon />,
-  specialists: <SpecialistsIcon />,
-  engineers: <EngineersIcon />,
-  monsters: <MonstersIcon />,
-};
-
-/** One hue per family, written out so Tailwind generates every class. */
-const ROW_TONES: Record<TroopRowId, string> = {
-  guardsmen: 'text-group-guardsmen',
-  specialists: 'text-group-specialist',
-  engineers: 'text-group-engineers',
-  monsters: 'text-group-monster',
-};
-
-const HELP = (
-  <>
-    <p>
-      A tier is the roman numeral on a unit&apos;s card. Set the lowest and the highest tier you can train for
-      each family, switch off a family you have nothing in, then drop the odd type you have not upgraded yet
-      by tapping it in the grid. The chips on the top tier do the same for a whole category at once.
-    </p>
-    <p>
-      <strong>Where to find it in game:</strong> the Barracks lists the tiers you can train and each unit card
-      carries the health, strength and cost repeated here; monsters have the same card in their own building.
-    </p>
-  </>
-);
-
-function tierLabel(prefix: string, tier: number): string {
-  return `${prefix}${tier}`;
-}
+import type { TroopRow, TroopRowId } from './rows';
+import { readUiFlag, TROOPS_EXPANDED, writeUiFlag } from './uiPrefs';
 
 export function TroopsSection() {
   const profile = useStore(selectActiveProfile);
-  const setup = useStore(selectActiveSetup);
   const updateProfile = useStore((state) => state.updateProfile);
-  const gridId = useId();
+  // A profile with no troops is a profile being filled in: the card opens itself and says how.
+  const empty = profile === undefined || isEmptyArmy(profile.troops);
+  const [expanded, setExpanded] = useState(() => readUiFlag(TROOPS_EXPANDED) ?? empty);
 
   if (profile === undefined) return null;
-
   const troops = profile.troops;
-  const excluded = new Set(troops.excludedUnitIds);
-  const pinned = new Set(setup?.pinnedUnitIds ?? []);
-  const rows = selectionByRow(troops);
-  const rowOf = new Map<string, TroopRowId>();
-  for (const { row, units } of rows) {
-    for (const unit of units) rowOf.set(unit.id, row.id);
-  }
-  const all = rows.flatMap((entry) => entry.units);
-  const includedCount = all.filter((unit) => !excluded.has(unit.id)).length;
-  const excludedHere = all.filter((unit) => excluded.has(unit.id));
+  const profileId = profile.id;
 
   const patch = (next: Partial<ProfileTroops>): void => {
-    updateProfile(profile.id, (current) => ({ troops: { ...current.troops, ...next } }));
+    updateProfile(profileId, (current) => ({ troops: { ...current.troops, ...next } }));
   };
 
-  const setRange = (row: TroopRowId, value: TierRangeValue | null): void => {
-    const ranges = {
+  /** Writes one group's range. The tiles describe one tier, so a moved top tier forgets them. */
+  const setRange = (row: TroopRowId, next: TierRange | null): void => {
+    const ranges: Record<TroopRowId, TierRange | null> = {
       guardsmen: troops.guardsmen,
       specialists: troops.specialists,
       engineers: troops.engineers,
       monsters: troops.monsters,
     };
-    const topTierMoved = (ranges[row]?.max ?? null) !== (value?.max ?? null);
-    ranges[row] = value;
-    // The chips describe one tier; when that tier moves they no longer mean anything.
+    ranges[row] = next;
     const topTierExcluded = { ...troops.topTierExcluded };
-    if (topTierMoved && isChipRow(row)) topTierExcluded[row] = [];
+    const moved = (troops[row]?.max ?? null) !== (next?.max ?? null);
+    if (moved && isChipRow(row)) topTierExcluded[row] = [];
     patch({ ...ranges, topTierExcluded });
   };
 
-  const setCategory = (row: ChipRowId, category: Category, on: boolean): void => {
-    const current = troops.topTierExcluded[row];
+  const setFrom = (row: TroopRowId, value: number | null): void => {
+    const range = troops[row];
+    if (value === null) {
+      setRange(row, null);
+      return;
+    }
+    setRange(row, { min: value, max: range === null ? value : Math.max(range.max, value) });
+  };
+
+  const setTo = (row: TroopRowId, value: number | null): void => {
+    const range = troops[row];
+    if (value === null) {
+      setRange(row, null);
+      return;
+    }
+    setRange(row, { min: range === null ? value : Math.min(range.min, value), max: value });
+  };
+
+  /**
+   * A top-tier tile. Guardsmen and specialists have one type per category per tier, so the tile
+   * writes the category the whole game reasons in; monsters have four unrelated types, so the tile
+   * writes the unit id. Putting a type back always clears both, because the March writes ids.
+   */
+  const setTile = (row: TroopRowId, unit: UnitDef, on: boolean): void => {
+    const chipRow = isChipRow(row) ? row : null;
     const topTierExcluded = { ...troops.topTierExcluded };
-    topTierExcluded[row] = on ? current.filter((item) => item !== category) : [...current, category];
-    patch({ topTierExcluded });
+    const category = unit.category;
+    if (chipRow !== null && category !== undefined) {
+      const rest = topTierExcluded[chipRow].filter((item) => item !== category);
+      topTierExcluded[chipRow] = on ? rest : [...rest, category];
+    }
+    const excludedUnitIds = on
+      ? troops.excludedUnitIds.filter((id) => id !== unit.id)
+      : chipRow === null
+        ? [...troops.excludedUnitIds.filter((id) => id !== unit.id), unit.id]
+        : troops.excludedUnitIds;
+    patch({ topTierExcluded, excludedUnitIds });
   };
 
-  const setUnit = (unitId: string, on: boolean): void => {
-    patch({
-      excludedUnitIds: on
-        ? troops.excludedUnitIds.filter((id) => id !== unitId)
-        : [...troops.excludedUnitIds, unitId],
-    });
+  const putBack = (ids: string[]): void => {
+    patch({ excludedUnitIds: troops.excludedUnitIds.filter((id) => !ids.includes(id)) });
   };
 
-  const restoreAll = (): void => {
-    const here = new Set(all.map((unit) => unit.id));
-    patch({ excludedUnitIds: troops.excludedUnitIds.filter((id) => !here.has(id)) });
+  const toggleCard = (next: boolean): void => {
+    setExpanded(next);
+    writeUiFlag(TROOPS_EXPANDED, next);
   };
+
+  const parts: SummaryPart[] = troopsSummary(troops).map((part) => ({
+    group: part.row.id,
+    text: part.text,
+    muted: !part.present,
+  }));
 
   return (
-    <Section
-      id="troops"
-      title="Troops"
-      icon={<TroopsIcon />}
-      help={HELP}
-      summary={
-        <p id="troops-summary" className="text-muted text-xs leading-relaxed">
-          {troopsSummary(troops).map((part, index) => (
-            <Fragment key={part.row.id}>
-              {index > 0 && ' \u00b7 '}
-              <span className="whitespace-nowrap">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'mr-1 inline-flex align-[-0.15em]',
-                    part.present ? ROW_TONES[part.row.id] : 'opacity-50',
-                  )}
-                >
-                  {ROW_ICONS[part.row.id]}
-                </span>
-                <span className={part.present ? 'text-fg' : 'text-muted'}>{part.text}</span>
-              </span>
-            </Fragment>
+    <Stack as="section" id="troops" aria-label="Troops" gap={2}>
+      <Disclosure
+        title="Troops"
+        summary={<SummaryLine parts={parts} />}
+        isExpanded={expanded}
+        onExpandedChange={toggleCard}
+      >
+        <Stack gap={4}>
+          {empty && (
+            <p className="text-muted text-sm">Add your troops: pick the lowest and highest tier you own.</p>
+          )}
+          {TROOP_ROWS.map((row) => (
+            <GroupRow
+              key={row.id}
+              row={row}
+              troops={troops}
+              onFrom={setFrom}
+              onTo={setTo}
+              onTile={setTile}
+              onPutBack={putBack}
+            />
           ))}
-          {' \u00b7 '}
-          <span className="nums whitespace-nowrap">{troopsCountText(all.length, excludedHere.length)}</span>
-        </p>
-      }
-    >
-      <div className="space-y-3">
-        <div className="divide-line -mt-1 divide-y">
-          {rows.map(({ row, units }) => {
-            const range = troops[row.id];
-            const bounds = rowBounds(row.id);
-            const chipRow = isChipRow(row.id) ? row.id : null;
-            const categories = range === null || chipRow === null ? [] : categoriesAtTier(chipRow, range.max);
-            return (
-              <div key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5">
-                <span
-                  aria-hidden="true"
-                  className={cn('flex w-5 shrink-0 justify-center', ROW_TONES[row.id])}
-                >
-                  {ROW_ICONS[row.id]}
-                </span>
-                <RangeSelect
-                  label={row.label}
-                  value={range}
-                  min={bounds.min}
-                  max={bounds.max}
-                  allowNone={row.allowNone}
-                  optionLabel={(tier) => tierLabel(row.prefix, tier)}
-                  onChange={(value) => {
-                    setRange(row.id, value);
-                  }}
-                />
-                {chipRow !== null && range !== null && categories.length > 1 && (
-                  <div className="flex flex-wrap items-center gap-1">
-                    {categories.map((category) => (
-                      <Pill
-                        key={category}
-                        label={`${tierLabel(row.prefix, range.max)} ${CATEGORY_LABELS[category]}`}
-                        badge={<UnitBadge group={ROW_GROUP[row.id]} category={category} size="sm" />}
-                        on={!troops.topTierExcluded[chipRow].includes(category)}
-                        onToggle={(on) => {
-                          setCategory(chipRow, category, on);
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-                {range !== null && units.length === 0 && row.chips && (
-                  <span className="text-muted text-xs">every category switched off</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {all.length === 0 && (
-          <HelpNote tone="warn">
-            Nothing is selected, so there is nothing to stack. Open at least one family above.
-          </HelpNote>
-        )}
-
-        {all.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 id={gridId} className="text-sm font-semibold">
-                Your unit types{' '}
-                <span className="text-muted nums font-normal">
-                  ({includedCount} in, {excludedHere.length} out)
-                </span>
-              </h3>
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={<ResetIcon />}
-                onClick={restoreAll}
-                disabled={excludedHere.length === 0}
-                aria-label="Restore all units"
-              >
-                Put them all back
-              </Button>
-            </div>
-            <ul aria-labelledby={gridId} className="grid grid-cols-3 gap-1 sm:grid-cols-5 lg:grid-cols-7">
-              {all.map((unit) => (
-                <li key={unit.id}>
-                  <UnitChip
-                    unit={unit}
-                    row={rowOf.get(unit.id) ?? 'guardsmen'}
-                    included={!excluded.has(unit.id)}
-                    pinned={pinned.has(unit.id)}
-                    onToggle={(on) => {
-                      setUnit(unit.id, on);
-                    }}
-                  />
-                </li>
-              ))}
-            </ul>
-            <p className="text-muted text-xs">
-              Tap a type to leave it out; it stays here, struck through, until you tap it back in. Point at
-              one to read its health, strength and cost.
-            </p>
-          </div>
-        )}
-      </div>
-    </Section>
+        </Stack>
+      </Disclosure>
+    </Stack>
   );
 }
 
-interface UnitChipProps {
-  unit: UnitDef;
-  row: TroopRowId;
-  included: boolean;
-  pinned: boolean;
-  onToggle: (included: boolean) => void;
+interface GroupRowProps {
+  row: TroopRow;
+  troops: ProfileTroops;
+  onFrom: (row: TroopRowId, value: number | null) => void;
+  onTo: (row: TroopRowId, value: number | null) => void;
+  onTile: (row: TroopRowId, unit: UnitDef, on: boolean) => void;
+  onPutBack: (ids: string[]) => void;
 }
 
-/** One cell of the grid: a toggle whose accessible name is the unit, so it reads as a checkbox. */
-function UnitChip({ unit, row, included, pinned, onToggle }: UnitChipProps) {
-  const kind =
-    unit.category === undefined ? GROUP_WORDS[row] : `${CATEGORY_LABELS[unit.category]} ${GROUP_WORDS[row]}`;
-  const facts = [
-    `${unit.name} — ${kind}, tier ${unit.tier}`,
-    `${number.format(unit.health)} HP · ${number.format(unit.strength)} strength`,
-    `${number.format(unit.cost)} ${POOL_WORDS[unit.pool]}`,
-    pinned ? 'Pinned to this march' : '',
-  ]
-    .filter((line) => line !== '')
-    .join('\n');
+/**
+ * One group: its marker, the two ends of the range, and the tiles of the top tier. A group set to
+ * "none" is one stepper and nothing else, which is what keeps the card four short rows (R4).
+ */
+function GroupRow({ row, troops, onFrom, onTo, onTile, onPutBack }: GroupRowProps) {
+  const range = troops[row.id];
+  const tiers = rowTiers(row.id);
+  const bounds = rowBounds(row.id);
+  // Guardsmen and specialists cannot be switched off — unless they already are, and someone has to
+  // be able to step out of that.
+  const allowNone = row.allowNone || range === null;
+  const tiles = row.tiles ? topTierUnits(troops, row.id) : [];
+  const leftOut = leftOutUnits(troops, row.id);
 
   return (
-    <button
-      type="button"
-      aria-pressed={included}
-      aria-label={unit.name}
-      title={facts}
-      onClick={() => {
-        onToggle(!included);
-      }}
-      className={cn(
-        'tap flex w-full items-center gap-1 rounded-lg border px-1.5 text-left transition-colors',
-        included
-          ? 'border-accent-line bg-surface text-fg hover:bg-accent-soft'
-          : 'border-line bg-raised text-muted opacity-70',
+    <Stack gap={1}>
+      <Cluster gap={2} align="end">
+        {/* The group is named by the steppers ("Guardsmen from"); the marker is its colour, and its
+            name for a screen reader. Repeating it here costs the row its second line on a phone. */}
+        <GroupMarker group={row.id} />
+        <TierStepper
+          label={`${row.label} from`}
+          prefix={row.prefix}
+          tiers={tiers}
+          value={range?.min ?? null}
+          allowNone={allowNone}
+          min={bounds.min}
+          max={range?.max ?? bounds.max}
+          onChange={(value) => {
+            onFrom(row.id, value);
+          }}
+        />
+        {range !== null && (
+          <TierStepper
+            label={`${row.label} to`}
+            prefix={row.prefix}
+            tiers={tiers}
+            value={range.max}
+            allowNone={row.allowNone}
+            min={range.min}
+            max={bounds.max}
+            onChange={(value) => {
+              onTo(row.id, value);
+            }}
+          />
+        )}
+        {range !== null && tiles.length > 0 && (
+          <Cluster gap={1} role="group" aria-label={`${row.label} at ${row.prefix}${range.max}`}>
+            <span className="text-muted text-sm">{`at ${row.prefix}${range.max}:`}</span>
+            {tiles.map((unit) => {
+              const on = topTierIncluded(troops, row.id, unit);
+              return (
+                <UnitTile
+                  key={unit.id}
+                  unit={unit}
+                  size="md"
+                  state={on ? 'on' : 'off'}
+                  onPress={() => {
+                    onTile(row.id, unit, !on);
+                  }}
+                />
+              );
+            })}
+          </Cluster>
+        )}
+      </Cluster>
+      {leftOut.length > 0 && (
+        <Cluster gap={1} align="center">
+          <span className="text-muted text-sm">Left out:</span>
+          {leftOut.map((unit) => (
+            <Button
+              key={unit.id}
+              size="sm"
+              variant="quiet"
+              aria-label={`Put back ${unit.name}`}
+              onPress={() => {
+                onPutBack([unit.id]);
+              }}
+            >
+              {unit.name}
+            </Button>
+          ))}
+          {leftOut.length > 1 && (
+            <Button
+              size="sm"
+              variant="quiet"
+              aria-label={`Put back all ${row.label.toLowerCase()}`}
+              onPress={() => {
+                onPutBack(leftOut.map((unit) => unit.id));
+              }}
+            >
+              Put back all
+            </Button>
+          )}
+        </Cluster>
       )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn('shrink-0 text-[0.7rem]', included ? 'text-accent' : 'text-muted')}
-      >
-        {included ? <CheckIcon /> : <CloseIcon />}
-      </span>
-      <UnitBadge
-        group={ROW_GROUP[row]}
-        {...(unit.category === undefined ? {} : { category: unit.category })}
-        tier={unit.tier}
-        size="sm"
-      />
-      <span className={cn('nums truncate text-xs font-medium', !included && 'line-through')}>
-        {unit.label}
-      </span>
-      {pinned && (
-        <span aria-hidden="true" className="text-accent ml-auto shrink-0 text-[0.7rem]">
-          <PinIcon />
-        </span>
-      )}
-    </button>
+    </Stack>
   );
 }

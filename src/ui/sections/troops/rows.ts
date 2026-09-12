@@ -1,38 +1,39 @@
 /**
- * S-11 — the four rows of the Troops section and the pure helpers that turn `profile.troops` into a
- * list of unit types.
+ * The four groups of the Troops card (design plan §7.1, amended) and the pure helpers that turn
+ * `profile.troops` into what the card draws: the tiers a stepper steps through, the unit types of
+ * the top tier, the types left out below it, and the one line the collapsed card shows.
  *
- * Everything here is derived from the game tables, never hard-coded: the tier bounds of a row, the
- * categories a tier actually offers, the order units are listed in. A data update that adds a tier or a
- * category therefore shows up in the UI without touching this file.
+ * Everything here is derived from the game tables, never hard-coded: the tiers of a group, the
+ * categories a tier offers, the order types are listed in. A data update that adds a tier or a
+ * category therefore shows up in the card without touching this file.
  */
 import { getUnits } from '@/data';
 import { CATEGORIES } from '@/data/types';
 import type { Category, Group, UnitDef } from '@/data/types';
-import type { ProfileTroops } from '@/state/schema';
+import type { ProfileTroops, TierRange } from '@/state/schema';
 
-/** The four rows, in the order PLAN §4.2 lists them. Row ids match the keys of `profile.troops`. */
+/** The four groups, in the order the game lists them. Ids match the keys of `profile.troops`. */
 export type TroopRowId = 'guardsmen' | 'specialists' | 'engineers' | 'monsters';
 
-/** Rows whose top tier offers per-category chips (the only two families with several categories). */
+/** Groups whose top-tier tiles drop a whole category (`topTierExcluded`), not one unit id. */
 export type ChipRowId = 'guardsmen' | 'specialists';
 
 export interface TroopRow {
   id: TroopRowId;
   label: string;
-  /** How a tier is written in the pickers: G1, S1, E1, M3. */
+  /** How a tier is written: G1, S1, E1, M3. */
   prefix: string;
-  /** Guardsmen and specialists let the player drop categories of the highest tier. */
-  chips: boolean;
-  /** Engineers and monsters can be switched off entirely ("none"). */
+  /** Groups with more than one type per tier show the top tier as tiles; engineers have one. */
+  tiles: boolean;
+  /** Engineers and monsters have a "none" position below their first tier. */
   allowNone: boolean;
 }
 
 export const TROOP_ROWS: readonly TroopRow[] = [
-  { id: 'guardsmen', label: 'Guardsmen', prefix: 'G', chips: true, allowNone: false },
-  { id: 'specialists', label: 'Specialists', prefix: 'S', chips: true, allowNone: false },
-  { id: 'engineers', label: 'Engineers', prefix: 'E', chips: false, allowNone: true },
-  { id: 'monsters', label: 'Monsters', prefix: 'M', chips: false, allowNone: true },
+  { id: 'guardsmen', label: 'Guardsmen', prefix: 'G', tiles: true, allowNone: false },
+  { id: 'specialists', label: 'Specialists', prefix: 'S', tiles: true, allowNone: false },
+  { id: 'engineers', label: 'Engineers', prefix: 'E', tiles: false, allowNone: true },
+  { id: 'monsters', label: 'Monsters', prefix: 'M', tiles: true, allowNone: true },
 ];
 
 export const CHIP_ROWS: readonly ChipRowId[] = ['guardsmen', 'specialists'];
@@ -49,14 +50,7 @@ export const ROW_GROUP: Record<TroopRowId, Group> = {
   monsters: 'monster',
 };
 
-export const CATEGORY_LABELS: Record<Category, string> = {
-  melee: 'Melee',
-  ranged: 'Ranged',
-  mounted: 'Mounted',
-  flying: 'Flying',
-};
-
-/** Every unit type of one row, whatever the player has unlocked. */
+/** Every unit type of one group, whatever the player has unlocked. */
 export function rowUnits(row: TroopRowId): UnitDef[] {
   const group = ROW_GROUP[row];
   return getUnits().filter((unit) =>
@@ -64,13 +58,18 @@ export function rowUnits(row: TroopRowId): UnitDef[] {
   );
 }
 
-/** Lowest and highest tier the game offers for a row (monsters start at 3). */
-export function rowBounds(row: TroopRowId): { min: number; max: number } {
-  const tiers = rowUnits(row).map((unit) => unit.tier);
-  return { min: Math.min(...tiers), max: Math.max(...tiers) };
+/** Every tier the game offers for a group, lowest first: the positions of its steppers. */
+export function rowTiers(row: TroopRowId): number[] {
+  return [...new Set(rowUnits(row).map((unit) => unit.tier))].sort((left, right) => left - right);
 }
 
-/** The categories a row actually has at one tier (guardsmen gain flying at G5, specialists at S5). */
+/** Lowest and highest tier the game offers for a group (monsters start at 3). */
+export function rowBounds(row: TroopRowId): { min: number; max: number } {
+  const tiers = rowTiers(row);
+  return { min: tiers[0] ?? 1, max: tiers[tiers.length - 1] ?? 1 };
+}
+
+/** The categories a group actually has at one tier (guardsmen gain flying at G5, specialists at S5). */
 export function categoriesAtTier(row: TroopRowId, tier: number): Category[] {
   const present = new Set(
     rowUnits(row)
@@ -93,9 +92,9 @@ function sortForDisplay(units: UnitDef[]): UnitDef[] {
 }
 
 /**
- * The unit types a row contributes: inside the tier range and, at the highest tier, not dropped by a
- * category chip. Per-unit exclusions are deliberately *not* applied — the preview grid has to show an
- * excluded unit so the player can put it back.
+ * The unit types a group contributes: inside the tier range and, at the highest tier, not dropped
+ * by a category. Per-unit exclusions are deliberately *not* applied — the card has to show a type
+ * that was left out so the player can put it back.
  */
 export function rowSelection(troops: ProfileTroops, row: TroopRowId): UnitDef[] {
   const range = troops[row];
@@ -110,62 +109,61 @@ export function rowSelection(troops: ProfileTroops, row: TroopRowId): UnitDef[] 
   );
 }
 
-export interface RowSelection {
-  row: TroopRow;
-  units: UnitDef[];
-}
-
-/** Every row's selection, in page order; rows with nothing selected are kept so the grid can say so. */
-export function selectionByRow(troops: ProfileTroops): RowSelection[] {
-  return TROOP_ROWS.map((row) => ({ row, units: rowSelection(troops, row.id) }));
-}
-
-/** All selected unit types, flattened — the grid's contents, excluded ones included. */
-export function selectedUnits(troops: ProfileTroops): UnitDef[] {
-  return selectionByRow(troops).flatMap((entry) => entry.units);
-}
-
-// ---- Header summary ------------------------------------------------------------------------------
-export interface TroopsSummaryPart {
-  row: TroopRow;
-  /** What the header line says for this family: "Guardsmen G1–G3 (no mounted at G3)", "no monsters". */
-  text: string;
-  /** False when the account has nothing in this family, so the header can dim it. */
-  present: boolean;
-}
-
-/** "G1", or "G1–G3" when the range spans more than one tier. */
-function rangeText(prefix: string, range: { min: number; max: number }): string {
-  return range.min === range.max ? `${prefix}${range.min}` : `${prefix}${range.min}–${prefix}${range.max}`;
+/** The types of the highest tier the player owns: the tiles of the row. */
+export function topTierUnits(troops: ProfileTroops, row: TroopRowId): UnitDef[] {
+  const range = troops[row];
+  if (range === null) return [];
+  return sortForDisplay(rowUnits(row).filter((unit) => unit.tier === range.max));
 }
 
 /**
- * One phrase per family for the section header, so a collapsed Troops section still says what the
- * account fields: which tiers, what was dropped at the top tier, and what is missing entirely.
+ * Is this top-tier type in the march? Guardsmen and specialists are dropped by category, monsters
+ * by unit id; a type the March left out (`excludedUnitIds`) reads as off whatever its group.
  */
+export function topTierIncluded(troops: ProfileTroops, row: TroopRowId, unit: UnitDef): boolean {
+  if (troops.excludedUnitIds.includes(unit.id)) return false;
+  if (!isChipRow(row) || unit.category === undefined) return true;
+  return !troops.topTierExcluded[row].includes(unit.category);
+}
+
+/**
+ * Types of this group the March left out below the top tier. Lower tiers are always in, so these
+ * are the only ones the card has to offer back — the top tier says it with its tiles.
+ */
+export function leftOutUnits(troops: ProfileTroops, row: TroopRowId): UnitDef[] {
+  const range = troops[row];
+  if (range === null) return [];
+  const excluded = new Set(troops.excludedUnitIds);
+  return sortForDisplay(
+    rowUnits(row).filter((unit) => unit.tier >= range.min && unit.tier < range.max && excluded.has(unit.id)),
+  );
+}
+
+/** True when the profile owns nothing at all, which is what the guided empty state answers. */
+export function isEmptyArmy(troops: ProfileTroops): boolean {
+  return TROOP_ROWS.every((row) => troops[row.id] === null);
+}
+
+// ---- The collapsed line --------------------------------------------------------------------------
+export interface TroopsSummaryPart {
+  row: TroopRow;
+  /** The group in game shorthand: "G1–G4", "S2", "no engineers". */
+  text: string;
+  /** False when the account has nothing in this group, so the line can dim it. */
+  present: boolean;
+}
+
+/** "G4", or "G1–G4" when the range spans more than one tier. */
+export function rangeText(prefix: string, range: TierRange): string {
+  return range.min === range.max ? `${prefix}${range.min}` : `${prefix}${range.min}–${prefix}${range.max}`;
+}
+
+/** One short phrase per group, so a collapsed card still says what the account fields. */
 export function troopsSummary(troops: ProfileTroops): TroopsSummaryPart[] {
   return TROOP_ROWS.map((row) => {
     const range = troops[row.id];
-    if (range === null) {
-      return { row, text: `no ${row.label.toLowerCase()}`, present: false };
-    }
-    const chipRow = isChipRow(row.id) ? row.id : null;
-    const dropped =
-      chipRow === null
-        ? []
-        : categoriesAtTier(chipRow, range.max).filter((category) =>
-            troops.topTierExcluded[chipRow].includes(category),
-          );
-    const note =
-      dropped.length === 0
-        ? ''
-        : ` (no ${dropped.map((category) => CATEGORY_LABELS[category].toLowerCase()).join(' or ')} at ${row.prefix}${range.max})`;
-    return { row, text: `${row.label} ${rangeText(row.prefix, range)}${note}`, present: true };
+    return range === null
+      ? { row, text: `no ${row.label.toLowerCase()}`, present: false }
+      : { row, text: rangeText(row.prefix, range), present: true };
   });
-}
-
-/** The tail of the header line: "12 types, 2 left out". */
-export function troopsCountText(total: number, leftOut: number): string {
-  const types = `${total} ${total === 1 ? 'type' : 'types'}`;
-  return leftOut === 0 ? types : `${types}, ${leftOut} left out`;
 }
