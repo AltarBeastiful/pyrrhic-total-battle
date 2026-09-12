@@ -66,6 +66,21 @@ test('each preservation flag is only offered with the method it belongs to, and 
   expect(options()?.strictMercsAboveMonsters).toBe(false);
 });
 
+test("relaxed preservation is offered only with M's Preservation and is cleared when it is left", () => {
+  render(<MethodSection />);
+  const underElite = screen.getByRole('switch', { name: 'Relaxed preservation' });
+  expect(underElite.hasAttribute('disabled')).toBe(true);
+  fireEvent.click(underElite);
+  expect(options()?.relaxedPreservation).toBe(false);
+
+  fireEvent.click(screen.getByRole('radio', { name: "M's Preservation" }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Relaxed preservation' }));
+  expect(options()?.relaxedPreservation).toBe(true);
+
+  fireEvent.click(screen.getByRole('radio', { name: 'Elite Preservation' }));
+  expect(options()?.relaxedPreservation).toBe(false);
+});
+
 test('round to 10s is available whatever the method is', () => {
   render(<MethodSection />);
   fireEvent.click(screen.getByRole('switch', { name: 'Round to 10s' }));

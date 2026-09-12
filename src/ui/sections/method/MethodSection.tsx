@@ -102,14 +102,18 @@ export function MethodSection() {
       options: {
         ...current.options,
         method,
-        // The two preservation flags are exclusive with the method they do not belong to (PLAN §3.3).
+        // The method-specific flags are exclusive with the method they do not belong to (PLAN §3.3).
         monstersLast: method === 'elite' ? current.options.monstersLast : false,
         strictMercsAboveMonsters: method === 'ms' ? current.options.strictMercsAboveMonsters : false,
+        relaxedPreservation: method === 'ms' ? current.options.relaxedPreservation : false,
       },
     }));
   };
 
-  const setFlag = (key: 'monstersLast' | 'strictMercsAboveMonsters' | 'roundTo10', on: boolean): void => {
+  const setFlag = (
+    key: 'monstersLast' | 'strictMercsAboveMonsters' | 'relaxedPreservation' | 'roundTo10',
+    on: boolean,
+  ): void => {
     updateActiveSetup((current) => {
       const next = { ...current.options };
       next[key] = on;
@@ -190,6 +194,19 @@ export function MethodSection() {
             disabled={options.method !== 'ms'}
             onChange={(on) => {
               setFlag('strictMercsAboveMonsters', on);
+            }}
+          />
+          <Toggle
+            label="Relaxed preservation"
+            description={
+              options.method === 'ms'
+                ? 'Lets a monster or mercenary stack grow past your lowest troop stack when that raises both the minimum and the average damage, so some monsters die before your last troops — the results list warns you and names them.'
+                : "Only available with M's Preservation."
+            }
+            checked={options.relaxedPreservation}
+            disabled={options.method !== 'ms'}
+            onChange={(on) => {
+              setFlag('relaxedPreservation', on);
             }}
           />
           <Toggle
