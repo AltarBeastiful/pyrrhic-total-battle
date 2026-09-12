@@ -364,11 +364,11 @@ expand/collapse state. One row per group:
 
 **Amended 2026-09-13 (owner):** players know mercenaries by name and tier; role and race filters are noise.
 
-- The owned list is the summary and the form, TotalStack-style: one compact row each, **ordered by tier
-  (highest first), then name** — `sm` tile · name · a tier badge in the tier colour · owned count as a **plain input** (select-all on
+- The owned list is the summary and the form, TotalStack-style: **compact pills in a wrapping row** (code,
+  tier, cap or ∞, category glyph, remove ×) **ordered by tier ascending, then name** — `sm` tile · name · a tier badge in the tier colour · owned count as a **plain input** (select-all on
   focus, no step buttons) with an "unlimited" toggle · pin marker. Tapping the row itself deselects it.
-- **Adding** is a **combobox** (type a name, or open the list): the list is grouped by tier, highest first, each
-  group headed "Tier VI" in that tier's colour, rows = tile · name · tier badge; picking a row adds it and keeps
+- **Adding** is a **combobox** (type a name, or open the list): the list is grouped by tier **ascending, as
+  TotalStack's** ("Tier V" first), each group headed in that tier's colour, rows = tile · name · tier badge; picking a row adds it and keeps
   the combobox open for the next one. No Tier/Role/Race chips. "Custom mercenary…" is the last row.
 - **Tier colours** come from the game's tier palette, made readable against our surfaces (tokens
   `--color-tier-5 … --color-tier-9`, one per tier present in the tables; a hypothesis to confirm against an
@@ -381,19 +381,27 @@ expand/collapse state. One row per group:
 Collapsed: the TOTAL as labelled figures (health, strength, special, sources on) plus a warning marker when a
 source is on but empty. Expanded: TOTAL stays as the header; below, groups in the order the game shows them.
 
-**Captains and the hero — amended 2026-09-13 (owner): take TotalStack's picker.** Not a list of switch rows
-but a **grid of captain tiles**, every captain the tables know, always visible inside the group: name, a
-glyph, and a **badge with the level and the star count** ("20 ★3"). Tapping the tile puts the captain in the
-march (or takes it out); at most three on, the fourth tap is refused with a one-line note. There is no "Add
-captain" button: the grid of every captain, enlisted or not, is the summary and the whole form at once
-(principle 2 applied to bonuses). Tapping the badge
-opens the level/stars editor in a sheet. Captains the player has never configured show the badge as "set
-level" until tapped. **Only captains whose bonuses touch a stack get a level badge** (TotalStack does the
-same: Carter, Aurora, Doria, Dustan, Farhad, Helen, Hercules, Proscope, Stror and Tengel have no health or
-strength key in `captains.json`); their tiles read "no stack bonus", can still be enlisted (they take one of
-the three slots the player really sends), and never open an editor. A captain with only one of the two keys
-edits that one. The hero gets the same tile at the head of the grid with its level badge. Ordering: on first,
-then captains with a stack bonus by name, then the rest.
+**Captains and the hero — amended twice on 2026-09-13; final: mimic TotalStack's picker exactly in
+behaviour, arrangement and relative size, in our CSS** (observed and noted in
+`docs/investigations/0006-totalstack-captain-picker.md`):
+
+- Heading "Captains" with the counter "1/3" beside it and one helper line ("Captain bonuses only count when
+  the captain marches").
+- All 30 captains as **small chips in a dense wrapping row**: name only, 32 px tall, 13 px text, 8 px gap
+  (our square 8 px chip, tonal ground); no portraits, no glyphs, no add button, no tiles.
+- Chips whose captain has stack data carry a **small gear badge overlapping the top-right corner** (18 px);
+  captains without data (see the list in the investigation) have none but can still be enlisted.
+- A chip with a level set shows a **dot after the name**.
+- **Tap the chip = enlist / remove.** Enlisted = tonal `accent-soft` ground + 1 px ring, gear badge in the
+  accent. The fourth tap is refused: the chip does not highlight and the counter stays "3/3" (we add a
+  polite live-region sentence, nothing modal).
+- **Tap the gear = a small popover anchored under the chip**: captain name, close, "Captain level" with a
+  base-level number input and a star-level select ("—", ★1…★7), and a footer that computes the resulting
+  bonus live ("Guardsmen strength and health +20 %"). Escape closes. Enlisting never opens it.
+- The hero: one chip at the head of the row, same anatomy (gear opens the hero's editor).
+- The same chip pattern serves **Artifacts** ("0/3", all 15, gear on each), **Permanent** (gear on each,
+  always on) and **Titles** (grouped Health / Strength / Other with the value under the name); Equipment
+  keeps "Add" (free-form pieces).
 
 **Other sources** (equipment, artifacts, permanent, other, events): rows, not chips — switch · name · value
 right-aligned in tabular figures · gear. Rows are 40 px. Editors open in a sheet (bottom on phone, right on
@@ -534,8 +542,10 @@ starts.
 
 **Phase C — Bonuses and Battle**
 - D-30 Bonuses as rows with a pinned TOTAL header; editors in sheets. Accept: the collapsed card is one line.
-- D-33 Captains and hero as a TotalStack-style tile grid: tap to enlist, level/star badge opens the editor,
-  three-captain cap enforced (§7.3, owner 2026-09-13).
+- D-33 ~~Captains and hero as a tile grid~~ superseded by D-34.
+- D-34 Captain picker mimicking TotalStack (§7.3, investigation 0006): dense name chips with a corner gear
+  badge, level dot, enlist by tap with a silent cap, anchored level popover with live bonus; same chips for
+  Artifacts, Permanent and Titles.
 - D-31 Battle card: segmented enemy, pool steppers, the method as an M3 single-select list with full-row
   targets, options as switch list items, objective as a single-select list (§7.4). The legacy Method section
   is deleted.
