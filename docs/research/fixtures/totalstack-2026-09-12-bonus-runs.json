@@ -1,0 +1,52 @@
+{
+  "common": {
+    "guardsmen": [1, 3], "specialists": [1, 1], "monsters": [3, 3], "leadership": 3000, "authority": 1200,
+    "method": "Elite Preservation", "priority": "none", "mercenaries": [],
+    "bonuses": {"healthArmy": 25, "strengthArmy": 25, "healthGuardsmen": 20, "strengthGuardsmen": 20,
+                "sources": "pills 'Personal Health Bonus' +25 army HP, 'Personal Strength Bonus' +25 army STR, captain Aydae base level 20 star 0 (guardsmen +20 HP / +20 STR)"},
+    "note": "Per-unit boosted HP is ROUNDED TO AN INTEGER before multiplying by count (ARC1 150x1.45=217.5 -> 218; E>ARC1 line 653x218=142,354). Strength-against damage uses base strength only (ARC1 653x50x0.67=21,876) while the base part uses (1 + army + group) = 1.45."
+  },
+  "runs": [
+    {
+      "id": "bonus-eng-nodom", "engineers": [1, 2], "dominance": null,
+      "troops": {"SW1": 473, "ARC1": 404, "SP1": 404, "SP2": 223, "ARC2": 224, "RD1": 202, "SP3": 125, "ARC3": 125, "RD2": 112, "RD3": 62, "CAT2": 27},
+      "note": "CAT1 absent (left in 'removed from formation' by the account state). SW1 (specialist, 150x1.25=187.5->188) 473x188=88,924 dies before SP1/ARC1 (404x218=88,072).",
+      "summary": {"stacks": 11, "damageByTroops": 1233106, "minimumDamage": 1210449, "averageDamage": 1233106, "damagePerSilver": 0.996,
+        "recoveryRetrainAll": {"time": "4d 1h", "silver": 1237800, "dragonCoins": 0, "gold": 0}}
+    },
+    {
+      "id": "bonus-8stacks-dom200", "engineers": null, "dominance": 200,
+      "troops": {"ARC1": 653, "SP2": 361, "ARC2": 361, "RD1": 328, "SP3": 202, "ARC3": 203, "RD2": 181, "RD3": 101},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6}, "dominanceUsed": 199,
+      "stackHpFromJournal": {"RD1": 142680, "ARC1": 142354, "RD2": 141723, "ARC2": 141512, "SP2": 141512, "ARC3": 141288, "SP3": 140592, "RD3": 140592, "WE": 128250, "ED": 118125, "BB": 117000, "SG": 117000},
+      "summary": {"stacks": 12, "damageByTroops": 1247756, "damageByMonsters": 1600155, "minimumDamage": 2780878, "averageDamage": 2847911, "damagePerSilver": 1.984, "damagePerDragonCoin": 2637, "damagePerGold": 1035,
+        "recoveryRetrainAll": {"time": "5d 23h", "silver": 1435200, "dragonCoins": 1080, "gold": 2752}},
+      "journalEnemyFirst": "33 rounds, 21 hits; per-hit lines e.g. ARC1>fly 69,218 (21,876 features), RD3>rng 94,051 (47,187), ED>mnt 97,650 (58,275), SG>mel 96,720 (57,720), WE>fly 91,998 (49,248)"
+    },
+    {
+      "id": "bonus-eng-dom200-all", "engineers": [1, 2], "dominance": 200,
+      "troops": {"SW1": 408, "ARC1": 350, "SP1": 349, "SP2": 193, "ARC2": 194, "RD1": 175, "SP3": 107, "ARC3": 107, "RD2": 97, "RD3": 54, "CAT1": 41, "CAT2": 23},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6}, "dominanceUsed": 199,
+      "note": "Engineers get the highest troop HP so they die first: CAT2 23 -> 77,625; CAT1 41 -> 76,875; then SW1 76,704, ARC1 76,300, RD1 76,125 ... Engineers attack the generic 'monster' target with no features (CAT2 12,938 = 23 x 450 x 1.25; CAT1 12,813 = 41 x 250 x 1.25).",
+      "summary": {"stacks": 16, "damageByTroops": 1719048, "damageByMonsters": 509844, "minimumDamage": 2129423, "averageDamage": 2228892, "damagePerSilver": 1.760, "damagePerDragonCoin": 2064, "damagePerGold": 810,
+        "recoveryRetrainAll": {"time": "4d 2h", "silver": 1266600, "dragonCoins": 1080, "gold": 2752}},
+      "journalEnemyFirst": "50 rounds, 34 hits. Order: WE, ED, BB, SG (monsters have the highest HP here), CAT2, CAT1, SW1, ARC1, RD1, ... Round 1 friendly hits: ED, BB, SG, then SW1 ARC1 RD1 ARC2 RD2 SP1 SP2 RD3 ARC3 SP3 CAT2 CAT1."
+    },
+    {
+      "id": "bonus-event-ragnarok", "engineers": [1, 2], "dominance": 200, "event": "Ragnarok - Fenrir (+130% strength)",
+      "troops": {"SW1": 473, "ARC1": 404, "SP1": 404, "SP2": 223, "ARC2": 224, "RD1": 202, "SP3": 125, "ARC3": 125, "RD2": 112, "RD3": 62, "CAT2": 27},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6},
+      "note": "Event strength is additive with the other strength bonuses: ED 7x4500x(1+0.25+1.30)=80,325 + features 58,275 = 138,600 (journal). The TOTAL strength card does not show the event (+25% army only). Stack counts unchanged by the event (HP unaffected).",
+      "summary": {"stacks": 15, "damageByTroops": 3421105, "damageByMonsters": 798444, "minimumDamage": 4047827, "averageDamage": 4219549, "damagePerSilver": 3.213, "damagePerDragonCoin": 3907, "damagePerGold": 1533,
+        "recoveryRetrainAll": {"time": "4d 14h", "silver": 1313400, "dragonCoins": 1080, "gold": 2752}},
+      "journalEnemyFirst": "47 rounds, 32 hits; lines: ED>mnt 138,600 (58,275), BB>mnt 124,488 (85,488?), SG>mel 137,280, SW1>mnt 65,038 (35,475), ARC1>fly 69,084 (39,794), RD3>rng 83,526 (54,758), CAT2>monster 30,983"
+    },
+    {
+      "id": "bonus-event-arachne", "engineers": null, "dominance": 200, "event": "Arachne's (enemy formation forced to 8 double)",
+      "troops": {"ARC1": 653, "SP2": 361, "ARC2": 361, "RD1": 328, "SP3": 202, "ARC3": 203, "RD2": 181, "RD3": 101},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6},
+      "note": "Same counts as bonus-8stacks-dom200; only the battle changes: 8 enemy attacks per round. Journal: 26 rounds, 14 friendly hits — round 1: E kills RD1, ARC1 hits, E, RD2, E, ARC2, E, SP2, E, ARC3, E, SP3, E, RD3, E(8th) kills RD3?, then WE, ED, BB, SG hit; round 2: E kills WE, ED, E, BB, E, SG, E. Per-hit damage identical to the 4-stack run.",
+      "summary": {"stacks": 12, "damageByTroops": 850523, "damageByMonsters": 1019688, "minimumDamage": 1810240, "averageDamage": 1870211, "damagePerSilver": 1.303, "damagePerDragonCoin": 1732, "damagePerGold": 680}
+    }
+  ]
+}

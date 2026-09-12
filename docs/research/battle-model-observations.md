@@ -20,6 +20,18 @@ reports).
   type is in the formation (ARC→flying, SP→mounted, RD→ranged, ED→mounted, SG→melee, BB→mounted, WE→flying,
   Bear→mounted).
 
+## 1b. Bonus application (verified with army +25/+25 and guardsmen +20/+20, fixtures in `totalstack-2026-09-12-bonus-runs.json`)
+- HP per unit = **round**(base × (1 + Σ health bonuses)) to an integer, then × count (ARC1 150 × 1.45 = 217.5 → 218;
+  653 × 218 = 142,354 ✓ journal). Engine must round per unit the same way or counts drift by ±1.
+- Base damage part = count × str × (1 + Σ strength bonuses); the strength-against part = count × str × SA/100 on
+  the *base* strength only (ARC1: 653×50×1.45 = 47,343 + 653×50×0.67 = 21,876 → 69,218 ✓).
+- Event strength (Ragnarok +130%) is additive inside the same bracket: ED 7×4500×(1+0.25+1.30) = 80,325 + 58,275 ✓.
+  Arachne's changes only the enemy formation (8 attacks per round); per-hit numbers are unchanged.
+- Engineers: highest HP per leadership, so under EP they end up with the highest troop-stack HP and die first
+  (CAT2 77,625 > CAT1 76,875 > SW1 76,704 …); they hit the generic "monster" with no strength-against.
+- Specialists in the same tier die before guardsmen because their bonus is lower (SW1 473×188 = 88,924 > SP1
+  404×218 = 88,072); i.e. the order is still "highest HP first" — the algorithm assigns HP targets, not names.
+
 ## 2. Damage per hit
 - **Journal line**: `count × str × (1 + Σ strength bonus) + count × str × SA[target]/100`, displayed as total
   "including X additional damage granted by the squad's features" where X is the second term. Verified on every
@@ -69,5 +81,7 @@ reports).
 - Priority "Maximum Damage" kept all ten troop types (average 2,131,530) although the eight-type army scores
   2,515,830; "Damage / Silver" removed SW1 and SP1. Their search is not exhaustive — our S-40 can do better
   simply by evaluating "drop tier-1 types" candidates.
+- Enemy formation N (4 or 8) generalises the round structure exactly (Arachne's run: 26 entries, 14 hits with
+  12 stacks and N = 8).
 - Round to 10s: only mercenaries/monsters are rounded (to multiples of 10); troops are re-sized around them;
   monster types that cannot reach 10 within the ordering are dropped (only WE 10 survived with dominance 200).

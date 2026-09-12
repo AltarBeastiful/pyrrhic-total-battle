@@ -10,6 +10,7 @@ Unit base data (from `../totalstack-data`): ARC1/SP1/SW1 150 hp 50 str cost 1; R
 RD2 540/180/2; ARC3/SP3 480/160/1; RD3 960/320/2 (riders: 5% double damage). Monsters (dominance cost):
 SG 15,600/5,200 (8), ED 13,500/4,500 (7), BB 11,700/3,900 (6), WE 5,700/1,900 (3). Bear V 66,000/22,000, authority 21.
 
-Files: `totalstack-2026-09-12-runs.json` (all runs), `totalstack-2026-09-12-journal-*.txt` (battle journals).
+Files: `totalstack-2026-09-12-runs.json` (zero-bonus runs), `totalstack-2026-09-12-bonus-runs.json` (army +25/+25,
+guardsmen +20/+20 via Aydae; engineers E1–E2; events Ragnarok and Arachne's), `totalstack-2026-09-12-journal-*.txt` (battle journals).
 The earlier fixture from the author's own account (bonuses ≠ 0, Elite Preservation) is described in
 `docs/research/totalstack-review.md` §3.

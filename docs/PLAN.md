@@ -116,10 +116,10 @@ Totals are shown with a per-key breakdown by source (needed to reconcile with in
 
 ### 3.2 Effective unit stats
 ```
-hp(unit)       = baseHealth × (1 + Σ health[key] for key in keys(unit)) / 100
+hp(unit)       = round( baseHealth × (1 + Σ health[key] for key in keys(unit)) / 100 )   (integer per unit, as TotalStack/the game display it)
 str(unit)      = baseStrength × (1 + Σ strength[key] for key in keys(unit)) / 100
 keys(unit)     = category + group (+ race for monsters and race-tagged mercenaries) + army
-dmg(stack, T)  = n × str × (1 + Σ strength) + n × str × strengthAgainst[T]/100        (T = targeted enemy stack type,
+dmg(stack, T)  = n × str × (1 + Σ strength + event) + n × str × strengthAgainst[T]/100   (T = targeted enemy stack type,
                  only if present in the enemy formation; `epicMonsters`, `swarmUnits` bonuses handled likewise)
 expectedDmg    = dmg × (1 + doubleDamageChance(unit + group + global)) × (1 + strikeTwoSquads…)  (see 3.5)
 ```
@@ -326,5 +326,8 @@ order, manual counts) so adding them later is UI work, not a redesign.
   persistence and schema; 0005 share-link encoding; 0006 engine design; 0007 game-data format and contributions).
   Fixtures now cover EP with monsters, MP with monsters and a capped mercenary, Total Optimization, both priority
   searches and Round-to-10s (`docs/research/fixtures/`, captured on a Pro trial with all bonuses at 0); the
-  bonus-bearing fixture from the author's account remains the only one with non-zero bonuses. Engineers and
-  events are still uncovered. The battle turn model is derived from TotalStack's journals but unvalidated in game.
+  second capture added engineers (E1–E2), non-zero bonuses (army +25/+25, guardsmen +20/+20 through captain Aydae)
+  and both events (Ragnarok strength, Arachne's 8-stack formation). Per-unit HP rounding to an integer and the
+  "strength-against on base strength" rule were found this way. Still uncovered: mercenaries with bonuses, temple
+  level ≠ 0, training reductions, titles/artifacts/equipment values (data tables exist, application rule is the
+  same additive one). The battle turn model is derived from TotalStack's journals but unvalidated in game.
