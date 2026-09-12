@@ -135,10 +135,10 @@ export function BonusesSection() {
   const sheet = { profile, summary, onClose: close };
 
   return (
-    <Card as="section" id="bonuses" aria-labelledby={titleId}>
+    <Card tone="none" shape="flat" as="section" id="bonuses" aria-labelledby={titleId}>
       <Stack gap={3}>
         <Stack gap={2}>
-          <h2 id={titleId} className="font-display text-lg">
+          <h2 id={titleId} className="text-lg">
             Bonuses
           </h2>
           <TotalsFigures summary={summary} />

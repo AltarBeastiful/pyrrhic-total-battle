@@ -1,8 +1,9 @@
 /**
  * The one line a collapsed card shows instead of its contents (design plan §7.1–§7.2):
- * "▮ G1–G4 · ▮ S1–S2 · ▮ no engineers". Each part may carry a group, in which case it opens with
- * that group's marker; the parts are separated by a middle dot and the line wraps rather than
- * truncating, because a summary that hides half of itself is not a summary.
+ * "▮ G1–G4  ▮ S1–S2  ▮ no engineers". Each part may carry a group, in which case it opens with
+ * that group's marker; the parts are separated by space and by their markers rather than by a
+ * middle dot (D-19), and the line wraps rather than truncating, because a summary that hides half
+ * of itself is not a summary.
  */
 import type { ReactNode } from 'react';
 import { tv } from 'tailwind-variants';
@@ -40,11 +41,6 @@ export function SummaryLine({ parts, trailing, className }: SummaryLineProps) {
     <span className={cn(line(), className)}>
       {parts.map((entry, index) => (
         <span key={`${entry.text}-${index}`} className={part({ muted: entry.muted ?? false })}>
-          {index > 0 && (
-            <span aria-hidden="true" className="text-muted">
-              ·
-            </span>
-          )}
           {entry.group !== undefined && <GroupMarker group={entry.group} />}
           <span className="min-w-0 truncate">{entry.text}</span>
         </span>

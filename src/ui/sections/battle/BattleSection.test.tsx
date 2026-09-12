@@ -69,7 +69,7 @@ test('the formation starts standard and the double preset writes eight squads', 
 
   fireEvent.click(screen.getByRole('radio', { name: 'Double 8' }));
   expect(setup()?.enemy).toEqual({ melee: 2, ranged: 2, mounted: 2, flying: 2 });
-  expect(screen.getByText(/8 squads: 2 melee · 2 ranged · 2 mounted · 2 flying/)).toBeTruthy();
+  expect(screen.getByText(/8 squads: 2 melee, 2 ranged, 2 mounted and 2 flying/)).toBeTruthy();
 });
 
 test('Custom reveals one field per category and writes what is typed', () => {
@@ -105,11 +105,15 @@ test('a cleared capacity counts as zero, and the empty march says what to type',
   expect((screen.getByLabelText('Leadership') as HTMLInputElement).value).toBe('');
 });
 
-test('a capacity steps by one, by a hundred with Shift and by a thousand with Ctrl', () => {
+test('a capacity is typed, never walked to: no step buttons, and the keyboard still steps', () => {
   render(<BattleSection />);
   type('Leadership', '4000');
 
-  fireEvent.click(screen.getByRole('button', { name: 'Increase Leadership' }));
+  // Nobody presses "+" 84,300 times (owner, 2026-09-13): the three pools are plain number inputs.
+  expect(screen.queryByRole('button', { name: 'Increase Leadership' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Decrease Leadership' })).toBeNull();
+
+  fireEvent.keyDown(screen.getByLabelText('Leadership'), { key: 'ArrowUp' });
   expect(setup()?.housing.leadership).toBe(4001);
 
   fireEvent.keyDown(screen.getByLabelText('Leadership'), { key: 'ArrowUp', shiftKey: true });
@@ -117,6 +121,16 @@ test('a capacity steps by one, by a hundred with Shift and by a thousand with Ct
 
   fireEvent.keyDown(screen.getByLabelText('Leadership'), { key: 'ArrowUp', ctrlKey: true });
   expect(setup()?.housing.leadership).toBe(5101);
+});
+
+test('clicking a capacity selects all of it, so the next keystroke replaces it', () => {
+  render(<BattleSection />);
+  type('Leadership', '4000');
+
+  const input = screen.getByLabelText('Leadership') as HTMLInputElement;
+  fireEvent.focus(input);
+  expect(input.selectionStart).toBe(0);
+  expect(input.selectionEnd).toBe(input.value.length);
 });
 
 // ---- The stacking method -------------------------------------------------------------------------
@@ -175,14 +189,15 @@ test('Your own order opens the order of the fall in a sheet', async () => {
   render(<BattleSection />);
 
   await user.click(screen.getByRole('button', { name: 'Edit order' }));
-  const sheet = screen.getByRole('dialog');
+  // The sheet is a chunk of its own (T-06); Vitest transforms it on demand, so give it a moment.
+  const sheet = await screen.findByRole('dialog', {}, { timeout: 10_000 });
   expect(within(sheet).getByRole('heading', { name: 'Order of the fall' })).toBeTruthy();
   // The default account fields guardsmen I–III and specialists I: every one of them is a row.
   expect(within(sheet).getAllByRole('button', { name: /^Move / }).length).toBeGreaterThan(0);
 
   await user.click(within(sheet).getByRole('button', { name: 'Close' }));
   expect(screen.queryByRole('dialog')).toBeNull();
-});
+}, 20_000);
 
 // ---- The objective -------------------------------------------------------------------------------
 test('the objective list writes the priority of the march', async () => {

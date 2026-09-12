@@ -1,72 +1,77 @@
 # Pyrrhic — design system
 
-One page, seven sections, a lot of numbers. The look has to survive that: warm enough not to feel like a
-spreadsheet, quiet enough that the figures stay readable, and legible at 360 px in both themes.
+One page, five sections, a lot of numbers. The look has to survive that: quiet enough that the figures stay
+readable, specific enough not to read as a template, and legible at 360 px in both themes.
 
-Everything here is implemented in `src/index.css` (tokens), `src/ui/icons/**` (glyphs and badges),
-`src/ui/Hero.tsx` (the header illustration) and `src/ui/primitives/**` (components). Sections never invent a
-colour, a radius or a shadow: they use these tokens and these components.
+**The idea, in one line: the only colour on the page is the colour of a unit.** Everything else is iron, slate
+and silver, because the five group hues are fixed and load-bearing and a sixth accent hue would compete with
+data (design direction D-19, `docs/investigations/0005-design-direction.md`).
 
-Constraints that shaped it: **no third-party font and no CDN** (ADR-0002) — the display face is a system serif;
-**no new dependency** (ADR-0003) — every glyph and the illustration are inline SVG we drew; **nothing leaves the
-browser** — no icon fetch, no web font request, no analytics pixel.
+Everything here is implemented in `src/index.css` (tokens), `src/ui/icons/**` (glyphs and badges) and
+`src/ui/kit/**` + `src/ui/domain/**` (components). Sections never invent a colour, a radius or a shadow: they
+use these tokens and these components.
+
+Constraints that shaped it: **bundled OFL fonts, never a CDN** (ADR-0002 as amended) — Inter and Fraunces ship
+with the app; **nothing leaves the browser** — no icon fetch, no web font request, no analytics pixel; **no
+arbitrary Tailwind values** — a number that is not in this file is a lint error.
 
 ---
 
 ## 1. Palette
 
-Two layers, one set of names (`docs/plans/design-overhaul.md` §6.1). A **neutral base** carries almost
-everything: a near-black blue-grey in dark, warm bone and paper in light. **Group colours** identify units and
-nothing else. The bronze/amber **accent** survives only as the action colour — the same hue family in both
-themes, used ten times less than before. A steel **blue** informs, and never acts.
+Two layers, one set of names. A **neutral base** carries almost everything: a green-shifted slate in dark,
+limewashed stone in light. The neutrals take their faint green cast (hue ≈ 155) from the guardsmen family, so
+the chrome is made of the same material as the army and the page belongs to this product and no other.
+
+**Group colours** identify units and nothing else. The **accent is not a hue**: it is a metal — struck silver
+on dark, dark iron on light — which is also what a march costs. It means one thing, "you can act on this", and
+it collides with none of the five unit hues.
 
 Light is the base (`:root`); dark comes from `[data-theme="dark"]` and from `prefers-color-scheme` when the
-player has not chosen (the theme select writes the attribute). Both dark blocks are identical by construction —
-`pnpm contrast` fails if they drift.
+player has not chosen. Both dark blocks are identical by construction — `pnpm contrast` fails if they drift.
 
 ### Neutral base, accent and states
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg` | `#f6f4ef` | `#101319` | The page. Carries a barely-there two-wash gradient (`--pyr-texture`). |
-| `surface` | `#ffffff` | `#181c24` | Cards, sheets, dialogs, popovers: anything that holds content. |
-| `raised` | `#eeebe4` | `#20252f` | A block *inside* a card: a metric tile, a header strip, a hover state. |
-| `sunken` | `#e9e5db` | `#0a0d12` | A well: a read-only figure, the share-link textarea. |
-| `fg` | `#1c1a17` | `#e9e6df` | Body text. 13.8:1 / 12.3:1 at worst. |
-| `muted` | `#5f5b55` | `#a7a49c` | Labels, hints, secondary lines. 5.4:1 / 6.2:1 — still body-text legal. |
-| `line` | `#ddd8ce` | `#2b303a` | **Decoration only**: card edges, dividers. Never the boundary of a control. |
-| `field` | `#857f76` | `#6b7484` | The border and well of anything you can type in or press. ≥ 3:1 (WCAG 1.4.11). |
-| `accent` | `#8e5017` | `#d9963c` | Actions: primary buttons, the on-state, focus rings, links. |
-| `accent-fg` | `#fff8f0` | `#17120a` | Text on a filled accent. 6.0:1 / 7.4:1. |
-| `accent-soft` | `#f6e3cc` | `#3a2a12` | The on-state background of a chip, an active tile. |
-| `accent-line` | `#ab7238` | `#9c7440` | A bronze hairline: the ring on an open card, a hover border. ≥ 3:1. |
-| `info` | `#14608f` | `#74bde4` | Information, never action: help marks, "this is what we computed". |
-| `info-fg` / `info-soft` | `#ffffff` / `#dfeaf7` | `#0a1319` / `#132a38` | Ink on a filled info; an informational block. |
-| `ok` | `#1c6b40` | `#6fcf97` | Saved, within budget, nothing to fix. |
-| `ok-fg` / `ok-soft` | `#ffffff` / `#d9efe2` | `#071a0f` / `#14301f` | ″ |
-| `warn` | `#a24409` | `#f0a468` | Worked, but look at it: ties, unused capacity, unsaved changes. |
-| `warn-fg` / `warn-soft` | `#fff8f3` / `#fbe1d1` | `#1a1109` / `#3c2415` | ″ |
-| `danger` | `#ae2a20` | `#f2857c` | Destructive, or over capacity. |
-| `danger-fg` / `danger-soft` | `#fff7f6` / `#f9dedb` | `#1f0a08` / `#3a1a17` | ″ |
+| `bg` | `#ecefec` **Limewash** | `#161a19` **Slate** | The page. Flat: no gradient, no wash. |
+| `surface` | `#fafbfa` **Paper** | `#1e2423` **Forge** | The setup sheet, the March card, dialogs, sheets, popovers. |
+| `raised` | `#dee3df` **Stone** | `#2b3231` **Anvil** | A block inside a card, a hover, the chosen row of a list. |
+| `sunken` | `#d5dbd7` | `#101413` | A well: a read-only figure, a gauge track, the share-link box. |
+| `fg` | `#131917` **Pitch** | `#e7ece9` **Chalk** | Body text and titles. 15.4:1 / 14.6:1 at best. |
+| `muted` | `#515a56` | `#9da7a3` **Ash** | Labels, captions, secondary lines. Never below 4.5:1. |
+| `line` | `#cfd5d1` | `#313938` | **Decoration only**: the hairline between sheet sections, dividers. |
+| `field` | `#6e7873` | `#78837f` | The border of anything you can type in or press. ≥ 3:1 (WCAG 1.4.11). |
+| `accent` | `#262e2b` **Iron** | `#d8e0dc` **Silver** | Actions: the primary button, the on-state mark, focus rings. |
+| `accent-fg` | `#fafbfa` | `#161a19` | Text on a filled accent. A filled Generate is the loudest thing on the page. |
+| `accent-soft` | `#dee3df` | `#2b3231` | The ground of a chosen row or segment — a tonal step, not a coloured block. |
+| `accent-line` | `#5b6560` | `#8e9a95` | A hairline that has to clear 3:1: the ring on an open card. |
+| `info` | `#515a56` | `#9da7a3` | Information, never action. Carries the (i) glyph; no hue of its own. |
+| `ok` | `#131917` | `#e7ece9` | Saved, copied, within budget. Carries the tick; no hue of its own. |
+| `warn` | `#8c3a2a` | `#e8a08f` | Worked, but look at it. The ember as *ink*, on `raised`, with the triangle. |
+| `danger` | `#a32c1f` | `#ee8878` | Destructive, or over capacity. **The one state that keeps a tinted ground.** |
+| `*-fg` / `*-soft` | `#fafbfa` / `#dee3df` | `#161a19` / `#2b3231` | Ink on a filled tone; the tone's own block. `danger-soft` alone is tinted (`#f3dcd7` / `#3a2320`). |
 
-`warn` is a **red-shifted amber** (hue ≈ 22° light, 27° dark), deliberately away from the engineers amber
-(≈ 38°/40°), and it always carries the triangle glyph: the two can never be confused at a glance.
+**Why the states lost their hues.** Green `ok` collided with guardsmen and steel-blue `info` with specialists,
+and an amber `warn` could never be told from the engineers gold. A page with five fixed unit hues cannot afford
+a hue per message type, so only destruction keeps one; the rest are carried by a glyph, a tonal step and the
+wording. Colour is still never the only signal — it is now rarely a signal at all outside the army.
 
 ### Group colours
 
-One hue per group, three parts each: `soft` is the tile background, `strong` the tile ink and the summary-line
-marker, `edge` the 2 px bar on a tile and the left edge of a result row.
+One hue per group, three parts each: `soft` is the tile ground (the group's hue mixed 18 % into the card
+surface — tinted iron, not a coloured block), `strong` the tile ink and the summary-line marker, `edge` the
+tile frame and the left edge of a result row. The five `strong` inks sit in one narrow lightness band, so no
+group shouts louder than another; `edge` now carries the same value as `strong`, since an ink that clears
+4.5:1 clears the 3:1 a boundary owes.
 
-| Group | Light `soft` / `strong` / `edge` | Dark `soft` / `strong` / `edge` |
+| Group | Light `soft` / `strong` = `edge` | Dark `soft` / `strong` = `edge` |
 |---|---|---|
-| Guardsmen (green) | `#dff3df` / `#1f6b2e` / `#0b8024` | `#173321` / `#7fd48f` / `#63e585` |
-| Specialists (blue) | `#dde9f7` / `#1f4f8a` / `#0d4d9c` | `#172436` / `#7fb2f0` / `#78b4ff` |
-| Engineers (amber) | `#f8ecd0` / `#7a5410` / `#8a5a0a` | `#352a14` / `#e6b85c` / `#f1bc51` |
-| Monsters (violet) | `#ebe0f5` / `#5b2f8a` / `#5a0eab` | `#2a1e38` / `#c39af0` / `#c394f6` |
-| Mercenaries (red) | `#f8dede` / `#8a2424` / `#a10d0d` | `#38191b` / `#f08a8a` / `#f58585` |
-
-The legacy single-value names `group-guardsmen`, `group-specialist`, `group-engineers`, `group-monster` are
-aliases of the matching `strong` ink and live only until the last old section is replaced.
+| Guardsmen (green) | `#d4e1d7` / `#256b35` | `#304337` / `#84ce93` |
+| Specialists (blue) | `#d4dde6` / `#25568a` | `#313f48` / `#8fbcee` |
+| Engineers (amber) | `#e1ddd1` / `#6f5417` | `#413e31` / `#ddb86e` |
+| Monsters (violet) | `#ddd8e6` / `#5b368a` | `#3b3a47` / `#c0a0ec` |
+| Mercenaries (red) | `#e6d6d6` / `#8c3030` | `#433837` / `#ec9391` |
 
 ### Checked, not guessed
 
@@ -75,61 +80,78 @@ on any pair below its floor. 170 pairs, all passing:
 
 | Rule | What it covers | Lowest light | Lowest dark |
 |---|---|---|---|
-| **4.5:1** (1.4.3) | `fg`, `muted`, every tone and every group `strong` on `bg`, `surface`, `raised`, `sunken` and on its own `*-soft`; every `*-fg` on its filled tone | **4.96** (`warn` on `sunken`) | **5.51** (`accent` on `accent-soft`) |
-| **3:1** (1.4.11) | `field` and `accent-line` on the four surfaces; every group `edge` on `surface` and on its own `soft` | **3.15** (`field` on `sunken`) | **3.26** (`field` on `raised`) |
+| **4.5:1** (1.4.3) | `fg`, `muted`, every tone and every group `strong` on `bg`, `surface`, `raised`, `sunken` and on its own `*-soft`; every `*-fg` on its filled tone | **4.62** | **4.92** |
+| **3:1** (1.4.11) | `field` and `accent-line` on the four surfaces; every group `edge` on `surface` and on its own `soft` | **3.25** | **3.34** |
 
-`line` is the one token deliberately below 3:1 (1.13 light / 1.16 dark): it draws card edges and dividers, never
-the boundary of a control, so the checker prints it for information and never fails on it. Controls use `field`.
+`line` is the one token deliberately below 3:1: it draws the hairline between the sheet's sections and nothing
+a finger ever lands on, so the checker prints it for information and never fails on it.
 
 Rules:
 
-- **Colour is never the only signal.** A unit tile has a glyph, a tier numeral and a code beside its group
-  colour; a warning has the triangle glyph *and* the tone; an on-state has a tick *and* an accent border.
-- **One primary per view.** The bronze fill means "this is the thing to press" (Generate, Share, Confirm).
-- **`info` never means "press me".** It marks something the app is telling you.
-- Group hues identify a unit, never a state — the mercenaries red and `danger` share a hue family on purpose,
-  and are told apart by where they appear (a tile) and what sits next to them (a glyph).
+- **Colour identifies a unit, never a state.** A tile has a glyph, a roman tier and a code beside its group
+  colour; a warning has the triangle *and* the ember ink; an on-state has a rule *and* a tonal step.
+- **One primary per view.** The filled metal means "this is the thing to press" (Generate, Share, Confirm).
+- The mercenaries red and `danger` share a hue family on purpose, and are told apart by where they appear (a
+  tile) and what sits next to them (a glyph).
 
 ## 2. Surfaces — which one, when
 
 ```
-bg          the page
-└ surface   section card, dialog, popover, the profile bar      (border-line, shadow-card)
-  └ raised  a block inside it: metric tile, header strip, hover (border-line)
-  └ sunken  a well: read-only output, a pasted link             (border-line)
-  └ accent  an on/selected block: the chosen method, an active chip (border-accent-line)
-  └ warn / danger / info   a state block: a warning note, a blocked action
+bg            the page
+├ surface     the setup sheet: one continuous ground, its sections split by a hairline (no radius)
+└ surface     the March card: the one radiused, elevated object on the page  (rounded-card, shadow-card)
+  └ raised    a block inside it: a metric tile, a hover, the chosen row of a list
+  └ sunken    a well: a read-only figure, a gauge track, a pasted link
+  └ danger    the one state block that is still tinted
 ```
 
-`Card` takes them as `tone`. Never nest two `surface` cards — go one step in (`raised`), or drop the border
-and use spacing. Elevation has exactly three steps: `shadow-card` (a card on the page), `shadow-pop` (a
-popover, a tooltip, a select menu), `shadow-modal` (a dialog or a drawer).
+`Card` takes `tone`, `shape` and `elevation`. `shape="flat"` + `tone="none"` is a block of the setup sheet;
+the default `card` shape plus `elevation="card"` is the answer. Never nest two `surface` cards — go one step in
+(`raised`), or drop the ground and use spacing. Elevation has three steps and all of them are for things that
+float or that the page is about: `shadow-card` (the March card), `shadow-pop` (a popover, a menu),
+`shadow-modal` (a dialog or a sheet).
 
 ## 3. Type
 
-| Role | Face | Size |
-|---|---|---|
-| H1 (the app name) | `--font-display` (`ui-serif` / Georgia) | `text-3xl` → `sm:text-4xl` |
-| Section title (H2), dialog and drawer titles | display | `text-lg` |
-| Block titles (H3, H4) | display (set on the element in `@layer base`) | `text-sm` semibold |
-| Body, labels, controls | `--font-sans` (`ui-sans-serif`, system-ui) | `text-sm`; `text-xs` for hints |
-| Figures | sans, **tabular** | `.nums`, or `tabular-nums` |
-| Share links, ids | `--font-mono` | `text-xs` |
+Two bundled families, and their jobs are not the ones you would guess. **Inter** sets everything you read,
+titles included, and every figure a player compares down a column (tabular). **Fraunces** sets *numerals only*
+— the roman tier on a unit tile and the one hero figure the March pane opens with. Titling every card in a
+display serif is what made the page read as an article rather than as an instrument, so it stopped.
 
-The serif is what stops the page reading like a form: it belongs to titles and to the app name, never to a
-label, a value or a button. Every number a player compares down a column (counts, costs, percentages,
-durations) is tabular — `.nums` on the element, and `output`/`td`/`th` get it for free.
+| Role | Face | Token | Size |
+|---|---|---|---|
+| The hero figure (expected damage) | Fraunces 300, `opsz 144`, `SOFT 0`, `WONK 0` | `text-hero` + `.hero-face` | 48 px |
+| Stack count, pool totals | Inter 600, tabular | `text-stat` / `text-xl` | 24 px |
+| Card and dialog titles (`h1`–`h4`, `.title-face`) | Inter 600, −0.015 em | `text-lg` | 21 px |
+| Body, control labels, unit names | Inter 400 | `text-base` | 16 px |
+| Captions, helper lines, table heads | Inter 400/500 | `text-sm` = `text-xs` | 13 px |
+| The roman tier on a tile | Fraunces 500, `opsz 144` | `.numeral-face` | 13 px (`sm`) / 16 px (`md`) / 21 px (`lg`) |
+| Share links, ids | `--font-mono` | `text-xs` | 13 px |
+
+The scale is the traditional one from *The Elements of Typographic Style* — 16 / 21 / 24 / 48 — over our own
+13 px floor, which is an accessibility decision rather than Bringhurst's. **14 and 20 are gone**: `--text-sm`
+is an alias of `--text-xs` so the class names in the components keep working while the step itself does not
+exist. Measure ≤ 70 characters. `output`, `td` and `th` get tabular figures for free.
 
 ## 4. Spacing, radius, motion
 
-- Spacing is Tailwind's scale. A section card pads `p-3` on a phone, `sm:p-4` from 640 px. Stacked blocks sit
-  `space-y-3` apart, related rows `gap-2`.
-- Radius: `rounded-card` (0.875 rem) for anything card-shaped — sections, dialogs, popovers, select menus;
-  `rounded-lg` for controls; `rounded-chip` for chips and badges.
-- Touch: every control keeps a 44 px row on a phone (`.tap`), 36 px from `sm`. A small control inside a tall
-  row uses `.tap-area` to grow its hit box without growing its box.
-- Motion is colour and border only, and all of it is switched off under `prefers-reduced-motion`.
-- Focus is one recipe, everywhere: a 2 px accent ring with a 2 px page-coloured offset. Never remove it.
+- **Radius is decided by what a thing is**, never by looks: the setup sheet `0` (it is the page), the March
+  card and every overlay `rounded-card` (12 px, M3 medium), buttons and fields `rounded-control` (8 px, M3
+  small), badges and filter chips `rounded-chip` (8 px, M3's chip corner — the 999 px pill is retired), a unit
+  tile `rounded-tile` (4 px: a frame, nearly square, like the game's own unit frames), a bottom sheet
+  `rounded-sheet` (28 px), full round only on the avatar and the floating button.
+- **Separation is a hairline and space, not a box.** Inside the setup sheet the sections are told apart by one
+  full-bleed `line` and by their own padding (`p-4 sm:p-5`, so 32–40 px between two blocks of content). A
+  border *and* a shadow *and* a tonal step on the same element is the thing this pass removed.
+- **Density by purpose.** Data rows are compact with a pointer and 44 px on touch; anything you aim at keeps
+  44 px everywhere (`.tap`, `controlHeight`). Spacing is Tailwind's scale on an 8 px rhythm, 4 px only inside a
+  control.
+- **Alignment.** Everything left-aligned; figures right-aligned in their column; nothing centred but the
+  floating button's glyph. A figure's name is a caption *under* it only for the hero — everywhere else the
+  label comes first, because those are read as a list.
+- **Motion** is colour, border and one gauge width, 120 ms for a state and 200 ms for a sheet, and all of it is
+  off under `prefers-reduced-motion`.
+- **Focus** is one recipe everywhere: a 2 px accent ring with a 2 px page-coloured offset. Never removed.
 
 ## 5. Icons
 
@@ -160,19 +182,12 @@ a package — touches one line in `src/ui/icons/`.
 | Verbs | `GenerateIcon` · `GearIcon` · `PencilIcon` · `PlusIcon` · `MinusIcon` · `TrashIcon` · `CopyIcon` · `DuplicateIcon` · `ShareIcon` · `DownloadIcon` · `UploadIcon` · `SyncIcon` · `PinIcon` · `UnpinIcon` · `UndoIcon` · `ResetIcon` · `SortIcon` · `SearchIcon` |
 | Marks | `CheckIcon` · `CloseIcon` · `InfoIcon` · `WarningIcon` · `ChevronUp/Down/Left/RightIcon` · `SunIcon` · `MoonIcon` |
 
-**`UnitBadge`** — the category glyph, the tier numeral and the group's colour on the ring:
-
-```tsx
-<UnitBadge group="guardsmen" category="ranged" tier={3} size="sm" />   // decorative
-<UnitBadge group="monster" category="flying" tier={5} title="Flying monster, tier 5" />
-```
-
+**`UnitBadge`** (`src/ui/icons/badges.tsx`) — the category glyph and the tier numeral in the group's colour.
 Engineers have no category, so the group glyph stands in. **`PoolBadge`** does the same for a housing pool
-(`leadership` / `authority` / `dominance`), with an optional written label.
+(`leadership` / `authority` / `dominance`), and is what sits inside each of the three capacity fields.
 
-The hero illustration (`src/ui/Hero.tsx`) is the one drawing in the app: eight stacks whose tops form a level
-line — the flat HP profile — facing the epic monster they were sized against. Decorative, themed by the
-tokens, 84 px tall on a phone.
+The unit *tile* (`src/ui/domain/UnitTile.tsx`) is the object the army is actually drawn with — group ground,
+group frame, silhouette, roman tier and short code — and the badges are for the places too small for it.
 
 ## 6. Components and their props
 
@@ -181,10 +196,10 @@ Public names and existing props never change (tests and sections depend on them)
 | Component | Added |
 |---|---|
 | `Button` | `size` gains `'lg'`; `iconRight?: ReactNode`; `fullWidth?: boolean` |
-| `Card` | `tone?: 'surface' \| 'raised' \| 'sunken' \| 'accent' \| 'info' \| 'warn' \| 'danger'`; `elevated?: boolean` |
+| `Card` | `tone` gains `'none'`; `shape?: 'card' \| 'flat'`; `elevation?: 'none' \| 'card'` |
 | `Section` | `icon?: ReactNode` — the section glyph, in a chip left of the title |
 | `Pill` | `badge?: ReactNode` — a `UnitBadge`/`PoolBadge` before the label (decorative) |
-| `NumberField` | `prefix?: ReactNode` — a glyph inside the field |
+| `NumberInput` | the plain field (no step buttons, selects on focus); `NumberStepper` is the same control with `buttons` on |
 | `IconButton` | `size?: 'sm' \| 'md'` |
 | `HelpNote` | `icon?: ReactNode \| null` — override the tone's glyph, or `null` for none |
 | `Hero` (new) | `actions?: ReactNode`, `className?: string` |
@@ -224,20 +239,20 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `minDamage` | Damage if the monster strikes first |
 | `maxDamage` | Damage if you strike first |
 | `avgDamage` | Expected damage |
-| `recovery.*` | **Recovery** — Silver · Gold · Dragon coins · Time |
+| `recovery.*` | **Recovery** — silver, gold, dragon coins, time |
 | `damagePerSilver` / `PerGold` / `PerDragonCoin` | **Value per silver** / **per gold** / **per dragon coin** |
-| `damageByPool` | Damage by pool — Troops · Mercenaries · Monsters |
+| `damageByPool` | Damage by pool — troops, mercenaries, monsters |
 
 The battle journal keeps in-game phrasing, line for line, so a player can hold it next to the real report.
 
-### The unit popover
+### The unit sheet
 
 Three headed blocks, in this order:
 
-1. **This march** — count · total HP · one hit · of which from strength-against · target squad · chance of a
+1. **This march** — count, total HP, one hit, of which from strength-against, target squad, chance of a
    double hit.
-2. **Unit** — tier · category · group · race · base HP · base strength · housing cost.
-3. **After the battle** — retrain (silver and time) · revive (gold).
+2. **Unit** — tier, category, group, race, base HP, base strength, housing cost.
+3. **After the battle** — retrain (silver and time), revive (gold).
 
 ### Elsewhere
 
@@ -250,31 +265,33 @@ Three headed blocks, in this order:
 
 ## 8. Finish reference
 
-What "finished" looks like here, named once so parallel work stops inventing it (D-18).
+What "finished" looks like here, named once so parallel work stops inventing it (D-18, rewritten for D-19).
 
-**The reference is restraint, not decoration.** Take the finish of a Linear- or Vercel-class product UI: a
-surface is told from the one under it by *one* step of tone and a hairline — never a border plus a shadow plus
-a tint; there is exactly one accent and it means "you can act on this"; text is set with generous line height
-and plenty of room around it; every figure a player compares is tabular. The game's warmth is rationed on
-purpose — it lives in the four group colours and in the bronze/amber accent, and nowhere else. A card is
-quiet so that a number can be loud.
+**The reference is restraint with one loud thing.** A surface is told from the one under it by *one* step of
+tone or by *one* hairline — never a border plus a shadow plus a tint. The page has exactly one accent, it is a
+metal, and it means "you can act on this". The setup is a page; the answer is an object. A card is quiet so
+that a number can be loud, and the number that is allowed to be loud is the expected damage.
 
-**Type.** Inter Variable for everything you read and every figure (tabular through `.nums`), Fraunces Variable
-for the display voice — section, dialog and card titles, the app name, the tier numeral on a tile — at
-`opsz 28`, `SOFT 20`, `WONK 0`, which is a display serif with the wonk turned off. Both are bundled with the
-app; the system stacks behind them are a fallback, not the design. Mono is the platform's, for ids and share
-links only.
-
-**Icons.** Lucide (ISC) for the interface, Game Icons (CC BY 3.0) for the unit silhouettes, both behind the
-export names in `src/ui/icons/` and both credited in the About dialog. Never mix a third source in.
+**Where the boldness is spent.** The kill-order column in the March pane: the stacks in the order they fall,
+each with a bar as long as the damage it deals measured against the loudest stack of the march, under one 48 px
+figure in the display face. Nothing else on the page gets an ornament. (The bar is damage and not health on
+purpose: the sizer gives every stack the same HP ceiling, so a column of HP bars would be identical bars.)
 
 **Three rules a reviewer can check without an opinion:**
 
 1. **A control has a border or a fill, never both.** A filled button draws no outline; an outlined button has a
    transparent or `surface` ground. The one exception is a focus ring, which is drawn outside the box.
-2. **One radius per level.** `rounded-card` for anything card-shaped (sections, dialogs, popovers, menus),
-   `rounded-control` for buttons, fields and tiles, `rounded-chip` for chips and badges. A radius is never
-   picked for looks; it is picked by what the thing is.
-3. **8 px rhythm.** Padding, gaps and offsets are multiples of 8 px (Tailwind's `2`, `3`, `4`, `6`, `8`), with
-   4 px (`1`) allowed only *inside* a control — the gap between a glyph and its label. Anything else is a
-   value that belongs in `src/index.css` as a token, and `pnpm lint` fails on arbitrary class values.
+2. **One radius per level, chosen by what the thing is** (§4). A radius is never picked for looks.
+3. **8 px rhythm, and no arbitrary values.** Padding, gaps and offsets are multiples of 8 px (Tailwind's `2`,
+   `3`, `4`, `6`, `8`), with 4 px (`1`) allowed only *inside* a control. Anything else belongs in
+   `src/index.css` as a token, and `pnpm lint` fails on arbitrary class values.
+
+**Two rules about controls that came out of the owner's review (2026-09-13):**
+
+4. **A step button exists only for a short ordered list** — a tier, a captain's star level, a dozen values at
+   most. Every other number is a `NumberInput`: a plain field that selects its whole value on focus, so the
+   next keystroke replaces it, while the arrow keys, the `Shift`/`Ctrl` jumps and locale parsing all remain.
+   Nobody walks a capacity to 84,300 one press at a time.
+5. **No meta strings joined by middle dots, and no label that exists only to sit above a control.** Facts
+   become cells with space between them, a caption under a figure, or a chip. The app bar carries the answer as
+   labelled cells; a phone gets the expected damage and the hits landed, and only the tiles are dropped.

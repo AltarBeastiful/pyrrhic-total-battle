@@ -89,7 +89,12 @@ test('the centre says there is no march until there is one, then reads it out', 
 
   putResult();
   rerender(<AppBar />);
-  expect(screen.getByText(/avg 1\.67M · min 1\.29M · 2/)).toBeTruthy();
+  // Each figure is its own cell with its name captioned under it: no dot-joined meta string.
+  expect(screen.getByText('1.67M')).toBeTruthy();
+  expect(screen.getByText('expected')).toBeTruthy();
+  expect(screen.getByText('1.29M')).toBeTruthy();
+  expect(screen.getByText('worst opening')).toBeTruthy();
+  expect(screen.getByText('hits landed')).toBeTruthy();
   expect(screen.queryByText(/since this result/)).toBeNull();
 
   // …and the march it belongs to, as tiles, from a medium window up.
@@ -97,12 +102,17 @@ test('the centre says there is no march until there is one, then reads it out', 
   expect(screen.getByText('Swordsman III, tier 3, on')).toBeTruthy();
 });
 
-test('a compact window keeps the bar to the brand and the two controls', () => {
+test('a compact window keeps the two figures that matter and drops the tiles', () => {
   putResult();
   stubMedia([]);
   render(<AppBar />);
 
-  expect(screen.queryByText(/^avg /)).toBeNull();
+  // A phone gets the answer too (owner, 2026-09-13): the expected damage and the hits landed, with
+  // the shorter caption. What it does not get is the worst opening or the march as tiles.
+  expect(screen.getByText('1.67M')).toBeTruthy();
+  expect(screen.getByText('expected')).toBeTruthy();
+  expect(screen.getByText('hits')).toBeTruthy();
+  expect(screen.queryByText('worst opening')).toBeNull();
   expect(screen.queryByText('Archer III, tier 3, on')).toBeNull();
   expect(screen.getByRole('button', { name: /^Account: / })).toBeTruthy();
 });

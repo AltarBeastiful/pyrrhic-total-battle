@@ -132,7 +132,7 @@ test('the short code appears from md up and the full name and group on lg', () =
   rerender(<UnitTile unit={ARCHER} size="lg" />);
   expect(screen.getByText('ARC')).toBeTruthy();
   expect(screen.getByText('Archer')).toBeTruthy();
-  expect(screen.getByText('Guardsmen · tier 3')).toBeTruthy();
+  expect(screen.getByText('Guardsmen III')).toBeTruthy();
 });
 
 test('a monster is drawn by its race and every sample unit renders at every size', () => {
@@ -144,7 +144,7 @@ test('a monster is drawn by its race and every sample unit renders at every size
     </>,
   );
 
-  expect(screen.getByText('Monsters · tier 5')).toBeTruthy();
-  expect(screen.getByText('Mercenaries · tier 6')).toBeTruthy();
+  expect(screen.getByText('Monsters V')).toBeTruthy();
+  expect(screen.getByText('Mercenaries VI')).toBeTruthy();
   expect(screen.getByText(`${FIRE_ELEMENTAL.name}, tier 5, on`)).toBeTruthy();
 });

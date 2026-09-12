@@ -14,6 +14,7 @@ import { tv } from 'tailwind-variants';
 import type { UnitDef } from '../../data/types';
 import { cn } from '../kit/cn';
 import { ring, stateLayerDom } from '../kit/styles';
+import { DamageBar } from './DamageBar';
 import { UnitTile } from './UnitTile';
 import { GROUP_EDGE_LEFT, unitGroupOf } from './unitGroup';
 
@@ -54,7 +55,7 @@ const cell = tv({
 
 const countButton = tv({
   base: cn(
-    'text-stat font-display rounded-control px-1 leading-none tabular-nums',
+    'text-stat rounded-control px-1 leading-none font-semibold tabular-nums',
     'motion-safe:transition-colors',
     stateLayerDom,
   ),
@@ -122,6 +123,8 @@ export interface MarchRowProps {
   reviveSilver?: number;
   /** Place in the kill order, 1-based; shown as "falls 3rd". */
   position?: number;
+  /** Damage this stack deals as a fraction of the loudest stack's; drawn as a bar under the count. */
+  damageShare?: number;
   /** The method put this stack last on purpose (mercenaries under some methods). */
   fallsLast?: boolean;
   /** Called after the count has been put on the clipboard. */
@@ -138,6 +141,7 @@ export function MarchRow({
   lost,
   reviveSilver,
   position,
+  damageShare,
   fallsLast = false,
   onCopy,
   children,
@@ -172,9 +176,11 @@ export function MarchRow({
           <span className="truncate font-medium">{unit.name}</span>
           {(position !== undefined || fallsLast) && (
             <span className="text-muted truncate text-xs">
-              {position !== undefined && `falls ${ordinal(position)}`}
-              {position !== undefined && fallsLast && ' · '}
-              {fallsLast && 'falls last'}
+              {position === undefined
+                ? 'falls last'
+                : fallsLast
+                  ? `falls ${ordinal(position)}, and last of the troops`
+                  : `falls ${ordinal(position)}`}
             </span>
           )}
         </span>
@@ -189,6 +195,9 @@ export function MarchRow({
           >
             {NUMBER.format(count)}
           </button>
+          {damageShare === undefined ? null : (
+            <DamageBar group={group} share={damageShare} className="w-16" />
+          )}
           <span role="status" className="text-muted text-xs">
             {copied ? 'Copied' : ''}
           </span>

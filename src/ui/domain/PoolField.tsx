@@ -1,7 +1,7 @@
 /**
- * A housing pool at rest: its glyph, its name, "used / total" in tabular figures, and a hairline
- * bar that shows how full it is (design plan §7.4). Read-only — the pool's *limit* is edited with a
- * `NumberStepper`; this is what the march did with it.
+ * A housing pool at rest: its glyph, its name, "used of total" in tabular figures, and the gauge
+ * that shows how full it is (design plan §7.4, D-19). Read-only — the pool's *limit* is typed into
+ * the Battle card's number field; this is what the march did with it.
  */
 import { tv } from 'tailwind-variants';
 
@@ -34,11 +34,11 @@ const value = tv({
 });
 
 const track = tv({
-  base: 'rounded-chip bg-sunken h-1 w-full overflow-hidden',
+  base: 'rounded-tile bg-sunken h-2 w-full overflow-hidden',
 });
 
 const fill = tv({
-  base: 'rounded-chip block h-full',
+  base: 'rounded-tile block h-full',
   variants: { over: { true: 'bg-danger', false: 'bg-accent' } },
   defaultVariants: { over: false },
 });
@@ -56,7 +56,9 @@ export function PoolField({ pool, used, total, className }: PoolFieldProps) {
   const over = used > total;
   const ratio = total > 0 ? used / total : 0;
   const percent = Math.min(100, Math.max(0, Math.round(ratio * 1000) / 10));
-  const text = `${NUMBER.format(used)} / ${NUMBER.format(total)}`;
+  // "84,300 of 84,300": a pool is a vessel filled to the brim on the game's Start March screen, and
+  // a fraction slash reads as arithmetic rather than as capacity.
+  const text = `${NUMBER.format(used)} of ${NUMBER.format(total)}`;
 
   return (
     <div className={cn(field(), className)}>

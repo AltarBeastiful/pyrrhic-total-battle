@@ -97,3 +97,14 @@ export const GROUP_EDGE_LEFT: Record<UnitGroup, string> = {
   monsters: 'border-l-group-monsters-edge',
   mercenaries: 'border-l-group-mercenaries-edge',
 };
+
+/**
+ * A tier as the game writes it: `Swordsman I`, `Abomination VI` (design direction D-19). The tables
+ * run to tier 9, and a hand-typed mercenary may carry 0, which has no numeral and falls back to the
+ * figure so the tile never renders an empty box.
+ */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'] as const;
+
+export function romanTier(tier: number): string {
+  return ROMAN[tier] ?? String(tier);
+}

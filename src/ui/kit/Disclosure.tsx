@@ -1,7 +1,7 @@
 /**
  * A line that opens. The whole header row is the button, so it is easy to hit with a thumb, and the
- * `summary` stays inside that row: collapsed, the line still says what is in there ("Health +312 %
- * · Strength +198 %") instead of only "Bonuses".
+ * `summary` stays inside that row: collapsed, the line still says what is in there
+ * ("Health +312 %, strength +198 %") instead of only "Bonuses".
  */
 import type { ReactNode } from 'react';
 import {

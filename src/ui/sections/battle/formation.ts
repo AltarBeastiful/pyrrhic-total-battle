@@ -43,10 +43,12 @@ export function detectMode(formation: Formation): FormationMode {
   return 'custom';
 }
 
-/** "1 melee · 1 ranged · 1 mounted · 1 flying", kinds with no squad left out. */
+/** "1 melee, 1 ranged, 1 mounted and 1 flying", kinds with no squad left out. */
 export function describeFormation(formation: Formation): string {
   const parts = CATEGORIES.filter((category) => formation[category] > 0).map(
     (category) => `${String(formation[category])} ${CATEGORY_LABEL[category].toLowerCase()}`,
   );
-  return parts.length === 0 ? 'no squads' : parts.join(' · ');
+  if (parts.length === 0) return 'no squads';
+  if (parts.length === 1) return parts[0] ?? 'no squads';
+  return `${parts.slice(0, -1).join(', ')} and ${parts.at(-1) ?? ''}`;
 }

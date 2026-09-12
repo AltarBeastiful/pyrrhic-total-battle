@@ -7,13 +7,13 @@
  * The app bar and the floating button are the only two things that do not scroll with the page, and
  * they are never both on screen.
  */
-import { useEffect } from 'react';
+import { lazy, useEffect } from 'react';
 
 import { selectTheme, useStore } from '@/state/store';
 
 import { Badge } from '../kit';
+import { LazySurface } from '../lazy';
 import { Page, Split, Stack } from '../layout';
-import { LoadSharedDialog } from '../profile/LoadSharedDialog';
 import { SECTIONS } from '../sections';
 import { applyTheme, watchSystemTheme } from '../theme';
 import { useUiStore } from '../uiStore';
@@ -21,6 +21,12 @@ import { AppBar } from './AppBar';
 import { GenerateFab } from './GenerateFab';
 import { MarchStatus } from './MarchStatus';
 import { TWO_PANES, useMediaQuery } from './useMediaQuery';
+
+// Most sessions are not opened on a share link, and the ones that are can wait a frame for the
+// prompt: the decoder and the dialog are a chunk of their own (ui-foundation plan §6).
+const LoadSharedDialog = lazy(() =>
+  import('../profile/LoadSharedDialog').then((module) => ({ default: module.LoadSharedDialog })),
+);
 
 /** What the player edits, in the order the registry fixes; the march is the other column. */
 const SETUP = SECTIONS.filter((section) => section.id !== 'results');
@@ -59,11 +65,17 @@ export function AppLayout() {
           id="main"
           sticky={twoPanes}
           start={
-            <Stack gap={3}>
+            /*
+              One continuous sheet rather than four floating cards (design direction D-19): the
+              sections are told apart by a full-bleed hairline and by their own padding, which
+              leaves the March card as the page's only radiused, elevated object. That is the truth
+              about the hierarchy — the setup is a page, the answer is an object.
+            */
+            <div className="bg-surface setup-sheet">
               {SETUP.map(({ id, Component }) => (
                 <Component key={id} />
               ))}
-            </Stack>
+            </div>
           }
           end={
             <Stack gap={3}>
@@ -82,7 +94,9 @@ export function AppLayout() {
 
       <GenerateFab />
 
-      <LoadSharedDialog payload={pendingShare} error={shareError} onClose={dismissShare} />
+      <LazySurface isOpen={pendingShare !== null || shareError !== null}>
+        <LoadSharedDialog payload={pendingShare} error={shareError} onClose={dismissShare} />
+      </LazySurface>
     </>
   );
 }

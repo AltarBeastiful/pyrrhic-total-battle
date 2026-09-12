@@ -50,8 +50,9 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   await expect(countsTable(page)).toBeHidden();
   await expect(countsList(page).getByRole('listitem')).toHaveCount(await stackCount(page));
 
-  // The leadership pool is spent, not merely allocated.
-  await expect(page.locator('#results').getByText('4,100 / 4,100')).toBeVisible();
+  // The leadership pool is spent, not merely allocated. A pool is a vessel filled to the brim, so
+  // it reads "used of total" rather than as a fraction (D-19).
+  await expect(page.locator('#results').getByText('4,100 of 4,100')).toBeVisible();
 
   // The story and the chart are folded away until they are asked for.
   await expect(page.getByRole('button', { name: /^Details/ }).last()).toHaveAttribute(
@@ -174,11 +175,10 @@ test('counts are edited in an explicit mode, and put back with Undo', async ({ p
   await page.getByRole('button', { name: 'Edit counts' }).click();
   await expect(rows.getByRole('textbox').first()).toBeVisible();
 
-  // One press of a stepper re-plays the battle on the hand-typed counts.
-  await rows
-    .getByRole('button', { name: /^Increase / })
-    .first()
-    .click();
+  // A count is typed, not walked to, so the field carries no step buttons; one arrow key re-plays
+  // the battle on the hand-typed counts.
+  await expect(rows.getByRole('button', { name: /^Increase / })).toHaveCount(0);
+  await rows.getByRole('textbox').first().press('ArrowUp');
   const undo = page.getByRole('button', { name: 'Undo' });
   await expect(undo).toBeVisible();
   expect(await summaryValue(page, 'Expected damage')).not.toBe(damage);

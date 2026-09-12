@@ -10,7 +10,7 @@ test('the pool is named and its pair of numbers is shown', () => {
   render(<PoolField pool="leadership" used={84300} total={84300} />);
 
   expect(screen.getByText('Leadership')).toBeTruthy();
-  expect(screen.getByText('84,300 / 84,300')).toBeTruthy();
+  expect(screen.getByText('84,300 of 84,300')).toBeTruthy();
 });
 
 test('the usage bar is a meter carrying used, total and the spoken pair', () => {
@@ -20,7 +20,7 @@ test('the usage bar is a meter carrying used, total and the spoken pair', () => 
   expect(meter.getAttribute('aria-valuenow')).toBe('120');
   expect(meter.getAttribute('aria-valuemin')).toBe('0');
   expect(meter.getAttribute('aria-valuemax')).toBe('480');
-  expect(meter.getAttribute('aria-valuetext')).toBe('120 / 480');
+  expect(meter.getAttribute('aria-valuetext')).toBe('120 of 480');
 });
 
 test('an empty pool does not divide by zero', () => {

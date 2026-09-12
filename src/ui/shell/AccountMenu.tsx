@@ -6,7 +6,7 @@
  * None of it takes permanent space, which is the point: the strip it replaces was two rows of
  * chrome on every screen for actions a player uses once a month.
  */
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 
 import { version as gameData } from '@/data';
@@ -18,7 +18,6 @@ import type { ImportMode, ParsedImport } from '@/share/exportImport';
 import { THEMES, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
 
-import { AboutDialog } from '../AboutDialog';
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -35,12 +34,19 @@ import {
   UploadIcon,
 } from '../icons';
 import { Badge, Button, Dialog, Menu, MenuItem, MenuSection, MenuSegment, TextField } from '../kit';
+import { LazySurface } from '../lazy';
 import { copyText, downloadJson } from '../profile/download';
 import { ImportDialog } from '../profile/ImportDialog';
 import { resultCounts, toSavedSummary, useResultStore } from '../resultStore';
-import { SyncDialog } from '../sync/SyncDialog';
 import { useUiStore } from '../uiStore';
 import { saveStatus } from './state';
+
+// Sync drags in the gist adapter and the Web Crypto wrapper, About drags in the data notes; both are
+// opened once in a blue moon, so neither is in the first load (ui-foundation plan §6).
+const AboutDialog = lazy(() => import('../AboutDialog').then((module) => ({ default: module.AboutDialog })));
+const SyncDialog = lazy(() =>
+  import('../sync/SyncDialog').then((module) => ({ default: module.SyncDialog })),
+);
 
 type DialogKind = 'new' | 'rename' | 'duplicate' | 'delete' | 'sync' | 'about';
 
@@ -267,7 +273,7 @@ export function AccountMenu() {
             icon={<Avatar name={profile.name} />}
             iconRight={<ChevronDownIcon />}
           >
-            <span className="truncate">{profile.name}</span>
+            <span className="hidden truncate sm:inline">{profile.name}</span>
           </Button>
         }
       >
@@ -456,19 +462,23 @@ export function AccountMenu() {
         }
       />
 
-      <SyncDialog
-        open={dialog === 'sync'}
-        onOpenChange={(open) => {
-          if (!open) close();
-        }}
-      />
+      <LazySurface isOpen={dialog === 'sync'}>
+        <SyncDialog
+          open={dialog === 'sync'}
+          onOpenChange={(open) => {
+            if (!open) close();
+          }}
+        />
+      </LazySurface>
 
-      <AboutDialog
-        open={dialog === 'about'}
-        onOpenChange={(open) => {
-          if (!open) close();
-        }}
-      />
+      <LazySurface isOpen={dialog === 'about'}>
+        <AboutDialog
+          open={dialog === 'about'}
+          onOpenChange={(open) => {
+            if (!open) close();
+          }}
+        />
+      </LazySurface>
 
       <ImportDialog
         parsed={importState.parsed}

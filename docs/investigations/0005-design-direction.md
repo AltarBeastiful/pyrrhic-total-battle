@@ -157,3 +157,25 @@ rows and any header labelling one control; "expected damage" becomes a caption u
 the documented exemption; the M3 structure (supporting pane from large, 64 dp app bar, extended FAB below
 large, 8/10/10 % state layers, outlined fields, tonal roles); bundled OFL fonts; the 13 px floor, tabular
 figures, the focus ring, reduced motion; no arbitrary Tailwind values.
+
+## 6. Applied (2026-09-13) — what shipped, and where it differs
+
+Applied to `src/index.css`, the kit and the sections; `after-*.png` sits beside each `before-*.png`.
+Amendments from the review, and the two places the plan was wrong:
+
+- **The bar is damage, not health.** The flat-HP rule makes every stack's total HP nearly equal, so an HP
+  column would have been identical bars. `MarchStackRow` now carries `damage` (summed from the enemy-first
+  journal) and `damageShare` against the loudest stack; `DamageBar` draws it. No engine change.
+- **Shape.** Controls stay at 8 px (M3 small) and chips move to 8 px; `--radius-tile` 4 px is new.
+- **Type.** The tokens were remapped, not retired: `xs` 13 · `sm` 13 (alias) · `base` 16 · `lg` 21 · `xl` 24 ·
+  `stat` 24 · new `hero` 3 rem. Measured: "VIII" is 19.5 px in a 32 px tile and 24.4 px in a 56 px one;
+  "19,639,721" is 178 px in the 360 dp pane. All fit.
+- **The primary stays unmistakable**: filled metal, `accent-fg` ink, 12–14:1, 44 px.
+- **Shell**: the app bar carries the expected damage and the hits on a phone too (no tiles under 600 px, and
+  the account trigger drops its visible name there to make the room); the extended FAB shows its label at the
+  top of the page at every width and collapses only on scroll down.
+- **Controls**: a step button is now only for a short ordered list. `NumberInput` (no buttons, selects its
+  whole value on focus) is the default; `NumberStepper` is the same control with `buttons` on.
+- **Deferred**: the dot strings and the tracked-caps label in `src/ui/sync/**` (another worker's tree); the
+  `Tier`/`Role`/`Race` eyebrow rows in the mercenary picker, which the Mercenaries rework will take; the bonus
+  and artifact sheets still use `NumberStepper` where `NumberInput` is the right control.

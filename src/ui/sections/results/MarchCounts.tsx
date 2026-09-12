@@ -13,8 +13,8 @@
 import { useEffect, useState } from 'react';
 
 import type { UnitDef } from '@/engine/types';
-import { MarchRow, MarchTable, UnitTile } from '@/ui/domain';
-import { Button, IconButton, NumberStepper } from '@/ui/kit';
+import { DamageBar, MarchRow, MarchTable, unitGroupOf, UnitTile } from '@/ui/domain';
+import { Button, IconButton, NumberInput } from '@/ui/kit';
 import { Cluster, Stack } from '@/ui/layout';
 import { copyText } from '@/ui/profile/download';
 
@@ -68,12 +68,12 @@ interface RowControlsProps {
   onDetails: (unit: UnitDef) => void;
 }
 
-/** What sits beside a row in both shapes: the stepper while editing, and the way into the sheet. */
+/** What sits beside a row in both shapes: the count field while editing, and the way into the sheet. */
 function RowControls({ row, editing, onCount, onDetails }: RowControlsProps) {
   return (
     <Cluster gap={1} wrap={false}>
       {editing && (
-        <NumberStepper
+        <NumberInput
           size="sm"
           label={`${row.unit.name} count`}
           value={row.stack.count}
@@ -109,13 +109,18 @@ interface StackedRowProps extends RowControlsProps {
  */
 function StackedRow({ row, editing, onCount, onDetails, onCopied }: StackedRowProps) {
   const { unit, stack } = row;
+  // Facts as cells with space between them, not a string joined by middle dots (D-19): each one is
+  // its own reading, and the eye can run down the column of losses without re-reading the sentence.
   const facts = [
-    row.position === undefined ? null : `falls ${ordinal(row.position)}`,
-    row.fallsLast ? 'falls last' : null,
+    row.position === undefined
+      ? 'not marching'
+      : row.fallsLast
+        ? `falls ${ordinal(row.position)}, and last of the troops`
+        : `falls ${ordinal(row.position)}`,
     `${amount(row.hits)} ${row.hits === 1 ? 'hit' : 'hits'}`,
     `${amount(row.lost)} lost`,
     `${amount(row.reviveGold)} gold to revive`,
-  ].filter((fact): fact is string => fact !== null);
+  ];
 
   return (
     <Stack as="li" gap={1}>
@@ -129,13 +134,18 @@ function StackedRow({ row, editing, onCount, onDetails, onCopied }: StackedRowPr
             void copyText(String(stack.count));
             onCopied('Copied');
           }}
-          className="text-stat font-display nums"
+          className="text-stat nums font-semibold"
         >
           {amount(stack.count)}
         </button>
       </Cluster>
+      <DamageBar group={unitGroupOf(unit)} share={row.damageShare} />
       <Cluster gap={2} justify="between">
-        <span className="text-muted text-sm">{facts.join(' · ')}</span>
+        <Cluster gap={3} className="text-muted min-w-0 text-sm">
+          {facts.map((fact) => (
+            <span key={fact}>{fact}</span>
+          ))}
+        </Cluster>
         <RowControls row={row} editing={editing} onCount={onCount} onDetails={onDetails} />
       </Cluster>
     </Stack>
@@ -167,7 +177,7 @@ export function MarchCounts({
   return (
     <Stack gap={2}>
       <Cluster gap={2} justify="between">
-        <h3 className="font-display text-lg">Counts to copy</h3>
+        <h3 className="text-lg">Counts to copy</h3>
         <Cluster gap={1}>
           <Button
             size="sm"
@@ -199,6 +209,9 @@ export function MarchCounts({
       <span role="status" className="text-muted text-sm">
         {flash}
       </span>
+      <p className="text-muted text-sm">
+        The bar under a stack is the damage it deals, against the loudest stack of the march.
+      </p>
 
       {/* Wide enough for the table: the same rows, in columns. */}
       <div className="hidden @xl:block">
@@ -211,6 +224,7 @@ export function MarchCounts({
               hits={row.hits}
               lost={row.lost}
               reviveSilver={row.reviveGold}
+              damageShare={row.damageShare}
               fallsLast={row.fallsLast}
               {...(row.position === undefined ? {} : { position: row.position })}
             >
@@ -220,7 +234,10 @@ export function MarchCounts({
         </MarchTable>
       </div>
 
-      {/* Narrower than 36 rem — a phone, or the supporting pane at any width. */}
+      {/* Narrower than 36 rem — a phone, or the supporting pane at any width. The column is read
+          top to bottom as the order the stacks fall, so it is captioned at both ends: a bar is how
+          much damage that stack deals, measured against the loudest stack of the march. */}
+      <span className="text-muted text-xs @xl:hidden">Falls first</span>
       <Stack as="ul" gap={3} className="@xl:hidden" aria-label="The march, in the order the stacks fall">
         {rows.map((row) => (
           <StackedRow
@@ -233,6 +250,7 @@ export function MarchCounts({
           />
         ))}
       </Stack>
+      <span className="text-muted text-xs @xl:hidden">Falls last</span>
     </Stack>
   );
 }

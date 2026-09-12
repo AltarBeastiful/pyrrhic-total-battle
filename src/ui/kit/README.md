@@ -44,13 +44,18 @@ The kit page globs `src/ui/kitpage/stories/*.story.tsx` with `import.meta.glob` 
 Colours (use as `bg-surface`, `text-muted`, `border-line`…): `bg surface raised sunken fg muted line field
 accent accent-fg accent-soft accent-line info info-fg info-soft danger danger-fg danger-soft warn warn-fg
 warn-soft ok ok-fg ok-soft`. **Group colours**, one per unit group and mercenaries, each with three parts:
-`group-<g>-soft` (tile background), `group-<g>-strong` (tile ink and marker), `group-<g>-edge` (row edge and
-tile bar) for `<g>` in `guardsmen specialists engineers monsters mercenaries`. The legacy single-value
+`group-<g>-soft` (tile ground, the hue mixed 18 % into the card surface), `group-<g>-strong` (tile ink and
+marker) and `group-<g>-edge` (row edge and tile frame; it now carries the same value as `strong`) for `<g>` in
+`guardsmen specialists engineers monsters mercenaries`. The legacy single-value
 `group-guardsmen / group-specialist / group-engineers / group-monster` names stay until the old sections die.
 
-Radii: `rounded-card` (12 px), `rounded-control` (8 px), `rounded-chip` (full). Shadows: `shadow-card
-shadow-pop shadow-modal`. Type: Tailwind's `text-xs/sm/base/lg/xl` = 13/14/16/20/24 px (overridden in
-`@theme`), plus `text-stat` (28 px) for counts and the average damage. Fonts: `font-display font-sans font-mono`.
+Radii, by what a thing _is_ (D-19): `rounded-card` (12 px, the March card and every overlay),
+`rounded-control` (8 px, buttons and fields), `rounded-chip` (8 px, badges and filter chips — not a pill),
+`rounded-tile` (4 px, a unit tile's frame), `rounded-sheet` (28 px, a bottom sheet). Shadows: `shadow-card
+shadow-pop shadow-modal`, and only for what floats or for the answer. Type: Tailwind's `text-xs/sm/base/lg/xl`
+= 13/13/16/21/24 px (overridden in `@theme`; `sm` is an alias of `xs`, 14 and 20 no longer exist), plus
+`text-stat` (24 px) for counts and `text-hero` (48 px) for the one display figure. Fonts: `font-sans` for
+everything you read, `font-display` for numerals only (`.numeral-face`, `.hero-face`), `font-mono` for ids.
 Motion: `duration-fast` (120 ms) and `duration-sheet` (200 ms); anything animated is wrapped in
 `motion-safe:`.
 

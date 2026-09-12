@@ -114,10 +114,10 @@ export function TroopsSection() {
   };
 
   return (
-    <Card as="section" id="troops" aria-labelledby={titleId}>
+    <Card tone="none" shape="flat" as="section" id="troops" aria-labelledby={titleId}>
       <Stack gap={3}>
         <Stack gap={1}>
-          <h2 id={titleId} className="font-display text-lg">
+          <h2 id={titleId} className="text-lg">
             Troops
           </h2>
           {empty && (

@@ -32,7 +32,7 @@ import {
 import type { IconProps } from '../icons';
 import { cn } from '../kit/cn';
 import { ring } from '../kit/styles';
-import { GROUP_LABEL, GROUP_OUTLINE, GROUP_TONE, unitGroupOf } from './unitGroup';
+import { GROUP_LABEL, GROUP_OUTLINE, GROUP_TONE, romanTier, unitGroupOf } from './unitGroup';
 import type { UnitGroup } from './unitGroup';
 
 /** How long a pointer has to stay down before it counts as a long press. */
@@ -63,7 +63,7 @@ const STATE_WORD: Record<UnitTileState, string> = {
 };
 
 const hit = tv({
-  base: 'relative inline-flex shrink-0 items-center justify-center rounded-control',
+  base: 'relative inline-flex shrink-0 items-center justify-center rounded-tile',
   variants: {
     size: {
       // 32 px of tile inside a 44 px target on touch; the target shrinks to the tile with a pointer.
@@ -76,7 +76,7 @@ const hit = tv({
 });
 
 const box = tv({
-  base: 'rounded-control flex min-w-0 items-center overflow-hidden border select-none',
+  base: 'rounded-tile flex min-w-0 items-center overflow-hidden border select-none',
   variants: {
     group: GROUP_TONE,
     /** Declared after `group` so the softened hairline wins over the tone's full-strength edge. */
@@ -107,9 +107,11 @@ const glyph = tv({
 });
 
 const tier = tv({
-  base: 'font-display leading-none tabular-nums',
+  base: 'numeral-face leading-none',
   variants: {
-    size: { sm: 'text-sm', md: 'text-lg', lg: 'text-xl' },
+    // A roman numeral runs wider than a digit, so `sm` keeps the label size and `md` the body size:
+    // "VIII" has to fit a 32 px tile, and the short code beside it carries the same information.
+    size: { sm: 'text-sm', md: 'text-base', lg: 'text-lg' },
     struck: { true: 'line-through', false: '' },
   },
   defaultVariants: { size: 'md', struck: false },
@@ -209,13 +211,13 @@ export function UnitTile({
           <>
             <Glyph className={glyph({ size })} />
             <span className="flex flex-col items-center gap-0.5">
-              <span className={tier({ size, struck: state === 'leftOut' })}>{unit.tier}</span>
+              <span className={tier({ size, struck: state === 'leftOut' })}>{romanTier(unit.tier)}</span>
               <span className={code({ size })}>{shortCode(unit.label)}</span>
             </span>
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-base font-medium">{unit.name}</span>
               <span className="truncate text-sm">
-                {GROUP_LABEL[group]} · tier {unit.tier}
+                {GROUP_LABEL[group]} {romanTier(unit.tier)}
               </span>
             </span>
           </>
@@ -225,12 +227,12 @@ export function UnitTile({
               <Glyph className={glyph({ size })} />
               <span className={code({ size })}>{shortCode(unit.label)}</span>
             </span>
-            <span className={tier({ size, struck: state === 'leftOut' })}>{unit.tier}</span>
+            <span className={tier({ size, struck: state === 'leftOut' })}>{romanTier(unit.tier)}</span>
           </>
         ) : (
           <>
             <Glyph className={glyph({ size })} />
-            <span className={tier({ size, struck: state === 'leftOut' })}>{unit.tier}</span>
+            <span className={tier({ size, struck: state === 'leftOut' })}>{romanTier(unit.tier)}</span>
           </>
         )}
       </span>

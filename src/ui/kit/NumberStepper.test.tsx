@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, expect, test } from 'vitest';
 
-import { NumberStepper } from './NumberStepper';
+import { NumberInput, NumberStepper } from './NumberStepper';
 
 afterEach(cleanup);
 
@@ -18,15 +18,19 @@ function Leadership({
   start = 10,
   allowEmpty = false,
   max = 1000000,
+  stepper = true,
 }: {
   start?: number | null;
   allowEmpty?: boolean;
   max?: number;
+  /** The two shapes share one implementation; the keyboard behaviour has to be identical. */
+  stepper?: boolean;
 }) {
   const [value, setValue] = useState<number | null>(start);
+  const Field = stepper ? NumberStepper : NumberInput;
   return (
     <>
-      <NumberStepper
+      <Field
         label="Leadership"
         value={value}
         onChange={setValue}
@@ -132,4 +136,36 @@ test('NumberStepper hands its description to a screen reader', () => {
     .map((id) => document.getElementById(id)?.textContent ?? '')
     .join(' ');
   expect(text).toContain('How many troops you can lead');
+});
+
+test('NumberInput has no step buttons: a typed number is typed, not walked to', () => {
+  render(<Leadership stepper={false} />);
+
+  expect(screen.getByLabelText('Leadership')).toBeDefined();
+  expect(screen.queryByRole('button', { name: 'Increase Leadership' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Decrease Leadership' })).toBeNull();
+
+  // The keyboard is what remains, and it steps exactly as the stepper's does.
+  fireEvent.keyDown(screen.getByLabelText('Leadership'), { key: 'ArrowUp', shiftKey: true });
+  expect(shown()).toBe('20');
+});
+
+test('NumberInput selects its whole value on focus, so the next keystroke replaces it', () => {
+  render(<Leadership start={84300} stepper={false} />);
+  const input = screen.getByLabelText('Leadership') as HTMLInputElement;
+
+  fireEvent.focus(input);
+  expect(input.selectionStart).toBe(0);
+  expect(input.selectionEnd).toBe(input.value.length);
+
+  // The click that caused the focus selects the value again, because the browser collapses the
+  // selection between the two events.
+  fireEvent.click(input);
+  expect(input.selectionEnd).toBe(input.value.length);
+
+  // A later click inside the already-focused field leaves the caret where it was aimed.
+  input.setSelectionRange(2, 2);
+  fireEvent.click(input);
+  expect(input.selectionStart).toBe(2);
+  expect(input.selectionEnd).toBe(2);
 });

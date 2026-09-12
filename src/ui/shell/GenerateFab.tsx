@@ -4,9 +4,13 @@
  * with the reason in the label, stale when the form moved under the answer, running with a press
  * that cancels, ready otherwise.
  *
- * Material 3's extended FAB behaviour: the label collapses to the glyph while the page scrolls down
- * and comes back on the way up or at the top, so the button never sits on top of what you are
- * reading. The listener is passive and does its work in one animation frame.
+ * Material 3's extended FAB behaviour: the button is extended — glyph *and* label — at the top of
+ * the page and at every width, and collapses to the glyph alone only while the page is being
+ * scrolled down; the label comes back on the way up or at the top, so the button never sits on top
+ * of what you are reading. The listener is passive and does its work in one animation frame.
+ *
+ * It used to drop its label under 400 px, which meant the narrowest screens — the ones where the
+ * button is the only Generate there is — never saw the word at all (owner, 2026-09-13).
  *
  * `Ctrl`/`⌘ + Enter` is registered here and only here — the button is mounted at every width, just
  * hidden above `xl`, so the shortcut works everywhere without being bound twice.
@@ -15,7 +19,6 @@ import { useEffect, useState } from 'react';
 
 import { GenerateIcon } from '../icons';
 import { FloatingAction } from '../kit';
-import { NARROW, useMediaQuery } from './useMediaQuery';
 import { useGenerateRun } from './useGenerateRun';
 
 /** Scroll noise under this many pixels does not flip the label. */
@@ -58,7 +61,6 @@ function useScrollingDown(): boolean {
 
 export function GenerateFab() {
   const { state, hint, press } = useGenerateRun();
-  const narrow = useMediaQuery(NARROW);
   const scrollingDown = useScrollingDown();
 
   useEffect(() => {
@@ -80,7 +82,7 @@ export function GenerateFab() {
         state={state}
         {...(hint === null ? {} : { hint })}
         icon={<GenerateIcon />}
-        showLabel={!narrow && !scrollingDown}
+        showLabel={!scrollingDown}
         onPress={press}
       />
     </div>

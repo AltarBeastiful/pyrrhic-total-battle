@@ -8,7 +8,7 @@
 import type { ReactNode } from 'react';
 
 import type { UnitDef } from '@/engine/types';
-import { GROUP_LABEL, StatBar, UnitTile, unitGroupOf } from '@/ui/domain';
+import { GROUP_LABEL, romanTier, StatBar, UnitTile, unitGroupOf } from '@/ui/domain';
 import { Button, Sheet } from '@/ui/kit';
 import { Cluster, Stack } from '@/ui/layout';
 
@@ -56,7 +56,7 @@ export function UnitSheet({ unit, row, totalDamage, pinned, onOpenChange, onEdit
       isOpen
       onOpenChange={onOpenChange}
       title={unit.name}
-      description={`${GROUP_LABEL[group]} · tier ${String(unit.tier)}`}
+      description={`${GROUP_LABEL[group]} ${romanTier(unit.tier)}`}
       footer={
         <>
           <Button
@@ -107,9 +107,8 @@ export function UnitSheet({ unit, row, totalDamage, pinned, onOpenChange, onEdit
               </p>
               <p className="text-muted text-sm">
                 {row.position === undefined ? 'Not in the battle.' : `Falls number ${String(row.position)}.`}
-                {` ${amount(row.lost)} lost · ${amount(row.reviveGold)} gold to revive · ${amount(
-                  row.retrainSilver,
-                )} silver and ${duration(row.retrainSeconds)} to retrain.`}
+                {` All ${amount(row.lost)} are lost: ${amount(row.reviveGold)} gold to revive them,`}
+                {` or ${amount(row.retrainSilver)} silver and ${duration(row.retrainSeconds)} to retrain.`}
               </p>
             </Stack>
           )}

@@ -1,4 +1,6 @@
 // Domain barrel: the components that know what a unit is. Keep the list sorted.
+export { DamageBar } from './DamageBar';
+export type { DamageBarProps } from './DamageBar';
 export { DeltaText } from './DeltaText';
 export type { DeltaTextProps } from './DeltaText';
 export { GroupMarker } from './GroupMarker';
@@ -19,6 +21,7 @@ export {
   GROUP_INK,
   GROUP_LABEL,
   GROUP_TONE,
+  romanTier,
   UNIT_GROUPS,
   unitGroupOf,
 } from './unitGroup';

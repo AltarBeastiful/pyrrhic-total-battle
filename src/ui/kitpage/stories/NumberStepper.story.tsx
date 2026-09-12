@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { NumberStepper } from '../../kit';
+import { NumberInput, NumberStepper } from '../../kit';
 import type { KitStory } from '../story';
 
 function LiveStepper(props: {
@@ -12,11 +12,14 @@ function LiveStepper(props: {
   errorMessage?: string;
   allowEmpty?: boolean;
   max?: number;
+  /** The stepping shape, for the short ordered lists that earn two buttons. */
+  buttons?: boolean;
 }) {
-  const { label, start = 12, size, suffix, description, errorMessage, allowEmpty, max } = props;
+  const { label, start = 12, size, suffix, description, errorMessage, allowEmpty, max, buttons } = props;
   const [value, setValue] = useState<number | null>(start);
+  const Field = buttons === true ? NumberStepper : NumberInput;
   return (
-    <NumberStepper
+    <Field
       label={label}
       value={value}
       onChange={setValue}
@@ -32,7 +35,7 @@ function LiveStepper(props: {
 }
 
 const story: KitStory = {
-  name: 'NumberStepper',
+  name: 'NumberInput',
   group: 'kit',
   render: () => (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -41,7 +44,9 @@ const story: KitStory = {
       <LiveStepper label="Health bonus" start={39} suffix="%" description="Shift steps by 10, Ctrl by 100" />
       <LiveStepper label="Empty is allowed" start={null} allowEmpty />
       <LiveStepper label="Over the limit" start={120} max={100} errorMessage="More than the pool holds" />
-      <NumberStepper label="Disabled" value={7} onChange={() => {}} isDisabled />
+      <NumberInput label="Disabled" value={7} onChange={() => {}} isDisabled />
+      <LiveStepper label="Star level (stepper)" start={3} max={7} buttons />
+      <LiveStepper label="Star level (sm stepper)" start={3} max={7} size="sm" buttons />
     </div>
   ),
 };

@@ -15,7 +15,7 @@
  * Like Troops, this card describes the *account*: everything is written to the active profile. The
  * only thing it reads from the battle setup is the list of pinned units, to mark them.
  */
-import { useId, useMemo, useState } from 'react';
+import { lazy, useId, useMemo, useState } from 'react';
 
 import type { Group, Race } from '@/data/types';
 import type { CustomMercenary, Profile } from '@/state/schema';
@@ -25,7 +25,7 @@ import {
   Button,
   Card,
   IconButton,
-  NumberStepper,
+  NumberInput,
   SearchField,
   SelectableItem,
   SelectableList,
@@ -34,9 +34,10 @@ import {
   ToggleItem,
 } from '@/ui/kit';
 import { Cluster, Stack } from '@/ui/layout';
+import { LazySurface } from '@/ui/lazy';
 
 import { PencilIcon, PlusIcon } from '../../icons';
-import { CustomMercenarySheet } from './CustomMercenarySheet';
+
 import { GROUP_LABELS, RACE_LABELS } from './labels';
 import {
   matches,
@@ -51,6 +52,12 @@ import {
 import type { MercenaryRow } from './rows';
 import { readRecent, rememberRecent } from './uiPrefs';
 
+// The hand-typed-mercenary form is a whole second card's worth of fields for something most players
+// never open: it arrives with the first press of "Add one by hand" (ui-foundation plan §6).
+const CustomMercenarySheet = lazy(() =>
+  import('./CustomMercenarySheet').then((module) => ({ default: module.CustomMercenarySheet })),
+);
+
 /** A pinned mercenary says so in its name: the pin on the tile is a picture, not a word. */
 function rowName(entry: MercenaryRow, isPinned: boolean): string {
   return isPinned ? `${entry.label}, kept in the march` : entry.label;
@@ -61,7 +68,7 @@ const FILTER_GROUP = 'shrink-0 flex-row items-center sm:flex-col sm:items-start'
 
 /** The line over the picker: how long the list is, and how to make it shorter. */
 function offeredCaption(count: number): string {
-  return `${count} ${count === 1 ? 'mercenary' : 'mercenaries'} · type to narrow`;
+  return `Type a name or code to narrow ${count} ${count === 1 ? 'mercenary' : 'mercenaries'}.`;
 }
 
 export function MercenariesSection() {
@@ -139,10 +146,10 @@ export function MercenariesSection() {
   };
 
   return (
-    <Card as="section" id="mercenaries" aria-labelledby={titleId}>
+    <Card tone="none" shape="flat" as="section" id="mercenaries" aria-labelledby={titleId}>
       <Stack gap={4}>
         <Stack gap={2}>
-          <h2 id={titleId} className="font-display text-lg">
+          <h2 id={titleId} className="text-lg">
             Mercenaries
           </h2>
           {owned.length === 0 ? (
@@ -167,7 +174,7 @@ export function MercenariesSection() {
                       </IconButton>
                     ) : (
                       <>
-                        <NumberStepper
+                        <NumberInput
                           label="Owned"
                           size="sm"
                           min={0}
@@ -308,17 +315,19 @@ export function MercenariesSection() {
         )}
       </Stack>
 
-      {editor !== null && (
-        <CustomMercenarySheet
-          key={editor.merc?.id ?? 'new'}
-          isOpen
-          {...(editor.merc === undefined ? {} : { initial: editor.merc })}
-          onSubmit={saveCustom}
-          onClose={() => {
-            setEditor(null);
-          }}
-        />
-      )}
+      <LazySurface isOpen={editor !== null}>
+        {editor !== null && (
+          <CustomMercenarySheet
+            key={editor.merc?.id ?? 'new'}
+            isOpen
+            {...(editor.merc === undefined ? {} : { initial: editor.merc })}
+            onSubmit={saveCustom}
+            onClose={() => {
+              setEditor(null);
+            }}
+          />
+        )}
+      </LazySurface>
     </Card>
   );
 }
@@ -344,7 +353,7 @@ function Face({
       <Stack gap={1} className="min-w-0">
         <span className="truncate">{entry.unit.name}</span>
         <span className="text-muted truncate text-sm">
-          {showOwned && !entry.isCustom ? `${entry.facts} · ${ownedText(entry.cap)}` : entry.facts}
+          {showOwned && !entry.isCustom ? `${entry.facts} — ${ownedText(entry.cap)}` : entry.facts}
         </span>
       </Stack>
     </>

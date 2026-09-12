@@ -28,7 +28,7 @@ export interface MercenaryRow {
   unit: UnitDef;
   /** The row's accessible name, its selected state excluded: "Bear V, tier 5". */
   label: string;
-  /** The quiet line under the name: "Tier 5 · Monster · Beast". */
+  /** The quiet line under the name: "Tier 5, monster, beast". */
   facts: string;
   /** How many the player owns; `null` means "as much as the camp can pay for". */
   cap: number | null;
@@ -52,7 +52,7 @@ export function rowFacts(unit: UnitDef): string {
     unit.race === undefined ? '' : RACE_LABELS[unit.race],
   ]
     .filter((part) => part !== '')
-    .join(' · ');
+    .join(', ');
 }
 
 /** The mercenary a saved profile points at, or a stand-in when the tables no longer carry it. */

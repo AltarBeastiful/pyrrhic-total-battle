@@ -79,19 +79,24 @@
     sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
-  /* Five steps and a figure size (plan §6.3). The floor is 13 px: nothing smaller ships. */
+  /* The scale, on the traditional sizes of The Elements of Typographic Style over our own 13 px
+     floor (D-19): 13 label · 16 body · 21 title · 24 count · 48 the one hero figure. `sm` is an
+     alias of `xs` so the class names in the components keep working while the step itself is gone —
+     14 and 20 are no longer part of the system. */
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.125rem;
-  --text-sm: 0.875rem;
-  --text-sm--line-height: 1.25rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
   --text-base: 1rem;
   --text-base--line-height: 1.5rem;
-  --text-lg: 1.25rem;
+  --text-lg: 1.3125rem;
   --text-lg--line-height: 1.75rem;
   --text-xl: 1.5rem;
   --text-xl--line-height: 2rem;
-  --text-stat: 1.75rem;
+  --text-stat: 1.5rem;
   --text-stat--line-height: 2rem;
+  --text-hero: 3rem;
+  --text-hero--line-height: 1;
 
   /* Surfaces and ink. */
   --color-bg: var(--pyr-bg);
@@ -150,12 +155,15 @@
   --color-group-engineers: var(--pyr-group-engineers-strong);
   --color-group-monster: var(--pyr-group-monsters-strong);
 
-  /* Radii. `card` is the one panels use, `control` every button and field, `chip` the pill round. */
-  --radius-card: 0.75rem;
-  --radius-control: 0.5rem;
+  /* Radii, by what a thing *is* (D-19). The setup sheet has none — it is the page; the March card
+     is the one radiused, elevated object; a control is M3's small shape; a unit tile is a frame,
+     nearly square, like the game's; a chip is a rounded rectangle, not a pill. */
+  --radius-card: 0.75rem; /* M3 medium: the March card, dialogs, menus, popovers */
+  --radius-control: 0.5rem; /* M3 small: buttons, fields, segments */
+  --radius-chip: 0.5rem; /* M3 chip: filter chips and badges */
+  --radius-tile: 0.25rem; /* M3 extra-small: the unit tile's frame */
   --radius-panel: 1rem; /* M3 large: side-sheet leading edge */
   --radius-sheet: 1.75rem; /* M3 extra-large: bottom-sheet top corners */
-  --radius-chip: 999px;
 
   /* Elevation. Three steps only: a card sits on the page, a popover floats, a dialog owns it. */
   --shadow-card: var(--pyr-shadow-card);
@@ -193,172 +201,159 @@
   --duration-fast: 120ms;
   --duration-sheet: 200ms;
 
-  --pyr-bg: #f6f4ef;
-  --pyr-surface: #ffffff;
-  --pyr-raised: #eeebe4;
-  --pyr-sunken: #e9e5db;
-  --pyr-fg: #1c1a17;
-  --pyr-muted: #5f5b55;
-  --pyr-line: #ddd8ce;
-  --pyr-field: #857f76;
+  --pyr-bg: #ecefec;
+  --pyr-surface: #fafbfa;
+  --pyr-raised: #dee3df;
+  --pyr-sunken: #d5dbd7;
+  --pyr-fg: #131917;
+  --pyr-muted: #515a56;
+  --pyr-line: #cfd5d1;
+  --pyr-field: #6e7873;
 
-  --pyr-accent: #8e5017;
-  --pyr-accent-fg: #fff8f0;
-  --pyr-accent-soft: #f6e3cc;
-  --pyr-accent-line: #ab7238;
+  --pyr-accent: #262e2b;
+  --pyr-accent-fg: #fafbfa;
+  --pyr-accent-soft: #dee3df;
+  --pyr-accent-line: #5b6560;
 
-  --pyr-info: #14608f;
-  --pyr-info-fg: #ffffff;
-  --pyr-info-soft: #dfeaf7;
+  --pyr-info: #515a56;
+  --pyr-info-fg: #fafbfa;
+  --pyr-info-soft: #dee3df;
 
-  --pyr-danger: #ae2a20;
-  --pyr-danger-fg: #fff7f6;
-  --pyr-danger-soft: #f9dedb;
-  --pyr-warn: #a24409;
-  --pyr-warn-fg: #fff8f3;
-  --pyr-warn-soft: #fbe1d1;
-  --pyr-ok: #1c6b40;
-  --pyr-ok-fg: #ffffff;
-  --pyr-ok-soft: #d9efe2;
+  --pyr-danger: #a32c1f;
+  --pyr-danger-fg: #fafbfa;
+  --pyr-danger-soft: #f3dcd7;
+  --pyr-warn: #8c3a2a;
+  --pyr-warn-fg: #fafbfa;
+  --pyr-warn-soft: #dee3df;
+  --pyr-ok: #131917;
+  --pyr-ok-fg: #fafbfa;
+  --pyr-ok-soft: #dee3df;
 
-  --pyr-group-guardsmen-soft: #dff3df;
-  --pyr-group-guardsmen-strong: #1f6b2e;
-  --pyr-group-guardsmen-edge: #0b8024;
-  --pyr-group-specialists-soft: #dde9f7;
-  --pyr-group-specialists-strong: #1f4f8a;
-  --pyr-group-specialists-edge: #0d4d9c;
-  --pyr-group-engineers-soft: #f8ecd0;
-  --pyr-group-engineers-strong: #7a5410;
-  --pyr-group-engineers-edge: #8a5a0a;
-  --pyr-group-monsters-soft: #ebe0f5;
-  --pyr-group-monsters-strong: #5b2f8a;
-  --pyr-group-monsters-edge: #5a0eab;
-  --pyr-group-mercenaries-soft: #f8dede;
-  --pyr-group-mercenaries-strong: #8a2424;
-  --pyr-group-mercenaries-edge: #a10d0d;
+  --pyr-group-guardsmen-soft: #d4e1d7;
+  --pyr-group-guardsmen-strong: #256b35;
+  --pyr-group-guardsmen-edge: #256b35;
+  --pyr-group-specialists-soft: #d4dde6;
+  --pyr-group-specialists-strong: #25568a;
+  --pyr-group-specialists-edge: #25568a;
+  --pyr-group-engineers-soft: #e1ddd1;
+  --pyr-group-engineers-strong: #6f5417;
+  --pyr-group-engineers-edge: #6f5417;
+  --pyr-group-monsters-soft: #ddd8e6;
+  --pyr-group-monsters-strong: #5b368a;
+  --pyr-group-monsters-edge: #5b368a;
+  --pyr-group-mercenaries-soft: #e6d6d6;
+  --pyr-group-mercenaries-strong: #8c3030;
+  --pyr-group-mercenaries-edge: #8c3030;
 
-  --pyr-shadow-card: 0 1px 2px #1c1a170d;
-  --pyr-shadow-pop: 0 6px 20px -6px #1c1a1738;
-  --pyr-shadow-modal: 0 20px 50px -12px #1c1a1754;
-
-  /* Parchment grain: two barely-there washes, painted on <body> only. */
-  --pyr-texture:
-    radial-gradient(80rem 40rem at 50% -12rem, #8e50170f, transparent 70%),
-    radial-gradient(50rem 30rem at 100% 0, #14608f0d, transparent 65%);
+  --pyr-shadow-card: 0 1px 2px #1319170f;
+  --pyr-shadow-pop: 0 6px 20px -6px #13191738;
+  --pyr-shadow-modal: 0 20px 50px -12px #13191754;
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --pyr-bg: #101319;
-    --pyr-surface: #181c24;
-    --pyr-raised: #20252f;
-    --pyr-sunken: #0a0d12;
-    --pyr-fg: #e9e6df;
-    --pyr-muted: #a7a49c;
-    --pyr-line: #2b303a;
-    --pyr-field: #6b7484;
+    --pyr-bg: #161a19;
+    --pyr-surface: #1e2423;
+    --pyr-raised: #2b3231;
+    --pyr-sunken: #101413;
+    --pyr-fg: #e7ece9;
+    --pyr-muted: #9da7a3;
+    --pyr-line: #313938;
+    --pyr-field: #78837f;
 
-    --pyr-accent: #d9963c;
-    --pyr-accent-fg: #17120a;
-    --pyr-accent-soft: #3a2a12;
-    --pyr-accent-line: #9c7440;
+    --pyr-accent: #d8e0dc;
+    --pyr-accent-fg: #161a19;
+    --pyr-accent-soft: #2b3231;
+    --pyr-accent-line: #8e9a95;
 
-    --pyr-info: #74bde4;
-    --pyr-info-fg: #0a1319;
-    --pyr-info-soft: #132a38;
+    --pyr-info: #9da7a3;
+    --pyr-info-fg: #161a19;
+    --pyr-info-soft: #2b3231;
 
-    --pyr-danger: #f2857c;
-    --pyr-danger-fg: #1f0a08;
-    --pyr-danger-soft: #3a1a17;
-    --pyr-warn: #f0a468;
-    --pyr-warn-fg: #1a1109;
-    --pyr-warn-soft: #3c2415;
-    --pyr-ok: #6fcf97;
-    --pyr-ok-fg: #071a0f;
-    --pyr-ok-soft: #14301f;
+    --pyr-danger: #ee8878;
+    --pyr-danger-fg: #161a19;
+    --pyr-danger-soft: #3a2320;
+    --pyr-warn: #e8a08f;
+    --pyr-warn-fg: #161a19;
+    --pyr-warn-soft: #2b3231;
+    --pyr-ok: #e7ece9;
+    --pyr-ok-fg: #161a19;
+    --pyr-ok-soft: #2b3231;
 
-    --pyr-group-guardsmen-soft: #173321;
-    --pyr-group-guardsmen-strong: #7fd48f;
-    --pyr-group-guardsmen-edge: #63e585;
-    --pyr-group-specialists-soft: #172436;
-    --pyr-group-specialists-strong: #7fb2f0;
-    --pyr-group-specialists-edge: #78b4ff;
-    --pyr-group-engineers-soft: #352a14;
-    --pyr-group-engineers-strong: #e6b85c;
-    --pyr-group-engineers-edge: #f1bc51;
-    --pyr-group-monsters-soft: #2a1e38;
-    --pyr-group-monsters-strong: #c39af0;
-    --pyr-group-monsters-edge: #c394f6;
-    --pyr-group-mercenaries-soft: #38191b;
-    --pyr-group-mercenaries-strong: #f08a8a;
-    --pyr-group-mercenaries-edge: #f58585;
+    --pyr-group-guardsmen-soft: #304337;
+    --pyr-group-guardsmen-strong: #84ce93;
+    --pyr-group-guardsmen-edge: #84ce93;
+    --pyr-group-specialists-soft: #313f48;
+    --pyr-group-specialists-strong: #8fbcee;
+    --pyr-group-specialists-edge: #8fbcee;
+    --pyr-group-engineers-soft: #413e31;
+    --pyr-group-engineers-strong: #ddb86e;
+    --pyr-group-engineers-edge: #ddb86e;
+    --pyr-group-monsters-soft: #3b3a47;
+    --pyr-group-monsters-strong: #c0a0ec;
+    --pyr-group-monsters-edge: #c0a0ec;
+    --pyr-group-mercenaries-soft: #433837;
+    --pyr-group-mercenaries-strong: #ec9391;
+    --pyr-group-mercenaries-edge: #ec9391;
 
     --pyr-shadow-card: 0 1px 2px #00000066;
     --pyr-shadow-pop: 0 8px 24px -8px #000000a6;
     --pyr-shadow-modal: 0 24px 56px -14px #000000bf;
-
-    --pyr-texture:
-      radial-gradient(80rem 40rem at 50% -12rem, #d9963c14, transparent 70%),
-      radial-gradient(50rem 30rem at 100% 0, #74bde40f, transparent 65%);
 
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --pyr-bg: #101319;
-  --pyr-surface: #181c24;
-  --pyr-raised: #20252f;
-  --pyr-sunken: #0a0d12;
-  --pyr-fg: #e9e6df;
-  --pyr-muted: #a7a49c;
-  --pyr-line: #2b303a;
-  --pyr-field: #6b7484;
+  --pyr-bg: #161a19;
+  --pyr-surface: #1e2423;
+  --pyr-raised: #2b3231;
+  --pyr-sunken: #101413;
+  --pyr-fg: #e7ece9;
+  --pyr-muted: #9da7a3;
+  --pyr-line: #313938;
+  --pyr-field: #78837f;
 
-  --pyr-accent: #d9963c;
-  --pyr-accent-fg: #17120a;
-  --pyr-accent-soft: #3a2a12;
-  --pyr-accent-line: #9c7440;
+  --pyr-accent: #d8e0dc;
+  --pyr-accent-fg: #161a19;
+  --pyr-accent-soft: #2b3231;
+  --pyr-accent-line: #8e9a95;
 
-  --pyr-info: #74bde4;
-  --pyr-info-fg: #0a1319;
-  --pyr-info-soft: #132a38;
+  --pyr-info: #9da7a3;
+  --pyr-info-fg: #161a19;
+  --pyr-info-soft: #2b3231;
 
-  --pyr-danger: #f2857c;
-  --pyr-danger-fg: #1f0a08;
-  --pyr-danger-soft: #3a1a17;
-  --pyr-warn: #f0a468;
-  --pyr-warn-fg: #1a1109;
-  --pyr-warn-soft: #3c2415;
-  --pyr-ok: #6fcf97;
-  --pyr-ok-fg: #071a0f;
-  --pyr-ok-soft: #14301f;
+  --pyr-danger: #ee8878;
+  --pyr-danger-fg: #161a19;
+  --pyr-danger-soft: #3a2320;
+  --pyr-warn: #e8a08f;
+  --pyr-warn-fg: #161a19;
+  --pyr-warn-soft: #2b3231;
+  --pyr-ok: #e7ece9;
+  --pyr-ok-fg: #161a19;
+  --pyr-ok-soft: #2b3231;
 
-  --pyr-group-guardsmen-soft: #173321;
-  --pyr-group-guardsmen-strong: #7fd48f;
-  --pyr-group-guardsmen-edge: #63e585;
-  --pyr-group-specialists-soft: #172436;
-  --pyr-group-specialists-strong: #7fb2f0;
-  --pyr-group-specialists-edge: #78b4ff;
-  --pyr-group-engineers-soft: #352a14;
-  --pyr-group-engineers-strong: #e6b85c;
-  --pyr-group-engineers-edge: #f1bc51;
-  --pyr-group-monsters-soft: #2a1e38;
-  --pyr-group-monsters-strong: #c39af0;
-  --pyr-group-monsters-edge: #c394f6;
-  --pyr-group-mercenaries-soft: #38191b;
-  --pyr-group-mercenaries-strong: #f08a8a;
-  --pyr-group-mercenaries-edge: #f58585;
+  --pyr-group-guardsmen-soft: #304337;
+  --pyr-group-guardsmen-strong: #84ce93;
+  --pyr-group-guardsmen-edge: #84ce93;
+  --pyr-group-specialists-soft: #313f48;
+  --pyr-group-specialists-strong: #8fbcee;
+  --pyr-group-specialists-edge: #8fbcee;
+  --pyr-group-engineers-soft: #413e31;
+  --pyr-group-engineers-strong: #ddb86e;
+  --pyr-group-engineers-edge: #ddb86e;
+  --pyr-group-monsters-soft: #3b3a47;
+  --pyr-group-monsters-strong: #c0a0ec;
+  --pyr-group-monsters-edge: #c0a0ec;
+  --pyr-group-mercenaries-soft: #433837;
+  --pyr-group-mercenaries-strong: #ec9391;
+  --pyr-group-mercenaries-edge: #ec9391;
 
   --pyr-shadow-card: 0 1px 2px #00000066;
   --pyr-shadow-pop: 0 8px 24px -8px #000000a6;
   --pyr-shadow-modal: 0 24px 56px -14px #000000bf;
-
-  --pyr-texture:
-    radial-gradient(80rem 40rem at 50% -12rem, #d9963c14, transparent 70%),
-    radial-gradient(50rem 30rem at 100% 0, #74bde40f, transparent 65%);
 
   color-scheme: dark;
 }
@@ -370,25 +365,18 @@
 
   body {
     @apply bg-bg text-fg antialiased;
-    background-image: var(--pyr-texture);
-    background-attachment: fixed;
-    background-repeat: no-repeat;
   }
 
-  /* Headings carry the display serif; the body stays on the sans. Set on the element so a
-     section's own H3/H4 gets the voice without every section file repeating a class.
-
-     Fraunces is drawn for a size: at its default optical size it is a text face, and titles want a
-     little more. `opsz 28` opens the letterforms without turning them into a poster, and `SOFT 20`
-     takes the edge off the serifs; `WONK 0` keeps the straight-sided g and y, because a title here
-     is a label on a card, not a headline. Weight is left to `font-weight`. */
-  :where(h1, h2, h3, h4) {
-    font-family: var(--font-display);
-    font-variation-settings:
-      'opsz' 28,
-      'SOFT' 20,
-      'WONK' 0;
-    letter-spacing: -0.006em;
+  /* Titles are set in the text face, heavier and a hair tighter (D-19). The display serif used to
+     title every card, which is what made the page read as an article rather than as an instrument;
+     it now sets numerals and nothing else. Set on the elements rather than through `:where()`,
+     because Preflight's own `h1–h6 { font-weight: inherit }` would otherwise win. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
   }
 
   /* Figures are compared column by column all over the results, so they are always tabular. */
@@ -422,6 +410,19 @@
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* The chosen row of a single-select list and the chosen segment of a segmented button. The tonal
+   step alone is quiet by design (the accent is a metal, not a hue), so the choice is also drawn: a
+   rule on the leading edge of a list row, under a segment. A `box-shadow` rather than a border, so
+   the row keeps its height and the hairline between rows keeps its place. Declared with `@utility`
+   rather than in `@layer utilities`, because `selected:` has to be able to reach it. */
+@utility selection-rule-start {
+  box-shadow: inset 3px 0 0 0 var(--pyr-fg);
+}
+
+@utility selection-rule-bottom {
+  box-shadow: inset 0 -2px 0 0 var(--pyr-fg);
 }
 
 @layer utilities {
@@ -466,19 +467,39 @@
     font-feature-settings: 'tnum' 1;
   }
 
-  /* A section or dialog title: the display serif, a hair tighter. Same optical size and softness
-     as a heading, for the titles that are not a heading element. */
+  /* A title that is not a heading element: the same sans voice as `h1`–`h4`. */
   .title-face {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* The numeral face (D-19). Fraunces no longer titles anything; it sets the roman tier on a tile
+     and the one hero figure the March pane opens with. `opsz 144` is the display cut, `SOFT 0` and
+     `WONK 0` keep the serifs crisp and the letterforms straight-sided. */
+  .numeral-face {
     font-family: var(--font-display);
     font-variation-settings:
-      'opsz' 28,
-      'SOFT' 20,
+      'opsz' 144,
+      'SOFT' 0,
       'WONK' 0;
+    font-weight: 500;
     letter-spacing: -0.01em;
   }
 
-  /* The thin bronze rule that opens a card header; decorative, never a boundary. */
-  .rule-accent {
-    background-image: linear-gradient(90deg, var(--pyr-accent-line), transparent 70%);
+  .hero-face {
+    font-family: var(--font-display);
+    font-variation-settings:
+      'opsz' 144,
+      'SOFT' 0,
+      'WONK' 0;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* The setup sheet: one continuous surface, its sections told apart by a hairline and by space.
+     The March card is the page's only radiused, elevated object (D-19). */
+  .setup-sheet > * + * {
+    border-top: 1px solid var(--pyr-line);
   }
 }

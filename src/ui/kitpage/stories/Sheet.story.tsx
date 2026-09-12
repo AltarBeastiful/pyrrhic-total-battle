@@ -9,7 +9,7 @@ const story: KitStory = {
       <Sheet
         trigger={<Button variant="secondary">Open the unit sheet</Button>}
         title="Archer 3"
-        description="Guardsmen · tier 3 · ranged"
+        description="Guardsmen III, ranged"
         footer={
           <>
             <Button variant="quiet">Leave out</Button>
@@ -18,7 +18,7 @@ const story: KitStory = {
         }
       >
         <div className="flex flex-col gap-2">
-          <p>Health 2 310 · Strength 1 940 · Speed 24</p>
+          <p>Health 2 310, strength 1 940, speed 24</p>
           <p className="text-muted text-sm">
             The sheet slides up from the bottom of a phone and in from the right once there is room.
           </p>

@@ -40,7 +40,7 @@ const sheet = tv({
     ],
     dialog: 'flex min-h-0 flex-1 flex-col outline-none',
     header: 'flex items-start gap-3 border-b border-line px-4 py-3 sm:px-5',
-    title: 'font-display text-lg text-fg',
+    title: 'title-face text-lg text-fg',
     description: 'mt-2 block text-sm text-muted',
     body: 'min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5',
     footer: 'flex flex-wrap justify-end gap-2 border-t border-line px-4 py-3 sm:px-5',

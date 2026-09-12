@@ -187,7 +187,7 @@ export interface ChipValue {
   text: string;
 }
 
-/** What a source is worth, as a chip says it: two keys at most, then "+2 more". */
+/** What a source is worth, as a chip says it: two keys at most, then "and 2 more". */
 export function chipValue(bonus: BonusLike, limit = 2): ChipValue {
   const lines = chipLines(bonus);
   const key = firstKey(bonus);
@@ -195,7 +195,7 @@ export function chipValue(bonus: BonusLike, limit = 2): ChipValue {
   const text =
     lines.length === 0
       ? ''
-      : lines.slice(0, limit).join(' · ') + (extra > 0 ? ` · +${String(extra)} more` : '');
+      : lines.slice(0, limit).join(', ') + (extra > 0 ? ` and ${String(extra)} more` : '');
   return { ...(key === undefined ? {} : { key }), text };
 }
 

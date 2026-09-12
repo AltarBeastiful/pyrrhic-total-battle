@@ -95,7 +95,7 @@ export function storyLines(
 /** The journal header the drawer shows and the copied text repeats. */
 export function journalHeader(journal: BattleJournal, enemy: EnemyFormation): string {
   const squads = enemySquads(enemy).length;
-  return `${String(journal.rounds)} rounds · ${String(journal.friendlyHits)} friendly hits · ${String(squads)} enemy squads`;
+  return `${String(journal.rounds)} rounds, ${String(journal.friendlyHits)} hits of yours, ${String(squads)} enemy squads`;
 }
 
 /** The whole journal as plain text, for the clipboard. */

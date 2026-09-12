@@ -23,13 +23,27 @@ import { MEDIUM, useMediaQuery } from './useMediaQuery';
 /** As many tiles as the bar can carry without crowding the figures; the rest are counted. */
 const MAX_TILES = 6;
 
-/** "avg 1.67M · min 1.29M · 2 hits", the march it belongs to, and whether it still stands. */
+/** One figure of the answer: the number first, its name under it — a caption, never an eyebrow. */
+function BarFigure({ value, name }: { value: string; name: string }) {
+  return (
+    <span className="flex shrink-0 flex-col leading-tight">
+      <span className="nums text-sm font-medium">{value}</span>
+      <span className="text-muted text-xs">{name}</span>
+    </span>
+  );
+}
+
+/**
+ * The answer the bar carries: the figures of the last run, a mark when the setup has moved under
+ * them, and — from a medium window — the unit tiles of the march they describe.
+ *
+ * A phone gets the figures too (owner, 2026-09-13): the expected damage and the hits landed, as two
+ * labelled cells rather than a string joined by middle dots. What a compact window does *not* get is
+ * the tiles, which is the part that needed the room.
+ */
 function MarchAnswer({ stale }: { stale: boolean }) {
   const last = useResultStore((state) => state.last);
   const medium = useMediaQuery(MEDIUM);
-
-  // A compact window has room for the brand and the two controls, and nothing else.
-  if (!medium) return null;
 
   if (last === null) {
     return (
@@ -48,11 +62,13 @@ function MarchAnswer({ stale }: { stale: boolean }) {
   const rest = result.stacks.length - units.length;
 
   return (
-    <Cluster gap={3} wrap={false} className="min-w-0 flex-1">
-      <span className="text-muted nums truncate text-sm">
-        {`avg ${compact(summary.avgDamage)} · min ${compact(summary.minDamage)} · ${amount(hits)} `}
-        {hits === 1 ? 'hit' : 'hits'}
-      </span>
+    <Cluster gap={3} wrap={false} className="min-w-0 flex-1 overflow-hidden">
+      <BarFigure value={compact(summary.avgDamage)} name="expected" />
+      {medium ? <BarFigure value={compact(summary.minDamage)} name="worst opening" /> : null}
+      <BarFigure
+        value={amount(hits)}
+        name={medium ? (hits === 1 ? 'hit landed' : 'hits landed') : hits === 1 ? 'hit' : 'hits'}
+      />
 
       {/* The mark is a word, never a colour on its own; what it means is spoken in full. */}
       {stale ? (
@@ -61,12 +77,14 @@ function MarchAnswer({ stale }: { stale: boolean }) {
         </Badge>
       ) : null}
 
-      <Cluster gap={1} wrap={false} className="min-w-0 overflow-hidden">
-        {units.map((unit) => (
-          <UnitTile key={unit.id} unit={unit} size="sm" />
-        ))}
-        {rest > 0 ? <Badge>+{amount(rest)}</Badge> : null}
-      </Cluster>
+      {medium ? (
+        <Cluster gap={1} wrap={false} className="min-w-0 overflow-hidden">
+          {units.map((unit) => (
+            <UnitTile key={unit.id} unit={unit} size="sm" />
+          ))}
+          {rest > 0 ? <Badge>+{amount(rest)}</Badge> : null}
+        </Cluster>
+      ) : null}
     </Cluster>
   );
 }
@@ -104,11 +122,11 @@ export function AppBar() {
     <header className="bg-bg sticky top-0 z-30">
       <div className="border-line border-b px-4 sm:px-6">
         <Cluster justify="between" wrap={false} gap={3} className="h-appbar mx-auto max-w-screen-2xl">
-          <Cluster gap={2} align="baseline" wrap={false}>
-            <span aria-hidden="true" className="text-accent">
+          <Cluster gap={2} align="baseline" wrap={false} className="shrink-0">
+            <span aria-hidden="true">
               <GuardsmenIcon />
             </span>
-            <h1 className="font-display text-lg">Pyrrhic</h1>
+            <h1 className="text-lg">Pyrrhic</h1>
             <span className="text-muted hidden text-xs sm:inline">Total Battle</span>
           </Cluster>
 

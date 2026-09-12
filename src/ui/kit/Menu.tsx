@@ -32,7 +32,7 @@ const menu = tv({
     ],
     list: 'flex max-h-96 flex-col gap-1 overflow-y-auto outline-none',
     section: 'mb-2 flex flex-col gap-1 last:mb-0',
-    sectionTitle: 'px-2 pt-1 pb-1 font-sans text-xs font-semibold tracking-wide text-muted uppercase',
+    sectionTitle: 'px-2 pt-1 pb-1 font-sans text-xs font-semibold text-muted',
     separator: 'my-2 h-px w-full bg-line',
   },
 });

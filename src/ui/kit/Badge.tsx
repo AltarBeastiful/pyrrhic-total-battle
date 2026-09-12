@@ -16,7 +16,7 @@ const badge = tv({
   variants: {
     tone: {
       neutral: 'bg-raised text-fg',
-      accent: 'bg-accent-soft text-accent',
+      accent: 'bg-accent text-accent-fg',
       info: 'bg-info-soft text-info',
       ok: 'bg-ok-soft text-ok',
       warn: 'bg-warn-soft text-warn',

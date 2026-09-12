@@ -78,7 +78,7 @@ test('pressing a row in the picker hires it, and pressing its own row gives it b
   expect(within(picker()).getByRole('row', { name: 'Bear V, tier 5' })).toBeTruthy();
 });
 
-test('the stepper says how many you own, and Unlimited takes the limit off again', async () => {
+test('the count says how many you own, and Unlimited takes the limit off again', async () => {
   const user = userEvent.setup();
   render(<MercenariesSection />);
   await user.click(within(picker()).getByRole('row', { name: 'Bear V, tier 5' }));
@@ -89,12 +89,20 @@ test('the stepper says how many you own, and Unlimited takes the limit off again
   fireEvent.blur(owned);
   expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 22 }]);
 
-  // The stepper is the row's own control: using it never unticks the row it sits in.
+  // The count is the row's own control: using it never unticks the row it sits in.
   expect(within(ownedList()).getByRole('row', { name: 'Bear V, tier 5' }).getAttribute('aria-selected')).toBe(
     'true',
   );
 
-  await user.click(within(row).getByRole('button', { name: 'Increase Owned' }));
+  // An owned count is typed, not walked to, so it carries no step buttons (owner, 2026-09-13);
+  // inside a selectable row the arrow keys belong to the list, so typing is the whole interaction.
+  expect(within(row).queryByRole('button', { name: 'Increase Owned' })).toBeNull();
+  expect(within(row).queryByRole('button', { name: 'Decrease Owned' })).toBeNull();
+
+  fireEvent.focus(owned);
+  expect((owned as HTMLInputElement).selectionEnd).toBe((owned as HTMLInputElement).value.length);
+  fireEvent.change(owned, { target: { value: '23' } });
+  fireEvent.blur(owned);
   expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 23 }]);
 
   const unlimited = within(row).getByRole('switch', { name: 'Unlimited' }) as HTMLInputElement;
@@ -173,7 +181,8 @@ test('the custom sheet adds a mercenary the tables do not carry', async () => {
   render(<MercenariesSection />);
 
   await user.click(screen.getByRole('button', { name: 'Custom mercenary' }));
-  const sheet = screen.getByRole('dialog');
+  // The sheet is a chunk of its own (T-06); Vitest transforms it on demand, so give it a moment.
+  const sheet = await screen.findByRole('dialog', {}, { timeout: 10_000 });
 
   await user.type(within(sheet).getByLabelText('Name'), 'Spider Queen');
   fireEvent.change(within(sheet).getByLabelText('Health'), { target: { value: '420000' } });
@@ -190,4 +199,4 @@ test('the custom sheet adds a mercenary the tables do not carry', async () => {
 
   expect(within(ownedList()).getByRole('row', { name: 'Spider Queen, custom' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Edit Spider Queen' })).toBeTruthy();
-});
+}, 20_000);

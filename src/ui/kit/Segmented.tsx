@@ -37,7 +37,7 @@ const segmentedStyles = tv({
     group: 'rounded-control border-field/60 divide-field/60 flex w-full divide-x overflow-hidden border',
     item: cn(
       'group text-muted flex min-w-0 flex-1 items-center justify-center gap-2 px-2 font-medium sm:px-3',
-      'selected:bg-accent-soft selected:text-fg',
+      'selected:bg-accent-soft selected:text-fg selected:selection-rule-bottom',
       stateLayer,
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
       ring,

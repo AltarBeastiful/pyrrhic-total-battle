@@ -92,6 +92,14 @@ export interface MarchStackRow {
   position?: number;
   /** How many times this stack strikes before it falls (the journal's own counter). */
   hits: number;
+  /** Damage this stack deals across the whole battle, summed from the journal. */
+  damage: number;
+  /**
+   * That damage as a fraction of the biggest stack's, `0`–`1`. The kill-order column draws it as a
+   * bar: total HP is nearly flat by construction (the sizer gives every stack the same ceiling), so
+   * HP bars would all be the same length, while damage dealt varies by an order of magnitude.
+   */
+  damageShare: number;
   /** Units lost: the whole stack, since the model plays the battle to the end of the army. */
   lost: number;
   /** Gold to bring them back, this stack alone. */
@@ -103,11 +111,16 @@ export interface MarchStackRow {
   fallsLast: boolean;
 }
 
-/** How many hits one stack lands in a journal. */
-function hitsOf(summary: BattleSummary, unitId: string): number {
-  return summary.journals.enemyFirst.entries.filter(
-    (entry) => entry.actor === 'army' && entry.unitId === unitId,
-  ).length;
+/** Every blow one stack lands in a journal: how many, and how much they came to. */
+function strikesOf(summary: BattleSummary, unitId: string): { hits: number; damage: number } {
+  let hits = 0;
+  let damage = 0;
+  for (const entry of summary.journals.enemyFirst.entries) {
+    if (entry.actor !== 'army' || entry.unitId !== unitId) continue;
+    hits += 1;
+    damage += entry.damage;
+  }
+  return { hits, damage };
 }
 
 /** A stack the player edited down to zero: out of the battle, still on the list so it can come back. */
@@ -142,7 +155,8 @@ export function marchRows(
       unit,
       stack,
       ...(live.has(stack.unitId) ? { position: index + 1 } : {}),
-      hits: hitsOf(summary, stack.unitId),
+      ...strikesOf(summary, stack.unitId),
+      damageShare: 0,
       lost: stack.count,
       reviveGold: Math.round(reviveOne(unit, stack.count, request.recovery).gold),
       retrainSilver: Math.round(retrain.silver),
@@ -150,7 +164,9 @@ export function marchRows(
       fallsLast: mercenariesLast && (group === 'mercenaries' || group === 'monsters'),
     });
   });
-  return rows;
+
+  const loudest = rows.reduce((most, row) => Math.max(most, row.damage), 0);
+  return loudest <= 0 ? rows : rows.map((row) => ({ ...row, damageShare: row.damage / loudest }));
 }
 
 /** The counts as the game wants them typed back in: one line per stack, "ARC3 2310". */

@@ -2,7 +2,8 @@
  * One choice out of a handful of unlike rules — Material 3's **single-select list** (design plan
  * §7.4). Every option is a full-width list item: a leading radio mark, the title, one quiet line of
  * supporting text, and an optional trailing control. The row itself is the target, so there is
- * nothing small to hit; the chosen row is tonal (`accent-soft`) and the others wear a state layer.
+ * nothing small to hit; the chosen row is tonal with a rule down its leading edge, and the others
+ * wear a state layer.
  *
  * This is not a `Select`: a select hides the choices behind a trigger and reads its options one at a
  * time. Use `OptionList` when the *reasons* matter (the stacking method, the objective) and `Select`
@@ -77,7 +78,9 @@ const optionList = tv({
   },
   variants: {
     isSelected: {
-      true: { row: 'bg-accent-soft' },
+      // A tonal step plus a rule down the leading edge: the accent is a metal, so the chosen row is
+      // marked by structure rather than by a coloured block (D-19).
+      true: { row: 'bg-accent-soft selection-rule-start' },
       false: {},
     },
     isDisabled: {

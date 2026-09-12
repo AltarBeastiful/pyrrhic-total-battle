@@ -20,7 +20,7 @@ import { eventEnemyFormation } from '@/state/derive';
 import { RECOVERY_MODES } from '@/state/schema';
 import { selectActiveSetup, useStore } from '@/state/store';
 import { PoolBadge } from '@/ui/icons';
-import { Banner, Card, NumberStepper, OptionList, Segmented, Select, Switch } from '@/ui/kit';
+import { Banner, Card, NumberInput, NumberStepper, OptionList, Segmented, Select, Switch } from '@/ui/kit';
 import { Cluster, Grid, Stack } from '@/ui/layout';
 import { useResultStore } from '@/ui/resultStore';
 import { MEDIUM, useMediaQuery } from '@/ui/shell/useMediaQuery';
@@ -100,9 +100,9 @@ export function BattleSection() {
   };
 
   return (
-    <Card as="section" id="battle" aria-labelledby={titleId} className="@container">
+    <Card tone="none" shape="flat" as="section" id="battle" aria-labelledby={titleId} className="@container">
       <Stack gap={4}>
-        <h2 id={titleId} className="font-display text-lg">
+        <h2 id={titleId} className="text-lg">
           Battle
         </h2>
 
@@ -159,15 +159,17 @@ export function BattleSection() {
           </Stack>
 
           {/*
-            A capacity runs to eight figures, and the field has to hold the glyph, the number and
-            both step buttons: each one keeps 12 rem of its own and the row wraps rather than cutting
-            "84,300" down to "84,".
+            A capacity is typed or pasted off the Start March screen, never walked to: nobody steps
+            to 84,300, so the three pools are plain number inputs (owner, 2026-09-13). Clicking one
+            selects the whole value, so the next keystroke replaces it; the arrow keys, the `Shift`
+            and `Ctrl` jumps and the locale parsing all stay. Without the two buttons the field only
+            has to hold the glyph and seven figures, so it keeps 9 rem instead of 12.
           */}
           <Cluster gap={3} align="start">
             {POOLS.map((pool) => (
-              <NumberStepper
+              <NumberInput
                 key={pool}
-                className="min-w-48 flex-1"
+                className="min-w-36 flex-1"
                 label={POOL_LABELS[pool]}
                 description={POOL_HINTS[pool]}
                 prefix={<PoolBadge pool={pool} size="sm" />}
