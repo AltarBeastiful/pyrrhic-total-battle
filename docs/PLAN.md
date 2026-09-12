@@ -57,7 +57,9 @@ tests/
 - Export: `pyrrhic-<profile>-<date>.json` (full profile or single setup/stack). Import merges or replaces, with preview.
 - Share URL: `https://<host>/#c=<base64url(deflate-raw(JSON))>`. Two kinds, chosen in the share dialog:
   **profile link** (whole account: tiers, mercenaries, all bonus source values, setups) and **battle link** (one
-  battle setup + its result counts, small enough to paste in clan chat). Payload has defaults stripped and a `kind` field. Opening a share link shows a "Load shared config → as new profile / replace active" prompt; nothing
+  battle setup + its result counts, small enough to paste in clan chat). Payload has defaults stripped and a `kind` field.
+  Size budget: a battle link must stay under 2,000 characters (Discord message limit for most users); a profile
+  link may be longer (browsers accept far more) and is also offered as a QR code / JSON file. See ADR-0005. Opening a share link shows a "Load shared config → as new profile / replace active" prompt; nothing
   is auto-overwritten. Target < 2 KB for a typical profile (browser limits are far above that).
 
 ### 2.2 Contributions and game-data updates
@@ -125,9 +127,10 @@ Verified against the user's TotalStack output (see review §3).
 
 ### 3.3 Kill order
 A kill order is an ordered list of *stacks* (unit types), first to die first. Sources:
-- **Elite Preservation**: engineers (any order) → leadership troops by tier ascending, within a tier
-  specialists → guardsmen and melee → ranged → mounted → flying; monsters and mercenaries ordered the same way
-  inside their own pools (tier ascending) but pools are independent (no cross-pool constraint).
+- **Elite Preservation**: engineers (any order) → leadership troops by tier ascending; within a tier
+  specialists before guardsmen, and by category ranged → melee → mounted → flying (verified on the fixture:
+  ARC1 > SP1 > RD1 > ARC2 > SP2 > RD3 by total HP); monsters and mercenaries ordered the same way inside their own
+  pools (tier ascending) but pools are independent (no cross-pool constraint).
 - **M's Preservation**: EP order, then the constraint chain *every leadership stack HP > every mercenary
   stack HP > every monster stack HP* (mercs die after troops, monsters after mercs). Option "Monsters Last"
   variant (monsters after troops, mercs unconstrained) kept as a flag.
@@ -246,8 +249,10 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 - S-20 `bonuses.ts` aggregation + effective HP/strength per unit; tests against review §3 numbers.
 - S-21 Kill order builders (EP, MP, Monsters Last, custom) with tests.
 - S-22 Stack sizing algorithm (flat profile, strict ordering, exact fill, caps, exclusions).
-      Regression test: the user's TotalStack config must reproduce SP1 929 / ARC1 930 / RD1 464 / SP2 513 /
-      ARC2 514 / RD3 143 (± 1 unit).
+      Regression test (`tests/fixtures/totalstack-2026-09-12-ep.json`): leadership 4100, health bonuses
+      guardsmen 39.5 / melee-ranged-mounted 1 / army 3, units ARC1 SP1 RD1 ARC2 SP2 RD3 must give
+      930 / 929 / 464 / 514 / 513 / 143 (± 1 unit each, pool exactly filled, HP strictly decreasing in that order:
+      200,182 > 199,967 > 199,752 > 199,149 > 198,762 > 196,997). Mercenaries at caps 22/24/23/12.
 - S-23 Round-to-10s mode.
 - S-24 Results UI: pools, pills, popovers, remove/restore, sort/reset order, save stack, share result.
 - S-25 Engine in a Web Worker with cancel/progress; main-thread fallback.
@@ -296,3 +301,13 @@ order, manual counts) so adding them later is UI work, not a redesign.
 4. (answered) English only.
 5. (answered) Share links exist for both a profile and a battle setup.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
+
+## 7. Review log
+- 2026-09-12 — Plan reviewed against the extracted data and the TotalStack fixture. Corrections: within-tier kill
+  order is ranged → melee → mounted (was written melee first); fixture numbers written out with total HP per stack;
+  share-link size budget added (Discord 2,000-char limit). Technical choices recorded as ADRs in `docs/decisions/`
+  (0001 TotalStack fetching — pending; 0002 client-only architecture; 0003 application stack; 0004 local
+  persistence and schema; 0005 share-link encoding; 0006 engine design; 0007 game-data format and contributions).
+  Known thin spots: only one stacking fixture (guardsmen G1–G3, no engineers/monsters, M's Preservation not
+  exercised) — S-22 needs at least one fixture with monsters + MP before the engine is called done; the battle
+  turn model is unvalidated (S-30).
