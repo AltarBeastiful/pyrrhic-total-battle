@@ -80,10 +80,30 @@ describe('summary of run ep-8stacks', () => {
     expect(summary.stackCount).toBe(12);
   });
 
-  it('keeps minimum ≤ average ≤ maximum (the average adds the double-damage expectation)', () => {
-    expect(summary.minDamage).toBeLessThan(summary.maxDamage);
-    expect(summary.avgDamage).toBeGreaterThan((summary.minDamage + summary.maxDamage) / 2 - 1);
-    expect(summary.avgDamage).toBeLessThan(summary.maxDamage * 1.1);
+  it('keeps minimum ≤ average ≤ maximum, the average being exactly the midpoint', () => {
+    expect(summary.minDamage).toBeLessThanOrEqual(summary.avgDamage);
+    expect(summary.avgDamage).toBeLessThanOrEqual(summary.maxDamage);
+    expect(summary.avgDamage).toBe(Math.round((summary.minDamage + summary.maxDamage) / 2));
+  });
+
+  it('counts expected double damage in the maximum only, never in the minimum or the journals', () => {
+    const plainArmyFirst = summary.journals.armyFirst.totalDamage;
+    const riders = result.stacks.filter((stack) => stack.doubleDamageChance > 0);
+    expect(riders.length).toBeGreaterThan(0);
+    // The riders' 5 % is the whole difference between the plain army-first journal and the maximum.
+    const expected = result.stacks.reduce(
+      (sum, stack) =>
+        sum +
+        (summary.journals.armyFirst.entries.filter(
+          (entry) => entry.actor === 'army' && entry.unitId === stack.unitId,
+        ).length *
+          stack.damagePerHit *
+          stack.doubleDamageChance) /
+          100,
+      0,
+    );
+    expect(summary.maxDamage).toBe(Math.round(plainArmyFirst + expected));
+    expect(summary.minDamage).toBe(summary.journals.enemyFirst.totalDamage);
   });
 
   it('splits the average across the pools it came from', () => {
@@ -225,5 +245,55 @@ describe('degenerate inputs', () => {
     expect(summary.journals.enemyFirst.entries).toHaveLength(1);
     expect(summary.journals.enemyFirst.friendlyHits).toBe(0);
     expect(summary.journals.armyFirst.friendlyHits).toBe(1);
+  });
+});
+
+describe('QA regression: average must never exceed the maximum', () => {
+  it('orders the three figures on the ten-troop-type, leadership 4100 march', () => {
+    const units = troopSet('SW1', 'ARC1', 'SP1', 'SP2', 'ARC2', 'RD1', 'SP3', 'ARC3', 'RD2', 'RD3');
+    const request = makeRequest({
+      units,
+      housing: { leadership: 4100, authority: 0, dominance: 0 },
+    });
+    const summary = simulateBattle(sizeStacks(request), request);
+
+    expect(summary.minDamage).toBe(925_723);
+    expect(summary.avgDamage).toBe(954_471);
+    expect(summary.maxDamage).toBe(983_219);
+    expect(summary.minDamage).toBeLessThan(summary.avgDamage);
+    expect(summary.avgDamage).toBeLessThan(summary.maxDamage);
+  });
+
+  it('holds for every captured army and both preservation methods', () => {
+    const armies = [
+      makeRequest({
+        units: [
+          ...troopSet('ARC1', 'SP2', 'ARC2', 'RD1', 'SP3', 'ARC3', 'RD2', 'RD3'),
+          ...monsterSet('WE', 'BB', 'ED', 'SG'),
+        ],
+      }),
+      makeRequest({
+        units: [
+          ...troopSet('SW1', 'ARC1', 'SP1', 'SP2', 'ARC2', 'RD1', 'SP3', 'ARC3', 'RD2', 'RD3'),
+          ...monsterSet('WE', 'BB', 'ED', 'SG'),
+        ],
+        options: { method: 'ms' },
+      }),
+      makeRequest({
+        units: [
+          ...troopSet('ARC1', 'SP2', 'ARC2', 'RD1', 'SP3', 'ARC3', 'RD2', 'RD3'),
+          ...mercenarySet('BER5'),
+        ],
+        caps: { 'bear-5': 6 },
+        options: { method: 'ms', roundTo10: true },
+      }),
+    ];
+    for (const request of armies) {
+      const summary = simulateBattle(sizeStacks(request), request);
+      expect(summary.minDamage).toBeLessThanOrEqual(summary.avgDamage);
+      expect(summary.avgDamage).toBeLessThanOrEqual(summary.maxDamage);
+      const byPool = Object.values(summary.damageByPool).reduce((sum, value) => sum + value, 0);
+      expect(Math.abs(byPool - summary.avgDamage)).toBeLessThanOrEqual(2);
+    }
   });
 });

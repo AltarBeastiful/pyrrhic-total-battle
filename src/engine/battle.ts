@@ -114,12 +114,23 @@ const MODEL_NOTES = [
   'Per-hit damage = count × strength × (1 + Σ strength + event) + count × base strength × strengthAgainst/100; verified on every line of three TotalStack journals and two in-game reports.',
   "Enemy damage line = the destroyed stack's total HP; the enemy always wipes our highest-HP living stack (10/10 kills in the in-game reports).",
   "Summary damage uses the journal per-hit value (features counted once). TotalStack's Battle Summary counts the strength-against part twice; that is unexplained, so we do not copy it — our MINIMUM will read lower than its.",
-  "Average = (minimum + maximum) / 2 with each stack's double-damage chance applied as a ×(1 + chance) expectation; a double damage is a plain ×2 on a hit (observed once in game).",
+  'Minimum = the enemy strikes first and nothing lucky happens: the enemy-first journal total, exactly the sum of its per-hit lines, with no probabilistic extra.',
+  "Maximum = we strike first and every stack's double-damage chance pays off on average: the army-first journal total with each stack multiplied by (1 + chance/100). A double damage is a plain ×2 on one hit (observed once in game).",
+  'Average = (minimum + maximum) / 2, so minimum ≤ average ≤ maximum always. Only the maximum and the average count expected double damage; the journals list the plain per-hit damage.',
   'Strike-two-squads is not modelled: no in-game observation of it yet, so it never changes a damage number.',
   'armyStrengthAgainstEpicMonsters is treated as an extra strength-against that applies to every target (we only ever fight epic monsters).',
   "swarmUnits strength-against counts only while the Arachne's event id is in activeEvents.",
   "Open: in both in-game reports one mounted stack (Rider I) was killed before its turn while the next stack took the friendly slot; we keep TotalStack's HP-order rule, so our journal has one extra friendly hit per such fight.",
 ] as const;
+
+/**
+ * Expected multiplier of one stack's damage once its double-damage chance is priced in: a proc is a plain ×2
+ * on a single hit, so a 5 % chance is worth ×1.05 on average. Only the maximum and the average use it — the
+ * minimum and the journal lines carry the plain damage.
+ */
+export function expectedDoubleDamageFactor(stack: Pick<Stack, 'doubleDamageChance'>): number {
+  return 1 + stack.doubleDamageChance / 100;
+}
 
 export function simulateBattle(result: StackResult, request: StackRequest): BattleSummary {
   const stacks = result.stacks;
@@ -130,26 +141,29 @@ export function simulateBattle(result: StackResult, request: StackRequest): Batt
   const enemyFirstHits = hitsPerStack(stacks, enemyStacks, false);
   const armyFirstHits = hitsPerStack(stacks, enemyStacks, true);
   const damageByPool: Record<Pool, number> = { leadership: 0, authority: 0, dominance: 0 };
-  let avgDamage = 0;
+  // Minimum: the enemy strikes first and nothing procs. Maximum: we strike first and every stack's
+  // double-damage chance pays off on average. The average is the midpoint, so min ≤ avg ≤ max by construction.
+  let maximum = 0;
   stacks.forEach((stack, index) => {
-    const averageHits = ((enemyFirstHits[index] ?? 0) + (armyFirstHits[index] ?? 0)) / 2;
-    const expected = averageHits * stack.damagePerHit * (1 + stack.doubleDamageChance / 100);
-    damageByPool[stack.pool] += expected;
-    avgDamage += expected;
+    const worst = (enemyFirstHits[index] ?? 0) * stack.damagePerHit;
+    const best = (armyFirstHits[index] ?? 0) * stack.damagePerHit * expectedDoubleDamageFactor(stack);
+    maximum += best;
+    damageByPool[stack.pool] += (worst + best) / 2;
   });
   for (const pool of Object.keys(damageByPool) as Pool[]) {
     damageByPool[pool] = Math.round(damageByPool[pool]);
   }
 
+  const minimum = enemyFirst.totalDamage;
+  const average = Math.round((minimum + maximum) / 2);
   const recovery = recoveryCosts(stacks, request.units, request.recovery).plan;
   // The ratios are computed from the *displayed* (rounded) average, the way TotalStack's summary does it.
-  const average = Math.round(avgDamage);
   const per = (cost: number): number => (cost > 0 ? average / cost : 0);
 
   return {
     stackCount: stacks.length,
-    minDamage: enemyFirst.totalDamage,
-    maxDamage: armyFirst.totalDamage,
+    minDamage: minimum,
+    maxDamage: Math.round(maximum),
     avgDamage: average,
     damageByPool,
     recovery,
