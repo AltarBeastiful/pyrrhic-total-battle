@@ -13,6 +13,17 @@ export function amount(value: number): string {
   return NUMBER.format(Math.round(value));
 }
 
+const COMPACT = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 });
+
+/**
+ * The same figure with the digits a glance needs: "1.67M", "890K". Only for places where the line
+ * has to stay short — the app bar's answer — never where a number is read off and typed into the game.
+ */
+export function compact(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  return COMPACT.format(Math.round(value));
+}
+
 /** A ratio such as damage per silver: two decimals while it is small, whole numbers above 100. */
 export function ratio(value: number): string {
   if (!Number.isFinite(value)) return '—';

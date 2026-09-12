@@ -62,20 +62,20 @@ const story: KitStory = {
       </Stack>
 
       <Stack gap={2}>
-        <Heading>Split — stacked on a phone, two scrolling columns from lg</Heading>
+        <Heading>Split — one column on a phone, a page and its sticky pane from xl</Heading>
         <Split
           start={
             <Stack gap={2}>
               <Box>editor</Box>
-              <Box>five twelfths</Box>
-              <Box>scrolls on its own</Box>
+              <Box>fluid</Box>
+              <Box>the page scrolls as one</Box>
             </Stack>
           }
           end={
             <Stack gap={2}>
               <Box>result</Box>
-              <Box>seven twelfths</Box>
-              <Box>scrolls on its own</Box>
+              <Box>a pane 27 rem wide</Box>
+              <Box>sticky under the app bar</Box>
             </Stack>
           }
         />

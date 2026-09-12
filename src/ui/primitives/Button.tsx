@@ -12,7 +12,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
   /** Trailing glyph (a chevron on a disclosure, an arrow on a "next"). Decorative too. */
   iconRight?: ReactNode;
-  /** Stretch to the width of the row — the sticky Generate button on a phone. */
+  /** Stretch to the width of the row. */
   fullWidth?: boolean;
 }
 

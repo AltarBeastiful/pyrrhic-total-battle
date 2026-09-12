@@ -61,8 +61,17 @@ export function housingField(page: Page, pool: 'Leadership' | 'Authority' | 'Dom
   return page.getByRole('textbox', { name: pool, exact: true });
 }
 
+/**
+ * The floating Generate button (design plan §5.3). Its accessible name carries the state, so the
+ * blocked one reads "Generate march: Add housing first"; the prefix is what every spec asks for.
+ */
 export function generateButton(page: Page): Locator {
-  return page.getByRole('button', { name: 'Generate', exact: true });
+  return page.getByRole('button', { name: /^Generate march/ });
+}
+
+/** The wrapper the button sits in: it carries `data-state` (ready / stale / running / blocked). */
+export function generateState(page: Page): Locator {
+  return generateButton(page).locator('xpath=..');
 }
 
 /** Fill the three housing capacities and run the engine, waiting for the summary to settle. */
@@ -80,7 +89,7 @@ export async function generate(
     await housingField(page, 'Dominance').fill(String(housing.dominance));
   }
   await generateButton(page).click();
-  await expect(generateButton(page)).toBeEnabled({ timeout: 30_000 });
+  await settle(page);
 }
 
 /** The shape of a stack chip's accessible name: "<short label> <count>", e.g. "ARC1 624". */
@@ -137,16 +146,57 @@ export function priorityField(page: Page): Locator {
 
 /** Wait until no Generate run is in flight (a priority search runs for up to eight seconds). */
 export async function settle(page: Page): Promise<void> {
-  await expect(generateButton(page)).toBeEnabled({ timeout: 30_000 });
+  await expect(generateState(page)).not.toHaveAttribute('data-state', 'running', { timeout: 30_000 });
 }
 
-/** Names of every profile in the switcher. */
-export async function profileNames(page: Page): Promise<string[]> {
-  const trigger = page.getByRole('combobox', { name: 'Active profile' });
-  await trigger.click();
-  const options = await page.getByRole('option').allInnerTexts();
+// ---- The account menu ---------------------------------------------------------------------------
+/** The top bar's one control; its accessible name is "Account: <profile name>". */
+export function accountButton(page: Page): Locator {
+  return page.getByRole('button', { name: /^Account: / });
+}
+
+export async function openAccountMenu(page: Page): Promise<Locator> {
+  await accountButton(page).click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+/** Open the menu and choose one item by name, waiting for the menu to close behind it. */
+export async function chooseInAccountMenu(page: Page, name: string | RegExp): Promise<void> {
+  await openAccountMenu(page);
+  await page.getByRole('menuitem', { name }).click();
+  await expect(page.getByRole('menu')).toBeHidden();
+}
+
+/** Rename the active profile through the menu and its dialog. */
+export async function renameProfile(page: Page, name: string): Promise<void> {
+  await chooseInAccountMenu(page, /^Rename profile/);
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Profile name').fill(name);
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(accountButton(page)).toHaveAccessibleName(`Account: ${name}`);
+}
+
+/** Wait until the debounced write has landed: the menu's one-word status says so. */
+export async function waitForSaved(page: Page): Promise<void> {
+  const menu = await openAccountMenu(page);
+  await expect(menu.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
   await page.keyboard.press('Escape');
-  return options.map((name) => name.trim());
+  await expect(page.getByRole('menu')).toBeHidden();
+}
+
+/** Names of every profile in the switcher, the active one without its spoken marker. */
+export async function profileNames(page: Page): Promise<string[]> {
+  const menu = await openAccountMenu(page);
+  const names = await menu
+    .getByRole('group', { name: 'Switch profile' })
+    .getByRole('menuitem')
+    .allInnerTexts();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  return names.map((name) => name.replace(/\s*\(active\)\s*$/, '').trim());
 }
 
 /** True when the document is wider than the viewport (PLAN §4: mobile first, never a sideways scroll). */

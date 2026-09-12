@@ -3,22 +3,36 @@
  * (ADR-0005). Both are the only ways a player moves an account between devices, so both are checked
  * against a genuinely empty second browser context.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { openApp, profileNames, watchConsole } from './helpers';
+import {
+  accountButton,
+  chooseInAccountMenu,
+  openApp,
+  profileNames,
+  renameProfile,
+  watchConsole,
+} from './helpers';
+
+/** The link the account menu just put on the clipboard. */
+async function clipboard(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const view = globalThis as unknown as {
+      navigator: { clipboard: { readText: () => Promise<string> } };
+    };
+    return view.navigator.clipboard.readText();
+  });
+}
 
 test('export writes a JSON file and importing it adds a second profile', async ({ page }, testInfo) => {
   const problems = watchConsole(page);
   await openApp(page);
 
-  await page.getByRole('button', { name: 'Rename profile' }).click();
-  await page.getByLabel('Profile name').fill('Exported');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.getByRole('combobox', { name: 'Active profile' })).toHaveText('Exported');
+  await renameProfile(page, 'Exported');
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Export profile' }).click(),
+    chooseInAccountMenu(page, /^Export JSON/),
   ]);
   expect(download.suggestedFilename()).toMatch(/^pyrrhic-exported-\d{4}-\d{2}-\d{2}\.json$/);
 
@@ -27,6 +41,8 @@ test('export writes a JSON file and importing it adds a second profile', async (
   const saved: unknown = JSON.parse(await (await import('node:fs/promises')).readFile(file, 'utf8'));
   expect(saved).toMatchObject({ kind: 'profile' });
 
+  // The menu's "Import JSON" opens this input; setting it directly is the same journey without the
+  // operating system's file chooser.
   await page.setInputFiles('input[type=file]', file);
 
   const preview = page.getByRole('dialog');
@@ -39,22 +55,19 @@ test('export writes a JSON file and importing it adds a second profile', async (
   expect(problems).toEqual([]);
 });
 
-test('a profile link offers to add the account in a fresh browser', async ({ page, browser }) => {
+test('a profile link offers to add the account in a fresh browser', async ({ page, browser, context }) => {
   const problems = watchConsole(page);
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await openApp(page);
 
-  await page.getByRole('button', { name: 'Rename profile' }).click();
-  await page.getByLabel('Profile name').fill('Shared');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await renameProfile(page, 'Shared');
 
-  await page.getByRole('button', { name: 'Share profile or march' }).click();
-  const share = page.getByRole('dialog');
-  await expect(share.getByRole('heading', { name: 'Share' })).toBeVisible();
-  const link = share.getByRole('textbox', { name: 'Profile share link' });
-  await expect(link).not.toHaveValue('');
-  const url = await link.inputValue();
+  // Share copies the link and says so in a live region; with no march generated it is the profile.
+  await chooseInAccountMenu(page, /^Share this march/);
+  // The march has its own status line; this one is the top bar's.
+  await expect(page.getByRole('banner').getByRole('status')).toHaveText('Copied');
+  const url = await clipboard(page);
   expect(url).toContain('#c=');
-  await page.keyboard.press('Escape');
 
   const fresh = await browser.newContext();
   const other = await fresh.newPage();
@@ -69,7 +82,7 @@ test('a profile link offers to add the account in a fresh browser', async ({ pag
   expect(other.url()).not.toContain('#c=');
 
   await prompt.getByRole('button', { name: 'Add as new profile' }).click();
-  await expect(other.getByRole('combobox', { name: 'Active profile' })).toHaveText('Shared');
+  await expect(accountButton(other)).toHaveAccessibleName('Account: Shared');
   await expect.poll(() => profileNames(other)).toEqual(['My account', 'Shared']);
 
   expect(otherProblems).toEqual([]);

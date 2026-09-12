@@ -14,6 +14,7 @@ import { createGistStore } from '@/sync/gist';
 import type { GistStore } from '@/sync/gist';
 import { useSyncStore } from '@/sync/syncStore';
 import { syncErrorMessage } from '@/sync/types';
+import { useUiStore } from '@/ui/uiStore';
 
 export type SyncStatus = 'idle' | 'testing' | 'checking' | 'applying';
 
@@ -77,12 +78,16 @@ export function useSync(): SyncController {
 
   const replan = useCallback((remoteIndex: Awaited<ReturnType<GistStore['index']>>): SyncPlan => {
     const { doc } = useStore.getState();
-    return plan({
+    const next = plan({
       profiles: doc.profiles,
       tombstones: doc.tombstones,
       remote: remoteIndex,
       syncState: useSyncStore.getState().records,
     });
+    // The account menu shows one word for the save state; a conflict is the only one it cannot work
+    // out from storage alone, so the plan leaves it here on its way past.
+    useUiStore.getState().setSyncConflict(next.counts.conflict > 0);
+    return next;
   }, []);
 
   const check = useCallback(async (): Promise<void> => {

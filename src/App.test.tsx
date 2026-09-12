@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { App } from '@/App';
@@ -20,41 +20,63 @@ afterEach(() => {
   cleanup();
 });
 
-test('renders the application heading and the profile bar', () => {
+/** Open the account menu, which is where every profile action lives now. */
+async function openAccountMenu(): Promise<void> {
+  fireEvent.click(screen.getByRole('button', { name: /^Account:/ }));
+  await screen.findByRole('menu');
+}
+
+test('renders the brand and the account menu', async () => {
   render(<App />);
   expect(screen.getByRole('heading', { level: 1, name: 'Pyrrhic' })).toBeTruthy();
-  expect(screen.getByLabelText('Active profile')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'New profile' })).toBeTruthy();
+
+  await openAccountMenu();
+  expect(screen.getByRole('menuitem', { name: /^New profile/ })).toBeTruthy();
+  expect(screen.getByRole('group', { name: 'Switch profile' })).toBeTruthy();
 });
 
 test('renders the seven sections of the plan, in order, with their anchors', () => {
   const { container } = render(<App />);
-  const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
-  expect(headings).toEqual(SECTIONS.map((section) => section.title));
-  for (const section of SECTIONS) {
-    expect(container.querySelector(`section#${section.id}`)).not.toBeNull();
-  }
+  const ids = [...container.querySelectorAll('section[id]')].map((node) => node.id);
+  expect(ids).toEqual(SECTIONS.map((section) => section.id));
 });
 
-test('a section body can be collapsed and expanded', () => {
+test('a card that folds says which way it is folded', () => {
   render(<App />);
-  const toggle = screen.getByRole('button', { name: 'Troops', expanded: true });
-  fireEvent.click(toggle);
-  expect(screen.getByRole('button', { name: 'Troops', expanded: false })).toBeTruthy();
+  // The army cards are a form and never fold (owner's third review); the march ones still do.
+  const toggle = (): HTMLElement => screen.getByRole('button', { name: /^Housing and march/ });
+  const before = toggle().getAttribute('aria-expanded');
+
+  expect(['true', 'false']).toContain(before);
+  fireEvent.click(toggle());
+  expect(toggle().getAttribute('aria-expanded')).not.toBe(before);
 });
 
-test('the About panel names the game data version and the privacy promise', () => {
+test('the march is generated from the frame, not from a section', () => {
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'About' }));
-  const dialog = screen.getByRole('dialog');
+  // Two controls, one per breakpoint: the app bar's above xl, the floating one below.
+  expect(screen.getAllByRole('button', { name: /^Generate march/ })).toHaveLength(2);
+  expect(screen.queryByRole('button', { name: 'Generate' })).toBeNull();
+});
+
+test('the About panel names the game data version and the privacy promise', async () => {
+  render(<App />);
+  await openAccountMenu();
+  fireEvent.click(screen.getByRole('menuitem', { name: /^About Pyrrhic/ }));
+
+  const dialog = await screen.findByRole('dialog');
   expect(dialog.textContent).toContain(String(gameData.dataVersion));
   expect(dialog.textContent).toContain(gameData.verifiedOn);
   expect(dialog.textContent).toContain('Nothing leaves your browser');
 });
 
-test('the theme control writes the choice to the store and to the document', () => {
+test('the theme row writes the choice to the store and to the document', async () => {
   render(<App />);
-  fireEvent.change(screen.getByLabelText('Theme'), { target: { value: 'dark' } });
-  expect(useStore.getState().doc.ui.theme).toBe('dark');
+  await openAccountMenu();
+  fireEvent.click(screen.getByRole('menuitemradio', { name: 'Dark' }));
+
+  await waitFor(() => {
+    expect(useStore.getState().doc.ui.theme).toBe('dark');
+  });
   expect(document.documentElement.dataset.theme).toBe('dark');
 });

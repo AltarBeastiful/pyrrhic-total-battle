@@ -53,19 +53,18 @@ test('the selective recovery plan asks how many unit types to revive', () => {
   expect(setup()?.recoveryPlan).toEqual({ mode: 'selective', selectiveTop: 2 });
 });
 
-test('the Generate button is there with the model-confidence note', () => {
+test('the model-confidence note is there, and the run is not', () => {
   render(<HousingSection />);
-  expect(screen.getByRole('button', { name: 'Generate' })).toBeTruthy();
   expect(screen.getByText(/Model confidence/)).toBeTruthy();
+  // The Generate button left with the sticky strip: the floating one owns the run (design plan §5.3).
+  expect(screen.queryByRole('button', { name: /Generate/ })).toBeNull();
 });
 
-test('Generate stays disabled until a housing value is entered', () => {
+test('an empty housing says so until a capacity is entered', () => {
   render(<HousingSection />);
-  expect(screen.getByRole('button', { name: 'Generate' })).toHaveProperty('disabled', true);
   expect(screen.getByText(/Enter your housing values from the march screen first/)).toBeTruthy();
 
   fireEvent.change(screen.getByLabelText('Dominance'), { target: { value: '200' } });
 
-  expect(screen.getByRole('button', { name: 'Generate' })).toHaveProperty('disabled', false);
   expect(screen.queryByText(/Enter your housing values from the march screen first/)).toBeNull();
 });

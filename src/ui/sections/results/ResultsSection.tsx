@@ -392,7 +392,7 @@ export function ResultsSection() {
     const result = edited?.result ?? last.result;
     return (
       <aside className="hidden xl:block">
-        <Card tone="raised" padded={false} className="sticky top-4 p-3">
+        <Card tone="raised" padded={false} className="p-3">
           <h3 className="mb-2 text-sm font-semibold">This march</h3>
           {POOLS.map((pool) => {
             const stacks = result.stacks.filter((stack) => stack.pool === pool);

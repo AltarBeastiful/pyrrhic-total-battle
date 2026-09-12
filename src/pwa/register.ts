@@ -1,5 +1,5 @@
 /**
- * Service-worker registration and the "an update is waiting" signal behind `UpdateToast`.
+ * Service-worker registration and the "an update is waiting" signal behind the account menu's "Update available" row.
  *
  * Registration lives outside React (it is called from `main.tsx`) so it happens once per page,
  * not once per mount, and so `<StrictMode>`'s double effects cannot register twice. Components

@@ -11,7 +11,7 @@ import { getCalcClient } from '@/ui/calcClient';
 import { readStoredResult, useResultStore } from '@/ui/resultStore';
 import { isAbortError } from '@/worker/client';
 
-import { tradeoffFigures, useRunStore } from './runStore';
+import { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 
 /**
  * Wall-clock budget of a priority search. Long enough for the greedy descent and a few restarts on a
@@ -33,7 +33,9 @@ export async function runGenerate(): Promise<void> {
   const run = useRunStore.getState();
   run.cancel();
   const controller = new AbortController();
-  run.start(controller);
+  // Stamped at the start, not at the end: what the answer on screen belongs to is the setup the run
+  // was launched with, so an edit made while the search runs already counts as stale.
+  run.start(controller, setupFingerprint(profile, setup));
   results.setRunning(true);
 
   try {

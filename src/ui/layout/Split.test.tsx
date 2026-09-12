@@ -8,44 +8,40 @@ afterEach(() => {
   cleanup();
 });
 
-test('the two halves are rendered in order, each in its own scrolling column', () => {
+test('the two halves are rendered in order, the pane a fixed width beside the page', () => {
   render(<Split data-testid="split" start={<p>editor</p>} end={<p>result</p>} />);
   const split = screen.getByTestId('split');
   const [start, end] = Array.from(split.children) as HTMLElement[];
 
   expect(start?.textContent).toBe('editor');
   expect(end?.textContent).toBe('result');
-  for (const column of [start, end]) {
-    expect(column?.className.split(' ')).toEqual(
-      expect.arrayContaining(['min-w-0', 'lg:h-dvh', 'lg:overflow-y-auto']),
-    );
-  }
+  expect(start?.className.split(' ')).toEqual(expect.arrayContaining(['min-w-0', 'xl:flex-1']));
+  expect(end?.className.split(' ')).toEqual(expect.arrayContaining(['xl:w-pane', 'xl:shrink-0']));
 });
 
-test('from the breakpoint up the frame owns the viewport, so the page itself cannot scroll', () => {
+test('the page keeps its one scrollbar: no column owns the viewport', () => {
   render(<Split data-testid="split" start="a" end="b" />);
   const split = screen.getByTestId('split');
-  expect(split.className.split(' ')).toEqual(
-    expect.arrayContaining(['grid', 'lg:h-dvh', 'lg:grid-cols-12', 'lg:overflow-hidden']),
-  );
+  const classes = [split, ...Array.from(split.children)]
+    .map((node) => (node as HTMLElement).className)
+    .join(' ');
+
+  for (const trapped of ['h-dvh', 'overflow-hidden', 'overflow-y-auto', 'overscroll-contain']) {
+    expect(classes).not.toContain(trapped);
+  }
+  expect(split.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'flex-col', 'xl:flex-row']));
 });
 
-test('the default ratio is 5/7 and `1/1` halves the frame', () => {
+test('the pane sticks only when it is asked to: the class carries no breakpoint', () => {
   const { rerender } = render(<Split data-testid="split" start="a" end="b" />);
-  let columns = Array.from(screen.getByTestId('split').children) as HTMLElement[];
-  expect(columns[0]?.className).toContain('lg:col-span-5');
-  expect(columns[1]?.className).toContain('lg:col-span-7');
+  const pane = (): HTMLElement => screen.getByTestId('split').children[1] as HTMLElement;
+  expect(pane().className).not.toContain('pane-sticky');
 
-  rerender(<Split data-testid="split" ratio="1/1" start="a" end="b" />);
-  columns = Array.from(screen.getByTestId('split').children) as HTMLElement[];
-  expect(columns[0]?.className).toContain('lg:col-span-6');
-  expect(columns[1]?.className).toContain('lg:col-span-6');
+  rerender(<Split data-testid="split" sticky start="a" end="b" />);
+  expect(pane().className).toContain('pane-sticky');
 });
 
-test('the breakpoint moves every responsive class with it', () => {
-  render(<Split data-testid="split" breakpoint="md" start="a" end="b" />);
-  const split = screen.getByTestId('split');
-  expect(split.className).toContain('md:grid-cols-12');
-  expect(split.className).not.toContain('lg:');
-  expect((split.children[0] as HTMLElement).className).toContain('md:col-span-5');
+test('the two panes are 24 px apart on a wide screen', () => {
+  render(<Split data-testid="split" start="a" end="b" />);
+  expect(screen.getByTestId('split').className).toContain('xl:gap-6');
 });

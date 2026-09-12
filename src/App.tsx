@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react';
 
-import { PwaHost } from '@/pwa/PwaHost';
-import { AppShell } from '@/ui/AppShell';
+import { AppLayout } from '@/ui/shell/AppLayout';
 
 // The component gallery (`docs/plans/ui-foundation.md` §5) is reachable at `/#kit` while developing
 // and nowhere else: a production build replaces `import.meta.env.DEV` with `false`, so the bundler
@@ -19,10 +18,5 @@ export function App() {
     );
   }
 
-  return (
-    <>
-      <AppShell />
-      <PwaHost />
-    </>
-  );
+  return <AppLayout />;
 }

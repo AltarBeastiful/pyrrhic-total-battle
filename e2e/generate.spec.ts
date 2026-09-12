@@ -47,23 +47,21 @@ test('Generate fills the pools and produces a battle summary', async ({ page }) 
   expect(problems).toEqual([]);
 });
 
-test('changing the housing and leaving a unit type out changes the stacks', async ({ page }) => {
+test('leaving a unit type out changes the stacks', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
-  await page.getByRole('combobox', { name: 'Guardsmen lowest tier' }).selectOption('1');
-  await page.getByRole('combobox', { name: 'Guardsmen highest tier' }).selectOption('3');
+  // The first-run account fields G1–G3, so Archer III is a top-tier type of the march.
   await generate(page, { leadership: 4100 });
 
   const before = await stackLabels(page);
   expect(before.length).toBeGreaterThan(1);
   expect(before.some((label) => label.startsWith('ARC3'))).toBe(true);
 
-  // "I have not upgraded my Archer III yet": one tap in the Troops grid drops the type everywhere.
-  await page.locator('#troops').getByRole('button', { name: 'Archer III', exact: true }).click();
-  await expect(
-    page.locator('#troops').getByRole('button', { name: 'Archer III', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'false');
+  // "I have not upgraded my Archer III yet": one tap on the tile drops the type everywhere.
+  const tile = page.locator('#troops').getByRole('button', { name: /^Archer III, tier 3/ });
+  await tile.click();
+  await expect(tile).toHaveAttribute('aria-pressed', 'false');
   await generate(page);
 
   const after = await stackLabels(page);

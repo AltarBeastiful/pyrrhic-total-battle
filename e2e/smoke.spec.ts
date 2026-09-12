@@ -6,14 +6,29 @@
  */
 import { expect, test } from '@playwright/test';
 
-import { housingField, openApp, SECTION_TITLES, themeAttribute, watchConsole } from './helpers';
+import {
+  accountButton,
+  housingField,
+  openAccountMenu,
+  openApp,
+  renameProfile,
+  SECTION_TITLES,
+  themeAttribute,
+  waitForSaved,
+  watchConsole,
+} from './helpers';
 
 test('first run shows the default profile and all seven sections', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
-  await expect(page.getByRole('combobox', { name: 'Active profile' })).toHaveText('My account');
-  await expect(page.getByText('Saved in this browser')).toBeVisible();
+  await expect(accountButton(page)).toHaveAccessibleName('Account: My account');
+
+  // The whole profile bar is one menu now, and the save state is one word inside it (design plan §5.2).
+  const menu = await openAccountMenu(page);
+  await expect(menu.getByText('Saved', { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
 
   for (const title of SECTION_TITLES) {
     await expect(page.getByRole('heading', { level: 2, name: title })).toBeVisible();
@@ -25,29 +40,17 @@ test('first run shows the default profile and all seven sections', async ({ page
   expect(problems).toEqual([]);
 });
 
-test('the Troops header says what the account fields, and follows a tier change', async ({ page }) => {
+test('the Troops card states the account as a form, and follows a tier change', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
-  // The summary is always visible, so a collapsed section still says what it holds (S-01, docs/design.md §7).
-  const summary = page.locator('#troops-summary');
-  await expect(summary).toBeVisible();
-  await expect(summary).toContainText('Guardsmen G1');
-  const before = (await summary.innerText()).trim();
+  // The army cards are the form *and* the summary: nothing to unfold, one row per group (D-22).
+  const card = page.locator('#troops');
+  await expect(card.getByRole('heading', { level: 2, name: 'Troops' })).toBeVisible();
+  await expect(card.getByRole('group', { name: /from$/ })).toHaveCount(4);
 
-  await page.getByRole('combobox', { name: 'Guardsmen highest tier' }).selectOption('5');
-
-  await expect(summary).toContainText('Guardsmen G1–G5');
-  expect((await summary.innerText()).trim()).not.toEqual(before);
-
-  // It keeps saying it with the body folded away.
-  await page.getByRole('button', { name: 'Troops', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Troops', exact: true })).toHaveAttribute(
-    'aria-expanded',
-    'false',
-  );
-  await expect(summary).toBeVisible();
-  await expect(summary).toContainText('Guardsmen G1–G5');
+  await card.getByRole('button', { name: 'Guardsmen to, higher' }).click();
+  await expect(card.getByRole('group', { name: 'Guardsmen at G4' })).toBeVisible();
 
   expect(problems).toEqual([]);
 });
@@ -58,36 +61,37 @@ test('what the player typed survives a reload', async ({ page }) => {
 
   await housingField(page, 'Leadership').fill('4100');
   await housingField(page, 'Authority').fill('1200');
-  await page.getByRole('button', { name: 'Rename profile' }).click();
-  await page.getByLabel('Profile name').fill('Reloaded');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  // The store writes to localStorage debounced; the indicator stamps the time once it lands.
-  await expect(page.getByText(/^Saved \d/)).toBeVisible({ timeout: 10_000 });
+  await renameProfile(page, 'Reloaded');
+  // The store writes to localStorage debounced; the menu's status says when it has landed.
+  await waitForSaved(page);
 
   await page.reload();
   await page.waitForLoadState('networkidle');
 
-  await expect(page.getByRole('combobox', { name: 'Active profile' })).toHaveText('Reloaded');
+  await expect(accountButton(page)).toHaveAccessibleName('Account: Reloaded');
   await expect(housingField(page, 'Leadership')).toHaveValue('4100');
   await expect(housingField(page, 'Authority')).toHaveValue('1200');
 
   expect(problems).toEqual([]);
 });
 
-test('the theme toggle flips data-theme', async ({ page }) => {
+test('the theme row of the account menu flips data-theme', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
-  const theme = page.getByRole('combobox', { name: 'Theme' });
   const attribute = (): Promise<string | undefined> => themeAttribute(page);
+  const choose = async (name: string): Promise<void> => {
+    await openAccountMenu(page);
+    await page.getByRole('menuitemradio', { name }).click();
+  };
 
-  await theme.selectOption('dark');
+  await choose('Dark');
   await expect.poll(attribute).toBe('dark');
-  await theme.selectOption('light');
+  await choose('Light');
   await expect.poll(attribute).toBe('light');
 
   // "System" resolves to a concrete value; it never leaves the attribute unset.
-  await theme.selectOption('system');
+  await choose('System');
   await expect.poll(attribute).toMatch(/^(light|dark)$/);
 
   expect(problems).toEqual([]);

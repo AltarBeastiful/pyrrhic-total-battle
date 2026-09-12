@@ -8,6 +8,8 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
 import type * as WorkerClient from '@/worker/client';
 
+import { GenerateFab } from '@/ui/shell/GenerateFab';
+
 import { HousingSection } from '../housing/HousingSection';
 import { amount } from './format';
 import { ResultsSection } from './ResultsSection';
@@ -25,6 +27,7 @@ function Page() {
     <>
       <HousingSection />
       <ResultsSection />
+      <GenerateFab />
     </>
   );
 }
@@ -44,7 +47,7 @@ afterEach(() => {
 const lastResult = () => useResultStore.getState().last;
 
 async function generate(): Promise<void> {
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Generate march/ }));
   await waitFor(() => {
     expect(lastResult()).not.toBeNull();
   });
@@ -153,7 +156,7 @@ test('two saved stacks can be compared side by side', async () => {
   await waitFor(() => {
     expect(screen.getByLabelText('Leadership')).toHaveProperty('value', '2000');
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Generate march/ }));
   await waitFor(() => {
     expect(lastResult()?.result.pools.leadership.capacity).toBe(2000);
   });

@@ -8,5 +8,5 @@ export {
 } from './Cluster';
 export { Grid, type GridCols, type GridColumns, type GridGap, type GridProps } from './Grid';
 export { Page, type PageProps } from './Page';
-export { Split, type SplitBreakpoint, type SplitProps, type SplitRatio } from './Split';
+export { Split, type SplitProps } from './Split';
 export { Stack, type StackAlign, type StackGap, type StackProps } from './Stack';

@@ -2,65 +2,48 @@ import type { ElementType, HTMLAttributes, ReactNode } from 'react';
 import { tv } from 'tailwind-variants';
 
 /**
- * The two-column frame of the desktop app (design plan D-10): the editor on the left, the result on
- * the right, each scrolling on its own so neither can push the other out of view. Below the
- * breakpoint the two columns are simply stacked and the page scrolls as one, which is what a phone
- * wants.
+ * A page and its supporting pane (Material 3's supporting-pane pattern, confirmed against the
+ * configurators we measured against): **one page scroll**, everywhere. Two panes that scroll
+ * independently make a wide screen feel like two windows and cost the page its scrollbar; the
+ * answer is kept in view by sticking it, not by trapping the page.
  *
- * The independent scroll is three classes working together: the root is exactly one viewport tall
- * and hides its own overflow, so the page itself cannot scroll; each column is that same height and
- * scrolls inside it.
+ * Below `xl` the halves are simply stacked and the page scrolls as one. From `xl` the end becomes a
+ * fixed-width pane (`w-pane`) beside a fluid start, and `pane-sticky` parks it under the app bar
+ * with a scrollbar of its own *only* when the march is taller than the viewport.
  */
 const split = tv({
   slots: {
-    root: 'grid gap-4',
-    start: 'min-w-0',
-    end: 'min-w-0',
+    root: 'flex flex-col gap-4 xl:flex-row xl:items-start xl:gap-6',
+    start: 'min-w-0 xl:flex-1',
+    end: 'min-w-0 xl:w-pane xl:shrink-0',
   },
   variants: {
-    breakpoint: {
-      md: {
-        root: 'md:h-dvh md:grid-cols-12 md:overflow-hidden',
-        start: 'md:h-dvh md:overflow-y-auto md:overscroll-contain',
-        end: 'md:h-dvh md:overflow-y-auto md:overscroll-contain',
-      },
-      lg: {
-        root: 'lg:h-dvh lg:grid-cols-12 lg:overflow-hidden',
-        start: 'lg:h-dvh lg:overflow-y-auto lg:overscroll-contain',
-        end: 'lg:h-dvh lg:overflow-y-auto lg:overscroll-contain',
-      },
-    },
-    ratio: {
-      '5/7': { root: '' },
-      '1/1': { root: '' },
+    sticky: {
+      true: { end: 'pane-sticky' },
+      false: {},
     },
   },
-  compoundVariants: [
-    { breakpoint: 'md', ratio: '5/7', class: { start: 'md:col-span-5', end: 'md:col-span-7' } },
-    { breakpoint: 'md', ratio: '1/1', class: { start: 'md:col-span-6', end: 'md:col-span-6' } },
-    { breakpoint: 'lg', ratio: '5/7', class: { start: 'lg:col-span-5', end: 'lg:col-span-7' } },
-    { breakpoint: 'lg', ratio: '1/1', class: { start: 'lg:col-span-6', end: 'lg:col-span-6' } },
-  ],
-  defaultVariants: { breakpoint: 'lg', ratio: '5/7' },
+  defaultVariants: { sticky: false },
 });
-
-export type SplitRatio = '5/7' | '1/1';
-export type SplitBreakpoint = 'md' | 'lg';
 
 export interface SplitProps extends HTMLAttributes<HTMLElement> {
   as?: ElementType;
-  /** The left-hand column: what the player edits. */
+  /** The page itself: what the player edits. Fluid from `xl` up. */
   start: ReactNode;
-  /** The right-hand column: what the app answers. */
+  /** The supporting pane: what the app answers. `w-pane` wide from `xl` up. */
   end: ReactNode;
-  ratio?: SplitRatio;
-  /** The width at which the single column becomes two. */
-  breakpoint?: SplitBreakpoint;
+  /**
+   * Let the pane stay beside the page while it scrolls. `pane-sticky` is a plain utility class and
+   * carries no breakpoint of its own, so the caller turns it on only where the pane really is beside
+   * the page — below that it would give a phone a second scrollbar, which is the thing this layout
+   * exists to avoid.
+   */
+  sticky?: boolean;
 }
 
-/** Two columns that scroll independently from the breakpoint up, stacked below it. */
-export function Split({ as: Tag = 'div', start, end, ratio, breakpoint, className, ...rest }: SplitProps) {
-  const slots = split({ ratio, breakpoint });
+/** One column below `xl`, a page and its supporting pane above it — and one scrollbar either way. */
+export function Split({ as: Tag = 'div', start, end, sticky, className, ...rest }: SplitProps) {
+  const slots = split({ sticky });
 
   return (
     <Tag className={slots.root({ className })} {...rest}>

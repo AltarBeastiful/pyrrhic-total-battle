@@ -1,12 +1,12 @@
 import type { Pool, RecoveryMode } from '@/engine/types';
 import { OBJECTIVES, RECOVERY_MODES } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { GenerateIcon, HousingIcon, PoolBadge } from '@/ui/icons';
+import { HousingIcon, PoolBadge } from '@/ui/icons';
 import { useResultStore } from '@/ui/resultStore';
-import { Button, HelpNote, NativeSelect, Popover, Section } from '@/ui/primitives';
+import { HelpNote, NativeSelect, Popover, Section } from '@/ui/primitives';
 
-import { amount, ratio } from '../results/format';
-import { cancelGenerate, runGenerate, SEARCH_BUDGET_MS } from '../results/generate';
+import { amount } from '../results/format';
+import { SEARCH_BUDGET_MS } from '../results/generate';
 import { IntegerField } from '../results/IntegerField';
 import { useRunStore } from '../results/runStore';
 import { unitName } from '../results/units';
@@ -58,7 +58,7 @@ const isPriority = (value: string): value is Priority =>
 const isRecoveryMode = (value: string): value is RecoveryMode =>
   (RECOVERY_MODES as readonly string[]).includes(value);
 
-/** Housing, priority, recovery plan and the Generate button (PLAN §4.7). */
+/** Housing, priority and recovery plan (PLAN §4.7); the run itself belongs to the floating button. */
 export function HousingSection() {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
@@ -67,7 +67,6 @@ export function HousingSection() {
   const error = useResultStore((state) => state.error);
   const modelNotes = useResultStore((state) => state.last?.summary.modelNotes);
   const requestUnits = useResultStore((state) => state.last?.request.units);
-  const progress = useRunStore((state) => state.progress);
   const searchExcluded = useRunStore((state) => state.searchExcluded);
 
   if (!profile || !setup) {
@@ -81,9 +80,7 @@ export function HousingSection() {
   const { housing, priority, recoveryPlan } = setup;
   // Nothing to fill: the engine would answer with an empty march and a list of ten identical reasons.
   const noHousing = housing.leadership + housing.authority + housing.dominance === 0;
-  const searching = running && priority !== 'none';
   const selectiveTop = recoveryPlan.selectiveTop ?? 3;
-  const score = (value: number): string => (priority === 'avgDamage' ? amount(value) : ratio(value));
 
   return (
     <Section
@@ -227,51 +224,12 @@ export function HousingSection() {
           </Popover>
         </HelpNote>
 
-        <div
-          className={
-            'border-line bg-surface sticky bottom-0 z-20 -mx-3 -mb-3 border-t px-3 py-3 ' +
-            'pb-[max(0.75rem,env(safe-area-inset-bottom))] ' +
-            'sm:-mx-4 sm:-mb-4 sm:px-4 md:static md:m-0 md:border-0 md:bg-transparent md:p-0 md:pb-0'
-          }
-        >
-          {noHousing && (
-            <HelpNote tone="warn" className="mb-2">
-              Enter your housing values from the march screen first: with no leadership, authority or
-              dominance there is nothing to fill.
-            </HelpNote>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              icon={<GenerateIcon />}
-              disabled={running || noHousing}
-              className="md:w-auto"
-              onClick={() => void runGenerate()}
-            >
-              {running ? 'Generating…' : 'Generate'}
-            </Button>
-            {running && (
-              <Button
-                onClick={() => {
-                  cancelGenerate();
-                }}
-              >
-                Cancel
-              </Button>
-            )}
-            <p className="text-muted nums text-xs" role="status">
-              {!running
-                ? ''
-                : !searching
-                  ? 'Generating…'
-                  : progress === null
-                    ? 'Trying formations…'
-                    : `Tried ${amount(progress.evaluated)} formations — best ${score(progress.bestScore)}`}
-            </p>
-          </div>
-        </div>
+        {noHousing && (
+          <HelpNote tone="warn">
+            Enter your housing values from the march screen first: with no leadership, authority or dominance
+            there is nothing to fill.
+          </HelpNote>
+        )}
       </div>
     </Section>
   );
