@@ -379,11 +379,26 @@ right side on desktop) with the same fields as today; the sheet header repeats t
 
 ### 7.4 Battle
 
-One card, one or two rows on desktop, four on phone: enemy formation (segmented Standard / Double / Custom),
-leadership · authority · dominance as steppers with the pool glyph inside, method (select: Tier ladder / Troops
-first / Your own order) with its toggles as switches on one line, objective (select). "Your own order" opens the
-existing drag list as a sheet. Every number here is a stepper with arrow-key and wheel support; `Shift` steps
-by 10, `Ctrl/⌘` by 100 (R2).
+One card, Material 3 anatomy throughout (owner's note 2026-09-12: the old Stacking method section is a mishmash
+of cards and a select; the whole option must be the target).
+
+- **Enemy formation**: M3 segmented button (Standard / Double / Custom); Custom reveals four steppers.
+- **Housing**: leadership · authority · dominance as outlined number fields with the pool glyph, steppers,
+  arrow keys, `Shift`/`Ctrl` multipliers (R2).
+- **Stacking method**: an M3 **single-select list** — three full-width list items (Tier ladder / Troops first /
+  Your own order), each tappable anywhere on the row (`role="radio"` in a `radiogroup`), with a leading radio
+  mark, the title, and a one-line supporting text in the glossary's words. No select, no nested cards. The
+  selected item is tonal (`accent-soft`), others plain with a state layer on hover/press. "Your own order"
+  shows a trailing "Edit order" button that opens the drag list in a sheet.
+- **Options**: the method's toggles as M3 **switch list items** under the list (Allow damage trades · Monsters
+  after troops · Monsters after mercenaries · Hired units in tens), each a full-width row: label, one-line
+  supporting text, trailing switch; the whole row toggles. Toggles that do not apply to the chosen method are
+  hidden, not disabled.
+- **Objective**: an M3 single-select list as well (Highest average damage / Best worst case / Damage per silver
+  / per gold / per dragon coin), collapsed to the chosen item with a "Change" affordance on phones.
+
+Desktop: enemy and housing on one row, method list and options side by side under it; phone: stacked. Every
+number here is a stepper; every choice is a full-row target.
 
 ### 7.5 March (results)
 
@@ -494,7 +509,9 @@ starts.
 
 **Phase C — Bonuses and Battle**
 - D-30 Bonuses as rows with a pinned TOTAL header; editors in sheets. Accept: the collapsed card is one line.
-- D-31 Battle card with segmented enemy, pool steppers, method and objective on one row on desktop.
+- D-31 Battle card: segmented enemy, pool steppers, the method as an M3 single-select list with full-row
+  targets, options as switch list items, objective as a single-select list (§7.4). The legacy Method section
+  is deleted.
 - D-32 Numeric stepper primitive everywhere a number is typed (housing, counts, levels): arrows, wheel,
   `Shift`/`Ctrl` multipliers, paste of "84 300" and "84,300".
 

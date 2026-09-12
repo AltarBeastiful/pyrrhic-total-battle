@@ -407,6 +407,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Owner: the Stacking method section must be a Material single-select list with full-row targets,
+  not cards plus a select; design plan §7.4 rewritten (D-31). Owner also installed the `frontend-design` guide;
+  a design-direction pass (D-19) is scheduled after the March card and the surface pass.
 - 2026-09-12 — Owner's third review: (1) new story S-48 best captains for a march (§3.7); (2) Troops and
   Mercenaries do not collapse — the form is the summary, TotalStack-style; (3) revised frame accepted, app bar
   also carries a troop recap; (4) March card reordered: recap figures and the army-as-form first, dying order
