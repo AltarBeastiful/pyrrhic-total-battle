@@ -1,7 +1,7 @@
 /**
  * The four groups of the Troops card (design plan §7.1, amended) and the pure helpers that turn
  * `profile.troops` into what the card draws: the tiers a stepper steps through, the unit types of
- * the top tier, the types left out below it, and the one line the collapsed card shows.
+ * the top tier, and the types the March left out below it.
  *
  * Everything here is derived from the game tables, never hard-coded: the tiers of a group, the
  * categories a tier offers, the order types are listed in. A data update that adds a tier or a
@@ -10,7 +10,7 @@
 import { getUnits } from '@/data';
 import { CATEGORIES } from '@/data/types';
 import type { Category, Group, UnitDef } from '@/data/types';
-import type { ProfileTroops, TierRange } from '@/state/schema';
+import type { ProfileTroops } from '@/state/schema';
 
 /** The four groups, in the order the game lists them. Ids match the keys of `profile.troops`. */
 export type TroopRowId = 'guardsmen' | 'specialists' | 'engineers' | 'monsters';
@@ -142,28 +142,4 @@ export function leftOutUnits(troops: ProfileTroops, row: TroopRowId): UnitDef[] 
 /** True when the profile owns nothing at all, which is what the guided empty state answers. */
 export function isEmptyArmy(troops: ProfileTroops): boolean {
   return TROOP_ROWS.every((row) => troops[row.id] === null);
-}
-
-// ---- The collapsed line --------------------------------------------------------------------------
-export interface TroopsSummaryPart {
-  row: TroopRow;
-  /** The group in game shorthand: "G1–G4", "S2", "no engineers". */
-  text: string;
-  /** False when the account has nothing in this group, so the line can dim it. */
-  present: boolean;
-}
-
-/** "G4", or "G1–G4" when the range spans more than one tier. */
-export function rangeText(prefix: string, range: TierRange): string {
-  return range.min === range.max ? `${prefix}${range.min}` : `${prefix}${range.min}–${prefix}${range.max}`;
-}
-
-/** One short phrase per group, so a collapsed card still says what the account fields. */
-export function troopsSummary(troops: ProfileTroops): TroopsSummaryPart[] {
-  return TROOP_ROWS.map((row) => {
-    const range = troops[row.id];
-    return range === null
-      ? { row, text: `no ${row.label.toLowerCase()}`, present: false }
-      : { row, text: rangeText(row.prefix, range), present: true };
-  });
 }

@@ -1,7 +1,8 @@
 /**
- * The amended Troops flow (design plan §7.1): on a phone, pick the lowest and the highest tier you
- * own, click out the top-tier type you have not upgraded yet, and check that the march the engine
- * produces leaves that type — and only that type — out.
+ * The amended Troops flow (design plan §7.1): the card does not collapse — on a phone, the four
+ * rows are already there, you pick the lowest and the highest tier you own, click out the top-tier
+ * type you have not upgraded yet, and the march the engine produces leaves that type — and only
+ * that type — out.
  */
 import { expect, test } from '@playwright/test';
 
@@ -13,13 +14,11 @@ test('a tier range and one tile decide what the march fields', async ({ page }) 
   await openApp(page);
 
   const card = page.locator('#troops');
-  const header = card.getByRole('button', { name: /^Troops/ });
 
-  // The card opens on its own only for an account with no troops; this one has the first-run army.
-  await expect(header).toHaveAttribute('aria-expanded', 'false');
-  await header.click();
-
-  // D-22: one row per group, and the narrowest phone we support never scrolls sideways.
+  // The form is the summary: one row per group, on screen with nothing to unfold (D-22), and the
+  // narrowest phone we support never scrolls sideways.
+  await expect(card.getByRole('heading', { level: 2, name: 'Troops' })).toBeVisible();
+  await expect(card.getByRole('button', { name: /^Troops/ })).toHaveCount(0);
   await expect(card.getByRole('group', { name: /from$/ })).toHaveCount(4);
   expect(await pageOverflowsSideways(page)).toBe(false);
 
@@ -31,12 +30,6 @@ test('a tier range and one tile decide what the march fields', async ({ page }) 
   await card.getByRole('button', { name: 'Rider IV, tier 4, on' }).click();
   await expect(card.getByRole('button', { name: 'Rider IV, tier 4, off' })).toBeVisible();
 
-  // Collapsed, the card still says what the account fields, in the game's own shorthand.
-  await header.click();
-  await expect(header).toHaveAttribute('aria-expanded', 'false');
-  await expect(header.getByText('G1–G4')).toBeVisible();
-  await expect(header.getByText('no monsters')).toBeVisible();
-
   await generate(page, { leadership: 20000 });
   await expect(stackPills(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -47,4 +40,34 @@ test('a tier range and one tile decide what the march fields', async ({ page }) 
   expect(labels.some((label) => label.startsWith('RD3'))).toBe(true);
 
   expect(problems).toEqual([]);
+});
+
+test('with every group set the card is still four rows on a wide screen', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openApp(page);
+
+  const card = page.locator('#troops');
+
+  // Fill the two groups the first-run account leaves at "none", so every row is at its widest.
+  await card.getByRole('button', { name: 'Guardsmen to, higher' }).click();
+  await card.getByRole('button', { name: 'Engineers from, higher' }).click();
+  await card.getByRole('button', { name: 'Monsters from, higher' }).click();
+  await expect(card.getByRole('group', { name: 'Monsters at M3' })).toBeVisible();
+
+  // A row is one line: its "from" end and its tiles sit at the same height.
+  for (const [group, tier] of [
+    ['Guardsmen', 'G4'],
+    ['Specialists', 'S1'],
+    ['Monsters', 'M3'],
+  ] as const) {
+    const from = await card.getByRole('group', { name: `${group} from` }).boundingBox();
+    const tiles = await card.getByRole('group', { name: `${group} at ${tier}` }).boundingBox();
+    if (from === null || tiles === null) throw new Error(`${group} row is not on screen`);
+    expect(Math.abs(from.y + from.height / 2 - (tiles.y + tiles.height / 2))).toBeLessThan(4);
+  }
+
+  // Four rows plus the title: the card stays short enough for Mercenaries to sit under it (R4).
+  const box = await card.boundingBox();
+  if (box === null) throw new Error('the Troops card is not on screen');
+  expect(box.height).toBeLessThan(340);
 });

@@ -1,20 +1,24 @@
 /**
- * Troops (design plan §7.1, amended) — the first form a player meets, and the one TotalStack gets
- * right: for each group, pick the lowest and the highest tier you own, then click out the top-tier
- * types you have not unlocked yet.
+ * Troops (design plan §7.1, amended twice) — the first form a player meets, and the one TotalStack
+ * gets right: for each group, pick the lowest and the highest tier you own, then click out the
+ * top-tier types you have not unlocked yet.
+ *
+ * The card does not collapse: **the form is the summary**. Four short rows, always on screen,
+ * readable at a glance and editable in place — there is nothing to unfold and nothing to remember
+ * between visits. A group set to "none" shrinks to its one stepper, which is what keeps the card
+ * four lines tall and Mercenaries right under it (R4).
  *
  * Lower tiers are always in. A type the March left out below the top tier is named under its row
  * with a way to put it back, so nothing the account fields is ever hidden. The card describes the
  * *account*, not one march: everything here is written straight to the active profile.
  */
-import { useState } from 'react';
+import { useId } from 'react';
 
 import type { UnitDef } from '@/data/types';
 import type { ProfileTroops, TierRange } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { GroupMarker, SummaryLine, UnitTile } from '@/ui/domain';
-import type { SummaryPart } from '@/ui/domain';
-import { Button, Disclosure, TierStepper } from '@/ui/kit';
+import { GroupMarker, UnitTile } from '@/ui/domain';
+import { Button, Card, cn, TierStepper } from '@/ui/kit';
 import { Cluster, Stack } from '@/ui/layout';
 
 import {
@@ -26,21 +30,26 @@ import {
   topTierIncluded,
   topTierUnits,
   TROOP_ROWS,
-  troopsSummary,
 } from './rows';
 import type { TroopRow, TroopRowId } from './rows';
-import { readUiFlag, TROOPS_EXPANDED, writeUiFlag } from './uiPrefs';
+
+/**
+ * The kit's fields stand their label above the control; a Troops row wants both ends of the range
+ * on one line, named by one short word. The stepper keeps its whole spoken name ("Guardsmen from")
+ * — the label is only moved out of sight, and the word beside it is the picture of it.
+ */
+const QUIET_LABEL = '[&>span]:sr-only';
 
 export function TroopsSection() {
   const profile = useStore(selectActiveProfile);
   const updateProfile = useStore((state) => state.updateProfile);
-  // A profile with no troops is a profile being filled in: the card opens itself and says how.
-  const empty = profile === undefined || isEmptyArmy(profile.troops);
-  const [expanded, setExpanded] = useState(() => readUiFlag(TROOPS_EXPANDED) ?? empty);
+  const titleId = useId();
 
   if (profile === undefined) return null;
   const troops = profile.troops;
   const profileId = profile.id;
+  // A profile with no troops is a profile being filled in: the card says how, above the rows.
+  const empty = isEmptyArmy(troops);
 
   const patch = (next: Partial<ProfileTroops>): void => {
     updateProfile(profileId, (current) => ({ troops: { ...current.troops, ...next } }));
@@ -104,29 +113,18 @@ export function TroopsSection() {
     patch({ excludedUnitIds: troops.excludedUnitIds.filter((id) => !ids.includes(id)) });
   };
 
-  const toggleCard = (next: boolean): void => {
-    setExpanded(next);
-    writeUiFlag(TROOPS_EXPANDED, next);
-  };
-
-  const parts: SummaryPart[] = troopsSummary(troops).map((part) => ({
-    group: part.row.id,
-    text: part.text,
-    muted: !part.present,
-  }));
-
   return (
-    <Stack as="section" id="troops" aria-label="Troops" gap={2}>
-      <Disclosure
-        title="Troops"
-        summary={<SummaryLine parts={parts} />}
-        isExpanded={expanded}
-        onExpandedChange={toggleCard}
-      >
-        <Stack gap={4}>
+    <Card as="section" id="troops" aria-labelledby={titleId}>
+      <Stack gap={3}>
+        <Stack gap={1}>
+          <h2 id={titleId} className="font-display text-lg">
+            Troops
+          </h2>
           {empty && (
             <p className="text-muted text-sm">Add your troops: pick the lowest and highest tier you own.</p>
           )}
+        </Stack>
+        <Stack gap={2}>
           {TROOP_ROWS.map((row) => (
             <GroupRow
               key={row.id}
@@ -139,8 +137,8 @@ export function TroopsSection() {
             />
           ))}
         </Stack>
-      </Disclosure>
-    </Stack>
+      </Stack>
+    </Card>
   );
 }
 
@@ -154,8 +152,11 @@ interface GroupRowProps {
 }
 
 /**
- * One group: its marker, the two ends of the range, and the tiles of the top tier. A group set to
- * "none" is one stepper and nothing else, which is what keeps the card four short rows (R4).
+ * One group on one line from `sm` up: its marker and name, the two ends of the range, and the tiles
+ * of the top tier. On a phone the name and the two words step aside and the tiles wrap under the
+ * steppers, which is the widest the row can be without a sideways scroll at 390 px — there, the
+ * tier code is the group's name ("G3" is guardsmen). A row at "none" has no code to read, so it
+ * keeps its name at every width.
  */
 function GroupRow({ row, troops, onFrom, onTo, onTile, onPutBack }: GroupRowProps) {
   const range = troops[row.id];
@@ -169,35 +170,49 @@ function GroupRow({ row, troops, onFrom, onTo, onTile, onPutBack }: GroupRowProp
 
   return (
     <Stack gap={1}>
-      <Cluster gap={2} align="end">
-        {/* The group is named by the steppers ("Guardsmen from"); the marker is its colour, and its
-            name for a screen reader. Repeating it here costs the row its second line on a phone. */}
+      <Cluster gap={2} align="center">
+        {/* The bar is the group's colour and, for a screen reader, its name; the word beside it is
+            the same name drawn, and only where there is room for it. */}
         <GroupMarker group={row.id} />
-        <TierStepper
-          label={`${row.label} from`}
-          prefix={row.prefix}
-          tiers={tiers}
-          value={range?.min ?? null}
-          allowNone={allowNone}
-          min={bounds.min}
-          max={range?.max ?? bounds.max}
-          onChange={(value) => {
-            onFrom(row.id, value);
-          }}
-        />
-        {range !== null && (
+        <span
+          aria-hidden="true"
+          className={cn(range === null ? 'inline-block' : 'hidden sm:inline-block', 'truncate sm:w-24')}
+        >
+          {row.label}
+        </span>
+        <Cluster gap={1}>
+          {range !== null && <span className="text-muted hidden text-sm sm:inline">from</span>}
           <TierStepper
-            label={`${row.label} to`}
+            className={QUIET_LABEL}
+            label={`${row.label} from`}
             prefix={row.prefix}
             tiers={tiers}
-            value={range.max}
-            allowNone={row.allowNone}
-            min={range.min}
-            max={bounds.max}
+            value={range?.min ?? null}
+            allowNone={allowNone}
+            min={bounds.min}
+            max={range?.max ?? bounds.max}
             onChange={(value) => {
-              onTo(row.id, value);
+              onFrom(row.id, value);
             }}
           />
+        </Cluster>
+        {range !== null && (
+          <Cluster gap={1}>
+            <span className="text-muted hidden text-sm sm:inline">to</span>
+            <TierStepper
+              className={QUIET_LABEL}
+              label={`${row.label} to`}
+              prefix={row.prefix}
+              tiers={tiers}
+              value={range.max}
+              allowNone={row.allowNone}
+              min={range.min}
+              max={bounds.max}
+              onChange={(value) => {
+                onTo(row.id, value);
+              }}
+            />
+          </Cluster>
         )}
         {range !== null && tiles.length > 0 && (
           <Cluster gap={1} role="group" aria-label={`${row.label} at ${row.prefix}${range.max}`}>
