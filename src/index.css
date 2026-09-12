@@ -112,8 +112,8 @@
      larger than 1rem. `max()` with `env()` is a valid spacing value in Tailwind v4. */
   --spacing-fab: max(1rem, env(safe-area-inset-bottom));
   /* The sticky app bar and the supporting pane it leaves room for (design plan §5.1, revised). */
-  --spacing-appbar: 3.5rem;
-  --spacing-pane: 27rem;
+  --spacing-appbar: 4rem; /* M3 top app bar, small: 64 dp */
+  --spacing-pane: 22.5rem; /* M3 supporting pane: 360 dp */
 }
 
 /* Light is the base palette — warm bone and parchment, near-black ink, bronze accent.

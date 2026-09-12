@@ -157,6 +157,28 @@ Target: all of it lives in the **account menu** (§5.2). None of it takes perman
 
 ## 5. Information architecture and the frame
 
+### 5.0 Base: Material 3 (with Material 3 Expressive where it applies)
+
+The page structure follows Material 3's layout system rather than a home-made grid, so every number below has
+a published rationale and a worker can check it (owner's request, 2026-09-12). Mapping used everywhere:
+
+| M3 concept | What we do |
+|---|---|
+| Window size classes | compact < 600 · medium 600–839 · expanded 840–1199 · large 1200–1599 · extra-large ≥ 1600. Tailwind: `sm` 640 ≈ medium, `xl` 1280 ≈ large (documented offset; we do not redefine Tailwind's breakpoints). |
+| Canonical layout | **Supporting pane**: focus pane = setup (Army, Bonuses, Battle), supporting pane = March, 360 dp, trailing, shown from **large**; below the focus pane at compact/medium/expanded (one column). Never two independent scrollers; the supporting pane is sticky under the top app bar and may scroll inside itself only when taller than the viewport. |
+| Margins and spacers | 16 dp margins at compact, 24 dp from medium; 24 dp spacer between panes; content max width 1600 dp. |
+| Top app bar | Small top app bar, 64 dp, sticky (M3 "pinned" scroll behaviour): leading brand mark, headline area used for the live answer (figures + troop recap tiles), trailing actions = Generate (large and up) and the account avatar. |
+| FAB | Extended FAB (56 dp, icon + label) at compact/medium/expanded, bottom-trailing, 16 dp from edges plus safe area; label collapses on scroll down (M3 behaviour); **hidden from large** where Generate sits in the app bar (M3: one FAB, never duplicated). |
+| Navigation | None: a single destination, so no navigation bar/rail/drawer. The account menu is a standard M3 menu from the top app bar. |
+| Surface roles | M3 tonal surface containers → our tokens: `surface-container-lowest` = `sunken`, `surface` = `bg`, `surface-container` = `surface`, `surface-container-high` = `raised`; cards are **filled** cards (tonal step, no outline), inputs are **outlined** (one hairline, no fill), menus and sheets `surface-container-high` with level-2/3 elevation. |
+| State layers | hover 8 %, focus 10 %, pressed 10 % of the on-surface colour over the container, instead of bespoke hover colours. |
+| Shape scale | extra-small 4 (chips' inner marks) · small 8 (controls) · medium 12 (cards) · large 16 (sheets' side) · extra-large 28 (bottom sheet top corners, extended FAB) · full (avatar). |
+| Type roles | display/headline = Fraunces (headline-small 24 / title-large 20); body-large 16 / body-medium 14 / label 13 = Inter; the stack count uses headline-medium 28 with tabular figures. |
+| Components | Cards, menus, dialogs, bottom/side sheets, switches, segmented buttons, chips (filter chips for the mercenary picker), text fields (outlined), tooltips, snackbars — all styled to M3 anatomy on the kit page. |
+
+Where M3 has no answer (unit tiles, the march table), we follow M3's principles (tonal containers, state
+layers, shape scale) and say so in the component's story.
+
 ### 5.1 Page structure
 
 **Revised 2026-09-12 after an independent design review** (Material 3 supporting-pane guidance; measured
@@ -182,13 +204,14 @@ Three regions:
 
 - **One page scroll at every width.** No nested scrollers, except that the supporting pane may scroll inside
   itself when it is taller than the viewport (sticky with a max height).
-- **App bar (sticky, 56 px)**: brand mark; the live answer (average, minimum, hits) once a result exists,
+- **App bar (sticky, 64 px, M3 small top app bar)**: brand mark; the live answer (average, minimum, hits) once a result exists,
   muted with a "changed" dot when the setup moved since, and beside it a recap of the march's troops as a
   row of `sm` tiles (owner's request; hidden under 600 px where the figures alone fit); on wide screens the
   primary Generate button; the account avatar and menu. It is the only sticky element besides the floating button, and it sticks the
   *answer*, not a toolbar — principle 5 is amended accordingly.
-- **≥ 1280 px:** setup (Army, Bonuses, Battle) fluid on the left; MARCH as a 27 rem supporting pane on the
-  right, sticky under the app bar. Generate lives in the app bar; no floating button.
+- **Large and up (1280 px in our breakpoints):** setup (Army, Bonuses, Battle) as the focus pane on the left;
+  MARCH as the 360 dp supporting pane on the right, sticky under the app bar, with the march rows in their
+  stacked card form. Generate lives in the app bar; no floating button.
 - **< 1280 px:** one column in the order Army, Bonuses, Battle, March; the floating Generate button
   (bottom-right, label collapses while scrolling down); generating scrolls to MARCH.
 

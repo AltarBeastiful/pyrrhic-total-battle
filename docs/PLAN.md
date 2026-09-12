@@ -218,7 +218,7 @@ most, repeat), then local swaps; time-boxed in a Web Worker with progress and ca
 when the pool is small (≤ 12 types). "Total Optimization" (relaxing preservation when it improves damage)
 is a separate investigation story (S-31).
 
-### 3.7 Best captains for a march (S-48, planned)
+### 3.7 Best captains for a march (S-48, written up, delayed)
 
 Captains carry bonuses keyed to one unit family or category (`captains.json`: a health key and a strength key,
 per-level and per-star values), so the best march can change with the captains sent: a mounted-strength captain
@@ -374,11 +374,11 @@ floating Generate, group colours from the game, unit tiles, march table, unit sh
 `docs/plans/ui-foundation.md` (measured state of the UI code, framework options, recommendation: owned kit on
 React Aria Components + Tailwind v4 + tailwind-variants after a one-day spike; stories T-00…T-09; ADR-0008).
 
-### M7 — Best captains (S-48) and March card (planned, prioritised)
-Order agreed 2026-09-12: finish the Army cards (in flight) → March card in the amended order (design plan §7.5:
-recap first, army as tiles that are also the form) → S-48 best captains (§3.7: engine search + slot count on the
-Battle card + "Best captains" in the March card) → Bonuses and Battle cards → Phase A2 finish pass if not done
-earlier (fonts, icon sets, surfaces).
+### M7 — March card, then Bonuses and Battle (planned, prioritised)
+Order agreed 2026-09-12 (revised the same day): finish the Army cards (in flight) → Phase A2 finish pass (fonts,
+icon sets, surfaces) → March card in the amended order (design plan §7.5: recap first, army as tiles that are
+also the form) → Bonuses and Battle cards → validation (Phase E). **S-48 best captains is written up (§3.7) but
+delayed by the owner; not scheduled.**
 
 ### Deferred — not planned, kept for reference
 Features TotalStack has that we are not interested in for now. They stay out of every milestone; pull one back
