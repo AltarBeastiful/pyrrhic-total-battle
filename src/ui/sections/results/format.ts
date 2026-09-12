@@ -53,3 +53,25 @@ export function deltaRatio(value: number): string {
   if (Math.abs(value) < 0.005) return '0';
   return `${value > 0 ? '+' : '-'}${ratio(Math.abs(value))}`;
 }
+
+const RELATIVE = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 7],
+  ['week', 5],
+  ['month', 12],
+];
+
+/** "just now", "5 minutes ago", "yesterday" — how long ago a cached result was generated. */
+export function relativeTime(at: number, now: number = Date.now()): string {
+  const seconds = Math.round((at - now) / 1000);
+  if (Math.abs(seconds) < 45) return 'just now';
+  let value = seconds;
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(value) < size) return RELATIVE.format(Math.round(value), unit);
+    value /= size;
+  }
+  return RELATIVE.format(Math.round(value), 'year');
+}

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { unitById } from '@/data';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { useResultStore } from '@/ui/resultStore';
+import { LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
 import type * as WorkerClient from '@/worker/client';
 
 import { HousingSection } from '../housing/HousingSection';
@@ -30,6 +30,7 @@ function Page() {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   useStore.getState().replaceDocument(newRoot());
   useResultStore.getState().clear();
   useRunStore.getState().reset();
@@ -176,4 +177,65 @@ test('removing a unit type from the formation excludes it and generates again', 
     expect(lastResult()?.result.stacks.some((stack) => stack.unitId === removed)).toBe(false);
   });
   expect(screen.getByText('Removed by you')).toBeTruthy();
+});
+
+test('an empty pool is reported once, not once per unit type', async () => {
+  // Dominance only: every troop type is dropped for the same reason, which is one fact, not ten.
+  useStore.getState().updateActiveSetup({ housing: { leadership: 0, authority: 0, dominance: 200 } });
+  render(<Page />);
+  await generate();
+
+  const dropped = lastResult()?.result.dropped ?? [];
+  expect(dropped.length).toBeGreaterThan(1);
+
+  const line = screen.getByText(`${String(dropped.length)} unit types left out`);
+  expect(line.closest('li')?.parentElement?.children).toHaveLength(1);
+});
+
+test('the last result and its hand edits come back after a reload', async () => {
+  const first = render(<Page />);
+  await generate();
+  const at = lastResult()?.at;
+  fireEvent.click(screen.getByRole('button', { name: `One more ${unitNameOf()}` }));
+  expect(window.localStorage.getItem(LAST_RESULT_KEY)).not.toBeNull();
+
+  // Unmounting stops the subscription, so clearing the store here is the reload, not a user action.
+  first.unmount();
+  useResultStore.getState().clear();
+  expect(window.localStorage.getItem(LAST_RESULT_KEY)).not.toBeNull();
+
+  render(<Page />);
+  await waitFor(() => {
+    expect(lastResult()?.at).toBe(at);
+  });
+  // The second pill is untouched, so its label and count are the generated ones.
+  expect(screen.getByRole('button', { name: pillName(1) })).toBeTruthy();
+  expect(screen.getByText('+1')).toBeTruthy();
+  expect(screen.getByText(/Generated just now/)).toBeTruthy();
+});
+
+test('a cached result belonging to another march is left alone', async () => {
+  const first = render(<Page />);
+  await generate();
+  first.unmount();
+  useResultStore.getState().clear();
+  useStore.getState().createSetup('Second march');
+
+  render(<Page />);
+  expect(lastResult()).toBeNull();
+  expect(screen.getByText(/Nothing generated yet/)).toBeTruthy();
+});
+
+test('a result older than the profile is flagged as possibly stale', async () => {
+  render(<Page />);
+  await generate();
+  const snapshot = lastResult();
+  if (!snapshot) throw new Error('no result');
+
+  act(() => {
+    useResultStore.setState({ last: { ...snapshot, at: snapshot.at - 60_000 } });
+  });
+
+  expect(screen.getByText(/Generated 1 minute ago/)).toBeTruthy();
+  expect(screen.getByText(/may be stale/)).toBeTruthy();
 });

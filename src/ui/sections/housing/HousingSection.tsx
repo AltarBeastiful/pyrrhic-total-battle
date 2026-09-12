@@ -59,6 +59,8 @@ export function HousingSection() {
   }
 
   const { housing, priority, recoveryPlan } = setup;
+  // Nothing to fill: the engine would answer with an empty march and a list of ten identical reasons.
+  const noHousing = housing.leadership + housing.authority + housing.dominance === 0;
   const searching = running && priority !== 'none';
   const selectiveTop = recoveryPlan.selectiveTop ?? 3;
   const score = (value: number): string => (priority === 'avgDamage' ? amount(value) : ratio(value));
@@ -219,8 +221,14 @@ export function HousingSection() {
             'sm:-mx-4 sm:-mb-4 sm:px-4 md:static md:m-0 md:border-0 md:bg-transparent md:p-0 md:pb-0'
           }
         >
+          {noHousing && (
+            <HelpNote tone="warn" className="mb-2">
+              Enter your housing values from the march screen first: with no leadership, authority or
+              dominance there is nothing to fill.
+            </HelpNote>
+          )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" disabled={running} onClick={() => void runGenerate()}>
+            <Button variant="primary" disabled={running || noHousing} onClick={() => void runGenerate()}>
               {running ? 'Generating…' : 'Generate'}
             </Button>
             {running && (

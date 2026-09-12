@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { version as gameData } from '@/data';
@@ -7,10 +7,10 @@ import { newSavedStack } from '@/state/defaults';
 import type { SavedStack } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Button, Card, HelpNote, Section, Toggle } from '@/ui/primitives';
-import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
+import { initResultPersistence, resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 
-import { amount } from './format';
-import { runGenerate } from './generate';
+import { amount, relativeTime } from './format';
+import { restoreLastResult, runGenerate } from './generate';
 import { JournalDrawer } from './JournalDrawer';
 import { applyCounts, hasEdits } from './manual';
 import { SavedStacksPanel, StackNameDialog } from './SavedStacks';
@@ -32,6 +32,23 @@ function stripZeros<K extends string>(map: Record<K, number>): Partial<Record<K,
     if (value !== 0) out[key] = value;
   }
   return out;
+}
+
+/**
+ * The same reason repeated for ten unit types is one fact, not ten: an empty pool drops every type it
+ * pays for. Identical reasons are collapsed into one line, the unit names kept underneath.
+ */
+function groupDropped(
+  dropped: readonly { unitId: string; reason: string }[],
+  nameOf: (unitId: string) => string,
+): { reason: string; names: string[] }[] {
+  const groups = new Map<string, string[]>();
+  for (const entry of dropped) {
+    const names = groups.get(entry.reason) ?? [];
+    names.push(nameOf(entry.unitId));
+    groups.set(entry.reason, names);
+  }
+  return [...groups].map(([reason, names]) => ({ reason, names }));
 }
 
 /**
@@ -98,17 +115,17 @@ export function ResultsSection() {
   const setup = useStore(selectActiveSetup);
   const removedMercenaries = useRunStore((state) => state.removedMercenaries);
 
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [stamp, setStamp] = useState(last?.at ?? 0);
+  // Manual edits live in the result store so they survive a reload with the result they belong to.
+  const counts = useResultStore((state) => state.manualCounts);
   const [sortByHp, setSortByHp] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // A new result replaces the manual edits: they belong to the formation they were made on.
-  if ((last?.at ?? 0) !== stamp) {
-    setStamp(last?.at ?? 0);
-    setCounts({});
-  }
+  // Bring back the cached result of this march, then keep the cache in step with the store.
+  useEffect(() => {
+    restoreLastResult();
+    return initResultPersistence();
+  }, []);
 
   const edited = useMemo(
     () => (last && hasEdits(last.result, counts) ? applyCounts(last.request, last.result, counts) : null),
@@ -168,11 +185,22 @@ export function ResultsSection() {
     );
     if (sortByHp) pills.sort((a, b) => b.totalHp - a.totalHp);
 
+    const outdated = profile !== undefined && profile.updatedAt > last.at;
+
     return (
       <div className="space-y-4">
         {stale && (
           <HelpNote tone="warn">
             This result was generated for another profile or march. Generate again to refresh it.
+          </HelpNote>
+        )}
+
+        <p className="text-muted text-xs">Generated {relativeTime(last.at)}.</p>
+
+        {outdated && !stale && (
+          <HelpNote tone="warn">
+            Your profile has changed since this result was generated, so it may be stale. Generate again to
+            bring it up to date.
           </HelpNote>
         )}
 
@@ -199,7 +227,7 @@ export function ResultsSection() {
           pools={result.pools}
           generated={generated}
           onCount={(unitId, count) => {
-            setCounts((current) => ({ ...current, [unitId]: count }));
+            useResultStore.getState().editCount(unitId, count);
           }}
           onRemove={removeFromFormation}
         />
@@ -212,7 +240,7 @@ export function ResultsSection() {
             </HelpNote>
             <Button
               onClick={() => {
-                setCounts({});
+                useResultStore.getState().resetCounts();
               }}
             >
               Back to generated
@@ -241,10 +269,15 @@ export function ResultsSection() {
           <Card padded={false} className="p-3">
             <h3 className="mb-1.5 text-sm font-semibold">Unit types left out</h3>
             <ul className="text-muted space-y-1 text-xs">
-              {result.dropped.map((entry) => (
-                <li key={entry.unitId}>
-                  <span className="text-fg font-medium">{unitName(entry.unitId, last.request.units)}</span> —{' '}
-                  {entry.reason}
+              {groupDropped(result.dropped, (unitId) => unitName(unitId, last.request.units)).map((group) => (
+                <li key={group.reason}>
+                  <span className="text-fg font-medium">
+                    {group.names.length === 1
+                      ? group.names[0]
+                      : `${String(group.names.length)} unit types left out`}
+                  </span>{' '}
+                  — {group.reason}
+                  {group.names.length > 1 && <span className="block">{group.names.join(', ')}</span>}
                 </li>
               ))}
             </ul>

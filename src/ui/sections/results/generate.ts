@@ -8,7 +8,7 @@
 import { buildStackRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { getCalcClient } from '@/ui/calcClient';
-import { useResultStore } from '@/ui/resultStore';
+import { readStoredResult, useResultStore } from '@/ui/resultStore';
 import { isAbortError } from '@/worker/client';
 
 import { useRunStore } from './runStore';
@@ -73,4 +73,39 @@ export async function runGenerate(): Promise<void> {
 /** Stop the run in flight; the result already on screen is left alone. */
 export function cancelGenerate(): void {
   useRunStore.getState().cancel();
+}
+
+/**
+ * Put the cached result back after a reload (`pyrrhic.lastResult.v1`).
+ *
+ * Only a cache that belongs to the march active *now* is restored — another profile or another setup
+ * would put numbers on screen that no input explains. The request is not cached (it carries the whole
+ * unit table of the march), so it is rebuilt from the profile before the snapshot goes back in the store.
+ */
+export function restoreLastResult(): boolean {
+  const state = useStore.getState();
+  const profile = selectActiveProfile(state);
+  const setup = selectActiveSetup(state);
+  if (!profile || !setup) return false;
+  if (useResultStore.getState().last !== null) return false;
+
+  const stored = readStoredResult();
+  if (!stored || stored.profileId !== profile.id || stored.setupId !== setup.id) return false;
+
+  try {
+    const request = buildStackRequest(profile, setup);
+    useResultStore.getState().setResult({
+      request,
+      result: stored.result,
+      summary: stored.summary,
+      profileId: stored.profileId,
+      setupId: stored.setupId,
+      at: stored.at,
+    });
+    useResultStore.getState().setManualCounts(stored.counts);
+    return true;
+  } catch (error) {
+    console.warn('[pyrrhic] the cached result could not be restored', error);
+    return false;
+  }
 }

@@ -58,3 +58,14 @@ test('the Generate button is there with the model-confidence note', () => {
   expect(screen.getByRole('button', { name: 'Generate' })).toBeTruthy();
   expect(screen.getByText(/Model confidence/)).toBeTruthy();
 });
+
+test('Generate stays disabled until a housing value is entered', () => {
+  render(<HousingSection />);
+  expect(screen.getByRole('button', { name: 'Generate' })).toHaveProperty('disabled', true);
+  expect(screen.getByText(/Enter your housing values from the march screen first/)).toBeTruthy();
+
+  fireEvent.change(screen.getByLabelText('Dominance'), { target: { value: '200' } });
+
+  expect(screen.getByRole('button', { name: 'Generate' })).toHaveProperty('disabled', false);
+  expect(screen.queryByText(/Enter your housing values from the march screen first/)).toBeNull();
+});
