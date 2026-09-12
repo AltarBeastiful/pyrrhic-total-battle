@@ -1,0 +1,99 @@
+import { useId } from 'react';
+import type { ReactNode } from 'react';
+import { ToggleButton, ToggleButtonGroup } from 'react-aria-components';
+import { tv } from 'tailwind-variants';
+
+import { cn } from './cn';
+import { fieldLabel, fieldRoot } from './fieldStyles';
+import { ring } from './styles';
+
+export interface SegmentedOption {
+  value: string;
+  /** The visible text of the segment. */
+  label: string;
+  /** A glyph before the text; decorative, the text carries the meaning. */
+  icon?: ReactNode;
+  isDisabled?: boolean;
+}
+
+export interface SegmentedProps {
+  /** The visible name of the choice ("Enemy formation", "Theme"). */
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: SegmentedOption[];
+  size?: 'sm' | 'md';
+  isDisabled?: boolean;
+  className?: string;
+}
+
+const segmentedStyles = tv({
+  slots: {
+    root: fieldRoot,
+    label: fieldLabel,
+    group: 'rounded-control border-line bg-field flex w-full gap-0.5 border p-0.5',
+    item: cn(
+      'rounded-control text-muted flex flex-1 items-center justify-center gap-1.5 px-3 font-medium',
+      'hover:text-fg hover:bg-raised selected:bg-accent selected:text-accent-fg',
+      'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
+      ring,
+    ),
+  },
+  variants: {
+    size: {
+      sm: { item: 'min-h-9 text-xs sm:min-h-8' },
+      md: { item: 'min-h-11 text-sm sm:min-h-9' },
+    },
+  },
+  defaultVariants: { size: 'md' },
+});
+
+/**
+ * One row, one choice: the segments are a single-selection `ToggleButtonGroup`, which means a
+ * radio group to a screen reader and left/right arrow keys between the segments. Selection can
+ * never be emptied — a segmented control always shows where you are.
+ */
+export function Segmented({
+  label,
+  value,
+  onChange,
+  options,
+  size = 'md',
+  isDisabled = false,
+  className,
+}: SegmentedProps) {
+  const labelId = useId();
+  const styles = segmentedStyles({ size });
+
+  return (
+    <div className={cn(styles.root(), className)}>
+      <span id={labelId} className={styles.label()}>
+        {label}
+      </span>
+      <ToggleButtonGroup
+        className={styles.group()}
+        aria-labelledby={labelId}
+        selectionMode="single"
+        disallowEmptySelection
+        selectedKeys={[value]}
+        onSelectionChange={(keys) => {
+          const [first] = [...keys];
+          if (first !== undefined) onChange(String(first));
+        }}
+        isDisabled={isDisabled}
+      >
+        {options.map((option) => (
+          <ToggleButton
+            key={option.value}
+            id={option.value}
+            className={styles.item()}
+            isDisabled={option.isDisabled ?? false}
+          >
+            {option.icon}
+            <span className="truncate">{option.label}</span>
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+    </div>
+  );
+}

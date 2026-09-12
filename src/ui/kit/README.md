@@ -30,9 +30,9 @@ Story contract (`src/ui/kitpage/story.ts`, owned by the kit-page worker, shape f
 
 ```ts
 export interface KitStory {
-  name: string;                 // "Button", "NumberStepper"…
+  name: string; // "Button", "NumberStepper"…
   group: 'kit' | 'layout' | 'domain' | 'shell';
-  render: () => ReactNode;      // every variant, size and state, in a Cluster; no app state
+  render: () => ReactNode; // every variant, size and state, in a Cluster; no app state
 }
 ```
 
