@@ -15,6 +15,7 @@ type Priority = (typeof OBJECTIVES)[number] | 'none';
 const PRIORITY_LABELS: Record<Priority, string> = {
   none: 'No priority — just size the stacks',
   avgDamage: 'Highest average damage',
+  minDamage: 'Best worst case (highest minimum damage)',
   damagePerSilver: 'Most damage per silver',
   damagePerGold: 'Most damage per gold',
   damagePerDragonCoin: 'Most damage per dragon coin',
