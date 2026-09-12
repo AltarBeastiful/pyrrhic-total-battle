@@ -142,3 +142,122 @@ export const DominanceIcon = (props: IconProps) => (
     <path d="M4.6 16 3 6.6l4.9 3.5L12 3.8l4.1 6.3L21 6.6 19.4 16z" />
   </Glyph>
 );
+
+// ---- Bolder silhouettes -------------------------------------------------------------------------
+/**
+ * The filled twins of the glyphs above, drawn for the unit tile (`src/ui/domain/UnitTile.tsx`,
+ * design plan §6.2): solid shapes and a 2.25 stroke instead of a 1.75 outline, so the silhouette
+ * still reads inside a 32 px tile at 16 px. Holes (an eye, a flame) are punched with `evenodd`
+ * rather than painted, because a glyph only ever has `currentColor` to work with. The outline set
+ * above is unchanged and stays the one used beside text.
+ */
+
+/** Melee (filled) — a broad sword, point up. */
+export const MeleeFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path fill="currentColor" stroke="none" d="M12 1.6 14.6 6.2v7.1H9.4V6.2z" />
+    <path fill="currentColor" stroke="none" d="M6.9 13.5h10.2v2.6H6.9z" />
+    <path fill="currentColor" stroke="none" d="M10.7 16.3h2.6v3.9h-2.6z" />
+    <path fill="currentColor" stroke="none" d="M9.2 20.1h5.6v2.3H9.2z" />
+  </Glyph>
+);
+
+/** Ranged (filled) — a drawn bow, its string and a solid arrowhead. */
+export const RangedFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path strokeWidth="2.6" d="M7 3.2a12.8 12.8 0 0 1 0 17.6" />
+    <path strokeWidth="1.4" d="M7 3.2v17.6" />
+    <path d="M4.9 12h10" />
+    <path fill="currentColor" stroke="none" d="M14.2 7.9 20.4 12l-6.2 4.1z" />
+  </Glyph>
+);
+
+/** Mounted (filled) — a horse's head in profile, the eye punched out. */
+export const MountedFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M7.6 21.4v-4c0-2.5.9-4.6 2.6-6.3L8.7 8.3 5.5 10V8.2c0-2.1 1.3-3.6 3.6-4.6L12 2.3l1.3 2.6c3 1.3 4.5 3.8 4.5 7.5 0 3.6-.7 6.6-2.1 9zm3.1-12.5a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8"
+    />
+  </Glyph>
+);
+
+/** Flying (filled) — a single solid wing. */
+export const FlyingFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M2.6 6.4c5.3-1.5 9.3.8 11.4 6.6.9 2.3 2.7 3.7 5.5 4.4-5.4 1.7-9.5-.5-11.6-6.4C7 8.6 5.2 7.1 2.6 6.4Z"
+    />
+  </Glyph>
+);
+
+/** Engineers (filled) — a catapult: solid wheel, thick arm, solid payload. */
+export const EngineersFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path d="M2.8 20.6h12.4" />
+    <circle cx="6.6" cy="17.6" r="3.1" fill="currentColor" stroke="none" />
+    <path strokeWidth="2.6" d="m6.6 17.6 9.4-9.4" />
+    <circle cx="17.8" cy="6.7" r="2.9" fill="currentColor" stroke="none" />
+    <path d="m10.9 13.3 3.5 4.9" />
+  </Glyph>
+);
+
+/** Beasts (filled) — a solid paw print. */
+export const BeastFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <ellipse cx="6.2" cy="9.5" rx="2.1" ry="2.4" fill="currentColor" stroke="none" />
+    <ellipse cx="10.3" cy="6" rx="2.1" ry="2.5" fill="currentColor" stroke="none" />
+    <ellipse cx="14.6" cy="6.3" rx="2.1" ry="2.5" fill="currentColor" stroke="none" />
+    <ellipse cx="18.1" cy="10.1" rx="2" ry="2.3" fill="currentColor" stroke="none" />
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M12 11.2c3.3 0 6.1 2.4 6.1 5.3 0 2.2-1.7 3.7-3.9 3.7-1.1 0-1.7-.3-2.2-.3s-1.1.3-2.2.3c-2.2 0-3.9-1.5-3.9-3.7 0-2.9 2.8-5.3 6.1-5.3Z"
+    />
+  </Glyph>
+);
+
+/** Elementals (filled) — a solid droplet with the flame punched out. */
+export const ElementalFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M12 2.4s6.5 6.9 6.5 11.2a6.5 6.5 0 0 1-13 0C5.5 9.3 12 2.4 12 2.4Zm0 15.6a2.9 2.9 0 0 1-2.6-4.2c.7-1.3 2.6-3 2.6-3s1.9 1.7 2.6 3a2.9 2.9 0 0 1-2.6 4.2Z"
+    />
+  </Glyph>
+);
+
+/** Dragons (filled) — a solid horned head in profile, the eye punched out. */
+export const DragonFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M3.2 19.2c.3-3.9 2-6.9 5-8.9l-.9-4.2 3.8 2.2c1-.3 2.1-.4 3.2-.4 1.3 0 2.5.2 3.5.6l3.8-2.8-1.1 4.6c1.4 1.5 2.2 3.4 2.4 5.7-1.4-1.3-2.9-1.7-4.4-1.4.6 1.8.3 3.4-.9 4.8zm6.6-7a1 1 0 1 0 0-2 1 1 0 0 0 0 2"
+    />
+  </Glyph>
+);
+
+/** Giants (filled) — a solid closed fist. */
+export const GiantFillIcon = (props: IconProps) => (
+  <Glyph strokeWidth="2.25" {...props}>
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M8.2 9.4V7.3a2.1 2.1 0 0 1 4.2 0v2.1zM12.4 9.4V6.5a2.1 2.1 0 0 1 4.2 0v2.9z"
+    />
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M4.8 11.3c0-1.3 1.1-2.4 2.4-2.4h9.3c2.2 0 4 1.8 4 4v2.2c0 3.2-2.6 5.8-5.8 5.8h-4.1a5.8 5.8 0 0 1-5.8-5.8z"
+    />
+    <path fill="currentColor" stroke="none" d="M5 12.2H3.3a1.2 1.2 0 0 0 0 2.4H5z" />
+  </Glyph>
+);

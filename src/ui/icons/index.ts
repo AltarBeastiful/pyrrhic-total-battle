@@ -27,6 +27,19 @@ export {
   SpecialistsIcon,
 } from './units';
 
+// The filled twins of the category, group and race glyphs, drawn for the unit tile.
+export {
+  BeastFillIcon,
+  DragonFillIcon,
+  ElementalFillIcon,
+  EngineersFillIcon,
+  FlyingFillIcon,
+  GiantFillIcon,
+  MeleeFillIcon,
+  MountedFillIcon,
+  RangedFillIcon,
+} from './units';
+
 // Verbs and state marks.
 export {
   CheckIcon,

@@ -115,9 +115,28 @@ wrap?}`, `Grid {cols: 1|2|3|4|{sm,lg}; gap?}`, `Split {start; end; ratio?: '5/7'
 independent scroll columns on desktop, stacked under the breakpoint), `Page {children}` (side gutters, bottom
 padding for the floating button, max width). All accept `as?` and `className`.
 
-Domain (later worker): `UnitTile { unit: UnitDef; size: 'sm'|'md'|'lg'; state?: 'on'|'off'|'pinned'|'leftOut';
-selected?; onPress?; onLongPress? }`, `GroupMarker { group }`, `PoolField`, `SummaryLine`, `StatBar`,
-`DeltaText`, `MarchRow`.
+Domain (`src/ui/domain/`): the components that know what a unit is. They follow every rule above, but
+build on the kit rather than on React Aria — nothing here needs more than a button.
+
+```ts
+UnitGroup    'guardsmen'|'specialists'|'engineers'|'monsters'|'mercenaries'   // unitGroupOf(unit) decides
+UnitTile     { unit: UnitDef; size: 'sm'|'md'|'lg'; state?: 'on'|'off'|'pinned'|'leftOut'; isSelected?;
+               onPress?(); onLongPress?(); label?: string }
+             // button with aria-pressed when onPress is given, else a span; name "Archer, tier 3, on".
+             // Long press = 500 ms of pointer, cancelled on move, never from the keyboard.
+GroupMarker  { group: UnitGroup; label?: string }        // 10×16 bar in the group's edge colour
+SummaryLine  { parts: { group?: UnitGroup; text: string; muted? }[]; trailing?: ReactNode }
+PoolField    { pool: 'leadership'|'authority'|'dominance'; used: number; total: number }  // + role="meter"
+DeltaText    { value; previous?; format(n): string; betterWhen: 'higher'|'lower' }  // "12 480 (+4 %)"
+StatBar      { label: string; base: number; boosted: number; format(n): string }    // two meters, one scale
+MarchRow     { unit: UnitDef; count: number; hits?; lost?; reviveSilver?; position?; fallsLast?;
+               onCopy?(count); children? }   // a <tr>; the count is a button that copies it
+MarchTable   { caption?: string; children }  // the <table>, its header row and the horizontal scroller
+```
+
+`unitGroup.ts` also exports `GROUP_LABEL` and the colour maps `GROUP_TONE` (the three utilities),
+`GROUP_INK`, `GROUP_EDGE_BG` and `GROUP_EDGE_LEFT`, each written out literally and shaped to drop
+straight into a `tv()` variant.
 
 ## Testing
 
