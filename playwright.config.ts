@@ -7,6 +7,8 @@ const baseURL = `http://127.0.0.1:${PORT}`;
 // separate command and is never pulled in by `pnpm test`.
 export default defineConfig({
   testDir: './e2e',
+  // The kit page only exists in a dev build; `visual.spec.ts` has its own config and server.
+  testIgnore: /visual\.spec\.ts/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
