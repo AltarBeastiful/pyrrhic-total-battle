@@ -386,8 +386,12 @@ but a **grid of captain tiles**, every captain the tables know, always visible i
 glyph, and a **badge with the level and the star count** ("20 ★3"). Tapping the tile puts the captain in the
 march (or takes it out); at most three on, the fourth tap is refused with a one-line note. Tapping the badge
 opens the level/stars editor in a sheet. Captains the player has never configured show the badge as "set
-level" until tapped. The hero gets the same tile at the head of the grid with its level badge. Ordering: on
-first, then by name.
+level" until tapped. **Only captains whose bonuses touch a stack get a level badge** (TotalStack does the
+same: Carter, Aurora, Doria, Dustan, Farhad, Helen, Hercules, Proscope, Stror and Tengel have no health or
+strength key in `captains.json`); their tiles read "no stack bonus", can still be enlisted (they take one of
+the three slots the player really sends), and never open an editor. A captain with only one of the two keys
+edits that one. The hero gets the same tile at the head of the grid with its level badge. Ordering: on first,
+then captains with a stack bonus by name, then the rest.
 
 **Other sources** (equipment, artifacts, permanent, other, events): rows, not chips — switch · name · value
 right-aligned in tabular figures · gear. Rows are 40 px. Editors open in a sheet (bottom on phone, right on
