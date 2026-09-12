@@ -360,14 +360,19 @@ expand/collapse state. One row per group:
 
 ### 7.2 Army — Mercenaries
 
-**Amended 2026-09-12:** no collapse here either. The selected mercenaries are the summary and the form,
-TotalStack-style: one compact row each, always visible — `sm` tile · name · tier and role in muted text ·
-owned count as a stepper with an "unlimited" toggle · pin marker. Tapping the row itself deselects it.
-- **Picker** behind one "Add mercenaries" button under the list (inline on desktop, a sheet on phones):
-  search field, filter chips (tier, role, race), rows in the same shape; pressing a row adds it (checkbox
-  semantics, the whole row is the target, R6). Recently used first.
-- Custom mercenary: a "+ Custom…" row at the end of the picker opens the existing form as a sheet.
-- Empty: the search field shows directly with one line of guidance.
+**Amended 2026-09-13 (owner):** players know mercenaries by name and tier; role and race filters are noise.
+
+- The owned list is the summary and the form, TotalStack-style: one compact row each, **ordered by tier
+  (highest first), then name** — `sm` tile · name · a tier badge in the tier colour · owned count as a stepper
+  with an "unlimited" toggle · pin marker. Tapping the row itself deselects it.
+- **Adding** is a **combobox** (type a name, or open the list): the list is grouped by tier, highest first, each
+  group headed "Tier VI" in that tier's colour, rows = tile · name · tier badge; picking a row adds it and keeps
+  the combobox open for the next one. No Tier/Role/Race chips. "Custom mercenary…" is the last row.
+- **Tier colours** come from the game's tier palette, made readable against our surfaces (tokens
+  `--color-tier-5 … --color-tier-9`, one per tier present in the tables; a hypothesis to confirm against an
+  in-game screenshot: V gold, VI crimson, VII violet, VIII teal, IX white-gold). The tier colour is used on
+  tier badges and group headings only; group colours keep the tile.
+- Empty: the combobox with one line of guidance.
 
 ### 7.3 Bonuses
 
@@ -506,7 +511,8 @@ starts.
 - D-22 Troops card in the TotalStack-inspired flow (§7.1): from/to steppers per group and top-tier tiles to
   click out; collapsed one-line summary; none rows collapse to one line. Accept: the whole card at 390 px is
   four rows tall with all four groups set; a newcomer configures G1–G4 without riders in four taps.
-- D-23 Mercenaries card: selected list first, whole-row selection, steppers, picker with search and filters.
+- D-23 Mercenaries card: owned list first ordered by tier, whole-row selection, steppers, a tier-grouped
+  combobox to add (no filter chips), tier colours on badges and headings.
   Accept: Troops and Mercenaries collapsed summaries visible together at 390×844 without scrolling.
 
 **Phase C — Bonuses and Battle**
