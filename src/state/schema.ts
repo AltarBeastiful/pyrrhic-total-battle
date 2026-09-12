@@ -314,8 +314,7 @@ export const profileSchema = syncMetaSchema.extend({
   mercenaries: mercenariesSchema,
   sources: sourcesSchema,
   recovery: recoverySettingsSchema,
-  /** Default housing; a setup overrides it for one march. */
-  housing: housingSchema,
+  // Housing belongs to the march, not to the account: it lives on `BattleSetup` only.
   setups: z.array(battleSetupSchema),
   activeSetupId: z.uuid(),
   savedStacks: z.array(savedStackSchema),

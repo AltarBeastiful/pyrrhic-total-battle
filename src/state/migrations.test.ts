@@ -105,7 +105,6 @@ function v1Fixture(): Record<string, unknown> {
           trainingSpeed: {},
           plan: { mode: 'retrain' },
         },
-        housing: { leadership: 4100, authority: 300, dominance: 120 },
         setups: [setup],
         activeSetupId: setup.id,
         savedStacks: [],
@@ -153,13 +152,17 @@ describe('migrate', () => {
     const profiles = fixture.profiles as Record<string, unknown>[];
     const profile = profiles[0] as Record<string, unknown>;
     profile.legacyKillOrder = ['archer-1'];
+    // Housing used to live on the profile; a document written before it moved must still load.
+    profile.housing = { leadership: 4100, authority: 300, dominance: 120 };
     (fixture as Record<string, unknown>).experiment = true;
 
     const doc = migrate(fixture);
     expect(doc.profiles[0]).not.toHaveProperty('legacyKillOrder');
+    expect(doc.profiles[0]).not.toHaveProperty('housing');
     expect(doc).not.toHaveProperty('experiment');
     expect(warn).toHaveBeenCalledOnce();
     expect(warn.mock.calls[0]?.[0]).toContain('profiles[0].legacyKillOrder');
+    expect(warn.mock.calls[0]?.[0]).toContain('profiles[0].housing');
     expect(warn.mock.calls[0]?.[0]).toContain('experiment');
   });
 

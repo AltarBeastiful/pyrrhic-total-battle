@@ -18,6 +18,7 @@ let updateReady = false;
 let waitingWorker: ServiceWorker | null = null;
 let started = false;
 let reloading = false;
+let updateAccepted = false;
 
 function announce(worker: ServiceWorker): void {
   waitingWorker = worker;
@@ -44,8 +45,14 @@ export function isUpdateReady(): boolean {
   return updateReady;
 }
 
-/** Let the waiting worker take over, then reload onto the new version. */
+/**
+ * Let the waiting worker take over, then reload onto the new version. This is the *only* thing
+ * that ever reloads the page: `clients.claim()` in the worker also fires `controllerchange` on a
+ * first visit, and reloading there would throw away the share-link fragment `main.tsx` has just
+ * consumed and any edit not yet written by the debounced save.
+ */
 export function applyUpdate(): void {
+  updateAccepted = true;
   if (!waitingWorker) {
     reloadOnce();
     return;
@@ -70,7 +77,10 @@ export function registerServiceWorker(): void {
   if (!window.isSecureContext) return;
   started = true;
 
-  navigator.serviceWorker.addEventListener('controllerchange', reloadOnce);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Not on the first install: only once the user has accepted the update toast.
+    if (updateAccepted) reloadOnce();
+  });
 
   const start = (): void => {
     void register();
@@ -82,6 +92,9 @@ export function registerServiceWorker(): void {
 async function register(): Promise<void> {
   try {
     const registration = await navigator.serviceWorker.register(new URL('sw.js', document.baseURI));
+    // A blocked registration (enterprise policy, a test harness, private browsing) can resolve
+    // with nothing at all rather than rejecting.
+    if (!registration) return;
 
     // A worker already waiting from an earlier visit. `controller` tells the first install
     // (nothing to announce: the page is already running the only version there is) from an update.

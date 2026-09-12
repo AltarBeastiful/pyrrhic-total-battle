@@ -109,12 +109,12 @@ describe('sync metadata', () => {
     const before = activeProfile(store);
     vi.advanceTimersByTime(5_000);
 
-    store.getState().updateProfile(before.id, { housing: { leadership: 4100, authority: 0, dominance: 0 } });
+    store.getState().updateProfile(before.id, { recovery: { ...before.recovery, templeLevel: 20 } });
     const after = activeProfile(store);
     expect(after.rev).toBe(before.rev + 1);
     expect(after.updatedAt).toBeGreaterThan(before.updatedAt);
     expect(after.deviceId).toBe(store.getState().doc.deviceId);
-    expect(after.housing.leadership).toBe(4100);
+    expect(after.recovery.templeLevel).toBe(20);
     expect(after.id).toBe(before.id);
   });
 

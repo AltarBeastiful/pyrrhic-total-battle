@@ -1,6 +1,6 @@
 import { version as gameData } from '@/data';
 import type { SharePayload } from '@/share/codec';
-import { cloneProfileWithNewIds } from '@/state/defaults';
+import { cloneProfileWithNewIds, uniqueProfileName } from '@/state/defaults';
 import { useStore } from '@/state/store';
 import type { BattleSetup } from '@/state/schema';
 
@@ -39,7 +39,11 @@ export function LoadSharedDialog({ payload, error, onClose }: LoadSharedDialogPr
   const addProfile = (): void => {
     if (payload?.kind !== 'profile') return;
     const state = useStore.getState();
-    state.addProfile(cloneProfileWithNewIds(payload.profile, state.doc.deviceId));
+    const name = uniqueProfileName(
+      payload.profile.name,
+      state.doc.profiles.map((profile) => profile.name),
+    );
+    state.addProfile(cloneProfileWithNewIds(payload.profile, state.doc.deviceId, name));
     onClose();
   };
 

@@ -45,7 +45,7 @@ export function defaultEnemyFormation(): BattleSetup['enemy'] {
   return { melee: 1, ranged: 1, mounted: 1, flying: 1 };
 }
 
-export function defaultHousing(): Profile['housing'] {
+export function defaultHousing(): BattleSetup['housing'] {
   return { leadership: 0, authority: 0, dominance: 0 };
 }
 
@@ -125,7 +125,6 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
       trainingSpeed: {},
       plan: { mode: 'retrain' },
     },
-    housing: defaultHousing(),
     setups: [setup],
     activeSetupId: setup.id,
     savedStacks: [],
@@ -134,6 +133,20 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
 
 export function newProfile(name: string, deviceId: string = uuid()): Profile {
   return buildProfile(uuid(), deviceId, name, Date.now(), defaultSetup(deviceId));
+}
+
+/**
+ * A profile name that is not already used. "Alpha" imported next to an existing "Alpha" becomes
+ * "Alpha (imported)", then "Alpha (imported 2)", so the profile switcher never shows two identical rows.
+ */
+export function uniqueProfileName(name: string, taken: Iterable<string>, suffix = 'imported'): string {
+  const used = new Set(taken);
+  if (!used.has(name)) return name;
+  const base = `${name} (${suffix}`;
+  for (let index = 1; ; index += 1) {
+    const candidate = index === 1 ? `${base})` : `${base} ${index})`;
+    if (!used.has(candidate)) return candidate;
+  }
 }
 
 export function newRoot(deviceName = ''): RootDocument {

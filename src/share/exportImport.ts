@@ -9,7 +9,7 @@
  */
 import type { StoreApi } from 'zustand';
 
-import { cloneProfileWithNewIds, CURRENT_DATA_VERSION, uuid } from '../state/defaults';
+import { cloneProfileWithNewIds, CURRENT_DATA_VERSION, uniqueProfileName, uuid } from '../state/defaults';
 import { migrateProfile, migrateSavedStack, readSchemaVersion } from '../state/migrations';
 import { SCHEMA_VERSION } from '../state/schema';
 import type { Profile, SavedStack } from '../state/schema';
@@ -171,7 +171,8 @@ export function parseImport(json: string): ParsedImport {
 
 /**
  * Apply a parsed import to the store.
- * - `add`: the payload gets brand-new ids and is appended (a profile becomes the active one).
+ * - `add`: the payload gets brand-new ids and is appended (a profile becomes the active one, and is
+ *   renamed when an existing profile already carries that name).
  * - `replace`: a profile replaces the one with the same id, or the active profile when the id is unknown;
  *   a stack replaces the one with the same id inside the active profile, or is appended.
  *
@@ -183,7 +184,14 @@ export function applyImport(store: StoreApi<StoreState>, parsed: ParsedImport, m
 
   if (parsed.kind === 'profile') {
     if (mode === 'add') {
-      const copy = cloneProfileWithNewIds(parsed.payload, doc.deviceId);
+      const copy = cloneProfileWithNewIds(
+        parsed.payload,
+        doc.deviceId,
+        uniqueProfileName(
+          parsed.payload.name,
+          doc.profiles.map((profile) => profile.name),
+        ),
+      );
       state.addProfile(copy);
       return copy.id;
     }

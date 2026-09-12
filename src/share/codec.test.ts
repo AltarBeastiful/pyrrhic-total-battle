@@ -37,7 +37,6 @@ function realisticProfile(): Profile {
     topTierExcluded: { guardsmen: ['mounted', 'flying'], specialists: ['flying'] },
     excludedUnitIds: ['rider-2', 'gargoyle-3'],
   };
-  profile.housing = { leadership: 4100, authority: 312, dominance: 148 };
   profile.mercenaries = {
     selected: Array.from({ length: 10 }, (_, index) => ({
       id: `mercenary-${index + 1}`,
@@ -96,7 +95,7 @@ function realisticProfile(): Profile {
         otherPills: ['personal', 'clan', 'kingdom'],
         hero: true,
       },
-      housing: profile.housing,
+      housing: { leadership: 4100, authority: 312, dominance: 148 },
       priority: 'avgDamage',
     },
     {

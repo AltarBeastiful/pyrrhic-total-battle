@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { newProfile, newRoot, newSavedStack } from '../state/defaults';
+import { newProfile, newRoot, newSavedStack, uniqueProfileName } from '../state/defaults';
 import { SCHEMA_VERSION } from '../state/schema';
 import type { Profile, SavedStack } from '../state/schema';
 import { createAppStore, selectActiveProfile } from '../state/store';
@@ -103,6 +103,17 @@ describe('parseImport', () => {
   });
 });
 
+describe('uniqueProfileName', () => {
+  it('keeps a free name and numbers the suffix when it is taken', () => {
+    expect(uniqueProfileName('Alpha', [])).toBe('Alpha');
+    expect(uniqueProfileName('Alpha', ['Alpha'])).toBe('Alpha (imported)');
+    expect(uniqueProfileName('Alpha', ['Alpha', 'Alpha (imported)'])).toBe('Alpha (imported 2)');
+    expect(uniqueProfileName('Alpha', ['Alpha', 'Alpha (imported)', 'Alpha (imported 2)'])).toBe(
+      'Alpha (imported 3)',
+    );
+  });
+});
+
 describe('applyImport', () => {
   it('adds a profile under fresh ids and activates it', () => {
     const store = createAppStore(newRoot('test'));
@@ -118,6 +129,21 @@ describe('applyImport', () => {
     expect(active.rev).toBe(0);
     expect(active.setups[0]?.id).not.toBe(imported.setups[0]?.id);
     expect(active.activeSetupId).toBe(active.setups[0]?.id);
+  });
+
+  it('never adds a second profile under an existing name', () => {
+    const store = createAppStore(newRoot('test'));
+    store.getState().renameProfile(store.getState().doc.activeProfileId, 'Alpha');
+    const parsed = parseImport(exportProfileFile(sampleProfile('Alpha'), 1, DATE).json);
+
+    applyImport(store, parsed, 'add');
+    applyImport(store, parsed, 'add');
+
+    expect(store.getState().doc.profiles.map((profile) => profile.name)).toEqual([
+      'Alpha',
+      'Alpha (imported)',
+      'Alpha (imported 2)',
+    ]);
   });
 
   it('replaces the profile with the same id, bumping its rev', () => {
