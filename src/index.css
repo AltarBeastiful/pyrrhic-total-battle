@@ -1,6 +1,62 @@
 @import 'tailwindcss';
 @plugin 'tailwindcss-react-aria-components';
 
+/* ---------------------------------------------------------------------------------------------
+   The two bundled faces (design plan D-15). ADR-0002 amended: an OFL font installed from npm and
+   served from our own origin keeps the promise that matters — nothing leaves the browser, nothing
+   is fetched from a third party — so the app no longer depends on whatever serif and sans the
+   device happens to have. A font from a CDN stays forbidden.
+
+   Declared by hand rather than by importing the package stylesheets, because those carry Cyrillic,
+   Greek and Vietnamese too: the app is written in Latin script, and every extra subset is another
+   file in the offline cache. Inter ships its weight axis; Fraunces ships weights, optical size and
+   softness, which the heading rule below sets.
+   --------------------------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/fraunces/files/fraunces-latin-full-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/fraunces/files/fraunces-latin-ext-full-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 /* Dark mode is driven by the app, not by the OS alone: Tailwind's `dark:` variant
    applies when `.dark` or `data-theme="dark"` is set on an ancestor (we put it on
    <html>). The theme toggle in the header flips that attribute. */
@@ -13,11 +69,14 @@
    `pnpm contrast` re-checks every pair in this file against WCAG 2.2.
    --------------------------------------------------------------------------------------------- */
 @theme inline {
-  /* Type. A system serif carries the display voice (ADR-0002: no third-party font, no CDN);
-     the body stays on the platform sans, and figures are always tabular. */
-  --font-display: ui-serif, Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  /* Type. Fraunces carries the display voice and Inter the text and the figures, both bundled
+     above; the stacks behind them are what shows while the woff2 loads and if it never does.
+     Figures are always tabular. */
+  --font-display:
+    'Fraunces Variable', ui-serif, Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Five steps and a figure size (plan §6.3). The floor is 13 px: nothing smaller ships. */
@@ -314,10 +373,19 @@
     background-repeat: no-repeat;
   }
 
-  /* Headings carry the display serif; the body stays on the platform sans. Set on the element so a
-     section's own H3/H4 gets the voice without every section file repeating a class. */
+  /* Headings carry the display serif; the body stays on the sans. Set on the element so a
+     section's own H3/H4 gets the voice without every section file repeating a class.
+
+     Fraunces is drawn for a size: at its default optical size it is a text face, and titles want a
+     little more. `opsz 28` opens the letterforms without turning them into a poster, and `SOFT 20`
+     takes the edge off the serifs; `WONK 0` keeps the straight-sided g and y, because a title here
+     is a label on a card, not a headline. Weight is left to `font-weight`. */
   :where(h1, h2, h3, h4) {
     font-family: var(--font-display);
+    font-variation-settings:
+      'opsz' 28,
+      'SOFT' 20,
+      'WONK' 0;
     letter-spacing: -0.006em;
   }
 
@@ -394,9 +462,14 @@
     font-feature-settings: 'tnum' 1;
   }
 
-  /* A section or dialog title: the display serif, a hair tighter. */
+  /* A section or dialog title: the display serif, a hair tighter. Same optical size and softness
+     as a heading, for the titles that are not a heading element. */
   .title-face {
     font-family: var(--font-display);
+    font-variation-settings:
+      'opsz' 28,
+      'SOFT' 20,
+      'WONK' 0;
     letter-spacing: -0.01em;
   }
 

@@ -133,8 +133,16 @@ durations) is tabular — `.nums` on the element, and `output`/`td`/`th` get it 
 
 ## 5. Icons
 
-`src/ui/icons/` — 50 glyphs, hand-drawn on a 24 grid, 1.75 stroke, round caps and joins, `currentColor`, sized
-in `em` so a glyph matches the text beside it.
+`src/ui/icons/` — two bundled sets behind one export name each, `currentColor` only and sized in `em` so a
+glyph matches the text beside it (D-16). **Lucide** (ISC) draws the interface: verbs, marks, section heads and
+the housing pools, on a 24 grid with a 2 stroke and round caps. **Game Icons** (CC BY 3.0, through
+`react-icons/gi`) draws the units: solid silhouettes, one per category, group and race, picked at 16 px on the
+kit page because that is the size a badge and a tile give them. Both are credited in the About dialog, both
+ship with the app — no icon font, no network request (ADR-0002).
+
+`Icon.tsx` holds the whole contract: `LucideGlyph` and `GameGlyph` wrap a package drawing, `Glyph` is there for
+anything we ever draw by hand. A section imports `ResetIcon`, never a package name, so swapping a drawing — or
+a package — touches one line in `src/ui/icons/`.
 
 - **Decorative by default.** A glyph renders `aria-hidden="true"`; it repeats the visible label, never replaces
   it. Pass `title` — and only then — when the glyph stands alone; it becomes `role="img"` with that name.
@@ -145,10 +153,10 @@ in `em` so a glyph matches the text beside it.
 | Family | Names |
 |---|---|
 | Categories | `MeleeIcon` (sword) · `RangedIcon` (bow) · `MountedIcon` (horse head) · `FlyingIcon` (wing) |
-| Groups | `GuardsmenIcon` (shield) · `SpecialistsIcon` (star) · `EngineersIcon` (catapult) · `MonstersIcon` (claw) |
-| Races | `BeastIcon` (paw) · `ElementalIcon` (droplet) · `DragonIcon` (head) · `GiantIcon` (fist) |
+| Groups | `GuardsmenIcon` (shield) · `SpecialistsIcon` (star) · `EngineersIcon` (catapult) · `MonstersIcon` (talons) |
+| Races | `BeastIcon` (paw) · `ElementalIcon` (flame) · `DragonIcon` (head) · `GiantIcon` (fist) |
 | Pools | `LeadershipIcon` (banner) · `AuthorityIcon` (coin) · `DominanceIcon` (crown) |
-| Sections | `TroopsIcon` · `MercenariesIcon` · `MethodIcon` (ladder) · `BonusesIcon` (sparkle) · `EnemyIcon` · `HousingIcon` (tent) · `ResultsIcon` (chart) |
+| Sections | `TroopsIcon` (people) · `MercenariesIcon` (purse) · `MethodIcon` (numbered list) · `BonusesIcon` (sparkle) · `EnemyIcon` · `HousingIcon` (tent) · `ResultsIcon` (chart) |
 | Verbs | `GenerateIcon` · `GearIcon` · `PencilIcon` · `PlusIcon` · `MinusIcon` · `TrashIcon` · `CopyIcon` · `DuplicateIcon` · `ShareIcon` · `DownloadIcon` · `UploadIcon` · `SyncIcon` · `PinIcon` · `UnpinIcon` · `UndoIcon` · `ResetIcon` · `SortIcon` · `SearchIcon` |
 | Marks | `CheckIcon` · `CloseIcon` · `InfoIcon` · `WarningIcon` · `ChevronUp/Down/Left/RightIcon` · `SunIcon` · `MoonIcon` |
 
@@ -238,3 +246,35 @@ Three headed blocks, in this order:
   troops / mercenaries / monsters.
 - Say **"stack"** for a unit type in a march, **"march"** for one battle setup, **"profile"** for one account.
 - Errors say what to do: "Enter a leadership capacity above 0", not "Invalid input".
+
+
+## 8. Finish reference
+
+What "finished" looks like here, named once so parallel work stops inventing it (D-18).
+
+**The reference is restraint, not decoration.** Take the finish of a Linear- or Vercel-class product UI: a
+surface is told from the one under it by *one* step of tone and a hairline — never a border plus a shadow plus
+a tint; there is exactly one accent and it means "you can act on this"; text is set with generous line height
+and plenty of room around it; every figure a player compares is tabular. The game's warmth is rationed on
+purpose — it lives in the four group colours and in the bronze/amber accent, and nowhere else. A card is
+quiet so that a number can be loud.
+
+**Type.** Inter Variable for everything you read and every figure (tabular through `.nums`), Fraunces Variable
+for the display voice — section, dialog and card titles, the app name, the tier numeral on a tile — at
+`opsz 28`, `SOFT 20`, `WONK 0`, which is a display serif with the wonk turned off. Both are bundled with the
+app; the system stacks behind them are a fallback, not the design. Mono is the platform's, for ids and share
+links only.
+
+**Icons.** Lucide (ISC) for the interface, Game Icons (CC BY 3.0) for the unit silhouettes, both behind the
+export names in `src/ui/icons/` and both credited in the About dialog. Never mix a third source in.
+
+**Three rules a reviewer can check without an opinion:**
+
+1. **A control has a border or a fill, never both.** A filled button draws no outline; an outlined button has a
+   transparent or `surface` ground. The one exception is a focus ring, which is drawn outside the box.
+2. **One radius per level.** `rounded-card` for anything card-shaped (sections, dialogs, popovers, menus),
+   `rounded-control` for buttons, fields and tiles, `rounded-chip` for chips and badges. A radius is never
+   picked for looks; it is picked by what the thing is.
+3. **8 px rhythm.** Padding, gaps and offsets are multiples of 8 px (Tailwind's `2`, `3`, `4`, `6`, `8`), with
+   4 px (`1`) allowed only *inside* a control — the gap between a glyph and its label. Anything else is a
+   value that belongs in `src/index.css` as a token, and `pnpm lint` fails on arbitrary class values.

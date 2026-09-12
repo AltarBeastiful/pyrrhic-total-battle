@@ -47,6 +47,10 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           Free and open source under the AGPL-3.0. Unit values are game facts, contributed and checked by
           players.
         </p>
+        <p className="text-muted text-xs">
+          Unit icons from game-icons.net, CC BY 3.0; interface icons from Lucide, ISC; type set in Inter and
+          Fraunces, SIL Open Font License. All bundled with the app — nothing is fetched from anyone else.
+        </p>
       </div>
     </Dialog>
   );

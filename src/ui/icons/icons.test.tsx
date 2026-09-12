@@ -3,7 +3,8 @@
  * The icon contract, checked on every glyph at once rather than one test per drawing: a glyph is an
  * `svg`, it inherits `currentColor`, and it is invisible to a screen reader unless the caller gives
  * it a name. Those three rules are what let a section drop an icon next to any label without
- * thinking about accessibility.
+ * thinking about accessibility — and they hold whichever package drew the glyph, which is the point
+ * of the wrappers in `Icon.tsx`.
  */
 import { cleanup, render, screen } from '@testing-library/react';
 import type { ComponentType } from 'react';
@@ -61,6 +62,23 @@ test('the set is complete: categories, groups, races, pools, sections and the ve
   expect(GLYPHS.length).toBeGreaterThanOrEqual(45);
 });
 
+test('the unit tile still finds a filled twin for every silhouette it can wear', () => {
+  const names = new Set(GLYPHS.map(([name]) => name));
+  for (const required of [
+    'MeleeFillIcon',
+    'RangedFillIcon',
+    'MountedFillIcon',
+    'FlyingFillIcon',
+    'EngineersFillIcon',
+    'BeastFillIcon',
+    'ElementalFillIcon',
+    'DragonFillIcon',
+    'GiantFillIcon',
+  ]) {
+    expect(names).toContain(required);
+  }
+});
+
 test.each(GLYPHS)('%s draws an svg that is decorative by default', (_name, Icon) => {
   const { container } = render(<Icon />);
   const svg = container.querySelector('svg');
@@ -70,7 +88,10 @@ test.each(GLYPHS)('%s draws an svg that is decorative by default', (_name, Icon)
   expect(svg?.getAttribute('focusable')).toBe('false');
   // Colour and size come from the text around it, never from the glyph itself.
   expect(svg?.getAttribute('stroke')).toBe('currentColor');
-  expect(svg?.getAttribute('viewBox')).toBe('0 0 24 24');
+  expect(svg?.getAttribute('width')).toMatch(/em$/);
+  expect(svg?.getAttribute('height')).toMatch(/em$/);
+  // One of the two grids the set is drawn on: Lucide's 24, or Game Icons' 512.
+  expect(['0 0 24 24', '0 0 512 512']).toContain(svg?.getAttribute('viewBox'));
   expect(svg?.querySelector('title')).toBeNull();
 });
 

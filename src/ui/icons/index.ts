@@ -1,12 +1,15 @@
 /**
- * The Pyrrhic icon set: hand-drawn inline SVG, one 24 grid, one stroke weight, `currentColor` only.
- * No icon package and no network request (ADR-0002).
+ * The Pyrrhic icon set. Two bundled packages draw it (design plan D-16): Lucide (ISC) for the verbs,
+ * the marks, the sections and the housing pools, Game Icons (CC BY 3.0, `react-icons/gi`) for the
+ * unit silhouettes. Both ship with the app — no icon font, no network request (ADR-0002) — and both
+ * are credited in the About dialog.
  *
- * Rules of use are in `docs/design.md`: an icon never replaces a label, it is decorative
- * (`aria-hidden`) unless you pass `title`, and a glyph means the same thing everywhere.
+ * Every export below is the same component contract whatever drew it: `currentColor`, sized in `em`,
+ * decorative unless you pass `title`. Rules of use are in `docs/design.md` §5: an icon never
+ * replaces a label, and a glyph means the same thing everywhere.
  */
-export { Glyph, PathGlyph } from './Icon';
-export type { GlyphProps, IconProps } from './Icon';
+export { GameGlyph, Glyph, LucideGlyph, PathGlyph } from './Icon';
+export type { GameGlyphProps, GlyphProps, IconProps, LucideGlyphProps } from './Icon';
 
 // Categories, groups, races, housing pools.
 export {
@@ -27,7 +30,8 @@ export {
   SpecialistsIcon,
 } from './units';
 
-// The filled twins of the category, group and race glyphs, drawn for the unit tile.
+// The filled twins the unit tile asks for. Game Icons are solid already, so each one is its
+// outline namesake; the names stay because the tile's contract does.
 export {
   BeastFillIcon,
   DragonFillIcon,
