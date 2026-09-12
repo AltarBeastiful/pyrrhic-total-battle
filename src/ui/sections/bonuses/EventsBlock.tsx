@@ -3,8 +3,9 @@ import { toggleActiveSource } from '@/state/actions/bonuses';
 import type { BattleSetup } from '@/state/schema';
 
 import { HelpNote, Pill } from '../../primitives';
+import { BlockGlyph } from './glyphs';
 import { formatPercent } from './labels';
-import { Block, PillRow } from './parts';
+import { Block, ChipGrid, ChipValueText } from './parts';
 
 /**
  * Events (S-16): the seasonal events running on this march. Some add strength to the whole army, some
@@ -19,23 +20,27 @@ export function EventsBlock({ setup }: { setup: BattleSetup }) {
   return (
     <Block
       title="Events"
-      note="Events screen: switch on the event this march happens during. An event only counts while it runs."
+      icon={<BlockGlyph name="events" />}
+      description="Switch on the event this march happens during. An event only counts while it runs."
+      where="the Events screen — the banner names the one running now."
     >
-      <PillRow>
+      <ChipGrid>
         {eventTable.map((record) => (
           <Pill
             key={record.id}
             label={record.name}
             {...(record.strength === undefined
               ? {}
-              : { detail: `strength ${formatPercent(record.strength)}` })}
+              : {
+                  detail: <ChipValueText>{`Army ${formatPercent(record.strength)} strength`}</ChipValueText>,
+                })}
             on={active.includes(record.id)}
             onToggle={(next) => {
               toggleActiveSource('events', record.id, next);
             }}
           />
         ))}
-      </PillRow>
+      </ChipGrid>
       {overriding.map((record) => (
         <HelpNote key={record.id} tone="warn">
           {record.name} decides the enemy formation for this march: the squads you set in the Enemy formation

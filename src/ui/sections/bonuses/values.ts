@@ -30,3 +30,8 @@ export function readBonusValues(entry: BonusHolder): BonusValues {
     ...(entry.special === undefined ? {} : { special: entry.special }),
   };
 }
+
+/** A one-key map: all a computed value or a hand-typed one ever needs. */
+export function singleKey<K extends string>(key: K, value: number | null): Partial<Record<K, number>> {
+  return value === null ? {} : ({ [key]: value } as Partial<Record<K, number>>);
+}

@@ -6,11 +6,12 @@ import type { EquipmentRecord, Quality } from '@/data/types';
 import { mintSourceId, removeSourceEntry, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 
-import { PlusIcon } from '../../icons';
+import { ChevronDownIcon, PlusIcon } from '../../icons';
 import { Button, HelpNote, NativeSelect, Pill } from '../../primitives';
 import { BonusKeyGrid } from './BonusKeyGrid';
-import { describeContribution, QUALITY_LABELS } from './labels';
-import { Block, FieldGroup, PillRow, SourceDialog } from './parts';
+import { BlockGlyph, KeyGlyph } from './glyphs';
+import { chipValue, describeContribution, QUALITY_LABELS } from './labels';
+import { Block, ChipGrid, ChipValueText, FieldGroup, SourceDialog, WorthList } from './parts';
 
 type EquipmentEntry = ProfileSources['equipment'][number];
 
@@ -18,7 +19,7 @@ type EquipmentEntry = ProfileSources['equipment'][number];
 export const MAX_EQUIPMENT = 15;
 
 const NOTE =
-  'Captain screen → equipment slots: each piece shows its type and its quality. Gems and enchantments are typed separately, because the quality table does not include them.';
+  'a captain’s five equipment slots — each piece shows its type and its quality. Gems and enchantments are typed separately, because the quality table does not carry them.';
 
 const recordOf = (equipmentId: string): EquipmentRecord | undefined =>
   equipmentTable.find((record) => record.id === equipmentId);
@@ -78,25 +79,30 @@ export function EquipmentBlock({ profile, setup }: { profile: Profile; setup: Ba
   return (
     <Block
       title="Equipment"
-      note="Captain screen: the five slots of each captain. Add one entry per piece you actually march with."
+      icon={<BlockGlyph name="equipment" />}
+      description="The pieces your captains wear. Switch off anything that stays at home."
+      where="a captain’s five equipment slots; the piece’s quality is written on its icon."
       actions={
         <Button icon={<PlusIcon />} disabled={full} onClick={add}>
           Add a piece
         </Button>
       }
     >
-      <PillRow>
+      <ChipGrid>
         {entries.map((current) => {
           const piece = recordOf(current.equipmentId);
           const label =
             current.name !== undefined && current.name !== ''
               ? current.name
               : (piece?.name ?? current.equipmentId);
+          const value = chipValue(piece?.byQuality[current.quality] ?? {}, 1);
+          const detail = `${QUALITY_LABELS[current.quality]}${value.text === '' ? '' : ` · ${value.text}`}`;
           return (
             <Pill
               key={current.id}
               label={label}
-              detail={QUALITY_LABELS[current.quality]}
+              badge={<KeyGlyph name={value.key} />}
+              detail={<ChipValueText>{detail}</ChipValueText>}
               on={active.includes(current.id)}
               onToggle={(next) => {
                 toggleActiveSource('equipment', current.id, next);
@@ -108,8 +114,10 @@ export function EquipmentBlock({ profile, setup }: { profile: Profile; setup: Ba
             />
           );
         })}
-      </PillRow>
-      {entries.length === 0 && <HelpNote>No piece added yet.</HelpNote>}
+      </ChipGrid>
+      {entries.length === 0 && (
+        <HelpNote>No piece yet. Add one for every slot your captains march with.</HelpNote>
+      )}
       {full && <HelpNote>Fifteen pieces is the most three captains can carry.</HelpNote>}
 
       {entry !== undefined && (
@@ -170,15 +178,17 @@ export function EquipmentBlock({ profile, setup }: { profile: Profile; setup: Ba
           </label>
 
           <FieldGroup label="Worth right now">
-            <ul className="text-sm">
-              {describeContribution(record?.byQuality[entry.quality] ?? {}).map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
+            <WorthList
+              lines={describeContribution(record?.byQuality[entry.quality] ?? {})}
+              empty="We have no figures for this piece at this quality yet."
+            />
           </FieldGroup>
 
-          <details className="border-line rounded-lg border px-3 py-2">
-            <summary className="text-muted tap flex cursor-pointer items-center text-xs font-semibold tracking-wide uppercase">
+          <details className="border-line group rounded-lg border px-3 py-2">
+            <summary className="text-muted tap flex cursor-pointer list-none items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+              <span aria-hidden="true" className="transition-transform group-open:rotate-180">
+                <ChevronDownIcon />
+              </span>
               Gem and enchantment
             </summary>
             <div className="mt-2">

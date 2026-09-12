@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { BONUS_KEYS, SPECIAL_KEYS } from '@/data/types';
 import type { BonusKey, BonusMap, SpecialKey, SpecialMap } from '@/data/types';
 
+import { ChevronDownIcon } from '../../icons';
 import { NumberField } from '../../primitives';
+import { KeySlot } from './glyphs';
 import { BONUS_LABELS, SPECIAL_LABELS } from './labels';
 
 export interface BonusValues {
@@ -17,7 +19,7 @@ export interface BonusKeyGridProps {
   onChange: (next: BonusValues) => void;
   /** Prefix of the field labels, so two editors on screen never share an accessible name. */
   scope: string;
-  /** Special strength keys are meaningless for a few editors (Unknown Sources). */
+  /** Special strength keys are meaningless for a few editors (the unexplained remainder). */
   withSpecial?: boolean;
 }
 
@@ -37,9 +39,14 @@ function Grid({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{children}</div>;
 }
 
+function Caption({ children }: { children: ReactNode }) {
+  return <p className="text-muted text-xs font-semibold tracking-wide uppercase">{children}</p>;
+}
+
 /**
  * The 13-key editor every free-form bonus source uses: health, strength, and the special strength keys
- * in a collapsible because most accounts never fill them in.
+ * in a disclosure, because most accounts never fill them in. Each field wears the glyph of its key —
+ * category, group or race — so a column can be scanned without reading every hint.
  */
 export function BonusKeyGrid({ value, onChange, scope, withSpecial = true }: BonusKeyGridProps) {
   const bonusField = (bucket: 'health' | 'strength', key: BonusKey) => (
@@ -48,6 +55,7 @@ export function BonusKeyGrid({ value, onChange, scope, withSpecial = true }: Bon
       label={`${scope} ${BONUS_LABELS[key]} ${bucket}`}
       hideLabel
       hint={BONUS_LABELS[key]}
+      prefix={<KeySlot name={key} />}
       decimal
       suffix="%"
       value={value[bucket][key] ?? null}
@@ -60,16 +68,19 @@ export function BonusKeyGrid({ value, onChange, scope, withSpecial = true }: Bon
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <p className="text-muted text-xs font-semibold tracking-wide uppercase">Health</p>
+        <Caption>Health</Caption>
         <Grid>{BONUS_KEYS.map((key) => bonusField('health', key))}</Grid>
       </div>
       <div className="space-y-2">
-        <p className="text-muted text-xs font-semibold tracking-wide uppercase">Strength</p>
+        <Caption>Strength</Caption>
         <Grid>{BONUS_KEYS.map((key) => bonusField('strength', key))}</Grid>
       </div>
       {withSpecial && (
-        <details className="border-line rounded-lg border px-3 py-2">
-          <summary className="text-muted tap flex cursor-pointer items-center text-xs font-semibold tracking-wide uppercase">
+        <details className="border-line group rounded-lg border px-3 py-2">
+          <summary className="text-muted tap flex cursor-pointer list-none items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <span aria-hidden="true" className="transition-transform group-open:rotate-180">
+              <ChevronDownIcon />
+            </span>
             Special strength
           </summary>
           <div className="mt-2">
@@ -80,6 +91,7 @@ export function BonusKeyGrid({ value, onChange, scope, withSpecial = true }: Bon
                   label={`${scope} ${SPECIAL_LABELS[key]}`}
                   hideLabel
                   hint={SPECIAL_LABELS[key]}
+                  prefix={<KeySlot name={key} />}
                   decimal
                   suffix="%"
                   value={value.special?.[key] ?? null}

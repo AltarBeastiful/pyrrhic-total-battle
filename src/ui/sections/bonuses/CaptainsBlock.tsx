@@ -8,8 +8,11 @@ import { captainValue } from '@/state/derive';
 
 import { PlusIcon } from '../../icons';
 import { Button, HelpNote, NativeSelect, NumberField, Pill } from '../../primitives';
-import { BONUS_LABELS, formatPercent, SPECIAL_LABELS } from './labels';
-import { Block, FieldGroup, PillRow, SourceDialog } from './parts';
+import { BlockGlyph, KeyGlyph } from './glyphs';
+import { chipValue, describeContribution } from './labels';
+import type { BonusLike } from './labels';
+import { Block, ChipGrid, ChipValueText, FieldGroup, SourceDialog, WorthList } from './parts';
+import { singleKey } from './values';
 
 type CaptainEntry = ProfileSources['captains'][number];
 
@@ -17,7 +20,7 @@ type CaptainEntry = ProfileSources['captains'][number];
 export const MAX_ACTIVE_CAPTAINS = 3;
 
 const NOTE =
-  'Captains screen: open a captain and read its base level and its star level. The bonus is the level times the captain’s own rate, plus what the stars add.';
+  'the Captains screen — open a captain to read its level and its stars. The bonus is the level times the captain’s own rate, plus what the stars add.';
 
 const RANK = new Map<string, number>(orders.captains.map((id, index) => [id, index]));
 
@@ -41,23 +44,22 @@ const recordOf = (captainId: string): CaptainRecord | undefined =>
 const hasData = (record: CaptainRecord | undefined): boolean =>
   record?.health !== undefined || record?.strength !== undefined || record?.special !== undefined;
 
-/** The three lines the editor shows: what this level and star combination is worth right now. */
-function computedLines(record: CaptainRecord | undefined, entry: CaptainEntry): string[] {
-  if (!record) return [];
-  const lines: string[] = [];
-  if (record.health) {
-    const value = captainValue(record.health, entry.level, entry.star);
-    lines.push(`${BONUS_LABELS[record.health.key]} health ${formatPercent(value)}`);
-  }
-  if (record.strength) {
-    const value = captainValue(record.strength, entry.level, entry.star);
-    lines.push(`${BONUS_LABELS[record.strength.key]} strength ${formatPercent(value)}`);
-  }
-  if (record.special) {
-    const value = captainValue(record.special, entry.level, entry.star);
-    lines.push(`${SPECIAL_LABELS[record.special.key]} ${formatPercent(value)}`);
-  }
-  return lines;
+/** What this level and star combination is worth right now, in the shape every value helper reads. */
+function worthNow(record: CaptainRecord | undefined, entry: CaptainEntry): BonusLike {
+  if (!record) return {};
+  return {
+    ...(record.health
+      ? { health: singleKey(record.health.key, captainValue(record.health, entry.level, entry.star)) }
+      : {}),
+    ...(record.strength
+      ? {
+          strength: singleKey(record.strength.key, captainValue(record.strength, entry.level, entry.star)),
+        }
+      : {}),
+    ...(record.special
+      ? { special: singleKey(record.special.key, captainValue(record.special, entry.level, entry.star)) }
+      : {}),
+  };
 }
 
 /**
@@ -96,7 +98,9 @@ export function CaptainsBlock({ profile, setup }: { profile: Profile; setup: Bat
   return (
     <Block
       title="Captains"
-      note="Captains screen: your captains and their levels. Add the ones you own, then switch on the three riding with this march."
+      icon={<BlockGlyph name="captains" />}
+      description="The captains you own. Switch on the three riding with this march."
+      where="Captains — each card shows the level and the stars you type here."
       actions={
         <>
           <NativeSelect
@@ -119,15 +123,18 @@ export function CaptainsBlock({ profile, setup }: { profile: Profile; setup: Bat
         </>
       }
     >
-      <PillRow>
+      <ChipGrid>
         {entries.map((current) => {
           const captain = recordOf(current.captainId);
           const on = active.includes(current.id);
+          const value = chipValue(worthNow(captain, current));
+          const detail = `L${String(current.level)} ★${String(current.star)}${value.text === '' ? '' : ` · ${value.text}`}`;
           return (
             <Pill
               key={current.id}
               label={captain?.name ?? current.captainId}
-              detail={`L${String(current.level)} ★${String(current.star)}`}
+              badge={<KeyGlyph name={value.key} />}
+              detail={<ChipValueText>{detail}</ChipValueText>}
               on={on}
               disabled={!on && atLimit}
               onToggle={(next) => {
@@ -140,8 +147,10 @@ export function CaptainsBlock({ profile, setup }: { profile: Profile; setup: Bat
             />
           );
         })}
-      </PillRow>
-      {entries.length === 0 && <HelpNote>No captain added yet.</HelpNote>}
+      </ChipGrid>
+      {entries.length === 0 && (
+        <HelpNote>No captain yet. Pick one above and add it, then set its level in the editor.</HelpNote>
+      )}
       {atLimit && (
         <HelpNote>Three captains ride at once. Switch one off before switching another on.</HelpNote>
       )}
@@ -186,16 +195,15 @@ export function CaptainsBlock({ profile, setup }: { profile: Profile; setup: Bat
           </div>
           {hasData(record) ? (
             <FieldGroup label="Worth right now">
-              <ul className="text-sm">
-                {computedLines(record, entry).map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
+              <WorthList
+                lines={describeContribution(worthNow(record, entry))}
+                empty="Nothing at this level yet."
+              />
             </FieldGroup>
           ) : (
             <HelpNote tone="warn">
-              No bonus data yet for this captain. It stays in the list, and counts as 0 until the tables carry
-              its numbers.
+              We have no figures for this captain yet. It stays in your list and counts as 0 until the tables
+              carry its numbers.
             </HelpNote>
           )}
         </SourceDialog>

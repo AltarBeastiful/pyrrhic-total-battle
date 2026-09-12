@@ -4,7 +4,8 @@ import type { BattleSetup, Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
 
 import { DuplicateIcon, PencilIcon, PlusIcon, TrashIcon } from '../../icons';
-import { Button, Dialog, HelpNote, NativeSelect } from '../../primitives';
+import { Button, Card, Dialog, IconButton, NativeSelect, Tooltip } from '../../primitives';
+import { BlockGlyph } from './glyphs';
 
 type SetupDialog = 'new' | 'rename' | 'delete';
 
@@ -79,6 +80,8 @@ function SetupNameDialog({
  * Battle setups (S-18). A setup is one march: which sources are switched on, plus the housing, enemy
  * and method the other sections edit. The profile keeps the values; the setup only keeps the selection,
  * so switching setups never makes you retype a bonus.
+ *
+ * It sits on its own raised card above the sources, because it decides what every chip below means.
  */
 export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSetup }) {
   const setActiveSetup = useStore((state) => state.setActiveSetup);
@@ -93,8 +96,14 @@ export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSe
   const onlyOne = profile.setups.length <= 1;
 
   return (
-    <div className="border-line bg-raised space-y-2 rounded-xl border p-3">
+    <Card tone="raised" className="space-y-2">
       <div className="flex flex-wrap items-end gap-2">
+        <span
+          aria-hidden="true"
+          className="border-accent-line bg-accent-soft text-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border"
+        >
+          <BlockGlyph name="setup" />
+        </span>
         <div className="min-w-40 flex-1">
           <NativeSelect
             label="Battle setup"
@@ -106,51 +115,54 @@ export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSe
             }}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-1">
-          <Button
-            aria-label="New battle setup"
-            icon={<PlusIcon />}
-            onClick={() => {
-              setDialog('new');
-            }}
-          >
-            <span className="hidden sm:inline">New</span>
-          </Button>
-          <Button
-            aria-label="Rename battle setup"
-            icon={<PencilIcon />}
-            onClick={() => {
-              setDialog('rename');
-            }}
-          >
-            <span className="hidden sm:inline">Rename</span>
-          </Button>
-          <Button
-            aria-label="Duplicate battle setup"
-            icon={<DuplicateIcon />}
-            onClick={() => {
-              duplicateSetup(setup.id);
-            }}
-          >
-            <span className="hidden sm:inline">Duplicate</span>
-          </Button>
-          <Button
-            aria-label="Delete battle setup"
-            icon={<TrashIcon />}
-            disabled={onlyOne}
-            onClick={() => {
-              setDialog('delete');
-            }}
-          >
-            <span className="hidden sm:inline">Delete</span>
-          </Button>
+        <div className="flex items-center gap-1">
+          <Tooltip content="New battle setup">
+            <IconButton
+              variant="secondary"
+              label="New battle setup"
+              icon={<PlusIcon />}
+              onClick={() => {
+                setDialog('new');
+              }}
+            />
+          </Tooltip>
+          <Tooltip content="Rename battle setup">
+            <IconButton
+              variant="secondary"
+              label="Rename battle setup"
+              icon={<PencilIcon />}
+              onClick={() => {
+                setDialog('rename');
+              }}
+            />
+          </Tooltip>
+          <Tooltip content="Duplicate battle setup">
+            <IconButton
+              variant="secondary"
+              label="Duplicate battle setup"
+              icon={<DuplicateIcon />}
+              onClick={() => {
+                duplicateSetup(setup.id);
+              }}
+            />
+          </Tooltip>
+          <Tooltip content="Delete battle setup">
+            <IconButton
+              variant="secondary"
+              label="Delete battle setup"
+              icon={<TrashIcon />}
+              disabled={onlyOne}
+              onClick={() => {
+                setDialog('delete');
+              }}
+            />
+          </Tooltip>
         </div>
       </div>
-      <HelpNote>
-        A setup is one march: the sources switched on below, plus the housing, enemy and method of the other
-        sections. Everything you type stays on the profile, so a second setup only changes what is switched
-        on.
-      </HelpNote>
+      <p className="text-muted text-xs">
+        A setup is one march. Your values stay on the profile, so a second setup only changes which sources
+        are switched on.
+      </p>
 
       <SetupNameDialog
         open={dialog === 'new'}
@@ -182,7 +194,7 @@ export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSe
           if (!next) close();
         }}
         title="Delete battle setup"
-        description={`“${setup.name}” will be removed. The bonus values you typed stay on the profile.`}
+        description={`“${setup.name}” will be removed. The values you typed stay on your profile.`}
         size="sm"
         footer={
           <>
@@ -199,6 +211,6 @@ export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSe
           </>
         }
       />
-    </div>
+    </Card>
   );
 }

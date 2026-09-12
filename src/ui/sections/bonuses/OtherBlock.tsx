@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { heroes as heroTable, otherPills as otherPillTable } from '@/data';
+import { heroes as heroTable, otherPills as otherPillTable, vip as vipTable } from '@/data';
 import { vipNeedsManual } from '@/state/derive';
 import {
   mintSourceId,
@@ -14,25 +14,41 @@ import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 import { PlusIcon } from '../../icons';
 import { Button, HelpNote, NativeSelect, NumberField, Pill, Toggle } from '../../primitives';
 import { BonusKeyGrid } from './BonusKeyGrid';
-import { describeContribution } from './labels';
-import { Block, FieldGroup, PillRow, SourceDialog } from './parts';
+import { BlockGlyph, KeyGlyph } from './glyphs';
+import { chipValue, describeContribution } from './labels';
+import type { BonusLike } from './labels';
+import { Block, ChipGrid, ChipValueText, FieldGroup, SourceDialog } from './parts';
 import { applyBonusValues, readBonusValues } from './values';
 
 type CustomEntry = ProfileSources['custom'][number];
-type Editor = 'vip' | 'dragon' | 'unknown' | { custom: string };
+type Editor = 'vip' | 'dragon' | 'remainder' | { custom: string };
 
 /** The highest VIP level the game currently sells. */
 const MAX_VIP_LEVEL = 15;
 
-const VIP_NOTE =
-  'VIP screen: your current VIP level. The army bonus it grants is on the same screen, next to the level.';
+const VIP_NOTE = 'the VIP screen — your level, and the army bonus written next to it.';
 const DRAGON_NOTE =
-  'Dragon screen: the army bonuses your dragon grants at its current level, plus what its equipped runes add.';
-const UNKNOWN_NOTE =
-  'For the gap between this page and a real battle report: type here what is missing so the totals match the game.';
+  'the Dragon screen — the army bonuses it grants at its current level, plus what its equipped runes add.';
+const REMAINDER_NOTE =
+  'a real battle report, or the march window on a monster: compare the army bonuses it lists with the totals below and type the difference here.';
 const CUSTOM_NOTE =
-  'Anything the sections above do not cover — a title we do not know, a temporary buff, a new source. Type the percentage on the key it applies to.';
+  'wherever the bonus comes from — a title we do not know, a temporary buff, a new source. Type the percentage on the key it applies to.';
 
+/** What VIP is worth right now: the table row, or the values you typed when we have no row. */
+function vipBonus(profile: Profile): BonusLike {
+  const { vipLevel, vipManual } = profile.sources;
+  if (!vipNeedsManual(profile)) {
+    return vipTable.find((entry) => entry.level === vipLevel)?.bonus ?? {};
+  }
+  if (!vipManual) return {};
+  return { health: { army: vipManual.health }, strength: { army: vipManual.strength } };
+}
+
+/**
+ * Other sources (S-16): the ones that live on their own screen — VIP, your dragon, your hero, the clan
+ * and kingdom bonuses — plus the remainder a battle report leaves unexplained and any source you type
+ * yourself.
+ */
 export function OtherBlock({ profile, setup }: { profile: Profile; setup: BattleSetup }) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const { sources } = profile;
@@ -71,20 +87,31 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
     setActiveFlag('hero', heroId !== '');
   };
 
+  const vipValue = chipValue(vipBonus(profile), 1);
+  const dragonValue = chipValue(sources.dragon, 1);
+  const remainderValue = chipValue(sources.unknown, 1);
+
   return (
     <Block
       title="Other"
-      note="The sources that live on their own screens: VIP, your dragon, your hero, the clan, kingdom and personal +25 % bonuses, and anything left over."
+      icon={<BlockGlyph name="other" />}
+      description="VIP, your dragon, your hero, the clan and kingdom bonuses, and anything left over."
+      where="each of these has a screen of its own — open a chip's gear and the editor names it."
       actions={
         <Button icon={<PlusIcon />} onClick={addCustom}>
-          Add a custom source
+          Add a source
         </Button>
       }
     >
-      <PillRow>
+      <ChipGrid>
         <Pill
           label="VIP"
-          detail={`level ${String(sources.vipLevel)}`}
+          badge={<KeyGlyph name={vipValue.key} />}
+          detail={
+            <ChipValueText>
+              {`Level ${String(sources.vipLevel)}${vipValue.text === '' ? '' : ` · ${vipValue.text}`}`}
+            </ChipValueText>
+          }
           on={active.vip}
           onToggle={(next) => {
             setActiveFlag('vip', next);
@@ -95,6 +122,8 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
         />
         <Pill
           label="Dragon"
+          badge={<KeyGlyph name={dragonValue.key} />}
+          detail={<ChipValueText>{dragonValue.text || 'nothing typed yet'}</ChipValueText>}
           on={active.dragon}
           onToggle={(next) => {
             setActiveFlag('dragon', next);
@@ -104,40 +133,52 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
           }}
         />
         <Pill
-          label="Unknown sources"
+          label="Unexplained remainder"
+          badge={<KeyGlyph name={remainderValue.key} />}
+          detail={<ChipValueText>{remainderValue.text || 'nothing typed yet'}</ChipValueText>}
           on={active.unknown}
           onToggle={(next) => {
             setActiveFlag('unknown', next);
           }}
           onEdit={() => {
-            setEditor('unknown');
+            setEditor('remainder');
           }}
         />
-        {otherPillTable.map((record) => (
-          <Pill
-            key={record.id}
-            label={record.name}
-            on={active.otherPills.includes(record.id)}
-            onToggle={(next) => {
-              toggleActiveSource('otherPills', record.id, next);
-            }}
-          />
-        ))}
-        {sources.custom.map((entry) => (
-          <Pill
-            key={entry.id}
-            label={entry.name || 'Custom source'}
-            on={active.custom.includes(entry.id)}
-            onToggle={(next) => {
-              toggleActiveSource('custom', entry.id, next);
-            }}
-            editLabel={`Edit ${entry.name || 'custom source'}`}
-            onEdit={() => {
-              setEditor({ custom: entry.id });
-            }}
-          />
-        ))}
-      </PillRow>
+        {otherPillTable.map((record) => {
+          const value = chipValue(record.bonus, 1);
+          return (
+            <Pill
+              key={record.id}
+              label={record.name}
+              badge={<KeyGlyph name={value.key} />}
+              {...(value.text === '' ? {} : { detail: <ChipValueText>{value.text}</ChipValueText> })}
+              on={active.otherPills.includes(record.id)}
+              onToggle={(next) => {
+                toggleActiveSource('otherPills', record.id, next);
+              }}
+            />
+          );
+        })}
+        {sources.custom.map((entry) => {
+          const value = chipValue(entry, 1);
+          return (
+            <Pill
+              key={entry.id}
+              label={entry.name || 'Source of your own'}
+              badge={<KeyGlyph name={value.key} />}
+              detail={<ChipValueText>{value.text || 'nothing typed yet'}</ChipValueText>}
+              on={active.custom.includes(entry.id)}
+              onToggle={(next) => {
+                toggleActiveSource('custom', entry.id, next);
+              }}
+              editLabel={`Edit ${entry.name || 'source of your own'}`}
+              onEdit={() => {
+                setEditor({ custom: entry.id });
+              }}
+            />
+          );
+        })}
+      </ChipGrid>
 
       <div className="flex flex-wrap items-end gap-3">
         <NativeSelect
@@ -170,7 +211,7 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
         </HelpNote>
       )}
       {hero !== undefined && describeContribution(hero.bonus).length === 0 && (
-        <HelpNote>No bonus data yet for {hero.name}; it counts as 0 until the tables carry it.</HelpNote>
+        <HelpNote>We have no figures for {hero.name} yet; it counts as 0 until the tables carry it.</HelpNote>
       )}
 
       <SourceDialog open={editor === 'vip'} onClose={close} title="VIP" note={VIP_NOTE}>
@@ -189,10 +230,10 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
           }}
         />
         {vipNeedsManual(profile) && (
-          <FieldGroup label="Values by hand">
+          <FieldGroup label="Values you type">
             <HelpNote tone="warn">
-              We have not measured the VIP table yet. Type the army health and strength the VIP screen shows
-              for your level.
+              We have not measured the VIP table yet. Type the army health and strength your VIP screen shows
+              for this level.
             </HelpNote>
             <div className="grid grid-cols-2 gap-3">
               <NumberField
@@ -237,9 +278,14 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
         />
       </SourceDialog>
 
-      <SourceDialog open={editor === 'unknown'} onClose={close} title="Unknown sources" note={UNKNOWN_NOTE}>
+      <SourceDialog
+        open={editor === 'remainder'}
+        onClose={close}
+        title="Unexplained remainder"
+        note={REMAINDER_NOTE}
+      >
         <BonusKeyGrid
-          scope="Unknown"
+          scope="Remainder"
           withSpecial={false}
           value={{ health: sources.unknown.health, strength: sources.unknown.strength }}
           onChange={(next) => {
@@ -255,7 +301,7 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
         <SourceDialog
           open
           onClose={close}
-          title={customEntry.name || 'Custom source'}
+          title={customEntry.name || 'Source of your own'}
           note={CUSTOM_NOTE}
           onRemove={() => {
             removeSourceEntry(profile.id, 'custom', customEntry.id);
@@ -275,7 +321,7 @@ export function OtherBlock({ profile, setup }: { profile: Profile; setup: Battle
             />
           </label>
           <BonusKeyGrid
-            scope={customEntry.name || 'Custom'}
+            scope={customEntry.name || 'Source'}
             value={readBonusValues(customEntry)}
             onChange={(next) => {
               patchCustom(customEntry.id, (current) => applyBonusValues(current, next));

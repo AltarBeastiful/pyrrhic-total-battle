@@ -8,8 +8,10 @@ import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 
 import { PlusIcon } from '../../icons';
 import { Button, HelpNote, NativeSelect, NumberField, Pill } from '../../primitives';
-import { BONUS_LABELS, FALLBACK_STAR_KEYS, humanizeOption, SPECIAL_LABELS } from './labels';
-import { Block, FieldGroup, PillRow, SourceDialog } from './parts';
+import { BlockGlyph, KeyGlyph } from './glyphs';
+import { BONUS_LABELS, chipValue, FALLBACK_STAR_KEYS, humanizeOption, SPECIAL_LABELS } from './labels';
+import { Block, ChipGrid, ChipValueText, FieldGroup, SourceDialog } from './parts';
+import { singleKey } from './values';
 
 type ArtifactEntry = ProfileSources['artifacts'][number];
 
@@ -17,7 +19,7 @@ type ArtifactEntry = ProfileSources['artifacts'][number];
 export const MAX_ACTIVE_ARTIFACTS = 3;
 
 const NOTE =
-  'Artifacts screen: each artifact shows its level and its star rating, and the random bonus it rolled. Type them exactly as the artifact card shows them.';
+  'the Artifacts screen — each card shows its level, its star rating and the random bonus it rolled. Type them exactly as the card shows them.';
 
 const recordOf = (artifactId: string): ArtifactRecord | undefined =>
   artifactTable.find((record) => record.id === artifactId);
@@ -33,9 +35,15 @@ function starKeys(record: ArtifactRecord | undefined): string[] {
 const hasLevels = (record: ArtifactRecord | undefined): boolean =>
   (record?.health?.levels ?? record?.strength?.levels ?? record?.special?.levels) !== undefined;
 
-/** A one-key map, which is all an artifact's hand-typed value ever needs. */
-function singleKey<K extends string>(key: K, value: number | null): Partial<Record<K, number>> {
-  return value === null ? {} : ({ [key]: value } as Partial<Record<K, number>>);
+/** The key an artifact feeds, so its chip can wear that family's glyph. */
+function keyOf(record: ArtifactRecord | undefined): BonusKey | SpecialKey | undefined {
+  return record?.health?.key ?? record?.strength?.key ?? record?.special?.key;
+}
+
+/** The name of that key, which the glyph repeats. */
+function keyLabel(key: BonusKey | SpecialKey | undefined): string {
+  if (key === undefined) return '';
+  return key in BONUS_LABELS ? BONUS_LABELS[key as BonusKey] : SPECIAL_LABELS[key as SpecialKey];
 }
 
 /**
@@ -81,6 +89,7 @@ export function ArtifactsBlock({ profile, setup }: { profile: Profile; setup: Ba
   ): ReactElement => (
     <NumberField
       label={`Hand-typed ${BONUS_LABELS[key]} ${bucket}`}
+      prefix={<KeyGlyph name={key} />}
       decimal
       suffix="%"
       value={current.manual?.[bucket]?.[key] ?? null}
@@ -96,22 +105,29 @@ export function ArtifactsBlock({ profile, setup }: { profile: Profile; setup: Ba
   return (
     <Block
       title="Artifacts"
-      note="Artifacts screen: the artifacts equipped on your hero. Three of them count on a march."
+      icon={<BlockGlyph name="artifacts" />}
+      description="The artifacts on your hero. Three of them count on a march."
+      where="Artifacts — the level and the star rating are written on each card."
       actions={
         <Button icon={<PlusIcon />} disabled={nextArtifact === undefined} onClick={add}>
           Add an artifact
         </Button>
       }
     >
-      <PillRow>
+      <ChipGrid>
         {entries.map((current) => {
           const artifact = recordOf(current.artifactId);
           const on = active.includes(current.id);
+          const key = keyOf(artifact);
+          const typed = hasLevels(artifact) ? '' : chipValue(current.manual ?? {}, 1).text;
+          const owns = `L${String(current.level)} ★${current.star}`;
+          const detail = typed === '' ? `${keyLabel(key)} · ${owns}`.trim() : `${owns} · ${typed}`;
           return (
             <Pill
               key={current.id}
               label={artifact?.name ?? current.artifactId}
-              detail={`L${String(current.level)} ★${current.star}`}
+              badge={<KeyGlyph name={key} />}
+              detail={<ChipValueText>{detail}</ChipValueText>}
               on={on}
               disabled={!on && atLimit}
               onToggle={(next) => {
@@ -124,8 +140,8 @@ export function ArtifactsBlock({ profile, setup }: { profile: Profile; setup: Ba
             />
           );
         })}
-      </PillRow>
-      {entries.length === 0 && <HelpNote>No artifact added yet.</HelpNote>}
+      </ChipGrid>
+      {entries.length === 0 && <HelpNote>No artifact yet. Add the ones equipped on your hero.</HelpNote>}
       {atLimit && <HelpNote>Three artifacts count at once. Switch one off to switch another on.</HelpNote>}
 
       {entry !== undefined && (
@@ -180,10 +196,10 @@ export function ArtifactsBlock({ profile, setup }: { profile: Profile; setup: Ba
           </div>
 
           {!hasLevels(record) && (
-            <FieldGroup label="Values by hand">
+            <FieldGroup label="Values you type">
               <HelpNote tone="warn">
-                We have not measured this artifact&apos;s level table yet, so the level and star above are
-                only a record of what you own. Type what the artifact card shows.
+                We have not measured this artifact&apos;s table yet, so the level and stars above only record
+                what you own. Type what its card shows.
               </HelpNote>
               <div className="grid gap-3 sm:grid-cols-2">
                 {record?.health && manualField('health', record.health.key, entry)}
@@ -191,6 +207,7 @@ export function ArtifactsBlock({ profile, setup }: { profile: Profile; setup: Ba
                 {specialKey !== undefined && (
                   <NumberField
                     label={`Hand-typed ${SPECIAL_LABELS[specialKey]}`}
+                    prefix={<KeyGlyph name={specialKey} />}
                     decimal
                     suffix="%"
                     value={entry.manual?.special?.[specialKey] ?? null}

@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 
 import { BonusesSection } from './BonusesSection';
+
+// The section pulls in every data table and renders nine blocks; under full-suite load the first
+// render can exceed the default 5 s budget, which is the cost of the import, not a hang.
+vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());
@@ -32,7 +36,7 @@ function hasTotalRow(card: CardName, key: string): boolean {
   return within(region).queryByText(key) !== null;
 }
 
-/** Opens the editor behind a pill's gear and returns its dialog. */
+/** Opens the editor behind a chip's gear and returns its dialog. */
 function openDialog(name: string): HTMLElement {
   fireEvent.click(screen.getByRole('button', { name }));
   return screen.getByRole('dialog');
@@ -50,6 +54,29 @@ function addAydae(level: string): void {
   done(dialog);
 }
 
+/** The header line, which stays visible when the section is folded. */
+function headerSummary(): string {
+  return screen.getByText(/^Army health/).textContent ?? '';
+}
+
+test('the header summary carries the army totals and what is switched on', () => {
+  render(<BonusesSection />);
+  expect(headerSummary()).toContain('Army health 0 %');
+
+  const permanent = openDialog('Edit Hall of Fame');
+  fireEvent.change(within(permanent).getByLabelText('Hall of Fame Army health'), {
+    target: { value: '40' },
+  });
+  done(permanent);
+  addAydae('20');
+
+  const summary = headerSummary();
+  expect(summary).toContain('Army health +40 %');
+  expect(summary).toContain('1 permanent');
+  expect(summary).toContain('1 captain');
+  expect(summary).not.toContain('2 captains');
+});
+
 test('a captain at level 20 shows up in the guardsmen totals', () => {
   render(<BonusesSection />);
   addAydae('20');
@@ -60,7 +87,7 @@ test('a captain at level 20 shows up in the guardsmen totals', () => {
   expect(totalRow('Strength totals', 'Guardsmen')).toContain('+20 %');
 });
 
-test('switching a pill off takes its source out of the totals', () => {
+test('switching a chip off takes its source out of the totals', () => {
   render(<BonusesSection />);
   addAydae('20');
 
@@ -125,7 +152,7 @@ test('a title has to be owned before it can be worn on a march', () => {
   expect(profile()?.sources.titles).toEqual(['battlemaster']);
   expect(setup()?.active.titles).toEqual([]);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Battlemaster' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Battlemaster/ }));
 
   expect(setup()?.active.titles).toEqual(['battlemaster']);
   expect(totalRow('Health totals', 'Army')).toContain('+150 %');
@@ -173,7 +200,8 @@ test('the temple level shows the divisor it applies to revival costs', () => {
   fireEvent.change(screen.getByLabelText('Temple level'), { target: { value: '30' } });
 
   expect(profile()?.recovery.templeLevel).toBe(30);
-  expect(screen.getByText(/divided by 3.84/)).toBeTruthy();
+  expect(screen.getByText('Revival costs divided by')).toBeTruthy();
+  expect(screen.getByText('3.84')).toBeTruthy();
 });
 
 test('training reduction and speed are stored per group', () => {

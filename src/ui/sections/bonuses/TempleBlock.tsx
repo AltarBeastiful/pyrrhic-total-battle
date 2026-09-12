@@ -4,7 +4,8 @@ import type { Group } from '@/data/types';
 import type { Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
 
-import { NumberField } from '../../primitives';
+import { Card, NumberField } from '../../primitives';
+import { BlockGlyph, KeySlot } from './glyphs';
 import { GROUP_LABELS } from './labels';
 import { Block, FieldGroup } from './parts';
 
@@ -37,13 +38,15 @@ export function TempleBlock({ profile }: { profile: Profile }) {
   return (
     <Block
       title="Temple and training"
-      note="Temple screen: the building's level. The training cost and speed bonuses are on your barracks and workshops, one figure per kind of unit."
+      icon={<BlockGlyph name="recovery" />}
+      description="What it costs to put your losses back on their feet, after the fight."
+      where="the Temple for its level; the cost and speed bonuses sit on your barracks and workshops."
     >
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <div className="space-y-3">
+        <Card tone="raised" className="flex flex-wrap items-end justify-between gap-4">
           <NumberField
             label="Temple level"
-            className="w-36"
+            className="w-32"
             value={recovery.templeLevel}
             min={0}
             max={45}
@@ -53,10 +56,13 @@ export function TempleBlock({ profile }: { profile: Profile }) {
               }));
             }}
           />
-          <p className="text-muted pb-2 text-xs">
-            Revival costs are divided by {String(divisorOf(recovery.templeLevel))}.
-          </p>
-        </div>
+          <div className="text-right">
+            <p className="text-muted text-xs">Revival costs divided by</p>
+            <p className="nums text-2xl leading-tight font-semibold">
+              {String(divisorOf(recovery.templeLevel))}
+            </p>
+          </div>
+        </Card>
 
         <FieldGroup label="Training cost reduction">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -66,6 +72,7 @@ export function TempleBlock({ profile }: { profile: Profile }) {
                 label={`${GROUP_LABELS[group]} training cost reduction`}
                 hideLabel
                 hint={GROUP_LABELS[group]}
+                prefix={<KeySlot name={group} />}
                 decimal
                 suffix="%"
                 value={recovery.trainingCostReduction[group] ?? null}
@@ -85,6 +92,7 @@ export function TempleBlock({ profile }: { profile: Profile }) {
                 label={`${GROUP_LABELS[group]} training speed`}
                 hideLabel
                 hint={GROUP_LABELS[group]}
+                prefix={<KeySlot name={group} />}
                 decimal
                 suffix="%"
                 value={recovery.trainingSpeed[group] ?? null}

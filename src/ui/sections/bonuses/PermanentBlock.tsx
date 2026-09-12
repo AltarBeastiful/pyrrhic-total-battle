@@ -7,14 +7,16 @@ import type { BuiltinPermanentSource, Profile, ProfileSources } from '@/state/sc
 import { PlusIcon } from '../../icons';
 import { Button, Pill } from '../../primitives';
 import { BonusKeyGrid } from './BonusKeyGrid';
-import { Block, PillRow, SourceDialog } from './parts';
+import { BlockGlyph, KeyGlyph } from './glyphs';
+import { chipValue } from './labels';
+import { Block, ChipGrid, ChipValueText, SourceDialog } from './parts';
 import { applyBonusValues, readBonusValues } from './values';
 
 type PermanentEntry = ProfileSources['permanent'][number];
 
 /** Where each of the eight builtin editors is read in game. Our own wording, one line each. */
 const WHERE: Record<BuiltinPermanentSource, string> = {
-  heroTalents: 'Hero screen → Talents: add up the health and strength lines of the talents you unlocked.',
+  heroTalents: 'Hero → Talents: add up the health and strength lines of the talents you unlocked.',
   hallOfFame: 'City → Hall of Fame: the army bonuses the building lists on its info panel.',
   customization: 'Profile → Customization: frames, portraits and city looks that carry an army bonus.',
   armyModernization: 'Academy → Research → the Army Modernization branch totals.',
@@ -25,11 +27,11 @@ const WHERE: Record<BuiltinPermanentSource, string> = {
 };
 
 const CUSTOM_NOTE =
-  'Anything permanent the list above misses. Read the percentage off the screen that grants it and type it on the key it applies to.';
+  'wherever it is granted — this editor is for anything permanent the list above misses. Read the percentage off that screen and type it on the key it applies to.';
 
 const ORDER = new Map<string, number>(BUILTIN_PERMANENT_SOURCES.map((id, index) => [id, index]));
 
-/** Builtin editors first, in the order the schema fixes them, then the rows the player added. */
+/** Builtin editors first, in the order the schema fixes them, then the rows you added. */
 function sortEntries(entries: readonly PermanentEntry[]): PermanentEntry[] {
   return [...entries].sort((a, b) => (ORDER.get(a.id) ?? 99) - (ORDER.get(b.id) ?? 99));
 }
@@ -38,19 +40,10 @@ function noteFor(entry: PermanentEntry): string {
   return entry.builtin === undefined ? CUSTOM_NOTE : WHERE[entry.builtin];
 }
 
-/** How many keys an editor has values on, shown on its pill so a filled source is visible at a glance. */
-function filledCount(entry: PermanentEntry): number {
-  return (
-    Object.keys(entry.health).length +
-    Object.keys(entry.strength).length +
-    Object.keys(entry.special ?? {}).length
-  );
-}
-
 /**
- * Permanent sources (S-14): the eight editors every account has, plus any the player adds. They are
- * always counted — there is no march where the Hall of Fame stops working — so the pills only carry a
- * gear, no on/off.
+ * Permanent sources (S-14): the eight editors every account has, plus any you add. They are always
+ * counted — there is no march where the Hall of Fame stops working — so their chips carry a gear and
+ * no switch.
  */
 export function PermanentBlock({ profile }: { profile: Profile }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -78,23 +71,26 @@ export function PermanentBlock({ profile }: { profile: Profile }) {
   return (
     <Block
       title="Permanent"
-      note="Bonuses your account always has. Type each one once; they count on every march, so they have no on/off switch."
+      icon={<BlockGlyph name="permanent" />}
+      description="Bonuses your account always has. Type each one once — they count on every march, so they have no switch."
+      where="open a chip's gear and the editor names the screen its figures are read on."
       actions={
         <Button icon={<PlusIcon />} onClick={add}>
-          Add a permanent source
+          Add a source
         </Button>
       }
     >
-      <PillRow>
+      <ChipGrid>
         {entries.map((source) => {
-          const filled = filledCount(source);
+          const value = chipValue(source);
           return (
             <Pill
               key={source.id}
               locked
               on
               label={source.name || 'Permanent source'}
-              detail={filled === 0 ? 'empty' : `${String(filled)} keys`}
+              badge={<KeyGlyph name={value.key} />}
+              detail={<ChipValueText>{value.text || 'nothing typed yet'}</ChipValueText>}
               editLabel={`Edit ${source.name || 'permanent source'}`}
               onToggle={() => undefined}
               onEdit={() => {
@@ -103,7 +99,7 @@ export function PermanentBlock({ profile }: { profile: Profile }) {
             />
           );
         })}
-      </PillRow>
+      </ChipGrid>
 
       {entry !== undefined && (
         <SourceDialog
