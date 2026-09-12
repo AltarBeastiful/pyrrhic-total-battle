@@ -407,6 +407,13 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Owner's verdict on the rebuilt Bonuses card: "a mismatch of CSS badly designed and executed",
+  the very thing the UI foundation plan was meant to avoid. Two causes accepted: (1) the coordinator specified
+  the captain picker from imagination instead of copying the reference (fixed: TotalStack observed live,
+  investigation 0006, story D-34); (2) the kit was hand-styled from scratch on unstyled React Aria primitives
+  by parallel workers instead of being seeded from a designed component set (ui-foundation T-b, skipped).
+  Decision in progress: a time-boxed spike rebuilds the three TotalStack forms on Mantine 9 in a worktree
+  (investigation 0007) to choose between (a) React Aria + Tailwind seeded from a designed kit and (b) Mantine.
 - 2026-09-13 — Overhaul build: foundation (tokens, kit on React Aria Components, layout, domain, kit page, lint
   gates, visual/axe config), Material 3 frame (app bar, account menu, extended FAB, supporting pane), and all five
   cards rebuilt (Troops in the TotalStack-inspired flow, Mercenaries with whole-row selection, Bonuses as switch
