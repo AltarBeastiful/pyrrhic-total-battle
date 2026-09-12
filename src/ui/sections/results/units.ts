@@ -1,0 +1,20 @@
+/**
+ * Naming a unit id in the UI. The tables are the source of truth, but a march can field a custom
+ * mercenary that only exists inside the profile, so the request's own unit list wins when it has one.
+ */
+import { unitById } from '@/data';
+import type { UnitDef } from '@/engine/types';
+
+export function findUnit(unitId: string, units?: readonly UnitDef[]): UnitDef | undefined {
+  return units?.find((unit) => unit.id === unitId) ?? unitById(unitId);
+}
+
+/** Full name, e.g. "Archer I". */
+export function unitName(unitId: string, units?: readonly UnitDef[]): string {
+  return findUnit(unitId, units)?.name ?? unitId;
+}
+
+/** Short pill label, e.g. "ARC1". */
+export function unitLabel(unitId: string, units?: readonly UnitDef[]): string {
+  return findUnit(unitId, units)?.label ?? unitId;
+}
