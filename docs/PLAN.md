@@ -407,6 +407,13 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Overhaul build: foundation (tokens, kit on React Aria Components, layout, domain, kit page, lint
+  gates, visual/axe config), Material 3 frame (app bar, account menu, extended FAB, supporting pane), and all five
+  cards rebuilt (Troops in the TotalStack-inspired flow, Mercenaries with whole-row selection, Bonuses as switch
+  rows, Battle with single-select lists, March in the amended order). Fonts bundled, Lucide + Game Icons, surface
+  pass. Gates: 793 unit tests, 20 e2e, typecheck, lint, format, build green; size-limit over (263 kB vs 200 kB main)
+  pending T-06/T-08. In flight: retirement of primitives/Radix/dnd-kit with lazy loading; D-19 design-direction
+  plan (plan-only, awaiting review).
 - 2026-09-12 — Owner: the Stacking method section must be a Material single-select list with full-row targets,
   not cards plus a select; design plan §7.4 rewritten (D-31). Owner also installed the `frontend-design` guide;
   a design-direction pass (D-19) is scheduled after the March card and the surface pass.
