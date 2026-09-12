@@ -211,8 +211,8 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 - S-01 Scaffold Vite/React/TS/Tailwind/Vitest, lint/format, GitHub Actions (test + Pages deploy).
 - S-02 Game data package: reshape `docs/research/totalstack-data` into our own `src/data/tables` format with
   zod-validated types, ids, display labels, icons; provenance note per table; spot-check values against the game.
-- S-03 Config schema v1 (Profile / BattleSetup / SavedStack) with zod + migrations skeleton; store with
-  persistence; default profile on first run.
+- S-03 Config schema v1 (Profile / BattleSetup / SavedStack, each with `id`/`updatedAt`/`rev`/`deviceId`,
+  root tombstones) with zod + migrations skeleton; store with persistence; default profile on first run.
 - S-04 Share codec (deflate-raw + base64url) with round-trip tests and size budget; JSON export/import.
 - S-06 Contributor-friendly data layout (section 2.2): table files, formatter, zod + integrity validation in CI,
       `docs/data/README.md`, `CONTRIBUTING.md`, PR template, data changelog, `dataVersion` shown in the app.
@@ -240,10 +240,9 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 - S-17 Temple / training fields, Enemy formation, Housing, priority select, Generate; original help text for
       every section (our own wording, "where to find it in game" notes included).
 - S-18 Battle setups (named active-source selections) inside a profile.
-- S-19 **Investigation**: simple cross-device use without a server we operate. Compare: share links + QR code
-      (phone ⇄ desktop), export/import of a JSON file kept in the user's own cloud drive, browser-native options
-      (File System Access API, Web Share), and a user-supplied storage backend (WebDAV / GitHub Gist / Drive file) as
-      an opt-in adapter. Output: recommendation + story if worth it. Constraint: no data ever goes to us.
+- S-19 Cross-device: investigation done (`docs/investigations/0001-cross-device-sync.md`). In M1: profile link +
+      QR, battle link, JSON export/import, "Send to another device" via the Web Share API. Sync-ready schema fields
+      (`id`, `updatedAt`, `rev`, tombstones) are part of S-03.
 
 ### M2 — Engine v1 (stacking)
 - S-20 `bonuses.ts` aggregation + effective HP/strength per unit; tests against review §3 numbers.
@@ -271,6 +270,10 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 - S-40 Priority search: max average damage (worker, progress, cancel, time box).
 - S-41 Priority search: damage per silver / gold / dragon coin.
 - S-43 Compare saved stacks side by side (summary metrics).
+- S-44 Sync adapter interface + explicit Pull/Push UI with per-profile conflict dialog (investigation 0001).
+- S-45 GitHub Gist sync adapter (fine-grained token, gist scope), optional client-side encryption.
+- S-46 Google Drive appData sync adapter (browser-only PKCE; gated on the scope-classification check).
+- S-47 Generic endpoint adapter + reference Cloudflare Worker in `tools/` for clan-hosted storage.
 
 ### M5 — Polish
 - S-50 PWA/offline, install prompt.

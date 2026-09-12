@@ -36,6 +36,13 @@ loadable after the app's data model evolves.
   payload }`; import shows a preview (profile name, counts, date) and asks "add as new / replace / cancel".
   Never silently overwrite.
 
+## Amendment 2026-09-12 (from investigation 0001, cross-device sync)
+Every profile, battle setup and saved stack carries `id` (UUID v4), `updatedAt` (epoch ms), `rev` (integer,
+incremented on each write) and `deviceId`; the root document keeps `tombstones: {id, deletedAt}[]` and a
+user-editable `deviceName`. Profiles are self-contained documents (no cross-profile references) so they can be
+synced and exported one at a time. A `RemoteStore` interface (`list/get/put(expectedRev)/delete`) sits beside the
+local storage adapter; adapters (Gist, Google Drive appData, generic endpoint) are opt-in and implemented later.
+
 ## Consequences
 - One place to reason about persistence; export = the same document; share link = the same document minus defaults.
 - Migration discipline is mandatory from day one (tests per version), which is cheap now and painful later.
