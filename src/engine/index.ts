@@ -17,6 +17,14 @@ export {
 export type { EffectiveUnit } from './units';
 export { buildKillOrder, eliteOrder } from './killOrder';
 export { RANK_SPREAD, sizeStacks } from './stacker';
+export {
+  EXHAUSTIVE_LIMIT,
+  MAX_RESTARTS,
+  mulberry32,
+  objectiveScore,
+  PROGRESS_EVERY,
+  searchPriority,
+} from './search';
 export { battleSequence, buildJournal, enemySquadCount, expectedHits, simulateBattle } from './battle';
 export {
   CHUNK,

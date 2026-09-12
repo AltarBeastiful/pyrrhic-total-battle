@@ -60,21 +60,41 @@ order is pure HP descending in both reports. Double damage is a ×2 on a single 
 - `DAMAGE / SILVER|GOLD|DRAGON COIN` = average damage ÷ the recovery-plan cost of the same resource
   (2,515,830 / 1,435,200 = 1.753 ✓; / 2,752 = 914 ✓; / 1,080 = 2,329 ✓).
 
-## 4. Recovery cost (partly verified; fixtures `totalstack-2026-09-12-mechanics-runs.json`, run temple20-training-reductions)
-- **Retrain-all silver** = Σ troops count × trainingCost.silver × (1 − trainingCostReduction[group]) + M, where for the
-  8-stack army Σ troops = 1,359,600 exactly and M = 75,600 (temple 0 and temple 20 give the same M; a 30% guardsmen
-  reduction removes exactly 0.3 × 1,359,600). M is *not* the monsters' training silver (557,200) and does not change
-  between WE 18 and WE 17 → **unexplained constant, open**.
-- **Retrain-all gold** = 2,752 at temple 0 → 1,520 at temple 20 = 2,752 / 1.81 ✓ (temple multiplier applies).
-  2,752 is not Σ revivalCost.gold of troops (12,000) nor monsters (3,184) → composition open.
-- **Revive-all gold** = 13,520 at temple 0 → 7,470 at temple 20 = 13,520 / 1.81 ✓. 13,520 ≠ 12,000 + 3,184 → open.
-- **Revive-all silver** = 216,000 at temple 0 (= 1,080 dragon coins × 200?) → 173,880 at temple 20 (×0.805) → open.
-- Dragon coins = Σ monsters count × trainingCost.dragonCoins = 1,080 ✓ in every run (retrain and revive alike).
-- Time: 5d 23h (retrain all) → 4d 3h with +50% guardsmen training speed; 1d 2h (revive all) → 21h 40m at temple 20.
-  Formula open (sum of training times ≈ 655×15 s + … is far below 5d 23h → probably per-unit time × count without
-  parallel queues, to be fitted).
-- "Selective" recovery offers TOP 1 / TOP 2 / TOP 3 / CUSTOM (revive the top-N troop tiers, retrain the rest).
-These open points are cheap to settle in game (the retrain/revive screens show the exact cost) — folded into S-33.
+## 4. Recovery cost (solved 2026-09-12 by the engine work; fixtures `totalstack-2026-09-12-mechanics-runs.json`)
+Units are trained and revived **in chunks of ten**, and one unit per chunk comes back free ("only 90% revived
+per chunk"). Writing `chunks(n) = ceil(n / 10)`, every captured figure follows from four formulas:
+- **Retrain silver** = Σ troops `n × training.silver × (1 − trainingCostReduction[group]/100)`
+  + Σ monsters/mercs `chunks(n) × training.silver` (monsters are trained ten at a time).
+- **Retrain time** = the same split on `training.seconds`, each term divided by `1 + trainingSpeed[group]/100`.
+- **Dragon coins** = Σ monsters `chunks(n) × training.dragonCoins` (identical under retrain and revive).
+- **Revive gold** = Σ all units `(n − chunks(n)) × revival.gold / templeMultiplier[level]`.
+  "Retrain all" also charges gold: it is exactly the *monsters'* revive gold, i.e. monsters cannot be retrained
+  back into the march.
+
+Per-run proof (all exact, no fitted constant left):
+
+| run | monsters | retrain silver | dragon coins | retrain gold | revive gold | retrain time |
+|---|---|---|---|---|---|---|
+| ep-8stacks | WE 18 / BB 8 / ED 7 / SG 6 | 1,435,200 ✓ | 1,080 ✓ | 2,752 ✓ | 13,520 ✓ | 5d 23h ✓ |
+| temple20-training-reductions (−30 % / +50 % guardsmen, temple 20) | same | 1,027,320 ✓ | 1,080 ✓ | 1,520 ✓ | 7,470 ✓ | 4d 3h ✓ |
+| mp-10stacks | WE 11 / BB 5 / ED 4 / SG 4 | 1,294,800 ✓ | 1,080 ✓ | 1,536 ✓ | — | 4d 11h ✓ |
+| to-10stacks | WE 11 / BB 6 / ED 5 / SG 4 | 1,294,800 ✓ | 1,080 ✓ | 1,744 ✓ | — | 4d 11h ✓ |
+| mp-bear | WE 17 / BB 8 / ED 7 / SG 6 + BER5 1 | 1,435,200 ✓ | 1,080 ✓ | 2,704 ✓ | — | 5d 23h ✓ |
+| ep-round-to-10s | WE 10 | 1,364,600 ✓ | 120 ✓ | 432 ✓ | — | 5d 10h ✓ |
+| bonus-eng-nodom | none | 1,237,800 ✓ | 0 ✓ | 0 ✓ | — | 4d 1h ✓ |
+
+This retires the three "unexplained constants" of the earlier write-up: M = 75,600 is the monsters' **chunk**
+silver (`2×8,400 + 16,800 + 19,600 + 22,400`), which is why it does not move between WE 18 and WE 17
+(`chunks(18) = chunks(17) = 2`); 2,752 is the monsters' chunk-discounted revive gold; 13,520 is the whole
+army's. The 1,080 dragon coins are `2×120 + 240 + 280 + 320`, not `Σ n × dragonCoins` (= 7,960).
+
+Still open (kept as `it.todo` in `tests/engine/recovery.test.ts`):
+- **Revive-all silver** = 216,000 at temple 0 → 173,880 at temple 20 (×0.805, not ÷1.81). 216,000 = 1,080 × 200
+  is suspicious but unconfirmed.
+- **Revive-all time** = 1d 2h at temple 0 → 21h 40m at temple 20 (ratio 1.2, unrelated to the temple divisor).
+- "Selective" recovery offers TOP 1 / TOP 2 / TOP 3 / CUSTOM (revive the top-N troop tiers, retrain the rest);
+  the engine implements it as "revive the top-N unit types by tier, retrain the rest".
+Both open points are cheap to settle in game (the retrain/revive screens show the exact cost) — folded into S-33.
 
 ## 5. Stacking observations (all bonuses 0)
 - Elite Preservation: flat HP profile, exact leadership fill, kill order tier-ascending; within a tier

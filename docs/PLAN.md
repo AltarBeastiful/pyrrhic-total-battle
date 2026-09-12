@@ -139,22 +139,30 @@ A kill order is an ordered list of *stacks* (unit types), first to die first. So
 - **Custom**: user-ordered list (drag & drop), mixing all pools.
 The pool a stack belongs to (leadership / authority / dominance) and its unit cost are fixed by data.
 
-### 3.4 Stack sizing ("flat HP profile with strict ordering")
+### 3.4 Stack sizing ("flat HP profile with exact fill")
 Given pool capacities, unit costs, per-unit HP, caps (mercenaries), and a kill order, find counts `n_i` such that:
 1. Σ cost_i × n_i ≤ capacity of each pool, and for leadership the pool is filled exactly when possible;
-2. total HP strictly decreases along the kill order: `HP_i > HP_j` for i before j (margin ≥ 1 unit's HP of the
-   later stack, so an in-game rounding never flips the order);
+2. total HP is **non-increasing** along the kill order, ties allowed and reported. Strict ordering was the
+   original intent, but the captured TotalStack output does not have it (ep-8stacks ships ARC2 = SP2 = 97,470
+   and SP3 = RD3 = 96,960) and forcing it costs 3–5 units per stack against the fixtures. The kill order is a
+   *ranking* that assigns HP targets; the stack that actually dies first is whichever has the highest total HP,
+   which is what the enemy picks (verified 10/10 kills in both in-game reports). Ties go to `result.warnings`;
 3. subject to (2), the HP profile is as flat as possible (this is what maximises the number of high-tier units).
 Algorithm: binary search on a target ceiling H for the pool; each stack gets `floor(H_i / hp_i)` with
-`H_i = H − i·δ`; then round-robin passes from the last-dying stack upward add/remove single units until the
-pool is exactly filled and (2) holds. O(stacks × log(capacity)); instantaneous.
+`H_i = H − i·δ` and `δ = RANK_SPREAD × H` (`RANK_SPREAD = 0.0019`, fitted to the captured runs); then
+round-robin passes from the first-to-die stack down add single units until the pool is exactly filled.
+O(stacks × log(capacity)); instantaneous. Results are returned in true kill order (total HP descending, ties
+broken by the ranking).
 Mercenary stacks are bounded by caps; if a cap makes a merc stack too small to sit *above* the next one in
 the kill order, the order simply continues (a capped stack may die earlier; the UI flags it).
 M's Preservation: size the leadership pool first; then size mercs under `min(troop HP)`; then monsters under
-`min(merc HP)`; report unused authority/dominance.
-Options: "Round to 10s" re-runs the sizing with counts constrained to multiples of 10 for mercs/monsters (revival
-works in 10-unit chunks, only 90% revived per chunk otherwise); exclusions (per-unit and top-tier per-category);
-Troop Type Allocation percentages when no preservation order is chosen (weights pool share per category).
+`min(troop HP)` too — and under `min(merc HP)` only when the "mercs above monsters" toggle is on, since the
+captured run does not enforce it; report unused authority/dominance.
+Options: "Round to 10s" solves the profile normally and then truncates mercenary/monster counts down to a
+multiple of 10, dropping the types that fall below 10 and leaving the freed capacity unused (revival and
+training work in 10-unit chunks; reproduces ep-round-to-10s exactly: WE 18 → 10, dominance 30/200);
+exclusions (per-unit and top-tier per-category); Troop Type Allocation percentages when no preservation order
+is chosen (weights pool share per category).
 
 ### 3.5 Battle model and Battle Summary
 Enemy: 4 stacks (flying/melee/ranged/mounted), 8 for Arachne's, or custom counts. Each enemy hit removes our
@@ -171,9 +179,14 @@ game, labelled as such); strike-two-squads is not modelled until observed. Damag
 strike-two-squads probabilities. Total damage = Σ over hits until all our stacks are dead or the round cap.
 Journal output = the same numbered hit list as the in-game report so users can compare 1:1.
 
-Recovery: lost units → **Retrain** (silver = Σ n × trainingCost × (1 − trainingCostReduction[group]),
-time = Σ trainingTime / (1 + speedBonus), dragon coins for monsters), **Revive** (gold = Σ n × revivalCost /
-templeMultiplier[templeLevel]), or **Selective** (revive top-N unit types, retrain the rest).
+Recovery: units are trained and revived **in chunks of ten**, and one unit per chunk comes back free. With
+`chunks(n) = ceil(n / 10)`: **Retrain** = Σ troops `n × training.silver × (1 − trainingCostReduction[group]/100)`
++ Σ monsters `chunks(n) × training.silver`, time the same split on `training.seconds` divided by
+`1 + trainingSpeed[group]/100`, dragon coins = Σ monsters `chunks(n) × training.dragonCoins`, plus the monsters'
+revive gold (monsters cannot be retrained back into the march); **Revive** = Σ all `(n − chunks(n)) ×
+revival.gold / templeMultiplier[templeLevel]`; **Selective** = revive the top-N unit types by tier, retrain the
+rest. These reproduce every silver, gold, dragon-coin and duration figure of the seven captured runs exactly
+(battle-model-observations §4); revive *silver* and revive *time* are still open.
 Summary metrics: stacks, min/avg/max damage, damage per silver, per gold, per dragon coin, retrain silver,
 retrain gold, time to retrain. Shown with deltas when the user edits counts manually.
 
@@ -255,11 +268,11 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 ### M2 — Engine v1 (stacking)
 - S-20 `bonuses.ts` aggregation + effective HP/strength per unit; tests against review §3 numbers.
 - S-21 Kill order builders (EP, MP, Monsters Last, custom) with tests.
-- S-22 Stack sizing algorithm (flat profile, strict ordering, exact fill, caps, exclusions).
-      Regression test (`tests/fixtures/totalstack-2026-09-12-ep.json`): leadership 4100, health bonuses
+- S-22 Stack sizing algorithm (flat profile, exact fill, non-increasing HP with ties reported, caps, exclusions).
+      Regression test (`tests/engine/stacker.test.ts`, review §3 run): leadership 4100, health bonuses
       guardsmen 39.5 / melee-ranged-mounted 1 / army 3, units ARC1 SP1 RD1 ARC2 SP2 RD3 must give
-      930 / 929 / 464 / 514 / 513 / 143 (± 1 unit each, pool exactly filled, HP strictly decreasing in that order:
-      200,182 > 199,967 > 199,752 > 199,149 > 198,762 > 196,997). Mercenaries at caps 22/24/23/12.
+      930 / 929 / 464 / 514 / 513 / 143 (± 1 unit each, pool exactly filled, HP non-increasing along the kill
+      order). Mercenaries at caps 22/24/23/12.
 - S-23 Round-to-10s mode.
 - S-24 Results UI: pools, pills, popovers, remove/restore, sort/reset order, save stack, share result.
 - S-25 Engine in a Web Worker with cancel/progress; main-thread fallback.
@@ -329,6 +342,18 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Engine (S-20…S-23, S-32…S-34) implemented and validated against every fixture. Reproduced
+  **exactly**: all three TotalStack journals entry for entry (actors, targets, per-hit damage, hit counters),
+  Arachne's 26 entries / 14 friendly hits, the Elite-Preservation monster pool (18/8/7/6 = 199), M's
+  Preservation (11/5/4/4 = 123; mp-bear 17/8/7/6 = 196 with Bear V capped at 1 and Cyclops V dropped),
+  Round-to-10s monsters (WE 10, dominance 30), captain Bernard's ARC1 706 × 165, every per-hit damage of both
+  in-game reports (±1: the game truncates where TotalStack rounds), and all seven runs' recovery costs once the
+  chunk-of-ten rule was found (§3.5). Stack counts match TotalStack to ±1 unit (±2 where several unit types
+  share hpPerUnit and cost). Known gaps: the Round-to-10s **troop** solve is up to 6 units off (TotalStack
+  re-solves leadership with a wider spread when rounding — unexplained); the beast-health-boost anomaly of the
+  captain-bernard run (a beast bonus also raising the Water Elemental, an elemental) is treated as a TotalStack
+  bug and not modelled; strict HP ordering dropped in favour of the observed non-increasing rule (§3.4);
+  strike-two-squads still unmodelled; the Rider I attack-order nuance still costs us one friendly hit per fight.
 - 2026-09-12 — Implementation started. Backlog: S-45 (Gist sync) written out as the first sync adapter since S-46
   (Google Drive) stays gated on a custom domain; S-46 unchanged.
 - 2026-09-12 — Second in-game report read (enemy first, 4 squads, one double-damage proc): round structure and
@@ -359,4 +384,5 @@ order, manual counts) so adding them later is UI work, not a redesign.
   monster-race bonus (with an anomaly to re-check), temple 20 + training reductions with all recovery plans, and MP
   with mercenaries under a bonus. Not captured: Custom Kill Order with a reordered list, Manual HP Order edits,
   equipment/artifact popups (additive tables, low risk). The battle turn model is derived from TotalStack's
-  journals but unvalidated in game; recovery-cost composition has four open equations (battle-model-observations §4).
+  journals but unvalidated in game; recovery-cost composition had four open equations — all but revive silver and
+  revive time were solved by the chunk-of-ten rule (battle-model-observations §4).
