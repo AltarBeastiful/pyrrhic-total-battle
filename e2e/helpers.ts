@@ -250,3 +250,69 @@ export function themeAttribute(page: Page): Promise<string | undefined> {
     return view.document.documentElement.dataset.theme;
   });
 }
+
+// ---- The Bonuses card ---------------------------------------------------------------------------
+/** The Bonuses card. Its editors are sheets in a portal, so they live outside this locator. */
+export function bonusesCard(page: Page): Locator {
+  return page.locator('#bonuses');
+}
+
+/** The line that unfolds the sources; its `aria-expanded` is the card's open state. */
+export function bonusesDisclosure(page: Page): Locator {
+  return bonusesCard(page).getByRole('button', { name: /^Sources/ });
+}
+
+/** Unfold the sources, if they are not already. */
+export async function openBonuses(page: Page): Promise<void> {
+  const trigger = bonusesDisclosure(page);
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+}
+
+/**
+ * One of the four labelled figures of the TOTAL ("Health", "Strength", "Special", "Sources on"),
+ * read from the card's own header rather than from an editor repeating it.
+ */
+export async function bonusTotal(page: Page, label: string): Promise<string> {
+  const figures = bonusesCard(page).locator('[aria-label="Army bonus totals"]').first();
+  const value = figures.locator(`xpath=.//dt[normalize-space()=${JSON.stringify(label)}]/following-sibling::dd[1]`);
+  return (await value.innerText()).trim();
+}
+
+/** A source row's switch: its accessible name is the source itself. */
+export function sourceSwitch(page: Page, name: string): Locator {
+  return bonusesCard(page).getByRole('switch', { name, exact: true });
+}
+
+/** One source row, as a player reads it: the name, then what it is worth. */
+export function sourceRow(page: Page, name: string): Locator {
+  return bonusesCard(page).getByRole('listitem').filter({ hasText: name }).first();
+}
+
+/** Open a source's editor through its gear and wait for the sheet. */
+export async function openSourceEditor(page: Page, name: string): Promise<Locator> {
+  await bonusesCard(page)
+    .getByRole('button', { name: `Edit ${name}` })
+    .click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  return sheet;
+}
+
+/** Pick an option out of a kit Select; its trigger is named "<current value> <label>". */
+export async function chooseInSelect(scope: Locator, label: string, option: string): Promise<void> {
+  await scope.getByRole('button', { name: new RegExp(`${label}$`) }).click();
+  await scope.page().getByRole('option', { name: option, exact: true }).click();
+}
+
+/** Add a captain through the Captains group and set it up in the sheet that opens. */
+export async function addCaptain(page: Page, name: string, level: number): Promise<void> {
+  await bonusesCard(page).getByRole('button', { name: 'Add captain' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  await chooseInSelect(sheet, 'Captain', name);
+  await sheet.getByRole('textbox', { name: 'Base level' }).fill(String(level));
+  await sheet.getByRole('textbox', { name: 'Base level' }).blur();
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await expect(sheet).toBeHidden();
+}

@@ -50,3 +50,7 @@ export type { ToggleGroupProps, ToggleItemProps } from './ToggleGroup';
 // Rows you tick (the mercenaries card).
 export { SelectableItem, SelectableList } from './SelectableList';
 export type { SelectableItemProps, SelectableListProps } from './SelectableList';
+
+// One choice out of a handful of unlike rules (the Battle card).
+export { OptionList } from './OptionList';
+export type { OptionListItem, OptionListProps } from './OptionList';

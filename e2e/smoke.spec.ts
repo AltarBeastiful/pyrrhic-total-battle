@@ -1,5 +1,5 @@
 /**
- * First-run smoke: the shell, the seven sections, persistence and the theme toggle (S-01 / S-52).
+ * First-run smoke: the shell, the five cards, persistence and the theme toggle (S-01 / S-52).
  * Deliberately shallow — the engine, the store and every editor have their own Vitest suites
  * (ADR-0003); what only a real browser can prove is that the assembled page comes up and survives
  * a reload.
@@ -8,6 +8,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   accountButton,
+  fillHousing,
   housingField,
   openAccountMenu,
   openApp,
@@ -18,7 +19,7 @@ import {
   watchConsole,
 } from './helpers';
 
-test('first run shows the default profile and all seven sections', async ({ page }) => {
+test('first run shows the default profile and all five cards', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
@@ -59,8 +60,8 @@ test('what the player typed survives a reload', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
-  await housingField(page, 'Leadership').fill('4100');
-  await housingField(page, 'Authority').fill('1200');
+  await fillHousing(page, 'Leadership', 4100);
+  await fillHousing(page, 'Authority', 1200);
   await renameProfile(page, 'Reloaded');
   // The store writes to localStorage debounced; the menu's status says when it has landed.
   await waitForSaved(page);
@@ -69,8 +70,9 @@ test('what the player typed survives a reload', async ({ page }) => {
   await page.waitForLoadState('networkidle');
 
   await expect(accountButton(page)).toHaveAccessibleName('Account: Reloaded');
-  await expect(housingField(page, 'Leadership')).toHaveValue('4100');
-  await expect(housingField(page, 'Authority')).toHaveValue('1200');
+  // The Battle card's steppers print a capacity the way a player reads it: grouped.
+  await expect(housingField(page, 'Leadership')).toHaveValue('4,100');
+  await expect(housingField(page, 'Authority')).toHaveValue('1,200');
 
   expect(problems).toEqual([]);
 });

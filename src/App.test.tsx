@@ -35,21 +35,26 @@ test('renders the brand and the account menu', async () => {
   expect(screen.getByRole('group', { name: 'Switch profile' })).toBeTruthy();
 });
 
-test('renders the seven sections of the plan, in order, with their anchors', () => {
+test('renders the cards of the plan, in order, with their anchors', () => {
   const { container } = render(<App />);
   const ids = [...container.querySelectorAll('section[id]')].map((node) => node.id);
   expect(ids).toEqual(SECTIONS.map((section) => section.id));
 });
 
 test('a card that folds says which way it is folded', () => {
-  render(<App />);
-  // The army cards are a form and never fold (owner's third review); the march ones still do.
-  const toggle = (): HTMLElement => screen.getByRole('button', { name: /^Housing and march/ });
-  const before = toggle().getAttribute('aria-expanded');
+  const { container } = render(<App />);
+  // The army cards and the Battle card are the form itself and never fold (owner's third review);
+  // whatever still folds — a bonus group, the saved marches — announces which way it is folded.
+  const folding = [...container.querySelectorAll('main [aria-expanded]')] as HTMLElement[];
+  expect(folding.length).toBeGreaterThan(0);
 
+  const [first] = folding;
+  if (first === undefined) throw new Error('nothing folds any more');
+  const before = first.getAttribute('aria-expanded');
   expect(['true', 'false']).toContain(before);
-  fireEvent.click(toggle());
-  expect(toggle().getAttribute('aria-expanded')).not.toBe(before);
+
+  fireEvent.click(first);
+  expect(first.getAttribute('aria-expanded')).not.toBe(before);
 });
 
 test('the march is generated from the frame, not from a section', () => {

@@ -87,8 +87,12 @@ describe.each(sections)('%s', (_title, Component) => {
     for (const pill of container.querySelectorAll('button[aria-pressed]')) {
       expect(['true', 'false']).toContain(pill.getAttribute('aria-pressed'));
     }
+    // The kit's switch is a native checkbox wearing `role="switch"`, so its state is the input's
+    // own `checked`; anything else has to spell it out with `aria-checked`.
     for (const toggle of screen.queryAllByRole('switch', { hidden: true })) {
-      expect(['true', 'false']).toContain(toggle.getAttribute('aria-checked'));
+      const state = toggle.getAttribute('aria-checked');
+      if (toggle instanceof HTMLInputElement) expect(typeof toggle.checked).toBe('boolean');
+      else expect(['true', 'false']).toContain(state);
       expect(accessibleName(toggle)).not.toBe('');
     }
     // A collapsed body is announced as collapsed.
@@ -98,10 +102,9 @@ describe.each(sections)('%s', (_title, Component) => {
   });
 });
 
-test('the sections that carry pills really expose them as toggles', () => {
-  for (const [, Component] of sections.filter(([title]) =>
-    ['Troops', 'Mercenaries', 'Bonuses', 'Enemy formation'].includes(title),
-  )) {
+test('the cards whose tiles are toggles really expose them as toggles', () => {
+  // The army cards press their unit tiles in and out; Bonuses and Battle are rows and switches now.
+  for (const [, Component] of sections.filter(([title]) => ['Troops', 'Mercenaries'].includes(title))) {
     const { container, unmount } = render(<Component />);
     expect(container.querySelectorAll('[aria-pressed]').length).toBeGreaterThan(0);
     unmount();
@@ -109,15 +112,14 @@ test('the sections that carry pills really expose them as toggles', () => {
 });
 
 test('the enemy fields revealed by the Custom preset are labelled too', () => {
-  const enemy = SECTIONS.find((section) => section.id === 'enemy');
-  if (enemy === undefined) throw new Error('the enemy section left the registry');
-  const Enemy = enemy.Component;
-  render(<Enemy />);
-  fireEvent.click(screen.getByRole('button', { name: 'Custom' }));
+  const battle = SECTIONS.find((section) => section.id === 'battle');
+  if (battle === undefined) throw new Error('the battle section left the registry');
+  const Battle = battle.Component;
+  render(<Battle />);
+  fireEvent.click(screen.getByRole('radio', { name: 'Custom' }));
 
-  const fields = screen.getAllByRole('textbox');
-  expect(fields).toHaveLength(4);
-  expect(fields.map(accessibleName)).toEqual(['Melee', 'Ranged', 'Mounted', 'Flying']);
+  const fields = screen.getAllByRole('textbox').map(accessibleName);
+  for (const name of ['Melee', 'Ranged', 'Mounted', 'Flying']) expect(fields).toContain(name);
 });
 
 test('every section is a landmark region named by its own heading', () => {
