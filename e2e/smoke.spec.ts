@@ -25,6 +25,33 @@ test('first run shows the default profile and all seven sections', async ({ page
   expect(problems).toEqual([]);
 });
 
+test('the Troops header says what the account fields, and follows a tier change', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+
+  // The summary is always visible, so a collapsed section still says what it holds (S-01, docs/design.md §7).
+  const summary = page.locator('#troops-summary');
+  await expect(summary).toBeVisible();
+  await expect(summary).toContainText('Guardsmen G1');
+  const before = (await summary.innerText()).trim();
+
+  await page.getByRole('combobox', { name: 'Guardsmen highest tier' }).selectOption('5');
+
+  await expect(summary).toContainText('Guardsmen G1–G5');
+  expect((await summary.innerText()).trim()).not.toEqual(before);
+
+  // It keeps saying it with the body folded away.
+  await page.getByRole('button', { name: 'Troops', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Troops', exact: true })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
+  await expect(summary).toBeVisible();
+  await expect(summary).toContainText('Guardsmen G1–G5');
+
+  expect(problems).toEqual([]);
+});
+
 test('what the player typed survives a reload', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);

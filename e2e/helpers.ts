@@ -83,15 +83,43 @@ export async function generate(
   await expect(generateButton(page)).toBeEnabled({ timeout: 30_000 });
 }
 
+/** The shape of a stack chip's accessible name: "<short label> <count>", e.g. "ARC1 624". */
+const STACK_CHIP = /^[A-Z]{2,5}\d+ [\d,]+$/;
+
 /**
- * The result pills, whose accessible name is "<short label> <count>" (e.g. "ARC1 624"). Matching on
- * that shape keeps the helper independent of which unit types the formation happens to contain.
+ * The result chips, matched on that name shape, which keeps the helper independent of which unit types
+ * the formation happens to contain.
  */
 export function stackPills(page: Page): Locator {
-  return page.locator('#results').getByRole('button', { name: /^[A-Z]{2,5}\d+ [\d,]+$/ });
+  return page.locator('#results').getByRole('button', { name: STACK_CHIP });
 }
 
-/** The summary card value under `label`, as the number it displays. */
+/**
+ * The chips as a player hears them: "ARC1 624".
+ *
+ * Not `innerText` — a chip carries a decorative `UnitBadge` that prints the tier as its own line, so the
+ * visible text reads "3 / ARC3 / 192". The accessible name leaves the badge out (it is `aria-hidden`),
+ * which is exactly the label the specs reason about.
+ */
+export async function stackLabels(page: Page): Promise<string[]> {
+  const snapshot = await page.locator('#results').ariaSnapshot();
+  return [...snapshot.matchAll(/- button "([A-Z]{2,5}\d+ [\d,]+)"/g)].map((match) => match[1] ?? '');
+}
+
+/** How many stacks the battle summary reports ("10 stacks", under the "Battle summary" heading). */
+export async function stackCount(page: Page): Promise<number> {
+  const text = await page
+    .locator('#results')
+    .getByText(/^[\d,]+ stacks/)
+    .first()
+    .innerText();
+  return Number((/[\d,]+/.exec(text)?.[0] ?? '0').replaceAll(',', ''));
+}
+
+/**
+ * The battle-summary card value under `label`, as the number it displays. The cards are titled in the
+ * player's own words ("Damage if the monster strikes first"), so pass the title as it is written.
+ */
 export async function summaryValue(page: Page, label: string): Promise<number> {
   const card = page
     .locator('#results div')
@@ -100,6 +128,16 @@ export async function summaryValue(page: Page, label: string): Promise<number> {
   const text = await card.innerText();
   const value = /[\d,]+/.exec(text.replace(label, ''))?.[0] ?? '0';
   return Number(value.replaceAll(',', ''));
+}
+
+/** The priority select of the Housing section. */
+export function priorityField(page: Page): Locator {
+  return page.getByRole('combobox', { name: 'Priority' });
+}
+
+/** Wait until no Generate run is in flight (a priority search runs for up to eight seconds). */
+export async function settle(page: Page): Promise<void> {
+  await expect(generateButton(page)).toBeEnabled({ timeout: 30_000 });
 }
 
 /** Names of every profile in the switcher. */
