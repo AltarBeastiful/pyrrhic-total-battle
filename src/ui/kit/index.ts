@@ -60,3 +60,7 @@ export type { SelectableItemProps, SelectableListProps } from './SelectableList'
 // One choice out of a handful of unlike rules (the Battle card).
 export { OptionList } from './OptionList';
 export type { OptionListItem, OptionListProps } from './OptionList';
+
+// A long, grouped list you pick one row out of (the mercenary picker).
+export { Combobox } from './Combobox';
+export type { ComboboxItem, ComboboxProps, ComboboxSection } from './Combobox';

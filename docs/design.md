@@ -73,14 +73,36 @@ group shouts louder than another; `edge` now carries the same value as `strong`,
 | Monsters (violet) | `#ddd8e6` / `#5b368a` | `#3b3a47` / `#c0a0ec` |
 | Mercenaries (red) | `#e6d6d6` / `#8c3030` | `#433837` / `#ec9391` |
 
+### Tier colours
+
+The game paints a mercenary's tier, and players read a camp by tier before they read it by name
+(design plan §7.2, amended 2026-09-13). So tiers get a **second, smaller colour system**: one ink
+each, from the game's own tier palette, darkened until it clears 4.5:1 as ink on the surfaces it
+appears on **and** on its own 12 % wash, which is the ground of a tier badge.
+
+| Tier | Light | Dark | The game's word for it |
+|---|---|---|---|
+| V (`--color-tier-5`) | `#71530f` | `#d7b25a` | gold |
+| VI (`--color-tier-6`) | `#8e2f2f` | `#ea9490` | crimson |
+| VII (`--color-tier-7`) | `#5c3a8e` | `#c7a3ee` | violet |
+| VIII (`--color-tier-8`) | `#1b625c` | `#7fd3cb` | teal |
+| IX (`--color-tier-9`) | `#645831` | `#eedca4` | white-gold |
+
+The tables carry tiers 5, 6, 7 and 9 today; VIII is defined so a tier-VIII mercenary arrives with a
+colour rather than with a hole. A tier ink is allowed on exactly two things: the **tier badge**
+(`src/ui/domain/TierBadge.tsx` — the roman numeral in Fraunces on a 12 % wash of its own ink) and
+the **heading over a tier** in the mercenary picker. Everywhere else the unit's colour is its
+group's, so the two systems never fight: the tile stays mercenary red, the badge beside it says
+which tier.
+
 ### Checked, not guessed
 
 `pnpm contrast` (`scripts/contrast-check.ts`) parses `src/index.css`, resolves both themes and fails the build
-on any pair below its floor. 170 pairs, all passing:
+on any pair below its floor. 230 pairs, all passing:
 
 | Rule | What it covers | Lowest light | Lowest dark |
 |---|---|---|---|
-| **4.5:1** (1.4.3) | `fg`, `muted`, every tone and every group `strong` on `bg`, `surface`, `raised`, `sunken` and on its own `*-soft`; every `*-fg` on its filled tone | **4.62** | **4.92** |
+| **4.5:1** (1.4.3) | `fg`, `muted`, every tone, every group `strong` and every tier ink on `bg`, `surface`, `raised`, `sunken` and on its own `*-soft`; every `*-fg` on its filled tone; every tier ink on its own 12 % badge wash over `surface` and `raised` | **4.60** | **4.60** |
 | **3:1** (1.4.11) | `field` and `accent-line` on the four surfaces; every group `edge` on `surface` and on its own `soft` | **3.25** | **3.34** |
 
 `line` is the one token deliberately below 3:1: it draws the hairline between the sheet's sections and nothing

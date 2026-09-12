@@ -148,6 +148,17 @@
   --color-group-mercenaries-strong: var(--pyr-group-mercenaries-strong);
   --color-group-mercenaries-edge: var(--pyr-group-mercenaries-edge);
 
+  /* One ink per mercenary tier, from the game's own tier palette (design plan §7.2, amended
+     2026-09-13). A second, smaller colour system beside the group hues: it appears on a tier badge
+     and on the heading over a tier in the mercenary picker, and nowhere else. The tables carry
+     tiers 5, 6, 7 and 9 today; 8 is defined too, so a tier-VIII mercenary arrives with a colour
+     rather than with a hole. */
+  --color-tier-5: var(--pyr-tier-5);
+  --color-tier-6: var(--pyr-tier-6);
+  --color-tier-7: var(--pyr-tier-7);
+  --color-tier-8: var(--pyr-tier-8);
+  --color-tier-9: var(--pyr-tier-9);
+
   /* Legacy single-value group names. They point at the new `strong` inks and stay until the
      last old section is replaced; nothing new may use them. */
   --color-group-guardsmen: var(--pyr-group-guardsmen-strong);
@@ -245,6 +256,14 @@
   --pyr-group-mercenaries-strong: #8c3030;
   --pyr-group-mercenaries-edge: #8c3030;
 
+  /* Tier inks: gold, crimson, violet, teal and white-gold, darkened until each clears 4.5:1 on the
+     surfaces a badge sits on and on its own 12 % ground. */
+  --pyr-tier-5: #71530f;
+  --pyr-tier-6: #8e2f2f;
+  --pyr-tier-7: #5c3a8e;
+  --pyr-tier-8: #1b625c;
+  --pyr-tier-9: #645831;
+
   --pyr-shadow-card: 0 1px 2px #1319170f;
   --pyr-shadow-pop: 0 6px 20px -6px #13191738;
   --pyr-shadow-modal: 0 20px 50px -12px #13191754;
@@ -298,6 +317,12 @@
     --pyr-group-mercenaries-strong: #ec9391;
     --pyr-group-mercenaries-edge: #ec9391;
 
+    --pyr-tier-5: #d7b25a;
+    --pyr-tier-6: #ea9490;
+    --pyr-tier-7: #c7a3ee;
+    --pyr-tier-8: #7fd3cb;
+    --pyr-tier-9: #eedca4;
+
     --pyr-shadow-card: 0 1px 2px #00000066;
     --pyr-shadow-pop: 0 8px 24px -8px #000000a6;
     --pyr-shadow-modal: 0 24px 56px -14px #000000bf;
@@ -350,6 +375,12 @@
   --pyr-group-mercenaries-soft: #433837;
   --pyr-group-mercenaries-strong: #ec9391;
   --pyr-group-mercenaries-edge: #ec9391;
+
+  --pyr-tier-5: #d7b25a;
+  --pyr-tier-6: #ea9490;
+  --pyr-tier-7: #c7a3ee;
+  --pyr-tier-8: #7fd3cb;
+  --pyr-tier-9: #eedca4;
 
   --pyr-shadow-card: 0 1px 2px #00000066;
   --pyr-shadow-pop: 0 8px 24px -8px #000000a6;

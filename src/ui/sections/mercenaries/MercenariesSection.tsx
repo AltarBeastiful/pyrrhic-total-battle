@@ -1,74 +1,86 @@
 /**
- * Mercenaries (design plan §7.2, amended by the owner) — the camp, as one always-visible list.
+ * Mercenaries (design plan §7.2, amended by the owner on 2026-09-13 and again after watching
+ * TotalStack live, `docs/investigations/0006-totalstack-captain-picker.md`) — the camp as a row of
+ * compact pills with a picker under it.
  *
- * The card is the summary: the mercenaries you own are on screen the moment the page is, one row
- * each — tile, name, what it is, how many you own as a stepper, the pin when the march keeps it —
- * and they are edited in place, with nothing to unfold. The row itself is the tick box, so putting
- * one back in the camp is a tap anywhere on the line except on its own controls (review point R6).
+ * The camp is not a list of rows: a player owns four to eight mercenaries and wants to see all of
+ * them at once, so each one is a **pill** — category glyph, short code, the tier in its own colour,
+ * how many you own, and a remove cross — and the pills wrap like words in a sentence, climbing the
+ * tiers as the picker does. The heading
+ * counts them and carries the one action that touches all of them. Nothing happens when the body of
+ * a pill is pressed: only the quantity (a popover) and the cross (remove) act, so a stray tap never
+ * changes the camp.
  *
- * The picker over the 69 built-in mercenaries lives behind one "Add mercenaries" button and opens
- * inline, under the list, at every width: it is a long list that wants the page's own scrolling
- * next to what you already own, not a modal that hides it. It shows itself when nothing is hired
- * yet, because then there is nothing else to look at. A mercenary the tables do not carry is typed
- * into a sheet from the end of the picker.
+ * The quantity lives in a popover rather than inside the pill because a labelled field plus its
+ * "unlimited" toggle is three times the height of the pill itself; there it also has the room to
+ * say what an empty field means.
+ *
+ * Adding is a combobox and nothing else: players know mercenaries by name and by tier, so you type
+ * the name, or you open the list, which is grouped by tier from the lowest up, as TotalStack's is.
+ * No Tier/Role/Race chips anywhere. A mercenary the tables do not carry is typed by hand from the
+ * button under the field.
  *
  * Like Troops, this card describes the *account*: everything is written to the active profile. The
  * only thing it reads from the battle setup is the list of pinned units, to mark them.
  */
 import { lazy, useId, useMemo, useState } from 'react';
+import type { ComponentType } from 'react';
 
-import type { Group, Race } from '@/data/types';
+import type { Category, Race } from '@/data/types';
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { UnitTile } from '@/ui/domain';
-import {
-  Button,
-  Card,
-  IconButton,
-  NumberInput,
-  SearchField,
-  SelectableItem,
-  SelectableList,
-  Switch,
-  ToggleGroup,
-  ToggleItem,
-} from '@/ui/kit';
+import { romanTier, TIER_INK, TierBadge, UnitTile } from '@/ui/domain';
+import { Badge, Button, Card, Combobox, IconButton, NumberInput, Popover, Switch } from '@/ui/kit';
+import type { ComboboxSection } from '@/ui/kit';
 import { Cluster, Stack } from '@/ui/layout';
 import { LazySurface } from '@/ui/lazy';
 
-import { PencilIcon, PlusIcon } from '../../icons';
-
-import { GROUP_LABELS, RACE_LABELS } from './labels';
+import type { IconProps } from '../../icons';
 import {
-  matches,
-  MERCENARY_RACES,
-  ownedRows,
-  ownedText,
-  pickerRows,
-  recentFirst,
-  ROLES,
-  TIERS,
-} from './rows';
+  BeastFillIcon,
+  CloseIcon,
+  DragonFillIcon,
+  ElementalFillIcon,
+  EngineersFillIcon,
+  FlyingFillIcon,
+  GiantFillIcon,
+  MeleeFillIcon,
+  MountedFillIcon,
+  PencilIcon,
+  PinIcon,
+  PlusIcon,
+  RangedFillIcon,
+} from '../../icons';
+
+import { offerGroups, ownedRows, ownedText } from './rows';
 import type { MercenaryRow } from './rows';
-import { readRecent, rememberRecent } from './uiPrefs';
 
 // The hand-typed-mercenary form is a whole second card's worth of fields for something most players
-// never open: it arrives with the first press of "Add one by hand" (ui-foundation plan §6).
+// never open: it arrives with the first press of "Custom mercenary…" (ui-foundation plan §6).
 const CustomMercenarySheet = lazy(() =>
   import('./CustomMercenarySheet').then((module) => ({ default: module.CustomMercenarySheet })),
 );
 
-/** A pinned mercenary says so in its name: the pin on the tile is a picture, not a word. */
-function rowName(entry: MercenaryRow, isPinned: boolean): string {
-  return isPinned ? `${entry.label}, kept in the march` : entry.label;
-}
+/**
+ * The silhouette a pill wears: its category, or its race when the tables tag it as a monster only.
+ * The unit tile draws the same set at a size where a whole tile fits; a pill has room for the glyph
+ * alone.
+ */
+const PILL_GLYPH: Record<Category | Race | 'other', ComponentType<IconProps>> = {
+  melee: MeleeFillIcon,
+  ranged: RangedFillIcon,
+  mounted: MountedFillIcon,
+  flying: FlyingFillIcon,
+  beast: BeastFillIcon,
+  elemental: ElementalFillIcon,
+  dragon: DragonFillIcon,
+  giant: GiantFillIcon,
+  other: EngineersFillIcon,
+};
 
-/** One filter group: its label opens the line on a phone and sits above the chips from `sm`. */
-const FILTER_GROUP = 'shrink-0 flex-row items-center sm:flex-col sm:items-start';
-
-/** The line over the picker: how long the list is, and how to make it shorter. */
-function offeredCaption(count: number): string {
-  return `Type a name or code to narrow ${count} ${count === 1 ? 'mercenary' : 'mercenaries'}.`;
+/** The short code without its tier digits: the data's "ABM6" is drawn as "ABM" beside a roman VI. */
+function shortCode(label: string): string {
+  return label.replace(/\d+$/, '') || label;
 }
 
 export function MercenariesSection() {
@@ -78,30 +90,29 @@ export function MercenariesSection() {
   const titleId = useId();
 
   const mercenaries = profile?.mercenaries;
-  const hired = (mercenaries?.selected.length ?? 0) + (mercenaries?.custom.length ?? 0);
-  const [picking, setPicking] = useState(() => hired === 0);
-  const [recent, setRecent] = useState<string[]>(() => readRecent());
-  const [query, setQuery] = useState('');
-  const [tiers, setTiers] = useState<string[]>([]);
-  const [roles, setRoles] = useState<string[]>([]);
-  const [races, setRaces] = useState<string[]>([]);
   const [editor, setEditor] = useState<{ merc?: CustomMercenary } | null>(null);
 
   const owned = useMemo(() => (mercenaries === undefined ? [] : ownedRows(mercenaries)), [mercenaries]);
   const ownedIds = useMemo(() => owned.map((entry) => entry.id), [owned]);
 
-  const offered = useMemo(() => {
-    const filters = {
-      query,
-      tiers: tiers.map(Number),
-      roles: roles as Group[],
-      races: races as Race[],
-    };
-    return recentFirst(
-      pickerRows(new Set(ownedIds)).filter((entry) => matches(entry, filters)),
-      recent,
-    );
-  }, [ownedIds, query, tiers, roles, races, recent]);
+  /** The picker: one group per tier, lowest first, each headed by its roman numeral in its colour. */
+  const offered = useMemo<ComboboxSection[]>(
+    () =>
+      offerGroups(new Set(ownedIds)).map((group) => {
+        const tone = TIER_INK[group.tier];
+        return {
+          id: `tier-${group.tier}`,
+          title: `Tier ${romanTier(group.tier)}`,
+          items: group.rows.map((entry) => ({
+            id: entry.id,
+            label: entry.label,
+            render: () => <Offer entry={entry} />,
+          })),
+          ...(tone === undefined ? {} : { tone }),
+        };
+      }),
+    [ownedIds],
+  );
 
   if (profile === undefined || mercenaries === undefined) return null;
 
@@ -112,21 +123,16 @@ export function MercenariesSection() {
     updateProfile(profileId, (current) => ({ mercenaries: { ...current.mercenaries, ...next } }));
   };
 
-  /** The owned list is ticked all the way down; untick a row and that mercenary leaves the camp. */
-  const keepOwned = (keys: string[]): void => {
-    const kept = new Set(keys);
-    patch({
-      selected: mercenaries.selected.filter((entry) => kept.has(entry.id)),
-      custom: mercenaries.custom.filter((entry) => kept.has(entry.id)),
-    });
+  const hire = (id: string): void => {
+    if (ownedIds.includes(id)) return;
+    patch({ selected: [...mercenaries.selected, { id, cap: null }] });
   };
 
-  /** The picker starts with nothing ticked, so whatever comes back is what was just hired. */
-  const hire = (keys: string[]): void => {
-    const added = keys.filter((id) => !ownedIds.includes(id));
-    if (added.length === 0) return;
-    patch({ selected: [...mercenaries.selected, ...added.map((id) => ({ id, cap: null }))] });
-    for (const id of added) setRecent(rememberRecent(id));
+  const release = (id: string): void => {
+    patch({
+      selected: mercenaries.selected.filter((entry) => entry.id !== id),
+      custom: mercenaries.custom.filter((entry) => entry.id !== id),
+    });
   };
 
   const setCap = (id: string, cap: number | null): void => {
@@ -149,170 +155,70 @@ export function MercenariesSection() {
     <Card tone="none" shape="flat" as="section" id="mercenaries" aria-labelledby={titleId}>
       <Stack gap={4}>
         <Stack gap={2}>
-          <h2 id={titleId} className="text-lg">
-            Mercenaries
-          </h2>
-          {owned.length === 0 ? (
-            <p className="text-muted text-sm">None hired yet. Find one below and say how many you own.</p>
-          ) : (
-            <SelectableList label="Mercenaries you own" selectedKeys={ownedIds} onSelectionChange={keepOwned}>
+          <Cluster gap={2} align="center" justify="between">
+            <Cluster gap={2} align="center">
+              <h2 id={titleId} className="text-lg">
+                Mercenaries
+              </h2>
+              {owned.length > 0 && <span className="text-muted text-sm">({owned.length} selected)</span>}
+            </Cluster>
+            {owned.length > 0 && (
+              <Button
+                variant="quiet"
+                size="sm"
+                onPress={() => {
+                  patch({ selected: [], custom: [] });
+                }}
+              >
+                Deselect all
+              </Button>
+            )}
+          </Cluster>
+
+          {owned.length > 0 && (
+            <ul aria-label="Mercenaries you own" className="flex flex-wrap gap-2">
               {owned.map((entry) => (
-                <SelectableItem
-                  key={entry.id}
-                  id={entry.id}
-                  label={rowName(entry, pinned.has(entry.id))}
-                  actions={
-                    entry.isCustom ? (
-                      <IconButton
-                        label={`Edit ${entry.unit.name}`}
-                        onPress={() => {
-                          const merc = mercenaries.custom.find((custom) => custom.id === entry.id);
-                          if (merc !== undefined) setEditor({ merc });
-                        }}
-                      >
-                        <PencilIcon />
-                      </IconButton>
-                    ) : (
-                      <>
-                        <NumberInput
-                          label="Owned"
-                          size="sm"
-                          min={0}
-                          allowEmpty
-                          value={entry.cap}
-                          onChange={(value) => {
-                            setCap(entry.id, value);
-                          }}
-                        />
-                        <Switch
-                          label="Unlimited"
-                          isSelected={entry.cap === null}
-                          onChange={(on) => {
-                            setCap(entry.id, on ? null : 0);
-                          }}
-                        />
-                      </>
-                    )
-                  }
-                >
-                  <Face entry={entry} isPinned={pinned.has(entry.id)} showOwned />
-                </SelectableItem>
+                <li key={entry.id}>
+                  <Pill
+                    entry={entry}
+                    isPinned={pinned.has(entry.id)}
+                    onCap={(cap) => {
+                      setCap(entry.id, cap);
+                    }}
+                    onEdit={() => {
+                      const merc = mercenaries.custom.find((custom) => custom.id === entry.id);
+                      if (merc !== undefined) setEditor({ merc });
+                    }}
+                    onRemove={() => {
+                      release(entry.id);
+                    }}
+                  />
+                </li>
               ))}
-            </SelectableList>
+            </ul>
           )}
         </Stack>
 
-        {picking ? (
-          <Stack gap={2}>
-            <SearchField
-              label="Find a mercenary"
-              value={query}
-              onChange={setQuery}
-              placeholder="Name or code"
-            />
-            {/*
-              On a phone the three groups are one line that scrolls sideways, faded at both edges,
-              each group opening with its own label; from `sm` they are the three labelled rows the
-              card had before. The outer element scrolls, the inner one is as wide as its content.
-            */}
-            <div className="overflow-x-auto mask-x-from-95% sm:overflow-visible sm:mask-none">
-              <Cluster
-                gap={4}
-                align="center"
-                wrap={false}
-                className="w-max sm:w-auto sm:flex-col sm:items-start"
-              >
-                <ToggleGroup
-                  label="Tier"
-                  size="sm"
-                  selectionMode="multiple"
-                  value={tiers}
-                  onChange={setTiers}
-                  className={FILTER_GROUP}
-                >
-                  {TIERS.map((tier) => (
-                    <ToggleItem key={tier} id={String(tier)} label={`Tier ${tier}`}>
-                      {`T${tier}`}
-                    </ToggleItem>
-                  ))}
-                </ToggleGroup>
-                <ToggleGroup
-                  label="Role"
-                  size="sm"
-                  selectionMode="multiple"
-                  value={roles}
-                  onChange={setRoles}
-                  className={FILTER_GROUP}
-                >
-                  {ROLES.map((role) => (
-                    <ToggleItem key={role} id={role} label={GROUP_LABELS[role]}>
-                      {GROUP_LABELS[role]}
-                    </ToggleItem>
-                  ))}
-                </ToggleGroup>
-                <ToggleGroup
-                  label="Race"
-                  size="sm"
-                  selectionMode="multiple"
-                  value={races}
-                  onChange={setRaces}
-                  className={FILTER_GROUP}
-                >
-                  {MERCENARY_RACES.map((race) => (
-                    <ToggleItem key={race} id={race} label={RACE_LABELS[race]}>
-                      {RACE_LABELS[race]}
-                    </ToggleItem>
-                  ))}
-                </ToggleGroup>
-              </Cluster>
-            </div>
-            <p className="text-muted text-sm">{offeredCaption(offered.length)}</p>
-            <SelectableList
-              label="Add a mercenary"
-              density="compact"
-              scrolls
-              selectedKeys={[]}
-              onSelectionChange={hire}
-              emptyState="Nothing matches those filters."
-            >
-              {offered.map((entry) => (
-                <SelectableItem key={entry.id} id={entry.id} label={entry.label}>
-                  <Face entry={entry} isPinned={false} />
-                </SelectableItem>
-              ))}
-            </SelectableList>
-            <Cluster gap={2} justify="between">
-              <Button
-                variant="quiet"
-                icon={<PlusIcon />}
-                onPress={() => {
-                  setEditor({});
-                }}
-              >
-                Custom mercenary
-              </Button>
-              {owned.length > 0 && (
-                <Button
-                  variant="quiet"
-                  onPress={() => {
-                    setPicking(false);
-                  }}
-                >
-                  Done adding
-                </Button>
-              )}
-            </Cluster>
-          </Stack>
-        ) : (
+        <Stack gap={2} align="start">
+          <Combobox
+            label="Add a mercenary"
+            placeholder="Name or code"
+            className="w-full"
+            description="Type a name, or open the list: mercenaries are grouped by tier."
+            sections={offered}
+            onSelect={hire}
+            emptyState="No mercenary of that name. Add it by hand below."
+          />
           <Button
+            variant="quiet"
             icon={<PlusIcon />}
             onPress={() => {
-              setPicking(true);
+              setEditor({});
             }}
           >
-            Add mercenaries
+            Custom mercenary…
           </Button>
-        )}
+        </Stack>
       </Stack>
 
       <LazySurface isOpen={editor !== null}>
@@ -333,29 +239,92 @@ export function MercenariesSection() {
 }
 
 /**
- * What every row shows: the tile, the name, and the quiet line of what the mercenary is. An owned
- * row ends that line with the quantity — `×22`, or `×∞` when nothing caps the stack — so the list
- * reads as the recap it is without opening anything.
+ * One mercenary you own: `⚔ ABM VI ×22 ✕`. The glyph and the code say which unit it is, the badge
+ * says which tier in that tier's colour, the quantity opens its own editor and the cross gives the
+ * mercenary back. A pinned one carries the mark the march keeps it with.
+ *
+ * The pill is 32 px tall with a pointer and 44 px on a touch screen, where its two buttons owe a
+ * thumb that much. The code is the one thing a screen reader never hears: it hears the name.
  */
-function Face({
+function Pill({
   entry,
   isPinned,
-  showOwned = false,
+  onCap,
+  onEdit,
+  onRemove,
 }: {
   entry: MercenaryRow;
   isPinned: boolean;
-  /** The row is one of the mercenaries you own, so the quantity belongs on the line. */
-  showOwned?: boolean;
+  onCap: (cap: number | null) => void;
+  onEdit: () => void;
+  onRemove: () => void;
 }) {
+  // Indexed where it is used, the way the unit tile picks its silhouette: a component that comes
+  // out of a call during render is a new component on every render.
+  const Glyph = PILL_GLYPH[entry.unit.category ?? entry.unit.race ?? 'other'];
+  const name = entry.unit.name;
+
+  return (
+    <span className="bg-raised rounded-chip flex items-center gap-1 py-0.5 pr-0.5 pl-1.5">
+      <Glyph aria-hidden="true" className="text-group-mercenaries-strong size-4 shrink-0" />
+      <span aria-hidden="true" className="text-sm font-medium">
+        {shortCode(entry.unit.label)}
+      </span>
+      <span className="sr-only">{name}</span>
+      {entry.unit.tier === 0 ? <Badge>Custom</Badge> : <TierBadge tier={entry.unit.tier} />}
+      {isPinned && <PinIcon title="kept in the march" className="text-muted size-3.5 shrink-0" />}
+      {entry.isCustom ? (
+        <IconButton size="sm" label={`Edit ${name}`} onPress={onEdit}>
+          <PencilIcon />
+        </IconButton>
+      ) : (
+        <Popover
+          label={`How many ${name} you own`}
+          trigger={
+            <Button
+              variant="quiet"
+              size="sm"
+              className="px-1"
+              aria-label={`${name}: owned ${entry.cap === null ? 'unlimited' : entry.cap}`}
+            >
+              <span className="nums text-sm">{ownedText(entry.cap)}</span>
+            </Button>
+          }
+        >
+          <Stack gap={3}>
+            <p className="text-base font-medium">{name}</p>
+            <NumberInput
+              label="Owned"
+              min={0}
+              allowEmpty
+              value={entry.cap}
+              description="How many you can field. Empty means as many as the camp pays for."
+              onChange={onCap}
+            />
+            <Switch
+              label="Unlimited"
+              isSelected={entry.cap === null}
+              onChange={(on) => {
+                onCap(on ? null : 0);
+              }}
+            />
+          </Stack>
+        </Popover>
+      )}
+      <IconButton size="sm" label={`Remove ${name}`} onPress={onRemove}>
+        <CloseIcon />
+      </IconButton>
+    </span>
+  );
+}
+
+/** One row of the picker; the combobox draws the ground and the focus, this only fills the line. */
+function Offer({ entry }: { entry: MercenaryRow }) {
   return (
     <>
-      <UnitTile unit={entry.unit} size="sm" state={isPinned ? 'pinned' : 'on'} label="" />
-      <Stack gap={1} className="min-w-0">
-        <span className="truncate">{entry.unit.name}</span>
-        <span className="text-muted truncate text-sm">
-          {showOwned && !entry.isCustom ? `${entry.facts} — ${ownedText(entry.cap)}` : entry.facts}
-        </span>
-      </Stack>
+      <UnitTile unit={entry.unit} size="sm" state="on" label="" className="size-8" />
+      <span className="min-w-0 flex-1 truncate">{entry.unit.name}</span>
+      <TierBadge tier={entry.unit.tier} />
     </>
   );
 }

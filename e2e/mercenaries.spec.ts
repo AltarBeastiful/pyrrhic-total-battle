@@ -1,48 +1,62 @@
 /**
- * The one mercenary flow a real browser has to prove (design plan §7.2, journey J2): find a
- * mercenary, hire it by pressing its row — no "Add" button at the end of the line (review point
- * R6) — say how many you own, and read the quantity back off the line, with nothing to unfold.
+ * The one mercenary flow a real browser has to prove (design plan §7.2 as amended on 2026-09-13,
+ * journey J2): find a mercenary by name in the picker, hire it with one press — no "Add" button at
+ * the end of a line (review point R6) — say how many you own in the pill's own editor, and read the
+ * quantity back off the pill, with nothing to unfold.
  */
 import { expect, test } from '@playwright/test';
 
 import { openApp, watchConsole } from './helpers';
 
-test('a mercenary is hired by its row, and the card says how many you own', async ({ page }) => {
+test('a mercenary is hired from the picker, and its pill says how many you own', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
   const card = page.locator('#mercenaries');
   await expect(card.getByRole('heading', { level: 2, name: 'Mercenaries' })).toBeVisible();
 
-  // Nothing hired yet, so the picker is already open; a filled camp keeps it behind one button.
-  const add = card.getByRole('button', { name: 'Add mercenaries' });
-  if (await add.isVisible()) await add.click();
+  // Adding is one field: no Tier / Role / Race chips, and nothing to unfold first.
+  const picker = card.getByRole('combobox', { name: 'Add a mercenary' });
+  await picker.click();
 
-  await card.getByRole('searchbox', { name: 'Find a mercenary' }).fill('bear');
+  const list = page.getByRole('listbox');
+  await expect(list).toBeVisible();
+  // The whole table is on offer, grouped by tier from the lowest up, headed by the roman numeral.
+  await expect(list.getByRole('group').first()).toContainText('Tier V');
 
-  const picker = card.getByRole('grid', { name: 'Add a mercenary' });
-  const offered = picker.getByRole('row', { name: 'Bear V, tier 5' });
+  await picker.fill('bear');
+  const offered = page.getByRole('option', { name: 'Bear V, tier 5' });
   await expect(offered).toBeVisible();
   await offered.click();
 
-  const owned = card
-    .getByRole('grid', { name: 'Mercenaries you own' })
-    .getByRole('row', { name: 'Bear V, tier 5' });
-  await expect(owned).toHaveAttribute('aria-selected', 'true');
-  // Hired means it left the picker: the two lists never show the same mercenary twice.
+  // Hired means it left the picker, and the picker stayed open for the next one.
+  await expect(list).toBeVisible();
   await expect(offered).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
 
-  // The stepper's field: a text input in the player's locale, with its two arrow buttons beside it.
-  const quantity = owned.getByRole('textbox', { name: 'Owned' });
+  // The camp is a row of pills: code, tier and quantity, counted in the heading.
+  await expect(card.getByText('(1 selected)')).toBeVisible();
+  const pill = card.getByRole('list', { name: 'Mercenaries you own' }).getByRole('listitem');
+  await expect(pill).toContainText('BER');
+  await expect(pill).toContainText('V');
+  await expect(pill).toContainText('×∞');
+
+  // The quantity opens its own editor: a plain field, no step buttons.
+  await pill.getByRole('button', { name: 'Bear V: owned unlimited' }).click();
+  const editor = page.getByRole('dialog');
+  await expect(editor).toBeVisible();
+  await expect(editor.getByRole('button', { name: 'Increase Owned' })).toHaveCount(0);
+
+  const quantity = editor.getByRole('textbox', { name: 'Owned' });
   await quantity.fill('22');
-  await quantity.blur();
+  // Tab commits the field and keeps the focus inside the panel, so Escape closes the panel itself.
+  await quantity.press('Tab');
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeHidden();
 
-  await expect(owned).toContainText('×22');
-
-  // The recap is the list itself: folding the picker away never hides what you own.
-  await card.getByRole('button', { name: 'Done adding' }).click();
-  await expect(card.getByRole('searchbox', { name: 'Find a mercenary' })).toBeHidden();
-  await expect(owned).toContainText('×22');
+  // The recap is the pill itself: the quantity is on it.
+  await expect(pill).toContainText('×22');
 
   expect(problems).toEqual([]);
 });

@@ -35,6 +35,13 @@ function relativeLuminance([r, g, b]: Rgb): number {
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 
+/** `fg` laid over `bg` at `alpha`, the way a `/12` opacity modifier paints a tinted chip. */
+function blend(fg: Rgb, bg: Rgb, alpha: number): Rgb {
+  return [0, 1, 2].map((i) =>
+    Math.round((fg[i] ?? 0) * alpha + (bg[i] ?? 0) * (1 - alpha)),
+  ) as unknown as Rgb;
+}
+
 function contrast(a: Rgb, b: Rgb): number {
   const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x) as [number, number];
   return (hi + 0.05) / (lo + 0.05);
@@ -83,6 +90,15 @@ function colour(palette: Palette, theme: string, token: string): Rgb {
 
 const GROUPS = ['guardsmen', 'specialists', 'engineers', 'monsters', 'mercenaries'] as const;
 
+/** The tiers the mercenary tables can carry a colour for (design plan §7.2). */
+const TIERS = [5, 6, 7, 8, 9] as const;
+
+/** The surfaces a tier badge is ever drawn on: the setup sheet, and the picker's own popover. */
+const BADGE_SURFACES = ['surface', 'raised'] as const;
+
+/** How much of a tier's ink tints the ground under its own numeral (`bg-tier-6/12`). */
+const TIER_GROUND = 0.12;
+
 /** The surfaces text is allowed to sit on. `sunken` is in the list: read-only figures live there. */
 const SURFACES = ['bg', 'surface', 'raised', 'sunken'] as const;
 
@@ -92,6 +108,8 @@ interface Pair {
   readonly min: number;
   /** Reported but never fatal — the token is decoration, not a boundary. */
   readonly advisory?: boolean;
+  /** The ground is `fg` laid over `bg` at this alpha: a badge tinted with its own ink. */
+  readonly over?: number;
 }
 
 function pairs(): Pair[] {
@@ -111,6 +129,13 @@ function pairs(): Pair[] {
   for (const group of GROUPS) {
     onSurfaces(`group-${group}-strong`, 4.5);
     list.push({ fg: `group-${group}-strong`, bg: `group-${group}-soft`, min: 4.5 });
+  }
+
+  // Tier inks: the roman numeral on a badge and the heading over a tier in the picker. The badge
+  // grounds itself in a 12 % wash of its own ink, so the ink is checked against that wash too.
+  for (const tier of TIERS) {
+    onSurfaces(`tier-${tier}`, 4.5);
+    for (const bg of BADGE_SURFACES) list.push({ fg: `tier-${tier}`, bg, min: 4.5, over: TIER_GROUND });
   }
 
   // Boundaries and markers: 3:1 (WCAG 1.4.11). `field` is the border of every control.
@@ -158,17 +183,22 @@ for (const name of mediaDark.keys()) {
 
 for (const [theme, palette] of themes) {
   for (const pair of pairs()) {
-    const ratio = contrast(colour(palette, theme, pair.fg), colour(palette, theme, pair.bg));
+    const fg = colour(palette, theme, pair.fg);
+    const under = colour(palette, theme, pair.bg);
+    const bg = pair.over === undefined ? under : blend(fg, under, pair.over);
+    const ratio = contrast(fg, bg);
     const ok = ratio >= pair.min;
     const mark = pair.advisory ? '·' : ok ? '✓' : '✗';
+    const ground =
+      pair.over === undefined ? pair.bg : `${pair.fg}/${Math.round(pair.over * 100)} on ${pair.bg}`;
     rows.push(
-      `  ${mark} ${theme.padEnd(5)} ${pair.fg.padEnd(26)} on ${pair.bg.padEnd(26)} ${ratio.toFixed(2).padStart(6)}  (needs ${pair.min})`,
+      `  ${mark} ${theme.padEnd(5)} ${pair.fg.padEnd(26)} on ${ground.padEnd(26)} ${ratio.toFixed(2).padStart(6)}  (needs ${pair.min})`,
     );
     if (!pair.advisory) {
       const key = `${theme} ${pair.min}`;
       minima.set(key, Math.min(minima.get(key) ?? Infinity, ratio));
       if (!ok) {
-        problems.push(`${theme} · ${pair.fg} on ${pair.bg}: ${ratio.toFixed(2)} (needs ${pair.min})`);
+        problems.push(`${theme} · ${pair.fg} on ${ground}: ${ratio.toFixed(2)} (needs ${pair.min})`);
       }
     }
   }

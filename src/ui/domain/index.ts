@@ -28,5 +28,6 @@ export {
   unitGroupOf,
 } from './unitGroup';
 export type { UnitGroup } from './unitGroup';
-export { TIER_INK, TIER_TONE, TierBadge } from './TierBadge';
+export { TierBadge } from './TierBadge';
 export type { TierBadgeProps } from './TierBadge';
+export { TIER_INK, TIER_NEUTRAL, TIER_TONE } from './TierBadge.tones';
