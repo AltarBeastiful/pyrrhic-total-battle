@@ -111,6 +111,10 @@ Defenders: helmet III (melee) 1,420, lion II (mounted) 1,398, eagle II (flying) 
 | 24 | lion 1,393 → merc-B † | 318,573 | – |
 
 ## Findings from the pair of reports
+- **First strike is a coin flip, and the pair shows both outcomes**: 23:02 = our army struck first (SP1 attacked
+  before dying), 23:00 = the monster struck first (SP1 died without attacking). Same army, same monster. This is
+  exactly the Enemy-first / Army-first pair that TotalStack's journal toggle shows and that our summary reports as
+  Minimum / Maximum with the Average in between (PLAN §3.5, story S-34).
 - **Round structure confirmed with N = 4 and enemy first**: E, F, E, F, E, F, E, then the 5 survivors F;
   round 2: E, F, E, F, E, F, E, then survivors; round 3: E, F, E. Exactly the structure TotalStack's journal uses.
 - **Double damage exists and is a plain ×2 on a hit**: entry 8 is 2 × 198,140 (entry 14) and the game labels it
