@@ -378,11 +378,20 @@ expand/collapse state. One row per group:
 
 ### 7.3 Bonuses
 
-Collapsed: the TOTAL line (health, strength, special, sources-on count) plus a warning marker when a source
-is on but empty. Expanded: TOTAL stays as the header; below, groups in the order the game shows them (Captains,
-Equipment, Artifacts, Permanent, Other, Events). Each source is a **row**, not a chip: switch · name · value ·
-gear. Rows are 40 px, values right-aligned in tabular figures. Editors open in a **sheet** (bottom on phone,
-right side on desktop) with the same fields as today; the sheet header repeats the TOTAL so you see it move.
+Collapsed: the TOTAL as labelled figures (health, strength, special, sources on) plus a warning marker when a
+source is on but empty. Expanded: TOTAL stays as the header; below, groups in the order the game shows them.
+
+**Captains and the hero — amended 2026-09-13 (owner): take TotalStack's picker.** Not a list of switch rows
+but a **grid of captain tiles**, every captain the tables know, always visible inside the group: name, a
+glyph, and a **badge with the level and the star count** ("20 ★3"). Tapping the tile puts the captain in the
+march (or takes it out); at most three on, the fourth tap is refused with a one-line note. Tapping the badge
+opens the level/stars editor in a sheet. Captains the player has never configured show the badge as "set
+level" until tapped. The hero gets the same tile at the head of the grid with its level badge. Ordering: on
+first, then by name.
+
+**Other sources** (equipment, artifacts, permanent, other, events): rows, not chips — switch · name · value
+right-aligned in tabular figures · gear. Rows are 40 px. Editors open in a sheet (bottom on phone, right on
+desktop) whose header repeats the TOTAL so you see it move.
 
 ### 7.4 Battle
 
@@ -519,6 +528,8 @@ starts.
 
 **Phase C — Bonuses and Battle**
 - D-30 Bonuses as rows with a pinned TOTAL header; editors in sheets. Accept: the collapsed card is one line.
+- D-33 Captains and hero as a TotalStack-style tile grid: tap to enlist, level/star badge opens the editor,
+  three-captain cap enforced (§7.3, owner 2026-09-13).
 - D-31 Battle card: segmented enemy, pool steppers, the method as an M3 single-select list with full-row
   targets, options as switch list items, objective as a single-select list (§7.4). The legacy Method section
   is deleted.
