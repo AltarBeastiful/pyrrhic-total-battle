@@ -10,6 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { simulateBattle } from '../../src/engine/battle';
 import { buildKillOrder } from '../../src/engine/killOrder';
 import { sizeStacks } from '../../src/engine/stacker';
 import type { StackResult, UnitDef } from '../../src/engine/types';
@@ -264,5 +265,75 @@ describe('the review §3 run from the author account', () => {
     expect(result.pools.authority.used).toBe(93);
     // "Boosted Health per unit 1,378" from the Rider 3 popup.
     expect(result.stacks.find((stack) => stack.unitId === 'rider-3')?.hpPerUnit).toBe(1378);
+  });
+});
+
+describe('relaxed preservation (investigation 0003, D-04)', () => {
+  const units = [...EP_TROOPS_10, ...TIER3_MONSTERS];
+
+  it("reproduces TotalStack's Total Optimization counts (WE 11 / BB 6 / ED 5 / SG 4, dominance 136)", () => {
+    const result = sizeStacks(makeRequest({ units, options: { method: 'ms', relaxedPreservation: true } }));
+    expect(countsByLabel(result, units)).toMatchObject({ WE: 11, BB: 6, ED: 5, SG: 4 });
+    expect(result.pools.dominance).toEqual({ used: 136, capacity: 200 });
+    expect(result.pools.leadership.used).toBe(3000);
+  });
+
+  it("leaves M's Preservation untouched when the flag is off", () => {
+    const plain = sizeStacks(makeRequest({ units, options: { method: 'ms' } }));
+    const explicit = sizeStacks(
+      makeRequest({ units, options: { method: 'ms', relaxedPreservation: false } }),
+    );
+    expect(countsByLabel(plain, units)).toMatchObject({ WE: 11, BB: 5, ED: 4, SG: 4 });
+    expect(countsByLabel(explicit, units)).toEqual(countsByLabel(plain, units));
+    expect(explicit.pools.dominance.used).toBe(123);
+  });
+
+  it('is ignored by Elite Preservation, which has no preservation ceiling to relax', () => {
+    const relaxed = sizeStacks(makeRequest({ units, options: { relaxedPreservation: true } }));
+    const plain = sizeStacks(makeRequest({ units }));
+    expect(countsByLabel(relaxed, units)).toEqual(countsByLabel(plain, units));
+  });
+
+  it('warns which stacks now die before the lowest troop stack', () => {
+    const result = sizeStacks(makeRequest({ units, options: { method: 'ms', relaxedPreservation: true } }));
+    const line = result.warnings.find((warning) => warning.startsWith('Relaxed preservation'));
+    expect(line).toBeDefined();
+    expect(line).toContain('battle-boar');
+    expect(line).toContain('emerald-dragon');
+    // Both really are above the floor, and the stacks stay in true kill order.
+    const troopFloor = Math.min(
+      ...result.stacks.filter((stack) => stack.pool === 'leadership').map((stack) => stack.totalHp),
+    );
+    const relaxedStacks = result.stacks.filter(
+      (stack) => stack.pool === 'dominance' && stack.totalHp >= troopFloor,
+    );
+    expect(relaxedStacks.map((stack) => stack.unitId).sort()).toEqual(['battle-boar', 'emerald-dragon']);
+    expectNonIncreasingHp(result);
+  });
+
+  it('improves both the average and the minimum damage, which is the guard it uses', () => {
+    const plainRequest = makeRequest({ units, options: { method: 'ms' } });
+    const relaxedRequest = makeRequest({
+      units,
+      options: { method: 'ms', relaxedPreservation: true },
+    });
+    const plain = simulateBattle(sizeStacks(plainRequest), plainRequest);
+    const relaxed = simulateBattle(sizeStacks(relaxedRequest), relaxedRequest);
+    expect(relaxed.avgDamage).toBeGreaterThan(plain.avgDamage);
+    expect(relaxed.minDamage).toBeGreaterThan(plain.minDamage);
+    // The trade is paid in gold: two more monsters to bring back.
+    expect(relaxed.recovery.gold).toBeGreaterThan(plain.recovery.gold);
+  });
+
+  it('grows a capped mercenary stack too (mp-bear army leaves authority nearly empty)', () => {
+    const bearUnits = [...EP_TROOPS, ...mercenarySet('BER5'), ...TIER3_MONSTERS];
+    const request = makeRequest({
+      units: bearUnits,
+      caps: { 'bear-5': 6 },
+      options: { method: 'ms', relaxedPreservation: true },
+    });
+    const result = sizeStacks(request);
+    expect(countsByLabel(result, bearUnits).BER5).toBeGreaterThan(1);
+    expect(result.pools.authority.used).toBeLessThanOrEqual(1200);
   });
 });

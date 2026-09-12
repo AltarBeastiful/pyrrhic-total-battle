@@ -77,6 +77,8 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
       strictMercsAboveMonsters: false,
       monstersLast: false,
       roundTo10: false,
+      // Investigation 0003: opt-in, because it lets monsters die before the troops MP is meant to protect.
+      relaxedPreservation: false,
     },
     priority: 'none',
     recoveryPlan: { mode: 'retrain' },

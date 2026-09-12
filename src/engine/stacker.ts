@@ -15,6 +15,7 @@
  * the order the enemy really kills them (total HP descending) and reports every tie in `warnings`.
  */
 import type { Pool, UnitDef } from '../data/types';
+import { simulateBattle } from './battle';
 import { buildKillOrder } from './killOrder';
 import { CHUNK } from './recovery';
 import { effectiveUnit, hitDamage, type EffectiveUnit } from './units';
@@ -120,6 +121,91 @@ function dropReason(slot: Slot, pool: Pool, ceiling: number | undefined, rounded
   return `no ${pool} capacity left for this unit type`;
 }
 
+/** Safety valve for the relaxed-preservation post-pass; it normally halts after two or three steps. */
+export const MAX_RELAX_STEPS = 500;
+
+function poolUsage(slots: Slot[]): number {
+  return slots.reduce((sum, slot) => sum + slot.count * slot.cost, 0);
+}
+
+/** The live stacks of a slot list, in the order the enemy destroys them (total HP descending). */
+function buildStacks(slots: Slot[]): Stack[] {
+  const stacks: Stack[] = [];
+  for (const slot of slots) {
+    if (slot.count <= 0) continue;
+    const { damage, features } = hitDamage(slot.effective, slot.count);
+    stacks.push({
+      unitId: slot.unit.id,
+      pool: slot.unit.pool,
+      count: slot.count,
+      hpPerUnit: slot.hp,
+      totalHp: slot.count * slot.hp,
+      strengthPerUnit: slot.effective.strengthPerUnit,
+      target: slot.effective.target,
+      damagePerHit: damage,
+      featuresDamage: features,
+      doubleDamageChance: slot.effective.doubleDamageChance,
+      strikeTwoSquadsChance: slot.effective.strikeTwoSquadsChance,
+    });
+  }
+  const rankOf = new Map(slots.map((slot) => [slot.unit.id, slot.rank]));
+  stacks.sort((a, b) => b.totalHp - a.totalHp || (rankOf.get(a.unitId) ?? 0) - (rankOf.get(b.unitId) ?? 0));
+  return stacks;
+}
+
+const NO_POOLS: Record<Pool, PoolUsage> = {
+  leadership: { used: 0, capacity: 0 },
+  authority: { used: 0, capacity: 0 },
+  dominance: { used: 0, capacity: 0 },
+};
+
+/**
+ * Relaxed preservation (investigation 0003, D-04): after M's Preservation has sized the pools, keep adding one
+ * unit to the monster or mercenary stack whose increment improves the average damage most — but accept the
+ * step only when the **minimum** damage improves as well. Without that guard the search keeps feeding one
+ * sacrificial top-of-the-order stack, which only lifts the maximum; with it, the pass halts exactly where
+ * TotalStack's "Total Optimization" run does (WE 11 / BB 6 / ED 5 / SG 4, dominance 136).
+ */
+function relaxPreservation(slots: Slot[], request: StackRequest, used: Record<Pool, number>): number {
+  const step = request.options.roundTo10 ? CHUNK : 1;
+  const candidates = slots.filter((slot) => slot.unit.pool !== 'leadership');
+  if (candidates.length === 0) return 0;
+
+  const score = (): { avg: number; min: number } => {
+    const summary = simulateBattle(
+      { stacks: buildStacks(slots), pools: NO_POOLS, dropped: [], warnings: [] },
+      request,
+    );
+    return { avg: summary.avgDamage, min: summary.minDamage };
+  };
+
+  let current = score();
+  let accepted = 0;
+  for (let attempt = 0; attempt < MAX_RELAX_STEPS; attempt += 1) {
+    let chosen: Slot | undefined;
+    let chosenScore: { avg: number; min: number } | undefined;
+    for (const slot of candidates) {
+      const pool = slot.unit.pool;
+      if (slot.count + step > slot.cap) continue;
+      if (used[pool] + slot.cost * step > request.housing[pool]) continue;
+      slot.count += step;
+      const candidate = score();
+      slot.count -= step;
+      if (!chosenScore || candidate.avg > chosenScore.avg) {
+        chosen = slot;
+        chosenScore = candidate;
+      }
+    }
+    if (!chosen || !chosenScore) break;
+    if (chosenScore.avg <= current.avg || chosenScore.min <= current.min) break;
+    chosen.count += step;
+    used[chosen.unit.pool] += chosen.cost * step;
+    current = chosenScore;
+    accepted += 1;
+  }
+  return accepted;
+}
+
 /**
  * Size every pool of a march. Returns the stacks in the order the enemy destroys them — total HP descending,
  * ties broken by the kill-order ranking (the enemy always wipes our highest-HP living stack).
@@ -148,8 +234,7 @@ export function sizeStacks(request: StackRequest): StackResult {
   const warnings: string[] = [];
   const ceilings: Partial<Record<Pool, number>> = {};
 
-  const used = sizePool(byPool.leadership, housing.leadership, {});
-  pools.leadership = { used, capacity: housing.leadership };
+  sizePool(byPool.leadership, housing.leadership, {});
 
   const lowest = (pool: Slot[]): number | undefined => {
     const live = pool.filter((slot) => slot.count > 0).map((slot) => slot.count * slot.hp);
@@ -159,11 +244,10 @@ export function sizeStacks(request: StackRequest): StackResult {
   const troopFloor = lowest(byPool.leadership);
   const mercCeiling = options.method === 'ms' && troopFloor !== undefined ? troopFloor - 1 : undefined;
   if (mercCeiling !== undefined) ceilings.authority = mercCeiling;
-  let usedAuthority = sizePool(byPool.authority, housing.authority, {
+  const usedAuthority = sizePool(byPool.authority, housing.authority, {
     ...(mercCeiling === undefined ? {} : { ceiling: mercCeiling }),
   });
-  if (options.roundTo10) usedAuthority = roundDownToChunks(byPool.authority, usedAuthority);
-  pools.authority = { used: usedAuthority, capacity: housing.authority };
+  if (options.roundTo10) roundDownToChunks(byPool.authority, usedAuthority);
 
   let monsterCeiling: number | undefined;
   if (options.method === 'ms' && troopFloor !== undefined) monsterCeiling = troopFloor - 1;
@@ -175,45 +259,48 @@ export function sizeStacks(request: StackRequest): StackResult {
     }
   }
   if (monsterCeiling !== undefined) ceilings.dominance = monsterCeiling;
-  let usedDominance = sizePool(byPool.dominance, housing.dominance, {
+  const usedDominance = sizePool(byPool.dominance, housing.dominance, {
     ...(monsterCeiling === undefined ? {} : { ceiling: monsterCeiling }),
   });
-  if (options.roundTo10) usedDominance = roundDownToChunks(byPool.dominance, usedDominance);
-  pools.dominance = { used: usedDominance, capacity: housing.dominance };
+  if (options.roundTo10) roundDownToChunks(byPool.dominance, usedDominance);
 
-  const dropped: { unitId: string; reason: string }[] = [];
-  const stacks: Stack[] = [];
-  for (const slot of slots) {
-    if (slot.count <= 0) {
-      dropped.push({
-        unitId: slot.unit.id,
-        reason: dropReason(
-          slot,
-          slot.unit.pool,
-          ceilings[slot.unit.pool],
-          options.roundTo10 && slot.unit.pool !== 'leadership',
-        ),
-      });
-      continue;
-    }
-    const { damage, features } = hitDamage(slot.effective, slot.count);
-    stacks.push({
-      unitId: slot.unit.id,
-      pool: slot.unit.pool,
-      count: slot.count,
-      hpPerUnit: slot.hp,
-      totalHp: slot.count * slot.hp,
-      strengthPerUnit: slot.effective.strengthPerUnit,
-      target: slot.effective.target,
-      damagePerHit: damage,
-      featuresDamage: features,
-      doubleDamageChance: slot.effective.doubleDamageChance,
-      strikeTwoSquadsChance: slot.effective.strikeTwoSquadsChance,
+  let relaxed = 0;
+  if (options.method === 'ms' && options.relaxedPreservation === true) {
+    relaxed = relaxPreservation(slots, request, {
+      leadership: poolUsage(byPool.leadership),
+      authority: poolUsage(byPool.authority),
+      dominance: poolUsage(byPool.dominance),
     });
   }
+  for (const pool of POOLS) {
+    pools[pool] = { used: poolUsage(byPool[pool]), capacity: housing[pool] };
+  }
 
-  const rankOf = new Map(slots.map((slot) => [slot.unit.id, slot.rank]));
-  stacks.sort((a, b) => b.totalHp - a.totalHp || (rankOf.get(a.unitId) ?? 0) - (rankOf.get(b.unitId) ?? 0));
+  const dropped: { unitId: string; reason: string }[] = [];
+  for (const slot of slots) {
+    if (slot.count > 0) continue;
+    dropped.push({
+      unitId: slot.unit.id,
+      reason: dropReason(
+        slot,
+        slot.unit.pool,
+        ceilings[slot.unit.pool],
+        options.roundTo10 && slot.unit.pool !== 'leadership',
+      ),
+    });
+  }
+  const stacks = buildStacks(slots);
+
+  if (relaxed > 0 && troopFloor !== undefined) {
+    const above = stacks
+      .filter((stack) => stack.pool !== 'leadership' && stack.totalHp >= troopFloor)
+      .map((stack) => stack.unitId);
+    if (above.length > 0) {
+      warnings.push(
+        `Relaxed preservation grew ${above.join(', ')} past your lowest troop stack (${troopFloor} HP): ${above.length === 1 ? 'it dies' : 'they die'} before your troops.`,
+      );
+    }
+  }
 
   for (const pool of POOLS) {
     const usage = pools[pool];

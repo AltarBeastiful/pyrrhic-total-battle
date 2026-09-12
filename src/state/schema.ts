@@ -226,6 +226,8 @@ export const stackingOptionsSchema = z.object({
   strictMercsAboveMonsters: z.boolean(),
   monstersLast: z.boolean(),
   roundTo10: z.boolean(),
+  // Added after v1 shipped: defaulted so stored setups keep parsing without a schema bump (ADR-0004).
+  relaxedPreservation: z.boolean().default(false),
   customOrder: z.array(z.string()).optional(),
 });
 

@@ -70,6 +70,12 @@ export interface StackingOptions {
   monstersLast: boolean;
   /** Mercenary and monster counts constrained to multiples of 10. */
   roundTo10: boolean;
+  /**
+   * M's Preservation only: after sizing, let monster/mercenary stacks grow past the lowest troop stack while
+   * both the average and the minimum damage improve (investigation 0003). Off by default — it deliberately
+   * breaks the promise MP is chosen for, so the UI must flag the stacks that moved.
+   */
+  relaxedPreservation?: boolean;
   /** `method === 'custom'`: unit ids first-to-die first; ids missing from the list are appended in EP order. */
   customOrder?: string[];
 }

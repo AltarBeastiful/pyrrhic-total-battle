@@ -417,6 +417,7 @@ describe('buildStackRequest', () => {
       strictMercsAboveMonsters: false,
       monstersLast: false,
       roundTo10: false,
+      relaxedPreservation: false,
     });
     expect(request.recovery).toEqual({
       templeLevel: 0,
@@ -436,6 +437,7 @@ describe('buildStackRequest', () => {
       strictMercsAboveMonsters: true,
       monstersLast: true,
       roundTo10: true,
+      relaxedPreservation: false,
       customOrder: ['archer-1', 'rider-1'],
     };
     setup.recoveryPlan = { mode: 'selective', selectiveTop: 3 };

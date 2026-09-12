@@ -566,6 +566,7 @@ function stackingOptions(setup: BattleSetup): StackingOptions {
     strictMercsAboveMonsters: options.strictMercsAboveMonsters,
     monstersLast: options.monstersLast,
     roundTo10: options.roundTo10,
+    relaxedPreservation: options.relaxedPreservation,
     ...(options.customOrder ? { customOrder: [...options.customOrder] } : {}),
   };
 }
