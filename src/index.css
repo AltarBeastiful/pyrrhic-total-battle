@@ -425,11 +425,13 @@
 @layer utilities {
   /* The supporting pane on wide screens: sticks under the app bar and only scrolls inside itself
      when it is taller than the viewport. The page keeps the one main scrollbar. */
-  .pane-sticky {
-    position: sticky;
-    top: var(--spacing-appbar);
-    max-height: calc(100dvh - var(--spacing-appbar));
-    overflow-y: auto;
+  @media (min-width: 80rem) {
+    .pane-sticky {
+      position: sticky;
+      top: var(--spacing-appbar);
+      max-height: calc(100dvh - var(--spacing-appbar));
+      overflow-y: auto;
+    }
   }
 
   /* Comfortable touch target on phones; desktop keeps the compact size. */
