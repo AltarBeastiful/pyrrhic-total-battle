@@ -1,8 +1,9 @@
 /**
  * S-12 — the "mercenary the tables do not know yet" form.
  *
- * Every field is a number the player can read off the mercenary's own sheet in game, so the form asks for
- * exactly those and nothing else. The result is stored in `profile.mercenaries.custom` and turned into a
+ * Every field is a number the player can read off the mercenary's own card in game, so the form asks for
+ * exactly those and nothing else, grouped the way the unit popover reads them: what the unit is, then what
+ * it costs to bring back. The result is stored in `profile.mercenaries.custom` and turned into a
  * normal unit by `customMercenaryToUnit`, which is why the field names match that function's input.
  */
 import { useState } from 'react';
@@ -91,7 +92,7 @@ export function CustomMercenaryDialog({ initial, onSubmit, onClose }: CustomMerc
         if (!next) onClose();
       }}
       title={editing ? 'Edit custom mercenary' : 'Custom mercenary'}
-      description="Copy the numbers from the mercenary's own sheet in game."
+      description="Copy the numbers straight off the mercenary's card in game."
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
@@ -101,7 +102,7 @@ export function CustomMercenaryDialog({ initial, onSubmit, onClose }: CustomMerc
         </>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         <TextField
           label="Name"
           value={draft.name}
@@ -111,100 +112,112 @@ export function CustomMercenaryDialog({ initial, onSubmit, onClose }: CustomMerc
           }}
           placeholder="Spider Queen"
         />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <NumberField
-            label="Health"
-            value={draft.health}
-            min={0}
-            onChange={(value) => {
-              set('health', value);
-            }}
-          />
-          <NumberField
-            label="Strength"
-            value={draft.strength}
-            min={0}
-            onChange={(value) => {
-              set('strength', value);
-            }}
-          />
-          <NumberField
-            label="Authority cost"
-            value={draft.cost}
-            min={0}
-            onChange={(value) => {
-              set('cost', value);
-            }}
-          />
+
+        <section className="space-y-2">
+          <h4 className="text-sm font-semibold">Unit</h4>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <NativeSelect
+              label="Role"
+              hideLabel={false}
+              value={draft.role}
+              options={GROUPS.map((group) => ({ value: group, label: GROUP_LABELS[group] }))}
+              onChange={(event) => {
+                set('role', event.target.value as Group);
+              }}
+            />
+            <NativeSelect
+              label="Category"
+              hideLabel={false}
+              value={draft.category}
+              options={[
+                { value: NONE, label: 'None' },
+                ...CATEGORIES.map((category) => ({ value: category, label: CATEGORY_LABELS[category] })),
+              ]}
+              onChange={(event) => {
+                set('category', event.target.value as Category | '');
+              }}
+            />
+            <NativeSelect
+              label="Race"
+              hideLabel={false}
+              value={draft.race}
+              options={[
+                { value: NONE, label: 'None' },
+                ...RACES.map((race) => ({ value: race, label: RACE_LABELS[race] })),
+              ]}
+              onChange={(event) => {
+                set('race', event.target.value as Race | '');
+              }}
+            />
+            <NativeSelect
+              label="Event"
+              hideLabel={false}
+              value={draft.event}
+              options={[
+                { value: NONE, label: 'None' },
+                ...events.map((record) => ({ value: record.id, label: record.name })),
+              ]}
+              onChange={(event) => {
+                set('event', event.target.value);
+              }}
+            />
+            <NumberField
+              label="Health"
+              value={draft.health}
+              min={0}
+              onChange={(value) => {
+                set('health', value);
+              }}
+            />
+            <NumberField
+              label="Strength"
+              value={draft.strength}
+              min={0}
+              onChange={(value) => {
+                set('strength', value);
+              }}
+            />
+            <NumberField
+              label="Authority cost"
+              value={draft.cost}
+              min={0}
+              onChange={(value) => {
+                set('cost', value);
+              }}
+            />
+            <NumberField
+              label="Double damage chance"
+              value={draft.doubleDamageChance}
+              min={0}
+              max={100}
+              decimal
+              suffix="%"
+              onChange={(value) => {
+                set('doubleDamageChance', value);
+              }}
+            />
+          </div>
+          <p className="text-muted text-xs">
+            Role, category and race decide which of your bonuses reach this mercenary. An event means its own
+            bonuses only count while that event is running.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h4 className="text-sm font-semibold">After the battle</h4>
           <NumberField
             label="Revival gold"
             value={draft.revivalGold}
             min={0}
+            className="sm:max-w-56"
             onChange={(value) => {
               set('revivalGold', value);
             }}
           />
-          <NumberField
-            label="Double damage chance"
-            value={draft.doubleDamageChance}
-            min={0}
-            max={100}
-            decimal
-            suffix="%"
-            onChange={(value) => {
-              set('doubleDamageChance', value);
-            }}
-          />
-          <NativeSelect
-            label="Role"
-            hideLabel={false}
-            value={draft.role}
-            options={GROUPS.map((group) => ({ value: group, label: GROUP_LABELS[group] }))}
-            onChange={(event) => {
-              set('role', event.target.value as Group);
-            }}
-          />
-          <NativeSelect
-            label="Category"
-            hideLabel={false}
-            value={draft.category}
-            options={[
-              { value: NONE, label: 'None' },
-              ...CATEGORIES.map((category) => ({ value: category, label: CATEGORY_LABELS[category] })),
-            ]}
-            onChange={(event) => {
-              set('category', event.target.value as Category | '');
-            }}
-          />
-          <NativeSelect
-            label="Race"
-            hideLabel={false}
-            value={draft.race}
-            options={[
-              { value: NONE, label: 'None' },
-              ...RACES.map((race) => ({ value: race, label: RACE_LABELS[race] })),
-            ]}
-            onChange={(event) => {
-              set('race', event.target.value as Race | '');
-            }}
-          />
-          <NativeSelect
-            label="Event"
-            hideLabel={false}
-            value={draft.event}
-            options={[
-              { value: NONE, label: 'None' },
-              ...events.map((record) => ({ value: record.id, label: record.name })),
-            ]}
-            onChange={(event) => {
-              set('event', event.target.value);
-            }}
-          />
-        </div>
-        <p className="text-muted text-xs">
-          Role, category and race decide which of your bonuses reach this mercenary. An event means its own
-          bonuses only count while that event is running.
-        </p>
+          <p className="text-muted text-xs">
+            What one of them costs to bring back. Mercenaries are never retrained.
+          </p>
+        </section>
       </div>
     </Dialog>
   );

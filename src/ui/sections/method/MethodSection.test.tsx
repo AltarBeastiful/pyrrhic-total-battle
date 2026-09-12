@@ -17,7 +17,23 @@ afterEach(() => {
 
 const options = () => selectActiveSetup(useStore.getState())?.options;
 
-/** Elite-Preservation order of the default account (guardsmen I–III, specialists I). */
+/** The header line, which is all a collapsed section shows of the method. */
+const summary = () =>
+  (document.querySelector('#method-summary')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+test('the header names the rule and every extra rule that is on', () => {
+  render(<MethodSection />);
+  expect(summary()).toBe('Tier ladder');
+
+  fireEvent.click(screen.getByRole('switch', { name: 'Monsters after troops' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Hired units in tens' }));
+  expect(summary()).toBe('Tier ladder \u00b7 monsters after troops \u00b7 tens');
+
+  fireEvent.click(screen.getByRole('radio', { name: 'Your own order' }));
+  expect(summary()).toBe('Your own order \u00b7 tens');
+});
+
+/** Tier-ladder order of the default account (guardsmen I–III, specialists I). */
 const DEFAULT_ORDER = [
   'swordsman-1',
   'archer-1',
@@ -32,62 +48,62 @@ const DEFAULT_ORDER = [
 ];
 
 function chooseCustom(): void {
-  fireEvent.click(screen.getByRole('radio', { name: 'Custom kill order' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Your own order' }));
 }
 
 test('choosing a method writes it to the active battle setup', () => {
   render(<MethodSection />);
-  expect(screen.getByRole('radio', { name: 'Elite Preservation' })).toBeTruthy();
+  expect(screen.getByRole('radio', { name: 'Tier ladder' })).toBeTruthy();
 
-  fireEvent.click(screen.getByRole('radio', { name: "M's Preservation" }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Troops first' }));
   expect(options()?.method).toBe('ms');
 
   chooseCustom();
   expect(options()?.method).toBe('custom');
 });
 
-test('each preservation flag is only offered with the method it belongs to, and is cleared otherwise', () => {
+test('each extra rule is only offered with the method it belongs to, and is cleared otherwise', () => {
   render(<MethodSection />);
-  const monstersLast = screen.getByRole('switch', { name: 'Monsters last' });
-  const strict = screen.getByRole('switch', { name: 'Mercenaries above monsters' });
+  const monstersLast = screen.getByRole('switch', { name: 'Monsters after troops' });
+  const strict = screen.getByRole('switch', { name: 'Monsters after mercenaries' });
 
   expect(strict.hasAttribute('disabled')).toBe(true);
   fireEvent.click(monstersLast);
   expect(options()?.monstersLast).toBe(true);
 
-  fireEvent.click(screen.getByRole('radio', { name: "M's Preservation" }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Troops first' }));
   expect(options()?.monstersLast).toBe(false);
-  expect(screen.getByRole('switch', { name: 'Monsters last' }).hasAttribute('disabled')).toBe(true);
+  expect(screen.getByRole('switch', { name: 'Monsters after troops' }).hasAttribute('disabled')).toBe(true);
 
-  fireEvent.click(screen.getByRole('switch', { name: 'Mercenaries above monsters' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Monsters after mercenaries' }));
   expect(options()?.strictMercsAboveMonsters).toBe(true);
 
-  fireEvent.click(screen.getByRole('radio', { name: 'Elite Preservation' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Tier ladder' }));
   expect(options()?.strictMercsAboveMonsters).toBe(false);
 });
 
-test("relaxed preservation is offered only with M's Preservation and is cleared when it is left", () => {
+test('damage trades are offered only with Troops first and are cleared when it is left', () => {
   render(<MethodSection />);
-  const underElite = screen.getByRole('switch', { name: 'Relaxed preservation' });
+  const underElite = screen.getByRole('switch', { name: 'Allow damage trades' });
   expect(underElite.hasAttribute('disabled')).toBe(true);
   fireEvent.click(underElite);
   expect(options()?.relaxedPreservation).toBe(false);
 
-  fireEvent.click(screen.getByRole('radio', { name: "M's Preservation" }));
-  fireEvent.click(screen.getByRole('switch', { name: 'Relaxed preservation' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Troops first' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Allow damage trades' }));
   expect(options()?.relaxedPreservation).toBe(true);
 
-  fireEvent.click(screen.getByRole('radio', { name: 'Elite Preservation' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Tier ladder' }));
   expect(options()?.relaxedPreservation).toBe(false);
 });
 
-test('round to 10s is available whatever the method is', () => {
+test('hired units in tens is available whatever the method is', () => {
   render(<MethodSection />);
-  fireEvent.click(screen.getByRole('switch', { name: 'Round to 10s' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Hired units in tens' }));
   expect(options()?.roundTo10).toBe(true);
 });
 
-test('the custom list starts in Elite-Preservation order, first to die on top', () => {
+test('your own order starts as the tier ladder, first to fall on top', () => {
   render(<MethodSection />);
   expect(screen.queryByRole('button', { name: 'Move Archer I down' })).toBeNull();
 
@@ -135,18 +151,18 @@ test('the up and down buttons reorder the list and store the whole order', () =>
   expect(screen.getByRole('button', { name: 'Move Spearman III down' }).hasAttribute('disabled')).toBe(true);
 });
 
-test('reset puts the Elite-Preservation order back and is disabled once it is the default', () => {
+test('the reset puts the tier-ladder order back and is disabled once it is the default', () => {
   render(<MethodSection />);
   chooseCustom();
-  expect(screen.getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled')).toBe(true);
+  expect(screen.getByRole('button', { name: 'Back to the tier ladder' }).hasAttribute('disabled')).toBe(true);
 
   fireEvent.click(screen.getByRole('button', { name: 'Move Rider III up' }));
-  const reset = screen.getByRole('button', { name: 'Reset to default' });
+  const reset = screen.getByRole('button', { name: 'Back to the tier ladder' });
   expect(reset.hasAttribute('disabled')).toBe(false);
 
   fireEvent.click(reset);
   expect(options()?.customOrder).toEqual(DEFAULT_ORDER);
-  expect(screen.getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled')).toBe(true);
+  expect(screen.getByRole('button', { name: 'Back to the tier ladder' }).hasAttribute('disabled')).toBe(true);
 });
 
 test('a stored order survives a change of army: gone units drop out, new ones join at the end', () => {

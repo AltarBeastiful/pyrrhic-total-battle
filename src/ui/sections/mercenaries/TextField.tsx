@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import type { ReactNode } from 'react';
 
 import { cn } from '../../primitives';
 
@@ -11,6 +12,8 @@ export interface TextFieldProps {
   hint?: string;
   /** Screen-reader-only label, for a field that already has a visible caption. */
   hideLabel?: boolean;
+  /** A glyph inside the field, before the text (a magnifier on a search box). Decorative. */
+  prefix?: ReactNode;
   type?: 'text' | 'search';
   disabled?: boolean;
   className?: string;
@@ -28,6 +31,7 @@ export function TextField({
   placeholder,
   hint,
   hideLabel = false,
+  prefix,
   type = 'text',
   disabled = false,
   className,
@@ -41,10 +45,16 @@ export function TextField({
       </label>
       <div
         className={cn(
-          'tap border-field bg-surface flex items-center rounded-lg border px-3',
+          'tap border-field bg-surface flex items-center gap-1.5 rounded-lg border px-3 transition-colors',
+          'focus-within:border-accent focus-within:ring-accent focus-within:ring-offset-bg focus-within:ring-2 focus-within:ring-offset-2',
           disabled && 'opacity-50',
         )}
       >
+        {prefix !== undefined && (
+          <span aria-hidden="true" className="text-muted shrink-0">
+            {prefix}
+          </span>
+        )}
         <input
           id={id}
           type={type}
@@ -56,7 +66,7 @@ export function TextField({
           onChange={(event) => {
             onChange(event.target.value);
           }}
-          className="text-fg w-full bg-transparent py-1.5 text-sm outline-none"
+          className="text-fg w-full bg-transparent py-1.5 text-sm outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
         />
       </div>
       {hint !== undefined && (

@@ -24,9 +24,10 @@ import {
 } from '@dnd-kit/sortable';
 import type { CSSProperties } from 'react';
 
-import type { Pool, UnitDef } from '@/data/types';
+import type { UnitDef } from '@/data/types';
 
-import { ChevronDownIcon, ChevronUpIcon } from '../../icons';
+import { ChevronDownIcon, ChevronUpIcon, PoolBadge, UnitBadge } from '../../icons';
+import type { BadgeGroup } from '../../icons';
 import { IconButton, cn } from '../../primitives';
 
 /** Drag handle glyph, in the same inline-SVG style as `src/ui/icons.tsx` (which this story does not own). */
@@ -48,11 +49,11 @@ function GripIcon() {
   );
 }
 
-const POOL_LABELS: Record<Pool, string> = {
-  leadership: 'Leadership',
-  authority: 'Authority',
-  dominance: 'Dominance',
-};
+/** Mercenaries without a role tag still need a ring colour; their pool decides it. */
+function badgeGroup(unit: UnitDef): BadgeGroup {
+  if (unit.group !== undefined) return unit.group;
+  return unit.pool === 'leadership' ? 'guardsmen' : 'monster';
+}
 
 export interface KillOrderListProps {
   /** Unit ids, first to die first. */
@@ -85,7 +86,7 @@ export function KillOrderList({ order, units, onChange }: KillOrderListProps) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <SortableContext items={order} strategy={verticalListSortingStrategy}>
-        <ol className="space-y-1.5">
+        <ol className="space-y-1">
           {order.map((id, index) => {
             const unit = units.get(id);
             if (unit === undefined) return null;
@@ -128,29 +129,35 @@ function SortableRow({ unit, index, total, onMove }: SortableRowProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        'border-line bg-surface flex items-center gap-2 rounded-lg border px-2 py-1.5',
-        isDragging && 'border-accent opacity-80 shadow-lg',
+        'border-line bg-surface flex items-center gap-1.5 rounded-lg border px-1.5 py-1',
+        isDragging && 'border-accent shadow-pop opacity-80',
       )}
     >
       <button
         type="button"
         aria-label={`Reorder ${unit.name}`}
-        className="text-muted hover:text-fg tap flex w-11 shrink-0 cursor-grab items-center justify-center sm:w-7"
+        className="text-muted hover:text-accent tap flex w-9 shrink-0 cursor-grab items-center justify-center sm:w-7"
         {...attributes}
         {...listeners}
       >
         <GripIcon />
       </button>
-      <span className="text-muted w-6 shrink-0 text-right text-xs tabular-nums">{index + 1}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{unit.name}</span>
-        <span className="text-muted block text-xs">
-          {unit.label} · {POOL_LABELS[unit.pool]}
-        </span>
+      <span className="text-muted nums w-5 shrink-0 text-right text-xs">{index + 1}</span>
+      <UnitBadge
+        group={badgeGroup(unit)}
+        {...(unit.category === undefined ? {} : { category: unit.category })}
+        tier={unit.tier}
+        size="sm"
+      />
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{unit.name}</span>
+      <span className="text-muted nums hidden shrink-0 text-xs sm:inline">{unit.label}</span>
+      <span className="hidden shrink-0 sm:inline-flex">
+        <PoolBadge pool={unit.pool} size="sm" />
       </span>
       <IconButton
         label={`Move ${unit.name} up`}
         icon={<ChevronUpIcon />}
+        size="sm"
         disabled={index === 0}
         onClick={() => {
           onMove(index - 1);
@@ -159,6 +166,7 @@ function SortableRow({ unit, index, total, onMove }: SortableRowProps) {
       <IconButton
         label={`Move ${unit.name} down`}
         icon={<ChevronDownIcon />}
+        size="sm"
         disabled={index === total - 1}
         onClick={() => {
           onMove(index + 1);

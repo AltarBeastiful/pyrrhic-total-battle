@@ -42,7 +42,7 @@ export function isChipRow(id: TroopRowId): id is ChipRowId {
 }
 
 /** `profile.troops` names the row "specialists"; the unit tables name the group "specialist". */
-const ROW_GROUP: Record<TroopRowId, Group> = {
+export const ROW_GROUP: Record<TroopRowId, Group> = {
   guardsmen: 'guardsmen',
   specialists: 'specialist',
   engineers: 'engineers',
@@ -123,4 +123,49 @@ export function selectionByRow(troops: ProfileTroops): RowSelection[] {
 /** All selected unit types, flattened — the grid's contents, excluded ones included. */
 export function selectedUnits(troops: ProfileTroops): UnitDef[] {
   return selectionByRow(troops).flatMap((entry) => entry.units);
+}
+
+// ---- Header summary ------------------------------------------------------------------------------
+export interface TroopsSummaryPart {
+  row: TroopRow;
+  /** What the header line says for this family: "Guardsmen G1–G3 (no mounted at G3)", "no monsters". */
+  text: string;
+  /** False when the account has nothing in this family, so the header can dim it. */
+  present: boolean;
+}
+
+/** "G1", or "G1–G3" when the range spans more than one tier. */
+function rangeText(prefix: string, range: { min: number; max: number }): string {
+  return range.min === range.max ? `${prefix}${range.min}` : `${prefix}${range.min}–${prefix}${range.max}`;
+}
+
+/**
+ * One phrase per family for the section header, so a collapsed Troops section still says what the
+ * account fields: which tiers, what was dropped at the top tier, and what is missing entirely.
+ */
+export function troopsSummary(troops: ProfileTroops): TroopsSummaryPart[] {
+  return TROOP_ROWS.map((row) => {
+    const range = troops[row.id];
+    if (range === null) {
+      return { row, text: `no ${row.label.toLowerCase()}`, present: false };
+    }
+    const chipRow = isChipRow(row.id) ? row.id : null;
+    const dropped =
+      chipRow === null
+        ? []
+        : categoriesAtTier(chipRow, range.max).filter((category) =>
+            troops.topTierExcluded[chipRow].includes(category),
+          );
+    const note =
+      dropped.length === 0
+        ? ''
+        : ` (no ${dropped.map((category) => CATEGORY_LABELS[category].toLowerCase()).join(' or ')} at ${row.prefix}${range.max})`;
+    return { row, text: `${row.label} ${rangeText(row.prefix, range)}${note}`, present: true };
+  });
+}
+
+/** The tail of the header line: "12 types, 2 left out". */
+export function troopsCountText(total: number, leftOut: number): string {
+  const types = `${total} ${total === 1 ? 'type' : 'types'}`;
+  return leftOut === 0 ? types : `${types}, ${leftOut} left out`;
 }

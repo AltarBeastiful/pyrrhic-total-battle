@@ -1,13 +1,14 @@
 /**
  * S-13 — Stacking method section (PLAN §4.4, §3.3).
  *
- * The method is a property of one march, so unlike Troops and Mercenaries this section writes to the
- * active *battle setup*. The custom order is stored as a plain list of unit ids; the list shown here is
- * always the stored one re-merged with the units currently in the march (ids that no longer exist are
- * dropped, new ones are appended in Elite-Preservation order), which is exactly what the engine does when
- * it reads `customOrder`.
+ * The method belongs to one march, so unlike Troops and Mercenaries this section writes to the active
+ * *battle setup*. Your own order is stored as a plain list of unit ids; the list shown here is always the
+ * stored one re-merged with the units currently in the march (ids that no longer exist are dropped, new
+ * ones are appended in tier-ladder order), which is exactly what the engine does when it reads
+ * `customOrder`.
  */
 import { useId, useMemo } from 'react';
+import type { ReactNode } from 'react';
 
 import type { UnitDef } from '@/data/types';
 import { buildKillOrder } from '@/engine';
@@ -15,32 +16,37 @@ import type { Method, StackingOptions } from '@/engine';
 import { buildUnits } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 
+import { GuardsmenIcon, MethodIcon, ResetIcon, SortIcon } from '../../icons';
 import { Button, HelpNote, Section, Toggle, cn } from '../../primitives';
 import { KillOrderList } from './KillOrderList';
 
 interface MethodOption {
   id: Method;
   title: string;
+  icon: ReactNode;
   blurb: string;
 }
 
+/** The three rules, in the words of the glossary in `docs/design.md` §7. */
 const METHOD_OPTIONS: readonly MethodOption[] = [
   {
     id: 'elite',
-    title: 'Elite Preservation',
-    blurb:
-      'Your cheapest, lowest units take the hits first, so the expensive ones are still standing at the end of the fight. Engineers go first, then tier by tier upwards.',
+    title: 'Tier ladder',
+    icon: <MethodIcon />,
+    blurb: 'Your cheapest, lowest-tier stacks take the hits first; each higher tier stands one step later.',
   },
   {
     id: 'ms',
-    title: "M's Preservation",
+    title: 'Troops first',
+    icon: <GuardsmenIcon />,
     blurb:
-      'Elite Preservation, plus every mercenary and monster stack is kept smaller than your smallest troop stack, so they only start dying once the troops are gone. Some authority and dominance is left unspent to make that possible.',
+      'Every mercenary and monster stack is kept smaller than your smallest troop stack, so hired units only fall after all your troops.',
   },
   {
     id: 'custom',
-    title: 'Custom kill order',
-    blurb: 'You decide the order yourself, mixing troops, mercenaries and monsters however you like.',
+    title: 'Your own order',
+    icon: <SortIcon />,
+    blurb: 'You decide which stack falls first, mixing troops, mercenaries and monsters.',
   },
 ];
 
@@ -49,25 +55,23 @@ const METHOD_TITLES = new Map(METHOD_OPTIONS.map((option) => [option.id, option.
 const HELP = (
   <>
     <p>
-      The enemy always hits the stack with the most total health left, so the order in which your stacks die
-      is decided by how big you make them. The method is how we pick those sizes.
+      The enemy always strikes the stack with the most health still standing, so the size you give a stack
+      decides when it falls. A method is the rule we size them by.
     </p>
     <p>
-      <strong>Elite Preservation</strong> sends the cheap units first: the higher the tier, the longer it
-      survives. <strong>M&rsquo;s Preservation</strong> adds a second rule — mercenaries and monsters sit
-      below your smallest troop stack, so nothing expensive dies while a cheap troop is still alive; the price
-      is unused authority and dominance. <strong>Custom</strong> hands you the list and lets you drag it into
-      any order you want.
+      <strong>Tier ladder</strong> spends the cheap units first: the higher the tier, the longer it stands.{' '}
+      <strong>Troops first</strong> adds one rule on top — every hired stack stays under your smallest troop
+      stack, so nothing expensive falls while a cheap troop is still up; the price is authority and dominance
+      left unspent. <strong>Your own order</strong> hands you the list and lets you drag it around.
     </p>
     <p>
-      <strong>Round to 10s</strong> makes every mercenary and monster stack a multiple of ten. Training and
-      revival happen in chunks of ten and one unit per chunk comes back free, so round numbers are cheaper to
-      bring back; the capacity that no longer fits simply stays unused.
+      <strong>Hired units in tens</strong> makes every mercenary and monster stack a multiple of ten: reviving
+      happens in tens and one unit per ten comes back free, so round stacks are cheaper to bring back. The
+      capacity that no longer fits stays unused.
     </p>
     <p>
-      <strong>Where to find it in game:</strong> nothing here is a screen you can read — the order is only
-      visible after the fight, in the battle report, where the stacks fall one by one. Compare that report
-      with our journal in Results to check the order came out the way you asked.
+      <strong>Where to find it in game:</strong> nowhere — you only see who fell first in the battle report
+      afterwards, so hold that report next to our journal in Results to check the order came out as you asked.
     </p>
   </>
 );
@@ -96,6 +100,14 @@ export function MethodSection() {
   const order = buildKillOrder(units, { ...base, method: 'custom', customOrder: stored });
   const unitsById = new Map(units.map((unit) => [unit.id, unit]));
   const isDefault = order.length === defaultOrder.length && order.every((id, i) => id === defaultOrder[i]);
+
+  // The header line: the rule, then the extra rules that are switched on, in the words of the toggles.
+  const extras = [
+    options.monstersLast ? 'monsters after troops' : '',
+    options.strictMercsAboveMonsters ? 'monsters after mercenaries' : '',
+    options.relaxedPreservation ? 'damage trades' : '',
+    options.roundTo10 ? 'tens' : '',
+  ].filter((word) => word !== '');
 
   const setMethod = (method: Method): void => {
     updateActiveSetup((current) => ({
@@ -129,12 +141,22 @@ export function MethodSection() {
     <Section
       id="method"
       title="Stacking method"
-      description="The order your stacks are meant to die in."
+      icon={<MethodIcon />}
       help={HELP}
-      summary={<span className="text-muted">{METHOD_TITLES.get(options.method) ?? options.method}</span>}
+      summary={
+        <p id="method-summary" className="text-xs">
+          <span className="text-fg font-medium">{METHOD_TITLES.get(options.method) ?? options.method}</span>
+          {extras.map((word) => (
+            <span key={word} className="text-muted">
+              {' · '}
+              {word}
+            </span>
+          ))}
+        </p>
+      }
     >
-      <div className="space-y-4">
-        <fieldset className="space-y-2">
+      <div className="space-y-3">
+        <fieldset className="grid gap-2 sm:grid-cols-3">
           <legend className="sr-only">Stacking method</legend>
           {METHOD_OPTIONS.map((option) => {
             const descriptionId = `${radioName}-${option.id}`;
@@ -143,8 +165,10 @@ export function MethodSection() {
               <div
                 key={option.id}
                 className={cn(
-                  'rounded-lg border px-3 py-2 transition-colors',
-                  checked ? 'border-accent bg-accent-soft' : 'border-line bg-surface',
+                  'flex flex-col gap-1 rounded-lg border px-2.5 py-2 transition-colors',
+                  checked
+                    ? 'border-accent bg-accent-soft shadow-card'
+                    : 'border-line bg-surface hover:border-accent-line',
                 )}
               >
                 <label className="tap flex cursor-pointer items-center gap-2">
@@ -157,11 +181,14 @@ export function MethodSection() {
                     onChange={() => {
                       setMethod(option.id);
                     }}
-                    className="accent-accent h-4 w-4"
+                    className="h-4 w-4 shrink-0"
                   />
+                  <span aria-hidden="true" className={cn('shrink-0', checked ? 'text-accent' : 'text-muted')}>
+                    {option.icon}
+                  </span>
                   <span className="text-sm font-medium">{option.title}</span>
                 </label>
-                <p id={descriptionId} className="text-muted mt-1 text-xs leading-relaxed">
+                <p id={descriptionId} className="text-muted text-xs leading-relaxed">
                   {option.blurb}
                 </p>
               </div>
@@ -169,13 +196,13 @@ export function MethodSection() {
           })}
         </fieldset>
 
-        <div className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
           <Toggle
-            label="Monsters last"
+            label="Monsters after troops"
             description={
               options.method === 'elite'
-                ? 'Keep every monster stack below your smallest troop stack; mercenaries stay unconstrained.'
-                : 'Only available with Elite Preservation.'
+                ? 'Keep every monster stack below your smallest troop stack; mercenaries stay free.'
+                : 'Only with the tier ladder.'
             }
             checked={options.monstersLast}
             disabled={options.method !== 'elite'}
@@ -184,11 +211,11 @@ export function MethodSection() {
             }}
           />
           <Toggle
-            label="Mercenaries above monsters"
+            label="Monsters after mercenaries"
             description={
               options.method === 'ms'
-                ? 'Also force every monster stack below your smallest mercenary stack. Off by default: the game does not appear to enforce that chain.'
-                : "Only available with M's Preservation."
+                ? 'Also keep every monster stack below your smallest mercenary stack. Off by default: the game does not seem to chain them that way.'
+                : 'Only with Troops first.'
             }
             checked={options.strictMercsAboveMonsters}
             disabled={options.method !== 'ms'}
@@ -197,11 +224,11 @@ export function MethodSection() {
             }}
           />
           <Toggle
-            label="Relaxed preservation"
+            label="Allow damage trades"
             description={
               options.method === 'ms'
-                ? 'Lets a monster or mercenary stack grow past your lowest troop stack when that raises both the minimum and the average damage, so some monsters die before your last troops — the results list warns you and names them.'
-                : "Only available with M's Preservation."
+                ? 'Let a hired stack grow past your smallest troop stack when that raises the damage; the results name every stack it affects.'
+                : 'Only with Troops first.'
             }
             checked={options.relaxedPreservation}
             disabled={options.method !== 'ms'}
@@ -210,8 +237,8 @@ export function MethodSection() {
             }}
           />
           <Toggle
-            label="Round to 10s"
-            description="Mercenary and monster stacks become multiples of ten, because revival works in tens."
+            label="Hired units in tens"
+            description="Mercenary and monster stacks become multiples of ten, because reviving works in tens."
             checked={options.roundTo10}
             onChange={(on) => {
               setFlag('roundTo10', on);
@@ -220,26 +247,28 @@ export function MethodSection() {
         </div>
 
         {options.method === 'custom' && (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold">Kill order</h3>
+              <h3 className="text-sm font-semibold">Order of the fall</h3>
               <Button
                 size="sm"
+                variant="ghost"
+                icon={<ResetIcon />}
                 disabled={isDefault}
                 onClick={() => {
                   setOrder(defaultOrder);
                 }}
               >
-                Reset to default
+                Back to the tier ladder
               </Button>
             </div>
             <p className="text-muted text-xs">
-              First to die at the top. Drag a row, use its up and down buttons, or focus the drag handle and
-              press Space then the arrow keys.
+              First to fall at the top. Drag a row, use its arrows, or pick the handle up with Space and move
+              it with the arrow keys.
             </p>
             {order.length === 0 ? (
               <HelpNote tone="warn">
-                There is no unit type to order yet. Pick tiers in Troops, or mercenaries above.
+                There is no stack to order yet. Pick tiers in Troops, or hire a mercenary.
               </HelpNote>
             ) : (
               <KillOrderList order={order} units={unitsById} onChange={setOrder} />

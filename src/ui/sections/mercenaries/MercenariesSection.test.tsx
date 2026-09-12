@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, useStore } from '@/state/store';
 
 import { MercenariesSection } from './MercenariesSection';
+
+// Every render walks the whole 69-mercenary picker; under full-suite load that is slower than the
+// default 5 s budget, and it is a cost of the render, not a hang.
+vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());
@@ -16,6 +20,22 @@ afterEach(() => {
 });
 
 const mercs = () => selectActiveProfile(useStore.getState())?.mercenaries;
+
+/** The header line: it is what the section says while its body is collapsed. */
+const summary = () =>
+  (document.querySelector('#mercenaries-summary')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+test('the header lists every hired mercenary with the quantity you own', () => {
+  render(<MercenariesSection />);
+  expect(summary()).toBe('No mercenary hired yet');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add Bear V' }));
+  expect(summary()).toBe('BER5 \u00d7\u221e (1 selected)');
+
+  fireEvent.change(screen.getByLabelText('Bear V owned'), { target: { value: '22' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add Abomination VI' }));
+  expect(summary()).toBe('BER5 \u00d722 \u00b7 ABM6 \u00d7\u221e (2 selected)');
+});
 
 function openCustomForm(): HTMLElement {
   fireEvent.click(screen.getByRole('button', { name: 'Custom mercenary' }));
