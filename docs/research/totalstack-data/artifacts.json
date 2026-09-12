@@ -1,0 +1,608 @@
+[
+ {
+  "name": "Heart of the Forest",
+  "baseStrengthByLevel": "$ref:cl",
+  "starStrengthByLevel": "$ref:gl",
+  "randomBonusOptions": [
+   {
+    "id": "armyHealth",
+    "label": "Army Health",
+    "appliesTo": [
+     "armyHealth"
+    ]
+   },
+   {
+    "id": "armyStrength",
+    "label": "Army Strength",
+    "appliesTo": [
+     "armyStrength"
+    ]
+   },
+   {
+    "id": "armyStrengthAndHealth",
+    "label": "Army Strength and Health",
+    "appliesTo": [
+     "armyStrength",
+     "armyHealth"
+    ]
+   },
+   {
+    "id": "armyStrengthAndHealthAgainstPlayers",
+    "label": "Army Strength and Health against players",
+    "appliesTo": [
+     "armyStrengthAgainstPlayers",
+     "armyHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Forest Crown",
+  "baseStrengthByLevel": "$ref:vn",
+  "starStrengthByLevel": "$ref:bn",
+  "baseHealthByLevel": "$ref:vn",
+  "starHealthByLevel": "$ref:bn",
+  "progressionAlsoAppliesAgainstPlayers": true,
+  "combinedProgressionSummaryLabel": "Army strength & health, plus both against players",
+  "randomBonusOptions": [
+   {
+    "id": "armyStrengthAndHealth",
+    "label": "Army Strength and Health",
+    "appliesTo": [
+     "armyStrength",
+     "armyHealth"
+    ]
+   },
+   {
+    "id": "armyHealthAgainstPlayers",
+    "label": "Army Health against players",
+    "appliesTo": [
+     "armyHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   },
+   {
+    "id": "armyStrengthAgainstPlayers",
+    "label": "Army Strength against players",
+    "appliesTo": [
+     "armyStrengthAgainstPlayers"
+    ],
+    "fullWidth": true
+   },
+   {
+    "id": "armyStrengthAndHealthAgainstPlayers",
+    "label": "Army Strength and Health against players",
+    "appliesTo": [
+     "armyStrengthAgainstPlayers",
+     "armyHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Ifrit Lord's Belt",
+  "baseStrengthByLevel": "$ref:Cn",
+  "starStrengthByLevel": "$ref:Sn",
+  "strengthTargetKey": "army",
+  "baseHealthByLevel": "$ref:Cn",
+  "starHealthByLevel": "$ref:Sn",
+  "healthTargetKey": "army",
+  "combinedProgressionSummaryLabel": "Army strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "armyHealth",
+    "label": "Army Health",
+    "appliesTo": [
+     "armyHealth"
+    ]
+   },
+   {
+    "id": "armyStrength",
+    "label": "Army Strength",
+    "appliesTo": [
+     "armyStrength"
+    ]
+   },
+   {
+    "id": "armyStrengthAndHealth",
+    "label": "Army Strength and Health",
+    "appliesTo": [
+     "armyStrength",
+     "armyHealth"
+    ]
+   },
+   {
+    "id": "armyStrengthAndHealthAgainstPlayers",
+    "label": "Army Strength and Health against players",
+    "appliesTo": [
+     "armyStrengthAgainstPlayers",
+     "armyHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Source Flask",
+  "baseStrengthByLevel": "$ref:xn",
+  "starStrengthByLevel": "$ref:In",
+  "strengthTargetKey": "guardsmen",
+  "baseHealthByLevel": "$ref:xn",
+  "starHealthByLevel": "$ref:In",
+  "healthTargetKey": "guardsmen",
+  "combinedProgressionSummaryLabel": "Guardsmen's strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "guardsmanHealth",
+    "label": "Guardsmen's Health",
+    "appliesTo": [
+     "guardsmanHealth"
+    ]
+   },
+   {
+    "id": "guardsmanStrength",
+    "label": "Guardsmen's Strength",
+    "appliesTo": [
+     "guardsmanStrength"
+    ]
+   },
+   {
+    "id": "guardsmanStrengthAndHealth",
+    "label": "Guardsmen's Strength and Health",
+    "appliesTo": [
+     "guardsmanStrength",
+     "guardsmanHealth"
+    ]
+   },
+   {
+    "id": "guardsmanStrengthAndHealthAgainstPlayers",
+    "label": "Guardsmen's Strength and Health against players",
+    "appliesTo": [
+     "guardsmanStrengthAgainstPlayers",
+     "guardsmanHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Medallion of Unity",
+  "baseStrengthByLevel": "$ref:lt",
+  "starStrengthByLevel": "$ref:dt",
+  "baseHealthByLevel": "$ref:aa",
+  "starHealthByLevel": "$ref:ra",
+  "healthTargetKey": "guardsmen",
+  "randomBonusOptions": [
+   {
+    "id": "armyHealth",
+    "label": "Army Health",
+    "appliesTo": [
+     "armyHealth"
+    ]
+   },
+   {
+    "id": "armyHealthAgainstPlayers",
+    "label": "Army Health against players",
+    "appliesTo": [
+     "armyHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   },
+   {
+    "id": "guardsmanHealth",
+    "label": "Guardsmen's Health",
+    "appliesTo": [
+     "guardsmanHealth"
+    ]
+   },
+   {
+    "id": "guardsmanHealthAgainstPlayers",
+    "label": "Guardsmen's Health against players",
+    "appliesTo": [
+     "guardsmanHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Fan of the Five Winds",
+  "baseStrengthByLevel": "$ref:yl",
+  "starStrengthByLevel": "$ref:fl",
+  "strengthTargetKey": "guardsmen",
+  "randomBonusOptions": [
+   {
+    "id": "armyStrength",
+    "label": "Army Strength",
+    "appliesTo": [
+     "armyStrength"
+    ]
+   },
+   {
+    "id": "armyStrengthAgainstPlayers",
+    "label": "Army Strength against players",
+    "appliesTo": [
+     "armyStrengthAgainstPlayers"
+    ],
+    "fullWidth": true
+   },
+   {
+    "id": "guardsmanStrength",
+    "label": "Guardsmen's Strength",
+    "appliesTo": [
+     "guardsmanStrength"
+    ]
+   },
+   {
+    "id": "guardsmanStrengthAgainstPlayers",
+    "label": "Guardsmen's Strength against players",
+    "appliesTo": [
+     "guardsmanStrengthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Zeus' Lightning",
+  "baseStrengthByLevel": "$ref:lt",
+  "starStrengthByLevel": "$ref:dt",
+  "showBaseLevelSelector": false,
+  "specialStrengthProgressions": {
+   "doubleDamageChance": {
+    "label": "Chance to deal double damage",
+    "starByLevel": "$ref:ul"
+   }
+  },
+  "randomBonusOptions": [
+   {
+    "id": "doubleDamageChance",
+    "label": "Chance to deal double damage",
+    "appliesTo": [
+     "doubleDamageChance"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Ghostflame Lantern",
+  "baseStrengthByLevel": "$ref:lt",
+  "starStrengthByLevel": "$ref:dt",
+  "specialStrengthProgressions": {
+   "armyStrengthAgainstEpicMonsters": {
+    "label": "Army strength against epic monsters",
+    "baseByLevel": "$ref:hl",
+    "starByLevel": "$ref:pl"
+   }
+  },
+  "randomBonusOptions": [
+   {
+    "id": "armyStrength",
+    "label": "Army Strength",
+    "appliesTo": [
+     "armyStrength"
+    ]
+   },
+   {
+    "id": "armyStrengthAgainstEpicMonsters",
+    "label": "Army Strength against epic monsters",
+    "appliesTo": [
+     "armyStrengthAgainstEpicMonsters"
+    ],
+    "fullWidth": true
+   },
+   {
+    "id": "armyStrengthAndHealth",
+    "label": "Army Strength and Health",
+    "appliesTo": [
+     "armyStrength",
+     "armyHealth"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Warden's Quiver",
+  "baseStrengthByLevel": "$ref:ge",
+  "starStrengthByLevel": "$ref:me",
+  "strengthTargetKey": "ranged",
+  "baseHealthByLevel": "$ref:ge",
+  "starHealthByLevel": "$ref:me",
+  "healthTargetKey": "ranged",
+  "combinedProgressionSummaryLabel": "Ranged strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "rangedHealth",
+    "label": "Ranged Health",
+    "appliesTo": [
+     "rangedHealth"
+    ]
+   },
+   {
+    "id": "rangedStrength",
+    "label": "Ranged Strength",
+    "appliesTo": [
+     "rangedStrength"
+    ]
+   },
+   {
+    "id": "rangedStrengthAndHealth",
+    "label": "Ranged Strength and Health",
+    "appliesTo": [
+     "rangedStrength",
+     "rangedHealth"
+    ]
+   },
+   {
+    "id": "rangedStrengthAndHealthAgainstPlayers",
+    "label": "Ranged Strength and Health against players",
+    "appliesTo": [
+     "rangedStrengthAgainstPlayers",
+     "rangedHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Philosopher's Stone",
+  "baseStrengthByLevel": "$ref:An",
+  "starStrengthByLevel": "$ref:En",
+  "strengthTargetKey": "specialist",
+  "baseHealthByLevel": "$ref:An",
+  "starHealthByLevel": "$ref:En",
+  "healthTargetKey": "specialist",
+  "combinedProgressionSummaryLabel": "Specialists' strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "specialistHealth",
+    "label": "Specialists' Health",
+    "appliesTo": [
+     "specialistHealth"
+    ]
+   },
+   {
+    "id": "specialistStrength",
+    "label": "Specialists' Strength",
+    "appliesTo": [
+     "specialistStrength"
+    ]
+   },
+   {
+    "id": "specialistStrengthAndHealth",
+    "label": "Specialists' Strength and Health",
+    "appliesTo": [
+     "specialistStrength",
+     "specialistHealth"
+    ]
+   },
+   {
+    "id": "specialistStrengthAndHealthAgainstPlayers",
+    "label": "Specialists' Strength and Health against players",
+    "appliesTo": [
+     "specialistStrengthAgainstPlayers",
+     "specialistHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Griffinwing Mask",
+  "baseStrengthByLevel": "$ref:Pn",
+  "starStrengthByLevel": "$ref:wn",
+  "strengthTargetKey": "monster",
+  "baseHealthByLevel": "$ref:Pn",
+  "starHealthByLevel": "$ref:wn",
+  "healthTargetKey": "monster",
+  "combinedProgressionSummaryLabel": "Monsters' strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "monsterHealth",
+    "label": "Monsters' Health",
+    "appliesTo": [
+     "monsterHealth"
+    ]
+   },
+   {
+    "id": "monsterStrength",
+    "label": "Monsters' Strength",
+    "appliesTo": [
+     "monsterStrength"
+    ]
+   },
+   {
+    "id": "monsterStrengthAndHealth",
+    "label": "Monsters' Strength and Health",
+    "appliesTo": [
+     "monsterStrength",
+     "monsterHealth"
+    ]
+   },
+   {
+    "id": "monsterStrengthAndHealthAgainstPlayers",
+    "label": "Monsters' Strength and Health against players",
+    "appliesTo": [
+     "monsterStrengthAgainstPlayers",
+     "monsterHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Ruby Brooch",
+  "baseStrengthByLevel": "$ref:Tn",
+  "starStrengthByLevel": "$ref:Bn",
+  "strengthTargetKey": "melee",
+  "baseHealthByLevel": "$ref:Tn",
+  "starHealthByLevel": "$ref:Bn",
+  "healthTargetKey": "melee",
+  "combinedProgressionSummaryLabel": "Melee strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "meleeHealth",
+    "label": "Melee Health",
+    "appliesTo": [
+     "meleeHealth"
+    ]
+   },
+   {
+    "id": "meleeStrength",
+    "label": "Melee Strength",
+    "appliesTo": [
+     "meleeStrength"
+    ]
+   },
+   {
+    "id": "meleeStrengthAndHealth",
+    "label": "Melee Strength and Health",
+    "appliesTo": [
+     "meleeStrength",
+     "meleeHealth"
+    ]
+   },
+   {
+    "id": "meleeStrengthAndHealthAgainstPlayers",
+    "label": "Melee Strength and Health against players",
+    "appliesTo": [
+     "meleeStrengthAgainstPlayers",
+     "meleeHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Knight of Dalarna",
+  "baseStrengthByLevel": "$ref:Ln",
+  "starStrengthByLevel": "$ref:Nn",
+  "strengthTargetKey": "mounted",
+  "baseHealthByLevel": "$ref:Ln",
+  "starHealthByLevel": "$ref:Nn",
+  "healthTargetKey": "mounted",
+  "combinedProgressionSummaryLabel": "Mounted strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "mountedHealth",
+    "label": "Mounted Health",
+    "appliesTo": [
+     "mountedHealth"
+    ]
+   },
+   {
+    "id": "mountedStrength",
+    "label": "Mounted Strength",
+    "appliesTo": [
+     "mountedStrength"
+    ]
+   },
+   {
+    "id": "mountedStrengthAndHealth",
+    "label": "Mounted Strength and Health",
+    "appliesTo": [
+     "mountedStrength",
+     "mountedHealth"
+    ]
+   },
+   {
+    "id": "mountedStrengthAndHealthAgainstPlayers",
+    "label": "Mounted Strength and Health against players",
+    "appliesTo": [
+     "mountedStrengthAgainstPlayers",
+     "mountedHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Valkyrie Diadem",
+  "baseStrengthByLevel": "$ref:_n",
+  "starStrengthByLevel": "$ref:Rn",
+  "strengthTargetKey": "flying",
+  "baseHealthByLevel": "$ref:_n",
+  "starHealthByLevel": "$ref:Rn",
+  "healthTargetKey": "flying",
+  "combinedProgressionSummaryLabel": "Flying strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "flyingHealth",
+    "label": "Flying Health",
+    "appliesTo": [
+     "flyingHealth"
+    ]
+   },
+   {
+    "id": "flyingStrength",
+    "label": "Flying Strength",
+    "appliesTo": [
+     "flyingStrength"
+    ]
+   },
+   {
+    "id": "flyingStrengthAndHealth",
+    "label": "Flying Strength and Health",
+    "appliesTo": [
+     "flyingStrength",
+     "flyingHealth"
+    ]
+   },
+   {
+    "id": "flyingStrengthAndHealthAgainstPlayers",
+    "label": "Flying Strength and Health against players",
+    "appliesTo": [
+     "flyingStrengthAgainstPlayers",
+     "flyingHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ },
+ {
+  "name": "Technobomb",
+  "baseStrengthByLevel": "$ref:Mn",
+  "starStrengthByLevel": "$ref:kn",
+  "strengthTargetKey": "engineers",
+  "baseHealthByLevel": "$ref:Mn",
+  "starHealthByLevel": "$ref:kn",
+  "healthTargetKey": "engineers",
+  "combinedProgressionSummaryLabel": "Engineers' strength & health",
+  "randomBonusOptions": [
+   {
+    "id": "engineerHealth",
+    "label": "Engineers' Health",
+    "appliesTo": [
+     "engineerHealth"
+    ]
+   },
+   {
+    "id": "engineerStrength",
+    "label": "Engineers' Strength",
+    "appliesTo": [
+     "engineerStrength"
+    ]
+   },
+   {
+    "id": "engineerStrengthAndHealth",
+    "label": "Engineers' Strength and Health",
+    "appliesTo": [
+     "engineerStrength",
+     "engineerHealth"
+    ]
+   },
+   {
+    "id": "engineerStrengthAndHealthAgainstPlayers",
+    "label": "Engineers' Strength and Health against players",
+    "appliesTo": [
+     "engineerStrengthAgainstPlayers",
+     "engineerHealthAgainstPlayers"
+    ],
+    "fullWidth": true
+   }
+  ]
+ }
+]

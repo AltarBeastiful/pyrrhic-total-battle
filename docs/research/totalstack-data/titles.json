@@ -1,0 +1,217 @@
+[
+ {
+  "name": "Battlemaster",
+  "healthBonuses": {
+   "army": 150
+  },
+  "strengthBonuses": {
+   "army": 150
+  },
+  "playerOnlyHealthBonuses": {
+   "army": 300
+  },
+  "playerOnlyStrengthBonuses": {
+   "army": 300
+  },
+  "specialStrengthBonuses": {
+   "doubleDamageChance": 5,
+   "strikeTwoSquadsChance": 5
+  }
+ },
+ {
+  "name": "Hero of Battle",
+  "healthBonuses": {
+   "army": 75
+  },
+  "strengthBonuses": {
+   "army": 75
+  },
+  "playerOnlyHealthBonuses": {
+   "army": 150
+  },
+  "playerOnlyStrengthBonuses": {
+   "army": 150
+  },
+  "specialStrengthBonuses": {
+   "doubleDamageChance": 2,
+   "strikeTwoSquadsChance": 2
+  }
+ },
+ {
+  "name": "Triumphal Warrior",
+  "specialStrengthBonuses": {
+   "strikeTwoSquadsChance": 10
+  }
+ },
+ {
+  "name": "Experienced Warrior",
+  "specialStrengthBonuses": {
+   "strikeTwoSquadsChance": 5
+  }
+ },
+ {
+  "name": "Emperor",
+  "specialStrengthBonuses": {
+   "strikeTwoSquadsChance": 10
+  }
+ },
+ {
+  "name": "Ronin",
+  "specialStrengthBonuses": {
+   "strikeTwoSquadsChance": 5
+  }
+ },
+ {
+  "name": "Warlord",
+  "healthBonuses": {
+   "army": 100
+  },
+  "strengthBonuses": {
+   "army": 100
+  }
+ },
+ {
+  "name": "Great Marshal",
+  "healthBonuses": {
+   "army": 25
+  },
+  "strengthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Centurion",
+  "healthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Tribune",
+  "strengthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "War Hero",
+  "healthBonuses": {
+   "army": 25
+  },
+  "strengthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Legendary Commander",
+  "strengthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Lifestream Lord",
+  "healthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Goldfinger",
+  "healthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Administrator",
+  "healthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Magister Militum",
+  "strengthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Dark Knight",
+  "healthBonuses": {
+   "army": 25
+  },
+  "strengthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Brave Warrior",
+  "healthBonuses": {
+   "army": 25
+  },
+  "strengthBonuses": {
+   "army": 25
+  }
+ },
+ {
+  "name": "Blademaster",
+  "healthBonuses": {
+   "army": 10
+  },
+  "strengthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Headhunter",
+  "strengthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Healer",
+  "healthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Dealer",
+  "healthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Chief",
+  "healthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Noble Governor",
+  "healthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Field Marshal",
+  "strengthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Daredevil",
+  "healthBonuses": {
+   "army": 10
+  },
+  "strengthBonuses": {
+   "army": 10
+  }
+ },
+ {
+  "name": "Dog",
+  "strengthBonuses": {
+   "army": -10
+  }
+ },
+ {
+  "name": "Punching Bag",
+  "healthBonuses": {
+   "army": -10
+  }
+ }
+]

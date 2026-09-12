@@ -1,0 +1,1595 @@
+[
+ {
+  "id": "archer-1",
+  "name": "Archer 1",
+  "pillLabel": "ARC 1",
+  "group": "guardsmen",
+  "tier": 1,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 150,
+  "strength": 50,
+  "strengthAgainst": {
+   "flying": 67,
+   "melee": 52
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 15,
+   "display": "15s"
+  },
+  "trainingCost": {
+   "silver": 300
+  }
+ },
+ {
+  "id": "spearman-1",
+  "name": "Spearman 1",
+  "pillLabel": "SP 1",
+  "group": "guardsmen",
+  "tier": 1,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 150,
+  "strength": 50,
+  "strengthAgainst": {
+   "mounted": 39,
+   "beasts": 80
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 15,
+   "display": "15s"
+  },
+  "trainingCost": {
+   "silver": 300
+  }
+ },
+ {
+  "id": "rider-1",
+  "name": "Rider 1",
+  "pillLabel": "RD 1",
+  "group": "guardsmen",
+  "tier": 1,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 300,
+  "strength": 100,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 65,
+   "engineers": 54
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 30,
+   "display": "30s"
+  },
+  "trainingCost": {
+   "silver": 600
+  }
+ },
+ {
+  "id": "archer-2",
+  "name": "Archer 2",
+  "pillLabel": "ARC 2",
+  "group": "guardsmen",
+  "tier": 2,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 270,
+  "strength": 90,
+  "strengthAgainst": {
+   "flying": 101,
+   "melee": 78
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 180,
+   "display": "180s"
+  },
+  "trainingCost": {
+   "silver": 500
+  }
+ },
+ {
+  "id": "spearman-2",
+  "name": "Spearman 2",
+  "pillLabel": "SP 2",
+  "group": "guardsmen",
+  "tier": 2,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 270,
+  "strength": 90,
+  "strengthAgainst": {
+   "mounted": 59,
+   "beasts": 120
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 180,
+   "display": "180s"
+  },
+  "trainingCost": {
+   "silver": 500
+  }
+ },
+ {
+  "id": "rider-2",
+  "name": "Rider 2",
+  "pillLabel": "RD 2",
+  "group": "guardsmen",
+  "tier": 2,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 540,
+  "strength": 180,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 98,
+   "engineers": 81
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 360,
+   "display": "360s"
+  },
+  "trainingCost": {
+   "silver": 1000.0
+  }
+ },
+ {
+  "id": "archer-3",
+  "name": "Archer 3",
+  "pillLabel": "ARC 3",
+  "group": "guardsmen",
+  "tier": 3,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 480,
+  "strength": 160,
+  "strengthAgainst": {
+   "flying": 151,
+   "melee": 117
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 420,
+   "display": "7m"
+  },
+  "trainingCost": {
+   "silver": 700
+  }
+ },
+ {
+  "id": "spearman-3",
+  "name": "Spearman 3",
+  "pillLabel": "SP 3",
+  "group": "guardsmen",
+  "tier": 3,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 480,
+  "strength": 160,
+  "strengthAgainst": {
+   "mounted": 88,
+   "beasts": 180
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 420,
+   "display": "7m"
+  },
+  "trainingCost": {
+   "silver": 700
+  }
+ },
+ {
+  "id": "rider-3",
+  "name": "Rider 3",
+  "pillLabel": "RD 3",
+  "group": "guardsmen",
+  "tier": 3,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 960,
+  "strength": 320,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 146,
+   "engineers": 122
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 840,
+   "display": "14m"
+  },
+  "trainingCost": {
+   "silver": 1400
+  }
+ },
+ {
+  "id": "archer-4",
+  "name": "Archer 4",
+  "pillLabel": "ARC 4",
+  "group": "guardsmen",
+  "tier": 4,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 870,
+  "strength": 290,
+  "strengthAgainst": {
+   "flying": 226,
+   "melee": 176
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 480,
+   "display": "8m"
+  },
+  "trainingCost": {
+   "silver": 900
+  }
+ },
+ {
+  "id": "spearman-4",
+  "name": "Spearman 4",
+  "pillLabel": "SP 4",
+  "group": "guardsmen",
+  "tier": 4,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 870,
+  "strength": 290,
+  "strengthAgainst": {
+   "mounted": 132,
+   "beasts": 270
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 480,
+   "display": "8m"
+  },
+  "trainingCost": {
+   "silver": 900
+  }
+ },
+ {
+  "id": "rider-4",
+  "name": "Rider 4",
+  "pillLabel": "RD 4",
+  "group": "guardsmen",
+  "tier": 4,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 1740,
+  "strength": 580,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 219,
+   "engineers": 182
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 960,
+   "display": "16m"
+  },
+  "trainingCost": {
+   "silver": 1800
+  }
+ },
+ {
+  "id": "archer-5",
+  "name": "Archer 5",
+  "pillLabel": "ARC 5",
+  "group": "guardsmen",
+  "tier": 5,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 1560,
+  "strength": 520,
+  "strengthAgainst": {
+   "flying": 339,
+   "melee": 263
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 540,
+   "display": "9m"
+  },
+  "trainingCost": {
+   "silver": 1100
+  }
+ },
+ {
+  "id": "spearman-5",
+  "name": "Spearman 5",
+  "pillLabel": "SP 5",
+  "group": "guardsmen",
+  "tier": 5,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 1560,
+  "strength": 520,
+  "strengthAgainst": {
+   "mounted": 197,
+   "beasts": 405
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 540,
+   "display": "9m"
+  },
+  "trainingCost": {
+   "silver": 1100
+  }
+ },
+ {
+  "id": "rider-5",
+  "name": "Rider 5",
+  "pillLabel": "RD 5",
+  "group": "guardsmen",
+  "tier": 5,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 3150,
+  "strength": 1050,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 329,
+   "engineers": 273
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1080,
+   "display": "18m"
+  },
+  "trainingCost": {
+   "silver": 2200
+  }
+ },
+ {
+  "id": "battle-griffin-5",
+  "name": "Battle Griffin 5",
+  "pillLabel": "BGF 5",
+  "group": "guardsmen",
+  "tier": 5,
+  "category": "flying",
+  "leadershipCost": 20,
+  "health": 30000.0,
+  "race": "beast",
+  "strength": 10000.0,
+  "strengthAgainst": {
+   "mounted": 395
+  },
+  "revivalCost": {
+   "gold": 80
+  },
+  "trainingTime": {
+   "seconds": 10800,
+   "display": "180m"
+  },
+  "trainingCost": {
+   "silver": 22000.0
+  }
+ },
+ {
+  "id": "heavy-arbalester-6",
+  "name": "Heavy Arbalester 6",
+  "pillLabel": "HARB 6",
+  "group": "guardsmen",
+  "tier": 6,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 2820,
+  "strength": 940,
+  "strengthAgainst": {
+   "flying": 509,
+   "melee": 395
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 600,
+   "display": "10m"
+  },
+  "trainingCost": {
+   "silver": 1300
+  }
+ },
+ {
+  "id": "heavy-halberdier-6",
+  "name": "Heavy Halberdier 6",
+  "pillLabel": "HHAL 6",
+  "group": "guardsmen",
+  "tier": 6,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 2820,
+  "strength": 940,
+  "strengthAgainst": {
+   "mounted": 296,
+   "beasts": 608
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 600,
+   "display": "10m"
+  },
+  "trainingCost": {
+   "silver": 1300
+  }
+ },
+ {
+  "id": "mounted-knight-6",
+  "name": "Mounted Knight 6",
+  "pillLabel": "MK 6",
+  "group": "guardsmen",
+  "tier": 6,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 5700,
+  "strength": 1900,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 494,
+   "engineers": 410
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1200,
+   "display": "20m"
+  },
+  "trainingCost": {
+   "silver": 2600
+  }
+ },
+ {
+  "id": "battle-griffin-6",
+  "name": "Battle Griffin 6",
+  "pillLabel": "BGF 6",
+  "group": "guardsmen",
+  "tier": 6,
+  "category": "flying",
+  "leadershipCost": 20,
+  "health": 57000.0,
+  "race": "beast",
+  "strength": 19000.0,
+  "strengthAgainst": {
+   "mounted": 592
+  },
+  "revivalCost": {
+   "gold": 80
+  },
+  "trainingTime": {
+   "seconds": 12000.0,
+   "display": "200m"
+  },
+  "trainingCost": {
+   "silver": 26000.0
+  }
+ },
+ {
+  "id": "heavy-arbalester-7",
+  "name": "Heavy Arbalester 7",
+  "pillLabel": "HARB 7",
+  "group": "guardsmen",
+  "tier": 7,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 5100,
+  "strength": 1700,
+  "strengthAgainst": {
+   "flying": 763,
+   "melee": 592
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 660,
+   "display": "11m"
+  },
+  "trainingCost": {
+   "silver": 1500
+  }
+ },
+ {
+  "id": "heavy-halberdier-7",
+  "name": "Heavy Halberdier 7",
+  "pillLabel": "HHAL 7",
+  "group": "guardsmen",
+  "tier": 7,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 5100,
+  "strength": 1700,
+  "strengthAgainst": {
+   "mounted": 444,
+   "beasts": 911
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 660,
+   "display": "11m"
+  },
+  "trainingCost": {
+   "silver": 1500
+  }
+ },
+ {
+  "id": "mounted-knight-7",
+  "name": "Mounted Knight 7",
+  "pillLabel": "MK 7",
+  "group": "guardsmen",
+  "tier": 7,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 10200,
+  "strength": 3400,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 740,
+   "engineers": 615
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1320,
+   "display": "22m"
+  },
+  "trainingCost": {
+   "silver": 3000.0
+  }
+ },
+ {
+  "id": "battle-griffin-7",
+  "name": "Battle Griffin 7",
+  "pillLabel": "BGF 7",
+  "group": "guardsmen",
+  "tier": 7,
+  "category": "flying",
+  "leadershipCost": 20,
+  "health": 102000.0,
+  "race": "beast",
+  "strength": 34000.0,
+  "strengthAgainst": {
+   "mounted": 888
+  },
+  "revivalCost": {
+   "gold": 80
+  },
+  "trainingTime": {
+   "seconds": 13200,
+   "display": "220m"
+  },
+  "trainingCost": {
+   "silver": 30000.0
+  }
+ },
+ {
+  "id": "purifier-1",
+  "name": "Purifier 1",
+  "pillLabel": "PUR 1",
+  "group": "guardsmen",
+  "tier": 8,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 9180,
+  "strength": 3060,
+  "strengthAgainst": {
+   "flying": 1145,
+   "melee": 888
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 720,
+   "display": "12m"
+  },
+  "trainingCost": {
+   "silver": 1700
+  }
+ },
+ {
+  "id": "punisher-1",
+  "name": "Punisher 1",
+  "pillLabel": "PUN 1",
+  "group": "guardsmen",
+  "tier": 8,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 9180,
+  "strength": 3060,
+  "strengthAgainst": {
+   "mounted": 667,
+   "beasts": 1367
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 720,
+   "display": "12m"
+  },
+  "trainingCost": {
+   "silver": 1700
+  }
+ },
+ {
+  "id": "smiter-1",
+  "name": "Smiter 1",
+  "pillLabel": "SMI 1",
+  "group": "guardsmen",
+  "tier": 8,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 18360,
+  "strength": 6120,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 1111,
+   "engineers": 923
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1440,
+   "display": "24m"
+  },
+  "trainingCost": {
+   "silver": 3400
+  }
+ },
+ {
+  "id": "corax-1",
+  "name": "Corax 1",
+  "pillLabel": "CRX 1",
+  "group": "guardsmen",
+  "tier": 8,
+  "category": "flying",
+  "leadershipCost": 20,
+  "health": 183600,
+  "strength": 61200,
+  "strengthAgainst": {
+   "mounted": 1333
+  },
+  "revivalCost": {
+   "gold": 80
+  },
+  "trainingTime": {
+   "seconds": 14400,
+   "display": "240m"
+  },
+  "trainingCost": {
+   "silver": 34000.0
+  }
+ },
+ {
+  "id": "purifier-2",
+  "name": "Purifier 2",
+  "pillLabel": "PUR 2",
+  "group": "guardsmen",
+  "tier": 9,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 16530,
+  "strength": 5510,
+  "strengthAgainst": {
+   "flying": 1717,
+   "melee": 1333
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 780,
+   "display": "13m"
+  },
+  "trainingCost": {
+   "silver": 1900
+  }
+ },
+ {
+  "id": "punisher-2",
+  "name": "Punisher 2",
+  "pillLabel": "PUN 2",
+  "group": "guardsmen",
+  "tier": 9,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 16530,
+  "strength": 5510,
+  "strengthAgainst": {
+   "mounted": 1000.0,
+   "beasts": 2050
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 780,
+   "display": "13m"
+  },
+  "trainingCost": {
+   "silver": 1900
+  }
+ },
+ {
+  "id": "smiter-2",
+  "name": "Smiter 2",
+  "pillLabel": "SMI 2",
+  "group": "guardsmen",
+  "tier": 9,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 33060,
+  "strength": 11020,
+  "doubleDamageChance": 5,
+  "strengthAgainst": {
+   "ranged": 1667,
+   "engineers": 1384
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1560,
+   "display": "26m"
+  },
+  "trainingCost": {
+   "silver": 3800
+  }
+ },
+ {
+  "id": "corax-2",
+  "name": "Corax 2",
+  "pillLabel": "CRX 2",
+  "group": "guardsmen",
+  "tier": 9,
+  "category": "flying",
+  "leadershipCost": 20,
+  "health": 330600,
+  "strength": 110200,
+  "strengthAgainst": {
+   "mounted": 1999
+  },
+  "revivalCost": {
+   "gold": 80
+  },
+  "trainingTime": {
+   "seconds": 15600,
+   "display": "260m"
+  },
+  "trainingCost": {
+   "silver": 38000.0
+  }
+ },
+ {
+  "id": "swordsman-1",
+  "name": "Swordsman 1",
+  "pillLabel": "SW 1",
+  "group": "specialist",
+  "tier": 1,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 150,
+  "strength": 50,
+  "strengthAgainst": {
+   "mounted": 20,
+   "beasts": 40
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 15,
+   "display": "15s"
+  },
+  "trainingCost": {
+   "silver": 300
+  }
+ },
+ {
+  "id": "swordsman-2",
+  "name": "Swordsman 2",
+  "pillLabel": "SW 2",
+  "group": "specialist",
+  "tier": 2,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 270,
+  "strength": 90,
+  "strengthAgainst": {
+   "mounted": 29,
+   "beasts": 60
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 180,
+   "display": "180s"
+  },
+  "trainingCost": {
+   "silver": 500
+  }
+ },
+ {
+  "id": "swordsman-3",
+  "name": "Swordsman 3",
+  "pillLabel": "SW 3",
+  "group": "specialist",
+  "tier": 3,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 480,
+  "strength": 160,
+  "strengthAgainst": {
+   "mounted": 44,
+   "beasts": 90
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 420,
+   "display": "7m"
+  },
+  "trainingCost": {
+   "silver": 700
+  }
+ },
+ {
+  "id": "swordsman-4",
+  "name": "Swordsman 4",
+  "pillLabel": "SW 4",
+  "group": "specialist",
+  "tier": 4,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 870,
+  "strength": 290,
+  "strengthAgainst": {
+   "mounted": 66,
+   "beasts": 135
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 480,
+   "display": "8m"
+  },
+  "trainingCost": {
+   "silver": 900
+  }
+ },
+ {
+  "id": "swordsman-5",
+  "name": "Swordsman 5",
+  "pillLabel": "SW 5",
+  "group": "specialist",
+  "tier": 5,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 1560,
+  "strength": 520,
+  "strengthAgainst": {
+   "mounted": 99,
+   "beasts": 203
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 540,
+   "display": "9m"
+  },
+  "trainingCost": {
+   "silver": 1100
+  }
+ },
+ {
+  "id": "deadshot-5",
+  "name": "Deadshot 5",
+  "pillLabel": "DS 5",
+  "group": "specialist",
+  "tier": 5,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 1560,
+  "strength": 520,
+  "strengthAgainst": {
+   "flying": 170,
+   "melee": 132
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 540,
+   "display": "9m"
+  },
+  "trainingCost": {
+   "silver": 1100
+  }
+ },
+ {
+  "id": "lion-rider-5",
+  "name": "Lion Rider 5",
+  "pillLabel": "LR 5",
+  "group": "specialist",
+  "tier": 5,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 3150,
+  "strength": 1050,
+  "strengthAgainst": {
+   "ranged": 165,
+   "engineers": 137
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1080,
+   "display": "18m"
+  },
+  "trainingCost": {
+   "silver": 2200
+  }
+ },
+ {
+  "id": "vulture-5",
+  "name": "Vulture 5",
+  "pillLabel": "VUL 5",
+  "group": "specialist",
+  "tier": 5,
+  "category": "flying",
+  "leadershipCost": 1,
+  "health": 1560,
+  "strength": 520,
+  "strengthAgainst": {
+   "mounted": 197
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 540,
+   "display": "9m"
+  },
+  "trainingCost": {
+   "silver": 1100
+  }
+ },
+ {
+  "id": "heavy-knight-6",
+  "name": "Heavy Knight 6",
+  "pillLabel": "HK 6",
+  "group": "specialist",
+  "tier": 6,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 2820,
+  "strength": 940,
+  "strengthAgainst": {
+   "mounted": 148,
+   "beasts": 304
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 600,
+   "display": "10m"
+  },
+  "trainingCost": {
+   "silver": 1300
+  }
+ },
+ {
+  "id": "deadshot-6",
+  "name": "Deadshot 6",
+  "pillLabel": "DS 6",
+  "group": "specialist",
+  "tier": 6,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 2820,
+  "strength": 940,
+  "strengthAgainst": {
+   "flying": 254,
+   "melee": 197
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 600,
+   "display": "10m"
+  },
+  "trainingCost": {
+   "silver": 1300
+  }
+ },
+ {
+  "id": "lion-rider-6",
+  "name": "Lion Rider 6",
+  "pillLabel": "LR 6",
+  "group": "specialist",
+  "tier": 6,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 5700,
+  "strength": 1900,
+  "strengthAgainst": {
+   "ranged": 247,
+   "engineers": 205
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1200,
+   "display": "20m"
+  },
+  "trainingCost": {
+   "silver": 2600
+  }
+ },
+ {
+  "id": "vulture-6",
+  "name": "Vulture 6",
+  "pillLabel": "VUL 6",
+  "group": "specialist",
+  "tier": 6,
+  "category": "flying",
+  "leadershipCost": 1,
+  "health": 2820,
+  "strength": 940,
+  "strengthAgainst": {
+   "mounted": 296
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 600,
+   "display": "10m"
+  },
+  "trainingCost": {
+   "silver": 1300
+  }
+ },
+ {
+  "id": "heavy-knight-7",
+  "name": "Heavy Knight 7",
+  "pillLabel": "HK 7",
+  "group": "specialist",
+  "tier": 7,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 5100,
+  "strength": 1700,
+  "strengthAgainst": {
+   "mounted": 222,
+   "beasts": 456
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 660,
+   "display": "11m"
+  },
+  "trainingCost": {
+   "silver": 1500
+  }
+ },
+ {
+  "id": "deadshot-7",
+  "name": "Deadshot 7",
+  "pillLabel": "DS 7",
+  "group": "specialist",
+  "tier": 7,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 5100,
+  "strength": 1700,
+  "strengthAgainst": {
+   "flying": 382,
+   "melee": 296
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 660,
+   "display": "11m"
+  },
+  "trainingCost": {
+   "silver": 1500
+  }
+ },
+ {
+  "id": "lion-rider-7",
+  "name": "Lion Rider 7",
+  "pillLabel": "LR 7",
+  "group": "specialist",
+  "tier": 7,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 10200,
+  "strength": 3400,
+  "strengthAgainst": {
+   "ranged": 370,
+   "engineers": 308
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1320,
+   "display": "22m"
+  },
+  "trainingCost": {
+   "silver": 3000.0
+  }
+ },
+ {
+  "id": "vulture-7",
+  "name": "Vulture 7",
+  "pillLabel": "VUL 7",
+  "group": "specialist",
+  "tier": 7,
+  "category": "flying",
+  "leadershipCost": 1,
+  "health": 5100,
+  "strength": 1700,
+  "strengthAgainst": {
+   "mounted": 444
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 660,
+   "display": "11m"
+  },
+  "trainingCost": {
+   "silver": 1500
+  }
+ },
+ {
+  "id": "duelist-1",
+  "name": "Duelist 1",
+  "pillLabel": "DUE 1",
+  "group": "specialist",
+  "tier": 8,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 9180,
+  "strength": 3060,
+  "strengthAgainst": {
+   "mounted": 333,
+   "beasts": 683
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 720,
+   "display": "12m"
+  },
+  "trainingCost": {
+   "silver": 1700
+  }
+ },
+ {
+  "id": "legitimist-1",
+  "name": "Legitimist 1",
+  "pillLabel": "LGT 1",
+  "group": "specialist",
+  "tier": 8,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 9180,
+  "strength": 3060,
+  "strengthAgainst": {
+   "flying": 572,
+   "melee": 444
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 720,
+   "display": "12m"
+  },
+  "trainingCost": {
+   "silver": 1700
+  }
+ },
+ {
+  "id": "whitemane-1",
+  "name": "Whitemane 1",
+  "pillLabel": "WM 1",
+  "group": "specialist",
+  "tier": 8,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 18360,
+  "strength": 6120,
+  "strengthAgainst": {
+   "ranged": 555,
+   "engineers": 461
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1440,
+   "display": "24m"
+  },
+  "trainingCost": {
+   "silver": 3400
+  }
+ },
+ {
+  "id": "royal-lion-1",
+  "name": "Royal Lion 1",
+  "pillLabel": "RL 1",
+  "group": "specialist",
+  "tier": 8,
+  "category": "flying",
+  "leadershipCost": 20,
+  "health": 183600,
+  "race": "beast",
+  "strength": 61200,
+  "strengthAgainst": {
+   "mounted": 667
+  },
+  "revivalCost": {
+   "gold": 80
+  },
+  "trainingTime": {
+   "seconds": 14400,
+   "display": "240m"
+  },
+  "trainingCost": {
+   "silver": 34000.0
+  }
+ },
+ {
+  "id": "duelist-2",
+  "name": "Duelist 2",
+  "pillLabel": "DUE 2",
+  "group": "specialist",
+  "tier": 9,
+  "category": "melee",
+  "leadershipCost": 1,
+  "health": 16530,
+  "strength": 5510,
+  "strengthAgainst": {
+   "mounted": 500,
+   "beasts": 1025
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 780,
+   "display": "13m"
+  },
+  "trainingCost": {
+   "silver": 1900
+  }
+ },
+ {
+  "id": "legitimist-2",
+  "name": "Legitimist 2",
+  "pillLabel": "LGT 2",
+  "group": "specialist",
+  "tier": 9,
+  "category": "ranged",
+  "leadershipCost": 1,
+  "health": 16530,
+  "strength": 5510,
+  "strengthAgainst": {
+   "flying": 859,
+   "melee": 667
+  },
+  "revivalCost": {
+   "gold": 4
+  },
+  "trainingTime": {
+   "seconds": 780,
+   "display": "13m"
+  },
+  "trainingCost": {
+   "silver": 1900
+  }
+ },
+ {
+  "id": "whitemane-2",
+  "name": "Whitemane 2",
+  "pillLabel": "WM 2",
+  "group": "specialist",
+  "tier": 9,
+  "category": "mounted",
+  "leadershipCost": 2,
+  "health": 33060,
+  "strength": 11020,
+  "strengthAgainst": {
+   "ranged": 833,
+   "engineers": 692
+  },
+  "revivalCost": {
+   "gold": 8
+  },
+  "trainingTime": {
+   "seconds": 1560,
+   "display": "26m"
+  },
+  "trainingCost": {
+   "silver": 3800
+  }
+ },
+ {
+  "id": "royal-lion-2",
+  "name": "Royal Lion 2",
+  "pillLabel": "RL 2",
+  "group": "specialist",
+  "tier": 9,
+  "category": "flying",
+  "leadershipCost": 20,
+  "health": 330600,
+  "race": "beast",
+  "strength": 110200,
+  "strengthAgainst": {
+   "mounted": 1000.0
+  },
+  "revivalCost": {
+   "gold": 80
+  },
+  "trainingTime": {
+   "seconds": 15600,
+   "display": "260m"
+  },
+  "trainingCost": {
+   "silver": 38000.0
+  }
+ },
+ {
+  "id": "catapult-1",
+  "name": "Catapult 1",
+  "pillLabel": "CAT 1",
+  "group": "engineers",
+  "tier": 1,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 1500,
+  "strength": 250,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 150,
+   "display": "150s"
+  },
+  "trainingCost": {
+   "silver": 3000.0
+  }
+ },
+ {
+  "id": "catapult-2",
+  "name": "Catapult 2",
+  "pillLabel": "CAT 2",
+  "group": "engineers",
+  "tier": 2,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 2700,
+  "strength": 450,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 1800,
+   "display": "1800s"
+  },
+  "trainingCost": {
+   "silver": 5000.0
+  }
+ },
+ {
+  "id": "catapult-3",
+  "name": "Catapult 3",
+  "pillLabel": "CAT 3",
+  "group": "engineers",
+  "tier": 3,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 4860,
+  "strength": 810,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 4200,
+   "display": "70m"
+  },
+  "trainingCost": {
+   "silver": 7000.0
+  }
+ },
+ {
+  "id": "catapult-4",
+  "name": "Catapult 4",
+  "pillLabel": "CAT 4",
+  "group": "engineers",
+  "tier": 4,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 8750,
+  "strength": 1460,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 4800,
+   "display": "80m"
+  },
+  "trainingCost": {
+   "silver": 9000.0
+  }
+ },
+ {
+  "id": "catapult-5",
+  "name": "Catapult 5",
+  "pillLabel": "CAT 5",
+  "group": "engineers",
+  "tier": 5,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 15800,
+  "strength": 2630,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 5400,
+   "display": "90m"
+  },
+  "trainingCost": {
+   "silver": 11000.0
+  }
+ },
+ {
+  "id": "siege-ballistae-6",
+  "name": "Siege Ballistae 6",
+  "pillLabel": "SB 6",
+  "group": "engineers",
+  "tier": 6,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 28400,
+  "strength": 4730,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 6000.0,
+   "display": "100m"
+  },
+  "trainingCost": {
+   "silver": 13000.0
+  }
+ },
+ {
+  "id": "siege-ballistae-7",
+  "name": "Siege Ballistae 7",
+  "pillLabel": "SB 7",
+  "group": "engineers",
+  "tier": 7,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 51000.0,
+  "strength": 8500,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 6600,
+   "display": "110m"
+  },
+  "trainingCost": {
+   "silver": 15000.0
+  }
+ },
+ {
+  "id": "josephine-1",
+  "name": "Josephine 1",
+  "pillLabel": "JOS 1",
+  "group": "engineers",
+  "tier": 8,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 91800,
+  "strength": 15310,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 7200,
+   "display": "120m"
+  },
+  "trainingCost": {
+   "silver": 17000.0
+  }
+ },
+ {
+  "id": "josephine-2",
+  "name": "Josephine 2",
+  "pillLabel": "JOS 2",
+  "group": "engineers",
+  "tier": 9,
+  "category": "engineer",
+  "leadershipCost": 10,
+  "health": 165300,
+  "strength": 27550,
+  "revivalCost": {
+   "gold": 40
+  },
+  "trainingTime": {
+   "seconds": 7800,
+   "display": "130m"
+  },
+  "trainingCost": {
+   "silver": 19000.0
+  }
+ }
+]

@@ -1,0 +1,31 @@
+[
+ {
+  "key": "doubleDamageChance",
+  "label": "Chance to deal double damage"
+ },
+ {
+  "key": "strikeTwoSquadsChance",
+  "label": "Chance to strike two squads"
+ },
+ "$spread:Ws",
+ {
+  "key": "guardsmenDoubleDamageChance",
+  "label": "Chance for guardsmen to deal double damage"
+ },
+ {
+  "key": "specialistsDoubleDamageChance",
+  "label": "Chance for specialists to deal double damage"
+ },
+ {
+  "key": "engineersDoubleDamageChance",
+  "label": "Chance for engineers to deal double damage"
+ },
+ {
+  "key": "monstersDoubleDamageChance",
+  "label": "Chance for monsters to deal double damage"
+ },
+ {
+  "key": "armyStrengthAgainstEpicMonsters",
+  "label": "Army Strength against epic monsters"
+ }
+]

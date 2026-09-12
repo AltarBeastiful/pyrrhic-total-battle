@@ -1,0 +1,524 @@
+{
+ "Logos": {
+  "bonusKey": "specialist",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   5,
+   5,
+   15,
+   15,
+   35
+  ],
+  "strength": {
+   "bonusKey": "specialist",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    5,
+    5,
+    15,
+    15,
+    35,
+    35
+   ]
+  }
+ },
+ "Aydae": {
+  "bonusKey": "guardsmen",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   15,
+   15,
+   45,
+   45,
+   105
+  ],
+  "strength": {
+   "bonusKey": "guardsmen",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    15,
+    15,
+    45,
+    45,
+    105,
+    105
+   ]
+  }
+ },
+ "Ingrid": {
+  "bonusKey": "monster",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   15,
+   15,
+   45,
+   45,
+   105
+  ],
+  "strength": {
+   "bonusKey": "monster",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    15,
+    15,
+    45,
+    45,
+    105,
+    105
+   ]
+  }
+ },
+ "Ye Ho-Sung": {
+  "bonusKey": "melee",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   15,
+   15,
+   45,
+   45,
+   105
+  ],
+  "strength": {
+   "bonusKey": "melee",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    15,
+    15,
+    45,
+    45,
+    105,
+    105
+   ]
+  }
+ },
+ "Bernard": {
+  "bonusKey": "ranged",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   15,
+   15,
+   45,
+   45,
+   105
+  ],
+  "strength": {
+   "bonusKey": "ranged",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    15,
+    15,
+    45,
+    45,
+    105,
+    105
+   ]
+  }
+ },
+ "Lucius": {
+  "bonusKey": "mounted",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   15,
+   15,
+   45,
+   45,
+   105
+  ],
+  "strength": {
+   "bonusKey": "mounted",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    15,
+    15,
+    45,
+    45,
+    105,
+    105
+   ]
+  }
+ },
+ "Brunhild": {
+  "bonusKey": "flying",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   15,
+   15,
+   45,
+   45,
+   105
+  ],
+  "strength": {
+   "bonusKey": "flying",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    15,
+    15,
+    45,
+    45,
+    105,
+    105
+   ]
+  }
+ },
+ "Sofia": {
+  "bonusKey": "army",
+  "baseMultiplier": 0.5,
+  "starBonuses": [
+   0,
+   2.5,
+   5,
+   10,
+   15,
+   25,
+   35
+  ]
+ },
+ "Xi Guiying": {
+  "bonusKey": "ranged",
+  "baseMultiplier": 0,
+  "starBonuses": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "strength": {
+   "bonusKey": "ranged",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    5,
+    5,
+    15,
+    15,
+    35,
+    35
+   ]
+  }
+ },
+ "Alexander": {
+  "bonusKey": "mounted",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   40,
+   40,
+   120,
+   120,
+   280
+  ],
+  "strength": {
+   "bonusKey": "mounted",
+   "baseMultiplier": 2,
+   "starBonuses": [
+    0,
+    40,
+    40,
+    120,
+    120,
+    280,
+    280
+   ]
+  }
+ },
+ "Minamoto": {
+  "bonusKey": "ranged",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   40,
+   40,
+   120,
+   120,
+   280
+  ],
+  "strength": {
+   "bonusKey": "ranged",
+   "baseMultiplier": 2,
+   "starBonuses": [
+    0,
+    40,
+    40,
+    120,
+    120,
+    280,
+    280
+   ]
+  }
+ },
+ "Ramses II": {
+  "bonusKey": "army",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   15,
+   30,
+   60,
+   90,
+   150,
+   210
+  ]
+ },
+ "Wu Zetian": {
+  "bonusKey": "flying",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   40,
+   40,
+   120,
+   120,
+   280
+  ],
+  "strength": {
+   "bonusKey": "flying",
+   "baseMultiplier": 2,
+   "starBonuses": [
+    0,
+    40,
+    40,
+    120,
+    120,
+    280,
+    280
+   ]
+  }
+ },
+ "Amanitore": {
+  "bonusKey": "army",
+  "baseMultiplier": 1.5,
+  "starBonuses": [
+   0,
+   15,
+   30,
+   60,
+   90,
+   150,
+   210
+  ],
+  "strength": {
+   "bonusKey": "army",
+   "baseMultiplier": 1.5,
+   "starBonuses": [
+    0,
+    15,
+    30,
+    60,
+    90,
+    150,
+    210
+   ]
+  },
+  "note": "These bonuses only apply on group marches, in reinforcements, and in raids."
+ },
+ "Leonidas": {
+  "bonusKey": "melee",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   40,
+   40,
+   120,
+   120,
+   280
+  ],
+  "strength": {
+   "bonusKey": "melee",
+   "baseMultiplier": 2,
+   "starBonuses": [
+    0,
+    40,
+    40,
+    120,
+    120,
+    280,
+    280
+   ]
+  }
+ },
+ "Hercules": {
+  "bonusKey": "army",
+  "baseMultiplier": 0,
+  "starBonuses": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "specialStrength": {
+   "bonusKey": "armyStrengthAgainstEpicMonsters",
+   "baseMultiplier": 2,
+   "starBonuses": [
+    0,
+    30,
+    90,
+    180,
+    300,
+    510,
+    860
+   ]
+  },
+  "note": "These bonuses only apply on battles against epic monsters."
+ },
+ "Beowulf": {
+  "bonusKey": "army",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   70,
+   140,
+   210,
+   280,
+   350,
+   420
+  ],
+  "strength": {
+   "bonusKey": "army",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    70,
+    140,
+    210,
+    280,
+    350,
+    420
+   ]
+  }
+ },
+ "Skadi": {
+  "bonusKey": "guardsmen",
+  "baseMultiplier": 2,
+  "starBonuses": [
+   0,
+   140,
+   280,
+   420,
+   560,
+   700,
+   840
+  ],
+  "strength": {
+   "bonusKey": "guardsmen",
+   "baseMultiplier": 2,
+   "starBonuses": [
+    0,
+    140,
+    280,
+    420,
+    560,
+    700,
+    840
+   ]
+  }
+ },
+ "Brann": {
+  "bonusKey": "engineers",
+  "baseMultiplier": 1,
+  "starBonuses": [
+   0,
+   0,
+   5,
+   5,
+   15,
+   15,
+   35
+  ],
+  "strength": {
+   "bonusKey": "engineers",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    5,
+    5,
+    15,
+    15,
+    35,
+    35
+   ]
+  }
+ },
+ "Cleopatra": {
+  "bonusKey": "army",
+  "baseMultiplier": 0,
+  "starBonuses": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "strength": {
+   "bonusKey": "army",
+   "baseMultiplier": 1,
+   "starBonuses": [
+    0,
+    15,
+    30,
+    60,
+    90,
+    150,
+    210
+   ]
+  }
+ },
+ "Heimdall": {
+  "bonusKey": "army",
+  "baseMultiplier": 0,
+  "starBonuses": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "strength": {
+   "bonusKey": "army",
+   "baseMultiplier": 1.5,
+   "starBonuses": [
+    0,
+    110,
+    220,
+    330,
+    440,
+    550,
+    660
+   ]
+  }
+ }
+}

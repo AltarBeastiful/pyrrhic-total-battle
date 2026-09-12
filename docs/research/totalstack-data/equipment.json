@@ -1,0 +1,1204 @@
+[
+ {
+  "name": "Guardsmen's Courage",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "guardsmen": 1.5
+    },
+    "strengthBonuses": {
+     "guardsmen": 1.5
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 0.1
+    }
+   },
+   "common": {
+    "healthBonuses": {
+     "guardsmen": 3
+    },
+    "strengthBonuses": {
+     "guardsmen": 3
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 0.2
+    }
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "guardsmen": 5
+    },
+    "strengthBonuses": {
+     "guardsmen": 5
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 0.3
+    }
+   },
+   "rare": {
+    "healthBonuses": {
+     "guardsmen": 8
+    },
+    "strengthBonuses": {
+     "guardsmen": 8
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 0.4
+    }
+   },
+   "epic": {
+    "healthBonuses": {
+     "guardsmen": 12
+    },
+    "strengthBonuses": {
+     "guardsmen": 12
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 0.5
+    }
+   },
+   "legendary": {
+    "healthBonuses": {
+     "guardsmen": 17
+    },
+    "strengthBonuses": {
+     "guardsmen": 17
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 0.8
+    }
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "guardsmen": 23
+    },
+    "strengthBonuses": {
+     "guardsmen": 23
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 1.2
+    }
+   },
+   "godlike": {
+    "healthBonuses": {
+     "guardsmen": 30
+    },
+    "strengthBonuses": {
+     "guardsmen": 30
+    },
+    "specialStrengthBonuses": {
+     "guardsmenDoubleDamageChance": 2
+    }
+   }
+  }
+ },
+ {
+  "name": "Specialists' Authority",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "specialist": 1.5
+    },
+    "strengthBonuses": {
+     "specialist": 1.5
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 0.1
+    }
+   },
+   "common": {
+    "healthBonuses": {
+     "specialist": 3
+    },
+    "strengthBonuses": {
+     "specialist": 3
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 0.2
+    }
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "specialist": 5
+    },
+    "strengthBonuses": {
+     "specialist": 5
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 0.3
+    }
+   },
+   "rare": {
+    "healthBonuses": {
+     "specialist": 8
+    },
+    "strengthBonuses": {
+     "specialist": 8
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 0.4
+    }
+   },
+   "epic": {
+    "healthBonuses": {
+     "specialist": 12
+    },
+    "strengthBonuses": {
+     "specialist": 12
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 0.5
+    }
+   },
+   "legendary": {
+    "healthBonuses": {
+     "specialist": 17
+    },
+    "strengthBonuses": {
+     "specialist": 17
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 0.8
+    }
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "specialist": 23
+    },
+    "strengthBonuses": {
+     "specialist": 23
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 1.2
+    }
+   },
+   "godlike": {
+    "healthBonuses": {
+     "specialist": 30
+    },
+    "strengthBonuses": {
+     "specialist": 30
+    },
+    "specialStrengthBonuses": {
+     "specialistsDoubleDamageChance": 2
+    }
+   }
+  }
+ },
+ {
+  "name": "Skillful Engineer",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "engineers": 1.5
+    },
+    "strengthBonuses": {
+     "engineers": 1.5
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 0.1
+    }
+   },
+   "common": {
+    "healthBonuses": {
+     "engineers": 3
+    },
+    "strengthBonuses": {
+     "engineers": 3
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 0.2
+    }
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "engineers": 5
+    },
+    "strengthBonuses": {
+     "engineers": 5
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 0.3
+    }
+   },
+   "rare": {
+    "healthBonuses": {
+     "engineers": 8
+    },
+    "strengthBonuses": {
+     "engineers": 8
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 0.4
+    }
+   },
+   "epic": {
+    "healthBonuses": {
+     "engineers": 12
+    },
+    "strengthBonuses": {
+     "engineers": 12
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 0.5
+    }
+   },
+   "legendary": {
+    "healthBonuses": {
+     "engineers": 17
+    },
+    "strengthBonuses": {
+     "engineers": 17
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 0.8
+    }
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "engineers": 23
+    },
+    "strengthBonuses": {
+     "engineers": 23
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 1.2
+    }
+   },
+   "godlike": {
+    "healthBonuses": {
+     "engineers": 30
+    },
+    "strengthBonuses": {
+     "engineers": 30
+    },
+    "specialStrengthBonuses": {
+     "engineersDoubleDamageChance": 2
+    }
+   }
+  }
+ },
+ {
+  "name": "Emerald Guardian",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "melee": 16
+    },
+    "strengthBonuses": {
+     "melee": 16
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 8
+     }
+    ]
+   },
+   "common": {
+    "healthBonuses": {
+     "melee": 24
+    },
+    "strengthBonuses": {
+     "melee": 24
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 12
+     }
+    ]
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "melee": 34
+    },
+    "strengthBonuses": {
+     "melee": 34
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 17
+     }
+    ]
+   },
+   "rare": {
+    "healthBonuses": {
+     "melee": 46
+    },
+    "strengthBonuses": {
+     "melee": 46
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 23
+     }
+    ]
+   },
+   "epic": {
+    "healthBonuses": {
+     "melee": 60
+    },
+    "strengthBonuses": {
+     "melee": 60
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 30
+     }
+    ]
+   },
+   "legendary": {
+    "healthBonuses": {
+     "melee": 78
+    },
+    "strengthBonuses": {
+     "melee": 78
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 39
+     }
+    ]
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "melee": 100
+    },
+    "strengthBonuses": {
+     "melee": 100
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 50
+     }
+    ]
+   },
+   "godlike": {
+    "healthBonuses": {
+     "melee": 128
+    },
+    "strengthBonuses": {
+     "melee": 128
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "melee",
+      "defenderTarget": "mounted",
+      "value": 64
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "Path of the Skybreaker",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "flying": 16
+    },
+    "strengthBonuses": {
+     "flying": 16
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 8
+     }
+    ]
+   },
+   "common": {
+    "healthBonuses": {
+     "flying": 24
+    },
+    "strengthBonuses": {
+     "flying": 24
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 12
+     }
+    ]
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "flying": 34
+    },
+    "strengthBonuses": {
+     "flying": 34
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 17
+     }
+    ]
+   },
+   "rare": {
+    "healthBonuses": {
+     "flying": 46
+    },
+    "strengthBonuses": {
+     "flying": 46
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 23
+     }
+    ]
+   },
+   "epic": {
+    "healthBonuses": {
+     "flying": 60
+    },
+    "strengthBonuses": {
+     "flying": 60
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 30
+     }
+    ]
+   },
+   "legendary": {
+    "healthBonuses": {
+     "flying": 78
+    },
+    "strengthBonuses": {
+     "flying": 78
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 39
+     }
+    ]
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "flying": 100
+    },
+    "strengthBonuses": {
+     "flying": 100
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 50
+     }
+    ]
+   },
+   "godlike": {
+    "healthBonuses": {
+     "flying": 128
+    },
+    "strengthBonuses": {
+     "flying": 128
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "flying",
+      "defenderTarget": "mounted",
+      "value": 64
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "Steppe Enslaver",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "mounted": 16
+    },
+    "strengthBonuses": {
+     "mounted": 16
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 8
+     }
+    ]
+   },
+   "common": {
+    "healthBonuses": {
+     "mounted": 24
+    },
+    "strengthBonuses": {
+     "mounted": 24
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 12
+     }
+    ]
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "mounted": 34
+    },
+    "strengthBonuses": {
+     "mounted": 34
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 17
+     }
+    ]
+   },
+   "rare": {
+    "healthBonuses": {
+     "mounted": 46
+    },
+    "strengthBonuses": {
+     "mounted": 46
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 23
+     }
+    ]
+   },
+   "epic": {
+    "healthBonuses": {
+     "mounted": 60
+    },
+    "strengthBonuses": {
+     "mounted": 60
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 30
+     }
+    ]
+   },
+   "legendary": {
+    "healthBonuses": {
+     "mounted": 78
+    },
+    "strengthBonuses": {
+     "mounted": 78
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 39
+     }
+    ]
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "mounted": 100
+    },
+    "strengthBonuses": {
+     "mounted": 100
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 50
+     }
+    ]
+   },
+   "godlike": {
+    "healthBonuses": {
+     "mounted": 128
+    },
+    "strengthBonuses": {
+     "mounted": 128
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "mounted",
+      "defenderTarget": "ranged",
+      "value": 64
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "Sagittarius's Fury",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "ranged": 16
+    },
+    "strengthBonuses": {
+     "ranged": 16
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 8
+     }
+    ]
+   },
+   "common": {
+    "healthBonuses": {
+     "ranged": 24
+    },
+    "strengthBonuses": {
+     "ranged": 24
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 12
+     }
+    ]
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "ranged": 34
+    },
+    "strengthBonuses": {
+     "ranged": 34
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 17
+     }
+    ]
+   },
+   "rare": {
+    "healthBonuses": {
+     "ranged": 46
+    },
+    "strengthBonuses": {
+     "ranged": 46
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 23
+     }
+    ]
+   },
+   "epic": {
+    "healthBonuses": {
+     "ranged": 60
+    },
+    "strengthBonuses": {
+     "ranged": 60
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 30
+     }
+    ]
+   },
+   "legendary": {
+    "healthBonuses": {
+     "ranged": 78
+    },
+    "strengthBonuses": {
+     "ranged": 78
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 39
+     }
+    ]
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "ranged": 100
+    },
+    "strengthBonuses": {
+     "ranged": 100
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 50
+     }
+    ]
+   },
+   "godlike": {
+    "healthBonuses": {
+     "ranged": 128
+    },
+    "strengthBonuses": {
+     "ranged": 128
+    },
+    "matchupStrengthBonuses": [
+     {
+      "attackerCategory": "ranged",
+      "defenderTarget": "melee",
+      "value": 64
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "Guardian of Justice",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "guardsmen": 10.7
+    },
+    "strengthBonuses": {
+     "guardsmen": 10.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 8
+    }
+   },
+   "common": {
+    "healthBonuses": {
+     "guardsmen": 16
+    },
+    "strengthBonuses": {
+     "guardsmen": 16
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 12
+    }
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "guardsmen": 22.7
+    },
+    "strengthBonuses": {
+     "guardsmen": 22.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 17
+    }
+   },
+   "rare": {
+    "healthBonuses": {
+     "guardsmen": 30.7
+    },
+    "strengthBonuses": {
+     "guardsmen": 30.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 23
+    }
+   },
+   "epic": {
+    "healthBonuses": {
+     "guardsmen": 40
+    },
+    "strengthBonuses": {
+     "guardsmen": 40
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 30
+    }
+   },
+   "legendary": {
+    "healthBonuses": {
+     "guardsmen": 52
+    },
+    "strengthBonuses": {
+     "guardsmen": 52
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 39
+    }
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "guardsmen": 66.7
+    },
+    "strengthBonuses": {
+     "guardsmen": 66.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 50
+    }
+   },
+   "godlike": {
+    "healthBonuses": {
+     "guardsmen": 85.3
+    },
+    "strengthBonuses": {
+     "guardsmen": 85.3
+    },
+    "playerOnlyStrengthBonuses": {
+     "guardsmanStrengthAgainstPlayers": 64
+    }
+   }
+  }
+ },
+ {
+  "name": "War Master",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "specialist": 10.7
+    },
+    "strengthBonuses": {
+     "specialist": 10.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 8
+    }
+   },
+   "common": {
+    "healthBonuses": {
+     "specialist": 16
+    },
+    "strengthBonuses": {
+     "specialist": 16
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 12
+    }
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "specialist": 22.7
+    },
+    "strengthBonuses": {
+     "specialist": 22.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 17
+    }
+   },
+   "rare": {
+    "healthBonuses": {
+     "specialist": 30.7
+    },
+    "strengthBonuses": {
+     "specialist": 30.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 23
+    }
+   },
+   "epic": {
+    "healthBonuses": {
+     "specialist": 40
+    },
+    "strengthBonuses": {
+     "specialist": 40
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 30
+    }
+   },
+   "legendary": {
+    "healthBonuses": {
+     "specialist": 52
+    },
+    "strengthBonuses": {
+     "specialist": 52
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 39
+    }
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "specialist": 66.7
+    },
+    "strengthBonuses": {
+     "specialist": 66.7
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 50
+    }
+   },
+   "godlike": {
+    "healthBonuses": {
+     "specialist": 85.3
+    },
+    "strengthBonuses": {
+     "specialist": 85.3
+    },
+    "playerOnlyStrengthBonuses": {
+     "specialistStrengthAgainstPlayers": 64
+    }
+   }
+  }
+ },
+ {
+  "name": "Emperor's Wrath",
+  "bonusesByQuality": {
+   "poor": {
+    "healthBonuses": {
+     "army": 5.4
+    },
+    "strengthBonuses": {
+     "army": 5.4
+    }
+   },
+   "common": {
+    "healthBonuses": {
+     "army": 8
+    },
+    "strengthBonuses": {
+     "army": 8
+    }
+   },
+   "uncommon": {
+    "healthBonuses": {
+     "army": 11.4
+    },
+    "strengthBonuses": {
+     "army": 11.4
+    }
+   },
+   "rare": {
+    "healthBonuses": {
+     "army": 15.4
+    },
+    "strengthBonuses": {
+     "army": 15.4
+    }
+   },
+   "epic": {
+    "healthBonuses": {
+     "army": 20
+    },
+    "strengthBonuses": {
+     "army": 20
+    }
+   },
+   "legendary": {
+    "healthBonuses": {
+     "army": 26
+    },
+    "strengthBonuses": {
+     "army": 26
+    }
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "army": 33.4
+    },
+    "strengthBonuses": {
+     "army": 33.4
+    }
+   },
+   "godlike": {
+    "healthBonuses": {
+     "army": 42.7
+    },
+    "strengthBonuses": {
+     "army": 42.7
+    }
+   }
+  }
+ },
+ {
+  "name": "Warrior of Ragnar\u00f6k",
+  "bonusesByQuality": {
+   "poor": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 15,
+     "doubleDamageChance": 0.1,
+     "strikeTwoSquadsChance": 0.1
+    }
+   },
+   "common": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 25,
+     "doubleDamageChance": 0.2,
+     "strikeTwoSquadsChance": 0.2
+    }
+   },
+   "uncommon": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 35,
+     "doubleDamageChance": 0.3,
+     "strikeTwoSquadsChance": 0.3
+    }
+   },
+   "rare": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 45,
+     "doubleDamageChance": 0.4,
+     "strikeTwoSquadsChance": 0.4
+    }
+   },
+   "epic": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 60,
+     "doubleDamageChance": 0.5,
+     "strikeTwoSquadsChance": 0.5
+    }
+   },
+   "legendary": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 90,
+     "doubleDamageChance": 0.8,
+     "strikeTwoSquadsChance": 0.8
+    }
+   },
+   "ascendant": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 140,
+     "doubleDamageChance": 1.2,
+     "strikeTwoSquadsChance": 1.2
+    }
+   },
+   "godlike": {
+    "specialStrengthBonuses": {
+     "armyStrengthAgainstEpicMonsters": 210,
+     "doubleDamageChance": 2,
+     "strikeTwoSquadsChance": 2
+    }
+   }
+  }
+ },
+ {
+  "name": "Immortal Warrior",
+  "bonusesByQuality": {
+   "uncommon": {
+    "healthBonuses": {
+     "army": 15
+    },
+    "strengthBonuses": {
+     "army": 15
+    },
+    "playerOnlyHealthBonuses": {
+     "armyHealthAgainstPlayers": 15
+    },
+    "playerOnlyStrengthBonuses": {
+     "armyStrengthAgainstPlayers": 15
+    },
+    "specialStrengthBonuses": {
+     "doubleDamageChance": 0.5
+    }
+   },
+   "rare": {
+    "healthBonuses": {
+     "army": 25
+    },
+    "strengthBonuses": {
+     "army": 25
+    },
+    "playerOnlyHealthBonuses": {
+     "armyHealthAgainstPlayers": 25
+    },
+    "playerOnlyStrengthBonuses": {
+     "armyStrengthAgainstPlayers": 25
+    },
+    "specialStrengthBonuses": {
+     "doubleDamageChance": 1
+    }
+   },
+   "epic": {
+    "healthBonuses": {
+     "army": 50
+    },
+    "strengthBonuses": {
+     "army": 50
+    },
+    "playerOnlyHealthBonuses": {
+     "armyHealthAgainstPlayers": 50
+    },
+    "playerOnlyStrengthBonuses": {
+     "armyStrengthAgainstPlayers": 50
+    },
+    "specialStrengthBonuses": {
+     "doubleDamageChance": 2
+    }
+   },
+   "legendary": {
+    "healthBonuses": {
+     "army": 60
+    },
+    "strengthBonuses": {
+     "army": 60
+    },
+    "playerOnlyHealthBonuses": {
+     "armyHealthAgainstPlayers": 60
+    },
+    "playerOnlyStrengthBonuses": {
+     "armyStrengthAgainstPlayers": 60
+    },
+    "specialStrengthBonuses": {
+     "doubleDamageChance": 2
+    }
+   },
+   "ascendant": {
+    "healthBonuses": {
+     "army": 75
+    },
+    "strengthBonuses": {
+     "army": 75
+    },
+    "playerOnlyHealthBonuses": {
+     "armyHealthAgainstPlayers": 75
+    },
+    "playerOnlyStrengthBonuses": {
+     "armyStrengthAgainstPlayers": 75
+    },
+    "specialStrengthBonuses": {
+     "doubleDamageChance": 2
+    }
+   },
+   "godlike": {
+    "healthBonuses": {
+     "army": 100
+    },
+    "strengthBonuses": {
+     "army": 100
+    },
+    "playerOnlyHealthBonuses": {
+     "armyHealthAgainstPlayers": 100
+    },
+    "playerOnlyStrengthBonuses": {
+     "armyStrengthAgainstPlayers": 100
+    },
+    "specialStrengthBonuses": {
+     "doubleDamageChance": 2
+    }
+   }
+  }
+ }
+]

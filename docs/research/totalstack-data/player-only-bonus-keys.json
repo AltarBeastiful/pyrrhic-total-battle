@@ -1,0 +1,56 @@
+[
+ {
+  "id": "armyStrengthAndHealthAgainstPlayers",
+  "healthKey": "armyHealthAgainstPlayers",
+  "strengthKey": "armyStrengthAgainstPlayers",
+  "label": "Army strength and health against players"
+ },
+ {
+  "id": "rangedStrengthAndHealthAgainstPlayers",
+  "healthKey": "rangedHealthAgainstPlayers",
+  "strengthKey": "rangedStrengthAgainstPlayers",
+  "label": "Ranged strength and health against players"
+ },
+ {
+  "id": "meleeStrengthAndHealthAgainstPlayers",
+  "healthKey": "meleeHealthAgainstPlayers",
+  "strengthKey": "meleeStrengthAgainstPlayers",
+  "label": "Melee strength and health against players"
+ },
+ {
+  "id": "mountedStrengthAndHealthAgainstPlayers",
+  "healthKey": "mountedHealthAgainstPlayers",
+  "strengthKey": "mountedStrengthAgainstPlayers",
+  "label": "Mounted strength and health against players"
+ },
+ {
+  "id": "flyingStrengthAndHealthAgainstPlayers",
+  "healthKey": "flyingHealthAgainstPlayers",
+  "strengthKey": "flyingStrengthAgainstPlayers",
+  "label": "Flying strength and health against players"
+ },
+ {
+  "id": "guardsmanStrengthAndHealthAgainstPlayers",
+  "healthKey": "guardsmanHealthAgainstPlayers",
+  "strengthKey": "guardsmanStrengthAgainstPlayers",
+  "label": "Guardsmen's strength and health against players"
+ },
+ {
+  "id": "specialistStrengthAndHealthAgainstPlayers",
+  "healthKey": "specialistHealthAgainstPlayers",
+  "strengthKey": "specialistStrengthAgainstPlayers",
+  "label": "Specialists' strength and health against players"
+ },
+ {
+  "id": "engineerStrengthAndHealthAgainstPlayers",
+  "healthKey": "engineerHealthAgainstPlayers",
+  "strengthKey": "engineerStrengthAgainstPlayers",
+  "label": "Engineers' strength and health against players"
+ },
+ {
+  "id": "monsterStrengthAndHealthAgainstPlayers",
+  "healthKey": "monsterHealthAgainstPlayers",
+  "strengthKey": "monsterStrengthAgainstPlayers",
+  "label": "Monsters' strength and health against players"
+ }
+]

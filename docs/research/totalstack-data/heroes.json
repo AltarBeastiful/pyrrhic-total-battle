@@ -1,0 +1,44 @@
+[
+ {
+  "name": "Hero - Svyatogor",
+  "healthArmyBonus": 50,
+  "strengthArmyBonus": 50
+ },
+ {
+  "name": "Hero - Haemon",
+  "healthArmyBonus": 0,
+  "strengthArmyBonus": 0,
+  "showInlineBonus": false
+ },
+ {
+  "name": "Hero - Meriones",
+  "healthArmyBonus": 0,
+  "strengthArmyBonus": 0,
+  "showInlineBonus": false
+ },
+ {
+  "name": "Personal Health Bonus",
+  "healthArmyBonus": 25,
+  "strengthArmyBonus": 0
+ },
+ {
+  "name": "Clan Health Bonus",
+  "healthArmyBonus": 25,
+  "strengthArmyBonus": 0
+ },
+ {
+  "name": "Personal Strength Bonus",
+  "healthArmyBonus": 0,
+  "strengthArmyBonus": 25
+ },
+ {
+  "name": "Clan Strength Bonus",
+  "healthArmyBonus": 0,
+  "strengthArmyBonus": 25
+ },
+ {
+  "name": "Kingdom Strength Bonus",
+  "healthArmyBonus": 0,
+  "strengthArmyBonus": 25
+ }
+]
