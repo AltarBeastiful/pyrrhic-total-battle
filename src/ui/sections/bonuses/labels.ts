@@ -122,11 +122,8 @@ export const AGAINST_LABELS: Record<StrengthAgainstKey, string> = {
   swarmUnits: 'swarm units',
 };
 
-/**
- * One line per key a source feeds, health and strength on the same line because that is how the game
- * writes them: "Guardsmen +20 % health / +20 % strength", "Double damage chance +5 %".
- */
-export function describeContribution(bonus: BonusLike): string[] {
+/** Every key a source feeds, gathered so health and strength of the same key share one line. */
+function collect(bonus: BonusLike, short: boolean): { label: string; parts: string[] }[] {
   const byKey = new Map<string, { label: string; parts: string[] }>();
   const add = (id: string, label: string, part: string): void => {
     const line = byKey.get(id) ?? { label, parts: [] };
@@ -135,10 +132,12 @@ export function describeContribution(bonus: BonusLike): string[] {
   };
 
   for (const [key, value] of Object.entries(bonus.health ?? {})) {
-    if (value) add(key, BONUS_LABELS[key as BonusKey], `${formatPercent(value)} health`);
+    if (value) add(key, BONUS_LABELS[key as BonusKey], `${formatPercent(value)} ${short ? 'HP' : 'health'}`);
   }
   for (const [key, value] of Object.entries(bonus.strength ?? {})) {
-    if (value) add(key, BONUS_LABELS[key as BonusKey], `${formatPercent(value)} strength`);
+    if (value) {
+      add(key, BONUS_LABELS[key as BonusKey], `${formatPercent(value)} ${short ? 'STR' : 'strength'}`);
+    }
   }
   for (const [key, value] of Object.entries(bonus.special ?? {})) {
     if (value) add(`special:${key}`, SPECIAL_LABELS[key as SpecialKey], formatPercent(value));
@@ -151,7 +150,24 @@ export function describeContribution(bonus: BonusLike): string[] {
     );
   }
 
-  return [...byKey.values()].map((line) => `${line.label} ${line.parts.join(' / ')}`);
+  return [...byKey.values()];
+}
+
+/**
+ * One line per key a source feeds, health and strength on the same line because that is how the game
+ * writes them: "Guardsmen +20 % health / +20 % strength", "Double damage chance +5 %".
+ */
+export function describeContribution(bonus: BonusLike): string[] {
+  return collect(bonus, false).map((line) => `${line.label} ${line.parts.join(' / ')}`);
+}
+
+/**
+ * The same thing in the shortest honest form, for a chip: "+78 % HP / +78 % STR melee". HP and STR
+ * are the game's own abbreviations, and the key name still ends the line so the chip's glyph repeats
+ * something written.
+ */
+export function chipLines(bonus: BonusLike): string[] {
+  return collect(bonus, true).map((line) => `${line.parts.join(' / ')} ${line.label.toLowerCase()}`);
 }
 
 /** The first key a source feeds: the one its chip glyph stands for. */
@@ -173,7 +189,7 @@ export interface ChipValue {
 
 /** What a source is worth, as a chip says it: two keys at most, then "+2 more". */
 export function chipValue(bonus: BonusLike, limit = 2): ChipValue {
-  const lines = describeContribution(bonus);
+  const lines = chipLines(bonus);
   const key = firstKey(bonus);
   const extra = lines.length - limit;
   const text =

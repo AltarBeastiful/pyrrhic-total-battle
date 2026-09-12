@@ -42,7 +42,7 @@ export function Popover({
           collisionPadding={12}
           {...(label === undefined ? {} : { 'aria-label': label })}
           className={cn(
-            'border-line bg-surface text-fg rounded-card shadow-pop z-50 max-w-[min(22rem,calc(100vw-1.5rem))] border p-3 text-sm',
+            'border-line bg-surface text-fg rounded-card shadow-pop z-50 max-h-[var(--radix-popover-content-available-height,80vh)] max-w-[min(22rem,calc(100vw-1.5rem))] overflow-y-auto border p-3 text-sm',
             className,
           )}
         >

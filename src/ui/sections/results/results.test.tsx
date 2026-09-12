@@ -285,7 +285,7 @@ test('keeping a left-out unit type in puts it back and remembers it', async () =
   const count = lastResult()?.result.stacks.find((stack) => stack.unitId === left)?.count ?? 0;
   fireEvent.click(screen.getByRole('button', { name: `${unitById(left)?.label ?? left} ${amount(count)}` }));
   const panel = await screen.findByLabelText(`${name} stack`);
-  fireEvent.click(within(panel).getByRole('button', { name: `Stop keeping it: ${name}` }));
+  fireEvent.click(within(panel).getByRole('button', { name: `Stop keeping ${name} in the march` }));
 
   await waitFor(() => {
     expect(setup()?.pinnedUnitIds).not.toContain(left);

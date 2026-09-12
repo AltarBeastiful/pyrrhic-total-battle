@@ -47,20 +47,25 @@ export function HpProfile({ stacks, units, kept, className }: HpProfileProps) {
     <figure className={cn('m-0 space-y-2', className)}>
       <figcaption className="text-muted text-xs">
         Total HP per stack, first to fall on top. The monster always hits the stack with the most health left,
-        so bars of similar length mean every stack gets to strike before it falls.
+        so bars of similar length mean every stack gets to strike before it falls. The bars use a square-root
+        scale so small stacks stay visible; the figures beside them are exact.
       </figcaption>
       <ul aria-label="Total HP per stack, first to fall first" className="space-y-1">
         {stacks.map((stack) => {
           const unit = findUnit(stack.unitId, units);
-          const width = Math.max(2, Math.round((stack.totalHp / widest) * 100));
+          // One scale for the whole list, so the bars still shorten from top to bottom in kill order —
+          // two per-group scales would put a short bar above a long one and lie about who falls first.
+          // The root keeps a 260 K troop stack readable next to a 6.5 M mercenary one (20 % against 100 %).
+          const width = Math.max(2, Math.round(Math.sqrt(Math.max(0, stack.totalHp) / widest) * 100));
           const isKept = kept.includes(stack.unitId);
           return (
             <li key={stack.unitId} className="relative flex items-center gap-2">
               <span className="bg-sunken border-line relative h-8 min-w-0 flex-1 overflow-hidden rounded-lg border">
                 <span
                   aria-hidden="true"
+                  data-hp-bar={String(width)}
                   style={{ width: `${String(width)}%` }}
-                  className={cn('absolute inset-y-0 left-0 border-l-4', POOL_BAR[stack.pool])}
+                  className={cn('absolute inset-y-0 left-0 min-w-[2px] border-l-4', POOL_BAR[stack.pool])}
                 />
                 <span className="relative flex h-full min-w-0 items-center gap-1.5 pr-2 pl-3 text-xs">
                   <UnitBadge {...unitBadge(unit, stack.pool)} size="sm" />

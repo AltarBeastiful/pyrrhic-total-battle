@@ -36,6 +36,7 @@ export function KeepButton({
       size={size}
       disabled={disabled}
       icon={kept ? <UnpinIcon /> : <PinIcon />}
+      aria-label={kept ? `Stop keeping ${name} in the march` : `Keep in march: ${name}`}
       {...(className === undefined ? {} : { className })}
       onClick={() => {
         if (kept) stopKeeping(unitId);
@@ -43,7 +44,6 @@ export function KeepButton({
       }}
     >
       {kept ? 'Stop keeping it' : 'Keep in march'}
-      <span className="sr-only">{`: ${name}`}</span>
     </Button>
   );
 }

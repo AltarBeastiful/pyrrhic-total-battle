@@ -79,7 +79,7 @@ export function Pill({
       )}
     >
       {locked ? (
-        <span className="flex min-h-11 items-center gap-1.5 py-1.5 pr-2 pl-2.5 font-medium sm:min-h-0">
+        <span className="flex min-h-11 min-w-0 items-center gap-1.5 py-1.5 pr-2 pl-2.5 font-medium sm:min-h-0">
           {body}
         </span>
       ) : (
@@ -90,7 +90,7 @@ export function Pill({
           onClick={() => {
             onToggle(!on);
           }}
-          className="rounded-chip flex min-h-11 items-center gap-1.5 py-1.5 pr-2 pl-2.5 font-medium disabled:cursor-not-allowed sm:min-h-0"
+          className="rounded-chip flex min-h-11 min-w-0 items-center gap-1.5 py-1.5 pr-2 pl-2.5 font-medium disabled:cursor-not-allowed sm:min-h-0"
         >
           {body}
         </button>

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { aggregateBonuses } from '@/engine/bonuses';
 import { describeTotals, resolveSources, sourceCaveats } from '@/state/derive';
+import type { BonusKey } from '@/data/types';
 import type { TotalRow } from '@/state/derive';
 import type { BattleSetup, Profile } from '@/state/schema';
 
@@ -50,6 +51,30 @@ function Rows({ rows, empty }: { rows: TotalRow[]; empty: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * A row with no breakdown behind it — the event strength, a matchup. Same columns as a key row, with
+ * an empty slot where the disclosure chevron sits, so every figure lines up down the card.
+ */
+function PlainRow({ name, label, value }: { name?: BonusKey | undefined; label: string; value: number }) {
+  return (
+    <li className="flex items-center gap-2 py-1.5">
+      <KeySlot name={name} />
+      <span className="truncate">{label}</span>
+      <span className="nums ml-auto font-medium">{formatPercent(value)}</span>
+      <span aria-hidden="true" className="w-[1.15em] shrink-0" />
+    </li>
+  );
+}
+
+/** The caption of a sub-list inside a total card. */
+function SubCaption({ children }: { children: string }) {
+  return (
+    <p className="text-muted border-line mt-2 border-t pt-2 text-xs font-semibold tracking-wide uppercase">
+      {children}
+    </p>
   );
 }
 
@@ -113,20 +138,24 @@ export function TotalsBlock({ profile, setup }: { profile: Profile; setup: Battl
         <TotalCard name="Strength" headline={valueOf(totals.strength, 'army')} headlineLabel="Whole army">
           <Rows rows={used(totals.strength)} empty="No strength bonus is switched on." />
           {totals.eventStrength !== 0 && (
-            <p className="border-line mt-2 flex items-center justify-between gap-2 border-t pt-2 text-sm">
-              <span>From events</span>
-              <span className="nums font-medium">{formatPercent(totals.eventStrength)}</span>
-            </p>
+            <ul className="border-line mt-2 border-t text-sm">
+              <PlainRow label="From events" value={totals.eventStrength} />
+            </ul>
           )}
           {totals.matchup.length > 0 && (
-            <ul className="text-muted nums mt-2 space-y-0.5 text-xs">
-              {totals.matchup.map((entry, index) => (
-                <li key={`${entry.attacker}-${entry.target}-${String(index)}`}>
-                  {BONUS_LABELS[entry.attacker]} against {AGAINST_LABELS[entry.target]}{' '}
-                  {formatPercent(entry.value)}
-                </li>
-              ))}
-            </ul>
+            <>
+              <SubCaption>Against a squad type</SubCaption>
+              <ul className="divide-line divide-y text-sm">
+                {totals.matchup.map((entry, index) => (
+                  <PlainRow
+                    key={`${entry.attacker}-${entry.target}-${String(index)}`}
+                    name={entry.attacker}
+                    label={`${BONUS_LABELS[entry.attacker]} against ${AGAINST_LABELS[entry.target]}`}
+                    value={entry.value}
+                  />
+                ))}
+              </ul>
+            </>
           )}
         </TotalCard>
 

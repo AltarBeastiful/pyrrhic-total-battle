@@ -55,10 +55,13 @@ export function ChipGrid({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap gap-2">{children}</div>;
 }
 
-/** The short value a chip carries, clipped so one wordy source cannot stretch the whole row. */
+/**
+ * The short value a chip carries. It wraps onto a second line rather than cutting a word in half,
+ * and stops there — anything longer is in the editor behind the gear.
+ */
 export function ChipValueText({ children }: { children: string }) {
   return (
-    <span className="nums block max-w-[11rem] truncate" title={children}>
+    <span className="nums line-clamp-2 block max-w-[13rem] text-left" title={children}>
       {children}
     </span>
   );
