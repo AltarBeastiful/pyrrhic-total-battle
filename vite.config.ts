@@ -23,7 +23,7 @@ export default defineConfig({
     // UI tests opt into jsdom with a `// @vitest-environment jsdom` docblock
     // (see src/App.test.tsx); `environmentMatchGlobs` was removed in Vitest 4.
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['tests/**/*.test.ts', 'tools/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
     restoreMocks: true,
   },
