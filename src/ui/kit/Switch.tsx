@@ -18,14 +18,19 @@ export interface SwitchProps {
 const switchStyles = tv({
   slots: {
     root: fieldRoot,
-    button: 'group flex min-h-11 w-full cursor-pointer items-center gap-3 outline-none sm:min-h-9',
+    button: 'group flex min-h-11 w-full cursor-pointer items-center gap-3 outline-none sm:min-h-10',
+    // Material 3's switch: a 52 × 32 track with no outline of its own, and a thumb that grows from
+    // 16 px to 24 px as it travels — the size change is what says "on" as loudly as the colour does.
     track: cn(
-      'border-line bg-sunken rounded-chip flex h-6 w-11 shrink-0 items-center border p-0.5',
-      'selected:bg-accent selected:border-accent motion-safe:transition-colors',
+      'bg-sunken rounded-chip flex h-8 w-13 shrink-0 items-center p-1',
+      'group-selected:bg-accent motion-safe:transition-colors',
       ringFromGroup,
     ),
-    thumb:
-      'bg-surface rounded-chip shadow-card size-5 group-selected:translate-x-5 motion-safe:transition-transform',
+    thumb: cn(
+      'bg-field rounded-chip size-4 translate-x-1',
+      'group-selected:bg-accent-fg group-selected:size-6 group-selected:translate-x-5',
+      'motion-safe:transition-all motion-safe:duration-fast',
+    ),
     label: fieldLabel,
     description: fieldDescription,
   },

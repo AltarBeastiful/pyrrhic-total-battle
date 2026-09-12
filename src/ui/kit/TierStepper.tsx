@@ -5,8 +5,8 @@ import { tv } from 'tailwind-variants';
 
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
 import { cn } from './cn';
-import { fieldBox, fieldLabel, fieldRoot, ringWithin } from './fieldStyles';
-import { ring } from './styles';
+import { fieldBox, fieldButton, fieldHeight, fieldLabel, fieldRoot, ringWithin } from './fieldStyles';
+import { ring, stateLayer } from './styles';
 
 export interface TierStepperProps {
   /** The visible name of the end being set ("Guardsmen from", "Monsters to"). */
@@ -51,30 +51,32 @@ const tierStyles = tv({
   slots: {
     root: fieldRoot,
     label: fieldLabel,
-    box: cn(fieldBox, 'w-fit overflow-hidden', ringWithin),
-    arrow: cn(
-      'text-muted hover:text-fg hover:bg-raised focus-visible:bg-raised flex shrink-0 items-center justify-center',
-      'disabled:cursor-not-allowed disabled:opacity-30 motion-safe:transition-colors',
-      ring,
-    ),
+    box: cn(fieldBox, fieldHeight, 'w-fit overflow-hidden', ringWithin),
+    arrow: cn(fieldButton, 'disabled:opacity-30'),
     value: cn(
-      'font-display nums text-fg hover:bg-raised flex shrink-0 items-center justify-center px-2 text-center',
+      'font-display nums text-fg rounded-control flex shrink-0 items-center justify-center px-2 text-center',
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
-      ring,
+      stateLayer,
+      'outline-none focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2',
     ),
-    popover: 'rounded-card border-line bg-surface shadow-pop max-w-full border p-2',
-    strip: 'flex flex-wrap gap-1',
+    popover: 'rounded-card bg-raised shadow-pop max-w-full p-3',
+    strip: 'flex flex-wrap gap-2',
     chip: cn(
-      'font-display nums rounded-control border-field/60 bg-sunken text-fg flex min-h-11 min-w-11 items-center',
-      'justify-center border px-2 sm:min-h-9 sm:min-w-9',
-      'hover:text-fg selected:bg-accent selected:border-accent selected:text-accent-fg',
+      'font-display nums rounded-control border-field/60 text-fg flex min-h-11 min-w-11 items-center',
+      'justify-center border bg-transparent px-2 sm:min-h-10 sm:min-w-10',
+      'selected:bg-accent-soft selected:border-transparent selected:text-fg',
+      stateLayer,
       ring,
     ),
   },
   variants: {
     size: {
-      sm: { arrow: 'size-9 sm:size-8', value: 'min-h-9 min-w-12 text-base sm:min-h-8' },
-      md: { arrow: 'size-11 sm:size-9', value: 'min-h-11 min-w-14 text-lg sm:min-h-9' },
+      sm: {
+        box: 'min-h-10 sm:min-h-9',
+        arrow: 'size-10 sm:size-9',
+        value: 'min-h-10 min-w-12 text-base sm:min-h-9',
+      },
+      md: { arrow: 'size-11 sm:size-10', value: 'min-h-11 min-w-14 text-lg sm:min-h-10' },
     },
   },
   defaultVariants: { size: 'md' },

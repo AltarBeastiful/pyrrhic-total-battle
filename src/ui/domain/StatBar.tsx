@@ -8,7 +8,7 @@ import { tv } from 'tailwind-variants';
 import { cn } from '../kit/cn';
 
 const block = tv({
-  base: 'flex min-w-0 flex-col gap-1.5',
+  base: 'flex min-w-0 flex-col gap-2',
 });
 
 const row = tv({

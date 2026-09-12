@@ -11,7 +11,7 @@ import { cn } from './cn';
 
 const tooltip = tv({
   base: [
-    'max-w-64 rounded-control border border-line bg-raised px-2 py-1 font-sans text-xs text-fg shadow-pop',
+    'max-w-64 rounded-control bg-raised px-2 py-1 font-sans text-xs text-fg shadow-pop',
     'motion-safe:transition-opacity motion-safe:duration-fast entering:opacity-0 exiting:opacity-0',
   ],
 });

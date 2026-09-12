@@ -13,7 +13,7 @@ import { GROUP_EDGE_BG, GROUP_LABEL } from './unitGroup';
 import type { UnitGroup } from './unitGroup';
 
 const marker = tv({
-  base: 'inline-flex shrink-0 items-center gap-1.5 text-base',
+  base: 'inline-flex shrink-0 items-center gap-2 text-base',
 });
 
 const bar = tv({

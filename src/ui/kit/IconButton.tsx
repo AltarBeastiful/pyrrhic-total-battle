@@ -7,23 +7,24 @@ import { Button as RACButton, type ButtonProps as RACButtonProps } from 'react-a
 import { tv } from 'tailwind-variants';
 
 import { cn } from './cn';
-import { disabledLook, ring } from './styles';
+import { disabledLook, ring, stateLayer } from './styles';
 
 const iconButton = tv({
   base: [
-    'inline-flex shrink-0 items-center justify-center rounded-control border',
+    'inline-flex shrink-0 items-center justify-center rounded-control',
     'transition-colors motion-safe:duration-fast',
+    stateLayer,
     ring,
     disabledLook,
   ],
   variants: {
     variant: {
-      quiet: 'border-transparent bg-transparent text-fg hovered:bg-raised pressed:bg-sunken',
-      secondary: 'border-field bg-surface text-fg hovered:bg-raised pressed:bg-sunken',
+      quiet: 'text-fg bg-transparent',
+      secondary: 'border-field/60 text-fg border bg-transparent',
     },
     size: {
       sm: 'min-h-11 min-w-11 text-sm sm:min-h-8 sm:min-w-8',
-      md: 'min-h-11 min-w-11 text-base sm:min-h-9 sm:min-w-9',
+      md: 'min-h-11 min-w-11 text-base sm:min-h-10 sm:min-w-10',
     },
   },
   defaultVariants: { variant: 'quiet', size: 'md' },

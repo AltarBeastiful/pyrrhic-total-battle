@@ -3,9 +3,10 @@ import type { ReactNode } from 'react';
 import { ToggleButton, ToggleButtonGroup } from 'react-aria-components';
 import { tv } from 'tailwind-variants';
 
+import { CheckIcon } from '../icons';
 import { cn } from './cn';
 import { fieldLabel, fieldRoot } from './fieldStyles';
-import { ring } from './styles';
+import { ring, stateLayer } from './styles';
 
 type ToggleSize = 'sm' | 'md';
 
@@ -43,18 +44,22 @@ const toggleStyles = tv({
   slots: {
     root: fieldRoot,
     label: fieldLabel,
-    group: 'flex flex-wrap gap-1.5',
+    group: 'flex flex-wrap gap-2',
+    // Material 3's filter chip: outlined while it is off, tonal with a leading check once it is on.
+    // A chip never carries an outline *and* a fill at the same time.
     item: cn(
-      'rounded-chip border-field/60 bg-sunken text-muted flex items-center justify-center gap-1.5 border font-medium',
-      'hover:text-fg hover:border-field selected:bg-accent-soft selected:border-accent-line selected:text-fg',
+      'group rounded-chip border-field/60 text-muted flex items-center justify-center gap-2 border bg-transparent',
+      'font-medium selected:bg-accent-soft selected:border-transparent selected:text-fg',
+      stateLayer,
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
       ring,
     ),
+    check: 'hidden shrink-0 group-selected:block',
   },
   variants: {
     size: {
-      sm: { item: 'min-h-9 px-2.5 text-xs sm:min-h-8' },
-      md: { item: 'min-h-11 px-3 text-sm sm:min-h-9' },
+      sm: { item: 'min-h-9 px-3 text-xs sm:min-h-8' },
+      md: { item: 'min-h-11 px-4 text-sm sm:min-h-10' },
     },
     orientation: {
       horizontal: { group: 'flex-row' },
@@ -109,6 +114,7 @@ export function ToggleItem({ id, label, children, isDisabled = false, className 
 
   return (
     <ToggleButton id={id} aria-label={label} className={cn(styles.item(), className)} isDisabled={isDisabled}>
+      <CheckIcon aria-hidden="true" className={styles.check()} />
       {children}
     </ToggleButton>
   );

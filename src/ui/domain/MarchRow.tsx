@@ -13,7 +13,7 @@ import { tv } from 'tailwind-variants';
 
 import type { UnitDef } from '../../data/types';
 import { cn } from '../kit/cn';
-import { ring } from '../kit/styles';
+import { ring, stateLayerDom } from '../kit/styles';
 import { UnitTile } from './UnitTile';
 import { GROUP_EDGE_LEFT, unitGroupOf } from './unitGroup';
 
@@ -53,7 +53,11 @@ const cell = tv({
 });
 
 const countButton = tv({
-  base: 'text-stat font-display rounded-control px-1 leading-none tabular-nums',
+  base: cn(
+    'text-stat font-display rounded-control px-1 leading-none tabular-nums',
+    'motion-safe:transition-colors',
+    stateLayerDom,
+  ),
 });
 
 /** "falls 3rd" — the position in the kill order, said the way a player says it. */
@@ -176,7 +180,7 @@ export function MarchRow({
         </span>
       </td>
       <td className={cell()}>
-        <span className="flex flex-col items-end gap-0.5">
+        <span className="flex flex-col items-end gap-1">
           <button
             type="button"
             onClick={handleCopy}

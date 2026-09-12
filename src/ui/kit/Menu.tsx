@@ -20,18 +20,20 @@ import {
 import { tv } from 'tailwind-variants';
 
 import { cn } from './cn';
-import { ring, tapTarget } from './styles';
+import { ring, stateLayer, tapTarget } from './styles';
 
 const menu = tv({
   slots: {
+    // A menu is one of the few things that floats: `raised` plus level-2 elevation, the medium
+    // shape, 12 px of inner padding and 8 px items inside it.
     popover: [
-      'min-w-48 max-w-80 overflow-auto rounded-card border border-line bg-surface p-1 shadow-pop',
+      'min-w-48 max-w-80 overflow-auto rounded-card bg-raised p-3 shadow-pop',
       'motion-safe:transition-all motion-safe:duration-fast entering:opacity-0 exiting:opacity-0',
     ],
-    list: 'max-h-96 overflow-y-auto outline-none',
-    section: 'mb-1 flex flex-col last:mb-0',
-    sectionTitle: 'px-3 pt-2 pb-1 font-sans text-xs font-semibold tracking-wide text-muted uppercase',
-    separator: 'my-1 h-px w-full bg-line',
+    list: 'flex max-h-96 flex-col gap-1 overflow-y-auto outline-none',
+    section: 'mb-2 flex flex-col gap-1 last:mb-0',
+    sectionTitle: 'px-2 pt-1 pb-1 font-sans text-xs font-semibold tracking-wide text-muted uppercase',
+    separator: 'my-2 h-px w-full bg-line',
   },
 });
 
@@ -39,9 +41,12 @@ const menuItem = tv({
   base: [
     'flex cursor-pointer items-center gap-3 rounded-control px-3 py-2 font-sans text-base',
     'transition-colors motion-safe:duration-fast',
-    'focused:bg-raised hovered:bg-raised selected:bg-accent-soft',
+    'focus:bg-fg/8 selected:bg-accent-soft',
+    stateLayer,
     'disabled:cursor-not-allowed disabled:opacity-50',
     tapTarget,
+    // The item's own focus mark is the `focus:` state layer above: React Aria drives a menu by
+    // virtual focus, so `data-focus-visible` is only set when the menu was opened from the keyboard.
     ring,
   ],
   variants: {
@@ -52,10 +57,11 @@ const menuItem = tv({
 
 const segmentItem = tv({
   base: [
-    'flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-control border border-transparent',
-    'px-3 py-1.5 font-sans text-sm text-fg transition-colors motion-safe:duration-fast',
-    'focused:border-field hovered:bg-raised',
-    'selected:border-transparent selected:bg-accent selected:text-accent-fg',
+    'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-control border border-transparent',
+    'px-3 py-2 font-sans text-sm text-fg transition-colors motion-safe:duration-fast',
+    'focus:bg-fg/8',
+    'selected:border-transparent selected:bg-accent-soft selected:text-fg',
+    stateLayer,
     tapTarget,
     ring,
   ],
@@ -181,9 +187,9 @@ export function MenuSegment({ label, value, onChange, options, className }: Menu
         const [first] = [...keys];
         if (typeof first === 'string') onChange(first);
       }}
-      className={cn(section(), 'flex-row flex-wrap items-center gap-1 px-1 pb-1', className)}
+      className={cn(section(), 'flex-row flex-wrap items-center gap-1', className)}
     >
-      <Header className={cn(sectionTitle(), 'w-full px-2')}>{label}</Header>
+      <Header className={cn(sectionTitle(), 'w-full')}>{label}</Header>
       {options.map((option) => (
         <RACMenuItem key={option.value} id={option.value} textValue={option.label} className={segmentItem()}>
           {option.icon === undefined ? null : <span className="shrink-0">{option.icon}</span>}

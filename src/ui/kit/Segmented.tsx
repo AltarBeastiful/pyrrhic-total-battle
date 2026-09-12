@@ -3,9 +3,10 @@ import type { ReactNode } from 'react';
 import { ToggleButton, ToggleButtonGroup } from 'react-aria-components';
 import { tv } from 'tailwind-variants';
 
+import { CheckIcon } from '../icons';
 import { cn } from './cn';
-import { fieldLabel, fieldRoot } from './fieldStyles';
-import { ring } from './styles';
+import { fieldHeight, fieldLabel, fieldRoot } from './fieldStyles';
+import { ring, stateLayer } from './styles';
 
 export interface SegmentedOption {
   value: string;
@@ -31,18 +32,24 @@ const segmentedStyles = tv({
   slots: {
     root: fieldRoot,
     label: fieldLabel,
-    group: 'rounded-control border-field/60 bg-sunken flex w-full gap-0.5 border p-0.5',
+    // Material 3's segmented button: one outlined container, hairline dividers between the segments,
+    // and the chosen one marked by a tonal fill and a check — never a solid accent block.
+    group: 'rounded-control border-field/60 divide-field/60 flex w-full divide-x overflow-hidden border',
     item: cn(
-      'rounded-control text-muted flex flex-1 items-center justify-center gap-1.5 px-3 font-medium',
-      'hover:text-fg hover:bg-raised selected:bg-accent selected:text-accent-fg',
+      'group text-muted flex min-w-0 flex-1 items-center justify-center gap-2 px-2 font-medium sm:px-3',
+      'selected:bg-accent-soft selected:text-fg',
+      stateLayer,
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
       ring,
+      'focus-visible:-outline-offset-2',
     ),
+    check: 'hidden size-4 shrink-0 group-selected:block',
+    icon: 'shrink-0 group-selected:hidden',
   },
   variants: {
     size: {
-      sm: { item: 'min-h-9 text-xs sm:min-h-8' },
-      md: { item: 'min-h-11 text-sm sm:min-h-9' },
+      sm: { item: 'min-h-10 text-xs sm:min-h-9' },
+      md: { item: cn(fieldHeight, 'text-sm') },
     },
   },
   defaultVariants: { size: 'md' },
@@ -89,7 +96,8 @@ export function Segmented({
             className={styles.item()}
             isDisabled={option.isDisabled ?? false}
           >
-            {option.icon}
+            <CheckIcon aria-hidden="true" className={styles.check()} />
+            {option.icon === undefined ? null : <span className={styles.icon()}>{option.icon}</span>}
             <span className="truncate">{option.label}</span>
           </ToggleButton>
         ))}

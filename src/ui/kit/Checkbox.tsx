@@ -18,9 +18,12 @@ export interface CheckboxProps {
 
 const checkboxStyles = tv({
   slots: {
-    button: 'group flex min-h-11 cursor-pointer items-center gap-3 outline-none sm:min-h-9',
+    button: 'group flex min-h-11 cursor-pointer items-center gap-3 outline-none sm:min-h-10',
+    // Material 3's checkbox: an 18 px box drawn with a 2 px stroke, transparent until it is ticked
+    // and then filled with the accent — a border *or* a fill, never both.
     box: cn(
-      'border-field/60 bg-sunken rounded-control flex size-5 shrink-0 items-center justify-center border',
+      'border-field rounded-sm flex size-4.5 shrink-0 items-center justify-center border-2 bg-transparent',
+      'motion-safe:transition-colors',
       'group-selected:bg-accent group-selected:border-accent group-selected:text-accent-fg',
       'group-indeterminate:bg-accent group-indeterminate:border-accent group-indeterminate:text-accent-fg',
       ringFromGroup,
@@ -36,10 +39,13 @@ const checkboxStyles = tv({
   defaultVariants: { isDisabled: false },
 });
 
+/** The glyph is sized to the box rather than to the text beside it: 14 px inside the 18 px square. */
+const MARK = 'size-3.5';
+
 /** The mark inside the box: a dash when the state is mixed, a tick when it is on, nothing when off. */
 function mark(isSelected: boolean, isIndeterminate: boolean) {
-  if (isIndeterminate) return <MinusIcon />;
-  if (isSelected) return <CheckIcon />;
+  if (isIndeterminate) return <MinusIcon className={MARK} />;
+  if (isSelected) return <CheckIcon className={MARK} />;
   return null;
 }
 

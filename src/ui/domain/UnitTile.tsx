@@ -1,7 +1,9 @@
 /**
  * The unit tile (design plan §6.2). One object in three sizes that replaces the old "G3 Melee" chip,
- * the `UnitBadge` and the stack chip: the group's soft background and strong ink, a 2 px left bar in
- * the group's edge colour, the category silhouette, and the tier numeral as the biggest thing on it.
+ * the `UnitBadge` and the stack chip: the group's soft background and strong ink inside one hairline
+ * in the group's edge colour, the category silhouette, and the tier numeral as the biggest thing on
+ * it. The hairline goes all the way round rather than sitting as a 2 px bar down the left: the bar
+ * read as the march table's row edge, and at `sm` it ate an eighth of a 32 px tile (D-17).
  *
  * Colour is never the only signal — the silhouette, the numeral and the short code say the same
  * thing, and the accessible name spells all of it out ("Archer, tier 3, on").
@@ -30,7 +32,7 @@ import {
 import type { IconProps } from '../icons';
 import { cn } from '../kit/cn';
 import { ring } from '../kit/styles';
-import { GROUP_LABEL, GROUP_TONE, unitGroupOf } from './unitGroup';
+import { GROUP_LABEL, GROUP_OUTLINE, GROUP_TONE, unitGroupOf } from './unitGroup';
 import type { UnitGroup } from './unitGroup';
 
 /** How long a pointer has to stay down before it counts as a long press. */
@@ -74,9 +76,11 @@ const hit = tv({
 });
 
 const box = tv({
-  base: 'rounded-control flex min-w-0 items-center overflow-hidden border-l-2 select-none',
+  base: 'rounded-control flex min-w-0 items-center overflow-hidden border select-none',
   variants: {
     group: GROUP_TONE,
+    /** Declared after `group` so the softened hairline wins over the tone's full-strength edge. */
+    outline: GROUP_OUTLINE,
     size: {
       sm: 'h-8 w-8 flex-col justify-center px-0.5',
       md: 'h-11 w-14 flex-col justify-center gap-0.5 px-1',
@@ -84,9 +88,9 @@ const box = tv({
     },
     state: {
       on: '',
-      off: 'border border-dashed opacity-70 saturate-50',
+      off: 'border-dashed opacity-70 saturate-50',
       pinned: '',
-      leftOut: 'bg-sunken text-muted border-l-line',
+      leftOut: 'bg-sunken text-muted border-line',
     },
     isSelected: {
       true: 'ring-accent ring-2',
@@ -200,7 +204,7 @@ export function UnitTile({
 
   const visual = (
     <>
-      <span className={cn(box({ group, size, state, isSelected }))} aria-hidden="true">
+      <span className={cn(box({ group, outline: group, size, state, isSelected }))} aria-hidden="true">
         {size === 'lg' ? (
           <>
             <Glyph className={glyph({ size })} />

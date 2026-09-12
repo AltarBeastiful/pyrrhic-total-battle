@@ -13,7 +13,7 @@ const PERCENT = ' %'; // narrow no-break space, the typographic rule for a uni
 const MINUS = '−';
 
 const wrapper = tv({
-  base: 'inline-flex items-baseline gap-1.5',
+  base: 'inline-flex items-baseline gap-2',
 });
 
 const delta = tv({

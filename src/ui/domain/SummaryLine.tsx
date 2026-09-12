@@ -16,7 +16,7 @@ const line = tv({
 });
 
 const part = tv({
-  base: 'inline-flex min-w-0 items-center gap-1.5',
+  base: 'inline-flex min-w-0 items-center gap-2',
   variants: { muted: { true: 'text-muted', false: 'text-fg' } },
   defaultVariants: { muted: false },
 });

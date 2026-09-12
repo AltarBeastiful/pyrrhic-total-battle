@@ -3,8 +3,15 @@ import { tv } from 'tailwind-variants';
 
 import { CloseIcon, SearchIcon } from '../icons';
 import { cn } from './cn';
-import { fieldBox, fieldInput, fieldLabel, fieldRoot, ringWithin } from './fieldStyles';
-import { ring } from './styles';
+import {
+  fieldBox,
+  fieldButton,
+  fieldHeight,
+  fieldInput,
+  fieldLabel,
+  fieldRoot,
+  ringWithin,
+} from './fieldStyles';
 
 export interface SearchFieldProps {
   /** The visible name of what is being searched ("Find a mercenary"). */
@@ -23,14 +30,10 @@ const searchStyles = tv({
   slots: {
     root: fieldRoot,
     label: fieldLabel,
-    box: cn(fieldBox, 'min-h-11 gap-1 px-2 sm:min-h-9', ringWithin),
+    box: cn(fieldBox, fieldHeight, 'gap-2 px-2', ringWithin),
     icon: 'text-muted shrink-0',
     input: cn(fieldInput, 'text-base sm:text-sm'),
-    clear: cn(
-      'text-muted hover:text-fg rounded-control flex size-8 shrink-0 items-center justify-center',
-      'motion-safe:transition-colors',
-      ring,
-    ),
+    clear: cn(fieldButton, 'size-8'),
   },
 });
 

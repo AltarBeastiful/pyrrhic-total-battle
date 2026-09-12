@@ -27,8 +27,11 @@ const sheet = tv({
       'sm:items-stretch sm:justify-end',
       'motion-safe:transition-opacity motion-safe:duration-sheet entering:opacity-0 exiting:opacity-0',
     ],
+    // Material 3 shape scale: a bottom sheet's top corners are extra-large, a side sheet's leading
+    // edge is one step down. `rounded-t-sheet` is 24 px and stands in for the 28 px `--radius-sheet`
+    // this pass asked for; swap it the moment the token lands in `src/index.css`.
     modal: [
-      'flex max-h-dvh w-full flex-col overflow-hidden rounded-t-card border border-line bg-surface shadow-modal',
+      'flex max-h-dvh w-full flex-col overflow-hidden rounded-t-sheet bg-raised shadow-modal',
       'sm:h-dvh sm:rounded-t-none sm:rounded-l-card',
       'motion-safe:transition-transform motion-safe:duration-sheet',
       'entering:translate-y-full exiting:translate-y-full',
@@ -38,7 +41,7 @@ const sheet = tv({
     dialog: 'flex min-h-0 flex-1 flex-col outline-none',
     header: 'flex items-start gap-3 border-b border-line px-4 py-3 sm:px-5',
     title: 'font-display text-lg text-fg',
-    description: 'mt-1 block text-sm text-muted',
+    description: 'mt-2 block text-sm text-muted',
     body: 'min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5',
     footer: 'flex flex-wrap justify-end gap-2 border-t border-line px-4 py-3 sm:px-5',
   },

@@ -1,10 +1,16 @@
 /**
  * The action of the kit. Four voices — `primary` carries the accent and there is at most one on a
- * screen, `secondary` is the ordinary bordered action, `quiet` is plain text on a hover surface
- * (never underlined, never accent-coloured), `danger` is the destructive one.
+ * screen, `secondary` is Material 3's outlined button (one hairline, no fill), `quiet` is the text
+ * button (no hairline, no fill), `danger` is the destructive one.
+ *
+ * Hover, press and keyboard focus are Material 3 **state layers** rather than a second colour per
+ * variant: 8 % of the on-colour on hover, 10 % on press and on focus. Over a neutral ground that is
+ * a tint of `fg`; over the accent and the danger fills it is an `::after` in the on-colour, because
+ * a tint of the foreground would be invisible there.
  *
  * Looks are declared once with `tv()`; state comes from React Aria's data attributes through the
- * `tailwindcss-react-aria-components` variants (`hovered:`, `pressed:`, `disabled:`), never from a
+ * `tailwindcss-react-aria-components` variants (`hover:`, `pressed:`, `disabled:` — the plugin maps
+ * `hover:` and `focus:` onto React Aria's `data-hovered`/`data-focused`), never from a
  * ternary that builds a class string.
  */
 import type { ReactNode, Ref } from 'react';
@@ -12,26 +18,29 @@ import { Button as RACButton, type ButtonProps as RACButtonProps } from 'react-a
 import { tv } from 'tailwind-variants';
 
 import { cn } from './cn';
-import { disabledLook, ring, tapTarget } from './styles';
+import { controlHeight, disabledLook, ring, stateLayer, stateLayerOn } from './styles';
+
+/** The state layer an accent- or danger-filled button wears, clipped to the control radius. */
+const filledLayer = cn(stateLayerOn, 'after:rounded-control');
 
 const button = tv({
   base: [
-    'inline-flex items-center justify-center gap-2 rounded-control border font-sans font-medium',
+    'inline-flex items-center justify-center gap-2 rounded-control font-sans font-medium',
     'transition-colors motion-safe:duration-fast',
     'pending:cursor-progress',
-    tapTarget,
+    controlHeight,
     ring,
     disabledLook,
   ],
   variants: {
     variant: {
-      primary: 'border-transparent bg-accent text-accent-fg hovered:opacity-90 pressed:opacity-80',
-      secondary: 'border-field bg-surface text-fg hovered:bg-raised pressed:bg-sunken',
-      quiet: 'border-transparent bg-transparent text-fg hovered:bg-raised pressed:bg-sunken',
-      danger: 'border-transparent bg-danger text-danger-fg hovered:opacity-90 pressed:opacity-80',
+      primary: cn('bg-accent text-accent-fg', filledLayer),
+      secondary: cn('border-field/60 text-fg border bg-transparent', stateLayer),
+      quiet: cn('text-fg bg-transparent', stateLayer),
+      danger: cn('bg-danger text-danger-fg', filledLayer),
     },
     size: {
-      sm: 'px-3 text-sm',
+      sm: 'px-3 text-sm min-h-10 sm:min-h-9',
       md: 'px-4 text-base',
       lg: 'px-5 text-lg min-h-12 sm:min-h-11',
     },

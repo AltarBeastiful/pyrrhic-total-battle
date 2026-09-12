@@ -13,8 +13,8 @@ import { tv } from 'tailwind-variants';
 
 import { CheckIcon, ChevronDownIcon } from '../icons';
 import { cn } from './cn';
-import { fieldBox, fieldDescription, fieldLabel, fieldRoot } from './fieldStyles';
-import { ring } from './styles';
+import { fieldBox, fieldDescription, fieldHeight, fieldLabel, fieldRoot } from './fieldStyles';
+import { stateLayer } from './styles';
 
 export interface SelectOption {
   value: string;
@@ -47,18 +47,22 @@ const selectStyles = tv({
     label: fieldLabel,
     trigger: cn(
       fieldBox,
+      fieldHeight,
       'text-fg w-full justify-between gap-2 px-3 text-left',
-      'hover:border-field disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
-      ring,
+      'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
+      stateLayer,
+      'outline-none focus-visible:border-accent focus-visible:outline-1 focus-visible:outline-accent',
+      'focus-visible:-outline-offset-1 focus-visible:ring-0',
     ),
     value: 'min-w-0 flex-1 truncate placeholder:text-muted',
     chevron: 'text-muted shrink-0',
     description: fieldDescription,
-    popover: 'rounded-card border-line bg-surface shadow-pop w-(--trigger-width) border p-1',
-    listbox: 'flex max-h-64 flex-col gap-0.5 overflow-auto outline-none',
+    popover: 'rounded-card bg-raised shadow-pop w-(--trigger-width) p-3',
+    listbox: 'flex max-h-64 flex-col gap-1 overflow-auto outline-none',
     item: cn(
       'group rounded-control text-fg flex cursor-pointer items-center gap-2 px-2 py-2 outline-none',
-      'focus:bg-accent-soft selected:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50',
+      'focus:bg-fg/8 hover:bg-fg/8 pressed:bg-fg/10 selected:bg-accent-soft',
+      'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
     ),
     itemText: 'flex min-w-0 flex-1 flex-col',
     itemLabel: 'truncate text-sm',
@@ -67,8 +71,8 @@ const selectStyles = tv({
   },
   variants: {
     size: {
-      sm: { trigger: 'min-h-9 text-xs sm:min-h-8' },
-      md: { trigger: 'min-h-11 text-sm sm:min-h-9' },
+      sm: { trigger: 'min-h-10 text-xs sm:min-h-9' },
+      md: { trigger: 'text-sm' },
     },
   },
   defaultVariants: { size: 'md' },

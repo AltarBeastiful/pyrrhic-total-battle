@@ -2,6 +2,9 @@
  * A short, non-interactive mark: a count, a tier, a state word. Semantic tones say what something
  * *is*; the five group tones identify a troop group and are never used for a state — the design
  * plan keeps those two colour systems apart on purpose.
+ *
+ * A badge is a tonal fill and nothing else: the outline it used to carry made every count on the
+ * page read as a control you could press.
  */
 import type { ReactNode } from 'react';
 import { tv } from 'tailwind-variants';
@@ -9,20 +12,20 @@ import { tv } from 'tailwind-variants';
 import { cn } from './cn';
 
 const badge = tv({
-  base: 'inline-flex shrink-0 items-center gap-1 rounded-chip border font-sans font-medium whitespace-nowrap tabular-nums',
+  base: 'inline-flex shrink-0 items-center gap-1 rounded-chip font-sans font-medium whitespace-nowrap tabular-nums',
   variants: {
     tone: {
-      neutral: 'border-line bg-raised text-fg',
-      accent: 'border-accent-line bg-accent-soft text-accent',
-      info: 'border-info bg-info-soft text-info',
-      ok: 'border-ok bg-ok-soft text-ok',
-      warn: 'border-warn bg-warn-soft text-warn',
-      danger: 'border-danger bg-danger-soft text-danger',
-      guardsmen: 'border-group-guardsmen-edge bg-group-guardsmen-soft text-group-guardsmen-strong',
-      specialists: 'border-group-specialists-edge bg-group-specialists-soft text-group-specialists-strong',
-      engineers: 'border-group-engineers-edge bg-group-engineers-soft text-group-engineers-strong',
-      monsters: 'border-group-monsters-edge bg-group-monsters-soft text-group-monsters-strong',
-      mercenaries: 'border-group-mercenaries-edge bg-group-mercenaries-soft text-group-mercenaries-strong',
+      neutral: 'bg-raised text-fg',
+      accent: 'bg-accent-soft text-accent',
+      info: 'bg-info-soft text-info',
+      ok: 'bg-ok-soft text-ok',
+      warn: 'bg-warn-soft text-warn',
+      danger: 'bg-danger-soft text-danger',
+      guardsmen: 'bg-group-guardsmen-soft text-group-guardsmen-strong',
+      specialists: 'bg-group-specialists-soft text-group-specialists-strong',
+      engineers: 'bg-group-engineers-soft text-group-engineers-strong',
+      monsters: 'bg-group-monsters-soft text-group-monsters-strong',
+      mercenaries: 'bg-group-mercenaries-soft text-group-mercenaries-strong',
     },
     size: {
       sm: 'px-2 py-0.5 text-xs',

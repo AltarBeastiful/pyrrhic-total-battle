@@ -24,7 +24,7 @@ const POOL_GLYPH = {
 } as const;
 
 const field = tv({
-  base: 'flex min-w-0 flex-col gap-1',
+  base: 'flex min-w-0 flex-col gap-2',
 });
 
 const value = tv({
@@ -60,7 +60,7 @@ export function PoolField({ pool, used, total, className }: PoolFieldProps) {
 
   return (
     <div className={cn(field(), className)}>
-      <span className="text-muted flex items-center gap-1.5 text-sm">
+      <span className="text-muted flex items-center gap-2 text-sm">
         <Glyph aria-hidden="true" className="h-4 w-4 shrink-0" />
         {label}
       </span>

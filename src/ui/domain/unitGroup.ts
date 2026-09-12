@@ -76,7 +76,20 @@ export const GROUP_EDGE_BG: Record<UnitGroup, string> = {
   mercenaries: 'bg-group-mercenaries-edge',
 };
 
-/** The edge colour on the left border only: the tile's bar and the march row's edge. */
+/**
+ * The edge colour as a whole hairline, softened so it frames the tonal fill instead of boxing it in:
+ * the unit tile's outline (design plan D-17 — one step of tone and one hairline, never a bar as
+ * well).
+ */
+export const GROUP_OUTLINE: Record<UnitGroup, string> = {
+  guardsmen: 'border-group-guardsmen-edge/40',
+  specialists: 'border-group-specialists-edge/40',
+  engineers: 'border-group-engineers-edge/40',
+  monsters: 'border-group-monsters-edge/40',
+  mercenaries: 'border-group-mercenaries-edge/40',
+};
+
+/** The edge colour on the left border only: the march row's edge. */
 export const GROUP_EDGE_LEFT: Record<UnitGroup, string> = {
   guardsmen: 'border-l-group-guardsmen-edge',
   specialists: 'border-l-group-specialists-edge',

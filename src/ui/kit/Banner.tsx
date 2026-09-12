@@ -12,18 +12,18 @@ import { IconButton } from './IconButton';
 
 const banner = tv({
   slots: {
-    root: 'flex items-start gap-3 rounded-card border p-3 sm:p-4',
-    glyph: 'mt-0.5 shrink-0',
+    root: 'flex items-start gap-3 rounded-card p-3 sm:p-4',
+    glyph: 'mt-1 shrink-0',
     title: 'font-sans text-base font-semibold',
     body: 'min-w-0 flex-1 text-sm',
     actions: 'mt-2 flex flex-wrap gap-2',
   },
   variants: {
     tone: {
-      info: { root: 'border-info bg-info-soft text-fg', glyph: 'text-info' },
-      warn: { root: 'border-warn bg-warn-soft text-fg', glyph: 'text-warn' },
-      danger: { root: 'border-danger bg-danger-soft text-fg', glyph: 'text-danger' },
-      ok: { root: 'border-ok bg-ok-soft text-fg', glyph: 'text-ok' },
+      info: { root: 'bg-info-soft text-fg', glyph: 'text-info' },
+      warn: { root: 'bg-warn-soft text-fg', glyph: 'text-warn' },
+      danger: { root: 'bg-danger-soft text-fg', glyph: 'text-danger' },
+      ok: { root: 'bg-ok-soft text-fg', glyph: 'text-ok' },
     },
   },
   defaultVariants: { tone: 'info' },

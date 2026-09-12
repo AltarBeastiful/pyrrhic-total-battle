@@ -17,7 +17,7 @@ import { cn } from './cn';
 const popover = tv({
   slots: {
     surface: [
-      'max-h-96 w-72 max-w-full overflow-y-auto rounded-card border border-line bg-surface p-4 shadow-pop',
+      'max-h-96 w-72 max-w-full overflow-y-auto rounded-card bg-raised p-4 shadow-pop',
       'motion-safe:transition-all motion-safe:duration-fast entering:opacity-0 exiting:opacity-0',
     ],
     panel: 'text-base text-fg outline-none',

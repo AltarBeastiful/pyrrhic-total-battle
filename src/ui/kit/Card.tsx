@@ -1,7 +1,9 @@
 /**
- * The one panel shape: 12 px corners, a hairline edge and a flat surface. `tone` moves it up or
- * down the neutral stack, or tints it when the panel itself carries a meaning (an accent summary,
- * an informational aside). Nothing else in the kit draws a box.
+ * The one panel shape: Material 3's **filled** card — 12 px corners (the medium shape), one tonal
+ * step away from the surface under it, no outline and no shadow. `tone` moves it up or down the
+ * neutral stack, or tints it when the panel itself carries a meaning (an accent summary, an
+ * informational aside). Elevation is reserved for what floats: menus, popovers, sheets, dialogs.
+ * Nothing else in the kit draws a box.
  */
 import type { ElementType, HTMLAttributes, ReactNode } from 'react';
 import { tv } from 'tailwind-variants';
@@ -9,16 +11,16 @@ import { tv } from 'tailwind-variants';
 import { cn } from './cn';
 
 const card = tv({
-  base: 'rounded-card border',
+  base: 'rounded-card',
   variants: {
     tone: {
-      surface: 'border-line bg-surface text-fg',
-      raised: 'border-line bg-raised text-fg shadow-card',
-      sunken: 'border-line bg-sunken text-fg',
-      accent: 'border-accent-line bg-accent-soft text-fg',
-      info: 'border-info bg-info-soft text-fg',
-      warn: 'border-warn bg-warn-soft text-fg',
-      danger: 'border-danger bg-danger-soft text-fg',
+      surface: 'bg-surface text-fg',
+      raised: 'bg-raised text-fg',
+      sunken: 'bg-sunken text-fg',
+      accent: 'bg-accent-soft text-fg',
+      info: 'bg-info-soft text-fg',
+      warn: 'bg-warn-soft text-fg',
+      danger: 'bg-danger-soft text-fg',
     },
     padding: {
       none: 'p-0',

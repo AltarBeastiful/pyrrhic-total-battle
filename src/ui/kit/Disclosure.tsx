@@ -14,23 +14,28 @@ import { tv } from 'tailwind-variants';
 
 import { ChevronDownIcon } from '../icons';
 import { cn } from './cn';
-import { ring, tapTarget } from './styles';
+import { ring, stateLayer, tapTarget } from './styles';
 
 const disclosure = tv({
   slots: {
-    root: 'rounded-card border border-line bg-surface',
+    root: 'rounded-card bg-surface',
     heading: 'm-0',
     trigger: [
       'group flex w-full cursor-pointer items-center gap-3 rounded-card px-4 py-3 text-left',
       'font-sans text-base text-fg transition-colors motion-safe:duration-fast',
-      'hovered:bg-raised pressed:bg-sunken disabled:cursor-not-allowed disabled:opacity-50',
+      stateLayer,
+      'disabled:cursor-not-allowed disabled:opacity-50',
       tapTarget,
       ring,
     ],
     title: 'font-medium',
     summary: 'min-w-0 flex-1 truncate text-sm text-muted',
     chevron: 'shrink-0 transition-transform motion-safe:duration-fast group-aria-expanded:rotate-180',
-    panel: 'border-t border-line px-4 py-4',
+    // React Aria renders the collapsed panel with `hidden="until-found"`, which hides the *contents*
+    // but still lays the box out: padding and a border on the panel itself left an empty ruled band
+    // under every closed card. They live on an inner wrapper instead, so closed means closed.
+    panel: '',
+    panelInner: 'border-t border-line px-4 py-4',
   },
 });
 
@@ -73,7 +78,9 @@ export function Disclosure({
           <ChevronDownIcon className={d.chevron()} />
         </RACButton>
       </Heading>
-      <DisclosurePanel className={d.panel()}>{children}</DisclosurePanel>
+      <DisclosurePanel className={d.panel()}>
+        <div className={d.panelInner()}>{children}</div>
+      </DisclosurePanel>
     </RACDisclosure>
   );
 }

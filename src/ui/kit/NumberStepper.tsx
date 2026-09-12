@@ -15,14 +15,15 @@ import { MinusIcon, PlusIcon } from '../icons';
 import { cn } from './cn';
 import {
   fieldBox,
+  fieldButton,
   fieldDescription,
   fieldError,
+  fieldHeight,
   fieldInput,
   fieldLabel,
   fieldRoot,
   ringWithin,
 } from './fieldStyles';
-import { ring } from './styles';
 
 export interface NumberStepperProps {
   /** The visible name of the number ("Leadership", "Owned"). */
@@ -56,13 +57,9 @@ const stepperStyles = tv({
   slots: {
     root: fieldRoot,
     label: fieldLabel,
-    box: cn(fieldBox, 'overflow-hidden', ringWithin),
+    box: cn(fieldBox, fieldHeight, 'overflow-hidden', ringWithin),
     input: cn(fieldInput, 'px-1 text-center'),
-    step: cn(
-      'text-muted hover:text-fg hover:bg-raised focus-visible:bg-raised flex shrink-0 items-center justify-center',
-      'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
-      ring,
-    ),
+    step: fieldButton,
     affix: 'text-muted shrink-0 px-1 text-sm',
     description: fieldDescription,
     error: fieldError,
@@ -70,18 +67,17 @@ const stepperStyles = tv({
   variants: {
     size: {
       sm: {
-        box: 'min-h-9 sm:min-h-8',
+        box: 'min-h-10 sm:min-h-9',
         input: 'text-sm',
-        step: 'size-9 sm:size-8',
+        step: 'size-10 sm:size-9',
       },
       md: {
-        box: 'min-h-11 sm:min-h-9',
         input: 'text-base sm:text-sm',
-        step: 'size-11 sm:size-9',
+        step: 'size-11 sm:size-10',
       },
     },
     isInvalid: {
-      true: { box: 'border-danger' },
+      true: { box: 'border-danger focus-within:border-danger focus-within:outline-danger' },
       false: {},
     },
   },

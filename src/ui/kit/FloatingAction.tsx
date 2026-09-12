@@ -20,14 +20,17 @@ import { tv } from 'tailwind-variants';
 
 import { Spinner } from './Button';
 import { cn } from './cn';
-import { ring } from './styles';
+import { ring, stateLayerOn } from './styles';
+
+/** The extended FAB is a filled surface, so its state layer is the on-colour, pill-shaped like it. */
+const filledLayer = cn(stateLayerOn, 'after:rounded-chip');
 
 const fab = tv({
   slots: {
     anchor: 'fixed right-fab bottom-fab z-40',
     root: [
       'relative inline-flex items-center justify-center gap-2',
-      'min-h-14 min-w-14 rounded-chip border border-transparent font-sans font-medium',
+      'min-h-14 min-w-14 rounded-chip font-sans font-medium',
       'shadow-pop transition-colors motion-safe:duration-fast',
       ring,
     ],
@@ -35,10 +38,10 @@ const fab = tv({
   },
   variants: {
     state: {
-      ready: { root: 'bg-accent text-accent-fg hovered:opacity-90 pressed:opacity-80' },
-      stale: { root: 'bg-accent text-accent-fg hovered:opacity-90 pressed:opacity-80' },
-      running: { root: 'bg-accent text-accent-fg hovered:opacity-90 pressed:opacity-80' },
-      blocked: { root: 'cursor-not-allowed border-line bg-raised text-muted' },
+      ready: { root: cn('bg-accent text-accent-fg', filledLayer) },
+      stale: { root: cn('bg-accent text-accent-fg', filledLayer) },
+      running: { root: cn('bg-accent text-accent-fg', filledLayer) },
+      blocked: { root: 'bg-raised text-muted cursor-not-allowed' },
     },
     showLabel: {
       true: { root: 'px-5' },

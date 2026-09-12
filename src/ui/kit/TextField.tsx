@@ -2,8 +2,7 @@ import { Input, Label, TextField as RACTextField, Text } from 'react-aria-compon
 import { tv } from 'tailwind-variants';
 
 import { cn } from './cn';
-import { fieldBox, fieldDescription, fieldError, fieldLabel, fieldRoot } from './fieldStyles';
-import { ring } from './styles';
+import { fieldBox, fieldDescription, fieldError, fieldHeight, fieldLabel, fieldRoot } from './fieldStyles';
 
 export interface TextFieldProps {
   /** The visible name of what is being typed. */
@@ -28,16 +27,18 @@ const textFieldStyles = tv({
     label: fieldLabel,
     input: cn(
       fieldBox,
-      'text-fg placeholder:text-muted min-h-11 w-full min-w-0 px-3 text-base sm:min-h-9 sm:text-sm',
+      fieldHeight,
+      'text-fg placeholder:text-muted w-full min-w-0 px-3 text-base sm:text-sm',
       'disabled:cursor-not-allowed disabled:opacity-50',
-      ring,
+      'outline-none focus-visible:border-accent focus-visible:outline-1 focus-visible:outline-accent',
+      'focus-visible:-outline-offset-1 focus-visible:ring-0',
     ),
     description: fieldDescription,
     error: fieldError,
   },
   variants: {
     isInvalid: {
-      true: { input: 'border-danger' },
+      true: { input: 'border-danger focus-visible:border-danger focus-visible:outline-danger' },
       false: {},
     },
   },

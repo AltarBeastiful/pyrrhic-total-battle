@@ -29,7 +29,7 @@ const selectable = tv({
     // content height, and a two-line row would spill over the one below it.
     item: cn(
       'group text-fg flex w-full shrink-0 cursor-pointer items-center gap-3 px-3 py-2 text-left outline-none',
-      'hovered:bg-raised selected:bg-accent-soft pressed:bg-sunken',
+      'hover:bg-raised selected:bg-accent-soft pressed:bg-sunken',
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
       'focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2',
       tapTarget,

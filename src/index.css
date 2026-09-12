@@ -153,6 +153,8 @@
   /* Radii. `card` is the one panels use, `control` every button and field, `chip` the pill round. */
   --radius-card: 0.75rem;
   --radius-control: 0.5rem;
+  --radius-panel: 1rem; /* M3 large: side-sheet leading edge */
+  --radius-sheet: 1.75rem; /* M3 extra-large: bottom-sheet top corners */
   --radius-chip: 999px;
 
   /* Elevation. Three steps only: a card sits on the page, a popover floats, a dialog owns it. */
