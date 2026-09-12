@@ -8,6 +8,7 @@
   "include": [
     "vite.config.ts",
     "playwright.config.ts",
+    "playwright.visual.config.ts",
     "eslint.config.js",
     "e2e",
     "scripts",

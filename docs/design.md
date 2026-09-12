@@ -15,51 +15,80 @@ browser** — no icon fetch, no web font request, no analytics pixel.
 
 ## 1. Palette
 
-Two palettes, one set of names. Light is warm bone and parchment with ink-brown text; dark is deep slate-ink
-with a warm bone text. The accent is **bronze** in light, **amber** in dark — the same hue family, so the app
-reads the same in both. A second, **cool blue** accent exists for information only.
+Two layers, one set of names (`docs/plans/design-overhaul.md` §6.1). A **neutral base** carries almost
+everything: a near-black blue-grey in dark, warm bone and paper in light. **Group colours** identify units and
+nothing else. The bronze/amber **accent** survives only as the action colour — the same hue family in both
+themes, used ten times less than before. A steel **blue** informs, and never acts.
 
 Light is the base (`:root`); dark comes from `[data-theme="dark"]` and from `prefers-color-scheme` when the
-player has not chosen (the theme select writes the attribute).
+player has not chosen (the theme select writes the attribute). Both dark blocks are identical by construction —
+`pnpm contrast` fails if they drift.
+
+### Neutral base, accent and states
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg` | `#f8f3e9` | `#0d1019` | The page. Carries a barely-there two-wash gradient (`--pyr-texture`). |
-| `surface` | `#fffdf9` | `#161b25` | Cards, sections, dialogs, popovers: anything that holds content. |
-| `raised` | `#f1eadd` | `#222732` | A block *inside* a card: a metric tile, a drawer header, a hover state. |
-| `sunken` | `#eae2d2` | `#0b0e16` | A well: a read-only figure, the share-link textarea. |
-| `fg` | `#281e16` | `#f0ece5` | Body text. 14.7:1 / 16.2:1 on `bg`. |
-| `muted` | `#63574d` | `#a7acb8` | Labels, hints, secondary lines. 6.3:1 / 8.4:1 on `bg` — still body-text legal. |
-| `line` | `#dcd4c7` | `#303541` | **Decoration only**: card edges, dividers. Never the boundary of a control. |
-| `field` | `#8f8274` | `#6e7583` | The border of anything you can type in or press. 3.4:1 / 4.1:1 on `bg` (WCAG 1.4.11). |
-| `accent` | `#8e5017` | `#eaad5e` | Actions: primary buttons, the on-state, focus rings, links. |
-| `accent-fg` | `#fffdfa` | `#181008` | Text on a filled accent. 6.3:1 / 9.6:1. |
-| `accent-soft` | `#f8e2ca` | `#432c12` | The on-state background of a chip, the section icon chip. |
-| `accent-line` | — | — | A soft bronze hairline: the ring on an open section, a hover border. |
-| `info` | `#136292` | `#72bbe5` | Information, never action: the dashed line in the hero, help marks. |
-| `info-soft` | `#d4e9fa` | `#173142` | Background of an informational block. |
-| `ok` | `#1d6e42` | `#76cc95` | Saved, within budget, nothing to fix. |
-| `warn` | `#846400` | `#e4be5b` | Worked, but look at it: ties, unused capacity, unsaved changes. |
-| `danger` | `#b32926` | `#f67972` | Destructive, or over capacity. |
-| `*-soft` | see CSS | see CSS | The matching tinted surface for `ok` / `warn` / `danger` / `info`. |
-| `group-guardsmen` | `#215d96` | `#76b0eb` | Unit-group identity. |
-| `group-specialist` | `#714290` | `#c79de6` | ″ |
-| `group-engineers` | `#006a61` | `#6dc3b8` | ″ |
-| `group-monster` | `#9d343b` | `#f28788` | ″ |
+| `bg` | `#f6f4ef` | `#101319` | The page. Carries a barely-there two-wash gradient (`--pyr-texture`). |
+| `surface` | `#ffffff` | `#181c24` | Cards, sheets, dialogs, popovers: anything that holds content. |
+| `raised` | `#eeebe4` | `#20252f` | A block *inside* a card: a metric tile, a header strip, a hover state. |
+| `sunken` | `#e9e5db` | `#0a0d12` | A well: a read-only figure, the share-link textarea. |
+| `fg` | `#1c1a17` | `#e9e6df` | Body text. 13.8:1 / 12.3:1 at worst. |
+| `muted` | `#5f5b55` | `#a7a49c` | Labels, hints, secondary lines. 5.4:1 / 6.2:1 — still body-text legal. |
+| `line` | `#ddd8ce` | `#2b303a` | **Decoration only**: card edges, dividers. Never the boundary of a control. |
+| `field` | `#857f76` | `#6b7484` | The border and well of anything you can type in or press. ≥ 3:1 (WCAG 1.4.11). |
+| `accent` | `#8e5017` | `#d9963c` | Actions: primary buttons, the on-state, focus rings, links. |
+| `accent-fg` | `#fff8f0` | `#17120a` | Text on a filled accent. 6.0:1 / 7.4:1. |
+| `accent-soft` | `#f6e3cc` | `#3a2a12` | The on-state background of a chip, an active tile. |
+| `accent-line` | `#ab7238` | `#9c7440` | A bronze hairline: the ring on an open card, a hover border. ≥ 3:1. |
+| `info` | `#14608f` | `#74bde4` | Information, never action: help marks, "this is what we computed". |
+| `info-fg` / `info-soft` | `#ffffff` / `#dfeaf7` | `#0a1319` / `#132a38` | Ink on a filled info; an informational block. |
+| `ok` | `#1c6b40` | `#6fcf97` | Saved, within budget, nothing to fix. |
+| `ok-fg` / `ok-soft` | `#ffffff` / `#d9efe2` | `#071a0f` / `#14301f` | ″ |
+| `warn` | `#a24409` | `#f0a468` | Worked, but look at it: ties, unused capacity, unsaved changes. |
+| `warn-fg` / `warn-soft` | `#fff8f3` / `#fbe1d1` | `#1a1109` / `#3c2415` | ″ |
+| `danger` | `#ae2a20` | `#f2857c` | Destructive, or over capacity. |
+| `danger-fg` / `danger-soft` | `#fff7f6` / `#f9dedb` | `#1f0a08` / `#3a1a17` | ″ |
 
-**Checked, not guessed.** Every text token clears **4.5:1** on `bg`, `surface`, `raised` and on every soft
-surface, in both themes; every UI token (`field` and the semantic colours used as a border or a mark) clears
-**3:1** on the three base surfaces; `accent-fg` on `accent` and `danger-fg` on `danger` clear 4.5:1. The four
-group hues clear 4.5:1 too, so a group colour may carry text as well as a ring. `line` is deliberately below
-3:1 — it is never load-bearing.
+`warn` is a **red-shifted amber** (hue ≈ 22° light, 27° dark), deliberately away from the engineers amber
+(≈ 38°/40°), and it always carries the triangle glyph: the two can never be confused at a glance.
+
+### Group colours
+
+One hue per group, three parts each: `soft` is the tile background, `strong` the tile ink and the summary-line
+marker, `edge` the 2 px bar on a tile and the left edge of a result row.
+
+| Group | Light `soft` / `strong` / `edge` | Dark `soft` / `strong` / `edge` |
+|---|---|---|
+| Guardsmen (green) | `#dff3df` / `#1f6b2e` / `#0b8024` | `#173321` / `#7fd48f` / `#63e585` |
+| Specialists (blue) | `#dde9f7` / `#1f4f8a` / `#0d4d9c` | `#172436` / `#7fb2f0` / `#78b4ff` |
+| Engineers (amber) | `#f8ecd0` / `#7a5410` / `#8a5a0a` | `#352a14` / `#e6b85c` / `#f1bc51` |
+| Monsters (violet) | `#ebe0f5` / `#5b2f8a` / `#5a0eab` | `#2a1e38` / `#c39af0` / `#c394f6` |
+| Mercenaries (red) | `#f8dede` / `#8a2424` / `#a10d0d` | `#38191b` / `#f08a8a` / `#f58585` |
+
+The legacy single-value names `group-guardsmen`, `group-specialist`, `group-engineers`, `group-monster` are
+aliases of the matching `strong` ink and live only until the last old section is replaced.
+
+### Checked, not guessed
+
+`pnpm contrast` (`scripts/contrast-check.ts`) parses `src/index.css`, resolves both themes and fails the build
+on any pair below its floor. 170 pairs, all passing:
+
+| Rule | What it covers | Lowest light | Lowest dark |
+|---|---|---|---|
+| **4.5:1** (1.4.3) | `fg`, `muted`, every tone and every group `strong` on `bg`, `surface`, `raised`, `sunken` and on its own `*-soft`; every `*-fg` on its filled tone | **4.96** (`warn` on `sunken`) | **5.51** (`accent` on `accent-soft`) |
+| **3:1** (1.4.11) | `field` and `accent-line` on the four surfaces; every group `edge` on `surface` and on its own `soft` | **3.15** (`field` on `sunken`) | **3.26** (`field` on `raised`) |
+
+`line` is the one token deliberately below 3:1 (1.13 light / 1.16 dark): it draws card edges and dividers, never
+the boundary of a control, so the checker prints it for information and never fails on it. Controls use `field`.
 
 Rules:
 
-- **Colour is never the only signal.** An on-state chip has a tick *and* an accent border; a warning has a
-  glyph *and* a tone; a unit badge has a glyph *and* a numeral beside its group colour.
+- **Colour is never the only signal.** A unit tile has a glyph, a tier numeral and a code beside its group
+  colour; a warning has the triangle glyph *and* the tone; an on-state has a tick *and* an accent border.
 - **One primary per view.** The bronze fill means "this is the thing to press" (Generate, Share, Confirm).
 - **`info` never means "press me".** It marks something the app is telling you.
-- Group hues identify a unit, never a state.
+- Group hues identify a unit, never a state — the mercenaries red and `danger` share a hue family on purpose,
+  and are told apart by where they appear (a tile) and what sits next to them (a glyph).
 
 ## 2. Surfaces — which one, when
 

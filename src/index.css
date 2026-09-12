@@ -9,7 +9,8 @@
 /* ---------------------------------------------------------------------------------------------
    Design tokens. Components only ever use these (`bg-surface`, `text-muted`, `border-line`,
    `font-display`, `shadow-card`…), so the whole look changes here and nowhere else.
-   `docs/design.md` documents what each one is for.
+   `docs/design.md` documents what each one is for, `docs/plans/design-overhaul.md` §6 why.
+   `pnpm contrast` re-checks every pair in this file against WCAG 2.2.
    --------------------------------------------------------------------------------------------- */
 @theme inline {
   /* Type. A system serif carries the display voice (ADR-0002: no third-party font, no CDN);
@@ -18,6 +19,20 @@
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Five steps and a figure size (plan §6.3). The floor is 13 px: nothing smaller ships. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 2rem;
+  --text-stat: 1.75rem;
+  --text-stat--line-height: 2rem;
 
   /* Surfaces and ink. */
   --color-bg: var(--pyr-bg);
@@ -40,7 +55,7 @@
   --color-info-fg: var(--pyr-info-fg);
   --color-info-soft: var(--pyr-info-soft);
 
-  /* Semantic states. */
+  /* Semantic states. `warn` is a red-shifted amber so it never reads as the engineers hue. */
   --color-danger: var(--pyr-danger);
   --color-danger-fg: var(--pyr-danger-fg);
   --color-danger-soft: var(--pyr-danger-soft);
@@ -51,166 +66,235 @@
   --color-ok-fg: var(--pyr-ok-fg);
   --color-ok-soft: var(--pyr-ok-soft);
 
-  /* One hue per troop group; they identify a unit badge, never a state. */
-  --color-group-guardsmen: var(--pyr-group-guardsmen);
-  --color-group-specialist: var(--pyr-group-specialist);
-  --color-group-engineers: var(--pyr-group-engineers);
-  --color-group-monster: var(--pyr-group-monster);
+  /* One hue per troop group; they identify a unit, never a state. Three parts each:
+     `soft` is the tile background, `strong` the tile ink and marker, `edge` the 2 px bar. */
+  --color-group-guardsmen-soft: var(--pyr-group-guardsmen-soft);
+  --color-group-guardsmen-strong: var(--pyr-group-guardsmen-strong);
+  --color-group-guardsmen-edge: var(--pyr-group-guardsmen-edge);
+  --color-group-specialists-soft: var(--pyr-group-specialists-soft);
+  --color-group-specialists-strong: var(--pyr-group-specialists-strong);
+  --color-group-specialists-edge: var(--pyr-group-specialists-edge);
+  --color-group-engineers-soft: var(--pyr-group-engineers-soft);
+  --color-group-engineers-strong: var(--pyr-group-engineers-strong);
+  --color-group-engineers-edge: var(--pyr-group-engineers-edge);
+  --color-group-monsters-soft: var(--pyr-group-monsters-soft);
+  --color-group-monsters-strong: var(--pyr-group-monsters-strong);
+  --color-group-monsters-edge: var(--pyr-group-monsters-edge);
+  --color-group-mercenaries-soft: var(--pyr-group-mercenaries-soft);
+  --color-group-mercenaries-strong: var(--pyr-group-mercenaries-strong);
+  --color-group-mercenaries-edge: var(--pyr-group-mercenaries-edge);
 
-  /* Radii. `card` is the one panels use; `chip` is the pill/badge round. */
-  --radius-card: 0.875rem;
+  /* Legacy single-value group names. They point at the new `strong` inks and stay until the
+     last old section is replaced; nothing new may use them. */
+  --color-group-guardsmen: var(--pyr-group-guardsmen-strong);
+  --color-group-specialist: var(--pyr-group-specialists-strong);
+  --color-group-engineers: var(--pyr-group-engineers-strong);
+  --color-group-monster: var(--pyr-group-monsters-strong);
+
+  /* Radii. `card` is the one panels use, `control` every button and field, `chip` the pill round. */
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
   --radius-chip: 999px;
 
   /* Elevation. Three steps only: a card sits on the page, a popover floats, a dialog owns it. */
   --shadow-card: var(--pyr-shadow-card);
   --shadow-pop: var(--pyr-shadow-pop);
   --shadow-modal: var(--pyr-shadow-modal);
+
+  /* Motion. `duration-fast` for state changes, `duration-sheet` for a sheet or dialog; both are
+     wrapped in `motion-safe:` at the call site. Tailwind resolves `duration-*` from this
+     namespace, so the readable `--duration-*` names below are what you edit. */
+  --transition-duration-fast: var(--duration-fast);
+  --transition-duration-sheet: var(--duration-sheet);
+
+  /* The floating button's offset, safe-area aware: `bottom-fab`, `right-fab`, `pb-fab`. One token,
+     so the button keeps the same gap from both edges even where the phone's bottom inset is
+     larger than 1rem. `max()` with `env()` is a valid spacing value in Tailwind v4. */
+  --spacing-fab: max(1rem, env(safe-area-inset-bottom));
 }
 
-/* Light is the base palette — warm bone and parchment, ink-brown text, bronze accent.
+/* Light is the base palette — warm bone and parchment, near-black ink, bronze accent.
    Dark is applied by the attribute the theme toggle sets and, when no attribute is present
-   (first paint, JS disabled), by the OS preference: deep slate-ink with an amber accent.
+   (first paint, JS disabled), by the OS preference: near-black blue-grey with an amber accent.
+   The two dark blocks below are deliberately identical; `pnpm contrast` fails if they drift.
 
-   Every value is checked against WCAG 2.2 (`docs/design.md` carries the table): text tokens
-   (`fg`, `muted`, `accent`, `info`, `danger`, `warn`, `ok`, every `group-*`) clear 4.5:1 on
-   `bg`, `surface`, `raised` and on every soft surface in both themes, and `field` — the border
-   of anything you can type in or press — clears 3:1 on `surface` and `bg` (1.4.11). `line`
-   stays low-contrast on purpose: it only ever draws decorative dividers and card edges, never
-   the boundary of a control. */
+   Every value is checked against WCAG 2.2 by `pnpm contrast` (`docs/design.md` §1 carries the
+   table): text tokens (`fg`, `muted`, `accent`, `info`, `danger`, `warn`, `ok`, every group
+   `strong`) clear 4.5:1 on `bg`, `surface`, `raised`, `sunken` and on their own soft surface in
+   both themes; `field` — the border of anything you can type in or press — clears 3:1 on the
+   base surfaces (1.4.11), as do `accent-line` and every group `edge`. `line` stays below 3:1 on
+   purpose: it only ever draws card edges and dividers, never the boundary of a control. */
 :root {
-  --pyr-bg: oklch(0.965 0.014 84);
-  --pyr-surface: oklch(0.995 0.006 84);
-  --pyr-raised: oklch(0.938 0.018 82);
-  --pyr-sunken: oklch(0.915 0.022 82);
-  --pyr-fg: oklch(0.245 0.022 62);
-  --pyr-muted: oklch(0.465 0.022 62);
-  --pyr-line: oklch(0.872 0.02 78);
-  --pyr-field: oklch(0.615 0.026 70);
+  /* Motion is the same in both themes. */
+  --duration-fast: 120ms;
+  --duration-sheet: 200ms;
 
-  --pyr-accent: oklch(0.495 0.107 58);
-  --pyr-accent-fg: oklch(0.995 0.004 84);
-  --pyr-accent-soft: oklch(0.925 0.04 70);
-  --pyr-accent-line: oklch(0.78 0.07 66);
+  --pyr-bg: #f6f4ef;
+  --pyr-surface: #ffffff;
+  --pyr-raised: #eeebe4;
+  --pyr-sunken: #e9e5db;
+  --pyr-fg: #1c1a17;
+  --pyr-muted: #5f5b55;
+  --pyr-line: #ddd8ce;
+  --pyr-field: #857f76;
 
-  --pyr-info: oklch(0.475 0.105 242);
-  --pyr-info-fg: oklch(0.995 0.004 84);
-  --pyr-info-soft: oklch(0.925 0.032 242);
+  --pyr-accent: #8e5017;
+  --pyr-accent-fg: #fff8f0;
+  --pyr-accent-soft: #f6e3cc;
+  --pyr-accent-line: #ab7238;
 
-  --pyr-danger: oklch(0.505 0.175 27);
-  --pyr-danger-fg: oklch(0.995 0.004 84);
-  --pyr-danger-soft: oklch(0.93 0.04 27);
-  --pyr-warn: oklch(0.52 0.115 88);
-  --pyr-warn-fg: oklch(0.995 0.004 84);
-  --pyr-warn-soft: oklch(0.935 0.055 92);
-  --pyr-ok: oklch(0.48 0.105 155);
-  --pyr-ok-fg: oklch(0.995 0.004 84);
-  --pyr-ok-soft: oklch(0.925 0.045 155);
+  --pyr-info: #14608f;
+  --pyr-info-fg: #ffffff;
+  --pyr-info-soft: #dfeaf7;
 
-  --pyr-group-guardsmen: oklch(0.47 0.11 250);
-  --pyr-group-specialist: oklch(0.47 0.13 310);
-  --pyr-group-engineers: oklch(0.47 0.085 185);
-  --pyr-group-monster: oklch(0.48 0.14 20);
+  --pyr-danger: #ae2a20;
+  --pyr-danger-fg: #fff7f6;
+  --pyr-danger-soft: #f9dedb;
+  --pyr-warn: #a24409;
+  --pyr-warn-fg: #fff8f3;
+  --pyr-warn-soft: #fbe1d1;
+  --pyr-ok: #1c6b40;
+  --pyr-ok-fg: #ffffff;
+  --pyr-ok-soft: #d9efe2;
 
-  --pyr-shadow-card: 0 1px 2px oklch(0.245 0.022 62 / 0.05);
-  --pyr-shadow-pop: 0 6px 20px -6px oklch(0.245 0.022 62 / 0.22);
-  --pyr-shadow-modal: 0 20px 50px -12px oklch(0.245 0.022 62 / 0.34);
+  --pyr-group-guardsmen-soft: #dff3df;
+  --pyr-group-guardsmen-strong: #1f6b2e;
+  --pyr-group-guardsmen-edge: #0b8024;
+  --pyr-group-specialists-soft: #dde9f7;
+  --pyr-group-specialists-strong: #1f4f8a;
+  --pyr-group-specialists-edge: #0d4d9c;
+  --pyr-group-engineers-soft: #f8ecd0;
+  --pyr-group-engineers-strong: #7a5410;
+  --pyr-group-engineers-edge: #8a5a0a;
+  --pyr-group-monsters-soft: #ebe0f5;
+  --pyr-group-monsters-strong: #5b2f8a;
+  --pyr-group-monsters-edge: #5a0eab;
+  --pyr-group-mercenaries-soft: #f8dede;
+  --pyr-group-mercenaries-strong: #8a2424;
+  --pyr-group-mercenaries-edge: #a10d0d;
+
+  --pyr-shadow-card: 0 1px 2px #1c1a170d;
+  --pyr-shadow-pop: 0 6px 20px -6px #1c1a1738;
+  --pyr-shadow-modal: 0 20px 50px -12px #1c1a1754;
 
   /* Parchment grain: two barely-there washes, painted on <body> only. */
   --pyr-texture:
-    radial-gradient(80rem 40rem at 50% -12rem, oklch(0.495 0.107 58 / 0.07), transparent 70%),
-    radial-gradient(50rem 30rem at 100% 0, oklch(0.475 0.105 242 / 0.05), transparent 65%);
+    radial-gradient(80rem 40rem at 50% -12rem, #8e50170f, transparent 70%),
+    radial-gradient(50rem 30rem at 100% 0, #14608f0d, transparent 65%);
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --pyr-bg: oklch(0.175 0.018 265);
-    --pyr-surface: oklch(0.222 0.02 265);
-    --pyr-raised: oklch(0.272 0.022 265);
-    --pyr-sunken: oklch(0.148 0.016 265);
-    --pyr-fg: oklch(0.945 0.01 86);
-    --pyr-muted: oklch(0.745 0.018 265);
-    --pyr-line: oklch(0.33 0.022 265);
-    --pyr-field: oklch(0.56 0.024 265);
+    --pyr-bg: #101319;
+    --pyr-surface: #181c24;
+    --pyr-raised: #20252f;
+    --pyr-sunken: #0a0d12;
+    --pyr-fg: #e9e6df;
+    --pyr-muted: #a7a49c;
+    --pyr-line: #2b303a;
+    --pyr-field: #6b7484;
 
-    --pyr-accent: oklch(0.79 0.12 72);
-    --pyr-accent-fg: oklch(0.18 0.02 62);
-    --pyr-accent-soft: oklch(0.315 0.052 66);
-    --pyr-accent-line: oklch(0.5 0.08 68);
+    --pyr-accent: #d9963c;
+    --pyr-accent-fg: #17120a;
+    --pyr-accent-soft: #3a2a12;
+    --pyr-accent-line: #9c7440;
 
-    --pyr-info: oklch(0.76 0.095 235);
-    --pyr-info-fg: oklch(0.18 0.02 240);
-    --pyr-info-soft: oklch(0.3 0.045 240);
+    --pyr-info: #74bde4;
+    --pyr-info-fg: #0a1319;
+    --pyr-info-soft: #132a38;
 
-    --pyr-danger: oklch(0.72 0.155 25);
-    --pyr-danger-fg: oklch(0.18 0.02 25);
-    --pyr-danger-soft: oklch(0.305 0.06 25);
-    --pyr-warn: oklch(0.815 0.125 88);
-    --pyr-warn-fg: oklch(0.18 0.02 88);
-    --pyr-warn-soft: oklch(0.32 0.05 88);
-    --pyr-ok: oklch(0.775 0.115 155);
-    --pyr-ok-fg: oklch(0.18 0.02 155);
-    --pyr-ok-soft: oklch(0.3 0.048 155);
+    --pyr-danger: #f2857c;
+    --pyr-danger-fg: #1f0a08;
+    --pyr-danger-soft: #3a1a17;
+    --pyr-warn: #f0a468;
+    --pyr-warn-fg: #1a1109;
+    --pyr-warn-soft: #3c2415;
+    --pyr-ok: #6fcf97;
+    --pyr-ok-fg: #071a0f;
+    --pyr-ok-soft: #14301f;
 
-    --pyr-group-guardsmen: oklch(0.74 0.105 250);
-    --pyr-group-specialist: oklch(0.76 0.11 310);
-    --pyr-group-engineers: oklch(0.76 0.085 185);
-    --pyr-group-monster: oklch(0.74 0.13 20);
+    --pyr-group-guardsmen-soft: #173321;
+    --pyr-group-guardsmen-strong: #7fd48f;
+    --pyr-group-guardsmen-edge: #63e585;
+    --pyr-group-specialists-soft: #172436;
+    --pyr-group-specialists-strong: #7fb2f0;
+    --pyr-group-specialists-edge: #78b4ff;
+    --pyr-group-engineers-soft: #352a14;
+    --pyr-group-engineers-strong: #e6b85c;
+    --pyr-group-engineers-edge: #f1bc51;
+    --pyr-group-monsters-soft: #2a1e38;
+    --pyr-group-monsters-strong: #c39af0;
+    --pyr-group-monsters-edge: #c394f6;
+    --pyr-group-mercenaries-soft: #38191b;
+    --pyr-group-mercenaries-strong: #f08a8a;
+    --pyr-group-mercenaries-edge: #f58585;
 
-    --pyr-shadow-card: 0 1px 2px oklch(0 0 0 / 0.4);
-    --pyr-shadow-pop: 0 8px 24px -8px oklch(0 0 0 / 0.65);
-    --pyr-shadow-modal: 0 24px 56px -14px oklch(0 0 0 / 0.75);
+    --pyr-shadow-card: 0 1px 2px #00000066;
+    --pyr-shadow-pop: 0 8px 24px -8px #000000a6;
+    --pyr-shadow-modal: 0 24px 56px -14px #000000bf;
 
     --pyr-texture:
-      radial-gradient(80rem 40rem at 50% -12rem, oklch(0.79 0.12 72 / 0.08), transparent 70%),
-      radial-gradient(50rem 30rem at 100% 0, oklch(0.76 0.095 235 / 0.06), transparent 65%);
+      radial-gradient(80rem 40rem at 50% -12rem, #d9963c14, transparent 70%),
+      radial-gradient(50rem 30rem at 100% 0, #74bde40f, transparent 65%);
 
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --pyr-bg: oklch(0.175 0.018 265);
-  --pyr-surface: oklch(0.222 0.02 265);
-  --pyr-raised: oklch(0.272 0.022 265);
-  --pyr-sunken: oklch(0.148 0.016 265);
-  --pyr-fg: oklch(0.945 0.01 86);
-  --pyr-muted: oklch(0.745 0.018 265);
-  --pyr-line: oklch(0.33 0.022 265);
-  --pyr-field: oklch(0.56 0.024 265);
+  --pyr-bg: #101319;
+  --pyr-surface: #181c24;
+  --pyr-raised: #20252f;
+  --pyr-sunken: #0a0d12;
+  --pyr-fg: #e9e6df;
+  --pyr-muted: #a7a49c;
+  --pyr-line: #2b303a;
+  --pyr-field: #6b7484;
 
-  --pyr-accent: oklch(0.79 0.12 72);
-  --pyr-accent-fg: oklch(0.18 0.02 62);
-  --pyr-accent-soft: oklch(0.315 0.052 66);
-  --pyr-accent-line: oklch(0.5 0.08 68);
+  --pyr-accent: #d9963c;
+  --pyr-accent-fg: #17120a;
+  --pyr-accent-soft: #3a2a12;
+  --pyr-accent-line: #9c7440;
 
-  --pyr-info: oklch(0.76 0.095 235);
-  --pyr-info-fg: oklch(0.18 0.02 240);
-  --pyr-info-soft: oklch(0.3 0.045 240);
+  --pyr-info: #74bde4;
+  --pyr-info-fg: #0a1319;
+  --pyr-info-soft: #132a38;
 
-  --pyr-danger: oklch(0.72 0.155 25);
-  --pyr-danger-fg: oklch(0.18 0.02 25);
-  --pyr-danger-soft: oklch(0.305 0.06 25);
-  --pyr-warn: oklch(0.815 0.125 88);
-  --pyr-warn-fg: oklch(0.18 0.02 88);
-  --pyr-warn-soft: oklch(0.32 0.05 88);
-  --pyr-ok: oklch(0.775 0.115 155);
-  --pyr-ok-fg: oklch(0.18 0.02 155);
-  --pyr-ok-soft: oklch(0.3 0.048 155);
+  --pyr-danger: #f2857c;
+  --pyr-danger-fg: #1f0a08;
+  --pyr-danger-soft: #3a1a17;
+  --pyr-warn: #f0a468;
+  --pyr-warn-fg: #1a1109;
+  --pyr-warn-soft: #3c2415;
+  --pyr-ok: #6fcf97;
+  --pyr-ok-fg: #071a0f;
+  --pyr-ok-soft: #14301f;
 
-  --pyr-group-guardsmen: oklch(0.74 0.105 250);
-  --pyr-group-specialist: oklch(0.76 0.11 310);
-  --pyr-group-engineers: oklch(0.76 0.085 185);
-  --pyr-group-monster: oklch(0.74 0.13 20);
+  --pyr-group-guardsmen-soft: #173321;
+  --pyr-group-guardsmen-strong: #7fd48f;
+  --pyr-group-guardsmen-edge: #63e585;
+  --pyr-group-specialists-soft: #172436;
+  --pyr-group-specialists-strong: #7fb2f0;
+  --pyr-group-specialists-edge: #78b4ff;
+  --pyr-group-engineers-soft: #352a14;
+  --pyr-group-engineers-strong: #e6b85c;
+  --pyr-group-engineers-edge: #f1bc51;
+  --pyr-group-monsters-soft: #2a1e38;
+  --pyr-group-monsters-strong: #c39af0;
+  --pyr-group-monsters-edge: #c394f6;
+  --pyr-group-mercenaries-soft: #38191b;
+  --pyr-group-mercenaries-strong: #f08a8a;
+  --pyr-group-mercenaries-edge: #f58585;
 
-  --pyr-shadow-card: 0 1px 2px oklch(0 0 0 / 0.4);
-  --pyr-shadow-pop: 0 8px 24px -8px oklch(0 0 0 / 0.65);
-  --pyr-shadow-modal: 0 24px 56px -14px oklch(0 0 0 / 0.75);
+  --pyr-shadow-card: 0 1px 2px #00000066;
+  --pyr-shadow-pop: 0 8px 24px -8px #000000a6;
+  --pyr-shadow-modal: 0 24px 56px -14px #000000bf;
 
   --pyr-texture:
-    radial-gradient(80rem 40rem at 50% -12rem, oklch(0.79 0.12 72 / 0.08), transparent 70%),
-    radial-gradient(50rem 30rem at 100% 0, oklch(0.76 0.095 235 / 0.06), transparent 65%);
+    radial-gradient(80rem 40rem at 50% -12rem, #d9963c14, transparent 70%),
+    radial-gradient(50rem 30rem at 100% 0, #74bde40f, transparent 65%);
 
   color-scheme: dark;
 }
