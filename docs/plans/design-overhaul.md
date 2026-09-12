@@ -472,6 +472,16 @@ starts.
 - D-18 A named visual reference for finish (restraint of Linear/Vercel-class dark UIs; the game's warmth only
   in the group colours and the accent) recorded in `docs/design.md`, so parallel workers stop inventing.
 
+- D-19 **Design-direction pass with the `frontend-design` guide** (owner's request, 2026-09-12). The guide's
+  list of generated-design tells matches us: cream background + high-contrast serif + warm-clay accent (light),
+  near-black + single amber accent (dark), identical rounded cards with one radius everywhere, middle-dot meta
+  strings on every summary line, eyebrow labels. The pass: write a short design plan grounded in Total Battle's
+  own materials and vernacular (a palette of 4–6 named values, type roles, a layout concept, principles), review
+  it against that list and revise anything that reads as the default, then apply it to `tokens.css` and the kit
+  page and re-screenshot. Constraints kept: group colours from the game, contrast floor, Material 3 structure.
+  Also replace the middle-dot separators in summary lines with spacing or real structure, and drop any
+  eyebrow-style label.
+
 **Phase B — Army**
 - D-20 Unit tile component in three sizes with all states (§6.2), group colours, bolder silhouettes.
 - D-21 Tier stepper with arrows, keyboard, the jump strip and the "none" position. Accept: G1–G3 → G1–G4 in one
