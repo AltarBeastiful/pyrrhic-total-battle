@@ -228,6 +228,22 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 
 ## 5. Milestones and backlog
 
+Status on 2026-09-12 (first implementation pass, branch `development`):
+
+| Milestone | Done | Open |
+|---|---|---|
+| M0 Foundation | S-01, S-02, S-03, S-04, S-05 (manual form: `pnpm data:compare`), S-06 | S-07 (decision on automated fetching; ADR-0001 still proposed) |
+| M1 Configuration UI | S-10 … S-19 (titles editor included after all: cheap once `titles.json` existed) | — |
+| M2 Engine v1 | S-20 … S-25 | — |
+| M3 Battle Summary | S-31, S-32, S-33, S-34 | S-30 remains an in-game validation story: friendly attack-order nuance, revive silver and revive time (see battle-model-observations §4) |
+| M4 Optimisation | S-40, S-41, S-43, S-44, S-45; D-04 pulled back as the "relaxed preservation" toggle (investigation 0003) | S-46 (gated), S-47 |
+| M5 Polish | S-50, S-52 | — |
+
+Known gaps: VIP table values and 14 artifact level tables are unknown (hand-typed values in the UI until
+contributed); round-to-10s troop counts differ from TotalStack by a few units; the beast-boost anomaly is not
+modelled; custom mercenaries have no cap field.
+
+
 ### M0 — Foundation
 - S-01 Scaffold Vite/React/TS/Tailwind/Vitest, lint/format, GitHub Actions (test + Pages deploy).
 - S-02 Game data package: reshape `docs/research/totalstack-data` into our own `src/data/tables` format with
@@ -321,7 +337,7 @@ into a milestone only on explicit request. The engine and config schema keep roo
 order, manual counts) so adding them later is UI work, not a redesign.
 - D-02 Titles editor (toggle pills from `titles.json`). Workaround: custom source.
 - D-03 Manual HP Order (per-stack +/- and drag edits with live summary deltas, undo/redo, housing overflow).
-- D-04 Total Optimization stacking method (S-42). Only revisited if S-31 concludes it is worth it.
+- D-04 Total Optimization — **done** as an opt-in "relaxed preservation" post-pass on M's Preservation (investigation 0003).
 - D-05 "By Battle Report" bonus input mode (health-only fallback for low-tier accounts).
 - D-06 Troop Type Allocation percentages (weighting categories when no preservation order is used; meant for
       normal monsters / citadels, not epic monsters).
@@ -342,6 +358,8 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — First implementation pass completed (M0–M5 except S-07, S-46, S-47): see the status table in §5.
+  Engine reproduces every captured TotalStack journal and recovery figure; recovery is billed in chunks of ten.
 - 2026-09-12 — Engine (S-20…S-23, S-32…S-34) implemented and validated against every fixture. Reproduced
   **exactly**: all three TotalStack journals entry for entry (actors, targets, per-hit damage, hit counters),
   Arachne's 26 entries / 14 friendly hits, the Elite-Preservation monster pool (18/8/7/6 = 199), M's
