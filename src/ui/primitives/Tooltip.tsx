@@ -20,7 +20,7 @@ export function Tooltip({ content, children, side = 'top' }: TooltipProps) {
           <RadixTooltip.Content
             side={side}
             sideOffset={6}
-            className="border-line bg-surface text-fg z-50 max-w-64 rounded-lg border px-2.5 py-1.5 text-xs shadow-lg"
+            className="border-line bg-surface text-fg shadow-pop z-50 max-w-64 rounded-lg border px-2.5 py-1.5 text-xs"
           >
             {content}
           </RadixTooltip.Content>

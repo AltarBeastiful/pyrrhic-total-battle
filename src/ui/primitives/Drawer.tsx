@@ -40,16 +40,18 @@ export function Drawer({
         <RadixDialog.Content
           onCloseAutoFocus={onCloseAutoFocus}
           className={cn(
-            'border-line bg-surface text-fg fixed z-50 flex flex-col border shadow-xl',
+            'border-line bg-surface text-fg shadow-modal fixed z-50 flex flex-col border',
             'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl',
             'sm:inset-y-0 sm:max-h-none sm:w-[26rem] sm:rounded-none',
             side === 'right' ? 'sm:right-0 sm:left-auto' : 'sm:right-auto sm:left-0',
           )}
           {...(description === undefined ? { 'aria-describedby': undefined } : {})}
         >
-          <div className="border-line flex items-start justify-between gap-3 border-b p-4">
+          <div className="border-line bg-raised flex items-start justify-between gap-3 border-b p-4">
             <div>
-              <RadixDialog.Title className="text-base font-semibold">{title}</RadixDialog.Title>
+              <RadixDialog.Title className="font-display text-lg leading-tight font-semibold">
+                {title}
+              </RadixDialog.Title>
               {description !== undefined && (
                 <RadixDialog.Description className="text-muted mt-1 text-xs">
                   {description}

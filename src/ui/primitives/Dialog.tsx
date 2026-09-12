@@ -20,7 +20,7 @@ export interface DialogProps {
   size?: DialogSize;
 }
 
-export const OVERLAY_CLASS = 'fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]';
+export const OVERLAY_CLASS = 'fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]';
 
 const SIZES: Record<DialogSize, string> = {
   sm: 'sm:max-w-sm',
@@ -48,14 +48,16 @@ export function Dialog({
           onCloseAutoFocus={onCloseAutoFocus}
           className={cn(
             'border-line bg-surface text-fg fixed top-1/2 left-1/2 z-50 max-h-[85dvh] w-[calc(100vw-2rem)]',
-            '-translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border p-4 shadow-xl sm:p-5',
+            'rounded-card shadow-modal -translate-x-1/2 -translate-y-1/2 overflow-y-auto border p-4 sm:p-5',
             SIZES[size],
           )}
           {...(description === undefined ? { 'aria-describedby': undefined } : {})}
         >
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
-              <RadixDialog.Title className="text-base font-semibold">{title}</RadixDialog.Title>
+              <RadixDialog.Title className="font-display text-lg leading-tight font-semibold">
+                {title}
+              </RadixDialog.Title>
               {description !== undefined && (
                 <RadixDialog.Description className="text-muted mt-1 text-xs">
                   {description}

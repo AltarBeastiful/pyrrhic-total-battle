@@ -5,86 +5,212 @@
    <html>). The theme toggle in the header flips that attribute. */
 @custom-variant dark (&:where(.dark, .dark *, [data-theme='dark'], [data-theme='dark'] *));
 
-/* Semantic tokens. Components only ever use these (`bg-surface`, `text-muted`,
-   `border-line`…), so a palette change happens here and nowhere else. */
+/* ---------------------------------------------------------------------------------------------
+   Design tokens. Components only ever use these (`bg-surface`, `text-muted`, `border-line`,
+   `font-display`, `shadow-card`…), so the whole look changes here and nowhere else.
+   `docs/design.md` documents what each one is for.
+   --------------------------------------------------------------------------------------------- */
 @theme inline {
+  /* Type. A system serif carries the display voice (ADR-0002: no third-party font, no CDN);
+     the body stays on the platform sans, and figures are always tabular. */
+  --font-display: ui-serif, Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Surfaces and ink. */
   --color-bg: var(--pyr-bg);
   --color-surface: var(--pyr-surface);
   --color-raised: var(--pyr-raised);
+  --color-sunken: var(--pyr-sunken);
   --color-fg: var(--pyr-fg);
   --color-muted: var(--pyr-muted);
   --color-line: var(--pyr-line);
   --color-field: var(--pyr-field);
+
+  /* Bronze/amber: anything you can act on. */
   --color-accent: var(--pyr-accent);
   --color-accent-fg: var(--pyr-accent-fg);
   --color-accent-soft: var(--pyr-accent-soft);
+  --color-accent-line: var(--pyr-accent-line);
+
+  /* Steel blue: anything that only informs (help, hints, "this is what we computed"). */
+  --color-info: var(--pyr-info);
+  --color-info-fg: var(--pyr-info-fg);
+  --color-info-soft: var(--pyr-info-soft);
+
+  /* Semantic states. */
   --color-danger: var(--pyr-danger);
   --color-danger-fg: var(--pyr-danger-fg);
+  --color-danger-soft: var(--pyr-danger-soft);
   --color-warn: var(--pyr-warn);
+  --color-warn-fg: var(--pyr-warn-fg);
+  --color-warn-soft: var(--pyr-warn-soft);
   --color-ok: var(--pyr-ok);
+  --color-ok-fg: var(--pyr-ok-fg);
+  --color-ok-soft: var(--pyr-ok-soft);
+
+  /* One hue per troop group; they identify a unit badge, never a state. */
+  --color-group-guardsmen: var(--pyr-group-guardsmen);
+  --color-group-specialist: var(--pyr-group-specialist);
+  --color-group-engineers: var(--pyr-group-engineers);
+  --color-group-monster: var(--pyr-group-monster);
+
+  /* Radii. `card` is the one panels use; `chip` is the pill/badge round. */
+  --radius-card: 0.875rem;
+  --radius-chip: 999px;
+
+  /* Elevation. Three steps only: a card sits on the page, a popover floats, a dialog owns it. */
+  --shadow-card: var(--pyr-shadow-card);
+  --shadow-pop: var(--pyr-shadow-pop);
+  --shadow-modal: var(--pyr-shadow-modal);
 }
 
-/* Light is the base palette; dark is applied by the attribute the theme toggle sets and,
-   when no attribute is present (first paint, JS disabled), by the OS preference.
+/* Light is the base palette — warm bone and parchment, ink-brown text, bronze accent.
+   Dark is applied by the attribute the theme toggle sets and, when no attribute is present
+   (first paint, JS disabled), by the OS preference: deep slate-ink with an amber accent.
 
-   Every value below is checked against WCAG 2.2: text tokens (`fg`, `muted`, `accent`,
-   `danger`, `warn`, `ok`) clear 4.5:1 on `bg`, `surface`, `raised` and `accent-soft` in
-   both themes, and `field` — the border of anything you can type in or press — clears 3:1
-   on `surface` and `bg` (1.4.11). `line` stays low-contrast on purpose: it only ever draws
-   decorative dividers and card edges, never the boundary of a control. */
+   Every value is checked against WCAG 2.2 (`docs/design.md` carries the table): text tokens
+   (`fg`, `muted`, `accent`, `info`, `danger`, `warn`, `ok`, every `group-*`) clear 4.5:1 on
+   `bg`, `surface`, `raised` and on every soft surface in both themes, and `field` — the border
+   of anything you can type in or press — clears 3:1 on `surface` and `bg` (1.4.11). `line`
+   stays low-contrast on purpose: it only ever draws decorative dividers and card edges, never
+   the boundary of a control. */
 :root {
-  --pyr-bg: oklch(0.985 0.003 250);
-  --pyr-surface: oklch(1 0 0);
-  --pyr-raised: oklch(0.965 0.005 250);
-  --pyr-fg: oklch(0.23 0.02 265);
-  --pyr-muted: oklch(0.52 0.02 265);
-  --pyr-line: oklch(0.9 0.008 265);
-  --pyr-field: oklch(0.65 0.012 265);
-  --pyr-accent: oklch(0.53 0.16 265);
-  --pyr-accent-fg: oklch(0.99 0 0);
-  --pyr-accent-soft: oklch(0.94 0.03 265);
-  --pyr-danger: oklch(0.55 0.18 25);
-  --pyr-danger-fg: oklch(0.99 0 0);
-  --pyr-warn: oklch(0.56 0.14 75);
-  --pyr-ok: oklch(0.52 0.13 150);
+  --pyr-bg: oklch(0.965 0.014 84);
+  --pyr-surface: oklch(0.995 0.006 84);
+  --pyr-raised: oklch(0.938 0.018 82);
+  --pyr-sunken: oklch(0.915 0.022 82);
+  --pyr-fg: oklch(0.245 0.022 62);
+  --pyr-muted: oklch(0.465 0.022 62);
+  --pyr-line: oklch(0.872 0.02 78);
+  --pyr-field: oklch(0.615 0.026 70);
+
+  --pyr-accent: oklch(0.495 0.107 58);
+  --pyr-accent-fg: oklch(0.995 0.004 84);
+  --pyr-accent-soft: oklch(0.925 0.04 70);
+  --pyr-accent-line: oklch(0.78 0.07 66);
+
+  --pyr-info: oklch(0.475 0.105 242);
+  --pyr-info-fg: oklch(0.995 0.004 84);
+  --pyr-info-soft: oklch(0.925 0.032 242);
+
+  --pyr-danger: oklch(0.505 0.175 27);
+  --pyr-danger-fg: oklch(0.995 0.004 84);
+  --pyr-danger-soft: oklch(0.93 0.04 27);
+  --pyr-warn: oklch(0.52 0.115 88);
+  --pyr-warn-fg: oklch(0.995 0.004 84);
+  --pyr-warn-soft: oklch(0.935 0.055 92);
+  --pyr-ok: oklch(0.48 0.105 155);
+  --pyr-ok-fg: oklch(0.995 0.004 84);
+  --pyr-ok-soft: oklch(0.925 0.045 155);
+
+  --pyr-group-guardsmen: oklch(0.47 0.11 250);
+  --pyr-group-specialist: oklch(0.47 0.13 310);
+  --pyr-group-engineers: oklch(0.47 0.085 185);
+  --pyr-group-monster: oklch(0.48 0.14 20);
+
+  --pyr-shadow-card: 0 1px 2px oklch(0.245 0.022 62 / 0.05);
+  --pyr-shadow-pop: 0 6px 20px -6px oklch(0.245 0.022 62 / 0.22);
+  --pyr-shadow-modal: 0 20px 50px -12px oklch(0.245 0.022 62 / 0.34);
+
+  /* Parchment grain: two barely-there washes, painted on <body> only. */
+  --pyr-texture:
+    radial-gradient(80rem 40rem at 50% -12rem, oklch(0.495 0.107 58 / 0.07), transparent 70%),
+    radial-gradient(50rem 30rem at 100% 0, oklch(0.475 0.105 242 / 0.05), transparent 65%);
+
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --pyr-bg: oklch(0.19 0.015 265);
-    --pyr-surface: oklch(0.24 0.018 265);
-    --pyr-raised: oklch(0.28 0.02 265);
-    --pyr-fg: oklch(0.95 0.005 265);
-    --pyr-muted: oklch(0.72 0.015 265);
-    --pyr-line: oklch(0.35 0.02 265);
-    --pyr-field: oklch(0.55 0.02 265);
-    --pyr-accent: oklch(0.72 0.13 265);
-    --pyr-accent-fg: oklch(0.18 0.02 265);
-    --pyr-accent-soft: oklch(0.33 0.05 265);
-    --pyr-danger: oklch(0.68 0.16 25);
-    --pyr-danger-fg: oklch(0.18 0.02 265);
-    --pyr-warn: oklch(0.78 0.13 75);
-    --pyr-ok: oklch(0.74 0.12 150);
+    --pyr-bg: oklch(0.175 0.018 265);
+    --pyr-surface: oklch(0.222 0.02 265);
+    --pyr-raised: oklch(0.272 0.022 265);
+    --pyr-sunken: oklch(0.148 0.016 265);
+    --pyr-fg: oklch(0.945 0.01 86);
+    --pyr-muted: oklch(0.745 0.018 265);
+    --pyr-line: oklch(0.33 0.022 265);
+    --pyr-field: oklch(0.56 0.024 265);
+
+    --pyr-accent: oklch(0.79 0.12 72);
+    --pyr-accent-fg: oklch(0.18 0.02 62);
+    --pyr-accent-soft: oklch(0.315 0.052 66);
+    --pyr-accent-line: oklch(0.5 0.08 68);
+
+    --pyr-info: oklch(0.76 0.095 235);
+    --pyr-info-fg: oklch(0.18 0.02 240);
+    --pyr-info-soft: oklch(0.3 0.045 240);
+
+    --pyr-danger: oklch(0.72 0.155 25);
+    --pyr-danger-fg: oklch(0.18 0.02 25);
+    --pyr-danger-soft: oklch(0.305 0.06 25);
+    --pyr-warn: oklch(0.815 0.125 88);
+    --pyr-warn-fg: oklch(0.18 0.02 88);
+    --pyr-warn-soft: oklch(0.32 0.05 88);
+    --pyr-ok: oklch(0.775 0.115 155);
+    --pyr-ok-fg: oklch(0.18 0.02 155);
+    --pyr-ok-soft: oklch(0.3 0.048 155);
+
+    --pyr-group-guardsmen: oklch(0.74 0.105 250);
+    --pyr-group-specialist: oklch(0.76 0.11 310);
+    --pyr-group-engineers: oklch(0.76 0.085 185);
+    --pyr-group-monster: oklch(0.74 0.13 20);
+
+    --pyr-shadow-card: 0 1px 2px oklch(0 0 0 / 0.4);
+    --pyr-shadow-pop: 0 8px 24px -8px oklch(0 0 0 / 0.65);
+    --pyr-shadow-modal: 0 24px 56px -14px oklch(0 0 0 / 0.75);
+
+    --pyr-texture:
+      radial-gradient(80rem 40rem at 50% -12rem, oklch(0.79 0.12 72 / 0.08), transparent 70%),
+      radial-gradient(50rem 30rem at 100% 0, oklch(0.76 0.095 235 / 0.06), transparent 65%);
+
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --pyr-bg: oklch(0.19 0.015 265);
-  --pyr-surface: oklch(0.24 0.018 265);
-  --pyr-raised: oklch(0.28 0.02 265);
-  --pyr-fg: oklch(0.95 0.005 265);
-  --pyr-muted: oklch(0.72 0.015 265);
-  --pyr-line: oklch(0.35 0.02 265);
-  --pyr-field: oklch(0.55 0.02 265);
-  --pyr-accent: oklch(0.72 0.13 265);
-  --pyr-accent-fg: oklch(0.18 0.02 265);
-  --pyr-accent-soft: oklch(0.33 0.05 265);
-  --pyr-danger: oklch(0.68 0.16 25);
-  --pyr-danger-fg: oklch(0.18 0.02 265);
-  --pyr-warn: oklch(0.78 0.13 75);
-  --pyr-ok: oklch(0.74 0.12 150);
+  --pyr-bg: oklch(0.175 0.018 265);
+  --pyr-surface: oklch(0.222 0.02 265);
+  --pyr-raised: oklch(0.272 0.022 265);
+  --pyr-sunken: oklch(0.148 0.016 265);
+  --pyr-fg: oklch(0.945 0.01 86);
+  --pyr-muted: oklch(0.745 0.018 265);
+  --pyr-line: oklch(0.33 0.022 265);
+  --pyr-field: oklch(0.56 0.024 265);
+
+  --pyr-accent: oklch(0.79 0.12 72);
+  --pyr-accent-fg: oklch(0.18 0.02 62);
+  --pyr-accent-soft: oklch(0.315 0.052 66);
+  --pyr-accent-line: oklch(0.5 0.08 68);
+
+  --pyr-info: oklch(0.76 0.095 235);
+  --pyr-info-fg: oklch(0.18 0.02 240);
+  --pyr-info-soft: oklch(0.3 0.045 240);
+
+  --pyr-danger: oklch(0.72 0.155 25);
+  --pyr-danger-fg: oklch(0.18 0.02 25);
+  --pyr-danger-soft: oklch(0.305 0.06 25);
+  --pyr-warn: oklch(0.815 0.125 88);
+  --pyr-warn-fg: oklch(0.18 0.02 88);
+  --pyr-warn-soft: oklch(0.32 0.05 88);
+  --pyr-ok: oklch(0.775 0.115 155);
+  --pyr-ok-fg: oklch(0.18 0.02 155);
+  --pyr-ok-soft: oklch(0.3 0.048 155);
+
+  --pyr-group-guardsmen: oklch(0.74 0.105 250);
+  --pyr-group-specialist: oklch(0.76 0.11 310);
+  --pyr-group-engineers: oklch(0.76 0.085 185);
+  --pyr-group-monster: oklch(0.74 0.13 20);
+
+  --pyr-shadow-card: 0 1px 2px oklch(0 0 0 / 0.4);
+  --pyr-shadow-pop: 0 8px 24px -8px oklch(0 0 0 / 0.65);
+  --pyr-shadow-modal: 0 24px 56px -14px oklch(0 0 0 / 0.75);
+
+  --pyr-texture:
+    radial-gradient(80rem 40rem at 50% -12rem, oklch(0.79 0.12 72 / 0.08), transparent 70%),
+    radial-gradient(50rem 30rem at 100% 0, oklch(0.76 0.095 235 / 0.06), transparent 65%);
+
   color-scheme: dark;
 }
 
@@ -95,6 +221,21 @@
 
   body {
     @apply bg-bg text-fg antialiased;
+    background-image: var(--pyr-texture);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  /* Headings carry the display serif; the body stays on the platform sans. Set on the element so a
+     section's own H3/H4 gets the voice without every section file repeating a class. */
+  :where(h1, h2, h3, h4) {
+    font-family: var(--font-display);
+    letter-spacing: -0.006em;
+  }
+
+  /* Figures are compared column by column all over the results, so they are always tabular. */
+  :where(output, td, th) {
+    font-variant-numeric: tabular-nums;
   }
 
   /* One ring recipe for every interactive element, so focus is always visible. `summary`
@@ -148,5 +289,22 @@
     .tap-area::after {
       content: none;
     }
+  }
+
+  /* Figures: every count, cost and percentage lines up column by column. */
+  .nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* A section or dialog title: the display serif, a hair tighter. */
+  .title-face {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* The thin bronze rule that opens a card header; decorative, never a boundary. */
+  .rule-accent {
+    background-image: linear-gradient(90deg, var(--pyr-accent-line), transparent 70%);
   }
 }

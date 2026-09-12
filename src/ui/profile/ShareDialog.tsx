@@ -67,7 +67,7 @@ function LinkPanel({
         aria-label={`${title} share link`}
         value={link}
         rows={3}
-        className="border-line bg-raised text-fg w-full resize-none rounded-lg border p-2 font-mono text-xs"
+        className="border-field bg-sunken text-fg focus-visible:border-accent w-full resize-none rounded-lg border p-2 font-mono text-xs"
       />
       <p className={overBudget ? 'text-warn text-xs' : 'text-muted text-xs'}>
         {count(link.length)} characters — budget {count(budget)}.

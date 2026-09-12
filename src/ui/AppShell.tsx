@@ -1,10 +1,23 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import { selectTheme, useStore } from '@/state/store';
 import { THEMES, type Theme } from '@/state/schema';
 
 import { AboutDialog } from './AboutDialog';
-import { InfoIcon } from './icons';
+import { Hero } from './Hero';
+import {
+  BonusesIcon,
+  EnemyIcon,
+  HousingIcon,
+  InfoIcon,
+  MercenariesIcon,
+  MethodIcon,
+  MoonIcon,
+  ResultsIcon,
+  SunIcon,
+  TroopsIcon,
+} from './icons';
 import { Button, NativeSelect } from './primitives';
 import { LoadSharedDialog } from './profile/LoadSharedDialog';
 import { ProfileBar } from './profile/ProfileBar';
@@ -13,6 +26,17 @@ import { applyTheme, watchSystemTheme } from './theme';
 import { useUiStore } from './uiStore';
 
 const THEME_LABELS: Record<Theme, string> = { system: 'System', light: 'Light', dark: 'Dark' };
+
+/** One glyph per section, so the jump bar reads at a glance on a phone. Decorative throughout. */
+const SECTION_ICONS: Record<string, ReactNode> = {
+  troops: <TroopsIcon />,
+  mercenaries: <MercenariesIcon />,
+  method: <MethodIcon />,
+  bonuses: <BonusesIcon />,
+  enemy: <EnemyIcon />,
+  housing: <HousingIcon />,
+  results: <ResultsIcon />,
+};
 
 function isTheme(value: string): value is Theme {
   return (THEMES as readonly string[]).includes(value);
@@ -25,14 +49,17 @@ function isTheme(value: string): value is Theme {
  */
 function SectionNav() {
   return (
-    <nav aria-label="Jump to a section" className="border-line bg-bg border-b">
+    <nav aria-label="Jump to a section" className="border-line bg-bg/95 border-b backdrop-blur">
       <ul className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-3 sm:px-4">
         {SECTIONS.map(({ id, title }) => (
           <li key={id} className="shrink-0">
             <a
               href={`#${id}`}
-              className="text-muted hover:bg-raised hover:text-fg tap inline-flex items-center rounded-lg px-2.5 text-xs font-medium whitespace-nowrap"
+              className="text-muted hover:bg-accent-soft hover:text-accent tap inline-flex items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium whitespace-nowrap transition-colors"
             >
+              <span aria-hidden="true" className="text-muted/80">
+                {SECTION_ICONS[id]}
+              </span>
               {title}
             </a>
           </li>
@@ -65,40 +92,43 @@ export function AppShell() {
     <div className="min-h-dvh">
       <a
         href="#main"
-        className="focus:bg-surface focus:text-fg sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-lg focus:px-3 focus:py-2"
+        className="focus:bg-surface focus:text-fg focus:shadow-pop sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-lg focus:px-3 focus:py-2"
       >
         Skip to the calculator
       </a>
 
-      <header className="border-line bg-bg border-b">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-3 py-3 sm:px-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold tracking-tight">Pyrrhic</h1>
-            <p className="text-muted text-xs">Epic monster stacking for Total Battle</p>
-          </div>
-          <NativeSelect
-            label="Theme"
-            className="w-28"
-            value={theme}
-            options={THEMES.map((value) => ({ value, label: THEME_LABELS[value] }))}
-            onChange={(event) => {
-              const next = event.target.value;
-              if (isTheme(next)) setTheme(next);
-            }}
-          />
-          <Button
-            icon={<InfoIcon />}
-            onClick={() => {
-              setAbout(true);
-            }}
-          >
-            About
-          </Button>
-        </div>
+      <header className="border-line border-b">
+        <Hero
+          actions={
+            <>
+              <NativeSelect
+                label="Theme"
+                className="w-28"
+                value={theme}
+                options={THEMES.map((value) => ({ value, label: THEME_LABELS[value] }))}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (isTheme(next)) setTheme(next);
+                }}
+              />
+              <span aria-hidden="true" className="text-muted hidden sm:inline">
+                {theme === 'dark' ? <MoonIcon /> : <SunIcon />}
+              </span>
+              <Button
+                icon={<InfoIcon />}
+                onClick={() => {
+                  setAbout(true);
+                }}
+              >
+                About
+              </Button>
+            </>
+          }
+        />
       </header>
 
       {/* One sticky strip: the profile bar sticks inside it, the jump bar under it. */}
-      <div className="sticky top-0 z-30">
+      <div className="sticky top-0 z-30 shadow-sm">
         <ProfileBar />
         <SectionNav />
       </div>
@@ -109,7 +139,7 @@ export function AppShell() {
         ))}
       </main>
 
-      <footer className="text-muted mx-auto max-w-5xl px-3 pb-8 text-xs sm:px-4">
+      <footer className="text-muted mx-auto max-w-5xl px-3 pt-2 pb-10 text-xs sm:px-4">
         Nothing leaves your browser. Free and open source under the AGPL-3.0.
       </footer>
 

@@ -63,7 +63,7 @@ export function NameDialog({
           onChange={(event) => {
             setName(event.target.value);
           }}
-          className="tap border-line bg-surface text-fg mt-1 w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
+          className="tap border-field bg-surface text-fg focus-visible:border-accent mt-1 w-full rounded-lg border px-3 py-1.5 text-sm transition-colors outline-none"
         />
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <Button onClick={onCancel}>Cancel</Button>

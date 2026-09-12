@@ -23,7 +23,7 @@ export interface SelectProps {
 }
 
 const TRIGGER_CLASS =
-  'tap border-field bg-surface text-fg flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50';
+  'tap border-field bg-surface text-fg flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors hover:border-accent-line disabled:opacity-50 data-[state=open]:border-accent';
 
 /** Styled listbox (Radix). Use `NativeSelect` for short, dense option lists such as tier pickers. */
 export function Select({
@@ -52,7 +52,7 @@ export function Select({
         <RadixSelect.Content
           position="popper"
           sideOffset={4}
-          className="border-line bg-surface text-fg z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border shadow-lg"
+          className="border-line bg-surface text-fg rounded-card shadow-pop z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden border"
         >
           <RadixSelect.Viewport className="p-1">
             {options.map((option) => (
@@ -60,7 +60,7 @@ export function Select({
                 key={option.value}
                 value={option.value}
                 disabled={option.disabled ?? false}
-                className="data-[highlighted]:bg-raised flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none data-[disabled]:opacity-50"
+                className="data-[highlighted]:bg-accent-soft data-[highlighted]:text-fg flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none data-[disabled]:opacity-50"
               >
                 <RadixSelect.ItemIndicator className="text-accent">
                   <CheckIcon />

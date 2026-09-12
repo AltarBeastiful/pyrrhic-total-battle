@@ -40,12 +40,13 @@ export function Toggle({
         className={cn(
           'tap-area inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          checked ? 'bg-accent border-accent' : 'bg-raised border-field',
+          checked ? 'bg-accent border-accent shadow-card' : 'bg-raised border-field',
         )}
       >
         <span
           className={cn(
-            'bg-surface h-4.5 w-4.5 rounded-full shadow transition-transform',
+            'h-4.5 w-4.5 rounded-full shadow transition-transform',
+            checked ? 'bg-accent-fg' : 'bg-surface',
             checked ? 'translate-x-6' : 'translate-x-1',
           )}
         />

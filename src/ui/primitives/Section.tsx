@@ -10,6 +10,8 @@ export interface SectionProps {
   /** Anchor id; also the key the section registry uses. */
   id: string;
   title: string;
+  /** The section's glyph, shown in a chip left of the title. Decorative. */
+  icon?: ReactNode;
   /** One line under the title, always visible. */
   description?: ReactNode;
   /** Long-form help, shown in a popover behind the "?" button. */
@@ -31,6 +33,7 @@ export interface SectionProps {
 export function Section({
   id,
   title,
+  icon,
   description,
   help,
   actions,
@@ -53,33 +56,52 @@ export function Section({
     onOpenChange?.(next);
   };
 
+  const heading = (
+    <h2 id={titleId} className="font-display text-lg leading-tight font-semibold">
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={isOpen}
+          aria-controls={bodyId}
+          className="tap group flex items-center gap-1.5 text-left"
+        >
+          {title}
+          <span
+            aria-hidden="true"
+            className="text-muted group-hover:text-accent border-line bg-raised flex h-5 w-5 items-center justify-center rounded-full border text-[0.7rem] transition-colors"
+          >
+            {isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          </span>
+        </button>
+      ) : (
+        title
+      )}
+    </h2>
+  );
+
   return (
     <section
       id={id}
       aria-labelledby={titleId}
-      className={cn('border-line bg-surface scroll-mt-28 rounded-xl border', className)}
+      className={cn(
+        'border-line bg-surface shadow-card rounded-card scroll-mt-28 border',
+        isOpen && 'ring-accent-line/40 ring-1',
+        className,
+      )}
     >
-      <div className="flex items-start gap-2 p-3 sm:p-4">
+      <div className="flex items-start gap-3 p-3 sm:p-4">
+        {icon !== undefined && (
+          <span
+            aria-hidden="true"
+            className="border-accent-line bg-accent-soft text-accent mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-base"
+          >
+            {icon}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 id={titleId} className="text-base font-semibold">
-              {collapsible ? (
-                <button
-                  type="button"
-                  onClick={toggle}
-                  aria-expanded={isOpen}
-                  aria-controls={bodyId}
-                  className="tap flex items-center gap-1 text-left"
-                >
-                  {title}
-                  <span className="text-muted" aria-hidden="true">
-                    {isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
-                  </span>
-                </button>
-              ) : (
-                title
-              )}
-            </h2>
+            {heading}
             {help !== undefined && (
               <Popover
                 label={`About ${title}`}

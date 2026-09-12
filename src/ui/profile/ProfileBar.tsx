@@ -8,15 +8,17 @@ import { selectActiveProfile, selectActiveSetup, selectProfiles, useStore } from
 import {
   DownloadIcon,
   DuplicateIcon,
+  LeadershipIcon,
   PencilIcon,
   PlusIcon,
   ShareIcon,
+  SyncIcon,
   TrashIcon,
   UploadIcon,
 } from '../icons';
 import { Button, Dialog, Select } from '../primitives';
 import { useResultStore } from '../resultStore';
-import { SyncDialog, SyncIcon } from '../sync/SyncDialog';
+import { SyncDialog } from '../sync/SyncDialog';
 import { useUiStore } from '../uiStore';
 import { downloadJson } from './download';
 import { ImportDialog } from './ImportDialog';
@@ -41,7 +43,10 @@ function SaveIndicator() {
       ? 'Saved in this browser'
       : `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   return (
-    <span className="text-muted flex items-center gap-1.5 text-xs" aria-live="polite">
+    <span
+      className="text-muted border-line bg-raised flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+      aria-live="polite"
+    >
       <span
         aria-hidden="true"
         className={`inline-block h-2 w-2 rounded-full ${dirty ? 'bg-warn' : 'bg-ok'}`}
@@ -96,8 +101,11 @@ export function ProfileBar() {
   };
 
   return (
-    <div className="border-line bg-surface sticky top-0 z-30 border-b">
+    <div className="border-line bg-surface/95 shadow-card sticky top-0 z-30 border-b backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-3 py-2 sm:px-4">
+        <span aria-hidden="true" className="text-accent hidden sm:inline">
+          <LeadershipIcon />
+        </span>
         <div className="min-w-40 flex-1">
           <Select
             label="Active profile"
@@ -109,6 +117,7 @@ export function ProfileBar() {
 
         <div className="flex flex-wrap items-center gap-1">
           <Button
+            variant="ghost"
             aria-label="New profile"
             icon={<PlusIcon />}
             onClick={() => {
@@ -118,6 +127,7 @@ export function ProfileBar() {
             <span className="hidden sm:inline">New</span>
           </Button>
           <Button
+            variant="ghost"
             aria-label="Duplicate profile"
             icon={<DuplicateIcon />}
             onClick={() => {
@@ -127,6 +137,7 @@ export function ProfileBar() {
             <span className="hidden sm:inline">Duplicate</span>
           </Button>
           <Button
+            variant="ghost"
             aria-label="Rename profile"
             icon={<PencilIcon />}
             onClick={() => {
@@ -136,6 +147,7 @@ export function ProfileBar() {
             <span className="hidden sm:inline">Rename</span>
           </Button>
           <Button
+            variant="ghost"
             aria-label="Delete profile"
             icon={<TrashIcon />}
             onClick={() => {
@@ -144,7 +156,9 @@ export function ProfileBar() {
           >
             <span className="hidden sm:inline">Delete</span>
           </Button>
+          <span aria-hidden="true" className="bg-line mx-1 hidden h-5 w-px sm:block" />
           <Button
+            variant="ghost"
             aria-label="Export profile"
             icon={<DownloadIcon />}
             onClick={() => {
@@ -154,6 +168,7 @@ export function ProfileBar() {
             <span className="hidden sm:inline">Export</span>
           </Button>
           <Button
+            variant="ghost"
             aria-label="Import a file"
             icon={<UploadIcon />}
             onClick={() => {
@@ -163,6 +178,7 @@ export function ProfileBar() {
             <span className="hidden sm:inline">Import</span>
           </Button>
           <Button
+            variant="ghost"
             aria-label="Sync across devices"
             icon={<SyncIcon />}
             onClick={() => {

@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import { cn } from './cn';
 
@@ -14,6 +15,8 @@ export interface NumberFieldProps {
   decimal?: boolean;
   /** Unit shown inside the field, e.g. "%". */
   suffix?: string;
+  /** A glyph inside the field, before the value (a pool badge, a coin). Decorative. */
+  prefix?: ReactNode;
   hint?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -45,6 +48,7 @@ export function NumberField({
   step,
   decimal = false,
   suffix,
+  prefix,
   hint,
   placeholder,
   disabled = false,
@@ -78,10 +82,16 @@ export function NumberField({
       </label>
       <div
         className={cn(
-          'tap border-field bg-surface flex items-center rounded-lg border px-3',
+          'tap border-field bg-surface flex items-center gap-1.5 rounded-lg border px-3 transition-colors',
+          'focus-within:border-accent focus-within:ring-accent focus-within:ring-offset-bg focus-within:ring-2 focus-within:ring-offset-2',
           disabled && 'opacity-50',
         )}
       >
+        {prefix !== undefined && (
+          <span aria-hidden="true" className="text-muted shrink-0">
+            {prefix}
+          </span>
+        )}
         <input
           id={fieldId}
           type="text"
@@ -109,7 +119,7 @@ export function NumberField({
             setLastValue(next);
             if (next !== value) onChange(next);
           }}
-          className="text-fg w-full bg-transparent py-1.5 text-sm outline-none"
+          className="text-fg nums w-full bg-transparent py-1.5 text-sm outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
         />
         {suffix !== undefined && <span className="text-muted pl-1 text-xs">{suffix}</span>}
       </div>

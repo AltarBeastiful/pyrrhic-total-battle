@@ -1,6 +1,7 @@
 import { version as gameData } from '@/data';
 
-import { Dialog, HelpNote } from './primitives';
+import { GuardsmenIcon } from './icons';
+import { Card, Dialog, HelpNote } from './primitives';
 
 export interface AboutDialogProps {
   open: boolean;
@@ -12,25 +13,35 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="About Pyrrhic" size="sm">
       <div className="space-y-3 text-sm">
-        <p>
-          A free stacking calculator for Total Battle epic monsters: enter your account once, pick the bonuses
-          that apply to a march, and get the stack sizes and the damage it should do.
-        </p>
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="border-accent-line bg-accent-soft text-accent mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-base"
+          >
+            <GuardsmenIcon />
+          </span>
+          <p>
+            Plan your epic-monster march: enter your account once, switch on the bonuses that apply, and get
+            the stack sizes and the damage they should do.
+          </p>
+        </div>
         <HelpNote tone="info">
           Nothing leaves your browser. No account, no server, no analytics: your profiles live in this
           browser&apos;s storage until you export or share them yourself, and a share link keeps its data
           after the <code>#</code>, which browsers never send anywhere.
         </HelpNote>
-        <dl className="divide-line divide-y">
-          <div className="flex justify-between gap-4 py-1">
-            <dt className="text-muted">Game data version</dt>
-            <dd className="font-medium">{String(gameData.dataVersion)}</dd>
-          </div>
-          <div className="flex justify-between gap-4 py-1">
-            <dt className="text-muted">Values verified</dt>
-            <dd className="font-medium">{gameData.verifiedOn}</dd>
-          </div>
-        </dl>
+        <Card tone="raised" padded={false} className="px-3 py-1">
+          <dl className="divide-line divide-y">
+            <div className="flex justify-between gap-4 py-1.5">
+              <dt className="text-muted">Game data version</dt>
+              <dd className="nums font-medium">{String(gameData.dataVersion)}</dd>
+            </div>
+            <div className="flex justify-between gap-4 py-1.5">
+              <dt className="text-muted">Values verified</dt>
+              <dd className="nums font-medium">{gameData.verifiedOn}</dd>
+            </div>
+          </dl>
+        </Card>
         <p className="text-muted text-xs">{gameData.notes}</p>
         <p className="text-muted text-xs">
           Free and open source under the AGPL-3.0. Unit values are game facts, contributed and checked by

@@ -2,7 +2,7 @@
 export { Button } from './Button';
 export type { ButtonProps, ButtonSize, ButtonVariant } from './Button';
 export { Card } from './Card';
-export type { CardProps } from './Card';
+export type { CardProps, CardTone } from './Card';
 export { cn } from './cn';
 export type { ClassValue } from './cn';
 export { Dialog, OVERLAY_CLASS } from './Dialog';
@@ -12,7 +12,7 @@ export type { DrawerProps } from './Drawer';
 export { HelpNote } from './HelpNote';
 export type { HelpNoteProps, HelpTone } from './HelpNote';
 export { IconButton } from './IconButton';
-export type { IconButtonProps } from './IconButton';
+export type { IconButtonProps, IconButtonSize } from './IconButton';
 export { NumberField } from './NumberField';
 export type { NumberFieldProps } from './NumberField';
 export { Pill } from './Pill';
