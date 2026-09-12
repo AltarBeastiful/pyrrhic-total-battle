@@ -16,13 +16,14 @@ import {
 } from '../icons';
 import { Button, Dialog, Select } from '../primitives';
 import { useResultStore } from '../resultStore';
+import { SyncDialog, SyncIcon } from '../sync/SyncDialog';
 import { useUiStore } from '../uiStore';
 import { downloadJson } from './download';
 import { ImportDialog } from './ImportDialog';
 import { NameDialog } from './NameDialog';
 import { ShareDialog } from './ShareDialog';
 
-type DialogKind = 'new' | 'rename' | 'duplicate' | 'delete' | 'share';
+type DialogKind = 'new' | 'rename' | 'duplicate' | 'delete' | 'share' | 'sync';
 
 interface ImportState {
   parsed: ParsedImport | null;
@@ -162,6 +163,15 @@ export function ProfileBar() {
             <span className="hidden sm:inline">Import</span>
           </Button>
           <Button
+            aria-label="Sync across devices"
+            icon={<SyncIcon />}
+            onClick={() => {
+              setDialog('sync');
+            }}
+          >
+            <span className="hidden sm:inline">Sync</span>
+          </Button>
+          <Button
             variant="primary"
             aria-label="Share profile or march"
             icon={<ShareIcon />}
@@ -243,6 +253,13 @@ export function ProfileBar() {
         profile={profile}
         setup={setup}
         result={result}
+      />
+
+      <SyncDialog
+        open={dialog === 'sync'}
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
       />
 
       <ImportDialog
