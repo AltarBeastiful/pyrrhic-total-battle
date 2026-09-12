@@ -88,9 +88,7 @@ describe('Elite Preservation', () => {
       'BB 93600',
       'SG 93600',
     ]);
-    expect(result.warnings).toContain(
-      'archer-2 and spearman-2 have the same total HP (97740); the game may kill them in either order',
-    );
+    expect(result.warnings).toContain('ARC2 and SP2 tie at 97,740 HP; the game decides which falls first.');
   });
 
   it('reproduces run ep-10stacks (SW1 and SP1 back in the formation)', () => {
@@ -176,7 +174,9 @@ describe("M's Preservation", () => {
     expect(counts).toMatchObject({ BER5: 1, WE: 17, BB: 8, ED: 7, SG: 6 });
     expect(counts.CYC5).toBeUndefined();
     expect(result.dropped.map((entry) => entry.unitId)).toEqual(['cyclops-5']);
-    expect(result.dropped[0]!.reason).toMatch(/one unit \(135000 HP\) already exceeds/);
+    expect(result.dropped[0]!.reason).toBe(
+      'one of them alone (135,000 HP) is bigger than your smallest troop stack, so it could not fall after your troops',
+    );
     expect(result.pools.leadership).toEqual({ used: 3000, capacity: 3000 });
     expect(result.pools.authority.used).toBe(21);
     expect(result.pools.dominance).toEqual({ used: 196, capacity: 200 });
@@ -296,10 +296,11 @@ describe('relaxed preservation (investigation 0003, D-04)', () => {
 
   it('warns which stacks now die before the lowest troop stack', () => {
     const result = sizeStacks(makeRequest({ units, options: { method: 'ms', relaxedPreservation: true } }));
-    const line = result.warnings.find((warning) => warning.startsWith('Relaxed preservation'));
-    expect(line).toBeDefined();
-    expect(line).toContain('battle-boar');
-    expect(line).toContain('emerald-dragon');
+    // Glossary wording (docs/design.md §7): the flag is called "Allow damage trades" everywhere a user
+    // can read it, and the stacks are named by their pill label with the count they grew to.
+    expect(result.warnings).toContain(
+      'Allow damage trades grew BB to 6 and ED to 5; they now fall before RD3.',
+    );
     // Both really are above the floor, and the stacks stay in true kill order.
     const troopFloor = Math.min(
       ...result.stacks.filter((stack) => stack.pool === 'leadership').map((stack) => stack.totalHp),
@@ -370,7 +371,7 @@ describe('pinned unit types', () => {
     });
 
     expect(result.warnings).toContain(
-      'CYC5 is kept in the march but its stack (135000) is larger than your smallest troop stack, so it will fall before your last troops.',
+      'CYC5 is pinned, and its stack (135,000 HP) is bigger than your smallest troop stack, so it falls before RD3.',
     );
     // It keeps its true place in the kill order: 135,000 HP is the first stack the enemy wipes.
     expect(result.stacks[0]?.unitId).toBe('cyclops-5');
@@ -417,7 +418,7 @@ describe('pinned unit types', () => {
     expect(countsByLabel(result, units).ED).toBeUndefined();
     expect(result.dropped).toContainEqual({
       unitId: 'emerald-dragon',
-      reason: 'pinned, but even 10 units do not fit in the dominance housing',
+      reason: 'pinned, but even 10 of them do not fit in your dominance housing',
     });
   });
 

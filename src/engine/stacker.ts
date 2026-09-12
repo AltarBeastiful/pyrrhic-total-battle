@@ -113,12 +113,23 @@ function roundDownToChunks(slots: Slot[], capacity: number): number {
   return Math.min(used, capacity);
 }
 
+// ---- Wording -------------------------------------------------------------------------------------
+/**
+ * Everything in `warnings` and `dropped[].reason` is read by a player, not by us: short sentences, unit
+ * labels (ARC3) instead of ids, grouped digits, the game's own housing names, and the vocabulary of
+ * `docs/design.md` §7 — "Allow damage trades", never the word this codebase uses internally.
+ *
+ * Drop reasons stay free of unit labels on purpose: the results list groups the types that share a reason
+ * under one line, and a label inside the sentence would split every group.
+ */
+const num = (value: number): string => value.toLocaleString('en-US');
+
 function dropReason(slot: Slot, pool: Pool, ceiling: number | undefined, rounded: boolean): string {
   if (ceiling !== undefined && slot.hp > ceiling) {
-    return `one unit (${slot.hp} HP) already exceeds the ${ceiling} HP ceiling of the kill order`;
+    return `one of them alone (${num(slot.hp)} HP) is bigger than your smallest troop stack, so it could not fall after your troops`;
   }
-  if (rounded) return `fewer than ${CHUNK} units fit the flat HP profile of the ${pool} pool`;
-  return `no ${pool} capacity left for this unit type`;
+  if (rounded) return `fewer than ${String(CHUNK)} fit, and hired units come in tens`;
+  return `no ${pool} left to pay for them`;
 }
 
 // ---- Pinned unit types ---------------------------------------------------------------------------
@@ -177,14 +188,14 @@ function sizePoolPinned(
     // it rather than nothing — only an empty cap leaves us with nothing to force.
     const target = Math.min(minimum, short.cap);
     if (target < 1) {
-      refused.push({ slot: short, reason: 'pinned, but its cap leaves no units to add' });
+      refused.push({ slot: short, reason: 'pinned, but you own none of them' });
       short.count = 0;
       continue;
     }
     if (target * short.cost > capacity - reserved) {
       refused.push({
         slot: short,
-        reason: `pinned, but even ${target} ${target === 1 ? 'unit does' : 'units do'} not fit in the ${pool} housing`,
+        reason: `pinned, but even ${String(target)} of them ${target === 1 ? 'does' : 'do'} not fit in your ${pool} housing`,
       });
       short.count = 0;
       continue;
@@ -382,35 +393,46 @@ export function sizeStacks(request: StackRequest): StackResult {
   }
   const stacks = buildStacks(slots);
 
-  // A pin that had to break its pool's preservation ceiling keeps its true place in the kill order (it is
-  // the highest-HP stack, so the enemy takes it first) — say so, because that is the promise MP is chosen for.
-  if (troopFloor !== undefined) {
+  const label = (unitId: string): string => labelOf.get(unitId) ?? unitId;
+  // The troop stack the whole "hired units fall last" promise is measured against.
+  const lastTroop = stacks.filter((stack) => stack.pool === 'leadership').at(-1);
+
+  // A pin that had to break its pool's ceiling keeps its true place in the order (it is the biggest stack,
+  // so the enemy takes it first) — say so, because falling last is what the user chose the method for.
+  if (troopFloor !== undefined && lastTroop) {
     for (const stack of stacks) {
       if (!pinned.has(stack.unitId) || stack.pool === 'leadership') continue;
       const ceiling = ceilings[stack.pool];
       if (ceiling === undefined || stack.totalHp <= ceiling || stack.totalHp < troopFloor) continue;
-      const label = labelOf.get(stack.unitId) ?? stack.unitId;
       warnings.push(
-        `${label} is kept in the march but its stack (${stack.totalHp}) is larger than your smallest troop stack, so it will fall before your last troops.`,
+        `${label(stack.unitId)} is pinned, and its stack (${num(stack.totalHp)} HP) is bigger than your smallest troop stack, so it falls before ${label(lastTroop.unitId)}.`,
       );
     }
   }
 
-  if (relaxed > 0 && troopFloor !== undefined) {
-    const above = stacks
-      .filter((stack) => stack.pool !== 'leadership' && stack.totalHp >= troopFloor)
-      .map((stack) => stack.unitId);
-    if (above.length > 0) {
+  if (relaxed > 0 && troopFloor !== undefined && lastTroop) {
+    const grown = stacks.filter((stack) => stack.pool !== 'leadership' && stack.totalHp >= troopFloor);
+    if (grown.length > 0) {
+      const list = grown.map((stack) => `${label(stack.unitId)} to ${num(stack.count)}`);
+      const phrase = list.length === 1 ? list[0] : `${list.slice(0, -1).join(', ')} and ${list.at(-1) ?? ''}`;
       warnings.push(
-        `Relaxed preservation grew ${above.join(', ')} past your lowest troop stack (${troopFloor} HP): ${above.length === 1 ? 'it dies' : 'they die'} before your troops.`,
+        `Allow damage trades grew ${phrase}; ${grown.length === 1 ? 'it now falls' : 'they now fall'} before ${label(lastTroop.unitId)}.`,
       );
     }
   }
 
   for (const pool of POOLS) {
     const usage = pools[pool];
-    if (usage.capacity > 0 && usage.used < usage.capacity) {
-      warnings.push(`${usage.capacity - usage.used} unused ${pool}`);
+    if (usage.capacity <= 0 || usage.used >= usage.capacity) continue;
+    const left = `${num(usage.capacity - usage.used)} ${pool} left unused`;
+    if (byPool[pool].length === 0) {
+      warnings.push(`${left}; nothing in this march needs it.`);
+    } else if (ceilings[pool] !== undefined) {
+      warnings.push(`${left} so hired units fall after your troops.`);
+    } else if (options.roundTo10 && pool !== 'leadership') {
+      warnings.push(`${left} because hired units come in tens.`);
+    } else {
+      warnings.push(`${left}; nothing else fits.`);
     }
   }
   for (let i = 1; i < stacks.length; i += 1) {
@@ -418,7 +440,7 @@ export function sizeStacks(request: StackRequest): StackResult {
     const current = stacks[i];
     if (previous && current && previous.totalHp === current.totalHp) {
       warnings.push(
-        `${previous.unitId} and ${current.unitId} have the same total HP (${current.totalHp}); the game may kill them in either order`,
+        `${label(previous.unitId)} and ${label(current.unitId)} tie at ${num(current.totalHp)} HP; the game decides which falls first.`,
       );
     }
   }
