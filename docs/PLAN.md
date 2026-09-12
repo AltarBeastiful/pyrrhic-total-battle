@@ -272,7 +272,10 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 - S-43 Compare saved stacks side by side (summary metrics).
 - S-44 Sync adapter interface + explicit Pull/Push UI with per-profile conflict dialog (investigation 0001).
 - S-45 GitHub Gist sync adapter (fine-grained token, gist scope), optional client-side encryption.
-- S-46 Google Drive appData sync adapter (browser-only PKCE; gated on the scope-classification check).
+- S-46 Google Drive appData sync adapter (GIS token model). Gated by investigation 0002: requires a custom domain
+      for the official site with homepage + privacy policy, Search Console verification, brand verification, and a
+      long-term owner for the Google Cloud project. Dropbox (app-folder, PKCE, no domain requirement) is the
+      alternative if the domain is refused.
 - S-47 Generic endpoint adapter + reference Cloudflare Worker in `tools/` for clan-hosted storage.
 
 ### M5 — Polish
@@ -306,6 +309,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Google Drive adapter requirements checked (investigation 0002): scope is non-sensitive, but
+  brand verification needs a domain we own (GitHub Pages not accepted), a privacy policy page, and one-hour tokens
+  without refresh, so only explicit Pull/Push fits. S-46 gated accordingly; Gist and generic endpoint go first.
 - 2026-09-12 — Plan reviewed against the extracted data and the TotalStack fixture. Corrections: within-tier kill
   order is ranged → melee → mounted (was written melee first); fixture numbers written out with total HP per stack;
   share-link size budget added (Discord 2,000-char limit). Technical choices recorded as ADRs in `docs/decisions/`
