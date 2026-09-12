@@ -9,3 +9,7 @@ LICENSE
 # Hand-written prose, captured TotalStack output and in-game battle-report
 # transcripts: line breaks there are meaningful, Prettier must not rewrap them.
 docs/
+
+# Captured TotalStack output and in-game battle-report transcripts used as engine regression
+# fixtures: verbatim copies of docs/research/fixtures, Prettier must not rewrap them.
+tests/fixtures/

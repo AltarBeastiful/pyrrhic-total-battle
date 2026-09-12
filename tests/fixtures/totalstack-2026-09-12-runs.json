@@ -1,0 +1,74 @@
+{
+  "common": {
+    "guardsmen": [1, 3], "specialists": [1, 1], "engineers": null, "monsters": [3, 3],
+    "leadership": 3000, "authority": 1200, "dominance": 200, "bonuses": "all zero",
+    "enemyFormation": {"flying": 1, "melee": 1, "ranged": 1, "mounted": 1}, "templeLevel": 0
+  },
+  "runs": [
+    {
+      "id": "ep-8stacks",
+      "method": "Elite Preservation", "priority": "none", "mercenaries": [],
+      "note": "SP1 and SW1 were excluded (left over from an earlier Damage/Silver priority run on this account). Identical output is produced by priority=Damage/Silver.",
+      "troops": {"ARC1": 655, "SP2": 361, "ARC2": 361, "RD1": 327, "SP3": 202, "ARC3": 203, "RD2": 181, "RD3": 101},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6}, "dominanceUsed": 199,
+      "totalHpDescending": ["WE 102600", "ARC1 98250", "RD1 98100", "RD2 97740", "ARC2 97470", "SP2 97470", "ARC3 97440", "SP3 96960", "RD3 96960", "ED 94500", "BB 93600", "SG 93600"],
+      "summary": {"stacks": 12, "damageByTroops": 1202244, "damageByMercenaries": 0, "damageByMonsters": 1313586,
+        "minimumDamage": 2428230, "averageDamage": 2515830, "damagePerSilver": 1.753, "damagePerDragonCoin": 2329, "damagePerGold": 914,
+        "recoveryRetrainAll": {"time": "5d 23h", "silver": 1435200, "dragonCoins": 1080, "gold": 2752},
+        "recoveryReviveAll": {"time": "1d 2h", "silver": 216000, "dragonCoins": 1080, "gold": 13520}},
+      "journalEnemyFirst": "33 rounds, 21 friendly hits — see totalstack-2026-09-12-journal-ep-enemy-first.txt"
+    },
+    {
+      "id": "ep-10stacks", "method": "Elite Preservation", "priority": "none (after Restore all)", "mercenaries": [],
+      "troops": {"SW1": 459, "ARC1": 455, "SP1": 455, "SP2": 251, "ARC2": 251, "RD1": 228, "SP3": 140, "ARC3": 141, "RD2": 126, "RD3": 70},
+      "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6}, "dominanceUsed": 199,
+      "note": "Same counts were returned by priority=Maximum Damage (average 2,131,530, lower than the 8-stack result 2,515,830)."
+    },
+    {
+      "id": "mp-10stacks", "method": "M's Preservation", "priority": "none", "mercenaries": [],
+      "troops": {"SW1": 459, "ARC1": 455, "SP1": 455, "SP2": 251, "ARC2": 251, "RD1": 228, "SP3": 140, "ARC3": 141, "RD2": 126, "RD3": 70},
+      "monsters": {"WE": 11, "BB": 5, "ED": 4, "SG": 4}, "dominanceUsed": 123,
+      "note": "Monsters reduced so every monster stack (max 62,700) is below the lowest troop stack (RD3 70x960=67,200).",
+      "summary": {"stacks": 14, "damageByTroops": 1051908, "damageByMonsters": 1101936, "minimumDamage": 2118629, "averageDamage": 2153844,
+        "damagePerSilver": 1.663, "damagePerDragonCoin": 1994, "damagePerGold": 1402,
+        "recoveryRetrainAll": {"time": "4d 11h", "silver": 1294800, "dragonCoins": 1080, "gold": 1536}}
+    },
+    {
+      "id": "to-10stacks", "method": "Total Optimization", "priority": "none", "mercenaries": [],
+      "troops": {"SW1": 459, "ARC1": 455, "SP1": 455, "SP2": 251, "ARC2": 251, "RD1": 228, "SP3": 141, "ARC3": 140, "RD2": 126, "RD3": 70},
+      "monsters": {"WE": 11, "BB": 6, "ED": 5, "SG": 4}, "dominanceUsed": 136,
+      "note": "Differs from MP by ED 5 (67,500 > RD3 67,200) and BB 6 (70,200): accepts two monster stacks dying before the top troops when damage improves.",
+      "summary": {"stacks": 14, "damageByTroops": 1228107, "damageByMonsters": 996962, "minimumDamage": 2157167, "averageDamage": 2225069,
+        "damagePerSilver": 1.718, "damagePerDragonCoin": 2060, "damagePerGold": 1276,
+        "recoveryRetrainAll": {"time": "4d 11h", "silver": 1294800, "dragonCoins": 1080, "gold": 1744}}
+    },
+    {
+      "id": "ep-priority-max-damage", "method": "Elite Preservation", "priority": "Maximum Damage", "mercenaries": [],
+      "troops": "same as ep-10stacks", "monsters": {"WE": 18, "BB": 8, "ED": 7, "SG": 6},
+      "summary": {"stacks": 14, "damageByTroops": 1649436, "damageByMonsters": 482094, "minimumDamage": 2035663, "averageDamage": 2131530, "damagePerSilver": 1.646, "damagePerDragonCoin": 1974, "damagePerGold": 775}
+    },
+    {
+      "id": "ep-round-to-10s", "method": "Elite Preservation", "priority": "none", "roundTo10s": true, "mercenaries": [],
+      "troops": {"ARC1": 660, "ARC2": 363, "SP2": 362, "RD1": 329, "ARC3": 201, "SP3": 200, "RD2": 179, "RD3": 99},
+      "monsters": {"WE": 10}, "dominanceUsed": 30,
+      "note": "Only monsters/mercs are rounded to 10s; troops are re-sized around them. Three monster types dropped entirely.",
+      "summary": {"stacks": 9, "damageByTroops": 1083887, "damageByMonsters": 147440, "minimumDamage": 1171747, "averageDamage": 1231327, "damagePerSilver": 0.902, "damagePerDragonCoin": 10261, "damagePerGold": 2850,
+        "recoveryRetrainAll": {"time": "5d 10h", "silver": 1364600, "dragonCoins": 120, "gold": 432}},
+      "pillDetails": {"RD3": {"amount": 99, "hits": "2", "damage": 124186, "probabilisticDamage": 130395, "totalHealth": 95040},
+                      "ARC1": {"amount": 660, "hits": "0-1", "damage": 77220, "totalHealth": 99000}}
+    },
+    {
+      "id": "mp-bear", "method": "M's Preservation", "priority": "none",
+      "mercenaries": [{"id": "bear-5", "cap": 6}, {"id": "cyclops-5", "cap": null}],
+      "troops": {"ARC1": 655, "SP2": 361, "ARC2": 361, "RD1": 327, "SP3": 202, "ARC3": 203, "RD2": 181, "RD3": 101},
+      "mercenaryCounts": {"BER5": 1}, "authorityUsed": 21,
+      "monsters": {"WE": 17, "BB": 8, "ED": 7, "SG": 6}, "dominanceUsed": 196,
+      "note": "Cyclops V (135,000 hp/unit) dropped: one unit already exceeds the lowest troop stack. Bear V limited to 1 unit (66,000 < RD3 96,960). Monsters sit just below RD3 (WE 17x5700=96,900) but ABOVE the Bear stack, so mercs > monsters is NOT enforced here.",
+      "summary": {"stacks": 13, "damageByTroops": 1093098, "damageByMercenaries": 158400, "damageByMonsters": 1497886, "minimumDamage": 2689815, "averageDamage": 2749384,
+        "damagePerSilver": 1.916, "damagePerDragonCoin": 2546, "damagePerGold": 1017,
+        "recoveryRetrainAll": {"time": "5d 23h", "silver": 1435200, "dragonCoins": 1080, "gold": 2704}},
+      "journal": "see totalstack-2026-09-12-journal-mp-bear-*.txt"
+    }
+  ],
+  "customKillOrderDefault": ["SW1", "ARC1", "SP1", "RD1", "ARC2", "SP2", "RD2", "ARC3", "SP3", "RD3", "WE", "BB", "SG", "ED"]
+}
