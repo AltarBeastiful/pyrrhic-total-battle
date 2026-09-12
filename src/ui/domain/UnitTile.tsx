@@ -66,7 +66,7 @@ const hit = tv({
     size: {
       // 32 px of tile inside a 44 px target on touch; the target shrinks to the tile with a pointer.
       sm: 'h-11 w-11 sm:h-8 sm:w-8',
-      md: 'h-11 w-11',
+      md: 'h-11 w-14',
       lg: 'h-auto w-full',
     },
   },
@@ -79,7 +79,7 @@ const box = tv({
     group: GROUP_TONE,
     size: {
       sm: 'h-8 w-8 flex-col justify-center px-0.5',
-      md: 'h-11 w-11 flex-col justify-center gap-0.5 px-1',
+      md: 'h-11 w-14 flex-col justify-center gap-0.5 px-1',
       lg: 'min-h-11 w-full flex-row gap-3 px-3 py-2',
     },
     state: {
