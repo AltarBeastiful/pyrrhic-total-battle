@@ -329,3 +329,45 @@ export async function addCaptain(page: Page, name: string, level: number): Promi
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(sheet).toBeHidden();
 }
+
+// ---- The captain grid (design plan §7.3 as amended, D-33) ---------------------------------------
+/**
+ * One captain tile's body. Its accessible name carries the state, the way the unit tiles do, so the
+ * two forms are asked for separately: "Enlist Beowulf" before, "Beowulf, enlisted" after.
+ */
+export function captainTile(page: Page, name: string): Locator {
+  return bonusesCard(page).getByRole('button', { name: new RegExp(`^(Enlist ${name}|${name}, enlisted)$`) });
+}
+
+/** The badge at the bottom right of a tile: "20 ★3" once set, "Set level" before. */
+export function captainBadge(page: Page, name: string): Locator {
+  return bonusesCard(page).getByRole('button', { name: new RegExp(`^(Set|Change) ${name}’s level$`) });
+}
+
+/** Tap a tile body: send that captain on this march, or take it out again. */
+export async function toggleCaptain(page: Page, name: string): Promise<void> {
+  await captainTile(page, name).click();
+}
+
+/** Open a captain's badge and type its level and its stars. */
+export async function setCaptainLevel(page: Page, name: string, level: number, star: number): Promise<void> {
+  await captainBadge(page, name).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  for (const [label, value] of [
+    ['Base level', level],
+    ['Stars', star],
+  ] as const) {
+    const field = sheet.getByRole('textbox', { name: label });
+    await field.fill(String(value));
+    await field.blur();
+  }
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await expect(sheet).toBeHidden();
+}
+
+/** Enlist a captain and set it up, the whole journey the grid replaced the Add button with. */
+export async function enlistCaptain(page: Page, name: string, level: number, star = 0): Promise<void> {
+  await toggleCaptain(page, name);
+  await setCaptainLevel(page, name, level, star);
+}

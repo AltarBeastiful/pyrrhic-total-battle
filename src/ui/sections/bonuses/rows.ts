@@ -6,6 +6,11 @@
  * what it is worth, whether it is on, what switching it writes, and which editor its gear opens —
  * so `BonusesSection.tsx` is a list of rows and nothing else.
  *
+ * Captains and the hero are the one group that draws itself as a **grid of tiles** rather than as
+ * rows (§7.3 as amended 2026-09-13, D-33): `tiles` is what the grid renders, and `rows` stays behind
+ * it as the bookkeeping the TOTAL counts, so nothing had to learn about captains twice. The hero
+ * left the Other group for the head of that grid.
+ *
  * The order of the groups is the order the game shows them in, so a player reading Pyrrhic next to
  * the game walks the same screens: Captains, Equipment, Artifacts, Titles, Permanent, Other,
  * Events. Two groups the design plan does not name are kept because nothing else in the app holds
@@ -18,7 +23,6 @@ import {
   events as eventTable,
   heroes as heroTable,
   otherPills as otherPillTable,
-  orders,
   temple,
   titles as titleTable,
   vip as vipTable,
@@ -37,7 +41,15 @@ import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
 import { captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 
-import { FALLBACK_STAR_KEYS, isEmptyBonus, mergeBonus, rowValue, sourceLabel } from './labels';
+import {
+  BONUS_LABELS,
+  FALLBACK_STAR_KEYS,
+  firstKey,
+  isEmptyBonus,
+  mergeBonus,
+  rowValue,
+  sourceLabel,
+} from './labels';
 import type { BonusLike } from './labels';
 import { singleKey } from './values';
 
@@ -86,8 +98,30 @@ export interface SourceRow {
   editor?: EditorTarget;
 }
 
-/** What an "Add …" button at the end of a group creates. */
-export type AddKind = 'captain' | 'equipment' | 'artifact' | 'title' | 'permanent' | 'custom';
+/** What an "Add …" button at the end of a group creates. Captains have none: the grid is the form. */
+export type AddKind = 'equipment' | 'artifact' | 'title' | 'permanent' | 'custom';
+
+/**
+ * What a tap on a captain tile acts on. A captain is named by its **table** id rather than by a
+ * source entry, because the grid shows all thirty whether or not the profile has an entry for them:
+ * the entry is minted by the first tap, not by an Add button.
+ */
+export type CaptainTarget = { kind: 'captain'; captainId: string } | { kind: 'hero' };
+
+/** One tile of the captain grid (design plan §7.3 as amended, D-33). */
+export interface CaptainTileRow {
+  /** React key: the captain's table id, or `hero`. */
+  id: string;
+  name: string;
+  /** The key its bonuses touch; absent when they touch no stack at all. */
+  bonusKey?: BonusKey;
+  /** The line under the name: the key in words, or why there is no badge. */
+  meta: string;
+  isEnlisted: boolean;
+  /** Absent when there is nothing to set: the tile has no badge and opens no editor. */
+  badge?: { text: string; isSet: boolean; label?: string };
+  target: CaptainTarget;
+}
 
 export interface SourceGroup {
   id: string;
@@ -95,6 +129,11 @@ export interface SourceGroup {
   /** How many of this group are on, and the cap when the game puts one: "2 of 3 captains on". */
   caption: string;
   rows: SourceRow[];
+  /**
+   * The captains group draws itself as a grid of tiles instead of rows. `rows` stays behind it as
+   * the bookkeeping the TOTAL counts, so "sources on" keeps counting enlisted captains and the hero.
+   */
+  tiles?: CaptainTileRow[];
   /** What the group says instead of rows when it holds none. */
   empty: string;
   add?: { label: string; kind: AddKind; isDisabled: boolean };
@@ -192,17 +231,37 @@ export function templeDivisor(level: number): number {
 }
 
 // ---- The lists the editors pick from ----------------------------------------------------------
-const CAPTAIN_RANK = new Map<string, number>(orders.captains.map((id, index) => [id, index]));
+/**
+ * A captain touches a stack only when it carries a health or a strength block. Ten of the thirty
+ * carry neither (Hercules' bonus is a special strength chance, which no stack size depends on), so
+ * they get no level badge and no editor — exactly what TotalStack's own picker does.
+ */
+export const hasStackEffect = (record: CaptainRecord | undefined): boolean =>
+  record?.health !== undefined || record?.strength !== undefined;
 
-/** The picker order of the data tables, with anything the order table misses appended by name. */
-export const SORTED_CAPTAINS: CaptainRecord[] = [...captainTable].sort((a, b) => {
-  const rankA = CAPTAIN_RANK.get(a.id);
-  const rankB = CAPTAIN_RANK.get(b.id);
-  if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
-  if (rankA !== undefined) return -1;
-  if (rankB !== undefined) return 1;
-  return a.name.localeCompare(b.name);
-});
+/** The key a captain's stack bonus lands on; health and strength always name the same one. */
+const stackKey = (record: CaptainRecord | undefined): BonusKey | undefined =>
+  record?.health?.key ?? record?.strength?.key;
+
+/** The profile's entry for one captain of the tables, if the player has ever touched it. */
+export const captainEntryFor = (profile: Profile, captainId: string): CaptainEntry | undefined =>
+  profile.sources.captains.find((entry) => entry.captainId === captainId);
+
+/**
+ * What this captain's two fields actually move, said in the sheet's description. The fields are
+ * always the level and the stars — a captain carrying only one of the two keys is no different to
+ * fill in, the key only says what the figure boosts — so the sheet says which out loud.
+ */
+export function captainBoosts(record: CaptainRecord | undefined): string {
+  const key = stackKey(record);
+  if (key === undefined || record === undefined) return '';
+  const where = BONUS_LABELS[key].toLowerCase();
+  if (record.health !== undefined && record.strength !== undefined) {
+    return `Its level and its stars set ${where} health and ${where} strength.`;
+  }
+  const what = record.health !== undefined ? 'health' : 'strength';
+  return `Its level and its stars set ${where} ${what} only — this captain grants nothing else.`;
+}
 
 /** Qualities the tables actually carry for this piece (a few start at uncommon). */
 export function qualitiesOf(record: EquipmentRecord | undefined): Quality[] {
@@ -231,33 +290,100 @@ const row = (values: SourceRow): SourceRow => values;
 /** Sources of a kind that keep a name of their own; an unnamed one still has to be findable. */
 const named = (name: string, fallback: string): string => (name.trim() === '' ? fallback : name);
 
+/** The badge's own text: the level and the stars once typed, the job to do before that. */
+const levelBadge = (entry: CaptainEntry | undefined): { text: string; isSet: boolean } =>
+  entry === undefined || entry.level === 0
+    ? { text: 'Set level', isSet: false }
+    : { text: `${String(entry.level)} ★${String(entry.star)}`, isSet: true };
+
+/**
+ * The hero's tile, at the head of the grid. The hero has no level of its own — all it stores is
+ * *which* hero leads the march — so its badge opens the same picker the old row's gear did.
+ */
+function heroTile(profile: Profile, setup: BattleSetup): CaptainTileRow {
+  const hero = heroTable.find((record) => record.id === profile.sources.hero);
+  const key = hero === undefined ? undefined : firstKey(hero.bonus);
+  const bonusKey = key !== undefined && key in BONUS_LABELS ? (key as BonusKey) : undefined;
+  return {
+    id: 'hero',
+    name: hero?.name ?? 'Hero',
+    ...(bonusKey === undefined ? {} : { bonusKey }),
+    meta:
+      hero === undefined
+        ? 'No hero chosen'
+        : bonusKey === undefined
+          ? 'No stack bonus'
+          : BONUS_LABELS[bonusKey],
+    isEnlisted: setup.active.hero && hero !== undefined,
+    badge: {
+      text: hero === undefined ? 'Choose hero' : 'Change hero',
+      isSet: hero !== undefined,
+      label: hero === undefined ? 'Choose the hero' : 'Change the hero',
+    },
+    target: { kind: 'hero' },
+  };
+}
+
+/**
+ * Every captain the tables know, always on screen: the grid is the whole form and the whole summary
+ * at once, so nothing opens a create flow any more. Order: the hero, then whoever is riding with
+ * this march, then the captains that can change a stack, then the rest — each run by name.
+ */
+function captainTiles(profile: Profile, setup: BattleSetup): CaptainTileRow[] {
+  const active = setup.active.captains;
+  const byCaptain = new Map(profile.sources.captains.map((entry) => [entry.captainId, entry]));
+  const tiles = [...captainTable]
+    .map((record) => {
+      const entry = byCaptain.get(record.id);
+      const isEnlisted = entry !== undefined && active.includes(entry.id);
+      const key = stackKey(record);
+      return {
+        id: record.id,
+        name: record.name,
+        ...(key === undefined ? {} : { bonusKey: key }),
+        meta: key === undefined ? 'No stack bonus' : BONUS_LABELS[key],
+        isEnlisted,
+        ...(hasStackEffect(record) ? { badge: levelBadge(entry) } : {}),
+        target: { kind: 'captain' as const, captainId: record.id },
+      } satisfies CaptainTileRow;
+    })
+    .sort((a, b) => {
+      const rank = (tile: CaptainTileRow): number => (tile.isEnlisted ? 0 : tile.badge === undefined ? 2 : 1);
+      return rank(a) - rank(b) || a.name.localeCompare(b.name);
+    });
+  return [heroTile(profile, setup), ...tiles];
+}
+
 function captainsGroup(profile: Profile, setup: BattleSetup): SourceGroup {
   const active = setup.active.captains;
-  const atLimit = active.length >= MAX_ACTIVE_CAPTAINS;
-  const owned = new Set(profile.sources.captains.map((entry) => entry.captainId));
+  const hero = heroTable.find((record) => record.id === profile.sources.hero);
   return {
     id: 'captains',
-    title: 'Captains',
+    title: 'Captains and hero',
     caption: caption(active.length, MAX_ACTIVE_CAPTAINS, 'captain', 'captains'),
-    empty: 'No captain yet. Add the ones you own, then switch on the three riding with this march.',
-    add: {
-      label: 'Add captain',
-      kind: 'captain',
-      isDisabled: captainTable.every((record) => owned.has(record.id)),
-    },
-    rows: profile.sources.captains.map((entry) => {
-      const record = captainRecord(entry.captainId);
-      const on = active.includes(entry.id);
-      return row({
-        id: entry.id,
-        name: record?.name ?? entry.captainId,
-        value: rowValue(captainWorth(record, entry)),
-        on,
-        isDisabled: !on && atLimit,
-        toggle: { list: 'captains', id: entry.id },
-        editor: { kind: 'captain', id: entry.id },
-      });
-    }),
+    empty: '',
+    tiles: captainTiles(profile, setup),
+    rows: [
+      row({
+        id: 'hero',
+        name: hero?.name ?? 'Hero',
+        value: hero === undefined ? '' : rowValue(hero.bonus),
+        on: setup.active.hero && hero !== undefined,
+        toggle: { flag: 'hero' },
+        editor: { kind: 'hero' },
+      }),
+      ...profile.sources.captains.map((entry) => {
+        const record = captainRecord(entry.captainId);
+        return row({
+          id: entry.id,
+          name: record?.name ?? entry.captainId,
+          value: rowValue(captainWorth(record, entry)),
+          on: active.includes(entry.id),
+          toggle: { list: 'captains', id: entry.id },
+          editor: { kind: 'captain', id: entry.id },
+        });
+      }),
+    ],
   };
 }
 
@@ -362,7 +488,7 @@ function permanentGroup(profile: Profile): SourceGroup {
 function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
   const { sources } = profile;
   const { active } = setup;
-  const hero = heroTable.find((record) => record.id === sources.hero);
+  // The hero left this group for the head of the captain grid (design plan §7.3 as amended, D-33).
   const rows: SourceRow[] = [
     row({
       id: 'vip',
@@ -379,14 +505,6 @@ function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
       on: active.dragon,
       toggle: { flag: 'dragon' },
       editor: { kind: 'dragon' },
-    }),
-    row({
-      id: 'hero',
-      name: hero?.name ?? 'Hero',
-      value: hero === undefined ? '' : rowValue(hero.bonus),
-      on: active.hero && hero !== undefined,
-      toggle: { flag: 'hero' },
-      editor: { kind: 'hero' },
     }),
     ...otherPillTable.map((record) =>
       row({

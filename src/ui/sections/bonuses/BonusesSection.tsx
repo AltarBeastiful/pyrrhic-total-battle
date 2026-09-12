@@ -7,35 +7,45 @@
  * switched on with nothing typed in. That is what a player checks after changing a captain's level,
  * and it is above the fold on a phone (J3: open, find, change, see the TOTAL move).
  *
- * Unfolded, the sources are grouped the way the game groups them and each one is a **row**, not a
- * chip: a switch carrying its name, what it is worth on the right, a gear at the end. Editing never
- * happens inline — the gear opens a sheet that repeats the TOTAL, so the figures are visible while
- * they move. Whether the card is open is remembered per device (decision D7), never in the document.
+ * Unfolded, the sources are grouped the way the game groups them. Captains and the hero are a
+ * **grid of tiles** — every captain the tables know, always on screen, tap to enlist and tap the
+ * badge to set a level (D-33), which is why that one group has no Add button. Everything else is a
+ * **row**, not a chip: a switch carrying its name, what it is worth on the right, a gear at the end.
+ * Editing never happens inline — the gear and the badge open a sheet that repeats the TOTAL, so the
+ * figures are visible while they move. Whether the card is open is remembered per device (decision
+ * D7), never in the document.
  */
 import { useId, useMemo, useState } from 'react';
 
 import { artifacts as artifactTable, equipment as equipmentTable, titles as titleTable } from '@/data';
-import { mintSourceId, setTitleOwned, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
+import {
+  mintSourceId,
+  setActiveFlag,
+  setTitleOwned,
+  toggleActiveSource,
+  updateSources,
+} from '@/state/actions/bonuses';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Card, Disclosure } from '@/ui/kit';
 import { Stack } from '@/ui/layout';
 
 import { ArtifactSheet } from './ArtifactSheet';
+import { CaptainGrid } from './CaptainGrid';
 import { CaptainSheet } from './CaptainSheet';
 import { EquipmentSheet } from './EquipmentSheet';
 import { CustomSheet, DragonSheet, PermanentSheet, RemainderSheet } from './FreeFormSheets';
 import { HeroSheet, VipSheet } from './OtherSheets';
 import { RecoverySheet } from './RecoverySheet';
 import {
+  captainEntryFor,
   firstQuality,
   MAX_ACTIVE_ARTIFACTS,
   MAX_ACTIVE_CAPTAINS,
-  SORTED_CAPTAINS,
   sourceGroups,
   starKeys,
   totalsSummary,
 } from './rows';
-import type { AddKind, EditorTarget } from './rows';
+import type { AddKind, CaptainTarget, EditorTarget } from './rows';
 import { SetupBar } from './SetupBar';
 import { SourceList } from './SourceList';
 import { TitleSheet } from './TitleSheet';
@@ -49,6 +59,7 @@ export function BonusesSection() {
   const titleId = useId();
   const [expanded, setExpanded] = useState(readExpanded);
   const [editor, setEditor] = useState<EditorTarget | null>(null);
+  const [isRefused, setRefused] = useState(false);
 
   const summary = useMemo(() => (profile && setup ? totalsSummary(profile, setup) : null), [profile, setup]);
   const groups = useMemo(() => (profile && setup ? sourceGroups(profile, setup) : []), [profile, setup]);
@@ -56,22 +67,47 @@ export function BonusesSection() {
   if (profile === undefined || setup === undefined || summary === null) return null;
   const profileId = profile.id;
 
-  /** Every "Add …" button creates the entry with the game's own defaults and opens its editor. */
-  const add = (kind: AddKind): void => {
-    if (kind === 'captain') {
-      const owned = new Set(profile.sources.captains.map((entry) => entry.captainId));
-      const pick = SORTED_CAPTAINS.find((record) => !owned.has(record.id));
-      if (pick === undefined) return;
-      const id = mintSourceId();
-      updateSources(profileId, (sources) => ({
-        ...sources,
-        captains: [...sources.captains, { id, captainId: pick.id, level: 0, star: 0 }],
-      }));
-      if (setup.active.captains.length < MAX_ACTIVE_CAPTAINS) toggleActiveSource('captains', id, true);
-      setEditor({ kind: 'captain', id });
+  /**
+   * The captain grid has no Add button: the entry that records a level and a star count is minted by
+   * the first tap, whether that tap enlisted the captain or opened its editor.
+   */
+  const entryIdFor = (captainId: string): string => {
+    const found = captainEntryFor(profile, captainId);
+    if (found !== undefined) return found.id;
+    const id = mintSourceId();
+    updateSources(profileId, (sources) => ({
+      ...sources,
+      captains: [...sources.captains, { id, captainId, level: 0, star: 0 }],
+    }));
+    return id;
+  };
+
+  /** A tap on a tile body. Three ride with a march, and the fourth tap is refused out loud. */
+  const enlist = (target: CaptainTarget): void => {
+    if (target.kind === 'hero') {
+      // An empty hero slot has nothing to enlist yet, so the tap opens the picker instead.
+      if (profile.sources.hero === undefined) setEditor({ kind: 'hero' });
+      else setActiveFlag('hero', !setup.active.hero);
       return;
     }
+    const entry = captainEntryFor(profile, target.captainId);
+    const on = entry !== undefined && setup.active.captains.includes(entry.id);
+    if (!on && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS) {
+      setRefused(true);
+      return;
+    }
+    setRefused(false);
+    toggleActiveSource('captains', entry?.id ?? entryIdFor(target.captainId), !on);
+  };
 
+  /** A tap on a tile badge. It opens the editor and never changes who marches. */
+  const configure = (target: CaptainTarget): void => {
+    if (target.kind === 'hero') setEditor({ kind: 'hero' });
+    else setEditor({ kind: 'captain', id: entryIdFor(target.captainId) });
+  };
+
+  /** Every "Add …" button creates the entry with the game's own defaults and opens its editor. */
+  const add = (kind: AddKind): void => {
     if (kind === 'equipment') {
       const first = equipmentTable[0];
       if (first === undefined) return;
@@ -155,16 +191,27 @@ export function BonusesSection() {
         >
           <Stack gap={6}>
             <SetupBar profile={profile} setup={setup} />
-            {groups.map((group) => (
-              <SourceList
-                key={group.id}
-                group={group}
-                onEdit={setEditor}
-                onAdd={(entry) => {
-                  if (entry.add !== undefined) add(entry.add.kind);
-                }}
-              />
-            ))}
+            {groups.map((group) =>
+              group.tiles === undefined ? (
+                <SourceList
+                  key={group.id}
+                  group={group}
+                  onEdit={setEditor}
+                  onAdd={(entry) => {
+                    if (entry.add !== undefined) add(entry.add.kind);
+                  }}
+                />
+              ) : (
+                <CaptainGrid
+                  key={group.id}
+                  group={group}
+                  tiles={group.tiles}
+                  onEnlist={enlist}
+                  onConfigure={configure}
+                  isRefused={isRefused && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS}
+                />
+              ),
+            )}
             <TotalsBreakdown profile={profile} setup={setup} />
           </Stack>
         </Disclosure>

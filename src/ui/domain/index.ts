@@ -1,4 +1,6 @@
 // Domain barrel: the components that know what a unit is. Keep the list sorted.
+export { CaptainTile } from './CaptainTile';
+export type { CaptainTileBadge, CaptainTileProps } from './CaptainTile';
 export { DamageBar } from './DamageBar';
 export type { DamageBarProps } from './DamageBar';
 export { DeltaText } from './DeltaText';
@@ -26,3 +28,5 @@ export {
   unitGroupOf,
 } from './unitGroup';
 export type { UnitGroup } from './unitGroup';
+export { TIER_INK, TIER_TONE, TierBadge } from './TierBadge';
+export type { TierBadgeProps } from './TierBadge';

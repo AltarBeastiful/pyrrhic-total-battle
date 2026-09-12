@@ -1,16 +1,20 @@
 /**
- * The captain editor (S-15): which captain this is, its base level and its stars. The bonus is the
- * level times the captain's own rate plus what the stars add, so the three fields are the whole
- * source and the TOTAL above them moves on every step.
+ * The captain editor (S-15): the base level and the stars, and nothing else. Which captain this is
+ * no longer belongs here — the grid picks it (D-33) — so the sheet is the two fields the badge
+ * promised, with the TOTAL above them moving on every step.
+ *
+ * A captain carrying only one of the two keys is filled in exactly the same way: the keys describe
+ * what the figure boosts, not what you type. The description says which, so nobody hunts for a
+ * missing field.
  */
 import type { CaptainRecord } from '@/data/types';
 import { removeSourceEntry, updateSources } from '@/state/actions/bonuses';
 import type { Profile, ProfileSources } from '@/state/schema';
-import { Banner, NumberStepper, Select } from '@/ui/kit';
+import { Banner, NumberStepper } from '@/ui/kit';
 import { Grid, Stack } from '@/ui/layout';
 
 import { describeContribution } from './labels';
-import { captainRecord, captainWorth, SORTED_CAPTAINS, WHERE } from './rows';
+import { captainBoosts, captainRecord, captainWorth, WHERE } from './rows';
 import type { TotalsSummary } from './rows';
 import { FieldGroup, SourceSheet, WorthList } from './SourceSheet';
 
@@ -30,9 +34,7 @@ export function CaptainSheet({ profile, entryId, summary, onClose }: CaptainShee
   const entry = profile.sources.captains.find((candidate) => candidate.id === entryId);
   if (entry === undefined) return null;
   const record = captainRecord(entry.captainId);
-  const takenElsewhere = new Set(
-    profile.sources.captains.filter((other) => other.id !== entry.id).map((other) => other.captainId),
-  );
+  const boosts = captainBoosts(record);
 
   const patch = (update: (current: CaptainEntry) => CaptainEntry): void => {
     updateSources(profile.id, (sources) => ({
@@ -44,28 +46,17 @@ export function CaptainSheet({ profile, entryId, summary, onClose }: CaptainShee
   return (
     <SourceSheet
       title={record?.name ?? entry.captainId}
-      where={WHERE.captain}
+      where={boosts === '' ? WHERE.captain : `${WHERE.captain} ${boosts}`}
       summary={summary}
       onClose={onClose}
-      removeLabel="Remove captain"
+      removeLabel="Forget this captain"
       onRemove={() => {
+        // The captain stays in the grid; what goes is the level, the stars and its place in a march.
         removeSourceEntry(profile.id, 'captains', entry.id);
         onClose();
       }}
     >
       <Stack gap={3}>
-        <Select
-          label="Captain"
-          value={entry.captainId}
-          options={SORTED_CAPTAINS.map((candidate) => ({
-            value: candidate.id,
-            label: candidate.name,
-            isDisabled: takenElsewhere.has(candidate.id),
-          }))}
-          onChange={(captainId) => {
-            patch((current) => ({ ...current, captainId }));
-          }}
-        />
         <Grid cols={2} gap={3}>
           <NumberStepper
             label="Base level"
