@@ -1,0 +1,289 @@
+[
+  {
+    "id": "administrator",
+    "name": "Administrator",
+    "bonus": {
+      "health": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "battlemaster",
+    "name": "Battlemaster",
+    "bonus": {
+      "health": {
+        "army": 150
+      },
+      "strength": {
+        "army": 150
+      },
+      "special": {
+        "doubleDamageChance": 5,
+        "strikeTwoSquadsChance": 5
+      }
+    }
+  },
+  {
+    "id": "blademaster",
+    "name": "Blademaster",
+    "bonus": {
+      "health": {
+        "army": 10
+      },
+      "strength": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "brave-warrior",
+    "name": "Brave Warrior",
+    "bonus": {
+      "health": {
+        "army": 25
+      },
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "centurion",
+    "name": "Centurion",
+    "bonus": {
+      "health": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "chief",
+    "name": "Chief",
+    "bonus": {
+      "health": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "daredevil",
+    "name": "Daredevil",
+    "bonus": {
+      "health": {
+        "army": 10
+      },
+      "strength": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "dark-knight",
+    "name": "Dark Knight",
+    "bonus": {
+      "health": {
+        "army": 25
+      },
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "dealer",
+    "name": "Dealer",
+    "bonus": {
+      "health": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "dog",
+    "name": "Dog",
+    "bonus": {
+      "strength": {
+        "army": -10
+      }
+    }
+  },
+  {
+    "id": "emperor",
+    "name": "Emperor",
+    "bonus": {
+      "special": {
+        "strikeTwoSquadsChance": 10
+      }
+    }
+  },
+  {
+    "id": "experienced-warrior",
+    "name": "Experienced Warrior",
+    "bonus": {
+      "special": {
+        "strikeTwoSquadsChance": 5
+      }
+    }
+  },
+  {
+    "id": "field-marshal",
+    "name": "Field Marshal",
+    "bonus": {
+      "strength": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "goldfinger",
+    "name": "Goldfinger",
+    "bonus": {
+      "health": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "great-marshal",
+    "name": "Great Marshal",
+    "bonus": {
+      "health": {
+        "army": 25
+      },
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "headhunter",
+    "name": "Headhunter",
+    "bonus": {
+      "strength": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "healer",
+    "name": "Healer",
+    "bonus": {
+      "health": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "hero-of-battle",
+    "name": "Hero of Battle",
+    "bonus": {
+      "health": {
+        "army": 75
+      },
+      "strength": {
+        "army": 75
+      },
+      "special": {
+        "doubleDamageChance": 2,
+        "strikeTwoSquadsChance": 2
+      }
+    }
+  },
+  {
+    "id": "legendary-commander",
+    "name": "Legendary Commander",
+    "bonus": {
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "lifestream-lord",
+    "name": "Lifestream Lord",
+    "bonus": {
+      "health": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "magister-militum",
+    "name": "Magister Militum",
+    "bonus": {
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "noble-governor",
+    "name": "Noble Governor",
+    "bonus": {
+      "health": {
+        "army": 10
+      }
+    }
+  },
+  {
+    "id": "punching-bag",
+    "name": "Punching Bag",
+    "bonus": {
+      "health": {
+        "army": -10
+      }
+    }
+  },
+  {
+    "id": "ronin",
+    "name": "Ronin",
+    "bonus": {
+      "special": {
+        "strikeTwoSquadsChance": 5
+      }
+    }
+  },
+  {
+    "id": "tribune",
+    "name": "Tribune",
+    "bonus": {
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "triumphal-warrior",
+    "name": "Triumphal Warrior",
+    "bonus": {
+      "special": {
+        "strikeTwoSquadsChance": 10
+      }
+    }
+  },
+  {
+    "id": "war-hero",
+    "name": "War Hero",
+    "bonus": {
+      "health": {
+        "army": 25
+      },
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "warlord",
+    "name": "Warlord",
+    "bonus": {
+      "health": {
+        "army": 100
+      },
+      "strength": {
+        "army": 100
+      }
+    }
+  }
+]

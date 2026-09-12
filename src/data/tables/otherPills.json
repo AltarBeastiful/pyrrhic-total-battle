@@ -1,0 +1,47 @@
+[
+  {
+    "id": "clan-health-bonus",
+    "name": "Clan Health Bonus",
+    "bonus": {
+      "health": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "clan-strength-bonus",
+    "name": "Clan Strength Bonus",
+    "bonus": {
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "kingdom-strength-bonus",
+    "name": "Kingdom Strength Bonus",
+    "bonus": {
+      "strength": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "personal-health-bonus",
+    "name": "Personal Health Bonus",
+    "bonus": {
+      "health": {
+        "army": 25
+      }
+    }
+  },
+  {
+    "id": "personal-strength-bonus",
+    "name": "Personal Strength Bonus",
+    "bonus": {
+      "strength": {
+        "army": 25
+      }
+    }
+  }
+]

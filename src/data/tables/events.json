@@ -1,0 +1,18 @@
+[
+  {
+    "id": "arachnes",
+    "name": "Arachne's Invasion",
+    "enemyFormation": {
+      "melee": 2,
+      "ranged": 2,
+      "mounted": 2,
+      "flying": 2
+    },
+    "activatesStrengthAgainst": "swarmUnits"
+  },
+  {
+    "id": "ragnarok-fenrir",
+    "name": "Ragnarok - Fenrir",
+    "strength": 130
+  }
+]

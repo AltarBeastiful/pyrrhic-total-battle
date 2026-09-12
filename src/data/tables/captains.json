@@ -1,0 +1,304 @@
+[
+  {
+    "id": "alexander",
+    "name": "Alexander",
+    "health": {
+      "key": "mounted",
+      "perLevel": 1,
+      "stars": [0, 0, 40, 40, 120, 120, 280]
+    },
+    "strength": {
+      "key": "mounted",
+      "perLevel": 2,
+      "stars": [0, 40, 40, 120, 120, 280, 280]
+    }
+  },
+  {
+    "id": "amanitore",
+    "name": "Amanitore",
+    "health": {
+      "key": "army",
+      "perLevel": 1.5,
+      "stars": [0, 15, 30, 60, 90, 150, 210]
+    },
+    "strength": {
+      "key": "army",
+      "perLevel": 1.5,
+      "stars": [0, 15, 30, 60, 90, 150, 210]
+    },
+    "note": "These bonuses only apply on group marches, in reinforcements, and in raids."
+  },
+  {
+    "id": "aurora",
+    "name": "Aurora"
+  },
+  {
+    "id": "aydae",
+    "name": "Aydae",
+    "health": {
+      "key": "guardsmen",
+      "perLevel": 1,
+      "stars": [0, 0, 15, 15, 45, 45, 105]
+    },
+    "strength": {
+      "key": "guardsmen",
+      "perLevel": 1,
+      "stars": [0, 15, 15, 45, 45, 105, 105]
+    }
+  },
+  {
+    "id": "beowulf",
+    "name": "Beowulf",
+    "health": {
+      "key": "army",
+      "perLevel": 1,
+      "stars": [0, 70, 140, 210, 280, 350, 420]
+    },
+    "strength": {
+      "key": "army",
+      "perLevel": 1,
+      "stars": [0, 70, 140, 210, 280, 350, 420]
+    }
+  },
+  {
+    "id": "bernard",
+    "name": "Bernard",
+    "health": {
+      "key": "ranged",
+      "perLevel": 1,
+      "stars": [0, 0, 15, 15, 45, 45, 105]
+    },
+    "strength": {
+      "key": "ranged",
+      "perLevel": 1,
+      "stars": [0, 15, 15, 45, 45, 105, 105]
+    }
+  },
+  {
+    "id": "brann",
+    "name": "Brann",
+    "health": {
+      "key": "engineers",
+      "perLevel": 1,
+      "stars": [0, 0, 5, 5, 15, 15, 35]
+    },
+    "strength": {
+      "key": "engineers",
+      "perLevel": 1,
+      "stars": [0, 5, 5, 15, 15, 35, 35]
+    }
+  },
+  {
+    "id": "brunhild",
+    "name": "Brunhild",
+    "health": {
+      "key": "flying",
+      "perLevel": 1,
+      "stars": [0, 0, 15, 15, 45, 45, 105]
+    },
+    "strength": {
+      "key": "flying",
+      "perLevel": 1,
+      "stars": [0, 15, 15, 45, 45, 105, 105]
+    }
+  },
+  {
+    "id": "carter",
+    "name": "Carter"
+  },
+  {
+    "id": "cleopatra",
+    "name": "Cleopatra",
+    "strength": {
+      "key": "army",
+      "perLevel": 1,
+      "stars": [0, 15, 30, 60, 90, 150, 210]
+    }
+  },
+  {
+    "id": "doria",
+    "name": "Doria"
+  },
+  {
+    "id": "dustan",
+    "name": "Dustan"
+  },
+  {
+    "id": "farhad",
+    "name": "Farhad"
+  },
+  {
+    "id": "heimdall",
+    "name": "Heimdall",
+    "strength": {
+      "key": "army",
+      "perLevel": 1.5,
+      "stars": [0, 110, 220, 330, 440, 550, 660]
+    }
+  },
+  {
+    "id": "helen",
+    "name": "Helen"
+  },
+  {
+    "id": "hercules",
+    "name": "Hercules",
+    "special": {
+      "key": "armyStrengthAgainstEpicMonsters",
+      "perLevel": 2,
+      "stars": [0, 30, 90, 180, 300, 510, 860]
+    },
+    "note": "These bonuses only apply on battles against epic monsters."
+  },
+  {
+    "id": "ingrid",
+    "name": "Ingrid",
+    "health": {
+      "key": "monster",
+      "perLevel": 1,
+      "stars": [0, 0, 15, 15, 45, 45, 105]
+    },
+    "strength": {
+      "key": "monster",
+      "perLevel": 1,
+      "stars": [0, 15, 15, 45, 45, 105, 105]
+    }
+  },
+  {
+    "id": "leonidas",
+    "name": "Leonidas",
+    "health": {
+      "key": "melee",
+      "perLevel": 1,
+      "stars": [0, 0, 40, 40, 120, 120, 280]
+    },
+    "strength": {
+      "key": "melee",
+      "perLevel": 2,
+      "stars": [0, 40, 40, 120, 120, 280, 280]
+    }
+  },
+  {
+    "id": "logos",
+    "name": "Logos",
+    "health": {
+      "key": "specialist",
+      "perLevel": 1,
+      "stars": [0, 0, 5, 5, 15, 15, 35]
+    },
+    "strength": {
+      "key": "specialist",
+      "perLevel": 1,
+      "stars": [0, 5, 5, 15, 15, 35, 35]
+    }
+  },
+  {
+    "id": "lucius",
+    "name": "Lucius",
+    "health": {
+      "key": "mounted",
+      "perLevel": 1,
+      "stars": [0, 0, 15, 15, 45, 45, 105]
+    },
+    "strength": {
+      "key": "mounted",
+      "perLevel": 1,
+      "stars": [0, 15, 15, 45, 45, 105, 105]
+    }
+  },
+  {
+    "id": "minamoto",
+    "name": "Minamoto",
+    "health": {
+      "key": "ranged",
+      "perLevel": 1,
+      "stars": [0, 0, 40, 40, 120, 120, 280]
+    },
+    "strength": {
+      "key": "ranged",
+      "perLevel": 2,
+      "stars": [0, 40, 40, 120, 120, 280, 280]
+    }
+  },
+  {
+    "id": "proscope",
+    "name": "Proscope"
+  },
+  {
+    "id": "ramses-ii",
+    "name": "Ramses II",
+    "health": {
+      "key": "army",
+      "perLevel": 1,
+      "stars": [0, 15, 30, 60, 90, 150, 210]
+    }
+  },
+  {
+    "id": "skadi",
+    "name": "Skadi",
+    "health": {
+      "key": "guardsmen",
+      "perLevel": 2,
+      "stars": [0, 140, 280, 420, 560, 700, 840]
+    },
+    "strength": {
+      "key": "guardsmen",
+      "perLevel": 2,
+      "stars": [0, 140, 280, 420, 560, 700, 840]
+    }
+  },
+  {
+    "id": "sofia",
+    "name": "Sofia",
+    "health": {
+      "key": "army",
+      "perLevel": 0.5,
+      "stars": [0, 2.5, 5, 10, 15, 25, 35]
+    }
+  },
+  {
+    "id": "stror",
+    "name": "Stror"
+  },
+  {
+    "id": "tengel",
+    "name": "Tengel"
+  },
+  {
+    "id": "wu-zetian",
+    "name": "Wu Zetian",
+    "health": {
+      "key": "flying",
+      "perLevel": 1,
+      "stars": [0, 0, 40, 40, 120, 120, 280]
+    },
+    "strength": {
+      "key": "flying",
+      "perLevel": 2,
+      "stars": [0, 40, 40, 120, 120, 280, 280]
+    }
+  },
+  {
+    "id": "xi-guiying",
+    "name": "Xi Guiying",
+    "strength": {
+      "key": "ranged",
+      "perLevel": 1,
+      "stars": [0, 5, 5, 15, 15, 35, 35]
+    }
+  },
+  {
+    "id": "ye-ho-sung",
+    "name": "Ye Ho-Sung",
+    "health": {
+      "key": "melee",
+      "perLevel": 1,
+      "stars": [0, 0, 15, 15, 45, 45, 105]
+    },
+    "strength": {
+      "key": "melee",
+      "perLevel": 1,
+      "stars": [0, 15, 15, 45, 45, 105, 105]
+    }
+  }
+]

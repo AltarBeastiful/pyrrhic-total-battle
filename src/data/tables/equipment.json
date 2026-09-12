@@ -1,0 +1,1132 @@
+[
+  {
+    "id": "emerald-guardian",
+    "name": "Emerald Guardian",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "melee": 16
+        },
+        "strength": {
+          "melee": 16
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 8
+          }
+        ]
+      },
+      "common": {
+        "health": {
+          "melee": 24
+        },
+        "strength": {
+          "melee": 24
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 12
+          }
+        ]
+      },
+      "uncommon": {
+        "health": {
+          "melee": 34
+        },
+        "strength": {
+          "melee": 34
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 17
+          }
+        ]
+      },
+      "rare": {
+        "health": {
+          "melee": 46
+        },
+        "strength": {
+          "melee": 46
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 23
+          }
+        ]
+      },
+      "epic": {
+        "health": {
+          "melee": 60
+        },
+        "strength": {
+          "melee": 60
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 30
+          }
+        ]
+      },
+      "legendary": {
+        "health": {
+          "melee": 78
+        },
+        "strength": {
+          "melee": 78
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 39
+          }
+        ]
+      },
+      "ascendant": {
+        "health": {
+          "melee": 100
+        },
+        "strength": {
+          "melee": 100
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 50
+          }
+        ]
+      },
+      "godlike": {
+        "health": {
+          "melee": 128
+        },
+        "strength": {
+          "melee": 128
+        },
+        "matchup": [
+          {
+            "attacker": "melee",
+            "target": "mounted",
+            "value": 64
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "emperors-wrath",
+    "name": "Emperor's Wrath",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "army": 5.4
+        },
+        "strength": {
+          "army": 5.4
+        }
+      },
+      "common": {
+        "health": {
+          "army": 8
+        },
+        "strength": {
+          "army": 8
+        }
+      },
+      "uncommon": {
+        "health": {
+          "army": 11.4
+        },
+        "strength": {
+          "army": 11.4
+        }
+      },
+      "rare": {
+        "health": {
+          "army": 15.4
+        },
+        "strength": {
+          "army": 15.4
+        }
+      },
+      "epic": {
+        "health": {
+          "army": 20
+        },
+        "strength": {
+          "army": 20
+        }
+      },
+      "legendary": {
+        "health": {
+          "army": 26
+        },
+        "strength": {
+          "army": 26
+        }
+      },
+      "ascendant": {
+        "health": {
+          "army": 33.4
+        },
+        "strength": {
+          "army": 33.4
+        }
+      },
+      "godlike": {
+        "health": {
+          "army": 42.7
+        },
+        "strength": {
+          "army": 42.7
+        }
+      }
+    }
+  },
+  {
+    "id": "guardian-of-justice",
+    "name": "Guardian of Justice",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "guardsmen": 10.7
+        },
+        "strength": {
+          "guardsmen": 10.7
+        }
+      },
+      "common": {
+        "health": {
+          "guardsmen": 16
+        },
+        "strength": {
+          "guardsmen": 16
+        }
+      },
+      "uncommon": {
+        "health": {
+          "guardsmen": 22.7
+        },
+        "strength": {
+          "guardsmen": 22.7
+        }
+      },
+      "rare": {
+        "health": {
+          "guardsmen": 30.7
+        },
+        "strength": {
+          "guardsmen": 30.7
+        }
+      },
+      "epic": {
+        "health": {
+          "guardsmen": 40
+        },
+        "strength": {
+          "guardsmen": 40
+        }
+      },
+      "legendary": {
+        "health": {
+          "guardsmen": 52
+        },
+        "strength": {
+          "guardsmen": 52
+        }
+      },
+      "ascendant": {
+        "health": {
+          "guardsmen": 66.7
+        },
+        "strength": {
+          "guardsmen": 66.7
+        }
+      },
+      "godlike": {
+        "health": {
+          "guardsmen": 85.3
+        },
+        "strength": {
+          "guardsmen": 85.3
+        }
+      }
+    }
+  },
+  {
+    "id": "guardsmens-courage",
+    "name": "Guardsmen's Courage",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "guardsmen": 1.5
+        },
+        "strength": {
+          "guardsmen": 1.5
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 0.1
+        }
+      },
+      "common": {
+        "health": {
+          "guardsmen": 3
+        },
+        "strength": {
+          "guardsmen": 3
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 0.2
+        }
+      },
+      "uncommon": {
+        "health": {
+          "guardsmen": 5
+        },
+        "strength": {
+          "guardsmen": 5
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 0.3
+        }
+      },
+      "rare": {
+        "health": {
+          "guardsmen": 8
+        },
+        "strength": {
+          "guardsmen": 8
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 0.4
+        }
+      },
+      "epic": {
+        "health": {
+          "guardsmen": 12
+        },
+        "strength": {
+          "guardsmen": 12
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 0.5
+        }
+      },
+      "legendary": {
+        "health": {
+          "guardsmen": 17
+        },
+        "strength": {
+          "guardsmen": 17
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 0.8
+        }
+      },
+      "ascendant": {
+        "health": {
+          "guardsmen": 23
+        },
+        "strength": {
+          "guardsmen": 23
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 1.2
+        }
+      },
+      "godlike": {
+        "health": {
+          "guardsmen": 30
+        },
+        "strength": {
+          "guardsmen": 30
+        },
+        "special": {
+          "guardsmenDoubleDamageChance": 2
+        }
+      }
+    }
+  },
+  {
+    "id": "immortal-warrior",
+    "name": "Immortal Warrior",
+    "byQuality": {
+      "uncommon": {
+        "health": {
+          "army": 15
+        },
+        "strength": {
+          "army": 15
+        },
+        "special": {
+          "doubleDamageChance": 0.5
+        }
+      },
+      "rare": {
+        "health": {
+          "army": 25
+        },
+        "strength": {
+          "army": 25
+        },
+        "special": {
+          "doubleDamageChance": 1
+        }
+      },
+      "epic": {
+        "health": {
+          "army": 50
+        },
+        "strength": {
+          "army": 50
+        },
+        "special": {
+          "doubleDamageChance": 2
+        }
+      },
+      "legendary": {
+        "health": {
+          "army": 60
+        },
+        "strength": {
+          "army": 60
+        },
+        "special": {
+          "doubleDamageChance": 2
+        }
+      },
+      "ascendant": {
+        "health": {
+          "army": 75
+        },
+        "strength": {
+          "army": 75
+        },
+        "special": {
+          "doubleDamageChance": 2
+        }
+      },
+      "godlike": {
+        "health": {
+          "army": 100
+        },
+        "strength": {
+          "army": 100
+        },
+        "special": {
+          "doubleDamageChance": 2
+        }
+      }
+    }
+  },
+  {
+    "id": "path-of-the-skybreaker",
+    "name": "Path of the Skybreaker",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "flying": 16
+        },
+        "strength": {
+          "flying": 16
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 8
+          }
+        ]
+      },
+      "common": {
+        "health": {
+          "flying": 24
+        },
+        "strength": {
+          "flying": 24
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 12
+          }
+        ]
+      },
+      "uncommon": {
+        "health": {
+          "flying": 34
+        },
+        "strength": {
+          "flying": 34
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 17
+          }
+        ]
+      },
+      "rare": {
+        "health": {
+          "flying": 46
+        },
+        "strength": {
+          "flying": 46
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 23
+          }
+        ]
+      },
+      "epic": {
+        "health": {
+          "flying": 60
+        },
+        "strength": {
+          "flying": 60
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 30
+          }
+        ]
+      },
+      "legendary": {
+        "health": {
+          "flying": 78
+        },
+        "strength": {
+          "flying": 78
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 39
+          }
+        ]
+      },
+      "ascendant": {
+        "health": {
+          "flying": 100
+        },
+        "strength": {
+          "flying": 100
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 50
+          }
+        ]
+      },
+      "godlike": {
+        "health": {
+          "flying": 128
+        },
+        "strength": {
+          "flying": 128
+        },
+        "matchup": [
+          {
+            "attacker": "flying",
+            "target": "mounted",
+            "value": 64
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "sagittariuss-fury",
+    "name": "Sagittarius's Fury",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "ranged": 16
+        },
+        "strength": {
+          "ranged": 16
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 8
+          }
+        ]
+      },
+      "common": {
+        "health": {
+          "ranged": 24
+        },
+        "strength": {
+          "ranged": 24
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 12
+          }
+        ]
+      },
+      "uncommon": {
+        "health": {
+          "ranged": 34
+        },
+        "strength": {
+          "ranged": 34
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 17
+          }
+        ]
+      },
+      "rare": {
+        "health": {
+          "ranged": 46
+        },
+        "strength": {
+          "ranged": 46
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 23
+          }
+        ]
+      },
+      "epic": {
+        "health": {
+          "ranged": 60
+        },
+        "strength": {
+          "ranged": 60
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 30
+          }
+        ]
+      },
+      "legendary": {
+        "health": {
+          "ranged": 78
+        },
+        "strength": {
+          "ranged": 78
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 39
+          }
+        ]
+      },
+      "ascendant": {
+        "health": {
+          "ranged": 100
+        },
+        "strength": {
+          "ranged": 100
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 50
+          }
+        ]
+      },
+      "godlike": {
+        "health": {
+          "ranged": 128
+        },
+        "strength": {
+          "ranged": 128
+        },
+        "matchup": [
+          {
+            "attacker": "ranged",
+            "target": "melee",
+            "value": 64
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "skillful-engineer",
+    "name": "Skillful Engineer",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "engineers": 1.5
+        },
+        "strength": {
+          "engineers": 1.5
+        },
+        "special": {
+          "engineersDoubleDamageChance": 0.1
+        }
+      },
+      "common": {
+        "health": {
+          "engineers": 3
+        },
+        "strength": {
+          "engineers": 3
+        },
+        "special": {
+          "engineersDoubleDamageChance": 0.2
+        }
+      },
+      "uncommon": {
+        "health": {
+          "engineers": 5
+        },
+        "strength": {
+          "engineers": 5
+        },
+        "special": {
+          "engineersDoubleDamageChance": 0.3
+        }
+      },
+      "rare": {
+        "health": {
+          "engineers": 8
+        },
+        "strength": {
+          "engineers": 8
+        },
+        "special": {
+          "engineersDoubleDamageChance": 0.4
+        }
+      },
+      "epic": {
+        "health": {
+          "engineers": 12
+        },
+        "strength": {
+          "engineers": 12
+        },
+        "special": {
+          "engineersDoubleDamageChance": 0.5
+        }
+      },
+      "legendary": {
+        "health": {
+          "engineers": 17
+        },
+        "strength": {
+          "engineers": 17
+        },
+        "special": {
+          "engineersDoubleDamageChance": 0.8
+        }
+      },
+      "ascendant": {
+        "health": {
+          "engineers": 23
+        },
+        "strength": {
+          "engineers": 23
+        },
+        "special": {
+          "engineersDoubleDamageChance": 1.2
+        }
+      },
+      "godlike": {
+        "health": {
+          "engineers": 30
+        },
+        "strength": {
+          "engineers": 30
+        },
+        "special": {
+          "engineersDoubleDamageChance": 2
+        }
+      }
+    }
+  },
+  {
+    "id": "specialists-authority",
+    "name": "Specialists' Authority",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "specialist": 1.5
+        },
+        "strength": {
+          "specialist": 1.5
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 0.1
+        }
+      },
+      "common": {
+        "health": {
+          "specialist": 3
+        },
+        "strength": {
+          "specialist": 3
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 0.2
+        }
+      },
+      "uncommon": {
+        "health": {
+          "specialist": 5
+        },
+        "strength": {
+          "specialist": 5
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 0.3
+        }
+      },
+      "rare": {
+        "health": {
+          "specialist": 8
+        },
+        "strength": {
+          "specialist": 8
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 0.4
+        }
+      },
+      "epic": {
+        "health": {
+          "specialist": 12
+        },
+        "strength": {
+          "specialist": 12
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 0.5
+        }
+      },
+      "legendary": {
+        "health": {
+          "specialist": 17
+        },
+        "strength": {
+          "specialist": 17
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 0.8
+        }
+      },
+      "ascendant": {
+        "health": {
+          "specialist": 23
+        },
+        "strength": {
+          "specialist": 23
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 1.2
+        }
+      },
+      "godlike": {
+        "health": {
+          "specialist": 30
+        },
+        "strength": {
+          "specialist": 30
+        },
+        "special": {
+          "specialistsDoubleDamageChance": 2
+        }
+      }
+    }
+  },
+  {
+    "id": "steppe-enslaver",
+    "name": "Steppe Enslaver",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "mounted": 16
+        },
+        "strength": {
+          "mounted": 16
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 8
+          }
+        ]
+      },
+      "common": {
+        "health": {
+          "mounted": 24
+        },
+        "strength": {
+          "mounted": 24
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 12
+          }
+        ]
+      },
+      "uncommon": {
+        "health": {
+          "mounted": 34
+        },
+        "strength": {
+          "mounted": 34
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 17
+          }
+        ]
+      },
+      "rare": {
+        "health": {
+          "mounted": 46
+        },
+        "strength": {
+          "mounted": 46
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 23
+          }
+        ]
+      },
+      "epic": {
+        "health": {
+          "mounted": 60
+        },
+        "strength": {
+          "mounted": 60
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 30
+          }
+        ]
+      },
+      "legendary": {
+        "health": {
+          "mounted": 78
+        },
+        "strength": {
+          "mounted": 78
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 39
+          }
+        ]
+      },
+      "ascendant": {
+        "health": {
+          "mounted": 100
+        },
+        "strength": {
+          "mounted": 100
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 50
+          }
+        ]
+      },
+      "godlike": {
+        "health": {
+          "mounted": 128
+        },
+        "strength": {
+          "mounted": 128
+        },
+        "matchup": [
+          {
+            "attacker": "mounted",
+            "target": "ranged",
+            "value": 64
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "war-master",
+    "name": "War Master",
+    "byQuality": {
+      "poor": {
+        "health": {
+          "specialist": 10.7
+        },
+        "strength": {
+          "specialist": 10.7
+        }
+      },
+      "common": {
+        "health": {
+          "specialist": 16
+        },
+        "strength": {
+          "specialist": 16
+        }
+      },
+      "uncommon": {
+        "health": {
+          "specialist": 22.7
+        },
+        "strength": {
+          "specialist": 22.7
+        }
+      },
+      "rare": {
+        "health": {
+          "specialist": 30.7
+        },
+        "strength": {
+          "specialist": 30.7
+        }
+      },
+      "epic": {
+        "health": {
+          "specialist": 40
+        },
+        "strength": {
+          "specialist": 40
+        }
+      },
+      "legendary": {
+        "health": {
+          "specialist": 52
+        },
+        "strength": {
+          "specialist": 52
+        }
+      },
+      "ascendant": {
+        "health": {
+          "specialist": 66.7
+        },
+        "strength": {
+          "specialist": 66.7
+        }
+      },
+      "godlike": {
+        "health": {
+          "specialist": 85.3
+        },
+        "strength": {
+          "specialist": 85.3
+        }
+      }
+    }
+  },
+  {
+    "id": "warrior-of-ragnarok",
+    "name": "Warrior of Ragnarök",
+    "byQuality": {
+      "poor": {
+        "special": {
+          "doubleDamageChance": 0.1,
+          "strikeTwoSquadsChance": 0.1,
+          "armyStrengthAgainstEpicMonsters": 15
+        }
+      },
+      "common": {
+        "special": {
+          "doubleDamageChance": 0.2,
+          "strikeTwoSquadsChance": 0.2,
+          "armyStrengthAgainstEpicMonsters": 25
+        }
+      },
+      "uncommon": {
+        "special": {
+          "doubleDamageChance": 0.3,
+          "strikeTwoSquadsChance": 0.3,
+          "armyStrengthAgainstEpicMonsters": 35
+        }
+      },
+      "rare": {
+        "special": {
+          "doubleDamageChance": 0.4,
+          "strikeTwoSquadsChance": 0.4,
+          "armyStrengthAgainstEpicMonsters": 45
+        }
+      },
+      "epic": {
+        "special": {
+          "doubleDamageChance": 0.5,
+          "strikeTwoSquadsChance": 0.5,
+          "armyStrengthAgainstEpicMonsters": 60
+        }
+      },
+      "legendary": {
+        "special": {
+          "doubleDamageChance": 0.8,
+          "strikeTwoSquadsChance": 0.8,
+          "armyStrengthAgainstEpicMonsters": 90
+        }
+      },
+      "ascendant": {
+        "special": {
+          "doubleDamageChance": 1.2,
+          "strikeTwoSquadsChance": 1.2,
+          "armyStrengthAgainstEpicMonsters": 140
+        }
+      },
+      "godlike": {
+        "special": {
+          "doubleDamageChance": 2,
+          "strikeTwoSquadsChance": 2,
+          "armyStrengthAgainstEpicMonsters": 210
+        }
+      }
+    }
+  }
+]

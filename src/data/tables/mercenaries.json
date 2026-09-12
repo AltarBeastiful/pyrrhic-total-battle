@@ -1,0 +1,1158 @@
+[
+  {
+    "id": "abomination-6",
+    "name": "Abomination VI",
+    "label": "ABM6",
+    "tier": 6,
+    "tags": ["monster", "melee", "beast"],
+    "cost": 68,
+    "health": 390000,
+    "strength": 130000,
+    "strengthAgainst": {
+      "ranged": 60,
+      "elementals": 50
+    },
+    "revival": {
+      "gold": 540
+    }
+  },
+  {
+    "id": "arbalester-6",
+    "name": "Arbalester VI",
+    "label": "ABT6",
+    "tier": 6,
+    "tags": ["guardsmen", "ranged"],
+    "cost": 1,
+    "health": 5700,
+    "strength": 1900,
+    "strengthAgainst": {
+      "melee": 394,
+      "flying": 509
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "arbalester-7",
+    "name": "Arbalester VII",
+    "label": "ABT7",
+    "tier": 7,
+    "tags": ["guardsmen", "ranged"],
+    "cost": 1,
+    "health": 10200,
+    "strength": 3400,
+    "strengthAgainst": {
+      "melee": 570,
+      "flying": 729
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "archdemon-6",
+    "name": "Archdemon VI",
+    "label": "ADM6",
+    "tier": 6,
+    "tags": ["monster", "melee", "giant"],
+    "cost": 95,
+    "health": 540000,
+    "strength": 180000,
+    "strengthAgainst": {
+      "mounted": 60,
+      "beasts": 40
+    },
+    "revival": {
+      "gold": 760
+    }
+  },
+  {
+    "id": "bear-5",
+    "name": "Bear V",
+    "label": "BER5",
+    "tier": 5,
+    "tags": ["monster", "melee", "beast"],
+    "cost": 21,
+    "health": 66000,
+    "strength": 22000,
+    "strengthAgainst": {
+      "mounted": 70,
+      "elementals": 50
+    },
+    "revival": {
+      "gold": 160
+    }
+  },
+  {
+    "id": "bone-golem-6",
+    "name": "Bone Golem VI",
+    "label": "BGM6",
+    "tier": 6,
+    "tags": ["monster", "melee"],
+    "cost": 37,
+    "health": 210000,
+    "strength": 70000,
+    "strengthAgainst": {
+      "dragons": 40
+    },
+    "doubleDamageChance": 20,
+    "revival": {
+      "gold": 300
+    }
+  },
+  {
+    "id": "bull-rider-5",
+    "name": "Bull Rider V",
+    "label": "BLR5",
+    "tier": 5,
+    "tags": ["monster", "mounted"],
+    "cost": 28,
+    "health": 87000,
+    "strength": 29000,
+    "strengthAgainst": {
+      "ranged": 55
+    },
+    "revival": {
+      "gold": 220
+    }
+  },
+  {
+    "id": "chariot-6",
+    "name": "Chariot VI",
+    "label": "CHR6",
+    "tier": 6,
+    "tags": ["guardsmen", "mounted"],
+    "cost": 2,
+    "health": 11400,
+    "strength": 3800,
+    "strengthAgainst": {
+      "ranged": 493,
+      "engineers": 410
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 16
+    }
+  },
+  {
+    "id": "chariot-7",
+    "name": "Chariot VII",
+    "label": "CHR7",
+    "tier": 7,
+    "tags": ["guardsmen", "mounted"],
+    "cost": 2,
+    "health": 20400,
+    "strength": 6800,
+    "strengthAgainst": {
+      "ranged": 752,
+      "engineers": 547
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 16
+    }
+  },
+  {
+    "id": "chitinous-defender-6",
+    "name": "Chitinous Defender VI",
+    "label": "CDF6",
+    "tier": 6,
+    "tags": ["guardsmen", "melee"],
+    "cost": 1,
+    "health": 5850,
+    "strength": 1950,
+    "strengthAgainst": {
+      "swarmUnits": 710
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "chitinous-defender-7",
+    "name": "Chitinous Defender VII",
+    "label": "CDF7",
+    "tier": 7,
+    "tags": ["guardsmen", "melee"],
+    "cost": 1,
+    "health": 10500,
+    "strength": 3500,
+    "strengthAgainst": {
+      "swarmUnits": 1121
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "chitinous-defender-leader-2",
+    "name": "Chitinous Defender Leader II",
+    "label": "CDL2",
+    "tier": 9,
+    "tags": ["guardsmen", "melee"],
+    "cost": 1,
+    "health": 33600,
+    "strength": 11200,
+    "strengthAgainst": {
+      "swarmUnits": 4000
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "combat-anteater-6",
+    "name": "Combat Anteater VI",
+    "label": "CAT6",
+    "tier": 6,
+    "tags": ["guardsmen", "mounted"],
+    "cost": 1,
+    "health": 6000,
+    "strength": 2000,
+    "strengthAgainst": {
+      "swarmUnits": 710
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "combat-anteater-7",
+    "name": "Combat Anteater VII",
+    "label": "CAT7",
+    "tier": 7,
+    "tags": ["guardsmen", "mounted"],
+    "cost": 1,
+    "health": 10800,
+    "strength": 3600,
+    "strengthAgainst": {
+      "swarmUnits": 1121
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "combat-anteater-leader-2",
+    "name": "Combat Anteater Leader II",
+    "label": "CAL2",
+    "tier": 9,
+    "tags": ["guardsmen", "mounted"],
+    "cost": 1,
+    "health": 34200,
+    "strength": 11400,
+    "strengthAgainst": {
+      "swarmUnits": 4000
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "cursed-dendroid-6",
+    "name": "Cursed Dendroid VI",
+    "label": "CDN6",
+    "tier": 6,
+    "tags": ["monster", "melee", "elemental"],
+    "cost": 57,
+    "health": 330000,
+    "strength": 110000,
+    "strengthAgainst": {
+      "ranged": 65,
+      "dragons": 50
+    },
+    "revival": {
+      "gold": 450
+    }
+  },
+  {
+    "id": "cursed-dragon-7",
+    "name": "Cursed Dragon VII",
+    "label": "CDR7",
+    "tier": 7,
+    "tags": ["monster", "flying", "dragon"],
+    "cost": 93,
+    "health": 960000,
+    "strength": 320000,
+    "strengthAgainst": {
+      "mounted": 50,
+      "giants": 50
+    },
+    "revival": {
+      "gold": 740
+    }
+  },
+  {
+    "id": "cyclops-5",
+    "name": "Cyclops V",
+    "label": "CYC5",
+    "tier": 5,
+    "tags": ["monster", "ranged", "giant"],
+    "cost": 43,
+    "health": 135000,
+    "strength": 45000,
+    "strengthAgainst": {
+      "melee": 45,
+      "beasts": 40
+    },
+    "revival": {
+      "gold": 340
+    }
+  },
+  {
+    "id": "death-chariot-6",
+    "name": "Death Chariot VI",
+    "label": "DCH6",
+    "tier": 6,
+    "tags": ["monster", "mounted"],
+    "cost": 30,
+    "health": 171000,
+    "strength": 57000,
+    "strengthAgainst": {
+      "ranged": 60
+    },
+    "revival": {
+      "gold": 240
+    }
+  },
+  {
+    "id": "demonic-salamander-2",
+    "name": "Demonic Salamander II",
+    "label": "DSL2",
+    "tier": 9,
+    "tags": ["monster", "melee"],
+    "cost": 38,
+    "health": 1230000,
+    "strength": 410000,
+    "strengthAgainst": {
+      "mounted": 65
+    },
+    "revival": {
+      "gold": 300
+    }
+  },
+  {
+    "id": "ent-6",
+    "name": "Ent VI",
+    "label": "ENT6",
+    "tier": 6,
+    "tags": ["monster", "melee", "elemental"],
+    "cost": 39,
+    "health": 219000,
+    "strength": 73000,
+    "strengthAgainst": {
+      "ranged": 55,
+      "dragons": 45
+    },
+    "revival": {
+      "gold": 310
+    }
+  },
+  {
+    "id": "epic-monster-hunter-5",
+    "name": "Epic Monster Hunter V",
+    "label": "EMH5",
+    "tier": 5,
+    "tags": ["guardsmen"],
+    "cost": 1,
+    "health": 3150,
+    "strength": 1050,
+    "strengthAgainst": {
+      "epicMonsters": 373
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "epic-monster-hunter-6",
+    "name": "Epic Monster Hunter VI",
+    "label": "EMH6",
+    "tier": 6,
+    "tags": ["guardsmen"],
+    "cost": 1,
+    "health": 6090,
+    "strength": 2030,
+    "strengthAgainst": {
+      "epicMonsters": 609
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "epic-monster-hunter-7",
+    "name": "Epic Monster Hunter VII",
+    "label": "EMH7",
+    "tier": 7,
+    "tags": ["guardsmen"],
+    "cost": 1,
+    "health": 11220,
+    "strength": 3740,
+    "strengthAgainst": {
+      "epicMonsters": 934
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "eternal-cannoneer-2",
+    "name": "Eternal Cannoneer II",
+    "label": "ETC2",
+    "tier": 9,
+    "tags": ["monster", "ranged"],
+    "cost": 40,
+    "health": 1320000,
+    "strength": 440000,
+    "strengthAgainst": {
+      "flying": 65
+    },
+    "revival": {
+      "gold": 320
+    }
+  },
+  {
+    "id": "fire-lord-7",
+    "name": "Fire Lord VII",
+    "label": "FLR7",
+    "tier": 7,
+    "tags": ["monster", "ranged", "elemental"],
+    "cost": 164,
+    "health": 1680000,
+    "strength": 560000,
+    "strengthAgainst": {
+      "melee": 80,
+      "dragons": 45
+    },
+    "revival": {
+      "gold": 1310
+    }
+  },
+  {
+    "id": "fireworm-rider-5",
+    "name": "Fireworm Rider V",
+    "label": "FWR5",
+    "tier": 5,
+    "tags": ["monster", "mounted"],
+    "cost": 48,
+    "health": 150000,
+    "strength": 50000,
+    "strengthAgainst": {
+      "ranged": 55
+    },
+    "revival": {
+      "gold": 380
+    }
+  },
+  {
+    "id": "galloper-2",
+    "name": "Galloper II",
+    "label": "GAL2",
+    "tier": 9,
+    "tags": ["specialist", "mounted"],
+    "cost": 2,
+    "health": 66000,
+    "strength": 22000,
+    "strengthAgainst": {
+      "ranged": 833,
+      "engineers": 692
+    },
+    "revival": {
+      "gold": 16
+    }
+  },
+  {
+    "id": "gargoyle-5",
+    "name": "Gargoyle V",
+    "label": "GRG5",
+    "tier": 5,
+    "tags": ["monster", "flying", "beast"],
+    "cost": 19,
+    "health": 57000,
+    "strength": 19000,
+    "strengthAgainst": {
+      "mounted": 70,
+      "elementals": 45
+    },
+    "revival": {
+      "gold": 150
+    }
+  },
+  {
+    "id": "giant-zombie-5",
+    "name": "Giant Zombie V",
+    "label": "GZM5",
+    "tier": 5,
+    "tags": ["monster", "melee", "giant"],
+    "cost": 32,
+    "health": 99000,
+    "strength": 33000,
+    "strengthAgainst": {
+      "mounted": 70,
+      "beasts": 45
+    },
+    "revival": {
+      "gold": 250
+    }
+  },
+  {
+    "id": "golden-dragon-7",
+    "name": "Golden Dragon VII",
+    "label": "GDR7",
+    "tier": 7,
+    "tags": ["monster", "flying", "dragon"],
+    "cost": 50,
+    "health": 510000,
+    "strength": 170000,
+    "strengthAgainst": {
+      "mounted": 934,
+      "giants": 365
+    },
+    "revival": {
+      "gold": 400
+    }
+  },
+  {
+    "id": "grim-stalker-6",
+    "name": "Grim Stalker VI",
+    "label": "GST6",
+    "tier": 6,
+    "tags": ["guardsmen", "ranged"],
+    "cost": 1,
+    "health": 5400,
+    "strength": 1800,
+    "strengthAgainst": {
+      "swarmUnits": 710
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "grim-stalker-7",
+    "name": "Grim Stalker VII",
+    "label": "GST7",
+    "tier": 7,
+    "tags": ["guardsmen", "ranged"],
+    "cost": 1,
+    "health": 9600,
+    "strength": 3200,
+    "strengthAgainst": {
+      "swarmUnits": 1121
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "grim-stalker-leader-2",
+    "name": "Grim Stalker Leader II",
+    "label": "GSL2",
+    "tier": 9,
+    "tags": ["guardsmen", "ranged"],
+    "cost": 1,
+    "health": 31800,
+    "strength": 10600,
+    "strengthAgainst": {
+      "swarmUnits": 4000
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "highlander-2",
+    "name": "Highlander II",
+    "label": "HLD2",
+    "tier": 9,
+    "tags": ["guardsmen", "ranged"],
+    "cost": 1,
+    "health": 33000,
+    "strength": 11000,
+    "strengthAgainst": {
+      "melee": 1333,
+      "flying": 1717
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "ifrit-5",
+    "name": "Ifrit V",
+    "label": "IFR5",
+    "tier": 5,
+    "tags": ["monster", "flying", "elemental"],
+    "cost": 42,
+    "health": 132000,
+    "strength": 44000,
+    "strengthAgainst": {
+      "melee": 70,
+      "dragons": 40
+    },
+    "revival": {
+      "gold": 330
+    }
+  },
+  {
+    "id": "jago-2",
+    "name": "Jago II",
+    "label": "JAG2",
+    "tier": 9,
+    "tags": ["specialist", "flying", "beast"],
+    "cost": 20,
+    "health": 660000,
+    "strength": 220000,
+    "strengthAgainst": {
+      "mounted": 1000
+    },
+    "revival": {
+      "gold": 160
+    }
+  },
+  {
+    "id": "jungle-king-7",
+    "name": "Jungle King VII",
+    "label": "JKG7",
+    "tier": 7,
+    "tags": ["monster", "melee", "beast"],
+    "cost": 33,
+    "health": 330000,
+    "strength": 110000,
+    "strengthAgainst": {
+      "mounted": 387,
+      "elementals": 911
+    },
+    "revival": {
+      "gold": 264
+    }
+  },
+  {
+    "id": "knight-6",
+    "name": "Knight VI",
+    "label": "KNT6",
+    "tier": 6,
+    "tags": ["specialist", "melee"],
+    "cost": 1,
+    "health": 5700,
+    "strength": 1900,
+    "strengthAgainst": {
+      "mounted": 148,
+      "beasts": 304
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "knight-7",
+    "name": "Knight VII",
+    "label": "KNT7",
+    "tier": 7,
+    "tags": ["specialist", "melee"],
+    "cost": 1,
+    "health": 10200,
+    "strength": 3400,
+    "strengthAgainst": {
+      "mounted": 194,
+      "beasts": 456
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "legionary-6",
+    "name": "Legionary VI",
+    "label": "LGN6",
+    "tier": 6,
+    "tags": ["guardsmen", "melee"],
+    "cost": 1,
+    "health": 5700,
+    "strength": 1900,
+    "strengthAgainst": {
+      "mounted": 295,
+      "beasts": 608
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "legionary-7",
+    "name": "Legionary VII",
+    "label": "LGN7",
+    "tier": 7,
+    "tags": ["guardsmen", "melee"],
+    "cost": 1,
+    "health": 10200,
+    "strength": 3400,
+    "strengthAgainst": {
+      "mounted": 387,
+      "beasts": 911
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "life-dragon-7",
+    "name": "Life Dragon VII",
+    "label": "LFD7",
+    "tier": 7,
+    "tags": ["monster", "flying", "dragon"],
+    "cost": 70,
+    "health": 720000,
+    "strength": 240000,
+    "strengthAgainst": {
+      "mounted": 60,
+      "giants": 50
+    },
+    "revival": {
+      "gold": 560
+    }
+  },
+  {
+    "id": "lightning-lord-7",
+    "name": "Lightning Lord VII",
+    "label": "LTN7",
+    "tier": 7,
+    "tags": ["monster", "ranged", "giant"],
+    "cost": 45,
+    "health": 460000,
+    "strength": 153000,
+    "strengthAgainst": {
+      "melee": 570,
+      "beasts": 729
+    },
+    "revival": {
+      "gold": 360
+    }
+  },
+  {
+    "id": "overlord-7",
+    "name": "Overlord VII",
+    "label": "OVL7",
+    "tier": 7,
+    "tags": ["monster", "ranged", "giant"],
+    "cost": 60,
+    "health": 600000,
+    "strength": 200000,
+    "strengthAgainst": {
+      "melee": 60,
+      "beasts": 50
+    },
+    "revival": {
+      "gold": 480
+    }
+  },
+  {
+    "id": "pounder-2",
+    "name": "Pounder II",
+    "label": "PND2",
+    "tier": 9,
+    "tags": ["specialist", "ranged"],
+    "cost": 1,
+    "health": 33000,
+    "strength": 11000,
+    "strengthAgainst": {
+      "melee": 667,
+      "flying": 859
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "quicksand-2",
+    "name": "Quicksand II",
+    "label": "QKS2",
+    "tier": 9,
+    "tags": ["guardsmen", "mounted"],
+    "cost": 2,
+    "health": 66000,
+    "strength": 22000,
+    "strengthAgainst": {
+      "ranged": 1667,
+      "engineers": 1384
+    },
+    "revival": {
+      "gold": 16
+    }
+  },
+  {
+    "id": "rhino-rider-6",
+    "name": "Rhino Rider VI",
+    "label": "RHR6",
+    "tier": 6,
+    "tags": ["specialist", "mounted"],
+    "cost": 2,
+    "health": 11340,
+    "strength": 3780,
+    "strengthAgainst": {
+      "ranged": 247,
+      "engineers": 205
+    },
+    "revival": {
+      "gold": 16
+    }
+  },
+  {
+    "id": "rhino-rider-7",
+    "name": "Rhino Rider VII",
+    "label": "RHR7",
+    "tier": 7,
+    "tags": ["specialist", "mounted"],
+    "cost": 2,
+    "health": 20400,
+    "strength": 6800,
+    "strengthAgainst": {
+      "ranged": 377,
+      "engineers": 274
+    },
+    "revival": {
+      "gold": 16
+    }
+  },
+  {
+    "id": "sandworm-7",
+    "name": "Sandworm VII",
+    "label": "SDW7",
+    "tier": 7,
+    "tags": ["monster", "melee", "elemental"],
+    "cost": 128,
+    "health": 1290000,
+    "strength": 430000,
+    "strengthAgainst": {
+      "mounted": 75,
+      "dragons": 50
+    },
+    "revival": {
+      "gold": 1020
+    }
+  },
+  {
+    "id": "scarface-2",
+    "name": "Scarface II",
+    "label": "SCF2",
+    "tier": 9,
+    "tags": ["specialist", "melee"],
+    "cost": 1,
+    "health": 33000,
+    "strength": 11000,
+    "strengthAgainst": {
+      "mounted": 500,
+      "beasts": 1025
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "scorpion-rider-5",
+    "name": "Scorpion Rider V",
+    "label": "SCR5",
+    "tier": 5,
+    "tags": ["monster", "mounted"],
+    "cost": 36,
+    "health": 111000,
+    "strength": 37000,
+    "strengthAgainst": {
+      "ranged": 40
+    },
+    "revival": {
+      "gold": 280
+    }
+  },
+  {
+    "id": "sea-lord-7",
+    "name": "Sea Lord VII",
+    "label": "SEA7",
+    "tier": 7,
+    "tags": ["monster", "mounted", "elemental"],
+    "cost": 40,
+    "health": 420000,
+    "strength": 140000,
+    "strengthAgainst": {
+      "ranged": 752,
+      "dragons": 547
+    },
+    "revival": {
+      "gold": 320
+    }
+  },
+  {
+    "id": "shedu-6",
+    "name": "Shedu VI",
+    "label": "SHD6",
+    "tier": 6,
+    "tags": ["specialist", "flying", "beast"],
+    "cost": 10,
+    "health": 56700,
+    "strength": 18900,
+    "strengthAgainst": {
+      "mounted": 296
+    },
+    "revival": {
+      "gold": 80
+    }
+  },
+  {
+    "id": "shedu-7",
+    "name": "Shedu VII",
+    "label": "SHD7",
+    "tier": 7,
+    "tags": ["specialist", "flying", "beast"],
+    "cost": 40,
+    "health": 408000,
+    "strength": 136000,
+    "strengthAgainst": {
+      "mounted": 467
+    },
+    "revival": {
+      "gold": 320
+    }
+  },
+  {
+    "id": "slavic-warrior-2",
+    "name": "Slavic Warrior II",
+    "label": "SLV2",
+    "tier": 9,
+    "tags": ["guardsmen", "melee"],
+    "cost": 1,
+    "health": 33000,
+    "strength": 11000,
+    "strengthAgainst": {
+      "mounted": 1000,
+      "beasts": 2050
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "sphynx-6",
+    "name": "Sphynx VI",
+    "label": "SPX6",
+    "tier": 6,
+    "tags": ["guardsmen", "flying", "beast"],
+    "cost": 10,
+    "health": 56700,
+    "strength": 18900,
+    "strengthAgainst": {
+      "mounted": 592
+    },
+    "revival": {
+      "gold": 80
+    }
+  },
+  {
+    "id": "sphynx-7",
+    "name": "Sphynx VII",
+    "label": "SPX7",
+    "tier": 7,
+    "tags": ["guardsmen", "flying", "beast"],
+    "cost": 10,
+    "health": 408000,
+    "strength": 136000,
+    "strengthAgainst": {
+      "mounted": 934
+    },
+    "revival": {
+      "gold": 320
+    }
+  },
+  {
+    "id": "superior-epic-monster-hunter-2",
+    "name": "Superior Epic Monster Hunter II",
+    "label": "EMH2",
+    "tier": 9,
+    "tags": ["guardsmen"],
+    "cost": 1,
+    "health": 75000,
+    "strength": 25000,
+    "strengthAgainst": {
+      "epicMonsters": 1000
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "swift-marksman-5",
+    "name": "Swift Marksman V",
+    "label": "SWM5",
+    "tier": 5,
+    "tags": ["guardsmen", "ranged"],
+    "cost": 1,
+    "health": 3150,
+    "strength": 1050,
+    "strengthAgainst": {
+      "melee": 263,
+      "flying": 339
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "trailseeker-6",
+    "name": "Trailseeker VI",
+    "label": "TRS6",
+    "tier": 6,
+    "tags": ["specialist", "ranged"],
+    "cost": 1,
+    "health": 5670,
+    "strength": 1890,
+    "strengthAgainst": {
+      "melee": 198,
+      "flying": 254
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "trailseeker-7",
+    "name": "Trailseeker VII",
+    "label": "TRS7",
+    "tier": 7,
+    "tags": ["specialist", "ranged"],
+    "cost": 1,
+    "health": 10200,
+    "strength": 3400,
+    "strengthAgainst": {
+      "melee": 286,
+      "flying": 364
+    },
+    "revival": {
+      "gold": 8
+    }
+  },
+  {
+    "id": "unicorn-rider-5",
+    "name": "Unicorn Rider V",
+    "label": "UNR5",
+    "tier": 5,
+    "tags": ["monster", "mounted"],
+    "cost": 26,
+    "health": 81000,
+    "strength": 27000,
+    "strengthAgainst": {
+      "ranged": 65
+    },
+    "revival": {
+      "gold": 200
+    }
+  },
+  {
+    "id": "warden-2",
+    "name": "Warden II",
+    "label": "WRD2",
+    "tier": 9,
+    "tags": ["monster", "mounted"],
+    "cost": 43,
+    "health": 1410000,
+    "strength": 470000,
+    "strengthAgainst": {
+      "ranged": 70
+    },
+    "revival": {
+      "gold": 340
+    }
+  },
+  {
+    "id": "warregal-2",
+    "name": "Warregal II",
+    "label": "WRG2",
+    "tier": 9,
+    "tags": ["guardsmen", "flying", "beast"],
+    "cost": 20,
+    "health": 660000,
+    "strength": 220000,
+    "strengthAgainst": {
+      "mounted": 1999
+    },
+    "revival": {
+      "gold": 160
+    }
+  },
+  {
+    "id": "wasp-man-6",
+    "name": "Wasp-Man VI",
+    "label": "WSP6",
+    "tier": 6,
+    "tags": ["guardsmen", "flying"],
+    "cost": 1,
+    "health": 5550,
+    "strength": 1850,
+    "strengthAgainst": {
+      "swarmUnits": 710
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "wasp-man-7",
+    "name": "Wasp-Man VII",
+    "label": "WSP7",
+    "tier": 7,
+    "tags": ["guardsmen", "flying"],
+    "cost": 1,
+    "health": 9900,
+    "strength": 3300,
+    "strengthAgainst": {
+      "swarmUnits": 1121
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "wasp-man-leader-2",
+    "name": "Wasp-Man Leader II",
+    "label": "WML2",
+    "tier": 9,
+    "tags": ["guardsmen", "flying"],
+    "cost": 1,
+    "health": 32400,
+    "strength": 10800,
+    "strengthAgainst": {
+      "swarmUnits": 4000
+    },
+    "revival": {
+      "gold": 8
+    },
+    "event": "arachnes"
+  },
+  {
+    "id": "wyvern-2",
+    "name": "Wyvern II",
+    "label": "WYV2",
+    "tier": 9,
+    "tags": ["monster", "flying"],
+    "cost": 63,
+    "health": 2070000,
+    "strength": 690000,
+    "strengthAgainst": {
+      "melee": 75
+    },
+    "revival": {
+      "gold": 500
+    }
+  }
+]

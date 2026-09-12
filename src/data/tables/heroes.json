@@ -1,0 +1,25 @@
+[
+  {
+    "id": "haemon",
+    "name": "Haemon",
+    "bonus": {}
+  },
+  {
+    "id": "meriones",
+    "name": "Meriones",
+    "bonus": {}
+  },
+  {
+    "id": "svyatogor",
+    "name": "Svyatogor",
+    "bonus": {
+      "health": {
+        "army": 50
+      },
+      "strength": {
+        "army": 50
+      }
+    },
+    "aloneOnly": true
+  }
+]

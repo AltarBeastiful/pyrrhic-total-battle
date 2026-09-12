@@ -1,0 +1,643 @@
+[
+  {
+    "id": "ancient-terror",
+    "name": "Ancient Terror",
+    "label": "AT",
+    "tier": 7,
+    "category": "mounted",
+    "race": "beast",
+    "cost": 41,
+    "health": 840000,
+    "strength": 280000,
+    "strengthAgainst": {
+      "ranged": 752
+    },
+    "revival": {
+      "gold": 656
+    },
+    "training": {
+      "seconds": 108000,
+      "silver": 246000,
+      "dragonCoins": 1640
+    }
+  },
+  {
+    "id": "battle-boar",
+    "name": "Battle Boar",
+    "label": "BB",
+    "tier": 3,
+    "category": "mounted",
+    "race": "beast",
+    "cost": 6,
+    "health": 11700,
+    "strength": 3900,
+    "strengthAgainst": {
+      "ranged": 113,
+      "mounted": 144
+    },
+    "revival": {
+      "gold": 96
+    },
+    "training": {
+      "seconds": 10080,
+      "silver": 16800,
+      "dragonCoins": 240
+    }
+  },
+  {
+    "id": "black-dragon",
+    "name": "Black Dragon",
+    "label": "BD",
+    "tier": 7,
+    "category": "flying",
+    "race": "dragon",
+    "cost": 44,
+    "health": 900000,
+    "strength": 300000,
+    "strengthAgainst": {
+      "melee": 570,
+      "beasts": 729
+    },
+    "revival": {
+      "gold": 704
+    },
+    "training": {
+      "seconds": 116100,
+      "silver": 264000,
+      "dragonCoins": 1760
+    }
+  },
+  {
+    "id": "crystal-dragon",
+    "name": "Crystal Dragon",
+    "label": "CD",
+    "tier": 6,
+    "category": "melee",
+    "race": "dragon",
+    "cost": 33,
+    "health": 360000,
+    "strength": 120000,
+    "strengthAgainst": {
+      "mounted": 258,
+      "elementals": 608
+    },
+    "revival": {
+      "gold": 528
+    },
+    "training": {
+      "seconds": 79200,
+      "silver": 172000,
+      "dragonCoins": 1320
+    }
+  },
+  {
+    "id": "desert-vanquisher",
+    "name": "Desert Vanquisher",
+    "label": "DV",
+    "tier": 5,
+    "category": "mounted",
+    "race": "dragon",
+    "cost": 20,
+    "health": 126000,
+    "strength": 42000,
+    "strengthAgainst": {
+      "ranged": 253,
+      "elementals": 324
+    },
+    "revival": {
+      "gold": 320
+    },
+    "training": {
+      "seconds": 43080,
+      "silver": 88000,
+      "dragonCoins": 800
+    }
+  },
+  {
+    "id": "destructive-colossus",
+    "name": "Destructive Colossus",
+    "label": "DC",
+    "tier": 7,
+    "category": "ranged",
+    "race": "giant",
+    "cost": 43,
+    "health": 870000,
+    "strength": 290000,
+    "strengthAgainst": {
+      "melee": 752,
+      "flying": 547
+    },
+    "revival": {
+      "gold": 688
+    },
+    "training": {
+      "seconds": 113400,
+      "silver": 258000,
+      "dragonCoins": 1720
+    }
+  },
+  {
+    "id": "devastator-1",
+    "name": "Devastator I",
+    "label": "DEV1",
+    "tier": 8,
+    "category": "mounted",
+    "race": "dragon",
+    "cost": 53,
+    "health": 1950000,
+    "strength": 650000,
+    "strengthAgainst": {
+      "ranged": 1281,
+      "giants": 667
+    },
+    "revival": {
+      "gold": 848
+    },
+    "training": {
+      "seconds": 152520,
+      "silver": 361000,
+      "dragonCoins": 2120
+    }
+  },
+  {
+    "id": "devastator-2",
+    "name": "Devastator II",
+    "label": "DEV2",
+    "tier": 9,
+    "category": "mounted",
+    "race": "dragon",
+    "cost": 53,
+    "health": 3510000,
+    "strength": 1170000,
+    "strengthAgainst": {
+      "ranged": 1922,
+      "giants": 1000
+    },
+    "revival": {
+      "gold": 848
+    },
+    "training": {
+      "seconds": 164580,
+      "silver": 403000,
+      "dragonCoins": 2120
+    }
+  },
+  {
+    "id": "emerald-dragon",
+    "name": "Emerald Dragon",
+    "label": "ED",
+    "tier": 3,
+    "category": "flying",
+    "race": "dragon",
+    "cost": 7,
+    "health": 13500,
+    "strength": 4500,
+    "strengthAgainst": {
+      "mounted": 185,
+      "giants": 72
+    },
+    "revival": {
+      "gold": 112
+    },
+    "training": {
+      "seconds": 11760,
+      "silver": 19600,
+      "dragonCoins": 280
+    }
+  },
+  {
+    "id": "ettin",
+    "name": "Ettin",
+    "label": "ETT",
+    "tier": 5,
+    "category": "melee",
+    "race": "giant",
+    "cost": 23,
+    "health": 144000,
+    "strength": 48000,
+    "strengthAgainst": {
+      "mounted": 334
+    },
+    "revival": {
+      "gold": 368
+    },
+    "training": {
+      "seconds": 49500,
+      "silver": 101200,
+      "dragonCoins": 920
+    }
+  },
+  {
+    "id": "fearsome-manticore",
+    "name": "Fearsome Manticore",
+    "label": "FM",
+    "tier": 5,
+    "category": "flying",
+    "race": "beast",
+    "cost": 22,
+    "health": 138000,
+    "strength": 46000,
+    "strengthAgainst": {
+      "flying": 253,
+      "giants": 324
+    },
+    "revival": {
+      "gold": 352
+    },
+    "training": {
+      "seconds": 47460,
+      "silver": 96800,
+      "dragonCoins": 880
+    }
+  },
+  {
+    "id": "fire-phoenix-1",
+    "name": "Fire Phoenix I",
+    "label": "FPH1",
+    "tier": 8,
+    "category": "flying",
+    "race": "elemental",
+    "cost": 54,
+    "health": 1980000,
+    "strength": 660000,
+    "strengthAgainst": {
+      "melee": 701,
+      "dragons": 1247
+    },
+    "revival": {
+      "gold": 864
+    },
+    "training": {
+      "seconds": 155340,
+      "silver": 367000,
+      "dragonCoins": 2160
+    }
+  },
+  {
+    "id": "fire-phoenix-2",
+    "name": "Fire Phoenix II",
+    "label": "FPH2",
+    "tier": 9,
+    "category": "flying",
+    "race": "elemental",
+    "cost": 54,
+    "health": 3570000,
+    "strength": 1190000,
+    "strengthAgainst": {
+      "melee": 1051,
+      "dragons": 1871
+    },
+    "revival": {
+      "gold": 864
+    },
+    "training": {
+      "seconds": 168300,
+      "silver": 411000,
+      "dragonCoins": 2160
+    }
+  },
+  {
+    "id": "flaming-centaur",
+    "name": "Flaming Centaur",
+    "label": "FC",
+    "tier": 5,
+    "category": "mounted",
+    "race": "elemental",
+    "cost": 21,
+    "health": 132000,
+    "strength": 44000,
+    "strengthAgainst": {
+      "ranged": 415,
+      "beasts": 162
+    },
+    "revival": {
+      "gold": 336
+    },
+    "training": {
+      "seconds": 45240,
+      "silver": 92400,
+      "dragonCoins": 840
+    }
+  },
+  {
+    "id": "gorgon-medusa",
+    "name": "Gorgon Medusa",
+    "label": "GM",
+    "tier": 4,
+    "category": "ranged",
+    "race": "beast",
+    "cost": 10,
+    "health": 36000,
+    "strength": 12000,
+    "strengthAgainst": {
+      "melee": 277,
+      "flying": 108
+    },
+    "revival": {
+      "gold": 160
+    },
+    "training": {
+      "seconds": 19200,
+      "silver": 36000,
+      "dragonCoins": 400
+    }
+  },
+  {
+    "id": "ice-phoenix",
+    "name": "Ice Phoenix",
+    "label": "IP",
+    "tier": 4,
+    "category": "flying",
+    "race": "elemental",
+    "cost": 15,
+    "health": 51000,
+    "strength": 17000,
+    "strengthAgainst": {
+      "flying": 223,
+      "dragons": 162
+    },
+    "revival": {
+      "gold": 240
+    },
+    "training": {
+      "seconds": 28800,
+      "silver": 54000,
+      "dragonCoins": 600
+    }
+  },
+  {
+    "id": "jungle-destroyer",
+    "name": "Jungle Destroyer",
+    "label": "JD",
+    "tier": 6,
+    "category": "melee",
+    "race": "beast",
+    "cost": 34,
+    "health": 390000,
+    "strength": 130000,
+    "strengthAgainst": {
+      "mounted": 623,
+      "dragons": 243
+    },
+    "revival": {
+      "gold": 544
+    },
+    "training": {
+      "seconds": 81600,
+      "silver": 177000,
+      "dragonCoins": 1360
+    }
+  },
+  {
+    "id": "kraken-1",
+    "name": "Kraken I",
+    "label": "KRK1",
+    "tier": 8,
+    "category": "melee",
+    "race": "giant",
+    "cost": 55,
+    "health": 2010000,
+    "strength": 670000,
+    "strengthAgainst": {
+      "mounted": 991,
+      "beasts": 957
+    },
+    "revival": {
+      "gold": 880
+    },
+    "training": {
+      "seconds": 158100,
+      "silver": 374000,
+      "dragonCoins": 2200
+    }
+  },
+  {
+    "id": "kraken-2",
+    "name": "Kraken II",
+    "label": "KRK2",
+    "tier": 9,
+    "category": "melee",
+    "race": "giant",
+    "cost": 55,
+    "health": 3630000,
+    "strength": 1210000,
+    "strengthAgainst": {
+      "mounted": 1486,
+      "beasts": 1435
+    },
+    "revival": {
+      "gold": 880
+    },
+    "training": {
+      "seconds": 171120,
+      "silver": 418000,
+      "dragonCoins": 2200
+    }
+  },
+  {
+    "id": "magic-dragon",
+    "name": "Magic Dragon",
+    "label": "MD",
+    "tier": 4,
+    "category": "ranged",
+    "race": "dragon",
+    "cost": 13,
+    "health": 45000,
+    "strength": 15000,
+    "strengthAgainst": {
+      "melee": 169,
+      "ranged": 216
+    },
+    "revival": {
+      "gold": 208
+    },
+    "training": {
+      "seconds": 24960,
+      "silver": 46800,
+      "dragonCoins": 520
+    }
+  },
+  {
+    "id": "many-armed-guardian",
+    "name": "Many-Armed Guardian",
+    "label": "MAG",
+    "tier": 4,
+    "category": "melee",
+    "race": "giant",
+    "cost": 11,
+    "health": 39000,
+    "strength": 13000,
+    "strengthAgainst": {
+      "mounted": 115,
+      "elementals": 270
+    },
+    "revival": {
+      "gold": 176
+    },
+    "training": {
+      "seconds": 21120,
+      "silver": 39600,
+      "dragonCoins": 440
+    }
+  },
+  {
+    "id": "ruby-golem",
+    "name": "Ruby Golem",
+    "label": "RG",
+    "tier": 6,
+    "category": "melee",
+    "race": "elemental",
+    "cost": 35,
+    "health": 390000,
+    "strength": 130000,
+    "strengthAgainst": {
+      "melee": 486,
+      "mounted": 380
+    },
+    "revival": {
+      "gold": 560
+    },
+    "training": {
+      "seconds": 83940,
+      "silver": 182000,
+      "dragonCoins": 1400
+    }
+  },
+  {
+    "id": "stone-gargoyle",
+    "name": "Stone Gargoyle",
+    "label": "SG",
+    "tier": 3,
+    "category": "flying",
+    "race": "giant",
+    "cost": 8,
+    "health": 15600,
+    "strength": 5200,
+    "strengthAgainst": {
+      "melee": 185,
+      "beasts": 72
+    },
+    "revival": {
+      "gold": 128
+    },
+    "training": {
+      "seconds": 13440,
+      "silver": 22400,
+      "dragonCoins": 320
+    }
+  },
+  {
+    "id": "trickster-1",
+    "name": "Trickster I",
+    "label": "TRK1",
+    "tier": 8,
+    "category": "ranged",
+    "race": "beast",
+    "cost": 52,
+    "health": 1920000,
+    "strength": 640000,
+    "strengthAgainst": {
+      "flying": 940,
+      "elementals": 1008
+    },
+    "revival": {
+      "gold": 832
+    },
+    "training": {
+      "seconds": 149700,
+      "silver": 354000,
+      "dragonCoins": 2080
+    }
+  },
+  {
+    "id": "trickster-2",
+    "name": "Trickster II",
+    "label": "TRK2",
+    "tier": 9,
+    "category": "ranged",
+    "race": "beast",
+    "cost": 52,
+    "health": 3450000,
+    "strength": 1150000,
+    "strengthAgainst": {
+      "flying": 1410,
+      "elementals": 1512
+    },
+    "revival": {
+      "gold": 832
+    },
+    "training": {
+      "seconds": 161820,
+      "silver": 395000,
+      "dragonCoins": 2080
+    }
+  },
+  {
+    "id": "troll-rider",
+    "name": "Troll Rider",
+    "label": "TR",
+    "tier": 6,
+    "category": "mounted",
+    "race": "giant",
+    "cost": 30,
+    "health": 330000,
+    "strength": 110000,
+    "strengthAgainst": {
+      "ranged": 380
+    },
+    "revival": {
+      "gold": 480
+    },
+    "training": {
+      "seconds": 72000,
+      "silver": 157000,
+      "dragonCoins": 1200
+    }
+  },
+  {
+    "id": "water-elemental",
+    "name": "Water Elemental",
+    "label": "WE",
+    "tier": 3,
+    "category": "ranged",
+    "race": "elemental",
+    "cost": 3,
+    "health": 5700,
+    "strength": 1900,
+    "strengthAgainst": {
+      "melee": 113,
+      "flying": 144
+    },
+    "revival": {
+      "gold": 48
+    },
+    "training": {
+      "seconds": 5040,
+      "silver": 8400,
+      "dragonCoins": 120
+    }
+  },
+  {
+    "id": "wind-lord",
+    "name": "Wind Lord",
+    "label": "WL",
+    "tier": 7,
+    "category": "melee",
+    "race": "elemental",
+    "cost": 45,
+    "health": 930000,
+    "strength": 310000,
+    "strengthAgainst": {
+      "mounted": 387,
+      "dragons": 911
+    },
+    "revival": {
+      "gold": 720
+    },
+    "training": {
+      "seconds": 118800,
+      "silver": 270000,
+      "dragonCoins": 1800
+    }
+  }
+]

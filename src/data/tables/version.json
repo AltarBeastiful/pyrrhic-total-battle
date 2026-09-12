@@ -1,0 +1,5 @@
+{
+  "dataVersion": 1,
+  "verifiedOn": "2026-09-12",
+  "notes": "Initial tables (v1). Unit, captain, equipment, artifact, title, hero and temple values read on 2026-09-12; still to be re-read on the in-game screens. VIP levels are placeholders (all zero) until a contributor fills them in from the VIP screen."
+}

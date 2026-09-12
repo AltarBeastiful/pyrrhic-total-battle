@@ -19,6 +19,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -b --noEmit",
+    "data:format": "node scripts/data-format.ts",
+    "data:check": "node scripts/data-check.ts",
     "e2e": "playwright test"
   },
   "dependencies": {

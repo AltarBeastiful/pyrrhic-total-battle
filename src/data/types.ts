@@ -181,6 +181,12 @@ export interface TitleRecord {
   bonus: BonusContribution;
 }
 
+/**
+ * The fixed "+25 %" pills that sit beside the heroes in game (Personal / Clan / Kingdom health and
+ * strength). Same shape as a title, its own table because it is its own screen.
+ */
+export type OtherPillRecord = TitleRecord;
+
 export interface HeroRecord {
   id: string;
   name: string;

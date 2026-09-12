@@ -35,6 +35,9 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
+      - name: Validate game data
+        run: pnpm data:check
+
       - name: Unit tests
         run: pnpm test
 

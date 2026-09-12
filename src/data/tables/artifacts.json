@@ -1,0 +1,252 @@
+[
+  {
+    "id": "fan-of-the-five-winds",
+    "name": "Fan of the Five Winds",
+    "strength": {
+      "key": "guardsmen"
+    },
+    "randomBonusOptions": ["armyStrength", "guardsmanStrength"]
+  },
+  {
+    "id": "forest-crown",
+    "name": "Forest Crown",
+    "health": {
+      "key": "army"
+    },
+    "strength": {
+      "key": "army"
+    },
+    "randomBonusOptions": ["armyStrengthAndHealth"]
+  },
+  {
+    "id": "ghostflame-lantern",
+    "name": "Ghostflame Lantern",
+    "strength": {
+      "key": "army"
+    },
+    "special": {
+      "key": "armyStrengthAgainstEpicMonsters"
+    },
+    "randomBonusOptions": ["armyStrength", "armyStrengthAgainstEpicMonsters", "armyStrengthAndHealth"]
+  },
+  {
+    "id": "griffinwing-mask",
+    "name": "Griffinwing Mask",
+    "health": {
+      "key": "monster"
+    },
+    "strength": {
+      "key": "monster"
+    },
+    "randomBonusOptions": ["monsterHealth", "monsterStrength", "monsterStrengthAndHealth"]
+  },
+  {
+    "id": "heart-of-the-forest",
+    "name": "Heart of the Forest",
+    "strength": {
+      "key": "army",
+      "levels": {
+        "base": {
+          "1": 42,
+          "2": 44,
+          "3": 46,
+          "4": 48,
+          "5": 50,
+          "6": 52,
+          "7": 54,
+          "8": 56,
+          "9": 58,
+          "10": 60,
+          "11": 62,
+          "12": 64,
+          "13": 66,
+          "14": 68,
+          "15": 70,
+          "16": 72,
+          "17": 74,
+          "18": 76,
+          "19": 78,
+          "20": 80,
+          "21": 84,
+          "22": 88,
+          "23": 92,
+          "24": 96,
+          "25": 100,
+          "26": 104,
+          "27": 108,
+          "28": 112,
+          "29": 116,
+          "30": 120,
+          "31": 126,
+          "32": 132,
+          "33": 138,
+          "34": 144,
+          "35": 150,
+          "36": 156,
+          "37": 162,
+          "38": 168,
+          "39": 174,
+          "40": 180,
+          "41": 188,
+          "42": 196,
+          "43": 204,
+          "44": 212,
+          "45": 220,
+          "46": 228,
+          "47": 236,
+          "48": 244,
+          "49": 252,
+          "50": 260,
+          "51": 270,
+          "52": 280,
+          "53": 290,
+          "54": 300,
+          "55": 310,
+          "56": 320,
+          "57": 330,
+          "58": 340,
+          "59": 350,
+          "60": 360
+        },
+        "star": {
+          "0.1": 48,
+          "0.2": 61,
+          "0.3": 74,
+          "0.4": 87,
+          "1.0": 100,
+          "1.1": 113,
+          "1.2": 126,
+          "1.3": 139,
+          "1.4": 152,
+          "2.0": 165,
+          "2.1": 178,
+          "2.2": 191,
+          "2.3": 204,
+          "2.4": 217,
+          "3.0": 230,
+          "3.1": 243,
+          "3.2": 256,
+          "3.3": 269,
+          "3.4": 282,
+          "4.0": 295,
+          "4.1": 308,
+          "4.2": 321,
+          "4.3": 334,
+          "4.4": 347,
+          "5.0": 360
+        }
+      }
+    },
+    "randomBonusOptions": ["armyHealth", "armyStrength", "armyStrengthAndHealth"]
+  },
+  {
+    "id": "ifrit-lords-belt",
+    "name": "Ifrit Lord's Belt",
+    "health": {
+      "key": "army"
+    },
+    "strength": {
+      "key": "army"
+    },
+    "randomBonusOptions": ["armyHealth", "armyStrength", "armyStrengthAndHealth"]
+  },
+  {
+    "id": "knight-of-dalarna",
+    "name": "Knight of Dalarna",
+    "health": {
+      "key": "mounted"
+    },
+    "strength": {
+      "key": "mounted"
+    },
+    "randomBonusOptions": ["mountedHealth", "mountedStrength", "mountedStrengthAndHealth"]
+  },
+  {
+    "id": "medallion-of-unity",
+    "name": "Medallion of Unity",
+    "health": {
+      "key": "guardsmen"
+    },
+    "strength": {
+      "key": "army"
+    },
+    "randomBonusOptions": ["armyHealth", "guardsmanHealth"]
+  },
+  {
+    "id": "philosophers-stone",
+    "name": "Philosopher's Stone",
+    "health": {
+      "key": "specialist"
+    },
+    "strength": {
+      "key": "specialist"
+    },
+    "randomBonusOptions": ["specialistHealth", "specialistStrength", "specialistStrengthAndHealth"]
+  },
+  {
+    "id": "ruby-brooch",
+    "name": "Ruby Brooch",
+    "health": {
+      "key": "melee"
+    },
+    "strength": {
+      "key": "melee"
+    },
+    "randomBonusOptions": ["meleeHealth", "meleeStrength", "meleeStrengthAndHealth"]
+  },
+  {
+    "id": "source-flask",
+    "name": "Source Flask",
+    "health": {
+      "key": "guardsmen"
+    },
+    "strength": {
+      "key": "guardsmen"
+    },
+    "randomBonusOptions": ["guardsmanHealth", "guardsmanStrength", "guardsmanStrengthAndHealth"]
+  },
+  {
+    "id": "technobomb",
+    "name": "Technobomb",
+    "health": {
+      "key": "engineers"
+    },
+    "strength": {
+      "key": "engineers"
+    },
+    "randomBonusOptions": ["engineerHealth", "engineerStrength", "engineerStrengthAndHealth"]
+  },
+  {
+    "id": "valkyrie-diadem",
+    "name": "Valkyrie Diadem",
+    "health": {
+      "key": "flying"
+    },
+    "strength": {
+      "key": "flying"
+    },
+    "randomBonusOptions": ["flyingHealth", "flyingStrength", "flyingStrengthAndHealth"]
+  },
+  {
+    "id": "wardens-quiver",
+    "name": "Warden's Quiver",
+    "health": {
+      "key": "ranged"
+    },
+    "strength": {
+      "key": "ranged"
+    },
+    "randomBonusOptions": ["rangedHealth", "rangedStrength", "rangedStrengthAndHealth"]
+  },
+  {
+    "id": "zeus-lightning",
+    "name": "Zeus' Lightning",
+    "strength": {
+      "key": "army"
+    },
+    "special": {
+      "key": "doubleDamageChance"
+    },
+    "randomBonusOptions": ["doubleDamageChance"]
+  }
+]

@@ -1,0 +1,1391 @@
+[
+  {
+    "id": "archer-1",
+    "name": "Archer I",
+    "label": "ARC1",
+    "group": "guardsmen",
+    "tier": 1,
+    "category": "ranged",
+    "cost": 1,
+    "health": 150,
+    "strength": 50,
+    "strengthAgainst": {
+      "melee": 52,
+      "flying": 67
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 15,
+      "silver": 300
+    }
+  },
+  {
+    "id": "archer-2",
+    "name": "Archer II",
+    "label": "ARC2",
+    "group": "guardsmen",
+    "tier": 2,
+    "category": "ranged",
+    "cost": 1,
+    "health": 270,
+    "strength": 90,
+    "strengthAgainst": {
+      "melee": 78,
+      "flying": 101
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 180,
+      "silver": 500
+    }
+  },
+  {
+    "id": "archer-3",
+    "name": "Archer III",
+    "label": "ARC3",
+    "group": "guardsmen",
+    "tier": 3,
+    "category": "ranged",
+    "cost": 1,
+    "health": 480,
+    "strength": 160,
+    "strengthAgainst": {
+      "melee": 117,
+      "flying": 151
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 420,
+      "silver": 700
+    }
+  },
+  {
+    "id": "archer-4",
+    "name": "Archer IV",
+    "label": "ARC4",
+    "group": "guardsmen",
+    "tier": 4,
+    "category": "ranged",
+    "cost": 1,
+    "health": 870,
+    "strength": 290,
+    "strengthAgainst": {
+      "melee": 176,
+      "flying": 226
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 480,
+      "silver": 900
+    }
+  },
+  {
+    "id": "archer-5",
+    "name": "Archer V",
+    "label": "ARC5",
+    "group": "guardsmen",
+    "tier": 5,
+    "category": "ranged",
+    "cost": 1,
+    "health": 1560,
+    "strength": 520,
+    "strengthAgainst": {
+      "melee": 263,
+      "flying": 339
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 540,
+      "silver": 1100
+    }
+  },
+  {
+    "id": "battle-griffin-5",
+    "name": "Battle Griffin V",
+    "label": "BGF5",
+    "group": "guardsmen",
+    "tier": 5,
+    "category": "flying",
+    "race": "beast",
+    "cost": 20,
+    "health": 30000,
+    "strength": 10000,
+    "strengthAgainst": {
+      "mounted": 395
+    },
+    "revival": {
+      "gold": 80
+    },
+    "training": {
+      "seconds": 10800,
+      "silver": 22000
+    }
+  },
+  {
+    "id": "battle-griffin-6",
+    "name": "Battle Griffin VI",
+    "label": "BGF6",
+    "group": "guardsmen",
+    "tier": 6,
+    "category": "flying",
+    "race": "beast",
+    "cost": 20,
+    "health": 57000,
+    "strength": 19000,
+    "strengthAgainst": {
+      "mounted": 592
+    },
+    "revival": {
+      "gold": 80
+    },
+    "training": {
+      "seconds": 12000,
+      "silver": 26000
+    }
+  },
+  {
+    "id": "battle-griffin-7",
+    "name": "Battle Griffin VII",
+    "label": "BGF7",
+    "group": "guardsmen",
+    "tier": 7,
+    "category": "flying",
+    "race": "beast",
+    "cost": 20,
+    "health": 102000,
+    "strength": 34000,
+    "strengthAgainst": {
+      "mounted": 888
+    },
+    "revival": {
+      "gold": 80
+    },
+    "training": {
+      "seconds": 13200,
+      "silver": 30000
+    }
+  },
+  {
+    "id": "catapult-1",
+    "name": "Catapult I",
+    "label": "CAT1",
+    "group": "engineers",
+    "tier": 1,
+    "cost": 10,
+    "health": 1500,
+    "strength": 250,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 150,
+      "silver": 3000
+    }
+  },
+  {
+    "id": "catapult-2",
+    "name": "Catapult II",
+    "label": "CAT2",
+    "group": "engineers",
+    "tier": 2,
+    "cost": 10,
+    "health": 2700,
+    "strength": 450,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 1800,
+      "silver": 5000
+    }
+  },
+  {
+    "id": "catapult-3",
+    "name": "Catapult III",
+    "label": "CAT3",
+    "group": "engineers",
+    "tier": 3,
+    "cost": 10,
+    "health": 4860,
+    "strength": 810,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 4200,
+      "silver": 7000
+    }
+  },
+  {
+    "id": "catapult-4",
+    "name": "Catapult IV",
+    "label": "CAT4",
+    "group": "engineers",
+    "tier": 4,
+    "cost": 10,
+    "health": 8750,
+    "strength": 1460,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 4800,
+      "silver": 9000
+    }
+  },
+  {
+    "id": "catapult-5",
+    "name": "Catapult V",
+    "label": "CAT5",
+    "group": "engineers",
+    "tier": 5,
+    "cost": 10,
+    "health": 15800,
+    "strength": 2630,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 5400,
+      "silver": 11000
+    }
+  },
+  {
+    "id": "corax-1",
+    "name": "Corax I",
+    "label": "CRX1",
+    "group": "guardsmen",
+    "tier": 8,
+    "category": "flying",
+    "cost": 20,
+    "health": 183600,
+    "strength": 61200,
+    "strengthAgainst": {
+      "mounted": 1333
+    },
+    "revival": {
+      "gold": 80
+    },
+    "training": {
+      "seconds": 14400,
+      "silver": 34000
+    }
+  },
+  {
+    "id": "corax-2",
+    "name": "Corax II",
+    "label": "CRX2",
+    "group": "guardsmen",
+    "tier": 9,
+    "category": "flying",
+    "cost": 20,
+    "health": 330600,
+    "strength": 110200,
+    "strengthAgainst": {
+      "mounted": 1999
+    },
+    "revival": {
+      "gold": 80
+    },
+    "training": {
+      "seconds": 15600,
+      "silver": 38000
+    }
+  },
+  {
+    "id": "deadshot-5",
+    "name": "Deadshot V",
+    "label": "DS5",
+    "group": "specialist",
+    "tier": 5,
+    "category": "ranged",
+    "cost": 1,
+    "health": 1560,
+    "strength": 520,
+    "strengthAgainst": {
+      "melee": 132,
+      "flying": 170
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 540,
+      "silver": 1100
+    }
+  },
+  {
+    "id": "deadshot-6",
+    "name": "Deadshot VI",
+    "label": "DS6",
+    "group": "specialist",
+    "tier": 6,
+    "category": "ranged",
+    "cost": 1,
+    "health": 2820,
+    "strength": 940,
+    "strengthAgainst": {
+      "melee": 197,
+      "flying": 254
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 600,
+      "silver": 1300
+    }
+  },
+  {
+    "id": "deadshot-7",
+    "name": "Deadshot VII",
+    "label": "DS7",
+    "group": "specialist",
+    "tier": 7,
+    "category": "ranged",
+    "cost": 1,
+    "health": 5100,
+    "strength": 1700,
+    "strengthAgainst": {
+      "melee": 296,
+      "flying": 382
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 660,
+      "silver": 1500
+    }
+  },
+  {
+    "id": "duelist-1",
+    "name": "Duelist I",
+    "label": "DUE1",
+    "group": "specialist",
+    "tier": 8,
+    "category": "melee",
+    "cost": 1,
+    "health": 9180,
+    "strength": 3060,
+    "strengthAgainst": {
+      "mounted": 333,
+      "beasts": 683
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 720,
+      "silver": 1700
+    }
+  },
+  {
+    "id": "duelist-2",
+    "name": "Duelist II",
+    "label": "DUE2",
+    "group": "specialist",
+    "tier": 9,
+    "category": "melee",
+    "cost": 1,
+    "health": 16530,
+    "strength": 5510,
+    "strengthAgainst": {
+      "mounted": 500,
+      "beasts": 1025
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 780,
+      "silver": 1900
+    }
+  },
+  {
+    "id": "heavy-arbalester-6",
+    "name": "Heavy Arbalester VI",
+    "label": "HARB6",
+    "group": "guardsmen",
+    "tier": 6,
+    "category": "ranged",
+    "cost": 1,
+    "health": 2820,
+    "strength": 940,
+    "strengthAgainst": {
+      "melee": 395,
+      "flying": 509
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 600,
+      "silver": 1300
+    }
+  },
+  {
+    "id": "heavy-arbalester-7",
+    "name": "Heavy Arbalester VII",
+    "label": "HARB7",
+    "group": "guardsmen",
+    "tier": 7,
+    "category": "ranged",
+    "cost": 1,
+    "health": 5100,
+    "strength": 1700,
+    "strengthAgainst": {
+      "melee": 592,
+      "flying": 763
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 660,
+      "silver": 1500
+    }
+  },
+  {
+    "id": "heavy-halberdier-6",
+    "name": "Heavy Halberdier VI",
+    "label": "HHAL6",
+    "group": "guardsmen",
+    "tier": 6,
+    "category": "melee",
+    "cost": 1,
+    "health": 2820,
+    "strength": 940,
+    "strengthAgainst": {
+      "mounted": 296,
+      "beasts": 608
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 600,
+      "silver": 1300
+    }
+  },
+  {
+    "id": "heavy-halberdier-7",
+    "name": "Heavy Halberdier VII",
+    "label": "HHAL7",
+    "group": "guardsmen",
+    "tier": 7,
+    "category": "melee",
+    "cost": 1,
+    "health": 5100,
+    "strength": 1700,
+    "strengthAgainst": {
+      "mounted": 444,
+      "beasts": 911
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 660,
+      "silver": 1500
+    }
+  },
+  {
+    "id": "heavy-knight-6",
+    "name": "Heavy Knight VI",
+    "label": "HK6",
+    "group": "specialist",
+    "tier": 6,
+    "category": "melee",
+    "cost": 1,
+    "health": 2820,
+    "strength": 940,
+    "strengthAgainst": {
+      "mounted": 148,
+      "beasts": 304
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 600,
+      "silver": 1300
+    }
+  },
+  {
+    "id": "heavy-knight-7",
+    "name": "Heavy Knight VII",
+    "label": "HK7",
+    "group": "specialist",
+    "tier": 7,
+    "category": "melee",
+    "cost": 1,
+    "health": 5100,
+    "strength": 1700,
+    "strengthAgainst": {
+      "mounted": 222,
+      "beasts": 456
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 660,
+      "silver": 1500
+    }
+  },
+  {
+    "id": "josephine-1",
+    "name": "Josephine I",
+    "label": "JOS1",
+    "group": "engineers",
+    "tier": 8,
+    "cost": 10,
+    "health": 91800,
+    "strength": 15310,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 7200,
+      "silver": 17000
+    }
+  },
+  {
+    "id": "josephine-2",
+    "name": "Josephine II",
+    "label": "JOS2",
+    "group": "engineers",
+    "tier": 9,
+    "cost": 10,
+    "health": 165300,
+    "strength": 27550,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 7800,
+      "silver": 19000
+    }
+  },
+  {
+    "id": "legitimist-1",
+    "name": "Legitimist I",
+    "label": "LGT1",
+    "group": "specialist",
+    "tier": 8,
+    "category": "ranged",
+    "cost": 1,
+    "health": 9180,
+    "strength": 3060,
+    "strengthAgainst": {
+      "melee": 444,
+      "flying": 572
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 720,
+      "silver": 1700
+    }
+  },
+  {
+    "id": "legitimist-2",
+    "name": "Legitimist II",
+    "label": "LGT2",
+    "group": "specialist",
+    "tier": 9,
+    "category": "ranged",
+    "cost": 1,
+    "health": 16530,
+    "strength": 5510,
+    "strengthAgainst": {
+      "melee": 667,
+      "flying": 859
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 780,
+      "silver": 1900
+    }
+  },
+  {
+    "id": "lion-rider-5",
+    "name": "Lion Rider V",
+    "label": "LR5",
+    "group": "specialist",
+    "tier": 5,
+    "category": "mounted",
+    "cost": 2,
+    "health": 3150,
+    "strength": 1050,
+    "strengthAgainst": {
+      "ranged": 165,
+      "engineers": 137
+    },
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1080,
+      "silver": 2200
+    }
+  },
+  {
+    "id": "lion-rider-6",
+    "name": "Lion Rider VI",
+    "label": "LR6",
+    "group": "specialist",
+    "tier": 6,
+    "category": "mounted",
+    "cost": 2,
+    "health": 5700,
+    "strength": 1900,
+    "strengthAgainst": {
+      "ranged": 247,
+      "engineers": 205
+    },
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1200,
+      "silver": 2600
+    }
+  },
+  {
+    "id": "lion-rider-7",
+    "name": "Lion Rider VII",
+    "label": "LR7",
+    "group": "specialist",
+    "tier": 7,
+    "category": "mounted",
+    "cost": 2,
+    "health": 10200,
+    "strength": 3400,
+    "strengthAgainst": {
+      "ranged": 370,
+      "engineers": 308
+    },
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1320,
+      "silver": 3000
+    }
+  },
+  {
+    "id": "mounted-knight-6",
+    "name": "Mounted Knight VI",
+    "label": "MK6",
+    "group": "guardsmen",
+    "tier": 6,
+    "category": "mounted",
+    "cost": 2,
+    "health": 5700,
+    "strength": 1900,
+    "strengthAgainst": {
+      "ranged": 494,
+      "engineers": 410
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1200,
+      "silver": 2600
+    }
+  },
+  {
+    "id": "mounted-knight-7",
+    "name": "Mounted Knight VII",
+    "label": "MK7",
+    "group": "guardsmen",
+    "tier": 7,
+    "category": "mounted",
+    "cost": 2,
+    "health": 10200,
+    "strength": 3400,
+    "strengthAgainst": {
+      "ranged": 740,
+      "engineers": 615
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1320,
+      "silver": 3000
+    }
+  },
+  {
+    "id": "punisher-1",
+    "name": "Punisher I",
+    "label": "PUN1",
+    "group": "guardsmen",
+    "tier": 8,
+    "category": "melee",
+    "cost": 1,
+    "health": 9180,
+    "strength": 3060,
+    "strengthAgainst": {
+      "mounted": 667,
+      "beasts": 1367
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 720,
+      "silver": 1700
+    }
+  },
+  {
+    "id": "punisher-2",
+    "name": "Punisher II",
+    "label": "PUN2",
+    "group": "guardsmen",
+    "tier": 9,
+    "category": "melee",
+    "cost": 1,
+    "health": 16530,
+    "strength": 5510,
+    "strengthAgainst": {
+      "mounted": 1000,
+      "beasts": 2050
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 780,
+      "silver": 1900
+    }
+  },
+  {
+    "id": "purifier-1",
+    "name": "Purifier I",
+    "label": "PUR1",
+    "group": "guardsmen",
+    "tier": 8,
+    "category": "ranged",
+    "cost": 1,
+    "health": 9180,
+    "strength": 3060,
+    "strengthAgainst": {
+      "melee": 888,
+      "flying": 1145
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 720,
+      "silver": 1700
+    }
+  },
+  {
+    "id": "purifier-2",
+    "name": "Purifier II",
+    "label": "PUR2",
+    "group": "guardsmen",
+    "tier": 9,
+    "category": "ranged",
+    "cost": 1,
+    "health": 16530,
+    "strength": 5510,
+    "strengthAgainst": {
+      "melee": 1333,
+      "flying": 1717
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 780,
+      "silver": 1900
+    }
+  },
+  {
+    "id": "rider-1",
+    "name": "Rider I",
+    "label": "RD1",
+    "group": "guardsmen",
+    "tier": 1,
+    "category": "mounted",
+    "cost": 2,
+    "health": 300,
+    "strength": 100,
+    "strengthAgainst": {
+      "ranged": 65,
+      "engineers": 54
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 30,
+      "silver": 600
+    }
+  },
+  {
+    "id": "rider-2",
+    "name": "Rider II",
+    "label": "RD2",
+    "group": "guardsmen",
+    "tier": 2,
+    "category": "mounted",
+    "cost": 2,
+    "health": 540,
+    "strength": 180,
+    "strengthAgainst": {
+      "ranged": 98,
+      "engineers": 81
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 360,
+      "silver": 1000
+    }
+  },
+  {
+    "id": "rider-3",
+    "name": "Rider III",
+    "label": "RD3",
+    "group": "guardsmen",
+    "tier": 3,
+    "category": "mounted",
+    "cost": 2,
+    "health": 960,
+    "strength": 320,
+    "strengthAgainst": {
+      "ranged": 146,
+      "engineers": 122
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 840,
+      "silver": 1400
+    }
+  },
+  {
+    "id": "rider-4",
+    "name": "Rider IV",
+    "label": "RD4",
+    "group": "guardsmen",
+    "tier": 4,
+    "category": "mounted",
+    "cost": 2,
+    "health": 1740,
+    "strength": 580,
+    "strengthAgainst": {
+      "ranged": 219,
+      "engineers": 182
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 960,
+      "silver": 1800
+    }
+  },
+  {
+    "id": "rider-5",
+    "name": "Rider V",
+    "label": "RD5",
+    "group": "guardsmen",
+    "tier": 5,
+    "category": "mounted",
+    "cost": 2,
+    "health": 3150,
+    "strength": 1050,
+    "strengthAgainst": {
+      "ranged": 329,
+      "engineers": 273
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1080,
+      "silver": 2200
+    }
+  },
+  {
+    "id": "royal-lion-1",
+    "name": "Royal Lion I",
+    "label": "RL1",
+    "group": "specialist",
+    "tier": 8,
+    "category": "flying",
+    "race": "beast",
+    "cost": 20,
+    "health": 183600,
+    "strength": 61200,
+    "strengthAgainst": {
+      "mounted": 667
+    },
+    "revival": {
+      "gold": 80
+    },
+    "training": {
+      "seconds": 14400,
+      "silver": 34000
+    }
+  },
+  {
+    "id": "royal-lion-2",
+    "name": "Royal Lion II",
+    "label": "RL2",
+    "group": "specialist",
+    "tier": 9,
+    "category": "flying",
+    "race": "beast",
+    "cost": 20,
+    "health": 330600,
+    "strength": 110200,
+    "strengthAgainst": {
+      "mounted": 1000
+    },
+    "revival": {
+      "gold": 80
+    },
+    "training": {
+      "seconds": 15600,
+      "silver": 38000
+    }
+  },
+  {
+    "id": "siege-ballistae-6",
+    "name": "Siege Ballistae VI",
+    "label": "SB6",
+    "group": "engineers",
+    "tier": 6,
+    "cost": 10,
+    "health": 28400,
+    "strength": 4730,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 6000,
+      "silver": 13000
+    }
+  },
+  {
+    "id": "siege-ballistae-7",
+    "name": "Siege Ballistae VII",
+    "label": "SB7",
+    "group": "engineers",
+    "tier": 7,
+    "cost": 10,
+    "health": 51000,
+    "strength": 8500,
+    "revival": {
+      "gold": 40
+    },
+    "training": {
+      "seconds": 6600,
+      "silver": 15000
+    }
+  },
+  {
+    "id": "smiter-1",
+    "name": "Smiter I",
+    "label": "SMI1",
+    "group": "guardsmen",
+    "tier": 8,
+    "category": "mounted",
+    "cost": 2,
+    "health": 18360,
+    "strength": 6120,
+    "strengthAgainst": {
+      "ranged": 1111,
+      "engineers": 923
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1440,
+      "silver": 3400
+    }
+  },
+  {
+    "id": "smiter-2",
+    "name": "Smiter II",
+    "label": "SMI2",
+    "group": "guardsmen",
+    "tier": 9,
+    "category": "mounted",
+    "cost": 2,
+    "health": 33060,
+    "strength": 11020,
+    "strengthAgainst": {
+      "ranged": 1667,
+      "engineers": 1384
+    },
+    "doubleDamageChance": 5,
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1560,
+      "silver": 3800
+    }
+  },
+  {
+    "id": "spearman-1",
+    "name": "Spearman I",
+    "label": "SP1",
+    "group": "guardsmen",
+    "tier": 1,
+    "category": "melee",
+    "cost": 1,
+    "health": 150,
+    "strength": 50,
+    "strengthAgainst": {
+      "mounted": 39,
+      "beasts": 80
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 15,
+      "silver": 300
+    }
+  },
+  {
+    "id": "spearman-2",
+    "name": "Spearman II",
+    "label": "SP2",
+    "group": "guardsmen",
+    "tier": 2,
+    "category": "melee",
+    "cost": 1,
+    "health": 270,
+    "strength": 90,
+    "strengthAgainst": {
+      "mounted": 59,
+      "beasts": 120
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 180,
+      "silver": 500
+    }
+  },
+  {
+    "id": "spearman-3",
+    "name": "Spearman III",
+    "label": "SP3",
+    "group": "guardsmen",
+    "tier": 3,
+    "category": "melee",
+    "cost": 1,
+    "health": 480,
+    "strength": 160,
+    "strengthAgainst": {
+      "mounted": 88,
+      "beasts": 180
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 420,
+      "silver": 700
+    }
+  },
+  {
+    "id": "spearman-4",
+    "name": "Spearman IV",
+    "label": "SP4",
+    "group": "guardsmen",
+    "tier": 4,
+    "category": "melee",
+    "cost": 1,
+    "health": 870,
+    "strength": 290,
+    "strengthAgainst": {
+      "mounted": 132,
+      "beasts": 270
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 480,
+      "silver": 900
+    }
+  },
+  {
+    "id": "spearman-5",
+    "name": "Spearman V",
+    "label": "SP5",
+    "group": "guardsmen",
+    "tier": 5,
+    "category": "melee",
+    "cost": 1,
+    "health": 1560,
+    "strength": 520,
+    "strengthAgainst": {
+      "mounted": 197,
+      "beasts": 405
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 540,
+      "silver": 1100
+    }
+  },
+  {
+    "id": "swordsman-1",
+    "name": "Swordsman I",
+    "label": "SW1",
+    "group": "specialist",
+    "tier": 1,
+    "category": "melee",
+    "cost": 1,
+    "health": 150,
+    "strength": 50,
+    "strengthAgainst": {
+      "mounted": 20,
+      "beasts": 40
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 15,
+      "silver": 300
+    }
+  },
+  {
+    "id": "swordsman-2",
+    "name": "Swordsman II",
+    "label": "SW2",
+    "group": "specialist",
+    "tier": 2,
+    "category": "melee",
+    "cost": 1,
+    "health": 270,
+    "strength": 90,
+    "strengthAgainst": {
+      "mounted": 29,
+      "beasts": 60
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 180,
+      "silver": 500
+    }
+  },
+  {
+    "id": "swordsman-3",
+    "name": "Swordsman III",
+    "label": "SW3",
+    "group": "specialist",
+    "tier": 3,
+    "category": "melee",
+    "cost": 1,
+    "health": 480,
+    "strength": 160,
+    "strengthAgainst": {
+      "mounted": 44,
+      "beasts": 90
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 420,
+      "silver": 700
+    }
+  },
+  {
+    "id": "swordsman-4",
+    "name": "Swordsman IV",
+    "label": "SW4",
+    "group": "specialist",
+    "tier": 4,
+    "category": "melee",
+    "cost": 1,
+    "health": 870,
+    "strength": 290,
+    "strengthAgainst": {
+      "mounted": 66,
+      "beasts": 135
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 480,
+      "silver": 900
+    }
+  },
+  {
+    "id": "swordsman-5",
+    "name": "Swordsman V",
+    "label": "SW5",
+    "group": "specialist",
+    "tier": 5,
+    "category": "melee",
+    "cost": 1,
+    "health": 1560,
+    "strength": 520,
+    "strengthAgainst": {
+      "mounted": 99,
+      "beasts": 203
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 540,
+      "silver": 1100
+    }
+  },
+  {
+    "id": "vulture-5",
+    "name": "Vulture V",
+    "label": "VUL5",
+    "group": "specialist",
+    "tier": 5,
+    "category": "flying",
+    "cost": 1,
+    "health": 1560,
+    "strength": 520,
+    "strengthAgainst": {
+      "mounted": 197
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 540,
+      "silver": 1100
+    }
+  },
+  {
+    "id": "vulture-6",
+    "name": "Vulture VI",
+    "label": "VUL6",
+    "group": "specialist",
+    "tier": 6,
+    "category": "flying",
+    "cost": 1,
+    "health": 2820,
+    "strength": 940,
+    "strengthAgainst": {
+      "mounted": 296
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 600,
+      "silver": 1300
+    }
+  },
+  {
+    "id": "vulture-7",
+    "name": "Vulture VII",
+    "label": "VUL7",
+    "group": "specialist",
+    "tier": 7,
+    "category": "flying",
+    "cost": 1,
+    "health": 5100,
+    "strength": 1700,
+    "strengthAgainst": {
+      "mounted": 444
+    },
+    "revival": {
+      "gold": 4
+    },
+    "training": {
+      "seconds": 660,
+      "silver": 1500
+    }
+  },
+  {
+    "id": "whitemane-1",
+    "name": "Whitemane I",
+    "label": "WM1",
+    "group": "specialist",
+    "tier": 8,
+    "category": "mounted",
+    "cost": 2,
+    "health": 18360,
+    "strength": 6120,
+    "strengthAgainst": {
+      "ranged": 555,
+      "engineers": 461
+    },
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1440,
+      "silver": 3400
+    }
+  },
+  {
+    "id": "whitemane-2",
+    "name": "Whitemane II",
+    "label": "WM2",
+    "group": "specialist",
+    "tier": 9,
+    "category": "mounted",
+    "cost": 2,
+    "health": 33060,
+    "strength": 11020,
+    "strengthAgainst": {
+      "ranged": 833,
+      "engineers": 692
+    },
+    "revival": {
+      "gold": 8
+    },
+    "training": {
+      "seconds": 1560,
+      "silver": 3800
+    }
+  }
+]
