@@ -12,3 +12,4 @@ Options considered, Decision, Consequences, Status. Numbering is chronological; 
 | 0005 | Share-link encoding in the URL fragment | Accepted |
 | 0006 | Calculation engine: pure deterministic TypeScript, worker-hosted, fixture-validated | Accepted |
 | 0007 | Game data as plain JSON tables with CI validation and open contribution | Accepted |
+| 0008 | UI foundation: owned component kit on React Aria Components, Tailwind v4 tokens, tailwind-variants | Proposed (after spike T-00, see docs/plans/ui-foundation.md) |

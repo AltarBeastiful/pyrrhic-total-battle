@@ -348,6 +348,15 @@ modelled; custom mercenaries have no cap field.
 - S-50 PWA/offline, install prompt.
 - S-52 Accessibility pass, mobile layout pass.
 
+### M6 — Design overhaul (planned, not started)
+Owner's review of the second pass judged the design bad: sticky strip with little value, profile actions in a
+permanent bar, selects where steppers belong, icons that do not read, Troops and Mercenaries still not readable
+together, oversized chips and undersized text, a unit popover still shaped like TotalStack's. Two plans await
+validation before any code: `docs/plans/design-overhaul.md` (personas, journeys J1–J7, frame with account menu and
+floating Generate, group colours from the game, unit tiles, march table, unit sheet; stories D-10…D-53) and
+`docs/plans/ui-foundation.md` (measured state of the UI code, framework options, recommendation: owned kit on
+React Aria Components + Tailwind v4 + tailwind-variants after a one-day spike; stories T-00…T-09; ADR-0008).
+
 ### Deferred — not planned, kept for reference
 Features TotalStack has that we are not interested in for now. They stay out of every milestone; pull one back
 into a milestone only on explicit request. The engine and config schema keep room for them (bonus keys, kill
@@ -375,6 +384,8 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Owner rejected the second-pass design ("hurts the eyes, unpractical"). Written up as two plans for
+  review: `docs/plans/design-overhaul.md` and `docs/plans/ui-foundation.md` (M6). Nothing built yet.
 - 2026-09-12 — Second pass after the owner's review: design overhaul (docs/design.md: palette, icons, hero, wording
   glossary with our own method names and unit-card structure), compact Troops/Mercenaries with always-visible
   summaries, pinned unit types persisted per setup, worst-case objective and all-types baseline in the priority
