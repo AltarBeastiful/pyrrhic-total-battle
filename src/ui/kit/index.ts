@@ -46,3 +46,7 @@ export { TierStepper } from './TierStepper';
 export type { TierStepperProps } from './TierStepper';
 export { ToggleGroup, ToggleItem } from './ToggleGroup';
 export type { ToggleGroupProps, ToggleItemProps } from './ToggleGroup';
+
+// Rows you tick (the mercenaries card).
+export { SelectableItem, SelectableList } from './SelectableList';
+export type { SelectableItemProps, SelectableListProps } from './SelectableList';

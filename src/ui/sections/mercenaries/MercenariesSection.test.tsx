@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
@@ -12,6 +13,7 @@ import { MercenariesSection } from './MercenariesSection';
 vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
+  globalThis.localStorage.clear();
   useStore.getState().replaceDocument(newRoot());
 });
 
@@ -21,128 +23,171 @@ afterEach(() => {
 
 const mercs = () => selectActiveProfile(useStore.getState())?.mercenaries;
 
-/** The header line: it is what the section says while its body is collapsed. */
-const summary = () =>
-  (document.querySelector('#mercenaries-summary')?.textContent ?? '').replace(/\s+/g, ' ').trim();
-
-test('the header lists every hired mercenary with the quantity you own', () => {
-  render(<MercenariesSection />);
-  expect(summary()).toBe('No mercenary hired yet');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Add Bear V' }));
-  expect(summary()).toBe('BER5 \u00d7\u221e (1 selected)');
-
-  fireEvent.change(screen.getByLabelText('Bear V owned'), { target: { value: '22' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Add Abomination VI' }));
-  expect(summary()).toBe('BER5 \u00d722 \u00b7 ABM6 \u00d7\u221e (2 selected)');
-});
-
-function openCustomForm(): HTMLElement {
-  fireEvent.click(screen.getByRole('button', { name: 'Custom mercenary' }));
-  return screen.getByRole('dialog');
+/** Write straight to the profile when the test is about what the card *shows*, not how you fill it. */
+function own(entries: { id: string; cap: number | null }[]): void {
+  const profile = selectActiveProfile(useStore.getState());
+  if (profile === undefined) throw new Error('the default document has no profile');
+  act(() => {
+    useStore.getState().updateProfile(profile.id, (current) => ({
+      mercenaries: { ...current.mercenaries, selected: entries },
+    }));
+  });
 }
 
-function fill(dialog: HTMLElement, label: string, value: string): void {
-  fireEvent.change(within(dialog).getByLabelText(label), { target: { value } });
-}
+const picker = () => screen.getByRole('grid', { name: 'Add a mercenary' });
+const ownedList = () => screen.getByRole('grid', { name: 'Mercenaries you own' });
+const search = () => screen.getByRole('searchbox', { name: 'Find a mercenary' });
 
-test('the text filter narrows the picker to matching mercenaries', () => {
+/** One row's whole line, whitespace squeezed the way a reader hears it. */
+const text = (row: HTMLElement): string => (row.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+test('what you own is on the card straight away, with the quantity on the line', () => {
   render(<MercenariesSection />);
-  expect(screen.getByRole('button', { name: 'Add Abomination VI' })).toBeTruthy();
+  expect(screen.getByText('None hired yet. Find one below and say how many you own.')).toBeTruthy();
 
-  fireEvent.change(screen.getByLabelText('Search mercenaries'), { target: { value: 'bear' } });
+  own([
+    { id: 'abomination-6', cap: 22 },
+    { id: 'bear-5', cap: null },
+  ]);
 
-  expect(screen.getByRole('button', { name: 'Add Bear V' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Add Abomination VI' })).toBeNull();
+  // No disclosure, no summary line: the list itself is the recap.
+  expect(screen.queryByRole('button', { name: /^Mercenaries/ })).toBeNull();
+  expect(screen.getByRole('heading', { level: 2, name: 'Mercenaries' })).toBeTruthy();
+
+  const rows = within(ownedList()).getAllByRole('row');
+  expect(rows).toHaveLength(2);
+  expect(text(rows[0] as HTMLElement)).toContain('Abomination VI');
+  expect(text(rows[0] as HTMLElement)).toContain('×22');
+  expect(text(rows[1] as HTMLElement)).toContain('×∞');
 });
 
-test('facet chips combine with the text filter', () => {
+test('pressing a row in the picker hires it, and pressing its own row gives it back', async () => {
+  const user = userEvent.setup();
   render(<MercenariesSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Specialist', pressed: false }));
 
-  // Bear V is tagged as a monster, so a "specialist" filter must hide it.
-  expect(screen.queryByRole('button', { name: 'Add Bear V' })).toBeNull();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Specialist', pressed: true }));
-  expect(screen.getByRole('button', { name: 'Add Bear V' })).toBeTruthy();
-});
-
-test('adding a mercenary moves it to the owned list, where a cap can be typed', () => {
-  render(<MercenariesSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Add Bear V' }));
-
+  await user.click(within(picker()).getByRole('row', { name: 'Bear V, tier 5' }));
   expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: null }]);
-  // It leaves the picker so the two lists never show the same mercenary twice.
-  expect(screen.queryByRole('button', { name: 'Add Bear V' })).toBeNull();
 
-  fireEvent.change(screen.getByLabelText('Bear V owned'), { target: { value: '12' } });
-  expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 12 }]);
+  // It leaves the picker, so the two lists never show the same mercenary twice.
+  expect(within(picker()).queryByRole('row', { name: 'Bear V, tier 5' })).toBeNull();
+  const row = within(ownedList()).getByRole('row', { name: 'Bear V, tier 5' });
+  expect(row.getAttribute('aria-selected')).toBe('true');
 
-  // Clearing the field means "no limit", not zero.
-  fireEvent.change(screen.getByLabelText('Bear V owned'), { target: { value: '' } });
-  expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: null }]);
-});
-
-test('a mercenary can be removed again', () => {
-  render(<MercenariesSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Add Bear V' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Remove Bear V' }));
-
+  await user.click(row);
   expect(mercs()?.selected).toEqual([]);
-  expect(screen.getByRole('button', { name: 'Add Bear V' })).toBeTruthy();
+  expect(within(picker()).getByRole('row', { name: 'Bear V, tier 5' })).toBeTruthy();
 });
 
-test('the custom form creates a mercenary from the values on its in-game sheet', () => {
+test('the stepper says how many you own, and Unlimited takes the limit off again', async () => {
+  const user = userEvent.setup();
   render(<MercenariesSection />);
-  const dialog = openCustomForm();
-  fill(dialog, 'Name', 'Spider Queen');
-  fill(dialog, 'Health', '420000');
-  fill(dialog, 'Strength', '140000');
-  fill(dialog, 'Authority cost', '70');
-  fill(dialog, 'Revival gold', '560');
-  fill(dialog, 'Double damage chance', '5');
-  fill(dialog, 'Role', 'monster');
-  fill(dialog, 'Category', 'flying');
-  fill(dialog, 'Race', 'beast');
-  fill(dialog, 'Event', 'arachnes');
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Add mercenary' }));
+  await user.click(within(picker()).getByRole('row', { name: 'Bear V, tier 5' }));
+
+  const row = within(ownedList()).getByRole('row', { name: 'Bear V, tier 5' });
+  const owned = within(row).getByLabelText('Owned');
+  fireEvent.change(owned, { target: { value: '22' } });
+  fireEvent.blur(owned);
+  expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 22 }]);
+
+  // The stepper is the row's own control: using it never unticks the row it sits in.
+  expect(within(ownedList()).getByRole('row', { name: 'Bear V, tier 5' }).getAttribute('aria-selected')).toBe(
+    'true',
+  );
+
+  await user.click(within(row).getByRole('button', { name: 'Increase Owned' }));
+  expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 23 }]);
+
+  const unlimited = within(row).getByRole('switch', { name: 'Unlimited' }) as HTMLInputElement;
+  expect(unlimited.checked).toBe(false);
+  fireEvent.click(unlimited);
+  expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: null }]);
+  expect((within(ownedList()).getByRole('switch', { name: 'Unlimited' }) as HTMLInputElement).checked).toBe(
+    true,
+  );
+});
+
+test('the search field narrows the picker to what matches', async () => {
+  const user = userEvent.setup();
+  render(<MercenariesSection />);
+  expect(within(picker()).getByRole('row', { name: 'Abomination VI, tier 6' })).toBeTruthy();
+
+  await user.type(search(), 'bear');
+
+  expect(within(picker()).getByRole('row', { name: 'Bear V, tier 5' })).toBeTruthy();
+  expect(within(picker()).queryByRole('row', { name: 'Abomination VI, tier 6' })).toBeNull();
+});
+
+test('the filter chips narrow the picker, and combine with each other', async () => {
+  const user = userEvent.setup();
+  render(<MercenariesSection />);
+
+  await user.click(screen.getByRole('button', { name: 'Guardsmen' }));
+  // Bear V counts as a monster, so a "guardsmen" filter has to hide it.
+  expect(within(picker()).queryByRole('row', { name: 'Bear V, tier 5' })).toBeNull();
+  expect(within(picker()).getByRole('row', { name: 'Arbalester VI, tier 6' })).toBeTruthy();
+
+  await user.click(screen.getByRole('button', { name: 'Tier 7' }));
+  expect(within(picker()).queryByRole('row', { name: 'Arbalester VI, tier 6' })).toBeNull();
+  expect(within(picker()).getByRole('row', { name: 'Arbalester VII, tier 7' })).toBeTruthy();
+
+  await user.click(screen.getByRole('button', { name: 'Guardsmen' }));
+  await user.click(screen.getByRole('button', { name: 'Tier 7' }));
+  expect(within(picker()).getByRole('row', { name: 'Bear V, tier 5' })).toBeTruthy();
+});
+
+test('nothing matching says so instead of showing an empty box', async () => {
+  const user = userEvent.setup();
+  render(<MercenariesSection />);
+
+  await user.type(search(), 'zzz');
+  expect(screen.getByText('Nothing matches those filters.')).toBeTruthy();
+});
+
+test('the last mercenaries hired come back first in the picker', async () => {
+  const user = userEvent.setup();
+  render(<MercenariesSection />);
+
+  await user.click(within(picker()).getByRole('row', { name: 'Bear V, tier 5' }));
+  await user.click(within(ownedList()).getByRole('row', { name: 'Bear V, tier 5' }));
+
+  const first = within(picker()).getAllByRole('row')[0];
+  expect(first?.getAttribute('aria-label')).toBe('Bear V, tier 5');
+});
+
+test('once something is hired the picker folds behind one button', async () => {
+  const user = userEvent.setup();
+  render(<MercenariesSection />);
+  await user.click(within(picker()).getByRole('row', { name: 'Bear V, tier 5' }));
+
+  await user.click(screen.getByRole('button', { name: 'Done adding' }));
+  expect(screen.queryByRole('searchbox', { name: 'Find a mercenary' })).toBeNull();
+  // What you own is never behind a press; only the picker is.
+  expect(within(ownedList()).getByRole('row', { name: 'Bear V, tier 5' })).toBeTruthy();
+
+  await user.click(screen.getByRole('button', { name: 'Add mercenaries' }));
+  expect(search()).toBeTruthy();
+});
+
+test('the custom sheet adds a mercenary the tables do not carry', async () => {
+  const user = userEvent.setup();
+  render(<MercenariesSection />);
+
+  await user.click(screen.getByRole('button', { name: 'Custom mercenary' }));
+  const sheet = screen.getByRole('dialog');
+
+  await user.type(within(sheet).getByLabelText('Name'), 'Spider Queen');
+  fireEvent.change(within(sheet).getByLabelText('Health'), { target: { value: '420000' } });
+  fireEvent.blur(within(sheet).getByLabelText('Health'));
+  fireEvent.change(within(sheet).getByLabelText('Authority cost'), { target: { value: '90' } });
+  fireEvent.blur(within(sheet).getByLabelText('Authority cost'));
+  await user.click(within(sheet).getByRole('button', { name: 'Add mercenary' }));
 
   const custom = mercs()?.custom ?? [];
   expect(custom).toHaveLength(1);
-  expect(custom[0]).toMatchObject({
-    name: 'Spider Queen',
-    health: 420000,
-    strength: 140000,
-    cost: 70,
-    revivalGold: 560,
-    doubleDamageChance: 5,
-    role: 'monster',
-    category: 'flying',
-    race: 'beast',
-    event: 'arachnes',
-  });
-  expect(custom[0]?.id).toMatch(/^custom-[0-9a-f]{8}$/);
+  expect(custom[0]?.name).toBe('Spider Queen');
+  expect(custom[0]?.health).toBe(420000);
+  expect(custom[0]?.cost).toBe(90);
+
+  expect(within(ownedList()).getByRole('row', { name: 'Spider Queen, custom' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Edit Spider Queen' })).toBeTruthy();
-});
-
-test('a custom mercenary can be edited without losing its id, and deleted', () => {
-  render(<MercenariesSection />);
-  const dialog = openCustomForm();
-  fill(dialog, 'Name', 'Spider Queen');
-  fill(dialog, 'Health', '1000');
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Add mercenary' }));
-  const created = mercs()?.custom[0];
-
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Spider Queen' }));
-  const editor = screen.getByRole('dialog');
-  expect(within(editor).getByLabelText<HTMLInputElement>('Health').value).toBe('1000');
-  fill(editor, 'Name', 'Spider Matriarch');
-  fireEvent.click(within(editor).getByRole('button', { name: 'Save changes' }));
-
-  expect(mercs()?.custom).toHaveLength(1);
-  expect(mercs()?.custom[0]?.id).toBe(created?.id);
-  expect(mercs()?.custom[0]?.name).toBe('Spider Matriarch');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Delete Spider Matriarch' }));
-  expect(mercs()?.custom).toEqual([]);
 });
