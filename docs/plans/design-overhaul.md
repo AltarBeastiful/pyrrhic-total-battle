@@ -384,7 +384,9 @@ source is on but empty. Expanded: TOTAL stays as the header; below, groups in th
 **Captains and the hero — amended 2026-09-13 (owner): take TotalStack's picker.** Not a list of switch rows
 but a **grid of captain tiles**, every captain the tables know, always visible inside the group: name, a
 glyph, and a **badge with the level and the star count** ("20 ★3"). Tapping the tile puts the captain in the
-march (or takes it out); at most three on, the fourth tap is refused with a one-line note. Tapping the badge
+march (or takes it out); at most three on, the fourth tap is refused with a one-line note. There is no "Add
+captain" button: the grid of every captain, enlisted or not, is the summary and the whole form at once
+(principle 2 applied to bonuses). Tapping the badge
 opens the level/stars editor in a sheet. Captains the player has never configured show the badge as "set
 level" until tapped. **Only captains whose bonuses touch a stack get a level badge** (TotalStack does the
 same: Carter, Aurora, Doria, Dustan, Farhad, Helen, Hercules, Proscope, Stror and Tengel have no health or
