@@ -25,8 +25,10 @@ const selectable = tv({
   slots: {
     list: 'rounded-card border-line divide-line flex flex-col divide-y border outline-none',
     empty: 'text-muted px-3 py-3 text-sm',
+    // `shrink-0`: inside a scrolling column a flex row would otherwise be squeezed under its own
+    // content height, and a two-line row would spill over the one below it.
     item: cn(
-      'group text-fg flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left outline-none',
+      'group text-fg flex w-full shrink-0 cursor-pointer items-center gap-3 px-3 py-2 text-left outline-none',
       'hovered:bg-raised selected:bg-accent-soft pressed:bg-sunken',
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
       'focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2',
@@ -49,7 +51,7 @@ const selectable = tv({
       compact: { item: 'py-1.5' },
       comfortable: { item: 'py-2' },
     },
-    /** The list scrolls on its own instead of growing the card. */
+    /** The list keeps about six rows on screen and scrolls inside itself for the rest. */
     scrolls: {
       true: { list: 'max-h-80 overflow-y-auto' },
       false: {},

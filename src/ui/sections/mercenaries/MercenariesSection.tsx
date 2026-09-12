@@ -56,6 +56,14 @@ function rowName(entry: MercenaryRow, isPinned: boolean): string {
   return isPinned ? `${entry.label}, kept in the march` : entry.label;
 }
 
+/** One filter group: its label opens the line on a phone and sits above the chips from `sm`. */
+const FILTER_GROUP = 'shrink-0 flex-row items-center sm:flex-col sm:items-start';
+
+/** The line over the picker: how long the list is, and how to make it shorter. */
+function offeredCaption(count: number): string {
+  return `${count} ${count === 1 ? 'mercenary' : 'mercenaries'} · type to narrow`;
+}
+
 export function MercenariesSection() {
   const profile = useStore(selectActiveProfile);
   const pinnedIds = useStore(selectActiveSetup)?.pinnedUnitIds;
@@ -195,29 +203,63 @@ export function MercenariesSection() {
               onChange={setQuery}
               placeholder="Name or code"
             />
-            <Cluster gap={4} align="start">
-              <ToggleGroup label="Tier" size="sm" selectionMode="multiple" value={tiers} onChange={setTiers}>
-                {TIERS.map((tier) => (
-                  <ToggleItem key={tier} id={String(tier)} label={`Tier ${tier}`}>
-                    {`T${tier}`}
-                  </ToggleItem>
-                ))}
-              </ToggleGroup>
-              <ToggleGroup label="Role" size="sm" selectionMode="multiple" value={roles} onChange={setRoles}>
-                {ROLES.map((role) => (
-                  <ToggleItem key={role} id={role} label={GROUP_LABELS[role]}>
-                    {GROUP_LABELS[role]}
-                  </ToggleItem>
-                ))}
-              </ToggleGroup>
-              <ToggleGroup label="Race" size="sm" selectionMode="multiple" value={races} onChange={setRaces}>
-                {MERCENARY_RACES.map((race) => (
-                  <ToggleItem key={race} id={race} label={RACE_LABELS[race]}>
-                    {RACE_LABELS[race]}
-                  </ToggleItem>
-                ))}
-              </ToggleGroup>
-            </Cluster>
+            {/*
+              On a phone the three groups are one line that scrolls sideways, faded at both edges,
+              each group opening with its own label; from `sm` they are the three labelled rows the
+              card had before. The outer element scrolls, the inner one is as wide as its content.
+            */}
+            <div className="overflow-x-auto mask-x-from-95% sm:overflow-visible sm:mask-none">
+              <Cluster
+                gap={4}
+                align="center"
+                wrap={false}
+                className="w-max sm:w-auto sm:flex-col sm:items-start"
+              >
+                <ToggleGroup
+                  label="Tier"
+                  size="sm"
+                  selectionMode="multiple"
+                  value={tiers}
+                  onChange={setTiers}
+                  className={FILTER_GROUP}
+                >
+                  {TIERS.map((tier) => (
+                    <ToggleItem key={tier} id={String(tier)} label={`Tier ${tier}`}>
+                      {`T${tier}`}
+                    </ToggleItem>
+                  ))}
+                </ToggleGroup>
+                <ToggleGroup
+                  label="Role"
+                  size="sm"
+                  selectionMode="multiple"
+                  value={roles}
+                  onChange={setRoles}
+                  className={FILTER_GROUP}
+                >
+                  {ROLES.map((role) => (
+                    <ToggleItem key={role} id={role} label={GROUP_LABELS[role]}>
+                      {GROUP_LABELS[role]}
+                    </ToggleItem>
+                  ))}
+                </ToggleGroup>
+                <ToggleGroup
+                  label="Race"
+                  size="sm"
+                  selectionMode="multiple"
+                  value={races}
+                  onChange={setRaces}
+                  className={FILTER_GROUP}
+                >
+                  {MERCENARY_RACES.map((race) => (
+                    <ToggleItem key={race} id={race} label={RACE_LABELS[race]}>
+                      {RACE_LABELS[race]}
+                    </ToggleItem>
+                  ))}
+                </ToggleGroup>
+              </Cluster>
+            </div>
+            <p className="text-muted text-sm">{offeredCaption(offered.length)}</p>
             <SelectableList
               label="Add a mercenary"
               density="compact"
