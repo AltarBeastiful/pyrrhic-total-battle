@@ -74,3 +74,55 @@ Defenders (3 squads): eagle II (flying) 337 (−6), helmet III (melee) 1,055 (�
 ## Recovery data captured on the way
 Temple level 15: "Coût de réanimation des troupes réduit de: divisé par 1.53" — matches the temple table (15 → 1.53).
 Unit sheet: Archer I revive cost 4 gold in attack / 40 silver in defence; Rider I 8 gold / 80 silver.
+
+---
+
+# Second report — same monster, 2026-09-11 23:00, Défaite, **enemy first**, 4 enemy squads
+
+Same army (SP1 944, ARC1 930, ARC2 514, SP2 513, RD1 464, RD3 143, CHR6 12, EMH6 22, merc-A 23, merc-B 23).
+Health total was +143% in this fight (SP1 HP 944 × 150 × 2.43 = 344,088), strength unchanged.
+Defenders: helmet III (melee) 1,420, lion II (mounted) 1,398, eagle II (flying) 897, robed II (ranged "swarm") 55,719.
+
+| # | actor → target | damage | features |
+|---|---|---|---|
+| 1 | helmet 1,420 → SP1 † | 344,088 | – |
+| 2 | ARC1 → eagle | 165,075 | 31,155 |
+| 3 | lion 1,398 → ARC1 † | 338,985 | 127,119 |
+| 4 | ARC2 → eagle (−1) | 179,951 | 46,723 |
+| 5 | eagle 896 → RD1 † | 338,256 | – |
+| 6 | SP2 → lion | 159,748 | 27,241 |
+| 7 | robed 55,719 → ARC2 † | 337,235 | – |
+| 8 | RD3 → robed (−183) | **396,280 "double dégâts"** | 133,618 |
+| 9 | CHR → robed (−165) | 355,680 | 224,808 |
+| 10 | EMH → helmet (−1) | 399,707 | 271,980 |
+| 11 | merc-A → eagle (−2) | 348,289 | 222,433 |
+| 12 | merc-B → lion (−2) | 254,334 | 128,915 |
+| 13 | helmet 1,419 → SP2 † | 336,579 | – |
+| 14 | RD3 → robed (−91) | 198,140 | 66,809 |
+| 15 | lion 1,396 → RD3 † | 333,590 | – |
+| 16 | CHR → robed (−165) | 355,680 | 224,808 |
+| 17 | eagle 894 → CHR † | 332,424 | – |
+| 18 | EMH → helmet (−1) | 399,707 | 271,980 |
+| 19 | robed 55,115 → EMH † | 322,891 | – |
+| 20 | merc-A → eagle (−1) | 348,289 | 222,433 |
+| 21 | merc-B → lion (−1) | 254,334 | 128,915 |
+| 22 | helmet 1,418 → merc-A † | 318,573 | – |
+| 23 | merc-B → lion (−2) | 254,334 | 128,915 |
+| 24 | lion 1,393 → merc-B † | 318,573 | – |
+
+## Findings from the pair of reports
+- **Round structure confirmed with N = 4 and enemy first**: E, F, E, F, E, F, E, then the 5 survivors F;
+  round 2: E, F, E, F, E, F, E, then survivors; round 3: E, F, E. Exactly the structure TotalStack's journal uses.
+- **Double damage exists and is a plain ×2 on a hit**: entry 8 is 2 × 198,140 (entry 14) and the game labels it
+  "double dégâts". Rider 3 had 5% (unit) + 3% (bonus) = 8%; one proc in 16 friendly hits across both reports.
+- **Friendly attack order** (the open question): in both fights the sequence was SP1, ARC1, ARC2, SP2, RD3, CHR, EMH,
+  merc-A, merc-B with **RD1 never attacking**, although RD1 is 3rd by HP. RD1 died at the 3rd enemy attack, i.e.
+  after only 2–3 friendly slots, so its slot is ≥ 4 (report 1) and ≥ 3 (report 2). Two rules fit every observation:
+  - **B (adopted)**: leadership troops first — foot units (melee, ranged) by total HP descending, then mounted units
+    by HP descending — then monsters, then mercenaries by HP descending. (Matches the community rule "troops →
+    monsters → mercenaries"; monsters not present in these fights.)
+  - A: leadership troops by unit count descending, mercenaries by HP descending. Indistinguishable from B here.
+  To separate them: a fight where a rider stack has more units than a foot stack, or foot stacks whose count order
+  differs from their HP order. Either way the enemy's kill order is pure HP-descending.
+- The ranged "swarm" squad (55,719 units) loses 91–183 units per hit and still one-shots our stacks; monster HP
+  pools are irrelevant to our result, only the number of enemy squads N matters.
