@@ -1,8 +1,11 @@
 # Battle model as implemented by TotalStack — derived from captured journals and summaries
 
 Source: fixtures in `docs/research/fixtures/` (2026-09-12, Pro trial, all bonuses 0). "Verified" means the formula
-reproduces TotalStack's number exactly; it does not yet mean the game behaves this way (S-30 still needs in-game
-reports).
+reproduces TotalStack's number exactly. **In-game validation (2026-09-12, one real epic-monster report, see
+`fixtures/ingame-2026-09-11-epic-ancient-report.md`)**: HP per stack, per-hit damage incl. strength-against on base
+strength, enemy targeting by highest HP, and the round structure all match the game exactly. One difference found:
+the game's friendly attack order is not always the next victim (Rider I was killed before its turn while Archer II
+attacked) — open item for S-30.
 
 ## 1. Turn structure (verified on two journals, enemy-first and army-first)
 - Our stacks are ordered by **total HP descending** (ties keep the display order). This order is used both as the

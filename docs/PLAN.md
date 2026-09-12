@@ -260,10 +260,12 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 
 ### M3 — Battle Summary
 - S-30 **Investigation**: turn structure, attack order and targeting of the in-game epic-monster battle.
-      TotalStack's own model is now fully derived (`docs/research/battle-model-observations.md`): round structure,
-      hit counts, per-hit formulas, summary totals. Remaining: (a) confirm against 3+ real in-game reports,
-      (b) explain the "2 × strength-against" in the summary vs "1 ×" in the journal, (c) the ≈42,500 troop-only
-      extra in the maximum, (d) the gold/time composition of recovery costs.
+      TotalStack's model derived and **validated against one real in-game epic report** (HP lines, per-hit damage,
+      targeting, round structure all exact; `fixtures/ingame-2026-09-11-epic-ancient-report.md`). Remaining:
+      (a) the friendly attack order when the next victim is not the next attacker (needs 1–2 more reports),
+      (b) TotalStack's "2 × strength-against" in its summary is NOT what the game shows — our summary uses the
+      journal formula (1 ×), (c) the ≈42,500 troop-only extra in TotalStack's maximum (irrelevant if we use our own
+      min/avg/max), (d) recovery-cost composition (S-33).
 - S-31 **Investigation**: what TotalStack's "Total Optimization" actually trades (housing/HP trades that break
       preservation when damage improves) and whether it is worth reproducing; write findings + proposal.
 - S-32 Damage model (min/avg/max, double damage, strike-two-squads, strength-against with enemy formation).
@@ -315,6 +317,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — First real in-game report read from the Journal: engine formulas confirmed exactly; TotalStack's
+  doubled strength-against in Battle Summary identified as their artefact, not the game's; one attack-order
+  discrepancy left open.
 - 2026-09-12 — Pro-trial capture session: seven runs and three journals saved as fixtures; TotalStack's battle
   model reverse-engineered and written up (`docs/research/battle-model-observations.md`); MP rule corrected in
   §3.3; S-30 narrowed to in-game validation and three open discrepancies.
