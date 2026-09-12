@@ -126,6 +126,10 @@ expectedDmg    = dmg × (1 + doubleDamageChance(unit + group + global)) × (1 + 
 Verified against the user's TotalStack output (see review §3).
 
 ### 3.3 Kill order
+User-facing names (docs/design.md glossary): Elite Preservation is shown as **Tier ladder**, M's Preservation as
+**Troops first**, the relaxed post-pass as **Allow damage trades**, the custom list as **Your own order**. The
+engine ids stay `elite` / `ms` / `custom`. The TotalStack names below are kept in this document for traceability
+to the research notes only.
 A kill order is an ordered list of *stacks* (unit types), first to die first. Sources:
 - **Elite Preservation**: engineers (any order) → leadership troops by tier ascending; within a tier
   specialists before guardsmen, and by category ranged → melee → mounted → flying (verified on the fixture:
@@ -164,6 +168,13 @@ training work in 10-unit chunks; reproduces ep-round-to-10s exactly: WE 18 → 1
 exclusions (per-unit and top-tier per-category); Troop Type Allocation percentages when no preservation order
 is chosen (weights pool share per category).
 
+**Pinned unit types.** A unit type the user pins from the results ("Keep in march", stored per battle setup as
+`pinnedUnitIds`) is never dropped: when the solver would leave it empty (Troops-first ceiling, tens rounding, no
+room) it reserves its minimum count (1, or 10 in tens mode) before the rest of the pool is re-solved, so the
+other stacks stay balanced; if it then sits above the ceiling it keeps its true place in the HP order and a
+warning says it will fall before the last troops. Pins are also kept by the priority search. Pinning an
+excluded type un-excludes it.
+
 ### 3.5 Battle model and Battle Summary
 Enemy: 4 stacks (flying/melee/ranged/mounted), 8 for Arachne's, or custom counts. Each enemy hit removes our
 highest-total-HP living stack. Sides alternate; whoever strikes first is a coin flip in game, so we compute the
@@ -194,7 +205,13 @@ The exact turn structure (why TotalStack reports "25 rounds • 15 friendly hits
 must be validated against real in-game battle reports before this section is called done — see S-30.
 
 ### 3.6 Priority search
-Objective ∈ {maxAverageDamage, damagePerSilver, damagePerGold, damagePerDragonCoin}. Search space = which unit
+Objective ∈ {avgDamage, minDamage (best worst case), damagePerSilver, damagePerGold, damagePerDragonCoin}.
+Every search result carries the all-types baseline (same request, nothing dropped) so the UI shows the trade-off:
+friendly hits, minimum, maximum, expected damage and recovery costs with signed deltas. Why this matters: the
+monster always kills the largest stack, so a low-tier type that must die first has to be as large (in HP) as the
+high-tier stacks while giving 3× less HP per housing point; `avgDamage` therefore tends to keep only the top tier
+(few, huge stacks, one free first hit), which raises the average but lowers the worst case and costs far more
+silver. `damagePerSilver` and `minDamage` keep the full ladder in the cases measured (§7, 2026-09-12). Search space = which unit
 types to include (tiers/categories within the unlocked range, mercenaries, monsters) for a fixed method.
 Strategy: greedy backward elimination with restarts (drop the unit type whose removal improves the objective
 most, repeat), then local swaps; time-boxed in a Web Worker with progress and cancel. Full enumeration only
@@ -336,7 +353,7 @@ Features TotalStack has that we are not interested in for now. They stay out of 
 into a milestone only on explicit request. The engine and config schema keep room for them (bonus keys, kill
 order, manual counts) so adding them later is UI work, not a redesign.
 - D-02 Titles editor (toggle pills from `titles.json`). Workaround: custom source.
-- D-03 Manual HP Order (per-stack +/- and drag edits with live summary deltas, undo/redo, housing overflow).
+- D-03 Manual HP Order — partly done: per-stack +/- and direct count edits with live deltas and undo; drag-to-reposition not built.
 - D-04 Total Optimization — **done** as an opt-in "relaxed preservation" post-pass on M's Preservation (investigation 0003).
 - D-05 "By Battle Report" bonus input mode (health-only fallback for low-tier accounts).
 - D-06 Troop Type Allocation percentages (weighting categories when no preservation order is used; meant for
@@ -358,6 +375,10 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-12 — Second pass after the owner's review: design overhaul (docs/design.md: palette, icons, hero, wording
+  glossary with our own method names and unit-card structure), compact Troops/Mercenaries with always-visible
+  summaries, pinned unit types persisted per setup, worst-case objective and all-types baseline in the priority
+  search, HP profile chart. Measured why "maximum damage" collapses to the top tier (see §3.6).
 - 2026-09-12 — First implementation pass completed (M0–M5 except S-07, S-46, S-47): see the status table in §5.
   Engine reproduces every captured TotalStack journal and recovery figure; recovery is billed in chunks of ten.
 - 2026-09-12 — Engine (S-20…S-23, S-32…S-34) implemented and validated against every fixture. Reproduced

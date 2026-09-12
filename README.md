@@ -62,3 +62,5 @@ runtime" literally true.
 ## Licence
 
 [AGPL-3.0-or-later](LICENSE). Game data is factual and shared under the same repository terms.
+
+Design tokens, icon rules and the wording glossary live in `docs/design.md`; sync setup in `docs/sync.md`.
