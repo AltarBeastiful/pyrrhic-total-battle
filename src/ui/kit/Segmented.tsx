@@ -31,7 +31,7 @@ const segmentedStyles = tv({
   slots: {
     root: fieldRoot,
     label: fieldLabel,
-    group: 'rounded-control border-line bg-field flex w-full gap-0.5 border p-0.5',
+    group: 'rounded-control border-field/60 bg-sunken flex w-full gap-0.5 border p-0.5',
     item: cn(
       'rounded-control text-muted flex flex-1 items-center justify-center gap-1.5 px-3 font-medium',
       'hover:text-fg hover:bg-raised selected:bg-accent selected:text-accent-fg',

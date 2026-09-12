@@ -20,7 +20,7 @@ const checkboxStyles = tv({
   slots: {
     button: 'group flex min-h-11 cursor-pointer items-center gap-3 outline-none sm:min-h-9',
     box: cn(
-      'border-line bg-field rounded-control flex size-5 shrink-0 items-center justify-center border',
+      'border-field/60 bg-sunken rounded-control flex size-5 shrink-0 items-center justify-center border',
       'group-selected:bg-accent group-selected:border-accent group-selected:text-accent-fg',
       'group-indeterminate:bg-accent group-indeterminate:border-accent group-indeterminate:text-accent-fg',
       ringFromGroup,

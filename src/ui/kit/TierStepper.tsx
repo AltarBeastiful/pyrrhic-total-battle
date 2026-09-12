@@ -65,7 +65,7 @@ const tierStyles = tv({
     popover: 'rounded-card border-line bg-surface shadow-pop max-w-full border p-2',
     strip: 'flex flex-wrap gap-1',
     chip: cn(
-      'font-display nums rounded-control border-line bg-field text-muted flex min-h-11 min-w-11 items-center',
+      'font-display nums rounded-control border-field/60 bg-sunken text-fg flex min-h-11 min-w-11 items-center',
       'justify-center border px-2 sm:min-h-9 sm:min-w-9',
       'hover:text-fg selected:bg-accent selected:border-accent selected:text-accent-fg',
       ring,

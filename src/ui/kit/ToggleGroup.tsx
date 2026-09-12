@@ -45,7 +45,7 @@ const toggleStyles = tv({
     label: fieldLabel,
     group: 'flex flex-wrap gap-1.5',
     item: cn(
-      'rounded-chip border-line bg-field text-muted flex items-center justify-center gap-1.5 border font-medium',
+      'rounded-chip border-field/60 bg-sunken text-muted flex items-center justify-center gap-1.5 border font-medium',
       'hover:text-fg hover:border-field selected:bg-accent-soft selected:border-accent-line selected:text-fg',
       'disabled:cursor-not-allowed disabled:opacity-50 motion-safe:transition-colors',
       ring,

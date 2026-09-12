@@ -3,7 +3,7 @@
  * equivalent of `./styles.ts`: import them, never retype them.
  *
  * The shape every control keeps: a visible label at `text-sm text-fg` above the control (a control
- * is never labelled by its placeholder), the control itself on `bg-field` inside a `border-line`
+ * is never labelled by its placeholder), the control itself as a sunken well (`bg-sunken`) inside a `border-field`
  * hairline at the 8 px control radius, and the help lines below in `text-xs`.
  */
 
@@ -20,7 +20,7 @@ export const fieldDescription = 'text-muted text-xs';
 export const fieldError = 'text-danger text-xs';
 
 /** The box a value sits in: field surface, hairline border, control radius. */
-export const fieldBox = 'rounded-control border-line bg-field flex items-center border';
+export const fieldBox = 'rounded-control border-field/60 bg-sunken flex items-center border';
 
 /** The typed value itself: figures line up, the box draws the border. */
 export const fieldInput = 'nums text-fg placeholder:text-muted w-full min-w-0 bg-transparent outline-none';
