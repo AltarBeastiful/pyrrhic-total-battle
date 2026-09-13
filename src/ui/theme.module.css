@@ -109,8 +109,11 @@
    shapes itself. The classes are handed out by the kit's `Panel` and by `theme.components`.
    --------------------------------------------------------------------------------------------- */
 
-/* A setup section: a lit block with one hairline and one soft shadow. 20/24 px of padding on a
-   desktop, 16 px in Material's compact window — the artboards' own two paddings. */
+/* A setup section: a lit block with one hairline and one soft shadow. **20 px of padding on a
+   desktop, 16 px in Material's compact window** — one pair of numbers for every card on the page
+   now (the owner's review of 2026-09-13: "clearer separation, it's a bit all over"). The panel used
+   to take 20/24 and the pane 24, which put the March's content on a different left edge from the
+   setup's beside it. */
 .panel {
   border: 1px solid var(--pyr-panel-border);
   border-radius: var(--mantine-radius-md);
@@ -121,12 +124,13 @@
 
 @media (min-width: 37.5em) {
   .panel {
-    padding: 1.25rem 1.5rem;
+    padding: 1.25rem;
   }
 }
 
 /* The March: the same idea one step brighter and one step deeper, so it reads as the object in
-   front of the setup rather than as a fifth section. */
+   front of the setup rather than as a fifth section. The same two paddings as a panel — the
+   spacing contract's 20 (`MarchPaneSpacing.dc.html`, `.pane`). */
 .pane {
   border: 1px solid var(--pyr-pane-border);
   border-radius: var(--mantine-radius-md);
@@ -137,8 +141,35 @@
 
 @media (min-width: 37.5em) {
   .pane {
-    padding: 1.5rem;
+    padding: 1.25rem;
   }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   THE SEPARATION LANGUAGE (the owner's review of 2026-09-13: "hard to distinguish parts", "the
+   battle summary is crammed and misses clear separation", "clearer separation, it's a bit all
+   over"). Handed out by the kit's `Sections`; `docs/design.md` §4 records it in ten lines.
+
+   Inside a card, the parts of that card are told apart by **one hairline with 16 px above and
+   below** and by nothing else. The first part carries no line and no space above it and the last
+   none below, so what closes the card at both ends is its own 20 px of padding: the rhythm reads as
+   one object with parts rather than as a stack of boxes, which is what the review was about.
+
+   `:first-child` / `:last-child` rather than a count, because half of these parts are conditional —
+   a part that is not on screen must not leave its line behind.
+   --------------------------------------------------------------------------------------------- */
+.sections > * {
+  border-top: 1px solid var(--pyr-hairline);
+  padding-block: 1rem;
+}
+
+.sections > *:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.sections > *:last-child {
+  padding-bottom: 0;
 }
 
 /* A well: anything sunk into a panel — a read-only figure, a housing field's ground, a segmented
@@ -150,7 +181,9 @@
   box-shadow: var(--pyr-well-shadow);
 }
 
-/* A panel's own head: the 15 px title on the left, the muted meta on the right (artboard `h2`). */
+/* A card's own head, and there is one shape for all of them: **the title at 15/600 on the left, a
+   12 px muted meta on the right**, 14 px of air under it (artboards `h2` and `.h .meta`). The meta
+   is a summary of the form under it and never a control. */
 .panelHeader :global(h2) {
   letter-spacing: 0.02em;
 }
@@ -166,6 +199,7 @@
 .panelMeta {
   flex: 0 1 auto;
   min-width: 0;
+  font-size: var(--pyr-meta);
   text-align: end;
 }
 

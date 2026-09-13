@@ -5,9 +5,10 @@
  * empty form. `e2e/visual.spec.ts` is the same gate for the kit page.
  */
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
+  chooseObjective,
   closeMarchSheet,
   generate,
   openAccountMenu,
@@ -24,6 +25,13 @@ const FRAMES = [
   { name: 'desktop', width: 1400, height: 900 },
   { name: 'phone', width: 390, height: 844 },
 ] as const;
+
+/** The five objectives side by side; it lands after the march, so it is waited for by name. */
+function comparison(page: Page): Locator {
+  return page.getByRole('table', { name: 'Every objective on this army' });
+}
+
+const COMPARISON_WAIT = { timeout: 40_000 };
 
 async function violations(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
@@ -87,12 +95,21 @@ test('a keyboard sees a real focus ring on a field, not a border that changed co
 });
 
 for (const frame of FRAMES) {
+  // Five extra searches per frame, on top of the march itself and six axe passes.
+  test.setTimeout(120_000);
   test(`the app has no WCAG A or AA violations at ${String(frame.width)} px, in either scheme`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: frame.width, height: frame.height });
     await openApp(page);
+    // With an objective, so the answer carries everything the March can draw: the pills, the
+    // left-out row *and* the five objectives side by side (investigation 0013 §5.3), which is a
+    // table of controls and the newest thing on the page.
+    await chooseObjective(page, 'Best worst case');
     await generate(page, { leadership: 4100, authority: 1200 });
+    // The comparison runs after the march and only where the March is drawn — the pane from
+    // 1200 px, the sheet below it.
+    if (frame.width >= 1200) await expect(comparison(page)).toBeVisible(COMPARISON_WAIT);
 
     await chooseTheme(page, 'Light');
     expect(await violations(page), `axe violations on the app, ${frame.name} light`).toEqual([]);
@@ -104,6 +121,7 @@ for (const frame of FRAMES) {
     // counts table, the trade-off strip — is only ever checked with the sheet open.
     if (frame.width < 1200) {
       await openMarchSheet(page);
+      await expect(comparison(page)).toBeVisible(COMPARISON_WAIT);
       expect(await violations(page), `axe violations on the March sheet, ${frame.name} dark`).toEqual([]);
       await closeMarchSheet(page);
     }

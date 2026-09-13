@@ -73,3 +73,30 @@
   outline-offset: 2px;
   border-radius: var(--mantine-radius-xs);
 }
+
+/* ---------------------------------------------------------------------------------------------
+   THE FIGURE (the owner's review of 2026-09-13: "the percentages could just be numbers with
+   minimal text"). Three declarations for the shape every figure on the page now takes: the label
+   12 px muted over the value, the value 15/600 tabular under it, and — in the `grid` layout — the
+   spacing contract's **two columns with 8 × 16 gaps** (`MarchPaneSpacing.dc.html`, `.figs`).
+   --------------------------------------------------------------------------------------------- */
+/* Mantine's `DataList` root *is* the `<dl>`, so the class lands on the grid itself. */
+.figureGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--pyr-figures-cols, 2), minmax(0, 1fr));
+  gap: var(--mantine-spacing-sm) var(--mantine-spacing-lg);
+}
+
+.figureLabel {
+  min-width: 0;
+  font-size: var(--pyr-meta);
+  line-height: 1.25;
+}
+
+/* Figures are compared down a column, so a figure is always tabular — and never wrapped: a number
+   broken across two lines is two numbers. */
+.figureValue {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}

@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
 
+import classes from './domain.module.css';
 import { Glyph } from './Glyph';
 import { GLYPHS } from './glyphs';
 
@@ -21,6 +22,23 @@ test('a glyph beside a visible label is hidden from screen readers', () => {
   );
   expect(screen.queryByRole('img')).toBeNull();
   expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe(GLYPHS.melee);
+});
+
+test('every glyph wears the fixed box, labelled or not, and `scale` only moves the em', () => {
+  // The glyph rule (docs/design.md §5): the box is a class and never a prop, so no caller can ship
+  // a bare emoji whose own font decides the line's metrics.
+  const { container } = render(
+    <span>
+      <Glyph kind="silver" />
+      <Glyph kind="gold" label="Gold" />
+      <Glyph kind="pin" scale={0.7} />
+    </span>,
+  );
+  const boxes = container.querySelectorAll(`.${String(classes.glyph)}`);
+  expect(boxes).toHaveLength(3);
+  // At `scale` 1 nothing is written inline at all: the class is the whole shape.
+  expect((boxes[0] as HTMLElement).style.fontSize).toBe('');
+  expect((boxes[2] as HTMLElement).style.fontSize).toBe('0.7em');
 });
 
 test('the mapping covers the game vocabulary the sections use', () => {

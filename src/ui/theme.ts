@@ -287,6 +287,11 @@ export const theme: MantineThemeOverride = createTheme({
     // writes that on the element itself, so the variable above cannot reach it (design rule 19;
     // investigation 0011 measured the Battle card's option sentences at 11 px).
     Switch: { styles: { description: { fontSize: 'var(--mantine-font-size-xs)' } } },
+    // **One line, everywhere** (docs/design.md §4). A rule between the parts of a card, a menu or a
+    // sheet is the hairline and nothing stronger; Mantine draws its dividers in the *field* colour,
+    // which is the ≥ 3:1 edge a control wears and reads as a border round a block.
+    Divider: { styles: { root: { borderColor: 'var(--pyr-hairline)' } } },
+    Menu: { styles: { divider: { borderColor: 'var(--pyr-hairline)' } } },
     Popover: { defaultProps: { shadow: 'md', withArrow: false } },
     Modal: { defaultProps: { radius: 'md' } },
     Drawer: { defaultProps: { radius: 'md' } },
@@ -368,7 +373,19 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       // padding. Said once, because the March pane's sticky block subtracts it from the window so
       // the bar never lands on the pills.
       '--pyr-commandbar-height': '5.75rem',
-      '--pyr-pane-width': '23.75rem',
+      // M3's supporting pane, widened from 380 to **420 px** (the owner's review of 2026-09-13:
+      // "the right side battle summary could take a bit more space — a bit crammed compared to the
+      // content density on the left"). The setup column gives up the 40 px; at 1400 px it still has
+      // 900, which is more than any form on it asks for. 420 is also what makes the spacing
+      // contract's "four stack pills across" true: 420 − 2 × 20 of padding − 3 × 8 of gap is four
+      // 88.5 px tracks (`domain.module.css`, `.pillGrid`).
+      '--pyr-pane-width': '26.25rem',
+      // The one size under the 13 px floor, and it is a *label*, never information: the word over a
+      // figure, the meta beside a card's title, a column head. The figure itself is 15/600 and the
+      // label repeats what the accessible name already says. Written as one variable so design
+      // rule 19 can be restored in one line if the owner reads it as a 12 px meta line after all
+      // (the spacing contracts ask for 12 throughout: `.h .meta`, `.fig .k`, `.pop label`).
+      '--pyr-meta': '0.75rem',
       // The metal is the same in both schemes: it is the game's trim, not a surface (`GOLD`).
       '--pyr-gold': GOLD.gradient,
       '--pyr-gold-hover': GOLD.hover,

@@ -24,9 +24,11 @@ export interface PillRowProps {
   items: PillRowItem[];
   /** Shown in place of the row when nothing is chosen yet. */
   empty?: ReactNode;
+  /** The row's own geometry, where a card has a spacing contract of its own (the camp's 32 px). */
+  className?: string | undefined;
 }
 
-export function PillRow({ label, items, empty }: PillRowProps) {
+export function PillRow({ label, items, empty, className }: PillRowProps) {
   if (items.length === 0 && empty !== undefined) {
     return (
       <Group role="group" aria-label={label}>
@@ -36,7 +38,7 @@ export function PillRow({ label, items, empty }: PillRowProps) {
   }
 
   return (
-    <Pill.Group role="group" aria-label={label}>
+    <Pill.Group role="group" aria-label={label} className={className}>
       {items.map((item) => (
         <Pill
           key={item.id}

@@ -19,7 +19,7 @@ export type { MarchGenerateButtonProps } from './MarchGenerateButton';
 // keyboard shortcut and the status line, so both need the same handful of exports.
 export { cancelGenerate, restoreLastResult, runGenerate, SEARCH_BUDGET_MS } from './generate';
 export { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
-export type { RemovedMercenary, RunState, SearchTradeoff, TradeoffFigures } from './runStore';
+export type { RunState, SearchTradeoff, TradeoffFigures } from './runStore';
 export { amount, compact, duration, percent, ratio } from './format';
 export { useMarch } from './useMarch';
 export type { MarchView } from './useMarch';

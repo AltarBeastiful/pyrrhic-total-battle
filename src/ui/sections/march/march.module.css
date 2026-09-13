@@ -106,3 +106,65 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+/* The one line under the body size: a label over a figure, a card's meta, a column head. It is the
+   theme's `--pyr-meta`, said here so the March never writes a bare `12px`. */
+.meta {
+  font-size: var(--pyr-meta);
+  line-height: 1.3;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The objectives, side by side (investigation 0013 §5.3, `TradeoffStrip.tsx`). Five rows of four
+   figures in a 420 px pane, so the figures are compact ("4.7M") and the table is allowed one
+   scroller of its own — design rule 17 forbids a *pane* that scrolls independently of the page, not
+   a table that is wider than its column. Every other block in the March stays inside its width.
+   --------------------------------------------------------------------------------------------- */
+.compareScroll {
+  overflow-x: auto;
+}
+
+.compare {
+  font-size: var(--mantine-font-size-xs);
+}
+
+.compare :global(thead th) {
+  border-bottom: 1px solid var(--pyr-hairline);
+  color: var(--mantine-color-dimmed);
+  font-size: var(--pyr-meta);
+  font-weight: 500;
+}
+
+/* No rules between the rows: the card's own parts are what hairlines are for (docs/design.md §4),
+   and five of them inside one part is the "boxes in boxes" this review went looking for. */
+.compare :global(tbody td),
+.compare :global(tbody th) {
+  border: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The march's own objective: one tonal step, so the eye finds the row it is reading against. The
+   row also carries `aria-current`, and its button says so in words. */
+.compare :global(tbody tr[data-current]) {
+  background: var(--pyr-raised);
+}
+
+/* The name is the control — pressing it generates with that objective — and it is the one cell
+   allowed to wrap, because "Damage per dragon coin" is four words. */
+.compareName {
+  height: auto;
+  min-height: 1.5rem;
+  font-weight: 600;
+  text-align: start;
+  white-space: normal;
+}
+
+.compareName :global(.mantine-Button-label) {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  line-height: 1.25;
+  white-space: normal;
+}

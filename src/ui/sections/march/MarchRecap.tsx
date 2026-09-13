@@ -119,9 +119,13 @@ export function MarchRecap() {
           </Group>
         </Stack>
 
+        {/* The four figures as the spacing contract draws them: a **2-column grid, 8 × 16 gaps**,
+            the label 12 px muted with its glyph in the fixed box over a 15/600 tabular figure
+            (`MarchPaneSpacing.dc.html`, `.figs`). They were four full-width rows of label-then-value
+            before, which is four lines of a 420 px pane spent on four numbers. */}
         <Figures
           label="March figures"
-          labelWidth="11rem"
+          layout="grid"
           items={figures.map((figure) => ({
             key: figure.key,
             label: figure.label,

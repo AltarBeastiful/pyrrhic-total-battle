@@ -23,7 +23,7 @@ import { mintSourceId, toggleActiveSource, updateSources } from '@/state/actions
 import { setActiveFlag } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Disclosure, Panel } from '@/ui/kit';
+import { Disclosure, Panel, Sections } from '@/ui/kit';
 
 import { ArtifactChips } from './ArtifactChips';
 import { CaptainChips } from './CaptainChips';
@@ -269,7 +269,8 @@ export function BonusesSection() {
         MAX_ACTIVE_CAPTAINS,
       )} · Sources on ${String(summary.on)}`}
     >
-      <Stack gap="sm">
+      {/* Two parts: what the army gains, and where it comes from (`kit/Sections.tsx`). */}
+      <Sections>
         <TotalsFigures summary={summary} />
 
         {/*
@@ -331,7 +332,7 @@ export function BonusesSection() {
             </Accordion>
           </Stack>
         </Disclosure>
-      </Stack>
+      </Sections>
 
       {editor?.kind === 'equipment' && <EquipmentSheet {...sheet} entryId={editor.id} />}
       {editor?.kind === 'permanent' && <PermanentSheet {...sheet} entryId={editor.id} />}

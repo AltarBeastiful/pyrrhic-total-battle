@@ -24,11 +24,11 @@ import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
 import { copyText } from '@/ui/profile/download';
 
-import { keepInMarch, removeFromFormation } from './formation';
+import { putBackInMarch, removeFromFormation } from './formation';
 import { amount } from './format';
 import classes from './march.module.css';
 import { countsText } from './rows';
-import type { MarchStackRow, PoolRow } from './rows';
+import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 
 /** How long "Copied" stays on screen. */
 const COPIED_MS = 1500;
@@ -57,8 +57,6 @@ function useFlash(): [string, (message: string) => void] {
 
 export interface MarchPillsProps {
   rows: PoolRow[];
-  /** Types this march does not field; a press on one puts it back. */
-  leftOut: UnitDef[];
   editing: boolean;
   onCount: (unitId: string, count: number) => void;
   /** A pill's corner mark: the unit sheet for that one type. */
@@ -70,17 +68,21 @@ export interface MarchPillsProps {
  * pane stays on screen while the setup scrolls past it (`shell/MarchPane.tsx`), so this block and
  * the whole-march actions under it travel together and neither can cover the other.
  */
-export function MarchPills({ rows, leftOut, editing, onCount, onDetails }: MarchPillsProps) {
+export function MarchPills({ rows, editing, onCount, onDetails }: MarchPillsProps) {
   return (
     <Stack gap="lg">
       {rows.map((row) => {
         const over = row.used > row.capacity;
         return (
           <Stack key={row.pool} gap="xs">
-            <Group gap={10} wrap="nowrap" align="center">
+            {/* The pool line, to the spacing contract (`MarchPaneSpacing.dc.html`, `.pool`): the
+                figure **22/700** in the pool's colour, the glyph in a 20 px box, and "of 20 000
+                leadership" at 12 px muted — the pool's *name*, which the line never said, so three
+                figures over three grids of pills were told apart by an emoji alone. */}
+            <Group gap={8} wrap="nowrap" align="center">
               <Text
                 span
-                fz="1.625rem"
+                fz="1.375rem"
                 lh={1}
                 fw={700}
                 className={classes.poolFigure}
@@ -88,11 +90,11 @@ export function MarchPills({ rows, leftOut, editing, onCount, onDetails }: March
               >
                 {amount(row.used)}
               </Text>
-              <Text span fz="1.375rem" lh={1}>
+              <Text span fz="1.25rem" lh={1}>
                 <Glyph kind={row.pool} label={POOL_LABEL[row.pool]} />
               </Text>
-              <Text span size="xs" c="dimmed">
-                {`of ${amount(row.capacity)}`}
+              <Text span className={classes.meta} c="dimmed">
+                {`of ${amount(row.capacity)} ${POOL_LABEL[row.pool].toLowerCase()}`}
               </Text>
             </Group>
             {row.entries.length > 0 && (
@@ -124,34 +126,52 @@ export function MarchPills({ rows, leftOut, editing, onCount, onDetails }: March
           </Stack>
         );
       })}
+    </Stack>
+  );
+}
 
-      {leftOut.length > 0 && (
-        <Stack gap={6}>
-          <Text span size="xs" c="dimmed">
-            Left out — tap to put back
-          </Text>
-          <Group gap={6} wrap="wrap" role="group" aria-label="Left out of this march">
-            {leftOut.map((unit) => (
-              <LeftOutPill
-                key={unit.id}
-                unit={unit}
-                onPutBack={() => {
-                  keepInMarch(unit.id);
-                }}
-              />
-            ))}
-            <Button
-              variant="subtle"
-              size="compact-xs"
-              onClick={() => {
-                for (const unit of leftOut) keepInMarch(unit.id);
-              }}
-            >
-              Put back all
-            </Button>
-          </Group>
-        </Stack>
-      )}
+/**
+ * The types this march does not field — **its own part of the pane**, under a hairline (the spacing
+ * contract's third section, `MarchPaneSpacing.dc.html`). It used to hang off the bottom of the pools
+ * inside the same block, which is why the owner read the pane as one undivided run: a footnote and
+ * the army it is a footnote to had the same separation as two pools.
+ */
+export interface MarchLeftOutProps {
+  /** Types this march does not field, with the reason; a press on one puts it back. */
+  leftOut: LeftOutUnit[];
+}
+
+export function MarchLeftOut({ leftOut }: MarchLeftOutProps) {
+  if (leftOut.length === 0) return null;
+  return (
+    <Stack gap={8}>
+      <Text span className={classes.meta} c="dimmed">
+        Left out — tap to put back
+      </Text>
+      {/* One row, two kinds: the pill carries `data-left-out="you" | "search"` and says which in
+          its name, because putting one back undoes the player's own press while putting the
+          other back pins the type against the search. */}
+      <Group gap={8} wrap="wrap" role="group" aria-label="Left out of this march">
+        {leftOut.map((entry) => (
+          <LeftOutPill
+            key={entry.unit.id}
+            unit={entry.unit}
+            reason={entry.reason}
+            onPutBack={() => {
+              putBackInMarch(entry.unit.id);
+            }}
+          />
+        ))}
+        <Button
+          variant="subtle"
+          size="compact-xs"
+          onClick={() => {
+            for (const entry of leftOut) putBackInMarch(entry.unit.id);
+          }}
+        >
+          Put back all
+        </Button>
+      </Group>
     </Stack>
   );
 }

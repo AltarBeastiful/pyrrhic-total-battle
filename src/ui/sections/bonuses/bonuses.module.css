@@ -4,21 +4,13 @@
    read *across* the header, as TotalStack's does, so the four figures sit on one wrapping line.
    Everything else on this card is a theme token on a stock component.
    --------------------------------------------------------------------------------------------- */
-.totals > dl {
-  display: grid;
-  /* Four equal columns where there is room: "Sources on" is two words and must not break across a
-     line (artboard `.figs`). */
-  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
-  gap: var(--mantine-spacing-lg);
-}
-
-/* …and **two by two** inside Material 3's compact window. Three plus one is what a 390 px phone
-   fitted, which left "Sources on" alone on a second line under three-quarters of empty space — the
-   owner photographed it on 2026-09-13. Two rows of two is the same four figures with no orphan. */
+/* The grid itself is the kit's now (`Figures`, `layout="grid"`): four columns where there is room.
+   What is left here is the one thing the kit cannot know — **two by two inside Material 3's compact
+   window**. Three plus one is what a 390 px phone fitted, which left "Sources on" alone on a second
+   line under three-quarters of empty space (the owner photographed it on 2026-09-13). */
 @media (max-width: 37.4375em) {
   .totals > dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--mantine-spacing-sm) var(--mantine-spacing-lg);
   }
 }
 

@@ -10,17 +10,24 @@ import type { ReactNode } from 'react';
 
 import type { UnitDef } from '@/engine/types';
 import { GROUP_LABEL, romanTier, StatBar, unitGroupOf, UnitTile } from '@/ui/domain';
-import { Sheet } from '@/ui/kit';
+import { Sections, Sheet } from '@/ui/kit';
+
+import classes from './march.module.css';
 
 import { keepInMarch, removeFromFormation, stopKeeping } from './formation';
 import { amount, duration, percent, ratio } from './format';
 import type { MarchStackRow } from './rows';
 
-/** One headed block of the sheet. */
+/**
+ * One part of the sheet: the same head every figure on the page wears — **12 px muted above what it
+ * is about** — and then the sentences (design rule 27: a unit's details read as prose, never as a
+ * grid of labelled numbers). The parts themselves are told apart by `Sections`, so this sheet has
+ * the March's rhythm rather than one of its own.
+ */
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Stack gap={4}>
-      <Text component="h4" size="xs" c="dimmed" fw={500}>
+    <Stack gap={6}>
+      <Text component="h4" className={classes.meta} c="dimmed" fw={500}>
         {title}
       </Text>
       {children}
@@ -92,7 +99,7 @@ export function UnitSheet({ unit, row, totalDamage, pinned, onClose, onEditCount
         </Group>
       }
     >
-      <Stack gap="md">
+      <Sections>
         <UnitTile unit={unit} size="lg" state={pinned ? 'pinned' : row === undefined ? 'leftOut' : 'on'} />
 
         <Block title="In this march">
@@ -140,7 +147,7 @@ export function UnitSheet({ unit, row, totalDamage, pinned, onClose, onEditCount
             />
           </Stack>
         </Block>
-      </Stack>
+      </Sections>
     </Sheet>
   );
 }

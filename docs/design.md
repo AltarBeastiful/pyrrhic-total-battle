@@ -123,17 +123,19 @@ variables at them, so overriding these nine re-skins every component at once.
 | field | `#6e7873` | `#78837f` | `--mantine-color-default-border` | the border of anything you type in or press; ≥ 3:1 |
 
 Three more variables the app's own CSS reads: `--pyr-appbar-height` (64 px, the height both bars and the
-sticky pane are measured from), `--pyr-pane-width` (360 px, M3's supporting pane), `--pyr-page-margin`
+sticky pane are measured from), `--pyr-pane-width` (**420 px** since the review of 2026-09-13 — M3's supporting pane, widened from 380 because
+"the right side battle summary could take a bit more space"; the setup column gives up the 40 px, and 420 is
+what puts four stack pills across), `--pyr-page-margin`
 (16 px compact / 24 px from 600 px — Material's page margins, §4) and `--pyr-font-numeral` (Fraunces).
 
 ### Checked, not guessed
 
 `pnpm contrast` (`scripts/contrast-check.ts`) imports the palette module the app builds its theme from, so
-there is no second copy to drift, and fails on any pair below its floor. **324 pairs, all passing:**
+there is no second copy to drift, and fails on any pair below its floor. **860 pairs, all passing:**
 
 | Rule | What it covers | Lowest light | Lowest dark |
 |---|---|---|---|
-| **4.5:1** (1.4.3) | ink and muted on page, sheet, panel, pane, raised, sunken; every ramp at its scheme's shade on those six surfaces and on its own 12 % tonal ground; the ink a filled ground of it is written in; Generate's ink on both ends of its gradient | **5.34** | **4.98** |
+| **4.5:1** (1.4.3) | ink and muted on page, sheet, panel, pane, raised, sunken; every ramp at its scheme's shade on those six surfaces and on its own 12 % tonal ground; the ink a filled ground of it is written in; Generate's ink on both ends of its gradient | **4.95** | **4.80** |
 | **3:1** (1.4.11) | `field` — the border of every control — and the focus ring, on the six surfaces | **3.52** | **3.34** |
 
 `hairline` and the two panel borders are deliberately below 3:1: they draw the edge of a block and nothing a
@@ -197,7 +199,8 @@ variant of Mantine's `Text`, which is the only way in: Mantine has no numerals s
 | A housing figure (the wells you retype into) | Inter 400, tabular | the `.housing` well | 15 px |
 | Captions, helper lines, panel meta | Inter 400/500 | `size="sm"` = `size="xs"` | 13 px |
 | A stack pill's code and roman tier | Inter 600, in the tier's ink | `fz="0.75rem"` | 12 px |
-| The roman tier on a tile or a mercenary pill | Fraunces 500, `opsz 144` | `<Text variant="numeral">` | 13 / 16 / 21 px |
+| The roman tier on a unit tile | Fraunces 500, `opsz 144` | `<Text variant="numeral">` | 13 / 16 / 21 px |
+| The roman tier on a badge or a mercenary pill | Inter 700, `+.02em` | `<TierBadge>` | 11 px |
 | Share links, ids | `fontFamilyMonospace` | `size="xs"` | 13 px |
 
 **The section title dropped from 21 px to 15** with direction A (design plan §5.5): a panel's title is a label
@@ -216,6 +219,38 @@ Measure ≤ 70 characters. `output`, `td` and `th` get tabular figures for free.
 
 ## 4. Spacing, radius, motion
 
+### The separation language
+
+The owner's review of 2026-09-13 — "hard to distinguish parts", "the battle summary is crammed and misses
+clear separation", "clearer separation, it's a bit all over" — answered in ten lines. Every surface on the
+page obeys all ten; `kit/Sections.tsx` and `theme.module.css` are the only places that draw them.
+
+1. **A card is a card, and the only card.** No card inside a card, no tinted block standing in for one; the
+   one exception is an `Alert`, which is a state and not a container.
+2. **A card's parts are separated by one hairline with 16 px above and below** — `--pyr-hairline`, 1 px,
+   full width — and by nothing else. The kit's `Sections` draws it; a part that is not on screen takes its
+   line with it.
+3. **The first part carries no line and no space above it, the last none below.** What closes a card at both
+   ends is its own padding, so the rhythm reads as one object with parts.
+4. **Card padding is 20 px on a desktop and 16 px in a compact window**, panel and March pane alike.
+5. **Every gap is a multiple of 8**: 8 between siblings, 16 between parts, 24 between cards. 4 and 6 exist
+   only *inside* one control (a pill's inner gap, a glyph beside its word).
+6. **A card's head is the title at 15/600 on the left and a 12 px muted meta on the right**, 14 px above the
+   first part. The meta summarises the form under it and is never a control.
+7. **A figure is the label 12 px muted above and the value 15/600 tabular below**, the unit glued to the
+   number ("+312 %", "4 519 202") and no sentence around it. `kit/Figures` is the only way to draw one.
+8. **Figures are laid out in a grid, not as rows**: two columns in a pane, four in a full-width card, 8 × 16
+   gaps.
+9. **One rule, one weight, one colour.** `Divider`, `Menu.Divider` and `Sections` all draw `--pyr-hairline`;
+   the ≥ 3:1 `field` colour is for the edge of something you press, never for separating parts.
+10. **Nothing else separates anything**: no second rule, no box, no tonal step, no extra 32 px of air where a
+    hairline is what was meant.
+
+The one deliberate breach of design rule 19 is line 6 and line 7's **12 px**, which the spacing contracts
+(`docs/design-canvas/MarchPaneSpacing.dc.html` `.h .meta` and `.fig .k`) write throughout. It is one
+variable, `--pyr-meta`, so restoring the 13 px floor is a one-line change; the tier badge's 11 px
+(`TierBadge`) is the other, and both are labels whose meaning is also in the accessible name.
+
 - **Radius is decided by what a thing is**, never by looks. The theme's scale is `xs` 4 · `sm` 8 · `md` 12 ·
   `lg` 16 · `xl` 28, and `defaultRadius` is `sm`: a setup panel and the March pane are `md` (M3 medium), so is
   every overlay, buttons, fields and chips are `sm` (M3 small — the 999 px pill is retired except on the
@@ -228,18 +263,21 @@ Measure ≤ 70 characters. `output`, `td` and `th` get tabular figures for free.
   and 24 px above and below the content. One variable, `--pyr-page-margin`, read by `Container`, the top app
   bar and the command bar, so the brand, the panels and Generate all start on the same line (the phone bar's
   own padding is the artboard's 12 px, because four chips share a 390 px row).
-- **A panel is 20/24 px of padding on a desktop and 16 px in a compact window**, with 16 px of air between
-  panels; the March pane is 24 px, and 16 px on a phone.
-- **Separation is an edge and space, not a rule.** Since direction A each setup section is its own panel, so
-  the `Divider` between sections is gone. A border *and* a shadow *and* a tonal step on the same element is
-  still the thing this system exists to prevent — a panel is allowed all three precisely because it is the one
-  object the design says is lit.
+- **Every card is 20 px of padding on a desktop and 16 px in a compact window**, with 16 px of air between
+  them — the panel *and* the March pane, so the setup's left edge and the March's are the same distance from
+  their own borders. The pane was 24 and the panel 20/24, which is the "a bit all over" of the review.
+- **Separation between cards is an edge and space; separation inside a card is one hairline.** Since
+  direction A each setup section is its own panel, so nothing is drawn *between* panels. Inside one, the
+  parts are told apart by the ten lines above. A border *and* a shadow *and* a tonal step on the same element
+  is still the thing this system exists to prevent — a panel is allowed all three precisely because it is the
+  one object the design says is lit.
 - **Density by purpose.** Controls are Mantine's `sm` (`ActionIcon` too — `xs` is 18 px, under the 24 px target
   minimum); a **chip and a tier stepper are both 30 px**, so a troop row reads as one line of equal parts; a
   **housing well is 40 px** and a third of the command bar wide, because it is the figure a player retypes off
-  the game's own march screen — 34 px as the phone bar's chip, which is that same well waiting to be typed in; a **stack pill is 62 px tall with 8/10 px of padding**, laid out
-  `repeat(auto-fill, minmax(78px, 1fr))` so a six-figure count widens every pill and the row wraps to fewer
-  instead of clipping one; a **left-out pill is 26 px**, because it is a footnote to the march.
+  the game's own march screen — 34 px as the phone bar's chip, which is that same well waiting to be typed in; a **stack pill is 56 px tall with 6/8 px of padding**, laid out
+  `repeat(auto-fill, minmax(88px, 1fr))` so four fit across the 420 px pane and a six-figure count widens
+  every pill and wraps the row to three instead of clipping one; a **mercenary pill is 32 px with 0/6/0/10
+  and a 6 px inner gap**; a **left-out pill is 26 px**, because it is a footnote to the march.
 - **One bar per edge** (design rule 2 as amended, plan §5.6). The top app bar is 64 px; the **command bar**
   closes the page at the bottom — 88 px of wells, the objective and Generate inside the page width, 24 px off
   the sides and off the bottom edge (112 px reserved), and two rows of 34 + 40 px (102 px) on a phone. Both
@@ -265,6 +303,16 @@ licence to carry, no network request. Emoji render in the platform's own font.
 
 One component, `Glyph` (`src/ui/domain/Glyph.tsx`), and one map, `glyphs.ts`. The mapping is the contract;
 which emoji draws a meaning is not, and neither is the face it renders in.
+
+**The glyph rule** (the owner's review of 2026-09-13, "many padding issues especially with unicode
+characters"; artboards `MarchPaneSpacing.dc.html` and `MercenariesSpacing.dc.html`, `.g`): every emoji sits in
+a **fixed `1.25em × 1.25em` inline-flex box**, `line-height: 1`, `vertical-align: -0.2em`, `flex: 0 0 auto`,
+and never as bare text. An emoji is drawn by whatever font the platform hands it, and that font's ascent,
+descent and advance have nothing to do with Inter's: bare, a 🛡️ beside "20 000" pushes the line's baseline
+down, by a different amount on every device. In a box of its own it cannot — the line's metrics are Inter's,
+the box is the same width everywhere, and glyphs down the left edge of a list of figures line up in a column.
+The box is a class (`domain.module.css`, `.glyph`), not a prop: there is one box and it is not negotiable,
+and `scale` only changes the em it is measured in. Nothing in the app writes an emoji outside `Glyph`.
 
 | Family | Glyphs |
 |---|---|
@@ -314,7 +362,9 @@ Mantine 9 is the component system (ADR-0008). Sections import its layout and typ
 
 The **kit** (`src/ui/kit`, contract in its own README) is the boundary for controls: `AppBar`, `AppMenu`,
 `ChipRow`, `ChoiceList` (`layout="list"` rows or `layout="cards"`), `CornerGear`, `Dialog`, `Disclosure`,
-`Figures`, `GenerateFab`, `GroupedCombobox`, `NumberField`, `PillRow`, `Sheet`, `SwitchRow`, `TierSelect`.
+`Figures`, `GenerateFab`, `GroupedCombobox`, `NumberField`, `PillRow`, `Sections`, `Sheet`, `SwitchRow`,
+`TierSelect`. Two of them carry the language of §4 and are the only way to draw it: `Sections` (a card's parts
+and the hairline between them) and `Figures` (a label over a value, as rows or as a grid).
 The **domain** (`src/ui/domain`) is the boundary for the components that know what a unit is: `UnitTile`,
 `GroupMarker`, `TierBadge`, `CaptainChip`, `MarchRow`/`MarchTable`, `PoolGauge`, `DeltaText`, `StatBar`,
 `Glyph`.

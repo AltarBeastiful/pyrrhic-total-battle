@@ -19,7 +19,7 @@ const story: KitStory = {
       />
       <Figures
         label="Army recovery cost"
-        withDivider
+        layout="grid"
         items={[
           { key: 'time', label: 'Time', value: '14d 14h', glyph: <Glyph kind="time" /> },
           { key: 'silver', label: 'Silver', value: '2 100 000', glyph: <Glyph kind="silver" /> },

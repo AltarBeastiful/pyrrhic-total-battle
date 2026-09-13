@@ -8,10 +8,19 @@
  * Emoji render with the platform's own font. We bundle none for now, so a glyph is a *repetition* of
  * something already written in text, never the only thing saying what a control does: a `Glyph` with
  * no `label` is hidden from screen readers, and one with a label becomes an `img` carrying it.
+ *
+ * **The glyph rule** (the owner's review of 2026-09-13, artboards `MarchPaneSpacing.dc.html` and
+ * `MercenariesSpacing.dc.html`, `.g`): every emoji sits in a **fixed 1.25 em inline-flex box**,
+ * line-height 1, `vertical-align: -0.2em`, and never as bare text. An emoji is drawn by whatever
+ * font the platform hands it, whose ascent, descent and advance have nothing to do with Inter's: a
+ * bare 🛡️ beside "20 000" pushed the whole line's baseline down and widened the row by however much
+ * that particular device's emoji font felt like. Inside a box of its own it cannot: the line's
+ * metrics come from Inter, the box is the same size on every device, and a row of figures with
+ * glyphs down its left edge lines up. This is why the shape is a *class* and not a prop — there is
+ * one box, it is not negotiable, and `scale` only moves the em it is measured in.
  */
-import type { CSSProperties } from 'react';
-
 import { GLYPHS, type GlyphKind } from './glyphs';
+import classes from './domain.module.css';
 
 export interface GlyphProps {
   kind: GlyphKind;
@@ -22,21 +31,15 @@ export interface GlyphProps {
   className?: string;
 }
 
-const BASE: CSSProperties = {
-  display: 'inline-block',
-  lineHeight: 1,
-  fontStyle: 'normal',
-  verticalAlign: '-0.1em',
-};
-
 export function Glyph({ kind, label, scale = 1, className }: GlyphProps) {
-  const style: CSSProperties = { ...BASE, fontSize: `${scale}em` };
+  const style = scale === 1 ? undefined : { fontSize: `${String(scale)}em` };
+  const box = className === undefined ? classes.glyph : `${classes.glyph ?? ''} ${className}`;
   return label === undefined ? (
-    <span aria-hidden="true" className={className} style={style}>
+    <span aria-hidden="true" className={box} style={style}>
       {GLYPHS[kind]}
     </span>
   ) : (
-    <span role="img" aria-label={label} className={className} style={style}>
+    <span role="img" aria-label={label} className={box} style={style}>
       {GLYPHS[kind]}
     </span>
   );

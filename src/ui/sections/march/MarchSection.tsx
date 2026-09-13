@@ -18,7 +18,7 @@
  * resolved on 2026-09-13): it is not drawn in the page a second time, so the answer is written once
  * and the page never has to travel to it.
  */
-import { Alert, Badge, Button, Group, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
+import { Alert, Button, Group, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
 import { Share2 } from 'lucide-react';
 import { lazy, useId, useState } from 'react';
 
@@ -28,7 +28,7 @@ import { buildBattleLink } from '@/share/codec';
 import { newSavedStack } from '@/state/defaults';
 import type { SavedStack } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Disclosure } from '@/ui/kit';
+import { Disclosure, Sections } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 import { copyText } from '@/ui/profile/download';
 import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
@@ -38,7 +38,7 @@ import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
 import { amount } from './format';
 import { MarchGenerateButton } from './MarchGenerateButton';
-import { MarchCountsBar, MarchPills } from './MarchPills';
+import { MarchCountsBar, MarchLeftOut, MarchPills } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
 import { useRunStore } from './runStore';
 import { TradeoffStrip } from './TradeoffStrip';
@@ -145,75 +145,130 @@ export function MarchSection() {
     // No ground of its own at either width (M-09 polish list, spike 0009's `v1-desktop.jpg`): the
     // March pane is one surface and the recap sheet is another, and a card inside either of them
     // would be a card inside a card.
-    <Stack
+    //
+    // **The pane is parts, and the parts are told apart by one hairline with 16 px above and below**
+    // (the owner's review of 2026-09-13: "the battle summary is crammed and misses clear
+    // separation"). `Sections` is the one place that draws that (`kit/Sections.tsx`,
+    // `docs/design.md` §4); every direct child below is a part, and a part that is not on screen
+    // takes its line with it. The spacing contract's four — recap · pools and pills · left out ·
+    // actions — are the first four, and everything the March has that the artboard does not follows
+    // in the same rhythm rather than in a rhythm of its own.
+    <Sections
       component="section"
       id={MARCH_ANCHOR}
       // In the sheet the sheet's own header is the heading, so the section takes its name from a
       // label instead of writing "March" on the screen a second time (design rule 5).
       {...(twoPanes ? { 'aria-labelledby': titleId } : { 'aria-label': 'March' })}
-      gap="md"
     >
-      <VisuallyHidden aria-live="polite">{announcement}</VisuallyHidden>
-
       {/*
-        The answer, and then the army. Nothing in here sticks on its own any more (owner,
-        2026-09-13): on a desktop the *pane* is the sticky element (`shell/MarchPane.tsx`), because a
-        block pinned inside the column is a block the rest of the column scrolls behind.
+        1 — the answer. Nothing in here sticks on its own any more (owner, 2026-09-13): on a desktop
+        the *pane* is the sticky element (`shell/MarchPane.tsx`), because a block pinned inside the
+        column is a block the rest of the column scrolls behind.
       */}
-      <div>
-        <Stack gap="md">
-          <Group justify="space-between" gap="xs">
-            <Group gap="xs">
-              {twoPanes && (
-                <Title order={2} id={titleId}>
-                  March
-                </Title>
-              )}
-              {result !== null && (
-                <Badge variant="light" color="gray" tt="none">
-                  {`${String(result.stacks.length)} stacks`}
-                </Badge>
-              )}
-            </Group>
+      <Stack gap="md">
+        {/* Inside the part rather than beside it: `Sections` gives every *direct* child a hairline
+            and 16 px, and a visually hidden live region is a child with no height — one that would
+            take the "first part" exemption with it and put a rule above the recap. */}
+        <VisuallyHidden aria-live="polite">{announcement}</VisuallyHidden>
+
+        {(twoPanes || result !== null) && (
+          <Group justify="space-between" wrap="nowrap" gap="sm">
+            {twoPanes ? (
+              <Title order={2} id={titleId}>
+                March
+              </Title>
+            ) : (
+              <span />
+            )}
+            {/* The stack count is the card's meta, in the one shape every card's meta has: 12 px
+                muted, right-aligned beside the title (docs/design.md §4). It was a badge, which is
+                a box inside a box for a two-word summary. */}
+            {result !== null && (
+              <Text span className={classes.meta} c="dimmed">
+                {`${String(result.stacks.length)} stacks`}
+              </Text>
+            )}
           </Group>
+        )}
 
-          <MarchRecap />
-          {/* Generate is the command bar's on a desktop and nowhere else (design plan §5.6): the
-              pane would be saying the same thing twice, 200 px above the bar that says it. In the
-              sheet it stays, because the sheet is a focus trap over the bar and the answer and the
-              action travel together (design rule 2). */}
-          {!twoPanes && <MarchGenerateButton fullWidth />}
+        <MarchRecap />
+        {/* Generate is the command bar's on a desktop and nowhere else (design plan §5.6): the
+            pane would be saying the same thing twice, 200 px above the bar that says it. In the
+            sheet it stays, because the sheet is a focus trap over the bar and the answer and the
+            action travel together (design rule 2). */}
+        {!twoPanes && <MarchGenerateButton fullWidth />}
+      </Stack>
 
-          {snapshot !== null && result !== null && summary !== null && (
-            /* The army steps back with the figures while the setup has moved under it
-               (`march.module.css`, `.outOfDate`): the whole answer dims together or none of it. */
-            <div data-stale={String(march.stale)} className={march.stale ? classes.outOfDate : undefined}>
-              <MarchPills
-                rows={march.pools}
-                leftOut={march.leftOut}
-                editing={editing}
-                onCount={(unitId, count) => {
-                  useResultStore.getState().editCount(unitId, count);
-                }}
-                onDetails={setSheetUnit}
-              />
-            </div>
+      {/* 2 — the pools and the stacks they paid for. The army steps back with the figures while the
+          setup has moved under it (`march.module.css`, `.outOfDate`): the whole answer dims together
+          or none of it. */}
+      {snapshot !== null && result !== null && summary !== null && (
+        <div data-stale={String(march.stale)} className={march.stale ? classes.outOfDate : undefined}>
+          <MarchPills
+            rows={march.pools}
+            editing={editing}
+            onCount={(unitId, count) => {
+              useResultStore.getState().editCount(unitId, count);
+            }}
+            onDetails={setSheetUnit}
+          />
+        </div>
+      )}
+
+      {/* 3 — what this march leaves at home. */}
+      {snapshot !== null && march.leftOut.length > 0 && <MarchLeftOut leftOut={march.leftOut} />}
+
+      {/* 4 — the things a player does with a whole march: copy the counts, edit them, keep it,
+          send it. One part, because they are one kind of thing (the save and share row used to sit
+          four hairlines further down, under the folds). */}
+      {snapshot !== null && result !== null && summary !== null && (
+        <Stack gap="sm">
+          <Group gap="sm" wrap="wrap">
+            <MarchCountsBar
+              countRows={march.rows}
+              editing={editing}
+              onEditing={setEditing}
+              edited={march.edited}
+              onUndo={() => {
+                useResultStore.getState().resetCounts();
+              }}
+            />
+            {/* Generate is the one filled control on this page (docs/design.md §1). */}
+            <Button
+              size="compact-sm"
+              variant="default"
+              onClick={() => {
+                setSaving(true);
+              }}
+            >
+              Save this march
+            </Button>
+            <Button
+              size="compact-sm"
+              variant="default"
+              leftSection={<Share2 size={14} aria-hidden />}
+              onClick={share}
+            >
+              Share
+            </Button>
+            <Text span role="status" className={classes.meta} c="dimmed">
+              {notice}
+            </Text>
+          </Group>
+          {march.edited && (
+            <Text className={classes.meta} c="dimmed">
+              Counts edited by hand. The figures above are recomputed on them; nothing is re-sized, so the
+              housing is yours to balance.
+            </Text>
           )}
         </Stack>
-      </div>
+      )}
 
-      {snapshot !== null && result !== null && summary !== null && (
-        <>
-          <MarchCountsBar
-            countRows={march.rows}
-            editing={editing}
-            onEditing={setEditing}
-            edited={march.edited}
-            onUndo={() => {
-              useResultStore.getState().resetCounts();
-            }}
-          />
-
+      {/* 5 — anything worth a look about this particular march. Alerts are the one tinted block the
+          design still allows (docs/design.md §2), and they are gathered into one part so they never
+          stripe the pane. */}
+      {snapshot !== null && result !== null && notices(march, result, otherMarch) && (
+        <Stack gap="sm">
           {otherMarch && (
             <Alert color="brass" title="Another march">
               This result was generated for another profile or march. Generate again to refresh it.
@@ -227,7 +282,7 @@ export function MarchSection() {
             </Alert>
           )}
           {/* One alert, not one per line: four stacked blocks pushed the army off the screen, and
-                every one of them said the same word. */}
+              every one of them said the same word. */}
           {result.warnings.length > 0 && (
             <Alert color="brass" title="Worth a look">
               <Stack component="ul" gap={2} m={0} pl="md">
@@ -250,16 +305,16 @@ export function MarchSection() {
               } is not zero.`}
             </Alert>
           )}
+        </Stack>
+      )}
 
-          {march.edited && (
-            <Text size="xs" c="dimmed">
-              Counts edited by hand. The figures above are recomputed on them; nothing is re-sized, so the
-              housing is yours to balance.
-            </Text>
-          )}
+      {/* 6 — what the objective bought, in the three shapes investigation 0013 §5 asks for. */}
+      {snapshot !== null && tradeoff !== null && <TradeoffStrip tradeoff={tradeoff} />}
 
-          {tradeoff !== null && tradeoff.excludedUnitIds.length > 0 && <TradeoffStrip tradeoff={tradeoff} />}
-
+      {/* 7 — everything that is folded away. Both folds in one part: a hairline between two
+          collapsed rows is a rule between two rules. */}
+      <Stack gap={0}>
+        {snapshot !== null && result !== null && summary !== null && (
           <Disclosure
             title="Details"
             summary="The battle story and the HP profile"
@@ -273,70 +328,66 @@ export function MarchSection() {
               </Stack>
             </LazySurface>
           </Disclosure>
+        )}
+        {profile !== undefined && (
+          <Disclosure
+            title="Saved marches"
+            summary={
+              profile.savedStacks.length === 0
+                ? 'Nothing saved yet'
+                : `${amount(profile.savedStacks.length)} saved`
+            }
+            opened={savedOpen}
+            onChange={setSavedOpen}
+          >
+            <LazySurface isOpen={savedOpen} reserve="panel">
+              <SavedMarchesPanel profile={profile} />
+            </LazySurface>
+          </Disclosure>
+        )}
+      </Stack>
 
-          <Group gap="xs">
-            {/* Generate is the one filled control on this page (docs/design.md §1). */}
-            <Button
-              variant="default"
-              onClick={() => {
-                setSaving(true);
-              }}
-            >
-              Save this march
-            </Button>
-            <Button variant="default" leftSection={<Share2 size={14} aria-hidden />} onClick={share}>
-              Share
-            </Button>
-            <Text span role="status" size="xs" c="dimmed">
-              {notice}
-            </Text>
-          </Group>
-
-          <UnitSheet
-            unit={sheetUnit}
-            row={march.rows.find((row) => row.unit.id === sheetUnit?.id)}
-            totalDamage={summary.journals.enemyFirst.totalDamage}
-            pinned={sheetUnit !== null && march.pinned.includes(sheetUnit.id)}
-            onClose={() => {
-              setSheetUnit(null);
-            }}
-            onEditCount={() => {
-              setEditing(true);
+      {/* Neither of these draws anything in the flow: they are the two surfaces the March raises. */}
+      {snapshot !== null && result !== null && summary !== null && (
+        <UnitSheet
+          unit={sheetUnit}
+          row={march.rows.find((row) => row.unit.id === sheetUnit?.id)}
+          totalDamage={summary.journals.enemyFirst.totalDamage}
+          pinned={sheetUnit !== null && march.pinned.includes(sheetUnit.id)}
+          onClose={() => {
+            setSheetUnit(null);
+          }}
+          onEditCount={() => {
+            setEditing(true);
+          }}
+        />
+      )}
+      {saving && summary !== null && (
+        <LazySurface isOpen={saving}>
+          <MarchNameDialog
+            opened={saving}
+            title="Save this march"
+            description="It is kept inside the active profile, with the march it came from."
+            confirmLabel="Save this march"
+            initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
+            onConfirm={saveMarch}
+            onCancel={() => {
+              setSaving(false);
             }}
           />
-
-          <LazySurface isOpen={saving}>
-            <MarchNameDialog
-              opened={saving}
-              title="Save this march"
-              description="It is kept inside the active profile, with the march it came from."
-              confirmLabel="Save this march"
-              initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
-              onConfirm={saveMarch}
-              onCancel={() => {
-                setSaving(false);
-              }}
-            />
-          </LazySurface>
-        </>
+        </LazySurface>
       )}
+    </Sections>
+  );
+}
 
-      {profile !== undefined && (
-        <Disclosure
-          title="Saved marches"
-          summary={
-            profile.savedStacks.length === 0
-              ? 'Nothing saved yet'
-              : `${amount(profile.savedStacks.length)} saved`
-          }
-          opened={savedOpen}
-          onChange={setSavedOpen}
-        >
-          <LazySurface isOpen={savedOpen} reserve="panel">
-            <SavedMarchesPanel profile={profile} />
-          </LazySurface>
-        </Disclosure>
-      )}
-    </Stack>
+/** Whether part 5 has anything in it; an empty part would still draw its hairline. */
+function notices(
+  march: ReturnType<typeof useMarch>,
+  result: { warnings: string[] },
+  otherMarch: boolean,
+): boolean {
+  return (
+    otherMarch || march.overflow.length > 0 || result.warnings.length > 0 || march.keptElsewhere.length > 0
   );
 }

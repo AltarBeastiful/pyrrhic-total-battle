@@ -25,7 +25,7 @@ import type { Method } from '@/engine';
 import { eventEnemyFormation } from '@/state/derive';
 import { selectActiveSetup, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
-import { ChoiceList, NumberField, Panel, SwitchRow } from '@/ui/kit';
+import { ChoiceList, NumberField, Panel, Sections, SwitchRow } from '@/ui/kit';
 import { useResultStore } from '@/ui/resultStore';
 
 import { appliesTo, isMethod, isRecoveryMode, METHOD_CHOICES, optionsFor, RECOVERY_CHOICES } from './choices';
@@ -89,9 +89,12 @@ export function BattleSection() {
 
   return (
     <Panel component="section" id="battle" aria-labelledby={titleId} title="Battle" titleId={titleId}>
-      <Stack gap="lg">
+      {/* Three parts, told apart the way every card's parts are: one hairline, 16 px above and
+          below (`kit/Sections.tsx`, docs/design.md §4). They were 16 px of air and nothing else,
+          which is why the owner read the card as one run of controls. */}
+      <Sections>
         {/* Who it is fought against: the count, the three presets, and the squads behind them. */}
-        <Stack gap={6}>
+        <Stack gap={8}>
           <Text size="xs" fw={500} id={enemyId}>
             {`Enemy stacks: ${String(squadCount(formation))}`}
           </Text>
@@ -147,7 +150,7 @@ export function BattleSection() {
         </Stack>
 
         {/* The rule the stacks are sized by, and the rules that ride on it. */}
-        <Stack gap="sm">
+        <Stack gap="md">
           {/* Three cards side by side where there is room; on a phone the chosen one alone, behind
             "Change Stacking method" (D-54) — the method is set once and read every day. */}
           <ChoiceList
@@ -229,7 +232,7 @@ export function BattleSection() {
             {error}
           </Alert>
         )}
-      </Stack>
+      </Sections>
     </Panel>
   );
 }

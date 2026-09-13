@@ -20,20 +20,26 @@ import type { TotalsSummary } from './rows';
 
 export interface TotalsFiguresProps {
   summary: TotalsSummary;
-  /** `md` heads the card; `sm` repeats it inside an editor, where it is a reminder, not a title. */
+  /**
+   * `md` heads the card, four across; `sm` repeats it inside an editor, two across, where it is a
+   * reminder beside the field being typed in rather than the card's own answer. The figures
+   * themselves are the same size in both — there is one figure style (`kit/Figures`).
+   */
   size?: 'sm' | 'md';
 }
 
 export function TotalsFigures({ summary, size = 'md' }: TotalsFiguresProps) {
   return (
     <Box className={classes.totals}>
+      {/* Four figures in the one style the whole page uses now (the owner's review of 2026-09-13:
+          "the percentages could just be numbers with minimal text"): the label 12 px muted over the
+          number, the number 15/600 tabular with its unit glued to it — "+312 %", never "Health
+          bonus +312 %". The 22 px figure the artboard drew here is gone with it: this card's
+          TOTAL is not louder than the March's, it is the same object on another card. */}
       <Figures
         label="Army bonus totals"
-        orientation="vertical"
-        size={size === 'md' ? 'xs' : size}
-        // The card's TOTAL is four columns of "label over figure", the figure at 22 px and 600
-        // (design plan §5.5, artboard `.figs`); an editor repeats it small, as a reminder.
-        {...(size === 'md' ? { valueFz: '1.375rem', valueFw: 600 } : {})}
+        layout="grid"
+        columns={size === 'md' ? 4 : 2}
         items={[
           { key: 'health', label: 'Health', value: formatPercent(summary.health) },
           { key: 'strength', label: 'Strength', value: formatPercent(summary.strength) },

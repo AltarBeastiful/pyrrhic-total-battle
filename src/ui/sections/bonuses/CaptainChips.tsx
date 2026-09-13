@@ -20,7 +20,7 @@
  * walk the chips, `Space` enlists, and the gear of the chip you are on is the next `Tab` — every
  * other gear is out of the tab order.
  */
-import { Divider, Group, Select, Stack, Text } from '@mantine/core';
+import { Group, Select, Stack, Text } from '@mantine/core';
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
@@ -28,7 +28,7 @@ import { heroes as heroTable } from '@/data';
 import { setActiveFlag, updateSources } from '@/state/actions/bonuses';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { CaptainChip } from '@/ui/domain';
-import { NumberField, useRovingTabs } from '@/ui/kit';
+import { Figures, NumberField, Sections, useRovingTabs } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
 import { captainBonusLines, MAX_CAPTAIN_STAR, type CaptainChipRow, type CaptainTarget } from './chips';
@@ -71,37 +71,44 @@ function CaptainLevelEditor({ captainId }: { captainId: string }) {
   const lines = captainBonusLines(captainId, level, star);
   const footer = lines[0] ?? 'Nothing at this level yet.';
   return (
-    <Stack gap="xs" w={220}>
-      <Text size="sm" fw={600}>
-        {record?.name ?? captainId}
-      </Text>
-      <NumberField
-        label="Base level"
-        value={level}
-        min={0}
-        max={999}
-        onChange={(next) => {
-          patch({ level: next ?? 0 });
-        }}
+    // Two parts and one hairline, like every other card on the page (docs/design.md §4); the footer
+    // is a **figure** and not a dimmed sentence — label 12 muted over the value at 15/600, the same
+    // object the March's recap and the Bonuses TOTAL are made of.
+    <Sections aria-label={record?.name ?? captainId}>
+      <Stack gap="xs" w={220}>
+        <Text size="sm" fw={600}>
+          {record?.name ?? captainId}
+        </Text>
+        <NumberField
+          label="Base level"
+          value={level}
+          min={0}
+          max={999}
+          onChange={(next) => {
+            patch({ level: next ?? 0 });
+          }}
+        />
+        <Select
+          label="Star level"
+          size="xs"
+          data={STAR_OPTIONS}
+          value={STAR_OPTIONS[star] ?? NO_STAR}
+          allowDeselect={false}
+          // Inside the popover, not in a portal: a click on a portalled option counts as a click
+          // outside the popover and would close the editor before the pick landed.
+          comboboxProps={{ withinPortal: false }}
+          onChange={(next) => {
+            patch({ star: Math.max(0, STAR_OPTIONS.indexOf(String(next ?? NO_STAR))) });
+          }}
+        />
+      </Stack>
+      <Figures
+        label="What this captain adds"
+        layout="grid"
+        columns={1}
+        items={[{ key: 'worth', label: 'At this level', value: footer }]}
       />
-      <Select
-        label="Star level"
-        size="xs"
-        data={STAR_OPTIONS}
-        value={STAR_OPTIONS[star] ?? NO_STAR}
-        allowDeselect={false}
-        // Inside the popover, not in a portal: a click on a portalled option counts as a click
-        // outside the popover and would close the editor before the pick landed.
-        comboboxProps={{ withinPortal: false }}
-        onChange={(next) => {
-          patch({ star: Math.max(0, STAR_OPTIONS.indexOf(String(next ?? NO_STAR))) });
-        }}
-      />
-      <Divider />
-      <Text size="xs" c="dimmed">
-        {footer}
-      </Text>
-    </Stack>
+    </Sections>
   );
 }
 
@@ -111,44 +118,57 @@ function HeroEditor() {
   if (profile === undefined) return null;
   const hero = heroTable.find((record) => record.id === profile.sources.hero);
   return (
-    <Stack gap="xs" w={220}>
-      <Text size="sm" fw={600}>
-        Hero
-      </Text>
-      <Select
-        label="Leading this march"
-        size="xs"
-        data={[
-          { value: '', label: 'No hero' },
-          ...heroTable.map((record) => ({ value: record.id, label: record.name })),
-        ]}
-        value={profile.sources.hero ?? ''}
-        allowDeselect={false}
-        comboboxProps={{ withinPortal: false }}
-        onChange={(next) => {
-          const heroId = next ?? '';
-          updateSources(profile.id, (current) => {
-            if (heroId === '') {
-              const { hero: _dropped, ...rest } = current;
-              return rest;
-            }
-            return { ...current, hero: heroId };
-          });
-          setActiveFlag('hero', heroId !== '');
-        }}
-      />
-      <Divider />
-      <Text size="xs" c="dimmed">
-        {hero === undefined
-          ? 'Choose the hero leading this march.'
-          : (describeContribution(hero.bonus)[0] ?? `We have no figures for ${hero.name} yet.`)}
-      </Text>
-      {hero?.aloneOnly === true && (
-        <Text size="xs" c="dimmed">
-          {hero.name} only grants its bonus on a solo march.
+    <Sections aria-label="Hero">
+      <Stack gap="xs" w={220}>
+        <Text size="sm" fw={600}>
+          Hero
         </Text>
-      )}
-    </Stack>
+        <Select
+          label="Leading this march"
+          size="xs"
+          data={[
+            { value: '', label: 'No hero' },
+            ...heroTable.map((record) => ({ value: record.id, label: record.name })),
+          ]}
+          value={profile.sources.hero ?? ''}
+          allowDeselect={false}
+          comboboxProps={{ withinPortal: false }}
+          onChange={(next) => {
+            const heroId = next ?? '';
+            updateSources(profile.id, (current) => {
+              if (heroId === '') {
+                const { hero: _dropped, ...rest } = current;
+                return rest;
+              }
+              return { ...current, hero: heroId };
+            });
+            setActiveFlag('hero', heroId !== '');
+          }}
+        />
+      </Stack>
+      <Stack gap={6}>
+        <Figures
+          label="What this hero adds"
+          layout="grid"
+          columns={1}
+          items={[
+            {
+              key: 'worth',
+              label: 'On this march',
+              value:
+                hero === undefined
+                  ? 'No hero chosen'
+                  : (describeContribution(hero.bonus)[0] ?? 'No figures yet'),
+            },
+          ]}
+        />
+        {hero?.aloneOnly === true && (
+          <Text size="xs" c="dimmed">
+            {hero.name} only grants its bonus on a solo march.
+          </Text>
+        )}
+      </Stack>
+    </Sections>
   );
 }
 

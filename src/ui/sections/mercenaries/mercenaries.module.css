@@ -1,0 +1,103 @@
+/* ---------------------------------------------------------------------------------------------
+   The camp, to the spacing contract (`docs/design-canvas/MercenariesSpacing.dc.html`) and the
+   owner's review of 2026-09-13 ("mercenaries padding inside the bubble too"; "the V number of the
+   mercenary is not easily readable").
+
+   Every value below is written beside the board: the pill is **32 px** with **0 / 6 / 0 / 10** of
+   padding and a **6 px** inner gap, the pills are **8 px** apart, the ✕ is a **22 px** round target
+   with 2 px of its own margin, and the cap popover is **280 wide with 16 of padding** and never
+   moves or resizes with the figure being typed into it.
+   --------------------------------------------------------------------------------------------- */
+
+/* The camp is **one row**: the pills and the button that adds one, wrapping together, 8 px apart
+   (the contract draws "Hire mercenary…" inside the pill row, not under it). */
+.camp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The row. Mantine derives a pill group's gap from the pill's font size; the contract says 8. */
+.pills {
+  gap: 8px;
+}
+
+/* The pill's body is a button, and a button is one child of the pill's label — so the 6 px inner
+   gap has to be on the button too, or the glyph, the code, the badge and the count are four spans
+   touching each other ("✕BER V ∞✕", the owner's review of 2026-09-13: "mercenaries padding inside
+   the bubble too"). */
+.face {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+}
+
+/* 0 above and below, 10 before the glyph and 6 after the ✕ — the asymmetry is the ✕'s own 2 px of
+   margin, so the cross sits in from the edge by the same amount the glyph does. */
+.pills :global(.mantine-Pill-root) {
+  height: 2rem;
+  padding: 0 6px 0 10px;
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* The pill's face is a row of four parts — glyph, code, tier, count — at one gap, so they read as
+   one object rather than as four spans that happen to be adjacent. It was inline spans with their
+   own `ml` on each, which is four numbers where the contract writes one. */
+.pills :global(.mantine-Pill-label) {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow: visible;
+}
+
+/* A 22 px round target, which is the smallest thing on this card a thumb aims at on purpose. */
+.pills :global(.mantine-Pill-remove) {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  margin-inline-start: 2px;
+  border-radius: 50%;
+}
+
+/* The one figure on the pill: how many you own, tabular so a row of pills reads as a column of
+   counts, and `∞` through `Glyph`'s box so an "unlimited" pill is exactly as tall as a "1 212" one. */
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The cap popover: 280 wide, 16 of padding, and the contract's rhythm — title 14/600 with the
+   glyph, label 12/600 four above the help line, help 12 muted, a 40 px field, the switch 12 below.
+   The box never moves or resizes with the value (`MercenariesSection.tsx` pins its alignment); what
+   is written here is only what it looks like.
+   --------------------------------------------------------------------------------------------- */
+.capPopover {
+  padding: 1rem;
+}
+
+.capPopover :global(.mantine-InputWrapper-label) {
+  margin-bottom: 4px;
+  font-size: var(--pyr-meta);
+  font-weight: 600;
+}
+
+.capPopover :global(.mantine-InputWrapper-description) {
+  margin-bottom: 8px;
+  font-size: var(--pyr-meta);
+}
+
+.capPopover :global(.mantine-Input-input) {
+  height: 2.5rem;
+  min-height: 2.5rem;
+  font-size: 0.9375rem;
+}
+
+/* A hand-typed mercenary has no tier to badge, so it says so in the badge's own place and size. */
+.custom {
+  font-size: var(--pyr-meta);
+  font-weight: 600;
+}

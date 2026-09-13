@@ -29,12 +29,13 @@ import { lazy, useId, useMemo, useState } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Glyph, romanTier, tierInk, TierBadge } from '@/ui/domain';
+import { count, Glyph, romanTier, tierInk, TierBadge } from '@/ui/domain';
 import { GroupedCombobox, NumberField, Panel, PillRow } from '@/ui/kit';
 import type { ComboboxGroup, PillRowItem } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 
-import { capSpoken, capText, mercGlyph, offerGroups, ownedRows, shortCode } from './rows';
+import classes from './mercenaries.module.css';
+import { capSpoken, mercGlyph, offerGroups, ownedRows, shortCode } from './rows';
 import type { MercenaryRow } from './rows';
 
 // The hand-typed-mercenary form is a whole second card's worth of fields for something most players
@@ -150,9 +151,12 @@ export function MercenariesSection() {
       meta={owned.length === 0 ? 'none hired' : `${String(owned.length)} hired`}
     >
       <Stack gap="sm">
-        {owned.length > 0 && <PillRow label="Mercenaries you own" items={items} />}
-
-        <Group gap="xs" wrap="wrap">
+        {/* One row: the pills and the two ways to add one, wrapping together at 8 px, as the
+            spacing contract draws them (`MercenariesSpacing.dc.html`, `.pills`). */}
+        <div className={classes.camp}>
+          {owned.length > 0 && (
+            <PillRow label="Mercenaries you own" items={items} className={classes.pills} />
+          )}
           <GroupedCombobox
             triggerLabel="Hire mercenary…"
             searchLabel="Search mercenaries"
@@ -181,7 +185,7 @@ export function MercenariesSection() {
               Deselect all
             </Button>
           )}
-        </Group>
+        </div>
 
         {owned.length === 0 && (
           <Text size="sm" c="dimmed">
@@ -218,29 +222,31 @@ function PillFace({ entry, isPinned }: { entry: MercenaryRow; isPinned: boolean 
   return (
     <>
       <Glyph kind={mercGlyph(entry.unit)} />
-      <Text span size="xs" fw={600} ml={5}>
+      <Text span size="xs" fw={600}>
         {shortCode(entry.unit.label)}
       </Text>
+      {/* The tier as the **badge**, not as a bare Fraunces numeral (the owner's review of
+          2026-09-13: "the V number of the mercenary is not easily readable" — the display face drew
+          `VI` as `\I` at 13 px). Inter 11/700 in the tier's ink on a wash of it: one object, and the
+          same one the picker's rows already wear. */}
       {tier === 0 ? (
-        <Text span size="xs" c="dimmed" ml={5}>
+        <Text span className={classes.custom} c="dimmed">
           Custom
         </Text>
       ) : (
-        <Text span size="xs" variant="numeral" c={tierInk(tier)} ml={5}>
-          {romanTier(tier)}
-        </Text>
+        <TierBadge tier={tier} />
       )}
-      {/* The quantity is a plain figure: Fraunces is for the tier numeral alone (design §3). */}
-      {!entry.isCustom && (
-        <Text span size="xs" ml={7}>
-          {capText(entry.cap)}
-        </Text>
-      )}
-      {isPinned && (
-        <Text span size="xs" ml={5}>
-          <Glyph kind="pin" scale={0.85} />
-        </Text>
-      )}
+      {/* The quantity is a plain tabular figure, and `∞` goes through the glyph box like every other
+          non-Latin mark on the page, so an unlimited pill is exactly as tall as a "1 212" one. */}
+      {!entry.isCustom &&
+        (entry.cap === null ? (
+          <Glyph kind="unlimited" />
+        ) : (
+          <Text span size="xs" className={classes.count}>
+            {count(entry.cap)}
+          </Text>
+        ))}
+      {isPinned && <Glyph kind="pin" scale={0.85} />}
     </>
   );
 }
@@ -282,6 +288,7 @@ function HiredPill({
     >
       <Popover.Target>
         <UnstyledButton
+          className={classes.face}
           fz="sm"
           aria-label={`${name}: owned ${capSpoken(entry.cap)}`}
           onClick={() => {
@@ -293,11 +300,15 @@ function HiredPill({
       </Popover.Target>
       {/* A width of its own, on the dropdown rather than on the popover, and a field that fills it:
           neither the box nor the control inside it is allowed to be sized by what is typed. */}
-      <Popover.Dropdown w={CAP_POPOVER_WIDTH}>
-        <Stack gap="xs">
-          <Text size="sm" fw={600}>
-            {name}
-          </Text>
+      <Popover.Dropdown w={CAP_POPOVER_WIDTH} className={classes.capPopover}>
+        <Stack gap="sm">
+          {/* The contract's head: the glyph in its box and the name at 14/600 (`.pop h4`). */}
+          <Group gap={6} wrap="nowrap">
+            <Glyph kind={mercGlyph(entry.unit)} />
+            <Text span fz="0.875rem" fw={600}>
+              {name}
+            </Text>
+          </Group>
           <NumberField
             label="Owned"
             value={entry.cap}
@@ -332,7 +343,7 @@ function CustomPill({
   onEdit: () => void;
 }) {
   return (
-    <UnstyledButton fz="sm" aria-label={`Edit ${entry.unit.name}`} onClick={onEdit}>
+    <UnstyledButton className={classes.face} fz="sm" aria-label={`Edit ${entry.unit.name}`} onClick={onEdit}>
       <PillFace entry={entry} isPinned={isPinned} />
     </UnstyledButton>
   );
@@ -346,6 +357,9 @@ function Offer({ entry }: { entry: MercenaryRow }) {
       <Text span size="sm" style={{ flex: 1 }}>
         {entry.unit.name}
       </Text>
+      {/* A real space, not the row's gap: the badge is an inline `span`, and the accessible-name
+          algorithm only puts a space between *block* boxes — without this the row is announced as
+          "Bear Vtier 5". CSS gaps are not text. */}{' '}
       <TierBadge tier={entry.unit.tier} />
     </Group>
   );

@@ -21,7 +21,8 @@
  * - the **22 px mark in the top-right corner**, a sibling of the body rather than a button inside a
  *   button, which opens the **unit sheet** (the hits, the losses, the revive cost, keep it in, edit
  *   its count). It sits inside the pill's own corner, not over its edge, and the top line reserves
- *   20 px so the code and the tier never run under it.
+ *   17 px — the 22 px mark, 3 px in from the border, less the 8 px of padding the body already
+ *   keeps — so the code and the tier never run under it.
  *
  * In edit mode the count *is* a field, in place, every keystroke re-sizes the march — and the corner
  * mark stands down, because a button over the top-right of a 30 px field is a press the player aimed
@@ -34,6 +35,12 @@
  * 2026-09-13 — the old 62 × 10 read as padded like a billboard, design rule 19), the count `nowrap`
  * at 19 px. A six-figure march therefore widens the pill and the grid wraps to fewer per row
  * instead of clipping a figure.
+ *
+ * The top line is **glyph · code · tier**, three elements and not one string, and only the *code*
+ * may be cut. It used to be `"ARC III"` in one span with an ellipsis at its end, so a track one
+ * pixel too narrow drew "ARC I" — a different unit, and a wrong count to copy into the game. The
+ * tier is `flex: 0 0 auto`; what an impossible track costs is a letter of a four-letter mercenary
+ * code ("HHA… VII"), never the numeral that says which unit this is.
  */
 import { ActionIcon, Box, NumberInput, Text, UnstyledButton } from '@mantine/core';
 import { Info } from 'lucide-react';
@@ -96,13 +103,17 @@ export function StackPill({
   // What the press does, in the words the row under the pools answers with ("put back").
   const name = `${unit.name}, ${figure}${kept} — leave out`;
 
+  // The code and the tier are two spans, not one string (owner, 2026-09-13). One string ellipsised
+  // from its end, so a narrow track drew "ARC III" as "ARC I" — a different unit and a wrong count
+  // to copy into the game. Only the code may be cut now; the tier never shrinks.
   const label = (
     <span className={classes.pillTop}>
-      <span className={classes.pillGlyph}>
-        <Glyph kind={glyphFor(unit)} scale={0.75} />
-      </span>
+      <Glyph kind={glyphFor(unit)} scale={0.85} />
       <Text span fz="0.75rem" fw={600} c={ink} className={classes.pillLabel}>
-        {`${shortCode(unit.label)} ${roman}`}
+        {shortCode(unit.label)}
+      </Text>
+      <Text span fz="0.75rem" fw={600} c={ink} className={classes.pillTier}>
+        {roman}
       </Text>
       {state === 'pinned' && <Glyph kind="pin" scale={0.7} />}
     </span>
@@ -165,6 +176,14 @@ export function StackPill({
   );
 }
 
+/** Who left this type out. The word is part of the pill's name, and `data-left-out` styles it. */
+export type LeftOutReason = 'you' | 'search';
+
+const LEFT_OUT_WORDS: Record<LeftOutReason, string> = {
+  you: 'left out by you',
+  search: 'left out by the search',
+};
+
 /**
  * A type that is *not* in this march (owner, 2026-09-13): TotalStack's "removed from formation"
  * row, in our words. 26 px, outlined, muted — the glyph, the code and the tier, then a "+", because
@@ -172,14 +191,28 @@ export function StackPill({
  * march, not part of it.
  *
  * It is the off half of the pill's toggle, so it says so: `aria-pressed={false}` and a name that
- * names the press, "Archer I — put back".
+ * names the press, "Archer I, left out by you — put back".
+ *
+ * The name carries the *reason* too, because a press means two different things: a type the player
+ * took out is simply let back in, a type the search dropped is pinned so it cannot be dropped again.
+ * The same reason is on the element as `data-left-out="you" | "search"`, which is the hook the two
+ * kinds are told apart by on screen.
  */
-export function LeftOutPill({ unit, onPutBack }: { unit: UnitDef; onPutBack: () => void }) {
+export function LeftOutPill({
+  unit,
+  reason = 'search',
+  onPutBack,
+}: {
+  unit: UnitDef;
+  reason?: LeftOutReason;
+  onPutBack: () => void;
+}) {
   const roman = romanTier(unit.tier) || String(unit.tier);
   return (
     <UnstyledButton
       className={classes.leftOutPill}
-      aria-label={`${unit.name} — put back`}
+      data-left-out={reason}
+      aria-label={`${unit.name}, ${LEFT_OUT_WORDS[reason]} — put back`}
       aria-pressed={false}
       onClick={onPutBack}
     >

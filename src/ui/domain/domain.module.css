@@ -1,6 +1,35 @@
 /* The two shapes Mantine has no prop for. Everything else in `domain` is a theme token on a stock
    component; these are counted against the kit's custom-CSS budget (plan §1.1). */
 
+/* ---------------------------------------------------------------------------------------------
+   THE GLYPH RULE (the owner's review of 2026-09-13; artboards `MarchPaneSpacing.dc.html` and
+   `MercenariesSpacing.dc.html`, class `.g`). Every emoji in the app goes through `Glyph`, and every
+   `Glyph` is this box: **1.25 em square, inline-flex, line-height 1, `vertical-align: -0.2em`**.
+
+   An emoji is drawn by whichever font the platform hands it, and that font's ascent, descent and
+   advance have nothing to do with Inter's. Left as bare text a 🛡️ beside "20 000" pushes the whole
+   line's baseline down, and by a different amount on every device — which is the "padding issues,
+   especially with unicode characters" of the owner's review. Inside a fixed box it cannot: the
+   line's metrics are Inter's, the box is the same width everywhere, and glyphs down the left edge
+   of a list of figures line up in a column.
+
+   `flex: 0 0 auto` so a flex row never squeezes it; `overflow: hidden` so a platform that draws its
+   emoji wider than the box cannot widen the row either.
+   --------------------------------------------------------------------------------------------- */
+.glyph {
+  display: inline-flex;
+  width: 1.25em;
+  height: 1.25em;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 1em;
+  font-style: normal;
+  line-height: 1;
+  vertical-align: -0.2em;
+}
+
 /* The group's colour bar at the head of a row: 4 px and 20 px tall, as direction A draws it
    (artboard `.gm i`), stretching with the line when the line is taller than that. */
 .marker {
@@ -48,27 +77,44 @@
 }
 
 /* The corner mark is absolute, so it costs the body no width — but it would still paint over the
-   top line at 78 px, and a code under a button is a code nobody can read. The line gives the corner
-   back as its own end padding, so the text stops before the mark starts (owner, 2026-09-13). */
+   top line, and a code under a button is a code nobody can read. The line gives the corner back as
+   its own end padding, so the text stops before the mark starts (owner, 2026-09-13).
+
+   **16 px, measured rather than guessed**: the mark is 22 px wide and sits 3 px in from the pill's
+   border, so its left edge is 25 px from that border and the body's own 8 px of padding already
+   covers the first 8. 16 stops the text one pixel inside the mark's *box* and three outside its
+   16 px glyph — which is exactly the inset the artboard draws (`padding: 6px 22px 6px 8px` on a
+   1 px border). Those last two pixels are what "LGN VI" needs at four pills across. */
 .pillTop {
   display: flex;
   min-width: 0;
   max-width: 100%;
   align-items: center;
-  gap: 3px;
-  padding-inline-end: 20px;
+  gap: 2px;
+  /* The line's own size, so the glyph's 1.25 em box is measured in the 12 px the code is written
+     in and not in the 16 px the pill inherits from the page — which made a 15 px mark an 18 px one
+     and cost the code three characters. */
+  font-size: 0.75rem;
+  padding-inline-end: 16px;
   overflow: hidden;
   line-height: 1.1;
   white-space: nowrap;
 }
 
-/* The last line of defence, for a hand-typed mercenary with a code nothing anticipated: the label
-   ends in an ellipsis inside its own line rather than sliding under the mark. `.pillGrid`'s floor is
-   what keeps it from ever firing on the game's own codes. */
+/* The code, and **only the code, may be cut**. It used to be one string — "ARC III" — with the
+   ellipsis at its end, so a narrow track drew "ARC I", which is a different unit and a wrong count
+   to copy into the game (owner, 2026-09-13). The tier is its own span below and never shrinks, so
+   what an impossible track costs is a letter of the code — "AB… VI" — and never the tier. */
 .pillLabel {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* The roman tier: the half of the label that carries which unit this is, so it is the half that is
+   never given up. */
+.pillTier {
+  flex: 0 0 auto;
 }
 
 /* The count is the one number a player retypes into the game: it is never wrapped and never cut.
@@ -129,15 +175,19 @@
 
 /* The march as pills: the row holds as many as fit and wraps.
 
-   The track floor is **96 px**, not the 78 it was: a pill now gives 20 px of its top line back to the
-   corner mark, and at 78 the mark ate the tier numeral — "ARC III" was drawn as "ARC I", which is a
-   different unit (owner, 2026-09-13: "the details button must not overlap the troop text"). 96 is the
-   narrowest track where the widest code and tier this game has ("ABM VI") still ends before the mark
-   starts. It costs a phone one pill per row and buys back every character of the label. */
+   The track floor is **88 px**, which is what the spacing contract's "four across" costs at the
+   pane's new width: 420 px less 2 × 20 px of pane padding is 378, less three 8 px gaps is 354, so a
+   track is 88.5 px and `auto-fill` lays four of them. (The artboard says 78 against a 380 px pane;
+   the app's pill carries one more pixel of border and a real 22 px button, so 88 is that same
+   drawing measured on the real object.) A phone's 358 px still lays three.
+
+   Nothing is clipped at 88: the top line reserves 18 px for the mark, the tier never shrinks
+   (`.pillTier`) and the count is `nowrap`, so a six-figure march widens every track and the row
+   wraps to three instead of cutting a figure. */
 .pillGrid {
   display: grid;
   gap: var(--mantine-spacing-sm);
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
 }
 
 /* The row of types this march left out: small, outlined, quiet — a footnote under the pools, never
@@ -158,4 +208,23 @@
     border-color: var(--mantine-color-default-border);
     background: var(--pyr-raised);
   }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The tier badge (the owner's review of 2026-09-13: "the V number of the mercenary is not easily
+   readable"). **Inter 11/700**, tracked out a fiftieth of an em, on a wash of its own ink: a roman
+   numeral in a 16 px box is a label and needs one stroke weight, not a display serif whose `V` is
+   two hairlines meeting. Mantine's badge type ramp is overridden in the theme to the 13 px floor,
+   so the size is said here, where it is the one place it means something.
+   --------------------------------------------------------------------------------------------- */
+.tierBadge {
+  /* Never squeezed: it is two letters and the half of the label that says which unit this is. */
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-variant-numeric: normal;
+  letter-spacing: 0.02em;
+}
+
+.tierBadge :global(.mantine-Badge-label) {
+  overflow: visible;
 }

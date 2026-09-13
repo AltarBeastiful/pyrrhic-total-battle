@@ -55,9 +55,12 @@ export function Sheet({ opened, onClose, title, description, children, footer, s
         </Text>
       )}
       {children}
+      {/* The sheet's last part, told apart the way every card's parts are: one hairline with 16 px
+          above and below (docs/design.md §4). It was 16 above and 8 below, which read as the footer
+          hanging off the rule rather than as a part of its own. */}
       {footer !== undefined && (
         <Box mt="lg">
-          <Divider mb="sm" />
+          <Divider mb="lg" />
           {footer}
         </Box>
       )}
