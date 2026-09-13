@@ -650,6 +650,18 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-14 — **Investigation 0015, theory-crafting the march** (`docs/investigations/0015-theorycraft.md`,
+  scripts and outputs under `tools/theorycraft/`). Two owner corrections folded in: authority is 2,000 (the
+  export's 200 was a typo) and Kai's calculator export plus its in-game report — which the engine replays
+  30/30 entries, every friendly line to the unit (third in-game validation). Findings: the troop floor
+  decides how much of the mercenary stock marches and dies last (ARC2 + RD2 + RD3 + mercs 7.84 M against the
+  owner's 4.47 M); when the floor is low, Troops first with the stock on top beats Hired last (+1.29 M);
+  the exhaustive mercenary vector beats the sizer by 2.8 % (the biggest hitter must be the smallest
+  mercenary stack); leadership beyond the floor returns 0.2–0.7 damage per silver against 3 for the march,
+  so a silver-bound campaign fields 20 % of the stock in tens above minimal sponges (30 sustained
+  marches); reviving with gold divides the troops' silver by 10 and the stock then lasts 72 marches
+  (176 M). Engine follow-ups E1–E6 listed in §8 (leadership as a search dimension, mercenary post-pass,
+  Troops-first candidate, double damage in the average, revive by silver-per-gold, profile fixes).
 - 2026-09-14 — **S-54 landed, UI included.** A fourth whole-card stacking method, *Complete optimization*
   (design rule 8), with two fields of its own — *Marches planned* (10) and *Silver budget* (empty =
   unlimited) — and no extra rules at all, since it tries every sizing itself (§7.4). `METHODS` gains

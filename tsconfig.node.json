@@ -17,5 +17,6 @@
     "src/data/schema.ts",
     "src/pwa/precache.ts",
     "src/ui/palette.ts"
-  ]
+  ],
+  "exclude": ["tools/theorycraft"]
 }

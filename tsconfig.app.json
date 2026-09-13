@@ -9,5 +9,5 @@
     },
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests", "tools/theorycraft"]
 }
