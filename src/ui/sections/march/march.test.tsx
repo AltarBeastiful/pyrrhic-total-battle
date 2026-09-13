@@ -280,7 +280,9 @@ test('editing counts is a mode, and Undo puts the generated ones back', async ()
   expect(screen.queryAllByLabelText(`${unit.name} count`)).toHaveLength(0);
   expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
 
-  fireEvent.click(screen.getByRole('radio', { name: 'Edit counts' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit counts' }));
+  // The toggle says it is on, and says what the press would do next.
+  expect(screen.getByRole('button', { name: 'Done editing' }).getAttribute('aria-pressed')).toBe('true');
   // The field is the pill's own count, in place.
   const field = screen.getByLabelText(`${unit.name} count`);
   expect(field).toHaveProperty('value', amount(count));
@@ -479,7 +481,7 @@ test('the last result and its hand edits come back after a reload', async () => 
   const at = lastResult()?.at;
   const { unit, count } = stackAt();
 
-  fireEvent.click(screen.getByRole('radio', { name: 'Edit counts' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit counts' }));
   fireEvent.keyDown(screen.getByLabelText(`${unit.name} count`), { key: 'ArrowUp' });
   await waitFor(() => {
     expect(useResultStore.getState().manualCounts[unit.id]).toBe(count + 1);

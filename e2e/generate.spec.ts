@@ -149,7 +149,7 @@ test('counts are edited in an explicit mode, and put back with Undo', async ({ p
   const pills = marchSection(page).locator('[data-stack]');
   await expect(pills.first().getByRole('textbox')).toBeHidden();
 
-  await setCountsMode(page, 'Edit counts');
+  await setCountsMode(page, 'edit');
   // The field is the pill's own count, in place.
   const field = pills.first().getByRole('textbox');
   await expect(field).toBeVisible();

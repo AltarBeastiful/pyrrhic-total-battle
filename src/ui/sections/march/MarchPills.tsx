@@ -10,8 +10,8 @@
  * press away in the unit sheet. The pool's figure *is* the gauge, written rather than drawn; **the
  * pills are the counts**.
  */
-import { Button, Group, SegmentedControl, Stack, Text } from '@mantine/core';
-import { Copy, Undo2 } from 'lucide-react';
+import { Button, Group, Stack, Text } from '@mantine/core';
+import { Copy, Pencil, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import type { UnitDef } from '@/engine/types';
@@ -171,7 +171,8 @@ export interface MarchCountsBarProps {
 /**
  * The two things a player does with a whole march, under the pills: copy every count at once, or
  * turn each pill's count into a field in place. A pill copies its own count on a press, so this row
- * is the only chrome the counts need (owner, 2026-09-13 — the table of per-stack lines is gone).
+ * is the only chrome the counts need (owner, 2026-09-13 — the table of per-stack lines is gone, and
+ * so is the Copy/Edit segmented control: editing is a toggle, copying is one button).
  */
 export function MarchCountsBar({ countRows, editing, onEditing, edited, onUndo }: MarchCountsBarProps) {
   const [flash, setFlash] = useFlash();
@@ -189,18 +190,19 @@ export function MarchCountsBar({ countRows, editing, onEditing, edited, onUndo }
       >
         Copy all counts
       </Button>
-      <SegmentedControl
-        size="xs"
-        aria-label="What a tap on a count does"
-        value={editing ? 'edit' : 'copy'}
-        data={[
-          { value: 'copy', label: 'Copy counts' },
-          { value: 'edit', label: 'Edit counts' },
-        ]}
-        onChange={(value) => {
-          onEditing(value === 'edit');
+      {/* One toggle, not a pair of modes (owner, 2026-09-13): "Copy counts" beside "Copy all counts"
+          asked the player to tell two copies apart, and there is only one — a press on a pill. */}
+      <Button
+        size="compact-sm"
+        variant={editing ? 'filled' : 'default'}
+        aria-pressed={editing}
+        leftSection={<Pencil size={14} aria-hidden />}
+        onClick={() => {
+          onEditing(!editing);
         }}
-      />
+      >
+        {editing ? 'Done editing' : 'Edit counts'}
+      </Button>
       {edited && (
         <Button
           size="compact-sm"

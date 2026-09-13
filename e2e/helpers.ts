@@ -490,8 +490,15 @@ export async function marchExpectedDamage(page: Page): Promise<number> {
   return figureNumber(await recap.innerText());
 }
 
-/** Turn every pill's count into a field, or back into a figure to copy. */
-export async function setCountsMode(page: Page, mode: 'Copy counts' | 'Edit counts'): Promise<void> {
-  await marchSection(page).getByText(mode, { exact: true }).click();
-  await expect(page.getByRole('radio', { name: mode, exact: true })).toBeChecked();
+/**
+ * Turn every pill's count into a field, or back into a figure to copy. One toggle button, whose
+ * label says what the next press does (owner, 2026-09-13).
+ */
+export async function setCountsMode(page: Page, mode: 'edit' | 'copy'): Promise<void> {
+  const name = mode === 'edit' ? 'Edit counts' : 'Done editing';
+  const toggle = marchSection(page).getByRole('button', { name, exact: true });
+  if ((await toggle.count()) > 0) await toggle.click();
+  await expect(
+    marchSection(page).getByRole('button', { name: mode === 'edit' ? 'Done editing' : 'Edit counts' }),
+  ).toBeVisible();
 }
