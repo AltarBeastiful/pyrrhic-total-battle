@@ -6,7 +6,7 @@
  * None of it takes permanent space, which is the point: the strip it replaces was two rows of
  * chrome on every screen for actions a player uses once a month (design rule 15).
  *
- * The menu itself is kit2's `AppMenu`, so the shell cannot invent a shape: every row is an action,
+ * The menu itself is kit's `AppMenu`, so the shell cannot invent a shape: every row is an action,
  * a segmented row or a section heading, and each kind has one appearance.
  */
 import { Avatar, Button, Group, Text, TextInput, UnstyledButton, useMantineColorScheme } from '@mantine/core';
@@ -35,7 +35,7 @@ import type { ImportMode, ParsedImport } from '@/share/exportImport';
 import { THEMES, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
 
-import { AppMenu, Dialog, type AppMenuEntry, type AppMenuSection } from '../kit2';
+import { AppMenu, Dialog, type AppMenuEntry, type AppMenuSection } from '../kit';
 import { LazySurface } from '../lazy';
 import { copyText, downloadJson } from '../profile/download';
 import { ImportDialog } from '../profile/ImportDialog';

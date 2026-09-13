@@ -1,25 +1,19 @@
-import { DeltaText } from '../../domain';
-import type { KitStory } from '../story';
+import { Stack } from '@mantine/core';
 
-const number = (n: number) => n.toLocaleString('en-US');
+import { count, DeltaText } from '../../domain';
+import type { KitStory } from '../story';
 
 const story: KitStory = {
   name: 'DeltaText',
   group: 'domain',
   render: () => (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline gap-6">
-        <DeltaText value={12480} previous={12000} format={number} betterWhen="higher" />
-        <DeltaText value={11640} previous={12000} format={number} betterWhen="higher" />
-        <DeltaText value={12000} previous={12000} format={number} betterWhen="higher" />
-        <DeltaText value={12480} format={number} betterWhen="higher" />
-      </div>
-      <div className="flex flex-wrap items-baseline gap-6">
-        <DeltaText value={9800} previous={12000} format={number} betterWhen="lower" />
-        <DeltaText value={14400} previous={12000} format={number} betterWhen="lower" />
-        <DeltaText value={3} previous={4} format={(n) => `${n} hits`} betterWhen="lower" />
-      </div>
-    </div>
+    <Stack gap="xs">
+      <DeltaText value={12480} format={count} betterWhen="higher" />
+      <DeltaText value={12480} previous={12000} format={count} betterWhen="higher" />
+      <DeltaText value={9000} previous={12000} format={count} betterWhen="higher" />
+      <DeltaText value={9000} previous={12000} format={count} betterWhen="lower" />
+      <DeltaText value={12000} previous={12000} format={count} betterWhen="higher" />
+    </Stack>
   ),
 };
 

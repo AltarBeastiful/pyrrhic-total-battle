@@ -1,17 +1,17 @@
-import { StatBar } from '../../domain';
-import type { KitStory } from '../story';
+import { Stack } from '@mantine/core';
 
-const number = (n: number) => n.toLocaleString('en-US');
+import { count, StatBar } from '../../domain';
+import type { KitStory } from '../story';
 
 const story: KitStory = {
   name: 'StatBar',
   group: 'domain',
   render: () => (
-    <div className="flex flex-col gap-6">
-      <StatBar label="Health" base={420} boosted={2154} format={number} />
-      <StatBar label="Strength" base={380} boosted={1862} format={number} />
-      <StatBar label="Health (no bonuses yet)" base={9600} boosted={9600} format={number} />
-    </div>
+    <Stack gap="md" maw={420}>
+      <StatBar label="Health" base={420} boosted={620} format={count} />
+      <StatBar label="Strength" base={380} boosted={380} format={count} />
+      <StatBar label="Revive cost" base={2} boosted={2} format={(n) => `${n} gold`} />
+    </Stack>
   ),
 };
 

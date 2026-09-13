@@ -3,12 +3,13 @@
  * the name, the date, the device that wrote it and the counts, then let the user choose. "Keep both"
  * keeps mine under its own identity and adds theirs as a new profile, so nothing is ever lost by accident.
  */
+import { Alert, Button, Group, Paper, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useEffect, useState } from 'react';
 
 import type { Profile } from '@/state/schema';
 import type { ConflictChoice, SyncPlanEntry } from '@/sync/engine';
 
-import { Banner, Button, Card, Dialog } from '../kit';
+import { Dialog } from '../kit';
 import { formatWhen } from './format';
 
 export interface ConflictDialogProps {
@@ -40,16 +41,22 @@ function Side({
   loading?: boolean;
 }) {
   return (
-    <Card tone="sunken" padding="sm">
-      <p className="text-muted text-xs font-medium tracking-wide uppercase">{title}</p>
+    <Paper bg="var(--pyr-sunken)" p="sm" radius="sm">
+      <Text size="xs" fw={500} tt="uppercase" c="dimmed">
+        {title}
+      </Text>
       {missing === undefined ? (
-        <dl className="mt-2 space-y-1 text-sm">
-          <div className="font-medium">{name}</div>
-          <div className="text-muted text-xs">Changed {formatWhen(updatedAt)}</div>
-          <div className="text-muted text-xs">
+        <Stack gap={2} mt="xs">
+          <Text size="sm" fw={500}>
+            {name}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Changed {formatWhen(updatedAt)}
+          </Text>
+          <Text size="xs" c="dimmed">
             On {device === undefined || device === '' ? 'an unnamed device' : device}
-          </div>
-          <div className="text-muted text-xs">
+          </Text>
+          <Text size="xs" c="dimmed">
             {loading ? (
               'Reading the gist…'
             ) : (
@@ -58,12 +65,14 @@ function Side({
                 {stacks === 1 ? '' : 's'}
               </>
             )}
-          </div>
-        </dl>
+          </Text>
+        </Stack>
       ) : (
-        <p className="text-muted mt-2 text-sm">{missing}</p>
+        <Text size="sm" c="dimmed" mt="xs">
+          {missing}
+        </Text>
       )}
-    </Card>
+    </Paper>
   );
 }
 
@@ -96,25 +105,27 @@ export function ConflictDialog({ entry, fetchRemote, onChoose, onClose }: Confli
 
   return (
     <Dialog
-      isOpen
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      opened
+      onClose={onClose}
       title={`Conflict: ${entry.name}`}
       description={entry.reason}
       size="lg"
       footer={
-        <>
-          <Button onPress={onClose}>Cancel</Button>
+        <Group justify="flex-end" gap="sm">
+          <Button variant="default" onClick={onClose}>
+            Cancel
+          </Button>
           <Button
-            onPress={() => {
+            variant="default"
+            onClick={() => {
               onChoose('mine');
             }}
           >
             {mineLabel}
           </Button>
           <Button
-            onPress={() => {
+            variant="default"
+            onClick={() => {
               onChoose('theirs');
             }}
           >
@@ -122,18 +133,17 @@ export function ConflictDialog({ entry, fetchRemote, onChoose, onClose }: Confli
           </Button>
           {kind === 'both-edited' && (
             <Button
-              variant="primary"
-              onPress={() => {
+              onClick={() => {
                 onChoose('both');
               }}
             >
               Keep both
             </Button>
           )}
-        </>
+        </Group>
       }
     >
-      <div className="grid gap-3 sm:grid-cols-2">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
         <Side
           title="On this device"
           name={entry.local?.name ?? entry.name}
@@ -153,12 +163,12 @@ export function ConflictDialog({ entry, fetchRemote, onChoose, onClose }: Confli
           loading={loading}
           {...(entry.remote === null ? { missing: 'Deleted on another device.' } : {})}
         />
-      </div>
+      </SimpleGrid>
       {kind === 'both-edited' && (
-        <Banner tone="info" className="mt-3">
-          Keep both leaves your version where it is and adds the gist's version as a new profile, which is
-          sent to the gist on the next sync.
-        </Banner>
+        <Alert color="brass" variant="light" mt="sm">
+          Keep both leaves your version where it is and adds the gist&apos;s version as a new profile, which
+          is sent to the gist on the next sync.
+        </Alert>
       )}
     </Dialog>
   );

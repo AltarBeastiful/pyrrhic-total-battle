@@ -9,7 +9,7 @@
 import { Button, Group, Paper, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
-import { Sheet } from '@/ui/kit2';
+import { Sheet } from '@/ui/kit';
 
 import type { TotalsSummary } from './rows';
 import { TotalsFigures } from './TotalsFigures';

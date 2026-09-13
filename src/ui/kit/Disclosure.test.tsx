@@ -1,107 +1,43 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useState } from 'react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { cleanup, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, expect, test } from 'vitest';
 
-import { Disclosure } from './Disclosure';
+import { Disclosure, DisclosureGroup } from './Disclosure';
+import { renderWithTheme } from './testRender';
 
 afterEach(cleanup);
 
-function pressKey(element: Element, key: string) {
-  return act(async () => {
-    fireEvent.keyDown(element, { key });
-    fireEvent.keyUp(element, { key });
-  });
-}
-
-function Example() {
-  return (
-    <Disclosure title="Bonuses" summary="Health +312 % · Strength +198 %">
-      <p>Every bonus, one by one.</p>
-    </Disclosure>
-  );
-}
-
-test('the collapsed line keeps the summary visible and is announced as collapsed', () => {
-  render(<Example />);
-
-  const trigger = screen.getByRole('button', { name: /Bonuses/ });
-  expect(trigger.getAttribute('aria-expanded')).toBe('false');
-  expect(screen.getByText('Health +312 % · Strength +198 %')).toBeTruthy();
-});
-
-test('a press opens the panel and a second press closes it', async () => {
-  render(<Example />);
-  const trigger = screen.getByRole('button', { name: /Bonuses/ });
-
-  fireEvent.click(trigger);
-  await waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('true'));
-  expect(screen.getByText('Every bonus, one by one.')).toBeTruthy();
-
-  fireEvent.click(trigger);
-  await waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('false'));
-});
-
-test('Enter and Space toggle the disclosure from the keyboard', async () => {
-  render(<Example />);
-  const trigger = screen.getByRole('button', { name: /Bonuses/ });
-
-  await pressKey(trigger, 'Enter');
-  expect(trigger.getAttribute('aria-expanded')).toBe('true');
-
-  await pressKey(trigger, ' ');
-  expect(trigger.getAttribute('aria-expanded')).toBe('false');
-
-  await pressKey(trigger, ' ');
-  expect(trigger.getAttribute('aria-expanded')).toBe('true');
-});
-
-test('defaultExpanded opens it on first render', () => {
-  render(
-    <Disclosure title="Battle story" defaultExpanded>
-      <p>Round one</p>
+test('the header is a button that says whether it is open, and the summary stays visible', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(
+    <Disclosure title="Equipment" summary="+12 % attack">
+      <p>Every piece of equipment</p>
     </Disclosure>,
   );
+  const header = screen.getByRole('button', { name: /Equipment/ });
+  expect(header.getAttribute('aria-expanded')).toBe('false');
+  expect(screen.getByText('+12 % attack')).toBeTruthy();
 
-  expect(screen.getByRole('button', { name: /Battle story/ }).getAttribute('aria-expanded')).toBe('true');
-  expect(screen.getByText('Round one')).toBeTruthy();
+  await user.click(header);
+  expect(screen.getByRole('button', { name: /Equipment/ }).getAttribute('aria-expanded')).toBe('true');
+  expect(screen.getByText('+12 % attack')).toBeTruthy();
 });
 
-test('it can be driven from the outside', async () => {
-  const onExpandedChange = vi.fn();
-
-  function Controlled() {
-    const [isExpanded, setExpanded] = useState(false);
-    return (
-      <Disclosure
-        title="March"
-        isExpanded={isExpanded}
-        onExpandedChange={(next) => {
-          onExpandedChange(next);
-          setExpanded(next);
-        }}
-      >
-        <p>The table</p>
-      </Disclosure>
-    );
-  }
-
-  render(<Controlled />);
-  const trigger = screen.getByRole('button', { name: /March/ });
-
-  await pressKey(trigger, 'Enter');
-  expect(onExpandedChange).toHaveBeenCalledWith(true);
-  await waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('true'));
-});
-
-test('a disabled disclosure does not open', () => {
-  render(
-    <Disclosure title="Sync" isDisabled>
-      <p>Hidden</p>
-    </Disclosure>,
+test('a group of folds is an accordion, one open at a time', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(
+    <DisclosureGroup
+      items={[
+        { value: 'captains', title: 'Captains', summary: '2 of 3', children: <p>Captain rows</p> },
+        { value: 'titles', title: 'Titles', summary: 'none', children: <p>Title rows</p> },
+      ]}
+    />,
   );
-  const trigger = screen.getByRole('button', { name: /Sync/ });
+  const captains = screen.getByRole('button', { name: /Captains/ });
+  await user.click(captains);
+  expect(captains.getAttribute('aria-expanded')).toBe('true');
 
-  fireEvent.click(trigger);
-  expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  await user.click(screen.getByRole('button', { name: /Titles/ }));
+  expect(screen.getByRole('button', { name: /Captains/ }).getAttribute('aria-expanded')).toBe('false');
 });

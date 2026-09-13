@@ -14,7 +14,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { UnitDef } from '@/data/types';
-import { Glyph, groupInk, TierBadge, unitGroupOf } from '@/ui/domain2';
+import { Glyph, groupInk, TierBadge, unitGroupOf } from '@/ui/domain';
 
 import { POOL_LABELS } from './choices';
 

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { newProfile, newRoot } from '@/state/defaults';
 import { SCHEMA_VERSION, type Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
 import { DEFAULT_SETTINGS, useSyncStore } from '@/sync/syncStore';
+import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { SyncDialog } from './SyncDialog';
 
@@ -67,16 +68,16 @@ afterEach(() => {
 });
 
 const openDialog = (): void => {
-  render(<SyncDialog open onOpenChange={() => undefined} />);
+  renderWithTheme(<SyncDialog open onOpenChange={() => undefined} />);
 };
 
 test('the settings tab stores the token, the gist id and the encryption choice', () => {
   openDialog();
-  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Settings' }));
 
   fireEvent.change(screen.getByLabelText('GitHub token'), { target: { value: 'github_pat_123' } });
   fireEvent.change(screen.getByLabelText('Gist id'), { target: { value: 'gist1' } });
-  fireEvent.click(screen.getByRole('switch', { name: 'Encrypt the gist' }));
+  fireEvent.click(screen.getByRole('switch', { name: /Encrypt the gist/ }));
   fireEvent.change(screen.getByLabelText('Passphrase'), { target: { value: 'correct horse' } });
   fireEvent.change(screen.getByLabelText('Device name'), { target: { value: "Rémi's phone" } });
 

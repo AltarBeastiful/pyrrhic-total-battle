@@ -14,7 +14,7 @@ import { ActionIcon, Button, Group, Stack, Switch, Text } from '@mantine/core';
 import { Plus, Settings } from 'lucide-react';
 
 import { setActiveFlag, toggleActiveSource } from '@/state/actions/bonuses';
-import { Glyph } from '@/ui/domain2';
+import { Glyph } from '@/ui/domain';
 
 import type { EditorTarget, SourceGroup, SourceRow, ToggleTarget } from './rows';
 

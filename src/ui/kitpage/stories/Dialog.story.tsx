@@ -1,35 +1,58 @@
-import { Button, Dialog } from '../../kit';
+import { Button, Group } from '@mantine/core';
+import { useState } from 'react';
+
+import { Dialog } from '../../kit';
 import type { KitStory } from '../story';
+
+function Live({ role }: { role: 'dialog' | 'alertdialog' }) {
+  const [opened, setOpened] = useState(false);
+  const close = () => {
+    setOpened(false);
+  };
+  return (
+    <>
+      <Button
+        variant={role === 'alertdialog' ? 'outline' : 'default'}
+        color={role === 'alertdialog' ? 'red' : 'brass'}
+        onClick={() => {
+          setOpened(true);
+        }}
+      >
+        {role === 'alertdialog' ? 'Reset everything' : 'Load shared setup'}
+      </Button>
+      <Dialog
+        opened={opened}
+        onClose={close}
+        role={role}
+        title={role === 'alertdialog' ? 'Reset the setup?' : 'Load this shared setup?'}
+        description={
+          role === 'alertdialog'
+            ? 'Every tier, mercenary and bonus goes back to its default. This cannot be undone.'
+            : 'It replaces what is on screen; your own setup stays saved under its own name.'
+        }
+        footer={
+          <Group justify="flex-end">
+            <Button variant="default" onClick={close}>
+              Cancel
+            </Button>
+            <Button color={role === 'alertdialog' ? 'red' : 'brass'} onClick={close}>
+              {role === 'alertdialog' ? 'Reset' : 'Load it'}
+            </Button>
+          </Group>
+        }
+      />
+    </>
+  );
+}
 
 const story: KitStory = {
   name: 'Dialog',
   group: 'kit',
   render: () => (
-    <div className="flex flex-wrap items-center gap-3">
-      <Dialog
-        trigger={<Button>About Pyrrhic</Button>}
-        title="About Pyrrhic"
-        description="A client-side stacking calculator for Total Battle."
-        footer={<Button variant="primary">Close</Button>}
-      >
-        <p>Everything is computed in this browser; nothing is uploaded.</p>
-      </Dialog>
-
-      <Dialog
-        trigger={<Button variant="danger">Delete this profile</Button>}
-        title="Delete this profile?"
-        description="This cannot be undone."
-        role="alertdialog"
-        footer={
-          <>
-            <Button variant="quiet">Keep it</Button>
-            <Button variant="danger">Delete</Button>
-          </>
-        }
-      >
-        <p>Aydael and its 12 saved marches go with it.</p>
-      </Dialog>
-    </div>
+    <Group gap="sm">
+      <Live role="dialog" />
+      <Live role="alertdialog" />
+    </Group>
   ),
 };
 

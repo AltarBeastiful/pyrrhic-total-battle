@@ -1,44 +1,58 @@
-import { Button, Sheet } from '../../kit';
+import { Button, Group, Stack, Text } from '@mantine/core';
+import { useState } from 'react';
+
+import { NumberField, Sheet } from '../../kit';
 import type { KitStory } from '../story';
 
-const story: KitStory = {
-  name: 'Sheet',
-  group: 'kit',
-  render: () => (
-    <div className="flex flex-wrap items-center gap-3">
+function Live() {
+  const [opened, setOpened] = useState(false);
+  return (
+    <>
+      <Button
+        onClick={() => {
+          setOpened(true);
+        }}
+      >
+        Edit the unit
+      </Button>
       <Sheet
-        trigger={<Button variant="secondary">Open the unit sheet</Button>}
-        title="Archer 3"
-        description="Guardsmen III, ranged"
+        opened={opened}
+        onClose={() => {
+          setOpened(false);
+        }}
+        title="Archer III"
+        description="Guardsmen · tier 3 · leadership 3"
         footer={
-          <>
-            <Button variant="quiet">Leave out</Button>
-            <Button variant="primary">Keep in march</Button>
-          </>
+          <Group justify="flex-end">
+            <Button
+              variant="default"
+              onClick={() => {
+                setOpened(false);
+              }}
+            >
+              Leave out
+            </Button>
+            <Button
+              onClick={() => {
+                setOpened(false);
+              }}
+            >
+              Keep in march
+            </Button>
+          </Group>
         }
       >
-        <div className="flex flex-col gap-2">
-          <p>Health 2 310, strength 1 940, speed 24</p>
-          <p className="text-muted text-sm">
-            The sheet slides up from the bottom of a phone and in from the right once there is room.
-          </p>
-        </div>
+        <Stack gap="sm">
+          <NumberField label="Count" value={1500} onChange={() => {}} />
+          <Text size="sm" c="dimmed">
+            The sheet is anchored at the bottom on a phone and on the right from 768 px up.
+          </Text>
+        </Stack>
       </Sheet>
+    </>
+  );
+}
 
-      <Sheet
-        trigger={<Button>Open a wide one</Button>}
-        title="Custom mercenary"
-        size="lg"
-        footer={<Button variant="primary">Save</Button>}
-      >
-        <p>A wider panel for an editor with several fields.</p>
-      </Sheet>
-
-      <Sheet trigger={<Button variant="quiet">No footer</Button>} title="Battle story">
-        <p>Round one: the tier ladder walks from the top down.</p>
-      </Sheet>
-    </div>
-  ),
-};
+const story: KitStory = { name: 'Sheet', group: 'kit', render: () => <Live /> };
 
 export default story;

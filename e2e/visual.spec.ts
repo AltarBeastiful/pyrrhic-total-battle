@@ -27,15 +27,24 @@ async function openKitPage(page: Page): Promise<void> {
   await expect(page.locator('[data-story]').first()).toBeVisible();
 }
 
+/** Every WCAG A/AA violation on the page as it is right now, one readable line each. */
+async function violations(page: Page): Promise<string[]> {
+  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+  return results.violations.map(
+    (violation) => `${violation.id} (${violation.nodes.length} node(s)): ${violation.help}`,
+  );
+}
+
 test('the kit page has no WCAG A or AA violations, in either theme', async ({ page }) => {
   await openKitPage(page);
 
-  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-  const summary = results.violations.map(
-    (violation) => `${violation.id} (${violation.nodes.length} node(s)): ${violation.help}`,
-  );
+  expect(await violations(page), 'axe violations on the kit page, light').toEqual([]);
 
-  expect(summary, 'axe violations on the kit page').toEqual([]);
+  // The scheme is one attribute on `<html>`, so both halves of the palette are checked in one run
+  // rather than in a second project: contrast is the rule a dark scheme breaks.
+  await page.getByRole('button', { name: 'Switch to the dark scheme' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await violations(page), 'axe violations on the kit page, dark').toEqual([]);
 });
 
 test('every story matches its baseline', async ({ page }) => {

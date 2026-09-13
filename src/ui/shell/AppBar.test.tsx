@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 
-import { renderWithTheme } from '../kit2/testRender';
+import { renderWithTheme } from '../kit/testRender';
 import { AppBar } from './AppBar';
 
 beforeEach(() => {

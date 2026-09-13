@@ -17,7 +17,10 @@ import { deflateSync } from 'node:zlib';
 
 const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', 'icons');
 
-// sRGB of the `--pyr-accent` / `--pyr-accent-fg` tokens in src/index.css (light palette).
+// The installed app's mark. These two predate the Mantine theme and the brass accent (ADR-0008):
+// the committed PNGs in `public/icons/` still carry the old blue, and regenerating them is a brand
+// decision, not a refactor. When that is taken, the values are `brass` shade 7 and `white` from
+// `src/ui/theme.ts` — run `pnpm icons` and commit the six files it rewrites.
 const ACCENT = [0x3d, 0x64, 0xc7];
 const MARK = [0xfc, 0xfc, 0xfc];
 

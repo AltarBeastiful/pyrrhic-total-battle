@@ -18,7 +18,7 @@ import { buildKillOrder } from '@/engine';
 import type { StackingOptions } from '@/engine';
 import { buildUnits } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Sheet } from '@/ui/kit2';
+import { Sheet } from '@/ui/kit';
 
 import { KillOrderList } from './KillOrderList';
 

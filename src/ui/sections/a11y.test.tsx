@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
-import { ThemeHarness } from '@/ui/kit2/testRender';
+import { ThemeHarness } from '@/ui/kit/testRender';
 
 import { SECTIONS } from './index';
 

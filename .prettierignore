@@ -6,6 +6,9 @@ test-results/
 pnpm-lock.yaml
 LICENSE
 
+# Scratch git worktrees Claude Code parks inside the repo: copies of the tree, not sources.
+.claude/
+
 # Hand-written prose, captured TotalStack output and in-game battle-report
 # transcripts: line breaks there are meaningful, Prettier must not rewrap them.
 docs/

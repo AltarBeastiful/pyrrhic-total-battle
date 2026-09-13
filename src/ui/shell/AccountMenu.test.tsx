@@ -11,7 +11,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 
-import { renderWithTheme } from '../kit2/testRender';
+import { renderWithTheme } from '../kit/testRender';
 import { AccountMenu } from './AccountMenu';
 
 vi.setConfig({ testTimeout: 20_000 });
@@ -121,6 +121,6 @@ test('the theme row offers the three choices and writes the one that is picked',
     expect(useStore.getState().doc.ui.theme).toBe('dark');
   });
   // The document attribute is the frame's job (`Shell` applies it); what the menu owes is the
-  // choice, and that it does not walk away — kit2's segmented row keeps the menu open.
+  // choice, and that it does not walk away — kit's segmented row keeps the menu open.
   expect(screen.getByRole('menu')).toBeTruthy();
 });

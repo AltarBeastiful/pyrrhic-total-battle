@@ -9,7 +9,7 @@ import { Alert, SimpleGrid, Stack } from '@mantine/core';
 import { updateSources } from '@/state/actions/bonuses';
 import { vipNeedsManual } from '@/state/derive';
 import type { Profile } from '@/state/schema';
-import { NumberField } from '@/ui/kit2';
+import { NumberField } from '@/ui/kit';
 
 import { MAX_VIP_LEVEL, WHERE } from './rows';
 import type { TotalsSummary } from './rows';

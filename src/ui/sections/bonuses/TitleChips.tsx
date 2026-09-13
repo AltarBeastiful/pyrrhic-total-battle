@@ -10,7 +10,7 @@
 import { Stack, Text } from '@mantine/core';
 
 import { setTitleOwned, toggleActiveSource } from '@/state/actions/bonuses';
-import { ChipRow } from '@/ui/kit2';
+import { ChipRow } from '@/ui/kit';
 
 import type { TitleFamilyRow } from './chips';
 

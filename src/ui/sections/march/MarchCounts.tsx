@@ -26,8 +26,8 @@ import { Copy, Info, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import type { UnitDef } from '@/engine/types';
-import { MarchRow, MarchTable, UnitTile } from '@/ui/domain2';
-import { NumberField } from '@/ui/kit2';
+import { MarchRow, MarchTable, UnitTile } from '@/ui/domain';
+import { NumberField } from '@/ui/kit';
 import { copyText } from '@/ui/profile/download';
 
 import { amount } from './format';

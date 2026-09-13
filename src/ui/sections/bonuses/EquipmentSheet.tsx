@@ -9,7 +9,7 @@ import { equipment as equipmentTable } from '@/data';
 import type { Quality } from '@/data/types';
 import { removeSourceEntry, updateSources } from '@/state/actions/bonuses';
 import type { Profile, ProfileSources } from '@/state/schema';
-import { Disclosure } from '@/ui/kit2';
+import { Disclosure } from '@/ui/kit';
 
 import { BonusKeyGrid } from './BonusKeyGrid';
 import { describeContribution, QUALITY_LABELS } from './labels';

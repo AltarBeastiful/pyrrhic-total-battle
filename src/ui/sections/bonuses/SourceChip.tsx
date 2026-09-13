@@ -10,7 +10,7 @@
 import { Chip, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
-import { CornerGear } from '@/ui/kit2';
+import { CornerGear } from '@/ui/kit';
 
 export interface SourceChipProps {
   /** What the chip reads as. */

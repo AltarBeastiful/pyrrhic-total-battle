@@ -14,7 +14,7 @@ import type { BonusKey } from '@/data/types';
 import { updateSources } from '@/state/actions/bonuses';
 import type { ProfileSources } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { Disclosure, NumberField } from '@/ui/kit2';
+import { Disclosure, NumberField } from '@/ui/kit';
 
 import type { ArtifactChipRow } from './chips';
 import { BONUS_LABELS, humanizeOption, rowValue, SPECIAL_LABELS } from './labels';

@@ -14,7 +14,7 @@ import { events } from '@/data';
 import { CATEGORIES, GROUPS, RACES } from '@/data/types';
 import type { Category, Group as UnitRole, Race } from '@/data/types';
 import type { CustomMercenary } from '@/state/schema';
-import { NumberField, Sheet } from '@/ui/kit2';
+import { NumberField, Sheet } from '@/ui/kit';
 
 import { CATEGORY_LABELS, GROUP_LABELS, RACE_LABELS } from './labels';
 

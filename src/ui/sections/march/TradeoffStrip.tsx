@@ -8,7 +8,7 @@
  */
 import { Paper, SimpleGrid, Stack, Text } from '@mantine/core';
 
-import { DeltaText } from '@/ui/domain2';
+import { DeltaText } from '@/ui/domain';
 
 import { amount } from './format';
 import type { SearchTradeoff, TradeoffFigures } from './runStore';

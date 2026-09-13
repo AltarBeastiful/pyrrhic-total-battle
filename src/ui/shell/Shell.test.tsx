@@ -12,7 +12,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 
-import { ThemeHarness } from '../kit2/testRender';
+import { ThemeHarness } from '../kit/testRender';
 import { useResultStore } from '../resultStore';
 import { useRunStore } from '../sections/march/runStore';
 import { Shell } from './Shell';

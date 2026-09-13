@@ -13,7 +13,7 @@
 import { Group, Text, UnstyledButton } from '@mantine/core';
 import { ChevronUp } from 'lucide-react';
 
-import { Glyph, UnitTile } from '@/ui/domain2';
+import { Glyph, UnitTile } from '@/ui/domain';
 
 import { compact } from './format';
 import classes from './march.module.css';

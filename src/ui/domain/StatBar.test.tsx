@@ -1,33 +1,29 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
 
+import { renderWithTheme } from '../kit/testRender';
 import { StatBar } from './StatBar';
+import { count } from './format';
 
 afterEach(cleanup);
 
-const number = (n: number) => n.toLocaleString('en-US');
+test('the two bars are named and carry the figure they draw', () => {
+  renderWithTheme(<StatBar label="Strength" base={380} boosted={520} format={count} />);
 
-test('both bars are meters on the same scale, and both numbers are visible', () => {
-  render(<StatBar label="Health" base={420} boosted={1260} format={number} />);
-
-  const base = screen.getByRole('meter', { name: 'Health, base' });
-  const boosted = screen.getByRole('meter', { name: 'Health, with bonuses' });
-
-  expect(base.getAttribute('aria-valuenow')).toBe('420');
-  expect(base.getAttribute('aria-valuemax')).toBe('1260');
-  expect(boosted.getAttribute('aria-valuenow')).toBe('1260');
-  expect(boosted.getAttribute('aria-valuemax')).toBe('1260');
-
-  expect(screen.getByText('420')).toBeTruthy();
-  expect(screen.getByText('1,260')).toBeTruthy();
+  const base = screen.getByRole('progressbar', { name: 'Strength, base' });
+  const boosted = screen.getByRole('progressbar', { name: 'Strength, with bonuses' });
+  expect(base.getAttribute('aria-valuetext')).toBe('380');
+  expect(boosted.getAttribute('aria-valuetext')).toBe('520');
+  expect(screen.getByText('520')).toBeTruthy();
 });
 
-test('the label is shown once and the rows are named', () => {
-  render(<StatBar label="Strength" base={0} boosted={0} format={number} />);
-
-  expect(screen.getByText('Strength')).toBeTruthy();
-  expect(screen.getByText('Base')).toBeTruthy();
-  expect(screen.getByText('With bonuses')).toBeTruthy();
-  expect(screen.getByRole('meter', { name: 'Strength, base' }).getAttribute('aria-valuemax')).toBe('1');
+test('the bars share one scale, so the gap between them is the bonus', () => {
+  renderWithTheme(<StatBar label="Health" base={500} boosted={1000} format={count} />);
+  const base = screen.getByRole('progressbar', { name: 'Health, base' });
+  const boosted = screen.getByRole('progressbar', { name: 'Health, with bonuses' });
+  expect(base.getAttribute('aria-valuemax')).toBe('1000');
+  expect(base.getAttribute('aria-valuenow')).toBe('500');
+  expect(boosted.getAttribute('aria-valuemax')).toBe('1000');
+  expect(boosted.getAttribute('aria-valuenow')).toBe('1000');
 });

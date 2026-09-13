@@ -11,7 +11,7 @@ import { SimpleGrid, Stack } from '@mantine/core';
 
 import { BONUS_KEYS, SPECIAL_KEYS } from '@/data/types';
 import type { BonusKey, BonusMap, SpecialKey, SpecialMap } from '@/data/types';
-import { Disclosure, NumberField } from '@/ui/kit2';
+import { Disclosure, NumberField } from '@/ui/kit';
 
 import { BONUS_LABELS, SPECIAL_LABELS } from './labels';
 import { FieldGroup } from './SourceSheet';

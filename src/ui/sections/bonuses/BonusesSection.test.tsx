@@ -15,7 +15,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { captains as captainTable } from '@/data';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { renderWithTheme } from '@/ui/kit2/testRender';
+import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { BonusesSection } from './BonusesSection';
 import { CAPTAIN_CAP_MESSAGE } from './CaptainChips';

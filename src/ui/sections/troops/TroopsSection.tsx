@@ -25,10 +25,10 @@ import { CATEGORIES } from '@/data/types';
 import type { UnitDef } from '@/data/types';
 import type { ProfileTroops, TierRange } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { Glyph, GroupMarker } from '@/ui/domain2';
-import type { GlyphKind } from '@/ui/domain2';
-import { ChipRow, TierSelect } from '@/ui/kit2';
-import type { ChipRowItem } from '@/ui/kit2';
+import { Glyph, GroupMarker } from '@/ui/domain';
+import type { GlyphKind } from '@/ui/domain';
+import { ChipRow, TierSelect } from '@/ui/kit';
+import type { ChipRowItem } from '@/ui/kit';
 
 import {
   isChipRow,
@@ -131,7 +131,7 @@ export function TroopsSection() {
 
   return (
     <Stack component="section" id="troops" aria-labelledby={titleId} gap="xs">
-      <Title order={2} size="h5" id={titleId}>
+      <Title order={2} id={titleId}>
         Troops
       </Title>
       {empty && (

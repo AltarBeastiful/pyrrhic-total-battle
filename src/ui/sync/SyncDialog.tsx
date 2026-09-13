@@ -6,6 +6,19 @@
  * action). Nothing is sent or applied until the user presses a button, and a conflict always opens the
  * per-profile dialog first.
  */
+import {
+  Alert,
+  Anchor,
+  Badge,
+  Button,
+  Group,
+  Paper,
+  PasswordInput,
+  Stack,
+  Tabs,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import { useState } from 'react';
 
 import { useStore } from '@/state/store';
@@ -13,8 +26,7 @@ import type { SyncAction, SyncPlanEntry } from '@/sync/engine';
 import { TOKEN_PAGE } from '@/sync/gist';
 import { useSyncStore } from '@/sync/syncStore';
 
-import { Badge, Banner, Button, Card, Dialog, Switch, Tabs, TextField } from '../kit';
-import { Cluster, Stack } from '../layout';
+import { Dialog, SwitchRow } from '../kit';
 import { ConflictDialog } from './ConflictDialog';
 import { formatWhen } from './format';
 import { useSync } from './useSync';
@@ -33,14 +45,14 @@ const ACTION_LABEL: Record<SyncAction, string> = {
   'in-sync': 'Up to date',
 };
 
-/** The badge tone that says what would happen to a profile, so colour is never the only cue. */
-const ACTION_TONE: Record<SyncAction, 'accent' | 'ok' | 'warn' | 'danger' | 'neutral'> = {
-  push: 'accent',
-  pull: 'ok',
-  conflict: 'warn',
+/** The badge colour that says what would happen to a profile, so colour is never the only cue. */
+const ACTION_COLOR: Record<SyncAction, string> = {
+  push: 'brass',
+  pull: 'guardsmen',
+  conflict: 'yellow',
   'delete-remote': 'danger',
   'delete-local': 'danger',
-  'in-sync': 'neutral',
+  'in-sync': 'slate',
 };
 
 const CHOICE_LABEL = {
@@ -58,91 +70,94 @@ function SettingsPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
   const setDeviceName = useStore((state) => state.setDeviceName);
 
   return (
-    <Stack gap={4}>
-      <Banner tone="info">
+    <Stack gap="md">
+      <Alert color="brass" variant="light">
         Your profile JSON is stored in a secret gist on your GitHub account; nothing else is contacted. The
         token stays in this browser and is only ever sent to api.github.com, in the request header.
-      </Banner>
+      </Alert>
 
-      <TextField
+      <PasswordInput
         label="GitHub token"
-        type="password"
         autoComplete="off"
         value={settings.token}
         placeholder="github_pat_…"
-        onChange={(token) => {
-          setSettings({ token });
+        onChange={(event) => {
+          setSettings({ token: event.currentTarget.value });
         }}
         description={
           <>
             Create a{' '}
-            <a className="underline" href={TOKEN_PAGE} target="_blank" rel="noreferrer noopener">
+            <Anchor href={TOKEN_PAGE} target="_blank" rel="noreferrer noopener" inherit>
               fine-grained token
-            </a>{' '}
+            </Anchor>{' '}
             with one permission: <strong>Account permissions → Gists: Read and write</strong>. No repository
             access is needed.
           </>
         }
       />
 
-      <Cluster gap={2}>
+      <Group gap="sm">
         <Button
-          onPress={() => {
+          variant="default"
+          onClick={() => {
             void sync.testConnection();
           }}
-          isDisabled={!sync.ready || sync.status !== 'idle'}
+          disabled={!sync.ready || sync.status !== 'idle'}
         >
           {sync.status === 'testing' ? 'Testing…' : 'Test connection'}
         </Button>
-        <Button variant="quiet" onPress={sync.forget}>
+        <Button variant="subtle" onClick={sync.forget}>
           Forget token and sync state
         </Button>
-      </Cluster>
+      </Group>
 
-      <TextField
+      <TextInput
         label="Gist id"
         autoComplete="off"
         value={settings.gistId}
         placeholder="created on the first push"
-        onChange={(gistId) => {
-          setSettings({ gistId });
+        onChange={(event) => {
+          setSettings({ gistId: event.currentTarget.value });
         }}
         description="Filled in automatically. Clear it to let the app find or create the pyrrhic-sync gist again."
       />
 
-      <Stack gap={2}>
-        <Switch
+      <Stack gap="sm">
+        <SwitchRow
           label="Encrypt the gist"
           description="AES-GCM with a key derived from a passphrase. GitHub then stores ciphertext only."
-          isSelected={settings.encrypt}
+          checked={settings.encrypt}
           onChange={(encrypt) => {
             setSettings({ encrypt });
           }}
         />
         {settings.encrypt && (
           <>
-            <TextField
+            <PasswordInput
               label="Passphrase"
-              type="password"
               value={passphrase}
               autoComplete="new-password"
-              onChange={setPassphrase}
+              onChange={(event) => {
+                setPassphrase(event.currentTarget.value);
+              }}
               description="Kept for this tab only, never written to disk and never sent anywhere."
             />
-            <Banner tone="warn">
+            <Alert color="brass" variant="light">
               There is no recovery: without this passphrase the gist cannot be read, on any device. Profiles
               already in the gist stay in clear until each one is sent again.
-            </Banner>
+            </Alert>
           </>
         )}
       </Stack>
 
-      <TextField
+      <TextInput
         label="Device name"
         autoComplete="off"
         value={deviceName}
         placeholder="Rémi's phone"
-        onChange={setDeviceName}
+        onChange={(event) => {
+          setDeviceName(event.currentTarget.value);
+        }}
         description="Shown on your other devices when two versions of a profile disagree."
       />
     </Stack>
@@ -159,11 +174,22 @@ function PlanRow({
   onResolve: () => void;
 }) {
   return (
-    <li className="flex flex-wrap items-start justify-between gap-2 py-2">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{entry.name}</p>
-        <p className="text-muted text-xs">{entry.reason}</p>
-        <p className="text-muted text-xs">
+    <Group
+      component="li"
+      justify="space-between"
+      align="flex-start"
+      gap="sm"
+      py="xs"
+      style={{ borderTop: '1px solid var(--pyr-hairline)' }}
+    >
+      <Stack gap={2} miw={0} style={{ flex: '1 1 12rem' }}>
+        <Text size="sm" fw={500}>
+          {entry.name}
+        </Text>
+        <Text size="xs" c="dimmed">
+          {entry.reason}
+        </Text>
+        <Text size="xs" c="dimmed">
           Here:{' '}
           {entry.local === null
             ? 'deleted'
@@ -173,20 +199,22 @@ function PlanRow({
           {entry.remote === null
             ? 'deleted'
             : `rev ${String(entry.remote.docRev)} · ${formatWhen(entry.remote.updatedAt)}`}
-        </p>
-        <p className="text-muted text-xs">
+        </Text>
+        <Text size="xs" c="dimmed">
           {entry.lastSynced === null ? 'Never synced.' : `Last synced ${formatWhen(entry.lastSynced.at)}.`}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Badge tone={ACTION_TONE[entry.action]}>{ACTION_LABEL[entry.action]}</Badge>
+        </Text>
+      </Stack>
+      <Group gap="sm" wrap="nowrap" style={{ flex: '0 0 auto' }}>
+        <Badge color={ACTION_COLOR[entry.action]} variant="light">
+          {ACTION_LABEL[entry.action]}
+        </Badge>
         {entry.action === 'conflict' && (
-          <Button size="sm" variant={choice === undefined ? 'primary' : 'secondary'} onPress={onResolve}>
+          <Button size="compact-sm" variant={choice === undefined ? 'filled' : 'default'} onClick={onResolve}>
             {choice === undefined ? `Resolve ${entry.name}` : `Will ${CHOICE_LABEL[choice]}`}
           </Button>
         )}
-      </div>
-    </li>
+      </Group>
+    </Group>
   );
 }
 
@@ -201,40 +229,52 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
   const conflict = entries.find((entry) => entry.id === conflictId) ?? null;
 
   return (
-    <Stack gap={3}>
-      {!sync.ready && <Banner tone="warn">Add a GitHub token in Settings first.</Banner>}
+    <Stack gap="md">
+      {!sync.ready && (
+        <Alert color="brass" variant="light">
+          Add a GitHub token in Settings first.
+        </Alert>
+      )}
 
-      <Cluster gap={2}>
+      <Group gap="sm">
         <Button
-          variant="primary"
-          isDisabled={!sync.ready || sync.status !== 'idle'}
-          onPress={() => {
+          disabled={!sync.ready || sync.status !== 'idle'}
+          onClick={() => {
             void sync.check();
           }}
         >
           {sync.status === 'checking' ? 'Checking…' : sync.plan === null ? 'Check the gist' : 'Check again'}
         </Button>
         <Button
-          isDisabled={sync.plan === null || todo === 0 || sync.status !== 'idle'}
-          onPress={() => {
+          variant="default"
+          disabled={sync.plan === null || todo === 0 || sync.status !== 'idle'}
+          onClick={() => {
             void sync.run();
           }}
         >
           {sync.status === 'applying' ? 'Syncing…' : 'Apply plan'}
         </Button>
         {counts !== undefined && (
-          <span className="text-muted text-xs">
+          <Text size="xs" c="dimmed">
             {counts.push} to send · {counts.pull} to receive · {counts.conflict} conflict
             {counts.conflict === 1 ? '' : 's'}
-          </span>
+          </Text>
         )}
-      </Cluster>
+      </Group>
 
-      {sync.error !== null && <Banner tone="danger">{sync.error}</Banner>}
-      {sync.notice !== null && <Banner tone="info">{sync.notice}</Banner>}
+      {sync.error !== null && (
+        <Alert color="danger" variant="light">
+          {sync.error}
+        </Alert>
+      )}
+      {sync.notice !== null && (
+        <Alert color="brass" variant="light">
+          {sync.notice}
+        </Alert>
+      )}
 
       {sync.plan !== null && (
-        <ul className="divide-line divide-y" aria-label="Sync plan">
+        <Stack component="ul" gap={0} aria-label="Sync plan" style={{ listStyle: 'none', padding: 0 }}>
           {entries.map((entry) => (
             <PlanRow
               key={entry.id}
@@ -245,22 +285,28 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
               }}
             />
           ))}
-          {entries.length === 0 && <li className="text-muted py-2 text-sm">Nothing on either side yet.</li>}
-        </ul>
+          {entries.length === 0 && (
+            <Text component="li" size="sm" c="dimmed" py="xs">
+              Nothing on either side yet.
+            </Text>
+          )}
+        </Stack>
       )}
 
       {sync.results !== null && sync.results.length > 0 && (
-        <Card tone="sunken" padding="sm">
-          <p className="text-sm font-medium">Last run</p>
-          <ul className="text-muted mt-1 space-y-1 text-xs">
+        <Paper bg="var(--pyr-sunken)" p="sm" radius="sm">
+          <Text size="sm" fw={500}>
+            Last run
+          </Text>
+          <Stack component="ul" gap={2} mt={4} style={{ listStyle: 'none', padding: 0 }}>
             {sync.results.map((result) => (
-              <li key={result.id}>
+              <Text key={result.id} component="li" size="xs" c="dimmed">
                 {result.name}: {ACTION_LABEL[result.action].toLowerCase()} — {result.status}
                 {result.message === undefined ? '' : ` (${result.message})`}
-              </li>
+              </Text>
             ))}
-          </ul>
-        </Card>
+          </Stack>
+        </Paper>
       )}
 
       <ConflictDialog
@@ -278,50 +324,35 @@ function SyncPanel({ sync }: { sync: ReturnType<typeof useSync> }) {
   );
 }
 
-/** Two arrows chasing each other; inline SVG like the rest of the icons (ADR-0002: no icon font). */
-export function SyncIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      width="1.15em"
-      height="1.15em"
-    >
-      <path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.5M4 13a8 8 0 0 0 13.7 4.7l2.3-2.2M4 4v4.5h4.5M20 20v-4.5h-4.5" />
-    </svg>
-  );
-}
-
 export function SyncDialog({ open, onOpenChange }: SyncDialogProps) {
   // A device that has no token lands on Settings; a configured one lands on the plan.
-  const [tab, setTab] = useState(() =>
+  const [tab, setTab] = useState<string | null>(() =>
     useSyncStore.getState().settings.token.trim() === '' ? 'settings' : 'sync',
   );
   const sync = useSync();
 
   return (
     <Dialog
-      isOpen={open}
-      onOpenChange={onOpenChange}
+      opened={open}
+      onClose={() => {
+        onOpenChange(false);
+      }}
       title="Sync across devices"
       description="Explicit Pull and Push through one secret GitHub gist. Nothing is sent automatically."
       size="lg"
     >
-      <Tabs
-        value={tab}
-        onChange={setTab}
-        label="Sync"
-        items={[
-          { value: 'sync', label: 'Pull / Push', content: <SyncPanel sync={sync} /> },
-          { value: 'settings', label: 'Settings', content: <SettingsPanel sync={sync} /> },
-        ]}
-      />
+      <Tabs value={tab} onChange={setTab} keepMounted={false}>
+        <Tabs.List aria-label="Sync">
+          <Tabs.Tab value="sync">Pull / Push</Tabs.Tab>
+          <Tabs.Tab value="settings">Settings</Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="sync" pt="md">
+          <SyncPanel sync={sync} />
+        </Tabs.Panel>
+        <Tabs.Panel value="settings" pt="md">
+          <SettingsPanel sync={sync} />
+        </Tabs.Panel>
+      </Tabs>
     </Dialog>
   );
 }

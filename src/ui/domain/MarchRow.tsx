@@ -1,67 +1,23 @@
 /**
  * The march table (design plan §7.5): one row per stack, in the order the stacks fall. The row's
- * left edge carries the group colour, the count is the biggest thing on the line and is a button
- * that copies it — the one number a player retypes into the game — and everything else (hits,
- * losses, revive cost) stays small beside it.
+ * left edge carries the group's colour, and the count — the one number a player retypes into the
+ * game — is the biggest thing on the line *and* a button that copies it.
  *
- * `MarchTable` is the wrapper: the header row, and the horizontal scroller that keeps the table
- * from forcing the page sideways on a phone.
+ * `MarchTable` is the wrapper: `Table` inside `Table.ScrollContainer`, so a six-column table never
+ * forces the page sideways on a phone.
  */
-import { useCallback, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { tv } from 'tailwind-variants';
+import { Stack, Table, Text, UnstyledButton } from '@mantine/core';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import type { UnitDef } from '../../data/types';
-import { cn } from '../kit/cn';
-import { ring, stateLayerDom } from '../kit/styles';
-import { DamageBar } from './DamageBar';
 import { UnitTile } from './UnitTile';
-import { GROUP_EDGE_LEFT, unitGroupOf } from './unitGroup';
-
-const NUMBER = new Intl.NumberFormat('en-US');
+import { count as formatCount } from './format';
+import { groupInk, unitGroupOf } from './unitGroup';
 
 /** How long "Copied" stays on the line. */
 const COPIED_MS = 1500;
 
-const table = tv({
-  base: 'w-full border-collapse text-left',
-});
-
-const scroller = tv({
-  base: 'w-full min-w-0 overflow-x-auto',
-});
-
-const head = tv({
-  base: 'text-muted px-2 py-1 text-xs font-medium whitespace-nowrap',
-});
-
-const rowStyle = tv({
-  base: 'border-line border-b align-middle',
-});
-
-const edgeCell = tv({
-  base: 'border-l-4 py-1.5 pr-2 pl-2',
-  variants: { group: GROUP_EDGE_LEFT },
-});
-
-const cell = tv({
-  base: 'px-2 py-1.5',
-  variants: {
-    tone: { normal: 'text-sm', quiet: 'text-muted text-sm' },
-    align: { start: 'text-left', end: 'text-right' },
-  },
-  defaultVariants: { tone: 'normal', align: 'end' },
-});
-
-const countButton = tv({
-  base: cn(
-    'text-stat rounded-control px-1 leading-none font-semibold tabular-nums',
-    'motion-safe:transition-colors',
-    stateLayerDom,
-  ),
-});
-
-/** "falls 3rd" — the position in the kill order, said the way a player says it. */
+/** "falls 3rd" — the place in the kill order, said the way a player says it. */
 function ordinal(position: number): string {
   const rest = position % 100;
   if (rest >= 11 && rest <= 13) return `${position}th`;
@@ -76,42 +32,26 @@ export interface MarchTableProps {
   /** Read to a screen reader in place of a visible title. */
   caption?: string;
   children: ReactNode;
-  className?: string;
 }
 
-export function MarchTable({ caption, children, className }: MarchTableProps) {
+export function MarchTable({ caption, children }: MarchTableProps) {
   return (
-    <div className={cn(scroller(), className)}>
-      <table className={table()}>
-        {caption !== undefined && <caption className="sr-only">{caption}</caption>}
-        <thead>
-          <tr className="border-line border-b">
-            <th scope="col" className={head()}>
-              <span className="sr-only">Type</span>
-            </th>
-            <th scope="col" className={head()}>
-              Unit
-            </th>
-            <th scope="col" className={cn(head(), 'text-right')}>
-              Count
-            </th>
-            <th scope="col" className={cn(head(), 'text-right')}>
-              Hits
-            </th>
-            <th scope="col" className={cn(head(), 'text-right')}>
-              Lost
-            </th>
-            <th scope="col" className={cn(head(), 'text-right')}>
-              Revive
-            </th>
-            <th scope="col" className={head()}>
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <Table.ScrollContainer minWidth={480} type="native" w="100%" maw="100%">
+      <Table verticalSpacing="xs" horizontalSpacing="xs" withRowBorders>
+        {caption !== undefined && <Table.Caption>{caption}</Table.Caption>}
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th />
+            <Table.Th>Unit</Table.Th>
+            <Table.Th ta="right">Count</Table.Th>
+            <Table.Th ta="right">Hits</Table.Th>
+            <Table.Th ta="right">Lost</Table.Th>
+            <Table.Th ta="right">Revive</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>{children}</Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
   );
 }
 
@@ -123,15 +63,10 @@ export interface MarchRowProps {
   reviveSilver?: number;
   /** Place in the kill order, 1-based; shown as "falls 3rd". */
   position?: number;
-  /** Damage this stack deals as a fraction of the loudest stack's; drawn as a bar under the count. */
-  damageShare?: number;
-  /** The method put this stack last on purpose (mercenaries under some methods). */
+  /** The method put this stack last on purpose. */
   fallsLast?: boolean;
-  /** Called after the count has been put on the clipboard. */
+  /** Called after the count has reached the clipboard. */
   onCopy?: (count: number) => void;
-  /** Extra controls for this row; they get the last cell. */
-  children?: ReactNode;
-  className?: string;
 }
 
 export function MarchRow({
@@ -141,74 +76,78 @@ export function MarchRow({
   lost,
   reviveSilver,
   position,
-  damageShare,
   fallsLast = false,
   onCopy,
-  children,
-  className,
 }: MarchRowProps) {
   const group = unitGroupOf(unit);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
-    return () => window.clearTimeout(timer);
+    const timer = globalThis.setTimeout(() => {
+      setCopied(false);
+    }, COPIED_MS);
+    return () => {
+      globalThis.clearTimeout(timer);
+    };
   }, [copied]);
 
-  const handleCopy = useCallback(() => {
-    const text = String(count);
+  const copy = useCallback(() => {
     // Absent on an insecure origin and in a test environment; copying is a convenience, never a
     // requirement, so its absence must not break the row.
     const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
-    if (clipboard?.writeText) void clipboard.writeText(text).catch(() => {});
+    if (clipboard?.writeText) void clipboard.writeText(String(count)).catch(() => {});
     setCopied(true);
     onCopy?.(count);
   }, [count, onCopy]);
 
+  const order =
+    position === undefined
+      ? fallsLast
+        ? 'falls last'
+        : undefined
+      : fallsLast
+        ? `falls ${ordinal(position)}, and last of the troops`
+        : `falls ${ordinal(position)}`;
+
   return (
-    <tr className={cn(rowStyle(), className)}>
-      <td className={edgeCell({ group })}>
+    <Table.Tr style={{ borderLeft: `4px solid ${groupInk(group)}` }}>
+      <Table.Td>
         <UnitTile unit={unit} size="sm" />
-      </td>
-      <td className={cell({ align: 'start' })}>
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate font-medium">{unit.name}</span>
-          {(position !== undefined || fallsLast) && (
-            <span className="text-muted truncate text-xs">
-              {position === undefined
-                ? 'falls last'
-                : fallsLast
-                  ? `falls ${ordinal(position)}, and last of the troops`
-                  : `falls ${ordinal(position)}`}
-            </span>
+      </Table.Td>
+      <Table.Td>
+        <Stack gap={0} miw={0}>
+          <Text span size="sm" fw={500} truncate>
+            {unit.name}
+          </Text>
+          {order !== undefined && (
+            <Text span size="xs" c="dimmed" truncate>
+              {order}
+            </Text>
           )}
-        </span>
-      </td>
-      <td className={cell()}>
-        <span className="flex flex-col items-end gap-1">
-          <button
-            type="button"
-            onClick={handleCopy}
-            aria-label={`Copy ${NUMBER.format(count)}, ${unit.name}`}
-            className={cn(countButton(), ring)}
+        </Stack>
+      </Table.Td>
+      <Table.Td ta="right">
+        <Stack gap={0} align="flex-end">
+          <UnstyledButton
+            aria-label={`Copy ${formatCount(count)}, ${unit.name}`}
+            onClick={copy}
+            style={{ fontSize: 'var(--mantine-font-size-xl)', fontWeight: 600, lineHeight: 1.1 }}
           >
-            {NUMBER.format(count)}
-          </button>
-          {damageShare === undefined ? null : (
-            <DamageBar group={group} share={damageShare} className="w-16" />
-          )}
-          <span role="status" className="text-muted text-xs">
+            {formatCount(count)}
+          </UnstyledButton>
+          <Text span role="status" size="xs" c="dimmed" mih="1.125rem">
             {copied ? 'Copied' : ''}
-          </span>
-        </span>
-      </td>
-      <td className={cell()}>{hits === undefined ? '—' : NUMBER.format(hits)}</td>
-      <td className={cell()}>{lost === undefined ? '—' : NUMBER.format(lost)}</td>
-      <td className={cell({ tone: 'quiet' })}>
-        {reviveSilver === undefined ? '—' : NUMBER.format(reviveSilver)}
-      </td>
-      <td className={cell({ align: 'start' })}>{children}</td>
-    </tr>
+          </Text>
+        </Stack>
+      </Table.Td>
+      <Table.Td ta="right">{hits === undefined ? '—' : formatCount(hits)}</Table.Td>
+      <Table.Td ta="right">{lost === undefined ? '—' : formatCount(lost)}</Table.Td>
+      <Table.Td ta="right">
+        <Text span size="sm" c="dimmed">
+          {reviveSilver === undefined ? '—' : formatCount(reviveSilver)}
+        </Text>
+      </Table.Td>
+    </Table.Tr>
   );
 }

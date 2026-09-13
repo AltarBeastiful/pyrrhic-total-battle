@@ -3,7 +3,6 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
@@ -71,7 +70,7 @@ export default defineConfig({
   // Relative asset URLs so the same bundle works under a GitHub Pages sub-path
   // (/pyrrhic/) and when index.html is opened straight from disk (file://).
   base: './',
-  plugins: [react(), tailwindcss(), pwaPrecache()],
+  plugins: [react(), pwaPrecache()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

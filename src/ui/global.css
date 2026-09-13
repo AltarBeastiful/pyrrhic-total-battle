@@ -1,26 +1,88 @@
 /* ---------------------------------------------------------------------------------------------
-   The app's own global CSS, on Mantine (M-01). Everything that used to be a Tailwind base rule and
-   is still needed lives here; the rest stays in `src/index.css` until M-09 deletes it.
-
-   The first line is load-bearing. Tailwind v4 puts Preflight in `@layer base` and its utilities in
-   `@layer utilities`, and an *unlayered* stylesheet beats every layer — so Mantine's element reset
-   (`button, input { font: inherit }`) would silently outrank `text-sm` on every legacy section.
-   Ordering `mantine` between `components` and `utilities` gives Mantine's component styles the win
-   over Preflight and leaves the old sections' utilities the win over Mantine's reset. `main.tsx`
-   therefore imports `@mantine/core/styles.layer.css`, the stylesheet Mantine ships already wrapped
-   in `@layer mantine`. When Tailwind goes (M-09) this line goes with it.
+   The app's own global CSS. Everything here is either a bundled font face or a rule Mantine does
+   not draw; colour, radius, spacing and type live in `src/ui/theme.ts`, which is the design
+   (ADR-0008). Tailwind and `src/index.css` were retired at M-09.
    --------------------------------------------------------------------------------------------- */
-@layer theme, base, components, mantine, utilities;
+
+/* ---------------------------------------------------------------------------------------------
+   The two bundled faces (design plan D-15). ADR-0002 amended: an OFL font installed from npm and
+   served from our own origin keeps the promise that matters — nothing leaves the browser, nothing
+   is fetched from a third party — so the app no longer depends on whatever serif and sans the
+   device happens to have. A font from a CDN stays forbidden.
+
+   Declared by hand rather than by importing the package stylesheets, because those carry Cyrillic,
+   Greek and Vietnamese too: the app is written in Latin script, and every extra subset is another
+   file in the offline cache. Inter ships its weight axis; Fraunces ships weights, optical size and
+   softness, which `theme.module.css` sets on the numeral variant.
+   --------------------------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/fraunces/files/fraunces-latin-full-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/fraunces/files/fraunces-latin-ext-full-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 /* The page ground and the text face. Mantine's own body rule reads `--mantine-color-body`, which
-   `cssVariablesResolver` already points at the design's page colour; this says it again unlayered
-   so the ground is right even before Mantine's stylesheet has loaded. */
+   `cssVariablesResolver` already points at the design's page colour; this says it again so the
+   ground is right even before Mantine's stylesheet has loaded. The two hex fallbacks are the
+   light scheme's page and ink, verbatim from `theme.ts`'s `SURFACE`. */
 body {
   margin: 0;
   background-color: var(--pyr-page, #ecefec);
-  color: var(--mantine-color-text);
+  color: var(--mantine-color-text, #131917);
   font-family: var(--mantine-font-family);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Material 3's page margins, the one thing the theme cannot express on its own: 16 px in a compact
+   window, 24 px from the medium window class (600 px) up. `Container` reads it through a style prop
+   (`theme.ts`), the app bar and the bottom bar through their own padding. */
+:root {
+  --pyr-page-margin: 1rem;
+}
+
+@media (min-width: 37.5em) {
+  :root {
+    --pyr-page-margin: 1.5rem;
+  }
 }
 
 /* Figures are compared column by column all over the results, so they are always tabular. */

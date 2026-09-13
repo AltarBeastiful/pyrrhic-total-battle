@@ -23,8 +23,8 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { heroes as heroTable } from '@/data';
 import { setActiveFlag, updateSources } from '@/state/actions/bonuses';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { CaptainChip } from '@/ui/domain2';
-import { NumberField } from '@/ui/kit2';
+import { CaptainChip } from '@/ui/domain';
+import { NumberField } from '@/ui/kit';
 
 import { captainBonusLines, MAX_CAPTAIN_STAR, type CaptainChipRow, type CaptainTarget } from './chips';
 import { describeContribution } from './labels';

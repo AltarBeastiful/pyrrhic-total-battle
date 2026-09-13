@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { selectActiveSetup, useStore } from '@/state/store';
-import { renderWithTheme } from '@/ui/kit2/testRender';
+import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { BattleSection } from './BattleSection';
 

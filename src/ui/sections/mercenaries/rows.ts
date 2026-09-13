@@ -12,7 +12,7 @@
 import { customMercenaryToUnit, mercenaries as mercenaryTable, unitById } from '@/data';
 import type { Group, UnitDef } from '@/data/types';
 import type { CustomMercenary, Profile } from '@/state/schema';
-import { count, type GlyphKind } from '@/ui/domain2';
+import { count, type GlyphKind } from '@/ui/domain';
 
 /** No owned quantity typed = you are never asked to field more than you have, because you have enough. */
 export const UNLIMITED = '∞';

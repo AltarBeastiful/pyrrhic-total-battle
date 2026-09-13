@@ -9,8 +9,8 @@ import { Button, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 import type { UnitDef } from '@/engine/types';
-import { GROUP_LABEL, romanTier, StatBar, unitGroupOf, UnitTile } from '@/ui/domain2';
-import { Sheet } from '@/ui/kit2';
+import { GROUP_LABEL, romanTier, StatBar, unitGroupOf, UnitTile } from '@/ui/domain';
+import { Sheet } from '@/ui/kit';
 
 import { keepInMarch, removeFromFormation, stopKeeping } from './formation';
 import { amount, duration, percent, ratio } from './format';

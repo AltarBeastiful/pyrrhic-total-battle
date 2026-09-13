@@ -13,7 +13,18 @@
  * On a desktop the recap is not here: it is in the March pane's header, above this block, with
  * Generate beside it (design rule 5 — never say the same thing twice on one screen).
  */
-import { Alert, Badge, Button, Card, Group, SimpleGrid, Stack, Text, VisuallyHidden } from '@mantine/core';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Group,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+  VisuallyHidden,
+} from '@mantine/core';
 import { Share2 } from 'lucide-react';
 import { lazy, useEffect, useId, useState } from 'react';
 
@@ -23,8 +34,8 @@ import { buildBattleLink } from '@/share/codec';
 import { newSavedStack } from '@/state/defaults';
 import type { SavedStack } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { PoolGauge } from '@/ui/domain2';
-import { Disclosure } from '@/ui/kit2';
+import { PoolGauge } from '@/ui/domain';
+import { Disclosure } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 import { copyText } from '@/ui/profile/download';
 import { initResultPersistence, resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
@@ -143,13 +154,22 @@ export function MarchSection() {
       : `March generated: ${amount(result.stacks.length)} stacks, ${amount(summary.avgDamage)} expected damage.`;
 
   return (
-    <Card component="section" id={MARCH_ANCHOR} aria-labelledby={titleId} radius="md">
+    <Card
+      component="section"
+      id={MARCH_ANCHOR}
+      aria-labelledby={titleId}
+      radius="md"
+      // In the March pane the whole pane is one surface (M-09 polish list, spike 0009's
+      // `v1-desktop.jpg`): the section brings no ground of its own there, or the answer would be a
+      // card inside a card. On one column it is the page's one raised object again.
+      {...(twoPanes ? { bg: 'transparent', p: 0, radius: 0 } : {})}
+    >
       <Stack gap="md">
         <Group justify="space-between" gap="xs">
           <Group gap="xs">
-            <Text component="h2" id={titleId} size="lg" fw={600}>
+            <Title order={2} id={titleId}>
               March
-            </Text>
+            </Title>
             {result !== null && (
               <Badge variant="light" color="gray">
                 {`${String(result.stacks.length)} stacks`}
@@ -172,12 +192,12 @@ export function MarchSection() {
         {snapshot !== null && result !== null && summary !== null && (
           <>
             {stale && (
-              <Alert color="yellow" title="Another march">
+              <Alert color="brass" title="Another march">
                 This result was generated for another profile or march. Generate again to refresh it.
               </Alert>
             )}
             {outdated && !stale && (
-              <Alert color="yellow" title="Possibly stale">
+              <Alert color="brass" title="Possibly stale">
                 Your profile has changed since this result was generated, so it may be stale. Generate again
                 to bring it up to date.
               </Alert>
@@ -192,7 +212,7 @@ export function MarchSection() {
             {/* One alert, not one per line: four stacked blocks pushed the army off the screen, and
                 every one of them said the same word. */}
             {result.warnings.length > 0 && (
-              <Alert color="yellow" title="Worth a look">
+              <Alert color="brass" title="Worth a look">
                 <Stack component="ul" gap={2} m={0} pl="md">
                   {result.warnings.map((warning) => (
                     <Text component="li" key={warning} size="sm">
@@ -203,7 +223,7 @@ export function MarchSection() {
               </Alert>
             )}
             {march.keptElsewhere.length > 0 && (
-              <Alert color="yellow" title="Kept in, but not marching">
+              <Alert color="brass" title="Kept in, but not marching">
                 {`${march.keptElsewhere
                   .map((unitId) => unitName(unitId, snapshot.request.units))
                   .join(', ')} stayed out of this march even though you keep ${

@@ -19,14 +19,30 @@ pnpm test        # run the unit tests once (pnpm test:watch to keep them running
 
 ## Other commands
 
-| Command          | What it does                                                  |
-| ---------------- | ------------------------------------------------------------- |
-| `pnpm build`     | Production build into `dist/` (relative asset paths)          |
-| `pnpm preview`   | Serve the production build locally                            |
-| `pnpm typecheck` | TypeScript, strict, no emit                                   |
-| `pnpm lint`      | ESLint                                                        |
-| `pnpm format`    | Prettier, write (`pnpm format:check` to only check)           |
-| `pnpm e2e`       | Playwright smoke tests (`pnpm exec playwright install` first) |
+| Command                   | What it does                                                          |
+| ------------------------- | --------------------------------------------------------------------- |
+| `pnpm build`              | Production build into `dist/` (relative asset paths)                  |
+| `pnpm preview`            | Serve the production build locally                                    |
+| `pnpm typecheck`          | TypeScript, strict, no emit                                           |
+| `pnpm lint`               | ESLint                                                                |
+| `pnpm format`             | Prettier, write (`pnpm format:check` to only check)                   |
+| `pnpm e2e`                | Playwright smoke tests (`pnpm exec playwright install` first)         |
+| `pnpm size`               | Bundle budgets (first load, on-demand, CSS) against the built `dist/` |
+| `pnpm contrast`           | Every contrast pair the palette promises, WCAG 2.2                    |
+| `pnpm test:visual`        | Kit-page screenshots and axe, at 390 and 1280                         |
+| `pnpm test:visual:update` | Re-baseline the kit-page screenshots after a deliberate change        |
+
+### Running one test
+
+`pnpm test` and `pnpm e2e` do not forward a path filter through the script. Call the runner
+directly instead:
+
+```sh
+pnpm vitest run src/ui/kit/ChoiceList.test.tsx   # one unit test file
+pnpm vitest run -t 'the arrows move'             # one test by name
+pnpm exec playwright test e2e/troops.spec.ts     # one e2e spec
+pnpm exec playwright test --config playwright.visual.config.ts --project phone
+```
 
 The service worker is not registered by `pnpm dev` (it would only fight hot reloading);
 start the dev server with `VITE_PWA_DEV=1 pnpm dev` to exercise it.
@@ -63,4 +79,6 @@ runtime" literally true.
 
 [AGPL-3.0-or-later](LICENSE). Game data is factual and shared under the same repository terms.
 
-Design tokens, icon rules and the wording glossary live in `docs/design.md`; sync setup in `docs/sync.md`.
+The theme — colour, type, spacing, component defaults — the glyph map and the wording glossary live
+in [`docs/design.md`](docs/design.md); the kit's contract in
+[`src/ui/kit/README.md`](src/ui/kit/README.md); sync setup in [`docs/sync.md`](docs/sync.md).

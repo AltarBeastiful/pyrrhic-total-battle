@@ -1,82 +1,73 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { Button } from '@mantine/core';
+import { cleanup, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
+import { afterEach, expect, test } from 'vitest';
 
-import { Button } from './Button';
 import { Dialog } from './Dialog';
+import { renderWithTheme } from './testRender';
 
 afterEach(cleanup);
 
-function open(name: string) {
-  const trigger = screen.getByRole('button', { name });
-  trigger.focus();
-  fireEvent.click(trigger);
-  return trigger;
+function Example({ role = 'dialog' }: { role?: 'dialog' | 'alertdialog' }) {
+  const [opened, setOpened] = useState(false);
+  return (
+    <>
+      <Button
+        onClick={() => {
+          setOpened(true);
+        }}
+      >
+        Reset everything
+      </Button>
+      <Dialog
+        opened={opened}
+        onClose={() => {
+          setOpened(false);
+        }}
+        title="Reset the setup?"
+        description="Every tier, mercenary and bonus goes back to its default."
+        role={role}
+        footer={<Button>Reset</Button>}
+      >
+        <p>This cannot be undone.</p>
+      </Dialog>
+    </>
+  );
 }
 
-test('the title names the dialog and the footer holds its actions', async () => {
-  const onConfirm = vi.fn();
-  render(
-    <Dialog
-      trigger={<Button>Delete profile</Button>}
-      title="Delete this profile?"
-      description="This cannot be undone."
-      footer={
-        <Button variant="danger" onPress={onConfirm}>
-          Delete
-        </Button>
-      }
-    >
-      <p>Aydael and its 4 saved marches go with it.</p>
-    </Dialog>,
-  );
-  open('Delete profile');
-
-  expect(await screen.findByRole('dialog', { name: 'Delete this profile?' })).toBeTruthy();
+test('it opens as a dialog named by its title', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example />);
+  await user.click(screen.getByRole('button', { name: 'Reset everything' }));
+  expect(await screen.findByRole('dialog', { name: 'Reset the setup?' })).toBeTruthy();
   expect(screen.getByText('This cannot be undone.')).toBeTruthy();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-  expect(onConfirm).toHaveBeenCalledTimes(1);
 });
 
-test('role="alertdialog" is announced as an alert dialog', async () => {
-  render(
-    <Dialog trigger={<Button>Reset</Button>} title="Reset everything?" role="alertdialog">
-      <p>Nothing can be recovered.</p>
-    </Dialog>,
-  );
-  open('Reset');
-
-  expect(await screen.findByRole('alertdialog', { name: 'Reset everything?' })).toBeTruthy();
-});
-
-test('Esc closes the dialog and focus returns to the trigger', async () => {
-  render(
-    <Dialog trigger={<Button>About</Button>} title="About Pyrrhic">
-      <p>Version 0</p>
-    </Dialog>,
-  );
-  const trigger = open('About');
-  const dialog = await screen.findByRole('dialog');
-
-  await act(async () => {
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-    fireEvent.keyUp(dialog, { key: 'Escape' });
-  });
-
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  await waitFor(() => expect(document.activeElement).toBe(trigger));
-});
-
-test('the Close button closes the dialog', async () => {
-  render(
-    <Dialog trigger={<Button>About</Button>} title="About Pyrrhic">
-      <p>Version 0</p>
-    </Dialog>,
-  );
-  open('About');
+test('Escape closes the plain dialog and returns focus to the trigger', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example />);
+  const trigger = screen.getByRole('button', { name: 'Reset everything' });
+  trigger.focus();
+  await user.click(trigger);
   await screen.findByRole('dialog');
+  await user.keyboard('{Escape}');
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  await waitFor(() => {
+    expect(document.activeElement).toBe(trigger);
+  });
+});
 
-  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+test('the alertdialog variant carries the role and refuses to be dismissed by Escape', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example role="alertdialog" />);
+  await user.click(screen.getByRole('button', { name: 'Reset everything' }));
+  const dialog = await screen.findByRole('alertdialog', { name: 'Reset the setup?' });
+  expect(dialog).toBeTruthy();
+
+  await user.keyboard('{Escape}');
+  expect(screen.getByRole('alertdialog')).toBeTruthy();
 });

@@ -1,34 +1,46 @@
-import { Badge, Disclosure } from '../../kit';
+import { Stack, Text } from '@mantine/core';
+
+import { Disclosure, DisclosureGroup, Figures } from '../../kit';
 import type { KitStory } from '../story';
 
 const story: KitStory = {
   name: 'Disclosure',
   group: 'kit',
   render: () => (
-    <div className="flex flex-col gap-3">
-      <Disclosure title="Bonuses" summary="Health +312 %, strength +198 %, special +40 %">
-        <p className="text-sm">Every bonus, one line each.</p>
+    <Stack gap="md" maw={520}>
+      <Disclosure title="Equipment" summary="+12 % attack" defaultOpened>
+        <Figures
+          items={[
+            { key: 'helmet', label: 'Helmet', value: '+4 %' },
+            { key: 'armour', label: 'Armour', value: '+5 %' },
+            { key: 'boots', label: 'Boots', value: '+3 %' },
+          ]}
+        />
       </Disclosure>
-
-      <Disclosure title="Battle story" defaultExpanded summary="6 rounds">
-        <p className="text-sm">Round one: the ladder walks tiers from the top down.</p>
-      </Disclosure>
-
-      <Disclosure
-        title={
-          <span className="flex items-center gap-2">
-            Mercenaries <Badge tone="mercenaries">4</Badge>
-          </span>
-        }
-        summary="ABM6 ×22, ABT6 ×24"
-      >
-        <p className="text-sm">A title may carry its own marks.</p>
-      </Disclosure>
-
-      <Disclosure title="Sync" isDisabled summary="Not set up on this device">
-        <p className="text-sm">Never seen while disabled.</p>
-      </Disclosure>
-    </div>
+      <DisclosureGroup
+        defaultValue="captains"
+        items={[
+          {
+            value: 'captains',
+            title: 'Captains',
+            summary: '2 of 3',
+            children: <Text size="sm">Aydae and Ardan are riding with this march.</Text>,
+          },
+          {
+            value: 'artifacts',
+            title: 'Artifacts',
+            summary: '4 equipped',
+            children: <Text size="sm">Four artifacts, none of them legendary.</Text>,
+          },
+          {
+            value: 'titles',
+            title: 'Titles',
+            summary: 'none',
+            children: <Text size="sm">No title in play.</Text>,
+          },
+        ]}
+      />
+    </Stack>
   ),
 };
 

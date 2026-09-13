@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { afterEach, expect, test } from 'vitest';
 
 import type { UnitDef } from '@/data/types';
-import { renderWithTheme } from '@/ui/kit2/testRender';
+import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { KillOrderList } from './KillOrderList';
 

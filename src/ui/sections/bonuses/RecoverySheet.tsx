@@ -9,7 +9,7 @@ import { GROUPS } from '@/data/types';
 import type { Group } from '@/data/types';
 import type { Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
-import { NumberField } from '@/ui/kit2';
+import { NumberField } from '@/ui/kit';
 
 import { GROUP_LABELS } from './labels';
 import { templeDivisor, WHERE } from './rows';

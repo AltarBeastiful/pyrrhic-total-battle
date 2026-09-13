@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
 
 import type { Profile, SavedStack } from '@/state/schema';
 import { useStore } from '@/state/store';
-import { Dialog } from '@/ui/kit2';
+import { Dialog } from '@/ui/kit';
 
 import { amount, duration, ratio } from './format';
 import { unitLabel } from './units';

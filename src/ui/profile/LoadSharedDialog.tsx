@@ -1,10 +1,12 @@
+import { Alert, Button, Group, Text } from '@mantine/core';
+
 import { version as gameData } from '@/data';
 import type { SharePayload } from '@/share/codec';
 import { cloneProfileWithNewIds, uniqueProfileName } from '@/state/defaults';
 import { useStore } from '@/state/store';
 import type { BattleSetup } from '@/state/schema';
 
-import { Banner, Button, Dialog } from '../kit';
+import { Dialog } from '../kit';
 
 export interface LoadSharedDialogProps {
   /** Decoded payload from the address bar; null when nothing is pending. */
@@ -71,58 +73,74 @@ export function LoadSharedDialog({ payload, error, onClose }: LoadSharedDialogPr
 
   return (
     <Dialog
-      isOpen={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
+      opened={open}
+      onClose={onClose}
       title={isProfile ? 'Load shared profile?' : 'Load shared march?'}
       description="This link was opened in your browser. Nothing has been changed yet."
       size="sm"
       footer={
         payload === null ? (
-          <Button onPress={onClose}>Close</Button>
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={onClose}>
+              Close
+            </Button>
+          </Group>
         ) : isProfile ? (
-          <>
-            <Button onPress={onClose}>Cancel</Button>
-            <Button onPress={replaceProfile}>Replace active profile</Button>
-            <Button variant="primary" onPress={addProfile}>
-              Add as new profile
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={onClose}>
+              Cancel
             </Button>
-          </>
+            <Button variant="default" onClick={replaceProfile}>
+              Replace active profile
+            </Button>
+            <Button onClick={addProfile}>Add as new profile</Button>
+          </Group>
         ) : (
-          <>
-            <Button onPress={onClose}>Cancel</Button>
-            <Button onPress={replaceSetup}>Replace active march</Button>
-            <Button variant="primary" onPress={addSetup}>
-              Add as new march
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={onClose}>
+              Cancel
             </Button>
-          </>
+            <Button variant="default" onClick={replaceSetup}>
+              Replace active march
+            </Button>
+            <Button onClick={addSetup}>Add as new march</Button>
+          </Group>
         )
       }
     >
-      {error !== null && <Banner tone="danger">{error}</Banner>}
+      {error !== null && (
+        <Alert color="danger" variant="light" mb="sm">
+          {error}
+        </Alert>
+      )}
       {payload?.kind === 'profile' && (
-        <p className="text-sm">
-          Profile <span className="font-medium">{payload.profile.name}</span> with{' '}
-          {String(payload.profile.setups.length)} saved march
+        <Text size="sm">
+          Profile{' '}
+          <Text span fw={500} inherit>
+            {payload.profile.name}
+          </Text>{' '}
+          with {String(payload.profile.setups.length)} saved march
           {payload.profile.setups.length === 1 ? '' : 'es'}.
-        </p>
+        </Text>
       )}
       {payload?.kind === 'battle' && (
-        <p className="text-sm">
-          March <span className="font-medium">{payload.setup.name}</span> with {String(payload.counts.length)}{' '}
-          stack{payload.counts.length === 1 ? '' : 's'}
+        <Text size="sm">
+          March{' '}
+          <Text span fw={500} inherit>
+            {payload.setup.name}
+          </Text>{' '}
+          with {String(payload.counts.length)} stack{payload.counts.length === 1 ? '' : 's'}
           {payload.summary === null
             ? ''
             : `, average damage ${Math.round(payload.summary.avgDamage).toLocaleString('en-US')}`}
           .
-        </p>
+        </Text>
       )}
       {staleData && (
-        <Banner tone="warn">
+        <Alert color="brass" variant="light" mt="sm">
           This link was made with game data version {String(payload.dataVersion)}; this build ships version{' '}
           {String(gameData.dataVersion)}. Values may have changed since.
-        </Banner>
+        </Alert>
       )}
     </Dialog>
   );

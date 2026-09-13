@@ -12,8 +12,8 @@
 import { Group, Paper, Stack, Text } from '@mantine/core';
 
 import type { BattleSummary, Pool, Stack as StackType } from '@/engine/types';
-import { DeltaText, Glyph, PoolGauge, UnitTile } from '@/ui/domain2';
-import { Figures } from '@/ui/kit2';
+import { DeltaText, Glyph, PoolGauge, UnitTile } from '@/ui/domain';
+import { Figures } from '@/ui/kit';
 
 import { keepInMarch } from './formation';
 import { amount, ratio } from './format';

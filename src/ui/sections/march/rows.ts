@@ -7,8 +7,8 @@
  */
 import { retrainOne, reviveOne } from '@/engine';
 import type { BattleSummary, Stack, StackRequest, StackResult, UnitDef } from '@/engine/types';
-import { unitGroupOf, UNIT_GROUPS } from '@/ui/domain2';
-import type { UnitGroup } from '@/ui/domain2';
+import { unitGroupOf, UNIT_GROUPS } from '@/ui/domain';
+import type { UnitGroup } from '@/ui/domain';
 
 import { amount } from './format';
 import { findUnit } from './units';

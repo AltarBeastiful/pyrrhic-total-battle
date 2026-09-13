@@ -11,7 +11,7 @@ import { useState } from 'react';
 
 import type { BattleSetup, Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
-import { Dialog } from '@/ui/kit2';
+import { Dialog } from '@/ui/kit';
 
 type SetupDialog = 'new' | 'rename' | 'delete';
 

@@ -68,21 +68,27 @@ Domain (`src/ui/domain`, on Mantine): `UnitTile` (`Paper` + `Image`/glyph + nume
 
 ## 4. Migration (strangler, one section per story, all on `development`)
 
-| # | Story | Accept when |
-|---|---|---|
-| M-01 | Provider, theme, colour-scheme sync, PostCSS, `@mantine/core/styles.css` (full; per-component later if needed), global CSS for page background and fonts; Tailwind and the RAC lint rules removed from the build (kept only where legacy files still import them, behind a lint allow-list) | app boots on Mantine with the old sections still rendering; kit page rebuilt on Mantine listing the composites; axe clean |
-| M-02 | Kit composites (§3) + domain on Mantine, with tests and kit-page stories | all composites on the kit page in both schemes at 1280 and 390 |
-| M-03 | Shell: AppBar, account menu, GenerateFab, one-page layout with the March as a sticky supporting pane (`Grid` + `position: sticky`) | frame acceptance from the design plan |
-| M-04 | Troops (one line per group like TotalStack, TierSelects + include-at chips with glyph/PNG) | D-22 |
-| M-05 | Mercenaries (PillRow + GroupedCombobox + cap popover, tier colours) | D-23 |
-| M-06 | Bonuses (TotalStack-style chips for captains, artifacts, permanent, titles; rows for equipment/other; level popover with live bonus) | D-30, D-34 |
-| M-07 | Battle (SegmentedControl, NumberFields, ChoiceLists, SwitchRows, order sheet) | D-31 |
-| M-08 | March (recap, tiles, counts table with copy and edit mode, trade-off, folded details, unit sheet) | D-40…D-43 |
-| M-09 | Retire React Aria, Tailwind, tailwind-variants/merge, the old kit/layout/domain and their lint rules; budgets 340/90/40 kB; `docs/design.md` rewritten for the theme | `pnpm size` green; no `react-aria-components`/`tailwind` in the tree |
-| M-10 | Glyphs: Unicode emoji as TotalStack uses them (⚔️ 🏹 🐴 🦅 🛡️ 🗡️ ⚙️ 💀 🏰 👹 🐾 🔥 🐉 🗿 🔒 🎯 ⏳ 🪙 🏵️ 💰 👑 ∞ 📌 ⚠️) through one `Glyph` component with accessible names; Lucide only for interface chrome; no icon assets, no licence to carry; platform emoji font (an OFL emoji subset can be bundled later if rendering differs too much across devices) | every game concept has one glyph; `react-icons` removed |
+| # | Story | Status | Accept when |
+|---|---|---|---|
+| M-01 | Provider, theme, colour-scheme sync, PostCSS, `@mantine/core/styles.css` (full; per-component later if needed), global CSS for page background and fonts; Tailwind and the RAC lint rules removed from the build (kept only where legacy files still import them, behind a lint allow-list) | **done** | app boots on Mantine with the old sections still rendering; kit page rebuilt on Mantine listing the composites; axe clean |
+| M-02 | Kit composites (§3) + domain on Mantine, with tests and kit-page stories | **done** | all composites on the kit page in both schemes at 1280 and 390 |
+| M-03 | Shell: AppBar, account menu, GenerateFab, one-page layout with the March as a sticky supporting pane (`Grid` + `position: sticky`) | **done** | frame acceptance from the design plan |
+| M-04 | Troops (one line per group like TotalStack, TierSelects + include-at chips with glyph/PNG) | **done** | D-22 |
+| M-05 | Mercenaries (PillRow + GroupedCombobox + cap popover, tier colours) | **done** | D-23 |
+| M-06 | Bonuses (TotalStack-style chips for captains, artifacts, permanent, titles; rows for equipment/other; level popover with live bonus) | **done** | D-30, D-34 |
+| M-07 | Battle (SegmentedControl, NumberFields, ChoiceLists, SwitchRows, order sheet) | **done** | D-31 |
+| M-08 | March (recap, tiles, counts table with copy and edit mode, trade-off, folded details, unit sheet) | **done** | D-40…D-43 |
+| M-09 | Retire React Aria, Tailwind, tailwind-variants/merge, the old kit/layout/domain and their lint rules; budgets 340/90/40 kB; `docs/design.md` rewritten for the theme | **done** | `pnpm size` green; no `react-aria-components`/`tailwind` in the tree |
+| M-10 | Glyphs: Unicode emoji as TotalStack uses them (⚔️ 🏹 🐴 🦅 🛡️ 🗡️ ⚙️ 💀 🏰 👹 🐾 🔥 🐉 🗿 🔒 🎯 ⏳ 🪙 🏵️ 💰 👑 ∞ 📌 ⚠️) through one `Glyph` component with accessible names; Lucide only for interface chrome; no icon assets, no licence to carry; platform emoji font (an OFL emoji subset can be bundled later if rendering differs too much across devices) | **done** | every game concept has one glyph; `react-icons` removed |
 
 Order: M-01 → M-02 → (M-03, M-04, M-05, M-06, M-07, M-08 in parallel, disjoint folders) → M-09 → M-10 as
 soon as assets are chosen (can run alongside M-04…M-08).
+
+**All ten are done (2026-09-13).** M-10 landed with M-02 rather than after it: there are no icon assets at
+all, so the Glyph component *is* the story. M-09 also took the five dialogs the migration had left on the old
+kit (About, Import, Load shared, Sync, Conflict), renamed `kit2`/`domain2`/`stories2` to their final names,
+split the generated palette out of `theme.ts` into `src/ui/palette.ts` so `pnpm contrast` can import it under
+plain Node, and worked the polish list below.
 
 ## 5. Comparison with an external Mantine assessment of TotalStack's UI (2026-09-13)
 
@@ -113,24 +119,27 @@ disclosure as the differentiator** — Bonuses opens on the TOTAL line only, cap
 and groups with nothing configured collapse to one "Add …" line (story D-35); **open source hygiene** —
 we mirror generic patterns only; palette, wording, logo and copy are ours (design direction, glossary).
 
-## 6. Polish list for M-09 (collected during the migration, 2026-09-13)
+## 6. Polish list for M-09 (collected during the migration, 2026-09-13) — **all done**
 
-- Section titles: Troops renders smaller than Mercenaries/Battle — one `Title order={2}` size from the
-  theme (`headings.sizes.h2`), sections must not set their own.
-- Page margins: `Container px="md"` gives 12 px in the compressed scale; Material asks 16 px at compact
-  and 24 px from medium — set `Container` padding explicitly and align the kit2 `AppBar` with it.
-- The March pane: recap + Generate sit on the page ground above the March card; decide one surface for the
-  whole pane (the spike drew a single card).
-- Recap sheet on phones: the bar's Generate stays clickable outside the sheet's focus trap — either include
-  the bar in the trap or hide the bar while the sheet is open.
-- `ActionIcon` default `size="xs"` (18 px) is below the 24 px target minimum; composites set their own — add a
-  theme default of `sm` and check the corner gear.
-- kit2 `ChipRow` live region now collapses while silent (done); `ChoiceList` stacks only — the Battle worker
-  built `ChoiceCards` (grid) locally; promote it to kit2 and drop the duplicate.
-- `pnpm test --` / `pnpm e2e --` do not forward path filters; document `pnpm vitest run <path>` and
-  `pnpm exec playwright test <spec>` in the README.
-- Remove Tailwind (`@tailwindcss/vite`, `@theme` block, `tailwind-variants`, `tailwind-merge`,
-  `tailwindcss-react-aria-components`), `react-aria-components`, `lucide-react` only where emoji replaced
-  it (keep for chrome), `react-icons` (Game Icons no longer used), the old `src/ui/{kit,layout,domain}`,
-  `src/ui/kitpage/stories`, the custom Tailwind lint rules; rename `kit2`→`kit`, `domain2`→`domain`,
-  `stories2`→`stories`; rewrite `docs/design.md` for the theme; regenerate visual baselines; `pnpm size`.
+- ~~Section titles: Troops renders smaller than Mercenaries/Battle~~ — `headings.sizes` is written out in the
+  theme over the design's four text steps (`h2` = 21 px) and no section sets a `size`; the March's own `Text
+  component="h2"` became a `Title order={2}` with it.
+- ~~Page margins~~ — one variable, `--pyr-page-margin` (16 px compact / 24 px from 600 px, `global.css`), read
+  by `Container`'s theme default, the top app bar and the bottom app bar, so all three start on one line.
+- ~~The March pane~~ — one `Paper radius="md" p="md"` around the recap, Generate and the March; `MarchSection`
+  drops its own card at that width, so the pane is one object as `v1-desktop.jpg` drew it.
+- ~~Recap sheet on phones~~ — the sheet's `zIndex` now puts it *over* the bottom bar rather than under it, so
+  the scrim covers the bar and the trap holds; the sheet carries its own Generate, so the answer and the
+  action still travel together.
+- ~~`ActionIcon` default `size="xs"`~~ — the theme default is `sm` (26 px). `CornerGear` is unaffected: it
+  asks for its own 18 px, because it is a badge on a chip and not a row control.
+- ~~`ChoiceList` stacks only / the Battle worker's local `ChoiceCards`~~ — one composite with
+  `layout: 'list' | 'cards'`, plus `columns` and `collapsible` for the grid; `src/ui/sections/battle/
+  ChoiceCards.tsx` is deleted and the kit story shows both layouts.
+- ~~`pnpm test --` / `pnpm e2e --` do not forward path filters~~ — the README has a "Running one test"
+  section, and the command table now lists `size`, `contrast` and the two visual scripts.
+- ~~Remove Tailwind and React Aria~~ — eight packages gone (`@tailwindcss/vite`, `tailwindcss`,
+  `prettier-plugin-tailwindcss`, `tailwind-variants`, `tailwind-merge`, `tailwindcss-react-aria-components`,
+  `react-aria-components`, `react-icons`); `src/index.css`, `src/ui/{kit,layout,domain,icons}`,
+  `src/ui/kitpage/{stories,themeMirror.ts}` and the `eslint/` rule folder deleted; `kit2`/`domain2`/`stories2`
+  renamed; `docs/design.md` §1–§6 rewritten for the theme; visual baselines regenerated.

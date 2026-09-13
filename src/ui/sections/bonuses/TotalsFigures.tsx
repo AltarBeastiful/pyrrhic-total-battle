@@ -12,7 +12,7 @@
  */
 import { Box } from '@mantine/core';
 
-import { Figures } from '@/ui/kit2';
+import { Figures } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
 import { formatPercent } from './labels';

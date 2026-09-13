@@ -6,7 +6,7 @@
  * Its header is the whole reason frame V1 won: the recap figures and the primary Generate travel
  * together, at the top of the pane, above the march itself.
  */
-import { Box, Stack } from '@mantine/core';
+import { Box, Paper, Stack } from '@mantine/core';
 
 import { MarchGenerateButton, MarchRecap, MarchSection } from '@/ui/sections/march';
 
@@ -17,13 +17,16 @@ export function MarchPane() {
     // Unnamed on purpose: the March section inside carries the name, and two landmarks called
     // "March" would be one too many.
     <Box component="aside" className={classes.pane}>
-      {/* No surface of its own: the March components bring theirs, and a card around a card is the
-          "mismatch of CSS" design rule 23 exists to stop. */}
-      <Stack gap="md">
-        <MarchRecap variant="pane" />
-        <MarchGenerateButton fullWidth />
-        <MarchSection />
-      </Stack>
+      {/* One surface for the whole pane, as the spike drew it (investigation 0009,
+          `v1-desktop.jpg`): the recap, Generate and the March are one object, not three floating
+          blocks on the page ground. `MarchSection` drops its own card at this width. */}
+      <Paper radius="md" p="md" bg="var(--mantine-color-default)">
+        <Stack gap="md">
+          <MarchRecap variant="pane" />
+          <MarchGenerateButton fullWidth />
+          <MarchSection />
+        </Stack>
+      </Paper>
     </Box>
   );
 }

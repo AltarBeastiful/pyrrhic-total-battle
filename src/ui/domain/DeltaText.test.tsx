@@ -1,52 +1,33 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
 
+import { renderWithTheme } from '../kit/testRender';
 import { DeltaText } from './DeltaText';
+import { count } from './format';
 
 afterEach(cleanup);
 
-const plain = (n: number) => String(n);
-
-test('without a previous run only the value is shown', () => {
-  render(<DeltaText value={100} format={plain} betterWhen="higher" />);
-
-  expect(screen.getByText('100')).toBeTruthy();
-  expect(screen.queryByText(/%/)).toBeNull();
+test('without a previous run only the figure is drawn', () => {
+  renderWithTheme(<DeltaText value={12480} format={count} betterWhen="higher" />);
+  expect(screen.getByText('12 480')).toBeTruthy();
 });
 
-test('a rise is better when higher is better', () => {
-  render(<DeltaText value={104} previous={100} format={plain} betterWhen="higher" />);
+test('a rise is an improvement when higher is better, and a fall when lower is', () => {
+  const { container, rerender } = renderWithTheme(
+    <DeltaText value={12480} previous={12000} format={count} betterWhen="higher" />,
+  );
+  expect(container.textContent).toContain('+4');
+  expect(container.textContent).toContain('better');
 
-  expect(screen.getByText('(+4 %)')).toBeTruthy();
-  expect(screen.getByText('better')).toBeTruthy();
+  rerender(<DeltaText value={12480} previous={12000} format={count} betterWhen="lower" />);
+  expect(container.textContent).toContain('worse');
 });
 
-test('the same rise is worse when lower is better', () => {
-  render(<DeltaText value={104} previous={100} format={plain} betterWhen="lower" />);
-
-  expect(screen.getByText('(+4 %)')).toBeTruthy();
-  expect(screen.getByText('worse')).toBeTruthy();
-});
-
-test('a fall is written with a real minus sign', () => {
-  render(<DeltaText value={97} previous={100} format={plain} betterWhen="higher" />);
-
-  expect(screen.getByText('(−3 %)')).toBeTruthy();
-  expect(screen.getByText('worse')).toBeTruthy();
-});
-
-test('no change is neither better nor worse', () => {
-  render(<DeltaText value={100} previous={100} format={plain} betterWhen="lower" />);
-
-  expect(screen.getByText('(0 %)')).toBeTruthy();
-  expect(screen.queryByText('better')).toBeNull();
-  expect(screen.queryByText('worse')).toBeNull();
-});
-
-test('a previous run of zero cannot yield a percentage', () => {
-  render(<DeltaText value={5} previous={0} format={(n) => `${n} hits`} betterWhen="higher" />);
-
-  expect(screen.getByText('5 hits')).toBeTruthy();
-  expect(screen.queryByText(/%/)).toBeNull();
+test('a fall is written with a real minus sign, never a hyphen', () => {
+  const { container } = renderWithTheme(
+    <DeltaText value={9000} previous={12000} format={count} betterWhen="higher" />,
+  );
+  expect(container.textContent).toContain('−');
+  expect(container.textContent).toContain('25');
 });

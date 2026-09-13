@@ -9,12 +9,14 @@
  * when it arrives, so a line of text under the button it came from would only be a flash — while a
  * surface that appears *inside* a card reserves its own height, so the card never jumps.
  */
+import { Text } from '@mantine/core';
 import { Suspense, useState } from 'react';
 import type { ReactNode } from 'react';
 
+/** Room held while the chunk arrives, in the theme's own units. */
 const RESERVE = {
-  row: 'min-h-9',
-  panel: 'min-h-40',
+  row: '2.25rem',
+  panel: '10rem',
 } as const;
 
 export interface LazySurfaceProps {
@@ -35,9 +37,15 @@ export function LazySurface({ isOpen, reserve, children }: LazySurfaceProps) {
     <Suspense
       fallback={
         reserve === undefined ? null : (
-          <p role="status" className={`text-muted flex items-center text-sm ${RESERVE[reserve]}`}>
+          <Text
+            component="p"
+            role="status"
+            size="sm"
+            c="dimmed"
+            style={{ display: 'flex', alignItems: 'center', minHeight: RESERVE[reserve] }}
+          >
             Loading…
-          </p>
+          </Text>
         )
       }
     >

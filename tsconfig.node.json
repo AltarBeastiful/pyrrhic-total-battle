@@ -15,6 +15,7 @@
     "tools",
     "src/data/types.ts",
     "src/data/schema.ts",
-    "src/pwa/precache.ts"
+    "src/pwa/precache.ts",
+    "src/ui/palette.ts"
   ]
 }

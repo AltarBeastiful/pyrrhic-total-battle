@@ -23,7 +23,7 @@ import { mintSourceId, toggleActiveSource, updateSources } from '@/state/actions
 import { setActiveFlag } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Disclosure } from '@/ui/kit2';
+import { Disclosure } from '@/ui/kit';
 
 import { ArtifactChips } from './ArtifactChips';
 import { CaptainChips } from './CaptainChips';
@@ -260,7 +260,7 @@ export function BonusesSection() {
     <Box component="section" id="bonuses" aria-labelledby={titleId} py="md">
       <Stack gap="sm">
         <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
-          <Title order={2} size="h4" id={titleId}>
+          <Title order={2} id={titleId}>
             Bonuses
           </Title>
           {summary.empty > 0 && (

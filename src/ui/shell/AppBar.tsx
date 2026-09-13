@@ -9,7 +9,7 @@
  */
 import { Box, Text, Title } from '@mantine/core';
 
-import { AppBar as BarSurface } from '../kit2';
+import { AppBar as BarSurface } from '../kit';
 import { AccountMenu } from './AccountMenu';
 import classes from './shell.module.css';
 
@@ -30,7 +30,7 @@ export function AppBar() {
       brand={
         <>
           <BrandMark />
-          <Title order={1} size="h5">
+          <Title order={1} size="h4">
             Pyrrhic
           </Title>
         </>

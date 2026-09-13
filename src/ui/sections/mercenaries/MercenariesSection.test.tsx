@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { renderWithTheme } from '@/ui/kit2/testRender';
+import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { MercenariesSection } from './MercenariesSection';
 

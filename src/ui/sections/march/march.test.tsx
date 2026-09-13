@@ -15,7 +15,7 @@ import { unitById } from '@/data';
 import type { UnitDef } from '@/engine/types';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { renderWithTheme } from '@/ui/kit2/testRender';
+import { renderWithTheme } from '@/ui/kit/testRender';
 import { LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
 import type * as WorkerClient from '@/worker/client';
 

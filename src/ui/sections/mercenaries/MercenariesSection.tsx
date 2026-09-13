@@ -29,9 +29,9 @@ import { lazy, useId, useMemo, useState } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Glyph, romanTier, TierBadge } from '@/ui/domain2';
-import { GroupedCombobox, NumberField, PillRow } from '@/ui/kit2';
-import type { ComboboxGroup, PillRowItem } from '@/ui/kit2';
+import { Glyph, romanTier, TierBadge } from '@/ui/domain';
+import { GroupedCombobox, NumberField, PillRow } from '@/ui/kit';
+import type { ComboboxGroup, PillRowItem } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 
 import { capSpoken, capText, mercGlyph, offerGroups, ownedRows, shortCode } from './rows';
@@ -150,7 +150,7 @@ export function MercenariesSection() {
       <Stack gap="sm">
         <Group justify="space-between" align="center" gap="xs" wrap="nowrap">
           <Group gap="xs" align="baseline" wrap="nowrap">
-            <Title order={2} size="lg" id={titleId}>
+            <Title order={2} id={titleId}>
               Mercenaries
             </Title>
             {owned.length > 0 && (

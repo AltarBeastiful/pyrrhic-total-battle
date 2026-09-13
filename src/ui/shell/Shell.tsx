@@ -16,7 +16,7 @@ import { Container, Divider, Drawer, Grid, Stack, Text } from '@mantine/core';
 import { Fragment, lazy, useEffect, useState } from 'react';
 
 import { selectTheme, useStore } from '@/state/store';
-import { MarchRecap, MarchSection } from '@/ui/sections/march';
+import { MarchGenerateButton, MarchRecap, MarchSection } from '@/ui/sections/march';
 
 import { LazySurface } from '../lazy';
 import { SECTIONS } from '../sections';
@@ -118,8 +118,11 @@ export function Shell() {
               setRecapOpen(true);
             }}
           />
-          {/* Half height, from the bottom: the figures and the first tiles, with the bar still
-              under it so Generate is never taken away (investigation 0009, "to decide" 3). */}
+          {/* Half height, from the bottom: the figures and the first tiles. The sheet sits *over*
+              the bottom bar rather than under it (M-09 polish list): a control outside a focus trap
+              that the pointer can still reach is a trap that does not hold, so the bar goes under
+              the scrim and the sheet carries its own Generate — the answer and the action still
+              travel together (investigation 0009, "to decide" 3). */}
           <Drawer
             opened={recapOpen}
             onClose={() => {
@@ -129,10 +132,14 @@ export function Shell() {
             size="60%"
             radius="md"
             padding="md"
+            zIndex={300}
             title="March"
             closeButtonProps={{ 'aria-label': 'Close' }}
           >
-            <MarchRecap variant="sheet" />
+            <Stack gap="md">
+              <MarchRecap variant="sheet" />
+              <MarchGenerateButton fullWidth />
+            </Stack>
           </Drawer>
         </>
       )}

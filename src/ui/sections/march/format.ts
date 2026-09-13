@@ -3,11 +3,11 @@
  * whole numbers grouped in threes, ratios with two decimals while they are small, durations written
  * the way a training queue writes them ("5d 23h").
  *
- * The grouping itself is `domain2`'s and not a second opinion: the number fields put a space every
+ * The grouping itself is `domain`'s and not a second opinion: the number fields put a space every
  * three digits (`thousandSeparator: ' '` in the theme), so every read-only figure beside them has to
  * do the same — a comma here and a space there reads as two different numbers.
  */
-import { count } from '@/ui/domain2';
+import { count } from '@/ui/domain';
 
 /** A whole number: unit counts, damage, silver, gold, dragon coins. */
 export function amount(value: number): string {

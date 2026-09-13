@@ -6,7 +6,14 @@
  */
 import { expect, test } from '@playwright/test';
 
-import { generate, openApp, pageOverflowsSideways, stackLabels, stackPills, watchConsole } from './helpers';
+import {
+  generate,
+  marchStackLabels,
+  marchTiles,
+  openApp,
+  pageOverflowsSideways,
+  watchConsole,
+} from './helpers';
 
 test('a tier range and one chip decide what the march fields', async ({ page }) => {
   const problems = watchConsole(page);

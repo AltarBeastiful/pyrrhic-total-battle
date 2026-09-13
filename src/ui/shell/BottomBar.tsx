@@ -20,7 +20,7 @@ export interface BottomBarProps {
 
 export function BottomBar({ onOpenRecap }: BottomBarProps) {
   return (
-    <Paper component="div" radius={0} px="sm" bg="var(--mantine-color-default)" className={classes.bottomBar}>
+    <Paper component="div" radius={0} bg="var(--mantine-color-default)" className={classes.bottomBar}>
       <UnstyledButton
         className={classes.tapRow}
         style={{ flex: '1 1 auto' }}

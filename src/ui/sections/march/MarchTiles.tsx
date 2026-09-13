@@ -13,7 +13,7 @@
 import { Group, Stack, Text, UnstyledButton } from '@mantine/core';
 
 import type { UnitDef } from '@/engine/types';
-import { GROUP_LABEL, GroupMarker, UnitTile } from '@/ui/domain2';
+import { GROUP_LABEL, GroupMarker, UnitTile } from '@/ui/domain';
 
 import { keepInMarch, removeFromFormation } from './formation';
 import { amount } from './format';

@@ -11,7 +11,7 @@ import { Copy } from 'lucide-react';
 import { useState } from 'react';
 
 import type { BattleSummary, StackRequest } from '@/engine/types';
-import { Disclosure } from '@/ui/kit2';
+import { Disclosure } from '@/ui/kit';
 import { copyText } from '@/ui/profile/download';
 
 import { amount } from './format';

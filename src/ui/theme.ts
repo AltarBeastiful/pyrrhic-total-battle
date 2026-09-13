@@ -21,7 +21,13 @@ import {
 
 import type { Theme } from '@/state/schema';
 
+import { COLORS, FILLED_SHADE, inkOn, PAPER, PITCH, SEEDS, SLATE, SURFACE } from './palette';
 import classes from './theme.module.css';
+
+// The palette is a module of its own so `pnpm contrast` can import it under plain Node; everything
+// the app reads by name still comes from here.
+export { contrastPairs, inkOn, ramp, SEEDS } from './palette';
+export type { ContrastPair, PyrColorName } from './palette';
 
 // ---- the app's own attribute -------------------------------------------------------------------
 
@@ -66,212 +72,14 @@ export function watchSystemTheme(currentTheme: () => Theme): () => void {
   };
 }
 
-// ---- colour, generated ---------------------------------------------------------------------
+// ---- the ramps, as Mantine wants them ----------------------------------------------------------
 
-/**
- * Mantine wants ten steps per colour and we own one hue per role, so every ramp is *generated*: the
- * seed's hue and saturation are kept and the step is found by **relative luminance**, not by HSL
- * lightness. That distinction is the whole point. A green and a violet at the same HSL lightness are
- * nowhere near the same contrast, so a lightness ladder would ship a guardsmen ink at 3.5:1 and a
- * monsters ink at 8:1 — the opposite of `docs/design.md` §1 ("the five `strong` inks sit in one
- * narrow lightness band, so no group shouts louder than another"). Targeting luminance puts every
- * hue's shade 7 at the same distance from a light sheet and every hue's shade 5 at the same distance
- * from a dark one. Index 7 is the ink a light page reads (`primaryShade.light`), index 5 the ink a
- * dark page reads (`primaryShade.dark`); `docs/design.md` §1 records the seeds, `ramp` the rest.
- */
-const LUMINANCE = [0.9, 0.8, 0.66, 0.52, 0.44, 0.36, 0.23, 0.1, 0.055, 0.03] as const;
-/** Saturation eased off at the pale end, so shade 0 is a wash rather than a sweet. */
-const SATURATION = [0.55, 0.62, 0.72, 0.82, 0.92, 1, 1, 1, 0.96, 0.9] as const;
+/** `palette.ts` returns plain arrays; Mantine wants its ten-tuple. Same ten strings either way. */
+const tuple = (shades: readonly string[]): MantineColorsTuple => shades as unknown as MantineColorsTuple;
 
-function hexToRgb(hex: string): [number, number, number] {
-  const value = Number.parseInt(hex.replace('#', ''), 16);
-  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
-}
-
-function rgbToHex(rgb: readonly [number, number, number]): string {
-  return `#${rgb
-    .map((c) =>
-      Math.round(Math.min(255, Math.max(0, c)))
-        .toString(16)
-        .padStart(2, '0'),
-    )
-    .join('')}`;
-}
-
-/** Hue in turns (0–1), saturation and lightness in 0–1. */
-function rgbToHsl(rgb: readonly [number, number, number]): { h: number; s: number; l: number } {
-  const [r, g, b] = [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255];
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  const d = max - min;
-  if (d === 0) return { h: 0, s: 0, l };
-  const s = d / (1 - Math.abs(2 * l - 1));
-  const h =
-    max === r
-      ? ((g - b) / d + (g < b ? 6 : 0)) / 6
-      : max === g
-        ? ((b - r) / d + 2) / 6
-        : ((r - g) / d + 4) / 6;
-  return { h, s, l };
-}
-
-function hslToRgb(h: number, s: number, l: number): [number, number, number] {
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h * 6) % 2) - 1));
-  const m = l - c / 2;
-  const sector = Math.floor(h * 6) % 6;
-  const table: readonly (readonly [number, number, number])[] = [
-    [c, x, 0],
-    [x, c, 0],
-    [0, c, x],
-    [0, x, c],
-    [x, 0, c],
-    [c, 0, x],
-  ];
-  const [r, g, b] = table[sector] ?? table[0]!;
-  return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
-}
-
-/** WCAG 2.2 relative luminance of an `#rrggbb` colour. */
-function luminance(hex: string): number {
-  const channels = hexToRgb(hex).map((c) => {
-    const v = c / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  }) as [number, number, number];
-  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-}
-
-/**
- * The lightness at which this hue and saturation reach `target` luminance. Luminance rises
- * monotonically with HSL lightness, so twenty bisections land within half a 0–255 step; a hue that
- * cannot reach the target (a saturated red asked for 0.9) converges on the closest it can.
- */
-function lightnessFor(h: number, s: number, target: number): number {
-  let low = 0;
-  let high = 1;
-  for (let i = 0; i < 20; i += 1) {
-    const mid = (low + high) / 2;
-    if (luminance(rgbToHex(hslToRgb(h, s, mid))) < target) low = mid;
-    else high = mid;
-  }
-  return (low + high) / 2;
-}
-
-/** Ten shades from one seed, lightest first — Mantine's own order. Pure; tested in `theme.test.ts`. */
-export function ramp(seedHex: string): MantineColorsTuple {
-  const { h, s } = rgbToHsl(hexToRgb(seedHex));
-  return LUMINANCE.map((target, index) => {
-    const saturation = Math.min(1, s * (SATURATION[index] ?? 1));
-    return rgbToHex(hslToRgb(h, saturation, lightnessFor(h, saturation, target)));
-  }) as unknown as MantineColorsTuple;
-}
-
-function contrastRatio(a: string, b: string): number {
-  const [light, dark] = luminance(a) > luminance(b) ? [a, b] : [b, a];
-  return (luminance(light) + 0.05) / (luminance(dark) + 0.05);
-}
-
-/**
- * Which of our two inks reads on a filled ground. Mantine's own `autoContrast` decides with a
- * luminance threshold *and* computes it from the light scheme's shade whichever scheme is showing
- * (friction 2 of investigation 0007: a filled button shipped at 1.34:1). Comparing the two ratios
- * per scheme is both correct and scheme-aware, and `variantColorResolver` below feeds it back in.
- */
-export function inkOn(background: string): string {
-  return contrastRatio(background, PITCH) >= contrastRatio(background, PAPER) ? PITCH : PAPER;
-}
-
-// ---- the seeds ---------------------------------------------------------------------------------
-
-const PITCH = '#131917'; // the design's darkest ink
-const PAPER = '#fafbfa'; // the design's lightest surface
-
-/**
- * One seed per role (`docs/design.md` §1). The accent is a **hue** and not a metal (ADR-0008): a
- * restrained brass from the game's trim, so filled buttons and `autoContrast` work as designed.
- */
-export const SEEDS = {
-  brass: '#c9a24a',
-  guardsmen: '#256b35',
-  specialists: '#25568a',
-  engineers: '#6f5417',
-  monsters: '#5b368a',
-  mercenaries: '#8c3030',
-  // The one state that keeps a hue (docs/design.md §1). Registered as Mantine's `red` as well, so
-  // a stock `color="red"` — a danger menu item, a pool over capacity — lands on our ramp and clears
-  // 4.5:1 like everything else rather than on Mantine's own red, which does not.
-  danger: '#a32c1f',
-  tier5: '#71530f',
-  tier6: '#8e2f2f',
-  tier7: '#5c3a8e',
-  tier8: '#1b625c',
-  tier9: '#645831',
-} as const;
-
-export type PyrColorName = keyof typeof SEEDS | 'slate';
-
-/**
- * The neutral scale, written out rather than generated: its extremes are the design's own surfaces
- * (Paper → the dark well) and the six named greys have to land on the indices Mantine paints with.
- * Registered as `dark` as well, because that is the scale Mantine's dark scheme reads.
- */
-const SLATE = [
-  PAPER, //     0  Paper      the light sheet, and dark-scheme text
-  '#ecefec', // 1  Limewash   the light page
-  '#dee3df', // 2  Stone      a light block
-  '#9da7a3', // 3  Ash        the dark scheme's muted ink
-  '#6e7873', // 4  the light scheme's field border
-  '#343d3b', // 5  the dark scheme's raised control ground (an unchecked chip sits here): dark
-  //                enough that a dimmed second line on it still clears 4.5:1
-  '#2b3231', // 6  Anvil      a dark block
-  '#1e2423', // 7  Forge      the dark sheet
-  '#161a19', // 8  Slate      the dark page
-  '#101413', // 9  the dark well
-] as unknown as MantineColorsTuple;
-
-const COLORS: Record<PyrColorName, MantineColorsTuple> = {
-  brass: ramp(SEEDS.brass),
-  guardsmen: ramp(SEEDS.guardsmen),
-  specialists: ramp(SEEDS.specialists),
-  engineers: ramp(SEEDS.engineers),
-  monsters: ramp(SEEDS.monsters),
-  mercenaries: ramp(SEEDS.mercenaries),
-  tier5: ramp(SEEDS.tier5),
-  tier6: ramp(SEEDS.tier6),
-  tier7: ramp(SEEDS.tier7),
-  tier8: ramp(SEEDS.tier8),
-  tier9: ramp(SEEDS.tier9),
-  danger: ramp(SEEDS.danger),
-  slate: SLATE,
-};
-
-/** The shade each scheme fills with; `primaryShade` below says the same thing to Mantine. */
-const FILLED_SHADE = { light: 7, dark: 5 } as const;
-
-/** The app's surfaces, verbatim from `docs/design.md` §1. */
-const SURFACE = {
-  light: {
-    page: '#ecefec',
-    sheet: PAPER,
-    raised: '#dee3df',
-    sunken: '#d5dbd7',
-    ink: PITCH,
-    muted: '#515a56',
-    hairline: '#cfd5d1',
-    field: '#6e7873',
-  },
-  dark: {
-    page: '#161a19',
-    sheet: '#1e2423',
-    raised: '#2b3231',
-    sunken: '#101413',
-    ink: '#e7ece9',
-    muted: '#9da7a3',
-    hairline: '#313938',
-    field: '#78837f',
-  },
-} as const;
+const RAMPS: Record<string, MantineColorsTuple> = Object.fromEntries(
+  Object.entries(COLORS).map(([name, shades]) => [name, tuple(shades)]),
+);
 
 const INTER =
   "'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -288,7 +96,7 @@ const variantColorResolver: VariantColorsResolver = (input) => {
   const resolved = defaultVariantColorsResolver(input);
   if (input.variant !== 'filled') return resolved;
   const [name, shade] = (input.color ?? input.theme.primaryColor).split('.');
-  if (shade !== undefined || name === undefined || !(name in COLORS)) return resolved;
+  if (shade !== undefined || name === undefined || !(name in RAMPS)) return resolved;
   return { ...resolved, color: `var(--pyr-on-${name})` };
 };
 
@@ -300,12 +108,29 @@ export const theme: MantineThemeOverride = createTheme({
   variantColorResolver,
   white: PAPER,
   black: PITCH,
-  colors: { ...COLORS, dark: SLATE, red: COLORS.danger },
+  // Mantine's own `red` and `yellow` are what a stock `color=` reaches for, and neither clears
+  // 4.5:1 on our sheets — its yellow alert label ships at 2.68:1. Both are pointed at a ramp of
+  // ours, so a stray stock colour still lands somewhere `pnpm contrast` has checked.
+  colors: { ...RAMPS, dark: tuple(SLATE), red: tuple(COLORS.danger), yellow: tuple(COLORS.brass) },
 
   fontFamily: INTER,
   fontFamilyMonospace: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
   // Inter titles everything (D-19); Fraunces sets numerals only, through the `numeral` Text variant.
-  headings: { fontFamily: INTER, fontWeight: '600' },
+  // The sizes are the design's four text steps and nothing else — Mantine's own ramp walks through
+  // 14, 18 and 20 px, which `docs/design.md` §3 does not have. `h2` is *the* section title: every
+  // section renders `Title order={2}` with no size of its own (M-09 polish list).
+  headings: {
+    fontFamily: INTER,
+    fontWeight: '600',
+    sizes: {
+      h1: { fontSize: '1.5rem', lineHeight: '2rem' },
+      h2: { fontSize: '1.3125rem', lineHeight: '1.75rem' },
+      h3: { fontSize: '1rem', lineHeight: '1.5rem' },
+      h4: { fontSize: '1rem', lineHeight: '1.5rem' },
+      h5: { fontSize: '0.8125rem', lineHeight: '1.125rem' },
+      h6: { fontSize: '0.8125rem', lineHeight: '1.125rem' },
+    },
+  },
   // The scale of `docs/design.md` §3: 13 label · 16 body · 21 title · 24 count.
   fontSizes: { xs: '0.8125rem', sm: '0.8125rem', md: '1rem', lg: '1.3125rem', xl: '1.5rem' },
 
@@ -341,7 +166,9 @@ export const theme: MantineThemeOverride = createTheme({
       },
     },
     NativeSelect: { defaultProps: { size: 'xs' } },
-    ActionIcon: { defaultProps: { size: 'xs' } },
+    // `xs` is 18 px, below the 24 px target minimum Material asks for; `sm` is 26 px. The corner
+    // gear asks for its own 18 px explicitly, because it is a badge on a chip, not a row control.
+    ActionIcon: { defaultProps: { size: 'sm' } },
     Badge: { defaultProps: { size: 'xs' } },
     Chip: {
       defaultProps: { size: 'xs', variant: 'light', radius: 'sm' },
@@ -365,6 +192,12 @@ export const theme: MantineThemeOverride = createTheme({
     Drawer: { defaultProps: { radius: 'md' } },
     Card: { defaultProps: { withBorder: false, padding: 'md', radius: 'md' } },
     Paper: { defaultProps: { radius: 'sm' } },
+    // Material's page margins: 16 px in a compact window, 24 px from medium (600 px) up. Mantine's
+    // own `md` padding is 12 px in our compressed scale, which is a phone margin on a desktop. The
+    // variable is switched by one media query in `global.css`, and a style prop rather than a class
+    // so it wins over Mantine's own padding without a specificity fight; the app bar and the bottom
+    // bar read the same variable, so the brand, the sections and Generate all start on one line.
+    Container: { defaultProps: { px: 'var(--pyr-page-margin)' } },
   },
 });
 
@@ -376,7 +209,7 @@ export const theme: MantineThemeOverride = createTheme({
 export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
   const ink = (scheme: 'light' | 'dark'): Record<string, string> =>
     Object.fromEntries(
-      Object.keys(COLORS).map((name) => [
+      Object.keys(RAMPS).map((name) => [
         `--pyr-on-${name}`,
         inkOn(mantineTheme.colors[name]?.[FILLED_SHADE[scheme]] ?? SEEDS.brass),
       ]),

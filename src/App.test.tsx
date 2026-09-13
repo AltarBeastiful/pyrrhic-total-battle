@@ -6,7 +6,7 @@ import { App } from '@/App';
 import { version as gameData } from '@/data';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
-import { ThemeHarness } from '@/ui/kit2/testRender';
+import { ThemeHarness } from '@/ui/kit/testRender';
 import { SECTIONS } from '@/ui/sections';
 
 // The first render compiles the whole application (every section); under full-suite load it can
@@ -39,7 +39,7 @@ test('renders the brand and the account menu', async () => {
   const menu = await openAccountMenu();
   expect(within(menu).getByRole('menuitem', { name: /^New profile/ })).toBeTruthy();
 
-  // The switcher is the rows under its own heading (kit2's `AppMenu` writes a menu label, which is
+  // The switcher is the rows under its own heading (kit's `AppMenu` writes a menu label, which is
   // what a menu says "these belong together" with).
   const switcher = within(menu).getByText('Switch profile').parentElement;
   if (switcher === null) throw new Error('the switcher lost its heading');

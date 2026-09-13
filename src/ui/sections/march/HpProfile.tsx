@@ -12,7 +12,7 @@
 import { Group, Progress, Stack, Text } from '@mantine/core';
 
 import type { Stack as StackType, UnitDef } from '@/engine/types';
-import { groupInk, unitGroupOf, UnitTile } from '@/ui/domain2';
+import { groupInk, unitGroupOf, UnitTile } from '@/ui/domain';
 
 import { amount } from './format';
 import { findUnit } from './units';

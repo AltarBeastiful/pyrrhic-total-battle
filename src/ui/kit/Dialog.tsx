@@ -1,123 +1,76 @@
 /**
- * A centred modal for a question that has to be answered before anything else happens. `role`
- * switches between the ordinary `dialog` and `alertdialog`; an alert dialog cannot be dismissed by
- * clicking the scrim, because losing it by accident is the whole thing an alert is guarding against.
+ * A modal question (plan §3). `Modal` for anything you can walk away from; `role="alertdialog"` for
+ * the ones you cannot — a destructive confirmation, a corrupt document — which also stops a click on
+ * the overlay from dismissing it.
+ *
+ * Mantine writes `role="dialog"` after its own prop spread, so the role cannot be passed in; it is
+ * set on the element once it exists. That is one line rather than rebuilding `Modal` from its parts.
  */
-import type { ReactNode } from 'react';
-import {
-  Dialog as RACDialog,
-  DialogTrigger,
-  Heading,
-  Modal,
-  ModalOverlay,
-  Text,
-} from 'react-aria-components';
-import { tv } from 'tailwind-variants';
-
-import { CloseIcon } from '../icons';
-import { cn } from './cn';
-import { IconButton } from './IconButton';
-
-const dialog = tv({
-  slots: {
-    overlay: [
-      'fixed inset-0 z-50 flex items-center justify-center bg-fg/40 p-4',
-      'motion-safe:transition-opacity motion-safe:duration-fast entering:opacity-0 exiting:opacity-0',
-    ],
-    modal: [
-      'flex max-h-dvh w-full flex-col overflow-hidden rounded-card bg-raised shadow-modal',
-      'motion-safe:transition-all motion-safe:duration-fast',
-      'entering:scale-95 entering:opacity-0 exiting:scale-95 exiting:opacity-0',
-    ],
-    panel: 'flex min-h-0 flex-col outline-none',
-    header: 'flex items-start gap-3 px-5 pt-5',
-    title: 'title-face text-lg text-fg',
-    description: 'mt-2 block text-sm text-muted',
-    body: 'min-h-0 overflow-y-auto px-5 py-4',
-    footer: 'flex flex-wrap justify-end gap-2 px-5 pb-5',
-  },
-  variants: {
-    /** How wide the card is allowed to get: a question, a form, a table to read across. */
-    size: {
-      sm: { modal: 'max-w-sm' },
-      md: { modal: 'max-w-md' },
-      lg: { modal: 'max-w-2xl' },
-    },
-  },
-  defaultVariants: { size: 'md' },
-});
+import { Box, Divider, Modal, Text } from '@mantine/core';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 export interface DialogProps {
-  /** A pressable that opens the dialog. Leave it out and drive `isOpen` instead. */
-  trigger?: ReactNode;
-  isOpen?: boolean;
-  onOpenChange?: (isOpen: boolean) => void;
+  opened: boolean;
+  onClose: () => void;
   title: string;
   description?: ReactNode;
   children?: ReactNode;
+  /** The row of buttons at the foot: the confirmation and the way out. */
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
+  /** `alertdialog` is the variant that interrupts: no overlay dismissal, no Escape. */
   role?: 'dialog' | 'alertdialog';
-  className?: string;
 }
 
+const SIZE = { sm: '22rem', md: '30rem', lg: '40rem' } as const;
+
 export function Dialog({
-  trigger,
-  isOpen,
-  onOpenChange,
+  opened,
+  onClose,
   title,
   description,
   children,
   footer,
   size = 'md',
   role = 'dialog',
-  className,
 }: DialogProps) {
-  const d = dialog({ size });
-  const open = {
-    ...(isOpen === undefined ? {} : { isOpen }),
-    ...(onOpenChange === undefined ? {} : { onOpenChange }),
-  };
+  const body = useRef<HTMLDivElement>(null);
 
-  const body = (
-    <ModalOverlay
-      isDismissable={role === 'dialog'}
-      className={d.overlay()}
-      {...(trigger === undefined ? open : {})}
-    >
-      <Modal className={cn(d.modal(), className)}>
-        <RACDialog role={role} className={d.panel()}>
-          {({ close }) => (
-            <>
-              <div className={d.header()}>
-                <div className="min-w-0 flex-1">
-                  <Heading slot="title" className={d.title()}>
-                    {title}
-                  </Heading>
-                  {description === undefined ? null : (
-                    <Text slot="description" className={d.description()}>
-                      {description}
-                    </Text>
-                  )}
-                </div>
-                <IconButton label="Close" onPress={close}>
-                  <CloseIcon />
-                </IconButton>
-              </div>
-              <div className={d.body()}>{children}</div>
-              {footer === undefined ? null : <div className={d.footer()}>{footer}</div>}
-            </>
-          )}
-        </RACDialog>
-      </Modal>
-    </ModalOverlay>
-  );
+  useEffect(() => {
+    if (!opened || role !== 'alertdialog') return;
+    body.current?.closest('[role="dialog"]')?.setAttribute('role', 'alertdialog');
+  }, [opened, role]);
 
-  if (trigger === undefined) return body;
+  const alert = role === 'alertdialog';
+
   return (
-    <DialogTrigger {...open}>
-      {trigger}
-      {body}
-    </DialogTrigger>
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={title}
+      size={SIZE[size]}
+      radius="md"
+      padding="md"
+      centered
+      closeOnClickOutside={!alert}
+      closeOnEscape={!alert}
+      withCloseButton={!alert}
+      closeButtonProps={{ 'aria-label': 'Close' }}
+    >
+      <Box ref={body}>
+        {description !== undefined && (
+          <Text size="sm" c="dimmed" mb="sm">
+            {description}
+          </Text>
+        )}
+        {children}
+        {footer !== undefined && (
+          <Box mt="lg">
+            <Divider mb="sm" />
+            {footer}
+          </Box>
+        )}
+      </Box>
+    </Modal>
   );
 }

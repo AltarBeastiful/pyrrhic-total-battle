@@ -3,11 +3,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from '@/App';
-// The layer order is declared by `global.css` and has to reach the bundler before either of the
-// stylesheets it orders, so this import comes first (see the comment at the top of that file).
+import '@mantine/core/styles.css';
 import '@/ui/global.css';
-import '@mantine/core/styles.layer.css';
-import '@/index.css';
 import { captureInstallPrompt } from '@/pwa/install';
 import { registerServiceWorker } from '@/pwa/register';
 import { createLocalStorageAdapter } from '@/state/storage';

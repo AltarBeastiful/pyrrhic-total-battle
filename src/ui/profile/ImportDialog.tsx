@@ -1,6 +1,8 @@
+import { Alert, Button, Group, Stack, Text } from '@mantine/core';
+
 import type { ImportMode, ParsedImport } from '@/share/exportImport';
 
-import { Banner, Button, Dialog } from '../kit';
+import { Dialog } from '../kit';
 
 export interface ImportDialogProps {
   /** The validated file, or null while only an error has to be shown. */
@@ -14,10 +16,14 @@ const date = (at: number): string => new Date(at).toLocaleDateString();
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 py-1 text-sm">
-      <span className="text-muted">{label}</span>
-      <span className="nums font-medium">{value}</span>
-    </div>
+    <Text component="div" size="sm" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+      <Text span c="dimmed" inherit>
+        {label}
+      </Text>
+      <Text span fw={500} inherit style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </Text>
+    </Text>
   );
 }
 
@@ -26,64 +32,74 @@ export function ImportDialog({ parsed, error, onApply, onClose }: ImportDialogPr
   const open = parsed !== null || error !== null;
   return (
     <Dialog
-      isOpen={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
+      opened={open}
+      onClose={onClose}
       title="Import"
       description="Check what the file contains before it is added to this browser."
       size="sm"
       footer={
         parsed === null ? (
-          <Button onPress={onClose}>Close</Button>
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={onClose}>
+              Close
+            </Button>
+          </Group>
         ) : (
-          <>
-            <Button onPress={onClose}>Cancel</Button>
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={onClose}>
+              Cancel
+            </Button>
             <Button
-              onPress={() => {
+              variant="default"
+              onClick={() => {
                 onApply('replace');
               }}
             >
               Replace active
             </Button>
             <Button
-              variant="primary"
-              onPress={() => {
+              onClick={() => {
                 onApply('add');
               }}
             >
               Add as new
             </Button>
-          </>
+          </Group>
         )
       }
     >
-      {error !== null && <Banner tone="danger">{error}</Banner>}
-      {parsed !== null && (
-        <div className="divide-line divide-y">
-          <Row label="Kind" value={parsed.kind === 'profile' ? 'Profile' : 'Saved stack'} />
-          <Row label="Name" value={parsed.preview.name} />
-          <Row label="Created" value={date(parsed.preview.createdAt)} />
-          {parsed.kind === 'profile' ? (
-            <>
-              <Row label="Battle setups" value={String(parsed.preview.setups)} />
-              <Row label="Saved stacks" value={String(parsed.preview.savedStacks)} />
-              <Row label="Mercenaries" value={String(parsed.preview.mercenaries)} />
-              <Row label="Bonus sources" value={String(parsed.preview.bonusSources)} />
-            </>
-          ) : (
-            <>
-              <Row label="Stacks" value={String(parsed.preview.stacks)} />
-              <Row label="Units" value={parsed.preview.units.toLocaleString('en-US')} />
-              <Row
-                label="Average damage"
-                value={Math.round(parsed.preview.avgDamage).toLocaleString('en-US')}
-              />
-            </>
-          )}
-          <Row label="Game data version" value={String(parsed.dataVersion)} />
-        </div>
-      )}
+      <Stack gap="sm">
+        {error !== null && (
+          <Alert color="danger" variant="light">
+            {error}
+          </Alert>
+        )}
+        {parsed !== null && (
+          <Stack gap={6}>
+            <Row label="Kind" value={parsed.kind === 'profile' ? 'Profile' : 'Saved stack'} />
+            <Row label="Name" value={parsed.preview.name} />
+            <Row label="Created" value={date(parsed.preview.createdAt)} />
+            {parsed.kind === 'profile' ? (
+              <>
+                <Row label="Battle setups" value={String(parsed.preview.setups)} />
+                <Row label="Saved stacks" value={String(parsed.preview.savedStacks)} />
+                <Row label="Mercenaries" value={String(parsed.preview.mercenaries)} />
+                <Row label="Bonus sources" value={String(parsed.preview.bonusSources)} />
+              </>
+            ) : (
+              <>
+                <Row label="Stacks" value={String(parsed.preview.stacks)} />
+                <Row label="Units" value={parsed.preview.units.toLocaleString('en-US')} />
+                <Row
+                  label="Average damage"
+                  value={Math.round(parsed.preview.avgDamage).toLocaleString('en-US')}
+                />
+              </>
+            )}
+            <Row label="Game data version" value={String(parsed.dataVersion)} />
+          </Stack>
+        )}
+      </Stack>
     </Dialog>
   );
 }

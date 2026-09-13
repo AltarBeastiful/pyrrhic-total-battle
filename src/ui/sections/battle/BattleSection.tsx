@@ -33,8 +33,8 @@ import type { Method } from '@/engine';
 import { eventEnemyFormation } from '@/state/derive';
 import { RECOVERY_MODES } from '@/state/schema';
 import { selectActiveSetup, useStore } from '@/state/store';
-import { Glyph } from '@/ui/domain2';
-import { NumberField, SwitchRow } from '@/ui/kit2';
+import { Glyph } from '@/ui/domain';
+import { ChoiceList, NumberField, SwitchRow } from '@/ui/kit';
 import { useResultStore } from '@/ui/resultStore';
 
 import {
@@ -49,7 +49,6 @@ import {
   RECOVERY_LABELS,
 } from './choices';
 import type { OptionKey } from './choices';
-import { ChoiceCards } from './ChoiceCards';
 import {
   CATEGORY_LABEL,
   detectMode,
@@ -205,7 +204,8 @@ export function BattleSection() {
 
       {/* The rule the stacks are sized by, and the rules that ride on it. */}
       <Stack gap="sm">
-        <ChoiceCards
+        <ChoiceList
+          layout="cards"
           label="Stacking method"
           value={options.method}
           items={METHOD_CHOICES}
@@ -245,7 +245,8 @@ export function BattleSection() {
 
       {/* What a Generate aims at, and what the losses are paid with. */}
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-        <ChoiceCards
+        <ChoiceList
+          layout="cards"
           label="Objective"
           value={priority}
           items={OBJECTIVE_CHOICES}
