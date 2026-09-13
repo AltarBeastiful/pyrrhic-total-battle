@@ -2,39 +2,36 @@
  * Bonuses (design plan §7.3, journey J3) — every health and strength source the account owns, and
  * which of them count for this march.
  *
- * The card is **one line until you open it**: the TOTAL as three labelled figures — health, strength
- * and double damage for the whole army — plus how many sources feed them and how many of those are
- * switched on with nothing typed in. That is what a player checks after changing a captain's level,
- * and it is above the fold on a phone (J3: open, find, change, see the TOTAL move).
+ * The card is **one line until you open it**: the TOTAL as four labelled figures — health, strength
+ * and double damage for the whole army, then how many sources feed them — plus a badge when one of
+ * those is switched on with nothing typed in. That is what a player checks after changing a
+ * captain's level, and it is above the fold on a phone (J3: open, find, change, see the TOTAL move).
  *
- * Unfolded, the sources are grouped the way the game groups them. Captains and the hero are a
- * **grid of tiles** — every captain the tables know, always on screen, tap to enlist and tap the
- * badge to set a level (D-33), which is why that one group has no Add button. Everything else is a
- * **row**, not a chip: a switch carrying its name, what it is worth on the right, a gear at the end.
- * Editing never happens inline — the gear and the badge open a sheet that repeats the TOTAL, so the
- * figures are visible while they move. Whether the card is open is remembered per device (decision
- * D7), never in the document.
+ * Unfolded, the sources are grouped the way the game groups them, each group an accordion item, with
+ * captains open by default because that is the one a returning player came for. Four of the eight
+ * are **chips** — TotalStack's own picker, mimicked (D-34): every captain, every artifact, every
+ * permanent source and every title on screen at once, tap to switch on, a gear on the corner of the
+ * ones that have something to set. The rest are **rows**: a switch carrying the name, what it is
+ * worth on the right, a gear opening a sheet that repeats the TOTAL so the figures are visible while
+ * they move. Whether the card is open is remembered per device (D7), never in the document.
  */
+import { Accordion, Alert, Badge, Box, Group, Stack, Text, Title } from '@mantine/core';
 import { useId, useMemo, useState } from 'react';
 
-import { artifacts as artifactTable, equipment as equipmentTable, titles as titleTable } from '@/data';
-import {
-  mintSourceId,
-  setActiveFlag,
-  setTitleOwned,
-  toggleActiveSource,
-  updateSources,
-} from '@/state/actions/bonuses';
+import { artifacts as artifactTable, equipment as equipmentTable } from '@/data';
+import { mintSourceId, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
+import { setActiveFlag } from '@/state/actions/bonuses';
+import { sourceCaveats } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Card, Disclosure } from '@/ui/kit';
-import { Stack } from '@/ui/layout';
+import { Disclosure } from '@/ui/kit2';
 
-import { ArtifactSheet } from './ArtifactSheet';
-import { CaptainGrid } from './CaptainGrid';
-import { CaptainSheet } from './CaptainSheet';
+import { ArtifactChips } from './ArtifactChips';
+import { CaptainChips } from './CaptainChips';
+import { artifactChips, captainChips, permanentChips, titleChips, type CaptainTarget } from './chips';
 import { EquipmentSheet } from './EquipmentSheet';
 import { CustomSheet, DragonSheet, PermanentSheet, RemainderSheet } from './FreeFormSheets';
-import { HeroSheet, VipSheet } from './OtherSheets';
+import { VipSheet } from './OtherSheets';
+import { PermanentChips } from './PermanentChips';
 import { RecoverySheet } from './RecoverySheet';
 import {
   captainEntryFor,
@@ -45,13 +42,25 @@ import {
   starKeys,
   totalsSummary,
 } from './rows';
-import type { AddKind, CaptainTarget, EditorTarget } from './rows';
+import type { AddKind, EditorTarget, SourceGroup } from './rows';
 import { SetupBar } from './SetupBar';
-import { SourceList } from './SourceList';
-import { TitleSheet } from './TitleSheet';
+import { SourceRows } from './SourceRows';
+import { TitleChips } from './TitleChips';
 import { TotalsBreakdown } from './TotalsBreakdown';
 import { TotalsFigures } from './TotalsFigures';
 import { readExpanded, writeExpanded } from './uiPrefs';
+
+/** The heading of every group, in the order the game shows its own screens. */
+const ORDER = [
+  'captains',
+  'equipment',
+  'artifacts',
+  'titles',
+  'permanent',
+  'other',
+  'events',
+  'recovery',
+] as const;
 
 export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
@@ -59,19 +68,32 @@ export function BonusesSection() {
   const titleId = useId();
   const [expanded, setExpanded] = useState(readExpanded);
   const [editor, setEditor] = useState<EditorTarget | null>(null);
-  const [isRefused, setRefused] = useState(false);
+  const [refusedCaptain, setRefusedCaptain] = useState(false);
+  const [refusedArtifact, setRefusedArtifact] = useState(false);
 
   const summary = useMemo(() => (profile && setup ? totalsSummary(profile, setup) : null), [profile, setup]);
-  const groups = useMemo(() => (profile && setup ? sourceGroups(profile, setup) : []), [profile, setup]);
+  const groups = useMemo(
+    () =>
+      profile && setup
+        ? new Map(sourceGroups(profile, setup).map((group) => [group.id, group]))
+        : new Map<string, SourceGroup>(),
+    [profile, setup],
+  );
+  const captains = useMemo(() => (profile && setup ? captainChips(profile, setup) : []), [profile, setup]);
+  const artifacts = useMemo(() => (profile && setup ? artifactChips(profile, setup) : []), [profile, setup]);
+  const permanent = useMemo(() => (profile ? permanentChips(profile) : []), [profile]);
+  const titles = useMemo(() => (setup ? titleChips(setup) : []), [setup]);
+  const caveats = useMemo(() => (profile && setup ? sourceCaveats(profile, setup) : []), [profile, setup]);
 
   if (profile === undefined || setup === undefined || summary === null) return null;
   const profileId = profile.id;
 
+  // ---- captains ---------------------------------------------------------------------------------
   /**
-   * The captain grid has no Add button: the entry that records a level and a star count is minted by
-   * the first tap, whether that tap enlisted the captain or opened its editor.
+   * The captain row has no Add button: the entry that records a level and a star count is minted by
+   * the first tap, whether that tap enlisted the captain or opened its gear.
    */
-  const entryIdFor = (captainId: string): string => {
+  const captainEntryIdFor = (captainId: string): string => {
     const found = captainEntryFor(profile, captainId);
     if (found !== undefined) return found.id;
     const id = mintSourceId();
@@ -82,31 +104,53 @@ export function BonusesSection() {
     return id;
   };
 
-  /** A tap on a tile body. Three ride with a march, and the fourth tap is refused out loud. */
+  /** A tap on a chip body. Three ride with a march; the fourth is refused, politely. */
   const enlist = (target: CaptainTarget): void => {
     if (target.kind === 'hero') {
-      // An empty hero slot has nothing to enlist yet, so the tap opens the picker instead.
-      if (profile.sources.hero === undefined) setEditor({ kind: 'hero' });
-      else setActiveFlag('hero', !setup.active.hero);
+      setActiveFlag('hero', !setup.active.hero);
       return;
     }
     const entry = captainEntryFor(profile, target.captainId);
     const on = entry !== undefined && setup.active.captains.includes(entry.id);
     if (!on && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS) {
-      setRefused(true);
+      setRefusedCaptain(true);
       return;
     }
-    setRefused(false);
-    toggleActiveSource('captains', entry?.id ?? entryIdFor(target.captainId), !on);
+    setRefusedCaptain(false);
+    toggleActiveSource('captains', entry?.id ?? captainEntryIdFor(target.captainId), !on);
   };
 
-  /** A tap on a tile badge. It opens the editor and never changes who marches. */
-  const configure = (target: CaptainTarget): void => {
-    if (target.kind === 'hero') setEditor({ kind: 'hero' });
-    else setEditor({ kind: 'captain', id: entryIdFor(target.captainId) });
+  /** A tap on a gear. It mints the entry the popover writes into and never changes who marches. */
+  const configureCaptain = (target: CaptainTarget): void => {
+    if (target.kind === 'captain') captainEntryIdFor(target.captainId);
   };
 
-  /** Every "Add …" button creates the entry with the game's own defaults and opens its editor. */
+  // ---- artifacts --------------------------------------------------------------------------------
+  const artifactEntryIdFor = (artifactId: string): string => {
+    const found = profile.sources.artifacts.find((entry) => entry.artifactId === artifactId);
+    if (found !== undefined) return found.id;
+    const id = mintSourceId();
+    const record = artifactTable.find((entry) => entry.id === artifactId);
+    const star = starKeys(record)[0] ?? '0.0';
+    updateSources(profileId, (sources) => ({
+      ...sources,
+      artifacts: [...sources.artifacts, { id, artifactId, level: 1, star }],
+    }));
+    return id;
+  };
+
+  const equipArtifact = (artifactId: string): void => {
+    const entry = profile.sources.artifacts.find((candidate) => candidate.artifactId === artifactId);
+    const on = entry !== undefined && setup.active.artifacts.includes(entry.id);
+    if (!on && setup.active.artifacts.length >= MAX_ACTIVE_ARTIFACTS) {
+      setRefusedArtifact(true);
+      return;
+    }
+    setRefusedArtifact(false);
+    toggleActiveSource('artifacts', entry?.id ?? artifactEntryIdFor(artifactId), !on);
+  };
+
+  // ---- the two Add buttons ----------------------------------------------------------------------
   const add = (kind: AddKind): void => {
     if (kind === 'equipment') {
       const first = equipmentTable[0];
@@ -118,31 +162,6 @@ export function BonusesSection() {
       }));
       toggleActiveSource('equipment', id, true);
       setEditor({ kind: 'equipment', id });
-      return;
-    }
-
-    if (kind === 'artifact') {
-      const owned = new Set(profile.sources.artifacts.map((entry) => entry.artifactId));
-      const pick = artifactTable.find((record) => !owned.has(record.id)) ?? artifactTable[0];
-      if (pick === undefined) return;
-      const id = mintSourceId();
-      const star = starKeys(pick)[0] ?? '0.0';
-      updateSources(profileId, (sources) => ({
-        ...sources,
-        artifacts: [...sources.artifacts, { id, artifactId: pick.id, level: 1, star }],
-      }));
-      if (setup.active.artifacts.length < MAX_ACTIVE_ARTIFACTS) toggleActiveSource('artifacts', id, true);
-      setEditor({ kind: 'artifact', id });
-      return;
-    }
-
-    if (kind === 'title') {
-      const held = new Set(profile.sources.titles);
-      const pick = titleTable.find((record) => !held.has(record.id));
-      if (pick === undefined) return;
-      setTitleOwned(profileId, pick.id, true);
-      toggleActiveSource('titles', pick.id, true);
-      setEditor({ kind: 'title', id: pick.id });
       return;
     }
 
@@ -170,72 +189,156 @@ export function BonusesSection() {
   };
   const sheet = { profile, summary, onClose: close };
 
-  return (
-    <Card tone="none" shape="flat" as="section" id="bonuses" aria-labelledby={titleId}>
-      <Stack gap={3}>
-        <Stack gap={2}>
-          <h2 id={titleId} className="text-lg">
-            Bonuses
-          </h2>
-          <TotalsFigures summary={summary} />
-        </Stack>
+  const rowGroup = (id: string) => {
+    const group = groups.get(id);
+    if (group === undefined) return null;
+    return (
+      <SourceRows
+        group={group}
+        onEdit={setEditor}
+        onAdd={(entry) => {
+          if (entry.add !== undefined) add(entry.add.kind);
+        }}
+      />
+    );
+  };
 
+  const caption = (id: string): string => groups.get(id)?.caption ?? '';
+
+  const panels: Record<(typeof ORDER)[number], { title: string; summary: string; body: React.ReactNode }> = {
+    captains: {
+      title: 'Captains and hero',
+      summary: `${String(setup.active.captains.length)}/${String(MAX_ACTIVE_CAPTAINS)}`,
+      body: (
+        <CaptainChips
+          chips={captains}
+          isRefused={refusedCaptain && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS}
+          onEnlist={enlist}
+          onConfigure={configureCaptain}
+        />
+      ),
+    },
+    equipment: { title: 'Equipment', summary: caption('equipment'), body: rowGroup('equipment') },
+    artifacts: {
+      title: 'Artifacts',
+      summary: `${String(setup.active.artifacts.length)}/${String(MAX_ACTIVE_ARTIFACTS)}`,
+      body: (
+        <ArtifactChips
+          chips={artifacts}
+          isRefused={refusedArtifact && setup.active.artifacts.length >= MAX_ACTIVE_ARTIFACTS}
+          onToggle={equipArtifact}
+          onConfigure={artifactEntryIdFor}
+        />
+      ),
+    },
+    titles: {
+      title: 'Titles',
+      summary: `${String(setup.active.titles.length)} worn`,
+      body: <TitleChips profileId={profileId} families={titles} />,
+    },
+    permanent: {
+      title: 'Permanent',
+      summary: `${String(permanent.length)} always on`,
+      body: (
+        <PermanentChips
+          chips={permanent}
+          onEdit={(id) => {
+            setEditor({ kind: 'permanent', id });
+          }}
+          onAdd={() => {
+            add('permanent');
+          }}
+        />
+      ),
+    },
+    other: { title: 'Other', summary: caption('other'), body: rowGroup('other') },
+    events: { title: 'Events', summary: caption('events'), body: rowGroup('events') },
+    recovery: { title: 'Recovery', summary: 'always on', body: rowGroup('recovery') },
+  };
+
+  return (
+    <Box component="section" id="bonuses" aria-labelledby={titleId} py="md">
+      <Stack gap="sm">
+        <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
+          <Title order={2} size="h4" id={titleId}>
+            Bonuses
+          </Title>
+          {summary.empty > 0 && (
+            <Badge color="danger" variant="light" size="sm" tt="none">
+              {`${String(summary.empty)} on but empty`}
+            </Badge>
+          )}
+        </Group>
+        <TotalsFigures summary={summary} />
+
+        {/*
+          No summary beside the title: the TOTAL is already above it and stays there, and a second
+          line saying the same thing would only be cut in half at 390 px (rule 5).
+        */}
         <Disclosure
           title="Sources"
-          summary="Switch on what counts for this march"
-          isExpanded={expanded}
-          onExpandedChange={(next) => {
+          opened={expanded}
+          onChange={(next) => {
             setExpanded(next);
             writeExpanded(next);
           }}
         >
-          <Stack gap={6}>
+          <Stack gap="md">
             <SetupBar profile={profile} setup={setup} />
-            {groups.map((group) =>
-              group.tiles === undefined ? (
-                <SourceList
-                  key={group.id}
-                  group={group}
-                  onEdit={setEditor}
-                  onAdd={(entry) => {
-                    if (entry.add !== undefined) add(entry.add.kind);
-                  }}
-                />
-              ) : (
-                <CaptainGrid
-                  key={group.id}
-                  group={group}
-                  tiles={group.tiles}
-                  onEnlist={enlist}
-                  onConfigure={configure}
-                  isRefused={isRefused && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS}
-                />
-              ),
-            )}
-            <TotalsBreakdown profile={profile} setup={setup} />
+            {caveats.map((caveat) => (
+              <Alert key={caveat} color="brass" variant="light">
+                {caveat}
+              </Alert>
+            ))}
+            {/*
+              `keepMounted={false}`: a closed group is not in the document at all. Eight groups hold
+              about eighty chips and as many anchored popovers between them, and a player opens one
+              group at a time — mounting the other seven costs a frame and buys nothing.
+            */}
+            <Accordion
+              multiple
+              keepMounted={false}
+              defaultValue={['captains']}
+              chevronPosition="left"
+              variant="default"
+            >
+              {ORDER.map((id) => (
+                <Accordion.Item key={id} value={id}>
+                  <Accordion.Control>
+                    <Group justify="space-between" wrap="nowrap" gap="sm" pr="xs">
+                      <Text span size="sm" fw={500}>
+                        {panels[id].title}
+                      </Text>
+                      <Text span size="xs" c="dimmed">
+                        {panels[id].summary}
+                      </Text>
+                    </Group>
+                  </Accordion.Control>
+                  <Accordion.Panel>{panels[id].body}</Accordion.Panel>
+                </Accordion.Item>
+              ))}
+              <Accordion.Item value="breakdown">
+                <Accordion.Control>
+                  <Text span size="sm" fw={500}>
+                    Every key and what feeds it
+                  </Text>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <TotalsBreakdown profile={profile} setup={setup} />
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
           </Stack>
         </Disclosure>
       </Stack>
 
-      {editor?.kind === 'captain' && <CaptainSheet {...sheet} entryId={editor.id} />}
       {editor?.kind === 'equipment' && <EquipmentSheet {...sheet} entryId={editor.id} />}
-      {editor?.kind === 'artifact' && <ArtifactSheet {...sheet} entryId={editor.id} />}
-      {editor?.kind === 'title' && (
-        <TitleSheet
-          {...sheet}
-          titleId={editor.id}
-          onRetarget={(id) => {
-            setEditor({ kind: 'title', id });
-          }}
-        />
-      )}
       {editor?.kind === 'permanent' && <PermanentSheet {...sheet} entryId={editor.id} />}
       {editor?.kind === 'custom' && <CustomSheet {...sheet} entryId={editor.id} />}
       {editor?.kind === 'vip' && <VipSheet {...sheet} />}
-      {editor?.kind === 'hero' && <HeroSheet {...sheet} />}
       {editor?.kind === 'dragon' && <DragonSheet {...sheet} />}
       {editor?.kind === 'remainder' && <RemainderSheet {...sheet} />}
       {editor?.kind === 'recovery' && <RecoverySheet {...sheet} />}
-    </Card>
+    </Box>
   );
 }

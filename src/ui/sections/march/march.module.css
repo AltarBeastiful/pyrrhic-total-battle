@@ -1,0 +1,51 @@
+/* The March's own CSS, counted against the kit's budget (ui-foundation plan §1.1). Nothing here is
+   a colour, a radius or a spacing — those are theme tokens; this is the one thing Mantine has no
+   prop for: a shape that follows the *card's* width instead of the window's. */
+
+/* The counts block measures itself. At 1400 px the March is a 360 dp supporting pane, so a media
+   query would give it the wide table on a screen where it has 22 rem to draw it in; a container
+   query asks the only question that matters — has this card room for six columns? */
+.counts {
+  container-type: inline-size;
+}
+
+.wide {
+  display: none;
+}
+
+@container (min-width: 36rem) {
+  .wide {
+    display: block;
+  }
+
+  .narrow {
+    display: none;
+  }
+}
+
+/* A stack in the recap sheet: the glyph and the name over the count, in a tile the thumb can read
+   two-up. Only the grid itself is here; the tile is a stock `Paper`. */
+.stackGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mantine-spacing-xs);
+}
+
+/* The quick summary is one line that must never widen the bar it sits in. */
+.quickLine {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* A count inside a row has no room for a label over it, and the row already says which unit it
+   belongs to — so the field's label is taken off the screen and left in the accessibility tree,
+   where it is the control's name. */
+.quietLabel :global(.mantine-InputWrapper-label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -5,10 +5,10 @@
  * They differ in one line of wording and in whether the row can be named or deleted, so they share
  * one shell here rather than repeating the grid four times.
  */
+import { Stack, TextInput } from '@mantine/core';
+
 import { removePermanentSource, removeSourceEntry, updateSources } from '@/state/actions/bonuses';
 import type { Profile, ProfileSources } from '@/state/schema';
-import { TextField } from '@/ui/kit';
-import { Stack } from '@/ui/layout';
 
 import { BonusKeyGrid } from './BonusKeyGrid';
 import { PERMANENT_WHERE, WHERE } from './rows';
@@ -57,12 +57,13 @@ export function PermanentSheet({ profile, entryId, summary, onClose }: FreeFormP
           }
         : {})}
     >
-      <Stack gap={4}>
+      <Stack gap="lg">
         {isCustom && (
-          <TextField
+          <TextInput
             label="Name"
             value={entry.name}
-            onChange={(name) => {
+            onChange={(event) => {
+              const name = event.currentTarget.value;
               patch((current) => ({ ...current, name }));
             }}
           />
@@ -103,11 +104,12 @@ export function CustomSheet({ profile, entryId, summary, onClose }: FreeFormProp
         onClose();
       }}
     >
-      <Stack gap={4}>
-        <TextField
+      <Stack gap="lg">
+        <TextInput
           label="Name"
           value={entry.name}
-          onChange={(name) => {
+          onChange={(event) => {
+            const name = event.currentTarget.value;
             patch((current) => ({ ...current, name }));
           }}
         />

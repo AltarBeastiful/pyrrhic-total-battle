@@ -1,14 +1,15 @@
 /**
  * The equipment editor (S-15): which piece this is, its quality, and the name of the captain wearing
- * it. What a gem or an enchantment adds sits behind a disclosure, because the quality table does not
- * carry it and most pieces have none.
+ * it. What a gem or an enchantment adds sits behind a fold, because the quality table does not carry
+ * it and most pieces have none.
  */
+import { Select, SimpleGrid, Stack, TextInput } from '@mantine/core';
+
 import { equipment as equipmentTable } from '@/data';
 import type { Quality } from '@/data/types';
 import { removeSourceEntry, updateSources } from '@/state/actions/bonuses';
 import type { Profile, ProfileSources } from '@/state/schema';
-import { Disclosure, Select, TextField } from '@/ui/kit';
-import { Grid, Stack } from '@/ui/layout';
+import { Disclosure } from '@/ui/kit2';
 
 import { BonusKeyGrid } from './BonusKeyGrid';
 import { describeContribution, QUALITY_LABELS } from './labels';
@@ -49,39 +50,45 @@ export function EquipmentSheet({ profile, entryId, summary, onClose }: Equipment
         onClose();
       }}
     >
-      <Stack gap={3}>
-        <Grid cols={{ base: 1, sm: 2 }} gap={3}>
+      <Stack gap="sm">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           <Select
             label="Equipment type"
+            data={equipmentTable.map((piece) => ({ value: piece.id, label: piece.name }))}
             value={entry.equipmentId}
-            options={equipmentTable.map((piece) => ({ value: piece.id, label: piece.name }))}
-            onChange={(equipmentId) => {
-              const next = equipmentRecord(equipmentId);
+            allowDeselect={false}
+            onChange={(next) => {
+              const equipmentId = next ?? entry.equipmentId;
+              const swapped = equipmentRecord(equipmentId);
               patch((current) => ({
                 ...current,
                 equipmentId,
-                quality: qualitiesOf(next).includes(current.quality) ? current.quality : firstQuality(next),
+                quality: qualitiesOf(swapped).includes(current.quality)
+                  ? current.quality
+                  : firstQuality(swapped),
               }));
             }}
           />
           <Select
             label="Quality"
-            value={entry.quality}
-            options={qualitiesOf(record).map((quality) => ({
+            data={qualitiesOf(record).map((quality) => ({
               value: quality,
               label: QUALITY_LABELS[quality],
             }))}
-            onChange={(quality) => {
-              patch((current) => ({ ...current, quality: quality as Quality }));
+            value={entry.quality}
+            allowDeselect={false}
+            onChange={(next) => {
+              patch((current) => ({ ...current, quality: (next ?? current.quality) as Quality }));
             }}
           />
-        </Grid>
-        <TextField
+        </SimpleGrid>
+        <TextInput
           label="Name"
-          value={entry.name ?? ''}
           placeholder="Which captain wears it"
           description="Optional, so two pieces of the same type stay apart."
-          onChange={(name) => {
+          value={entry.name ?? ''}
+          onChange={(event) => {
+            const name = event.currentTarget.value;
             patch((current) => ({ ...current, name }));
           }}
         />

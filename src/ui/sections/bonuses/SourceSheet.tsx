@@ -1,14 +1,15 @@
 /**
- * The editor behind a row's gear (design plan §7.3): a sheet — from the bottom on a phone, from the
- * right once there is room — whose description line is where the figures are read in game, and
+ * The editor behind a **row's** gear (design plan §7.3): a sheet — from the bottom on a phone, from
+ * the right once there is room — whose description line is where the figures are read in game, and
  * whose first block repeats the TOTAL, so the player sees the three figures move as they type.
  *
- * Every editor in this folder is this shell plus its own fields. Nothing is edited inline any more.
+ * Chips edit in an anchored popover instead (D-34); a sheet is for the editors that are a form —
+ * a piece of equipment, a permanent source, the temple.
  */
+import { Button, Group, Paper, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
-import { Button, Card, Sheet } from '@/ui/kit';
-import { Stack } from '@/ui/layout';
+import { Sheet } from '@/ui/kit2';
 
 import type { TotalsSummary } from './rows';
 import { TotalsFigures } from './TotalsFigures';
@@ -39,30 +40,26 @@ export function SourceSheet({
 }: SourceSheetProps) {
   return (
     <Sheet
-      isOpen
+      opened
       size={size}
       title={title}
       description={where}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
       footer={
-        <>
+        <Group justify="flex-end" gap="sm">
           {onRemove !== undefined && (
-            <Button variant="danger" onPress={onRemove}>
+            <Button variant="subtle" color="danger" onClick={onRemove}>
               {removeLabel}
             </Button>
           )}
-          <Button variant="primary" onPress={onClose}>
-            Done
-          </Button>
-        </>
+          <Button onClick={onClose}>Done</Button>
+        </Group>
       }
     >
-      <Stack gap={4}>
-        <Card tone="sunken" padding="sm">
+      <Stack gap="md">
+        <Paper bg="var(--pyr-sunken)" p="sm">
           <TotalsFigures summary={summary} size="sm" />
-        </Card>
+        </Paper>
         {children}
       </Stack>
     </Sheet>
@@ -72,8 +69,10 @@ export function SourceSheet({
 /** A labelled block of fields inside an editor. */
 export function FieldGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Stack gap={2} as="section" aria-label={label}>
-      <h5 className="text-sm font-medium">{label}</h5>
+    <Stack gap="xs" component="section" aria-label={label}>
+      <Text size="sm" fw={500}>
+        {label}
+      </Text>
       {children}
     </Stack>
   );
@@ -81,12 +80,19 @@ export function FieldGroup({ label, children }: { label: string; children: React
 
 /** What a source is worth right now, one line per key, as the editors list it. */
 export function WorthList({ lines, empty }: { lines: string[]; empty: string }) {
-  if (lines.length === 0) return <p className="text-muted text-sm">{empty}</p>;
+  if (lines.length === 0)
+    return (
+      <Text size="sm" c="dimmed">
+        {empty}
+      </Text>
+    );
   return (
-    <ul className="nums text-sm">
+    <Stack gap={2}>
       {lines.map((line) => (
-        <li key={line}>{line}</li>
+        <Text key={line} size="sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {line}
+        </Text>
       ))}
-    </ul>
+    </Stack>
   );
 }

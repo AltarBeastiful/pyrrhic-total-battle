@@ -1,18 +1,20 @@
 /**
  * The 13-key editor every free-form bonus source uses: health, then strength, then the special
- * strength keys behind a disclosure, because most accounts never fill those in.
+ * strength keys behind a fold, because most accounts never fill those in.
  *
- * Every value is a stepper (D-32): arrows, the wheel, `Shift` and `Ctrl` jumps, and a figure typed
- * or pasted in the player's own locale. Clearing a field removes the key instead of storing a 0, so
- * a source only ever carries what was actually typed into it.
+ * Every value is a percentage read off a game screen and retyped here, so every field is the kit's
+ * `NumberField` — a plain input that selects its whole value on focus (rule 9), decimals allowed
+ * because the game writes 12.5 %. Clearing a field removes the key instead of storing a 0, so a
+ * source only ever carries what was actually typed into it.
  */
+import { SimpleGrid, Stack } from '@mantine/core';
+
 import { BONUS_KEYS, SPECIAL_KEYS } from '@/data/types';
 import type { BonusKey, BonusMap, SpecialKey, SpecialMap } from '@/data/types';
-import { Disclosure, NumberStepper } from '@/ui/kit';
-import { Grid, Stack } from '@/ui/layout';
+import { Disclosure, NumberField } from '@/ui/kit2';
 
-import { FieldGroup } from './SourceSheet';
 import { BONUS_LABELS, SPECIAL_LABELS } from './labels';
+import { FieldGroup } from './SourceSheet';
 
 export interface BonusValues {
   health: BonusMap;
@@ -26,9 +28,6 @@ export interface BonusKeyGridProps {
   /** Special strength keys are meaningless for a few editors (the unexplained remainder). */
   withSpecial?: boolean;
 }
-
-/** Percentages, as the game writes them: up to two decimals, no grouping. */
-const PERCENT: Intl.NumberFormatOptions = { maximumFractionDigits: 2, useGrouping: false };
 
 /** Sets or clears one key; an empty field removes the key instead of storing a 0. */
 function setKey<K extends string>(
@@ -44,14 +43,11 @@ function setKey<K extends string>(
 
 export function BonusKeyGrid({ value, onChange, withSpecial = true }: BonusKeyGridProps) {
   const bonusField = (bucket: 'health' | 'strength', key: BonusKey) => (
-    <NumberStepper
+    <NumberField
       key={`${bucket}-${key}`}
       label={`${BONUS_LABELS[key]} ${bucket}`}
-      size="sm"
-      suffix="%"
-      step={0.1}
       allowEmpty
-      formatOptions={PERCENT}
+      allowDecimal
       value={value[bucket][key] ?? null}
       onChange={(next) => {
         onChange({ ...value, [bucket]: setKey(value[bucket], key, next) });
@@ -60,36 +56,33 @@ export function BonusKeyGrid({ value, onChange, withSpecial = true }: BonusKeyGr
   );
 
   return (
-    <Stack gap={4}>
-      <FieldGroup label="Health">
-        <Grid cols={{ base: 1, sm: 2 }} gap={2}>
+    <Stack gap="lg">
+      <FieldGroup label="Health, in percent">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
           {BONUS_KEYS.map((key) => bonusField('health', key))}
-        </Grid>
+        </SimpleGrid>
       </FieldGroup>
-      <FieldGroup label="Strength">
-        <Grid cols={{ base: 1, sm: 2 }} gap={2}>
+      <FieldGroup label="Strength, in percent">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
           {BONUS_KEYS.map((key) => bonusField('strength', key))}
-        </Grid>
+        </SimpleGrid>
       </FieldGroup>
       {withSpecial && (
         <Disclosure title="Special strength" summary="Double damage and second strikes">
-          <Grid cols={{ base: 1, sm: 2 }} gap={2}>
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
             {SPECIAL_KEYS.map((key: SpecialKey) => (
-              <NumberStepper
+              <NumberField
                 key={key}
                 label={SPECIAL_LABELS[key]}
-                size="sm"
-                suffix="%"
-                step={0.1}
                 allowEmpty
-                formatOptions={PERCENT}
+                allowDecimal
                 value={value.special?.[key] ?? null}
                 onChange={(next) => {
                   onChange({ ...value, special: setKey(value.special ?? {}, key, next) });
                 }}
               />
             ))}
-          </Grid>
+          </SimpleGrid>
         </Disclosure>
       )}
     </Stack>

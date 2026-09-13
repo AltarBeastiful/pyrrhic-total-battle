@@ -5,14 +5,13 @@
  *
  * It sits at the top of the unfolded card because it decides what every switch below means.
  */
+import { ActionIcon, Button, Group, Select, TextInput } from '@mantine/core';
+import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import type { BattleSetup, Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
-import { Button, Dialog, IconButton, Select, TextField } from '@/ui/kit';
-import { Cluster } from '@/ui/layout';
-
-import { DuplicateIcon, PencilIcon, PlusIcon, TrashIcon } from '../../icons';
+import { Dialog } from '@/ui/kit2';
 
 type SetupDialog = 'new' | 'rename' | 'delete';
 
@@ -32,32 +31,37 @@ function NameDialog({
 
   return (
     <Dialog
-      isOpen
+      opened
       title={kind === 'new' ? 'New battle setup' : 'Rename battle setup'}
       description={
         kind === 'new'
           ? 'It starts as a copy of the setup you are on, so you only change what differs.'
           : 'Name it after the march it describes, for example “Arachne’s, solo”.'
       }
-      onOpenChange={(open) => {
-        if (!open) onCancel();
-      }}
+      onClose={onCancel}
       footer={
-        <>
-          <Button onPress={onCancel}>Cancel</Button>
+        <Group justify="flex-end" gap="sm">
+          <Button variant="default" onClick={onCancel}>
+            Cancel
+          </Button>
           <Button
-            variant="primary"
-            isDisabled={trimmed === ''}
-            onPress={() => {
+            disabled={trimmed === ''}
+            onClick={() => {
               onConfirm(trimmed);
             }}
           >
             {kind === 'new' ? 'Create' : 'Save'}
           </Button>
-        </>
+        </Group>
       }
     >
-      <TextField label="Setup name" value={name} onChange={setName} />
+      <TextInput
+        label="Setup name"
+        value={name}
+        onChange={(event) => {
+          setName(event.currentTarget.value);
+        }}
+      />
     </Dialog>
   );
 }
@@ -74,51 +78,59 @@ export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSe
   };
 
   return (
-    <Cluster gap={2} align="end">
+    <Group gap="xs" align="flex-end" wrap="wrap">
       <Select
         label="Battle setup"
-        className="w-full sm:w-auto sm:min-w-40 sm:flex-1"
+        data={profile.setups.map((entry) => ({ value: entry.id, label: entry.name }))}
         value={setup.id}
-        options={profile.setups.map((entry) => ({ value: entry.id, label: entry.name }))}
-        onChange={setActiveSetup}
+        allowDeselect={false}
+        flex="1 1 12rem"
+        miw={0}
+        onChange={(next) => {
+          if (next !== null) setActiveSetup(next);
+        }}
       />
-      <IconButton
-        variant="secondary"
-        label="New battle setup"
-        onPress={() => {
+      <ActionIcon
+        size="lg"
+        variant="default"
+        aria-label="New battle setup"
+        onClick={() => {
           setDialog('new');
         }}
       >
-        <PlusIcon />
-      </IconButton>
-      <IconButton
-        variant="secondary"
-        label="Rename battle setup"
-        onPress={() => {
+        <Plus size={16} aria-hidden />
+      </ActionIcon>
+      <ActionIcon
+        size="lg"
+        variant="default"
+        aria-label="Rename battle setup"
+        onClick={() => {
           setDialog('rename');
         }}
       >
-        <PencilIcon />
-      </IconButton>
-      <IconButton
-        variant="secondary"
-        label="Duplicate battle setup"
-        onPress={() => {
+        <Pencil size={16} aria-hidden />
+      </ActionIcon>
+      <ActionIcon
+        size="lg"
+        variant="default"
+        aria-label="Duplicate battle setup"
+        onClick={() => {
           duplicateSetup(setup.id);
         }}
       >
-        <DuplicateIcon />
-      </IconButton>
-      <IconButton
-        variant="secondary"
-        label="Delete battle setup"
-        isDisabled={profile.setups.length <= 1}
-        onPress={() => {
+        <Copy size={16} aria-hidden />
+      </ActionIcon>
+      <ActionIcon
+        size="lg"
+        variant="default"
+        aria-label="Delete battle setup"
+        disabled={profile.setups.length <= 1}
+        onClick={() => {
           setDialog('delete');
         }}
       >
-        <TrashIcon />
-      </IconButton>
+        <Trash2 size={16} aria-hidden />
+      </ActionIcon>
 
       {dialog === 'new' && (
         <NameDialog
@@ -144,29 +156,29 @@ export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSe
       )}
       {dialog === 'delete' && (
         <Dialog
-          isOpen
+          opened
           role="alertdialog"
           title="Delete battle setup"
           description={`“${setup.name}” will be removed. The values you typed stay on your profile.`}
-          onOpenChange={(open) => {
-            if (!open) close();
-          }}
+          onClose={close}
           footer={
-            <>
-              <Button onPress={close}>Cancel</Button>
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" onClick={close}>
+                Cancel
+              </Button>
               <Button
-                variant="danger"
-                onPress={() => {
+                color="danger"
+                onClick={() => {
                   deleteSetup(setup.id);
                   close();
                 }}
               >
                 Delete setup
               </Button>
-            </>
+            </Group>
           }
         />
       )}
-    </Cluster>
+    </Group>
   );
 }

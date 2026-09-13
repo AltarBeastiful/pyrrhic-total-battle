@@ -3,20 +3,18 @@
  * why it is one always-on row at the end of the card rather than a group of its own: the temple
  * level divides every revival bill, and the training lines shave the retraining one.
  */
+import { SimpleGrid, Stack } from '@mantine/core';
+
 import { GROUPS } from '@/data/types';
 import type { Group } from '@/data/types';
 import type { Profile } from '@/state/schema';
 import { useStore } from '@/state/store';
-import { NumberStepper } from '@/ui/kit';
-import { Grid, Stack } from '@/ui/layout';
+import { NumberField } from '@/ui/kit2';
 
 import { GROUP_LABELS } from './labels';
 import { templeDivisor, WHERE } from './rows';
 import type { TotalsSummary } from './rows';
 import { FieldGroup, SourceSheet } from './SourceSheet';
-
-/** Percentages typed by hand: up to two decimals, no grouping. */
-const PERCENT: Intl.NumberFormatOptions = { maximumFractionDigits: 2, useGrouping: false };
 
 export interface RecoverySheetProps {
   profile: Profile;
@@ -49,8 +47,8 @@ export function RecoverySheet({ profile, summary, onClose }: RecoverySheetProps)
       onClose={onClose}
       size="lg"
     >
-      <Stack gap={4}>
-        <NumberStepper
+      <Stack gap="lg">
+        <NumberField
           label="Temple level"
           value={recovery.templeLevel}
           min={0}
@@ -62,43 +60,37 @@ export function RecoverySheet({ profile, summary, onClose }: RecoverySheetProps)
             }));
           }}
         />
-        <FieldGroup label="Training cost reduction">
-          <Grid cols={{ base: 2, sm: 4 }} gap={2}>
+        <FieldGroup label="Training cost reduction, in percent">
+          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
             {GROUPS.map((group) => (
-              <NumberStepper
+              <NumberField
                 key={group}
                 label={`${GROUP_LABELS[group]} training cost reduction`}
-                size="sm"
-                suffix="%"
-                step={0.1}
                 allowEmpty
-                formatOptions={PERCENT}
+                allowDecimal
                 value={recovery.trainingCostReduction[group] ?? null}
                 onChange={(next) => {
                   patchGroup('trainingCostReduction', group, next);
                 }}
               />
             ))}
-          </Grid>
+          </SimpleGrid>
         </FieldGroup>
-        <FieldGroup label="Training speed">
-          <Grid cols={{ base: 2, sm: 4 }} gap={2}>
+        <FieldGroup label="Training speed, in percent">
+          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
             {GROUPS.map((group) => (
-              <NumberStepper
+              <NumberField
                 key={group}
                 label={`${GROUP_LABELS[group]} training speed`}
-                size="sm"
-                suffix="%"
-                step={0.1}
                 allowEmpty
-                formatOptions={PERCENT}
+                allowDecimal
                 value={recovery.trainingSpeed[group] ?? null}
                 onChange={(next) => {
                   patchGroup('trainingSpeed', group, next);
                 }}
               />
             ))}
-          </Grid>
+          </SimpleGrid>
         </FieldGroup>
       </Stack>
     </SourceSheet>

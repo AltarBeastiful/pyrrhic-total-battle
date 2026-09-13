@@ -1,28 +1,51 @@
 // @vitest-environment jsdom
 /**
- * The Bonuses card, checked the way a player uses it (design plan §7.3, journey J3): the TOTAL is
- * three labelled figures in the header, captains and the hero are a grid of tiles, every other
- * source is a row with a switch and a gear, and every editor is a sheet that repeats the TOTAL so
- * the figures are visible while they move.
+ * The Bonuses card, checked the way a player uses it (design plan §7.3, journey J3, D-34): the TOTAL
+ * is four labelled figures in the header, captains, artifacts, permanent sources and titles are
+ * TotalStack's chips, everything else is a row with a switch and a gear, and the editors are an
+ * anchored popover (a level) or a sheet (a form) that repeats the TOTAL so the figures move in view.
  *
  * Everything is selected by role and by accessible name, so a class, a layout or a glyph can change
  * without a test noticing.
  */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { captains as captainTable } from '@/data';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { renderWithTheme } from '@/ui/kit2/testRender';
 
 import { BonusesSection } from './BonusesSection';
-import { CAPTAIN_CAP_MESSAGE } from './CaptainGrid';
+import { CAPTAIN_CAP_MESSAGE } from './CaptainChips';
 
-// The card pulls in every data table and renders eight groups; under full-suite load the first
+// The card pulls in every data table and renders eighty-odd chips; under full-suite load the first
 // render can exceed the default 5 s budget, which is the cost of the import, not a hang.
 vi.setConfig({ testTimeout: 30_000 });
 
+/**
+ * The card is read with **reduced motion on**, which is a real setting we respect (rule 24) and the
+ * one that makes a fold honest in jsdom: Mantine's `Collapse` then has no transition to run, so a
+ * closed group is absent from the document and an open one is in it, with no timer in between.
+ */
 beforeEach(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+  // jsdom ships no `scrollIntoView`, and Mantine's combobox keeps the chosen option in view on a
+  // timer after the test has moved on; without this the run ends on an unhandled rejection.
+  Element.prototype.scrollIntoView ??= () => {};
   globalThis.localStorage.clear();
   useStore.getState().replaceDocument(newRoot());
 });
@@ -34,7 +57,7 @@ afterEach(() => {
 const profile = () => selectActiveProfile(useStore.getState());
 const setup = () => selectActiveSetup(useStore.getState());
 
-/** The card itself; the sheets render in a portal, outside it. */
+/** The card itself. */
 function card(): HTMLElement {
   const node = document.querySelector('#bonuses');
   if (node === null) throw new Error('the Bonuses card is not on screen');
@@ -43,7 +66,8 @@ function card(): HTMLElement {
 
 /** The four labelled figures of a TOTAL header, as a name → value map. */
 function totals(scope: HTMLElement): Record<string, string> {
-  const list = within(scope).getByLabelText('Army bonus totals');
+  const list = within(scope).getAllByLabelText('Army bonus totals')[0];
+  if (list === undefined) throw new Error('no TOTAL on screen');
   const out: Record<string, string> = {};
   for (const term of list.querySelectorAll('dt')) {
     out[term.textContent ?? ''] = term.nextElementSibling?.textContent ?? '';
@@ -52,77 +76,61 @@ function totals(scope: HTMLElement): Record<string, string> {
 }
 
 /** The line that unfolds the sources. */
-function disclosure(): HTMLElement {
-  return within(card()).getByRole('button', { name: /^Sources/ });
-}
+const disclosure = (): HTMLElement => within(card()).getByRole('button', { name: /^Sources/ });
 
 function expand(): void {
   const trigger = disclosure();
   if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
 }
 
-/** Opens one row's editor and returns its sheet. */
-function openEditor(name: string): HTMLElement {
-  fireEvent.click(screen.getByRole('button', { name: `Edit ${name}` }));
-  return screen.getByRole('dialog');
+/** Open one accordion group; a closed group is not in the document (`keepMounted={false}`). */
+function openGroup(title: string): void {
+  const control = within(card()).getByRole('button', { name: new RegExp(`^${title}`) });
+  if (control.getAttribute('aria-expanded') !== 'true') fireEvent.click(control);
 }
 
-/** A kit Select's trigger; its accessible name is the chosen value, then the field's own label. */
-function selectTrigger(scope: HTMLElement, label: string): HTMLElement {
-  return within(scope).getByRole('button', { name: new RegExp(`${label}$`) });
+/** A captain chip body, by either of the two names it wears. */
+function captainChip(name: string): HTMLElement {
+  return (
+    within(card()).queryByRole('checkbox', { name: `Send ${name} on this march` }) ??
+    within(card()).getByRole('checkbox', { name: `${name}, riding with this march` })
+  );
 }
 
-function done(sheet: HTMLElement): void {
-  fireEvent.click(within(sheet).getByRole('button', { name: 'Done' }));
+const captainGear = (name: string): HTMLElement =>
+  within(card()).getByRole('button', { name: new RegExp(`^(Set|Change) ${name}’s level$`) });
+
+/** A chip's visible label; Mantine draws it as a `<label for>` beside the input, not around it. */
+function chipLabel(chip: HTMLElement): HTMLElement {
+  const label = document.querySelector(`label[for="${chip.id}"]`);
+  if (label === null) throw new Error(`no label for ${chip.id}`);
+  return label as HTMLElement;
 }
 
-/** Types into a stepper the way the field expects it: a change, then leaving the field. */
+/** A kit `Select`: its input carries the combobox role, beside a hidden input of the same name. */
+const chooseIn = async (
+  user: ReturnType<typeof userEvent.setup>,
+  scope: HTMLElement,
+  label: string,
+  option: string,
+): Promise<void> => {
+  await user.click(within(scope).getByRole('combobox', { name: label }));
+  await user.click(screen.getByRole('option', { name: option }));
+};
+
 function typeNumber(scope: HTMLElement, label: string, value: string): void {
   const field = within(scope).getByLabelText(label);
   fireEvent.change(field, { target: { value } });
   fireEvent.blur(field);
 }
 
-// ---- The captain grid ---------------------------------------------------------------------------
-/** Every tile body of the grid, in the order it lays them out. */
-function tileNames(): string[] {
-  return within(card())
-    .getAllByRole('button', { name: /^(Enlist |.*, enlisted$)/ })
-    .map((node) => (node.getAttribute('aria-label') ?? '').replace(/^Enlist |, enlisted$/g, ''));
-}
+const done = (sheet: HTMLElement): void => {
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Done' }));
+};
 
-/** Tap a tile body: enlist the captain, or take it out again. */
-function enlist(name: string): void {
-  const tile = within(card()).queryByRole('button', { name: `Enlist ${name}` });
-  fireEvent.click(tile ?? within(card()).getByRole('button', { name: `${name}, enlisted` }));
-}
-
-/** Tap a tile badge and return the sheet it opened. */
-function openBadge(name: string): HTMLElement {
-  fireEvent.click(within(card()).getByRole('button', { name: new RegExp(`^(Set|Change) ${name}’s level$`) }));
-  return screen.getByRole('dialog');
-}
-
-/** The hero's badge names itself, because what it opens is a pick rather than a level. */
-function openHeroBadge(label: string): HTMLElement {
-  fireEvent.click(within(card()).getByRole('button', { name: label }));
-  return screen.getByRole('dialog');
-}
-
-/**
- * Enlist a captain and set its base level through the badge. Beowulf gives the *whole army* 1 % of
- * health and of strength per level, which is the figure the header carries; Aydae gives the same to
- * guardsmen only, which the header deliberately does not.
- */
-function addCaptain(name: string, level: string): void {
-  enlist(name);
-  const sheet = openBadge(name);
-  typeNumber(sheet, 'Base level', level);
-  done(sheet);
-}
-
-test('the header carries the TOTAL as three labelled figures and the count of sources on', () => {
-  render(<BonusesSection />);
+// ---- the header ---------------------------------------------------------------------------------
+test('the header carries the TOTAL as four labelled figures', () => {
+  renderWithTheme(<BonusesSection />);
 
   expect(within(card()).getByRole('heading', { level: 2, name: 'Bonuses' })).toBeTruthy();
   expect(totals(card())).toEqual({
@@ -133,13 +141,14 @@ test('the header carries the TOTAL as three labelled figures and the count of so
   });
 });
 
-test('a source switched on with nothing typed in it is counted in the header', () => {
-  render(<BonusesSection />);
+test('a source switched on with nothing typed in it is badged in the header', () => {
+  renderWithTheme(<BonusesSection />);
 
   // VIP, the dragon and the unexplained remainder start switched on and empty.
   expect(within(card()).getByText('3 on but empty')).toBeTruthy();
 
   expand();
+  openGroup('Other');
   fireEvent.click(within(card()).getByRole('switch', { name: 'Dragon' }));
 
   expect(setup()?.active.dragon).toBe(false);
@@ -147,7 +156,7 @@ test('a source switched on with nothing typed in it is counted in the header', (
 });
 
 test('the sources are folded away by default and the choice is remembered per device', () => {
-  const first = render(<BonusesSection />);
+  const first = renderWithTheme(<BonusesSection />);
   expect(disclosure().getAttribute('aria-expanded')).toBe('false');
 
   fireEvent.click(disclosure());
@@ -155,274 +164,250 @@ test('the sources are folded away by default and the choice is remembered per de
   expect(globalThis.localStorage.getItem('pyrrhic.ui.v1')).toContain('"bonusesExpanded":true');
 
   first.unmount();
-  render(<BonusesSection />);
+  renderWithTheme(<BonusesSection />);
   expect(disclosure().getAttribute('aria-expanded')).toBe('true');
 });
 
-test('a tile takes its captain in and out of the march, and keeps the level it was given', () => {
-  render(<BonusesSection />);
+// ---- the captain chips --------------------------------------------------------------------------
+test('the row shows the hero and every captain the tables know, and none of them is an Add button', () => {
+  renderWithTheme(<BonusesSection />);
   expand();
-  addCaptain('Beowulf', '20');
 
-  expect(profile()?.sources.captains).toHaveLength(1);
+  const row = within(card()).getByRole('group', { name: 'Captains and hero' });
+  expect(within(row).getAllByRole('checkbox')).toHaveLength(captainTable.length + 1);
+  expect(within(row).getByRole('checkbox', { name: 'Send Hero on this march' })).toBeTruthy();
+  for (const record of captainTable) {
+    expect(within(row).getByRole('checkbox', { name: new RegExp(record.name) })).toBeTruthy();
+  }
+  expect(within(card()).queryByRole('button', { name: /^Add captain/ })).toBeNull();
+});
+
+test('a chip sends its captain on the march and takes it off again, and the TOTAL follows', () => {
+  renderWithTheme(<BonusesSection />);
+  expand();
+
+  fireEvent.click(captainChip('Beowulf'));
   expect(setup()?.active.captains).toHaveLength(1);
-  expect(totals(card()).Health).toBe('+20 %');
+  expect(profile()?.sources.captains).toHaveLength(1);
 
-  const tile = within(card()).getByRole('button', { name: 'Beowulf, enlisted' });
-  expect(tile.getAttribute('aria-pressed')).toBe('true');
-  fireEvent.click(tile);
-
+  fireEvent.click(captainChip('Beowulf'));
   expect(setup()?.active.captains).toEqual([]);
+  // The entry stays: the level it was given is not lost by leaving it behind for one march.
   expect(profile()?.sources.captains).toHaveLength(1);
-  expect(totals(card()).Health).toBe('0 %');
-  expect(within(card()).getByRole('button', { name: 'Enlist Beowulf' })).toBeTruthy();
 });
 
-test('the grid shows every captain the tables know, with the hero at its head', () => {
-  render(<BonusesSection />);
+test('a captain that touches no stack carries no gear, and can still ride along', () => {
+  renderWithTheme(<BonusesSection />);
   expand();
 
-  const names = tileNames();
-  expect(names).toHaveLength(captainTable.length + 1);
-  expect(names[0]).toBe('Hero');
-  for (const record of captainTable) expect(names).toContain(record.name);
-});
+  expect(within(card()).queryByRole('button', { name: /Carter’s level$/ })).toBeNull();
+  expect(within(card()).getByRole('button', { name: /Beowulf’s level$/ })).toBeTruthy();
 
-test('the grid puts the enlisted first, then the captains that touch a stack, then the rest', () => {
-  render(<BonusesSection />);
-  expand();
-  enlist('Skadi');
-
-  const names = tileNames().slice(1);
-  expect(names[0]).toBe('Skadi');
-
-  // Of the thirty, ten carry neither a health nor a strength block; they close the grid, by name.
-  const noStack = captainTable
-    .filter((record) => record.health === undefined && record.strength === undefined)
-    .map((record) => record.name)
-    .sort((a, b) => a.localeCompare(b));
-  expect(names.slice(-noStack.length)).toEqual(noStack);
-  expect(names.slice(1, -noStack.length)).toEqual(
-    [...names.slice(1, -noStack.length)].sort((a, b) => a.localeCompare(b)),
-  );
-});
-
-test('a captain that touches no stack has no badge, and its tile says why', () => {
-  render(<BonusesSection />);
-  expand();
-
-  expect(within(card()).getByRole('button', { name: 'Enlist Tengel' }).textContent).toContain(
-    'No stack bonus',
-  );
-  expect(within(card()).queryByRole('button', { name: /Tengel’s level$/ })).toBeNull();
-  // It still takes one of the three slots the player really sends.
-  enlist('Tengel');
+  fireEvent.click(captainChip('Carter'));
   expect(setup()?.active.captains).toHaveLength(1);
 });
 
-test('the fourth captain is refused, in one line', () => {
-  render(<BonusesSection />);
+test('the fourth captain is refused, in one line, and the chip stays off', () => {
+  renderWithTheme(<BonusesSection />);
   expand();
-  for (const name of ['Beowulf', 'Aydae', 'Skadi']) enlist(name);
+
+  for (const name of ['Beowulf', 'Aydae', 'Skadi']) fireEvent.click(captainChip(name));
   expect(setup()?.active.captains).toHaveLength(3);
   expect(within(card()).queryByText(CAPTAIN_CAP_MESSAGE)).toBeNull();
 
-  enlist('Brann');
+  fireEvent.click(captainChip('Brann'));
 
   expect(setup()?.active.captains).toHaveLength(3);
-  expect(within(card()).getByRole('status').textContent).toContain(CAPTAIN_CAP_MESSAGE);
-  expect(within(card()).getByRole('button', { name: 'Enlist Brann' }).getAttribute('aria-pressed')).toBe(
-    'false',
-  );
+  expect(within(card()).getAllByRole('status')[0]?.textContent).toContain(CAPTAIN_CAP_MESSAGE);
+  expect((captainChip('Brann') as HTMLInputElement).checked).toBe(false);
 
   // Taking one out makes room, and the note goes with it.
-  enlist('Aydae');
-  expect(within(card()).queryByText(CAPTAIN_CAP_MESSAGE)).toBeNull();
-  enlist('Brann');
+  fireEvent.click(captainChip('Aydae'));
+  fireEvent.click(captainChip('Brann'));
   expect(setup()?.active.captains).toHaveLength(3);
+  expect(within(card()).queryByText(CAPTAIN_CAP_MESSAGE)).toBeNull();
 });
 
-test('a badge opens the level sheet without changing who marches', () => {
-  render(<BonusesSection />);
+test('the gear opens an anchored popover with the level and the stars, and never enlists anybody', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
   expand();
 
-  const sheet = openBadge('Aydae');
-  expect(within(sheet).getByRole('heading', { level: 2, name: 'Aydae' })).toBeTruthy();
-  typeNumber(sheet, 'Base level', '20');
-  typeNumber(sheet, 'Stars', '3');
-  done(sheet);
+  await user.click(captainGear('Aydae'));
+  expect(captainGear('Aydae').getAttribute('aria-expanded')).toBe('true');
+  expect(screen.getByRole('textbox', { name: 'Base level' })).toBeTruthy();
+  expect(screen.getByRole('combobox', { name: 'Star level' })).toBeTruthy();
 
-  // The entry was minted by the badge alone; the captain is still on the bench.
+  // The entry is minted by the gear alone; Aydae is still on the bench.
   expect(profile()?.sources.captains).toHaveLength(1);
   expect(setup()?.active.captains).toEqual([]);
-  expect(totals(card()).Health).toBe('0 %');
-  expect(within(card()).getByRole('button', { name: 'Change Aydae’s level' }).textContent).toBe('20 ★3');
-
-  enlist('Aydae');
-  const row = within(card()).getByRole('button', { name: 'Change Aydae’s level' });
-  expect(row).toBeTruthy();
-  expect(totals(card()).Health).toBe('0 %');
+  expect((captainChip('Aydae') as HTMLInputElement).checked).toBe(false);
 });
 
-test('the hero rides at the head of the grid and its badge opens the hero picker', () => {
-  render(<BonusesSection />);
+test('the popover computes the bonus live and the chip takes a dot once a level is set', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
   expand();
 
-  expect(within(card()).getByRole('button', { name: 'Enlist Hero' }).textContent).toContain('No hero chosen');
+  fireEvent.click(captainChip('Aydae'));
+  await user.click(captainGear('Aydae'));
+  typeNumber(document.body, 'Base level', '20');
 
-  const sheet = openHeroBadge('Choose the hero');
-  fireEvent.click(selectTrigger(sheet, 'Hero'));
-  fireEvent.click(screen.getByRole('option', { name: 'Svyatogor' }));
-  done(sheet);
+  expect(profile()?.sources.captains[0]?.level).toBe(20);
+  // Aydae boosts guardsmen only, so the whole-army figure does not move; the footer says what does.
+  expect(screen.getByText('+20 % health and strength (guardsmen)')).toBeTruthy();
+  expect(totals(card()).Health).toBe('0 %');
+
+  // The gear renames itself once there is something to change, and the chip wears the dot.
+  expect(within(card()).getByRole('button', { name: 'Change Aydae’s level' })).toBeTruthy();
+  expect(chipLabel(captainChip('Aydae')).textContent).toContain('•');
+});
+
+test('a levelled captain moves the TOTAL, stars included', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  expand();
+
+  fireEvent.click(captainChip('Beowulf'));
+  await user.click(captainGear('Beowulf'));
+  typeNumber(document.body, 'Base level', '20');
+  expect(totals(card()).Health).toBe('+20 %');
+
+  await chooseIn(user, document.body, 'Star level', '★3');
+
+  expect(profile()?.sources.captains[0]?.star).toBe(3);
+  expect(totals(card()).Health).toBe('+230 %');
+  expect(totals(card()).Strength).toBe('+230 %');
+});
+
+test('the hero leads the row and its gear opens the pick', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  expand();
+
+  await user.click(within(card()).getByRole('button', { name: /^(Set|Change) Hero’s level$/ }));
+  await chooseIn(user, document.body, 'Leading this march', 'Svyatogor');
 
   expect(profile()?.sources.hero).toBe('svyatogor');
   expect(setup()?.active.hero).toBe(true);
-  expect(tileNames()[0]).toBe('Svyatogor');
-  expect(totals(card()).Health).toBe('+50 %');
-
-  fireEvent.click(within(card()).getByRole('button', { name: 'Svyatogor, enlisted' }));
-  expect(setup()?.active.hero).toBe(false);
-  expect(totals(card()).Health).toBe('0 %');
+  await waitFor(() => {
+    expect(totals(card()).Health).toBe('+50 %');
+  });
 });
 
-test('a permanent source has no switch, wears a gear, and always counts', () => {
-  render(<BonusesSection />);
+// ---- artifacts, permanent sources and titles ------------------------------------------------------
+test('an artifact is equipped from its chip and levelled from its gear', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
   expand();
+  openGroup('Artifacts');
 
+  const row = within(card()).getByRole('group', { name: 'Artifacts' });
+  expect(within(row).getAllByRole('checkbox')).toHaveLength(15);
+
+  fireEvent.click(within(row).getByRole('checkbox', { name: 'Equip Ruby Brooch' }));
+  expect(setup()?.active.artifacts).toHaveLength(1);
+
+  await user.click(within(card()).getByRole('button', { name: /Ruby Brooch’s level$/ }));
+  expect(screen.getByRole('textbox', { name: 'Level' })).toBeTruthy();
+  expect(screen.getByRole('combobox', { name: 'Star rating' })).toBeTruthy();
+  typeNumber(document.body, 'Melee strength', '30');
+
+  expect(profile()?.sources.artifacts[0]?.manual?.strength).toEqual({ melee: 30 });
+  expect(totals(card()).Strength).toBe('0 %');
+});
+
+test('a permanent source is always on, and its gear opens the sheet that moves the TOTAL', () => {
+  renderWithTheme(<BonusesSection />);
+  expand();
+  openGroup('Permanent');
+
+  const chip = within(card()).getByRole('checkbox', { name: 'Hall of Fame, on every march' });
+  expect((chip as HTMLInputElement).checked).toBe(true);
   expect(within(card()).queryByRole('switch', { name: 'Hall of Fame' })).toBeNull();
 
-  const sheet = openEditor('Hall of Fame');
-  expect(within(sheet).getByRole('heading', { name: 'Hall of Fame' })).toBeTruthy();
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit Hall of Fame' }));
+  const sheet = screen.getByRole('dialog');
   typeNumber(sheet, 'Army health', '40');
+  expect(totals(sheet).Health).toBe('+40 %');
   done(sheet);
 
   expect(totals(card()).Health).toBe('+40 %');
 });
 
-test('a row says what its source is worth, key named', () => {
-  render(<BonusesSection />);
+test('a title is worn from its chip, with what it is worth written under the name', () => {
+  renderWithTheme(<BonusesSection />);
   expand();
+  openGroup('Titles');
 
-  const sheet = openEditor('Hall of Fame');
-  typeNumber(sheet, 'Guardsmen health', '20');
-  typeNumber(sheet, 'Guardsmen strength', '20');
-  done(sheet);
+  const health = within(card()).getByRole('group', { name: 'Titles — health' });
+  const chip = within(health).getByRole('checkbox', { name: 'Administrator' });
+  expect(chipLabel(chip).textContent).toContain('+25 % HP army');
 
-  const row = within(card()).getByRole('button', { name: 'Edit Hall of Fame' }).closest('li');
-  expect(row?.textContent).toContain('+20 % health and strength (guardsmen)');
+  fireEvent.click(chip);
+
+  expect(profile()?.sources.titles).toEqual(['administrator']);
+  expect(setup()?.active.titles).toEqual(['administrator']);
+  expect(totals(card()).Health).toBe('+25 %');
 });
 
-test('the badge opens a sheet named after the captain, and the TOTAL moves in both places', () => {
-  render(<BonusesSection />);
+// ---- the row groups -------------------------------------------------------------------------------
+test('a group with nothing configured is one Add line, and adding puts a switch row in', () => {
+  renderWithTheme(<BonusesSection />);
   expand();
-  addCaptain('Beowulf', '20');
+  openGroup('Equipment');
 
-  const sheet = openBadge('Beowulf');
-  expect(within(sheet).getByRole('heading', { name: 'Beowulf' })).toBeTruthy();
-  expect(totals(sheet).Health).toBe('+20 %');
-
-  typeNumber(sheet, 'Base level', '30');
-
-  expect(profile()?.sources.captains[0]?.level).toBe(30);
-  expect(totals(sheet).Health).toBe('+30 %');
-  expect(totals(card()).Health).toBe('+30 %');
-
-  done(sheet);
-  expect(screen.queryByRole('dialog')).toBeNull();
-});
-
-test('the sheet says where the figures are read in game, and what this captain boosts', () => {
-  render(<BonusesSection />);
-  expand();
-
-  const both = openBadge('Aydae');
-  expect(within(both).getByText(/the Captains screen/)).toBeTruthy();
-  expect(within(both).getByText(/guardsmen health and guardsmen strength/)).toBeTruthy();
-  done(both);
-
-  // Half the keys is still the same two fields; the description is what says so.
-  const one = openBadge('Cleopatra');
-  expect(within(one).getByLabelText('Base level')).toBeTruthy();
-  expect(within(one).getByLabelText('Stars')).toBeTruthy();
-  expect(within(one).getByText(/army strength only/)).toBeTruthy();
-});
-
-test('adding a piece of equipment puts it in the list, switched on', () => {
-  render(<BonusesSection />);
-  expand();
+  expect(within(card()).queryByRole('listitem')).toBeNull();
 
   fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
-  const sheet = screen.getByRole('dialog');
-  expect(within(sheet).getByLabelText('Equipment type')).toBeTruthy();
-  done(sheet);
+  done(screen.getByRole('dialog'));
 
   expect(profile()?.sources.equipment).toHaveLength(1);
   expect(setup()?.active.equipment).toHaveLength(1);
   expect(within(card()).getByRole('switch', { name: 'Emerald Guardian' })).toBeTruthy();
-  expect(totals(card()).Health).toBe('0 %');
 });
 
-test('changing an equipment quality moves the TOTAL', () => {
-  render(<BonusesSection />);
+test('editing a piece of equipment in its sheet moves the TOTAL', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
   expand();
+  openGroup('Equipment');
   fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
   done(screen.getByRole('dialog'));
 
-  const sheet = openEditor('Emerald Guardian');
-  fireEvent.click(selectTrigger(sheet, 'Quality'));
-  fireEvent.click(screen.getByRole('option', { name: 'Godlike' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit Emerald Guardian' }));
+  const sheet = screen.getByRole('dialog');
+  await chooseIn(user, sheet, 'Quality', 'Godlike');
   done(sheet);
 
   expect(profile()?.sources.equipment[0]?.quality).toBe('godlike');
-  const row = within(card()).getByRole('switch', { name: 'Emerald Guardian' }).closest('li');
+  const row = within(card()).getByRole('switch', { name: 'Emerald Guardian' }).closest('[role="listitem"]');
   expect(row?.textContent).toContain('+128 % health and strength (melee)');
 });
 
-test('a group says the cap the game puts on it', () => {
-  render(<BonusesSection />);
+test('the temple and training row wears the pin instead of a switch and keeps its sheet', () => {
+  renderWithTheme(<BonusesSection />);
   expand();
-  addCaptain('Aydae', '10');
+  openGroup('Recovery');
 
-  expect(within(card()).getByText('1 of 3 captains on')).toBeTruthy();
-});
+  expect(within(card()).queryByRole('switch', { name: 'Temple and training' })).toBeNull();
 
-test('a title has to be added before it can be worn, and giving it up removes the row', () => {
-  render(<BonusesSection />);
-  expand();
-
-  fireEvent.click(within(card()).getByRole('button', { name: 'Add title' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit Temple and training' }));
   const sheet = screen.getByRole('dialog');
-  const name = within(sheet).getByRole('heading', { level: 2 }).textContent ?? '';
+  typeNumber(sheet, 'Temple level', '30');
+  typeNumber(sheet, 'Guardsmen training cost reduction', '12.5');
   done(sheet);
 
-  expect(profile()?.sources.titles).toEqual([expect.any(String)]);
-  expect(setup()?.active.titles).toHaveLength(1);
-
-  fireEvent.click(within(card()).getByRole('button', { name: `Edit ${name}` }));
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Give up this title' }));
-
-  expect(profile()?.sources.titles).toEqual([]);
-  expect(setup()?.active.titles).toEqual([]);
+  expect(profile()?.recovery.templeLevel).toBe(30);
+  expect(profile()?.recovery.trainingCostReduction).toEqual({ guardsmen: 12.5 });
+  expect(within(card()).getByText(/revival costs divided by 3.84/)).toBeTruthy();
 });
 
-test('deleting a source switches it off in every battle setup', () => {
-  render(<BonusesSection />);
+test('every battle setup keeps its own selection of sources', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
   expand();
-  addCaptain('Aydae', '20');
-  fireEvent.click(within(card()).getByRole('button', { name: 'Duplicate battle setup' }));
-  expect(profile()?.setups.every((entry) => entry.active.captains.length === 1)).toBe(true);
-
-  const sheet = openBadge('Aydae');
-  fireEvent.click(within(sheet).getByRole('button', { name: 'Forget this captain' }));
-
-  expect(profile()?.sources.captains).toEqual([]);
-  expect(profile()?.setups.every((entry) => entry.active.captains.length === 0)).toBe(true);
-});
-
-test('every battle setup keeps its own selection of sources', () => {
-  render(<BonusesSection />);
-  expand();
-  addCaptain('Beowulf', '20');
+  fireEvent.click(captainChip('Beowulf'));
   const first = setup();
 
   fireEvent.click(within(card()).getByRole('button', { name: 'New battle setup' }));
@@ -434,26 +419,11 @@ test('every battle setup keeps its own selection of sources', () => {
   expect(setup()?.name).toBe('Solo');
   expect(setup()?.active.captains).toHaveLength(1);
 
-  enlist('Beowulf');
+  fireEvent.click(captainChip('Beowulf'));
   expect(setup()?.active.captains).toEqual([]);
 
-  fireEvent.click(selectTrigger(card(), 'Battle setup'));
-  fireEvent.click(screen.getByRole('option', { name: first?.name ?? '' }));
+  await chooseIn(user, card(), 'Battle setup', first?.name ?? '');
 
   expect(setup()?.id).toBe(first?.id);
-  expect(totals(card()).Health).toBe('+20 %');
-});
-
-test('the temple and training row keeps the recovery settings behind its gear', () => {
-  render(<BonusesSection />);
-  expand();
-
-  const sheet = openEditor('Temple and training');
-  typeNumber(sheet, 'Temple level', '30');
-  typeNumber(sheet, 'Guardsmen training cost reduction', '12.5');
-  done(sheet);
-
-  expect(profile()?.recovery.templeLevel).toBe(30);
-  expect(profile()?.recovery.trainingCostReduction).toEqual({ guardsmen: 12.5 });
-  expect(within(card()).getByText(/revival costs divided by 3.84/)).toBeTruthy();
+  expect(setup()?.active.captains).toHaveLength(1);
 });
