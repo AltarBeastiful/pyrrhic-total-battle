@@ -31,8 +31,8 @@ plan disagree, the rule wins; change the rule here first. Each rule cites the re
    tapping anywhere on the item selects it; never a select box next to cards. [R6f, R12]
 8. **Typed numbers are plain inputs** that select their whole value on focus so typing replaces it (housing
    pools, owned counts, stack counts). Arrow keys may still step. [R14, R16]
-9. **Steppers only for short ordered lists** of at most twelve values (tiers G1–G9, captain levels and
-   stars); nothing else gets − / + buttons. [R6b, R17]
+9. **Steppers only for ordered lists of at most a hundred values** (tiers G1–G9, captain levels and
+   stars, small counts); anything larger is a plain input. [R6b, R17, R25]
 10. **Long lists are searched, not filtered.** Players know mercenaries by name and tier: a combobox grouped
     by tier, each tier in its colour; no role or race filter chips. [R15]
 11. **No add button where a grid of every option works.** Captains, artifacts, titles: all options visible,
