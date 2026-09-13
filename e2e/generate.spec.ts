@@ -86,14 +86,22 @@ test('a press on a pill leaves that type out of the march, and puts it back', as
   expect(without.some((label) => label.startsWith(`${code} `))).toBe(false);
   expect(without.length).toBe(before.length - 1);
 
-  // The type is in the small row under the pools now — the off half of the same toggle — and a press
-  // puts it back and keeps it in for good.
+  // Leaving a type out is a decision about *this march*, not about the account: the Troops card
+  // still ticks every type the account owns (schema v2).
+  await expect(page.locator('#troops').getByRole('checkbox', { name: 'Rider III' })).toBeChecked();
+
+  // The type is in the small row under the pools now — the off half of the same toggle — and it says
+  // who left it out, because that decides what putting it back means.
   const putBack = marchLeftOut(page).first();
   await expect(putBack).toHaveAttribute('aria-pressed', 'false');
+  await expect(putBack).toHaveAttribute('data-left-out', 'you');
+  await expect(putBack).toHaveAccessibleName(/left out by you/);
   await putBack.click();
   await settle(page);
+
+  // A type *you* left out is simply let back in: the exclusion is undone and nothing is pinned.
   expect((await marchStackLabels(page)).length).toBe(before.length);
-  await expect(marchSection(page).getByRole('button', { name: /, kept in — leave out$/ })).toBeVisible();
+  await expect(marchSection(page).getByRole('button', { name: /, kept in — leave out$/ })).toHaveCount(0);
 
   expect(problems).toEqual([]);
 });
@@ -187,10 +195,16 @@ test('a type the priority left out can be kept in the march, and stays in', asyn
   await chooseObjective(page, 'Best worst case');
   await generate(page, { leadership: 4100 });
 
-  // A search wins by marching with fewer types, and the strip says what that bought (PLAN §3.6).
-  await expect(marchSection(page).getByRole('heading', { name: 'Compared with all types' })).toBeVisible();
+  // A search wins by marching with fewer types, and the strip says what that bought — as the five
+  // objectives side by side, since investigation 0013 §5.3 (PLAN §3.6, design rule 29).
+  await expect(marchSection(page).getByRole('heading', { name: 'Objectives compared' })).toBeVisible();
   const leftOut = marchLeftOut(page);
   await expect(leftOut.first()).toBeVisible();
+
+  // Nobody took these out by hand, so the row says the search did — and the only way to overrule the
+  // search is to keep the type in for good.
+  await expect(leftOut.first()).toHaveAttribute('data-left-out', 'search');
+  await expect(leftOut.first()).toHaveAccessibleName(/left out by the search/);
 
   const before = await marchStackLabels(page);
   await leftOut.first().click();

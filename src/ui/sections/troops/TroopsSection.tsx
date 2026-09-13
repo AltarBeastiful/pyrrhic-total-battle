@@ -14,11 +14,13 @@
  * the top tier as a muted caption and one emoji `Chip` per type at it — checked means "I own it".
  * Engineers and monsters read "—" at both ends when the group is not used at all.
  *
- * Lower tiers are always in. A type the March left out below the top tier is named under its row
- * with a way to put it back, so nothing the account fields is ever hidden. The block describes the
- * *account*, not one march: everything here is written straight to the active profile.
+ * Lower tiers are always in. The block describes **technology** — what the account has unlocked —
+ * and nothing else: everything here is written straight to the active profile, and what one march
+ * leaves out is the March's own business (`setup.excludedUnitIds`, owner's correction of
+ * 2026-09-13). A type taken out of a march therefore never appears here, and no press here can
+ * change a march the player is not looking at.
  */
-import { Box, Button, Flex, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { Box, Flex, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { useId } from 'react';
 
 import { CATEGORIES } from '@/data/types';
@@ -33,7 +35,6 @@ import type { ChipRowItem } from '@/ui/kit';
 import {
   isChipRow,
   isEmptyArmy,
-  leftOutUnits,
   rangeSummary,
   rowBounds,
   rowTiers,
@@ -108,8 +109,9 @@ export function TroopsSection() {
   /**
    * The top tier's chips, written back the way the schema stores them: guardsmen and specialists
    * have one type per category per tier, so a chip drops the *category* (`topTierExcluded`);
-   * monsters have four unrelated types at one tier, so a chip drops the *unit id*. Checking a chip
-   * always clears both, because the March leaves types out by id.
+   * monsters have four unrelated types at one tier, which no category tells apart, so a chip drops
+   * the *unit id* (`excludedUnitIds`). Both say the same thing — "the account has not unlocked
+   * this" — and neither has anything to do with a march.
    */
   const setIncluded = (row: TroopRowId, nextIds: string[]): void => {
     const units = topTierUnits(troops, row);
@@ -128,10 +130,6 @@ export function TroopsSection() {
         ...(isChipRow(row) ? [] : dropped.map((unit) => unit.id)),
       ],
     });
-  };
-
-  const putBack = (ids: string[]): void => {
-    patch({ excludedUnitIds: troops.excludedUnitIds.filter((id) => !ids.includes(id)) });
   };
 
   return (
@@ -157,7 +155,6 @@ export function TroopsSection() {
             onFrom={setFrom}
             onTo={setTo}
             onIncluded={setIncluded}
-            onPutBack={putBack}
           />
         ))}
       </Stack>
@@ -171,7 +168,6 @@ interface GroupRowProps {
   onFrom: (row: TroopRowId, value: number | null) => void;
   onTo: (row: TroopRowId, value: number | null) => void;
   onIncluded: (row: TroopRowId, unitIds: string[]) => void;
-  onPutBack: (ids: string[]) => void;
 }
 
 /**
@@ -179,7 +175,7 @@ interface GroupRowProps {
  * tier. The line wraps rather than scrolls, so on a phone the chips drop under the two selects —
  * which is the second line the design allows the row (R14).
  */
-function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRowProps) {
+function GroupRow({ row, troops, onFrom, onTo, onIncluded }: GroupRowProps) {
   const hintId = useId();
   const range = troops[row.id];
   const tiers = rowTiers(row.id);
@@ -188,7 +184,6 @@ function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRow
   // be able to step out of that.
   const allowNone = row.allowNone || range === null;
   const units = row.tiles ? topTierUnits(troops, row.id) : [];
-  const leftOut = leftOutUnits(troops, row.id);
   const top = range === null ? '' : `${row.prefix}${range.max}`;
   const hint = `Untick the ${top} types you have not unlocked`;
 
@@ -274,25 +269,6 @@ function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRow
           </Group>
         )}
       </Flex>
-      {leftOut.length > 0 && (
-        <Group gap={6} wrap="wrap" align="center" pl={{ base: 0, sm: NAME_WIDTH }}>
-          <Text size="xs" c="dimmed">
-            {/* No middle dot before the button: facts are separated by space, not by punctuation
-                (docs/design.md §8 rule 5). */}
-            {`Left out: ${leftOut.map((unit) => unit.name).join(', ')}`}
-          </Text>
-          <Button
-            variant="subtle"
-            size="xs"
-            aria-label={`Put back left-out ${row.label.toLowerCase()}`}
-            onClick={() => {
-              onPutBack(leftOut.map((unit) => unit.id));
-            }}
-          >
-            Put back
-          </Button>
-        </Group>
-      )}
     </Stack>
   );
 }

@@ -1,11 +1,14 @@
 /**
  * The four groups of the Troops card (design plan §7.1, amended) and the pure helpers that turn
- * `profile.troops` into what the card draws: the tiers a stepper steps through, the unit types of
- * the top tier, and the types the March left out below it.
+ * `profile.troops` into what the card draws: the tiers a stepper steps through and the unit types of
+ * the top tier.
  *
- * Everything here is derived from the game tables, never hard-coded: the tiers of a group, the
- * categories a tier offers, the order types are listed in. A data update that adds a tier or a
- * category therefore shows up in the card without touching this file.
+ * All of it is **technology** — the tiers and the types the account has unlocked. What a march leaves
+ * out is a battle-setup decision and never reaches this file (owner, 2026-09-13).
+ *
+ * Nothing is hard-coded either: the tiers of a group, the categories a tier offers and the order
+ * types are listed in all come from the game tables, so a data update that adds a tier or a category
+ * shows up in the card without touching this file.
  */
 import { getUnits } from '@/data';
 import { CATEGORIES } from '@/data/types';
@@ -93,8 +96,7 @@ function sortForDisplay(units: UnitDef[]): UnitDef[] {
 
 /**
  * The unit types a group contributes: inside the tier range and, at the highest tier, not dropped
- * by a category. Per-unit exclusions are deliberately *not* applied — the card has to show a type
- * that was left out so the player can put it back.
+ * by a category.
  */
 export function rowSelection(troops: ProfileTroops, row: TroopRowId): UnitDef[] {
   const range = troops[row];
@@ -117,26 +119,14 @@ export function topTierUnits(troops: ProfileTroops, row: TroopRowId): UnitDef[] 
 }
 
 /**
- * Is this top-tier type in the march? Guardsmen and specialists are dropped by category, monsters
- * by unit id; a type the March left out (`excludedUnitIds`) reads as off whatever its group.
+ * Does the account own this top-tier type? Guardsmen and specialists are dropped by category
+ * (`topTierExcluded`), monsters by unit id (`excludedUnitIds`) — a monster tier holds four unrelated
+ * types that no category tells apart. Both are technology; neither says anything about a march.
  */
 export function topTierIncluded(troops: ProfileTroops, row: TroopRowId, unit: UnitDef): boolean {
   if (troops.excludedUnitIds.includes(unit.id)) return false;
   if (!isChipRow(row) || unit.category === undefined) return true;
   return !troops.topTierExcluded[row].includes(unit.category);
-}
-
-/**
- * Types of this group the March left out below the top tier. Lower tiers are always in, so these
- * are the only ones the card has to offer back — the top tier says it with its tiles.
- */
-export function leftOutUnits(troops: ProfileTroops, row: TroopRowId): UnitDef[] {
-  const range = troops[row];
-  if (range === null) return [];
-  const excluded = new Set(troops.excludedUnitIds);
-  return sortForDisplay(
-    rowUnits(row).filter((unit) => unit.tier >= range.min && unit.tier < range.max && excluded.has(unit.id)),
-  );
 }
 
 /** True when the profile owns nothing at all, which is what the guided empty state answers. */

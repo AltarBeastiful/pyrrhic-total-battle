@@ -168,12 +168,18 @@ training work in 10-unit chunks; reproduces ep-round-to-10s exactly: WE 18 → 1
 exclusions (per-unit and top-tier per-category); Troop Type Allocation percentages when no preservation order
 is chosen (weights pool share per category).
 
-**Pinned unit types.** A unit type the user pins from the results ("Keep in march", stored per battle setup as
-`pinnedUnitIds`) is never dropped: when the solver would leave it empty (Troops-first ceiling, tens rounding, no
-room) it reserves its minimum count (1, or 10 in tens mode) before the rest of the pool is re-solved, so the
-other stacks stay balanced; if it then sits above the ceiling it keeps its true place in the HP order and a
-warning says it will fall before the last troops. Pins are also kept by the priority search. Pinning an
-excluded type un-excludes it.
+**Pinned and left-out unit types.** Both are **battle-setup** decisions, stored side by side on the setup and
+never on the profile: `pinnedUnitIds` is what this march keeps whatever the solver prefers, `excludedUnitIds`
+is what the player took out of this march by hand. The available types of a march are therefore the troop
+selection (tier ranges, top-tier category chips, and the top-tier monsters the account has not unlocked) *minus*
+the active setup's `excludedUnitIds`; what the sizer or the priority search drops on top of that is reported in
+the result and written nowhere. A pinned type is never dropped: when the solver would leave it empty
+(Troops-first ceiling, tens rounding, no room) it reserves its minimum count (1, or 10 in tens mode) before the
+rest of the pool is re-solved, so the other stacks stay balanced; if it then sits above the ceiling it keeps its
+true place in the HP order and a warning says it will fall before the last troops. Pins are also kept by the
+priority search. The two lists are mutually exclusive: leaving a type out drops its pin, and pinning one clears
+its exclusion. "Put back" reads the setup to decide which it means — undo the player's own exclusion, or pin a
+type the search dropped.
 
 ### 3.5 Battle model and Battle Summary
 Enemy: 4 stacks (flying/melee/ranged/mounted), 8 for Arachne's, or custom counts. Each enemy hit removes our
@@ -260,8 +266,11 @@ UI: a slot count on the Battle card and a "Best captains" action in the March ca
 1. **Profile bar**: active profile switcher, New / Duplicate / Rename / Delete, Export, Import, Share link,
    "unsaved changes" indicator. Theme toggle.
 2. **Troops**: four rows (Guardsmen, Specialists, Engineers, Monsters) with min/max tier steppers and, for the
-   top tier, category chips to exclude not-yet-upgraded types. A compact grid preview of every included unit
-   with per-unit exclude toggles ("I upgraded archers only" = untick the other G-max units).
+   top tier, category chips to exclude not-yet-upgraded types. The block describes **technology** only — what
+   the account has unlocked — so it is the tier ranges, the top-tier category chips (`topTierExcluded`) and, for
+   monsters, whose tier holds four unrelated types no category tells apart, the top-tier unit ids
+   (`troops.excludedUnitIds`). What one march leaves out is not here: it is `BattleSetup.excludedUnitIds`,
+   written from the March card, so switching setup changes the army without touching a single unlocked tier.
 3. **Mercenaries**: searchable picker with filters (tier, role, category, race), selected list with owned
    cap per mercenary, custom mercenary form.
 4. **Stacking method**: Elite Preservation / M's Preservation / Custom kill order (+ Monsters Last toggle,

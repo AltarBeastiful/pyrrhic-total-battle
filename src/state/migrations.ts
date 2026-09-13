@@ -6,6 +6,7 @@
  *
  * Unknown fields are never a crash: zod strips them and we log one console warning naming the paths.
  */
+import { unitById } from '../data';
 import { profileSchema, rootDocumentSchema, savedStackSchema, SCHEMA_VERSION } from './schema';
 import type { Profile, RootDocument, SavedStack } from './schema';
 
@@ -13,21 +14,72 @@ export type Migration = (doc: Record<string, unknown>) => Record<string, unknown
 export type MigrationTable = Record<number, Migration>;
 
 /**
+ * Is this unit id *technology* — a monster of the top tier the account has not unlocked yet — rather
+ * than a march decision? Guardsmen and specialists say the same thing with `topTierExcluded`, one
+ * category at a time; monsters cannot, because one monster tier holds four unrelated types.
+ */
+function isTopTierMonster(unitId: string, troops: Record<string, unknown> | undefined): boolean {
+  const unit = unitById(unitId);
+  if (unit === undefined || unit.kind !== 'monster') return false;
+  const monsters = troops?.monsters;
+  if (!isPlainObject(monsters) || typeof monsters.max !== 'number') return false;
+  return unit.tier === monsters.max;
+}
+
+/**
+ * `1 → 2` for one profile: "left out of the march" was a *battle setup* decision stored on the
+ * *profile*, so one march's exclusions changed what every other march could field. Everything in
+ * `troops.excludedUnitIds` that is not a top-tier monster moves into every setup's own
+ * `excludedUnitIds` (the march it was taken out of is no longer knowable, so every march keeps the
+ * army the player last saw); the top-tier monsters stay where they are, because they are technology.
+ */
+export function splitTroopExclusions(profile: Record<string, unknown>): Record<string, unknown> {
+  const troops = isPlainObject(profile.troops) ? profile.troops : undefined;
+  if (troops === undefined) return profile;
+  const stored = Array.isArray(troops.excludedUnitIds)
+    ? troops.excludedUnitIds.filter((id): id is string => typeof id === 'string')
+    : [];
+  const kept = stored.filter((id) => isTopTierMonster(id, troops));
+  const moved = stored.filter((id) => !kept.includes(id));
+  const setups = Array.isArray(profile.setups) ? profile.setups : [];
+  return {
+    ...profile,
+    troops: { ...troops, excludedUnitIds: kept },
+    setups: setups.map((setup) => {
+      if (!isPlainObject(setup)) return setup;
+      const own = Array.isArray(setup.excludedUnitIds)
+        ? setup.excludedUnitIds.filter((id): id is string => typeof id === 'string')
+        : [];
+      return { ...setup, excludedUnitIds: [...own, ...moved.filter((id) => !own.includes(id))] };
+    }),
+  };
+}
+
+function migrateProfiles(doc: Record<string, unknown>): unknown {
+  if (!Array.isArray(doc.profiles)) return doc.profiles;
+  return doc.profiles.map((profile) => (isPlainObject(profile) ? splitTroopExclusions(profile) : profile));
+}
+
+/**
  * Root-document migrations. Each entry needs a fixture test in `migrations.test.ts`.
  * `0 → 1`: documents written by the pre-release build carried no `schemaVersion`.
+ * `1 → 2`: march exclusions move from `profile.troops` to `BattleSetup.excludedUnitIds`.
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
+  1: (doc) => ({ ...doc, schemaVersion: 2, profiles: migrateProfiles(doc) }),
 };
 
 /**
  * Per-file migrations for exported / shared profiles and stacks. They share the version line of the root
  * document, so a payload written at version `n` is upgraded with `table[n] … table[SCHEMA_VERSION - 1]`.
  * `0 → 1` is the identity here: the pre-release change was the root-level `schemaVersion` field only.
+ * A saved stack is a frozen snapshot of a run that already happened, so nothing moves into it at
+ * `1 → 2`: its setup simply gains the new empty field from the schema's own default.
  */
 const identity: Migration = (doc) => doc;
-export const profileMigrations: MigrationTable = { 0: identity };
-export const savedStackMigrations: MigrationTable = { 0: identity };
+export const profileMigrations: MigrationTable = { 0: identity, 1: splitTroopExclusions };
+export const savedStackMigrations: MigrationTable = { 0: identity, 1: identity };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -7,6 +7,11 @@ import { SCHEMA_VERSION } from './schema';
 /**
  * A hand-written v1 document: the fixture ADR-0004 asks for, so the migration chain is exercised by a
  * literal payload and not only by whatever `newRoot()` happens to produce today.
+ *
+ * Its `troops.excludedUnitIds` carries all three cases v1 → v2 has to tell apart: a guardsman the
+ * March left out (`rider-1`), a monster of a tier the account *has* passed (`battle-boar`, M3 under
+ * an M3–M4 range), and a monster of the top tier it has not unlocked (`magic-dragon`, M4). Only the
+ * last one is technology; the other two are march decisions and move to the setups.
  */
 function v1Fixture(): Record<string, unknown> {
   const setup = {
@@ -39,6 +44,7 @@ function v1Fixture(): Record<string, unknown> {
     priority: 'avgDamage',
     recoveryPlan: { mode: 'selective', selectiveTop: 3 },
   };
+  const second = { ...setup, id: '44444444-4444-4444-8444-444444444444', name: 'Arachne 8-stack' };
   return {
     schemaVersion: 1,
     dataVersion: 1,
@@ -57,9 +63,9 @@ function v1Fixture(): Record<string, unknown> {
           guardsmen: { min: 1, max: 3 },
           specialists: { min: 1, max: 2 },
           engineers: { min: 1, max: 2 },
-          monsters: null,
+          monsters: { min: 3, max: 4 },
           topTierExcluded: { guardsmen: ['mounted'], specialists: [] },
-          excludedUnitIds: ['rider-1'],
+          excludedUnitIds: ['rider-1', 'battle-boar', 'magic-dragon'],
         },
         mercenaries: {
           selected: [
@@ -105,7 +111,7 @@ function v1Fixture(): Record<string, unknown> {
           trainingSpeed: {},
           plan: { mode: 'retrain' },
         },
-        setups: [setup],
+        setups: [setup, second],
         activeSetupId: setup.id,
         savedStacks: [],
       },
@@ -124,7 +130,7 @@ describe('readSchemaVersion', () => {
 });
 
 describe('migrate', () => {
-  it('accepts a v1 fixture unchanged', () => {
+  it('accepts a v1 fixture and carries everything it said forward', () => {
     const doc = migrate(v1Fixture());
     expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(doc.profiles).toHaveLength(1);
@@ -132,6 +138,51 @@ describe('migrate', () => {
     expect(doc.profiles[0]?.mercenaries.custom[0]?.name).toBe('Event brute');
     expect(doc.tombstones).toHaveLength(1);
     expect(doc.ui.theme).toBe('dark');
+  });
+
+  it('v1 → v2 moves march exclusions to the setups and leaves the technology alone', () => {
+    const doc = migrate(v1Fixture());
+    const profile = doc.profiles[0];
+
+    // Only the top-tier monster the account has not unlocked stays on the profile.
+    expect(profile?.troops.excludedUnitIds).toEqual(['magic-dragon']);
+    // The two march decisions land on every setup, because which march they were taken out of is
+    // not knowable from a v1 document — and each march keeps the army the player last saw.
+    for (const setup of profile?.setups ?? []) {
+      expect(setup.excludedUnitIds).toEqual(['rider-1', 'battle-boar']);
+    }
+    expect(profile?.setups).toHaveLength(2);
+  });
+
+  it('v1 → v2 keeps a monster exclusion that is not at the top tier out of the profile', () => {
+    const fixture = v1Fixture();
+    const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+    // No monster row at all: nothing about a monster id can be technology.
+    (profile.troops as Record<string, unknown>).monsters = null;
+
+    const migrated = migrate(fixture).profiles[0];
+    expect(migrated?.troops.excludedUnitIds).toEqual([]);
+    expect(migrated?.setups[0]?.excludedUnitIds).toEqual(['rider-1', 'battle-boar', 'magic-dragon']);
+  });
+
+  it('a document written at v2 keeps the two lists where it put them', () => {
+    const fixture = v1Fixture();
+    const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+    (profile.troops as Record<string, unknown>).excludedUnitIds = ['magic-dragon'];
+    const setups = profile.setups as Record<string, unknown>[];
+    setups[0]!.excludedUnitIds = ['archer-2'];
+    setups[1]!.excludedUnitIds = [];
+
+    const migrated = migrate({ ...fixture, schemaVersion: 2 }).profiles[0];
+    expect(migrated?.troops.excludedUnitIds).toEqual(['magic-dragon']);
+    expect(migrated?.setups[0]?.excludedUnitIds).toEqual(['archer-2']);
+    expect(migrated?.setups[1]?.excludedUnitIds).toEqual([]);
+  });
+
+  it('a setup written before v2 gets the empty list from the schema default', () => {
+    const doc = migrate(v1Fixture());
+    expect(doc.profiles[0]?.setups[0]?.pinnedUnitIds).toEqual([]);
+    expect(newRoot().profiles[0]?.setups[0]?.excludedUnitIds).toEqual([]);
   });
 
   it('round-trips a freshly created document', () => {
@@ -184,5 +235,14 @@ describe('migrateProfile', () => {
     expect(migrateProfile(profile, 1).name).toBe('Main account');
     expect(migrateProfile(profile, 0).name).toBe('Main account');
     expect(() => migrateProfile({ name: 'nope' }, 1)).toThrow();
+  });
+
+  it('runs the v1 → v2 split on an imported or shared profile too', () => {
+    const fixture = v1Fixture();
+    const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+
+    const migrated = migrateProfile(profile, 1);
+    expect(migrated.troops.excludedUnitIds).toEqual(['magic-dragon']);
+    expect(migrated.setups[0]?.excludedUnitIds).toEqual(['rider-1', 'battle-boar']);
   });
 });

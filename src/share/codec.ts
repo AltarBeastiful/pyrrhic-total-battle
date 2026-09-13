@@ -104,8 +104,11 @@ export function restoreDefaults<T>(stripped: unknown, defaults: T): T {
 // ---- Payload packing ---------------------------------------------------------------------------------
 /**
  * Note for future schema versions: a stripped payload can only be restored with the *defaults of its own
- * version*. Today there is a single version, so the current templates are used; a v2 that changes a
- * default must keep a copy of the v1 template next to its migration.
+ * version*. The current templates are still the right ones at v2, because the only shape change since v1
+ * (`BattleSetup.excludedUnitIds`) *added* a field whose default — the empty array — is exactly what a v1
+ * setup meant by not having it; a link written at v1 therefore restores unchanged and `migrateProfile`
+ * then moves the profile's march exclusions onto its setups. A version that changes an existing default
+ * must keep a copy of the older template next to its migration.
  */
 function packSetup(setup: BattleSetup): unknown {
   return stripDefaults(setup, SHARE_SETUP_TEMPLATE) ?? {};

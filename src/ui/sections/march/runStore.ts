@@ -1,7 +1,9 @@
 /**
- * View-only state of one "Generate" run: search progress, the running job's abort handle, the two lists
- * the Results section needs to explain what is missing from the formation (types the priority search left
- * out, mercenaries the user removed by hand), and what the search gave up to win.
+ * View-only state of one "Generate" run: search progress, the running job's abort handle, the types the
+ * priority search left out of the winning formation, and what the search gave up to win.
+ *
+ * What the *player* left out is not here: it is a battle-setup decision (`setup.excludedUnitIds`), so it
+ * outlives the run and lives in the document.
  *
  * It is deliberately outside `useResultStore` (which holds the *result* and is read by the share
  * dialog): a progress tick must not invalidate anything that looks at the last result.
@@ -10,12 +12,6 @@ import { create } from 'zustand';
 
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
-
-/** A mercenary taken out of the formation, kept with its owned cap so "Restore" can put it back. */
-export interface RemovedMercenary {
-  id: string;
-  cap: number | null;
-}
 
 /** The handful of figures the trade-off table compares; everything else in a summary is noise there. */
 export interface TradeoffFigures {
@@ -95,7 +91,6 @@ export interface RunState {
   searchExcluded: string[];
   /** The winner against the all-types army; `null` when the result did not come from a priority. */
   tradeoff: SearchTradeoff | null;
-  removedMercenaries: RemovedMercenary[];
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
@@ -104,8 +99,6 @@ export interface RunState {
   cancel: () => void;
   /** Keep the summary a new result replaces; called with `null` when there is nothing to keep. */
   rememberPrevious: (summary: BattleSummary | null) => void;
-  rememberMercenary: (mercenary: RemovedMercenary) => void;
-  forgetMercenary: (id: string) => void;
   reset: () => void;
 }
 
@@ -115,7 +108,6 @@ export const useRunStore = create<RunState>()((set, get) => ({
   lastRunFingerprint: null,
   searchExcluded: [],
   tradeoff: null,
-  removedMercenaries: [],
   controller: null,
   start: (controller, fingerprint) => {
     set({
@@ -141,16 +133,6 @@ export const useRunStore = create<RunState>()((set, get) => ({
   rememberPrevious: (summary) => {
     set({ previousSummary: summary });
   },
-  rememberMercenary: (mercenary) => {
-    set((state) =>
-      state.removedMercenaries.some((entry) => entry.id === mercenary.id)
-        ? state
-        : { removedMercenaries: [...state.removedMercenaries, mercenary] },
-    );
-  },
-  forgetMercenary: (id) => {
-    set((state) => ({ removedMercenaries: state.removedMercenaries.filter((entry) => entry.id !== id) }));
-  },
   reset: () => {
     set({
       progress: null,
@@ -158,7 +140,6 @@ export const useRunStore = create<RunState>()((set, get) => ({
       lastRunFingerprint: null,
       searchExcluded: [],
       tradeoff: null,
-      removedMercenaries: [],
       controller: null,
     });
   },

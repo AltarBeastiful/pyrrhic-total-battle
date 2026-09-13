@@ -364,6 +364,21 @@ describe('buildUnits', () => {
     expect(caps).toEqual({ 'bear-5': 120 }); // `null` cap = unlimited = no entry
   });
 
+  it('subtracts what one march leaves out, and only when that march is the one asked about', () => {
+    const { profile, setup } = fixture();
+    // Technology: the account fields G1–G3 and S1, and owns every one of those ten types.
+    const owned = buildUnits(profile).units.map((unit) => unit.id);
+    expect(owned).toContain('archer-2');
+
+    setup.excludedUnitIds = ['archer-2'];
+
+    // Asked about the account alone, nothing changed: a march never edits what is owned.
+    expect(buildUnits(profile).units.map((unit) => unit.id)).toEqual(owned);
+    // Asked about this march, the type is simply not in it.
+    expect(buildUnits(profile, setup).units.map((unit) => unit.id)).not.toContain('archer-2');
+    expect(profile.troops.excludedUnitIds).toEqual([]);
+  });
+
   it('turns a custom mercenary into a plain unit', () => {
     const { profile } = fixture();
     profile.mercenaries.custom = [
@@ -454,13 +469,48 @@ describe('buildStackRequest', () => {
     const { profile, setup } = fixture();
     expect(buildStackRequest(profile, setup).pinned).toEqual([]);
 
-    profile.troops.excludedUnitIds = ['rider-1'];
+    setup.excludedUnitIds = ['rider-1'];
     setup.pinnedUnitIds = ['archer-1', 'rider-1', 'not-a-unit'];
 
-    // `rider-1` is excluded and `not-a-unit` does not exist, so neither reaches the engine — but both stay
-    // on the setup, so the pin comes back if the exclusion does.
+    // `rider-1` is left out and `not-a-unit` does not exist, so neither reaches the engine — but both stay
+    // on the setup, so the pin comes back if the exclusion goes.
     expect(buildStackRequest(profile, setup).pinned).toEqual(['archer-1']);
     expect(setup.pinnedUnitIds).toEqual(['archer-1', 'rider-1', 'not-a-unit']);
+  });
+
+  it('leaves out what this march leaves out, and switching march changes the army', () => {
+    const { profile, setup } = fixture();
+    const everything = buildStackRequest(profile, setup).units.map((unit) => unit.id);
+    expect(everything).toContain('rider-2');
+    expect(everything).toContain('archer-3');
+
+    const other: BattleSetup = { ...defaultSetup('device-1', 'Second'), excludedUnitIds: ['archer-3'] };
+    profile.setups = [setup, other];
+    setup.excludedUnitIds = ['rider-2'];
+
+    const first = buildStackRequest(profile, setup).units.map((unit) => unit.id);
+    expect(first).not.toContain('rider-2');
+    expect(first).toContain('archer-3');
+
+    const second = buildStackRequest(profile, other).units.map((unit) => unit.id);
+    expect(second).toContain('rider-2');
+    expect(second).not.toContain('archer-3');
+
+    // Neither march touched the account: both types are still owned.
+    expect(profile.troops.excludedUnitIds).toEqual([]);
+  });
+
+  it('subtracts the technology exclusions and the march exclusions together', () => {
+    const { profile, setup } = fixture();
+    profile.troops.monsters = { min: 3, max: 4 };
+    // A top-tier monster the account has not unlocked: technology, and no march can put it back.
+    profile.troops.excludedUnitIds = ['magic-dragon'];
+    setup.excludedUnitIds = ['gorgon-medusa'];
+
+    const ids = buildStackRequest(profile, setup).units.map((unit) => unit.id);
+    expect(ids).not.toContain('magic-dragon');
+    expect(ids).not.toContain('gorgon-medusa');
+    expect(ids).toContain('ice-phoenix');
   });
 });
 

@@ -9,13 +9,13 @@
  */
 import { useMemo } from 'react';
 
-import type { BattleSummary, Pool, StackResult, UnitDef } from '@/engine/types';
+import type { BattleSummary, Pool, StackResult } from '@/engine/types';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
 import { applyCounts, hasEdits } from './manual';
 import { leftOutOf, marchRows, poolRows } from './rows';
-import type { MarchStackRow, PoolRow } from './rows';
+import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { setupFingerprint, useRunStore } from './runStore';
 
 export interface MarchView {
@@ -42,8 +42,11 @@ export interface MarchView {
   pools: PoolRow[];
   /** Unit types kept in the march by hand. */
   pinned: string[];
-  /** Types that are not in the request any more: excluded in the profile, or removed here. */
-  leftOut: UnitDef[];
+  /**
+   * Types this march does not field, each with the reason: the player took it out of *this* march
+   * (`setup.excludedUnitIds`), or the sizer / priority search dropped it.
+   */
+  leftOut: LeftOutUnit[];
   /** Types kept in that this march did not field anyway — something upstream is switched off. */
   keptElsewhere: string[];
 }
@@ -56,12 +59,13 @@ export function useMarch(): MarchView {
   const counts = useResultStore((state) => state.manualCounts);
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
-  const removedMercenaries = useRunStore((state) => state.removedMercenaries);
   const previous = useRunStore((state) => state.previousSummary);
   const lastRunFingerprint = useRunStore((state) => state.lastRunFingerprint);
 
   const pinned = setup?.pinnedUnitIds ?? EMPTY;
-  const excluded = profile?.troops.excludedUnitIds ?? EMPTY;
+  // Left out *of this march*, by hand. What the account does not own at all is not a march decision
+  // and never reaches here: `buildStackRequest` never puts it in the request.
+  const excluded = setup?.excludedUnitIds ?? EMPTY;
 
   // The store hands out the same profile and setup objects until one of them is edited, so this is
   // rebuilt only when something a march is actually computed from moved.
@@ -91,8 +95,6 @@ export function useMarch(): MarchView {
       : null;
     const result = edits?.result ?? snapshot.result;
     const summary = edits?.summary ?? snapshot.summary;
-    const leftOutIds = [...excluded, ...removedMercenaries.map((entry) => entry.id)];
-
     const pools = poolRows({ result, units: snapshot.request.units, pinned });
 
     return {
@@ -106,8 +108,8 @@ export function useMarch(): MarchView {
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
       pools,
       pinned: [...pinned],
-      leftOut: leftOutOf(snapshot.request.units, result, leftOutIds),
+      leftOut: leftOutOf(snapshot.request.units, result, excluded),
       keptElsewhere: pinned.filter((unitId) => !result.stacks.some((stack) => stack.unitId === unitId)),
     };
-  }, [snapshot, counts, pinned, excluded, removedMercenaries, previous, stale]);
+  }, [snapshot, counts, pinned, excluded, previous, stale]);
 }

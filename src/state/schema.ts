@@ -22,7 +22,7 @@ import type { BonusMap, Category, SpecialMap } from '../data/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -58,8 +58,14 @@ export type TierRange = z.infer<typeof tierRangeSchema>;
 
 /**
  * Unlocked tiers per row of the Troops section (PLAN §4.2). `null` = the row is not used at all.
- * `topTierExcluded` drops categories of the *highest* tier that the account has not upgraded yet;
- * `excludedUnitIds` is the per-unit override of the preview grid.
+ *
+ * The whole block describes **technology**: what the account has unlocked, which changes rarely.
+ * `topTierExcluded` drops categories of the *highest* tier that the account has not upgraded yet
+ * (guardsmen and specialists have one type per category per tier); `excludedUnitIds` does the same
+ * job for monsters, whose tier holds four unrelated types that no category tells apart.
+ *
+ * What a *march* leaves out is not here: it is `BattleSetup.excludedUnitIds` (schema v2), because
+ * the same account fields different armies from one march to the next.
  */
 export const troopsSchema = z.object({
   guardsmen: tierRangeSchema.nullable(),
@@ -268,6 +274,13 @@ export const battleSetupSchema = syncMetaSchema.extend({
    * Added after v1 shipped: defaulted so stored setups keep parsing without a schema bump (ADR-0004).
    */
   pinnedUnitIds: z.array(z.string()).default([]),
+  /**
+   * Unit types the player took out of *this* march by hand (a press on its pill). The account still
+   * owns them — `profile.troops` says so — they are simply not marching here, so switching setup
+   * changes the army without touching the technology. Added in schema v2; `migrations[1]` moves the
+   * march decisions that used to live in `profile.troops.excludedUnitIds` here.
+   */
+  excludedUnitIds: z.array(z.string()).default([]),
 });
 export type BattleSetup = z.infer<typeof battleSetupSchema>;
 

@@ -495,13 +495,24 @@ function troopIncluded(unit: UnitDef, troops: ProfileTroops): boolean {
 /**
  * The unit types this profile fields, with the per-unit caps the engine must respect.
  *
- * Troops and monsters come from the tier ranges (a `null` range disables the whole row), minus the
- * top-tier category chips and minus the per-unit exclusions. Mercenaries are the ones the player selected;
- * a `null` cap means "unlimited", i.e. no entry in `caps`. Custom mercenaries are turned into plain
- * `UnitDef`s and are always unlimited (the form has no owned field).
+ * Two different things decide it, and they are kept apart on purpose:
+ *
+ * - **technology** — the tier ranges (a `null` range disables the whole row), the top-tier category
+ *   chips, and `troops.excludedUnitIds` for the top-tier monsters the account has not unlocked. This
+ *   is the profile, and it changes rarely;
+ * - **this march** — `setup.excludedUnitIds`, the types the player took out of the march by hand.
+ *   Pass a setup to subtract them; called with a profile alone, the answer is everything the account
+ *   can field, which is what the Troops card and the kill-order editor ask for.
+ *
+ * Mercenaries are the ones the player selected; a `null` cap means "unlimited", i.e. no entry in
+ * `caps`. Custom mercenaries are turned into plain `UnitDef`s and are always unlimited (the form has
+ * no owned field).
  */
-export function buildUnits(profile: Profile): { units: UnitDef[]; caps: Record<string, number> } {
-  const excluded = new Set(profile.troops.excludedUnitIds);
+export function buildUnits(
+  profile: Profile,
+  setup?: BattleSetup,
+): { units: UnitDef[]; caps: Record<string, number> } {
+  const excluded = new Set([...profile.troops.excludedUnitIds, ...(setup?.excludedUnitIds ?? [])]);
   const selected = new Map(profile.mercenaries.selected.map((entry) => [entry.id, entry.cap]));
   const caps: Record<string, number> = {};
 
@@ -591,7 +602,7 @@ export function buildStackRequest(
   setup: BattleSetup,
   tables: DeriveTables = DEFAULT_TABLES,
 ): StackRequest {
-  const { units, caps } = buildUnits(profile);
+  const { units, caps } = buildUnits(profile, setup);
   const available = new Set(units.map((unit) => unit.id));
   return {
     units,
@@ -603,7 +614,8 @@ export function buildStackRequest(
     activeEvents: [...setup.active.events],
     recovery: recoverySettings(profile, setup),
     // A pin survives a tier range or exclusion that hides its unit: it is kept in the setup and simply not
-    // forwarded, so it comes back when the unit does.
+    // forwarded, so it comes back when the unit does. (Leaving a type out drops its pin, so the two
+    // lists of the setup only overlap when a stored document says they do.)
     pinned: setup.pinnedUnitIds.filter((id) => available.has(id)),
   };
 }

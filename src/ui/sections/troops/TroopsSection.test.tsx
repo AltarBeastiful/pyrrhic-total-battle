@@ -3,7 +3,11 @@
  * The Troops block, asked for the way a player meets it: by role and by the words on screen. The
  * two ends of a range are **steppers** — `spinbutton`s named "Guardsmen from" / "Guardsmen to",
  * each between two arrow buttons (owner, 2026-09-13); the top tier is a named `group` of `checkbox`
- * chips; "Put back" is a button. Nothing here knows a class name.
+ * chips. Nothing here knows a class name.
+ *
+ * The block writes **technology** and nothing else: the tiers the account has unlocked and, at the
+ * top tier, the types it owns. What a march leaves out lives on the battle setup, so it never shows
+ * up here — the last test below is what holds that line.
  */
 import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -153,17 +157,17 @@ test('moving the top tier forgets the chips, because they described the tier bel
   expect(chip('Rider IV').checked).toBe(true);
 });
 
-test('a type the March left out below the top tier is named, and goes back in one press', async () => {
-  const user = userEvent.setup();
-  setTroops({ excludedUnitIds: ['archer-1', 'rider-2'] });
+test('what a march leaves out is not on this card: no left-out line and nothing to put back', () => {
+  // The March writes its own exclusions to the active setup (schema v2). The account still owns
+  // Archer I and Rider II, so the card says nothing about them and offers no way to "put them back".
+  useStore.getState().updateActiveSetup({ excludedUnitIds: ['archer-1', 'rider-2'] });
   renderWithTheme(<TroopsSection />);
 
-  expect(screen.getByText(/Left out: Archer I, Rider II/)).toBeTruthy();
-
-  await user.click(screen.getByRole('button', { name: 'Put back left-out guardsmen' }));
-
+  expect(screen.queryByText(/Left out/)).toBeNull();
+  expect(screen.queryByRole('button', { name: /[Pp]ut back/ })).toBeNull();
   expect(troops().excludedUnitIds).toEqual([]);
-  expect(screen.queryByText(/Left out:/)).toBeNull();
+  // The chips of the top tier are the card's only per-type control, and they are all still ticked.
+  expect(chip('Rider III').checked).toBe(true);
 });
 
 test('engineers have a range but no chips: one type per tier means nothing to click out', () => {

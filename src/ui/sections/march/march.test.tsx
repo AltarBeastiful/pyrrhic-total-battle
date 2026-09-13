@@ -14,7 +14,7 @@ import { useEffect } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { unitById } from '@/data';
-import type { UnitDef } from '@/engine/types';
+import type { Objective, UnitDef } from '@/engine/types';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
@@ -103,9 +103,12 @@ function stackPill(unit: UnitDef, count: number): HTMLElement {
   return screen.getByRole('button', { name: `${unit.name}, ${amount(count)} — leave out` });
 }
 
-/** A type this march does not field: a small outlined pill in the row under the pools. */
-function leftOutPill(unit: UnitDef): HTMLElement {
-  return screen.getByRole('button', { name: `${unit.name} — put back` });
+/**
+ * A type this march does not field: a small outlined pill in the row under the pools. Its name says
+ * *who* left it out, because putting each kind back means a different thing.
+ */
+function leftOutPill(unit: UnitDef, reason: 'you' | 'the search' = 'the search'): HTMLElement {
+  return screen.getByRole('button', { name: `${unit.name}, left out by ${reason} — put back` });
 }
 
 /** The corner mark on a pill, and the same name on any other way into the sheet. */
@@ -162,9 +165,11 @@ test('the pool says what the march spent, over the stacks it paid for', async ()
   renderWithTheme(<Page />);
   await generate();
 
-  // The figure is the gauge now (design rule 5): "4 100 🛡️ of 4 100", not a bar saying it again.
+  // The figure is the gauge now (design rule 5): "4 100 🛡️ of 4 100 leadership", not a bar saying
+  // it again — and the pool's *name* is on the line, because an emoji is never the only label
+  // (the spacing contract, `MarchPaneSpacing.dc.html`, `.pool .of`).
   expect(screen.getByText(amount(4100))).toBeTruthy();
-  expect(screen.getByText(`of ${amount(4100)}`)).toBeTruthy();
+  expect(screen.getByText(`of ${amount(4100)} leadership`)).toBeTruthy();
   expect(screen.getByRole('group', { name: 'Leadership stacks' })).toBeTruthy();
 });
 
@@ -222,17 +227,42 @@ test('a press on a pill leaves that type out of the march, and copies nothing', 
 
   fireEvent.click(pill);
 
-  // The march is re-sized on the spot and the type is gone from it…
+  // The march is re-sized on the spot and the type is gone from it. It is *this march* that leaves
+  // it out: the account still owns the type, so nothing in the profile moved (schema v2).
   await waitFor(() => {
-    expect(profile()?.troops.excludedUnitIds).toContain(unit.id);
+    expect(setup()?.excludedUnitIds).toContain(unit.id);
   });
+  expect(profile()?.troops.excludedUnitIds).not.toContain(unit.id);
   await waitFor(() => {
     expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
   });
   // …and into the row under the pools, where a press puts it back.
-  expect(leftOutPill(unit).getAttribute('aria-pressed')).toBe('false');
+  expect(leftOutPill(unit, 'you').getAttribute('aria-pressed')).toBe('false');
   // Tap-to-copy is gone: "Copy all counts" is the one copy on the page.
   expect(writeText).not.toHaveBeenCalled();
+}, 20_000);
+
+test('putting back a type you left out simply lets it back in — it is not kept in', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit, count } = stackAt();
+
+  fireEvent.click(stackPill(unit, count));
+  await waitFor(() => {
+    expect(setup()?.excludedUnitIds).toContain(unit.id);
+  });
+
+  fireEvent.click(leftOutPill(unit, 'you'));
+
+  // The exclusion is undone, and nothing else: a type the player took out by hand never needed a
+  // pin to come back, and a pin the player did not ask for would survive every later change.
+  await waitFor(() => {
+    expect(setup()?.excludedUnitIds).not.toContain(unit.id);
+  });
+  expect(setup()?.pinnedUnitIds).not.toContain(unit.id);
+  await waitFor(() => {
+    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(true);
+  });
 }, 20_000);
 
 test('the corner mark, and nothing else on the pill, opens the unit sheet', async () => {
@@ -248,7 +278,7 @@ test('the corner mark, and nothing else on the pill, opens the unit sheet', asyn
   expect(writeText).not.toHaveBeenCalled();
 }, 15_000);
 
-test('a tap on a left-out pill keeps that type in the march for good', async () => {
+test('a tap on a pill the sizer dropped keeps that type in the march for good', async () => {
   // 20 leadership is enough for nine of the ten types the default profile owns: one is left out.
   setLeadership(20);
   renderWithTheme(<Page />);
@@ -258,7 +288,9 @@ test('a tap on a left-out pill keeps that type in the march for good', async () 
   const unit = unitById(leftOut);
   if (!unit) throw new Error('nothing was left out');
 
-  fireEvent.click(leftOutPill(unit));
+  // Nobody took this one out by hand, so the pill says the search did — and the only way to overrule
+  // the sizer is a pin.
+  fireEvent.click(leftOutPill(unit, 'the search'));
 
   await waitFor(() => {
     expect(setup()?.pinnedUnitIds).toContain(unit.id);
@@ -373,82 +405,91 @@ test('leaving a type out from its sheet excludes it and generates again', async 
   fireEvent.click(within(sheet).getByRole('button', { name: 'Leave out' }));
 
   await waitFor(() => {
-    expect(profile()?.troops.excludedUnitIds).toContain(unit.id);
+    expect(setup()?.excludedUnitIds).toContain(unit.id);
   });
   await waitFor(() => {
     expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
   });
 }, 15_000);
 
-test('what the search gave up is said beside what it won', async () => {
-  renderWithTheme(<Page />);
-  await generate();
-  const { unit } = stackAt();
-  const figures = {
-    friendlyHits: 4,
-    minDamage: 1,
-    maxDamage: 2,
-    avgDamage: 3,
-    silver: 4,
-    gold: 5,
-    dragonCoins: 0,
-  };
+/** The comparison runs five real searches before the table exists; jsdom runs them inline. */
+const TABLE_WAIT = { timeout: 25_000 };
 
+/** The seven figures a run's trade-off carries, with whatever the test needs written over them. */
+const TRADEOFF_FIGURES = {
+  friendlyHits: 4,
+  minDamage: 1,
+  maxDamage: 2,
+  avgDamage: 3,
+  silver: 4,
+  gold: 5,
+  dragonCoins: 0,
+};
+
+/** Put a finished priority search on screen, with the types it left at home. */
+function landTradeoff(objective: Objective, excludedUnitIds: string[], keep: string): void {
   act(() => {
     useRunStore.setState({
       tradeoff: {
-        objective: 'minDamage',
-        includedUnitIds: [unit.id],
-        excludedUnitIds: ['spearman-1'],
-        selection: figures,
-        baseline: { ...figures, avgDamage: 6 },
+        objective,
+        includedUnitIds: [keep],
+        excludedUnitIds,
+        selection: TRADEOFF_FIGURES,
+        baseline: { ...TRADEOFF_FIGURES, avgDamage: 6 },
       },
     });
   });
+}
 
-  expect(screen.getByRole('heading', { name: 'Compared with all types' })).toBeTruthy();
-  expect(screen.getByText(`All types ${amount(6)}`)).toBeTruthy();
+test('a priority that dropped nothing says so in one line, and draws no strip', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+
+  // Investigation 0013 §5.1: on an army already trimmed to what the search would pick, the old
+  // strip was seven zero deltas. One sentence says the same thing and is true.
+  landTradeoff('avgDamage', [], unit.id);
+
+  expect(screen.getByText(/keeps every type/)).toBeTruthy();
+  expect(screen.queryByRole('table', { name: 'Every objective on this army' })).toBeNull();
 });
 
-test('the honest note offers the other objectives beside it, and pressing one runs them', async () => {
+test('an objective this march cannot be ranked by says so instead of pretending', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+
+  // Investigation 0013 §5.2: `dragonCoins: 0` on the all-types march means every candidate divided
+  // by zero, so nothing was compared and the winner is the plain march.
+  landTradeoff('damagePerDragonCoin', ['spearman-1'], unit.id);
+
+  expect(screen.getByText(/cannot be compared/)).toBeTruthy();
+  expect(screen.queryByRole('table', { name: 'Every objective on this army' })).toBeNull();
+});
+
+test('what the search gave up is the objectives side by side, and a row runs one', async () => {
   useStore.getState().updateActiveSetup({ priority: 'avgDamage' });
   renderWithTheme(<Page />);
   await generate();
   const { unit } = stackAt();
-  const figures = {
-    friendlyHits: 4,
-    minDamage: 1,
-    maxDamage: 2,
-    avgDamage: 3,
-    silver: 4,
-    gold: 5,
-    dragonCoins: 0,
-  };
 
-  act(() => {
-    useRunStore.setState({
-      tradeoff: {
-        objective: 'avgDamage',
-        includedUnitIds: [unit.id],
-        excludedUnitIds: ['spearman-1'],
-        selection: figures,
-        baseline: { ...figures, avgDamage: 6 },
-      },
-    });
-  });
+  landTradeoff('avgDamage', ['spearman-1'], unit.id);
 
-  // Design rule 29: saying what the priority gave up is only half of it — the alternatives are
-  // offered next to the answer, and the one already running is not offered back.
+  // Investigation 0013 §5.3: five searches on the same request, four figures each, one row per
+  // objective. They run after the main one, so the table arrives a tick later.
+  expect(screen.getByRole('heading', { name: 'Objectives compared' })).toBeTruthy();
+  const table = await screen.findByRole('table', { name: 'Every objective on this army' }, TABLE_WAIT);
+  expect(within(table).getAllByRole('row').length).toBe(6);
+
+  // Design rule 29's second half: the alternatives are offered next to the answer, and choosing one
+  // is one press — it writes the objective and generates again.
   const at = lastResult()?.at;
-  fireEvent.click(screen.getByRole('button', { name: 'Try best worst case' }));
+  fireEvent.click(within(table).getByRole('button', { name: 'Generate with Best worst case' }));
   expect(setup()?.priority).toBe('minDamage');
   await waitFor(() => {
     expect(lastResult()?.at).not.toBe(at);
   });
-
-  expect(screen.queryByRole('button', { name: 'Try best worst case' })).toBeNull();
-  expect(screen.getByRole('button', { name: 'Try damage per silver' })).toBeTruthy();
-}, 20_000);
+}, 30_000);
 
 test('a warning from the engine is an alert under the recap', async () => {
   renderWithTheme(<Page />);

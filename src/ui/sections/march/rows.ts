@@ -78,29 +78,47 @@ export function poolRows({ result, units, pinned }: PoolRowsInput): PoolRow[] {
   return rows;
 }
 
+/** Why a type is not marching. The two are put back in two different ways, so the row says which. */
+export type LeftOutReason = 'you' | 'search';
+
+/** One type of the "Left out" row: what it is, and who left it out. */
+export interface LeftOutUnit {
+  unit: UnitDef;
+  reason: LeftOutReason;
+}
+
 /**
  * The types that are *not* in this march: the ones the sizer or the priority search dropped, and
  * the ones the player took out by hand. They are drawn under the pools as a small row of outlined
  * pills — TotalStack's "removed from formation" line, in our words — so nothing the account fields
  * ever disappears from the screen (design rule 13).
+ *
+ * The two kinds are told apart (owner, 2026-09-13), because putting one back is not the same act:
+ * a type the player took out is simply let back in, a type the search dropped has to be *pinned*
+ * to overrule it. `excludedByPlayer` is the active setup's own list; anything else missing from the
+ * result was the app's decision, not the player's.
+ *
+ * A type the player took out is not in `units` any more (the request is built without it), so it is
+ * resolved from the tables by `findUnit`.
  */
 export function leftOutOf(
   units: readonly UnitDef[],
   result: StackResult,
-  leftOutIds: readonly string[],
-): UnitDef[] {
+  excludedByPlayer: readonly string[],
+): LeftOutUnit[] {
   const marching = new Set(result.stacks.filter((stack) => stack.count > 0).map((s) => s.unitId));
+  const byHand = new Set(excludedByPlayer);
   const seen = new Set<string>();
-  const out: UnitDef[] = [];
+  const out: LeftOutUnit[] = [];
   for (const unit of [
     ...units,
-    ...leftOutIds.map((unitId) => findUnit(unitId, units)).filter((unit) => unit !== undefined),
+    ...excludedByPlayer.map((unitId) => findUnit(unitId, units)).filter((unit) => unit !== undefined),
   ]) {
     if (marching.has(unit.id) || seen.has(unit.id)) continue;
     seen.add(unit.id);
-    out.push(unit);
+    out.push({ unit, reason: byHand.has(unit.id) ? 'you' : 'search' });
   }
-  return out.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+  return out.sort((a, b) => a.unit.tier - b.unit.tier || a.unit.name.localeCompare(b.unit.name));
 }
 
 // ---- The counts to copy -------------------------------------------------------------------------
