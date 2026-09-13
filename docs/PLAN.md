@@ -304,8 +304,8 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-43 Compare saved stacks | done | saved marches at the foot of the March card |
 | S-44 Sync adapter interface + explicit Pull/Push | retired | investigation 0001; the per-profile RemoteStore contract went with S-45 (ADR-0009) |
 | S-45 GitHub Gist sync adapter | retired | removed by S-49b: `src/sync/**` and `src/ui/sync/**` deleted, `docs/sync.md` rewritten (ADR-0009) |
-| S-46 Google Drive appData adapter | gated | investigation 0002: needs a domain we own, a privacy policy page, Search Console and brand verification |
-| S-47 Generic endpoint adapter + reference Worker | backlog | not started |
+| S-46 Google Drive appData adapter | retired | superseded by the S-49 account (2026-09-13, owner): the account covers cross-device sync and its Google sign-in uses only the Pages origin, so the verification gate never applies |
+| S-47 Generic endpoint adapter + reference Worker | retired | superseded by the S-49 account (2026-09-13, owner); a no-server option can return as a new story if ever wanted |
 | S-48 Best captains for a march | deferred | written up in §3.7; delayed by the owner (rule 33: engine stories wait until the UI is right) |
 | S-50 PWA / offline / install prompt | done | hand-written service worker, no PWA dependency |
 | S-52 Accessibility and mobile layout pass | done | axe zero on the kit page and the app in both schemes; `pnpm contrast` over 176 pairs |
@@ -565,6 +565,7 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Owner retired S-46 (Google Drive) and S-47 (generic endpoint): the S-49 account supersedes both.
 - 2026-09-13 — S-49b built (ADR-0009 proposed): opt-in account sync on PocketBase, Google (PKCE, real
   `/oauth-callback` path + `404.html` copy) and email/password, conflict dialog per the spec, service worker
   bypass for the backend, `storage.persist()`; Gist sync and the QR hand-off retired. Hidden until
