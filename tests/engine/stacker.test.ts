@@ -88,7 +88,7 @@ describe('Elite Preservation', () => {
       'BB 93600',
       'SG 93600',
     ]);
-    expect(result.warnings).toContain('ARC2 and SP2 tie at 97,740 HP; the game decides which falls first.');
+    expect(result.warnings).toContain('ARC2 and SP2 tie at 97 740 HP; the game decides which falls first.');
   });
 
   it('reproduces run ep-10stacks (SW1 and SP1 back in the formation)', () => {
@@ -175,7 +175,7 @@ describe("M's Preservation", () => {
     expect(counts.CYC5).toBeUndefined();
     expect(result.dropped.map((entry) => entry.unitId)).toEqual(['cyclops-5']);
     expect(result.dropped[0]!.reason).toBe(
-      'one of them alone (135,000 HP) is bigger than your smallest troop stack, so it could not fall after your troops',
+      'one of them alone (135 000 HP) is bigger than your smallest troop stack, so it could not fall after your troops',
     );
     expect(result.pools.leadership).toEqual({ used: 3000, capacity: 3000 });
     expect(result.pools.authority.used).toBe(21);
@@ -371,7 +371,7 @@ describe('pinned unit types', () => {
     });
 
     expect(result.warnings).toContain(
-      'CYC5 is pinned, and its stack (135,000 HP) is bigger than your smallest troop stack, so it falls before RD3.',
+      'CYC5 is pinned, and its stack (135 000 HP) is bigger than your smallest troop stack, so it falls before RD3.',
     );
     // It keeps its true place in the kill order: 135,000 HP is the first stack the enemy wipes.
     expect(result.stacks[0]?.unitId).toBe('cyclops-5');

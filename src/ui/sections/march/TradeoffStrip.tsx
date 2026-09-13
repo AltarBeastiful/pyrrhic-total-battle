@@ -49,7 +49,10 @@ export function TradeoffStrip({ tradeoff }: TradeoffStripProps) {
             dropped,
           )} out. Tap a dimmed tile above to keep one in.`}
         </Text>
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+        {/* A container query, not a viewport one: this strip is as often inside the 360 px March
+            pane on a 1400 px desktop as it is across a phone, and two columns in 360 px break a
+            figure across two lines ("75 870" / "000" — investigation 0011). */}
+        <SimpleGrid type="container" cols={{ base: 1, '340px': 2 }} spacing="xs">
           {FIGURES.map((figure) => {
             const all = figure.read(tradeoff.baseline);
             return (

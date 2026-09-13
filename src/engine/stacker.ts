@@ -122,7 +122,10 @@ function roundDownToChunks(slots: Slot[], capacity: number): number {
  * Drop reasons stay free of unit labels on purpose: the results list groups the types that share a reason
  * under one line, and a label inside the sentence would split every group.
  */
-const num = (value: number): string => value.toLocaleString('en-US');
+// A space every three digits, the way the number fields and every read-only figure write one
+// (`src/ui/domain/format.ts`): these sentences sit next to those figures in the March, and a comma
+// here beside a space there reads as two different numbers (design rule 26).
+const num = (value: number): string => value.toLocaleString('en-US').replace(/,/g, ' ');
 
 function dropReason(slot: Slot, pool: Pool, ceiling: number | undefined, rounded: boolean): string {
   if (ceiling !== undefined && slot.hp > ceiling) {

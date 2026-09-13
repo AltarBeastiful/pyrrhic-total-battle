@@ -256,7 +256,9 @@ function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRow
       {leftOut.length > 0 && (
         <Group gap={6} wrap="wrap" align="center" pl={{ base: 0, sm: NAME_WIDTH }}>
           <Text size="xs" c="dimmed">
-            {`Left out: ${leftOut.map((unit) => unit.name).join(', ')} ·`}
+            {/* No middle dot before the button: facts are separated by space, not by punctuation
+                (docs/design.md §8 rule 5). */}
+            {`Left out: ${leftOut.map((unit) => unit.name).join(', ')}`}
           </Text>
           <Button
             variant="subtle"

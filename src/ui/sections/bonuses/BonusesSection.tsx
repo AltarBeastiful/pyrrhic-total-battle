@@ -23,6 +23,7 @@ import { mintSourceId, toggleActiveSource, updateSources } from '@/state/actions
 import { setActiveFlag } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { Glyph } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
 
 import { ArtifactChips } from './ArtifactChips';
@@ -263,8 +264,10 @@ export function BonusesSection() {
           <Title order={2} id={titleId}>
             Bonuses
           </Title>
+          {/* A warning carries the triangle *and* the wording, never the colour alone
+              (docs/design.md §1). */}
           {summary.empty > 0 && (
-            <Badge color="danger" variant="light" size="sm" tt="none">
+            <Badge color="danger" variant="light" size="sm" tt="none" leftSection={<Glyph kind="warning" />}>
               {`${String(summary.empty)} on but empty`}
             </Badge>
           )}

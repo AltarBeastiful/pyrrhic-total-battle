@@ -160,16 +160,38 @@ export const theme: MantineThemeOverride = createTheme({
         hideControls: true,
         thousandSeparator: ' ',
         // Every figure on this page is retyped from the game: landing in one selects the old value.
+        // Measured in investigation 0011: it holds for a mouse press anywhere in the field and for
+        // a keyboard focus, so the next keystroke replaces the figure (design rule 9).
         onFocus: (event: { currentTarget: HTMLInputElement }) => {
           event.currentTarget.select();
         },
+        // …and the pool's glyph is decoration, not a control: without this it sits over the first
+        // 34 px of a 200 px field and swallows the press that should land in the field
+        // (investigation 0011).
+        leftSectionPointerEvents: 'none' as const,
       },
     },
     NativeSelect: { defaultProps: { size: 'xs' } },
+    // The avatar in the app bar is 32 px, and Mantine writes its initial at size ÷ 2.5 = 12.8 px.
+    // Which profile you are in is information, so it sits on the 13 px floor like everything else.
+    Avatar: { vars: () => ({ root: { '--avatar-placeholder-fz': 'var(--mantine-font-size-xs)' } }) },
     // `xs` is 18 px, below the 24 px target minimum Material asks for; `sm` is 26 px. The corner
     // gear asks for its own 18 px explicitly, because it is a badge on a chip, not a row control.
     ActionIcon: { defaultProps: { size: 'sm' } },
-    Badge: { defaultProps: { size: 'xs' } },
+    Badge: {
+      defaultProps: { size: 'xs' },
+      // Mantine's badge sizes carry their own type ramp in hard pixels — `xs` is 9 px and `lg` is
+      // the first step that clears 13. The badge stays `xs`-small (20 px tall, 6 px of side
+      // padding) and its label is written at the design's floor instead (design rule 19;
+      // investigation 0011 measured "15 STACKS" at 9 px and "3 on but empty" at 10 px).
+      vars: () => ({
+        root: {
+          '--badge-fz': 'var(--mantine-font-size-xs)',
+          '--badge-height': '1.25rem',
+          '--badge-padding-x': '0.375rem',
+        },
+      }),
+    },
     Chip: {
       defaultProps: { size: 'xs', variant: 'light', radius: 'sm' },
       // TotalStack's chip is 32 px tall with a 13 px label, which is neither Mantine's `xs` (22 px)
@@ -186,6 +208,11 @@ export const theme: MantineThemeOverride = createTheme({
       // ("HP +25 %" under a title, investigation 0006).
       classNames: { label: classes.chipLabel },
     },
+    // The sentence under a switch row is the one that explains the option. Mantine derives its
+    // size from the control's (`sm` − 2 px = 11 px here), which is under the design's floor, and it
+    // writes that on the element itself, so the variable above cannot reach it (design rule 19;
+    // investigation 0011 measured the Battle card's option sentences at 11 px).
+    Switch: { styles: { description: { fontSize: 'var(--mantine-font-size-xs)' } } },
     Pill: { defaultProps: { size: 'md' } },
     Popover: { defaultProps: { shadow: 'md', withArrow: false } },
     Modal: { defaultProps: { radius: 'md' } },
@@ -243,6 +270,10 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       '--pyr-pane-width': '22.5rem',
       '--mantine-font-family-headings': INTER,
       '--pyr-font-numeral': FRAUNCES,
+      // Mantine writes the sentence under a control two pixels below `sm`, which is 11 px in our
+      // ramp — under the floor, and it is the sentence that explains the option (the Battle card's
+      // switch rows). The design has one caption size and this is it (design rule 19).
+      '--input-description-size': 'var(--mantine-font-size-xs)',
     },
     light: surfaces('light'),
     dark: surfaces('dark'),

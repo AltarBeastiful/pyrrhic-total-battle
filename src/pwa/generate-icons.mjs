@@ -17,12 +17,12 @@ import { deflateSync } from 'node:zlib';
 
 const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', 'icons');
 
-// The installed app's mark. These two predate the Mantine theme and the brass accent (ADR-0008):
-// the committed PNGs in `public/icons/` still carry the old blue, and regenerating them is a brand
-// decision, not a refactor. When that is taken, the values are `brass` shade 7 and `white` from
-// `src/ui/theme.ts` — run `pnpm icons` and commit the six files it rewrites.
-const ACCENT = [0x3d, 0x64, 0xc7];
-const MARK = [0xfc, 0xfc, 0xfc];
+// The installed app's mark, in the theme's own two colours (investigation 0011): the tile is
+// `brass` shade 7 (#6d5621, the light scheme's accent ink) and the three bars are `slate` 0
+// (#fafbfa, the design's Paper) — 6.8:1 apart, so the stack reads at 48 px on a home screen. Both
+// are verbatim from `SEEDS`/`SLATE` in `src/ui/palette.ts`; run `pnpm icons` after changing either.
+const ACCENT = [0x6d, 0x56, 0x21];
+const MARK = [0xfa, 0xfb, 0xfa];
 
 // ---------------------------------------------------------------- minimal PNG encoder
 

@@ -35,7 +35,7 @@ function Live() {
             title: 'Your own order',
             description: 'Follow the order you set in Troops.',
           },
-          { value: 'locked', title: 'Total optimisation', description: 'Not available yet.', disabled: true },
+          { value: 'locked', title: 'Every combination', description: 'Not available yet.', disabled: true },
         ]}
       />
       <ChoiceList
