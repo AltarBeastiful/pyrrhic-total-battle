@@ -353,6 +353,15 @@ four-troop-type march with the mercenaries trimmed under the floor, and the gold
 (2,150 a march), which is what turns four affordable marches into five. Above a 6 M floor the SP2
 variant costs 2 % of the total for 22 % more per march.
 
+**Against Kai's march under the same budget** (`10-vs-kai`): his exact counts cost 1,592,300 silver and
+7 mercenaries a march, so 8 M buys five marches of 3,819,334 = 19,096,670 (19,191,550 under his own
+report's bonuses), against 28,738,336 for the plan above (+50 %) or 29,401,690 for the five-march variant
+(+54 %). Hits are what he wins — 18/19 against our 10/11, his mercenaries at positions 8–11 with 2 2 3 3
+hits against ours at 5–8 with 1 2 2 2 — but his 60 mercenaries × 10 hits are 2,527,659 of damage where
+our 195 × 7 hits are 5,711,615. He wins one column, damage per mercenary burnt (546 k against 342 k),
+which is the deep-ladder regime of §5 item 5: with a small stock per march his shape is right; with 8 M
+of silver and 92/76/72/37 in stock, the floor is what to spend on.
+
 ## 7. Bonuses, captains, gear (B; `30-bonus-sensitivity`, `31-captains`, `05-captain-swap`, `32-gear`)
 
 - **Strength is linear and small per point**: +1 on `army` or `guardsmen` strength, or on
