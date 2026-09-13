@@ -16,3 +16,6 @@ docs/
 # Captured TotalStack output and in-game battle-report transcripts used as engine regression
 # fixtures: verbatim copies of docs/research/fixtures, Prettier must not rewrap them.
 tests/fixtures/
+
+# Generated experiment outputs (investigation 0015): tables written by the scripts, not hand-formatted.
+tools/theorycraft/out/
