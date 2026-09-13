@@ -60,6 +60,39 @@ describe('inline client', () => {
     client.dispose();
   });
 
+  test('complete optimization answers with a winner, its campaign and the plans it beat', async () => {
+    const client = createInlineClient();
+    const found = await client.complete({
+      request: smallRequest(),
+      objective: 'avgDamage',
+      campaign: { marches: 3 },
+      budgetMs: 500,
+    });
+
+    expect(found.winner.campaign.fought).toBe(3);
+    expect(found.winner.campaign.marches).toHaveLength(3);
+    expect(found.winner.includedUnitIds.length).toBeGreaterThan(0);
+    expect(found.winner.single.summary.avgDamage).toBeGreaterThan(0);
+    // One row per sizing × mercenary spend: the comparison the March draws is read off these.
+    expect(found.candidates.length).toBeGreaterThan(1);
+    expect(found.candidates[0]?.score).toBe(found.winner.score);
+    client.dispose();
+  });
+
+  test('an aborted signal cancels a complete optimization too', async () => {
+    const client = createInlineClient();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      client.complete(
+        { request: smallRequest(), objective: 'avgDamage', campaign: { marches: 2 }, budgetMs: 100 },
+        undefined,
+        controller.signal,
+      ),
+    ).rejects.toThrow(/cancelled/i);
+    client.dispose();
+  });
+
   test('an aborted signal rejects with an AbortError and never runs the job', async () => {
     const client = createInlineClient();
     const controller = new AbortController();

@@ -11,6 +11,7 @@
  */
 import { create } from 'zustand';
 
+import type { CompleteResult } from '@/engine/campaign';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
@@ -101,12 +102,22 @@ export interface RunState {
   leftOutByPlayer: string[];
   /** The winner against the all-types army; `null` when the result did not come from a priority. */
   tradeoff: SearchTradeoff | null;
+  /**
+   * The whole campaign search, when the march came from "Complete optimization" (S-54): the winning
+   * sizing, its ten marches and every spend level it was compared against. It explains the answer on
+   * screen and nothing else, so it lives here with the run and is never stored or shared.
+   */
+  campaign: CompleteResult | null;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
   setProgress: (progress: SearchProgress) => void;
   /** A finished Generate: the solver's own selection, and no March edit left over from before it. */
-  finish: (includedUnitIds: string[], tradeoff?: SearchTradeoff | null) => void;
+  finish: (
+    includedUnitIds: string[],
+    tradeoff?: SearchTradeoff | null,
+    campaign?: CompleteResult | null,
+  ) => void;
   /** A March edit: the new list to size on, and who is out by hand. */
   setIncluded: (includedUnitIds: string[], leftOutByPlayer: string[]) => void;
   cancel: () => void;
@@ -122,6 +133,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   includedUnitIds: [],
   leftOutByPlayer: [],
   tradeoff: null,
+  campaign: null,
   controller: null,
   start: (controller, fingerprint) => {
     set({
@@ -130,14 +142,15 @@ export const useRunStore = create<RunState>()((set, get) => ({
       includedUnitIds: [],
       leftOutByPlayer: [],
       tradeoff: null,
+      campaign: null,
       lastRunFingerprint: fingerprint ?? null,
     });
   },
   setProgress: (progress) => {
     set({ progress });
   },
-  finish: (includedUnitIds, tradeoff = null) => {
-    set({ controller: null, progress: null, includedUnitIds, leftOutByPlayer: [], tradeoff });
+  finish: (includedUnitIds, tradeoff = null, campaign = null) => {
+    set({ controller: null, progress: null, includedUnitIds, leftOutByPlayer: [], tradeoff, campaign });
   },
   setIncluded: (includedUnitIds, leftOutByPlayer) => {
     set({ includedUnitIds, leftOutByPlayer });
@@ -159,6 +172,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       includedUnitIds: [],
       leftOutByPlayer: [],
       tradeoff: null,
+      campaign: null,
       controller: null,
     });
   },

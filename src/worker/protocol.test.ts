@@ -29,9 +29,16 @@ describe('errorPayload', () => {
 });
 
 describe('request guard', () => {
-  test('accepts the three request kinds', () => {
+  test('accepts the four request kinds', () => {
     expect(isCalcRequestMessage({ kind: 'stack', id: 'a', request: stackRequest })).toBe(true);
     expect(isCalcRequestMessage({ kind: 'search', id: 'b', request: { request: stackRequest } })).toBe(true);
+    expect(
+      isCalcRequestMessage({
+        kind: 'complete',
+        id: 'd',
+        request: { request: stackRequest, campaign: { marches: 10 } },
+      }),
+    ).toBe(true);
     expect(isCalcRequestMessage({ kind: 'cancel', id: 'c' })).toBe(true);
   });
 
@@ -49,6 +56,7 @@ describe('response guard', () => {
     expect(isCalcResponseMessage({ kind: 'stack', id: 'a', result: {}, summary: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'progress', id: 'a', progress: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'search', id: 'a', result: {} })).toBe(true);
+    expect(isCalcResponseMessage({ kind: 'complete', id: 'a', result: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'cancelled', id: 'a' })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: { message: 'no' } })).toBe(true);
   });

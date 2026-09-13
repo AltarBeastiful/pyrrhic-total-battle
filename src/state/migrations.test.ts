@@ -1,13 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { newRoot } from './defaults';
-import {
-  migrate,
-  migrateProfile,
-  migrations,
-  readSchemaVersion,
-  splitTroopExclusions,
-} from './migrations';
+import { migrate, migrateProfile, migrations, readSchemaVersion, splitTroopExclusions } from './migrations';
 import { SCHEMA_VERSION } from './schema';
 
 /**
@@ -209,6 +203,23 @@ describe('migrate', () => {
       expect(setup).not.toHaveProperty('pinnedUnitIds');
     }
     expect(newRoot().profiles[0]?.setups[0]).not.toHaveProperty('excludedUnitIds');
+  });
+
+  it('gives a v3 setup written before S-54 the default campaign', () => {
+    // The field was added *inside* v3 with a schema default rather than with a version bump
+    // (ADR-0004): a document stored by yesterday's build has no `campaign` at all and must load.
+    const fixture = v1Fixture();
+    const setups = (fixture.profiles as Record<string, unknown>[])[0]!.setups as Record<string, unknown>[];
+    for (const setup of setups) expect(setup).not.toHaveProperty('campaign');
+
+    const migrated = migrate(fixture);
+    expect(migrated.profiles[0]?.setups[0]?.campaign).toEqual({ marches: 10 });
+    // And a campaign the player did write is kept as written.
+    setups[0]!.campaign = { marches: 4, silverBudget: 1_000_000 };
+    expect(migrate({ ...fixture, schemaVersion: 3 }).profiles[0]?.setups[0]?.campaign).toEqual({
+      marches: 4,
+      silverBudget: 1_000_000,
+    });
   });
 
   it('round-trips a freshly created document', () => {

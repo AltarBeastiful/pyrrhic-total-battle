@@ -10,7 +10,9 @@
  * Plain functions rather than a hook: the same run has to be startable from an event handler in either
  * half of the page, and everything it reads or writes already lives in a store.
  */
-import { buildStackRequest } from '@/state/derive';
+import { withMethod } from '@/engine';
+import type { StackRequest } from '@/engine/types';
+import { buildCompleteRequest, buildStackRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { getCalcClient } from '@/ui/calcClient';
 import { readStoredResult, useResultStore } from '@/ui/resultStore';
@@ -23,6 +25,14 @@ import { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
  * phone, short enough that the button never looks stuck; the search returns its best find when it runs out.
  */
 export const SEARCH_BUDGET_MS = 8_000;
+
+/**
+ * Wall-clock budget of a complete optimization. The same as a priority search, and for the same
+ * reason: the engine splits it across the twelve (sizing × mercenary spend) cells and every cell
+ * answers with its best find when its share runs out, so a longer budget buys a better answer and
+ * never a different kind of one.
+ */
+export const COMPLETE_BUDGET_MS = 8_000;
 
 /** Size the stacks for the active march (running a priority search first when one is selected). */
 export async function runGenerate(): Promise<void> {
@@ -51,6 +61,36 @@ export async function runGenerate(): Promise<void> {
     const request = buildStackRequest(profile, setup);
     const client = getCalcClient();
     const common = { request, profileId: profile.id, setupId: setup.id };
+
+    // Complete optimization is its own kind of run (S-54): the objective still says what to aim at,
+    // but the sizing, the share of the mercenaries and the unit types are all the search's to choose,
+    // and it scores them on the whole campaign rather than on this one march.
+    if (setup.options.method === 'complete') {
+      const found = await client.complete(
+        buildCompleteRequest(profile, setup, COMPLETE_BUDGET_MS),
+        (progress) => {
+          useRunStore.getState().setProgress(progress);
+        },
+        controller.signal,
+      );
+      const { winner } = found;
+      // What is on screen is the campaign's **first march**, so the request it belongs to is that
+      // march's: the winner's sizing, and the caps its mercenary spend gives it. A March edit then
+      // re-sizes exactly what is drawn (`resizeMarch` runs the sizer on this very request).
+      const marchRequest: StackRequest = {
+        ...withMethod(request, winner.method),
+        caps: winner.campaign.marches[0]?.caps ?? request.caps,
+      };
+      useRunStore.getState().rememberPrevious(previous);
+      useResultStore.getState().setResult({
+        ...common,
+        request: marchRequest,
+        result: winner.single.result,
+        summary: winner.single.summary,
+      });
+      useRunStore.getState().finish([...winner.includedUnitIds], null, found);
+      return;
+    }
 
     if (setup.priority === 'none') {
       const { result, summary } = await client.stack(request, controller.signal);
@@ -146,7 +186,6 @@ export async function resizeMarch(includedUnitIds: string[], leftOutByPlayer: st
       .setError(error instanceof Error ? error.message : 'The march could not be re-sized.');
   }
 }
-
 
 /**
  * Put the cached result back after a reload (`pyrrhic.lastResult.v1`).

@@ -5,18 +5,19 @@
  * The stored ids never change; only the words do. Every description is the one line the glossary
  * fixes, trimmed to fit a list row.
  */
-import type { Method } from '@/engine';
 import type { Pool, RecoveryMode } from '@/engine/types';
 import { METHODS, OBJECTIVES } from '@/state/schema';
+import type { SetupMethod } from '@/state/schema';
 
 // ---- The rule the stacks are sized by ------------------------------------------------------------
 export interface MethodChoice {
-  value: Method;
+  value: SetupMethod;
   title: string;
   description: string;
 }
 
-export const isMethod = (value: string): value is Method => (METHODS as readonly string[]).includes(value);
+export const isMethod = (value: string): value is SetupMethod =>
+  (METHODS as readonly string[]).includes(value);
 
 export const METHOD_CHOICES: readonly MethodChoice[] = [
   {
@@ -34,6 +35,11 @@ export const METHOD_CHOICES: readonly MethodChoice[] = [
     title: 'Your own order',
     description: 'You decide which stack falls first.',
   },
+  {
+    value: 'complete',
+    title: 'Complete optimization',
+    description: 'Tries every sizing over the marches you plan and keeps the best campaign.',
+  },
 ];
 
 // ---- The extra rules -----------------------------------------------------------------------------
@@ -43,8 +49,12 @@ export interface OptionChoice {
   key: OptionKey;
   label: string;
   description: string;
-  /** The methods the rule means anything for; on the others it is hidden, not disabled (§7.4). */
-  methods: readonly Method[];
+  /**
+   * The methods the rule means anything for; on the others it is hidden, not disabled (§7.4).
+   * **Complete optimization is on none of them**: it tries every sizing itself, so a rule that fixes
+   * one of them would be the player answering the question they asked the search.
+   */
+  methods: readonly SetupMethod[];
 }
 
 /** In the order §7.4 lists them. */
@@ -75,11 +85,11 @@ export const OPTION_CHOICES: readonly OptionChoice[] = [
   },
 ];
 
-export const optionsFor = (method: Method): OptionChoice[] =>
+export const optionsFor = (method: SetupMethod): OptionChoice[] =>
   OPTION_CHOICES.filter((option) => option.methods.includes(method));
 
 /** A rule belongs to the method it was written for; changing the method switches the rest off. */
-export const appliesTo = (key: OptionKey, method: Method): boolean =>
+export const appliesTo = (key: OptionKey, method: SetupMethod): boolean =>
   OPTION_CHOICES.find((option) => option.key === key)?.methods.includes(method) ?? false;
 
 // ---- What a Generate aims at ---------------------------------------------------------------------

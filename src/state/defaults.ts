@@ -4,7 +4,7 @@
  * against (ADR-0005): `SHARE_PROFILE_TEMPLATE` / `SHARE_SETUP_TEMPLATE` are the same objects built
  * with fixed ids and timestamps so they are deterministic.
  */
-import { BUILTIN_PERMANENT_SOURCES, SCHEMA_VERSION } from './schema';
+import { BUILTIN_PERMANENT_SOURCES, DEFAULT_MARCHES, SCHEMA_VERSION } from './schema';
 import type { BattleSetup, BuiltinPermanentSource, Profile, RootDocument, SavedStack } from './schema';
 
 /**
@@ -82,6 +82,8 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
     },
     priority: 'none',
     recoveryPlan: { mode: 'retrain' },
+    // What "Complete optimization" plans for; unread by every other method (S-54).
+    campaign: { marches: DEFAULT_MARCHES },
   };
 }
 

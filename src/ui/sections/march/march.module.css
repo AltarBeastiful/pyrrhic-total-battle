@@ -151,6 +151,18 @@
   background: var(--pyr-raised);
 }
 
+/* The campaign's plans (S-54, `CampaignPanel.tsx`) name themselves in two lines — the sizing, and how
+   many mercenaries it fields — inside one cell, so the five figures beside them fit a 420 px pane.
+   It is the one cell of that table allowed to wrap, for the reason `.compareName` is below. */
+/* Written as two classes so it outweighs the `nowrap` every other cell of the table carries: capped
+   rather than merely allowed to wrap, because without a ceiling "Troops first, with damage trades"
+   sets the column and pushes the last two figures out of a 420 px pane, where the same name over two
+   lines costs one line and shows them. */
+.compare .planCell {
+  max-width: 9.5rem;
+  white-space: normal;
+}
+
 /* The name is the control — pressing it generates with that objective — and it is the one cell
    allowed to wrap, because "Damage per dragon coin" is four words. */
 .compareName {

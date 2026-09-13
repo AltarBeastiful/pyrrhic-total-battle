@@ -341,7 +341,7 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-49a Account sync backend | in progress | groundwork done and verified: `ops/pocketbase/` (PocketBase 0.40.4 compose, Caddy site, save hook, `profiles` migration, smoke script), every spec `[verify]` answered in investigation 0012, hosting in investigation 0010. **Deployment is pending the owner** (Dynu hostname, the two-line philou change, the Google OAuth client, the backup target) |
 | S-49b Account sync client | done | `src/account/**`, `src/ui/account/**`, ADR-0009, `/oauth-callback` + `404.html` copy, SW NetworkOnly for the backend, `storage.persist()`; e2e `e2e/account.spec.ts` against a local 0.40.4 container. Hidden until the owner sets `VITE_BACKEND_ORIGIN` |
 | S-53 Left-out troops without pins | done | schema v3 drops `BattleSetup.pinnedUnitIds` and `excludedUnitIds`, the sizer and the search lose their pinned paths, and the March keeps `includedUnitIds` with the result (§3.4 rewritten); owner's story of 2026-09-13 below the table |
-| S-54 Complete optimization | engine done, UI in progress | `src/engine/campaign.ts` (`simulateCampaign`, `searchComplete`, 22 tests); story below; investigation 0014 §5 |
+| S-54 Complete optimization | done | `src/engine/campaign.ts` (`simulateCampaign`, `searchComplete`, 22 tests); the fourth method on the Battle card with *Marches planned* / *Silver budget*, the `complete` worker job, and the March's sizing line + folded Campaign section (`ui/sections/march/campaign.ts`, `CampaignPanel.tsx`); investigation 0014 §5 |
 | S-55 Bonus recap: every key, always visible | backlog | hero assessment 2026-09-13: the engine applies the hero (Svyatogor +50/+50 army) and the TOTAL figures move, but our only per-key view is the breakdown fold, two folds deep, hiding keys at 0; TotalStack's recap lists all 9 + 9 keys and the three specials. Promote that block to the head of the Sources fold, every key listed including 0 % (rules 1, 4, 5, 7) |
 
 **S-53 — Left-out troops without pins (owner, 2026-09-13 evening; clarified the same night).** The current
@@ -387,10 +387,13 @@ spending fewer mercenaries per march buys more damage over several marches":
 - **Battle card**: "Complete optimization" as a whole-card choice beside the three methods (rule 8), with two
   fields under it: *Marches planned* (default 10) and *Silver budget* (empty = unlimited; shown for every
   objective, since the owner reads "damage per silver" as "my silver is limited").
-- **March pane**: the winning march as today, plus a line naming the sizing it chose ("Hired units fall
-  after your troops, with damage trades") and, folded (rule 4), a *Campaign* section: one row per march
-  (mercenaries fielded, damage, silver so far) and the spend comparison (100 / 75 / 50 / 25 %: marches,
-  total damage, silver, mercenaries lost, left). Numbers through `Figures`, separations through `Sections`.
+- **March pane**: the winning march as today, plus a line naming the sizing it chose ("Sized as Troops
+  first, with damage trades. Every mercenary you own marches each time.") and, folded (rule 4), a
+  *Campaign* section: the campaign's figures, one row per march (mercenaries fielded, damage, silver so
+  far) and the plans compared — every sizing at full strength plus the best of each smaller share, the
+  winner marked. Numbers through `Figures`, separations through `Sections`. It **replaces** the objectives
+  comparison for this method: five more searches over one battle explain nothing that twelve plans over ten
+  marches have not already said.
 - Not in scope: a different march per campaign step, valuing leftover mercenaries, monsters' dragon coins
   beyond what `recovery.ts` already prices.
 
@@ -647,6 +650,22 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-14 — **S-54 landed, UI included.** A fourth whole-card stacking method, *Complete optimization*
+  (design rule 8), with two fields of its own — *Marches planned* (10) and *Silver budget* (empty =
+  unlimited) — and no extra rules at all, since it tries every sizing itself (§7.4). `METHODS` gains
+  `'complete'` while the engine's `Method` is untouched: `derive.engineMethod` maps it to the tier ladder
+  and `searchComplete` sets the method per candidate. `BattleSetup.campaign` is defaulted *inside* schema
+  v3 (ADR-0004, the rule `relaxedPreservation` was added under), so documents written yesterday keep
+  parsing. A `complete` worker job sits beside `stack` and `search` — cancellable, progress forwarded, same
+  inline fallback. The March gains one line under the figures ("Sized as Troops first, with damage trades.
+  Every mercenary you own marches each time.") and a folded **Campaign** section: the campaign's figures
+  through `Figures`, the ten marches one per row, and the plans compared — every sizing at full strength
+  plus the best of each smaller share, the winner marked — which *replaces* the objectives strip for this
+  method rather than joining it. Wording is the glossary's throughout (`docs/design.md` §7): a spend level
+  is "All / Three quarters / Half / A quarter mercenaries", never a fraction. Gates: 676 unit tests (662
+  before), 46 e2e (44 before, J6 "plan a campaign" at 5 taps on a phone and 3 on a desktop), lint and
+  typecheck clean. The visual suite's one failure (`domain-unittile`, 908/915 px) is unrelated and was
+  already failing before this change — baselines untouched.
 - 2026-09-13 (late) — **S-53 landed.** Schema v3: `BattleSetup` loses `pinnedUnitIds` and `excludedUnitIds`
   (root and profile migrations discard both; `troops.excludedUnitIds` — technology — stays). The engine loses
   `StackRequest.pinned`, `sizePoolPinned`, `pinnedMinimum` and the search's pinned space; `buildUnits` and

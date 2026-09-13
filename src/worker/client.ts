@@ -5,9 +5,10 @@
  * browser, jsdom, a Node script) or constructing one throws, it transparently falls back to the same
  * jobs on the main thread. Callers get one interface and never branch on it.
  */
+import type { CompleteRequest, CompleteResult } from '@/engine/campaign';
 import type { SearchProgress, SearchRequest, StackRequest, SearchResult } from '@/engine/types';
 
-import { runSearch, runStack } from './jobs';
+import { runComplete, runSearch, runStack } from './jobs';
 import {
   errorPayload,
   isCalcResponseMessage,
@@ -24,6 +25,12 @@ export interface CalcClient {
   readonly mode: 'worker' | 'inline';
   stack(request: StackRequest, signal?: AbortSignal): Promise<StackOutcome>;
   search(request: SearchRequest, onProgress?: ProgressHandler, signal?: AbortSignal): Promise<SearchResult>;
+  /** Complete optimization (S-54): the best sizing × mercenary spend × subset over a whole campaign. */
+  complete(
+    request: CompleteRequest,
+    onProgress?: ProgressHandler,
+    signal?: AbortSignal,
+  ): Promise<CompleteResult>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -75,6 +82,7 @@ function createWorkerClient(worker: Worker): CalcClient {
         entry.resolve({ result: message.result, summary: message.summary } as never);
         return;
       case 'search':
+      case 'complete':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -128,6 +136,8 @@ function createWorkerClient(worker: Worker): CalcClient {
       send<StackOutcome>({ kind: 'stack', id: nextJobId('stack'), request }, signal),
     search: (request, onProgress, signal) =>
       send<SearchResult>({ kind: 'search', id: nextJobId('search'), request }, signal, onProgress),
+    complete: (request, onProgress, signal) =>
+      send<CompleteResult>({ kind: 'complete', id: nextJobId('complete'), request }, signal, onProgress),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -167,6 +177,15 @@ export function createInlineClient(): CalcClient {
       run(
         () =>
           runSearch(request, {
+            onProgress: (progress) => onProgress?.(progress),
+            cancelled: () => aborted(signal),
+          }),
+        signal,
+      ),
+    complete: (request, onProgress, signal) =>
+      run(
+        () =>
+          runComplete(request, {
             onProgress: (progress) => onProgress?.(progress),
             cancelled: () => aborted(signal),
           }),

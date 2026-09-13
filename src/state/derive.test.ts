@@ -4,10 +4,13 @@ import { BONUS_KEYS, SPECIAL_KEYS } from '../data/types';
 import { aggregateBonuses } from '../engine/bonuses';
 import { defaultSetup, newProfile } from './defaults';
 import {
+  buildCompleteRequest,
   buildStackRequest,
   buildUnits,
+  campaignSettings,
   captainValue,
   describeTotals,
+  engineMethod,
   eventEnemyFormation,
   resolveSources,
   sourceCaveats,
@@ -483,6 +486,40 @@ describe('buildStackRequest', () => {
     expect(ids).not.toContain('magic-dragon');
     expect(ids).toContain('gorgon-medusa');
     expect(ids).toContain('ice-phoenix');
+  });
+});
+
+describe('complete optimization (S-54)', () => {
+  it('hands the engine a plain sizing: the fourth method is not one of its three', () => {
+    const { profile, setup } = fixture();
+    setup.options = { ...setup.options, method: 'complete' };
+
+    // `searchComplete` sets the method per candidate (`withMethod`), so what the request carries is
+    // only ever a starting point — and it must be a method the engine knows.
+    expect(engineMethod('complete')).toBe('elite');
+    expect(engineMethod('ms')).toBe('ms');
+    expect(buildStackRequest(profile, setup).options.method).toBe('elite');
+  });
+
+  it('carries the campaign of the setup, and unlimited silver stays absent', () => {
+    const { profile, setup } = fixture();
+    expect(campaignSettings(setup)).toEqual({ marches: 10 });
+
+    setup.campaign = { marches: 4, silverBudget: 2_000_000 };
+    const request = buildCompleteRequest(profile, setup, 1_234);
+    expect(request.campaign).toEqual({ marches: 4, silverBudget: 2_000_000 });
+    expect(request.budgetMs).toBe(1_234);
+    expect(request.request.units.length).toBeGreaterThan(0);
+  });
+
+  it('ranks a campaign on expected damage when the march has no priority', () => {
+    const { profile, setup } = fixture();
+    expect(setup.priority).toBe('none');
+    // A campaign is always ranked on something: ten marches nobody compares are not an answer.
+    expect(buildCompleteRequest(profile, setup, 0).objective).toBe('avgDamage');
+
+    setup.priority = 'damagePerSilver';
+    expect(buildCompleteRequest(profile, setup, 0).objective).toBe('damagePerSilver');
   });
 });
 

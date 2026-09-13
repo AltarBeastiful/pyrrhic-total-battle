@@ -36,6 +36,7 @@ import { MARCH_ANCHOR } from '@/ui/shell/march';
 import classes from './march.module.css';
 import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
+import { CampaignFold, CampaignSizing } from './CampaignPanel';
 import { amount } from './format';
 import { MarchGenerateButton } from './MarchGenerateButton';
 import { MarchCountsBar, MarchLeftOut, MarchPills } from './MarchPills';
@@ -191,6 +192,9 @@ export function MarchSection() {
         )}
 
         <MarchRecap />
+        {/* Under the figures, and only after a complete optimization: the sizing the search chose,
+            which is the one thing about this answer the player did not decide themselves (S-54). */}
+        <CampaignSizing />
         {/* Generate is the command bar's on a desktop and nowhere else (design plan §5.6): the
             pane would be saying the same thing twice, 200 px above the bar that says it. In the
             sheet it stays, because the sheet is a focus trap over the bar and the answer and the
@@ -299,9 +303,11 @@ export function MarchSection() {
       {/* 6 — what the objective bought, in the three shapes investigation 0013 §5 asks for. */}
       {snapshot !== null && tradeoff !== null && <TradeoffStrip tradeoff={tradeoff} />}
 
-      {/* 7 — everything that is folded away. Both folds in one part: a hairline between two
-          collapsed rows is a rule between two rules. */}
+      {/* 7 — everything that is folded away. The folds share one part: a hairline between two
+          collapsed rows is a rule between two rules. The campaign comes first of them — it explains
+          the answer, where the other two are reference (S-54). */}
       <Stack gap={0}>
+        <CampaignFold />
         {snapshot !== null && result !== null && summary !== null && (
           <Disclosure
             title="Details"

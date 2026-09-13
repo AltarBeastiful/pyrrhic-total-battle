@@ -21,8 +21,9 @@ import { Alert, Box, Group, NumberInput, SegmentedControl, SimpleGrid, Stack, Te
 import { useId, useState } from 'react';
 
 import { CATEGORIES } from '@/data/types';
-import type { Method } from '@/engine';
 import { eventEnemyFormation } from '@/state/derive';
+import { DEFAULT_MARCHES, MAX_MARCHES } from '@/state/schema';
+import type { SetupMethod } from '@/state/schema';
 import { selectActiveSetup, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
 import { ChoiceList, NumberField, Panel, Sections, SwitchRow } from '@/ui/kit';
@@ -54,18 +55,19 @@ export function BattleSection() {
 
   if (setup === undefined) return null;
 
-  const { recoveryPlan, options } = setup;
+  const { recoveryPlan, options, campaign } = setup;
   const forced = eventEnemyFormation(setup);
   const formation: Formation = forced ?? setup.enemy;
   const mode = forced === undefined && isManual ? 'custom' : detectMode(formation);
   const editable = mode === 'custom' && forced === undefined;
   const selectiveTop = recoveryPlan.selectiveTop ?? 3;
+  const rules = optionsFor(options.method);
 
   const writeFormation = (next: Formation): void => {
     updateActiveSetup({ enemy: next });
   };
 
-  const setMethod = (method: Method): void => {
+  const setMethod = (method: SetupMethod): void => {
     updateActiveSetup((current) => ({
       options: {
         ...current.options,
@@ -175,25 +177,65 @@ export function BattleSection() {
             </Group>
           )}
 
-          <Stack gap="xs" role="group" aria-labelledby={optionsId}>
-            <Text size="xs" fw={500} id={optionsId}>
-              Options
-            </Text>
-            {/* 8 px apart, the switch immediately before its label (owner, 2026-09-13). */}
-            <Stack gap="sm">
-              {optionsFor(options.method).map((option) => (
-                <SwitchRow
-                  key={option.key}
-                  label={option.label}
-                  description={option.description}
-                  checked={options[option.key]}
-                  onChange={(on) => {
-                    setOption(option.key, on);
-                  }}
-                />
-              ))}
+          {/* What a campaign is (S-54). Two fields in the card's own field style, under the method
+              they belong to, and only while it is chosen — the rest of the card is about one march. */}
+          {options.method === 'complete' && (
+            <Stack gap="sm" maw={520}>
+              <NumberField
+                label="Marches planned"
+                description="How many times you fight this army before hiring again."
+                value={campaign.marches}
+                min={1}
+                max={MAX_MARCHES}
+                onChange={(value) => {
+                  updateActiveSetup((current) => ({
+                    campaign: { ...current.campaign, marches: value ?? DEFAULT_MARCHES },
+                  }));
+                }}
+              />
+              <NumberField
+                label="Silver budget"
+                description="Empty means no limit. A campaign stops before a march it cannot pay for, so pair it with the damage-per-silver objective."
+                value={campaign.silverBudget ?? null}
+                allowEmpty
+                placeholder="Unlimited"
+                min={0}
+                leftSection={<Glyph kind="silver" />}
+                onChange={(value) => {
+                  updateActiveSetup((current) => ({
+                    campaign: {
+                      marches: current.campaign.marches,
+                      ...(value === null ? {} : { silverBudget: value }),
+                    },
+                  }));
+                }}
+              />
             </Stack>
-          </Stack>
+          )}
+
+          {/* Complete optimization has none: a rule that fixes one sizing is the player answering the
+              question they asked the search, so the whole block goes with them (§7.4). */}
+          {rules.length > 0 && (
+            <Stack gap="xs" role="group" aria-labelledby={optionsId}>
+              <Text size="xs" fw={500} id={optionsId}>
+                Options
+              </Text>
+              {/* 8 px apart, the switch immediately before its label (owner, 2026-09-13). */}
+              <Stack gap="sm">
+                {rules.map((option) => (
+                  <SwitchRow
+                    key={option.key}
+                    label={option.label}
+                    description={option.description}
+                    checked={options[option.key]}
+                    onChange={(on) => {
+                      setOption(option.key, on);
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Stack>
+          )}
         </Stack>
 
         {/* What the losses are paid with. The objective used to sit beside it; it is in the command

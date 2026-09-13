@@ -2,10 +2,11 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search', id, request }  and  { kind: 'cancel', id }
+ * Request:  { kind: 'stack' | 'search' | 'complete', id, request }  and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
- *           { kind: 'progress', id, progress }   (search only, zero or more)
+ *           { kind: 'progress', id, progress }   (searches only, zero or more)
  *           { kind: 'search', id, result }
+ *           { kind: 'complete', id, result }
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message } }
  *
@@ -13,6 +14,7 @@
  * flattened to `{ message }`: an `Error` does not survive `postMessage` in every browser, and the stack
  * trace of a worker frame is useless to the user anyway.
  */
+import type { CompleteRequest, CompleteResult } from '@/engine/campaign';
 import type {
   BattleSummary,
   SearchProgress,
@@ -36,13 +38,20 @@ export interface SearchJob {
   request: SearchRequest;
 }
 
+/** Complete optimization (S-54): the same shape as a search, over a campaign of several marches. */
+export interface CompleteJob {
+  kind: 'complete';
+  id: JobId;
+  request: CompleteRequest;
+}
+
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
 export interface CancelJob {
   kind: 'cancel';
   id: JobId;
 }
 
-export type CalcRequestMessage = StackJob | SearchJob | CancelJob;
+export type CalcRequestMessage = StackJob | SearchJob | CompleteJob | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -63,6 +72,12 @@ export interface SearchDoneMessage {
   result: SearchResult;
 }
 
+export interface CompleteDoneMessage {
+  kind: 'complete';
+  id: JobId;
+  result: CompleteResult;
+}
+
 export interface CancelledMessage {
   kind: 'cancelled';
   id: JobId;
@@ -75,7 +90,12 @@ export interface ErrorMessage {
 }
 
 export type CalcResponseMessage =
-  StackDoneMessage | SearchProgressMessage | SearchDoneMessage | CancelledMessage | ErrorMessage;
+  | StackDoneMessage
+  | SearchProgressMessage
+  | SearchDoneMessage
+  | CompleteDoneMessage
+  | CancelledMessage
+  | ErrorMessage;
 
 /** What `stack()` resolves with: the sizing and the battle summary computed from it. */
 export interface StackOutcome {
@@ -112,6 +132,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
   switch (value.kind) {
     case 'stack':
     case 'search':
+    case 'complete':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -129,6 +150,7 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'progress':
       return isRecord(value.progress);
     case 'search':
+    case 'complete':
       return isRecord(value.result);
     case 'cancelled':
       return true;

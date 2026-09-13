@@ -198,7 +198,17 @@ export type ProfileSources = z.infer<typeof sourcesSchema>;
 
 // ---- Recovery / housing / enemy / method ----------------------------------------------------------
 export const RECOVERY_MODES = ['retrain', 'revive', 'selective'] as const satisfies readonly RecoveryMode[];
-export const METHODS = ['elite', 'ms', 'custom'] as const satisfies readonly Method[];
+
+/** The three sizings the engine itself knows (`engine/types.ts`, `Method`). */
+export const ENGINE_METHODS = ['elite', 'ms', 'custom'] as const satisfies readonly Method[];
+
+/**
+ * What the Battle card offers. `complete` (S-54) is the app's own fourth choice and not an engine
+ * method: it *tries* every sizing over a campaign of several marches and keeps the one that wins, so
+ * `derive.ts` hands the engine a plain request and `searchComplete` sets the method per candidate.
+ */
+export const METHODS = [...ENGINE_METHODS, 'complete'] as const;
+export type SetupMethod = (typeof METHODS)[number];
 export const OBJECTIVES = [
   'avgDamage',
   'minDamage',
@@ -239,6 +249,22 @@ export const stackingOptionsSchema = z.object({
   customOrder: z.array(z.string()).optional(),
 });
 
+// ---- The campaign a "Complete optimization" plans for (S-54) --------------------------------------
+/** Marches a campaign plans for when the player has said nothing: a week of fighting on one refit. */
+export const DEFAULT_MARCHES = 10;
+/**
+ * And the most it will plan for. Every candidate of the search is played march by march, so this is
+ * the one number that decides how long a Generate can run; 50 is far past what a stock survives.
+ */
+export const MAX_MARCHES = 50;
+
+export const campaignPlanSchema = z.object({
+  marches: z.int().min(1).max(MAX_MARCHES).default(DEFAULT_MARCHES),
+  /** Retrain silver for the whole campaign; absent = unlimited. */
+  silverBudget: z.number().min(0).optional(),
+});
+export type CampaignPlan = z.infer<typeof campaignPlanSchema>;
+
 // ---- Battle setup ---------------------------------------------------------------------------------
 /**
  * Which sources are switched on for this march. Captains / equipment / artifacts / custom hold the
@@ -269,6 +295,9 @@ export const battleSetupSchema = syncMetaSchema.extend({
   /** `'none'` = plain Generate, no priority search (PLAN §3.6). */
   priority: z.union([z.enum(OBJECTIVES), z.literal('none')]),
   recoveryPlan: recoveryPlanSchema,
+  // Added by S-54 inside v3: defaulted, so every setup stored before it keeps parsing without a
+  // schema bump (ADR-0004, the rule `relaxedPreservation` was added under).
+  campaign: campaignPlanSchema.default({ marches: DEFAULT_MARCHES }),
 });
 export type BattleSetup = z.infer<typeof battleSetupSchema>;
 

@@ -368,6 +368,60 @@ async function journey3(page: Page): Promise<void> {
   expect(taps.count).toBeLessThanOrEqual(6);
 }
 
+/**
+ * J6 — plan a campaign (S-54). The daily question is "what do I march with today"; this one is "what
+ * do I march with for the next ten fights". Choose the fourth stacking method, Generate, and read
+ * the campaign: the sizing it chose, and one row per march. Budget: ≤ 5 taps at either width.
+ */
+async function journey6(page: Page, phone: boolean): Promise<void> {
+  const taps = new Taps();
+  const battle = page.locator('#battle');
+
+  // On a phone the method is folded to the chosen one, so reaching the others is a tap of its own.
+  const change = battle.getByRole('button', { name: 'Change Stacking method' });
+  if (phone) await taps.tap(change);
+  await taps.tap(battle.getByRole('radio', { name: 'Complete optimization' }));
+
+  // The campaign it will plan for, with the default nobody has to type.
+  await expect(battle.getByLabel('Marches planned')).toHaveValue('10');
+  await expect(battle.getByLabel('Silver budget')).toHaveValue('');
+  // And the rules that ride on a sizing are gone: this method tries every sizing itself.
+  await expect(battle.getByRole('switch')).toHaveCount(0);
+
+  await taps.tap(generateButton(page).first());
+  await settle(page);
+
+  // On a phone the March is the sheet the bottom bar opens; on a desktop it is the pane's column.
+  const march = phone ? page.getByRole('dialog', { name: 'March' }) : page.locator('#march');
+  if (phone) {
+    await taps.tap(recapSummary(page));
+    await expect(march).toBeVisible();
+  }
+
+  // The one thing about this answer the player did not choose: what sized it.
+  await expect(march.getByText(/^Sized as /)).toBeVisible();
+
+  const fold = march.getByRole('button', { name: /^Campaign/ });
+  await expect(fold).toContainText('10 marches');
+  await taps.tap(fold);
+
+  const table = march.getByRole('table', { name: 'Every march of this campaign' });
+  await expect(table).toBeVisible();
+  // Ten marches and their head row, each with what it fielded and what it had cost by then.
+  await expect(table.getByRole('row')).toHaveCount(11);
+  await expect(march.getByText('Marches fought')).toBeVisible();
+  await expect(
+    march.getByRole('table', { name: 'Every plan this campaign was compared against' }),
+  ).toBeVisible();
+  // The campaign replaces the objectives strip: nothing runs five more searches behind it.
+  await expect(march.getByRole('heading', { name: 'Objectives compared' })).toHaveCount(0);
+
+  if (phone) await closeMarchSheet(page);
+
+  record('J6 taps', taps.count, 5);
+  expect(taps.count).toBeLessThanOrEqual(5);
+}
+
 /** J5 — share this march: the account menu, the item, the word that says it is on the clipboard. */
 async function journey5(page: Page): Promise<void> {
   const taps = new Taps();
@@ -413,6 +467,12 @@ test.describe('phone 390×844', () => {
     await journey5(page);
     expect(problems).toEqual([]);
   });
+
+  test('J6 plan a campaign: ≤ 5 taps', async ({ page }) => {
+    const problems = watchConsole(page);
+    await journey6(page, true);
+    expect(problems).toEqual([]);
+  });
 });
 
 test.describe('desktop 1400×900', () => {
@@ -444,6 +504,12 @@ test.describe('desktop 1400×900', () => {
     const problems = watchConsole(page);
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await journey5(page);
+    expect(problems).toEqual([]);
+  });
+
+  test('J6 plan a campaign: ≤ 5 taps', async ({ page }) => {
+    const problems = watchConsole(page);
+    await journey6(page, false);
     expect(problems).toEqual([]);
   });
 });

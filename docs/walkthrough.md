@@ -4,7 +4,7 @@ Half an hour with the game open beside you. Do each numbered thing **twice** —
 dark, and look at light once. Use your real account values. Run a production build (`pnpm build && pnpm
 preview`), not the dev server.
 
-## The eight things to try
+## The nine things to try
 
 1. **Your daily march.** Open the app, set the monster and the leadership you have free, Generate, copy the
    counts into the game. It should cost three taps on the phone, two on the desktop, and the figures should
@@ -16,11 +16,15 @@ preview`), not the dev server.
    the spot, with no Generate — take another one out, then Generate and watch it start again from the
    solver's own answer. Compare against the previous run, undo. Try the worst-case and per-silver
    objectives against the average.
-5. **Share it.** Send a march to yourself, open the link on the other device, save a copy.
-6. **Start from nothing.** New profile, configure it as a new player would. Does every empty card tell you
+5. **Plan a campaign.** In Battle, choose **Complete optimization**, leave "Marches planned" at ten (or
+   type a silver budget), Generate. The March says what sized it — "Sized as Troops first, with damage
+   trades" — and the folded **Campaign** section holds the totals, one row per march, and the plans it
+   beat, including what fielding fewer mercenaries each time would have given you.
+6. **Share it.** Send a march to yourself, open the link on the other device, save a copy.
+7. **Start from nothing.** New profile, configure it as a new player would. Does every empty card tell you
    what to do next?
-7. **The account menu.** Switch profile, duplicate, rename, export, import, change the theme.
-8. **Offline.** Turn the network off, reload, generate. Then install it to the home screen and do it again.
+8. **The account menu.** Switch profile, duplicate, rename, export, import, change the theme.
+9. **Offline.** Turn the network off, reload, generate. Then install it to the home screen and do it again.
 
 ## What to judge it against
 

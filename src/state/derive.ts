@@ -50,15 +50,17 @@ import type {
   VipRecord,
 } from '../data/types';
 import { aggregateBonuses } from '../engine/bonuses';
+import type { CampaignSettings, CompleteRequest } from '../engine/campaign';
 import type {
   BonusTotals,
   EnemyFormation,
+  Method,
   RecoverySettings,
   ResolvedSource,
   StackingOptions,
   StackRequest,
 } from '../engine/types';
-import type { BattleSetup, Profile, ProfileTroops } from './schema';
+import type { BattleSetup, Profile, ProfileTroops, SetupMethod } from './schema';
 
 // ---- Tables ---------------------------------------------------------------------------------------
 /** The game tables the derive layer reads. Injectable so tests can pin values without touching `src/data`. */
@@ -565,10 +567,20 @@ export function eventEnemyFormation(
   return forced ? normalizeEnemy(forced) : undefined;
 }
 
+/**
+ * The sizing the engine is asked for. Three of the four are its own; **Complete optimization is not a
+ * sizing at all** — it tries each of them over a campaign and sets the method per candidate
+ * (`searchComplete`, `withMethod`), so the request it starts from carries the tier ladder and nothing
+ * about it is read before the search overrides it.
+ */
+export function engineMethod(method: SetupMethod): Method {
+  return method === 'complete' ? 'elite' : method;
+}
+
 function stackingOptions(setup: BattleSetup): StackingOptions {
   const { options } = setup;
   return {
-    method: options.method,
+    method: engineMethod(options.method),
     strictMercsAboveMonsters: options.strictMercsAboveMonsters,
     monstersLast: options.monstersLast,
     roundTo10: options.roundTo10,
@@ -607,6 +619,34 @@ export function buildStackRequest(
     enemy: eventEnemyFormation(setup, tables) ?? normalizeEnemy(setup.enemy),
     activeEvents: [...setup.active.events],
     recovery: recoverySettings(profile, setup),
+  };
+}
+
+/** The campaign this setup plans for, in the engine's own words (`CampaignSettings`). */
+export function campaignSettings(setup: BattleSetup): CampaignSettings {
+  const { marches, silverBudget } = setup.campaign;
+  return { marches, ...(silverBudget === undefined ? {} : { silverBudget }) };
+}
+
+/**
+ * Everything `searchComplete` needs for one press on Generate (S-54).
+ *
+ * The objective is the march's own, and **"No priority" means expected damage here**: a campaign is
+ * always ranked on something — the alternative would be to play ten marches and then not compare
+ * them. Everything else is the plain march request, because the search decides the sizing, the
+ * mercenary spend and the unit subset itself.
+ */
+export function buildCompleteRequest(
+  profile: Profile,
+  setup: BattleSetup,
+  budgetMs: number,
+  tables: DeriveTables = DEFAULT_TABLES,
+): CompleteRequest {
+  return {
+    request: buildStackRequest(profile, setup, tables),
+    objective: setup.priority === 'none' ? 'avgDamage' : setup.priority,
+    campaign: campaignSettings(setup),
+    budgetMs,
   };
 }
 

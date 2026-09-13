@@ -389,6 +389,11 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `method: 'elite'` | **Tier ladder** | Your cheapest, lowest-tier stacks take the hits first; each higher tier stands one step later. |
 | `method: 'ms'` | **Troops first** | Every mercenary and monster stack is kept smaller than your smallest troop stack, so hired units only fall after all your troops. |
 | `method: 'custom'` | **Your own order** | You decide which stack falls first, mixing troops, mercenaries and monsters. |
+| `method: 'complete'` | **Complete optimization** | Tries every sizing over the marches you plan and keeps the best campaign. |
+| `campaign.marches` | **Marches planned** | How many times you fight this army before hiring again. |
+| `campaign.silverBudget` | **Silver budget** | Empty means no limit. A campaign stops before a march it cannot pay for. |
+| `CompleteCandidate.spend` | **Mercenaries per march** | All · Three quarters · Half · A quarter — how much of every hired stack marches each time. |
+| `CompleteResult.winner.method` | **Sized as …** | The sizing the search chose, in the three words above: Tier ladder · Troops first · Troops first, with damage trades. |
 | `relaxedPreservation` | **Allow damage trades** | Let a hired stack grow past your smallest troop stack when that raises the damage; the results name every stack it affects. |
 | `monstersLast` | **Monsters after troops** | Keep every monster stack below your smallest troop stack; mercenaries stay free. |
 | `strictMercsAboveMonsters` | **Monsters after mercenaries** | Also keep every monster stack below your smallest mercenary stack. |
@@ -407,6 +412,8 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `recovery.*` | **Recovery** — silver, gold, dragon coins, time |
 | `damagePerSilver` / `PerGold` / `PerDragonCoin` | **Value per silver** / **per gold** / **per dragon coin** |
 | `damageByPool` | Damage by pool — troops, mercenaries, monsters |
+| `CampaignSummary` | **Campaign** — marches fought, total expected damage, total silver, damage per silver, mercenaries lost and left |
+| `CompleteResult.candidates` | **The plans compared** — one row per plan: marches, damage, silver, lost, left |
 
 The battle journal keeps in-game phrasing, line for line, so a player can hold it next to the real report.
 

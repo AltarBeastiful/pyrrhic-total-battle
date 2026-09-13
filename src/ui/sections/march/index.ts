@@ -17,7 +17,13 @@ export type { MarchGenerateButtonProps } from './MarchGenerateButton';
 // What the frame reads to know where a run stands (the fingerprint, the progress, the previous
 // summary) and how it starts or stops one. The section owns the engine call; the shell owns the
 // keyboard shortcut and the status line, so both need the same handful of exports.
-export { cancelGenerate, restoreLastResult, runGenerate, SEARCH_BUDGET_MS } from './generate';
+export {
+  cancelGenerate,
+  COMPLETE_BUDGET_MS,
+  restoreLastResult,
+  runGenerate,
+  SEARCH_BUDGET_MS,
+} from './generate';
 export { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 export type { RunState, SearchTradeoff, TradeoffFigures } from './runStore';
 export { amount, compact, duration, percent, ratio } from './format';

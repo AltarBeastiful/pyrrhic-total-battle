@@ -190,10 +190,49 @@ test('on a phone the stacking method folds to the chosen one too (D-54)', async 
   expect(within(methods).getAllByRole('radio')).toHaveLength(1);
 
   await user.click(within(methods).getByRole('button', { name: 'Change Stacking method' }));
-  expect(within(methods).getAllByRole('radio')).toHaveLength(3);
+  expect(within(methods).getAllByRole('radio')).toHaveLength(4);
   await user.click(within(methods).getByText('Hired units only fall once all of your troops have.'));
   expect(options()?.method).toBe('ms');
   expect(within(methods).getAllByRole('radio')).toHaveLength(1);
+});
+
+// ---- Complete optimization (S-54) ----------------------------------------------------------------
+test('the fourth method asks what the campaign is, and hides the rules it decides itself', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BattleSection />);
+
+  // Nothing about a campaign is on screen until the method that has one is chosen.
+  expect(screen.queryByLabelText('Marches planned')).toBeNull();
+  expect(screen.queryByLabelText('Silver budget')).toBeNull();
+
+  await user.click(screen.getByRole('radio', { name: 'Complete optimization' }));
+  expect(options()?.method).toBe('complete');
+
+  // It tries every sizing itself, so a rule that fixes one would be the player answering their own
+  // question: the whole Options block goes with them (§7.4).
+  expect(screen.queryAllByRole('switch')).toHaveLength(0);
+  expect(screen.queryByText('Options')).toBeNull();
+
+  // Ten marches unless the player says otherwise, and no silver limit at all.
+  expect((screen.getByLabelText('Marches planned') as HTMLInputElement).value).toBe('10');
+  expect((screen.getByLabelText('Silver budget') as HTMLInputElement).value).toBe('');
+  expect(setup()?.campaign).toEqual({ marches: 10 });
+
+  type('Marches planned', '6');
+  expect(setup()?.campaign).toEqual({ marches: 6 });
+
+  type('Silver budget', '2000000');
+  expect(setup()?.campaign).toEqual({ marches: 6, silverBudget: 2_000_000 });
+
+  // Emptying it is "unlimited" again, not a budget of zero.
+  const budget = screen.getByLabelText('Silver budget');
+  fireEvent.change(budget, { target: { value: '' } });
+  fireEvent.blur(budget);
+  expect(setup()?.campaign).toEqual({ marches: 6 });
+
+  // And the fields leave with the method.
+  await user.click(screen.getByRole('radio', { name: 'Tier ladder' }));
+  expect(screen.queryByLabelText('Marches planned')).toBeNull();
 });
 
 // ---- What the losses cost ------------------------------------------------------------------------

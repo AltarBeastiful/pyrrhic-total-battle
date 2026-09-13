@@ -16,7 +16,7 @@ import { useMemo } from 'react';
 import type { UnitDef } from '@/data/types';
 import { buildKillOrder } from '@/engine';
 import type { StackingOptions } from '@/engine';
-import { buildUnits } from '@/state/derive';
+import { buildUnits, engineMethod } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Sheet } from '@/ui/kit';
 
@@ -41,7 +41,8 @@ export function OrderSheetPanel({ opened, onClose }: OrderSheetPanelProps) {
   // `StackingOptions` treats `customOrder` as strictly absent-or-present, so it is passed explicitly
   // rather than spread from the stored options (which type it as `string[] | undefined`).
   const base: StackingOptions = {
-    method: options.method,
+    // Both orders below name their own method; this one only has to be an engine method at all.
+    method: engineMethod(options.method),
     strictMercsAboveMonsters: options.strictMercsAboveMonsters,
     monstersLast: options.monstersLast,
     roundTo10: options.roundTo10,

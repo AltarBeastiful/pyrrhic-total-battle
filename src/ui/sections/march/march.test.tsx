@@ -532,6 +532,48 @@ test('what the search gave up is the objectives side by side, and a row runs one
   });
 }, 30_000);
 
+test('complete optimization answers with a campaign, and the March draws it instead of the objectives', async () => {
+  // The fourth method (S-54): the search picks the sizing, the share of the mercenaries and the unit
+  // types, and scores them over the marches the setup plans for.
+  act(() => {
+    useStore
+      .getState()
+      .updateActiveSetup((current) => ({ options: { ...current.options, method: 'complete' } }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  // The one thing about this answer the player did not choose: what sized it.
+  expect(screen.getByText(/^Sized as /)).toBeTruthy();
+  expect(useRunStore.getState().campaign?.winner.campaign.fought).toBe(10);
+
+  // Folded until it is asked for (design rule 4), with the answer's headline on the closed row.
+  const fold = screen.getByRole('button', { name: /^Campaign/ });
+  expect(fold.getAttribute('aria-expanded')).toBe('false');
+  expect(fold.textContent).toContain('10 marches');
+  fireEvent.click(fold);
+  await waitFor(() => {
+    expect(fold.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  expect(screen.getByText('Marches fought')).toBeTruthy();
+  const marches = screen.getByRole('table', { name: 'Every march of this campaign' });
+  expect(within(marches).getAllByRole('row')).toHaveLength(11);
+  // Every sizing at full strength, then the best of each smaller share.
+  const plans = screen.getByRole('table', { name: 'Every plan this campaign was compared against' });
+  expect(within(plans).getAllByRole('row')).toHaveLength(7);
+  expect(
+    within(plans)
+      .getAllByRole('row')
+      .filter((row) => row.getAttribute('aria-current') === 'true'),
+  ).toHaveLength(1);
+
+  // And it *replaces* the objectives comparison: five more searches to compare one battle would be
+  // five wasted next to twelve plans compared over ten marches.
+  expect(useRunStore.getState().tradeoff).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Objectives compared' })).toBeNull();
+}, 30_000);
+
 test('a warning from the engine is an alert under the recap', async () => {
   renderWithTheme(<Page />);
   await generate();
