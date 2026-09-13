@@ -191,9 +191,10 @@ a round the enemy's N attacks alternate with single friendly attacks — each ta
 order that is alive and has not struck this round — and after the N-th enemy attack every living stack that has
 not struck yet attacks once, in attack order; a stack wiped before its turn simply loses that round's attack.
 "Army first" only inserts one opening attack by the first stack in attack order. Double damage is a plain ×2 on
-the whole line, features included (seen twice in game, labelled as such); strike-two-squads is still not modelled
-— the one line of four reports we do not reproduce (a second Archer II strike on 2026-09-13, the only fight with
-the title active) is the likely sighting. Damage per hit from 3.2; expected damage adds double-damage and
+the whole line, features included (seen twice in game, labelled as such); strike-two-squads is still not modelled.
+One line of four reports is not reproduced — a second Archer II strike after the last enemy attack of a round on
+2026-09-13 — and the account's unit cards show no strike-two-squads chance, so it is probably the end-of-round
+sweep rule rather than a proc; a fourth report settles it. Damage per hit from 3.2; expected damage adds double-damage and
 strike-two-squads probabilities. Total damage = Σ over hits until all our stacks are dead or the round cap.
 Journal output = the same numbered hit list as the in-game report so users can compare 1:1. The game scales a
 stack's HP and rounds once (20 Spearman I = 7,289, not divisible by 20); TotalStack rounds per unit and our sizer
@@ -590,8 +591,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
   line. Recovery: the owner confirmed there is no retrain dialog (retraining = recruiting again in the Army tab)
   and the Temple states "revive up to 90 % of your fallen troops" — exactly `n − chunks(n)` — so revive-all
   **silver** (216,000 → 173,880) and **time** (1 d 2 h → 21 h 40 m) are the training cost of the tenth unit of
-  each chunk; both `it.todo`s replaced by tests. Left open: the strike-two-squads proc (one unlabelled line) and
-  the report's headline damage figure.
+  each chunk; both `it.todo`s replaced by tests. Left open: one extra Archer II line after a round's last enemy
+  attack (the account shows no strike-two-squads chance, so probably the sweep rule, not a proc) and the
+  report's headline damage figure.
 - 2026-09-13 — Direction A implemented from the canvas (D-55) with the owner's nine corrections (readable
   tier-coloured pills that extend, no per-stack dead list, steppers back, chips at well height, left-out row
   below, whole at-a-glance panel sticky, switches beside labels, badge retired, one Edit toggle).

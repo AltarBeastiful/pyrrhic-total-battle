@@ -163,7 +163,7 @@ const MODEL_NOTES = [
   'armyStrengthAgainstEpicMonsters is treated as an extra strength-against that applies to every target (we only ever fight epic monsters).',
   "swarmUnits strength-against counts only while the Arachne's event id is in activeEvents.",
   'Our stacks attack in base-damage order (per-hit damage without the strength-against part), not in HP order: confirmed on four in-game reports, it is why a big low-bonus stack can strike after a small one. The enemy still kills by HP.',
-  'Open, one line in four reports: on 2026-09-13 the last surviving stack struck a second time in the same round (the only fight with the strike-two-squads title active); we do not model it, so that journal has 20 entries against the game 21.',
+  'Open, one line in four reports: on 2026-09-13 the last surviving stack (Archer II) struck a second time after the round\u2019s last enemy attack. The account\u2019s unit cards show no strike-two-squads chance, so a proc is unlikely and the rule behind that extra sweep is unsettled; our journal has 20 entries against the game\u2019s 21.',
 ] as const;
 
 /**

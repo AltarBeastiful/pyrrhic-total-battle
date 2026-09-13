@@ -43,8 +43,11 @@ round's attack. Evidence:
   reproduces both reports entry for entry (28 and 24 entries); with the HP-order rule it produced one extra hit.
 - The divergence needs bonuses that differ between families: this profile boosts guardsmen ×2.43 health /
   ×2.87 strength but the specialist only ×1.51 / ×1.71.
-- One line is still unexplained: entry 20 of the 2026-09-13 report, a second Archer II strike in the same
-  round (20 of 21 entries reproduced). It was the only fight with the strike-two-squads title active.
+- One line is still unexplained: entry 20 of the 2026-09-13 report, a second Archer II strike right after the
+  round's last enemy attack, same target and same damage as its normal line (20 of 21 entries reproduced). The
+  account's unit cards show no strike-two-squads chance, so it is more likely the end-of-round sweep rule than
+  a proc; the engine sweeps only stacks that have not struck this round, which reproduces both 2026-09-11
+  fights.
 
 ## 1d. HP rounding (settled in game, 2026-09-13)
 The game scales the **stack** and rounds once: 20 Spearman I total 7,289, which is not divisible by 20, so no

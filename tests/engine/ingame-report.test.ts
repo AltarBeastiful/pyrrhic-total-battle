@@ -280,8 +280,9 @@ describe('report 3 — 2026-09-13 13:27, enemy first, 4 enemy squads, a mercenar
       target: 'melee',
       damagePerHit: row.damage,
       featuresDamage: row.features,
-      doubleDamageChance: row.label === 'RD1' ? 8.8 : 3.8,
-      strikeTwoSquadsChance: 5,
+      // From the report's own troop-detail popup: +3.0 % account bonus, plus the riders' own +5 % feature.
+      doubleDamageChance: row.label.startsWith('RD') ? 8 : 3,
+      strikeTwoSquadsChance: 0, // the popup lists no such chance for this account
     };
   });
   const journal = buildJournal(stacks, 4, false);

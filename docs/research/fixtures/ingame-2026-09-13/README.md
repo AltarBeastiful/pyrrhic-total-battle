@@ -15,6 +15,7 @@ Screenshots here are downscaled JPEGs; the full-size originals stay outside the 
 | `card-archer1-p1/p2.jpg` | a guardsman's card: base 50/150, features, Health +145.5 %, Strength +175.0 %, double damage +3.8 %, "revival cost reduced by 1.53 times", revival 4 gold (attack) / 40 silver (defence) |
 | `card-swordsman1-p2.jpg` | the same card for a **Specialist**: Health +76.0 %, Strength +96.0 % — far below the guardsmen |
 | `card-rider3-p2.jpg`, `card-arbalester6-p1.jpg` | Rider III (own +5 % double damage) and the mercenary |
+| `report2-detail-archer1.jpg` | the troop-detail popup **inside the report** — the bonuses as they applied in this fight |
 
 ## The fight — "Epic Inferno squad" (K:319 X:511 Y:491), 13:27, Defeat, **enemy first**, 4 squads
 
@@ -36,6 +37,25 @@ Our march, in the order the enemy wiped it (= total HP descending, 9/9):
 Hit list: `1 E>ABT6 · 2 SP1 · 3 E>SP1 · 4 ARC1 · 5 E>ARC1 · 6 SP2 · 7 E>SP2 · 8 RD3 · 9 RD1 · 10 RD2 ·
 11 SW1 · 12 ARC2 · 13 E>RD3 · 14 RD1 (double damage 4,224 incl. 780) · 15 E>RD1 · 16 RD2 · 17 E>SW1 ·
 18 ARC2 · 19 E>RD2 · 20 ARC2 · 21 E>ARC2`.
+
+## The troop-detail popup inside the report (`report2-detail-archer1.jpg`)
+
+Clicking a troop row in the report opens its card with the bonuses **that fight** was computed with — the
+authority for reconciling a report, and different from the Army-tab card, which shows the account *now*.
+Archer I, transcribed: *Guardsman, Human, Ranged unit*; Initiative 10, Food 5, Carrying capacity 100, Revival
+cost after an attack 4 Gold / after defending 40 Silver. **Features**: strength against melee +52 %, against
+flying +67 %. **Bonuses**: carrying capacity +5.5 %, chance to deal double damage **+3.0 %**, health
+**+143.5 %**, health in a battle against another player +5.0 %, march speed +29.7 %, strength **+188.0 %**,
+training cost −13.5 %, training speed +47.9 %, troop revival cost reduced by 1.53 times. **No
+strike-two-squads line** — which is why entry 20 is probably not a proc.
+
+Every figure checks out against the hit list: `16 × 150 × 2.435 = 5,843` is the enemy's damage line for that
+stack (+143.5 % health), `16 × 50 × 2.88 = 2,304` its base damage (+188 % strength) and `16 × 50 × 0.67 = 536`
+its features (the +67 % flying feature, its target being the flying squad) — and both features match
+`strengthAgainst` for Archer I in `src/data/tables/troops.json` exactly (`{ melee: 52, flying: 67 }`).
+The Army-tab card taken an hour later reads +145.5 % / +175.0 % / +3.8 %: bonuses that travel with the march
+(the captain sent with it) and buffs that changed in between make the two differ, so **always reconcile a
+report against its own popup**.
 
 ## What it settles
 
@@ -61,9 +81,15 @@ Hit list: `1 E>ABT6 · 2 SP1 · 3 E>SP1 · 4 ARC1 · 5 E>ARC1 · 6 SP2 · 7 E>SP
    Swordsman I only ×1.51 / ×1.71. The unit cards show higher headline figures (+145.5 % / +175.0 % for
    Archer I, +76.0 % / +96.0 % for Swordsman I), so some of the card's bonus does not apply to this fight —
    open for S-20; the engine test uses the report's own numbers.
-6. **One line is unexplained**: entry 20, a second Archer II strike in the same round. Our model produces 20 of
-   the 21 entries. This was the only fight with the strike-two-squads title (5 %) active, which is the likely
-   cause — the game does not label the line, unlike "double damage". Not modelled.
+6. **One line is unexplained**: entry 20, a second Archer II strike, placed right after the round's fourth and
+   last enemy attack, on the same enemy squad and for the same 700 (incl. 182) as its other two lines — not
+   doubled, not labelled. Our model produces 20 of the 21 entries. A strike-two-squads proc was the first
+   guess, but the Army-tab cards captured the same afternoon list no such chance for Archer I, Archer II,
+   Rider III, Swordsman I or Punisher I (they do list "chance to deal double damage +3.8 %"), so the title was
+   probably not active and the rule behind the extra sweep is still open: our engine lets the end-of-round
+   sweep run only over stacks that have not struck this round, which reproduces both 2026-09-11 fights but
+   drops this line. To settle: the troop-detail popup inside the report (it lists the per-stack chances) or a
+   fourth report.
 
 ## Recovery — what the game actually offers
 
