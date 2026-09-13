@@ -186,6 +186,7 @@ count feasible in game. "Sizer" = what the app produces today.
 | Extra owned type back in (ARC1 / SP1 / RD1) | on the 7-type set | −1.76 M … −2.10 M | `33-extra-stacks` |
 | Tail stack behind the mercenaries | up to 100 SP2 at the very end | +5 k … +62 k | `13-squads-and-stacks` |
 | Catapult I (if unlocked) | 274 units, no features | −4.3 M | `33-extra-stacks` |
+| **Deep ladder with small mercenary stacks** (Kai's shape; `07-deep-ladder`) | at 20/20/10/10 mercs, full leadership: 3 sponges 3,023,480 → Kai's 7 troop types 3,813,773 (mercs at positions 8–11, 2 2 3 3 hits) | +790,293 (+26 %), and +26 % per mercenary lost | `07-deep-ladder` |
 | **Enemy squads** | N = 3 (no flying): 8,644,808 · N = 4: 7,843,624 · N = 8: 5,950,768 | +10 % · — · −24 % | `13-squads-and-stacks`, `34-enemy-composition` |
 | Enemy categories at N = 4 | all four present 7,843,624 · no flying 7,660,000 (ABT6 → melee +394, ARC2 → melee) · no ranged 6,085,801 (CHR6, RD2, RD3 lose their features) · flying only 5,278,681 | — | `34-enemy-composition` |
 | Double damage (not in the figures) | riders and CHR6 8 %, everyone else 3 % | +407,268 expected (+5.2 %) | `30-bonus-sensitivity` |
@@ -216,7 +217,18 @@ What the table says, in order of size:
    action rescues whichever round-1 victim would otherwise have been wiped before its turn; it is worth
    nothing only when the first victim ranks below every survivor in base damage (Swordsman I in the
    owner's march: max = min there, 0 gained).
-5. **Which monster you hit is a 10–25 % lever you already own.** The hits table is `ceil(p/N)`: three
+5. **Kai's deep ladder is the right shape once the mercenary stacks are small** (`07-deep-ladder`). The
+   3-sponge set wins while the stock fielded is large, because the floor is what limits the stock: at
+   92/76/72/37 it gives 7.83 M against 4.40 M for seven troop types (mercs 21/22/22/11 under a 320 k
+   floor). Field 30/20/20/10 or less — the sustained-campaign regime of §6 — and the floor stops binding
+   (EMH6 30 = 444 k, under a 320 k floor only just; EMH6 20 = 296 k fits under seven sponges), so every
+   extra troop type in front is worth a later position: at 20/20/10/10, seven sponges give 3,813,773
+   against 3,023,480 for three (+26 %) for less silver (1,700,700 against 2,361,500) and the same six
+   mercenaries lost; at 10/10/10/10, 3,002,167 against 2,545,192. Eight sponges (SW1 back in) lose again,
+   because the specialist drags the floor to 238 k. The crossover is where the biggest mercenary stack
+   falls below what seven sponges can hold (≈ 320 k HP, i.e. EMH6 ≤ 21): above it, few big sponges; below
+   it, Kai's ladder.
+6. **Which monster you hit is a 10–25 % lever you already own.** The hits table is `ceil(p/N)`: three
    squads give the seven-stack march 8,644,808, eight squads 5,950,768, and a formation without a ranged
    squad costs CHR6, RD2 and RD3 their features (−1.76 M). The owner's own reports show the same monster
    with 3 squads at 23:02 and 4 at 23:00 (2026-09-11), so the count is readable before attacking —
@@ -244,6 +256,11 @@ What the table says, in order of size:
 | 7 types, best merc vector | 8,061,308 | 2,361,500 | 237,200 + ≈11,550 | 27 | 3.41 | 299 k | 7 d 21 h |
 | 7 types, half stock (50/40/40/20), troops just above | 4,176,086 | 1,574,200 | — | 15 | 2.65 | 278 k | — |
 | 7 types, **cheap**: 20/20/10/10, troops just above (L 1,162: ARC2 454 · RD2 227 · RD3 127) | 1,893,351 | 631,800 | 63,180 + ≈3,050 | 6 | 3.00 | **316 k** | ≈ 2 d |
+
+With the mercenaries at 20/20/10/10 and *full* leadership on seven troop types (Kai's shape, §5 item 5)
+a march deals 3,813,773 for 1,700,700 silver: 2.24 per silver and 635,629 per mercenary lost — the
+best per-mercenary figure of any march measured, at the cost of 2.7× the cheap march's silver. So: silver
+binding → the cheap march; stock binding (reviving) → seven sponges at full leadership.
 
 The cheap march is not better per silver than the full one (3.00 against 3.32): the mercenaries' hits do
 not scale with the sponges, and the sponge just above 296 k HP costs proportionally what the sponge above
@@ -276,8 +293,9 @@ Read it as three regimes:
   75 % spend instead.
 - **Gold available:** reviving divides the troops' silver by 10 (the mercenaries' gold, 1.3–1.4 k a march
   at full stock, is charged either way), so silver stops binding and the *stock* does; then fill
-  leadership again and stretch the stock: 20 % of it in tens, 72 marches, 176 M — 22× the damage the same
-  stock gives in eight full marches. Silver saved per gold is a property of the unit type
+  leadership again and stretch the stock: 20 % of it in tens, 72 marches, 176 M with four troop types —
+  and about 275 M with Kai's seven (3.81 M a march instead of 2.44 M, `07-deep-ladder`; the campaign grid
+  of `23-campaign-leadership` only had the 3- and 4-sponge sets, so its revive figures are a floor). Silver saved per gold is a property of the unit type
   (`training.silver × 1.53 / revival.gold`): RD3 268, tier 2 191, tier 1 115, mercenaries 0 — so when gold
   is short revive RD3 first, then ARC2 / RD2, and note that the game's TOP 1–4 selective revive would
   spend it on the four tier-6 mercenaries, which saves no silver at all (`24-recovery-choice`). Potions
@@ -324,13 +342,14 @@ Read it as three regimes:
    ARC2 454 · RD2 227 · RD3 127 · EMH6 20 · ABT6 20 · LGN6 10 · CHR6 10, 631,800 silver, 1,893,351 damage,
    6 mercenaries; it sustains 30 marches. Below ~8 M of total silver, two full marches beat it.
 5. **If gold is available, revive** instead of recruiting: the troops' silver ÷ 10, RD3 first. With gold the
-   right plan flips back to full leadership and 20 % of the stock in tens, up to 72 marches and 176 M.
+   right plan flips to full leadership, 20 % of the stock in tens, and **Kai's seven troop types in front**
+   (ARC1 SP1 RD1 ARC2 SP2 RD2 RD3, never SW1): 3.81 M a march, up to 72 marches, ≈ 275 M.
 6. **Count mercenaries in tens** whenever the stock, not this march, is the constraint.
 7. Captain: Skadi > Heimdall > Hercules if owned; any health-only captain is worth nothing here.
 
 **For the engine (in order of measured value):**
 
-- **E1 — the complete search must own leadership.** Add "troops sized just above the mercenaries" as a
+- **E1 — the complete search must own leadership, and re-choose the subset per spend level** (it does; the deep ladder only wins below ≈ 30 % spend, which is why a single-battle shortlist at full stock never proposes it). Add "troops sized just above the mercenaries" as a
   sizing choice beside "full leadership", size the mercenaries in tens when a spend level is below 1, and
   shortlist on the *campaign* score (stage 1 on single-battle score is why a hand grid beats it by up to
   10 % and why it never finds the 20 % · L 1,162 plan). Playing the stock decay per march is already there.

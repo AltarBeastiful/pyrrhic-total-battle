@@ -660,7 +660,7 @@ order, manual counts) so adding them later is UI work, not a redesign.
   mercenary stack); leadership beyond the floor returns 0.2–0.7 damage per silver against 3 for the march,
   so a silver-bound campaign fields 20 % of the stock in tens above minimal sponges (30 sustained
   marches); reviving with gold divides the troops' silver by 10 and the stock then lasts 72 marches
-  (176 M). Engine follow-ups E1–E6 listed in §8 (leadership as a search dimension, mercenary post-pass,
+  (176 M). below ≈ 30 % spend Kai's seven-sponge ladder beats the 3-sponge set by 26 % per march and per mercenary (`07-deep-ladder`). Engine follow-ups E1–E6 listed in §8 (leadership as a search dimension, mercenary post-pass,
   Troops-first candidate, double damage in the average, revive by silver-per-gold, profile fixes).
 - 2026-09-14 — **S-54 landed, UI included.** A fourth whole-card stacking method, *Complete optimization*
   (design rule 8), with two fields of its own — *Marches planned* (10) and *Silver budget* (empty =
