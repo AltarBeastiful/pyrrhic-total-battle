@@ -595,6 +595,16 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — **Spacing pass + exclusion model** merged and redeployed. Spacing from the canvas contract
+  (page 3): `Glyph` a fixed 1.25 em box everywhere, March pane 420 px with pills four across, pool lines
+  number-first, figures in a two-column grid, per-objective comparison table (investigation 0013 §5,
+  `objectiveCompare.ts`), mercenary pills with an Inter 11/700 tier badge, percentages as numbers through one
+  `Figures` component, one `Sections` separation language (hairline, 16 px) across March, Battle, Bonuses,
+  sheets and popovers (`docs/design.md` §4). Two known breaches of rule 19's 13 px floor: the 12 px meta
+  (`--pyr-meta`) and the 11 px tier badge — both from the contract, one variable each to revert. Model:
+  march exclusions are `BattleSetup.excludedUnitIds` (schema v2; migration moves non-top-tier ids out of
+  `troops.excludedUnitIds`), request building subtracts the setup's list, the Troops card no longer shows a
+  "Left out" line. Gates: 649 unit, 44 e2e, 4 visual, contrast 860 pairs, size 217/42/32 kB.
 - 2026-09-13 — **Published.** `development` merged into `main`; GitHub Pages (Actions build) serves
   https://altarbeastiful.github.io/pyrrhic-total-battle/ with `VITE_BACKEND_ORIGIN` set. Backend S-49a deployed
   on the "main" server beside philou: `https://pyrrhic-backend.92.5.91.253.sslip.io` (Let's Encrypt), PocketBase
