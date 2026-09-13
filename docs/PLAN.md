@@ -168,18 +168,17 @@ training work in 10-unit chunks; reproduces ep-round-to-10s exactly: WE 18 → 1
 exclusions (per-unit and top-tier per-category); Troop Type Allocation percentages when no preservation order
 is chosen (weights pool share per category).
 
-**Pinned and left-out unit types.** Both are **battle-setup** decisions, stored side by side on the setup and
-never on the profile: `pinnedUnitIds` is what this march keeps whatever the solver prefers, `excludedUnitIds`
-is what the player took out of this march by hand. The available types of a march are therefore the troop
-selection (tier ranges, top-tier category chips, and the top-tier monsters the account has not unlocked) *minus*
-the active setup's `excludedUnitIds`; what the sizer or the priority search drops on top of that is reported in
-the result and written nowhere. A pinned type is never dropped: when the solver would leave it empty
-(Troops-first ceiling, tens rounding, no room) it reserves its minimum count (1, or 10 in tens mode) before the
-rest of the pool is re-solved, so the other stacks stay balanced; if it then sits above the ceiling it keeps its
-true place in the HP order and a warning says it will fall before the last troops. Pins are also kept by the
-priority search. The two lists are mutually exclusive: leaving a type out drops its pin, and pinning one clears
-its exclusion. "Put back" reads the setup to decide which it means — undo the player's own exclusion, or pin a
-type the search dropped.
+**Left-out unit types** (S-53, schema v3). There are no pins and nothing about a march's left-out types is
+stored: the setup carries neither list. The available types of a march are the troop selection alone (tier
+ranges, top-tier category chips, and the top-tier monsters the account has not unlocked). **Generate is a
+fresh solve** on all of them — the sizer, or the priority search when an objective is chosen — and it forgets
+every earlier March edit. **The March then recomputes in place**: taking a type out or putting one back edits
+the run's `includedUnitIds` and re-sizes the remaining types straight away (the sizer only, never the search),
+without a Generate and without marking the answer out of date, because the form has not moved. A put-back type
+is simply *in*, sized like any other; nothing forces one, so if the sizer still cannot pay for it, it returns
+to the left-out row with the sizer's own reason. The left-out row lists every available type the march does
+not field and says who left it out — the player, or the solver. All of it lives with the result (`runStore`)
+and is never persisted, shared or synced.
 
 ### 3.5 Battle model and Battle Summary
 Enemy: 4 stacks (flying/melee/ranged/mounted), 8 for Arachne's, or custom counts. Each enemy hit removes our
@@ -341,6 +340,59 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-52 Accessibility and mobile layout pass | done | axe zero on the kit page and the app in both schemes; `pnpm contrast` over 176 pairs |
 | S-49a Account sync backend | in progress | groundwork done and verified: `ops/pocketbase/` (PocketBase 0.40.4 compose, Caddy site, save hook, `profiles` migration, smoke script), every spec `[verify]` answered in investigation 0012, hosting in investigation 0010. **Deployment is pending the owner** (Dynu hostname, the two-line philou change, the Google OAuth client, the backup target) |
 | S-49b Account sync client | done | `src/account/**`, `src/ui/account/**`, ADR-0009, `/oauth-callback` + `404.html` copy, SW NetworkOnly for the backend, `storage.persist()`; e2e `e2e/account.spec.ts` against a local 0.40.4 container. Hidden until the owner sets `VITE_BACKEND_ORIGIN` |
+| S-53 Left-out troops without pins | done | schema v3 drops `BattleSetup.pinnedUnitIds` and `excludedUnitIds`, the sizer and the search lose their pinned paths, and the March keeps `includedUnitIds` with the result (§3.4 rewritten); owner's story of 2026-09-13 below the table |
+| S-54 Complete optimization | engine done, UI in progress | `src/engine/campaign.ts` (`simulateCampaign`, `searchComplete`, 22 tests); story below; investigation 0014 §5 |
+| S-55 Bonus recap: every key, always visible | backlog | hero assessment 2026-09-13: the engine applies the hero (Svyatogor +50/+50 army) and the TOTAL figures move, but our only per-key view is the breakdown fold, two folds deep, hiding keys at 0; TotalStack's recap lists all 9 + 9 keys and the three specials. Promote that block to the head of the Sources fold, every key listed including 0 % (rules 1, 4, 5, 7) |
+
+**S-53 — Left-out troops without pins (owner, 2026-09-13 evening; clarified the same night).** The current
+model (§3.4) keeps two lists on the setup, `excludedUnitIds` and `pinnedUnitIds`, and the owner finds the pins
+a bad experience: when Generate leaves a type out and he puts it back, it comes back *pinned*, and nothing on
+screen lets him reset the pins short of removing the types one by one. A "reset pins" control would add one
+more thing to the interface; the owner chose to drop pins altogether.
+
+Target flow, in the owner's words: *"Select the army with the Troops and Mercenaries forms, pick the method
+and the objective, Generate. Then tweak by adding and removing types in the March, without generating again."*
+
+- **The left half of the page (Troops, Mercenaries, Bonuses, Battle) never generates by itself.** Changing
+  anything there marks the march on screen as stale and the player is told to Generate — as today. Nothing
+  recomputes behind their back.
+- **Generate is a fresh solve.** It runs the sizer or the priority search on the whole army the forms
+  describe, reports the types the solver leaves out, and **resets the March's own edits** (the left-out
+  list). Nothing is remembered from the previous answer.
+- **The right half (the March) recomputes in place.** Taking a type out or putting one back re-sizes the
+  remaining types straight away, without a Generate. A put-back type is simply *in* — sized like any other —
+  never kept for good. The answer on screen is then the player's tweak of the solver's march, and it stays
+  until the next Generate or until a left-half change makes it stale.
+- **The left-out list is run state, not setup state** (owner: "the left-out list only appears on the right
+  part right now and it is the good call"). It lives with the result (`runStore`), is cleared by Generate,
+  and is not persisted, shared or synced.
+- **Pins go entirely.** Schema v3 drops `BattleSetup.pinnedUnitIds` and `BattleSetup.excludedUnitIds`
+  (migration discards both; `troops.excludedUnitIds` — technology — stays); with them the sizer's pinned
+  path (`sizePoolPinned`, `pinnedMinimum`), the search's pinned space, `StackRequest.pinned`, the pin
+  actions of `formation.ts` (`keepInMarch`, `stopKeeping`), the pin badge and the "keep" wording in the
+  March, the share codec fields, and their tests. §3.4's "Pinned and left-out unit types" paragraph is
+  rewritten to this model when the story lands.
+
+**S-54 — Complete optimization (owner, 2026-09-13 evening; investigation 0014 §5).** A fourth stacking
+method. It answers the owner's "optimise everything, mercenaries and order included, and tell me whether
+spending fewer mercenaries per march buys more damage over several marches":
+
+- **Engine** (`src/engine/campaign.ts`): `searchComplete` runs the priority search under every sizing
+  (Troops first, Hired last, Hired last with damage trades) and every mercenary spend level (100 / 75 / 50 /
+  25 % of the owned stock per march), then scores each candidate on a **campaign** of N marches simulated
+  march by march with the game's 90 % revival (the stock loses one unit per chunk of ten fielded, every
+  march is re-sized to the stock left, troops are retrained each time); an optional silver budget stops the
+  campaign early. The objective applies to the campaign totals (total expected damage, total worst case,
+  total damage over total silver / gold / dragon coins).
+- **Battle card**: "Complete optimization" as a whole-card choice beside the three methods (rule 8), with two
+  fields under it: *Marches planned* (default 10) and *Silver budget* (empty = unlimited; shown for every
+  objective, since the owner reads "damage per silver" as "my silver is limited").
+- **March pane**: the winning march as today, plus a line naming the sizing it chose ("Hired units fall
+  after your troops, with damage trades") and, folded (rule 4), a *Campaign* section: one row per march
+  (mercenaries fielded, damage, silver so far) and the spend comparison (100 / 75 / 50 / 25 %: marches,
+  total damage, silver, mercenaries lost, left). Numbers through `Figures`, separations through `Sections`.
+- Not in scope: a different march per campaign step, valuing leftover mercenaries, monsters' dragon coins
+  beyond what `recovery.ts` already prices.
 
 D-02…D-09 are a different list — the TotalStack features we are not building; they keep their own section at
 the end of §5. All are deferred except **D-04 Total Optimization**, done as the opt-in relaxed-preservation
@@ -595,6 +647,18 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 (late) — **S-53 landed.** Schema v3: `BattleSetup` loses `pinnedUnitIds` and `excludedUnitIds`
+  (root and profile migrations discard both; `troops.excludedUnitIds` — technology — stays). The engine loses
+  `StackRequest.pinned`, `sizePoolPinned`, `pinnedMinimum` and the search's pinned space; `buildUnits` and
+  `buildStackRequest` return everything the account can field. The March keeps `includedUnitIds` in `runStore`:
+  Generate sets it from the solver's own answer and clears the player's edits, leave out / put back re-size
+  with `sizeStacks` alone, in place, without touching the staleness fingerprint. §3.4 rewritten. Gates: 640
+  unit tests (10 pin tests deleted, 1 rewritten), 44 e2e.
+- 2026-09-13 (late) — Owner: new story **S-53 left-out troops without pins** (§5.1): Generate becomes a fresh
+  solve that also resets the manual left-out list; put-back types are sized like any other, never pinned;
+  `pinnedUnitIds` is to be removed. Same day, investigation 0014 (TotalStack parity on the owner's export):
+  marches identical to ±1 unit in every mode, Total Optimization reproduced by "Allow damage trades", the
+  damage gap is TotalStack's summary formula; §3.5's "+42,500" is explained.
 - 2026-09-13 — **Spacing pass + exclusion model** merged and redeployed. Spacing from the canvas contract
   (page 3): `Glyph` a fixed 1.25 em box everywhere, March pane 420 px with pills four across, pool lines
   number-first, figures in a two-column grid, per-objective comparison table (investigation 0013 §5,

@@ -486,16 +486,15 @@ export function marchLeftOut(page: Page): Locator {
  * and unreadable from here.
  */
 export async function marchStackLabels(page: Page): Promise<string[]> {
-  const tiles = marchSection(page).locator('[data-stack]');
-  const total = await tiles.count();
-  const labels: string[] = [];
-  for (let index = 0; index < total; index += 1) {
-    const tile = tiles.nth(index);
-    const label = await tile.getAttribute('data-stack');
-    const count = Number(await tile.getAttribute('data-count'));
-    if (label !== null && count > 0) labels.push(`${label} ${String(count)}`);
-  }
-  return labels;
+  // One evaluation, not one round-trip per pill: a March edit re-sizes the march in place, so a
+  // pill-by-pill read can splice the answer before the edit onto the answer after it.
+  return page.$$eval('#march [data-stack]', (tiles) =>
+    tiles.flatMap((tile) => {
+      const label = tile.getAttribute('data-stack');
+      const count = Number(tile.getAttribute('data-count'));
+      return label !== null && count > 0 ? [`${label} ${String(count)}`] : [];
+    }),
+  );
 }
 
 /** How many stacks the march fields. */

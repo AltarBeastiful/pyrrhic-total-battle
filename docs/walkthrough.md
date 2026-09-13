@@ -12,8 +12,10 @@ preview`), not the dev server.
 2. **The army changed.** A tier unlocked, or you upgraded two types: change the range, click out what you do
    not own, Generate. Four taps.
 3. **Bonuses changed.** Find a captain, change its level, watch the TOTAL move, Generate. Four taps.
-4. **A different answer.** Notice a unit type left out of the march, put it back, compare against the
-   previous run, undo. Try the worst-case and per-silver objectives against the average.
+4. **A different answer.** Notice a unit type left out of the march, put it back — the march re-sizes on
+   the spot, with no Generate — take another one out, then Generate and watch it start again from the
+   solver's own answer. Compare against the previous run, undo. Try the worst-case and per-silver
+   objectives against the average.
 5. **Share it.** Send a march to yourself, open the link on the other device, save a copy.
 6. **Start from nothing.** New profile, configure it as a new player would. Does every empty card tell you
    what to do next?

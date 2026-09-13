@@ -93,10 +93,6 @@ export function searchPriority(
   shouldCancel?: () => boolean,
 ): SearchResult {
   const ids = request.request.units.map((unit) => unit.id);
-  // Pinned types are not part of the search space: they are in every candidate, so the space is the power
-  // set of the *free* types and `exhaustive` is decided on those alone.
-  const pinned = new Set(ids.filter((id) => request.request.pinned?.includes(id) === true));
-  const free = ids.filter((id) => !pinned.has(id));
   const started = now();
   const budget = request.budgetMs > 0 ? request.budgetMs : Infinity;
   const cache = new Map<string, Evaluation>();
@@ -141,20 +137,18 @@ export function searchPriority(
   consider(baseline);
 
   let exhaustive = false;
-  if (free.length === 0) {
+  if (ids.length === 0) {
     // Nothing to choose: the only candidate is the formation itself, already scored above.
     exhaustive = true;
-  } else if (free.length <= EXHAUSTIVE_LIMIT) {
+  } else if (ids.length <= EXHAUSTIVE_LIMIT) {
     exhaustive = true;
-    // Without pins the empty subset is skipped (it is no formation at all); with pins, "the pins only" is a
-    // real candidate, so the enumeration starts at 0.
-    for (let bits = pinned.size > 0 ? 0 : 1; bits < 1 << free.length; bits += 1) {
+    // The empty subset is skipped: it is no formation at all.
+    for (let bits = 1; bits < 1 << ids.length; bits += 1) {
       if (stop()) {
         exhaustive = false;
         break;
       }
-      const kept = new Set(free.filter((_, index) => (bits & (1 << index)) !== 0));
-      consider(evaluate(ids.filter((id) => pinned.has(id) || kept.has(id))));
+      consider(evaluate(ids.filter((_, index) => (bits & (1 << index)) !== 0)));
     }
   } else {
     const random = mulberry32(request.seed ?? 1);
@@ -163,7 +157,7 @@ export function searchPriority(
       improve(start);
     }
     for (let restart = 0; restart < MAX_RESTARTS && !stop(); restart += 1) {
-      const start = ids.filter((id) => pinned.has(id) || random() < 0.5);
+      const start = ids.filter(() => random() < 0.5);
       improve(start.length > 0 ? start : ids);
     }
   }
@@ -181,15 +175,15 @@ export function searchPriority(
     const starts = [ids];
     if (pools.length > 1) {
       for (const pool of pools) {
-        starts.push(ids.filter((id) => pinned.has(id) || poolOf.get(id) === pool));
-        starts.push(ids.filter((id) => pinned.has(id) || poolOf.get(id) !== pool));
+        starts.push(ids.filter((id) => poolOf.get(id) === pool));
+        starts.push(ids.filter((id) => poolOf.get(id) !== pool));
       }
     }
     return starts.filter((start) => start.length > 0);
   }
 
   /**
-   * Backward elimination and local swaps, alternated to a local optimum. Pinned types are never dropped.
+   * Backward elimination and local swaps, alternated to a local optimum.
    * The two moves see different neighbours, so a set that has just grown can usually be shrunk again:
    * running each of them once, as the first version did, stopped several descents one move early.
    */
@@ -201,24 +195,22 @@ export function searchPriority(
     const shrink = (): boolean => {
       let moved = false;
       for (let improved = true; improved && !stop();) {
-        const droppable = current.subset.filter((id) => !pinned.has(id));
-        // Never empty the formation: without pins one type must survive, with pins the pins themselves do.
-        if (droppable.length <= (pinned.size > 0 ? 0 : 1)) break;
+        // Never empty the formation: one type must survive.
+        const subset = current.subset;
+        if (subset.length <= 1) break;
         improved = false;
         let bestDrop: Evaluation | undefined;
-        for (const id of droppable) {
+        for (const id of subset) {
           if (stop()) break;
-          const candidate = evaluate(current.subset.filter((other) => other !== id));
+          const candidate = evaluate(subset.filter((other) => other !== id));
           if (!bestDrop || candidate.score > bestDrop.score) bestDrop = candidate;
         }
         // Some types only pay off when they leave together (the captured runs drop SW1 *and* SP1, never
         // one of them), so when no single drop helps, look one step further and try every pair.
         if (!bestDrop || bestDrop.score <= current.score) {
-          for (let i = 0; i < droppable.length && !stop(); i += 1) {
-            for (let j = i + 1; j < droppable.length; j += 1) {
-              const pair = evaluate(
-                current.subset.filter((other) => other !== droppable[i] && other !== droppable[j]),
-              );
+          for (let i = 0; i < subset.length && !stop(); i += 1) {
+            for (let j = i + 1; j < subset.length; j += 1) {
+              const pair = evaluate(subset.filter((other) => other !== subset[i] && other !== subset[j]));
               if (!bestDrop || pair.score > bestDrop.score) bestDrop = pair;
             }
           }
@@ -249,7 +241,7 @@ export function searchPriority(
             moved = true;
             break;
           }
-          for (const remove of current.subset.filter((id) => !pinned.has(id))) {
+          for (const remove of current.subset) {
             const swapped = evaluate(
               ids.filter((id) => (current.subset.includes(id) && id !== remove) || id === add),
             );

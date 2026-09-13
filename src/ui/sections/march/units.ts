@@ -9,11 +9,6 @@ export function findUnit(unitId: string, units?: readonly UnitDef[]): UnitDef | 
   return units?.find((unit) => unit.id === unitId) ?? unitById(unitId);
 }
 
-/** Full name, e.g. "Archer I". */
-export function unitName(unitId: string, units?: readonly UnitDef[]): string {
-  return findUnit(unitId, units)?.name ?? unitId;
-}
-
 /** Short chip label, e.g. "ARC1". */
 export function unitLabel(unitId: string, units?: readonly UnitDef[]): string {
   return findUnit(unitId, units)?.label ?? unitId;

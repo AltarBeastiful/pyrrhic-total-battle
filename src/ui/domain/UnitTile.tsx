@@ -18,13 +18,12 @@ import classes from './domain.module.css';
 import { GROUP_LABEL, groupGround, groupInk, romanTier, unitGroupOf, type UnitGroup } from './unitGroup';
 
 export type UnitTileSize = 'sm' | 'md' | 'lg';
-export type UnitTileState = 'on' | 'off' | 'pinned' | 'leftOut';
+export type UnitTileState = 'on' | 'off' | 'leftOut';
 
 /** How each state is said out loud; a tile's name always ends with one of these. */
 const STATE_WORD: Record<UnitTileState, string> = {
   on: 'on',
   off: 'off',
-  pinned: 'pinned',
   leftOut: 'left out',
 };
 
@@ -95,12 +94,6 @@ export function UnitTile({
       }}
       aria-hidden="true"
     >
-      {/* A pin is a mark, not a tint: the tile keeps its colour and gains a corner. */}
-      {state === 'pinned' && (
-        <span style={{ position: 'absolute', top: 0, right: 1, fontSize: '0.6em', lineHeight: 1 }}>
-          <Glyph kind="pin" />
-        </span>
-      )}
       <Stack gap={0} align="center" justify="center" h="100%">
         {image === undefined ? (
           <Glyph kind={glyphFor(unit, group)} scale={metrics.glyph} />
@@ -129,7 +122,7 @@ export function UnitTile({
   }
 
   return (
-    <UnstyledButton aria-pressed={state === 'on' || state === 'pinned'} aria-label={name} onClick={onPress}>
+    <UnstyledButton aria-pressed={state === 'on'} aria-label={name} onClick={onPress}>
       {face}
     </UnstyledButton>
   );

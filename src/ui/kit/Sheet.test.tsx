@@ -28,7 +28,7 @@ function Example() {
         }}
         title="Archer III"
         description="Guardsmen · tier 3"
-        footer={<Button>Keep in march</Button>}
+        footer={<Button>Leave out</Button>}
       >
         <p>Stats and bonuses</p>
       </Sheet>
@@ -45,7 +45,7 @@ test('the sheet is a dialog named by its title, with the description, the body a
   expect(dialog).toBeTruthy();
   expect(screen.getByText('Guardsmen · tier 3')).toBeTruthy();
   expect(screen.getByText('Stats and bonuses')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Keep in march' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Leave out' })).toBeTruthy();
 });
 
 test('Escape closes the sheet and gives focus back to what opened it', async () => {

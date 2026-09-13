@@ -15,7 +15,7 @@ export type { MarchRowProps, MarchTableProps } from './MarchRow';
 export { PoolGauge } from './PoolGauge';
 export type { PoolGaugeProps } from './PoolGauge';
 export { LeftOutPill, StackPill } from './StackPill';
-export type { StackPillProps, StackPillState } from './StackPill';
+export type { StackPillProps } from './StackPill';
 export { StatBar } from './StatBar';
 export type { StatBarProps } from './StatBar';
 export { TierBadge } from './TierBadge';

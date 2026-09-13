@@ -21,7 +21,6 @@ const story: KitStory = {
             key={unit.id}
             unit={unit}
             count={COUNTS[index] ?? 100}
-            state={index === 1 ? 'pinned' : 'on'}
             onLeaveOut={() => {}}
             onDetails={() => {}}
           />
@@ -48,8 +47,13 @@ const story: KitStory = {
         left out · a press puts the type back
       </Text>
       <div>
-        {SAMPLE_UNITS.slice(0, 3).map((unit) => (
-          <LeftOutPill key={unit.id} unit={unit} onPutBack={() => {}} />
+        {SAMPLE_UNITS.slice(0, 3).map((unit, index) => (
+          <LeftOutPill
+            key={unit.id}
+            unit={unit}
+            reason={index === 0 ? 'you' : 'search'}
+            onPutBack={() => {}}
+          />
         ))}
       </div>
     </Stack>

@@ -81,13 +81,14 @@ test('a press on a pill leaves that type out of the march, and puts it back', as
   const pill = marchPills(page).first();
   await expect(pill).toHaveAttribute('aria-pressed', 'true');
   await pill.click();
-  await settle(page);
+  // A March edit re-sizes in place rather than generating (S-53), so the wait is the pill grid
+  // itself: Generate never goes into its running state.
+  await expect(marchPills(page)).toHaveCount(before.length - 1);
   const without = await marchStackLabels(page);
   expect(without.some((label) => label.startsWith(`${code} `))).toBe(false);
-  expect(without.length).toBe(before.length - 1);
 
-  // Leaving a type out is a decision about *this march*, not about the account: the Troops card
-  // still ticks every type the account owns (schema v2).
+  // Leaving a type out is a decision about *the march on screen*, not about the account: the Troops
+  // card still ticks every type the account owns (S-53).
   await expect(page.locator('#troops').getByRole('checkbox', { name: 'Rider III' })).toBeChecked();
 
   // The type is in the small row under the pools now — the off half of the same toggle — and it says
@@ -97,11 +98,10 @@ test('a press on a pill leaves that type out of the march, and puts it back', as
   await expect(putBack).toHaveAttribute('data-left-out', 'you');
   await expect(putBack).toHaveAccessibleName(/left out by you/);
   await putBack.click();
-  await settle(page);
 
-  // A type *you* left out is simply let back in: the exclusion is undone and nothing is pinned.
-  expect((await marchStackLabels(page)).length).toBe(before.length);
-  await expect(marchSection(page).getByRole('button', { name: /, kept in — leave out$/ })).toHaveCount(0);
+  // A type *you* left out is simply let back in, sized like any other: nothing holds it there.
+  await expect(marchPills(page)).toHaveCount(before.length);
+  await expect(marchLeftOut(page)).toHaveCount(0);
 
   expect(problems).toEqual([]);
 });
@@ -188,7 +188,9 @@ test('a march says nothing about its age, and says plainly when the setup has mo
   expect(problems).toEqual([]);
 });
 
-test('a type the priority left out can be kept in the march, and stays in', async ({ page }) => {
+test('a type the priority left out can be put back, and the next Generate solves afresh', async ({
+  page,
+}) => {
   const problems = watchConsole(page);
   await openApp(page);
 
@@ -201,8 +203,7 @@ test('a type the priority left out can be kept in the march, and stays in', asyn
   const leftOut = marchLeftOut(page);
   await expect(leftOut.first()).toBeVisible();
 
-  // Nobody took these out by hand, so the row says the search did — and the only way to overrule the
-  // search is to keep the type in for good.
+  // Nobody took these out by hand, so the row says the search did.
   await expect(leftOut.first()).toHaveAttribute('data-left-out', 'search');
   await expect(leftOut.first()).toHaveAccessibleName(/left out by the search/);
 
@@ -210,16 +211,15 @@ test('a type the priority left out can be kept in the march, and stays in', asyn
   await leftOut.first().click();
   await settle(page);
 
-  // Keeping a type in re-sizes the march at once, so the type it named is in the stacks now.
-  const kept = await marchStackLabels(page);
-  expect(kept.length).toBe(before.length + 1);
-  const added = kept.find((label) => !before.includes(label));
-  expect(added).toBeDefined();
-  const code = added?.split(' ')[0] ?? '';
+  // Putting a type back re-sizes the march at once, without a Generate, so it is in the stacks now.
+  await expect(marchPills(page)).toHaveCount(before.length + 1);
+  const back = await marchStackLabels(page);
+  expect(back.find((label) => !before.includes(label))).toBeDefined();
 
+  // Generate is a fresh solve (S-53): the March's own edit is forgotten and the search answers again
+  // with its own selection.
   await generate(page);
-  const again = await marchStackLabels(page);
-  expect(again.some((label) => label.startsWith(`${code} `))).toBe(true);
+  expect(await marchStackLabels(page)).toEqual(before);
 
   expect(problems).toEqual([]);
 });
@@ -278,7 +278,7 @@ test('the unit sheet opens from a pill and acts on that one type', async ({ page
   await expect(sheet).toBeVisible();
   await expect(sheet.getByText('In this march')).toBeVisible();
   await expect(sheet.getByText('Why this size')).toBeVisible();
-  await expect(sheet.getByRole('button', { name: 'Keep in march' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Leave out' })).toBeVisible();
 
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toBeHidden();

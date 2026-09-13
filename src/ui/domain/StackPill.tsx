@@ -52,8 +52,6 @@ import classes from './domain.module.css';
 import { count as formatCount } from './format';
 import { romanTier, tierGround, tierInk, unitGroupOf } from './unitGroup';
 
-export type StackPillState = 'on' | 'pinned';
-
 /** The biggest count a hand edit may reach; past it the game would refuse the march anyway. */
 const MAX_COUNT = 10_000_000;
 
@@ -75,7 +73,6 @@ export interface StackPillProps {
   unit: UnitDef;
   /** Units of this type in the march; `0` when it is left out. */
   count: number;
-  state?: StackPillState;
   /** Edit mode: the count is a field in place, and the pill is not a button. */
   editing?: boolean;
   /** A hand-typed count. */
@@ -86,22 +83,13 @@ export interface StackPillProps {
   onDetails: () => void;
 }
 
-export function StackPill({
-  unit,
-  count,
-  state = 'on',
-  editing = false,
-  onCount,
-  onLeaveOut,
-  onDetails,
-}: StackPillProps) {
+export function StackPill({ unit, count, editing = false, onCount, onLeaveOut, onDetails }: StackPillProps) {
   const ink = tierInk(unit.tier);
   const roman = romanTier(unit.tier) || String(unit.tier);
   const figure = formatCount(count);
 
-  const kept = state === 'pinned' ? ', kept in' : '';
   // What the press does, in the words the row under the pools answers with ("put back").
-  const name = `${unit.name}, ${figure}${kept} — leave out`;
+  const name = `${unit.name}, ${figure} — leave out`;
 
   // The code and the tier are two spans, not one string (owner, 2026-09-13). One string ellipsised
   // from its end, so a narrow track drew "ARC III" as "ARC I" — a different unit and a wrong count
@@ -115,7 +103,6 @@ export function StackPill({
       <Text span fz="0.75rem" fw={600} c={ink} className={classes.pillTier}>
         {roman}
       </Text>
-      {state === 'pinned' && <Glyph kind="pin" scale={0.7} />}
     </span>
   );
 
@@ -193,10 +180,10 @@ const LEFT_OUT_WORDS: Record<LeftOutReason, string> = {
  * It is the off half of the pill's toggle, so it says so: `aria-pressed={false}` and a name that
  * names the press, "Archer I, left out by you — put back".
  *
- * The name carries the *reason* too, because a press means two different things: a type the player
- * took out is simply let back in, a type the search dropped is pinned so it cannot be dropped again.
- * The same reason is on the element as `data-left-out="you" | "search"`, which is the hook the two
- * kinds are told apart by on screen.
+ * The name carries the *reason* too, because a player wants to know whether they took a type out or
+ * the solver did; the press itself is the same either way — the type goes back in and the sizer
+ * decides its count. The same reason is on the element as `data-left-out="you" | "search"`, which is
+ * the hook the two kinds are told apart by on screen.
  */
 export function LeftOutPill({
   unit,

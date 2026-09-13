@@ -20,15 +20,15 @@
  * No Tier/Role/Race chips anywhere. A mercenary the tables do not carry is typed by hand from the
  * button beside the picker.
  *
- * Like Troops, this card describes the *account*: everything is written to the active profile. The
- * only thing it reads from the battle setup is the list of pinned units, to mark them.
+ * Like Troops, this card describes the *account*: everything is written to the active profile, and
+ * nothing here is read from the battle setup or from the march on screen.
  */
 import { Button, Group, Popover, Stack, Switch, Text, UnstyledButton } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { lazy, useId, useMemo, useState } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
-import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { selectActiveProfile, useStore } from '@/state/store';
 import { count, Glyph, romanTier, tierInk, TierBadge } from '@/ui/domain';
 import { GroupedCombobox, NumberField, Panel, PillRow } from '@/ui/kit';
 import type { ComboboxGroup, PillRowItem } from '@/ui/kit';
@@ -49,7 +49,6 @@ const CAP_POPOVER_WIDTH = 280;
 
 export function MercenariesSection() {
   const profile = useStore(selectActiveProfile);
-  const pinnedIds = useStore(selectActiveSetup)?.pinnedUnitIds;
   const updateProfile = useStore((state) => state.updateProfile);
   const titleId = useId();
 
@@ -81,7 +80,6 @@ export function MercenariesSection() {
   if (profile === undefined || mercenaries === undefined) return null;
 
   const profileId = profile.id;
-  const pinned = new Set(pinnedIds ?? []);
 
   const patch = (next: Partial<Profile['mercenaries']>): void => {
     updateProfile(profileId, (current) => ({ mercenaries: { ...current.mercenaries, ...next } }));
@@ -120,7 +118,6 @@ export function MercenariesSection() {
     label: entry.isCustom ? (
       <CustomPill
         entry={entry}
-        isPinned={pinned.has(entry.id)}
         onEdit={() => {
           const merc = mercenaries.custom.find((custom) => custom.id === entry.id);
           if (merc !== undefined) setEditor({ merc });
@@ -129,7 +126,6 @@ export function MercenariesSection() {
     ) : (
       <HiredPill
         entry={entry}
-        isPinned={pinned.has(entry.id)}
         onCap={(cap) => {
           setCap(entry.id, cap);
         }}
@@ -213,11 +209,11 @@ export function MercenariesSection() {
 
 /**
  * What a pill says, in TotalStack's own order: `🐴 EMH V ∞`. The glyph and the code say which unit
- * it is, the numeral says which tier in that tier's colour, the figure says how many you own, and a
- * pinned one carries the mark the march keeps it with. Inline spans rather than a flex row: the
- * pill's own label box already centres its line, and a `<div>` inside a `<button>` is not HTML.
+ * it is, the numeral says which tier in that tier's colour, and the figure says how many you own.
+ * Inline spans rather than a flex row: the pill's own label box already centres its line, and a
+ * `<div>` inside a `<button>` is not HTML.
  */
-function PillFace({ entry, isPinned }: { entry: MercenaryRow; isPinned: boolean }) {
+function PillFace({ entry }: { entry: MercenaryRow }) {
   const tier = entry.unit.tier;
   return (
     <>
@@ -246,7 +242,6 @@ function PillFace({ entry, isPinned }: { entry: MercenaryRow; isPinned: boolean 
             {count(entry.cap)}
           </Text>
         ))}
-      {isPinned && <Glyph kind="pin" scale={0.85} />}
     </>
   );
 }
@@ -256,15 +251,7 @@ function PillFace({ entry, isPinned }: { entry: MercenaryRow; isPinned: boolean 
  * pill with a plain field — an owned count is typed, never walked to (owner, 2026-09-13) — and the
  * switch that says "as many as the camp pays for".
  */
-function HiredPill({
-  entry,
-  isPinned,
-  onCap,
-}: {
-  entry: MercenaryRow;
-  isPinned: boolean;
-  onCap: (cap: number | null) => void;
-}) {
+function HiredPill({ entry, onCap }: { entry: MercenaryRow; onCap: (cap: number | null) => void }) {
   const [opened, setOpened] = useState(false);
   const name = entry.unit.name;
 
@@ -295,7 +282,7 @@ function HiredPill({
             setOpened((open) => !open);
           }}
         >
-          <PillFace entry={entry} isPinned={isPinned} />
+          <PillFace entry={entry} />
         </UnstyledButton>
       </Popover.Target>
       {/* A width of its own, on the dropdown rather than on the popover, and a field that fills it:
@@ -333,18 +320,10 @@ function HiredPill({
 }
 
 /** A hand-typed one: there is no owned count to set, so its body opens the form it came from. */
-function CustomPill({
-  entry,
-  isPinned,
-  onEdit,
-}: {
-  entry: MercenaryRow;
-  isPinned: boolean;
-  onEdit: () => void;
-}) {
+function CustomPill({ entry, onEdit }: { entry: MercenaryRow; onEdit: () => void }) {
   return (
     <UnstyledButton className={classes.face} fz="sm" aria-label={`Edit ${entry.unit.name}`} onClick={onEdit}>
-      <PillFace entry={entry} isPinned={isPinned} />
+      <PillFace entry={entry} />
     </UnstyledButton>
   );
 }

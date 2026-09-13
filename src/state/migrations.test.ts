@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { newRoot } from './defaults';
-import { migrate, migrateProfile, migrations, readSchemaVersion } from './migrations';
+import {
+  migrate,
+  migrateProfile,
+  migrations,
+  readSchemaVersion,
+  splitTroopExclusions,
+} from './migrations';
 import { SCHEMA_VERSION } from './schema';
 
 /**
@@ -141,17 +147,21 @@ describe('migrate', () => {
   });
 
   it('v1 → v2 moves march exclusions to the setups and leaves the technology alone', () => {
-    const doc = migrate(v1Fixture());
-    const profile = doc.profiles[0];
+    // The step on its own: v3 takes the setups' list away again, so the end of the chain cannot
+    // show what this one did.
+    const fixture = v1Fixture();
+    const profile = splitTroopExclusions((fixture.profiles as Record<string, unknown>[])[0]!);
+    const troops = profile.troops as Record<string, unknown>;
 
     // Only the top-tier monster the account has not unlocked stays on the profile.
-    expect(profile?.troops.excludedUnitIds).toEqual(['magic-dragon']);
+    expect(troops.excludedUnitIds).toEqual(['magic-dragon']);
     // The two march decisions land on every setup, because which march they were taken out of is
     // not knowable from a v1 document — and each march keeps the army the player last saw.
-    for (const setup of profile?.setups ?? []) {
+    const setups = profile.setups as Record<string, unknown>[];
+    for (const setup of setups) {
       expect(setup.excludedUnitIds).toEqual(['rider-1', 'battle-boar']);
     }
-    expect(profile?.setups).toHaveLength(2);
+    expect(setups).toHaveLength(2);
   });
 
   it('v1 → v2 keeps a monster exclusion that is not at the top tier out of the profile', () => {
@@ -160,29 +170,45 @@ describe('migrate', () => {
     // No monster row at all: nothing about a monster id can be technology.
     (profile.troops as Record<string, unknown>).monsters = null;
 
-    const migrated = migrate(fixture).profiles[0];
-    expect(migrated?.troops.excludedUnitIds).toEqual([]);
-    expect(migrated?.setups[0]?.excludedUnitIds).toEqual(['rider-1', 'battle-boar', 'magic-dragon']);
+    const split = splitTroopExclusions(profile);
+    expect((split.troops as Record<string, unknown>).excludedUnitIds).toEqual([]);
+    expect((split.setups as Record<string, unknown>[])[0]?.excludedUnitIds).toEqual([
+      'rider-1',
+      'battle-boar',
+      'magic-dragon',
+    ]);
+    // …and the whole chain then keeps the technology empty: nothing here was ever technology.
+    expect(migrate(fixture).profiles[0]?.troops.excludedUnitIds).toEqual([]);
   });
 
-  it('a document written at v2 keeps the two lists where it put them', () => {
+  it('v2 → v3 discards the setup’s pinned and left-out lists, and keeps the technology', () => {
     const fixture = v1Fixture();
     const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
     (profile.troops as Record<string, unknown>).excludedUnitIds = ['magic-dragon'];
     const setups = profile.setups as Record<string, unknown>[];
     setups[0]!.excludedUnitIds = ['archer-2'];
+    setups[0]!.pinnedUnitIds = ['rider-1'];
     setups[1]!.excludedUnitIds = [];
 
     const migrated = migrate({ ...fixture, schemaVersion: 2 }).profiles[0];
+    // What a march left out and what it kept are gone: both were march state, and a march's own
+    // left-out list now lives with the result on screen (S-53).
+    for (const setup of migrated?.setups ?? []) {
+      expect(setup).not.toHaveProperty('excludedUnitIds');
+      expect(setup).not.toHaveProperty('pinnedUnitIds');
+    }
+    // The technology is untouched.
     expect(migrated?.troops.excludedUnitIds).toEqual(['magic-dragon']);
-    expect(migrated?.setups[0]?.excludedUnitIds).toEqual(['archer-2']);
-    expect(migrated?.setups[1]?.excludedUnitIds).toEqual([]);
   });
 
-  it('a setup written before v2 gets the empty list from the schema default', () => {
+  it('carries a v1 document all the way to v3 with neither list on any setup', () => {
     const doc = migrate(v1Fixture());
-    expect(doc.profiles[0]?.setups[0]?.pinnedUnitIds).toEqual([]);
-    expect(newRoot().profiles[0]?.setups[0]?.excludedUnitIds).toEqual([]);
+    expect(doc.schemaVersion).toBe(3);
+    for (const setup of doc.profiles[0]?.setups ?? []) {
+      expect(setup).not.toHaveProperty('excludedUnitIds');
+      expect(setup).not.toHaveProperty('pinnedUnitIds');
+    }
+    expect(newRoot().profiles[0]?.setups[0]).not.toHaveProperty('excludedUnitIds');
   });
 
   it('round-trips a freshly created document', () => {
@@ -237,12 +263,22 @@ describe('migrateProfile', () => {
     expect(() => migrateProfile({ name: 'nope' }, 1)).toThrow();
   });
 
-  it('runs the v1 → v2 split on an imported or shared profile too', () => {
+  it('runs the whole chain on an imported or shared profile too', () => {
     const fixture = v1Fixture();
     const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
 
     const migrated = migrateProfile(profile, 1);
+    // v1 → v2 kept only the technology on the profile, and v2 → v3 dropped what it had moved onto
+    // the setups: an imported profile arrives with the army the account owns and no march decision.
     expect(migrated.troops.excludedUnitIds).toEqual(['magic-dragon']);
-    expect(migrated.setups[0]?.excludedUnitIds).toEqual(['rider-1', 'battle-boar']);
+    expect(migrated.setups[0]).not.toHaveProperty('excludedUnitIds');
+  });
+
+  it('drops a v2 profile’s pins on import', () => {
+    const fixture = v1Fixture();
+    const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+    (profile.setups as Record<string, unknown>[])[0]!.pinnedUnitIds = ['archer-1'];
+
+    expect(migrateProfile(profile, 2).setups[0]).not.toHaveProperty('pinnedUnitIds');
   });
 });

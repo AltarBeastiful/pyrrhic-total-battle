@@ -4,7 +4,7 @@ import { SAMPLE_UNITS } from '../../domain/fixtures';
 import { UnitTile, type UnitTileState } from '../../domain';
 import type { KitStory } from '../story';
 
-const STATES: UnitTileState[] = ['on', 'off', 'pinned', 'leftOut'];
+const STATES: UnitTileState[] = ['on', 'off', 'leftOut'];
 
 const story: KitStory = {
   name: 'UnitTile',

@@ -43,7 +43,6 @@ import { MarchRecap } from './MarchRecap';
 import { useRunStore } from './runStore';
 import { TradeoffStrip } from './TradeoffStrip';
 import { UnitSheet } from './UnitSheet';
-import { unitName } from './units';
 import { useMarch } from './useMarch';
 
 // Four surfaces nobody sees until they ask for them, each heavy in its own way: the journal, the HP
@@ -294,17 +293,6 @@ export function MarchSection() {
               </Stack>
             </Alert>
           )}
-          {march.keptElsewhere.length > 0 && (
-            <Alert color="brass" title="Kept in, but not marching">
-              {`${march.keptElsewhere
-                .map((unitId) => unitName(unitId, snapshot.request.units))
-                .join(', ')} stayed out of this march even though you keep ${
-                march.keptElsewhere.length === 1 ? 'it' : 'them'
-              } in. Check that the tier is still switched on, and that the capacity paying for ${
-                march.keptElsewhere.length === 1 ? 'it' : 'them'
-              } is not zero.`}
-            </Alert>
-          )}
         </Stack>
       )}
 
@@ -324,7 +312,7 @@ export function MarchSection() {
             <LazySurface isOpen={detailsOpen} reserve="panel">
               <Stack gap="md">
                 <BattleStory request={snapshot.request} summary={summary} />
-                <HpProfile stacks={result.stacks} units={snapshot.request.units} kept={march.pinned} />
+                <HpProfile stacks={result.stacks} units={snapshot.request.units} />
               </Stack>
             </LazySurface>
           </Disclosure>
@@ -353,7 +341,6 @@ export function MarchSection() {
           unit={sheetUnit}
           row={march.rows.find((row) => row.unit.id === sheetUnit?.id)}
           totalDamage={summary.journals.enemyFirst.totalDamage}
-          pinned={sheetUnit !== null && march.pinned.includes(sheetUnit.id)}
           onClose={() => {
             setSheetUnit(null);
           }}
@@ -387,7 +374,5 @@ function notices(
   result: { warnings: string[] },
   otherMarch: boolean,
 ): boolean {
-  return (
-    otherMarch || march.overflow.length > 0 || result.warnings.length > 0 || march.keptElsewhere.length > 0
-  );
+  return otherMarch || march.overflow.length > 0 || result.warnings.length > 0;
 }

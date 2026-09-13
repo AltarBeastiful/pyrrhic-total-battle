@@ -40,18 +40,12 @@ export interface MarchView {
   rows: MarchStackRow[];
   /** The army as pills, one block per housing pool (design plan §5.5). */
   pools: PoolRow[];
-  /** Unit types kept in the march by hand. */
-  pinned: string[];
   /**
-   * Types this march does not field, each with the reason: the player took it out of *this* march
-   * (`setup.excludedUnitIds`), or the sizer / priority search dropped it.
+   * Types this march does not field, each with the reason: the player took it out of the march on
+   * screen, or the sizer / priority search dropped it.
    */
   leftOut: LeftOutUnit[];
-  /** Types kept in that this march did not field anyway — something upstream is switched off. */
-  keptElsewhere: string[];
 }
-
-const EMPTY: string[] = [];
 
 export function useMarch(): MarchView {
   const snapshot = useResultStore((state) => state.last);
@@ -61,11 +55,10 @@ export function useMarch(): MarchView {
   const setup = useStore(selectActiveSetup);
   const previous = useRunStore((state) => state.previousSummary);
   const lastRunFingerprint = useRunStore((state) => state.lastRunFingerprint);
-
-  const pinned = setup?.pinnedUnitIds ?? EMPTY;
-  // Left out *of this march*, by hand. What the account does not own at all is not a march decision
-  // and never reaches here: `buildStackRequest` never puts it in the request.
-  const excluded = setup?.excludedUnitIds ?? EMPTY;
+  // Left out *of the march on screen*, by hand — run state, cleared by the next Generate (S-53).
+  // What the account does not own at all is not a march decision and never reaches here:
+  // `buildStackRequest` never puts it in the request.
+  const leftOutByPlayer = useRunStore((state) => state.leftOutByPlayer);
 
   // The store hands out the same profile and setup objects until one of them is edited, so this is
   // rebuilt only when something a march is actually computed from moved.
@@ -84,9 +77,7 @@ export function useMarch(): MarchView {
         overflow: [],
         rows: [],
         pools: [],
-        pinned: [...pinned],
         leftOut: [],
-        keptElsewhere: [],
       };
     }
 
@@ -95,7 +86,7 @@ export function useMarch(): MarchView {
       : null;
     const result = edits?.result ?? snapshot.result;
     const summary = edits?.summary ?? snapshot.summary;
-    const pools = poolRows({ result, units: snapshot.request.units, pinned });
+    const pools = poolRows({ result, units: snapshot.request.units });
 
     return {
       snapshot,
@@ -107,9 +98,7 @@ export function useMarch(): MarchView {
       overflow: edits?.overflow ?? [],
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
       pools,
-      pinned: [...pinned],
-      leftOut: leftOutOf(snapshot.request.units, result, excluded),
-      keptElsewhere: pinned.filter((unitId) => !result.stacks.some((stack) => stack.unitId === unitId)),
+      leftOut: leftOutOf(snapshot.request.units, result, leftOutByPlayer),
     };
-  }, [snapshot, counts, pinned, excluded, previous, stale]);
+  }, [snapshot, counts, leftOutByPlayer, previous, stale]);
 }

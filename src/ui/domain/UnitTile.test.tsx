@@ -27,11 +27,9 @@ test('given a press handler it becomes a toggle button carrying its state', asyn
   expect(onPress).toHaveBeenCalledTimes(1);
 });
 
-test('pinned reads as pressed, left out reads as unpressed and struck through', () => {
-  const { rerender } = renderWithTheme(
-    <UnitTile unit={ARCHER} size="md" state="pinned" onPress={() => {}} />,
-  );
-  expect(screen.getByRole('button', { name: /pinned/ }).getAttribute('aria-pressed')).toBe('true');
+test('on reads as pressed, left out reads as unpressed and struck through', () => {
+  const { rerender } = renderWithTheme(<UnitTile unit={ARCHER} size="md" state="on" onPress={() => {}} />);
+  expect(screen.getByRole('button', { name: /, on$/ }).getAttribute('aria-pressed')).toBe('true');
 
   rerender(<UnitTile unit={ARCHER} size="md" state="leftOut" onPress={() => {}} />);
   expect(screen.getByRole('button', { name: /left out/ }).getAttribute('aria-pressed')).toBe('false');

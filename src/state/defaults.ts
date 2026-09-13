@@ -82,8 +82,6 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
     },
     priority: 'none',
     recoveryPlan: { mode: 'retrain' },
-    pinnedUnitIds: [],
-    excludedUnitIds: [],
   };
 }
 

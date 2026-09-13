@@ -4,8 +4,8 @@
  * you own from two tiny selects, uncheck the top-tier type you have not upgraded yet, and the march
  * the engine produces leaves that type — and only that type — out.
  *
- * The block is **technology** and nothing else (schema v2): a type one march leaves out never
- * appears here, so there is no "put back" to press either.
+ * The block is **technology** and nothing else (S-53): a type one march leaves out never appears
+ * here — it lives with the answer on screen — so there is no "put back" to press either.
  */
 import { expect, test } from '@playwright/test';
 
@@ -60,7 +60,7 @@ test('a tier range and one chip decide what the march fields', async ({ page }) 
   expect(labels.some((label) => label.startsWith('RD3'))).toBe(true);
 
   // And the card says nothing about what the march itself leaves out: no left-out line, nothing to
-  // put back. That belongs to the battle setup now.
+  // put back. That belongs to the March pane and to the run it is showing.
   await expect(block.getByText(/Left out/)).toHaveCount(0);
   await expect(block.getByRole('button', { name: /[Pp]ut back/ })).toHaveCount(0);
 

@@ -16,9 +16,9 @@
  *
  * Lower tiers are always in. The block describes **technology** — what the account has unlocked —
  * and nothing else: everything here is written straight to the active profile, and what one march
- * leaves out is the March's own business (`setup.excludedUnitIds`, owner's correction of
- * 2026-09-13). A type taken out of a march therefore never appears here, and no press here can
- * change a march the player is not looking at.
+ * leaves out is the March's own business, kept with the answer on screen and nowhere else (S-53).
+ * A type taken out of a march therefore never appears here, and no press here can change a march
+ * the player is not looking at.
  */
 import { Box, Flex, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { useId } from 'react';

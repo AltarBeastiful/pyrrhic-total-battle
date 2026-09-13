@@ -26,7 +26,6 @@ export interface RequestOverrides {
   enemy?: EnemyFormation;
   activeEvents?: string[];
   recovery?: Partial<StackRequest['recovery']>;
-  pinned?: string[];
 }
 
 export function makeRequest(overrides: RequestOverrides): StackRequest {
@@ -51,7 +50,6 @@ export function makeRequest(overrides: RequestOverrides): StackRequest {
       plan: { mode: 'retrain' },
       ...overrides.recovery,
     },
-    ...(overrides.pinned === undefined ? {} : { pinned: overrides.pinned }),
   };
 }
 

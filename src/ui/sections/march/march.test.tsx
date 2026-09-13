@@ -105,7 +105,7 @@ function stackPill(unit: UnitDef, count: number): HTMLElement {
 
 /**
  * A type this march does not field: a small outlined pill in the row under the pools. Its name says
- * *who* left it out, because putting each kind back means a different thing.
+ * *who* left it out, because a player wants to know which of the two it was.
  */
 function leftOutPill(unit: UnitDef, reason: 'you' | 'the search' = 'the search'): HTMLElement {
   return screen.getByRole('button', { name: `${unit.name}, left out by ${reason} — put back` });
@@ -227,39 +227,77 @@ test('a press on a pill leaves that type out of the march, and copies nothing', 
 
   fireEvent.click(pill);
 
-  // The march is re-sized on the spot and the type is gone from it. It is *this march* that leaves
-  // it out: the account still owns the type, so nothing in the profile moved (schema v2).
-  await waitFor(() => {
-    expect(setup()?.excludedUnitIds).toContain(unit.id);
-  });
-  expect(profile()?.troops.excludedUnitIds).not.toContain(unit.id);
+  // The march is re-sized on the spot and the type is gone from it. It is *the march on screen*
+  // that leaves it out: nothing in the document moved, neither the account's own types (S-53)…
   await waitFor(() => {
     expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
   });
+  expect(profile()?.troops.excludedUnitIds).not.toContain(unit.id);
+  expect(useRunStore.getState().leftOutByPlayer).toContain(unit.id);
+  expect(useRunStore.getState().includedUnitIds).not.toContain(unit.id);
   // …and into the row under the pools, where a press puts it back.
   expect(leftOutPill(unit, 'you').getAttribute('aria-pressed')).toBe('false');
   // Tap-to-copy is gone: "Copy all counts" is the one copy on the page.
   expect(writeText).not.toHaveBeenCalled();
 }, 20_000);
 
-test('putting back a type you left out simply lets it back in — it is not kept in', async () => {
+test('a March edit re-sizes in place and never marks the answer out of date', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  const fingerprint = useRunStore.getState().lastRunFingerprint;
+  const { unit, count } = stackAt();
+  const before = lastResult()?.result.pools.leadership.used ?? 0;
+
+  fireEvent.click(stackPill(unit, count));
+  await waitFor(() => {
+    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
+  });
+
+  // The setup did not move, so neither did the fingerprint the staleness warning is drawn from.
+  expect(useRunStore.getState().lastRunFingerprint).toBe(fingerprint);
+  expect(document.querySelector('[data-stale="true"]')).toBeNull();
+  // The remaining types were re-sized on the housing the type gave back.
+  expect(lastResult()?.result.pools.leadership.used).toBeGreaterThanOrEqual(before - unit.cost);
+}, 20_000);
+
+test('putting a type back is simply putting it in: the sizer decides its count', async () => {
   renderWithTheme(<Page />);
   await generate();
   const { unit, count } = stackAt();
 
   fireEvent.click(stackPill(unit, count));
   await waitFor(() => {
-    expect(setup()?.excludedUnitIds).toContain(unit.id);
+    expect(useRunStore.getState().leftOutByPlayer).toContain(unit.id);
   });
 
   fireEvent.click(leftOutPill(unit, 'you'));
 
-  // The exclusion is undone, and nothing else: a type the player took out by hand never needed a
-  // pin to come back, and a pin the player did not ask for would survive every later change.
   await waitFor(() => {
-    expect(setup()?.excludedUnitIds).not.toContain(unit.id);
+    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(true);
   });
-  expect(setup()?.pinnedUnitIds).not.toContain(unit.id);
+  // Nothing holds it there: it is in the march, exactly like every other type.
+  expect(useRunStore.getState().leftOutByPlayer).not.toContain(unit.id);
+  expect(useRunStore.getState().includedUnitIds).toContain(unit.id);
+}, 20_000);
+
+test('Generate is a fresh solve: it forgets what the March left out', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit, count } = stackAt();
+
+  fireEvent.click(stackPill(unit, count));
+  await waitFor(() => {
+    expect(useRunStore.getState().leftOutByPlayer).toContain(unit.id);
+  });
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /^Generate march/ }));
+    await waitFor(() => {
+      expect(useRunStore.getState().leftOutByPlayer).toEqual([]);
+    });
+  });
+
+  // The whole army is back: Generate solves on what the forms describe and nothing else.
   await waitFor(() => {
     expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(true);
   });
@@ -278,26 +316,28 @@ test('the corner mark, and nothing else on the pill, opens the unit sheet', asyn
   expect(writeText).not.toHaveBeenCalled();
 }, 15_000);
 
-test('a tap on a pill the sizer dropped keeps that type in the march for good', async () => {
+test('a type the sizer dropped is offered again when it is put back, and stays out if it still does not fit', async () => {
   // 20 leadership is enough for nine of the ten types the default profile owns: one is left out.
   setLeadership(20);
   renderWithTheme(<Page />);
   await generate();
 
-  const leftOut = lastResult()?.result.dropped[0]?.unitId ?? '';
-  const unit = unitById(leftOut);
+  const dropped = lastResult()?.result.dropped[0]?.unitId ?? '';
+  const unit = unitById(dropped);
   if (!unit) throw new Error('nothing was left out');
 
-  // Nobody took this one out by hand, so the pill says the search did — and the only way to overrule
-  // the sizer is a pin.
-  fireEvent.click(leftOutPill(unit, 'the search'));
+  // Nobody took this one out by hand, so the pill says the solver did.
+  const pill = leftOutPill(unit, 'the search');
+  expect(useRunStore.getState().includedUnitIds).toContain(unit.id);
 
+  fireEvent.click(pill);
+
+  // It was already offered to the sizer, which could not pay for it: it comes straight back to the
+  // row with the sizer's own reason. Nothing forces a type in any more (S-53).
   await waitFor(() => {
-    expect(setup()?.pinnedUnitIds).toContain(unit.id);
+    expect(lastResult()?.result.dropped.map((entry) => entry.unitId)).toContain(unit.id);
   });
-  await waitFor(() => {
-    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(true);
-  });
+  expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
 }, 15_000);
 
 test('every stack has a pill, in kill order, and there is no table under them', async () => {
@@ -391,11 +431,12 @@ test('the unit sheet opens from a tile and says what the stack does, in sentence
   expect(within(sheet).getByText('In this march')).toBeTruthy();
   expect(within(sheet).getByText('Why this size')).toBeTruthy();
   expect(within(sheet).getByText(new RegExp(`^${amount(count)} ${unit.name} land`))).toBeTruthy();
-  expect(within(sheet).getByRole('button', { name: 'Keep in march' })).toBeTruthy();
+  // A marching type has no "put back": it is already in (S-53).
+  expect(within(sheet).queryByRole('button', { name: /put back/i })).toBeNull();
   expect(within(sheet).getByRole('button', { name: 'Leave out' })).toBeTruthy();
 });
 
-test('leaving a type out from its sheet excludes it and generates again', async () => {
+test('leaving a type out from its sheet takes it out of the march and re-sizes the rest', async () => {
   renderWithTheme(<Page />);
   await generate();
   const { unit } = stackAt();
@@ -405,7 +446,7 @@ test('leaving a type out from its sheet excludes it and generates again', async 
   fireEvent.click(within(sheet).getByRole('button', { name: 'Leave out' }));
 
   await waitFor(() => {
-    expect(setup()?.excludedUnitIds).toContain(unit.id);
+    expect(useRunStore.getState().leftOutByPlayer).toContain(unit.id);
   });
   await waitFor(() => {
     expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);

@@ -22,7 +22,7 @@ import type { BonusMap, Category, SpecialMap } from '../data/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -64,8 +64,9 @@ export type TierRange = z.infer<typeof tierRangeSchema>;
  * (guardsmen and specialists have one type per category per tier); `excludedUnitIds` does the same
  * job for monsters, whose tier holds four unrelated types that no category tells apart.
  *
- * What a *march* leaves out is not here: it is `BattleSetup.excludedUnitIds` (schema v2), because
- * the same account fields different armies from one march to the next.
+ * What a *march* leaves out is not here and is not stored at all (schema v3, S-53): Generate solves
+ * on everything the account can field, and the types the player then takes out of the march on screen
+ * live with the result, not in the document.
  */
 export const troopsSchema = z.object({
   guardsmen: tierRangeSchema.nullable(),
@@ -268,19 +269,6 @@ export const battleSetupSchema = syncMetaSchema.extend({
   /** `'none'` = plain Generate, no priority search (PLAN §3.6). */
   priority: z.union([z.enum(OBJECTIVES), z.literal('none')]),
   recoveryPlan: recoveryPlanSchema,
-  /**
-   * Unit types forced into the march: the sizer keeps them even when the flat profile or a preservation
-   * ceiling would leave them out, and the priority search never eliminates them.
-   * Added after v1 shipped: defaulted so stored setups keep parsing without a schema bump (ADR-0004).
-   */
-  pinnedUnitIds: z.array(z.string()).default([]),
-  /**
-   * Unit types the player took out of *this* march by hand (a press on its pill). The account still
-   * owns them — `profile.troops` says so — they are simply not marching here, so switching setup
-   * changes the army without touching the technology. Added in schema v2; `migrations[1]` moves the
-   * march decisions that used to live in `profile.troops.excludedUnitIds` here.
-   */
-  excludedUnitIds: z.array(z.string()).default([]),
 });
 export type BattleSetup = z.infer<typeof battleSetupSchema>;
 

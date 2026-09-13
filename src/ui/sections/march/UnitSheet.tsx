@@ -3,7 +3,7 @@
  * twelve labelled numbers. Each figure appears once, inside the sentence that gives it meaning.
  *
  * It opens from the figure under a tile and from a row's info button, and it is the one place that
- * holds every action about a single type: keep it in, leave it out, edit its count.
+ * holds every action about a single type: leave it out, put it back, edit its count.
  */
 import { Button, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
@@ -14,7 +14,7 @@ import { Sections, Sheet } from '@/ui/kit';
 
 import classes from './march.module.css';
 
-import { keepInMarch, removeFromFormation, stopKeeping } from './formation';
+import { putBackInMarch, removeFromFormation } from './formation';
 import { amount, duration, percent, ratio } from './format';
 import type { MarchStackRow } from './rows';
 
@@ -42,13 +42,12 @@ export interface UnitSheetProps {
   row?: MarchStackRow | undefined;
   /** Damage of the whole march, so the stack's share can be said as a share. */
   totalDamage: number;
-  pinned: boolean;
   onClose: () => void;
   /** Turns the counts into fields; the sheet closes behind it. */
   onEditCount: () => void;
 }
 
-export function UnitSheet({ unit, row, totalDamage, pinned, onClose, onEditCount }: UnitSheetProps) {
+export function UnitSheet({ unit, row, totalDamage, onClose, onEditCount }: UnitSheetProps) {
   if (unit === null) return null;
 
   const group = unitGroupOf(unit);
@@ -64,16 +63,17 @@ export function UnitSheet({ unit, row, totalDamage, pinned, onClose, onEditCount
       description={`${GROUP_LABEL[group]} ${romanTier(unit.tier)}`}
       footer={
         <Group gap="xs">
-          <Button
-            variant="default"
-            onClick={() => {
-              if (pinned) stopKeeping(unit.id);
-              else keepInMarch(unit.id);
-              onClose();
-            }}
-          >
-            {pinned ? 'Stop keeping it' : 'Keep in march'}
-          </Button>
+          {row === undefined && (
+            <Button
+              variant="default"
+              onClick={() => {
+                putBackInMarch(unit.id);
+                onClose();
+              }}
+            >
+              Put back in the march
+            </Button>
+          )}
           {row !== undefined && (
             <Button
               variant="default"
@@ -100,11 +100,13 @@ export function UnitSheet({ unit, row, totalDamage, pinned, onClose, onEditCount
       }
     >
       <Sections>
-        <UnitTile unit={unit} size="lg" state={pinned ? 'pinned' : row === undefined ? 'leftOut' : 'on'} />
+        <UnitTile unit={unit} size="lg" state={row === undefined ? 'leftOut' : 'on'} />
 
         <Block title="In this march">
           {row === undefined || stack === undefined ? (
-            <Text size="sm">Left out of this march. Keeping it in puts it back and holds it there.</Text>
+            <Text size="sm">
+              Left out of this march. Putting it back adds it to the march and re-sizes the rest around it.
+            </Text>
           ) : (
             <Stack gap={4}>
               <Text size="sm">

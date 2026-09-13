@@ -100,12 +100,6 @@ export interface StackRequest {
   /** Ids of events active for this march (turns on event-gated strength-against, e.g. swarmUnits). */
   activeEvents: string[];
   recovery: RecoverySettings;
-  /**
-   * Unit ids the user forces into the march (PLAN §3.4): the sizer gives them at least one unit (ten under
-   * "round to 10s") even when the flat profile, a preservation ceiling or the leftover capacity would leave
-   * them out, and the search never eliminates them. Ids absent from `units` are ignored.
-   */
-  pinned?: string[];
 }
 
 // ---- Stacking result -----------------------------------------------------------------------------

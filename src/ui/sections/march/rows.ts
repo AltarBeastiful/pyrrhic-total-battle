@@ -17,8 +17,6 @@ export interface PillEntry {
   unit: UnitDef;
   /** Units of this type in the march. */
   count: number;
-  /** `pinned` is kept in by hand, `on` is simply in. */
-  state: 'on' | 'pinned';
 }
 
 /** One housing pool: what it paid for, and the stacks it is paying for, in kill order. */
@@ -37,8 +35,6 @@ export interface PoolRowsInput {
   result: StackResult;
   /** The unit types the march was computed from. */
   units: readonly UnitDef[];
-  /** Types kept in the march by hand. */
-  pinned: readonly string[];
 }
 
 /**
@@ -51,18 +47,14 @@ export interface PoolRowsInput {
  *
  * A pool with no stacks and no capacity is left out of the list rather than drawn empty.
  */
-export function poolRows({ result, units, pinned }: PoolRowsInput): PoolRow[] {
+export function poolRows({ result, units }: PoolRowsInput): PoolRow[] {
   const byPool = new Map<Pool, PillEntry[]>();
 
   for (const stack of result.stacks) {
     if (stack.count <= 0) continue;
     const unit = findUnit(stack.unitId, units);
     if (unit === undefined) continue;
-    const entry: PillEntry = {
-      unit,
-      count: stack.count,
-      state: pinned.includes(unit.id) ? 'pinned' : 'on',
-    };
+    const entry: PillEntry = { unit, count: stack.count };
     const list = byPool.get(stack.pool);
     if (list === undefined) byPool.set(stack.pool, [entry]);
     else list.push(entry);
@@ -78,7 +70,7 @@ export function poolRows({ result, units, pinned }: PoolRowsInput): PoolRow[] {
   return rows;
 }
 
-/** Why a type is not marching. The two are put back in two different ways, so the row says which. */
+/** Why a type is not marching: the player took it out, or the sizer or the search dropped it. */
 export type LeftOutReason = 'you' | 'search';
 
 /** One type of the "Left out" row: what it is, and who left it out. */
@@ -88,32 +80,27 @@ export interface LeftOutUnit {
 }
 
 /**
- * The types that are *not* in this march: the ones the sizer or the priority search dropped, and
- * the ones the player took out by hand. They are drawn under the pools as a small row of outlined
- * pills — TotalStack's "removed from formation" line, in our words — so nothing the account fields
- * ever disappears from the screen (design rule 13).
+ * The types that are *not* in this march: **every type the account can field** and did not march,
+ * whether the solver dropped it or the player took it out. They are drawn under the pools as a small
+ * row of outlined pills — TotalStack's "removed from formation" line, in our words — so nothing the
+ * account fields ever disappears from the screen (design rule 13).
  *
- * The two kinds are told apart (owner, 2026-09-13), because putting one back is not the same act:
- * a type the player took out is simply let back in, a type the search dropped has to be *pinned*
- * to overrule it. `excludedByPlayer` is the active setup's own list; anything else missing from the
- * result was the app's decision, not the player's.
+ * `units` is the whole available army, because the request kept on the result is never narrowed: the
+ * sizer is called with a filtered copy, so a type the player took out is still here to be put back.
  *
- * A type the player took out is not in `units` any more (the request is built without it), so it is
- * resolved from the tables by `findUnit`.
+ * Putting one back is the same act either way (S-53), but the row still says *who* left it out, and
+ * that is `leftOutByPlayer`: anything else missing from the result was the solver's own decision.
  */
 export function leftOutOf(
   units: readonly UnitDef[],
   result: StackResult,
-  excludedByPlayer: readonly string[],
+  leftOutByPlayer: readonly string[],
 ): LeftOutUnit[] {
   const marching = new Set(result.stacks.filter((stack) => stack.count > 0).map((s) => s.unitId));
-  const byHand = new Set(excludedByPlayer);
+  const byHand = new Set(leftOutByPlayer);
   const seen = new Set<string>();
   const out: LeftOutUnit[] = [];
-  for (const unit of [
-    ...units,
-    ...excludedByPlayer.map((unitId) => findUnit(unitId, units)).filter((unit) => unit !== undefined),
-  ]) {
+  for (const unit of units) {
     if (marching.has(unit.id) || seen.has(unit.id)) continue;
     seen.add(unit.id);
     out.push({ unit, reason: byHand.has(unit.id) ? 'you' : 'search' });

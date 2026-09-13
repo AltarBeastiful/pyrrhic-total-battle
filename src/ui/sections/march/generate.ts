@@ -1,9 +1,14 @@
 /**
- * The "Generate" run, shared by the Housing section (which owns the button) and the Results section
- * (which re-runs it after a unit type is removed from the formation).
+ * The two ways a march is computed (S-53).
+ *
+ * **Generate** is a fresh solve: it runs the sizer, or the priority search when an objective is chosen,
+ * on the whole army the forms describe, and forgets every edit made in the March since the last one.
+ * **A March edit** — leaving a type out, putting one back — re-sizes the types that are left, in place:
+ * the sizer only, never the search, and never a word about the result being out of date, because the
+ * form has not moved.
  *
  * Plain functions rather than a hook: the same run has to be startable from an event handler in either
- * section, and everything it reads or writes already lives in a store.
+ * half of the page, and everything it reads or writes already lives in a store.
  */
 import { buildStackRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
@@ -51,7 +56,9 @@ export async function runGenerate(): Promise<void> {
       const { result, summary } = await client.stack(request, controller.signal);
       useRunStore.getState().rememberPrevious(previous);
       useResultStore.getState().setResult({ ...common, result, summary });
-      useRunStore.getState().finish([]);
+      // Every type the account can field was offered to the sizer; what it could not pay for is in
+      // `result.dropped`, with the reason the left-out row shows.
+      useRunStore.getState().finish(request.units.map((unit) => unit.id));
       return;
     }
 
@@ -68,7 +75,7 @@ export async function runGenerate(): Promise<void> {
     useResultStore.getState().setResult({ ...common, result: found.result, summary: found.summary });
     // The search's own first evaluation is the army with every type in it: keep it, it is the only way to
     // show what the winning selection gave up (PLAN §3.6).
-    useRunStore.getState().finish(left, {
+    useRunStore.getState().finish([...found.includedUnitIds], {
       objective: setup.priority,
       includedUnitIds: [...found.includedUnitIds],
       excludedUnitIds: left,
@@ -91,6 +98,55 @@ export async function runGenerate(): Promise<void> {
 export function cancelGenerate(): void {
   useRunStore.getState().cancel();
 }
+
+/** Abort handle of the re-size in flight: two quick presses must not race each other onto the screen. */
+let resizing: AbortController | null = null;
+
+/**
+ * Re-size the march on screen after a March edit, without a Generate.
+ *
+ * Only the sizer runs, and only on the types that are left: a priority search is an answer to the
+ * objective, and re-running it would overwrite the player's own tweak with the solver's opinion. The
+ * *whole* available army stays in the snapshot's request — it is what the left-out row lists — and the
+ * filtered copy is what the engine is called with.
+ *
+ * Nothing here touches `lastRunFingerprint`: a tweak is still an answer to the form as it stands, so
+ * the march must not go stale under it.
+ */
+export async function resizeMarch(includedUnitIds: string[], leftOutByPlayer: string[]): Promise<void> {
+  const snapshot = useResultStore.getState().last;
+  if (snapshot === null) return;
+  useRunStore.getState().setIncluded(includedUnitIds, leftOutByPlayer);
+
+  resizing?.abort();
+  const controller = new AbortController();
+  resizing = controller;
+  const included = new Set(includedUnitIds);
+
+  try {
+    const { result, summary } = await getCalcClient().stack(
+      { ...snapshot.request, units: snapshot.request.units.filter((unit) => included.has(unit.id)) },
+      controller.signal,
+    );
+    if (controller.signal.aborted) return;
+    useResultStore.getState().setResult({
+      request: snapshot.request,
+      result,
+      summary,
+      profileId: snapshot.profileId,
+      setupId: snapshot.setupId,
+      // The same run, re-sized: keeping the stamp keeps everything keyed on it (the objective
+      // comparison, five searches long) from starting again at every press on a pill.
+      at: snapshot.at,
+    });
+  } catch (error) {
+    if (isAbortError(error)) return;
+    useResultStore
+      .getState()
+      .setError(error instanceof Error ? error.message : 'The march could not be re-sized.');
+  }
+}
+
 
 /**
  * Put the cached result back after a reload (`pyrrhic.lastResult.v1`).
@@ -120,6 +176,18 @@ export function restoreLastResult(): boolean {
       at: stored.at,
     });
     useResultStore.getState().setManualCounts(stored.counts);
+    // What the sizer was given the first time round, read back off its own answer: the stacks it
+    // fielded plus the types it had to drop. The player's own leave-outs are not cached, so a
+    // restored march reads as the solver's, which is what it was before any tweak.
+    useRunStore
+      .getState()
+      .setIncluded(
+        [
+          ...stored.result.stacks.map((stack) => stack.unitId),
+          ...stored.result.dropped.map((entry) => entry.unitId),
+        ],
+        [],
+      );
     return true;
   } catch (error) {
     console.warn('[pyrrhic] the cached result could not be restored', error);

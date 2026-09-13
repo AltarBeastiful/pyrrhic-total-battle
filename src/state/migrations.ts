@@ -55,19 +55,39 @@ export function splitTroopExclusions(profile: Record<string, unknown>): Record<s
   };
 }
 
-function migrateProfiles(doc: Record<string, unknown>): unknown {
+/**
+ * `2 → 3` for one profile (S-53): pins are gone, and what a march leaves out is no longer a stored
+ * decision. Generate solves on everything the account can field and the player's own leave-outs live
+ * with the result on screen, so both `pinnedUnitIds` and `excludedUnitIds` are **discarded** — there
+ * is nowhere left to put them. `troops.excludedUnitIds` is untouched: that one is technology.
+ */
+export function dropSetupUnitLists(profile: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(profile.setups)) return profile;
+  return {
+    ...profile,
+    setups: profile.setups.map((setup) => {
+      if (!isPlainObject(setup)) return setup;
+      const { pinnedUnitIds: _pinned, excludedUnitIds: _excluded, ...rest } = setup;
+      return rest;
+    }),
+  };
+}
+
+function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
-  return doc.profiles.map((profile) => (isPlainObject(profile) ? splitTroopExclusions(profile) : profile));
+  return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
 }
 
 /**
  * Root-document migrations. Each entry needs a fixture test in `migrations.test.ts`.
  * `0 → 1`: documents written by the pre-release build carried no `schemaVersion`.
  * `1 → 2`: march exclusions move from `profile.troops` to `BattleSetup.excludedUnitIds`.
+ * `2 → 3`: the setup's `pinnedUnitIds` and `excludedUnitIds` are dropped (S-53).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
-  1: (doc) => ({ ...doc, schemaVersion: 2, profiles: migrateProfiles(doc) }),
+  1: (doc) => ({ ...doc, schemaVersion: 2, profiles: migrateProfiles(doc, splitTroopExclusions) }),
+  2: (doc) => ({ ...doc, schemaVersion: 3, profiles: migrateProfiles(doc, dropSetupUnitLists) }),
 };
 
 /**
@@ -75,11 +95,15 @@ export const migrations: MigrationTable = {
  * document, so a payload written at version `n` is upgraded with `table[n] … table[SCHEMA_VERSION - 1]`.
  * `0 → 1` is the identity here: the pre-release change was the root-level `schemaVersion` field only.
  * A saved stack is a frozen snapshot of a run that already happened, so nothing moves into it at
- * `1 → 2`: its setup simply gains the new empty field from the schema's own default.
+ * `1 → 2` or `2 → 3`: its setup gains, then loses, fields the schema alone decides about.
  */
 const identity: Migration = (doc) => doc;
-export const profileMigrations: MigrationTable = { 0: identity, 1: splitTroopExclusions };
-export const savedStackMigrations: MigrationTable = { 0: identity, 1: identity };
+export const profileMigrations: MigrationTable = {
+  0: identity,
+  1: splitTroopExclusions,
+  2: dropSetupUnitLists,
+};
+export const savedStackMigrations: MigrationTable = { 0: identity, 1: identity, 2: identity };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

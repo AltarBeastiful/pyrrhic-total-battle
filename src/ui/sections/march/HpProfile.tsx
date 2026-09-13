@@ -21,11 +21,9 @@ export interface HpProfileProps {
   /** Stacks in kill order: the first to fall first. */
   stacks: readonly StackType[];
   units: readonly UnitDef[];
-  /** Unit ids kept in the march by hand; they carry the pin mark. */
-  kept: readonly string[];
 }
 
-export function HpProfile({ stacks, units, kept }: HpProfileProps) {
+export function HpProfile({ stacks, units }: HpProfileProps) {
   if (stacks.length === 0) return null;
   const widest = Math.max(...stacks.map((stack) => stack.totalHp), 1);
   const rows = stacks.flatMap((stack) => {
@@ -44,15 +42,9 @@ export function HpProfile({ stacks, units, kept }: HpProfileProps) {
           // One scale for the whole list: two per-group scales would put a short bar above a long
           // one and lie about who falls first.
           const width = Math.max(2, Math.round(Math.sqrt(Math.max(0, stack.totalHp) / widest) * 100));
-          const pinned = kept.includes(stack.unitId);
           return (
             <Group component="li" key={stack.unitId} gap="xs" wrap="nowrap">
-              <UnitTile
-                unit={unit}
-                size="sm"
-                state={pinned ? 'pinned' : 'on'}
-                label={`${unit.name}${pinned ? ', kept in the march' : ''}`}
-              />
+              <UnitTile unit={unit} size="sm" label={unit.name} />
               <Text span size="sm" truncate w={120}>
                 {unit.name}
               </Text>

@@ -24,7 +24,7 @@ import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
 import { copyText } from '@/ui/profile/download';
 
-import { putBackInMarch, removeFromFormation } from './formation';
+import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
 import { amount } from './format';
 import classes from './march.module.css';
 import { countsText } from './rows';
@@ -108,7 +108,6 @@ export function MarchPills({ rows, editing, onCount, onDetails }: MarchPillsProp
                     key={entry.unit.id}
                     unit={entry.unit}
                     count={entry.count}
-                    state={entry.state}
                     editing={editing}
                     onCount={(next) => {
                       onCount(entry.unit.id, next);
@@ -149,8 +148,8 @@ export function MarchLeftOut({ leftOut }: MarchLeftOutProps) {
         Left out — tap to put back
       </Text>
       {/* One row, two kinds: the pill carries `data-left-out="you" | "search"` and says which in
-          its name, because putting one back undoes the player's own press while putting the
-          other back pins the type against the search. */}
+          its name, because a player wants to know whether they took a type out or the solver did.
+          The press is the same either way — the type goes back in and the sizer decides its count. */}
       <Group gap={8} wrap="wrap" role="group" aria-label="Left out of this march">
         {leftOut.map((entry) => (
           <LeftOutPill
@@ -166,7 +165,7 @@ export function MarchLeftOut({ leftOut }: MarchLeftOutProps) {
           variant="subtle"
           size="compact-xs"
           onClick={() => {
-            for (const entry of leftOut) putBackInMarch(entry.unit.id);
+            putBackAllInMarch(leftOut.map((entry) => entry.unit.id));
           }}
         >
           Put back all

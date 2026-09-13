@@ -1,9 +1,10 @@
 /**
- * View-only state of one "Generate" run: search progress, the running job's abort handle, the types the
- * priority search left out of the winning formation, and what the search gave up to win.
+ * View-only state of one "Generate" run: search progress, the running job's abort handle, the unit types
+ * this march is sized on, the ones the player took out by hand, and what the search gave up to win.
  *
- * What the *player* left out is not here: it is a battle-setup decision (`setup.excludedUnitIds`), so it
- * outlives the run and lives in the document.
+ * **The left-out list is run state** (S-53, owner 2026-09-13): it lives with the answer on screen, not
+ * in the document. Generate is a fresh solve and forgets every earlier March edit; nothing here is
+ * persisted, shared or synced.
  *
  * It is deliberately outside `useResultStore` (which holds the *result* and is read by the share
  * dialog): a progress tick must not invalidate anything that looks at the last result.
@@ -54,13 +55,16 @@ export function tradeoffFigures(summary: BattleSummary): TradeoffFigures {
 
 /**
  * Everything a march is computed from, as one string: the active setup (housing, enemy, method,
- * priority, recovery plan, pins) and the parts of the profile the engine reads (troop ranges and
+ * priority, recovery plan) and the parts of the profile the engine reads (troop ranges and
  * exclusions, mercenaries, bonus sources, recovery settings).
  *
  * Compared with the fingerprint taken when the last run started, it answers the one question the
- * floating button asks itself — "is what is on screen still the answer to what is in the form?".
+ * Generate button asks itself — "is what is on screen still the answer to what is in the form?".
  * Cheap enough to take on every change of those objects: the store hands out the same references
  * until one of them is edited, so it is recomputed only when something really moved.
+ *
+ * The March's own edits are *not* in it, and must never be: leaving a type out re-sizes the march in
+ * place, which is an answer to the form as it stands, not a reason to call the answer out of date.
  */
 export function setupFingerprint(profile: Profile | undefined, setup: BattleSetup | undefined): string {
   if (profile === undefined || setup === undefined) return '';
@@ -87,15 +91,24 @@ export interface RunState {
    * was cancelled. A different fingerprint now means the result on screen is stale.
    */
   lastRunFingerprint: string | null;
-  /** Unit types the priority search left out of the winning formation. */
-  searchExcluded: string[];
+  /**
+   * The unit types the march on screen is sized on: what the solver picked at the last Generate, then
+   * what the player has put back or taken out since. Everything the account can field and is *not*
+   * here was left out, and the left-out row says by whom.
+   */
+  includedUnitIds: string[];
+  /** Of those, the ones the player took out by hand; the rest were the solver's own decision. */
+  leftOutByPlayer: string[];
   /** The winner against the all-types army; `null` when the result did not come from a priority. */
   tradeoff: SearchTradeoff | null;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
   setProgress: (progress: SearchProgress) => void;
-  finish: (searchExcluded: string[], tradeoff?: SearchTradeoff | null) => void;
+  /** A finished Generate: the solver's own selection, and no March edit left over from before it. */
+  finish: (includedUnitIds: string[], tradeoff?: SearchTradeoff | null) => void;
+  /** A March edit: the new list to size on, and who is out by hand. */
+  setIncluded: (includedUnitIds: string[], leftOutByPlayer: string[]) => void;
   cancel: () => void;
   /** Keep the summary a new result replaces; called with `null` when there is nothing to keep. */
   rememberPrevious: (summary: BattleSummary | null) => void;
@@ -106,14 +119,16 @@ export const useRunStore = create<RunState>()((set, get) => ({
   progress: null,
   previousSummary: null,
   lastRunFingerprint: null,
-  searchExcluded: [],
+  includedUnitIds: [],
+  leftOutByPlayer: [],
   tradeoff: null,
   controller: null,
   start: (controller, fingerprint) => {
     set({
       controller,
       progress: null,
-      searchExcluded: [],
+      includedUnitIds: [],
+      leftOutByPlayer: [],
       tradeoff: null,
       lastRunFingerprint: fingerprint ?? null,
     });
@@ -121,8 +136,11 @@ export const useRunStore = create<RunState>()((set, get) => ({
   setProgress: (progress) => {
     set({ progress });
   },
-  finish: (searchExcluded, tradeoff = null) => {
-    set({ controller: null, progress: null, searchExcluded, tradeoff });
+  finish: (includedUnitIds, tradeoff = null) => {
+    set({ controller: null, progress: null, includedUnitIds, leftOutByPlayer: [], tradeoff });
+  },
+  setIncluded: (includedUnitIds, leftOutByPlayer) => {
+    set({ includedUnitIds, leftOutByPlayer });
   },
   cancel: () => {
     get().controller?.abort();
@@ -138,7 +156,8 @@ export const useRunStore = create<RunState>()((set, get) => ({
       progress: null,
       previousSummary: null,
       lastRunFingerprint: null,
-      searchExcluded: [],
+      includedUnitIds: [],
+      leftOutByPlayer: [],
       tradeoff: null,
       controller: null,
     });

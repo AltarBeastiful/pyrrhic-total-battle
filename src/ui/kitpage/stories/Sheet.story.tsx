@@ -37,7 +37,7 @@ function Live() {
                 setOpened(false);
               }}
             >
-              Keep in march
+              Edit count
             </Button>
           </Group>
         }

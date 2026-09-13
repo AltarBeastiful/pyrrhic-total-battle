@@ -35,8 +35,8 @@ function realisticProfile(): Profile {
     engineers: { min: 1, max: 2 },
     monsters: { min: 3, max: 5 },
     topTierExcluded: { guardsmen: ['mounted', 'flying'], specialists: ['flying'] },
-    // Technology only: an M5 monster the account has not unlocked. What a march leaves out travels
-    // on the setup instead (`excludedUnitIds` below).
+    // Technology only: an M5 monster the account has not unlocked. What a march leaves out is not
+    // stored at all since S-53, so nothing about it travels in a link.
     excludedUnitIds: ['ettin'],
   };
   profile.mercenaries = {
@@ -99,7 +99,6 @@ function realisticProfile(): Profile {
       },
       housing: { leadership: 4100, authority: 312, dominance: 148 },
       priority: 'avgDamage',
-      excludedUnitIds: ['rider-2'],
     },
     {
       ...second,
@@ -218,12 +217,13 @@ describe('profile links', () => {
     expect(decoded.kind).toBe('profile');
   });
 
-  it('moves a v1 link’s march exclusions onto its setups', async () => {
+  it('keeps a v1 link’s technology and drops what only a march had left out', async () => {
     // A link written by the build before the split: the profile carried every exclusion, march
-    // decisions included. Decoding runs `profileMigrations[1]`, so the setups inherit them.
+    // decisions included. Decoding runs the whole chain — `profileMigrations[1]` moves the march
+    // decisions onto the setups, `[2]` then throws them away, because a march's left-out list is
+    // run state now (S-53).
     const profile = realisticProfile();
     profile.troops.excludedUnitIds = ['ettin', 'rider-2'];
-    profile.setups = profile.setups.map((setup) => ({ ...setup, excludedUnitIds: [] }));
 
     const decoded = await decodeShare(
       await encodeShare({
@@ -236,7 +236,7 @@ describe('profile links', () => {
     if (decoded.kind !== 'profile') throw new Error('wrong kind');
     // `ettin` is an M5 monster and the account's top monster tier is M5: technology, it stays put.
     expect(decoded.profile.troops.excludedUnitIds).toEqual(['ettin']);
-    for (const setup of decoded.profile.setups) expect(setup.excludedUnitIds).toEqual(['rider-2']);
+    for (const setup of decoded.profile.setups) expect(setup).not.toHaveProperty('excludedUnitIds');
   });
 
   it('stays inside the 8,000-character budget', async () => {
@@ -254,13 +254,6 @@ describe('battle links', () => {
     expect(decoded.setup).toEqual(setup);
     expect(decoded.counts).toEqual(counts);
     expect(decoded.summary).toEqual(summary);
-  });
-
-  it('carries what the march leaves out', async () => {
-    const { setup, counts } = battleFixture();
-    const decoded = await decodeShare(await buildBattleLink(setup, counts));
-    if (decoded.kind !== 'battle') throw new Error('wrong kind');
-    expect(decoded.setup.excludedUnitIds).toEqual(['rider-2']);
   });
 
   it('works without a summary', async () => {

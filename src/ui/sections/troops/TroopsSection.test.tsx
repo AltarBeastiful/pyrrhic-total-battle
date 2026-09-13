@@ -158,9 +158,8 @@ test('moving the top tier forgets the chips, because they described the tier bel
 });
 
 test('what a march leaves out is not on this card: no left-out line and nothing to put back', () => {
-  // The March writes its own exclusions to the active setup (schema v2). The account still owns
-  // Archer I and Rider II, so the card says nothing about them and offers no way to "put them back".
-  useStore.getState().updateActiveSetup({ excludedUnitIds: ['archer-1', 'rider-2'] });
+  // The March keeps its own left-out list with the result on screen (S-53), and the account still
+  // owns every type, so the card says nothing about them and offers no way to "put them back".
   renderWithTheme(<TroopsSection />);
 
   expect(screen.queryByText(/Left out/)).toBeNull();
