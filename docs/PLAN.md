@@ -439,6 +439,12 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Mantine migration M-01…M-08 done on `development`: theme with luminance-targeted ramps, kit and
+  domain on stock components, frame V1 (top bar brand + account; sticky March pane with recap and Generate
+  from 1200 px; bottom bar with the quick summary and Generate plus a recap sheet on phones), Troops as
+  TotalStack's one-line rows, Mercenaries pills + tier combobox, Bonuses captain chips with corner gear and
+  level popover, Battle full-card choices and plain housing, March in the amended order. Gates: 842 unit
+  tests, 24 e2e, build, size 238/63/36 kB. M-09 (retire Tailwind/React Aria/old kit, polish list) in flight.
 - 2026-09-13 — Backlog: S-49 signed-in account sync on PocketBase with Google OAuth (owner's spec in
   docs/research), two parts, replacing Gist sync and the QR hand-off; needs ADR-0009 and a host from the owner.
 - 2026-09-13 — Decision: move the UI to **Mantine 9** (ADR-0008) after spike 0007 showed every TotalStack form
