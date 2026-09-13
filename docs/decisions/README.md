@@ -13,3 +13,7 @@ Options considered, Decision, Consequences, Status. Numbering is chronological; 
 | 0006 | Calculation engine: pure deterministic TypeScript, worker-hosted, fixture-validated | Accepted |
 | 0007 | Game data as plain JSON tables with CI validation and open contribution | Accepted |
 | 0008 | UI component framework: Mantine 9 (after the React Aria kit was built and rejected on execution; spike 0007) | Accepted |
+| 0009 | Optional signed-in account sync (PocketBase) | Proposed |
+
+ADR-0003's stack is still current except for its UI half: Tailwind and the hand-rolled
+primitives were replaced by Mantine 9 in ADR-0008.

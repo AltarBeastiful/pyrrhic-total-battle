@@ -24,7 +24,7 @@ Non-goals (v1)
 
 ## 2. Architecture
 
-Stack: **Vite + React 19 + TypeScript (strict)**, Tailwind CSS v4, Zustand (state, persist middleware),
+Stack: **Vite + React 19 + TypeScript (strict)**, Mantine 9 (themed from the design hues, ADR-0008), Zustand (state, persist middleware),
 zod (schemas for stored/imported/URL config with versioned migrations), Vitest (engine tests),
 Playwright (a few smoke e2e), GitHub Pages via GitHub Actions. PWA (offline) as a later story.
 
@@ -262,21 +262,130 @@ Mobile first (≥360px), keyboard accessible, light/dark themes. English only.
 
 ## 5. Milestones and backlog
 
-Status on 2026-09-12 (first implementation pass, branch `development`):
+Status on 2026-09-13, branch `development` (nothing merged to `main`). Every story of every milestone is
+listed below with one pointer to the commit subject, plan section or investigation that closed it. Statuses:
+**done**, **in progress**, **backlog** (planned, not started), **deferred** (not scheduled), **gated**
+(blocked on something outside the repository).
 
-| Milestone | Done | Open |
+### 5.1 Engine and application stories (M0–M5, M7, M8)
+
+| Story | Status | Closed by / where it stands |
 |---|---|---|
-| M0 Foundation | S-01, S-02, S-03, S-04, S-05 (manual form: `pnpm data:compare`), S-06 | S-07 (decision on automated fetching; ADR-0001 still proposed) |
-| M1 Configuration UI | S-10 … S-19 (titles editor included after all: cheap once `titles.json` existed) | — |
-| M2 Engine v1 | S-20 … S-25 | — |
-| M3 Battle Summary | S-31, S-32, S-33, S-34 | S-30 remains an in-game validation story: friendly attack-order nuance, revive silver and revive time (see battle-model-observations §4) |
-| M4 Optimisation | S-40, S-41, S-43, S-44, S-45; D-04 pulled back as the "relaxed preservation" toggle (investigation 0003) | S-46 (gated), S-47 |
-| M5 Polish | S-50, S-52 | — |
+| S-01 Scaffold, lint/format, CI, Pages deploy | done | first implementation pass; the Tailwind half of the scaffold was retired again in M-09 |
+| S-02 Game data package (`src/data/tables`, zod types, provenance) | done | first implementation pass |
+| S-03 Config schema v1 + store + migrations | done | first implementation pass |
+| S-04 Share codec + JSON export/import | done | ADR-0005 |
+| S-05 TotalStack data-drift check | done in its manual form | `pnpm data:compare` over a downloaded bundle (`tools/totalstack-sync`); the automated, scheduled form is gated by S-07 |
+| S-06 Contributor-friendly data layout | done | ADR-0007, `docs/data/README.md`, `CONTRIBUTING.md`, `pnpm data:check` in CI |
+| S-07 Decision: may we fetch TotalStack's bundle automatically? | backlog | ADR-0001 still Proposed; no terms of service found, question not put to them yet |
+| S-10 Profile bar (CRUD, export/import, share, load-from-URL) | done | actions now live in the account menu (D-10); `e5b81aa` |
+| S-11 Troops section | done | rebuilt twice since (D-22, M-04) |
+| S-12 Mercenaries section | done | rebuilt as pills + tier combobox (D-23, M-05) |
+| S-13 Stacking method section | done | folded into the Battle card (D-31, M-07); the legacy section is deleted |
+| S-14 Bonus sources, TOTAL cards, breakdown, custom source | done | rebuilt as chips and rows (D-30, M-06) |
+| S-15 Captains, Equipment, Artifacts editors | done | captain chips with the level popover (D-34, M-06) |
+| S-16 Other (VIP, Dragon, Hero, pills) and Events editors | done | `ebce3e4` |
+| S-17 Temple/training, enemy, housing, priority, Generate, help text | done | housing and enemy now in the Battle card (M-07) |
+| S-18 Battle setups inside a profile | done | setup bar in the Bonuses card |
+| S-19 Cross-device hand-off (profile/battle links, QR, Web Share) | done | investigation 0001; the QR hand-off is retired by S-49b |
+| S-20 Bonus aggregation + effective HP/strength | done | validated against review §3 and every fixture |
+| S-21 Kill order builders | done | EP, MP, Monsters Last, custom |
+| S-22 Stack sizing (flat profile, exact fill) | done | `tests/engine/stacker.test.ts` reproduces the fixture |
+| S-23 Round-to-10s mode | done | monsters exact; the troop solve is still up to 6 units off TotalStack |
+| S-24 Results UI | done | replaced by the March card (D-40…D-43, M-08) |
+| S-25 Engine in a Web Worker | done | cancel/progress with a main-thread fallback |
+| S-30 In-game validation of the battle model | in progress | two real reports reproduced exactly; open: the friendly attack-order nuance (Rider I), revive silver, revive time (`battle-model-observations` §4) |
+| S-31 Investigation: what Total Optimization trades | done | investigation 0003; shipped as the relaxed-preservation toggle |
+| S-32 Damage model (min/avg/max, double damage, strength-against) | done | every captured journal reproduced entry for entry |
+| S-33 Recovery model (retrain/revive/selective) | done | chunk-of-ten rule; all seven runs reproduced |
+| S-34 Battle Summary cards + journal | done | now the folded battle story in the March card (D-43) |
+| S-40 Priority search: average damage | done | worker, progress, cancel, time box |
+| S-41 Priority search: damage per silver / gold / dragon coin | done | with the all-types baseline and the honest-objective note (rule 29) |
+| S-43 Compare saved stacks | done | saved marches at the foot of the March card |
+| S-44 Sync adapter interface + explicit Pull/Push | done | investigation 0001 |
+| S-45 GitHub Gist sync adapter | done | `src/sync/gist.ts`, `docs/sync.md`; retired by S-49b once account sync is live |
+| S-46 Google Drive appData adapter | gated | investigation 0002: needs a domain we own, a privacy policy page, Search Console and brand verification |
+| S-47 Generic endpoint adapter + reference Worker | backlog | not started |
+| S-48 Best captains for a march | deferred | written up in §3.7; delayed by the owner (rule 33: engine stories wait until the UI is right) |
+| S-50 PWA / offline / install prompt | done | hand-written service worker, no PWA dependency |
+| S-52 Accessibility and mobile layout pass | done | axe zero on the kit page and the app in both schemes; `pnpm contrast` over 176 pairs |
+| S-49a Account sync backend | in progress | groundwork done and verified: `ops/pocketbase/` (PocketBase 0.40.4 compose, Caddy site, save hook, `profiles` migration, smoke script), every spec `[verify]` answered in investigation 0012, hosting in investigation 0010. **Deployment is pending the owner** (Dynu hostname, the two-line philou change, the Google OAuth client, the backup target) |
+| S-49b Account sync client | in progress | being built in `src/`; needs ADR-0009 and `docs/sync.md` rewritten |
 
-Known gaps: VIP table values and 14 artifact level tables are unknown (hand-typed values in the UI until
-contributed); round-to-10s troop counts differ from TotalStack by a few units; the beast-boost anomaly is not
-modelled; custom mercenaries have no cap field.
+D-02…D-09 are a different list — the TotalStack features we are not building; they keep their own section at
+the end of §5. All are deferred except **D-04 Total Optimization**, done as the opt-in relaxed-preservation
+post-pass (investigation 0003, which numbers it S-42), and **D-03 Manual HP Order**, partly done.
 
+### 5.2 Design overhaul stories (M6, `docs/plans/design-overhaul.md` §10)
+
+Where a story shipped in a different shape than it was written, the row says so: the reviews that produced
+`docs/design-rules.md` and spike 0009 changed several of them after they were specified.
+
+| Story | Status | Closed by / where it stands |
+|---|---|---|
+| D-10 Top bar with brand and account menu | done | `e5b81aa` (M-03); the profile bar, sticky strip and jump bar are gone |
+| D-11 Floating Generate with four states | done, amended | frame V1 (spike 0009, rule 2): no floating button — Generate sits in the March pane header on desktop and in the bottom app bar on phones; `GenerateFab` stays in the kit, unused |
+| D-12 Two-column desktop, single-column phone | done | sticky 360 px March pane from 1200 px (`e5b81aa`) |
+| D-13 Neutral palette and type scale | done | the Mantine theme (M-01); the 13 px floor was enforced in `bab19ac` after investigation 0011 |
+| D-15 Self-hosted variable fonts | done | Inter and Fraunces bundled, no CDN (ADR-0002 as amended) |
+| D-16 Icon sets | done, amended | M-10 and rule 21: Unicode emoji through one `Glyph` for every game concept, Lucide for interface chrome only; Game Icons dropped, so there are no icon assets at all |
+| D-17 Surfaces: border or fill, never both | done | `70f4dda`, then absorbed by the theme in M-01/M-09 |
+| D-18 A named visual reference for finish | done | `docs/design.md` §8 |
+| D-19 Design-direction pass with the `frontend-design` guide | done | investigation 0005 and `4ef92dd`; carried into the Mantine theme and `docs/design.md`, rewritten in M-09 |
+| D-20 Unit tile in three sizes with all states | done | `domain/UnitTile` on Mantine (M-02) |
+| D-21 Tier stepper | done, amended | rule 7: `TierSelect` from/to selects, one line per group as TotalStack does (`a723b98`, M-04) |
+| D-22 Troops card in the TotalStack-inspired flow | done | `a723b98` (M-04) |
+| D-23 Mercenaries card | done | `4519621` (M-05) |
+| D-30 Bonuses as rows with a pinned TOTAL | done | `ebce3e4` (M-06) |
+| D-31 Battle card (segmented enemy, full-card method, switch options) | done | `3adbd23` (M-07) |
+| D-32 Numeric stepper primitive everywhere | done, amended | rules 9 and 10: plain inputs that select on focus for typed numbers (`a174b83`, `23bf1a2`); steps only for tiers, levels and stars |
+| D-33 Captains and hero as a tile grid | deferred | superseded by D-34 before it was built |
+| D-34 Captain picker mimicking TotalStack | done | investigation 0006, `ebce3e4` (M-06): dense chips, corner gear, level dot, anchored popover with the live bonus |
+| D-35 Progressive disclosure in Bonuses | done | `ebce3e4`: groups with nothing configured collapse to their "Add …" line |
+| D-36 Housing mirrored in the app bar | backlog | an option, never adopted: frame V1 keeps the top bar to brand and account, and housing stays in the Battle card |
+| D-40 March card in the amended order | done | `ef2dc5f` (M-08) |
+| D-41 Left-out row, trade-off strip, delta | done | `ef2dc5f` |
+| D-42 Unit sheet replacing the popover | done | `ef2dc5f` |
+| D-43 Battle story with the raw journal folded | done | `ef2dc5f` |
+| D-44 Shared-march banner and save-a-copy | backlog | a share link still opens the `LoadSharedDialog` prompt (S-10 behaviour), not a banner on the result |
+| D-50 Journey checks scripted | done | `0d16eca`, re-measured in `e4be398`: phone J1 3 taps · 0 screens, desktop J1 2 taps; J2 4, J3 4, J5 2 (`e2e/journeys.spec.ts`) |
+| D-51 Owner walkthrough on phone and desktop | backlog | waiting on the owner; the script is `docs/walkthrough.md`, findings go in §7 |
+| D-52 Two external players try J1 and J6 | backlog | not started; after D-51 |
+| D-53 Rewrite `docs/design.md` for the new system | done | `00a8b73` (M-09) |
+| D-54 Shorten the setup on phones | done | `e4be398`: the Battle card is 887 px at 390 px wide, from 983; the ≈ 600 target is out of reach while rule 8 holds, and the travel it existed to cut is gone anyway (D-50) |
+
+### 5.3 Mantine migration (`docs/plans/ui-foundation-mantine.md` §4)
+
+All ten are done on `development` (2026-09-13). Gates at the end of M-09: 542 unit tests, 26 e2e, 4 visual,
+`pnpm contrast` over 176 pairs, `pnpm size` 211 / 35 / 30 kB against budgets of 340 / 90 / 40.
+
+| Story | Status | Closed by |
+|---|---|---|
+| M-01 Provider, theme, colour-scheme sync, PostCSS | done | `af84308` |
+| M-02 Kit composites and domain components on Mantine | done | `af84308` |
+| M-03 Shell: app bar, account menu, sticky March pane (frame V1) | done | `e5b81aa` |
+| M-04 Troops | done | `a723b98` |
+| M-05 Mercenaries | done | `4519621` |
+| M-06 Bonuses | done | `ebce3e4` |
+| M-07 Battle | done | `3adbd23` |
+| M-08 March | done | `ef2dc5f` |
+| M-09 Retire React Aria, Tailwind, the old kit and the lint rules; budgets; `design.md` rewritten | done | `00a8b73`, `9ffb33a`, `6ce5b2f` |
+| M-10 Glyphs: Unicode emoji through one `Glyph` component | done | landed with M-02 — with no icon assets at all, the `Glyph` component *is* the story |
+
+The React Aria foundation stories **T-00…T-09** (`docs/plans/ui-foundation.md` §8) were built and then
+retired: T-00…T-07 shipped, were rejected by the owner on execution, and T-08/T-09 were replaced by ADR-0008
+and M-09. That plan is history now; nothing there is open.
+
+### 5.4 Counts
+
+68 done, 3 in progress, 6 backlog, 2 deferred, 1 gated, out of 80 stories.
+
+Known gaps in the data and the engine: VIP table values and 14 artifact level tables are unknown (hand-typed
+in the UI until contributed); round-to-10s troop counts differ from TotalStack by a few units; the
+beast-boost anomaly is not modelled; custom mercenaries have no cap field.
+
+The story descriptions follow, milestone by milestone; where one disagrees with a table above, the table
+is the current truth.
 
 ### M0 — Foundation
 - S-01 Scaffold Vite/React/TS/Tailwind/Vitest, lint/format, GitHub Actions (test + Pages deploy).
@@ -365,22 +474,36 @@ modelled; custom mercenaries have no cap field.
 - S-50 PWA/offline, install prompt.
 - S-52 Accessibility pass, mobile layout pass.
 
-### M6 — Design overhaul (planned, not started)
-Owner's review of the second pass judged the design bad: sticky strip with little value, profile actions in a
-permanent bar, selects where steppers belong, icons that do not read, Troops and Mercenaries still not readable
-together, oversized chips and undersized text, a unit popover still shaped like TotalStack's. Two plans await
-validation before any code: `docs/plans/design-overhaul.md` (personas, journeys J1–J7, frame with account menu and
-floating Generate, group colours from the game, unit tiles, march table, unit sheet; stories D-10…D-53) and
-`docs/plans/ui-foundation.md` (measured state of the UI code, framework options, recommendation: owned kit on
-React Aria Components + Tailwind v4 + tailwind-variants after a one-day spike; stories T-00…T-09; ADR-0008).
+### M6 — Design overhaul (done on `development`)
 
-### M7 — March card, then Bonuses and Battle (planned, prioritised)
-Order agreed 2026-09-12 (revised the same day): finish the Army cards (in flight) → Phase A2 finish pass (fonts,
-icon sets, surfaces) → March card in the amended order (design plan §7.5: recap first, army as tiles that are
-also the form) → Bonuses and Battle cards → validation (Phase E). **S-48 best captains is written up (§3.7) but
-delayed by the owner; not scheduled.**
+The owner rejected the second design pass on 2026-09-12 ("hurts the eyes, unpractical"): a sticky strip with
+little value, profile actions in a permanent bar, selects where steppers belong, icons that did not read,
+Troops and Mercenaries unreadable together, oversized chips and undersized text. Two plans were written
+before any code — `docs/plans/design-overhaul.md` (personas, journeys J1–J7, frame, cards, stories D-10…D-54)
+and `docs/plans/ui-foundation.md` (the technical half) — and the owner's decisions from every review since
+were distilled into the charter `docs/design-rules.md`, which now outranks both plans.
 
-### M8 — Signed-in account sync (S-49, backlog, two parts) — replaces Gist sync (S-45) and the QR/share-link
+The overhaul was then built twice. The first build, on a hand-styled React Aria kit, was rejected on
+execution ("a mismatch of CSS badly designed and executed"); the second, on Mantine 9 after spike 0007 and
+ADR-0008, is what is on `development` today. Every D-story is accounted for in §5.2: 25 done, 1 superseded,
+4 in the backlog (D-36 housing in the app bar, D-44 the shared-march banner, and the two human validation
+stories D-51 and D-52).
+
+### M7 — March card, then Bonuses and Battle (done)
+
+The order agreed on 2026-09-12 — Army cards → finish pass → March card → Bonuses and Battle → validation —
+was carried out through the Mantine migration (§5.3): M-04/M-05 for the Army cards, M-06 and M-07 for
+Bonuses and Battle, M-08 for the March card in the amended order, M-09 for the retirement and the polish
+list. Phase E validation is done except the two human stories: **D-50** journey budgets are measured in
+`e2e/journeys.spec.ts`, **D-54** shortened the phone setup, the charter was checked rule by rule in
+investigation 0011 (29 met, 5 partly, 0 not met) and the five partly-met rules were fixed in `e4be398`;
+**D-51** (the owner's walkthrough, script in `docs/walkthrough.md`) and **D-52** (two external players) are
+waiting on people, not on code.
+
+**S-48 best captains is written up (§3.7) but delayed by the owner; not scheduled** (rule 33: engine stories
+wait until the UI is right).
+
+### M8 — Signed-in account sync (S-49, two parts, in progress) — replaces Gist sync (S-45) and the QR/share-link
 device hand-off once live
 
 Owner's spec: `docs/research/pocketbase-profile-sync-spec.md` (a self-hosted PocketBase behind Caddy; Google
@@ -391,26 +514,29 @@ two lossy choices and a JSON export first; service worker `NetworkOnly` for the 
 `navigator.storage.persist()`; deliberately no sync engine, no realtime, no merging). Email/password sign-in
 is optional on top (PocketBase's `users` auth collection supports it natively).
 
-This breaks ADR-0002's "no server" property for the sync feature only; it needs **ADR-0009** (proposed at
-implementation time): the app stays fully usable offline and anonymous, the account is opt-in, the server
-stores an opaque blob, and nothing else leaves the browser. Hosting: the "main" server beside philou, sharing philou's Caddy (investigation
-`docs/investigations/0010-hosting-pocketbase-beside-philou.md`: PocketBase joins philou's Docker network,
-philou's Caddyfile imports a `sites-enabled/*.caddy` directory, backend name `pyrrhic-backend` on a Dynu domain, e.g. `pyrrhic-backend.dynu.net`; Dynu's domains are on the Public Suffix List).
-Prerequisites from the owner: approval of the two-line philou change, the backend name, a Google Cloud project with the OAuth client,
-`<user>.github.io` verified in Search Console. Every `[verify]` in the spec is checked against the pinned
-PocketBase version before code.
+This breaks ADR-0002's "no server" property for the sync feature only; it needs **ADR-0009** (proposed with
+the client work): the app stays fully usable offline and anonymous, the account is opt-in, the server stores
+an opaque blob, and nothing else leaves the browser. Hosting: the "main" server beside philou, sharing
+philou's Caddy (investigation `docs/investigations/0010-hosting-pocketbase-beside-philou.md`: PocketBase joins
+philou's Docker network, philou's Caddyfile imports a `sites-enabled/*.caddy` directory, backend name
+`pyrrhic-backend` on a Dynu domain, e.g. `pyrrhic-backend.dynu.net`; Dynu's domains are on the Public Suffix
+List). Every `[verify]` in the spec has been checked against the pinned PocketBase version
+(investigation 0012).
 
-- **S-49a Backend**: docker-compose (pinned PocketBase, Caddy), `pb_hooks/main.pb.js` save endpoint, the
-  `profiles` collection and rules, CORS origins, hardening, S3 backups; a smoke script covering the spec's §7
-  acceptance checklist. Lives in `ops/pocketbase/` in this repo (no secrets committed).
-- **S-49b Client**: sign-in with Google (PKCE flow per spec §5.2; the callback must be a real path with a `404.html` copy of
-  `index.html` — Google forbids fragments in redirect URIs, investigation 0012), optional email/password, account menu rows (Sign in / Signed in as … / Save to account / Load from
+- **S-49a Backend** — *groundwork done, deployment pending the owner.* `ops/pocketbase/` holds the pinned
+  compose file (PocketBase 0.40.4), the Caddy site block, `pb_hooks/main.pb.js`, the `profiles` migration with
+  its rules and index, and `smoke.sh` covering the spec's §7 checklist; all of it exercised against a
+  throwaway container (12/12). No secrets are committed. Still needed **from the owner**: the Dynu hostname,
+  approval of the two-line philou change, a Google Cloud project with the OAuth client and
+  `<user>.github.io` verified in Search Console, and a backup target (PocketBase's S3 backups or a nightly
+  pull). See `ops/pocketbase/README.md` for the deployment steps in order.
+- **S-49b Client** — *in progress.* Sign-in with Google (PKCE flow per spec §5.2; the callback must be a real
+  path with a `404.html` copy of `index.html` — Google forbids fragments in redirect URIs, investigation
+  0012), optional email/password, account menu rows (Sign in / Signed in as … / Save to account / Load from
   account / Sign out), `remoteVersion`/`deviceId`/`dirty` in local state, conflict modal, SW `NetworkOnly`
   rule, storage persistence prompt; then retire the Gist adapter (S-45), the sync dialog's token handling and
-  the QR code hand-off (share links stay: they carry a march, not an account).
-
-Order: after the Mantine migration (M-06…M-09) and the March/validation phases; S-49a can start earlier if
-the owner provides the host.
+  the QR code hand-off (share links stay: they carry a march, not an account). Lands with ADR-0009 and a
+  rewritten `docs/sync.md`.
 
 ### Deferred — not planned, kept for reference
 Features TotalStack has that we are not interested in for now. They stay out of every milestone; pull one back
