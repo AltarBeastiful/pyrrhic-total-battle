@@ -252,7 +252,11 @@ TotalStack's pills: the pool total in the pool colour with its glyph ("20 000 �
 (glyph, code and tier on top; the count large below) **coloured by tier** (grey I, green II, blue III,
 violet IV, then the mercenary tier colours V–IX), five per row in the pane, three on phones. The full battle
 report stays folded in Details for now (owner: "not sure, let's stick with it"). Implementation matches the
-artboards with a page-level pixel diff as the gate (story D-55).
+artboards with a page-level pixel diff as the gate (story D-55). **Desktop stickiness (owner, later the same
+day):** the sticky block is the whole march-at-a-glance panel — recap, Generate, the pool pills and the
+left-out row — so nothing slides over the pills while the setup scrolls; only the copy/edit row, trade-off,
+Details and Saved marches flow below it. An inner scroll exists only as a fallback for marches with more
+pills than the viewport holds.
 
 ## 6. Visual language
 
