@@ -395,7 +395,7 @@ This breaks ADR-0002's "no server" property for the sync feature only; it needs 
 implementation time): the app stays fully usable offline and anonymous, the account is opt-in, the server
 stores an opaque blob, and nothing else leaves the browser. Hosting: the "main" server beside philou, sharing philou's Caddy (investigation
 `docs/investigations/0010-hosting-pocketbase-beside-philou.md`: PocketBase joins philou's Docker network,
-philou's Caddyfile imports a `sites-enabled/*.caddy` directory, `pyrrhic.92.5.91.253.sslip.io` or a DuckDNS name).
+philou's Caddyfile imports a `sites-enabled/*.caddy` directory, backend name `pyrrhic-backend` on a Dynu domain, e.g. `pyrrhic-backend.dynu.net`; Dynu's domains are on the Public Suffix List).
 Prerequisites from the owner: approval of the two-line philou change, the backend name, a Google Cloud project with the OAuth client,
 `<user>.github.io` verified in Search Console. Every `[verify]` in the spec is checked against the pinned
 PocketBase version before code.

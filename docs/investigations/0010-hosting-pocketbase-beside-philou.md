@@ -36,7 +36,7 @@ certificate, so `philou.…` and `pyrrhic.…` coexist.
 `pyrrhic.caddy`:
 
 ```
-pyrrhic.92.5.91.253.sslip.io {
+pyrrhic-backend.dynu.net {
 	encode zstd gzip
 	reverse_proxy pocketbase:8090
 	@admin path /_/*
@@ -88,12 +88,19 @@ committed there ("caddy: import sites-enabled/*.caddy so other services on this 
   limits; the name survives an IP change (update the record). Google never sees the backend host (the spec's
   frontend-hosted redirect), so either choice is fine for OAuth; the difference is only certificate
   reliability and a readable name.
+- **Dynu (owner's choice, 2026-09-13):** free dynamic DNS; its shared domains (`dynu.net`, `dynuddns.com`,
+  `dynuddns.net`, `freeddns.org`, `mywire.org`, `ddnsfree.com`, `kozow.com`, `giize.com`, …) **are all on
+  the Public Suffix List** (submitted by Dynu), so `pyrrhic-backend.dynu.net` is its own registered domain
+  for Let's Encrypt rate limits, exactly like DuckDNS; the free plan allows a handful of hostnames, has an
+  update API (not needed while the server's IP is static), and the name survives an IP change. Decision:
+  backend name **`pyrrhic-backend`**, on a Dynu domain (`pyrrhic-backend.dynu.net` unless the owner prefers
+  another of their domains), A record → 92.5.91.253. philou stays on sslip.io.
 - nip.io: same properties as sslip.io. A real domain (a few euros a year) remains the cleanest later.
 
 ## Checklist before S-49a starts
 
-1. Owner: choose the name (`pyrrhic.92.5.91.253.sslip.io` now, or a DuckDNS name) and approve the
-   two-line philou change.
+1. Owner: create `pyrrhic-backend.dynu.net` (or another Dynu domain) → 92.5.91.253 in the Dynu dashboard,
+   and approve the two-line philou change.
 2. Owner: the Google Cloud project and OAuth client (the spec §2.2) with the GitHub Pages origin only.
 3. Pin the PocketBase image and check every `[verify]` in the spec against that version.
 4. Backups: PocketBase's built-in S3 backups, or a nightly `sqlite3 .backup` + copy to the owner's machine
