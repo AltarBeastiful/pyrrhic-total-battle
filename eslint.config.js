@@ -21,6 +21,12 @@ const pyrrhic = {
  */
 const LEGACY_STYLING = ['src/ui/sections/**', 'src/ui/profile/**', 'src/ui/sync/**', 'src/pwa/**'];
 
+/**
+ * The Mantine half of the tree (ADR-0008). It carries no Tailwind, so neither styling rule applies;
+ * at M-09 these folders lose their `2` and the two rules above are deleted outright.
+ */
+const MANTINE_ONLY = ['src/ui/kit2/**', 'src/ui/domain2/**', 'src/ui/kitpage/stories2/**'];
+
 export default tseslint.config(
   {
     ignores: [
@@ -70,8 +76,9 @@ export default tseslint.config(
     },
   },
 
-  // Kit rule 1: React Aria Components is an implementation detail of the kit. Everything else
-  // imports the kit's own components, so a swap of behaviour library touches one directory.
+  // Kit rule 1, for the kit that is on its way out: React Aria Components is an implementation
+  // detail of `src/ui/kit`. `@mantine/core` is deliberately *not* restricted — ADR-0008 makes it
+  // the component system, and sections compose its layout and typography components directly.
   {
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/ui/kit/**'],
@@ -91,10 +98,13 @@ export default tseslint.config(
     },
   },
 
-  // Kit rule 3: tokens only. Values belong in src/index.css, never in a class name.
+  // Kit rule 3: tokens only. Values belong in src/index.css, never in a class name. `kit2`,
+  // `domain2` and their stories use no Tailwind at all — Mantine props, theme tokens and a CSS
+  // module for the handful of shapes the library has no prop for — so the rule has nothing to say
+  // about them and must not be read as permission to start.
   {
     files: ['src/ui/**/*.{ts,tsx}'],
-    ignores: LEGACY_STYLING,
+    ignores: [...LEGACY_STYLING, ...MANTINE_ONLY],
     plugins: { pyrrhic },
     rules: {
       'pyrrhic/no-arbitrary-tailwind': 'error',
@@ -105,7 +115,7 @@ export default tseslint.config(
   // written; it becomes an error, and the legacy list goes, at T-08.
   {
     files: ['src/ui/sections/**/*.{ts,tsx}', 'src/ui/shell/**/*.{ts,tsx}'],
-    ignores: LEGACY_STYLING,
+    ignores: [...LEGACY_STYLING, ...MANTINE_ONLY],
     plugins: { pyrrhic },
     rules: {
       'pyrrhic/max-classname-utilities': ['warn', { max: 4 }],
@@ -113,8 +123,13 @@ export default tseslint.config(
   },
 
   // A story's default export is a data object, not a component; fast refresh has nothing to say.
+  // Neither does it about the test harness, whose export is a render function.
   {
-    files: ['src/ui/kitpage/stories/*.story.tsx'],
+    files: [
+      'src/ui/kitpage/stories/*.story.tsx',
+      'src/ui/kitpage/stories2/*.story.tsx',
+      'src/ui/kit2/testRender.tsx',
+    ],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

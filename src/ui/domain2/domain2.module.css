@@ -1,0 +1,16 @@
+/* The two shapes Mantine has no prop for. Everything else in `domain2` is a theme token on a stock
+   component; these are counted against the kit's custom-CSS budget (plan §1.1). */
+
+/* The group's colour bar at the head of a row: 3 px, full height of the line it opens. */
+.marker {
+  width: 3px;
+  align-self: stretch;
+  min-height: 1.5rem;
+  border-radius: 1px;
+}
+
+/* A unit tile is a frame, nearly square, like the game's; the numeral has to sit tight inside it. */
+.tile {
+  user-select: none;
+  overflow: hidden;
+}

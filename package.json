@@ -80,7 +80,7 @@
         "dist/assets/index-*.js",
         "dist/assets/data-*.js"
       ],
-      "limit": "260 kB"
+      "limit": "340 kB"
     },
     {
       "name": "on-demand js (all other chunks)",
@@ -89,12 +89,12 @@
         "!dist/assets/index-*.js",
         "!dist/assets/data-*.js"
       ],
-      "limit": "70 kB"
+      "limit": "90 kB"
     },
     {
       "name": "css",
       "path": "dist/assets/*.css",
-      "limit": "20 kB"
+      "limit": "40 kB"
     }
   ]
 }

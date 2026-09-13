@@ -1,0 +1,37 @@
+/* ---------------------------------------------------------------------------------------------
+   The app's own global CSS, on Mantine (M-01). Everything that used to be a Tailwind base rule and
+   is still needed lives here; the rest stays in `src/index.css` until M-09 deletes it.
+
+   The first line is load-bearing. Tailwind v4 puts Preflight in `@layer base` and its utilities in
+   `@layer utilities`, and an *unlayered* stylesheet beats every layer — so Mantine's element reset
+   (`button, input { font: inherit }`) would silently outrank `text-sm` on every legacy section.
+   Ordering `mantine` between `components` and `utilities` gives Mantine's component styles the win
+   over Preflight and leaves the old sections' utilities the win over Mantine's reset. `main.tsx`
+   therefore imports `@mantine/core/styles.layer.css`, the stylesheet Mantine ships already wrapped
+   in `@layer mantine`. When Tailwind goes (M-09) this line goes with it.
+   --------------------------------------------------------------------------------------------- */
+@layer theme, base, components, mantine, utilities;
+
+/* The page ground and the text face. Mantine's own body rule reads `--mantine-color-body`, which
+   `cssVariablesResolver` already points at the design's page colour; this says it again unlayered
+   so the ground is right even before Mantine's stylesheet has loaded. */
+body {
+  margin: 0;
+  background-color: var(--pyr-page, #ecefec);
+  color: var(--mantine-color-text);
+  font-family: var(--mantine-font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Figures are compared column by column all over the results, so they are always tabular. */
+:where(output, td, th) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Someone who asked the system for less movement gets none of ours. Mantine honours the preference
+   through `respectReducedMotion`; this covers everything it does not draw. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

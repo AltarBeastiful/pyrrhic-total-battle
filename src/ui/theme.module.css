@@ -1,0 +1,23 @@
+/* The one class the theme itself owns: Fraunces sets numerals and nothing else (docs/design.md §3
+   and D-19) — the roman tier on a unit tile and the one hero figure. `opsz 144` is the display cut,
+   `SOFT 0` and `WONK 0` keep the serifs crisp and the letterforms straight-sided. Exposed as the
+   `numeral` variant of Mantine's `Text`, which is the only way in: Mantine has no numerals slot. */
+.numeral {
+  font-family: var(--pyr-font-numeral);
+  font-variation-settings:
+    'opsz' 144,
+    'SOFT' 0,
+    'WONK' 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* A chip may carry a second, dimmed line (a title's "HP +25 %"), which Mantine's fixed label height
+   would clip: the 32 px becomes a floor instead of a height. */
+.chipLabel {
+  height: auto;
+  min-height: var(--chip-size);
+  padding-block: 0.1875rem;
+  line-height: 1.2;
+}
