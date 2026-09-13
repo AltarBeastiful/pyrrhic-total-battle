@@ -83,3 +83,32 @@ Domain (`src/ui/domain`, on Mantine): `UnitTile` (`Paper` + `Image`/glyph + nume
 
 Order: M-01 → M-02 → (M-03, M-04, M-05, M-06, M-07, M-08 in parallel, disjoint folders) → M-09 → M-10 as
 soon as assets are chosen (can run alongside M-04…M-08).
+
+## 5. Comparison with an external Mantine assessment of TotalStack's UI (2026-09-13)
+
+The owner shared an independent write-up of how TotalStack's page maps onto Mantine. Component by component
+against this plan, with our decision where we deliberately differ:
+
+| TotalStack element (external mapping) | This plan | Decision |
+|---|---|---|
+| Top pill nav with dropdowns → `Menubar` | no navigation: one destination, an account `Menu` in the app bar | keep ours (nothing to navigate) |
+| Trial banner → `Alert` | `Banner` = `Alert` | same |
+| Method cards → `Radio.Card` + `Badge` tags | `ChoiceList` = `Radio.Group` + `Radio.Card`, full-card target, corner radio | same; no NEW/POPULAR marketing tags |
+| By Source / By Report → `SegmentedControl` | `SegmentedControl` for enemy, recovery plan, theme | same |
+| Captain/artifact/title toggles → `Chip.Group multiple` + `Indicator` | `ChipRow` + `CornerGear` (= `Indicator` + `ActionIcon`) | same; chips 32 px like TotalStack, sub-label node for titles |
+| Collapses → `Accordion` | `Disclosure` (`Collapse`) for a single fold with a visible summary; `Accordion` for groups | both allowed |
+| Totals readouts → `DataList` (9.4+) | `Figures` composite on `DataList` for TOTAL and the March recap | adopted |
+| Bottom bar → fixed `Paper` + `NumberInput size="lg"` + `Select` + gradient `Button` | **our own decision stands**: a sticky *top* app bar carrying the answer (figures + troop recap) and the account menu; Generate reachable everywhere (app bar from `lg`, extended FAB below); housing inputs live in the Battle card | keep ours; open option D-36: mirror the current housing values in the app bar with a tap-to-edit popover, since housing changes every fight (J1) |
+| Floating chat → `Affix` | `GenerateFab` = `Affix` + `Button` | same mechanism, different purpose |
+| Per-type colours → theme colours + type augmentation | `guardsmen`… ramps, `mantine.d.ts` augmentation | same |
+
+Costs the assessment names, and our answers: **palette** — custom `slate` scale + `cssVariablesResolver`
+(done in M-01, our hues, not TotalStack's navy); **density** — a deliberate global pass in the theme
+(`defaultProps` sizes, compressed spacing, 32 px chips), not per component; **glow** — deliberately not
+ported (our direction is hairlines and tonal steps; no gradients, no ambient light).
+
+Risks it raises, and what we do: **`Chip.Group` re-render cost** with ~80 chips on a phone — `ChipRow`
+memoizes each chip and keeps selection outside the group, with a render-count test; **progressive
+disclosure as the differentiator** — Bonuses opens on the TOTAL line only, captains are the visible grid,
+and groups with nothing configured collapse to one "Add …" line (story D-35); **open source hygiene** —
+we mirror generic patterns only; palette, wording, logo and copy are ours (design direction, glossary).

@@ -543,6 +543,10 @@ starts.
 **Phase C — Bonuses and Battle**
 - D-30 Bonuses as rows with a pinned TOTAL header; editors in sheets. Accept: the collapsed card is one line.
 - D-33 ~~Captains and hero as a tile grid~~ superseded by D-34.
+- D-35 Progressive disclosure in Bonuses: groups with nothing configured collapse to one "Add …" line;
+  the TOTAL line and the captain chips are what a returning player sees.
+- D-36 (option, to validate) Housing values mirrored in the app bar with a tap-to-edit popover, since they
+  change every fight; the Battle card keeps the full fields.
 - D-34 Captain picker mimicking TotalStack (§7.3, investigation 0006): dense name chips with a corner gear
   badge, level dot, enlist by tap with a silent cap, anchored level popover with live bonus; same chips for
   Artifacts, Permanent and Titles.
