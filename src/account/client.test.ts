@@ -19,6 +19,7 @@ import {
   isOAuthCallback,
   loadDeviceState,
   oauthRedirectUrl,
+  readCallback,
   resetClient,
   saveDeviceState,
 } from './client';
@@ -116,6 +117,25 @@ test('a callback is recognised by its query, a normal start is not', () => {
   expect(isOAuthCallback()).toBe(true);
   at('/pyrrhic/oauth-callback?error=access_denied');
   expect(isOAuthCallback()).toBe(true);
+});
+
+test('the two links in the backend emails are recognised by their path, with their token', () => {
+  at('/pyrrhic/');
+  expect(readCallback()).toBeNull();
+  at('/pyrrhic/?token=not-ours');
+  expect(readCallback()).toBeNull();
+
+  at('/pyrrhic/password-reset?token=abc');
+  expect(readCallback()).toEqual({ kind: 'password-reset', token: 'abc' });
+  // GitHub Pages serves 404.html for both spellings, so both have to be answered.
+  at('/pyrrhic/verify-email/?token=def');
+  expect(readCallback()).toEqual({ kind: 'verify-email', token: 'def' });
+  // A link that lost its query is still ours to answer — with a sentence, not a blank app.
+  at('/pyrrhic/password-reset');
+  expect(readCallback()).toEqual({ kind: 'password-reset', token: '' });
+
+  at('/pyrrhic/oauth-callback?code=abc&state=def');
+  expect(readCallback()).toEqual({ kind: 'oauth' });
 });
 
 test('every failure has a sentence, never a stack', () => {

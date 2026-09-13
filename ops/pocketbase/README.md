@@ -21,7 +21,7 @@ account sync in `docs/PLAN.md` § M8.
 `pocketbase` binary + an entrypoint script. No `sqlite3` binary is included.
 
 Everything below was exercised against a throwaway `0.40.4` container locally; the
-hook, the migration and `smoke.sh` all pass there (12/12).
+hook, the migrations and `smoke.sh` all pass there (14/14 with a token, 9/9 without).
 
 ## What is in this directory
 
@@ -31,7 +31,8 @@ docker-compose.local.yml      dev/e2e override: publishes 8090, widens --origins
 caddy/pyrrhic.caddy           site block for philou's sites-enabled directory
 pb_hooks/main.pb.js           POST /api/app/profile — the only write path
 pb_migrations/1789300800_profiles.js   the `profiles` collection, fields, index, rules
-smoke.sh                      curl-based acceptance checks (spec §7)
+pb_migrations/1789315200_account_hardening.js   password minimum, mail templates, rate limits
+smoke.sh                      curl-based acceptance checks (spec §7) + the account checks
 ```
 
 No secrets are committed. The Google client secret lives only in PocketBase's
@@ -49,6 +50,12 @@ settings (inside `pb_data`), and tokens only in the operator's shell.
    nightly pull to your machine (step 10 has both).
 5. Whether email/password sign-in stays enabled on the `users` collection. It is on by
    default and is useful for `smoke.sh`; disable it later if you want Google only.
+6. **The SMTP account** (step 9a). Without one, PocketBase still answers every request
+   normally — it simply never sends a confirmation or a reset email, and nobody can
+   confirm an address, which means nobody can save. This is the one setting the app
+   genuinely needs from you.
+7. Whether to go further and refuse _sign-in itself_ to unconfirmed accounts
+   (step 9c). Off by default, on purpose.
 
 ## Deployment
 
@@ -105,6 +112,7 @@ Resulting layout:
 /home/ubuntu/pyrrhic/docker-compose.yml
 /home/ubuntu/pyrrhic/pb_hooks/main.pb.js
 /home/ubuntu/pyrrhic/pb_migrations/1789300800_profiles.js
+/home/ubuntu/pyrrhic/pb_migrations/1789315200_account_hardening.js
 /home/ubuntu/caddy-sites/pyrrhic.caddy
 ```
 
@@ -119,8 +127,9 @@ docker compose up -d
 docker compose logs -f --tail=50 pocketbase      # ctrl-C when you see "Server started"
 ```
 
-The migration in `pb_migrations/` runs automatically on first boot and creates the
-`profiles` collection. Confirm from the host:
+The migrations in `pb_migrations/` run automatically on first boot: the first creates
+the `profiles` collection, the second hardens the `users` collection and the rate
+limiter (step 9b). Confirm from the host:
 
 ```bash
 docker run --rm --network deploy_default curlimages/curl:latest \
@@ -213,9 +222,96 @@ curl -s https://pyrrhic-backend.dynu.net/api/collections/users/auth-methods \
 Still in the admin UI, **Settings → Application**:
 
 - _Application URL_: `https://pyrrhic-backend.dynu.net`
+- _Application name_: `Pyrrhic` — it is the `{APP_NAME}` in every email subject and body.
 - _Proxy_ → tick "use a proxy header" and set it to **`X-Forwarded-For`**. Caddy sets
   that header; without this, every request looks like it comes from the Caddy
-  container and the built-in rate limiter sees one client.
+  container and the built-in rate limiter sees one client — **and the rate limits in
+  step 9b would then throttle every player at once.**
+
+#### 9a. Mail (SMTP) — owner inputs
+
+The account cannot work without this: an address nobody confirms can never save
+(`pb_hooks/main.pb.js` answers 403), and a forgotten password can never be reset.
+PocketBase holds the password, so it cannot come from a file in this repo.
+
+**Settings → Mail settings → Use SMTP mail server**, then five fields:
+
+| Field              | What to put in it                                                  |
+| ------------------ | ------------------------------------------------------------------ |
+| _SMTP server host_ | e.g. `smtp.eu.mailgun.org`, `smtp.resend.com`, `ssl0.ovh.net`      |
+| _Port_             | `587` with TLS off (STARTTLS), or `465` with _TLS_ ticked          |
+| _Username_         | whatever the provider issued — often the full sending address      |
+| _Password_         | the provider's API key or mailbox password; **it lives only here** |
+| _Sender address_   | e.g. `no-reply@your-domain`, on a domain the provider may send for |
+| _Sender name_      | `Pyrrhic`                                                          |
+
+Use the admin UI's **Send test email** button before trusting it. A provider's free
+tier is enough: this sends one email per new account and per forgotten password.
+
+Two notes worth keeping:
+
+- A domain with SPF and DKIM set up by the provider is the difference between "check
+  your inbox" and "check your spam folder".
+- PocketBase answers `204` to a reset request even when the mail fails to leave, on
+  purpose: the endpoint must not tell a stranger which addresses are registered. So a
+  broken SMTP setting is **invisible** from the app — only the test button and the
+  container logs show it.
+
+#### 9b. What `pb_migrations/1789315200_account_hardening.js` already did
+
+It runs once, on the first boot after it is copied in, and `$app.settings()` is
+writable from a migration in 0.40.4 — so none of this is an admin-UI chore:
+
+| Setting                           | Value                                                               |
+| --------------------------------- | ------------------------------------------------------------------- |
+| `users` password minimum length   | **10** characters (PocketBase ships 8)                              |
+| `users` _Reset password_ template | button links to `<PYRRHIC_APP_URL>/password-reset?token={TOKEN}`    |
+| `users` _Verification_ template   | button links to `<PYRRHIC_APP_URL>/verify-email?token={TOKEN}`      |
+| Rate limiter                      | **enabled**, with the rules below in front of PocketBase's own four |
+
+| Label                        | Ceiling          | Why                |
+| ---------------------------- | ---------------- | ------------------ |
+| `users:authWithPassword`     | 10 per minute    | password guessing  |
+| `users:requestPasswordReset` | 3 per 5 minutes  | mail cannon        |
+| `users:requestVerification`  | 3 per 5 minutes  | mail cannon        |
+| `users:confirmPasswordReset` | 10 per 5 minutes | token scanning     |
+| `users:confirmVerification`  | 10 per 5 minutes | token scanning     |
+| `users:create`               | 30 per hour      | signup floods      |
+| `POST /api/app/profile`      | 30 per minute    | our own save route |
+
+Labels are **route tags**, not paths, on purpose: PocketBase matches a tag before a
+path, so `POST /api/collections/users/auth-with-password` as a label would have been
+silently overruled by the shipped `*:auth` rule. Only `/api/app/profile`, which is
+ours and carries no tag, is matched by path. (Verified tag by tag on 0.40.4.)
+
+**The app origin in those two templates is read from the `PYRRHIC_APP_URL` environment
+variable in `docker-compose.yml`, at the moment the migration runs — once.** If you
+change that variable afterwards, nothing happens: edit the two templates by hand in
+**Collections → `users` → gear → Options → Mail templates**, keeping
+`?token={TOKEN}` exactly as it is.
+
+To change a ceiling later: **Settings → Application → Rate limiting**, or edit the
+migration before the first boot.
+
+#### 9c. Optional: only confirmed accounts may sign in
+
+The migration deliberately leaves `users` → _Options_ → **Authentication rule** empty.
+Setting it to `verified = true` is supported (0.40.4 answers `403 "The request doesn't
+satisfy the collection requirements to authenticate."`), and it is _stricter_ — but it
+refuses the sign-in itself, so the app has no session from which to explain the refusal
+or offer to send the email again. As shipped, an unconfirmed account signs in, sees
+**Confirm your email address** in the account menu, and is refused only when it tries to
+save. Change it in the admin UI if you prefer the stricter behaviour; nothing in the
+client breaks (it maps that 403 to "This account is not confirmed yet").
+
+#### 9d. Careful: the admin UI writes migration files
+
+`--automigrate` is on by default, so **every collection change you make in the admin UI
+writes a new file into `/pb_migrations`** — which is a bind mount of this repo's
+`ops/pocketbase/pb_migrations/` when you run the local container. If a
+`*_updated_users.js` appears there after you have been in the admin UI, it is that:
+keep it (and commit it) if the change was deliberate, delete it if it was not. Settings
+changes — SMTP, rate limits, proxy — write no file.
 
 CORS is **not** an admin-UI setting: it is the `--origins` flag in `docker-compose.yml`,
 currently `https://altarbeastiful.github.io,http://localhost:5180`
@@ -279,8 +375,17 @@ It covers spec §7 items that can be scripted: health, CORS allow/deny, an
 unauthenticated list that leaks nothing, an unauthenticated save rejected with 401, a
 first save at version 1 returning 200, a replayed version returning a deterministic
 409 with `serverVersion`, a direct `PATCH` refused, cross-account isolation, and 8090
-being closed to the internet. It restores whatever it touched. The remaining §7 items
-(two-device sign-in, the conflict modal, cascade delete, a restored backup) are manual.
+being closed to the internet.
+
+Checks 12-15 cover the email/password account: a password under the collection's
+minimum refused with `validation_min_text_constraint`, a fresh account signing in, its
+save refused with `403 {"data":{"reason":"email_not_verified"}}`, and a reset request
+answering `204` for a registered address and an unknown one alike. They create one
+throwaway `smoke-<timestamp>@pyrrhic.test` account and delete it again.
+
+It restores whatever it touched. The remaining §7 items (two-device sign-in, the
+conflict modal, cascade delete, a real email opening the app at `/password-reset` or
+`/verify-email`, a restored backup) are manual.
 
 ## Rollback
 

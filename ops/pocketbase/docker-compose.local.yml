@@ -8,10 +8,18 @@
 #   * publish 8090 on the host, so a browser on this machine can reach PocketBase;
 #   * widen --origins to the ports this repo serves the app on (Vite 5180,
 #     `pnpm preview` / Playwright 4173), so CORS does not reject the dev build.
+#
+# It also points the mail links at the local preview server rather than at GitHub Pages,
+# so a password-reset mail opened on this machine lands on this machine's build.
 services:
   pocketbase:
     ports:
       - "127.0.0.1:8090:8090"
+    environment:
+      PYRRHIC_APP_URL: http://127.0.0.1:4173
+      # Local only, and read once by the hardening migration: the rate limiter ignores
+      # this machine, so a Playwright run is never throttled. Production leaves it unset.
+      PYRRHIC_RATE_LIMIT_EXCLUDE: 127.0.0.1,::1,172.16.0.0/12
     command:
       - serve
       - --http=0.0.0.0:8090

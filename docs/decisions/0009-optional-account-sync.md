@@ -46,8 +46,9 @@ Option 3, under five constraints that are the point of this record:
    adds a Save button and a Load button; it never becomes the source of truth. Nothing is pushed or
    pulled in the background, on start-up, or on a timer — only on an explicit press (spec §8).
 2. **The account is opt-in and reversible.** Signing out leaves the local document untouched. The
-   server copy can be deleted by its owner (`deleteRule` on the collection). Refusing to sign in
-   costs nothing and hides nothing.
+   server copy can be deleted by its owner (`deleteRule` on the collection), and so can the whole
+   account, from the account menu: deleting the `users` record cascades to the `profiles` row, and
+   the browser keeps every profile it had. Refusing to sign in costs nothing and hides nothing.
 3. **The server stores one opaque blob per user and nothing else.** The `profiles` collection holds
    `{ user, data, version, updatedBy }`: the whole root document as the client wrote it, an
    optimistic version counter, and an opaque device id used only to word a conflict message. The
@@ -62,6 +63,13 @@ Option 3, under five constraints that are the point of this record:
    `VITE_BACKEND_ORIGIN` is read at build time; when it is empty the account rows are not rendered,
    no client is constructed and the SDK chunk is never fetched. A fork that sets nothing gets exactly
    the app ADR-0002 describes, with no dead UI to explain.
+
+An email address is **confirmed before the account may save**. The check lives in the hook
+(`auth.verified()` → `403 {"data":{"reason":"email_not_verified"}}`), not in the collection's
+`authRule`: refusing the sign-in itself would leave the app with no session from which to explain the
+refusal or offer to send the email again. The two links those emails carry are answered by the app at
+`…/password-reset` and `…/verify-email`, the way `…/oauth-callback` already is, and PocketBase's mail
+templates are rewritten by a migration to point there rather than at its own dashboard.
 
 Concurrency is a single optimistic `version`, checked server-side by an explicit
 `POST /api/app/profile` hook that answers a deterministic **409** (investigation 0012). There is no
@@ -89,6 +97,10 @@ feature that one person uses. Share links stay: they carry a march, not an accou
   redirect URI (investigation 0012, deviation 9). On GitHub Pages that needs a build-time copy of
   `index.html` to `404.html`; it is the first thing in this project that depends on a host behaviour
   rather than on static files alone.
+- The hosted instance needs an SMTP account (`ops/pocketbase/README.md` step 9a). Without one no
+  address can be confirmed, so no account can save — and PocketBase answers `204` to a reset request
+  whether or not the mail left, on purpose, so a broken mailer is invisible from the app. That is the
+  price of not telling a stranger which addresses are registered.
 - `navigator.storage.persist()` is now requested on first load. It is the counterpart to constraint 1:
   the local document stays the source of truth, so it had better survive.
 - The stored blob is the whole root document, so a schema migration that the client can read is also

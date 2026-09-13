@@ -1,11 +1,11 @@
 import { MantineProvider } from '@mantine/core';
-import { StrictMode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from '@/App';
 import '@mantine/core/styles.css';
 import '@/ui/global.css';
-import { accountErrorMessage, appRootUrl, isAccountConfigured, isOAuthCallback } from '@/account/client';
+import { accountErrorMessage, appRootUrl, isAccountConfigured, readCallback } from '@/account/client';
 import { trackAccountChanges, useAccountStore } from '@/account/state';
 import { captureInstallPrompt } from '@/pwa/install';
 import { requestPersistentStorage } from '@/pwa/persist';
@@ -41,10 +41,11 @@ const container = document.getElementById('root');
 if (!container) {
   throw new Error('Missing #root element in index.html');
 }
-const root = container;
+const root = createRoot(container);
 
-function mount(): void {
-  createRoot(root).render(
+/** One React root for the whole page: a callback page and the app take turns in it, never stack. */
+function render(node: ReactNode): void {
+  root.render(
     <StrictMode>
       <MantineProvider
         theme={theme}
@@ -52,22 +53,46 @@ function mount(): void {
         colorSchemeManager={documentColorSchemeManager()}
         defaultColorScheme="light"
       >
-        <App />
+        {node}
       </MantineProvider>
     </StrictMode>,
   );
 }
 
+function mount(): void {
+  render(<App />);
+}
+
 /**
- * `…/oauth-callback` (S-49b, spec §5.2). Google forbids a fragment in a redirect URI, so the
- * callback is a real path, served by the build-time copy of `index.html` to `404.html`
- * (`scripts/postbuild-404.mjs`). It is handled here rather than in a component because there is no
- * router in this app and because the `?code=…` must leave the address bar before anything can copy
- * it: the exchange runs first, then `replaceState` puts the app root back, then the app mounts.
- *
- * Nothing about this blocks a normal start: the check is a synchronous look at the query string.
+ * Leave a callback page: the one-time token goes out of the address bar first, then the app mounts
+ * and the stored session is revalidated — a confirmation that has just been accepted is how the
+ * account menu learns the address is confirmed.
  */
-if (isAccountConfigured() && isOAuthCallback()) {
+function backToApp(): void {
+  window.history.replaceState(null, '', appRootUrl());
+  mount();
+  void useAccountStore.getState().restore();
+}
+
+/**
+ * The three addresses that are an answer to something the account started elsewhere (S-49b, spec
+ * §5.2): Google coming back, and the two links the backend's emails carry.
+ *
+ * They are real paths, served by the build-time copy of `index.html` to `404.html`
+ * (`scripts/postbuild-404.mjs`) — Google forbids a fragment in a redirect URI, and a link in an
+ * email should not carry one either. They are handled here rather than in a component because there
+ * is no router in this app and because the one-time token must leave the address bar before anything
+ * can copy it.
+ *
+ * Nothing about this blocks a normal start: the check is a synchronous look at the address.
+ */
+const callback = isAccountConfigured() ? readCallback() : null;
+
+if (callback === null) {
+  mount();
+  // Revalidate a stored token (spec §5.1). Does nothing, and loads nothing, without one.
+  void useAccountStore.getState().restore();
+} else if (callback.kind === 'oauth') {
   void (async () => {
     try {
       const { completeGoogleSignIn } = await import('@/account/auth');
@@ -82,7 +107,28 @@ if (isAccountConfigured() && isOAuthCallback()) {
     }
   })();
 } else {
-  mount();
-  // Revalidate a stored token (spec §5.1). Does nothing, and loads nothing, without one.
-  void useAccountStore.getState().restore();
+  // A page with one question in it, in place of the app. The chunk is fetched only here, so a normal
+  // start never pays for it.
+  const { kind, token } = callback;
+  void import('@/ui/account/CallbackPages')
+    .then(({ PasswordResetPage, VerifyEmailPage }) => {
+      if (kind === 'password-reset') {
+        render(
+          <PasswordResetPage
+            token={token}
+            onDone={() => {
+              backToApp();
+              // The new password is the one to sign in with, so ask for it straight away.
+              useAccountStore.getState().setDialog('signin');
+            }}
+          />,
+        );
+        return;
+      }
+      render(<VerifyEmailPage token={token} onDone={backToApp} />);
+    })
+    .catch(() => {
+      // The account chunk could not be fetched: the app itself is still perfectly usable.
+      backToApp();
+    });
 }

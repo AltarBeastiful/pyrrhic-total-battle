@@ -11,6 +11,7 @@
 //   200 -> { version, updated }
 //   400 -> invalid body
 //   401 -> not authenticated
+//   403 -> { code: 403, message: ..., data: { reason: "email_not_verified" } }
 //   409 -> { code: 409, message: "conflict", data: { serverVersion, updated } }
 //
 // The collection's create/update/delete API rules are locked to superusers only, so this
@@ -24,6 +25,21 @@ routerAdd('POST', '/api/app/profile', (e) => {
   }
   if (auth.collection().name !== 'users') {
     throw new ForbiddenError('only user accounts can save a profile');
+  }
+  // An address nobody has confirmed is an address that can be taken back: the account
+  // would then hold somebody else's profiles. Reading stays open (there is nothing to
+  // read yet), signing in stays open (see the migration's note on `authRule`), and the
+  // client keys the "Confirm your email address first" message on `data.reason`, not on
+  // the wording, so this sentence can change without breaking it.
+  // Returned rather than thrown: an ApiError rewrites every value in `data` into
+  // {"code":"validation_invalid_value","message":"Invalid value."}, so a thrown error
+  // cannot carry a machine-readable reason. e.json() is verbatim, as the 409 below.
+  if (!auth.verified()) {
+    return e.json(403, {
+      code: 403,
+      message: 'email not verified',
+      data: { reason: 'email_not_verified' },
+    });
   }
 
   // DynamicModel shape values double as the Go types to bind into.

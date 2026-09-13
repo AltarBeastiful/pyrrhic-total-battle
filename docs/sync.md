@@ -28,10 +28,27 @@ If the build you are using has no backend configured, the account rows are simpl
 configuration.
 
 **With an email and a password.** Open *Sign in with email…*, turn on **Create account** the first
-time. Passwords must be at least 8 characters. A verification email is sent if the instance has a
-mailer; the account works either way.
+time. Passwords must be at least 10 characters. Pyrrhic then says *Check your inbox to confirm your
+address*, because the server refuses to save profiles for an address nobody has confirmed — open the
+link in that email, and the account is ready. Until you do, the account menu carries a **Confirm your
+email address** row that sends the email again.
+
+**If you forget the password.** *Forgot your password?* in the same dialog sends a link that opens
+Pyrrhic at *Choose a new password*. The answer is the same whether or not the address has an account
+— *if an account exists for this address, a reset link is on its way* — so the page never tells a
+stranger who is registered. The link works once, expires in 30 minutes, and signs every device out.
 
 *Sign out* leaves everything in this browser untouched.
+
+## Changing or ending the account
+
+Both live behind the row that names the account — *Signed in as you@example.com* — because the menu
+is kept to four rows.
+
+| Button | What it does |
+| --- | --- |
+| **Change password…** | Asks for the current password and the new one twice. Every other device is signed out and will ask for the new password; this browser stays signed in. For accounts made with an email — a Google account's password belongs to Google. |
+| **Delete account…** | Deletes the account and the copy of your profiles saved on it, for good. **Your profiles in this browser are not touched**, and Pyrrhic keeps working exactly as it does without an account. |
 
 ## Saving and loading
 
@@ -73,6 +90,18 @@ In this browser:
 | `pyrrhic.account.v1` | The session token, so you are not asked to sign in on every visit. |
 | `pyrrhic.account.device.v1` | This browser's device id and the version it last saw. Never uploaded. |
 | `pyrrhic.account.pkce` (**sessionStorage**) | The one-time sign-in verifier, for the length of the Google redirect only. |
+
+## The three addresses Pyrrhic answers besides its own
+
+A link in an email, or Google coming back, opens Pyrrhic at a path rather than at the app itself. The
+one-time token in the address is used and then removed from the address bar before the app starts, so
+it cannot be copied out of a shared screen or a browser history.
+
+| Path | What it is |
+| --- | --- |
+| `…/oauth-callback` | Google, coming back from its consent screen. |
+| `…/password-reset?token=…` | The *Choose a new password* page, from a reset email. |
+| `…/verify-email?token=…` | Confirms the address, from a confirmation email. |
 
 ## Limitations
 

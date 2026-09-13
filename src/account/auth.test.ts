@@ -8,8 +8,14 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { AUTH_STORAGE_KEY, PKCE_SESSION_KEY, resetClient } from './client';
 import {
+  changePassword,
   completeGoogleSignIn,
+  confirmPasswordReset,
+  confirmVerification,
+  deleteAccount,
   refreshSession,
+  requestPasswordReset,
+  resendVerification,
   signInWithPassword,
   signOut,
   signUpWithPassword,
@@ -208,4 +214,143 @@ test('signing out drops the stored session', async () => {
   await signInWithPassword('player@example.com', 'password123');
   await signOut();
   expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+});
+
+// ---- Confirming, forgetting, changing, leaving ---------------------------------------------------
+test('a sign-in refused by the collection rule names the unconfirmed address', async () => {
+  // 403 is `authRule` refusing the record itself; wrong credentials are a 400 (verified on 0.40.4).
+  onRequest('authWithPassword', () => {
+    throw new FakeResponseError(403);
+  });
+  await expect(signInWithPassword('player@example.com', 'password1234')).rejects.toMatchObject({
+    kind: 'unverified',
+    message: 'This account is not confirmed yet. Open the link in the confirmation email, then sign in.',
+  });
+});
+
+test('asking for another confirmation email is one call with the address', async () => {
+  onRequest('requestVerification', () => true);
+  await expect(resendVerification('player@example.com')).resolves.toBeUndefined();
+  expect(fakeCalls.at(-1)).toEqual({
+    collection: 'users',
+    method: 'requestVerification',
+    args: ['player@example.com'],
+  });
+});
+
+test('a confirmation link with no token is refused before the server is asked', async () => {
+  await expect(confirmVerification('')).rejects.toMatchObject({ kind: 'auth' });
+  expect(fakeCalls).toEqual([]);
+});
+
+test('a confirmation token is spent, and an expired one says what to do next', async () => {
+  onRequest('confirmVerification', () => true);
+  await expect(confirmVerification('the-token')).resolves.toBeUndefined();
+  expect(fakeCalls.at(-1)).toMatchObject({ method: 'confirmVerification', args: ['the-token'] });
+
+  onRequest('confirmVerification', () => {
+    throw new FakeResponseError(400);
+  });
+  await expect(confirmVerification('stale')).rejects.toMatchObject({
+    kind: 'auth',
+    message: 'This confirmation link has expired. Sign in and ask for a new email from the account menu.',
+  });
+});
+
+test('a reset request is one call, and says nothing about whether the address exists', async () => {
+  onRequest('requestPasswordReset', () => true);
+  await expect(requestPasswordReset('player@example.com')).resolves.toBeUndefined();
+  expect(fakeCalls.at(-1)).toEqual({
+    collection: 'users',
+    method: 'requestPasswordReset',
+    args: ['player@example.com'],
+  });
+});
+
+test('too many reset requests is a wait, not a failure the player caused', async () => {
+  onRequest('requestPasswordReset', () => {
+    throw new FakeResponseError(429);
+  });
+  await expect(requestPasswordReset('player@example.com')).rejects.toMatchObject({
+    kind: 'server',
+    message: 'Too many attempts in a row. Wait a few minutes, then try again.',
+  });
+});
+
+test('confirming a reset sends the new password twice, as the API wants it', async () => {
+  onRequest('confirmPasswordReset', () => true);
+  await expect(confirmPasswordReset('the-token', 'newpassword12')).resolves.toBeUndefined();
+  expect(fakeCalls.at(-1)).toEqual({
+    collection: 'users',
+    method: 'confirmPasswordReset',
+    args: ['the-token', 'newpassword12', 'newpassword12'],
+  });
+});
+
+test('a spent or expired reset link says so, with the length rule beside it', async () => {
+  onRequest('confirmPasswordReset', () => {
+    throw new FakeResponseError(400);
+  });
+  await expect(confirmPasswordReset('stale', 'newpassword12')).rejects.toMatchObject({
+    kind: 'auth',
+    message:
+      'This reset link has expired, or the new password is shorter than 10 characters. Ask for a new email and try again.',
+  });
+  await expect(confirmPasswordReset('', 'newpassword12')).rejects.toMatchObject({ kind: 'auth' });
+});
+
+test('changing the password sends the old one and signs this browser in again', async () => {
+  onRequest('authWithPassword', () => ({ token: 'tok', record: USER }));
+  await signInWithPassword('player@example.com', 'password1234');
+
+  onRequest('update', () => ({ ...USER }));
+  onRequest('authWithPassword', () => ({ token: 'fresh-token', record: { ...USER, verified: true } }));
+
+  await expect(changePassword('password1234', 'newpassword12')).resolves.toMatchObject({ id: 'u1' });
+  expect(fakeCalls.map((call) => call.method)).toEqual(['authWithPassword', 'update', 'authWithPassword']);
+  expect(fakeCalls[1]?.args).toEqual([
+    'u1',
+    { oldPassword: 'password1234', password: 'newpassword12', passwordConfirm: 'newpassword12' },
+  ]);
+  // PocketBase revokes every token of the account as it saves, so the stored one must be the new one.
+  expect(localStorage.getItem(AUTH_STORAGE_KEY)).toContain('fresh-token');
+});
+
+test('a wrong current password is one sentence that names both possible causes', async () => {
+  onRequest('authWithPassword', () => ({ token: 'tok', record: USER }));
+  await signInWithPassword('player@example.com', 'password1234');
+
+  onRequest('update', () => {
+    throw new FakeResponseError(400);
+  });
+  await expect(changePassword('wrong', 'newpassword12')).rejects.toMatchObject({
+    kind: 'auth',
+    message: 'That current password is not right, or the new one is shorter than 10 characters.',
+  });
+});
+
+test('changing the password without a session asks for one first', async () => {
+  await expect(changePassword('password1234', 'newpassword12')).rejects.toMatchObject({ kind: 'auth' });
+  expect(fakeCalls).toEqual([]);
+});
+
+test('deleting the account removes the record and drops the session with it', async () => {
+  onRequest('authWithPassword', () => ({ token: 'tok', record: USER }));
+  await signInWithPassword('player@example.com', 'password1234');
+
+  onRequest('delete', () => true);
+  await expect(deleteAccount()).resolves.toBeUndefined();
+  expect(fakeCalls.at(-1)).toEqual({ collection: 'users', method: 'delete', args: ['u1'] });
+  expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+});
+
+test('an account that could not be deleted keeps its session, and says so', async () => {
+  onRequest('authWithPassword', () => ({ token: 'tok', record: USER }));
+  await signInWithPassword('player@example.com', 'password1234');
+
+  onRequest('delete', () => {
+    throw new FakeResponseError(404);
+  });
+  await expect(deleteAccount()).rejects.toMatchObject({ kind: 'server' });
+  expect(localStorage.getItem(AUTH_STORAGE_KEY)).toContain('tok');
 });

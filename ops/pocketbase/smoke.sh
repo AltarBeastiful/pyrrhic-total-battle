@@ -11,6 +11,13 @@
 #   PB_TOKEN_B    a second user's token; enables the cross-account leak check (10)
 #   PB_HOST       host/IP to probe for a publicly exposed 8090 (check 11)
 #   PB_ORIGIN     expected CORS origin (default: https://altarbeastiful.github.io)
+#   PB_EMAIL      an address the reset check may ask a mail for (default: a throwaway
+#                 pyrrhic.test address, which exists nowhere and must still answer 204)
+#
+# Checks 12-15 create one throwaway account (`smoke-<timestamp>@pyrrhic.test`) to prove
+# the email/password hardening: the minimum password length, the 403 an unconfirmed
+# address gets from the save route, and the neutral answer to a reset request. The
+# account is deleted again at the end, and with it the profile row it never wrote.
 #
 # Getting a token for a test account:
 #   curl -s -X POST "$PB_URL/api/collections/users/auth-with-password" \
@@ -31,6 +38,7 @@ PB_TOKEN="${PB_TOKEN:-}"
 PB_TOKEN_B="${PB_TOKEN_B:-}"
 PB_HOST="${PB_HOST:-}"
 PB_ORIGIN="${PB_ORIGIN:-https://altarbeastiful.github.io}"
+PB_EMAIL="${PB_EMAIL:-nobody-has-this-address@pyrrhic.test}"
 
 for bin in curl jq; do
 	command -v "$bin" >/dev/null 2>&1 || { echo "smoke.sh needs $bin" >&2; exit 2; }
@@ -231,8 +239,75 @@ else
 	fi
 fi
 
+# ------------------------------------------------------- email/password hardening
+section "Email, password and confirmation"
+
+STAMP="$(date -u +%Y%m%d%H%M%S)"
+SMOKE_EMAIL="smoke-${STAMP}@pyrrhic.test"
+SMOKE_PASSWORD="smoke-password-${STAMP}"
+
+call POST /api/collections/users/records "" \
+	"{\"email\":\"${SMOKE_EMAIL}\",\"password\":\"short123\",\"passwordConfirm\":\"short123\"}"
+if [ "$STATUS" = "400" ] && grep -q 'validation_min_text_constraint' <<<"$BODY"; then
+	ok "12. a password under the collection minimum is refused (400)"
+elif [ "$STATUS" = "429" ]; then
+	warn "12. password minimum: the rate limiter answered first (wait, or exclude this IP)"
+else
+	bad "12. a password under the collection minimum is refused" "got $STATUS: $BODY"
+fi
+
+smoke_id=""
+smoke_token=""
+call POST /api/collections/users/records "" \
+	"{\"email\":\"${SMOKE_EMAIL}\",\"password\":\"${SMOKE_PASSWORD}\",\"passwordConfirm\":\"${SMOKE_PASSWORD}\"}"
+if [ "$STATUS" != "200" ]; then
+	warn "13-14. unconfirmed-save checks (could not create ${SMOKE_EMAIL}: HTTP $STATUS)"
+else
+	smoke_id="$(jq -r '.id // empty' <<<"$BODY")"
+	call POST /api/collections/users/auth-with-password "" \
+		"{\"identity\":\"${SMOKE_EMAIL}\",\"password\":\"${SMOKE_PASSWORD}\"}"
+	smoke_token="$(jq -r '.token // empty' <<<"$BODY" 2>/dev/null)"
+	if [ -z "$smoke_token" ] && [ "$STATUS" = "403" ]; then
+		# An authRule of "verified = true" refuses the sign-in itself: that is the stricter
+		# setting the README describes, not a failure of this script.
+		ok "13. a new account cannot sign in at all: the collection requires a confirmed address"
+		warn "14. unconfirmed save (no session to try it with under that rule)"
+	elif [ -z "$smoke_token" ]; then
+		bad "13. a new account signs in" "got $STATUS: $BODY"
+	else
+		ok "13. a new account signs in"
+		call POST /api/app/profile "$smoke_token" \
+			'{"data":{"pyrrhicSmokeTest":true},"version":1,"deviceId":"smoke"}'
+		reason="$(jq -r '.data.reason // empty' <<<"$BODY" 2>/dev/null)"
+		if [ "$STATUS" = "403" ] && [ "$reason" = "email_not_verified" ]; then
+			ok "14. an unconfirmed account cannot save (403, reason email_not_verified)"
+		else
+			bad "14. an unconfirmed account cannot save" "got $STATUS: $BODY"
+		fi
+	fi
+fi
+
+# A reset for an address nobody has registered must answer exactly as one for an address
+# that exists, or the endpoint tells strangers who has an account here.
+call POST /api/collections/users/request-password-reset "" "{\"email\":\"${PB_EMAIL}\"}"
+unknown_status="$STATUS"
+call POST /api/collections/users/request-password-reset "" "{\"email\":\"${SMOKE_EMAIL}\"}"
+if [ "$unknown_status" = "204" ] && [ "$STATUS" = "204" ]; then
+	ok "15. a reset request is 204 for an unknown address and for a real one"
+elif [ "$unknown_status" = "429" ] || [ "$STATUS" = "429" ]; then
+	warn "15. reset request: the rate limiter answered first (3 per 5 minutes, by design)"
+else
+	bad "15. a reset request is 204 either way" "unknown: $unknown_status, real: $STATUS"
+fi
+
+if [ -n "$smoke_id" ] && [ -n "$smoke_token" ]; then
+	call DELETE "/api/collections/users/records/${smoke_id}" "$smoke_token"
+	note "restored: deleted the throwaway account ${SMOKE_EMAIL} (HTTP $STATUS)"
+fi
+
 printf '\n%s passed, %s failed, %s skipped\n' "$pass" "$fail" "$skip"
 printf 'Not scriptable, do these by hand: Google sign-in on two devices, the conflict\n'
-printf 'modal, the cascade delete of a users record, and a restored-backup instance.\n'
+printf 'modal, the cascade delete of a users record, a real reset or confirmation email\n'
+printf 'opening the app at /password-reset and /verify-email, and a restored backup.\n'
 
 [ "$fail" -eq 0 ]

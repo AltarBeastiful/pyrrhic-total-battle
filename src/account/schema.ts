@@ -32,6 +32,15 @@ export const pushConflictSchema = z.object({
   }),
 });
 
+/**
+ * `403` from `POST /api/app/profile`. The hook *returns* this body rather than throwing, because a
+ * thrown `ApiError` rewrites every value in `data` into `{"code":"validation_invalid_value"}` and the
+ * reason would not survive the trip (verified on 0.40.4). Anything else 403 is an expired session.
+ */
+export const pushForbiddenSchema = z.object({
+  data: z.object({ reason: z.string() }),
+});
+
 /** The authenticated user, as much of it as the account menu shows. */
 export const authUserSchema = z.object({
   id: z.string().min(1),

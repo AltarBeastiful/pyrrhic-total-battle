@@ -16,6 +16,12 @@ services:
     container_name: pyrrhic-pocketbase
     restart: unless-stopped
 
+    # Read once, by pb_migrations/1789315200_account_hardening.js, to build the links in
+    # the password-reset and email-confirmation messages. Changing it later does not
+    # re-run the migration: edit the templates in the admin UI instead (README step 9).
+    environment:
+      PYRRHIC_APP_URL: https://altarbeastiful.github.io/pyrrhic-total-battle
+
     volumes:
       - pb_data:/pb_data
       - ./pb_hooks:/pb_hooks

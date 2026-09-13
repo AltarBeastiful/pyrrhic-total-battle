@@ -11,7 +11,7 @@
 import type { RootDocument } from '@/state/schema';
 
 import { AccountError, backendOrigin, getClient, PROFILE_ENDPOINT, PROFILES_COLLECTION } from './client';
-import { profileRecordSchema, pushConflictSchema, pushOkSchema } from './schema';
+import { profileRecordSchema, pushConflictSchema, pushForbiddenSchema, pushOkSchema } from './schema';
 
 /** What the account holds right now. `data` is still unvalidated: `migrate()` owns that. */
 export interface RemoteProfile {
@@ -97,8 +97,21 @@ export async function push(
     }
     return { ok: false, serverVersion: parsed.data.data.serverVersion, updated: parsed.data.data.updated };
   }
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 403) {
+    const parsed = pushForbiddenSchema.safeParse(await readJson(response));
+    if (parsed.success && parsed.data.data.reason === 'email_not_verified') {
+      throw new AccountError(
+        'unverified',
+        'Confirm your email address first: open the link in the email we sent, then save again.',
+      );
+    }
     throw new AccountError('auth', 'This session has expired. Sign in again.');
+  }
+  if (response.status === 401) {
+    throw new AccountError('auth', 'This session has expired. Sign in again.');
+  }
+  if (response.status === 429) {
+    throw new AccountError('server', 'Too many saves in a row. Wait a minute, then try again.');
   }
   if (!response.ok) {
     throw new AccountError('server', 'The account server refused to save this profile.');

@@ -59,6 +59,7 @@ beforeEach(async () => {
     notice: '',
     error: '',
     conflict: null,
+    verificationSent: false,
     dialog: null,
     pending: null,
   });
@@ -197,4 +198,68 @@ test('signing out forgets the session and the version, and leaves the document a
 
   expect(useAccountStore.getState()).toMatchObject({ user: null, remoteVersion: 0, dirty: false });
   expect(useStore.getState().doc.profiles[0]?.name).toBe('Mine');
+});
+
+test('a save refused for an unconfirmed address leaves the row explaining what to do', async () => {
+  useAccountStore.setState({ user: { ...USER, verified: false } });
+  useStore.getState().renameProfile(useStore.getState().doc.activeProfileId, 'Mine');
+  vi.stubGlobal('fetch', () =>
+    Promise.resolve(
+      respond(403, { code: 403, message: 'email not verified', data: { reason: 'email_not_verified' } }),
+    ),
+  );
+
+  await useAccountStore.getState().save();
+
+  expect(useAccountStore.getState()).toMatchObject({ busy: 'none', dirty: true, notice: '' });
+  expect(useAccountStore.getState().error).toContain('Confirm your email address first');
+});
+
+test('asking for another confirmation email says a mail is on its way', async () => {
+  useAccountStore.setState({ user: { ...USER, verified: false } });
+  onRequest('requestVerification', () => true);
+
+  await useAccountStore.getState().resendVerification();
+
+  expect(useAccountStore.getState()).toMatchObject({ verificationSent: true, busy: 'none', error: '' });
+});
+
+test('changing the password keeps the session and answers true', async () => {
+  onRequest('update', () => ({ ...USER }));
+  onRequest('authWithPassword', () => ({ token: 'fresh-token', record: USER }));
+
+  await expect(useAccountStore.getState().changePassword('password123', 'newpassword12')).resolves.toBe(true);
+  expect(useAccountStore.getState()).toMatchObject({ user: USER, busy: 'none', error: '' });
+});
+
+test('a refused password change answers false and says why', async () => {
+  onRequest('update', () => {
+    throw new FakeResponseError(400);
+  });
+
+  await expect(useAccountStore.getState().changePassword('wrong', 'newpassword12')).resolves.toBe(false);
+  expect(useAccountStore.getState().error).toContain('That current password is not right');
+  expect(useAccountStore.getState().user).toEqual(USER);
+});
+
+test('deleting the account signs out and forgets the version, and keeps the profiles', async () => {
+  useStore.getState().renameProfile(useStore.getState().doc.activeProfileId, 'Mine');
+  useAccountStore.setState({ remoteVersion: 5 });
+  onRequest('delete', () => true);
+
+  await expect(useAccountStore.getState().deleteAccount()).resolves.toBe(true);
+
+  expect(useAccountStore.getState()).toMatchObject({ user: null, remoteVersion: 0, dirty: false });
+  expect(useStore.getState().doc.profiles[0]?.name).toBe('Mine');
+  expect(JSON.parse(localStorage.getItem(DEVICE_STORAGE_KEY) ?? '{}').remoteVersion).toBe(0);
+});
+
+test('an account the server would not delete stays signed in, with a sentence', async () => {
+  onRequest('delete', () => {
+    throw new FakeResponseError(403);
+  });
+
+  await expect(useAccountStore.getState().deleteAccount()).resolves.toBe(false);
+  expect(useAccountStore.getState().user).toEqual(USER);
+  expect(useAccountStore.getState().error).not.toBe('');
 });

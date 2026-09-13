@@ -1,7 +1,7 @@
 /**
- * Account state and the four things a player can do with it (S-49b, ADR-0009): sign in, save, load,
- * sign out. The flows live here rather than in the menu so they can be driven without React, and so
- * the menu stays a list of rows.
+ * Account state and everything a player can do with it (S-49b, ADR-0009): sign in, save, load, sign
+ * out, confirm the address, change the password, delete the account. The flows live here rather than
+ * in the menu so they can be driven without React, and so the menu stays a list of rows.
  *
  * Nothing in here runs on its own. There is no background sync, no auto-push after an edit and no
  * auto-pull on start beyond revalidating the token: the local document is the source of truth and
@@ -28,10 +28,10 @@ import type { AccountUser } from './schema';
 import { pull, push, type RemoteProfile } from './sync';
 
 /** Which request is in flight; the rows disable themselves rather than spinning. */
-export type AccountBusy = 'none' | 'signin' | 'save' | 'load';
+export type AccountBusy = 'none' | 'signin' | 'save' | 'load' | 'verify' | 'password' | 'delete';
 
 /** The surfaces the account rows can open. */
-export type AccountDialog = 'signin' | 'load' | 'conflict' | null;
+export type AccountDialog = 'signin' | 'load' | 'conflict' | 'account' | 'password' | 'delete' | null;
 
 export interface AccountConflict {
   /** The version the account holds right now — always ahead of ours, or this would not be a conflict. */
@@ -55,6 +55,8 @@ export interface AccountState {
   /** One sentence when something did not. */
   error: string;
   conflict: AccountConflict | null;
+  /** Set once a confirmation email has been asked for again, so the row can say so. */
+  verificationSent: boolean;
   dialog: AccountDialog;
   /** A blob already fetched (the first pull after sign-in), waiting for the player to confirm. */
   pending: RemoteProfile | null;
@@ -69,6 +71,11 @@ export interface AccountState {
   load: () => Promise<void>;
   /** The two lossy ways out of a 409 (spec §5.5). */
   resolveConflict: (choice: 'server' | 'device') => Promise<void>;
+  /** Ask for another confirmation email for the signed-in address. */
+  resendVerification: () => Promise<void>;
+  /** Both answer `true` when the server agreed, so the dialog knows which panel to show. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  deleteAccount: () => Promise<boolean>;
   signOut: () => Promise<void>;
   /** Revalidate a stored token on start-up; does nothing when there is none. */
   restore: () => Promise<void>;
@@ -117,6 +124,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     notice: '',
     error: '',
     conflict: null,
+    verificationSent: false,
     dialog: null,
     pending: null,
 
@@ -138,7 +146,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
      * what is on screen behind their back (spec §5.5's spirit, applied to the first run).
      */
     adopt: async (user) => {
-      set({ user, busy: 'load', error: '', dialog: null });
+      set({ user, busy: 'load', error: '', dialog: null, verificationSent: false });
       try {
         const remote = await pull();
         if (remote === null) {
@@ -223,6 +231,70 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       }
     },
 
+    /**
+     * The address is confirmed by opening a link in an email, so all this can do is ask for the
+     * email again — and PocketBase will not send a second one within its own cooldown. The row
+     * therefore says a mail is on its way, never that a new one was sent.
+     */
+    resendVerification: async () => {
+      const { user } = get();
+      if (user === null || user.email === '') return;
+      set({ busy: 'verify', error: '' });
+      try {
+        const { resendVerification } = await import('./auth');
+        await resendVerification(user.email);
+        set({ verificationSent: true, busy: 'none' });
+      } catch (error) {
+        set({ error: accountErrorMessage(error), busy: 'none' });
+      }
+    },
+
+    /**
+     * PocketBase revokes every token of the account when its password changes, so `changePassword`
+     * signs in again and hands back a fresh record; the store takes it as the current user.
+     */
+    changePassword: async (currentPassword, newPassword) => {
+      if (get().user === null) return false;
+      set({ busy: 'password', error: '' });
+      try {
+        const auth = await import('./auth');
+        const user = await auth.changePassword(currentPassword, newPassword);
+        set({ user, busy: 'none' });
+        return true;
+      } catch (error) {
+        set({ error: accountErrorMessage(error), busy: 'none' });
+        return false;
+      }
+    },
+
+    /**
+     * The account and the copy it holds are gone; this browser's profiles are not touched. What is
+     * left is exactly a signed-out app that has never saved, so the version counter goes back to 0.
+     */
+    deleteAccount: async () => {
+      if (get().user === null) return false;
+      set({ busy: 'delete', error: '' });
+      try {
+        const { deleteAccount } = await import('./auth');
+        await deleteAccount();
+      } catch (error) {
+        set({ error: accountErrorMessage(error), busy: 'none' });
+        return false;
+      }
+      rememberVersion(0);
+      set({
+        user: null,
+        dirty: false,
+        busy: 'none',
+        notice: '',
+        error: '',
+        conflict: null,
+        pending: null,
+        verificationSent: false,
+      });
+      return true;
+    },
+
     signOut: async () => {
       // Loaded lazily: signing out must not be the thing that pulls the SDK into the first load.
       const { signOut } = await import('./auth');
@@ -239,6 +311,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         error: '',
         conflict: null,
         pending: null,
+        verificationSent: false,
         dialog: null,
       });
     },

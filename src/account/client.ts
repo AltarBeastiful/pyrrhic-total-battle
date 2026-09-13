@@ -18,6 +18,14 @@ export const PKCE_SESSION_KEY = 'pyrrhic.account.pkce';
 
 /** The path the OAuth provider comes back to, relative to the app root (investigation 0012). */
 export const OAUTH_CALLBACK_FILE = 'oauth-callback';
+/**
+ * The two paths the backend's emails point at, relative to the app root. PocketBase's own templates
+ * open its dashboard; `ops/pocketbase/pb_migrations/1789315200_account_hardening.js` rewrites them to
+ * `<app root>/password-reset?token=…` and `<app root>/verify-email?token=…`, which are answered here
+ * the way `oauth-callback` is — by `src/main.tsx`, before the app mounts.
+ */
+export const PASSWORD_RESET_FILE = 'password-reset';
+export const VERIFY_EMAIL_FILE = 'verify-email';
 
 export const USERS_COLLECTION = 'users';
 export const PROFILES_COLLECTION = 'profiles';
@@ -48,6 +56,8 @@ export type AccountErrorKind =
   | 'network'
   /** Wrong credentials, an expired session, or a provider that refused. */
   | 'auth'
+  /** The account exists, but its email address has never been confirmed. */
+  | 'unverified'
   /** The OAuth round trip could not be verified (state mismatch, no code). */
   | 'oauth'
   /** The backend answered, but not with something we can use. */
@@ -182,6 +192,26 @@ export function isOAuthCallback(): boolean {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
   return params.has('code') || params.has('error');
+}
+
+/** A page load that is an answer to something the account started elsewhere. */
+export type AccountCallback =
+  { kind: 'oauth' } | { kind: 'password-reset'; token: string } | { kind: 'verify-email'; token: string };
+
+/**
+ * Which of the three, if any. The two email paths are recognised by the **path** — the token alone
+ * would be ambiguous, and a `?token=` on the app root is not ours — while OAuth keeps its historic
+ * query test, because Google may come back to any path the redirect URI names.
+ *
+ * A trailing slash is tolerated: GitHub Pages serves `404.html` for both spellings.
+ */
+export function readCallback(): AccountCallback | null {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.replace(/\/+$/, '');
+  const token = new URLSearchParams(window.location.search).get('token') ?? '';
+  if (path.endsWith(`/${PASSWORD_RESET_FILE}`)) return { kind: 'password-reset', token };
+  if (path.endsWith(`/${VERIFY_EMAIL_FILE}`)) return { kind: 'verify-email', token };
+  return isOAuthCallback() ? { kind: 'oauth' } : null;
 }
 
 // ---- The client --------------------------------------------------------------------------------

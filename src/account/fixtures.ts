@@ -123,6 +123,26 @@ class FakeCollection {
     return Promise.resolve(this.call('requestVerification', [email]));
   }
 
+  confirmVerification(token: string): Promise<unknown> {
+    return Promise.resolve(this.call('confirmVerification', [token]));
+  }
+
+  requestPasswordReset(email: string): Promise<unknown> {
+    return Promise.resolve(this.call('requestPasswordReset', [email]));
+  }
+
+  confirmPasswordReset(token: string, password: string, passwordConfirm: string): Promise<unknown> {
+    return Promise.resolve(this.call('confirmPasswordReset', [token, password, passwordConfirm]));
+  }
+
+  update(id: string, body: unknown): Promise<unknown> {
+    return Promise.resolve(this.call('update', [id, body]));
+  }
+
+  delete(id: string): Promise<unknown> {
+    return Promise.resolve(this.call('delete', [id]));
+  }
+
   /** The three auth calls all save the token, exactly as the SDK does. */
   private auth(method: string, args: unknown[]): Promise<unknown> {
     const result = this.call(method, args) as { token?: string; record?: unknown };

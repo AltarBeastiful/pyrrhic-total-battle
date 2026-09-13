@@ -122,3 +122,29 @@ test('saving without a session is refused before anything is sent', async () => 
   await expect(push(newRoot(), 0, 'device-1')).rejects.toMatchObject({ kind: 'auth' });
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+test('a save refused for an unconfirmed address is told apart from an expired session', async () => {
+  await signIn();
+  // The hook returns this body verbatim; a thrown ApiError could not carry the reason (0.40.4).
+  vi.stubGlobal('fetch', () =>
+    Promise.resolve(
+      respond(403, { code: 403, message: 'email not verified', data: { reason: 'email_not_verified' } }),
+    ),
+  );
+  await expect(push(newRoot(), 0, 'device-1')).rejects.toMatchObject({
+    kind: 'unverified',
+    message: 'Confirm your email address first: open the link in the email we sent, then save again.',
+  });
+
+  vi.stubGlobal('fetch', () => Promise.resolve(respond(403, { code: 403, message: 'forbidden', data: {} })));
+  await expect(push(newRoot(), 0, 'device-1')).rejects.toMatchObject({ kind: 'auth' });
+});
+
+test('a save the rate limiter refused says to wait, not that something broke', async () => {
+  await signIn();
+  vi.stubGlobal('fetch', () => Promise.resolve(respond(429, { message: 'Too Many Requests.' })));
+  await expect(push(newRoot(), 0, 'device-1')).rejects.toMatchObject({
+    kind: 'server',
+    message: 'Too many saves in a row. Wait a minute, then try again.',
+  });
+});
