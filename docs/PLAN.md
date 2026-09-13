@@ -403,8 +403,8 @@ PocketBase version before code.
 - **S-49a Backend**: docker-compose (pinned PocketBase, Caddy), `pb_hooks/main.pb.js` save endpoint, the
   `profiles` collection and rules, CORS origins, hardening, S3 backups; a smoke script covering the spec's §7
   acceptance checklist. Lives in `ops/pocketbase/` in this repo (no secrets committed).
-- **S-49b Client**: sign-in with Google (PKCE flow per spec §5.2, `#/oauth-callback` hash route or `404.html`
-  copy), optional email/password, account menu rows (Sign in / Signed in as … / Save to account / Load from
+- **S-49b Client**: sign-in with Google (PKCE flow per spec §5.2; the callback must be a real path with a `404.html` copy of
+  `index.html` — Google forbids fragments in redirect URIs, investigation 0012), optional email/password, account menu rows (Sign in / Signed in as … / Save to account / Load from
   account / Sign out), `remoteVersion`/`deviceId`/`dirty` in local state, conflict modal, SW `NetworkOnly`
   rule, storage persistence prompt; then retire the Gist adapter (S-45), the sync dialog's token handling and
   the QR code hand-off (share links stay: they carry a march, not an account).

@@ -76,6 +76,17 @@ spec's design broke, but four details did — see *Deviations*.
    returns a `types.DateTime` struct, which does not serialise to the plain string the
    client contract expects. The wire format is `2026-09-13 02:59:21.284Z` — note the
    space, it is **not** ISO-8601 with a `T`.
+9. **The OAuth callback cannot be a hash route.** Spec §5.2 offers
+   `#/oauth-callback` as an alternative to copying `index.html` to `404.html`. Google
+   rejects it: *"Redirect URIs cannot contain the fragment component"*
+   (<https://developers.google.com/identity/protocols/oauth2/web-server>, "Redirect URI
+   validation rules"). The registered URI is therefore
+   `https://altarbeastiful.github.io/pyrrhic-total-battle/oauth-callback`, **without a
+   trailing slash** — GitHub Pages serves `404.html` for it, and with Vite's
+   `base: './'` the relative asset URLs still resolve against `/pyrrhic-total-battle/`.
+   (A trailing slash would make them resolve against `…/oauth-callback/` and 404.)
+   `docs/PLAN.md` § M8 S-49b still lists the hash route as an option; it is not one.
+   PLAN.md was out of scope for this pass, so it needs a one-line edit by the owner.
 
 ## What S-49b must do differently
 
@@ -97,9 +108,9 @@ spec's design broke, but four details did — see *Deviations*.
   403. Only `getFirstListItem('')` (read) and `POST /api/app/profile` (write) are
   available; `delete` still works if a "remove my cloud copy" action is ever wanted.
 - **Pin `pocketbase@0.28.1`** in `package.json` when S-49b starts.
-- **The OAuth redirect URI is frozen once registered with Google.** Decide hash route
-  (`#/oauth-callback`) vs the `404.html` copy *before* creating the Google client;
-  `ops/pocketbase/README.md` step 8 currently assumes the hash route.
+- **Ship a build-time `404.html` copy of `index.html`** and route
+  `/pyrrhic-total-battle/oauth-callback` client-side. The hash route is not available
+  (deviation 9), and the redirect URI is frozen once registered with Google.
 
 ## Files produced
 
@@ -122,7 +133,8 @@ profile.
 
 1. The exact Dynu hostname (`pyrrhic-backend.dynu.net` is assumed throughout).
 2. The two-line philou change (`sites-enabled` volume + `import`).
-3. Hash route vs `404.html` for the OAuth callback — it freezes the Google redirect URI.
+3. Nothing to decide on the OAuth callback — Google's fragment rule settles it — but
+   `docs/PLAN.md` § M8 S-49b still offers the hash route and should be corrected.
 4. Backup target: built-in S3 (Backblaze B2 / Scaleway) or a nightly pull to the
    owner's machine.
 5. Whether email/password sign-in stays enabled on `users` (it is on by default and

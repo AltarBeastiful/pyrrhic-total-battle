@@ -1,0 +1,58 @@
+# Pyrrhic profile-sync backend — PocketBase behind philou's Caddy.
+#
+# Deployed to /home/ubuntu/pyrrhic/ on the "main" server (see
+# docs/investigations/0010-hosting-pocketbase-beside-philou.md).
+#
+# No `ports:` on purpose — 8090 is reachable only from the `deploy_default`
+# Docker network, which philou's Caddy is already attached to.
+
+# Fixes the compose project name (and therefore the volume name
+# `pyrrhic_pb_data`) regardless of the directory it is run from.
+name: pyrrhic
+
+services:
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:0.40.4
+    container_name: pyrrhic-pocketbase
+    restart: unless-stopped
+
+    volumes:
+      - pb_data:/pb_data
+      - ./pb_hooks:/pb_hooks
+      - ./pb_migrations:/pb_migrations
+
+    # The image entrypoint only injects --dir/--publicDir/--hooksDir when it is
+    # given no arguments (or only flags). Because the first argument here is
+    # `serve`, every directory has to be spelled out — otherwise PocketBase
+    # falls back to /usr/local/bin/pb_data and the volumes above are ignored.
+    command:
+      - serve
+      - --http=0.0.0.0:8090
+      - --dir=/pb_data
+      - --publicDir=/pb_public
+      - --hooksDir=/pb_hooks
+      - --migrationsDir=/pb_migrations
+      - --origins=https://altarbeastiful.github.io,http://localhost:5180
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8090/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - deploy_default
+
+networks:
+  deploy_default:
+    external: true
+
+volumes:
+  pb_data:

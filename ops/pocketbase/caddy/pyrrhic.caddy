@@ -1,0 +1,51 @@
+# Pyrrhic profile-sync backend.
+#
+# Install as /home/ubuntu/caddy-sites/pyrrhic.caddy on the "main" server; philou's
+# Caddy imports /etc/caddy/sites-enabled/*.caddy from that bind-mounted directory
+# (see docs/investigations/0010-hosting-pocketbase-beside-philou.md).
+#
+# Reload after editing:
+#   docker exec philou-web caddy reload --config /etc/caddy/Caddyfile
+#
+# `pocketbase` resolves on the shared `deploy_default` network. If the container
+# name differs from the service name, use `pyrrhic-pocketbase:8090` instead.
+
+pyrrhic-backend.dynu.net {
+	encode zstd gzip
+
+	# --- Admin UI ---------------------------------------------------------
+	# /_/* is denied to everyone by default. 203.0.113.1 is a TEST-NET-3 address
+	# that is nobody's, so the `not remote_ip` matcher is true for every client.
+	# To administer: replace it with your current public IP (`curl -4 ifconfig.me`),
+	# reload Caddy, do the work, then put 203.0.113.1 back and reload again.
+	# Several values are allowed: `not remote_ip 1.2.3.4 5.6.7.0/24`.
+	#
+	# This only hides the dashboard. The superuser API (password + rate limited)
+	# stays reachable; add `/api/collections/_superusers/*` to the matcher below
+	# if you want that closed too.
+	@admin {
+		path /_/*
+		not remote_ip 203.0.113.1
+	}
+	respond @admin 403
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+	}
+
+	# PocketBase owns its own CORS headers (the --origins flag in docker-compose.yml).
+	# Do not add Access-Control-* here or the browser will see duplicates.
+	reverse_proxy pocketbase:8090
+
+	log {
+		output file /data/pyrrhic-access.log {
+			roll_size 10MiB
+			roll_keep 3
+		}
+	}
+}
