@@ -13,7 +13,9 @@ review checks against. When a rule and a plan disagree, the rule wins; change th
    travel together: on desktop at the top of the sticky March pane; on phones in a Material bottom app bar
    holding a very quick summary (damage, silver, a few troop tiles, text cut when needed) and Generate, with
    the full recap in a sheet that opens from it. The top app bar carries only the brand and the account. One
-   sticky bar per edge, nothing else sticky. *(Amended by the coordinator on 2026-09-13 after spike 0009,
+   sticky bar per edge, nothing else sticky. *(Amended again 2026-09-13, owner: the bottom edge holds a
+   command bar — housing, objective and Generate together, as TotalStack's — on desktop and phones; the
+   march panel keeps the answer.)* *(Amended by the coordinator on 2026-09-13 after spike 0009,
    adopting V1; the earlier text said "one sticky app bar with the answer, a floating Generate below desktop
    width" — revert here if you disagree.)*
 3. **Configure once, generate often.** Troops and bonuses change rarely; the monster, the housing and the

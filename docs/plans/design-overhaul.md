@@ -258,6 +258,19 @@ left-out row — so nothing slides over the pills while the setup scrolls; only 
 Details and Saved marches flow below it. An inner scroll exists only as a fallback for marches with more
 pills than the viewport holds.
 
+## 5.6 Command bar (owner's choice, 2026-09-13, after seeing TotalStack's update)
+
+Leadership, authority and dominance change with every march, so they sit with Generate, as TotalStack's
+bottom bar does. **Desktop (large and up):** a sticky bottom **command bar** inside the page width — the
+three housing inputs (plain, select-all, pool glyph), the objective select, and the gold Generate — while
+the right-hand march panel keeps the recap and the pills (sticky under the app bar; the bar's height is
+reserved below it). The Battle card keeps enemy formation, method, order and recovery only. **Phones:** a
+two-row bar — housing as three tappable value chips (tap = the chip becomes an input; the fourth chip opens
+the objective) above the answer figure ("🎯 4.7M · 🪙 8.1M · 10 stacks") and Generate; tapping the figure
+opens the march sheet. Canvas page "Housing with Generate", artboards `CommandBar.dc.html`, `PhoneBar.dc.html`.
+Design rule 2 is amended accordingly: one sticky bar per edge — the app bar on top, the command bar below.
+Story D-56.
+
 ## 6. Visual language
 
 ### 6.1 Colour
@@ -582,6 +595,8 @@ starts.
   desktop J1 **2 taps · 0 screens** either way. J2 4 taps, J3 4 taps, J5 2 taps. The 2.14 screens the
   page used to travel are gone with `scrollToMarch`: the March is the phone's sheet and the desktop
   column, so a Generate changes what is already on screen.
+- D-56 Command bar: housing + objective + Generate in a sticky bottom bar (desktop) and a two-row phone bar;
+  housing and objective leave the Battle card; the march panel keeps recap and pills (§5.6).
 - D-55 Implement direction A from the canvas artboards (desktop, phone, phone sheet) with tier-coloured
   march pills; pixel diff against the artboards as the gate.
 - D-54 Shorten the setup on phones: the method and the objective fold to the chosen option in the list

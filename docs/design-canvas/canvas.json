@@ -47,6 +47,15 @@
       "w": 1400,
       "h": 1000,
       "title": "Direction C \u2014 Game hall"
+    },
+    {
+      "file": "PhoneBar.dc.html",
+      "x": 1500,
+      "y": 1160,
+      "w": 390,
+      "h": 900,
+      "title": "Alt 2 \u2014 phone: two-row command bar (housing chips + answer + Generate)",
+      "page": "page-2"
     }
   ],
   "annotations": [
@@ -55,7 +64,7 @@
       "x": 1500,
       "y": 1160,
       "w": 360,
-      "text": "Direction A chosen (2026-09-13). The march recap now follows TotalStack's readable pills: pool total in the pool colour, two-line pills (glyph, code and tier above, the count large below), coloured by tier. B and C are kept below for reference."
+      "text": "Direction A chosen (2026-09-13). The march recap now follows TotalStack's readable pills: pool total in the pool colour, two-line pills (glyph, code and tier above, the count large below), coloured by tier. B and C are kept below for reference.\n\nOwner chose Alt 2 (command bar). Phone: a two-row bar \u2014 housing chips (tap to edit inline, the last chip opens the objective) above the answer figure and Generate; tapping the figure opens the march sheet."
     }
   ],
   "launch": {
