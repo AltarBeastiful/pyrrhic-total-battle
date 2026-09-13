@@ -21,9 +21,9 @@ export type ChipRowId = 'guardsmen' | 'specialists';
 export interface TroopRow {
   id: TroopRowId;
   label: string;
-  /** How a tier is written: G1, S1, E1, M3. */
-  prefix: string;
-  /** Groups with more than one type per tier show the top tier as tiles; engineers have one. */
+  /** How a tier is written: G1, S1, E1, M3 — the prefix `TierSelect` writes its options with. */
+  prefix: 'G' | 'S' | 'E' | 'M';
+  /** Groups with more than one type per tier show the top tier as chips; engineers have one. */
   tiles: boolean;
   /** Engineers and monsters have a "none" position below their first tier. */
   allowNone: boolean;

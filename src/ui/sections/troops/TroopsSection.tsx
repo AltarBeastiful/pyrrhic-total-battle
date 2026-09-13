@@ -3,23 +3,32 @@
  * gets right: for each group, pick the lowest and the highest tier you own, then click out the
  * top-tier types you have not unlocked yet.
  *
- * The card does not collapse: **the form is the summary**. Four short rows, always on screen,
- * readable at a glance and editable in place — there is nothing to unfold and nothing to remember
- * between visits. A group set to "none" shrinks to its one stepper, which is what keeps the card
- * four lines tall and Mercenaries right under it (R4).
+ * The block does not collapse: **the form is the summary** (R6). Four short rows, always on screen,
+ * readable at a glance and editable in place. No `Paper` and no padding of its own either — the
+ * setup column is one continuous sheet, so the section is a title and its rows and the shell owns
+ * the space and the rule that tell it from Mercenaries under it (D-19). That leaves the March as
+ * the page's only elevated object.
+ *
+ * Rebuilt on Mantine at M-04, copying the reference row for row (investigation 0009, `v1-desktop`):
+ * a coloured `GroupMarker`, the group's name, "from [G1] to [G4]" as two tiny `TierSelect`s, then
+ * "at G4:" and one emoji `Chip` per top-tier type — checked means "I own it". Engineers and
+ * monsters read "—" at both ends when the group is not used at all.
  *
  * Lower tiers are always in. A type the March left out below the top tier is named under its row
- * with a way to put it back, so nothing the account fields is ever hidden. The card describes the
+ * with a way to put it back, so nothing the account fields is ever hidden. The block describes the
  * *account*, not one march: everything here is written straight to the active profile.
  */
+import { Box, Button, Flex, Group, Stack, Text, Title } from '@mantine/core';
 import { useId } from 'react';
 
+import { CATEGORIES } from '@/data/types';
 import type { UnitDef } from '@/data/types';
 import type { ProfileTroops, TierRange } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { GroupMarker, UnitTile } from '@/ui/domain';
-import { Button, Card, cn, TierStepper } from '@/ui/kit';
-import { Cluster, Stack } from '@/ui/layout';
+import { Glyph, GroupMarker } from '@/ui/domain2';
+import type { GlyphKind } from '@/ui/domain2';
+import { ChipRow, TierSelect } from '@/ui/kit2';
+import type { ChipRowItem } from '@/ui/kit2';
 
 import {
   isChipRow,
@@ -34,11 +43,14 @@ import {
 import type { TroopRow, TroopRowId } from './rows';
 
 /**
- * The kit's fields stand their label above the control; a Troops row wants both ends of the range
- * on one line, named by one short word. The stepper keeps its whole spoken name ("Guardsmen from")
- * — the label is only moved out of sight, and the word beside it is the picture of it.
+ * How wide the group's name is before the ranges start. A fixed column is what lines the four
+ * "from" selects up under each other, as the reference does; it still leaves the two selects room
+ * on a 390 px screen, where only the chips wrap to a second line.
  */
-const QUIET_LABEL = '[&>span]:sr-only';
+const NAME_WIDTH = 112;
+
+/** The theme's chip height (`--chip-size`, 2 rem): how tall a row of chips is allowed to be. */
+const CHIP_HEIGHT = 32;
 
 export function TroopsSection() {
   const profile = useStore(selectActiveProfile);
@@ -48,14 +60,14 @@ export function TroopsSection() {
   if (profile === undefined) return null;
   const troops = profile.troops;
   const profileId = profile.id;
-  // A profile with no troops is a profile being filled in: the card says how, above the rows.
+  // A profile with no troops is a profile being filled in: the block says how, above the rows.
   const empty = isEmptyArmy(troops);
 
   const patch = (next: Partial<ProfileTroops>): void => {
     updateProfile(profileId, (current) => ({ troops: { ...current.troops, ...next } }));
   };
 
-  /** Writes one group's range. The tiles describe one tier, so a moved top tier forgets them. */
+  /** Writes one group's range. The chips describe one tier, so a moved top tier forgets them. */
   const setRange = (row: TroopRowId, next: TierRange | null): void => {
     const ranges: Record<TroopRowId, TierRange | null> = {
       guardsmen: troops.guardsmen,
@@ -89,24 +101,28 @@ export function TroopsSection() {
   };
 
   /**
-   * A top-tier tile. Guardsmen and specialists have one type per category per tier, so the tile
-   * writes the category the whole game reasons in; monsters have four unrelated types, so the tile
-   * writes the unit id. Putting a type back always clears both, because the March writes ids.
+   * The top tier's chips, written back the way the schema stores them: guardsmen and specialists
+   * have one type per category per tier, so a chip drops the *category* (`topTierExcluded`);
+   * monsters have four unrelated types at one tier, so a chip drops the *unit id*. Checking a chip
+   * always clears both, because the March leaves types out by id.
    */
-  const setTile = (row: TroopRowId, unit: UnitDef, on: boolean): void => {
-    const chipRow = isChipRow(row) ? row : null;
+  const setIncluded = (row: TroopRowId, nextIds: string[]): void => {
+    const units = topTierUnits(troops, row);
+    const included = new Set(nextIds);
+    const dropped = units.filter((unit) => !included.has(unit.id));
     const topTierExcluded = { ...troops.topTierExcluded };
-    const category = unit.category;
-    if (chipRow !== null && category !== undefined) {
-      const rest = topTierExcluded[chipRow].filter((item) => item !== category);
-      topTierExcluded[chipRow] = on ? rest : [...rest, category];
+    if (isChipRow(row)) {
+      const categories = new Set(dropped.map((unit) => unit.category));
+      topTierExcluded[row] = CATEGORIES.filter((category) => categories.has(category));
     }
-    const excludedUnitIds = on
-      ? troops.excludedUnitIds.filter((id) => id !== unit.id)
-      : chipRow === null
-        ? [...troops.excludedUnitIds.filter((id) => id !== unit.id), unit.id]
-        : troops.excludedUnitIds;
-    patch({ topTierExcluded, excludedUnitIds });
+    const ofTopTier = new Set(units.map((unit) => unit.id));
+    patch({
+      topTierExcluded,
+      excludedUnitIds: [
+        ...troops.excludedUnitIds.filter((id) => !ofTopTier.has(id)),
+        ...(isChipRow(row) ? [] : dropped.map((unit) => unit.id)),
+      ],
+    });
   };
 
   const putBack = (ids: string[]): void => {
@@ -114,31 +130,29 @@ export function TroopsSection() {
   };
 
   return (
-    <Card tone="none" shape="flat" as="section" id="troops" aria-labelledby={titleId}>
-      <Stack gap={3}>
-        <Stack gap={1}>
-          <h2 id={titleId} className="text-lg">
-            Troops
-          </h2>
-          {empty && (
-            <p className="text-muted text-sm">Add your troops: pick the lowest and highest tier you own.</p>
-          )}
-        </Stack>
-        <Stack gap={2}>
-          {TROOP_ROWS.map((row) => (
-            <GroupRow
-              key={row.id}
-              row={row}
-              troops={troops}
-              onFrom={setFrom}
-              onTo={setTo}
-              onTile={setTile}
-              onPutBack={putBack}
-            />
-          ))}
-        </Stack>
+    <Stack component="section" id="troops" aria-labelledby={titleId} gap="xs">
+      <Title order={2} size="h5" id={titleId}>
+        Troops
+      </Title>
+      {empty && (
+        <Text size="sm" c="dimmed">
+          Add your troops: pick the lowest and highest tier you own.
+        </Text>
+      )}
+      <Stack gap={8}>
+        {TROOP_ROWS.map((row) => (
+          <GroupRow
+            key={row.id}
+            row={row}
+            troops={troops}
+            onFrom={setFrom}
+            onTo={setTo}
+            onIncluded={setIncluded}
+            onPutBack={putBack}
+          />
+        ))}
       </Stack>
-    </Card>
+    </Stack>
   );
 }
 
@@ -147,43 +161,50 @@ interface GroupRowProps {
   troops: ProfileTroops;
   onFrom: (row: TroopRowId, value: number | null) => void;
   onTo: (row: TroopRowId, value: number | null) => void;
-  onTile: (row: TroopRowId, unit: UnitDef, on: boolean) => void;
+  onIncluded: (row: TroopRowId, unitIds: string[]) => void;
   onPutBack: (ids: string[]) => void;
 }
 
 /**
- * One group on one line from `sm` up: its marker and name, the two ends of the range, and the tiles
- * of the top tier. On a phone the name and the two words step aside and the tiles wrap under the
- * steppers, which is the widest the row can be without a sideways scroll at 390 px — there, the
- * tier code is the group's name ("G3" is guardsmen). A row at "none" has no code to read, so it
- * keeps its name at every width.
+ * One group on one line: its marker and name, the two ends of the range, and the chips of the top
+ * tier. The line wraps rather than scrolls, so on a phone the chips drop under the two selects —
+ * which is the second line the design allows the row (R14).
  */
-function GroupRow({ row, troops, onFrom, onTo, onTile, onPutBack }: GroupRowProps) {
+function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRowProps) {
   const range = troops[row.id];
   const tiers = rowTiers(row.id);
   const bounds = rowBounds(row.id);
   // Guardsmen and specialists cannot be switched off — unless they already are, and someone has to
   // be able to step out of that.
   const allowNone = row.allowNone || range === null;
-  const tiles = row.tiles ? topTierUnits(troops, row.id) : [];
+  const units = row.tiles ? topTierUnits(troops, row.id) : [];
   const leftOut = leftOutUnits(troops, row.id);
+  const top = range === null ? '' : `${row.prefix}${range.max}`;
+
+  const items: ChipRowItem[] = units.map((unit) => ({
+    value: unit.id,
+    label: shortCode(unit.label),
+    glyph: <Glyph kind={chipGlyph(unit)} />,
+    color: row.id,
+    // The chip's words are a code; a screen reader gets the type's real name instead.
+    name: unit.name,
+  }));
+  const included = units.filter((unit) => topTierIncluded(troops, row.id, unit)).map((unit) => unit.id);
 
   return (
-    <Stack gap={1}>
-      <Cluster gap={2} align="center">
-        {/* The bar is the group's colour and, for a screen reader, its name; the word beside it is
-            the same name drawn, and only where there is room for it. */}
-        <GroupMarker group={row.id} />
-        <span
-          aria-hidden="true"
-          className={cn(range === null ? 'inline-block' : 'hidden sm:inline-block', 'truncate sm:w-24')}
-        >
-          {row.label}
-        </span>
-        <Cluster gap={1}>
-          {range !== null && <span className="text-muted hidden text-sm sm:inline">from</span>}
-          <TierStepper
-            className={QUIET_LABEL}
+    <Stack gap={2}>
+      {/* `Flex` rather than `Group` for the one thing a group cannot say: a line that wraps stays
+          closer to itself (4 px) than two groups are to each other (8 px), so the chips read as
+          part of the row above them on a phone. */}
+      <Flex wrap="wrap" align="center" columnGap="sm" rowGap={4}>
+        <Box w={NAME_WIDTH}>
+          <GroupMarker group={row.id} label={row.label} />
+        </Box>
+        <Group gap={6} wrap="nowrap">
+          <Text size="xs" c="dimmed">
+            from
+          </Text>
+          <TierSelect
             label={`${row.label} from`}
             prefix={row.prefix}
             tiers={tiers}
@@ -195,75 +216,75 @@ function GroupRow({ row, troops, onFrom, onTo, onTile, onPutBack }: GroupRowProp
               onFrom(row.id, value);
             }}
           />
-        </Cluster>
-        {range !== null && (
-          <Cluster gap={1}>
-            <span className="text-muted hidden text-sm sm:inline">to</span>
-            <TierStepper
-              className={QUIET_LABEL}
-              label={`${row.label} to`}
-              prefix={row.prefix}
-              tiers={tiers}
-              value={range.max}
-              allowNone={row.allowNone}
-              min={range.min}
-              max={bounds.max}
-              onChange={(value) => {
-                onTo(row.id, value);
-              }}
-            />
-          </Cluster>
+          <Text size="xs" c="dimmed">
+            to
+          </Text>
+          <TierSelect
+            label={`${row.label} to`}
+            prefix={row.prefix}
+            tiers={tiers}
+            value={range?.max ?? null}
+            allowNone={allowNone}
+            min={range?.min ?? bounds.min}
+            max={bounds.max}
+            onChange={(value) => {
+              onTo(row.id, value);
+            }}
+          />
+        </Group>
+        {range !== null && items.length > 0 && (
+          <Group gap={6} wrap="nowrap">
+            <Text size="xs" c="dimmed">{`at ${top}:`}</Text>
+            {/* The kit's chip row keeps a live region under the chips for the "N at most" refusal.
+                A troop row has no maximum and never says it, so the row is held to the height of a
+                chip and the empty line overflows into the gap instead of adding a line to the card
+                and pushing "at G4:" off the chips' centre. */}
+            <Box h={CHIP_HEIGHT}>
+              <ChipRow
+                label={`${row.label} at ${top}`}
+                items={items}
+                value={included}
+                gap={4}
+                onChange={(next) => {
+                  onIncluded(row.id, next);
+                }}
+              />
+            </Box>
+          </Group>
         )}
-        {range !== null && tiles.length > 0 && (
-          <Cluster gap={1} role="group" aria-label={`${row.label} at ${row.prefix}${range.max}`}>
-            <span className="text-muted text-sm">{`at ${row.prefix}${range.max}:`}</span>
-            {tiles.map((unit) => {
-              const on = topTierIncluded(troops, row.id, unit);
-              return (
-                <UnitTile
-                  key={unit.id}
-                  unit={unit}
-                  size="md"
-                  state={on ? 'on' : 'off'}
-                  onPress={() => {
-                    onTile(row.id, unit, !on);
-                  }}
-                />
-              );
-            })}
-          </Cluster>
-        )}
-      </Cluster>
+      </Flex>
       {leftOut.length > 0 && (
-        <Cluster gap={1} align="center">
-          <span className="text-muted text-sm">Left out:</span>
-          {leftOut.map((unit) => (
-            <Button
-              key={unit.id}
-              size="sm"
-              variant="quiet"
-              aria-label={`Put back ${unit.name}`}
-              onPress={() => {
-                onPutBack([unit.id]);
-              }}
-            >
-              {unit.name}
-            </Button>
-          ))}
-          {leftOut.length > 1 && (
-            <Button
-              size="sm"
-              variant="quiet"
-              aria-label={`Put back all ${row.label.toLowerCase()}`}
-              onPress={() => {
-                onPutBack(leftOut.map((unit) => unit.id));
-              }}
-            >
-              Put back all
-            </Button>
-          )}
-        </Cluster>
+        <Group gap={6} wrap="wrap" align="center" pl={{ base: 0, sm: NAME_WIDTH }}>
+          <Text size="xs" c="dimmed">
+            {`Left out: ${leftOut.map((unit) => unit.name).join(', ')} ·`}
+          </Text>
+          <Button
+            variant="subtle"
+            size="xs"
+            aria-label={`Put back left-out ${row.label.toLowerCase()}`}
+            onClick={() => {
+              onPutBack(leftOut.map((unit) => unit.id));
+            }}
+          >
+            Put back
+          </Button>
+        </Group>
       )}
     </Stack>
   );
+}
+
+/**
+ * Which emoji opens a chip. Troops are recognised by the category the whole game reasons in;
+ * monsters by their race, because a monster tier holds four unrelated beasts and dragons — the same
+ * choice `UnitTile` makes, so the chip here and the tile in the March read alike.
+ */
+function chipGlyph(unit: UnitDef): GlyphKind {
+  if (unit.kind === 'monster' && unit.race !== undefined) return unit.race;
+  return unit.category ?? 'army';
+}
+
+/** The short code without its tier digits: "ARC1" is drawn as "ARC", the row already said "at G4". */
+function shortCode(label: string): string {
+  return label.replace(/\d+$/, '') || label;
 }

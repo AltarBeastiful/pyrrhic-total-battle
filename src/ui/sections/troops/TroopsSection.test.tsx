@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+/**
+ * The Troops block, asked for the way a player meets it: by role and by the words on screen. The
+ * two ends of a range are `combobox`es named "Guardsmen from" / "Guardsmen to"; the top tier is a
+ * named `group` of `checkbox` chips; "Put back" is a button. Nothing here knows a class name.
+ */
+import { cleanup, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import type { ProfileTroops } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
+import { renderWithTheme } from '@/ui/kit2/testRender';
 
 import { TroopsSection } from './TroopsSection';
 
@@ -29,152 +36,160 @@ function setTroops(next: Partial<ProfileTroops>): void {
   state.updateProfile(profile.id, (current) => ({ troops: { ...current.troops, ...next } }));
 }
 
-const stepper = (name: string) => screen.getByRole('group', { name });
+/** One end of a range. Its value is the tier as a number, or "—" when the group is unused. */
+const end = (name: string): HTMLSelectElement => screen.getByRole('combobox', { name }) as HTMLSelectElement;
 
-/** What one end of a range reads: the only button of the stepper that carries a word. */
-const shown = (name: string): string =>
-  within(stepper(name)).getByRole('button', { name: /^(?:[GSEM]\d+|none)$/ }).textContent ?? '';
+const option = (name: string, label: string): HTMLOptionElement =>
+  within(end(name)).getByRole('option', { name: label }) as HTMLOptionElement;
 
-test('the card is the form: every group is on screen with nothing to open', () => {
-  render(<TroopsSection />);
+const chip = (name: string): HTMLInputElement => screen.getByRole('checkbox', { name }) as HTMLInputElement;
+
+test('the block is the form: four groups, both ends of every range, nothing to unfold', () => {
+  renderWithTheme(<TroopsSection />);
 
   expect(screen.getByRole('heading', { level: 2, name: 'Troops' })).toBeTruthy();
-  // No disclosure to unfold: the four rows are the card.
   expect(screen.queryByRole('button', { name: /^Troops/ })).toBeNull();
-  for (const group of ['Guardsmen', 'Specialists', 'Engineers', 'Monsters']) {
-    expect(stepper(`${group} from`)).toBeTruthy();
-  }
+  // Four rows, two ends each — engineers and monsters keep their "to" even when unused.
+  expect(screen.getAllByRole('combobox')).toHaveLength(8);
 
   // The first-run account: guardsmen I–III, specialists I, nothing else.
-  expect(shown('Guardsmen from')).toBe('G1');
-  expect(shown('Guardsmen to')).toBe('G3');
-  expect(shown('Specialists from')).toBe('S1');
-  expect(shown('Engineers from')).toBe('none');
-  expect(shown('Monsters from')).toBe('none');
-  expect(screen.getByRole('group', { name: 'Guardsmen at G3' })).toBeTruthy();
+  expect(end('Guardsmen from').value).toBe('1');
+  expect(end('Guardsmen to').value).toBe('3');
+  expect(end('Specialists from').value).toBe('1');
+
+  // The top tier is a named group of chips, each one an emoji and the type's short code.
+  const top = screen.getByRole('group', { name: 'Guardsmen at G3' });
+  expect(within(top).getAllByRole('checkbox')).toHaveLength(3);
+  expect(within(top).getByText('RD')).toBeTruthy();
+  expect(chip('Rider III').checked).toBe(true);
 });
 
-test('a group at none is its stepper and nothing else', () => {
-  render(<TroopsSection />);
+test('a group with nothing in it reads "—" at both ends and has no chips', () => {
+  renderWithTheme(<TroopsSection />);
 
   expect(troops().engineers).toBeNull();
-  expect(stepper('Engineers from')).toBeTruthy();
-  expect(screen.queryByRole('group', { name: 'Engineers to' })).toBeNull();
+  expect(end('Engineers from').value).toBe('—');
+  expect(end('Engineers to').value).toBe('—');
   expect(screen.queryByRole('group', { name: /^Engineers at/ })).toBeNull();
-  expect(shown('Engineers from')).toBe('none');
+  expect(end('Monsters to').value).toBe('—');
 });
 
-test('the arrow keys move one end of a range, and the two ends clamp each other', () => {
-  render(<TroopsSection />);
+test('the highest tier widens the range, and the lowest cannot pass it', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<TroopsSection />);
 
-  // G1–G3 becomes G1–G4 with a single key, which is the whole point of the stepper (R2, D-22).
-  fireEvent.keyDown(stepper('Guardsmen to'), { key: 'ArrowRight' });
+  await user.selectOptions(end('Guardsmen to'), '4');
   expect(troops().guardsmen).toEqual({ min: 1, max: 4 });
-  expect(shown('Guardsmen to')).toBe('G4');
+  expect(screen.getByRole('group', { name: 'Guardsmen at G4' })).toBeTruthy();
 
-  // "From" cannot pass "to": it stops on the tier "to" sits on.
-  for (let press = 0; press < 6; press += 1) {
-    fireEvent.keyDown(stepper('Guardsmen from'), { key: 'ArrowRight' });
-  }
-  expect(troops().guardsmen).toEqual({ min: 4, max: 4 });
-
-  // …and "to" cannot drop below "from" either.
-  fireEvent.keyDown(stepper('Guardsmen to'), { key: 'ArrowLeft' });
-  fireEvent.keyDown(stepper('Guardsmen to'), { key: 'ArrowLeft' });
-  expect(troops().guardsmen).toEqual({ min: 4, max: 4 });
-  expect(shown('Guardsmen from')).toBe('G4');
+  await user.selectOptions(end('Guardsmen to'), '2');
+  expect(troops().guardsmen).toEqual({ min: 1, max: 2 });
+  // "From" may not offer a tier above "to"…
+  expect(option('Guardsmen from', 'G3').disabled).toBe(true);
+  expect(option('Guardsmen from', 'G2').disabled).toBe(false);
 });
 
-test('a guardsmen tile drops the category of the top tier, and only of the top tier', () => {
-  render(<TroopsSection />);
+test('the lowest tier clamps the highest from the other side', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<TroopsSection />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Rider III, tier 3, on' }));
+  await user.selectOptions(end('Guardsmen from'), '3');
+  expect(troops().guardsmen).toEqual({ min: 3, max: 3 });
+  // …and "to" may not drop below "from".
+  expect(option('Guardsmen to', 'G2').disabled).toBe(true);
+  expect(option('Guardsmen to', 'G4').disabled).toBe(false);
+});
+
+test('a guardsmen chip drops the category of the top tier, and only of the top tier', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<TroopsSection />);
+
+  await user.click(chip('Rider III'));
 
   expect(troops().topTierExcluded.guardsmen).toEqual(['mounted']);
   expect(troops().excludedUnitIds).toEqual([]);
-  expect(screen.getByRole('button', { name: 'Rider III, tier 3, off' })).toBeTruthy();
-  // Rider I and Rider II are lower tiers: always in, and never drawn as a tile.
-  expect(screen.queryByRole('button', { name: /^Rider II,/ })).toBeNull();
+  expect(chip('Rider III').checked).toBe(false);
+  // Rider I and Rider II are lower tiers: always in, and never drawn as a chip.
+  expect(screen.queryByRole('checkbox', { name: 'Rider II' })).toBeNull();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Rider III, tier 3, off' }));
+  await user.click(chip('Rider III'));
   expect(troops().topTierExcluded.guardsmen).toEqual([]);
 });
 
-test('a monster tile drops that one monster, because a tier has four unrelated ones', () => {
+test('a monster chip drops that one monster, because a tier has four unrelated ones', async () => {
+  const user = userEvent.setup();
   setTroops({ monsters: { min: 3, max: 3 } });
-  render(<TroopsSection />);
+  renderWithTheme(<TroopsSection />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Battle Boar, tier 3, on' }));
+  await user.click(chip('Battle Boar'));
 
   expect(troops().excludedUnitIds).toEqual(['battle-boar']);
   expect(troops().topTierExcluded).toEqual({ guardsmen: [], specialists: [] });
-  expect(screen.getByRole('button', { name: 'Emerald Dragon, tier 3, on' })).toBeTruthy();
+  expect(chip('Emerald Dragon').checked).toBe(true);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Battle Boar, tier 3, off' }));
+  await user.click(chip('Battle Boar'));
   expect(troops().excludedUnitIds).toEqual([]);
 });
 
-test('a type the March left out below the top tier is named, and can be put back', () => {
+test('moving the top tier forgets the chips, because they described the tier below', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<TroopsSection />);
+
+  await user.click(chip('Rider III'));
+  expect(troops().topTierExcluded.guardsmen).toEqual(['mounted']);
+
+  await user.selectOptions(end('Guardsmen to'), '4');
+  expect(troops().topTierExcluded.guardsmen).toEqual([]);
+  expect(chip('Rider IV').checked).toBe(true);
+});
+
+test('a type the March left out below the top tier is named, and goes back in one press', async () => {
+  const user = userEvent.setup();
   setTroops({ excludedUnitIds: ['archer-1', 'rider-2'] });
-  render(<TroopsSection />);
+  renderWithTheme(<TroopsSection />);
 
-  expect(screen.getByText('Left out:')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Put back Archer I' }));
-  expect(troops().excludedUnitIds).toEqual(['rider-2']);
+  expect(screen.getByText(/Left out: Archer I, Rider II/)).toBeTruthy();
 
-  // One name left, so the "all" shortcut goes with it.
-  expect(screen.queryByRole('button', { name: /^Put back all/ })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Put back Rider II' }));
+  await user.click(screen.getByRole('button', { name: 'Put back left-out guardsmen' }));
+
   expect(troops().excludedUnitIds).toEqual([]);
-  expect(screen.queryByText('Left out:')).toBeNull();
+  expect(screen.queryByText(/Left out:/)).toBeNull();
 });
 
-test('"put back all" clears the whole group at once', () => {
-  setTroops({ excludedUnitIds: ['archer-1', 'rider-2', 'battle-boar'] });
-  render(<TroopsSection />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Put back all guardsmen' }));
-
-  // Only the guardsmen went back: the monster the March left out is not this row's business.
-  expect(troops().excludedUnitIds).toEqual(['battle-boar']);
-});
-
-test('stepping a group out of none opens the rest of its row, and back again', () => {
-  render(<TroopsSection />);
-
-  expect(troops().monsters).toBeNull();
-  expect(screen.queryByRole('group', { name: 'Monsters to' })).toBeNull();
-
-  // Monsters only exist from tier 3 in the tables, so "on" cannot mean tier 1.
-  fireEvent.keyDown(stepper('Monsters from'), { key: 'ArrowRight' });
-  expect(troops().monsters).toEqual({ min: 3, max: 3 });
-  expect(screen.getByRole('group', { name: 'Monsters to' })).toBeTruthy();
-  expect(screen.getByRole('group', { name: 'Monsters at M3' })).toBeTruthy();
-
-  // Stepping back below the first tier switches the group off again.
-  fireEvent.keyDown(stepper('Monsters from'), { key: 'ArrowLeft' });
-  expect(troops().monsters).toBeNull();
-  expect(shown('Monsters from')).toBe('none');
-});
-
-test('engineers have a range but no tiles: one type per tier means nothing to click out', () => {
+test('engineers have a range but no chips: one type per tier means nothing to click out', () => {
   setTroops({ engineers: { min: 1, max: 4 } });
-  render(<TroopsSection />);
+  renderWithTheme(<TroopsSection />);
 
-  expect(shown('Engineers from')).toBe('E1');
-  expect(shown('Engineers to')).toBe('E4');
+  expect(end('Engineers from').value).toBe('1');
+  expect(end('Engineers to').value).toBe('4');
   expect(screen.queryByRole('group', { name: /^Engineers at/ })).toBeNull();
 });
 
-test('an account with nothing in it says what to do, above the four rows', () => {
+test('a group comes out of "—" and goes back into it', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<TroopsSection />);
+
+  // Monsters only exist from tier 3 in the tables, so "on" cannot mean tier 1.
+  await user.selectOptions(end('Monsters from'), '3');
+  expect(troops().monsters).toEqual({ min: 3, max: 3 });
+  expect(screen.getByRole('group', { name: 'Monsters at M3' })).toBeTruthy();
+
+  await user.selectOptions(end('Monsters from'), '—');
+  expect(troops().monsters).toBeNull();
+  expect(end('Monsters from').value).toBe('—');
+  expect(screen.queryByRole('group', { name: /^Monsters at/ })).toBeNull();
+});
+
+test('an account with nothing in it says what to do, above the four rows', async () => {
+  const user = userEvent.setup();
   setTroops({ guardsmen: null, specialists: null, engineers: null, monsters: null });
-  render(<TroopsSection />);
+  renderWithTheme(<TroopsSection />);
 
   expect(screen.getByText('Add your troops: pick the lowest and highest tier you own.')).toBeTruthy();
-  expect(screen.getAllByRole('group', { name: /from$/ })).toHaveLength(4);
-  expect(shown('Guardsmen from')).toBe('none');
+  expect(screen.getAllByRole('combobox')).toHaveLength(8);
+  expect(end('Guardsmen from').value).toBe('—');
 
-  // Every group can be stepped out of "none", guardsmen included.
-  fireEvent.keyDown(stepper('Guardsmen from'), { key: 'ArrowRight' });
+  // Every group can be brought out of "—", guardsmen included.
+  await user.selectOptions(end('Guardsmen from'), '1');
   expect(troops().guardsmen).toEqual({ min: 1, max: 1 });
 });
