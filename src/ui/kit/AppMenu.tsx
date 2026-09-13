@@ -62,7 +62,9 @@ export function AppMenu({ label, trigger, sections, width = 240 }: AppMenuProps)
           `aria-haspopup` onto whatever it is given, and neither is allowed on a `<span>`
           (investigation 0007's `aria-allowed-attr`). The trigger carries its own name. */}
       <Menu.Target>{trigger}</Menu.Target>
-      <Menu.Dropdown aria-label={label}>
+      {/* Long menus (a signed-in account has a dozen rows) scroll inside the dropdown instead of
+          running past the viewport, where the last rows could not be reached. */}
+      <Menu.Dropdown aria-label={label} mah="calc(100dvh - 5rem)" style={{ overflowY: 'auto' }}>
         {sections.map((section, index) => (
           <div key={section.id}>
             {index > 0 && <Menu.Divider />}
