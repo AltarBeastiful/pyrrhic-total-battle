@@ -85,19 +85,25 @@ body {
   }
 }
 
-/* One bar per edge means a browser that scrolls something into view has to stop short of both of
-   them, or it lands the thing it scrolled to *under* one (WCAG 2.2 §2.4.11, focus not obscured —
-   and every `scrollIntoView` the page, an anchor or the keyboard makes). The snapport is inset by
-   the app bar over the page and by the command bar under it: 88 px plus the 24 px of air below it
-   from 1200 px, and the phone bar's 102 px under that (design plan §5.6). */
+/* A browser that scrolls something into view has to stop short of the command bar or it lands the
+   thing it scrolled to under it (WCAG 2.2 §2.4.11). That inset is a `scroll-margin-bottom` on the
+   scroll targets themselves (sections, the March), NOT a global `scroll-padding-bottom`: a global
+   inset also covers the command bar's own fields, so the browser's focus-on-press treated them as
+   obscured and scrolled the page to the bar's in-flow position at the end of the document — a jump
+   of 220 px on desktop and 460 px on a phone at every tap in a housing field. */
 html {
   scroll-padding-top: var(--mantine-spacing-md);
-  scroll-padding-bottom: 6.5rem;
+}
+
+section[id],
+[data-scroll-target] {
+  scroll-margin-bottom: 6.5rem;
 }
 
 @media (min-width: 75em) {
-  html {
-    scroll-padding-bottom: calc(var(--pyr-commandbar-height) + 1.5rem);
+  section[id],
+  [data-scroll-target] {
+    scroll-margin-bottom: calc(var(--pyr-commandbar-height) + 1.5rem);
   }
 }
 
