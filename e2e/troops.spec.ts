@@ -36,9 +36,9 @@ test('a tier range and one chip decide what the march fields', async ({ page }) 
   await expect(block.getByRole('checkbox', { name: 'Rider IV' })).not.toBeChecked();
 
   await generate(page, { leadership: 20000 });
-  await expect(stackPills(page).first()).toBeVisible({ timeout: 30_000 });
+  await expect(marchTiles(page).first()).toBeVisible({ timeout: 30_000 });
 
-  const labels = await stackLabels(page);
+  const labels = await marchStackLabels(page);
   expect(labels.some((label) => label.startsWith('ARC4'))).toBe(true);
   expect(labels.some((label) => label.startsWith('RD4'))).toBe(false);
   // Lower tiers are always in, so the riders the player does own still march.
