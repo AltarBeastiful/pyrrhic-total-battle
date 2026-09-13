@@ -565,6 +565,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Password account completed (reset, verification enforced, change password, delete account,
+  server hardening by migration); S-46/S-47 retired. Design canvas with three page directions published for the
+  owner's pick (working files in `docs/design-canvas/`); S-30 questionnaire relayed to the owner.
 - 2026-09-13 — Owner retired S-46 (Google Drive) and S-47 (generic endpoint): the S-49 account supersedes both.
 - 2026-09-13 — S-49b built (ADR-0009 proposed): opt-in account sync on PocketBase, Google (PKCE, real
   `/oauth-callback` path + `404.html` copy) and email/password, conflict dialog per the spec, service worker
