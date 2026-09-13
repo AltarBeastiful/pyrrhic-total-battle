@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/postbuild-404.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -35,6 +35,7 @@
     "@mantine/core": "9.6.1",
     "@mantine/hooks": "9.6.1",
     "lucide-react": "1.45.0",
+    "pocketbase": "0.28.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.6.2",

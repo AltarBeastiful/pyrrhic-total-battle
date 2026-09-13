@@ -28,6 +28,7 @@ function pwaPrecache(): Plugin {
   let root = process.cwd();
   let outDir = 'dist';
   let publicDir = '';
+  let backendOrigin = '';
 
   return {
     name: 'pyrrhic:pwa-precache',
@@ -37,6 +38,9 @@ function pwaPrecache(): Plugin {
       root = config.root;
       outDir = config.build.outDir;
       publicDir = config.publicDir;
+      // The worker must never cache the account backend (ADR-0009); it is the one origin the app
+      // talks to at run time, and it is only known at build time.
+      backendOrigin = config.env.VITE_BACKEND_ORIGIN ?? '';
     },
 
     // Everything is read back from the written output rather than from the rollup bundle: the
@@ -59,7 +63,7 @@ function pwaPrecache(): Plugin {
       }
 
       const template = readFileSync(path.join(publicDir, SERVICE_WORKER_FILE), 'utf8');
-      const rendered = renderServiceWorker(template, files, hash.digest('hex').slice(0, 16));
+      const rendered = renderServiceWorker(template, files, hash.digest('hex').slice(0, 16), backendOrigin);
       writeFileSync(path.join(dir, SERVICE_WORKER_FILE), rendered);
       this.info(`${SERVICE_WORKER_FILE}: precaching ${files.length} files`);
     },
@@ -81,9 +85,12 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        // One stable vendor chunk (React + Mantine) so the first-load budget can name it.
+        // One stable vendor chunk (React + Mantine + zod) so the first-load budget can name it.
+        // zod is listed because the account module (S-49b) also uses it: without this it is hoisted
+        // into a shared chunk of its own, which the budget's globs would not count as first load
+        // even though `index.html` preloads it.
         manualChunks(id: string) {
-          if (/node_modules\/(react|react-dom|scheduler|@mantine)\//.test(id)) return 'vendor';
+          if (/node_modules\/(react|react-dom|scheduler|@mantine|zod)\//.test(id)) return 'vendor';
           return undefined;
         },
       },

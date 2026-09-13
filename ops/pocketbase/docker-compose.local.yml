@@ -1,0 +1,22 @@
+# Local development / e2e override. NEVER deployed.
+#
+#   docker network create deploy_default          # once, on a machine without philou
+#   docker compose -f ops/pocketbase/docker-compose.yml \
+#                  -f ops/pocketbase/docker-compose.local.yml up -d
+#
+# It does the two things the production file deliberately refuses to do:
+#   * publish 8090 on the host, so a browser on this machine can reach PocketBase;
+#   * widen --origins to the ports this repo serves the app on (Vite 5180,
+#     `pnpm preview` / Playwright 4173), so CORS does not reject the dev build.
+services:
+  pocketbase:
+    ports:
+      - "127.0.0.1:8090:8090"
+    command:
+      - serve
+      - --http=0.0.0.0:8090
+      - --dir=/pb_data
+      - --publicDir=/pb_public
+      - --hooksDir=/pb_hooks
+      - --migrationsDir=/pb_migrations
+      - --origins=http://localhost:5180,http://127.0.0.1:5180,http://localhost:4173,http://127.0.0.1:4173

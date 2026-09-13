@@ -17,13 +17,13 @@
 // handler (which saves through $app and therefore bypasses API rules) owns every write.
 // Reads stay on the standard GET /api/collections/profiles/records route.
 
-routerAdd("POST", "/api/app/profile", (e) => {
+routerAdd('POST', '/api/app/profile', (e) => {
   const auth = e.auth;
   if (!auth) {
-    throw new UnauthorizedError("authentication required");
+    throw new UnauthorizedError('authentication required');
   }
-  if (auth.collection().name !== "users") {
-    throw new ForbiddenError("only user accounts can save a profile");
+  if (auth.collection().name !== 'users') {
+    throw new ForbiddenError('only user accounts can save a profile');
   }
 
   // DynamicModel shape values double as the Go types to bind into.
@@ -32,23 +32,23 @@ routerAdd("POST", "/api/app/profile", (e) => {
   const body = new DynamicModel({
     data: nullObject(),
     version: 0,
-    deviceId: "",
+    deviceId: '',
   });
   e.bindBody(body);
 
   const version = body.version;
-  if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
-    throw new BadRequestError("invalid version");
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
+    throw new BadRequestError('invalid version');
   }
   if (body.data === null || body.data === undefined) {
-    throw new BadRequestError("missing data");
+    throw new BadRequestError('missing data');
   }
 
-  const deviceId = String(body.deviceId || "").slice(0, 100);
+  const deviceId = String(body.deviceId || '').slice(0, 100);
 
   let record = null;
   try {
-    record = $app.findFirstRecordByFilter("profiles", "user = {:uid}", {
+    record = $app.findFirstRecordByFilter('profiles', 'user = {:uid}', {
       uid: auth.id,
     });
   } catch (err) {
@@ -61,44 +61,44 @@ routerAdd("POST", "/api/app/profile", (e) => {
     if (version !== 1) {
       return e.json(409, {
         code: 409,
-        message: "conflict",
-        data: { serverVersion: 0, updated: "" },
+        message: 'conflict',
+        data: { serverVersion: 0, updated: '' },
       });
     }
 
-    const collection = $app.findCollectionByNameOrId("profiles");
+    const collection = $app.findCollectionByNameOrId('profiles');
     record = new Record(collection);
-    record.set("user", auth.id);
-    record.set("data", body.data);
-    record.set("version", 1);
-    record.set("updatedBy", deviceId);
+    record.set('user', auth.id);
+    record.set('data', body.data);
+    record.set('version', 1);
+    record.set('updatedBy', deviceId);
     $app.save(record);
 
     return e.json(200, {
       version: 1,
-      updated: record.getString("updated"),
+      updated: record.getString('updated'),
     });
   }
 
-  const serverVersion = record.getInt("version");
+  const serverVersion = record.getInt('version');
   if (version !== serverVersion + 1) {
     return e.json(409, {
       code: 409,
-      message: "conflict",
+      message: 'conflict',
       data: {
         serverVersion: serverVersion,
-        updated: record.getString("updated"),
+        updated: record.getString('updated'),
       },
     });
   }
 
-  record.set("data", body.data);
-  record.set("version", version);
-  record.set("updatedBy", deviceId);
+  record.set('data', body.data);
+  record.set('version', version);
+  record.set('updatedBy', deviceId);
   $app.save(record);
 
   return e.json(200, {
     version: version,
-    updated: record.getString("updated"),
+    updated: record.getString('updated'),
   });
 });

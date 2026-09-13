@@ -21,13 +21,10 @@ export interface UiState {
   /** True between an edit and the debounced write that follows it. */
   dirty: boolean;
   lastSavedAt: number | null;
-  /** True when the last sync check found a profile edited on both sides (the account menu says so). */
-  syncConflict: boolean;
   setPendingShare: (payload: SharePayload | null) => void;
   setShareError: (message: string | null) => void;
   markDirty: () => void;
   markSaved: (at?: number) => void;
-  setSyncConflict: (conflict: boolean) => void;
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -35,7 +32,6 @@ export const useUiStore = create<UiState>()((set) => ({
   shareError: null,
   dirty: false,
   lastSavedAt: null,
-  syncConflict: false,
   setPendingShare: (payload) => {
     set({ pendingShare: payload });
   },
@@ -47,9 +43,6 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   markSaved: (at) => {
     set({ dirty: false, lastSavedAt: at ?? Date.now() });
-  },
-  setSyncConflict: (conflict) => {
-    set({ syncConflict: conflict });
   },
 }));
 

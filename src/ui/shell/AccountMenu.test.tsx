@@ -42,7 +42,6 @@ test('the menu carries the profile actions, the file actions, the link and About
     'Delete profile',
     'Export JSON',
     'Import JSON',
-    'Sync…',
     'Share this march',
     'About Pyrrhic',
   ];

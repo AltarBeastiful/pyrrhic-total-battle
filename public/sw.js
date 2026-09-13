@@ -9,10 +9,17 @@
  * its own origin. Navigations are network-first so a freshly deployed index.html is picked up,
  * falling back to the precached shell when there is no network; hashed assets are cache-first
  * because their name changes whenever their content does.
+ *
+ * The one exception is the account backend (ADR-0009, spec §5.6): it is NetworkOnly, always, even
+ * if it is ever served from this very origin. A profile pull answered out of a cache after a save
+ * on another device is a silent conflict loop that is extremely hard to diagnose.
  */
 
 const PRECACHE = /* precache-manifest */ [];
 const VERSION = /* precache-version */ 'dev';
+// Origin of the profile-sync backend, substituted at build time from VITE_BACKEND_ORIGIN.
+// Empty means this build has no account at all.
+const BACKEND = /* backend-origin */ '';
 
 const CACHE_NAME = `pyrrhic-${VERSION}`;
 const CACHE_PREFIX = 'pyrrhic-';
@@ -59,6 +66,8 @@ self.addEventListener('fetch', (event) => {
   if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
 
   const url = new URL(request.url);
+  // NetworkOnly for the account backend: never read it from a cache, never write it to one.
+  if (BACKEND !== '' && url.origin === BACKEND) return;
   if (url.origin !== self.location.origin) return; // never proxy another origin
 
   event.respondWith(request.mode === 'navigate' ? handleNavigate(event) : handleAsset(event));

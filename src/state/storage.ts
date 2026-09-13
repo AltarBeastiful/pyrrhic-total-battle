@@ -1,10 +1,11 @@
 /**
  * Persistence adapters (ADR-0004). The store only ever sees `StorageAdapter`, so swapping localStorage
- * for IndexedDB (`idb-keyval`) later touches this file alone. `RemoteStore` is the sync-side sibling
- * described in investigation 0001; no adapter implements it yet (S-44/S-45).
+ * for IndexedDB (`idb-keyval`) later touches this file alone.
+ *
+ * There is no remote adapter contract here any more: the per-profile `RemoteStore` of investigation
+ * 0001 existed for the Gist adapter, which ADR-0009 retired. Account sync pushes the *whole* root
+ * document as one opaque blob and lives in `src/account/`.
  */
-import type { Profile } from './schema';
-
 /** Single key holding the whole root document (ADR-0004: one document, not ~90 keys). */
 export const STORAGE_KEY = 'pyrrhic.v1';
 /** Where an unreadable document is parked so a user can still recover it by hand. */
@@ -84,28 +85,4 @@ export function createMemoryAdapter(initial: string | null = null): MemoryAdapte
       return corrupt;
     },
   };
-}
-
-// ---- Remote (sync) contract -------------------------------------------------------------------------
-/** One remote profile document as the index lists it. */
-export interface RemoteDocMeta {
-  id: string;
-  rev: number;
-  updatedAt: number;
-  deviceName?: string;
-}
-
-export type RemotePutResult = { ok: true; rev: number } | { ok: false; conflict: RemoteDocMeta };
-
-/**
- * Investigation 0001: the remote holds **one document per profile** plus a small index, so two devices
- * editing different profiles never conflict. `expectedRev` is the optimistic-concurrency check
- * (`null` = "must not exist yet"); a mismatch returns a conflict instead of overwriting.
- * Implementations: Gist (S-45), Google Drive appData (S-46), generic endpoint (S-47).
- */
-export interface RemoteStore {
-  list(): Promise<RemoteDocMeta[]>;
-  get(id: string): Promise<Profile | null>;
-  put(id: string, doc: Profile, expectedRev: number | null): Promise<RemotePutResult>;
-  delete(id: string, expectedRev: number | null): Promise<RemotePutResult>;
 }

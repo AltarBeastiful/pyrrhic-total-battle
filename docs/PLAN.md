@@ -287,7 +287,7 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-16 Other (VIP, Dragon, Hero, pills) and Events editors | done | `ebce3e4` |
 | S-17 Temple/training, enemy, housing, priority, Generate, help text | done | housing and enemy now in the Battle card (M-07) |
 | S-18 Battle setups inside a profile | done | setup bar in the Bonuses card |
-| S-19 Cross-device hand-off (profile/battle links, QR, Web Share) | done | investigation 0001; the QR hand-off is retired by S-49b |
+| S-19 Cross-device hand-off (profile/battle links, QR, Web Share) | done | investigation 0001; the QR / Web Share hand-off is retired by S-49b, share links stay |
 | S-20 Bonus aggregation + effective HP/strength | done | validated against review §3 and every fixture |
 | S-21 Kill order builders | done | EP, MP, Monsters Last, custom |
 | S-22 Stack sizing (flat profile, exact fill) | done | `tests/engine/stacker.test.ts` reproduces the fixture |
@@ -302,15 +302,15 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-40 Priority search: average damage | done | worker, progress, cancel, time box |
 | S-41 Priority search: damage per silver / gold / dragon coin | done | with the all-types baseline and the honest-objective note (rule 29) |
 | S-43 Compare saved stacks | done | saved marches at the foot of the March card |
-| S-44 Sync adapter interface + explicit Pull/Push | done | investigation 0001 |
-| S-45 GitHub Gist sync adapter | done | `src/sync/gist.ts`, `docs/sync.md`; retired by S-49b once account sync is live |
+| S-44 Sync adapter interface + explicit Pull/Push | retired | investigation 0001; the per-profile RemoteStore contract went with S-45 (ADR-0009) |
+| S-45 GitHub Gist sync adapter | retired | removed by S-49b: `src/sync/**` and `src/ui/sync/**` deleted, `docs/sync.md` rewritten (ADR-0009) |
 | S-46 Google Drive appData adapter | gated | investigation 0002: needs a domain we own, a privacy policy page, Search Console and brand verification |
 | S-47 Generic endpoint adapter + reference Worker | backlog | not started |
 | S-48 Best captains for a march | deferred | written up in §3.7; delayed by the owner (rule 33: engine stories wait until the UI is right) |
 | S-50 PWA / offline / install prompt | done | hand-written service worker, no PWA dependency |
 | S-52 Accessibility and mobile layout pass | done | axe zero on the kit page and the app in both schemes; `pnpm contrast` over 176 pairs |
 | S-49a Account sync backend | in progress | groundwork done and verified: `ops/pocketbase/` (PocketBase 0.40.4 compose, Caddy site, save hook, `profiles` migration, smoke script), every spec `[verify]` answered in investigation 0012, hosting in investigation 0010. **Deployment is pending the owner** (Dynu hostname, the two-line philou change, the Google OAuth client, the backup target) |
-| S-49b Account sync client | in progress | being built in `src/`; needs ADR-0009 and `docs/sync.md` rewritten |
+| S-49b Account sync client | done | `src/account/**`, `src/ui/account/**`, ADR-0009, `/oauth-callback` + `404.html` copy, SW NetworkOnly for the backend, `storage.persist()`; e2e `e2e/account.spec.ts` against a local 0.40.4 container. Hidden until the owner sets `VITE_BACKEND_ORIGIN` |
 
 D-02…D-09 are a different list — the TotalStack features we are not building; they keep their own section at
 the end of §5. All are deferred except **D-04 Total Optimization**, done as the opt-in relaxed-preservation
@@ -565,6 +565,11 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — S-49b built (ADR-0009 proposed): opt-in account sync on PocketBase, Google (PKCE, real
+  `/oauth-callback` path + `404.html` copy) and email/password, conflict dialog per the spec, service worker
+  bypass for the backend, `storage.persist()`; Gist sync and the QR hand-off retired. Hidden until
+  `VITE_BACKEND_ORIGIN` is set; Google sign-in awaits the owner's OAuth client. Pages workflow needs the
+  variable on the build step when deploying.
 - 2026-09-13 — Phase E: journey budgets measured in `e2e/journeys.spec.ts` (J1 3 taps, J2 4, J3 4, J5 2); rules
   compliance review (investigation 0011: 29 met, 5 partly, 0 not met) with fixes (13 px floor, PWA icons in
   the theme's palette, …); S-49a groundwork in `ops/pocketbase/` verified against PocketBase 0.40.4

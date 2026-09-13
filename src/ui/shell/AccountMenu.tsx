@@ -1,7 +1,8 @@
 /**
  * Everything that used to live in the profile bar, behind one control (design plan §5.2): the
- * profile and its name, the other profiles, the four profile actions, the two file actions and
- * sync, the share link, the theme, the offline rows the PWA used to float over the page, and About.
+ * profile and its name, the other profiles, the four profile actions, the two file actions, the
+ * share link, the optional account (S-49b, only in a build that has a backend), the theme, the
+ * offline rows the PWA used to float over the page, and About.
  *
  * None of it takes permanent space, which is the point: the strip it replaces was two rows of
  * chrome on every screen for actions a player uses once a month (design rule 15).
@@ -26,6 +27,7 @@ import {
 import { lazy, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 
+import { useAccountStore } from '@/account/state';
 import { version as gameData } from '@/data';
 import { isInstallAvailable, promptInstall, subscribeToInstall } from '@/pwa/install';
 import { applyUpdate, isUpdateReady, subscribeToUpdate } from '@/pwa/register';
@@ -35,6 +37,7 @@ import type { ImportMode, ParsedImport } from '@/share/exportImport';
 import { THEMES, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
 
+import { useAccountSection } from '../account/section';
 import { AppMenu, Dialog, type AppMenuEntry, type AppMenuSection } from '../kit';
 import { LazySurface } from '../lazy';
 import { copyText, downloadJson } from '../profile/download';
@@ -44,14 +47,14 @@ import { useUiStore } from '../uiStore';
 import classes from './shell.module.css';
 import { saveStatus } from './state';
 
-// Sync drags in the gist adapter and the Web Crypto wrapper, About drags in the data notes; both are
-// opened once in a blue moon, so neither is in the first load (ui-foundation plan §6).
+// The account surfaces drag in the PocketBase SDK and About drags in the data notes; both are opened
+// once in a blue moon, so neither is in the first load (ui-foundation plan §6).
 const AboutDialog = lazy(() => import('../AboutDialog').then((module) => ({ default: module.AboutDialog })));
-const SyncDialog = lazy(() =>
-  import('../sync/SyncDialog').then((module) => ({ default: module.SyncDialog })),
+const AccountDialogs = lazy(() =>
+  import('../account/AccountDialogs').then((module) => ({ default: module.AccountDialogs })),
 );
 
-type DialogKind = 'new' | 'rename' | 'duplicate' | 'delete' | 'sync' | 'about';
+type DialogKind = 'new' | 'rename' | 'duplicate' | 'delete' | 'about';
 
 interface ImportState {
   parsed: ParsedImport | null;
@@ -141,7 +144,9 @@ export function AccountMenu() {
   const setActiveProfile = useStore((state) => state.setActiveProfile);
   const result = useResultStore((state) => state.last);
   const dirty = useUiStore((state) => state.dirty);
-  const conflict = useUiStore((state) => state.syncConflict);
+  const conflict = useAccountStore((state) => state.conflict) !== null;
+  const accountDialog = useAccountStore((state) => state.dialog);
+  const accountSection = useAccountSection();
   const { setColorScheme } = useMantineColorScheme();
 
   const installable = useSyncExternalStore(subscribeToInstall, isInstallAvailable, () => false);
@@ -327,15 +332,6 @@ export function AccountMenu() {
           },
         },
         {
-          id: 'sync',
-          label: 'Sync…',
-          description: 'Between your own devices',
-          icon: <RefreshCw size={ICON} aria-hidden />,
-          onSelect: () => {
-            setDialog('sync');
-          },
-        },
-        {
           id: 'share',
           label: 'Share this march',
           description: result === null ? 'Link to this profile' : 'Link to the march you generated',
@@ -344,6 +340,7 @@ export function AccountMenu() {
         },
       ],
     },
+    ...(accountSection === null ? [] : [accountSection]),
     {
       id: 'theme',
       entries: [
@@ -483,13 +480,8 @@ export function AccountMenu() {
         }
       />
 
-      <LazySurface isOpen={dialog === 'sync'}>
-        <SyncDialog
-          open={dialog === 'sync'}
-          onOpenChange={(open) => {
-            if (!open) close();
-          }}
-        />
+      <LazySurface isOpen={accountDialog !== null}>
+        <AccountDialogs />
       </LazySurface>
 
       <LazySurface isOpen={dialog === 'about'}>

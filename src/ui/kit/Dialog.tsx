@@ -5,9 +5,14 @@
  *
  * Mantine writes `role="dialog"` after its own prop spread, so the role cannot be passed in; it is
  * set on the element once it exists. That is one line rather than rebuilding `Modal` from its parts.
+ *
+ * It is set from a **ref callback**, not an effect. Outside a test environment `Modal` mounts its
+ * content behind a transition, so on the render where `opened` flips true the body is not in the
+ * tree yet and an effect keyed on `opened` finds nothing — which is exactly the case no jsdom test
+ * could see (`env="test"` turns transitions off) and every browser had.
  */
 import { Box, Divider, Modal, Text } from '@mantine/core';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 
 export interface DialogProps {
   opened: boolean;
@@ -34,12 +39,13 @@ export function Dialog({
   size = 'md',
   role = 'dialog',
 }: DialogProps) {
-  const body = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!opened || role !== 'alertdialog') return;
-    body.current?.closest('[role="dialog"]')?.setAttribute('role', 'alertdialog');
-  }, [opened, role]);
+  const body = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node === null || role !== 'alertdialog') return;
+      node.closest('[role="dialog"]')?.setAttribute('role', 'alertdialog');
+    },
+    [role],
+  );
 
   const alert = role === 'alertdialog';
 

@@ -27,6 +27,7 @@ hook, the migration and `smoke.sh` all pass there (12/12).
 
 ```
 docker-compose.yml            pocketbase only; no ports; joins philou's deploy_default
+docker-compose.local.yml      dev/e2e override: publishes 8090, widens --origins. Never deployed.
 caddy/pyrrhic.caddy           site block for philou's sites-enabled directory
 pb_hooks/main.pb.js           POST /api/app/profile — the only write path
 pb_migrations/1789300800_profiles.js   the `profiles` collection, fields, index, rules
@@ -303,3 +304,34 @@ Roll the version back the same way: change the tag in `docker-compose.yml` and
 `docker compose up -d`. PocketBase migrates the schema **forward** on boot, so a
 downgrade needs the backup taken before the upgrade — always
 `POST /api/backups` before changing the image tag.
+
+## Running it on a development machine (S-49b)
+
+The production file publishes no port and allows only the GitHub Pages origin, so a
+browser on your own machine can reach neither. `docker-compose.local.yml` is the
+override that fixes both, and nothing else:
+
+```bash
+docker network create deploy_default          # once; philou owns it on the server
+docker compose -f ops/pocketbase/docker-compose.yml \
+               -f ops/pocketbase/docker-compose.local.yml up -d
+docker compose -f ops/pocketbase/docker-compose.yml exec pocketbase \
+  /usr/local/bin/pocketbase superuser upsert --dir=/pb_data dev@pyrrhic.local devdevdevdev
+curl -s http://127.0.0.1:8090/api/health
+```
+
+The client reads the backend origin at **build** time, so both the dev server and the
+Playwright suite need it in the environment:
+
+```bash
+VITE_BACKEND_ORIGIN=http://127.0.0.1:8090 pnpm dev
+VITE_BACKEND_ORIGIN=http://127.0.0.1:8090 pnpm exec playwright test e2e/account.spec.ts
+```
+
+Without it the app has no account rows at all and `e2e/account.spec.ts` skips itself, which
+is what keeps CI green without Docker. Google sign-in is not available locally (the OAuth
+client is registered against the GitHub Pages origin); email/password is, and is what the
+e2e suite uses.
+
+Tear down with `docker compose -f ops/pocketbase/docker-compose.yml down -v` and
+`docker network rm deploy_default`.

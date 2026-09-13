@@ -60,6 +60,7 @@ describe('renderServiceWorker', () => {
   const template = [
     'const PRECACHE = /* precache-manifest */ [];',
     "const VERSION = /* precache-version */ 'dev';",
+    "const BACKEND = /* backend-origin */ '';",
   ].join('\n');
 
   test('substitutes the list and the version', () => {
@@ -75,11 +76,41 @@ describe('renderServiceWorker', () => {
 
   test('the result is valid JavaScript that exposes the list', () => {
     const rendered = renderServiceWorker(template, ['index.html'], 'abc123');
-    const read = new Function(`${rendered}; return { PRECACHE, VERSION };`) as () => {
+    const read = new Function(`${rendered}; return { PRECACHE, VERSION, BACKEND };`) as () => {
       PRECACHE: string[];
       VERSION: string;
+      BACKEND: string;
     };
-    expect(read()).toEqual({ PRECACHE: ['index.html'], VERSION: 'abc123' });
+    expect(read()).toEqual({ PRECACHE: ['index.html'], VERSION: 'abc123', BACKEND: '' });
+  });
+
+  test('the backend origin is substituted, and reduced to an origin', () => {
+    const rendered = renderServiceWorker(
+      template,
+      ['index.html'],
+      'abc123',
+      'https://pyrrhic-backend.dynu.net/api/',
+    );
+    expect(rendered).toContain("/* backend-origin */ 'https://pyrrhic-backend.dynu.net'");
+  });
+
+  test('no backend origin leaves the worker with no exception to make', () => {
+    expect(renderServiceWorker(template, [], 'abc123')).toContain("/* backend-origin */ ''");
+    expect(renderServiceWorker(template, [], 'abc123', '   ')).toContain("/* backend-origin */ ''");
+  });
+
+  test('a backend origin that is not a URL fails the build', () => {
+    expect(() => renderServiceWorker(template, [], 'abc123', 'pyrrhic-backend')).toThrow(
+      /VITE_BACKEND_ORIGIN/,
+    );
+  });
+
+  test('fails loudly when the backend marker was edited out of the template', () => {
+    const withoutBackend = [
+      'const PRECACHE = /* precache-manifest */ [];',
+      "const VERSION = /* precache-version */ 'dev';",
+    ].join('\n');
+    expect(() => renderServiceWorker(withoutBackend, [], 'abc123')).toThrow(/backend-origin/);
   });
 
   test('fails loudly when a marker was edited out of the template', () => {

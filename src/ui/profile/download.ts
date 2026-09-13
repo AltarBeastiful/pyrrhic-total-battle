@@ -1,6 +1,9 @@
 /**
- * Browser plumbing for export and sharing. Everything here is guarded: an export must never throw
- * because a browser lacks the Web Share API or blocks object URLs.
+ * Browser plumbing for export and sharing. Both are guarded: an export must never throw because a
+ * browser blocks object URLs, and a copy must never throw because the clipboard is unavailable.
+ *
+ * The Web Share "send to another device" hand-off that used to live here went with the Gist sync it
+ * belonged to (ADR-0009): a share link and a JSON file are the two ways out, and neither needs it.
  */
 import type { ExportedFile } from '@/share/exportImport';
 
@@ -18,45 +21,6 @@ export function downloadJson(file: ExportedFile): void {
   setTimeout(() => {
     URL.revokeObjectURL(url);
   }, 0);
-}
-
-export function toJsonFile(file: ExportedFile): File {
-  return new File([file.json], file.filename, { type: 'application/json' });
-}
-
-export function canShare(): boolean {
-  return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-}
-
-function canShareFiles(file: File): boolean {
-  return typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
-}
-
-export type ShareOutcome = 'shared' | 'cancelled' | 'unavailable';
-
-/**
- * "Send to another device": hand the JSON export to the OS share sheet when it accepts files
- * (AirDrop, Nearby Share, a messaging app), otherwise share the link itself.
- */
-export async function sendToDevice(options: {
-  title: string;
-  text: string;
-  url: string;
-  file?: ExportedFile;
-}): Promise<ShareOutcome> {
-  if (!canShare()) return 'unavailable';
-  const file = options.file === undefined ? null : toJsonFile(options.file);
-  try {
-    if (file && canShareFiles(file)) {
-      await navigator.share({ title: options.title, text: options.text, files: [file] });
-    } else {
-      await navigator.share({ title: options.title, text: options.text, url: options.url });
-    }
-    return 'shared';
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') return 'cancelled';
-    return 'unavailable';
-  }
 }
 
 /** Copy to the clipboard, falling back to the legacy command when the API is unavailable. */

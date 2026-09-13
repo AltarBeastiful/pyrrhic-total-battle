@@ -65,12 +65,31 @@ export function buildPrecacheList(files: Iterable<string>): string[] {
 
 const MANIFEST_MARKER = /\/\* precache-manifest \*\/\s*\[[^\]]*\]/;
 const VERSION_MARKER = /\/\* precache-version \*\/\s*'[^']*'/;
+const BACKEND_MARKER = /\/\* backend-origin \*\/\s*'[^']*'/;
+
+/** An origin and nothing else: no path, no query, no trailing slash. */
+export function normaliseBackendOrigin(value: string | undefined): string {
+  const trimmed = (value ?? '').trim();
+  if (trimmed === '') return '';
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    throw new Error(`${SERVICE_WORKER_FILE}: VITE_BACKEND_ORIGIN is not a URL (${JSON.stringify(trimmed)})`);
+  }
+}
 
 /**
- * Substitutes the precache list and the cache version into the worker template
- * (`public/sw.js`, which is also what the dev server serves as-is).
+ * Substitutes the precache list, the cache version and the account backend's origin into the worker
+ * template (`public/sw.js`, which is also what the dev server serves as-is). The backend origin is
+ * what the worker refuses to cache (ADR-0009, spec §5.6); an empty one means this build has no
+ * account.
  */
-export function renderServiceWorker(template: string, files: readonly string[], version: string): string {
+export function renderServiceWorker(
+  template: string,
+  files: readonly string[],
+  version: string,
+  backendOrigin = '',
+): string {
   if (!MANIFEST_MARKER.test(template)) {
     throw new Error(`${SERVICE_WORKER_FILE}: the /* precache-manifest */ marker is missing`);
   }
@@ -80,8 +99,13 @@ export function renderServiceWorker(template: string, files: readonly string[], 
   if (!/^[A-Za-z0-9._-]+$/.test(version)) {
     throw new Error(`${SERVICE_WORKER_FILE}: unusable cache version ${JSON.stringify(version)}`);
   }
+  if (!BACKEND_MARKER.test(template)) {
+    throw new Error(`${SERVICE_WORKER_FILE}: the /* backend-origin */ marker is missing`);
+  }
+  const backend = normaliseBackendOrigin(backendOrigin);
   // Function replacements: a `$` in a file name must not be read as a capture reference.
   return template
     .replace(MANIFEST_MARKER, () => `/* precache-manifest */ ${JSON.stringify(files)}`)
-    .replace(VERSION_MARKER, () => `/* precache-version */ '${version}'`);
+    .replace(VERSION_MARKER, () => `/* precache-version */ '${version}'`)
+    .replace(BACKEND_MARKER, () => `/* backend-origin */ '${backend}'`);
 }
