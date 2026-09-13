@@ -380,6 +380,36 @@ icon sets, surfaces) → March card in the amended order (design plan §7.5: rec
 also the form) → Bonuses and Battle cards → validation (Phase E). **S-48 best captains is written up (§3.7) but
 delayed by the owner; not scheduled.**
 
+### M8 — Signed-in account sync (S-49, backlog, two parts) — replaces Gist sync (S-45) and the QR/share-link
+device hand-off once live
+
+Owner's spec: `docs/research/pocketbase-profile-sync-spec.md` (a self-hosted PocketBase behind Caddy; Google
+OAuth with a frontend-hosted redirect so only the GitHub Pages origin is ever registered with Google; one
+`profiles` collection with one blob per user and an optimistic `version`; an explicit `POST /api/app/profile`
+hook returning a deterministic 409; the client keeps `remoteVersion`, `deviceId`, `dirty`; conflict modal with
+two lossy choices and a JSON export first; service worker `NetworkOnly` for the backend origin;
+`navigator.storage.persist()`; deliberately no sync engine, no realtime, no merging). Email/password sign-in
+is optional on top (PocketBase's `users` auth collection supports it natively).
+
+This breaks ADR-0002's "no server" property for the sync feature only; it needs **ADR-0009** (proposed at
+implementation time): the app stays fully usable offline and anonymous, the account is opt-in, the server
+stores an opaque blob, and nothing else leaves the browser. Prerequisites from the owner: a VPS or host for
+PocketBase + Caddy, a domain or wildcard host for the backend, a Google Cloud project with the OAuth client,
+`<user>.github.io` verified in Search Console. Every `[verify]` in the spec is checked against the pinned
+PocketBase version before code.
+
+- **S-49a Backend**: docker-compose (pinned PocketBase, Caddy), `pb_hooks/main.pb.js` save endpoint, the
+  `profiles` collection and rules, CORS origins, hardening, S3 backups; a smoke script covering the spec's §7
+  acceptance checklist. Lives in `ops/pocketbase/` in this repo (no secrets committed).
+- **S-49b Client**: sign-in with Google (PKCE flow per spec §5.2, `#/oauth-callback` hash route or `404.html`
+  copy), optional email/password, account menu rows (Sign in / Signed in as … / Save to account / Load from
+  account / Sign out), `remoteVersion`/`deviceId`/`dirty` in local state, conflict modal, SW `NetworkOnly`
+  rule, storage persistence prompt; then retire the Gist adapter (S-45), the sync dialog's token handling and
+  the QR code hand-off (share links stay: they carry a march, not an account).
+
+Order: after the Mantine migration (M-06…M-09) and the March/validation phases; S-49a can start earlier if
+the owner provides the host.
+
 ### Deferred — not planned, kept for reference
 Features TotalStack has that we are not interested in for now. They stay out of every milestone; pull one back
 into a milestone only on explicit request. The engine and config schema keep room for them (bonus keys, kill
@@ -407,6 +437,8 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Backlog: S-49 signed-in account sync on PocketBase with Google OAuth (owner's spec in
+  docs/research), two parts, replacing Gist sync and the QR hand-off; needs ADR-0009 and a host from the owner.
 - 2026-09-13 — Decision: move the UI to **Mantine 9** (ADR-0008) after spike 0007 showed every TotalStack form
   mapping to stock components with 42 lines of CSS. The React Aria kit is retired in the migration plan
   `docs/plans/ui-foundation-mantine.md`. Tailwind goes with it.
