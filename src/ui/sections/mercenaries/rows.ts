@@ -10,14 +10,12 @@
  * Everything here is pure, so the ordering and the wording are tested without rendering anything.
  */
 import { customMercenaryToUnit, mercenaries as mercenaryTable, unitById } from '@/data';
-import type { UnitDef } from '@/data/types';
+import type { Group, UnitDef } from '@/data/types';
 import type { CustomMercenary, Profile } from '@/state/schema';
+import { count, type GlyphKind } from '@/ui/domain2';
 
 /** No owned quantity typed = you are never asked to field more than you have, because you have enough. */
 export const UNLIMITED = '∞';
-const TIMES = '×';
-
-const number = new Intl.NumberFormat('en-US');
 
 export interface MercenaryRow {
   id: string;
@@ -130,7 +128,39 @@ export function offerGroups(taken: Set<string>): TierGroup[] {
     .map(([tier, rows]) => ({ tier, rows: rows.sort(byName) }));
 }
 
-/** "×22", or "×∞" when nothing caps the stack. */
-export function ownedText(cap: number | null): string {
-  return `${TIMES}${cap === null ? UNLIMITED : number.format(cap)}`;
+/**
+ * The quantity as the pill writes it — "240", or "∞" when nothing caps the stack. TotalStack's pill
+ * is three glanceable things ("EMH 5 ∞") and a multiplication sign is a fourth; the popover behind
+ * the pill spells the figure out in words.
+ */
+export function capText(cap: number | null): string {
+  return cap === null ? UNLIMITED : count(cap);
+}
+
+/** The same figure said out loud, for the button that opens the quantity editor. */
+export function capSpoken(cap: number | null): string {
+  return cap === null ? 'unlimited' : count(cap);
+}
+
+/** A mercenary's own family, when it has neither a category nor a race to show (the hunters). */
+const GROUP_GLYPH: Record<Group, GlyphKind> = {
+  guardsmen: 'guardsmen',
+  specialist: 'specialists',
+  engineers: 'engineers',
+  monster: 'monsters',
+};
+
+/**
+ * The silhouette a pill and a picker row wear: the category the mercenary fights as, its race when
+ * the tables tag it as a monster only, and its family when it carries neither.
+ */
+export function mercGlyph(unit: UnitDef): GlyphKind {
+  if (unit.category !== undefined) return unit.category;
+  if (unit.race !== undefined) return unit.race;
+  return unit.group === undefined ? 'army' : GROUP_GLYPH[unit.group];
+}
+
+/** The short code without its tier digits: the data's "ABM6" is drawn as "ABM" beside a roman VI. */
+export function shortCode(label: string): string {
+  return label.replace(/\d+$/, '') || label;
 }

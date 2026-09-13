@@ -1,24 +1,24 @@
 /**
- * The "mercenary the tables do not know yet" form (design plan §7.2: the old dialog, restyled as a
- * sheet). Every field is a number the player can read off the mercenary's own card in game, so the
- * form asks for exactly those and nothing else, in the order the card reads them: what the unit is,
- * then what it costs to bring one back.
+ * The "mercenary the tables do not know yet" form (design plan §7.2: the old dialog, as a sheet).
+ * Every field is a number the player can read off the mercenary's own card in game, so the form
+ * asks for exactly those and nothing else, in the order the card reads them: what the unit is, then
+ * what it costs to bring one back.
  *
  * The result is stored in `profile.mercenaries.custom` and turned into a normal unit by
  * `customMercenaryToUnit`, which is why the field names match that function's input.
  */
+import { Button, Group, Select, SimpleGrid, Stack, TextInput } from '@mantine/core';
 import { useState } from 'react';
 
 import { events } from '@/data';
 import { CATEGORIES, GROUPS, RACES } from '@/data/types';
-import type { Category, Group, Race } from '@/data/types';
+import type { Category, Group as UnitRole, Race } from '@/data/types';
 import type { CustomMercenary } from '@/state/schema';
-import { Button, NumberStepper, Select, Sheet, TextField } from '@/ui/kit';
-import { Grid, Stack } from '@/ui/layout';
+import { NumberField, Sheet } from '@/ui/kit2';
 
 import { CATEGORY_LABELS, GROUP_LABELS, RACE_LABELS } from './labels';
 
-/** `Select` keys are strings, so "nothing chosen" needs a key of its own. */
+/** A `Select` value is a string, so "nothing chosen" needs a key of its own. */
 const NONE = 'none';
 
 /** Short, readable and collision-free enough for a handful of hand-typed mercenaries. */
@@ -33,7 +33,7 @@ interface Draft {
   cost: number | null;
   revivalGold: number | null;
   doubleDamageChance: number | null;
-  role: Group;
+  role: UnitRole;
   category: Category | typeof NONE;
   race: Race | typeof NONE;
   event: string;
@@ -55,14 +55,14 @@ function toDraft(merc: CustomMercenary | undefined): Draft {
 }
 
 export interface CustomMercenarySheetProps {
-  isOpen: boolean;
+  opened: boolean;
   /** Absent = a new mercenary; present = edit that one, keeping its id. */
   initial?: CustomMercenary;
   onSubmit: (mercenary: CustomMercenary) => void;
   onClose: () => void;
 }
 
-export function CustomMercenarySheet({ isOpen, initial, onSubmit, onClose }: CustomMercenarySheetProps) {
+export function CustomMercenarySheet({ opened, initial, onSubmit, onClose }: CustomMercenarySheetProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(initial));
   const editing = initial !== undefined;
   const named = draft.name.trim() !== '';
@@ -91,128 +91,123 @@ export function CustomMercenarySheet({ isOpen, initial, onSubmit, onClose }: Cus
 
   return (
     <Sheet
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      opened={opened}
+      onClose={onClose}
       title={editing ? 'Edit custom mercenary' : 'Custom mercenary'}
       description="Copy the numbers straight off the mercenary's card in game."
       size="lg"
       footer={
-        <>
-          <Button onPress={onClose}>Cancel</Button>
-          <Button variant="primary" isDisabled={!named} onPress={save}>
+        <Group justify="flex-end" gap="xs">
+          <Button variant="default" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button disabled={!named} onClick={save}>
             {editing ? 'Save changes' : 'Add mercenary'}
           </Button>
-        </>
+        </Group>
       }
     >
-      <Stack gap={4}>
-        <TextField
+      <Stack gap="sm">
+        <TextInput
           label="Name"
           value={draft.name}
-          description="Required — it is how the mercenary shows up in your list."
+          description="Required — it is how the mercenary shows up in your camp."
           placeholder="Spider Queen"
-          onChange={(value) => {
-            set('name', value);
+          onChange={(event) => {
+            set('name', event.currentTarget.value);
           }}
         />
 
-        <Grid cols={{ sm: 2 }} gap={3}>
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           <Select
             label="Role"
             value={draft.role}
-            options={GROUPS.map((group) => ({ value: group, label: GROUP_LABELS[group] }))}
+            allowDeselect={false}
+            data={GROUPS.map((group) => ({ value: group, label: GROUP_LABELS[group] }))}
             onChange={(value) => {
-              set('role', value as Group);
+              set('role', (value ?? 'monster') as UnitRole);
             }}
           />
           <Select
             label="Category"
             value={draft.category}
-            options={[
+            allowDeselect={false}
+            data={[
               { value: NONE, label: 'None' },
               ...CATEGORIES.map((category) => ({ value: category, label: CATEGORY_LABELS[category] })),
             ]}
             onChange={(value) => {
-              set('category', value as Category | typeof NONE);
+              set('category', (value ?? NONE) as Category | typeof NONE);
             }}
           />
           <Select
             label="Race"
             value={draft.race}
-            options={[
+            allowDeselect={false}
+            data={[
               { value: NONE, label: 'None' },
               ...RACES.map((race) => ({ value: race, label: RACE_LABELS[race] })),
             ]}
             onChange={(value) => {
-              set('race', value as Race | typeof NONE);
+              set('race', (value ?? NONE) as Race | typeof NONE);
             }}
           />
           <Select
             label="Event"
             value={draft.event}
+            allowDeselect={false}
             description="Its own bonuses only count while that event runs."
-            options={[
+            data={[
               { value: NONE, label: 'None' },
               ...events.map((record) => ({ value: record.id, label: record.name })),
             ]}
             onChange={(value) => {
-              set('event', value);
+              set('event', value ?? NONE);
             }}
           />
-          <NumberStepper
+          <NumberField
             label="Health"
             value={draft.health}
-            min={0}
-            step={1000}
             allowEmpty
             onChange={(value) => {
               set('health', value);
             }}
           />
-          <NumberStepper
+          <NumberField
             label="Strength"
             value={draft.strength}
-            min={0}
-            step={1000}
             allowEmpty
             onChange={(value) => {
               set('strength', value);
             }}
           />
-          <NumberStepper
+          <NumberField
             label="Authority cost"
             value={draft.cost}
-            min={0}
             allowEmpty
             onChange={(value) => {
               set('cost', value);
             }}
           />
-          <NumberStepper
-            label="Double damage chance"
+          <NumberField
+            label="Double damage chance (%)"
             value={draft.doubleDamageChance}
-            min={0}
             max={100}
-            suffix="%"
             allowEmpty
             onChange={(value) => {
               set('doubleDamageChance', value);
             }}
           />
-          <NumberStepper
+          <NumberField
             label="Revival gold"
             value={draft.revivalGold}
-            min={0}
-            step={10}
             allowEmpty
             description="What one of them costs to bring back; mercenaries are never retrained."
             onChange={(value) => {
               set('revivalGold', value);
             }}
           />
-        </Grid>
+        </SimpleGrid>
       </Stack>
     </Sheet>
   );
