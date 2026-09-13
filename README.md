@@ -76,8 +76,9 @@ cross-table integrity and the engine regression tests all run on the pull reques
 
 ## Account sync
 
-Signed-in sync across devices is optional and not part of the calculator — see
-[`docs/sync.md`](docs/sync.md) when it lands.
+Signed-in sync across devices is **optional, opt-in and off by default**: a build without
+`VITE_BACKEND_ORIGIN` has no account rows at all and never loads the SDK. See [`docs/sync.md`](docs/sync.md)
+and [ADR-0009](docs/decisions/0009-optional-account-sync.md).
 
 ## Licence and assets
 
