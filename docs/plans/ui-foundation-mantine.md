@@ -14,11 +14,10 @@ direction (`docs/design.md`: hues, fonts, one-sheet setup with an elevated March
    behaviour; an observation note precedes any form that has not been observed yet.
 3. **The theme is the design.** Colour, radius, spacing, fonts and component defaults live in
    `src/ui/theme.ts` (`createTheme` + `cssVariablesResolver`); no utility classes, no arbitrary values.
-4. **Small styling problems are solved with carefully chosen images and text colour** (owner): a unit,
-   category, race or captain may be drawn by a small PNG/SVG asset from `src/ui/assets/` (our own or
-   properly licensed; never the game's files) shown with Mantine `Image`/`Avatar`, and meaning may be carried
-   by coloured text through theme colours (`c="tier.6"`, `c="group-guardsmen.6"`), with the contrast floor
-   checked. Both are first-class tools, not workarounds.
+4. **Small styling problems are solved with emoji glyphs and text colour** (owner): game concepts are drawn
+   with Unicode emoji exactly as TotalStack does (⚔️ 🏹 🐴 🦅 …) through one `Glyph` component, and meaning
+   may be carried by coloured text through theme colours (`c="tier6.5"`, `c="guardsmen.6"`), with the
+   contrast floor checked. Both are first-class tools, not workarounds; no icon assets to license.
 5. **Accessibility floor unchanged**: axe zero violations on the kit page and the four frames; roles and
    names as before; tests select by role and label.
 
@@ -80,7 +79,7 @@ Domain (`src/ui/domain`, on Mantine): `UnitTile` (`Paper` + `Image`/glyph + nume
 | M-07 | Battle (SegmentedControl, NumberFields, ChoiceLists, SwitchRows, order sheet) | D-31 |
 | M-08 | March (recap, tiles, counts table with copy and edit mode, trade-off, folded details, unit sheet) | D-40…D-43 |
 | M-09 | Retire React Aria, Tailwind, tailwind-variants/merge, the old kit/layout/domain and their lint rules; budgets 340/90/40 kB; `docs/design.md` rewritten for the theme | `pnpm size` green; no `react-aria-components`/`tailwind` in the tree |
-| M-10 | Assets: a small set of carefully chosen PNG/SVG glyphs for categories, races and (if licensed) captains, in `src/ui/assets/`, with the licence file; used by tiles, chips and pills | glyphs read at 16 px; licence recorded |
+| M-10 | Glyphs: Unicode emoji as TotalStack uses them (⚔️ 🏹 🐴 🦅 🛡️ 🗡️ ⚙️ 💀 🏰 👹 🐾 🔥 🐉 🗿 🔒 🎯 ⏳ 🪙 🏵️ 💰 👑 ∞ 📌 ⚠️) through one `Glyph` component with accessible names; Lucide only for interface chrome; no icon assets, no licence to carry; platform emoji font (an OFL emoji subset can be bundled later if rendering differs too much across devices) | every game concept has one glyph; `react-icons` removed |
 
 Order: M-01 → M-02 → (M-03, M-04, M-05, M-06, M-07, M-08 in parallel, disjoint folders) → M-09 → M-10 as
 soon as assets are chosen (can run alongside M-04…M-08).
