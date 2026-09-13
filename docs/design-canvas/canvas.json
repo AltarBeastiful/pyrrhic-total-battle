@@ -6,7 +6,8 @@
       "y": 0,
       "w": 1400,
       "h": 1000,
-      "title": "Main \u2014 leading candidate (A)"
+      "title": "Main \u2014 leading candidate (A)",
+      "page": "page-1"
     },
     {
       "file": "PhoneA.dc.html",
@@ -14,7 +15,8 @@
       "y": 0,
       "w": 390,
       "h": 900,
-      "title": "Phone \u2014 A"
+      "title": "Phone \u2014 A",
+      "page": "page-1"
     },
     {
       "file": "PhoneSheetA.dc.html",
@@ -22,7 +24,8 @@
       "y": 0,
       "w": 390,
       "h": 900,
-      "title": "Phone \u2014 A, march sheet open"
+      "title": "Phone \u2014 A, march sheet open",
+      "page": "page-1"
     },
     {
       "file": "DirectionA.dc.html",
@@ -30,7 +33,8 @@
       "y": 1160,
       "w": 1400,
       "h": 1000,
-      "title": "Direction A \u2014 Layered war room"
+      "title": "Direction A \u2014 Layered war room",
+      "page": "page-1"
     },
     {
       "file": "DirectionB.dc.html",
@@ -38,7 +42,8 @@
       "y": 2320,
       "w": 1400,
       "h": 1000,
-      "title": "Direction B \u2014 Quiet ledger"
+      "title": "Direction B \u2014 Quiet ledger",
+      "page": "page-1"
     },
     {
       "file": "DirectionC.dc.html",
@@ -46,7 +51,8 @@
       "y": 3480,
       "w": 1400,
       "h": 1000,
-      "title": "Direction C \u2014 Game hall"
+      "title": "Direction C \u2014 Game hall",
+      "page": "page-1"
     },
     {
       "file": "PhoneBar.dc.html",
@@ -64,10 +70,22 @@
       "x": 1500,
       "y": 1160,
       "w": 360,
-      "text": "Direction A chosen (2026-09-13). The march recap now follows TotalStack's readable pills: pool total in the pool colour, two-line pills (glyph, code and tier above, the count large below), coloured by tier. B and C are kept below for reference.\n\nOwner chose Alt 2 (command bar). Phone: a two-row bar \u2014 housing chips (tap to edit inline, the last chip opens the objective) above the answer figure and Generate; tapping the figure opens the march sheet."
+      "text": "Direction A chosen (2026-09-13). The march recap now follows TotalStack's readable pills: pool total in the pool colour, two-line pills (glyph, code and tier above, the count large below), coloured by tier. B and C are kept below for reference.\n\nOwner chose Alt 2 (command bar). Phone: a two-row bar \u2014 housing chips (tap to edit inline, the last chip opens the objective) above the answer figure and Generate; tapping the figure opens the march sheet.",
+      "page": "page-1"
     }
   ],
   "launch": {
-    "view": "canvas"
-  }
+    "view": "canvas",
+    "page": "page-2"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Direction A"
+    },
+    {
+      "id": "page-2",
+      "name": "Housing with Generate"
+    }
+  ]
 }
