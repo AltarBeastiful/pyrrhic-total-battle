@@ -165,9 +165,10 @@ describe('pinned unit types', () => {
 
     expect(found.includedUnitIds).toContain('swordsman-1');
     expect(found.includedUnitIds).not.toContain('spearman-1');
-    // The pin costs damage — it takes the tier-1 slot the free search gives to Archer I.
-    expect(found.includedUnitIds).not.toContain('archer-1');
-    expect(found.score).toBeLessThan(search(ALL, 'avgDamage').score);
+    // The pin costs damage and changes the answer: it takes a tier-1 slot the free search spends elsewhere.
+    const free = search(ALL, 'avgDamage');
+    expect(found.includedUnitIds).not.toEqual(free.includedUnitIds);
+    expect(found.score).toBeLessThan(free.score);
     // ... but it is still the best formation that contains it.
     expect(found.score).toBeGreaterThan(scoreOf(ALL, 'avgDamage'));
     expect(found.result.stacks.some((stack) => stack.unitId === 'swordsman-1')).toBe(true);

@@ -178,7 +178,10 @@ excluded type un-excludes it.
 ### 3.5 Battle model and Battle Summary
 Enemy: 4 stacks (flying/melee/ranged/mounted), 8 for Arachne's, or custom counts. Each enemy hit removes our
 highest-total-HP living stack. Sides alternate; whoever strikes first is a coin flip in game, so we compute the
-**Minimum** (enemy first), **Maximum** (we strike first) and **Average** damage. A fight runs on **two orders**
+**Minimum** (enemy first), **Maximum** (we strike first) and **Average** damage. The game prints no total
+damage figure — a report's damage is the sum of its own hit lines — so both bounds *are* that sum (features
+counted once, a double-damage line at its printed doubled value) and a user can add up a real report and land
+on one of our two numbers; the average is the plain midpoint and procs are upside we do not price in. A fight runs on **two orders**
 (settled in game on 2026-09-13, S-30): the enemy kills by **total HP descending** (29/29 kills over four reports,
 a mercenary stack on top included), while our stacks strike in **base-damage descending** order — `count ×
 strength × (1 + Σ strength %)`, the per-hit damage *without* the strength-against part. The two coincide whenever

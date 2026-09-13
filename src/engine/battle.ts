@@ -156,9 +156,10 @@ const MODEL_NOTES = [
   'Per-hit damage = count × strength × (1 + Σ strength + event) + count × base strength × strengthAgainst/100; verified on every line of three TotalStack journals and two in-game reports.',
   "Enemy damage line = the destroyed stack's total HP; the enemy always wipes our highest-HP living stack (10/10 kills in the in-game reports).",
   "Summary damage uses the journal per-hit value (features counted once). TotalStack's Battle Summary counts the strength-against part twice; that is unexplained, so we do not copy it — our MINIMUM will read lower than its.",
-  'Minimum = the enemy strikes first and nothing lucky happens: the enemy-first journal total, exactly the sum of its per-hit lines, with no probabilistic extra.',
-  "Maximum = we strike first and every stack's double-damage chance pays off on average: the army-first journal total with each stack multiplied by (1 + chance/100). A double damage is a plain ×2 on one hit (observed once in game).",
-  'Average = (minimum + maximum) / 2, so minimum ≤ average ≤ maximum always. Only the maximum and the average count expected double damage; the journals list the plain per-hit damage.',
+  'The game prints no total damage: a report\u2019s damage is the sum of its own hit lines (features counted once, a double-damage line at its printed doubled value). Our minimum and maximum are exactly those sums, so a user can add up a report and land on one of them.',
+  'Minimum = the enemy strikes first and nothing lucky happens: the enemy-first journal total.',
+  'Maximum = we strike first: the army-first journal total, again the plain sum of its lines.',
+  'Average = (minimum + maximum) / 2. Procs are upside we do not price in: a double damage is a plain \u00d72 on one hit, features included (2026-09-13 entry 14 = 4,224 incl. 780 against 2,112 incl. 390).',
   'Strike-two-squads is not modelled: no in-game observation of it yet, so it never changes a damage number.',
   'armyStrengthAgainstEpicMonsters is treated as an extra strength-against that applies to every target (we only ever fight epic monsters).',
   "swarmUnits strength-against counts only while the Arachne's event id is in activeEvents.",
@@ -168,8 +169,9 @@ const MODEL_NOTES = [
 
 /**
  * Expected multiplier of one stack's damage once its double-damage chance is priced in: a proc is a plain ×2
- * on a single hit, so a 5 % chance is worth ×1.05 on average. Only the maximum and the average use it — the
- * minimum and the journal lines carry the plain damage.
+ * on a single hit (features included — verified in game), so a 5 % chance is worth ×1.05 on average. The
+ * summary no longer uses it: min and max are the plain sums a battle report prints, and procs are upside on
+ * top. Kept for the UI and for a future strike-two-squads model, which multiplies the same hit.
  */
 export function expectedDoubleDamageFactor(stack: Pick<Stack, 'doubleDamageChance'>): number {
   return 1 + stack.doubleDamageChance / 100;
@@ -184,15 +186,16 @@ export function simulateBattle(result: StackResult, request: StackRequest): Batt
   const enemyFirstHits = hitsPerStack(stacks, enemyStacks, false);
   const armyFirstHits = hitsPerStack(stacks, enemyStacks, true);
   const damageByPool: Record<Pool, number> = { leadership: 0, authority: 0, dominance: 0 };
-  // Minimum: the enemy strikes first and nothing procs. Maximum: we strike first and every stack's
-  // double-damage chance pays off on average. The average is the midpoint, so min ≤ avg ≤ max by construction.
-  let maximum = 0;
+  // The game prints no total: a report's damage is the sum of its own hit lines, features included once.
+  // So both bounds are exactly that sum — minimum with the enemy striking first, maximum with us — and a
+  // user can add up their report and land on one of our two numbers. Procs (double damage, strike two
+  // squads) are upside on top and are deliberately not priced in; the average is the plain midpoint.
   stacks.forEach((stack, index) => {
     const worst = (enemyFirstHits[index] ?? 0) * stack.damagePerHit;
-    const best = (armyFirstHits[index] ?? 0) * stack.damagePerHit * expectedDoubleDamageFactor(stack);
-    maximum += best;
+    const best = (armyFirstHits[index] ?? 0) * stack.damagePerHit;
     damageByPool[stack.pool] += (worst + best) / 2;
   });
+  const maximum = armyFirst.totalDamage;
   for (const pool of Object.keys(damageByPool) as Pool[]) {
     damageByPool[pool] = Math.round(damageByPool[pool]);
   }

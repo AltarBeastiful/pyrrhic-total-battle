@@ -86,24 +86,17 @@ describe('summary of run ep-8stacks', () => {
     expect(summary.avgDamage).toBe(Math.round((summary.minDamage + summary.maxDamage) / 2));
   });
 
-  it('counts expected double damage in the maximum only, never in the minimum or the journals', () => {
-    const plainArmyFirst = summary.journals.armyFirst.totalDamage;
+  it('reports the two journals\u2019 own sums, the way a battle report adds up (S-30, 2026-09-13)', () => {
+    // The game prints no total damage: you add up the hit lines. So both bounds are exactly those sums and
+    // a user can reconcile a real report against one of them. Procs stay upside we do not price in.
+    expect(summary.minDamage).toBe(summary.journals.enemyFirst.totalDamage);
+    expect(summary.maxDamage).toBe(summary.journals.armyFirst.totalDamage);
+    expect(summary.avgDamage).toBe(Math.round((summary.minDamage + summary.maxDamage) / 2));
     const riders = result.stacks.filter((stack) => stack.doubleDamageChance > 0);
     expect(riders.length).toBeGreaterThan(0);
-    // The riders' 5 % is the whole difference between the plain army-first journal and the maximum.
-    const expected = result.stacks.reduce(
-      (sum, stack) =>
-        sum +
-        (summary.journals.armyFirst.entries.filter(
-          (entry) => entry.actor === 'army' && entry.unitId === stack.unitId,
-        ).length *
-          stack.damagePerHit *
-          stack.doubleDamageChance) /
-          100,
-      0,
+    expect(summary.maxDamage).toBeLessThan(
+      summary.journals.armyFirst.totalDamage * (1 + riders[0]!.doubleDamageChance / 100),
     );
-    expect(summary.maxDamage).toBe(Math.round(plainArmyFirst + expected));
-    expect(summary.minDamage).toBe(summary.journals.enemyFirst.totalDamage);
   });
 
   it('splits the average across the pools it came from', () => {
@@ -257,9 +250,10 @@ describe('QA regression: average must never exceed the maximum', () => {
     });
     const summary = simulateBattle(sizeStacks(request), request);
 
+    // Both bounds are the journals' own sums (S-30); the riders' double-damage chance is upside on top.
     expect(summary.minDamage).toBe(925_723);
-    expect(summary.avgDamage).toBe(954_471);
-    expect(summary.maxDamage).toBe(983_219);
+    expect(summary.avgDamage).toBe(944_473);
+    expect(summary.maxDamage).toBe(963_223);
     expect(summary.minDamage).toBeLessThan(summary.avgDamage);
     expect(summary.avgDamage).toBeLessThan(summary.maxDamage);
   });

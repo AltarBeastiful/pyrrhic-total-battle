@@ -16,6 +16,7 @@ Screenshots here are downscaled JPEGs; the full-size originals stay outside the 
 | `card-swordsman1-p2.jpg` | the same card for a **Specialist**: Health +76.0 %, Strength +96.0 % — far below the guardsmen |
 | `card-rider3-p2.jpg`, `card-arbalester6-p1.jpg` | Rider III (own +5 % double damage) and the mercenary |
 | `report2-detail-archer1.jpg` | the troop-detail popup **inside the report** — the bonuses as they applied in this fight |
+| `report2-detail-rider1.jpg` | the same popup for Rider I — the mounted counterpart, and the riders' own +5 % double damage |
 
 ## The fight — "Epic Inferno squad" (K:319 X:511 Y:491), 13:27, Defeat, **enemy first**, 4 squads
 
@@ -53,6 +54,25 @@ Every figure checks out against the hit list: `16 × 150 × 2.435 = 5,843` is th
 stack (+143.5 % health), `16 × 50 × 2.88 = 2,304` its base damage (+188 % strength) and `16 × 50 × 0.67 = 536`
 its features (the +67 % flying feature, its target being the flying squad) — and both features match
 `strengthAgainst` for Archer I in `src/data/tables/troops.json` exactly (`{ melee: 52, flying: 67 }`).
+Rider I, same popup (`report2-detail-rider1.jpg`): *Guardsman, Human, Mounted unit*; food 10, carrying capacity
+200, revival cost after an attack **8 Gold** / after defending 80 Silver. **Features**: strength against ranged
++65 %, against siege engines +54 %, **chance to deal double damage +5 %** (the unit's own, on top of the
+account's +3.0 %). **Bonuses**: health **+143.0 %**, strength **+187.0 %**, the rest identical to Archer I.
+Checks: `6 × 300 × 2.4296 = 4,373` is its enemy damage line, `6 × 100 × 2.87 = 1,722` its base damage and
+`6 × 100 × 0.65 = 390` its features (the +65 % ranged feature — our table has `{ ranged: 65, engineers: 54 }`
+for Rider I, the popup's "siege engines" being our `engineers` key). The double-damage line is exactly
+`2 × (1,722 + 390) = 4,224` incl. `2 × 390 = 780` — a plain ×2 on both parts, at 8 % (5 % feature + 3 % bonus).
+
+**A category term, exactly as the engine models it.** Ranged units carry +143.5 % health / +188.0 % strength,
+melee and mounted +143.0 % / +187.0 %: a +0.5 / +1 point ranged top-up on a common army+guardsmen base, which
+is one `ranged` category contribution in our additive `group + category (+ race) + army` set. Nothing is
+missing from the bonus model; only the per-source split is (S-20).
+
+**The game truncates the stack total, it does not round it.** With rounding no single ranged multiplier can
+produce both Archer I's 5,843 (16 units) and Archer II's 1,314 (2 units) — the intervals are disjoint; with
+truncation they meet at m ∈ [2.434583, 2.435), which is also what "+143.5 %" displays. Our sizer keeps
+TotalStack's per-unit rounding, so stack HP can read one point high: that is the ±0.2 % tolerance in the tests.
+
 The Army-tab card taken an hour later reads +145.5 % / +175.0 % / +3.8 %: bonuses that travel with the march
 (the captain sent with it) and buffs that changed in between make the two differ, so **always reconcile a
 report against its own popup**.
@@ -91,6 +111,19 @@ report against its own popup**.
    drops this line. To settle: the troop-detail popup inside the report (it lists the per-stack chances) or a
    fourth report.
 
+## Total damage: add up the lines
+
+The report shows no total. Summing its own figures, the 12 friendly lines of this fight give **25,675** as
+printed (features counted once, entry 14 at its doubled 4,224) — or 20,433 with the "additional" parts
+stripped out, the additional parts alone being 5,242. Our model produces 11 of those lines and no procs, so
+its minimum for this march is **22,863** (25,675 − 2,112 for the doubled half − 700 for the unmodelled extra
+line). The engine's Minimum and Maximum are now exactly the enemy-first and army-first journal sums, so they
+are directly comparable with a report a user adds up; the Average stays the midpoint.
+
+The 2026-09-11 report 1 header read "5.67M", and **no sum of its lines reproduces it**: friendly as printed
+4,357,898; with the additional parts counted twice 6,378,644; without them 2,337,152; friendly + enemy
+7,692,771; enemy alone 3,334,873. Recorded as unexplained — it is not a quantity our summary claims.
+
 ## Recovery — what the game actually offers
 
 There is **no retrain dialog and no hospital**. Retraining a lost unit is simply recruiting it again in the
@@ -107,7 +140,14 @@ discounts). Those two formulas reproduce TotalStack's revive-all silver (216,000
 the guardsmen discount) and its revive-all duration (1 d 2 h → 21 h 40 m) exactly, closing the last two open
 equations of S-30.
 
+The per-unit gold base is the unit card's **"revival cost after an attack"** — 4 gold for Archer I and the
+other 1-cost troops, 8 for the riders, matching `revival.gold` in our tables (the "after defending" silver,
+40 and 80, is the defence-side price and is not part of a march's recovery). Each Temple row's slider maximum
+is exactly `floor(0.9 × dead)`: 20 Spearman I → 18, 18 Swordsman I → 16, 8 Spearman II → 7, 6 Rider I → 5,
+3 Rider II → 2, 2 Archer II → 1 — the chunk rule, unit by unit, on screen.
+
 Sample gold rows (temple 15, ÷1.53): 16 units → 42 g, 18 → 47 g, 5 → 26 g, 1 → 3 g match
-`round(n × revival.gold / 1.53)` with the table's 4 and 8 gold; a few rows read one gold higher
-(7 → 19 instead of 18, 2 → 11 instead of 10), so the per-row rounding rule is not pinned. The aggregate our
-engine reports is unaffected at the scale of a real march.
+`round(n × revival.gold / 1.53)`; a few rows read one gold higher (7 → 19 instead of 18, 2 → 11 instead of 10),
+so the per-row rounding rule is not pinned. For this march the engine charges 296 gold before the temple and
+**193 after** (÷1.53); the Temple's "Revive all 15.6 K" cannot check it because it pools the account's earlier
+losses (rows of 837, 264, 233 and 128 units).
