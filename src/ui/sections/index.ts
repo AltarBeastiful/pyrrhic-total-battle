@@ -7,11 +7,11 @@ import type { ComponentType } from 'react';
 
 import { BattleSection } from './battle/BattleSection';
 import { BonusesSection } from './bonuses/BonusesSection';
+import { MarchSection } from './march';
 import { MercenariesSection } from './mercenaries/MercenariesSection';
-import { ResultsSection } from './results/ResultsSection';
 import { TroopsSection } from './troops/TroopsSection';
 
-export const SECTION_IDS = ['troops', 'mercenaries', 'bonuses', 'battle', 'results'] as const;
+export const SECTION_IDS = ['troops', 'mercenaries', 'bonuses', 'battle', 'march'] as const;
 
 export type SectionId = (typeof SECTION_IDS)[number];
 
@@ -28,5 +28,5 @@ export const SECTIONS: readonly SectionSpec[] = [
   { id: 'mercenaries', title: 'Mercenaries', Component: MercenariesSection },
   { id: 'bonuses', title: 'Bonuses', Component: BonusesSection },
   { id: 'battle', title: 'Battle', Component: BattleSection },
-  { id: 'results', title: 'March', Component: ResultsSection },
+  { id: 'march', title: 'March', Component: MarchSection },
 ];

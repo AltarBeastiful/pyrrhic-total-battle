@@ -1,0 +1,85 @@
+/* ---------------------------------------------------------------------------------------------
+   The frame's own CSS: the four shapes Mantine has no prop for (spike 0009's `frame.css`, trimmed
+   to what frame V1 uses). Nothing here is a colour, a radius or a spacing — those are theme
+   tokens; `--pyr-appbar-height` is the 64 px both bars and the sticky pane are measured from.
+   --------------------------------------------------------------------------------------------- */
+
+/* One column of chrome and content, so a short page still puts the bottom bar on the bottom edge
+   and the sticky bars have a containing block that runs the height of the document. */
+.frame {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1 1 auto;
+}
+
+/* The skip link is the first thing a keyboard reaches and nothing a mouse ever sees. */
+.skip {
+  position: absolute;
+  z-index: 400;
+  top: 0;
+  left: 0;
+  padding: 0.5rem 0.75rem;
+  transform: translateY(-150%);
+  border-bottom-right-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-default);
+  color: var(--mantine-color-text);
+}
+
+.skip:focus {
+  transform: translateY(0);
+}
+
+/* The brand mark: a tonal square with the diamond in it, never a logotype (design rule 25). */
+.mark {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-default-hover);
+  place-items: center;
+}
+
+/* The account trigger and the bottom bar's summary are both "a row you press": no ground of their
+   own until the pointer is on them. */
+.tapRow {
+  min-width: 0;
+  padding: 0.25rem 0.375rem;
+  border-radius: var(--mantine-radius-sm);
+  color: inherit;
+  text-align: start;
+}
+
+.tapRow:hover {
+  background: var(--mantine-color-default-hover);
+}
+
+/* M3's supporting pane: 360 dp, trailing, sticky under the app bar. It is allowed to scroll inside
+   itself only when it is taller than the window it hangs in (design rule 17). */
+.pane {
+  position: sticky;
+  top: var(--pyr-appbar-height);
+  max-height: calc(100dvh - var(--pyr-appbar-height));
+  width: var(--pyr-pane-width);
+  overflow: auto;
+}
+
+/* The Material bottom app bar (frame V1). Sticky rather than fixed: as the last block of the frame
+   it is pinned to the bottom edge while the page scrolls and lands in the flow at the end of it,
+   so it covers nothing. Its z-index puts it over the recap sheet, which is the whole point of V1 —
+   opening the recap never takes Generate away. */
+.bottomBar {
+  position: sticky;
+  z-index: 250;
+  bottom: 0;
+  display: flex;
+  height: calc(var(--pyr-appbar-height) + env(safe-area-inset-bottom, 0px));
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  border-top: 1px solid var(--mantine-color-default-border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

@@ -4,8 +4,25 @@
  * sync, the share link, the theme, the offline rows the PWA used to float over the page, and About.
  *
  * None of it takes permanent space, which is the point: the strip it replaces was two rows of
- * chrome on every screen for actions a player uses once a month.
+ * chrome on every screen for actions a player uses once a month (design rule 15).
+ *
+ * The menu itself is kit2's `AppMenu`, so the shell cannot invent a shape: every row is an action,
+ * a segmented row or a section heading, and each kind has one appearance.
  */
+import { Avatar, Button, Group, Text, TextInput, UnstyledButton, useMantineColorScheme } from '@mantine/core';
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Download,
+  Info,
+  Link2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { lazy, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 
@@ -18,27 +35,13 @@ import type { ImportMode, ParsedImport } from '@/share/exportImport';
 import { THEMES, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
 
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  DownloadIcon,
-  DuplicateIcon,
-  InfoIcon,
-  MoonIcon,
-  PencilIcon,
-  PlusIcon,
-  ShareIcon,
-  SunIcon,
-  SyncIcon,
-  TrashIcon,
-  UploadIcon,
-} from '../icons';
-import { Badge, Button, Dialog, Menu, MenuItem, MenuSection, MenuSegment, TextField } from '../kit';
+import { AppMenu, Dialog, type AppMenuEntry, type AppMenuSection } from '../kit2';
 import { LazySurface } from '../lazy';
 import { copyText, downloadJson } from '../profile/download';
 import { ImportDialog } from '../profile/ImportDialog';
 import { resultCounts, toSavedSummary, useResultStore } from '../resultStore';
 import { useUiStore } from '../uiStore';
+import classes from './shell.module.css';
 import { saveStatus } from './state';
 
 // Sync drags in the gist adapter and the Web Crypto wrapper, About drags in the data notes; both are
@@ -57,31 +60,20 @@ interface ImportState {
 
 const EMPTY_IMPORT: ImportState = { parsed: null, error: null };
 
-const THEME_OPTIONS: { value: Theme; label: string; icon?: ReactNode }[] = [
+const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light', icon: <SunIcon /> },
-  { value: 'dark', label: 'Dark', icon: <MoonIcon /> },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
 ];
+
+const ICON = 15;
 
 function isTheme(value: string): value is Theme {
   return (THEMES as readonly string[]).includes(value);
 }
 
-/** The profile's initial on a coloured disc; decorative, the name beside it is the label. */
-function Avatar({ name }: { name: string }) {
-  const initial = name.trim().charAt(0).toUpperCase();
-  return (
-    <span aria-hidden="true">
-      <Badge tone="accent" size="md">
-        {initial === '' ? '?' : initial}
-      </Badge>
-    </span>
-  );
-}
-
 /** One name, one field: New, Rename and Duplicate all ask the same question. */
 function NameDialog({
-  open,
   title,
   description,
   confirmLabel,
@@ -89,7 +81,6 @@ function NameDialog({
   onConfirm,
   onCancel,
 }: {
-  open: boolean;
   title: string;
   description?: string;
   confirmLabel: string;
@@ -99,36 +90,44 @@ function NameDialog({
 }) {
   const [name, setName] = useState(initialName);
   const trimmed = name.trim();
+  const confirm = (): void => {
+    if (trimmed !== '') onConfirm(trimmed);
+  };
 
   return (
     <Dialog
-      isOpen={open}
-      onOpenChange={(next) => {
-        if (!next) onCancel();
-      }}
+      opened
+      onClose={onCancel}
       title={title}
+      size="sm"
       {...(description === undefined ? {} : { description })}
       footer={
-        <>
-          <Button onPress={onCancel}>Cancel</Button>
-          <Button
-            variant="primary"
-            isDisabled={trimmed === ''}
-            onPress={() => {
-              onConfirm(trimmed);
-            }}
-          >
+        <Group justify="flex-end" gap="sm">
+          <Button variant="default" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button disabled={trimmed === ''} onClick={confirm}>
             {confirmLabel}
           </Button>
-        </>
+        </Group>
       }
     >
-      <TextField label="Profile name" value={name} onChange={setName} />
+      <TextInput
+        label="Profile name"
+        data-autofocus
+        value={name}
+        onChange={(event) => {
+          setName(event.currentTarget.value);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') confirm();
+        }}
+      />
     </Dialog>
   );
 }
 
-/** The account menu and every dialog it opens. Rendered by `TopBar`, nowhere else. */
+/** The account menu and every dialog it opens. Rendered by the app bar, nowhere else. */
 export function AccountMenu() {
   const profiles = useStore(selectProfiles);
   const profile = useStore(selectActiveProfile);
@@ -143,6 +142,7 @@ export function AccountMenu() {
   const result = useResultStore((state) => state.last);
   const dirty = useUiStore((state) => state.dirty);
   const conflict = useUiStore((state) => state.syncConflict);
+  const { setColorScheme } = useMantineColorScheme();
 
   const installable = useSyncExternalStore(subscribeToInstall, isInstallAvailable, () => false);
   const updateReady = useSyncExternalStore(subscribeToUpdate, isUpdateReady, () => false);
@@ -212,11 +212,166 @@ export function AccountMenu() {
       });
   };
 
+  const switchEntries: AppMenuEntry[] = profiles.map((entry) => ({
+    id: entry.id,
+    label: entry.name,
+    ...(entry.id === profile.id ? { icon: <Check size={ICON} aria-hidden /> } : {}),
+    onSelect: () => {
+      setActiveProfile(entry.id);
+    },
+  }));
+
+  const appEntries: AppMenuEntry[] = [
+    ...(installable
+      ? [
+          {
+            id: 'install',
+            label: 'Install app',
+            description: 'Keeps working offline',
+            icon: <Download size={ICON} aria-hidden />,
+            onSelect: () => {
+              void promptInstall();
+            },
+          } satisfies AppMenuEntry,
+        ]
+      : []),
+    ...(updateReady
+      ? [
+          {
+            id: 'update',
+            label: 'Update available',
+            description: 'Reload to get the new version',
+            icon: <RefreshCw size={ICON} aria-hidden />,
+            onSelect: applyUpdate,
+          } satisfies AppMenuEntry,
+        ]
+      : []),
+    {
+      id: 'about',
+      label: 'About Pyrrhic',
+      icon: <Info size={ICON} aria-hidden />,
+      onSelect: () => {
+        setDialog('about');
+      },
+    },
+  ];
+
+  // The order of design plan §5.2: who you are and whether it is saved, who else you are, what you
+  // can do to this profile, the file actions, the link, the theme, and About at the bottom.
+  const sections: AppMenuSection[] = [
+    {
+      id: 'profile',
+      title: profile.name,
+      entries: [
+        {
+          id: 'rename',
+          label: 'Rename profile',
+          description: saveStatus({ dirty, conflict }),
+          icon: <Pencil size={ICON} aria-hidden />,
+          onSelect: () => {
+            setDialog('rename');
+          },
+        },
+      ],
+    },
+    { id: 'switch', title: 'Switch profile', entries: switchEntries },
+    {
+      id: 'this',
+      title: 'This profile',
+      entries: [
+        {
+          id: 'new',
+          label: 'New profile',
+          icon: <Plus size={ICON} aria-hidden />,
+          onSelect: () => {
+            setDialog('new');
+          },
+        },
+        {
+          id: 'duplicate',
+          label: 'Duplicate profile',
+          icon: <Copy size={ICON} aria-hidden />,
+          onSelect: () => {
+            setDialog('duplicate');
+          },
+        },
+        {
+          id: 'delete',
+          label: 'Delete profile',
+          icon: <Trash2 size={ICON} aria-hidden />,
+          danger: true,
+          onSelect: () => {
+            setDialog('delete');
+          },
+        },
+      ],
+    },
+    {
+      id: 'data',
+      title: 'Data',
+      entries: [
+        {
+          id: 'export',
+          label: 'Export JSON',
+          icon: <Download size={ICON} aria-hidden />,
+          onSelect: () => {
+            downloadJson(exportProfileFile(profile, gameData.dataVersion));
+          },
+        },
+        {
+          id: 'import',
+          label: 'Import JSON',
+          icon: <Upload size={ICON} aria-hidden />,
+          onSelect: () => {
+            fileInput.current?.click();
+          },
+        },
+        {
+          id: 'sync',
+          label: 'Sync…',
+          description: 'Between your own devices',
+          icon: <RefreshCw size={ICON} aria-hidden />,
+          onSelect: () => {
+            setDialog('sync');
+          },
+        },
+        {
+          id: 'share',
+          label: 'Share this march',
+          description: result === null ? 'Link to this profile' : 'Link to the march you generated',
+          icon: <Link2 size={ICON} aria-hidden />,
+          onSelect: copyShareLink,
+        },
+      ],
+    },
+    {
+      id: 'theme',
+      entries: [
+        {
+          kind: 'segment',
+          id: 'theme',
+          label: 'Theme',
+          value: theme,
+          options: THEME_OPTIONS,
+          onChange: (next) => {
+            if (!isTheme(next)) return;
+            setTheme(next);
+            // The store writes `data-theme`; this tells Mantine the same thing, so its own colour
+            // scheme cannot drift from ours (theme.ts, "the two attributes kept in step").
+            setColorScheme(next === 'system' ? 'auto' : next);
+          },
+        },
+      ],
+    },
+    { id: 'app', title: 'Pyrrhic', entries: appEntries },
+  ];
+
+  const initial = profile.name.trim().charAt(0).toUpperCase();
+
   const nameDialog = (): ReactNode => {
     if (dialog === 'new') {
       return (
         <NameDialog
-          open
           title="New profile"
           description="A profile is one game account: its tiers, mercenaries and bonus values."
           confirmLabel="Create"
@@ -232,7 +387,6 @@ export function AccountMenu() {
     if (dialog === 'rename') {
       return (
         <NameDialog
-          open
           title="Rename profile"
           confirmLabel="Save"
           initialName={profile.name}
@@ -247,7 +401,6 @@ export function AccountMenu() {
     if (dialog === 'duplicate') {
       return (
         <NameDialog
-          open
           title="Duplicate profile"
           description="The copy gets its own identity, so editing it never touches the original."
           confirmLabel="Duplicate"
@@ -265,170 +418,37 @@ export function AccountMenu() {
 
   return (
     <>
-      <Menu
+      <AppMenu
         label="Account"
+        width={260}
+        sections={sections}
         trigger={
-          <Button
-            aria-label={`Account: ${profile.name}`}
-            icon={<Avatar name={profile.name} />}
-            iconRight={<ChevronDownIcon />}
-          >
-            <span className="hidden truncate sm:inline">{profile.name}</span>
-          </Button>
+          <UnstyledButton className={classes.tapRow} aria-label={`Account: ${profile.name}`}>
+            <Group gap={6} wrap="nowrap">
+              <Avatar size={32} radius="xl" color="brass" variant="light">
+                {initial === '' ? '?' : initial}
+              </Avatar>
+              <Group gap={4} wrap="nowrap" visibleFrom="sm">
+                <Text size="sm" lineClamp={1}>
+                  {profile.name}
+                </Text>
+                <ChevronDown size={14} aria-hidden />
+              </Group>
+            </Group>
+          </UnstyledButton>
         }
-      >
-        <MenuSection title={profile.name}>
-          <MenuItem
-            id="rename"
-            icon={<PencilIcon />}
-            description={saveStatus({ dirty, conflict })}
-            onAction={() => {
-              setDialog('rename');
-            }}
-          >
-            Rename profile
-          </MenuItem>
-        </MenuSection>
+      />
 
-        <MenuSection title="Switch profile">
-          {profiles.map((entry) => (
-            <MenuItem
-              key={entry.id}
-              id={entry.id}
-              textValue={entry.name}
-              {...(entry.id === profile.id ? { icon: <CheckIcon /> } : {})}
-              onAction={() => {
-                setActiveProfile(entry.id);
-              }}
-            >
-              {entry.name}
-              {entry.id === profile.id ? <span className="sr-only"> (active)</span> : null}
-            </MenuItem>
-          ))}
-        </MenuSection>
-
-        <MenuSection title="This profile">
-          <MenuItem
-            id="new"
-            icon={<PlusIcon />}
-            onAction={() => {
-              setDialog('new');
-            }}
-          >
-            New profile
-          </MenuItem>
-          <MenuItem
-            id="duplicate"
-            icon={<DuplicateIcon />}
-            onAction={() => {
-              setDialog('duplicate');
-            }}
-          >
-            Duplicate profile
-          </MenuItem>
-          <MenuItem
-            id="delete"
-            icon={<TrashIcon />}
-            isDanger
-            onAction={() => {
-              setDialog('delete');
-            }}
-          >
-            Delete profile
-          </MenuItem>
-        </MenuSection>
-
-        <MenuSection title="Data">
-          <MenuItem
-            id="export"
-            icon={<DownloadIcon />}
-            onAction={() => {
-              downloadJson(exportProfileFile(profile, gameData.dataVersion));
-            }}
-          >
-            Export JSON
-          </MenuItem>
-          <MenuItem
-            id="import"
-            icon={<UploadIcon />}
-            onAction={() => {
-              fileInput.current?.click();
-            }}
-          >
-            Import JSON
-          </MenuItem>
-          <MenuItem
-            id="sync"
-            icon={<SyncIcon />}
-            description="Between your own devices"
-            onAction={() => {
-              setDialog('sync');
-            }}
-          >
-            Sync…
-          </MenuItem>
-          <MenuItem
-            id="share"
-            icon={<ShareIcon />}
-            description={result === null ? 'Link to this profile' : 'Link to the march you generated'}
-            onAction={copyShareLink}
-          >
-            Share this march
-          </MenuItem>
-        </MenuSection>
-
-        <MenuSegment
-          label="Theme"
-          value={theme}
-          onChange={(next) => {
-            if (isTheme(next)) setTheme(next);
-          }}
-          options={THEME_OPTIONS}
-        />
-
-        <MenuSection title="Pyrrhic">
-          {installable ? (
-            <MenuItem
-              id="install"
-              icon={<DownloadIcon />}
-              description="Keeps working offline"
-              onAction={() => {
-                void promptInstall();
-              }}
-            >
-              Install app
-            </MenuItem>
-          ) : null}
-          {updateReady ? (
-            <MenuItem
-              id="update"
-              icon={<SyncIcon />}
-              description="Reload to get the new version"
-              onAction={applyUpdate}
-            >
-              Update available
-            </MenuItem>
-          ) : null}
-          <MenuItem
-            id="about"
-            icon={<InfoIcon />}
-            onAction={() => {
-              setDialog('about');
-            }}
-          >
-            About Pyrrhic
-          </MenuItem>
-        </MenuSection>
-      </Menu>
-
-      <span role="status">{notice === '' ? null : <Badge tone="ok">{notice}</Badge>}</span>
+      <Text span role="status" size="xs" c="dimmed">
+        {notice}
+      </Text>
 
       <input
         ref={fileInput}
         type="file"
         accept="application/json,.json"
         aria-label="Pyrrhic export file"
-        className="hidden"
+        style={{ display: 'none' }}
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = '';
@@ -440,25 +460,26 @@ export function AccountMenu() {
 
       <Dialog
         role="alertdialog"
-        isOpen={dialog === 'delete'}
-        onOpenChange={(next) => {
-          if (!next) close();
-        }}
+        opened={dialog === 'delete'}
+        onClose={close}
         title="Delete profile"
-        description={`"${profile.name}" and everything in it will be removed from this browser. Export it first if you might want it back.`}
+        size="sm"
+        description={`“${profile.name}” and everything in it will be removed from this browser. Export it first if you might want it back.`}
         footer={
-          <>
-            <Button onPress={close}>Cancel</Button>
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={close}>
+              Cancel
+            </Button>
             <Button
-              variant="danger"
-              onPress={() => {
+              color="danger"
+              onClick={() => {
                 deleteProfile(profile.id);
                 close();
               }}
             >
               Delete profile
             </Button>
-          </>
+          </Group>
         }
       />
 

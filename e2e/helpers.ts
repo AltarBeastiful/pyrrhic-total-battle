@@ -371,3 +371,133 @@ export async function enlistCaptain(page: Page, name: string, level: number, sta
   await toggleCaptain(page, name);
   await setCaptainLevel(page, name, level, star);
 }
+
+// ---- The frame (M-03, design plan §5.1 — frame V1) ----------------------------------------------
+/**
+ * The setup cards, in registry order. The March is the fifth section and the one that moves: it is
+ * inside the supporting pane from 1200 px and in the page flow below that, so a spec asks for it
+ * through `marchPane` / `recapSummary` rather than through this list.
+ */
+export const SETUP_TITLES = ['Troops', 'Mercenaries', 'Bonuses', 'Battle'] as const;
+
+/** The March as M3's trailing supporting pane: only from 1200 px, sticky under the app bar. */
+export function marchPane(page: Page): Locator {
+  return page.locator('main aside');
+}
+
+/** The Material bottom app bar's summary, below 1200 px: pressing it opens the recap sheet. */
+export function recapSummary(page: Page): Locator {
+  return page.getByRole('button', { name: 'Open the march recap' });
+}
+
+/** Generate, wherever the frame put it — the March pane's header or the bottom app bar. */
+export function generateControl(page: Page): Locator {
+  return page.getByRole('button', { name: /generate/i });
+}
+
+/**
+ * The profiles in the account menu's switcher, read from the rows under its own heading. Kit2's
+ * `AppMenu` writes the heading as a menu label and the rows after it, which is the shape a menu
+ * groups with; the label's parent is the group.
+ */
+export async function switchProfileNames(page: Page): Promise<string[]> {
+  const menu = await openAccountMenu(page);
+  const names = await menu
+    .getByText('Switch profile', { exact: true })
+    .locator('xpath=..')
+    .getByRole('menuitem')
+    .allInnerTexts();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  return names.map((name) => name.trim());
+}
+
+// ---- The March section (design plan §7.5, M-08) -------------------------------------------------
+/**
+ * The March itself. It is a landmark named by its own heading, and it moves: the supporting pane
+ * from 1200 px, the page flow below that. Its anchor is `march`, which is also the registry id.
+ */
+export function marchSection(page: Page): Locator {
+  return page.locator('#march');
+}
+
+/** The march as tiles: the ones marching say "… in the march — leave out". */
+export function marchTiles(page: Page): Locator {
+  return marchSection(page).getByRole('button', { name: /in the march\b/ });
+}
+
+/** The dimmed tiles: the types the search or the player left out of the march. */
+export function marchLeftOut(page: Page): Locator {
+  return marchSection(page).getByRole('button', { name: /left out — keep in march$/ });
+}
+
+/**
+ * The march as a player would read it off the section: "ARC1 624", one entry per marching stack.
+ *
+ * Read from the `data-stack` / `data-count` pair each tile carries rather than from its drawing:
+ * the tile writes its code and its tier as two separate pieces of text, which is right on screen
+ * and unreadable from here.
+ */
+export async function marchStackLabels(page: Page): Promise<string[]> {
+  const tiles = marchSection(page).locator('[data-stack]');
+  const total = await tiles.count();
+  const labels: string[] = [];
+  for (let index = 0; index < total; index += 1) {
+    const tile = tiles.nth(index);
+    const label = await tile.getAttribute('data-stack');
+    const count = Number(await tile.getAttribute('data-count'));
+    if (label !== null && count > 0) labels.push(`${label} ${String(count)}`);
+  }
+  return labels;
+}
+
+/** How many stacks the march fields. */
+export async function marchStackCount(page: Page): Promise<number> {
+  return (await marchStackLabels(page)).length;
+}
+
+/** The counts to copy, in the table shape a card wider than 36 rem shows. */
+export function marchCountsTable(page: Page): Locator {
+  return marchSection(page).getByRole('table', { name: /in the order the stacks fall/ });
+}
+
+/** The same counts as stacked rows: a phone, and the 360 dp March pane at any width. */
+export function marchCountsList(page: Page): Locator {
+  return marchSection(page).getByRole('list', { name: /in the order the stacks fall/ });
+}
+
+/**
+ * A figure, whatever separator it is written with: the app groups thousands with a space, the way
+ * the number fields do ("19 639 721"), and a ratio keeps its decimals. `\s` covers every space the
+ * formatter may put there, the non-breaking ones included.
+ */
+function figureNumber(text: string): number {
+  const match = /\d[\d\s]*(\.\d+)?/.exec(text);
+  return match === null ? Number.NaN : Number(match[0].replace(/\s/g, ''));
+}
+
+/**
+ * One recap figure by the words it is written in ("Worst opening", "Silver to recover"). The recap
+ * travels with Generate, so it is looked up on the page rather than inside the section: it is in
+ * the pane's header on a desktop and in the section on a phone — one of the two, never both.
+ */
+export async function marchFigure(page: Page, label: string): Promise<number> {
+  const value = page
+    .locator('[aria-label="March figures"]')
+    .first()
+    // `contains`, not `=`: a figure's label may open with a glyph ("🪙 Silver to recover").
+    .locator(`xpath=.//dt[contains(., ${JSON.stringify(label)})]/following-sibling::dd[1]`);
+  return figureNumber(await value.innerText());
+}
+
+/** The hero figure: the expected damage, the first thing the recap prints. */
+export async function marchExpectedDamage(page: Page): Promise<number> {
+  const recap = page.locator('[aria-label="This march in figures"]').first();
+  return figureNumber(await recap.innerText());
+}
+
+/** Turn the counts into fields, or back into figures to copy. */
+export async function setCountsMode(page: Page, mode: 'Copy counts' | 'Edit counts'): Promise<void> {
+  await marchSection(page).getByText(mode, { exact: true }).click();
+  await expect(page.getByRole('radio', { name: mode, exact: true })).toBeChecked();
+}

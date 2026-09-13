@@ -9,8 +9,8 @@ import {
   accountButton,
   chooseInAccountMenu,
   openApp,
-  profileNames,
   renameProfile,
+  switchProfileNames,
   watchConsole,
 } from './helpers';
 
@@ -50,7 +50,7 @@ test('export writes a JSON file and importing it adds a second profile', async (
   await expect(preview).toContainText('Exported');
   await preview.getByRole('button', { name: 'Add as new' }).click();
 
-  await expect.poll(() => profileNames(page)).toHaveLength(2);
+  await expect.poll(() => switchProfileNames(page)).toHaveLength(2);
 
   expect(problems).toEqual([]);
 });
@@ -83,7 +83,7 @@ test('a profile link offers to add the account in a fresh browser', async ({ pag
 
   await prompt.getByRole('button', { name: 'Add as new profile' }).click();
   await expect(accountButton(other)).toHaveAccessibleName('Account: Shared');
-  await expect.poll(() => profileNames(other)).toEqual(['My account', 'Shared']);
+  await expect.poll(() => switchProfileNames(other)).toEqual(['My account', 'Shared']);
 
   expect(otherProblems).toEqual([]);
   await fresh.close();

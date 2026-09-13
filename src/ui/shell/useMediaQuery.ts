@@ -2,20 +2,24 @@
  * The two questions the frame asks the browser: how wide is it, and does this player want motion.
  *
  * `useSyncExternalStore` rather than an effect and a piece of state: the answer is read during the
- * first render (so the floating button never flashes the wrong label) and the subscription is the
+ * first render (so the frame never paints the wrong column first) and the subscription is the
  * media query's own `change` event. Everything is guarded — jsdom and the service worker's global
  * have no `matchMedia`, and a test that renders the shell must not care.
  */
 import { useCallback, useSyncExternalStore } from 'react';
 
-/** Below this width the page is one column and the result sits under the setup (design plan §5.1). */
-export const ONE_COLUMN = '(max-width: 1279px)';
-/** From here the supporting pane sits beside the page and Generate moves into the app bar. */
-export const TWO_PANES = '(min-width: 1280px)';
-/** Material 3's medium window: from here the app bar has room for the march recap. */
+/**
+ * Below this width the page is one column: the march sits under the setup and the answer and
+ * Generate are in the bottom app bar (design plan §5.1, frame V1).
+ */
+export const ONE_COLUMN = '(max-width: 1199px)';
+/**
+ * M3's *large* window, Mantine's `lg` breakpoint: from here the March is the 360 dp supporting pane
+ * beside the page and there is no bottom bar.
+ */
+export const TWO_PANES = '(min-width: 1200px)';
+/** Material 3's medium window: from here a card has room for a second column. */
 export const MEDIUM = '(min-width: 600px)';
-/** Under this the floating button drops its label and shows the glyph alone (design plan §5.3). */
-export const NARROW = '(max-width: 399px)';
 export const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 function list(query: string): MediaQueryList | null {

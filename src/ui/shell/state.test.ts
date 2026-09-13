@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { newRoot } from '@/state/defaults';
 import type { BattleSetup, Profile } from '@/state/schema';
 
-import { setupFingerprint } from '../sections/results/runStore';
+import { setupFingerprint } from '../sections/march/runStore';
 import { blockedReason, fabState, saveStatus } from './state';
 
 function fixture(): { profile: Profile; setup: BattleSetup } {

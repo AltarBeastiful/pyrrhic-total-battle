@@ -1,15 +1,15 @@
 /**
- * One run, two controls. The app bar carries Generate on a wide screen and the floating button
- * carries it everywhere else (never both at once), so the state they show and the press they answer
- * to live here rather than twice.
+ * One run, wherever it is started from. The March pane's button on a desktop and the bottom app
+ * bar's on a phone are the March section's own (M-08); what the shell still owns is the keyboard
+ * shortcut, and the state it presses through.
  */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 
 import { useResultStore } from '../resultStore';
-import { cancelGenerate, runGenerate } from '../sections/results/generate';
-import { setupFingerprint, useRunStore } from '../sections/results/runStore';
+import { cancelGenerate, runGenerate } from '../sections/march/generate';
+import { setupFingerprint, useRunStore } from '../sections/march/runStore';
 import { scrollToMarch } from './march';
 import { blockedReason, fabState, type FabState } from './state';
 
@@ -45,4 +45,25 @@ export function useGenerateRun(): GenerateRun {
   }, [running, hint]);
 
   return { state, hint, press };
+}
+
+/**
+ * `Ctrl`/`⌘ + Enter` generates from anywhere, including from inside a field — which is exactly
+ * where a player's hands are when they want it. Bound once, by the frame, so it cannot be bound
+ * twice by two controls that exist at two different widths.
+ */
+export function useGenerateShortcut(): void {
+  const { press } = useGenerateRun();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.repeat) return;
+      event.preventDefault();
+      press();
+    };
+    globalThis.document.addEventListener('keydown', onKeyDown);
+    return () => {
+      globalThis.document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [press]);
 }
