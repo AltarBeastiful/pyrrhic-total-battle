@@ -586,6 +586,13 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — **Published.** `development` merged into `main`; GitHub Pages (Actions build) serves
+  https://altarbeastiful.github.io/pyrrhic-total-battle/ with `VITE_BACKEND_ORIGIN` set. Backend S-49a deployed
+  on the "main" server beside philou: `https://pyrrhic-backend.92.5.91.253.sslip.io` (Let's Encrypt), PocketBase
+  0.40.4 in `/home/ubuntu/pyrrhic/`, site block in `/home/ubuntu/caddy-sites/` imported by philou's Caddy
+  (philou commits 840a6e9, 934dd24 — mount at `/etc/caddy-sites`, since a subdirectory of the read-only
+  `/etc/caddy` cannot be a mountpoint); smoke test 9 passed / 3 skipped. Owner's admin-UI steps pending: Google
+  OAuth client, SMTP, backup target; Dynu name later.
 - 2026-09-13 — **S-30 closed** with a third in-game report (a deliberate 9-stack march) plus the Temple and
   unit-card screens (`docs/research/fixtures/ingame-2026-09-13/`, 18 screenshots). Found: our stacks strike in
   **base-damage** order, not HP order — the engine now reproduces all three reports entry for entry (28, 24 and
