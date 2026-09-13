@@ -72,3 +72,26 @@ export type {
   StrengthAgainstKey,
   UnitDef,
 } from './types';
+
+// S-54 — complete optimization (one army, several marches). Appended last so it never collides with the
+// rest of the file.
+export {
+  campaignScore,
+  clampSpend,
+  COMPLETE_METHODS,
+  DEFAULT_SPEND_LEVELS,
+  marchTarget,
+  searchComplete,
+  SHORTLIST,
+  simulateCampaign,
+  withMethod,
+} from './campaign';
+export type {
+  CampaignMarch,
+  CampaignSettings,
+  CampaignSummary,
+  CompleteCandidate,
+  CompleteMethod,
+  CompleteRequest,
+  CompleteResult,
+} from './campaign';

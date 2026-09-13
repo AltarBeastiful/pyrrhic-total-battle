@@ -89,6 +89,9 @@ keep reproducing its counts); the difference is the ±1 tolerance the in-game te
 - `AVERAGE DAMAGE` = (minimum + maximum)/2, but the implied maximum for **troops** exceeds the army-first journal
   by a constant ≈ 42,500 in both runs (same troop stacks in both). 42,500 ≈ 5% × 2 × (total rider damage), i.e.
   it looks like the riders' double-damage chance being counted in the maximum only. Not resolved; see S-30.
+  **Resolved 2026-09-13 (investigation 0014):** the implied maximum is the minimum plus the first stack's
+  army-first hit plus `2 × chance × damage` of every double-damage stack — double damage priced at twice its
+  chance, in the maximum only (TO run: 7,607,442 + 128,271 + 0.1 × 2,523,714 ≈ 7,988,210 ✓).
 - `DAMAGE / SILVER|GOLD|DRAGON COIN` = average damage ÷ the recovery-plan cost of the same resource
   (2,515,830 / 1,435,200 = 1.753 ✓; / 2,752 = 914 ✓; / 1,080 = 2,329 ✓).
 
