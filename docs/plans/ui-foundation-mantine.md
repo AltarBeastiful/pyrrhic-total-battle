@@ -112,3 +112,25 @@ memoizes each chip and keeps selection outside the group, with a render-count te
 disclosure as the differentiator** — Bonuses opens on the TOTAL line only, captains are the visible grid,
 and groups with nothing configured collapse to one "Add …" line (story D-35); **open source hygiene** —
 we mirror generic patterns only; palette, wording, logo and copy are ours (design direction, glossary).
+
+## 6. Polish list for M-09 (collected during the migration, 2026-09-13)
+
+- Section titles: Troops renders smaller than Mercenaries/Battle — one `Title order={2}` size from the
+  theme (`headings.sizes.h2`), sections must not set their own.
+- Page margins: `Container px="md"` gives 12 px in the compressed scale; Material asks 16 px at compact
+  and 24 px from medium — set `Container` padding explicitly and align the kit2 `AppBar` with it.
+- The March pane: recap + Generate sit on the page ground above the March card; decide one surface for the
+  whole pane (the spike drew a single card).
+- Recap sheet on phones: the bar's Generate stays clickable outside the sheet's focus trap — either include
+  the bar in the trap or hide the bar while the sheet is open.
+- `ActionIcon` default `size="xs"` (18 px) is below the 24 px target minimum; composites set their own — add a
+  theme default of `sm` and check the corner gear.
+- kit2 `ChipRow` live region now collapses while silent (done); `ChoiceList` stacks only — the Battle worker
+  built `ChoiceCards` (grid) locally; promote it to kit2 and drop the duplicate.
+- `pnpm test --` / `pnpm e2e --` do not forward path filters; document `pnpm vitest run <path>` and
+  `pnpm exec playwright test <spec>` in the README.
+- Remove Tailwind (`@tailwindcss/vite`, `@theme` block, `tailwind-variants`, `tailwind-merge`,
+  `tailwindcss-react-aria-components`), `react-aria-components`, `lucide-react` only where emoji replaced
+  it (keep for chrome), `react-icons` (Game Icons no longer used), the old `src/ui/{kit,layout,domain}`,
+  `src/ui/kitpage/stories`, the custom Tailwind lint rules; rename `kit2`→`kit`, `domain2`→`domain`,
+  `stories2`→`stories`; rewrite `docs/design.md` for the theme; regenerate visual baselines; `pnpm size`.
