@@ -407,6 +407,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Decision: move the UI to **Mantine 9** (ADR-0008) after spike 0007 showed every TotalStack form
+  mapping to stock components with 42 lines of CSS. The React Aria kit is retired in the migration plan
+  `docs/plans/ui-foundation-mantine.md`. Tailwind goes with it.
 - 2026-09-13 — Owner's verdict on the rebuilt Bonuses card: "a mismatch of CSS badly designed and executed",
   the very thing the UI foundation plan was meant to avoid. Two causes accepted: (1) the coordinator specified
   the captain picker from imagination instead of copying the reference (fixed: TotalStack observed live,

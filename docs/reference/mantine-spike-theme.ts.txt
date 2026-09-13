@@ -1,0 +1,162 @@
+/**
+ * Investigation 0007 — Pyrrhic's design tokens (`docs/design.md` §1) expressed as a Mantine theme.
+ *
+ * The friction this file exists to measure: our palette is *role*-shaped (each group has a `soft`
+ * ground, a `strong` ink and an `edge`, different in light and dark), while Mantine wants a
+ * ten-step lightness ramp per colour and picks one index out of it. The two models do not line up,
+ * so every ramp here is *derived* from the two inks we actually own rather than authored.
+ */
+import { createTheme, type MantineColorsTuple, type MantineThemeOverride } from '@mantine/core';
+
+/* --- our tokens, verbatim from docs/design.md §1 ------------------------------------------- */
+
+export const PYR = {
+  light: {
+    bg: '#ecefec', // Limewash
+    surface: '#fafbfa', // Paper
+    raised: '#dee3df', // Stone
+    fg: '#131917', // Pitch
+    muted: '#515a56',
+    line: '#cfd5d1',
+    field: '#6e7873',
+    accent: '#262e2b', // Iron
+    accentFg: '#fafbfa',
+  },
+  dark: {
+    bg: '#161a19', // Slate
+    surface: '#1e2423', // Forge
+    raised: '#2b3231', // Anvil
+    fg: '#e7ece9', // Chalk
+    muted: '#9da7a3', // Ash
+    line: '#313938',
+    field: '#78837f',
+    accent: '#d8e0dc', // Silver
+    accentFg: '#161a19',
+  },
+} as const;
+
+/** Each group's `strong` ink, light then dark (`docs/design.md` §1, "Group colours"). */
+const GROUP_INK = {
+  guardsmen: ['#256b35', '#84ce93'],
+  specialists: ['#25568a', '#8fbcee'],
+  engineers: ['#6f5417', '#ddb86e'],
+  monsters: ['#5b368a', '#c0a0ec'],
+  mercenaries: ['#8c3030', '#ec9391'],
+} as const;
+
+/* --- deriving a ten-step ramp from two inks ------------------------------------------------ */
+
+function rgb(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function hex(c: [number, number, number]): string {
+  return `#${c.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('')}`;
+}
+
+function mix(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = rgb(a);
+  const [br, bg, bb] = rgb(b);
+  return hex([ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t]);
+}
+
+/**
+ * Mantine indexes 0 (lightest) → 9 (darkest). We own two inks — the one that reads on a light
+ * surface and the one that reads on a dark one — so the ramp is built by mixing the dark-theme ink
+ * up towards white for 0–4 and the light-theme ink down towards near-black for 6–9. Index 6 is the
+ * light ink (Mantine's default filled shade) and index 3 the dark one, which is why `primaryShade`
+ * below picks 6 in light and 3 in dark.
+ */
+function ramp(lightInk: string, darkInk: string): MantineColorsTuple {
+  return [
+    mix(darkInk, '#ffffff', 0.82),
+    mix(darkInk, '#ffffff', 0.64),
+    mix(darkInk, '#ffffff', 0.3),
+    darkInk,
+    mix(darkInk, lightInk, 0.35),
+    mix(darkInk, lightInk, 0.7),
+    lightInk,
+    mix(lightInk, '#000000', 0.18),
+    mix(lightInk, '#000000', 0.36),
+    mix(lightInk, '#000000', 0.52),
+  ] as unknown as MantineColorsTuple;
+}
+
+/** The accent is a metal, not a hue: dark Iron on light, struck Silver on dark. */
+const metal = ramp(PYR.light.accent, PYR.dark.accent);
+
+/** Mantine's own `dark` scale is what paints body, surfaces and borders in dark mode. */
+const slate = [
+  PYR.dark.fg,
+  '#c3ccc8',
+  PYR.dark.muted,
+  '#6d7a76',
+  '#4a5451',
+  '#3a4341',
+  PYR.dark.raised,
+  PYR.dark.surface,
+  PYR.dark.bg,
+  '#101413',
+] as unknown as MantineColorsTuple;
+
+export const theme: MantineThemeOverride = createTheme({
+  primaryColor: 'metal',
+  primaryShade: { light: 6, dark: 3 },
+  colors: {
+    metal,
+    dark: slate,
+    guardsmen: ramp(...GROUP_INK.guardsmen),
+    specialists: ramp(...GROUP_INK.specialists),
+    engineers: ramp(...GROUP_INK.engineers),
+    monsters: ramp(...GROUP_INK.monsters),
+    mercenaries: ramp(...GROUP_INK.mercenaries),
+  },
+  fontFamily:
+    "'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
+  fontFamilyMonospace: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+  // Fraunces sets numerals only (design.md §3): the roman tier and the one hero figure. Mantine has
+  // no "numerals" slot, so headings carry it here and the `.numeral-face` class does the rest.
+  headings: {
+    fontFamily: "'Fraunces Variable', ui-serif, Georgia, 'Times New Roman', serif",
+    fontWeight: '500',
+  },
+  defaultRadius: 'sm',
+  radius: { xs: '0.25rem', sm: '0.5rem', md: '0.75rem', lg: '1rem', xl: '1.75rem' },
+  fontSizes: { xs: '0.8125rem', sm: '0.8125rem', md: '1rem', lg: '1.3125rem', xl: '1.5rem' },
+  autoContrast: true,
+  luminanceThreshold: 0.4,
+});
+
+/**
+ * Our tokens reaching Mantine's own variables. `cssVariablesResolver` is the documented hook and it
+ * is the only clean way in: everything Mantine paints (body, paper, borders, placeholder ink) reads
+ * these, so overriding nine of them re-skins every component at once.
+ */
+export const cssVariablesResolver = () => ({
+  variables: {
+    '--mantine-font-family-headings': "'Fraunces Variable', ui-serif, Georgia, serif",
+  },
+  light: {
+    '--mantine-color-body': PYR.light.bg,
+    '--mantine-color-text': PYR.light.fg,
+    '--mantine-color-dimmed': PYR.light.muted,
+    '--mantine-color-default': PYR.light.surface,
+    '--mantine-color-default-hover': PYR.light.raised,
+    '--mantine-color-default-border': PYR.light.field,
+    '--mantine-color-default-color': PYR.light.fg,
+    '--mantine-color-placeholder': PYR.light.muted,
+    '--mantine-color-anchor': PYR.light.accent,
+  },
+  dark: {
+    '--mantine-color-body': PYR.dark.bg,
+    '--mantine-color-text': PYR.dark.fg,
+    '--mantine-color-dimmed': PYR.dark.muted,
+    '--mantine-color-default': PYR.dark.surface,
+    '--mantine-color-default-hover': PYR.dark.raised,
+    '--mantine-color-default-border': PYR.dark.field,
+    '--mantine-color-default-color': PYR.dark.fg,
+    '--mantine-color-placeholder': PYR.dark.muted,
+    '--mantine-color-anchor': PYR.dark.accent,
+  },
+});

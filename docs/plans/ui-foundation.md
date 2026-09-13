@@ -1,6 +1,6 @@
 # Pyrrhic — UI technical foundation plan
 
-Status: **validated by the owner on 2026-09-12** with the starred options (route B, T-00 folded into T-03). Implementation in progress. Companion to `docs/plans/design-overhaul.md`; this plan decides *how*
+Status: **route B built 2026-09-12/13 and rejected by the owner on execution; route C (Mantine 9) accepted 2026-09-13 after spike 0007 — see ADR-0008.** §3's recommendation is superseded; §4–§8 below describe the React Aria kit as built and are kept as history. The Mantine migration is specified in `docs/plans/ui-foundation-mantine.md`. Companion to `docs/plans/design-overhaul.md`; this plan decides *how*
 the overhaul is built so that it is fast to build, cheap to change, and does not end as another 12 000 lines
 of hand-tuned class strings. It ends with a proposed ADR-0008.
 

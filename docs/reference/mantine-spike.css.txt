@@ -1,0 +1,69 @@
+/* Investigation 0007 — every line of CSS Mantine could not give us. Kept deliberately small: the
+   point of the spike is to count it. */
+
+/* The group's colour bar at the head of a troop row (design.md §1: colour identifies a unit). */
+.spk-marker {
+  width: 3px;
+  align-self: stretch;
+  min-height: 1.5rem;
+  border-radius: 1px;
+}
+
+/* TotalStack's captain chip is 32 px tall with 13 px text; Mantine's `sm` Chip is 30 px and its
+   label padding is wider, so the density is set here. */
+.spk-captains .mantine-Chip-label {
+  height: 32px;
+  font-size: 0.8125rem;
+  padding-inline: 0.625rem;
+}
+
+/* The gear badge overlaps the corner, so the chip needs room and the Indicator needs no ground. */
+.spk-captains .mantine-Indicator-indicator {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+/* Mantine's Chip always draws a tick when checked; TotalStack's glyph toggles show the glyph
+   alone, so the tick is removed for those and the chip keeps a square, icon-sized hit area. */
+.spk-glyph-chips .mantine-Chip-iconWrapper {
+  display: none;
+}
+
+/* A level that has been set shows as a dot after the name. */
+.spk-dot::after {
+  content: '●';
+  margin-inline-start: 0.375rem;
+  font-size: 0.5rem;
+  vertical-align: 0.2em;
+}
+
+/* Fraunces sets numerals only (design.md §3). */
+.spk-numeral {
+  font-family: 'Fraunces Variable', ui-serif, Georgia, serif;
+  font-variation-settings: 'opsz' 144;
+  font-weight: 500;
+}
+
+/* Mantine's `filled` variant hard-codes a white label. Our accent is a metal, not a hue, so in the
+   dark theme it is a near-white (Silver #d8e0dc) and the label came out at 1.34:1. Neither
+   `theme.autoContrast` nor the per-component `autoContrast` prop changed it in 9.6.1, although
+   Mantine had itself computed `--mantine-primary-color-contrast: #000`; so the ink is pinned to
+   that variable by hand. */
+
+.spk-captains .mantine-Chip-label[data-checked] {
+  color: var(--mantine-primary-color-contrast);
+}
+
+/* The dropdown scrolls inside itself, as TotalStack's does. */
+.spk-merc-options {
+  max-height: 17rem;
+  overflow-y: auto;
+}
+
+/* The sticky bar sits on the sheet, not on the page, and clears the phone's bottom inset. */
+.spk-bar {
+  border-top: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-default);
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}

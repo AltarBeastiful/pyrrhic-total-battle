@@ -1,0 +1,617 @@
+/**
+ * Investigation 0007 — the three forms the owner wants copied from TotalStack
+ * (`docs/investigations/0006-totalstack-captain-picker.md`), rebuilt on Mantine 9 and on nothing
+ * else. Dev-only: reached at `#spike`, never imported by the app.
+ *
+ * Every control here is a stock Mantine component. Where one did not exist, the fallback is noted
+ * in a comment so the write-up can count the gaps honestly.
+ */
+import {
+  ActionIcon,
+  Affix,
+  Anchor,
+  Badge,
+  Box,
+  Button,
+  Chip,
+  Combobox,
+  Container,
+  Divider,
+  Group,
+  Indicator,
+  NativeSelect,
+  NumberInput,
+  Pill,
+  Popover,
+  Select,
+  Stack,
+  Switch,
+  Text,
+  Title,
+  useCombobox,
+  useMantineColorScheme,
+} from '@mantine/core';
+import {
+  Bird,
+  Crosshair,
+  Flame,
+  Ghost,
+  Hammer,
+  Moon,
+  PawPrint,
+  Rabbit,
+  Settings,
+  Shield,
+  Sun,
+  Swords,
+  Users,
+} from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+
+import {
+  bonusSentence,
+  captains,
+  hasStackData,
+  mercenaries,
+  mercenaryTiers,
+  troopGroups,
+  type Mercenary,
+  type TroopGroup,
+} from './data';
+import './spike.css';
+
+const CATEGORY_ICON: Record<string, ReactNode> = {
+  melee: <Swords size={14} />,
+  ranged: <Crosshair size={14} />,
+  mounted: <Rabbit size={14} />,
+  flying: <Bird size={14} />,
+};
+
+const MERC_TAG_ICON: Record<string, ReactNode> = {
+  monster: <Ghost size={12} />,
+  guardsmen: <Shield size={12} />,
+  specialist: <Users size={12} />,
+  beast: <PawPrint size={12} />,
+  giant: <Hammer size={12} />,
+  dragon: <Flame size={12} />,
+};
+
+const NONE = '—';
+
+/* ------------------------------------------------------------------ a. Troops row (plan §7.1) */
+
+interface TroopState {
+  from: string;
+  to: string;
+  include: string[];
+}
+
+function TroopRow({ group, state, onChange }: {
+  group: TroopGroup;
+  state: TroopState;
+  onChange: (next: TroopState) => void;
+}): ReactNode {
+  const options = group.tiers.map((t) => `${group.prefix}${t}`);
+  const data = group.optional ? [NONE, ...options] : options;
+  const off = state.to === NONE;
+
+  return (
+    <Group gap="sm" wrap="wrap" align="flex-start">
+      <Box className="spk-marker" bg={`${group.id}.6`} />
+      <Text size="sm" fw={500} w={96}>
+        {group.label}
+      </Text>
+      <Group gap={6} wrap="nowrap">
+        <Text size="xs" c="dimmed">
+          from
+        </Text>
+        <NativeSelect
+          size="xs"
+          w={72}
+          aria-label={`${group.label} lowest tier`}
+          data={data}
+          value={state.from}
+          onChange={(e) => { onChange({ ...state, from: e.currentTarget.value }); }}
+        />
+        <Text size="xs" c="dimmed">
+          to
+        </Text>
+        <NativeSelect
+          size="xs"
+          w={72}
+          aria-label={`${group.label} highest tier`}
+          data={data}
+          value={state.to}
+          onChange={(e) => { onChange({ ...state, to: e.currentTarget.value }); }}
+        />
+      </Group>
+      {/* Guardsmen and monsters click out the top-tier types they have not unlocked. */}
+      {group.categories.length > 0 && !off ? (
+        <Group gap={6} wrap="nowrap">
+          <Text size="xs" c="dimmed">
+            Include at {state.to}:
+          </Text>
+          <Chip.Group
+            multiple
+            value={state.include}
+            onChange={(v) => { onChange({ ...state, include: v }); }}
+          >
+            <Group gap={4} className="spk-glyph-chips">
+              {group.categories.map((c) => (
+                <Chip key={c} value={c} size="xs" radius="sm" color={group.id} aria-label={c}>
+                  {CATEGORY_ICON[c]}
+                </Chip>
+              ))}
+            </Group>
+          </Chip.Group>
+        </Group>
+      ) : null}
+    </Group>
+  );
+}
+
+/* ------------------------------------------------------- b. Mercenaries (plan §7.2, D-23) */
+
+interface Hired {
+  id: string;
+  cap: number;
+  unlimited: boolean;
+}
+
+const MERC_FILTERS = [
+  { id: 'monster', label: 'Monsters', icon: <Ghost size={14} /> },
+  { id: 'guardsmen', label: 'Guardsmen', icon: <Shield size={14} /> },
+  { id: 'specialist', label: 'Specialists', icon: <Users size={14} /> },
+  { id: 'melee', label: 'Melee', icon: <Swords size={14} /> },
+  { id: 'ranged', label: 'Ranged', icon: <Crosshair size={14} /> },
+  { id: 'flying', label: 'Flying', icon: <Bird size={14} /> },
+  { id: 'beast', label: 'Beasts', icon: <PawPrint size={14} /> },
+];
+
+function MercenaryPill({ merc, hired, onRemove, onChange }: {
+  merc: Mercenary;
+  hired: Hired;
+  onRemove: () => void;
+  onChange: (next: Hired) => void;
+}): ReactNode {
+  const [opened, setOpened] = useState(false);
+  const glyph = merc.tags.map((t) => MERC_TAG_ICON[t]).find(Boolean) ?? null;
+
+  return (
+    <Popover
+      opened={opened}
+      onChange={setOpened}
+      position="bottom-start"
+      withRoles={false}
+      withArrow
+      shadow="md"
+      trapFocus
+    >
+      <Popover.Target>
+        <Pill
+          withRemoveButton
+          size="md"
+          onRemove={onRemove}
+          onClick={() => { setOpened((o) => !o); }}
+          style={{ cursor: 'pointer' }}
+        >
+          <Group gap={5} wrap="nowrap" component="span">
+            <Text span fw={600} size="xs">
+              {merc.label}
+            </Text>
+            <Text span size="xs" c="dimmed" className="spk-numeral">
+              {merc.tier}
+            </Text>
+            <Text span size="xs">
+              {hired.unlimited ? '∞' : hired.cap}
+            </Text>
+            {glyph}
+          </Group>
+        </Pill>
+      </Popover.Target>
+      <Popover.Dropdown>
+        <Stack gap="xs" w={200}>
+          <Text size="sm" fw={600}>
+            {merc.name}
+          </Text>
+          <NumberInput
+            size="xs"
+            label="Owned"
+            hideControls
+            min={0}
+            thousandSeparator=" "
+            disabled={hired.unlimited}
+            value={hired.cap}
+            onFocus={(e) => { e.currentTarget.select(); }}
+            onChange={(v) => { onChange({ ...hired, cap: Number(v) || 0 }); }}
+          />
+          <Switch
+            size="xs"
+            label="Unlimited"
+            checked={hired.unlimited}
+            onChange={(e) => { onChange({ ...hired, unlimited: e.currentTarget.checked }); }}
+          />
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  );
+}
+
+function MercenariesBlock(): ReactNode {
+  const [hired, setHired] = useState<Hired[]>([
+    { id: 'epic-monster-hunter-5', cap: 0, unlimited: true },
+    { id: 'bear-5', cap: 240, unlimited: false },
+    { id: 'archdemon-6', cap: 30, unlimited: false },
+  ]);
+  const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<string[]>([]);
+
+  const byId = useMemo(() => new Map(mercenaries.map((m) => [m.id, m])), []);
+  const combobox = useCombobox({ onDropdownClose: () => { combobox.resetSelectedOption(); } });
+
+  const matching = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return mercenaries.filter((m) => {
+      if (q && !m.name.toLowerCase().includes(q) && !m.label.toLowerCase().includes(q)) return false;
+      return filters.every((f) => m.tags.includes(f));
+    });
+  }, [query, filters]);
+
+  const add = (id: string): void => {
+    setHired((cur) => (cur.some((h) => h.id === id) ? cur : [...cur, { id, cap: 0, unlimited: true }]));
+    // The dropdown deliberately stays open: TotalStack lets you hire several in a row.
+  };
+
+  return (
+    <Stack gap="xs">
+      <Group gap="xs" justify="space-between">
+        <Group gap="xs" align="baseline">
+          <Title order={2} size="h5" ff="var(--mantine-font-family)">
+            Mercenaries
+          </Title>
+          <Text size="xs" c="dimmed">
+            ({hired.length} selected)
+          </Text>
+        </Group>
+        <Anchor
+          component="button"
+          type="button"
+          size="xs"
+          onClick={() => { setHired([]); }}
+        >
+          Deselect all
+        </Anchor>
+      </Group>
+
+      <Pill.Group>
+        {hired.map((h) => {
+          const merc = byId.get(h.id);
+          if (!merc) return null;
+          return (
+            <MercenaryPill
+              key={h.id}
+              merc={merc}
+              hired={h}
+              onRemove={() => { setHired((cur) => cur.filter((x) => x.id !== h.id)); }}
+              onChange={(next) => { setHired((cur) => cur.map((x) => (x.id === h.id ? next : x))); }}
+            />
+          );
+        })}
+      </Pill.Group>
+
+      <Combobox store={combobox} onOptionSubmit={add} withinPortal={false}>
+        <Combobox.DropdownTarget>
+          <Button
+            size="xs"
+            variant="default"
+            w={220}
+            onClick={() => { combobox.toggleDropdown(); }}
+          >
+            Hire mercenary…
+          </Button>
+        </Combobox.DropdownTarget>
+        <Combobox.Dropdown>
+          <Combobox.Search
+            value={query}
+            onChange={(e) => { setQuery(e.currentTarget.value); }}
+            placeholder="Search mercenaries"
+            aria-label="Search mercenaries"
+            // Friction worth recording: `Combobox.DropdownTarget` positions the dropdown but does
+            // not wire the keyboard contract the way `Combobox.Target` does, so Escape has to be
+            // handled by hand when the search field lives inside the dropdown.
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                combobox.closeDropdown();
+              }
+            }}
+          />
+          <Box p={6}>
+            <ActionIcon.Group>
+              {MERC_FILTERS.map((f) => (
+                <ActionIcon
+                  key={f.id}
+                  size="sm"
+                  aria-label={f.label}
+                  aria-pressed={filters.includes(f.id)}
+                  variant={filters.includes(f.id) ? 'filled' : 'default'}
+                  onClick={() => {
+                    setFilters((cur) =>
+                      cur.includes(f.id) ? cur.filter((x) => x !== f.id) : [...cur, f.id],
+                    );
+                  }}
+                >
+                  {f.icon}
+                </ActionIcon>
+              ))}
+            </ActionIcon.Group>
+          </Box>
+          <Combobox.Options className="spk-merc-options">
+            {mercenaryTiers.map((tier) => {
+              const rows = matching.filter((m) => m.tier === tier);
+              if (rows.length === 0) return null;
+              return (
+                <Combobox.Group key={tier} label={`Tier ${tier}`}>
+                  {rows.map((m) => (
+                    <Combobox.Option key={m.id} value={m.id} disabled={hired.some((h) => h.id === m.id)}>
+                      <Group gap="xs" wrap="nowrap">
+                        <Badge size="xs" variant="light" color="mercenaries" className="spk-numeral">
+                          {m.tier}
+                        </Badge>
+                        <Text size="xs">{m.name}</Text>
+                      </Group>
+                    </Combobox.Option>
+                  ))}
+                </Combobox.Group>
+              );
+            })}
+            {matching.length === 0 ? <Combobox.Empty>No mercenary matches</Combobox.Empty> : null}
+          </Combobox.Options>
+        </Combobox.Dropdown>
+      </Combobox>
+    </Stack>
+  );
+}
+
+/* ----------------------------------------------------------- c. Captains (plan §7.3, D-34) */
+
+const STAR_OPTIONS = [NONE, ...Array.from({ length: 7 }, (_, i) => `★${i + 1}`)];
+
+interface Levels {
+  level: number;
+  stars: number;
+}
+
+function CaptainsBlock(): ReactNode {
+  const [enlisted, setEnlisted] = useState<string[]>(['aydae']);
+  const [levels, setLevels] = useState<Record<string, Levels>>({ aydae: { level: 20, stars: 3 } });
+  const [openGear, setOpenGear] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+
+  const onChange = (next: string[]): void => {
+    if (next.length > 3) {
+      // TotalStack refuses the fourth silently; we add a polite sentence and nothing else.
+      setNotice('Three captains at most march together. Remove one first.');
+      return;
+    }
+    setNotice('');
+    setEnlisted(next);
+  };
+
+  return (
+    <Stack gap={6}>
+      <Group gap="xs" align="baseline">
+        <Title order={2} size="h5" ff="var(--mantine-font-family)">
+          Captains
+        </Title>
+        <Text size="xs" c="dimmed">
+          {enlisted.length}/3
+        </Text>
+      </Group>
+      <Text size="xs" c="dimmed" fs="italic">
+        Captain bonuses only count when the captain marches.
+      </Text>
+
+      <Chip.Group multiple value={enlisted} onChange={onChange}>
+        <Group gap={8} className="spk-captains">
+          {captains.map((c) => {
+            const lv = levels[c.id];
+            const set = Boolean(lv && (lv.level > 0 || lv.stars > 0));
+            const chip = (
+              <Chip value={c.id} size="sm" radius="sm" autoContrast>
+                <span className={set ? 'spk-dot' : undefined}>{c.name}</span>
+              </Chip>
+            );
+            if (!hasStackData(c)) return <span key={c.id}>{chip}</span>;
+
+            const current = lv ?? { level: 0, stars: 0 };
+            return (
+              <Popover
+                key={c.id}
+                opened={openGear === c.id}
+                onChange={(o) => { if (!o) setOpenGear(null); }}
+                position="bottom-start"
+                withRoles={false}
+                withArrow
+                shadow="md"
+                trapFocus
+              >
+                {/* Anchored under the chip, as TotalStack does — not under the gear. */}
+                <Popover.Target>
+                  <span>
+                    <Indicator
+                      position="top-end"
+                      offset={2}
+                      size={18}
+                      color="transparent"
+                      label={
+                        <ActionIcon
+                          size={18}
+                          radius="xl"
+                          variant={enlisted.includes(c.id) ? 'filled' : 'default'}
+                          aria-label={`Set ${c.name}'s level`}
+                          onClick={() => { setOpenGear((o) => (o === c.id ? null : c.id)); }}
+                        >
+                          <Settings size={11} />
+                        </ActionIcon>
+                      }
+                    >
+                      {chip}
+                    </Indicator>
+                  </span>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs" w={230}>
+                    <Text size="sm" fw={600}>
+                      {c.name}
+                    </Text>
+                    <NumberInput
+                      size="xs"
+                      label="Base level"
+                      hideControls
+                      min={0}
+                      max={60}
+                      value={current.level}
+                      onFocus={(e) => { e.currentTarget.select(); }}
+                      onChange={(v) => {
+                        setLevels((cur) => ({ ...cur, [c.id]: { ...current, level: Number(v) || 0 } }));
+                      }}
+                    />
+                    <Select
+                      size="xs"
+                      label="Star level"
+                      data={STAR_OPTIONS}
+                      value={STAR_OPTIONS[current.stars] ?? NONE}
+                      allowDeselect={false}
+                      onChange={(v) => {
+                        const stars = Math.max(0, STAR_OPTIONS.indexOf(String(v ?? NONE)));
+                        setLevels((cur) => ({ ...cur, [c.id]: { ...current, stars } }));
+                      }}
+                    />
+                    <Divider />
+                    <Text size="xs" c="dimmed">
+                      {bonusSentence(c, current.level, current.stars)}
+                    </Text>
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            );
+          })}
+        </Group>
+      </Chip.Group>
+
+      <Text size="xs" c="dimmed" aria-live="polite" mih="1.125rem">
+        {notice}
+      </Text>
+    </Stack>
+  );
+}
+
+/* ------------------------------------------------------------------- d. The sticky bar */
+
+function StickyBar(): ReactNode {
+  const [pools, setPools] = useState({ leadership: 84300, authority: 12500, dominance: 3200 });
+  const field = (key: keyof typeof pools, label: string): ReactNode => (
+    <NumberInput
+      size="xs"
+      w={112}
+      label={label}
+      hideControls
+      min={0}
+      thousandSeparator=" "
+      value={pools[key]}
+      onFocus={(e) => { e.currentTarget.select(); }}
+      onChange={(v) => { setPools((cur) => ({ ...cur, [key]: Number(v) || 0 })); }}
+    />
+  );
+
+  return (
+    <Affix position={{ bottom: 0, left: 0, right: 0 }}>
+      <Box className="spk-bar" px="md" pt="xs" pb="xs">
+        <Container size="lg" p={0}>
+          <Group gap="sm" justify="space-between" wrap="wrap">
+            <Group gap="sm" wrap="wrap">
+              {field('leadership', 'Leadership')}
+              {field('authority', 'Authority')}
+              {field('dominance', 'Dominance')}
+              <Select
+                size="xs"
+                w={150}
+                label="Priority"
+                defaultValue="Tier ladder"
+                allowDeselect={false}
+                data={['Tier ladder', 'Troops first', 'Your own order']}
+              />
+            </Group>
+            {/* Our accent is a metal, not a hue, so in dark it is a near-white and Mantine's filled
+                Button put a white label on it: 1.34:1. Neither `theme.autoContrast` nor the
+                `autoContrast` prop changed it in 9.6.1, and no stylesheet can — Mantine writes
+                `--button-color: var(--mantine-color-white)` as an *inline* style. The only way in
+                is the `styles` API, pointed at the contrast variable Mantine itself computed. */}
+            <Button size="sm" mt={18} style={{ color: 'var(--mantine-primary-color-contrast)' }}>
+              Generate
+            </Button>
+          </Group>
+        </Container>
+      </Box>
+    </Affix>
+  );
+}
+
+/* --------------------------------------------------------------------------- the page */
+
+function ColorSchemeToggle(): ReactNode {
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  return (
+    <ActionIcon
+      variant="default"
+      size="md"
+      aria-label={colorScheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+      onClick={toggleColorScheme}
+    >
+      {colorScheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+    </ActionIcon>
+  );
+}
+
+export function SpikePage(): ReactNode {
+  const [troops, setTroops] = useState<Record<string, TroopState>>({
+    guardsmen: { from: 'G1', to: 'G4', include: ['melee', 'ranged', 'flying'] },
+    specialists: { from: 'S1', to: 'S2', include: [] },
+    engineers: { from: NONE, to: NONE, include: [] },
+    monsters: { from: 'M3', to: 'M5', include: ['melee', 'ranged', 'mounted', 'flying'] },
+  });
+
+  return (
+    <Container size="lg" py="md" pb={96} component="main">
+      <Stack gap="lg">
+        <Group justify="space-between">
+          <Title order={1} size="h3" ff="var(--mantine-font-family)">
+            Mantine spike — the three TotalStack forms
+          </Title>
+          <ColorSchemeToggle />
+        </Group>
+
+        <Stack gap={6}>
+          <Title order={2} size="h5" ff="var(--mantine-font-family)">
+            Troops
+          </Title>
+          {troopGroups.map((g) => (
+            <TroopRow
+              key={g.id}
+              group={g}
+              state={troops[g.id] ?? { from: NONE, to: NONE, include: [] }}
+              onChange={(next) => { setTroops((cur) => ({ ...cur, [g.id]: next })); }}
+            />
+          ))}
+        </Stack>
+
+        <Divider />
+        <MercenariesBlock />
+        <Divider />
+        <CaptainsBlock />
+      </Stack>
+      <StickyBar />
+    </Container>
+  );
+}
