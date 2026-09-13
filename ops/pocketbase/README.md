@@ -1,5 +1,15 @@
 # Pyrrhic profile-sync backend (S-49a)
 
+**Live since 2026-09-13** at `https://pyrrhic-backend.92.5.91.253.sslip.io` (Let's Encrypt certificate; a Dynu
+name can replace it later by editing `/home/ubuntu/caddy-sites/pyrrhic.caddy`, the `--origins`/`PYRRHIC_APP_URL`
+values in `/home/ubuntu/pyrrhic/docker-compose.yml`, and the mail templates in the admin UI). Server paths:
+`/home/ubuntu/pyrrhic/` (compose, hooks, migrations, `smoke.sh`, and `.superuser` — mode 600, the generated
+superuser credentials; rotate them from the admin UI), `/home/ubuntu/caddy-sites/pyrrhic.caddy` (imported by
+philou's Caddy from `/etc/caddy-sites/*.caddy`; philou commits 840a6e9 and 934dd24). Admin UI at `/_/` is
+denied by default: put your public IP in the `not remote_ip` matcher of the site file and
+`docker exec philou-web caddy reload --config /etc/caddy/Caddyfile`. Still to do in the admin UI: Google
+OAuth client (owner), SMTP (owner), backup target.
+
 Self-hosted PocketBase behind philou's Caddy on the "main" server, for the signed-in
 account sync in `docs/PLAN.md` § M8.
 
