@@ -9,8 +9,13 @@ review checks against. When a rule and a plan disagree, the rule wins; change th
 1. **The answer comes first.** Once a march exists, the figures a player compares marches by (expected and
    worst-case damage, hits, recovery cost, damage per silver) are the first thing on screen, and they stay
    visible while the setup changes. The order stacks die in is detail, folded away. 
-2. **Generate is reachable from everywhere.** One sticky app bar carries the answer and the account; below
-   desktop width a floating Generate button, above it Generate sits in the bar. No other sticky toolbar. 
+2. **Generate is reachable from everywhere, next to the answer.** The march summary and the Generate action
+   travel together: on desktop at the top of the sticky March pane; on phones in a Material bottom app bar
+   holding a very quick summary (damage, silver, a few troop tiles, text cut when needed) and Generate, with
+   the full recap in a sheet that opens from it. The top app bar carries only the brand and the account. One
+   sticky bar per edge, nothing else sticky. *(Amended by the coordinator on 2026-09-13 after spike 0009,
+   adopting V1; the earlier text said "one sticky app bar with the answer, a floating Generate below desktop
+   width" — revert here if you disagree.)*
 3. **Configure once, generate often.** Troops and bonuses change rarely; the monster, the housing and the
    owned mercenaries change every fight. The layout optimises the daily journey: open, adjust one or two
    numbers, generate, copy counts. 

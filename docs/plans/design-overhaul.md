@@ -183,42 +183,34 @@ layers, shape scale) and say so in the component's story.
 
 ### 5.1 Page structure
 
-**Revised 2026-09-12 after an independent design review** (Material 3 supporting-pane guidance; measured
-comparables — Apple's MacBook configurator, Google Cloud's pricing calculator, AWS's calculator, Raidbots,
-Wowhead — none scrolls two panes independently; all scroll one page and keep the *answer* sticky). The first
-draft's two independently scrolling columns is withdrawn.
-
-Three regions:
+**Revised again 2026-09-13 after spike 0009** (four frames built on Mantine with screenshots at 1400 and 390 px,
+`docs/investigations/0009-summary-generate-spike.md`): the answer and Generate travel together; the top app
+bar no longer duplicates the figures (design rule 5).
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│ ◆ Pyrrhic     avg 1.67 M · min 1.29 M · 2 hits   [Generate] (A)│  app bar, sticky, 56 px
+│ ◆ Pyrrhic                                              (R) ▾  │  top app bar: brand + account, sticky
 ├──────────────────────────────────┬────────────────────────────┤
-│ ARMY                             │ MARCH  (supporting pane)   │
-│  Troops       G1–G4 · S1–S2 …    │  avg 1.67 M · min · hits   │
-│  Mercenaries  ABM6 ×22 · …       │  ┌────┬──────────┬───────┐ │
-│ BONUSES  Health +312 % …     ⌄   │  │ ▣  │ Archer 3 │ 2 310 │ │
-│ BATTLE   Enemy · Leadership …    │  …                         │
-│          Method · Objective      │  Left out … Keep in march  │
-│                                  │  Story ▸  Profile ▸  Save  │
+│ ARMY   Troops · Mercenaries      │ MARCH            12 stacks │  sticky supporting pane (≥ 1200)
+│ BONUSES  totals line        ⌄    │ 19,639,721 expected        │
+│ BATTLE  housing · enemy · method │ worst · hits · silver …    │
+│         · objective              │ [⚔ Generate]               │
+│                                  │ TROOPS 84,300 / 84,300     │
+│                                  │ ▣ Swordsman I 12,846 …     │
+│                                  │ Left out — tap to put back │
 └──────────────────────────────────┴────────────────────────────┘
+phone (< 1200): one column; bottom app bar (64 px, sticky):
+│ 19.6M · 34.3M silver  ⚔12.8k 🏹12.8k +8 ˄     [⚔ Generate] │  tap the summary → recap sheet (half height)
 ```
 
-- **One page scroll at every width.** No nested scrollers, except that the supporting pane may scroll inside
-  itself when it is taller than the viewport (sticky with a max height).
-- **App bar (sticky, 64 px, M3 small top app bar)**: brand mark; the live answer (average, minimum, hits) once a result exists,
-  muted with a "changed" dot when the setup moved since, and beside it a recap of the march's troops as a
-  row of `sm` tiles (owner's request; hidden under 600 px where the figures alone fit); on wide screens the
-  primary Generate button; the account avatar and menu. It is the only sticky element besides the floating button, and it sticks the
-  *answer*, not a toolbar — principle 5 is amended accordingly.
-- **Large and up (1280 px in our breakpoints):** setup (Army, Bonuses, Battle) as the focus pane on the left;
-  MARCH as the 360 dp supporting pane on the right, sticky under the app bar, with the march rows in their
-  stacked card form. Generate lives in the app bar; no floating button.
-- **< 1280 px:** one column in the order Army, Bonuses, Battle, March; the floating Generate button
-  (bottom-right, label collapses while scrolling down); generating scrolls to MARCH.
-
-The section jump bar, the profile bar and the hero illustration leave the frame (the hero survives on the
-empty state and About only).
+- **Desktop (large and up):** setup as the focus pane on the left; the March as the 360 dp supporting pane on
+  the right, sticky under the app bar, its header holding the recap figures and the primary Generate.
+- **Phone and tablet:** one column; a **Material bottom app bar** carries the quick summary (expected damage,
+  silver, up to four tiny troop tiles, ellipsis when short of room) and Generate; tapping the summary opens a
+  half-height bottom sheet with the full recap (figures, per-pool stacks with counts, left-out types). No
+  floating action button. Measured sticky chrome at 390×844: 64 px top + 64 px bottom, content never covered.
+- **One page scroll**, as before; the March section also exists in the page flow on phones (below the setup)
+  so the sheet is a shortcut, not the only way to it — to validate in D-12.
 
 ### 5.2 Account menu
 
@@ -582,9 +574,9 @@ Tick, strike or amend. Recommendations are marked ★.
 - **D3 Frame.** ★ No sticky bars; top bar scrolls away; account menu holds every profile action.
 - **D4 Generate.** ★ Floating button, not a menu item; `Ctrl/⌘ + Enter`. Fallback: menu item if the button is in
   the way.
-- **D5 Desktop split.** ~~Setup left 5/12, March right 7/12 from 1024 px, two scrollers~~ → **revised:** one
-  page scroll, March as a sticky 27 rem supporting pane from 1280 px, figures and Generate in the sticky app
-  bar (design review 2026-09-12).
+- **D5 Desktop split.** Revised twice: one page scroll, March as a sticky 360 dp supporting pane from the
+  large class with the recap and Generate in its header; phones get a bottom app bar with the quick summary
+  and Generate and a recap sheet (spike 0009, 2026-09-13). The top app bar holds brand and account only.
 - **D6 Tablet order.** March first when a result exists and nothing changed; setup first otherwise. Or always
   setup first?
 - **D7 Bonuses collapsed by default.** ★ Yes, TOTAL line only; expanded state remembered per device.
