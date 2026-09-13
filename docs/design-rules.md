@@ -127,4 +127,5 @@ plan disagree, the rule wins; change the rule here first. Each rule cites the re
 | R21 | Go to TotalStack, look at the captain selection, note everything, mimic behaviour, arrangement and relative size in our CSS | 09-13 |
 | R22 | What was built is a mismatch of CSS badly designed and executed, what the stack choice was meant to avoid; take TotalStack as the example; implement it in our stack or change the stack | 09-13 |
 | R23 | Small styling problems with carefully chosen images and text colouring; then: Unicode characters like TotalStack's ⚔️ | 09-13 |
+| R25 | The stepper rule: raise the limit to 100 values | 09-13 |
 | R24 | Compare the Mantine plan with an external assessment; keep our decisions (Generate accessible from everywhere); take what they do well and improve | 09-13 |
