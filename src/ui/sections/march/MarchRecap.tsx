@@ -15,7 +15,8 @@ import type { BattleSummary } from '@/engine/types';
 import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { amount, ratio } from './format';
+import { amount, ratio, relativeTime } from './format';
+import classes from './march.module.css';
 import { useMarch } from './useMarch';
 
 /**
@@ -91,14 +92,16 @@ export function MarchRecap() {
       <Stack gap={2}>
         {/* The hero figure at `docs/design.md` §3's own 48 px, and free to shrink rather than to
             break: it is the widest thing in a 360 dp pane. */}
-        <Text variant="numeral" fz="3rem" lh={1.05} fw={600} style={{ overflowWrap: 'anywhere' }}>
+        <Text variant="numeral" fz={{ base: '2.5rem', lg: '3rem' }} lh={1} fw={300} className={classes.hero}>
           {amount(summary.avgDamage)}
         </Text>
         <Group gap="xs" wrap="nowrap">
           {/* The one figure that carried no mark while the four under it did (rule 21). */}
           <Glyph kind="averageDamage" />
+          {/* "Expected damage · generated just now" — the artboard's own label line. When the run
+              landed is a fact about this figure, not a second heading (design rule 5). */}
           <Text span size="sm" c="dimmed">
-            Expected damage
+            {`Expected damage · generated ${relativeTime(snapshot.at)}`}
           </Text>
           {previous !== null && (
             <DeltaText

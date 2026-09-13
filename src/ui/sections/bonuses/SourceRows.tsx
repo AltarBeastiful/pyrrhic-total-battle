@@ -24,7 +24,10 @@ function apply(target: ToggleTarget, on: boolean): void {
 }
 
 function Row({ row, onEdit }: { row: SourceRow; onEdit: (target: EditorTarget) => void }) {
-  const value = row.value === '' ? 'nothing yet' : row.value;
+  // A source switched on with nothing typed into it says so here, in its own value column, and
+  // nowhere else (owner, 2026-09-13 — the card's "N on but empty" badge was retired): an em dash is
+  // how a table says "no value", and the gear beside it is where the value is typed.
+  const value = row.value === '' ? '—' : row.value;
   return (
     <Group role="listitem" gap="xs" wrap="nowrap" mih={40}>
       {row.locked === true ? (

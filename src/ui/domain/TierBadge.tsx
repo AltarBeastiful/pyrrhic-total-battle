@@ -11,9 +11,10 @@
  */
 import { Badge } from '@mantine/core';
 
-import { romanTier } from './unitGroup';
+import { romanTier, tierInk } from './unitGroup';
 
-const COLOURED = new Set([5, 6, 7, 8, 9]);
+/** Every tier the palette carries an ink for (design plan §5.5): I–IV as well as V–IX now. */
+const COLOURED = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
 export interface TierBadgeProps {
   /** 5–9 in the tables today; anything else is drawn without a colour. */
@@ -29,7 +30,7 @@ export function TierBadge({ tier, size = 'xs' }: TierBadgeProps) {
       radius="sm"
       variant="light"
       color={coloured ? `tier${tier}` : 'slate'}
-      c={coloured ? `var(--mantine-color-tier${tier}-text)` : 'dimmed'}
+      c={coloured ? tierInk(tier) : 'dimmed'}
       ff="var(--pyr-font-numeral)"
       aria-label={`tier ${tier}`}
     >

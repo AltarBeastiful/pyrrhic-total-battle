@@ -6,81 +6,101 @@
  * that one is left out" is testable on its own.
  */
 import { retrainOne, reviveOne } from '@/engine';
-import type { BattleSummary, Stack, StackRequest, StackResult, UnitDef } from '@/engine/types';
-import { unitGroupOf, UNIT_GROUPS } from '@/ui/domain';
-import type { UnitGroup } from '@/ui/domain';
+import type { BattleSummary, Pool, Stack, StackRequest, StackResult, UnitDef } from '@/engine/types';
+import { unitGroupOf } from '@/ui/domain';
 
-import { amount } from './format';
 import { findUnit } from './units';
 
-// ---- The march as tiles -------------------------------------------------------------------------
-/** A type of the profile's range, as the tile row draws it. */
-export interface TileEntry {
+// ---- The march as pills, one block per pool ------------------------------------------------------
+/** A stack of the march, as one pill draws it. */
+export interface PillEntry {
   unit: UnitDef;
-  /** Units of this type in the march; `0` when it is left out. */
+  /** Units of this type in the march. */
   count: number;
-  /** `pinned` is kept in by hand, `leftOut` is not marching, `on` is simply in. */
-  state: 'on' | 'pinned' | 'leftOut';
+  /** `pinned` is kept in by hand, `on` is simply in. */
+  state: 'on' | 'pinned';
 }
 
-export interface TileRow {
-  group: UnitGroup;
-  entries: TileEntry[];
+/** One housing pool: what it paid for, and the stacks it is paying for, in kill order. */
+export interface PoolRow {
+  pool: Pool;
+  used: number;
+  capacity: number;
+  entries: PillEntry[];
 }
 
-/** What a tile does when it is pressed, said in full: a tile is a verb, not a decoration. */
-export function tileLabel(entry: TileEntry): string {
-  const head = `${entry.unit.name}, tier ${String(entry.unit.tier)}`;
-  if (entry.state === 'leftOut') return `${head}, left out — keep in march`;
-  const kept = entry.state === 'pinned' ? ', kept in' : '';
-  return `${head}, ${amount(entry.count)} in the march${kept} — leave out`;
-}
+/** The pools in the order the Battle card asks for them. */
+export const POOL_ORDER: readonly Pool[] = ['leadership', 'authority', 'dominance'];
 
-export interface TileRowsInput {
+export interface PoolRowsInput {
+  /** The result on screen: its stacks are already in kill order, first to fall first. */
+  result: StackResult;
   /** The unit types the march was computed from. */
   units: readonly UnitDef[];
-  /** Counts by unit id, from the result on screen. */
-  counts: Map<string, number>;
   /** Types kept in the march by hand. */
   pinned: readonly string[];
-  /** Types that are not in the request any more: excluded in the profile, removed here by hand. */
-  leftOutIds: readonly string[];
-}
-
-/** Tiers first, then the name: the order the Troops card draws a group in. */
-function byTier(a: TileEntry, b: TileEntry): number {
-  return a.unit.tier - b.unit.tier || a.unit.name.localeCompare(b.unit.name);
 }
 
 /**
- * One row per group, each holding the types of the profile's range: the ones marching with their
- * count, then the ones the search or the player left out, dimmed. A row with nothing in it is left
- * out of the list rather than drawn empty.
+ * One block per housing pool (design plan §5.5): the pool's own figure, then the stacks it houses
+ * as pills **in kill order** — the order the engine returned them in, which is the order they fall.
+ *
+ * Only what is marching (owner, 2026-09-13): a type the search or the player left out is not a
+ * stack, so it does not take a stack's space. `leftOutOf` below gathers those into the small row
+ * that sits under the pools.
+ *
+ * A pool with no stacks and no capacity is left out of the list rather than drawn empty.
  */
-export function tileRows({ units, counts, pinned, leftOutIds }: TileRowsInput): TileRow[] {
-  const entries = new Map<string, TileEntry>();
+export function poolRows({ result, units, pinned }: PoolRowsInput): PoolRow[] {
+  const byPool = new Map<Pool, PillEntry[]>();
 
-  for (const unit of units) {
-    const count = counts.get(unit.id) ?? 0;
-    const state = count <= 0 ? 'leftOut' : pinned.includes(unit.id) ? 'pinned' : 'on';
-    entries.set(unit.id, { unit, count, state });
-  }
-
-  for (const unitId of leftOutIds) {
-    if (entries.has(unitId)) continue;
-    // A type the player took out is no longer in the request, so the tables name it.
-    const unit = findUnit(unitId, units);
+  for (const stack of result.stacks) {
+    if (stack.count <= 0) continue;
+    const unit = findUnit(stack.unitId, units);
     if (unit === undefined) continue;
-    entries.set(unitId, { unit, count: 0, state: 'leftOut' });
+    const entry: PillEntry = {
+      unit,
+      count: stack.count,
+      state: pinned.includes(unit.id) ? 'pinned' : 'on',
+    };
+    const list = byPool.get(stack.pool);
+    if (list === undefined) byPool.set(stack.pool, [entry]);
+    else list.push(entry);
   }
 
-  const rows: TileRow[] = [];
-  for (const group of UNIT_GROUPS) {
-    const inGroup = [...entries.values()].filter((entry) => unitGroupOf(entry.unit) === group);
-    if (inGroup.length === 0) continue;
-    rows.push({ group, entries: inGroup.sort(byTier) });
+  const rows: PoolRow[] = [];
+  for (const pool of POOL_ORDER) {
+    const entries = byPool.get(pool) ?? [];
+    const usage = result.pools[pool];
+    if (entries.length === 0 && usage.capacity <= 0 && usage.used <= 0) continue;
+    rows.push({ pool, used: usage.used, capacity: usage.capacity, entries });
   }
   return rows;
+}
+
+/**
+ * The types that are *not* in this march: the ones the sizer or the priority search dropped, and
+ * the ones the player took out by hand. They are drawn under the pools as a small row of outlined
+ * pills — TotalStack's "removed from formation" line, in our words — so nothing the account fields
+ * ever disappears from the screen (design rule 13).
+ */
+export function leftOutOf(
+  units: readonly UnitDef[],
+  result: StackResult,
+  leftOutIds: readonly string[],
+): UnitDef[] {
+  const marching = new Set(result.stacks.filter((stack) => stack.count > 0).map((s) => s.unitId));
+  const seen = new Set<string>();
+  const out: UnitDef[] = [];
+  for (const unit of [
+    ...units,
+    ...leftOutIds.map((unitId) => findUnit(unitId, units)).filter((unit) => unit !== undefined),
+  ]) {
+    if (marching.has(unit.id) || seen.has(unit.id)) continue;
+    seen.add(unit.id);
+    out.push(unit);
+  }
+  return out.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
 }
 
 // ---- The counts to copy -------------------------------------------------------------------------

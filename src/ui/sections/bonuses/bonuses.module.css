@@ -5,8 +5,11 @@
    Everything else on this card is a theme token on a stock component.
    --------------------------------------------------------------------------------------------- */
 .totals > dl {
-  flex-flow: row wrap;
-  column-gap: var(--mantine-spacing-xl);
+  display: grid;
+  /* Four equal columns where there is room, three on a phone: "Sources on" is two words and must
+     not break across a line (artboard `.figs`, and its own three-column phone variant). */
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  gap: var(--mantine-spacing-lg);
 }
 
 .totals dt {

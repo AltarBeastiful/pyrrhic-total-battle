@@ -50,9 +50,14 @@ vi.mock('../sections', () => {
 
 /** The March contract (M-08): the pieces the frame places, each saying where it landed. */
 vi.mock('@/ui/sections/march', () => ({
+  // The section carries the recap and Generate itself now: on a desktop they are the head of the
+  // sticky "march at a glance" block inside it, not something the pane wraps around it
+  // (owner, 2026-09-13).
   MarchSection: (): ReactNode => (
     <section id="march" aria-labelledby="march-h">
       <h2 id="march-h">March</h2>
+      <p>recap</p>
+      <button type="button">Generate md</button>
     </section>
   ),
   MarchRecap: (): ReactNode => <p>recap</p>,
@@ -172,9 +177,10 @@ test('the summary opens a sheet that holds the whole March section', async () =>
 
   const sheet = await screen.findByRole('dialog', { name: 'March' });
   expect(within(sheet).getByRole('button', { name: 'Close' })).toBeTruthy();
-  // The whole March section is in it — not a second, shorter copy of the recap.
+  // The whole March section is in it — and it is the only place the recap is written, because the
+  // section carries the recap itself.
   expect(sheet.querySelector('#march')).not.toBeNull();
-  expect(screen.queryByText('recap')).toBeNull();
+  expect(within(sheet).getByText('recap')).toBeTruthy();
 });
 
 test('a run that lands with the sheet shut is said out loud, and the bar is marked', async () => {
@@ -205,7 +211,7 @@ test('a run that lands with the sheet shut is said out loud, and the bar is mark
   });
 });
 
-test('at 1400 px the March is the sticky supporting pane, its header carrying recap and Generate', () => {
+test('at 1400 px the March is the supporting pane, carrying the recap and Generate', () => {
   desktop();
   const { container } = renderShell();
 

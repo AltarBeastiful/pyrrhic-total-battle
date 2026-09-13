@@ -1,0 +1,9 @@
+/* The Battle card's one shape Mantine has no prop for (plan §1.1, design rule 23): a housing field
+   is 40 px tall and reads at 15 px, because it is the figure a player retypes off the game's own
+   march screen and the artboard draws it as the biggest well on the page (`.input`). Mantine's
+   sizes step 36 → 42, so the height is said here rather than rounded to one of them. */
+.housing :global(.mantine-Input-input) {
+  height: 2.5rem;
+  min-height: 2.5rem;
+  font-size: 0.9375rem;
+}

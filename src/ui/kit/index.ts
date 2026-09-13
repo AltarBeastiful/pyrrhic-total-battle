@@ -21,6 +21,8 @@ export { GroupedCombobox } from './GroupedCombobox';
 export type { ComboboxGroup, ComboboxOption, GroupedComboboxProps } from './GroupedCombobox';
 export { NumberField } from './NumberField';
 export type { NumberFieldProps } from './NumberField';
+export { Panel } from './Panel';
+export type { PanelProps, PanelSurface } from './Panel';
 export { PillRow } from './PillRow';
 export type { PillRowItem, PillRowProps } from './PillRow';
 export { Sheet } from './Sheet';

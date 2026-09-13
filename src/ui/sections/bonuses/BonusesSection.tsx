@@ -15,7 +15,7 @@
  * worth on the right, a gear opening a sheet that repeats the TOTAL so the figures are visible while
  * they move. Whether the card is open is remembered per device (D7), never in the document.
  */
-import { Accordion, Alert, Badge, Box, Group, Stack, Text, Title } from '@mantine/core';
+import { Accordion, Alert, Group, Stack, Text } from '@mantine/core';
 import { useId, useMemo, useState } from 'react';
 
 import { artifacts as artifactTable, equipment as equipmentTable } from '@/data';
@@ -23,8 +23,7 @@ import { mintSourceId, toggleActiveSource, updateSources } from '@/state/actions
 import { setActiveFlag } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Glyph } from '@/ui/domain';
-import { Disclosure } from '@/ui/kit';
+import { Disclosure, Panel } from '@/ui/kit';
 
 import { ArtifactChips } from './ArtifactChips';
 import { CaptainChips } from './CaptainChips';
@@ -258,20 +257,19 @@ export function BonusesSection() {
   };
 
   return (
-    <Box component="section" id="bonuses" aria-labelledby={titleId} py="md">
+    <Panel
+      component="section"
+      id="bonuses"
+      aria-labelledby={titleId}
+      title="Bonuses"
+      titleId={titleId}
+      // What the form under it currently says, in the artboard's own words: how many captains ride
+      // of the three the game allows, and how many sources feed the totals (design plan §5.5).
+      meta={`Captains ${String(setup.active.captains.length)}/${String(
+        MAX_ACTIVE_CAPTAINS,
+      )} · Sources on ${String(summary.on)}`}
+    >
       <Stack gap="sm">
-        <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
-          <Title order={2} id={titleId}>
-            Bonuses
-          </Title>
-          {/* A warning carries the triangle *and* the wording, never the colour alone
-              (docs/design.md §1). */}
-          {summary.empty > 0 && (
-            <Badge color="danger" variant="light" size="sm" tt="none" leftSection={<Glyph kind="warning" />}>
-              {`${String(summary.empty)} on but empty`}
-            </Badge>
-          )}
-        </Group>
         <TotalsFigures summary={summary} />
 
         {/*
@@ -342,6 +340,6 @@ export function BonusesSection() {
       {editor?.kind === 'dragon' && <DragonSheet {...sheet} />}
       {editor?.kind === 'remainder' && <RemainderSheet {...sheet} />}
       {editor?.kind === 'recovery' && <RecoverySheet {...sheet} />}
-    </Box>
+    </Panel>
   );
 }

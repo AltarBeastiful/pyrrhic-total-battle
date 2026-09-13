@@ -1,16 +1,101 @@
 /* The two shapes Mantine has no prop for. Everything else in `domain` is a theme token on a stock
    component; these are counted against the kit's custom-CSS budget (plan §1.1). */
 
-/* The group's colour bar at the head of a row: 3 px, full height of the line it opens. */
+/* The group's colour bar at the head of a row: 4 px and 20 px tall, as direction A draws it
+   (artboard `.gm i`), stretching with the line when the line is taller than that. */
 .marker {
-  width: 3px;
+  width: 4px;
   align-self: stretch;
-  min-height: 1.5rem;
-  border-radius: 1px;
+  min-height: 1.25rem;
+  border-radius: 2px;
 }
 
 /* A unit tile is a frame, nearly square, like the game's; the numeral has to sit tight inside it. */
 .tile {
   user-select: none;
   overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The stack pill (design plan §5.5; artboard `.spill`), as the owner corrected it on 2026-09-13:
+   62 px tall, 10 px of radius — the one shape between the theme's `sm` and `md` steps, because it
+   is neither a control nor a card — and **it extends rather than squeezes**. Every colour on it
+   comes from the caller as a tier variable.
+   --------------------------------------------------------------------------------------------- */
+.pill {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 3.875rem;
+  border: 1px solid;
+  border-radius: 0.625rem;
+}
+
+.pillBody {
+  display: flex;
+  width: 100%;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* 8 px over, 10 px either side: a count never sits on the border. */
+  padding: 0.5rem 0.625rem;
+  gap: 3px;
+  color: inherit;
+}
+
+.pillTop {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* The count is the one number a player retypes into the game: it is never wrapped and never cut.
+   When it is wider than its column the grid's `auto-fill` drops a pill from the row instead. */
+.pillCount {
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* The way into the unit sheet: a mark in the corner, and a long press anywhere on the pill. */
+.pillInfo {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  opacity: 0.55;
+}
+
+.pillInfo:hover,
+.pillInfo:focus-visible {
+  opacity: 1;
+}
+
+/* The march as pills: the row holds as many as fit at 78 px and wraps, so a six-figure count
+   widens every pill in the grid rather than clipping one (owner, 2026-09-13). */
+.pillGrid {
+  display: grid;
+  gap: var(--mantine-spacing-sm);
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+}
+
+/* The row of types this march left out: small, outlined, quiet — a footnote under the pools, never
+   a stack among them (owner, 2026-09-13). 26 px, as TotalStack's own removed-from-formation row. */
+.leftOutPill {
+  display: inline-flex;
+  height: 1.625rem;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--pyr-well-border);
+  border-radius: 0.4375rem;
+  padding: 0 0.5rem;
+  color: inherit;
+}
+
+.leftOutPill:hover {
+  border-color: var(--mantine-color-default-border);
+  background: var(--pyr-raised);
 }

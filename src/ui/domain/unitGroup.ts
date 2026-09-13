@@ -7,7 +7,7 @@
  * write `var(--mantine-color-${group}-text)` and get the right ink in either scheme. Nothing here
  * knows about class names any more — that was the Tailwind kit's job.
  */
-import type { UnitDef } from '../../data/types';
+import type { Pool, UnitDef } from '../../data/types';
 
 export type UnitGroup = 'guardsmen' | 'specialists' | 'engineers' | 'monsters' | 'mercenaries';
 
@@ -56,6 +56,44 @@ export function groupInk(group: UnitGroup): string {
 /** The group's tonal ground — a tinted step, never a coloured block. */
 export function groupGround(group: UnitGroup): string {
   return `var(--mantine-color-${group}-light)`;
+}
+
+/**
+ * A housing pool's colour (design plan §5.5): the pool's own figure is written in it, above the
+ * stacks it paid for. Three of our ramps, chosen for what the pool's glyph already is — the shield
+ * is the guardsmen green, the crown is the brass, the skull is the danger red — so the page gains a
+ * meaning rather than a hue (design rule 20).
+ */
+export const POOL_COLOR: Record<Pool, string> = {
+  leadership: 'guardsmen',
+  authority: 'brass',
+  dominance: 'danger',
+};
+
+export function poolInk(pool: Pool): string {
+  return `var(--mantine-color-${POOL_COLOR[pool]}-filled)`;
+}
+
+/**
+ * The nine troop and mercenary tiers have a colour each (design plan §5.5, direction A): grey I,
+ * green II, blue III, violet IV, then the five the game gives its own metals and stones. A tier ink
+ * is the scheme's *filled* shade — 7 on a light page, 5 on a dark one — which is the pair
+ * `pnpm contrast` checks; Mantine's `-text` is shade 4 in the dark and would read a step paler than
+ * the artboards.
+ *
+ * Tier 0 is a hand-typed mercenary with no tier at all: it gets the muted ink and no hue.
+ */
+export function tierInk(tier: number): string {
+  if (!Number.isFinite(tier) || tier < 1 || tier > 9) return 'var(--mantine-color-dimmed)';
+  return `var(--mantine-color-tier${String(Math.round(tier))}-filled)`;
+}
+
+/**
+ * The tonal wash under a tier's ink — the 12 % the palette checks that ink against. Written with
+ * `color-mix` rather than with Mantine's `-light`, which is a different alpha in each scheme.
+ */
+export function tierGround(tier: number): string {
+  return `color-mix(in srgb, ${tierInk(tier)} 13%, transparent)`;
 }
 
 /**

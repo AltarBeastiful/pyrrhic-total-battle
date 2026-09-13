@@ -10,10 +10,10 @@
  * The separators are spacing, not middle dots (D-19): a dotted string reads as one long sentence,
  * and these are three separate readings.
  */
-import { Group, Text, UnstyledButton } from '@mantine/core';
+import { Box, Group, Text, UnstyledButton } from '@mantine/core';
 import { ChevronUp } from 'lucide-react';
 
-import { Glyph, UnitTile } from '@/ui/domain';
+import { Glyph, groupGround, groupInk, unitGroupOf } from '@/ui/domain';
 
 import { compact } from './format';
 import classes from './march.module.css';
@@ -47,7 +47,7 @@ export function MarchQuickSummary({ onOpen }: MarchQuickSummaryProps) {
 
   const line = (
     <Group className={classes.quickLine} gap="xs" wrap="nowrap" miw={0}>
-      <Text span size="sm" fw={600}>
+      <Text span fz="0.9375rem" fw={600} style={{ fontVariantNumeric: 'tabular-nums' }}>
         {compact(summary.avgDamage)}
       </Text>
       {/* The coin rather than the word (design rule 22): "1.7M silver" is cut to "1.7M …" at
@@ -58,10 +58,23 @@ export function MarchQuickSummary({ onOpen }: MarchQuickSummaryProps) {
           {compact(summary.recovery.silver)}
         </Text>
       </Group>
+      {/* Three 26 px squares, not three unit tiles: at this size a tier numeral and a code are
+          unreadable, so the square carries the group's colour and the category's glyph and the
+          sheet behind the bar carries the rest (artboard `.mini span`). */}
       <Group gap={4} wrap="nowrap">
-        {shown.map((row) => (
-          <UnitTile key={row.unit.id} unit={row.unit} size="sm" />
-        ))}
+        {shown.map((row) => {
+          const group = unitGroupOf(row.unit);
+          return (
+            <Box
+              key={row.unit.id}
+              className={classes.miniTile}
+              title={row.unit.name}
+              style={{ background: groupGround(group), borderColor: groupInk(group) }}
+            >
+              <Glyph kind={row.unit.category ?? 'army'} scale={0.75} label={row.unit.name} />
+            </Box>
+          );
+        })}
         {rest > 0 && (
           <Text span size="xs" c="dimmed">
             {`+${String(rest)}`}

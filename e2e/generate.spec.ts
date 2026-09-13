@@ -9,15 +9,13 @@ import {
   chooseObjective,
   generate,
   generateButton,
-  marchCountsList,
-  marchCountsTable,
   marchExpectedDamage,
   marchFigure,
   marchLeftOut,
   marchSection,
   marchStackCount,
   marchStackLabels,
-  marchTiles,
+  marchPills,
   openApp,
   openMarchSheet,
   pageOverflowsSideways,
@@ -34,10 +32,10 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
 
   await generate(page, { leadership: 4100 });
 
-  // One tile per unit type of the march, each with a non-zero count.
-  const tiles = marchTiles(page);
-  await expect(tiles.first()).toBeVisible();
-  expect(await tiles.count()).toBeGreaterThan(1);
+  // One pill per marching stack, each with a non-zero count.
+  const pills = marchPills(page);
+  await expect(pills.first()).toBeVisible();
+  expect(await pills.count()).toBeGreaterThan(1);
   for (const label of await marchStackLabels(page)) {
     expect(Number(label.split(' ')[1] ?? '0')).toBeGreaterThan(0);
   }
@@ -48,14 +46,14 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   expect(await marchFigure(page, 'Worst opening')).toBeGreaterThan(0);
   expect(await marchFigure(page, 'Silver to recover')).toBeGreaterThan(0);
 
-  // The counts to copy carry the same stacks, in the order they fall. At 1280 px the March is the
-  // 360 dp supporting pane, so the block is in its stacked shape whatever the window says.
-  await expect(marchCountsTable(page)).toBeHidden();
-  await expect(marchCountsList(page).getByRole('listitem')).toHaveCount(await marchStackCount(page));
+  // The pills *are* the counts (owner, 2026-09-13): there is no table under them, and the row of
+  // whole-march actions is what is left.
+  await expect(marchSection(page).getByRole('table')).toHaveCount(0);
+  await expect(marchSection(page).getByRole('button', { name: 'Copy all counts' })).toBeVisible();
 
   // The leadership pool is spent, not merely allocated. A pool is a vessel filled to the brim, so
-  // it reads "used of total" rather than as a fraction (D-19).
-  await expect(marchSection(page).getByText('4 100 of 4 100')).toBeVisible();
+  // its figure reads "used … of total" rather than as a fraction (D-19).
+  await expect(marchSection(page).getByText('of 4 100')).toBeVisible();
 
   // The story and the chart are folded away until they are asked for.
   await expect(marchSection(page).getByRole('button', { name: /^Details The battle story/ })).toHaveAttribute(
@@ -75,18 +73,24 @@ test('a tile in the March leaves a type out, and puts it back', async ({ page })
   const code = before[0]?.split(' ')[0] ?? '';
   expect(code).not.toBe('');
 
-  // The tile is the control: a tap on a marching one leaves that type out and re-sizes the march.
-  await marchTiles(page).first().click();
+  // Leaving a type out is the unit sheet's job now (owner, 2026-09-13): the pill's corner mark
+  // opens it, and the sheet holds every action about that one type.
+  await marchSection(page)
+    .getByRole('button', { name: /^Details: / })
+    .first()
+    .click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: 'Leave out' }).click();
   await settle(page);
   const without = await marchStackLabels(page);
   expect(without.some((label) => label.startsWith(`${code} `))).toBe(false);
   expect(without.length).toBe(before.length - 1);
 
-  // The same tile, now dimmed, puts it back — and keeps it in for good.
+  // The type is in the small row under the pools now; a press puts it back and keeps it in for good.
   await marchLeftOut(page).first().click();
   await settle(page);
   expect((await marchStackLabels(page)).length).toBe(before.length);
-  await expect(marchSection(page).getByRole('button', { name: /kept in — leave out$/ })).toBeVisible();
+  await expect(marchSection(page).getByRole('button', { name: /, kept in$/ })).toBeVisible();
 
   expect(problems).toEqual([]);
 });
@@ -121,20 +125,17 @@ test('a type the priority left out can be kept in the march, and stays in', asyn
   expect(problems).toEqual([]);
 });
 
-test('a card wider than 36 rem draws the counts as a table', async ({ page }) => {
+test('the counts have one shape at every width: the pills themselves', async ({ page }) => {
   const problems = watchConsole(page);
-  // One column, so the March is the sheet — and the sheet is as wide as the page, which is what the
-  // container query asks about.
+  // One column, so the March is the sheet — and the sheet is as wide as the page.
   await page.setViewportSize({ width: 1024, height: 900 });
   await openApp(page);
   await generate(page, { leadership: 4100 });
   await openMarchSheet(page);
 
-  const table = marchCountsTable(page);
-  await expect(table).toBeVisible();
-  await expect(table.getByRole('row')).toHaveCount((await marchStackCount(page)) + 1);
-  await expect(table.getByRole('columnheader', { name: 'Count' })).toBeVisible();
-  await expect(marchCountsList(page)).toBeHidden();
+  // One pill per stack, whatever the width: the counts have no second shape any more.
+  await expect(marchPills(page)).toHaveCount(await marchStackCount(page));
+  await expect(marchSection(page).getByRole('table')).toHaveCount(0);
 
   expect(problems).toEqual([]);
 });
@@ -145,16 +146,17 @@ test('counts are edited in an explicit mode, and put back with Undo', async ({ p
   await generate(page, { leadership: 4100 });
 
   const damage = await marchExpectedDamage(page);
-  const rows = marchCountsList(page);
-  await expect(rows.getByRole('textbox').first()).toBeHidden();
+  const pills = marchSection(page).locator('[data-stack]');
+  await expect(pills.first().getByRole('textbox')).toBeHidden();
 
   await setCountsMode(page, 'Edit counts');
-  const field = rows.getByRole('textbox').first();
+  // The field is the pill's own count, in place.
+  const field = pills.first().getByRole('textbox');
   await expect(field).toBeVisible();
 
   // A count is typed, not walked to, so the field carries no step buttons; the battle is re-played
   // on the hand-typed counts the moment one changes.
-  await expect(rows.getByRole('button', { name: /^Increase / })).toHaveCount(0);
+  await expect(pills.getByRole('button', { name: /^Increase / })).toHaveCount(0);
   await field.fill('1');
   const undo = marchSection(page).getByRole('button', { name: 'Undo' });
   await expect(undo).toBeVisible();
@@ -167,12 +169,12 @@ test('counts are edited in an explicit mode, and put back with Undo', async ({ p
   expect(problems).toEqual([]);
 });
 
-test('the unit sheet opens from a row and acts on that one type', async ({ page }) => {
+test('the unit sheet opens from a pill and acts on that one type', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
   await generate(page, { leadership: 4100 });
 
-  await marchCountsList(page)
+  await marchSection(page)
     .getByRole('button', { name: /^Details: / })
     .first()
     .click();
@@ -201,20 +203,20 @@ test('mobile: the bar carries the answer, and the recap is one tap away', async 
   expect(await pageOverflowsSideways(page)).toBe(false);
   await expect(generateButton(page)).toBeVisible();
   // The March is not in the page at all below 1200 px (design rule 5): it is the sheet.
-  await expect(marchTiles(page)).toHaveCount(0);
+  await expect(marchPills(page)).toHaveCount(0);
 
   // The quick summary in the bottom bar opens it. The sheet covers the bar rather than sitting
   // under it (M-09 polish list): a control outside a focus trap that the pointer can still reach is
   // a trap that does not hold. So the bar goes under the scrim and the sheet carries its own
   // Generate, and the answer and the action still travel together.
   const recap = await openMarchSheet(page);
-  await expect(recap.getByText('Expected damage', { exact: true })).toBeVisible();
-  await expect(recap.getByRole('progressbar', { name: 'Leadership used' })).toBeVisible();
+  await expect(recap.getByText(/^Expected damage/)).toBeVisible();
+  await expect(recap.getByRole('group', { name: 'Leadership stacks' })).toBeVisible();
   await expect(recap.getByRole('button', { name: /^Generate march/ })).toBeVisible();
-  await expect(marchTiles(page).first()).toBeVisible();
-  // The narrow sheet stacks its rows instead of drawing the table.
-  await expect(marchCountsTable(page)).toBeHidden();
-  await expect(marchCountsList(page)).toBeVisible();
+  await expect(marchPills(page).first()).toBeVisible();
+  // The pills are the counts: no table, and one row of whole-march actions under them.
+  await expect(marchSection(page).getByRole('table')).toHaveCount(0);
+  await expect(recap.getByRole('button', { name: 'Copy all counts' })).toBeVisible();
   // …and the trap holds: tabbing all the way round never leaves the sheet for the bar underneath.
   for (let i = 0; i < 12; i += 1) await page.keyboard.press('Tab');
   const trapped = await page.evaluate(() => {

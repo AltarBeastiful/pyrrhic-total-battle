@@ -94,41 +94,38 @@ function stackAt(index = 0): { unit: UnitDef; count: number } {
   return { unit, count: stack.count };
 }
 
-/** The accessible name of a marching tile, the way `tileLabel` writes it. */
-function marchingTile(unit: UnitDef, count: number): HTMLElement {
-  return screen.getByRole('button', {
-    name: `${unit.name}, tier ${String(unit.tier)}, ${amount(count)} in the march — leave out`,
-  });
+/**
+ * A marching stack's pill. **The pills are the counts** (owner, 2026-09-13): a press copies the
+ * count, which is what its name says, and the corner mark opens the unit sheet.
+ */
+function stackPill(unit: UnitDef, count: number): HTMLElement {
+  return screen.getByRole('button', { name: `Copy ${amount(count)}, ${unit.name}` });
 }
 
-function leftOutTile(unit: UnitDef): HTMLElement {
+/** A type this march does not field: a small outlined pill in the row under the pools. */
+function leftOutPill(unit: UnitDef): HTMLElement {
   return screen.getByRole('button', {
     name: `${unit.name}, tier ${String(unit.tier)}, left out — keep in march`,
   });
 }
 
-/** The table shape of the counts; the stacked shape carries the same rows under 36 rem. */
-function countsTable(): HTMLElement {
-  return screen.getByRole('table', { name: /in the order the stacks fall/ });
+/** The corner mark on a pill, and the same name on any other way into the sheet. */
+function detailsButtons(unit: UnitDef): HTMLElement[] {
+  return screen.getAllByRole('button', { name: `Details: ${unit.name}` });
 }
 
-/** The stacked shape, which is what the 360 dp March pane draws at any window width. */
-function countsList(): HTMLElement {
-  return screen.getByRole('list', { name: /in the order the stacks fall/ });
-}
-
-test('the recap comes first, then the tiles, then the counts', async () => {
+test('the recap comes first, then the pills, then the two count actions', async () => {
   renderWithTheme(<Page />);
   await generate();
 
-  const recap = screen.getByText('Expected damage');
-  const tiles = screen.getByRole('group', { name: 'Guardsmen in the march' });
-  const counts = screen.getByRole('heading', { name: 'Counts to copy' });
+  const recap = screen.getByText(/^Expected damage/);
+  const pills = screen.getByRole('group', { name: 'Leadership stacks' });
+  const copyAll = screen.getByRole('button', { name: 'Copy all counts' });
 
   const follows = (first: Element, second: Element): boolean =>
     (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-  expect(follows(recap, tiles)).toBe(true);
-  expect(follows(tiles, counts)).toBe(true);
+  expect(follows(recap, pills)).toBe(true);
+  expect(follows(pills, copyAll)).toBe(true);
 });
 
 test('the recap is the figures a march is compared by, the expected damage first', async () => {
@@ -165,11 +162,14 @@ test('the recap says which way every figure moved since the previous run', async
   expect(screen.getAllByText('worse').length).toBeGreaterThan(0);
 }, 15_000);
 
-test('the pools say what the march spent, brim to brim', async () => {
+test('the pool says what the march spent, over the stacks it paid for', async () => {
   renderWithTheme(<Page />);
   await generate();
 
-  expect(screen.getByText(`${amount(4100)} of ${amount(4100)}`)).toBeTruthy();
+  // The figure is the gauge now (design rule 5): "4 100 🛡️ of 4 100", not a bar saying it again.
+  expect(screen.getByText(amount(4100))).toBeTruthy();
+  expect(screen.getByText(`of ${amount(4100)}`)).toBeTruthy();
+  expect(screen.getByRole('group', { name: 'Leadership stacks' })).toBeTruthy();
 });
 
 test('Generate names the state it is in: ready, then stale when the setup moves', async () => {
@@ -214,26 +214,18 @@ test('the quick summary is one line, and nothing at all before the first run', a
   expect(onOpen).toHaveBeenCalled();
 });
 
-test('a tile carries its stack count and a tap leaves that type out', async () => {
+test('a pill carries its stack count, and a press copies it', async () => {
   renderWithTheme(<Page />);
   await generate();
   const { unit, count } = stackAt();
 
-  const tile = marchingTile(unit, count);
-  expect(tile.getAttribute('aria-pressed')).toBe('true');
-  fireEvent.click(tile);
-
-  await waitFor(() => {
-    expect(profile()?.troops.excludedUnitIds).toContain(unit.id);
-  });
-  await waitFor(() => {
-    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
-  });
-  // The same tile is still there, dimmed, offering the other half of the gesture.
-  expect(leftOutTile(unit).getAttribute('aria-pressed')).toBe('false');
+  const pill = stackPill(unit, count);
+  expect(pill.closest('[data-stack]')?.getAttribute('data-count')).toBe(String(count));
+  fireEvent.click(pill);
+  expect(writeText).toHaveBeenCalledWith(String(count));
 }, 15_000);
 
-test('a tap on a dimmed tile keeps that type in the march for good', async () => {
+test('a tap on a left-out pill keeps that type in the march for good', async () => {
   // 20 leadership is enough for nine of the ten types the default profile owns: one is left out.
   setLeadership(20);
   renderWithTheme(<Page />);
@@ -243,7 +235,7 @@ test('a tap on a dimmed tile keeps that type in the march for good', async () =>
   const unit = unitById(leftOut);
   if (!unit) throw new Error('nothing was left out');
 
-  fireEvent.click(leftOutTile(unit));
+  fireEvent.click(leftOutPill(unit));
 
   await waitFor(() => {
     expect(setup()?.pinnedUnitIds).toContain(unit.id);
@@ -253,26 +245,18 @@ test('a tap on a dimmed tile keeps that type in the march for good', async () =>
   });
 }, 15_000);
 
-test('the counts are a table in kill order, and a tap on one copies it', async () => {
-  renderWithTheme(<Page />);
-  await generate();
-  const { unit, count } = stackAt();
-
-  const rows = within(countsTable()).getAllByRole('row');
-  // One header row plus one row per stack.
-  expect(rows).toHaveLength((lastResult()?.result.stacks.length ?? 0) + 1);
-
-  fireEvent.click(within(countsTable()).getByRole('button', { name: `Copy ${amount(count)}, ${unit.name}` }));
-  expect(writeText).toHaveBeenCalledWith(String(count));
-});
-
-test('the same counts are stacked rows for a narrow card, with the same name', async () => {
+test('every stack has a pill, in kill order, and there is no table under them', async () => {
   renderWithTheme(<Page />);
   await generate();
 
-  expect(within(countsList()).getAllByRole('listitem')).toHaveLength(lastResult()?.result.stacks.length ?? 0);
-  expect(screen.getByText('Falls first')).toBeTruthy();
-  expect(screen.getByText('Falls last')).toBeTruthy();
+  const pills = [...document.querySelectorAll('[data-stack]')];
+  expect(pills).toHaveLength(lastResult()?.result.stacks.length ?? 0);
+  // Kill order, first to fall first — the order the engine returned the stacks in.
+  expect(pills.map((node) => node.getAttribute('data-stack'))).toEqual(
+    (lastResult()?.result.stacks ?? []).map((stack) => unitById(stack.unitId)?.label ?? ''),
+  );
+  // The per-stack table is gone: the pills are the counts (owner, 2026-09-13).
+  expect(screen.queryByRole('table', { name: /in the order the stacks fall/ })).toBeNull();
 });
 
 test('Copy all counts writes one line per stack, in the game’s own shorthand', async () => {
@@ -297,11 +281,12 @@ test('editing counts is a mode, and Undo puts the generated ones back', async ()
   expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
 
   fireEvent.click(screen.getByRole('radio', { name: 'Edit counts' }));
-  const field = within(countsTable()).getByLabelText(`${unit.name} count`);
+  // The field is the pill's own count, in place.
+  const field = screen.getByLabelText(`${unit.name} count`);
   expect(field).toHaveProperty('value', amount(count));
 
   // A count is typed, not walked to: the field carries no step buttons, and the keyboard still steps.
-  expect(within(countsTable()).queryByRole('button', { name: /^Increase/ })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Increase/ })).toBeNull();
   fireEvent.keyDown(field, { key: 'ArrowUp' });
 
   // The march on screen is recomputed on the hand-typed counts; the generated result is untouched.
@@ -340,10 +325,9 @@ test('the unit sheet opens from a tile and says what the stack does, in sentence
   await generate();
   const { unit, count } = stackAt();
 
-  // The figure under a tile is the way in; the same name sits on the row's info button below, and
-  // the tiles come first.
-  const [fromTile] = screen.getAllByRole('button', { name: `Details: ${unit.name}` });
-  fireEvent.click(fromTile as HTMLElement);
+  // The mark in the pill's corner is the way in (a long press does the same on a touch screen).
+  const [fromPill] = detailsButtons(unit);
+  fireEvent.click(fromPill as HTMLElement);
 
   const sheet = await screen.findByRole('dialog', { name: unit.name });
   expect(within(sheet).getByText('In this march')).toBeTruthy();
@@ -358,7 +342,7 @@ test('leaving a type out from its sheet excludes it and generates again', async 
   await generate();
   const { unit } = stackAt();
 
-  fireEvent.click(within(countsList()).getByRole('button', { name: `Details: ${unit.name}` }));
+  fireEvent.click(detailsButtons(unit)[0] as HTMLElement);
   const sheet = await screen.findByRole('dialog', { name: unit.name });
   fireEvent.click(within(sheet).getByRole('button', { name: 'Leave out' }));
 
@@ -463,12 +447,12 @@ test('the recap is the figures alone, and the section under it carries the pools
 
   // The figures, once (design rule 5): the hero, the five comparisons and nothing else.
   const recap = screen.getByLabelText('This march in figures');
-  expect(within(recap).getByText('Expected damage')).toBeTruthy();
-  expect(within(recap).queryByRole('progressbar')).toBeNull();
+  expect(within(recap).getByText(/^Expected damage/)).toBeTruthy();
+  expect(within(recap).queryByRole('group', { name: 'Leadership stacks' })).toBeNull();
 
-  // What the recap used to repeat is the section's own, and it is there exactly once.
-  expect(screen.getAllByRole('progressbar', { name: 'Leadership used' })).toHaveLength(1);
-  expect(screen.getAllByText('Expected damage')).toHaveLength(1);
+  // The pools and the army are the section's own, and each is there exactly once.
+  expect(screen.getAllByRole('group', { name: 'Leadership stacks' })).toHaveLength(1);
+  expect(screen.getAllByText(/^Expected damage/)).toHaveLength(1);
 }, 15_000);
 
 test('a march can be saved, and is found again under the fold', async () => {
@@ -496,7 +480,7 @@ test('the last result and its hand edits come back after a reload', async () => 
   const { unit, count } = stackAt();
 
   fireEvent.click(screen.getByRole('radio', { name: 'Edit counts' }));
-  fireEvent.keyDown(within(countsTable()).getByLabelText(`${unit.name} count`), { key: 'ArrowUp' });
+  fireEvent.keyDown(screen.getByLabelText(`${unit.name} count`), { key: 'ArrowUp' });
   await waitFor(() => {
     expect(useResultStore.getState().manualCounts[unit.id]).toBe(count + 1);
   });
@@ -510,10 +494,8 @@ test('the last result and its hand edits come back after a reload', async () => 
   await waitFor(() => {
     expect(lastResult()?.at).toBe(at);
   });
-  expect(screen.getByText(/Generated just now/)).toBeTruthy();
-  expect(
-    within(countsTable()).getByRole('button', { name: `Copy ${amount(count + 1)}, ${unit.name}` }),
-  ).toBeTruthy();
+  expect(screen.getByText(/generated just now/)).toBeTruthy();
+  expect(stackPill(unit, count + 1)).toBeTruthy();
 }, 20_000);
 
 test('a cached result belonging to another march is left alone', async () => {

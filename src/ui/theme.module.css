@@ -21,3 +21,137 @@
   padding-block: 0.1875rem;
   line-height: 1.2;
 }
+
+/* ---------------------------------------------------------------------------------------------
+   Direction A's four surfaces (design plan §5.5; artboards `docs/design-canvas/Main.dc.html` and
+   `PhoneSheetA.dc.html`). Every value below is a variable `cssVariablesResolver` writes out of
+   `DEPTH` and `GOLD` in `palette.ts` — there is no hex here, and no section may draw one of these
+   shapes itself. The classes are handed out by the kit's `Panel` and by `theme.components`.
+   --------------------------------------------------------------------------------------------- */
+
+/* A setup section: a lit block with one hairline and one soft shadow. 20/24 px of padding on a
+   desktop, 16 px in Material's compact window — the artboards' own two paddings. */
+.panel {
+  border: 1px solid var(--pyr-panel-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--pyr-panel);
+  box-shadow: var(--pyr-panel-shadow);
+  padding: 1rem;
+}
+
+@media (min-width: 37.5em) {
+  .panel {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+/* The March: the same idea one step brighter and one step deeper, so it reads as the object in
+   front of the setup rather than as a fifth section. */
+.pane {
+  border: 1px solid var(--pyr-pane-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--pyr-pane);
+  box-shadow: var(--pyr-pane-shadow);
+  padding: 1rem;
+}
+
+@media (min-width: 37.5em) {
+  .pane {
+    padding: 1.5rem;
+  }
+}
+
+/* A well: anything sunk into a panel — a read-only figure, a housing field's ground, a segmented
+   control's track. */
+.well {
+  border: 1px solid var(--pyr-well-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--pyr-sunken);
+  box-shadow: var(--pyr-well-shadow);
+}
+
+/* A panel's own head: the 15 px title on the left, the muted meta on the right (artboard `h2`). */
+.panelHeader :global(h2) {
+  letter-spacing: 0.02em;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-sm);
+  margin-bottom: 0.875rem;
+}
+
+.panelMeta {
+  flex: 0 1 auto;
+  min-width: 0;
+  text-align: end;
+}
+
+/* Generate, the one gilded control on the page (design plan §5.5). Reached as `variant="gold"` on
+   Mantine's own `Button`, so the size, the loader, the disabled state and the focus ring are still
+   the library's; only the metal is ours. */
+.gold {
+  border: none;
+  background: var(--pyr-gold);
+  box-shadow: var(--pyr-gold-shadow);
+  color: var(--pyr-gold-ink);
+  font-weight: 700;
+}
+
+.gold:hover:not(:disabled):not([data-disabled]) {
+  background: var(--pyr-gold-hover);
+}
+
+/* The brand mark: the same metal, turned 45°, and never a logotype (design rule 25). */
+.mark {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--pyr-mark);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 15%) inset;
+}
+
+/* The account trigger: a pill on the raised step, as the artboards draw it. */
+.accountPill {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  min-width: 0;
+  border: 1px solid var(--pyr-hairline);
+  border-radius: var(--mantine-radius-xl);
+  background: var(--pyr-raised);
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  color: inherit;
+}
+
+/* Both bars carry the page's own faint top light, so the chrome and the panels are one material. */
+.bar {
+  background: var(--pyr-bar);
+}
+
+/* A chip (design plan §5.5 as the owner corrected it on 2026-09-13; artboards `.chip` and `.cap`).
+   Off, it is the well the panel is cut into; on, it is its own colour's wash with a hairline of
+   that colour's ink — and no check mark, because the glyph and the code are already the chip. The
+   state is carried by `aria-checked`, which is where a state belongs. */
+.chip {
+  border: 1px solid var(--pyr-well-border);
+  background: var(--pyr-sunken);
+  color: var(--mantine-color-dimmed);
+}
+
+.chip[data-checked] {
+  border-color: currentcolor;
+  background: var(--chip-bg);
+  color: var(--chip-color);
+}
+
+.chip:hover:not([data-disabled]) {
+  border-color: var(--mantine-color-default-border);
+}
+
+.chipIcon {
+  display: none;
+}

@@ -20,8 +20,8 @@
  * in the pane on a desktop and in the sheet on a phone, and rendering it in both places would put
  * the same anchor on the page twice.
  */
-import { Container, Divider, Drawer, Grid, Stack, Text, VisuallyHidden } from '@mantine/core';
-import { Fragment, lazy, useEffect, useState } from 'react';
+import { Container, Drawer, Grid, Stack, Text, VisuallyHidden } from '@mantine/core';
+import { lazy, useEffect, useState } from 'react';
 
 import { selectTheme, useStore } from '@/state/store';
 import { amount, MarchSection, restoreLastResult } from '@/ui/sections/march';
@@ -85,17 +85,15 @@ export function Shell() {
   };
 
   /**
-   * The setup is one continuous sheet, not four floating cards (design direction D-19): a section
-   * draws no rule of its own, so the frame is what tells them apart — a full-width hairline and
-   * 24 px of air either side of it.
+   * The setup is four **panels** (design plan §5.5, direction A — this replaces D-19's one
+   * continuous sheet split by hairlines): each section is a lit block with its own edge and its own
+   * shadow, and the frame's only job is the 16 px of air between them. The rule that used to tell
+   * them apart is gone — the panel's own border does it.
    */
   const setup = (
-    <Stack gap="xl">
-      {SETUP.map(({ id, Component }, index) => (
-        <Fragment key={id}>
-          {index > 0 ? <Divider /> : null}
-          <Component />
-        </Fragment>
+    <Stack gap="lg">
+      {SETUP.map(({ id, Component }) => (
+        <Component key={id} />
       ))}
     </Stack>
   );
@@ -108,7 +106,7 @@ export function Shell() {
 
       <AppBar />
 
-      <Container id="main" component="main" size={CONTENT_WIDTH} py="md" className={classes.main}>
+      <Container id="main" component="main" size={CONTENT_WIDTH} py="xl" className={classes.main}>
         {wide ? (
           <Grid gap="xl">
             <Grid.Col span="auto" miw={0}>
@@ -153,10 +151,13 @@ export function Shell() {
             }}
             position="bottom"
             size="calc(100dvh - var(--pyr-appbar-height))"
-            radius="md"
-            padding="md"
+            radius={0}
+            padding="lg"
             zIndex={300}
             title="March"
+            // The sheet is the March pane's own material, with 20 px on its two top corners alone
+            // (artboard `PhoneSheetA.dc.html`, `.sheet`); Mantine's `radius` would round all four.
+            classNames={{ content: classes.sheet }}
             closeButtonProps={{ 'aria-label': 'Close' }}
           >
             <MarchSection />

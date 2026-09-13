@@ -1,0 +1,219 @@
+/**
+ * The march as TotalStack's own recap, in our colours (design plan §5.5, the owner's corrections of
+ * 2026-09-13): **one block per housing pool** — the pool's figure in the pool's colour beside its
+ * glyph, then the stacks that pool paid for as two-line pills coloured by tier, as many across as
+ * fit at 78 px. Under the pools, the types this march left out as a small outlined row. Under that,
+ * the two things a player does with a whole march: copy every count, or edit them by hand.
+ *
+ * It replaces three blocks that said the same thing three times (design rule 5): the grid of 44 px
+ * unit tiles, the row of pool gauges, and the "counts to copy" table whose every figure is one
+ * press away in the unit sheet. The pool's figure *is* the gauge, written rather than drawn; **the
+ * pills are the counts**.
+ */
+import { Button, Group, SegmentedControl, Stack, Text } from '@mantine/core';
+import { Copy, Undo2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import type { UnitDef } from '@/engine/types';
+import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
+import domainClasses from '@/ui/domain/domain.module.css';
+import { copyText } from '@/ui/profile/download';
+
+import { keepInMarch } from './formation';
+import { amount } from './format';
+import classes from './march.module.css';
+import { countsText } from './rows';
+import type { MarchStackRow, PoolRow } from './rows';
+
+/** How long "Copied" stays on screen. */
+const COPIED_MS = 1500;
+
+/** What a pool is called in a sentence; the glyph is the game's own. */
+const POOL_LABEL = {
+  leadership: 'Leadership',
+  authority: 'Authority',
+  dominance: 'Dominance',
+} as const;
+
+/** A message that clears itself, for the two clipboard actions. */
+function useFlash(): [string, (message: string) => void] {
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    if (message === '') return;
+    const timer = globalThis.setTimeout(() => {
+      setMessage('');
+    }, COPIED_MS);
+    return () => {
+      globalThis.clearTimeout(timer);
+    };
+  }, [message]);
+  return [message, setMessage];
+}
+
+export interface MarchPillsProps {
+  rows: PoolRow[];
+  /** Types this march does not field; a press on one keeps it in. */
+  leftOut: UnitDef[];
+  editing: boolean;
+  onCount: (unitId: string, count: number) => void;
+  /** A pill's corner mark, and a long press on one. */
+  onDetails: (unit: UnitDef) => void;
+}
+
+/**
+ * The march at a glance: the pools, their stacks, and what was left out. On a desktop this is the
+ * block that **stays on screen** while the setup scrolls past it (owner, 2026-09-13) — which is why
+ * the two whole-march actions are a separate component below it rather than part of it.
+ */
+export function MarchPills({ rows, leftOut, editing, onCount, onDetails }: MarchPillsProps) {
+  const [flash, setFlash] = useFlash();
+
+  return (
+    <Stack gap="lg">
+      {rows.map((row) => {
+        const over = row.used > row.capacity;
+        return (
+          <Stack key={row.pool} gap="xs">
+            <Group gap={10} wrap="nowrap" align="center">
+              <Text
+                span
+                fz="1.625rem"
+                lh={1}
+                fw={700}
+                className={classes.poolFigure}
+                c={over ? 'var(--mantine-color-danger-filled)' : poolInk(row.pool)}
+              >
+                {amount(row.used)}
+              </Text>
+              <Text span fz="1.375rem" lh={1}>
+                <Glyph kind={row.pool} label={POOL_LABEL[row.pool]} />
+              </Text>
+              <Text span size="xs" c="dimmed">
+                {`of ${amount(row.capacity)}`}
+              </Text>
+            </Group>
+            {row.entries.length > 0 && (
+              <div
+                className={domainClasses.pillGrid}
+                role="group"
+                aria-label={`${POOL_LABEL[row.pool]} stacks`}
+              >
+                {row.entries.map((entry) => (
+                  <StackPill
+                    key={entry.unit.id}
+                    unit={entry.unit}
+                    count={entry.count}
+                    state={entry.state}
+                    editing={editing}
+                    onCount={(next) => {
+                      onCount(entry.unit.id, next);
+                    }}
+                    onCopy={() => {
+                      void copyText(String(entry.count));
+                      setFlash('Copied');
+                    }}
+                    onDetails={() => {
+                      onDetails(entry.unit);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </Stack>
+        );
+      })}
+
+      {leftOut.length > 0 && (
+        <Stack gap={6}>
+          <Text span size="xs" c="dimmed">
+            Left out — tap to put back
+          </Text>
+          <Group gap={6} wrap="wrap" role="group" aria-label="Left out of this march">
+            {leftOut.map((unit) => (
+              <LeftOutPill
+                key={unit.id}
+                unit={unit}
+                onPutBack={() => {
+                  keepInMarch(unit.id);
+                }}
+              />
+            ))}
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              onClick={() => {
+                for (const unit of leftOut) keepInMarch(unit.id);
+              }}
+            >
+              Put back all
+            </Button>
+          </Group>
+        </Stack>
+      )}
+
+      <Text span role="status" size="xs" c="dimmed">
+        {flash}
+      </Text>
+    </Stack>
+  );
+}
+
+export interface MarchCountsBarProps {
+  /** Every stack, for "Copy all counts". */
+  countRows: MarchStackRow[];
+  editing: boolean;
+  onEditing: (editing: boolean) => void;
+  /** Some count was changed by hand, so there is something to undo. */
+  edited: boolean;
+  onUndo: () => void;
+}
+
+/**
+ * The two things a player does with a whole march, under the pills: copy every count at once, or
+ * turn each pill's count into a field in place. A pill copies its own count on a press, so this row
+ * is the only chrome the counts need (owner, 2026-09-13 — the table of per-stack lines is gone).
+ */
+export function MarchCountsBar({ countRows, editing, onEditing, edited, onUndo }: MarchCountsBarProps) {
+  const [flash, setFlash] = useFlash();
+
+  return (
+    <Group gap="sm" wrap="wrap">
+      <Button
+        size="compact-sm"
+        variant="default"
+        leftSection={<Copy size={14} aria-hidden />}
+        onClick={() => {
+          void copyText(countsText(countRows));
+          setFlash('Copied');
+        }}
+      >
+        Copy all counts
+      </Button>
+      <SegmentedControl
+        size="xs"
+        aria-label="What a tap on a count does"
+        value={editing ? 'edit' : 'copy'}
+        data={[
+          { value: 'copy', label: 'Copy counts' },
+          { value: 'edit', label: 'Edit counts' },
+        ]}
+        onChange={(value) => {
+          onEditing(value === 'edit');
+        }}
+      />
+      {edited && (
+        <Button
+          size="compact-sm"
+          variant="default"
+          leftSection={<Undo2 size={14} aria-hidden />}
+          onClick={onUndo}
+        >
+          Undo
+        </Button>
+      )}
+      <Text span role="status" size="xs" c="dimmed">
+        {flash}
+      </Text>
+    </Group>
+  );
+}

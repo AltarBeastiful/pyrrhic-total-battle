@@ -22,7 +22,7 @@ export interface AppBarProps {
 
 export function AppBar({ brand, children, actions }: AppBarProps) {
   return (
-    <Paper component="header" className={classes.appBar} radius={0} py="xs" bg="var(--mantine-color-default)">
+    <Paper component="header" className={classes.appBar} radius={0} py="xs">
       <Group justify="space-between" wrap="nowrap" gap="sm" h="100%">
         <Group gap="xs" wrap="nowrap" miw={0}>
           {brand}

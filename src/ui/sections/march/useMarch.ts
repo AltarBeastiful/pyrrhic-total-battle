@@ -14,8 +14,8 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
 import { applyCounts, hasEdits } from './manual';
-import { marchRows, tileRows } from './rows';
-import type { MarchStackRow, TileRow } from './rows';
+import { leftOutOf, marchRows, poolRows } from './rows';
+import type { MarchStackRow, PoolRow } from './rows';
 import { useRunStore } from './runStore';
 
 export interface MarchView {
@@ -31,7 +31,8 @@ export interface MarchView {
   /** Pools the hand-edited counts no longer fit in. */
   overflow: Pool[];
   rows: MarchStackRow[];
-  tiles: TileRow[];
+  /** The army as pills, one block per housing pool (design plan §5.5). */
+  pools: PoolRow[];
   /** Unit types kept in the march by hand. */
   pinned: string[];
   /** Types that are not in the request any more: excluded in the profile, or removed here. */
@@ -64,7 +65,7 @@ export function useMarch(): MarchView {
         edited: false,
         overflow: [],
         rows: [],
-        tiles: [],
+        pools: [],
         pinned: [...pinned],
         leftOut: [],
         keptElsewhere: [],
@@ -78,12 +79,7 @@ export function useMarch(): MarchView {
     const summary = edits?.summary ?? snapshot.summary;
     const leftOutIds = [...excluded, ...removedMercenaries.map((entry) => entry.id)];
 
-    const tiles = tileRows({
-      units: snapshot.request.units,
-      counts: new Map(result.stacks.map((stack) => [stack.unitId, stack.count])),
-      pinned,
-      leftOutIds,
-    });
+    const pools = poolRows({ result, units: snapshot.request.units, pinned });
 
     return {
       snapshot,
@@ -93,11 +89,9 @@ export function useMarch(): MarchView {
       edited: edits !== null,
       overflow: edits?.overflow ?? [],
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
-      tiles,
+      pools,
       pinned: [...pinned],
-      leftOut: tiles.flatMap((row) =>
-        row.entries.filter((entry) => entry.state === 'leftOut').map((entry) => entry.unit),
-      ),
+      leftOut: leftOutOf(snapshot.request.units, result, leftOutIds),
       keptElsewhere: pinned.filter((unitId) => !result.stacks.some((stack) => stack.unitId === unitId)),
     };
   }, [snapshot, counts, pinned, excluded, removedMercenaries, previous]);

@@ -34,8 +34,8 @@ test('a mercenary is hired from the picker, and its pill says how many you own',
   await search.press('Escape');
   await expect(list).toBeHidden();
 
-  // The camp is a row of pills: glyph, code, tier and quantity, counted in the heading.
-  await expect(card.getByText('(1 selected)')).toBeVisible();
+  // The camp is a row of pills: glyph, code, tier and quantity, counted in the panel's meta.
+  await expect(card.getByText('1 hired')).toBeVisible();
   const pill = card.getByRole('button', { name: 'Bear V: owned unlimited' });
   await expect(pill).toContainText('BER');
   await expect(pill).toContainText('V');
@@ -74,7 +74,7 @@ test('the pills wrap on a phone rather than pushing the card sideways', async ({
   }
   await search.press('Escape');
 
-  await expect(card.getByText('(4 selected)')).toBeVisible();
+  await expect(card.getByText('4 hired')).toBeVisible();
   const overflow = await card.evaluate((node) => node.scrollWidth - node.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });

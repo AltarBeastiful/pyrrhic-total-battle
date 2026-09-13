@@ -1,14 +1,22 @@
 /**
- * One end of a group's tier range (plan §3, TotalStack's "from G1 to G4"). A native select, because
- * that is what TotalStack uses and what a phone draws best: the wheel is the platform's, the list is
- * five entries long, and nothing has to be taught.
+ * One end of a group's tier range (plan §3, TotalStack's "from G1 to G4"), as a **stepper** — the
+ * owner's correction of 2026-09-13 and design rule 10: a tier list is at most nine ordered values,
+ * which is exactly what a stepper is for, and a native select on a phone opens a modal wheel for a
+ * choice between "G3" and "G4".
  *
- * The clamping is the whole reason this is a composite rather than a `NativeSelect` at the call
- * site: the two ends of a range constrain each other, so the "from" select may not offer a tier
- * above the "to" value and a value that falls outside the window is shown — and reported — clamped.
+ * A 30 px well — the same well every figure on the page sits in — with a quiet arrow at each end and
+ * the tier written between them. The clamping is the whole reason this is a composite rather than
+ * two buttons at the call site: the two ends of a range constrain each other, so the "from" stepper
+ * may not step past the "to" value and a value outside the window is shown, and reported, clamped.
+ *
+ * The value carries `role="spinbutton"` and the arrows are siblings of it rather than its children,
+ * so a keyboard gets the arrow keys on the value itself *and* two real buttons, and no widget ends
+ * up nested inside another (investigation 0007's own lesson, and axe's `nested-interactive`).
  */
-import { NativeSelect } from '@mantine/core';
+import { ActionIcon, Group, Text } from '@mantine/core';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import classes from './kit.module.css';
 import { clampTier, type TierPrefix } from './tiers';
 
 const NONE = '—';
@@ -25,7 +33,7 @@ export interface TierSelectProps {
   /** Adds a "—" position below the first tier. */
   allowNone?: boolean;
   /**
-   * Lowest tier this end may take — how a "to" value clamps its "from" select, and back. Explicitly
+   * Lowest tier this end may take — how a "to" value clamps its "from" stepper, and back. Explicitly
    * `undefined` is allowed: a section computes these from the other end, which may be "none".
    */
   min?: number | undefined;
@@ -45,29 +53,82 @@ export function TierSelect({
   min,
   max,
   disabled = false,
-  w = 72,
+  w = 84,
 }: TierSelectProps) {
   const shown = clampTier(value, min, max);
-  const data = [
-    ...(allowNone ? [{ value: NONE, label: NONE }] : []),
-    ...tiers.map((tier) => ({
-      value: String(tier),
-      label: `${prefix}${tier}`,
-      disabled: (min !== undefined && tier < min) || (max !== undefined && tier > max),
-    })),
+  // Every position this end may take, in order: "none" first when it has one, then the tiers the
+  // other end still allows.
+  const steps: (number | null)[] = [
+    ...(allowNone ? [null] : []),
+    ...tiers.filter((tier) => (min === undefined || tier >= min) && (max === undefined || tier <= max)),
   ];
+  const at = steps.indexOf(shown);
+  const text = shown === null ? NONE : `${prefix}${String(shown)}`;
+
+  const step = (delta: number): void => {
+    if (disabled || steps.length === 0) return;
+    const next = steps[Math.min(steps.length - 1, Math.max(0, (at === -1 ? 0 : at) + delta))];
+    if (next === undefined || next === shown) return;
+    onChange(next);
+  };
+
+  const jump = (index: number): void => {
+    const next = steps[index];
+    if (next === undefined || next === shown) return;
+    onChange(next);
+  };
 
   return (
-    <NativeSelect
-      aria-label={label}
-      data={data}
-      value={shown === null ? NONE : String(shown)}
-      disabled={disabled}
-      w={w}
-      onChange={(event) => {
-        const next = event.currentTarget.value;
-        onChange(next === NONE ? null : clampTier(Number(next), min, max));
-      }}
-    />
+    <Group gap={0} wrap="nowrap" w={w} className={classes.stepper}>
+      <ActionIcon
+        variant="subtle"
+        color="gray"
+        size={22}
+        disabled={disabled || at <= 0}
+        aria-label={`${label}: one tier down`}
+        onClick={() => {
+          step(-1);
+        }}
+      >
+        <ChevronLeft size={13} aria-hidden />
+      </ActionIcon>
+      <Text
+        component="div"
+        role="spinbutton"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={label}
+        aria-valuenow={shown ?? 0}
+        aria-valuemin={allowNone ? 0 : (steps[0] ?? 0)}
+        aria-valuemax={steps.at(-1) ?? 0}
+        aria-valuetext={text}
+        {...(disabled ? { 'aria-disabled': true } : {})}
+        className={classes.stepperValue}
+        fz="0.8125rem"
+        fw={600}
+        onKeyDown={(event) => {
+          const key = event.key;
+          if (key === 'ArrowUp' || key === 'ArrowRight') step(1);
+          else if (key === 'ArrowDown' || key === 'ArrowLeft') step(-1);
+          else if (key === 'Home') jump(0);
+          else if (key === 'End') jump(steps.length - 1);
+          else return;
+          event.preventDefault();
+        }}
+      >
+        {text}
+      </Text>
+      <ActionIcon
+        variant="subtle"
+        color="gray"
+        size={22}
+        disabled={disabled || at === steps.length - 1}
+        aria-label={`${label}: one tier up`}
+        onClick={() => {
+          step(1);
+        }}
+      >
+        <ChevronRight size={13} aria-hidden />
+      </ActionIcon>
+    </Group>
   );
 }

@@ -54,6 +54,23 @@ export function housingField(page: Page, pool: 'Leadership' | 'Authority' | 'Dom
 }
 
 /**
+ * One end of a troop group's tier range (the owner's correction of 2026-09-13): a stepper, whose
+ * value is a `spinbutton` written with its prefix ("G3") and whose arrows are two buttons beside it.
+ */
+export function tierStepper(scope: Locator, name: string): Locator {
+  return scope.getByRole('spinbutton', { name, exact: true });
+}
+
+/** Walk one end of a range by `steps` positions; negative walks down. */
+export async function stepTier(scope: Locator, name: string, steps: number): Promise<void> {
+  const arrow = scope.getByRole('button', {
+    name: `${name}: one tier ${steps < 0 ? 'down' : 'up'}`,
+    exact: true,
+  });
+  for (let index = 0; index < Math.abs(steps); index += 1) await arrow.click();
+}
+
+/**
  * The floating Generate button (design plan §5.3). Its accessible name carries the state, so the
  * blocked one reads "Generate march: Add housing first"; the prefix is what every spec asks for.
  */
@@ -90,69 +107,6 @@ export async function generate(
   if (housing.dominance !== undefined) await fillHousing(page, 'Dominance', housing.dominance);
   await generateButton(page).click();
   await settle(page);
-}
-
-/**
- * The march as tiles (design plan §7.5): one tile per unit type of the profile's range, the ones
- * marching named "… in the march — leave out" and the ones left out "… left out — keep in march".
- */
-export function stackPills(page: Page): Locator {
-  return page.locator('#results').getByRole('button', { name: /in the march\b/ });
-}
-
-/** The dimmed tiles: the types the search or the player left out of the march. */
-export function leftOutTiles(page: Page): Locator {
-  return page.locator('#results').getByRole('button', { name: /left out/ });
-}
-
-/**
- * The march as a player would read it off the card: "ARC1 624", one entry per marching stack.
- *
- * Read from the `data-stack` / `data-count` pair each tile carries rather than from its drawing: the
- * tile writes its code and its tier as two separate pieces of text, which is right on screen and
- * unreadable from here.
- */
-export async function stackLabels(page: Page): Promise<string[]> {
-  const tiles = page.locator('#results [data-stack]');
-  const total = await tiles.count();
-  const labels: string[] = [];
-  for (let index = 0; index < total; index += 1) {
-    const tile = tiles.nth(index);
-    const label = await tile.getAttribute('data-stack');
-    const count = Number(await tile.getAttribute('data-count'));
-    if (label !== null && count > 0) labels.push(`${label} ${count.toLocaleString('en-US')}`);
-  }
-  return labels;
-}
-
-/** How many stacks the march fields. */
-export async function stackCount(page: Page): Promise<number> {
-  return (await stackLabels(page)).length;
-}
-
-/**
- * The recap figure under `label`, as the number it displays. The recap is written in the player's own
- * words ("Damage if the monster strikes first"), so pass the label as it is written.
- */
-export async function summaryValue(page: Page, label: string): Promise<number> {
-  // The innermost block that holds the label is the figure itself: its label and its number.
-  const figure = page
-    .locator('#results div')
-    .filter({ has: page.getByText(label, { exact: true }) })
-    .last();
-  const text = await figure.innerText();
-  const value = /[\d,]+/.exec(text.replace(label, ''))?.[0] ?? '0';
-  return Number(value.replaceAll(',', ''));
-}
-
-/** The counts to copy, in the table shape a card wider than 36 rem shows. */
-export function countsTable(page: Page): Locator {
-  return page.locator('#results').getByRole('table', { name: /in the order the stacks fall/ });
-}
-
-/** The same counts as stacked rows: a phone, and the 360 dp supporting pane at any width. */
-export function countsList(page: Page): Locator {
-  return page.locator('#results').getByRole('list', { name: /in the order the stacks fall/ });
 }
 
 /**
@@ -467,12 +421,16 @@ export function marchSection(page: Page): Locator {
   return page.locator('#march');
 }
 
-/** The march as tiles: the ones marching say "… in the march — leave out". */
-export function marchTiles(page: Page): Locator {
-  return marchSection(page).getByRole('button', { name: /in the march\b/ });
+/**
+ * The march as pills (design plan §5.5, the owner's correction of 2026-09-13): one two-line pill per
+ * marching stack, coloured by tier. A press copies the count, which is what the name says.
+ */
+export function marchPills(page: Page): Locator {
+  // `Copy <count>, <unit>` — the digit keeps "Copy all counts" out of the list.
+  return marchSection(page).getByRole('button', { name: /^Copy \d/ });
 }
 
-/** The dimmed tiles: the types the search or the player left out of the march. */
+/** The small outlined row under the pools: the types the search or the player left out. */
 export function marchLeftOut(page: Page): Locator {
   return marchSection(page).getByRole('button', { name: /left out — keep in march$/ });
 }
@@ -500,16 +458,6 @@ export async function marchStackLabels(page: Page): Promise<string[]> {
 /** How many stacks the march fields. */
 export async function marchStackCount(page: Page): Promise<number> {
   return (await marchStackLabels(page)).length;
-}
-
-/** The counts to copy, in the table shape a card wider than 36 rem shows. */
-export function marchCountsTable(page: Page): Locator {
-  return marchSection(page).getByRole('table', { name: /in the order the stacks fall/ });
-}
-
-/** The same counts as stacked rows: a phone, and the 360 dp March pane at any width. */
-export function marchCountsList(page: Page): Locator {
-  return marchSection(page).getByRole('list', { name: /in the order the stacks fall/ });
 }
 
 /**
@@ -542,7 +490,7 @@ export async function marchExpectedDamage(page: Page): Promise<number> {
   return figureNumber(await recap.innerText());
 }
 
-/** Turn the counts into fields, or back into figures to copy. */
+/** Turn every pill's count into a field, or back into a figure to copy. */
 export async function setCountsMode(page: Page, mode: 'Copy counts' | 'Edit counts'): Promise<void> {
   await marchSection(page).getByText(mode, { exact: true }).click();
   await expect(page.getByRole('radio', { name: mode, exact: true })).toBeChecked();

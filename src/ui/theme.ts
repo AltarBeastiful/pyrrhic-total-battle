@@ -21,7 +21,7 @@ import {
 
 import type { Theme } from '@/state/schema';
 
-import { COLORS, FILLED_SHADE, inkOn, PAPER, PITCH, SEEDS, SLATE, SURFACE } from './palette';
+import { COLORS, DEPTH, FILLED_SHADE, GOLD, inkOn, PAPER, PITCH, SEEDS, SLATE, SURFACE } from './palette';
 import classes from './theme.module.css';
 
 // The palette is a module of its own so `pnpm contrast` can import it under plain Node; everything
@@ -93,6 +93,11 @@ const FRAUNCES = "'Fraunces Variable', ui-serif, Georgia, 'Iowan Old Style', 'Ti
  * colour is pointed at the per-scheme ink this file computes instead; everything else is Mantine's.
  */
 const variantColorResolver: VariantColorsResolver = (input) => {
+  // `gold` is ours, not Mantine's: the metal is painted by `theme.module.css`, and the resolver is
+  // only asked for something the library can understand so hover, active and the ring keep working.
+  if (input.variant === 'gold') {
+    return { ...defaultVariantColorsResolver({ ...input, variant: 'filled' }), color: GOLD.ink };
+  }
   const resolved = defaultVariantColorsResolver(input);
   if (input.variant !== 'filled') return resolved;
   const [name, shade] = (input.color ?? input.theme.primaryColor).split('.');
@@ -124,7 +129,9 @@ export const theme: MantineThemeOverride = createTheme({
     fontWeight: '600',
     sizes: {
       h1: { fontSize: '1.5rem', lineHeight: '2rem' },
-      h2: { fontSize: '1.3125rem', lineHeight: '1.75rem' },
+      // 15 px, not 21: direction A's section title is a *label* over a dense form, and the figures
+      // inside the panel are what the eye is meant to land on (design plan §5.5, artboard `h2`).
+      h2: { fontSize: '0.9375rem', lineHeight: '1.375rem', fontWeight: '600' },
       h3: { fontSize: '1rem', lineHeight: '1.5rem' },
       h4: { fontSize: '1rem', lineHeight: '1.5rem' },
       h5: { fontSize: '0.8125rem', lineHeight: '1.125rem' },
@@ -158,7 +165,30 @@ export const theme: MantineThemeOverride = createTheme({
       }),
     },
     // --- density (plan §2; TotalStack's own sizes) -----------------------------------------
-    Button: { defaultProps: { size: 'sm' } },
+    Button: {
+      defaultProps: { size: 'sm' },
+      // `variant="gold"` is the one control on the page that is gilded: Generate (design plan §5.5).
+      classNames: (_theme: unknown, props: { variant?: string }) => ({
+        root: props.variant === 'gold' ? classes.gold : undefined,
+      }),
+    },
+    // The track is a well and the chosen segment is the raised step, as the artboard draws it. The
+    // library's own grounds are `gray-1` / `dark-8`, neither of which is a surface of ours.
+    SegmentedControl: {
+      defaultProps: { radius: 'sm' },
+      styles: {
+        root: {
+          background: 'var(--pyr-sunken)',
+          border: '1px solid var(--pyr-well-border)',
+          boxShadow: 'var(--pyr-well-shadow)',
+          padding: '3px',
+        },
+        indicator: {
+          background: 'var(--pyr-raised)',
+          boxShadow: '0 1px 0 rgb(255 255 255 / 6%) inset',
+        },
+      },
+    },
     TextInput: { defaultProps: { size: 'sm' } },
     Select: { defaultProps: { size: 'sm' } },
     NumberInput: {
@@ -201,19 +231,28 @@ export const theme: MantineThemeOverride = createTheme({
     },
     Chip: {
       defaultProps: { size: 'xs', variant: 'light', radius: 'sm' },
-      // TotalStack's chip is 32 px tall with a 13 px label, which is neither Mantine's `xs` (22 px)
-      // nor its `sm` (30 px, wider padding). The three variables are the documented way to say so.
+      // The artboards' chip is the height of the well beside it — 30 px — with a 13 px label, which
+      // is neither Mantine's `xs` (23 px) nor its `sm` (28 px, wider padding). The variables are the
+      // documented way to say so. There is no check mark (owner, 2026-09-13): a chip that is on is
+      // tinted and bordered in its group's colour, so the two paddings are the same.
       vars: () => ({
         root: {
-          '--chip-size': '2rem',
+          '--chip-size': '1.875rem',
           '--chip-fz': '0.8125rem',
-          '--chip-padding': '0.625rem',
-          '--chip-checked-padding': '0.375rem',
+          '--chip-padding': '0.5625rem',
+          '--chip-checked-padding': '0.5625rem',
         },
       }),
-      // …and the label grows past that height when a chip carries a second, dimmed line
-      // ("HP +25 %" under a title, investigation 0006).
-      classNames: { label: classes.chipLabel },
+      classNames: {
+        // The label grows past that height when a chip carries a second, dimmed line ("HP +25 %"
+        // under a title, investigation 0006).
+        label: classes.chipLabel,
+        // Unchecked is the well the rest of the panel is cut into; checked is the group's own wash
+        // with a hairline of its ink.
+        root: classes.chip,
+        // The check mark is gone: the glyph and the code are the chip, and the state is spoken.
+        iconWrapper: classes.chipIcon,
+      },
     },
     // The sentence under a switch row is the one that explains the option. Mantine derives its
     // size from the control's (`sm` − 2 px = 11 px here), which is under the design's floor, and it
@@ -251,11 +290,28 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
 
   const surfaces = (scheme: 'light' | 'dark'): Record<string, string> => {
     const s = SURFACE[scheme];
+    const depth = DEPTH[scheme];
     return {
       '--pyr-page': s.page,
       '--pyr-hairline': s.hairline,
       '--pyr-sunken': s.sunken,
       '--pyr-raised': s.raised,
+      // Direction A's depth (design plan §5.5). Every one of these is read by exactly one class in
+      // `theme.module.css`; nothing else in the app is allowed to draw a gradient or a shadow.
+      '--pyr-panel': depth.panel,
+      '--pyr-panel-border': depth.panelBorder,
+      '--pyr-panel-shadow': depth.panelShadow,
+      '--pyr-pane': depth.pane,
+      '--pyr-pane-border': depth.paneBorder,
+      '--pyr-pane-shadow': depth.paneShadow,
+      '--pyr-well-border': depth.wellBorder,
+      '--pyr-well-shadow': depth.wellShadow,
+      '--pyr-bar': depth.barTop,
+      '--pyr-bar-shadow': depth.barShadow,
+      '--pyr-sheet-shadow': depth.sheetShadow,
+      // Every control you type into is a well cut into the panel (artboard `.input`, `.sel b`).
+      '--input-bg': s.sunken,
+      '--input-bd': depth.wellBorder,
       '--mantine-color-body': s.page,
       '--mantine-color-text': s.ink,
       '--mantine-color-dimmed': s.muted,
@@ -274,7 +330,13 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
   return {
     variables: {
       '--pyr-appbar-height': '4rem',
-      '--pyr-pane-width': '22.5rem',
+      '--pyr-pane-width': '23.75rem',
+      // The metal is the same in both schemes: it is the game's trim, not a surface (`GOLD`).
+      '--pyr-gold': GOLD.gradient,
+      '--pyr-gold-hover': GOLD.hover,
+      '--pyr-gold-ink': GOLD.ink,
+      '--pyr-gold-shadow': GOLD.shadow,
+      '--pyr-mark': GOLD.mark,
       '--mantine-font-family-headings': INTER,
       '--pyr-font-numeral': FRAUNCES,
       // Mantine writes the sentence under a control two pixels below `sm`, which is 11 px in our

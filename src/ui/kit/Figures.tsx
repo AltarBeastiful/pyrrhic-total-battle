@@ -25,6 +25,9 @@ export interface FiguresProps {
   withDivider?: boolean;
   labelWidth?: string;
   size?: 'xs' | 'sm' | 'md';
+  /** The value's own size, when it is the thing the eye lands on (the Bonuses TOTAL, at 22 px). */
+  valueFz?: string;
+  valueFw?: number;
 }
 
 export function Figures({
@@ -34,6 +37,8 @@ export function Figures({
   withDivider = false,
   labelWidth = '9rem',
   size = 'sm',
+  valueFz,
+  valueFw = 500,
 }: FiguresProps) {
   return (
     <DataList
@@ -58,7 +63,8 @@ export function Figures({
             <Text
               span
               size={size}
-              fw={500}
+              fw={valueFw}
+              {...(valueFz === undefined ? {} : { fz: valueFz })}
               ff="var(--mantine-font-family)"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >

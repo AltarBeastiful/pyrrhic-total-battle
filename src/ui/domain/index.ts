@@ -14,11 +14,24 @@ export { MarchRow, MarchTable } from './MarchRow';
 export type { MarchRowProps, MarchTableProps } from './MarchRow';
 export { PoolGauge } from './PoolGauge';
 export type { PoolGaugeProps } from './PoolGauge';
+export { LeftOutPill, StackPill } from './StackPill';
+export type { StackPillProps, StackPillState } from './StackPill';
 export { StatBar } from './StatBar';
 export type { StatBarProps } from './StatBar';
 export { TierBadge } from './TierBadge';
 export type { TierBadgeProps } from './TierBadge';
 export { UnitTile } from './UnitTile';
 export type { UnitTileProps, UnitTileSize, UnitTileState } from './UnitTile';
-export { GROUP_LABEL, groupGround, groupInk, romanTier, UNIT_GROUPS, unitGroupOf } from './unitGroup';
+export {
+  GROUP_LABEL,
+  groupGround,
+  groupInk,
+  POOL_COLOR,
+  poolInk,
+  romanTier,
+  tierGround,
+  tierInk,
+  UNIT_GROUPS,
+  unitGroupOf,
+} from './unitGroup';
 export type { UnitGroup } from './unitGroup';

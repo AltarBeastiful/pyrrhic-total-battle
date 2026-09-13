@@ -144,6 +144,14 @@ export const SEEDS = {
   // a stock `color="red"` — a danger menu item, a pool over capacity — lands on our ramp and clears
   // 4.5:1 like everything else rather than on Mantine's own red, which does not.
   danger: '#a32c1f',
+  // The troop tiers (design plan §5.5, direction A). I–IV are the *same hues* as three of the unit
+  // groups on purpose — the game paints a tier II green and a tier III blue, and inventing a second
+  // green beside the guardsmen one would put two nearly identical inks on the same pill. The three
+  // seeds are therefore written as the group seeds are, and `theme.test.ts` asserts they stay equal.
+  tier1: '#485150', // I — slate, the one tier with no hue
+  tier2: '#256b35', // II — green, the guardsmen seed
+  tier3: '#25568a', // III — blue, the specialists seed
+  tier4: '#5b368a', // IV — violet, the monsters seed
   tier5: '#71530f',
   tier6: '#8e2f2f',
   tier7: '#5c3a8e',
@@ -179,6 +187,10 @@ export const COLORS: Record<PyrColorName, string[]> = {
   engineers: ramp(SEEDS.engineers),
   monsters: ramp(SEEDS.monsters),
   mercenaries: ramp(SEEDS.mercenaries),
+  tier1: ramp(SEEDS.tier1),
+  tier2: ramp(SEEDS.tier2),
+  tier3: ramp(SEEDS.tier3),
+  tier4: ramp(SEEDS.tier4),
   tier5: ramp(SEEDS.tier5),
   tier6: ramp(SEEDS.tier6),
   tier7: ramp(SEEDS.tier7),
@@ -193,13 +205,23 @@ export const FILLED_SHADE = { light: 7, dark: 5 } as const;
 
 export type Scheme = 'light' | 'dark';
 
-/** The app's surfaces, verbatim from `docs/design.md` §1. */
+/**
+ * The app's surfaces, verbatim from `docs/design.md` §1.
+ *
+ * `panel` and `pane` are the two **lit** surfaces direction A added (design plan §5.5): a setup
+ * section and the March pane are not flat fills any more but a faint top-to-bottom light. The value
+ * written here is the end of that gradient text has the *least* contrast against — the light end in
+ * the dark scheme, the dark end in the light one — so `pnpm contrast` checks the worst case rather
+ * than the average. `DEPTH` below carries the gradients themselves.
+ */
 export const SURFACE = {
   light: {
     page: '#ecefec',
     sheet: PAPER,
+    panel: '#f3f5f3',
+    pane: '#eef1ee',
     raised: '#dee3df',
-    sunken: '#d5dbd7',
+    sunken: '#e9ede9',
     ink: PITCH,
     muted: '#515a56',
     hairline: '#cfd5d1',
@@ -208,6 +230,8 @@ export const SURFACE = {
   dark: {
     page: '#161a19',
     sheet: '#1e2423',
+    panel: '#212827',
+    pane: '#232a29',
     raised: '#2b3231',
     sunken: '#101413',
     ink: '#e7ece9',
@@ -215,6 +239,59 @@ export const SURFACE = {
     hairline: '#313938',
     field: '#78837f',
   },
+} as const;
+
+/**
+ * Depth, as direction A draws it (design plan §5.5, artboards `docs/design-canvas/*.dc.html`): the
+ * gradients, borders and shadows that make a panel a lit object rather than a fill. Strings rather
+ * than arithmetic, because that is what they are — but they live here, beside the surfaces they are
+ * built from, so `theme.ts` is the only file that turns them into CSS variables and no section ever
+ * writes one.
+ */
+export const DEPTH = {
+  light: {
+    panel: 'linear-gradient(180deg, #ffffff, #f3f5f3)',
+    panelBorder: '#d7ddd8',
+    panelShadow: '0 8px 24px rgba(19, 25, 23, 0.08), 0 1px 0 rgba(255, 255, 255, 0.9) inset',
+    pane: 'linear-gradient(180deg, #fdfefd 0, #eef1ee 600px)',
+    paneBorder: '#ccd3ce',
+    paneShadow: '0 12px 32px rgba(19, 25, 23, 0.1)',
+    wellShadow: '0 1px 2px rgba(19, 25, 23, 0.1) inset',
+    wellBorder: '#ccd3ce',
+    barTop: 'linear-gradient(180deg, #ffffff, #ecefec)',
+    sheetShadow: '0 -12px 32px rgba(19, 25, 23, 0.18)',
+    barShadow: '0 -8px 24px rgba(19, 25, 23, 0.12)',
+  },
+  dark: {
+    panel: 'linear-gradient(180deg, #212827, #1c2221)',
+    panelBorder: '#2f3736',
+    panelShadow: '0 8px 24px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.04) inset',
+    pane: 'linear-gradient(180deg, #232a29 0, #1a201f 600px)',
+    paneBorder: '#3a4341',
+    paneShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+    wellShadow: '0 1px 2px rgba(0, 0, 0, 0.4) inset',
+    wellBorder: '#313938',
+    barTop: 'linear-gradient(180deg, #1e2423, #161a19)',
+    sheetShadow: '0 -12px 32px rgba(0, 0, 0, 0.5)',
+    barShadow: '0 -8px 24px rgba(0, 0, 0, 0.4)',
+  },
+} as const;
+
+/**
+ * The one gilded object on the page: Generate (design plan §5.5). It is the same in both schemes on
+ * purpose — it is the game's own trim, not a surface — so it is written once. `ink` is the dark it
+ * is lettered in; `pnpm contrast` checks that ink against **both** ends of the gradient.
+ */
+export const GOLD = {
+  gradient: 'linear-gradient(180deg, #e0c070, #c19a3f)',
+  top: '#e0c070',
+  bottom: '#c19a3f',
+  ink: '#1a1408',
+  shadow: '0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 6px 16px rgba(201, 162, 74, 0.25)',
+  /** One step brighter under the pointer; the ink is dark, so brighter is the readable direction. */
+  hover: 'linear-gradient(180deg, #ecd08a, #cfa955)',
+  /** The brand mark: the same metal, turned 45°. */
+  mark: 'linear-gradient(135deg, #e0c070, #8f6d2a)',
 } as const;
 
 /**
@@ -230,7 +307,7 @@ export function inkOn(background: string): string {
 // ---- the pairs the palette owes ----------------------------------------------------------------
 
 /** The surfaces text is allowed to sit on. `sunken` is in the list: read-only figures live there. */
-const SURFACES = ['page', 'sheet', 'raised', 'sunken'] as const;
+const SURFACES = ['page', 'sheet', 'panel', 'pane', 'raised', 'sunken'] as const;
 
 /** How much of a colour's ink tints the ground under it — Mantine's own `light` variant alpha. */
 const TONAL_ALPHA = 0.12;
@@ -301,6 +378,40 @@ export function contrastPairs(): ContrastPair[] {
     // shade, drawn 2 px wide with 2 px of offset, so what it has to stand out from is whatever
     // surface the control sits on — both page grounds included.
     onSurfaces('focus ring', COLORS.brass[shade]!, 3);
+
+    // Generate, the one gilded control (design plan §5.5). Its ink is checked against both ends of
+    // the gradient, because a gradient has no single ground; the border of the panels and of the
+    // pane is a boundary you can see but never press, so it rides with the hairline as advisory.
+    for (const [end, background] of [
+      ['gold top', GOLD.top],
+      ['gold bottom', GOLD.bottom],
+    ] as const) {
+      list.push({
+        scheme,
+        foreground: 'gold ink',
+        background: end,
+        fg: GOLD.ink,
+        bg: background,
+        min: 4.5,
+      });
+    }
+
+    // Each of the two only ever draws itself against the page it floats on, so it is one pair
+    // apiece rather than one per surface.
+    for (const [name, colour] of [
+      ['panel border', DEPTH[scheme].panelBorder],
+      ['pane border', DEPTH[scheme].paneBorder],
+    ] as const) {
+      list.push({
+        scheme,
+        foreground: name,
+        background: 'page',
+        fg: colour,
+        bg: s.page,
+        min: 3,
+        advisory: true,
+      });
+    }
 
     // Decoration: printed so a drift is visible, never a failure. The hairline draws sheet edges
     // and dividers, never the boundary of a control, so it is deliberately quiet.

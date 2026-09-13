@@ -17,7 +17,7 @@
  * resolved on 2026-09-13): it is not drawn in the page a second time, so the answer is written once
  * and the page never has to travel to it.
  */
-import { Alert, Badge, Button, Group, SimpleGrid, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
+import { Alert, Badge, Button, Group, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
 import { Share2 } from 'lucide-react';
 import { lazy, useId, useState } from 'react';
 
@@ -27,19 +27,18 @@ import { buildBattleLink } from '@/share/codec';
 import { newSavedStack } from '@/state/defaults';
 import type { SavedStack } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { PoolGauge } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 import { copyText } from '@/ui/profile/download';
 import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 import { MARCH_ANCHOR } from '@/ui/shell/march';
+import classes from './march.module.css';
 import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
-import { amount, relativeTime } from './format';
-import { MarchCounts } from './MarchCounts';
+import { amount } from './format';
 import { MarchGenerateButton } from './MarchGenerateButton';
+import { MarchCountsBar, MarchPills } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
-import { MarchTiles } from './MarchTiles';
 import { useRunStore } from './runStore';
 import { TradeoffStrip } from './TradeoffStrip';
 import { UnitSheet } from './UnitSheet';
@@ -57,8 +56,6 @@ const SavedMarchesPanel = lazy(() =>
 const MarchNameDialog = lazy(() =>
   import('./SavedMarches').then((module) => ({ default: module.MarchNameDialog })),
 );
-
-const POOLS: Pool[] = ['leadership', 'authority', 'dominance'];
 
 const POOL_LABELS: Record<Pool, string> = {
   leadership: 'leadership',
@@ -151,42 +148,64 @@ export function MarchSection() {
       // label instead of writing "March" on the screen a second time (design rule 5).
       {...(twoPanes ? { 'aria-labelledby': titleId } : { 'aria-label': 'March' })}
       gap="md"
+      // …and the section runs the pane's height for the same reason (`.glance`).
+      h={twoPanes ? '100%' : undefined}
     >
-      <Group justify="space-between" gap="xs">
-        <Group gap="xs">
-          {twoPanes && (
-            <Title order={2} id={titleId}>
-              March
-            </Title>
-          )}
-          {result !== null && (
-            <Badge variant="light" color="gray">
-              {`${String(result.stacks.length)} stacks`}
-            </Badge>
-          )}
-        </Group>
-        {snapshot !== null && (
-          <Text span size="xs" c="dimmed">
-            {`Generated ${relativeTime(snapshot.at)}`}
-          </Text>
-        )}
-      </Group>
-
       <VisuallyHidden aria-live="polite">{announcement}</VisuallyHidden>
 
-      {/* The recap travels with Generate (design rule 2). On a desktop both are in the pane's header
-          above this block and are never repeated here — including the line that says nothing has run
-          yet. In the phone's sheet the section carries them itself, in that order: the bar's own
-          Generate is under the scrim while the sheet is open. */}
-      {!twoPanes && (
-        <>
+      {/*
+        The march at a glance, and on a desktop the block that stays (owner, 2026-09-13): the
+        figures, Generate, the pools with their stacks and the types left out. Sticky under the app
+        bar, so scrolling the setup never takes the answer — or the army — off the screen; capped at
+        the window's height with a scrollbar of its own only when a march has more pills than the
+        window can hold, which is the one exception design rule 17 allows.
+      */}
+      <div className={twoPanes ? classes.glance : undefined}>
+        <Stack gap="md">
+          <Group justify="space-between" gap="xs">
+            <Group gap="xs">
+              {twoPanes && (
+                <Title order={2} id={titleId}>
+                  March
+                </Title>
+              )}
+              {result !== null && (
+                <Badge variant="light" color="gray" tt="none">
+                  {`${String(result.stacks.length)} stacks`}
+                </Badge>
+              )}
+            </Group>
+          </Group>
+
           <MarchRecap />
           <MarchGenerateButton fullWidth />
-        </>
-      )}
+
+          {snapshot !== null && result !== null && summary !== null && (
+            <MarchPills
+              rows={march.pools}
+              leftOut={march.leftOut}
+              editing={editing}
+              onCount={(unitId, count) => {
+                useResultStore.getState().editCount(unitId, count);
+              }}
+              onDetails={setSheetUnit}
+            />
+          )}
+        </Stack>
+      </div>
 
       {snapshot !== null && result !== null && summary !== null && (
         <>
+          <MarchCountsBar
+            countRows={march.rows}
+            editing={editing}
+            onEditing={setEditing}
+            edited={march.edited}
+            onUndo={() => {
+              useResultStore.getState().resetCounts();
+            }}
+          />
+
           {stale && (
             <Alert color="brass" title="Another march">
               This result was generated for another profile or march. Generate again to refresh it.
@@ -230,35 +249,6 @@ export function MarchSection() {
             </Alert>
           )}
 
-          <MarchTiles rows={march.tiles} onDetails={setSheetUnit} />
-
-          <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="xs">
-            {POOLS.filter((pool) => result.pools[pool].capacity > 0 || result.pools[pool].used > 0).map(
-              (pool) => (
-                <PoolGauge
-                  key={pool}
-                  pool={pool}
-                  used={result.pools[pool].used}
-                  total={result.pools[pool].capacity}
-                />
-              ),
-            )}
-          </SimpleGrid>
-
-          <MarchCounts
-            rows={march.rows}
-            editing={editing}
-            onEditing={setEditing}
-            edited={march.edited}
-            onCount={(unitId, count) => {
-              useResultStore.getState().editCount(unitId, count);
-            }}
-            onUndo={() => {
-              useResultStore.getState().resetCounts();
-            }}
-            onDetails={setSheetUnit}
-          />
-
           {march.edited && (
             <Text size="xs" c="dimmed">
               Counts edited by hand. The figures above are recomputed on them; nothing is re-sized, so the
@@ -283,7 +273,9 @@ export function MarchSection() {
           </Disclosure>
 
           <Group gap="xs">
+            {/* Generate is the one filled control on this page (docs/design.md §1). */}
             <Button
+              variant="default"
               onClick={() => {
                 setSaving(true);
               }}

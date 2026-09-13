@@ -41,3 +41,55 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* The pool's own figure over the pills it paid for (artboard `.pool-v`): 26 px and 700, the
+   second-biggest number in the March after the hero. The size is a style prop for the reason the
+   hero's is; what a class can still say is the numerals and the tracking. */
+.poolFigure {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* The hero figure is free to break rather than to push the pane sideways: it is the widest thing
+   in 380 px. Its two sizes (48 px in the pane, 40 in the phone's sheet) are style props, because
+   Mantine writes `--text-fz` inline and an inline value beats a class. */
+.hero {
+  overflow-wrap: anywhere;
+}
+
+/* The bottom bar's three tiles are 26 px squares, not 32 px unit tiles (artboard `.mini span`);
+   the glyph keeps 3 px off every edge, as the pills do (owner, 2026-09-13). */
+.miniTile {
+  display: grid;
+  width: 1.625rem;
+  height: 1.625rem;
+  border: 1px solid;
+  border-radius: var(--mantine-radius-xs);
+  padding: 3px;
+  line-height: 1;
+  place-items: center;
+}
+
+/* The march at a glance, pinned (owner, 2026-09-13). On a desktop the figures, Generate, the pools
+   and their pills stay under the app bar while the setup scrolls past; everything after them — the
+   counts row, the trade-off, the folded detail, the saved marches — flows with the page.
+
+   The negative margins put the block back on the pane's own edges, so what passes behind it really
+   is hidden; the pane's material is repainted here for the same reason. The cap and the scrollbar
+   are a fallback for a march with more pills than the window holds, and nothing else: a ten- or
+   sixteen-stack march fits a 900 px window without either. */
+.glance {
+  position: sticky;
+  /* Over everything the section draws under it, and under both bars (100 and 250). A segmented
+     control paints its own label at `z-index: 2`, so 1 was not enough. */
+  z-index: 5;
+  top: var(--pyr-appbar-height);
+  max-height: calc(100dvh - var(--pyr-appbar-height) - 1rem);
+  margin: calc(-1 * var(--mantine-spacing-xl)) calc(-1 * var(--mantine-spacing-xl)) 0;
+  border-bottom: 1px solid var(--pyr-hairline);
+  border-radius: var(--mantine-radius-md) var(--mantine-radius-md) 0 0;
+  background: var(--pyr-pane);
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
+  overflow: auto;
+  overscroll-behavior: contain;
+}

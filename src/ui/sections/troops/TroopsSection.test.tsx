@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 /**
  * The Troops block, asked for the way a player meets it: by role and by the words on screen. The
- * two ends of a range are `combobox`es named "Guardsmen from" / "Guardsmen to"; the top tier is a
- * named `group` of `checkbox` chips; "Put back" is a button. Nothing here knows a class name.
+ * two ends of a range are **steppers** — `spinbutton`s named "Guardsmen from" / "Guardsmen to",
+ * each between two arrow buttons (owner, 2026-09-13); the top tier is a named `group` of `checkbox`
+ * chips; "Put back" is a button. Nothing here knows a class name.
  */
 import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -36,11 +37,19 @@ function setTroops(next: Partial<ProfileTroops>): void {
   state.updateProfile(profile.id, (current) => ({ troops: { ...current.troops, ...next } }));
 }
 
-/** One end of a range. Its value is the tier as a number, or "—" when the group is unused. */
-const end = (name: string): HTMLSelectElement => screen.getByRole('combobox', { name }) as HTMLSelectElement;
+/** One end of a range: the stepper's value, written with its prefix ("G3") or "—" when unused. */
+const end = (name: string): string =>
+  screen.getByRole('spinbutton', { name }).getAttribute('aria-valuetext') ?? '';
 
-const option = (name: string, label: string): HTMLOptionElement =>
-  within(end(name)).getByRole('option', { name: label }) as HTMLOptionElement;
+/** One of a stepper's two arrows. */
+const arrow = (name: string, direction: 'up' | 'down'): HTMLButtonElement =>
+  screen.getByRole('button', { name: `${name}: one tier ${direction}` }) as HTMLButtonElement;
+
+/** Walk one end of a range by `steps` positions; negative walks down. */
+async function step(user: ReturnType<typeof userEvent.setup>, name: string, steps: number): Promise<void> {
+  const direction = steps < 0 ? 'down' : 'up';
+  for (let i = 0; i < Math.abs(steps); i += 1) await user.click(arrow(name, direction));
+}
 
 const chip = (name: string): HTMLInputElement => screen.getByRole('checkbox', { name }) as HTMLInputElement;
 
@@ -50,12 +59,12 @@ test('the block is the form: four groups, both ends of every range, nothing to u
   expect(screen.getByRole('heading', { level: 2, name: 'Troops' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: /^Troops/ })).toBeNull();
   // Four rows, two ends each — engineers and monsters keep their "to" even when unused.
-  expect(screen.getAllByRole('combobox')).toHaveLength(8);
+  expect(screen.getAllByRole('spinbutton')).toHaveLength(8);
 
   // The first-run account: guardsmen I–III, specialists I, nothing else.
-  expect(end('Guardsmen from').value).toBe('1');
-  expect(end('Guardsmen to').value).toBe('3');
-  expect(end('Specialists from').value).toBe('1');
+  expect(end('Guardsmen from')).toBe('G1');
+  expect(end('Guardsmen to')).toBe('G3');
+  expect(end('Specialists from')).toBe('S1');
 
   // The top tier is a named group of chips, each one an emoji and the type's short code.
   const top = screen.getByRole('group', { name: 'Guardsmen at G3' });
@@ -68,36 +77,37 @@ test('a group with nothing in it reads "—" at both ends and has no chips', () 
   renderWithTheme(<TroopsSection />);
 
   expect(troops().engineers).toBeNull();
-  expect(end('Engineers from').value).toBe('—');
-  expect(end('Engineers to').value).toBe('—');
+  expect(end('Engineers from')).toBe('—');
+  expect(end('Engineers to')).toBe('—');
   expect(screen.queryByRole('group', { name: /^Engineers at/ })).toBeNull();
-  expect(end('Monsters to').value).toBe('—');
+  expect(end('Monsters to')).toBe('—');
 });
 
 test('the highest tier widens the range, and the lowest cannot pass it', async () => {
   const user = userEvent.setup();
   renderWithTheme(<TroopsSection />);
 
-  await user.selectOptions(end('Guardsmen to'), '4');
+  await step(user, 'Guardsmen to', 1);
   expect(troops().guardsmen).toEqual({ min: 1, max: 4 });
   expect(screen.getByRole('group', { name: 'Guardsmen at G4' })).toBeTruthy();
 
-  await user.selectOptions(end('Guardsmen to'), '2');
+  await step(user, 'Guardsmen to', -2);
   expect(troops().guardsmen).toEqual({ min: 1, max: 2 });
-  // "From" may not offer a tier above "to"…
-  expect(option('Guardsmen from', 'G3').disabled).toBe(true);
-  expect(option('Guardsmen from', 'G2').disabled).toBe(false);
+  // "From" may not step above "to": at G2 its up arrow is already at the end of the window.
+  await step(user, 'Guardsmen from', 5);
+  expect(end('Guardsmen from')).toBe('G2');
+  expect(arrow('Guardsmen from', 'up').disabled).toBe(true);
 });
 
 test('the lowest tier clamps the highest from the other side', async () => {
   const user = userEvent.setup();
   renderWithTheme(<TroopsSection />);
 
-  await user.selectOptions(end('Guardsmen from'), '3');
+  await step(user, 'Guardsmen from', 2);
   expect(troops().guardsmen).toEqual({ min: 3, max: 3 });
   // …and "to" may not drop below "from".
-  expect(option('Guardsmen to', 'G2').disabled).toBe(true);
-  expect(option('Guardsmen to', 'G4').disabled).toBe(false);
+  expect(arrow('Guardsmen to', 'down').disabled).toBe(true);
+  expect(arrow('Guardsmen to', 'up').disabled).toBe(false);
 });
 
 test('a guardsmen chip drops the category of the top tier, and only of the top tier', async () => {
@@ -138,7 +148,7 @@ test('moving the top tier forgets the chips, because they described the tier bel
   await user.click(chip('Rider III'));
   expect(troops().topTierExcluded.guardsmen).toEqual(['mounted']);
 
-  await user.selectOptions(end('Guardsmen to'), '4');
+  await step(user, 'Guardsmen to', 1);
   expect(troops().topTierExcluded.guardsmen).toEqual([]);
   expect(chip('Rider IV').checked).toBe(true);
 });
@@ -160,8 +170,8 @@ test('engineers have a range but no chips: one type per tier means nothing to cl
   setTroops({ engineers: { min: 1, max: 4 } });
   renderWithTheme(<TroopsSection />);
 
-  expect(end('Engineers from').value).toBe('1');
-  expect(end('Engineers to').value).toBe('4');
+  expect(end('Engineers from')).toBe('E1');
+  expect(end('Engineers to')).toBe('E4');
   expect(screen.queryByRole('group', { name: /^Engineers at/ })).toBeNull();
 });
 
@@ -169,14 +179,14 @@ test('a group comes out of "—" and goes back into it', async () => {
   const user = userEvent.setup();
   renderWithTheme(<TroopsSection />);
 
-  // Monsters only exist from tier 3 in the tables, so "on" cannot mean tier 1.
-  await user.selectOptions(end('Monsters from'), '3');
+  // Monsters only exist from tier 3 in the tables, so the first step out of "—" is M3.
+  await step(user, 'Monsters from', 1);
   expect(troops().monsters).toEqual({ min: 3, max: 3 });
   expect(screen.getByRole('group', { name: 'Monsters at M3' })).toBeTruthy();
 
-  await user.selectOptions(end('Monsters from'), '—');
+  await step(user, 'Monsters from', -1);
   expect(troops().monsters).toBeNull();
-  expect(end('Monsters from').value).toBe('—');
+  expect(end('Monsters from')).toBe('—');
   expect(screen.queryByRole('group', { name: /^Monsters at/ })).toBeNull();
 });
 
@@ -186,10 +196,10 @@ test('an account with nothing in it says what to do, above the four rows', async
   renderWithTheme(<TroopsSection />);
 
   expect(screen.getByText('Add your troops: pick the lowest and highest tier you own.')).toBeTruthy();
-  expect(screen.getAllByRole('combobox')).toHaveLength(8);
-  expect(end('Guardsmen from').value).toBe('—');
+  expect(screen.getAllByRole('spinbutton')).toHaveLength(8);
+  expect(end('Guardsmen from')).toBe('—');
 
   // Every group can be brought out of "—", guardsmen included.
-  await user.selectOptions(end('Guardsmen from'), '1');
+  await step(user, 'Guardsmen from', 1);
   expect(troops().guardsmen).toEqual({ min: 1, max: 1 });
 });

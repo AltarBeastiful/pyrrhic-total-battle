@@ -33,17 +33,6 @@
   transform: translateY(0);
 }
 
-/* The brand mark: a tonal square with the diamond in it, never a logotype (design rule 25). */
-.mark {
-  display: grid;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-sm);
-  background: var(--mantine-color-default-hover);
-  place-items: center;
-}
-
 /* The account trigger and the bottom bar's summary are both "a row you press": no ground of their
    own until the pointer is on them. */
 .tapRow {
@@ -62,21 +51,10 @@
    scrollbar of its own, because there is exactly one scroll on this page (design rule 17). */
 .pane {
   width: var(--pyr-pane-width);
-}
-
-/* …and the one thing that stays: the recap and Generate, pinned under the app bar while the march
-   passes behind them. It carries the pane's own surface colour and the pane's padding as a negative
-   margin, so the block it hides is really hidden and the ink still starts on the pane's own margin.
-   `z-index` puts it over the march, never over the app bar (which is 200). */
-.paneHeader {
-  position: sticky;
-  z-index: 1;
-  top: var(--pyr-appbar-height);
-  margin: calc(-1 * var(--mantine-spacing-md)) calc(-1 * var(--mantine-spacing-md)) 0;
-  border-bottom: 1px solid var(--pyr-hairline);
-  border-radius: var(--mantine-radius-md) var(--mantine-radius-md) 0 0;
-  background: var(--mantine-color-default);
-  padding: var(--mantine-spacing-md);
+  /* The column, not the content: the block that stays (`march.module.css`, `.glance`) can only
+     travel as far as its own containing block, so the pane runs the height of the grid row and the
+     glance stays under the app bar all the way to the bottom of the setup. */
+  height: 100%;
 }
 
 /* One short flash on the bar's summary when a run lands with the sheet shut — the eye's half of the
@@ -118,7 +96,23 @@
   height: calc(var(--pyr-appbar-height) + env(safe-area-inset-bottom, 0px));
   align-items: center;
   gap: var(--mantine-spacing-sm);
-  border-top: 1px solid var(--mantine-color-default-border);
+  border-top: 1px solid var(--pyr-hairline);
+  background: var(--pyr-bar);
+  box-shadow: var(--pyr-bar-shadow);
   padding-inline: var(--pyr-page-margin);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* The March sheet (artboard `PhoneSheetA.dc.html`, `.sheet`): the pane's own lit material, 20 px on
+   the two top corners only, and the shadow that lifts it off the setup behind it. */
+.sheet {
+  border-top: 1px solid var(--pyr-pane-border);
+  border-radius: 1.25rem 1.25rem 0 0;
+  background: var(--pyr-pane);
+  box-shadow: var(--pyr-sheet-shadow);
+}
+
+/* Both bars carry the page's own faint top light, so the chrome and the panels are one material. */
+.barSurface {
+  background: var(--pyr-bar);
 }

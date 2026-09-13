@@ -58,11 +58,18 @@ export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGen
     <Button
       size={size}
       fullWidth={fullWidth}
+      // 44 px in the March pane, 40 in the bottom app bar — the artboards' own two heights
+      // (design plan §5.5, `.gen` and `.gen.sm`).
+      h={fullWidth ? 44 : 40}
+      radius={10}
+      fz="0.9375rem"
       aria-label={name}
       {...(blocked ? { 'data-disabled': true, 'aria-disabled': true } : {})}
-      variant={blocked ? 'default' : 'filled'}
+      // The one gilded control on the page. Blocked, it drops the metal: a button that cannot be
+      // pressed must not look like the thing to press (docs/design.md §1, "one primary per view").
+      variant={blocked ? 'default' : 'gold'}
       leftSection={
-        running ? <Loader size={14} color="var(--pyr-on-brass)" /> : <Swords size={16} aria-hidden />
+        running ? <Loader size={14} color="var(--pyr-gold-ink)" /> : <Swords size={16} aria-hidden />
       }
       onClick={(event) => {
         if (blocked) {

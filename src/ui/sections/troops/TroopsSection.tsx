@@ -18,7 +18,7 @@
  * with a way to put it back, so nothing the account fields is ever hidden. The block describes the
  * *account*, not one march: everything here is written straight to the active profile.
  */
-import { Box, Button, Flex, Group, Stack, Text, Title } from '@mantine/core';
+import { Box, Button, Flex, Group, Stack, Text } from '@mantine/core';
 import { useId } from 'react';
 
 import { CATEGORIES } from '@/data/types';
@@ -27,13 +27,14 @@ import type { ProfileTroops, TierRange } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Glyph, GroupMarker } from '@/ui/domain';
 import type { GlyphKind } from '@/ui/domain';
-import { ChipRow, TierSelect } from '@/ui/kit';
+import { ChipRow, Panel, TierSelect } from '@/ui/kit';
 import type { ChipRowItem } from '@/ui/kit';
 
 import {
   isChipRow,
   isEmptyArmy,
   leftOutUnits,
+  rangeSummary,
   rowBounds,
   rowTiers,
   topTierIncluded,
@@ -47,7 +48,7 @@ import type { TroopRow, TroopRowId } from './rows';
  * "from" selects up under each other, as the reference does; it still leaves the two selects room
  * on a 390 px screen, where only the chips wrap to a second line.
  */
-const NAME_WIDTH = 112;
+const NAME_WIDTH = 120;
 
 /** The theme's chip height (`--chip-size`, 2 rem): how tall a row of chips is allowed to be. */
 const CHIP_HEIGHT = 32;
@@ -130,16 +131,20 @@ export function TroopsSection() {
   };
 
   return (
-    <Stack component="section" id="troops" aria-labelledby={titleId} gap="xs">
-      <Title order={2} id={titleId}>
-        Troops
-      </Title>
-      {empty && (
-        <Text size="sm" c="dimmed">
-          Add your troops: pick the lowest and highest tier you own.
-        </Text>
-      )}
-      <Stack gap={8}>
+    <Panel
+      component="section"
+      id="troops"
+      aria-labelledby={titleId}
+      title="Troops"
+      titleId={titleId}
+      meta={rangeSummary(troops)}
+    >
+      <Stack gap={6}>
+        {empty && (
+          <Text size="sm" c="dimmed">
+            Add your troops: pick the lowest and highest tier you own.
+          </Text>
+        )}
         {TROOP_ROWS.map((row) => (
           <GroupRow
             key={row.id}
@@ -152,7 +157,7 @@ export function TroopsSection() {
           />
         ))}
       </Stack>
-    </Stack>
+    </Panel>
   );
 }
 
@@ -196,7 +201,7 @@ function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRow
       {/* `Flex` rather than `Group` for the one thing a group cannot say: a line that wraps stays
           closer to itself (4 px) than two groups are to each other (8 px), so the chips read as
           part of the row above them on a phone. */}
-      <Flex wrap="wrap" align="center" columnGap="sm" rowGap={4}>
+      <Flex wrap="wrap" align="center" columnGap="sm" rowGap={4} mih={40}>
         <Box w={NAME_WIDTH}>
           <GroupMarker group={row.id} label={row.label} />
         </Box>

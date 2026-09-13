@@ -165,3 +165,16 @@ test('a subscriber that writes back settles instead of looping', () => {
   expect(calls).toBe(0);
   manager.unsubscribe();
 });
+
+test('the troop tiers are the group hues, not a second green and a second blue', () => {
+  // Direction A colours a stack pill by its tier (design plan §5.5). Tiers II–IV are written as the
+  // group seeds on purpose: the game paints a tier II green and a tier III blue, and inventing a
+  // second one of each would put two nearly identical inks on the same screen. If a seed is ever
+  // changed, this is the line that says the pair has come apart.
+  expect(SEEDS.tier2).toBe(SEEDS.guardsmen);
+  expect(SEEDS.tier3).toBe(SEEDS.specialists);
+  expect(SEEDS.tier4).toBe(SEEDS.monsters);
+  // Tier I is the one tier with no hue: a slate, as close to the design's Ash as the luminance
+  // ladder reaches.
+  expect(ramp(SEEDS.tier1)[5]).toBe('#99a5a3');
+});

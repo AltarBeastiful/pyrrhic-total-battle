@@ -17,6 +17,7 @@ import {
   recapSummary,
   renameProfile,
   SETUP_TITLES,
+  stepTier,
   themeAttribute,
   waitForSaved,
   watchConsole,
@@ -108,9 +109,9 @@ test('the Troops card states the account as a form, and follows a tier change', 
   // a tier at each end of the range, and the chips of the top tier beside them.
   const card = page.locator('#troops');
   await expect(card.getByRole('heading', { level: 2, name: 'Troops' })).toBeVisible();
-  await expect(card.getByRole('combobox', { name: /(from|to)$/ })).toHaveCount(8);
+  await expect(card.getByRole('spinbutton', { name: /(from|to)$/ })).toHaveCount(8);
 
-  await card.getByRole('combobox', { name: 'Guardsmen to' }).selectOption('G4');
+  await stepTier(card, 'Guardsmen to', 1);
   await expect(card.getByRole('group', { name: 'Guardsmen at G4' })).toBeVisible();
 
   expect(problems).toEqual([]);

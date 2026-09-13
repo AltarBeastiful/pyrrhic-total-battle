@@ -46,6 +46,10 @@ showing, which is how a near-white accent once shipped white-on-white).
 | `monsters` | the monsters group | `#5b368a` | `#6e41a7` | `#b296d6` | `#fafbfa` / `#131917` |
 | `mercenaries` | the mercenaries group | `#8c3030` | `#9c3636` | `#d88f8f` | `#fafbfa` / `#131917` |
 | `danger` | destructive, or over capacity — registered as Mantine's `red` too | `#a32c1f` | `#a52d1f` | `#e6887e` | `#fafbfa` / `#131917` |
+| `tier1` | tier I — slate, the one tier with no hue | `#485150` | `#515b5a` | `#99a5a3` | `#fafbfa` / `#131917` |
+| `tier2` | tier II — green | `#256b35` | `#236632` | `#3fb75b` | `#fafbfa` / `#131917` |
+| `tier3` | tier III — blue | `#25568a` | `#275b93` | `#74a6da` | `#fafbfa` / `#131917` |
+| `tier4` | tier IV — violet | `#5b368a` | `#6e41a7` | `#b296d6` | `#fafbfa` / `#131917` |
 | `tier5` | tier V — the game's gold | `#71530f` | `#73540f` | `#d0981c` | `#fafbfa` / `#131917` |
 | `tier6` | tier VI — crimson | `#8e2f2f` | `#9e3434` | `#d98d8d` | `#fafbfa` / `#131917` |
 | `tier7` | tier VII — violet | `#5c3a8e` | `#6b44a6` | `#b096d4` | `#fafbfa` / `#131917` |
@@ -55,6 +59,23 @@ showing, which is how a near-white accent once shipped white-on-white).
 The accent is a **hue and not a metal** (ADR-0008): a restrained brass from the game's trim, so Mantine's
 filled buttons work as designed. It still means one thing — "you can act on this" — and it collides with none
 of the five unit hues.
+
+**Tiers I–IV were added for direction A** (design plan §5.5): the March draws every stack as a pill coloured
+by its tier, so the four troop tiers need inks as much as the five mercenary ones already did. Their seeds are
+*the group seeds*, deliberately — the game paints a tier II green and a tier III blue, and a second green
+beside the guardsmen one would put two nearly indistinguishable inks on the same screen. `theme.test.ts`
+asserts `tier2`, `tier3` and `tier4` stay equal to `guardsmen`, `specialists` and `monsters`; tier I is the
+one tier with no hue, a slate whose dark ink lands on `#99a5a3` (the design's Ash, to the nearest step the
+luminance ladder can reach — the ladder is what guarantees the nine tier inks read at one loudness).
+
+**The one gilded object is Generate** (`GOLD` in `palette.ts`): `linear-gradient(180deg, #e0c070, #c19a3f)`
+lettered in `#1a1408`, with `0 1px 0 rgb(255 255 255 / 35%) inset, 0 6px 16px rgb(201 162 74 / 25%)`. It is
+the same in both schemes, because it is the game's trim rather than a surface, and `pnpm contrast` checks its
+ink against **both ends** of the gradient (6.8:1 and 12.4:1). The brand mark is the same metal turned 45°.
+
+**Pools have a colour too**, because the March writes a pool's figure over the stacks it paid for: leadership
+is `guardsmen` (the shield), authority is `brass` (the crown), dominance is `danger` (the skull). Three ramps
+already checked, no new hue.
 
 ### The generated ramps
 
@@ -70,6 +91,10 @@ app writes a hex: a component asks for `color="guardsmen"` or `c="tier6.5"`, and
 | `monsters` | `#f5f2f7` | `#eae6f0` | `#dad1e7` | `#c9b8de` | `#bea8da` | `#b296d6` | `#9872c8` | `#6e41a7` | `#52327a` | `#3b2657` |
 | `mercenaries` | `#f8f2f2` | `#f1e5e5` | `#e8cfcf` | `#dfb4b4` | `#dca3a3` | `#d88f8f` | `#ca6666` | `#9c3636` | `#742a2a` | `#542020` |
 | `danger` | `#f9f2f2` | `#f3e3e2` | `#edcdca` | `#e8b2ad` | `#e79f97` | `#e6887e` | `#dd594a` | `#a52d1f` | `#7b231a` | `#591c15` |
+| `tier1` | `#f3f4f3` | `#e6e7e7` | `#d2d5d5` | `#bac1c0` | `#aab3b2` | `#99a5a3` | `#788785` | `#515b5a` | `#3c4343` | `#2d3131` |
+| `tier2` | `#eff5f0` | `#dbebdf` | `#b9ddc2` | `#8cce9b` | `#66c47b` | `#3fb75b` | `#34954a` | `#236632` | `#1b4b26` | `#16381d` |
+| `tier3` | `#f1f4f7` | `#e1e8f1` | `#c6d6e8` | `#a6c1df` | `#8fb4dd` | `#74a6da` | `#4587cd` | `#275b93` | `#1f446b` | `#18324c` |
+| `tier4` | `#f5f2f7` | `#eae6f0` | `#dad1e7` | `#c9b8de` | `#bea8da` | `#b296d6` | `#9872c8` | `#6e41a7` | `#52327a` | `#3b2657` |
 | `tier5` | `#f7f4eb` | `#efe6d3` | `#e6d3a7` | `#ddbb6c` | `#dcaa37` | `#d0981c` | `#aa7d17` | `#73540f` | `#553f0d` | `#3e2e0b` |
 | `tier6` | `#f8f2f2` | `#f1e5e5` | `#e8cece` | `#e0b5b5` | `#dda3a3` | `#d98d8d` | `#cc6565` | `#9e3434` | `#742929` | `#542020` |
 | `tier7` | `#f4f2f7` | `#eae6f0` | `#d9d0e6` | `#c7b9dd` | `#bca8d9` | `#b096d4` | `#9674c6` | `#6b44a6` | `#503379` | `#3a2755` |
@@ -104,42 +129,55 @@ sticky pane are measured from), `--pyr-pane-width` (360 px, M3's supporting pane
 ### Checked, not guessed
 
 `pnpm contrast` (`scripts/contrast-check.ts`) imports the palette module the app builds its theme from, so
-there is no second copy to drift, and fails on any pair below its floor. **176 pairs, all passing:**
+there is no second copy to drift, and fails on any pair below its floor. **324 pairs, all passing:**
 
 | Rule | What it covers | Lowest light | Lowest dark |
 |---|---|---|---|
-| **4.5:1** (1.4.3) | ink and muted on page, sheet, raised, sunken; every ramp at its scheme's shade on those four surfaces and on its own 12 % tonal ground; the ink a filled ground of it is written in | **4.94** | **4.98** |
-| **3:1** (1.4.11) | `field` — the border of every control — on the four surfaces | **3.25** | **3.34** |
+| **4.5:1** (1.4.3) | ink and muted on page, sheet, panel, pane, raised, sunken; every ramp at its scheme's shade on those six surfaces and on its own 12 % tonal ground; the ink a filled ground of it is written in; Generate's ink on both ends of its gradient | **5.34** | **4.98** |
+| **3:1** (1.4.11) | `field` — the border of every control — and the focus ring, on the six surfaces | **3.52** | **3.34** |
 
-`hairline` is the one value deliberately below 3:1: it draws the rule between the sheet's sections and nothing
-a finger ever lands on, so the checker prints it for information and never fails on it.
+`hairline` and the two panel borders are deliberately below 3:1: they draw the edge of a block and nothing a
+finger ever lands on, so the checker prints them for information and never fails on them.
 
 Rules:
 
 - **Colour identifies a unit, never a state.** A tile has a glyph, a roman tier and a code beside its group
-  colour; a warning has ⚠️ *and* the wording; an on-state has a mark *and* a tonal step.
-- **One primary per view.** The filled brass means "this is the thing to press" (Generate, Confirm).
+  colour; a warning has ⚠️ *and* the wording; an on-state is a tonal step *and* a spoken `aria-checked`.
+- **One primary per view.** Generate is the one gilded control on the page, and nothing else wears the metal;
+  every other action is `variant="default"`. Filled brass stays the fill for a dialog's confirm.
 - The mercenaries red and `danger` share a hue family on purpose, and are told apart by where they appear (a
   tile) and what sits next to them (a glyph).
-- A tier ink is allowed on exactly two things: the **tier badge** (`src/ui/domain/TierBadge.tsx` — the roman
-  numeral in Fraunces on a wash of its own ink) and the **heading over a tier** in the mercenary picker.
-  Everywhere else a unit's colour is its group's, so the two systems never fight.
+- A tier ink is allowed on exactly four things: the **stack pill** in the March (border, code and count), the
+  **tier badge** (`src/ui/domain/TierBadge.tsx` — the roman numeral in Fraunces on a wash of its own ink), the
+  **mercenary pill's** roman numeral and the **heading over a tier** in the mercenary picker. Everywhere else a
+  unit's colour is its group's, so the two systems never fight — and the March is the one place where telling
+  two stacks of the same unit apart is the whole job, which is why it is the tier that colours it there.
+- A **chip's on-state is a tint and a hairline of its own ink, with no check mark** (owner, 2026-09-13): the
+  glyph and the code are the chip, and the state is carried by `aria-checked` where a state belongs.
 
 ## 2. Surfaces — which one, when
 
 ```
-page            the page ground
-├ sheet         the setup: one continuous ground, its sections split by a Divider (no radius)
-└ sheet         the March pane: the one radiused object on the page  (Paper radius="md")
-  └ raised      a block inside it: a hover, the chosen row of a list, an unchecked chip in the dark
-  └ sunken      a well: a read-only figure, a gauge track, a pasted link
-  └ danger/12   the one state block that is still tinted
+page              the page ground
+├ panel           a setup section: a lit block — gradient, one hairline, one soft shadow   (kit `Panel`)
+│ └ well          anything sunk into it: a field, a tier stepper, a segmented track, a figure
+│ └ raised        a block on top of it: a hover, the chosen segment, the account pill
+├ pane            the March: the same idea one step brighter and one step deeper           (`Panel surface="pane"`)
+│ └ glance        the part of it that stays: recap · Generate · the pools and their pills
+│ └ tier/13       a stack pill: a wash of its tier's ink, bordered in the same ink
+└ sheet           what floats over the page: a dialog, a popover, a menu
+  └ danger/12     the one state block that is still tinted
 ```
 
-Never nest two sheets. Go one step in (`raised`), or drop the ground and use spacing: inside the March pane
-the recap, Generate and the March are one surface, not three cards (M-09; spike 0009's `v1-desktop.jpg`).
-Elevation has two steps and both are for things that float: `shadow="md"` on a popover or a menu, Mantine's
-own overlay shadow on a dialog or a sheet. Nothing on the page itself casts a shadow.
+**Direction A replaced D-19's one continuous sheet** (design plan §5.5, adopted 2026-09-13): the setup is
+four panels with 16 px between them, and the full-width `Divider` that used to tell the sections apart is
+gone — a panel's own edge does that now. Never nest two panels: go one step in (`well` or `raised`), or drop
+the ground and use spacing. Inside the March the recap, Generate, the pills and the counts are one surface,
+not four cards.
+
+Elevation has three steps and each is for something that floats: a panel's `0 8px 24px`, the March pane's
+`0 12px 32px`, and Mantine's own overlay shadow on a dialog or a bottom sheet. The one gilded object,
+Generate, carries a glow of its own metal rather than a shadow.
 
 ## 3. Type
 
@@ -150,38 +188,60 @@ variant of Mantine's `Text`, which is the only way in: Mantine has no numerals s
 
 | Role | Face | How it is asked for | Size |
 |---|---|---|---|
-| The hero figure (expected damage) | Fraunces 300, `opsz 144`, `SOFT 0`, `WONK 0` | `<Text variant="numeral">` at 48 px | 48 px |
-| Stack count, pool totals | Inter 600, tabular | `size="xl"` | 24 px |
-| Section titles | Inter 600 | `<Title order={2}>` — **no `size` prop** | 21 px |
+| The hero figure (expected damage) | Fraunces 300, `opsz 144`, `SOFT 0`, `WONK 0` | `<Text variant="numeral" fz={{ base, lg }}>` | 48 px in the pane, 40 in the phone's sheet |
+| A pool's figure, over the stacks it paid for | Inter 700, tabular, in the pool's colour | `fz="1.625rem"` | 26 px |
+| A stack's count on its pill | Inter 700, tabular, `nowrap` | `fz="1.1875rem"` | 19 px |
+| The brand, in the app bar | Inter 600 | `<Title order={1} size="1.125rem">` | 18 px |
+| Section titles | Inter 600, `letter-spacing .02em` | `<Title order={2}>` — **no `size` prop** | 15 px |
 | Body, control labels, unit names | Inter 400 | `size="md"` (the default) | 16 px |
-| Captions, helper lines, table heads | Inter 400/500 | `size="sm"` = `size="xs"` | 13 px |
-| The roman tier on a tile | Fraunces 500, `opsz 144` | `<Text variant="numeral">` | 13 / 16 / 21 px by tile size |
+| A housing figure (the wells you retype into) | Inter 400, tabular | the `.housing` well | 15 px |
+| Captions, helper lines, panel meta | Inter 400/500 | `size="sm"` = `size="xs"` | 13 px |
+| A stack pill's code and roman tier | Inter 600, in the tier's ink | `fz="0.75rem"` | 12 px |
+| The roman tier on a tile or a mercenary pill | Fraunces 500, `opsz 144` | `<Text variant="numeral">` | 13 / 16 / 21 px |
 | Share links, ids | `fontFamilyMonospace` | `size="xs"` | 13 px |
 
-The scale is the traditional one from *The Elements of Typographic Style* — 16 / 21 / 24 / 48 — over our own
-13 px floor, which is an accessibility decision rather than Bringhurst's. **14, 18 and 20 are gone**: `xs` and
-`sm` are the same 13 px, and `headings.sizes` is written out in the theme so `h1`–`h6` land on the four steps
-instead of on Mantine's own six. A section that sets its own heading size is a bug (M-09). Measure ≤ 70
-characters. `output`, `td` and `th` get tabular figures for free.
+**The section title dropped from 21 px to 15** with direction A (design plan §5.5): a panel's title is a label
+over a dense form, and the figures inside it are what the eye is meant to land on. The scale is otherwise the
+traditional one from *The Elements of Typographic Style* — 16 / 21 / 24 / 48 — over our own 13 px floor, which
+is an accessibility decision rather than Bringhurst's. **14, 18 and 20 are gone** from the ramp: `xs` and `sm`
+are the same 13 px, and `headings.sizes` is written out in the theme so `h1`–`h6` land on the steps instead of
+on Mantine's own six. A section that sets its own heading size is a bug (M-09).
+
+The one place under 13 px is a **stack pill's top line** (12 px): it is three letters and a roman numeral in a
+78 px column, it is repeated on every pill, and the count under it says the same thing loudly. Everywhere the
+artboards wrote 12 px for an *information* line — a figure's label, a field's label, a panel's meta — the app
+writes 13, because design rule 19 names "12 px meta lines" as the thing it exists to prevent.
+
+Measure ≤ 70 characters. `output`, `td` and `th` get tabular figures for free.
 
 ## 4. Spacing, radius, motion
 
 - **Radius is decided by what a thing is**, never by looks. The theme's scale is `xs` 4 · `sm` 8 · `md` 12 ·
-  `lg` 16 · `xl` 28, and `defaultRadius` is `sm`: the setup has none (it is the page), the March pane and every
-  overlay are `md` (M3 medium), buttons, fields and chips are `sm` (M3 small — the 999 px pill is retired), a
-  unit tile is `xs` (a frame, nearly square, like the game's own), a bottom sheet is `xl`, full round only on
-  the avatar.
+  `lg` 16 · `xl` 28, and `defaultRadius` is `sm`: a setup panel and the March pane are `md` (M3 medium), so is
+  every overlay, buttons, fields and chips are `sm` (M3 small — the 999 px pill is retired except on the
+  account trigger and the avatar), a unit tile is `xs`, the phone's March sheet is 20 px on its **two top
+  corners only**. Two shapes sit off the scale and say why: a **stack pill** is 10 px (it is neither a control
+  nor a card) and Generate is 10 px (it is the artboards' own figure).
 - **Spacing is compressed on purpose**: `xs` 4 · `sm` 8 · `md` 12 · `lg` 16 · `xl` 24. Mantine's stock scale
   (10 · 12 · 16 · 20 · 32) would push the March below the fold, and TotalStack fits a whole army on one screen.
-- **Page margins are Material's**: 16 px in a compact window, 24 px from the medium window class (600 px) up.
-  One variable, `--pyr-page-margin`, read by `Container`, the top app bar and the bottom app bar, so the brand,
-  the sections and Generate all start on the same line.
-- **Separation is a hairline and space, not a box.** Inside the setup the sections are told apart by one
-  full-width `Divider` and by `gap="xl"` either side of it. A border *and* a shadow *and* a tonal step on the
-  same element is the thing this system exists to prevent.
+- **Page margins are Material's**: 16 px in a compact window, 24 px from the medium window class (600 px) up,
+  and 24 px above and below the content. One variable, `--pyr-page-margin`, read by `Container`, the top app
+  bar and the bottom app bar, so the brand, the panels and Generate all start on the same line.
+- **A panel is 20/24 px of padding on a desktop and 16 px in a compact window**, with 16 px of air between
+  panels; the March pane is 24 px, and 16 px on a phone.
+- **Separation is an edge and space, not a rule.** Since direction A each setup section is its own panel, so
+  the `Divider` between sections is gone. A border *and* a shadow *and* a tonal step on the same element is
+  still the thing this system exists to prevent — a panel is allowed all three precisely because it is the one
+  object the design says is lit.
 - **Density by purpose.** Controls are Mantine's `sm` (`ActionIcon` too — `xs` is 18 px, under the 24 px target
-  minimum); a chip is TotalStack's 32 px with a 13 px label; `NativeSelect` is `xs`, because a tier select is
-  two characters wide.
+  minimum); a **chip and a tier stepper are both 30 px**, so a troop row reads as one line of equal parts; a
+  **housing well is 40 px** and a third of the panel wide, because it is the figure a player retypes off the
+  game's own march screen; a **stack pill is 62 px tall with 8/10 px of padding**, laid out
+  `repeat(auto-fill, minmax(78px, 1fr))` so a six-figure count widens every pill and the row wraps to fewer
+  instead of clipping one; a **left-out pill is 26 px**, because it is a footnote to the march.
+- **One block stays put.** On a desktop the March's recap, Generate, pools and pills are `position: sticky`
+  under the 64 px app bar, capped at `calc(100dvh - 64px - 16px)`; everything after them flows with the page.
+  That cap is a fallback, not a layout: a march of up to fifteen stacks fits a 900 px window without it.
 - **Alignment.** Everything left-aligned; figures right-aligned in their column; nothing centred. A figure's
   name is a caption *under* it only for the hero — everywhere else the label comes first, because those are
   read as a list.

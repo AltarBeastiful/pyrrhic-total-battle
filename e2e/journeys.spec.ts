@@ -29,13 +29,13 @@ import {
   generateButton,
   housingField,
   marchAnswer,
-  marchCountsList,
   marchStackLabels,
-  marchTiles,
+  marchPills,
   openApp,
   openMarchSheet,
   recapSummary,
   settle,
+  stepTier,
   waitForSaved,
   watchConsole,
 } from './helpers';
@@ -71,8 +71,8 @@ function record(label: string, value: number, budget: number | null): void {
  *
  * What counts as one tap follows the plan's definition — a touch or a click. Landing in a number
  * field is one; the digits after it are the keyboard the field opens, not further taps (design
- * rule 9: a typed number selects itself on focus, so typing replaces it). A native tier select is
- * one: on a phone it is the system picker, which is the whole of the gesture we copied.
+ * rule 9: a typed number selects itself on focus, so typing replaces it). A tier stepper counts one
+ * tap per step, because that is exactly what it is (design rule 10).
  */
 class Taps {
   private taps = 0;
@@ -87,10 +87,10 @@ class Taps {
     await target.click();
   }
 
-  /** One press on a native select, picker and all. */
-  async pick(select: Locator, value: string): Promise<void> {
-    this.taps += 1;
-    await select.selectOption(value);
+  /** Walking a tier stepper: one tap per step. */
+  async step(scope: Locator, name: string, steps: number): Promise<void> {
+    this.taps += Math.abs(steps);
+    await stepTier(scope, name, steps);
   }
 
   /** One press into a number field, then the keyboard. */
@@ -260,10 +260,11 @@ async function journey1(page: Page, phone: boolean): Promise<void> {
     await taps.tap(recapSummary(page));
     const sheet = page.getByRole('dialog', { name: 'March' });
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByText('Expected damage', { exact: true })).toBeVisible();
-    await expect(marchTiles(page).first()).toBeVisible();
+    await expect(sheet.getByText(/^Expected damage/)).toBeVisible();
+    await expect(marchPills(page).first()).toBeVisible();
 
-    const firstCount = marchCountsList(page).getByRole('listitem').first();
+    // The pills are the counts (owner, 2026-09-13): the first one is the first count to read.
+    const firstCount = marchPills(page).first();
     await expect(firstCount).toBeVisible();
     const labels = await marchStackLabels(page);
     expect(labels.length).toBeGreaterThan(0);
@@ -285,7 +286,7 @@ async function journey1(page: Page, phone: boolean): Promise<void> {
 
   // Desktop: the recap and Generate stay pinned at the top of the March column, and the counts flow
   // under them with the page — one scroll, and this is how much of it the player pushes through.
-  const firstCount = marchCountsList(page).getByRole('listitem').first();
+  const firstCount = marchPills(page).first();
   const travelled = await screensToRead(page, firstCount, null);
   await expect(firstCount).toBeInViewport();
   await expect(recapSummary(page)).toHaveCount(0);
@@ -303,8 +304,8 @@ async function journey2(page: Page): Promise<void> {
   const taps = new Taps();
   const troops = page.locator('#troops');
 
-  await taps.pick(troops.getByRole('combobox', { name: 'Guardsmen from' }), '1');
-  await taps.pick(troops.getByRole('combobox', { name: 'Guardsmen to' }), '4');
+  // G3 → G4 is one step of the "to" stepper; "from" is already at G1.
+  await taps.step(troops, 'Guardsmen to', 1);
   const top = troops.getByRole('group', { name: 'Guardsmen at G4' });
   await expect(top).toBeVisible();
 
@@ -318,7 +319,7 @@ async function journey2(page: Page): Promise<void> {
   // it is not part of the journey's budget, so the sheet is opened outside the counter.
   const sheet = (await recapSummary(page).count()) > 0;
   if (sheet) await openMarchSheet(page);
-  await expect(marchTiles(page).first()).toBeVisible({ timeout: 30_000 });
+  await expect(marchPills(page).first()).toBeVisible({ timeout: 30_000 });
 
   const labels = await marchStackLabels(page);
   // The new tier marches; the one type that was turned off does not.

@@ -2,9 +2,12 @@ import { MantineProvider } from '@mantine/core';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { App } from '@/App';
+// The library's stylesheet first, then ours: every CSS module in `src/ui` is loaded as a side
+// effect of importing `@/App`, and the last rule of equal specificity wins. With the import the
+// other way round Mantine's own `.mantine-UnstyledButton-root` beat our panel and pill classes.
 import '@mantine/core/styles.css';
 import '@/ui/global.css';
+import { App } from '@/App';
 import { accountErrorMessage, appRootUrl, isAccountConfigured, readCallback } from '@/account/client';
 import { trackAccountChanges, useAccountStore } from '@/account/state';
 import { captureInstallPrompt } from '@/pwa/install';

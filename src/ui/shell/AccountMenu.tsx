@@ -44,7 +44,7 @@ import { copyText, downloadJson } from '../profile/download';
 import { ImportDialog } from '../profile/ImportDialog';
 import { resultCounts, toSavedSummary, useResultStore } from '../resultStore';
 import { useUiStore } from '../uiStore';
-import classes from './shell.module.css';
+import themeClasses from '../theme.module.css';
 import { saveStatus } from './state';
 
 // The account surfaces drag in the PocketBase SDK and About drags in the data notes; both are opened
@@ -420,17 +420,15 @@ export function AccountMenu() {
         width={260}
         sections={sections}
         trigger={
-          <UnstyledButton className={classes.tapRow} aria-label={`Account: ${profile.name}`}>
-            <Group gap={6} wrap="nowrap">
-              <Avatar size={32} radius="xl" color="brass" variant="light">
-                {initial === '' ? '?' : initial}
-              </Avatar>
-              <Group gap={4} wrap="nowrap" visibleFrom="sm">
-                <Text size="sm" lineClamp={1}>
-                  {profile.name}
-                </Text>
-                <ChevronDown size={14} aria-hidden />
-              </Group>
+          <UnstyledButton className={themeClasses.accountPill} aria-label={`Account: ${profile.name}`}>
+            <Avatar size={28} radius="xl" color="brass" variant="filled">
+              {initial === '' ? '?' : initial}
+            </Avatar>
+            <Group gap={4} wrap="nowrap" visibleFrom="sm">
+              <Text size="sm" lineClamp={1}>
+                {profile.name}
+              </Text>
+              <ChevronDown size={14} aria-hidden />
             </Group>
           </UnstyledButton>
         }

@@ -80,7 +80,7 @@ test('the section is a landmark named by its own heading', () => {
   expect(region?.getAttribute('aria-labelledby')).toBe(heading.id);
 });
 
-test('what you own is a row of pills, lowest tier first, counted in the heading', () => {
+test('what you own is a row of pills, lowest tier first, counted in the panel meta', () => {
   renderWithTheme(<MercenariesSection />);
 
   own([
@@ -89,7 +89,7 @@ test('what you own is a row of pills, lowest tier first, counted in the heading'
     { id: 'abomination-6', cap: 22 },
   ]);
 
-  expect(screen.getByText('(3 selected)')).toBeTruthy();
+  expect(screen.getByText('3 hired')).toBeTruthy();
   expect(pillNames()).toEqual([
     'Bear V: owned unlimited',
     'Abomination VI: owned 22',
@@ -136,7 +136,7 @@ test('picking a mercenary adds its pill, and the list stays open for the next on
   // never show the same mercenary twice.
   expect(screen.getByRole('listbox')).toBeTruthy();
   expect(screen.queryByRole('option', { name: 'Bear V tier 5' })).toBeNull();
-  expect(screen.getByText('(1 selected)')).toBeTruthy();
+  expect(screen.getByText('1 hired')).toBeTruthy();
 });
 
 test('a name the tables do not carry says so, and is never hired by accident', async () => {

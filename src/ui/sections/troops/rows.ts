@@ -143,3 +143,20 @@ export function leftOutUnits(troops: ProfileTroops, row: TroopRowId): UnitDef[] 
 export function isEmptyArmy(troops: ProfileTroops): boolean {
   return TROOP_ROWS.every((row) => troops[row.id] === null);
 }
+
+/**
+ * What the panel's head says about the form under it (design plan §5.5, artboard "G1–G3 · S1"): one
+ * term per group that has a range, the two ends joined by an en dash when they differ. Groups the
+ * player does not field say nothing at all — an empty group adds no line and no word (design
+ * rule 14).
+ */
+export function rangeSummary(troops: ProfileTroops): string {
+  return TROOP_ROWS.map((row) => {
+    const range = troops[row.id];
+    if (range === null) return null;
+    const low = `${row.prefix}${String(range.min)}`;
+    return range.min === range.max ? low : `${low}–${row.prefix}${String(range.max)}`;
+  })
+    .filter((term) => term !== null)
+    .join(' · ');
+}

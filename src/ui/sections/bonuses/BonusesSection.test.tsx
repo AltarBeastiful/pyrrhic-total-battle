@@ -141,18 +141,23 @@ test('the header carries the TOTAL as four labelled figures', () => {
   });
 });
 
-test('a source switched on with nothing typed in it is badged in the header', () => {
+test('a source switched on with nothing typed in it reads "—" in its own row, and nowhere else', () => {
   renderWithTheme(<BonusesSection />);
 
-  // VIP, the dragon and the unexplained remainder start switched on and empty.
-  expect(within(card()).getByText('3 on but empty')).toBeTruthy();
+  // The card's old "N on but empty" badge is retired (owner, 2026-09-13): it named a number a
+  // player could do nothing with. The row that has no value says so, where the value would be.
+  expect(within(card()).queryByText(/on but empty/)).toBeNull();
 
   expand();
   openGroup('Other');
-  fireEvent.click(within(card()).getByRole('switch', { name: 'Dragon' }));
+  const row = within(card())
+    .getAllByRole('listitem')
+    .find((node) => node.textContent?.includes('Dragon'));
+  if (row === undefined) throw new Error('the dragon row is missing');
+  expect(within(row).getByText('—')).toBeTruthy();
 
+  fireEvent.click(within(card()).getByRole('switch', { name: 'Dragon' }));
   expect(setup()?.active.dragon).toBe(false);
-  expect(within(card()).getByText('2 on but empty')).toBeTruthy();
 });
 
 test('the sources are folded away by default and the choice is remembered per device', () => {

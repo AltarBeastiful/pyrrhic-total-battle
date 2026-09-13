@@ -30,7 +30,10 @@ export function TotalsFigures({ summary, size = 'md' }: TotalsFiguresProps) {
       <Figures
         label="Army bonus totals"
         orientation="vertical"
-        size={size}
+        size={size === 'md' ? 'xs' : size}
+        // The card's TOTAL is four columns of "label over figure", the figure at 22 px and 600
+        // (design plan §5.5, artboard `.figs`); an editor repeats it small, as a reminder.
+        {...(size === 'md' ? { valueFz: '1.375rem', valueFw: 600 } : {})}
         items={[
           { key: 'health', label: 'Health', value: formatPercent(summary.health) },
           { key: 'strength', label: 'Strength', value: formatPercent(summary.strength) },

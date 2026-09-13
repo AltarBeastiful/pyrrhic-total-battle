@@ -23,14 +23,14 @@
  * Like Troops, this card describes the *account*: everything is written to the active profile. The
  * only thing it reads from the battle setup is the list of pinned units, to mark them.
  */
-import { Box, Button, Group, Popover, Stack, Switch, Text, Title, UnstyledButton } from '@mantine/core';
+import { Button, Group, Popover, Stack, Switch, Text, UnstyledButton } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { lazy, useId, useMemo, useState } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Glyph, romanTier, TierBadge } from '@/ui/domain';
-import { GroupedCombobox, NumberField, PillRow } from '@/ui/kit';
+import { Glyph, romanTier, tierInk, TierBadge } from '@/ui/domain';
+import { GroupedCombobox, NumberField, Panel, PillRow } from '@/ui/kit';
 import type { ComboboxGroup, PillRowItem } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 
@@ -42,14 +42,6 @@ import type { MercenaryRow } from './rows';
 const CustomMercenarySheet = lazy(() =>
   import('./CustomMercenarySheet').then((module) => ({ default: module.CustomMercenarySheet })),
 );
-
-/** The tiers the game gives a colour of their own; anything else is written in the muted ink. */
-const COLOURED_TIERS = new Set([5, 6, 7, 8, 9]);
-
-/** A tier's ink, readable in both schemes — the same variable `TierBadge` paints itself with. */
-function tierInk(tier: number): string {
-  return COLOURED_TIERS.has(tier) ? `var(--mantine-color-tier${tier}-text)` : 'dimmed';
-}
 
 export function MercenariesSection() {
   const profile = useStore(selectActiveProfile);
@@ -146,32 +138,15 @@ export function MercenariesSection() {
   }));
 
   return (
-    <Box component="section" id="mercenaries" aria-labelledby={titleId} p="lg">
+    <Panel
+      component="section"
+      id="mercenaries"
+      aria-labelledby={titleId}
+      title="Mercenaries"
+      titleId={titleId}
+      meta={owned.length === 0 ? 'none hired' : `${String(owned.length)} hired`}
+    >
       <Stack gap="sm">
-        <Group justify="space-between" align="center" gap="xs" wrap="nowrap">
-          <Group gap="xs" align="baseline" wrap="nowrap">
-            <Title order={2} id={titleId}>
-              Mercenaries
-            </Title>
-            {owned.length > 0 && (
-              <Text size="sm" c="dimmed">
-                ({owned.length} selected)
-              </Text>
-            )}
-          </Group>
-          {owned.length > 0 && (
-            <Button
-              variant="subtle"
-              size="compact-sm"
-              onClick={() => {
-                patch({ selected: [], custom: [] });
-              }}
-            >
-              Deselect all
-            </Button>
-          )}
-        </Group>
-
         {owned.length > 0 && <PillRow label="Mercenaries you own" items={items} />}
 
         <Group gap="xs" wrap="wrap">
@@ -192,6 +167,17 @@ export function MercenariesSection() {
           >
             Custom mercenary
           </Button>
+          {owned.length > 0 && (
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              onClick={() => {
+                patch({ selected: [], custom: [] });
+              }}
+            >
+              Deselect all
+            </Button>
+          )}
         </Group>
 
         {owned.length === 0 && (
@@ -214,7 +200,7 @@ export function MercenariesSection() {
           />
         )}
       </LazySurface>
-    </Box>
+    </Panel>
   );
 }
 

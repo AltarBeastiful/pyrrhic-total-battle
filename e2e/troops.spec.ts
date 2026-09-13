@@ -9,9 +9,11 @@ import { expect, test } from '@playwright/test';
 import {
   generate,
   marchStackLabels,
-  marchTiles,
+  marchPills,
   openApp,
   openMarchSheet,
+  stepTier,
+  tierStepper,
   pageOverflowsSideways,
   watchConsole,
 } from './helpers';
@@ -27,13 +29,13 @@ test('a tier range and one chip decide what the march fields', async ({ page }) 
   // of every range always present, and the narrowest phone we support never scrolls sideways.
   await expect(block.getByRole('heading', { level: 2, name: 'Troops' })).toBeVisible();
   await expect(block.getByRole('button', { name: /^Troops/ })).toHaveCount(0);
-  await expect(block.getByRole('combobox')).toHaveCount(8);
+  await expect(block.getByRole('spinbutton')).toHaveCount(8);
   // A group nobody uses reads "—" at both ends, as the reference does.
-  await expect(block.getByRole('combobox', { name: 'Engineers from' })).toHaveValue('—');
+  await expect(tierStepper(block, 'Engineers from')).toHaveAttribute('aria-valuetext', '—');
   expect(await pageOverflowsSideways(page)).toBe(false);
 
-  // G1–G3 becomes G1–G4 by picking the tier, which is the whole of the flow we copied.
-  await block.getByRole('combobox', { name: 'Guardsmen to' }).selectOption('4');
+  // G1–G3 becomes G1–G4 with one step of the "to" end, which is the whole of the flow we copied.
+  await stepTier(block, 'Guardsmen to', 1);
   const top = block.getByRole('group', { name: 'Guardsmen at G4' });
   await expect(top).toBeVisible();
 
@@ -46,7 +48,7 @@ test('a tier range and one chip decide what the march fields', async ({ page }) 
   await generate(page, { leadership: 20000 });
   // At 390 px the March is the sheet the bottom bar opens (design rule 5).
   await openMarchSheet(page);
-  await expect(marchTiles(page).first()).toBeVisible({ timeout: 30_000 });
+  await expect(marchPills(page).first()).toBeVisible({ timeout: 30_000 });
 
   const labels = await marchStackLabels(page);
   expect(labels.some((label) => label.startsWith('ARC4'))).toBe(true);
@@ -64,9 +66,9 @@ test('with every group set the block is still four short rows on a wide screen',
   const block = page.locator('#troops');
 
   // Fill the two groups the first-run account leaves unused, so every row is at its widest.
-  await block.getByRole('combobox', { name: 'Guardsmen to' }).selectOption('4');
-  await block.getByRole('combobox', { name: 'Engineers from' }).selectOption('1');
-  await block.getByRole('combobox', { name: 'Monsters from' }).selectOption('3');
+  await stepTier(block, 'Guardsmen to', 1);
+  await stepTier(block, 'Engineers from', 1);
+  await stepTier(block, 'Monsters from', 1);
   await expect(block.getByRole('group', { name: 'Monsters at M3' })).toBeVisible();
 
   // A row is one line: its "from" end and its chips sit at the same height.
@@ -75,7 +77,7 @@ test('with every group set the block is still four short rows on a wide screen',
     ['Specialists', 'S1'],
     ['Monsters', 'M3'],
   ] as const) {
-    const from = await block.getByRole('combobox', { name: `${group} from` }).boundingBox();
+    const from = await tierStepper(block, `${group} from`).boundingBox();
     const chips = await block.getByRole('group', { name: `${group} at ${tier}` }).boundingBox();
     if (from === null || chips === null) throw new Error(`${group} row is not on screen`);
     expect(Math.abs(from.y + from.height / 2 - (chips.y + chips.height / 2))).toBeLessThan(6);

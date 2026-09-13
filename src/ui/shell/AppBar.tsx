@@ -7,21 +7,18 @@
  * pane's header on a desktop, the bottom app bar on a phone — because a bar that repeats the pane
  * eighty pixels above it is what `v4-desktop.jpg` shows and design rule 5 forbids.
  */
-import { Box, Text, Title } from '@mantine/core';
+import { Box, Title } from '@mantine/core';
 
 import { AppBar as BarSurface } from '../kit';
 import { AccountMenu } from './AccountMenu';
-import classes from './shell.module.css';
+import themeClasses from '../theme.module.css';
 
-/** Our own mark: a tonal square with a diamond in it. Decorative — the word beside it is the name. */
+/**
+ * Our own mark: a gilded square, the game's trim turned 45° (design plan §5.5, artboard `.mark`).
+ * Decorative — the word beside it is the name, and a logotype is what design rule 25 forbids.
+ */
 function BrandMark() {
-  return (
-    <Box className={classes.mark} aria-hidden="true">
-      <Text span size="sm" fw={600}>
-        ◆
-      </Text>
-    </Box>
-  );
+  return <Box className={themeClasses.mark} aria-hidden="true" />;
 }
 
 export function AppBar() {
@@ -30,7 +27,7 @@ export function AppBar() {
       brand={
         <>
           <BrandMark />
-          <Title order={1} size="h4">
+          <Title order={1} size="1.125rem" fw={600} lh={1.4}>
             Pyrrhic
           </Title>
         </>
