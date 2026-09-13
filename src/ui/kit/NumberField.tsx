@@ -24,7 +24,14 @@ export interface NumberFieldProps {
   /** A glyph inside the field, at the start: the pool's mark, a currency. */
   leftSection?: ReactNode;
   description?: ReactNode;
+  /**
+   * What is wrong with the figure. A sentence is written under the field; `true` marks the field
+   * and says nothing, for a form that carries one message line of its own (the command bar). Either
+   * way the input is `aria-invalid`.
+   */
   error?: ReactNode;
+  /** What the phone's Enter key says it does. The command bar's fields go. */
+  enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send';
   placeholder?: string;
   disabled?: boolean;
   w?: number | string;
@@ -41,6 +48,7 @@ export function NumberField({
   leftSection,
   description,
   error,
+  enterKeyHint,
   placeholder,
   disabled = false,
   w,
@@ -58,6 +66,11 @@ export function NumberField({
       leftSection={leftSection}
       description={description}
       error={error}
+      // The phone keyboard this field asks for: the digits pad for a count, the decimal one only
+      // where a fraction is meant. Through `attributes` because Mantine writes `inputMode` itself,
+      // after the props it was given, and `attributes.input` is the one thing it writes last.
+      attributes={{ input: { inputMode: allowDecimal ? 'decimal' : 'numeric' } }}
+      {...(enterKeyHint === undefined ? {} : { enterKeyHint })}
       {...(max === undefined ? {} : { max })}
       {...(placeholder === undefined ? {} : { placeholder })}
       {...(w === undefined ? {} : { w })}

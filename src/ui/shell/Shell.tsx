@@ -5,8 +5,9 @@
  * - the top app bar carries the brand and the account, and nothing else;
  * - the bottom edge carries the **command bar**: the three housing pools, the objective and
  *   Generate — the four things that change with every march (design rule 2 as amended, story D-56).
- *   It is wells and a select inside the page's width on a desktop, and two rows of chips and the
- *   answer on a phone, but it is the same bar and the same state;
+ *   It is wells and a select from 1024 px (`DESKTOP_BAR`, M3's expanded window) and two rows of
+ *   chips and the answer below that, but it is the same bar, the same form and the same state. Its
+ *   ground is full bleed at both widths, so no live page scrolls past under it;
  * - from `lg` (1200 px) the setup is the focus pane and the March is M3's 360 dp supporting pane on
  *   the right, its recap and its pills sticky under the app bar — without a Generate of its own,
  *   which now lives in the bar alone — and the rest of it flowing with the page (design rule 17);
@@ -37,6 +38,7 @@ import { applyTheme, watchSystemTheme } from '../theme';
 import { useUiStore } from '../uiStore';
 import { AppBar } from './AppBar';
 import { BottomBar } from './BottomBar';
+import { DESKTOP_BAR } from './command';
 import { CommandBar } from './CommandBar';
 import { MarchPane } from './MarchPane';
 import classes from './shell.module.css';
@@ -58,6 +60,9 @@ const CONTENT_WIDTH = 1600;
 export function Shell() {
   const theme = useStore(selectTheme);
   const wide = useMediaQuery(TWO_PANES);
+  // The bar changes shape one window class before the March does: from 1024 px there is room for
+  // four wells in a row, and the phone bar's chips would be 341 px each (the review of 2026-09-13).
+  const barWide = useMediaQuery(DESKTOP_BAR);
   const [recapOpen, setRecapOpen] = useState(false);
   const pendingShare = useUiStore((state) => state.pendingShare);
   const shareError = useUiStore((state) => state.shareError);
@@ -83,6 +88,10 @@ export function Shell() {
   // A run that lands while the March is off screen is a change nobody can see: the bar says so.
   const run = useLastRun();
   const announcement = recapOpen ? '' : run.sentence;
+
+  const openRecap = (): void => {
+    setRecapOpen(true);
+  };
 
   const dismissShare = (): void => {
     useUiStore.getState().setPendingShare(null);
@@ -132,29 +141,32 @@ export function Shell() {
         </Text>
       </Container>
 
-      {wide ? (
-        /* The bar is the last block of the frame, so a sticky `bottom: 0` pins it to the window
-           while the page scrolls and leaves it in the flow at the end: its height is reserved and
-           the last row of the setup can always be scrolled clear of it. The dock is what sticks —
-           a sticky element travels only inside its own containing block — and it is a `Container`
-           so the bar starts and ends on the same line as the panels above it. */
-        <Container component="div" size={CONTENT_WIDTH} className={classes.commandDock}>
-          <CommandBar />
-        </Container>
+      {/* The bar is the last block of the frame, so a sticky `bottom: 0` pins it to the window
+          while the page scrolls and leaves it in the flow at the end: its height is reserved and
+          the last row of the setup can always be scrolled clear of it. The dock is what sticks —
+          a sticky element travels only inside its own containing block — and it carries the ground
+          from edge to edge, with a `Container` inside it so the content starts and ends on the same
+          lines as the panels above it. */}
+      {barWide ? (
+        <div className={classes.commandDock}>
+          <Container component="div" size={CONTENT_WIDTH}>
+            {/* Between 1024 and 1199 px the March has no pane, so the bar carries the answer and
+                the sheet opens from it: the answer and Generate travel together (design rule 2). */}
+            <CommandBar {...(wide ? {} : { onOpenRecap: openRecap, pulse: run.index })} />
+          </Container>
+        </div>
       ) : (
+        <BottomBar pulse={run.index} onOpenRecap={openRecap} />
+      )}
+
+      {!wide && (
         <>
           {/* The answer changed while the sheet was shut: the summary pulses once for the eye and
               this sentence says the same thing for everyone else (design rule 24 — colour and
               motion are never the only signal). */}
           <VisuallyHidden role="status">{announcement}</VisuallyHidden>
-          <BottomBar
-            pulse={run.index}
-            onOpenRecap={() => {
-              setRecapOpen(true);
-            }}
-          />
           {/* Full height under the app bar, and the whole March inside it: the recap, the army, the
-              counts, everything. The sheet sits *over* the bottom bar rather than under it (M-09
+              counts, everything. The sheet sits *over* the command bar rather than under it (M-09
               polish list): a control outside a focus trap that the pointer can still reach is a trap
               that does not hold, so the bar goes under the scrim and the sheet carries its own
               Generate — the answer and the action still travel together. */}
@@ -167,6 +179,8 @@ export function Shell() {
             size="calc(100dvh - var(--pyr-appbar-height))"
             radius={0}
             padding="lg"
+            // Over both bars (250) and under a kit `Sheet` (320), so a unit sheet raised from the
+            // March inside this one lands on top of it rather than behind it (`theme.ts`).
             zIndex={300}
             title="March"
             // The sheet is the March pane's own material, with 20 px on its two top corners alone

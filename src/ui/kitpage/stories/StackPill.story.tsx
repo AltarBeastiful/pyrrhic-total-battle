@@ -13,7 +13,7 @@ const story: KitStory = {
   render: () => (
     <Stack gap="md">
       <Text size="xs" c="dimmed">
-        marching · the grid holds as many as fit at 78 px
+        marching · a press leaves the type out · the corner mark opens the unit sheet
       </Text>
       <div className={domainClasses.pillGrid}>
         {SAMPLE_UNITS.map((unit, index) => (
@@ -22,14 +22,14 @@ const story: KitStory = {
             unit={unit}
             count={COUNTS[index] ?? 100}
             state={index === 1 ? 'pinned' : 'on'}
-            onCopy={() => {}}
+            onLeaveOut={() => {}}
             onDetails={() => {}}
           />
         ))}
       </div>
 
       <Text size="xs" c="dimmed">
-        edit mode · the count is a field in place
+        edit mode · the count is a field in place, and the corner mark stands down
       </Text>
       <div className={domainClasses.pillGrid}>
         {SAMPLE_UNITS.slice(0, 3).map((unit, index) => (

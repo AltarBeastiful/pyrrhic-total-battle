@@ -97,13 +97,14 @@ html {
 
 section[id],
 [data-scroll-target] {
-  scroll-margin-bottom: 6.5rem;
+  scroll-margin-bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
 }
 
-@media (min-width: 75em) {
+/* From 1024 px the bar is the desktop one (`DESKTOP_BAR`), which says its own height. */
+@media (min-width: 64em) {
   section[id],
   [data-scroll-target] {
-    scroll-margin-bottom: calc(var(--pyr-commandbar-height) + 1.5rem);
+    scroll-margin-bottom: calc(var(--pyr-commandbar-height) + 1rem);
   }
 }
 

@@ -32,8 +32,14 @@ export interface PanelProps {
   titleId?: string;
   /** Right-aligned and muted, beside the title: what the form under it currently says. */
   meta?: ReactNode;
-  /** The one style a caller may set: the pane runs the height of the column it sticks in. */
+  /** The one style a caller may set. */
   style?: CSSProperties;
+  /**
+   * One extra class beside the surface's own — the shape the *frame* needs, never a look. The March
+   * pane passes the cap and the scroll it takes when a march is taller than the window
+   * (`march.module.css`, `.paneScroll`); nothing else uses it.
+   */
+  className?: string | undefined;
   /** Names the region when there is no visible title. */
   'aria-label'?: string;
   'aria-labelledby'?: string;
@@ -53,6 +59,7 @@ export function Panel({
   title,
   titleId,
   meta,
+  className,
   children,
   ...rest
 }: PanelProps) {
@@ -61,7 +68,11 @@ export function Panel({
   // whole styling, and it reads theme variables.
   return createElement(
     component,
-    { id, className: SURFACE_CLASS[surface], ...rest },
+    {
+      id,
+      className: className === undefined ? SURFACE_CLASS[surface] : `${SURFACE_CLASS[surface]} ${className}`,
+      ...rest,
+    },
     title === undefined ? null : (
       <div key="head" className={classes.panelHeader}>
         <Title order={2} id={titleId}>

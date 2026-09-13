@@ -4,6 +4,7 @@
  * shortcut, and the state it presses through.
  */
 import { useCallback, useEffect, useMemo } from 'react';
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 
@@ -64,4 +65,41 @@ export function useGenerateShortcut(): void {
       globalThis.document.removeEventListener('keydown', onKeyDown);
     };
   }, [press]);
+}
+
+export interface BarForm {
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLFormElement>) => void;
+}
+
+/**
+ * What makes the command bar a form (design plan §5.6; the review of 2026-09-13: "Enter in a
+ * housing field does nothing, which is the one key a hand on the keypad reaches for").
+ *
+ * Submitting the bar *is* generating, so `Enter` in any of its fields runs the march — and the
+ * fields ask for the `go` key on a phone to say so. It is said in two halves because the bar's one
+ * button is Generate, which Mantine renders as `type="button"`: with no submit button in it, a form
+ * with more than one field has no implicit submission of its own, so `Enter` is turned into a
+ * `requestSubmit()` here and the submit is what presses.
+ *
+ * An `Enter` something else has already dealt with is left alone — choosing an option in the
+ * objective's dropdown, above all — and so is `Ctrl`/`⌘ + Enter`, which is the frame's shortcut and
+ * would otherwise press twice.
+ */
+export function useBarForm(): BarForm {
+  const { press } = useGenerateRun();
+
+  return {
+    onSubmit: (event) => {
+      event.preventDefault();
+      press();
+    },
+    onKeyDown: (event) => {
+      if (event.key !== 'Enter' || event.defaultPrevented) return;
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if ((event.target as HTMLElement).tagName !== 'INPUT') return;
+      event.preventDefault();
+      event.currentTarget.requestSubmit();
+    },
+  };
 }

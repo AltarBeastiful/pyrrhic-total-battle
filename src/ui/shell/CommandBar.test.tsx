@@ -19,8 +19,13 @@ import { useRunStore } from '../sections/march/runStore';
 import { BottomBar } from './BottomBar';
 import { CommandBar } from './CommandBar';
 
+const calls = vi.hoisted(() => ({ run: 0 }));
+
 vi.mock('../sections/march/generate', () => ({
-  runGenerate: () => Promise.resolve(),
+  runGenerate: () => {
+    calls.run += 1;
+    return Promise.resolve();
+  },
   cancelGenerate: () => undefined,
   restoreLastResult: () => false,
 }));
@@ -36,6 +41,7 @@ beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());
   useResultStore.getState().clear();
   useRunStore.getState().reset();
+  calls.run = 0;
 });
 
 afterEach(cleanup);
@@ -148,4 +154,96 @@ test('the phone bar keeps the answer and Generate on its second row', () => {
 
   expect(screen.getByRole('button', { name: 'Open the march recap' })).toBeTruthy();
   expect(screen.getByRole('button', { name: /^Generate march/ })).toBeTruthy();
+});
+
+// ---- The words, the message line and Enter ------------------------------------------------------
+test('every pool is named in words as well as in emoji, at both widths', () => {
+  withHousing();
+  const { unmount } = render(<BottomBar onOpenRecap={() => undefined} />, { wrapper: ThemeHarness });
+
+  // The chip: the glyph, the pool's short name and the figure — the emoji is never the label
+  // (the review of 2026-09-13 found three chips whose only label was an emoji).
+  const chip = screen.getByRole('button', { name: 'Leadership 4 100' });
+  expect(chip.textContent).toContain('Lead');
+  expect(chip.textContent).toContain('4 100');
+  for (const short of ['Auth', 'Dom']) {
+    expect(screen.getByText(short)).toBeTruthy();
+  }
+  unmount();
+
+  // The desktop bar writes the whole word, as the label over the well.
+  render(<CommandBar />, { wrapper: ThemeHarness });
+  expect(screen.getByText('Leadership')).toBeTruthy();
+  expect(screen.getByText('Objective')).toBeTruthy();
+});
+
+test('an open chip keeps its glyph and its word beside the field', async () => {
+  const user = userEvent.setup();
+  withHousing();
+  render(<BottomBar onOpenRecap={() => undefined} />, { wrapper: ThemeHarness });
+
+  await user.click(screen.getByRole('button', { name: 'Leadership 4 100' }));
+  const field = screen.getByRole('textbox', { name: 'Leadership' });
+  const chip = field.closest('[class*="chipField"]') as HTMLElement;
+  expect(chip.textContent).toContain('Lead');
+  expect(within(chip).getByText('🛡️')).toBeTruthy();
+  // The keyboard it asks a phone for, and what its Enter key says it does.
+  expect(field.getAttribute('inputmode')).toBe('numeric');
+  expect(field.getAttribute('enterkeyhint')).toBe('go');
+});
+
+test('the objective chip carries the objective by name, not a bare chevron', async () => {
+  const user = userEvent.setup();
+  render(<BottomBar onOpenRecap={() => undefined} />, { wrapper: ThemeHarness });
+
+  const chip = screen.getByRole('button', { name: 'Objective: No priority' });
+  expect(chip.textContent).toContain('No priority');
+
+  await user.click(chip);
+  await user.click(await screen.findByRole('radio', { name: 'Best worst case' }));
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Objective: Best worst case' }).textContent).toContain(
+      'Best worst case',
+    );
+  });
+});
+
+test('a figure a march cannot carry is said once, above the fields, and marks its own well', () => {
+  useStore.getState().updateActiveSetup({ housing: { leadership: 200_000_000, authority: 0, dominance: 0 } });
+  render(<CommandBar />, { wrapper: ThemeHarness });
+
+  const message = screen.getByRole('alert');
+  expect(message.textContent).toBe('Leadership is over the 100 000 000 a pool can hold.');
+  // The field is marked, and says so to a screen reader; the words are the line above it, once.
+  expect(screen.getByRole('textbox', { name: 'Leadership' }).getAttribute('aria-invalid')).toBe('true');
+  expect(screen.getByRole('textbox', { name: 'Authority' }).getAttribute('aria-invalid')).toBeNull();
+  expect(screen.getAllByText(/over the 100 000 000/)).toHaveLength(1);
+});
+
+test('the bar is a form, and a plain Enter in a field generates', async () => {
+  const user = userEvent.setup();
+  withHousing();
+  render(<CommandBar />, { wrapper: ThemeHarness });
+
+  expect(screen.getByRole('form', { name: 'This march' })).toBeTruthy();
+
+  const field = screen.getByRole('textbox', { name: 'Leadership' });
+  await user.click(field);
+  await user.keyboard('{Enter}');
+  expect(calls.run).toBe(1);
+});
+
+test('Enter in a chip commits the figure and generates once', async () => {
+  const user = userEvent.setup();
+  withHousing();
+  render(<BottomBar onOpenRecap={() => undefined} />, { wrapper: ThemeHarness });
+
+  await user.click(screen.getByRole('button', { name: 'Leadership 4 100' }));
+  await user.keyboard('5000{Enter}');
+
+  expect(setup()?.housing.leadership).toBe(5000);
+  expect(calls.run).toBe(1);
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Leadership 5 000' })).toBeTruthy();
+  });
 });

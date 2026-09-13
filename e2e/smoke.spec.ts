@@ -54,9 +54,9 @@ test('the answer and Generate travel together: pane on a desktop, bottom bar on 
   const problems = watchConsole(page);
   await openApp(page);
 
-  // 1280 px (the default viewport): M3's supporting pane, with the recap and Generate pinned under
-  // the 64 px app bar and the rest of the March flowing with the page — one page scroll and no
-  // second scroller (design rule 17, resolved after investigation 0011).
+  // 1280 px (the default viewport): M3's supporting pane, and **the pane itself is what sticks**
+  // (owner, 2026-09-13). Nothing inside it may be pinned on its own — a block pinned inside the
+  // column is a block the rest of the column scrolls behind, which is the defect this replaced.
   await expect(marchPane(page)).toBeVisible();
   await expect(generateControl(page)).toHaveCount(1);
   await expect(recapSummary(page)).toBeHidden();
@@ -73,14 +73,16 @@ test('the answer and Generate travel together: pane on a desktop, bottom bar on 
       (child) => view.getComputedStyle(child).position === 'sticky',
     ).length;
     return {
+      position: view.getComputedStyle(node).position,
       overflowY: view.getComputedStyle(node).overflowY,
       scrolls: element.scrollHeight > element.clientHeight + 1,
       pinned,
     };
   });
+  expect(frame.position).toBe('sticky');
   expect(frame.overflowY).toBe('visible');
   expect(frame.scrolls).toBe(false);
-  expect(frame.pinned).toBeGreaterThan(0);
+  expect(frame.pinned, 'nothing inside the pane may stick on its own').toBe(0);
 
   // 390 px: one column, and the answer moves into the Material bottom app bar with Generate.
   await page.setViewportSize(PHONE);

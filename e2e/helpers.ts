@@ -114,13 +114,16 @@ export function generateState(page: Page): Locator {
 
 /**
  * Type one housing capacity in the command bar and commit it. One gesture at both widths: the press
- * that opens a phone's chip is the same press that lands in a desktop's field, and `Enter` puts the
- * figure back.
+ * that opens a phone's chip is the same press that lands in a desktop's field, and leaving the
+ * field puts the figure back.
+ *
+ * Leaving rather than `Enter`: since the bar became a form, `Enter` is "go" and starts a run
+ * (`useBarForm`, `commandbar.spec.ts`), and a helper that fills three pools would start three.
  */
 export async function fillHousing(page: Page, pool: Pool, value: number): Promise<void> {
   const field = await editHousing(page, pool);
   await field.fill(String(value));
-  await field.press('Enter');
+  await field.blur();
 }
 
 /** Fill the three housing capacities and run the engine, waiting for the summary to settle. */
@@ -458,17 +461,21 @@ export function marchSection(page: Page): Locator {
 }
 
 /**
- * The march as pills (design plan §5.5, the owner's correction of 2026-09-13): one two-line pill per
- * marching stack, coloured by tier. A press copies the count, which is what the name says.
+ * The march as pills (design plan §5.5, the owner's corrections of 2026-09-13): one two-line pill per
+ * marching stack, coloured by tier. A press **leaves that type out**, which is what the name says.
  */
 export function marchPills(page: Page): Locator {
-  // `Copy <count>, <unit>` — the digit keeps "Copy all counts" out of the list.
-  return marchSection(page).getByRole('button', { name: /^Copy \d/ });
+  return marchSection(page).getByRole('button', { name: /— leave out$/ });
+}
+
+/** The mark in a pill's corner: the only way into the unit sheet. */
+export function marchPillDetails(page: Page): Locator {
+  return marchSection(page).getByRole('button', { name: /^Details: / });
 }
 
 /** The small outlined row under the pools: the types the search or the player left out. */
 export function marchLeftOut(page: Page): Locator {
-  return marchSection(page).getByRole('button', { name: /left out — keep in march$/ });
+  return marchSection(page).getByRole('button', { name: /— put back$/ });
 }
 
 /**

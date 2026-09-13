@@ -16,6 +16,7 @@ import { selectActiveSetup, useStore } from '@/state/store';
 import { ThemeHarness } from '../kit/testRender';
 import { useResultStore } from '../resultStore';
 import { useRunStore } from '../sections/march/runStore';
+import { DESKTOP_BAR } from './command';
 import { Shell } from './Shell';
 import { TWO_PANES } from './useMediaQuery';
 
@@ -51,9 +52,9 @@ vi.mock('../sections', () => {
 
 /** The March contract (M-08): the pieces the frame places, each saying where it landed. */
 vi.mock('@/ui/sections/march', () => ({
-  // The section carries the recap itself now: on a desktop it is the head of the sticky "march at
-  // a glance" block inside it, not something the pane wraps around it (owner, 2026-09-13). Generate
-  // is not in it at that width — it is the command bar's, and only the phone's sheet keeps one
+  // The section carries the recap itself now, and on a desktop the whole pane is what sticks, so
+  // the section is one block from the figures to the saved marches (owner, 2026-09-13). Generate is
+  // not in it at that width — it is the command bar's, and only the phone's sheet keeps one
   // (design plan §5.6).
   MarchSection: (): ReactNode => (
     <section id="march" aria-labelledby="march-h">
@@ -91,9 +92,14 @@ function stubMedia(matching: string[]): void {
   });
 }
 
-/** 1400 px: the supporting pane is beside the page. Nothing else matches. */
+/** 1400 px: the supporting pane is beside the page, and the bar is the desktop one. */
 function desktop(): void {
-  stubMedia([TWO_PANES]);
+  stubMedia([TWO_PANES, DESKTOP_BAR]);
+}
+
+/** 1100 px: room for a row of wells, none for a pane — the March is still in the sheet. */
+function tablet(): void {
+  stubMedia([DESKTOP_BAR]);
 }
 
 function renderShell(): ReturnType<typeof render> {
@@ -161,7 +167,7 @@ test('under 1200 px the page is the setup alone — the March is not drawn twice
   expect(screen.queryByRole('heading', { level: 2, name: 'March' })).toBeNull();
 });
 
-test('under 1200 px the command bar carries housing, the objective, the summary and Generate', () => {
+test('under 1024 px the command bar carries housing, the objective, the summary and Generate', () => {
   renderShell();
 
   // Row 1: the three pools as chips, and the fourth chip that opens the objective (§5.6).
@@ -271,6 +277,22 @@ test('at 1400 px the command bar is wells and a select, and the only Generate on
   expect(screen.queryByRole('button', { name: 'Open the march recap' })).toBeNull();
   expect(screen.queryByText('quick summary')).toBeNull();
   expect(screen.getAllByRole('button', { name: /^Generate/ })).toHaveLength(1);
+});
+
+test('between 1024 and 1199 px the bar is the desktop one, and it carries the answer', () => {
+  tablet();
+  const { container } = renderShell();
+
+  // The wells, not the chips the review found 341 px wide at this width.
+  for (const pool of ['Leadership', 'Authority', 'Dominance']) {
+    expect(screen.getByRole('textbox', { name: pool })).toBeTruthy();
+  }
+  expect(screen.queryByRole('button', { name: 'Leadership 0' })).toBeNull();
+  expect(container.querySelector('[class*="bottomBar"]')).toBeNull();
+
+  // …and the March still has no pane at this width, so the answer and its sheet are in the bar.
+  expect(container.querySelector('aside')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Open the march recap' })).toBeTruthy();
 });
 
 test('the command bar is the only thing on the bottom edge, and the page reserves it', () => {
