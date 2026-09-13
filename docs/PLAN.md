@@ -565,6 +565,9 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Direction A implemented from the canvas (D-55) with the owner's nine corrections (readable
+  tier-coloured pills that extend, no per-stack dead list, steppers back, chips at well height, left-out row
+  below, whole at-a-glance panel sticky, switches beside labels, badge retired, one Edit toggle).
 - 2026-09-13 — Password account completed (reset, verification enforced, change password, delete account,
   server hardening by migration); S-46/S-47 retired. Design canvas with three page directions published for the
   owner's pick (working files in `docs/design-canvas/`); S-30 questionnaire relayed to the owner.
