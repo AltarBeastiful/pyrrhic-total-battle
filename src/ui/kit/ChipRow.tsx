@@ -13,9 +13,31 @@
  * between the chips, so a keyboard crosses a row of thirty in one `Tab` and `Space` still toggles.
  */
 import { Chip, Group, Stack, Text } from '@mantine/core';
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 
 import { useRovingTabs } from './useRovingTabs';
+
+/**
+ * The **dense** row (the owner's phone review, 2026-09-13): a Troops include chip is a glyph and a
+ * three-letter code, and at 30 px with a 13 px label it was the tallest thing on the row. 26 px and
+ * 12 px of type is TotalStack's own size for the same chip. Said as the four variables Mantine
+ * documents for a `Chip`, on the instance, so nothing else on the page changes size with it.
+ */
+const DENSE: CSSProperties = {
+  '--chip-size': '1.625rem',
+  '--chip-fz': '0.75rem',
+  '--chip-padding': '0.4375rem',
+  '--chip-checked-padding': '0.4375rem',
+} as CSSProperties;
 
 export interface ChipRowItem {
   value: string;
@@ -49,16 +71,21 @@ export interface ChipRowProps {
   /** One at a time. */
   single?: boolean;
   gap?: number;
+  /** 26 px and 12 px of type: a row of codes, not of names (the Troops include chips). */
+  dense?: boolean;
+  /** The id of the caption that says what the row is for; a screen reader reads it after the name. */
+  describedBy?: string;
 }
 
 interface ChipRowItemProps {
   item: ChipRowItem;
   checked: boolean;
   single: boolean;
+  dense: boolean;
   onToggle: (value: string) => void;
 }
 
-const RowChip = memo(function RowChip({ item, checked, single, onToggle }: ChipRowItemProps) {
+const RowChip = memo(function RowChip({ item, checked, single, dense, onToggle }: ChipRowItemProps) {
   return (
     <Chip
       value={item.value}
@@ -67,6 +94,7 @@ const RowChip = memo(function RowChip({ item, checked, single, onToggle }: ChipR
       type={single ? 'radio' : 'checkbox'}
       color={item.color ?? 'brass'}
       aria-label={item.name}
+      {...(dense ? { style: DENSE } : {})}
       onChange={() => {
         onToggle(item.value);
       }}
@@ -101,6 +129,8 @@ export function ChipRow({
   refusal,
   single = false,
   gap = 6,
+  dense = false,
+  describedBy,
 }: ChipRowProps) {
   const [notice, setNotice] = useState('');
   const selected = useMemo(() => new Set(value), [value]);
@@ -136,13 +166,21 @@ export function ChipRow({
 
   return (
     <Stack gap={4}>
-      <Group role="group" aria-label={label} gap={gap} wrap="wrap" {...roving}>
+      <Group
+        role="group"
+        aria-label={label}
+        {...(describedBy === undefined ? {} : { 'aria-describedby': describedBy })}
+        gap={gap}
+        wrap="wrap"
+        {...roving}
+      >
         {items.map((item) => (
           <RowChip
             key={item.value}
             item={item}
             checked={selected.has(item.value)}
             single={single}
+            dense={dense}
             onToggle={onToggle}
           />
         ))}

@@ -43,6 +43,9 @@ const CustomMercenarySheet = lazy(() =>
   import('./CustomMercenarySheet').then((module) => ({ default: module.CustomMercenarySheet })),
 );
 
+/** How wide the owned-count editor is, in every state it can be in. */
+const CAP_POPOVER_WIDTH = 280;
+
 export function MercenariesSection() {
   const profile = useStore(selectActiveProfile);
   const pinnedIds = useStore(selectActiveSetup)?.pinnedUnitIds;
@@ -260,7 +263,23 @@ function HiredPill({
   const name = entry.unit.name;
 
   return (
-    <Popover opened={opened} onChange={setOpened} position="bottom-start" width={230} trapFocus returnFocus>
+    <Popover
+      opened={opened}
+      onChange={setOpened}
+      position="bottom-start"
+      withinPortal
+      keepMounted={false}
+      // The editor must not move while a figure is being typed into it (the owner's phone review,
+      // 2026-09-13: it jumped sideways between the empty field and "1 212"). The pill it hangs off
+      // *does* widen as the figure lands — that is the figure — and floating-ui's flip had turned
+      // the dropdown's start alignment into an **end** alignment to fit it on a 390 px screen, so
+      // the box was pinned to an edge that moves. Off the cross axis, the alignment stays at the
+      // pill's start and `shift` clamps the box to the window instead: one position, whatever the
+      // pill under it does.
+      middlewares={{ flip: { crossAxis: false } }}
+      trapFocus
+      returnFocus
+    >
       <Popover.Target>
         <UnstyledButton
           fz="sm"
@@ -272,7 +291,9 @@ function HiredPill({
           <PillFace entry={entry} isPinned={isPinned} />
         </UnstyledButton>
       </Popover.Target>
-      <Popover.Dropdown>
+      {/* A width of its own, on the dropdown rather than on the popover, and a field that fills it:
+          neither the box nor the control inside it is allowed to be sized by what is typed. */}
+      <Popover.Dropdown w={CAP_POPOVER_WIDTH}>
         <Stack gap="xs">
           <Text size="sm" fw={600}>
             {name}
@@ -282,6 +303,7 @@ function HiredPill({
             value={entry.cap}
             min={0}
             allowEmpty
+            w="100%"
             description="Empty means as many as the camp pays for."
             onChange={onCap}
           />

@@ -30,6 +30,7 @@ import { selectActiveProfile, useStore } from '@/state/store';
 import { CaptainChip } from '@/ui/domain';
 import { NumberField, useRovingTabs } from '@/ui/kit';
 
+import classes from './bonuses.module.css';
 import { captainBonusLines, MAX_CAPTAIN_STAR, type CaptainChipRow, type CaptainTarget } from './chips';
 import { describeContribution } from './labels';
 import { captainEntryFor, captainRecord } from './rows';
@@ -242,7 +243,14 @@ export function CaptainChips({ chips, isRefused, onEnlist, onConfigure }: Captai
       <Text size="xs" c="dimmed">
         {CAPTAIN_HELPER}
       </Text>
-      <Group role="group" aria-label="Captains and hero" gap={8} wrap="wrap" {...roving}>
+      <Group
+        role="group"
+        aria-label="Captains and hero"
+        className={classes.gearGrid}
+        gap={8}
+        wrap="wrap"
+        {...roving}
+      >
         {chips.map((chip) => (
           <EnlistChip
             key={chip.id}

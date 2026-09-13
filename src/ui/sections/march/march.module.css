@@ -29,6 +29,15 @@
   flex: 1 1 auto;
 }
 
+/* The stack count is the first thing to go (the owner's phone review, 2026-09-13: the line read
+   "🪙 812.4K · 10 …" at 390 px, which cuts the figures rather than the footnote). Below 424 px it
+   is dropped whole and the two figures beside it are never truncated; from there up it is back. */
+@media (max-width: 26.5em) {
+  .quickStacks {
+    display: none;
+  }
+}
+
 /* A count inside a row has no room for a label over it, and the row already says which unit it
    belongs to — so the field's label is taken off the screen and left in the accessibility tree,
    where it is the control's name. */

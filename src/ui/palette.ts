@@ -301,6 +301,36 @@ export const GOLD = {
 } as const;
 
 /**
+ * **One selection language**, for every control that can be on or off (the owner's phone review,
+ * 2026-09-13: "states are hard to tell apart, colours hard to see"). Chips, mercenary pills and the
+ * method and objective cards all say it the same way, so a player learns it once:
+ *
+ * - **on** — the group's own ink (or brass) *tinting* the ground under the control, a 1 px border in
+ *   that same ink at full strength, and the page's ink on top, also at full strength. The border is
+ *   what carries the state at 3:1 (WCAG 2.2 §1.4.11): a tint of a fifth of a colour can never clear
+ *   3:1 against the ground it is mixed into, so the ring around it has to, and it does — no ramp is
+ *   under 5:1 against any surface.
+ * - **off** — nothing. The panel's own ground, the boundary every control on this page wears
+ *   (`field`, checked at 3:1 already), and the label written at `OFF_LABEL`.
+ *
+ * The two numbers below are the whole of it. The tint is heavier on a dark sheet because a wash over
+ * near-black shows less than the same wash over near-white. `OFF_LABEL` is 0.65 rather than the 0.6
+ * the review asked for by one step: at 0.6 the dimmed label lands at 4.25:1 on `raised`, and the
+ * floor for text is 4.5:1.
+ */
+export const CHIP_TINT = { light: 0.18, dark: 0.25 } as const;
+export const OFF_LABEL = 0.65;
+
+/**
+ * The third number, and the one a tint costs: a wash of a colour lifts the ground under it, so the
+ * *dimmed* line inside a control that is on — a title's "HP +25 %", a method card's sentence — no
+ * longer clears 4.5:1 against it at the page's own muted ink (measured at 4.06:1 on a dark sheet).
+ * Inside an on control the muted ink is therefore the page's ink at this strength instead, which
+ * clears 4.8:1 in the worse of the two schemes.
+ */
+export const ON_DIMMED = 0.75;
+
+/**
  * Which of our two inks reads on a filled ground. Mantine's own `autoContrast` decides with a
  * luminance threshold *and* computes it from the light scheme's shade whichever scheme is showing
  * (friction 2 of investigation 0007: a filled button shipped at 1.34:1). Comparing the two ratios
@@ -377,8 +407,69 @@ export function contrastPairs(): ContrastPair[] {
       });
     }
 
-    // Boundaries and markers: 3:1 (WCAG 1.4.11). `field` is the border of every control.
+    // Boundaries and markers: 3:1 (WCAG 1.4.11). `field` is the border of every control — and, since
+    // the selection language above, the boundary of a chip, a pill or a card that is **off**.
     onSurfaces('field', s.field, 3);
+    onSurfaces('off boundary', s.field, 3);
+
+    // The **off** label: the page's ink at `OFF_LABEL`, which is what `opacity` leaves on the
+    // ground under it. Text, so 4.5:1.
+    for (const name of SURFACES) {
+      list.push({
+        scheme,
+        foreground: `off label ${String(Math.round(OFF_LABEL * 100))}%`,
+        background: name,
+        fg: blend(s.ink, s[name], OFF_LABEL),
+        bg: s[name],
+        min: 4.5,
+      });
+    }
+
+    // The **on** state, per ramp, on the grounds a chip, a pill or a card actually sits on: a
+    // section panel, a sheet or popover, the March pane, and a raised block. Three pairs each —
+    // the ring that carries the state (3:1), the label on the tinted ground (4.5:1), and the tint
+    // against the bare ground it replaces, which is reported so the drift is visible but is never
+    // the gate: no fifth of a colour clears 3:1 against itself, which is why the ring exists.
+    for (const [name, shades] of Object.entries(COLORS)) {
+      if (name === 'slate') continue;
+      const ink = shades[shade]!;
+      for (const surface of ['panel', 'sheet', 'pane', 'raised'] as const) {
+        const tinted = blend(ink, s[surface], CHIP_TINT[scheme]);
+        list.push({
+          scheme,
+          foreground: `on ring ${name}`,
+          background: surface,
+          fg: ink,
+          bg: s[surface],
+          min: 3,
+        });
+        list.push({
+          scheme,
+          foreground: 'on label',
+          background: `${name} tint on ${surface}`,
+          fg: s.ink,
+          bg: tinted,
+          min: 4.5,
+        });
+        list.push({
+          scheme,
+          foreground: 'on second line',
+          background: `${name} tint on ${surface}`,
+          fg: blend(s.ink, tinted, ON_DIMMED),
+          bg: tinted,
+          min: 4.5,
+        });
+        list.push({
+          scheme,
+          foreground: `on tint ${name}`,
+          background: surface,
+          fg: tinted,
+          bg: s[surface],
+          min: 3,
+          advisory: true,
+        });
+      }
+    }
 
     // The focus ring (design rule 24, WCAG 2.2 §2.4.11). It is the accent at this scheme's filled
     // shade, drawn 2 px wide with 2 px of offset, so what it has to stand out from is whatever

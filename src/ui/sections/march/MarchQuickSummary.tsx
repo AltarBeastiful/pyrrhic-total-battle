@@ -45,13 +45,26 @@ export function MarchQuickSummary({ onOpen }: MarchQuickSummaryProps) {
         {compact(summary.avgDamage)}
       </Text>
       {/* The coin rather than the word (design rule 22): "1.7M silver" is cut to "1.7M …" at
-          390 px, and a glyph that carries its own name loses nothing. */}
-      <Text span size="xs" c="dimmed" truncate style={{ fontVariantNumeric: 'tabular-nums' }}>
+          390 px, and a glyph that carries its own name loses nothing. The figure itself is never
+          cut — it is the answer — so it wraps nothing and shrinks not at all. */}
+      <Text span size="xs" c="dimmed" style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
         {'· '}
         <Glyph kind="silver" label="silver to recover" />
-        {` ${compact(summary.recovery.silver)} · ${String(marching)} stacks`}
+        {` ${compact(summary.recovery.silver)}`}
       </Text>
-      <ChevronUp size={16} aria-hidden />
+      {/* How many stacks: the least of the three readings, and the one the line gives up first when
+          the bar is narrower than its words (`march.module.css`, `.quickStacks`). */}
+      <Text
+        span
+        size="xs"
+        c="dimmed"
+        truncate
+        className={classes.quickStacks}
+        style={{ fontVariantNumeric: 'tabular-nums' }}
+      >
+        {`· ${String(marching)} stacks`}
+      </Text>
+      <ChevronUp size={16} aria-hidden style={{ flex: '0 0 auto' }} />
     </Group>
   );
 

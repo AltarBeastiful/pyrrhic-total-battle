@@ -13,13 +13,93 @@
   letter-spacing: -0.01em;
 }
 
+/* ---------------------------------------------------------------------------------------------
+   THE SELECTION LANGUAGE (the owner's phone review, 2026-09-13: "states are hard to tell apart").
+   One shape says on and off, and every control that has those two states says it this way: the
+   include chips, the captain, artifact, permanent and title chips, the hired mercenaries' pills and
+   the method and objective cards.
+
+     on  — `--pyr-on-tint` of the control's own ink washing the ground, a 1 px ring of that ink at
+           full strength, and the page's ink on top, also at full strength.
+     off — the panel's own ground, the boundary every control wears, and the label at
+           `--pyr-off-label`.
+
+   The two numbers and every pair they make are in `src/ui/palette.ts` and gated by `pnpm contrast`.
+   The ring is what carries the state at 3:1: a fifth of a colour mixed into a ground can never
+   clear 3:1 against that same ground, so the ring has to, and every ramp clears 5:1.
+
+   Specificity is deliberate. Mantine writes the chip's own grounds at (0,2,0) and its touch-press
+   ground at (0,3,0) — including, on a dark scheme, a mid-grey `:active` that is *lighter* than the
+   checked ground — so these rules are written at (0,4,0) and win outright rather than by the order
+   two stylesheets happen to load in.
+   --------------------------------------------------------------------------------------------- */
+
 /* A chip may carry a second, dimmed line (a title's "HP +25 %"), which Mantine's fixed label height
-   would clip: the 32 px becomes a floor instead of a height. */
+   would clip: the 30 px becomes a floor instead of a height. The label is also the box you see —
+   Mantine's root is only what holds the input beside it — so the two states are written here.
+
+   `--pyr-chip-ink` is the control's own ink: brass at the root, the group's own colour on a chip
+   that was given one (`theme.ts`, the `Chip` vars). `color-mix` towards `transparent` is a tint and
+   not a fill, so what shows through is the surface the control was dropped on — the same arithmetic
+   `palette.ts` checks. */
 .chipLabel {
   height: auto;
   min-height: var(--chip-size);
   padding-block: 0.1875rem;
   line-height: 1.2;
+}
+
+.chip .chipLabel[data-checked]:not([data-disabled]) {
+  border: 1px solid var(--pyr-chip-ink);
+  background: color-mix(in srgb, var(--pyr-chip-ink) var(--pyr-on-tint), transparent);
+  color: var(--mantine-color-text);
+  /* The tint lifted the ground, so the second line is written a step stronger over it. */
+  --mantine-color-dimmed: color-mix(in srgb, var(--mantine-color-text) var(--pyr-on-dimmed), transparent);
+}
+
+/* The off state's quiet is a *colour* and not an `opacity`, so it reaches the chip's own words and
+   leaves a second line's already-checked dimmed ink alone — dimming a dimmed line twice was
+   3.05:1. The mix is the page's ink at `--pyr-off-label` over whatever ground the chip sits on,
+   which is exactly the blend `palette.ts` checks. */
+.chip .chipLabel:not([data-checked]):not([data-disabled]) {
+  border: 1px solid var(--mantine-color-default-border);
+  background: transparent;
+  color: color-mix(in srgb, var(--mantine-color-text) var(--pyr-off-label), transparent);
+}
+
+/* A mark is the one thing no colour of ours can reach: the glyphs are the platform's own emoji, so
+   they are dimmed to the same strength the words beside them are written at. */
+.chip .chipLabel:not([data-checked]):not([data-disabled]) :is([aria-hidden='true'], [role='img']) {
+  opacity: var(--pyr-off-label);
+}
+
+/* A press, on a device with no pointer to hover with: one step more of the same wash, so the chip
+   answers the thumb without changing colour. Mantine's own touch rule paints a mid-grey here. */
+.chip .chipLabel:not([data-disabled]):active {
+  background: color-mix(in srgb, var(--pyr-chip-ink) calc(var(--pyr-on-tint) + 12%), transparent);
+}
+
+/* A pill is a thing already chosen, so it is always on (the hired mercenaries, a march's
+   equipment); Mantine paints it a grey a shade off the panel it sits on, which reads as nothing. */
+.pill {
+  border: 1px solid var(--pyr-chip-ink);
+  background: color-mix(in srgb, var(--pyr-chip-ink) var(--pyr-on-tint), transparent);
+  color: var(--mantine-color-text);
+  --mantine-color-dimmed: color-mix(in srgb, var(--mantine-color-text) var(--pyr-on-dimmed), transparent);
+}
+
+/* A method or an objective: the same two states, in a card the size of a sentence. Its own words
+   stay at full strength either way — they are prose to read before choosing, not a chip's label. */
+.choiceCard {
+  border: 1px solid var(--mantine-color-default-border);
+  background: transparent;
+  color: var(--mantine-color-text);
+}
+
+.choiceCard[data-checked] {
+  border-color: var(--pyr-chip-ink);
+  background: color-mix(in srgb, var(--pyr-chip-ink) var(--pyr-on-tint), transparent);
+  --mantine-color-dimmed: color-mix(in srgb, var(--mantine-color-text) var(--pyr-on-dimmed), transparent);
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -132,24 +212,25 @@
   background: var(--pyr-bar);
 }
 
-/* A chip (design plan §5.5 as the owner corrected it on 2026-09-13; artboards `.chip` and `.cap`).
-   Off, it is the well the panel is cut into; on, it is its own colour's wash with a hairline of
-   that colour's ink — and no check mark, because the glyph and the code are already the chip. The
-   state is carried by `aria-checked`, which is where a state belongs. */
+/* Mantine's chip root is only the box that holds the hidden input beside the label: everything you
+   can see is on the label, which is where the two states above are written. */
 .chip {
-  border: 1px solid var(--pyr-well-border);
-  background: var(--pyr-sunken);
-  color: var(--mantine-color-dimmed);
+  border: none;
+  background: none;
 }
 
-.chip[data-checked] {
-  border-color: currentcolor;
-  background: var(--chip-bg);
-  color: var(--chip-color);
-}
+/* Under a pointer, and *only* under a pointer. A phone keeps `:hover` on the last thing a thumb
+   landed on until the next tap lands elsewhere, so an unguarded hover rule is a square that appears
+   around a chip after it is pressed and stays there — which is exactly what the owner photographed
+   on 2026-09-13. Mantine guards every one of its own hover rules this way; ours did not. */
+@media (hover: hover) {
+  .chip .chipLabel:not([data-disabled]):hover {
+    background: color-mix(in srgb, var(--pyr-chip-ink) calc(var(--pyr-on-tint) + 8%), transparent);
+  }
 
-.chip:hover:not([data-disabled]) {
-  border-color: var(--mantine-color-default-border);
+  .chip .chipLabel:not([data-checked]):not([data-disabled]):hover {
+    border-color: var(--pyr-chip-ink);
+  }
 }
 
 .chipIcon {

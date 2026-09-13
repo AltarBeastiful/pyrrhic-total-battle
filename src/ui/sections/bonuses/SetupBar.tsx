@@ -84,7 +84,10 @@ export function SetupBar({ profile, setup }: { profile: Profile; setup: BattleSe
         data={profile.setups.map((entry) => ({ value: entry.id, label: entry.name }))}
         value={setup.id}
         allowDeselect={false}
-        flex="1 1 12rem"
+        // On a phone the name takes the whole first line and the four actions ride together on the
+        // second (the owner's phone review, 2026-09-13: three of them fitted beside the select and
+        // the bin fell through on its own). From the medium window the row is one line again.
+        flex={{ base: '1 1 100%', sm: '1 1 12rem' }}
         miw={0}
         onChange={(next) => {
           if (next !== null) setActiveSetup(next);

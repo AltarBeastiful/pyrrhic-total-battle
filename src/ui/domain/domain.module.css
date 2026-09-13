@@ -69,9 +69,16 @@
   opacity: 0.55;
 }
 
-.pillInfo:hover,
+/* A phone keeps `:hover` on the last thing a thumb touched, so every hover rule in this file is
+   guarded: an unguarded one is a highlight that appears after a tap and stays until the next one. */
 .pillInfo:focus-visible {
   opacity: 1;
+}
+
+@media (hover: hover) {
+  .pillInfo:hover {
+    opacity: 1;
+  }
 }
 
 /* The march as pills: the row holds as many as fit at 78 px and wraps, so a six-figure count
@@ -95,7 +102,9 @@
   color: inherit;
 }
 
-.leftOutPill:hover {
-  border-color: var(--mantine-color-default-border);
-  background: var(--pyr-raised);
+@media (hover: hover) {
+  .leftOutPill:hover {
+    border-color: var(--mantine-color-default-border);
+    background: var(--pyr-raised);
+  }
 }

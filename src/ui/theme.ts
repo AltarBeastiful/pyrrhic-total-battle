@@ -21,7 +21,21 @@ import {
 
 import type { Theme } from '@/state/schema';
 
-import { COLORS, DEPTH, FILLED_SHADE, GOLD, inkOn, PAPER, PITCH, SEEDS, SLATE, SURFACE } from './palette';
+import {
+  CHIP_TINT,
+  COLORS,
+  DEPTH,
+  FILLED_SHADE,
+  GOLD,
+  inkOn,
+  OFF_LABEL,
+  ON_DIMMED,
+  PAPER,
+  PITCH,
+  SEEDS,
+  SLATE,
+  SURFACE,
+} from './palette';
 import classes from './theme.module.css';
 
 // The palette is a module of its own so `pnpm contrast` can import it under plain Node; everything
@@ -235,31 +249,44 @@ export const theme: MantineThemeOverride = createTheme({
       // is neither Mantine's `xs` (23 px) nor its `sm` (28 px, wider padding). The variables are the
       // documented way to say so. There is no check mark (owner, 2026-09-13): a chip that is on is
       // tinted and bordered in its group's colour, so the two paddings are the same.
-      vars: () => ({
+      //
+      // `--pyr-chip-ink` is ours and is the whole of the selection language (`palette.ts`, the
+      // `CHIP_TINT` comment): the **strong** shade of the chip's own colour — the one every ramp
+      // clears 5:1 with against every surface — rather than Mantine's `light-color`, which is the
+      // near-black end on a light page and the near-white end on a dark one and so carries no hue
+      // at all. It is a variable of our own instead of an override of `--chip-color` so the
+      // library's own resolver is left exactly as it is.
+      vars: (_theme: unknown, props: { color?: string }) => ({
         root: {
           '--chip-size': '1.875rem',
           '--chip-fz': '0.8125rem',
           '--chip-padding': '0.5625rem',
           '--chip-checked-padding': '0.5625rem',
+          '--pyr-chip-ink': `var(--mantine-color-${props.color ?? 'brass'}-filled)`,
         },
       }),
       classNames: {
-        // The label grows past that height when a chip carries a second, dimmed line ("HP +25 %"
-        // under a title, investigation 0006).
+        // The label is the chip you see — Mantine's root is only the box the input and the label
+        // sit in — so both states are written there (`theme.module.css`). It also grows past the
+        // 30 px when a chip carries a second, dimmed line ("HP +25 %", investigation 0006).
         label: classes.chipLabel,
-        // Unchecked is the well the rest of the panel is cut into; checked is the group's own wash
-        // with a hairline of its ink.
         root: classes.chip,
         // The check mark is gone: the glyph and the code are the chip, and the state is spoken.
         iconWrapper: classes.chipIcon,
       },
     },
+    // The things already chosen (the hired mercenaries, a march's equipment) are **on**, so they
+    // wear the on state of the selection language and not Mantine's near-invisible grey.
+    Pill: { defaultProps: { size: 'md' }, classNames: { root: classes.pill } },
+    // A method or an objective is the same question a chip asks, asked in sentences: the chosen
+    // card is tinted and ringed like a chip that is on. Its own text stays at full strength in both
+    // states — a card's description is prose to read before choosing, not a chip's label.
+    RadioCard: { classNames: { card: classes.choiceCard } },
     // The sentence under a switch row is the one that explains the option. Mantine derives its
     // size from the control's (`sm` − 2 px = 11 px here), which is under the design's floor, and it
     // writes that on the element itself, so the variable above cannot reach it (design rule 19;
     // investigation 0011 measured the Battle card's option sentences at 11 px).
     Switch: { styles: { description: { fontSize: 'var(--mantine-font-size-xs)' } } },
-    Pill: { defaultProps: { size: 'md' } },
     Popover: { defaultProps: { shadow: 'md', withArrow: false } },
     Modal: { defaultProps: { radius: 'md' } },
     Drawer: { defaultProps: { radius: 'md' } },
@@ -304,6 +331,10 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       '--pyr-pane': depth.pane,
       '--pyr-pane-border': depth.paneBorder,
       '--pyr-pane-shadow': depth.paneShadow,
+      // The selection language's one per-scheme number (`palette.ts`, `CHIP_TINT`): how much of a
+      // group's ink washes the ground under a control that is on. Heavier on a dark sheet, because
+      // the same wash shows less over near-black than over near-white.
+      '--pyr-on-tint': `${String(Math.round(CHIP_TINT[scheme] * 100))}%`,
       '--pyr-well-border': depth.wellBorder,
       '--pyr-well-shadow': depth.wellShadow,
       '--pyr-bar': depth.barTop,
@@ -343,6 +374,16 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       '--pyr-gold-ink': GOLD.ink,
       '--pyr-gold-shadow': GOLD.shadow,
       '--pyr-mark': GOLD.mark,
+      // The other two, the same in both schemes and written as percentages because `color-mix` and
+      // `opacity` both take one: what an **off** label is written at, and what a dimmed second line
+      // inside an **on** control is written at, the tint under it having lifted the ground.
+      // `palette.ts` checks both blends at 4.5:1.
+      '--pyr-off-label': `${String(Math.round(OFF_LABEL * 100))}%`,
+      '--pyr-on-dimmed': `${String(Math.round(ON_DIMMED * 100))}%`,
+      // The ink a control that is on wears. Brass unless the control was given a colour of its own:
+      // a chip's `color` prop writes this again on the chip (`Chip.vars` above), and a pill or a
+      // card inherits the accent from here.
+      '--pyr-chip-ink': 'var(--mantine-color-brass-filled)',
       '--mantine-font-family-headings': INTER,
       '--pyr-font-numeral': FRAUNCES,
       // Mantine writes the sentence under a control two pixels below `sm`, which is 11 px in our

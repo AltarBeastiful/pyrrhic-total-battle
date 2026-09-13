@@ -60,6 +60,46 @@ test('a mercenary is hired from the picker, and its pill says how many you own',
   expect(problems).toEqual([]);
 });
 
+test('the owned-count editor does not move while the figure is typed', async ({ page }) => {
+  // 390 px is where it moved (the owner's phone review, 2026-09-13): the editor is wider than the
+  // room to the right of the pill, so something has to give — and what used to give was the box's
+  // alignment, which flipped to the pill's *end* and then travelled every time the figure it was
+  // anchored to got wider. Two pills, so the one under test starts half way across the row.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openApp(page);
+
+  const card = page.locator('#mercenaries');
+  await card.getByRole('button', { name: 'Hire mercenary…' }).click();
+  const search = page.getByRole('textbox', { name: 'Search mercenaries' });
+  for (const name of ['Bear V tier 5', 'Abomination VI tier 6']) {
+    await search.fill(name.split(' tier ')[0] ?? '');
+    await page.getByRole('option', { name }).click();
+  }
+  await search.press('Escape');
+
+  await card.getByRole('button', { name: 'Abomination VI: owned unlimited' }).click();
+  const editor = page.getByRole('dialog');
+  await expect(editor).toBeVisible();
+
+  const box = async (): Promise<{ x: number; width: number }> => {
+    const rect = await editor.evaluate((node) => {
+      const { x, width } = node.getBoundingClientRect();
+      return { x, width };
+    });
+    return rect;
+  };
+
+  const before = await box();
+  const quantity = editor.getByRole('textbox', { name: 'Owned' });
+  await quantity.fill('1212');
+  // The pill behind it *does* widen — that is the figure landing on it — which is the whole point.
+  await expect(card.getByRole('button', { name: /^Abomination VI: owned 1.212$/ })).toBeVisible();
+
+  const after = await box();
+  expect(after.x, 'the editor moved sideways as the figure was typed').toBeCloseTo(before.x, 0);
+  expect(after.width, 'the editor changed width as the figure was typed').toBeCloseTo(before.width, 0);
+});
+
 test('the pills wrap on a phone rather than pushing the card sideways', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openApp(page);

@@ -20,6 +20,14 @@
   border: none;
 }
 
+/* …but it does need somewhere to sit. An 18 px gear inset 2 px covers the last 16 px of the chip
+   under it, which on a short name is the name itself — the owner photographed the gear sitting on
+   the word "Hero" on 2026-09-13. The chip a gear rides gives that strip back as padding, so the
+   label always ends before the mark starts. */
+.cornerGear :global(.mantine-Chip-label) {
+  padding-inline-end: 1.25rem;
+}
+
 /* The app bar is NOT sticky (owner, 2026-09-13: a permanent 64 px of brand and avatar on a phone is
    wasted screen). It scrolls away with the page; the answer lives in the March panel and the command
    bar. Its side padding is the page margin the `Container` under it uses (`theme.module.css`,

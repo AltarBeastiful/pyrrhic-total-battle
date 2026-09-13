@@ -16,6 +16,7 @@ import type { ProfileSources } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Disclosure, NumberField, useRovingTabs } from '@/ui/kit';
 
+import classes from './bonuses.module.css';
 import type { ArtifactChipRow } from './chips';
 import { BONUS_LABELS, humanizeOption, rowValue, SPECIAL_LABELS } from './labels';
 import { artifactHasLevels, artifactRecord, artifactWorth, starKeys } from './rows';
@@ -220,7 +221,7 @@ export function ArtifactChips({ chips, isRefused, onToggle, onConfigure }: Artif
 
   return (
     <Stack gap="xs">
-      <Group role="group" aria-label="Artifacts" gap={8} wrap="wrap" {...roving}>
+      <Group role="group" aria-label="Artifacts" className={classes.gearGrid} gap={8} wrap="wrap" {...roving}>
         {chips.map((chip) => (
           <MemoArtifactChip
             key={chip.id}

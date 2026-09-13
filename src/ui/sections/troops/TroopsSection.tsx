@@ -11,14 +11,14 @@
  *
  * Rebuilt on Mantine at M-04, copying the reference row for row (investigation 0009, `v1-desktop`):
  * a coloured `GroupMarker`, the group's name, "from [G1] to [G4]" as two tiny `TierSelect`s, then
- * "at G4:" and one emoji `Chip` per top-tier type — checked means "I own it". Engineers and
- * monsters read "—" at both ends when the group is not used at all.
+ * the top tier as a muted caption and one emoji `Chip` per type at it — checked means "I own it".
+ * Engineers and monsters read "—" at both ends when the group is not used at all.
  *
  * Lower tiers are always in. A type the March left out below the top tier is named under its row
  * with a way to put it back, so nothing the account fields is ever hidden. The block describes the
  * *account*, not one march: everything here is written straight to the active profile.
  */
-import { Box, Button, Flex, Group, Stack, Text } from '@mantine/core';
+import { Box, Button, Flex, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { useId } from 'react';
 
 import { CATEGORIES } from '@/data/types';
@@ -50,8 +50,12 @@ import type { TroopRow, TroopRowId } from './rows';
  */
 const NAME_WIDTH = 120;
 
-/** The theme's chip height (`--chip-size`, 2 rem): how tall a row of chips is allowed to be. */
-const CHIP_HEIGHT = 32;
+/**
+ * The dense chip's height (`ChipRow`'s `DENSE`, 26 px): how tall a row of chips is allowed to be.
+ * The owner's phone review of 2026-09-13 cut them from 30 px — on a phone the three include chips
+ * were the tallest thing on the row and read as buttons rather than as the ticks they are.
+ */
+const CHIP_HEIGHT = 26;
 
 export function TroopsSection() {
   const profile = useStore(selectActiveProfile);
@@ -176,6 +180,7 @@ interface GroupRowProps {
  * which is the second line the design allows the row (R14).
  */
 function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRowProps) {
+  const hintId = useId();
   const range = troops[row.id];
   const tiers = rowTiers(row.id);
   const bounds = rowBounds(row.id);
@@ -185,6 +190,7 @@ function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRow
   const units = row.tiles ? topTierUnits(troops, row.id) : [];
   const leftOut = leftOutUnits(troops, row.id);
   const top = range === null ? '' : `${row.prefix}${range.max}`;
+  const hint = `Untick the ${top} types you have not unlocked`;
 
   const items: ChipRowItem[] = units.map((unit) => ({
     value: unit.id,
@@ -239,17 +245,27 @@ function GroupRow({ row, troops, onFrom, onTo, onIncluded, onPutBack }: GroupRow
         </Group>
         {range !== null && items.length > 0 && (
           <Group gap={6} wrap="nowrap">
-            <Text size="xs" c="dimmed">{`at ${top}:`}</Text>
+            {/* The tier, once, at the start of the row — not "at G3:" and not on the chips, which
+                say a type and nothing else (owner, 2026-09-13). What the row is *for* is a
+                sentence, and a sentence on every troop row is four sentences nobody reads twice:
+                it is the caption's tooltip, and its description for a screen reader. */}
+            <Tooltip label={hint} withinPortal>
+              <Text size="xs" c="dimmed" id={hintId}>
+                {top}
+              </Text>
+            </Tooltip>
             {/* The kit's chip row keeps a live region under the chips for the "N at most" refusal.
                 A troop row has no maximum and never says it, so the row is held to the height of a
                 chip and the empty line overflows into the gap instead of adding a line to the card
-                and pushing "at G4:" off the chips' centre. */}
+                and pushing the tier caption off the chips' centre. */}
             <Box h={CHIP_HEIGHT}>
               <ChipRow
                 label={`${row.label} at ${top}`}
                 items={items}
                 value={included}
-                gap={4}
+                gap={6}
+                dense
+                describedBy={hintId}
                 onChange={(next) => {
                   onIncluded(row.id, next);
                 }}

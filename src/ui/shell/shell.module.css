@@ -43,8 +43,12 @@
   text-align: start;
 }
 
-.tapRow:hover {
-  background: var(--mantine-color-default-hover);
+/* Guarded, like every hover rule in the app: a phone leaves `:hover` on the last thing a thumb
+   touched, and an unguarded rule is a ground that appears after a tap and never goes away. */
+@media (hover: hover) {
+  .tapRow:hover {
+    background: var(--mantine-color-default-hover);
+  }
 }
 
 /* M3's supporting pane: 360 dp, trailing, and flowing with the page — no height of its own and no
@@ -142,8 +146,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-.chip:hover {
-  border-color: var(--mantine-color-default-border);
+@media (hover: hover) {
+  .chip:hover {
+    border-color: var(--mantine-color-default-border);
+  }
 }
 
 /* An empty pool is a chip with nothing in it yet, so it is written in the muted ink. */

@@ -6,12 +6,30 @@
    --------------------------------------------------------------------------------------------- */
 .totals > dl {
   display: grid;
-  /* Four equal columns where there is room, three on a phone: "Sources on" is two words and must
-     not break across a line (artboard `.figs`, and its own three-column phone variant). */
+  /* Four equal columns where there is room: "Sources on" is two words and must not break across a
+     line (artboard `.figs`). */
   grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
   gap: var(--mantine-spacing-lg);
 }
 
+/* …and **two by two** inside Material 3's compact window. Three plus one is what a 390 px phone
+   fitted, which left "Sources on" alone on a second line under three-quarters of empty space — the
+   owner photographed it on 2026-09-13. Two rows of two is the same four figures with no orphan. */
+@media (max-width: 37.4375em) {
+  .totals > dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--mantine-spacing-sm) var(--mantine-spacing-lg);
+  }
+}
+
 .totals dt {
   min-width: 0;
+}
+
+/* A wrapping grid of chips that carry gears (captains, artifacts, permanent sources). Half of an
+   18 px gear stands above the chip it rides, so at the row's own 8 px gap it lands on the chip in
+   the row above — visible now that a chip is an outline rather than a filled block. The row gap
+   gives that half back; the gap between chips on a line is still the row's. */
+.gearGrid {
+  row-gap: 1rem;
 }

@@ -113,6 +113,14 @@ html {
   outline-offset: 2px;
 }
 
+/* The sentence under a control is given our font size by `--input-description-size` (theme.ts) but
+   no line height of its own, so Mantine draws a 13 px sentence in a 13 px box: the descenders of
+   "Empty means as many as the camp pays for." sit on the field below it, and the same sentence
+   wrapped to two lines lands *on* it (the owner's phone review, 2026-09-13, screenshots 2 and 3). */
+.mantine-InputWrapper-description {
+  line-height: 1.35;
+}
+
 /* Figures are compared column by column all over the results, so they are always tabular. */
 :where(output, td, th) {
   font-variant-numeric: tabular-nums;

@@ -20,10 +20,13 @@ const TITLES = [
 
 function Live() {
   const [categories, setCategories] = useState<string[]>(['melee', 'ranged']);
+  const [codes, setCodes] = useState<string[]>(['melee', 'mounted']);
   const [titles, setTitles] = useState<string[]>([]);
   return (
     <Stack gap="md">
       <ChipRow label="Include at G4" items={CATEGORIES} value={categories} onChange={setCategories} />
+      {/* The dense row: 26 px and 12 px of type, which is what a Troops include chip is. */}
+      <ChipRow label="Include at G4, dense" items={CATEGORIES} value={codes} dense onChange={setCodes} />
       <ChipRow
         label="Titles"
         items={TITLES}

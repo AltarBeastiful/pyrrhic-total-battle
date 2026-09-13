@@ -12,6 +12,7 @@ import { Plus } from 'lucide-react';
 
 import { useRovingTabs } from '@/ui/kit';
 
+import classes from './bonuses.module.css';
 import type { PermanentChipRow } from './chips';
 import { SourceChip } from './SourceChip';
 
@@ -26,7 +27,14 @@ export function PermanentChips({ chips, onEdit, onAdd }: PermanentChipsProps) {
 
   return (
     <Stack gap="xs">
-      <Group role="group" aria-label="Permanent sources" gap={8} wrap="wrap" {...roving}>
+      <Group
+        role="group"
+        aria-label="Permanent sources"
+        className={classes.gearGrid}
+        gap={8}
+        wrap="wrap"
+        {...roving}
+      >
         {chips.map((chip) => (
           <SourceChip
             key={chip.id}

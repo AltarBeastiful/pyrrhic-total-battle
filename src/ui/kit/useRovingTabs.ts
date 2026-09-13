@@ -83,6 +83,14 @@ export function useRovingTabs(): RovingTabs {
     [apply],
   );
 
+  /**
+   * Move to an item and focus it. **Only a key ever calls this** — a pointer or a thumb lands on a
+   * chip by itself and `onFocus` below merely records where it landed — so the ring this focus
+   * raises is a keyboard's ring, which is the one it is for. `focusVisible` says that out loud for
+   * the engines that read it, rather than leaving it to a heuristic (design rule 24; the owner
+   * photographed a square appearing around a chip after a tap on 2026-09-13, which was a `:hover`
+   * a phone never takes back — see `theme.module.css`).
+   */
   const move = useCallback(
     (next: number): void => {
       const list = items();
@@ -90,7 +98,7 @@ export function useRovingTabs(): RovingTabs {
       const wrapped = (next + list.length) % list.length;
       box.current.active = wrapped;
       apply();
-      list[wrapped]?.focus();
+      list[wrapped]?.focus({ focusVisible: true });
     },
     [apply, items],
   );
