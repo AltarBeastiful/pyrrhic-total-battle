@@ -79,6 +79,12 @@ export default defineConfig({
   build: {
     target: 'es2023',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        // One stable vendor chunk (React + Mantine) so the first-load budget can name it.
+        manualChunks: { vendor: ['react', 'react-dom', '@mantine/core', '@mantine/hooks'] },
+      },
+    },
   },
   test: {
     // The engine, data and share layers are plain TypeScript: node is the default.

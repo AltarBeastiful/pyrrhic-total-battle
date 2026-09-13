@@ -70,6 +70,7 @@
       "name": "first load js (app + game data)",
       "path": [
         "dist/assets/index-*.js",
+        "dist/assets/vendor-*.js",
         "dist/assets/data-*.js"
       ],
       "limit": "340 kB"
@@ -79,6 +80,7 @@
       "path": [
         "dist/assets/*.js",
         "!dist/assets/index-*.js",
+        "!dist/assets/vendor-*.js",
         "!dist/assets/data-*.js"
       ],
       "limit": "90 kB"
