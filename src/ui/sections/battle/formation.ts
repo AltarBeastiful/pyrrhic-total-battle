@@ -22,8 +22,8 @@ export const PRESETS = {
 export type FormationMode = keyof typeof PRESETS | 'custom';
 
 export const MODE_LABELS: Record<FormationMode, string> = {
-  standard: 'Standard 4',
-  double: 'Double 8',
+  standard: '4 standard',
+  double: '8 double',
   custom: 'Custom',
 };
 
@@ -41,14 +41,4 @@ export function detectMode(formation: Formation): FormationMode {
     if (CATEGORIES.every((category) => formation[category] === preset[category])) return mode;
   }
   return 'custom';
-}
-
-/** "1 melee, 1 ranged, 1 mounted and 1 flying", kinds with no squad left out. */
-export function describeFormation(formation: Formation): string {
-  const parts = CATEGORIES.filter((category) => formation[category] > 0).map(
-    (category) => `${String(formation[category])} ${CATEGORY_LABEL[category].toLowerCase()}`,
-  );
-  if (parts.length === 0) return 'no squads';
-  if (parts.length === 1) return parts[0] ?? 'no squads';
-  return `${parts.slice(0, -1).join(', ')} and ${parts.at(-1) ?? ''}`;
 }

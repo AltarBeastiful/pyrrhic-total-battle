@@ -1,14 +1,16 @@
 /**
- * The body of "Your own order" (design plan §7.4): the Battle card shows the rule, and the list of
- * stacks — which is long, draggable and nothing like a row of options — opens beside it. The whole
- * file sits behind `React.lazy`, which is what keeps the engine and the kit's drag and drop out of
- * the first load; `OrderSheet.tsx` is the button that asks for it.
+ * The body of "Your own order" (design overhaul §7.4): the Battle card shows the rule, and the list
+ * of stacks — which is long and nothing like a row of options — opens beside it. The whole file sits
+ * behind `React.lazy`, which is what keeps the engine out of the first load; `OrderSheet.tsx` is the
+ * button that asks for it.
  *
  * The order is stored as a plain list of unit ids; what the sheet shows is always the stored list
  * re-merged with the units currently in the march (ids that no longer exist are dropped, new ones
  * are appended in tier-ladder order), which is exactly what the engine does when it reads
  * `customOrder`.
  */
+import { Alert, Button } from '@mantine/core';
+import { RotateCcw } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { UnitDef } from '@/data/types';
@@ -16,18 +18,16 @@ import { buildKillOrder } from '@/engine';
 import type { StackingOptions } from '@/engine';
 import { buildUnits } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Banner, Button, Sheet } from '@/ui/kit';
-import { Stack } from '@/ui/layout';
+import { Sheet } from '@/ui/kit2';
 
-import { ResetIcon } from '../../icons';
 import { KillOrderList } from './KillOrderList';
 
 export interface OrderSheetPanelProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
+  opened: boolean;
+  onClose: () => void;
 }
 
-export function OrderSheetPanel({ isOpen, onOpenChange }: OrderSheetPanelProps) {
+export function OrderSheetPanel({ opened, onClose }: OrderSheetPanelProps) {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const updateActiveSetup = useStore((state) => state.updateActiveSetup);
@@ -58,16 +58,16 @@ export function OrderSheetPanel({ isOpen, onOpenChange }: OrderSheetPanelProps) 
   return (
     <Sheet
       size="lg"
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
+      opened={opened}
+      onClose={onClose}
       title="Order of the fall"
-      description="First to fall at the top. Drag a row, use its arrows, or pick a row up from its handle with Enter and move it with the arrow keys."
+      description="First to fall at the top. Move a row with its two arrows; every move is announced."
       footer={
         <Button
-          variant="quiet"
-          icon={<ResetIcon />}
-          isDisabled={isDefault}
-          onPress={() => {
+          variant="subtle"
+          leftSection={<RotateCcw size={14} aria-hidden />}
+          disabled={isDefault}
+          onClick={() => {
             setOrder(defaultOrder);
           }}
         >
@@ -75,15 +75,13 @@ export function OrderSheetPanel({ isOpen, onOpenChange }: OrderSheetPanelProps) 
         </Button>
       }
     >
-      <Stack gap={3}>
-        {order.length === 0 ? (
-          <Banner tone="warn">
-            There is no stack to order yet. Pick tiers in Troops, or hire a mercenary.
-          </Banner>
-        ) : (
-          <KillOrderList order={order} units={unitsById} onChange={setOrder} />
-        )}
-      </Stack>
+      {order.length === 0 ? (
+        <Alert color="brass" variant="light">
+          There is no stack to order yet. Pick tiers in Troops, or hire a mercenary.
+        </Alert>
+      ) : (
+        <KillOrderList order={order} units={unitsById} onChange={setOrder} />
+      )}
     </Sheet>
   );
 }

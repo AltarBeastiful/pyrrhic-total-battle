@@ -1,11 +1,11 @@
 /**
- * The control that "Your own order" puts beside its rule: one button, and nothing else on the first
- * load. The sheet it opens — with the engine that rebuilds the order and the kit's drag and drop —
- * is a chunk of its own, fetched the first time the button is pressed (ui-foundation plan §6).
+ * The control "Your own order" puts under the method cards: one button, and nothing else on the
+ * first load. The sheet it opens — with the engine that rebuilds the order — is a chunk of its own,
+ * fetched the first time the button is pressed (ui-foundation plan §6).
  */
+import { Button } from '@mantine/core';
 import { lazy, useState } from 'react';
 
-import { Button } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 
 const OrderSheetPanel = lazy(() =>
@@ -13,20 +13,25 @@ const OrderSheetPanel = lazy(() =>
 );
 
 export function OrderSheet() {
-  const [isOpen, setOpen] = useState(false);
+  const [opened, setOpened] = useState(false);
 
   return (
     <>
       <Button
-        size="sm"
-        onPress={() => {
-          setOpen(true);
+        variant="default"
+        onClick={() => {
+          setOpened(true);
         }}
       >
         Edit order
       </Button>
-      <LazySurface isOpen={isOpen}>
-        <OrderSheetPanel isOpen={isOpen} onOpenChange={setOpen} />
+      <LazySurface isOpen={opened}>
+        <OrderSheetPanel
+          opened={opened}
+          onClose={() => {
+            setOpened(false);
+          }}
+        />
       </LazySurface>
     </>
   );
