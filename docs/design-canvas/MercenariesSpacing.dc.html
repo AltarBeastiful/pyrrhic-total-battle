@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,600&display=swap">
+  <style>
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; color: #e7ece9; }
+    a { color: #c9a24a; } a:hover { color: #e0c070; }
+    * { box-sizing: border-box; }
+    /* The glyph rule: every emoji sits in a fixed box so line metrics never depend on the emoji font. */
+    .g { display: inline-flex; align-items: center; justify-content: center; width: 1.25em; height: 1.25em; line-height: 1; font-size: 1em; vertical-align: -0.2em; flex: 0 0 auto; }
+    .grid8 { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(201,162,74,.10) 1px, transparent 1px); background-size: 100% 8px; }
+    .note { font-size: 11px; color: #c9a24a; font-family: ui-monospace, monospace; }
+    
+.card { position: relative; width: 640px; background: linear-gradient(180deg, #212827, #1c2221); border: 1px solid #2f3736; border-radius: 12px; padding: 20px 24px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.h { display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+.h .meta { font-size: 12px; color: #9da7a3; font-weight: 500; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mp { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 6px 0 10px; border-radius: 999px; background: rgba(140,48,48,.22); border: 1px solid rgba(216,143,143,.45); font-size: 13px; font-weight: 600; }
+.mp .t { font-family: Fraunces, serif; color: #d98d8d; font-weight: 600; font-size: 14px; }
+.mp .x { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #9da7a3; margin-left: 2px; }
+.mp .n { font-variant-numeric: tabular-nums; }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #3b4442; background: #2b3231; color: #e7ece9; font-size: 13px; font-weight: 600; }
+.pop { width: 280px; padding: 16px; border-radius: 12px; background: #242b2a; border: 1px solid #3a4341; box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+.pop h4 { margin: 0 0 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.pop label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.pop .help { font-size: 12px; color: #9da7a3; margin-bottom: 8px; line-height: 1.4; }
+.pop .input { height: 40px; border-radius: 8px; background: #101413; border: 1px solid #313938; display: flex; align-items: center; padding: 0 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.pop .sw { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; }
+.pop .sw i { width: 36px; height: 20px; border-radius: 10px; background: #c9a24a; position: relative; display: inline-block; }
+.pop .sw i:after { content: ""; position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #1a1408; }
+
+  </style>
+</helmet>
+
+<div style="padding: 24px; background: #161a19; display: flex; gap: 40px; align-items: flex-start">
+<div class="card">
+  <div class="grid8"></div>
+  <div class="h">Mercenaries <span class="meta">3 hired · Deselect all</span></div>
+  <div class="pills">
+    <span class="mp"><span class="g">🛡️</span>EMH <span class="t">V</span> <span class="n">∞</span><span class="x">✕</span></span>
+    <span class="mp"><span class="g">🏹</span>ABT <span class="t">VI</span> <span class="n">1 212</span><span class="x">✕</span></span>
+    <span class="mp"><span class="g">🐻</span>BER <span class="t">V</span> <span class="n">240</span><span class="x">✕</span></span>
+    <span class="btn">Hire mercenary…</span>
+  </div>
+  <div style="margin-top: 16px" class="pop">
+    <h4><span class="g">🏹</span>Arbalester VI</h4>
+    <label>Owned</label>
+    <div class="help">Empty means as many as the camp pays for.</div>
+    <div class="input">1 212</div>
+    <div class="sw"><i></i>Unlimited</div>
+  </div>
+</div>
+<div style="max-width: 340px; font-size: 13px; line-height: 1.6; color: #9da7a3">
+  <p class="note">MERCENARIES — spacing contract</p>
+  <p>Card padding <b>20 × 24</b>; title row 15/600 with a 12 muted meta; <b>14</b> below the title.</p>
+  <p>Pills <b>32 px</b>, padding <b>0 6 0 10</b>, inner gap <b>6</b>, gap between pills <b>8</b>; glyph in the 1.25em box; the roman tier in Fraunces 14 in the tier colour; the count tabular; the ✕ a 22 px round target with 2 px extra margin. The "Hire mercenary…" button sits in the same row, 36 px.</p>
+  <p>Cap popover <b>280 wide</b>, padding <b>16</b>, radius 12; title 14/600 with the glyph; label 12/600 at 4 above the help line; help 12 muted; input 40 px; the switch row 12 below. The box never moves or resizes with the value.</p>
+</div>
+</div>
+
+</x-dc>
+</body>
+</html>

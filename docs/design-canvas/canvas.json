@@ -62,6 +62,24 @@
       "h": 900,
       "title": "Alt 2 \u2014 phone: two-row command bar (housing chips + answer + Generate)",
       "page": "page-2"
+    },
+    {
+      "file": "MarchPaneSpacing.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 860,
+      "h": 760,
+      "title": "March pane \u2014 sections, rhythm, glyph rule",
+      "page": "page-3"
+    },
+    {
+      "file": "MercenariesSpacing.dc.html",
+      "x": 0,
+      "y": 880,
+      "w": 1080,
+      "h": 520,
+      "title": "Mercenaries \u2014 pills and the cap popover",
+      "page": "page-3"
     }
   ],
   "annotations": [
@@ -72,11 +90,19 @@
       "w": 360,
       "text": "Direction A chosen (2026-09-13). The march recap now follows TotalStack's readable pills: pool total in the pool colour, two-line pills (glyph, code and tier above, the count large below), coloured by tier. B and C are kept below for reference.\n\nOwner chose Alt 2 (command bar). Phone: a two-row bar \u2014 housing chips (tap to edit inline, the last chip opens the objective) above the answer figure and Generate; tapping the figure opens the march sheet.",
       "page": "page-1"
+    },
+    {
+      "id": "spacing-note",
+      "x": 900,
+      "y": 0,
+      "w": 360,
+      "page": "page-3",
+      "text": "Owner: paddings uneven, emoji misaligned, the March pane crammed without clear separation, mercenary pills and the cap popover padded inconsistently.\nThese two artboards are the spacing contract at 1:1 with an 8 px grid behind: hairline-separated sections in the pane, fixed glyph boxes for every emoji, and exact paddings written beside each board. A worker applies them pixel for pixel."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-2"
+    "page": "page-3"
   },
   "pages": [
     {
@@ -86,6 +112,10 @@
     {
       "id": "page-2",
       "name": "Housing with Generate"
+    },
+    {
+      "id": "page-3",
+      "name": "Spacing"
     }
   ]
 }
