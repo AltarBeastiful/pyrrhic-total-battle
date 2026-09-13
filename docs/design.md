@@ -1,5 +1,7 @@
 # Pyrrhic — design system
 
+Rules first: `docs/design-rules.md` is the charter this system serves.
+
 One page, five sections, a lot of numbers. The look has to survive that: quiet enough that the figures stay
 readable, specific enough not to read as a template, and legible at 360 px in both themes.
 

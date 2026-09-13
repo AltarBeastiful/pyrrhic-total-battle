@@ -4,7 +4,7 @@ A fully client-side replacement for TotalStack's *Epic Monster Stacking* calcula
 No accounts, no server, no logging. Profiles, saved stacks and settings live in the browser
 (localStorage/IndexedDB) and can be exported as JSON or shared as a URL that carries the whole config.
 
-Companion documents: `docs/research/totalstack-review.md` (what TotalStack does, verified formulas) and
+Companion documents: `docs/design-rules.md` (the owner's UI/UX rules, checked by every plan and worker brief), `docs/research/totalstack-review.md` (what TotalStack does, verified formulas) and
 `docs/research/totalstack-data/*.json` (game data tables: troops, monsters, mercenaries, captains,
 equipment, artifacts, titles, temple table).
 
