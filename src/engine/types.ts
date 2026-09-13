@@ -215,6 +215,13 @@ export interface SearchResult {
   evaluated: number;
   exhaustive: boolean;
   /**
+   * The objective has no meaning for this army: its ratio's denominator is zero for every candidate (a
+   * march with no monsters costs no dragon coins), so nothing could be compared and the winner is simply
+   * the all-types formation — the very march "No priority" produces. The UI must say that instead of
+   * presenting the result as what the objective chose.
+   */
+  unmeasurable: boolean;
+  /**
    * The army the user would get without the search — every requested unit type, sized from the same request.
    * Always present (it is the search's first evaluation) so the UI can show what the winner traded away:
    * friendly hits are `summary.journals.enemyFirst.friendlyHits` / `.armyFirst.friendlyHits`, the rest is

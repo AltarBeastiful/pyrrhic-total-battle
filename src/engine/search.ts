@@ -7,9 +7,17 @@
  *
  * Up to 12 unit types the space is small enough to enumerate exhaustively (4,095 subsets). Above that the
  * search is greedy backward elimination — drop the type whose removal improves the objective most, repeat —
- * followed by local swaps (add one type back, or trade one in for one out), restarted from random subsets
- * drawn by a seeded PRNG. Both paths are deterministic for the same inputs; only exhausting `budgetMs`
- * (wall-clock) can cut a run short, and `exhaustive` then reports false.
+ * alternated with local swaps (add one type back, or trade one in for one out), run from a set of starting
+ * points: the whole formation, then the *structured* ones (each pool on its own and each pool's
+ * complement), then random subsets drawn by a seeded PRNG. Both paths are deterministic for the same
+ * inputs; only exhausting `budgetMs` (wall-clock) can cut a run short, and `exhaustive` then reports false.
+ *
+ * The structured starts and the alternation are not decoration. A per-cost objective ("damage per silver")
+ * has one basin per *pool* — monsters are paid for in dragon coins and chunk silver, mercenaries are not
+ * retrained at all — and no sequence of one- or two-type drops leads from the full army into a
+ * monsters-only march, so a hill-climb that only ever starts from the full formation and from coin-flip
+ * subsets answers whatever its seed happens to land on (investigation 0013: the zero-bonus fixture army
+ * scored 1.118 on seed 1 and 4.310, the true optimum, on seed 7).
  */
 import { simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
@@ -27,8 +35,12 @@ import type {
 export const PROGRESS_EVERY = 50;
 /** Largest formation the search enumerates exhaustively. */
 export const EXHAUSTIVE_LIMIT = 12;
-/** Random restarts attempted after the first greedy descent, budget permitting. */
-export const MAX_RESTARTS = 12;
+/**
+ * Random restarts attempted after the whole formation and the structured starts, budget permitting.
+ * Each one costs a few dozen evaluations against a warm cache; 64 of them on the 14-type fixture army
+ * take ~1 s of the 8 s the app gives a search.
+ */
+export const MAX_RESTARTS = 64;
 
 /** Small, fast, seedable PRNG; the search must give the same answer on every machine. */
 export function mulberry32(seed: number): () => number {
@@ -146,75 +158,115 @@ export function searchPriority(
     }
   } else {
     const random = mulberry32(request.seed ?? 1);
-    improve(ids);
+    for (const start of structuredStarts()) {
+      if (stop()) break;
+      improve(start);
+    }
     for (let restart = 0; restart < MAX_RESTARTS && !stop(); restart += 1) {
       const start = ids.filter((id) => pinned.has(id) || random() < 0.5);
       improve(start.length > 0 ? start : ids);
     }
   }
 
-  /** Backward elimination to a local optimum, then local swaps around it. Pinned types are never dropped. */
+  /**
+   * The starting points a coin flip practically never produces: the whole formation, then each pool on
+   * its own and each pool's complement. Pools are where the cost objectives separate — monsters are paid
+   * for in dragon coins and in silver by the chunk of ten, mercenaries are not retrained at all — and the
+   * peak of a ratio is usually one whole pool, which is a dozen simultaneous drops away from the full
+   * army and therefore unreachable by any sequence of improving one- or two-type drops.
+   */
+  function structuredStarts(): string[][] {
+    const poolOf = new Map(request.request.units.map((unit) => [unit.id, unit.pool]));
+    const pools = [...new Set(poolOf.values())];
+    const starts = [ids];
+    if (pools.length > 1) {
+      for (const pool of pools) {
+        starts.push(ids.filter((id) => pinned.has(id) || poolOf.get(id) === pool));
+        starts.push(ids.filter((id) => pinned.has(id) || poolOf.get(id) !== pool));
+      }
+    }
+    return starts.filter((start) => start.length > 0);
+  }
+
+  /**
+   * Backward elimination and local swaps, alternated to a local optimum. Pinned types are never dropped.
+   * The two moves see different neighbours, so a set that has just grown can usually be shrunk again:
+   * running each of them once, as the first version did, stopped several descents one move early.
+   */
   function improve(start: string[]): void {
     let current = evaluate(start);
     consider(current);
 
-    let improved = true;
-    while (improved && !stop()) {
-      const droppable = current.subset.filter((id) => !pinned.has(id));
-      // Never empty the formation: without pins one type must survive, with pins the pins themselves do.
-      if (droppable.length <= (pinned.size > 0 ? 0 : 1)) break;
-      improved = false;
-      let bestDrop: Evaluation | undefined;
-      for (const id of droppable) {
-        if (stop()) break;
-        const candidate = evaluate(current.subset.filter((other) => other !== id));
-        if (!bestDrop || candidate.score > bestDrop.score) bestDrop = candidate;
-      }
-      // Some types only pay off when they leave together (the captured runs drop SW1 *and* SP1, never one
-      // of them), so when no single drop helps, look one step further and try every pair.
-      if (!bestDrop || bestDrop.score <= current.score) {
-        for (let i = 0; i < droppable.length && !stop(); i += 1) {
-          for (let j = i + 1; j < droppable.length; j += 1) {
-            const pair = evaluate(
-              current.subset.filter((other) => other !== droppable[i] && other !== droppable[j]),
-            );
-            if (!bestDrop || pair.score > bestDrop.score) bestDrop = pair;
+    /** Drop the type (or pair of types) whose removal helps most, while one does. */
+    const shrink = (): boolean => {
+      let moved = false;
+      for (let improved = true; improved && !stop();) {
+        const droppable = current.subset.filter((id) => !pinned.has(id));
+        // Never empty the formation: without pins one type must survive, with pins the pins themselves do.
+        if (droppable.length <= (pinned.size > 0 ? 0 : 1)) break;
+        improved = false;
+        let bestDrop: Evaluation | undefined;
+        for (const id of droppable) {
+          if (stop()) break;
+          const candidate = evaluate(current.subset.filter((other) => other !== id));
+          if (!bestDrop || candidate.score > bestDrop.score) bestDrop = candidate;
+        }
+        // Some types only pay off when they leave together (the captured runs drop SW1 *and* SP1, never
+        // one of them), so when no single drop helps, look one step further and try every pair.
+        if (!bestDrop || bestDrop.score <= current.score) {
+          for (let i = 0; i < droppable.length && !stop(); i += 1) {
+            for (let j = i + 1; j < droppable.length; j += 1) {
+              const pair = evaluate(
+                current.subset.filter((other) => other !== droppable[i] && other !== droppable[j]),
+              );
+              if (!bestDrop || pair.score > bestDrop.score) bestDrop = pair;
+            }
           }
         }
-      }
-      if (bestDrop && bestDrop.score > current.score) {
-        current = bestDrop;
-        consider(current);
-        improved = true;
-      }
-    }
-
-    improved = true;
-    while (improved && !stop()) {
-      improved = false;
-      const missing = ids.filter((id) => !current.subset.includes(id));
-      for (const add of missing) {
-        if (stop() || improved) break;
-        const grown = evaluate(ids.filter((id) => current.subset.includes(id) || id === add));
-        if (grown.score > current.score) {
-          current = grown;
+        if (bestDrop && bestDrop.score > current.score) {
+          current = bestDrop;
           consider(current);
           improved = true;
-          break;
+          moved = true;
         }
-        for (const remove of current.subset.filter((id) => !pinned.has(id))) {
-          const swapped = evaluate(
-            ids.filter((id) => (current.subset.includes(id) && id !== remove) || id === add),
-          );
-          if (swapped.score > current.score) {
-            current = swapped;
+      }
+      return moved;
+    };
+
+    /** Add one type back, or trade one in for one out, while one of the two helps. */
+    const grow = (): boolean => {
+      let moved = false;
+      for (let improved = true; improved && !stop();) {
+        improved = false;
+        const missing = ids.filter((id) => !current.subset.includes(id));
+        for (const add of missing) {
+          if (stop() || improved) break;
+          const grown = evaluate(ids.filter((id) => current.subset.includes(id) || id === add));
+          if (grown.score > current.score) {
+            current = grown;
             consider(current);
             improved = true;
+            moved = true;
             break;
+          }
+          for (const remove of current.subset.filter((id) => !pinned.has(id))) {
+            const swapped = evaluate(
+              ids.filter((id) => (current.subset.includes(id) && id !== remove) || id === add),
+            );
+            if (swapped.score > current.score) {
+              current = swapped;
+              consider(current);
+              improved = true;
+              moved = true;
+              break;
+            }
           }
         }
       }
-    }
+      return moved;
+    };
+
+    for (let moved = true; moved && !stop();) moved = shrink() || grow();
   }
 
   const winner = best ?? evaluate(ids);
@@ -226,6 +278,9 @@ export function searchPriority(
     score: winner.score,
     evaluated,
     exhaustive,
+    // Every candidate scored −Infinity, so nothing was ever compared: the winner is the formation the
+    // search started from, and calling it the answer to the objective would be a lie (PLAN §3.6).
+    unmeasurable: winner.score === -Infinity,
     baseline: {
       includedUnitIds: baseline.subset,
       result: baseline.result,

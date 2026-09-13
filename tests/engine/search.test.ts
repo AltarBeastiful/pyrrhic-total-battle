@@ -60,6 +60,35 @@ describe('damage per silver', () => {
     expect(found.score).toBeGreaterThan(scoreOf(ALL, 'damagePerSilver'));
   });
 
+  /**
+   * Investigation 0013. Enumerating all 2^14 − 1 subsets of this army puts the peak of damage-per-silver
+   * on a monsters-only march at 4.3098: monsters are retrained ten at a time, so the pool that carries
+   * most of the damage costs almost no silver. It is twelve simultaneous drops away from the full army,
+   * and the first version of the search — one descent from the full formation plus twelve coin-flip
+   * restarts — answered whatever its seed landed on: 1.1176 on seed 1, 3.9226 on seeds 2 and 3, the real
+   * 4.3098 on seed 7. The pool-shaped starting points are what make it reproducible.
+   */
+  const PER_SILVER_OPTIMUM = 4.3098;
+
+  it('finds the monsters-only peak that no chain of one- or two-type drops leads to', () => {
+    const found = search(ALL, 'damagePerSilver');
+    expect(found.score).toBeCloseTo(PER_SILVER_OPTIMUM, 4);
+    expect(found.includedUnitIds).toEqual(['water-elemental', 'emerald-dragon', 'stone-gargoyle']);
+  });
+
+  it('gives the same answer whatever the seed', () => {
+    const scores = [1, 2, 3, 7, 42].map(
+      (seed) =>
+        searchPriority({
+          request: makeRequest({ units: ALL }),
+          objective: 'damagePerSilver',
+          budgetMs: 10_000,
+          seed,
+        }).score,
+    );
+    for (const score of scores) expect(score).toBeCloseTo(PER_SILVER_OPTIMUM, 4);
+  });
+
   it('finds a different formation for dragon coins than for silver', () => {
     const coins = search(ALL, 'damagePerDragonCoin');
     const silver = search(ALL, 'damagePerSilver');
@@ -83,6 +112,20 @@ describe('objectiveScore', () => {
     expect(summary.recovery.dragonCoins).toBe(0);
     expect(objectiveScore(summary, 'damagePerDragonCoin')).toBe(-Infinity);
     expect(objectiveScore(summary, 'avgDamage')).toBeGreaterThan(0);
+  });
+
+  it('reports an objective nothing could be measured against, rather than passing the army off as its answer', () => {
+    const found = searchPriority({
+      request: makeRequest({ units: TROOPS, housing: { dominance: 0 } }),
+      objective: 'damagePerDragonCoin',
+      budgetMs: 10_000,
+      seed: 1,
+    });
+    expect(found.unmeasurable).toBe(true);
+    expect(found.score).toBe(-Infinity);
+    // What comes back is the all-types army, i.e. exactly what "No priority" would have produced.
+    expect(found.includedUnitIds).toEqual(found.baseline.includedUnitIds);
+    expect(search(ALL, 'damagePerDragonCoin').unmeasurable).toBe(false);
   });
 });
 
