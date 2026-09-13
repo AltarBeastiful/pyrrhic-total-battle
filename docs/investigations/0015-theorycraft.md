@@ -334,6 +334,25 @@ does not. The 199 marches on the Pareto frontier (damage ↑, silver ↓, stock 
 the floor itself — how much a single march must do to count — is a game fact we do not have and should be
 read off the event's rules before choosing a row.
 
+### 6.5 The owner's actual budget: 8 M silver, 12 k gold (`09-plan-8m-12k`, `SILVER=… GOLD=…` to rerun)
+
+Every design (8 troop sets × 5 stock levels × 2 methods × full / minimal leadership × 4 revival choices)
+played march by march: the mercenaries' revival gold is mandatory, the rest of the gold revives troop
+types in silver-per-gold order, silver pays the remainder, stock decays by `ceil(n/10)`.
+
+| constraint | plan | marches | per march | total | silver | gold | stock left |
+|---|---|---|---|---|---|---|---|
+| none (pure total) | ARC1 811 + 20/20/10/10, minimal leadership | 32 | 1,145,593 | 36,180,860 | 7,785,600 | 10,374 | 28/12/40/5 |
+| every march ≥ 2–5 M | **ARC1 ARC2 RD2 RD3 + EMH6 43 · ABT6 46 · LGN6 46 · CHR6 23, Hired last, RD3 revived** | 5 | 5,880,338 | 29,401,690 | 7,862,500 | 10,745 | 67/51/47/22 |
+| every march ≥ 6–7 M | **ARC2 SP2 RD2 RD3 + EMH6 53 · ABT6 57 · LGN6 57 · CHR6 28, Hired last, RD3 revived** | 4 | 7,201,171 | 28,738,336 | 7,514,000 | 10,567 | 68/52/48/25 |
+| the 7-type single-march winner | ARC2 RD2 RD3 + 75/76/72/37 | 3 | 7.8 → 6.6 M | ≈ 21.7 M | 7.08 M | ≈ 4.2 k | 68/52/48/25 |
+
+The pure total is the degenerate tiny march again (32 marches, 192 mercenaries burnt for 36 M — 189 k
+per mercenary against 346 k for the five-march plan); with any floor from 2 M up the answer is a
+four-troop-type march with the mercenaries trimmed under the floor, and the gold's job is to revive RD3
+(2,150 a march), which is what turns four affordable marches into five. Above a 6 M floor the SP2
+variant costs 2 % of the total for 22 % more per march.
+
 ## 7. Bonuses, captains, gear (B; `30-bonus-sensitivity`, `31-captains`, `05-captain-swap`, `32-gear`)
 
 - **Strength is linear and small per point**: +1 on `army` or `guardsmen` strength, or on
