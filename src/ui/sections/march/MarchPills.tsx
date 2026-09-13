@@ -5,6 +5,11 @@
  * fit at 78 px. Under the pools, the types this march left out as a small outlined row. Under that,
  * the two things a player does with a whole march: copy every count, or edit them by hand.
  *
+ * A press on a stack pill **takes that type out of the march** (owner, 2026-09-13): the march is
+ * re-sized on the spot and the type drops into the "Left out" row, where a press puts it back. That
+ * is the whole gesture — the ⓘ in the pill's corner is the unit sheet, and copying is "Copy all
+ * counts" under the pools.
+ *
  * It replaces three blocks that said the same thing three times (design rule 5): the grid of 44 px
  * unit tiles, the row of pool gauges, and the "counts to copy" table whose every figure is one
  * press away in the unit sheet. The pool's figure *is* the gauge, written rather than drawn; **the
@@ -19,7 +24,7 @@ import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
 import { copyText } from '@/ui/profile/download';
 
-import { keepInMarch } from './formation';
+import { keepInMarch, removeFromFormation } from './formation';
 import { amount } from './format';
 import classes from './march.module.css';
 import { countsText } from './rows';
@@ -35,7 +40,7 @@ const POOL_LABEL = {
   dominance: 'Dominance',
 } as const;
 
-/** A message that clears itself, for the two clipboard actions. */
+/** A message that clears itself, for the one clipboard action left. */
 function useFlash(): [string, (message: string) => void] {
   const [message, setMessage] = useState('');
   useEffect(() => {
@@ -52,22 +57,20 @@ function useFlash(): [string, (message: string) => void] {
 
 export interface MarchPillsProps {
   rows: PoolRow[];
-  /** Types this march does not field; a press on one keeps it in. */
+  /** Types this march does not field; a press on one puts it back. */
   leftOut: UnitDef[];
   editing: boolean;
   onCount: (unitId: string, count: number) => void;
-  /** A pill's corner mark, and a long press on one. */
+  /** A pill's corner mark: the unit sheet for that one type. */
   onDetails: (unit: UnitDef) => void;
 }
 
 /**
- * The march at a glance: the pools, their stacks, and what was left out. On a desktop this is the
- * block that **stays on screen** while the setup scrolls past it (owner, 2026-09-13) — which is why
- * the two whole-march actions are a separate component below it rather than part of it.
+ * The march at a glance: the pools, their stacks, and what was left out. On a desktop the whole
+ * pane stays on screen while the setup scrolls past it (`shell/MarchPane.tsx`), so this block and
+ * the whole-march actions under it travel together and neither can cover the other.
  */
 export function MarchPills({ rows, leftOut, editing, onCount, onDetails }: MarchPillsProps) {
-  const [flash, setFlash] = useFlash();
-
   return (
     <Stack gap="lg">
       {rows.map((row) => {
@@ -108,9 +111,8 @@ export function MarchPills({ rows, leftOut, editing, onCount, onDetails }: March
                     onCount={(next) => {
                       onCount(entry.unit.id, next);
                     }}
-                    onCopy={() => {
-                      void copyText(String(entry.count));
-                      setFlash('Copied');
+                    onLeaveOut={() => {
+                      removeFromFormation(entry.unit.id);
                     }}
                     onDetails={() => {
                       onDetails(entry.unit);
@@ -150,10 +152,6 @@ export function MarchPills({ rows, leftOut, editing, onCount, onDetails }: March
           </Group>
         </Stack>
       )}
-
-      <Text span role="status" size="xs" c="dimmed">
-        {flash}
-      </Text>
     </Stack>
   );
 }
@@ -170,9 +168,9 @@ export interface MarchCountsBarProps {
 
 /**
  * The two things a player does with a whole march, under the pills: copy every count at once, or
- * turn each pill's count into a field in place. A pill copies its own count on a press, so this row
- * is the only chrome the counts need (owner, 2026-09-13 — the table of per-stack lines is gone, and
- * so is the Copy/Edit segmented control: editing is a toggle, copying is one button).
+ * turn each pill's count into a field in place. **This row is the copy control** (owner,
+ * 2026-09-13): a press on a pill leaves its type out, so there is no second, smaller copy hiding in
+ * the grid — and the count on a pill is still text a player can select by hand.
  */
 export function MarchCountsBar({ countRows, editing, onEditing, edited, onUndo }: MarchCountsBarProps) {
   const [flash, setFlash] = useFlash();
@@ -190,8 +188,8 @@ export function MarchCountsBar({ countRows, editing, onEditing, edited, onUndo }
       >
         Copy all counts
       </Button>
-      {/* One toggle, not a pair of modes (owner, 2026-09-13): "Copy counts" beside "Copy all counts"
-          asked the player to tell two copies apart, and there is only one — a press on a pill. */}
+      {/* One toggle, not a pair of modes (owner, 2026-09-13): editing is a state the button names,
+          and there is only one copy on the page — the button beside it. */}
       <Button
         size="compact-sm"
         variant={editing ? 'filled' : 'default'}

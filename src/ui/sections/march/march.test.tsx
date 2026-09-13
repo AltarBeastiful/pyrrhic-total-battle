@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 /**
- * The March, by role and by name (design plan §7.5): the recap first, the army as tiles that change
- * the march, the counts to copy with an explicit edit mode, and everything that explains the numbers
- * folded away underneath — plus the three contract components the shell renders elsewhere (the
- * quick summary, the recap sheet and Generate).
+ * The March, by role and by name (design plan §7.5): the recap first, the army as pills that change
+ * the march — a press leaves a type out, the corner mark opens its sheet — the counts with an
+ * explicit edit mode, and everything that explains the numbers folded away underneath, plus the
+ * three contract components the shell renders elsewhere (the quick summary, the recap sheet and
+ * Generate).
  *
  * The engine runs for real here (the calculation client is the inline one), so every assertion about
  * a count or a figure is an assertion about the engine's own output.
@@ -95,18 +96,16 @@ function stackAt(index = 0): { unit: UnitDef; count: number } {
 }
 
 /**
- * A marching stack's pill. **The pills are the counts** (owner, 2026-09-13): a press copies the
- * count, which is what its name says, and the corner mark opens the unit sheet.
+ * A marching stack's pill. **A press leaves that type out** (owner, 2026-09-13): the primary action
+ * is direct, the name says so, and the corner mark is the only way into the unit sheet.
  */
 function stackPill(unit: UnitDef, count: number): HTMLElement {
-  return screen.getByRole('button', { name: `Copy ${amount(count)}, ${unit.name}` });
+  return screen.getByRole('button', { name: `${unit.name}, ${amount(count)} — leave out` });
 }
 
 /** A type this march does not field: a small outlined pill in the row under the pools. */
 function leftOutPill(unit: UnitDef): HTMLElement {
-  return screen.getByRole('button', {
-    name: `${unit.name}, tier ${String(unit.tier)}, left out — keep in march`,
-  });
+  return screen.getByRole('button', { name: `${unit.name} — put back` });
 }
 
 /** The corner mark on a pill, and the same name on any other way into the sheet. */
@@ -134,15 +133,12 @@ test('the recap is the figures a march is compared by, the expected damage first
 
   const summary = lastResult()?.summary;
   expect(screen.getByText(amount(summary?.avgDamage ?? 0))).toBeTruthy();
-  for (const label of [
-    'Worst opening',
-    'Hits landed',
-    'Silver to recover',
-    'Gold to recover',
-    'Damage per silver',
-  ]) {
+  for (const label of ['Worst opening', 'Silver to recover', 'Gold to recover', 'Damage per silver']) {
     expect(screen.getByText(label)).toBeTruthy();
   }
+  // How many times the army swings is a fact about a stack, so it is said in the unit sheet alone
+  // (owner, 2026-09-13) and never in the recap.
+  expect(screen.queryByText('Hits landed')).toBeNull();
 });
 
 test('the recap says which way every figure moved since the previous run', async () => {
@@ -214,15 +210,42 @@ test('the quick summary is one line, and nothing at all before the first run', a
   expect(onOpen).toHaveBeenCalled();
 });
 
-test('a pill carries its stack count, and a press copies it', async () => {
+test('a press on a pill leaves that type out of the march, and copies nothing', async () => {
   renderWithTheme(<Page />);
   await generate();
   const { unit, count } = stackAt();
 
   const pill = stackPill(unit, count);
   expect(pill.closest('[data-stack]')?.getAttribute('data-count')).toBe(String(count));
+  // The on half of a toggle written across two rows: pressed here, not pressed in the row below.
+  expect(pill.getAttribute('aria-pressed')).toBe('true');
+
   fireEvent.click(pill);
-  expect(writeText).toHaveBeenCalledWith(String(count));
+
+  // The march is re-sized on the spot and the type is gone from it…
+  await waitFor(() => {
+    expect(profile()?.troops.excludedUnitIds).toContain(unit.id);
+  });
+  await waitFor(() => {
+    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
+  });
+  // …and into the row under the pools, where a press puts it back.
+  expect(leftOutPill(unit).getAttribute('aria-pressed')).toBe('false');
+  // Tap-to-copy is gone: "Copy all counts" is the one copy on the page.
+  expect(writeText).not.toHaveBeenCalled();
+}, 20_000);
+
+test('the corner mark, and nothing else on the pill, opens the unit sheet', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+
+  const [mark] = detailsButtons(unit);
+  fireEvent.click(mark as HTMLElement);
+
+  const sheet = await screen.findByRole('dialog', { name: unit.name });
+  expect(within(sheet).getByRole('button', { name: 'Leave out' })).toBeTruthy();
+  expect(writeText).not.toHaveBeenCalled();
 }, 15_000);
 
 test('a tap on a left-out pill keeps that type in the march for good', async () => {
@@ -327,7 +350,8 @@ test('the unit sheet opens from a tile and says what the stack does, in sentence
   await generate();
   const { unit, count } = stackAt();
 
-  // The mark in the pill's corner is the way in (a long press does the same on a touch screen).
+  // The mark in the pill's corner is the way in, and the only one: the long press it used to share
+  // the pill with is gone with tap-to-copy (owner, 2026-09-13).
   const [fromPill] = detailsButtons(unit);
   fireEvent.click(fromPill as HTMLElement);
 
@@ -496,8 +520,52 @@ test('the last result and its hand edits come back after a reload', async () => 
   await waitFor(() => {
     expect(lastResult()?.at).toBe(at);
   });
-  expect(screen.getByText(/generated just now/)).toBeTruthy();
   expect(stackPill(unit, count + 1)).toBeTruthy();
+}, 20_000);
+
+test('a fresh march says nothing about its age; a stale one says so and steps back', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+
+  // When the answer is current there is nothing to read about it: no clock, no marker, no dimming
+  // (owner, 2026-09-13 — "generated 5 minutes ago" is not a question anybody asks).
+  const recap = screen.getByLabelText('This march in figures');
+  expect(within(recap).queryByText(/generated/i)).toBeNull();
+  expect(screen.queryByText(/Setup changed since this march/)).toBeNull();
+  for (const block of document.querySelectorAll('[data-stale]')) {
+    expect(block.getAttribute('data-stale')).toBe('false');
+  }
+  const generateButton = screen.getByRole('button', { name: 'Generate march' });
+  expect(generateButton.closest('[data-state]')?.getAttribute('data-state')).toBe('ready');
+
+  // Move the form under the answer: the figures and the pills step back together, one line in the
+  // warning ink says what happened, and Generate keeps its dot.
+  setLeadership(2000);
+
+  expect(screen.getByText('Setup changed since this march. Generate to refresh.')).toBeTruthy();
+  expect(screen.getByRole('img', { name: 'Out of date' })).toBeTruthy();
+  const dimmed = [...document.querySelectorAll('[data-stale]')];
+  expect(dimmed.length).toBeGreaterThanOrEqual(2);
+  for (const block of dimmed) expect(block.getAttribute('data-stale')).toBe('true');
+  expect(generateButton.closest('[data-state]')?.getAttribute('data-state')).toBe('stale');
+
+  // …and generating again puts it all back.
+  await generate();
+  await waitFor(() => {
+    expect(screen.queryByText(/Setup changed since this march/)).toBeNull();
+  });
+}, 20_000);
+
+test('the phone bar’s answer line carries the warning marker only while the march is stale', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  cleanup();
+
+  renderWithTheme(<MarchQuickSummary onOpen={() => {}} />);
+  expect(screen.queryByRole('img', { name: 'Setup changed since this march' })).toBeNull();
+
+  setLeadership(2000);
+  expect(screen.getByRole('img', { name: 'Setup changed since this march' })).toBeTruthy();
 }, 20_000);
 
 test('a cached result belonging to another march is left alone', async () => {

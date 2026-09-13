@@ -51,14 +51,26 @@
   }
 }
 
-/* M3's supporting pane: 360 dp, trailing, and flowing with the page — no height of its own and no
-   scrollbar of its own, because there is exactly one scroll on this page (design rule 17). */
+/* M3's supporting pane: 360 dp, trailing, and **the sticky element itself** (owner, 2026-09-13:
+   "the battle summary still goes over its detailed content on scrolling").
+
+   Until then only the top of the column stuck — the figures, the pools and the pills — and the rest
+   of the March slid underneath it: the copy/edit row, the trade-off, the folded Details and the
+   saved marches all passed behind the block that was meant to be showing them. Sticking the *whole*
+   column makes that impossible: everything in the March moves together, so nothing in it can cover
+   anything else in it.
+
+   The one scroll of design rule 17 is still the page's. The pane is capped at the window less the
+   command bar (`march.module.css`, `.paneScroll`) and only scrolls inside itself when a march is
+   taller than that — sixteen stacks fit a 900 px window with Details and Saved marches folded,
+   which is how they start.
+
+   The Grid column it sits in runs the height of the row, which is the containing block a sticky
+   element travels inside: that is what lets the pane follow the setup all the way down. */
 .pane {
+  position: sticky;
+  top: var(--mantine-spacing-lg);
   width: var(--pyr-pane-width);
-  /* The column, not the content: the block that stays (`march.module.css`, `.glance`) can only
-     travel as far as its own containing block, so the pane runs the height of the grid row and the
-     glance stays under the app bar all the way to the bottom of the setup. */
-  height: 100%;
 }
 
 /* One short flash on the bar's summary when a run lands with the sheet shut — the eye's half of the
@@ -88,15 +100,31 @@
   }
 }
 
-/* The phone's command bar (design plan §5.6, artboard `PhoneBar.dc.html`, `.bar2`): two rows —
-   the three housing wells as value chips with the objective beside them, then the answer and
-   Generate. 102 px tall, and sticky rather than fixed, so as the last block of the frame it is
-   pinned to the bottom edge while the page scrolls and lands in the flow at the end of it: the
-   page reserves its height and it covers nothing. Its z-index puts it under the recap sheet's
-   scrim, which carries a Generate of its own.
+/* The row the bar's answer is: the account trigger's own "row you press", stretched to whatever is
+   left between the fields and Generate, and allowed to be cut rather than to wrap. */
+.answerTap {
+  composes: tapRow;
+  min-width: 0;
+  flex: 1 1 auto;
+}
 
-   12 px of side padding, not the page's 16: the artboard draws the chips wider than the panels,
-   because four of them share one 390 px row. */
+/* ---------------------------------------------------------------------------------------------
+   Both bars, one object at two widths (design plan §5.6, artboards `CommandBar.dc.html` `.cmd`
+   and `PhoneBar.dc.html` `.bar2`). They are **full bleed**: the ground reaches the bottom edge and
+   both sides of the window with 12 px of radius on its two top corners alone, so no live page ever
+   scrolls past underneath (the review of 2026-09-13). What tells it from the page in the light
+   scheme is three things at once, because one of them alone is invisible there: a tonal step (the
+   command surface is lit from `#ffffff`, the page is not), the hairline along its top edge, and
+   the shadow it throws up the page.
+   --------------------------------------------------------------------------------------------- */
+
+/* The phone's command bar: two rows — the three housing pools as value chips with the objective
+   beside them, then the answer and Generate. ~120 px tall, and sticky rather than fixed, so as the
+   last block of the frame it is pinned to the bottom edge while the page scrolls and lands in the
+   flow at the end of it: the page reserves its height and it covers nothing. Its z-index puts it
+   under the recap sheet's scrim, which carries a Generate of its own.
+
+   12 px of side padding, not the page's 16: four targets share one 390 px row. */
 .bottomBar {
   position: sticky;
   z-index: 250;
@@ -104,46 +132,92 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border-top: 1px solid var(--pyr-hairline);
-  background: var(--pyr-bar);
-  box-shadow: var(--pyr-bar-shadow);
+  border-top: 1px solid var(--pyr-pane-border);
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: var(--pyr-command);
+  box-shadow: var(--pyr-command-shadow);
   padding: 0.625rem 0.75rem;
   padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* Row 1: three housing chips and the objective's, each an equal share of the row. */
+/* Row 1: three housing chips, which share what is left, and the objective's, which asks for the
+   width of the name it carries and gives it up first. */
 .housingRow {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0.375rem;
 }
 
 /* Row 2: the answer figure, whose whole half opens the March sheet, and Generate. */
 .answerRow {
   display: flex;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
-/* A housing value as a chip: the same well the desktop bar types into, at 34 px, waiting to be
-   tapped into an input (`PhoneBar.dc.html`, `.hchip`). */
+/* A housing value as a chip: the same well the desktop bar types into, at the 44 px a thumb needs
+   (the review of 2026-09-13 measured 34). The glyph keeps a box of its own so the three chips read
+   as a column of figures, and the pool's short name stands over the figure — an emoji is never the
+   only label, and at 390 px the four of them do not fit on one line beside their words. */
 .chip {
   display: flex;
   min-width: 0;
-  height: 2.125rem;
-  flex: 1 1 0;
+  height: 2.75rem;
+  flex: 1 1 auto;
   align-items: center;
-  justify-content: center;
-  gap: 0.3125rem;
+  gap: 0.25rem;
   border: 1px solid var(--pyr-well-border);
   border-radius: var(--mantine-radius-sm);
   background: var(--pyr-sunken);
   box-shadow: var(--pyr-well-shadow);
+  padding: 0 0.375rem;
   color: var(--mantine-color-text);
   font-size: var(--mantine-font-size-xs);
+  text-align: start;
+}
+
+.chipGlyph {
+  width: 1rem;
+  flex: 0 0 1rem;
+  text-align: center;
+}
+
+.chipBody {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.chipWord {
+  overflow: hidden;
+  color: var(--mantine-color-dimmed);
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipValue {
+  overflow: hidden;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* An empty pool is a chip with nothing in it yet, so its figure is written in the muted ink. */
+.chip[data-empty] .chipValue {
+  color: var(--mantine-color-dimmed);
+}
+
+/* A figure the bar cannot march with carries the error ink on its own edge as well as in the
+   message line above the row (design rule 24: never the words alone, never the colour alone). */
+.chip[data-error] {
+  border-color: var(--mantine-color-error);
 }
 
 @media (hover: hover) {
@@ -152,61 +226,100 @@
   }
 }
 
-/* An empty pool is a chip with nothing in it yet, so it is written in the muted ink. */
-.chipEmpty {
+/* The fourth chip is the objective's: its name, and the chevron that opens the five rows. */
+.objectiveChip {
   composes: chip;
+  flex: 0 1 auto;
+  justify-content: space-between;
+}
+
+.objectiveName {
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipChevron {
+  flex: 0 0 auto;
   color: var(--mantine-color-dimmed);
 }
 
-/* The fourth chip is the objective's, and it carries a chevron rather than a figure. */
-.objectiveChip {
-  composes: chip;
-  flex: 0 0 2.125rem;
-}
-
-/* The chip a thumb has opened: the same 34 px box, now a field, in the same place in the row. */
+/* The chip a thumb has opened: the same 44 px box, in the same place in the row, with the glyph
+   and the word still standing — only the figure has become a field. */
 .chipField {
-  min-width: 0;
-  flex: 1 1 0;
+  composes: chip;
 }
 
-.chipField :global(.mantine-Input-input) {
-  height: 2.125rem;
-  min-height: 2.125rem;
+.chipInput {
+  height: 1.0625rem;
+  min-height: 1.0625rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--mantine-color-text);
   font-size: var(--mantine-font-size-xs);
   font-weight: 600;
-  text-align: center;
+  line-height: 1.15;
 }
 
 /* ---------------------------------------------------------------------------------------------
    The desktop command bar (design plan §5.6, artboard `CommandBar.dc.html`, `.cmd`): housing, the
-   objective and Generate on the bottom edge of the page, inside the page's own width. The dock is
-   what sticks — a sticky element can only travel inside its containing block, and the bar's own
-   block is 88 px tall — and the bar inside it keeps the 24 px of air the artboard leaves under it.
+   objective and Generate on the bottom edge, from 1024 px (`DESKTOP_BAR`). The **dock** is the
+   full-bleed ground and the thing that sticks — a sticky element can only travel inside its
+   containing block — and the `Container` inside it keeps the content on the page's own lines.
    --------------------------------------------------------------------------------------------- */
 .commandDock {
   position: sticky;
   z-index: 250;
   bottom: 0;
+  border-top: 1px solid var(--pyr-pane-border);
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: var(--pyr-command);
+  box-shadow: var(--pyr-command-shadow);
 }
 
 .commandBar {
-  display: grid;
-  height: var(--pyr-commandbar-height);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 0;
+}
+
+.commandRow {
+  display: flex;
   align-items: end;
-  margin-bottom: var(--mantine-spacing-xl);
-  border: 1px solid var(--pyr-pane-border);
-  border-radius: var(--mantine-radius-md);
-  background: var(--pyr-command);
-  box-shadow: var(--pyr-command-shadow);
   gap: var(--mantine-spacing-md);
-  grid-template-columns: 1fr 1fr 1fr 1.2fr auto;
-  padding: 0.875rem 1.25rem;
+}
+
+/* The wells take the room they need and no more: at 1100 px a field that shares the row four ways
+   is 220 px, and at 1600 px it is still 220 px rather than the 341 px the review measured. */
+.commandFields {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: end;
+  gap: var(--mantine-spacing-md);
+}
+
+.commandFields > * {
+  min-width: 0;
+  max-width: 13.75rem;
+  flex: 1 1 0;
+}
+
+/* The one message line both bars show, above the fields rather than under each of them. */
+.barMessage {
+  margin: 0;
+  color: var(--mantine-color-error);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.35;
 }
 
 /* The three pools and the objective are the biggest wells on the page here too (docs/design.md §4:
-   a housing well is 40 px), and their labels are the artboard's small caps — at the design's 13 px
-   floor rather than its own 11 px (design rule 19). */
+   a housing well is 40 px), and their labels are the design's own 13 px sentence case — not the
+   artboard's 11 px small caps, which the review of 2026-09-13 read as shouted chrome. */
 .commandBar :global(.mantine-Input-input) {
   height: 2.5rem;
   min-height: 2.5rem;
@@ -219,9 +332,18 @@
   color: var(--mantine-color-dimmed);
   font-size: var(--mantine-font-size-xs);
   font-weight: 500;
-  letter-spacing: 0.04em;
   line-height: 1;
-  text-transform: uppercase;
+}
+
+/* Generate is the one thing in the bar a thumb has to hit first time: 48 px on a phone, 44 on a
+   desktop. `!important` because the March section's button carries its own height as an inline
+   style (`MarchGenerateButton`, `h={40}`) and the bar owns its own target sizes. */
+.bottomBar :global(.mantine-Button-root) {
+  height: 3rem !important;
+}
+
+.commandBar :global(.mantine-Button-root) {
+  height: 2.75rem !important;
 }
 
 /* The March sheet (artboard `PhoneSheetA.dc.html`, `.sheet`): the pane's own lit material, 20 px on

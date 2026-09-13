@@ -1,17 +1,20 @@
 /**
  * The calculator itself, end to end: housing in, a march out, the two ways a player changes what it
- * fields (a tile in the March, a type the priority left at home), and the three things they do with
- * the answer — read the counts, copy them, edit one by hand.
+ * fields (a press on a pill in the March, a type the priority left at home), and the three things
+ * they do with the answer — read the counts, copy them all, edit one by hand.
  */
 import { expect, test } from '@playwright/test';
 
 import {
   chooseObjective,
+  fillHousing,
   generate,
   generateButton,
+  generateState,
   marchExpectedDamage,
   marchFigure,
   marchLeftOut,
+  marchPillDetails,
   marchSection,
   marchStackCount,
   marchStackLabels,
@@ -64,7 +67,7 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   expect(problems).toEqual([]);
 });
 
-test('a tile in the March leaves a type out, and puts it back', async ({ page }) => {
+test('a press on a pill leaves that type out of the march, and puts it back', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
@@ -73,24 +76,106 @@ test('a tile in the March leaves a type out, and puts it back', async ({ page })
   const code = before[0]?.split(' ')[0] ?? '';
   expect(code).not.toBe('');
 
-  // Leaving a type out is the unit sheet's job now (owner, 2026-09-13): the pill's corner mark
-  // opens it, and the sheet holds every action about that one type.
-  await marchSection(page)
-    .getByRole('button', { name: /^Details: / })
-    .first()
-    .click();
-  const sheet = page.getByRole('dialog');
-  await sheet.getByRole('button', { name: 'Leave out' }).click();
+  // The primary action is direct (owner, 2026-09-13): a press on the pill itself takes the type out
+  // of the march, from the sticky pane, without a sheet in between.
+  const pill = marchPills(page).first();
+  await expect(pill).toHaveAttribute('aria-pressed', 'true');
+  await pill.click();
   await settle(page);
   const without = await marchStackLabels(page);
   expect(without.some((label) => label.startsWith(`${code} `))).toBe(false);
   expect(without.length).toBe(before.length - 1);
 
-  // The type is in the small row under the pools now; a press puts it back and keeps it in for good.
-  await marchLeftOut(page).first().click();
+  // The type is in the small row under the pools now — the off half of the same toggle — and a press
+  // puts it back and keeps it in for good.
+  const putBack = marchLeftOut(page).first();
+  await expect(putBack).toHaveAttribute('aria-pressed', 'false');
+  await putBack.click();
   await settle(page);
   expect((await marchStackLabels(page)).length).toBe(before.length);
-  await expect(marchSection(page).getByRole('button', { name: /, kept in$/ })).toBeVisible();
+  await expect(marchSection(page).getByRole('button', { name: /, kept in — leave out$/ })).toBeVisible();
+
+  expect(problems).toEqual([]);
+});
+
+test('the pill’s corner mark opens the unit sheet over the sticky pane', async ({ page }) => {
+  const problems = watchConsole(page);
+  // Two panes: the March is the sticky pane on the right and the command bar is on the bottom edge,
+  // which is the frame the sheet used to open *under* (owner, 2026-09-13).
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openApp(page);
+  await generate(page, { leadership: 4100 });
+
+  const mark = marchPillDetails(page).first();
+  const name = (await mark.getAttribute('aria-label'))?.replace('Details: ', '') ?? '';
+  expect(name).not.toBe('');
+  await mark.click();
+
+  // The sheet is on top of everything the page pins to an edge, so its heading can be read and its
+  // actions can be pressed.
+  const sheet = page.getByRole('dialog', { name });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole('heading', { name })).toBeVisible();
+  const leaveOut = sheet.getByRole('button', { name: 'Leave out' });
+  await expect(leaveOut).toBeVisible();
+
+  // "On top" measured rather than asserted: the point the button occupies belongs to the button.
+  const box = await leaveOut.boundingBox();
+  expect(box).not.toBeNull();
+  const owns = await page.evaluate(
+    ({ x, y }) => {
+      const view = globalThis as unknown as {
+        document: {
+          elementFromPoint: (px: number, py: number) => { closest: (s: string) => unknown } | null;
+        };
+      };
+      return (view.document.elementFromPoint(x, y)?.closest('[role="dialog"]') ?? null) !== null;
+    },
+    { x: (box?.x ?? 0) + (box?.width ?? 0) / 2, y: (box?.y ?? 0) + (box?.height ?? 0) / 2 },
+  );
+  expect(owns, 'the command bar is painting over the unit sheet').toBe(true);
+
+  await leaveOut.click();
+  await settle(page);
+  await expect(marchLeftOut(page).first()).toBeVisible();
+
+  expect(problems).toEqual([]);
+});
+
+test('a march says nothing about its age, and says plainly when the setup has moved', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+  await generate(page, { leadership: 4100 });
+
+  // Current: no clock, no warning, nothing dimmed (owner, 2026-09-13 — "generated 5 minutes ago" is
+  // retired; what matters is whether the answer still answers the form).
+  await expect(page.getByText(/generated (just now|\d)/)).toHaveCount(0);
+  await expect(
+    marchSection(page).getByText('Setup changed since this march. Generate to refresh.'),
+  ).toHaveCount(0);
+  for (const block of await marchSection(page).locator('[data-stale]').all()) {
+    await expect(block).toHaveAttribute('data-stale', 'false');
+  }
+  await expect(generateState(page)).toHaveAttribute('data-state', 'ready');
+
+  // Move the form under the answer without generating: one line says so, the answer steps back, and
+  // Generate keeps its dot.
+  await fillHousing(page, 'Leadership', 2000);
+  await expect(
+    marchSection(page).getByText('Setup changed since this march. Generate to refresh.'),
+  ).toBeVisible();
+  const blocks = await marchSection(page).locator('[data-stale]').all();
+  expect(blocks.length).toBeGreaterThanOrEqual(2);
+  for (const block of blocks) await expect(block).toHaveAttribute('data-stale', 'true');
+  await expect(generateState(page)).toHaveAttribute('data-state', 'stale');
+
+  // Generating again clears every one of those signals at once.
+  await generateButton(page).click();
+  await settle(page);
+  await expect(
+    marchSection(page).getByText('Setup changed since this march. Generate to refresh.'),
+  ).toHaveCount(0);
+  await expect(generateState(page)).toHaveAttribute('data-state', 'ready');
 
   expect(problems).toEqual([]);
 });
@@ -174,10 +259,7 @@ test('the unit sheet opens from a pill and acts on that one type', async ({ page
   await openApp(page);
   await generate(page, { leadership: 4100 });
 
-  await marchSection(page)
-    .getByRole('button', { name: /^Details: / })
-    .first()
-    .click();
+  await marchPillDetails(page).first().click();
   const sheet = page.getByRole('dialog');
   await expect(sheet).toBeVisible();
   await expect(sheet.getByText('In this march')).toBeVisible();
@@ -186,6 +268,45 @@ test('the unit sheet opens from a pill and acts on that one type', async ({ page
 
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toBeHidden();
+
+  expect(problems).toEqual([]);
+});
+
+test('mobile: a unit sheet opens on top of the March sheet, not behind it', async ({ page }) => {
+  const problems = watchConsole(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openApp(page);
+  await generate(page, { leadership: 4100 });
+
+  // The March *is* the sheet below 1200 px, so a unit sheet raised from it is a sheet over a sheet:
+  // at Mantine's own stacking it opened underneath, with only its header showing (owner, 2026-09-13).
+  await openMarchSheet(page);
+  const mark = marchPillDetails(page).first();
+  const name = (await mark.getAttribute('aria-label'))?.replace('Details: ', '') ?? '';
+  await mark.click();
+
+  const unitSheet = page.getByRole('dialog', { name });
+  await expect(unitSheet).toBeVisible();
+  const leaveOut = unitSheet.getByRole('button', { name: 'Leave out' });
+  await expect(leaveOut).toBeVisible();
+
+  const box = await leaveOut.boundingBox();
+  const owns = await page.evaluate(
+    ({ x, y, title }) => {
+      const view = globalThis as unknown as {
+        document: {
+          elementFromPoint: (
+            px: number,
+            py: number,
+          ) => { closest: (s: string) => { textContent: string } | null } | null;
+        };
+      };
+      const dialog = view.document.elementFromPoint(x, y)?.closest('[role="dialog"]') ?? null;
+      return dialog !== null && dialog.textContent.includes(title);
+    },
+    { x: (box?.x ?? 0) + (box?.width ?? 0) / 2, y: (box?.y ?? 0) + (box?.height ?? 0) / 2, title: name },
+  );
+  expect(owns, 'the March sheet is painting over the unit sheet').toBe(true);
 
   expect(problems).toEqual([]);
 });

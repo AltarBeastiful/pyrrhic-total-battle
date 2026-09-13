@@ -126,12 +126,15 @@ export function MarchSection() {
       });
   };
 
-  const stale =
+  // A result that belongs to another profile or another march entirely — a different fact from
+  // "the setup moved", which the recap says in one line of its own now (owner, 2026-09-13: the
+  // "Possibly stale" alert that used to sit here said the same thing in a bigger box, design
+  // rule 5).
+  const otherMarch =
     snapshot !== null &&
     profile !== undefined &&
     setup !== undefined &&
     (snapshot.profileId !== profile.id || snapshot.setupId !== setup.id);
-  const outdated = snapshot !== null && profile !== undefined && profile.updatedAt > snapshot.at;
 
   const announcement =
     snapshot === null || summary === null || result === null
@@ -149,19 +152,15 @@ export function MarchSection() {
       // label instead of writing "March" on the screen a second time (design rule 5).
       {...(twoPanes ? { 'aria-labelledby': titleId } : { 'aria-label': 'March' })}
       gap="md"
-      // …and the section runs the pane's height for the same reason (`.glance`).
-      h={twoPanes ? '100%' : undefined}
     >
       <VisuallyHidden aria-live="polite">{announcement}</VisuallyHidden>
 
       {/*
-        The march at a glance, and on a desktop the block that stays (owner, 2026-09-13): the
-        figures, Generate, the pools with their stacks and the types left out. Sticky under the app
-        bar, so scrolling the setup never takes the answer — or the army — off the screen; capped at
-        the window's height with a scrollbar of its own only when a march has more pills than the
-        window can hold, which is the one exception design rule 17 allows.
+        The answer, and then the army. Nothing in here sticks on its own any more (owner,
+        2026-09-13): on a desktop the *pane* is the sticky element (`shell/MarchPane.tsx`), because a
+        block pinned inside the column is a block the rest of the column scrolls behind.
       */}
-      <div className={twoPanes ? classes.glance : undefined}>
+      <div>
         <Stack gap="md">
           <Group justify="space-between" gap="xs">
             <Group gap="xs">
@@ -186,15 +185,19 @@ export function MarchSection() {
           {!twoPanes && <MarchGenerateButton fullWidth />}
 
           {snapshot !== null && result !== null && summary !== null && (
-            <MarchPills
-              rows={march.pools}
-              leftOut={march.leftOut}
-              editing={editing}
-              onCount={(unitId, count) => {
-                useResultStore.getState().editCount(unitId, count);
-              }}
-              onDetails={setSheetUnit}
-            />
+            /* The army steps back with the figures while the setup has moved under it
+               (`march.module.css`, `.outOfDate`): the whole answer dims together or none of it. */
+            <div data-stale={String(march.stale)} className={march.stale ? classes.outOfDate : undefined}>
+              <MarchPills
+                rows={march.pools}
+                leftOut={march.leftOut}
+                editing={editing}
+                onCount={(unitId, count) => {
+                  useResultStore.getState().editCount(unitId, count);
+                }}
+                onDetails={setSheetUnit}
+              />
+            </div>
           )}
         </Stack>
       </div>
@@ -211,15 +214,9 @@ export function MarchSection() {
             }}
           />
 
-          {stale && (
+          {otherMarch && (
             <Alert color="brass" title="Another march">
               This result was generated for another profile or march. Generate again to refresh it.
-            </Alert>
-          )}
-          {outdated && !stale && (
-            <Alert color="brass" title="Possibly stale">
-              Your profile has changed since this result was generated, so it may be stale. Generate again to
-              bring it up to date.
             </Alert>
           )}
           {march.overflow.length > 0 && (

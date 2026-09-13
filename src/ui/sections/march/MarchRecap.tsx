@@ -1,8 +1,19 @@
 /**
  * The answer, in figures (design plan §7.5 step 1, design rule 1). The expected damage is the one
- * number the eye should land on, so it is the only thing on the page set in the display face, at the
- * 48 px `docs/design.md` §3 gives it; the five figures a player compares marches by follow it as a
- * list, each carrying the way it moved since the previous run.
+ * number the eye should land on: **Inter at 700 and 36 px**, tabular, tightened a hundredth of an em
+ * (owner, 2026-09-13 — the display face was the prettier of the two and the harder to read a figure
+ * in; Fraunces is left to the roman tier numerals on tiles and pills, where it spells rather than
+ * counts). The figures a player compares marches by follow it as a list, each carrying the way it
+ * moved since the previous run.
+ *
+ * "Hits landed" is not among them any more (owner, 2026-09-13): how many times the army swings is a
+ * fact about a stack, and it is said in the unit sheet, where it belongs to the type it describes.
+ *
+ * Neither is "generated just now" (owner, 2026-09-13): *when* a march was computed is not a question
+ * anybody asks — **whether it still answers the form** is. So the clock is gone and the staleness it
+ * was standing in for is said outright: once the setup moves under the answer, the figures and the
+ * pills fall to 70 %, and one line in the warning ink under them says what happened and what to do.
+ * Nothing at all is drawn while the answer is current.
  *
  * One shape, wherever it is shown (M-08's contract): the March pane's header on a desktop, the head
  * of the March section on a phone — and the March section is what the recap sheet holds, so the
@@ -15,7 +26,7 @@ import type { BattleSummary } from '@/engine/types';
 import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { amount, ratio, relativeTime } from './format';
+import { amount, ratio } from './format';
 import classes from './march.module.css';
 import { useMarch } from './useMarch';
 
@@ -26,7 +37,7 @@ import { useMarch } from './useMarch';
 const CHANGE_ONLY = (): string => '';
 
 export function MarchRecap() {
-  const { snapshot, result, summary, previous } = useMarch();
+  const { snapshot, result, summary, previous, stale } = useMarch();
 
   if (snapshot === null || result === null || summary === null) {
     return (
@@ -39,7 +50,6 @@ export function MarchRecap() {
 
   const was = <T,>(pick: (value: BattleSummary) => T): T | undefined =>
     previous === null ? undefined : pick(previous);
-  const hits = summary.journals.enemyFirst.friendlyHits;
 
   const figures = [
     {
@@ -50,14 +60,6 @@ export function MarchRecap() {
       format: amount,
       betterWhen: 'higher' as const,
       glyph: <Glyph kind="minimumDamage" />,
-    },
-    {
-      key: 'hits',
-      label: 'Hits landed',
-      value: hits,
-      previous: was((value) => value.journals.enemyFirst.friendlyHits),
-      format: amount,
-      betterWhen: 'higher' as const,
     },
     {
       key: 'silver',
@@ -89,49 +91,63 @@ export function MarchRecap() {
 
   return (
     <Stack gap="md" aria-label="This march in figures">
-      <Stack gap={2}>
-        {/* The hero figure at `docs/design.md` §3's own 48 px, and free to shrink rather than to
-            break: it is the widest thing in a 360 dp pane. */}
-        <Text variant="numeral" fz={{ base: '2.5rem', lg: '3rem' }} lh={1} fw={300} className={classes.hero}>
-          {amount(summary.avgDamage)}
-        </Text>
-        <Group gap="xs" wrap="nowrap">
-          {/* The one figure that carried no mark while the four under it did (rule 21). */}
-          <Glyph kind="averageDamage" />
-          {/* "Expected damage · generated just now" — the artboard's own label line. When the run
-              landed is a fact about this figure, not a second heading (design rule 5). */}
-          <Text span size="sm" c="dimmed">
-            {`Expected damage · generated ${relativeTime(snapshot.at)}`}
+      {/* Everything that *is* the answer dims together while the answer is out of date; the line
+          that says so does not, because it is the one thing on the block still worth reading. */}
+      <Stack gap="md" data-stale={String(stale)} className={stale ? classes.outOfDate : undefined}>
+        <Stack gap={2}>
+          {/* The hero figure: one size at every width now (36 px), Inter at 700, and free to break
+              rather than to push the pane sideways — it is the widest thing in a 360 dp pane. The
+              numerals and the tracking are the class's (`march.module.css`, `.hero`). */}
+          <Text fz="2.25rem" lh={1} fw={700} className={classes.hero}>
+            {amount(summary.avgDamage)}
           </Text>
-          {previous !== null && (
-            <DeltaText
-              value={summary.avgDamage}
-              previous={previous.avgDamage}
-              format={CHANGE_ONLY}
-              betterWhen="higher"
-              size="xs"
-            />
-          )}
-        </Group>
+          <Group gap="xs" wrap="nowrap">
+            {/* The one figure that carried no mark while the four under it did (rule 21). */}
+            <Glyph kind="averageDamage" />
+            <Text span size="sm" c="dimmed">
+              Expected damage
+            </Text>
+            {previous !== null && (
+              <DeltaText
+                value={summary.avgDamage}
+                previous={previous.avgDamage}
+                format={CHANGE_ONLY}
+                betterWhen="higher"
+                size="xs"
+              />
+            )}
+          </Group>
+        </Stack>
+
+        <Figures
+          label="March figures"
+          labelWidth="11rem"
+          items={figures.map((figure) => ({
+            key: figure.key,
+            label: figure.label,
+            ...(figure.glyph === undefined ? {} : { glyph: figure.glyph }),
+            value: (
+              <DeltaText
+                value={figure.value}
+                {...(figure.previous === undefined ? {} : { previous: figure.previous })}
+                format={figure.format}
+                betterWhen={figure.betterWhen}
+              />
+            ),
+          }))}
+        />
       </Stack>
 
-      <Figures
-        label="March figures"
-        labelWidth="11rem"
-        items={figures.map((figure) => ({
-          key: figure.key,
-          label: figure.label,
-          ...(figure.glyph === undefined ? {} : { glyph: figure.glyph }),
-          value: (
-            <DeltaText
-              value={figure.value}
-              {...(figure.previous === undefined ? {} : { previous: figure.previous })}
-              format={figure.format}
-              betterWhen={figure.betterWhen}
-            />
-          ),
-        }))}
-      />
+      {/* One line, in the warning ink, and only while it is true. `role="status"` rather than an
+          alert: it is a change in what is already on screen, not an interruption. */}
+      {stale && (
+        <Group gap={6} wrap="nowrap" role="status" c="var(--mantine-color-brass-filled)">
+          <Glyph kind="warning" label="Out of date" />
+          <Text span size="sm" fw={500} c="var(--mantine-color-brass-filled)">
+            Setup changed since this march. Generate to refresh.
+          </Text>
+        </Group>
+      )}
     </Stack>
   );
 }

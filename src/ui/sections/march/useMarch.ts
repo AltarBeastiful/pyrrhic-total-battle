@@ -16,7 +16,7 @@ import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 import { applyCounts, hasEdits } from './manual';
 import { leftOutOf, marchRows, poolRows } from './rows';
 import type { MarchStackRow, PoolRow } from './rows';
-import { useRunStore } from './runStore';
+import { setupFingerprint, useRunStore } from './runStore';
 
 export interface MarchView {
   /** The generated result as it came out of the engine, with the request it belongs to. */
@@ -26,6 +26,13 @@ export interface MarchView {
   summary: BattleSummary | null;
   /** The run before this one, when there was one; the recap says which way each figure moved. */
   previous: BattleSummary | null;
+  /**
+   * The setup has moved since this march was generated, so what is on screen answers a question the
+   * form no longer asks. One reading for the three places that show it (owner, 2026-09-13): the
+   * recap's warning line, the dimmed figures and pills, the ⚠️ on the phone bar's answer — and it is
+   * the same comparison Generate's own dot is drawn from (`shell/state.ts`, `fabState`).
+   */
+  stale: boolean;
   /** Counts were changed by hand, so there is something to undo. */
   edited: boolean;
   /** Pools the hand-edited counts no longer fit in. */
@@ -51,9 +58,15 @@ export function useMarch(): MarchView {
   const setup = useStore(selectActiveSetup);
   const removedMercenaries = useRunStore((state) => state.removedMercenaries);
   const previous = useRunStore((state) => state.previousSummary);
+  const lastRunFingerprint = useRunStore((state) => state.lastRunFingerprint);
 
   const pinned = setup?.pinnedUnitIds ?? EMPTY;
   const excluded = profile?.troops.excludedUnitIds ?? EMPTY;
+
+  // The store hands out the same profile and setup objects until one of them is edited, so this is
+  // rebuilt only when something a march is actually computed from moved.
+  const fingerprint = useMemo(() => setupFingerprint(profile, setup), [profile, setup]);
+  const stale = snapshot !== null && lastRunFingerprint !== null && lastRunFingerprint !== fingerprint;
 
   return useMemo(() => {
     if (snapshot === null) {
@@ -62,6 +75,7 @@ export function useMarch(): MarchView {
         result: null,
         summary: null,
         previous,
+        stale: false,
         edited: false,
         overflow: [],
         rows: [],
@@ -86,6 +100,7 @@ export function useMarch(): MarchView {
       result,
       summary,
       previous,
+      stale,
       edited: edits !== null,
       overflow: edits?.overflow ?? [],
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
@@ -94,5 +109,5 @@ export function useMarch(): MarchView {
       leftOut: leftOutOf(snapshot.request.units, result, leftOutIds),
       keptElsewhere: pinned.filter((unitId) => !result.stacks.some((stack) => stack.unitId === unitId)),
     };
-  }, [snapshot, counts, pinned, excluded, removedMercenaries, previous]);
+  }, [snapshot, counts, pinned, excluded, removedMercenaries, previous, stale]);
 }

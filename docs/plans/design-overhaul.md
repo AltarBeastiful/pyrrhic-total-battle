@@ -253,10 +253,9 @@ TotalStack's pills: the pool total in the pool colour with its glyph ("20 000 �
 violet IV, then the mercenary tier colours V–IX), five per row in the pane, three on phones. The full battle
 report stays folded in Details for now (owner: "not sure, let's stick with it"). Implementation matches the
 artboards with a page-level pixel diff as the gate (story D-55). **Desktop stickiness (owner, later the same
-day):** the sticky block is the whole march-at-a-glance panel — recap, Generate, the pool pills and the
-left-out row — so nothing slides over the pills while the setup scrolls; only the copy/edit row, trade-off,
-Details and Saved marches flow below it. An inner scroll exists only as a fallback for marches with more
-pills than the viewport holds.
+day, revised twice):** the whole March column is the sticky element — recap, pills, left-out row, actions,
+the folded Details and Saved marches — so nothing in it is ever overlapped; it scrolls inside itself only
+when taller than the window (Details open, or beyond ~16 stacks). Generate now lives in the command bar.
 
 ## 5.6 Command bar (owner's choice, 2026-09-13, after seeing TotalStack's update)
 
@@ -461,17 +460,24 @@ number here is a stepper; every choice is a full-row target.
 **Amended 2026-09-12 (owner):** the most useful things come first, and the army shown is also the form to
 change it. Order inside the card:
 
-1. **Recap line**: average and minimum damage, hits taken, silver and gold to recover, damage per silver —
-   the figures a player compares marches by — with the delta against the previous run.
+1. **Recap line**: average and minimum damage, silver and gold to recover, damage per silver — the figures a
+   player compares marches by — with the delta against the previous run. The expected damage is the hero, set
+   in Inter 700 at 36 px with tabular numerals; hits taken are a fact about a stack and live in the unit sheet,
+   and *when* a march was generated is not shown at all. What is shown instead is **staleness**: once the setup
+   moves under the answer, the figures and the pills fall to 70 %, one line in the warning ink says "Setup
+   changed since this march. Generate to refresh.", Generate keeps its dot and the phone bar's answer line
+   opens with ⚠️. Nothing is drawn while the answer is current.
 2. **The march as tiles**: the selected unit types laid out like the Troops form (group rows of `md` tiles
    with the stack count under each tile); the left-out types of the range sit in the same rows, dimmed, so
    putting one back or leaving one out is the same gesture as in the Troops card (tap the tile). Pinned
    types carry the pin mark. This block is both the readable summary and the control.
-3. **The march table** (counts to copy): one row per stack in kill order — tile · name · **count** (xl, tap to
-   copy) · hits · lost · revive cost; row left edge in the group colour; mercenary rows carry a "falls last"
-   marker. Under 600 px the rows stack as cards. Manual editing is an explicit "Edit counts" mode in the
-   table header (counts become steppers, the recap recomputes live, Undo appears); outside that mode a tap on a
-   count only copies it. "Copy all counts" lives in the header.
+3. **The counts** are the pills themselves — one two-line pill per stack, coloured by tier, the count the
+   biggest thing on it. **A tap on a pill leaves that type out of the march** (it re-sizes at once and the type
+   drops into the "Left out — tap to put back" row); the **ⓘ in the pill's corner** — a 22 px button with a
+   16 px glyph, its own target, never nested in the pill's — opens the unit sheet; and **"Copy all counts" is
+   the copy control**, the one copy on the page, beside "Edit counts". There is no tap-to-copy on a pill and no
+   long press: one gesture, one meaning (the count is still selectable text). Manual editing is the explicit
+   "Edit counts" mode (each count becomes a field in place, the recap recomputes live, Undo appears).
 4. **Compared with all types**: a two-column strip, only when the search left types out.
 5. **Details, folded by default**: the battle story (narrative, raw journal behind a further toggle) and the
    HP profile chart. The order stacks fall in is here, not above the fold.

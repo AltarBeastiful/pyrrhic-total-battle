@@ -60,36 +60,49 @@
 }
 
 /* The hero figure is free to break rather than to push the pane sideways: it is the widest thing
-   in 380 px. Its two sizes (48 px in the pane, 40 in the phone's sheet) are style props, because
-   Mantine writes `--text-fz` inline and an inline value beats a class. */
+   in 380 px. Its size (36 px, one at every width) is a style prop, because Mantine writes
+   `--text-fz` inline and an inline value beats a class.
+
+   The face is **Inter at 700**, not the display face (owner, 2026-09-13): Fraunces sets the roman
+   tier numerals on tiles and pills, where it spells, and nothing that has to be read as a figure.
+   What the class says is the two things a figure needs — one column per digit, and a hundredth of an
+   em out of the tracking so six of them read as one number. */
 .hero {
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* The march at a glance, pinned (owner, 2026-09-13). On a desktop the figures, the pools and their
-   pills stay under the app bar while the setup scrolls past; everything after them — the
-   counts row, the trade-off, the folded detail, the saved marches — flows with the page.
+/* An answer the form has moved away from (owner, 2026-09-13). The figures and the pills are still
+   readable — they were true a moment ago and a player may still be copying a count off them — but
+   they step back, so the warning line under them is what the eye lands on. 70 %, which keeps the
+   dimmed second lines clear of the 4.5:1 floor on every surface, and never applied to the warning
+   itself. */
+.outOfDate {
+  opacity: 0.7;
+}
 
-   The negative margins put the block back on the pane's own edges, so what passes behind it really
-   is hidden; the pane's material is repainted here for the same reason. The cap and the scrollbar
-   are a fallback for a march with more pills than the window holds, and nothing else: a ten- or
-   sixteen-stack march fits a 900 px window without either. */
-.glance {
-  position: sticky;
-  /* Over everything the section draws under it, and under both bars (100 and 250). A segmented
-     control paints its own label at `z-index: 2`, so 1 was not enough. */
-  z-index: 5;
-  /* The app bar scrolls away, so the panel sticks at the very top with a little air. */
-  top: var(--mantine-spacing-md);
-  /* The window, less the command bar under it (design plan §5.6, the 88 px bar plus the 24 px of
-     air the artboard leaves below it), so the bar can never land on the pills this block exists to
-     keep on screen. */
-  max-height: calc(100dvh - var(--pyr-commandbar-height) - var(--mantine-spacing-xl) - 2rem);
-  margin: calc(-1 * var(--mantine-spacing-xl)) calc(-1 * var(--mantine-spacing-xl)) 0;
-  border-bottom: 1px solid var(--pyr-hairline);
-  border-radius: var(--mantine-radius-md) var(--mantine-radius-md) 0 0;
-  background: var(--pyr-pane);
-  padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
-  overflow: auto;
+/* The March pane scrolls inside itself only when it has to (owner, 2026-09-13, after "the battle
+   summary still goes over its detailed content on scrolling").
+
+   The block that used to stick was the *top* of the column — the figures, the pools and the pills —
+   and everything under it in the same column (the copy/edit row, the trade-off, the folded Details,
+   the saved marches) passed *behind* it. So the sticky element is the whole column now
+   (`shell.module.css`, `.pane`): nothing in the March can be overlapped by anything else in the
+   March, because it all moves together.
+
+   This class is what makes that safe: the column is capped at the window less the command bar, and
+   it is the *panel* that scrolls, so the pane's own shadow is drawn outside the scroller rather than
+   clipped by it. With Details and Saved marches folded — which is how they start — a sixteen-stack
+   march fits a 900 px window and no scrollbar appears at all. */
+.paneScroll {
+  /* Positioned, and not for a z-index: an `overflow` box only clips what it is the containing block
+     for, and Mantine's `VisuallyHidden` is `position: absolute`. Without this the dozen hidden
+     labels inside the HP profile escaped the scroller, landed against the initial containing block
+     and added 1 100 px of empty page under the app — which is the "scroll into nothing" this class
+     would otherwise have introduced. */
+  position: relative;
+  max-height: calc(100dvh - var(--mantine-spacing-lg) - var(--pyr-commandbar-height) - 1.5rem);
+  overflow-y: auto;
   overscroll-behavior: contain;
 }

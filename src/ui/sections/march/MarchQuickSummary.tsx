@@ -10,6 +10,11 @@
  * The three mini troop tiles the bar used to carry are gone (owner, 2026-09-13): the row above this
  * one is the housing chips now, and the tiles were the half of the line that said the least. The
  * stack count says what they said, in four characters.
+ *
+ * When the setup has moved under the answer the line opens with a ⚠️ instead of the target (owner,
+ * 2026-09-13, with "generated 5 minutes ago" retired everywhere): on a phone this row is the whole
+ * of the march until the sheet is opened, so the one thing it must never do is read as current when
+ * it is not. The recap inside the sheet says the same thing in a sentence.
  */
 import { Group, Text, UnstyledButton } from '@mantine/core';
 import { ChevronUp } from 'lucide-react';
@@ -26,7 +31,7 @@ export interface MarchQuickSummaryProps {
 }
 
 export function MarchQuickSummary({ onOpen }: MarchQuickSummaryProps) {
-  const { summary, rows } = useMarch();
+  const { summary, rows, stale } = useMarch();
 
   if (summary === null) {
     return (
@@ -40,7 +45,14 @@ export function MarchQuickSummary({ onOpen }: MarchQuickSummaryProps) {
 
   const line = (
     <Group className={classes.quickLine} gap={6} wrap="nowrap" miw={0}>
-      <Glyph kind="averageDamage" />
+      {/* The marker takes the target's place rather than standing beside it: the bar is 390 px wide
+          and a second glyph would be paid for out of the figure, which is the one thing here that is
+          never cut. */}
+      {stale ? (
+        <Glyph kind="warning" label="Setup changed since this march" />
+      ) : (
+        <Glyph kind="averageDamage" />
+      )}
       <Text span fz="0.9375rem" fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
         {compact(summary.avgDamage)}
       </Text>

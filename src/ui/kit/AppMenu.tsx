@@ -51,13 +51,10 @@ export function AppMenu({ label, trigger, sections, width = 240 }: AppMenuProps)
     // first child of the `role="menu"` dropdown, which is a child that role does not allow (axe
     // `aria-required-children`). Off, the focus trap lands on the first item — which is what a menu
     // owes the keyboard anyway.
-    <Menu
-      shadow="md"
-      width={width}
-      position="bottom-end"
-      withinPortal={false}
-      withInitialFocusPlaceholder={false}
-    >
+    // Portalled to the body and stacked over every bar (`theme.ts`): left in place it was a child of
+    // the app bar, which paints at 100 — under the command bar's 250 — so the last rows of a long
+    // account menu were covered by the bar at the bottom of the window.
+    <Menu shadow="md" width={width} position="bottom-end" withinPortal withInitialFocusPlaceholder={false}>
       {/* The trigger itself, never a wrapper: `Menu.Target` stamps `aria-expanded` and
           `aria-haspopup` onto whatever it is given, and neither is allowed on a `<span>`
           (investigation 0007's `aria-allowed-attr`). The trigger carries its own name. */}

@@ -18,15 +18,19 @@
 
 /* ---------------------------------------------------------------------------------------------
    The stack pill (design plan §5.5; artboard `.spill`), as the owner corrected it on 2026-09-13:
-   62 px tall, 10 px of radius — the one shape between the theme's `sm` and `md` steps, because it
+   56 px tall, 10 px of radius — the one shape between the theme's `sm` and `md` steps, because it
    is neither a control nor a card — and **it extends rather than squeezes**. Every colour on it
    comes from the caller as a tier variable.
+
+   The padding is 6 px over and 8 px either side (the owner's desktop review: the earlier 8 × 10
+   read as a billboard around a three-letter code — design rule 19). The count keeps its 19 px and
+   the top line its 12 px, so what went is air, not information.
    --------------------------------------------------------------------------------------------- */
 .pill {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 3.875rem;
+  min-height: 3.5rem;
   border: 1px solid;
   border-radius: 0.625rem;
 }
@@ -38,19 +42,33 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* 8 px over, 10 px either side: a count never sits on the border. */
-  padding: 0.5rem 0.625rem;
+  padding: 6px 8px;
   gap: 3px;
   color: inherit;
 }
 
+/* The corner mark is absolute, so it costs the body no width — but it would still paint over the
+   top line at 78 px, and a code under a button is a code nobody can read. The line gives the corner
+   back as its own end padding, so the text stops before the mark starts (owner, 2026-09-13). */
 .pillTop {
   display: flex;
+  min-width: 0;
   max-width: 100%;
   align-items: center;
   gap: 3px;
+  padding-inline-end: 20px;
+  overflow: hidden;
   line-height: 1.1;
   white-space: nowrap;
+}
+
+/* The last line of defence, for a hand-typed mercenary with a code nothing anticipated: the label
+   ends in an ellipsis inside its own line rather than sliding under the mark. `.pillGrid`'s floor is
+   what keeps it from ever firing on the game's own codes. */
+.pillLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* The count is the one number a player retypes into the game: it is never wrapped and never cut.
@@ -61,12 +79,19 @@
   white-space: nowrap;
 }
 
-/* The way into the unit sheet: a mark in the corner, and a long press anywhere on the pill. */
+/* The way into the unit sheet, and the only one now the long press is gone (owner, 2026-09-13):
+   a **22 px button carrying a 16 px glyph**, in the pill's top-right corner and a *sibling* of the
+   body rather than a button nested inside it — a button inside a button is neither a valid tree nor
+   a target a thumb can aim at.
+
+   It sits *inside* the corner, never over the edge: positive offsets only, so nothing is clipped by
+   the pill's own radius and nothing reaches into the pill beside it. Absolute, so it never pushes
+   the count off centre; `.pillTop` reserves the 20 px it stands in. */
 .pillInfo {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  opacity: 0.55;
+  top: 3px;
+  right: 3px;
+  opacity: 0.75;
 }
 
 /* A phone keeps `:hover` on the last thing a thumb touched, so every hover rule in this file is
@@ -81,12 +106,38 @@
   }
 }
 
-/* The march as pills: the row holds as many as fit at 78 px and wraps, so a six-figure count
-   widens every pill in the grid rather than clipping one (owner, 2026-09-13). */
+/* A pill that has just arrived — in the pools because it was put back, in the "Left out" row
+   because it was left out — fades in over 120 ms so the eye follows it across the move. It runs on
+   mount alone: a pill that was already there keeps its element and does not blink when the march is
+   generated again. Motion-safe, like everything else that moves (design rule 24). */
+@media (prefers-reduced-motion: no-preference) {
+  .pill,
+  .leftOutPill {
+    animation: pill-arrive 120ms ease-out 1;
+  }
+}
+
+@keyframes pill-arrive {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* The march as pills: the row holds as many as fit and wraps.
+
+   The track floor is **96 px**, not the 78 it was: a pill now gives 20 px of its top line back to the
+   corner mark, and at 78 the mark ate the tier numeral — "ARC III" was drawn as "ARC I", which is a
+   different unit (owner, 2026-09-13: "the details button must not overlap the troop text"). 96 is the
+   narrowest track where the widest code and tier this game has ("ABM VI") still ends before the mark
+   starts. It costs a phone one pill per row and buys back every character of the label. */
 .pillGrid {
   display: grid;
   gap: var(--mantine-spacing-sm);
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
 }
 
 /* The row of types this march left out: small, outlined, quiet — a footnote under the pools, never

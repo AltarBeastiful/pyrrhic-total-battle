@@ -364,9 +364,10 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
     variables: {
       '--pyr-appbar-height': '4rem',
       // The desktop command bar's own height (design plan §5.6, `CommandBar.dc.html`): 14 px of
-      // padding, a label, a 40 px well, 14 px of padding. Said once, because the March pane's
-      // sticky block subtracts it from the window so the bar never lands on the pills.
-      '--pyr-commandbar-height': '5.5rem',
+      // padding, a 13 px label, the row — a 40 px well beside the 44 px Generate — and 14 px of
+      // padding. Said once, because the March pane's sticky block subtracts it from the window so
+      // the bar never lands on the pills.
+      '--pyr-commandbar-height': '5.75rem',
       '--pyr-pane-width': '23.75rem',
       // The metal is the same in both schemes: it is the game's trim, not a surface (`GOLD`).
       '--pyr-gold': GOLD.gradient,

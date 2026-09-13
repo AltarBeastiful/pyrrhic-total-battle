@@ -29,6 +29,13 @@ export interface DialogProps {
 
 const SIZE = { sm: '22rem', md: '30rem', lg: '40rem' } as const;
 
+/**
+ * One step above a `Sheet` (320): a dialog is the one thing allowed to interrupt one — "Save this
+ * march" is raised from inside the phone's March sheet — and it is portalled for the same reason a
+ * sheet is. `theme.ts` carries the whole ladder and the defect that wrote it.
+ */
+export const DIALOG_Z_INDEX = 340;
+
 export function Dialog({
   opened,
   onClose,
@@ -58,6 +65,8 @@ export function Dialog({
       radius="md"
       padding="md"
       centered
+      withinPortal
+      zIndex={DIALOG_Z_INDEX}
       closeOnClickOutside={!alert}
       closeOnEscape={!alert}
       withCloseButton={!alert}
