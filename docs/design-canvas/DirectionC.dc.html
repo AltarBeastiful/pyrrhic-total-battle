@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,600&display=swap">
+  <style>
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; }
+    a { color: #c9a24a; } a:hover { color: #e0c070; }
+    * { box-sizing: border-box; }
+    
+.page { width: 1400px; min-height: 900px; background: #161a19; color: #e7ece9; }
+.bar { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: linear-gradient(180deg, #1e2423, #161a19); border-bottom: 1px solid #313938; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; }
+.mark { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #e0c070, #8f6d2a); box-shadow: 0 1px 0 rgba(255,255,255,.15) inset; }
+.acct { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: #2b3231; border: 1px solid #313938; font-size: 14px; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: #c9a24a; color: #131917; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; padding: 24px; }
+.panel { background: linear-gradient(180deg, #212827, #1c2221); border: 1px solid #2f3736; border-radius: 12px; padding: 20px 24px; box-shadow: 0 8px 24px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.04) inset; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; letter-spacing: .02em; color: #e7ece9; display: flex; align-items: center; justify-content: space-between; }
+h2 .meta { font-weight: 500; color: #9da7a3; font-size: 13px; }
+.row { display: grid; grid-template-columns: 120px auto 1fr; align-items: center; gap: 12px; height: 40px; }
+.gm { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+.gm i { width: 4px; height: 20px; border-radius: 2px; display: block; }
+.sel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #9da7a3; }
+.sel b { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; height: 30px; padding: 0 10px; border-radius: 8px; background: #101413; border: 1px solid #313938; color: #e7ece9; font-weight: 600; font-size: 13px; }
+.chips { display: flex; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1px solid transparent; }
+.chip.on { background: rgba(37,107,53,.35); border-color: rgba(63,183,91,.5); color: #b9e9c3; }
+.chip.off { background: #101413; border-color: #313938; color: #9da7a3; }
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 10px; border-radius: 999px; background: rgba(140,48,48,.25); border: 1px solid rgba(216,143,143,.35); font-size: 13px; font-weight: 600; }
+.pill .t { font-family: Fraunces, serif; color: #d98d8d; }
+.pill .x { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #9da7a3; }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #3b4442; background: #2b3231; color: #e7ece9; font-size: 13px; font-weight: 600; }
+.figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.fig .l { font-size: 12px; color: #9da7a3; } .fig .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cap { position: relative; height: 32px; padding: 0 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: #101413; border: 1px solid #313938; color: #e7ece9; }
+.cap.on { background: rgba(201,162,74,.18); border-color: rgba(201,162,74,.6); }
+.cap .gear { position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; border-radius: 50%; background: #2b3231; border: 1px solid #4a5451; display: grid; place-items: center; }
+.cap.on .gear { background: #c9a24a; border-color: #c9a24a; }
+.cap .dot { width: 5px; height: 5px; border-radius: 50%; background: #c9a24a; }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.field label { display: block; font-size: 12px; color: #9da7a3; margin-bottom: 6px; }
+.input { height: 40px; border-radius: 8px; background: #101413; border: 1px solid #313938; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 15px; font-variant-numeric: tabular-nums; box-shadow: 0 1px 2px rgba(0,0,0,.4) inset; }
+.seg { display: inline-flex; background: #101413; border: 1px solid #313938; border-radius: 8px; padding: 3px; }
+.seg span { padding: 0 14px; height: 30px; display: inline-flex; align-items: center; border-radius: 6px; font-size: 13px; font-weight: 500; color: #9da7a3; }
+.seg span.on { background: #2b3231; color: #e7ece9; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.card { position: relative; padding: 12px 40px 12px 14px; border-radius: 10px; background: #101413; border: 1px solid #313938; }
+.card.on { border-color: #c9a24a; background: rgba(201,162,74,.08); }
+.card b { display: block; font-size: 14px; margin-bottom: 4px; } .card span { font-size: 13px; color: #9da7a3; }
+.card i { position: absolute; top: 12px; right: 12px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #4a5451; }
+.card.on i { border-color: #c9a24a; background: radial-gradient(circle, #c9a24a 45%, transparent 50%); }
+.march { background: linear-gradient(180deg, #232a29, #1a201f); border: 1px solid #3a4341; border-radius: 12px; padding: 24px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+.hero { font-family: Fraunces, serif; font-weight: 300; font-size: 48px; line-height: 1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.hero-l { font-size: 13px; color: #9da7a3; margin: 6px 0 16px; }
+.kv { display: grid; grid-template-columns: 1fr auto; row-gap: 6px; font-size: 13px; }
+.kv .k { color: #9da7a3; } .kv .v { font-variant-numeric: tabular-nums; }
+.gen { margin: 18px 0; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; color: #1a1408; background: linear-gradient(180deg, #e0c070, #c19a3f); box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 6px 16px rgba(201,162,74,.25); }
+.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.tile { height: 62px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 600; border: 1px solid rgba(255,255,255,.08); }
+.tile .n { font-family: Fraunces, serif; font-size: 18px; font-weight: 600; line-height: 1; }
+.tile .c { font-size: 12px; font-variant-numeric: tabular-nums; }
+.gauge { margin: 16px 0; } .gauge .l { font-size: 12px; color: #9da7a3; display: flex; justify-content: space-between; margin-bottom: 6px; }
+.gauge .b { height: 4px; border-radius: 2px; background: #101413; } .gauge .b i { display: block; height: 100%; width: 100%; border-radius: 2px; background: #c9a24a; }
+.cnt { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid #2b3231; }
+.cnt .nm { font-size: 13px; font-weight: 600; } .cnt .sub { font-size: 12px; color: #9da7a3; }
+.cnt .big { font-family: Fraunces, serif; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.page { background: radial-gradient(ellipse at top, #1d1c17 0%, #0f110f 60%); }
+.bar { background: linear-gradient(180deg, #2a2418, #171610); border-bottom: 1px solid #5a4a22; }
+.brand { font-family: Fraunces, serif; font-weight: 600; font-size: 22px; letter-spacing: .02em; color: #e0c070; }
+.panel { background: linear-gradient(180deg, #1c1f1b, #15181500) padding-box, linear-gradient(180deg, #6b5623, #2c2a1c) border-box; border: 1px solid transparent; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+h2 { font-family: Fraunces, serif; font-size: 18px; font-weight: 600; color: #e0c070; text-transform: uppercase; letter-spacing: .08em; }
+.sel b, .input, .btn { background: #0e100e; border-color: #4a3f20; border-radius: 4px; }
+.chip { border-radius: 4px; } .chip.on { background: rgba(37,107,53,.45); border-color: #3fb75b; color: #d9f5de; }
+.pill { border-radius: 4px; background: rgba(140,48,48,.35); border-color: #d98d8d; }
+.cap { border-radius: 4px; background: #0e100e; border-color: #4a3f20; } .cap.on { background: rgba(224,192,112,.22); border-color: #e0c070; }
+.seg { border-radius: 4px; border-color: #4a3f20; background: #0e100e; } .seg span.on { background: #4a3f20; color: #e0c070; }
+.card { border-radius: 4px; border-color: #3a3520; } .card.on { border-color: #e0c070; background: rgba(224,192,112,.1); }
+.march { background: linear-gradient(180deg, #1f1d15, #14140f) padding-box, linear-gradient(180deg, #a5843a, #3a3120) border-box; border: 1px solid transparent; border-radius: 6px; }
+.hero { color: #e0c070; text-shadow: 0 0 24px rgba(224,192,112,.25); }
+.gen { border-radius: 4px; background: linear-gradient(180deg, #f0d48a, #b8903a); box-shadow: 0 0 0 1px #6b5623, 0 8px 24px rgba(224,192,112,.3); }
+.tile { border-radius: 4px; border: 1px solid #4a3f20; } .tile .n { color: #e0c070; }
+.gauge .b i { background: linear-gradient(90deg, #e0c070, #a5843a); }
+
+  </style>
+</helmet>
+
+<div class="page">
+  <div class="bar">
+    <div class="brand"><span class="mark"></span>Pyrrhic</div>
+    <div class="acct"><span class="avatar">R</span>Rémi <span style="color:#9da7a3">▾</span></div>
+  </div>
+  <div class="grid">
+    <div class="stack">
+      <div class="panel">
+        <h2>Troops <span class="meta">G1–G3 · S1</span></h2>
+        <div class="stack" style="gap: 6px">
+          <div class="row"><div class="gm"><i style="background:#3fb75b"></i>Guardsmen</div><div class="sel">from <b>G1</b> to <b>G3</b></div><div class="chips"><span class="sel" style="margin-right:2px">at G3:</span><span class="chip on">✓ 🏹 ARC</span><span class="chip on">✓ ⚔️ SP</span><span class="chip on">✓ 🐴 RD</span></div></div>
+          <div class="row"><div class="gm"><i style="background:#74a6da"></i>Specialists</div><div class="sel">from <b>S1</b> to <b>S1</b></div><div class="chips"><span class="sel" style="margin-right:2px">at S1:</span><span class="chip on">✓ ⚔️ SW</span></div></div>
+          <div class="row"><div class="gm"><i style="background:#cc9a2a"></i>Engineers</div><div class="sel">from <b>—</b> to <b>—</b></div><div></div></div>
+          <div class="row"><div class="gm"><i style="background:#b296d6"></i>Monsters</div><div class="sel">from <b>—</b> to <b>—</b></div><div></div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Mercenaries <span class="meta">2 hired</span></h2>
+        <div class="chips" style="flex-wrap: wrap; gap: 10px">
+          <span class="pill">🐻 BER <span class="t">V</span> 240 <span class="x">×</span></span>
+          <span class="pill">👹 ABM <span class="t">VI</span> ∞ <span class="x">×</span></span>
+          <span class="btn">Hire mercenary…</span>
+          <span style="font-size:13px;color:#9da7a3">+ Custom mercenary</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Bonuses <span class="meta">Captains 1/3 · Sources on 4</span></h2>
+        <div class="figs" style="margin-bottom: 16px">
+          <div class="fig"><div class="l">Health</div><div class="v">+312 %</div></div>
+          <div class="fig"><div class="l">Strength</div><div class="v">+287 %</div></div>
+          <div class="fig"><div class="l">Special</div><div class="v">+40 %</div></div>
+          <div class="fig"><div class="l">Sources on</div><div class="v">4</div></div>
+        </div>
+        <div class="cchips"><span class="cap on">Aydae<span class="dot"></span><span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Alexander<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Amanitore<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Aurora</span><span class="cap">Beowulf<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Bernard<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Brann<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Brunhild<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Carter</span><span class="cap">Cleopatra<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span><span class="cap">Doria</span><span class="cap">Dustan</span><span class="cap">Farhad</span><span class="cap">Heimdall<span class="gear"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e7ece9" stroke-width="3"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></span></span></div>
+      </div>
+      <div class="panel">
+        <h2>Battle</h2>
+        <div class="fields" style="margin-bottom: 16px">
+          <div class="field"><label>Leadership</label><div class="input">🛡️ 84 300</div></div>
+          <div class="field"><label>Authority</label><div class="input">👑 12 500</div></div>
+          <div class="field"><label>Dominance</label><div class="input" style="color:#9da7a3">💀 0</div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 16px; margin-bottom: 16px"><span style="font-size:13px;color:#9da7a3">Enemy stacks: 4</span><span class="seg"><span class="on">4 standard</span><span>8 double</span><span>Custom</span></span></div>
+        <div class="cards">
+          <div class="card on"><b>Tier ladder</b><span>Your cheapest, lowest-tier stacks take the hits first.</span><i></i></div>
+          <div class="card"><b>Troops first</b><span>Hired units only fall once all of your troops have.</span><i></i></div>
+          <div class="card"><b>Your own order</b><span>You decide which stack falls first.</span><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="march">
+      <div class="hero">4 659 437</div>
+      <div class="hero-l">🎯 Expected damage · generated just now</div>
+      <div class="kv"><span class="k">🔒 Worst opening</span><span class="v">4 519 202</span><span class="k">Hits landed</span><span class="v">15</span><span class="k">🪙 Silver to recover</span><span class="v">8 131 400</span><span class="k">💰 Gold to recover</span><span class="v">0</span><span class="k">Damage per silver</span><span class="v">0.57</span></div>
+      <div class="gen">⚔️ Generate</div>
+      <div class="tiles"><div class="tile" style="background: #256b3533; color: #e7ece9"><span>🏹</span><span class="n">I</span><span>ARC</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>🐴</span><span class="n">I</span><span>RD</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>⚔️</span><span class="n">I</span><span>SP</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>🏹</span><span class="n">II</span><span>ARC</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>🐴</span><span class="n">II</span><span>RD</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>⚔️</span><span class="n">II</span><span>SP</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>🏹</span><span class="n">III</span><span>ARC</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>🐴</span><span class="n">III</span><span>RD</span></div><div class="tile" style="background: #256b3533; color: #e7ece9"><span>⚔️</span><span class="n">III</span><span>SP</span></div><div class="tile" style="background: #25568a33; color: #e7ece9"><span>⚔️</span><span class="n">I</span><span>SW</span></div></div>
+      <div class="gauge"><div class="l"><span>🛡️ Leadership</span><span>20 000 of 20 000</span></div><div class="b"><i></i></div></div>
+      <h2>Counts to copy <span class="meta">Copy all</span></h2>
+      <div class="cnt"><div><div class="nm">⚔️ Swordsman I</div><div class="sub">falls 1st · 0 hits · 3 048 lost</div></div><div class="big">3 048</div></div><div class="cnt"><div><div class="nm">🏹 Archer I</div><div class="sub">falls 2nd · 1 hit · 3 042 lost</div></div><div class="big">3 042</div></div><div class="cnt"><div><div class="nm">⚔️ Spearman I</div><div class="sub">falls 3rd · 1 hit · 3 036 lost</div></div><div class="big">3 036</div></div><div class="cnt"><div><div class="nm">🐴 Rider I</div><div class="sub">falls 4th · 1 hit · 1 515 lost</div></div><div class="big">1 515</div></div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

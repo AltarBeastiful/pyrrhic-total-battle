@@ -8,3 +8,5 @@ test-results/
 .vite/
 .claude/worktrees/
 .claude/settings.local.json
+docs/design-canvas/*.html
+!docs/design-canvas/*.dc.html

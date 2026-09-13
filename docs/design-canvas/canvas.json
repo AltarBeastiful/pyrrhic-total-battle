@@ -1,0 +1,56 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1400,
+      "h": 1000,
+      "title": "Main \u2014 leading candidate (A)"
+    },
+    {
+      "file": "PhoneA.dc.html",
+      "x": 1500,
+      "y": 0,
+      "w": 390,
+      "h": 900,
+      "title": "Phone \u2014 A"
+    },
+    {
+      "file": "DirectionA.dc.html",
+      "x": 0,
+      "y": 1160,
+      "w": 1400,
+      "h": 1000,
+      "title": "Direction A \u2014 Layered war room"
+    },
+    {
+      "file": "DirectionB.dc.html",
+      "x": 0,
+      "y": 2320,
+      "w": 1400,
+      "h": 1000,
+      "title": "Direction B \u2014 Quiet ledger"
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "x": 0,
+      "y": 3480,
+      "w": 1400,
+      "h": 1000,
+      "title": "Direction C \u2014 Game hall"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 1500,
+      "y": 1160,
+      "w": 360,
+      "text": "Three directions of the same page with the same real data.\\nA: layered panels with depth and a warm brass action (leading candidate, also in Main and Phone).\\nB: editorial ledger \u2014 Fraunces titles, hairlines, no cards, most whitespace.\\nC: game hall \u2014 brass-bordered panels, gold titles, square corners, the most game-like.\\nPick one, or point at parts to mix. Emoji glyphs are per design rule 20."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}
