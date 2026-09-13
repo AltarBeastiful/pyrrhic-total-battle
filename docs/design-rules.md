@@ -102,3 +102,8 @@ review checks against. When a rule and a plan disagree, the rule wins; change th
 32. **Independent review of structure** (Material guidance, comparables) for any layout decision that shapes
     the whole page. 
 33. **Delay what is not design**: engine stories such as best captains wait until the UI is right. 
+34. **Keep a continuous history of how we work.** Every Claude Code transcript, the auto-memory and every
+    subagent's full output are mirrored outside git to `~/pyrrhic-claude-history/` (hourly systemd user
+    timer, a session-end hook, hard-linked dated snapshots kept 90 days) so the owner can review how the
+    coordinator and the subagents worked and where a line of thinking went wrong. The subagent outputs
+    live in `/tmp` and are the fragile part: they are only ever added to the mirror, never deleted.
