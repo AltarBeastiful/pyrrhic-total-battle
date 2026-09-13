@@ -82,7 +82,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // One stable vendor chunk (React + Mantine) so the first-load budget can name it.
-        manualChunks: { vendor: ['react', 'react-dom', '@mantine/core', '@mantine/hooks'] },
+        manualChunks(id: string) {
+          if (/node_modules\/(react|react-dom|scheduler|@mantine)\//.test(id)) return 'vendor';
+          return undefined;
+        },
       },
     },
   },
