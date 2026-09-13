@@ -25,7 +25,14 @@ export {
   PROGRESS_EVERY,
   searchPriority,
 } from './search';
-export { battleSequence, buildJournal, enemySquadCount, expectedHits, simulateBattle } from './battle';
+export {
+  attackOrder,
+  battleSequence,
+  buildJournal,
+  enemySquadCount,
+  expectedHits,
+  simulateBattle,
+} from './battle';
 export {
   CHUNK,
   chunks,

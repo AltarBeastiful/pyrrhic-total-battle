@@ -1,15 +1,25 @@
 /**
- * S-32 / S-34 — battle model and Battle Summary (PLAN §3.5,
+ * S-30 / S-32 / S-34 — battle model and Battle Summary (PLAN §3.5,
  * docs/research/battle-model-observations.md §1).
  *
- * Round structure (reproduces both TotalStack journals and both in-game reports):
- *   - our stacks are ordered by total HP descending; the enemy always wipes the highest-HP living stack;
+ * Two different orders drive a fight, and confusing them was the model's last open item (S-30):
+ *   - the **kill order** is total HP descending: the enemy always wipes our highest-HP living stack
+ *     (29/29 kills over four in-game reports, including a mercenary stack sitting on top);
+ *   - the **attack order** is *base damage* descending — `count × strength × (1 + Σ strength%)`, i.e. the
+ *     journal's per-hit damage **without** the strength-against ("features") part. Verified on all four
+ *     reports; it is what makes Rider I miss its turn in the two 2026-09-11 fights and Rider II strike
+ *     before the bigger Swordsman I stack on 2026-09-13.
+ * Round structure (reproduces the three TotalStack journals and the in-game reports):
  *   - each round the enemy makes N attacks (N = number of enemy squads); between two consecutive enemy
- *     attacks the new top stack (the next victim) attacks once; after the N-th enemy attack every survivor
- *     attacks once in HP order;
- *   - "your army first" only inserts one attack by the top stack at the very start.
- * Closed form for the hit counters the journal prints: with kill position p (1-based) a stack lives
- * r = ceil(p / N) rounds and hits `r − 1` times when `p ≡ 1 (mod N)`, else `r` times; +1 for p = 1 army-first.
+ *     attacks the next stack in attack order that is alive and has not attacked this round attacks once;
+ *   - after the N-th enemy attack every living stack that has not yet attacked this round attacks once, in
+ *     attack order (a stack killed before its turn simply loses that round's attack);
+ *   - "your army first" only inserts one attack by the first stack in attack order at the very start.
+ * With flat-HP armies and uniform bonuses the two orders coincide (health and strength both scale a
+ * base ratio of 3), which is why every captured TotalStack journal still reproduces entry for entry.
+ * Closed form for the hit counters the journal prints, valid when the two orders coincide: with kill
+ * position p (1-based) a stack lives r = ceil(p / N) rounds and hits `r − 1` times when `p ≡ 1 (mod N)`,
+ * else `r` times; +1 for p = 1 army-first.
  */
 import type { Pool } from '../data/types';
 import { recoveryCosts } from './recovery';
@@ -37,30 +47,62 @@ interface Move {
   index: number;
 }
 
-/** The move sequence of one battle, in journal order. */
-export function battleSequence(stackCount: number, enemyStacks: number, armyFirst: boolean): Move[] {
+/**
+ * Attack order as indices into the kill-ordered `stacks`: **base damage descending**, the per-hit damage
+ * without the strength-against part. Ties keep the kill order, which is what the game's report shows when
+ * two stacks carry the same boosted strength.
+ */
+export function attackOrder(stacks: Pick<Stack, 'count' | 'strengthPerUnit'>[]): number[] {
+  // `count × strengthPerUnit` is the unrounded base damage; using it instead of the rounded journal figure
+  // keeps two stacks with identical boosted strength a genuine tie (the ±1 of `hitDamage` would not).
+  return stacks
+    .map((stack, index) => ({ index, base: stack.count * stack.strengthPerUnit }))
+    .sort((a, b) => b.base - a.base || a.index - b.index)
+    .map((entry) => entry.index);
+}
+
+/**
+ * The move sequence of one battle, in journal order. `order` lists the stack indices in attack order
+ * (default: the kill order itself, which is the case whenever health and strength bonuses move together).
+ */
+export function battleSequence(
+  stackCount: number,
+  enemyStacks: number,
+  armyFirst: boolean,
+  order?: number[],
+): Move[] {
   const moves: Move[] = [];
   if (stackCount <= 0 || enemyStacks <= 0) return moves;
-  let alive = 0;
-  let opening = armyFirst;
-  while (alive < stackCount) {
-    if (opening) {
-      moves.push({ actor: 'army', index: alive });
-      opening = false;
+  const attackers = order ?? Array.from({ length: stackCount }, (_unused, index) => index);
+  const dead = new Array<boolean>(stackCount).fill(false);
+  const acted = new Array<boolean>(stackCount).fill(false);
+  const nextAttacker = (): number | undefined => attackers.find((index) => !dead[index] && !acted[index]);
+  const attack = (): void => {
+    const index = nextAttacker();
+    if (index === undefined) return;
+    acted[index] = true;
+    moves.push({ actor: 'army', index });
+  };
+
+  if (armyFirst) attack();
+  let killed = 0;
+  while (killed < stackCount) {
+    for (let k = 0; k < enemyStacks && killed < stackCount; k += 1) {
+      moves.push({ actor: 'enemy', index: killed });
+      dead[killed] = true;
+      killed += 1;
+      if (k < enemyStacks - 1 && killed < stackCount) attack();
     }
-    for (let k = 0; k < enemyStacks && alive < stackCount; k += 1) {
-      moves.push({ actor: 'enemy', index: alive });
-      alive += 1;
-      if (k < enemyStacks - 1 && alive < stackCount) moves.push({ actor: 'army', index: alive });
-    }
-    for (let i = alive; i < stackCount; i += 1) moves.push({ actor: 'army', index: i });
+    // End-of-round sweep: everyone still alive who has not struck this round, in attack order.
+    for (const index of attackers) if (!dead[index] && !acted[index]) moves.push({ actor: 'army', index });
+    acted.fill(false);
   }
   return moves;
 }
 
 /** One journal: the same numbered entry list TotalStack and the game's report print. */
 export function buildJournal(stacks: Stack[], enemyStacks: number, armyFirst: boolean): BattleJournal {
-  const moves = battleSequence(stacks.length, enemyStacks, armyFirst);
+  const moves = battleSequence(stacks.length, enemyStacks, armyFirst, attackOrder(stacks));
   const totalHits = stacks.map(() => 0);
   for (const move of moves) {
     if (move.actor === 'army') totalHits[move.index] = (totalHits[move.index] ?? 0) + 1;
@@ -104,7 +146,7 @@ export function buildJournal(stacks: Stack[], enemyStacks: number, armyFirst: bo
 
 function hitsPerStack(stacks: Stack[], enemyStacks: number, armyFirst: boolean): number[] {
   const counts = stacks.map(() => 0);
-  for (const move of battleSequence(stacks.length, enemyStacks, armyFirst)) {
+  for (const move of battleSequence(stacks.length, enemyStacks, armyFirst, attackOrder(stacks))) {
     if (move.actor === 'army') counts[move.index] = (counts[move.index] ?? 0) + 1;
   }
   return counts;
@@ -120,7 +162,8 @@ const MODEL_NOTES = [
   'Strike-two-squads is not modelled: no in-game observation of it yet, so it never changes a damage number.',
   'armyStrengthAgainstEpicMonsters is treated as an extra strength-against that applies to every target (we only ever fight epic monsters).',
   "swarmUnits strength-against counts only while the Arachne's event id is in activeEvents.",
-  "Open: in both in-game reports one mounted stack (Rider I) was killed before its turn while the next stack took the friendly slot; we keep TotalStack's HP-order rule, so our journal has one extra friendly hit per such fight.",
+  'Our stacks attack in base-damage order (per-hit damage without the strength-against part), not in HP order: confirmed on four in-game reports, it is why a big low-bonus stack can strike after a small one. The enemy still kills by HP.',
+  'Open, one line in four reports: on 2026-09-13 the last surviving stack struck a second time in the same round (the only fight with the strike-two-squads title active); we do not model it, so that journal has 20 entries against the game 21.',
 ] as const;
 
 /**

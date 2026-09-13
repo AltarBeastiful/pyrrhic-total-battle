@@ -135,7 +135,7 @@ describe('closed form for the hit counters', () => {
     for (let enemyStacks = 1; enemyStacks <= 8; enemyStacks += 1) {
       for (const armyFirst of [false, true]) {
         const stacks = stacksInOrder(
-          Array.from({ length: 14 }, (_, index) => ({ label: 'ARC1', count: 100 + index })),
+          Array.from({ length: 14 }, (_unused, index) => ({ label: 'ARC1', count: 113 - index })),
           UNITS,
           emptyTotals(),
           STANDARD_ENEMY,

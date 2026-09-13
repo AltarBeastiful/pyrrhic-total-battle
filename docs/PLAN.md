@@ -178,31 +178,48 @@ excluded type un-excludes it.
 ### 3.5 Battle model and Battle Summary
 Enemy: 4 stacks (flying/melee/ranged/mounted), 8 for Arachne's, or custom counts. Each enemy hit removes our
 highest-total-HP living stack. Sides alternate; whoever strikes first is a coin flip in game, so we compute the
-**Minimum** (enemy first), **Maximum** (we strike first) and **Average** damage. Our stacks attack in
-HP-descending order, the same order the enemy kills them in — this is TotalStack's verified model and it reproduces
-the round structure of two real reports exactly. (The two reports also show one stack, Rider I, being killed before
-its turn while the next stack attacked; a possible refinement — foot troops before mounted, then monsters, then
-mercenaries — is recorded as an observation in the fixture file, not implemented until confirmed.) Each stack targets
-the enemy stack it has the best `strengthAgainst` for, else the melee squad. Within a round the enemy's N attacks
-(each killing our highest-HP living stack) alternate with single friendly attacks; after the N-th enemy attack every
-surviving stack attacks once. "Army first" only changes round 1. Double damage is a ×2 on a single hit (seen once in
-game, labelled as such); strike-two-squads is not modelled until observed. Damage per hit from 3.2; expected damage adds double-damage and
+**Minimum** (enemy first), **Maximum** (we strike first) and **Average** damage. A fight runs on **two orders**
+(settled in game on 2026-09-13, S-30): the enemy kills by **total HP descending** (29/29 kills over four reports,
+a mercenary stack on top included), while our stacks strike in **base-damage descending** order — `count ×
+strength × (1 + Σ strength %)`, the per-hit damage *without* the strength-against part. The two coincide whenever
+health and strength bonuses move together (every captured TotalStack run), which is why TotalStack's HP-order
+model reproduced its own journals; they diverge as soon as one family is boosted unevenly, and that is what makes
+Rider I miss its turn in the two 2026-09-11 fights and Rider II strike before the bigger Swordsman I stack on
+2026-09-13. With the base-damage order the engine reproduces all three reports entry for entry (28, 24 and 20 of
+21 lines). Each stack targets the enemy stack it has the best `strengthAgainst` for, else the melee squad. Within
+a round the enemy's N attacks alternate with single friendly attacks — each taken by the next stack in attack
+order that is alive and has not struck this round — and after the N-th enemy attack every living stack that has
+not struck yet attacks once, in attack order; a stack wiped before its turn simply loses that round's attack.
+"Army first" only inserts one opening attack by the first stack in attack order. Double damage is a plain ×2 on
+the whole line, features included (seen twice in game, labelled as such); strike-two-squads is still not modelled
+— the one line of four reports we do not reproduce (a second Archer II strike on 2026-09-13, the only fight with
+the title active) is the likely sighting. Damage per hit from 3.2; expected damage adds double-damage and
 strike-two-squads probabilities. Total damage = Σ over hits until all our stacks are dead or the round cap.
-Journal output = the same numbered hit list as the in-game report so users can compare 1:1.
+Journal output = the same numbered hit list as the in-game report so users can compare 1:1. The game scales a
+stack's HP and rounds once (20 Spearman I = 7,289, not divisible by 20); TotalStack rounds per unit and our sizer
+follows it to keep reproducing its counts, which is the ±1 the in-game tests tolerate.
 
-Recovery: units are trained and revived **in chunks of ten**, and one unit per chunk comes back free. With
-`chunks(n) = ceil(n / 10)`: **Retrain** = Σ troops `n × training.silver × (1 − trainingCostReduction[group]/100)`
-+ Σ monsters `chunks(n) × training.silver`, time the same split on `training.seconds` divided by
-`1 + trainingSpeed[group]/100`, dragon coins = Σ monsters `chunks(n) × training.dragonCoins`, plus the monsters'
-revive gold (monsters cannot be retrained back into the march); **Revive** = Σ all `(n − chunks(n)) ×
-revival.gold / templeMultiplier[templeLevel]`; **Selective** = revive the top-N unit types by tier, retrain the
-rest. These reproduce every silver, gold, dragon-coin and duration figure of the seven captured runs exactly
-(battle-model-observations §4); revive *silver* and revive *time* are still open.
+Recovery: there is no retrain dialog and no hospital in the game — **retraining is recruiting the lost units
+again in the Army tab** at the training price (per unit for troops, per batch of ten for monsters), and the
+**Temple** is the only recovery screen: *"here you can revive up to 90 % of your fallen troops"*, 3 sacred
+potions or gold per unit, the gold divided by the temple multiplier. Since `n − chunks(n) ≡ floor(0.9 n)` with
+`chunks(n) = ceil(n / 10)`, the game's 90 % *is* our chunk-of-ten rule, and the tenth unit of every chunk is not
+revived at all: it has to be recruited again, which is what a "revive all" still costs in silver and in time. So:
+**Retrain** = Σ troops `n × training.silver × (1 − trainingCostReduction[group]/100)` + Σ monsters
+`chunks(n) × training.silver`, time the same split on `training.seconds` divided by `1 + trainingSpeed[group]/100`,
+dragon coins = Σ monsters `chunks(n) × training.dragonCoins`, plus the monsters' revive gold (monsters cannot be
+retrained back into the march); **Revive** = gold Σ all `(n − chunks(n)) × revival.gold /
+templeMultiplier[templeLevel]`, plus silver Σ all `chunks(n) × training.silver × (1 − reduction)` and time Σ all
+`chunks(n) × training.seconds / (1 + speed)` for the tenth that cannot come back; **Selective** = revive the
+top-N unit types by tier, retrain the rest. These reproduce every silver, gold, dragon-coin and duration figure
+of the seven captured runs exactly — revive-all silver (216,000 → 173,880) and revive-all time (1 d 2 h →
+21 h 40 m) included (battle-model-observations §4). The temple divisor applies to gold only.
 Summary metrics: stacks, min/avg/max damage, damage per silver, per gold, per dragon coin, retrain silver,
 retrain gold, time to retrain. Shown with deltas when the user edits counts manually.
 
-The exact turn structure (why TotalStack reports "25 rounds • 15 friendly hits" for 10 stacks vs 4 enemy stacks)
-must be validated against real in-game battle reports before this section is called done — see S-30.
+Validated against four real in-game battle reports (2026-09-11 ×2, the 2026-09-13 deliberate march, plus the
+Temple and unit-card screens); S-30 is done. Still unmodelled: the strike-two-squads proc and the report's own
+headline damage figure.
 
 ### 3.6 Priority search
 Objective ∈ {avgDamage, minDamage (best worst case), damagePerSilver, damagePerGold, damagePerDragonCoin}.
@@ -294,7 +311,7 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-23 Round-to-10s mode | done | monsters exact; the troop solve is still up to 6 units off TotalStack |
 | S-24 Results UI | done | replaced by the March card (D-40…D-43, M-08) |
 | S-25 Engine in a Web Worker | done | cancel/progress with a main-thread fallback |
-| S-30 In-game validation of the battle model | in progress | two real reports reproduced exactly; open: the friendly attack-order nuance (Rider I), revive silver, revive time (`battle-model-observations` §4) |
+| S-30 In-game validation of the battle model | done | four reports; attack order = base damage descending (the Rider I nuance closed), revive silver and revive time solved, HP rounded per stack not per unit (`docs/research/fixtures/ingame-2026-09-13/`) |
 | S-31 Investigation: what Total Optimization trades | done | investigation 0003; shipped as the relaxed-preservation toggle |
 | S-32 Damage model (min/avg/max, double damage, strength-against) | done | every captured journal reproduced entry for entry |
 | S-33 Recovery model (retrain/revive/selective) | done | chunk-of-ten rule; all seven runs reproduced |
@@ -565,6 +582,16 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — **S-30 closed** with a third in-game report (a deliberate 9-stack march) plus the Temple and
+  unit-card screens (`docs/research/fixtures/ingame-2026-09-13/`, 18 screenshots). Found: our stacks strike in
+  **base-damage** order, not HP order — the engine now reproduces all three reports entry for entry (28, 24 and
+  20 of 21 lines) and "Rider I never attacks" is explained instead of tolerated; the enemy still kills by HP with
+  a mercenary on top; the game rounds a stack's HP once, not per unit; double damage is a plain ×2 on the whole
+  line. Recovery: the owner confirmed there is no retrain dialog (retraining = recruiting again in the Army tab)
+  and the Temple states "revive up to 90 % of your fallen troops" — exactly `n − chunks(n)` — so revive-all
+  **silver** (216,000 → 173,880) and **time** (1 d 2 h → 21 h 40 m) are the training cost of the tenth unit of
+  each chunk; both `it.todo`s replaced by tests. Left open: the strike-two-squads proc (one unlabelled line) and
+  the report's headline damage figure.
 - 2026-09-13 — Direction A implemented from the canvas (D-55) with the owner's nine corrections (readable
   tier-coloured pills that extend, no per-stack dead list, steppers back, chips at well height, left-out row
   below, whole at-a-glance panel sticky, switches beside labels, badge retired, one Edit toggle).

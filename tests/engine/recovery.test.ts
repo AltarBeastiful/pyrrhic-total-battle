@@ -58,6 +58,10 @@ function settings(overrides: Partial<RecoverySettings> = {}): RecoverySettings {
 }
 
 describe('chunks of ten', () => {
+  it('is the game\'s own "up to 90 %" rule: n − chunks(n) = floor(0.9 n) for every n', () => {
+    for (let n = 0; n <= 300; n += 1) expect(n - chunks(n)).toBe(Math.floor(0.9 * n));
+  });
+
   it('bills started chunks of ten', () => {
     expect(chunks(0)).toBe(0);
     expect(chunks(1)).toBe(1);
@@ -118,8 +122,29 @@ describe('run temple20-training-reductions (temple 20, guardsmen −30 % cost / 
     expect(cost.revive.gold).toBe(7_470);
   });
 
-  it.todo('revive-all silver: 216,000 at temple 0, 173,880 at temple 20 — composition unexplained');
-  it.todo('revive-all time: 1d 2h at temple 0, 21h 40m at temple 20 — formula unexplained');
+  // S-30, 2026-09-13: the Temple revives 90 % of the fallen ("here you can revive up to 90 % of your
+  // fallen troops" — and n − chunks(n) is exactly floor(0.9 n)); the tenth unit of every chunk has to be
+  // recruited again, so a revive-all still costs one chunk's worth of training silver and training time.
+  it('reproduces revive-all silver: 216,000 at temple 0, 173,880 with the guardsmen discount', () => {
+    expect(recoveryCosts(EP8, UNITS, settings()).revive.silver).toBe(216_000);
+    expect(cost.revive.silver).toBe(173_880);
+  });
+
+  it('reproduces revive-all time: "1d 2h" at temple 0, "21h 40m" with +50 % guardsmen speed', () => {
+    const plain = recoveryCosts(EP8, UNITS, settings()).revive.seconds;
+    expect(plain).toBe(94_380); // 1 d 2 h 13 m, shown as "1d 2h"
+    expect(Math.floor(plain / 86_400)).toBe(1);
+    expect(Math.floor((plain % 86_400) / 3_600)).toBe(2);
+    expect(cost.revive.seconds).toBe(78_040); // 21 h 40 m 40 s, shown as "21h 40m"
+    expect(Math.floor(cost.revive.seconds / 3_600)).toBe(21);
+    expect(Math.floor((cost.revive.seconds % 3_600) / 60)).toBe(40);
+  });
+
+  it('bills the temple divisor on the gold only, never on the silver or the time', () => {
+    const plain = recoveryCosts(EP8, UNITS, settings()).revive;
+    expect(plain.silver / cost.revive.silver).not.toBeCloseTo(1.81, 2);
+    expect(plain.gold / cost.revive.gold).toBeCloseTo(1.81, 1);
+  });
 });
 
 describe('other captured runs', () => {

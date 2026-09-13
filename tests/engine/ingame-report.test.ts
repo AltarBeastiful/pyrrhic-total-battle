@@ -8,18 +8,19 @@
  *  - the enemy's damage line (= the destroyed stack's total HP) is compared to ±0.2 %: the game multiplies
  *    count × unrounded per-unit HP (514 × 658.8 = 338,623) while TotalStack — and our contract — round the
  *    per-unit HP first (659 → 338,726).
- * The friendly attack order differs by exactly one hit in both fights: Rider I never attacked although it is
- * 3rd by HP. We keep TotalStack's HP-order rule (PLAN §3.5), so our journal has one extra Rider I hit.
+ * Both fights are now reproduced entry for entry, including the fact that Rider I never attacks: our stacks
+ * strike in **base-damage** order (S-30, 2026-09-13), and Rider I — 3rd by HP — sits 4th by damage, so the
+ * enemy's third attack wipes it before its turn comes round.
  */
 import { describe, expect, it } from 'vitest';
 
-import { buildJournal } from '../../src/engine/battle';
+import { attackOrder, buildJournal } from '../../src/engine/battle';
 import type { EnemyFormation, JournalEntry, Stack } from '../../src/engine/types';
 import { stacksInOrder, totalsFrom } from '../helpers/request';
 import { mercenarySet, troopSet } from '../helpers/units';
 
 const UNITS = [
-  ...troopSet('ARC1', 'SP1', 'RD1', 'ARC2', 'SP2', 'RD3'),
+  ...troopSet('ARC1', 'SP1', 'RD1', 'ARC2', 'SP2', 'RD2', 'RD3', 'SW1'),
   ...mercenarySet('EMH6', 'ABT6', 'LGN6', 'CHR6'),
 ];
 const LABEL_OF = new Map(UNITS.map((unit) => [unit.id, unit.label]));
@@ -130,8 +131,8 @@ describe('report 1 — 2026-09-11 23:02, our army first, 3 enemy squads', () => 
     expectClose(hpOf(stacks, 'EMH6'), 324_231, 0.002);
   });
 
-  it('reproduces the round structure: same kill order, same attack order minus the Rider I hit', () => {
-    expect(journal.entries).toHaveLength(29); // the report shows 28: Rider I never attacked
+  it('reproduces the round structure entry for entry: 28 entries, Rider I never attacking', () => {
+    expect(journal.entries).toHaveLength(28);
     expect(labels(journal.entries, 'enemy')).toEqual([
       'SP1',
       'ARC1',
@@ -144,7 +145,7 @@ describe('report 1 — 2026-09-11 23:02, our army first, 3 enemy squads', () => 
       'ABT6',
       'LGN6',
     ]);
-    expect(labels(journal.entries, 'army').filter((label) => label !== 'RD1')).toEqual([
+    expect(labels(journal.entries, 'army')).toEqual([
       'SP1',
       'ARC1',
       'ARC2',
@@ -193,8 +194,8 @@ describe('report 2 — 2026-09-11 23:00, enemy first, 4 enemy squads (a swarm sq
     expect(2 * damageOf(stacks, 'RD3')).toBeCloseTo(396_280, -1);
   });
 
-  it('reproduces the round structure with N = 4 and the enemy striking first', () => {
-    expect(journal.entries).toHaveLength(25); // the report shows 24: Rider I never attacked
+  it('reproduces the round structure with N = 4 and the enemy striking first (24 entries)', () => {
+    expect(journal.entries).toHaveLength(24);
     expect(labels(journal.entries, 'enemy')).toEqual([
       'SP1',
       'ARC1',
@@ -207,7 +208,7 @@ describe('report 2 — 2026-09-11 23:00, enemy first, 4 enemy squads (a swarm sq
       'ABT6',
       'LGN6',
     ]);
-    expect(labels(journal.entries, 'army').filter((label) => label !== 'RD1')).toEqual([
+    expect(labels(journal.entries, 'army')).toEqual([
       'ARC1',
       'ARC2',
       'SP2',
@@ -235,5 +236,114 @@ describe('report 2 — 2026-09-11 23:00, enemy first, 4 enemy squads (a swarm sq
     expectClose(hpOf(stacks, 'SP2'), 336_579, 0.002);
     expectClose(hpOf(stacks, 'RD3'), 333_590, 0.002);
     expectClose(hpOf(stacks, 'EMH6'), 322_891, 0.002);
+  });
+});
+
+/**
+ * S-30 — third in-game report, 2026-09-13 13:27, epic "Inferno squad" (K:319 X:511 Y:491), DEFEAT, the
+ * enemy striking first with 4 squads. A deliberate 9-stack march (see
+ * `docs/research/fixtures/ingame-2026-09-13/README.md`) built to separate three candidate attack-order
+ * rules. Stacks are written from the report's own figures rather than re-derived from bonuses, because this
+ * profile boosts guardsmen far more than specialists (Swordsman I carries about +51 % health where the
+ * guardsmen carry +143 %), which is exactly what makes the orders diverge.
+ */
+describe('report 3 — 2026-09-13 13:27, enemy first, 4 enemy squads, a mercenary on top', () => {
+  interface Row {
+    label: string;
+    count: number;
+    totalHp: number;
+    damage: number;
+    features: number;
+  }
+  // In kill order (total HP descending), which is the order the enemy wiped them in, 9/9.
+  const ROWS: Row[] = [
+    { label: 'ABT6', count: 2, totalHp: 27_758, damage: 10_906, features: 0 }, // never struck: damage computed
+    { label: 'SP1', count: 20, totalHp: 7_289, damage: 3_260, features: 390 },
+    { label: 'ARC1', count: 16, totalHp: 5_843, damage: 2_840, features: 536 },
+    { label: 'SP2', count: 8, totalHp: 5_248, damage: 2_491, features: 425 },
+    { label: 'RD3', count: 2, totalHp: 4_665, damage: 2_771, features: 935 },
+    { label: 'RD1', count: 6, totalHp: 4_373, damage: 2_112, features: 390 },
+    { label: 'SW1', count: 18, totalHp: 4_077, damage: 1_719, features: 180 },
+    { label: 'RD2', count: 3, totalHp: 3_936, damage: 2_079, features: 530 },
+    { label: 'ARC2', count: 2, totalHp: 1_314, damage: 700, features: 182 },
+  ];
+
+  const stacks: Stack[] = ROWS.map((row) => {
+    const unit = UNITS.find((candidate) => candidate.label === row.label)!;
+    return {
+      unitId: unit.id,
+      pool: unit.pool,
+      count: row.count,
+      hpPerUnit: row.totalHp / row.count,
+      totalHp: row.totalHp,
+      strengthPerUnit: (row.damage - row.features) / row.count,
+      target: 'melee',
+      damagePerHit: row.damage,
+      featuresDamage: row.features,
+      doubleDamageChance: row.label === 'RD1' ? 8.8 : 3.8,
+      strikeTwoSquadsChance: 5,
+    };
+  });
+  const journal = buildJournal(stacks, 4, false);
+
+  it('kills strictly by total HP, mercenary included: the Arbalester stack dies first, unstruck', () => {
+    const hp = ROWS.map((row) => row.totalHp);
+    expect([...hp].sort((a, b) => b - a)).toEqual(hp);
+    expect(labels(journal.entries, 'enemy')).toEqual(ROWS.map((row) => row.label));
+    expect(journal.entries[0]).toMatchObject({ actor: 'enemy', damage: 27_758 });
+  });
+
+  it('strikes in base-damage order, which is NOT the HP order (Rider II before Swordsman I)', () => {
+    expect(attackOrder(stacks).map((index) => ROWS[index]!.label)).toEqual([
+      'ABT6',
+      'SP1',
+      'ARC1',
+      'SP2',
+      'RD3',
+      'RD1',
+      'RD2',
+      'SW1',
+      'ARC2',
+    ]);
+    // The crux of the fight: Swordsman I is the bigger stack (4,077 HP against 3,936) so it dies first,
+    // yet Rider II hits harder without its features (1,549 against 1,539) so it strikes first.
+    const sw1 = stacks.find((stack) => stack.unitId === 'swordsman-1')!;
+    const rd2 = stacks.find((stack) => stack.unitId === 'rider-2')!;
+    expect(sw1.totalHp).toBeGreaterThan(rd2.totalHp);
+    expect(rd2.damagePerHit - rd2.featuresDamage).toBeGreaterThan(sw1.damagePerHit - sw1.featuresDamage);
+  });
+
+  it("reproduces the report's hit list entry for entry (20 of its 21 lines)", () => {
+    expect(journal.entries).toHaveLength(20);
+    expect(labels(journal.entries, 'army')).toEqual([
+      // Round 1: three interleaved strikes, then every survivor sweeps.
+      'SP1',
+      'ARC1',
+      'SP2',
+      'RD3',
+      'RD1',
+      'RD2',
+      'SW1',
+      'ARC2',
+      // Round 2: Rider III and Swordsman I are wiped before their turn.
+      'RD1',
+      'RD2',
+      'ARC2',
+    ]);
+    expect(journal.friendlyHits).toBe(11);
+    // The game's 21st line is a second Archer II strike in round 2 (entry 20), the one line of four
+    // reports our model does not produce — most likely the strike-two-squads title, active only here.
+  });
+
+  it('prices the double-damage line as a plain ×2 on both parts of the hit (entry 14)', () => {
+    const rd1 = stacks.find((stack) => stack.unitId === 'rider-1')!;
+    expect(2 * rd1.damagePerHit).toBe(4_224);
+    expect(2 * rd1.featuresDamage).toBe(780);
+  });
+
+  it('shows the game does not round HP per unit: 7,289 over 20 Spearmen I is not an integer', () => {
+    const sp1 = ROWS.find((row) => row.label === 'SP1')!;
+    expect(sp1.totalHp % sp1.count).not.toBe(0);
+    expect(sp1.totalHp / sp1.count).toBeCloseTo(364.45, 2);
   });
 });

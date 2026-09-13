@@ -56,19 +56,20 @@ Defenders (3 squads): eagle II (flying) 337 (−6), helmet III (melee) 1,055 (�
 - **Enemy target = our highest-HP living stack**, every time (10/10 kills), regardless of its own strength-against.
 - **Round structure** with N = 3 enemy squads: round 1 (army first): F, E, F, E, F, E, then all survivors F;
   rounds 2+: E, F, E, F, E, F, then survivors F; final lone stack killed by an extra E. Identical to TotalStack's journal
-  structure. Rounds/hits: 28 entries, 16 friendly hits, 12 enemy hits.
+  structure. Rounds/hits: 28 entries, 18 friendly hits, 10 enemy hits (one per stack).
 - Each of our stacks always hits the same enemy squad (best strength-against, else the melee squad for RD3/CHR).
 - Enemy squads lose a few units per hit (1–2), so the monster is far from dying — consistent with "damage" being the
   score, not a kill.
 
-## What differs from TotalStack's model (open)
-- **Our attack order** was SP1, ARC1, ARC2, SP2, RD3, CHR, EMH, merc-A, merc-B — this is the HP-descending order
+## What differs from TotalStack's model (**resolved 2026-09-13**)
+- **Our attack order** was SP1, ARC1, ARC2, SP2, RD3, CHR, EMH, merc-A, merc-B — the HP-descending order
   **except that RD1 (3rd by HP) never attacked**: it was killed by the 3rd enemy attack while ARC2 took the 3rd
-  friendly slot. TotalStack assumes the next attacker is always the next victim (RD1 would have attacked). So the
-  game's friendly order is not simply HP order. Hypotheses to test on a second report: (a) the enemy's next victim is
-  skipped in the friendly sequence, (b) mounted units act after foot units, (c) order follows the march list
-  (ARC1, ARC2, SP1, SP2, RD1, RD3, mercs — rejected, SP1 attacked first). Effect on totals: at most one hit of one
-  stack per round (~2–3% of damage) — small, but the engine should model it once known.
+  friendly slot. TotalStack assumes the next attacker is always the next victim (RD1 would have attacked).
+  **Settled by the 2026-09-13 march** (`docs/research/fixtures/ingame-2026-09-13/`): our stacks strike in
+  **base-damage descending** order — `count × strength × (1 + Σ strength %)`, features excluded. Here that is
+  SP1 135,936 > ARC1 134,385 > ARC2 133,691 > RD1 133,632 > SP2 132,969 > RD3 131,788 > CHR > EMH > merc-A >
+  merc-B, so RD1 sits fourth and the enemy's third attack wipes it before its turn — exactly what the report
+  shows. The engine reproduces both fights entry for entry with this rule.
 - The captain and the dragon appear as "units" in the report (cards 36 ★★ and 38) but never in the hit list.
 
 ## Recovery data captured on the way
@@ -119,16 +120,11 @@ Defenders: helmet III (melee) 1,420, lion II (mounted) 1,398, eagle II (flying) 
   round 2: E, F, E, F, E, F, E, then survivors; round 3: E, F, E. Exactly the structure TotalStack's journal uses.
 - **Double damage exists and is a plain ×2 on a hit**: entry 8 is 2 × 198,140 (entry 14) and the game labels it
   "double dégâts". Rider 3 had 5% (unit) + 3% (bonus) = 8%; one proc in 16 friendly hits across both reports.
-- **Friendly attack order** (the open question): in both fights the sequence was SP1, ARC1, ARC2, SP2, RD3, CHR, EMH,
-  merc-A, merc-B with **RD1 never attacking**, although RD1 is 3rd by HP. RD1 died at the 3rd enemy attack, i.e.
-  after only 2–3 friendly slots, so its slot is ≥ 4 (report 1) and ≥ 3 (report 2). Two candidate rules fit every observation (**neither is adopted yet**; the engine keeps TotalStack's
-  HP-order rule until more reports confirm one of these):
-  - B: leadership troops first — foot units (melee, ranged) by total HP descending, then mounted units
-    by HP descending — then monsters, then mercenaries by HP descending. (Matches the community rule "troops →
-    monsters → mercenaries"; monsters not present in these fights.)
-  - A: leadership troops by unit count descending, mercenaries by HP descending. Indistinguishable from B here.
-  Impact if wrong: one hit of one stack per round.
-  To separate them: a fight where a rider stack has more units than a foot stack, or foot stacks whose count order
-  differs from their HP order. Either way the enemy's kill order is pure HP-descending.
+- **Friendly attack order** (**answered 2026-09-13**): in both fights the sequence was SP1, ARC1, ARC2, SP2, RD3,
+  CHR, EMH, merc-A, merc-B with **RD1 never attacking**, although RD1 is 3rd by HP. The rule is **base damage
+  descending** (hit damage without the strength-against part), which ranks RD1 fourth here and wipes it before its
+  turn. The two candidates recorded at the time — A "unit count descending" and B "foot units, then mounted, then
+  monsters, then mercenaries" — are both refuted by the 2026-09-13 march, where an 18-unit Swordsman I stack
+  struck *after* a 3-unit Rider II stack. The enemy's kill order stays pure HP-descending.
 - The ranged "swarm" squad (55,719 units) loses 91–183 units per hit and still one-shots our stacks; monster HP
   pools are irrelevant to our result, only the number of enemy squads N matters.

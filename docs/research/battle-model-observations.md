@@ -9,8 +9,14 @@ rules are recorded in the fixture file; the engine keeps TotalStack's HP-order r
 order is pure HP descending in both reports. Double damage is a ×2 on a single hit with the unit's own chance plus the bonus.
 
 ## 1. Turn structure (verified on two journals, enemy-first and army-first)
-- Our stacks are ordered by **total HP descending** (ties keep the display order). This order is used both as the
-  enemy's kill order and as our attack order. Counts never change during the fight (an enemy hit wipes a stack).
+> **Amended 2026-09-13 (S-30 closed).** A fight runs on **two** orders, not one. The **kill order** is total HP
+> descending, as below. The **attack order** is *base damage* descending — `count × strength × (1 + Σ strength %)`,
+> the per-hit damage without the strength-against part. TotalStack uses the HP order for both, which is right only
+> while health and strength bonuses move together (every captured TotalStack run, where health = 3 × strength for
+> every unit and the bonuses are uniform). See §1c and `fixtures/ingame-2026-09-13/README.md`.
+
+- Our stacks are ordered by **total HP descending** (ties keep the display order). This is the enemy's kill order.
+  Counts never change during the fight (an enemy hit wipes a stack).
 - The enemy has N stacks (4 standard, 8 for Arachne's, custom). Each **round**:
   1. the enemy makes N attacks, one per enemy stack; each attack kills our highest-HP living stack;
   2. between two consecutive enemy attacks, our current highest-HP living stack (the next victim) attacks once;
@@ -23,6 +29,27 @@ order is pure HP descending in both reports. Double damage is a ×2 on a single 
 - Each of our stacks always targets the enemy stack it has the largest strength-against for, when that enemy
   type is in the formation (ARC→flying, SP→mounted, RD→ranged, ED→mounted, SG→melee, BB→mounted, WE→flying,
   Bear→mounted).
+
+## 1c. Attack order (settled in game, 2026-09-13, `fixtures/ingame-2026-09-13/`)
+A deliberate 9-stack march at an epic monster separated the candidates. Our stacks strike in **base-damage
+descending** order — `count × strength × (1 + Σ strength %)`, features excluded — fixed for the whole fight;
+each round every living stack strikes once in that order, and a stack wiped before its turn simply loses that
+round's attack. Evidence:
+- 2026-09-13: Swordsman I (specialist, 18 units, 4,077 HP) dies *before* Rider II (3 units, 3,936 HP) yet
+  strikes *after* it, because its base damage is 1,539 against Rider II's 1,549. Neither "unit count
+  descending" nor "foot units then mounted" survives that pair; both are refuted.
+- 2026-09-11 (both fights): Rider I is third by HP but fourth by base damage, so the enemy's third attack wipes
+  it before its turn — which is exactly why it never appears in either hit list. With this rule the engine
+  reproduces both reports entry for entry (28 and 24 entries); with the HP-order rule it produced one extra hit.
+- The divergence needs bonuses that differ between families: this profile boosts guardsmen ×2.43 health /
+  ×2.87 strength but the specialist only ×1.51 / ×1.71.
+- One line is still unexplained: entry 20 of the 2026-09-13 report, a second Archer II strike in the same
+  round (20 of 21 entries reproduced). It was the only fight with the strike-two-squads title active.
+
+## 1d. HP rounding (settled in game, 2026-09-13)
+The game scales the **stack** and rounds once: 20 Spearman I total 7,289, which is not divisible by 20, so no
+integer per-unit HP can produce it. TotalStack rounds the per-unit value first (and our sizer follows it, to
+keep reproducing its counts); the difference is the ±1 tolerance the in-game tests carry.
 
 ## 1b. Bonus application (verified with army +25/+25 and guardsmen +20/+20, fixtures in `totalstack-2026-09-12-bonus-runs.json`)
 - HP per unit = **round**(base × (1 + Σ health bonuses)) to an integer, then × count (ARC1 150 × 1.45 = 217.5 → 218;
@@ -45,7 +72,9 @@ order is pure HP descending in both reports. Double damage is a ×2 on a single 
   (pill: RD3 99 units → 31,680 + 2×46,253 = 124,186 ✓; ARC1 660 → 33,000 + 2×22,110 = 77,220 ✓).
   "Probabilistic Damage" = Damage × (1 + double-damage chance) (RD3: 124,186 × 1.05 = 130,395 ✓).
   Why the summary doubles the strength-against term is unknown (maybe the in-game "features" line is itself on top
-  of a strength-against already applied). **To settle with a real battle report** (S-30).
+  of a strength-against already applied). Three in-game reports show the journal formula (features counted once),
+  so this stays a TotalStack artefact we do not copy. Double damage is a plain ×2 on the whole line, features
+  included (2026-09-13 entry 14: 4,224 incl. 780 against 2,112 incl. 390).
 
 ## 3. Summary totals (verified)
 - `DAMAGE BY <pool>` = Σ over the pool's stacks of `(base + 2×features) × averageHits`, where averageHits is the
@@ -88,13 +117,23 @@ silver (`2×8,400 + 16,800 + 19,600 + 22,400`), which is why it does not move be
 (`chunks(18) = chunks(17) = 2`); 2,752 is the monsters' chunk-discounted revive gold; 13,520 is the whole
 army's. The 1,080 dragon coins are `2×120 + 240 + 280 + 320`, not `Σ n × dragonCoins` (= 7,960).
 
-Still open (kept as `it.todo` in `tests/engine/recovery.test.ts`):
-- **Revive-all silver** = 216,000 at temple 0 → 173,880 at temple 20 (×0.805, not ÷1.81). 216,000 = 1,080 × 200
-  is suspicious but unconfirmed.
-- **Revive-all time** = 1d 2h at temple 0 → 21h 40m at temple 20 (ratio 1.2, unrelated to the temple divisor).
+**Solved 2026-09-13 (S-30), from the game's own Temple screen and the owner's clarification.** There is no
+retrain dialog and no hospital: retraining is recruiting the lost units again in the Army tab at the training
+price (per unit for troops, per batch of ten for monsters — which is where `chunks(n)` comes from on that
+side). The Temple is the only recovery screen and its header reads *"here you can revive up to **90 %** of
+your fallen troops"*, charging 3 sacred potions or gold per unit. Since `n − chunks(n) ≡ floor(0.9 n)` for
+every n, "ten at a time, one comes back free" **is** the game's 90 %: the tenth unit of each chunk is not
+revived at all and must be recruited again — which is exactly what a "revive all" still costs in silver and
+in time. Hence:
+- **Revive-all silver** = Σ `chunks(n) × training.silver × (1 − trainingCostReduction[group]/100)`
+  = 216,000 at temple 0 and 173,880 with the guardsmen −30 % ✓ exact (the temple divisor never touches silver;
+  the 0.805 ratio was the training discount, not the temple).
+- **Revive-all time** = Σ `chunks(n) × training.seconds / (1 + trainingSpeed[group]/100)` = 94,380 s
+  (shown "1d 2h") and 78,040 s (shown "21h 40m") ✓ exact.
+- Per-row gold in the Temple matches `round(n × revival.gold / templeDivisor)` on most rows and reads one gold
+  higher on a few (7 units → 19 instead of 18); the per-row rounding rule is not pinned, the aggregate is.
 - "Selective" recovery offers TOP 1 / TOP 2 / TOP 3 / CUSTOM (revive the top-N troop tiers, retrain the rest);
   the engine implements it as "revive the top-N unit types by tier, retrain the rest".
-Both open points are cheap to settle in game (the retrain/revive screens show the exact cost) — folded into S-33.
 
 ## 5. Stacking observations (all bonuses 0)
 - Elite Preservation: flat HP profile, exact leadership fill, kill order tier-ascending; within a tier

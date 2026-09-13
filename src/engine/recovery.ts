@@ -10,12 +10,23 @@
  *                   + Σ monsters chunks(n) × training.seconds / (1 + speed.monster / 100)
  *   dragon coins    = Σ monsters chunks(n) × training.dragonCoins
  *   revive gold     = Σ all      (n − chunks(n)) × revival.gold / templeMultiplier[level]
+ *   revive silver   = Σ all      chunks(n) × training.silver × (1 − reduction[group] / 100)
+ *   revive time     = Σ all      chunks(n) × training.seconds / (1 + speed[group] / 100)
  *   retrain gold    = the monsters' revive gold (monsters cannot be retrained back into the march)
  *
- * That reproduces every silver, gold, dragon-coin and duration figure of the seven captured runs exactly and
- * explains the three "unexplained constants" of battle-model-observations §4 (M = 75,600 = the monsters'
- * chunk silver; 2,752 = the monsters' chunk-discounted revive gold; 13,520 = the whole army's).
- * Still open (kept as `it.todo`): revive **silver** (216,000 at temple 0) and revive **time** (1 d 2 h).
+ * The in-game screens (2026-09-13 capture) explain the shape, and the owner confirmed there is no "retrain"
+ * dialog and no hospital: **retraining is just recruiting the lost units again in the Army tab** at the
+ * training price (per unit for troops, per batch of ten for monsters, which is why `chunks(n)` appears
+ * there), while the **Temple** says in so many words "here you can revive up to 90% of your fallen troops"
+ * and charges gold (or 3 sacred potions) per unit. And `n − chunks(n) ≡ floor(0.9 n)` for every n, so the
+ * "chunk of ten, one comes back free" rule *is* the game's 90%: the tenth unit of each chunk is not lost,
+ * it simply has to be recruited again — which is exactly the silver and the time a "revive all" still costs.
+ *
+ * That reproduces every silver, gold, dragon-coin and duration figure of the seven captured runs exactly —
+ * including revive-all silver (216,000 at temple 0, 173,880 with the guardsmen training discount) and
+ * revive-all time (1 d 2 h → 21 h 40 m), the last two open equations of S-30 — and explains the three
+ * "unexplained constants" of battle-model-observations §4 (M = 75,600 = the monsters' chunk silver;
+ * 2,752 = the monsters' chunk-discounted revive gold; 13,520 = the whole army's).
  */
 import type { Group, Pool, UnitDef } from '../data/types';
 import type { RecoveryCost, RecoveryMode, RecoverySettings, Stack } from './types';
@@ -116,14 +127,22 @@ export function retrainOne(unit: UnitDef, count: number, settings: RecoverySetti
   return cost;
 }
 
-/** Revive one stack: one unit per chunk of ten comes back free, the temple divides the gold. */
+/**
+ * Revive one stack: the Temple brings back 90 % of the fallen units (`count − chunks(count)`, which is
+ * exactly `floor(0.9 × count)`) for gold, divided by the temple multiplier. The remaining tenth cannot be
+ * revived at all: it is recruited again, so a "revive all" still costs training silver and training time
+ * for `chunks(count)` units — per unit for troops, per batch of ten for monsters.
+ */
 export function reviveOne(unit: UnitDef, count: number, settings: RecoverySettings): RecoveryCost {
-  const paid = count - chunks(count);
+  const revived = count - chunks(count);
+  const training = unit.training;
+  const reduction = 1 - percent(settings.trainingCostReduction, unit.group) / 100;
+  const speed = 1 + percent(settings.trainingSpeed, unit.group) / 100;
   return {
-    silver: 0,
-    gold: (paid * unit.revival.gold) / templeDivisor(settings.templeLevel),
+    silver: training ? chunks(count) * training.silver * reduction : 0,
+    gold: (revived * unit.revival.gold) / templeDivisor(settings.templeLevel),
     dragonCoins: unit.pool === 'dominance' ? chunks(count) * (unit.training?.dragonCoins ?? 0) : 0,
-    seconds: 0,
+    seconds: training ? (chunks(count) * training.seconds) / speed : 0,
   };
 }
 
