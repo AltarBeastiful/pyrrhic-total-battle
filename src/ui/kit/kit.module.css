@@ -20,12 +20,12 @@
   border: none;
 }
 
-/* The sticky bar sits above the phone's bottom inset, and the app bar reserves its own height. Its
-   side padding is the page margin the `Container` under it uses (`theme.module.css`, `.container`),
-   so the brand starts on the same line as the first section. */
+/* The app bar is NOT sticky (owner, 2026-09-13: a permanent 64 px of brand and avatar on a phone is
+   wasted screen). It scrolls away with the page; the answer lives in the March panel and the command
+   bar. Its side padding is the page margin the `Container` under it uses (`theme.module.css`,
+   `.container`), so the brand starts on the same line as the first section. */
 .appBar {
-  position: sticky;
-  top: 0;
+  position: static;
   z-index: 100;
   min-height: var(--pyr-appbar-height);
   /* The page's own faint top light, so the chrome and the panels read as one material

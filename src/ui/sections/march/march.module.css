@@ -70,13 +70,12 @@
   /* Over everything the section draws under it, and under both bars (100 and 250). A segmented
      control paints its own label at `z-index: 2`, so 1 was not enough. */
   z-index: 5;
-  top: var(--pyr-appbar-height);
-  /* The window, less both bars: the app bar over it and the command bar under it (design plan
-     §5.6, the 88 px bar plus the 24 px of air the artboard leaves below it), so the bar can never
-     land on the pills this block exists to keep on screen. */
-  max-height: calc(
-    100dvh - var(--pyr-appbar-height) - var(--pyr-commandbar-height) - var(--mantine-spacing-xl) - 1rem
-  );
+  /* The app bar scrolls away, so the panel sticks at the very top with a little air. */
+  top: var(--mantine-spacing-md);
+  /* The window, less the command bar under it (design plan §5.6, the 88 px bar plus the 24 px of
+     air the artboard leaves below it), so the bar can never land on the pills this block exists to
+     keep on screen. */
+  max-height: calc(100dvh - var(--pyr-commandbar-height) - var(--mantine-spacing-xl) - 2rem);
   margin: calc(-1 * var(--mantine-spacing-xl)) calc(-1 * var(--mantine-spacing-xl)) 0;
   border-bottom: 1px solid var(--pyr-hairline);
   border-radius: var(--mantine-radius-md) var(--mantine-radius-md) 0 0;

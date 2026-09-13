@@ -268,7 +268,8 @@ reserved below it). The Battle card keeps enemy formation, method, order and rec
 two-row bar — housing as three tappable value chips (tap = the chip becomes an input; the fourth chip opens
 the objective) above the answer figure ("🎯 4.7M · 🪙 8.1M · 10 stacks") and Generate; tapping the figure
 opens the march sheet. Canvas page "Housing with Generate", artboards `CommandBar.dc.html`, `PhoneBar.dc.html`.
-Design rule 2 is amended accordingly: one sticky bar per edge — the app bar on top, the command bar below.
+Design rule 2 is amended accordingly: the command bar is the only sticky chrome; the top bar (brand, account)
+scrolls away with the page on every width (owner, 2026-09-13: a permanent bar on a phone is useless).
 Story D-56.
 
 ## 6. Visual language

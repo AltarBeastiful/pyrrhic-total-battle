@@ -1,6 +1,6 @@
 /**
  * The top app bar (design plan §5.1 as revised by spike 0009 — frame V1 adopted): M3's small top
- * app bar, 64 px, sticky, carrying **two things only**. The brand on the left, the account on the
+ * app bar, 64 px, scrolling away with the page, carrying **two things only**. The brand on the left, the account on the
  * right, and nothing else.
  *
  * The figures used to live here. They moved to where the action they belong with is — the March

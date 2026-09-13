@@ -1,5 +1,5 @@
 /**
- * The sticky bar at the top of the page (design plan §5.1). A `Paper`, not `AppShell.Header`: the
+ * The bar at the top of the page (design plan §5.1); it scrolls away with the page. A `Paper`, not `AppShell.Header`: the
  * app is one scrolling page with a supporting pane, not a shell with panels, and `AppShell` would
  * take the page's scroll away from it.
  *
