@@ -558,7 +558,11 @@ starts.
 
 **Phase E — Validation**
 - D-50 Journey checks: J1 in ≤ 3 taps and ≤ 2 screens on a 390×844 emulated phone, scripted in Playwright;
-  J2 and J3 with their tap budgets.
+  J2 and J3 with their tap budgets. **Done 2026-09-13** (`e2e/journeys.spec.ts`): J1 3 taps / 0 player
+  scrolls on phone (the page itself travels 2.14 screens when Generate scrolls to the in-page March —
+  the Battle card alone is 973 px tall; see D-54), J2 4 taps, J3 4 taps, J5 2 taps.
+- D-54 Shorten the setup on phones so the page travels ≤ 2 screens to the March: fold the Battle card's
+  method/objective cards into the collapsed list form on phones and tighten the enemy block (≈ 973 → ≈ 600 px).
 - D-51 Owner walkthrough on phone and desktop with the game open; findings logged in `docs/PLAN.md` §7.
 - D-52 Two external players (P1/P3) try J1 and J6 unaided; problems become stories or are closed with a reason.
 - D-53 Rewrite `docs/design.md` for the new system; retire the glossary entries that no longer apply.
