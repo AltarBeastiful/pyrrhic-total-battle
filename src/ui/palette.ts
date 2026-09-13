@@ -297,6 +297,11 @@ export function contrastPairs(): ContrastPair[] {
     // Boundaries and markers: 3:1 (WCAG 1.4.11). `field` is the border of every control.
     onSurfaces('field', s.field, 3);
 
+    // The focus ring (design rule 24, WCAG 2.2 §2.4.11). It is the accent at this scheme's filled
+    // shade, drawn 2 px wide with 2 px of offset, so what it has to stand out from is whatever
+    // surface the control sits on — both page grounds included.
+    onSurfaces('focus ring', COLORS.brass[shade]!, 3);
+
     // Decoration: printed so a drift is visible, never a failure. The hairline draws sheet edges
     // and dividers, never the boundary of a control, so it is deliberately quiet.
     onSurfaces('hairline', s.hairline, 3, true);

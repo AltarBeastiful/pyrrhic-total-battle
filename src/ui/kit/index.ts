@@ -31,3 +31,5 @@ export { TierSelect } from './TierSelect';
 export type { TierSelectProps } from './TierSelect';
 export { clampTier } from './tiers';
 export type { TierPrefix } from './tiers';
+export { useRovingTabs } from './useRovingTabs';
+export type { RovingTabs } from './useRovingTabs';

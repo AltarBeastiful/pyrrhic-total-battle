@@ -58,14 +58,52 @@
   background: var(--mantine-color-default-hover);
 }
 
-/* M3's supporting pane: 360 dp, trailing, sticky under the app bar. It is allowed to scroll inside
-   itself only when it is taller than the window it hangs in (design rule 17). */
+/* M3's supporting pane: 360 dp, trailing, and flowing with the page — no height of its own and no
+   scrollbar of its own, because there is exactly one scroll on this page (design rule 17). */
 .pane {
-  position: sticky;
-  top: var(--pyr-appbar-height);
-  max-height: calc(100dvh - var(--pyr-appbar-height));
   width: var(--pyr-pane-width);
-  overflow: auto;
+}
+
+/* …and the one thing that stays: the recap and Generate, pinned under the app bar while the march
+   passes behind them. It carries the pane's own surface colour and the pane's padding as a negative
+   margin, so the block it hides is really hidden and the ink still starts on the pane's own margin.
+   `z-index` puts it over the march, never over the app bar (which is 200). */
+.paneHeader {
+  position: sticky;
+  z-index: 1;
+  top: var(--pyr-appbar-height);
+  margin: calc(-1 * var(--mantine-spacing-md)) calc(-1 * var(--mantine-spacing-md)) 0;
+  border-bottom: 1px solid var(--pyr-hairline);
+  border-radius: var(--mantine-radius-md) var(--mantine-radius-md) 0 0;
+  background: var(--mantine-color-default);
+  padding: var(--mantine-spacing-md);
+}
+
+/* One short flash on the bar's summary when a run lands with the sheet shut — the eye's half of the
+   signal the shell also announces in words. Only for a player who has not asked for stillness
+   (design rule 24), and only once: the element is keyed on the run count, so a second run is a new
+   element and a new animation rather than a loop. */
+@media (prefers-reduced-motion: no-preference) {
+  .pulse {
+    animation: pulse 900ms ease-out 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+
+  35% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* The Material bottom app bar (frame V1). Sticky rather than fixed: as the last block of the frame

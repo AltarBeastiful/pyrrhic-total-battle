@@ -1,27 +1,22 @@
 /**
  * The answer, in figures (design plan §7.5 step 1, design rule 1). The expected damage is the one
- * number the eye should land on, so it is the only thing on the page set in the display face; the
- * five figures a player compares marches by follow it as a list, each carrying the way it moved
- * since the previous run.
+ * number the eye should land on, so it is the only thing on the page set in the display face, at the
+ * 48 px `docs/design.md` §3 gives it; the five figures a player compares marches by follow it as a
+ * list, each carrying the way it moved since the previous run.
  *
- * Two variants, one component (M-08's contract). `pane` is the March pane header on desktop and the
- * head of the section on a phone: figures and nothing else. `sheet` is what opens from the bottom
- * bar's quick summary, where there is room for the whole answer — the figures, then what each
- * housing pool bought, then the types left at home.
+ * One shape, wherever it is shown (M-08's contract): the March pane's header on a desktop, the head
+ * of the March section on a phone — and the March section is what the recap sheet holds, so the
+ * figures are written once and never twice on one screen (design rule 5; investigation 0011 found
+ * 97 of the sheet's 98 lines repeated from the page under it).
  */
-import { Group, Paper, Stack, Text } from '@mantine/core';
+import { Group, Stack, Text } from '@mantine/core';
 
-import type { BattleSummary, Pool, Stack as StackType } from '@/engine/types';
-import { DeltaText, Glyph, PoolGauge, UnitTile } from '@/ui/domain';
+import type { BattleSummary } from '@/engine/types';
+import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { keepInMarch } from './formation';
 import { amount, ratio } from './format';
-import classes from './march.module.css';
-import { findUnit } from './units';
 import { useMarch } from './useMarch';
-
-const POOLS: Pool[] = ['leadership', 'authority', 'dominance'];
 
 /**
  * The hero prints its own number, so the line under it carries only the change. `DeltaText` is
@@ -29,13 +24,8 @@ const POOLS: Pool[] = ['leadership', 'authority', 'dominance'];
  */
 const CHANGE_ONLY = (): string => '';
 
-export interface MarchRecapProps {
-  /** 'pane' = March pane header on desktop; 'sheet' = the phone recap sheet (adds the stacks). */
-  variant: 'pane' | 'sheet';
-}
-
-export function MarchRecap({ variant }: MarchRecapProps) {
-  const { snapshot, result, summary, previous, leftOut } = useMarch();
+export function MarchRecap() {
+  const { snapshot, result, summary, previous } = useMarch();
 
   if (snapshot === null || result === null || summary === null) {
     return (
@@ -96,15 +86,17 @@ export function MarchRecap({ variant }: MarchRecapProps) {
     },
   ];
 
-  const stacksIn = (pool: Pool): StackType[] => result.stacks.filter((stack) => stack.pool === pool);
-
   return (
     <Stack gap="md" aria-label="This march in figures">
       <Stack gap={2}>
-        <Text variant="numeral" fz="2rem" lh={1.1} fw={600}>
+        {/* The hero figure at `docs/design.md` §3's own 48 px, and free to shrink rather than to
+            break: it is the widest thing in a 360 dp pane. */}
+        <Text variant="numeral" fz="3rem" lh={1.05} fw={600} style={{ overflowWrap: 'anywhere' }}>
           {amount(summary.avgDamage)}
         </Text>
         <Group gap="xs" wrap="nowrap">
+          {/* The one figure that carried no mark while the four under it did (rule 21). */}
+          <Glyph kind="averageDamage" />
           <Text span size="sm" c="dimmed">
             Expected damage
           </Text>
@@ -137,61 +129,6 @@ export function MarchRecap({ variant }: MarchRecapProps) {
           ),
         }))}
       />
-
-      {variant === 'sheet' && (
-        <>
-          {POOLS.filter((pool) => result.pools[pool].capacity > 0 || result.pools[pool].used > 0).map(
-            (pool) => (
-              <Stack key={pool} gap="xs">
-                <PoolGauge pool={pool} used={result.pools[pool].used} total={result.pools[pool].capacity} />
-                <div className={classes.stackGrid}>
-                  {stacksIn(pool).map((stack) => {
-                    const unit = findUnit(stack.unitId, snapshot.request.units);
-                    if (unit === undefined) return null;
-                    return (
-                      <Paper key={stack.unitId} p="xs" radius="sm" bg="var(--pyr-sunken)">
-                        <Group gap="xs" wrap="nowrap">
-                          <UnitTile unit={unit} size="sm" />
-                          <Stack gap={0} miw={0}>
-                            <Text span size="xs" c="dimmed" truncate>
-                              {unit.name}
-                            </Text>
-                            <Text span size="md" fw={600}>
-                              {amount(stack.count)}
-                            </Text>
-                          </Stack>
-                        </Group>
-                      </Paper>
-                    );
-                  })}
-                </div>
-              </Stack>
-            ),
-          )}
-
-          {leftOut.length > 0 && (
-            <Stack gap="xs">
-              <Text span size="xs" c="dimmed">
-                Left out — tap to put back
-              </Text>
-              <Group gap="xs">
-                {leftOut.map((unit) => (
-                  <UnitTile
-                    key={unit.id}
-                    unit={unit}
-                    size="sm"
-                    state="leftOut"
-                    label={`${unit.name}, tier ${String(unit.tier)}, left out — keep in march`}
-                    onPress={() => {
-                      keepInMarch(unit.id);
-                    }}
-                  />
-                ))}
-              </Group>
-            </Stack>
-          )}
-        </>
-      )}
     </Stack>
   );
 }

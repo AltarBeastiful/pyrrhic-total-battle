@@ -167,7 +167,7 @@ a published rationale and a worker can check it (owner's request, 2026-09-12). M
 | M3 concept | What we do |
 |---|---|
 | Window size classes | compact < 600 · medium 600–839 · expanded 840–1199 · large 1200–1599 · extra-large ≥ 1600. Tailwind: `sm` 640 ≈ medium, `xl` 1280 ≈ large (documented offset; we do not redefine Tailwind's breakpoints). |
-| Canonical layout | **Supporting pane**: focus pane = setup (Army, Bonuses, Battle), supporting pane = March, 360 dp, trailing, shown from **large**; below the focus pane at compact/medium/expanded (one column). Never two independent scrollers; the supporting pane is sticky under the top app bar and may scroll inside itself only when taller than the viewport. |
+| Canonical layout | **Supporting pane**: focus pane = setup (Army, Bonuses, Battle), supporting pane = March, 360 dp, trailing, shown from **large**; the phone's sheet below that (one column). Never two independent scrollers: *(amended 2026-09-13, investigation 0011 — the pane held 1 787 px in an 836 px window and scrolled inside itself)* only the pane's **header** is sticky under the top app bar, carrying the recap and Generate, and the rest of the March flows with the page. Design rule 17. |
 | Margins and spacers | 16 dp margins at compact, 24 dp from medium; 24 dp spacer between panes; content max width 1600 dp. |
 | Top app bar | Small top app bar, 64 dp, sticky (M3 "pinned" scroll behaviour): leading brand mark, headline area used for the live answer (figures + troop recap tiles), trailing actions = Generate (large and up) and the account avatar. |
 | FAB | Extended FAB (56 dp, icon + label) at compact/medium/expanded, bottom-trailing, 16 dp from edges plus safe area; label collapses on scroll down (M3 behaviour); **hidden from large** where Generate sits in the app bar (M3: one FAB, never duplicated). |
@@ -209,8 +209,10 @@ phone (< 1200): one column; bottom app bar (64 px, sticky):
   silver, up to four tiny troop tiles, ellipsis when short of room) and Generate; tapping the summary opens a
   half-height bottom sheet with the full recap (figures, per-pool stacks with counts, left-out types). No
   floating action button. Measured sticky chrome at 390×844: 64 px top + 64 px bottom, content never covered.
-- **One page scroll**, as before; the March section also exists in the page flow on phones (below the setup)
-  so the sheet is a shortcut, not the only way to it — to validate in D-12.
+- **One page scroll**, as before. *(Validated and decided 2026-09-13, after investigation 0011 measured
+  97 of the sheet's 98 lines repeated from the section under it: on phones the sheet **is** the March —
+  the whole section, recap first, at full height — and the March is no longer in the page flow. Design
+  rule 5.)*
 
 ### 5.2 Account menu
 
@@ -558,11 +560,21 @@ starts.
 
 **Phase E — Validation**
 - D-50 Journey checks: J1 in ≤ 3 taps and ≤ 2 screens on a 390×844 emulated phone, scripted in Playwright;
-  J2 and J3 with their tap budgets. **Done 2026-09-13** (`e2e/journeys.spec.ts`): J1 3 taps / 0 player
-  scrolls on phone (the page itself travels 2.14 screens when Generate scrolls to the in-page March —
-  the Battle card alone is 973 px tall; see D-54), J2 4 taps, J3 4 taps, J5 2 taps.
-- D-54 Shorten the setup on phones so the page travels ≤ 2 screens to the March: fold the Battle card's
-  method/objective cards into the collapsed list form on phones and tighten the enemy block (≈ 973 → ≈ 600 px).
+  J2 and J3 with their tap budgets. **Done 2026-09-13, re-measured after the rule 5 / rule 17 fixes**
+  (`e2e/journeys.spec.ts`): phone J1 **3 taps · 0 screens the page travels on its own · 0 screens the
+  player scrolls to the counts** (0.59 of page position, all of it the scroll to the housing field);
+  desktop J1 **2 taps · 0 screens** either way. J2 4 taps, J3 4 taps, J5 2 taps. The 2.14 screens the
+  page used to travel are gone with `scrollToMarch`: the March is the phone's sheet and the desktop
+  column, so a Generate changes what is already on screen.
+- D-54 Shorten the setup on phones: the method and the objective fold to the chosen option in the list
+  form under 640 px, the recovery plan with them, the four enemy counts sit on one row. **Done
+  2026-09-13: the Battle card is 887 px at 390 px wide, from 983** (measured on the production build
+  with the housing filled; the 973 of investigation 0011 is the same figure before the ⚠️ badge). The
+  ≈ 600 target is out of reach while rule 8 holds: 496 px of the card is housing (154), the enemy block
+  (117), the option switches (133), the heading (28) and the section gaps (64), which leaves 104 px for
+  three labelled choice groups that cost ~130 px each folded — and the recovery plan grew from a 61 px
+  select box to a folded list to satisfy rule 8. The travel this story existed to cut is gone anyway
+  (D-50): the page no longer goes to the March at all.
 - D-51 Owner walkthrough on phone and desktop with the game open; findings logged in `docs/PLAN.md` §7.
 - D-52 Two external players (P1/P3) try J1 and J6 unaided; problems become stories or are closed with a reason.
 - D-53 Rewrite `docs/design.md` for the new system; retire the glossary entries that no longer apply.

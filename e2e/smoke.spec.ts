@@ -53,15 +53,33 @@ test('the answer and Generate travel together: pane on a desktop, bottom bar on 
   const problems = watchConsole(page);
   await openApp(page);
 
-  // 1280 px (the default viewport): M3's supporting pane, sticky under the 64 px app bar.
+  // 1280 px (the default viewport): M3's supporting pane, with the recap and Generate pinned under
+  // the 64 px app bar and the rest of the March flowing with the page — one page scroll and no
+  // second scroller (design rule 17, resolved after investigation 0011).
   await expect(marchPane(page)).toBeVisible();
   await expect(generateControl(page)).toHaveCount(1);
   await expect(recapSummary(page)).toBeHidden();
-  const sticky = await marchPane(page).evaluate((node) => {
-    const view = globalThis as unknown as { getComputedStyle: (element: unknown) => { position: string } };
-    return view.getComputedStyle(node).position;
+  const frame = await marchPane(page).evaluate((node) => {
+    const view = globalThis as unknown as {
+      getComputedStyle: (element: unknown) => { position: string; overflowY: string };
+    };
+    const element = node as unknown as {
+      scrollHeight: number;
+      clientHeight: number;
+      querySelectorAll: (selector: string) => Iterable<unknown>;
+    };
+    const pinned = [...element.querySelectorAll('*')].filter(
+      (child) => view.getComputedStyle(child).position === 'sticky',
+    ).length;
+    return {
+      overflowY: view.getComputedStyle(node).overflowY,
+      scrolls: element.scrollHeight > element.clientHeight + 1,
+      pinned,
+    };
   });
-  expect(sticky).toBe('sticky');
+  expect(frame.overflowY).toBe('visible');
+  expect(frame.scrolls).toBe(false);
+  expect(frame.pinned).toBeGreaterThan(0);
 
   // 390 px: one column, and the answer moves into the Material bottom app bar with Generate.
   await page.setViewportSize(PHONE);
@@ -69,10 +87,13 @@ test('the answer and Generate travel together: pane on a desktop, bottom bar on 
   await expect(recapSummary(page)).toBeVisible();
   await expect(generateControl(page)).toHaveCount(1);
 
-  // Tapping the summary opens the recap sheet; the bar stays under it (investigation 0009).
+  // Tapping the summary opens the March sheet; the bar stays under it (investigation 0009), and the
+  // March is in the sheet rather than in the page a second time (design rule 5).
+  await expect(page.locator('#march')).toHaveCount(0);
   await recapSummary(page).click();
-  const sheet = page.getByRole('dialog');
-  await expect(sheet.getByRole('heading', { name: 'March' })).toBeVisible();
+  const sheet = page.getByRole('dialog', { name: 'March' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('#march')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
 

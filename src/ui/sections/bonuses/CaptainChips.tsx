@@ -15,6 +15,10 @@
  * The name is the whole chip: no glyph, no portrait, no second line (§7.3). Thirty-one chips have to
  * fit on two lines at desktop width, and a mark before every name buys nothing a player needs while
  * choosing — what the captain boosts is in the popover, next to the figure it moves.
+ *
+ * The grid is **one tab stop** (design rule 24; investigation 0011 measured fifty-two): the arrows
+ * walk the chips, `Space` enlists, and the gear of the chip you are on is the next `Tab` — every
+ * other gear is out of the tab order.
  */
 import { Divider, Group, Select, Stack, Text } from '@mantine/core';
 
@@ -24,7 +28,7 @@ import { heroes as heroTable } from '@/data';
 import { setActiveFlag, updateSources } from '@/state/actions/bonuses';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { CaptainChip } from '@/ui/domain';
-import { NumberField } from '@/ui/kit';
+import { NumberField, useRovingTabs } from '@/ui/kit';
 
 import { captainBonusLines, MAX_CAPTAIN_STAR, type CaptainChipRow, type CaptainTarget } from './chips';
 import { describeContribution } from './labels';
@@ -210,6 +214,7 @@ const keyOf = (target: CaptainTarget): string => (target.kind === 'hero' ? 'hero
 
 export function CaptainChips({ chips, isRefused, onEnlist, onConfigure }: CaptainChipsProps) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const roving = useRovingTabs();
 
   // The latest props, read inside callbacks that never change identity — which is what lets the
   // memoised chips keep their props stable across a toggle (the same trick `ChipRow` uses).
@@ -237,7 +242,7 @@ export function CaptainChips({ chips, isRefused, onEnlist, onConfigure }: Captai
       <Text size="xs" c="dimmed">
         {CAPTAIN_HELPER}
       </Text>
-      <Group role="group" aria-label="Captains and hero" gap={8} wrap="wrap">
+      <Group role="group" aria-label="Captains and hero" gap={8} wrap="wrap" {...roving}>
         {chips.map((chip) => (
           <EnlistChip
             key={chip.id}

@@ -134,6 +134,13 @@ export const theme: MantineThemeOverride = createTheme({
   // The scale of `docs/design.md` §3: 13 label · 16 body · 21 title · 24 count.
   fontSizes: { xs: '0.8125rem', sm: '0.8125rem', md: '1rem', lg: '1.3125rem', xl: '1.5rem' },
 
+  // Said out loud rather than left to Mantine's default, because design rule 24 turns on it: a
+  // keyboard gets a 2 px ring in the accent with 2 px of offset on *every* focusable, and a pointer
+  // gets none. Mantine draws it from `--mantine-primary-color-filled`, which is brass 7 on a light
+  // page and brass 5 on a dark one — both checked by `pnpm contrast` against all four surfaces.
+  // Text fields are the exception Mantine leaves as a border-colour change; `global.css` closes it.
+  focusRing: 'auto',
+
   defaultRadius: 'sm',
   radius: { xs: '0.25rem', sm: '0.5rem', md: '0.75rem', lg: '1rem', xl: '1.75rem' },
   // Compressed on purpose (4 · 8 · 12 · 16 · 24): TotalStack fits a whole army on one screen and

@@ -48,6 +48,62 @@ test('clicking a chip adds it and clicking it again takes it away', async () => 
   expect(screen.getByTestId('chosen').textContent).toBe('ranged');
 });
 
+// ---- One tab stop, arrows inside it (design rule 24; investigation 0011's 52-stop captain grid) --
+test('the row is one tab stop: Tab enters it once and Tab leaves it', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(
+    <>
+      <button type="button">before</button>
+      <Example />
+      <button type="button">after</button>
+    </>,
+  );
+
+  screen.getByRole('button', { name: 'before' }).focus();
+  await user.tab();
+  expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'Melee' }));
+  await user.tab();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'after' }));
+});
+
+test('the arrows move between the chips and Space toggles the one you are on', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example />);
+
+  screen.getByRole('checkbox', { name: 'Melee' }).focus();
+  await user.keyboard('{ArrowRight}');
+  expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'Ranged' }));
+
+  await user.keyboard(' ');
+  expect(screen.getByTestId('chosen').textContent).toBe('melee,ranged');
+
+  // The ends wrap, and Home/End jump to them.
+  await user.keyboard('{End}');
+  expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'Flying' }));
+  await user.keyboard('{ArrowRight}');
+  expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'Melee' }));
+  await user.keyboard('{ArrowLeft}');
+  expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'Flying' }));
+});
+
+test('Tab comes back to the chip it left, not to the first one', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(
+    <>
+      <Example />
+      <button type="button">after</button>
+    </>,
+  );
+
+  screen.getByRole('checkbox', { name: 'Melee' }).focus();
+  await user.keyboard('{ArrowRight}{ArrowRight}');
+  await user.tab();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'after' }));
+
+  await user.tab({ shift: true });
+  expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'Mounted' }));
+});
+
 test('past the maximum the next pick is refused, in words', async () => {
   const user = userEvent.setup();
   renderWithTheme(<Example max={2} />);

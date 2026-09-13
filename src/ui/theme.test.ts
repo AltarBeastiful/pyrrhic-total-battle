@@ -3,12 +3,14 @@ import { afterEach, expect, test } from 'vitest';
 
 import {
   applyTheme,
+  contrastPairs,
   documentColorSchemeManager,
   inkOn,
   ramp,
   resolveTheme,
   SEEDS,
   systemTheme,
+  theme,
   watchSystemTheme,
 } from './theme';
 
@@ -93,6 +95,19 @@ test('the ink chosen for a filled ground clears 4.5:1 on it, in either scheme', 
     expect(contrast(inkOn(shades[7]!), shades[7]!)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(inkOn(shades[5]!), shades[5]!)).toBeGreaterThanOrEqual(4.5);
   }
+});
+
+test('the focus ring is the accent, on every focusable, and it stands out on every surface', () => {
+  // Design rule 24 / WCAG 2.2 §2.4.11. `auto` is Mantine's "a keyboard sees it, a pointer does not",
+  // drawn 2 px wide with 2 px of offset from `--mantine-primary-color-filled` — the brass shade this
+  // scheme fills with. `src/ui/global.css` carries the same ring to text fields, which Mantine marks
+  // with a border colour alone.
+  expect(theme.focusRing).toBe('auto');
+  expect(theme.primaryColor).toBe('brass');
+
+  const rings = contrastPairs().filter((pair) => pair.foreground === 'focus ring');
+  expect(rings.length).toBeGreaterThan(0);
+  for (const pair of rings) expect(pair.min).toBe(3);
 });
 
 test('a seed keeps its hue: the generated guardsmen ink is the design’s own green', () => {

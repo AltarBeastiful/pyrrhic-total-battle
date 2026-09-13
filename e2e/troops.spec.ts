@@ -11,6 +11,7 @@ import {
   marchStackLabels,
   marchTiles,
   openApp,
+  openMarchSheet,
   pageOverflowsSideways,
   watchConsole,
 } from './helpers';
@@ -43,6 +44,8 @@ test('a tier range and one chip decide what the march fields', async ({ page }) 
   await expect(block.getByRole('checkbox', { name: 'Rider IV' })).not.toBeChecked();
 
   await generate(page, { leadership: 20000 });
+  // At 390 px the March is the sheet the bottom bar opens (design rule 5).
+  await openMarchSheet(page);
   await expect(marchTiles(page).first()).toBeVisible({ timeout: 30_000 });
 
   const labels = await marchStackLabels(page);

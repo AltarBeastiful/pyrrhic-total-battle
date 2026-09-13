@@ -134,6 +134,38 @@ export const RECOVERY_LABELS: Record<RecoveryMode, string> = {
   selective: 'Revive the top types, retrain the rest',
 };
 
+export interface RecoveryChoice {
+  value: RecoveryMode;
+  title: string;
+  description: string;
+}
+
+/**
+ * The three plans as whole rows rather than as a dropdown (design rule 8; investigation 0011 found
+ * the last select box in the app here). One line each, in our own words: what it is paid with, and
+ * what that costs you besides the coin.
+ */
+export const RECOVERY_CHOICES: readonly RecoveryChoice[] = [
+  {
+    value: 'retrain',
+    title: RECOVERY_LABELS.retrain,
+    description: 'Silver and training time bring every lost unit back.',
+  },
+  {
+    value: 'revive',
+    title: RECOVERY_LABELS.revive,
+    description: 'Gold brings every lost unit back at once, with no wait.',
+  },
+  {
+    value: 'selective',
+    title: RECOVERY_LABELS.selective,
+    description: 'Gold for your highest tiers, silver and time for the rest.',
+  },
+];
+
+export const isRecoveryMode = (value: string): value is RecoveryMode =>
+  RECOVERY_CHOICES.some((choice) => choice.value === value);
+
 // ---- What the march can carry --------------------------------------------------------------------
 export const POOL_LABELS: Record<Pool, string> = {
   leadership: 'Leadership',

@@ -8,9 +8,14 @@
  * chip on every toggle, and Bonuses puts about eighty of them on one phone screen; keeping the
  * selection in the caller's hands and passing `checked` down lets `memo` stop the other seventy-nine
  * from re-rendering. The row still carries the group's role and name itself.
+ *
+ * The row is **one tab stop** (design rule 24): `useRovingTabs` puts the arrows in charge of moving
+ * between the chips, so a keyboard crosses a row of thirty in one `Tab` and `Space` still toggles.
  */
 import { Chip, Group, Stack, Text } from '@mantine/core';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+
+import { useRovingTabs } from './useRovingTabs';
 
 export interface ChipRowItem {
   value: string;
@@ -99,6 +104,7 @@ export function ChipRow({
 }: ChipRowProps) {
   const [notice, setNotice] = useState('');
   const selected = useMemo(() => new Set(value), [value]);
+  const roving = useRovingTabs();
 
   // The latest props, read inside a callback that never changes identity — which is what lets the
   // memoised chips above keep their props stable across a toggle. Written after the render rather
@@ -130,7 +136,7 @@ export function ChipRow({
 
   return (
     <Stack gap={4}>
-      <Group role="group" aria-label={label} gap={gap} wrap="wrap">
+      <Group role="group" aria-label={label} gap={gap} wrap="wrap" {...roving}>
         {items.map((item) => (
           <RowChip
             key={item.value}

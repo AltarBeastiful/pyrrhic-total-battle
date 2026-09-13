@@ -182,6 +182,26 @@ test('the row shows the hero and every captain the tables know, and none of them
   expect(within(card()).queryByRole('button', { name: /^Add captain/ })).toBeNull();
 });
 
+test('the captain grid is one tab stop, the arrows walk it, and only its own gear is reachable', () => {
+  renderWithTheme(<BonusesSection />);
+  expand();
+
+  const row = within(card()).getByRole('group', { name: 'Captains and hero' });
+  const chips = within(row).getAllByRole('checkbox');
+  const gears = within(row).getAllByRole('button');
+  // Design rule 24b: investigation 0011 measured 52 tab stops here. One is in the tab order now.
+  expect(chips.length + gears.length).toBeGreaterThan(40);
+  expect([...chips, ...gears].filter((node) => node.tabIndex === 0)).toHaveLength(2);
+
+  // The arrows move between the chips; the pair left in the order is the focused chip and its gear.
+  const first = chips[0] as HTMLElement;
+  first.focus();
+  fireEvent.keyDown(first, { key: 'ArrowRight' });
+  expect(document.activeElement).toBe(chips[1]);
+  expect((chips[1] as HTMLElement).tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+});
+
 test('a chip sends its captain on the march and takes it off again, and the TOTAL follows', () => {
   renderWithTheme(<BonusesSection />);
   expand();

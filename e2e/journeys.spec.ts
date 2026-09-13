@@ -9,9 +9,9 @@
  * before it breaks the budget, and nobody sees it unless the figure is on the report.
  *
  * Two viewports, because the frame is two frames (plan §5.1, frame V1): a phone carries the answer
- * and Generate in the bottom app bar with the recap a tap away in a sheet, a desktop carries them in
- * the sticky March pane. Each journey runs on both, and the figures are printed per viewport, so a
- * budget that only breaks on a phone is visible as such.
+ * and Generate in the bottom app bar with the **whole March** a tap away in a sheet, a desktop
+ * carries them at the top of the March column. Each journey runs on both, and the figures are
+ * printed per viewport, so a budget that only breaks on a phone is visible as such.
  *
  * A measurement that goes over its budget is printed OVER and not thrown: this spec reports what the
  * frame costs, and what to do about a cost the plan did not want is the plan's business, not a
@@ -24,14 +24,16 @@ import {
   bonusTotal,
   bonusesCard,
   bonusesDisclosure,
+  closeMarchSheet,
   fillHousing,
   generateButton,
   housingField,
+  marchAnswer,
   marchCountsList,
-  marchExpectedDamage,
   marchStackLabels,
   marchTiles,
   openApp,
+  openMarchSheet,
   recapSummary,
   settle,
   waitForSaved,
@@ -46,8 +48,6 @@ const SEED_LEADERSHIP = 20_000;
 /** What J1 changes it to: the one number the daily journey touches. */
 const DAILY_LEADERSHIP = 24_000;
 
-/** The bar's quick summary writes the damage short ("19.6M"); `march/format.ts` is the original. */
-const COMPACT = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 /** Every count on screen is grouped with spaces; `ui/domain/format.ts` is the original. */
 const GROUPED = new Intl.NumberFormat('en-GB');
 const grouped = (value: number): string => GROUPED.format(value).replace(/,/g, ' ');
@@ -128,8 +128,8 @@ function screensScrolled(page: Page): Promise<number> {
  * top instead, which is the moment it starts to read.
  */
 async function screensToRead(page: Page, target: Locator, stickyBar: Locator | null): Promise<number> {
-  // Generate brings the march into view with a smooth scroll (`ui/shell/march.ts`); measuring while
-  // it is still running would read a position nobody is at.
+  // Nothing scrolls the page on its own any more, but a measurement still starts from a page that
+  // has stopped moving.
   await settleScroll(page);
   const view = await page.evaluate(() => {
     const window = globalThis as unknown as { scrollY: number; innerHeight: number };
@@ -181,7 +181,7 @@ async function seedProfile(page: Page): Promise<void> {
   await fillHousing(page, 'Leadership', SEED_LEADERSHIP);
   await generateButton(page).first().click();
   await settle(page);
-  await expect(marchTiles(page).first()).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => marchAnswer(page), { timeout: 30_000 }).not.toContain('No march yet');
   // Both halves of the profile are written debounced: the document through the account menu's own
   // word, the cached result under its own key.
   await waitForSaved(page);
@@ -223,75 +223,82 @@ async function chipLabel(page: Page, name: string): Promise<Locator> {
  * J1 — the daily march. Open the app, change the one number that changed since yesterday, generate,
  * read the counts. Budget: ≤ 3 taps and ≤ 2 screens.
  *
- * **Two screen readings, because a phone has two.** Generating brings the march into view by itself
- * (`ui/shell/march.ts`), so the page *travels* the whole setup column whether the player pushes it
- * or not, while the player's own thumb scrolls nothing: the bar holds the answer and the sheet holds
- * the counts. Both are recorded; the budget is held against the scrolling the player does, which is
- * what design plan §3 counts ("how many viewport heights the user scrolls through").
- *
- * The travelled figure is the one to watch: measured 2.14 screens at 390×844 (setup column 1 804 px,
- * of which the Battle card alone is 973), which is over the §3 budget of 2 and is recorded as OVER
- * rather than failed — the budget is the app's to meet, not this spec's to enforce by fiat.
+ * **The page no longer travels.** Until 2026-09-13 a Generate scrolled a phone the whole height of
+ * the setup column to reach an in-page March (2.14 screens, recorded OVER on every run). The March
+ * is the sheet now (design rule 5) and the pane's own column on a desktop (rule 17), so both
+ * readings are taken and both are expected to be small: what the *player* scrolls, and what the page
+ * moves on its own.
  */
 async function journey1(page: Page, phone: boolean): Promise<void> {
   const taps = new Taps();
-  const before = await marchExpectedDamage(page);
-  expect(before).toBeGreaterThan(0);
+  const before = await marchAnswer(page);
+  expect(before).not.toBe('');
 
-  // Tap 1 — the free leadership is the one thing that changed since yesterday.
+  // Tap 1 — the free leadership is the one thing that changed since yesterday. Reaching the field is
+  // the player's own scroll on a phone; where it leaves the page is the baseline for what follows.
   await taps.type(housingField(page, 'Leadership'), String(DAILY_LEADERSHIP));
+  await settleScroll(page);
+  const atTheForm = await screensScrolled(page);
+
   // Tap 2 — Generate, wherever the frame put it; it is on screen either way, so nothing is hunted for.
   await taps.tap(generateButton(page).first());
   await settle(page);
-  await expect.poll(() => marchExpectedDamage(page), { timeout: 30_000 }).not.toBe(before);
-  const damage = await marchExpectedDamage(page);
+  await expect.poll(() => marchAnswer(page), { timeout: 30_000 }).not.toBe(before);
 
-  // Where Generate left the page, before the player touches it again.
+  // What the page did on the player's behalf. It used to be the whole setup column.
   await settleScroll(page);
   const landed = await screensScrolled(page);
-  const bar = phone ? recapSummary(page) : null;
-
-  if (bar !== null) {
-    // The bar is sticky, so the answer is wherever the page happens to be: nothing to scroll for it.
-    await expect(bar).toBeInViewport();
-    await expect(bar).toContainText(COMPACT.format(Math.round(damage)));
-    record('J1 screens to read the recap', 0, 0);
-  }
-
-  // The counts in the page itself: how far down the page they sit, and how much of that the player
-  // has left to push through after Generate has already brought the march up.
-  const firstCount = marchCountsList(page).getByRole('listitem').first();
-  const travelled = await screensToRead(page, firstCount, bar);
-  await expect(firstCount).toBeInViewport();
-  const scrolled = Math.max(0, travelled - landed);
-
-  const labels = await marchStackLabels(page);
-  expect(labels.length).toBeGreaterThan(0);
+  record('J1 screens the page travels on its own', Math.abs(landed - atTheForm), 0);
 
   if (phone) {
-    // Tap 3 — the same counts the way the frame was built for them: the recap sheet over the bar,
-    // reachable from wherever the page is, with every stack and its count in it.
+    // The bar is sticky and it carries the new answer: nothing to scroll to read it.
+    await expect(recapSummary(page)).toBeInViewport();
+    record('J1 screens to read the recap', 0, 0);
+
+    // Tap 3 — the sheet *is* the March: the recap first, then the army, then the counts, all of it
+    // inside the sheet and none of it in the page behind.
     await taps.tap(recapSummary(page));
     const sheet = page.getByRole('dialog', { name: 'March' });
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByText('Expected damage')).toBeVisible();
+    await expect(sheet.getByText('Expected damage', { exact: true })).toBeVisible();
+    await expect(marchTiles(page).first()).toBeVisible();
+
+    const firstCount = marchCountsList(page).getByRole('listitem').first();
+    await expect(firstCount).toBeVisible();
+    const labels = await marchStackLabels(page);
+    expect(labels.length).toBeGreaterThan(0);
     const written = await sheet.innerText();
     for (const label of labels) expect(written).toContain(grouped(Number(label.split(' ')[1])));
-    await page.keyboard.press('Escape');
-    await expect(sheet).toBeHidden();
+
+    // The page itself has not moved a pixel while any of that happened: whatever it is showing is
+    // where the setup left it, and the counts cost nothing on top.
+    const travelled = await screensScrolled(page);
+    await closeMarchSheet(page);
+
+    record('J1 taps', taps.count, 3);
+    record('J1 screens the player scrolls to the counts', Math.max(0, travelled - landed), 2);
+    record('J1 screens the page travels to the counts', travelled, 2);
+    expect(taps.count).toBeLessThanOrEqual(3);
+    expect(travelled).toBeLessThanOrEqual(2);
+    return;
   }
 
+  // Desktop: the recap and Generate stay pinned at the top of the March column, and the counts flow
+  // under them with the page — one scroll, and this is how much of it the player pushes through.
+  const firstCount = marchCountsList(page).getByRole('listitem').first();
+  const travelled = await screensToRead(page, firstCount, null);
+  await expect(firstCount).toBeInViewport();
+  await expect(recapSummary(page)).toHaveCount(0);
+  const labels = await marchStackLabels(page);
+  expect(labels.length).toBeGreaterThan(0);
+
   record('J1 taps', taps.count, 3);
-  record('J1 screens the player scrolls to the counts', scrolled, 2);
-  record('J1 screens the page travels to the counts', travelled, phone ? 2 : null);
+  record('J1 screens the player scrolls to the counts', Math.max(0, travelled - landed), 2);
+  record('J1 screens the page travels to the counts', travelled, 2);
   expect(taps.count).toBeLessThanOrEqual(3);
-  expect(scrolled).toBeLessThanOrEqual(2);
+  expect(travelled).toBeLessThanOrEqual(2);
 }
 
-/**
- * J2 — something changed in the army: G1–G3 becomes G1–G4, minus the riders that are not upgraded
- * yet. Budget: ≤ 4 taps (one per tier end, one chip, one Generate).
- */
 async function journey2(page: Page): Promise<void> {
   const taps = new Taps();
   const troops = page.locator('#troops');
@@ -306,12 +313,18 @@ async function journey2(page: Page): Promise<void> {
 
   await taps.tap(generateButton(page).first());
   await settle(page);
+
+  // The march itself is one tap away in the sheet on a phone and in the pane on a desktop; reading
+  // it is not part of the journey's budget, so the sheet is opened outside the counter.
+  const sheet = (await recapSummary(page).count()) > 0;
+  if (sheet) await openMarchSheet(page);
   await expect(marchTiles(page).first()).toBeVisible({ timeout: 30_000 });
 
   const labels = await marchStackLabels(page);
   // The new tier marches; the one type that was turned off does not.
   expect(labels.some((label) => /^[A-Z]+4 /.test(label))).toBe(true);
   expect(labels.some((label) => label.startsWith('RD4 '))).toBe(false);
+  if (sheet) await closeMarchSheet(page);
 
   record('J2 taps', taps.count, 4);
   expect(taps.count).toBeLessThanOrEqual(4);

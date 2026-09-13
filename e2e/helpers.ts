@@ -166,13 +166,17 @@ export function priorityField(page: Page): Locator {
 /**
  * Choose one objective by the words it is written in. The press lands on the row's own text: the
  * radio itself sits under the mark the row draws, which is what a player presses too.
+ *
+ * The name is asked for as a prefix, not as the whole string: from the medium window up the options
+ * are cards named by their title alone, and under it they are rows whose name is the title and the
+ * sentence run together (D-54).
  */
 export async function chooseObjective(page: Page, title: string): Promise<void> {
-  // Under Material 3's medium window the list is folded to the chosen row; unfold it first.
+  // Inside Material 3's compact window the list is folded to the chosen row; unfold it first.
   const change = priorityField(page).getByRole('button', { name: 'Change Objective' });
   if (await change.isVisible()) await change.click();
   await priorityField(page).getByText(title, { exact: true }).click();
-  await expect(priorityField(page).getByRole('radio', { name: title, exact: true })).toBeChecked();
+  await expect(priorityField(page).getByRole('radio', { name: new RegExp(`^${title}`) })).toBeChecked();
 }
 
 /** Wait until no Generate run is in flight (a priority search runs for up to eight seconds). */
@@ -385,9 +389,51 @@ export function marchPane(page: Page): Locator {
   return page.locator('main aside');
 }
 
-/** The Material bottom app bar's summary, below 1200 px: pressing it opens the recap sheet. */
+/** The Material bottom app bar's summary, below 1200 px: pressing it opens the March sheet. */
 export function recapSummary(page: Page): Locator {
   return page.getByRole('button', { name: 'Open the march recap' });
+}
+
+/**
+ * The March sheet (design rule 5 as resolved 2026-09-13): below 1200 px the whole March section is
+ * in it, and it is the only place the answer is written in full.
+ */
+export function marchSheet(page: Page): Locator {
+  return page.getByRole('dialog', { name: 'March' });
+}
+
+/**
+ * Open it from the bar's summary and wait for it to settle — really settle: the sheet slides up and
+ * fades in over 300 ms, and a half-transparent surface reads as a contrast failure that is not
+ * there (the same trap `a11y.spec.ts` already avoids with the account menu).
+ */
+export async function openMarchSheet(page: Page): Promise<Locator> {
+  await recapSummary(page).click();
+  const sheet = marchSheet(page);
+  await expect(sheet).toBeVisible();
+  await sheet.evaluate(async (node) => {
+    const element = node as unknown as {
+      getAnimations: (options?: { subtree?: boolean }) => { finished: Promise<unknown> }[];
+    };
+    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished));
+  });
+  return sheet;
+}
+
+export async function closeMarchSheet(page: Page): Promise<void> {
+  await page.keyboard.press('Escape');
+  await expect(marchSheet(page)).toBeHidden();
+}
+
+/**
+ * The answer as the frame shows it right now, whatever the width: the pane's recap figures on a
+ * desktop, the bottom bar's one-line summary on a phone. A journey compares this before and after a
+ * run, because it is exactly what the player sees change.
+ */
+export async function marchAnswer(page: Page): Promise<string> {
+  const recap = page.locator('[aria-label="This march in figures"]');
+  if ((await recap.count()) > 0) return (await recap.first().innerText()).trim();
+  return (await recapSummary(page).innerText()).trim();
 }
 
 /** Generate, wherever the frame put it — the March pane's header or the bottom app bar. */

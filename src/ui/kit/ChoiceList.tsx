@@ -10,17 +10,25 @@
  * - `list` stacks full-width rows with the mark at the start and an optional figure at the end. Use
  *   it for a long list, or one whose rows carry a trailing value.
  * - `cards` lays the options out as a grid of equal columns with the mark in the **top-right
- *   corner** (design overhaul §7.4, investigation 0008's "Stacking method"). On a phone they stack
- *   whatever `columns` says, and a long list may fold to the chosen card behind a "Change …"
- *   button. A card's accessible name is the *title alone*; the sentence reaches a screen reader as
- *   its description instead of being glued onto its name.
+ *   corner** (design overhaul §7.4, investigation 0008's "Stacking method") — **from the medium
+ *   window up**. Inside Material 3's compact window a card grid is a column of cards with nothing a
+ *   grid buys, so it falls back to `list` there (D-54): the row is shorter, and a long one may fold
+ *   to the chosen option behind a "Change …" button. A card's accessible name is the *title alone*;
+ *   the sentence reaches a screen reader as its description instead of being glued onto its name.
+ *
+ * `collapsible` folds either shape, because the question it answers — "is this window too narrow to
+ * carry every option at once?" — is the same one the layout asks.
  */
 import { Button, Group, Radio, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useId, useState, type ReactNode } from 'react';
 
-/** Wide enough for cards to sit side by side; under it they stack (Material 3's compact window). */
-const WIDE = '(min-width: 48em)';
+/**
+ * Material 3's compact window ends at 600 dp; 40 em is the first step past it in our own type scale,
+ * and the width at which two option cards stop being a column of one. Under it a `cards` list is
+ * drawn as rows and a `collapsible` one folds.
+ */
+const WIDE = '(min-width: 40em)';
 
 export interface ChoiceItem {
   value: string;
@@ -37,11 +45,11 @@ export interface ChoiceListProps {
   value: string | null;
   onChange: (value: string) => void;
   items: readonly ChoiceItem[];
-  /** Stacked rows (the default) or a grid of cards. */
+  /** Stacked rows (the default) or a grid of cards from the medium window up. */
   layout?: 'list' | 'cards';
-  /** `cards` only: columns from `sm` up; one on a phone whatever this says. */
+  /** `cards` only: how many columns the grid has where there is room for one. */
   columns?: number;
-  /** `cards` only: a long list folds to the chosen card on a phone, behind a "Change …" button. */
+  /** A long list folds to the chosen option on a phone, behind a "Change …" button. */
   collapsible?: boolean;
   /** Groups the radios for the keyboard; generated from the label when left out. */
   name?: string;
@@ -63,9 +71,10 @@ export function ChoiceList({
   const wide = useMediaQuery(WIDE, false, { getInitialValueInEffect: false });
   const [expanded, setExpanded] = useState(false);
 
-  const cards = layout === 'cards';
+  // A grid of one column is not a grid: inside the compact window the cards are rows (D-54).
+  const cards = layout === 'cards' && wide;
   const chosen = items.filter((item) => item.value === value);
-  const folded = cards && collapsible && !wide && !expanded && chosen.length > 0;
+  const folded = collapsible && !wide && !expanded && chosen.length > 0;
   const shown = folded ? chosen : items;
 
   return (
@@ -81,7 +90,7 @@ export function ChoiceList({
       name={name ?? label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}
     >
       {cards ? (
-        <SimpleGrid cols={{ base: 1, sm: folded ? 1 : columns }} spacing="xs" mt={6}>
+        <SimpleGrid cols={folded ? 1 : columns} spacing="xs" mt={6}>
           {shown.map((item) => (
             <Card key={item.value} item={item} />
           ))}

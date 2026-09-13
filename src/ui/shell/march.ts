@@ -1,18 +1,12 @@
 /**
- * Getting to the result. On one column the march is below the setup, so generating brings it into
- * view; when the player asked for no motion nothing moves on its own and the March section offers a
- * link instead (design plan §9). The frame owns this because it owns where the march is.
+ * Where the march lives, and nothing else.
+ *
+ * It used to hold `scrollToMarch`, which pushed a phone the whole height of the setup column after
+ * every Generate (2.14 screens, measured by `e2e/journeys.spec.ts` on 2026-09-13). The frame no
+ * longer needs it: the March is the sticky pane's own column on a desktop and the sheet the bottom
+ * bar opens on a phone, so a run changes what is already on screen and the page never moves under
+ * the thumb (design rules 5 and 17).
  */
-import { mediaMatches, ONE_COLUMN, REDUCED_MOTION } from './useMediaQuery';
 
-/** The anchor of the March section (the registry id) — what the page scrolls to after a run. */
+/** The anchor of the March section (the registry id): its landmark, and what specs locate it by. */
 export const MARCH_ANCHOR = 'march';
-
-/** Bring the march into view; `false` when the frame deliberately left the page where it was. */
-export function scrollToMarch(): boolean {
-  if (!mediaMatches(ONE_COLUMN) || mediaMatches(REDUCED_MOTION)) return false;
-  const march = globalThis.document.getElementById(MARCH_ANCHOR);
-  if (march === null) return false;
-  march.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  return true;
-}

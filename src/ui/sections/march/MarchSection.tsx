@@ -12,21 +12,14 @@
  *
  * On a desktop the recap is not here: it is in the March pane's header, above this block, with
  * Generate beside it (design rule 5 — never say the same thing twice on one screen).
+ *
+ * Below 1200 px this whole section **is** the recap sheet the bottom bar opens (design rule 5 as
+ * resolved on 2026-09-13): it is not drawn in the page a second time, so the answer is written once
+ * and the page never has to travel to it.
  */
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  Title,
-  VisuallyHidden,
-} from '@mantine/core';
+import { Alert, Badge, Button, Group, SimpleGrid, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
 import { Share2 } from 'lucide-react';
-import { lazy, useEffect, useId, useState } from 'react';
+import { lazy, useId, useState } from 'react';
 
 import { version as gameData } from '@/data';
 import type { BonusKey, Pool, SpecialKey, UnitDef } from '@/engine/types';
@@ -38,13 +31,13 @@ import { PoolGauge } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 import { copyText } from '@/ui/profile/download';
-import { initResultPersistence, resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
+import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 import { MARCH_ANCHOR } from '@/ui/shell/march';
 import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
-import { restoreLastResult } from './generate';
 import { amount, relativeTime } from './format';
 import { MarchCounts } from './MarchCounts';
+import { MarchGenerateButton } from './MarchGenerateButton';
 import { MarchRecap } from './MarchRecap';
 import { MarchTiles } from './MarchTiles';
 import { useRunStore } from './runStore';
@@ -99,12 +92,6 @@ export function MarchSection() {
   const [savedOpen, setSavedOpen] = useState(false);
   const titleId = useId();
 
-  // Bring back the cached result of this march, then keep the cache in step with the store.
-  useEffect(() => {
-    restoreLastResult();
-    return initResultPersistence();
-  }, []);
-
   const { snapshot, result, summary } = march;
 
   const saveMarch = (name: string): void => {
@@ -154,202 +141,208 @@ export function MarchSection() {
       : `March generated: ${amount(result.stacks.length)} stacks, ${amount(summary.avgDamage)} expected damage.`;
 
   return (
-    <Card
+    // No ground of its own at either width (M-09 polish list, spike 0009's `v1-desktop.jpg`): the
+    // March pane is one surface and the recap sheet is another, and a card inside either of them
+    // would be a card inside a card.
+    <Stack
       component="section"
       id={MARCH_ANCHOR}
-      aria-labelledby={titleId}
-      radius="md"
-      // In the March pane the whole pane is one surface (M-09 polish list, spike 0009's
-      // `v1-desktop.jpg`): the section brings no ground of its own there, or the answer would be a
-      // card inside a card. On one column it is the page's one raised object again.
-      {...(twoPanes ? { bg: 'transparent', p: 0, radius: 0 } : {})}
+      // In the sheet the sheet's own header is the heading, so the section takes its name from a
+      // label instead of writing "March" on the screen a second time (design rule 5).
+      {...(twoPanes ? { 'aria-labelledby': titleId } : { 'aria-label': 'March' })}
+      gap="md"
     >
-      <Stack gap="md">
-        <Group justify="space-between" gap="xs">
-          <Group gap="xs">
+      <Group justify="space-between" gap="xs">
+        <Group gap="xs">
+          {twoPanes && (
             <Title order={2} id={titleId}>
               March
             </Title>
-            {result !== null && (
-              <Badge variant="light" color="gray">
-                {`${String(result.stacks.length)} stacks`}
-              </Badge>
-            )}
-          </Group>
-          {snapshot !== null && (
-            <Text span size="xs" c="dimmed">
-              {`Generated ${relativeTime(snapshot.at)}`}
-            </Text>
+          )}
+          {result !== null && (
+            <Badge variant="light" color="gray">
+              {`${String(result.stacks.length)} stacks`}
+            </Badge>
           )}
         </Group>
-
-        <VisuallyHidden aria-live="polite">{announcement}</VisuallyHidden>
-
-        {/* The recap travels with Generate, so on a desktop it is in the pane's header above this
-            block and is never repeated here — including the line that says nothing has run yet. */}
-        {!twoPanes && <MarchRecap variant="pane" />}
-
-        {snapshot !== null && result !== null && summary !== null && (
-          <>
-            {stale && (
-              <Alert color="brass" title="Another march">
-                This result was generated for another profile or march. Generate again to refresh it.
-              </Alert>
-            )}
-            {outdated && !stale && (
-              <Alert color="brass" title="Possibly stale">
-                Your profile has changed since this result was generated, so it may be stale. Generate again
-                to bring it up to date.
-              </Alert>
-            )}
-            {march.overflow.length > 0 && (
-              <Alert color="red" title="Over capacity">
-                {`Over capacity in ${march.overflow
-                  .map((pool) => POOL_LABELS[pool])
-                  .join(', ')}. The game will refuse a march that does not fit.`}
-              </Alert>
-            )}
-            {/* One alert, not one per line: four stacked blocks pushed the army off the screen, and
-                every one of them said the same word. */}
-            {result.warnings.length > 0 && (
-              <Alert color="brass" title="Worth a look">
-                <Stack component="ul" gap={2} m={0} pl="md">
-                  {result.warnings.map((warning) => (
-                    <Text component="li" key={warning} size="sm">
-                      {warning}
-                    </Text>
-                  ))}
-                </Stack>
-              </Alert>
-            )}
-            {march.keptElsewhere.length > 0 && (
-              <Alert color="brass" title="Kept in, but not marching">
-                {`${march.keptElsewhere
-                  .map((unitId) => unitName(unitId, snapshot.request.units))
-                  .join(', ')} stayed out of this march even though you keep ${
-                  march.keptElsewhere.length === 1 ? 'it' : 'them'
-                } in. Check that the tier is still switched on, and that the capacity paying for ${
-                  march.keptElsewhere.length === 1 ? 'it' : 'them'
-                } is not zero.`}
-              </Alert>
-            )}
-
-            <MarchTiles rows={march.tiles} onDetails={setSheetUnit} />
-
-            <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="xs">
-              {POOLS.filter((pool) => result.pools[pool].capacity > 0 || result.pools[pool].used > 0).map(
-                (pool) => (
-                  <PoolGauge
-                    key={pool}
-                    pool={pool}
-                    used={result.pools[pool].used}
-                    total={result.pools[pool].capacity}
-                  />
-                ),
-              )}
-            </SimpleGrid>
-
-            <MarchCounts
-              rows={march.rows}
-              editing={editing}
-              onEditing={setEditing}
-              edited={march.edited}
-              onCount={(unitId, count) => {
-                useResultStore.getState().editCount(unitId, count);
-              }}
-              onUndo={() => {
-                useResultStore.getState().resetCounts();
-              }}
-              onDetails={setSheetUnit}
-            />
-
-            {march.edited && (
-              <Text size="xs" c="dimmed">
-                Counts edited by hand. The figures above are recomputed on them; nothing is re-sized, so the
-                housing is yours to balance.
-              </Text>
-            )}
-
-            {tradeoff !== null && tradeoff.excludedUnitIds.length > 0 && (
-              <TradeoffStrip tradeoff={tradeoff} />
-            )}
-
-            <Disclosure
-              title="Details"
-              summary="The battle story and the HP profile"
-              opened={detailsOpen}
-              onChange={setDetailsOpen}
-            >
-              <LazySurface isOpen={detailsOpen} reserve="panel">
-                <Stack gap="md">
-                  <BattleStory request={snapshot.request} summary={summary} />
-                  <HpProfile stacks={result.stacks} units={snapshot.request.units} kept={march.pinned} />
-                </Stack>
-              </LazySurface>
-            </Disclosure>
-
-            <Group gap="xs">
-              <Button
-                onClick={() => {
-                  setSaving(true);
-                }}
-              >
-                Save this march
-              </Button>
-              <Button variant="default" leftSection={<Share2 size={14} aria-hidden />} onClick={share}>
-                Share
-              </Button>
-              <Text span role="status" size="xs" c="dimmed">
-                {notice}
-              </Text>
-            </Group>
-
-            <UnitSheet
-              unit={sheetUnit}
-              row={march.rows.find((row) => row.unit.id === sheetUnit?.id)}
-              totalDamage={summary.journals.enemyFirst.totalDamage}
-              pinned={sheetUnit !== null && march.pinned.includes(sheetUnit.id)}
-              onClose={() => {
-                setSheetUnit(null);
-              }}
-              onEditCount={() => {
-                setEditing(true);
-              }}
-            />
-
-            <LazySurface isOpen={saving}>
-              <MarchNameDialog
-                opened={saving}
-                title="Save this march"
-                description="It is kept inside the active profile, with the march it came from."
-                confirmLabel="Save this march"
-                initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
-                onConfirm={saveMarch}
-                onCancel={() => {
-                  setSaving(false);
-                }}
-              />
-            </LazySurface>
-          </>
+        {snapshot !== null && (
+          <Text span size="xs" c="dimmed">
+            {`Generated ${relativeTime(snapshot.at)}`}
+          </Text>
         )}
+      </Group>
 
-        {profile !== undefined && (
+      <VisuallyHidden aria-live="polite">{announcement}</VisuallyHidden>
+
+      {/* The recap travels with Generate (design rule 2). On a desktop both are in the pane's header
+          above this block and are never repeated here — including the line that says nothing has run
+          yet. In the phone's sheet the section carries them itself, in that order: the bar's own
+          Generate is under the scrim while the sheet is open. */}
+      {!twoPanes && (
+        <>
+          <MarchRecap />
+          <MarchGenerateButton fullWidth />
+        </>
+      )}
+
+      {snapshot !== null && result !== null && summary !== null && (
+        <>
+          {stale && (
+            <Alert color="brass" title="Another march">
+              This result was generated for another profile or march. Generate again to refresh it.
+            </Alert>
+          )}
+          {outdated && !stale && (
+            <Alert color="brass" title="Possibly stale">
+              Your profile has changed since this result was generated, so it may be stale. Generate again to
+              bring it up to date.
+            </Alert>
+          )}
+          {march.overflow.length > 0 && (
+            <Alert color="red" title="Over capacity">
+              {`Over capacity in ${march.overflow
+                .map((pool) => POOL_LABELS[pool])
+                .join(', ')}. The game will refuse a march that does not fit.`}
+            </Alert>
+          )}
+          {/* One alert, not one per line: four stacked blocks pushed the army off the screen, and
+                every one of them said the same word. */}
+          {result.warnings.length > 0 && (
+            <Alert color="brass" title="Worth a look">
+              <Stack component="ul" gap={2} m={0} pl="md">
+                {result.warnings.map((warning) => (
+                  <Text component="li" key={warning} size="sm">
+                    {warning}
+                  </Text>
+                ))}
+              </Stack>
+            </Alert>
+          )}
+          {march.keptElsewhere.length > 0 && (
+            <Alert color="brass" title="Kept in, but not marching">
+              {`${march.keptElsewhere
+                .map((unitId) => unitName(unitId, snapshot.request.units))
+                .join(', ')} stayed out of this march even though you keep ${
+                march.keptElsewhere.length === 1 ? 'it' : 'them'
+              } in. Check that the tier is still switched on, and that the capacity paying for ${
+                march.keptElsewhere.length === 1 ? 'it' : 'them'
+              } is not zero.`}
+            </Alert>
+          )}
+
+          <MarchTiles rows={march.tiles} onDetails={setSheetUnit} />
+
+          <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="xs">
+            {POOLS.filter((pool) => result.pools[pool].capacity > 0 || result.pools[pool].used > 0).map(
+              (pool) => (
+                <PoolGauge
+                  key={pool}
+                  pool={pool}
+                  used={result.pools[pool].used}
+                  total={result.pools[pool].capacity}
+                />
+              ),
+            )}
+          </SimpleGrid>
+
+          <MarchCounts
+            rows={march.rows}
+            editing={editing}
+            onEditing={setEditing}
+            edited={march.edited}
+            onCount={(unitId, count) => {
+              useResultStore.getState().editCount(unitId, count);
+            }}
+            onUndo={() => {
+              useResultStore.getState().resetCounts();
+            }}
+            onDetails={setSheetUnit}
+          />
+
+          {march.edited && (
+            <Text size="xs" c="dimmed">
+              Counts edited by hand. The figures above are recomputed on them; nothing is re-sized, so the
+              housing is yours to balance.
+            </Text>
+          )}
+
+          {tradeoff !== null && tradeoff.excludedUnitIds.length > 0 && <TradeoffStrip tradeoff={tradeoff} />}
+
           <Disclosure
-            title="Saved marches"
-            summary={
-              profile.savedStacks.length === 0
-                ? 'Nothing saved yet'
-                : `${amount(profile.savedStacks.length)} saved`
-            }
-            opened={savedOpen}
-            onChange={setSavedOpen}
+            title="Details"
+            summary="The battle story and the HP profile"
+            opened={detailsOpen}
+            onChange={setDetailsOpen}
           >
-            <LazySurface isOpen={savedOpen} reserve="panel">
-              <SavedMarchesPanel profile={profile} />
+            <LazySurface isOpen={detailsOpen} reserve="panel">
+              <Stack gap="md">
+                <BattleStory request={snapshot.request} summary={summary} />
+                <HpProfile stacks={result.stacks} units={snapshot.request.units} kept={march.pinned} />
+              </Stack>
             </LazySurface>
           </Disclosure>
-        )}
-      </Stack>
-    </Card>
+
+          <Group gap="xs">
+            <Button
+              onClick={() => {
+                setSaving(true);
+              }}
+            >
+              Save this march
+            </Button>
+            <Button variant="default" leftSection={<Share2 size={14} aria-hidden />} onClick={share}>
+              Share
+            </Button>
+            <Text span role="status" size="xs" c="dimmed">
+              {notice}
+            </Text>
+          </Group>
+
+          <UnitSheet
+            unit={sheetUnit}
+            row={march.rows.find((row) => row.unit.id === sheetUnit?.id)}
+            totalDamage={summary.journals.enemyFirst.totalDamage}
+            pinned={sheetUnit !== null && march.pinned.includes(sheetUnit.id)}
+            onClose={() => {
+              setSheetUnit(null);
+            }}
+            onEditCount={() => {
+              setEditing(true);
+            }}
+          />
+
+          <LazySurface isOpen={saving}>
+            <MarchNameDialog
+              opened={saving}
+              title="Save this march"
+              description="It is kept inside the active profile, with the march it came from."
+              confirmLabel="Save this march"
+              initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
+              onConfirm={saveMarch}
+              onCancel={() => {
+                setSaving(false);
+              }}
+            />
+          </LazySurface>
+        </>
+      )}
+
+      {profile !== undefined && (
+        <Disclosure
+          title="Saved marches"
+          summary={
+            profile.savedStacks.length === 0
+              ? 'Nothing saved yet'
+              : `${amount(profile.savedStacks.length)} saved`
+          }
+          opened={savedOpen}
+          onChange={setSavedOpen}
+        >
+          <LazySurface isOpen={savedOpen} reserve="panel">
+            <SavedMarchesPanel profile={profile} />
+          </LazySurface>
+        </Disclosure>
+      )}
+    </Stack>
   );
 }

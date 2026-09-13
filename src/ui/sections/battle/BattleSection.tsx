@@ -20,7 +20,6 @@ import {
   Group,
   NumberInput,
   SegmentedControl,
-  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -31,7 +30,6 @@ import { useId, useState } from 'react';
 import { CATEGORIES } from '@/data/types';
 import type { Method } from '@/engine';
 import { eventEnemyFormation } from '@/state/derive';
-import { RECOVERY_MODES } from '@/state/schema';
 import { selectActiveSetup, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
 import { ChoiceList, NumberField, SwitchRow } from '@/ui/kit';
@@ -41,12 +39,13 @@ import {
   appliesTo,
   isMethod,
   isPriority,
+  isRecoveryMode,
   METHOD_CHOICES,
   OBJECTIVE_CHOICES,
   optionsFor,
   POOL_LABELS,
   POOLS,
-  RECOVERY_LABELS,
+  RECOVERY_CHOICES,
 } from './choices';
 import type { OptionKey } from './choices';
 import {
@@ -176,8 +175,9 @@ export function BattleSection() {
             yourself.
           </Alert>
         )}
-        {/* Four across on anything but a phone, where they read as two rows of two. */}
-        <SimpleGrid cols={{ base: 2, xs: 4 }} spacing="xs" maw={520}>
+        {/* One row of four, at every width (D-54): a squad count is two digits, and two rows of two
+            cost a phone 59 px for nothing. */}
+        <SimpleGrid cols={4} spacing="xs" maw={520}>
           {CATEGORIES.map((category) => (
             <Box key={category} miw={0}>
               <NumberInput
@@ -204,12 +204,15 @@ export function BattleSection() {
 
       {/* The rule the stacks are sized by, and the rules that ride on it. */}
       <Stack gap="sm">
+        {/* Three cards side by side where there is room; on a phone the chosen one alone, behind
+            "Change Stacking method" (D-54) — the method is set once and read every day. */}
         <ChoiceList
           layout="cards"
           label="Stacking method"
           value={options.method}
           items={METHOD_CHOICES}
           columns={METHOD_CHOICES.length}
+          collapsible
           onChange={(value) => {
             if (isMethod(value)) setMethod(value);
           }}
@@ -257,16 +260,17 @@ export function BattleSection() {
         />
 
         <Stack gap="sm">
-          <Select
+          {/* Three options, so three whole rows and no dropdown (design rule 8; the last select box
+              in the app, investigation 0011). */}
+          <ChoiceList
             label="Recovery plan"
             value={recoveryPlan.mode}
-            allowDeselect={false}
-            data={RECOVERY_MODES.map((value) => ({ value, label: RECOVERY_LABELS[value] }))}
+            items={RECOVERY_CHOICES}
+            collapsible
             onChange={(value) => {
-              const next = RECOVERY_MODES.find((recovery) => recovery === value);
-              if (next === undefined) return;
+              if (!isRecoveryMode(value)) return;
               updateActiveSetup({
-                recoveryPlan: next === 'selective' ? { mode: next, selectiveTop } : { mode: next },
+                recoveryPlan: value === 'selective' ? { mode: value, selectiveTop } : { mode: value },
               });
             }}
           />

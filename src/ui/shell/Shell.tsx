@@ -4,21 +4,30 @@
  *
  * - the top app bar carries the brand and the account, and nothing else;
  * - from `lg` (1200 px) the setup is the focus pane and the March is M3's 360 dp supporting pane on
- *   the right, sticky under the app bar, its header holding the recap and Generate;
- * - below that the page is one column — setup, then the March — with a Material bottom app bar
- *   carrying the quick summary and Generate, and the full recap one tap away in a bottom sheet.
+ *   the right, its recap and Generate sticky under the app bar and the rest of it flowing with the
+ *   page (design rule 17);
+ * - below that the page is the setup and nothing else, with a Material bottom app bar carrying the
+ *   quick summary and Generate, and **the March itself in the sheet that opens from it**.
+ *
+ * That last line is design rule 5 as resolved on 2026-09-13 (investigation 0011: 97 of the sheet's
+ * 98 lines were repeated from the section under it). On a phone the sheet *is* the March: the page
+ * holds the setup, the bar holds the answer, and the whole march — recap, tiles, counts, trade-off,
+ * details — is one tap away at full height. Nothing scrolls the page on the player's behalf any
+ * more, so a Generate leaves the thumb exactly where it was; the bar's summary changes under it, and
+ * says so out loud for anyone who cannot see it change.
  *
  * The width decides in JavaScript rather than in CSS because the March section itself moves: it is
- * in the pane on a desktop and in the page flow on a phone, and rendering it in both places would
- * put the same anchor on the page twice.
+ * in the pane on a desktop and in the sheet on a phone, and rendering it in both places would put
+ * the same anchor on the page twice.
  */
-import { Container, Divider, Drawer, Grid, Stack, Text } from '@mantine/core';
+import { Container, Divider, Drawer, Grid, Stack, Text, VisuallyHidden } from '@mantine/core';
 import { Fragment, lazy, useEffect, useState } from 'react';
 
 import { selectTheme, useStore } from '@/state/store';
-import { MarchGenerateButton, MarchRecap, MarchSection } from '@/ui/sections/march';
+import { amount, MarchSection, restoreLastResult } from '@/ui/sections/march';
 
 import { LazySurface } from '../lazy';
+import { initResultPersistence, useResultStore } from '../resultStore';
 import { SECTIONS } from '../sections';
 import { applyTheme, watchSystemTheme } from '../theme';
 import { useUiStore } from '../uiStore';
@@ -52,11 +61,23 @@ export function Shell() {
   // that only exists at one width.
   useGenerateShortcut();
 
+  // The cached result of the last visit, and the writer that keeps the cache in step. The frame owns
+  // both since the March moved into the sheet: on a phone the section is unmounted until the sheet
+  // is opened, and the bar's summary has to be right before anybody opens anything.
+  useEffect(() => {
+    restoreLastResult();
+    return initResultPersistence();
+  }, []);
+
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
   useEffect(() => watchSystemTheme(() => useStore.getState().doc.ui.theme), []);
+
+  // A run that lands while the March is off screen is a change nobody can see: the bar says so.
+  const run = useLastRun();
+  const announcement = recapOpen ? '' : run.sentence;
 
   const dismissShare = (): void => {
     useUiStore.getState().setPendingShare(null);
@@ -98,10 +119,7 @@ export function Shell() {
             </Grid.Col>
           </Grid>
         ) : (
-          <Stack gap="xl">
-            {setup}
-            <MarchSection />
-          </Stack>
+          setup
         )}
       </Container>
 
@@ -113,33 +131,35 @@ export function Shell() {
 
       {wide ? null : (
         <>
+          {/* The answer changed while the sheet was shut: the summary pulses once for the eye and
+              this sentence says the same thing for everyone else (design rule 24 — colour and
+              motion are never the only signal). */}
+          <VisuallyHidden role="status">{announcement}</VisuallyHidden>
           <BottomBar
+            pulse={run.index}
             onOpenRecap={() => {
               setRecapOpen(true);
             }}
           />
-          {/* Half height, from the bottom: the figures and the first tiles. The sheet sits *over*
-              the bottom bar rather than under it (M-09 polish list): a control outside a focus trap
-              that the pointer can still reach is a trap that does not hold, so the bar goes under
-              the scrim and the sheet carries its own Generate — the answer and the action still
-              travel together (investigation 0009, "to decide" 3). */}
+          {/* Full height under the app bar, and the whole March inside it: the recap, the army, the
+              counts, everything. The sheet sits *over* the bottom bar rather than under it (M-09
+              polish list): a control outside a focus trap that the pointer can still reach is a trap
+              that does not hold, so the bar goes under the scrim and the sheet carries its own
+              Generate — the answer and the action still travel together. */}
           <Drawer
             opened={recapOpen}
             onClose={() => {
               setRecapOpen(false);
             }}
             position="bottom"
-            size="60%"
+            size="calc(100dvh - var(--pyr-appbar-height))"
             radius="md"
             padding="md"
             zIndex={300}
             title="March"
             closeButtonProps={{ 'aria-label': 'Close' }}
           >
-            <Stack gap="md">
-              <MarchRecap variant="sheet" />
-              <MarchGenerateButton fullWidth />
-            </Stack>
+            <MarchSection />
           </Drawer>
         </>
       )}
@@ -149,4 +169,33 @@ export function Shell() {
       </LazySurface>
     </div>
   );
+}
+
+/**
+ * What the last finished run was, for a phone that cannot see the March while the sheet is shut.
+ *
+ * The store is subscribed to rather than watched with an effect, because that is what it is: an
+ * external source of changes, and the sentence is written in its callback. The run that was already
+ * in the cache when the app opened is not a run — restoring yesterday's march is not news.
+ */
+function useLastRun(): { index: number; sentence: string } {
+  const [run, setRun] = useState({ index: 0, sentence: '' });
+
+  useEffect(() => {
+    // The restore above has already landed by now: effects run in the order they are written.
+    let seen = useResultStore.getState().last?.at ?? null;
+    return useResultStore.subscribe((state) => {
+      const last = state.last;
+      if (last === null || last.at === seen) return;
+      seen = last.at;
+      setRun((current) => ({
+        index: current.index + 1,
+        sentence: `March generated: ${amount(last.result.stacks.length)} stacks, ${amount(
+          last.summary.avgDamage,
+        )} expected damage. Open the summary to read it.`,
+      }));
+    });
+  }, []);
+
+  return run;
 }

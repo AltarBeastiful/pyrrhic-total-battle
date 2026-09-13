@@ -224,9 +224,25 @@ test('on a phone the objective folds to the chosen one until Change is pressed',
   await user.click(within(list).getByRole('button', { name: 'Change Objective' }));
   expect(within(list).getAllByRole('radio')).toHaveLength(6);
 
-  await user.click(within(list).getByRole('radio', { name: 'Highest average damage' }));
+  // Under the medium window the options are rows, so a row's name is its title and its sentence.
+  await user.click(within(list).getByRole('radio', { name: /^Highest average damage/ }));
   expect(setup()?.priority).toBe('avgDamage');
   expect(within(list).getAllByRole('radio')).toHaveLength(1);
+});
+
+test('on a phone the stacking method folds to the chosen one too (D-54)', async () => {
+  stubWidth(false);
+  const user = userEvent.setup();
+  renderWithTheme(<BattleSection />);
+
+  const methods = screen.getByRole('radiogroup', { name: 'Stacking method' });
+  expect(within(methods).getAllByRole('radio')).toHaveLength(1);
+
+  await user.click(within(methods).getByRole('button', { name: 'Change Stacking method' }));
+  expect(within(methods).getAllByRole('radio')).toHaveLength(3);
+  await user.click(within(methods).getByText('Hired units only fall once all of your troops have.'));
+  expect(options()?.method).toBe('ms');
+  expect(within(methods).getAllByRole('radio')).toHaveLength(1);
 });
 
 // ---- What the losses cost ------------------------------------------------------------------------
@@ -235,8 +251,11 @@ test('the selective recovery plan asks how many unit types to revive', async () 
   renderWithTheme(<BattleSection />);
   expect(screen.queryByLabelText('Unit types to revive')).toBeNull();
 
-  await user.click(screen.getByRole('combobox', { name: 'Recovery plan' }));
-  await user.click(screen.getByRole('option', { name: 'Revive the top types, retrain the rest' }));
+  // Three whole rows, never a dropdown (design rule 8).
+  const plans = screen.getByRole('radiogroup', { name: 'Recovery plan' });
+  expect(screen.queryByRole('combobox', { name: 'Recovery plan' })).toBeNull();
+  expect(within(plans).getAllByRole('radio')).toHaveLength(3);
+  await user.click(within(plans).getByText('Gold for your highest tiers, silver and time for the rest.'));
   expect(setup()?.recoveryPlan).toEqual({ mode: 'selective', selectiveTop: 3 });
 
   type('Unit types to revive', '2');

@@ -18,7 +18,6 @@ import { useMemo } from 'react';
 
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { useResultStore } from '@/ui/resultStore';
-import { scrollToMarch } from '@/ui/shell/march';
 import { blockedReason, fabState } from '@/ui/shell/state';
 
 import { cancelGenerate, runGenerate } from './generate';
@@ -49,7 +48,6 @@ export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGen
     }
     if (hint !== null) return;
     void runGenerate();
-    scrollToMarch();
   };
 
   const blocked = state === 'blocked' && hint !== null;

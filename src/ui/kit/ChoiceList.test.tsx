@@ -7,7 +7,34 @@ import { afterEach, expect, test } from 'vitest';
 import { ChoiceList } from './ChoiceList';
 import { renderWithTheme } from './testRender';
 
-afterEach(cleanup);
+const realMatchMedia = window.matchMedia;
+
+/** Stand in for the browser: jsdom has no `matchMedia`, and its fallback answer is the phone. */
+function stubWide(matches: boolean): void {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: (media: string) => ({
+      media,
+      matches,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
+afterEach(() => {
+  cleanup();
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: realMatchMedia,
+  });
+});
 
 const ITEMS = [
   { value: 'ladder', title: 'Tier ladder', description: 'Fill from the top tier down.' },
@@ -51,6 +78,8 @@ test('clicking a row chooses it', async () => {
 });
 
 test('the cards layout names a card by its title alone and describes it with the sentence', () => {
+  // Cards only exist from the medium window up (D-54); jsdom answers every query with `false`.
+  stubWide(true);
   renderWithTheme(
     <ChoiceList layout="cards" columns={3} label="Method" value="ladder" onChange={() => {}} items={ITEMS} />,
   );
@@ -61,7 +90,7 @@ test('the cards layout names a card by its title alone and describes it with the
   expect(document.getElementById(describedBy ?? '')?.textContent).toBe('Fill from the top tier down.');
 });
 
-test('a collapsible card list folds to the chosen card on a phone and unfolds on request', async () => {
+test('a collapsible list folds to the chosen option on a phone and unfolds on request', async () => {
   const user = userEvent.setup();
   renderWithTheme(
     <ChoiceList layout="cards" collapsible label="Method" value="ladder" onChange={() => {}} items={ITEMS} />,

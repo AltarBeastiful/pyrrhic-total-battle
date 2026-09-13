@@ -161,9 +161,17 @@ test('every section is a landmark region named by its own heading', () => {
       continue;
     }
     expect(region).not.toBeNull();
-    const heading = within(region as HTMLElement).getByRole('heading', { level: 2 });
-    expect(region?.getAttribute('aria-labelledby')).toBe(heading.id);
-    expect(heading.textContent).toContain(spec.title);
+    const element = region as HTMLElement;
+    const labelledBy = element.getAttribute('aria-labelledby');
+    if (labelledBy === null) {
+      // The March inside the phone's sheet takes its name from the sheet's own header rather than
+      // writing "March" on the screen twice (design rule 5, 2026-09-13).
+      expect(element.getAttribute('aria-label')).toBe(spec.title);
+    } else {
+      const heading = within(element).getByRole('heading', { level: 2 });
+      expect(labelledBy).toBe(heading.id);
+      expect(heading.textContent).toContain(spec.title);
+    }
     unmount();
   }
 });

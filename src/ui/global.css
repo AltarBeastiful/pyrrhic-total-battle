@@ -85,6 +85,18 @@ body {
   }
 }
 
+/* The focus ring on a field (design rule 24; investigation 0011, rule 24a). Mantine marks a focused
+   input by changing its border colour and nothing else — `#6e7873` → brass is **1.8:1** between the
+   two states, under WCAG 2.2 §2.4.11's 3:1 — while buttons and chips get the theme's 2 px ring. This
+   is that same ring, written once for every control Mantine renders through `Input`: text fields,
+   number fields, selects, the native tier selects and the search box. The colour is the theme's own
+   focus colour, so the scheme switch carries it; `pnpm contrast` checks it against all four surfaces
+   in both schemes. */
+.mantine-Input-input:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
 /* Figures are compared column by column all over the results, so they are always tabular. */
 :where(output, td, th) {
   font-variant-numeric: tabular-nums;

@@ -23,14 +23,6 @@
   }
 }
 
-/* A stack in the recap sheet: the glyph and the name over the count, in a tile the thumb can read
-   two-up. Only the grid itself is here; the tile is a stock `Paper`. */
-.stackGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--mantine-spacing-xs);
-}
-
 /* The quick summary is one line that must never widen the bar it sits in. */
 .quickLine {
   min-width: 0;

@@ -5,7 +5,7 @@
  * contract are both stubbed here — this is a test of the frame, not of what it frames, and the
  * five sections are being written in parallel.
  */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -48,18 +48,21 @@ vi.mock('../sections', () => {
   };
 });
 
-/** The March contract (M-08): the four pieces the frame places, each saying where it landed. */
+/** The March contract (M-08): the pieces the frame places, each saying where it landed. */
 vi.mock('@/ui/sections/march', () => ({
   MarchSection: (): ReactNode => (
     <section id="march" aria-labelledby="march-h">
       <h2 id="march-h">March</h2>
     </section>
   ),
-  MarchRecap: ({ variant }: { variant: string }): ReactNode => <p>recap {variant}</p>,
+  MarchRecap: (): ReactNode => <p>recap</p>,
   MarchQuickSummary: (): ReactNode => <span>quick summary</span>,
   MarchGenerateButton: ({ size }: { size?: string }): ReactNode => (
     <button type="button">Generate {size ?? 'md'}</button>
   ),
+  // The frame owns the cached result now that the March lives in the sheet on a phone.
+  restoreLastResult: () => false,
+  amount: (value: number): string => String(value),
 }));
 
 const realMatchMedia = window.matchMedia;
@@ -89,6 +92,20 @@ function desktop(): void {
 
 function renderShell(): ReturnType<typeof render> {
   return render(<Shell />, { wrapper: ThemeHarness });
+}
+
+/**
+ * A result the frame can announce. Only the two figures the sentence quotes are real; the rest is
+ * the smallest shape `ResultSnapshot` accepts, because the frame reads nothing else.
+ */
+function fakeResult(stacks: number, avgDamage: number) {
+  return {
+    request: {} as never,
+    result: { stacks: Array.from({ length: stacks }, () => ({})) } as never,
+    summary: { avgDamage } as never,
+    profileId: 'p',
+    setupId: 's',
+  };
 }
 
 /** The default document has an army but no housing, so a march is blocked until this is called. */
@@ -127,12 +144,15 @@ test('a keyboard reaches the calculator without walking the header', () => {
   expect(screen.getByRole('main').id).toBe('main');
 });
 
-test('under 1200 px the page is one column, with the March under the setup', () => {
+test('under 1200 px the page is the setup alone — the March is not drawn twice', () => {
   const { container } = renderShell();
 
+  // Design rule 5, resolved 2026-09-13: the March is the sheet, and nothing but the setup is in the
+  // page under it (investigation 0011 measured 97 of the sheet's 98 lines repeated from the page).
   const ids = [...container.querySelectorAll('main section[id]')].map((node) => node.id);
-  expect(ids).toEqual(['troops', 'mercenaries', 'bonuses', 'battle', 'march']);
+  expect(ids).toEqual(['troops', 'mercenaries', 'bonuses', 'battle']);
   expect(container.querySelector('aside')).toBeNull();
+  expect(screen.queryByRole('heading', { level: 2, name: 'March' })).toBeNull();
 });
 
 test('under 1200 px the bottom app bar carries the summary and Generate', () => {
@@ -146,13 +166,43 @@ test('under 1200 px the bottom app bar carries the summary and Generate', () => 
   expect(screen.queryByRole('button', { name: /^Generate march/ })).toBeNull();
 });
 
-test('the summary opens the recap sheet, which is the full recap and nothing else', async () => {
+test('the summary opens a sheet that holds the whole March section', async () => {
   renderShell();
   fireEvent.click(screen.getByRole('button', { name: 'Open the march recap' }));
 
-  const sheet = await screen.findByRole('dialog');
-  expect(within(sheet).getByText('recap sheet')).toBeTruthy();
-  expect(within(sheet).getByRole('heading', { name: 'March' })).toBeTruthy();
+  const sheet = await screen.findByRole('dialog', { name: 'March' });
+  expect(within(sheet).getByRole('button', { name: 'Close' })).toBeTruthy();
+  // The whole March section is in it — not a second, shorter copy of the recap.
+  expect(sheet.querySelector('#march')).not.toBeNull();
+  expect(screen.queryByText('recap')).toBeNull();
+});
+
+test('a run that lands with the sheet shut is said out loud, and the bar is marked', async () => {
+  renderShell();
+  const bar = screen.getByRole('button', { name: 'Open the march recap' });
+  // The app bar keeps a status line of its own for "Copied", so every live region is read together.
+  const status = (): string =>
+    screen
+      .getAllByRole('status')
+      .map((node) => node.textContent ?? '')
+      .join('');
+  expect(status()).toBe('');
+
+  act(() => {
+    useResultStore.getState().setResult(fakeResult(12, 19_639_721));
+  });
+  await waitFor(() => {
+    expect(status()).toMatch(/^March generated: 12 stacks, 19639721 expected damage\./);
+  });
+  // The eye's half of the same signal, and only where motion is welcome (the class carries a
+  // `prefers-reduced-motion` guard of its own).
+  expect(bar.querySelector('[class*="pulse"]')).not.toBeNull();
+
+  // Opening the sheet is reading the answer: there is nothing left to announce.
+  fireEvent.click(bar);
+  await waitFor(() => {
+    expect(status()).toBe('');
+  });
 });
 
 test('at 1400 px the March is the sticky supporting pane, its header carrying recap and Generate', () => {
@@ -161,7 +211,7 @@ test('at 1400 px the March is the sticky supporting pane, its header carrying re
 
   const pane = container.querySelector('aside');
   if (pane === null) throw new Error('the supporting pane is missing');
-  expect(within(pane as HTMLElement).getByText('recap pane')).toBeTruthy();
+  expect(within(pane as HTMLElement).getByText('recap')).toBeTruthy();
   expect(within(pane as HTMLElement).getByRole('button', { name: 'Generate md' })).toBeTruthy();
   expect(within(pane as HTMLElement).getByRole('heading', { level: 2, name: 'March' })).toBeTruthy();
 

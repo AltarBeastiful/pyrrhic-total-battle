@@ -1,5 +1,6 @@
 /**
- * The two questions the frame asks the browser: how wide is it, and does this player want motion.
+ * The one question the frame asks the browser: how wide is it. (It used to ask about motion too, for
+ * the scroll a Generate started; nothing scrolls the page on the player's behalf any more.)
  *
  * `useSyncExternalStore` rather than an effect and a piece of state: the answer is read during the
  * first render (so the frame never paints the wrong column first) and the subscription is the
@@ -9,26 +10,19 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 /**
- * Below this width the page is one column: the march sits under the setup and the answer and
- * Generate are in the bottom app bar (design plan §5.1, frame V1).
- */
-export const ONE_COLUMN = '(max-width: 1199px)';
-/**
  * M3's *large* window, Mantine's `lg` breakpoint: from here the March is the 360 dp supporting pane
- * beside the page and there is no bottom bar.
+ * beside the page and there is no bottom bar. Below it the page is the setup alone, the answer and
+ * Generate are in the bottom app bar, and the March is the sheet that opens from it.
  */
 export const TWO_PANES = '(min-width: 1200px)';
-/** Material 3's medium window: from here a card has room for a second column. */
-export const MEDIUM = '(min-width: 600px)';
-export const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 function list(query: string): MediaQueryList | null {
   if (typeof globalThis.matchMedia !== 'function') return null;
   return globalThis.matchMedia(query);
 }
 
-/** Answer the query once, outside React (event handlers, plain functions). */
-export function mediaMatches(query: string): boolean {
+/** Answer the query once, outside React. */
+function matches(query: string): boolean {
   return list(query)?.matches === true;
 }
 
@@ -48,7 +42,7 @@ export function useMediaQuery(query: string): boolean {
 
   return useSyncExternalStore(
     subscribe,
-    () => mediaMatches(query),
+    () => matches(query),
     () => false,
   );
 }

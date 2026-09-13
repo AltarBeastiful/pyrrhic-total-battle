@@ -5,12 +5,19 @@
  * reports — so every other figure moved without anyone saying so. This strip puts each figure of
  * the winning selection next to the army you would have marched with every type in it. Putting a
  * dropped type back is done on its tile above, where its cost is visible.
+ *
+ * Rule 29 has a second half: saying so is not enough, the **other objectives are offered beside the
+ * answer**. They are two light buttons under the sentence — the worst-case and the per-silver
+ * objective, whichever of them is not the one that just ran — and pressing one sets the objective in
+ * the Battle card and generates again, so the comparison is one tap rather than a scroll and a form.
  */
-import { Paper, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Button, Group, Paper, SimpleGrid, Stack, Text } from '@mantine/core';
 
+import { selectActiveSetup, useStore } from '@/state/store';
 import { DeltaText } from '@/ui/domain';
 
 import { amount } from './format';
+import { runGenerate } from './generate';
 import type { SearchTradeoff, TradeoffFigures } from './runStore';
 
 interface Figure {
@@ -30,13 +37,29 @@ const FIGURES: Figure[] = [
   { label: 'Dragon coins', read: (figures) => figures.dragonCoins, betterWhen: 'lower' },
 ];
 
+/**
+ * The two honest alternatives of design rule 29, in the Battle card's own words. The ids are the
+ * schema's objectives; the labels are what the card calls them, prefixed with the verb that says
+ * pressing runs the search again.
+ */
+const ALTERNATIVES = [
+  { priority: 'minDamage', label: 'Try best worst case' },
+  { priority: 'damagePerSilver', label: 'Try damage per silver' },
+] as const;
+
 export interface TradeoffStripProps {
   tradeoff: SearchTradeoff;
 }
 
 export function TradeoffStrip({ tradeoff }: TradeoffStripProps) {
+  const setup = useStore(selectActiveSetup);
   const kept = tradeoff.includedUnitIds.length;
   const dropped = tradeoff.excludedUnitIds.length;
+
+  const tryObjective = (priority: (typeof ALTERNATIVES)[number]['priority']): void => {
+    useStore.getState().updateActiveSetup({ priority });
+    void runGenerate();
+  };
 
   return (
     <Paper p="sm" radius="sm" bg="var(--pyr-sunken)">
@@ -49,6 +72,23 @@ export function TradeoffStrip({ tradeoff }: TradeoffStripProps) {
             dropped,
           )} out. Tap a dimmed tile above to keep one in.`}
         </Text>
+        {/* Rule 29's second half: the alternatives, beside the answer rather than in the form. */}
+        <Group gap="xs">
+          {ALTERNATIVES.filter((alternative) => alternative.priority !== setup?.priority).map(
+            (alternative) => (
+              <Button
+                key={alternative.priority}
+                variant="light"
+                size="compact-sm"
+                onClick={() => {
+                  tryObjective(alternative.priority);
+                }}
+              >
+                {alternative.label}
+              </Button>
+            ),
+          )}
+        </Group>
         {/* A container query, not a viewport one: this strip is as often inside the 360 px March
             pane on a 1400 px desktop as it is across a phone, and two columns in 360 px break a
             figure across two lines ("75 870" / "000" — investigation 0011). */}

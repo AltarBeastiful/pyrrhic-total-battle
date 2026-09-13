@@ -10,7 +10,6 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { useResultStore } from '../resultStore';
 import { cancelGenerate, runGenerate } from '../sections/march/generate';
 import { setupFingerprint, useRunStore } from '../sections/march/runStore';
-import { scrollToMarch } from './march';
 import { blockedReason, fabState, type FabState } from './state';
 
 export interface GenerateRun {
@@ -41,7 +40,6 @@ export function useGenerateRun(): GenerateRun {
     }
     if (hint !== null) return;
     void runGenerate();
-    scrollToMarch();
   }, [running, hint]);
 
   return { state, hint, press };

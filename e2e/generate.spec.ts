@@ -19,6 +19,7 @@ import {
   marchStackLabels,
   marchTiles,
   openApp,
+  openMarchSheet,
   pageOverflowsSideways,
   setCountsMode,
   settle,
@@ -122,10 +123,12 @@ test('a type the priority left out can be kept in the march, and stays in', asyn
 
 test('a card wider than 36 rem draws the counts as a table', async ({ page }) => {
   const problems = watchConsole(page);
-  // One column, so the March is as wide as the page: the container query gives it the table.
+  // One column, so the March is the sheet — and the sheet is as wide as the page, which is what the
+  // container query asks about.
   await page.setViewportSize({ width: 1024, height: 900 });
   await openApp(page);
   await generate(page, { leadership: 4100 });
+  await openMarchSheet(page);
 
   const table = marchCountsTable(page);
   await expect(table).toBeVisible();
@@ -196,22 +199,22 @@ test('mobile: the bar carries the answer, and the recap is one tap away', async 
   await generate(page, { leadership: 4100, authority: 1200 });
 
   expect(await pageOverflowsSideways(page)).toBe(false);
-  await expect(marchTiles(page).first()).toBeVisible();
   await expect(generateButton(page)).toBeVisible();
-  // The narrow section stacks its rows instead of drawing the table.
-  await expect(marchCountsTable(page)).toBeHidden();
-  await expect(marchCountsList(page)).toBeVisible();
+  // The March is not in the page at all below 1200 px (design rule 5): it is the sheet.
+  await expect(marchTiles(page)).toHaveCount(0);
 
-  // The quick summary in the bottom bar opens the full recap. The sheet covers the bar rather than
-  // sitting under it (M-09 polish list): a control outside a focus trap that the pointer can still
-  // reach is a trap that does not hold. So the bar goes under the scrim and the sheet carries its
-  // own Generate, and the answer and the action still travel together.
-  await page.getByRole('button', { name: 'Open the march recap' }).click();
-  const recap = page.getByRole('dialog', { name: 'March' });
-  await expect(recap).toBeVisible();
-  await expect(recap.getByText('Expected damage')).toBeVisible();
+  // The quick summary in the bottom bar opens it. The sheet covers the bar rather than sitting
+  // under it (M-09 polish list): a control outside a focus trap that the pointer can still reach is
+  // a trap that does not hold. So the bar goes under the scrim and the sheet carries its own
+  // Generate, and the answer and the action still travel together.
+  const recap = await openMarchSheet(page);
+  await expect(recap.getByText('Expected damage', { exact: true })).toBeVisible();
   await expect(recap.getByRole('progressbar', { name: 'Leadership used' })).toBeVisible();
   await expect(recap.getByRole('button', { name: /^Generate march/ })).toBeVisible();
+  await expect(marchTiles(page).first()).toBeVisible();
+  // The narrow sheet stacks its rows instead of drawing the table.
+  await expect(marchCountsTable(page)).toBeHidden();
+  await expect(marchCountsList(page)).toBeVisible();
   // …and the trap holds: tabbing all the way round never leaves the sheet for the bar underneath.
   for (let i = 0; i < 12; i += 1) await page.keyboard.press('Tab');
   const trapped = await page.evaluate(() => {

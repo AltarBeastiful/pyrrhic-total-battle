@@ -14,7 +14,7 @@ import type { BonusKey } from '@/data/types';
 import { updateSources } from '@/state/actions/bonuses';
 import type { ProfileSources } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { Disclosure, NumberField } from '@/ui/kit';
+import { Disclosure, NumberField, useRovingTabs } from '@/ui/kit';
 
 import type { ArtifactChipRow } from './chips';
 import { BONUS_LABELS, humanizeOption, rowValue, SPECIAL_LABELS } from './labels';
@@ -199,6 +199,7 @@ export interface ArtifactChipsProps {
 
 export function ArtifactChips({ chips, isRefused, onToggle, onConfigure }: ArtifactChipsProps) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const roving = useRovingTabs();
   const latest = useRef({ onToggle, onConfigure });
   useEffect(() => {
     latest.current = { onToggle, onConfigure };
@@ -219,7 +220,7 @@ export function ArtifactChips({ chips, isRefused, onToggle, onConfigure }: Artif
 
   return (
     <Stack gap="xs">
-      <Group role="group" aria-label="Artifacts" gap={8} wrap="wrap">
+      <Group role="group" aria-label="Artifacts" gap={8} wrap="wrap" {...roving}>
         {chips.map((chip) => (
           <MemoArtifactChip
             key={chip.id}

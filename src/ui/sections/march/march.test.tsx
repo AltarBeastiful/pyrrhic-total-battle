@@ -9,6 +9,7 @@
  * a count or a figure is an assertion about the engine's own output.
  */
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { useEffect } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { unitById } from '@/data';
@@ -16,13 +17,12 @@ import type { UnitDef } from '@/engine/types';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
-import { LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
+import { initResultPersistence, LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
 import type * as WorkerClient from '@/worker/client';
 
+import { restoreLastResult } from './generate';
 import { amount } from './format';
-import { MarchGenerateButton } from './MarchGenerateButton';
 import { MarchQuickSummary } from './MarchQuickSummary';
-import { MarchRecap } from './MarchRecap';
 import { MarchSection } from './MarchSection';
 import { useRunStore } from './runStore';
 
@@ -41,12 +41,16 @@ const writeText = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()
  * own failure modes to every test here.
  */
 function Page() {
-  return (
-    <>
-      <MarchGenerateButton />
-      <MarchSection />
-    </>
-  );
+  // The cache is the frame's business since the March moved into the phone's sheet (`ui/shell`), so
+  // the harness plays the frame's part: restore on mount, keep the cache in step while mounted.
+  useEffect(() => {
+    restoreLastResult();
+    return initResultPersistence();
+  }, []);
+
+  // Generate is the section's own on one column (the width jsdom answers with), so the harness adds
+  // none of its own: two buttons with one name is what the frame is careful never to draw.
+  return <MarchSection />;
 }
 
 /** Change the leadership the march is sized for, the way the Battle card would. */
@@ -396,6 +400,46 @@ test('what the search gave up is said beside what it won', async () => {
   expect(screen.getByText(`All types ${amount(6)}`)).toBeTruthy();
 });
 
+test('the honest note offers the other objectives beside it, and pressing one runs them', async () => {
+  useStore.getState().updateActiveSetup({ priority: 'avgDamage' });
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+  const figures = {
+    friendlyHits: 4,
+    minDamage: 1,
+    maxDamage: 2,
+    avgDamage: 3,
+    silver: 4,
+    gold: 5,
+    dragonCoins: 0,
+  };
+
+  act(() => {
+    useRunStore.setState({
+      tradeoff: {
+        objective: 'avgDamage',
+        includedUnitIds: [unit.id],
+        excludedUnitIds: ['spearman-1'],
+        selection: figures,
+        baseline: { ...figures, avgDamage: 6 },
+      },
+    });
+  });
+
+  // Design rule 29: saying what the priority gave up is only half of it — the alternatives are
+  // offered next to the answer, and the one already running is not offered back.
+  const at = lastResult()?.at;
+  fireEvent.click(screen.getByRole('button', { name: 'Try best worst case' }));
+  expect(setup()?.priority).toBe('minDamage');
+  await waitFor(() => {
+    expect(lastResult()?.at).not.toBe(at);
+  });
+
+  expect(screen.queryByRole('button', { name: 'Try best worst case' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Try damage per silver' })).toBeTruthy();
+}, 20_000);
+
 test('a warning from the engine is an alert under the recap', async () => {
   renderWithTheme(<Page />);
   await generate();
@@ -412,16 +456,19 @@ test('a warning from the engine is an alert under the recap', async () => {
   expect(screen.getByText('Worth a look')).toBeTruthy();
 });
 
-test('the recap sheet adds what each pool bought and what stayed at home', async () => {
+test('the recap is the figures alone, and the section under it carries the pools and the army', async () => {
   setLeadership(20);
   renderWithTheme(<Page />);
   await generate();
-  cleanup();
 
-  renderWithTheme(<MarchRecap variant="sheet" />);
-  expect(screen.getByText('Expected damage')).toBeTruthy();
-  expect(screen.getByRole('progressbar', { name: 'Leadership used' })).toBeTruthy();
-  expect(screen.getByText('Left out — tap to put back')).toBeTruthy();
+  // The figures, once (design rule 5): the hero, the five comparisons and nothing else.
+  const recap = screen.getByLabelText('This march in figures');
+  expect(within(recap).getByText('Expected damage')).toBeTruthy();
+  expect(within(recap).queryByRole('progressbar')).toBeNull();
+
+  // What the recap used to repeat is the section's own, and it is there exactly once.
+  expect(screen.getAllByRole('progressbar', { name: 'Leadership used' })).toHaveLength(1);
+  expect(screen.getAllByText('Expected damage')).toHaveLength(1);
 }, 15_000);
 
 test('a march can be saved, and is found again under the fold', async () => {
