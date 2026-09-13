@@ -141,7 +141,8 @@ export function ChipRow({
           />
         ))}
       </Group>
-      <Text role="status" size="xs" c="dimmed" mih="1.125rem">
+      {/* Always mounted so screen readers announce a refusal; takes no space while silent. */}
+      <Text role="status" size="xs" c="dimmed" mih={notice ? '1.125rem' : 0} {...(notice ? {} : { lh: 0 })}>
         {notice}
       </Text>
     </Stack>
