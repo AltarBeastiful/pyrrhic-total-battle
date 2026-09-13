@@ -439,6 +439,11 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — M-09 done: React Aria kit, Tailwind, eight dependencies and the custom lint rules removed; kit,
+  domain and stories renamed into place; remaining dialogs on Mantine; polish list applied; design.md rewritten
+  for the theme; visual baselines regenerated; axe zero on kit page and app in both schemes; stable vendor
+  chunk. Gates: 542 unit tests, 26 e2e, 4 visual, contrast 176 pairs, size 211/35/30 kB. The UI migration to
+  Mantine is complete on `development`; nothing merged to `main`.
 - 2026-09-13 — Mantine migration M-01…M-08 done on `development`: theme with luminance-targeted ramps, kit and
   domain on stock components, frame V1 (top bar brand + account; sticky March pane with recap and Generate
   from 1200 px; bottom bar with the quick summary and Generate plus a recap sheet on phones), Troops as
