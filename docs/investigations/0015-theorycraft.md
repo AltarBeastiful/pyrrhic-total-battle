@@ -306,6 +306,34 @@ Read it as three regimes:
   Whether the game trains several unit types in parallel is **to check in game** — the repo has no
   evidence either way, and it decides whether retraining or reviving is even a choice.
 
+### 6.4 Damage per silver with a damage floor (`08-frontier`, 3,060 marches: 255 troop subsets × 6 spend levels × 2 methods, B, full leadership)
+
+The owner's objection to a pure ratio stands on two legs: a march that is too small may not do enough
+to the monster, and hits accumulate with stack count. So the question is the best silver efficiency
+*above a damage floor*, with the stock burnt beside it:
+
+| floor per march | best damage per silver | avg damage | silver | mercs lost | per silver | per merc lost |
+|---|---|---|---|---|---|---|
+| any | ARC1 SP1 RD1 + all mercs on top (Troops first) | 5,118,498 | 1,302,900 | 30 | 3.93 | 171 k |
+| ≥ 6 M | ARC1 + ARC2 (or ARC1 + RD2) under-troops, mercs 68/73/72/36 | 6,062,806 | 1,612,700 | 27 | 3.76 | 225 k |
+| ≥ 7 M | ARC2 RD2 RD3, full stock | 7,825,435 | 2,361,500 | 28 | 3.31 | 279 k |
+| ≥ 8 M | nothing at full leadership; the best merc vector of §5 (8,061,308) | 8,061,308 | 2,361,500 | 27 | 3.41 | 299 k |
+
+And the same with the stock as the scarce thing (best damage per mercenary lost above a floor): ≥ 3 M
+→ Kai's seven types with 20/20/10/10 (3,813,773, 636 k per mercenary); ≥ 4 M → seven types with SW1 and
+18/20/20/10 (4,041,500, 577 k); ≥ 5 M → ARC1 ARC2 SP2 RD2 RD3 with 35/37/38/19 (5,619,301, 401 k); ≥ 6 M
+→ ARC2 SP2 RD2 RD3 with 53/57/57/28 (7,201,171, 343 k); ≥ 7.5 M → the 7-type winner (279 k).
+
+Two readings. **Per silver, more hits do not pay for the sponges that buy them**: every full-leadership
+march costs between 1.30 M (four thousand tier-1 units) and 2.36 M (ARC2 RD2 RD3) in silver, a 1.8×
+spread, while the damage spread across the whole frontier is 5.1 M to 7.8 M, 1.5×; the ratio therefore
+drifts toward the cheapest sponge that still shelters (or, for Troops first, merely accompanies) the whole
+stock. Above a 7 M floor the answer is the 7-type winner either way. **Per mercenary, the deep ladder
+wins at every floor below 7 M**, because hits scale with the number of stacks in front and the stock burnt
+does not. The 199 marches on the Pareto frontier (damage ↑, silver ↓, stock ↓) are in `out/08-frontier.md`;
+the floor itself — how much a single march must do to count — is a game fact we do not have and should be
+read off the event's rules before choosing a row.
+
 ## 7. Bonuses, captains, gear (B; `30-bonus-sensitivity`, `31-captains`, `05-captain-swap`, `32-gear`)
 
 - **Strength is linear and small per point**: +1 on `army` or `guardsmen` strength, or on
