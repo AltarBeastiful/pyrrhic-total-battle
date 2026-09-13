@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,600&display=swap">
+  <style>
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; }
+    a { color: #c9a24a; } a:hover { color: #e0c070; }
+    * { box-sizing: border-box; }
+    
+.page { width: 1400px; min-height: 900px; background: #161a19; color: #e7ece9; }
+.bar { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: linear-gradient(180deg, #1e2423, #161a19); border-bottom: 1px solid #313938; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; }
+.mark { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #e0c070, #8f6d2a); box-shadow: 0 1px 0 rgba(255,255,255,.15) inset; }
+.acct { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: #2b3231; border: 1px solid #313938; font-size: 14px; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: #c9a24a; color: #131917; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; padding: 24px; }
+.panel { background: linear-gradient(180deg, #212827, #1c2221); border: 1px solid #2f3736; border-radius: 12px; padding: 20px 24px; box-shadow: 0 8px 24px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.04) inset; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; letter-spacing: .02em; color: #e7ece9; display: flex; align-items: center; justify-content: space-between; }
+h2 .meta { font-weight: 500; color: #9da7a3; font-size: 13px; }
+.row { display: grid; grid-template-columns: 120px auto 1fr; align-items: center; gap: 12px; height: 40px; }
+.gm { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+.gm i { width: 4px; height: 20px; border-radius: 2px; display: block; }
+.sel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #9da7a3; }
+.sel b { display: inline-flex; align-items: center; justify-content: space-between; min-width: 84px; height: 30px; padding: 0 4px; border-radius: 8px; background: #101413; border: 1px solid #313938; color: #e7ece9; font-weight: 600; font-size: 13px; }
+    .sel b .ar { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: #9da7a3; font-size: 11px; }
+.chips { display: flex; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 9px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+.chip.on { background: rgba(37,107,53,.35); border-color: rgba(63,183,91,.5); color: #b9e9c3; }
+.chip.off { background: #101413; border-color: #313938; color: #9da7a3; }
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 10px; border-radius: 999px; background: rgba(140,48,48,.25); border: 1px solid rgba(216,143,143,.35); font-size: 13px; font-weight: 600; }
+.pill .t { font-family: Fraunces, serif; color: #d98d8d; }
+.pill .x { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #9da7a3; }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #3b4442; background: #2b3231; color: #e7ece9; font-size: 13px; font-weight: 600; }
+.figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.fig .l { font-size: 12px; color: #9da7a3; } .fig .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cap { position: relative; height: 32px; padding: 0 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: #101413; border: 1px solid #313938; color: #e7ece9; }
+.cap.on { background: rgba(201,162,74,.18); border-color: rgba(201,162,74,.6); }
+.cap .gear { position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; border-radius: 50%; background: #2b3231; border: 1px solid #4a5451; display: grid; place-items: center; }
+.cap.on .gear { background: #c9a24a; border-color: #c9a24a; }
+.cap .dot { width: 5px; height: 5px; border-radius: 50%; background: #c9a24a; }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.field label { display: block; font-size: 12px; color: #9da7a3; margin-bottom: 6px; }
+.input { height: 40px; border-radius: 8px; background: #101413; border: 1px solid #313938; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 15px; font-variant-numeric: tabular-nums; box-shadow: 0 1px 2px rgba(0,0,0,.4) inset; }
+.seg { display: inline-flex; background: #101413; border: 1px solid #313938; border-radius: 8px; padding: 3px; }
+.seg span { padding: 0 14px; height: 30px; display: inline-flex; align-items: center; border-radius: 6px; font-size: 13px; font-weight: 500; color: #9da7a3; }
+.seg span.on { background: #2b3231; color: #e7ece9; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.card { position: relative; padding: 12px 40px 12px 14px; border-radius: 10px; background: #101413; border: 1px solid #313938; }
+.card.on { border-color: #c9a24a; background: rgba(201,162,74,.08); }
+.card b { display: block; font-size: 14px; margin-bottom: 4px; } .card span { font-size: 13px; color: #9da7a3; }
+.card i { position: absolute; top: 12px; right: 12px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #4a5451; }
+.card.on i { border-color: #c9a24a; background: radial-gradient(circle, #c9a24a 45%, transparent 50%); }
+.march { background: linear-gradient(180deg, #232a29, #1a201f); border: 1px solid #3a4341; border-radius: 12px; padding: 24px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+.hero { font-family: Fraunces, serif; font-weight: 300; font-size: 48px; line-height: 1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.hero-l { font-size: 13px; color: #9da7a3; margin: 6px 0 16px; }
+.kv { display: grid; grid-template-columns: 1fr auto; row-gap: 6px; font-size: 13px; }
+.kv .k { color: #9da7a3; } .kv .v { font-variant-numeric: tabular-nums; }
+.gen { margin: 18px 0; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; color: #1a1408; background: linear-gradient(180deg, #e0c070, #c19a3f); box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 6px 16px rgba(201,162,74,.25); }
+.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.tile { height: 62px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 600; border: 1px solid rgba(255,255,255,.08); }
+.tile .n { font-family: Fraunces, serif; font-size: 18px; font-weight: 600; line-height: 1; }
+.tile .c { font-size: 12px; font-variant-numeric: tabular-nums; }
+.gauge { margin: 16px 0; } .gauge .l { font-size: 12px; color: #9da7a3; display: flex; justify-content: space-between; margin-bottom: 6px; }
+.gauge .b { height: 4px; border-radius: 2px; background: #101413; } .gauge .b i { display: block; height: 100%; width: 100%; border-radius: 2px; background: #c9a24a; }
+.cnt { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid #2b3231; }
+.cnt .nm { font-size: 13px; font-weight: 600; } .cnt .sub { font-size: 12px; color: #9da7a3; }
+.cnt .big { font-family: Fraunces, serif; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.page { width: 390px; min-height: 844px; }
+.bar { padding: 0 16px; }
+.grid { display: block; padding: 16px; }
+.panel { padding: 16px; }
+.row { grid-template-columns: 1fr; height: auto; gap: 8px; margin-bottom: 8px; }
+.gm { justify-content: space-between; }
+.bottom { position: sticky; bottom: 0; height: 64px; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: linear-gradient(180deg, #1e2423, #161a19); border-top: 1px solid #313938; box-shadow: 0 -8px 24px rgba(0,0,0,.4); }
+.quick { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.quick b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.mini { display: flex; gap: 4px; } .mini span { width: 26px; height: 26px; border-radius: 4px; display: grid; place-items: center; font-size: 12px; background: rgba(37,107,53,.35); border: 1px solid rgba(63,183,91,.45); }
+.gen.sm { margin: 0; height: 40px; padding: 0 16px; font-size: 14px; }
+
+
+.pool { display: flex; align-items: center; gap: 10px; margin: 18px 0 10px; }
+.pool-v { font-size: 26px; font-weight: 700; color: #3fb75b; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.pool-g { font-size: 22px; }
+.pills { display: grid; gap: 8px; }
+.spill { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 62px; padding: 8px 10px; border-radius: 10px; border: 1px solid; min-width: 0; }
+.spill .top { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; }
+.spill .cnt2 { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+
+.sheet { position: absolute; left: 0; right: 0; bottom: 64px; top: 64px; background: linear-gradient(180deg, #232a29, #1a201f); border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px 16px; box-shadow: 0 -12px 32px rgba(0,0,0,.5); border-top: 1px solid #3a4341; }
+.page { position: relative; }
+.lo { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px; border-radius: 7px; border: 1px solid #313938; color: #9da7a3; font-size: 12px; font-weight: 600; } .lo b { color: #c9a24a; }
+
+.desk { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.desk .input { height: 38px; font-size: 14px; padding: 0 10px; }
+.desk label { font-size: 11px; color: #9da7a3; display: block; margin-bottom: 4px; }
+.prio { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.prio .input { flex: 1; height: 38px; font-size: 13px; justify-content: space-between; }
+.deskhead { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #9da7a3; margin-bottom: 8px; }
+
+.desk .input { height: 36px; }
+  </style>
+</helmet>
+
+<div class="page">
+  <div class="bar"><div class="brand"><span class="mark"></span>Pyrrhic</div><div class="acct"><span class="avatar">R</span></div></div>
+  <div class="grid">
+    <div class="stack">
+      <div class="panel">
+        <h2>Troops <span class="meta">G1–G3 · S1</span></h2>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#3fb75b"></i>Guardsmen</span><span class="sel">from <b><span class="ar">◀</span>G1<span class="ar">▶</span></b> to <b><span class="ar">◀</span>G3<span class="ar">▶</span></b></span></div><div class="chips"><span class="sel">at G3:</span><span class="chip on">🏹 ARC</span><span class="chip on">⚔️ SP</span><span class="chip on">🐴 RD</span></div></div>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#74a6da"></i>Specialists</span><span class="sel">from <b><span class="ar">◀</span>S1<span class="ar">▶</span></b> to <b><span class="ar">◀</span>S1<span class="ar">▶</span></b></span></div><div class="chips"><span class="sel">at S1:</span><span class="chip on">⚔️ SW</span></div></div>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#cc9a2a"></i>Engineers</span><span class="sel">from <b><span class="ar">◀</span>—<span class="ar">▶</span></b> to <b><span class="ar">◀</span>—<span class="ar">▶</span></b></span></div></div>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#b296d6"></i>Monsters</span><span class="sel">from <b><span class="ar">◀</span>—<span class="ar">▶</span></b> to <b><span class="ar">◀</span>—<span class="ar">▶</span></b></span></div></div>
+      </div>
+      <div class="panel">
+        <h2>Mercenaries <span class="meta">2 hired</span></h2>
+        <div class="chips" style="flex-wrap: wrap; gap: 10px"><span class="pill">🐻 BER <span class="t">V</span> 240 <span class="x">×</span></span><span class="pill">👹 ABM <span class="t">VI</span> ∞ <span class="x">×</span></span><span class="btn">Hire mercenary…</span></div>
+      </div>
+      <div class="panel">
+        <h2>Bonuses <span class="meta">Sources on 4</span></h2>
+        <div class="figs" style="grid-template-columns: repeat(3, minmax(0,1fr))"><div class="fig"><div class="l">Health</div><div class="v">+312 %</div></div><div class="fig"><div class="l">Strength</div><div class="v">+287 %</div></div><div class="fig"><div class="l">Special</div><div class="v">+40 %</div></div></div>
+      </div>
+      <div class="panel">
+        <h2>Battle</h2>
+        <div class="fields" style="grid-template-columns: 1fr 1fr"><div class="field"><label>Leadership</label><div class="input">🛡️ 84 300</div></div><div class="field"><label>Authority</label><div class="input">👑 12 500</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-weight:600;font-size:15px">March <span class="meta" style="color:#9da7a3;font-weight:500;font-size:13px">10 stacks</span></span><span style="color:#9da7a3">✕</span></div>
+    
+      <div class="deskhead">This march</div>
+      <div class="desk">
+        <div><label>Leadership</label><div class="input">🛡️ 84 300</div></div>
+        <div><label>Authority</label><div class="input">👑 12 500</div></div>
+        <div><label>Dominance</label><div class="input" style="color:#9da7a3">💀 0</div></div>
+      </div>
+      <div class="prio"><div class="input"><span>Objective: Highest average damage</span><span style="color:#9da7a3">▾</span></div></div>
+      <div class="gen" style="margin: 0 0 14px">⚔️ Generate</div>
+<div class="hero" style="font-size:40px">4 659 437</div>
+    <div class="hero-l">🎯 Expected damage</div>
+    <div class="kv"><span class="k">🔒 Worst opening</span><span class="v">4 519 202</span><span class="k">Hits landed</span><span class="v">15</span><span class="k">🪙 Silver to recover</span><span class="v">8 131 400</span><span class="k">Damage per silver</span><span class="v">0.57</span></div>
+    <div class="pool"><span class="pool-v">20 000</span><span class="pool-g">🛡️</span></div><div class="pills" style="grid-template-columns: repeat(auto-fill, minmax(78px, 1fr))"><div class="spill" style="border-color: #74a6da; background: rgba(116,166,218,.14)"><span class="top"><span>🐴</span><span style="color:#74a6da">RD III</span></span><span class="cnt2" style="color:#74a6da">468</span></div><div class="spill" style="border-color: #3fb75b; background: rgba(63,183,91,.12)"><span class="top"><span>🐴</span><span style="color:#3fb75b">RD II</span></span><span class="cnt2" style="color:#3fb75b">837</span></div><div class="spill" style="border-color: #74a6da; background: rgba(116,166,218,.14)"><span class="top"><span>🏹</span><span style="color:#74a6da">ARC III</span></span><span class="cnt2" style="color:#74a6da">939</span></div><div class="spill" style="border-color: #74a6da; background: rgba(116,166,218,.14)"><span class="top"><span>⚔️</span><span style="color:#74a6da">SP III</span></span><span class="cnt2" style="color:#74a6da">938</span></div><div class="spill" style="border-color: #9da7a3; background: rgba(157,167,163,.12)"><span class="top"><span>🐴</span><span style="color:#9da7a3">RD I</span></span><span class="cnt2" style="color:#9da7a3">1 515</span></div><div class="spill" style="border-color: #3fb75b; background: rgba(63,183,91,.12)"><span class="top"><span>🏹</span><span style="color:#3fb75b">ARC II</span></span><span class="cnt2" style="color:#3fb75b">1 680</span></div><div class="spill" style="border-color: #3fb75b; background: rgba(63,183,91,.12)"><span class="top"><span>⚔️</span><span style="color:#3fb75b">SP II</span></span><span class="cnt2" style="color:#3fb75b">1 677</span></div><div class="spill" style="border-color: #9da7a3; background: rgba(157,167,163,.12)"><span class="top"><span>🏹</span><span style="color:#9da7a3">ARC I</span></span><span class="cnt2" style="color:#9da7a3">3 042</span></div><div class="spill" style="border-color: #9da7a3; background: rgba(157,167,163,.12)"><span class="top"><span>⚔️</span><span style="color:#9da7a3">SP I</span></span><span class="cnt2" style="color:#9da7a3">3 036</span></div><div class="spill" style="border-color: #9da7a3; background: rgba(157,167,163,.12)"><span class="top"><span>⚔️</span><span style="color:#9da7a3">SW I</span></span><span class="cnt2" style="color:#9da7a3">3 048</span></div></div>
+<div style="margin-top: 14px"><div style="font-size: 12px; color: #9da7a3; margin-bottom: 6px">Left out — tap to put back</div><div style="display:flex; flex-wrap: wrap; gap: 6px; align-items: center"><span class="lo">🏹 ARC I <b>+</b></span><span class="lo">⚔️ SP I <b>+</b></span><span class="lo">🐴 RD I <b>+</b></span><span style="font-size:12px;color:#9da7a3;margin-left:6px">Put back all</span></div></div>
+  </div>
+  <div class="bottom"><div class="quick"><b>4.7M</b><span style="color:#9da7a3">🪙 8.1M</span><span class="mini"><span>⚔️</span><span>🏹</span><span>⚔️</span></span><span style="color:#9da7a3">+7 ˄</span></div><div class="gen sm">⚔️ Generate</div></div>
+</div>
+
+</x-dc>
+</body>
+</html>
