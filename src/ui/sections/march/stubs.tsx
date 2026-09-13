@@ -25,7 +25,7 @@ export interface MarchGenerateButtonProps {
 /** Bound to the run store: ready / stale / running (cancel) / blocked (with the reason as tooltip). */
 export function MarchGenerateButton(props: MarchGenerateButtonProps) {
   return (
-    <Button size={props.size ?? 'md'} fullWidth={props.fullWidth}>
+    <Button size={props.size ?? 'md'} fullWidth={props.fullWidth ?? false}>
       Generate
     </Button>
   );
