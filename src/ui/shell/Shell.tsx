@@ -1,13 +1,17 @@
 /**
- * The frame (design plan §5.1, frame V1 adopted after spike 0009). **One page scroll**, two bars,
- * no floating button:
+ * The frame (design plan §5.1 and §5.6, frame V1 adopted after spike 0009, command bar chosen by the
+ * owner on 2026-09-13). **One page scroll**, one bar per edge, no floating button:
  *
  * - the top app bar carries the brand and the account, and nothing else;
+ * - the bottom edge carries the **command bar**: the three housing pools, the objective and
+ *   Generate — the four things that change with every march (design rule 2 as amended, story D-56).
+ *   It is wells and a select inside the page's width on a desktop, and two rows of chips and the
+ *   answer on a phone, but it is the same bar and the same state;
  * - from `lg` (1200 px) the setup is the focus pane and the March is M3's 360 dp supporting pane on
- *   the right, its recap and Generate sticky under the app bar and the rest of it flowing with the
- *   page (design rule 17);
- * - below that the page is the setup and nothing else, with a Material bottom app bar carrying the
- *   quick summary and Generate, and **the March itself in the sheet that opens from it**.
+ *   the right, its recap and its pills sticky under the app bar — without a Generate of its own,
+ *   which now lives in the bar alone — and the rest of it flowing with the page (design rule 17);
+ * - below that the page is the setup and nothing else, and **the March itself is in the sheet the
+ *   bar's answer opens**.
  *
  * That last line is design rule 5 as resolved on 2026-09-13 (investigation 0011: 97 of the sheet's
  * 98 lines were repeated from the section under it). On a phone the sheet *is* the March: the page
@@ -33,6 +37,7 @@ import { applyTheme, watchSystemTheme } from '../theme';
 import { useUiStore } from '../uiStore';
 import { AppBar } from './AppBar';
 import { BottomBar } from './BottomBar';
+import { CommandBar } from './CommandBar';
 import { MarchPane } from './MarchPane';
 import classes from './shell.module.css';
 import { useGenerateShortcut } from './useGenerateRun';
@@ -127,7 +132,16 @@ export function Shell() {
         </Text>
       </Container>
 
-      {wide ? null : (
+      {wide ? (
+        /* The bar is the last block of the frame, so a sticky `bottom: 0` pins it to the window
+           while the page scrolls and leaves it in the flow at the end: its height is reserved and
+           the last row of the setup can always be scrolled clear of it. The dock is what sticks —
+           a sticky element travels only inside its own containing block — and it is a `Container`
+           so the bar starts and ends on the same line as the panels above it. */
+        <Container component="div" size={CONTENT_WIDTH} className={classes.commandDock}>
+          <CommandBar />
+        </Container>
+      ) : (
         <>
           {/* The answer changed while the sheet was shut: the summary pulses once for the eye and
               this sentence says the same thing for everyone else (design rule 24 — colour and

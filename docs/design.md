@@ -226,7 +226,8 @@ Measure ≤ 70 characters. `output`, `td` and `th` get tabular figures for free.
   (10 · 12 · 16 · 20 · 32) would push the March below the fold, and TotalStack fits a whole army on one screen.
 - **Page margins are Material's**: 16 px in a compact window, 24 px from the medium window class (600 px) up,
   and 24 px above and below the content. One variable, `--pyr-page-margin`, read by `Container`, the top app
-  bar and the bottom app bar, so the brand, the panels and Generate all start on the same line.
+  bar and the command bar, so the brand, the panels and Generate all start on the same line (the phone bar's
+  own padding is the artboard's 12 px, because four chips share a 390 px row).
 - **A panel is 20/24 px of padding on a desktop and 16 px in a compact window**, with 16 px of air between
   panels; the March pane is 24 px, and 16 px on a phone.
 - **Separation is an edge and space, not a rule.** Since direction A each setup section is its own panel, so
@@ -235,13 +236,19 @@ Measure ≤ 70 characters. `output`, `td` and `th` get tabular figures for free.
   object the design says is lit.
 - **Density by purpose.** Controls are Mantine's `sm` (`ActionIcon` too — `xs` is 18 px, under the 24 px target
   minimum); a **chip and a tier stepper are both 30 px**, so a troop row reads as one line of equal parts; a
-  **housing well is 40 px** and a third of the panel wide, because it is the figure a player retypes off the
-  game's own march screen; a **stack pill is 62 px tall with 8/10 px of padding**, laid out
+  **housing well is 40 px** and a third of the command bar wide, because it is the figure a player retypes off
+  the game's own march screen — 34 px as the phone bar's chip, which is that same well waiting to be typed in; a **stack pill is 62 px tall with 8/10 px of padding**, laid out
   `repeat(auto-fill, minmax(78px, 1fr))` so a six-figure count widens every pill and the row wraps to fewer
   instead of clipping one; a **left-out pill is 26 px**, because it is a footnote to the march.
-- **One block stays put.** On a desktop the March's recap, Generate, pools and pills are `position: sticky`
-  under the 64 px app bar, capped at `calc(100dvh - 64px - 16px)`; everything after them flows with the page.
-  That cap is a fallback, not a layout: a march of up to fifteen stacks fits a 900 px window without it.
+- **One bar per edge** (design rule 2 as amended, plan §5.6). The top app bar is 64 px; the **command bar**
+  closes the page at the bottom — 88 px of wells, the objective and Generate inside the page width, 24 px off
+  the sides and off the bottom edge (112 px reserved), and two rows of 34 + 40 px (102 px) on a phone. Both
+  are `position: sticky` at the end of the frame, so their height is in the flow and nothing hides under
+  them; `html` is given the matching `scroll-padding` so nothing the browser scrolls to lands under a bar.
+- **One block stays put.** On a desktop the March's recap, pools and pills are `position: sticky` under the
+  64 px app bar, capped at `calc(100dvh - 64px - 112px - 16px)` — the window less both bars; everything after
+  them flows with the page. That cap is a fallback, not a layout: a march of up to fifteen stacks fits a
+  900 px window without it.
 - **Alignment.** Everything left-aligned; figures right-aligned in their column; nothing centred. A figure's
   name is a caption *under* it only for the hero — everywhere else the label comes first, because those are
   read as a list.

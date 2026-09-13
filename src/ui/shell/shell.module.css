@@ -84,23 +84,138 @@
   }
 }
 
-/* The Material bottom app bar (frame V1). Sticky rather than fixed: as the last block of the frame
-   it is pinned to the bottom edge while the page scrolls and lands in the flow at the end of it,
-   so it covers nothing. Its z-index puts it over the recap sheet, which is the whole point of V1 —
-   opening the recap never takes Generate away. */
+/* The phone's command bar (design plan §5.6, artboard `PhoneBar.dc.html`, `.bar2`): two rows —
+   the three housing wells as value chips with the objective beside them, then the answer and
+   Generate. 102 px tall, and sticky rather than fixed, so as the last block of the frame it is
+   pinned to the bottom edge while the page scrolls and lands in the flow at the end of it: the
+   page reserves its height and it covers nothing. Its z-index puts it under the recap sheet's
+   scrim, which carries a Generate of its own.
+
+   12 px of side padding, not the page's 16: the artboard draws the chips wider than the panels,
+   because four of them share one 390 px row. */
 .bottomBar {
   position: sticky;
   z-index: 250;
   bottom: 0;
   display: flex;
-  height: calc(var(--pyr-appbar-height) + env(safe-area-inset-bottom, 0px));
-  align-items: center;
-  gap: var(--mantine-spacing-sm);
+  flex-direction: column;
+  gap: 0.5rem;
   border-top: 1px solid var(--pyr-hairline);
   background: var(--pyr-bar);
   box-shadow: var(--pyr-bar-shadow);
-  padding-inline: var(--pyr-page-margin);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding: 0.625rem 0.75rem;
+  padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Row 1: three housing chips and the objective's, each an equal share of the row. */
+.housingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Row 2: the answer figure, whose whole half opens the March sheet, and Generate. */
+.answerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* A housing value as a chip: the same well the desktop bar types into, at 34 px, waiting to be
+   tapped into an input (`PhoneBar.dc.html`, `.hchip`). */
+.chip {
+  display: flex;
+  min-width: 0;
+  height: 2.125rem;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3125rem;
+  border: 1px solid var(--pyr-well-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--pyr-sunken);
+  box-shadow: var(--pyr-well-shadow);
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip:hover {
+  border-color: var(--mantine-color-default-border);
+}
+
+/* An empty pool is a chip with nothing in it yet, so it is written in the muted ink. */
+.chipEmpty {
+  composes: chip;
+  color: var(--mantine-color-dimmed);
+}
+
+/* The fourth chip is the objective's, and it carries a chevron rather than a figure. */
+.objectiveChip {
+  composes: chip;
+  flex: 0 0 2.125rem;
+}
+
+/* The chip a thumb has opened: the same 34 px box, now a field, in the same place in the row. */
+.chipField {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.chipField :global(.mantine-Input-input) {
+  height: 2.125rem;
+  min-height: 2.125rem;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The desktop command bar (design plan §5.6, artboard `CommandBar.dc.html`, `.cmd`): housing, the
+   objective and Generate on the bottom edge of the page, inside the page's own width. The dock is
+   what sticks — a sticky element can only travel inside its containing block, and the bar's own
+   block is 88 px tall — and the bar inside it keeps the 24 px of air the artboard leaves under it.
+   --------------------------------------------------------------------------------------------- */
+.commandDock {
+  position: sticky;
+  z-index: 250;
+  bottom: 0;
+}
+
+.commandBar {
+  display: grid;
+  height: var(--pyr-commandbar-height);
+  align-items: end;
+  margin-bottom: var(--mantine-spacing-xl);
+  border: 1px solid var(--pyr-pane-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--pyr-command);
+  box-shadow: var(--pyr-command-shadow);
+  gap: var(--mantine-spacing-md);
+  grid-template-columns: 1fr 1fr 1fr 1.2fr auto;
+  padding: 0.875rem 1.25rem;
+}
+
+/* The three pools and the objective are the biggest wells on the page here too (docs/design.md §4:
+   a housing well is 40 px), and their labels are the artboard's small caps — at the design's 13 px
+   floor rather than its own 11 px (design rule 19). */
+.commandBar :global(.mantine-Input-input) {
+  height: 2.5rem;
+  min-height: 2.5rem;
+  font-size: 0.9375rem;
+}
+
+.commandBar :global(.mantine-InputWrapper-label) {
+  display: block;
+  margin-bottom: 0.375rem;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 /* The March sheet (artboard `PhoneSheetA.dc.html`, `.sheet`): the pane's own lit material, 20 px on

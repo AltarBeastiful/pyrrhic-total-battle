@@ -308,6 +308,8 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       '--pyr-well-shadow': depth.wellShadow,
       '--pyr-bar': depth.barTop,
       '--pyr-bar-shadow': depth.barShadow,
+      '--pyr-command': depth.command,
+      '--pyr-command-shadow': depth.commandShadow,
       '--pyr-sheet-shadow': depth.sheetShadow,
       // Every control you type into is a well cut into the panel (artboard `.input`, `.sel b`).
       '--input-bg': s.sunken,
@@ -330,6 +332,10 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
   return {
     variables: {
       '--pyr-appbar-height': '4rem',
+      // The desktop command bar's own height (design plan §5.6, `CommandBar.dc.html`): 14 px of
+      // padding, a label, a 40 px well, 14 px of padding. Said once, because the March pane's
+      // sticky block subtracts it from the window so the bar never lands on the pills.
+      '--pyr-commandbar-height': '5.5rem',
       '--pyr-pane-width': '23.75rem',
       // The metal is the same in both schemes: it is the game's trim, not a surface (`GOLD`).
       '--pyr-gold': GOLD.gradient,

@@ -49,8 +49,37 @@ export function watchConsole(page: Page): string[] {
   return problems;
 }
 
-export function housingField(page: Page, pool: 'Leadership' | 'Authority' | 'Dominance'): Locator {
+// ---- The command bar (design plan §5.6, story D-56) ---------------------------------------------
+/**
+ * Housing and the objective live on the bottom edge now, with Generate, at every width. The three
+ * helpers below hide the one difference between the two drawings: from 1200 px a pool is a field
+ * standing open, and below it a **chip** that becomes that same field when a thumb lands on it.
+ */
+export type Pool = 'Leadership' | 'Authority' | 'Dominance';
+
+/** A pool's field: on a phone it only exists once the chip has been opened. */
+export function housingField(page: Page, pool: Pool): Locator {
   return page.getByRole('textbox', { name: pool, exact: true });
+}
+
+/** A pool's chip (phones): its name is the pool and the figure it carries, "Leadership 84 300". */
+export function housingChip(page: Page, pool: Pool): Locator {
+  return page.getByRole('button', { name: new RegExp(`^${pool} `) });
+}
+
+/** The field, open and ready to be typed in — opening the chip first where there is one. */
+export async function editHousing(page: Page, pool: Pool): Promise<Locator> {
+  const field = housingField(page, pool);
+  if ((await field.count()) === 0) await housingChip(page, pool).click();
+  await expect(field).toBeVisible();
+  return field;
+}
+
+/** What a pool reads right now, whichever of the two shapes the width gives it. */
+export async function housingValue(page: Page, pool: Pool): Promise<string> {
+  const field = housingField(page, pool);
+  if ((await field.count()) > 0) return field.inputValue();
+  return (await housingChip(page, pool).innerText()).trim();
 }
 
 /**
@@ -71,7 +100,7 @@ export async function stepTier(scope: Locator, name: string, steps: number): Pro
 }
 
 /**
- * The floating Generate button (design plan §5.3). Its accessible name carries the state, so the
+ * Generate, in the command bar (design plan §5.6). Its accessible name carries the state, so the
  * blocked one reads "Generate march: Add housing first"; the prefix is what every spec asks for.
  */
 export function generateButton(page: Page): Locator {
@@ -84,15 +113,12 @@ export function generateState(page: Page): Locator {
 }
 
 /**
- * Type one housing capacity and commit it: the Battle card's steppers keep what you type to
- * themselves until the field is left or `Enter` is pressed, so a `fill` alone never reaches the march.
+ * Type one housing capacity in the command bar and commit it. One gesture at both widths: the press
+ * that opens a phone's chip is the same press that lands in a desktop's field, and `Enter` puts the
+ * figure back.
  */
-export async function fillHousing(
-  page: Page,
-  pool: 'Leadership' | 'Authority' | 'Dominance',
-  value: number,
-): Promise<void> {
-  const field = housingField(page, pool);
+export async function fillHousing(page: Page, pool: Pool, value: number): Promise<void> {
+  const field = await editHousing(page, pool);
   await field.fill(String(value));
   await field.press('Enter');
 }
@@ -109,28 +135,38 @@ export async function generate(
   await settle(page);
 }
 
-/**
- * What a Generate aims at, in the Battle card: a radio group whose options are named by their title
- * ("Best worst case" is the worst-case objective).
- */
+/** What a Generate aims at, from 1200 px: one compact select in the command bar. */
+export function objectiveSelect(page: Page): Locator {
+  return page.getByRole('combobox', { name: 'Objective' });
+}
+
+/** The same question on a phone: the bar's fourth chip, named after the objective it carries. */
+export function objectiveChip(page: Page): Locator {
+  return page.getByRole('button', { name: /^Objective: / });
+}
+
+/** The objectives as rows, inside the chip's popover (phones only). */
 export function priorityField(page: Page): Locator {
   return page.getByRole('radiogroup', { name: 'Objective' });
 }
 
 /**
- * Choose one objective by the words it is written in. The press lands on the row's own text: the
- * radio itself sits under the mark the row draws, which is what a player presses too.
- *
- * The name is asked for as a prefix, not as the whole string: from the medium window up the options
- * are cards named by their title alone, and under it they are rows whose name is the title and the
- * sentence run together (D-54).
+ * Choose one objective by the words it is written in — the select's option from 1200 px, the
+ * popover's row below it (design plan §5.6). Both are named by the title alone.
  */
 export async function chooseObjective(page: Page, title: string): Promise<void> {
-  // Inside Material 3's compact window the list is folded to the chosen row; unfold it first.
-  const change = priorityField(page).getByRole('button', { name: 'Change Objective' });
-  if (await change.isVisible()) await change.click();
-  await priorityField(page).getByText(title, { exact: true }).click();
-  await expect(priorityField(page).getByRole('radio', { name: new RegExp(`^${title}`) })).toBeChecked();
+  const select = objectiveSelect(page);
+  if ((await select.count()) > 0) {
+    await select.click();
+    await page.getByRole('option', { name: title, exact: true }).click();
+    await expect(select).toHaveValue(title);
+    return;
+  }
+
+  const chip = objectiveChip(page);
+  await chip.click();
+  await priorityField(page).getByRole('radio', { name: title, exact: true }).click();
+  await expect(chip).toHaveAccessibleName(`Objective: ${title}`);
 }
 
 /** Wait until no Generate run is in flight (a priority search runs for up to eight seconds). */
@@ -343,7 +379,7 @@ export function marchPane(page: Page): Locator {
   return page.locator('main aside');
 }
 
-/** The Material bottom app bar's summary, below 1200 px: pressing it opens the March sheet. */
+/** The phone command bar's answer line: pressing it opens the March sheet. */
 export function recapSummary(page: Page): Locator {
   return page.getByRole('button', { name: 'Open the march recap' });
 }
@@ -390,7 +426,7 @@ export async function marchAnswer(page: Page): Promise<string> {
   return (await recapSummary(page).innerText()).trim();
 }
 
-/** Generate, wherever the frame put it — the March pane's header or the bottom app bar. */
+/** Generate, in the one place the frame puts it now — the command bar, at both widths. */
 export function generateControl(page: Page): Locator {
   return page.getByRole('button', { name: /generate/i });
 }

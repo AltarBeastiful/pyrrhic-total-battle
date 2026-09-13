@@ -57,21 +57,8 @@
   overflow-wrap: anywhere;
 }
 
-/* The bottom bar's three tiles are 26 px squares, not 32 px unit tiles (artboard `.mini span`);
-   the glyph keeps 3 px off every edge, as the pills do (owner, 2026-09-13). */
-.miniTile {
-  display: grid;
-  width: 1.625rem;
-  height: 1.625rem;
-  border: 1px solid;
-  border-radius: var(--mantine-radius-xs);
-  padding: 3px;
-  line-height: 1;
-  place-items: center;
-}
-
-/* The march at a glance, pinned (owner, 2026-09-13). On a desktop the figures, Generate, the pools
-   and their pills stay under the app bar while the setup scrolls past; everything after them — the
+/* The march at a glance, pinned (owner, 2026-09-13). On a desktop the figures, the pools and their
+   pills stay under the app bar while the setup scrolls past; everything after them — the
    counts row, the trade-off, the folded detail, the saved marches — flows with the page.
 
    The negative margins put the block back on the pane's own edges, so what passes behind it really
@@ -84,7 +71,12 @@
      control paints its own label at `z-index: 2`, so 1 was not enough. */
   z-index: 5;
   top: var(--pyr-appbar-height);
-  max-height: calc(100dvh - var(--pyr-appbar-height) - 1rem);
+  /* The window, less both bars: the app bar over it and the command bar under it (design plan
+     §5.6, the 88 px bar plus the 24 px of air the artboard leaves below it), so the bar can never
+     land on the pills this block exists to keep on screen. */
+  max-height: calc(
+    100dvh - var(--pyr-appbar-height) - var(--pyr-commandbar-height) - var(--mantine-spacing-xl) - 1rem
+  );
   margin: calc(-1 * var(--mantine-spacing-xl)) calc(-1 * var(--mantine-spacing-xl)) 0;
   border-bottom: 1px solid var(--pyr-hairline);
   border-radius: var(--mantine-radius-md) var(--mantine-radius-md) 0 0;

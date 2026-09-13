@@ -10,7 +10,7 @@ import {
   accountButton,
   fillHousing,
   generateControl,
-  housingField,
+  housingValue,
   marchPane,
   openAccountMenu,
   openApp,
@@ -137,9 +137,7 @@ test('what the player typed survives a reload', async ({ page }) => {
     ['Leadership', '4100'],
     ['Authority', '1200'],
   ] as const) {
-    await expect
-      .poll(async () => (await housingField(page, pool).inputValue()).replace(/\D/g, ''))
-      .toBe(digits);
+    await expect.poll(async () => (await housingValue(page, pool)).replace(/\D/g, '')).toBe(digits);
   }
 
   expect(problems).toEqual([]);

@@ -2,13 +2,14 @@ import { Box, Card, Divider, Stack, Text, Title } from '@mantine/core';
 
 import { AppBar } from '../../shell/AppBar';
 import { BottomBar } from '../../shell/BottomBar';
+import { CommandBar } from '../../shell/CommandBar';
 import type { KitStory } from '../story';
 
 /**
- * The frame of design plan §5.1 (V1, spike 0009) in three pieces: the top app bar as the page
- * mounts it, the head of the 360 dp supporting pane, and the Material bottom app bar a phone gets.
- * Both bars are the app's own components — the story only stands them still, so the gallery shows
- * what the page shows.
+ * The frame of design plan §5.1 and §5.6 in four pieces: the top app bar as the page mounts it, the
+ * head of the 360 dp supporting pane, the desktop command bar, and the phone's two-row one. Every
+ * bar is the app's own component — the story only stands them still, so the gallery shows what the
+ * page shows.
  */
 function PaneHead() {
   return (
@@ -36,7 +37,9 @@ const story: KitStory = {
       <AppBar />
       <Divider label="Supporting pane, from 1200 px" labelPosition="left" />
       <PaneHead />
-      <Divider label="Bottom app bar, below 1200 px" labelPosition="left" />
+      <Divider label="Command bar, from 1200 px" labelPosition="left" />
+      <CommandBar />
+      <Divider label="Command bar, below 1200 px" labelPosition="left" />
       <BottomBar onOpenRecap={() => undefined} />
     </Stack>
   ),

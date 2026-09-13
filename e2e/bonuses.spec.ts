@@ -147,11 +147,14 @@ test('the card remembers being open, and the sources survive a reload', async ({
   await level.blur();
   await page.keyboard.press('Escape');
 
-  // The document is written back debounced; wait for the captain to reach storage.
+  // The document is written back debounced, and the captain and its level are two edits: waiting for
+  // the name alone reloads on the *first* write whenever the machine is slow enough for it to have
+  // landed before the level was typed, and reads the level back as 0.
   await page.waitForFunction(
     () => {
       const view = globalThis as unknown as { localStorage: { getItem: (k: string) => string | null } };
-      return (view.localStorage.getItem('pyrrhic.v1') ?? '').includes('beowulf');
+      const stored = view.localStorage.getItem('pyrrhic.v1') ?? '';
+      return stored.includes('beowulf') && /"level":\s*12\b/.test(stored);
     },
     undefined,
     { timeout: 10_000 },

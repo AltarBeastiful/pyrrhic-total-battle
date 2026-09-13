@@ -10,8 +10,9 @@
  * editing a count by hand. Every one of them re-sizes the march, because numbers on screen must
  * always answer the question that is in the form.
  *
- * On a desktop the recap is not here: it is in the March pane's header, above this block, with
- * Generate beside it (design rule 5 — never say the same thing twice on one screen).
+ * On a desktop Generate is not here: it is in the command bar on the bottom edge, with the housing
+ * and the objective (design plan §5.6, design rule 5 — never say the same thing twice on one
+ * screen). In the phone's sheet it stays, under the recap.
  *
  * Below 1200 px this whole section **is** the recap sheet the bottom bar opens (design rule 5 as
  * resolved on 2026-09-13): it is not drawn in the page a second time, so the answer is written once
@@ -178,7 +179,11 @@ export function MarchSection() {
           </Group>
 
           <MarchRecap />
-          <MarchGenerateButton fullWidth />
+          {/* Generate is the command bar's on a desktop and nowhere else (design plan §5.6): the
+              pane would be saying the same thing twice, 200 px above the bar that says it. In the
+              sheet it stays, because the sheet is a focus trap over the bar and the answer and the
+              action travel together (design rule 2). */}
+          {!twoPanes && <MarchGenerateButton fullWidth />}
 
           {snapshot !== null && result !== null && summary !== null && (
             <MarchPills

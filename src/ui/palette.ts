@@ -243,7 +243,9 @@ export const SURFACE = {
 
 /**
  * Depth, as direction A draws it (design plan §5.5, artboards `docs/design-canvas/*.dc.html`): the
- * gradients, borders and shadows that make a panel a lit object rather than a fill. Strings rather
+ * gradients, borders and shadows that make a panel a lit object rather than a fill — the command bar
+ * included (`CommandBar.dc.html`, `.cmd`: its own gradient over its own 88 px, lit from above and
+ * throwing its shadow up the page). Strings rather
  * than arithmetic, because that is what they are — but they live here, beside the surfaces they are
  * built from, so `theme.ts` is the only file that turns them into CSS variables and no section ever
  * writes one.
@@ -261,6 +263,8 @@ export const DEPTH = {
     barTop: 'linear-gradient(180deg, #ffffff, #ecefec)',
     sheetShadow: '0 -12px 32px rgba(19, 25, 23, 0.18)',
     barShadow: '0 -8px 24px rgba(19, 25, 23, 0.12)',
+    command: 'linear-gradient(180deg, #ffffff, #eef1ee)',
+    commandShadow: '0 -8px 28px rgba(19, 25, 23, 0.14)',
   },
   dark: {
     panel: 'linear-gradient(180deg, #212827, #1c2221)',
@@ -274,6 +278,8 @@ export const DEPTH = {
     barTop: 'linear-gradient(180deg, #1e2423, #161a19)',
     sheetShadow: '0 -12px 32px rgba(0, 0, 0, 0.5)',
     barShadow: '0 -8px 24px rgba(0, 0, 0, 0.4)',
+    command: 'linear-gradient(180deg, #242b2a, #1b2120)',
+    commandShadow: '0 -8px 28px rgba(0, 0, 0, 0.45)',
   },
 } as const;
 

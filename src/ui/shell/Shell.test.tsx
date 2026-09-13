@@ -6,11 +6,12 @@
  * five sections are being written in parallel.
  */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
-import { useStore } from '@/state/store';
+import { selectActiveSetup, useStore } from '@/state/store';
 
 import { ThemeHarness } from '../kit/testRender';
 import { useResultStore } from '../resultStore';
@@ -50,14 +51,14 @@ vi.mock('../sections', () => {
 
 /** The March contract (M-08): the pieces the frame places, each saying where it landed. */
 vi.mock('@/ui/sections/march', () => ({
-  // The section carries the recap and Generate itself now: on a desktop they are the head of the
-  // sticky "march at a glance" block inside it, not something the pane wraps around it
-  // (owner, 2026-09-13).
+  // The section carries the recap itself now: on a desktop it is the head of the sticky "march at
+  // a glance" block inside it, not something the pane wraps around it (owner, 2026-09-13). Generate
+  // is not in it at that width — it is the command bar's, and only the phone's sheet keeps one
+  // (design plan §5.6).
   MarchSection: (): ReactNode => (
     <section id="march" aria-labelledby="march-h">
       <h2 id="march-h">March</h2>
       <p>recap</p>
-      <button type="button">Generate md</button>
     </section>
   ),
   MarchRecap: (): ReactNode => <p>recap</p>,
@@ -160,15 +161,43 @@ test('under 1200 px the page is the setup alone — the March is not drawn twice
   expect(screen.queryByRole('heading', { level: 2, name: 'March' })).toBeNull();
 });
 
-test('under 1200 px the bottom app bar carries the summary and Generate', () => {
+test('under 1200 px the command bar carries housing, the objective, the summary and Generate', () => {
   renderShell();
 
+  // Row 1: the three pools as chips, and the fourth chip that opens the objective (§5.6).
+  for (const pool of ['Leadership', 'Authority', 'Dominance']) {
+    expect(screen.getByRole('button', { name: `${pool} 0` })).toBeTruthy();
+  }
+  expect(screen.getByRole('button', { name: 'Objective: No priority' })).toBeTruthy();
+  // …and nothing is a field until a thumb asks for one.
+  expect(screen.queryByRole('textbox', { name: 'Leadership' })).toBeNull();
+
+  // Row 2: the answer, and Generate at the small size both bars use.
   const summary = screen.getByRole('button', { name: 'Open the march recap' });
   expect(within(summary).getByText('quick summary')).toBeTruthy();
-  // The bar's Generate is the small one; the pane's is the full-width one.
   expect(screen.getByRole('button', { name: 'Generate sm' })).toBeTruthy();
   // No floating action button anywhere any more (design rule 2 as amended).
   expect(screen.queryByRole('button', { name: /^Generate march/ })).toBeNull();
+});
+
+test('a housing chip becomes a field where it stands, and writes the march', async () => {
+  const user = userEvent.setup();
+  renderShell();
+
+  await user.click(screen.getByRole('button', { name: 'Leadership 0' }));
+  const field = screen.getByRole('textbox', { name: 'Leadership' }) as HTMLInputElement;
+  expect(field).toBe(document.activeElement);
+
+  await user.keyboard('4100');
+  expect(selectActiveSetup(useStore.getState())?.housing.leadership).toBe(4100);
+
+  // Enter puts the figure back, in the chip's own place in the row. (The figure is grouped on the
+  // page; the March's formatter is stubbed here, so it reads plainly.)
+  await user.keyboard('{Enter}');
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Leadership 4100' })).toBeTruthy();
+  });
+  expect(screen.queryByRole('textbox', { name: 'Leadership' })).toBeNull();
 });
 
 test('the summary opens a sheet that holds the whole March section', async () => {
@@ -211,14 +240,15 @@ test('a run that lands with the sheet shut is said out loud, and the bar is mark
   });
 });
 
-test('at 1400 px the March is the supporting pane, carrying the recap and Generate', () => {
+test('at 1400 px the March is the supporting pane, carrying the recap and no Generate', () => {
   desktop();
   const { container } = renderShell();
 
   const pane = container.querySelector('aside');
   if (pane === null) throw new Error('the supporting pane is missing');
   expect(within(pane as HTMLElement).getByText('recap')).toBeTruthy();
-  expect(within(pane as HTMLElement).getByRole('button', { name: 'Generate md' })).toBeTruthy();
+  // Generate lives in the command bar alone (design plan §5.6).
+  expect(within(pane as HTMLElement).queryByRole('button', { name: /^Generate/ })).toBeNull();
   expect(within(pane as HTMLElement).getByRole('heading', { level: 2, name: 'March' })).toBeTruthy();
 
   // The setup keeps the other column, in registry order.
@@ -228,13 +258,54 @@ test('at 1400 px the March is the supporting pane, carrying the recap and Genera
   expect(setup).toEqual(['troops', 'mercenaries', 'bonuses', 'battle']);
 });
 
-test('at 1400 px there is no bottom bar and no second summary', () => {
+test('at 1400 px the command bar is wells and a select, and the only Generate on the page', () => {
   desktop();
   renderShell();
+
+  // The three pools are plain fields, filled in place — no chip to open first (design rule 9).
+  for (const pool of ['Leadership', 'Authority', 'Dominance']) {
+    expect(screen.getByRole('textbox', { name: pool })).toBeTruthy();
+  }
+  expect(screen.getByRole('combobox', { name: 'Objective' })).toBeTruthy();
 
   expect(screen.queryByRole('button', { name: 'Open the march recap' })).toBeNull();
   expect(screen.queryByText('quick summary')).toBeNull();
   expect(screen.getAllByRole('button', { name: /^Generate/ })).toHaveLength(1);
+});
+
+test('the command bar is the only thing on the bottom edge, and the page reserves it', () => {
+  desktop();
+  const { container } = renderShell();
+
+  const sticky = [...container.querySelectorAll('[class]')].filter((node) =>
+    [...node.classList].some((name) => name.includes('commandDock') || name.includes('bottomBar')),
+  );
+  expect(sticky).toHaveLength(1);
+  // …and it is the *last* block of the frame, sticky rather than fixed: its height is in the flow,
+  // so the page reserves it and the last row of the setup is never hidden under it.
+  const footer = screen.getByRole('contentinfo');
+  const where = footer.compareDocumentPosition(sticky[0] as Node);
+  expect(where & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+test('Tab walks the bar in the order a march is set up in', async () => {
+  desktop();
+  const user = userEvent.setup();
+  renderShell();
+
+  const order = [
+    screen.getByRole('textbox', { name: 'Leadership' }),
+    screen.getByRole('textbox', { name: 'Authority' }),
+    screen.getByRole('textbox', { name: 'Dominance' }),
+    screen.getByRole('combobox', { name: 'Objective' }),
+    screen.getByRole('button', { name: 'Generate sm' }),
+  ];
+
+  order[0]?.focus();
+  for (const next of order.slice(1)) {
+    await user.tab();
+    expect(document.activeElement).toBe(next);
+  }
 });
 
 test('Ctrl + Enter generates from anywhere on the page, but never while blocked', () => {

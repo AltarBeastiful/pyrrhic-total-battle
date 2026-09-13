@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 /**
- * D-31 — the Battle card on Mantine: the capacities, the enemy, the method cards, the rules that
- * ride on them and the objective, each checked the way a player meets them (by role and by name)
- * and each written straight to the active march.
+ * D-31, amended by D-56 — the Battle card on Mantine: the enemy, the method cards, the rules that
+ * ride on them and the recovery plan, each checked the way a player meets them (by role and by
+ * name) and each written straight to the active march. The capacities and the objective moved to
+ * the command bar (`src/ui/shell/CommandBar.test.tsx`); the first test here is that they left.
  */
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -17,8 +18,8 @@ import { BattleSection } from './BattleSection';
 const realMatchMedia = window.matchMedia;
 
 /**
- * The card asks the browser one question — is there room for the objective to stand open? — so the
- * two window sizes are stubbed rather than guessed. `wide()` is a desktop, `phone()` a 390 px one.
+ * The card asks the browser one question — is there room for the method cards to stand open? — so
+ * the two window sizes are stubbed rather than guessed: `true` is a desktop, `false` a 390 px one.
  */
 function stubWidth(matches: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -69,40 +70,22 @@ function type(label: string, text: string): void {
   fireEvent.blur(field);
 }
 
-// ---- Housing -------------------------------------------------------------------------------------
-test('the three capacities are written to the active march', () => {
+// ---- What left the card (D-56) --------------------------------------------------------------------
+test('housing and the objective are in the command bar, not in this card', () => {
   renderWithTheme(<BattleSection />);
-  type('Leadership', '4100');
-  type('Authority', '1200');
-  type('Dominance', '200');
 
-  expect(setup()?.housing).toEqual({ leadership: 4100, authority: 1200, dominance: 200 });
-  // Nobody steps to 84 300 (owner, 2026-09-13): the three pools are plain inputs.
-  expect(screen.queryByRole('button', { name: /Leadership/ })).toBeNull();
-});
-
-test('a cleared capacity counts as zero, and the empty march says what to type', () => {
-  renderWithTheme(<BattleSection />);
-  expect(screen.getByText(/Enter your housing values/)).toBeTruthy();
-
-  type('Leadership', '4100');
+  // The three capacities and what a Generate aims at change with every march, so they live on the
+  // bottom edge beside Generate now (design plan §5.6); the card keeps what is configured once.
+  for (const pool of ['Leadership', 'Authority', 'Dominance']) {
+    expect(screen.queryByLabelText(pool)).toBeNull();
+  }
+  expect(screen.queryByRole('radiogroup', { name: 'Objective' })).toBeNull();
   expect(screen.queryByText(/Enter your housing values/)).toBeNull();
 
-  type('Leadership', '');
-  expect(setup()?.housing.leadership).toBe(0);
-  expect((screen.getByLabelText('Leadership') as HTMLInputElement).value).toBe('');
-});
-
-test('landing in a capacity selects all of it, so the next keystroke replaces it', async () => {
-  const user = userEvent.setup();
-  useStore.getState().updateActiveSetup({ housing: { leadership: 4100, authority: 0, dominance: 0 } });
-  renderWithTheme(<BattleSection />);
-
-  const input = screen.getByLabelText('Leadership') as HTMLInputElement;
-  await user.click(input);
-  expect(input.value).toBe('4 100');
-  expect(input.selectionStart).toBe(0);
-  expect(input.selectionEnd).toBe(input.value.length);
+  // What is left, in the order the card reads in.
+  expect(screen.getByText('Enemy stacks: 4')).toBeTruthy();
+  expect(screen.getByRole('radiogroup', { name: 'Stacking method' })).toBeTruthy();
+  expect(screen.getByRole('radiogroup', { name: 'Recovery plan' })).toBeTruthy();
 });
 
 // ---- The enemy -----------------------------------------------------------------------------------
@@ -197,38 +180,6 @@ test('"Your own order" is the only method that offers the order of the fall', as
   // The default account fields guardsmen I–III and specialists I: every one of them is a row.
   expect(within(sheet).getAllByRole('listitem').length).toBeGreaterThan(1);
 }, 20_000);
-
-// ---- The objective -------------------------------------------------------------------------------
-test('the objective writes the priority of the march', async () => {
-  const user = userEvent.setup();
-  renderWithTheme(<BattleSection />);
-
-  const list = screen.getByRole('radiogroup', { name: 'Objective' });
-  expect(within(list).getByRole('radio', { name: 'No priority' }).getAttribute('aria-checked')).toBe('true');
-
-  await user.click(within(list).getByText('Best worst case'));
-  expect(setup()?.priority).toBe('minDamage');
-
-  await user.click(within(list).getByRole('radio', { name: 'Damage per silver' }));
-  expect(setup()?.priority).toBe('damagePerSilver');
-});
-
-test('on a phone the objective folds to the chosen one until Change is pressed', async () => {
-  stubWidth(false);
-  const user = userEvent.setup();
-  renderWithTheme(<BattleSection />);
-
-  const list = screen.getByRole('radiogroup', { name: 'Objective' });
-  expect(within(list).getAllByRole('radio')).toHaveLength(1);
-
-  await user.click(within(list).getByRole('button', { name: 'Change Objective' }));
-  expect(within(list).getAllByRole('radio')).toHaveLength(6);
-
-  // Under the medium window the options are rows, so a row's name is its title and its sentence.
-  await user.click(within(list).getByRole('radio', { name: /^Highest average damage/ }));
-  expect(setup()?.priority).toBe('avgDamage');
-  expect(within(list).getAllByRole('radio')).toHaveLength(1);
-});
 
 test('on a phone the stacking method folds to the chosen one too (D-54)', async () => {
   stubWidth(false);

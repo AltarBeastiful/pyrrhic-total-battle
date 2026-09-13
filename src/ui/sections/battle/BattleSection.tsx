@@ -1,15 +1,18 @@
 /**
- * Battle (design overhaul §7.4) — one card for everything this march is fought under: what it may
- * carry, who it is fought against, the rule its stacks are sized by, the extra rules that ride on
- * that one, and what a Generate aims at.
+ * Battle (design overhaul §7.4, amended by design plan §5.6) — one card for the rules this march is
+ * fought under: who it is fought against, the rule its stacks are sized by, the extra rules that
+ * ride on that one, the order of the fall and what the losses are paid with.
+ *
+ * What changes with *every* march left this card on 2026-09-13 (owner's choice, story D-56): the
+ * three housing capacities and the objective are in the command bar on the bottom edge, beside
+ * Generate, where a player retypes them without leaving the answer. What is left is configured and
+ * read, not retyped.
  *
  * The arrangement is TotalStack's (investigation 0008), rebuilt on Mantine in our own skin and our
- * own words: the three capacities first as large plain inputs — nobody steps to 84 300 — then the
- * enemy as a caption, a three-segment control and four small count fields; then the method as wide
- * option cards in one row with the radio mark in the top-right corner and the whole card as the
- * target; then the rules that ride on it as switch rows, hidden rather than disabled when they mean
- * nothing; and last the objective, folded to the chosen one on a phone, beside what the losses are
- * paid with.
+ * own words: the enemy as a caption, a three-segment control and four small count fields; then the
+ * method as wide option cards in one row with the radio mark in the top-right corner and the whole
+ * card as the target; then the rules that ride on it as switch rows, hidden rather than disabled
+ * when they mean nothing; and last what the losses are paid with.
  *
  * Everything written here belongs to the *march*, not to the account: it all goes to the active
  * battle setup.
@@ -25,18 +28,7 @@ import { Glyph } from '@/ui/domain';
 import { ChoiceList, NumberField, Panel, SwitchRow } from '@/ui/kit';
 import { useResultStore } from '@/ui/resultStore';
 
-import {
-  appliesTo,
-  isMethod,
-  isPriority,
-  isRecoveryMode,
-  METHOD_CHOICES,
-  OBJECTIVE_CHOICES,
-  optionsFor,
-  POOL_LABELS,
-  POOLS,
-  RECOVERY_CHOICES,
-} from './choices';
+import { appliesTo, isMethod, isRecoveryMode, METHOD_CHOICES, optionsFor, RECOVERY_CHOICES } from './choices';
 import type { OptionKey } from './choices';
 import {
   CATEGORY_LABEL,
@@ -48,7 +40,6 @@ import {
   squadCount,
 } from './formation';
 import type { Formation } from './formation';
-import classes from './battle.module.css';
 import { OrderSheet } from './OrderSheet';
 
 export function BattleSection() {
@@ -58,20 +49,17 @@ export function BattleSection() {
   // "Custom" is a mode, not a formation: it stays chosen while the four fields still read 1·1·1·1.
   const [isManual, setManual] = useState(false);
   const titleId = useId();
-  const housingId = useId();
   const enemyId = useId();
   const optionsId = useId();
 
   if (setup === undefined) return null;
 
-  const { housing, priority, recoveryPlan, options } = setup;
+  const { recoveryPlan, options } = setup;
   const forced = eventEnemyFormation(setup);
   const formation: Formation = forced ?? setup.enemy;
   const mode = forced === undefined && isManual ? 'custom' : detectMode(formation);
   const editable = mode === 'custom' && forced === undefined;
   const selectiveTop = recoveryPlan.selectiveTop ?? 3;
-  // Nothing to fill: the engine would answer with an empty march and a list of identical reasons.
-  const noHousing = housing.leadership + housing.authority + housing.dominance === 0;
 
   const writeFormation = (next: Formation): void => {
     updateActiveSetup({ enemy: next });
@@ -102,44 +90,6 @@ export function BattleSection() {
   return (
     <Panel component="section" id="battle" aria-labelledby={titleId} title="Battle" titleId={titleId}>
       <Stack gap="lg">
-        {/*
-        What the march may carry. A capacity is typed or pasted off the game's Start March screen,
-        never walked to, so the three pools are plain inputs whose whole value is selected the moment
-        one takes focus (owner, 2026-09-13). They sit on one row and wrap when the card is narrow.
-      */}
-        <Stack gap={6}>
-          <Text size="xs" fw={500} id={housingId}>
-            Housing
-          </Text>
-          {/* Three across from the small window up, two on a phone — thirds of the panel, as the
-            artboard draws them (`.fields`); the biggest wells on the page, because these are the
-            figures a player retypes off the game's own march screen. */}
-          <SimpleGrid
-            cols={{ base: 2, xs: 3 }}
-            spacing="lg"
-            className={classes.housing}
-            aria-labelledby={housingId}
-          >
-            {POOLS.map((pool) => (
-              <Box key={pool} miw={0}>
-                <NumberField
-                  label={POOL_LABELS[pool]}
-                  leftSection={<Glyph kind={pool} />}
-                  // A pool at zero is one nobody has filled in yet, so the field stands empty and
-                  // invites the number instead of showing a 0 the player never typed.
-                  value={housing[pool] === 0 ? null : housing[pool]}
-                  min={0}
-                  max={100_000_000}
-                  allowEmpty
-                  onChange={(value) => {
-                    updateActiveSetup({ housing: { ...housing, [pool]: value ?? 0 } });
-                  }}
-                />
-              </Box>
-            ))}
-          </SimpleGrid>
-        </Stack>
-
         {/* Who it is fought against: the count, the three presets, and the squads behind them. */}
         <Stack gap={6}>
           <Text size="xs" fw={500} id={enemyId}>
@@ -243,55 +193,36 @@ export function BattleSection() {
           </Stack>
         </Stack>
 
-        {/* What a Generate aims at, and what the losses are paid with. */}
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+        {/* What the losses are paid with. The objective used to sit beside it; it is in the command
+          bar now, where it is read every day (design plan §5.6). */}
+        <Stack gap="sm">
+          {/* Three options, so three whole rows and no dropdown (design rule 8; the last select box
+            in the app, investigation 0011). */}
           <ChoiceList
-            layout="cards"
-            label="Objective"
-            value={priority}
-            items={OBJECTIVE_CHOICES}
+            label="Recovery plan"
+            value={recoveryPlan.mode}
+            items={RECOVERY_CHOICES}
             collapsible
             onChange={(value) => {
-              if (isPriority(value)) updateActiveSetup({ priority: value });
+              if (!isRecoveryMode(value)) return;
+              updateActiveSetup({
+                recoveryPlan: value === 'selective' ? { mode: value, selectiveTop } : { mode: value },
+              });
             }}
           />
-
-          <Stack gap="sm">
-            {/* Three options, so three whole rows and no dropdown (design rule 8; the last select box
-              in the app, investigation 0011). */}
-            <ChoiceList
-              label="Recovery plan"
-              value={recoveryPlan.mode}
-              items={RECOVERY_CHOICES}
-              collapsible
+          {recoveryPlan.mode === 'selective' && (
+            <NumberField
+              label="Unit types to revive"
+              description="The highest tiers are revived, everything else is retrained."
+              value={selectiveTop}
+              min={1}
+              max={20}
               onChange={(value) => {
-                if (!isRecoveryMode(value)) return;
-                updateActiveSetup({
-                  recoveryPlan: value === 'selective' ? { mode: value, selectiveTop } : { mode: value },
-                });
+                updateActiveSetup({ recoveryPlan: { mode: 'selective', selectiveTop: value ?? 1 } });
               }}
             />
-            {recoveryPlan.mode === 'selective' && (
-              <NumberField
-                label="Unit types to revive"
-                description="The highest tiers are revived, everything else is retrained."
-                value={selectiveTop}
-                min={1}
-                max={20}
-                onChange={(value) => {
-                  updateActiveSetup({ recoveryPlan: { mode: 'selective', selectiveTop: value ?? 1 } });
-                }}
-              />
-            )}
-          </Stack>
-        </SimpleGrid>
-
-        {noHousing && (
-          <Alert color="brass" variant="light">
-            Enter your housing values from the march screen first: with no leadership, authority or dominance
-            there is nothing to fill.
-          </Alert>
-        )}
+          )}
+        </Stack>
 
         {error !== null && (
           <Alert color="danger" variant="light" title="That march could not be generated">

@@ -27,7 +27,8 @@ import {
   closeMarchSheet,
   fillHousing,
   generateButton,
-  housingField,
+  housingValue,
+  type Pool,
   marchAnswer,
   marchStackLabels,
   marchPills,
@@ -91,6 +92,16 @@ class Taps {
   async step(scope: Locator, name: string, steps: number): Promise<void> {
     this.taps += Math.abs(steps);
     await stepTier(scope, name, steps);
+  }
+
+  /**
+   * One press on a housing capacity, then the keyboard. It is one tap at both widths: from 1200 px
+   * the press lands in the field, and on a phone the same press opens the chip *into* that field
+   * (design plan §5.6) — nothing is tapped twice.
+   */
+  async typeHousing(page: Page, pool: Pool, value: number): Promise<void> {
+    this.taps += 1;
+    await fillHousing(page, pool, value);
   }
 
   /** One press into a number field, then the keyboard. */
@@ -197,7 +208,7 @@ async function seedProfile(page: Page): Promise<void> {
   await page.reload();
   await page.waitForLoadState('networkidle');
   await expect(page.getByRole('heading', { level: 1, name: 'Pyrrhic' })).toBeVisible();
-  await expect(housingField(page, 'Leadership')).toHaveValue(grouped(SEED_LEADERSHIP));
+  await expect.poll(() => housingValue(page, 'Leadership')).toContain(grouped(SEED_LEADERSHIP));
   await toTop(page);
 }
 
@@ -236,7 +247,7 @@ async function journey1(page: Page, phone: boolean): Promise<void> {
 
   // Tap 1 — the free leadership is the one thing that changed since yesterday. Reaching the field is
   // the player's own scroll on a phone; where it leaves the page is the baseline for what follows.
-  await taps.type(housingField(page, 'Leadership'), String(DAILY_LEADERSHIP));
+  await taps.typeHousing(page, 'Leadership', DAILY_LEADERSHIP);
   await settleScroll(page);
   const atTheForm = await screensScrolled(page);
 
