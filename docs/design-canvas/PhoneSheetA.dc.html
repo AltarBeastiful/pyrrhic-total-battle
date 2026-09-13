@@ -28,9 +28,10 @@ h2 .meta { font-weight: 500; color: #9da7a3; font-size: 13px; }
 .gm { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
 .gm i { width: 4px; height: 20px; border-radius: 2px; display: block; }
 .sel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #9da7a3; }
-.sel b { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; height: 30px; padding: 0 10px; border-radius: 8px; background: #101413; border: 1px solid #313938; color: #e7ece9; font-weight: 600; font-size: 13px; }
+.sel b { display: inline-flex; align-items: center; justify-content: space-between; min-width: 84px; height: 30px; padding: 0 4px; border-radius: 8px; background: #101413; border: 1px solid #313938; color: #e7ece9; font-weight: 600; font-size: 13px; }
+    .sel b .ar { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: #9da7a3; font-size: 11px; }
 .chips { display: flex; gap: 8px; align-items: center; }
-.chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1px solid transparent; }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 9px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
 .chip.on { background: rgba(37,107,53,.35); border-color: rgba(63,183,91,.5); color: #b9e9c3; }
 .chip.off { background: #101413; border-color: #313938; color: #9da7a3; }
 .pill { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 10px; border-radius: 999px; background: rgba(140,48,48,.25); border: 1px solid rgba(216,143,143,.35); font-size: 13px; font-weight: 600; }
@@ -105,10 +106,10 @@ h2 .meta { font-weight: 500; color: #9da7a3; font-size: 13px; }
     <div class="stack">
       <div class="panel">
         <h2>Troops <span class="meta">G1–G3 · S1</span></h2>
-        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#3fb75b"></i>Guardsmen</span><span class="sel">from <b>G1</b> to <b>G3</b></span></div><div class="chips"><span class="sel">at G3:</span><span class="chip on">✓ 🏹 ARC</span><span class="chip on">✓ ⚔️ SP</span><span class="chip on">✓ 🐴 RD</span></div></div>
-        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#74a6da"></i>Specialists</span><span class="sel">from <b>S1</b> to <b>S1</b></span></div><div class="chips"><span class="sel">at S1:</span><span class="chip on">✓ ⚔️ SW</span></div></div>
-        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#cc9a2a"></i>Engineers</span><span class="sel">from <b>—</b> to <b>—</b></span></div></div>
-        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#b296d6"></i>Monsters</span><span class="sel">from <b>—</b> to <b>—</b></span></div></div>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#3fb75b"></i>Guardsmen</span><span class="sel">from <b><span class="ar">◀</span>G1<span class="ar">▶</span></b> to <b><span class="ar">◀</span>G3<span class="ar">▶</span></b></span></div><div class="chips"><span class="sel">at G3:</span><span class="chip on">🏹 ARC</span><span class="chip on">⚔️ SP</span><span class="chip on">🐴 RD</span></div></div>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#74a6da"></i>Specialists</span><span class="sel">from <b><span class="ar">◀</span>S1<span class="ar">▶</span></b> to <b><span class="ar">◀</span>S1<span class="ar">▶</span></b></span></div><div class="chips"><span class="sel">at S1:</span><span class="chip on">⚔️ SW</span></div></div>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#cc9a2a"></i>Engineers</span><span class="sel">from <b><span class="ar">◀</span>—<span class="ar">▶</span></b> to <b><span class="ar">◀</span>—<span class="ar">▶</span></b></span></div></div>
+        <div class="row"><div class="gm"><span style="display:flex;gap:10px;align-items:center"><i style="background:#b296d6"></i>Monsters</span><span class="sel">from <b><span class="ar">◀</span>—<span class="ar">▶</span></b> to <b><span class="ar">◀</span>—<span class="ar">▶</span></b></span></div></div>
       </div>
       <div class="panel">
         <h2>Mercenaries <span class="meta">2 hired</span></h2>
