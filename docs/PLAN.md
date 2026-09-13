@@ -439,6 +439,12 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-13 — Phase E: journey budgets measured in `e2e/journeys.spec.ts` (J1 3 taps, J2 4, J3 4, J5 2); rules
+  compliance review (investigation 0011: 29 met, 5 partly, 0 not met) with fixes (13 px floor, PWA icons in
+  the theme's palette, …); S-49a groundwork in `ops/pocketbase/` verified against PocketBase 0.40.4
+  (investigation 0012). In flight: the five partly-met rules (phone sheet as the March, no inner pane scroll on
+  desktop, recovery plan as a list, focus ring and roving chips, alternative objectives beside the note) and
+  D-54.
 - 2026-09-13 — M-09 done: React Aria kit, Tailwind, eight dependencies and the custom lint rules removed; kit,
   domain and stories renamed into place; remaining dialogs on Mantine; polish list applied; design.md rewritten
   for the theme; visual baselines regenerated; axe zero on kit page and app in both schemes; stable vendor
