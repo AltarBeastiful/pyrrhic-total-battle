@@ -242,6 +242,18 @@ When online accounts arrive later, the same menu grows a "Sign in" row at the to
 - Keyboard: `Ctrl/⌘ + Enter` anywhere generates. Screen readers get "Generate march" plus the state.
 - It never covers a control: the page keeps 80 px of bottom padding, and the button hides while a sheet is open.
 
+## 5.5 Direction chosen (2026-09-13): A, "layered war room"
+
+From the three page directions on the design canvas (working files `docs/design-canvas/`, artboards
+`Main.dc.html`, `PhoneA.dc.html`, `PhoneSheetA.dc.html`): panels with depth (a faint top light, one hairline,
+one soft shadow), a gold Generate, dense rows, Inter throughout with Fraunces for the hero figure and stack
+counts. The owner's one correction: the march recap must be *readable*, not compact — it follows
+TotalStack's pills: the pool total in the pool colour with its glyph ("20 000 🛡️"), then two-line pills
+(glyph, code and tier on top; the count large below) **coloured by tier** (grey I, green II, blue III,
+violet IV, then the mercenary tier colours V–IX), five per row in the pane, three on phones. The full battle
+report stays folded in Details for now (owner: "not sure, let's stick with it"). Implementation matches the
+artboards with a page-level pixel diff as the gate (story D-55).
+
 ## 6. Visual language
 
 ### 6.1 Colour
@@ -566,6 +578,8 @@ starts.
   desktop J1 **2 taps · 0 screens** either way. J2 4 taps, J3 4 taps, J5 2 taps. The 2.14 screens the
   page used to travel are gone with `scrollToMarch`: the March is the phone's sheet and the desktop
   column, so a Generate changes what is already on screen.
+- D-55 Implement direction A from the canvas artboards (desktop, phone, phone sheet) with tier-coloured
+  march pills; pixel diff against the artboards as the gate.
 - D-54 Shorten the setup on phones: the method and the objective fold to the chosen option in the list
   form under 640 px, the recovery plan with them, the four enemy counts sit on one row. **Done
   2026-09-13: the Battle card is 887 px at 390 px wide, from 983** (measured on the production build
