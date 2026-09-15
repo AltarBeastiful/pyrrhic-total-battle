@@ -119,6 +119,19 @@ would cost **314**. Authority is not a constraint and never appears as `binding`
 - **The frontier is the answer, not a decoration.** 2.2 is the same account buying 1.75× more damage for the
   same silver by choosing a different point of it; that is the "bang for the buck" the owner is asking for, and
   it is only visible when the points are drawn side by side.
+- **So the slider carries the frontier's own answers, not a sample of it** (owner, 2026-09-15: *"find a few 4-5
+  common, good picks to have a slider control how much silver vs merc we want to spend… the algorithm should
+  figure out where are the best 3-5 spots and place us in the sweet spot by default"*).
+  `CampaignPlan.alternatives` is now the **named picks**, each the answer to a question a player asks, each
+  defined by a rule with no parameter to set, deduplicated by their counts and sorted cheapest first:
+  the **cheapest** the band keeps · the **best damage a silver** · the **sweet spot** (where the bar opens) ·
+  the **knee** · the **most damage** · the **kindest to the stock** (offered only if the band keeps it, since
+  §2.3 measures it as a plan nobody should march). Measured on the owner's account at the app's horizon
+  (`out/86-slider-stops.md`): **four stops** — 140 hired for 446 K silver a march (5.79 a silver), 45 hired for
+  1.6 M (the stock-sparing bend, 2.00), the sweet spot at 205 hired for 2.3 M (3.02), and the most damage at
+  207 for 2.4 M (2.94). Four of the six rules land on distinct plans there and three at a horizon of ten,
+  because at that horizon the sweet spot *is* the best damage a silver — the bar carries what the data supports
+  rather than a fixed five.
 
 ## 4. What this does not settle
 

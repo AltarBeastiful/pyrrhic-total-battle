@@ -1083,9 +1083,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const chosenPoint = summarise(chosen);
 
   /**
-   * The band the list is cut to. The owner, on the bar: *"well just don't show the extremes, if we use a
-   * certain % of mercs or waay too much silver we're too far off from our goal of everything optimized."*
-   * A plan is near the goal when its march is not a token field and not a silver sink:
+   * What the bar is allowed to **offer**. The owner, on the first bar: *"well just don't show the extremes, if
+   * we use a certain % of mercs or waay too much silver we're too far off from our goal of everything
+   * optimized."* It no longer cuts a list — the stops below are the picks (`stops`) — it decides which of the
+   * two ratio **extremes** is offered at all: the kindest-to-the-stock end is refused when it is the silver
+   * sink the owner says he would never choose. A plan is near the goal when its march is not a token field and
+   * not a silver sink:
    *
    *   **mercenaries** — it fields at least **half the hired troops the plan's own march fields** (the goal's
    *   mercenary share is the yardstick, so a horizon that legitimately fields few mercenaries is not punished
@@ -1119,54 +1122,29 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // rather than an empty list, which is the same graceful degradation the other three refusals have.
     (!refuseDroppedTypes || stocked.every((entry) => (row.counts[entry.id] ?? 0) > 0));
 
-  const banded = undominated.filter(inBand);
-  // A caller who asks for at least as many rows as the frontier holds is asking for the frontier, and gets
-  // it whole; a caller asking for fewer rows than exist gets the band, because that is the list the UI draws
-  // the bar from. An empty band is never handed back: the unbanded frontier is.
-  const source = undominated.length <= keep ? undominated : banded.length > 0 ? banded : undominated;
   /**
-   * How many of the frontier's plans the band refused **to hand back** — 0 whenever the frontier was handed
-   * back whole, because then nothing was refused. The count and the list have to agree: the UI prints this
-   * number next to a table, and a number describing rows the player can see in that table is a lie.
+   * **The stops the bar carries** (owner, 2026-09-15: *"find a few 4-5 common, good picks to have a slider
+   * control how much silver vs merc we want to spend, which was the whole point… the algorithm should still
+   * try to figure out where are the best 3-5 best spots and place us in the sweet spot by default and let us
+   * slide in other good and backed-by-calculation-and-data spots."*).
+   *
+   * It used to be an **even sample** of the band, with the picks pushed in when the thinning skipped them —
+   * eight stops for the owner's four, at a horizon where most of them said the same thing. It is now the
+   * picks themselves: each is the answer to a question a player asks, each is defined by a rule with no
+   * parameter to set, and a rule that lands on a plan another rule already found adds nothing (measured:
+   * experiment 86, where at one horizon the sweet spot *is* the best damage a silver).
+   *
+   *  - the **cheapest** the band keeps — the least silver that still fields a proper march;
+   *  - the **best damage a silver** — where the next piece of silver stops paying;
+   *  - the **sweet spot** — the plan that stands closest to both ratios at once, and where the bar opens;
+   *  - the **knee** — the plan furthest above the line the frontier's two ends draw, which is the bend of the
+   *    trade rather than either of its ratios;
+   *  - the **most damage** the army can do;
+   *  - the **kindest to the stock** — the best damage a hired unit, offered only if the band keeps it, since
+   *    it is the one pick measured to be a plan nobody should march (`tools/theorycraft/out/83`).
+   *
+   * Sorted cheapest first, because the bar is read left to right as "spend less … spend more".
    */
-  const leftOut = source === banded ? undominated.length - banded.length : 0;
-  const sampled: (PlanTotals & { label: string })[] =
-    source.length <= keep
-      ? [...source]
-      : Array.from(
-          { length: keep },
-          (_unused, index) =>
-            source[Math.round((index * (source.length - 1)) / (keep - 1))] as PlanTotals & {
-              label: string;
-            },
-        );
-  // The plan on screen must be *on* the list the UI marks, so the two the module settles on — the one it
-  // sized, and the balanced one when no budget was given — are added when the thinning skipped them. The two
-  // ratio picks are added only if the band keeps them: they are the extremes by definition, and when they
-  // are the plans the owner says he would never choose, the bar must not carry them.
-  for (const point of [
-    chosenPoint,
-    balanced ? summarise(balanced) : chosenPoint,
-    ...(light && inBand(summarise(light)) ? [summarise(light)] : []),
-    ...(heavy && inBand(summarise(heavy)) ? [summarise(heavy)] : []),
-  ]) {
-    if (!sampled.some((row) => row.silver === point.silver && row.totalDamage === point.totalDamage)) {
-      sampled.push(point);
-    }
-  }
-
-  /**
-   * The compromise when no silver budget is given: the plan that stands as close as it can to **both**
-   * ratios at once — damage per silver and damage per mercenary — each measured against the best the
-   * frontier offers. Picking either extreme is a plan that spends one resource to waste the other: the
-   * efficiency peak burns silver well and mercenaries badly, and the mercenary peak does the reverse. The
-   * owner asked for the sweet spot between them, and this is its definition, with no parameter to set.
-   */
-  // The three picks were measured over every candidate while the search ran (see `light`, `balanced` and
-  // `heavy` in the loop); what is left here is making sure the ones the UI marks are on the list it draws.
-  sampled.sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage);
-  const alternatives: (PlanTotals & { label: string })[] = sampled;
-
   /**
    * The recommendation when no silver budget is given: the **knee** of the damage-against-silver curve — the
    * plan where one more piece of silver stops buying damage as fast as it did before. It is the balanced
@@ -1195,6 +1173,46 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     return best;
   })();
+
+  const mostDamage = undominated.reduce<(PlanTotals & { label: string }) | undefined>(
+    (best, row) => (best === undefined || row.totalDamage > best.totalDamage ? row : best),
+    undefined,
+  );
+  const stops: (PlanTotals & { label: string })[] = [];
+  for (const point of [
+    chosenPoint,
+    light ? summarise(light) : undefined,
+    balanced ? summarise(balanced) : undefined,
+    knee,
+    mostDamage,
+    heavy && inBand(summarise(heavy)) ? summarise(heavy) : undefined,
+  ]) {
+    // Two rules that land on the same counts are one plan, and one stop. Counts, not silver: two plans can
+    // cost the same and field differently, and a bar must not offer the same march twice.
+    if (point === undefined) continue;
+    if (stops.some((row) => JSON.stringify(row.counts) === JSON.stringify(point.counts))) continue;
+    stops.push(point);
+  }
+  stops.sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage);
+  /**
+   * How many of the frontier's plans the bar does **not** carry. The number and the list have to agree — the
+   * UI prints this beside the table it describes — so it is counted off the list that is actually handed
+   * back, never off a filter that ran somewhere else.
+   */
+  const leftOut = Math.max(0, undominated.length - stops.length);
+  const sampled = stops.slice(0, keep);
+
+  /**
+   * The compromise when no silver budget is given: the plan that stands as close as it can to **both**
+   * ratios at once — damage per silver and damage per mercenary — each measured against the best the
+   * frontier offers. Picking either extreme is a plan that spends one resource to waste the other: the
+   * efficiency peak burns silver well and mercenaries badly, and the mercenary peak does the reverse. The
+   * owner asked for the sweet spot between them, and this is its definition, with no parameter to set.
+   */
+  // The three picks were measured over every candidate while the search ran (see `light`, `balanced` and
+  // `heavy` in the loop); what is left here is making sure the ones the UI marks are on the list it draws.
+  sampled.sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage);
+  const alternatives: (PlanTotals & { label: string })[] = sampled;
 
   const leadershipUsed = chosen.rungs.reduce((sum, rung) => sum + rung.count * rung.entry.cost, 0);
   const total: PlanTotals = summarise(chosen);

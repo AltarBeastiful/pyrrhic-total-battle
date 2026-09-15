@@ -450,6 +450,15 @@ player).
   the pick toward the end that spends the most for the least. The fix is a definition that follows the resource
   which binds — which the app cannot know while the silver box is off the card (S-56) — so it is written down
   rather than half-done here.
+- **The slider carries the frontier's own picks, not a sample of it** (owner, 2026-09-15: *"find a few 4-5
+  common, good picks to have a slider control how much silver vs merc we want to spend, which was the whole
+  point… the algorithm should figure out where are the best 3-5 spots and place us in the sweet spot by
+  default"*). `CampaignPlan.alternatives` is the named picks — cheapest · best damage a silver · sweet spot
+  (default) · knee · most damage · kindest to the stock — deduplicated by counts and sorted cheapest first,
+  replacing the even sample of the band that carried eight stops mostly saying the same thing. Measured at the
+  app's horizon: **four stops**, 140 hired for 446 K silver a march through the stock-sparing bend at 45 hired
+  to the sweet spot at 205 — and three at a horizon of ten, where two of the rules land on one plan
+  (`out/86-slider-stops.md`). The band now only decides whether the stock-sparing extreme is offered at all.
 - **The definition.** Full optimization is *the marches, and the counts of each, that maximise the campaign's total damage subject to leadership and authority per march, the permanent `ceil(n/10)` loss of every hired stack fielded, and the player's silver* — a campaign objective, and a frontier rather than a point. Verified: the best single march takes **82.3 %** of the best campaign; under a capped purse the same engine buys **1.75×** more damage by maximising damage a silver than by maximising the total; damage a mercenary rises to 435,961 exactly where the march collapses to two hired units; the horizon swings a march by **434.6 %**; and authority is not binding at all (155 of 2,000).
 
 **S-57 — The March's second half, and a locked Objective (owner, 2026-09-15).** Two changes that shipped

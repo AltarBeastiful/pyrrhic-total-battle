@@ -186,12 +186,20 @@ describe('the search does not get worse', () => {
       'arbalester-7': 7,
       'chariot-6': 7,
     });
-    // 11 → 9 on 2026-09-15, when the frontier started being cut to the band the owner asked for ("just don't
-    // show the extremes"). `leftOut` is not the rows this list lost — it is how many of the *frontier's* 56
-    // plans the band refused, which is the count the UI needs to be honest about the bar it draws. Every
-    // figure above is unmoved — the plan is the same plan.
-    expect(PLAN.alternatives).toHaveLength(9);
-    expect(PLAN.leftOut).toBe(47);
+    // 11 → 9 → **3** on 2026-09-15. The list stopped being an even sample of the frontier and became the
+    // **named picks** the owner asked for — "a few 4-5 common, good picks to have a slider control how much
+    // silver vs merc we want to spend… the algorithm should figure out where are the best spots": the
+    // cheapest, the best damage a silver, the sweet spot, the most damage, and the kindest to the stock. On
+    // this frontier four of those rules land on distinct plans (the sweet spot *is* the plan the module sized
+    // here, and the stock-sparing end is refused by the band as the silver sink it measured as), so the bar
+    // carries four stops.
+    //
+    // `leftOut` stays what it was: not the rows this list lost, but how many of the frontier's plans the bar
+    // does **not** carry — the count the UI needs to be honest about the bar it draws. It is a big number
+    // because a frontier is a big number: 190 plans here, of which four are worth a stop. Every other figure
+    // in this test is unmoved, because the plan is the same plan.
+    expect(PLAN.alternatives).toHaveLength(4);
+    expect(PLAN.leftOut).toBe(186);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained
