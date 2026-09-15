@@ -98,7 +98,7 @@ function minLeadership(request: StackRequest, full: StackResult): Record<string,
     const ev = evaluateCounts(request, counts);
     const low = Math.min(...ev.result.stacks.filter((s) => s.pool === 'leadership').map((s) => s.totalHp));
     if (low > mercMax) break;
-    for (const s of troops) counts[s.unitId] += 1;
+    for (const s of troops) counts[s.unitId] = (counts[s.unitId] ?? 0) + 1;
   }
   return counts;
 }

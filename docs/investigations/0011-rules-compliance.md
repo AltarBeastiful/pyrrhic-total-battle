@@ -37,7 +37,7 @@ met during this pass; the fixes are listed under the table, with what was measur
 | 14 | Troops and mercenaries readable together on one phone screen | met | Measured at 390×844 with both configured: Troops 76→324 px, Mercenaries 373→550 px — both complete inside the 64/780 chrome, with the Bonuses total still above the fold (`05`). Engineers and Monsters set to "—" stay one line each. | — |
 | 15 | Nothing on screen without value | met | No "Saved in this browser" line (it is one word inside the account menu), no jump bar, no profile toolbar. The menu carries rename, the saved state, switch, new, duplicate, delete, export, import, sync, share, theme and about (`14`). The battle-setup row lives *inside* the folded Sources, so it is not permanent chrome. | — |
 | 16 | Material 3 base, verified independently | met | Window classes, the supporting pane from 1200 px, 16/24 dp margins, a 64 px small top app bar, a bottom app bar, filled cards and the shape scale are mapped in `docs/plans/design-overhaul.md` §5.0; an independent structure review (M3 canonical layouts, Apple HIG, five measured comparables) is logged in `docs/PLAN.md` §7, 2026-09-12, and spike 0009 chose the frame. | — |
-| 17 | One page scroll | **partly** | Before a march there is one scroll: no `overflow:auto/scroll` box anywhere holds more than it shows, and the only positioned boxes are the app bar and the March `aside`, both sticky. **After a Generate at 1400×900 the pane becomes a second scroller**: measured 836 px of viewport against 1 787 px of content, so the wheel over the pane moves the pane and not the page — the two-scroller behaviour the independent review of 2026-09-12 withdrew. At 390×844 there is still exactly one scroll. The plan amended this for itself (§5.0: the supporting pane "may scroll inside itself only when taller than the viewport"); the charter did not, and the charter wins until it is edited. | Proposed (M): either let the pane's tail flow with the page and stick only its header (the figures and Generate), or amend rule 17 to say a supporting pane taller than the viewport may scroll. Owner's call — it is the same decision the 2026-09-12 review already took once. |
+| 17 | One page scroll | met **(fixed 2026-09-15)** | Before a march there is one scroll: no `overflow:auto/scroll` box anywhere holds more than it shows, and the only positioned boxes are the app bar and the March `aside`, both sticky. **After a Generate the pane became a second scroller** — measured 836 px of viewport against 1 787 px of content, and on the owner's own plan 919 px of March against 768 px of room at 1400×900 with every fold already shut — so the wheel over the pane moved the pane and not the page: the two-scroller behaviour the independent review of 2026-09-12 withdrew. **Fixed:** the pane is never given a scroll of its own. It sticks while the March fits the room the window leaves it and travels with the page once it does not (`shell/usePaneFits.ts`, re-measured on every change to the March or the window), and the `max-height` + `overflow-y: auto` that capped it are gone. Re-measured after the fix: **0 scrollable boxes anywhere in `main`**, before and after a Generate, at 1400×900, 1200×800 and 1200×560 — and the end of the March is reached by the page's own scroll (`e2e/generate.spec.ts`). At 390×844 there is still exactly one scroll. | Fixed here: the owner's call of the decision this row left open, 2026-09-15 — "I want to avoid double scrollbars; make this change so we always avoid scroll bars on the battle summary". Of the two options proposed, the pane's tail flows with the page; amending rule 17 to allow a second scroll was withdrawn. **Consequence, measured:** a March of this account's size (861–1 234 px) is taller than the room at any ordinary window height (603 px at 1280×720), so the pane does not stick for it — 0 of the states measured after the fix keep the stick, and it sticks only for a March that fits (an empty one, at 194 px). If the March must stay on screen, the lever is its own length, not a scrollbar: the two biggest blocks are the "Objectives compared" table (280 px) and the pools and pills (265 px). |
 | 18 | Phone first, desktop second monitor | met | Everything reaches the thumb at 390 px, Generate included; `e2e/troops.spec.ts` asserts the page never scrolls sideways at 390. Desktop puts the setup and the march side by side (`06`). | — |
 | 19 | Right-sized; information text never below 13 px | met **(fixed)** | Before: querying the computed size of every visible text node across 16 states found **six under the floor** — the "15 STACKS" badge at **9 px**, "3 on but empty" at **10 px**, the two switch sentences in the Battle card at **11 px**, the account avatar's initial at **12.8 px**. After the fixes, the same sweep over the same 16 states returns **nothing under 13 px**. Also fixed: inside the 360 px pane the trade-off strip broke figures across two lines ("75 870" / "000"). | Fixed here (see below). Remaining note: the hero figure is 32 px where `docs/design.md` §3 says 48 px — a design decision to confirm, not a floor breach. |
 | 20 | Colour means group | met | Group bars open every Troops row and every March row; tiles carry the group ground and ink; tier badges carry the tier ink; `pnpm contrast` checks 176 pairs and all pass (lowest 4.94 light / 4.98 dark at 4.5:1). Colour is never alone — every tile also carries a glyph, a roman tier and a code. | — |
@@ -55,6 +55,24 @@ met during this pass; the fixes are listed under the table, with what was measur
 | 32 | Independent review of structure | met | `docs/PLAN.md` §7, 2026-09-12: "Independent design review of the overhaul frame (Material 3 canonical layouts, Apple HIG, five measured comparables)" — it withdrew the two independently scrolling columns. Spike 0009 did the same for the summary/Generate frame. | — |
 | 33 | Delay what is not design | met | S-48 "best captains for a march" is written up in `docs/PLAN.md` §3.7 and deliberately not built; the engine's other stories sit behind the UI phases. | — |
 | 34 | Keep a continuous history | met | `~/pyrrhic-claude-history/` holds `current/project`, `current/tasks` and dated `snapshots/` (latest `2026-09-13_0452`); `pyrrhic-history.timer` is active and hourly (last run 40 min before this check, next in 19 min). | — |
+
+**Follow-up, 2026-09-15 — the stick, re-measured.** Rule 17's row named the lever correctly: the March's own
+length, not a scrollbar. That is what the pass of 2026-09-15 moved. The March's explaining half — the
+"Objectives compared" strip, the battle story and the HP profile, the saved marches, and the row that copies,
+edits, saves or shares the counts — is now one panel at the foot of the **setup** column
+(`ui/sections/march/MarchFoot.tsx`, anchored `#march-foot`), drawn only from 1200 px; below that the March
+sheet carries the same four blocks, never both. Re-measured with `paneFrame()` (`e2e/helpers.ts`) on a real
+march (leadership 84 300): **before**, the pane was **771 px against 768 px** of room at 1400×900 and kept the
+stick at no window size; **after**, it is **655 px with one warning alert and 553 px without**, against **740
+/ 640 / 560 px** of room at 1400×900 / 1280×800 / 1280×720. So the pane now **sticks at 1400×900** (new test
+in `e2e/generate.spec.ts`) and **still flows at 1280×720** and at 1280×800 with a warning; both states keep
+0 scrollable boxes and reach the end of the March by the page's own scroll. The pane's height no longer
+depends on the folds or on the objective comparison — those px belong to the setup column's foot now, and
+opening Details or the saved list there does not move the pane at all (the plan's own fold stays in the pane,
+because the plan's assessment is part of the answer). The room at 1400×900 lost 20 of those px to the other
+half of this change: `--pyr-commandbar-height` went 5.75rem → 7.5rem, the bar's *tallest* state, because the
+Objective's locked reason took the bar from 88 px to 119.7 px — so the reserve is fixed and the pane pays
+about **28 px** at every method rather than a different room per Battle-card setting.
 
 ---
 
@@ -111,6 +129,12 @@ keyboard select the whole value and the next keystroke replaces it. No change wa
 - **Frame:** every `position: fixed|sticky` box and every `overflow: auto|scroll` box whose content exceeds
   it, plus the bounding boxes of `#troops`, `#mercenaries`, the summary and Generate — run both before and
   after a Generate, which is what caught rule 17 (the pane has one scroll of its own only once it is full).
+  Re-run on 2026-09-15 after the fix: no `overflow` box anywhere holds more than it shows, before or after a
+  Generate, at 1400×900, 1200×800 and 1200×560.
+- **The pane's stick, 2026-09-15:** `paneFrame()` (`e2e/helpers.ts`) reads the pane's height, the room
+  `shell/usePaneFits.ts` compares it against, its `position`, its `top` against the setup column's, and every
+  scrollable box it holds — polled, because the stick is a `ResizeObserver`'s word and arrives a frame after
+  the March resizes. Run at 1400×900, 1280×800 and 1280×720 (the numbers in the follow-up above).
 
 ## The screenshots
 

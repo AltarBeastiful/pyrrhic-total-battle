@@ -122,10 +122,16 @@ variables at them, so overriding these nine re-skins every component at once.
 | hairline | `#cfd5d1` | `#313938` | `--pyr-hairline` | **decoration only**: the rule between sheet sections |
 | field | `#6e7873` | `#78837f` | `--mantine-color-default-border` | the border of anything you type in or press; ≥ 3:1 |
 
-Three more variables the app's own CSS reads: `--pyr-appbar-height` (64 px, the height both bars and the
-sticky pane are measured from), `--pyr-pane-width` (**420 px** since the review of 2026-09-13 — M3's supporting pane, widened from 380 because
-"the right side battle summary could take a bit more space"; the setup column gives up the 40 px, and 420 is
-what puts four stack pills across), `--pyr-page-margin`
+Further variables the app's own CSS reads: `--pyr-appbar-height` (64 px, the height both bars and the
+sticky pane are measured from), `--pyr-commandbar-height` (**7.5rem**, 120 px — the bottom bar's *tallest*
+state, not its everyday one: measured 2026-09-15, 88 px with nothing to say and 119.7 px with the
+Objective locked and its reason showing, and the March pane subtracts whichever the token says from the
+window, §4),
+`--pyr-pane-width` (**504 px** — the token is `31.5rem`; M3's supporting pane, widened from 380 to 420 px in
+the review of 2026-09-13 ("the right side battle summary could take a bit more space — a bit crammed
+compared to the content density on the left") and to 504 px later, an owner's experiment that stayed. The
+comment in `ui/theme.ts` above the token still explains the 420 px version of it: read the value, not the
+prose, until that comment is rewritten), `--pyr-page-margin`
 (16 px compact / 24 px from 600 px — Material's page margins, §4) and `--pyr-font-numeral` (Fraunces).
 
 ### Checked, not guessed
@@ -165,8 +171,11 @@ page              the page ground
 │ └ well          anything sunk into it: a field, a tier stepper, a segmented track, a figure
 │ └ raised        a block on top of it: a hover, the chosen segment, the account pill
 ├ pane            the March: the same idea one step brighter and one step deeper           (`Panel surface="pane"`)
-│ └ glance        the part of it that stays: recap · Generate · the pools and their pills
+│ └ glance        the half of the March that answers: recap · Generate · the pools and their pills · the plan
 │ └ tier/13       a stack pill: a wash of its tier's ink, bordered in the same ink
+├ panel           the same March's second half, from 1200 px: one panel, **"This march in full"**, closing the
+│                 setup column — what the objective bought, the battle story and the HP profile, the saved
+│                 marches, and the row that copies, edits, saves or shares the counts (`#march-foot`)
 └ sheet           what floats over the page: a dialog, a popover, a menu
   └ danger/12     the one state block that is still tinted
 ```
@@ -175,7 +184,11 @@ page              the page ground
 four panels with 16 px between them, and the full-width `Divider` that used to tell the sections apart is
 gone — a panel's own edge does that now. Never nest two panels: go one step in (`well` or `raised`), or drop
 the ground and use spacing. Inside the March the recap, Generate, the pills and the counts are one surface,
-not four cards.
+not four cards. **The March itself is two of them** (owner, 2026-09-15): on a desktop the answer is the pane
+on the right and everything that *explains* it is the foot of the left column, so the pane stays shorter
+than the column beside it — which is the only reason it can stick at all (§4). Below 1200 px there is no
+column to put anything in, so the March is the phone's sheet and carries both halves, and nothing is drawn
+in two places at one width.
 
 Elevation has three steps and each is for something that floats: a panel's `0 8px 24px`, the March pane's
 `0 12px 32px`, and Mantine's own overlay shadow on a dialog or a bottom sheet. The one gilded object,
@@ -270,23 +283,41 @@ variable, `--pyr-meta`, so restoring the 13 px floor is a one-line change; the t
   direction A each setup section is its own panel, so nothing is drawn *between* panels. Inside one, the
   parts are told apart by the ten lines above. A border *and* a shadow *and* a tonal step on the same element
   is still the thing this system exists to prevent — a panel is allowed all three precisely because it is the
-  one object the design says is lit.
+  one object the design says is lit. **The March is two panels of this frame, not one** (owner,
+  2026-09-15): the pane on the right carries the answer, and **"This march in full"** (`#march-foot`) closes
+  the setup column with everything that explains or acts on it — one panel each, 16 px of air between them
+  like every other pair, and neither drawn on the other side of the 1200 px line.
 - **Density by purpose.** Controls are Mantine's `sm` (`ActionIcon` too — `xs` is 18 px, under the 24 px target
   minimum); a **chip and a tier stepper are both 30 px**, so a troop row reads as one line of equal parts; a
   **housing well is 40 px** and a third of the command bar wide, because it is the figure a player retypes off
   the game's own march screen — 34 px as the phone bar's chip, which is that same well waiting to be typed in; a **stack pill is 56 px tall with 6/8 px of padding**, laid out
-  `repeat(auto-fill, minmax(88px, 1fr))` so four fit across the 420 px pane and a six-figure count widens
-  every pill and wraps the row to three instead of clipping one; a **mercenary pill is 32 px with 0/6/0/10
+  `repeat(auto-fill, minmax(88px, 1fr))` so four fit across the pane — 504 px since 2026-09-15 (§1), which is
+  four 110 px tracks — and a six-figure count widens every pill and wraps the row instead of clipping one; a
+  **mercenary pill is 32 px with 0/6/0/10
   and a 6 px inner gap**; a **left-out pill is 26 px**, because it is a footnote to the march.
 - **One bar per edge** (design rule 2 as amended, plan §5.6). The top app bar is 64 px; the **command bar**
   closes the page at the bottom — 88 px of wells, the objective and Generate inside the page width, 24 px off
-  the sides and off the bottom edge (112 px reserved), and two rows of 34 + 40 px (102 px) on a phone. Both
-  are `position: sticky` at the end of the frame, so their height is in the flow and nothing hides under
-  them; `html` is given the matching `scroll-padding` so nothing the browser scrolls to lands under a bar.
-- **One block stays put.** On a desktop the March's recap, pools and pills are `position: sticky` under the
-  64 px app bar, capped at `calc(100dvh - 64px - 112px - 16px)` — the window less both bars; everything after
-  them flows with the page. That cap is a fallback, not a layout: a march of up to fifteen stacks fits a
-  900 px window without it.
+  the sides and off the bottom edge, and two rows of 34 + 40 px (102 px) on a phone. It may also carry **one
+  line above the fields** — a pool figure the game would refuse, or why the Objective is locked — which
+  measured 119.7 px against the 88 px of the bare bar (2026-09-15), so the reserve is the tallest of the two
+  and `--pyr-commandbar-height` is **7.5rem** (§1): a reserve that moved with a Battle-card setting would give
+  the pane a different room for the same march. Both bars are `position: sticky` at the end of the frame, so
+  their height is in the flow and nothing hides under them; `html` is given the matching `scroll-padding` so
+  nothing the browser scrolls to lands under a bar.
+- **The whole pane stays put.** On a desktop the March pane is `position: sticky` under the 64 px app bar as
+  **one object** (owner, 2026-09-15) — the figures, the army, the counts, the left-out row, the notices and
+  the plan's own fold together. Nothing pins itself *inside* the column, because a block pinned inside its
+  column is a block the rest of the column scrolls behind. It carries **no `max-height` and no `overflow`**:
+  a scroll inside the pane is the second scroller design rule 17 forbids. What decides instead is
+  `shell/usePaneFits.ts`, which measures the March against `100dvh − --mantine-spacing-lg −
+  --pyr-commandbar-height − 24 px` — the window less the pane's own sticky top, less the bar the pane must
+  never be hidden under, less a little air — and re-measures on every change to the March or the window. It
+  fits, so the pane sticks; it does not fit, and the pane stops sticking and the page carries it. Measured
+  on a real march (leadership 84 300): **655 px with one warning alert, 553 px without**, against **740 / 640
+  / 560 px** of room at 1400×900 / 1280×800 / 1280×720 — it sticks at 1400×900 and flows at 1280×720 and at
+  1280×800-with-a-warning. Before the March's second half moved to the foot of the setup column it was
+  **771 px** against 768 px of room and stuck at no window size at all. The command bar's taller reserve
+  (§1) costs the pane about **28 px** of room at every method, and that is the price of the sentence saying why the Objective is locked.
 - **Alignment.** Everything left-aligned; figures right-aligned in their column; nothing centred. A figure's
   name is a caption *under* it only for the hero — everywhere else the label comes first, because those are
   read as a list.
@@ -389,16 +420,18 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `method: 'elite'` | **Tier ladder** | Your cheapest, lowest-tier stacks take the hits first; each higher tier stands one step later. |
 | `method: 'ms'` | **Troops first** | Every mercenary and monster stack is kept smaller than your smallest troop stack, so hired units only fall after all your troops. |
 | `method: 'custom'` | **Your own order** | You decide which stack falls first, mixing troops, mercenaries and monsters. |
-| `method: 'complete'` | **Complete optimization** | Tries every sizing over the marches you plan and keeps the best campaign. |
-| `campaign.marches` | **Marches planned** | How many times you fight this army before hiring again. |
-| `campaign.silverBudget` | **Silver budget** | Empty means no limit. A campaign stops before a march it cannot pay for. |
-| `CompleteCandidate.spend` | **Mercenaries per march** | All · Three quarters · Half · A quarter — how much of every hired stack marches each time. |
-| `CompleteResult.winner.method` | **Sized as …** | The sizing the search chose, in the three words above: Tier ladder · Troops first · Troops first, with damage trades. |
+| `method: 'plan'` | **Complete optimization** | Plans the marches your army can fight: how big each one is, and what it carries. |
+| `PlanTotals.damagePerSilver` · `damagePerMercenary` | **Damage per silver · per mercenary** | What the two scarce resources buy. The plan reports both, and which one ends it. |
+| `CampaignPlan.alternatives` | **The trade** | The plans nothing else beats on every resource at once, cheapest first, cut to the ones near the goal: the trade between silver, hired stock and damage. Its table reads one march at a time — **Damage a march · Silver a march · Mercs a march · Per silver · Per mercenary**. |
+| `PlanTotals.repeat` | **A march** | The repeated march's own figures — what one of the identical marches hits for, costs and burns, without the final march spread over it. It agrees with the battle's own report for that march to the unit. |
+| `CampaignPlan.leftOut` | **Off the goal** | How many of the frontier's plans the trade refused: marches that field a token share of the hired stock, or spend silver far past what it returns. The fold says the count; nothing is hidden silently. |
 | `relaxedPreservation` | **Allow damage trades** | Let a hired stack grow past your smallest troop stack when that raises the damage; the results name every stack it affects. |
 | `monstersLast` | **Monsters after troops** | Keep every monster stack below your smallest troop stack; mercenaries stay free. |
 | `strictMercsAboveMonsters` | **Monsters after mercenaries** | Also keep every monster stack below your smallest mercenary stack. |
 | `roundTo10` | **Hired units in tens** | Mercenary and monster stacks become multiples of ten, because reviving works in tens. |
 | `customOrder` | **Order of the fall** | First to fall at the top. |
+| `marchFoot` (`#march-foot`) | **This march in full** | The March's explaining half, one panel: what the objective bought, the battle story and the HP profile, the saved marches, and the row that copies, edits, saves or shares the counts. The foot of the setup column on a desktop, the March sheet below 1200 px — never both (owner, 2026-09-15). |
+| `objectiveLocked` | **"The plan weighs damage against what it costs, so it decides this itself."** | What the Objective's own description says while **Complete optimization** is chosen, because that method picks the objective for itself. The Objective select is disabled and points at the sentence; on a phone the chip keeps its name and is named **"Objective: decided by the plan"** for a screen reader (owner, 2026-09-15 — a deliberate exception to §7.4's "hidden, not disabled"). |
 
 ### Results
 
@@ -412,8 +445,7 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `recovery.*` | **Recovery** — silver, gold, dragon coins, time |
 | `damagePerSilver` / `PerGold` / `PerDragonCoin` | **Value per silver** / **per gold** / **per dragon coin** |
 | `damageByPool` | Damage by pool — troops, mercenaries, monsters |
-| `CampaignSummary` | **Campaign** — marches fought, total expected damage, total silver, damage per silver, mercenaries lost and left |
-| `CompleteResult.candidates` | **The plans compared** — one row per plan: marches, damage, silver, lost, left |
+| `CampaignPlan.totalDamage` · `silver` · `marches` · `mercLost` | **Fought to the end** — the sequence added up: damage, silver and hired stock over every march, the final one included. One muted line under the plan's fold, not a headline |
 
 The battle journal keeps in-game phrasing, line for line, so a player can hold it next to the real report.
 

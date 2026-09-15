@@ -369,23 +369,69 @@ async function journey3(page: Page): Promise<void> {
 }
 
 /**
- * J6 — plan a campaign (S-54). The daily question is "what do I march with today"; this one is "what
- * do I march with for the next ten fights". Choose the fourth stacking method, Generate, and read
- * the campaign: the sizing it chose, and one row per march. Budget: ≤ 5 taps at either width.
+ * The army the plan is planned from, before the journey's own taps start (S-56).
+ *
+ * The plan spreads the **hired stock** over the marches it sizes, so an account that has hired nothing
+ * leaves it nothing to spread and the engine refuses outright ("There is no campaign to plan from this
+ * army"). An *unlimited* mercenary is no better: a stock the plan cannot ration is not a stock it can
+ * divide over ten marches. Both were measured on 2026-09-15 — `planCampaign` returns no candidate at all
+ * for either. So the returning player this journey opens on has hired one mercenary and typed what he
+ * owns of it, and has opened the authority pool that pays for it.
+ *
+ * It is seed work, like `seedProfile`: it happens **before** the counter, and what the journey measures
+ * is the planning, not the camp.
+ */
+async function seedHiredStock(page: Page): Promise<void> {
+  const card = page.locator('#mercenaries');
+  await card.getByRole('button', { name: 'Hire mercenary…' }).click();
+  const search = page.getByRole('textbox', { name: 'Search mercenaries' });
+  await search.fill('Bear');
+  await page.getByRole('option', { name: 'Bear V tier 5' }).click();
+  await search.press('Escape');
+
+  // Hired reads "owned unlimited" until the pill's own popover says otherwise, and unlimited is not a
+  // figure the plan can ration (the pill's popover, J2 of `mercenaries.spec.ts`).
+  await card.getByRole('button', { name: 'Bear V: owned unlimited' }).click();
+  const owned = page.getByRole('dialog').getByRole('textbox', { name: 'Owned' });
+  await owned.fill('500');
+  await owned.press('Tab');
+  await page.keyboard.press('Escape');
+  await expect(card.getByRole('button', { name: /^Bear V: owned 500$/ })).toBeVisible();
+
+  // The hired stock is paid for out of authority, so the pool has to have room for it.
+  await fillHousing(page, 'Authority', 40_000);
+  await waitForSaved(page);
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('heading', { level: 1, name: 'Pyrrhic' })).toBeVisible();
+  await toTop(page);
+}
+
+/**
+ * J6 — plan a campaign (S-55, seeded by S-56). The daily question is "what do I march with today"; this
+ * one is "what do I march with for the next ten fights".
+ *
+ * Choose the fourth stacking method — Complete optimization, the plan — Generate, and read the plan's
+ * own UI in the March: what it sized, the trade it chose from, and what one march of it hits for.
+ *
+ * The method is the only thing this journey picks. The plan decides the marches, the counts and the
+ * split between silver and the hired stock itself, so the card carries no rule and no field to answer it
+ * with (S-56); the budget is the same either way. Budget: ≤ 5 taps at either width.
  */
 async function journey6(page: Page, phone: boolean): Promise<void> {
+  await seedHiredStock(page);
+
   const taps = new Taps();
   const battle = page.locator('#battle');
 
   // On a phone the method is folded to the chosen one, so reaching the others is a tap of its own.
   const change = battle.getByRole('button', { name: 'Change Stacking method' });
   if (phone) await taps.tap(change);
+  // The one plan card there is: S-54's method and the second card it was disambiguated from are gone.
   await taps.tap(battle.getByRole('radio', { name: 'Complete optimization' }));
 
-  // The campaign it will plan for, with the default nobody has to type.
-  await expect(battle.getByLabel('Marches planned')).toHaveValue('10');
-  await expect(battle.getByLabel('Silver budget')).toHaveValue('');
-  // And the rules that ride on a sizing are gone: this method tries every sizing itself.
+  // Nothing rides on this method: a rule that fixes one sizing would be the player answering the
+  // question they asked the search, and there is nothing else on the card to fill in.
   await expect(battle.getByRole('switch')).toHaveCount(0);
 
   await taps.tap(generateButton(page).first());
@@ -398,23 +444,27 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
     await expect(march).toBeVisible();
   }
 
-  // The one thing about this answer the player did not choose: what sized it.
-  await expect(march.getByText(/^Sized as /)).toBeVisible();
+  // The one thing about this answer the player did not choose: what sized it, and where on the trade the
+  // plan on screen sits (`PlanSizing`).
+  await expect(march.getByText(/^Planned from the army: /)).toBeVisible();
 
-  const fold = march.getByRole('button', { name: /^Campaign/ });
-  await expect(fold).toContainText('10 marches');
+  // The plan itself, folded: what one of its marches hits for and how many of them it repeats.
+  const fold = march.getByRole('button', { name: /^Plan / });
+  await expect(fold).toContainText(/damage a march/);
+  await expect(fold).toContainText(/\d+ marches?/);
   await taps.tap(fold);
 
-  const table = march.getByRole('table', { name: 'Every march of this campaign' });
-  await expect(table).toBeVisible();
-  // Ten marches and their head row, each with what it fielded and what it had cost by then.
-  await expect(table.getByRole('row')).toHaveCount(11);
-  await expect(march.getByText('Marches fought')).toBeVisible();
-  await expect(
-    march.getByRole('table', { name: 'Every plan this campaign was compared against' }),
-  ).toBeVisible();
-  // The campaign replaces the objectives strip: nothing runs five more searches behind it.
-  await expect(march.getByRole('heading', { name: 'Objectives compared' })).toHaveCount(0);
+  // The trade it chose from, read a march at a time (`PlanFold`): one row per plan the search kept, and
+  // what one march of it hits for, costs in silver and burns of the hired stock that does not come back.
+  const trade = march.getByRole('table', { name: 'Every plan on the trade' });
+  await expect(trade).toBeVisible();
+  await expect(trade.getByRole('columnheader', { name: 'Damage a march' })).toBeVisible();
+  await expect(trade.getByRole('columnheader', { name: 'Silver a march' })).toBeVisible();
+  await expect(trade.getByRole('columnheader', { name: 'Mercs a march' })).toBeVisible();
+  // The head row, then one row per plan kept — never a table with nothing in it.
+  expect(await trade.getByRole('row').count()).toBeGreaterThan(1);
+  // And what the whole sequence adds up to if it is fought to the end, one line under it.
+  await expect(march.getByText(/^Fought to the end: /)).toBeVisible();
 
   if (phone) await closeMarchSheet(page);
 

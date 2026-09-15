@@ -13,6 +13,7 @@ import {
   generateState,
   marchExpectedDamage,
   marchFigure,
+  marchFoot,
   marchLeftOut,
   marchPillDetails,
   marchSection,
@@ -22,6 +23,7 @@ import {
   openApp,
   openMarchSheet,
   pageOverflowsSideways,
+  paneFrame,
   setCountsMode,
   settle,
   watchConsole,
@@ -49,20 +51,94 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   expect(await marchFigure(page, 'Worst opening')).toBeGreaterThan(0);
   expect(await marchFigure(page, 'Silver to recover')).toBeGreaterThan(0);
 
-  // The pills *are* the counts (owner, 2026-09-13): there is no table under them, and the row of
-  // whole-march actions is what is left.
+  // The pills *are* the counts (owner, 2026-09-13): there is no table under them. The row of
+  // whole-march actions is the foot of the setup column at this width (owner, 2026-09-15).
   await expect(marchSection(page).getByRole('table')).toHaveCount(0);
-  await expect(marchSection(page).getByRole('button', { name: 'Copy all counts' })).toBeVisible();
+  await expect(marchFoot(page).getByRole('button', { name: 'Copy all counts' })).toBeVisible();
 
   // The leadership pool is spent, not merely allocated. A pool is a vessel filled to the brim, so
   // its figure reads "used … of total" rather than as a fraction (D-19).
   await expect(marchSection(page).getByText('of 4 100')).toBeVisible();
 
   // The story and the chart are folded away until they are asked for.
-  await expect(marchSection(page).getByRole('button', { name: /^Details The battle story/ })).toHaveAttribute(
+  await expect(marchFoot(page).getByRole('button', { name: /^Details The battle story/ })).toHaveAttribute(
     'aria-expanded',
     'false',
   );
+
+  expect(problems).toEqual([]);
+});
+
+test('a March taller than the window is carried by the page, never by a scroll of its own', async ({
+  page,
+}) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+  // The default 1280×720 window leaves a pane 568 px (measured): a march of this size is 655 px
+  // against it, so this is the case the old `max-height` answered with a scrollbar. It is still the
+  // case after the 2026-09-15 move — what left the pane was 116 px of reference and actions, not
+  // enough to bring a full march inside a 720 px window.
+  await generate(page, { leadership: 4100 });
+
+  const pane = await paneFrame(page);
+  // The case first, so a March that no longer outgrows the pane cannot leave the assertions below
+  // passing vacuously.
+  expect(
+    pane.height,
+    'this march now fits the pane — the flowing case this test is about is gone',
+  ).toBeGreaterThan(pane.room);
+  expect(pane.scrollers, 'the March took a scroll of its own (design rule 17)').toEqual([]);
+  // The two columns open on the same line, in this state as in the other one: a flowing pane keeps
+  // its `position: relative` but must not keep the sticky `top` as an offset (measured 16 px low).
+  expect(pane.top, 'the pane starts below the first setup card').toBe(pane.setupTop);
+
+  // The answer arrives a frame after the March changes size — it is a `ResizeObserver`'s word — so it
+  // is polled rather than sampled the instant the summary settles. A pane that never gives up the
+  // stick would have to hide its own tail to do it, which is what this fails on.
+  await expect
+    .poll(async () => (await paneFrame(page)).position, {
+      message: 'a March taller than its room kept the stick',
+    })
+    .toBe('relative');
+
+  // And the tail is reached the way the rule says it must be: by scrolling the page to its end.
+  await page.evaluate(() => {
+    const view = globalThis as unknown as {
+      scrollTo: (x: number, y: number) => void;
+      document: { documentElement: { scrollHeight: number } };
+    };
+    view.scrollTo(0, view.document.documentElement.scrollHeight);
+  });
+  await settle(page);
+  const scrolled = await paneFrame(page);
+  expect(
+    scrolled.bottom,
+    'the end of the March cannot be brought on screen by the page scroll',
+  ).toBeLessThanOrEqual(scrolled.viewport + 1);
+
+  expect(problems).toEqual([]);
+});
+
+test('a March that fits the room keeps the stick — the point of the foot panel', async ({ page }) => {
+  const problems = watchConsole(page);
+  // The window the pane is meant to stick in, and the one it could not before 2026-09-15: measured
+  // then, the March was 771 px against 748 px of room and gave up the stick at every size.
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openApp(page);
+  await generate(page, { leadership: 4100 });
+
+  const pane = await paneFrame(page);
+  expect(
+    pane.height,
+    'this march outgrew its room again — the pane cannot stick and the foot panel has lost its point',
+  ).toBeLessThanOrEqual(pane.room);
+  // And the same two guarantees hold in this state as in the flowing one (design rule 17).
+  expect(pane.scrollers).toEqual([]);
+  await expect
+    .poll(async () => (await paneFrame(page)).position, {
+      message: 'a March that fits its room did not keep the stick',
+    })
+    .toBe('sticky');
 
   expect(problems).toEqual([]);
 });
@@ -199,7 +275,9 @@ test('a type the priority left out can be put back, and the next Generate solves
 
   // A search wins by marching with fewer types, and the strip says what that bought — as the five
   // objectives side by side, since investigation 0013 §5.3 (PLAN §3.6, design rule 29).
-  await expect(marchSection(page).getByRole('heading', { name: 'Objectives compared' })).toBeVisible();
+  // The comparison is reference, so it lives in the setup column's foot rather than in the pane
+  // that has to stay short enough to stick (owner, 2026-09-15).
+  await expect(marchFoot(page).getByRole('heading', { name: 'Objectives compared' })).toBeVisible();
   const leftOut = marchLeftOut(page);
   await expect(leftOut.first()).toBeVisible();
 
@@ -257,7 +335,7 @@ test('counts are edited in an explicit mode, and put back with Undo', async ({ p
   // on the hand-typed counts the moment one changes.
   await expect(pills.getByRole('button', { name: /^Increase / })).toHaveCount(0);
   await field.fill('1');
-  const undo = marchSection(page).getByRole('button', { name: 'Undo' });
+  const undo = marchFoot(page).getByRole('button', { name: 'Undo' });
   await expect(undo).toBeVisible();
   expect(await marchExpectedDamage(page)).not.toBe(damage);
 

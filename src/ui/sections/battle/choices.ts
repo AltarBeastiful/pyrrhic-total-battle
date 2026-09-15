@@ -36,9 +36,9 @@ export const METHOD_CHOICES: readonly MethodChoice[] = [
     description: 'You decide which stack falls first.',
   },
   {
-    value: 'complete',
+    value: 'plan',
     title: 'Complete optimization',
-    description: 'Tries every sizing over the marches you plan and keeps the best campaign.',
+    description: 'Plans the marches your army can fight: how big each one is, and what it carries.',
   },
 ];
 

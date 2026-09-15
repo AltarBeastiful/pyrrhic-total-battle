@@ -370,16 +370,23 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       '--pyr-appbar-height': '4rem',
       // The desktop command bar's own height (design plan §5.6, `CommandBar.dc.html`): 14 px of
       // padding, a 13 px label, the row — a 40 px well beside the 44 px Generate — and 14 px of
-      // padding. Said once, because the March pane's sticky block subtracts it from the window so
-      // the bar never lands on the pills.
-      '--pyr-commandbar-height': '5.75rem',
-      // M3's supporting pane, widened from 380 to **420 px** (the owner's review of 2026-09-13:
-      // "the right side battle summary could take a bit more space — a bit crammed compared to the
-      // content density on the left"). The setup column gives up the 40 px; at 1400 px it still has
-      // 900, which is more than any form on it asks for. 420 is also what makes the spacing
-      // contract's "four stack pills across" true: 420 − 2 × 20 of padding − 3 × 8 of gap is four
-      // 88.5 px tracks (`domain.module.css`, `.pillGrid`).
-      '--pyr-pane-width': '26.25rem',
+      // padding, plus the one line both bars may carry above the fields. Said once, and read twice:
+      // the bar is laid out from it, and `usePaneFits.ts` subtracts it from the window so the March
+      // pane never lands under it.
+      //
+      // It is the bar's **tallest** state, not its everyday one, because a reserve that moves would
+      // give the pane a different room depending on a Battle-card setting: measured 2026-09-15, 88 px
+      // with nothing to say and 119.7 px with the Objective locked by the plan method (that state
+      // carries a one-line `description` under the field). 7.5rem covers it.
+      '--pyr-commandbar-height': '7.5rem',
+      // M3's supporting pane, widened from 380 to 420 px by the owner's review of 2026-09-13 ("the
+      // right side battle summary could take a bit more space — a bit crammed compared to the content
+      // density on the left") and to **504 px** since, which is what the token says. The setup column
+      // gives that width up; at 1400 px it still has more than any form on it asks for. 504 is also
+      // what keeps the spacing contract's "four stack pills across" true: 504 − 2 × 20 of padding is
+      // 464 px of track, which at `minmax(88px, 1fr)` with an 8 px gap still resolves to four
+      // (`domain.module.css`, `.pillGrid`). Width is read off the token, never off this comment.
+      '--pyr-pane-width': '31.5rem',
       // The one size under the 13 px floor, and it is a *label*, never information: the word over a
       // figure, the meta beside a card's title, a column head. The figure itself is 15/600 and the
       // label repeats what the accessible name already says. Written as one variable so design

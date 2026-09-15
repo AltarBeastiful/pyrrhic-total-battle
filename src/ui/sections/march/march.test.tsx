@@ -532,48 +532,54 @@ test('what the search gave up is the objectives side by side, and a row runs one
   });
 }, 30_000);
 
-test('complete optimization answers with a campaign, and the March draws it instead of the objectives', async () => {
-  // The fourth method (S-54): the search picks the sizing, the share of the mercenaries and the unit
-  // types, and scores them over the marches the setup plans for.
+test('complete optimization answers with a plan, and the March draws it instead of the objectives', async () => {
+  // The plan method (S-55): the army alone decides the marches, the counts and the split between silver
+  // and the hired stock. It is the fourth and last method since S-56 removed the S-54 one it replaced.
+  // The plan is planned from the army alone — and an army with no mercenaries has no plan at all
+  // (`planCampaign` refuses it) — so this suite hands it a stock, the way the Mercenaries card would.
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [
+    { id: 'epic-monster-hunter-6', cap: 92 },
+    { id: 'arbalester-6', cap: 76 },
+    { id: 'legionary-6', cap: 72 },
+    { id: 'chariot-6', cap: 37 },
+  ];
   act(() => {
-    useStore
-      .getState()
-      .updateActiveSetup((current) => ({ options: { ...current.options, method: 'complete' } }));
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 4_100, authority: 2_000, dominance: 0 },
+      options: { ...current.options, method: 'plan' },
+    }));
   });
   renderWithTheme(<Page />);
   await generate();
 
   // The one thing about this answer the player did not choose: what sized it.
-  expect(screen.getByText(/^Sized as /)).toBeTruthy();
-  expect(useRunStore.getState().campaign?.winner.campaign.fought).toBe(10);
+  const plan = useRunStore.getState().plan;
+  expect(plan).not.toBeNull();
+  expect(plan?.marches).toBe(10);
+  expect(screen.getByText(/^Planned from the army:/)).toBeTruthy();
 
   // Folded until it is asked for (design rule 4), with the answer's headline on the closed row.
-  const fold = screen.getByRole('button', { name: /^Campaign/ });
+  const fold = screen.getByRole('button', { name: /^Plan/ });
   expect(fold.getAttribute('aria-expanded')).toBe('false');
-  expect(fold.textContent).toContain('10 marches');
+  expect(fold.textContent).toContain('damage a march');
   fireEvent.click(fold);
   await waitFor(() => {
     expect(fold.getAttribute('aria-expanded')).toBe('true');
   });
 
-  expect(screen.getByText('Marches fought')).toBeTruthy();
-  const marches = screen.getByRole('table', { name: 'Every march of this campaign' });
-  expect(within(marches).getAllByRole('row')).toHaveLength(11);
-  // Every sizing at full strength, then the best of each smaller share.
-  const plans = screen.getByRole('table', { name: 'Every plan this campaign was compared against' });
-  expect(within(plans).getAllByRole('row')).toHaveLength(7);
-  expect(
-    within(plans)
-      .getAllByRole('row')
-      .filter((row) => row.getAttribute('aria-current') === 'true'),
-  ).toHaveLength(1);
+  // The trade the plan chose from, one row per stop: a plan the player may be asked to march.
+  const trade = screen.getByRole('table', { name: 'Every plan on the trade' });
+  expect(within(trade).getAllByRole('row').length).toBeGreaterThan(2);
 
-  // And it *replaces* the objectives comparison: five more searches to compare one battle would be
-  // five wasted next to twelve plans compared over ten marches.
+  // And it *replaces* the objectives comparison: five more searches to compare one battle would explain
+  // nothing that a plan over ten marches has not already said.
   expect(useRunStore.getState().tradeoff).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Objectives compared' })).toBeNull();
 }, 30_000);
-
 test('a warning from the engine is an alert under the recap', async () => {
   renderWithTheme(<Page />);
   await generate();
@@ -637,8 +643,11 @@ test('the last result and its hand edits come back after a reload', async () => 
   expect(window.localStorage.getItem(LAST_RESULT_KEY)).not.toBeNull();
 
   // Unmounting stops the subscription, so clearing the store here is the reload, not a user action.
+  // Both stores are cleared because a reload recreates both: the run store's own view state — which
+  // counts are being edited — belongs to the run that just ended (owner, 2026-09-15).
   first.unmount();
   useResultStore.getState().clear();
+  useRunStore.getState().reset();
 
   renderWithTheme(<Page />);
   await waitFor(() => {

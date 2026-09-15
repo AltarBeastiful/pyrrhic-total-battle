@@ -285,5 +285,4 @@ describe('baseline', () => {
     expect(found.baseline.includedUnitIds).toEqual(ALL.map((unit) => unit.id));
     expect(found.baseline.summary).toEqual(found.summary);
   });
-
 });

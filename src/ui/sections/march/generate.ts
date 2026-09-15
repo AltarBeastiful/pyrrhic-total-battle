@@ -10,29 +10,26 @@
  * Plain functions rather than a hook: the same run has to be startable from an event handler in either
  * half of the page, and everything it reads or writes already lives in a store.
  */
-import { withMethod } from '@/engine';
+import { planMarch, withMethod } from '@/engine';
 import type { StackRequest } from '@/engine/types';
-import { buildCompleteRequest, buildStackRequest } from '@/state/derive';
+import { buildPlanRequest, buildStackRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { getCalcClient } from '@/ui/calcClient';
 import { readStoredResult, useResultStore } from '@/ui/resultStore';
+import { CAMPAIGN } from '@/config';
 import { isAbortError } from '@/worker/client';
 
 import { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 
 /**
- * Wall-clock budget of a priority search. Long enough for the greedy descent and a few restarts on a
- * phone, short enough that the button never looks stuck; the search returns its best find when it runs out.
+ * The two wall-clock budgets, as `src/config.ts` sets them. They are re-exported under the names the March
+ * has always used — a search long enough for the greedy descent and a few restarts on a phone, and a plan
+ * that looks at far more candidates than a single-march search — and each is a cap rather than a duration:
+ * the engine stops when it has finished, answers with its best find when the cap arrives, and a longer one
+ * buys a better answer rather than a different kind of one.
  */
-export const SEARCH_BUDGET_MS = 8_000;
-
-/**
- * Wall-clock budget of a complete optimization. The same as a priority search, and for the same
- * reason: the engine splits it across the twelve (sizing × mercenary spend) cells and every cell
- * answers with its best find when its share runs out, so a longer budget buys a better answer and
- * never a different kind of one.
- */
-export const COMPLETE_BUDGET_MS = 8_000;
+export const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
+export const PLAN_BUDGET_MS = CAMPAIGN.budgets.plan;
 
 /** Size the stacks for the active march (running a priority search first when one is selected). */
 export async function runGenerate(): Promise<void> {
@@ -62,33 +59,40 @@ export async function runGenerate(): Promise<void> {
     const client = getCalcClient();
     const common = { request, profileId: profile.id, setupId: setup.id };
 
-    // Complete optimization is its own kind of run (S-54): the objective still says what to aim at,
-    // but the sizing, the share of the mercenaries and the unit types are all the search's to choose,
-    // and it scores them on the whole campaign rather than on this one march.
-    if (setup.options.method === 'complete') {
-      const found = await client.complete(
-        buildCompleteRequest(profile, setup, COMPLETE_BUDGET_MS),
-        (progress) => {
-          useRunStore.getState().setProgress(progress);
-        },
+    // The plan (S-55) is its own kind of run: the army alone decides the marches, the counts and the
+    // split between silver and the mercenary stock, and the answer is the whole sequence rather than one
+    // march. Without a silver box the plan is the most efficient one the army points to; with it, the best
+    // that budget buys. Either way the march on screen is the plan's own first march, so a March edit
+    // re-sizes exactly what is drawn.
+    if (setup.options.method === 'plan') {
+      const planned = await client.plan(
+        { ...buildPlanRequest(profile, setup), budgetMs: PLAN_BUDGET_MS },
         controller.signal,
       );
-      const { winner } = found;
-      // What is on screen is the campaign's **first march**, so the request it belongs to is that
-      // march's: the winner's sizing, and the caps its mercenary spend gives it. A March edit then
-      // re-sizes exactly what is drawn (`resizeMarch` runs the sizer on this very request).
+      const chosen = planned.recommend ?? planned;
+      const itsMarch = planMarch(request, chosen.counts);
+      /**
+       * The caps the march's request carries are **the hired spend the plan decided**, and nothing else.
+       *
+       * The plan rations the *hired stock* over the marches, so a March edit must not spend more of it than
+       * the plan does. It does not ration the troops: they are rationed by leadership, which the sizer
+       * already respects. Capping the troop types at the plan's own counts as well — which is what this did
+       * until 2026-09-15 — left a left-out stack's leadership **unused**: every surviving type was already at
+       * its ceiling, so leaving one out changed nothing at all (measured, `tools/theorycraft/out/76-plan-resize.md`;
+       * the owner's *"before, when I left out a troop, it would equilibrate again the troops and mercs"*).
+       */
+      const hiredCaps: Record<string, number> = {};
+      for (const unit of request.units) {
+        const count = chosen.counts[unit.id];
+        if (unit.pool === 'authority' && count !== undefined) hiredCaps[unit.id] = count;
+      }
       const marchRequest: StackRequest = {
-        ...withMethod(request, winner.method),
-        caps: winner.campaign.marches[0]?.caps ?? request.caps,
+        ...withMethod(request, 'elite'),
+        caps: { ...request.caps, ...hiredCaps },
       };
       useRunStore.getState().rememberPrevious(previous);
-      useResultStore.getState().setResult({
-        ...common,
-        request: marchRequest,
-        result: winner.single.result,
-        summary: winner.single.summary,
-      });
-      useRunStore.getState().finish([...winner.includedUnitIds], null, found);
+      useResultStore.getState().setResult({ ...common, request: marchRequest, ...itsMarch });
+      useRunStore.getState().finish(Object.keys(chosen.counts), null, planned);
       return;
     }
 
@@ -128,15 +132,32 @@ export async function runGenerate(): Promise<void> {
       useResultStore.getState().setRunning(false);
       return;
     }
-    useResultStore
-      .getState()
-      .setError(error instanceof Error ? error.message : 'The calculation could not be finished.');
+    useResultStore.getState().setError(refusalOf(error));
   }
 }
 
 /** Stop the run in flight; the result already on screen is left alone. */
 export function cancelGenerate(): void {
   useRunStore.getState().cancel();
+}
+
+/**
+ * What to tell a player when a run could not be finished (design rule 26: nothing the engine says in its own
+ * vocabulary reaches the screen).
+ *
+ * The plan is the one method that can **refuse outright**: it plans by spreading the hired stock over the
+ * marches the player set, so an account that holds no mercenaries leaves it nothing to spread, and the
+ * engine says so in a sentence written for a programmer. Everything else is passed through unchanged — a
+ * run that fails for another reason is a bug, and hiding the message would only make it harder to report.
+ */
+export function refusalOf(error: unknown): string {
+  if (error instanceof Error && error.message.includes('no feasible plan')) {
+    return (
+      'There is no campaign to plan from this army. This method spreads the hired stock you own over the ' +
+      'marches you set, so it needs your mercenaries filled in first.'
+    );
+  }
+  return error instanceof Error ? error.message : 'The calculation could not be finished.';
 }
 
 /** Abort handle of the re-size in flight: two quick presses must not race each other onto the screen. */

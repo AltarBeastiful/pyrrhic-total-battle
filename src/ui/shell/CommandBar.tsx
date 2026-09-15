@@ -10,8 +10,8 @@
  * Its content still stops on the page's own lines, because the dock holds a `Container`.
  *
  * The bar is in the flow, at the end of the frame: the page reserves its height and the last row of
- * the setup can always be scrolled clear of it. The March pane's sticky block subtracts the same
- * height from the window (`march.module.css`, `.paneScroll`), so the bar never lands on the pills.
+ * the setup can always be scrolled clear of it. The March pane measures the same height out of the
+ * window (`shell/usePaneFits.ts`), so the bar never lands on the pills.
  *
  * Between 1024 and 1199 px the March has no pane to live in, so the bar carries the answer too and
  * the sheet opens from it: the answer and Generate travel together at every width (design rule 2).
@@ -26,7 +26,7 @@ import { Glyph } from '@/ui/domain';
 import { NumberField } from '@/ui/kit';
 import { MarchGenerateButton, MarchQuickSummary } from '@/ui/sections/march';
 
-import { OBJECTIVE_CHOICES, POOL_LABELS, POOLS, useCommandBar } from './command';
+import { OBJECTIVE_CHOICES, OBJECTIVE_LOCKED_REASON, POOL_LABELS, POOLS, useCommandBar } from './command';
 import classes from './shell.module.css';
 import { useBarForm } from './useGenerateRun';
 
@@ -41,7 +41,7 @@ export interface CommandBarProps {
 }
 
 export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
-  const { housing, priority, problems, message, setPool, setObjective } = useCommandBar();
+  const { housing, priority, problems, message, objectiveLocked, setPool, setObjective } = useCommandBar();
   const form = useBarForm();
 
   if (housing === null) return null;
@@ -88,6 +88,15 @@ export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
             value={priority}
             allowDeselect={false}
             comboboxProps={{ withinPortal: true }}
+            // Locked while the plan decides it (owner, 2026-09-15). The reason goes in Mantine's own
+            // `description` slot rather than a paragraph of our own: a caller's `aria-describedby` is
+            // overwritten by the input's (`Input.mjs`), so the slot is the only way the sentence is
+            // *linked* to the control instead of merely sitting near it — and it renders at `xs`,
+            // which this theme sets to 13 px, inside rule 19's floor. It costs the bar ~32 px of
+            // height (measured 2026-09-15: 88 px to 119.7), which is why the token that reserves it
+            // (`theme.ts`) is the bar's tallest state rather than its everyday one.
+            disabled={objectiveLocked}
+            {...(objectiveLocked ? { description: OBJECTIVE_LOCKED_REASON } : {})}
             onChange={(value) => {
               if (value !== null) setObjective(value);
             }}

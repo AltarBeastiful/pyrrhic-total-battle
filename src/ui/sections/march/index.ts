@@ -8,6 +8,8 @@
  * "sheet" shape of the recap was the duplication design rule 5 forbids (investigation 0011).
  */
 export { MarchSection } from './MarchSection';
+// The March's second half, drawn at the foot of the setup column from 1200 px up (owner, 2026-09-15).
+export { MarchFoot } from './MarchFoot';
 export { MarchQuickSummary } from './MarchQuickSummary';
 export type { MarchQuickSummaryProps } from './MarchQuickSummary';
 export { MarchRecap } from './MarchRecap';
@@ -17,13 +19,7 @@ export type { MarchGenerateButtonProps } from './MarchGenerateButton';
 // What the frame reads to know where a run stands (the fingerprint, the progress, the previous
 // summary) and how it starts or stops one. The section owns the engine call; the shell owns the
 // keyboard shortcut and the status line, so both need the same handful of exports.
-export {
-  cancelGenerate,
-  COMPLETE_BUDGET_MS,
-  restoreLastResult,
-  runGenerate,
-  SEARCH_BUDGET_MS,
-} from './generate';
+export { cancelGenerate, restoreLastResult, runGenerate, SEARCH_BUDGET_MS } from './generate';
 export { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 export type { RunState, SearchTradeoff, TradeoffFigures } from './runStore';
 export { amount, compact, duration, percent, ratio } from './format';

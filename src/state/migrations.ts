@@ -73,6 +73,32 @@ export function dropSetupUnitLists(profile: Record<string, unknown>): Record<str
   };
 }
 
+/**
+ * `3 → 4` for one profile (owner, 2026-09-15): the fourth stacking method is gone and the campaign card
+ * with it.
+ *
+ * `complete` (S-54) is superseded by `plan` (S-55), so a setup that stored it becomes a plan one; the
+ * other four methods are untouched. `setup.campaign` goes entirely: the plan's horizon is a policy number
+ * now (`CAMPAIGN.marches`, `src/config.ts`) and the silver box is not on the card at all, so there is
+ * nowhere left for a stored `marches` or `silverBudget` to be read. Dropping the field is the whole
+ * migration — nothing the player typed into it survives, which is what "off the card" means.
+ */
+export function dropCompleteMethod(profile: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(profile.setups)) return profile;
+  return {
+    ...profile,
+    setups: profile.setups.map((setup) => (isPlainObject(setup) ? withoutCompleteMethod(setup) : setup)),
+  };
+}
+
+/** One setup: drop the campaign card, and read `complete` as the method that replaced it. */
+function withoutCompleteMethod(setup: Record<string, unknown>): Record<string, unknown> {
+  const { campaign: _campaign, ...rest } = setup;
+  const options = isPlainObject(rest.options) ? rest.options : undefined;
+  if (options === undefined || options.method !== 'complete') return rest;
+  return { ...rest, options: { ...options, method: 'plan' } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -83,11 +109,13 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `0 → 1`: documents written by the pre-release build carried no `schemaVersion`.
  * `1 → 2`: march exclusions move from `profile.troops` to `BattleSetup.excludedUnitIds`.
  * `2 → 3`: the setup's `pinnedUnitIds` and `excludedUnitIds` are dropped (S-53).
+ * `3 → 4`: the `complete` method becomes `plan` and the setup's `campaign` is dropped (S-56).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
   1: (doc) => ({ ...doc, schemaVersion: 2, profiles: migrateProfiles(doc, splitTroopExclusions) }),
   2: (doc) => ({ ...doc, schemaVersion: 3, profiles: migrateProfiles(doc, dropSetupUnitLists) }),
+  3: (doc) => ({ ...doc, schemaVersion: 4, profiles: migrateProfiles(doc, dropCompleteMethod) }),
 };
 
 /**
@@ -102,8 +130,22 @@ export const profileMigrations: MigrationTable = {
   0: identity,
   1: splitTroopExclusions,
   2: dropSetupUnitLists,
+  3: dropCompleteMethod,
 };
-export const savedStackMigrations: MigrationTable = { 0: identity, 1: identity, 2: identity };
+/**
+ * A saved stack carries a *whole setup*, so `3 → 4` reaches inside it: the same two edits as a profile's
+ * (`dropCompleteMethod`), applied to `setup` rather than to every entry of `setups`.
+ */
+const migrateSavedStackSetup: Migration = (doc) => {
+  const setup = doc.setup;
+  return isPlainObject(setup) ? { ...doc, setup: withoutCompleteMethod(setup) } : doc;
+};
+export const savedStackMigrations: MigrationTable = {
+  0: identity,
+  1: identity,
+  2: identity,
+  3: migrateSavedStackSetup,
+};
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

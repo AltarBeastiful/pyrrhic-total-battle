@@ -20,6 +20,8 @@ import { getUnits, unitById } from '../../src/data';
 import { aggregateBonuses } from '../../src/engine/bonuses';
 import { buildKillOrder } from '../../src/engine/killOrder';
 import { simulateBattle } from '../../src/engine/battle';
+import { planCampaign } from '../../src/engine/plan';
+import type { CampaignPlan, PlanTotals } from '../../src/engine/plan';
 import { sizeStacks } from '../../src/engine/stacker';
 import { effectiveUnit, hitDamage } from '../../src/engine/units';
 import type {
@@ -100,6 +102,25 @@ export function reportTotals(): BonusTotals {
   return aggregateBonuses([source]);
 }
 
+/**
+ * Scenario C — the bonuses the 2026-09-14 report (`docs/research/battlereportkai.md`, replayed by
+ * `02-kai-report.test.ts`) was fought with, derived from that report's own 30 lines: guardsmen +159 %
+ * health / +189 % strength with a category bonus of +2 health / +1 strength on top (ranged +2.5 / +2), the
+ * category-less EMH6 therefore at ×2.59 / ×2.89, double damage +3 %. One report newer than B, and the
+ * account's current fight — theory-craft numbers are computed under C first and B second.
+ */
+export function kaiReportTotals(): BonusTotals {
+  const source: ResolvedSource = {
+    id: 'kai-report-2026-09-14',
+    label: 'bonuses as in the 2026-09-14 report',
+    kind: 'custom',
+    health: { guardsmen: 159, melee: 2, mounted: 2, flying: 2, ranged: 2.5 },
+    strength: { guardsmen: 189, melee: 1, mounted: 1, flying: 1, ranged: 2 },
+    special: { doubleDamageChance: 3 },
+  };
+  return aggregateBonuses([source]);
+}
+
 export function withTotals(request: StackRequest, totals: BonusTotals): StackRequest {
   return { ...request, totals };
 }
@@ -107,6 +128,11 @@ export function withTotals(request: StackRequest, totals: BonusTotals): StackReq
 /** Scenario B request with the temple the account really has (15, ÷1.53). */
 export function scenarioB(request: StackRequest): StackRequest {
   return { ...request, totals: reportTotals(), recovery: { ...request.recovery, templeLevel: 15 } };
+}
+
+/** Scenario C request with the account's temple (15, ÷1.53). */
+export function scenarioC(request: StackRequest): StackRequest {
+  return { ...request, totals: kaiReportTotals(), recovery: { ...request.recovery, templeLevel: 15 } };
 }
 
 export function withUnits(request: StackRequest, ids: readonly string[]): StackRequest {
@@ -334,6 +360,46 @@ export class Report {
     writeFileSync(file, `${this.parts.join('\n')}\n`);
     return file.pathname;
   }
+}
+
+/**
+ * S-58 — one campaign planned with either of the two candidate fixes switched on, and the two things the
+ * pair of comparison experiments (`80`, `81`) both ask of it: what the frontier **offers**, and which of
+ * those offers field **none** of a hired type the account holds a stock of.
+ *
+ * Written once here rather than twice in the experiments, because the whole point of the pair is that the
+ * two fixes are measured by the same arithmetic; a second copy of "what is a hole" would be a second
+ * definition of it.
+ */
+export interface FixedPlan {
+  /** How this run is named in a report — "the baseline", "fix A", … */
+  label: string;
+  plan: CampaignPlan;
+  /** The plans the frontier offers, in the order the app draws them. */
+  rows: (PlanTotals & { label: string })[];
+  /** Of those, the ones that field none of a stocked hired type: the holes the owner is complaining about. */
+  holes: (PlanTotals & { label: string })[];
+}
+
+/** Is this plan fielding none of a type the account holds? `stocked` is the ids it holds in `request.caps`. */
+export function holesIn(
+  rows: (PlanTotals & { label: string })[],
+  stocked: readonly string[],
+): (PlanTotals & { label: string })[] {
+  return rows.filter((row) => stocked.some((id) => (row.counts[id] ?? 0) === 0));
+}
+
+export function planWithFixes(
+  request: StackRequest,
+  marchTarget: number,
+  alternatives: number,
+  flags: { tokenFloor?: boolean; refuseDroppedTypes?: boolean },
+  label: string,
+): FixedPlan {
+  const plan = planCampaign({ request, marchTarget, alternatives, ...flags });
+  const rows = plan.alternatives;
+  const stocked = MERC_IDS.filter((id) => (request.caps[id] ?? 0) > 0);
+  return { label, plan, rows, holes: holesIn(rows, stocked) };
 }
 
 export { getUnits, unitById, simulateBattle, sizeStacks };

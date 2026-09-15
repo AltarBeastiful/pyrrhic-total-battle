@@ -10,30 +10,39 @@
  * scrolling". One sticky element per column and no split inside it is the only arrangement in which
  * that cannot happen.
  *
- * Design rule 17 still holds: the page has one scroll, and the pane takes one of its own only when a
- * march is taller than the window less the command bar — which, with Details and Saved marches
- * folded, a sixteen-stack march is not.
+ * **And it sticks only while the March fits the window** (owner, 2026-09-15: "I want to avoid double
+ * scrollbars; make this change so we always avoid scroll bars on the battle summary"). Design rule
+ * 17 allows a supporting pane to stick, and forbids one that scrolls independently of the page — so
+ * the pane is never given a scroll of its own: when the March grows past the room the window leaves
+ * it, it gives up the stick and the page carries it, top to bottom. `usePaneFits` measures it, on
+ * the pane's own height and the window's, because opening a fold or planning a longer march is what
+ * makes the March outgrow the window in the first place.
  */
 import { Box } from '@mantine/core';
+import { useRef } from 'react';
 
 import { MarchSection } from '@/ui/sections/march';
-import marchClasses from '@/ui/sections/march/march.module.css';
 import { Panel } from '@/ui/kit';
 
 import classes from './shell.module.css';
+import { usePaneFits } from './usePaneFits';
 
 export function MarchPane() {
+  const pane = useRef<HTMLDivElement>(null);
+  const fits = usePaneFits(pane);
+
   return (
     // Unnamed on purpose: the March section inside carries the name, and two landmarks called
     // "March" would be one too many.
-    <Box component="aside" className={classes.pane}>
+    <Box
+      component="aside"
+      ref={pane}
+      className={fits ? classes.pane : `${classes.pane} ${classes.paneFlowing}`}
+    >
       {/* One surface for the whole pane, as the spike drew it (investigation 0009,
           `v1-desktop.jpg`) and as direction A lights it: the recap, Generate and the March are one
-          object, not three floating blocks on the page ground. `MarchSection` brings no ground.
-
-          The cap and the scroll live on the panel rather than on the `aside`, so the pane's own
-          shadow is drawn outside the scroller instead of being clipped by it. */}
-      <Panel surface="pane" className={marchClasses.paneScroll}>
+          object, not three floating blocks on the page ground. `MarchSection` brings no ground. */}
+      <Panel surface="pane">
         <MarchSection />
       </Panel>
     </Box>

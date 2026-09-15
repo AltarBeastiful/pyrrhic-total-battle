@@ -22,7 +22,7 @@ import type { BonusMap, Category, SpecialMap } from '../data/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -203,11 +203,16 @@ export const RECOVERY_MODES = ['retrain', 'revive', 'selective'] as const satisf
 export const ENGINE_METHODS = ['elite', 'ms', 'custom'] as const satisfies readonly Method[];
 
 /**
- * What the Battle card offers. `complete` (S-54) is the app's own fourth choice and not an engine
- * method: it *tries* every sizing over a campaign of several marches and keeps the one that wins, so
- * `derive.ts` hands the engine a plain request and `searchComplete` sets the method per candidate.
+ * What the Battle card offers. `plan` (S-55) is the app's own choice, not an engine method: it sizes the
+ * whole campaign from the army alone — the marches, the counts and the split between silver and the
+ * mercenary stock are all its to choose (`planCampaign`).
+ *
+ * `complete` (S-54) was the fourth method until 2026-09-15, when the owner reviewed the five and had it
+ * removed as superseded by `plan`. It survives in `src/engine/campaign.ts` as a theorycraft instrument
+ * only (experiments 22, 23 and 48 measure with it); a document that stored it migrates to `plan`
+ * (`migrations.ts`, `3 → 4`).
  */
-export const METHODS = [...ENGINE_METHODS, 'complete'] as const;
+export const METHODS = [...ENGINE_METHODS, 'plan'] as const;
 export type SetupMethod = (typeof METHODS)[number];
 export const OBJECTIVES = [
   'avgDamage',
@@ -249,22 +254,6 @@ export const stackingOptionsSchema = z.object({
   customOrder: z.array(z.string()).optional(),
 });
 
-// ---- The campaign a "Complete optimization" plans for (S-54) --------------------------------------
-/** Marches a campaign plans for when the player has said nothing: a week of fighting on one refit. */
-export const DEFAULT_MARCHES = 10;
-/**
- * And the most it will plan for. Every candidate of the search is played march by march, so this is
- * the one number that decides how long a Generate can run; 50 is far past what a stock survives.
- */
-export const MAX_MARCHES = 50;
-
-export const campaignPlanSchema = z.object({
-  marches: z.int().min(1).max(MAX_MARCHES).default(DEFAULT_MARCHES),
-  /** Retrain silver for the whole campaign; absent = unlimited. */
-  silverBudget: z.number().min(0).optional(),
-});
-export type CampaignPlan = z.infer<typeof campaignPlanSchema>;
-
 // ---- Battle setup ---------------------------------------------------------------------------------
 /**
  * Which sources are switched on for this march. Captains / equipment / artifacts / custom hold the
@@ -295,9 +284,6 @@ export const battleSetupSchema = syncMetaSchema.extend({
   /** `'none'` = plain Generate, no priority search (PLAN §3.6). */
   priority: z.union([z.enum(OBJECTIVES), z.literal('none')]),
   recoveryPlan: recoveryPlanSchema,
-  // Added by S-54 inside v3: defaulted, so every setup stored before it keeps parsing without a
-  // schema bump (ADR-0004, the rule `relaxedPreservation` was added under).
-  campaign: campaignPlanSchema.default({ marches: DEFAULT_MARCHES }),
 });
 export type BattleSetup = z.infer<typeof battleSetupSchema>;
 

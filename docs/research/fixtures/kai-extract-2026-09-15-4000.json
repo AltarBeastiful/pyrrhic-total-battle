@@ -1,0 +1,125 @@
+{
+ "note": "An extraction handed over by the owner 2026-09-15 (voice: \"extracted a new plan with 4000 on kai and 18/18 for legionary and arbalester mercs\"): eleven stacks, leadership exactly 4,000 by our own costs, no health bonus in the figures (833 Spearman I = 833 x 150 base HP). Kept verbatim; `bonusHealth` is 0 on every stack, so the bonuses it was fought under are NOT in this file.",
+ "capturedAt": "2026-09-15",
+ "kind": "kai-extraction",
+ "payload": {
+  "squadCount": 11,
+  "revivalCost": {
+   "unit": "gold",
+   "value": 14289,
+   "baseValue": 16544
+  },
+  "army": [
+   {
+    "name": "Spearman I",
+    "tier": 1,
+    "count": 833,
+    "baseHealth": 124950,
+    "bonusHealth": 0,
+    "totalHealth": 124950,
+    "sequence": "~1 of 11",
+    "loss": 1
+   },
+   {
+    "name": "Rider I",
+    "tier": 1,
+    "count": 412,
+    "baseHealth": 123600,
+    "bonusHealth": 0,
+    "totalHealth": 123600,
+    "sequence": "~2 of 11",
+    "loss": 2
+   },
+   {
+    "name": "Archer I",
+    "tier": 1,
+    "count": 815,
+    "baseHealth": 122250,
+    "bonusHealth": 0,
+    "totalHealth": 122250,
+    "sequence": "~3 of 11",
+    "loss": 3
+   },
+   {
+    "name": "Spearman II",
+    "tier": 2,
+    "count": 439,
+    "baseHealth": 118530,
+    "bonusHealth": 0,
+    "totalHealth": 118530,
+    "sequence": "~4 of 11",
+    "loss": 4
+   },
+   {
+    "name": "Rider II",
+    "tier": 2,
+    "count": 217,
+    "baseHealth": 117180,
+    "bonusHealth": 0,
+    "totalHealth": 117180,
+    "sequence": "~5 of 11",
+    "loss": 5
+   },
+   {
+    "name": "Archer II",
+    "tier": 2,
+    "count": 429,
+    "baseHealth": 115830,
+    "bonusHealth": 0,
+    "totalHealth": 115830,
+    "sequence": "~6 of 11",
+    "loss": 6
+   },
+   {
+    "name": "Rider III",
+    "tier": 3,
+    "count": 113,
+    "baseHealth": 108480,
+    "bonusHealth": 0,
+    "totalHealth": 108480,
+    "sequence": "~7 of 11",
+    "loss": 7
+   },
+   {
+    "name": "Legionary",
+    "tier": 6,
+    "count": 18,
+    "baseHealth": 102600,
+    "bonusHealth": 0,
+    "totalHealth": 102600,
+    "sequence": "~8 of 11",
+    "loss": 8
+   },
+   {
+    "name": "Arbalester",
+    "tier": 6,
+    "count": 18,
+    "baseHealth": 102600,
+    "bonusHealth": 0,
+    "totalHealth": 102600,
+    "sequence": "~9 of 11",
+    "loss": 8
+   },
+   {
+    "name": "Epic Monster Hunter VI",
+    "tier": 6,
+    "count": 16,
+    "baseHealth": 97440,
+    "bonusHealth": 0,
+    "totalHealth": 97440,
+    "sequence": "~10 of 11",
+    "loss": 10
+   },
+   {
+    "name": "Chariot",
+    "tier": 6,
+    "count": 8,
+    "baseHealth": 91200,
+    "bonusHealth": 0,
+    "totalHealth": 91200,
+    "sequence": "~11 of 11",
+    "loss": 11
+   }
+  ]
+ }
+}

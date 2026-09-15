@@ -2,11 +2,11 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search' | 'complete', id, request }  and  { kind: 'cancel', id }
+ * Request:  { kind: 'stack' | 'search' | 'plan', id, request }  and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
  *           { kind: 'progress', id, progress }   (searches only, zero or more)
  *           { kind: 'search', id, result }
- *           { kind: 'complete', id, result }
+ *           { kind: 'plan', id, result }
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message } }
  *
@@ -14,7 +14,7 @@
  * flattened to `{ message }`: an `Error` does not survive `postMessage` in every browser, and the stack
  * trace of a worker frame is useless to the user anyway.
  */
-import type { CompleteRequest, CompleteResult } from '@/engine/campaign';
+import type { CampaignInput, CampaignPlan } from '@/engine/plan';
 import type {
   BattleSummary,
   SearchProgress,
@@ -38,11 +38,11 @@ export interface SearchJob {
   request: SearchRequest;
 }
 
-/** Complete optimization (S-54): the same shape as a search, over a campaign of several marches. */
-export interface CompleteJob {
-  kind: 'complete';
+/** Complete optimization v2 (S-55): the campaign planned from the army alone. */
+export interface PlanJob {
+  kind: 'plan';
   id: JobId;
-  request: CompleteRequest;
+  request: CampaignInput;
 }
 
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
@@ -51,7 +51,7 @@ export interface CancelJob {
   id: JobId;
 }
 
-export type CalcRequestMessage = StackJob | SearchJob | CompleteJob | CancelJob;
+export type CalcRequestMessage = StackJob | SearchJob | PlanJob | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -72,10 +72,10 @@ export interface SearchDoneMessage {
   result: SearchResult;
 }
 
-export interface CompleteDoneMessage {
-  kind: 'complete';
+export interface PlanDoneMessage {
+  kind: 'plan';
   id: JobId;
-  result: CompleteResult;
+  result: CampaignPlan;
 }
 
 export interface CancelledMessage {
@@ -93,7 +93,7 @@ export type CalcResponseMessage =
   | StackDoneMessage
   | SearchProgressMessage
   | SearchDoneMessage
-  | CompleteDoneMessage
+  | PlanDoneMessage
   | CancelledMessage
   | ErrorMessage;
 
@@ -132,7 +132,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
   switch (value.kind) {
     case 'stack':
     case 'search':
-    case 'complete':
+    case 'plan':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -150,7 +150,7 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'progress':
       return isRecord(value.progress);
     case 'search':
-    case 'complete':
+    case 'plan':
       return isRecord(value.result);
     case 'cancelled':
       return true;

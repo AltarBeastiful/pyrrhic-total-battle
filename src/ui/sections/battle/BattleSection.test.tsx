@@ -13,6 +13,7 @@ import { newRoot } from '@/state/defaults';
 import { selectActiveSetup, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
+import { METHOD_CHOICES } from './choices';
 import { BattleSection } from './BattleSection';
 
 const realMatchMedia = window.matchMedia;
@@ -190,49 +191,56 @@ test('on a phone the stacking method folds to the chosen one too (D-54)', async 
   expect(within(methods).getAllByRole('radio')).toHaveLength(1);
 
   await user.click(within(methods).getByRole('button', { name: 'Change Stacking method' }));
-  expect(within(methods).getAllByRole('radio')).toHaveLength(4);
+  // Every method the card offers, the plan one (S-55) included.
+  expect(within(methods).getAllByRole('radio')).toHaveLength(METHOD_CHOICES.length);
   await user.click(within(methods).getByText('Hired units only fall once all of your troops have.'));
   expect(options()?.method).toBe('ms');
   expect(within(methods).getAllByRole('radio')).toHaveLength(1);
 });
 
-// ---- Complete optimization (S-54) ----------------------------------------------------------------
-test('the fourth method asks what the campaign is, and hides the rules it decides itself', async () => {
+// ---- Complete optimization, the plan (S-55) -------------------------------------------------------
+test('the plan method asks for nothing, and hides the rules it decides itself', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BattleSection />);
 
-  // Nothing about a campaign is on screen until the method that has one is chosen.
+  // Nothing to type about a campaign, under any method (S-56, owner's review of 2026-09-15): the horizon
+  // the plan is planned over and the silver it may spend are policy numbers now (`src/config.ts`), so the
+  // two fields the card used to carry are gone, and the stored `campaign` with them.
   expect(screen.queryByLabelText('Marches planned')).toBeNull();
   expect(screen.queryByLabelText('Silver budget')).toBeNull();
+  expect(setup()).not.toHaveProperty('campaign');
+  expect(screen.getAllByRole('switch')).toHaveLength(2);
 
   await user.click(screen.getByRole('radio', { name: 'Complete optimization' }));
-  expect(options()?.method).toBe('complete');
+  expect(options()?.method).toBe('plan');
+
+  // The card keeps what a player reads before choosing it, and the words the glossary fixes for it.
+  expect(
+    screen.getByText('Plans the marches your army can fight: how big each one is, and what it carries.'),
+  ).toBeTruthy();
 
   // It tries every sizing itself, so a rule that fixes one would be the player answering their own
-  // question: the whole Options block goes with them (§7.4).
+  // question: the whole Options block goes with them (§7.4), and there is nothing else to fill in.
   expect(screen.queryAllByRole('switch')).toHaveLength(0);
   expect(screen.queryByText('Options')).toBeNull();
+});
 
-  // Ten marches unless the player says otherwise, and no silver limit at all.
-  expect((screen.getByLabelText('Marches planned') as HTMLInputElement).value).toBe('10');
-  expect((screen.getByLabelText('Silver budget') as HTMLInputElement).value).toBe('');
-  expect(setup()?.campaign).toEqual({ marches: 10 });
+test('the plan method switches off the rules that belonged to the method it came from', () => {
+  renderWithTheme(<BattleSection />);
 
-  type('Marches planned', '6');
-  expect(setup()?.campaign).toEqual({ marches: 6 });
+  // Tier ladder owns "Monsters after troops": turn it on, then hand the march to the plan.
+  fireEvent.click(rule('Monsters after troops') as HTMLElement);
+  expect(options()?.monstersLast).toBe(true);
 
-  type('Silver budget', '2000000');
-  expect(setup()?.campaign).toEqual({ marches: 6, silverBudget: 2_000_000 });
+  fireEvent.click(screen.getByRole('radio', { name: 'Complete optimization' }));
+  expect(options()?.monstersLast).toBe(false);
+  expect(screen.queryAllByRole('switch')).toHaveLength(0);
 
-  // Emptying it is "unlimited" again, not a budget of zero.
-  const budget = screen.getByLabelText('Silver budget');
-  fireEvent.change(budget, { target: { value: '' } });
-  fireEvent.blur(budget);
-  expect(setup()?.campaign).toEqual({ marches: 6 });
-
-  // And the fields leave with the method.
-  await user.click(screen.getByRole('radio', { name: 'Tier ladder' }));
-  expect(screen.queryByLabelText('Marches planned')).toBeNull();
+  // And it stays off: the rule belonged to the sizing the plan does not read.
+  fireEvent.click(screen.getByRole('radio', { name: 'Tier ladder' }));
+  expect(screen.getAllByRole('switch')).toHaveLength(2);
+  expect(rule('Monsters after troops')).toBeTruthy();
+  expect(options()?.monstersLast).toBe(false);
 });
 
 // ---- What the losses cost ------------------------------------------------------------------------

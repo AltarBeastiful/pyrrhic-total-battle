@@ -11,7 +11,52 @@
  */
 import { create } from 'zustand';
 
-import type { CompleteResult } from '@/engine/campaign';
+import type { CampaignPlan } from '@/engine/plan';
+
+/**
+ * Where on the plan's frontier the March is read (S-55; one control since the owner's review of 2026-09-14).
+ *
+ * The frontier **is** the trade — its plans sorted cheapest-first, from the one that stretches silver
+ * furthest to the one kindest to the hired stock — so a position on it is the choice, and the three
+ * directions the toggle used to offer were three of its points rather than a different question. It is a
+ * position and not an input: every plan on the frontier comes out of the same search, so moving along it
+ * shows another answer instead of asking for one.
+ */
+export type PlanPick = number;
+
+/** The plan a position names, clamped to the frontier: a fresh search can be shorter than the last one. */
+export function pickOf(plan: CampaignPlan, position: number) {
+  const rows = plan.alternatives;
+  if (rows.length === 0) return plan.recommend ?? plan.mostEfficient ?? plan;
+  const at = Math.max(0, Math.min(rows.length - 1, Math.round(position)));
+  return rows[at] ?? plan;
+}
+
+/** Where a plan's own figures sit on the frontier it was carried with (`null` when the list has no copy). */
+function positionOf(plan: CampaignPlan, wanted: { silver: number; totalDamage: number }): number | null {
+  const at = plan.alternatives.findIndex(
+    (point) => point.silver === wanted.silver && point.totalDamage === wanted.totalDamage,
+  );
+  return at < 0 ? null : at;
+}
+
+/**
+ * Where the **sweet spot** sits on the frontier — the plan the engine weighed both resources to choose —
+ * or `null` when there is no such point. A silver box makes the plan *be* the answer (there is nothing
+ * left to balance), and only then does the engine leave `recommend` out; the bar is drawn without a
+ * marker, because a marker on a plan nobody weighed would be pointing at a spot that does not exist.
+ */
+export function sweetSpotOf(plan: CampaignPlan): number | null {
+  return plan.recommend === undefined ? null : positionOf(plan, plan.recommend);
+}
+
+/**
+ * Where the frontier opens: on the plan the engine recommends, which is the one it weighed both resources
+ * to choose. Found by the plan's own figures, because the list carries a copy of it rather than the object.
+ */
+export function defaultPlanPosition(plan: CampaignPlan): number {
+  return sweetSpotOf(plan) ?? positionOf(plan, plan) ?? 0;
+}
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
@@ -82,6 +127,16 @@ export interface RunState {
   /** Last progress tick of a priority search; `null` outside a search. */
   progress: SearchProgress | null;
   /**
+   * Whether the March's counts are being edited by hand — the mode "Edit counts" turns on.
+   *
+   * It lives here rather than in `MarchSection` since 2026-09-15, when the row that switches it moved
+   * to the foot of the left column while the stack pills it edits stayed in the March pane: the two
+   * are on opposite sides of the page now, so the flag belongs to the *run* they both describe. Same
+   * species as `planPick` — a view position about the answer on screen, forgotten by the next one.
+   */
+  editingCounts: boolean;
+  setEditingCounts: (editing: boolean) => void;
+  /**
    * The summary of the run *before* the one on screen, so the recap can say which way every figure
    * moved (design plan §7.5). It belongs to the run, not to the document: a reload starts again
    * with nothing to compare against rather than with a comparison nobody remembers making.
@@ -103,21 +158,25 @@ export interface RunState {
   /** The winner against the all-types army; `null` when the result did not come from a priority. */
   tradeoff: SearchTradeoff | null;
   /**
-   * The whole campaign search, when the march came from "Complete optimization" (S-54): the winning
-   * sizing, its ten marches and every spend level it was compared against. It explains the answer on
-   * screen and nothing else, so it lives here with the run and is never stored or shared.
+   * The plan, when the march came from "Complete optimization" (S-55): the marches it sized, the frontier
+   * it chose from and what binds. It explains the answer on screen and nothing else, so it lives here
+   * with the run and is never stored or shared.
    */
-  campaign: CompleteResult | null;
+  plan: CampaignPlan | null;
+  /**
+   * Which plan on the frontier the March is showing, cheapest first. One control over the whole trade: the
+   * ends are the plans that spend one resource to spare the other, and it opens where the engine's own
+   * recommendation sits. A position, not an input — the plans are computed together, so the player chooses
+   * a place on the trade without naming a silver figure.
+   */
+  planPick: PlanPick;
+  setPlanPick: (pick: PlanPick) => void;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
   setProgress: (progress: SearchProgress) => void;
   /** A finished Generate: the solver's own selection, and no March edit left over from before it. */
-  finish: (
-    includedUnitIds: string[],
-    tradeoff?: SearchTradeoff | null,
-    campaign?: CompleteResult | null,
-  ) => void;
+  finish: (includedUnitIds: string[], tradeoff?: SearchTradeoff | null, plan?: CampaignPlan | null) => void;
   /** A March edit: the new list to size on, and who is out by hand. */
   setIncluded: (includedUnitIds: string[], leftOutByPlayer: string[]) => void;
   cancel: () => void;
@@ -128,29 +187,50 @@ export interface RunState {
 
 export const useRunStore = create<RunState>()((set, get) => ({
   progress: null,
+  editingCounts: false,
   previousSummary: null,
   lastRunFingerprint: null,
   includedUnitIds: [],
   leftOutByPlayer: [],
   tradeoff: null,
-  campaign: null,
+  plan: null,
+  planPick: 0,
   controller: null,
   start: (controller, fingerprint) => {
     set({
       controller,
       progress: null,
+      // A fresh solve is not an edit of the previous one, so the mode the last one left on goes off
+      // with the answer it belonged to.
+      editingCounts: false,
       includedUnitIds: [],
       leftOutByPlayer: [],
       tradeoff: null,
-      campaign: null,
+      plan: null,
+      planPick: 0,
       lastRunFingerprint: fingerprint ?? null,
     });
   },
   setProgress: (progress) => {
     set({ progress });
   },
-  finish: (includedUnitIds, tradeoff = null, campaign = null) => {
-    set({ controller: null, progress: null, includedUnitIds, leftOutByPlayer: [], tradeoff, campaign });
+  setEditingCounts: (editingCounts) => {
+    set({ editingCounts });
+  },
+  finish: (includedUnitIds, tradeoff = null, plan = null) => {
+    set({
+      controller: null,
+      progress: null,
+      includedUnitIds,
+      leftOutByPlayer: [],
+      tradeoff,
+      plan,
+      // a fresh plan opens on the one it recommends rather than at the cheap end of its frontier
+      planPick: plan === null ? 0 : defaultPlanPosition(plan),
+    });
+  },
+  setPlanPick: (planPick) => {
+    set({ planPick });
   },
   setIncluded: (includedUnitIds, leftOutByPlayer) => {
     set({ includedUnitIds, leftOutByPlayer });
@@ -167,12 +247,14 @@ export const useRunStore = create<RunState>()((set, get) => ({
   reset: () => {
     set({
       progress: null,
+      editingCounts: false,
       previousSummary: null,
       lastRunFingerprint: null,
       includedUnitIds: [],
       leftOutByPlayer: [],
       tradeoff: null,
-      campaign: null,
+      plan: null,
+      planPick: 0,
       controller: null,
     });
   },

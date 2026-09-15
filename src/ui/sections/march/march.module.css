@@ -82,31 +82,10 @@
   opacity: 0.7;
 }
 
-/* The March pane scrolls inside itself only when it has to (owner, 2026-09-13, after "the battle
-   summary still goes over its detailed content on scrolling").
-
-   The block that used to stick was the *top* of the column — the figures, the pools and the pills —
-   and everything under it in the same column (the copy/edit row, the trade-off, the folded Details,
-   the saved marches) passed *behind* it. So the sticky element is the whole column now
-   (`shell.module.css`, `.pane`): nothing in the March can be overlapped by anything else in the
-   March, because it all moves together.
-
-   This class is what makes that safe: the column is capped at the window less the command bar, and
-   it is the *panel* that scrolls, so the pane's own shadow is drawn outside the scroller rather than
-   clipped by it. With Details and Saved marches folded — which is how they start — a sixteen-stack
-   march fits a 900 px window and no scrollbar appears at all. */
-.paneScroll {
-  /* Positioned, and not for a z-index: an `overflow` box only clips what it is the containing block
-     for, and Mantine's `VisuallyHidden` is `position: absolute`. Without this the dozen hidden
-     labels inside the HP profile escaped the scroller, landed against the initial containing block
-     and added 1 100 px of empty page under the app — which is the "scroll into nothing" this class
-     would otherwise have introduced. */
-  position: relative;
-  max-height: calc(100dvh - var(--mantine-spacing-lg) - var(--pyr-commandbar-height) - 1.5rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
+/* The March pane took a scroll of its own here until 2026-09-15 — a `max-height` at the window less
+   the command bar and an `overflow-y: auto` inside it. It is gone, and nothing replaced it: the pane
+   never scrolls on its own (design rule 17), it sticks while the March fits the window and travels
+   with the page once it does not (`shell/MarchPane.tsx`, `shell/usePaneFits.ts`). */
 /* The one line under the body size: a label over a figure, a card's meta, a column head. It is the
    theme's `--pyr-meta`, said here so the March never writes a bare `12px`. */
 .meta {
@@ -159,6 +138,12 @@
    sets the column and pushes the last two figures out of a 420 px pane, where the same name over two
    lines costs one line and shows them. */
 .compare .planCell {
+  /* A **floor as well as a ceiling** (S-55, 2026-09-15). With six figures beside it, an auto-laid table
+     squeezed the name to about fifty pixels on a 390 px sheet — "3 stacks · 135 hired · 1.6M silver a
+     march" came out one word per line, eight lines tall, and the row stopped reading as a row. The
+     floor makes the table scroll a little further sideways instead, which is what the scroller is for
+     (design rule 17). */
+  min-width: 8rem;
   max-width: 9.5rem;
   white-space: normal;
 }

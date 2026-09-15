@@ -22,7 +22,6 @@ import { useId, useState } from 'react';
 
 import { CATEGORIES } from '@/data/types';
 import { eventEnemyFormation } from '@/state/derive';
-import { DEFAULT_MARCHES, MAX_MARCHES } from '@/state/schema';
 import type { SetupMethod } from '@/state/schema';
 import { selectActiveSetup, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
@@ -55,7 +54,7 @@ export function BattleSection() {
 
   if (setup === undefined) return null;
 
-  const { recoveryPlan, options, campaign } = setup;
+  const { recoveryPlan, options } = setup;
   const forced = eventEnemyFormation(setup);
   const formation: Formation = forced ?? setup.enemy;
   const mode = forced === undefined && isManual ? 'custom' : detectMode(formation);
@@ -153,8 +152,9 @@ export function BattleSection() {
 
         {/* The rule the stacks are sized by, and the rules that ride on it. */}
         <Stack gap="md">
-          {/* Three cards side by side where there is room; on a phone the chosen one alone, behind
-            "Change Stacking method" (D-54) — the method is set once and read every day. */}
+          {/* One card per method side by side where there is room — four since S-56 removed the fifth;
+            on a phone the chosen one alone, behind "Change Stacking method" (D-54) — the method is set
+            once and read every day. */}
           <ChoiceList
             layout="cards"
             label="Stacking method"
@@ -177,44 +177,11 @@ export function BattleSection() {
             </Group>
           )}
 
-          {/* What a campaign is (S-54). Two fields in the card's own field style, under the method
-              they belong to, and only while it is chosen — the rest of the card is about one march. */}
-          {options.method === 'complete' && (
-            <Stack gap="sm" maw={520}>
-              <NumberField
-                label="Marches planned"
-                description="How many times you fight this army before hiring again."
-                value={campaign.marches}
-                min={1}
-                max={MAX_MARCHES}
-                onChange={(value) => {
-                  updateActiveSetup((current) => ({
-                    campaign: { ...current.campaign, marches: value ?? DEFAULT_MARCHES },
-                  }));
-                }}
-              />
-              <NumberField
-                label="Silver budget"
-                description="Empty means no limit. A campaign stops before a march it cannot pay for, so pair it with the damage-per-silver objective."
-                value={campaign.silverBudget ?? null}
-                allowEmpty
-                placeholder="Unlimited"
-                min={0}
-                leftSection={<Glyph kind="silver" />}
-                onChange={(value) => {
-                  updateActiveSetup((current) => ({
-                    campaign: {
-                      marches: current.campaign.marches,
-                      ...(value === null ? {} : { silverBudget: value }),
-                    },
-                  }));
-                }}
-              />
-            </Stack>
-          )}
-
-          {/* Complete optimization has none: a rule that fixes one sizing is the player answering the
-              question they asked the search, so the whole block goes with them (§7.4). */}
+          {/* Complete optimization has no rules of its own: a rule that fixes one sizing is the player
+              answering the question they asked the search, so the whole block goes with them (§7.4).
+              Nor has it any fields — the owner's review of 2026-09-15 took the last two off the card
+              (S-56): the marches it plans over and the silver it may spend are policy numbers now, read
+              from `src/config.ts`, so there is nothing here for a player to type. */}
           {rules.length > 0 && (
             <Stack gap="xs" role="group" aria-labelledby={optionsId}>
               <Text size="xs" fw={500} id={optionsId}>

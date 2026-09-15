@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { newRoot } from './defaults';
-import { migrate, migrateProfile, migrations, readSchemaVersion, splitTroopExclusions } from './migrations';
+import { newRoot, newSavedStack } from './defaults';
+import {
+  migrate,
+  migrateProfile,
+  migrateSavedStack,
+  migrations,
+  readSchemaVersion,
+  splitTroopExclusions,
+} from './migrations';
 import { SCHEMA_VERSION } from './schema';
 
 /**
@@ -195,9 +202,9 @@ describe('migrate', () => {
     expect(migrated?.troops.excludedUnitIds).toEqual(['magic-dragon']);
   });
 
-  it('carries a v1 document all the way to v3 with neither list on any setup', () => {
+  it('carries a v1 document all the way to the current version with neither list on any setup', () => {
     const doc = migrate(v1Fixture());
-    expect(doc.schemaVersion).toBe(3);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
     for (const setup of doc.profiles[0]?.setups ?? []) {
       expect(setup).not.toHaveProperty('excludedUnitIds');
       expect(setup).not.toHaveProperty('pinnedUnitIds');
@@ -205,21 +212,37 @@ describe('migrate', () => {
     expect(newRoot().profiles[0]?.setups[0]).not.toHaveProperty('excludedUnitIds');
   });
 
-  it('gives a v3 setup written before S-54 the default campaign', () => {
-    // The field was added *inside* v3 with a schema default rather than with a version bump
-    // (ADR-0004): a document stored by yesterday's build has no `campaign` at all and must load.
+  it('reads a v3 setup that chose Complete optimization as a plan, and drops the campaign card', () => {
+    // S-56: the S-54 method was removed as superseded by the plan, and the two fields it shared with it
+    // left the card. The horizon and the silver are policy numbers now (`src/config.ts`), so a stored
+    // `campaign` has nowhere left to be read — dropping it *is* the migration.
     const fixture = v1Fixture();
     const setups = (fixture.profiles as Record<string, unknown>[])[0]!.setups as Record<string, unknown>[];
-    for (const setup of setups) expect(setup).not.toHaveProperty('campaign');
-
-    const migrated = migrate(fixture);
-    expect(migrated.profiles[0]?.setups[0]?.campaign).toEqual({ marches: 10 });
-    // And a campaign the player did write is kept as written.
+    setups[0]!.options = { ...(setups[0]!.options as Record<string, unknown>), method: 'complete' };
     setups[0]!.campaign = { marches: 4, silverBudget: 1_000_000 };
-    expect(migrate({ ...fixture, schemaVersion: 3 }).profiles[0]?.setups[0]?.campaign).toEqual({
-      marches: 4,
-      silverBudget: 1_000_000,
-    });
+
+    const migrated = migrate({ ...fixture, schemaVersion: 3 });
+    expect(migrated.profiles[0]?.setups[0]?.options.method).toBe('plan');
+    expect(migrated.profiles[0]?.setups[0]).not.toHaveProperty('campaign');
+    // A setup that chose something else keeps its method, and loses the campaign all the same.
+    expect(migrated.profiles[0]?.setups[1]?.options.method).toBe('elite');
+    expect(migrated.profiles[0]?.setups[1]).not.toHaveProperty('campaign');
+  });
+
+  it('reaches inside a saved stack, whose captured setup chose the removed method', () => {
+    // A saved stack is a whole setup, frozen; `3 → 4` has to edit *its* copy or the stack stops parsing.
+    const root = newRoot('desktop');
+    const setup = root.profiles[0]?.setups[0];
+    if (setup === undefined) throw new Error('newRoot() must create one setup');
+    const raw = JSON.parse(JSON.stringify(newSavedStack('Bear', setup, 'device-a'))) as {
+      setup: Record<string, unknown>;
+    };
+    raw.setup.options = { ...(raw.setup.options as Record<string, unknown>), method: 'complete' };
+    raw.setup.campaign = { marches: 4 };
+
+    const migrated = migrateSavedStack(raw, 3);
+    expect(migrated.setup.options.method).toBe('plan');
+    expect(migrated.setup).not.toHaveProperty('campaign');
   });
 
   it('round-trips a freshly created document', () => {

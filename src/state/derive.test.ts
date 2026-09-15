@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { BONUS_KEYS, SPECIAL_KEYS } from '../data/types';
+import { CAMPAIGN } from '../config';
 import { aggregateBonuses } from '../engine/bonuses';
 import { defaultSetup, newProfile } from './defaults';
 import {
-  buildCompleteRequest,
+  buildPlanRequest,
   buildStackRequest,
   buildUnits,
-  campaignSettings,
   captainValue,
   describeTotals,
   engineMethod,
@@ -489,37 +489,28 @@ describe('buildStackRequest', () => {
   });
 });
 
-describe('complete optimization (S-54)', () => {
-  it('hands the engine a plain sizing: the fourth method is not one of its three', () => {
+describe('complete optimization (S-55)', () => {
+  it('hands the engine a plain sizing: the plan is not one of its three', () => {
     const { profile, setup } = fixture();
-    setup.options = { ...setup.options, method: 'complete' };
+    setup.options = { ...setup.options, method: 'plan' };
 
-    // `searchComplete` sets the method per candidate (`withMethod`), so what the request carries is
-    // only ever a starting point — and it must be a method the engine knows.
-    expect(engineMethod('complete')).toBe('elite');
+    // `planCampaign` sizes the army itself, so what the request carries is only ever a starting point —
+    // and it must be a method the engine knows.
+    expect(engineMethod('plan')).toBe('elite');
     expect(engineMethod('ms')).toBe('ms');
     expect(buildStackRequest(profile, setup).options.method).toBe('elite');
   });
 
-  it('carries the campaign of the setup, and unlimited silver stays absent', () => {
+  it('takes the horizon and the trade width from the policy file, not from the setup', () => {
     const { profile, setup } = fixture();
-    expect(campaignSettings(setup)).toEqual({ marches: 10 });
+    const request = buildPlanRequest(profile, setup);
 
-    setup.campaign = { marches: 4, silverBudget: 2_000_000 };
-    const request = buildCompleteRequest(profile, setup, 1_234);
-    expect(request.campaign).toEqual({ marches: 4, silverBudget: 2_000_000 });
-    expect(request.budgetMs).toBe(1_234);
+    expect(request.marchTarget).toBe(CAMPAIGN.marches);
+    expect(request.alternatives).toBe(CAMPAIGN.planAlternatives);
+    // S-56 took the silver box off the card, so no budget is ever sent: the plan is always the free one
+    // the army points to, and the frontier it returns shows which resource binds.
+    expect(request.silverBudget).toBeUndefined();
     expect(request.request.units.length).toBeGreaterThan(0);
-  });
-
-  it('ranks a campaign on expected damage when the march has no priority', () => {
-    const { profile, setup } = fixture();
-    expect(setup.priority).toBe('none');
-    // A campaign is always ranked on something: ten marches nobody compares are not an answer.
-    expect(buildCompleteRequest(profile, setup, 0).objective).toBe('avgDamage');
-
-    setup.priority = 'damagePerSilver';
-    expect(buildCompleteRequest(profile, setup, 0).objective).toBe('damagePerSilver');
   });
 });
 

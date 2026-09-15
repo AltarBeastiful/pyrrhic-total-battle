@@ -95,6 +95,42 @@ test('the objective is one select, and it writes the priority', async () => {
   });
 });
 
+/**
+ * The one method that ignores the objective (owner, 2026-09-15). `planCampaign` declares an
+ * `objective` and never reads it, and `generate.ts` returns the plan before the priority search, so
+ * the control is locked rather than left looking live — with the sentence that says why, wired to
+ * the field rather than merely beside it.
+ */
+test('the objective is locked, and says why, while the plan decides it', async () => {
+  render(<CommandBar />, { wrapper: ThemeHarness });
+
+  const live = () => screen.getByRole('combobox', { name: 'Objective' }) as HTMLInputElement;
+  expect(live().disabled).toBe(false);
+  expect(screen.queryByText(/decides this itself/)).toBeNull();
+
+  useStore.getState().updateActiveSetup((current) => ({
+    options: { ...current.options, method: 'plan' },
+  }));
+
+  await waitFor(() => {
+    expect(live().disabled).toBe(true);
+  });
+  // The reason is on screen, and it is the field's own description rather than a paragraph nearby.
+  const reason = screen.getByText(/decides this itself/);
+  const describedBy = live().getAttribute('aria-describedby');
+  expect(describedBy).not.toBeNull();
+  expect(reason.id).toBe(describedBy);
+
+  // And it goes back to live the moment the method stops deciding it.
+  useStore.getState().updateActiveSetup((current) => ({
+    options: { ...current.options, method: 'elite' },
+  }));
+  await waitFor(() => {
+    expect(live().disabled).toBe(false);
+  });
+  expect(screen.queryByText(/decides this itself/)).toBeNull();
+});
+
 test('Generate is in the bar, and says why it cannot run', async () => {
   const user = userEvent.setup();
   const { rerender } = render(<CommandBar />, { wrapper: ThemeHarness });
@@ -147,6 +183,29 @@ test('the fourth chip opens the objective, and choosing one closes it', async ()
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Objective: Damage per silver' })).toBeTruthy();
   });
+});
+
+/**
+ * The same lock on a phone, where the objective is a chip that opens a popover rather than a select:
+ * a chip that opened a list of choices it will not take would be worse than one that cannot open. The
+ * reason cannot live in a tooltip (a disabled control fires no hover) or in the popover (it does not
+ * open), so the bar carries it in its own note line — and the chip's name says it too, the way
+ * Generate's does.
+ */
+test('the phone objective chip locks with the plan, and the bar says why', async () => {
+  render(<BottomBar onOpenRecap={() => undefined} />, { wrapper: ThemeHarness });
+
+  useStore.getState().updateActiveSetup((current) => ({
+    options: { ...current.options, method: 'plan' },
+  }));
+
+  const chip = await screen.findByRole('button', { name: 'Objective: decided by the plan' });
+  expect((chip as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText(/decides this itself/)).toBeTruthy();
+
+  // And it does not open: a trap over choices that cannot be taken is worse than a dead chip.
+  await userEvent.setup().click(chip);
+  expect(screen.queryByRole('radiogroup', { name: 'Objective' })).toBeNull();
 });
 
 test('the phone bar keeps the answer and Generate on its second row', () => {

@@ -1,0 +1,62 @@
+{
+ "note": "TotalStack's answer as the owner sent it a second time (2026-09-15, createdAt 13:50:14.857Z), saved verbatim, with his correction that the mercenary caps were arbalester 18 and legionary 18. Verified against the 13:43 capture in tools/theorycraft/77: the two agree on every count, which is what makes their optimizer look deterministic on this arena.",
+ "capturedAt": "2026-09-15",
+ "endpoint": "https://totalstack.ca/api/calculations/optimize",
+ "caps": {
+  "epic-monster-hunter-6": 16,
+  "arbalester-6": 18,
+  "legionary-6": 18,
+  "chariot-6": 8
+ },
+ "response": {
+  "calculation": {
+   "inputValue": 4000,
+   "dominanceValue": null,
+   "authorityValue": 2000,
+   "guardsmenMinTier": 1,
+   "guardsmenMaxTier": 3,
+   "specialistMinTier": 1,
+   "specialistMaxTier": 1,
+   "monsterMinTier": 3,
+   "monsterMaxTier": 0,
+   "guardsmenPct": 80,
+   "specialistPct": 20,
+   "engineerMinTier": 1,
+   "engineerMaxTier": 0,
+   "rangedPct": 25,
+   "meleePct": 25,
+   "mountedPct": 25,
+   "flyingPct": 0,
+   "troopCounts": {
+    "archer-1": 616,
+    "spearman-1": 614,
+    "rider-1": 308,
+    "archer-2": 341,
+    "spearman-2": 342,
+    "rider-2": 170,
+    "rider-3": 94,
+    "swordsman-1": 942
+   },
+   "monsterCounts": {},
+   "mercenaryCounts": {
+    "chariot-6": 7,
+    "epic-monster-hunter-6": 14,
+    "legionary-6": 16,
+    "arbalester-6": 15
+   },
+   "id": 0,
+   "userId": null,
+   "isOptimized": true,
+   "createdAt": "2026-09-15T13:50:14.857Z"
+  },
+  "excludedTroopIds": [],
+  "excludedMonsterIds": [],
+  "selectedMercenaryIds": [
+   "epic-monster-hunter-6",
+   "arbalester-6",
+   "legionary-6",
+   "chariot-6"
+  ],
+  "customMercenaryIds": []
+ }
+}

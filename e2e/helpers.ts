@@ -382,6 +382,90 @@ export function marchPane(page: Page): Locator {
   return page.locator('main aside');
 }
 
+/**
+ * The pane as the frame laid it out: whether it sticks or travels with the page, how tall the March
+ * is, the room the window leaves it, where its top edge is (beside `setupTop`), and every box inside
+ * it that holds more than it shows.
+ *
+ * The decision is the app's (`shell/usePaneFits.ts`); a spec reads it here rather than working it out
+ * again. The room is spelled out — the window, less the pane's own top, the command bar and 24 px of
+ * air — because a spec that borrowed the app's own arithmetic could not notice it drifting.
+ */
+export function paneFrame(page: Page): Promise<{
+  position: string;
+  height: number;
+  room: number;
+  bottom: number;
+  viewport: number;
+  top: number;
+  setupTop: number;
+  scrollers: string[];
+}> {
+  return page.evaluate(() => {
+    const view = globalThis as unknown as {
+      innerHeight: number;
+      getComputedStyle: (element: unknown) => {
+        position: string;
+        overflowX: string;
+        overflowY: string;
+        fontSize: string;
+        getPropertyValue: (property: string) => string;
+      };
+      document: {
+        documentElement: unknown;
+        querySelector: (selector: string) => unknown;
+      };
+    };
+    const root = view.getComputedStyle(view.document.documentElement);
+    const length = (property: string, fallback: number): number => {
+      const declared = root.getPropertyValue(property).trim();
+      const value = Number.parseFloat(declared);
+      if (!Number.isFinite(value)) return fallback;
+      return declared.endsWith('rem') ? value * (Number.parseFloat(root.fontSize) || 16) : value;
+    };
+    const pane = view.document.querySelector('aside') as unknown as {
+      getBoundingClientRect: () => { height: number; bottom: number; top: number };
+      querySelectorAll: (selector: string) => Iterable<unknown>;
+    } | null;
+    const empty = { position: 'none', height: 0, room: 0, bottom: 0, viewport: 0, top: 0, setupTop: 0 };
+    if (pane === null) return { ...empty, scrollers: [] };
+    // The first setup card, whose own top edge the pane shares (both columns open on the same line).
+    const first = view.document.querySelector('#troops') as unknown as {
+      getBoundingClientRect: () => { top: number };
+    } | null;
+
+    const scrollers: string[] = [];
+    for (const node of pane.querySelectorAll('*')) {
+      const style = view.getComputedStyle(node);
+      const element = node as unknown as {
+        tagName: string;
+        scrollWidth: number;
+        scrollHeight: number;
+        clientWidth: number;
+        clientHeight: number;
+      };
+      const vertical = element.scrollHeight > element.clientHeight + 2 && /auto|scroll/.test(style.overflowY);
+      const horizontal = element.scrollWidth > element.clientWidth + 2 && /auto|scroll/.test(style.overflowX);
+      if (vertical || horizontal)
+        scrollers.push(`${element.tagName.toLowerCase()} (${style.overflowX}/${style.overflowY})`);
+    }
+
+    const rect = pane.getBoundingClientRect();
+    return {
+      position: view.getComputedStyle(pane).position,
+      height: Math.round(rect.height),
+      room: Math.round(
+        view.innerHeight - length('--mantine-spacing-lg', 16) - length('--pyr-commandbar-height', 92) - 24,
+      ),
+      bottom: Math.round(rect.bottom),
+      viewport: view.innerHeight,
+      top: Math.round(rect.top),
+      setupTop: Math.round(first?.getBoundingClientRect().top ?? 0),
+      scrollers,
+    };
+  });
+}
+
 /** The phone command bar's answer line: pressing it opens the March sheet. */
 export function recapSummary(page: Page): Locator {
   return page.getByRole('button', { name: 'Open the march recap' });
@@ -456,6 +540,19 @@ export async function switchProfileNames(page: Page): Promise<string[]> {
  * The March itself. It is a landmark named by its own heading, and it moves: the supporting pane
  * from 1200 px, the page flow below that. Its anchor is `march`, which is also the registry id.
  */
+/**
+ * The March's second half, at the foot of the setup column (owner, 2026-09-15): the objectives
+ * comparison, the battle story, the HP profile, the saved list and the row of whole-march actions.
+ *
+ * It is drawn **instead of** the sheet's copy of the same blocks (`ui/sections/march/MarchFoot.tsx`,
+ * `MarchSection.tsx`), so a control that moved here is on this page once and only once. Below
+ * 1200 px there is no foot at all — the March is the sheet and carries them itself — which is why
+ * the specs that touch a moved control say which width they mean.
+ */
+export function marchFoot(page: Page): Locator {
+  return page.locator('#march-foot');
+}
+
 export function marchSection(page: Page): Locator {
   return page.locator('#march');
 }
@@ -538,9 +635,11 @@ export async function marchExpectedDamage(page: Page): Promise<number> {
  */
 export async function setCountsMode(page: Page, mode: 'edit' | 'copy'): Promise<void> {
   const name = mode === 'edit' ? 'Edit counts' : 'Done editing';
-  const toggle = marchSection(page).getByRole('button', { name, exact: true });
+  // Scoped to neither host: the two are mutually exclusive (foot on a desktop, sheet below 1200 px),
+  // so one page-wide lookup finds the toggle at every width — and finds it exactly once.
+  const toggle = page.getByRole('button', { name, exact: true });
   if ((await toggle.count()) > 0) await toggle.click();
   await expect(
-    marchSection(page).getByRole('button', { name: mode === 'edit' ? 'Done editing' : 'Edit counts' }),
+    page.getByRole('button', { name: mode === 'edit' ? 'Done editing' : 'Edit counts' }),
   ).toBeVisible();
 }

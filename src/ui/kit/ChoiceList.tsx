@@ -119,8 +119,23 @@ export function ChoiceList({
 }
 
 function Row({ item }: { item: ChoiceItem }) {
+  const descriptionId = useId();
+
   return (
-    <Radio.Card value={item.value} withBorder radius="sm" p="sm" disabled={item.disabled ?? false}>
+    // The same name and the same description as a card, and said the same way: a row's own name is
+    // nothing at all to a browser's accessibility tree — measured on the built app, the phones' rows
+    // came out as bare `radio` with no name while the cards were named — so the title is written on
+    // the control and the sentence is *described by* it, exactly as `Card` below does it. A radio a
+    // screen reader cannot name is a control with no name at all (WCAG 4.1.2).
+    <Radio.Card
+      value={item.value}
+      withBorder
+      radius="sm"
+      p="sm"
+      disabled={item.disabled ?? false}
+      aria-label={item.title}
+      {...(item.description === undefined ? {} : { 'aria-describedby': descriptionId })}
+    >
       <Group wrap="nowrap" align="flex-start" gap="sm">
         <Radio.Indicator />
         <Stack gap={2} flex={1} miw={0}>
@@ -128,7 +143,7 @@ function Row({ item }: { item: ChoiceItem }) {
             {item.title}
           </Text>
           {item.description !== undefined && (
-            <Text size="xs" c="dimmed">
+            <Text id={descriptionId} size="xs" c="dimmed">
               {item.description}
             </Text>
           )}

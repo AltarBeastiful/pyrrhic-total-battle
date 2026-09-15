@@ -57,12 +57,31 @@ export function poolProblem(pool: Pool, value: number): string | null {
   return null;
 }
 
+/**
+ * Why the Objective is locked while the plan method is chosen (owner, 2026-09-15), in the words the
+ * bar shows it in.
+ *
+ * The plan weighs damage against what it costs, so there is no objective left to pick: `planCampaign`
+ * declares an `objective` and never reads it (`engine/plan.ts`), `buildPlanRequest` never sends one,
+ * and nothing else reads `setup.priority` for that method either — `generate.ts` returns the plan
+ * before it reaches the priority search. Locking the control rather than hiding it is a **deliberate
+ * exception** to §7.4's *"Toggles that do not apply to the chosen method are hidden, not disabled"*
+ * (`docs/plans/design-overhaul.md`) and to rule 15's *"nothing on screen without value"*: the
+ * objective is the *bar's* control rather than a rule of one method, so it keeps its place in the tab
+ * order's story and says why it cannot be used. The owner chose it after seeing both alternatives —
+ * hiding it, and making the plan honour it — and the second is still open as engine work.
+ */
+export const OBJECTIVE_LOCKED_REASON =
+  'The plan weighs damage against what it costs, so it decides this itself.';
+
 export interface CommandBarState {
   /** `null` while no march is selected, which is the one state the bar draws nothing for. */
   housing: BattleSetup['housing'] | null;
   priority: Priority;
   /** The chosen objective in the words the player picked it by. */
   objectiveTitle: string;
+  /** True while the method decides the objective for itself: both bars lock the control and say why. */
+  objectiveLocked: boolean;
   /** Per pool: what is wrong with the figure it holds, or `null`. Marks the field, no words. */
   problems: Record<Pool, string | null>;
   /** The same thing said once, above the fields — or `null` while every pool is in range. */
@@ -86,6 +105,7 @@ export function useCommandBar(): CommandBarState {
     housing,
     priority,
     objectiveTitle: OBJECTIVE_CHOICES.find((choice) => choice.value === priority)?.title ?? '',
+    objectiveLocked: setup?.options.method === 'plan',
     problems,
     message: said.length === 0 ? null : said.join(' '),
     setPool: (pool, value) => {

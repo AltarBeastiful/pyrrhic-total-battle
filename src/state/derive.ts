@@ -30,6 +30,7 @@ import {
   titles as titleTable,
   vip as vipTable,
 } from '../data';
+import { CAMPAIGN } from '../config';
 import { BONUS_KEYS, CATEGORIES, SPECIAL_KEYS } from '../data/types';
 import type {
   ArtifactRecord,
@@ -50,7 +51,7 @@ import type {
   VipRecord,
 } from '../data/types';
 import { aggregateBonuses } from '../engine/bonuses';
-import type { CampaignSettings, CompleteRequest } from '../engine/campaign';
+import type { CampaignInput } from '../engine/plan';
 import type {
   BonusTotals,
   EnemyFormation,
@@ -568,13 +569,13 @@ export function eventEnemyFormation(
 }
 
 /**
- * The sizing the engine is asked for. Three of the four are its own; **Complete optimization is not a
- * sizing at all** — it tries each of them over a campaign and sets the method per candidate
- * (`searchComplete`, `withMethod`), so the request it starts from carries the tier ladder and nothing
- * about it is read before the search overrides it.
+ * The sizing the engine is asked for. Three of the four are its own; **Complete optimization v2 is not a
+ * sizing at all** — it plans the army's own ladder from scratch, so the request it starts from carries the
+ * tier ladder and nothing about it is read before `planCampaign` builds its own.
  */
 export function engineMethod(method: SetupMethod): Method {
-  return method === 'complete' ? 'elite' : method;
+  // The plan decides the sizing itself; the request carries the tier ladder and nothing more.
+  return method === 'plan' ? 'elite' : method;
 }
 
 function stackingOptions(setup: BattleSetup): StackingOptions {
@@ -622,31 +623,30 @@ export function buildStackRequest(
   };
 }
 
-/** The campaign this setup plans for, in the engine's own words (`CampaignSettings`). */
-export function campaignSettings(setup: BattleSetup): CampaignSettings {
-  const { marches, silverBudget } = setup.campaign;
-  return { marches, ...(silverBudget === undefined ? {} : { silverBudget }) };
-}
-
 /**
- * Everything `searchComplete` needs for one press on Generate (S-54).
+ * Everything `planCampaign` needs for one press on Generate with the plan method (S-55).
  *
- * The objective is the march's own, and **"No priority" means expected damage here**: a campaign is
- * always ranked on something — the alternative would be to play ten marches and then not compare
- * them. Everything else is the plain march request, because the search decides the sizing, the
- * mercenary spend and the unit subset itself.
+ * Every number here is a **policy** number out of `src/config.ts`, and the owner's review of 2026-09-15 is
+ * why: the two campaign fields left the Battle card (S-56), so the horizon the plan is planned over and the
+ * silver it may spend are no longer things a player types. The horizon matters most — left to itself the
+ * plan answers with the campaign that maximises total damage, which on a real account is 66 marches and
+ * 313 days of training, a number to read rather than a plan to march. No silver budget is sent at all now,
+ * so the plan is always the free one the army points to, and the frontier it returns shows the trade with
+ * the resource that binds.
  */
-export function buildCompleteRequest(
+export function buildPlanRequest(
   profile: Profile,
   setup: BattleSetup,
-  budgetMs: number,
   tables: DeriveTables = DEFAULT_TABLES,
-): CompleteRequest {
+): CampaignInput {
   return {
     request: buildStackRequest(profile, setup, tables),
-    objective: setup.priority === 'none' ? 'avgDamage' : setup.priority,
-    campaign: campaignSettings(setup),
-    budgetMs,
+    marchTarget: CAMPAIGN.marches,
+    // How many plans the trade carries for the bar: a policy number, set with the horizon (`src/config.ts`).
+    alternatives: CAMPAIGN.planAlternatives,
+    // S-58: the two candidate fixes for "the plan drops a whole hired type", both off until the owner picks
+    // one from the pair of experiments (`src/config.ts`, `CAMPAIGN.planFixes`).
+    ...CAMPAIGN.planFixes,
   };
 }
 

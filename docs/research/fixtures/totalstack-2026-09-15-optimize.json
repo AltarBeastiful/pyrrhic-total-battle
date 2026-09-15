@@ -1,0 +1,193 @@
+{
+ "note": "TotalStack's own answer to the owner's optimize query, captured 2026-09-15 by the coordinator with the owner's own cookies. `request` is the payload as sent (verbatim), `response` is what https://totalstack.ca/api/calculations/optimize returned for it (HTTP 200). Kept as a fixture so the comparison in tools/theorycraft/75 is reproducible without the network.",
+ "capturedAt": "2026-09-15",
+ "endpoint": "https://totalstack.ca/api/calculations/optimize",
+ "request": {
+  "inputValue": 4000,
+  "authorityValue": 2000,
+  "guardsmenMinTier": 1,
+  "guardsmenMaxTier": 3,
+  "specialistMinTier": 1,
+  "specialistMaxTier": 1,
+  "monsterMinTier": 3,
+  "monsterMaxTier": 0,
+  "engineerMinTier": 1,
+  "engineerMaxTier": 0,
+  "rangedPct": 25,
+  "meleePct": 25,
+  "mountedPct": 25,
+  "flyingPct": 0,
+  "guardsmenExcludedCategories": [
+   "melee",
+   "ranged"
+  ],
+  "specialistExcludedCategories": [],
+  "excludedTroopIds": [],
+  "excludedMonsterIds": [],
+  "selectedMercenaryIds": [
+   "epic-monster-hunter-6",
+   "arbalester-6",
+   "legionary-6",
+   "chariot-6"
+  ],
+  "customMercenaries": [],
+  "mercenaryCaps": {
+   "bear-5": 6,
+   "cyclops-5": 6,
+   "arbalester-6": 15,
+   "epic-monster-hunter-6": 14,
+   "chariot-6": 8,
+   "legionary-6": 16
+  },
+  "enforceOrdering": false,
+  "monsterSaving": false,
+  "monstersLast": false,
+  "relaxedPreservation": true,
+  "damageStacking": false,
+  "damageStackingAttackOrder": false,
+  "roundMonstersTo10": false,
+  "roundMercsTo10": false,
+  "bonusMode": "source",
+  "directBonuses": {},
+  "healthBonuses": {
+   "flying": 0,
+   "mounted": 0,
+   "melee": 35,
+   "ranged": 0,
+   "guardsmen": 0,
+   "specialist": 0,
+   "engineers": 0,
+   "monster": 0,
+   "army": 3,
+   "beast": 0,
+   "elemental": 0,
+   "dragon": 0,
+   "giant": 0
+  },
+  "objective": "damagePerSilver",
+  "deepOptimizationSeeds": false,
+  "optimizationSeed": {
+   "excludedTroopIds": [],
+   "excludedMonsterIds": [],
+   "selectedMercenaryIds": [
+    "epic-monster-hunter-6",
+    "arbalester-6",
+    "legionary-6",
+    "chariot-6"
+   ],
+   "customMercenaryIds": []
+  },
+  "recoveryPlan": {
+   "mode": "retrainAll",
+   "selectiveTopTroopTypes": 1
+  },
+  "reviveAllTroops": false,
+  "enemyFormation": {
+   "flying": 1,
+   "melee": 1,
+   "ranged": 1,
+   "mounted": 1
+  },
+  "templeLevel": 0,
+  "trainingCostReductions": {
+   "guardsmen": 0,
+   "specialists": 0,
+   "engineers": 0,
+   "monsters": 0
+  },
+  "trainingSpeedBonuses": {
+   "guardsmen": 0,
+   "specialists": 0,
+   "engineers": 0,
+   "monsters": 0
+  },
+  "strengthBonuses": {
+   "flying": 0,
+   "mounted": 0,
+   "melee": 70,
+   "ranged": 0,
+   "guardsmen": 0,
+   "specialist": 0,
+   "engineers": 0,
+   "monster": 0,
+   "army": 3,
+   "beast": 0,
+   "elemental": 0,
+   "dragon": 0,
+   "giant": 0
+  },
+  "matchupStrengthBonusesByCategoryAndTarget": {
+   "ranged": {},
+   "melee": {},
+   "mounted": {},
+   "flying": {}
+  },
+  "armyStrengthAgainstEpicMonstersBonus": 0,
+  "eventStrengthBonus": 0,
+  "activeEventStrengthName": null,
+  "arachnesEventActive": false,
+  "specialStrengthBonuses": {
+   "doubleDamageChance": 0,
+   "strikeTwoSquadsChance": 0,
+   "beastsStrikeTwoSquadsChance": 0,
+   "elementalsStrikeTwoSquadsChance": 0,
+   "dragonsStrikeTwoSquadsChance": 0,
+   "giantsStrikeTwoSquadsChance": 0,
+   "guardsmenDoubleDamageChance": 0,
+   "specialistsDoubleDamageChance": 0,
+   "engineersDoubleDamageChance": 0,
+   "monstersDoubleDamageChance": 0
+  }
+ },
+ "response": {
+  "calculation": {
+   "inputValue": 4000,
+   "dominanceValue": null,
+   "authorityValue": 2000,
+   "guardsmenMinTier": 1,
+   "guardsmenMaxTier": 3,
+   "specialistMinTier": 1,
+   "specialistMaxTier": 1,
+   "monsterMinTier": 3,
+   "monsterMaxTier": 0,
+   "guardsmenPct": 80,
+   "specialistPct": 20,
+   "engineerMinTier": 1,
+   "engineerMaxTier": 0,
+   "rangedPct": 25,
+   "meleePct": 25,
+   "mountedPct": 25,
+   "flyingPct": 0,
+   "troopCounts": {
+    "archer-1": 748,
+    "spearman-1": 561,
+    "rider-1": 375,
+    "archer-2": 416,
+    "spearman-2": 311,
+    "rider-2": 208,
+    "rider-3": 116,
+    "swordsman-1": 565
+   },
+   "monsterCounts": {},
+   "mercenaryCounts": {
+    "chariot-6": 8,
+    "epic-monster-hunter-6": 14,
+    "legionary-6": 15,
+    "arbalester-6": 15
+   },
+   "id": 0,
+   "userId": null,
+   "isOptimized": true,
+   "createdAt": "2026-09-15T11:51:15.150Z"
+  },
+  "excludedTroopIds": [],
+  "excludedMonsterIds": [],
+  "selectedMercenaryIds": [
+   "epic-monster-hunter-6",
+   "arbalester-6",
+   "legionary-6",
+   "chariot-6"
+  ],
+  "customMercenaryIds": []
+ }
+}

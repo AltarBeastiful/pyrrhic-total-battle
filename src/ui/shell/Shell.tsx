@@ -9,8 +9,9 @@
  *   chips and the answer below that, but it is the same bar, the same form and the same state. Its
  *   ground is full bleed at both widths, so no live page scrolls past under it;
  * - from `lg` (1200 px) the setup is the focus pane and the March is M3's 360 dp supporting pane on
- *   the right, its recap and its pills sticky under the app bar — without a Generate of its own,
- *   which now lives in the bar alone — and the rest of it flowing with the page (design rule 17);
+ *   the right, without a Generate of its own — which now lives in the bar alone. The whole pane
+ *   sticks while the March fits the window and travels with the page once it does not, so the March
+ *   never takes a scroll of its own (design rule 17, `MarchPane.tsx`);
  * - below that the page is the setup and nothing else, and **the March itself is in the sheet the
  *   bar's answer opens**.
  *
@@ -29,7 +30,7 @@ import { Container, Drawer, Grid, Stack, Text, VisuallyHidden } from '@mantine/c
 import { lazy, useEffect, useState } from 'react';
 
 import { selectTheme, useStore } from '@/state/store';
-import { amount, MarchSection, restoreLastResult } from '@/ui/sections/march';
+import { amount, MarchFoot, MarchSection, restoreLastResult } from '@/ui/sections/march';
 
 import { LazySurface } from '../lazy';
 import { initResultPersistence, useResultStore } from '../resultStore';
@@ -103,12 +104,19 @@ export function Shell() {
    * continuous sheet split by hairlines): each section is a lit block with its own edge and its own
    * shadow, and the frame's only job is the 16 px of air between them. The rule that used to tell
    * them apart is gone — the panel's own border does it.
+   *
+   * **The March's second half is the fifth**, and only where there is a pane to shorten (owner,
+   * 2026-09-15): the panes only stick while the March fits the room the window leaves them, and the
+   * objective comparison, the battle story, the saved list and the whole-march actions were most of
+   * what stopped it. Below 1200 px there is no pane, so the March is the sheet and carries them
+   * itself (`MarchSection.tsx`) — the same flag, one decision.
    */
   const setup = (
     <Stack gap="lg">
       {SETUP.map(({ id, Component }) => (
         <Component key={id} />
       ))}
+      {wide && <MarchFoot />}
     </Stack>
   );
 

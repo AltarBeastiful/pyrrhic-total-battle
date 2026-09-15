@@ -60,10 +60,10 @@
    column makes that impossible: everything in the March moves together, so nothing in it can cover
    anything else in it.
 
-   The one scroll of design rule 17 is still the page's. The pane is capped at the window less the
-   command bar (`march.module.css`, `.paneScroll`) and only scrolls inside itself when a march is
-   taller than that — sixteen stacks fit a 900 px window with Details and Saved marches folded,
-   which is how they start.
+   The one scroll of design rule 17 is the page's, and the pane never takes one of its own: it
+   sticks only while the March fits the room above (`usePaneFits.ts` — the window, less this `top`,
+   less the command bar, less a little air), and `paneFlowing` below is what a March that does not
+   fit gets instead.
 
    The Grid column it sits in runs the height of the row, which is the containing block a sticky
    element travels inside: that is what lets the pane follow the setup all the way down. */
@@ -71,6 +71,26 @@
   position: sticky;
   top: var(--mantine-spacing-lg);
   width: var(--pyr-pane-width);
+}
+
+/* A March taller than the room the window leaves it travels with the page instead of sticking: a
+   pane that followed the setup from there would have to hide its own tail, and giving it a scroll of
+   its own is the second scroller design rule 17 forbids (owner, 2026-09-15: "make this change so we
+   always avoid scroll bars on the battle summary" — 919 px of March against 768 px of room on their
+   own plan, with every fold shut).
+
+   `top: auto` is not a detail: `top` is inherited from the rule above, and on a relative box it is an
+   *offset*, so the pane would sit 16 px below the first setup card instead of on its line (owner,
+   2026-09-15: "the battle summary is slightly below the troop selection form"). Aligned by giving the
+   offset back up, not by moving the setup.
+
+   `relative` rather than `static`, and not for a look either: the pane is the containing block the
+   dozen `VisuallyHidden` labels inside the HP profile are positioned against, and against the initial
+   containing block they add ~1 100 px of empty page under the app. `sticky` above is positioned
+   too, so the labels are contained in both states; only this one has to say so. */
+.paneFlowing {
+  position: relative;
+  top: auto;
 }
 
 /* One short flash on the bar's summary when a run lands with the sheet shut — the eye's half of the
@@ -341,6 +361,16 @@
 .barMessage {
   margin: 0;
   color: var(--mantine-color-error);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.35;
+}
+
+/* A note that is not a complaint: why a control in the bar cannot be used, in the phone bar's own
+   line above the chips. Muted, never the error colour, and not a `role="alert"` — nothing has gone
+   wrong (owner, 2026-09-15: the Objective is locked while the plan decides it). */
+.barNote {
+  margin: 0;
+  color: var(--mantine-color-dimmed);
   font-size: var(--mantine-font-size-xs);
   line-height: 1.35;
 }

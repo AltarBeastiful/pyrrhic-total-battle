@@ -341,8 +341,11 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-49a Account sync backend | in progress | groundwork done and verified: `ops/pocketbase/` (PocketBase 0.40.4 compose, Caddy site, save hook, `profiles` migration, smoke script), every spec `[verify]` answered in investigation 0012, hosting in investigation 0010. **Deployment is pending the owner** (Dynu hostname, the two-line philou change, the Google OAuth client, the backup target) |
 | S-49b Account sync client | done | `src/account/**`, `src/ui/account/**`, ADR-0009, `/oauth-callback` + `404.html` copy, SW NetworkOnly for the backend, `storage.persist()`; e2e `e2e/account.spec.ts` against a local 0.40.4 container. Hidden until the owner sets `VITE_BACKEND_ORIGIN` |
 | S-53 Left-out troops without pins | done | schema v3 drops `BattleSetup.pinnedUnitIds` and `excludedUnitIds`, the sizer and the search lose their pinned paths, and the March keeps `includedUnitIds` with the result (§3.4 rewritten); owner's story of 2026-09-13 below the table |
-| S-54 Complete optimization | done | `src/engine/campaign.ts` (`simulateCampaign`, `searchComplete`, 22 tests); the fourth method on the Battle card with *Marches planned* / *Silver budget*, the `complete` worker job, and the March's sizing line + folded Campaign section (`ui/sections/march/campaign.ts`, `CampaignPanel.tsx`); investigation 0014 §5 |
+| S-54 Complete optimization | done, superseded | `src/engine/campaign.ts` (`simulateCampaign`, `searchComplete`, 22 tests); the fourth method on the Battle card with *Marches planned* / *Silver budget*, the `complete` worker job, and the March's sizing line + folded Campaign section (`ui/sections/march/campaign.ts`, `CampaignPanel.tsx`); investigation 0014 §5. **Removed by S-56 (2026-09-15)**: the method, its two fields and both panels are gone, and schema v4 reads a stored `complete` as `plan` |
+| S-56 Remove Complete optimization v1 | done | owner's review 2026-09-15: two methods were answering one question at two resolutions, so `complete` leaves the Battle card and the plan method (S-55, `src/engine/plan.ts`) keeps the name **Complete optimization**; `METHODS` is four ids, schema v4 maps a stored `complete` to `plan` and drops `setup.campaign`, `ui/sections/march/campaign.ts` and `CampaignPanel.tsx` are deleted, `src/engine/campaign.ts` stays as the instrument experiments 22 / 23 / 48 are measured with, and the horizon moved into `src/config.ts` (§5.1) |
 | S-55 Bonus recap: every key, always visible | backlog | hero assessment 2026-09-13: the engine applies the hero (Svyatogor +50/+50 army) and the TOTAL figures move, but our only per-key view is the breakdown fold, two folds deep, hiding keys at 0; TotalStack's recap lists all 9 + 9 keys and the three specials. Promote that block to the head of the Sources fold, every key listed including 0 % (rules 1, 4, 5, 7) |
+| S-58 The plan's holes, and what full optimization means | done | owner, 2026-09-15. **Two flagged candidate fixes** for "the plan drops a whole hired type", both **off**: `tokenFloor` (the grid's thrift end samples one chunk of every hired type instead of none — `CAMPAIGN.planFixes`, `engine/plan.ts`) and `refuseDroppedTypes` (the frontier band refuses to offer a plan with a hole, counting them in `leftOut`). Measured against each other in experiments 80 and 81 on the owner's account: both remove every hole on the frontier, **B leaves the winner and the frontier's best identical** (`leftOut` 14 → 17) while **A shifts the recommendation by 0.87 %** because replacing the zero changes where the refinement lands. Three new unit tests pin the flags and their off-by-default. **And the horizon off-by-one is fixed**: a target of 1 played 2 marches (`max(1, planned − 1)` clamped a repeat up); a one-march campaign now scores no finale at all and plays exactly 1. **Investigation 0019** states the full-optimization definition and verifies each clause with data (77–83) |
+| S-57 The March's second half, and a locked Objective | done | owner, 2026-09-15, two changes in one pass. **The March's explaining half left the pane** — the objectives comparison, the battle story and the HP profile, the saved marches and the whole-march actions are now one panel, **"This march in full"** (`#march-foot`, `ui/sections/march/MarchFoot.tsx`), at the foot of the setup column from 1200 px, and the March sheet below that (`MarchSection.tsx`; `editingCounts` moved into `runStore` because the switch and the pills are now on opposite sides of the page). It is a **partial win**, measured with `paneFrame()` on a real march (leadership 84 300): the pane is 655 px with a warning and 553 px without, so it **sticks at 1400×900** (768 px of room; new test in `e2e/generate.spec.ts`) and **still flows at 1280×720** (560) and at 1280×800 with a warning (640). **The Objective is locked** while **Complete optimization** is chosen (`OBJECTIVE_LOCKED_REASON`, `shell/command.ts`), a deliberate exception to §7.4's hidden-not-disabled and to rule 15, which costs the pane about **28 px** of room at every method (`--pyr-commandbar-height` 5.75rem → 7.5rem, the bar's tallest state) |
 
 **S-53 — Left-out troops without pins (owner, 2026-09-13 evening; clarified the same night).** The current
 model (§3.4) keeps two lists on the setup, `excludedUnitIds` and `pinnedUnitIds`, and the owner finds the pins
@@ -373,9 +376,9 @@ and the objective, Generate. Then tweak by adding and removing types in the Marc
   March, the share codec fields, and their tests. §3.4's "Pinned and left-out unit types" paragraph is
   rewritten to this model when the story lands.
 
-**S-54 — Complete optimization (owner, 2026-09-13 evening; investigation 0014 §5).** A fourth stacking
-method. It answers the owner's "optimise everything, mercenaries and order included, and tell me whether
-spending fewer mercenaries per march buys more damage over several marches":
+**S-54 — Complete optimization (owner, 2026-09-13 evening; investigation 0014 §5; removed by S-56).** A
+fourth stacking method. It answers the owner's "optimise everything, mercenaries and order included, and
+tell me whether spending fewer mercenaries per march buys more damage over several marches":
 
 - **Engine** (`src/engine/campaign.ts`): `searchComplete` runs the priority search under every sizing
   (Troops first, Hired last, Hired last with damage trades) and every mercenary spend level (100 / 75 / 50 /
@@ -396,6 +399,84 @@ spending fewer mercenaries per march buys more damage over several marches":
   marches have not already said.
 - Not in scope: a different march per campaign step, valuing leftover mercenaries, monsters' dragon coins
   beyond what `recovery.ts` already prices.
+
+**S-56 — Remove Complete optimization v1 (owner, 2026-09-15).** The owner reviewed the five stacking methods
+and had `complete` taken off the Battle card. The reason is resolution, not a defect: the plan method
+(S-55, `src/engine/plan.ts`) answers the same question — how many marches, how big each one, and how much of
+the hired stock each carries — at the resolution the March can show, a horizon, a frontier of plans and a
+march-by-march trade, where `complete` answered it with a score per sizing × spend level and one Campaign
+panel. Two methods answering one question at two resolutions is a choice the player should not have to make,
+so the older one goes and the surviving method keeps the name **Complete optimization**: the "v2" went with
+the removal (investigation 0018 §6 had already flagged the suffix as reading like a version number to a
+player).
+
+- **Method**: `METHODS` is `['elite', 'ms', 'custom', 'plan']` (`src/state/schema.ts`). The Battle card
+  offers four methods, and `complete`'s two fields (*Marches planned*, *Silver budget*) leave with it —
+  the plan method's card is the method and nothing else, which is also why its option rules were already
+  empty.
+- **Schema v4** (`3 → 4`, `dropCompleteMethod` in `src/state/migrations.ts`; `SCHEMA_VERSION = 4`): a stored
+  `complete` becomes `plan`, and `setup.campaign` is dropped from a profile's setups and from a saved
+  stack's setup. Nothing else moves — the field is read nowhere once the card stops asking for it.
+- **UI**: `ui/sections/march/campaign.ts`, its test and `CampaignPanel.tsx` are deleted, `MarchSection` no
+  longer draws `CampaignSizing` or `CampaignFold`, and `runStore` loses its `campaign` field. What stays is
+  the plan pane (`PlanPanel.tsx`): the sizing line under the figures and the folded **Plan** section.
+- **Engine**: `src/engine/campaign.ts` is kept deliberately (`simulateCampaign`, `searchComplete`, 22 tests
+  of its own). It is no longer reachable from the app and is a theorycraft instrument now: experiments 22,
+  23 and 48 measure campaigns with it, importing the module directly (`tools/theorycraft/`). The public
+  engine surface (`src/engine/index.ts`) keeps its exports; nothing on the app's path uses them.
+- **Policy**: the horizon and the silver left the card, so `src/config.ts` is the only place either is set:
+  `CAMPAIGN.marches` (10, read by `derive.ts` as `marchTarget`), `CAMPAIGN.planAlternatives` (4) and
+  `budgets.search` / `budgets.plan`. `maxMarches` and `budgets.complete` go with the method. The silver is
+  no longer an input at all — the plan sweeps its own frontier and names the sweet spot — and the engine's
+  optional `silverBudget` survives for the experiments.
+- **Left open** (found on the way, not fixed): `plan.ts:79` declares `objective?: Objective` and never reads
+  it, so the command bar's Objective select is live on the plan method and has no effect; and `plan.ts`'s
+  header comment is still stale about `simulateBattle` (`plan.ts:22-23`).
+
+**S-58 — What "full optimization" means, and the plan's holes (owner, 2026-09-15).** The day's second thread started with *"I still see some mercs not used when generating marches with complete opt"* and ended as a definition. Experiments 78–83, investigation 0019.
+
+- **The defect, measured.** The frontier offered one plan in five that fielded **no legionaries at all**, and putting a single one back paid +22,230 damage while lasting 72 marches. The `0` sample in the mercenary grid is a degenerate point on the thrift axis, not a trade anyone would take. Both fixes are in behind `CAMPAIGN.planFixes`, **off**, with an experiment each (80, 81) and three unit tests; the comparison is above.
+- **The horizon off-by-one.** A target of 1 played 2 marches. `makeScorer` gained a `finale` flag, the planner turns it off for a one-march target, and `tests/engine/plan.test.ts` asserts the target is the campaign's own length at 1, 2, 3 and 10.
+- **The definition.** Full optimization is *the marches, and the counts of each, that maximise the campaign's total damage subject to leadership and authority per march, the permanent `ceil(n/10)` loss of every hired stack fielded, and the player's silver* — a campaign objective, and a frontier rather than a point. Verified: the best single march takes **82.3 %** of the best campaign; under a capped purse the same engine buys **1.75×** more damage by maximising damage a silver than by maximising the total; damage a mercenary rises to 435,961 exactly where the march collapses to two hired units; the horizon swings a march by **434.6 %**; and authority is not binding at all (155 of 2,000).
+
+**S-57 — The March's second half, and a locked Objective (owner, 2026-09-15).** Two changes that shipped
+together; the first was asked for in the owner's own words — *"the right side tab bar could be stripped of
+some detail that could be moved at the end of the left side so that the right side would always follow
+scroll"* — and the second is the one defect S-56 had just left open.
+
+- **The March is two halves now.** `ui/sections/march/MarchFoot.tsx` holds four blocks — `MarchObjectives`
+  (the "Objectives compared" strip), `MarchDetailsFold` (the battle story and the HP profile),
+  `MarchSavedFold` (the saved marches) and `MarchActions` (copy, edit, save, share) — and `MarchFoot` draws
+  them as **one panel** titled **"This march in full"**, anchored `#march-foot` (`MARCH_FOOT_ANCHOR`,
+  `shell/march.ts`). The panel has **two mutually exclusive hosts**: `Shell.tsx` draws it as the setup
+  column's last panel from 1200 px up, and `MarchSection.tsx` draws the same four blocks itself below that,
+  where the March is the phone's sheet — nothing is on one screen twice. What the pane keeps is the answer:
+  the recap and `PlanSizing`, the pools and the pills, the left-out row, the notices, and the **Plan** fold,
+  because the plan's own assessment *is* the answer. `editingCounts` moved out of `MarchSection`'s local
+  state into `useRunStore` (reset in `start()`), since the switch and the pills it turns into fields are now
+  on opposite sides of the page.
+- **The Objective is locked under Complete optimization.** `planCampaign` declares `objective?: Objective`
+  and never reads it, `buildPlanRequest` never sends one, and `generate.ts` returns the plan before it
+  reaches the priority search — so the command bar's Objective did nothing for that method. `shell/command.ts`
+  gains `OBJECTIVE_LOCKED_REASON` ("The plan weighs damage against what it costs, so it decides this
+  itself.") and `objectiveLocked` (`setup?.options.method === 'plan'`); the desktop Select is `disabled` and
+  points at the sentence with `aria-describedby`, the phone's chip keeps its name, does not open, and is
+  labelled **"Objective: decided by the plan"**. Locking rather than hiding is a **deliberate exception** to
+  §7.4's "hidden, not disabled" and to rule 15 — the objective is the bar's control rather than a rule of one
+  method, so it keeps its place in the tab order's story and says why it cannot be used. The reason is a
+  muted `.barNote` line **above** the fields, beside the existing `.barMessage`, and not a `description` under
+  the field: measured the same day, a line under a field took the bar from 88 px to **119.7 px** and pushed
+  Generate off the row.
+- **Measured, both halves.** The desktop bar is **88 px** with nothing to say and **119.7 px** with one note
+  line, so `--pyr-commandbar-height` (`ui/theme.ts`) went 5.75rem → **7.5rem** and the jsdom fallback in
+  `shell/usePaneFits.ts` went 92 → **112** with it (`MarchPane.test.tsx` asserts `paneRoom()` is
+  `innerHeight − 152`): the pane loses about **28 px** of room at every method, which is the price of the note
+  line. The pane itself, measured with `paneFrame()` (`e2e/helpers.ts`) on a real march at leadership
+  84 300: **771 px against 768 px** of room at 1400×900 before, and **655 px with one warning alert / 553 px
+  without** after, against **740 / 640 / 560 px** at 1400×900 / 1280×800 / 1280×720. So the pane **sticks at
+  1400×900** (`e2e/generate.spec.ts`'s new test) and **still flows at 1280×720** and at 1280×800 with a
+  warning (the flowing test's comment was updated to say so, and that it is what the old `max-height` used to
+  answer with a scrollbar). Partial, not solved: below 1200 px nothing changed at all.
 
 D-02…D-09 are a different list — the TotalStack features we are not building; they keep their own section at
 the end of §5. All are deferred except **D-04 Total Optimization**, done as the opt-in relaxed-preservation
@@ -463,7 +544,7 @@ and M-09. That plan is history now; nothing there is open.
 
 ### 5.4 Counts
 
-68 done, 3 in progress, 6 backlog, 2 deferred, 1 gated, out of 80 stories.
+69 done, 3 in progress, 6 backlog, 2 deferred, 1 gated, out of 81 stories.
 
 Known gaps in the data and the engine: VIP table values and 14 artifact level tables are unknown (hand-typed
 in the UI until contributed); round-to-10s troop counts differ from TotalStack by a few units; the
@@ -650,6 +731,42 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-15 — **S-56: Complete optimization v1 removed.** The owner reviewed the five stacking methods and
+  had `complete` taken off the Battle card: the plan method (S-55) answers the same question one resolution
+  finer — a horizon, a frontier of plans and a march-by-march trade, against a score per sizing × spend level
+  and one Campaign panel — and two methods answering one question at two resolutions is a choice the player
+  should not have to make. The plan method keeps the name **Complete optimization**; the "v2" went with the
+  removal. `METHODS` is `['elite', 'ms', 'custom', 'plan']` and `SCHEMA_VERSION` is 4: the `3 → 4` migration
+  (`dropCompleteMethod`) reads a stored `complete` as `plan` and drops `setup.campaign` from a profile's
+  setups and from a saved stack's setup, so documents and shared stacks written since S-54 keep parsing.
+  `ui/sections/march/campaign.ts`, its test and `CampaignPanel.tsx` are deleted, `MarchSection` no longer
+  draws `CampaignSizing` or `CampaignFold`, and `runStore` loses its `campaign` field; the plan pane
+  (`PlanPanel.tsx`) stays as it is. `src/engine/campaign.ts` is kept deliberately and is no longer reachable
+  from the app — it is the instrument experiments 22, 23 and 48 measure with. The two card fields left with
+  the method, so the horizon and the silver policy live in `src/config.ts` alone (`CAMPAIGN.marches` 10, read
+  by `derive.ts` as `marchTarget`, `CAMPAIGN.planAlternatives` 4, `budgets.search` / `budgets.plan`;
+  `maxMarches` and `budgets.complete` deleted) — the file the owner asked for on 2026-09-15, now the only
+  place either number is set. Same pass: §7 of `docs/design.md` (four method rows, the campaign-field rows
+  gone), the walkthrough's fifth try, and investigation 0018's note on where the horizon is asked for. Two
+  quiet defects found and left open: `plan.ts:79` declares `objective?: Objective` and never reads it, so the
+  command bar's Objective select does nothing when the plan method is chosen, and `plan.ts`'s header comment
+  is stale about `simulateBattle`.
+- 2026-09-14 — **Investigation 0016, the march optimised** (`docs/investigations/0016-march-optimization.md`,
+  scripts `45`–`50` and their outputs under `tools/theorycraft/`). Five experiments, all engine-scored, all
+  under scenario **C** — the bonuses the owner's 2026-09-14 report was fought with (+159 %/+189 % guardsmen
+  with a +2/+1 category top-up), which that report fixes exactly and which 0015's scenario B had superseded.
+  Findings: the ledger (damage = Σ hits(p) · k_u · HP_p, k a per-type constant) makes a march predictable,
+  and the exact optimum is `RD3 582 · EMH6 92 · ARC2 1,519 · RD2 761 · LGN6 72 · CHR6 36 · ABT6 71 · SP2 138`
+  = **8,338,153**, +5.8 % on 0015's reference, found independently by two searches (a third stalled 2.1 %
+  short because the average-damage objective is a staircase and a count climb sees no gradient); a **tail**
+  stack below the mercenaries pays (+0.82 %, −10,800 silver) and corrects 0015 §6.2's "extra leadership is
+  the worst buy"; procs are +4.85 % and **not steerable** (0.00 %) while the app's min→max is +10.2 % and
+  free; re-optimising per monster beats the fixed march (+4.4 % three squads, +18.1 % no ranged) and a melee
+  squad is worth exactly nothing; and a **mercenaries-only march costs no silver at all**, which is what
+  makes ten marches reachable from a 1.1 M purse. Corrected here: 0015's mercenary-order rule and "round
+  counts to tens" are local rules (the optimum mixes, EMH6 at its cap on a one-hit rung). Engine follow-ups
+  E1–E6 in §9 (count hill-climb after sizing, tails as a sizing choice, mercenaries above troops, the proc
+  band, unrounded enemy lines, the survival note). Evidence table and the decisive in-game tests in §8.
 - 2026-09-14 — **Investigation 0015, theory-crafting the march** (`docs/investigations/0015-theorycraft.md`,
   scripts and outputs under `tools/theorycraft/`). Two owner corrections folded in: authority is 2,000 (the
   export's 200 was a typo) and Kai's calculator export plus its in-game report — which the engine replays

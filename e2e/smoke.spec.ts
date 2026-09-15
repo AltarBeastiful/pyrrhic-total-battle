@@ -11,9 +11,11 @@ import {
   fillHousing,
   generateControl,
   housingValue,
+  marchFoot,
   marchPane,
   openAccountMenu,
   openApp,
+  paneFrame,
   recapSummary,
   renameProfile,
   SETUP_TITLES,
@@ -84,6 +86,20 @@ test('the answer and Generate travel together: pane on a desktop, bottom bar on 
   expect(frame.scrolls).toBe(false);
   expect(frame.pinned, 'nothing inside the pane may stick on its own').toBe(0);
 
+  // Nothing *in* the pane is a scroll of its own either: the wheel over the March is the page's
+  // (design rule 17, owner 2026-09-15: "always avoid scroll bars on the battle summary"). An empty
+  // March is the case that fits; `generate.spec.ts` checks the one that does not.
+  const pane = await paneFrame(page);
+  expect(pane.scrollers).toEqual([]);
+  // And the sticking pane starts on the first setup card's line (owner, 2026-09-15: "the battle
+  // summary is slightly below the troop selection form" — the other state, where `top` is not a
+  // sticky offset but an offset, is checked in `generate.spec.ts`).
+  expect(pane.top, 'the pane does not start on the first setup card’s line').toBe(pane.setupTop);
+
+  // The March's second half is the setup column's last panel at this width, and the sheet's copy of
+  // it is not drawn — the two hosts are mutually exclusive (owner, 2026-09-15).
+  await expect(marchFoot(page)).toHaveCount(1);
+
   // 390 px: one column, and the answer moves into the Material bottom app bar with Generate.
   await page.setViewportSize(PHONE);
   await expect(marchPane(page)).toHaveCount(0);
@@ -93,6 +109,8 @@ test('the answer and Generate travel together: pane on a desktop, bottom bar on 
   // Tapping the summary opens the March sheet; the bar stays under it (investigation 0009), and the
   // March is in the sheet rather than in the page a second time (design rule 5).
   await expect(page.locator('#march')).toHaveCount(0);
+  // One column, so there is no foot: what it holds is in the sheet with the rest of the March.
+  await expect(marchFoot(page)).toHaveCount(0);
   await recapSummary(page).click();
   const sheet = page.getByRole('dialog', { name: 'March' });
   await expect(sheet).toBeVisible();

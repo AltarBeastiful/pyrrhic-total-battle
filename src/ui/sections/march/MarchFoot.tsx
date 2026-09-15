@@ -1,0 +1,255 @@
+/**
+ * The March's second half (owner, 2026-09-15): everything that *explains* the answer, or acts on the
+ * whole march, rather than being the answer. On a desktop these four blocks sit at the foot of the
+ * setup column so the March pane stays shorter than it — which is what lets the pane stick
+ * (`shell/usePaneFits.ts`: a pane that does not fit the room the window leaves it gives up the stick).
+ * Measured the same day: the pane was **771 px against 768 px of room at 1400×900**, so it did not
+ * stick at any window size.
+ *
+ * **Two hosts, never both.** The blocks below are placed by `MarchFoot` when the pane is drawn, and by
+ * `MarchSection` when the March is the phone's sheet (`!twoPanes`) — the same flag `MarchSection`
+ * already switches its composition on, so "the March is written once" is the guarantee the single
+ * Generate already relies on (design rule 5). Nothing here is drawn twice on one screen at any width.
+ *
+ * What stays in the pane is what the pane is *for*: the figures, the army, what it left at home, the
+ * plan's own assessment (`PlanSizing`, `PlanFold`). What moves down here is reference and
+ * whole-march actions — the objective comparison, the battle story, the HP profile, the saved list,
+ * and the row that copies, edits, saves or shares the counts.
+ */
+import { Button, Group, Stack, Text } from '@mantine/core';
+import { Share2 } from 'lucide-react';
+import { lazy, useState } from 'react';
+
+import { version as gameData } from '@/data';
+import type { BonusKey, SpecialKey } from '@/engine/types';
+import { buildBattleLink } from '@/share/codec';
+import { newSavedStack } from '@/state/defaults';
+import type { SavedStack } from '@/state/schema';
+import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { Disclosure, Panel, Sections } from '@/ui/kit';
+import { LazySurface } from '@/ui/lazy';
+import { copyText } from '@/ui/profile/download';
+import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
+import { MARCH_FOOT_ANCHOR } from '@/ui/shell/march';
+
+import { MarchCountsBar } from './MarchPills';
+import classes from './march.module.css';
+import { amount } from './format';
+import { TradeoffStrip } from './TradeoffStrip';
+import { useRunStore } from './runStore';
+import { useMarch } from './useMarch';
+
+// Three surfaces nobody sees until they ask for them, each heavy in its own way: the journal, the HP
+// chart, the saved marches and the dialog that names one (ui-foundation plan §6). Saving a march and
+// opening the list share one fetch.
+const BattleStory = lazy(() => import('./BattleStory').then((module) => ({ default: module.BattleStory })));
+const HpProfile = lazy(() => import('./HpProfile').then((module) => ({ default: module.HpProfile })));
+const SavedMarchesPanel = lazy(() =>
+  import('./SavedMarches').then((module) => ({ default: module.SavedMarchesPanel })),
+);
+const MarchNameDialog = lazy(() =>
+  import('./SavedMarches').then((module) => ({ default: module.MarchNameDialog })),
+);
+
+/** Saved marches keep the aggregated bonus maps; the zeroes would triple the stored document. */
+function stripZeros<K extends string>(map: Record<K, number>): Partial<Record<K, number>> {
+  const out: Partial<Record<K, number>> = {};
+  for (const [key, value] of Object.entries(map) as [K, number][]) {
+    if (value !== 0) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * What the objective bought, in the three shapes investigation 0013 §5 asks for. One part of its own,
+ * and the tallest block the pane used to carry (~280 px measured).
+ */
+export function MarchObjectives() {
+  const tradeoff = useRunStore((state) => state.tradeoff);
+  if (tradeoff === null) return null;
+  return <TradeoffStrip tradeoff={tradeoff} />;
+}
+
+/** The battle story and the HP profile: reference, read once, so it stays folded (design rule 4). */
+export function MarchDetailsFold() {
+  const { snapshot, result, summary } = useMarch();
+  const [open, setOpen] = useState(false);
+  if (snapshot === null || result === null || summary === null) return null;
+  return (
+    <Disclosure
+      title="Details"
+      summary="The battle story and the HP profile"
+      opened={open}
+      onChange={setOpen}
+    >
+      <LazySurface isOpen={open} reserve="panel">
+        <Stack gap="md">
+          <BattleStory request={snapshot.request} summary={summary} />
+          <HpProfile stacks={result.stacks} units={snapshot.request.units} />
+        </Stack>
+      </LazySurface>
+    </Disclosure>
+  );
+}
+
+/** Yesterday's marches, kept in the profile. Draws before the first Generate too — it is where the
+ * list is discovered at all. */
+export function MarchSavedFold() {
+  const profile = useStore(selectActiveProfile);
+  const [open, setOpen] = useState(false);
+  if (profile === undefined) return null;
+  return (
+    <Disclosure
+      title="Saved marches"
+      summary={
+        profile.savedStacks.length === 0 ? 'Nothing saved yet' : `${amount(profile.savedStacks.length)} saved`
+      }
+      opened={open}
+      onChange={setOpen}
+    >
+      <LazySurface isOpen={open} reserve="panel">
+        <SavedMarchesPanel profile={profile} />
+      </LazySurface>
+    </Disclosure>
+  );
+}
+
+/**
+ * The things a player does with a whole march: copy every count, edit them by hand, keep the march,
+ * send it. One part, because they are one kind of thing.
+ *
+ * The edit mode it switches lives in the run store, not here: the stack pills it turns into fields are
+ * in the March pane on the other side of the page (`runStore.ts`, `editingCounts`).
+ */
+export function MarchActions() {
+  const march = useMarch();
+  const setup = useStore(selectActiveSetup);
+  const editing = useRunStore((state) => state.editingCounts);
+  const setEditing = useRunStore((state) => state.setEditingCounts);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState('');
+  const { snapshot, result, summary } = march;
+
+  const saveMarch = (name: string): void => {
+    if (!setup || snapshot === null || result === null || summary === null) return;
+    const state = useStore.getState();
+    const saved: SavedStack = {
+      ...newSavedStack(name, setup, state.doc.deviceId),
+      totals: {
+        health: stripZeros<BonusKey>(snapshot.request.totals.health),
+        strength: stripZeros<BonusKey>(snapshot.request.totals.strength),
+        special: stripZeros<SpecialKey>(snapshot.request.totals.special),
+      },
+      counts: resultCounts(result),
+      summary: toSavedSummary(summary),
+      dataVersion: gameData.dataVersion,
+    };
+    state.addSavedStack(saved);
+    setSaving(false);
+  };
+
+  const share = (): void => {
+    if (!setup || result === null || summary === null) return;
+    const baseUrl = typeof window === 'undefined' ? '' : window.location.href;
+    void buildBattleLink(setup, resultCounts(result), toSavedSummary(summary), {
+      baseUrl,
+      dataVersion: gameData.dataVersion,
+    })
+      .then(copyText)
+      .then((ok) => {
+        setNotice(ok ? 'Link copied' : 'The link could not be copied');
+      })
+      .catch(() => {
+        setNotice('The link could not be built');
+      });
+  };
+
+  if (snapshot === null || result === null || summary === null) return null;
+
+  return (
+    <Stack gap="sm">
+      <Group gap="sm" wrap="wrap">
+        <MarchCountsBar
+          countRows={march.rows}
+          editing={editing}
+          onEditing={setEditing}
+          edited={march.edited}
+          onUndo={() => {
+            useResultStore.getState().resetCounts();
+          }}
+        />
+        {/* Generate is the one filled control on this page (docs/design.md §1). */}
+        <Button
+          size="compact-sm"
+          variant="default"
+          onClick={() => {
+            setSaving(true);
+          }}
+        >
+          Save this march
+        </Button>
+        <Button
+          size="compact-sm"
+          variant="default"
+          leftSection={<Share2 size={14} aria-hidden />}
+          onClick={share}
+        >
+          Share
+        </Button>
+        <Text span role="status" className={classes.meta} c="dimmed">
+          {notice}
+        </Text>
+      </Group>
+      {march.edited && (
+        <Text className={classes.meta} c="dimmed">
+          Counts edited by hand. The figures are recomputed on them; nothing is re-sized, so the housing is
+          yours to balance.
+        </Text>
+      )}
+      {saving && (
+        <LazySurface isOpen={saving}>
+          <MarchNameDialog
+            opened={saving}
+            title="Save this march"
+            description="It is kept inside the active profile, with the march it came from."
+            confirmLabel="Save this march"
+            initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
+            onConfirm={saveMarch}
+            onCancel={() => {
+              setSaving(false);
+            }}
+          />
+        </LazySurface>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * The foot of the setup column: the March's second half as one panel, in the order a player reads it
+ * — what the objective bought, then what happened, then what is saved, then what to do with it.
+ *
+ * It draws from the first load, before any march has been run: the saved list is where "nothing saved
+ * yet" is discovered, and the other three parts take their hairline with them when they have nothing
+ * to say (`kit/Sections.tsx`).
+ */
+export function MarchFoot() {
+  return (
+    <Panel
+      component="section"
+      id={MARCH_FOOT_ANCHOR}
+      title="This march in full"
+      titleId={`${MARCH_FOOT_ANCHOR}-title`}
+    >
+      {/* The four blocks are the *direct* children on purpose: a part that has nothing to say
+          renders nothing, and takes its hairline and its 16 px with it (`kit/Sections.tsx`). A
+          wrapper `<div>` would leave an empty part behind. */}
+      <Sections>
+        <MarchObjectives />
+        <MarchDetailsFold />
+        <MarchSavedFold />
+        <MarchActions />
+      </Sections>
+    </Panel>
+  );
+}

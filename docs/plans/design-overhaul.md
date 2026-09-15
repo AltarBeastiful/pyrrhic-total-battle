@@ -167,7 +167,7 @@ a published rationale and a worker can check it (owner's request, 2026-09-12). M
 | M3 concept | What we do |
 |---|---|
 | Window size classes | compact < 600 · medium 600–839 · expanded 840–1199 · large 1200–1599 · extra-large ≥ 1600. Tailwind: `sm` 640 ≈ medium, `xl` 1280 ≈ large (documented offset; we do not redefine Tailwind's breakpoints). |
-| Canonical layout | **Supporting pane**: focus pane = setup (Army, Bonuses, Battle), supporting pane = March, 360 dp, trailing, shown from **large**; the phone's sheet below that (one column). Never two independent scrollers: *(amended 2026-09-13, investigation 0011 — the pane held 1 787 px in an 836 px window and scrolled inside itself)* only the pane's **header** is sticky under the top app bar, carrying the recap and Generate, and the rest of the March flows with the page. Design rule 17. |
+| Canonical layout | **Supporting pane**: focus pane = setup (Army, Bonuses, Battle), supporting pane = March, 360 dp, trailing, shown from **large**; the phone's sheet below that (one column). Never two independent scrollers: *(amended 2026-09-13, investigation 0011 — the pane held 1 787 px in an 836 px window and scrolled inside itself)* the March's tail flows with the page rather than inside a scroll of its own. *(Amended again 2026-09-15: the **whole pane** is the sticky element, and only while the March fits the room the window leaves it above the command bar — `shell/usePaneFits.ts`; the March's explaining half moved to the foot of the setup column, §5.5 and §7.5, and the pane is 504 px.)* Design rule 17. |
 | Margins and spacers | 16 dp margins at compact, 24 dp from medium; 24 dp spacer between panes; content max width 1600 dp. |
 | Top app bar | Small top app bar, 64 dp, sticky (M3 "pinned" scroll behaviour): leading brand mark, headline area used for the live answer (figures + troop recap tiles), trailing actions = Generate (large and up) and the account avatar. |
 | FAB | Extended FAB (56 dp, icon + label) at compact/medium/expanded, bottom-trailing, 16 dp from edges plus safe area; label collapses on scroll down (M3 behaviour); **hidden from large** where Generate sits in the app bar (M3: one FAB, never duplicated). |
@@ -203,8 +203,9 @@ phone (< 1200): one column; bottom app bar (64 px, sticky):
 │ 19.6M · 34.3M silver  ⚔12.8k 🏹12.8k +8 ˄     [⚔ Generate] │  tap the summary → recap sheet (half height)
 ```
 
-- **Desktop (large and up):** setup as the focus pane on the left; the March as the 360 dp supporting pane on
-  the right, sticky under the app bar, its header holding the recap figures and the primary Generate.
+- **Desktop (large and up):** setup as the focus pane on the left; the March as the supporting pane on the
+  right, sticky under the app bar while it fits the room the window leaves it (amended 2026-09-15, §5.5),
+  holding the recap figures and the primary Generate.
 - **Phone and tablet:** one column; a **Material bottom app bar** carries the quick summary (expected damage,
   silver, up to four tiny troop tiles, ellipsis when short of room) and Generate; tapping the summary opens a
   half-height bottom sheet with the full recap (figures, per-pool stacks with counts, left-out types). No
@@ -250,12 +251,18 @@ one soft shadow), a gold Generate, dense rows, Inter throughout with Fraunces fo
 counts. The owner's one correction: the march recap must be *readable*, not compact — it follows
 TotalStack's pills: the pool total in the pool colour with its glyph ("20 000 🛡️"), then two-line pills
 (glyph, code and tier on top; the count large below) **coloured by tier** (grey I, green II, blue III,
-violet IV, then the mercenary tier colours V–IX), five per row in the pane, three on phones. The full battle
+violet IV, then the mercenary tier colours V–IX), four per row in the pane, three on phones. The full battle
 report stays folded in Details for now (owner: "not sure, let's stick with it"). Implementation matches the
 artboards with a page-level pixel diff as the gate (story D-55). **Desktop stickiness (owner, later the same
-day, revised twice):** the whole March column is the sticky element — recap, pills, left-out row, actions,
-the folded Details and Saved marches — so nothing in it is ever overlapped; it scrolls inside itself only
-when taller than the window (Details open, or beyond ~16 stacks). Generate now lives in the command bar.
+day, revised twice, and again 2026-09-15):** the whole March column is the sticky element — the answer
+(recap, pools and pills), the left-out row, the notices and the plan's own fold — so nothing in it is ever
+overlapped, and **it never scrolls inside itself**. It sticks while the March fits the room the window leaves
+it above the command bar and travels with the page once it does not (design rule 17, `shell/usePaneFits.ts`);
+giving it a scroll of its own is the second scroller rule 17 forbids. What used to make it too tall to fit —
+the objective comparison, the battle story and the HP profile, the saved marches and the action row — is now
+the last panel of the *setup* column, **"This march in full"** (`#march-foot`), and below 1200 px the March
+sheet carries the same blocks instead (owner, 2026-09-15). Generate now lives in the command bar, whose
+reserve is its tallest state (7.5rem) so the locked Objective's line cannot change the room the pane gets.
 
 ## 5.6 Command bar (owner's choice, 2026-09-13, after seeing TotalStack's update)
 
@@ -449,8 +456,18 @@ of cards and a select; the whole option must be the target).
   after troops · Monsters after mercenaries · Hired units in tens), each a full-width row: label, one-line
   supporting text, trailing switch; the whole row toggles. Toggles that do not apply to the chosen method are
   hidden, not disabled.
+- **One deliberate exception to that rule** (owner, 2026-09-15): the command bar's **Objective** select is
+  *disabled* while **Complete optimization** is chosen, and the reason shows under the field (the phone's chip says it in the bar's own note line instead) —
+  "The plan weighs damage against what it costs, so it decides this itself." The objective is the bar's own
+  control rather than a rule of one method: it is typed in for every method of four, so hiding it for one of
+  them would move a control the player knows the place of. Disabling it and naming the reason keeps both the
+  place and the honesty (rule 15 is answered by the sentence, not by the absence), and the reason reaches a
+  screen reader with the control — `aria-describedby` on the select, `aria-label="Objective: decided by the
+  plan"` on the phone's chip — because a disabled control fires no hover and a tooltip alone would hide the
+  one thing the player needs to read.
 - **Objective**: an M3 single-select list as well (Highest average damage / Best worst case / Damage per silver
-  / per gold / per dragon coin), collapsed to the chosen item with a "Change" affordance on phones.
+  / per gold / per dragon coin), collapsed to the chosen item with a "Change" affordance on phones. It lives
+  in the command bar since D-56 (§5.6).
 
 Desktop: enemy and housing on one row, method list and options side by side under it; phone: stacked. Every
 number here is a stepper; every choice is a full-row target.
@@ -458,7 +475,14 @@ number here is a stepper; every choice is a full-row target.
 ### 7.5 March (results)
 
 **Amended 2026-09-12 (owner):** the most useful things come first, and the army shown is also the form to
-change it. Order inside the card:
+change it. **Amended again 2026-09-15 (owner):** the March is split in two. The pane — or the sheet, below
+1200 px — keeps the answer: the recap, the tiles, the pills, the left-out row and the plan's own fold
+(`PlanSizing`, `PlanFold`), because the plan's assessment *is* the answer. Everything that explains the
+answer or acts on the whole march — items 4 to 6 — is the last panel of the **setup** column on a desktop,
+**"This march in full"** (`#march-foot`), and stays in the sheet where there is no column to put it in. That
+is what makes the pane short enough to stick (design rule 17, §5.5). Order inside the two:
+
+**The pane (the answer).**
 
 1. **Recap line**: average and minimum damage, silver and gold to recover, damage per silver — the figures a
    player compares marches by — with the delta against the previous run. The expected damage is the hero, set
@@ -477,11 +501,21 @@ change it. Order inside the card:
    16 px glyph, its own target, never nested in the pill's — opens the unit sheet; and **"Copy all counts" is
    the copy control**, the one copy on the page, beside "Edit counts". There is no tap-to-copy on a pill and no
    long press: one gesture, one meaning (the count is still selectable text). Manual editing is the explicit
-   "Edit counts" mode (each count becomes a field in place, the recap recomputes live, Undo appears).
-4. **Compared with all types**: a two-column strip, only when the search left types out.
+   "Edit counts" mode (each count becomes a field in place, the recap recomputes live, Undo appears); the
+   control itself sits at the foot with the actions (item 6), and the mode it switches is run state, not
+   pane state, because the pills it turns into fields are on the other side of the page.
+
+**The foot of the setup column — "This march in full" (`#march-foot`) on a desktop, the March sheet below
+1200 px.**
+
+4. **Compared with all types** (the "Objectives compared" strip): a two-column strip, only when the search
+   left types out. The tallest block the pane used to carry, ~280 px measured.
 5. **Details, folded by default**: the battle story (narrative, raw journal behind a further toggle) and the
    HP profile chart. The order stacks fall in is here, not above the fold.
-6. Actions at the bottom: Save this march · Share.
+6. Actions at the foot: **Copy all counts / Edit counts** with Undo, then **Save this march** and **Share** —
+   and, over them, the fold of saved marches, drawn from the first load because that panel is where the list
+   is discovered at all. In the panel the four read in that order: what the objective bought, what happened,
+   what is saved, what to do with it.
 
 ### 7.6 The unit sheet (replaces the popover, R9)
 

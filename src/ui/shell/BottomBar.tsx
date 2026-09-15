@@ -34,7 +34,14 @@ import { Glyph } from '@/ui/domain';
 import { ChoiceList } from '@/ui/kit';
 import { amount, MarchGenerateButton, MarchQuickSummary } from '@/ui/sections/march';
 
-import { OBJECTIVE_CHOICES, POOL_LABELS, POOL_SHORT, POOLS, useCommandBar } from './command';
+import {
+  OBJECTIVE_CHOICES,
+  OBJECTIVE_LOCKED_REASON,
+  POOL_LABELS,
+  POOL_SHORT,
+  POOLS,
+  useCommandBar,
+} from './command';
 import classes from './shell.module.css';
 import { useBarForm } from './useGenerateRun';
 
@@ -49,7 +56,8 @@ export interface BottomBarProps {
 }
 
 export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
-  const { housing, priority, objectiveTitle, problems, message, setPool, setObjective } = useCommandBar();
+  const { housing, priority, objectiveTitle, objectiveLocked, problems, message, setPool, setObjective } =
+    useCommandBar();
   const form = useBarForm();
 
   return (
@@ -61,6 +69,9 @@ export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
           {message}
         </p>
       )}
+      {/* Why the objective chip is locked, in the bar's own line above the chips. A note, not an
+          alert: nothing has gone wrong. */}
+      {objectiveLocked && <p className={classes.barNote}>{OBJECTIVE_LOCKED_REASON}</p>}
       {housing !== null && (
         <div className={classes.housingRow}>
           {POOLS.map((pool) => (
@@ -74,7 +85,12 @@ export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
               }}
             />
           ))}
-          <ObjectiveChip value={priority} title={objectiveTitle} onChange={setObjective} />
+          <ObjectiveChip
+            value={priority}
+            title={objectiveTitle}
+            locked={objectiveLocked}
+            onChange={setObjective}
+          />
         </div>
       )}
       <div className={classes.answerRow}>
@@ -181,6 +197,8 @@ function HousingChip({ pool, value, problem, onChange }: HousingChipProps) {
 interface ObjectiveChipProps {
   value: string;
   title: string;
+  /** True while the plan decides the objective: the chip reads, says why, and does not open. */
+  locked: boolean;
   onChange: (value: string) => void;
 }
 
@@ -188,8 +206,14 @@ interface ObjectiveChipProps {
  * The fourth chip: what this Generate is aiming at, by name, with the chevron that opens the five
  * objectives as rows (design rule 8). A bare chevron was a control with no label at all — the
  * review of 2026-09-13 could not tell what it opened without pressing it.
+ *
+ * While the plan method is chosen the chip is locked (owner, 2026-09-15). The reason cannot live in a
+ * tooltip and cannot live in the popover — a disabled control fires no hover, and this one does not
+ * open — so it goes in the bar's note line, and the chip's own accessible name carries it as well,
+ * the way Generate's does (`MarchGenerateButton.tsx`): *"a disabled button fires no hover, so a
+ * tooltip alone would hide the one thing the player needs to read."*
  */
-function ObjectiveChip({ value, title, onChange }: ObjectiveChipProps) {
+function ObjectiveChip({ value, title, locked, onChange }: ObjectiveChipProps) {
   const [opened, setOpened] = useState(false);
 
   return (
@@ -206,9 +230,12 @@ function ObjectiveChip({ value, title, onChange }: ObjectiveChipProps) {
         <UnstyledButton
           type="button"
           className={classes.objectiveChip}
-          aria-label={`Objective: ${title}`}
+          aria-label={locked ? 'Objective: decided by the plan' : `Objective: ${title}`}
           aria-expanded={opened}
+          disabled={locked}
+          aria-disabled={locked}
           onClick={() => {
+            if (locked) return;
             setOpened((open) => !open);
           }}
         >

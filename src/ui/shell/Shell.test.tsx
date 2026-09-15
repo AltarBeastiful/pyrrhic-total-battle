@@ -63,6 +63,9 @@ vi.mock('@/ui/sections/march', () => ({
     </section>
   ),
   MarchRecap: (): ReactNode => <p>recap</p>,
+  // The March's second half: the frame draws it as the setup column's last panel at this width, and
+  // the section draws it for the phone's sheet instead (owner, 2026-09-15).
+  MarchFoot: (): ReactNode => <section id="march-foot" aria-label="This march in full" />,
   MarchQuickSummary: (): ReactNode => <span>quick summary</span>,
   MarchGenerateButton: ({ size }: { size?: string }): ReactNode => (
     <button type="button">Generate {size ?? 'md'}</button>
@@ -261,7 +264,7 @@ test('at 1400 px the March is the supporting pane, carrying the recap and no Gen
   const setup = [...container.querySelectorAll('main section[id]')]
     .filter((node) => pane.contains(node) === false)
     .map((node) => node.id);
-  expect(setup).toEqual(['troops', 'mercenaries', 'bonuses', 'battle']);
+  expect(setup).toEqual(['troops', 'mercenaries', 'bonuses', 'battle', 'march-foot']);
 });
 
 test('at 1400 px the command bar is wells and a select, and the only Generate on the page', () => {

@@ -1,0 +1,56 @@
+{
+ "note": "A second TotalStack optimize answer, handed over by the owner 2026-09-15 (createdAt 2026-09-15T13:43:13.735Z). Leadership 4,000 by our own costs (measured 3,999). The request is not in the capture \u2014 only the answer and the seeds \u2014 so the caps it was asked under are inferred from the counts it returned.",
+ "capturedAt": "2026-09-15",
+ "endpoint": "https://totalstack.ca/api/calculations/optimize",
+ "response": {
+  "calculation": {
+   "inputValue": 4000,
+   "dominanceValue": null,
+   "authorityValue": 2000,
+   "guardsmenMinTier": 1,
+   "guardsmenMaxTier": 3,
+   "specialistMinTier": 1,
+   "specialistMaxTier": 1,
+   "monsterMinTier": 3,
+   "monsterMaxTier": 0,
+   "guardsmenPct": 80,
+   "specialistPct": 20,
+   "engineerMinTier": 1,
+   "engineerMaxTier": 0,
+   "rangedPct": 25,
+   "meleePct": 25,
+   "mountedPct": 25,
+   "flyingPct": 0,
+   "troopCounts": {
+    "archer-1": 616,
+    "spearman-1": 614,
+    "rider-1": 308,
+    "archer-2": 341,
+    "spearman-2": 342,
+    "rider-2": 170,
+    "rider-3": 94,
+    "swordsman-1": 942
+   },
+   "monsterCounts": {},
+   "mercenaryCounts": {
+    "chariot-6": 7,
+    "epic-monster-hunter-6": 14,
+    "legionary-6": 16,
+    "arbalester-6": 15
+   },
+   "id": 0,
+   "userId": null,
+   "isOptimized": true,
+   "createdAt": "2026-09-15T13:43:13.735Z"
+  },
+  "excludedTroopIds": [],
+  "excludedMonsterIds": [],
+  "selectedMercenaryIds": [
+   "epic-monster-hunter-6",
+   "arbalester-6",
+   "legionary-6",
+   "chariot-6"
+  ],
+  "customMercenaryIds": []
+ }
+}

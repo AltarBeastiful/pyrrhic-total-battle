@@ -2,8 +2,8 @@
  * The job bodies, shared by the worker and by the main-thread fallback so both compute exactly the
  * same thing. Everything here is pure: the transport lives in `calc.worker.ts` / `client.ts`.
  */
-import { searchComplete, searchPriority, simulateBattle, sizeStacks } from '@/engine';
-import type { CompleteRequest, CompleteResult } from '@/engine/campaign';
+import { planCampaign, searchPriority, simulateBattle, sizeStacks } from '@/engine';
+import type { CampaignInput, CampaignPlan } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, SearchResult, StackRequest } from '@/engine/types';
 
 import type { StackOutcome } from './protocol';
@@ -28,10 +28,10 @@ export function runSearch(request: SearchRequest, context: JobContext): SearchRe
 }
 
 /**
- * Complete optimization (S-54): every sizing × every mercenary spend level, scored over a campaign of
- * several marches. Time-boxed and cancellable exactly like the priority search — it is the same
- * contract, and the budget is split across the cells inside the engine.
+ * Complete optimization v2 (S-55): the campaign planned from the army alone. Not time-boxed — it reports no
+ * progress, because every candidate is scored whole and the answer is one plan rather than a ranked list —
+ * but it is cancellable at a candidate boundary, which is what the Cancel button needs.
  */
-export function runComplete(request: CompleteRequest, context: JobContext): CompleteResult {
-  return searchComplete(request, context.onProgress, context.cancelled);
+export function runPlan(request: CampaignInput, context: JobContext): CampaignPlan {
+  return planCampaign({ ...request, shouldStop: context.cancelled });
 }

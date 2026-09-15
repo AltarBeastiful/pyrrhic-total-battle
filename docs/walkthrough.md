@@ -15,12 +15,24 @@ preview`), not the dev server.
 4. **A different answer.** Notice a unit type left out of the march, put it back — the march re-sizes on
    the spot, with no Generate — take another one out, then Generate and watch it start again from the
    solver's own answer. Compare against the previous run, undo. Try the worst-case and per-silver
-   objectives against the average.
-5. **Plan a campaign.** In Battle, choose **Complete optimization**, leave "Marches planned" at ten (or
-   type a silver budget), Generate. The March says what sized it — "Sized as Troops first, with damage
-   trades" — and the folded **Campaign** section holds the totals, one row per march, and the plans it
-   beat, including what fielding fewer mercenaries each time would have given you.
-6. **Share it.** Send a march to yourself, open the link on the other device, save a copy.
+   objectives against the average — the Objective is in the command bar at the bottom of the page, not in
+   the Battle card. Under **Complete optimization** it is the one exception: the plan weighs damage against
+   what it costs itself, so the Objective is greyed out and the line above the fields says why.
+5. **Plan a campaign.** In Battle, choose **Complete optimization** and Generate — there is nothing else to
+   fill in: how many marches a plan is fought over and what it may spend are numbers the app holds
+   (`src/config.ts`), not fields on the card, and the Objective is locked, as in 4. The March says in words
+   what it planned — how many identical marches and the stacks each one fields, then where the plan sits on
+   the trade — and the folded **Plan** section holds the thesis in prose, a bar with a marker on the sweet
+   spot (and the control back to it), and the trade itself: one row per plan kept, what a march of it hits
+   for, costs in silver and burns of the hired stock, with damage per silver and per mercenary beside them.
+   The rest of the March's second half is **not in the pane on a desktop**: the comparison with all types,
+   the battle story and the HP chart, your saved marches and the row that copies, edits, saves or shares the
+   counts are together at the end of the **left** column, under **"This march in full"**. On a phone there is
+   no left column, so the March sheet carries all of it. Watch the right-hand pane while you scroll: it is
+   meant to come with you when the march fits the window it has, and to travel with the page when it does not.
+6. **Share it.** Send a march to yourself, open the link on the other device, save a copy. **Share** and
+   **Save this march** are in "This march in full" on a desktop (the March sheet on a phone), beside the
+   counts row.
 7. **Start from nothing.** New profile, configure it as a new player would. Does every empty card tell you
    what to do next?
 8. **The account menu.** Switch profile, duplicate, rename, export, import, change the theme.
@@ -32,8 +44,10 @@ preview`), not the dev server.
 particular: the answer and Generate stay together and visible (1, 2, 5); the form is the summary and whole
 rows are targets (6, 8); troops and mercenaries readable together (14); typed numbers select on touch (9);
 nothing on screen without value (15); nothing too big or under 13 px (19); colour means group or tier only
-(20); our own words (26). Investigation 0011 measured all 34 on screenshots — this is the same question
-asked with your thumbs.
+(20); our own words (26). One deliberate exception to rule 15 is on the page to judge too: under **Complete
+optimization** the Objective stays in the command bar greyed out, with one muted line above the fields saying
+the plan decides it itself (4, 5) — judge whether that line earns the ~28 px of pane room it costs.
+Investigation 0011 measured all 34 on screenshots — this is the same question asked with your thumbs.
 
 ## Where to write what you find
 

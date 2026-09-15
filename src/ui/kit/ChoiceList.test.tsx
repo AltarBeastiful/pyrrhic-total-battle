@@ -55,8 +55,16 @@ function Example() {
 test('every choice is a radio with its title as the name, and one is chosen', () => {
   renderWithTheme(<Example />);
   expect(screen.getAllByRole('radio')).toHaveLength(3);
-  expect(screen.getByRole('radio', { name: /Tier ladder/ }).getAttribute('aria-checked')).toBe('true');
+  // The row shape (jsdom answers `false` to every media query, which is the phone) names its control
+  // by the title **alone** and hangs the sentence off it as a description — the same contract the
+  // card has, and the one a browser's accessibility tree needs: on the built app, a row written
+  // without it comes out as a bare `radio` with no name at all.
+  const row = screen.getByRole('radio', { name: 'Tier ladder' });
+  expect(row.getAttribute('aria-checked')).toBe('true');
   expect(screen.getByText('Fill from the top tier down.')).toBeTruthy();
+  expect(document.getElementById(row.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+    'Fill from the top tier down.',
+  );
 });
 
 test('the arrows move through the list and choose as they go', async () => {

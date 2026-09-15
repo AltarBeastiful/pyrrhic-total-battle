@@ -73,8 +73,9 @@ export type {
   UnitDef,
 } from './types';
 
-// S-54 — complete optimization (one army, several marches). Appended last so it never collides with the
-// rest of the file.
+// S-54 — the campaign simulator (one army, several marches). No longer a method the app can choose: removed
+// from the Battle card by S-56 (2026-09-15) and kept as the instrument the theorycraft experiments measure
+// with (`tools/theorycraft/22`, `23`, `48`). Appended last so it never collides with the rest of the file.
 export {
   campaignScore,
   clampSpend,
@@ -95,3 +96,9 @@ export type {
   CompleteRequest,
   CompleteResult,
 } from './campaign';
+
+// S-55 — the plan method (`plan.ts`): the campaign planned from the army alone, drawn on the Battle card as
+// Complete optimization since S-56 dropped the "v2". Names are prefixed with Plan to stay clear of S-54's
+// Campaign* exports.
+export { DEFAULT_GAP, planCampaign, marchResult as planMarch } from './plan';
+export type { CampaignInput, CampaignPlan, PlanMarch, PlanTotals } from './plan';

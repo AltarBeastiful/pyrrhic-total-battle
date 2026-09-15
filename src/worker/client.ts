@@ -5,10 +5,10 @@
  * browser, jsdom, a Node script) or constructing one throws, it transparently falls back to the same
  * jobs on the main thread. Callers get one interface and never branch on it.
  */
-import type { CompleteRequest, CompleteResult } from '@/engine/campaign';
+import type { CampaignInput, CampaignPlan } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, StackRequest, SearchResult } from '@/engine/types';
 
-import { runComplete, runSearch, runStack } from './jobs';
+import { runPlan, runSearch, runStack } from './jobs';
 import {
   errorPayload,
   isCalcResponseMessage,
@@ -25,12 +25,8 @@ export interface CalcClient {
   readonly mode: 'worker' | 'inline';
   stack(request: StackRequest, signal?: AbortSignal): Promise<StackOutcome>;
   search(request: SearchRequest, onProgress?: ProgressHandler, signal?: AbortSignal): Promise<SearchResult>;
-  /** Complete optimization (S-54): the best sizing × mercenary spend × subset over a whole campaign. */
-  complete(
-    request: CompleteRequest,
-    onProgress?: ProgressHandler,
-    signal?: AbortSignal,
-  ): Promise<CompleteResult>;
+  /** Complete optimization v2 (S-55): the campaign planned from the army alone. */
+  plan(request: CampaignInput, signal?: AbortSignal): Promise<CampaignPlan>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -82,7 +78,7 @@ function createWorkerClient(worker: Worker): CalcClient {
         entry.resolve({ result: message.result, summary: message.summary } as never);
         return;
       case 'search':
-      case 'complete':
+      case 'plan':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -136,8 +132,7 @@ function createWorkerClient(worker: Worker): CalcClient {
       send<StackOutcome>({ kind: 'stack', id: nextJobId('stack'), request }, signal),
     search: (request, onProgress, signal) =>
       send<SearchResult>({ kind: 'search', id: nextJobId('search'), request }, signal, onProgress),
-    complete: (request, onProgress, signal) =>
-      send<CompleteResult>({ kind: 'complete', id: nextJobId('complete'), request }, signal, onProgress),
+    plan: (request, signal) => send<CampaignPlan>({ kind: 'plan', id: nextJobId('plan'), request }, signal),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -182,15 +177,8 @@ export function createInlineClient(): CalcClient {
           }),
         signal,
       ),
-    complete: (request, onProgress, signal) =>
-      run(
-        () =>
-          runComplete(request, {
-            onProgress: (progress) => onProgress?.(progress),
-            cancelled: () => aborted(signal),
-          }),
-        signal,
-      ),
+    plan: (request, signal) =>
+      run(() => runPlan(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }), signal),
     dispose() {
       disposed = true;
     },
