@@ -437,6 +437,19 @@ player).
 
 - **The defect, measured.** The frontier offered one plan in five that fielded **no legionaries at all**, and putting a single one back paid +22,230 damage while lasting 72 marches. The `0` sample in the mercenary grid is a degenerate point on the thrift axis, not a trade anyone would take. Both fixes are in behind `CAMPAIGN.planFixes`, **off**, with an experiment each (80, 81) and three unit tests; the comparison is above.
 - **The horizon off-by-one.** A target of 1 played 2 marches. `makeScorer` gained a `finale` flag, the planner turns it off for a one-march target, and `tests/engine/plan.test.ts` asserts the target is the campaign's own length at 1, 2, 3 and 10.
+- **The horizon's default is 4** (was 10). The owner's cadence is an epic event every three days, three or
+  four marches each, and four is the best of both: measured on his account, horizon 3 burns 24 mercenaries a
+  march for 5,983,998 damage, horizon **4 burns 21 for 6,826,445** — fewer mercenaries *and* 14 % more damage,
+  the peak of all ten horizons — while 10 gave up a third of that damage for endurance the cadence never uses
+  (`out/85-horizon-merc-cost.md`). Three still keeps the better *silver* rate (3.63 against 3.02), so the
+  choice is which resource to favour. `CAMPAIGN.marches` in `src/config.ts`, with the table in its comment.
+- **Open, and deliberately not rushed: where the recommendation sits.** Measured in `out/84-marginal-silver.md`
+  — the first ~6 M of silver returns a marginal 7.75 damage a silver and everything past it under 2.5, while
+  the engine's recommendation sits at 17.08 M. `balanced` balances damage *a silver* against damage *a
+  mercenary*, and that second ratio is the trap investigation 0019 §2.3 documents: balancing against it drags
+  the pick toward the end that spends the most for the least. The fix is a definition that follows the resource
+  which binds — which the app cannot know while the silver box is off the card (S-56) — so it is written down
+  rather than half-done here.
 - **The definition.** Full optimization is *the marches, and the counts of each, that maximise the campaign's total damage subject to leadership and authority per march, the permanent `ceil(n/10)` loss of every hired stack fielded, and the player's silver* — a campaign objective, and a frontier rather than a point. Verified: the best single march takes **82.3 %** of the best campaign; under a capped purse the same engine buys **1.75×** more damage by maximising damage a silver than by maximising the total; damage a mercenary rises to 435,961 exactly where the march collapses to two hired units; the horizon swings a march by **434.6 %**; and authority is not binding at all (155 of 2,000).
 
 **S-57 — The March's second half, and a locked Objective (owner, 2026-09-15).** Two changes that shipped

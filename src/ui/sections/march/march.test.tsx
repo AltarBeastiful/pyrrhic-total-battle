@@ -13,6 +13,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { useEffect } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
+import { CAMPAIGN } from '@/config';
 import { unitById } from '@/data';
 import type { Objective, UnitDef } from '@/engine/types';
 import { newRoot } from '@/state/defaults';
@@ -559,7 +560,7 @@ test('complete optimization answers with a plan, and the March draws it instead 
   // The one thing about this answer the player did not choose: what sized it.
   const plan = useRunStore.getState().plan;
   expect(plan).not.toBeNull();
-  expect(plan?.marches).toBe(10);
+  expect(plan?.marches).toBe(CAMPAIGN.marches);
   expect(screen.getByText(/^Planned from the army:/)).toBeTruthy();
 
   // Folded until it is asked for (design rule 4), with the answer's headline on the closed row.

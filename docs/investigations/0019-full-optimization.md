@@ -77,8 +77,21 @@ A ratio can point a direction. It cannot name a stopping point, and this one poi
 ### 2.4 The horizon is part of the question
 
 Same sweep. Damage a march by horizon asked: **3,120,063** at one, a peak of **3,236,374** at three,
-**1,982,910** at ten (the app's setting), **666,148** at fourteen — and **eleven of the thirty horizons have no
-plan at all**, because a 60-unit purse cannot field anything that survives them. The spread is **434.6 %**.
+**1,982,910** at ten, **666,148** at fourteen — and **eleven of the thirty horizons have no plan at all**,
+because a 60-unit purse cannot field anything that survives them. The spread is **434.6 %**.
+
+**And the default changed because of it** (owner, 2026-09-15). `CAMPAIGN.marches` is **4**, not 10, because
+that is the owner's own cadence — an epic event every three days, three or four marches each. Measured on his
+account (`out/85-horizon-merc-cost.md`):
+
+| horizon | hired a march | burned a march | damage a march | damage a silver |
+|---|---|---|---|---|
+| 3 | 227 | 24 | 5,983,998 | **3.63** |
+| **4** | 205 | **21** | **6,826,445** | 3.02 |
+| 10 | 135 | 14 | 4,638,724 | 2.72 |
+
+Four burns **fewer** mercenaries than three and does **14 % more damage a march** — the peak of all ten
+horizons. Ten, the old default, gave up a third of that damage for endurance the owner's cadence never uses.
 
 So "the best march" is not a question until the horizon is named. It is also the mechanism behind the holes the
 owner reported the same day: a long horizon forces the plan to field less of each type, and at horizon 8 the
@@ -109,7 +122,17 @@ would cost **314**. Authority is not a constraint and never appears as `binding`
 
 ## 4. What this does not settle
 
-- **The horizon's default.** Ten is a compromise — it gives up 39 % of the damage a march that a three-march
+- **Where the plan's recommendation sits.** Measured in `out/84-marginal-silver.md`: on the owner's account at
+  the old horizon of ten, the first ~6 M of silver returns a **marginal 7.75 damage a silver** and everything
+  past it returns **under 2.5**; the *average* rate peaks in the same bucket (4.60), so the two agree on where
+  the common ground is. The engine's recommendation sits at **17.08 M** — nearly three times past the cliff —
+  because `balanced` is the candidate that best balances damage *a silver* against damage *a mercenary*, and the
+  mercenary ratio is the trap of §2.3: balancing against it drags the pick toward the end that spends most for
+  least. The fix is a definition, not a constant: the recommendation should follow the resource that binds,
+  which the app cannot know while the silver box is off the card (S-56). Open.
+- **The horizon's default.** Settled at 4 (§2.4), on the owner's cadence rather than on arithmetic — and it is
+  worth saying that 3 keeps the better *silver* rate, so the choice is which resource to favour, not which
+  number is correct. The old value of ten gave up 39 % of the damage a march that a three-march
   horizon would field, and it is the number that creates the dropped types. What it should be is a question
   about how the player actually plays, not about arithmetic.
 - **Silver's value over time.** The definition treats a silver spent as a silver spent; it has no model of how

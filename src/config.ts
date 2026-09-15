@@ -12,18 +12,31 @@
 
 export const CAMPAIGN = {
   /**
-   * Marches a plan is planned over — the horizon the plan method answers at: about a week of fighting
-   * before the army is hired again.
+   * Marches a plan is planned over — the horizon the plan method answers at. Four is the owner's own
+   * cadence: an epic event every three days, about three or four marches each.
    *
    * The plan's own search has no opinion about the future. Left to itself it answers with the campaign that
    * maximises total damage, which on a real account is 66 marches and 313 days of training
-   * (`tools/theorycraft/out/73-plan-horizon.md`) — a figure to read, not a plan to march. That horizon is
-   * also what puts the hired stock back into the repeated march: fielding a tenth of a stack per march is
-   * only worth it over a campaign short enough to survive it. And it is the *dominant* lever of the
-   * answer, not a detail — measured on the owner's account, damage a silver reads 1.36 unbounded, 2.18 at
-   * ten marches and 2.54 at six — which is why it is a number to change here rather than a field to retype.
+   * (`tools/theorycraft/out/73-plan-horizon.md`) — a figure to read, not a plan to march. The horizon is
+   * the *dominant* lever of the answer, which is why it is a number to change here rather than a field to
+   * retype, and why it is worth the measurement below.
+   *
+   * **Why four** (owner, 2026-09-15; experiments 82–85, `out/85-horizon-merc-cost.md`). The horizon buys
+   * the hired stock endurance and pays for it with damage: a fielded stack loses `ceil(n/10)` for good, so
+   * a longer plan can field less of every type. On the owner's account, a march at each horizon:
+   *
+   *   | horizon | hired a march | burned a march | damage a march | damage a silver |
+   *   |---|---|---|---|---|
+   *   | 3 | 227 | 24 | 5,983,998 | 3.63 |
+   *   | **4** | 205 | **21** | **6,826,445** | 3.02 |
+   *   | 10 | 135 | 14 | 4,638,724 | 2.72 |
+   *
+   * Four **burns fewer mercenaries than three and does 14 % more damage a march** — it is the peak damage
+   * of all ten horizons, and the only one the owner's cadence reaches. Ten (the old default) gave up a
+   * third of the damage for endurance nobody was using. Three keeps the best *silver* rate (3.63 against
+   * 3.02); four is the better trade when the hired stock is the resource that does not come back.
    */
-  marches: 10,
+  marches: 4,
   /**
    * Plans the S-55 trade carries for the slider, besides the ones the engine insists on (the sweet spot,
    * the two ends and the plan itself). Every stop is a plan the player may be asked to choose, so this is
