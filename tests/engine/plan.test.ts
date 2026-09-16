@@ -245,6 +245,45 @@ describe(
       // What the bar does not offer is counted, and the count can never exceed the frontier it came from.
       expect(plan.leftOut).toBeGreaterThanOrEqual(0);
     });
+
+    test('the sweet spot is the middle of the trade in hired stock', () => {
+      // The owner, 2026-09-16: *"the sweet spot seems to be too similar with silver save, especially for merc
+      // spends."* The rule was the plan closest to the best on both ratios, which walks to the silver end and
+      // burns as much stock as the dearest plan on the bar; it is now the **middle of the trade's own stock
+      // range**, which is a statement about the plans the bar can carry rather than about the search's peaks
+      // (`tools/theorycraft/out/90-the-sweet-spot.md`).
+      const req = request();
+      const plan = planCampaign({ request: req, alternatives: 8, withTrade: true });
+      const trade = plan.trade ?? [];
+      const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot');
+      expect(sweet).toBeDefined();
+      expect(trade.length).toBeGreaterThan(2);
+
+      const burns = trade.map((row) => row.repeat.mercLost);
+      const middle = (Math.min(...burns) + Math.max(...burns)) / 2;
+      const reach = (row: { repeat: { mercLost: number } }): number => Math.abs(row.repeat.mercLost - middle);
+
+      // Nobody is nearer the middle of the range than it is…
+      for (const row of trade) {
+        expect(reach(row), 'a plan outside the trade beats the sweet spot').toBeGreaterThanOrEqual(
+          reach(sweet as { repeat: { mercLost: number } }),
+        );
+      }
+      // …and among the plans that burn the same, it does the most with it. (Where two plans sit either side of
+      // the middle, the thriftier side wins — a band narrow enough to have no side of its own is the case
+      // where the choice would otherwise fall back to the dearest plan on the bar.)
+      const sameBurn = trade.filter((row) => row.repeat.mercLost === sweet?.repeat.mercLost);
+      expect(sameBurn.length).toBeGreaterThan(0);
+      for (const row of sameBurn) {
+        expect(sweet?.repeat.damage).toBeGreaterThanOrEqual(row.repeat.damage);
+      }
+      // Which is what makes the recommendation a genuine middle rather than an end: on an army whose trade
+      // spans a range, it is not the plan that burns the most, and not the plan that burns the least.
+      expect(burns.length).toBeGreaterThan(2);
+      if (Math.max(...burns) > Math.min(...burns)) {
+        expect(sweet?.repeat.mercLost).toBeLessThan(Math.max(...burns));
+      }
+    });
   },
   TIMEOUT,
 );

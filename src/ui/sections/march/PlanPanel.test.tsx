@@ -282,13 +282,17 @@ test('the block opens on its own — the plan is part of the answer, not a fold 
   const fold = screen.getByRole('button', { name: /^Plan/ });
   expect(fold.getAttribute('aria-expanded')).toBe('true');
   // The row still carries the plan the block is *reading* — where the bar opens, which is the plan the engine
-  // weighed both resources to choose — and not the one its search settled on: the two part company as soon as
-  // the bar moves, and a headline that describes a plan the body is not showing is a lie. Read the way the
-  // owner asked for it: a march at a time, not a campaign total.
+  // recommends — and not the one its search settled on: the two part company as soon as the bar moves, and a
+  // headline that describes a plan the body is not showing is a lie. Read the way the owner asked for it: a
+  // march at a time, not a campaign total.
   const shown = pickOf(PLAN, defaultPlanPosition(PLAN));
   const repeated = shown.marches - (shown.finaleCounts ? 1 : 0);
   expect(fold.textContent).toContain('damage a march');
-  expect(fold.textContent).toContain(`${repeated} marches${shown.finaleCounts ? ' + a last one' : ''}`);
+  // One march is a word of its own, and a recommendation whose plan repeats only once is a case the row has to
+  // get right: the old rule never produced one on this army, and the middle-of-the-trade rule does.
+  expect(fold.textContent).toContain(
+    `${repeated} ${repeated === 1 ? 'march' : 'marches'}${shown.finaleCounts ? ' + a last one' : ''}`,
+  );
 });
 
 test('the whole row is the target: pressing a plan’s name reads that plan', () => {

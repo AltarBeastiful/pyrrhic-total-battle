@@ -110,6 +110,39 @@ saying what the plan did for *this* army, with an ⓘ beside it carrying the gen
 to hunt for — and the chevron stays, because the pane has exactly no room to spare (740 of 740) and closing it
 is how a player gets the sticking pane back.
 
+**D-6 — The sweet spot is the middle of the trade in hired stock.** Added the same day, from the owner's second
+look at the built screen:
+
+> *"no change in placement, just the sweet spot seems to be too similar with silver save, especially for merc
+> spends."*
+
+He was right, and not marginally. Measured on his account the old rule burned **21** hired units a march where
+the two named ends burned **12** and **22** — a plan one unit from the dearest thing on the bar, saving no
+stock at all, which was *also* the best damage a silver. And the old rule was doing exactly what it said: a
+max-of-minimums rewards a plan that is excellent on one axis and strong on the other, and the axis it can
+afford to be excellent on is the one whose peak is hardest to reach, so it walked to the silver end.
+
+Two other principled re-aims were measured over the same trade before this one was chosen
+(`tools/theorycraft/out/90-the-sweet-spot.md`), and neither moves: the **crossing** of the two relative
+efficiencies lands at 20 burned, and re-anchoring the peaks on the offered plans changes nothing. On this army
+the ratios genuinely cross up there, because each further hired unit burned buys **more** damage than the one
+before it — 214 k damage a unit between 12 and 17 burned, 318 k between 17 and 22 — so the stock is worth
+spending and no efficiency rule will decline to spend it.
+
+The recommendation is therefore stated in the resource that does not come back: **the best march whose burn is
+closest to the middle of the range between the thriftiest and the dearest plan the bar can carry** — and where
+the two sides of the middle are equally near, the **thriftier** one wins, because a band narrow enough to sit
+either side of its own middle (measured on a small account: burns 19, 19, 20) is exactly the case where the
+choice would otherwise fall back to the dearest plan on the bar. No free parameter — both
+ends of the range are plans the engine found, and the middle is a consequence. Measured after the change: the
+bar opens on **17 burned for 5 333 606 damage a march**, against the old rule's 21 for 6 826 445 — 19 % less of
+the stack for 22 % less damage, at the same silver. The bar also gained a row: **4 stops** (12 · 17 · 22 · 22
+burned) where it carried 3, and `leftOut` fell from 45 to 44.
+
+`CampaignInput.withTrade` was added to make that measurable at all: the frontier the picks are drawn from was
+computed and then thrown away, so no experiment could ask "where else could the sweet spot have been". It stays
+as an opt-in field — a screen draws the four answers, and the trade is the set behind them.
+
 **Amended the same day, and the amendment is about *where*. D-5 first put the block straight under the recap
 figures — "a new part of the recap", read literally — which pushed the pills and their counts down the pane.
 The owner, 2026-09-16: *"im not fond of moving the army down. We should first see the army then the details to
