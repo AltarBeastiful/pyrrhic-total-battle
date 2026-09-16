@@ -829,6 +829,27 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-16 (evening) — **Review of S-59 on retaking the branch.** The four commits made without the
+  orchestrator were checked figure by figure: experiments 86 and 90 regenerate byte-identical, tsc, eslint,
+  709 unit tests and 49 e2e pass; 88 and 89 had been committed with the previous rule's recommendation on them
+  and were regenerated (ab587cc). A probe over `withTrade` on the owner's export at the app's horizon found
+  three things the screen cannot show and only he can decide, recorded here rather than half-fixed:
+  **silver is nearly flat across the bar** (1.97–2.35 M a march, set by the troop rungs) while hired burn runs
+  12→22 and **gold** — the price `marchOf` puts on every hired stack, 467–827 a march — is shown nowhere, so
+  the "silver vs merc" slider's axis (*Least silver … Most silver*) is the resource that does not move; the two
+  right-hand stops are **one plan to within 0.2 %** (`best-for-silver` 6 905 207 / 2 331 500 / 22 burned
+  against `most-damage` 6 920 621 / 2 354 500 / 22; dedup is by exact counts); stops sort by campaign silver,
+  so at horizon 10 the bar reads burns 15 · 10 · 12 · 15 left to right; and `spare-the-stock` fields no
+  legionary at all — the S-58 case, both flags still off. The sweet-spot rule holds, but "no free parameter"
+  overstates it: the band's ends are the 50 % thresholds against the winner, so the middle is about three
+  quarters of the winner's burn. A UI review of the built screen (seeded account, both widths) found and the
+  same pass fixed: the ⓘ was dead on touch (a `Popover` now), the trade's names scrolled away on a phone
+  (first column pinned), only the name button selected a row (the row is the control), the 58 px band under
+  the bar did not press it (it does), "Sweet spot / the sweet spot" twice on one row and again in the tip
+  (once), 🎯 and 👑 each meaning two things (🪖 `mercenaries` glyph added, the raised row marked by weight),
+  heads wrapping to four lines (glyph + two words, nowrap), four tail paragraphs and the curve table still
+  under the trade (one "Fought to the end" line stays, the rest behind a closed *Reference* fold), four dead
+  CSS rules, and "Per silver" rounding three different plans to one figure (three decimals).
 - 2026-09-16 — **S-59: the plan's own screen, named.** The owner reviewed what the plan method draws, in his
   words:
 

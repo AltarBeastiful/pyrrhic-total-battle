@@ -21,11 +21,25 @@
  * - the two seven-figure columns print in `compact` figures ("6.83M"), because a seven-digit number beside
  *   a bar is a number nobody reads at a glance.
  *
- * The whole row's name is the control (design rule 8), the row on screen is raised with `--pyr-raised` and
- * `aria-current` exactly as the objectives strip's row is, and the sweet spot is said in words on its own
- * row rather than only marked in colour (rule 24).
+ * The owner's screen review of the built table (2026-09-16) took four more things off it, and each is a rule:
+ *
+ * - **the whole `<tr>` is the control**, not the name inside it (design rule 8: whole rows are targets). The
+ *   row is the one focusable thing on its line, it answers a click and Enter or Space, and it says which plan
+ *   is on screen with `aria-selected` and `aria-current` rather than with a button's label. The table is a
+ *   `grid`, which is what makes a selected *row* a thing ARIA can say;
+ * - **one glyph, one meaning** (rule 21, `docs/design.md`): "Hired lost" wore 👑, which is the authority
+ *   pool's glyph two blocks above it on the same screen, and the plan on screen wore a second 🎯 beside its
+ *   name while 🎯 already headed "Damage". The hired stock has its own glyph now and the row on screen is
+ *   marked by the raised ground and its heavier name alone;
+ * - **the heads are a glyph and two words**, never three lines of "Silver / a / march" (rule 19). Every row of
+ *   this table *is* one march — the line above the bar and the fold's own summary both say so — so the unit
+ *   belongs in the table's name, not repeated in five heads;
+ * - **"the sweet spot" is not printed under a row named "Sweet spot"** (rule 5).
+ *
+ * The row on screen is raised with `--pyr-raised` exactly as the objectives strip's row is.
  */
-import { Button, Group, Progress, Table, Text } from '@mantine/core';
+import { Group, Progress, Table, Text } from '@mantine/core';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import type { PlanRow } from '@/engine/plan';
 
@@ -43,8 +57,6 @@ export interface PlanTradeProps {
   /** The row the bar's pointer is on, lit here so the bar and the table read as one thing. */
   hovered: number | null;
   onSelect: (index: number) => void;
-  /** Where the sweet spot sits among `rows`, or `null` when the engine weighed no two resources. */
-  sweet: number | null;
 }
 
 /**
@@ -56,32 +68,69 @@ function per(damage: number, resource: number): number {
   return resource > 0 ? damage / resource : Number.NaN;
 }
 
-export function PlanTrade({ rows, position, hovered, onSelect, sweet }: PlanTradeProps) {
+/**
+ * "Per silver" is printed to **three** decimals on the trade. At two it printed `0.54` on all three of the
+ * owner's plans beside a row *named* "Best for silver" (S-59 screen review, 2026-09-16) — a column that
+ * decides a name was rounding the decision away. Three is enough on a real account (1.89 · 2.37 · 2.96 at
+ * the app's horizon); a seeded army whose plans tie at three decimals is showing the same figure, and a
+ * sixth decimal would be noise dressed as a difference (rule 5).
+ */
+const PER_SILVER_DECIMALS = 3;
+
+export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps) {
   const loudest = Math.max(1, ...rows.map((row) => row.repeat.damage));
+  // Two module classes on one cell: the name's own width rules, and the pin that keeps it on the left edge
+  // while the figures scroll. Composed here because `className` may only ever carry a module value
+  // (`src/ui/kit/README.md` rule 3, which the linter holds).
+  const nameCell = `${classes.planCell ?? ''} ${classes.pinned ?? ''}`;
 
   return (
     <div className={classes.compareScroll}>
       <Table
         className={classes.compare}
-        horizontalSpacing={6}
+        // 4 rather than 6: measured at 1400×900, the heads on one line each made a 498 px table in a
+        // 462 px pane — a sideways scroller in the March where there was none (design rule 17 allows the
+        // table one, the desktop has never needed it). Four pixels a side over six cells is 24 of the 36.
+        horizontalSpacing={4}
         verticalSpacing={6}
-        aria-label="Every plan on the trade"
+        // A `grid` rather than a plain table, because every row is a control the player picks between:
+        // that is the role that lets a *row* carry `aria-selected`, and it is what the raised ground
+        // says in colour (design rule 24 — never colour alone).
+        role="grid"
+        // The heads print "Damage" and "Silver" with no unit, so the unit is said once, here, where a
+        // reader meets the table (design rule 5: say it where it is expected, not five times over).
+        aria-label="Every plan on the trade, one repeated march each"
       >
         <Table.Thead>
           <Table.Tr>
-            <Table.Th scope="col">Plan</Table.Th>
+            <Table.Th scope="col" className={classes.pinned}>
+              Plan
+            </Table.Th>
             {/* The glyphs are the three columns that name a game resource — damage, silver, the hired
                 stock — and they come from `GLYPHS` (design rule 21: emoji are the game's vocabulary, and
                 one component draws them). The row's own name and the two ratios derived from these three
-                carry none. */}
+                carry none.
+
+                **A glyph and a two-word head at most, all on one line** (design rule 19). They read
+                "🎯 Damage a march" and "🪙 Silver a march" until 2026-09-16, which an auto-laid table in a
+                420 px pane broke as "Damage a / march" and "Silver / a / march" — three and four lines of
+                head over one line of figures, with 👑 alone on a line of its own above "Hired / lost". The
+                unit those heads were carrying is the table's own (`aria-label` above): every row here is one
+                repeated march, which the line over the bar and the fold's summary both say already.
+
+                TotalStack is no help on the wording — the one screen of theirs ever observed has no such
+                table (`docs/investigations/0008-totalstack-method-enemy-results.md`; `0006` is the captain
+                picker and has no column heads at all) — but its figure tiles are exactly this shape, a glyph
+                then a short caps label ("🔒 MINIMUM DAMAGE", "🪙 SILVER"), and its ratios are written as
+                "DAMAGE / SILVER". Ours stay our own words (rule 26): "Per silver", "Per hired". */}
             <Table.Th scope="col" ta="end">
-              <Glyph kind="averageDamage" /> Damage a march
+              <Glyph kind="averageDamage" /> Damage
             </Table.Th>
             <Table.Th scope="col" ta="end">
-              <Glyph kind="silver" /> Silver a march
+              <Glyph kind="silver" /> Silver
             </Table.Th>
             <Table.Th scope="col" ta="end">
-              <Glyph kind="authority" /> Hired lost
+              <Glyph kind="mercenaries" /> Hired lost
             </Table.Th>
             <Table.Th scope="col" ta="end">
               Per silver
@@ -97,42 +146,40 @@ export function PlanTrade({ rows, position, hovered, onSelect, sweet }: PlanTrad
             return (
               <Table.Tr
                 key={point.pick}
-                // The row on screen, the way the objectives strip says it: one tonal step, plus
-                // `aria-current` for a reader, plus the button's own name. Never colour alone (rule 24).
+                // **The whole row is the target** (design rule 8), which is what it claimed to be while only
+                // the name inside it answered a press. It is the one focusable thing on its line — a row of
+                // six figures with a button in the first cell is a tab stop that lands nowhere a finger
+                // aims — and it answers the two keys a control answers. Its focus ring is the theme's, drawn
+                // by `march.module.css` off Mantine's own variables.
+                tabIndex={0}
+                aria-selected={current}
+                // The row on screen, the way the objectives strip says it: one tonal step for the eye, and
+                // for a reader the two attributes that mean it. Never colour alone (rule 24) — and the
+                // name is set heavier with it (`march.module.css`), which is weight and not hue.
                 data-current={current ? 'true' : undefined}
                 aria-current={current ? 'true' : undefined}
                 // The row the bar is pointing at. A hover is not a selection, so it is not the raised
                 // step — what it gets is the same hairline the parts use, on the edge nearest the finger.
                 data-lit={index === hovered ? 'true' : undefined}
+                onClick={() => {
+                  onSelect(index);
+                }}
+                onKeyDown={(event: ReactKeyboardEvent<HTMLTableRowElement>) => {
+                  // Enter and Space, the two a control answers; Space is also the page's scroll, so it is
+                  // only taken when the row itself has the focus.
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  if (event.target !== event.currentTarget) return;
+                  event.preventDefault();
+                  onSelect(index);
+                }}
               >
-                {/* The row is the control (design rule 8: the whole item is the target): pressing a
-                    plan's name reads that plan, the same answer the bar reads. */}
-                <Table.Th scope="row" className={classes.planCell}>
-                  <Button
-                    variant="subtle"
-                    size="compact-xs"
-                    px={4}
-                    className={classes.compareName}
-                    aria-label={
-                      current
-                        ? `${PICK_WORD[point.pick]}, the plan on screen`
-                        : `Read the plan ${PICK_WORD[point.pick]}`
-                    }
-                    onClick={() => {
-                      onSelect(index);
-                    }}
-                  >
-                    {current && <Glyph kind="averageDamage" scale={0.75} />}
-                    {PICK_WORD[point.pick]}
-                  </Button>
-                  {/* Two things can be true of one row, and colour may not be the only signal saying so
-                      (design rule 24): the plan on screen is raised and marked, and the sweet spot is
-                      named. */}
-                  {index === sweet && (
-                    <Text size="xs" c="var(--mantine-color-brass-filled)">
-                      the sweet spot
-                    </Text>
-                  )}
+                <Table.Th scope="row" className={nameCell}>
+                  {/* The name, and nothing beside it. It wore a 🎯 when the row was the one on screen —
+                      the same glyph heading the Damage column two cells along — and "the sweet spot"
+                      under a row already named "Sweet spot" (design rules 5 and 21). The raised ground,
+                      the heavier name and `aria-selected` say the first; the row's own name says the
+                      second, as does the marker on the bar above. */}
+                  {PICK_WORD[point.pick]}
                 </Table.Th>
                 <Table.Td ta="end">
                   <Group gap="xs" wrap="nowrap" justify="flex-end">
@@ -142,7 +189,7 @@ export function PlanTrade({ rows, position, hovered, onSelect, sweet }: PlanTrad
                     <Progress.Root
                       size="sm"
                       radius="xs"
-                      w={48}
+                      w={40}
                       role="progressbar"
                       aria-label={`${PICK_WORD[point.pick]}, damage a march`}
                       aria-valuemin={0}
@@ -156,14 +203,16 @@ export function PlanTrade({ rows, position, hovered, onSelect, sweet }: PlanTrad
                         color="brass"
                       />
                     </Progress.Root>
-                    <Text span w={44} ta="end">
+                    <Text span w={40} ta="end">
                       {compact(point.repeat.damage)}
                     </Text>
                   </Group>
                 </Table.Td>
                 <Table.Td ta="end">{compact(point.repeat.silver)}</Table.Td>
                 <Table.Td ta="end">{amount(point.repeat.mercLost)}</Table.Td>
-                <Table.Td ta="end">{ratio(per(point.repeat.damage, point.repeat.silver))}</Table.Td>
+                <Table.Td ta="end">
+                  {ratio(per(point.repeat.damage, point.repeat.silver), PER_SILVER_DECIMALS)}
+                </Table.Td>
                 <Table.Td ta="end">{ratio(per(point.repeat.damage, point.repeat.mercLost))}</Table.Td>
               </Table.Tr>
             );

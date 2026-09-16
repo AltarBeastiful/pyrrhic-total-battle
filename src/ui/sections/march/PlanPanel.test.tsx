@@ -13,6 +13,7 @@
  * exactly what the owner could not tell apart.
  */
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
@@ -52,13 +53,14 @@ const PLAN = planCampaign({ request: request(), alternatives: 6 });
 /** The plans the bar carries, cheapest first — the picks the engine settled on, four at most. */
 const ROWS = PLAN.alternatives;
 
+// The table's own name carries the unit its heads stopped repeating (S-59 screen review).
+const TRADE = 'table[aria-label="Every plan on the trade, one repeated march each"]';
+
 /** The trade's rows, in the DOM, so a case can point at the same one twice. */
 function tradeRows(): HTMLElement[] {
-  const trade = document.querySelector('table[aria-label="Every plan on the trade"]');
+  const trade = document.querySelector(TRADE);
   return trade === null ? [] : [...trade.querySelectorAll<HTMLElement>('tbody tr')];
 }
-
-const TRADE = 'table[aria-label="Every plan on the trade"]';
 
 /**
  * A rectangle in the shape jsdom cannot produce. jsdom lays nothing out — every `getBoundingClientRect()` it
@@ -217,8 +219,11 @@ test('the tip names the plan under the pointer, not the one on screen', () => {
   expect(shown).not.toBeNull();
   expect(shown?.textContent ?? '').toContain(PICK_WORD[wanted.pick]);
   expect(shown?.textContent ?? '').not.toContain(PICK_WORD[selected.pick]);
-  // It carries the figure a player compares plans by, and it says "the sweet spot" when that is what the row is.
+  // It carries the figure a player compares plans by, and nothing else.
   expect(shown?.textContent ?? '').toContain(`${compact(wanted.repeat.damage)} damage a march`);
+  // Two lines and no third: it used to close with "the sweet spot" over a tip already naming the plan
+  // **Sweet spot**, above a bar marked "Sweet spot" in the same brass (design rule 5).
+  expect(shown?.textContent ?? '').not.toContain('the sweet spot');
   // `aria-hidden` on purpose: the trade below prints the same answer as a table and `aria-valuetext` carries
   // it for a screen reader (design rule 24). A tip is never the only place a fact lives.
   expect(shown?.getAttribute('aria-hidden')).toBe('true');
@@ -250,6 +255,32 @@ test('the bar and the table are one thing: the pointer’s row is ruled and the 
   const current = rows.filter((row) => row.getAttribute('data-current') !== null);
   expect(current).toHaveLength(1);
   expect(current[0]).toBe(rows[position]);
+});
+
+test('the band is the target, not just the 16 px track', () => {
+  stubLayout();
+  renderWithTheme(<PlanFold />);
+  const position = defaultPlanPosition(PLAN);
+  const away = anotherStop();
+  const last = Math.max(1, ROWS.length - 1);
+
+  // The band is ~58 px tall because the sweet-spot mark has to clear the two words under the bar, and its
+  // own comment in `march.module.css` has always said every one of those pixels can be aimed at. It could
+  // not: Mantine's slider root is 16 px and owned the only press that moved the thumb, so a press in the
+  // air under the track did nothing (design rule 19). It reads the nearest stop now.
+  fireEvent.pointerDown(bar(), { clientX: TRACK.left + TRACK.width * (away / last) });
+  expect(useRunStore.getState().planPick).toBe(away);
+  // …and the tip follows it, so the press answers the same question the pointer was asking.
+  const wanted = ROWS[away];
+  if (wanted === undefined) throw new Error('too few plans to press');
+  expect(tip()?.textContent ?? '').toContain(PICK_WORD[wanted.pick]);
+
+  // Never a press that belongs to a child: the two words under the bar and "Back to the sweet spot" are the
+  // controls a player reaches for when the bar is already somewhere else, and a band that answered their
+  // presses too would move the bar out from under the finger.
+  useRunStore.setState({ planPick: position });
+  fireEvent.pointerDown(screen.getByText('Most silver'), { clientX: TRACK.left });
+  expect(useRunStore.getState().planPick).toBe(position);
 });
 
 test('the tip still arrives when the system asks for no motion', () => {
@@ -295,15 +326,41 @@ test('the block opens on its own — the plan is part of the answer, not a fold 
   );
 });
 
-test('the whole row is the target: pressing a plan’s name reads that plan', () => {
+test('the whole row is the target: a press anywhere on it reads that plan', () => {
   renderWithTheme(<PlanFold />);
   const away = anotherStop();
+  const position = defaultPlanPosition(PLAN);
+  const row = tradeRows()[away];
+  if (row === undefined) throw new Error('too few plans to press');
 
-  // The bar is one way to walk the trade and the table is the other (design rule 8): a plan's name is a
-  // control, and pressing it does what a stop on the bar does — puts that plan on screen, with no new search.
-  const button = within(tradeRows()[away] as HTMLElement).getByRole('button');
-  fireEvent.click(button);
+  // The bar is one way to walk the trade and the table is the other (design rule 8): the **row** is the
+  // control — not a button in its first cell, which is a target the width of a word on a line six figures
+  // long — and pressing it does what a stop on the bar does, with no new search.
+  expect(within(row).queryByRole('button')).toBeNull();
+  fireEvent.click(row);
   expect(useRunStore.getState().planPick).toBe(away);
+
+  // One focusable thing per row, and it is the row; the two keys a control answers both read it.
+  expect(row.getAttribute('tabindex')).toBe('0');
+  expect(row.querySelectorAll('[tabindex]')).toHaveLength(0);
+  useRunStore.setState({ planPick: position });
+  fireEvent.keyDown(row, { key: 'Enter' });
+  expect(useRunStore.getState().planPick).toBe(away);
+  useRunStore.setState({ planPick: position });
+  fireEvent.keyDown(row, { key: ' ' });
+  expect(useRunStore.getState().planPick).toBe(away);
+});
+
+test('the row on screen says so to a reader, not only in colour', () => {
+  renderWithTheme(<PlanFold />);
+  const position = defaultPlanPosition(PLAN);
+  const rows = tradeRows();
+  // `aria-selected` is what a row in a grid carries, and the table is a grid for exactly that reason: the
+  // raised ground is the same fact in colour, which design rule 24 never allows to be the only one.
+  expect(document.querySelector(TRADE)?.getAttribute('role')).toBe('grid');
+  expect(rows.filter((row) => row.getAttribute('aria-selected') === 'true')).toHaveLength(1);
+  expect(rows[position]?.getAttribute('aria-selected')).toBe('true');
+  expect(rows[position]?.getAttribute('aria-current')).toBe('true');
 });
 
 test('a row prices the march the recap is drawing, and the engine’s own battle agrees with it', () => {
@@ -336,10 +393,21 @@ test('the two ratio columns are the march’s own, not the campaign’s', () => 
   // Damage a march, Silver a march, Hired lost, Per silver, Per hired — and the last two divide the row's own
   // march (0020 §D-3), which is what stops a row named for a ratio from being beaten on that ratio by the row
   // above it.
-  expect(cells.at(-2)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.silver));
+  expect(cells.at(-2)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.silver, 3));
   expect(cells.at(-1)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.mercLost));
   // The campaign's ratios are what they used to be, and they are not what the row prints.
-  expect(cells.at(-2)?.textContent).not.toBe(ratio(row.damagePerSilver));
+  expect(cells.at(-2)?.textContent).not.toBe(ratio(row.damagePerSilver, 3));
+
+  // And "Per silver" is printed to where the plans actually differ. At two decimals the whole column read
+  // "0.54" on the owner's own account — three rows, one figure — so the row named "Best for silver" was
+  // indistinguishable from the two beneath it on the very ratio it is named for.
+  const perSilver = [...(document.querySelectorAll(`${TRADE} tbody tr`) ?? [])].map(
+    (line) => [...line.querySelectorAll('td')].at(-2)?.textContent ?? '',
+  );
+  const exact = ROWS.map((point) => point.repeat.damage / point.repeat.silver);
+  if (new Set(exact.map((value) => value.toFixed(6))).size === ROWS.length) {
+    expect(new Set(perSilver).size).toBe(ROWS.length);
+  }
 });
 
 test('the trade says how many plans the band refused, and nothing when it refused none', () => {
@@ -384,26 +452,31 @@ test('opened, it says what the plan did for this army and reads the trade a marc
     expect(rows[index]?.textContent ?? '').toContain(PICK_WORD[row.pick]);
     expect(drawn).not.toContain(row.label);
   }
-  // The columns are the decision: what a march hits for, what it costs and what it burns — the three that name
-  // a game resource behind their own glyph, then the two ratios.
+  // The columns are the decision: what a march hits for, what it costs and what it burns — the three that
+  // name a game resource behind their own glyph, then the two ratios. **A glyph and two words at most**: the
+  // heads carried "a march" until 2026-09-16 and a 420 px pane broke them over three and four lines, while
+  // the unit is the table's own and is said once in its name. And 👑 is gone from "Hired lost": it is the
+  // authority pool's glyph, printed two blocks above this table on the same screen (rule 21).
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual([
-    'Plan',
-    '🎯 Damage a march',
-    '🪙 Silver a march',
-    '👑 Hired lost',
-    'Per silver',
-    'Per hired',
-  ]);
-  // And the sweet spot is named in words on its own row, not only marked in colour (rule 24).
+  expect(headers).toEqual(['Plan', '🎯 Damage', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(document.querySelector(TRADE)?.getAttribute('aria-label')).toContain('march');
+  // The sweet spot is named by the row's own **name**, and never a second time under it: "the sweet spot"
+  // under a row called "Sweet spot" is the same words twice on one line (rule 5).
   const sweet = sweetSpotOf(plan);
   expect(sweet).not.toBeNull();
-  expect(rows.filter((row) => (row.textContent ?? '').includes('the sweet spot'))).toHaveLength(1);
+  expect(rows.filter((row) => (row.textContent ?? '').includes('the sweet spot'))).toHaveLength(0);
+  expect(rows[sweet ?? 0]?.textContent ?? '').toContain(
+    PICK_WORD[(plan.alternatives[sweet ?? 0] as PlanRow).pick],
+  );
 
-  // The totals stay available, one line down, without being the headline.
+  // The totals stay available, one line down, without being the headline — and they are the **one** line of
+  // the old tail that is still on screen.
   expect(screen.getByText(/^Fought to the end: /)).toBeTruthy();
 
-  // And the sentence about which resource ended the plan: the one that matches what the engine said binds.
+  // Everything else the tail said is behind one closed fold (design rule 4; the owner, 2026-09-16: the prose
+  // goes). The sentence about which resource ended the plan is in there, with the curve and the rest.
+  const reference = screen.getByRole('button', { name: /^Reference/ });
+  expect(reference.getAttribute('aria-expanded')).toBe('false');
   const binds = plan.binding;
   const sentence =
     binds.mercenaries && binds.silver
@@ -413,5 +486,23 @@ test('opened, it says what the plan did for this army and reads the trade a marc
         : binds.silver
           ? 'The silver box is what ends the plan: more silver would buy more marches.'
           : 'Nothing binds yet — the plan stops where more troops stop paying for themselves.';
+  fireEvent.click(reference);
+  expect(reference.getAttribute('aria-expanded')).toBe('true');
   expect(screen.getByText(sentence)).toBeTruthy();
+  expect(screen.getByText(/^Every plan here is fought over the same marches/)).toBeTruthy();
+}, 60_000);
+
+test('the why is a popover a thumb can open, not a tooltip only a pointer can hover', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<PlanFold />);
+
+  // It was a `Tooltip` with `touch: false`, which put the owner's own paragraph out of reach on the frame
+  // this app is designed at first (design rules 18 and 24). A press opens it, a press outside closes it.
+  const why = screen.getByRole('button', { name: 'Why the plan weighs silver against the hired stock' });
+  expect(screen.getAllByText(/^Damage is paid for twice over:/)).toHaveLength(1);
+  await user.click(why);
+  expect(screen.getAllByText(/^Damage is paid for twice over:/).length).toBeGreaterThan(1);
+  // …and a press outside it puts it away again, which is the half a tooltip could not do on a phone.
+  await user.click(document.body);
+  expect(screen.getAllByText(/^Damage is paid for twice over:/)).toHaveLength(1);
 }, 60_000);

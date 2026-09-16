@@ -16,6 +16,10 @@ export const GLYPHS = {
   specialists: '🗡️',
   engineers: '⚙️',
   monsters: '💀',
+  // The fifth family `UnitGroup` has always had and the set never did (`domain/unitGroup.ts`). Added
+  // for the plan's trade, where "Hired lost" wore 👑 — the authority pool's glyph two blocks above it
+  // on the same screen — against the one-meaning-per-glyph rule (`docs/design.md` §"Glyphs", rule 21).
+  mercenaries: '🪖',
   army: '🏰',
   epicMonster: '👹',
   // races

@@ -436,10 +436,14 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // The trade it chose from, read a march at a time (`PlanTrade`): one row per answer the engine offers,
   // named rather than described, and what one march of it hits for, costs in silver and burns of the
   // hired stock that does not come back.
-  const trade = march.getByRole('table', { name: 'Every plan on the trade' });
+  // A `grid` since the screen review of 2026-09-16: every row of it is a control, and the unit its heads
+  // stopped repeating is carried once, in the table's own name.
+  const trade = march.getByRole('grid', { name: 'Every plan on the trade, one repeated march each' });
   await expect(trade).toBeVisible();
-  await expect(trade.getByRole('columnheader', { name: 'Damage a march' })).toBeVisible();
-  await expect(trade.getByRole('columnheader', { name: 'Silver a march' })).toBeVisible();
+  // A glyph and two words per head, on one line: they read "Damage a march" until an auto-laid table in a
+  // 420 px pane set them as "Damage a / march" and "Silver / a / march" (design rule 19).
+  await expect(trade.getByRole('columnheader', { name: 'Damage', exact: true })).toBeVisible();
+  await expect(trade.getByRole('columnheader', { name: 'Silver', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Hired lost' })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();
   // The head row, then one row per answer — never a table with nothing in it, and every row named: a
@@ -449,8 +453,13 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   await expect(
     trade.getByRole('row', { name: /Sweet spot|Most damage|Best for silver|Spare the stock/ }),
   ).toHaveCount(rows - 1);
-  // And the sweet spot says so in words on its own row, not only by the colour of its marker.
-  await expect(trade.getByRole('row', { name: /the sweet spot/ })).toHaveCount(1);
+  // **The whole row is the control** (design rule 8), not a button in its first cell: each row is the one
+  // focusable thing on its line and says which plan is on screen with `aria-selected`.
+  await expect(trade.getByRole('row', { selected: true })).toHaveCount(1);
+  await expect(trade.getByRole('button')).toHaveCount(0);
+  // "the sweet spot" is no longer printed under a row already named "Sweet spot" (design rule 5): the
+  // name is the word, and the bar above it carries the marker.
+  await expect(trade.getByRole('row', { name: /the sweet spot/ })).toHaveCount(0);
 
   // The bar's tip names the plan **under the pointer** (S-59). This is also the only place the bar's
   // geometry is measured in a real browser: Mantine's root carries `padding-inline: var(--slider-size)`,
@@ -467,8 +476,13 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
     await expect(tip).not.toHaveText(atCheapEnd);
   }
 
-  // And what the whole sequence adds up to if it is fought to the end, one line under it.
+  // And what the whole sequence adds up to if it is fought to the end, one line under it — the one line of
+  // the old tail still on screen. The four dimmed paragraphs and the curve table that followed it are
+  // behind one closed fold now (owner, 2026-09-16: the prose goes; design rule 4).
   await expect(march.getByText(/^Fought to the end: /)).toBeVisible();
+  await expect(march.getByText(/^Every plan here is fought over the same marches/)).toBeHidden();
+  const reference = march.getByRole('button', { name: /^Reference/ });
+  await expect(reference).toHaveAttribute('aria-expanded', 'false');
 
   if (phone) await closeMarchSheet(page);
 

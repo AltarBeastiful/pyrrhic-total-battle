@@ -150,23 +150,55 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
     };
   }, [read]);
 
-  const move = (event: ReactPointerEvent<HTMLDivElement>): void => {
+  /**
+   * The stop a pointer is over, or `null` when there is no layout to read it off (jsdom, a bar inside a
+   * closed fold). Shared by the move that raises the tip and the press that reads a plan, so the two can
+   * never disagree about which stop a finger is on.
+   */
+  const stopUnder = (clientX: number): { index: number; live: Frame } | null => {
     const live = read();
     // Nothing to measure: jsdom answers every box as zero, and so does a bar the browser has not laid out
     // yet. There is then no answer to "which stop is under the pointer", and naming one would light a row
     // in the trade below that the pointer is not on — so the bar says nothing instead of guessing.
-    if (live === null) return;
+    if (live === null) return null;
     // `clientX` is in client coordinates and `origin` is in the band's own; mixing the two is a bug that
     // only shows on a bar that is not at the page's left edge, which is every bar this app draws.
-    const index = stopAt((event.clientX - live.left) / live.span, rows.length);
-    onHover(index);
-    raise(index, live);
+    return { index: stopAt((clientX - live.left) / live.span, rows.length), live };
+  };
+
+  /**
+   * **The band is the target, all 58 px of it** (design rule 19). Its own comment in `march.module.css`
+   * has claimed that since the bar was built, and it was not true: Mantine's slider root is 16 px tall and
+   * owns the only press that moves the thumb, so a click 14 px under the track — inside the air this band
+   * adds so the sweet-spot mark clears the two words below it — landed on the band and did nothing at all.
+   * It reads the nearest stop now, the same arithmetic the tip uses, and hands the focus to the thumb so
+   * the arrow keys carry on from where the finger left off.
+   *
+   * Only a press on the band **itself**: the slider, the two words under it and "Back to the sweet spot"
+   * are all children with presses of their own, and a parent that answered theirs too would move the bar
+   * whenever a player reached for the button that puts it back.
+   */
+  const press = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.target !== band.current) return;
+    const under = stopUnder(event.clientX);
+    if (under === null) return;
+    slider.current?.querySelector<HTMLElement>('.mantine-Slider-thumb')?.focus();
+    onSelect(under.index);
+    raise(under.index, under.live);
+  };
+
+  const move = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const under = stopUnder(event.clientX);
+    if (under === null) return;
+    onHover(under.index);
+    raise(under.index, under.live);
   };
 
   return (
     <Box
       ref={band}
       className={classes.barBand}
+      onPointerDown={press}
       onPointerMove={move}
       onPointerLeave={() => {
         onHover(null);
@@ -257,14 +289,12 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           <Text size="sm" fw={600}>
             {PICK_WORD[row.pick]}
           </Text>
+          {/* Two lines and no third. It closed with "the sweet spot" over a tip already naming the plan
+              **Sweet spot**, above a bar whose mark says "Sweet spot" in the same brass — the same words
+              three times in one glance (design rule 5, the owner's own cut of 2026-09-16). */}
           <Text size="xs" opacity={0.75}>
             {`${compact(row.repeat.damage)} damage a march`}
           </Text>
-          {sweet !== null && tipAt === sweet && (
-            <Text size="xs" opacity={0.75}>
-              the sweet spot
-            </Text>
-          )}
         </Box>
       )}
 

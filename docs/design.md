@@ -361,7 +361,7 @@ and `scale` only changes the em it is measured in. Nothing in the app writes an 
 | Family | Glyphs |
 |---|---|
 | Categories | ⚔️ `melee` · 🏹 `ranged` · 🐴 `mounted` · 🦅 `flying` |
-| Groups | 🛡️ `guardsmen` · 🗡️ `specialists` · ⚙️ `engineers` · 💀 `monsters` · 🏰 `army` · 👹 `epicMonster` |
+| Groups | 🛡️ `guardsmen` · 🗡️ `specialists` · ⚙️ `engineers` · 💀 `monsters` · 🪖 `mercenaries` · 🏰 `army` · 👹 `epicMonster` |
 | Races | 🐾 `beast` · 🔥 `elemental` · 🐉 `dragon` · 🗿 `giant` |
 | Housing pools | 🛡️ `leadership` · 👑 `authority` · 💀 `dominance` |
 | Figures | 🔒 `minimumDamage` · 🎯 `averageDamage` · ⏳ `time` · 🪙 `silver` · 🏵️ `dragonCoin` · 💰 `gold` |
@@ -370,7 +370,10 @@ and `scale` only changes the em it is measured in. Nothing in the app writes an 
 - **Decorative by default.** `<Glyph kind="melee" />` renders `aria-hidden`; it repeats a visible label, never
   replaces it. Give it a `label` — and only then — when it stands alone, and it becomes `role="img"` with that
   name.
-- **One meaning per glyph.** 👑 is always authority, 💀 is always the monsters family and dominance with it.
+- **One meaning per glyph.** 👑 is always authority, 💀 is always the monsters family and dominance with it,
+  🪖 is always the hired stock. The plan's trade broke this on 2026-09-16 — its "Hired lost" column wore 👑,
+  the pool glyph printed two blocks above it on the same screen — which is why `mercenaries` exists: the
+  fifth family `UnitGroup` carries and the glyph set did not.
 - **Meaning may also be carried by coloured text** (`c="tier6.5"`, `c="guardsmen.7"`), with the contrast floor
   checked. Both are first-class tools, not workarounds.
 

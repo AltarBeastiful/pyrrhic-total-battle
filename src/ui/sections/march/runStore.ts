@@ -12,6 +12,8 @@
 import { create } from 'zustand';
 
 import type { CampaignPlan, PlanRow } from '@/engine/plan';
+import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
+import type { BattleSetup, Profile } from '@/state/schema';
 
 /**
  * Where on the bar the March is read (S-55; one control since the owner's review of 2026-09-14).
@@ -69,8 +71,6 @@ export function sweetSpotOf(plan: CampaignPlan): number | null {
 export function defaultPlanPosition(plan: CampaignPlan): number {
   return sweetSpotOf(plan) ?? positionOf(plan, plan) ?? 0;
 }
-import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
-import type { BattleSetup, Profile } from '@/state/schema';
 
 /** The handful of figures the trade-off table compares; everything else in a summary is noise there. */
 export interface TradeoffFigures {

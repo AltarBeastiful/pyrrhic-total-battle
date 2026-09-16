@@ -2,26 +2,10 @@
    a colour, a radius or a spacing — those are theme tokens; this is the one thing Mantine has no
    prop for: a shape that follows the *card's* width instead of the window's. */
 
-/* The counts block measures itself. At 1400 px the March is a 360 dp supporting pane, so a media
-   query would give it the wide table on a screen where it has 22 rem to draw it in; a container
-   query asks the only question that matters — has this card room for six columns? */
-.counts {
-  container-type: inline-size;
-}
-
-.wide {
-  display: none;
-}
-
-@container (min-width: 36rem) {
-  .wide {
-    display: block;
-  }
-
-  .narrow {
-    display: none;
-  }
-}
+/* The counts block's container query lived here — `.counts`, `.wide`, `.narrow` — and went out with the
+   counts table itself (owner, 2026-09-13: the pills *are* the counts). `.quietLabel` went with the field
+   that used to sit inside a stack row. Nothing referenced any of the four; design rule 23 counts this
+   file's rules, and a rule nothing reads still counts. */
 
 /* The quick summary is one line that must never widen the bar it sits in. */
 .quickLine {
@@ -36,19 +20,6 @@
   .quickStacks {
     display: none;
   }
-}
-
-/* A count inside a row has no room for a label over it, and the row already says which unit it
-   belongs to — so the field's label is taken off the screen and left in the accessibility tree,
-   where it is the control's name. */
-.quietLabel :global(.mantine-InputWrapper-label) {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 /* The pool's own figure over the pills it paid for (artboard `.pool-v`): 26 px and 700, the
@@ -107,11 +78,17 @@
   font-size: var(--mantine-font-size-xs);
 }
 
+/* One line per head, always (design rule 19). Left to wrap, an auto-laid table in a 420 px pane set
+   "🪙 Silver a march" as "Silver / a / march" — four lines of head over one line of figures, and the
+   glyph alone on a line above "Hired / lost". The heads are a glyph and two words now
+   (`PlanTrade.tsx`), and this is what stops the browser breaking even those: the table is allowed its
+   own sideways scroller, so a head that does not fit widens the table rather than growing it taller. */
 .compare :global(thead th) {
   border-bottom: 1px solid var(--pyr-hairline);
   color: var(--mantine-color-dimmed);
   font-size: var(--pyr-meta);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 /* No rules between the rows: the card's own parts are what hairlines are for (docs/design.md §4),
@@ -124,10 +101,34 @@
   white-space: nowrap;
 }
 
-/* The march's own objective: one tonal step, so the eye finds the row it is reading against. The
-   row also carries `aria-current`, and its button says so in words. */
+/* The march's own objective: one tonal step, so the eye finds the row it is reading against. The row
+   also carries `aria-current` and, on the plan's trade, `aria-selected`. */
 .compare :global(tbody tr[data-current]) {
   background: var(--pyr-raised);
+}
+
+/* …and one step of weight with it, which is the half a colour-blind eye can still read (design rule 24:
+   colour is never the only signal). It replaces the 🎯 the plan's trade printed beside the name of the row
+   on screen — the same glyph that heads the Damage column two cells along (rule 21, one meaning per
+   glyph). Everything in the table's body is already 600; the row on screen is 700. */
+.compare :global(tbody tr[data-current] th) {
+  font-weight: 700;
+}
+
+/* The whole row is the control on the plan's trade (`PlanTrade.tsx`, design rule 8), so it takes a
+   pointer like one. The focus ring is Mantine's own `mantine-focus-auto`, put on the row in the TSX
+   rather than drawn again here (rule 23). */
+.compare :global(tbody tr[tabindex]) {
+  cursor: pointer;
+}
+
+/* The ring a keyboard sees, in the theme's own two values — the same `2px` of the primary fill and the same
+   offset Mantine draws on every button (`@mantine/core/styles.css`, `.mantine-focus-auto`). Written here
+   rather than borrowed as a utility class, because `className` in this tree may only carry a module value
+   (kit rule 3). The offset is turned inwards so the ring is not clipped by the table's own scroller. */
+.compare :global(tbody tr:focus-visible) {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
 }
 
 /* The row the plan's bar is pointing at (S-59). It is deliberately **not** the ground above: a hover is
@@ -157,9 +158,50 @@
      The floor is **7 rem**, and it was measured rather than guessed: at 5.5 rem an auto layout gave the
      column 97.8 px and the name wrapped — "Sweet / spot" over "the sweet / spot", four lines for a row
      whose figures are one — where 7 rem (112 px) sets "Best for silver" on one line and "the sweet spot"
-     on one below it. The cell still wraps, because a name and that note are two lines. */
-  min-width: 7rem;
+     on one below it.
+
+     **6.5 rem since the screen review of 2026-09-16**, when the note under the name went (rule 5: the row
+     is already called "Sweet spot") and the heads stopped wrapping. 104 px still sets the longest of the
+     four names, "Spare the stock", on one line at the table's 12 px; the eight pixels it gives back are
+     part of the 36 that keep a 462 px pane free of a sideways scroller. The cell may still wrap, because
+     the engine names the rows and a longer name is its to give. */
+  min-width: 6.25rem;
   white-space: normal;
+}
+
+/* The pinned first column (S-59 screen review, 2026-09-16). Measured at 390 px: the trade is **420 px of
+   table in 358 px of sheet**, so the scroller this table has always been allowed (above) took the plan
+   names off the left edge and left five columns of figures naming nothing — "t spot", "mage", "silver".
+   The names stay and the figures travel under them.
+
+   `position: sticky` needs an opaque ground of its own, because a transparent cell is one the scrolled
+   figures show through. The ground under the block is `--pyr-pane` in both places the March is drawn (the
+   desktop pane and the phone sheet, `shell.module.css`) and that token is a **gradient** — a 600 px ramp no
+   28 px cell can repeat — so the pinned cell takes the flat surface nearest it, the page's own, with the
+   hairline the whole app tells its parts apart by along the edge the figures pass. The step is deliberate
+   and small: it reads as a pinned column rather than as a seam. The raised row keeps its own ground here
+   too, or the plan on screen would lose its mark the moment the table scrolled. */
+.compare .pinned {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--pyr-page);
+  /* The edge the figures pass, as a **shadow** and not a border: a border is a pixel of layout, and the
+     measurement above leaves the table none to spare in a 462 px pane. */
+  box-shadow: 1px 0 0 var(--pyr-hairline);
+}
+
+/* The pointer's row rules its cells (above) by replacing their shadow, which on this one cell would take
+   the pinned edge away for as long as a finger rests on the row. Both, then. */
+.compare :global(tbody tr[data-lit]) .pinned {
+  box-shadow:
+    inset 0 1px 0 var(--pyr-hairline),
+    inset 0 -1px 0 var(--pyr-hairline),
+    1px 0 0 var(--pyr-hairline);
+}
+
+.compare :global(tbody tr[data-current]) .pinned {
+  background: var(--pyr-raised);
 }
 
 /* The name is the control — pressing it generates with that objective — and it is the one cell
@@ -192,8 +234,12 @@
    its own, and the two words under the bar. Measured at 1400×900: the label hangs from 14 px to 34 px
    below the root's top, and `xl` (24 px) of gap between the root and the words is what clears it —
    without it the label printed **over** "Least silver", which is the collision this records. The band
-   is therefore ~58 px tall, not the 40 px a bare slider would want, and every one of those pixels can
-   be aimed at. */
+   is therefore ~58 px tall, not the 40 px a bare slider would want.
+
+   **And every one of those pixels can be aimed at — since 2026-09-16, and not before.** This comment
+   claimed it from the day it was written while the slider root owned the only press that moved the
+   thumb: a click 14 px under the track landed on the band and did nothing. `PlanBar.press` is what
+   makes the claim true (design rule 19). */
 .barBand {
   position: relative;
   display: flex;

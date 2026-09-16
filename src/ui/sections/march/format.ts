@@ -27,11 +27,19 @@ export function compact(value: number): string {
   return COMPACT.format(Math.round(value));
 }
 
-/** A ratio such as damage per silver: two decimals while it is small, whole numbers above 100. */
-export function ratio(value: number): string {
+/**
+ * A ratio such as damage per silver: two decimals while it is small, whole numbers above 100.
+ *
+ * `decimals` is there for one reason, and it is a measured one (S-59 review, 2026-09-16): on the plan's
+ * trade the column named "Per silver" printed **0.54 on all three rows** — the plans differ in the third
+ * decimal (0.536, 0.535, 0.534), so a column that decides a row's *name* was rounding the decision away
+ * and the row called "Best for silver" read exactly like the two under it. A figure a player chooses by
+ * has to be printed to where it differs.
+ */
+export function ratio(value: number, decimals = 2): string {
   if (!Number.isFinite(value)) return '—';
   if (value === 0) return '0';
-  return Math.abs(value) >= 100 ? amount(value) : value.toFixed(2);
+  return Math.abs(value) >= 100 ? amount(value) : value.toFixed(decimals);
 }
 
 /** A percentage as entered (5 → "5%", 2.5 → "2.5%"). */

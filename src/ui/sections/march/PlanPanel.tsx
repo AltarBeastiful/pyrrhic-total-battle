@@ -19,8 +19,14 @@
  *   and — once the bar has been moved off it — the one control that puts it back;
  * - **the trade** (`PlanTrade.tsx`): one row per answer, named, with what a march of it hits for, costs in
  *   silver and burns of the hired stock. That is the question the method exists to answer;
- * - **the reference tail**: what silver buys (the curve), what the whole sequence comes to, what it ran out
- *   of, how many plans were left off, and whether the march on screen has been edited since.
+ * - **one line of totals**, "Fought to the end", because a player who has read the trade still asks what the
+ *   whole sequence comes to;
+ * - **the reference tail, folded** (the owner, 2026-09-16: the prose goes). What silver buys (the curve),
+ *   what the plan ran out of, how a row is to be read and how many plans were left off are four dimmed
+ *   paragraphs and a table that nobody reads twice, so they sit behind one nested fold named "Reference",
+ *   closed until it is asked for (design rule 4). What stays out of it is the one line above and the
+ *   warning that the march on screen has been hand-edited since — a warning behind a chevron is not a
+ *   warning.
  *
  * **Every plan on the trade is fought over the same marches** — the horizon `src/config.ts` sets, which the
  * Battle card no longer asks for (S-56). That is the owner's decision of the same review, and it is what makes
@@ -30,7 +36,7 @@
  *
  * Nothing here computes anything: the engine returns the plan and its picks, and the run store holds them.
  */
-import { ActionIcon, Group, Stack, Table, Text, Tooltip, VisuallyHidden } from '@mantine/core';
+import { ActionIcon, Group, Popover, Stack, Table, Text, VisuallyHidden } from '@mantine/core';
 import { Info } from 'lucide-react';
 import { useId, useState } from 'react';
 
@@ -174,6 +180,7 @@ export function PlanFold() {
   // thing (invariants 0020 §D-2): the bar says which plan, the table says what it is worth, and the two
   // must be reading the same row.
   const [hovered, setHovered] = useState<number | null>(null);
+  const [whyOpen, setWhyOpen] = useState(false);
   const whyId = useId();
   if (plan === null) return null;
 
@@ -233,26 +240,40 @@ export function PlanFold() {
                   best.repeat.damage,
                 )} damage a march, spending ${mercsAMarch(best)} of the hired stock each time.`}
           </Text>
-          {/* Reachable by keyboard and not only by pointer: Mantine's `Tooltip` opens on hover alone by
-              default, and it links nothing to the control for a screen reader, so the same words are
-              carried again beside it as the button's description. */}
-          <Tooltip
-            label={WHY}
-            multiline
-            w={320}
-            events={{ hover: true, focus: true, touch: false }}
+          {/* **A popover and not a tooltip** (design rules 18 and 24). It was a `Tooltip` with
+              `touch: false`, which on a phone — the frame this app is designed at first — meant the
+              paragraph the owner asked for on 2026-09-15 could not be reached at all: hover is not a
+              thing a thumb has. A `Popover` opens on the press, closes on a press outside it or on
+              Escape, and works identically for a pointer, a thumb and a keyboard. The words are still
+              carried beside the button as its description, because a popover's contents are not in the
+              accessibility tree until it is open. */}
+          <Popover
+            opened={whyOpen}
+            onChange={setWhyOpen}
+            width={320}
+            position="bottom-end"
+            withArrow
+            shadow="md"
             withinPortal
           >
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size="sm"
-              aria-label="Why the plan weighs silver against the hired stock"
-              aria-describedby={whyId}
-            >
-              <Info size={16} aria-hidden />
-            </ActionIcon>
-          </Tooltip>
+            <Popover.Target>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label="Why the plan weighs silver against the hired stock"
+                aria-describedby={whyId}
+                onClick={() => {
+                  setWhyOpen((open) => !open);
+                }}
+              >
+                <Info size={16} aria-hidden />
+              </ActionIcon>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Text size="sm">{WHY}</Text>
+            </Popover.Dropdown>
+          </Popover>
           <VisuallyHidden id={whyId}>{WHY}</VisuallyHidden>
         </Group>
 
@@ -269,84 +290,97 @@ export function PlanFold() {
           />
         )}
 
-        <PlanTrade rows={rows} position={position} hovered={hovered} onSelect={read} sweet={sweet} />
-
-        {/* Every plan is fought over the same marches — the horizon `src/config.ts` sets — so the table needs
-            no column for length: a row is *the march you repeat*, which is the march the recap above is
-            drawing, and the two ratio columns weigh that one march. */}
-        <Text size="sm" c="dimmed">
-          Every plan here is fought over the same marches — the horizon the app plans over — so a row is the
-          march you repeat: what it hits for, what it costs in silver and what it burns of the hired stock for
-          good. The two ratio columns divide that one march's damage by its own silver and by its own hired
-          losses. The whole sequence is added up at the foot of this block.
-        </Text>
-
-        {/* The extremes are not offered (owner, 2026-09-15: "just don't show the extremes"), so the fold says
-            what was cut rather than letting the bar look like the whole trade. The count is the engine's
-            (`CampaignPlan.leftOut`); the words are ours. */}
-        {plan.leftOut > 0 && (
-          <Text size="sm" c="dimmed">
-            {`${amount(plan.leftOut)} of the plans the search kept are off the goal — a march that fields a ` +
-              `token share of the hired stock, or silver spent far past what it returns — and are not offered ` +
-              `here.`}
-          </Text>
-        )}
+        <PlanTrade rows={rows} position={position} hovered={hovered} onSelect={read} />
 
         {/* What the sequence adds up to if it is fought to the end — one line, not a headline: nobody commits
-            to a hundred marches at once, and the figures above are the ones they march. */}
+            to a hundred marches at once, and the figures above are the ones they march. It is the one line of
+            the old tail that stays out of the fold below, because it answers a question the trade raises. */}
         <Text size="sm" c="dimmed">
           {`Fought to the end: ${amount(plan.totalDamage)} damage and ${amount(
             plan.silver,
           )} silver over ${amount(plan.marches)} marches, with ${amount(plan.mercLost)} of the hired stock gone.`}
         </Text>
 
-        {/* What the plan ran out of — the one thing a player would otherwise have to work out. */}
-        <Text size="sm" c="dimmed">
-          {bindingSentence(plan.binding)}
-        </Text>
-
-        {/* The curve behind the frontier: what N silver buys, and what it buys a mercenary. Six points of it,
-            evenly spaced, because the frontier list above is thinned for the eye while this is the shape — and
-            the shape is what says how far silver is worth spending. */}
-        {plan.curve.length > 2 && (
-          <>
-            <Table
-              horizontalSpacing={6}
-              verticalSpacing={4}
-              aria-label="What silver buys along the plan curve"
-            >
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th scope="col">Silver</Table.Th>
-                  <Table.Th scope="col" ta="end">
-                    Damage
-                  </Table.Th>
-                  <Table.Th scope="col" ta="end">
-                    A silver
-                  </Table.Th>
-                  <Table.Th scope="col" ta="end">
-                    A mercenary
-                  </Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {sampledCurve(plan.curve).map((point) => (
-                  <Table.Tr key={point.silver}>
-                    <Table.Td>{amount(point.silver)}</Table.Td>
-                    <Table.Td ta="end">{amount(point.damage)}</Table.Td>
-                    <Table.Td ta="end">{ratio(point.damagePerSilver)}</Table.Td>
-                    <Table.Td ta="end">{ratio(point.damage / Math.max(1, point.mercLost))}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+        {/* **The prose goes behind a chevron** (the owner, 2026-09-16; design rule 4 — fold what is read
+            once). Four dimmed paragraphs and a table stood under the trade: how to read a row, how many
+            plans the band refused, what the plan ran out of, what silver buys along the curve and where it
+            stops buying. None of them is the answer and all of them are true, so they are folded rather than
+            cut, closed until a player asks — which is the same treatment the bonus sources and the battle
+            story get. */}
+        <Disclosure title="Reference">
+          <Stack gap="md">
+            {/* Every plan is fought over the same marches — the horizon `src/config.ts` sets — so the table
+                needs no column for length: a row is *the march you repeat*, which is the march the recap
+                above is drawing, and the two ratio columns weigh that one march. */}
             <Text size="sm" c="dimmed">
-              {`Past about ${amount(efficientCeiling(plan.curve))} silver, the next slice buys less than one damage a silver — ` +
-                `beyond that the plan is buying damage with the hired stock rather than with silver.`}
+              Every plan here is fought over the same marches — the horizon the app plans over — so a row is
+              the march you repeat: what it hits for, what it costs in silver and what it burns of the hired
+              stock for good. The two ratio columns divide that one march's damage by its own silver and by
+              its own hired losses.
             </Text>
-          </>
-        )}
 
+            {/* The extremes are not offered (owner, 2026-09-15: "just don't show the extremes"), so the fold
+                says what was cut rather than letting the bar look like the whole trade. The count is the
+                engine's (`CampaignPlan.leftOut`); the words are ours. */}
+            {plan.leftOut > 0 && (
+              <Text size="sm" c="dimmed">
+                {`${amount(plan.leftOut)} of the plans the search kept are off the goal — a march that fields a ` +
+                  `token share of the hired stock, or silver spent far past what it returns — and are not offered ` +
+                  `here.`}
+              </Text>
+            )}
+
+            {/* What the plan ran out of — the one thing a player would otherwise have to work out. */}
+            <Text size="sm" c="dimmed">
+              {bindingSentence(plan.binding)}
+            </Text>
+
+            {/* The curve behind the frontier: what N silver buys, and what it buys a mercenary. Six points of
+                it, evenly spaced, because the frontier list above is thinned for the eye while this is the
+                shape — and the shape is what says how far silver is worth spending. */}
+            {plan.curve.length > 2 && (
+              <>
+                <Table
+                  horizontalSpacing={6}
+                  verticalSpacing={4}
+                  aria-label="What silver buys along the plan curve"
+                >
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th scope="col">Silver</Table.Th>
+                      <Table.Th scope="col" ta="end">
+                        Damage
+                      </Table.Th>
+                      <Table.Th scope="col" ta="end">
+                        A silver
+                      </Table.Th>
+                      <Table.Th scope="col" ta="end">
+                        A mercenary
+                      </Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {sampledCurve(plan.curve).map((point) => (
+                      <Table.Tr key={point.silver}>
+                        <Table.Td>{amount(point.silver)}</Table.Td>
+                        <Table.Td ta="end">{amount(point.damage)}</Table.Td>
+                        <Table.Td ta="end">{ratio(point.damagePerSilver)}</Table.Td>
+                        <Table.Td ta="end">{ratio(point.damage / Math.max(1, point.mercLost))}</Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+                <Text size="sm" c="dimmed">
+                  {`Past about ${amount(efficientCeiling(plan.curve))} silver, the next slice buys less than one damage a silver — ` +
+                    `beyond that the plan is buying damage with the hired stock rather than with silver.`}
+                </Text>
+              </>
+            )}
+          </Stack>
+        </Disclosure>
+
+        {/* Not folded: a warning behind a chevron is not a warning. The figures above are of a march the
+            player has since changed by hand, which is the one thing on this block that can be out of date. */}
         {edited && (
           <Text size="sm" c="dimmed">
             The march on screen has been edited by hand since it was planned; the plan behind it has not

@@ -571,7 +571,9 @@ test('complete optimization answers with a plan, and the March draws it instead 
 
   // The trade the plan chose from, one row per answer the engine offers: a plan the player may be asked to
   // march.
-  const trade = screen.getByRole('table', { name: 'Every plan on the trade' });
+  // Its name carries the unit its column heads stopped repeating (S-59 screen review, 2026-09-16), and it
+  // is a `grid` because each of its rows is a control the player picks between.
+  const trade = screen.getByRole('grid', { name: 'Every plan on the trade, one repeated march each' });
   expect(within(trade).getAllByRole('row').length).toBeGreaterThan(2);
 
   // And it folds away on request: the chevron is how a player whose pane no longer sticks gets one that
