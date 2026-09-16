@@ -11,25 +11,31 @@
  */
 import { create } from 'zustand';
 
-import type { CampaignPlan } from '@/engine/plan';
+import type { CampaignPlan, PlanRow } from '@/engine/plan';
 
 /**
- * Where on the plan's frontier the March is read (S-55; one control since the owner's review of 2026-09-14).
+ * Where on the bar the March is read (S-55; one control since the owner's review of 2026-09-14).
  *
- * The frontier **is** the trade — its plans sorted cheapest-first, from the one that stretches silver
+ * The trade **is** the axis — its plans sorted cheapest-first, from the one that stretches silver
  * furthest to the one kindest to the hired stock — so a position on it is the choice, and the three
  * directions the toggle used to offer were three of its points rather than a different question. It is a
  * position and not an input: every plan on the frontier comes out of the same search, so moving along it
  * shows another answer instead of asking for one.
+ *
+ * It is a **position** and not a `PlanPick`: since S-59 the engine names which of the four answers a row
+ * is (`src/engine/plan.ts`), and the two are different questions — "which plan is on screen" against
+ * "what kind of answer is that row". Named `PlanPosition` so a file that needs both can import both.
  */
-export type PlanPick = number;
+export type PlanPosition = number;
 
-/** The plan a position names, clamped to the frontier: a fresh search can be shorter than the last one. */
-export function pickOf(plan: CampaignPlan, position: number) {
+/** The plan a position names, clamped to the bar: a fresh search can be shorter than the last one. */
+export function pickOf(plan: CampaignPlan, position: number): PlanRow {
   const rows = plan.alternatives;
-  if (rows.length === 0) return plan.recommend ?? plan.mostEfficient ?? plan;
   const at = Math.max(0, Math.min(rows.length - 1, Math.round(position)));
-  return rows[at] ?? plan;
+  // `alternatives` always carries at least the sweet spot — the engine pushes it first, whatever the
+  // band does — so the fallback is defensive: a plan of an older shape still draws as a row rather than
+  // throwing on a property it has not got.
+  return rows[at] ?? { ...plan, pick: 'sweet-spot', label: '' };
 }
 
 /** Where a plan's own figures sit on the frontier it was carried with (`null` when the list has no copy). */
@@ -45,6 +51,12 @@ function positionOf(plan: CampaignPlan, wanted: { silver: number; totalDamage: n
  * or `null` when there is no such point. A silver box makes the plan *be* the answer (there is nothing
  * left to balance), and only then does the engine leave `recommend` out; the bar is drawn without a
  * marker, because a marker on a plan nobody weighed would be pointing at a spot that does not exist.
+ *
+ * **Read off `recommend` and not off `pick: 'sweet-spot'`** (S-59, considered and left alone). The engine
+ * marks a sweet-spot row whether or not a budget was given, so the `pick` would answer an index in a case
+ * where this function promises `null` — the two agree on every plan the app can produce, and disagree on
+ * the one a caller that passes `silverBudget` gets. A simplification that changes an exported answer is
+ * not a simplification.
  */
 export function sweetSpotOf(plan: CampaignPlan): number | null {
   return plan.recommend === undefined ? null : positionOf(plan, plan.recommend);
@@ -169,8 +181,8 @@ export interface RunState {
    * recommendation sits. A position, not an input — the plans are computed together, so the player chooses
    * a place on the trade without naming a silver figure.
    */
-  planPick: PlanPick;
-  setPlanPick: (pick: PlanPick) => void;
+  planPick: PlanPosition;
+  setPlanPick: (pick: PlanPosition) => void;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;

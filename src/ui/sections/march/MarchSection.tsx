@@ -137,7 +137,7 @@ export function MarchSection() {
         {!twoPanes && <MarchGenerateButton fullWidth />}
       </Stack>
 
-      {/* 2 — the pools and the stacks they paid for. The army steps back with the figures while the
+      {/* 2 — the army: the pools and the stacks they paid for. The army steps back with the figures while the
           setup has moved under it (`march.module.css`, `.outOfDate`): the whole answer dims together
           or none of it. */}
       {snapshot !== null && result !== null && summary !== null && (
@@ -156,13 +156,27 @@ export function MarchSection() {
       {/* 3 — what this march leaves at home. */}
       {snapshot !== null && march.leftOut.length > 0 && <MarchLeftOut leftOut={march.leftOut} />}
 
-      {/* 4 — the things a player does with a whole march: copy the counts, edit them, keep it, send
+      {/* 4 — the plan behind a complete optimization (S-59). It is **not a fold to hunt for** (the owner
+          asked for the nine-line explanation that stood above the figures to go, and for the block to be
+          "a new part of the recap when total optimization is chosen"), so it arrives **open** — `PlanFold`
+          carries `defaultOpened`, and the chevron stays because closing it is how a player whose pane no
+          longer sticks gets one that does (`docs/design.md` §4).
+
+          **Under the army, not above it** (owner, 2026-09-16: *"we should first see the army then the
+          details to change them afterwards"*). S-59 first put the block straight under the recap figures,
+          which pushed the pills and their counts down the pane; the block is a *control* — reading another
+          plan puts another march on screen — and a control belongs after the thing it acts on, never
+          between the answer and the army. It draws nothing at any other method: `PlanFold` is null without a
+          plan, and `Sections` gives a part that is not on screen no line to take with it. */}
+      <PlanFold />
+
+      {/* 5 — the things a player does with a whole march: copy the counts, edit them, keep it, send
           it. One part, because they are one kind of thing. **In the sheet only** (owner, 2026-09-15):
           on a desktop they are the foot of the setup column instead (`MarchFoot.tsx`), because the
           pane has to stay shorter than the column it sits beside for it to stick. */}
       {!twoPanes && <MarchActions />}
 
-      {/* 5 — anything worth a look about this particular march. Alerts are the one tinted block the
+      {/* 6 — anything worth a look about this particular march. Alerts are the one tinted block the
           design still allows (docs/design.md §2), and they are gathered into one part so they never
           stripe the pane. */}
       {snapshot !== null && result !== null && notices(march, result, otherMarch) && (
@@ -195,21 +209,26 @@ export function MarchSection() {
         </Stack>
       )}
 
-      {/* 6 — what the objective bought. The sheet's only: on a desktop it is the first block of the
+      {/* 7 — what the objective bought. The sheet's only: on a desktop it is the first block of the
           setup column's foot (`MarchFoot.tsx`), out of the 280 px the pane cannot spare. */}
       {!twoPanes && <MarchObjectives />}
 
-      {/* 7 — everything that is folded away. The folds share one part: a hairline between two
-          collapsed rows is a rule between two rules. The plan comes first of them — it explains the
-          answer, where the other two are reference (S-55). */}
-      <Stack gap={0}>
-        <PlanFold />
-        {/* The two reference folds are the sheet's as well: the plan's own assessment stays with the
-            answer in the pane, and these two go down the column with everything else that explains
-            rather than answers (owner, 2026-09-15). */}
-        {!twoPanes && <MarchDetailsFold />}
-        {!twoPanes && <MarchSavedFold />}
-      </Stack>
+      {/* 8 — everything that is folded away. The folds share one part: a hairline between two
+          collapsed rows is a rule between two rules. The plan used to lead them (S-55); it is part 2
+          now, where the answer is, and what is left here is reference.
+
+          The whole part is inside the `!twoPanes` test rather than each fold: an empty `Stack` is still
+          a child of `Sections`, and `Sections` gives every direct child a hairline and 16 px — so on a
+          desktop, where both folds belong to the setup column's foot, it was drawing a stray rule and a
+          stray 16 px under the last real part. */}
+      {!twoPanes && (
+        <Stack gap={0}>
+          {/* These two go down the column with everything else that explains rather than answers
+              (owner, 2026-09-15). */}
+          <MarchDetailsFold />
+          <MarchSavedFold />
+        </Stack>
+      )}
 
       {/* Neither of these draws anything in the flow: they are the two surfaces the March raises. */}
       {snapshot !== null && result !== null && summary !== null && (

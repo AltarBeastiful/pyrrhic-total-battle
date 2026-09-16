@@ -130,6 +130,17 @@
   background: var(--pyr-raised);
 }
 
+/* The row the plan's bar is pointing at (S-59). It is deliberately **not** the ground above: a hover is
+   not a selection, and the brief that produced this asked for the two marks not to be confusable. So it
+   is a rule — the same `--pyr-hairline` every part of the page is told apart by — drawn along the row's
+   two long edges and never between its cells, and the tip over the bar names the plan in words, so the
+   pointer's row is never said by colour alone (design rule 24). */
+.compare :global(tbody tr[data-lit] > *) {
+  box-shadow:
+    inset 0 1px 0 var(--pyr-hairline),
+    inset 0 -1px 0 var(--pyr-hairline);
+}
+
 /* The campaign's plans (S-54, `CampaignPanel.tsx`) name themselves in two lines — the sizing, and how
    many mercenaries it fields — inside one cell, so the five figures beside them fit a 420 px pane.
    It is the one cell of that table allowed to wrap, for the reason `.compareName` is below. */
@@ -138,13 +149,16 @@
    sets the column and pushes the last two figures out of a 420 px pane, where the same name over two
    lines costs one line and shows them. */
 .compare .planCell {
-  /* A **floor as well as a ceiling** (S-55, 2026-09-15). With six figures beside it, an auto-laid table
-     squeezed the name to about fifty pixels on a 390 px sheet — "3 stacks · 135 hired · 1.6M silver a
-     march" came out one word per line, eight lines tall, and the row stopped reading as a row. The
-     floor makes the table scroll a little further sideways instead, which is what the scroller is for
-     (design rule 17). */
-  min-width: 8rem;
-  max-width: 9.5rem;
+  /* A **floor, and no ceiling any more** (S-59, 2026-09-16). The 8 rem floor and the 9.5 rem ceiling were
+     sized for the shape sentences ("3 stacks · 135 hired · 1.6M silver a march"), which came out one word
+     per line in an auto-laid table on a 390 px sheet; an auto table now lays out four short names, the
+     longest of them "Best for silver", so the ceiling has nothing to hold back and is gone with them.
+
+     The floor is **7 rem**, and it was measured rather than guessed: at 5.5 rem an auto layout gave the
+     column 97.8 px and the name wrapped — "Sweet / spot" over "the sweet / spot", four lines for a row
+     whose figures are one — where 7 rem (112 px) sets "Best for silver" on one line and "the sweet spot"
+     on one below it. The cell still wraps, because a name and that note are two lines. */
+  min-width: 7rem;
   white-space: normal;
 }
 
@@ -164,4 +178,73 @@
   align-items: center;
   line-height: 1.25;
   white-space: normal;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The plan's bar (S-59, `PlanBar.tsx`). Two shapes Mantine has no prop for: the band the pointer is
+   aimed at, and a tip that sits at a *stop* rather than at the pointer. Everything else on the bar —
+   the track, the thumb, the marks, the two words under it — is stock `Slider`.
+   --------------------------------------------------------------------------------------------- */
+
+/* Mantine's slider root is 16 px tall (`height: calc(var(--slider-size) * 2)`, `styles.css`), which is
+   a target a trackpad misses. The band is the control the bar is aimed at, and it has to hold three
+   stacked things: the sweet-spot mark's label, which is absolutely positioned and so takes no room of
+   its own, and the two words under the bar. Measured at 1400×900: the label hangs from 14 px to 34 px
+   below the root's top, and `xl` (24 px) of gap between the root and the words is what clears it —
+   without it the label printed **over** "Least silver", which is the collision this records. The band
+   is therefore ~58 px tall, not the 40 px a bare slider would want, and every one of those pixels can
+   be aimed at. */
+.barBand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--mantine-spacing-xl);
+  min-height: 2.5rem;
+}
+
+/* The tip is ours and not Mantine's `Tooltip` because it has to sit at a **stop** — where the plan it
+   names actually is — while `Tooltip` follows the pointer, which is the "hard to grasp" the owner
+   reported. Its surface is Mantine's own tooltip surface rather than one of ours (design rule 23): the
+   inverted pair below is what `Tooltip` paints in each scheme, so a player reads this the same way they
+   read Generate's hint. Positioning and motion are the two things a prop cannot say. */
+.tip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + var(--mantine-spacing-xs));
+  z-index: 2;
+  max-width: 100%;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border-radius: var(--mantine-radius-sm);
+  /* A tooltip is never the thing you press: the bar underneath keeps every pointer event, so a hover on
+     the tip is still a hover on the bar. */
+  pointer-events: none;
+  opacity: 0;
+}
+
+[data-mantine-color-scheme='light'] .tip {
+  background-color: var(--mantine-color-gray-9);
+  color: var(--mantine-color-white);
+}
+
+[data-mantine-color-scheme='dark'] .tip {
+  background-color: var(--mantine-color-gray-2);
+  color: var(--mantine-color-black);
+}
+
+.tip[data-shown] {
+  opacity: 1;
+}
+
+/* Motion, and only for a player who has not asked for the system for stillness (design rule 24; the
+   house pattern is `shell.module.css` and `domain.module.css`). The tip fades on enter and leave — so it
+   needs no mount/unmount machinery to have something left to fade — and slides between stops, because
+   the transform is what carries it there (`PlanBar.tipTransform`). 120 ms, the beat the stack pills
+   arrive on. Under reduced motion the tip still appears and still moves; it simply arrives. */
+@media (prefers-reduced-motion: no-preference) {
+  .tip {
+    transition:
+      opacity 120ms ease-out,
+      transform 120ms ease-out;
+  }
 }

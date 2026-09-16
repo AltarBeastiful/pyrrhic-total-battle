@@ -138,11 +138,47 @@ export async function generate(
   await settle(page);
 }
 
+/**
+ * The army a plan is planned from, before the journey's own taps start (S-56). Shared by every spec that
+ * needs the plan method, because the seed is fiddly and the failure mode of getting it wrong is a silent
+ * one — "There is no campaign to plan from this army".
+ *
+ * The plan spreads the **hired stock** over the marches it sizes, so an account that has hired nothing
+ * leaves it nothing to spread and the engine refuses outright. An *unlimited* mercenary is no better: a
+ * stock the plan cannot ration is not a stock it can divide over ten marches. Both were measured on
+ * 2026-09-15 — `planCampaign` returns no candidate at all for either. So this hires one mercenary, types
+ * what is owned of it, and opens the authority pool that pays for it, then reloads so the document rather
+ * than the session is what the run reads.
+ */
+export async function seedHiredStock(page: Page): Promise<void> {
+  const card = page.locator('#mercenaries');
+  await card.getByRole('button', { name: 'Hire mercenary…' }).click();
+  const search = page.getByRole('textbox', { name: 'Search mercenaries' });
+  await search.fill('Bear');
+  await page.getByRole('option', { name: 'Bear V tier 5' }).click();
+  await search.press('Escape');
+
+  // Hired reads "owned unlimited" until the pill's own popover says otherwise, and unlimited is not a
+  // figure the plan can ration (the pill's popover, J2 of `mercenaries.spec.ts`).
+  await card.getByRole('button', { name: 'Bear V: owned unlimited' }).click();
+  const owned = page.getByRole('dialog').getByRole('textbox', { name: 'Owned' });
+  await owned.fill('500');
+  await owned.press('Tab');
+  await page.keyboard.press('Escape');
+  await expect(card.getByRole('button', { name: /^Bear V: owned 500$/ })).toBeVisible();
+
+  // The hired stock is paid for out of authority, so the pool has to have room for it.
+  await fillHousing(page, 'Authority', 40_000);
+  await waitForSaved(page);
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('heading', { level: 1, name: 'Pyrrhic' })).toBeVisible();
+}
+
 /** What a Generate aims at, from 1200 px: one compact select in the command bar. */
 export function objectiveSelect(page: Page): Locator {
   return page.getByRole('combobox', { name: 'Objective' });
 }
-
 /** The same question on a phone: the bar's fourth chip, named after the objective it carries. */
 export function objectiveChip(page: Page): Locator {
   return page.getByRole('button', { name: /^Objective: / });

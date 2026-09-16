@@ -563,18 +563,24 @@ test('complete optimization answers with a plan, and the March draws it instead 
   expect(plan?.marches).toBe(CAMPAIGN.marches);
   expect(screen.getByText(/^Planned from the army:/)).toBeTruthy();
 
-  // Folded until it is asked for (design rule 4), with the answer's headline on the closed row.
+  // **Open on arrival** (S-59: the owner's 2026-09-16 review — "it becomes a new part of the recap"), with
+  // the answer's headline on the row either way.
   const fold = screen.getByRole('button', { name: /^Plan/ });
-  expect(fold.getAttribute('aria-expanded')).toBe('false');
+  expect(fold.getAttribute('aria-expanded')).toBe('true');
   expect(fold.textContent).toContain('damage a march');
-  fireEvent.click(fold);
-  await waitFor(() => {
-    expect(fold.getAttribute('aria-expanded')).toBe('true');
-  });
 
-  // The trade the plan chose from, one row per stop: a plan the player may be asked to march.
+  // The trade the plan chose from, one row per answer the engine offers: a plan the player may be asked to
+  // march.
   const trade = screen.getByRole('table', { name: 'Every plan on the trade' });
   expect(within(trade).getAllByRole('row').length).toBeGreaterThan(2);
+
+  // And it folds away on request: the chevron is how a player whose pane no longer sticks gets one that
+  // does, and what is left on the row is still the answer.
+  fireEvent.click(fold);
+  await waitFor(() => {
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+  });
+  expect(fold.textContent).toContain('damage a march');
 
   // And it *replaces* the objectives comparison: five more searches to compare one battle would explain
   // nothing that a plan over ten marches has not already said.

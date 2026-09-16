@@ -1,23 +1,29 @@
 // @vitest-environment jsdom
 /**
- * The Plan fold (S-55), by role and by name (design plan §7.5).
+ * The plan block (S-55, rewritten for S-59), by role and by name.
  *
- * The search itself is the engine's and is tested there; what this file checks is that the answer is *drawn*
- * — the one line saying what the plan decided (design rule 29), the thesis the method exists to state, the
- * bar with its sweet-spot marker and its way back, the trade read a march at a time with exactly one plan
- * marked, and which resource the plan ran out of. The store is primed with a plan the engine really
- * produced, so the words and the numbers are the ones a player would see.
+ * The search itself is the engine's and is tested there; what this file checks is that the answer is *drawn*:
+ * the one line saying what the plan decided, the bar and the tip that names the plan **under the pointer**
+ * rather than the one on screen, the trade read a march at a time with exactly one plan raised, and what the
+ * plan ran out of. The store is primed with a plan the engine really produced, so the words and the numbers
+ * are the ones a player would see.
+ *
+ * Since S-59 a row is named by `PlanRow.pick` (`./picks`) and the engine's shape sentence is not drawn at
+ * all, so every assertion here is against a **name** — the file before this one held sentences, which is
+ * exactly what the owner could not tell apart.
  */
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
+import type { PlanRow } from '@/engine/plan';
 import type { StackRequest } from '@/engine/types';
 import { getUnits } from '@/data';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
-import { amount } from './format';
 import { PlanFold, PlanSizing } from './PlanPanel';
+import { PICK_WORD } from './picks';
+import { compact, ratio } from './format';
 import { defaultPlanPosition, pickOf, sweetSpotOf, useRunStore } from './runStore';
 
 /** A small army with a hired stock: enough for the planner to have a real plan to show. */
@@ -43,17 +49,84 @@ function request(): StackRequest {
 // and every case below draws the same answer.
 const PLAN = planCampaign({ request: request(), alternatives: 6 });
 
-/** The fold, opened — every case below but the headline reads the body. */
-async function opened(): Promise<void> {
-  renderWithTheme(<PlanFold />);
-  fireEvent.click(screen.getByRole('button', { name: /^Plan/ }));
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: /^Plan/ }).getAttribute('aria-expanded')).toBe('true');
+/** The plans the bar carries, cheapest first — the picks the engine settled on, four at most. */
+const ROWS = PLAN.alternatives;
+
+/** The trade's rows, in the DOM, so a case can point at the same one twice. */
+function tradeRows(): HTMLElement[] {
+  const trade = document.querySelector('table[aria-label="Every plan on the trade"]');
+  return trade === null ? [] : [...trade.querySelectorAll<HTMLElement>('tbody tr')];
+}
+
+const TRADE = 'table[aria-label="Every plan on the trade"]';
+
+/**
+ * A rectangle in the shape jsdom cannot produce. jsdom lays nothing out — every `getBoundingClientRect()` it
+ * answers is a zero box — so the two boxes `PlanBar` measures are stubbed here, at the geometry a real
+ * browser really hands it: Mantine's root carries `padding-inline: var(--slider-size)`, so the **track** is
+ * inset 8 px from the root at each end, and only the track is where the stops are. Verified against a real
+ * browser at 1400×900, which measured a 462 px root over a 446 px track — the same 8 px, and the same reason
+ * the bar reads the track and not the root.
+ */
+const BAND = { left: 100, width: 400 };
+const TRACK = { left: 108, width: 384 };
+
+function rect(left: number, width: number): DOMRect {
+  return {
+    x: left,
+    y: 0,
+    left,
+    right: left + width,
+    top: 0,
+    bottom: 16,
+    width,
+    height: 16,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+/** Install the two boxes above, before anything is rendered. `restoreMocks` puts the prototype back after. */
+function stubLayout(): void {
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    const root = document.querySelector('.mantine-Slider-root');
+    if (this === root?.parentElement) return rect(BAND.left, BAND.width);
+    if (this === root?.querySelector('.mantine-Slider-track')) return rect(TRACK.left, TRACK.width);
+    return rect(0, 0);
   });
 }
 
+/** The `<Slider>`'s own root, and the band it is wrapped in — the two elements the geometry is read off. */
+function bar(): HTMLElement {
+  const root = document.querySelector('.mantine-Slider-root');
+  if (root === null) throw new Error('no bar on screen');
+  const band = root.parentElement;
+  if (band === null) throw new Error('the bar has no band');
+  return band;
+}
+
+/** Put the pointer on one stop, the way a pointer does: the band gets the move, the index comes off `clientX`. */
+function pointAt(index: number): void {
+  const last = Math.max(1, ROWS.length - 1);
+  fireEvent.pointerMove(bar(), { clientX: TRACK.left + TRACK.width * (index / last) });
+}
+
+/** Take the pointer off the bar. React synthesises a leave out of the `pointerout` the browser sends. */
+function pointAway(): void {
+  fireEvent.pointerOut(bar(), { relatedTarget: document.body });
+}
+
+/** The tip, which is the only element carrying the state its own CSS reads (`march.module.css`, `.tip`). */
+function tip(): HTMLElement | null {
+  return document.querySelector('[data-shown]');
+}
+
+/** A stop that is not the one the bar opens on: the complaint this tip answers is that it named the wrong plan. */
+function anotherStop(): number {
+  return defaultPlanPosition(PLAN) === 0 ? 1 : 0;
+}
+
 beforeEach(() => {
-  // primed the way a run primes it: the plan, and the frontier position it opens on
+  // primed the way a run primes it: the plan, and the position it opens on
   useRunStore.setState({
     plan: PLAN,
     planPick: defaultPlanPosition(PLAN),
@@ -64,6 +137,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   useRunStore.setState({ plan: null });
 });
 
@@ -74,19 +148,20 @@ test('the sizing line says what the plan decided, and nothing about it is invent
   if (!plan) return;
 
   const line = screen.getByText(/^Planned from the army:/);
-  // The line describes the plan the frontier is read at — where it opens, which is the engine's own pick —
-  // and where that plan sits on the trade, and nothing else. It opens on the sweet spot, so that is what the
-  // line has to call it.
+  // The line describes the plan the bar is read at — where it opens, which is the engine's own pick — and the
+  // counts it sized. It opens on the sweet spot and it **stops there**: the clause that used to name it ("the
+  // sweet spot between the two resources") is the row's own name, one line above the table that prints it,
+  // and design rule 5 forbids saying the same thing twice (S-59).
   const position = defaultPlanPosition(plan);
   const point = pickOf(plan, position);
   expect(line.textContent).toContain(String(point.marches - (point.finaleCounts ? 1 : 0)));
   expect(line.textContent).toContain(`${Object.keys(point.counts).length} stacks`);
   expect(sweetSpotOf(plan)).toBe(position);
-  expect(line.textContent).toContain('the sweet spot between the two resources');
+  expect(line.textContent).not.toContain('the sweet spot between the two resources');
 });
 
-test('one control walks the trade, the keyboard walks it too, and the way back to the sweet spot is a word', async () => {
-  await opened();
+test('one control walks the trade, the keyboard walks it too, and the way back to the sweet spot is a word', () => {
+  renderWithTheme(<PlanFold />);
   const plan = useRunStore.getState().plan;
   if (!plan) throw new Error('no plan to draw');
   const sweet = sweetSpotOf(plan);
@@ -99,6 +174,10 @@ test('one control walks the trade, the keyboard walks it too, and the way back t
   expect(bar.getAttribute('aria-valuemax')).toBe(String(plan.alternatives.length - 1));
   const openedAt = Number(bar.getAttribute('aria-valuenow'));
   expect(openedAt).toBe(sweet);
+  // Mantine's own floating label is gone: it hung off the thumb and named the plan already on screen, which
+  // is the half of the owner's complaint the tip below answers.
+  const opened = plan.alternatives[sweet];
+  expect(opened === undefined ? '' : screen.queryByText(opened.label)).toBeNull();
   expect(screen.getByText('Least silver')).toBeTruthy();
   expect(screen.getByText('Most silver')).toBeTruthy();
   // On the sweet spot, there is nothing to go back to.
@@ -118,95 +197,200 @@ test('one control walks the trade, the keyboard walks it too, and the way back t
   }
 });
 
-test('the fold is closed until it is asked for, with the plan headline on the row', () => {
+test('the tip names the plan under the pointer, not the one on screen', () => {
+  stubLayout();
   renderWithTheme(<PlanFold />);
-  const plan = useRunStore.getState().plan;
-  if (!plan) throw new Error('no plan to draw');
+  const position = defaultPlanPosition(PLAN);
+  const away = anotherStop();
+  const wanted = ROWS[away];
+  const selected = ROWS[position];
+  if (wanted === undefined || selected === undefined) throw new Error('too few plans to point at');
+
+  // Nothing is shown before the pointer arrives: the tip belongs to the pointer, not to the value.
+  expect(tip()).toBeNull();
+
+  pointAt(away);
+  // Pointing at a plan is not reading it: the selection stays where it was, and only the tip follows the
+  // pointer. Reading is the bar's own move (the arrow keys, a press) or a row's name.
+  expect(useRunStore.getState().planPick).toBe(position);
+  const shown = tip();
+  expect(shown).not.toBeNull();
+  expect(shown?.textContent ?? '').toContain(PICK_WORD[wanted.pick]);
+  expect(shown?.textContent ?? '').not.toContain(PICK_WORD[selected.pick]);
+  // It carries the figure a player compares plans by, and it says "the sweet spot" when that is what the row is.
+  expect(shown?.textContent ?? '').toContain(`${compact(wanted.repeat.damage)} damage a march`);
+  // `aria-hidden` on purpose: the trade below prints the same answer as a table and `aria-valuetext` carries
+  // it for a screen reader (design rule 24). A tip is never the only place a fact lives.
+  expect(shown?.getAttribute('aria-hidden')).toBe('true');
+
+  // Leaving the band takes it away again, without the plan on screen changing.
+  pointAway();
+  expect(tip()).toBeNull();
+  expect(useRunStore.getState().planPick).toBe(position);
+});
+
+test('the bar and the table are one thing: the pointer’s row is ruled and the one on screen is raised', () => {
+  stubLayout();
+  renderWithTheme(<PlanFold />);
+  const position = defaultPlanPosition(PLAN);
+  const away = anotherStop();
+
+  const rows = tradeRows();
+  pointAt(away);
+
+  // Two different marks, because they are two different facts — a hover is not a selection, and the brief
+  // that produced this asked for the two not to be confusable. The plan on screen is *raised*
+  // (`data-current`, the objectives strip's own mark) and carries `aria-current`; the plan under the pointer
+  // is *ruled* by the hairline every part of the page is told apart by, and the tip names it in words, so
+  // neither is ever said by colour alone (design rule 24).
+  const lit = rows.filter((row) => row.getAttribute('data-lit') !== null);
+  expect(lit).toHaveLength(1);
+  expect(lit[0]).toBe(rows[away]);
+  expect(lit[0]?.getAttribute('aria-current')).toBeNull();
+  const current = rows.filter((row) => row.getAttribute('data-current') !== null);
+  expect(current).toHaveLength(1);
+  expect(current[0]).toBe(rows[position]);
+});
+
+test('the tip still arrives when the system asks for no motion', () => {
+  stubLayout();
+  // The motion is a CSS transition inside `@media (prefers-reduced-motion: no-preference)` and jsdom draws
+  // none of it, so what this holds is the half that could be got wrong: the tip's *presence* never depends
+  // on an animation having run — reduced motion drops the movement, never the answer (design rule 24).
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query.includes('prefers-reduced-motion'),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }));
+  renderWithTheme(<PlanFold />);
+
+  pointAt(anotherStop());
+  const wanted = ROWS[anotherStop()];
+  if (wanted === undefined) throw new Error('no row under the pointer');
+  expect(tip()?.textContent ?? '').toContain(PICK_WORD[wanted.pick]);
+});
+
+test('the block opens on its own — the plan is part of the answer, not a fold to hunt for', () => {
+  renderWithTheme(<PlanFold />);
+  // No click: it arrives open (0020 §D-5), and the chevron stays, because closing it is how a player whose
+  // pane no longer sticks gets one that does.
   const fold = screen.getByRole('button', { name: /^Plan/ });
-  expect(fold.getAttribute('aria-expanded')).toBe('false');
-  // The row carries the plan the fold is *reading* — where the control opens, which is the plan the engine
-  // weighed both resources to choose — and not the one its search settled on: the two part company as soon
-  // as the control moves, and a headline that describes a plan the body is not showing is a lie. Read the
-  // way the owner asked for it: a march at a time, not a campaign total.
-  const shown = pickOf(plan, defaultPlanPosition(plan));
+  expect(fold.getAttribute('aria-expanded')).toBe('true');
+  // The row still carries the plan the block is *reading* — where the bar opens, which is the plan the engine
+  // weighed both resources to choose — and not the one its search settled on: the two part company as soon as
+  // the bar moves, and a headline that describes a plan the body is not showing is a lie. Read the way the
+  // owner asked for it: a march at a time, not a campaign total.
+  const shown = pickOf(PLAN, defaultPlanPosition(PLAN));
   const repeated = shown.marches - (shown.finaleCounts ? 1 : 0);
   expect(fold.textContent).toContain('damage a march');
-  // The last march is a real one and it is not a repeat: the row says so rather than counting it in.
   expect(fold.textContent).toContain(`${repeated} marches${shown.finaleCounts ? ' + a last one' : ''}`);
 });
 
-test('the whole row is the target: pressing a plan’s name reads that plan', async () => {
-  await opened();
-  const plan = useRunStore.getState().plan;
-  if (!plan) throw new Error('no plan to draw');
+test('the whole row is the target: pressing a plan’s name reads that plan', () => {
+  renderWithTheme(<PlanFold />);
+  const away = anotherStop();
 
   // The bar is one way to walk the trade and the table is the other (design rule 8): a plan's name is a
-  // control, and pressing it does what a stop on the bar does — puts that plan on screen, no new search.
-  const rows = [
-    ...document.querySelectorAll('table[aria-label="Every plan on the trade"] tbody tr'),
-  ] as HTMLElement[];
-  const away = defaultPlanPosition(plan) === 0 ? 1 : 0;
-  const button = within(rows[away] as HTMLElement).getByRole('button');
+  // control, and pressing it does what a stop on the bar does — puts that plan on screen, with no new search.
+  const button = within(tradeRows()[away] as HTMLElement).getByRole('button');
   fireEvent.click(button);
   expect(useRunStore.getState().planPick).toBe(away);
 });
 
-test('a row prices the march the recap is drawing, and the engine’s own battle agrees with it', async () => {
-  await opened();
+test('a row prices the march the recap is drawing, and the engine’s own battle agrees with it', () => {
+  renderWithTheme(<PlanFold />);
   const plan = useRunStore.getState().plan;
   if (!plan) throw new Error('no plan to draw');
 
   // The owner's complaint of 2026-09-15: the row's figures were the plan spread over its marches, finale
-  // included, so the plan on screen read one damage a march and the row that named it read another. The row
-  // is the **repeated** march now, and the engine's `repeat` is what proves it: the real battle of that very
+  // included, so the plan on screen read one damage a march and the row that named it read another. The row is
+  // the **repeated** march now, and the engine's `repeat` is what proves it: the real battle of that very
   // march — the call the March section makes — reports the same figure, to the unit.
   const shown = pickOf(plan, defaultPlanPosition(plan));
-  const trade = document.querySelector('table[aria-label="Every plan on the trade"]');
-  const marked = trade === null ? null : trade.querySelector('tbody tr[data-marked]');
-  expect(marked).not.toBeNull();
-  expect(marked?.textContent ?? '').toContain(amount(shown.repeat.damage));
+  const raised = document.querySelector(`${TRADE} tbody tr[data-current]`);
+  expect(raised).not.toBeNull();
+  expect(raised?.textContent ?? '').toContain(compact(shown.repeat.damage));
+  expect(raised?.textContent ?? '').toContain(compact(shown.repeat.silver));
   expect(planMarch(request(), shown.counts).summary.avgDamage).toBe(shown.repeat.damage);
   expect(planMarch(request(), shown.counts).summary.recovery.silver).toBe(shown.repeat.silver);
 });
 
-test('the trade says how many plans the band refused, and nothing when it refused none', async () => {
-  await opened();
+test('the two ratio columns are the march’s own, not the campaign’s', () => {
+  renderWithTheme(<PlanFold />);
+  const row: PlanRow | undefined = ROWS[defaultPlanPosition(PLAN)];
+  expect(row).toBeDefined();
+  if (row === undefined) return;
+
+  const cells = [
+    ...(document.querySelector(`${TRADE} tbody tr[data-current]`)?.querySelectorAll('td') ?? []),
+  ];
+  // Damage a march, Silver a march, Hired lost, Per silver, Per hired — and the last two divide the row's own
+  // march (0020 §D-3), which is what stops a row named for a ratio from being beaten on that ratio by the row
+  // above it.
+  expect(cells.at(-2)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.silver));
+  expect(cells.at(-1)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.mercLost));
+  // The campaign's ratios are what they used to be, and they are not what the row prints.
+  expect(cells.at(-2)?.textContent).not.toBe(ratio(row.damagePerSilver));
+});
+
+test('the trade says how many plans the band refused, and nothing when it refused none', () => {
+  renderWithTheme(<PlanFold />);
   const plan = useRunStore.getState().plan;
   if (!plan) throw new Error('no plan to draw');
 
-  // The extremes are not offered (owner: "just don't show the extremes"), and the fold says so with the
+  // The extremes are not offered (owner: "just don't show the extremes"), and the block says so with the
   // engine's own count rather than leaving the bar looking like the whole trade.
   const line = screen.queryByText(/of the plans the search kept are off the goal/);
   if (plan.leftOut === 0) expect(line).toBeNull();
-  else expect(line?.textContent ?? '').toContain(amount(plan.leftOut));
+  else expect(line?.textContent ?? '').toContain(String(plan.leftOut));
 });
 
-test('opened, it says what the method is for, then reads the trade a march at a time', async () => {
-  await opened();
+test('opened, it says what the plan did for this army and reads the trade a march at a time', () => {
+  renderWithTheme(<PlanFold />);
   const plan = useRunStore.getState().plan;
   if (!plan) throw new Error('no plan to draw');
 
-  // The thesis first: how damage is paid for, and where the sweet spot landed for this army — in its own
-  // figures, so it is an analysis and not a motto.
-  expect(screen.getByText(/^Damage is paid for twice over:/)).toBeTruthy();
+  // One line in the muted ink, about *this* army — and the general why behind the glyph beside it, where the
+  // owner's "wayyy too big" paragraph was **moved** rather than deleted (0020 §D-4).
   expect(screen.getByText(/^The sweet spot it found for this army is /)).toBeTruthy();
+  // The owner's paragraph is not prose on the screen any more. "Moved, not deleted" is exact: its words are
+  // still in the document, and the only place they are is the glyph's own description.
+  const moved = screen.getByText(/^Damage is paid for twice over:/);
+  expect(moved.closest('.mantine-VisuallyHidden-root')).not.toBeNull();
+  const why = screen.getByRole('button', { name: 'Why the plan weighs silver against the hired stock' });
+  // Reachable by keyboard, and its words are the button's description as well as its tooltip: Mantine's
+  // `Tooltip` links nothing for a screen reader on its own.
+  expect(why.getAttribute('aria-describedby')).not.toBeNull();
 
-  // The trade table. Queried through the DOM rather than by role: jsdom keeps the folded panel's table out
-  // of the accessibility tree, so `getByRole('table')` finds nothing even with the fold open. The rows are
-  // still asserted one by one against the engine's own frontier.
-  const trade = document.querySelector('table[aria-label="Every plan on the trade"]');
-  expect(trade).not.toBeNull();
-  const rows = trade === null ? [] : [...trade.querySelectorAll('tbody tr')];
-  // One row per plan the engine put on the trade, and exactly one of them marked as the one on screen.
+  // The trade table. Queried through the DOM rather than by role: jsdom keeps the folded panel's table out of
+  // the accessibility tree, so `getByRole('table')` finds nothing even with the block open. The rows are still
+  // asserted one by one against the engine's own picks.
+  const rows = tradeRows();
+  // One row per plan the engine offers, and exactly one of them raised as the one on screen.
   expect(rows).toHaveLength(plan.alternatives.length);
-  expect(rows.filter((row) => row.getAttribute('data-marked') !== null)).toHaveLength(1);
-  // The columns are the decision: what a march hits for, what it costs and what it burns.
-  const headers = trade === null ? [] : [...trade.querySelectorAll('thead th')].map((th) => th.textContent);
-  expect(headers).toContain('Damage a march');
-  expect(headers).toContain('Silver a march');
-  expect(headers).toContain('Mercs a march');
-  expect(headers).toContain('Per silver');
-  expect(headers).toContain('Per mercenary');
+  expect(rows.filter((row) => row.getAttribute('data-current') !== null)).toHaveLength(1);
+  // Every row is **named** — the engine's own pick, in our words — and nothing prints the shape sentence.
+  const drawn = rows.map((row) => row.textContent ?? '').join('\n');
+  for (const [index, row] of plan.alternatives.entries()) {
+    expect(rows[index]?.textContent ?? '').toContain(PICK_WORD[row.pick]);
+    expect(drawn).not.toContain(row.label);
+  }
+  // The columns are the decision: what a march hits for, what it costs and what it burns — the three that name
+  // a game resource behind their own glyph, then the two ratios.
+  const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
+  expect(headers).toEqual([
+    'Plan',
+    '🎯 Damage a march',
+    '🪙 Silver a march',
+    '👑 Hired lost',
+    'Per silver',
+    'Per hired',
+  ]);
   // And the sweet spot is named in words on its own row, not only marked in colour (rule 24).
   const sweet = sweetSpotOf(plan);
   expect(sweet).not.toBeNull();

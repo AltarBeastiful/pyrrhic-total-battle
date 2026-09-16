@@ -1,5 +1,5 @@
 /**
- * The plan behind "Complete optimization" (S-55).
+ * The plan behind "Complete optimization" (S-55; the owner's own screen review since, S-59).
  *
  * The method answers a different question from every other one on the Battle card: not "what is the best
  * march", but "what is the best **plan**" — how many marches to spread the army over, how big each one
@@ -8,38 +8,41 @@
  *
  * **The plan is read a march at a time** (owner's review of 2026-09-15: "I'm not going to commit to 14
  * marches anyway"). A campaign total is a figure nobody marches: what a player decides is what one march
- * fields, what it costs and what it burns of the stock that does not come back. So the fold is built in that
- * order —
+ * fields, what it costs and what it burns of the stock that does not come back. So the block is built in
+ * that order —
  *
- * - **the thesis, in words, first**: damage is paid for with silver, which comes back, or with the hired
- *   stock, which does not; the whole sequence is what shows where the two balance, and the plan the engine
- *   weighed both resources to choose is named, with its own figures, in the same breath (design rule 29: an
- *   answer says what it did);
- * - **the bar** (design rule 23: a stock Mantine slider, named for screen readers and driven by the arrow
- *   keys, design rule 24): one tick per plan kept, a **marker on the sweet spot**, and — once the bar has
- *   been moved off it — the one control that puts it back;
- * - **the trade, as a table of marches**: one row per plan kept, and what a march of it hits for, costs in
- *   silver and burns of the hired stock. That is the question the method exists to answer, and the row on
- *   screen and the sweet spot are both said in words under it rather than by colour (rule 24).
+ * - **what the plan did for this army**, in its own figures, in one line of the muted meta ink, with the
+ *   general why behind the glyph beside it (`docs/investigations/0020-the-plan-screen.md` §D-4: the owner
+ *   asked for the explanation on 2026-09-15 and cut it back on 2026-09-16, so it is **moved, not
+ *   deleted**);
+ * - **the bar** (`PlanBar.tsx`): one stop per answer the engine offers, a **marker on the sweet spot**,
+ *   and — once the bar has been moved off it — the one control that puts it back;
+ * - **the trade** (`PlanTrade.tsx`): one row per answer, named, with what a march of it hits for, costs in
+ *   silver and burns of the hired stock. That is the question the method exists to answer;
+ * - **the reference tail**: what silver buys (the curve), what the whole sequence comes to, what it ran out
+ *   of, how many plans were left off, and whether the march on screen has been edited since.
  *
- * **Every plan on the trade is fought over the same marches** — the horizon `src/config.ts` sets, which
- * the Battle card no longer asks for (S-56). That is the owner's decision of the same review, and it is what makes the table
- * a table of marches rather than of campaigns: without a horizon the search answers with the campaign that
- * maximises total damage, which on a real account is 66 marches and 313 days of training, and it leaves the
- * hired stock out of the repeated march to get there (`tools/theorycraft/out/73-plan-horizon.md`).
+ * **Every plan on the trade is fought over the same marches** — the horizon `src/config.ts` sets, which the
+ * Battle card no longer asks for (S-56). That is the owner's decision of the same review, and it is what makes
+ * the table a table of marches rather than of campaigns: without a horizon the search answers with the
+ * campaign that maximises total damage, which on a real account is 66 marches and 313 days of training, and
+ * it leaves the hired stock out of the repeated march to get there (`tools/theorycraft/out/73-plan-horizon.md`).
  *
- * Nothing here computes anything: the engine returns the plan and its frontier, and the run store holds it.
+ * Nothing here computes anything: the engine returns the plan and its picks, and the run store holds them.
  */
-import { Button, Group, Slider, Stack, Table, Text } from '@mantine/core';
+import { ActionIcon, Group, Stack, Table, Text, Tooltip, VisuallyHidden } from '@mantine/core';
+import { Info } from 'lucide-react';
+import { useId, useState } from 'react';
 
 import { planMarch, withMethod } from '@/engine';
 import type { CampaignPlan, PlanTotals } from '@/engine/plan';
 import { buildStackRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { Glyph } from '@/ui/domain';
-import { useResultStore } from '@/ui/resultStore';
 import { Disclosure } from '@/ui/kit';
+import { useResultStore } from '@/ui/resultStore';
 
+import { PlanBar } from './PlanBar';
+import { PlanTrade } from './PlanTrade';
 import { amount, compact, ratio } from './format';
 import classes from './march.module.css';
 
@@ -66,21 +69,25 @@ function mercsAMarch(point: PlanFigures): string {
 }
 
 /**
- * Where on the trade the plan on screen sits, in words (design rule 29: an answer says what it did). It is
- * read off the plan's *position* on the frontier rather than off a name, so it stays true when the search
- * returns a different set of plans — and when the engine has a sweet spot, the distance to it is what the
- * player wants to know rather than the index in a list.
+ * Where on the trade the plan on screen sits, in words (design rule 29: an answer says what it did), or
+ * `null` when there is nothing left to say.
+ *
+ * **The sweet spot says nothing** (S-59). It used to close the sizing line with "— the sweet spot between
+ * the two resources", which is the row's own name written a second time one line above the table that
+ * prints it; design rule 5 forbids saying the same thing twice, and the row's name says it now. Its
+ * distance *from* the sweet spot still earns its place — no name says where on the trade a plan stands
+ * relative to the recommendation — so only the identity clause goes.
  */
-function readAt(count: number, position: number, sweet: number | null): string {
+function readAt(count: number, position: number, sweet: number | null): string | null {
   if (count < 2) return 'the only plan the search kept';
   if (sweet === null) {
     if (position <= 0) return 'the least silver of the plans kept';
     if (position >= count - 1) return 'the most silver of the plans kept';
-    return `plan ${position + 1} of the ${count} kept, cheapest first`;
+    return `plan ${String(position + 1)} of the ${String(count)} kept, cheapest first`;
   }
-  if (position === sweet) return 'the sweet spot between the two resources';
+  if (position === sweet) return null;
   const away = Math.abs(position - sweet);
-  return `${away} plan${away === 1 ? '' : 's'} ${position < sweet ? 'cheaper' : 'pricier'} than the sweet spot`;
+  return `${String(away)} plan${away === 1 ? '' : 's'} ${position < sweet ? 'cheaper' : 'pricier'} than the sweet spot`;
 }
 
 /** What the plan decided, in one line, in the muted meta ink (it explains an answer). */
@@ -92,15 +99,14 @@ export function PlanSizing() {
 
   const point = pickOf(plan, position);
   const repeated = point.marches - (point.finaleCounts ? 1 : 0);
+  const where = readAt(plan.alternatives.length, position, sweetSpotOf(plan));
   return (
     <Text size="sm" c="dimmed" className={stale ? classes.outOfDate : undefined}>
-      {`Planned from the army: ${repeated} identical march${repeated === 1 ? '' : 'es'} of ${
-        Object.keys(point.counts).length
-      } stacks${point.finaleCounts ? ` and a final march for what is left` : ''} — ${readAt(
-        plan.alternatives.length,
-        position,
-        sweetSpotOf(plan),
-      )}.`}
+      {`Planned from the army: ${String(repeated)} identical march${repeated === 1 ? '' : 'es'} of ${String(
+        Object.keys(point.counts).length,
+      )} stacks${point.finaleCounts ? ' and a final march for what is left' : ''}${
+        where === null ? '' : ` — ${where}`
+      }.`}
     </Text>
   );
 }
@@ -141,12 +147,34 @@ function bindingSentence(binding: CampaignPlan['binding']): string {
   return 'Nothing binds yet — the plan stops where more troops stop paying for themselves.';
 }
 
-/** The plan, folded (design rule 4): what it decided, the trade it chose from, and what each march is. */
+/**
+ * The thesis, behind the glyph that explains the line beside it (S-59, `docs/investigations/0020` §D-4).
+ *
+ * The owner asked for this paragraph on 2026-09-15 (`0018-plan-horizon-and-the-fold.md:8`) and cut it back
+ * the next day — *"The text above is wayyy too big and might even be unecessary if the form itself is
+ * clear"* — so it is moved rather than deleted: it is the answer to "why weigh silver against mercenaries
+ * at all", which is a question the figures on the trade cannot state, and it is asked rarely enough to be
+ * behind a glyph. Unchanged, sentence for sentence.
+ */
+const WHY = [
+  'Damage is paid for twice over: with silver, which you earn back, and with the hired stock, which is gone',
+  'for good. Silver buys a deeper march — more of it, and every march hits harder for it. The hired stock',
+  'hits harder still and takes no leadership, but a stack loses a tenth of itself every march it is fielded,',
+  'so the same stock is worth more spent thinly over many marches than all at once. Which of the two runs out',
+  'first is only visible over a whole sequence of marches, and planning the sequence is what this method does.',
+].join(' ');
+
+/** The plan, open when it arrives and still collapsible: it is part of the answer (design rule 1). */
 export function PlanFold() {
   const plan = useRunStore((state) => state.plan);
   const position = useRunStore((state) => state.planPick);
   const setPlanPick = useRunStore((state) => state.setPlanPick);
   const edited = useRunStore((state) => state.leftOutByPlayer.length > 0);
+  // Which of the trade's rows the bar's pointer is on. It lives here because the bar and the table are one
+  // thing (invariants 0020 §D-2): the bar says which plan, the table says what it is worth, and the two
+  // must be reading the same row.
+  const [hovered, setHovered] = useState<number | null>(null);
+  const whyId = useId();
   if (plan === null) return null;
 
   const shown = pickOf(plan, position);
@@ -186,191 +214,71 @@ export function PlanFold() {
     // written a march at a time like everything else: the figure a player commits to is one march's.
     <Disclosure
       title="Plan"
+      defaultOpened
       summary={`${compact(each.damage)} damage a march · ${amount(repeated)} march${
         repeated === 1 ? '' : 'es'
       }${shown.finaleCounts ? ' + a last one' : ''}`}
     >
       <Stack gap="md">
-        {/* What the method brings, before any of its figures (the owner asked for it in so many words). The
-            whole point of planning a sequence rather than a march is that the two resources run out at
-            different times, and that is a sentence before it is a table. */}
-        <Stack gap={6}>
+        {/* What the plan did for *this* army, in its own figures, with the general why behind the glyph
+            (S-59). The ⓘ is interface chrome and not a game glyph, so it is a Lucide icon rather than a
+            `Glyph` (design rule 21). */}
+        <Group gap="xs" align="flex-start" wrap="nowrap">
           <Text size="sm" c="dimmed">
-            Damage is paid for twice over: with silver, which you earn back, and with the hired stock, which
-            is gone for good. Silver buys a deeper march — more of it, and every march hits harder for it. The
-            hired stock hits harder still and takes no leadership, but a stack loses a tenth of itself every
-            march it is fielded, so the same stock is worth more spent thinly over many marches than all at
-            once. Which of the two runs out first is only visible over a whole sequence of marches, and
-            planning the sequence is what this method does.
+            {best === null
+              ? `It spends the silver box you set: ${amount(each.damage)} damage a march for ${amount(
+                  each.silver,
+                )} silver, using ${mercsAMarch(shown)} of the hired stock each time.`
+              : `The sweet spot it found for this army is ${amount(
+                  best.repeat.damage,
+                )} damage a march, spending ${mercsAMarch(best)} of the hired stock each time.`}
           </Text>
-          {/* And where that lands for *this* army, in its own figures — the analysis, not a general remark. */}
-          {best === null ? (
-            <Text size="sm" c="dimmed">
-              {`It spends the silver box you set: ${amount(each.damage)} damage a march for ${amount(
-                each.silver,
-              )} silver, using ${mercsAMarch(shown)} of the hired stock each time.`}
-            </Text>
-          ) : (
-            <Text size="sm" c="dimmed">
-              {`The sweet spot it found for this army is ${best.label} — ${amount(
-                best.repeat.damage,
-              )} damage a march, spending ${mercsAMarch(best)} of the hired stock each time.`}
-            </Text>
-          )}
-        </Stack>
+          {/* Reachable by keyboard and not only by pointer: Mantine's `Tooltip` opens on hover alone by
+              default, and it links nothing to the control for a screen reader, so the same words are
+              carried again beside it as the button's description. */}
+          <Tooltip
+            label={WHY}
+            multiline
+            w={320}
+            events={{ hover: true, focus: true, touch: false }}
+            withinPortal
+          >
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              aria-label="Why the plan weighs silver against the hired stock"
+              aria-describedby={whyId}
+            >
+              <Info size={16} aria-hidden />
+            </ActionIcon>
+          </Tooltip>
+          <VisuallyHidden id={whyId}>{WHY}</VisuallyHidden>
+        </Group>
 
         {/* One control over the whole trade: the frontier *is* the axis — cheapest plan at one end, kindest
-            to the hired stock at the other — so a position on it is the choice. A stock Mantine slider
-            (design rule 23), named for screen readers and driven by the arrow keys as well as the mouse
-            (design rule 24). Every plan kept is a tick, so where the control can stop is visible without
-            dragging it, and the sweet spot carries a marker and the one control that returns to it. */}
+            to the hired stock at the other — so a position on it is the choice. */}
         {rows.length > 1 && (
-          <>
-            <Slider
-              min={0}
-              max={rows.length - 1}
-              step={1}
-              value={position}
-              onChange={read}
-              thumbLabel="Where on the trade to read the plan"
-              thumbValueText={(value) => rows[Math.round(value)]?.label ?? ''}
-              label={(value) => rows[Math.round(value)]?.label ?? ''}
-              marks={rows.map((_row, index) =>
-                index === sweet
-                  ? {
-                      value: index,
-                      label: (
-                        // Mantine centres a mark's label on its own mark, so a label on the **end** marks
-                        // hangs half a word off the track and is clipped by the pane (measured at 390 px,
-                        // where the band leaves the sweet spot as the cheapest plan — stop 0). Nudging the
-                        // label back inside by half its own width is what keeps the marker on the bar when
-                        // the sweet spot is an end; a missing marker would be the alternative, and the owner
-                        // asked for a marker.
-                        <Text
-                          span
-                          size="xs"
-                          fw={600}
-                          c="var(--mantine-color-brass-filled)"
-                          style={{
-                            display: 'inline-block',
-                            transform:
-                              sweet === 0
-                                ? 'translateX(50%)'
-                                : sweet === rows.length - 1
-                                  ? 'translateX(-50%)'
-                                  : undefined,
-                          }}
-                        >
-                          Sweet spot
-                        </Text>
-                      ),
-                    }
-                  : { value: index },
-              )}
-            />
-            {/* The two ends are named **under** the bar, not as mark labels: Mantine centres a mark's label
-                on its own mark, so a label naming an end would hang half a word off the track — the same
-                clipping the marker above is nudged out of, done in words instead. */}
-            <Group justify="space-between" align="center" wrap="nowrap">
-              <Text size="xs" c="dimmed">
-                Least silver
-              </Text>
-              {/* The way back to the marker above, in words: the mark says where the sweet spot is, this
-                  says how to get there, and it is only drawn while the bar is somewhere else. */}
-              {sweet !== null && position !== sweet && (
-                <Button variant="subtle" size="compact-xs" onClick={() => read(sweet)}>
-                  Back to the sweet spot
-                </Button>
-              )}
-              <Text size="xs" c="dimmed">
-                Most silver
-              </Text>
-            </Group>
-          </>
+          <PlanBar
+            rows={rows}
+            position={position}
+            hovered={hovered}
+            onHover={setHovered}
+            onSelect={read}
+            sweet={sweet}
+          />
         )}
 
-        {/* The trade itself. Every plan the search kept, cheapest first, read as marches rather than as
-            campaigns: what one of them hits for, what it costs in silver and what it burns of the stock that
-            does not come back. Wider than the pane, so it takes the same scroller the campaign's tables use
-            (design rule 17). */}
-        <div className={classes.compareScroll}>
-          <Table
-            className={classes.compare}
-            horizontalSpacing={6}
-            verticalSpacing={6}
-            aria-label="Every plan on the trade"
-          >
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th scope="col">Plan</Table.Th>
-                <Table.Th scope="col" ta="end">
-                  Damage a march
-                </Table.Th>
-                <Table.Th scope="col" ta="end">
-                  Silver a march
-                </Table.Th>
-                <Table.Th scope="col" ta="end">
-                  Mercs a march
-                </Table.Th>
-                <Table.Th scope="col" ta="end">
-                  Per silver
-                </Table.Th>
-                <Table.Th scope="col" ta="end">
-                  Per mercenary
-                </Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {rows.map((point, index) => {
-                const marked = point.totalDamage === shown.totalDamage && point.silver === shown.silver;
-                return (
-                  <Table.Tr
-                    key={`${point.label}-${point.silver}-${point.totalDamage}`}
-                    data-marked={marked || undefined}
-                    {...(marked ? { 'aria-current': 'true' } : {})}
-                  >
-                    {/* The row is the control (design rule 8: the whole item is the target): pressing a
-                        plan's name puts that plan's march on screen, the same answer the bar reads. */}
-                    <Table.Th scope="row" className={classes.planCell}>
-                      <Button
-                        variant="subtle"
-                        size="compact-xs"
-                        px={4}
-                        className={classes.compareName}
-                        aria-label={
-                          marked ? `${point.label}, the plan on screen` : `Read the plan ${point.label}`
-                        }
-                        onClick={() => read(index)}
-                      >
-                        {marked && <Glyph kind="averageDamage" scale={0.75} />}
-                        {point.label}
-                      </Button>
-                      {/* Two things can be true of one row, and colour may not be the only signal saying so
-                          (design rule 24): the plan on screen is marked, and the sweet spot is named. */}
-                      {index === sweet && (
-                        <Text size="xs" c="var(--mantine-color-brass-filled)">
-                          the sweet spot
-                        </Text>
-                      )}
-                    </Table.Th>
-                    <Table.Td>{amount(point.repeat.damage)}</Table.Td>
-                    <Table.Td>{amount(point.repeat.silver)}</Table.Td>
-                    <Table.Td>{mercsAMarch(point)}</Table.Td>
-                    <Table.Td>{ratio(point.damagePerSilver)}</Table.Td>
-                    <Table.Td>{ratio(point.damagePerMercenary)}</Table.Td>
-                  </Table.Tr>
-                );
-              })}
-            </Table.Tbody>
-          </Table>
-        </div>
-        {/* Every plan is fought over the same marches — the horizon `src/config.ts` sets — so the table
-            needs no column for length: a row is *the march you repeat*, which is the march the recap above
-            is drawing, and the two ratio columns weigh the whole plan. */}
+        <PlanTrade rows={rows} position={position} hovered={hovered} onSelect={read} sweet={sweet} />
+
+        {/* Every plan is fought over the same marches — the horizon `src/config.ts` sets — so the table needs
+            no column for length: a row is *the march you repeat*, which is the march the recap above is
+            drawing, and the two ratio columns weigh that one march. */}
         <Text size="sm" c="dimmed">
           Every plan here is fought over the same marches — the horizon the app plans over — so a row is the
           march you repeat: what it hits for, what it costs in silver and what it burns of the hired stock for
-          good. The two ratio columns weigh the whole plan, final march included.
+          good. The two ratio columns divide that one march's damage by its own silver and by its own hired
+          losses. The whole sequence is added up at the foot of this block.
         </Text>
 
         {/* The extremes are not offered (owner, 2026-09-15: "just don't show the extremes"), so the fold says
@@ -384,8 +292,8 @@ export function PlanFold() {
           </Text>
         )}
 
-        {/* What the sequence adds up to if it is fought to the end — one line, not a headline: nobody
-            commits to a hundred marches at once, and the figures above are the ones they march. */}
+        {/* What the sequence adds up to if it is fought to the end — one line, not a headline: nobody commits
+            to a hundred marches at once, and the figures above are the ones they march. */}
         <Text size="sm" c="dimmed">
           {`Fought to the end: ${amount(plan.totalDamage)} damage and ${amount(
             plan.silver,
@@ -398,8 +306,8 @@ export function PlanFold() {
         </Text>
 
         {/* The curve behind the frontier: what N silver buys, and what it buys a mercenary. Six points of it,
-            evenly spaced, because the frontier list above is thinned for the eye while this is the shape —
-            and the shape is what says how far silver is worth spending. */}
+            evenly spaced, because the frontier list above is thinned for the eye while this is the shape — and
+            the shape is what says how far silver is worth spending. */}
         {plan.curve.length > 2 && (
           <>
             <Table
@@ -425,9 +333,9 @@ export function PlanFold() {
                 {sampledCurve(plan.curve).map((point) => (
                   <Table.Tr key={point.silver}>
                     <Table.Td>{amount(point.silver)}</Table.Td>
-                    <Table.Td>{amount(point.damage)}</Table.Td>
-                    <Table.Td>{ratio(point.damagePerSilver)}</Table.Td>
-                    <Table.Td>{ratio(point.damage / Math.max(1, point.mercLost))}</Table.Td>
+                    <Table.Td ta="end">{amount(point.damage)}</Table.Td>
+                    <Table.Td ta="end">{ratio(point.damagePerSilver)}</Table.Td>
+                    <Table.Td ta="end">{ratio(point.damage / Math.max(1, point.mercLost))}</Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>

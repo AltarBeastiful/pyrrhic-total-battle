@@ -480,7 +480,14 @@ change it. **Amended again 2026-09-15 (owner):** the March is split in two. The 
 (`PlanSizing`, `PlanFold`), because the plan's assessment *is* the answer. Everything that explains the
 answer or acts on the whole march — items 4 to 6 — is the last panel of the **setup** column on a desktop,
 **"This march in full"** (`#march-foot`), and stays in the sheet where there is no column to put it in. That
-is what makes the pane short enough to stick (design rule 17, §5.5). Order inside the two:
+is what makes the pane short enough to stick (design rule 17, §5.5). **Amended again 2026-09-16 (owner,
+S-59):** that fold **arrives open** and stays collapsible, because it reads as part of the answer rather than
+a fold to hunt for; the row it collapses to keeps the plan's headline, and the plan method's pane is taller
+for it (998 px open against 740 px of room at 1400×900 — `docs/investigations/0020-the-plan-screen.md` §1,
+D-5). **Amended the same day, on where it stands** (owner, 2026-09-16: *"we should first see the army then
+the details to change them afterwards"*): the pane reads **answer · army · left out · plan**, because the block
+is a control — reading another plan puts another march on screen — and the army comes before what changes it.
+`PlanSizing` stands above it, unchanged. Order inside the two:
 
 **The pane (the answer).**
 

@@ -189,6 +189,62 @@ describe(
         }
       }
     });
+
+    test('the bar carries the four answers, and each name is true of the row that wears it', () => {
+      const req = request();
+      const plan = planCampaign({ request: req, alternatives: 6 });
+      const rows = plan.alternatives;
+
+      // Four at most, and never the same answer twice — two rules that land on one plan are one row.
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.length).toBeLessThanOrEqual(4);
+      expect(new Set(rows.map((row) => row.pick)).size).toBe(rows.length);
+
+      // Cheapest first, because the bar is read left to right as "spend less … spend more".
+      const silver = rows.map((row) => row.silver);
+      expect([...silver].sort((a, b) => a - b)).toEqual(silver);
+
+      // The bar opens on the sweet spot, so the plan the engine recommends is one of the rows it carries —
+      // and it is the same plan, not a copy that drifted.
+      const sweet = rows.find((row) => row.pick === 'sweet-spot');
+      expect(sweet).toBeDefined();
+      expect(plan.recommend?.counts).toEqual(sweet?.counts);
+
+      // **The name is a definition, stated on the figures the row itself carries**: no other row beats the
+      // one named for a figure, on that figure. A `best-for-silver` row may be absent — when the sweet spot
+      // is itself the best for silver, the name is not handed down to the runner-up. A `most-damage` row is
+      // always there, because some row of a non-empty list is its biggest.
+      const perSilver = (row: (typeof rows)[number]) =>
+        row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : -1;
+      const best = (of: (row: (typeof rows)[number]) => number) => Math.max(...rows.map(of));
+      expect(rows.find((row) => row.pick === 'most-damage')?.repeat.damage).toBe(
+        best((row) => row.repeat.damage),
+      );
+      const efficient = rows.find((row) => row.pick === 'best-for-silver');
+      if (efficient) expect(perSilver(efficient)).toBe(best(perSilver));
+
+      // The three answers other than the sweet spot are drawn from the plans **inside the band** — the
+      // owner's "just don't show the extremes": at least half the hired units the plan's own march fields,
+      // and more than one troop stack. (The sweet spot is offered whether or not the band would keep it: it
+      // is the recommendation, and where the bar opens.)
+      const mercIds = new Set(req.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id));
+      const hiredOf = (counts: Record<string, number>) =>
+        Object.entries(counts).reduce((sum, [id, count]) => sum + (mercIds.has(id) ? count : 0), 0);
+      const troopsOf = (counts: Record<string, number>) =>
+        Object.keys(counts).filter((id) => !mercIds.has(id)).length;
+      for (const row of rows) {
+        if (row.pick === 'sweet-spot') continue;
+        expect(hiredOf(row.counts) * 2, row.pick).toBeGreaterThanOrEqual(hiredOf(plan.counts));
+        expect(troopsOf(row.counts), row.pick).toBeGreaterThan(1);
+      }
+
+      // The shape sentence the experiments read is still carried beside the identity — the two are not a
+      // second opinion on a number, and the record in `tools/theorycraft/63`…`86` still reproduces.
+      for (const row of rows) expect(row.label).toContain('silver a march');
+
+      // What the bar does not offer is counted, and the count can never exceed the frontier it came from.
+      expect(plan.leftOut).toBeGreaterThanOrEqual(0);
+    });
   },
   TIMEOUT,
 );

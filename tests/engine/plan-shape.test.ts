@@ -214,9 +214,22 @@ describe('the search does not get worse', () => {
     expect(PLAN.mostEfficient?.damagePerSilver ?? 0).toBeGreaterThanOrEqual(2.49);
     expect(PLAN.mostThrifty?.damagePerMercenary ?? 0).toBeGreaterThanOrEqual(816_726);
     expect(PLAN.recommend).toBeDefined();
-    // The frontier it drew carries the plan it settled on, so the UI can mark it on screen.
-    expect(
-      PLAN.alternatives.some((row) => row.silver === PLAN.silver && row.totalDamage === PLAN.totalDamage),
-    ).toBe(true);
+    // **Every name is true of the row that wears it** (S-59): no plan the bar carries beats the row named for
+    // a figure, on that figure. What the UI may rely on is the names, not the winner's presence — the search
+    // maximises the campaign total, where the bar answers about a march, so the plan it settled on is not
+    // necessarily one of the four (it is not, on this army).
+    const rows = PLAN.alternatives;
+    const named = (pick: (typeof rows)[number]['pick']) => rows.find((row) => row.pick === pick);
+    const best = (of: (row: (typeof rows)[number]) => number): number => Math.max(...rows.map(of));
+    const perSilver = (row: (typeof rows)[number]) =>
+      row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : -1;
+    expect(named('most-damage')?.repeat.damage).toBe(best((row) => row.repeat.damage));
+    // `best-for-silver` is absent whenever the sweet spot is itself the best for silver — a taken name is not
+    // handed down to the runner-up, which is the whole point of the rule.
+    const silver = named('best-for-silver');
+    if (silver) expect(perSilver(silver)).toBe(best(perSilver));
+    expect(named('sweet-spot')).toBeDefined();
+    // The bar opens on the sweet spot, so the row the engine recommends has to be one of the rows it carries.
+    expect(rows.some((row) => row.pick === 'sweet-spot')).toBe(true);
   });
 }, 120_000);

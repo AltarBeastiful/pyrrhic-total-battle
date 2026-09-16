@@ -7,7 +7,15 @@
  *
  * `CampaignPlan.alternatives` stopped being an even sample of the frontier and became the **named picks** —
  * each the answer to a question a player asks, each defined by a rule with no parameter to set, deduplicated by
- * their counts. This file is the check: what the bar carries on the owner's account at the app's horizon, at
+ * their counts.
+ *
+ * **S-59 (2026-09-16) changed what a pick is, and this file measures the new thing.** The rows are now four
+ * *definitions* — the best damage a silver, the best damage a hired unit, the sweet spot, the most damage —
+ * each stated on the repeated march's own figures and drawn from the plans inside the **band**, rather than the
+ * names of whichever of six rules happened to fire; and a name already taken is not handed down to the
+ * runner-up. Before the change two of the four rows on this account were plans the band refuses — a
+ * single-troop-stack march, and one fielding 45 hired against the plan's 207 — which is experiment 0020 §1's
+ * table, taken with the old code. What moved between the two reports is exactly those rows. This file is the check: what the bar carries on the owner's account at the app's horizon, at
  * the old default, and at a silver budget where the picks are supposed to collapse to one.
  *
  * `THEORY=1 pnpm vitest run tools/theorycraft/86-slider-stops.test.ts`
@@ -50,8 +58,8 @@ describe.skipIf(!process.env.THEORY)('the stops the slider carries', () => {
       report.add(
         `**${n(plan.alternatives.length)} stops**, cheapest first; the frontier holds more and says so ` +
           `(\`leftOut\` = ${n(plan.leftOut)}). The bar opens on the **sweet spot**.\n\n` +
-          `| # | the plan’s own name | stacks | hired a march | burned a march | damage a march | silver a march | damage a silver | damage a hired | is the sweet spot? |\n` +
-          `|---|---|---|---|---|---|---|---|---|---|\n` +
+          `| # | pick | the shape sentence | stacks | hired a march | burned a march | damage a march | silver a march | damage a silver | damage a hired | is the sweet spot? |\n` +
+          `|---|---|---|---|---|---|---|---|---|---|---|\n` +
           plan.alternatives
             .map((point, index) => {
               const { result, summary } = evaluateCounts(base, point.counts);
@@ -60,7 +68,7 @@ describe.skipIf(!process.env.THEORY)('the stops the slider carries', () => {
               const isSweet =
                 sweet !== undefined && JSON.stringify(sweet.counts) === JSON.stringify(point.counts);
               return (
-                `| ${n(index + 1)} | ${point.label} | ${n(result.stacks.length)} | ${n(hired)} | ${n(burned)} | ` +
+                `| ${n(index + 1)} | \`${point.pick}\` | ${point.label} | ${n(result.stacks.length)} | ${n(hired)} | ${n(burned)} | ` +
                 `**${n(summary.avgDamage)}** | ${n(summary.recovery.silver)} | ` +
                 `${(summary.avgDamage / Math.max(1, summary.recovery.silver)).toFixed(2)} | ` +
                 `${(summary.avgDamage / Math.max(1, burned)).toFixed(0)} | ${isSweet ? '**yes**' : '—'} |`

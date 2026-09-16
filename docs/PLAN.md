@@ -346,6 +346,7 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-55 Bonus recap: every key, always visible | backlog | hero assessment 2026-09-13: the engine applies the hero (Svyatogor +50/+50 army) and the TOTAL figures move, but our only per-key view is the breakdown fold, two folds deep, hiding keys at 0; TotalStack's recap lists all 9 + 9 keys and the three specials. Promote that block to the head of the Sources fold, every key listed including 0 % (rules 1, 4, 5, 7) |
 | S-58 The plan's holes, and what full optimization means | done | owner, 2026-09-15. **Two flagged candidate fixes** for "the plan drops a whole hired type", both **off**: `tokenFloor` (the grid's thrift end samples one chunk of every hired type instead of none — `CAMPAIGN.planFixes`, `engine/plan.ts`) and `refuseDroppedTypes` (the frontier band refuses to offer a plan with a hole, counting them in `leftOut`). Measured against each other in experiments 80 and 81 on the owner's account: both remove every hole on the frontier, **B leaves the winner and the frontier's best identical** (`leftOut` 14 → 17) while **A shifts the recommendation by 0.87 %** because replacing the zero changes where the refinement lands. Three new unit tests pin the flags and their off-by-default. **And the horizon off-by-one is fixed**: a target of 1 played 2 marches (`max(1, planned − 1)` clamped a repeat up); a one-march campaign now scores no finale at all and plays exactly 1. **Investigation 0019** states the full-optimization definition and verifies each clause with data (77–83) |
 | S-57 The March's second half, and a locked Objective | done | owner, 2026-09-15, two changes in one pass. **The March's explaining half left the pane** — the objectives comparison, the battle story and the HP profile, the saved marches and the whole-march actions are now one panel, **"This march in full"** (`#march-foot`, `ui/sections/march/MarchFoot.tsx`), at the foot of the setup column from 1200 px, and the March sheet below that (`MarchSection.tsx`; `editingCounts` moved into `runStore` because the switch and the pills are now on opposite sides of the page). It is a **partial win**, measured with `paneFrame()` on a real march (leadership 84 300): the pane is 655 px with a warning and 553 px without, so it **sticks at 1400×900** (768 px of room; new test in `e2e/generate.spec.ts`) and **still flows at 1280×720** (560) and at 1280×800 with a warning (640). **The Objective is locked** while **Complete optimization** is chosen (`OBJECTIVE_LOCKED_REASON`, `shell/command.ts`), a deliberate exception to §7.4's hidden-not-disabled and to rule 15, which costs the pane about **28 px** of room at every method (`--pyr-commandbar-height` 5.75rem → 7.5rem, the bar's tallest state) |
+| S-59 The plan's screen: named rows, a tip that follows the pointer, a trade with a shape | done | owner's review 2026-09-16, investigation 0020, detail below. The bar carries up to four named picks — **Best for silver · Spare the stock · Sweet spot · Most damage** — each defined over the plans inside the band on the repeated march's own figures, cheapest first, and a name already taken is not handed to the runner-up (three rows on the owner's account, where the sweet spot is itself the best for silver) (`PlanPick`, `pick` on every carried row, `src/engine/plan.ts`; `tests/engine/plan.test.ts`); the tip follows the pointer and lights that plan's row (`PlanPanel.tsx`, `PlanPanel.test.tsx`); the trade gains a damage bar a row, glyph column heads and compact figures and `docs/design.md` §8's ornament rule is amended for it; the prose is cut to one analysis line with the general why behind a glyph (`docs/design.md` §7); and the plan block arrives **open** and stays collapsible **under the army** — it is a control, so the army you change comes first (owner, same day: *"we should first see the army then the details to change them afterwards"*) — measured at 1400×900 with `paneFrame()`: **740 px of March against 740 px of room** folded, **998 px open**. Experiment `tools/theorycraft/86-slider-stops.test.ts` regenerated, 87 deleted; `e2e/journeys.spec.ts` J6 and `e2e/generate.spec.ts` updated |
 
 **S-53 — Left-out troops without pins (owner, 2026-09-13 evening; clarified the same night).** The current
 model (§3.4) keeps two lists on the setup, `excludedUnitIds` and `pinnedUnitIds`, and the owner finds the pins
@@ -499,6 +500,64 @@ scroll"* — and the second is the one defect S-56 had just left open.
   1400×900** (`e2e/generate.spec.ts`'s new test) and **still flows at 1280×720** and at 1280×800 with a
   warning (the flowing test's comment was updated to say so, and that it is what the old `max-height` used to
   answer with a scrollbar). Partial, not solved: below 1200 px nothing changed at all.
+
+**S-59 — The plan's screen: named rows, a tip that follows the pointer, a trade with a shape (owner,
+2026-09-16).** The owner reviewed the screen the plan method draws; four of his five asks became decisions
+the same day and the fifth — the wall of prose — was **moved, not deleted**, because the same reviewer had
+asked for it one day earlier (`docs/investigations/0018-plan-horizon-and-the-fold.md:8`). Nothing here
+is copied from TotalStack: their only observed screen is the method card, which has no plan list, no bar and
+no trade table, so rule 26 governs throughout (`docs/investigations/0020-the-plan-screen.md`).
+
+- **The four names, and the rows are the names.** The bar carries exactly four picks, defined over the plans
+  **inside the band** and stated on the repeated march's own figures, cheapest first: **Best for silver**
+  (the best damage a silver), **Spare the stock** (the best damage a hired unit), **Sweet spot** (the plan the
+  engine weighed both resources to choose, and where the bar opens) and **Most damage** (the most damage the
+  army can do). A plan several definitions fit wears the first of them, in the order **Sweet spot → Most
+  damage → Best for silver → Spare the stock**. The knee stops being a stop — it stays in the payload,
+  because it decides the recommendation rather than answering anything — and `leftOut` counts the extremes the
+  band refuses. On the
+  owner's account that is what happens to the two old sentence labels: the single-troop-stack march and the
+  knee leave the bar, and the rows that replace them are named rather than described. Measured there at the
+  app's horizon, the bar carries **4 stops** with `leftOut` = 44 (`tools/theorycraft/out/86-slider-stops.md`):
+  `spare-the-stock` at 107 hired a march, the `sweet-spot` at 205, `best-for-silver` at 207 and `most-damage`
+  at 207 — against the old list's first stop, a single-troop-stack march, and its second, the knee at 45 hired
+  (0020 §1).
+- **The engine hands over an identity, the UI writes the words.** `PlanPick`
+  (`'best-for-silver' | 'spare-the-stock' | 'sweet-spot' | 'most-damage'`) and `pick: PlanPick` on every
+  carried row (`src/engine/plan.ts`); the shape sentence the engine has always written (`3 stacks · 45 hired ·
+  1.6M silver a march`) stays on the row for the recorded experiments that read it as a row's identity
+  (`tools/theorycraft/63`…`86`) and the app no longer draws it, because the silver in it is a column of the
+  table under it and "stacks" meant the march's troop rungs in the label and every stack in the table.
+  `alternatives` can still only truncate the list, never invent a row.
+- **The tip is the plan under the cursor.** Mantine's floating label goes (`label={null}`); ours follows the
+  pointer along the track, slides between stops, fades, is clamped inside the pane at both ends, and lights
+  the plan's own row in the table below. Arrow keys and focus show it at the thumb, and
+  `prefers-reduced-motion: reduce` keeps the tip and drops the motion (rule 24).
+- **The trade is made visual.** A damage bar on every row, scaled to the loudest plan on the list, a glyph on
+  each column head, compact figures for the two seven-digit columns, the row on screen raised (`--pyr-raised`)
+  and the sweet spot said in words on its row. The bar is a **second ornament** on the page, and
+  `docs/design.md` §8 is amended rather than broken quietly.
+- **The prose is cut to the analysis, and the why moves behind a glyph.** One muted line saying what the plan
+  did for *this* army, with the general explanation on demand beside it. The explanation is not lost: it is
+  what the owner asked for in 0018, and it is still on the page.
+- **The plan is open when it arrives, and still collapsible, and it stands under the army.** The chevron
+  stays because the pane has no room to spare: measured with `paneFrame()` at 1400×900 with the method
+  chosen, **740 px of March against 740 px of room** folded and **998 px open**, so the plan method's pane
+  sticks by nothing at all folded and flows while the plan is showing. The row it collapses to keeps the
+  plan's headline. **Where it stands was amended the same day** (owner, 2026-09-16: *"im not fond of moving
+  the army down. We should first see the army then the details to change them afterwards"*): the pane reads
+  **answer · army · left out · plan**, because the block is a *control* — reading another plan puts another
+  march on screen — and a control belongs after the thing it acts on. `PlanSizing`, the hidden line under the
+  figures, stays where it is: that one is the answer. Pinned by J6, which measures where the army and the plan
+  are drawn rather than asserting a DOM order.
+
+`tools/theorycraft/86-slider-stops.test.ts` is regenerated — its subject is exactly this list, so it prints
+each stop's `pick` beside the shape sentence it came from, at the app's horizon, the old default and a silver
+budget — and its committed `.md` changes with it; `87-stop-rules.test.ts` (the probe that produced 0020 §1) is
+deleted, since 86 asks its question now. `tests/engine/plan.test.ts` gains the picks (four at most, cheapest
+first, all inside the band, the sweet spot present and marked), `PlanPanel.test.tsx` is rewritten against
+names rather than sentences and holds the tip and the reduced-motion contract, `e2e/journeys.spec.ts` J6 is
+updated for a plan that is open on arrival, and `e2e/generate.spec.ts` gains the pane measurement above.
 
 D-02…D-09 are a different list — the TotalStack features we are not building; they keep their own section at
 the end of §5. All are deferred except **D-04 Total Optimization**, done as the opt-in relaxed-preservation
@@ -753,6 +812,43 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-16 — **S-59: the plan's own screen, named.** The owner reviewed what the plan method draws, in his
+  words:
+
+  > *"two things ui related for the plan of optimize all: slider tooltip is hard to grasp. it represent the
+  > current selected one, and the name is unclear. Woudl be best to have tooltip be the one below the cursor,
+  > with animation on hover so we understand and find better names for it. Then the table below, same plan name
+  > is hard to catch and some info in it is already in the table. better names. then the table itself needs more
+  > styling to be more visual. We could use icons but better styling is needed. Or redrawn in another way. The
+  > text above is wayyy too big and might even be unecessary if the form itself is clear. Then we can move to
+  > actually showing this all the time or even not in a arrow down plan details. It becomes a new part of the
+  > recap when total optimization is choosen."*
+
+  Four of the five asks became decisions the same day (`docs/investigations/0020-the-plan-screen.md` D-1…D-3,
+  D-5): the bar carries four named picks and nothing else (D-1), the tip is the plan under the cursor and
+  slides between stops (D-2), the trade is made visual — a damage bar a row, glyph column heads, compact
+  figures (D-3) — and the plan block **arrives open and stays collapsible** (D-5), because the pane has no room
+  to spare: `paneFrame()` at 1400×900 with the method chosen reads **740
+  px of March against 740 px of room** folded and **998 px open**, so the plan method's pane sticks by nothing
+  at all folded and flows while the plan is showing. **Where the block stands was corrected the same day**,
+  with the owner's own words:
+
+  > *"im not fond of moving the army down. We should first see the army then the details to change them
+  > afterwards"*
+
+  D-5 had read "a new part of the recap" literally and put the block straight under the figures, pushing the
+  pills and their counts down the pane. The order is now **answer · army · left out · plan**: the block is a
+  *control* — reading another plan puts another march on screen — and a control belongs after the thing it acts
+  on. `PlanSizing` stays under the figures, because that line is the answer and the block is the control. J6
+  pins it by measuring where the army and the plan are *drawn*, not by asserting a DOM order. The fifth — the wall of explanation — is **moved, not
+  deleted** (D-4), because the same reviewer had asked for it one day earlier (0018:8: *"What's missing is the
+  explanation on top … silver buys good damage, mercs also buys good damage but they are used sparsely"*), so
+  the general why stays on the page behind the glyph that explains the line. Nothing on this screen is copied from TotalStack: the only
+  screen of theirs ever observed is the method card (0008), which has no plan list, no names, no bar and no
+  trade table, so rule 26 governs and every word is ours. Same pass: `docs/design.md` §4 (the pane's parts),
+  §7 (four new `PlanPick` rows, the trade's real heads) and §8 (the ornament rule amended, dated, for the
+  trade's bar), `docs/walkthrough.md` try 5, `docs/plans/design-overhaul.md` §7.5, and the experiment
+  `tools/theorycraft/86-slider-stops.test.ts` regenerated to print each stop's `pick`.
 - 2026-09-15 — **S-56: Complete optimization v1 removed.** The owner reviewed the five stacking methods and
   had `complete` taken off the Battle card: the plan method (S-55) answers the same question one resolution
   finer — a horizon, a frontier of plans and a march-by-march trade, against a score per sizing × spend level

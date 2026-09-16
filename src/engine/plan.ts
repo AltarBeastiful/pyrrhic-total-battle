@@ -182,6 +182,37 @@ export interface PlanCurvePoint {
   thriftyPerMercenary: number;
 }
 
+/**
+ * **Which of the four answers a row on the bar is** (S-59, owner 2026-09-16).
+ *
+ * The bar used to carry up to six *rules* — the winner, the best damage a silver, the sweet spot, the knee,
+ * the most damage and the kindest to the stock — each wearing a sentence that described its shape
+ * (`3 stacks · 205 hired · 2.3M silver a march`). Two of those sentences were one row apart and read as a
+ * typo, the silver in them was a column of the table below, and "stacks" meant the march's troop rungs in the
+ * label and every stack in the table. So a row now carries **which answer it is** and the UI writes the words
+ * (`docs/investigations/0020-the-plan-screen.md` §D-1), and the four answers are defined over the plans the
+ * band keeps rather than over whichever rules happened to fire.
+ *
+ * The engine states the identity; naming it is the UI's (`docs/design.md` §7). No word of English is in the
+ * payload any more.
+ */
+export type PlanPick = 'best-for-silver' | 'spare-the-stock' | 'sweet-spot' | 'most-damage';
+
+/**
+ * A plan the bar offers: one of the four answers above, priced.
+ *
+ * It carries **both** names. `pick` is what the player is shown — the UI writes the words for it
+ * (`docs/design.md` §7). `label` is the shape sentence the engine has always written (`3 stacks · 45 hired ·
+ * 1.6M silver a march`); **the app stopped drawing it in S-59**, because the silver in it is a column of the
+ * table under it and "stacks" meant the march's troop rungs there and every stack here, and it stays because
+ * a dozen recorded experiments (`tools/theorycraft/63`…`86`) read it as the row's identity in their reports.
+ * One of the two is for the screen and one is for the record; neither is a second opinion on a number.
+ */
+export interface PlanRow extends PlanTotals {
+  pick: PlanPick;
+  label: string;
+}
+
 export interface CampaignPlan extends PlanTotals {
   /** The repeated march (the plan is this, `marches` times), or the single march if `marches` is 1. */
   march: PlanMarch;
@@ -190,20 +221,19 @@ export interface CampaignPlan extends PlanTotals {
   /** Which resource stops the plan being better. */
   binding: { silver: boolean; mercenaries: boolean; leadership: boolean; marches: boolean };
   /**
-   * The non-dominated plans, cheapest first: the trade-off line the UI draws. Cut to the band — see
-   * `leftOut` — unless the caller asked for at least as many rows as the frontier holds.
+   * The four answers the bar carries, cheapest first: the best damage a silver, the best damage a hired unit,
+   * the sweet spot and the most damage — each drawn from the plans inside the **band** (see `leftOut`),
+   * deduplicated by their counts. Four at most, and a plan that several answers fit wears the first of them.
    */
-  alternatives: (PlanTotals & { label: string })[];
+  alternatives: PlanRow[];
   /**
-   * How many of the frontier's plans the band refused to hand back: the marches that field a token share of
-   * the mercenaries, spend silver far past what they return, or stand on a single troop stack. `0` when
-   * nothing was cut — including when the band would have emptied the list and the unbanded frontier was
-   * handed back instead.
+   * How many of the frontier's non-dominated plans the bar does **not** offer. The four answers above are
+   * drawn from the plans inside the band — the marches that field a token share of the hired stock, spend
+   * silver far past what they return, or stand on a single troop stack are not among them — and this counts
+   * everything the bar left behind, refused by the band or simply not one of the four answers.
    *
-   * **`0` also for a caller who asked for the whole frontier** (as many rows as it holds): those calls are
-   * how the frontier is measured, they are handed every row, and a count of what a band *would* have refused
-   * would be describing an offer that was never made — the UI tells the player what it is not showing, and
-   * this is the field it reads.
+   * `0` when the band would keep nothing at all: the four answers are drawn from the unbanded frontier
+   * instead, and nothing was refused by a band that never applied.
    */
   leftOut: number;
   /**
@@ -214,14 +244,19 @@ export interface CampaignPlan extends PlanTotals {
   curve: PlanCurvePoint[];
   /**
    * The balanced proposal, present only when no silver budget was given — the plan the army alone points to.
-   * With a budget the plan *is* the answer, and the total dominates both ratios.
+   * With a budget the plan *is* the answer, and the total dominates both ratios. It is the bar's
+   * `sweet-spot` row.
    */
-  recommend?: (PlanTotals & { label: string }) | undefined;
-  /** The knee of the damage-against-silver curve, for the UI's "balanced / efficient" trade-off line. */
+  recommend?: PlanRow | undefined;
+  /**
+   * The knee of the damage-against-silver curve: where one more piece of silver stops buying damage as fast
+   * as it did before. **No longer a row of its own** (S-59): it is what *decides* the recommendation, which
+   * is an answer to offer, where the knee itself is not.
+   */
   knee?: (PlanTotals & { label: string }) | undefined;
-  /** The plan that buys the most damage per silver — one end of the trade, carried for the UI. */
+  /** The plan that buys the most damage per silver over the whole search, band or no band. */
   mostEfficient?: (PlanTotals & { label: string }) | undefined;
-  /** The plan that buys the most damage per mercenary — the other end, carried for the UI. */
+  /** The plan that buys the most damage per mercenary over the whole search, band or no band. */
   mostThrifty?: (PlanTotals & { label: string }) | undefined;
 }
 
@@ -1030,16 +1065,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const silver = candidate.marches * m.silver + (candidate.finale?.silver ?? 0);
     const mercLost = candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0);
     /**
-     * The plan's identity in the player's own terms: how deep the march is (its troop stacks), how many hired
-     * units ride it, and what one march of it costs. The old label was `N× 7 rungs + finale`, which named the
-     * *engine's* repeat count and the rung count — at a fixed march target every row began with the same `9×`,
-     * so ten of sixteen rows wore one name and a slider could not tell its own stops apart. Measured against
-     * the carried lists at `marchTarget` 10 and 20 (`tools/theorycraft/out/73-plan-horizon.md` §7): stacks +
-     * hired leaves one collision (five rows at a target of 10), and **the mercenary split does not fix it** —
-     * the colliding rows are one march shape at different ladder spends, so the disambiguator has to be a
-     * number, not a shape. The march's own silver does fix it, and it is written in the March's own compact
-     * idiom (`1.7M`, `890K`), not in a third one. Presentation only: no number in the payload moves — the
-     * march count is `PlanTotals.marches` and the finale is `finaleCounts`.
+     * The plan's shape in the engine's own terms: how deep the march is (its troop stacks), how many hired
+     * units ride it, and what one march of it costs. It replaced `N× 7 rungs + finale`, which named the
+     * *engine's* repeat count and the rung count — at a fixed march target every row began with the same
+     * `9×`, so ten of sixteen rows wore one name and a slider could not tell its own stops apart.
+     *
+     * **Not what the bar shows since S-59.** The four rows are named by what they answer (`PlanPick`) and this
+     * sentence is read by the experiments; it is kept, and kept identical, because a dozen recorded reports
+     * (`tools/theorycraft/63`…`86`) quote it as a row's identity. Presentation only: no number in the payload
+     * moves — the march count is `PlanTotals.marches` and the finale is `finaleCounts`.
      */
     const stacks = candidate.rungs.length;
     const hired = Object.values(m.mercFielded).reduce((sum, count) => sum + count, 0);
@@ -1081,6 +1115,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   undominated.sort((a, b) => a.silver - b.silver || a.mercLost - b.mercLost || a.totalDamage - b.totalDamage);
   const keep = Math.max(2, input.alternatives ?? 12);
   const chosenPoint = summarise(chosen);
+  /** The plan the engine recommends, priced — the bar's `sweet-spot` row, and a candidate for every name. */
+  const sweetSpotBase: PlanTotals & { label: string } = balanced ? summarise(balanced) : chosenPoint;
 
   /**
    * What the bar is allowed to **offer**. The owner, on the first bar: *"well just don't show the extremes, if
@@ -1113,38 +1149,55 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * plan rations.
    */
   const stocked = mercTypes.filter((entry) => (stock[entry.id] ?? 0) > 0);
-  const inBand = (row: PlanTotals & { label: string }): boolean =>
+  const inBand = (row: PlanTotals): boolean =>
     hiredOf(row.counts) * 2 >= goal.hired &&
     row.damagePerSilver * 2 >= goal.perSilver &&
     Object.keys(row.counts).filter((id) => !mercIds.has(id)).length > 1 &&
     // S-58 B (`refuseDroppedTypes`): a plan the player is offered fields a little of everything they hold.
-    // The band can empty out if the *winner* drops a type; the fallback below hands the whole frontier back
-    // rather than an empty list, which is the same graceful degradation the other three refusals have.
+    // The band can empty out if the *winner* drops a type; the fallback below draws the four answers from the
+    // unbanded frontier rather than handing back an empty bar, which is the graceful degradation the other
+    // three refusals have.
     (!refuseDroppedTypes || stocked.every((entry) => (row.counts[entry.id] ?? 0) > 0));
 
   /**
-   * **The stops the bar carries** (owner, 2026-09-15: *"find a few 4-5 common, good picks to have a slider
-   * control how much silver vs merc we want to spend, which was the whole point… the algorithm should still
-   * try to figure out where are the best 3-5 best spots and place us in the sweet spot by default and let us
-   * slide in other good and backed-by-calculation-and-data spots."*).
+   * **The plans the four answers are drawn from.** The band is the owner's instruction of 2026-09-15 —
+   * *"well just don't show the extremes, if we use a certain % of mercs or waay too much silver we're too far
+   * off from our goal of everything optimized"* — and every threshold is measured against the plan itself,
+   * never a free-standing number, so the plan is always inside it. A plan is near the goal when its march is
+   * not a token field and not a silver sink:
    *
-   * It used to be an **even sample** of the band, with the picks pushed in when the thinning skipped them —
-   * eight stops for the owner's four, at a horizon where most of them said the same thing. It is now the
-   * picks themselves: each is the answer to a question a player asks, each is defined by a rule with no
-   * parameter to set, and a rule that lands on a plan another rule already found adds nothing (measured:
-   * experiment 86, where at one horizon the sweet spot *is* the best damage a silver).
+   *   **mercenaries** — it fields at least **half the hired troops the plan's own march fields** (the goal's
+   *   mercenary share is the yardstick, so a horizon that legitimately fields few mercenaries is not punished
+   *   for it); **silver** — it returns at least **half the plan's own damage a silver**; and **the march**
+   *   itself must be more than a single troop stack (experiment 72's criterion, and the owner's own "the
+   *   least silver plan would never be chosen … is not a strategy").
    *
-   *  - the **cheapest** the band keeps — the least silver that still fields a proper march;
-   *  - the **best damage a silver** — where the next piece of silver stops paying;
-   *  - the **sweet spot** — the plan that stands closest to both ratios at once, and where the bar opens;
-   *  - the **knee** — the plan furthest above the line the frontier's two ends draw, which is the bend of the
-   *    trade rather than either of its ratios;
-   *  - the **most damage** the army can do;
-   *  - the **kindest to the stock** — the best damage a hired unit, offered only if the band keeps it, since
-   *    it is the one pick measured to be a plan nobody should march (`tools/theorycraft/out/83`).
+   * Measured on the account (`tools/theorycraft/out/74-row-figures.md` §2b): at a target of 10 the band keeps
+   * 31 of 46 frontier rows, at 20 it keeps 15 of 31, and the plan and the sweet spot pass at both.
    *
-   * Sorted cheapest first, because the bar is read left to right as "spend less … spend more".
+   * **Until S-59 the band was only ever applied to one of the six rules** the bar drew from, so two of the
+   * four stops on the owner's own account were plans this refuses — the leftmost being the single-troop-stack
+   * march the criterion above exists to exclude (`docs/investigations/0020-the-plan-screen.md` §1). It is
+   * applied to the set the answers are drawn from now, which is what the instruction always meant.
    */
+  const band = undominated.filter(inBand);
+  /**
+   * The plans a name may be given to: the band, **plus the recommendation** — which is offered whether or not
+   * the band keeps it, since it is where the bar opens and the answer the engine weighed both resources for.
+   *
+   * It has to be in the set, or a name could be false on its own row: measured, the sweet spot stood outside
+   * the band (it fields no monster the plan does) *and* had the best damage a silver of everything on the bar,
+   * so the runner-up took the `best-for-silver` slot and the table showed a row named "Best for silver" whose
+   * ratio was lower than the row above it (`tools/theorycraft/out/86`). A named row now competes against every
+   * plan the bar can carry.
+   */
+  const candidates =
+    band.length === 0
+      ? undominated
+      : band.some((row) => JSON.stringify(row.counts) === JSON.stringify(sweetSpotBase.counts))
+        ? band
+        : [...band, sweetSpotBase];
+
   /**
    * The recommendation when no silver budget is given: the **knee** of the damage-against-silver curve — the
    * plan where one more piece of silver stops buying damage as fast as it did before. It is the balanced
@@ -1174,45 +1227,71 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     return best;
   })();
 
-  const mostDamage = undominated.reduce<(PlanTotals & { label: string }) | undefined>(
-    (best, row) => (best === undefined || row.totalDamage > best.totalDamage ? row : best),
-    undefined,
-  );
-  const stops: (PlanTotals & { label: string })[] = [];
-  for (const point of [
-    chosenPoint,
-    light ? summarise(light) : undefined,
-    balanced ? summarise(balanced) : undefined,
-    knee,
-    mostDamage,
-    heavy && inBand(summarise(heavy)) ? summarise(heavy) : undefined,
-  ]) {
-    // Two rules that land on the same counts are one plan, and one stop. Counts, not silver: two plans can
-    // cost the same and field differently, and a bar must not offer the same march twice.
-    if (point === undefined) continue;
-    if (stops.some((row) => JSON.stringify(row.counts) === JSON.stringify(point.counts))) continue;
-    stops.push(point);
+  /** The row of `offered` that maximises one figure — the band's answer to each of the three open questions. */
+  const bestOf = (pick: (row: PlanTotals) => number): (PlanTotals & { label: string }) | undefined =>
+    candidates.reduce<(PlanTotals & { label: string }) | undefined>(
+      (best, row) => (best === undefined || pick(row) > pick(best) ? row : best),
+      undefined,
+    );
+
+  /**
+   * **The four answers the bar carries** (owner, 2026-09-15: *"find a few 4-5 common, good picks to have a
+   * slider control how much silver vs merc we want to spend, which was the whole point… the algorithm should
+   * still try to figure out where are the best 3-5 best spots and place us in the sweet spot by default"*, and
+   * 2026-09-16 on naming them: *"find better names for it"*).
+   *
+   * Each is a **definition over the plans inside the band**, stated on the figures the row itself carries —
+   * the repeated march's own `repeat`, which is what the table prints and what the recap above it is drawing —
+   * rather than the name of a rule that happened to fire. That is what makes a name true of the row under it,
+   * whatever the account and whatever the horizon:
+   *
+   *  - the **sweet spot** — the plan the engine weighed both resources to choose, and where the bar opens. It
+   *    is offered whether or not the band would keep it, because it is the recommendation;
+   *  - the **most damage** a march of it does;
+   *  - the **best damage a silver** a march of it does;
+   *  - the **best damage a hired unit** a march of it does.
+   *
+   * **A name that is already taken is not handed down.** Measured before this rule (`tools/theorycraft/out/86`
+   * §"the app's horizon"): the sweet spot was *also* the best damage a silver, the runner-up took the slot, and
+   * the bar showed a row named "Best for silver" whose ratio was lower than the row above it — a name that was
+   * false on its face. A row that several definitions fit wears the first of them, and the others are simply
+   * not offered rather than passed to the next-best plan.
+   *
+   * Counts decide whether two picks are one plan: two plans can cost the same and field differently, and a bar
+   * must not offer the same march twice. Sorted cheapest first, because the bar is read left to right as
+   * "spend less … spend more".
+   */
+  const perSilver = (row: PlanTotals): number =>
+    row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : -1;
+  const perHired = (row: PlanTotals): number =>
+    row.repeat.mercLost > 0 ? row.repeat.damage / row.repeat.mercLost : -1;
+  const stops: PlanRow[] = [];
+  for (const { row, pick } of [
+    { row: balanced ? summarise(balanced) : chosenPoint, pick: 'sweet-spot' as const },
+    { row: bestOf((row) => row.repeat.damage), pick: 'most-damage' as const },
+    { row: bestOf(perSilver), pick: 'best-for-silver' as const },
+    { row: bestOf(perHired), pick: 'spare-the-stock' as const },
+  ] satisfies { row: (PlanTotals & { label: string }) | undefined; pick: PlanPick }[]) {
+    if (row === undefined) continue;
+    if (stops.some((other) => JSON.stringify(other.counts) === JSON.stringify(row.counts))) continue;
+    stops.push({ ...row, pick });
   }
   stops.sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage);
   /**
    * How many of the frontier's plans the bar does **not** carry. The number and the list have to agree — the
    * UI prints this beside the table it describes — so it is counted off the list that is actually handed
-   * back, never off a filter that ran somewhere else.
+   * back, and reads `0` when the band kept nothing (nothing was refused by a band that never applied).
    */
-  const leftOut = Math.max(0, undominated.length - stops.length);
-  const sampled = stops.slice(0, keep);
-
+  const leftOut = band.length > 0 ? Math.max(0, undominated.length - stops.length) : 0;
+  const alternatives: PlanRow[] = stops.slice(0, keep);
   /**
-   * The compromise when no silver budget is given: the plan that stands as close as it can to **both**
-   * ratios at once — damage per silver and damage per mercenary — each measured against the best the
-   * frontier offers. Picking either extreme is a plan that spends one resource to waste the other: the
-   * efficiency peak burns silver well and mercenaries badly, and the mercenary peak does the reverse. The
-   * owner asked for the sweet spot between them, and this is its definition, with no parameter to set.
+   * The plan the engine recommends, as the bar's own row: the same figures the list carries when the cap
+   * above did not cut it off, and a copy of them when it did.
    */
-  // The three picks were measured over every candidate while the search ran (see `light`, `balanced` and
-  // `heavy` in the loop); what is left here is making sure the ones the UI marks are on the list it draws.
-  sampled.sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage);
-  const alternatives: (PlanTotals & { label: string })[] = sampled;
+  const sweetSpot: PlanRow = stops.find((row) => row.pick === 'sweet-spot') ?? {
+    ...sweetSpotBase,
+    pick: 'sweet-spot',
+  };
 
   const leadershipUsed = chosen.rungs.reduce((sum, rung) => sum + rung.count * rung.entry.cost, 0);
   const total: PlanTotals = summarise(chosen);
@@ -1247,7 +1326,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // the frontier turns into diminishing returns. The knee is carried beside it for the UI to show the trade.
     ...(input.silverBudget === undefined
       ? {
-          recommend: balanced ? summarise(balanced) : chosenPoint,
+          recommend: sweetSpot,
           knee: knee ?? chosenPoint,
           mostEfficient: light ? summarise(light) : chosenPoint,
           mostThrifty: heavy ? summarise(heavy) : chosenPoint,

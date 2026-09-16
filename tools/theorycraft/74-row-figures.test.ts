@@ -15,6 +15,7 @@ import { describe, it } from 'vitest';
 
 import { aggregateBonuses } from '../../src/engine/bonuses';
 import { marchResult, planCampaign } from '../../src/engine/plan';
+import type { PlanTotals } from '../../src/engine/plan';
 import { chunks } from '../../src/engine/recovery';
 import type { ResolvedSource, StackRequest } from '../../src/engine/types';
 import { Report, loadOwner, n, withCaps, withHousing } from './harness';
@@ -80,7 +81,10 @@ describe.skipIf(!process.env.THEORY)(
       );
       let worst = 0;
       let rows = 0;
-      const check = (target: number, point: Point, name: string): void => {
+      // A `PlanTotals` with an optional shape sentence, and not `Point`: this checks the frontier **and** the
+      // four payload picks, and S-59 gave the *rows* a `pick` the payload fields do not carry — while the
+      // sentence is still the identity this report quotes.
+      const check = (target: number, point: PlanTotals & { label?: string }, name: string): void => {
         const { summary } = marchResult(request, point.counts);
         const battleMercs = MERC_IDS.reduce((sum, id) => sum + chunks(point.counts[id] ?? 0), 0);
         worst = Math.max(worst, Math.abs(point.repeat.damage - summary.avgDamage));
@@ -92,7 +96,7 @@ describe.skipIf(!process.env.THEORY)(
             `${point.repeat.silver === summary.recovery.silver ? '0' : n(point.repeat.silver - summary.recovery.silver)} | ` +
             `${n(point.repeat.mercLost)} | ${n(battleMercs)} | ` +
             `${point.repeat.mercLost === battleMercs ? '0' : `**${n(point.repeat.mercLost - battleMercs)}**`} | ` +
-            `\`${point.label}\` |`,
+            `\`${point.label ?? name}\` |`,
         );
       };
       for (const target of TARGETS) {

@@ -171,7 +171,8 @@ page              the page ground
 │ └ well          anything sunk into it: a field, a tier stepper, a segmented track, a figure
 │ └ raised        a block on top of it: a hover, the chosen segment, the account pill
 ├ pane            the March: the same idea one step brighter and one step deeper           (`Panel surface="pane"`)
-│ └ glance        the half of the March that answers: recap · Generate · the pools and their pills · the plan
+│ └ glance        the half of the March that answers: recap · Generate · the pools and their pills · the plan,
+│                 open when it arrives (S-59) and collapsible
 │ └ tier/13       a stack pill: a wash of its tier's ink, bordered in the same ink
 ├ panel           the same March's second half, from 1200 px: one panel, **"This march in full"**, closing the
 │                 setup column — what the objective bought, the battle story and the HP profile, the saved
@@ -306,7 +307,15 @@ variable, `--pyr-meta`, so restoring the 13 px floor is a one-line change; the t
   nothing the browser scrolls to lands under a bar.
 - **The whole pane stays put.** On a desktop the March pane is `position: sticky` under the 64 px app bar as
   **one object** (owner, 2026-09-15) — the figures, the army, the counts, the left-out row, the notices and
-  the plan's own fold together. Nothing pins itself *inside* the column, because a block pinned inside its
+  the plan's own block together, because the plan's assessment *is* the answer. The plan **arrives open**
+  (2026-09-16, S-59) and **collapses on demand**: it reads as a part of the answer rather than a fold to
+  hunt for, and closing it is how a player whose pane no longer sticks gets one that does
+  (`docs/investigations/0020-the-plan-screen.md` §1, D-5). **Where it stands was amended the same day** (owner,
+  2026-09-16: *"we should first see the army then the details to change them afterwards"*): the order in the
+  pane is **answer · army · left out · plan**, because the block is a *control* — reading another plan puts
+  another march on screen — and a control belongs after the thing it acts on. `PlanSizing` stays under the
+  figures: it is the answer, where the block is the control.
+  Nothing pins itself *inside* the column, because a block pinned inside its
   column is a block the rest of the column scrolls behind. It carries **no `max-height` and no `overflow`**:
   a scroll inside the pane is the second scroller design rule 17 forbids. What decides instead is
   `shell/usePaneFits.ts`, which measures the March against `100dvh − --mantine-spacing-lg −
@@ -318,6 +327,10 @@ variable, `--pyr-meta`, so restoring the 13 px floor is a one-line change; the t
   1280×800-with-a-warning. Before the March's second half moved to the foot of the setup column it was
   **771 px** against 768 px of room and stuck at no window size at all. The command bar's taller reserve
   (§1) costs the pane about **28 px** of room at every method, and that is the price of the sentence saying why the Objective is locked.
+  **Amended 2026-09-16 (S-59):** the plan method's pane is the exception the plan block makes — measured with
+  `paneFrame()` at 1400×900, **740 px of March against 740 px of room** with the block folded and **998 px
+  open**, so that pane sticks by nothing at all folded and flows while the plan is showing, which is what its
+  chevron is for (`docs/investigations/0020-the-plan-screen.md` §1).
 - **Alignment.** Everything left-aligned; figures right-aligned in their column; nothing centred. A figure's
   name is a caption *under* it only for the hero — everywhere else the label comes first, because those are
   read as a list.
@@ -422,9 +435,13 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `method: 'custom'` | **Your own order** | You decide which stack falls first, mixing troops, mercenaries and monsters. |
 | `method: 'plan'` | **Complete optimization** | Plans the marches your army can fight: how big each one is, and what it carries. |
 | `PlanTotals.damagePerSilver` · `damagePerMercenary` | **Damage per silver · per mercenary** | What the two scarce resources buy. The plan reports both, and which one ends it. |
-| `CampaignPlan.alternatives` | **The trade** | The plans nothing else beats on every resource at once, cheapest first, cut to the ones near the goal: the trade between silver, hired stock and damage. Its table reads one march at a time — **Damage a march · Silver a march · Mercs a march · Per silver · Per mercenary**. |
+| `CampaignPlan.alternatives` | **The trade** | The plans nothing else beats on every resource at once, cheapest first, cut to the ones near the goal: the trade between silver, hired stock and damage. Its rows are the four picks below — the plan's name is the row's own head, and the row carries a bar as long as the damage a march of it deals, measured against the loudest plan on the list — and its columns read one march at a time: **Plan** and then **Damage a march · Silver a march · Hired lost · Per silver · Per hired**, each head behind its glyph and the two seven-figure columns in compact figures (S-59) — and **Per silver and Per hired are the march's own ratios**, not the campaign's, so every figure on a row is a fact about the one march the recap above is drawing. A plan several of the four definitions fit wears the first, in this order: **Sweet spot → Most damage → Best for silver → Spare the stock**. |
+| `PlanPick: 'best-for-silver'` | **Best for silver** | The best damage a silver the band keeps, stated on the repeated march's own figures. |
+| `PlanPick: 'spare-the-stock'` | **Spare the stock** | The best damage a hired unit the band keeps, stated on the repeated march's own figures. |
+| `PlanPick: 'sweet-spot'` | **Sweet spot** | The plan the engine weighed both resources to choose — where the bar opens; its row says so in words. |
+| `PlanPick: 'most-damage'` | **Most damage** | The most damage the army can do in a march. |
 | `PlanTotals.repeat` | **A march** | The repeated march's own figures — what one of the identical marches hits for, costs and burns, without the final march spread over it. It agrees with the battle's own report for that march to the unit. |
-| `CampaignPlan.leftOut` | **Off the goal** | How many of the frontier's plans the trade refused: marches that field a token share of the hired stock, or spend silver far past what it returns. The fold says the count; nothing is hidden silently. |
+| `CampaignPlan.leftOut` | **Off the goal** | How many of the frontier's plans the trade refused: marches that field a token share of the hired stock, or spend silver far past what it returns. The plan block says the count; nothing is hidden silently. |
 | `relaxedPreservation` | **Allow damage trades** | Let a hired stack grow past your smallest troop stack when that raises the damage; the results name every stack it affects. |
 | `monstersLast` | **Monsters after troops** | Keep every monster stack below your smallest troop stack; mercenaries stay free. |
 | `strictMercsAboveMonsters` | **Monsters after mercenaries** | Also keep every monster stack below your smallest mercenary stack. |
@@ -445,7 +462,7 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `recovery.*` | **Recovery** — silver, gold, dragon coins, time |
 | `damagePerSilver` / `PerGold` / `PerDragonCoin` | **Value per silver** / **per gold** / **per dragon coin** |
 | `damageByPool` | Damage by pool — troops, mercenaries, monsters |
-| `CampaignPlan.totalDamage` · `silver` · `marches` · `mercLost` | **Fought to the end** — the sequence added up: damage, silver and hired stock over every march, the final one included. One muted line under the plan's fold, not a headline |
+| `CampaignPlan.totalDamage` · `silver` · `marches` · `mercLost` | **Fought to the end** — the sequence added up: damage, silver and hired stock over every march, the final one included. One muted line at the foot of the plan block, not a headline |
 
 The battle journal keeps in-game phrasing, line for line, so a player can hold it next to the real report.
 
@@ -480,6 +497,12 @@ that a number can be loud, and the number that is allowed to be loud is the expe
 each with a bar as long as the damage it deals measured against the loudest stack of the march, under one 48 px
 figure in the display face. Nothing else on the page gets an ornament. (The bar is damage and not health on
 purpose: the sizer gives every stack the same HP ceiling, so a column of HP bars would be identical bars.)
+
+*Amended 2026-09-16 (owner, S-59):* the trade table of the plan method — "Every plan on the trade" — gets a
+bar on every row, as long as the damage a march of that plan deals measured against the **loudest plan on the
+list**. It is a second ornament and **the only addition this rule gets**: the bar means damage wherever it is
+drawn, its length is that row measured against its own list, and no other block on the page joins them
+(`docs/investigations/0020-the-plan-screen.md` D-3).
 
 **Three rules a reviewer can check without an opinion:**
 

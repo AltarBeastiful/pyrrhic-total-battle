@@ -22,9 +22,15 @@ preview`), not the dev server.
    fill in: how many marches a plan is fought over and what it may spend are numbers the app holds
    (`src/config.ts`), not fields on the card, and the Objective is locked, as in 4. The March says in words
    what it planned — how many identical marches and the stacks each one fields, then where the plan sits on
-   the trade — and the folded **Plan** section holds the thesis in prose, a bar with a marker on the sweet
-   spot (and the control back to it), and the trade itself: one row per plan kept, what a march of it hits
-   for, costs in silver and burns of the hired stock, with damage per silver and per mercenary beside them.
+   the trade — and the **Plan** block arrives **open**, rather than a fold to hunt for (it still collapses, and
+   the row it collapses to keeps the plan's headline). It stands **under the army**, not above it: the block
+   is a control — reading another plan puts another march on screen — so the army you came to change is first.
+   The bar carries up to four
+   named plans — **Best for silver · Spare the stock · Sweet spot · Most damage** — and the tip follows the
+   pointer instead of the thumb: it names the plan under it and lights that plan's row in the table below.
+   One muted line says what the plan did for *your* army, with the general why behind the ⓘ beside it, and the
+   trade is one row per plan — a bar as long as the damage it deals, what a march of it hits for, costs in
+   silver and burns of the hired stock, with damage per silver and per mercenary beside them.
    The rest of the March's second half is **not in the pane on a desktop**: the comparison with all types,
    the battle story and the HP chart, your saved marches and the row that copies, edits, saves or shares the
    counts are together at the end of the **left** column, under **"This march in full"**. On a phone there is

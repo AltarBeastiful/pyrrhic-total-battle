@@ -24,6 +24,7 @@ import {
   openMarchSheet,
   pageOverflowsSideways,
   paneFrame,
+  seedHiredStock,
   setCountsMode,
   settle,
   watchConsole,
@@ -139,6 +140,66 @@ test('a March that fits the room keeps the stick — the point of the foot panel
       message: 'a March that fits its room did not keep the stick',
     })
     .toBe('sticky');
+
+  expect(problems).toEqual([]);
+});
+
+test('the plan method’s March is taller than its room, and the page carries it', async ({ page }) => {
+  const problems = watchConsole(page);
+  // The one method whose pane cannot stick, and the reason it cannot: the plan block is part of the
+  // answer and **arrives open** (S-59), so its figures are on screen from the first frame rather than
+  // behind a chevron. Measured on the owner's export at 1400×900 on 2026-09-16 — `paneFrame` reported
+  // **740 px of March against 740 px of room with the block folded**, so that pane sticks by nothing at
+  // all even closed, and flows as soon as the block is showing. The figures below are the same
+  // measurement on this spec's own account and are **printed**, because a pane that quietly changed
+  // sides is the regression here, not a number that moved (`docs/investigations/0020-the-plan-screen.md`
+  // §1, `docs/design.md` §4).
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openApp(page);
+  await seedHiredStock(page);
+
+  await page.locator('#battle').getByRole('radio', { name: 'Complete optimization' }).click();
+  await generate(page, { leadership: 20_000 });
+
+  // It arrives open: no tap, which is what the journey's budget now relies on.
+  const fold = marchSection(page).getByRole('button', { name: /^Plan / });
+  await expect(fold).toHaveAttribute('aria-expanded', 'true');
+
+  const open = await paneFrame(page);
+  const withPlan = `height ${String(open.height)} px, room ${String(open.room)} px`;
+  test.info().annotations.push({ type: 'measured', description: `plan open — ${withPlan}` });
+  process.stdout.write(`  measured — plan open: ${withPlan}\n`);
+
+  // What is true, rather than what would be tidier: a March this tall is **carried by the page**.
+  expect(
+    open.height,
+    'the plan method now fits its room — the flowing case this test is about is gone',
+  ).toBeGreaterThan(open.room);
+  await expect
+    .poll(async () => (await paneFrame(page)).position, {
+      message: 'a March taller than its room with the plan open kept the stick',
+    })
+    .toBe('relative');
+
+  // And closing the block — the chevron's whole purpose — gives the pane its stick back, if not its
+  // room: measured on this account, what is left is still taller than 740 px.
+  await fold.click();
+  await expect(fold).toHaveAttribute('aria-expanded', 'false');
+  // The fold animates its own height, so the shorter March arrives a few frames later rather than on the
+  // click: polled, the way the pane's own decision is.
+  await expect
+    .poll(async () => (await paneFrame(page)).height, {
+      message: 'closing the plan did not shorten the March — the fold is not the plan block',
+    })
+    .toBeLessThan(open.height);
+  const closed = await paneFrame(page);
+  const withoutPlan = `height ${String(closed.height)} px, room ${String(closed.room)} px`;
+  test.info().annotations.push({ type: 'measured', description: `plan closed — ${withoutPlan}` });
+  process.stdout.write(`  measured — plan closed: ${withoutPlan}\n`);
+
+  // Neither state ever takes a scroll of its own (design rule 17).
+  expect(closed.scrollers).toEqual([]);
+  expect(open.scrollers).toEqual([]);
 
   expect(problems).toEqual([]);
 });
