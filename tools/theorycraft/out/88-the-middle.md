@@ -1,12 +1,13 @@
 
 ## The four answers, as the app draws them
 
-`leftOut` = 45 — the plans on the frontier the bar does not offer.
+`leftOut` = 44 — the plans on the frontier the bar does not offer.
 
 | pick | damage a march | silver a march | hired burned | damage a silver | damage a hired |
 |---|---|---|---|---|---|
 | `spare-the-stock` | **4,262,790** | 2,252,000 | 12 | 1.89 | 355233 |
-| `sweet-spot` | **6,826,445** | 2,256,900 | 21 | 3.02 | 325069 |
+| `sweet-spot` | **5,333,606** | 2,252,000 | 17 | 2.37 | 313742 |
+| `best-for-silver` | **6,905,207** | 2,331,500 | 22 | 2.96 | 313873 |
 | `most-damage` | **6,920,621** | 2,354,500 | 22 | 2.94 | 314574 |
 
 ## What the whole curve offers, level by level

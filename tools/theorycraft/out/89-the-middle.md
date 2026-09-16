@@ -27,9 +27,10 @@ silver buying damage without touching the stock.
 | pick | damage a march | silver a march | hired burned |
 |---|---|---|---|
 | `spare-the-stock` | **4,262,790** | 2,252,000 | 12 |
-| `sweet-spot` | **6,826,445** | 2,256,900 | 21 |
+| `sweet-spot` | **5,333,606** | 2,252,000 | 17 |
+| `best-for-silver` | **6,905,207** | 2,331,500 | 22 |
 | `most-damage` | **6,920,621** | 2,354,500 | 22 |
 
-`leftOut` = 45 plans on the frontier are not offered by the bar.
+`leftOut` = 44 plans on the frontier are not offered by the bar.
 The hired soldiers of the account (4 types) are counted inside `mercLost` along with
 every monster the account fields, which is why it is larger than the shipped column's own count.

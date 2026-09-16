@@ -269,8 +269,9 @@ export interface CampaignPlan extends PlanTotals {
   recommend?: PlanRow | undefined;
   /**
    * The knee of the damage-against-silver curve: where one more piece of silver stops buying damage as fast
-   * as it did before. **No longer a row of its own** (S-59): it is what *decides* the recommendation, which
-   * is an answer to offer, where the knee itself is not.
+   * as it did before. **No longer a row of its own** (S-59), and since the owner's correction of 2026-09-16 it
+   * decides nothing either — the recommendation is the middle of the trade in hired stock (`recommend`). It is
+   * carried for the curve's own shape.
    */
   knee?: (PlanTotals & { label: string }) | undefined;
   /** The plan that buys the most damage per silver over the whole search, band or no band. */
@@ -1066,7 +1067,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const chosen = best as Candidate;
   const march = toMarch(chosen.rungs, chosen.mercs, chosen.march);
   const finale = chosen.finale
-    ? toMarch(chosen.finaleRungs, leftoverVector(stock, chosen), chosen.finale)
+    ? toMarch(chosen.finaleRungs, leftoversOf(chosen, stock), chosen.finale)
     : undefined;
   // The frontier the UI shows: only the plans nothing else beats on every resource at once, thinned to a
   // readable number. This is also where the recommendation comes from when no silver budget was given.
@@ -1384,9 +1385,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     ...(input.withTrade === true
       ? { trade: [...candidates].sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage) }
       : {}),
-    // With no budget the recommendation is the plan that buys the most damage per silver: the owner asked for
-    // the sweet spot between the two resources, and that is the plan where silver is stretched furthest before
-    // the frontier turns into diminishing returns. The knee is carried beside it for the UI to show the trade.
+    // With no budget the recommendation is the sweet spot — the middle of the trade in hired stock, see
+    // `sweetSpotBase` above. With a budget the plan *is* the answer and nothing is recommended beside it. The
+    // knee and the two peaks are carried for the curve's shape, not for the bar.
     ...(input.silverBudget === undefined
       ? {
           recommend: sweetSpot,
@@ -1398,22 +1399,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
 }
 
+/** The mercenaries a plan leaves for its final march: the stock less one chunk a repeat. */
 function leftoversOf(
   candidate: { marches: number; mercs: { entry: Effective; count: number }[] },
   stock: Record<string, number>,
-): { entry: Effective; count: number }[] {
-  return candidate.mercs
-    .map((merc) => ({
-      entry: merc.entry,
-      count: Math.max(0, (stock[merc.entry.id] ?? 0) - candidate.marches * chunks(merc.count)),
-    }))
-    .filter((merc) => merc.count > 0);
-}
-
-/** The mercenaries a plan leaves for its final march. */
-function leftoverVector(
-  stock: Record<string, number>,
-  candidate: { marches: number; mercs: { entry: Effective; count: number }[] },
 ): { entry: Effective; count: number }[] {
   return candidate.mercs
     .map((merc) => ({

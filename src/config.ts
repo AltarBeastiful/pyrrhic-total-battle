@@ -38,12 +38,10 @@ export const CAMPAIGN = {
    */
   marches: 4,
   /**
-   * Plans the S-55 trade carries for the slider, besides the ones the engine insists on (the sweet spot,
-   * the two ends and the plan itself). Every stop is a plan the player may be asked to choose, so this is
-   * the knob between "a control I can read" and "a table I have to read": at 4 the bar carries about eight
-   * stops at a 360 px pane, which is what the owner's review of 2026-09-15 asked for ("we should have less
-   * option"). The engine samples that many evenly from the plans nothing beats — at a horizon they sit
-   * close enough together that a stop lands next to the sweet spot (`out/73-plan-horizon.md` §6).
+   * The most plans the S-55 bar may carry. Since S-59 the engine offers only its four named answers (sweet
+   * spot, most damage, best for silver, spare the stock — `PlanPick`), deduplicated, so this only ever
+   * truncates that list and never pads it; four is "every answer", which is what the owner's review of
+   * 2026-09-15 asked for ("we should have less option").
    */
   planAlternatives: 4,
   /**
