@@ -60,6 +60,18 @@ export const CAMPAIGN = {
    */
   planFixes: { tokenFloor: false, refuseDroppedTypes: false },
   /**
+   * **The bar's axis and the candidate fix to the current one** (review of 2026-09-16, both behind flags so
+   * `tools/theorycraft/91` can compare them on the engine's own figures before either ships).
+   *
+   * - `axis: 'silver'` is S-59 as built: four named answers sorted by campaign silver. `'burn'` runs the bar
+   *   along hired units burned a march — one plan a burn level, thriftiest first, the same sweet spot — because
+   *   on the owner's account silver barely moves across the bar (1.97–2.35 M a march) while the burn runs
+   *   12→22 and the two right-hand stops are one plan to 0.2 %.
+   * - `mergeNear` is the fix to the silver axis: stops that burn the same and sit within this fraction of each
+   *   other on damage and silver a march are one stop. `0` is off; `0.02` merges the pair above.
+   */
+  planBar: { axis: 'silver' as 'silver' | 'burn', mergeNear: 0 },
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

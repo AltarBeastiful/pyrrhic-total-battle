@@ -9,6 +9,7 @@ import { describe, expect, test } from 'vitest';
 import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { StackRequest, UnitDef } from '@/engine/types';
+import type { PlanRepeat } from '@/engine/plan';
 
 /** A small but complete army: four troop types and three mercenaries with a stock to spend. */
 function request(silver = false): StackRequest {
@@ -283,6 +284,74 @@ describe(
       if (Math.max(...burns) > Math.min(...burns)) {
         expect(sweet?.repeat.mercLost).toBeLessThan(Math.max(...burns));
       }
+    });
+
+    test('the burn axis: one plan a burn level, thriftiest first, the same sweet spot', () => {
+      // Review of 2026-09-16 (`tools/theorycraft/out/91-cross-review.md`): behind `barAxis: 'burn'` the bar
+      // runs along hired units burned a march. The sweet spot is the very plan the silver axis recommends,
+      // so the flag changes what stands beside the recommendation and never the recommendation itself.
+      const req = request();
+      const silver = planCampaign({ request: req, alternatives: 4, withTrade: true });
+      const burn = planCampaign({ request: req, alternatives: 4, withTrade: true, barAxis: 'burn' });
+      expect(silver.barAxis).toBe('silver');
+      expect(burn.barAxis).toBe('burn');
+      expect(burn.recommend?.counts).toEqual(silver.recommend?.counts);
+
+      const rows = burn.alternatives;
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.length).toBeLessThanOrEqual(4);
+      // Sorted by burn, and no two stops burn the same: the ladder is one plan a level.
+      const burns = rows.map((row) => row.repeat.mercLost);
+      expect([...burns].sort((a, b) => a - b)).toEqual(burns);
+      expect(new Set(burns).size).toBe(burns.length);
+      // Each stop is the best march at its burn level among the plans the bar may carry.
+      const trade = burn.trade ?? [];
+      for (const row of rows) {
+        const level = trade.filter((other) => other.repeat.mercLost === row.repeat.mercLost);
+        expect(Math.max(...level.map((other) => other.repeat.damage))).toBe(row.repeat.damage);
+      }
+      // The ends are named; the sweet spot is on the bar; a filler is a `step`, and nothing else is.
+      expect(rows.find((row) => row.pick === 'most-damage')?.repeat.damage).toBe(
+        Math.max(...trade.map((other) => other.repeat.damage)),
+      );
+      expect(rows.some((row) => row.pick === 'sweet-spot')).toBe(true);
+      for (const row of rows) {
+        expect(['spare-the-stock', 'sweet-spot', 'step', 'most-damage']).toContain(row.pick);
+      }
+      // Every stop carries the gold its march's hired stacks cost, and it grows with the burn.
+      for (const row of rows) expect(row.repeat.gold).toBeGreaterThanOrEqual(0);
+      const golds = rows.map((row) => row.repeat.gold);
+      expect([...golds].sort((a, b) => a - b)).toEqual(golds);
+    });
+
+    test('merging near stops: two plans that burn the same and sit within the tolerance are one stop', () => {
+      // The candidate fix to the silver axis (`mergeNearStops`): measured on the owner's bar, `best-for-silver`
+      // and `most-damage` burned 22 each at 6 905 207 and 6 920 621 damage a march — one plan to the eye.
+      const req = request();
+      const loose = planCampaign({ request: req, alternatives: 6 });
+      const tight = planCampaign({ request: req, alternatives: 6, mergeNearStops: 0.02 });
+      const near = (a: { repeat: PlanRepeat }, b: { repeat: PlanRepeat }): boolean =>
+        a.repeat.mercLost === b.repeat.mercLost &&
+        Math.abs(a.repeat.damage - b.repeat.damage) <= 0.02 * Math.max(a.repeat.damage, b.repeat.damage) &&
+        Math.abs(a.repeat.silver - b.repeat.silver) <= 0.02 * Math.max(a.repeat.silver, b.repeat.silver);
+      // No two surviving stops are near each other…
+      for (const a of tight.alternatives) {
+        for (const b of tight.alternatives) {
+          if (a !== b) expect(near(a, b)).toBe(false);
+        }
+      }
+      // …every survivor is one of the stops the loose bar carried, the sweet spot survives, and the merge
+      // never invents a row.
+      for (const row of tight.alternatives) {
+        expect(
+          loose.alternatives.some((other) => JSON.stringify(other.counts) === JSON.stringify(row.counts)),
+        ).toBe(true);
+      }
+      expect(tight.alternatives.some((row) => row.pick === 'sweet-spot')).toBe(true);
+      expect(tight.alternatives.length).toBeLessThanOrEqual(loose.alternatives.length);
+      // With the tolerance at zero, nothing changes.
+      const off = planCampaign({ request: req, alternatives: 6, mergeNearStops: 0 });
+      expect(off.alternatives).toEqual(loose.alternatives);
     });
   },
   TIMEOUT,

@@ -647,6 +647,9 @@ export function buildPlanRequest(
     // S-58: the two candidate fixes for "the plan drops a whole hired type", both off until the owner picks
     // one from the pair of experiments (`src/config.ts`, `CAMPAIGN.planFixes`).
     ...CAMPAIGN.planFixes,
+    // Review of 2026-09-16: which resource the bar runs along, and the near-stop merge (`CAMPAIGN.planBar`).
+    barAxis: CAMPAIGN.planBar.axis,
+    mergeNearStops: CAMPAIGN.planBar.mergeNear,
   };
 }
 

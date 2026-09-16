@@ -27,10 +27,10 @@ import { Box, Button, Group, Slider, Text } from '@mantine/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
-import type { PlanRow } from '@/engine/plan';
+import type { CampaignPlan, PlanRow } from '@/engine/plan';
 
 import { compact } from './format';
-import { PICK_WORD } from './picks';
+import { AXIS_ENDS, planWords } from './picks';
 import classes from './march.module.css';
 
 /** Everything the mapping needs, in the two coordinate spaces it uses — and they are not the same one. */
@@ -58,6 +58,13 @@ function sameFrame(one: Frame, other: Frame): boolean {
 export interface PlanBarProps {
   /** Every plan the bar offers, cheapest first — the engine's order, which is the bar's own axis. */
   rows: PlanRow[];
+  /**
+   * **Which resource the stops run along** (`CampaignPlan.barAxis`, behind `CAMPAIGN.planBar.axis`). It is
+   * the engine's word and not a guess: it decides the two words under the bar, and on `'burn'` it is the
+   * hired stock that is spent for good rather than the silver that comes back. Design rule 5 — the ends
+   * are named after the axis they are the ends of, in the trade's own words.
+   */
+  axis: CampaignPlan['barAxis'];
   /** Which of them the March is showing. */
   position: number;
   /** The row the pointer is on, or `null` when it is away from the bar. Held by the block, so the trade
@@ -92,7 +99,8 @@ function tipTransform(x: number, band: number): string {
   return `translateX(clamp(0px, calc(${x.toFixed(1)}px - 50%), calc(${band.toFixed(1)}px - 100%)))`;
 }
 
-export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: PlanBarProps) {
+export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, sweet }: PlanBarProps) {
+  const ends = AXIS_ENDS[axis];
   const band = useRef<HTMLDivElement>(null);
   const slider = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -226,7 +234,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           const shown = rows[Math.round(value)];
           return shown === undefined
             ? ''
-            : `${PICK_WORD[shown.pick]}, ${compact(shown.repeat.damage)} damage a march`;
+            : `${planWords(shown)}, ${compact(shown.repeat.damage)} damage a march`;
         }}
         // Clicking the bar focuses its root (Mantine's own `onMouseDownCapture`), so this is the keyboard's
         // way in as well as the mouse's — and it is the value's own stop, because a focus has no pointer.
@@ -287,7 +295,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           aria-hidden="true"
         >
           <Text size="sm" fw={600}>
-            {PICK_WORD[row.pick]}
+            {planWords(row)}
           </Text>
           {/* Two lines and no third. It closed with "the sweet spot" over a tip already naming the plan
               **Sweet spot**, above a bar whose mark says "Sweet spot" in the same brass — the same words
@@ -295,6 +303,16 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           <Text size="xs" opacity={0.75}>
             {`${compact(row.repeat.damage)} damage a march`}
           </Text>
+          {/* **What the march costs in gold** — the hired stacks' own price, which silver never pays
+              (`PlanRepeat.gold`). Only on the burn axis, where the bar is ordered by the hired stock and
+              the question "what does sparing it cost me" is the one the stops are asking; the silver axis
+              draws the two lines it always has. It is the figure the trade cannot always carry — see
+              `PlanTrade.tsx` on the sixth column — so the tip is where it is read. */}
+          {axis === 'burn' && (
+            <Text size="xs" opacity={0.75}>
+              {`${compact(row.repeat.gold)} gold a march`}
+            </Text>
+          )}
         </Box>
       )}
 
@@ -303,7 +321,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           marker above is nudged out of, done in words instead. */}
       <Group justify="space-between" align="center" wrap="nowrap">
         <Text size="xs" c="dimmed">
-          Least silver
+          {ends.low}
         </Text>
         {/* The way back to the marker above, in words: the mark says where the sweet spot is, this says how
             to get there, and it is only drawn while the bar is somewhere else. */}
@@ -319,7 +337,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           </Button>
         )}
         <Text size="xs" c="dimmed">
-          Most silver
+          {ends.high}
         </Text>
       </Group>
     </Box>

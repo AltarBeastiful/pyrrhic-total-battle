@@ -41,17 +41,19 @@
 import { Group, Progress, Table, Text } from '@mantine/core';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import type { PlanRow } from '@/engine/plan';
+import type { CampaignPlan, PlanRow } from '@/engine/plan';
 
 import { Glyph } from '@/ui/domain';
 
 import { amount, compact, ratio } from './format';
-import { PICK_WORD } from './picks';
+import { planWords } from './picks';
 import classes from './march.module.css';
 
 export interface PlanTradeProps {
   /** Every plan the search kept, cheapest first. */
   rows: PlanRow[];
+  /** Which resource the bar above runs along (`CampaignPlan.barAxis`) — the axis this table is sorted on. */
+  axis: CampaignPlan['barAxis'];
   /** Which of them the March is showing. */
   position: number;
   /** The row the bar's pointer is on, lit here so the bar and the table read as one thing. */
@@ -77,7 +79,7 @@ function per(damage: number, resource: number): number {
  */
 const PER_SILVER_DECIMALS = 3;
 
-export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps) {
+export function PlanTrade({ rows, axis, position, hovered, onSelect }: PlanTradeProps) {
   const loudest = Math.max(1, ...rows.map((row) => row.repeat.damage));
   // Two module classes on one cell: the name's own width rules, and the pin that keeps it on the left edge
   // while the figures scroll. Composed here because `className` may only ever carry a module value
@@ -145,13 +147,31 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
             const current = index === position;
             return (
               <Table.Tr
-                key={point.pick}
+                // The burn axis can carry several `step` fillers, so a key of the pick alone collides: one
+                // plan a burn level is what the engine guarantees, and that is what makes this pair unique.
+                key={`${point.pick}-${String(point.repeat.mercLost)}`}
                 // **The whole row is the target** (design rule 8), which is what it claimed to be while only
                 // the name inside it answered a press. It is the one focusable thing on its line — a row of
                 // six figures with a button in the first cell is a tab stop that lands nowhere a finger
                 // aims — and it answers the two keys a control answers. Its focus ring is the theme's, drawn
                 // by `march.module.css` off Mantine's own variables.
                 tabIndex={0}
+                // **Gold a march, where the table has no room for it** (review of 2026-09-16). It was built
+                // as a seventh column first and measured at 1400×900: the heads came to a **505 px table in
+                // a 462 px pane**, which is the sideways scroller the six-column table was tuned down to
+                // `horizontalSpacing={4}` to avoid (design rule 17, and `e2e/generate.spec.ts` holds it). So
+                // on the burn axis the figure is read off the bar's tip (`PlanBar.tsx`) and carried here as
+                // the row's own name, where a screen reader meets it — never colour, never a column that
+                // pushes the table off its pane. The ratio cells are unchanged and still read as cells.
+                aria-label={
+                  axis === 'burn'
+                    ? `${planWords(point)}: ${compact(point.repeat.damage)} damage, ${compact(
+                        point.repeat.silver,
+                      )} silver, ${compact(point.repeat.gold)} gold, ${amount(
+                        point.repeat.mercLost,
+                      )} hired lost a march`
+                    : undefined
+                }
                 aria-selected={current}
                 // The row on screen, the way the objectives strip says it: one tonal step for the eye, and
                 // for a reader the two attributes that mean it. Never colour alone (rule 24) — and the
@@ -179,7 +199,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                       under a row already named "Sweet spot" (design rules 5 and 21). The raised ground,
                       the heavier name and `aria-selected` say the first; the row's own name says the
                       second, as does the marker on the bar above. */}
-                  {PICK_WORD[point.pick]}
+                  {planWords(point)}
                 </Table.Th>
                 <Table.Td ta="end">
                   <Group gap="xs" wrap="nowrap" justify="flex-end">
@@ -191,7 +211,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                       radius="xs"
                       w={40}
                       role="progressbar"
-                      aria-label={`${PICK_WORD[point.pick]}, damage a march`}
+                      aria-label={`${planWords(point)}, damage a march`}
                       aria-valuemin={0}
                       aria-valuemax={loudest}
                       aria-valuenow={point.repeat.damage}

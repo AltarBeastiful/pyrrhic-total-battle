@@ -17,13 +17,13 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
-import type { PlanRow } from '@/engine/plan';
+import type { CampaignPlan, PlanRow } from '@/engine/plan';
 import type { StackRequest } from '@/engine/types';
 import { getUnits } from '@/data';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { PlanFold, PlanSizing } from './PlanPanel';
-import { PICK_WORD } from './picks';
+import { planWords } from './picks';
 import { compact, ratio } from './format';
 import { defaultPlanPosition, pickOf, sweetSpotOf, useRunStore } from './runStore';
 
@@ -217,8 +217,8 @@ test('the tip names the plan under the pointer, not the one on screen', () => {
   expect(useRunStore.getState().planPick).toBe(position);
   const shown = tip();
   expect(shown).not.toBeNull();
-  expect(shown?.textContent ?? '').toContain(PICK_WORD[wanted.pick]);
-  expect(shown?.textContent ?? '').not.toContain(PICK_WORD[selected.pick]);
+  expect(shown?.textContent ?? '').toContain(planWords(wanted));
+  expect(shown?.textContent ?? '').not.toContain(planWords(selected));
   // It carries the figure a player compares plans by, and nothing else.
   expect(shown?.textContent ?? '').toContain(`${compact(wanted.repeat.damage)} damage a march`);
   // Two lines and no third: it used to close with "the sweet spot" over a tip already naming the plan
@@ -273,7 +273,7 @@ test('the band is the target, not just the 16 px track', () => {
   // …and the tip follows it, so the press answers the same question the pointer was asking.
   const wanted = ROWS[away];
   if (wanted === undefined) throw new Error('too few plans to press');
-  expect(tip()?.textContent ?? '').toContain(PICK_WORD[wanted.pick]);
+  expect(tip()?.textContent ?? '').toContain(planWords(wanted));
 
   // Never a press that belongs to a child: the two words under the bar and "Back to the sweet spot" are the
   // controls a player reaches for when the bar is already somewhere else, and a band that answered their
@@ -303,7 +303,7 @@ test('the tip still arrives when the system asks for no motion', () => {
   pointAt(anotherStop());
   const wanted = ROWS[anotherStop()];
   if (wanted === undefined) throw new Error('no row under the pointer');
-  expect(tip()?.textContent ?? '').toContain(PICK_WORD[wanted.pick]);
+  expect(tip()?.textContent ?? '').toContain(planWords(wanted));
 });
 
 test('the block opens on its own — the plan is part of the answer, not a fold to hunt for', () => {
@@ -449,7 +449,7 @@ test('opened, it says what the plan did for this army and reads the trade a marc
   // Every row is **named** — the engine's own pick, in our words — and nothing prints the shape sentence.
   const drawn = rows.map((row) => row.textContent ?? '').join('\n');
   for (const [index, row] of plan.alternatives.entries()) {
-    expect(rows[index]?.textContent ?? '').toContain(PICK_WORD[row.pick]);
+    expect(rows[index]?.textContent ?? '').toContain(planWords(row));
     expect(drawn).not.toContain(row.label);
   }
   // The columns are the decision: what a march hits for, what it costs and what it burns — the three that
@@ -465,9 +465,7 @@ test('opened, it says what the plan did for this army and reads the trade a marc
   const sweet = sweetSpotOf(plan);
   expect(sweet).not.toBeNull();
   expect(rows.filter((row) => (row.textContent ?? '').includes('the sweet spot'))).toHaveLength(0);
-  expect(rows[sweet ?? 0]?.textContent ?? '').toContain(
-    PICK_WORD[(plan.alternatives[sweet ?? 0] as PlanRow).pick],
-  );
+  expect(rows[sweet ?? 0]?.textContent ?? '').toContain(planWords(plan.alternatives[sweet ?? 0] as PlanRow));
 
   // The totals stay available, one line down, without being the headline — and they are the **one** line of
   // the old tail that is still on screen.
@@ -506,3 +504,118 @@ test('the why is a popover a thumb can open, not a tooltip only a pointer can ho
   await user.click(document.body);
   expect(screen.getAllByText(/^Damage is paid for twice over:/)).toHaveLength(1);
 }, 60_000);
+
+/**
+ * **The burn axis** (`CampaignInput.barAxis: 'burn'`, behind `CAMPAIGN.planBar.axis` and off by default).
+ *
+ * The plan below is a literal rather than a second search: the axis is an *input* to the engine, and what
+ * the three cases here hold is the **drawing** of a payload that carries `barAxis: 'burn'` — the ends the
+ * bar is named after, a `step` row wearing its own burn, and the gold the trade has no column for. The
+ * figures are the engine's own shape (one plan a burn level, thriftiest first, the sweet spot among them),
+ * copied onto a real row so nothing but `pick`, `repeat` and the sort key is invented.
+ */
+const BURN_ROWS: PlanRow[] = [
+  {
+    ...(ROWS[0] as PlanRow),
+    pick: 'spare-the-stock',
+    silver: 11,
+    totalDamage: 101,
+    repeat: { damage: 4_100_000, silver: 2_000_000, gold: 11_400, mercLost: 9 },
+  },
+  {
+    ...(ROWS[0] as PlanRow),
+    pick: 'sweet-spot',
+    silver: 12,
+    totalDamage: 102,
+    repeat: { damage: 5_200_000, silver: 2_100_000, gold: 12_100, mercLost: 12 },
+  },
+  {
+    ...(ROWS[0] as PlanRow),
+    pick: 'step',
+    silver: 13,
+    totalDamage: 103,
+    repeat: { damage: 6_000_000, silver: 2_200_000, gold: 13_600, mercLost: 15 },
+  },
+  {
+    ...(ROWS[0] as PlanRow),
+    pick: 'most-damage',
+    silver: 14,
+    totalDamage: 104,
+    repeat: { damage: 6_900_000, silver: 2_300_000, gold: 33_700, mercLost: 22 },
+  },
+];
+
+/** `sweetSpotOf` finds the recommendation by its own silver and damage, so the copy has to be one of the rows. */
+const BURN: CampaignPlan = {
+  ...PLAN,
+  barAxis: 'burn',
+  alternatives: BURN_ROWS,
+  recommend: BURN_ROWS[1] as PlanRow,
+};
+
+/** Prime the store with the burn plan, the way a run with `CAMPAIGN.planBar.axis: 'burn'` would. */
+function primeBurn(position = defaultPlanPosition(BURN)): void {
+  useRunStore.setState({ plan: BURN, planPick: position, includedUnitIds: [], leftOutByPlayer: [] });
+}
+
+test('the burn axis names its ends after the hired stock, and a step wears its own burn', () => {
+  primeBurn();
+  renderWithTheme(<PlanFold />);
+
+  // The two words under the bar are the axis's own (design rule 5: one name per thing). "Least silver …
+  // Most silver" would name the one resource these stops are **not** ordered by.
+  expect(screen.getByText('Fewest hired lost')).toBeTruthy();
+  expect(screen.getByText('Most hired lost')).toBeTruthy();
+  expect(screen.queryByText('Least silver')).toBeNull();
+  expect(screen.queryByText('Most silver')).toBeNull();
+
+  // A `step` is the filler between two named stops; it answers no question of its own, so it is named by
+  // what it burns, in the same words as the column it is read off ("Hired lost") — never "Step".
+  const rows = tradeRows();
+  expect(rows).toHaveLength(BURN_ROWS.length);
+  expect(rows[2]?.textContent ?? '').toContain('15 hired lost');
+  expect(rows.map((row) => row.textContent ?? '').join('\n')).not.toContain('Step');
+
+  // **Gold has no column.** Built as a seventh head and measured in a browser at 1400×900, the table came
+  // to 505 px in a 462 px pane — the sideways scroller the six heads were tuned down to avoid (rule 17) —
+  // so the figure is carried by the bar's tip and by the row's own accessible name instead.
+  const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
+  expect(headers).toEqual(['Plan', '🎯 Damage', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(rows[2]?.getAttribute('aria-label') ?? '').toContain(`${compact(13_600)} gold`);
+  expect(rows[2]?.getAttribute('aria-label') ?? '').toContain('15 hired lost');
+});
+
+test('the burn axis tip carries the gold a march the trade has no room for', () => {
+  stubLayout();
+  primeBurn();
+  renderWithTheme(<PlanFold />);
+
+  const last = BURN_ROWS.length - 1;
+  fireEvent.pointerMove(bar(), { clientX: TRACK.left + (TRACK.width * 2) / last });
+  const shown = tip();
+  expect(shown).not.toBeNull();
+  // The step's own name, its damage, and the gold — three lines where the silver axis draws two.
+  expect(shown?.textContent ?? '').toContain('15 hired lost');
+  expect(shown?.textContent ?? '').toContain(`${compact(6_000_000)} damage a march`);
+  expect(shown?.textContent ?? '').toContain(`${compact(13_600)} gold a march`);
+});
+
+test('the silver axis draws exactly what it drew: two ends in silver, and no gold in the tip', () => {
+  stubLayout();
+  renderWithTheme(<PlanFold />);
+
+  expect(screen.getByText('Least silver')).toBeTruthy();
+  expect(screen.getByText('Most silver')).toBeTruthy();
+  pointAt(anotherStop());
+  expect(tip()?.textContent ?? '').not.toContain('gold a march');
+});
+
+test('the sizing line says where a plan stands in the resource the bar is ordered by', () => {
+  // Off the sweet spot (stop 1) and two stops to its right: on the burn axis that is two plans **heavier on
+  // the hired stock**, and "pricier" would be a claim about silver the list is not sorted by.
+  primeBurn(3);
+  renderWithTheme(<PlanSizing />);
+  const line = screen.getByText(/^Planned from the army:/);
+  expect(line.textContent ?? '').toContain('2 plans heavier on the hired stock than the sweet spot');
+  expect(line.textContent ?? '').not.toContain('pricier');
+});
