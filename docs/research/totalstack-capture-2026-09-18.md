@@ -26,6 +26,8 @@ Maximum Damage `averageDamage` · Damage / Silver `damagePerSilver`):
 | the 4 000 case of 2026-09-15 | 4 000 | 2 000 | G1–G3 with melee/ranged excluded, S1 | EMH 14 · ABT 15 · LGN 16 · CHR 8 | melee +35/+70, army +3/+3 |
 
 Ten scenarios × (three Generate bodies + three optimize bodies × two priorities) = 90 answers, a few seconds each.
+The page picks the route by the priority: `/api/calculations` with None, `/api/calculations/optimize` (with an
+`objective`) with Maximum Damage or Damage / Silver — both are recorded and replayed.
 
 ## How to run it
 
@@ -108,10 +110,12 @@ async function run() {
     const base = bases[key];
     for (const [name, make] of scenarios) {
       for (const [pName, objective] of priorities) {
-        // A Generate body has no `objective`: it is replayed once. An optimize body is replayed once a priority.
-        if (!('objective' in base.body) && pName !== 'none') { left -= 1; continue; }
+        // A Generate body (/api/calculations) has no `objective`: it is replayed once, as "none". An optimize
+        // body (/api/calculations/optimize) is replayed once a priority, "none" being no priority at all.
+        const optimize = 'objective' in base.body;
+        if (optimize === (pName === 'none')) { left -= 1; continue; }
         const body = { ...make(base.body) };
-        if ('objective' in base.body) body.objective = objective ?? 'averageDamage';
+        if (optimize) body.objective = objective;
         try {
           const res = await nativeFetch(base.url, { ...base.init, body: JSON.stringify(body) });
           const text = await res.text();
