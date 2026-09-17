@@ -1,7 +1,8 @@
 /**
  * A captain, as TotalStack draws one (investigation 0006, design plan §7.3): a dense chip that
  * toggles whether the captain rides with this march, a gear on its top-right corner that opens the
- * level editor, and a dot after the name once a level has been recorded.
+ * level editor, and a dot once a level has been recorded — in the gear's own strip, so a chip with a
+ * level is no wider than one without (`kit/ChipDot.tsx`).
  *
  * Two targets, never one. The chip enlists; the gear edits. A player correcting a level must not
  * discover they also enlisted somebody, so the gear is a sibling button with its own name — which is
@@ -11,6 +12,7 @@
 import { Chip, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
+import { ChipDot } from '../kit/ChipDot';
 import { CornerGear } from '../kit/CornerGear';
 import { Glyph } from './Glyph';
 import type { GlyphKind } from './glyphs';
@@ -61,12 +63,7 @@ export function CaptainChip({
         <Stack gap={0} component="span">
           <Text span inherit>
             {name}
-            {levelSet && (
-              <Text span c="dimmed">
-                {' '}
-                •
-              </Text>
-            )}
+            {levelSet && <ChipDot />}
           </Text>
           {bonus !== undefined && (
             <Text span size="xs" c="dimmed">

@@ -285,7 +285,7 @@ test('the popover computes the bonus live and the chip takes a dot once a level 
 
   // The gear renames itself once there is something to change, and the chip wears the dot.
   expect(within(card()).getByRole('button', { name: 'Change Aydae’s level' })).toBeTruthy();
-  expect(chipLabel(captainChip('Aydae')).textContent).toContain('•');
+  expect(chipLabel(captainChip('Aydae')).querySelector('[class*="chipDot"]')).not.toBeNull();
 });
 
 test('a levelled captain moves the TOTAL, stars included', async () => {

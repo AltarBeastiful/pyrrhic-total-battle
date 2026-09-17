@@ -43,6 +43,8 @@
    not a fill, so what shows through is the surface the control was dropped on — the same arithmetic
    `palette.ts` checks. */
 .chipLabel {
+  /* The box the kit's `ChipDot` is placed against, in the strip the gear's chip reserves. */
+  position: relative;
   height: auto;
   min-height: var(--chip-size);
   padding-block: 0.1875rem;

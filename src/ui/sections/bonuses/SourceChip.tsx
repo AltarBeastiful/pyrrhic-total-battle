@@ -10,7 +10,7 @@
 import { Chip, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
-import { CornerGear } from '@/ui/kit';
+import { ChipDot, CornerGear } from '@/ui/kit';
 
 export interface SourceChipProps {
   /** What the chip reads as. */
@@ -21,7 +21,7 @@ export interface SourceChipProps {
   value?: string;
   checked: boolean;
   onToggle: () => void;
-  /** A level or a value is recorded: the name gets a dot, as TotalStack's chips do. */
+  /** A level or a value is recorded: the chip gets a dot, as TotalStack's chips do (`ChipDot`). */
   dotted?: boolean;
   disabled?: boolean;
   /** The gear's own accessible name. Left out, the chip carries no gear. */
@@ -53,12 +53,7 @@ export function SourceChip({
         <Stack gap={0} component="span">
           <Text span inherit>
             {name}
-            {dotted && (
-              <Text span c="dimmed">
-                {' '}
-                •
-              </Text>
-            )}
+            {dotted && <ChipDot />}
           </Text>
           {value !== undefined && value !== '' && (
             <Text span size="xs" c="dimmed">

@@ -39,24 +39,25 @@ want set the same way.
 
 ## What is in here
 
-| Composite         | Built from                                | What it is for                                                         |
-| ----------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
-| `AppBar`          | sticky `Paper`                            | the top bar; brand, an optional middle, actions                        |
-| `AppMenu`         | `Menu`                                    | sections, danger items, a segmented row (theme)                        |
-| `ChipRow`         | `Chip.Group` + `Group`                    | a wrapping row of chips, `max` selection with a spoken refusal         |
-| `ChoiceList`      | `Radio.Group` + `Radio.Card`              | one choice out of several, `layout="list"` rows or `layout="cards"`    |
-| `CornerGear`      | `Indicator` + `ActionIcon` (+ `Popover`)  | the gear on a chip's top-right corner, and the editor it opens         |
-| `Dialog`          | `Modal`                                   | a modal question; `role="alertdialog"` for the ones you cannot dismiss |
-| `Disclosure`      | `Collapse` + `UnstyledButton`             | one fold that keeps its summary visible; `DisclosureGroup` for several |
-| `Figures`         | `DataList`                                | one figure style: a 12 px label over a 15/600 value, as rows or a grid |
-| `GenerateFab`     | `Affix` + `Button`                        | ready / stale / running / blocked, below `lg`                          |
-| `GroupedCombobox` | `Combobox` + `.Search` + `.Group`         | a tier-grouped searchable list that stays open after a pick            |
-| `NumberField`     | `NumberInput`                             | thousands separator, select-all on focus, optional leading glyph       |
-| `PillRow`         | `Pill.Group` + `Pill withRemoveButton`    | what is already chosen (mercenaries)                                   |
-| `Sections`        | one class on a `div`                      | a card's parts: one hairline, 16 px above and below (design.md §4)     |
-| `Sheet`           | `Drawer` (bottom under `sm`, right above) | a side sheet; returns focus on close                                   |
-| `SwitchRow`       | `Switch labelPosition="left"`             | a setting as a full row, sentence under the name                       |
-| `TierSelect`      | `NativeSelect size="xs"`                  | one end of a tier range, "—" for none, clamped by its partner          |
+| Composite         | Built from                                | What it is for                                                             |
+| ----------------- | ----------------------------------------- | -------------------------------------------------------------------------- |
+| `AppBar`          | sticky `Paper`                            | the top bar; brand, an optional middle, actions                            |
+| `AppMenu`         | `Menu`                                    | sections, danger items, a segmented row (theme)                            |
+| `ChipRow`         | `Chip.Group` + `Group`                    | a wrapping row of chips, `max` selection with a spoken refusal             |
+| `ChoiceList`      | `Radio.Group` + `Radio.Card`              | one choice out of several, `layout="list"` rows or `layout="cards"`        |
+| `CornerGear`      | `Indicator` + `ActionIcon` (+ `Popover`)  | the gear on a chip's top-right corner, and the editor it opens             |
+| `ChipDot`         | one `span`                                | the dot a chip wears once something is recorded on it, in the gear's strip |
+| `Dialog`          | `Modal`                                   | a modal question; `role="alertdialog"` for the ones you cannot dismiss     |
+| `Disclosure`      | `Collapse` + `UnstyledButton`             | one fold that keeps its summary visible; `DisclosureGroup` for several     |
+| `Figures`         | `DataList`                                | one figure style: a 12 px label over a 15/600 value, as rows or a grid     |
+| `GenerateFab`     | `Affix` + `Button`                        | ready / stale / running / blocked, below `lg`                              |
+| `GroupedCombobox` | `Combobox` + `.Search` + `.Group`         | a tier-grouped searchable list that stays open after a pick                |
+| `NumberField`     | `NumberInput`                             | thousands separator, select-all on focus, optional leading glyph           |
+| `PillRow`         | `Pill.Group` + `Pill withRemoveButton`    | what is already chosen (mercenaries)                                       |
+| `Sections`        | one class on a `div`                      | a card's parts: one hairline, 16 px above and below (design.md §4)         |
+| `Sheet`           | `Drawer` (bottom under `sm`, right above) | a side sheet; returns focus on close                                       |
+| `SwitchRow`       | `Switch labelPosition="left"`             | a setting as a full row, sentence under the name                           |
+| `TierSelect`      | `NativeSelect size="xs"`                  | one end of a tier range, "—" for none, clamped by its partner              |
 
 `src/ui/domain` is the same contract for the components that know what a _unit_ is: `UnitTile`,
 `GroupMarker`, `TierBadge`, `CaptainChip`, `MarchRow`/`MarchTable`, `PoolGauge`, `DeltaText`,

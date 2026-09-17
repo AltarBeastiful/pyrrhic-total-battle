@@ -31,6 +31,32 @@
   padding-inline-end: 0.875rem;
 }
 
+/* The dot a chip wears once something is recorded on it (`ChipDot.tsx`): a 5 px disc in the chip's
+   dimmed ink — which the checked chip re-mixes for its own tinted ground (`theme.module.css`) — and
+   a fallback place after the name for a chip that has no gear to make room for it. */
+.chipDot {
+  display: inline-block;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  flex: 0 0 auto;
+  margin-inline-start: 0.25rem;
+  border-radius: 50%;
+  background: var(--mantine-color-dimmed);
+  vertical-align: middle;
+}
+
+/* …and its real place: in the strip under the gear, halfway down the chip and 5 px off its edge,
+   where the gear's circle — 9 px of radius centred on the top corner — cannot reach it (16 px away
+   at the nearest), and 4 px after where the name is allowed to end. The label is the positioned
+   box (`theme.module.css`, `.chipLabel`). */
+.cornerGear :global(.mantine-Chip-label) .chipDot {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 0.3125rem;
+  margin: 0;
+  transform: translateY(-50%);
+}
+
 /* The app bar is NOT sticky (owner, 2026-09-13: a permanent 64 px of brand and avatar on a phone is
    wasted screen). It scrolls away with the page; the answer lives in the March panel and the command
    bar. Its side padding is the page margin the `Container` under it uses (`theme.module.css`,

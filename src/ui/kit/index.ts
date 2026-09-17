@@ -3,6 +3,7 @@ export { AppBar } from './AppBar';
 export type { AppBarProps } from './AppBar';
 export { AppMenu } from './AppMenu';
 export type { AppMenuAction, AppMenuEntry, AppMenuProps, AppMenuSection, AppMenuSegment } from './AppMenu';
+export { ChipDot } from './ChipDot';
 export { ChipRow } from './ChipRow';
 export type { ChipRowItem, ChipRowProps } from './ChipRow';
 export { ChoiceList } from './ChoiceList';
