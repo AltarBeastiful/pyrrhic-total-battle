@@ -15,7 +15,7 @@
  *   general why behind the glyph beside it (`docs/investigations/0020-the-plan-screen.md` §D-4: the owner
  *   asked for the explanation on 2026-09-15 and cut it back on 2026-09-16, so it is **moved, not
  *   deleted**);
- * - **the bar** (`PlanBar.tsx`): three stops at most, running along the hired units a march burns for good
+ * - **the bar** (`PlanBar.tsx`): four stops at most, running along the hired units a march burns for good
  *   (owner, 2026-09-17) — a **marker on the sweet spot**, and, once the bar has been moved off it, the one
  *   control that puts it back;
  * - **the trade** (`PlanTrade.tsx`): one row per stop, named, with what a march of it hits for, costs in

@@ -14,13 +14,15 @@
 import type { PlanPick, PlanRow } from '@/engine/plan';
 
 /**
- * The three answers the bar carries (`PlanPick`), each with the one name it wears. Private: `planWords`
- * below is the single place a row is named, so nothing can index this map a second way.
+ * The four answers the bar carries (`PlanPick`), each with the one name it wears — in the owner's own words
+ * of 2026-09-18, and in the bar's own order, thriftiest first. Private: `planWords` below is the single
+ * place a row is named, so nothing can index this map a second way.
  */
 const PICK_WORD: Record<PlanPick, string> = {
-  'spare-the-stock': 'Spare the stock',
+  'least-silver': 'Least silver',
   'sweet-spot': 'Sweet spot',
-  'most-damage': 'Most damage',
+  'more-mercs': 'More mercs',
+  'most-mercs': 'Most mercs',
 };
 
 /**
@@ -43,7 +45,7 @@ const BEST_FOR_WORD = { silver: 'best a silver', hired: 'best a hired' } as cons
 /**
  * **The two efficiencies, in the words the stop that has one wears** (owner, 2026-09-17: the bar is *"about
  * balancing between burning silver efficiently… and burning mercs efficiently"*, and a separate "Best for
- * silver" stop that is the "Most damage" stop to 0.2 % is *"inefficient and causes frustration"*).
+ * silver" stop that is the top of the ladder to 0.2 % is *"inefficient and causes frustration"*).
  *
  * `null` when the stop is neither. Of the stops the bar carries exactly one is the best damage a silver and
  * exactly one the best damage a hired unit (`PlanRow.bestFor`, `src/engine/plan.ts`), and nothing stops the
@@ -65,7 +67,9 @@ export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
  *
  * They are the axis's own name and not decoration: the stops run along the hired units a march burns for
  * good (thriftiest first), and calling those ends "Least silver … Most silver" would name the one resource
- * the bar is *not* ordered by. The words match the trade's "Hired lost" head for the same reason (rule 5).
+ * the bar is *not* ordered by — a *stop* may be called "Least silver" (it is the thriftiest efficient rung),
+ * but an axis named after it would claim the whole bar is sorted by silver, which it is not. The words match
+ * the trade's "Hired lost" head for the same reason (rule 5).
  *
  * **One pair, because there is one bar** (review of 2026-09-18). It was a record keyed by an axis the
  * payload carried; the silver ordering it was the other half of was retired with `CampaignPlan.barAxis`,

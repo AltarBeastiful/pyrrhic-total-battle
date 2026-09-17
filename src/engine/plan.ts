@@ -223,7 +223,16 @@ export interface PlanCurvePoint {
  * The engine states the identity; naming it is the UI's (`docs/design.md` §7). No word of English is in the
  * payload any more.
  */
-export type PlanPick = 'spare-the-stock' | 'sweet-spot' | 'most-damage';
+/**
+ * The four stops of the bar (owner, 2026-09-18: *"in my mind we would have on the slider: least silver, sweet
+ * spot, more mercs, most mercs — whilst still trying to aim for an ok sil/dmg and merc/dmg on each"*), along the
+ * hired units burned a march. Each is a definition over the ladder's rungs (`tools/theorycraft/out/99`):
+ * `least-silver` the rung nothing beats on both ratios that costs the least silver (the fewest burned on a
+ * tie), `sweet-spot` the knee of damage against burn over those rungs, `more-mercs` the rung nearest the
+ * middle of the gap between the sweet spot and the top, `most-mercs` the top of the ladder — the most the
+ * troops can shelter, and the most damage by the ladder's own construction.
+ */
+export type PlanPick = 'least-silver' | 'sweet-spot' | 'more-mercs' | 'most-mercs';
 
 /**
  * A plan the bar offers: one of the four answers above, priced.
@@ -1517,32 +1526,51 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   /** The plans the sweet spot is read off: the efficient rungs (the whole band if none stands). */
   const sweetPool = efficientRows.length > 0 ? efficientRows : candidates;
 
-  const burns = sweetPool.map((row) => row.repeat.mercLost);
-  const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
-  const sweetSpotBase: PlanTotals & { label: string } = sweetPool.reduce<PlanTotals & { label: string }>(
-    (best, row) => {
-      // Closest to the middle of the range; **the thriftier side wins a tie**, because the whole point of the
-      // rule is the stock — a band narrow enough to sit either side of its own middle (measured on a small
-      // account: burns 19, 19, 20) is exactly the case where the choice would otherwise fall to the dearest
-      // plan on the bar, which is the defect this rule replaced. Among plans that burn the same, the one that
-      // does the most with it.
-      const away = Math.abs(row.repeat.mercLost - middleBurn);
-      const bestAway = Math.abs(best.repeat.mercLost - middleBurn);
-      if (away < bestAway) return row;
-      if (away > bestAway) return best;
-      if (row.repeat.mercLost !== best.repeat.mercLost) {
-        return row.repeat.mercLost < best.repeat.mercLost ? row : best;
-      }
-      return row.repeat.damage > best.repeat.damage ? row : best;
-    },
-    sweetPool[0] ?? chosenPoint,
-  );
-
   /**
-   * The recommendation when no silver budget is given: the **knee** of the damage-against-silver curve — the
-   * plan where one more piece of silver stops buying damage as fast as it did before. It is carried for the
-   * curve's own shape; the recommendation the bar opens on is the middle of the trade in hired stock.
+   * **The sweet spot is the knee of damage against burn** over the rungs nothing beats on both ratios (owner,
+   * 2026-09-18, on the middle of the range landing one unit from the thrift end: *"best optimization still
+   * doesn't offer enough splits"*). Measured on his latest export (`tools/theorycraft/out/99-three-stops.md`):
+   * silver is flat from 7 to 10 burned because the troop ladder is sized off the biggest hired stack and the
+   * other types ride for free, so the last rung before silver starts rising — 10 burned, 5 862 857 for the
+   * same 3 619 200 silver as the 8 the middle rule chose — is both the best damage a silver and the knee. The
+   * knee is the efficient rung farthest above the chord drawn over the **whole** ladder, from its thriftiest
+   * rung to its top, in burn and damage — the chord has to span the ladder, or the knee of the efficient rungs
+   * alone lands one unit from their end (measured: 8 against 10). With fewer than three rungs there is no
+   * chord, and the middle rule stands (the thriftier on a tie).
    */
+  const sweetSpotBase: PlanTotals & { label: string } = ((): PlanTotals & { label: string } => {
+    const rows = sweetPool;
+    const first = ladderRows[0];
+    const last = ladderRows[ladderRows.length - 1];
+    if (rows.length < 3 || !first || !last) {
+      const burns = rows.map((row) => row.repeat.mercLost);
+      const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
+      return rows.reduce<PlanTotals & { label: string }>((best, row) => {
+        const away = Math.abs(row.repeat.mercLost - middleBurn);
+        const bestAway = Math.abs(best.repeat.mercLost - middleBurn);
+        if (away < bestAway) return row;
+        if (away > bestAway) return best;
+        if (row.repeat.mercLost !== best.repeat.mercLost) {
+          return row.repeat.mercLost < best.repeat.mercLost ? row : best;
+        }
+        return row.repeat.damage > best.repeat.damage ? row : best;
+      }, rows[0] ?? chosenPoint);
+    }
+    const dx = last.repeat.mercLost - first.repeat.mercLost || 1;
+    const dy = last.repeat.damage - first.repeat.damage || 1;
+    let best = first;
+    let bestDistance = -Infinity;
+    for (const row of rows) {
+      const t = (row.repeat.mercLost - first.repeat.mercLost) / dx;
+      const distance = (row.repeat.damage - (first.repeat.damage + t * dy)) / dy;
+      if (distance > bestDistance) {
+        bestDistance = distance;
+        best = row;
+      }
+    }
+    return best;
+  })();
+
   const knee = ((): (PlanTotals & { label: string }) | undefined => {
     const points = undominated.filter((point) => Number.isFinite(point.damagePerSilver) && point.silver > 0);
     if (points.length < 3) return points[points.length - 1];
@@ -1602,13 +1630,43 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     stops.push({ ...row, pick, bestFor: { silver: false, hired: false } });
   };
   /**
-   * **Three stops** (owner, 2026-09-17: *"keep 3 spot on the slider each time"*), thriftiest first: the lowest
-   * rung the band keeps, the sweet spot, and the top of the ladder — which is the most damage by the ladder's
-   * own construction. Two stops that are one plan collapse to one, so a bar may carry two.
+   * **Four stops** (owner, 2026-09-18, replacing the three of 2026-09-17), thriftiest first — see `PlanPick`.
+   * Two stops that are one plan collapse to one, so a bar may carry fewer.
    */
+  const top = ladderRows[ladderRows.length - 1];
+  /** The efficient rung that costs the least silver — the fewest burned on a tie, then the most damage. */
+  const leastSilver = efficientRows.reduce<(PlanTotals & { label: string }) | undefined>((best, row) => {
+    if (!best) return row;
+    if (row.repeat.silver !== best.repeat.silver) return row.repeat.silver < best.repeat.silver ? row : best;
+    if (row.repeat.mercLost !== best.repeat.mercLost) {
+      return row.repeat.mercLost < best.repeat.mercLost ? row : best;
+    }
+    return row.repeat.damage > best.repeat.damage ? row : best;
+  }, undefined);
+  /**
+   * More mercenaries: the rung of the ladder nearest the middle of the gap between the sweet spot and the
+   * top, strictly inside it — the step a player takes when the stock allows more than the knee and less than
+   * everything. Two rungs equally near are told apart by damage a unit burned.
+   */
+  const moreMercs = ((): (PlanTotals & { label: string }) | undefined => {
+    if (!top) return undefined;
+    const low = sweetSpotBase.repeat.mercLost;
+    const high = top.repeat.mercLost;
+    if (high - low < 2) return undefined;
+    const middle = (low + high) / 2;
+    let pick: (PlanTotals & { label: string }) | undefined;
+    for (const row of ladderRows) {
+      if (row.repeat.mercLost <= low || row.repeat.mercLost >= high) continue;
+      const away = Math.abs(row.repeat.mercLost - middle);
+      const held = pick ? Math.abs(pick.repeat.mercLost - middle) : Infinity;
+      if (away < held || (away === held && pick && perHired(row) > perHired(pick))) pick = row;
+    }
+    return pick;
+  })();
   offer(sweetSpotBase, 'sweet-spot');
-  offer(ladderRows[ladderRows.length - 1], 'most-damage');
-  offer(ladderRows[0], 'spare-the-stock');
+  offer(top, 'most-mercs');
+  offer(leastSilver, 'least-silver');
+  offer(moreMercs, 'more-mercs');
   stops.sort(
     (a, b) =>
       a.repeat.mercLost - b.repeat.mercLost ||

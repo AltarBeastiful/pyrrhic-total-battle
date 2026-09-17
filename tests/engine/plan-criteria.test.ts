@@ -53,14 +53,14 @@ const under = (measured: number): number => measured * 0.999;
 const over = (measured: number): number => measured * 1.001;
 
 interface Floors {
-  /** The thrift end: damage a hired unit is the bar's best, and at least this. */
-  thriftPerHired: number;
+  /** The least-silver end: damage a hired unit is the bar's best there, and at least this. */
+  leastPerHired: number;
   /** The sweet spot's two ratios and its campaign. */
   sweetPerSilver: number;
   sweetPerHired: number;
   sweetCampaignDamage: number;
   sweetCampaignSilverCeiling: number;
-  /** The most-damage end: damage a march and a silver, and the plan's campaign. */
+  /** The most-mercs end: damage a march and a silver, and the plan's campaign. */
   mostDamage: number;
   mostPerSilver: number;
   campaignDamage: number;
@@ -69,22 +69,26 @@ interface Floors {
 /** What every bar must satisfy, whatever the army: the criteria's own consistency. */
 function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   const rows = plan.alternatives;
-  expect(rows).toHaveLength(3);
-  const [thrift, sweet, most] = rows as [PlanRow, PlanRow, PlanRow];
-  expect(thrift.pick).toBe('spare-the-stock');
-  expect(sweet.pick).toBe('sweet-spot');
-  expect(most.pick).toBe('most-damage');
+  expect(rows.length).toBeGreaterThanOrEqual(3);
+  expect(rows.length).toBeLessThanOrEqual(4);
+  const named = (pick: PlanRow['pick']): PlanRow | undefined => rows.find((row) => row.pick === pick);
+  const least = named('least-silver') ?? (rows[0] as PlanRow);
+  const sweet = named('sweet-spot') as PlanRow;
+  const most = named('most-mercs') as PlanRow;
+  expect(sweet).toBeDefined();
+  expect(most).toBeDefined();
+  expect(rows[rows.length - 1]).toBe(most);
   expect(plan.recommend?.counts).toEqual(sweet.counts);
 
   // Along the bar, burning more must buy more.
-  expect(sweet.repeat.mercLost).toBeGreaterThan(thrift.repeat.mercLost);
-  expect(most.repeat.mercLost).toBeGreaterThan(sweet.repeat.mercLost);
-  expect(sweet.repeat.damage).toBeGreaterThan(thrift.repeat.damage);
-  expect(most.repeat.damage).toBeGreaterThan(sweet.repeat.damage);
+  for (let index = 1; index < rows.length; index += 1) {
+    const previous = rows[index - 1] as PlanRow;
+    const current = rows[index] as PlanRow;
+    expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
+    expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+  }
 
-  // The two efficiency notes sit on exactly one stop each, and on the stop that has the figure. (Which stop
-  // that is depends on the army: at 12 000 leadership the sweet spot is the best a silver, not the most
-  // damage, because silver is not flat across that bar.)
+  // The two efficiency notes sit on exactly one stop each, and on the stop that has the figure.
   const silverNotes = rows.filter((row) => row.bestFor.silver);
   const hiredNotes = rows.filter((row) => row.bestFor.hired);
   expect(silverNotes).toHaveLength(1);
@@ -92,14 +96,15 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   expect(perSilver(silverNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perSilver)));
   expect(perHired(hiredNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perHired)));
 
-  // The sweet spot is not beaten on both ratios by either end.
-  for (const end of [thrift, most]) {
-    const beats = perSilver(end) >= perSilver(sweet) && perHired(end) >= perHired(sweet);
+  // The sweet spot is not beaten on both ratios by any other stop.
+  for (const other of rows) {
+    if (other === sweet) continue;
+    const beats = perSilver(other) >= perSilver(sweet) && perHired(other) >= perHired(sweet);
     expect(beats).toBe(false);
   }
 
   // The floors: the criteria themselves.
-  expect(perHired(thrift)).toBeGreaterThanOrEqual(floors.thriftPerHired);
+  expect(perHired(least)).toBeGreaterThanOrEqual(floors.leastPerHired);
   expect(perSilver(sweet)).toBeGreaterThanOrEqual(floors.sweetPerSilver);
   expect(perHired(sweet)).toBeGreaterThanOrEqual(floors.sweetPerHired);
   expect(sweet.totalDamage).toBeGreaterThanOrEqual(floors.sweetCampaignDamage);
@@ -117,17 +122,19 @@ describe('the plan’s criteria hold their floors', () => {
       tokenFloor: true,
       sizerShape: true,
     });
-    // Measured 2026-09-18: thrift 464 728 a hired; sweet 1.0024 a silver · 383 259 a hired, campaign
-    // 6 638 206 for 6 117 600; most 2 006 473 a march at 1.3119; the plan 7 866 454.
+    // Measured 2026-09-18 with the four stops (least silver 3 burned · sweet spot 5 · most mercs 6): least
+    // 465 392 a hired; sweet 1.2211 a silver · 373 524 a hired, campaign 7 521 725 for 6 089 100; most
+    // 2 006 473 a march at 1.3119; the plan 7 868 855.
+
     expectCriteria(plan, {
-      thriftPerHired: under(464_728),
-      sweetPerSilver: under(1.0024),
-      sweetPerHired: under(383_259),
-      sweetCampaignDamage: under(6_638_206),
-      sweetCampaignSilverCeiling: over(6_117_600),
+      leastPerHired: under(465_392),
+      sweetPerSilver: under(1.2211),
+      sweetPerHired: under(373_524),
+      sweetCampaignDamage: under(7_521_725),
+      sweetCampaignSilverCeiling: over(6_089_100),
       mostDamage: under(2_006_473),
       mostPerSilver: under(1.3119),
-      campaignDamage: under(7_866_454),
+      campaignDamage: under(7_868_855),
     });
   }, 120_000);
 });
@@ -157,15 +164,14 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       expect(plan.recommend?.repeat.damage).toBe(
         planMarch(input.request, plan.recommend?.counts ?? {}).summary.avgDamage,
       );
-      // Measured 2026-09-18 after the ladder learned its rung order (`out/98`): 8 · 11 · 14 burned; thrift
-      // 529 687 a hired; sweet 1.9459 · 484 597, campaign 22 045 361 for 10 957 600; most 6 242 452 at 2.2788;
-      // the plan 24 814 601. Re-based from the morning's 7 · 10 · 14 (thrift 548 476, sweet 1.8064 · 494 851,
-      // campaign 20 924 965): the 7-burn thrift end is dominated on the campaign by the new 8-burn plan — the
-      // same silver, the same 35 hired burned over the four marches, 10 % more damage — so it left the
-      // frontier, and the sweet spot gained 7.7 % of damage for 2 % of damage a hired unit. A floor is
-      // re-based only for a change measured better on the campaign, and the note says which.
+      // Measured 2026-09-18 with the four stops: 10 · 11 · 12 · 14 burned; least silver 4 965 077 for
+      // 2 614 000 at 496 507 a hired; sweet 1.9459 · 484 597, campaign 22 045 361 for 10 957 600; most
+      // 6 242 452 at 2.2788; the plan 24 814 601. (Earlier the same day, three stops: thrift 548 476 → 529 687
+      // as the 7-burn plan left the frontier, dominated on the campaign; then the least-silver end replaced the
+      // thrift end.) A floor is re-based only for a change measured better on the campaign, and the note says
+      // which.
       expectCriteria(plan, {
-        thriftPerHired: under(529_687),
+        leastPerHired: under(496_507),
         sweetPerSilver: under(1.9459),
         sweetPerHired: under(484_597),
         sweetCampaignDamage: under(22_045_361),
@@ -182,17 +188,16 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       const plan = planCampaign(
         buildPlanRequest(profile, { ...setup, housing: { ...setup.housing, leadership: 12_000 } }),
       );
-      // Measured 2026-09-18 after the ladder learned its rung order: 10 · 13 · 19 burned, all ladders; thrift
-      // 636 133 a hired; sweet 1.5831 · 563 760, campaign 29 660 413 for 18 585 800; most 8 281 474 at 1.5186;
-      // the plan 32 518 195. Re-based from 9 · 13 · 17 (thrift 602 630, sweet 1.4644 · 529 175, campaign
-      // 28 804 801 for 18 790 400, most 8 185 823 at 1.7426): every sweet-spot figure rose and its silver fell;
-      // the most-damage stop does 1.2 % more for 16 % more silver, which is the trade its name promises.
+      // Measured 2026-09-18 with the four stops: 10 · 17 · 19 burned (the knee lands at 17, where the last
+      // two units buy 1 % of damage for 16 % of silver, so no rung fits between it and the top); least
+      // 636 132 a hired; sweet 1.7426 · 481 519, campaign 32 231 242 for 18 790 400; most 8 281 474 at
+      // 1.5186; the plan 32 518 195.
       expectCriteria(plan, {
-        thriftPerHired: under(636_133),
-        sweetPerSilver: under(1.5831),
-        sweetPerHired: under(563_760),
-        sweetCampaignDamage: under(29_660_413),
-        sweetCampaignSilverCeiling: over(18_585_800),
+        leastPerHired: under(636_132),
+        sweetPerSilver: under(1.7426),
+        sweetPerHired: under(481_519),
+        sweetCampaignDamage: under(32_231_242),
+        sweetCampaignSilverCeiling: over(18_790_400),
         mostDamage: under(8_281_474),
         mostPerSilver: under(1.5186),
         campaignDamage: under(32_518_195),

@@ -198,7 +198,7 @@ describe(
       const burn = planCampaign({ request: req, withTrade: true });
       const rows = burn.alternatives;
       expect(rows.length).toBeGreaterThan(0);
-      expect(rows.length).toBeLessThanOrEqual(3);
+      expect(rows.length).toBeLessThanOrEqual(4);
 
       // Sorted by burn, no two stops burn the same, and damage climbs with the burn: a stop never asks for more
       // of the stock than the one to its left for less damage.
@@ -217,7 +217,7 @@ describe(
       }
       // The top is the most damage of everything the bar could carry; the sweet spot is on the bar and is the
       // recommendation.
-      expect(rows[rows.length - 1]?.pick).toBe('most-damage');
+      expect(rows[rows.length - 1]?.pick).toBe('most-mercs');
       expect(rows[rows.length - 1]?.repeat.damage).toBe(
         Math.max(...trade.map((other) => other.repeat.damage)),
       );
@@ -225,7 +225,7 @@ describe(
       expect(sweet).toBeDefined();
       expect(burn.recommend?.counts).toEqual(sweet?.counts);
       for (const row of rows) {
-        expect(['spare-the-stock', 'sweet-spot', 'most-damage']).toContain(row.pick);
+        expect(['least-silver', 'sweet-spot', 'more-mercs', 'most-mercs']).toContain(row.pick);
       }
       // The sweet spot is a plan no rung of the ladder beats on both efficiencies at once (owner, 2026-09-17:
       // his sweet spot at 15 burned lost to the 12 stop on damage a silver *and* a hired).
@@ -281,8 +281,8 @@ describe(
         // Whatever shape won, its counts are fieldable and its damage is the battle's own.
         expect(used(req, both.march.counts, 'leadership')).toBeLessThanOrEqual(req.housing.leadership);
         expect(both.march.damage).toBe(planMarch(req, both.march.counts).summary.avgDamage);
-        // Three stops, never more (owner, 2026-09-17: "keep 3 spot on the slider each time").
-        expect(both.alternatives.length).toBeLessThanOrEqual(3);
+        // Four stops, never more (owner, 2026-09-18: least silver · sweet spot · more mercs · most mercs).
+        expect(both.alternatives.length).toBeLessThanOrEqual(4);
       },
       TIMEOUT,
     );

@@ -27,18 +27,22 @@ preview`), not the dev server.
    is a control — reading another plan puts another march on screen — so the army you came to change is first.
    The bar runs along the **hired stock** — *Fewest hired lost … Most hired lost*, one plan a burn level,
    thriftiest first. That is the balance the slider is for: burning silver well at one end against burning
-   mercenaries well at the other, with the sweet spot in the middle. There are **three stops at most**, and
-   each is named by which answer it is — **Spare the stock · Sweet spot · Most damage** — and nothing else.
-   The two efficiencies are **notes rather than stops**: the plan that does
+   mercenaries well at the other, with the sweet spot in the middle. There are **four stops at most**, and
+   each is named by which answer it is — **Least silver · Sweet spot · More mercs · Most mercs** — and
+   nothing else. *Least silver* is the cheapest march still worth fielding; *Sweet spot* is the knee, where
+   one more hired unit burned stops buying damage as fast as it did; *More mercs* is the step between the
+   knee and the top, for when the stock allows more; *Most mercs* is the top of the ladder — the most hired
+   units your troops can shelter, and the most damage. The two efficiencies are **notes rather than stops**:
+   the plan that does
    most with a silver says *best a silver* under its name, the one that does most with a hired unit says
    *best a hired*. Judge whether those two lines say enough — they replaced a "Best for silver" stop of its
-   own, which on the owner's account was the "Most damage" stop to within 0.2 %. The tip follows the
+   own, which on the owner's account was the top stop to within 0.2 %. The tip follows the
    pointer instead of the thumb: it names the plan under it and lights that plan's row in the table below.
    One muted line says what the plan did for *your* army, with the general why behind the ⓘ beside it, and the
    trade is one row per plan — a bar as long as the damage it deals, what a march of it hits for, costs in
    silver and burns of the hired stock, with damage per silver and per hired unit beside them.
    The rest of the March's second half is **not in the pane on a desktop**: the comparison with all types,
-   the battle story and the HP chart, your saved marches and the row that copies, edits, saves or shares the
+   the **Details** fold, your saved marches and the row that copies, edits, saves or shares the
    counts are together at the end of the **left** column, under **"This march in full"**. On a phone there is
    no left column, so the March sheet carries all of it. Watch the right-hand pane while you scroll: it is
    meant to come with you when the march fits the window it has, and to travel with the page when it does not.

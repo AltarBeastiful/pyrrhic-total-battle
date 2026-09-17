@@ -58,7 +58,7 @@ function sameFrame(one: Frame, other: Frame): boolean {
 export interface PlanBarProps {
   /**
    * Every plan the bar offers, thriftiest first — the engine's order, which is the bar's own axis: the
-   * hired units a march burns for good. Three stops at most.
+   * hired units a march burns for good. Four stops at most.
    */
   rows: PlanRow[];
   /** Which of them the March is showing. */
@@ -106,7 +106,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
    */
   const [tipAt, setTipAt] = useState(0);
   const [up, setUp] = useState(false);
-  // A fresh search can carry fewer plans than the bar the pointer last left (three at most, and two stops
+  // A fresh search can carry fewer plans than the bar the pointer last left (four at most, and two stops
   // that are one plan collapse to one), so the remembered stop is clamped: a tip pointing off the end of the
   // track is worse than a stale one.
   const row = rows[Math.min(tipAt, Math.max(0, rows.length - 1))];
