@@ -41,6 +41,14 @@ test('the trigger opens a list grouped by tier', async () => {
   expect(screen.getByRole('option', { name: 'Archdemon' })).toBeTruthy();
 });
 
+test('opening the list puts the focus in the search field, so typing starts at once', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example />);
+  await user.click(screen.getByRole('button', { name: 'Hire mercenary…' }));
+
+  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Search mercenaries' }));
+});
+
 test('the search narrows the list to what matches', async () => {
   const user = userEvent.setup();
   renderWithTheme(<Example />);

@@ -56,6 +56,13 @@ export function GroupedCombobox({
 }: GroupedComboboxProps) {
   const [query, setQuery] = useState('');
   const combobox = useCombobox({
+    // The search field takes the focus as the list opens (owner, 2026-09-18: "the hire a merc button
+    // should focus the combobox input"): the trigger is pressed to type a name, and a second click to
+    // reach the field was a tap for nothing. Mantine's `Combobox.Search` registers the field the store
+    // focuses here.
+    onDropdownOpen: () => {
+      combobox.focusSearchInput();
+    },
     onDropdownClose: () => {
       combobox.resetSelectedOption();
     },
