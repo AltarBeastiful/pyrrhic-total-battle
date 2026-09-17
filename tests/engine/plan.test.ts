@@ -286,40 +286,63 @@ describe(
       }
     });
 
-    test('the burn axis: one plan a burn level, thriftiest first, the same sweet spot', () => {
-      // Review of 2026-09-16 (`tools/theorycraft/out/91-cross-review.md`): behind `barAxis: 'burn'` the bar
-      // runs along hired units burned a march. The sweet spot is the very plan the silver axis recommends,
-      // so the flag changes what stands beside the recommendation and never the recommendation itself.
+    test('the burn axis: a monotone ladder, the sweet spot on it, fillers in the inner half of a gap', () => {
+      // Review of 2026-09-16/17 (`tools/theorycraft/out/91`, `92`): behind `barAxis: 'burn'` the bar runs along
+      // hired units burned a march, one plan a level, and only where burning more buys more.
       const req = request();
-      const silver = planCampaign({ request: req, alternatives: 4, withTrade: true });
       const burn = planCampaign({ request: req, alternatives: 4, withTrade: true, barAxis: 'burn' });
-      expect(silver.barAxis).toBe('silver');
       expect(burn.barAxis).toBe('burn');
-      expect(burn.recommend?.counts).toEqual(silver.recommend?.counts);
-
       const rows = burn.alternatives;
       expect(rows.length).toBeGreaterThan(0);
       expect(rows.length).toBeLessThanOrEqual(4);
-      // Sorted by burn, and no two stops burn the same: the ladder is one plan a level.
-      const burns = rows.map((row) => row.repeat.mercLost);
-      expect([...burns].sort((a, b) => a - b)).toEqual(burns);
-      expect(new Set(burns).size).toBe(burns.length);
+
+      // Sorted by burn, no two stops burn the same, and damage climbs with the burn: a stop never asks for more
+      // of the stock than the one to its left for less damage.
+      for (let index = 1; index < rows.length; index += 1) {
+        const previous = rows[index - 1];
+        const current = rows[index];
+        if (!previous || !current) continue;
+        expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
+        expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+      }
       // Each stop is the best march at its burn level among the plans the bar may carry.
       const trade = burn.trade ?? [];
       for (const row of rows) {
         const level = trade.filter((other) => other.repeat.mercLost === row.repeat.mercLost);
         expect(Math.max(...level.map((other) => other.repeat.damage))).toBe(row.repeat.damage);
       }
-      // The ends are named; the sweet spot is on the bar; a filler is a `step`, and nothing else is.
-      expect(rows.find((row) => row.pick === 'most-damage')?.repeat.damage).toBe(
+      // The top is the most damage of everything the bar could carry; the sweet spot is on the bar and is the
+      // recommendation; a filler is a `step`, and nothing else is.
+      expect(rows[rows.length - 1]?.pick).toBe('most-damage');
+      expect(rows[rows.length - 1]?.repeat.damage).toBe(
         Math.max(...trade.map((other) => other.repeat.damage)),
       );
-      expect(rows.some((row) => row.pick === 'sweet-spot')).toBe(true);
+      const sweet = rows.find((row) => row.pick === 'sweet-spot');
+      expect(sweet).toBeDefined();
+      expect(burn.recommend?.counts).toEqual(sweet?.counts);
       for (const row of rows) {
         expect(['spare-the-stock', 'sweet-spot', 'step', 'most-damage']).toContain(row.pick);
       }
+      // A filler stands nearer the middle of the gap it fills than either end (no twin of a neighbour).
+      rows.forEach((row, index) => {
+        if (row.pick !== 'step') return;
+        const low = rows[index - 1]?.repeat.mercLost;
+        const high = rows[index + 1]?.repeat.mercLost;
+        if (low === undefined || high === undefined) return;
+        expect(Math.abs(row.repeat.mercLost - (low + high) / 2) * 4).toBeLessThan(high - low);
+      });
+      // Exactly one stop is the bar's best damage a silver and exactly one its best damage a hired unit.
+      const perSilver = (row: (typeof rows)[number]): number => row.repeat.damage / row.repeat.silver;
+      const perHired = (row: (typeof rows)[number]): number => row.repeat.damage / row.repeat.mercLost;
+      expect(rows.filter((row) => row.bestFor.silver)).toHaveLength(1);
+      expect(rows.filter((row) => row.bestFor.hired)).toHaveLength(1);
+      expect(perSilver(rows.find((row) => row.bestFor.silver) as (typeof rows)[number])).toBe(
+        Math.max(...rows.map(perSilver)),
+      );
+      expect(perHired(rows.find((row) => row.bestFor.hired) as (typeof rows)[number])).toBe(
+        Math.max(...rows.map(perHired)),
+      );
       // Every stop carries the gold its march's hired stacks cost, and it grows with the burn.
-      for (const row of rows) expect(row.repeat.gold).toBeGreaterThanOrEqual(0);
       const golds = rows.map((row) => row.repeat.gold);
       expect([...golds].sort((a, b) => a - b)).toEqual(golds);
     });

@@ -252,6 +252,17 @@ export type PlanPick = 'best-for-silver' | 'spare-the-stock' | 'sweet-spot' | 'm
 export interface PlanRow extends PlanTotals {
   pick: PlanPick;
   label: string;
+  /**
+   * **Which efficiency this stop is the bar's best at** (owner, 2026-09-17: the slider is *"about balancing
+   * between burning silver efficiently, which is constrained, and burning mercs efficiently, which is
+   * constrained as well"*). Of the stops the bar carries, exactly one is the best damage a silver and exactly
+   * one the best damage a hired unit — and on any account whose mercenaries are priced in gold they are the
+   * dear end and the thrift end, because a hired stack adds damage and no silver. So the two efficiencies are
+   * **said on the stops that have them** rather than offered as stops of their own: measured on the owner's
+   * bar, a "Best for silver" stop was the "Most damage" stop to 0.2 % (`tools/theorycraft/out/91`), one more
+   * row to read that did nothing its name promised.
+   */
+  bestFor: { silver: boolean; hired: boolean };
 }
 
 export interface CampaignPlan extends PlanTotals {
@@ -1265,9 +1276,43 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * 6 826 445 — 19 % less of the stock for 22 % less damage. No free parameter: both ends of the range are
    * plans the engine found, and the middle is a consequence.
    */
-  const burns = candidates.map((row) => row.repeat.mercLost);
+  const barAxis = input.barAxis ?? 'silver';
+  /**
+   * **The burn ladder** (the burn axis, `barAxis: 'burn'`): one plan a level of hired units burned a march —
+   * the best march at that burn, the cheaper on a tie — kept only where **burning more buys more**. Measured
+   * (`tools/theorycraft/out/92-the-bar-as-drawn.md`, horizon 3): the band's best march at 20 burned hits for
+   * 4 938 868 and its best at 17 for 5 314 021, so a bar that offered the 20 would be offering three more units
+   * of the stock for less damage; the level is dropped, and so is every level above the most damage. The
+   * ladder is what the sweet spot is read off on this axis, so the recommendation can never be a plan a
+   * thriftier stop beats.
+   */
+  const ladder = new Map<number, PlanTotals & { label: string }>();
+  for (const row of candidates) {
+    const held = ladder.get(row.repeat.mercLost);
+    if (
+      !held ||
+      row.repeat.damage > held.repeat.damage ||
+      (row.repeat.damage === held.repeat.damage && row.repeat.silver < held.repeat.silver)
+    ) {
+      ladder.set(row.repeat.mercLost, row);
+    }
+  }
+  const levels: number[] = [];
+  let climbed = -Infinity;
+  for (const burn of [...ladder.keys()].sort((a, b) => a - b)) {
+    const damage = ladder.get(burn)?.repeat.damage ?? 0;
+    if (damage > climbed) {
+      levels.push(burn);
+      climbed = damage;
+    }
+  }
+  const ladderRows = levels.map((burn) => ladder.get(burn) as PlanTotals & { label: string });
+  /** The plans the sweet spot is read off: the ladder on the burn axis, the whole band on the silver one. */
+  const sweetPool = barAxis === 'burn' && ladderRows.length > 0 ? ladderRows : candidates;
+
+  const burns = sweetPool.map((row) => row.repeat.mercLost);
   const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
-  const sweetSpotBase: PlanTotals & { label: string } = candidates.reduce<PlanTotals & { label: string }>(
+  const sweetSpotBase: PlanTotals & { label: string } = sweetPool.reduce<PlanTotals & { label: string }>(
     (best, row) => {
       // Closest to the middle of the range; **the thriftier side wins a tie**, because the whole point of the
       // rule is the stock — a band narrow enough to sit either side of its own middle (measured on a small
@@ -1283,7 +1328,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       }
       return row.repeat.damage > best.repeat.damage ? row : best;
     },
-    candidates[0] ?? chosenPoint,
+    sweetPool[0] ?? chosenPoint,
   );
 
   /**
@@ -1352,42 +1397,22 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : -1;
   const perHired = (row: PlanTotals): number =>
     row.repeat.mercLost > 0 ? row.repeat.damage / row.repeat.mercLost : -1;
-  const barAxis = input.barAxis ?? 'silver';
   const sameCounts = (a: PlanTotals, b: PlanTotals): boolean =>
     JSON.stringify(a.counts) === JSON.stringify(b.counts);
   const stops: PlanRow[] = [];
   const offer = (row: (PlanTotals & { label: string }) | undefined, pick: PlanPick): void => {
     if (row === undefined) return;
     if (stops.some((other) => sameCounts(other, row))) return;
-    stops.push({ ...row, pick });
+    stops.push({ ...row, pick, bestFor: { silver: false, hired: false } });
   };
   if (barAxis === 'burn') {
     /**
-     * **The burn axis.** One plan a burn level — the best march at that burn, the cheaper on a tie — so the
-     * ladder the bar walks is monotone in the resource the sweet spot is defined on, and two plans that burn
-     * the same can never be two stops. The ends are the thriftiest level the band keeps and the most damage;
-     * the sweet spot is `sweetSpotBase`, unchanged, so the two axes recommend the same plan; and the
-     * remaining places go to the widest gaps between the stops already there, the upper gap on a tie.
+     * **The burn axis.** The stops are rungs of the ladder above: the thriftiest level the band keeps, the
+     * sweet spot (the middle of the ladder's range), the top (the most damage, by the ladder's own
+     * construction), and the remaining places to the widest gaps between the stops already there, the upper
+     * gap on a tie. Two plans that burn the same can never be two stops.
      */
-    const ladder = new Map<number, PlanTotals & { label: string }>();
-    for (const row of candidates) {
-      const held = ladder.get(row.repeat.mercLost);
-      if (
-        !held ||
-        row.repeat.damage > held.repeat.damage ||
-        (row.repeat.damage === held.repeat.damage && row.repeat.silver < held.repeat.silver)
-      ) {
-        ladder.set(row.repeat.mercLost, row);
-      }
-    }
-    const top = bestOf((row) => row.repeat.damage);
-    const levels = [...ladder.keys()]
-      .filter((burn) => top === undefined || burn <= top.repeat.mercLost)
-      .sort((a, b) => a - b);
-    // The level nearest a target burn; two levels equally near are told apart by what each unit burned
-    // buys there (the resource the axis is about). Measured (`out/91`): between the sweet spot at 17 and
-    // the most damage at 22 the midpoint is 19.5, and the 20-burn level buys 6 276 006 for 2 252 000 silver
-    // where the 19-burn level buys 5 896 029 for 2 331 500 — less burn is the only thing 19 has over 20.
+    const top = ladderRows[ladderRows.length - 1];
     const perUnit = (row: PlanTotals): number => row.repeat.damage / Math.max(1, row.repeat.mercLost);
     const nearest = (target: number): (PlanTotals & { label: string }) | undefined => {
       let pickLevel: number | undefined;
@@ -1409,25 +1434,38 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     offer(sweetSpotBase, 'sweet-spot');
     offer(top, 'most-damage');
     offer(levels[0] === undefined ? undefined : ladder.get(levels[0]), 'spare-the-stock');
+    /**
+     * The fillers: the widest gap between the stops already there gets a `step` at the rung nearest its
+     * middle — **if that rung stands nearer the gap's middle than either of its ends**, so a filler is never a
+     * neighbour's twin. Measured (`out/92`, horizon 3): the gap 19→25 had its nearest rung at 24, one unit and
+     * 1.1 % of damage from the most damage — a stop that says nothing its neighbour does not. Not a tolerance
+     * to set: a rung in the inner half of a gap is a stop, a rung in the outer quarters is not. A gap that
+     * cannot be filled is left, and the next-widest is tried.
+     */
     while (stops.length < keep) {
       const burnsHeld = [...new Set(stops.map((row) => row.repeat.mercLost))].sort((a, b) => a - b);
-      let gap: { low: number; high: number } | undefined;
+      const gaps: { low: number; high: number }[] = [];
       for (let i = 1; i < burnsHeld.length; i += 1) {
-        const low = burnsHeld[i - 1] ?? 0;
-        const high = burnsHeld[i] ?? 0;
-        if (!gap || high - low >= gap.high - gap.low) gap = { low, high };
+        gaps.push({ low: burnsHeld[i - 1] ?? 0, high: burnsHeld[i] ?? 0 });
       }
-      if (!gap) break;
-      const filler = nearest((gap.low + gap.high) / 2);
-      if (
-        !filler ||
-        filler.repeat.mercLost <= gap.low ||
-        filler.repeat.mercLost >= gap.high ||
-        stops.some((row) => sameCounts(row, filler))
-      ) {
+      // Widest first; two gaps as wide as each other, the upper one first (where the damage is).
+      gaps.sort((a, b) => b.high - b.low - (a.high - a.low) || b.low - a.low);
+      let placed = false;
+      for (const gap of gaps) {
+        const middle = (gap.low + gap.high) / 2;
+        const filler = nearest(middle);
+        if (
+          !filler ||
+          Math.abs(filler.repeat.mercLost - middle) * 4 >= gap.high - gap.low ||
+          stops.some((row) => sameCounts(row, filler))
+        ) {
+          continue;
+        }
+        offer(filler, 'step');
+        placed = true;
         break;
       }
-      offer(filler, 'step');
+      if (!placed) break;
     }
     stops.sort(
       (a, b) =>
@@ -1474,6 +1512,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * UI prints this beside the table it describes — so it is counted off the list that is actually handed
    * back, and reads `0` when the band kept nothing (nothing was refused by a band that never applied).
    */
+  // The two efficiencies, said on the stops that have them (`PlanRow.bestFor`): the best damage a silver
+  // and the best damage a hired unit **of the stops the bar carries** — one stop each, the first on a tie.
+  const bestStop = (of: (row: PlanTotals) => number): PlanRow | undefined =>
+    stops.reduce<PlanRow | undefined>(
+      (best, row) => (best === undefined || of(row) > of(best) ? row : best),
+      undefined,
+    );
+  const silverBest = bestStop(perSilver);
+  const hiredBest = bestStop(perHired);
+  for (const row of stops) {
+    row.bestFor = { silver: row === silverBest, hired: row === hiredBest };
+  }
   const leftOut = band.length > 0 ? Math.max(0, undominated.length - stops.length) : 0;
   const alternatives: PlanRow[] = stops.slice(0, keep);
   /**
@@ -1483,6 +1533,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const sweetSpot: PlanRow = stops.find((row) => row.pick === 'sweet-spot') ?? {
     ...sweetSpotBase,
     pick: 'sweet-spot',
+    bestFor: { silver: false, hired: false },
   };
 
   const leadershipUsed = chosen.rungs.reduce((sum, rung) => sum + rung.count * rung.entry.cost, 0);

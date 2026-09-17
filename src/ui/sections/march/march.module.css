@@ -164,8 +164,30 @@
      is already called "Sweet spot") and the heads stopped wrapping. 104 px still sets the longest of the
      four names, "Spare the stock", on one line at the table's 12 px; the eight pixels it gives back are
      part of the 36 that keep a 462 px pane free of a sideways scroller. The cell may still wrap, because
-     the engine names the rows and a longer name is its to give. */
+     the engine names the rows and a longer name is its to give.
+
+     **The note came back on 2026-09-17**, and the floor held: the cell now carries the efficiency a stop is
+     the bar's best at under the name (`.planNote` below) — "best a hired" over "Spare the stock". Measured
+     at 1400×900 on the burn axis, the column is 107 px and the table 462 px in a 462 px pane, with no
+     scroller; at 390 px the column is the 100 px floor, the name wraps to two lines and the row is 70 px.
+     It is not the note of the S-59 review that rule 5 cut: that one printed "the sweet spot" under a row
+     called "Sweet spot", and this one says something no other cell on the row does. */
   min-width: 6.25rem;
+  white-space: normal;
+}
+
+/* The efficiency a stop is the bar's best at, under the plan's name (`PlanTrade.tsx`, owner 2026-09-17).
+   It is a second line inside the name cell rather than a column of its own — the table has no room for a
+   seventh head in a 462 px pane (the note beside `aria-label` there) — so what it needs from CSS is only
+   what makes it read as a *subordinate* line: the table body sets every cell to 600, and a note that
+   inherited that would look like a second name. Everything else is the component's (design rule 23):
+   `size="xs"` is the table's own 13 px, `c="dimmed"` the muted ink the heads use.
+
+   It wraps, unlike every other cell in this table: a stop that is both efficiencies wears both words, and
+   a nowrap note would be the one thing on the row that could widen the table past its pane. */
+.compare .planNote {
+  font-weight: 400;
+  line-height: 1.25;
   white-space: normal;
 }
 

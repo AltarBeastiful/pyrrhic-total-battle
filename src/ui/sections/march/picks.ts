@@ -44,13 +44,37 @@ export function planWords(row: NamedRow): string {
   return row.pick === 'step' ? `${amount(row.repeat.mercLost)} hired lost` : PICK_WORD[row.pick];
 }
 
+/** The words for the two efficiencies, keyed the way `PlanRow.bestFor` is. */
+const BEST_FOR_WORD = { silver: 'best a silver', hired: 'best a hired' } as const;
+
+/**
+ * **The two efficiencies, in the words the stop that has one wears** (owner, 2026-09-17: the bar is *"about
+ * balancing between burning silver efficiently… and burning mercs efficiently"*, and a separate "Best for
+ * silver" stop that is the "Most damage" stop to 0.2 % is *"inefficient and causes frustration"*).
+ *
+ * `null` when the stop is neither. Of the stops the bar carries exactly one is the best damage a silver and
+ * exactly one the best damage a hired unit (`PlanRow.bestFor`, `src/engine/plan.ts`), and nothing stops the
+ * same stop being both — so the two words join rather than stacking into a second line.
+ *
+ * The words are the trade's own column heads, "Per silver" and "Per hired", said the short way (design rule
+ * 5: one name per thing). A note under a row's name, the row's accessible name and the bar's tip all read
+ * this one function, so a stop cannot claim an efficiency in one place and a different one in another.
+ */
+export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
+  if (row.bestFor.silver && row.bestFor.hired) return 'best a silver and a hired';
+  if (row.bestFor.silver) return BEST_FOR_WORD.silver;
+  if (row.bestFor.hired) return BEST_FOR_WORD.hired;
+  return null;
+}
+
 /**
  * The two words under the bar, naming its ends — the resource `CampaignPlan.alternatives` is sorted along.
  *
- * They are the axis's own name and not decoration: on `'burn'` the stops run along the hired units a march
- * burns for good (thriftiest first), and calling those ends "Least silver … Most silver" would name the one
- * resource the bar is *not* ordered by. The words match the trade's "Hired lost" head for the same reason
- * `planWords` names a step that way (rule 5).
+ * They are the axis's own name and not decoration: on `'burn'` — the app's axis since 2026-09-17
+ * (`CAMPAIGN.planBar.axis`) — the stops run along the hired units a march burns for good (thriftiest
+ * first), and calling those ends "Least silver … Most silver" would name the one resource the bar is *not*
+ * ordered by. The words match the trade's "Hired lost" head for the same reason `planWords` names a step
+ * that way (rule 5). The silver pair stays for the comparison axis, which is still selectable.
  */
 export const AXIS_ENDS: Record<'silver' | 'burn', { low: string; high: string }> = {
   silver: { low: 'Least silver', high: 'Most silver' },

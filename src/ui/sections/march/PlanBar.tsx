@@ -30,7 +30,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { CampaignPlan, PlanRow } from '@/engine/plan';
 
 import { compact } from './format';
-import { AXIS_ENDS, planWords } from './picks';
+import { AXIS_ENDS, bestForWords, planWords } from './picks';
 import classes from './march.module.css';
 
 /** Everything the mapping needs, in the two coordinate spaces it uses — and they are not the same one. */
@@ -115,6 +115,8 @@ export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, swee
   // already taken is not handed down), so the remembered stop is clamped: a tip pointing off the end of the
   // track is worse than a stale one.
   const row = rows[Math.min(tipAt, Math.max(0, rows.length - 1))];
+  /** Which of the two efficiencies the tip's stop is the bar's best at, or `null` (`./picks`). */
+  const efficiency = row === undefined ? null : bestForWords(row);
 
   /**
    * The track's box. Read live by the handler rather than kept, so a bar that moved under the pointer — the
@@ -232,9 +234,14 @@ export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, swee
         thumbLabel="Where on the trade to read the plan"
         thumbValueText={(value) => {
           const shown = rows[Math.round(value)];
-          return shown === undefined
-            ? ''
-            : `${planWords(shown)}, ${compact(shown.repeat.damage)} damage a march`;
+          if (shown === undefined) return '';
+          // The tip is `aria-hidden` decoration, so everything it draws has to be said here as well or it
+          // is said to a pointer only (design rule 24). The efficiency is the line the owner asked for on
+          // 2026-09-17 and it rides along in the same words as the note on the row below (`./picks`).
+          const best = bestForWords(shown);
+          return `${planWords(shown)}, ${compact(shown.repeat.damage)} damage a march${
+            best === null ? '' : `, ${best}`
+          }`;
         }}
         // Clicking the bar focuses its root (Mantine's own `onMouseDownCapture`), so this is the keyboard's
         // way in as well as the mouse's — and it is the value's own stop, because a focus has no pointer.
@@ -297,6 +304,16 @@ export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, swee
           <Text size="sm" fw={600}>
             {planWords(row)}
           </Text>
+          {/* **The efficiency this stop is the bar's best at**, where the trade puts it: under the name
+              (`PlanTrade.tsx`, `PlanRow.bestFor`). The bar and the table are one thing (0020 §D-2), so a
+              stop that says "best a silver" on the row below says it here too, in the same words — the
+              owner's 2026-09-17 reason for the note existing at all is that the two efficiencies are what
+              the bar balances, and a player reading the bar is exactly who is asking. */}
+          {efficiency !== null && (
+            <Text size="xs" opacity={0.75}>
+              {efficiency}
+            </Text>
+          )}
           {/* Two lines and no third. It closed with "the sweet spot" over a tip already naming the plan
               **Sweet spot**, above a bar whose mark says "Sweet spot" in the same brass — the same words
               three times in one glance (design rule 5, the owner's own cut of 2026-09-16). */}

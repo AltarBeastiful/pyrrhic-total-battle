@@ -25,12 +25,18 @@ preview`), not the dev server.
    the trade — and the **Plan** block arrives **open**, rather than a fold to hunt for (it still collapses, and
    the row it collapses to keeps the plan's headline). It stands **under the army**, not above it: the block
    is a control — reading another plan puts another march on screen — so the army you came to change is first.
-   The bar carries up to four
-   named plans — **Best for silver · Spare the stock · Sweet spot · Most damage** — and the tip follows the
+   The bar runs along the **hired stock** — *Fewest hired lost … Most hired lost*, one plan a burn level,
+   thriftiest first. That is the balance the slider is for: burning silver well at one end against burning
+   mercenaries well at the other, with the sweet spot in the middle. A stop the engine can put a name to
+   wears it — **Spare the stock · Sweet spot · Most damage** — and a stop between two of them is named by
+   what it burns ("15 hired lost"). The two efficiencies are **notes rather than stops**: the plan that does
+   most with a silver says *best a silver* under its name, the one that does most with a hired unit says
+   *best a hired*. Judge whether those two lines say enough — they replaced a "Best for silver" stop of its
+   own, which on the owner's account was the "Most damage" stop to within 0.2 %. The tip follows the
    pointer instead of the thumb: it names the plan under it and lights that plan's row in the table below.
    One muted line says what the plan did for *your* army, with the general why behind the ⓘ beside it, and the
    trade is one row per plan — a bar as long as the damage it deals, what a march of it hits for, costs in
-   silver and burns of the hired stock, with damage per silver and per mercenary beside them.
+   silver and burns of the hired stock, with damage per silver and per hired unit beside them.
    The rest of the March's second half is **not in the pane on a desktop**: the comparison with all types,
    the battle story and the HP chart, your saved marches and the row that copies, edits, saves or shares the
    counts are together at the end of the **left** column, under **"This march in full"**. On a phone there is

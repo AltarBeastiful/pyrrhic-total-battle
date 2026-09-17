@@ -16,6 +16,7 @@ import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
+import { CAMPAIGN } from '@/config';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan, PlanRow } from '@/engine/plan';
 import type { StackRequest } from '@/engine/types';
@@ -23,7 +24,7 @@ import { getUnits } from '@/data';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { PlanFold, PlanSizing } from './PlanPanel';
-import { planWords } from './picks';
+import { AXIS_ENDS, bestForWords, planWords } from './picks';
 import { compact, ratio } from './format';
 import { defaultPlanPosition, pickOf, sweetSpotOf, useRunStore } from './runStore';
 
@@ -48,10 +49,22 @@ function request(): StackRequest {
 
 // The plan is computed once for the file: the search is a real one (a few seconds even on this small army),
 // and every case below draws the same answer.
-const PLAN = planCampaign({ request: request(), alternatives: 6 });
+//
+// **On the app's own axis** (`CAMPAIGN.planBar.axis`, `'burn'` since the owner's decision of 2026-09-17,
+// `src/state/derive.ts` passes it). This file draws what a player sees, so it reads the flag rather than
+// naming an axis: nothing below asserts "Least silver" or "Fewest hired lost" literally — the two words
+// come from `AXIS_ENDS` — and the silver axis keeps a case of its own further down.
+const PLAN = planCampaign({
+  request: request(),
+  alternatives: 6,
+  barAxis: CAMPAIGN.planBar.axis,
+});
 
-/** The plans the bar carries, cheapest first — the picks the engine settled on, four at most. */
+/** The plans the bar carries, thriftiest first — the stops the engine settled on, six at most here. */
 const ROWS = PLAN.alternatives;
+
+/** The two words under the bar on whichever axis the app is set to. */
+const ENDS = AXIS_ENDS[PLAN.barAxis];
 
 // The table's own name carries the unit its heads stopped repeating (S-59 screen review).
 const TRADE = 'table[aria-label="Every plan on the trade, one repeated march each"]';
@@ -180,8 +193,9 @@ test('one control walks the trade, the keyboard walks it too, and the way back t
   // is the half of the owner's complaint the tip below answers.
   const opened = plan.alternatives[sweet];
   expect(opened === undefined ? '' : screen.queryByText(opened.label)).toBeNull();
-  expect(screen.getByText('Least silver')).toBeTruthy();
-  expect(screen.getByText('Most silver')).toBeTruthy();
+  // Named after the axis the payload carries, never after the resource it is not ordered by (rule 5).
+  expect(screen.getByText(ENDS.low)).toBeTruthy();
+  expect(screen.getByText(ENDS.high)).toBeTruthy();
   // On the sweet spot, there is nothing to go back to.
   expect(screen.queryByRole('button', { name: 'Back to the sweet spot' })).toBeNull();
 
@@ -279,7 +293,7 @@ test('the band is the target, not just the 16 px track', () => {
   // controls a player reaches for when the bar is already somewhere else, and a band that answered their
   // presses too would move the bar out from under the finger.
   useRunStore.setState({ planPick: position });
-  fireEvent.pointerDown(screen.getByText('Most silver'), { clientX: TRACK.left });
+  fireEvent.pointerDown(screen.getByText(ENDS.high), { clientX: TRACK.left });
   expect(useRunStore.getState().planPick).toBe(position);
 });
 
@@ -506,13 +520,20 @@ test('the why is a popover a thumb can open, not a tooltip only a pointer can ho
 }, 60_000);
 
 /**
- * **The burn axis** (`CampaignInput.barAxis: 'burn'`, behind `CAMPAIGN.planBar.axis` and off by default).
+ * **The burn axis, on figures of a known shape** (`CampaignInput.barAxis: 'burn'`, the app's own axis since
+ * 2026-09-17 — `CAMPAIGN.planBar.axis`).
  *
  * The plan below is a literal rather than a second search: the axis is an *input* to the engine, and what
- * the three cases here hold is the **drawing** of a payload that carries `barAxis: 'burn'` — the ends the
- * bar is named after, a `step` row wearing its own burn, and the gold the trade has no column for. The
- * figures are the engine's own shape (one plan a burn level, thriftiest first, the sweet spot among them),
- * copied onto a real row so nothing but `pick`, `repeat` and the sort key is invented.
+ * the cases here hold is the **drawing** of a payload that carries `barAxis: 'burn'` — the ends the bar is
+ * named after, a `step` row wearing its own burn, the gold the trade has no column for, and the two
+ * efficiencies as notes on the stops that have them. The figures are the engine's own shape (one plan a
+ * burn level, thriftiest first, the sweet spot among them), copied onto a real row so nothing but `pick`,
+ * `repeat`, `bestFor` and the sort key is invented.
+ *
+ * `bestFor` is **not** invented either: on these figures the best damage a silver is the dearest stop
+ * (3.00 against 2.73 · 2.48 · 2.05) and the best damage a hired unit is the thriftiest (456 k against
+ * 433 k · 400 k · 314 k), which is the engine's own claim about an account whose mercenaries are priced
+ * in gold — the dear end and the thrift end (`PlanRow.bestFor`, `src/engine/plan.ts`).
  */
 const BURN_ROWS: PlanRow[] = [
   {
@@ -520,6 +541,7 @@ const BURN_ROWS: PlanRow[] = [
     pick: 'spare-the-stock',
     silver: 11,
     totalDamage: 101,
+    bestFor: { silver: false, hired: true },
     repeat: { damage: 4_100_000, silver: 2_000_000, gold: 11_400, mercLost: 9 },
   },
   {
@@ -527,6 +549,7 @@ const BURN_ROWS: PlanRow[] = [
     pick: 'sweet-spot',
     silver: 12,
     totalDamage: 102,
+    bestFor: { silver: false, hired: false },
     repeat: { damage: 5_200_000, silver: 2_100_000, gold: 12_100, mercLost: 12 },
   },
   {
@@ -534,6 +557,7 @@ const BURN_ROWS: PlanRow[] = [
     pick: 'step',
     silver: 13,
     totalDamage: 103,
+    bestFor: { silver: false, hired: false },
     repeat: { damage: 6_000_000, silver: 2_200_000, gold: 13_600, mercLost: 15 },
   },
   {
@@ -541,6 +565,7 @@ const BURN_ROWS: PlanRow[] = [
     pick: 'most-damage',
     silver: 14,
     totalDamage: 104,
+    bestFor: { silver: true, hired: false },
     repeat: { damage: 6_900_000, silver: 2_300_000, gold: 33_700, mercLost: 22 },
   },
 ];
@@ -585,6 +610,44 @@ test('the burn axis names its ends after the hired stock, and a step wears its o
   expect(rows[2]?.getAttribute('aria-label') ?? '').toContain('15 hired lost');
 });
 
+test('the two efficiencies are notes on the stops that have them, not stops of their own', () => {
+  stubLayout();
+  primeBurn();
+  renderWithTheme(<PlanFold />);
+
+  // Of the stops the bar carries, exactly one is the best damage a silver and exactly one the best damage a
+  // hired unit (`PlanRow.bestFor`), and each says so in one muted line under its own name — never as a row
+  // of its own. The owner, 2026-09-17: a separate "Best for silver" stop that measured as the "Most damage"
+  // stop to 0.2 % is *"inefficient and causes frustration"*.
+  const rows = tradeRows();
+  expect(rows.filter((row) => (row.textContent ?? '').includes('best a silver'))).toHaveLength(1);
+  expect(rows.filter((row) => (row.textContent ?? '').includes('best a hired'))).toHaveLength(1);
+  // On these figures they are the two ends: the dearest stop does most with a silver, the thriftiest most
+  // with a hired unit. A stop that is neither says nothing at all.
+  expect(rows[3]?.textContent ?? '').toContain('best a silver');
+  expect(rows[0]?.textContent ?? '').toContain('best a hired');
+  expect(rows[1]?.textContent ?? '').not.toContain('best a');
+  // The words are the trade's own column heads said short, so the row cannot claim one thing under its name
+  // and another in the column beside it (design rule 5).
+  expect(bestForWords(BURN_ROWS[3] as PlanRow)).toBe('best a silver');
+  expect(bestForWords(BURN_ROWS[0] as PlanRow)).toBe('best a hired');
+
+  // …and in the row's accessible name, because the note is drawn in the muted ink and a mark that is only
+  // there for the eye is a mark half the readers do not get (design rule 24).
+  expect(rows[3]?.getAttribute('aria-label') ?? '').toContain('best a silver');
+  expect(rows[0]?.getAttribute('aria-label') ?? '').toContain('best a hired');
+
+  // The bar says it too, over the stop it belongs to: the bar and the table are one thing (0020 §D-2).
+  const last = BURN_ROWS.length - 1;
+  fireEvent.pointerMove(bar(), { clientX: TRACK.left + TRACK.width });
+  expect(tip()?.textContent ?? '').toContain('best a silver');
+  // The tip is `aria-hidden`, so the thumb's own value text is where a screen reader meets the same fact.
+  const thumb = screen.getByRole('slider', { name: 'Where on the trade to read the plan' });
+  fireEvent.keyDown(thumb, { key: 'End' });
+  expect(useRunStore.getState().planPick).toBe(last);
+  expect(thumb.getAttribute('aria-valuetext') ?? '').toContain('best a silver');
+});
+
 test('the burn axis tip carries the gold a march the trade has no room for', () => {
   stubLayout();
   primeBurn();
@@ -601,7 +664,12 @@ test('the burn axis tip carries the gold a march the trade has no room for', () 
 });
 
 test('the silver axis draws exactly what it drew: two ends in silver, and no gold in the tip', () => {
+  // The comparison axis (`CAMPAIGN.planBar.axis: 'silver'`), which stays selectable after 2026-09-17 made
+  // the burn axis the app's. The payload is `PLAN` with its axis relabelled rather than a second search:
+  // what the two assertions here are about is the **drawing** — the words under the bar and the tip's
+  // third line — and neither reads the order of the rows.
   stubLayout();
+  useRunStore.setState({ plan: { ...PLAN, barAxis: 'silver' }, planPick: defaultPlanPosition(PLAN) });
   renderWithTheme(<PlanFold />);
 
   expect(screen.getByText('Least silver')).toBeTruthy();

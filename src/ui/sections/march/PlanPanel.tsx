@@ -15,10 +15,12 @@
  *   general why behind the glyph beside it (`docs/investigations/0020-the-plan-screen.md` §D-4: the owner
  *   asked for the explanation on 2026-09-15 and cut it back on 2026-09-16, so it is **moved, not
  *   deleted**);
- * - **the bar** (`PlanBar.tsx`): one stop per answer the engine offers, a **marker on the sweet spot**,
- *   and — once the bar has been moved off it — the one control that puts it back;
- * - **the trade** (`PlanTrade.tsx`): one row per answer, named, with what a march of it hits for, costs in
- *   silver and burns of the hired stock. That is the question the method exists to answer;
+ * - **the bar** (`PlanBar.tsx`): one stop per burn level the engine offers — it runs along the hired units
+ *   a march burns for good since 2026-09-17 (`CAMPAIGN.planBar.axis`) — a **marker on the sweet spot**,
+ *   and, once the bar has been moved off it, the one control that puts it back;
+ * - **the trade** (`PlanTrade.tsx`): one row per stop, named, with what a march of it hits for, costs in
+ *   silver and burns of the hired stock, and a muted note on the two stops that are the bar's best damage
+ *   a silver and its best damage a hired unit. That is the question the method exists to answer;
  * - **one line of totals**, "Fought to the end", because a player who has read the trade still asks what the
  *   whole sequence comes to;
  * - **the reference tail, folded** (the owner, 2026-09-16: the prose goes). What silver buys (the curve),
@@ -88,7 +90,9 @@ function mercsAMarch(point: PlanFigures): string {
  * plans kept" name a silver ordering, and on `barAxis: 'burn'` the list is not sorted by silver at all — it
  * runs along the hired units a march burns, so a stop further right can perfectly well cost *less* silver.
  * On that axis the same three sentences are written in the resource the bar is actually ordered by, in the
- * trade's own words ("hired lost", `./picks`).
+ * trade's own words ("hired lost", `./picks`). Since 2026-09-17 `'burn'` is the app's own axis
+ * (`CAMPAIGN.planBar.axis`), so those are the sentences a player reads; the silver ones are what the
+ * comparison axis still needs.
  */
 function readAt(
   count: number,
@@ -189,6 +193,13 @@ const WHY = [
   'hits harder still and takes no leadership, but a stack loses a tenth of itself every march it is fielded,',
   'so the same stock is worth more spent thinly over many marches than all at once. Which of the two runs out',
   'first is only visible over a whole sequence of marches, and planning the sequence is what this method does.',
+  // One sentence added on 2026-09-17, when the bar became the burn axis: the paragraph said why the two
+  // resources are weighed and never what the control under it is ordered by. The owner's own words that
+  // day — the bar is *"about balancing between burning silver efficiently, which is constrained, and
+  // burning mercs efficiently, which is constrained as well"* — and the two efficiencies are notes on the
+  // stops that have them rather than stops of their own (`PlanRow.bestFor`, `PlanTrade.tsx`).
+  'The bar runs along that stock, fewest hired lost to most, and each plan says whether it is the one that',
+  'does most with a silver or the one that does most with a hired unit.',
 ].join(' ');
 
 /** The plan, open when it arrives and still collapsible: it is part of the answer (design rule 1). */
@@ -298,8 +309,10 @@ export function PlanFold() {
           <VisuallyHidden id={whyId}>{WHY}</VisuallyHidden>
         </Group>
 
-        {/* One control over the whole trade: the frontier *is* the axis — cheapest plan at one end, kindest
-            to the hired stock at the other — so a position on it is the choice. */}
+        {/* One control over the whole trade: the frontier *is* the axis — since 2026-09-17 the hired units
+            a march burns, fewest at one end and most at the other (`CAMPAIGN.planBar.axis: 'burn'`) — so a
+            position on it is the choice. The two words under the bar are named after whichever axis the
+            payload carries (`AXIS_ENDS`, `./picks`), never after silver on a list silver does not order. */}
         {rows.length > 1 && (
           <PlanBar
             rows={rows}

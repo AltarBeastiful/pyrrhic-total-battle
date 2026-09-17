@@ -446,12 +446,18 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   await expect(trade.getByRole('columnheader', { name: 'Silver', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Hired lost' })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();
-  // The head row, then one row per answer — never a table with nothing in it, and every row named: a
-  // name already taken is not handed down, so the bar carries three rows as often as four.
+  // The head row, then one row per stop — never a table with nothing in it, and every row named. Two kinds
+  // of name, because the bar runs along the hired stock since 2026-09-17 (`CAMPAIGN.planBar.axis: 'burn'`):
+  // the answers the engine can put a name to, and the `step` fillers between them, which answer no question
+  // of their own and are named by what they burn ("15 hired lost", `src/ui/sections/march/picks.ts`).
   const rows = await trade.getByRole('row').count();
   expect(rows).toBeGreaterThan(1);
   await expect(
-    trade.getByRole('row', { name: /Sweet spot|Most damage|Best for silver|Spare the stock/ }),
+    // Anchored at the start of the accessible name: on this axis every row's name *ends* with "… N hired
+    // lost a march", so an unanchored alternative would match every row whatever it was called.
+    trade.getByRole('row', {
+      name: /^(Sweet spot|Most damage|Best for silver|Spare the stock|\d+ hired lost)\b/,
+    }),
   ).toHaveCount(rows - 1);
   // **The whole row is the control** (design rule 8), not a button in its first cell: each row is the one
   // focusable thing on its line and says which plan is on screen with `aria-selected`.

@@ -37,7 +37,7 @@ export function pickOf(plan: CampaignPlan, position: number): PlanRow {
   // `alternatives` always carries at least the sweet spot — the engine pushes it first, whatever the
   // band does — so the fallback is defensive: a plan of an older shape still draws as a row rather than
   // throwing on a property it has not got.
-  return rows[at] ?? { ...plan, pick: 'sweet-spot', label: '' };
+  return rows[at] ?? { ...plan, pick: 'sweet-spot', label: '', bestFor: { silver: false, hired: false } };
 }
 
 /** Where a plan's own figures sit on the frontier it was carried with (`null` when the list has no copy). */

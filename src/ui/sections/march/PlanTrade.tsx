@@ -46,7 +46,7 @@ import type { CampaignPlan, PlanRow } from '@/engine/plan';
 import { Glyph } from '@/ui/domain';
 
 import { amount, compact, ratio } from './format';
-import { planWords } from './picks';
+import { bestForWords, planWords } from './picks';
 import classes from './march.module.css';
 
 export interface PlanTradeProps {
@@ -145,6 +145,10 @@ export function PlanTrade({ rows, axis, position, hovered, onSelect }: PlanTrade
         <Table.Tbody>
           {rows.map((point, index) => {
             const current = index === position;
+            // Which of the two efficiencies this stop is the bar's best at, or `null` (`./picks`,
+            // `PlanRow.bestFor`). Read once and written in both places the row says anything: under the
+            // name, and in the accessible name below (design rule 5 — one name per thing).
+            const note = bestForWords(point);
             return (
               <Table.Tr
                 // The burn axis can carry several `step` fillers, so a key of the pick alone collides: one
@@ -169,7 +173,7 @@ export function PlanTrade({ rows, axis, position, hovered, onSelect }: PlanTrade
                         point.repeat.silver,
                       )} silver, ${compact(point.repeat.gold)} gold, ${amount(
                         point.repeat.mercLost,
-                      )} hired lost a march`
+                      )} hired lost a march${note === null ? '' : `, ${note}`}`
                     : undefined
                 }
                 aria-selected={current}
@@ -200,6 +204,24 @@ export function PlanTrade({ rows, axis, position, hovered, onSelect }: PlanTrade
                       the heavier name and `aria-selected` say the first; the row's own name says the
                       second, as does the marker on the bar above. */}
                   {planWords(point)}
+                  {/* **The two efficiencies, said on the stops that have them** (owner, 2026-09-17: the bar
+                      is *"about balancing between burning silver efficiently, which is constrained, and
+                      burning mercs efficiently, which is constrained as well"*, and a stop of its own for
+                      one of them was *"inefficient and causes frustration"* — it measured as the "Most
+                      damage" stop to 0.2 %). So they stopped being rows and became a note on a row: one
+                      muted line under the name, in the same words as the columns it is read off, "Per
+                      silver" and "Per hired" (design rule 5).
+
+                      `size="xs"` is the table's own 13 px and not `--pyr-meta`'s 12: this is information a
+                      player chooses by, and design rule 19 puts a floor under that. The ink is the muted
+                      one the heads and every explaining line in this block already use (`c="dimmed"`), so
+                      no colour is invented for it — and the words are never the only signal, because the
+                      same note is in the row's accessible name above. */}
+                  {note !== null && (
+                    <Text size="xs" c="dimmed" className={classes.planNote ?? undefined}>
+                      {note}
+                    </Text>
+                  )}
                 </Table.Th>
                 <Table.Td ta="end">
                   <Group gap="xs" wrap="nowrap" justify="flex-end">
