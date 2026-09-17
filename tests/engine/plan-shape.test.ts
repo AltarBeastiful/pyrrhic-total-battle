@@ -227,7 +227,9 @@ describe('the search does not get worse', () => {
     const best = (of: (row: (typeof rows)[number]) => number): number => Math.max(...rows.map(of));
     const perSilver = (row: (typeof rows)[number]) =>
       row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : -1;
-    expect(named('most-mercs')?.repeat.damage).toBe(best((row) => row.repeat.damage));
+    expect(named('steady-max')?.repeat.damage).toBe(
+      best((row) => (row.pick === 'all-in' ? 0 : row.repeat.damage)),
+    );
     // The bar's best a silver is said as a note on the stop that has it, never offered as a stop of its own.
     const noted = rows.find((row) => row.bestFor.silver);
     expect(noted).toBeDefined();

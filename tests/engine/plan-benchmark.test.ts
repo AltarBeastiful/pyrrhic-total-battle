@@ -13,8 +13,8 @@
  * What must hold, or the plan is changing numbers rather than improving on the sizers (floors measured on
  * 2026-09-18):
  *
- *  - the most-mercs stop reaches at least 94 % of the best sizer sequence's four-march damage (the sizers
- *    may edge it by burning far more of the stock — measured 1–5 % — but not by more);
+ *  - the plan's hardest-hitting stop (the steady max, or the all-in sequence where it beats it) reaches at
+ *    least 94 % of the best sizer sequence's four-march damage;
  *  - the plan's best stop **a hired unit** beats every sizer sequence on that ratio;
  *  - the plan's best stop **a silver** reaches at least 95 % of the best sizer sequence's.
  *
@@ -153,15 +153,16 @@ function benchmark(
   const planned = planCampaign(input);
   const plan = planned.alternatives.map((stop) => {
     const repeats = stop.marches - (stop.finaleCounts ? 1 : 0);
-    const marches = Array.from({ length: repeats }, () => stop.counts);
-    if (stop.finaleCounts) marches.push(stop.finaleCounts);
+    const marches = stop.sequence ?? Array.from({ length: repeats }, () => stop.counts);
+    if (!stop.sequence && stop.finaleCounts) marches.push(stop.finaleCounts);
     const campaign = campaignOf(input.request, `Complete optimization · ${stop.pick}`, marches);
     // The engine's own campaign figure and the four marches priced one by one must agree.
     expect(Math.abs(campaign.damage - stop.totalDamage)).toBeLessThanOrEqual(1);
     return campaign;
   });
   const sweet = plan.find((c) => c.name.endsWith('sweet-spot'));
-  const most = plan[plan.length - 1];
+  // The plan's hardest-hitting campaign: the steady max or, where it beats it, the all-in sequence.
+  const most = plan.reduce<Campaign | undefined>((b, c) => (!b || c.damage > b.damage ? c : b), undefined);
   if (!sweet || !most) throw new Error('no sweet spot or top');
   return { sizers, plan, sweet, most };
 }
@@ -193,9 +194,10 @@ function expectPlanWins(
   const planPerSilver = Math.max(...plan.map(perSilver));
   const planPerHired = Math.max(...plan.map(perHired));
   const tell = rows.map((c) => `${c.name}: ${n(c.damage)} / ${n(c.silver)} / ${n(c.burned)}`).join('; ');
-  expect(most.damage, `most mercs against the best sizer sequence (${tell})`).toBeGreaterThanOrEqual(
-    DAMAGE_FLOOR * bestSizerDamage,
-  );
+  expect(
+    most.damage,
+    `the plan's hardest campaign against the best sizer sequence (${tell})`,
+  ).toBeGreaterThanOrEqual(DAMAGE_FLOOR * bestSizerDamage);
   expect(planPerHired, `the plan's best a hired against the sizers (${tell})`).toBeGreaterThan(
     bestSizerPerHired,
   );

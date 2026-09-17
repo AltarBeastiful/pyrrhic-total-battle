@@ -15,7 +15,7 @@
  *   general why behind the glyph beside it (`docs/investigations/0020-the-plan-screen.md` §D-4: the owner
  *   asked for the explanation on 2026-09-15 and cut it back on 2026-09-16, so it is **moved, not
  *   deleted**);
- * - **the bar** (`PlanBar.tsx`): four stops at most, running along the hired units a march burns for good
+ * - **the bar** (`PlanBar.tsx`): five stops at most, running along the hired units a march burns for good
  *   (owner, 2026-09-17) — a **marker on the sweet spot**, and, once the bar has been moved off it, the one
  *   control that puts it back;
  * - **the trade** (`PlanTrade.tsx`): one row per stop, named, with what a march of it hits for, costs in
@@ -52,6 +52,7 @@ import { useResultStore } from '@/ui/resultStore';
 import { PlanBar } from './PlanBar';
 import { PlanTrade } from './PlanTrade';
 import { amount, compact, ratio } from './format';
+import { sequenceWords } from './picks';
 
 import { pickOf, sweetSpotOf, useRunStore } from './runStore';
 
@@ -125,6 +126,11 @@ const WHY = [
   'hits harder still and takes no leadership, but a stack loses a tenth of itself every march it is fielded,',
   'so the same stock is worth more spent thinly over many marches than all at once. Which of the two runs out',
   'first is only visible over a whole sequence of marches, and planning the sequence is what this method does.',
+  // The fifth stop, added 2026-09-18, is the one plan that argues with the paragraph above it: it spends the
+  // stock as fast as the troops can shelter it. Saying so is design rule 29 — an objective the page offers is
+  // described honestly, including the case against it.
+  'The far end is the exception: it repeats no march at all, but shelters every mercenary it can on the first',
+  'and marches on whatever the stock has left, which spends that stock fastest.',
   // One sentence added on 2026-09-17, when the bar became the hired stock's: the paragraph said why the two
   // resources are weighed and never what the control under it is ordered by. The owner's own words that
   // day — the bar is *"about balancing between burning silver efficiently, which is constrained, and
@@ -153,6 +159,16 @@ export function PlanFold() {
   const sweet = sweetSpotOf(plan);
   const each = shown.repeat;
   const repeated = shown.marches - (shown.finaleCounts ? 1 : 0);
+  /**
+   * **How the stop on screen is fought**, in the one sentence that stop's own shape allows.
+   *
+   * Every stop but one is a march repeated and a last one to spend the remainder, so the row counts the
+   * repeats and says "+ a last one". The `all-in` stop is a **sequence**: it shelters every mercenary it can
+   * on the first march and then marches on what the stock has left, so no two of its marches are the same
+   * one and counting repeats of the march above would be false (`PlanTotals.sequence`, and `sequenceWords`
+   * in `./picks` where the words live).
+   */
+  const sequence = sequenceWords(shown);
   const best = sweet === null ? null : (rows[sweet] ?? null);
 
   /**
@@ -186,9 +202,10 @@ export function PlanFold() {
     <Disclosure
       title="Plan"
       defaultOpened
-      summary={`${compact(each.damage)} damage a march · ${amount(repeated)} march${
-        repeated === 1 ? '' : 'es'
-      }${shown.finaleCounts ? ' + a last one' : ''}`}
+      summary={`${compact(each.damage)} damage a march · ${
+        sequence ??
+        `${amount(repeated)} march${repeated === 1 ? '' : 'es'}${shown.finaleCounts ? ' + a last one' : ''}`
+      }`}
     >
       <Stack gap="md">
         {/* What the plan did for *this* army, in its own figures, with the general why behind the glyph

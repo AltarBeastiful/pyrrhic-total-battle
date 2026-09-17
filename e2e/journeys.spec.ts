@@ -443,14 +443,14 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   await expect(trade.getByRole('columnheader', { name: 'Hired lost' })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();
   // The head row, then one row per stop — never a table with nothing in it, and every row named. One kind
-  // of name: a row is **which answer it is** and nothing else (`src/ui/sections/march/picks.ts`), four
+  // of name: a row is **which answer it is** and nothing else (`src/ui/sections/march/picks.ts`), five
   // stops at most along the hired stock the bar runs on.
   const rows = await trade.getByRole('row').count();
   expect(rows).toBeGreaterThan(1);
   await expect(
     // Anchored at the start of the accessible name: every row's name *ends* with "… N hired lost a march",
     // so an unanchored alternative would match every row whatever it was called.
-    trade.getByRole('row', { name: /^(Least silver|Sweet spot|More mercs|Most mercs)\b/ }),
+    trade.getByRole('row', { name: /^(Silver saver|Sweet spot|More mercs|Steady max|All in)\b/ }),
   ).toHaveCount(rows - 1);
   // **The whole row is the control** (design rule 8), not a button in its first cell: each row is the one
   // focusable thing on its line and says which plan is on screen with `aria-selected`.

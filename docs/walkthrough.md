@@ -21,18 +21,23 @@ preview`), not the dev server.
 5. **Plan a campaign.** In Battle, choose **Complete optimization** and Generate — there is nothing else to
    fill in: how many marches a plan is fought over and what it may spend are numbers the app holds
    (`src/config.ts`), not fields on the card, and the Objective is locked, as in 4. The March says in words
-   what it planned — how many identical marches and the stacks each one fields, then where the plan sits on
+   what it planned — how many marches and the stacks each one fields, then where the plan sits on
    the trade — and the **Plan** block arrives **open**, rather than a fold to hunt for (it still collapses, and
    the row it collapses to keeps the plan's headline). It stands **under the army**, not above it: the block
    is a control — reading another plan puts another march on screen — so the army you came to change is first.
    The bar runs along the **hired stock** — *Fewest hired lost … Most hired lost*, one plan a burn level,
    thriftiest first. That is the balance the slider is for: burning silver well at one end against burning
-   mercenaries well at the other, with the sweet spot in the middle. There are **four stops at most**, and
-   each is named by which answer it is — **Least silver · Sweet spot · More mercs · Most mercs** — and
-   nothing else. *Least silver* is the cheapest march still worth fielding; *Sweet spot* is the knee, where
-   one more hired unit burned stops buying damage as fast as it did; *More mercs* is the step between the
-   knee and the top, for when the stock allows more; *Most mercs* is the top of the ladder — the most hired
-   units your troops can shelter, and the most damage. The two efficiencies are **notes rather than stops**:
+   mercenaries well at the other, with the sweet spot in the middle. There are **five stops at most**, and
+   each is named by which answer it is — **Silver saver · Sweet spot · More mercs · Steady max · All in** —
+   and nothing else. *Silver saver* is the cheapest march still worth fielding; *Sweet spot* is the knee,
+   where one more hired unit burned stops buying damage as fast as it did; *More mercs* is the step between
+   the knee and the top, for when the stock allows more; *Steady max* is the top of the ladder — the most
+   hired units your troops can shelter **every** march, and the most damage a repeated march does. *All in*
+   is the far end and the odd one out: it repeats no march at all, but shelters every mercenary it can on the
+   first march and then marches on whatever the stock has left, which spends that stock fastest. Read its
+   row and you will see it say so in words — *"4 marches, each on what the last one left"* where every other
+   stop counts repeats — and the figures beside it are that **first** march's, not four identical ones. Judge
+   whether that is clear enough to commit to. The two efficiencies are **notes rather than stops**:
    the plan that does
    most with a silver says *best a silver* under its name, the one that does most with a hired unit says
    *best a hired*. Judge whether those two lines say enough — they replaced a "Best for silver" stop of its

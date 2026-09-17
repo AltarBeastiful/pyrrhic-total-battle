@@ -23,8 +23,8 @@ import { getUnits } from '@/data';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { PlanFold } from './PlanPanel';
-import { BAR_ENDS, bestForWords, planWords } from './picks';
-import { compact, ratio } from './format';
+import { BAR_ENDS, bestForWords, planWords, sequenceWords } from './picks';
+import { amount, compact, ratio } from './format';
 import { defaultPlanPosition, pickOf, sweetSpotOf, useRunStore } from './runStore';
 
 /** A small army with a hired stock: enough for the planner to have a real plan to show. */
@@ -51,7 +51,7 @@ function request(): StackRequest {
 // so neither does this.
 const PLAN = planCampaign({ request: request() });
 
-/** The plans the bar carries, thriftiest first — the stops the engine settled on, four at most. */
+/** The plans the bar carries, thriftiest first — the stops the engine settled on, five at most. */
 const ROWS = PLAN.alternatives;
 
 /** The two words under the bar: one pair, because the bar runs along one resource (`./picks`). */
@@ -505,14 +505,16 @@ test('the why is a popover a thumb can open, not a tooltip only a pointer can ho
  * 365 k · 314 k), which is the engine's own claim about an account whose mercenaries are priced in gold — the
  * dear end and the thrift end (`PlanRow.bestFor`, `src/engine/plan.ts`).
  *
- * **Four rows since 2026-09-18** (`PlanPick`): the owner asked for a "more mercs" step between the knee and
- * the top, so the bar carries the whole of `least-silver → sweet-spot → more-mercs → most-mercs` and the
- * cases below read the last row rather than the third.
+ * **Five rows since 2026-09-18** (`PlanPick`): the owner asked for a "more mercs" step between the knee and
+ * the top and then for a stop that fills every mercenary the troops can shelter, so the bar carries the whole
+ * of `silver-saver → sweet-spot → more-mercs → steady-max → all-in` and the cases below read the last row
+ * rather than the third. The `all-in` row is the one that carries `sequence`: it repeats no march, so the
+ * figures beside it are its **first** march's and the fold and the tip both say so in words.
  */
 const BURN_ROWS: PlanRow[] = [
   {
     ...(ROWS[0] as PlanRow),
-    pick: 'least-silver',
+    pick: 'silver-saver',
     silver: 11,
     totalDamage: 101,
     bestFor: { silver: false, hired: true },
@@ -536,11 +538,24 @@ const BURN_ROWS: PlanRow[] = [
   },
   {
     ...(ROWS[0] as PlanRow),
-    pick: 'most-mercs',
+    pick: 'steady-max',
     silver: 14,
     totalDamage: 104,
     bestFor: { silver: true, hired: false },
     repeat: { damage: 6_900_000, silver: 2_300_000, gold: 33_700, mercLost: 22 },
+  },
+  // The one stop that is a sequence rather than a march repeated: it carries `PlanTotals.sequence`, four
+  // marches that differ, and nothing else about a row changes for it.
+  {
+    ...(ROWS[0] as PlanRow),
+    pick: 'all-in',
+    silver: 15,
+    totalDamage: 105,
+    sequence: [{ a: 4 }, { a: 3 }, { a: 2 }, { a: 1 }],
+    marches: 4,
+    finaleCounts: undefined,
+    bestFor: { silver: false, hired: false },
+    repeat: { damage: 7_400_000, silver: 2_400_000, gold: 48_000, mercLost: 30 },
   },
 ];
 
@@ -562,13 +577,15 @@ test('the bar names its ends after the hired stock, and every row is its own ans
 
   // The two words under the bar are the bar's own resource (design rule 5: one name per thing). "Least
   // silver … Most silver" would name the one resource these stops are **not** ordered by — and a *stop* is
-  // called "Least silver" since 2026-09-18, which is exactly why the ends may not be.
+  // called "Silver saver" since 2026-09-18, which is exactly why the ends may not be.
   expect(screen.getByText('Fewest hired lost')).toBeTruthy();
   expect(screen.getByText('Most hired lost')).toBeTruthy();
   expect(screen.queryByText('Most silver')).toBeNull();
-  expect(screen.getByText('Least silver').closest('tr')).toBe(tradeRows()[0]);
+  expect(screen.getByText('Silver saver').closest('tr')).toBe(tradeRows()[0]);
+  // The dear end of the bar is a stop called "All in" and the axis is still named after the hired stock.
+  expect(screen.getByText('All in').closest('tr')).toBe(tradeRows()[BURN_ROWS.length - 1]);
 
-  // Four stops at most, and a row is named by **which answer it is** and by nothing else: the `step`
+  // Five stops at most, and a row is named by **which answer it is** and by nothing else: the `step`
   // filler that wore its own burn ("15 hired lost") went with the silver axis on 2026-09-18.
   const rows = tradeRows();
   expect(rows).toHaveLength(BURN_ROWS.length);
@@ -605,6 +622,7 @@ test('the two efficiencies are notes on the stops that have them, not stops of t
   expect(rows[0]?.textContent ?? '').toContain('best a hired');
   expect(rows[1]?.textContent ?? '').not.toContain('best a');
   expect(rows[2]?.textContent ?? '').not.toContain('best a');
+  expect(rows[4]?.textContent ?? '').not.toContain('best a');
   // The words are the trade's own column heads said short, so the row cannot claim one thing under its name
   // and another in the column beside it (design rule 5).
   expect(bestForWords(BURN_ROWS[3] as PlanRow)).toBe('best a silver');
@@ -616,13 +634,19 @@ test('the two efficiencies are notes on the stops that have them, not stops of t
   expect(rows[0]?.getAttribute('aria-label') ?? '').toContain('best a hired');
 
   // The bar says it too, over the stop it belongs to: the bar and the table are one thing (0020 §D-2).
-  const last = BURN_ROWS.length - 1;
-  fireEvent.pointerMove(bar(), { clientX: TRACK.left + TRACK.width });
+  // The best a silver is the **fourth** stop and no longer the bar's far end — "All in" stands past it
+  // since 2026-09-18 — so the pointer is put on that stop rather than at the end of the track.
+  const dearest = BURN_ROWS.length - 2;
+  fireEvent.pointerMove(bar(), {
+    clientX: TRACK.left + (TRACK.width * dearest) / (BURN_ROWS.length - 1),
+  });
   expect(tip()?.textContent ?? '').toContain('best a silver');
   // The tip is `aria-hidden`, so the thumb's own value text is where a screen reader meets the same fact.
   const thumb = screen.getByRole('slider', { name: 'Where on the trade to read the plan' });
   fireEvent.keyDown(thumb, { key: 'End' });
-  expect(useRunStore.getState().planPick).toBe(last);
+  expect(useRunStore.getState().planPick).toBe(BURN_ROWS.length - 1);
+  fireEvent.keyDown(thumb, { key: 'ArrowLeft' });
+  expect(useRunStore.getState().planPick).toBe(dearest);
   expect(thumb.getAttribute('aria-valuetext') ?? '').toContain('best a silver');
 });
 
@@ -637,6 +661,38 @@ test('the tip carries the gold a march the trade has no room for', () => {
   expect(shown).not.toBeNull();
   // The stop's own name, its damage, and the gold — the third line the trade has no column for.
   expect(shown?.textContent ?? '').toContain(planWords(BURN_ROWS[last] as PlanRow));
-  expect(shown?.textContent ?? '').toContain(`${compact(6_900_000)} damage a march`);
-  expect(shown?.textContent ?? '').toContain(`${compact(33_700)} gold a march`);
+  expect(shown?.textContent ?? '').toContain(`${compact(7_400_000)} damage a march`);
+  expect(shown?.textContent ?? '').toContain(`${compact(48_000)} gold a march`);
+});
+
+test('the all-in stop says it is a sequence, on the bar and on the row the fold collapses to', () => {
+  stubLayout();
+  const last = BURN_ROWS.length - 1;
+  primeBurn(last);
+  renderWithTheme(<PlanFold />);
+
+  // The one stop that repeats no march: it shelters every mercenary it can on the first march and then
+  // marches on what the stock has left (`PlanTotals.sequence`). The figures beside it are the **first**
+  // march's, so the row that says how the plan is fought may not count repeats of it.
+  const words = sequenceWords(BURN_ROWS[last] as PlanRow);
+  expect(words).toBe('4 marches, each on what the last one left');
+  const fold = screen.getByRole('button', { name: /^Plan/ });
+  expect(fold.textContent).toContain(words);
+  expect(fold.textContent).not.toContain('+ a last one');
+
+  // On the bar, in the same words (design rule 5), and in the thumb's value text because the tip is
+  // `aria-hidden` decoration (design rule 24).
+  fireEvent.pointerMove(bar(), { clientX: TRACK.left + TRACK.width });
+  expect(tip()?.textContent ?? '').toContain(words);
+  const thumb = screen.getByRole('slider', { name: 'Where on the trade to read the plan' });
+  fireEvent.keyDown(thumb, { key: 'End' });
+  expect(thumb.getAttribute('aria-valuetext') ?? '').toContain(words);
+
+  // Every other stop is still a march repeated, and says nothing about a sequence.
+  expect(sequenceWords(BURN_ROWS[0] as PlanRow)).toBeNull();
+
+  // "Fought to the end" is unmoved: it is the campaign's own totals, not the stop's.
+  expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
+    `${amount(BURN.totalDamage)} damage`,
+  );
 });

@@ -167,6 +167,13 @@ export interface PlanTotals {
   /** Counts of the final march, when the plan has one. */
   finaleCounts?: Record<string, number> | undefined;
   /**
+   * Every march of the campaign, first to last, when they **differ** — the `all-in` stop, which fields every
+   * mercenary the troops can shelter and then marches on what is left. Absent for a plan that repeats one
+   * march and plays a finale; then `counts` × the repeats plus `finaleCounts` is the campaign. `repeat` is the
+   * first march's figures either way, and the totals are the whole sequence's.
+   */
+  sequence?: Record<string, number>[] | undefined;
+  /**
    * What **one** of the plan's identical marches is, on its own, without the final march spread over it —
    * the same march the March section draws, priced by the plan's own arithmetic. `totalDamage` and `silver`
    * above include the finale, which is why a row showing `totalDamage / marches` disagrees with the March
@@ -224,15 +231,22 @@ export interface PlanCurvePoint {
  * payload any more.
  */
 /**
- * The four stops of the bar (owner, 2026-09-18: *"in my mind we would have on the slider: least silver, sweet
- * spot, more mercs, most mercs — whilst still trying to aim for an ok sil/dmg and merc/dmg on each"*), along the
- * hired units burned a march. Each is a definition over the ladder's rungs (`tools/theorycraft/out/99`):
- * `least-silver` the rung nothing beats on both ratios that costs the least silver (the fewest burned on a
- * tie), `sweet-spot` the knee of damage against burn over those rungs, `more-mercs` the rung nearest the
- * middle of the gap between the sweet spot and the top, `most-mercs` the top of the ladder — the most the
- * troops can shelter, and the most damage by the ladder's own construction.
+ * The five stops of the bar (owner, 2026-09-18: *"least silver, sweet spot, more mercs, most mercs"*, then
+ * *"a last stop: all mercs possible … fill all the mercs you can safely"* and *"a cost-saving silver march using
+ * some mercs but just enough troops to shield them"*), along the hired units burned a march. Each is a
+ * definition over the plans the band keeps (`tools/theorycraft/out/99`):
+ *
+ *  - `silver-saver` — the cheapest march left of the sweet spot that costs no more silver and is at least as
+ *    efficient a silver: on every account measured it is the tight ladder, every troop rung just above the
+ *    mercenaries, some of the stock riding with it;
+ *  - `sweet-spot` — the knee of damage against burn over the rungs nothing beats on both ratios;
+ *  - `more-mercs` — the rung nearest the middle of the gap between the sweet spot and the steady max;
+ *  - `steady-max` — the top of the ladder: the most mercenaries the troops shelter **every march of the
+ *    horizon**, and the most damage a repeated march does;
+ *  - `all-in` — every mercenary the troops can shelter on the first march, then each next march on what the
+ *    stock has left (`PlanTotals.sequence`): the campaign that spends the stock fastest.
  */
-export type PlanPick = 'least-silver' | 'sweet-spot' | 'more-mercs' | 'most-mercs';
+export type PlanPick = 'silver-saver' | 'sweet-spot' | 'more-mercs' | 'steady-max' | 'all-in';
 
 /**
  * A plan the bar offers: one of the four answers above, priced.
@@ -1726,6 +1740,111 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * must not offer the same march twice. Sorted cheapest first, because the bar is read left to right as
    * "spend less … spend more".
    */
+  /**
+   * **All in**: every mercenary the troops can shelter on the first march, then each next march on what the
+   * stock has left, for the horizon. Each march is the strongest shape — ladders, the sizer's methods, the
+   * winner's rungs — that fields the most of the remaining stock with every hired stack under the lowest troop
+   * stack (the enemy wipes the highest-HP stack first, so a hired stack above a troop stack dies before it);
+   * the stock is tried whole, then at 95 %, 90 %… until a shape shelters it. The campaign that spends the stock
+   * fastest — the descending sequence the benchmark (`tests/engine/plan-benchmark.test.ts`) found the sizers
+   * playing and the plan unable to express.
+   */
+  const allIn = ((): (PlanTotals & { label: string }) | undefined => {
+    if (planned === undefined || planned < 1) return undefined;
+    const remaining: Record<string, number> = { ...stock };
+    const played: Candidate[] = [];
+    const hiredOfVector = (mercs: { entry: Effective; count: number }[]): number =>
+      mercs.reduce((sum, merc) => sum + merc.count, 0);
+    for (let i = 0; i < planned; i += 1) {
+      const single = makeScorer({
+        troops,
+        mercTypes,
+        stock: remaining,
+        leadership,
+        enemyStacks,
+        gap,
+        finale: false,
+        ...(sizerShape ? { sizer } : {}),
+        winnerRungs: () => winnerRungs,
+      });
+      let found: Candidate | null = null;
+      for (let share = 1; share > 0.04 && !found; share -= 0.05) {
+        const counts: Record<string, number> = {};
+        let any = false;
+        for (const entry of mercTypes) {
+          const count = Math.floor((remaining[entry.id] ?? 0) * share);
+          counts[entry.id] = count;
+          if (count > 0) any = true;
+        }
+        if (!any) break;
+        const depths = [
+          ...(sizerShape ? Object.keys(SIZER_DEPTHS).map(Number) : []),
+          ...(winnerRungs.length > 0 ? [WINNER_RUNGS_DEPTH] : []),
+          ...DEPTHS,
+        ];
+        for (const depth of depths) {
+          for (const scale of depth <= 0 ? [1] : LADDER_GROWTHS) {
+            const scored = single(1, counts, depth, scale);
+            if (!scored || scored.rungs.length === 0) continue;
+            const fielded = scored.mercs.filter((merc) => merc.count > 0);
+            if (fielded.length === 0) continue;
+            const troopFloor = Math.min(...scored.rungs.map((rung) => rung.count * rung.entry.hp));
+            const hiredTop = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
+            if (troopFloor <= hiredTop) continue;
+            const candidate: Candidate = {
+              marches: 1,
+              mercs: scored.mercs,
+              rungs: scored.rungs,
+              march: scored.march,
+              finale: null,
+              finaleRungs: [],
+              finaleMercs: [],
+              total: scored.total,
+              depth,
+              scale,
+            };
+            // The most of the stock first, the most damage with it second.
+            if (
+              !found ||
+              hiredOfVector(candidate.mercs) > hiredOfVector(found.mercs) ||
+              (hiredOfVector(candidate.mercs) === hiredOfVector(found.mercs) && candidate.total > found.total)
+            ) {
+              found = candidate;
+            }
+          }
+        }
+      }
+      if (!found) break;
+      played.push(found);
+      for (const merc of found.mercs) {
+        remaining[merc.entry.id] = Math.max(0, (remaining[merc.entry.id] ?? 0) - chunks(merc.count));
+      }
+    }
+    const first = played[0];
+    if (!first) return undefined;
+    const marches = played.map((candidate) => toMarch(candidate.rungs, candidate.mercs, candidate.march));
+    const head = marches[0] as PlanMarch;
+    const totalDamage = marches.reduce((sum, march) => sum + march.damage, 0);
+    const silver = marches.reduce((sum, march) => sum + march.silver, 0);
+    const gold = marches.reduce((sum, march) => sum + march.gold, 0);
+    const mercLost = marches.reduce((sum, march) => sum + march.mercLost, 0);
+    const hired = Object.values(head.mercFielded).reduce((sum, count) => sum + count, 0);
+    return {
+      label: `${first.rungs.length} ${first.rungs.length === 1 ? 'stack' : 'stacks'} · ${hired} hired · ${compact(head.silver)} silver a march`,
+      counts: head.counts,
+      sequence: marches.map((march) => march.counts),
+      totalDamage,
+      silver,
+      gold,
+      mercLost,
+      repeat: { damage: head.damage, silver: head.silver, gold: head.gold, mercLost: head.mercLost },
+      shape: first.depth === WINNER_RUNGS_DEPTH ? 'winner' : (SIZER_DEPTHS[first.depth] ?? 'ladder'),
+      marches: marches.length,
+      damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
+      damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+    };
+  })();
+
   const sameCounts = (a: PlanTotals, b: PlanTotals): boolean =>
     JSON.stringify(a.counts) === JSON.stringify(b.counts);
   const stops: PlanRow[] = [];
@@ -1797,9 +1916,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     return pick;
   })();
   offer(sweetSpotBase, 'sweet-spot');
-  offer(top, 'most-mercs');
-  offer(leastSilver, 'least-silver');
+  offer(top, 'steady-max');
+  offer(leastSilver, 'silver-saver');
   offer(moreMercs, 'more-mercs');
+  // Offered only when it burns more than the steady max a march: on an account whose whole stock the troops
+  // already shelter every march, "all in" is the steady max and would be a second row of it.
+  if (allIn && top && allIn.repeat.mercLost > top.repeat.mercLost) offer(allIn, 'all-in');
   stops.sort(
     (a, b) =>
       a.repeat.mercLost - b.repeat.mercLost ||

@@ -198,7 +198,7 @@ describe(
       const burn = planCampaign({ request: req, withTrade: true });
       const rows = burn.alternatives;
       expect(rows.length).toBeGreaterThan(0);
-      expect(rows.length).toBeLessThanOrEqual(4);
+      expect(rows.length).toBeLessThanOrEqual(5);
 
       // Sorted by burn, no two stops burn the same, and damage climbs with the burn: a stop never asks for more
       // of the stock than the one to its left for less damage.
@@ -207,13 +207,16 @@ describe(
         const current = rows[index];
         if (!previous || !current) continue;
         expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
-        expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+        // The all-in stop fields every mercenary the troops can shelter, which can cost troops: it burns the
+        // most and need not hit the hardest a march.
+        if (current.pick !== 'all-in') expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
       }
       // Each rung stop is the best march at its burn level among the plans the bar may carry; the least-silver
       // stop is a different thing — the cheapest efficient march left of the sweet spot — and must cost less.
       const trade = burn.trade ?? [];
       for (const row of rows) {
-        if (row.pick === 'least-silver') {
+        if (row.pick === 'all-in') continue;
+        if (row.pick === 'silver-saver') {
           const sweetRow = rows.find((other) => other.pick === 'sweet-spot');
           expect(row.repeat.silver).toBeLessThanOrEqual(sweetRow?.repeat.silver ?? Infinity);
           continue;
@@ -223,15 +226,16 @@ describe(
       }
       // The top is the most damage of everything the bar could carry; the sweet spot is on the bar and is the
       // recommendation.
-      expect(rows[rows.length - 1]?.pick).toBe('most-mercs');
-      expect(rows[rows.length - 1]?.repeat.damage).toBe(
+      const rungStops = rows.filter((row) => row.pick !== 'all-in');
+      expect(rungStops[rungStops.length - 1]?.pick).toBe('steady-max');
+      expect(rungStops[rungStops.length - 1]?.repeat.damage).toBe(
         Math.max(...trade.map((other) => other.repeat.damage)),
       );
       const sweet = rows.find((row) => row.pick === 'sweet-spot');
       expect(sweet).toBeDefined();
       expect(burn.recommend?.counts).toEqual(sweet?.counts);
       for (const row of rows) {
-        expect(['least-silver', 'sweet-spot', 'more-mercs', 'most-mercs']).toContain(row.pick);
+        expect(['silver-saver', 'sweet-spot', 'more-mercs', 'steady-max', 'all-in']).toContain(row.pick);
       }
       // The sweet spot is a plan no rung of the ladder beats on both efficiencies at once (owner, 2026-09-17:
       // his sweet spot at 15 burned lost to the 12 stop on damage a silver *and* a hired).
@@ -287,8 +291,8 @@ describe(
         // Whatever shape won, its counts are fieldable and its damage is the battle's own.
         expect(used(req, both.march.counts, 'leadership')).toBeLessThanOrEqual(req.housing.leadership);
         expect(both.march.damage).toBe(planMarch(req, both.march.counts).summary.avgDamage);
-        // Four stops, never more (owner, 2026-09-18: least silver · sweet spot · more mercs · most mercs).
-        expect(both.alternatives.length).toBeLessThanOrEqual(4);
+        // Five stops, never more (owner, 2026-09-18: silver saver · sweet spot · more mercs · steady max · all in).
+        expect(both.alternatives.length).toBeLessThanOrEqual(5);
       },
       TIMEOUT,
     );

@@ -4,7 +4,7 @@
  * The engine states **which** answer a row is (`PlanRow.pick`, `src/engine/plan.ts`); naming it is the
  * UI's, and it is named once. The bar's tip, the trade's rows, their accessible names and the tests that
  * hold them all read `planWords` below, so a row cannot be called two things on one screen — which is what
- * the owner was looking at when he asked for "better names": four stops each wearing a *shape sentence*
+ * the owner was looking at when he asked for "better names": five stops each wearing a *shape sentence*
  * (`3 stacks · 205 hired · 2.3M silver a march`), two of them one row apart and reading as a typo.
  *
  * `PlanRow.label` still carries that sentence and **is no longer drawn anywhere**. It is kept in the
@@ -14,15 +14,22 @@
 import type { PlanPick, PlanRow } from '@/engine/plan';
 
 /**
- * The four answers the bar carries (`PlanPick`), each with the one name it wears — in the owner's own words
+ * The five answers the bar carries (`PlanPick`), each with the one name it wears — in the owner's own words
  * of 2026-09-18, and in the bar's own order, thriftiest first. Private: `planWords` below is the single
  * place a row is named, so nothing can index this map a second way.
+ *
+ * **"Silver saver" and not "Least silver"**, **"Steady max" and not "Most mercs"** (owner, 2026-09-18, with
+ * the fifth stop): the thrifty end is a march that spends *less* silver rather than the least of anything —
+ * the superlative was read as the cheapest march the app could think of — and the top of the ladder is now
+ * the most mercenaries the troops shelter **every** march, which `all-in` beats on the first march alone. Two
+ * stops that both claimed "most" would read as the same answer twice.
  */
 const PICK_WORD: Record<PlanPick, string> = {
-  'least-silver': 'Least silver',
+  'silver-saver': 'Silver saver',
   'sweet-spot': 'Sweet spot',
   'more-mercs': 'More mercs',
-  'most-mercs': 'Most mercs',
+  'steady-max': 'Steady max',
+  'all-in': 'All in',
 };
 
 /**
@@ -67,12 +74,32 @@ export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
  *
  * They are the axis's own name and not decoration: the stops run along the hired units a march burns for
  * good (thriftiest first), and calling those ends "Least silver … Most silver" would name the one resource
- * the bar is *not* ordered by — a *stop* may be called "Least silver" (it is the thriftiest efficient rung),
- * but an axis named after it would claim the whole bar is sorted by silver, which it is not. The words match
- * the trade's "Hired lost" head for the same reason (rule 5).
+ * the bar is *not* ordered by — a *stop* may be called "Silver saver" (it is the thriftiest efficient rung)
+ * and the dear end "All in", but an axis named after either would claim the whole bar is sorted by silver,
+ * or that its far end is the only plan spending the stock. The words match the trade's "Hired lost" head for
+ * the same reason (rule 5).
  *
  * **One pair, because there is one bar** (review of 2026-09-18). It was a record keyed by an axis the
  * payload carried; the silver ordering it was the other half of was retired with `CampaignPlan.barAxis`,
  * and a map of one entry is a choice nobody makes.
  */
 export const BAR_ENDS = { low: 'Fewest hired lost', high: 'Most hired lost' } as const;
+
+/**
+ * **The one stop that is a sequence, said in one line** — or `null` for every other stop.
+ *
+ * Every other plan on the bar is one march repeated and a last one to spend what is left, so "a march" names
+ * the whole campaign and the figures beside it are that march's. `all-in` is not: it fields every mercenary
+ * the troops can shelter on the first march and then marches on whatever the stock has left, so its marches
+ * **differ** and the engine hands them over whole (`PlanTotals.sequence`, `src/engine/plan.ts`). A row that
+ * said "4 marches" and nothing else would be read as four of the march drawn above it, which is the one thing
+ * this plan is not.
+ *
+ * One sentence, in one place (design rule 5): the fold's own summary line and the bar's tip both read it, so
+ * the stop cannot describe itself one way over the bar and another over the March.
+ */
+export function sequenceWords(row: Pick<PlanRow, 'sequence'>): string | null {
+  const marches = row.sequence?.length ?? 0;
+  if (marches < 1) return null;
+  return `${String(marches)} march${marches === 1 ? '' : 'es'}, each on what the last one left`;
+}

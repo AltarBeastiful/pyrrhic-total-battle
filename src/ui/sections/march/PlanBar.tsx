@@ -30,7 +30,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { PlanRow } from '@/engine/plan';
 
 import { compact } from './format';
-import { BAR_ENDS, bestForWords, planWords } from './picks';
+import { BAR_ENDS, bestForWords, planWords, sequenceWords } from './picks';
 import classes from './march.module.css';
 
 /** Everything the mapping needs, in the two coordinate spaces it uses — and they are not the same one. */
@@ -58,7 +58,7 @@ function sameFrame(one: Frame, other: Frame): boolean {
 export interface PlanBarProps {
   /**
    * Every plan the bar offers, thriftiest first — the engine's order, which is the bar's own axis: the
-   * hired units a march burns for good. Four stops at most.
+   * hired units a march burns for good. Five stops at most.
    */
   rows: PlanRow[];
   /** Which of them the March is showing. */
@@ -106,12 +106,18 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
    */
   const [tipAt, setTipAt] = useState(0);
   const [up, setUp] = useState(false);
-  // A fresh search can carry fewer plans than the bar the pointer last left (four at most, and two stops
+  // A fresh search can carry fewer plans than the bar the pointer last left (five at most, and two stops
   // that are one plan collapse to one), so the remembered stop is clamped: a tip pointing off the end of the
   // track is worse than a stale one.
   const row = rows[Math.min(tipAt, Math.max(0, rows.length - 1))];
   /** Which of the two efficiencies the tip's stop is the bar's best at, or `null` (`./picks`). */
   const efficiency = row === undefined ? null : bestForWords(row);
+  /**
+   * The one line the `all-in` stop needs and no other stop has: it is a **sequence**, not a march repeated
+   * (`./picks`, `PlanTotals.sequence`). `null` everywhere else, so the tip keeps its height on every other
+   * stop.
+   */
+  const sequence = row === undefined ? null : sequenceWords(row);
 
   /**
    * The track's box. Read live by the handler rather than kept, so a bar that moved under the pointer — the
@@ -234,9 +240,10 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           // is said to a pointer only (design rule 24). The efficiency is the line the owner asked for on
           // 2026-09-17 and it rides along in the same words as the note on the row below (`./picks`).
           const best = bestForWords(shown);
+          const run = sequenceWords(shown);
           return `${planWords(shown)}, ${compact(shown.repeat.damage)} damage a march${
             best === null ? '' : `, ${best}`
-          }`;
+          }${run === null ? '' : `, ${run}`}`;
         }}
         // Clicking the bar focuses its root (Mantine's own `onMouseDownCapture`), so this is the keyboard's
         // way in as well as the mouse's — and it is the value's own stop, because a focus has no pointer.
@@ -322,6 +329,16 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           <Text size="xs" opacity={0.75}>
             {`${compact(row.repeat.gold)} gold a march`}
           </Text>
+          {/* **The stop that is a sequence says so** (S-74). Every other stop on the bar is the march above
+              repeated, so "6.9M damage a march" names the whole campaign; `all-in` shelters every mercenary
+              it can on the first march and then marches on what the stock has left, so the three figures
+              above it are the **first** march's and counting them four times would be false. One line, in the
+              words the fold's own summary uses (`sequenceWords`, `./picks`). */}
+          {sequence !== null && (
+            <Text size="xs" opacity={0.75}>
+              {sequence}
+            </Text>
+          )}
         </Box>
       )}
 

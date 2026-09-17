@@ -53,14 +53,14 @@ const under = (measured: number): number => measured * 0.999;
 const over = (measured: number): number => measured * 1.001;
 
 interface Floors {
-  /** The least-silver end: damage a hired unit is the bar's best there, and at least this. */
+  /** The silver saver: damage a hired unit at least this, when the stop is offered. */
   leastPerHired: number;
   /** The sweet spot's two ratios and its campaign. */
   sweetPerSilver: number;
   sweetPerHired: number;
   sweetCampaignDamage: number;
   sweetCampaignSilverCeiling: number;
-  /** The most-mercs end: damage a march and a silver, and the plan's campaign. */
+  /** The steady max: damage a march and a silver, and the plan's campaign. */
   mostDamage: number;
   mostPerSilver: number;
   campaignDamage: number;
@@ -70,22 +70,28 @@ interface Floors {
 function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   const rows = plan.alternatives;
   expect(rows.length).toBeGreaterThanOrEqual(3);
-  expect(rows.length).toBeLessThanOrEqual(4);
+  expect(rows.length).toBeLessThanOrEqual(5);
   const named = (pick: PlanRow['pick']): PlanRow | undefined => rows.find((row) => row.pick === pick);
-  const least = named('least-silver');
+  const least = named('silver-saver');
   const sweet = named('sweet-spot') as PlanRow;
-  const most = named('most-mercs') as PlanRow;
+  const most = named('steady-max') as PlanRow;
+  const allIn = named('all-in');
   expect(sweet).toBeDefined();
   expect(most).toBeDefined();
-  expect(rows[rows.length - 1]).toBe(most);
+  expect(rows[rows.length - 1]).toBe(allIn ?? most);
   expect(plan.recommend?.counts).toEqual(sweet.counts);
 
-  // Along the bar, burning more must buy more.
+  // Along the bar, burning more must buy more — up to the steady max. The all-in stop fields every
+  // mercenary the troops can shelter, which can cost troops: it burns the most and need not hit the hardest.
   for (let index = 1; index < rows.length; index += 1) {
     const previous = rows[index - 1] as PlanRow;
     const current = rows[index] as PlanRow;
     expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
-    expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+    if (current.pick !== 'all-in') expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+  }
+  if (allIn) {
+    expect(allIn.sequence?.length).toBe(allIn.marches);
+    expect(allIn.repeat.mercLost).toBeGreaterThanOrEqual(most.repeat.mercLost);
   }
 
   // The two efficiency notes sit on exactly one stop each, and on the stop that has the figure.
@@ -96,11 +102,11 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   expect(perSilver(silverNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perSilver)));
   expect(perHired(hiredNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perHired)));
 
-  // The sweet spot is not beaten on both ratios by the rungs to its right; the least-silver stop is allowed
+  // The sweet spot is not beaten on both ratios by the rungs to its right; the silver saver is allowed
   // to — it is the saving stop, cheaper and at least as efficient a silver by definition, and it pays for
-  // that in damage (owner's design of 2026-09-18: least silver · sweet spot · more mercs · most mercs).
+  // that in damage (owner's design of 2026-09-18: silver saver · sweet spot · more mercs · steady max · all in).
   for (const other of rows) {
-    if (other === sweet || other === least) continue;
+    if (other === sweet || other === least || other === allIn) continue;
     const beats = perSilver(other) >= perSilver(sweet) && perHired(other) >= perHired(sweet);
     expect(beats).toBe(false);
   }

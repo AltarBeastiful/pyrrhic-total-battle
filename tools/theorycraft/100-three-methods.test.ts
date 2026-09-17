@@ -117,8 +117,8 @@ describe.skipIf(!process.env.THEORY)('the three methods', () => {
       const plan = planCampaign(buildPlanRequest(profile, setup));
       for (const stop of plan.alternatives) {
         const repeats = stop.marches - (stop.finaleCounts ? 1 : 0);
-        const marches = Array.from({ length: repeats }, () => stop.counts);
-        if (stop.finaleCounts) marches.push(stop.finaleCounts);
+        const marches = stop.sequence ?? Array.from({ length: repeats }, () => stop.counts);
+        if (!stop.sequence && stop.finaleCounts) marches.push(stop.finaleCounts);
         rows.push({
           name: `Complete optimization · ${stop.pick} (${stop.shape})`,
           marches,
