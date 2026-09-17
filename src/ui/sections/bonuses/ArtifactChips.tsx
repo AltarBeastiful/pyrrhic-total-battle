@@ -14,6 +14,7 @@ import type { BonusKey } from '@/data/types';
 import { updateSources } from '@/state/actions/bonuses';
 import type { ProfileSources } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
+import { BONUS_KEY_GLYPHS, Glyph } from '@/ui/domain';
 import { Disclosure, NumberField, useRovingTabs } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
@@ -47,6 +48,7 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
     <NumberField
       key={`${bucket}-${key}`}
       label={`${BONUS_LABELS[key]} ${bucket}`}
+      leftSection={<Glyph kind={BONUS_KEY_GLYPHS[key]} />}
       allowEmpty
       allowDecimal
       value={entry.manual?.[bucket]?.[key] ?? null}

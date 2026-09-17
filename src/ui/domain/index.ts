@@ -6,7 +6,7 @@ export type { DeltaTextProps } from './DeltaText';
 export { count } from './format';
 export { Glyph } from './Glyph';
 export type { GlyphProps } from './Glyph';
-export { GLYPHS } from './glyphs';
+export { BONUS_KEY_GLYPHS, GLYPHS, isBonusKey } from './glyphs';
 export type { GlyphKind } from './glyphs';
 export { GroupMarker } from './GroupMarker';
 export type { GroupMarkerProps } from './GroupMarker';

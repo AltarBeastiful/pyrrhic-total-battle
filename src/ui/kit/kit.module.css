@@ -20,12 +20,15 @@
   border: none;
 }
 
-/* …but it does need somewhere to sit. An 18 px gear inset 2 px covers the last 16 px of the chip
-   under it, which on a short name is the name itself — the owner photographed the gear sitting on
-   the word "Hero" on 2026-09-13. The chip a gear rides gives that strip back as padding, so the
-   label always ends before the mark starts. */
+/* …but it does need somewhere to sit. An 18 px gear centred on the corner reaches 9 px into the
+   chip under it, which on a short name is the name itself — the owner photographed the gear sitting
+   on the word "Hero" on 2026-09-13. The chip a gear rides gives that strip back as padding, so the
+   label always ends before the mark starts: 14 px, the 9 the gear covers and 5 of air, against the
+   9 px the other side keeps. It was 20 px over a gear inset 2 px, and thirty-one captains at 6 px
+   too wide each read as "a bit too wide, maybe because of the config badge" (owner, 2026-09-17);
+   the gear is a circle, so at the height of the letters it is further away than its box. */
 .cornerGear :global(.mantine-Chip-label) {
-  padding-inline-end: 1.25rem;
+  padding-inline-end: 0.875rem;
 }
 
 /* The app bar is NOT sticky (owner, 2026-09-13: a permanent 64 px of brand and avatar on a phone is

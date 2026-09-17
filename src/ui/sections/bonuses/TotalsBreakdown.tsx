@@ -11,6 +11,7 @@ import { aggregateBonuses } from '@/engine/bonuses';
 import { describeTotals, resolveSources } from '@/state/derive';
 import type { TotalRow } from '@/state/derive';
 import type { BattleSetup, Profile } from '@/state/schema';
+import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain';
 
 import { AGAINST_LABELS, BONUS_LABELS, formatPercent, sourceLabel } from './labels';
 
@@ -19,13 +20,31 @@ const carries = (row: TotalRow): boolean => row.value !== 0 || row.contributors.
 
 const NUMS = { fontVariantNumeric: 'tabular-nums' } as const;
 
-function Line({ label, value, dim = false }: { label: string; value: string; dim?: boolean }) {
+/**
+ * One key and its figure. A key's row opens with the key's glyph, the same mark its field wears in
+ * every editor (`BONUS_KEY_GLYPHS`), so the audit reads down its left edge the way the forms do; a
+ * contributor's row under it, and a special key's, carry none.
+ */
+function Line({
+  label,
+  value,
+  glyph,
+  dim = false,
+}: {
+  label: string;
+  value: string;
+  glyph?: GlyphKind;
+  dim?: boolean;
+}) {
   const tone = dim ? { size: 'xs' as const, c: 'dimmed', fw: 400 } : { size: 'sm' as const, fw: 500 };
   return (
     <Group justify="space-between" gap="xs" wrap="nowrap" align="baseline">
-      <Text size={tone.size} {...(dim ? { c: 'dimmed' } : {})} truncate>
-        {label}
-      </Text>
+      <Group gap={6} wrap="nowrap" miw={0}>
+        {glyph !== undefined && <Glyph kind={glyph} />}
+        <Text size={tone.size} {...(dim ? { c: 'dimmed' } : {})} truncate>
+          {label}
+        </Text>
+      </Group>
       <Text size={tone.size} {...(dim ? { c: 'dimmed' } : {})} fw={tone.fw} style={NUMS}>
         {value}
       </Text>
@@ -45,7 +64,11 @@ function Rows({ rows, empty }: { rows: TotalRow[]; empty: string }) {
     <Stack gap="xs">
       {used.map((row) => (
         <Stack key={row.key} gap={0}>
-          <Line label={row.label} value={formatPercent(row.value)} />
+          <Line
+            label={row.label}
+            value={formatPercent(row.value)}
+            {...(isBonusKey(row.key) ? { glyph: BONUS_KEY_GLYPHS[row.key] } : {})}
+          />
           {row.contributors.map((contributor, index) => (
             <Line
               key={`${contributor.sourceId}-${String(index)}`}
@@ -89,6 +112,7 @@ export function TotalsBreakdown({ profile, setup }: { profile: Profile; setup: B
           <Line
             key={`${entry.attacker}-${entry.target}-${String(index)}`}
             label={`${BONUS_LABELS[entry.attacker]} against ${AGAINST_LABELS[entry.target]}`}
+            glyph={BONUS_KEY_GLYPHS[entry.attacker]}
             value={formatPercent(entry.value)}
           />
         ))}

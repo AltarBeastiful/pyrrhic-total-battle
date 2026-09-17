@@ -56,7 +56,10 @@ export function CornerGear({
     <Indicator
       className={classes.cornerGear}
       position="top-end"
-      offset={2}
+      // Centred on the corner itself, as TotalStack's gear is (investigation 0006: "overlapping the
+      // top-right corner"). It used to sit 2 px in, which is 2 px more of the chip's last letters
+      // under it and 2 px more the chip had to reserve for it (`kit.module.css`, `.cornerGear`).
+      offset={0}
       size={size}
       color="transparent"
       label={dropdown === undefined ? gear : <Popover.Target>{gear}</Popover.Target>}

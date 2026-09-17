@@ -6,11 +6,17 @@
  * `NumberField` — a plain input that selects its whole value on focus (rule 9), decimals allowed
  * because the game writes 12.5 %. Clearing a field removes the key instead of storing a 0, so a
  * source only ever carries what was actually typed into it.
+ *
+ * Each field opens with its key's glyph (`BONUS_KEY_GLYPHS`), the way the Battle card's enemy fields
+ * and the command bar's pools do: thirteen fields whose labels all end in the same word are told
+ * apart by the mark before the figure, not by reading every label (owner, 2026-09-17). The label
+ * still says the key in words; the glyph repeats it and is hidden from a screen reader.
  */
 import { SimpleGrid, Stack } from '@mantine/core';
 
 import { BONUS_KEYS, SPECIAL_KEYS } from '@/data/types';
 import type { BonusKey, BonusMap, SpecialKey, SpecialMap } from '@/data/types';
+import { BONUS_KEY_GLYPHS, Glyph } from '@/ui/domain';
 import { Disclosure, NumberField } from '@/ui/kit';
 
 import { BONUS_LABELS, SPECIAL_LABELS } from './labels';
@@ -46,6 +52,7 @@ export function BonusKeyGrid({ value, onChange, withSpecial = true }: BonusKeyGr
     <NumberField
       key={`${bucket}-${key}`}
       label={`${BONUS_LABELS[key]} ${bucket}`}
+      leftSection={<Glyph kind={BONUS_KEY_GLYPHS[key]} />}
       allowEmpty
       allowDecimal
       value={value[bucket][key] ?? null}
