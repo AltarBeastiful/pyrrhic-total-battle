@@ -18,7 +18,7 @@ import {
 } from '@/data';
 import type { BattleSetup, Profile } from '@/state/schema';
 
-import { chipValue, rowValue } from './labels';
+import { chipValue, describeContribution, rowValue } from './labels';
 import { artifactWorth, captainEntryFor, captainWorth, hasStackEffect } from './rows';
 
 /** The highest star rating a captain's table carries: none, then ★1…★6. */
@@ -108,6 +108,8 @@ export interface PermanentChipRow {
   value: string;
   /** A row the player added, rather than one of the eight the game always grants. */
   isCustom: boolean;
+  /** Every line it is worth, for the chip's tooltip; the chip's own `value` stops at "and N more". */
+  lines: string[];
 }
 
 /** The permanent sources, which count on every march and so are always highlighted. */
@@ -123,6 +125,7 @@ export function permanentChips(profile: Profile): PermanentChipRow[] {
       name: entry.name === '' ? 'Permanent source' : entry.name,
       value: chipValue(entry, 1).text,
       isCustom: entry.builtin === undefined,
+      lines: describeContribution(entry),
       unnamed: entry.name === '',
     }))
     .sort((a, b) => Number(a.unnamed) - Number(b.unnamed) || a.name.localeCompare(b.name))

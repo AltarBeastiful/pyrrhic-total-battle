@@ -41,7 +41,14 @@ import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
 import { captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 
-import { FALLBACK_STAR_KEYS, isEmptyBonus, mergeBonus, rowValue, sourceLabel } from './labels';
+import {
+  describeContribution,
+  FALLBACK_STAR_KEYS,
+  isEmptyBonus,
+  mergeBonus,
+  rowValue,
+  sourceLabel,
+} from './labels';
 import type { BonusLike } from './labels';
 import { singleKey } from './values';
 
@@ -81,6 +88,8 @@ export interface SourceRow {
   name: string;
   /** One line: "+25 % health (guardsmen)". Empty when nothing has been typed yet. */
   value: string;
+  /** Every line, for the chip's tooltip, where `value` stops at "and N more". */
+  lines?: string[];
   on: boolean;
   /** A permanent source counts on every march: it wears the tack instead of a switch. */
   locked?: boolean;
@@ -283,6 +292,7 @@ function equipmentGroup(profile: Profile, setup: BattleSetup): SourceGroup {
         id: entry.id,
         name: named(entry.name ?? '', record?.name ?? entry.equipmentId),
         value: rowValue(equipmentWorth(record, entry)),
+        lines: describeContribution(equipmentWorth(record, entry)),
         on: active.includes(entry.id),
         toggle: { list: 'equipment', id: entry.id },
         editor: { kind: 'equipment', id: entry.id },
@@ -367,6 +377,7 @@ function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
       id: 'vip',
       name: `VIP level ${String(sources.vipLevel)}`,
       value: rowValue(vipWorth(profile)),
+      lines: describeContribution(vipWorth(profile)),
       on: active.vip,
       toggle: { flag: 'vip' },
       editor: { kind: 'vip' },
@@ -375,6 +386,7 @@ function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
       id: 'dragon',
       name: 'Dragon',
       value: rowValue(sources.dragon),
+      lines: describeContribution(sources.dragon),
       on: active.dragon,
       toggle: { flag: 'dragon' },
       editor: { kind: 'dragon' },
@@ -384,6 +396,7 @@ function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
         id: record.id,
         name: record.name,
         value: rowValue(record.bonus),
+        lines: describeContribution(record.bonus),
         on: active.otherPills.includes(record.id),
         toggle: { list: 'otherPills', id: record.id },
       }),
@@ -393,6 +406,7 @@ function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
         id: entry.id,
         name: named(entry.name, 'Source of your own'),
         value: rowValue(entry),
+        lines: describeContribution(entry),
         on: active.custom.includes(entry.id),
         toggle: { list: 'custom', id: entry.id },
         editor: { kind: 'custom', id: entry.id },
@@ -402,6 +416,7 @@ function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
       id: 'remainder',
       name: 'Unexplained remainder',
       value: rowValue(sources.unknown),
+      lines: describeContribution(sources.unknown),
       on: active.unknown,
       toggle: { flag: 'unknown' },
       editor: { kind: 'remainder' },

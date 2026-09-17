@@ -45,6 +45,7 @@ function Chip({ row, onEdit }: { row: SourceRow; onEdit: (target: EditorTarget) 
     <SourceChip
       name={row.name}
       value={value}
+      details={row.lines ?? []}
       checked={row.locked === true ? row.value !== '' : row.on}
       dotted={editor !== undefined && row.value !== ''}
       disabled={row.isDisabled ?? false}

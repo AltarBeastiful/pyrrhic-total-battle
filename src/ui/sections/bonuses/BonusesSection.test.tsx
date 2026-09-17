@@ -371,6 +371,23 @@ test('a permanent source is on while something is recorded in it, and its gear o
   expect((chip as HTMLInputElement).checked).toBe(true);
 });
 
+test('a hover over a source chip raises every line it is worth', async () => {
+  renderWithTheme(<BonusesSection />);
+  expand();
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit Hall of Fame' }));
+  const sheet = screen.getByRole('dialog');
+  typeNumber(sheet, 'Army health', '40');
+  typeNumber(sheet, 'Guardsmen strength', '12');
+  done(sheet);
+
+  // The chip's own line stops at one key ("… and 1 more"); the tooltip says both (owner, 2026-09-17).
+  const chip = within(card()).getByRole('checkbox', { name: 'Hall of Fame, on every march' });
+  expect(chipLabel(chip).textContent).toContain('and 1 more');
+  fireEvent.mouseEnter(chipLabel(chip).closest('span[style]') ?? chipLabel(chip));
+  expect(await screen.findByText('Guardsmen +12 % strength')).toBeTruthy();
+  expect(screen.getByText('Army +40 % health')).toBeTruthy();
+});
+
 test('a title is worn from its chip, with what it is worth written under the name', () => {
   renderWithTheme(<BonusesSection />);
   expand();

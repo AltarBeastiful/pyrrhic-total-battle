@@ -7,7 +7,7 @@
  * a permanent source is "always on". The shapes, the 32 px height and the gear are the theme's and
  * the kit's; nothing here is styled.
  */
-import { Chip, Group, Stack, Text } from '@mantine/core';
+import { Box, Chip, Group, Stack, Text, Tooltip } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 import { ChipDot, CornerGear } from '@/ui/kit';
@@ -19,6 +19,12 @@ export interface SourceChipProps {
   toggleLabel: string;
   /** The second, dimmed line under the name: what the source is worth. */
   value?: string;
+  /**
+   * Every line the source is worth, for the tooltip a hover or a focus raises (owner, 2026-09-17:
+   * "a tooltip on hover on Army Modernization that shows all bonuses entered"). The chip's own line
+   * stops at "and 2 more"; this is the rest. Nothing is raised for a source with nothing in it.
+   */
+  details?: readonly string[];
   checked: boolean;
   onToggle: () => void;
   /** A level or a value is recorded: the chip gets a dot, as TotalStack's chips do (`ChipDot`). */
@@ -40,6 +46,7 @@ export function SourceChip({
   checked,
   onToggle,
   dotted = false,
+  details = [],
   disabled = false,
   gearLabel,
   onGear,
@@ -65,7 +72,35 @@ export function SourceChip({
     </Chip>
   );
 
-  if (gearLabel === undefined || onGear === undefined) return chip;
+  // The tooltip's target is a box around the chip rather than the chip itself: Mantine's `Chip` hands
+  // its props to the hidden input, and a hover never lands on a hidden input. In a portal, so a
+  // popover-anchored gear and a card's own overflow leave it alone; on focus too, for the keyboard.
+  const described =
+    details.length === 0 ? (
+      chip
+    ) : (
+      <Tooltip
+        label={
+          <Stack gap={2}>
+            {details.map((line) => (
+              <Text key={line} size="xs">
+                {line}
+              </Text>
+            ))}
+          </Stack>
+        }
+        events={{ hover: true, focus: true, touch: false }}
+        withinPortal
+        multiline
+        maw={280}
+      >
+        <Box component="span" display="inline-block">
+          {chip}
+        </Box>
+      </Tooltip>
+    );
+
+  if (gearLabel === undefined || onGear === undefined) return described;
 
   return (
     <CornerGear
@@ -76,7 +111,7 @@ export function SourceChip({
       {...(gearOpened === undefined ? {} : { opened: gearOpened })}
       {...(onGearOpenedChange === undefined ? {} : { onOpenedChange: onGearOpenedChange })}
     >
-      {chip}
+      {described}
     </CornerGear>
   );
 }

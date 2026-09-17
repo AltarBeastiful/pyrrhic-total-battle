@@ -47,6 +47,7 @@ export function PermanentChips({ chips, onEdit, onAdd }: PermanentChipsProps) {
             key={chip.id}
             name={chip.name}
             value={chip.value}
+            details={chip.lines}
             dotted={chip.value !== ''}
             checked={chip.value !== ''}
             toggleLabel={chip.value === '' ? `Set ${chip.name}` : `${chip.name}, on every march`}

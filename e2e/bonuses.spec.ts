@@ -101,8 +101,9 @@ test('a captain enlisted and levelled through its gear moves the TOTAL', async (
   expect(await bonusTotal(page, 'Health')).toBe('+230 %');
   expect(await bonusTotal(page, 'Strength')).toBe('+230 %');
 
-  // The chip wears the dot that says a level is recorded, and the gear renamed itself.
-  await expect(await chipLabel(page, 'Beowulf')).toContainText('•');
+  // The chip wears the dot that says a level is recorded — a disc in the gear's strip since S-70, not a
+  // typed bullet — and the gear renamed itself.
+  await expect((await chipLabel(page, 'Beowulf')).locator('[class*="chipDot"]')).toHaveCount(1);
   await expect(captainGear(page, 'Beowulf')).toHaveAccessibleName('Change Beowulf’s level');
 
   // The gear is its own target: opening it again never changes who marches.
