@@ -31,7 +31,8 @@ Ten scenarios × three priorities × three methods = 90 answers, a few seconds e
 
 1. Open https://totalstack.ca, signed in, with your profile loaded. Open DevTools (F12) → Console.
 2. Paste the snippet below and press Enter. It prints `recording…`.
-3. Choose **Total Optimization**, priority **None**, press **Generate**. The console prints `recorded: total…`.
+3. Choose **Total Optimization**, priority **None**, press **Generate**. The console prints `recorded: calculations|…`
+   with the request body — check the body for the field that names the method (it is part of the key).
    Do the same for **M's Preservation** and **Elite Preservation** (priority None each time).
 4. Type `run()` and press Enter. The console counts the answers down; when done a file
    `totalstack-2026-09-18-dataset.json` lands in Downloads. Hand it over.
@@ -46,9 +47,11 @@ const results = [];          // every answer, in order
 const nativeFetch = window.fetch.bind(window);
 window.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url;
-  if (url.includes('/api/calculations/') && init && String(init.method).toUpperCase() === 'POST' && typeof init.body === 'string') {
+  if (url.includes('/api/calculations') && init && String(init.method).toUpperCase() === 'POST' && typeof init.body === 'string') {
     const body = JSON.parse(init.body);
-    const key = `${url.split('/api/calculations/')[1]}|${body.stackingMethod ?? body.method ?? body.mode ?? ''}|${body.relaxedPreservation}|${body.enforceOrdering}`;
+    // The method's own field, whatever the page calls it (2026-09-18: the endpoint is /api/calculations, no suffix).
+    const methodField = Object.keys(body).find((k) => /method|stacking|mode|strategy/i.test(k) && typeof body[k] === 'string');
+    const key = `${url.split('/api/')[1]}|${methodField ? `${methodField}=${body[methodField]}` : ''}|relaxed=${body.relaxedPreservation}|order=${body.enforceOrdering}`;
     bases[key] = { url, init: { ...init, body: undefined }, body };
     console.log('recorded:', key, body);
   }
