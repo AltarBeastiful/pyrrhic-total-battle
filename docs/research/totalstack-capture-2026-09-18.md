@@ -25,15 +25,17 @@ Maximum Damage `averageDamage` · Damage / Silver `damagePerSilver`):
 | first-run, hunters 83 | 20 000 | 40 000 | ″ | EMH 83 | none |
 | the 4 000 case of 2026-09-15 | 4 000 | 2 000 | G1–G3 with melee/ranged excluded, S1 | EMH 14 · ABT 15 · LGN 16 · CHR 8 | melee +35/+70, army +3/+3 |
 
-Ten scenarios × three priorities × three methods = 90 answers, a few seconds each.
+Ten scenarios × (three Generate bodies + three optimize bodies × two priorities) = 90 answers, a few seconds each.
 
 ## How to run it
 
 1. Open https://totalstack.ca, signed in, with your profile loaded. Open DevTools (F12) → Console.
 2. Paste the snippet below and press Enter. It prints `recording…`.
-3. Choose **Total Optimization**, priority **None**, press **Generate**. The console prints `recorded: calculations|…`
-   with the request body — check the body for the field that names the method (it is part of the key).
-   Do the same for **M's Preservation** and **Elite Preservation** (priority None each time).
+3. Priority **None**: press **Generate** under **Total Optimization**, then under **M's Preservation**, then under
+   **Elite Preservation**. Each prints `recorded: calculations|…` with a different key (the key is every flag the
+   body carries; the first run of this kit keyed on two flags only and Total Optimization was overwritten).
+   Then priority **Maximum Damage**: Generate once under each of the three methods again — those post to the
+   optimize endpoint with an `objective`, and `run()` replays each of them under both priorities.
 4. Type `run()` and press Enter. The console counts the answers down; when done a file
    `totalstack-2026-09-18-dataset.json` lands in Downloads. Hand it over.
 
@@ -49,9 +51,15 @@ window.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url;
   if (url.includes('/api/calculations') && init && String(init.method).toUpperCase() === 'POST' && typeof init.body === 'string') {
     const body = JSON.parse(init.body);
-    // The method's own field, whatever the page calls it (2026-09-18: the endpoint is /api/calculations, no suffix).
-    const methodField = Object.keys(body).find((k) => /method|stacking|mode|strategy/i.test(k) && typeof body[k] === 'string');
-    const key = `${url.split('/api/')[1]}|${methodField ? `${methodField}=${body[methodField]}` : ''}|relaxed=${body.relaxedPreservation}|order=${body.enforceOrdering}`;
+    // The body carries no method name (2026-09-18): the method is the combination of its booleans, so the key
+    // is every boolean and string the body has, plus the path — /api/calculations for Generate, /optimize for a
+    // priority search (which carries `objective`).
+    const flags = Object.keys(body)
+      .filter((k) => typeof body[k] === 'boolean' || (typeof body[k] === 'string' && k !== 'bonusMode'))
+      .sort()
+      .map((k) => `${k}=${body[k]}`)
+      .join(',');
+    const key = `${url.split('/api/')[1]}|${flags}`;
     bases[key] = { url, init: { ...init, body: undefined }, body };
     console.log('recorded:', key, body);
   }
@@ -100,8 +108,10 @@ async function run() {
     const base = bases[key];
     for (const [name, make] of scenarios) {
       for (const [pName, objective] of priorities) {
+        // A Generate body has no `objective`: it is replayed once. An optimize body is replayed once a priority.
+        if (!('objective' in base.body) && pName !== 'none') { left -= 1; continue; }
         const body = { ...make(base.body) };
-        if ('objective' in base.body) body.objective = objective;
+        if ('objective' in base.body) body.objective = objective ?? 'averageDamage';
         try {
           const res = await nativeFetch(base.url, { ...base.init, body: JSON.stringify(body) });
           const text = await res.text();
@@ -135,3 +145,12 @@ function save() {
 `docs/research/fixtures/totalstack-2026-09-18-total-optimization-7000.json` — Total Optimization, 7 000
 leadership, priority Damage / Silver, on the owner's TotalStack profile (which fields Archer III and
 Spearman III, unlike his Pyrrhic export): 13 352 794 average damage for 3 198 200 silver and 1 160 gold.
+
+## First run, 2026-09-18 22:11 (`docs/research/fixtures/totalstack-2026-09-18-dataset.json`)
+
+Two Generate bodies were recorded — `relaxedPreservation=true, enforceOrdering=false` (M's Preservation) and
+`relaxedPreservation=false, enforceOrdering=true` (Elite Preservation); the Total Optimization press keyed the
+same as one of them and was overwritten — and the body carries no `objective`, so the three "priorities" are the
+same answer three times: 20 distinct answers, all HTTP 201, each following its scenario (the troops sum to the
+leadership asked, the mercenaries follow the caps). `isOptimized` is false throughout: the priority search is
+the optimize endpoint, reached only when a priority is set on the page. The second run above fills both gaps.
