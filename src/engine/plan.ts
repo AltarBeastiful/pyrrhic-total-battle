@@ -1124,6 +1124,17 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     laddersOnly = false,
   ): Candidate | null => {
     let pick: Candidate | null = null;
+    /**
+     * The vector's **tight** shape, kept beside its strongest: the ladder at scale 1 — every rung just above
+     * the mercenaries, the smallest stacks that still shelter them — over as many troop types as the
+     * leadership pays for. Only the strongest shape a vector reached the frontier, so a cheaper march with the
+     * same mercenaries was scored and thrown away, and no stop could ever cost less than the winner's troops
+     * (owner, 2026-09-18: *"now the plan almost doesn't change in terms of silver"*). Measured on his live
+     * account: the sweet spot's troops at 70 % hit for 5 798 781 against 7 453 778, for 5 427 600 silver
+     * against 7 756 500 — 1.07 a silver against 0.96 — and the search had never carried it. Not the most
+     * silver-efficient shape outright: that is a single small stack, the extreme the band refuses.
+     */
+    let tight: Candidate | null = null;
     const fielded = vector.filter((merc) => merc.count > 0);
     if (fielded.length === 0) return null;
     const marches = targetRepeats ?? marchesFor(stock, fielded);
@@ -1164,12 +1175,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           scale,
         };
         if (!pick || candidate.total > pick.total) pick = candidate;
+        if (depth > 0 && scale === 1 && (!tight || depth > tight.depth)) tight = candidate;
         record(candidate);
         if (depth <= 0 && scored.mercs.some((merc, index) => merc.count !== vector[index]?.count)) {
           derived.push(scored.mercs);
         }
       }
     }
+    if (tight && tight !== pick) consider(tight);
     if (!laddersOnly) {
       const seen = new Set<string>([vector.map((merc) => merc.count).join(',')]);
       for (const mercs of derived) {
@@ -1727,37 +1740,33 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    */
   const top = ladderRows[ladderRows.length - 1];
   /**
-   * **Least silver**: the cheapest march the band keeps to the left of the sweet spot — fewer units burned
-   * than it — the fewest burned on a tie, then the most damage. Over the band and not the ladder, because the
-   * ladder keeps one plan a level, the best damage there, and the cheapest plan at that level is a different
-   * one (measured on the 2026-09-17 export at 12 000: 6 361 327 for 4 426 500 silver at 10 burned, where the
-   * level's best hits for 6 760 346 at 4 668 300). The band already refuses the silver sinks, so "ok" ratios
-   * come with it. Absent when nothing stands left of the sweet spot.
+   * **Least silver**: the cheapest march of the band that stands left of the sweet spot (fewer units burned),
+   * costs no more silver than it, and is **at least as efficient a silver** — so the stop is a real saving and
+   * not a smaller march for its own sake — and that no other such march beats on both ratios. Over the band
+   * and not the ladder, because the ladder keeps one plan a level, the best damage there, and the cheapest
+   * plan at that level is a different one: the vector's tight ladder (`tight` in `evaluateVector`). The
+   * "beaten on both" test is taken among the marches left of the sweet spot only: the tight ladders of one
+   * account share one shape and so one pair of ratios to the third decimal, and against the whole band the
+   * dearest of them beat every cheaper one by a hair (measured on the owner's live account: 1.0706 a silver
+   * and 962 801 a hired at 60 hunters against 1.0708 and 962 605 at 40), which left no least-silver stop at
+   * all. Equal silver is allowed and the fewest burned breaks the tie; absent when nothing qualifies.
    */
+  const leftOfSweet = candidates.filter(
+    (row) =>
+      row.repeat.mercLost < sweetSpotBase.repeat.mercLost &&
+      row.repeat.silver <= sweetSpotBase.repeat.silver &&
+      perSilver(row) >= perSilver(sweetSpotBase),
+  );
   const beatenOnBoth = (row: PlanTotals): boolean =>
-    candidates.some(
+    leftOfSweet.some(
       (other) =>
         other !== row &&
         perSilver(other) >= perSilver(row) &&
         perHired(other) >= perHired(row) &&
         (perSilver(other) > perSilver(row) || perHired(other) > perHired(row)),
     );
-  const leastSilver = candidates
-    // Left of the sweet spot, and not a plan another band plan beats on both ratios: the cheapest march of
-    // the band outright was measured as one the sweet spot beats on both (his latest export: 4 366 381 for
-    // 3 230 800 at 1.35 a silver · 545 798 a hired, against the sweet spot's 1.62 · 586 286), which is not the
-    // "ok on each" the owner asked of every stop.
-    // …and no dearer than the sweet spot in silver, or the name would be false on its own row (measured on
-    // the 2026-09-17 export at 7 000: the only efficient plan left of the sweet spot cost 2 722 500 against
-    // its 2 614 000 — absent rather than misnamed). Equal silver is allowed: on an account whose silver is
-    // flat across the rungs (one hired type, the troop ladder sized off it) the least silver is a tie, and
-    // the fewest units burned breaks it — the same silver for fewer mercenaries is the left end.
-    .filter(
-      (row) =>
-        row.repeat.mercLost < sweetSpotBase.repeat.mercLost &&
-        row.repeat.silver <= sweetSpotBase.repeat.silver &&
-        !beatenOnBoth(row),
-    )
+  const leastSilver = leftOfSweet
+    .filter((row) => !beatenOnBoth(row))
     .reduce<(PlanTotals & { label: string }) | undefined>((best, row) => {
       if (!best) return row;
       if (row.repeat.silver !== best.repeat.silver)

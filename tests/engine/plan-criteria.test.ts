@@ -96,12 +96,15 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   expect(perSilver(silverNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perSilver)));
   expect(perHired(hiredNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perHired)));
 
-  // The sweet spot is not beaten on both ratios by any other stop.
+  // The sweet spot is not beaten on both ratios by the rungs to its right; the least-silver stop is allowed
+  // to — it is the saving stop, cheaper and at least as efficient a silver by definition, and it pays for
+  // that in damage (owner's design of 2026-09-18: least silver · sweet spot · more mercs · most mercs).
   for (const other of rows) {
-    if (other === sweet) continue;
+    if (other === sweet || other === least) continue;
     const beats = perSilver(other) >= perSilver(sweet) && perHired(other) >= perHired(sweet);
     expect(beats).toBe(false);
   }
+  if (least) expect(perSilver(least)).toBeGreaterThanOrEqual(perSilver(sweet));
 
   // The floors: the criteria themselves.
   if (least) {
@@ -125,12 +128,13 @@ describe('the plan’s criteria hold their floors', () => {
       tokenFloor: true,
       sizerShape: true,
     });
-    // Measured 2026-09-18 with the four stops (least silver 3 burned · sweet spot 5 · most mercs 6): least
-    // 465 392 a hired; sweet 1.2211 a silver · 373 524 a hired, campaign 7 521 725 for 6 089 100; most
-    // 2 006 473 a march at 1.3119; the plan 7 868 855.
+    // Measured 2026-09-18 (least silver 3 burned · sweet spot 5 · most mercs 6): least silver 1 320 822 for
+    // 1 069 600 at 440 274 a hired (the tight ladder — a real saving, 30 % less silver than the sweet spot's
+    // 1 529 400); sweet 1.2211 a silver · 373 524 a hired, campaign 7 521 725 for 6 089 100; most 2 006 473
+    // a march at 1.3119; the plan 7 868 855.
 
     expectCriteria(plan, {
-      leastPerHired: under(465_392),
+      leastPerHired: under(440_274),
       sweetPerSilver: under(1.2211),
       sweetPerHired: under(373_524),
       sweetCampaignDamage: under(7_521_725),
@@ -174,9 +178,11 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // buys more than the last), so there is no knee and the middle of the efficient rungs stands — 5 %
       // less silver and 2.5 % more a hired unit than the 11, for 2.4 % less a silver. A floor is re-based only
       // for a change measured and explained, and the note says which.
-      // No least-silver stop here: the only efficient march left of the sweet spot costs more silver than it.
+      // Least silver here is the 7-burn tight ladder: 4 177 683 for 2 178 700 (17 % less silver than the sweet
+      // spot) at 1.918 a silver · 596 812 a hired — it beats the sweet spot on both ratios, which the saving
+      // stop may.
       expectCriteria(plan, {
-        leastPerHired: under(648_774),
+        leastPerHired: under(596_812),
         sweetPerSilver: under(1.8994),
         sweetPerHired: under(496_507),
         sweetCampaignDamage: under(20_684_777),
@@ -198,7 +204,7 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // 6 297 292 for 3 972 200 at 572 481 a hired; sweet 1.7426 · 481 519, campaign 32 231 242 for
       // 18 790 400; most 8 281 474 at 1.5186; the plan 32 518 195.
       expectCriteria(plan, {
-        leastPerHired: under(572_481),
+        leastPerHired: under(524_183),
         sweetPerSilver: under(1.7426),
         sweetPerHired: under(481_519),
         sweetCampaignDamage: under(32_231_242),

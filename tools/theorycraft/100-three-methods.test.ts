@@ -25,7 +25,7 @@ import { effectiveUnit } from '../../src/engine/units';
 import type { StackRequest } from '../../src/engine/types';
 import { parseImport } from '../../src/share/exportImport';
 import { buildStackRequest, buildPlanRequest } from '../../src/state/derive';
-import { EXPORT_2026_09_17, Report, evaluate, evaluateCounts, n } from './harness';
+import { EXPORT_2026_09_17, Report, evaluate, evaluateCounts, loadLiveAccount, n } from './harness';
 
 const EXPORT_LATEST =
   process.env.PYRRHIC_EXPORT_LATEST ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (3).json';
@@ -44,16 +44,24 @@ const chunks = (count: number): number => Math.ceil(count / 10);
 describe.skipIf(!process.env.THEORY)('the three methods', () => {
   it('benchmarks them on the owner’s exports', () => {
     const report = new Report('100-three-methods');
+    const live = loadLiveAccount();
     for (const [label, file, leadership] of [
       ['latest export, its setup', EXPORT_LATEST, undefined],
       ['latest export, 12 000 leadership', EXPORT_LATEST, 12_000],
       ['export of 2026-09-17, its setup (7 000)', EXPORT_2026_09_17, undefined],
+      ['export of 2026-09-17, 12 000 leadership', EXPORT_2026_09_17, 12_000],
+      ['live account of 2026-09-18 (one hired type, 20 000 leadership)', 'live', undefined],
     ] as const) {
-      const parsed = parseImport(readFileSync(file, 'utf8'));
-      if (parsed.kind !== 'profile') throw new Error('not a profile export');
-      const profile = parsed.payload;
-      const base = profile.setups[0];
-      if (!base) throw new Error('no setup');
+      let profile = live.profile;
+      let base = live.setup;
+      if (file !== 'live') {
+        const parsed = parseImport(readFileSync(file, 'utf8'));
+        if (parsed.kind !== 'profile') throw new Error('not a profile export');
+        profile = parsed.payload;
+        const first = profile.setups[0];
+        if (!first) throw new Error('no setup');
+        base = first;
+      }
       const setup = leadership === undefined ? base : { ...base, housing: { ...base.housing, leadership } };
       const rows: Row[] = [];
       const request0 = buildStackRequest(profile, {

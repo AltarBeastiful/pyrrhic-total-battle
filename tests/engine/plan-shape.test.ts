@@ -203,7 +203,7 @@ describe('the search does not get worse', () => {
     // started learning which type takes which rung (`out/98`): the repeated march is the same march to the
     // unit, and the final march gained 2 250 damage for 3 800 silver less from a better rung order.
     expect(PLAN.alternatives).toHaveLength(4);
-    expect(PLAN.leftOut).toBe(187);
+    expect(PLAN.leftOut).toBe(309);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained

@@ -34,6 +34,7 @@ import type {
   UnitDef,
 } from '../../src/engine/types';
 import { parseImport } from '../../src/share/exportImport';
+import type { BattleSetup, Profile } from '../../src/state/schema';
 import { buildStackRequest } from '../../src/state/derive';
 
 export const EXPORT = process.env.PYRRHIC_EXPORT ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-13.json';
@@ -66,6 +67,28 @@ export interface Owner {
 }
 
 /** The export as the app reads it. Scenario A bonuses (the file's own). */
+/**
+ * The owner's **live** account as his browser held it on 2026-09-18 — read off `localStorage` in his own
+ * page, which no export on disk carries: the 2026-09-17 export's profile with one hired type (epic monster
+ * hunters, 83 in stock), captains Aydae 43 ★3 · Alexander 36 · Leonidas 41, and 20 000 leadership on the
+ * setup. The bar he was looking at when he said "the stops still are not to my design".
+ */
+export function loadLiveAccount(): { profile: Profile; setup: BattleSetup } {
+  if (!existsSync(EXPORT_2026_09_17)) throw new Error(`export not found: ${EXPORT_2026_09_17}`);
+  const parsed = parseImport(readFileSync(EXPORT_2026_09_17, 'utf8'));
+  if (parsed.kind !== 'profile') throw new Error('not a profile export');
+  const profile = structuredClone(parsed.payload);
+  profile.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 83 }];
+  profile.sources.captains = [
+    { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
+    { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+    { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+  ];
+  const first = profile.setups[0];
+  if (!first) throw new Error('no setup');
+  return { profile, setup: { ...first, housing: { leadership: 20_000, authority: 2_180, dominance: 0 } } };
+}
+
 export function loadOwner(file: string = EXPORT): Owner {
   if (!existsSync(file)) throw new Error(`export not found: ${file}`);
   const text = readFileSync(file, 'utf8');
