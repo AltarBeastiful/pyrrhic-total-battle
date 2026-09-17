@@ -34,10 +34,12 @@ The page picks the route by the priority: `/api/calculations` with None, `/api/c
 1. Open https://totalstack.ca, signed in, with your profile loaded. Open DevTools (F12) → Console.
 2. Paste the snippet below and press Enter. It prints `recording…`.
 3. Priority **None**: press **Generate** under **Total Optimization**, then under **M's Preservation**, then under
-   **Elite Preservation**. Each prints `recorded: calculations|…` with a different key (the key is every flag the
-   body carries; the first run of this kit keyed on two flags only and Total Optimization was overwritten).
-   Then priority **Maximum Damage**: Generate once under each of the three methods again — those post to the
-   optimize endpoint with an `objective`, and `run()` replays each of them under both priorities.
+   **Elite Preservation**. Each press should print `recorded (n so far): calculations|…` with a new key. If a
+   press prints nothing, the page did not send a request for it (say so); if Total Optimization prints the same
+   key as another method, TotalStack sends the same body for both and only the page shows the difference.
+   Then priority **Damage / Silver**: Generate once under each of the three methods again — those post to
+   `/api/calculations/optimize` with an `objective`, and `run()` replays each of them under both priorities.
+   Expect six keys before `run()`.
 4. Type `run()` and press Enter. The console counts the answers down; when done a file
    `totalstack-2026-09-18-dataset.json` lands in Downloads. Hand it over.
 
@@ -49,23 +51,37 @@ If a step fails, the console says which scenario and why; `results` holds what w
 const bases = {};            // method → { url, init, body } as the page sent it
 const results = [];          // every answer, in order
 const nativeFetch = window.fetch.bind(window);
+const record = (url, init, bodyText) => {
+  if (!url.includes('/api/calculations') || typeof bodyText !== 'string') return;
+  const body = JSON.parse(bodyText);
+  // The body carries no method name (2026-09-18): the method is the combination of its booleans, so the key
+  // is every boolean and string the body has, plus the path — /api/calculations for Generate, /optimize for a
+  // priority search (which carries `objective`).
+  const flags = Object.keys(body)
+    .filter((k) => typeof body[k] === 'boolean' || (typeof body[k] === 'string' && k !== 'bonusMode'))
+    .sort()
+    .map((k) => `${k}=${body[k]}`)
+    .join(',');
+  const key = `${url.split('/api/')[1]}|${flags}`;
+  bases[key] = { url, init: { ...init, body: undefined }, body };
+  console.log(`recorded (${Object.keys(bases).length} so far):`, key);
+};
 window.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url;
-  if (url.includes('/api/calculations') && init && String(init.method).toUpperCase() === 'POST' && typeof init.body === 'string') {
-    const body = JSON.parse(init.body);
-    // The body carries no method name (2026-09-18): the method is the combination of its booleans, so the key
-    // is every boolean and string the body has, plus the path — /api/calculations for Generate, /optimize for a
-    // priority search (which carries `objective`).
-    const flags = Object.keys(body)
-      .filter((k) => typeof body[k] === 'boolean' || (typeof body[k] === 'string' && k !== 'bonusMode'))
-      .sort()
-      .map((k) => `${k}=${body[k]}`)
-      .join(',');
-    const key = `${url.split('/api/')[1]}|${flags}`;
-    bases[key] = { url, init: { ...init, body: undefined }, body };
-    console.log('recorded:', key, body);
-  }
+  if (init && String(init.method).toUpperCase() === 'POST') record(url, init, init.body);
   return nativeFetch(input, init);
+};
+// The page may send through XMLHttpRequest instead of fetch: record that too, replayed through fetch.
+const xhrOpen = XMLHttpRequest.prototype.open;
+const xhrSend = XMLHttpRequest.prototype.send;
+const xhrHeader = XMLHttpRequest.prototype.setRequestHeader;
+XMLHttpRequest.prototype.open = function (method, url, ...rest) { this.__kit = { method, url, headers: {} }; return xhrOpen.call(this, method, url, ...rest); };
+XMLHttpRequest.prototype.setRequestHeader = function (name, value) { if (this.__kit) this.__kit.headers[name] = value; return xhrHeader.call(this, name, value); };
+XMLHttpRequest.prototype.send = function (body) {
+  if (this.__kit && String(this.__kit.method).toUpperCase() === 'POST') {
+    record(this.__kit.url, { method: 'POST', headers: this.__kit.headers, credentials: 'include' }, body);
+  }
+  return xhrSend.call(this, body);
 };
 console.log('recording… now press Generate once per stacking method (priority None).');
 
