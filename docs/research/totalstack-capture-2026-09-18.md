@@ -174,3 +174,23 @@ same as one of them and was overwritten — and the body carries no `objective`,
 same answer three times: 20 distinct answers, all HTTP 201, each following its scenario (the troops sum to the
 leadership asked, the mercenaries follow the caps). `isOptimized` is false throughout: the priority search is
 the optimize endpoint, reached only when a priority is set on the page. The second run above fills both gaps.
+
+## Third run, 2026-09-18 22:44 (`docs/research/fixtures/totalstack-2026-09-18-dataset-full.json`) — the full set
+
+Six bases, 80 answers (40 Generate at HTTP 201, 40 optimize at HTTP 200), each answer following its scenario.
+The body names no method; the flags do:
+
+| base | flags | what the page calls it |
+|---|---|---|
+| `/api/calculations` | relaxedPreservation=true, enforceOrdering=false | M's Preservation |
+| `/api/calculations` | relaxedPreservation=false, enforceOrdering=true, monsterSaving=true | **Total Optimization** (its 7 000 answer matches the Battle Summary read off the page: ARC3 537 · RD3 239 · RD2 428 · SP3 436 · ARC2 959 · SP2 778 · SP1 1 408 · RD1 774, ABT 45 · EMH 42 · CHR 20 · LGN 36) |
+| `/api/calculations` | relaxedPreservation=false, enforceOrdering=true | Elite Preservation |
+| `/api/calculations` | relaxedPreservation=true, enforceOrdering=false, with `excludedTroopIds` archer-1 / spearman-1 / swordsman-1 | M's Preservation again, pressed after an optimize had left those types out on the page |
+| `/api/calculations/optimize` | enforceOrdering=true, relaxedPreservation=false, objective | the priority search under Elite (replayed under both objectives) |
+| `/api/calculations/optimize` | enforceOrdering=false, relaxedPreservation=true, objective | the priority search under M's (replayed under both objectives) |
+
+Caveat for the owner's scenarios (7 000 / 12 000 / 20 000 / 11 000, live, evening): the kit only rewrites
+`excludedTroopIds` for the first-run and 4 000 cases, so a base recorded while the page was excluding types
+(the second M's base: archer-1, spearman-1, swordsman-1; the Total Optimization and Elite bases: archer-1,
+swordsman-1) replays the owner's scenarios with those exclusions. The first M's base and both optimize bases
+are the clean ones for those scenarios; the optimize answers carry their own `excludedTroopIds` in the response.
