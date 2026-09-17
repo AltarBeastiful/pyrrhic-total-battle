@@ -314,15 +314,17 @@ export async function bonusTotal(page: Page, label: string): Promise<string> {
   return (await value.innerText()).trim();
 }
 
-/** A source row's switch: its accessible name is the source itself. */
+/** A source's chip: its accessible name says the source and its state (2026-09-17, every family is chips). */
 export function sourceSwitch(page: Page, name: string): Locator {
-  return bonusesCard(page).getByRole('switch', { name, exact: true });
+  return bonusesCard(page).getByRole('checkbox', {
+    name: new RegExp(`^(Switch on ${name}|${name}, on for this march)$`),
+  });
 }
 
 /**
- * Flip a source row's switch. The control itself is a visually hidden input behind the track it
- * draws, so it is pressed from the keyboard — which is how a player on a keyboard does it, and
- * which never collides with the sticky app bar the way a scrolled click can.
+ * Flip a source's chip. The control itself is a visually hidden input behind the label it draws,
+ * so it is pressed from the keyboard — which is how a player on a keyboard does it, and which never
+ * collides with the sticky app bar the way a scrolled click can.
  */
 export async function toggleSource(page: Page, name: string): Promise<void> {
   const control = sourceSwitch(page, name);
@@ -330,9 +332,9 @@ export async function toggleSource(page: Page, name: string): Promise<void> {
   await page.keyboard.press('Space');
 }
 
-/** One source row, as a player reads it: the name, then what it is worth. */
+/** One source's chip, as a player reads it: the name, then what it is worth under it. */
 export function sourceRow(page: Page, name: string): Locator {
-  return bonusesCard(page).getByRole('listitem').filter({ hasText: name }).first();
+  return bonusesCard(page).locator('.mantine-Chip-label').filter({ hasText: name }).first();
 }
 
 /** Open a source's editor through its gear and wait for the sheet. */

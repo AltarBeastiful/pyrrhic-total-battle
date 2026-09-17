@@ -10,6 +10,7 @@
 import { Chip, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
+import { Glyph } from '@/ui/domain';
 import { ChipDot, CornerGear } from '@/ui/kit';
 
 export interface SourceChipProps {
@@ -23,6 +24,8 @@ export interface SourceChipProps {
   onToggle: () => void;
   /** A level or a value is recorded: the chip gets a dot, as TotalStack's chips do (`ChipDot`). */
   dotted?: boolean;
+  /** Counts on every march: the pin before the name, and no state to switch (`SourceChips`). */
+  pinned?: boolean;
   disabled?: boolean;
   /** The gear's own accessible name. Left out, the chip carries no gear. */
   gearLabel?: string;
@@ -40,6 +43,7 @@ export function SourceChip({
   checked,
   onToggle,
   dotted = false,
+  pinned = false,
   disabled = false,
   gearLabel,
   onGear,
@@ -50,6 +54,7 @@ export function SourceChip({
   const chip = (
     <Chip checked={checked} disabled={disabled} color="brass" aria-label={toggleLabel} onChange={onToggle}>
       <Group gap={5} wrap="nowrap" component="span">
+        {pinned && <Glyph kind="pin" scale={0.75} />}
         <Stack gap={0} component="span">
           <Text span inherit>
             {name}

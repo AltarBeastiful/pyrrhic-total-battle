@@ -111,13 +111,22 @@ export interface PermanentChipRow {
 }
 
 /** The permanent sources, which count on every march and so are always highlighted. */
+/**
+ * In the order of their names, not of their adding (owner, 2026-09-17: "move Army Modernization
+ * first"): a permanent source is named by the player, and a row the player cannot reorder reads
+ * best in the one order they can predict. The unnamed ones fall to the end.
+ */
 export function permanentChips(profile: Profile): PermanentChipRow[] {
-  return profile.sources.permanent.map((entry) => ({
-    id: entry.id,
-    name: entry.name === '' ? 'Permanent source' : entry.name,
-    value: chipValue(entry, 1).text,
-    isCustom: entry.builtin === undefined,
-  }));
+  return profile.sources.permanent
+    .map((entry) => ({
+      id: entry.id,
+      name: entry.name === '' ? 'Permanent source' : entry.name,
+      value: chipValue(entry, 1).text,
+      isCustom: entry.builtin === undefined,
+      unnamed: entry.name === '',
+    }))
+    .sort((a, b) => Number(a.unnamed) - Number(b.unnamed) || a.name.localeCompare(b.name))
+    .map(({ unnamed: _unnamed, ...chip }) => chip);
 }
 
 /** Which of the three headings a title sits under, the way the game's own screen splits them. */

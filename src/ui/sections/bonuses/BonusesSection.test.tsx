@@ -83,11 +83,20 @@ function expand(): void {
   if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
 }
 
-/** Open one accordion group; a closed group is not in the document (`keepMounted={false}`). */
+/**
+ * Open one of the two foot folds (artifacts, titles). Every other family is on screen the moment
+ * the sources are, so for those this is a no-op — the name is kept so a test reads as the journey.
+ */
 function openGroup(title: string): void {
-  const control = within(card()).getByRole('button', { name: new RegExp(`^${title}`) });
-  if (control.getAttribute('aria-expanded') !== 'true') fireEvent.click(control);
+  const control = within(card()).queryByRole('button', { name: new RegExp(`^${title}`) });
+  if (control !== null && control.getAttribute('aria-expanded') !== 'true') fireEvent.click(control);
 }
+
+/** A source chip that can be switched, by either of the two names it wears. */
+const sourceChip = (name: string): HTMLElement =>
+  within(card()).getByRole('checkbox', {
+    name: new RegExp(`^(Switch on ${name}|${name}, on for this march)$`),
+  });
 
 /** A captain chip body, by either of the two names it wears. */
 function captainChip(name: string): HTMLElement {
@@ -141,22 +150,20 @@ test('the header carries the TOTAL as four labelled figures', () => {
   });
 });
 
-test('a source switched on with nothing typed in it reads "—" in its own row, and nowhere else', () => {
+test('a source switched on with nothing typed in it reads "—" on its own chip, and nowhere else', () => {
   renderWithTheme(<BonusesSection />);
 
   // The card's old "N on but empty" badge is retired (owner, 2026-09-13): it named a number a
-  // player could do nothing with. The row that has no value says so, where the value would be.
+  // player could do nothing with. The chip that has no value says so, where the value would be.
   expect(within(card()).queryByText(/on but empty/)).toBeNull();
 
   expand();
-  openGroup('Other');
-  const row = within(card())
-    .getAllByRole('listitem')
-    .find((node) => node.textContent?.includes('Dragon'));
-  if (row === undefined) throw new Error('the dragon row is missing');
-  expect(within(row).getByText('—')).toBeTruthy();
+  // No fold to open: the Other family is on screen with the sources (owner, 2026-09-17).
+  expect(within(card()).queryByRole('button', { name: /^Other/ })).toBeNull();
+  const chip = sourceChip('Dragon');
+  expect(chipLabel(chip).textContent).toContain('—');
 
-  fireEvent.click(within(card()).getByRole('switch', { name: 'Dragon' }));
+  fireEvent.click(chip);
   expect(setup()?.active.dragon).toBe(false);
 });
 
@@ -377,19 +384,20 @@ test('a title is worn from its chip, with what it is worth written under the nam
 });
 
 // ---- the row groups -------------------------------------------------------------------------------
-test('a group with nothing configured is one Add line, and adding puts a switch row in', () => {
+test('a family with nothing configured is one Add line, and adding puts a chip in', () => {
   renderWithTheme(<BonusesSection />);
   expand();
-  openGroup('Equipment');
 
-  expect(within(card()).queryByRole('listitem')).toBeNull();
+  expect(within(card()).queryByRole('group', { name: 'Equipment' })).toBeNull();
 
   fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
   done(screen.getByRole('dialog'));
 
   expect(profile()?.sources.equipment).toHaveLength(1);
   expect(setup()?.active.equipment).toHaveLength(1);
-  expect(within(card()).getByRole('switch', { name: 'Emerald Guardian' })).toBeTruthy();
+  const chip = sourceChip('Emerald Guardian');
+  expect((chip as HTMLInputElement).checked).toBe(true);
+  expect(within(card()).getByRole('group', { name: 'Equipment' })).toBeTruthy();
 });
 
 test('editing a piece of equipment in its sheet moves the TOTAL', async () => {
@@ -406,16 +414,17 @@ test('editing a piece of equipment in its sheet moves the TOTAL', async () => {
   done(sheet);
 
   expect(profile()?.sources.equipment[0]?.quality).toBe('godlike');
-  const row = within(card()).getByRole('switch', { name: 'Emerald Guardian' }).closest('[role="listitem"]');
-  expect(row?.textContent).toContain('+128 % health and strength (melee)');
+  expect(chipLabel(sourceChip('Emerald Guardian')).textContent).toContain(
+    '+128 % health and strength (melee)',
+  );
 });
 
-test('the temple and training row wears the pin instead of a switch and keeps its sheet', () => {
+test('the temple and training chip wears the pin, is always on, and keeps its sheet', () => {
   renderWithTheme(<BonusesSection />);
   expand();
-  openGroup('Recovery');
 
-  expect(within(card()).queryByRole('switch', { name: 'Temple and training' })).toBeNull();
+  const chip = within(card()).getByRole('checkbox', { name: 'Temple and training, on every march' });
+  expect((chip as HTMLInputElement).checked).toBe(true);
 
   fireEvent.click(within(card()).getByRole('button', { name: 'Edit Temple and training' }));
   const sheet = screen.getByRole('dialog');

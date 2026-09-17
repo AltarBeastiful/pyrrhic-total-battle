@@ -15,6 +15,9 @@ const KEY = 'pyrrhic.ui.v1';
 
 /** The field of that object this card owns. */
 export const BONUSES_EXPANDED = 'bonusesExpanded';
+/** The two families folded at the foot of the list (artifacts, titles), each remembered the same way. */
+export const BONUSES_FOLDS = 'bonusesFolds';
+export type BonusesFold = 'artifacts' | 'titles';
 
 function readAll(): Record<string, unknown> {
   try {
@@ -38,5 +41,25 @@ export function writeExpanded(expanded: boolean): void {
     globalThis.localStorage?.setItem(KEY, JSON.stringify({ ...readAll(), [BONUSES_EXPANDED]: expanded }));
   } catch {
     // No storage (private window, full quota): the card simply forgets between visits.
+  }
+}
+
+/** Was one of the two foot folds left open? Anything but a stored `true` means folded. */
+export function readFold(fold: BonusesFold): boolean {
+  const folds = readAll()[BONUSES_FOLDS];
+  return typeof folds === 'object' && folds !== null && (folds as Record<string, unknown>)[fold] === true;
+}
+
+export function writeFold(fold: BonusesFold, open: boolean): void {
+  try {
+    const all = readAll();
+    const folds =
+      typeof all[BONUSES_FOLDS] === 'object' && all[BONUSES_FOLDS] !== null ? all[BONUSES_FOLDS] : {};
+    globalThis.localStorage?.setItem(
+      KEY,
+      JSON.stringify({ ...all, [BONUSES_FOLDS]: { ...(folds as Record<string, unknown>), [fold]: open } }),
+    );
+  } catch {
+    // No storage: the fold simply forgets between visits.
   }
 }

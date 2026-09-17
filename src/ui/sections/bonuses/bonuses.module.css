@@ -25,3 +25,37 @@
 .gearGrid {
   row-gap: 1rem;
 }
+
+/* A family of sources (`FamilyRow.tsx`): the label column, then the chips. 132 px is what the
+   longest family name ("Hero and captains") asks for at 13/600 with room to spare, and it is the
+   same column the Troops card gives a group's name, so the two cards line up. The label's 6 px of
+   top padding puts its first line on the chips' centre line. */
+.family {
+  display: grid;
+  grid-template-columns: 8.25rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.familyLabel {
+  padding-top: 0.375rem;
+}
+
+.familyChips {
+  min-width: 0;
+}
+
+/* Material's compact window: the label stands over its chips, the card is one column. */
+@media (max-width: 37.4375em) {
+  .family {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.375rem;
+  }
+
+  .familyLabel {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding-top: 0;
+  }
+}

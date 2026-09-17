@@ -7,15 +7,17 @@
  * those is switched on with nothing typed in. That is what a player checks after changing a
  * captain's level, and it is above the fold on a phone (J3: open, find, change, see the TOTAL move).
  *
- * Unfolded, the sources are grouped the way the game groups them, each group an accordion item, with
- * captains open by default because that is the one a returning player came for. Four of the eight
- * are **chips** — TotalStack's own picker, mimicked (D-34): every captain, every artifact, every
- * permanent source and every title on screen at once, tap to switch on, a gear on the corner of the
- * ones that have something to set. The rest are **rows**: a switch carrying the name, what it is
- * worth on the right, a gear opening a sheet that repeats the TOTAL so the figures are visible while
- * they move. Whether the card is open is remembered per device (D7), never in the document.
+ * Unfolded, the sources are **every family on screen at once**, each a row of chips behind its
+ * name and its count (owner, 2026-09-17; the canvas "Bonuses card redesign"): the hero and the
+ * captains, the equipment, the permanent sources, the odds and ends, the events, the temple — the
+ * families a player touches on an ordinary day, in the order they touch them. The accordion that
+ * held them, one fold each with the captains alone open, hid the obvious ones and drew the rest as
+ * switch rows with the gear on the far side of the card; now every source is a chip — TotalStack's
+ * own picker, mimicked (D-34) — tinted when it is on, its gear on its own corner, so a whole family
+ * reads at a glance. The two families set once, artifacts and titles, keep a fold each at the foot
+ * of the list, remembered per device like the card itself (D7), and the audit is the last fold.
  */
-import { Accordion, Alert, Group, Stack, Text } from '@mantine/core';
+import { Alert, Stack } from '@mantine/core';
 import { useId, useMemo, useState } from 'react';
 
 import { artifacts as artifactTable, equipment as equipmentTable } from '@/data';
@@ -27,6 +29,7 @@ import { Disclosure, Panel, Sections } from '@/ui/kit';
 
 import { ArtifactChips } from './ArtifactChips';
 import { CaptainChips } from './CaptainChips';
+import { FamilyRow } from './FamilyRow';
 import { artifactChips, captainChips, permanentChips, titleChips, type CaptainTarget } from './chips';
 import { EquipmentSheet } from './EquipmentSheet';
 import { CustomSheet, DragonSheet, PermanentSheet, RemainderSheet } from './FreeFormSheets';
@@ -44,29 +47,29 @@ import {
 } from './rows';
 import type { AddKind, EditorTarget, SourceGroup } from './rows';
 import { SetupBar } from './SetupBar';
-import { SourceRows } from './SourceRows';
+import { SourceChips } from './SourceChips';
 import { TitleChips } from './TitleChips';
 import { TotalsBreakdown } from './TotalsBreakdown';
 import { TotalsFigures } from './TotalsFigures';
-import { readExpanded, writeExpanded } from './uiPrefs';
+import { readExpanded, readFold, writeExpanded, writeFold, type BonusesFold } from './uiPrefs';
 
-/** The heading of every group, in the order the game shows its own screens. */
-const ORDER = [
-  'captains',
-  'equipment',
-  'artifacts',
-  'titles',
-  'permanent',
-  'other',
-  'events',
-  'recovery',
-] as const;
+/**
+ * The families on screen, in the order a player touches them on an ordinary day: who rides, what
+ * they wear, what the account always has, what else counts, what is running, the temple. The two
+ * set once come after, folded (`FOLDED`).
+ */
+const ORDER = ['captains', 'equipment', 'permanent', 'other', 'events', 'recovery'] as const;
+const FOLDED = ['artifacts', 'titles'] as const satisfies readonly BonusesFold[];
 
 export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const titleId = useId();
   const [expanded, setExpanded] = useState(readExpanded);
+  const [folds, setFolds] = useState<Record<BonusesFold, boolean>>(() => ({
+    artifacts: readFold('artifacts'),
+    titles: readFold('titles'),
+  }));
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const [refusedCaptain, setRefusedCaptain] = useState(false);
   const [refusedArtifact, setRefusedArtifact] = useState(false);
@@ -189,11 +192,11 @@ export function BonusesSection() {
   };
   const sheet = { profile, summary, onClose: close };
 
-  const rowGroup = (id: string) => {
+  const chipGroup = (id: string) => {
     const group = groups.get(id);
     if (group === undefined) return null;
     return (
-      <SourceRows
+      <SourceChips
         group={group}
         onEdit={setEditor}
         onAdd={(entry) => {
@@ -205,9 +208,12 @@ export function BonusesSection() {
 
   const caption = (id: string): string => groups.get(id)?.caption ?? '';
 
-  const panels: Record<(typeof ORDER)[number], { title: string; summary: string; body: React.ReactNode }> = {
+  const panels: Record<
+    (typeof ORDER)[number] | (typeof FOLDED)[number],
+    { title: string; summary: string; body: React.ReactNode }
+  > = {
     captains: {
-      title: 'Captains and hero',
+      title: 'Hero and captains',
       summary: `${String(setup.active.captains.length)}/${String(MAX_ACTIVE_CAPTAINS)}`,
       body: (
         <CaptainChips
@@ -218,7 +224,7 @@ export function BonusesSection() {
         />
       ),
     },
-    equipment: { title: 'Equipment', summary: caption('equipment'), body: rowGroup('equipment') },
+    equipment: { title: 'Equipment', summary: caption('equipment'), body: chipGroup('equipment') },
     artifacts: {
       title: 'Artifacts',
       summary: `${String(setup.active.artifacts.length)}/${String(MAX_ACTIVE_ARTIFACTS)}`,
@@ -251,9 +257,9 @@ export function BonusesSection() {
         />
       ),
     },
-    other: { title: 'Other', summary: caption('other'), body: rowGroup('other') },
-    events: { title: 'Events', summary: caption('events'), body: rowGroup('events') },
-    recovery: { title: 'Recovery', summary: 'always on', body: rowGroup('recovery') },
+    other: { title: 'Other', summary: caption('other'), body: chipGroup('other') },
+    events: { title: 'Events', summary: caption('events'), body: chipGroup('events') },
+    recovery: { title: 'Recovery', summary: 'always on', body: chipGroup('recovery') },
   };
 
   return (
@@ -292,44 +298,32 @@ export function BonusesSection() {
                 {caveat}
               </Alert>
             ))}
-            {/*
-              `keepMounted={false}`: a closed group is not in the document at all. Eight groups hold
-              about eighty chips and as many anchored popovers between them, and a player opens one
-              group at a time — mounting the other seven costs a frame and buys nothing.
-            */}
-            <Accordion
-              multiple
-              keepMounted={false}
-              defaultValue={['captains']}
-              chevronPosition="left"
-              variant="default"
-            >
-              {ORDER.map((id) => (
-                <Accordion.Item key={id} value={id}>
-                  <Accordion.Control>
-                    <Group justify="space-between" wrap="nowrap" gap="sm" pr="xs">
-                      <Text span size="sm" fw={500}>
-                        {panels[id].title}
-                      </Text>
-                      <Text span size="xs" c="dimmed">
-                        {panels[id].summary}
-                      </Text>
-                    </Group>
-                  </Accordion.Control>
-                  <Accordion.Panel>{panels[id].body}</Accordion.Panel>
-                </Accordion.Item>
+            {ORDER.map((id) => (
+              <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
+                {panels[id].body}
+              </FamilyRow>
+            ))}
+            {/* The folds share one part, as the March's do: a hairline between two collapsed rows
+                is a rule between two rules. The two families set once, then the audit. */}
+            <Stack gap={0}>
+              {FOLDED.map((id) => (
+                <Disclosure
+                  key={id}
+                  title={panels[id].title}
+                  summary={panels[id].summary}
+                  opened={folds[id]}
+                  onChange={(next) => {
+                    setFolds((current) => ({ ...current, [id]: next }));
+                    writeFold(id, next);
+                  }}
+                >
+                  {panels[id].body}
+                </Disclosure>
               ))}
-              <Accordion.Item value="breakdown">
-                <Accordion.Control>
-                  <Text span size="sm" fw={500}>
-                    Every key and what feeds it
-                  </Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <TotalsBreakdown profile={profile} setup={setup} />
-                </Accordion.Panel>
-              </Accordion.Item>
-            </Accordion>
+              <Disclosure title="Every key and what feeds it">
+                <TotalsBreakdown profile={profile} setup={setup} />
+              </Disclosure>
+            </Stack>
           </Stack>
         </Disclosure>
       </Sections>

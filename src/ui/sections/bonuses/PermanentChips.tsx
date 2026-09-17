@@ -1,6 +1,6 @@
 /**
  * The permanent sources, as TotalStack draws them (investigation 0006): the same chips as the
- * captains, always highlighted, with a gear on each. They count on every march — there is no switch
+ * captains, always highlighted and pinned, with a gear on each. They count on every march — there is no switch
  * to flip — so the chip and the gear are two names for the same target: open what this source is
  * worth and type it in.
  *
@@ -41,6 +41,7 @@ export function PermanentChips({ chips, onEdit, onAdd }: PermanentChipsProps) {
             name={chip.name}
             value={chip.value}
             dotted={chip.value !== ''}
+            pinned
             checked
             toggleLabel={`${chip.name}, on every march`}
             gearLabel={`Edit ${chip.name}`}
