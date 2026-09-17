@@ -1,0 +1,778 @@
+{
+ "run": "2026-09-17T19:41:48.009Z",
+ "scenarios": [
+  {
+   "label": "2026-09-17 export, its setup (7 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "more-mercs",
+    "steady-max",
+    "all-in"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 22493346,
+     "silver": 10957600,
+     "burned": 93,
+     "perSilver": 2.053,
+     "perHired": 241864
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 25952553,
+     "silver": 14192200,
+     "burned": 93,
+     "perSilver": 1.829,
+     "perHired": 279060
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 23441856,
+     "silver": 10957600,
+     "burned": 55,
+     "perSilver": 2.139,
+     "perHired": 426216
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 25833694,
+     "silver": 14192200,
+     "burned": 86,
+     "perSilver": 1.82,
+     "perHired": 300392
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 21662734,
+     "silver": 10957600,
+     "burned": 47,
+     "perSilver": 1.977,
+     "perHired": 460909
+    },
+    {
+     "name": "Complete optimization · more-mercs",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 22133839,
+     "silver": 10957600,
+     "burned": 50,
+     "perSilver": 2.02,
+     "perHired": 442677
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 23264491,
+     "silver": 10957600,
+     "burned": 53,
+     "perSilver": 2.123,
+     "perHired": 438953
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 22518504,
+     "silver": 14337600,
+     "burned": 93,
+     "perSilver": 1.571,
+     "perHired": 242134
+    }
+   ]
+  },
+  {
+   "label": "2026-09-17 export, 12 000 leadership",
+   "refusal": null,
+   "stops": [
+    "silver-saver",
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 32417040,
+     "silver": 18790400,
+     "burned": 93,
+     "perSilver": 1.725,
+     "perHired": 348570
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 33361705,
+     "silver": 20399600,
+     "burned": 93,
+     "perSilver": 1.635,
+     "perHired": 358728
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 33438122,
+     "silver": 18790400,
+     "burned": 70,
+     "perSilver": 1.78,
+     "perHired": 477687
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 34283252,
+     "silver": 21204200,
+     "burned": 85,
+     "perSilver": 1.617,
+     "perHired": 403332
+    },
+    {
+     "name": "Complete optimization · silver-saver",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 25145044,
+     "silver": 14231900,
+     "burned": 51,
+     "perSilver": 1.767,
+     "perHired": 493040
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 32231242,
+     "silver": 18790400,
+     "burned": 67,
+     "perSilver": 1.715,
+     "perHired": 481063
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 32518195,
+     "silver": 21057500,
+     "burned": 73,
+     "perSilver": 1.544,
+     "perHired": 445455
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 31652798,
+     "silver": 22422900,
+     "burned": 93,
+     "perSilver": 1.412,
+     "perHired": 340353
+    }
+   ]
+  },
+  {
+   "label": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "silver-saver",
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 26530424,
+     "silver": 31236000,
+     "burned": 30,
+     "perSilver": 0.849,
+     "perHired": 884347
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 31495858,
+     "silver": 45750400,
+     "burned": 30,
+     "perSilver": 0.688,
+     "perHired": 1049862
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 26530424,
+     "silver": 31236000,
+     "burned": 30,
+     "perSilver": 0.849,
+     "perHired": 884347
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 31495858,
+     "silver": 45750400,
+     "burned": 30,
+     "perSilver": 0.688,
+     "perHired": 1049862
+    },
+    {
+     "name": "Complete optimization · silver-saver",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 21453290,
+     "silver": 20537200,
+     "burned": 22,
+     "perSilver": 1.045,
+     "perHired": 975150
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 29677128,
+     "silver": 30607200,
+     "burned": 25,
+     "perSilver": 0.97,
+     "perHired": 1187085
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 30215378,
+     "silver": 30270800,
+     "burned": 28,
+     "perSilver": 0.998,
+     "perHired": 1079121
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 31218724,
+     "silver": 31092400,
+     "burned": 30,
+     "perSilver": 1.004,
+     "perHired": 1040624
+    }
+   ]
+  },
+  {
+   "label": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
+   "refusal": null,
+   "stops": [
+    "silver-saver",
+    "sweet-spot",
+    "more-mercs",
+    "steady-max",
+    "all-in"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 72384395,
+     "silver": 17179200,
+     "burned": 874,
+     "perSilver": 4.213,
+     "perHired": 82820
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 80658235,
+     "silver": 30800000,
+     "burned": 874,
+     "perSilver": 2.619,
+     "perHired": 92286
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 29111661,
+     "silver": 17179200,
+     "burned": 78,
+     "perSilver": 1.695,
+     "perHired": 373226
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 52075835,
+     "silver": 0,
+     "burned": 874,
+     "perSilver": 52075835,
+     "perHired": 59583
+    },
+    {
+     "name": "Complete optimization · silver-saver",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 22179294,
+     "silver": 13217400,
+     "burned": 49,
+     "perSilver": 1.678,
+     "perHired": 452639
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 26023854,
+     "silver": 17179200,
+     "burned": 58,
+     "perSilver": 1.515,
+     "perHired": 448687
+    },
+    {
+     "name": "Complete optimization · more-mercs",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 27096537,
+     "silver": 17179200,
+     "burned": 61,
+     "perSilver": 1.577,
+     "perHired": 444206
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 30107115,
+     "silver": 17179200,
+     "burned": 70,
+     "perSilver": 1.753,
+     "perHired": 430102
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 29111661,
+     "silver": 17179200,
+     "burned": 78,
+     "perSilver": 1.695,
+     "perHired": 373226
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Bear V ×1 (20 000 leadership)",
+   "refusal": "planCampaign: no feasible plan for this army",
+   "stops": [],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 18554768,
+     "silver": 32525600,
+     "burned": 1,
+     "perSilver": 0.57,
+     "perHired": 18554768
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 23899764,
+     "silver": 56000000,
+     "burned": 1,
+     "perSilver": 0.427,
+     "perHired": 23899764
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 18554768,
+     "silver": 32525600,
+     "burned": 1,
+     "perSilver": 0.57,
+     "perHired": 18554768
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 23899764,
+     "silver": 56000000,
+     "burned": 1,
+     "perSilver": 0.427,
+     "perHired": 23899764
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Bear V ×2 (20 000 leadership)",
+   "refusal": "planCampaign: no feasible plan for this army",
+   "stops": [],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 18779168,
+     "silver": 32525600,
+     "burned": 2,
+     "perSilver": 0.577,
+     "perHired": 9389584
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 23974564,
+     "silver": 56000000,
+     "burned": 2,
+     "perSilver": 0.428,
+     "perHired": 11987282
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 18779168,
+     "silver": 32525600,
+     "burned": 2,
+     "perSilver": 0.577,
+     "perHired": 9389584
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 23974564,
+     "silver": 56000000,
+     "burned": 2,
+     "perSilver": 0.428,
+     "perHired": 11987282
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Bear V ×3 (20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 19115768,
+     "silver": 32525600,
+     "burned": 3,
+     "perSilver": 0.588,
+     "perHired": 6371923
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 24086764,
+     "silver": 56000000,
+     "burned": 3,
+     "perSilver": 0.43,
+     "perHired": 8028921
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 19115768,
+     "silver": 32525600,
+     "burned": 3,
+     "perSilver": 0.588,
+     "perHired": 6371923
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 24086764,
+     "silver": 56000000,
+     "burned": 3,
+     "perSilver": 0.43,
+     "perHired": 8028921
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 3,
+     "damage": 14168526,
+     "silver": 24394200,
+     "burned": 3,
+     "perSilver": 0.581,
+     "perHired": 4722842
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Bear V ×10 (20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 21788376,
+     "silver": 32525600,
+     "burned": 4,
+     "perSilver": 0.67,
+     "perHired": 5447094
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 25133964,
+     "silver": 56000000,
+     "burned": 4,
+     "perSilver": 0.449,
+     "perHired": 6283491
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 21135368,
+     "silver": 32525600,
+     "burned": 4,
+     "perSilver": 0.65,
+     "perHired": 5283842
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 25133964,
+     "silver": 56000000,
+     "burned": 4,
+     "perSilver": 0.449,
+     "perHired": 6283491
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 21135368,
+     "silver": 32525600,
+     "burned": 4,
+     "perSilver": 0.65,
+     "perHired": 5283842
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 27526898,
+     "silver": 32525600,
+     "burned": 30,
+     "perSilver": 0.846,
+     "perHired": 917563
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 30340395,
+     "silver": 33291200,
+     "burned": 30,
+     "perSilver": 0.911,
+     "perHired": 1011347
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 30230189,
+     "silver": 32525600,
+     "burned": 29,
+     "perSilver": 0.929,
+     "perHired": 1042420
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 30436414,
+     "silver": 32908400,
+     "burned": 30,
+     "perSilver": 0.925,
+     "perHired": 1014547
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 29021204,
+     "silver": 32525600,
+     "burned": 25,
+     "perSilver": 0.892,
+     "perHired": 1160848
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 30057473,
+     "silver": 32525600,
+     "burned": 28,
+     "perSilver": 0.924,
+     "perHired": 1073481
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 28219651,
+     "silver": 36343000,
+     "burned": 30,
+     "perSilver": 0.776,
+     "perHired": 940655
+    }
+   ]
+  },
+  {
+   "label": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 8616048,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.416,
+     "perHired": 359002
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 8620931,
+     "silver": 6157800,
+     "burned": 24,
+     "perSilver": 1.4,
+     "perHired": 359205
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 8628782,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.418,
+     "perHired": 359533
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "marches": 4,
+     "damage": 8633665,
+     "silver": 6157800,
+     "burned": 24,
+     "perSilver": 1.402,
+     "perHired": 359736
+    },
+    {
+     "name": "TotalStack · optimize (as captured, repeated)",
+     "kind": "external",
+     "marches": 4,
+     "damage": 8911356,
+     "silver": 6084400,
+     "burned": 24,
+     "perSilver": 1.465,
+     "perHired": 371307
+    },
+    {
+     "name": "Kai’s calculator · extract (as captured, repeated)",
+     "kind": "external",
+     "marches": 4,
+     "damage": 8118806,
+     "silver": 6203200,
+     "burned": 24,
+     "perSilver": 1.309,
+     "perHired": 338284
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 8193505,
+     "silver": 6083200,
+     "burned": 19,
+     "perSilver": 1.347,
+     "perHired": 431237
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 8331398,
+     "silver": 6083200,
+     "burned": 21,
+     "perSilver": 1.37,
+     "perHired": 396733
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "marches": 4,
+     "damage": 8154596,
+     "silver": 6250700,
+     "burned": 24,
+     "perSilver": 1.305,
+     "perHired": 339775
+    }
+   ]
+  }
+ ]
+}

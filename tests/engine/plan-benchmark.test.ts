@@ -1,60 +1,75 @@
 /**
  * **The benchmark, as a standing test** (owner, 2026-09-18: *"always benchmark our total optimization against
  * the two others to understand if we're finding something interesting or just changing numbers without really
- * improving on the current stack algorithm"*).
+ * improving on the current stack algorithm"*; later that day: *"update the benchmark with the needed test
+ * scenarios to prove everything … so we have a definitive benchmark over the main use cases of the
+ * calculators"*).
  *
  * Complete optimization against Tier ladder and Troops first — each as the plain sizer and as Generate runs
- * it on the owner's setup, the priority search on average damage — and every plan stop, all played for the
- * same four marches: the sizer methods re-sized each march on the stock the last one left (a chunk of ten
- * lost per hired stack fielded), the plan as its own sequence of repeats and finale. Every march is priced by
- * `simulateBattle` on its counts. The report form of this is `tools/theorycraft/100-three-methods.test.ts`;
- * the table each case measured here is written to `tools/theorycraft/out/benchmark-latest.md`.
+ * it, the priority search on average damage — and every plan stop, all played for the same four marches: the
+ * sizer methods re-sized each march on the stock the last one left (a chunk of ten lost per hired stack
+ * fielded), the plan as its own sequence of repeats and finale. Where a calculator outside this repo answered
+ * the same case (TotalStack's optimize capture of 2026-09-15, Kai's calculator's extract of the same day), its
+ * march is a row too, played as captured while the stock lasts. Every march is priced by `simulateBattle` on
+ * its counts.
  *
- * What must hold, or the plan is changing numbers rather than improving on the sizers (floors measured on
- * 2026-09-18):
+ * **The scenarios** are the main use cases of the calculators, each pinned to what the engine does today so
+ * that a change either way is news:
  *
- *  - the plan's hardest-hitting stop (the steady max, or the all-in sequence where it beats it) reaches at
- *    least 89 % of the best sizer sequence's four-march damage;
- *  - the plan's best stop **a hired unit** beats every sizer sequence on that ratio;
- *  - the plan's best stop **a silver** reaches at least 95 % of the best sizer sequence's.
+ *  - the owner's 2026-09-17 export at its setup (7 000 leadership — the case where a hired stack on top was
+ *    the best sponge, experiment 101 §A) and at 12 000;
+ *  - his live account of 2026-09-18 (one hired type, 20 000) and its evening form (four types, one of them
+ *    hired as unlimited, 11 000);
+ *  - a first-run army with Bear V at a stock of 1, 2, 3 and 10 (experiment 101 §B: the small stocks where
+ *    the plan refuses or offers one stop), and with the hunter at 83 (the e2e seed);
+ *  - the 4 000-leadership case of 2026-09-15, the one case two other calculators answered.
  *
- * **Known gap, measured 2026-09-18 and pinned below:** on the 2026-09-17 export at its setup the plain
- * Troops-first sequence beats the plan's *sweet spot* on both ratios (2.14 a silver · 426 216 a hired against
- * 1.95 · 376 087); at 12 000 it beats it a silver only. The sizer re-sizes each march smaller as the stock drains — a descending sequence the
- * plan cannot express, since it repeats one march and plays a finale. The pin flips when that shape lands.
+ * What must hold on every case the plan answers, or the plan is changing numbers rather than improving on
+ * the sizers: its hardest-hitting campaign reaches the pinned share of the best sizer sequence's four-march
+ * damage, its best stop a hired unit beats every sizer sequence unless pinned otherwise, and its best stop a
+ * silver reaches 95 % of the best sizer sequence's. The pins are measured, not chosen — each carries the
+ * date and the figure — and a proposal that moves one moves the pin with it.
  *
- * Runs where the owner's export is (skipped elsewhere): the 2026-09-17 export at its setup and at 12 000
- * leadership, and his live account of 2026-09-18 built from it.
+ * The table each case measured is written to `tools/theorycraft/out/benchmark-latest.md`, the figures to
+ * `benchmark-latest.json` beside it (what a before/after comparison reads). Runs where the owner's export is
+ * (skipped elsewhere).
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
+import { CAMPAIGN } from '@/config';
+import { unitById } from '@/data';
 import { planCampaign } from '@/engine';
 import { simulateBattle } from '@/engine/battle';
+import { aggregateBonuses } from '@/engine/bonuses';
 import { buildKillOrder } from '@/engine/killOrder';
+import type { CampaignPlan } from '@/engine/plan';
 import { chunks } from '@/engine/recovery';
 import { searchPriority } from '@/engine/search';
 import { sizeStacks } from '@/engine/stacker';
-import type { Stack, StackRequest, StackResult } from '@/engine/types';
+import type { ResolvedSource, Stack, StackRequest, StackResult, UnitDef } from '@/engine/types';
 import { effectiveUnit, hitDamage } from '@/engine/units';
 import { parseImport } from '@/share/exportImport';
-import type { BattleSetup, Profile } from '@/state/schema';
-import { buildPlanRequest, buildStackRequest } from '@/state/derive';
+import { newProfile } from '@/state/defaults';
+import { buildStackRequest } from '@/state/derive';
+import type { Profile } from '@/state/schema';
 
 const OWNER_EXPORT =
   process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
+const TOTALSTACK_CAPTURE = new URL(
+  '../../docs/research/fixtures/totalstack-2026-09-15-optimize.json',
+  import.meta.url,
+);
+const KAI_EXTRACT = new URL('../../docs/research/fixtures/kai-extract-2026-09-15-4000.json', import.meta.url);
 const HORIZON = 4;
 const SEARCH_BUDGET_MS = 3_000;
-/**
- * Measured 2026-09-18: 89.6 % on the 2026-09-17 export at its setup, 94.9 % at 12 000, 99 % live. The 7 000
- * case fell from 95.6 % when every hired stack was made to stand under the troops and every hired type kept
- * (S-75): the sizer sequences it is measured against shelter nothing — their hired stacks die first — and
- * the owner chose the shelter over those 6 %.
- */
-const DAMAGE_FLOOR = 0.89;
 const SILVER_FLOOR = 0.95;
-const REPORT = new URL('../../tools/theorycraft/out/benchmark-latest.md', import.meta.url);
+const OUT = new URL('../../tools/theorycraft/out/', import.meta.url);
+const REPORT = new URL('benchmark-latest.md', OUT);
+const FIGURES = new URL('benchmark-latest.json', OUT);
 const n = (value: number): string => Math.round(value).toLocaleString('en-US');
+
+// ---- pricing ---------------------------------------------------------------------------------------------
 
 /** A march from explicit counts, priced as the recap prices it. */
 function price(request: StackRequest, counts: Record<string, number>): { damage: number; silver: number } {
@@ -92,13 +107,24 @@ function price(request: StackRequest, counts: Record<string, number>): { damage:
 
 interface Campaign {
   name: string;
+  /** Who produced the marches: one of ours, or a calculator outside this repo. */
+  kind: 'sizer' | 'plan' | 'external';
+  marches: number;
   damage: number;
   silver: number;
   burned: number;
 }
 
-function campaignOf(request: StackRequest, name: string, marches: Record<string, number>[]): Campaign {
-  const mercIds = request.units.filter((u) => u.pool === 'authority').map((u) => u.id);
+const hiredIds = (request: StackRequest): string[] =>
+  request.units.filter((u) => u.pool === 'authority').map((u) => u.id);
+
+function campaignOf(
+  request: StackRequest,
+  name: string,
+  kind: Campaign['kind'],
+  marches: Record<string, number>[],
+): Campaign {
+  const mercIds = hiredIds(request);
   let damage = 0;
   let silver = 0;
   let burned = 0;
@@ -108,19 +134,18 @@ function campaignOf(request: StackRequest, name: string, marches: Record<string,
     silver += priced.silver;
     burned += mercIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0);
   }
-  return { name, damage, silver, burned };
+  return { name, kind, marches: marches.length, damage, silver, burned };
 }
 
 /** A sizer method played for the horizon the way a player plays it: Generate, march, lose a chunk, again. */
 function greedy(
-  profile: Profile,
-  setup: BattleSetup,
+  base: StackRequest,
   method: 'elite' | 'ms',
   name: string,
   pick: (request: StackRequest) => Record<string, number>,
 ): Campaign {
-  const first = buildStackRequest(profile, { ...setup, options: { ...setup.options, method } });
-  const mercIds = first.units.filter((u) => u.pool === 'authority').map((u) => u.id);
+  const first: StackRequest = { ...base, options: { ...base.options, method } };
+  const mercIds = hiredIds(first);
   const caps = { ...first.caps };
   const marches: Record<string, number>[] = [];
   for (let i = 0; i < HORIZON; i += 1) {
@@ -128,9 +153,30 @@ function greedy(
     const counts = pick(request);
     if (Object.values(counts).every((c) => c <= 0)) break;
     marches.push(counts);
-    for (const id of mercIds) caps[id] = Math.max(0, (caps[id] ?? 0) - chunks(counts[id] ?? 0));
+    for (const id of mercIds) {
+      if (caps[id] !== undefined) caps[id] = Math.max(0, caps[id] - chunks(counts[id] ?? 0));
+    }
   }
-  return campaignOf(first, name, marches);
+  return campaignOf(first, name, 'sizer', marches);
+}
+
+/** A march another calculator answered, played as captured while the stock lasts (a hired stack clamped to what is left). */
+function asCaptured(base: StackRequest, name: string, counts: Record<string, number>): Campaign {
+  const mercIds = hiredIds(base);
+  const caps = { ...base.caps };
+  const marches: Record<string, number>[] = [];
+  for (let i = 0; i < HORIZON; i += 1) {
+    const march = { ...counts };
+    for (const id of mercIds) {
+      const cap = caps[id];
+      if (cap !== undefined) march[id] = Math.min(march[id] ?? 0, cap);
+    }
+    marches.push(march);
+    for (const id of mercIds) {
+      if (caps[id] !== undefined) caps[id] = Math.max(0, caps[id] - chunks(march[id] ?? 0));
+    }
+  }
+  return campaignOf(base, name, 'external', marches);
 }
 
 const countsOf = (result: StackResult): Record<string, number> =>
@@ -138,137 +184,407 @@ const countsOf = (result: StackResult): Record<string, number> =>
 const perSilver = (c: Campaign): number => c.damage / Math.max(1, c.silver);
 const perHired = (c: Campaign): number => c.damage / Math.max(1, c.burned);
 
-function benchmark(
-  profile: Profile,
-  setup: BattleSetup,
-): { sizers: Campaign[]; plan: Campaign[]; sweet: Campaign; most: Campaign } {
-  const sizers: Campaign[] = [];
+// ---- the scenarios ---------------------------------------------------------------------------------------
+
+interface Pinned {
+  /** The plan refuses this army outright (`planCampaign` throws). */
+  refuses: boolean;
+  /** Stops on the bar. */
+  stops: number;
+  /** The sweet spot beaten on both ratios by a sizer sequence. */
+  sweetLosesOnBoth: boolean;
+  /** The share of the best sizer sequence's four-march damage the plan's hardest campaign reaches. */
+  damageFloor: number;
+  /** The plan's best stop a hired unit beats every sizer sequence. */
+  winsHired: boolean;
+  /** The share of the best sizer sequence's damage a silver the plan's best stop reaches (0.95 unless a case says why). */
+  silverFloor?: number;
+}
+
+interface Scenario {
+  label: string;
+  request: StackRequest;
+  /** Marches answered by calculators outside this repo, priced under this scenario's own bonuses. */
+  externals: { name: string; counts: Record<string, number> }[];
+  pinned: Pinned;
+}
+
+function ownerProfile(): Profile | null {
+  if (!existsSync(OWNER_EXPORT)) return null;
+  const parsed = parseImport(readFileSync(OWNER_EXPORT, 'utf8'));
+  return parsed.kind === 'profile' ? parsed.payload : null;
+}
+
+/** The owner's live browser account of 2026-09-18: his export's profile with the captains he had enlisted. */
+function liveProfile(profile: Profile, hired: { id: string; cap: number | null }[]): Profile {
+  const live = structuredClone(profile);
+  live.mercenaries.selected = hired;
+  live.sources.captains = [
+    { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
+    { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+    { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+  ];
+  return live;
+}
+
+/** A first-run army (Guardsmen I–III, Specialists I, no bonuses) with one hired type at a stock. */
+function firstRun(hired: { id: string; cap: number }, leadership: number): StackRequest {
+  const profile = newProfile('first run');
+  profile.mercenaries.selected = [hired];
+  const setup = profile.setups[0];
+  if (!setup) throw new Error('no setup');
+  return buildStackRequest(profile, { ...setup, housing: { leadership, authority: 40_000, dominance: 0 } });
+}
+
+interface Capture {
+  request: {
+    inputValue: number;
+    authorityValue: number;
+    mercenaryCaps: Record<string, number>;
+    selectedMercenaryIds: string[];
+    relaxedPreservation: boolean;
+    healthBonuses: Record<string, number>;
+    strengthBonuses: Record<string, number>;
+    templeLevel: number;
+    enemyFormation: Record<string, number>;
+  };
+  response: { calculation: { troopCounts: Record<string, number>; mercenaryCounts: Record<string, number> } };
+}
+interface KaiExtract {
+  payload: { army: { name: string; count: number }[] };
+}
+const KAI_NAMES: Record<string, string> = {
+  'Spearman I': 'spearman-1',
+  'Rider I': 'rider-1',
+  'Archer I': 'archer-1',
+  'Spearman II': 'spearman-2',
+  'Rider II': 'rider-2',
+  'Archer II': 'archer-2',
+  'Rider III': 'rider-3',
+  Legionary: 'legionary-6',
+  Arbalester: 'arbalester-6',
+  'Epic Monster Hunter VI': 'epic-monster-hunter-6',
+  Chariot: 'chariot-6',
+};
+
+/**
+ * The 4 000-leadership case of 2026-09-15 as TotalStack was asked it: its own answer's troop types (the
+ * query's tier window as it read it), the four hired types with the caps of the query, its bonuses (melee
+ * +35 / +70, army +3 / +3), its enemy and temple. TotalStack's answer and Kai's extract of the same day are
+ * the external rows; Kai's extract carries no bonus figures, so it is priced under the query's.
+ */
+function fourThousand(): Scenario {
+  const capture = JSON.parse(readFileSync(TOTALSTACK_CAPTURE, 'utf8')) as Capture;
+  const kai = JSON.parse(readFileSync(KAI_EXTRACT, 'utf8')) as KaiExtract;
+  const query = capture.request;
+  const theirs = {
+    ...capture.response.calculation.troopCounts,
+    ...capture.response.calculation.mercenaryCounts,
+  };
+  const troopIds = Object.keys(capture.response.calculation.troopCounts);
+  const units = [...troopIds, ...query.selectedMercenaryIds].map((id) => {
+    const unit = unitById(id);
+    if (!unit) throw new Error(`unknown unit ${id}`);
+    return unit as UnitDef;
+  });
+  const caps = Object.fromEntries(query.selectedMercenaryIds.map((id) => [id, query.mercenaryCaps[id] ?? 0]));
+  const source: ResolvedSource = {
+    id: 'totalstack-2026-09-15',
+    label: 'the capture request',
+    kind: 'custom',
+    health: { melee: query.healthBonuses['melee'] ?? 0, army: query.healthBonuses['army'] ?? 0 },
+    strength: { melee: query.strengthBonuses['melee'] ?? 0, army: query.strengthBonuses['army'] ?? 0 },
+  };
+  const request: StackRequest = {
+    units,
+    caps,
+    housing: { leadership: query.inputValue, authority: query.authorityValue, dominance: 0 },
+    totals: aggregateBonuses([source]),
+    options: {
+      method: 'ms',
+      strictMercsAboveMonsters: false,
+      monstersLast: false,
+      roundTo10: false,
+      relaxedPreservation: query.relaxedPreservation,
+    },
+    enemy: {
+      melee: query.enemyFormation['melee'] ?? 0,
+      ranged: query.enemyFormation['ranged'] ?? 0,
+      mounted: query.enemyFormation['mounted'] ?? 0,
+      flying: query.enemyFormation['flying'] ?? 0,
+    },
+    activeEvents: [],
+    recovery: {
+      templeLevel: query.templeLevel,
+      trainingCostReduction: {},
+      trainingSpeed: {},
+      plan: { mode: 'retrain' },
+    },
+  };
+  const kaiCounts: Record<string, number> = {};
+  for (const stack of kai.payload.army) {
+    const id = KAI_NAMES[stack.name];
+    if (!id) throw new Error(`unmapped Kai stack ${stack.name}`);
+    kaiCounts[id] = stack.count;
+  }
+  return {
+    label:
+      'the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)',
+    request,
+    externals: [
+      { name: 'TotalStack · optimize (as captured, repeated)', counts: theirs },
+      { name: 'Kai’s calculator · extract (as captured, repeated)', counts: kaiCounts },
+    ],
+    // Measured 2026-09-18: three stops; 96.5 % of the best sizer sequence's damage. TotalStack's own answer,
+    // repeated, out-hits every row here (8.91 M against the plan's 8.33 M, same silver, 24 burned against 21).
+    pinned: { refuses: false, stops: 3, sweetLosesOnBoth: false, damageFloor: 0.96, winsHired: true },
+  };
+}
+
+function scenarios(profile: Profile): Scenario[] {
+  const setup = profile.setups[0];
+  if (!setup) throw new Error('no setup');
+  const at = (leadership: number, p: Profile = profile): StackRequest =>
+    buildStackRequest(p, { ...setup, housing: { ...setup.housing, leadership } });
+  const live = (hired: { id: string; cap: number | null }[], leadership: number): StackRequest =>
+    buildStackRequest(liveProfile(profile, hired), {
+      ...setup,
+      housing: { leadership, authority: 2_180, dominance: 0 },
+    });
+  return [
+    {
+      // Pinned 2026-09-18: the plain Troops-first sequence beat the sweet spot on both ratios (2.14 · 426 216
+      // against 1.95 · 376 087) until every hired type was kept and every hired stack sheltered (S-75); the
+      // shelter costs 6 % of the top damage here (89.6 % of the sizers, experiment 101 §A).
+      label: '2026-09-17 export, its setup (7 000 leadership)',
+      request: buildStackRequest(profile, setup),
+      externals: [],
+      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: false, damageFloor: 0.89, winsHired: true },
+    },
+    {
+      label: '2026-09-17 export, 12 000 leadership',
+      request: at(12_000),
+      externals: [],
+      // Measured 2026-09-18 before the proposals: 94.9 % of the sizers' damage, four stops (no more-mercs rung).
+      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: false, damageFloor: 0.94, winsHired: true },
+    },
+    {
+      label: 'live account of 2026-09-18 (one hired type, 20 000 leadership)',
+      request: live([{ id: 'epic-monster-hunter-6', cap: 83 }], 20_000),
+      externals: [],
+      // Measured 2026-09-18: 99.1 %, four stops.
+      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: false, damageFloor: 0.99, winsHired: true },
+    },
+    {
+      label: 'live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)',
+      request: live(
+        [
+          { id: 'epic-monster-hunter-6', cap: 83 },
+          { id: 'legionary-6', cap: null },
+          { id: 'chariot-6', cap: 10 },
+          { id: 'arbalester-6', cap: 60 },
+        ],
+        11_000,
+      ),
+      externals: [],
+      // Measured 2026-09-18: the sizers field the unlimited legionaries by the authority pool alone — 2 180 a
+      // march, 874 burned over four, and Generate under Troops first answers a march of legionaries and no
+      // troops at all (no silver, 52 M damage) — so their damage and their damage a silver are not a yardstick
+      // here; the plan's 30.1 M at 70 burned is 37 % of that damage and wins a hired by four times.
+      pinned: {
+        refuses: false,
+        stops: 5,
+        sweetLosesOnBoth: false,
+        damageFloor: 0.37,
+        winsHired: true,
+        silverFloor: 0,
+      },
+    },
+    {
+      label: 'first-run army, Bear V ×1 (20 000 leadership)',
+      request: firstRun({ id: 'bear-5', cap: 1 }, 20_000),
+      externals: [],
+      pinned: { refuses: true, stops: 0, sweetLosesOnBoth: false, damageFloor: 0, winsHired: false },
+    },
+    {
+      label: 'first-run army, Bear V ×2 (20 000 leadership)',
+      request: firstRun({ id: 'bear-5', cap: 2 }, 20_000),
+      externals: [],
+      pinned: { refuses: true, stops: 0, sweetLosesOnBoth: false, damageFloor: 0, winsHired: false },
+    },
+    {
+      label: 'first-run army, Bear V ×3 (20 000 leadership)',
+      request: firstRun({ id: 'bear-5', cap: 3 }, 20_000),
+      externals: [],
+      // Measured 2026-09-18 (experiment 101 §B): one stop, one bear fielded; the sizers field all three and
+      // burn the same one a march — 58.8 % of their damage, beaten a hired and on both ratios.
+      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: true, damageFloor: 0.58, winsHired: false },
+    },
+    {
+      label: 'first-run army, Bear V ×10 (20 000 leadership)',
+      request: firstRun({ id: 'bear-5', cap: 10 }, 20_000),
+      externals: [],
+      // Measured 2026-09-18 (experiment 101 §B): one stop, six bears under the Elite sizer; the sizers field
+      // ten, nine, eight, seven for the same four chunks — 84.1 % of their damage, beaten a hired.
+      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: true, damageFloor: 0.84, winsHired: false },
+    },
+    {
+      label: 'first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)',
+      request: firstRun({ id: 'epic-monster-hunter-6', cap: 83 }, 20_000),
+      externals: [],
+      // Measured 2026-09-18: 98.8 %, three stops (no silver saver, no more-mercs rung).
+      pinned: { refuses: false, stops: 3, sweetLosesOnBoth: false, damageFloor: 0.98, winsHired: true },
+    },
+    fourThousand(),
+  ];
+}
+
+// ---- one scenario ----------------------------------------------------------------------------------------
+
+interface Measured {
+  rows: Campaign[];
+  plan: CampaignPlan | null;
+  refusal: string | null;
+}
+
+function measure(scenario: Scenario): Measured {
+  const { request } = scenario;
+  const rows: Campaign[] = [];
   for (const [method, title] of [
     ['elite', 'Tier ladder'],
     ['ms', 'Troops first'],
   ] as const) {
-    sizers.push(greedy(profile, setup, method, `${title} · all types`, (r) => countsOf(sizeStacks(r))));
-    sizers.push(
-      greedy(profile, setup, method, `${title} · Generate (average damage)`, (r) =>
+    rows.push(greedy(request, method, `${title} · all types`, (r) => countsOf(sizeStacks(r))));
+    rows.push(
+      greedy(request, method, `${title} · Generate (average damage)`, (r) =>
         countsOf(searchPriority({ request: r, objective: 'avgDamage', budgetMs: SEARCH_BUDGET_MS }).result),
       ),
     );
   }
-  const input = buildPlanRequest(profile, setup);
-  const planned = planCampaign(input);
-  const plan = planned.alternatives.map((stop) => {
-    const repeats = stop.marches - (stop.finaleCounts ? 1 : 0);
-    const marches = stop.sequence ?? Array.from({ length: repeats }, () => stop.counts);
-    if (!stop.sequence && stop.finaleCounts) marches.push(stop.finaleCounts);
-    const campaign = campaignOf(input.request, `Complete optimization · ${stop.pick}`, marches);
-    // The engine's own campaign figure and the four marches priced one by one must agree.
-    expect(Math.abs(campaign.damage - stop.totalDamage)).toBeLessThanOrEqual(1);
-    return campaign;
-  });
-  const sweet = plan.find((c) => c.name.endsWith('sweet-spot'));
-  // The plan's hardest-hitting campaign: the steady max or, where it beats it, the all-in sequence.
-  const most = plan.reduce<Campaign | undefined>((b, c) => (!b || c.damage > b.damage ? c : b), undefined);
-  if (!sweet || !most) throw new Error('no sweet spot or top');
-  return { sizers, plan, sweet, most };
+  for (const external of scenario.externals) rows.push(asCaptured(request, external.name, external.counts));
+  let plan: CampaignPlan | null = null;
+  let refusal: string | null = null;
+  try {
+    plan = planCampaign({ request, marchTarget: HORIZON, ...CAMPAIGN.planFixes });
+  } catch (error) {
+    refusal = error instanceof Error ? error.message : String(error);
+  }
+  if (plan) {
+    for (const stop of plan.alternatives) {
+      const repeats = stop.marches - (stop.finaleCounts ? 1 : 0);
+      const marches = stop.sequence ?? Array.from({ length: repeats }, () => stop.counts);
+      if (!stop.sequence && stop.finaleCounts) marches.push(stop.finaleCounts);
+      const campaign = campaignOf(request, `Complete optimization · ${stop.pick}`, 'plan', marches);
+      // The engine's own campaign figure and the marches priced one by one must agree.
+      expect(Math.abs(campaign.damage - stop.totalDamage)).toBeLessThanOrEqual(1);
+      rows.push(campaign);
+    }
+  }
+  return { rows, plan, refusal };
 }
 
-function expectPlanWins(
-  label: string,
-  profile: Profile,
-  setup: BattleSetup,
-  knownGap: { sweetLosesOnBoth: boolean },
-): void {
-  const { sizers, plan, sweet, most } = benchmark(profile, setup);
-  const rows = [...sizers, ...plan];
+function record(label: string, measured: Measured): void {
   const lines = [
     `## ${label}`,
     '',
-    '| sequence | four-march damage | silver | hired burned | a silver | a hired |',
-    '|---|---|---|---|---|---|',
-    ...rows.map(
+    measured.refusal
+      ? `The plan refused: \`${measured.refusal}\`.`
+      : `The plan offers ${measured.plan?.alternatives.length ?? 0} stops.`,
+    '',
+    '| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |',
+    '|---|---|---|---|---|---|---|',
+    ...measured.rows.map(
       (c) =>
-        `| ${c.name} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.burned)} | ${perSilver(c).toFixed(2)} | ${n(perHired(c))} |`,
+        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.burned)} | ${perSilver(c).toFixed(2)} | ${n(perHired(c))} |`,
     ),
     '',
   ];
   appendFileSync(REPORT, `${lines.join('\n')}\n`);
+  const figures = JSON.parse(readFileSync(FIGURES, 'utf8')) as { scenarios: unknown[] };
+  figures.scenarios.push({
+    label,
+    refusal: measured.refusal,
+    stops: measured.plan?.alternatives.map((stop) => stop.pick) ?? [],
+    rows: measured.rows.map((c) => ({
+      name: c.name,
+      kind: c.kind,
+      marches: c.marches,
+      damage: Math.round(c.damage),
+      silver: c.silver,
+      burned: c.burned,
+      perSilver: Math.round(perSilver(c) * 1000) / 1000,
+      perHired: Math.round(perHired(c)),
+    })),
+  });
+  writeFileSync(FIGURES, `${JSON.stringify(figures, null, 1)}\n`);
+}
 
+function check(scenario: Scenario, measured: Measured): void {
+  const { pinned } = scenario;
+  const tell = measured.rows
+    .map((c) => `${c.name}: ${n(c.damage)} / ${n(c.silver)} / ${n(c.burned)}`)
+    .join('; ');
+  expect(measured.refusal !== null, `the plan refuses (${measured.refusal ?? 'no'})`).toBe(pinned.refuses);
+  if (!measured.plan) return;
+  expect(measured.plan.alternatives.length, `stops on the bar (${tell})`).toBe(pinned.stops);
+  const sizers = measured.rows.filter((c) => c.kind === 'sizer');
+  const plan = measured.rows.filter((c) => c.kind === 'plan');
+  const sweet = plan.find((c) => c.name.endsWith('sweet-spot'));
+  const most = plan.reduce<Campaign | undefined>((b, c) => (!b || c.damage > b.damage ? c : b), undefined);
+  if (!sweet || !most) throw new Error('no sweet spot or top');
   const bestSizerDamage = Math.max(...sizers.map((c) => c.damage));
   const bestSizerPerSilver = Math.max(...sizers.map(perSilver));
   const bestSizerPerHired = Math.max(...sizers.map(perHired));
   const planPerSilver = Math.max(...plan.map(perSilver));
   const planPerHired = Math.max(...plan.map(perHired));
-  const tell = rows.map((c) => `${c.name}: ${n(c.damage)} / ${n(c.silver)} / ${n(c.burned)}`).join('; ');
   expect(
     most.damage,
     `the plan's hardest campaign against the best sizer sequence (${tell})`,
-  ).toBeGreaterThanOrEqual(DAMAGE_FLOOR * bestSizerDamage);
-  expect(planPerHired, `the plan's best a hired against the sizers (${tell})`).toBeGreaterThan(
-    bestSizerPerHired,
+  ).toBeGreaterThanOrEqual(pinned.damageFloor * bestSizerDamage);
+  expect(planPerHired > bestSizerPerHired, `the plan's best a hired beats the sizers (${tell})`).toBe(
+    pinned.winsHired,
   );
   expect(planPerSilver, `the plan's best a silver against the sizers (${tell})`).toBeGreaterThanOrEqual(
-    SILVER_FLOOR * bestSizerPerSilver,
+    (pinned.silverFloor ?? SILVER_FLOOR) * bestSizerPerSilver,
   );
-  // The pinned state of the sweet spot against the sizer sequences: a change either way is news.
   const sweetLoses = sizers.some((c) => perSilver(c) >= perSilver(sweet) && perHired(c) >= perHired(sweet));
   expect(sweetLoses, `the sweet spot beaten on both ratios by a sizer sequence (${tell})`).toBe(
-    knownGap.sweetLosesOnBoth,
+    pinned.sweetLosesOnBoth,
   );
 }
 
+// ---- the suite -------------------------------------------------------------------------------------------
+
 describe.skipIf(!existsSync(OWNER_EXPORT))(
-  'the plan against Tier ladder and Troops first, over four marches',
+  'the plan against Tier ladder, Troops first and the other calculators, over four marches',
   () => {
-    const parsed = existsSync(OWNER_EXPORT) ? parseImport(readFileSync(OWNER_EXPORT, 'utf8')) : null;
-    const profile = parsed?.kind === 'profile' ? parsed.payload : null;
-    const setup = profile?.setups[0];
+    const profile = ownerProfile();
+    const cases = profile ? scenarios(profile) : [];
     if (profile) {
-      mkdirSync(new URL('.', REPORT), { recursive: true });
+      mkdirSync(OUT, { recursive: true });
       writeFileSync(
         REPORT,
-        '# The plan against Tier ladder and Troops first — the latest run of `tests/engine/plan-benchmark.test.ts`\n\n' +
+        '# The plan against Tier ladder, Troops first and the other calculators — the latest run of `tests/engine/plan-benchmark.test.ts`\n\n' +
           'Every sequence is four marches: the sizers re-sized each march on the stock the last one left (Generate ' +
-          'four times), the plan as its own repeats and finale. Each march priced by `simulateBattle` on its counts.\n\n',
+          'four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. ' +
+          'Each march priced by `simulateBattle` on its counts.\n\n' +
+          `Run: ${new Date().toISOString()}, commit ${process.env.GIT_COMMIT ?? '(working tree)'}\n\n`,
+      );
+      writeFileSync(
+        FIGURES,
+        `${JSON.stringify({ run: new Date().toISOString(), scenarios: [] }, null, 1)}\n`,
       );
     }
-
-    test('on the 2026-09-17 export at its setup', () => {
-      if (!profile || !setup) throw new Error('no profile');
-      // Pinned 2026-09-18: the plain Troops-first sequence beat the sweet spot on both ratios (2.14 · 426 216
-      // against 1.95 · 376 087) until every hired type was kept and every hired stack sheltered (S-75), which
-      // moved the sweet spot to 11 burned; it keeps its damage a hired unit above that sequence now (460 909
-      // against 426 216) and loses a silver only.
-      expectPlanWins('2026-09-17 export, its setup (7 000 leadership)', profile, setup, {
-        sweetLosesOnBoth: false,
-      });
-    }, 300_000);
-
-    test('on the 2026-09-17 export at 12 000 leadership', () => {
-      if (!profile || !setup) throw new Error('no profile');
-      expectPlanWins(
-        '2026-09-17 export, 12 000 leadership',
-        profile,
-        { ...setup, housing: { ...setup.housing, leadership: 12_000 } },
-        // Troops first (all types) beats it a silver (1.78 against 1.72) and not a hired (477 687 against 481 063).
-        { sweetLosesOnBoth: false },
+    for (const scenario of cases) {
+      test(
+        scenario.label,
+        () => {
+          const measured = measure(scenario);
+          record(scenario.label, measured);
+          check(scenario, measured);
+        },
+        300_000,
       );
-    }, 300_000);
-
-    test('on the owner’s live account of 2026-09-18 (one hired type, 20 000 leadership)', () => {
-      if (!profile || !setup) throw new Error('no profile');
-      const live = structuredClone(profile);
-      live.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 83 }];
-      live.sources.captains = [
-        { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
-        { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
-        { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
-      ];
-      expectPlanWins(
-        'live account of 2026-09-18 (one hired type, 20 000 leadership)',
-        live,
-        { ...setup, housing: { leadership: 20_000, authority: 2_180, dominance: 0 } },
-        { sweetLosesOnBoth: false },
-      );
-    }, 300_000);
+    }
   },
 );
