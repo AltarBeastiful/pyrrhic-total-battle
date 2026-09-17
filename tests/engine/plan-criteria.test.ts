@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
 import { getUnits } from '@/data';
-import { emptyTotals, planCampaign } from '@/engine';
+import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan, PlanRow } from '@/engine/plan';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import { parseImport } from '@/share/exportImport';
@@ -137,8 +137,22 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
 
     test('at his setup (7 000 leadership), through the app’s own request builder', () => {
       if (!profile || !setup) throw new Error('no profile');
+      const input = buildPlanRequest(profile, setup);
+      // The bonuses reach the plan: his three captains (Aydae 39 ★3, Leonidas 36, Alexander 19) and the army
+      // modernization are what the request carries, and nothing else is active on this setup. A regression in
+      // source resolution would move these before it moved the floors below.
+      expect(input.request.totals.strength.guardsmen).toBe(84);
+      expect(input.request.totals.health.guardsmen).toBe(54);
+      expect(input.request.totals.strength.melee).toBe(72);
+      expect(input.request.totals.health.melee).toBe(38);
+      expect(input.request.totals.strength.mounted).toBe(38);
+      expect(input.request.totals.health.mounted).toBe(21);
       const started = Date.now();
-      const plan = planCampaign(buildPlanRequest(profile, setup));
+      const plan = planCampaign(input);
+      // The plan prices a march exactly as the recap will: its own figure for the sweet spot is the battle's.
+      expect(plan.recommend?.repeat.damage).toBe(
+        planMarch(input.request, plan.recommend?.counts ?? {}).summary.avgDamage,
+      );
       // Measured 2026-09-18 (`out/95`, `out/96`): 7 · 10 · 14 burned; thrift 548 476 a hired; sweet 1.8064 ·
       // 494 851, campaign 20 924 965 for 10 957 600; most 6 242 452 at 2.2788; the plan 24 814 601; ~1 s.
       expectCriteria(plan, {
