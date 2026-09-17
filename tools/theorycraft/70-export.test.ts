@@ -115,7 +115,7 @@ describe.skipIf(!process.env.THEORY)(
       };
 
       // ── the curve ───────────────────────────────────────────────────────────────────────────────────
-      const plan = planCampaign({ request, alternatives: 10 });
+      const plan = planCampaign({ request });
       const curveRows: string[][] = [
         [
           'silver',

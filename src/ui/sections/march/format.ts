@@ -68,10 +68,3 @@ export function delta(value: number): string {
   if (rounded === 0) return '0';
   return `${rounded > 0 ? '+' : '-'}${amount(Math.abs(rounded))}`;
 }
-
-/** A difference in a ratio metric, same sign rules with two decimals. */
-export function deltaRatio(value: number): string {
-  if (!Number.isFinite(value)) return '—';
-  if (Math.abs(value) < 0.005) return '0';
-  return `${value > 0 ? '+' : '-'}${ratio(Math.abs(value))}`;
-}

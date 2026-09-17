@@ -49,7 +49,6 @@ describe.skipIf(!process.env.THEORY)('the stops the slider carries', () => {
       const plan = planCampaign({
         request: base,
         marchTarget: testCase.marchTarget,
-        alternatives: 5,
         ...(testCase.silverBudget === undefined ? {} : { silverBudget: testCase.silverBudget }),
       });
       const sweet = plan.recommend;

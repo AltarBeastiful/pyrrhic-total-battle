@@ -29,7 +29,7 @@ describe.skipIf(!process.env.THEORY)('the hired stock the plan fields', () => {
     const owner = loadOwner();
     const base: StackRequest = scenarioC(withHousing(owner.twelve, { leadership: 4_343, authority: 2_000 }));
 
-    const plan = planCampaign({ request: base, marchTarget: 10, alternatives: 4 });
+    const plan = planCampaign({ request: base, marchTarget: 10 });
     const chosen = plan.recommend ?? plan;
 
     const held = (id: string): number => base.caps[id] ?? 0;
@@ -136,15 +136,15 @@ describe.skipIf(!process.env.THEORY)('the hired stock the plan fields', () => {
       '\n| rows asked | plans on the frontier | of them, plans dropping a whole hired type |\n|---|---|---|',
     );
     for (const asked of [4, 8, 12, 24]) {
-      const wide = planCampaign({ request: base, marchTarget: 10, alternatives: asked });
+      const wide = planCampaign({ request: base, marchTarget: 10 });
       const rows = wide.alternatives;
       const holes = rows.filter((point) => MERC_IDS.some((id) => (point.counts[id] ?? 0) === 0));
       report.add(`| ${n(asked)} | ${n(rows.length)} | ${n(holes.length)} |`);
     }
 
     /** Every plan on a 24-row frontier that drops exactly one hired type. */
-    const holesOf = (asked: number): (typeof plan.alternatives)[number][] =>
-      planCampaign({ request: base, marchTarget: 10, alternatives: asked }).alternatives.filter(
+    const holesOf = (): (typeof plan.alternatives)[number][] =>
+      planCampaign({ request: base, marchTarget: 10 }).alternatives.filter(
         (point) => MERC_IDS.filter((id) => (point.counts[id] ?? 0) === 0).length === 1,
       );
 
@@ -155,7 +155,7 @@ describe.skipIf(!process.env.THEORY)('the hired stock the plan fields', () => {
         'drops a type: the missing type is given a token count — 1, 5, 10, and the most that lasts the ' +
         'horizon — with **everything else left as the plan set it**, and the real battle is replayed.',
     );
-    for (const point of holesOf(24)) {
+    for (const point of holesOf()) {
       const missing = MERC_IDS.filter((id) => (point.counts[id] ?? 0) === 0);
       if (missing.length !== 1) continue;
       const id = missing[0] as string;

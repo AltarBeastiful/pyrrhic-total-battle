@@ -13,35 +13,28 @@
  */
 import type { PlanPick, PlanRow } from '@/engine/plan';
 
-import { amount } from './format';
-
-export const PICK_WORD: Record<PlanPick, string> = {
-  'best-for-silver': 'Best for silver',
+/**
+ * The three answers the bar carries (`PlanPick`), each with the one name it wears. Private: `planWords`
+ * below is the single place a row is named, so nothing can index this map a second way.
+ */
+const PICK_WORD: Record<PlanPick, string> = {
   'spare-the-stock': 'Spare the stock',
   'sweet-spot': 'Sweet spot',
   'most-damage': 'Most damage',
-  // A burn-axis filler (`CampaignInput.barAxis: 'burn'`): it has no answer of its own to be named after, so
-  // `planWords` names it by its own burn and this is only the fallback for a row with no figures.
-  step: 'Step',
 };
-
-/** Everything naming a row needs: which answer it is, and what the march it stands for burns. */
-type NamedRow = Pick<PlanRow, 'pick' | 'repeat'>;
 
 /**
  * **A row's words, wherever they are written** (review of 2026-09-16, design rule 5: one name per thing).
  *
- * The four named answers are the map above. A `step` — the filler the burn axis puts between two named
- * stops (`CampaignInput.barAxis: 'burn'`) — answers no question of its own, so "Step" names nothing a
- * player can choose by; it is named by **what it burns**, in the trade's own words ("15 hired lost", the
- * same words as the column head it is read off). The burn is the axis the bar runs along on that axis, so
- * the name is also the row's position on it.
+ * A row is named by **which answer it is** and by nothing else: the `step` filler the bar used to carry
+ * between two named stops is gone with the silver axis (review of 2026-09-18), so there is no row left that
+ * has to be named after its own figures.
  *
  * Every reader goes through here — the tip, the thumb's value text, the trade's row heads, its bars'
  * accessible names — so a stop cannot be called one thing on the bar and another in the table below it.
  */
-export function planWords(row: NamedRow): string {
-  return row.pick === 'step' ? `${amount(row.repeat.mercLost)} hired lost` : PICK_WORD[row.pick];
+export function planWords(row: Pick<PlanRow, 'pick'>): string {
+  return PICK_WORD[row.pick];
 }
 
 /** The words for the two efficiencies, keyed the way `PlanRow.bestFor` is. */
@@ -70,13 +63,12 @@ export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
 /**
  * The two words under the bar, naming its ends — the resource `CampaignPlan.alternatives` is sorted along.
  *
- * They are the axis's own name and not decoration: on `'burn'` — the app's axis since 2026-09-17
- * (`CAMPAIGN.planBar.axis`) — the stops run along the hired units a march burns for good (thriftiest
- * first), and calling those ends "Least silver … Most silver" would name the one resource the bar is *not*
- * ordered by. The words match the trade's "Hired lost" head for the same reason `planWords` names a step
- * that way (rule 5). The silver pair stays for the comparison axis, which is still selectable.
+ * They are the axis's own name and not decoration: the stops run along the hired units a march burns for
+ * good (thriftiest first), and calling those ends "Least silver … Most silver" would name the one resource
+ * the bar is *not* ordered by. The words match the trade's "Hired lost" head for the same reason (rule 5).
+ *
+ * **One pair, because there is one bar** (review of 2026-09-18). It was a record keyed by an axis the
+ * payload carried; the silver ordering it was the other half of was retired with `CampaignPlan.barAxis`,
+ * and a map of one entry is a choice nobody makes.
  */
-export const AXIS_ENDS: Record<'silver' | 'burn', { low: string; high: string }> = {
-  silver: { low: 'Least silver', high: 'Most silver' },
-  burn: { low: 'Fewest hired lost', high: 'Most hired lost' },
-};
+export const BAR_ENDS = { low: 'Fewest hired lost', high: 'Most hired lost' } as const;

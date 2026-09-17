@@ -400,11 +400,10 @@ export function holesIn(
 export function planWithFixes(
   request: StackRequest,
   marchTarget: number,
-  alternatives: number,
   flags: { tokenFloor?: boolean; refuseDroppedTypes?: boolean },
   label: string,
 ): FixedPlan {
-  const plan = planCampaign({ request, marchTarget, alternatives, ...flags });
+  const plan = planCampaign({ request, marchTarget, ...flags });
   const rows = plan.alternatives;
   const stocked = MERC_IDS.filter((id) => (request.caps[id] ?? 0) > 0);
   return { label, plan, rows, holes: holesIn(rows, stocked) };

@@ -13,7 +13,7 @@ import type { BattleSummary, Pool, Stack, StackRequest, StackResult } from '@/en
 
 const POOLS: Pool[] = ['leadership', 'authority', 'dominance'];
 
-export interface EditedResult {
+interface EditedResult {
   result: StackResult;
   summary: BattleSummary;
   /** Pools the edited counts no longer fit in. */

@@ -27,10 +27,10 @@ import { Box, Button, Group, Slider, Text } from '@mantine/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
-import type { CampaignPlan, PlanRow } from '@/engine/plan';
+import type { PlanRow } from '@/engine/plan';
 
 import { compact } from './format';
-import { AXIS_ENDS, bestForWords, planWords } from './picks';
+import { BAR_ENDS, bestForWords, planWords } from './picks';
 import classes from './march.module.css';
 
 /** Everything the mapping needs, in the two coordinate spaces it uses — and they are not the same one. */
@@ -56,15 +56,11 @@ function sameFrame(one: Frame, other: Frame): boolean {
 }
 
 export interface PlanBarProps {
-  /** Every plan the bar offers, cheapest first — the engine's order, which is the bar's own axis. */
-  rows: PlanRow[];
   /**
-   * **Which resource the stops run along** (`CampaignPlan.barAxis`, behind `CAMPAIGN.planBar.axis`). It is
-   * the engine's word and not a guess: it decides the two words under the bar, and on `'burn'` it is the
-   * hired stock that is spent for good rather than the silver that comes back. Design rule 5 — the ends
-   * are named after the axis they are the ends of, in the trade's own words.
+   * Every plan the bar offers, thriftiest first — the engine's order, which is the bar's own axis: the
+   * hired units a march burns for good. Three stops at most.
    */
-  axis: CampaignPlan['barAxis'];
+  rows: PlanRow[];
   /** Which of them the March is showing. */
   position: number;
   /** The row the pointer is on, or `null` when it is away from the bar. Held by the block, so the trade
@@ -99,8 +95,7 @@ function tipTransform(x: number, band: number): string {
   return `translateX(clamp(0px, calc(${x.toFixed(1)}px - 50%), calc(${band.toFixed(1)}px - 100%)))`;
 }
 
-export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, sweet }: PlanBarProps) {
-  const ends = AXIS_ENDS[axis];
+export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: PlanBarProps) {
   const band = useRef<HTMLDivElement>(null);
   const slider = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -111,8 +106,8 @@ export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, swee
    */
   const [tipAt, setTipAt] = useState(0);
   const [up, setUp] = useState(false);
-  // A fresh search can carry fewer plans than the bar the pointer last left (four at most, and a name
-  // already taken is not handed down), so the remembered stop is clamped: a tip pointing off the end of the
+  // A fresh search can carry fewer plans than the bar the pointer last left (three at most, and two stops
+  // that are one plan collapse to one), so the remembered stop is clamped: a tip pointing off the end of the
   // track is worse than a stale one.
   const row = rows[Math.min(tipAt, Math.max(0, rows.length - 1))];
   /** Which of the two efficiencies the tip's stop is the bar's best at, or `null` (`./picks`). */
@@ -321,15 +316,12 @@ export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, swee
             {`${compact(row.repeat.damage)} damage a march`}
           </Text>
           {/* **What the march costs in gold** — the hired stacks' own price, which silver never pays
-              (`PlanRepeat.gold`). Only on the burn axis, where the bar is ordered by the hired stock and
-              the question "what does sparing it cost me" is the one the stops are asking; the silver axis
-              draws the two lines it always has. It is the figure the trade cannot always carry — see
-              `PlanTrade.tsx` on the sixth column — so the tip is where it is read. */}
-          {axis === 'burn' && (
-            <Text size="xs" opacity={0.75}>
-              {`${compact(row.repeat.gold)} gold a march`}
-            </Text>
-          )}
+              (`PlanRepeat.gold`). The bar is ordered by the hired stock, so "what does sparing it cost me"
+              is the question every stop is asking. It is the figure the trade has no room for — see
+              `PlanTrade.tsx` on the seventh column — so the tip is where it is read. */}
+          <Text size="xs" opacity={0.75}>
+            {`${compact(row.repeat.gold)} gold a march`}
+          </Text>
         </Box>
       )}
 
@@ -338,7 +330,7 @@ export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, swee
           marker above is nudged out of, done in words instead. */}
       <Group justify="space-between" align="center" wrap="nowrap">
         <Text size="xs" c="dimmed">
-          {ends.low}
+          {BAR_ENDS.low}
         </Text>
         {/* The way back to the marker above, in words: the mark says where the sweet spot is, this says how
             to get there, and it is only drawn while the bar is somewhere else. */}
@@ -354,7 +346,7 @@ export function PlanBar({ rows, axis, position, hovered, onHover, onSelect, swee
           </Button>
         )}
         <Text size="xs" c="dimmed">
-          {ends.high}
+          {BAR_ENDS.high}
         </Text>
       </Group>
     </Box>

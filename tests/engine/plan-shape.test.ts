@@ -42,7 +42,7 @@ function request(mercenaries = 3, stock = 20): StackRequest {
 }
 
 const REQUEST = request();
-const PLAN = planCampaign({ request: REQUEST, alternatives: 8 });
+const PLAN = planCampaign({ request: REQUEST });
 const SCORE = shapeScorer(REQUEST);
 
 /** The ladder's ten scales as `plan.ts` offers them (`LADDER_GROWTHS`), for the comparison in §4. */
@@ -142,8 +142,8 @@ describe('the arithmetic of a shape', () => {
     // A narrower army than the one above: the budgeted path cannot use the cache, so it pays the eighty
     // ladders per shape in full, and this is about agreement rather than size.
     const narrow = request(2, 10);
-    const free = planCampaign({ request: narrow, alternatives: 6 });
-    const roomy = planCampaign({ request: narrow, silverBudget: free.silver * 4, alternatives: 6 });
+    const free = planCampaign({ request: narrow });
+    const roomy = planCampaign({ request: narrow, silverBudget: free.silver * 4 });
     expect(roomy.totalDamage).toBe(free.totalDamage);
     expect(roomy.silver).toBe(free.silver);
     expect(roomy.mercLost).toBe(free.mercLost);
@@ -196,10 +196,10 @@ describe('the search does not get worse', () => {
     //
     // `leftOut` stays what it was: not the rows this list lost, but how many of the frontier's plans the bar
     // does **not** carry — the count the UI needs to be honest about the bar it draws. It is a big number
-    // because a frontier is a big number: 190 plans here, of which four are worth a stop. Every other figure
-    // in this test is unmoved, because the plan is the same plan.
-    expect(PLAN.alternatives).toHaveLength(4);
-    expect(PLAN.leftOut).toBe(186);
+    // because a frontier is a big number: 190 plans here, of which three are worth a stop (the bar carries
+    // three since 2026-09-18). Every other figure in this test is unmoved, because the plan is the same plan.
+    expect(PLAN.alternatives).toHaveLength(3);
+    expect(PLAN.leftOut).toBe(187);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained
@@ -224,10 +224,9 @@ describe('the search does not get worse', () => {
     const perSilver = (row: (typeof rows)[number]) =>
       row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : -1;
     expect(named('most-damage')?.repeat.damage).toBe(best((row) => row.repeat.damage));
-    // `best-for-silver` is absent whenever the sweet spot is itself the best for silver — a taken name is not
-    // handed down to the runner-up, which is the whole point of the rule.
-    const silver = named('best-for-silver');
-    if (silver) expect(perSilver(silver)).toBe(best(perSilver));
+    // The most-damage end is the bar's best a silver, said as a note rather than offered as a stop.
+    expect(named('most-damage')?.bestFor.silver).toBe(true);
+    expect(perSilver(named('most-damage') as (typeof rows)[number])).toBe(best(perSilver));
     expect(named('sweet-spot')).toBeDefined();
     // The bar opens on the sweet spot, so the row the engine recommends has to be one of the rows it carries.
     expect(rows.some((row) => row.pick === 'sweet-spot')).toBe(true);

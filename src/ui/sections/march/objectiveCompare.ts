@@ -37,7 +37,7 @@ import type { TradeoffFigures } from './runStore';
  * optimum in ~300 ms since the restarts landed, so 4 s is ten times the measured need and still
  * bounds the whole comparison at 20 s in the worst case.
  */
-export const COMPARE_BUDGET_MS = 4_000;
+const COMPARE_BUDGET_MS = 4_000;
 
 /** The five the bar offers, in the order the bar offers them ("No priority" is not an objective). */
 export const COMPARED_OBJECTIVES = [
@@ -89,7 +89,7 @@ export function isUnmeasurable(objective: Objective, baseline: TradeoffFigures):
  * Sequential on purpose: there is one calculation worker, and five searches posted at once would
  * interleave their time budgets and each return a worse answer than it would have alone.
  */
-export async function compareObjectives(request: StackRequest, signal: AbortSignal): Promise<ObjectiveRow[]> {
+async function compareObjectives(request: StackRequest, signal: AbortSignal): Promise<ObjectiveRow[]> {
   const client = getCalcClient();
   const rows: ObjectiveRow[] = [];
   const total = request.units.length;
@@ -111,7 +111,7 @@ export async function compareObjectives(request: StackRequest, signal: AbortSign
 }
 
 /** Everything the strip needs to draw itself, and the two verbs that drive it. */
-export interface Comparison {
+interface Comparison {
   rows: ObjectiveRow[] | null;
   running: boolean;
   /** Why the last attempt produced nothing; `null` when it produced something or never ran. */
@@ -140,7 +140,7 @@ interface CompareState {
   cancel: () => void;
 }
 
-export const useCompareStore = create<CompareState>()((set, get) => ({
+const useCompareStore = create<CompareState>()((set, get) => ({
   fingerprint: null,
   rows: null,
   running: false,

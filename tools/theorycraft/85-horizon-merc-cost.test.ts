@@ -70,7 +70,7 @@ describe.skipIf(!process.env.THEORY)('the mercenary cost of a horizon', () => {
         '|---|---|---|---|---|---|---|---|---|\n',
     );
     const rows = Array.from({ length: 10 }, (_unused, index) => index + 1).map((horizon) => {
-      const plan = planCampaign({ request: base, marchTarget: horizon, alternatives: 4 });
+      const plan = planCampaign({ request: base, marchTarget: horizon });
       const chosen = plan.recommend ?? plan;
       const { result, summary } = evaluateCounts(base, chosen.counts);
       const hired = MERC_COST.reduce((sum, id) => sum + (chosen.counts[id] ?? 0), 0);

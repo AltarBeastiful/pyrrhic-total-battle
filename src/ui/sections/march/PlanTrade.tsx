@@ -41,7 +41,7 @@
 import { Group, Progress, Table, Text } from '@mantine/core';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import type { CampaignPlan, PlanRow } from '@/engine/plan';
+import type { PlanRow } from '@/engine/plan';
 
 import { Glyph } from '@/ui/domain';
 
@@ -50,10 +50,8 @@ import { bestForWords, planWords } from './picks';
 import classes from './march.module.css';
 
 export interface PlanTradeProps {
-  /** Every plan the search kept, cheapest first. */
+  /** Every plan the bar offers, thriftiest first — the hired units a march burns is what sorts them. */
   rows: PlanRow[];
-  /** Which resource the bar above runs along (`CampaignPlan.barAxis`) — the axis this table is sorted on. */
-  axis: CampaignPlan['barAxis'];
   /** Which of them the March is showing. */
   position: number;
   /** The row the bar's pointer is on, lit here so the bar and the table read as one thing. */
@@ -79,7 +77,7 @@ function per(damage: number, resource: number): number {
  */
 const PER_SILVER_DECIMALS = 3;
 
-export function PlanTrade({ rows, axis, position, hovered, onSelect }: PlanTradeProps) {
+export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps) {
   const loudest = Math.max(1, ...rows.map((row) => row.repeat.damage));
   // Two module classes on one cell: the name's own width rules, and the pin that keeps it on the left edge
   // while the figures scroll. Composed here because `className` may only ever carry a module value
@@ -151,9 +149,9 @@ export function PlanTrade({ rows, axis, position, hovered, onSelect }: PlanTrade
             const note = bestForWords(point);
             return (
               <Table.Tr
-                // The burn axis can carry several `step` fillers, so a key of the pick alone collides: one
-                // plan a burn level is what the engine guarantees, and that is what makes this pair unique.
-                key={`${point.pick}-${String(point.repeat.mercLost)}`}
+                // A row is its answer, and the engine never offers the same answer twice (two stops that are
+                // one plan collapse to one), so the pick is the key.
+                key={point.pick}
                 // **The whole row is the target** (design rule 8), which is what it claimed to be while only
                 // the name inside it answered a press. It is the one focusable thing on its line — a row of
                 // six figures with a button in the first cell is a tab stop that lands nowhere a finger
@@ -164,18 +162,14 @@ export function PlanTrade({ rows, axis, position, hovered, onSelect }: PlanTrade
                 // as a seventh column first and measured at 1400×900: the heads came to a **505 px table in
                 // a 462 px pane**, which is the sideways scroller the six-column table was tuned down to
                 // `horizontalSpacing={4}` to avoid (design rule 17, and `e2e/generate.spec.ts` holds it). So
-                // on the burn axis the figure is read off the bar's tip (`PlanBar.tsx`) and carried here as
-                // the row's own name, where a screen reader meets it — never colour, never a column that
-                // pushes the table off its pane. The ratio cells are unchanged and still read as cells.
-                aria-label={
-                  axis === 'burn'
-                    ? `${planWords(point)}: ${compact(point.repeat.damage)} damage, ${compact(
-                        point.repeat.silver,
-                      )} silver, ${compact(point.repeat.gold)} gold, ${amount(
-                        point.repeat.mercLost,
-                      )} hired lost a march${note === null ? '' : `, ${note}`}`
-                    : undefined
-                }
+                // the figure is read off the bar's tip (`PlanBar.tsx`) and carried here as the row's own
+                // name, where a screen reader meets it — never colour, never a column that pushes the table
+                // off its pane. The ratio cells are unchanged and still read as cells.
+                aria-label={`${planWords(point)}: ${compact(point.repeat.damage)} damage, ${compact(
+                  point.repeat.silver,
+                )} silver, ${compact(point.repeat.gold)} gold, ${amount(
+                  point.repeat.mercLost,
+                )} hired lost a march${note === null ? '' : `, ${note}`}`}
                 aria-selected={current}
                 // The row on screen, the way the objectives strip says it: one tonal step for the eye, and
                 // for a reader the two attributes that mean it. Never colour alone (rule 24) — and the

@@ -12,7 +12,7 @@ import type { BattleJournal, Category, EnemyFormation, JournalEntry } from '@/en
 
 import { amount } from './format';
 
-export const CATEGORY_NAME: Record<Category, string> = {
+const CATEGORY_NAME: Record<Category, string> = {
   melee: 'melee',
   ranged: 'ranged',
   mounted: 'mounted',
@@ -20,7 +20,7 @@ export const CATEGORY_NAME: Record<Category, string> = {
 };
 
 /** The enemy squads in formation order, one entry per squad (Arachne's: eight). */
-export function enemySquads(enemy: EnemyFormation): Category[] {
+function enemySquads(enemy: EnemyFormation): Category[] {
   const squads: Category[] = [];
   for (const category of CATEGORIES) {
     for (let i = 0; i < Math.max(0, Math.round(enemy[category])); i += 1) squads.push(category);
@@ -28,7 +28,7 @@ export function enemySquads(enemy: EnemyFormation): Category[] {
   return squads;
 }
 
-export interface JournalLine {
+interface JournalLine {
   n: number;
   actor: JournalEntry['actor'];
   text: string;
@@ -36,7 +36,7 @@ export interface JournalLine {
 }
 
 /** One journal as numbered sentences; `labelOf` turns a unit id into its pill label. */
-export function journalLines(
+function journalLines(
   journal: BattleJournal,
   enemy: EnemyFormation,
   labelOf: (unitId: string) => string,
@@ -68,7 +68,7 @@ export function journalLines(
   });
 }
 
-export interface StoryLine extends JournalLine {
+interface StoryLine extends JournalLine {
   /** Which round of the battle the hit belongs to. */
   round: number;
 }

@@ -41,7 +41,7 @@ describe.skipIf(!process.env.THEORY)('the middle of the trade', () => {
     for (const ceiling of [
       3_000_000, 5_000_000, 7_000_000, 8_000_000, 9_000_000, 10_000_000, 12_000_000, 16_000_000, 24_000_000,
     ]) {
-      const plan = planCampaign({ request: base, marchTarget: 4, silverBudget: ceiling, alternatives: 2 });
+      const plan = planCampaign({ request: base, marchTarget: 4, silverBudget: ceiling });
       const each = plan.repeat;
       report.add(
         `| ${n(ceiling)} | ${n(each.silver)} | **${n(each.damage)}** | ${n(each.mercLost)} | ` +
@@ -58,7 +58,7 @@ describe.skipIf(!process.env.THEORY)('the middle of the trade', () => {
     );
 
     report.h('What the app draws, for comparison');
-    const plan = planCampaign({ request: base, marchTarget: 4, alternatives: 8 });
+    const plan = planCampaign({ request: base, marchTarget: 4 });
     report.add(
       `| pick | damage a march | silver a march | hired burned |\n|---|---|---|---|\n` +
         plan.alternatives

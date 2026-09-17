@@ -27,7 +27,7 @@ describe.skipIf(!process.env.THEORY)('the middle of the trade', () => {
     const owner = loadOwner();
     const base: StackRequest = scenarioC(withHousing(owner.twelve, { leadership: 4_343, authority: 2_000 }));
 
-    const plan = planCampaign({ request: base, marchTarget: 4, alternatives: 8 });
+    const plan = planCampaign({ request: base, marchTarget: 4 });
 
     report.h('The four answers, as the app draws them');
     report.add(

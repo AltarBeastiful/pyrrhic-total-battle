@@ -45,7 +45,7 @@ describe.skipIf(!process.env.THEORY)('where the sweet spot lands', () => {
     const owner = loadOwner();
     const base: StackRequest = scenarioC(withHousing(owner.twelve, { leadership: 4_343, authority: 2_000 }));
 
-    const plan = planCampaign({ request: base, marchTarget: 4, alternatives: 8, withTrade: true });
+    const plan = planCampaign({ request: base, marchTarget: 4, withTrade: true });
     const trade = plan.trade ?? [];
     const shipped = plan.recommend;
     const peakS = Math.max(...trade.map(perSilver));

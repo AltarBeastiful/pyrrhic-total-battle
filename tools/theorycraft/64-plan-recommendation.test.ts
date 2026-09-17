@@ -47,7 +47,7 @@ describe.skipIf(!process.env.THEORY)(
         HELD,
       );
 
-      const plan = planCampaign({ request: base, alternatives: 14 });
+      const plan = planCampaign({ request: base });
       report.add(
         `input: troops + bonuses + mercenaries only — no silver, no march count.\n` +
           `the plan it sized: ${n(plan.marches)} marches, ${n(plan.totalDamage)} total, ${n(plan.silver)} silver, ` +

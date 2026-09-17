@@ -77,7 +77,7 @@ describe.skipIf(!process.env.THEORY)('the common ground, and a horizon of three'
 
     const plans = HORIZONS.map((horizon) => ({
       horizon,
-      plan: planCampaign({ request: base, marchTarget: horizon, alternatives: 4 }),
+      plan: planCampaign({ request: base, marchTarget: horizon }),
     }));
 
     // ---- 1. what the two compared rows actually field -------------------------------------------------

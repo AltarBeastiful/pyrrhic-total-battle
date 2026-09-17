@@ -124,7 +124,7 @@ describe.skipIf(!process.env.THEORY)(
       show(free, '1. The plan from the army alone (no silver budget, no march count)');
 
       // 2. the same with the 3 M silver he had
-      const budgeted = planCampaign({ request: base, silverBudget: SILVER, alternatives: 400 });
+      const budgeted = planCampaign({ request: base, silverBudget: SILVER });
       show(budgeted, `2. The same army with the ${n(SILVER)} silver he had`);
 
       // 3. what the objective parameter changes
@@ -133,7 +133,8 @@ describe.skipIf(!process.env.THEORY)(
         '| objective | marches | total damage | silver | mercenaries lost | damage / silver | damage / mercenary |\n|---|---|---|---|---|---|---|',
       );
       for (const objective of ['avgDamage', 'damagePerSilver', 'damagePerMercenary'] as Objective[]) {
-        const plan = planCampaign({ request: base, silverBudget: SILVER, objective });
+        // `CampaignInput.objective` was never read and went on 2026-09-18: the three rows are one plan.
+        const plan = planCampaign({ request: base, silverBudget: SILVER });
         report.add(
           `| ${objective} | ${plan.marches} | ${n(plan.totalDamage)} | ${n(plan.silver)} | ${n(plan.mercLost)} | ` +
             `${plan.damagePerSilver.toFixed(2)} | ${n(Math.round(plan.damagePerMercenary))} |`,

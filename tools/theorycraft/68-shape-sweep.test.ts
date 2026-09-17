@@ -113,7 +113,7 @@ describe.skipIf(!process.env.THEORY)(
       };
 
       /** The engine's own plan, so the seeds are its picks and not a re-derivation of them. */
-      const plan = planCampaign({ request, alternatives: 10 });
+      const plan = planCampaign({ request });
       const picks = [
         plan.recommend,
         plan.knee,

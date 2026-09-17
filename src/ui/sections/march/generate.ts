@@ -29,7 +29,7 @@ import { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
  * buys a better answer rather than a different kind of one.
  */
 export const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
-export const PLAN_BUDGET_MS = CAMPAIGN.budgets.plan;
+const PLAN_BUDGET_MS = CAMPAIGN.budgets.plan;
 
 /** Size the stacks for the active march (running a priority search first when one is selected). */
 export async function runGenerate(): Promise<void> {

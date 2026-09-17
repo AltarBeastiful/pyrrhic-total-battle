@@ -51,7 +51,7 @@ describe.skipIf(!process.env.THEORY)(
         '| purse | marches | total damage | silver | mercs lost | of which irreplaceable | damage / silver | damage / irreplaceable |\n|---|---|---|---|---|---|---|---|',
       );
       for (const purse of [2_000_000, 3_000_000, 5_000_000, 8_000_000, 12_000_000, 20_000_000]) {
-        const plan = planCampaign({ request: base, silverBudget: purse, alternatives: 4 });
+        const plan = planCampaign({ request: base, silverBudget: purse });
         const advancedLost = ADVANCED.reduce(
           (sum, id) =>
             sum +
@@ -74,7 +74,7 @@ describe.skipIf(!process.env.THEORY)(
           'week is the silver the week brings in.',
       );
       const weekly = 5_000_000;
-      const plan = planCampaign({ request: base, silverBudget: weekly, alternatives: 6 });
+      const plan = planCampaign({ request: base, silverBudget: weekly });
       const advancedLost = ADVANCED.reduce((sum, id) => {
         const repeated = plan.marches - (plan.finale ? 1 : 0);
         const per = plan.march.mercFielded[id] ? Math.ceil((plan.march.mercFielded[id] ?? 0) / 10) : 0;
@@ -93,7 +93,7 @@ describe.skipIf(!process.env.THEORY)(
       report.add(
         '| pick | marches | damage | silver | mercs | per silver | per mercenary |\n|---|---|---|---|---|---|---|',
       );
-      const free = planCampaign({ request: base, alternatives: 6 });
+      const free = planCampaign({ request: base });
       for (const [name, point] of [
         ['silver-light', free.mostEfficient],
         ['balanced', free.recommend],

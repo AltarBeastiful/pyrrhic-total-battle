@@ -64,7 +64,7 @@ describe.skipIf(!process.env.THEORY)(
 
       // now hand the planner the same vector as its entire stock
       const capped = withCaps(base, VECTOR);
-      const plan = planCampaign({ request: capped, alternatives: 8 });
+      const plan = planCampaign({ request: capped });
       report.add(
         `\nwith that vector as the whole stock the planner sizes **${n(plan.marches)} marches, ${n(plan.totalDamage)} total, ${n(plan.silver)} silver, ${n(plan.mercLost)} lost** ` +
           `(${plan.damagePerSilver.toFixed(2)} a silver).`,

@@ -18,17 +18,17 @@ import type { BattleSetup, Profile } from '@/state/schema';
 /**
  * Where on the bar the March is read (S-55; one control since the owner's review of 2026-09-14).
  *
- * The trade **is** the axis — its plans sorted cheapest-first, from the one that stretches silver
- * furthest to the one kindest to the hired stock — so a position on it is the choice, and the three
- * directions the toggle used to offer were three of its points rather than a different question. It is a
- * position and not an input: every plan on the frontier comes out of the same search, so moving along it
- * shows another answer instead of asking for one.
+ * The trade **is** the axis — its plans sorted thriftiest-first along the hired units a march burns for
+ * good — so a position on it is the choice, and the three directions the toggle used to offer were three of
+ * its points rather than a different question. It is a position and not an input: every plan on the frontier
+ * comes out of the same search, so moving along it shows another answer instead of asking for one.
  *
- * It is a **position** and not a `PlanPick`: since S-59 the engine names which of the four answers a row
- * is (`src/engine/plan.ts`), and the two are different questions — "which plan is on screen" against
- * "what kind of answer is that row". Named `PlanPosition` so a file that needs both can import both.
+ * It is a **position** and not a `PlanPick`: since S-59 the engine names which of the answers a row is
+ * (`src/engine/plan.ts`), and the two are different questions — "which plan is on screen" against "what kind
+ * of answer is that row". The name stays so `RunState` below can say which of the two it holds; nothing
+ * outside this file has needed to name it.
  */
-export type PlanPosition = number;
+type PlanPosition = number;
 
 /** The plan a position names, clamped to the bar: a fresh search can be shorter than the last one. */
 export function pickOf(plan: CampaignPlan, position: number): PlanRow {
@@ -176,7 +176,7 @@ export interface RunState {
    */
   plan: CampaignPlan | null;
   /**
-   * Which plan on the frontier the March is showing, cheapest first. One control over the whole trade: the
+   * Which plan on the frontier the March is showing, thriftiest first. One control over the whole trade: the
    * ends are the plans that spend one resource to spare the other, and it opens where the engine's own
    * recommendation sits. A position, not an input — the plans are computed together, so the player chooses
    * a place on the trade without naming a silver figure.

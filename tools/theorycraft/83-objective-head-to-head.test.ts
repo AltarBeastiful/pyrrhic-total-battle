@@ -84,7 +84,7 @@ describe.skipIf(!process.env.THEORY)('what full optimization means', () => {
     const owner = loadOwner();
     const base: StackRequest = scenarioC(withHousing(owner.twelve, { leadership: 4_343, authority: 2_000 }));
 
-    const plan = planCampaign({ request: base, marchTarget: HORIZON, alternatives: 4 });
+    const plan = planCampaign({ request: base, marchTarget: HORIZON });
     const search = searchPriority({ request: base, objective: 'damagePerSilver', budgetMs: 30_000 });
     const searchCounts: Record<string, number> = {};
     for (const stack of search.result.stacks) searchCounts[stack.unitId] = stack.count;

@@ -86,11 +86,11 @@ describe('inline client', () => {
     expect(plan.marches).toBeGreaterThan(0);
     expect(plan.totalDamage).toBeGreaterThan(0);
     expect(Object.keys(plan.march.counts).length).toBeGreaterThan(0);
-    // The frontier is what the Plan fold draws: more than one plan, cheapest first.
+    // The bar is what the Plan fold draws: more than one stop, thriftiest first (hired units burned a march).
     expect(plan.alternatives.length).toBeGreaterThan(1);
-    const silver = plan.alternatives.map((point) => point.silver);
-    expect([...silver].sort((a, b) => a - b)).toEqual(silver);
-    // With no silver budget the answer is the most efficient plan it found.
+    const burns = plan.alternatives.map((point) => point.repeat.mercLost);
+    expect([...burns].sort((a, b) => a - b)).toEqual(burns);
+    // With no silver budget the answer is the sweet spot.
     expect(plan.recommend).toBeDefined();
     client.dispose();
   }, 120_000);

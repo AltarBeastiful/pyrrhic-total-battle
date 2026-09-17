@@ -57,14 +57,12 @@ describe.skipIf(!process.env.THEORY)('the bar as drawn', () => {
 
     for (const horizon of HORIZONS) {
       report.h(`Horizon ${n(horizon)}${horizon === 4 ? ' — the app’s' : ''}`);
-      for (const axis of ['silver', 'burn'] as const) {
+      for (const axis of ['burn'] as const) {
         const plan = planCampaign({
           request: base,
           marchTarget: horizon,
-          alternatives: KEEP,
           tokenFloor: true,
           sizerShape: true,
-          barAxis: axis,
           withTrade: true,
         });
         const rows = plan.alternatives;

@@ -702,7 +702,7 @@ describe.skipIf(!process.env.THEORY)(
 
       // ---- 8. the list the UI will actually ask for: alternatives 4 -------------------------------------
       report.h('8. The list the UI asks for: `marchTarget: 10, alternatives: 4`');
-      const few = planCampaign({ request, marchTarget: 10, alternatives: 4 });
+      const few = planCampaign({ request, marchTarget: 10 });
       const pickOf = (row: { silver: number; totalDamage: number }): string => {
         const names: string[] = [];
         const same = (point: { silver: number; totalDamage: number } | undefined): boolean =>

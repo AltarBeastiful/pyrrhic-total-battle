@@ -47,11 +47,10 @@ describe('S-58 — the plan fixes', () => {
     'both flags are off by default, and the answer is the one the engine gave before them',
     () => {
       const req = request();
-      const plain = planCampaign({ request: req, marchTarget: HORIZON, alternatives: 4 });
+      const plain = planCampaign({ request: req, marchTarget: HORIZON });
       const explicitlyOff = planCampaign({
         request: req,
         marchTarget: HORIZON,
-        alternatives: 4,
         tokenFloor: false,
         refuseDroppedTypes: false,
       });
@@ -77,7 +76,6 @@ describe('S-58 — the plan fixes', () => {
       const fixed = planCampaign({
         request: req,
         marchTarget: HORIZON,
-        alternatives: 4,
         tokenFloor: true,
       });
 
@@ -105,7 +103,6 @@ describe('S-58 — the plan fixes', () => {
       const fixed = planCampaign({
         request: req,
         marchTarget: HORIZON,
-        alternatives: 4,
         refuseDroppedTypes: true,
       });
 

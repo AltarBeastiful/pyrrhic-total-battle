@@ -48,7 +48,7 @@ describe.skipIf(!process.env.THEORY)('leaving a troop out of a planned march', (
       withCaps(withHousing(owner.twelve, { leadership: 4_343, authority: 2_000 }), HELD),
     );
 
-    const plan = planCampaign({ request: base, marchTarget: 10, alternatives: 4 });
+    const plan = planCampaign({ request: base, marchTarget: 10 });
     const chosen = plan.recommend ?? plan;
     const counts = chosen.counts;
     const planned = new Set(Object.keys(counts));

@@ -39,8 +39,6 @@ const MERC_IDS = ['epic-monster-hunter-6', 'arbalester-6', 'legionary-6', 'chari
 /** Every mercenary the account holds — the denominator of "a certain % of mercs". */
 const STOCK = MERC_IDS.reduce((sum, id) => sum + (HELD[id] ?? 0), 0);
 const TARGETS = [10, 20] as const;
-/** Ask for more rows than the frontier holds: the thinning then keeps the frontier itself. */
-const ALL = 100_000;
 
 function ownerRequest(): StackRequest {
   const owner = loadOwner();
@@ -65,8 +63,7 @@ describe.skipIf(!process.env.THEORY)(
       const report = new Report('74-row-figures');
       const request = ownerRequest();
       const plans = new Map<number, ReturnType<typeof planCampaign>>();
-      for (const target of TARGETS)
-        plans.set(target, planCampaign({ request, marchTarget: target, alternatives: ALL }));
+      for (const target of TARGETS) plans.set(target, planCampaign({ request, marchTarget: target }));
 
       // ---- 1. the reconciliation ------------------------------------------------------------------------
       report.h('1. `PlanTotals.repeat` against the real battle, to the unit');
@@ -242,7 +239,7 @@ describe.skipIf(!process.env.THEORY)(
       );
       for (const target of TARGETS) {
         const frontier = plans.get(target) as ReturnType<typeof planCampaign>;
-        const ui = planCampaign({ request, marchTarget: target, alternatives: 4 });
+        const ui = planCampaign({ request, marchTarget: target });
         const goal = { hired: hiredOf(ui), perSilver: ui.damagePerSilver };
         const stacksOf = (point: { counts: Record<string, number> }): number =>
           Object.keys(point.counts).filter((id) => !(MERC_IDS as readonly string[]).includes(id)).length;
@@ -344,7 +341,7 @@ describe.skipIf(!process.env.THEORY)(
           `handed back whenever the band would leave nothing, with \`leftOut\` reading 0 in that case. Measured here, ` +
           `the band keeps ${TARGETS.map((target) => {
             const frontier = plans.get(target) as ReturnType<typeof planCampaign>;
-            const ui = planCampaign({ request, marchTarget: target, alternatives: 4 });
+            const ui = planCampaign({ request, marchTarget: target });
             return `${n(frontier.alternatives.length - ui.leftOut)} of ${n(frontier.alternatives.length)} at a target of ${n(target)}`;
           }).join(
             ', and ',

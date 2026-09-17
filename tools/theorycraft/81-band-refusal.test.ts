@@ -35,8 +35,9 @@ describe.skipIf(!process.env.THEORY)('fix B — the band refuses a dropped type'
       { label: 'both fixes', flags: { tokenFloor: true, refuseDroppedTypes: true } },
     ] as const;
 
-    const atWidth = (width: number): ReturnType<typeof planWithFixes>[] =>
-      RUNS.map((run) => planWithFixes(base, HORIZON, width, run.flags, run.label));
+    // The bar carries three stops since 2026-09-18; `width` no longer reaches the engine.
+    const atWidth = (_width: number): ReturnType<typeof planWithFixes>[] =>
+      RUNS.map((run) => planWithFixes(base, HORIZON, run.flags, run.label));
     const cells = (counts: Record<string, number>): string =>
       MERC_IDS.map((id) => {
         const count = counts[id] ?? 0;

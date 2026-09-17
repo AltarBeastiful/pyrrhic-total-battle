@@ -152,12 +152,12 @@
 .compare .planCell {
   /* A **floor, and no ceiling any more** (S-59, 2026-09-16). The 8 rem floor and the 9.5 rem ceiling were
      sized for the shape sentences ("3 stacks · 135 hired · 1.6M silver a march"), which came out one word
-     per line in an auto-laid table on a 390 px sheet; an auto table now lays out four short names, the
-     longest of them "Best for silver", so the ceiling has nothing to hold back and is gone with them.
+     per line in an auto-laid table on a 390 px sheet; an auto table now lays out three short names, the
+     longest of them "Spare the stock", so the ceiling has nothing to hold back and is gone with them.
 
      The floor is **7 rem**, and it was measured rather than guessed: at 5.5 rem an auto layout gave the
      column 97.8 px and the name wrapped — "Sweet / spot" over "the sweet / spot", four lines for a row
-     whose figures are one — where 7 rem (112 px) sets "Best for silver" on one line and "the sweet spot"
+     whose figures are one — where 7 rem (112 px) sets the longest name on one line and "the sweet spot"
      on one below it.
 
      **6.5 rem since the screen review of 2026-09-16**, when the note under the name went (rule 5: the row
@@ -168,7 +168,7 @@
 
      **The note came back on 2026-09-17**, and the floor held: the cell now carries the efficiency a stop is
      the bar's best at under the name (`.planNote` below) — "best a hired" over "Spare the stock". Measured
-     at 1400×900 on the burn axis, the column is 107 px and the table 462 px in a 462 px pane, with no
+     at 1400×900, the column is 107 px and the table 462 px in a 462 px pane, with no
      scroller; at 390 px the column is the 100 px floor, the name wraps to two lines and the row is 70 px.
      It is not the note of the S-59 review that rule 5 cut: that one printed "the sweet spot" under a row
      called "Sweet spot", and this one says something no other cell on the row does. */
@@ -255,7 +255,7 @@
    stacked things: the sweet-spot mark's label, which is absolutely positioned and so takes no room of
    its own, and the two words under the bar. Measured at 1400×900: the label hangs from 14 px to 34 px
    below the root's top, and `xl` (24 px) of gap between the root and the words is what clears it —
-   without it the label printed **over** "Least silver", which is the collision this records. The band
+   without it the label printed **over** the word under it, which is the collision this records. The band
    is therefore ~58 px tall, not the 40 px a bare slider would want.
 
    **And every one of those pixels can be aimed at — since 2026-09-16, and not before.** This comment

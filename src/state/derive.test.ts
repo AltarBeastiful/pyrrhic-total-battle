@@ -501,12 +501,11 @@ describe('complete optimization (S-55)', () => {
     expect(buildStackRequest(profile, setup).options.method).toBe('elite');
   });
 
-  it('takes the horizon and the trade width from the policy file, not from the setup', () => {
+  it('takes the horizon from the policy file, not from the setup', () => {
     const { profile, setup } = fixture();
     const request = buildPlanRequest(profile, setup);
 
     expect(request.marchTarget).toBe(CAMPAIGN.marches);
-    expect(request.alternatives).toBe(CAMPAIGN.planAlternatives);
     // S-56 took the silver box off the card, so no budget is ever sent: the plan is always the free one
     // the army points to, and the frontier it returns shows which resource binds.
     expect(request.silverBudget).toBeUndefined();

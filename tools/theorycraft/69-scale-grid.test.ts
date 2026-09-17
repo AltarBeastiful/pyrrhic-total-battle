@@ -151,7 +151,7 @@ describe.skipIf(!process.env.THEORY)(
       }
 
       report.h('The planner’s own campaign, beside them');
-      const plan = planCampaign({ request, alternatives: 10 });
+      const plan = planCampaign({ request });
       const bar = plan.recommend;
       report.add(
         `the planner's best campaign (max total damage over everything it searches): ` +

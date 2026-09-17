@@ -42,7 +42,7 @@ describe.skipIf(!process.env.THEORY)(
         ),
         HELD,
       );
-      const plan = planCampaign({ request: base, alternatives: 10 });
+      const plan = planCampaign({ request: base });
 
       report.h('The curve: what N silver buys, and what it buys a mercenary');
       report.add(

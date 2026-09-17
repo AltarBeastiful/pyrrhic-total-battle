@@ -38,12 +38,6 @@ export const CAMPAIGN = {
    */
   marches: 4,
   /**
-   * The most plans the S-55 bar may carry. **Three** (owner, 2026-09-17: *"my definite verdict is keep 3 spot
-   * on the slider each time"*): the thrift end, the sweet spot and the most damage, and never a filler
-   * between them. The engine only ever truncates to this; it never pads.
-   */
-  planAlternatives: 3,
-  /**
    * **S-58 — the two candidate fixes for "the plan drops a whole hired type"**, each behind its own flag so
    * they can be measured against each other before either ships (owner, 2026-09-15: *"implement both behind
    * feature flags and lets compare them after with an experiment for each"*).
@@ -61,26 +55,15 @@ export const CAMPAIGN = {
    */
   planFixes: { tokenFloor: true, refuseDroppedTypes: false, sizerShape: true },
   /**
-   * **The bar's axis** — `'burn'` since the owner's decision of 2026-09-17 (review of 2026-09-16 put both
-   * axes behind this flag so `tools/theorycraft/91` could measure them; this is the answer it produced).
-   *
-   * The slider is, in his own words, *"about balancing between burning silver efficiently, which is
-   * constrained, and burning mercs efficiently, which is constrained as well"*, and **the sweet spot keeps
-   * the middle**. So the bar runs along the resource a player is actually trading away: `'burn'` orders the
-   * stops by the hired units a march burns for good — one plan a burn level, thriftiest first, the same
-   * sweet spot — because on his own account silver barely moves across the bar (1.97–2.35 M a march) while
-   * the burn runs 12→22. The two efficiencies are then **said on the stops that have them**
-   * (`PlanRow.bestFor`, drawn by `PlanTrade.tsx`) rather than offered as stops of their own: a separate
-   * "Best for silver" stop measured as the "Most damage" stop to 0.2 % is, again in his words, *"inefficient
-   * and causes frustration"*.
-   *
-   * - `axis: 'silver'` is S-59 as built — the four named answers sorted by campaign silver — and stays
-   *   selectable so the two can still be compared side by side.
-   * - `mergeNear` is the fix to the *silver* axis: stops that burn the same and sit within this fraction of
-   *   each other on damage and silver a march are one stop. `0` is off; `0.02` merges the pair above. The
-   *   burn axis has nothing for it to do (one plan a burn level), so it stays off.
+   * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
+   * keeps, the sweet spot in the middle of the rungs nothing beats on both ratios, and the most damage —
+   * with the two efficiencies said on the stops that have them (`PlanRow.bestFor`). Owner, 2026-09-17: the
+   * slider is *"about balancing between burning silver efficiently, which is constrained, and burning mercs
+   * efficiently, which is constrained as well"*, *"keep 3 spot on the slider each time"*, and a stop that is
+   * another to 0.2 % *"is inefficient and causes frustration"*. The silver axis and the near-stop merge that
+   * were measured against it (`tools/theorycraft/out/91`, `92`) were retired with the review of 2026-09-18:
+   * nothing here is left to set.
    */
-  planBar: { axis: 'burn' as 'silver' | 'burn', mergeNear: 0 },
   /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a

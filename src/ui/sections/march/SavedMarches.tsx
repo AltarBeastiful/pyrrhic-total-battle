@@ -20,7 +20,7 @@ import { unitLabel } from './units';
 const DATE = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
 /** How many saved marches fit side by side before the table stops being readable on a phone. */
-export const MAX_COMPARED = 3;
+const MAX_COMPARED = 3;
 
 // ---- Name dialog -------------------------------------------------------------------------------
 export interface MarchNameDialogProps {

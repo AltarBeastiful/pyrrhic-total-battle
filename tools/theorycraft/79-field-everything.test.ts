@@ -34,7 +34,7 @@ describe.skipIf(!process.env.THEORY)('the plan against fielding everything', () 
     const owner = loadOwner();
     const base: StackRequest = scenarioC(withHousing(owner.twelve, { leadership: 4_343, authority: 2_000 }));
 
-    const plan = planCampaign({ request: base, marchTarget: HORIZON, alternatives: 4 });
+    const plan = planCampaign({ request: base, marchTarget: HORIZON });
     const chosen = plan.recommend ?? plan;
 
     const line = (counts: Record<string, number>, label: string): string => {

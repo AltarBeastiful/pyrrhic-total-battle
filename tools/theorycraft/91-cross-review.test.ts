@@ -51,11 +51,13 @@ const FLAGS: { key: string; flags: { tokenFloor?: boolean; refuseDroppedTypes?: 
   { key: 'B · refuseDroppedTypes', flags: { refuseDroppedTypes: true } },
   { key: 'A + B', flags: { tokenFloor: true, refuseDroppedTypes: true } },
 ];
-const WAYS: { key: string; input: { barAxis?: 'silver' | 'burn'; mergeNearStops?: number } }[] = [
-  { key: 'current', input: { barAxis: 'silver' } },
-  { key: 'current + merge', input: { barAxis: 'silver', mergeNearStops: MERGE } },
-  { key: 'burn axis', input: { barAxis: 'burn' } },
-];
+/**
+ * The three ways of drawing the bar this file crossed with the S-58 flags on 2026-09-16 — the silver axis, the
+ * silver axis with near stops merged, the burn axis — were decided on 2026-09-17 and the losers retired on
+ * 2026-09-18 (`docs/PLAN.md` S-61, S-65): the engine draws the burn axis and nothing else now, so the cross is
+ * the S-58 flags against the one bar. `out/91` of 2026-09-16 is the record of the three-way cross.
+ */
+const WAYS: { key: string; input: Record<string, never> }[] = [{ key: 'the bar', input: {} }];
 
 describe.skipIf(!process.env.THEORY)('the cross review', () => {
   it('crosses every S-58 flag with every way of drawing the bar', () => {
@@ -95,7 +97,6 @@ describe.skipIf(!process.env.THEORY)('the cross review', () => {
         const plan = planCampaign({
           request: base,
           marchTarget: HORIZON,
-          alternatives: KEEP,
           withTrade: true,
           ...flags,
           ...input,

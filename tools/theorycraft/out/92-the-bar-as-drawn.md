@@ -5,15 +5,7 @@ Owner's export of 2026-09-13, scenario C, 4 343 leadership / 2 000 authority, no
 
 ## Horizon 3
 
-### silver axis — 3 stops, `leftOut` 64
-
-| pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
-|---|---|---|---|---|---|---|---|---|---|
-| `sweet-spot` ★ | — | 20 | **4,938,868** | 2,096,200 | 967 | 2.36 | 246,943 | — | EMH 83 · arbalester 31 · legionary 29 · chariot 33 |
-| `best-for-silver` | best a silver | 27 | **6,316,748** | 2,096,200 | 1,318 | 3.01 | 233,954 | 21.8 % · 0.0 % · 7 units | EMH 83 · arbalester 69 · legionary 65 · chariot 33 |
-| `spare-the-stock` | best a hired | 13 | **4,465,339** | 2,256,900 | 654 | 1.98 | 343,488 | 29.3 % · 7.1 % · 14 units | EMH 37 · arbalester 48 · legionary 10 · chariot 23 |
-
-### burn axis — 3 stops, `leftOut` 65
+### burn axis — 3 stops, `leftOut` 72
 
 | pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
 |---|---|---|---|---|---|---|---|---|---|
@@ -24,15 +16,7 @@ Owner's export of 2026-09-13, scenario C, 4 343 leadership / 2 000 authority, no
 
 ## Horizon 4 — the app’s
 
-### silver axis — 3 stops, `leftOut` 55
-
-| pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
-|---|---|---|---|---|---|---|---|---|---|
-| `spare-the-stock` | best a hired | 13 | **4,485,090** | 2,252,000 | 685 | 1.99 | 345,007 | — | EMH 34 · arbalester 43 · legionary 10 · chariot 30 |
-| `sweet-spot` ★ | — | 17 | **5,518,119** | 2,331,500 | 863 | 2.37 | 324,595 | 18.7 % · 3.4 % · 4 units | EMH 53 · arbalester 62 · legionary 10 · chariot 30 |
-| `best-for-silver` | best a silver | 22 | **6,905,207** | 2,331,500 | 1,103 | 2.96 | 313,873 | 20.1 % · 0.0 % · 5 units | EMH 56 · arbalester 62 · legionary 60 · chariot 29 |
-
-### burn axis — 3 stops, `leftOut` 56
+### burn axis — 3 stops, `leftOut` 58
 
 | pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
 |---|---|---|---|---|---|---|---|---|---|
@@ -43,15 +27,7 @@ Owner's export of 2026-09-13, scenario C, 4 343 leadership / 2 000 authority, no
 
 ## Horizon 10
 
-### silver axis — 3 stops, `leftOut` 35
-
-| pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
-|---|---|---|---|---|---|---|---|---|---|
-| `best-for-silver` | best a silver | 15 | **4,903,400** | 1,989,200 | 800 | 2.47 | 326,893 | — | EMH 50 · arbalester 40 · legionary 40 · chariot 20 |
-| `sweet-spot` ★ | — | 12 | **4,359,399** | 2,256,900 | 622 | 1.93 | 363,283 | 11.1 % · 11.9 % · 3 units | EMH 35 · arbalester 40 · legionary 18 · chariot 20 |
-| `spare-the-stock` | best a hired | 9 | **3,558,502** | 2,252,000 | 471 | 1.58 | 395,389 | 18.4 % · 0.2 % · 3 units | EMH 23 · arbalester 28 · legionary 10 · chariot 20 |
-
-### burn axis — 3 stops, `leftOut` 36
+### burn axis — 3 stops, `leftOut` 92
 
 | pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
 |---|---|---|---|---|---|---|---|---|---|

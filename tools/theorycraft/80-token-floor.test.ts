@@ -45,8 +45,9 @@ describe.skipIf(!process.env.THEORY)('fix A — the token floor', () => {
     );
 
     // One planning run per (width, flags): the search is ~10 s, so nothing here may call it twice.
-    const atWidth = (width: number): ReturnType<typeof planWithFixes>[] =>
-      RUNS.map((run) => planWithFixes(base, HORIZON, width, run.flags, run.label));
+    // The bar carries three stops since 2026-09-18; `width` no longer reaches the engine.
+    const atWidth = (_width: number): ReturnType<typeof planWithFixes>[] =>
+      RUNS.map((run) => planWithFixes(base, HORIZON, run.flags, run.label));
     const cells = (counts: Record<string, number>): string =>
       MERC_IDS.map((id) => {
         const count = counts[id] ?? 0;

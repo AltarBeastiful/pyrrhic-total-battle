@@ -27,9 +27,9 @@ preview`), not the dev server.
    is a control — reading another plan puts another march on screen — so the army you came to change is first.
    The bar runs along the **hired stock** — *Fewest hired lost … Most hired lost*, one plan a burn level,
    thriftiest first. That is the balance the slider is for: burning silver well at one end against burning
-   mercenaries well at the other, with the sweet spot in the middle. A stop the engine can put a name to
-   wears it — **Spare the stock · Sweet spot · Most damage** — and a stop between two of them is named by
-   what it burns ("15 hired lost"). The two efficiencies are **notes rather than stops**: the plan that does
+   mercenaries well at the other, with the sweet spot in the middle. There are **three stops at most**, and
+   each is named by which answer it is — **Spare the stock · Sweet spot · Most damage** — and nothing else.
+   The two efficiencies are **notes rather than stops**: the plan that does
    most with a silver says *best a silver* under its name, the one that does most with a hired unit says
    *best a hired*. Judge whether those two lines say enough — they replaced a "Best for silver" stop of its
    own, which on the owner's account was the "Most damage" stop to within 0.2 %. The tip follows the

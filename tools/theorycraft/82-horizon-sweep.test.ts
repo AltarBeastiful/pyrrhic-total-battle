@@ -197,7 +197,7 @@ describe.skipIf(!process.env.THEORY)('the horizon sweep', () => {
     const refused: number[] = [];
     for (let horizon = 1; horizon <= MAX_HORIZON; horizon += 1) {
       try {
-        const plan = planCampaign({ request: base, marchTarget: horizon, alternatives: 4 });
+        const plan = planCampaign({ request: base, marchTarget: horizon });
         const chosen = plan.recommend ?? plan;
         swept.push(
           measure(

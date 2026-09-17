@@ -53,7 +53,7 @@ describe.skipIf(!process.env.THEORY)(
         ),
         HELD,
       );
-      const plan = planCampaign({ request, alternatives: 6 });
+      const plan = planCampaign({ request });
       const counts = plan.march.counts;
       report.h('The stack the plan marches, and the plan it belongs to');
       report.add(

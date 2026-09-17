@@ -13,7 +13,7 @@ import { findUnit } from './units';
 
 // ---- The march as pills, one block per pool ------------------------------------------------------
 /** A stack of the march, as one pill draws it. */
-export interface PillEntry {
+interface PillEntry {
   unit: UnitDef;
   /** Units of this type in the march. */
   count: number;
@@ -28,9 +28,9 @@ export interface PoolRow {
 }
 
 /** The pools in the order the Battle card asks for them. */
-export const POOL_ORDER: readonly Pool[] = ['leadership', 'authority', 'dominance'];
+const POOL_ORDER: readonly Pool[] = ['leadership', 'authority', 'dominance'];
 
-export interface PoolRowsInput {
+interface PoolRowsInput {
   /** The result on screen: its stacks are already in kill order, first to fall first. */
   result: StackResult;
   /** The unit types the march was computed from. */
