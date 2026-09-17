@@ -196,14 +196,14 @@ describe('the search does not get worse', () => {
     //
     // `leftOut` stays what it was: not the rows this list lost, but how many of the frontier's plans the bar
     // does **not** carry — the count the UI needs to be honest about the bar it draws. It is a big number
-    // because a frontier is a big number: 190 plans here, of which three are worth a stop (the bar carries
-    // three or four since 2026-09-18). Every other figure in this test is unmoved, because the plan is the same plan.
+    // because a frontier is a big number: 190 plans here, of which four are worth a stop (the bar carries
+    // up to four since 2026-09-18). Every other figure in this test is unmoved, because the plan is the same plan.
     //
     // 18 331 217 → 18 333 467 damage and 33 288 500 → 33 284 700 silver on 2026-09-18, when the ladder
     // started learning which type takes which rung (`out/98`): the repeated march is the same march to the
     // unit, and the final march gained 2 250 damage for 3 800 silver less from a better rung order.
-    expect(PLAN.alternatives).toHaveLength(3);
-    expect(PLAN.leftOut).toBe(188);
+    expect(PLAN.alternatives).toHaveLength(4);
+    expect(PLAN.leftOut).toBe(187);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained

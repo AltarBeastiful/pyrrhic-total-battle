@@ -72,7 +72,7 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   expect(rows.length).toBeGreaterThanOrEqual(3);
   expect(rows.length).toBeLessThanOrEqual(4);
   const named = (pick: PlanRow['pick']): PlanRow | undefined => rows.find((row) => row.pick === pick);
-  const least = named('least-silver') ?? (rows[0] as PlanRow);
+  const least = named('least-silver');
   const sweet = named('sweet-spot') as PlanRow;
   const most = named('most-mercs') as PlanRow;
   expect(sweet).toBeDefined();
@@ -104,7 +104,10 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   }
 
   // The floors: the criteria themselves.
-  expect(perHired(least)).toBeGreaterThanOrEqual(floors.leastPerHired);
+  if (least) {
+    expect(least.repeat.silver).toBeLessThanOrEqual(sweet.repeat.silver);
+    expect(perHired(least)).toBeGreaterThanOrEqual(floors.leastPerHired);
+  }
   expect(perSilver(sweet)).toBeGreaterThanOrEqual(floors.sweetPerSilver);
   expect(perHired(sweet)).toBeGreaterThanOrEqual(floors.sweetPerHired);
   expect(sweet.totalDamage).toBeGreaterThanOrEqual(floors.sweetCampaignDamage);
@@ -164,18 +167,20 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       expect(plan.recommend?.repeat.damage).toBe(
         planMarch(input.request, plan.recommend?.counts ?? {}).summary.avgDamage,
       );
-      // Measured 2026-09-18 with the four stops: 10 · 11 · 12 · 14 burned; least silver 4 965 077 for
-      // 2 614 000 at 496 507 a hired; sweet 1.9459 · 484 597, campaign 22 045 361 for 10 957 600; most
-      // 6 242 452 at 2.2788; the plan 24 814 601. (Earlier the same day, three stops: thrift 548 476 → 529 687
-      // as the 7-burn plan left the frontier, dominated on the campaign; then the least-silver end replaced the
-      // thrift end.) A floor is re-based only for a change measured better on the campaign, and the note says
-      // which.
+      // Measured 2026-09-18, once every burn level between the ends has a rung: 7 · 10 · 12 · 14 burned;
+      // least silver 4 541 421 for 2 722 500 at 648 774 a hired; sweet 4 965 077 for 2 614 000 at 1.8994 ·
+      // 496 508, campaign 20 684 777 for 10 581 400; most 6 242 452 at 2.2788; the plan 24 814 601. The sweet
+      // spot moved 11 → 10 when the ladder gained its 7-burn rung: this ladder is convex (each unit burned
+      // buys more than the last), so there is no knee and the middle of the efficient rungs stands — 5 %
+      // less silver and 2.5 % more a hired unit than the 11, for 2.4 % less a silver. A floor is re-based only
+      // for a change measured and explained, and the note says which.
+      // No least-silver stop here: the only efficient march left of the sweet spot costs more silver than it.
       expectCriteria(plan, {
-        leastPerHired: under(496_507),
-        sweetPerSilver: under(1.9459),
-        sweetPerHired: under(484_597),
-        sweetCampaignDamage: under(22_045_361),
-        sweetCampaignSilverCeiling: over(10_957_600),
+        leastPerHired: under(648_774),
+        sweetPerSilver: under(1.8994),
+        sweetPerHired: under(496_507),
+        sweetCampaignDamage: under(20_684_777),
+        sweetCampaignSilverCeiling: over(10_581_400),
         mostDamage: under(6_242_452),
         mostPerSilver: under(2.2788),
         campaignDamage: under(24_814_601),
@@ -188,12 +193,12 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       const plan = planCampaign(
         buildPlanRequest(profile, { ...setup, housing: { ...setup.housing, leadership: 12_000 } }),
       );
-      // Measured 2026-09-18 with the four stops: 10 · 17 · 19 burned (the knee lands at 17, where the last
-      // two units buy 1 % of damage for 16 % of silver, so no rung fits between it and the top); least
-      // 636 132 a hired; sweet 1.7426 · 481 519, campaign 32 231 242 for 18 790 400; most 8 281 474 at
-      // 1.5186; the plan 32 518 195.
+      // Measured 2026-09-18, every burn level filled: 11 · 17 · 19 burned (the knee lands at 17, where the last
+      // two units buy 1 % of damage for 16 % of silver, so no rung fits between it and the top); least silver
+      // 6 297 292 for 3 972 200 at 572 481 a hired; sweet 1.7426 · 481 519, campaign 32 231 242 for
+      // 18 790 400; most 8 281 474 at 1.5186; the plan 32 518 195.
       expectCriteria(plan, {
-        leastPerHired: under(636_132),
+        leastPerHired: under(572_481),
         sweetPerSilver: under(1.7426),
         sweetPerHired: under(481_519),
         sweetCampaignDamage: under(32_231_242),

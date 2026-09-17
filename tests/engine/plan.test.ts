@@ -209,9 +209,15 @@ describe(
         expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
         expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
       }
-      // Each stop is the best march at its burn level among the plans the bar may carry.
+      // Each rung stop is the best march at its burn level among the plans the bar may carry; the least-silver
+      // stop is a different thing — the cheapest efficient march left of the sweet spot — and must cost less.
       const trade = burn.trade ?? [];
       for (const row of rows) {
+        if (row.pick === 'least-silver') {
+          const sweetRow = rows.find((other) => other.pick === 'sweet-spot');
+          expect(row.repeat.silver).toBeLessThanOrEqual(sweetRow?.repeat.silver ?? Infinity);
+          continue;
+        }
         const level = trade.filter((other) => other.repeat.mercLost === row.repeat.mercLost);
         expect(Math.max(...level.map((other) => other.repeat.damage))).toBe(row.repeat.damage);
       }

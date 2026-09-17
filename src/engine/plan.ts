@@ -179,7 +179,7 @@ export interface PlanTotals {
    * one rung each, scaled) or the sizer's own march under one of its methods (`SizerMethod`). Presentation
    * and record only — the counts are the plan.
    */
-  shape: 'ladder' | SizerMethod;
+  shape: 'ladder' | SizerMethod | 'winner';
   totalDamage: number;
   silver: number;
   gold: number;
@@ -566,6 +566,8 @@ export interface ShapeContext {
         method: SizerMethod,
       ) => { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] })
     | undefined;
+  /** The troop stacks scored at `WINNER_RUNGS_DEPTH`: the search's winner, once there is one. */
+  winnerRungs?: (() => { entry: Effective; count: number }[]) | undefined;
 }
 
 /**
@@ -577,6 +579,15 @@ export interface ShapeContext {
  */
 export type SizerMethod = 'elite' | 'ms' | 'msRelaxed';
 export const SIZER_DEPTHS: Record<number, SizerMethod> = { 0: 'elite', [-1]: 'ms', [-2]: 'msRelaxed' };
+/**
+ * The depth that names one more shape: **the winner's own troop stacks, with the mercenaries of the vector
+ * being scored**. The ladder sizes its rungs off the biggest hired stack, so fewer mercenaries shrink the
+ * troops with them and the march loses twice; the winner's rungs kept whole and only the hired count lowered
+ * is the march a player would actually field. Measured on the owner's live account (one hired type, 83 in
+ * stock, 20 000 leadership): the search's best 60-hunter march hit for 7 170 113 at 8 229 200 silver and fell
+ * off the frontier, the winner's rungs with 60 hunters hit for 7 453 778 at the winner's own 7 756 500.
+ */
+export const WINNER_RUNGS_DEPTH = -3;
 
 export interface ScoredShape {
   marches: number;
@@ -732,7 +743,10 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     // are its caps, and what it fields — troops and mercenaries both — is the shape.
     const sizerMethod = SIZER_DEPTHS[depth];
     let sizedRungs: { entry: Effective; count: number }[] = [];
-    if (sizerMethod !== undefined) {
+    if (depth === WINNER_RUNGS_DEPTH) {
+      sizedRungs = context.winnerRungs?.() ?? [];
+      if (sizedRungs.length === 0) return null;
+    } else if (sizerMethod !== undefined) {
       if (!context.sizer) return null;
       const sized = context.sizer(fielded, sizerMethod);
       sizedRungs = sized.rungs;
@@ -751,7 +765,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     const mercenaryHp = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
     const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
     const rungs =
-      sizerMethod !== undefined
+      sizerMethod !== undefined || depth === WINNER_RUNGS_DEPTH
         ? sizedRungs
         : ladder(
             troops,
@@ -1045,6 +1059,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       mercs: stacks.filter((stack) => stack.entry.pool === 'authority'),
     };
   };
+  let winnerRungs: { entry: Effective; count: number }[] = [];
   const score = makeScorer({
     troops,
     mercTypes,
@@ -1054,6 +1069,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     gap,
     finale: planned !== 1,
     ...(sizerShape ? { sizer } : {}),
+    winnerRungs: () => winnerRungs,
   });
   /** Silver one candidate spends: its repeats, plus its final march. */
   const marchedSilver = (candidate: Candidate): number =>
@@ -1302,6 +1318,67 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
   }
 
+  /**
+   * **Every burn level between the ends gets a rung** (owner, 2026-09-18, on a bar with two stops one unit
+   * apart on his account: *"the stops still are not to my design"*). The grid samples each hired type at five
+   * counts — its cap, 70 %, 45 %, 20 % and one chunk — and the climb only walks around the winner, so on an
+   * account with one hired type the bar had nothing between 46 and 65 hired (5 and 7 burned). Here the
+   * winner's vector is scaled to every burn level under its own, each type rounded **up** to a chunk of ten
+   * (a chunk is paid whole, so a full one hits hardest for its price), and every shape is scored on it.
+   */
+  if (best) {
+    const winner: Candidate = best;
+    winnerRungs = winner.rungs;
+    const burnOf = (vector: { entry: Effective; count: number }[]): number =>
+      vector.reduce((sum, merc) => sum + chunks(merc.count), 0);
+    const topBurn = burnOf(winner.mercs);
+    const seen = new Set<string>([winner.mercs.map((merc) => merc.count).join(',')]);
+    for (let burn = topBurn - 1; burn >= 1; burn -= 1) {
+      if (stop()) break;
+      const vector = winner.mercs.map((merc) => ({
+        entry: merc.entry,
+        count: Math.min(
+          stock[merc.entry.id] ?? 0,
+          merc.count <= 0 ? 0 : CHUNK * Math.ceil((merc.count * burn) / topBurn / CHUNK),
+        ),
+      }));
+      const key = vector.map((merc) => merc.count).join(',');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      let candidate = evaluateVector(vector);
+      // The winner's own rungs with this vector's mercenaries (`WINNER_RUNGS_DEPTH`), the shape the search
+      // could not reach from a merc-sized ladder.
+      const kept = evaluateVector(vector, { depth: WINNER_RUNGS_DEPTH, scale: 1 });
+      if (kept && (!candidate || kept.total > candidate.total)) candidate = kept;
+      if (!candidate) continue;
+      // The winner's shape was refined by the climb above (its depth and its scale); a swept vector scored on
+      // the grid's coarse scales alone loses to it — measured on the owner's live account, the 60-hunter march
+      // came out at 7 170 113 for 8 229 200 silver, a dearer and barely stronger march than the 48-hunter one,
+      // and was dominated off the frontier. So each swept vector gets the same walk over depth and scale.
+      for (let round = 0; round < 16; round += 1) {
+        let improved: Candidate | null = null;
+        const { depth, scale } = candidate;
+        const trials: { depth: number; scale: number }[] = [];
+        for (const rung of [depth - 1, depth + 1]) {
+          if ((DEPTHS as readonly number[]).includes(rung)) trials.push({ depth: rung, scale });
+        }
+        if (depth > 0) {
+          for (const step of SCALE_STEPS) {
+            const trial = Math.round(scale * (1 + step) * 1000) / 1000;
+            if (trial >= 1 && trial <= MAX_SCALE) trials.push({ depth, scale: trial });
+          }
+        }
+        for (const trial of trials) {
+          const scored = evaluateVector(vector, trial);
+          if (scored && scored.total > (improved?.total ?? candidate.total)) improved = scored;
+        }
+        if (!improved) break;
+        candidate = improved;
+      }
+      consider(candidate);
+    }
+  }
+
   const chosen = best as Candidate;
   const march = toMarch(chosen.rungs, chosen.mercs, chosen.march);
   const finale = chosen.finale ? toMarch(chosen.finaleRungs, chosen.finaleMercs, chosen.finale) : undefined;
@@ -1341,7 +1418,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // The repeated march's own figures, which `toMarch` already priced and the totals above spread the
       // finale over: these are what the March section reports for the plan's own march.
       repeat: { damage: m.damage, silver: m.silver, gold: m.gold, mercLost: m.mercLost },
-      shape: SIZER_DEPTHS[candidate.depth] ?? 'ladder',
+      shape: candidate.depth === WINNER_RUNGS_DEPTH ? 'winner' : (SIZER_DEPTHS[candidate.depth] ?? 'ladder'),
       marches: candidate.marches + (candidate.finale ? 1 : 0),
       damagePerSilver: silver > 0 ? candidate.total / silver : Infinity,
       damagePerMercenary: mercLost > 0 ? candidate.total / mercLost : Infinity,
@@ -1558,8 +1635,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     const dx = last.repeat.mercLost - first.repeat.mercLost || 1;
     const dy = last.repeat.damage - first.repeat.damage || 1;
-    let best = first;
-    let bestDistance = -Infinity;
+    let best: (PlanTotals & { label: string }) | undefined;
+    let bestDistance = 0;
     for (const row of rows) {
       const t = (row.repeat.mercLost - first.repeat.mercLost) / dx;
       const distance = (row.repeat.damage - (first.repeat.damage + t * dy)) / dy;
@@ -1568,7 +1645,22 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         best = row;
       }
     }
-    return best;
+    // No rung stands above the chord: the ladder is convex (each unit burned buys more than the last —
+    // measured on the 2026-09-17 export at 7 000), so there is no knee and the middle of the efficient
+    // rungs is the compromise, the thriftier on a tie.
+    if (best) return best;
+    const burns = rows.map((row) => row.repeat.mercLost);
+    const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
+    return rows.reduce<PlanTotals & { label: string }>((held, row) => {
+      const away = Math.abs(row.repeat.mercLost - middleBurn);
+      const heldAway = Math.abs(held.repeat.mercLost - middleBurn);
+      if (away < heldAway) return row;
+      if (away > heldAway) return held;
+      if (row.repeat.mercLost !== held.repeat.mercLost) {
+        return row.repeat.mercLost < held.repeat.mercLost ? row : held;
+      }
+      return row.repeat.damage > held.repeat.damage ? row : held;
+    }, rows[0] ?? chosenPoint);
   })();
 
   const knee = ((): (PlanTotals & { label: string }) | undefined => {
@@ -1634,15 +1726,47 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * Two stops that are one plan collapse to one, so a bar may carry fewer.
    */
   const top = ladderRows[ladderRows.length - 1];
-  /** The efficient rung that costs the least silver — the fewest burned on a tie, then the most damage. */
-  const leastSilver = efficientRows.reduce<(PlanTotals & { label: string }) | undefined>((best, row) => {
-    if (!best) return row;
-    if (row.repeat.silver !== best.repeat.silver) return row.repeat.silver < best.repeat.silver ? row : best;
-    if (row.repeat.mercLost !== best.repeat.mercLost) {
-      return row.repeat.mercLost < best.repeat.mercLost ? row : best;
-    }
-    return row.repeat.damage > best.repeat.damage ? row : best;
-  }, undefined);
+  /**
+   * **Least silver**: the cheapest march the band keeps to the left of the sweet spot — fewer units burned
+   * than it — the fewest burned on a tie, then the most damage. Over the band and not the ladder, because the
+   * ladder keeps one plan a level, the best damage there, and the cheapest plan at that level is a different
+   * one (measured on the 2026-09-17 export at 12 000: 6 361 327 for 4 426 500 silver at 10 burned, where the
+   * level's best hits for 6 760 346 at 4 668 300). The band already refuses the silver sinks, so "ok" ratios
+   * come with it. Absent when nothing stands left of the sweet spot.
+   */
+  const beatenOnBoth = (row: PlanTotals): boolean =>
+    candidates.some(
+      (other) =>
+        other !== row &&
+        perSilver(other) >= perSilver(row) &&
+        perHired(other) >= perHired(row) &&
+        (perSilver(other) > perSilver(row) || perHired(other) > perHired(row)),
+    );
+  const leastSilver = candidates
+    // Left of the sweet spot, and not a plan another band plan beats on both ratios: the cheapest march of
+    // the band outright was measured as one the sweet spot beats on both (his latest export: 4 366 381 for
+    // 3 230 800 at 1.35 a silver · 545 798 a hired, against the sweet spot's 1.62 · 586 286), which is not the
+    // "ok on each" the owner asked of every stop.
+    // …and no dearer than the sweet spot in silver, or the name would be false on its own row (measured on
+    // the 2026-09-17 export at 7 000: the only efficient plan left of the sweet spot cost 2 722 500 against
+    // its 2 614 000 — absent rather than misnamed). Equal silver is allowed: on an account whose silver is
+    // flat across the rungs (one hired type, the troop ladder sized off it) the least silver is a tie, and
+    // the fewest units burned breaks it — the same silver for fewer mercenaries is the left end.
+    .filter(
+      (row) =>
+        row.repeat.mercLost < sweetSpotBase.repeat.mercLost &&
+        row.repeat.silver <= sweetSpotBase.repeat.silver &&
+        !beatenOnBoth(row),
+    )
+    .reduce<(PlanTotals & { label: string }) | undefined>((best, row) => {
+      if (!best) return row;
+      if (row.repeat.silver !== best.repeat.silver)
+        return row.repeat.silver < best.repeat.silver ? row : best;
+      if (row.repeat.mercLost !== best.repeat.mercLost) {
+        return row.repeat.mercLost < best.repeat.mercLost ? row : best;
+      }
+      return row.repeat.damage > best.repeat.damage ? row : best;
+    }, undefined);
   /**
    * More mercenaries: the rung of the ladder nearest the middle of the gap between the sweet spot and the
    * top, strictly inside it — the step a player takes when the stock allows more than the knee and less than
