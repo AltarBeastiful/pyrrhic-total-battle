@@ -22,7 +22,7 @@ import type { StackRequest } from '@/engine/types';
 import { getUnits } from '@/data';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
-import { PlanFold, PlanSizing } from './PlanPanel';
+import { PlanFold } from './PlanPanel';
 import { BAR_ENDS, bestForWords, planWords } from './picks';
 import { compact, ratio } from './format';
 import { defaultPlanPosition, pickOf, sweetSpotOf, useRunStore } from './runStore';
@@ -145,25 +145,6 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   useRunStore.setState({ plan: null });
-});
-
-test('the sizing line says what the plan decided, and nothing about it is invented', () => {
-  renderWithTheme(<PlanSizing />);
-  const plan = useRunStore.getState().plan;
-  expect(plan).not.toBeNull();
-  if (!plan) return;
-
-  const line = screen.getByText(/^Planned from the army:/);
-  // The line describes the plan the bar is read at — where it opens, which is the engine's own pick — and the
-  // counts it sized. It opens on the sweet spot and it **stops there**: the clause that used to name it ("the
-  // sweet spot between the two resources") is the row's own name, one line above the table that prints it,
-  // and design rule 5 forbids saying the same thing twice (S-59).
-  const position = defaultPlanPosition(plan);
-  const point = pickOf(plan, position);
-  expect(line.textContent).toContain(String(point.marches - (point.finaleCounts ? 1 : 0)));
-  expect(line.textContent).toContain(`${Object.keys(point.counts).length} stacks`);
-  expect(sweetSpotOf(plan)).toBe(position);
-  expect(line.textContent).not.toContain('the sweet spot between the two resources');
 });
 
 test('one control walks the trade, the keyboard walks it too, and the way back to the sweet spot is a word', () => {
@@ -658,14 +639,4 @@ test('the tip carries the gold a march the trade has no room for', () => {
   expect(shown?.textContent ?? '').toContain(planWords(BURN_ROWS[last] as PlanRow));
   expect(shown?.textContent ?? '').toContain(`${compact(6_900_000)} damage a march`);
   expect(shown?.textContent ?? '').toContain(`${compact(33_700)} gold a march`);
-});
-
-test('the sizing line says where a plan stands in the resource the bar is ordered by', () => {
-  // Off the sweet spot (stop 1) and one stop to its right: that is one plan **heavier on the hired stock**,
-  // and "pricier" would be a claim about silver the list is not sorted by.
-  primeBurn(2);
-  renderWithTheme(<PlanSizing />);
-  const line = screen.getByText(/^Planned from the army:/);
-  expect(line.textContent ?? '').toContain('1 plan heavier on the hired stock than the sweet spot');
-  expect(line.textContent ?? '').not.toContain('pricier');
 });

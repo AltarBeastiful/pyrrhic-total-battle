@@ -294,18 +294,19 @@ export function BonusesSection() {
             writeExpanded(next);
           }}
         >
-          <Stack gap="md">
-            <SetupBar profile={profile} setup={setup} />
+          <Stack gap="lg">
             {caveats.map((caveat) => (
               <Alert key={caveat} color="brass" variant="light">
                 {caveat}
               </Alert>
             ))}
-            {ORDER.map((id) => (
-              <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
-                {panels[id].body}
-              </FamilyRow>
-            ))}
+            <Stack gap="md">
+              {ORDER.map((id) => (
+                <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
+                  {panels[id].body}
+                </FamilyRow>
+              ))}
+            </Stack>
             {/* The folds share one part, as the March's do: a hairline between two collapsed rows
                 is a rule between two rules. The two families set once, then the audit. */}
             <Stack gap={0}>
@@ -327,6 +328,11 @@ export function BonusesSection() {
                 <TotalsBreakdown profile={profile} setup={setup} />
               </Disclosure>
             </Stack>
+            {/* The battle setup closes the form (owner, 2026-09-17: "experiment with moving the battle
+                setup at the end of the form"; it stood first, one 16 px gap over the captains, "too
+                crowded"). What is on this march is chosen above; which named setup holds that choice —
+                keep it, rename it, copy it — is the last thing on the card, with its own room. */}
+            <SetupBar profile={profile} setup={setup} />
           </Stack>
         </Disclosure>
       </Sections>

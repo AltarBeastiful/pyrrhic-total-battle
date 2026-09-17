@@ -610,7 +610,8 @@ test('complete optimization answers with a plan, and the March draws it instead 
   const plan = useRunStore.getState().plan;
   expect(plan).not.toBeNull();
   expect(plan?.marches).toBe(CAMPAIGN.marches);
-  expect(screen.getByText(/^Planned from the army:/)).toBeTruthy();
+  // No sizing line under the figures (owner, 2026-09-17): the Plan block below says what sized it.
+  expect(screen.queryByText(/^Planned from the army:/)).toBeNull();
 
   // **Open on arrival** (S-59: the owner's 2026-09-16 review — "it becomes a new part of the recap"), with
   // the answer's headline on the row either way.

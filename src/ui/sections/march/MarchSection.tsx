@@ -28,7 +28,7 @@ import { useResultStore } from '@/ui/resultStore';
 import { MARCH_ANCHOR } from '@/ui/shell/march';
 import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
-import { PlanFold, PlanSizing } from './PlanPanel';
+import { PlanFold } from './PlanPanel';
 import { amount } from './format';
 import { MarchActions, MarchDetailsFold, MarchObjectives, MarchSavedFold } from './MarchFoot';
 import { MarchGenerateButton } from './MarchGenerateButton';
@@ -127,9 +127,8 @@ export function MarchSection() {
         )}
 
         <MarchRecap />
-        {/* Under the figures, and only after a complete optimization: the sizing the plan chose, which
-            is the one thing about this answer the player did not decide themselves (S-55). */}
-        <PlanSizing />
+        {/* No sizing line under the figures any more (owner, 2026-09-17: "remove Planned from the army…"):
+            what the plan sized is the Plan block's own row, two parts down, and the line said it twice. */}
         {/* Generate is the command bar's on a desktop and nowhere else (design plan §5.6): the
             pane would be saying the same thing twice, 200 px above the bar that says it. In the
             sheet it stays, because the sheet is a focus trap over the bar and the answer and the

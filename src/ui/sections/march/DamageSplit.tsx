@@ -20,14 +20,14 @@
  * The figures are `Figures` in the contract's grid, all on one line while there is room and two
  * across below the two-pane width, where a 390 px sheet has no room for three seven-figure numbers.
  */
-import { chunks } from '@/engine/recovery';
-import type { BattleSummary, Stack } from '@/engine/types';
+import type { BattleSummary } from '@/engine/types';
 import { Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 import type { Figure } from '@/ui/kit';
 import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
 import { compact, per, percent, ratio } from './format';
+import { hiredLost, type HiredStack } from './hired';
 
 /**
  * The two figures this block reads, and nothing else: a fixture in a test is the pair of numbers, not
@@ -35,17 +35,12 @@ import { compact, per, percent, ratio } from './format';
  */
 export type DamageSplitSummary = Pick<BattleSummary, 'avgDamage' | 'damageByPool'>;
 /** A stack, as far as the hired count is concerned. */
-export type DamageSplitStack = Pick<Stack, 'pool' | 'count'>;
+export type DamageSplitStack = HiredStack;
 
 export interface DamageSplitProps {
   summary: DamageSplitSummary;
   /** The march on screen, in kill order: what it burns of the hired stock is counted off these. */
   stacks: readonly DamageSplitStack[];
-}
-
-/** The hired units a march costs for good: one in every ten of each authority stack (`chunks`). */
-function hiredLost(stacks: readonly DamageSplitStack[]): number {
-  return stacks.reduce((sum, stack) => sum + (stack.pool === 'authority' ? chunks(stack.count) : 0), 0);
 }
 
 export function DamageSplit({ summary, stacks }: DamageSplitProps) {

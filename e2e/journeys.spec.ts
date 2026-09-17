@@ -410,10 +410,6 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
     await expect(march).toBeVisible();
   }
 
-  // The one thing about this answer the player did not choose: what sized it, and where on the trade the
-  // plan on screen sits (`PlanSizing`).
-  await expect(march.getByText(/^Planned from the army: /)).toBeVisible();
-
   // The plan itself, **open on arrival** — it is part of the answer, not a fold to hunt for (S-59). No tap.
   const fold = march.getByRole('button', { name: /^Plan / });
   await expect(fold).toHaveAttribute('aria-expanded', 'true');

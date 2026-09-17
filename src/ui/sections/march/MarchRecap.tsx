@@ -26,7 +26,8 @@ import type { BattleSummary } from '@/engine/types';
 import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { amount, ratio } from './format';
+import { amount, percent, ratio } from './format';
+import { hiredLost, hiredStock } from './hired';
 import classes from './march.module.css';
 import { useMarch } from './useMarch';
 
@@ -89,6 +90,29 @@ export function MarchRecap() {
     },
   ];
 
+  // **What this march burns of the hired stock** (owner, 2026-09-17: "a merc lost count with a percent of
+  // all mercs available, to see how big the drop is"). The count is the one the plan's trade prints as
+  // "Hired lost" (`./hired`); the share is of every hired unit the account owns across the types the
+  // march could draw on, and it is left unsaid while one of them is uncapped. No delta: the previous run
+  // is kept as a summary, and a summary carries no stacks.
+  const lost = hiredLost(result.stacks);
+  const stock = hiredStock(snapshot.request);
+  const hired = {
+    key: 'hired',
+    label: 'Hired lost',
+    glyph: <Glyph kind="mercenaries" />,
+    value: (
+      <Group gap={6} wrap="nowrap" align="baseline">
+        <DeltaText value={lost} format={amount} betterWhen="lower" />
+        {stock !== null && stock > 0 && (
+          <Text span size="xs" c="dimmed">
+            {`· ${percent(Math.round((lost / stock) * 100))} of ${amount(stock)}`}
+          </Text>
+        )}
+      </Group>
+    ),
+  };
+
   return (
     <Stack gap="md" aria-label="This march in figures">
       {/* Everything that *is* the answer dims together while the answer is out of date; the line
@@ -126,19 +150,22 @@ export function MarchRecap() {
         <Figures
           label="March figures"
           layout="grid"
-          items={figures.map((figure) => ({
-            key: figure.key,
-            label: figure.label,
-            ...(figure.glyph === undefined ? {} : { glyph: figure.glyph }),
-            value: (
-              <DeltaText
-                value={figure.value}
-                {...(figure.previous === undefined ? {} : { previous: figure.previous })}
-                format={figure.format}
-                betterWhen={figure.betterWhen}
-              />
-            ),
-          }))}
+          items={[
+            ...figures.map((figure) => ({
+              key: figure.key,
+              label: figure.label,
+              ...(figure.glyph === undefined ? {} : { glyph: figure.glyph }),
+              value: (
+                <DeltaText
+                  value={figure.value}
+                  {...(figure.previous === undefined ? {} : { previous: figure.previous })}
+                  format={figure.format}
+                  betterWhen={figure.betterWhen}
+                />
+              ),
+            })),
+            hired,
+          ]}
         />
       </Stack>
 

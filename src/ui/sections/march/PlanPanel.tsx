@@ -52,10 +52,8 @@ import { useResultStore } from '@/ui/resultStore';
 import { PlanBar } from './PlanBar';
 import { PlanTrade } from './PlanTrade';
 import { amount, compact, ratio } from './format';
-import classes from './march.module.css';
 
 import { pickOf, sweetSpotOf, useRunStore } from './runStore';
-import { useMarch } from './useMarch';
 
 /**
  * The figures of one plan, as the engine carries them: a row of the trade, or the plan itself when the
@@ -74,56 +72,6 @@ type PlanFigures = Pick<PlanTotals, 'repeat'>;
 function mercsAMarch(point: PlanFigures): string {
   const each = point.repeat.mercLost;
   return each >= 10 ? amount(each) : each.toFixed(1);
-}
-
-/**
- * Where on the trade the plan on screen sits, in words (design rule 29: an answer says what it did), or
- * `null` when there is nothing left to say.
- *
- * **The sweet spot says nothing** (S-59). It used to close the sizing line with "— the sweet spot between
- * the two resources", which is the row's own name written a second time one line above the table that
- * prints it; design rule 5 forbids saying the same thing twice, and the row's name says it now. Its
- * distance *from* the sweet spot still earns its place — no name says where on the trade a plan stands
- * relative to the recommendation — so only the identity clause goes.
- *
- * **The words are the bar's own resource** (review of 2026-09-16, design rule 5). "Cheaper" and "the least
- * silver of the plans kept" name a silver ordering, and the list is not sorted by silver at all — it runs
- * along the hired units a march burns, so a stop further right can perfectly well cost *less* silver. The
- * sentences are written in the resource the bar is actually ordered by, in the trade's own words ("hired
- * lost", `./picks`).
- */
-function readAt(count: number, position: number, sweet: number | null): string | null {
-  if (count < 2) return 'the only plan the search kept';
-  if (sweet === null) {
-    if (position <= 0) return 'the fewest hired lost of the plans kept';
-    if (position >= count - 1) return 'the most hired lost of the plans kept';
-    return `plan ${String(position + 1)} of the ${String(count)} kept, thriftiest first`;
-  }
-  if (position === sweet) return null;
-  const away = Math.abs(position - sweet);
-  const side = position < sweet ? 'thriftier with the hired stock' : 'heavier on the hired stock';
-  return `${String(away)} plan${away === 1 ? '' : 's'} ${side} than the sweet spot`;
-}
-
-/** What the plan decided, in one line, in the muted meta ink (it explains an answer). */
-export function PlanSizing() {
-  const plan = useRunStore((state) => state.plan);
-  const position = useRunStore((state) => state.planPick);
-  const { stale } = useMarch();
-  if (plan === null) return null;
-
-  const point = pickOf(plan, position);
-  const repeated = point.marches - (point.finaleCounts ? 1 : 0);
-  const where = readAt(plan.alternatives.length, position, sweetSpotOf(plan));
-  return (
-    <Text size="sm" c="dimmed" className={stale ? classes.outOfDate : undefined}>
-      {`Planned from the army: ${String(repeated)} identical march${repeated === 1 ? '' : 'es'} of ${String(
-        Object.keys(point.counts).length,
-      )} stacks${point.finaleCounts ? ' and a final march for what is left' : ''}${
-        where === null ? '' : ` — ${where}`
-      }.`}
-    </Text>
-  );
 }
 
 /**
