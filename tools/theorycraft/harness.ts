@@ -37,6 +37,14 @@ import { parseImport } from '../../src/share/exportImport';
 import { buildStackRequest } from '../../src/state/derive';
 
 export const EXPORT = process.env.PYRRHIC_EXPORT ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-13.json';
+/**
+ * The owner's export of 2026-09-17: leadership 7 000 / authority 2 180 on its setup, three captains (Aydae
+ * 39 ★3, Alexander 19, Leonidas 36), stock EMH 142 · ABT 50 · CHR 20 · LGN 42. The 2026-09-13 file above
+ * cannot reproduce his live bar (his march of that day hits for 6 133 203 in the app and 4 986 889 under it);
+ * experiments from 93 on read this one.
+ */
+export const EXPORT_2026_09_17 =
+  process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
 export const OUT_DIR = new URL('./out/', import.meta.url);
 
 export const MERC_IDS = ['epic-monster-hunter-6', 'arbalester-6', 'legionary-6', 'chariot-6'] as const;
@@ -58,9 +66,9 @@ export interface Owner {
 }
 
 /** The export as the app reads it. Scenario A bonuses (the file's own). */
-export function loadOwner(): Owner {
-  if (!existsSync(EXPORT)) throw new Error(`export not found: ${EXPORT}`);
-  const text = readFileSync(EXPORT, 'utf8');
+export function loadOwner(file: string = EXPORT): Owner {
+  if (!existsSync(file)) throw new Error(`export not found: ${file}`);
+  const text = readFileSync(file, 'utf8');
   const parsed = parseImport(text);
   if (parsed.kind !== 'profile') throw new Error('not a profile export');
   const setup = parsed.payload.setups[0];

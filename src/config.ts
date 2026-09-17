@@ -59,7 +59,7 @@ export const CAMPAIGN = {
    * 2 331 500 silver at the same 17 burned, and the thrift end fields 10 legionaries instead of none; B only
    * hides the legionary-free plan, and with A on it has nothing left to hide.
    */
-  planFixes: { tokenFloor: true, refuseDroppedTypes: false, sizerShape: false },
+  planFixes: { tokenFloor: true, refuseDroppedTypes: false, sizerShape: true },
   /**
    * **The bar's axis** — `'burn'` since the owner's decision of 2026-09-17 (review of 2026-09-16 put both
    * axes behind this flag so `tools/theorycraft/91` could measure them; this is the answer it produced).

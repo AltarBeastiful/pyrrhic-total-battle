@@ -1303,12 +1303,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * now competes against every plan the bar can carry — and the sweet spot is *chosen from* this set rather
    * than added to it, so it is inside by construction.
    */
-  const candidates =
-    band.length === 0
-      ? undominated
-      : band.some((row) => JSON.stringify(row.counts) === JSON.stringify(chosenPoint.counts))
-        ? band
-        : [...band, chosenPoint];
+  // The band alone (the unbanded frontier only when the band keeps nothing). The winner used to be added
+  // when the band refused it, for a sweet spot that was read elsewhere; the sweet spot is read off these
+  // candidates now, so it is inside by construction — and measured on the owner's export of 2026-09-17 the
+  // refused winner was a single-troop-stack march (3 495 riders and the mercenaries) standing on the bar as
+  // "Most damage", the very plan the band's third criterion exists to refuse.
+  const candidates = band.length === 0 ? undominated : band;
 
   /**
    * **The sweet spot: the middle of the trade in hired stock** (owner, 2026-09-16).

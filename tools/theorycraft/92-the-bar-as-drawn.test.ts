@@ -49,8 +49,8 @@ describe.skipIf(!process.env.THEORY)('the bar as drawn', () => {
 
     report.h('The frame');
     report.add(
-      `Owner's export, scenario C, 4 343 leadership / 2 000 authority, no budget, S-58 **A on** (the app's ` +
-        `setting since 2026-09-17), the bar capped at ${n(KEEP)} stops. Every row is the repeated march. ` +
+      `Owner's export of 2026-09-13, scenario C, 4 343 leadership / 2 000 authority, no budget, S-58 **A on** and ` +
+        `the **sizer shape on** (the app's settings since 2026-09-17), the bar capped at ${n(KEEP)} stops. Every row is the repeated march. ` +
         `"vs previous" is how far a stop stands from the one to its left — damage, silver, burn — as a share ` +
         `of the larger; the owner's question 4 is whether a stop earns its place, and this is the measure.`,
     );
@@ -63,6 +63,7 @@ describe.skipIf(!process.env.THEORY)('the bar as drawn', () => {
           marchTarget: horizon,
           alternatives: KEEP,
           tokenFloor: true,
+          sizerShape: true,
           barAxis: axis,
           withTrade: true,
         });
