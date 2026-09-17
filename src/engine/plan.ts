@@ -209,6 +209,12 @@ export interface PlanTotals {
    * march (`marchResult` → `simulateBattle`). Measured: `tools/theorycraft/out/74-row-figures.md` §1.
    */
   repeat: PlanRepeat;
+  /**
+   * Which shape the search sized the repeated march with: a `ladder` (the strongest `depth` troop types,
+   * one rung each, scaled) or the sizer's own march under one of its methods (`SizerMethod`). Presentation
+   * and record only — the counts are the plan.
+   */
+  shape: 'ladder' | SizerMethod;
   totalDamage: number;
   silver: number;
   gold: number;
@@ -576,11 +582,27 @@ export interface ShapeContext {
    * shape scored when `depth` is `0` (`CampaignInput.sizerShape`). Absent, a depth of `0` scores nothing.
    */
   sizer?:
-    ((mercs: { entry: Effective; count: number }[]) => { entry: Effective; count: number }[]) | undefined;
+    | ((
+        mercs: { entry: Effective; count: number }[],
+        method: SizerMethod,
+      ) => { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] })
+    | undefined;
 }
+
+/**
+ * The stacking methods the sizer shape is scored with (`CampaignInput.sizerShape`), keyed by the depth that
+ * names them in the shape scorer: `0` Elite, `-1` Military Science, `-2` Military Science relaxed. Measured
+ * on the owner's export of 2026-09-17 (`tools/theorycraft/out/94-under-the-cap.md` §C): with the sweet spot's
+ * own mercenary caps, Military Science over the same eight types hit for 5 770 261 against Elite's 5 736 190
+ * while burning fewer hired units — a march the Elite-only sizer shape could not reach.
+ */
+export type SizerMethod = 'elite' | 'ms' | 'msRelaxed';
+export const SIZER_DEPTHS: Record<number, SizerMethod> = { 0: 'elite', [-1]: 'ms', [-2]: 'msRelaxed' };
 
 export interface ScoredShape {
   marches: number;
+  /** The mercenaries the shape actually fields — the sizer's own when the shape is the sizer's. */
+  mercs: { entry: Effective; count: number }[];
   /** The counts of the repeated march, as the app carries them. */
   counts: Record<string, number>;
   rungs: { entry: Effective; count: number }[];
@@ -648,12 +670,25 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
   let cachedFinale: ScoredShape['finale'] = null;
 
   return (marches, counts, depth, scale, silverBudget) => {
-    const vector = mercTypes.map((entry) => ({
+    let vector = mercTypes.map((entry) => ({
       entry,
       count: Math.max(0, Math.floor(counts[entry.id] ?? 0)),
     }));
-    const fielded = vector.filter((merc) => merc.count > 0);
+    let fielded = vector.filter((merc) => merc.count > 0);
     if (fielded.length === 0 || marches < 1) return null;
+    // A depth of 0 or less is the sizer's own march under one of its methods (`SIZER_DEPTHS`): the counts
+    // are its caps, and what it fields — troops and mercenaries both — is the shape.
+    const sizerMethod = SIZER_DEPTHS[depth];
+    let sizedRungs: { entry: Effective; count: number }[] = [];
+    if (sizerMethod !== undefined) {
+      if (!context.sizer) return null;
+      const sized = context.sizer(fielded, sizerMethod);
+      sizedRungs = sized.rungs;
+      const byId = new Map(sized.mercs.map((merc) => [merc.entry.id, merc.count]));
+      vector = mercTypes.map((entry) => ({ entry, count: Math.max(0, byId.get(entry.id) ?? 0) }));
+      fielded = vector.filter((merc) => merc.count > 0);
+      if (fielded.length === 0) return null;
+    }
     // A shape is only a plan if the stock can field it on every one of those marches. The planner derives
     // `marches` from the counts (`marchesFor`), so this never bites there — but a caller may pass both, and
     // the two must not disagree: fielding a count the stock cannot sustain burns mercenaries it does not have.
@@ -663,11 +698,8 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     // what the enemy can kill in one march, and the HP the mercenaries need shelter from
     const mercenaryHp = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
     const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
-    // Depth 0 is the sizer's own march (see `ShapeContext.sizer`), every other depth a ladder.
     const rungs =
-      depth === 0
-        ? (context.sizer?.(fielded) ?? [])
-        : ladder(troops, depth, mercenaryHp, gap, leadership, scale);
+      sizerMethod !== undefined ? sizedRungs : ladder(troops, depth, mercenaryHp, gap, leadership, scale);
     if (rungs.length === 0) return null;
     const march = marchOf([...rungs, ...vector], enemyStacks);
     if (budgetPerMarch !== undefined && march.silver > budgetPerMarch) return null;
@@ -687,6 +719,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     }
     return {
       marches,
+      mercs: vector,
       counts,
       rungs,
       march,
@@ -920,7 +953,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * The Elite sizer over every troop type, the hired counts as caps — what the March pane draws after a
    * put-back, scored inside the search so the plan can find it itself (`CampaignInput.sizerShape`).
    */
-  const sizer = (mercs: { entry: Effective; count: number }[]): { entry: Effective; count: number }[] => {
+  const sizer = (
+    mercs: { entry: Effective; count: number }[],
+    method: SizerMethod,
+  ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } => {
     const caps: Record<string, number> = { ...request.caps };
     const fieldedIds = new Set<string>();
     for (const merc of mercs) {
@@ -931,12 +967,20 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       ...request,
       caps,
       units: request.units.filter((unit) => unit.pool === 'leadership' || fieldedIds.has(unit.id)),
-      options: { ...request.options, method: 'elite', relaxedPreservation: false },
+      options: {
+        ...request.options,
+        method: method === 'elite' ? 'elite' : 'ms',
+        relaxedPreservation: method === 'msRelaxed',
+      },
     });
-    return sized.stacks
-      .filter((stack) => stack.pool === 'leadership' && stack.count > 0)
-      .map((stack) => ({ entry: byId.get(stack.unitId) as Effective, count: stack.count }))
-      .filter((rung) => rung.entry !== undefined);
+    const stacks = sized.stacks
+      .filter((stack) => stack.count > 0)
+      .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
+      .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
+    return {
+      rungs: stacks.filter((stack) => stack.entry.pool === 'leadership'),
+      mercs: stacks.filter((stack) => stack.entry.pool === 'authority'),
+    };
   };
   const score = makeScorer({
     troops,
@@ -1006,15 +1050,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (marches < 1) return null;
     const counts: Record<string, number> = {};
     for (const merc of vector) counts[merc.entry.id] = merc.count;
-    // Depth 0 is the sizer's own shape, scored once a vector (its scale means nothing) when the flag is on.
-    const depths: readonly number[] = only ? [only.depth] : sizerShape ? [0, ...DEPTHS] : DEPTHS;
+    // A depth of 0 or less is the sizer's own shape under one method (`SIZER_DEPTHS`), scored once a vector
+    // (its scale means nothing) when the flag is on.
+    const depths: readonly number[] = only
+      ? [only.depth]
+      : sizerShape
+        ? [...Object.keys(SIZER_DEPTHS).map(Number), ...DEPTHS]
+        : DEPTHS;
     for (const depth of depths) {
-      for (const scale of only ? [only.scale] : depth === 0 ? [1] : LADDER_GROWTHS) {
+      for (const scale of only ? [only.scale] : depth <= 0 ? [1] : LADDER_GROWTHS) {
         const scored = score(marches, counts, depth, scale, input.silverBudget);
         if (!scored) continue;
         const candidate: Candidate = {
           marches,
-          mercs: vector,
+          // What the shape fields: the sizer's own mercenaries when the shape is the sizer's.
+          mercs: scored.mercs,
           rungs: scored.rungs,
           march: scored.march,
           finale: scored.finale?.march ?? null,
@@ -1115,7 +1165,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           moved = true;
         }
       }
-      for (const step of SCALE_STEPS) {
+      for (const step of depth <= 0 ? [] : SCALE_STEPS) {
         const trial = Math.round(scale * (1 + step) * 1000) / 1000;
         if (trial < 1 || trial > MAX_SCALE) continue;
         const key = where(vector, depth, trial);
@@ -1207,6 +1257,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // The repeated march's own figures, which `toMarch` already priced and the totals above spread the
       // finale over: these are what the March section reports for the plan's own march.
       repeat: { damage: m.damage, silver: m.silver, gold: m.gold, mercLost: m.mercLost },
+      shape: SIZER_DEPTHS[candidate.depth] ?? 'ladder',
       marches: candidate.marches + (candidate.finale ? 1 : 0),
       damagePerSilver: silver > 0 ? candidate.total / silver : Infinity,
       damagePerMercenary: mercLost > 0 ? candidate.total / mercLost : Infinity,
