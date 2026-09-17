@@ -58,6 +58,19 @@ function firstRun(...hired: { id: string; cap: number }[]): StackRequest {
   });
 }
 
+/**
+ * The hired units a march **fields**, Σ counts over the authority pool. The bar itself runs along the
+ * **burn** — what the stock pays, `ceil(n/10)` a stack — and this is the one reading the engine takes off the
+ * counts: the `all-in` stop is offered when its first march fields more than the steady max's repeat, because
+ * a stock smaller than a chunk burns the same whatever it fields (`plan.ts`, the all-in offer).
+ */
+const fieldedOf = (req: StackRequest, counts: Record<string, number>): number =>
+  Object.entries(counts).reduce(
+    (sum, [id, count]) =>
+      req.units.find((unit) => unit.id === id)?.pool === 'authority' ? sum + count : sum,
+    0,
+  );
+
 /** The marches a stop plays, first to last: its own sequence, or its repeats and the final march. */
 function marchesOf(row: PlanTotals): Record<string, number>[] {
   if (row.sequence) return row.sequence;
@@ -310,16 +323,26 @@ describe(
       expect(rows.length).toBeGreaterThan(0);
       expect(rows.length).toBeLessThanOrEqual(5);
 
-      // Sorted by burn, no two stops burn the same, and damage climbs with the burn: a stop never asks for more
-      // of the stock than the one to its left for less damage.
+      // Sorted by burn, no two rung stops burn the same, and damage climbs with the burn: a stop never asks
+      // for more of the stock than the one to its left for less damage.
+      //
+      // **The `all-in` may share the burn of the stop before it** (re-based 2026-09-18). It is offered on what
+      // its first march *fields* rather than on what it burns, because a stock smaller than a chunk burns the
+      // same whatever it fields — and then it is sorted onto the bar by the burn like every other stop, so it
+      // can land on the rung it was told apart from. It is always last, being the dearest march at its burn.
       for (let index = 1; index < rows.length; index += 1) {
         const previous = rows[index - 1];
         const current = rows[index];
         if (!previous || !current) continue;
+        if (current.pick === 'all-in') {
+          expect(current.repeat.mercLost).toBeGreaterThanOrEqual(previous.repeat.mercLost);
+          expect(fieldedOf(req, current.counts)).toBeGreaterThan(fieldedOf(req, previous.counts));
+          continue;
+        }
         expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
         // The all-in stop fields every mercenary the troops can shelter, which can cost troops: it burns the
         // most and need not hit the hardest a march.
-        if (current.pick !== 'all-in') expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+        expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
       }
       // Each rung stop is the best march at its burn level among the plans the bar may carry; the least-silver
       // stop is a different thing — the cheapest efficient march left of the sweet spot — and must cost less.
@@ -452,6 +475,89 @@ describe(
   },
   TIMEOUT,
 );
+
+/**
+ * **A stock smaller than a chunk still gets its all-in** (owner, 2026-09-18: *"a last stop: all mercs
+ * possible … fill all the mercs you can safely"*).
+ *
+ * The bar runs along the **burn**, `ceil(n/10)` summed over the hired stacks a march fields — the game's own
+ * rule for what a march costs the stock for good, and what every row shows. The `all-in` was offered on that
+ * reading too, and it is the one stop the burn cannot see: with ten bears in stock, 10 · 9 · 8 · 7 and eight a
+ * march both burn one chunk a march, so the campaign that spends the stock fastest tied the steady max and was
+ * dropped as a duplicate of it (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §B). It is offered
+ * on what its first march **fields** instead — the one place the engine reads a count rather than a cost.
+ *
+ * TotalStack's own priority search answers exactly those campaigns: 26 486 216 over four marches with ten
+ * bears in stock and 25 439 016 with three, against this plan's 21 732 276 and 14 168 526.
+ */
+describe('a stock smaller than a chunk still has an all-in', () => {
+  test(
+    'ten bears: more than one stop, rising in what they field, and an all-in that spends the stock',
+    () => {
+      const req = firstRun({ id: 'bear-5', cap: 10 });
+      const plan = planCampaign({ request: req, marchTarget: CAMPAIGN.marches, ...CAMPAIGN.planFixes });
+
+      // More than one stop — it was exactly one on the burn axis, because every row burned one chunk.
+      expect(plan.alternatives.length).toBeGreaterThan(1);
+
+      // The bar reads left to right as "field fewer … field more", strictly.
+      for (let index = 1; index < plan.alternatives.length; index += 1) {
+        const previous = plan.alternatives[index - 1];
+        const current = plan.alternatives[index];
+        if (!previous || !current) continue;
+        expect(
+          fieldedOf(req, current.counts),
+          `${current.pick} fields more than ${previous.pick}`,
+        ).toBeGreaterThan(fieldedOf(req, previous.counts));
+      }
+
+      // The all-in is on the bar, and it is the campaign that spends the stock fastest: the whole stock on the
+      // first march, then a chunk fewer each time (10 · 9 · 8 · 7 — one unit lost a march, the stock being
+      // under a chunk).
+      const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
+      expect(allIn, 'the all-in stop is offered').toBeDefined();
+      const sequence = (allIn?.sequence ?? []).map((march) => march['bear-5'] ?? 0);
+      expect(sequence[0]).toBe(10);
+      for (let index = 1; index < sequence.length; index += 1) {
+        expect(sequence[index] ?? 0).toBeLessThan(sequence[index - 1] ?? 0);
+      }
+
+      // Every stop is a campaign the two criteria can be read off — the bar draws both of them on every row.
+      for (const row of plan.alternatives) {
+        expect(Number.isFinite(row.damagePerSilver), `${row.pick} has a damage a silver`).toBe(true);
+        expect(Number.isFinite(row.damagePerMercenary), `${row.pick} has a damage a hired unit`).toBe(true);
+        expect(row.damagePerSilver).toBeGreaterThan(0);
+        expect(row.damagePerMercenary).toBeGreaterThan(0);
+      }
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'three bears: the all-in fields 3 · 2 · 1 and stops when the stock is gone',
+    () => {
+      const req = firstRun({ id: 'bear-5', cap: 3 });
+      const plan = planCampaign({ request: req, marchTarget: CAMPAIGN.marches, ...CAMPAIGN.planFixes });
+      const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
+      expect(allIn, 'the all-in stop is offered').toBeDefined();
+      expect((allIn?.sequence ?? []).map((march) => march['bear-5'] ?? 0)).toEqual([3, 2, 1]);
+      // It is the hardest-hitting campaign on this bar, which is the point of offering it: measured
+      // 2026-09-18, 14 505 126 against the repeat's 14 168 526 (one bear a march for three marches).
+      expect(allIn?.totalDamage ?? 0).toBeGreaterThan(
+        Math.max(...plan.alternatives.filter((row) => row.pick !== 'all-in').map((row) => row.totalDamage)),
+      );
+      // **It plays three marches, not the horizon's four** (measured 2026-09-18). The all-in stops where the
+      // stock does: its rule is "every mercenary the troops can shelter, then what is left", and after 3 · 2 ·
+      // 1 there is nothing left to shelter. TotalStack's priority search marches a fourth time on troops alone
+      // and reaches 25 439 016 where this bar's best is 14 505 126, so a march with no hired stack in it is
+      // damage this method leaves on the table — but it is the sizer's march, not a plan of the hired stock,
+      // and nothing else about the horizon changed here (S-76: the horizon is a ceiling).
+      expect(allIn?.marches).toBe(3);
+      expect(allIn?.sequence?.length).toBe(3);
+    },
+    TIMEOUT,
+  );
+});
 
 /**
  * **The short type on a real account** (coordinator, 2026-09-18). The owner's export holds four hired types —

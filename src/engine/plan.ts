@@ -233,8 +233,9 @@ export interface PlanCurvePoint {
 /**
  * The five stops of the bar (owner, 2026-09-18: *"least silver, sweet spot, more mercs, most mercs"*, then
  * *"a last stop: all mercs possible … fill all the mercs you can safely"* and *"a cost-saving silver march using
- * some mercs but just enough troops to shield them"*), along the hired units burned a march. Each is a
- * definition over the plans the band keeps (`tools/theorycraft/out/99`):
+ * some mercs but just enough troops to shield them"*), along the hired units **burned** a march — what the
+ * stock actually pays, `ceil(n/10)` over the hired stacks fielded. Each is a definition over the plans the
+ * band keeps (`tools/theorycraft/out/99`):
  *
  *  - `silver-saver` — the cheapest march left of the sweet spot that costs no more silver and is at least as
  *    efficient a silver: on every account measured it is the tight ladder, every troop rung just above the
@@ -244,7 +245,12 @@ export interface PlanCurvePoint {
  *  - `steady-max` — the top of the ladder: the most mercenaries the troops shelter **every march of the
  *    horizon**, and the most damage a repeated march does;
  *  - `all-in` — every mercenary the troops can shelter on the first march, then each next march on what the
- *    stock has left (`PlanTotals.sequence`): the campaign that spends the stock fastest.
+ *    stock has left (`PlanTotals.sequence`): the campaign that spends the stock fastest. It is offered when
+ *    its first march **fields** more hired units than the steady max's repeat, which is the one reading on
+ *    this bar that is a count rather than a cost: a stock smaller than a chunk burns the same whatever it
+ *    fields, so 10 · 9 · 8 · 7 tied the steady max and was dropped as a duplicate of it, on the very armies
+ *    where TotalStack's priority search answers 26 486 216 over four marches (ten bears) and 25 439 016
+ *    (three) against this plan's 21 732 276 and 14 168 526.
  */
 export type PlanPick = 'silver-saver' | 'sweet-spot' | 'more-mercs' | 'steady-max' | 'all-in';
 
@@ -1485,9 +1491,30 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * **Every burn level between the ends gets a rung** (owner, 2026-09-18, on a bar with two stops one unit
    * apart on his account: *"the stops still are not to my design"*). The grid samples each hired type at five
    * counts — its cap, 70 %, 45 %, 20 % and one chunk — and the climb only walks around the winner, so on an
-   * account with one hired type the bar had nothing between 46 and 65 hired (5 and 7 burned). Here the
-   * winner's vector is scaled to every burn level under its own, each type rounded **up** to a chunk of ten
-   * (a chunk is paid whole, so a full one hits hardest for its price), and every shape is scored on it.
+   * account with one hired type the bar had nothing between 46 and 65 hired (5 and 7 burned). So the winner's
+   * vector is scaled to every burn level under its own and every shape is scored on it.
+   *
+   * **Two vectors a level, not one** (2026-09-18). The level is the same as it has always been — the burn, and
+   * `CHUNK * ceil(count · burn / topBurn / CHUNK)` per type, which is the vector the sweep has always scored —
+   * and beside it the same level taken **per unit**, `max(1, round(count · burn / topBurn))`. The rounding up
+   * to a whole chunk can only ever offer a one-type account its stock in tens, and the stock is spent a unit
+   * at a time; what a unit *costs* is the chunk, and the chunk is what the bar is drawn on (`ladder` below),
+   * so the level stays the burn and only the vector at it is finer. **Nothing is dropped**: every level and
+   * every vector the sweep walked before is still walked, in the same order, under the same `seen`, and the
+   * per-unit vector is scored only where it differs. Verified vector by vector against the previous engine on
+   * six armies, 2026-09-18 — the owner's export at 7 000, his evening account, his live account at 20 000, a
+   * first-run army with ten bears, the engine tests' army and the plan-shape army: each one's offered sequence
+   * is identical and not one previously-scored vector is missing. What the per-unit vectors add is extra
+   * shapes on top (7 000: 8 vectors scored → 21; the evening account: 8 → 24).
+   *
+   * What they buy, measured 2026-09-18: on the evening account the sweet spot rises to 28 367 940 over four
+   * marches and the more-mercs rung to 29 265 102; on the owner's export at 7 000 the ladder's thriftiest rung
+   * improves from 1.9175 a silver to **1.9715** (3 650 146 a march for 1 851 500), which puts a silver saver
+   * back on that bar and — because the knee is measured from a chord drawn over the whole ladder — moves the
+   * sweet spot from the 11-burn rung to the 10. They also move the frozen figures of
+   * `tests/engine/plan-shape.test.ts`: 15 → 17 marches for 18 333 467 → **18 617 972** damage, five of each
+   * hired type a march instead of seven. Damage is the objective, and it went up on every army measured.
+   * Walked from the winner down, so a budget that cuts the walk short cuts the thrift end, not the middle.
    */
   if (best) {
     const winner: Candidate = best;
@@ -1496,24 +1523,17 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       vector.reduce((sum, merc) => sum + chunks(merc.count), 0);
     const topBurn = burnOf(winner.mercs);
     const seen = new Set<string>([winner.mercs.map((merc) => merc.count).join(',')]);
-    for (let burn = topBurn - 1; burn >= 1; burn -= 1) {
-      if (stop()) break;
-      const vector = winner.mercs.map((merc) => ({
-        entry: merc.entry,
-        count: Math.min(
-          stock[merc.entry.id] ?? 0,
-          merc.count <= 0 ? 0 : CHUNK * Math.ceil((merc.count * burn) / topBurn / CHUNK),
-        ),
-      }));
+    /** One swept vector: scored on the whole ladder grid, then refined on depth and scale like the winner. */
+    const sweep = (vector: { entry: Effective; count: number }[]): void => {
       const key = vector.map((merc) => merc.count).join(',');
-      if (seen.has(key)) continue;
+      if (seen.has(key)) return;
       seen.add(key);
       let candidate = evaluateVector(vector);
       // The winner's own rungs with this vector's mercenaries (`WINNER_RUNGS_DEPTH`), the shape the search
       // could not reach from a merc-sized ladder.
       const kept = evaluateVector(vector, { depth: WINNER_RUNGS_DEPTH, scale: 1 });
       if (kept && (!candidate || kept.total > candidate.total)) candidate = kept;
-      if (!candidate) continue;
+      if (!candidate) return;
       // The winner's shape was refined by the climb above (its depth and its scale); a swept vector scored on
       // the grid's coarse scales alone loses to it — measured on the owner's live account, the 60-hunter march
       // came out at 7 170 113 for 8 229 200 silver, a dearer and barely stronger march than the 48-hunter one,
@@ -1539,6 +1559,30 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         candidate = improved;
       }
       consider(candidate);
+    };
+    for (let burn = topBurn - 1; burn >= 1; burn -= 1) {
+      if (stop()) break;
+      // the level as it has always been read: each type rounded up to a whole chunk
+      sweep(
+        winner.mercs.map((merc) => ({
+          entry: merc.entry,
+          count: Math.min(
+            stock[merc.entry.id] ?? 0,
+            merc.count <= 0 ? 0 : CHUNK * Math.ceil((merc.count * burn) / topBurn / CHUNK),
+          ),
+        })),
+      );
+      // and the same level per unit — a type the winner fields keeps at least one of itself, because a
+      // thriftier level is not a reason to drop a type the account holds (S-58 A's thrift end, here)
+      sweep(
+        winner.mercs.map((merc) => ({
+          entry: merc.entry,
+          count:
+            merc.count <= 0
+              ? 0
+              : Math.max(1, Math.min(stock[merc.entry.id] ?? 0, Math.round((merc.count * burn) / topBurn))),
+        })),
+      );
     }
   }
 
@@ -1721,13 +1765,26 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * plans the engine found, and the middle is a consequence.
    */
   /**
-   * **The burn ladder** (the burn axis, `barAxis: 'burn'`): one plan a level of hired units burned a march —
-   * the best march at that burn, the cheaper on a tie — kept only where **burning more buys more**. Measured
+   * **The burn ladder** (the burn axis): one plan a level of hired units burned a march — the best march at
+   * that burn, the cheaper on a tie — kept only where **burning more buys more**. Measured
    * (`tools/theorycraft/out/92-the-bar-as-drawn.md`, horizon 3): the band's best march at 20 burned hits for
    * 4 938 868 and its best at 17 for 5 314 021, so a bar that offered the 20 would be offering three more units
    * of the stock for less damage; the level is dropped, and so is every level above the most damage. The
    * ladder is what the sweet spot is read off on this axis, so the recommendation can never be a plan a
    * thriftier stop beats.
+   *
+   * **The axis is the burn because the burn is what the player pays** (validator, 2026-09-18, on a proposal to
+   * key this on the hired units a march *fields* instead). The chunk of ten is not a yardstick this file chose:
+   * a march fielding one to ten of a type loses one unit of it for good either way, so a thrifty march that
+   * fields a few of four types costs four chunks and a dearer one that fields forty of one costs four as well.
+   * The burn therefore **compresses the thrift end** on purpose, and an axis of raw counts understates what the
+   * first units of each type cost and drags the recommendation toward fielding fewer mercenaries. Measured on
+   * the owner's export at 12 000 (`sweetSpotBase` below draws a chord over this ladder and takes the rung
+   * farthest above it): on hired fielded the chord picks **114 fielded** at a distance of .2224; on the burn it
+   * picks **156 fielded / 17 burned** at .148 against the 114's .083 — 37 % more of the field for one more
+   * chunk, which is the trade the player is actually offered. The one thing read off the counts is the
+   * `all-in` offer, and only because an all-in on a stock under a chunk burns no more than the steady max
+   * while fielding the whole stock (see below).
    */
   const ladder = new Map<number, PlanTotals & { label: string }>();
   for (const row of candidates) {
@@ -1783,12 +1840,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * choice between them used to go to thrift, which is a coin toss dressed as a rule (owner: *"no more magic
    * static numbers"*).
    *
-   * Measured on his export at 7 000 with the capped sponge march on the bar: the burn ladder is 7 · 9 · 10 ·
-   * 11 · 12 · 13 · 14, no rung stands above the chord, and the middle is **10.5** — the 10 and the 11 are both
-   * half a unit away. Over the whole campaign the 11 beats the 10 on **both** of the criteria the bar balances:
-   * 22 045 361 damage at 2.0119 a silver and 393 667 a hired unit, against 20 684 777 at 1.9548 and 376 087.
-   * Thrift was handing the recommendation a plan another stop dominates, which is the one thing the sweet spot
-   * must never be.
+   * Measured on his export at 7 000 with the capped sponge march on the bar: the burn ladder is 7 · 9 · 10 · 11 · 12 · 13 · 14, no rung stands above the chord, and the middle is
+   * **10.5** — the 10 and the 11 are both half a unit away. Over the whole campaign the 11 beats the 10 on
+   * **both** of the criteria the bar balances: 22 045 361 damage at 2.0119 a silver and 393 667 a hired unit,
+   * against 20 684 777 at 1.9548 and 376 087. Thrift was handing the recommendation a plan another stop
+   * dominates, which is the one thing the sweet spot must never be.
    *
    * So a tie is broken by the campaign's own two ratios (`damagePerSilver`, `damagePerMercenary` — the whole
    * run, repeats and finale, not the repeated march alone): the rung the other does not beat on both wins, and
@@ -2019,8 +2075,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     stops.push({ ...row, pick, bestFor: { silver: false, hired: false } });
   };
   /**
-   * **Four stops** (owner, 2026-09-18, replacing the three of 2026-09-17), thriftiest first — see `PlanPick`.
-   * Two stops that are one plan collapse to one, so a bar may carry fewer.
+   * **Five stops** (owner, 2026-09-18, replacing the three of 2026-09-17), thriftiest first — see `PlanPick`.
+   * Two stops that are one plan collapse to one, so a bar may carry fewer. The `all-in` is the one stop that
+   * may share a burn with the one before it (it is offered on what it fields), and it is always last: it is
+   * sorted on the burn like the rest, and it is the dearest march at whatever burn it lands on.
    */
   const top = ladderRows[ladderRows.length - 1];
   /**
@@ -2084,9 +2142,23 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   offer(top, 'steady-max');
   offer(leastSilver, 'silver-saver');
   offer(moreMercs, 'more-mercs');
-  // Offered only when it burns more than the steady max a march: on an account whose whole stock the troops
-  // already shelter every march, "all in" is the steady max and would be a second row of it.
-  if (allIn && top && allIn.repeat.mercLost > top.repeat.mercLost) offer(allIn, 'all-in');
+  /**
+   * **Offered when its first march fields more hired units than the steady max's repeat** (owner, 2026-09-18:
+   * *"a last stop: all mercs possible … fill all the mercs you can safely"*). On an account whose whole stock
+   * the troops already shelter every march, "all in" *is* the steady max and would be a second row of it.
+   *
+   * The test used to be the burn, and the burn cannot see this stop on a stock smaller than a chunk: with ten
+   * bears in stock, 10 · 9 · 8 · 7 and eight a march both burn one chunk a march, so the campaign that spends
+   * the stock fastest tied the steady max and was dropped as a duplicate of it
+   * (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §B). This is the **one** place the hired count
+   * is read instead of what it costs, and only because two campaigns that cost the same are told apart by
+   * nothing else. Measured on that army, 2026-09-18: the all-in plays 10 · 9 · 8 · 7 for **21 700 948** over
+   * four marches at **45 577 400** silver, against the steady max's 21 732 276 for 32 525 600 — 40 % more
+   * silver to spend the stock four times faster, for slightly *less* damage. It is a poor deal on this army,
+   * and the point of the stop is that the bar can now show it as one; on the owner's own account it is the
+   * campaign that fields 254 hired units where the steady max fields 128.
+   */
+  if (allIn && top && hiredOf(allIn.counts) > hiredOf(top.counts)) offer(allIn, 'all-in');
   stops.sort(
     (a, b) =>
       a.repeat.mercLost - b.repeat.mercLost ||

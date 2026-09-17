@@ -49,6 +49,18 @@ function request(): StackRequest {
 
 const perSilver = (row: PlanRow): number => row.repeat.damage / row.repeat.silver;
 const perHired = (row: PlanRow): number => row.repeat.damage / Math.max(1, row.repeat.mercLost);
+/**
+ * The hired units a march **fields**. The bar runs along the burn — what the stock pays — and this is the one
+ * reading the engine takes off the counts: the `all-in` is offered when its first march fields more than the
+ * steady max's repeat (`plan.ts`). The unit ids are the authority pool's; every army here holds only hired
+ * soldiers in it.
+ */
+const hiredOf = (counts: Record<string, number>): number =>
+  Object.entries(counts).reduce(
+    (sum, [id, count]) =>
+      getUnits().find((unit) => unit.id === id)?.pool === 'authority' ? sum + count : sum,
+    0,
+  );
 const under = (measured: number): number => measured * 0.999;
 const over = (measured: number): number => measured * 1.001;
 
@@ -83,15 +95,27 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
 
   // Along the bar, burning more must buy more — up to the steady max. The all-in stop fields every
   // mercenary the troops can shelter, which can cost troops: it burns the most and need not hit the hardest.
+  //
+  // **Re-based 2026-09-18: the all-in may share the steady max's burn.** It is offered on what its first march
+  // *fields* rather than on what it burns, because a stock smaller than a chunk burns the same whatever it
+  // fields (ten bears: 10 · 9 · 8 · 7 and eight a march are both one chunk a march). On this army the two land
+  // on 6 burned together — 60 hired fielded against 48 — and the assertion was strict, which is why the
+  // synthetic bar had three stops and now has four. The rung stops are still strictly apart on the burn.
   for (let index = 1; index < rows.length; index += 1) {
     const previous = rows[index - 1] as PlanRow;
     const current = rows[index] as PlanRow;
+    if (current.pick === 'all-in') {
+      expect(current.repeat.mercLost).toBeGreaterThanOrEqual(previous.repeat.mercLost);
+      continue;
+    }
     expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
-    if (current.pick !== 'all-in') expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+    expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
   }
   if (allIn) {
     expect(allIn.sequence?.length).toBe(allIn.marches);
     expect(allIn.repeat.mercLost).toBeGreaterThanOrEqual(most.repeat.mercLost);
+    // And it fields more than the steady max's repeat, which is the rule it is offered by.
+    expect(hiredOf(allIn.counts)).toBeGreaterThan(hiredOf(most.counts));
   }
 
   // The two efficiency notes sit on exactly one stop each, and on the stop that has the figure.
@@ -199,11 +223,21 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // **No silver saver is offered**: that stop must be at least as efficient a silver as the sweet spot,
       // and the 11 at 1.9459 leaves nothing left of it that is (the 7 burns at 1.9175). The floor below is
       // kept for the armies that do offer one; `expectCriteria` reads it only then.
+      // **Re-based 2026-09-18**, when the sweep began scoring each of its levels per unit as well as rounded
+      // up to a whole chunk (`plan.ts`). The ladder is the same 7 · 9 · 10 · 11 · 12 · 13 · 14, but the plan at
+      // its **7-burn rung is better** — 3 650 146 a march for 1 851 500 silver, 1.9715 a silver against the
+      // 1.9175 quoted above — and a better thrift end tilts the chord the knee is measured from, so a rung now
+      // stands above it where none did and the middle rule no longer decides. The sweet spot moves from the 11
+      // to the **10**: 4 948 511 a march for 2 739 400 at 1.8064 a silver and 494 851 a hired unit, campaign
+      // 20 924 965. It costs damage (22 045 361 → 20 924 965) and a silver (1.9459 → 1.8064) and buys a hired
+      // unit (484 597 → 494 851). A **silver saver is offered again** at that new 7-burn rung — 16 747 720 over
+      // four marches at 521 449 a hired — which is why `leastPerHired` drops from a floor nothing exercised.
+      // The steady max and the plan itself are untouched: 6 242 452 at 2.2788, campaign 24 814 601.
       expectCriteria(plan, {
-        leastPerHired: under(596_812),
-        sweetPerSilver: under(1.9459),
-        sweetPerHired: under(484_596),
-        sweetCampaignDamage: under(22_045_361),
+        leastPerHired: under(521_449),
+        sweetPerSilver: under(1.8064),
+        sweetPerHired: under(494_851),
+        sweetCampaignDamage: under(20_924_965),
         sweetCampaignSilverCeiling: over(10_957_600),
         mostDamage: under(6_242_452),
         mostPerSilver: under(2.2788),
@@ -222,9 +256,19 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       const plan = planCampaign(buildPlanRequest(profile, setup));
       const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot') as PlanRow;
       expect(sweet).toBeDefined();
-      expect(sweet.totalDamage).toBeGreaterThanOrEqual(22_000_000);
+      // 22 000 000 → 20 900 000 on 2026-09-18: the knee moved from the 11-burn rung to the 10 when the sweep's
+      // per-unit vectors improved the ladder's 7-burn rung and tilted the chord (see the floors above).
+      expect(sweet.totalDamage).toBeGreaterThanOrEqual(20_900_000);
+      // **The silver saver is excluded, as it is in `expectCriteria`** (re-based 2026-09-18). That stop is
+      // defined to be cheaper than the sweet spot *and* at least as efficient a silver, so it can only ever
+      // tie or beat it on the first ratio, and a thriftier march usually beats it on the second too: the rule
+      // this file already states is that the saving stop is allowed to, and it pays for it in damage. HEAD's
+      // 12 000 bar is the precedent — its silver saver, 1.8143 a silver and 524 183 a hired against the sweet
+      // spot's 1.7426 and 481 519, dominates it there and always has. This test was written when the 7 000 bar
+      // had **no** silver saver (the sweep's per-unit vectors gave it one at 7 burned), so the exception had
+      // never applied here. What it is for is unchanged: no *other* stop may beat the recommendation on both.
       for (const other of plan.alternatives) {
-        if (other === sweet) continue;
+        if (other === sweet || other.pick === 'silver-saver') continue;
         const beats =
           other.damagePerSilver >= sweet.damagePerSilver &&
           other.damagePerMercenary >= sweet.damagePerMercenary &&

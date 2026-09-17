@@ -175,16 +175,24 @@ describe('the arithmetic of a shape', () => {
 describe('the search does not get worse', () => {
   test('the plan this army produces, frozen', () => {
     // Measured 2026-09-15 with the ladder's scale hill-climbed (`plan.ts`, SCALE_STEPS).
-    expect(PLAN.marches).toBe(15);
-    expect(PLAN.totalDamage).toBe(18_333_467);
-    expect(PLAN.silver).toBe(33_284_700);
-    expect(PLAN.mercLost).toBe(45);
+    //
+    // **Re-based 2026-09-18**, when the sweep after the hill-climb began scoring each of its levels **per
+    // unit** as well as rounded up to a whole chunk. Nothing was taken away — the levels and the vectors the
+    // sweep walked before are walked in the same order, verified vector by vector against HEAD on six armies —
+    // and the per-unit vectors are extra shapes on top. On this army they find a better campaign, which is
+    // what this test exists to notice: **18 333 467 → 18 617 972** damage over 15 → **17** marches, fielding
+    // five of each hired type a march instead of seven (a thriftier march lasts longer), for
+    // 33 284 700 → 37 966 200 silver and 45 → **51** hired units lost. Damage is the objective and it went up.
+    expect(PLAN.marches).toBe(17);
+    expect(PLAN.totalDamage).toBe(18_617_972);
+    expect(PLAN.silver).toBe(37_966_200);
+    expect(PLAN.mercLost).toBe(51);
     expect(PLAN.march.counts).toEqual({
       'archer-2': 2_569,
       'archer-3': 1_417,
-      'arbalester-6': 7,
-      'arbalester-7': 7,
-      'chariot-6': 7,
+      'arbalester-6': 5,
+      'arbalester-7': 5,
+      'chariot-6': 5,
     });
     // 11 → 9 → **3** on 2026-09-15. The list stopped being an even sample of the frontier and became the
     // **named picks** the owner asked for — "a few 4-5 common, good picks to have a slider control how much
@@ -203,18 +211,23 @@ describe('the search does not get worse', () => {
     // started learning which type takes which rung (`out/98`): the repeated march is the same march to the
     // unit, and the final march gained 2 250 damage for 3 800 silver less from a better rung order.
     expect(PLAN.alternatives).toHaveLength(4);
-    expect(PLAN.leftOut).toBe(309);
+    // 309 → **310** on 2026-09-18 with the per-unit sweep vectors: the frontier carries one more plan, and
+    // the bar still carries four stops, so one more is left out. Nothing the search used to find was lost.
+    expect(PLAN.leftOut).toBe(310);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained
     // the silver level that search reaches.
-    expect(PLAN.curve).toHaveLength(19);
+    // 19 → **20** on 2026-09-18: the per-unit sweep vectors reach one more silver level of the curve.
+    expect(PLAN.curve).toHaveLength(20);
   });
 
   test('and the two rates it reaches are floors, not ceilings', () => {
     // Damage is the objective; the two ratios are the trade. All three may only improve — this is the
     // assertion that fails if the search loses a lever (the scale, the counts, the finale).
-    expect(PLAN.totalDamage).toBeGreaterThanOrEqual(18_333_467);
+    // 18 333 467 → 18 617 972 on 2026-09-18 (the per-unit sweep vectors, see above). The two rates are
+    // unmoved to the unit: 2.4942 a silver and 816 790 a mercenary.
+    expect(PLAN.totalDamage).toBeGreaterThanOrEqual(18_617_972);
     expect(PLAN.mostEfficient?.damagePerSilver ?? 0).toBeGreaterThanOrEqual(2.49);
     expect(PLAN.mostThrifty?.damagePerMercenary ?? 0).toBeGreaterThanOrEqual(816_726);
     expect(PLAN.recommend).toBeDefined();

@@ -400,10 +400,18 @@ function ownerScenarios(profile: Profile): Scenario[] {
       // plan's win a hired unit here — it was that stop's 523 723 that beat the sizers' 426 215, and the four
       // stops left top out at the sweet spot's 393 667. The bar's thrift end on this army is now the sweet
       // spot itself; a proposal that brings a thriftier stop back should move this pin with it.
+      // Re-based 2026-09-18, when the sweep began scoring each of its levels per unit as well as rounded up to
+      // a whole chunk: the ladder's thriftiest rung improves to 1.9715 a silver, which puts a **silver saver**
+      // back on this bar (4 → **5** stops, 16 747 720 over four marches at 478 506 a hired unit) and, by
+      // tilting the chord the knee is drawn from, moves the sweet spot from the 11-burn rung to the 10 —
+      // 20 924 965 at 1.9097 a silver and 475 567 a hired. Both of those beat the Troops-first sequence's
+      // 426 216 a hired, so `winsHired` is true again and no sizer sequence beats the sweet spot on both
+      // ratios any more (`sweetLosesOnBoth` false). The plan's own campaign is untouched at 24 814 601 (95.6 %
+      // of the best sizer), and so is the steady max at 6 242 452 a march.
       label: '2026-09-17 export, its setup (7 000 leadership)',
       request: buildStackRequest(profile, setup),
       externals: [],
-      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: true, damageFloor: 0.95, winsHired: false },
+      pinned: { refuses: false, stops: 5, sweetLosesOnBoth: false, damageFloor: 0.95, winsHired: true },
     },
     {
       label: '2026-09-17 export, 12 000 leadership',
@@ -478,13 +486,18 @@ function commonScenarios(): Scenario[] {
       // TotalStack's dataset of 2026-09-18: its priority search under M's fields the three bears in three tier-3
       // stacks and goes on with troops alone when they are gone — 25 439 016 over four marches; the plan's one
       // bear a march reaches 55.7 % of it and loses a hired.
+      // Re-based 2026-09-18: the `all-in` is offered on what its first march **fields** rather than on what it
+      // burns. A stock of three burns one chunk whatever it fields, so 3 · 2 · 1 tied the one-bear repeat on
+      // the bar's own axis and was dropped as a duplicate of it. 1 → **2** stops, and the new one is the
+      // plan's hardest campaign here: 14 505 126 against 14 168 526, which is 58.8 % → **60.2 %** of the
+      // sizers and 55.7 % → **57.0 %** of TotalStack's answer. Nothing else on this case moved.
       pinned: {
         refuses: false,
-        stops: 1,
+        stops: 2,
         sweetLosesOnBoth: true,
-        damageFloor: 0.58,
+        damageFloor: 0.6,
         winsHired: false,
-        externals: { damageFloor: 0.55, winsHired: false },
+        externals: { damageFloor: 0.57, winsHired: false },
       },
     },
     {
@@ -497,9 +510,15 @@ function commonScenarios(): Scenario[] {
       // and the stop hits harder — 84.1 % → 86.4 %.
       // TotalStack's priority search under M's: 26 486 216 over four marches (ten bears first, then what is left);
       // the plan's six a march reaches 82 % and loses a hired.
+      // Re-based 2026-09-18: the `all-in` is offered on what its first march **fields**, so 10 · 9 · 8 · 7 is a
+      // stop — 1 → **2** — where on the burn it tied the eight-a-march repeat at one chunk and was dropped as a
+      // duplicate. It is the *stop* that is new and not the damage: 21 700 948 over four marches for
+      // 45 577 400 silver against the repeat's 21 732 276 for 32 525 600, so 40 % more silver to spend the
+      // stock four times faster for slightly less damage. The bar can show that as a poor deal now, which it
+      // could not before; every pinned figure is unmoved (86.5 % of the sizers, 82.1 % of TotalStack).
       pinned: {
         refuses: false,
-        stops: 1,
+        stops: 2,
         sweetLosesOnBoth: true,
         damageFloor: 0.86,
         winsHired: false,
@@ -531,6 +550,13 @@ interface Measured {
   rows: Campaign[];
   plan: CampaignPlan | null;
   refusal: string | null;
+  /**
+   * Wall time `planCampaign` itself took on this scenario, in milliseconds — the search only, not the sizer
+   * rows beside it. Carried into `benchmark-latest.json` beside the stops (owner, 2026-09-18: a proposal that
+   * widens the search has to say what it costs), so a later run compares against a measured number rather
+   * than against a memory of how long the suite felt.
+   */
+  planMs: number;
 }
 
 function measure(scenario: Scenario): Measured {
@@ -564,6 +590,7 @@ function measure(scenario: Scenario): Measured {
   }
   let plan: CampaignPlan | null = null;
   let refusal: string | null = null;
+  const startedAt = performance.now();
   try {
     plan = planCampaign({
       request,
@@ -574,6 +601,7 @@ function measure(scenario: Scenario): Measured {
   } catch (error) {
     refusal = error instanceof Error ? error.message : String(error);
   }
+  const planMs = Math.round(performance.now() - startedAt);
   if (plan) {
     for (const stop of plan.alternatives) {
       const repeats = stop.marches - (stop.finaleCounts ? 1 : 0);
@@ -585,7 +613,7 @@ function measure(scenario: Scenario): Measured {
       rows.push(campaign);
     }
   }
-  return { rows, plan, refusal };
+  return { rows, plan, refusal, planMs };
 }
 
 function record(label: string, measured: Measured): void {
@@ -610,6 +638,7 @@ function record(label: string, measured: Measured): void {
     label,
     refusal: measured.refusal,
     stops: measured.plan?.alternatives.map((stop) => stop.pick) ?? [],
+    planMs: measured.planMs,
     rows: measured.rows.map((c) => ({
       name: c.name,
       kind: c.kind,
