@@ -831,6 +831,19 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-18 (evening) — **Assessment after S-75, experiment 101** (owner: *"losing there if we shield the mercs
+  properly? or is there a flaw in our calculations of the expected battle? … I feel 10 should still be slidable
+  2 - 5 - 10 … rooted in calculations, no more magic static numbers"*). No flaw: every stack dies in a march
+  and a hired stack loses `ceil(n/10)` wherever it stands, so the shelter buys strikes, not survival — and the
+  journal already prices strikes. The 6 % at 7 000 is the **sponge**: the unsheltered march put 34 legionaries
+  on top, the first stack the enemy wipes (0–1 strikes), which moved every other stack one kill slot later
+  (arbalesters 3 strikes instead of 2) for one more legionary burned and 48 gold a march. The clamp forbids
+  that trade on capped types too, which nobody asked for. Ten bears on a first-run army: one stop because
+  every stop rule compares **burn chunks** and 1–10 units of a type all burn one; the band says 2 or 5 bears
+  are worse on both ratios than 6 (same burn, 30–45 % less damage), the hidden all-in 10·9·8·7 is +5 % damage
+  for +49 % silver; and **one or two units of a type make the plan refuse outright** (a 4-march horizon needs
+  three), with the refusal worded as "fill in your mercenaries". Proposed, not built: shelter only unlimited
+  types; compare stops on hired fielded rather than chunks; make the horizon a ceiling.
 - 2026-09-18 (past midnight, last) — **S-75: every hired type kept, every hired stack sheltered, unlimited
   mercenaries bounded.** S-58 B on; sizer-shaped marches lower any hired stack that stands above the lowest
   troop stack; an unlimited type is fielded as far as the authority pool and the shelter allow, and the winner
