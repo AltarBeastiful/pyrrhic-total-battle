@@ -4,13 +4,22 @@
  * mercenary stock, the damage each march shows is the battle's own, the frontier is really non-dominated, and
  * a silver budget is respected.
  */
+import { existsSync, readFileSync } from 'node:fs';
+
 import { describe, expect, test } from 'vitest';
 
+import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { StackRequest, UnitDef } from '@/engine/types';
-import type { PlanRepeat } from '@/engine/plan';
+import type { CampaignInput, PlanRepeat, PlanTotals } from '@/engine/plan';
 import { effectiveUnit } from '@/engine/units';
+import { parseImport } from '@/share/exportImport';
+import { newProfile } from '@/state/defaults';
+import { buildPlanRequest, buildStackRequest } from '@/state/derive';
+
+const OWNER_EXPORT =
+  process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
 
 /** A small but complete army: four troop types and three mercenaries with a stock to spend. */
 function request(silver = false): StackRequest {
@@ -35,6 +44,26 @@ function request(silver = false): StackRequest {
     recovery: { templeLevel: 0, trainingCostReduction: {}, trainingSpeed: {}, plan: { mode: 'retrain' } },
     ...(silver ? {} : {}),
   };
+}
+
+/** A first-run army (Guardsmen I–III, Specialists I, no bonuses) with the hired types at their stocks. */
+function firstRun(...hired: { id: string; cap: number }[]): StackRequest {
+  const profile = newProfile('first run');
+  profile.mercenaries.selected = hired;
+  const setup = profile.setups[0];
+  if (!setup) throw new Error('no setup');
+  return buildStackRequest(profile, {
+    ...setup,
+    housing: { leadership: 20_000, authority: 40_000, dominance: 0 },
+  });
+}
+
+/** The marches a stop plays, first to last: its own sequence, or its repeats and the final march. */
+function marchesOf(row: PlanTotals): Record<string, number>[] {
+  if (row.sequence) return row.sequence;
+  const repeats = row.marches - (row.finaleCounts ? 1 : 0);
+  const marches = Array.from({ length: repeats }, () => row.counts);
+  return row.finaleCounts ? [...marches, row.finaleCounts] : marches;
 }
 
 const used = (req: StackRequest, counts: Record<string, number>, pool: string): number =>
@@ -88,6 +117,86 @@ describe(
           expect(plan.marches, `a target of ${String(target)} must play ${String(target)} marches`).toBe(
             target,
           );
+        }
+      },
+      TIMEOUT,
+    );
+
+    /**
+     * **The horizon is a ceiling, not a requirement** (owner, 2026-09-18: *"no more magic static numbers"*).
+     *
+     * A first-run army holding one or two of a hired type holds **no** count that lasts three repeats, so its
+     * grid came back empty, `planCampaign` threw, and the app answered "it needs your mercenaries filled in
+     * first" (`src/ui/sections/march/generate.ts`) to a player who had filled them in. A stock the horizon
+     * outruns plays the marches it lasts; a stock that carries the horizon still plays all four of them.
+     */
+    test(
+      'a stock the horizon outruns plays a shorter campaign instead of being refused',
+      () => {
+        for (const cap of [1, 2]) {
+          const req = firstRun({ id: 'bear-5', cap });
+          const plan = planCampaign({ request: req, marchTarget: 4, ...CAMPAIGN.planFixes });
+          // One bear lasts one march at a count of one, two bears two: the campaign is exactly that long.
+          expect(plan.marches, `a stock of ${String(cap)} plays as many marches as it lasts`).toBe(cap);
+          expect(plan.alternatives.length).toBeGreaterThan(0);
+          for (const row of plan.alternatives) {
+            // The plan is about spreading the hired stock, so every stop fields the one type it holds…
+            expect(row.counts['bear-5'] ?? 0, `${row.pick} fields the bear`).toBeGreaterThan(0);
+            expect(row.marches).toBeGreaterThanOrEqual(1);
+            expect(row.marches).toBeLessThanOrEqual(4);
+            // …and never more of it than the stock still has, a chunk of ten lost for good every march.
+            let left = cap;
+            for (const counts of marchesOf(row)) {
+              const fielded = counts['bear-5'] ?? 0;
+              expect(
+                fielded,
+                `${row.pick} fields ${String(fielded)} of ${String(left)} left`,
+              ).toBeLessThanOrEqual(left);
+              left -= Math.ceil(fielded / 10);
+            }
+            expect(left).toBeGreaterThanOrEqual(0);
+          }
+        }
+        // A stock that carries the horizon is unchanged: it plays the four marches it was asked for.
+        const carried = planCampaign({
+          request: firstRun({ id: 'epic-monster-hunter-6', cap: 83 }),
+          marchTarget: 4,
+          ...CAMPAIGN.planFixes,
+        });
+        expect(carried.marches).toBe(4);
+      },
+      TIMEOUT,
+    );
+
+    /**
+     * **A short type rides the finale; it does not shorten everybody's campaign** (coordinator, 2026-09-18,
+     * measuring the first reading of the ceiling on the owner's export at 7 000 with the chariot cap cut to
+     * two: the sweet spot and the steady max became two-march campaigns of 9 705 867 and 9 838 204 while the
+     * all-in went on playing four for 20 877 865 — two chariots halving the campaign of an account holding 234
+     * other hired units, because S-58 B asks every stop to field every stocked type and an outrun type then
+     * caps the repeats for all of them).
+     *
+     * So the repeated march leaves a type the horizon outruns alone, and the final march spends its whole
+     * stock; S-58 B is judged over the campaign, so a plan whose finale carries it is not a hole.
+     */
+    test(
+      'a type the horizon outruns rides the finale when another type carries the horizon',
+      () => {
+        // The hunter's 83 carry four marches; two bears carry none of them.
+        const req = firstRun({ id: 'epic-monster-hunter-6', cap: 83 }, { id: 'bear-5', cap: 2 });
+        const plan = planCampaign({ request: req, marchTarget: 4, ...CAMPAIGN.planFixes });
+        expect(plan.marches).toBe(4);
+        for (const row of plan.alternatives) {
+          expect(row.marches, `${row.pick} plays the horizon`).toBe(4);
+          // The all-in stop is a sequence of four different marches and front-loads the short type itself.
+          if (row.sequence) {
+            expect(row.sequence.some((march) => (march['bear-5'] ?? 0) > 0)).toBe(true);
+            continue;
+          }
+          expect(row.counts['bear-5'] ?? 0, `${row.pick} keeps the bears out of its repeat`).toBe(0);
+          expect(row.finaleCounts?.['bear-5'] ?? 0, `${row.pick} spends the bears in its finale`).toBe(2);
+          // The hunters are rationed over the repeats, as they were.
+          expect(row.counts['epic-monster-hunter-6'] ?? 0).toBeGreaterThan(0);
         }
       },
       TIMEOUT,
@@ -343,3 +452,71 @@ describe(
   },
   TIMEOUT,
 );
+
+/**
+ * **The short type on a real account** (coordinator, 2026-09-18). The owner's export holds four hired types —
+ * 142 hunters, 50 arbalesters, 42 legionaries, 20 chariots — and cutting the chariot stock alone to two or one
+ * is the case where the horizon outruns *one* type of an account with 234 other hired units. Measured through
+ * the app's own request builder, so the horizon and the S-58 flags are the app's: the plan keeps its four
+ * marches and spends the chariots in the finale.
+ */
+describe.skipIf(!existsSync(OWNER_EXPORT))('a short hired type on the owner’s account', () => {
+  const parsed = existsSync(OWNER_EXPORT) ? parseImport(readFileSync(OWNER_EXPORT, 'utf8')) : null;
+  const profile = parsed?.kind === 'profile' ? parsed.payload : null;
+  const atChariots = (cap: number): CampaignInput => {
+    if (!profile) throw new Error('no profile');
+    const copy = structuredClone(profile);
+    copy.mercenaries.selected = copy.mercenaries.selected.map((hired) =>
+      hired.id === 'chariot-6' ? { ...hired, cap } : hired,
+    );
+    const setup = copy.setups[0];
+    if (!setup) throw new Error('no setup');
+    return buildPlanRequest(copy, setup);
+  };
+
+  test(
+    'two chariots ride the finale instead of halving the campaign',
+    () => {
+      // Measured 2026-09-18 at his own 20 chariots: sweet spot 21 662 734, steady max 23 264 491 over four
+      // marches. With the stock cut to two the first reading of the ceiling answered 9 705 867 and 9 838 204
+      // over *two* marches; with the chariots in the finale it answers 17 221 858 and 18 286 849 over four —
+      // the same campaign less the chariots' share, which is what two of them are worth.
+      const full = planCampaign(atChariots(20));
+      for (const cap of [2, 1]) {
+        const plan = planCampaign(atChariots(cap));
+        expect(plan.marches, `a chariot stock of ${String(cap)} still plays the horizon`).toBe(4);
+        expect(plan.totalDamage).toBeGreaterThan(full.totalDamage * 0.7);
+        // What changed with the chariots in the finale is the band: before, every candidate fielded none of
+        // them in its repeated march, S-58 B refused them all, and the bar fell back to the unbanded
+        // candidates (nothing left out, a steady max of 18 993 178). Judged over the campaign, the band holds
+        // and does its work — 34 candidates left out and a steady max of 18 286 849 on 2026-09-18.
+        expect(plan.leftOut, `the band applies with a chariot stock of ${String(cap)}`).toBeGreaterThan(0);
+        for (const row of plan.alternatives) {
+          expect(row.marches, `${row.pick} plays the horizon`).toBe(4);
+          // The all-in stop front-loads the chariots on its first march, as it always did.
+          if (row.sequence) {
+            expect(row.sequence[0]?.['chariot-6'] ?? 0).toBe(cap);
+            continue;
+          }
+          expect(row.counts['chariot-6'] ?? 0, `${row.pick} keeps the chariots out of its repeat`).toBe(0);
+          expect(row.finaleCounts?.['chariot-6'] ?? 0, `${row.pick} spends them in its finale`).toBe(cap);
+        }
+      }
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'five chariots sustain the horizon, and nothing about them changes',
+    () => {
+      // Three a march last the three repeats, so the type is rationed over the repeated march as before:
+      // measured 2026-09-18, three fielded a march and the two left over in the finale.
+      const plan = planCampaign(atChariots(5));
+      expect(plan.marches).toBe(4);
+      for (const row of plan.alternatives) {
+        expect(row.counts['chariot-6'] ?? 0, `${row.pick} fields chariots in its repeat`).toBeGreaterThan(0);
+      }
+    },
+    TIMEOUT,
+  );
+});

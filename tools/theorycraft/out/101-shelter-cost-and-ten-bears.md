@@ -43,11 +43,7 @@ average damage 5,864,482 (min 5,764,606, max 5,964,358), silver 2,739,400, gold 
 One row a stop, a march: damage, silver, gold, hired burned, damage a silver, damage a hired unit burned.
 
 
-### 1 bears in stock: **planCampaign: no feasible plan for this army**
-
-### 2 bears in stock: **planCampaign: no feasible plan for this army**
-
-### 3 bears in stock (19 ms, 1 stops, band left out 1)
+### 1 bears in stock (12 ms, 1 stops, band left out 1)
 
 | stop | damage | silver | gold | burned | a silver | a hired | hired fielded |
 |---|---|---|---|---|---|---|---|
@@ -55,7 +51,23 @@ One row a stop, a march: damage, silver, gold, hired burned, damage a silver, da
 
 winner's troops: swordsman-1 3048 · archer-1 3042 · spearman-1 3036 · rider-1 1515 · archer-2 1680 · spearman-2 1677 · rider-2 837 · archer-3 939 · spearman-3 938 · rider-3 468
 
-### 5 bears in stock (20 ms, 1 stops, band left out 5)
+### 2 bears in stock (14 ms, 1 stops, band left out 5)
+
+| stop | damage | silver | gold | burned | a silver | a hired | hired fielded |
+|---|---|---|---|---|---|---|---|
+| sweet-spot (elite) | 4,835,042 | 8,131,400 | 160 | 1 | 0.59 | 4,835,042 | bear-5 2 |
+
+winner's troops: swordsman-1 3048 · archer-1 3042 · spearman-1 3036 · rider-1 1515 · archer-2 1680 · spearman-2 1677 · rider-2 837 · archer-3 939 · spearman-3 938 · rider-3 468
+
+### 3 bears in stock (11 ms, 1 stops, band left out 1)
+
+| stop | damage | silver | gold | burned | a silver | a hired | hired fielded |
+|---|---|---|---|---|---|---|---|
+| sweet-spot (elite) | 4,722,842 | 8,131,400 | 0 | 1 | 0.58 | 4,722,842 | bear-5 1 |
+
+winner's troops: swordsman-1 3048 · archer-1 3042 · spearman-1 3036 · rider-1 1515 · archer-2 1680 · spearman-2 1677 · rider-2 837 · archer-3 939 · spearman-3 938 · rider-3 468
+
+### 5 bears in stock (21 ms, 1 stops, band left out 5)
 
 | stop | damage | silver | gold | burned | a silver | a hired | hired fielded |
 |---|---|---|---|---|---|---|---|
@@ -79,7 +91,7 @@ winner's troops: archer-2 9537 · archer-3 5259 · rider-3 2578
 
 winner's troops: swordsman-1 3048 · archer-1 3042 · spearman-1 3036 · rider-1 1515 · archer-2 1680 · spearman-2 1677 · rider-2 837 · archer-3 939 · spearman-3 938 · rider-3 468
 
-### 20 bears in stock (38 ms, 2 stops, band left out 30)
+### 20 bears in stock (40 ms, 2 stops, band left out 30)
 
 | stop | damage | silver | gold | burned | a silver | a hired | hired fielded |
 |---|---|---|---|---|---|---|---|
@@ -88,7 +100,7 @@ winner's troops: swordsman-1 3048 · archer-1 3042 · spearman-1 3036 · rider-1
 
 winner's troops: rider-3 5040 · archer-3 9884
 
-### 30 bears in stock (26 ms, 2 stops, band left out 26)
+### 30 bears in stock (28 ms, 2 stops, band left out 26)
 
 | stop | damage | silver | gold | burned | a silver | a hired | hired fielded |
 |---|---|---|---|---|---|---|---|

@@ -68,10 +68,10 @@ export interface CampaignInput {
   /** Silver the campaign may spend. Omitted: the plan spends what the stock and the leadership allow. */
   silverBudget?: number;
   /**
-   * How many marches the campaign plays in total — the same meaning as S-54's `CampaignSettings.marches`
-   * (`simulateCampaign` plays exactly that many). The last of them is the
-   * finale, so the repeated march is fielded `marchTarget − 1` times; the plan's own `marches` reads back
-   * the target.
+   * How many marches the campaign plays **at most** — the horizon, a ceiling and not a requirement (see
+   * `repeatsFor` in `planCampaign`). The last march is the finale, so the repeated march is fielded at most
+   * `marchTarget − 1` times; a stock too small to carry the horizon is repeated as often as it lasts and the
+   * campaign is simply shorter. The plan's own `marches` reads back what it played, never the target.
    *
    * Omitted: the plan chooses the count, and it will be as long as the mercenary stock allows — 66
    * repeats on the owner's account, which is 313 days of training. The target is what bounds that.
@@ -898,11 +898,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
 
   /**
-   * The marches the campaign plays. A target fixes both the grid's march count and every candidate's, so
-   * the grid is built for that one count instead of for all twelve: the maxima are `largestFor(held, K)`,
+   * The marches the campaign may play. A target caps both the grid's march count and every candidate's, so
+   * the grid is built for that one count instead of for all twelve: the maxima are `anchorFor(held, K)`,
    * which is a different number at every K, and a grid built for the wrong K is a grid of counts that are
    * either infeasible (too big to last the run — `score` rejects them) or too small to be the maximum the
-   * fractions are meant to sample around.
+   * fractions are meant to sample around. It is a **cap**: a vector the stock cannot repeat that often is
+   * repeated as often as it can be (`repeatsFor`), not thrown away.
    */
   const planned = input.marchTarget === undefined ? undefined : Math.max(1, Math.floor(input.marchTarget));
   /**
@@ -917,6 +918,79 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * and the single march is the repeated one, chosen against the stock it does not have to repeat.
    */
   const targetRepeats = planned === undefined ? undefined : Math.max(1, planned - 1);
+  /**
+   * **The horizon is a ceiling, not a requirement** (owner, 2026-09-18: *"no more magic static numbers"*).
+   *
+   * The repeats a vector plays are `min(targetRepeats, marchesFor(sustain, fielded))`: as many identical
+   * marches as the hired stock sustains — `lastsMarches`, one chunk of ten lost a march — and never more than
+   * the target leaves room for. A plan therefore plays *at most* `marchTarget` marches, and a stock the
+   * horizon outruns gives a **shorter campaign rather than nothing**. `PlanTotals.marches` is what was played,
+   * repeats and finale, so a plan can answer with fewer marches than it was asked for and never with more.
+   *
+   * It used to be read the other way round: every candidate was fielded `targetRepeats` times whatever the
+   * stock held, so a first-run army holding one or two of a hired type — which holds **no** count that lasts
+   * three repeats — had an empty grid, and `planCampaign` threw "no feasible plan for this army" at an account
+   * that holds mercenaries and can plainly march with them (`tools/theorycraft/out/101-shelter-cost-and-ten-
+   * bears.md` §B, the "1 bears" and "2 bears" rows). A shorter campaign is not a refusal; the refusal is what
+   * it says — no hired type in stock at all, or a silver budget nothing fits.
+   *
+   * The finale still plays on what the repeats leave. When they leave nothing there is no finale and the plan
+   * is the repeats alone (`finaleFor` answers `null`): this method is about spreading the hired stock, and a
+   * march with none of it left in it is the sizer's job rather than this one's.
+   *
+   * **A type the horizon outruns shortens the campaign only when every type the account holds is outrun.**
+   * When one of them carries the horizon, the short type is not fielded in the **repeated** march at all — no
+   * count of it lasts the run, and `score` refuses it as it always did — and it is spent in the **finale**,
+   * which fields whatever the repeats left of every type, sheltered like any hired stack. A plan whose finale
+   * carries it is therefore not a hole, which is why S-58 B is judged over the campaign (`inBand` below) and
+   * not over the repeated march alone.
+   *
+   * Measured with the alternative (the first reading of this rule, 2026-09-18, since replaced) — the shorter
+   * run taken whenever *any* fielded type was outrun — on the
+   * owner's export at 7 000 with the chariot cap cut to **2** and his other 234 hired units untouched: the
+   * sweet spot and the steady max became two-march campaigns of 9 705 867 and 9 838 204 while the all-in went
+   * on playing four for 20 877 865; at a cap of 1 the same, at a cap of 5 (which sustains three a march) the
+   * full four. Two chariots halved the campaign of the whole account, because S-58 B asks every stop to field
+   * every stocked type and an outrun type then caps the repeats for all of them.
+   */
+  /**
+   * A type the horizon outruns: no count of its whole stock lasts the repeats a target leaves room for. An
+   * unlimited type is never outrun — its stock is the authority pool and never drains (`sustain` Infinity),
+   * so its anchor is that whole stock at any march count (`anchorOf`).
+   */
+  const outrun = (id: string): boolean =>
+    targetRepeats !== undefined &&
+    !unlimited.has(id) &&
+    (stock[id] ?? 0) > 0 &&
+    largestFor(stock[id] ?? 0, targetRepeats) === 0;
+  /** Whether any type the account holds carries the horizon — the one that decides between the two readings. */
+  const carriesHorizon =
+    targetRepeats !== undefined && mercTypes.some((entry) => (stock[entry.id] ?? 0) > 0 && !outrun(entry.id));
+  const repeatsFor = (mercs: { entry: Effective; count: number }[]): number => {
+    if (targetRepeats === undefined) return marchesFor(sustain, mercs);
+    if (carriesHorizon) return targetRepeats;
+    let repeats = targetRepeats;
+    for (const merc of mercs) {
+      if (merc.count <= 0) continue;
+      repeats = Math.min(repeats, lastsMarches(sustain[merc.entry.id] ?? 0, merc.count));
+    }
+    return Math.max(1, repeats);
+  };
+
+  /**
+   * The count a type's grid is anchored on, and the fractions below it are taken from: the largest that
+   * sustains the run, or — for a type whose stock the **horizon outruns** on an account where nothing else
+   * carries it — the whole stock, which is the largest there is to field. A stock of one holds no count that
+   * lasts three repeats and a stock of two holds none either, so their `largestFor` is nothing and their
+   * column of the grid was empty: that is the whole of "no feasible plan for this army" on a first-run
+   * account. Anchored on the stock, a stock of two samples two and one, each repeated as often as it lasts.
+   * Where another type does carry the horizon the anchor stays at nothing, and the short type rides the
+   * finale instead (`repeatsFor`).
+   */
+  const anchorFor = (held: number, marches: number): number =>
+    largestFor(held, marches) || (carriesHorizon ? 0 : largestFor(held, 1));
+  const anchorOf = (id: string, marches: number): number =>
+    unlimited.has(id) ? (stock[id] ?? 0) : anchorFor(stock[id] ?? 0, marches);
 
   /**
    * The shapes the grid starts from, per march count.
@@ -940,7 +1014,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       ? Array.from({ length: MAX_MARCHES }, (_unused, index) => index + 1)
       : [targetRepeats];
   for (const marches of gridMarches) {
-    const maxima = mercTypes.map((entry) => largestFor(stock[entry.id] ?? 0, marches));
+    const maxima = mercTypes.map((entry) => anchorOf(entry.id, marches));
     const crossed = mercTypes
       .map((_entry, index) => index)
       .sort((a, b) => (maxima[b] ?? 0) * (mercTypes[b]?.hp ?? 0) - (maxima[a] ?? 0) * (mercTypes[a]?.hp ?? 0))
@@ -1203,7 +1277,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     let tight: Candidate | null = null;
     const fielded = vector.filter((merc) => merc.count > 0);
     if (fielded.length === 0) return null;
-    const marches = targetRepeats ?? marchesFor(sustain, fielded);
+    const marches = repeatsFor(fielded);
     if (marches < 1) return null;
     const counts: Record<string, number> = {};
     for (const merc of vector) counts[merc.entry.id] = merc.count;
@@ -1365,18 +1439,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // count at this march count, and down. The moves above shift a count by one or two at a time, so a
       // shape that wants one type at its largest while the rest stay small (which is what lifts the floor
       // the ladder has to clear, and with it what the whole march costs) is reached from here instead.
-      // Under a target the run is the target's, not the vector's: `marchesFor` reads the tightest type the
-      // vector happens to field, which is a different count of marches than the plan is planning for, and
-      // `largestFor` at that count is a different maximum than the one the moves below mean to sample.
-      const currentMarches =
-        targetRepeats ??
-        marchesFor(
-          sustain,
-          vector.filter((merc) => merc.count > 0),
-        );
+      // Under a target the run is the shorter of the two (`repeatsFor`): the target is a ceiling, so a vector
+      // whose stock does not carry it is repeated as often as the stock allows, and `largestFor` at *that*
+      // count is the maximum these moves mean to sample around — at the target's own count it would be a
+      // maximum the vector cannot field.
+      const currentMarches = repeatsFor(vector);
       for (let index = 0; index < vector.length; index += 1) {
         const id = vector[index]?.entry.id ?? '';
-        const max = largestFor(stock[id] ?? 0, currentMarches);
+        const max = anchorOf(id, currentMarches);
         for (const fraction of [1, ...MERC_FRACTIONS, 0]) {
           const count = Math.round(max * fraction);
           if (count === (vector[index]?.count ?? 0)) continue;
@@ -1549,6 +1619,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * plan rations.
    */
   const stocked = mercTypes.filter((entry) => (stock[entry.id] ?? 0) > 0 || unlimited.has(entry.id));
+  /**
+   * Whether a **campaign** fields a type at all: its repeated march, its final march, or — for the `all-in`
+   * stop, whose marches all differ — any march of its sequence. S-58 B is a question about the plan and not
+   * about one of its marches: a type the horizon outruns is spent in the finale rather than in the repeat
+   * (`repeatsFor`), and a plan that spends it there has no hole in it.
+   */
+  const fieldsInCampaign = (row: PlanTotals, id: string): boolean =>
+    (row.counts[id] ?? 0) > 0 ||
+    (row.finaleCounts?.[id] ?? 0) > 0 ||
+    (row.sequence?.some((march) => (march[id] ?? 0) > 0) ?? false);
   const inBand = (row: PlanTotals): boolean =>
     hiredOf(row.counts) * 2 >= goal.hired &&
     row.damagePerSilver * 2 >= goal.perSilver &&
@@ -1557,7 +1637,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // The band can empty out if the *winner* drops a type; the fallback below draws the four answers from the
     // unbanded frontier rather than handing back an empty bar, which is the graceful degradation the other
     // three refusals have.
-    (!refuseDroppedTypes || stocked.every((entry) => (row.counts[entry.id] ?? 0) > 0));
+    (!refuseDroppedTypes || stocked.every((entry) => fieldsInCampaign(row, entry.id)));
 
   /**
    * **The plans the four answers are drawn from.** The band is the owner's instruction of 2026-09-15 —

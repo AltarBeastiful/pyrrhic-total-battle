@@ -436,13 +436,19 @@ function commonScenarios(): Scenario[] {
       label: 'first-run army, Bear V ×1 (20 000 leadership)',
       request: firstRun({ id: 'bear-5', cap: 1 }, 20_000),
       externals: [],
-      pinned: { refuses: true, stops: 0, sweetLosesOnBoth: false, damageFloor: 0, winsHired: false },
+      // Measured 2026-09-18, once the horizon became a ceiling: one stop of **one** march — a stock of one
+      // bear sustains no repeat — 4 722 842 for 8 131 400, 19.8 % of the four-march sizers' damage and the
+      // best of every row a silver (0.581 against 0.570). It refused outright before.
+      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: false, damageFloor: 0.19, winsHired: false },
     },
     {
       label: 'first-run army, Bear V ×2 (20 000 leadership)',
       request: firstRun({ id: 'bear-5', cap: 2 }, 20_000),
       externals: [],
-      pinned: { refuses: true, stops: 0, sweetLosesOnBoth: false, damageFloor: 0, winsHired: false },
+      // Measured 2026-09-18, once the horizon became a ceiling: one stop of **two** marches — two bears
+      // fielded, then the one the chunk left — 9 557 884 for 16 262 800, 39.9 % of the four-march sizers'
+      // damage and the best of every row a silver (0.588 against 0.577). It refused outright before.
+      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: false, damageFloor: 0.39, winsHired: false },
     },
     {
       label: 'first-run army, Bear V ×3 (20 000 leadership)',
