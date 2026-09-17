@@ -189,17 +189,49 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // type or are not as efficient a silver); sweet 5 330 563 for 2 739 400 at 1.9459 · 484 597, campaign
       // 21 662 734 for 10 957 600; steady max 5 864 482 at 2.1408 (it was the unsheltered MS-relaxed march at
       // 6 242 452: the shelter costs 6 % of damage here, which is the owner's choice); the plan 23 264 491.
+      // Re-based 2026-09-18 (S-77): the shelter is the **unlimited** types' rule alone, so the capped
+      // legionaries stand on top again as the enemy's first kill and the steady max is the sponge march at
+      // 6 242 452 (2.2788 a silver), the plan 24 814 601. The burn ladder is 7 · 9 · 10 · 11 · 12 · 13 · 14,
+      // no rung stands above the chord, and the middle is 10.5: the 10 and the 11 are equally near it, and the
+      // tie now goes to the rung the other does not dominate over the campaign (`middleOfRange`) — the **11**,
+      // 22 045 361 at 2.0119 a silver and 393 667 a hired against the 10's 20 684 777 at 1.9548 and 376 087.
+      // Its own march is 5 330 563 for 2 739 400 — 1.9459 a silver, 484 597 a hired unit.
+      // **No silver saver is offered**: that stop must be at least as efficient a silver as the sweet spot,
+      // and the 11 at 1.9459 leaves nothing left of it that is (the 7 burns at 1.9175). The floor below is
+      // kept for the armies that do offer one; `expectCriteria` reads it only then.
       expectCriteria(plan, {
         leastPerHired: under(596_812),
         sweetPerSilver: under(1.9459),
         sweetPerHired: under(484_596),
-        sweetCampaignDamage: under(21_662_734),
+        sweetCampaignDamage: under(22_045_361),
         sweetCampaignSilverCeiling: over(10_957_600),
-        mostDamage: under(5_864_482),
-        mostPerSilver: under(2.1408),
-        campaignDamage: under(23_264_491),
+        mostDamage: under(6_242_452),
+        mostPerSilver: under(2.2788),
+        campaignDamage: under(24_814_601),
       });
       expect(Date.now() - started).toBeLessThan(10_000);
+    }, 120_000);
+
+    test('the sweet spot’s campaign is not dominated by another stop, at 7 000', () => {
+      if (!profile || !setup) throw new Error('no profile');
+      // **The tie the campaign breaks** (validator, 2026-09-18; S-77). With the sponge march on the bar the
+      // burn ladder has no knee, and the middle of it falls between two rungs — 10.5 on this army. Thrift used
+      // to take the 10, and the 10 is dominated over the whole campaign by the 11: 20 684 777 at 1.9548 a
+      // silver and 376 087 a hired against 22 045 361 at 2.0119 and 393 667. The recommendation must never be
+      // a plan another stop of the same bar beats on both of the things the slider balances.
+      const plan = planCampaign(buildPlanRequest(profile, setup));
+      const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot') as PlanRow;
+      expect(sweet).toBeDefined();
+      expect(sweet.totalDamage).toBeGreaterThanOrEqual(22_000_000);
+      for (const other of plan.alternatives) {
+        if (other === sweet) continue;
+        const beats =
+          other.damagePerSilver >= sweet.damagePerSilver &&
+          other.damagePerMercenary >= sweet.damagePerMercenary &&
+          (other.damagePerSilver > sweet.damagePerSilver ||
+            other.damagePerMercenary > sweet.damagePerMercenary);
+        expect(beats, `${other.pick} dominates the sweet spot over the campaign`).toBe(false);
+      }
     }, 120_000);
 
     test('at 12 000 leadership', () => {

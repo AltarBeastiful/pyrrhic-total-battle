@@ -520,3 +520,162 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('a short hired type on the owner’s 
     TIMEOUT,
   );
 });
+
+/**
+ * **S-77 — a capped hired stack may stand on top.** The shelter (S-75) was asked for the one type nothing
+ * else bounds (owner, 2026-09-18: *"when a merc is unlimited and is put in, don't put more, and lower it so
+ * the health stack still makes sense — below the troops"*); clamping every hired type as well cost damage,
+ * because a hired stack above the lowest troop stack is the enemy's first kill and moves every other stack
+ * one kill slot later — a sponge the battle model already prices, burn included
+ * (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §A). A capped type now keeps the count the
+ * sizer gave it; an unlimited one is still lowered under the troops.
+ */
+describe('a capped hired type is not sheltered, an unlimited one is', () => {
+  /** A first-run army (Guardsmen I–III, Specialists I, no bonuses) with two hired types at their stocks. */
+  const army = (hired: { id: string; cap: number | null }[], leadership: number): CampaignInput => {
+    const profile = newProfile('two hired types');
+    profile.mercenaries.selected = hired;
+    const setup = profile.setups[0];
+    if (!setup) throw new Error('no setup');
+    return {
+      request: buildStackRequest(profile, {
+        ...setup,
+        housing: { leadership, authority: 40_000, dominance: 0 },
+      }),
+      marchTarget: 4,
+      tokenFloor: true,
+      refuseDroppedTypes: true,
+      sizerShape: true,
+    };
+  };
+  /** Every stack of a march, by total HP: what the enemy's kill order reads. */
+  const stackHp = (input: CampaignInput, counts: Record<string, number>): Map<string, number> => {
+    const { request } = input;
+    return new Map(
+      request.units
+        .filter((unit) => (counts[unit.id] ?? 0) > 0)
+        .map((unit) => [
+          unit.id,
+          (counts[unit.id] ?? 0) *
+            effectiveUnit(unit, request.totals, request.enemy, request.activeEvents).hpPerUnit,
+        ]),
+    );
+  };
+  const troopFloor = (input: CampaignInput, counts: Record<string, number>): number => {
+    const hp = stackHp(input, counts);
+    return Math.min(
+      ...input.request.units
+        .filter((unit) => unit.pool === 'leadership' && hp.has(unit.id))
+        .map((unit) => hp.get(unit.id) ?? 0),
+    );
+  };
+
+  test(
+    'the same army answers differently once a type is hired as unlimited',
+    () => {
+      // Measured 2026-09-18, 40 arbalesters and 40 chitinous defenders VII at 7 000 leadership: the steady max
+      // stands 32 defenders (336 000 HP) on top of a lowest troop stack of 156 480 for 2 842 356 a march. Hire
+      // the same defenders as unlimited and the shelter takes over: 14 of them, 147 000 HP, under the troops,
+      // for 2 696 285 — the 5 % the owner's rule costs, paid only where he asked for it.
+      const capped = army(
+        [
+          { id: 'arbalester-6', cap: 40 },
+          { id: 'chitinous-defender-7', cap: 40 },
+        ],
+        7_000,
+      );
+      const plan = planCampaign(capped);
+      const most = plan.alternatives.find((row) => row.pick === 'steady-max');
+      expect(most).toBeDefined();
+      const counts = most?.counts ?? {};
+      const hp = stackHp(capped, counts);
+      const floor = troopFloor(capped, counts);
+      // Both hired types are fielded, and the sizer's shape stands one of them above the troops.
+      expect(counts['arbalester-6'] ?? 0).toBeGreaterThan(0);
+      expect(counts['chitinous-defender-7'] ?? 0).toBeGreaterThan(0);
+      expect(hp.get('chitinous-defender-7') ?? 0).toBeGreaterThan(floor);
+      // It stands on more than one troop stack, and the march is the battle's own.
+      const troops = capped.request.units.filter(
+        (unit) => unit.pool === 'leadership' && (counts[unit.id] ?? 0) > 0,
+      );
+      expect(troops.length).toBeGreaterThan(1);
+      expect(most?.repeat.damage).toBe(planMarch(capped.request, counts).summary.avgDamage);
+
+      // The same army with the defenders hired as unlimited: every stack of that type is under the troops.
+      const free = army(
+        [
+          { id: 'arbalester-6', cap: 40 },
+          { id: 'chitinous-defender-7', cap: null },
+        ],
+        7_000,
+      );
+      const other = planCampaign(free);
+      for (const row of other.alternatives) {
+        if (row.pick === 'all-in') continue;
+        expect(
+          row.counts['chitinous-defender-7'] ?? 0,
+          `${row.pick} fields the unlimited type`,
+        ).toBeGreaterThan(0);
+        const unlimitedHp = stackHp(free, row.counts).get('chitinous-defender-7') ?? 0;
+        expect(unlimitedHp, `${row.pick} shelters the unlimited type`).toBeLessThan(
+          troopFloor(free, row.counts),
+        );
+      }
+    },
+    TIMEOUT,
+  );
+});
+
+/**
+ * **S-77 on the owner's account.** His export at 7 000 is the case experiment 101 §A measured: the sizer's
+ * MS-relaxed shape stands 34 legionaries on top as the enemy's first kill — every other stack one slot later,
+ * the arbalesters striking three times instead of two — for 6 242 452 damage a march against 5 864 482
+ * sheltered, at one more legionary burned and 48 gold. With only the unlimited types clamped, that march is
+ * the steady max again, and the bar still carries all four hired types (S-58 B).
+ */
+describe.skipIf(!existsSync(OWNER_EXPORT))('the legionaries stand on top on the owner’s account', () => {
+  const parsed = existsSync(OWNER_EXPORT) ? parseImport(readFileSync(OWNER_EXPORT, 'utf8')) : null;
+  const profile = parsed?.kind === 'profile' ? parsed.payload : null;
+
+  test(
+    'the steady max is the sponge march again, at his own setup (7 000 leadership)',
+    () => {
+      if (!profile) throw new Error('no profile');
+      const setup = profile.setups[0];
+      if (!setup) throw new Error('no setup');
+      const input = buildPlanRequest(profile, setup);
+      const plan = planCampaign(input);
+      const most = plan.alternatives.find((row) => row.pick === 'steady-max');
+      expect(most).toBeDefined();
+      const counts = most?.counts ?? {};
+      const hp = new Map(
+        input.request.units.map((unit) => [
+          unit.id,
+          effectiveUnit(unit, input.request.totals, input.request.enemy, input.request.activeEvents)
+            .hpPerUnit,
+        ]),
+      );
+      const stack = (id: string): number => (counts[id] ?? 0) * (hp.get(id) ?? 0);
+      const floor = Math.min(
+        ...input.request.units
+          .filter((unit) => unit.pool === 'leadership' && (counts[unit.id] ?? 0) > 0)
+          .map((unit) => stack(unit.id)),
+      );
+      // Measured 2026-09-18: 34 legionaries, 372 096 HP over a lowest troop stack of 361 200, 6 242 452 damage.
+      expect(counts['legionary-6'] ?? 0).toBeGreaterThan(0);
+      expect(stack('legionary-6')).toBeGreaterThan(floor);
+      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(6_200_000);
+      // The march is priced exactly as the recap prices it, sponge and all.
+      expect(most?.repeat.damage).toBe(planMarch(input.request, counts).summary.avgDamage);
+      // Every hired type the account holds is still on every stop of the bar.
+      const hired = input.request.units.filter((unit) => unit.pool === 'authority');
+      expect(hired.length).toBe(4);
+      for (const row of plan.alternatives) {
+        for (const unit of hired) {
+          expect(row.counts[unit.id] ?? 0, `${row.pick} fields ${unit.id}`).toBeGreaterThan(0);
+        }
+      }
+    },
+    TIMEOUT,
+  );
+});

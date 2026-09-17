@@ -380,11 +380,21 @@ function ownerScenarios(profile: Profile): Scenario[] {
     {
       // Pinned 2026-09-18: the plain Troops-first sequence beat the sweet spot on both ratios (2.14 · 426 216
       // against 1.95 · 376 087) until every hired type was kept and every hired stack sheltered (S-75); the
-      // shelter costs 6 % of the top damage here (89.6 % of the sizers, experiment 101 §A).
+      // shelter cost 6 % of the top damage here (89.6 % of the sizers, experiment 101 §A).
+      // S-77, 2026-09-18: only an **unlimited** hired stack is clamped under the troops, so the capped
+      // legionaries may stand on top again as the enemy's first kill — 89.6 % → 95.6 % of the sizers. The bar
+      // keeps four stops: the middle rule's tie now goes to the rung the other does not dominate over the
+      // campaign (11 burned, not 10), and no march left of it is as efficient a silver, so no silver saver is
+      // offered. The Troops-first sequence still beats the sweet spot on both **campaign** ratios (2.1394 ·
+      // 426 215 against 2.0119 · 393 667): this case is a sizer shape either way, and the sweet spot is the
+      // middle of the bar rather than the hardest march it can find. With the silver saver gone so is the
+      // plan's win a hired unit here — it was that stop's 523 723 that beat the sizers' 426 215, and the four
+      // stops left top out at the sweet spot's 393 667. The bar's thrift end on this army is now the sweet
+      // spot itself; a proposal that brings a thriftier stop back should move this pin with it.
       label: '2026-09-17 export, its setup (7 000 leadership)',
       request: buildStackRequest(profile, setup),
       externals: [],
-      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: false, damageFloor: 0.89, winsHired: true },
+      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: true, damageFloor: 0.95, winsHired: false },
     },
     {
       label: '2026-09-17 export, 12 000 leadership',
@@ -464,7 +474,9 @@ function commonScenarios(): Scenario[] {
       externals: [],
       // Measured 2026-09-18 (experiment 101 §B): one stop, six bears under the Elite sizer; the sizers field
       // ten, nine, eight, seven for the same four chunks — 84.1 % of their damage, beaten a hired.
-      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: true, damageFloor: 0.84, winsHired: false },
+      // S-77, 2026-09-18: the bears are capped, so the sizer's shape no longer lowers them under the troops
+      // and the stop hits harder — 84.1 % → 86.4 %.
+      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: true, damageFloor: 0.86, winsHired: false },
     },
     {
       label: 'first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)',

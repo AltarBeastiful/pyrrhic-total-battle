@@ -1184,14 +1184,28 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
       .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
     const rungs = stacks.filter((stack) => stack.entry.pool === 'leadership');
-    // The shelter: every hired stack under the lowest troop stack, or the enemy — which wipes the
-    // highest-HP living stack first — takes it before the troops have died (owner, 2026-09-18: *"lower it
-    // so the health stack still makes sense, below the troops"*). A hired stack the sizer sized over that
-    // line is lowered to just under it; one that cannot be is left out of this shape.
+    // The shelter: an **unlimited** hired stack under the lowest troop stack, or the enemy — which wipes the
+    // highest-HP living stack first — takes it before the troops have died (owner, 2026-09-18: *"when a merc
+    // is unlimited and is put in, don't put more, and lower it so the health stack still makes sense — below
+    // the troops"*). A stack the sizer sized over that line is lowered to just under it; one that cannot be is
+    // left out of this shape.
+    //
+    // **Only the unlimited types** (S-77). Clamping every hired type read that sentence — which is about the
+    // one case where nothing else bounds a stack — as a rule for all of them, and it costs damage: on the
+    // owner's export at 7 000 the unsheltered MS-relaxed march stood **34 legionaries on top** as the enemy's
+    // first kill — a sponge, every other stack one kill slot later, the arbalesters striking three times
+    // instead of two — for **6 242 452** damage a march against **5 864 482** sheltered, at one more legionary
+    // burned and 48 gold (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §A). The battle model
+    // prices that already — `marchOf` runs the journal, and the burn is `ceil(n / 10)` wherever the stack
+    // stands — so the two ratios judge a hired sponge like any other march, and a capped type keeps the count
+    // the sizer gave it wherever it stands. The other shapes are unchanged: the ladders shelter by
+    // construction (every rung is built above `mercenaryHp`), and the all-in shelters every type by its own
+    // test, because that stop is the one the owner asked for as *"all the mercs you can safely field"*.
     const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
     const sheltered = stacks
       .filter((stack) => stack.entry.pool === 'authority')
       .map((stack) => {
+        if (!unlimited.has(stack.entry.id)) return stack;
         if (!Number.isFinite(floor) || stack.count * stack.entry.hp < floor) return stack;
         return { entry: stack.entry, count: Math.max(0, Math.ceil(floor / stack.entry.hp) - 1) };
       })
@@ -1763,6 +1777,46 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const sweetPool = efficientRows.length > 0 ? efficientRows : candidates;
 
   /**
+   * **The middle of the range, and the tie the campaign breaks** (validator, 2026-09-18; S-77). The fallback
+   * when there is no knee: the rung whose burn is closest to the middle of the efficient rungs' own range.
+   * The middle is a half-unit whenever the range is odd, and then **two rungs are exactly as near it** — the
+   * choice between them used to go to thrift, which is a coin toss dressed as a rule (owner: *"no more magic
+   * static numbers"*).
+   *
+   * Measured on his export at 7 000 with the capped sponge march on the bar: the burn ladder is 7 · 9 · 10 ·
+   * 11 · 12 · 13 · 14, no rung stands above the chord, and the middle is **10.5** — the 10 and the 11 are both
+   * half a unit away. Over the whole campaign the 11 beats the 10 on **both** of the criteria the bar balances:
+   * 22 045 361 damage at 2.0119 a silver and 393 667 a hired unit, against 20 684 777 at 1.9548 and 376 087.
+   * Thrift was handing the recommendation a plan another stop dominates, which is the one thing the sweet spot
+   * must never be.
+   *
+   * So a tie is broken by the campaign's own two ratios (`damagePerSilver`, `damagePerMercenary` — the whole
+   * run, repeats and finale, not the repeated march alone): the rung the other does not beat on both wins, and
+   * only when neither dominates does thrift decide, as it always did. Two plans at the *same* burn are still
+   * told apart by damage.
+   */
+  const dominates = (row: PlanTotals, other: PlanTotals): boolean =>
+    row.damagePerSilver >= other.damagePerSilver &&
+    row.damagePerMercenary >= other.damagePerMercenary &&
+    (row.damagePerSilver > other.damagePerSilver || row.damagePerMercenary > other.damagePerMercenary);
+  const middleOfRange = (rows: (PlanTotals & { label: string })[]): PlanTotals & { label: string } => {
+    const burns = rows.map((row) => row.repeat.mercLost);
+    const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
+    return rows.reduce<PlanTotals & { label: string }>((held, row) => {
+      const away = Math.abs(row.repeat.mercLost - middleBurn);
+      const heldAway = Math.abs(held.repeat.mercLost - middleBurn);
+      if (away < heldAway) return row;
+      if (away > heldAway) return held;
+      if (row.repeat.mercLost !== held.repeat.mercLost) {
+        if (dominates(row, held)) return row;
+        if (dominates(held, row)) return held;
+        return row.repeat.mercLost < held.repeat.mercLost ? row : held;
+      }
+      return row.repeat.damage > held.repeat.damage ? row : held;
+    }, rows[0] ?? chosenPoint);
+  };
+
+  /**
    * **The sweet spot is the knee of damage against burn** over the rungs nothing beats on both ratios (owner,
    * 2026-09-18, on the middle of the range landing one unit from the thrift end: *"best optimization still
    * doesn't offer enough splits"*). Measured on his latest export (`tools/theorycraft/out/99-three-stops.md`):
@@ -1772,26 +1826,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * knee is the efficient rung farthest above the chord drawn over the **whole** ladder, from its thriftiest
    * rung to its top, in burn and damage — the chord has to span the ladder, or the knee of the efficient rungs
    * alone lands one unit from their end (measured: 8 against 10). With fewer than three rungs there is no
-   * chord, and the middle rule stands (the thriftier on a tie).
+   * chord, and the middle rule stands (`middleOfRange` above: the campaign's ratios break a tie, thrift last).
    */
   const sweetSpotBase: PlanTotals & { label: string } = ((): PlanTotals & { label: string } => {
     const rows = sweetPool;
     const first = ladderRows[0];
     const last = ladderRows[ladderRows.length - 1];
-    if (rows.length < 3 || !first || !last) {
-      const burns = rows.map((row) => row.repeat.mercLost);
-      const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
-      return rows.reduce<PlanTotals & { label: string }>((best, row) => {
-        const away = Math.abs(row.repeat.mercLost - middleBurn);
-        const bestAway = Math.abs(best.repeat.mercLost - middleBurn);
-        if (away < bestAway) return row;
-        if (away > bestAway) return best;
-        if (row.repeat.mercLost !== best.repeat.mercLost) {
-          return row.repeat.mercLost < best.repeat.mercLost ? row : best;
-        }
-        return row.repeat.damage > best.repeat.damage ? row : best;
-      }, rows[0] ?? chosenPoint);
-    }
+    // Fewer than three rungs: no chord to draw, so the middle rule stands (`middleOfRange`).
+    if (rows.length < 3 || !first || !last) return middleOfRange(rows);
     const dx = last.repeat.mercLost - first.repeat.mercLost || 1;
     const dy = last.repeat.damage - first.repeat.damage || 1;
     let best: (PlanTotals & { label: string }) | undefined;
@@ -1806,20 +1848,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     // No rung stands above the chord: the ladder is convex (each unit burned buys more than the last —
     // measured on the 2026-09-17 export at 7 000), so there is no knee and the middle of the efficient
-    // rungs is the compromise, the thriftier on a tie.
+    // rungs is the compromise, a tie between two of them settled by the campaign's ratios (`middleOfRange`).
     if (best) return best;
-    const burns = rows.map((row) => row.repeat.mercLost);
-    const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
-    return rows.reduce<PlanTotals & { label: string }>((held, row) => {
-      const away = Math.abs(row.repeat.mercLost - middleBurn);
-      const heldAway = Math.abs(held.repeat.mercLost - middleBurn);
-      if (away < heldAway) return row;
-      if (away > heldAway) return held;
-      if (row.repeat.mercLost !== held.repeat.mercLost) {
-        return row.repeat.mercLost < held.repeat.mercLost ? row : held;
-      }
-      return row.repeat.damage > held.repeat.damage ? row : held;
-    }, rows[0] ?? chosenPoint);
+    return middleOfRange(rows);
   })();
 
   const knee = ((): (PlanTotals & { label: string }) | undefined => {
