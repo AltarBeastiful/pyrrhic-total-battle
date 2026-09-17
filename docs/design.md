@@ -175,8 +175,9 @@ page              the page ground
 │                 open when it arrives (S-59) and collapsible
 │ └ tier/13       a stack pill: a wash of its tier's ink, bordered in the same ink
 ├ panel           the same March's second half, from 1200 px: one panel, **"This march in full"**, closing the
-│                 setup column — what the objective bought, the battle story and the HP profile, the saved
-│                 marches, and the row that copies, edits, saves or shares the counts (`#march-foot`)
+│                 setup column — what the objective bought, the damage split with the HP profile and the
+│                 battle story, the saved marches, and the row that copies, edits, saves or shares the
+│                 counts (`#march-foot`)
 └ sheet           what floats over the page: a dialog, a popover, a menu
   └ danger/12     the one state block that is still tinted
 ```
@@ -450,7 +451,8 @@ Banned in user-facing text: **"Pro"** (nothing here is paid), **"preservation"**
 | `strictMercsAboveMonsters` | **Monsters after mercenaries** | Also keep every monster stack below your smallest mercenary stack. |
 | `roundTo10` | **Hired units in tens** | Mercenary and monster stacks become multiples of ten, because reviving works in tens. |
 | `customOrder` | **Order of the fall** | First to fall at the top. |
-| `marchFoot` (`#march-foot`) | **This march in full** | The March's explaining half, one panel: what the objective bought, the battle story and the HP profile, the saved marches, and the row that copies, edits, saves or shares the counts. The foot of the setup column on a desktop, the March sheet below 1200 px — never both (owner, 2026-09-15). |
+| `marchFoot` (`#march-foot`) | **This march in full** | The March's explaining half, one panel: what the objective bought, the **Details** fold, the saved marches, and the row that copies, edits, saves or shares the counts. The foot of the setup column on a desktop, the March sheet below 1200 px — never both (owner, 2026-09-15). |
+| `MarchDetailsFold` (**Details**) | **"The HP profile and the battle story"** | The fold opens on the **damage split** — 🛡️ Troops · 👑 Hired · 💀 Monsters, each `damageByPool` figure in compact digits with its share of the march, the dominance line only when a monster fought — and a fourth figure, **Damage a hired unit**: the expected damage over the hired units the march burns for good (`chunks`, the same count the trade prints as "Hired lost"). The mark on a pool figure is the *pool's* glyph, as the March pane's own pool lines are; 🪖 stays the hired stock. Under it the **HP profile comes before the battle story** (owner, 2026-09-18: "invert the position of battle story and health stack so we see health stack quickly"), and the chart wears a heading of its own, **HP profile**, at the story's level. |
 | `objectiveLocked` | **"The plan weighs damage against what it costs, so it decides this itself."** | What the Objective's own description says while **Complete optimization** is chosen, because that method picks the objective for itself. The Objective select is disabled and points at the sentence; on a phone the chip keeps its name and is named **"Objective: decided by the plan"** for a screen reader (owner, 2026-09-15 — a deliberate exception to §7.4's "hidden, not disabled"). |
 
 ### Results

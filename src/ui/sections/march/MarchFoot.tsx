@@ -2,7 +2,8 @@
  * The March's second half (owner, 2026-09-15): everything that *explains* the answer, or acts on the
  * whole march, rather than being the answer. On a desktop these four blocks sit at the foot of the
  * setup column so the March pane stays shorter than it — which is what lets the pane stick
- * (`shell/usePaneFits.ts`: a pane that does not fit the room the window leaves it gives up the stick).
+ * with its head pinned for good (`shell/usePaneStick.ts`: a pane that does not fit the room the window
+ * leaves it sticks at both ends instead, and its recap is one flick of the wheel away rather than on screen).
  * Measured the same day: the pane was **771 px against 768 px of room at 1400×900**, so it did not
  * stick at any window size.
  *
@@ -13,8 +14,8 @@
  *
  * What stays in the pane is what the pane is *for*: the figures, the army, what it left at home, the
  * plan's own assessment (`PlanSizing`, `PlanFold`). What moves down here is reference and
- * whole-march actions — the objective comparison, the battle story, the HP profile, the saved list,
- * and the row that copies, edits, saves or shares the counts.
+ * whole-march actions — the objective comparison, the damage split with the HP profile and the
+ * battle story, the saved list, and the row that copies, edits, saves or shares the counts.
  */
 import { Button, Group, Stack, Text } from '@mantine/core';
 import { Share2 } from 'lucide-react';
@@ -32,6 +33,7 @@ import { copyText } from '@/ui/profile/download';
 import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 import { MARCH_FOOT_ANCHOR } from '@/ui/shell/march';
 
+import { DamageSplit } from './DamageSplit';
 import { MarchCountsBar } from './MarchPills';
 import classes from './march.module.css';
 import { amount } from './format';
@@ -70,7 +72,18 @@ export function MarchObjectives() {
   return <TradeoffStrip tradeoff={tradeoff} />;
 }
 
-/** The battle story and the HP profile: reference, read once, so it stays folded (design rule 4). */
+/**
+ * The HP profile and the battle story: reference, read once, so it stays folded (design rule 4).
+ *
+ * Two changes the owner asked for on 2026-09-18. The fold **opens on the damage split** — troop
+ * damage against hired damage, and what a hired unit lost is worth — because that is what guides the
+ * next march, and neither the story nor the chart says it (`DamageSplit`). And the **HP profile
+ * comes first**: "invert the position of battle story and health stack so we see health stack
+ * quickly". The chart is the shorter of the two and the one a player checks at a glance, while the
+ * story is a round-by-round read; putting the story's paragraphs above it meant scrolling past them
+ * every time. `DamageSplit` is not lazy — it is a handful of numbers already in hand — so it draws
+ * the moment the fold opens, while the two heavy surfaces under it arrive with their chunks.
+ */
 export function MarchDetailsFold() {
   const { snapshot, result, summary } = useMarch();
   const [open, setOpen] = useState(false);
@@ -78,14 +91,15 @@ export function MarchDetailsFold() {
   return (
     <Disclosure
       title="Details"
-      summary="The battle story and the HP profile"
+      summary="The HP profile and the battle story"
       opened={open}
       onChange={setOpen}
     >
       <LazySurface isOpen={open} reserve="panel">
         <Stack gap="md">
-          <BattleStory request={snapshot.request} summary={summary} />
+          <DamageSplit summary={summary} stacks={result.stacks} />
           <HpProfile stacks={result.stacks} units={snapshot.request.units} />
+          <BattleStory request={snapshot.request} summary={summary} />
         </Stack>
       </LazySurface>
     </Disclosure>

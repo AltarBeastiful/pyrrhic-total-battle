@@ -68,3 +68,12 @@ export function delta(value: number): string {
   if (rounded === 0) return '0';
   return `${rounded > 0 ? '+' : '-'}${amount(Math.abs(rounded))}`;
 }
+
+/**
+ * `damage / resource`, with a resource of zero reading as "—" rather than as infinity: `ratio` prints any
+ * non-finite value that way, and a march that burns no hired unit has no damage a hired unit rather than an
+ * infinite one. Shared by the plan's trade and the Details fold's damage split, which print the same ratio.
+ */
+export function per(damage: number, resource: number): number {
+  return resource > 0 ? damage / resource : Number.NaN;
+}

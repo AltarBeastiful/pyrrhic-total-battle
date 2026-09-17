@@ -22,6 +22,7 @@ import { renderWithTheme } from '@/ui/kit/testRender';
 import { initResultPersistence, LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
 import type * as WorkerClient from '@/worker/client';
 
+import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
 import { amount } from './format';
 import { MarchQuickSummary } from './MarchQuickSummary';
@@ -400,11 +401,11 @@ test('editing counts is a mode, and Undo puts the generated ones back', async ()
   // Three battles are played out here (the run, the edit, the undo): a busy machine needs the room.
 }, 20_000);
 
-test('the details are folded away until they are asked for', async () => {
+test('the details are folded away until they are asked for, and open on the HP profile', async () => {
   renderWithTheme(<Page />);
   await generate();
 
-  const details = screen.getByRole('button', { name: 'Details The battle story and the HP profile' });
+  const details = screen.getByRole('button', { name: 'Details The HP profile and the battle story' });
   expect(details.getAttribute('aria-expanded')).toBe('false');
   expect(screen.queryByText('Battle story')).toBeNull();
 
@@ -416,7 +417,55 @@ test('the details are folded away until they are asked for', async () => {
   expect(await screen.findByText('Battle story', {}, { timeout: 15_000 })).toBeTruthy();
   expect(screen.getByRole('list', { name: /Total HP per stack/ })).toBeTruthy();
   expect(screen.getByRole('button', { name: /^Raw journal/ }).getAttribute('aria-expanded')).toBe('false');
+
+  // The chart comes first and the story second (owner, 2026-09-18): the health stack is what a
+  // glance is after, and the story's paragraphs used to stand between the fold and it.
+  const headings = screen.getAllByRole('heading', { level: 4 }).map((node) => node.textContent);
+  expect(headings).toEqual(['HP profile', 'Battle story']);
+
+  // And above both of them, the split this march's damage came from — the first thing in the fold.
+  const split = screen.getByLabelText("Where this march's damage came from");
+  expect(split.compareDocumentPosition(screen.getByRole('heading', { level: 4, name: 'HP profile' }))).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  // This march hires nobody (authority 0 in the harness), so the hired figures say so rather than
+  // dividing by nothing: "—" is what `ratio` prints for a resource of zero.
+  expect(within(split).getByText('Troops')).toBeTruthy();
+  expect(within(split).getByText('Hired')).toBeTruthy();
+  expect(within(split).getByText('Damage a hired unit')).toBeTruthy();
+  expect(within(split).getByText('—')).toBeTruthy();
 }, 25_000);
+
+/**
+ * The damage split on its own, on a fixture: the engine's `damageByPool` and the hired units the
+ * march burns are the only two things it reads, so the fixture is those two.
+ */
+test('the damage split says what each pool hit for, its share, and what a hired unit was worth', () => {
+  renderWithTheme(
+    <DamageSplit
+      summary={{
+        avgDamage: 5_200_000,
+        damageByPool: { leadership: 3_224_000, authority: 1_976_000, dominance: 0 },
+      }}
+      stacks={[
+        { pool: 'leadership', count: 4_100 },
+        // 260 hired units cost 26 for good: ten of them are one (`chunks`), which is what the plan's
+        // trade prints as "Hired lost" for the same march.
+        { pool: 'authority', count: 260 },
+      ]}
+    />,
+  );
+
+  const split = screen.getByLabelText("Where this march's damage came from");
+  // Compact figures with the share beside them: 3.22M of 5.2M is 62 %, 1.98M is 38 %.
+  expect(within(split).getByText('3.2M · 62%')).toBeTruthy();
+  expect(within(split).getByText('2M · 38%')).toBeTruthy();
+  // 5 200 000 over 26 hired units lost.
+  expect(within(split).getByText('200 000')).toBeTruthy();
+  // Three figures, and no fourth: nothing fought out of the dominance pool (design rule 15).
+  expect(within(split).queryByText('Monsters')).toBeNull();
+  expect(within(split).getAllByRole('term')).toHaveLength(3);
+});
 
 test('the unit sheet opens from a tile and says what the stack does, in sentences', async () => {
   renderWithTheme(<Page />);

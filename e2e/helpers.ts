@@ -578,7 +578,7 @@ export async function switchProfileNames(page: Page): Promise<string[]> {
  */
 /**
  * The March's second half, at the foot of the setup column (owner, 2026-09-15): the objectives
- * comparison, the battle story, the HP profile, the saved list and the row of whole-march actions.
+ * comparison, the HP profile and the battle story, the saved list and the row of whole-march actions.
  *
  * It is drawn **instead of** the sheet's copy of the same blocks (`ui/sections/march/MarchFoot.tsx`,
  * `MarchSection.tsx`), so a control that moved here is on this page once and only once. Below

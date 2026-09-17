@@ -45,7 +45,7 @@ import type { PlanRow } from '@/engine/plan';
 
 import { Glyph } from '@/ui/domain';
 
-import { amount, compact, ratio } from './format';
+import { amount, compact, per, ratio } from './format';
 import { bestForWords, planWords } from './picks';
 import classes from './march.module.css';
 
@@ -57,15 +57,6 @@ export interface PlanTradeProps {
   /** The row the bar's pointer is on, lit here so the bar and the table read as one thing. */
   hovered: number | null;
   onSelect: (index: number) => void;
-}
-
-/**
- * `damage / resource`, with a resource of zero reading as "—" rather than as infinity: `ratio` prints any
- * non-finite value that way, and a plan that burns no hired unit has no damage a hired unit rather than an
- * infinite one.
- */
-function per(damage: number, resource: number): number {
-  return resource > 0 ? damage / resource : Number.NaN;
 }
 
 /**

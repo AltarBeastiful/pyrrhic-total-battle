@@ -42,6 +42,10 @@ preview`), not the dev server.
    counts are together at the end of the **left** column, under **"This march in full"**. On a phone there is
    no left column, so the March sheet carries all of it. Watch the right-hand pane while you scroll: it is
    meant to come with you when the march fits the window it has, and to travel with the page when it does not.
+   Open **Details**: it opens on a **damage split** — what your troops hit for and what the hired units hit
+   for, each with its share, and what one hired unit lost was worth in damage — and the **HP chart comes
+   before the battle story**, so the health stack is there at a glance instead of below the round-by-round
+   read (owner, 2026-09-18). Judge whether the split is what you would steer the next march by.
 6. **Share it.** Send a march to yourself, open the link on the other device, save a copy. **Share** and
    **Save this march** are in "This march in full" on a desktop (the March sheet on a phone), beside the
    counts row.

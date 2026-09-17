@@ -61,8 +61,9 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   // its figure reads "used … of total" rather than as a fraction (D-19).
   await expect(marchSection(page).getByText('of 4 100')).toBeVisible();
 
-  // The story and the chart are folded away until they are asked for.
-  await expect(marchFoot(page).getByRole('button', { name: /^Details The battle story/ })).toHaveAttribute(
+  // The chart and the story are folded away until they are asked for — the chart first since
+  // 2026-09-18, which is what the fold's own summary says.
+  await expect(marchFoot(page).getByRole('button', { name: /^Details The HP profile/ })).toHaveAttribute(
     'aria-expanded',
     'false',
   );
