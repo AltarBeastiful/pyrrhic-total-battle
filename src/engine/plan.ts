@@ -1307,8 +1307,31 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
   }
   const ladderRows = levels.map((burn) => ladder.get(burn) as PlanTotals & { label: string });
-  /** The plans the sweet spot is read off: the ladder on the burn axis, the whole band on the silver one. */
-  const sweetPool = barAxis === 'burn' && ladderRows.length > 0 ? ladderRows : candidates;
+  /**
+   * **A rung nothing beats on both efficiencies** (owner, 2026-09-17, reading his own bar: *"12 hired lost got
+   * better silver/dmg, better dmg/merc and almost the same damage"* than the sweet spot at 15). His stops, as
+   * the app drew them: 10 burned at 1.280 a silver / 568 182 a hired, **12 at 1.320 / 511 100**, the sweet spot
+   * at 15 at 1.263 / 442 961, 19 at 1.409 / 399 460 — the recommendation lost to the stop beside it on both of
+   * the two things the slider balances. A plan another rung beats on damage a silver *and* damage a hired unit
+   * is not a compromise between them, so it is neither the sweet spot nor a filler; the two ends keep their
+   * places by definition. On his numbers this leaves 10, 12 and 19, and the middle of that range is 12.
+   */
+  const rungPerSilver = (row: PlanTotals): number =>
+    row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0;
+  const rungPerHired = (row: PlanTotals): number =>
+    row.repeat.mercLost > 0 ? row.repeat.damage / row.repeat.mercLost : 0;
+  const efficientRows = ladderRows.filter(
+    (row) =>
+      !ladderRows.some(
+        (other) =>
+          other !== row &&
+          rungPerSilver(other) >= rungPerSilver(row) &&
+          rungPerHired(other) >= rungPerHired(row) &&
+          (rungPerSilver(other) > rungPerSilver(row) || rungPerHired(other) > rungPerHired(row)),
+      ),
+  );
+  /** The plans the sweet spot is read off: the efficient rungs on the burn axis, the whole band on the silver one. */
+  const sweetPool = barAxis === 'burn' && efficientRows.length > 0 ? efficientRows : candidates;
 
   const burns = sweetPool.map((row) => row.repeat.mercLost);
   const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
@@ -1414,9 +1437,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      */
     const top = ladderRows[ladderRows.length - 1];
     const perUnit = (row: PlanTotals): number => row.repeat.damage / Math.max(1, row.repeat.mercLost);
+    // Fillers are drawn from the efficient rungs only (see `efficientRows`): a stop another stop beats on both
+    // ratios is the frustration the owner described, whatever its place on the bar.
+    const fillerLevels = efficientRows.map((row) => row.repeat.mercLost);
     const nearest = (target: number): (PlanTotals & { label: string }) | undefined => {
       let pickLevel: number | undefined;
-      for (const level of levels) {
+      for (const level of fillerLevels) {
         if (pickLevel === undefined) {
           pickLevel = level;
           continue;

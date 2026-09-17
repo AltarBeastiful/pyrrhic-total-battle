@@ -331,6 +331,31 @@ describe(
         if (low === undefined || high === undefined) return;
         expect(Math.abs(row.repeat.mercLost - (low + high) / 2) * 4).toBeLessThan(high - low);
       });
+      // The sweet spot and every filler are plans no rung of the ladder beats on both efficiencies at once
+      // (owner, 2026-09-17: his sweet spot at 15 burned lost to the 12 stop on damage a silver *and* a hired).
+      const rungs = new Map<number, (typeof trade)[number]>();
+      for (const row of trade) {
+        const held = rungs.get(row.repeat.mercLost);
+        if (!held || row.repeat.damage > held.repeat.damage) rungs.set(row.repeat.mercLost, row);
+      }
+      const ratios = (row: { repeat: PlanRepeat }) => ({
+        silver: row.repeat.damage / row.repeat.silver,
+        hired: row.repeat.damage / row.repeat.mercLost,
+      });
+      for (const row of rows) {
+        if (row.pick !== 'sweet-spot' && row.pick !== 'step') continue;
+        const own = ratios(row);
+        for (const rung of rungs.values()) {
+          const other = ratios(rung);
+          const beats =
+            other.silver >= own.silver &&
+            other.hired >= own.hired &&
+            (other.silver > own.silver || other.hired > own.hired);
+          expect(beats, `${row.pick} at ${String(row.repeat.mercLost)} burned is beaten on both ratios`).toBe(
+            false,
+          );
+        }
+      }
       // Exactly one stop is the bar's best damage a silver and exactly one its best damage a hired unit.
       const perSilver = (row: (typeof rows)[number]): number => row.repeat.damage / row.repeat.silver;
       const perHired = (row: (typeof rows)[number]): number => row.repeat.damage / row.repeat.mercLost;

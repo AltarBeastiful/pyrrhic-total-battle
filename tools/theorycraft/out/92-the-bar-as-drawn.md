@@ -19,8 +19,8 @@ Owner's export, scenario C, 4 343 leadership / 2 000 authority, no budget, S-58 
 | pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
 |---|---|---|---|---|---|---|---|---|---|
 | `spare-the-stock` | best a hired | 13 | **4,465,339** | 2,256,900 | 654 | 1.98 | 343,488 | — | EMH 37 · arbalester 48 · legionary 10 · chariot 23 |
-| `step` | — | 16 | **4,958,341** | 2,308,400 | 763 | 2.15 | 309,896 | 9.9 % · 2.2 % · 3 units | EMH 58 · arbalester 48 · legionary 13 · chariot 23 |
-| `sweet-spot` ★ | — | 19 | **5,691,931** | 2,308,400 | 920 | 2.47 | 299,575 | 12.9 % · 0.0 % · 3 units | EMH 58 · arbalester 48 · legionary 46 · chariot 23 |
+| `step` | — | 15 | **4,891,651** | 2,308,400 | 753 | 2.12 | 326,110 | 8.7 % · 2.2 % · 2 units | EMH 58 · arbalester 48 · legionary 10 · chariot 23 |
+| `sweet-spot` ★ | — | 19 | **5,691,931** | 2,308,400 | 920 | 2.47 | 299,575 | 14.1 % · 0.0 % · 4 units | EMH 58 · arbalester 48 · legionary 46 · chariot 23 |
 | `most-damage` | best a silver | 25 | **6,541,503** | 2,469,600 | 1,213 | 2.65 | 261,660 | 13.0 % · 6.5 % · 6 units | EMH 61 · arbalester 69 · legionary 65 · chariot 33 |
 
 
@@ -35,14 +35,13 @@ Owner's export, scenario C, 4 343 leadership / 2 000 authority, no budget, S-58 
 | `best-for-silver` | best a silver | 22 | **6,905,207** | 2,331,500 | 1,103 | 2.96 | 313,873 | 20.1 % · 0.0 % · 5 units | EMH 56 · arbalester 62 · legionary 60 · chariot 29 |
 | `most-damage` | — | 22 | **6,920,621** | 2,354,500 | 1,103 | 2.94 | 314,574 | 0.2 % · 1.0 % · 0 units | EMH 56 · arbalester 62 · legionary 60 · chariot 29 |
 
-### burn axis — 4 stops, `leftOut` 46
+### burn axis — 3 stops, `leftOut` 47
 
 | pick | best at | burned | damage a march | silver a march | gold a march | a silver | a hired | vs previous: damage · silver · burn | hired fielded |
 |---|---|---|---|---|---|---|---|---|---|
 | `spare-the-stock` | best a hired | 12 | **4,107,350** | 2,252,000 | 622 | 1.82 | 342,279 | — | EMH 34 · arbalester 28 · legionary 12 · chariot 30 |
 | `sweet-spot` ★ | — | 17 | **5,518,119** | 2,331,500 | 863 | 2.37 | 324,595 | 25.6 % · 3.4 % · 5 units | EMH 53 · arbalester 62 · legionary 10 · chariot 30 |
-| `step` | — | 20 | **6,276,006** | 2,252,000 | 1,009 | 2.79 | 313,800 | 12.1 % · 3.4 % · 3 units | EMH 53 · arbalester 43 · legionary 60 · chariot 30 |
-| `most-damage` | best a silver | 22 | **6,920,621** | 2,354,500 | 1,103 | 2.94 | 314,574 | 9.3 % · 4.4 % · 2 units | EMH 56 · arbalester 62 · legionary 60 · chariot 29 |
+| `most-damage` | best a silver | 22 | **6,920,621** | 2,354,500 | 1,103 | 2.94 | 314,574 | 20.3 % · 1.0 % · 5 units | EMH 56 · arbalester 62 · legionary 60 · chariot 29 |
 
 
 ## Horizon 10
