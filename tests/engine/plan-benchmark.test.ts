@@ -61,6 +61,8 @@ import { newProfile } from '@/state/defaults';
 import { buildStackRequest } from '@/state/derive';
 import type { Profile } from '@/state/schema';
 
+import { totalstackRows, widenedFor } from './totalstack-rows';
+
 const OWNER_EXPORT =
   process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
 const TOTALSTACK_CAPTURE = new URL(
@@ -116,6 +118,13 @@ interface Campaign {
   name: string;
   /** Who produced the marches: one of ours, or a calculator outside this repo. */
   kind: 'sizer' | 'plan' | 'external';
+  /**
+   * False for a captured answer that fields a troop type the scenario's army does not hold (TotalStack's
+   * profile fields Archer III, Spearman III and Swordsman I where the owner's export leaves them out): priced
+   * and shown, since it is what the other calculator says, but no pin is judged against a march the player
+   * cannot make.
+   */
+  comparable: boolean;
   marches: number;
   damage: number;
   silver: number;
@@ -141,7 +150,7 @@ function campaignOf(
     silver += priced.silver;
     burned += mercIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0);
   }
-  return { name, kind, marches: marches.length, damage, silver, burned };
+  return { name, kind, comparable: true, marches: marches.length, damage, silver, burned };
 }
 
 /** A sizer method played for the horizon the way a player plays it: Generate, march, lose a chunk, again. */
@@ -466,7 +475,17 @@ function commonScenarios(): Scenario[] {
       externals: [],
       // Measured 2026-09-18 (experiment 101 §B): one stop, one bear fielded; the sizers field all three and
       // burn the same one a march — 58.8 % of their damage, beaten a hired and on both ratios.
-      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: true, damageFloor: 0.58, winsHired: false },
+      // TotalStack's dataset of 2026-09-18: its priority search under M's fields the three bears in three tier-3
+      // stacks and goes on with troops alone when they are gone — 25 439 016 over four marches; the plan's one
+      // bear a march reaches 55.7 % of it and loses a hired.
+      pinned: {
+        refuses: false,
+        stops: 1,
+        sweetLosesOnBoth: true,
+        damageFloor: 0.58,
+        winsHired: false,
+        externals: { damageFloor: 0.55, winsHired: false },
+      },
     },
     {
       label: 'first-run army, Bear V ×10 (20 000 leadership)',
@@ -476,14 +495,31 @@ function commonScenarios(): Scenario[] {
       // ten, nine, eight, seven for the same four chunks — 84.1 % of their damage, beaten a hired.
       // S-77, 2026-09-18: the bears are capped, so the sizer's shape no longer lowers them under the troops
       // and the stop hits harder — 84.1 % → 86.4 %.
-      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: true, damageFloor: 0.86, winsHired: false },
+      // TotalStack's priority search under M's: 26 486 216 over four marches (ten bears first, then what is left);
+      // the plan's six a march reaches 82 % and loses a hired.
+      pinned: {
+        refuses: false,
+        stops: 1,
+        sweetLosesOnBoth: true,
+        damageFloor: 0.86,
+        winsHired: false,
+        externals: { damageFloor: 0.82, winsHired: false },
+      },
     },
     {
       label: 'first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)',
       request: firstRun({ id: 'epic-monster-hunter-6', cap: 83 }, 20_000),
       externals: [],
       // Measured 2026-09-18: 98.8 %, three stops (no silver saver, no more-mercs rung).
-      pinned: { refuses: false, stops: 3, sweetLosesOnBoth: false, damageFloor: 0.98, winsHired: true },
+      // TotalStack's M's Preservation: 30 587 159 over four marches; the plan reaches 98.2 % and wins a hired.
+      pinned: {
+        refuses: false,
+        stops: 3,
+        sweetLosesOnBoth: false,
+        damageFloor: 0.98,
+        winsHired: true,
+        externals: { damageFloor: 0.98, winsHired: true },
+      },
     },
     fourThousand(),
   ];
@@ -511,7 +547,21 @@ function measure(scenario: Scenario): Measured {
       ),
     );
   }
-  for (const external of scenario.externals) rows.push(asCaptured(request, external.name, external.counts));
+  // The captured answers: the case's own (the 2026-09-15 capture, Kai's extract) and TotalStack's dataset of
+  // 2026-09-18 for every scenario it answered, each priced on the request widened to the troop types it
+  // fielded (`totalstack-rows.ts`).
+  const held = new Set(request.units.map((unit) => unit.id));
+  for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
+    const outside = Object.entries(external.counts)
+      .filter(([id, count]) => count > 0 && !held.has(id))
+      .map(([id]) => id);
+    const row = asCaptured(widenedFor(request, external.counts), external.name, external.counts);
+    if (outside.length > 0) {
+      row.comparable = false;
+      row.name = `${row.name} — outside the army's window (${outside.join(', ')})`;
+    }
+    rows.push(row);
+  }
   let plan: CampaignPlan | null = null;
   let refusal: string | null = null;
   try {
@@ -563,6 +613,7 @@ function record(label: string, measured: Measured): void {
     rows: measured.rows.map((c) => ({
       name: c.name,
       kind: c.kind,
+      comparable: c.comparable,
       marches: c.marches,
       damage: Math.round(c.damage),
       silver: c.silver,
@@ -587,7 +638,7 @@ function check(scenario: Scenario, measured: Measured): void {
   for (const c of sizers) expect(c.marches, `${c.name} played no march`).toBeGreaterThan(0);
   if (!measured.plan) return;
   const plan = measured.rows.filter((c) => c.kind === 'plan');
-  const externals = measured.rows.filter((c) => c.kind === 'external');
+  const externals = measured.rows.filter((c) => c.kind === 'external' && c.comparable);
   const sweet = plan.find((c) => c.name.endsWith('sweet-spot'));
   const most = plan.reduce<Campaign | undefined>((b, c) => (!b || c.damage > b.damage ? c : b), undefined);
   if (!sweet || !most) throw new Error('no sweet spot or top');

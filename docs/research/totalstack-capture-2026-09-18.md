@@ -100,13 +100,18 @@ const hire = (b, caps) => ({
   mercenaryCaps: { ...b.mercenaryCaps, ...caps },
   optimizationSeed: b.optimizationSeed ? { ...b.optimizationSeed, selectedMercenaryIds: Object.keys(caps) } : b.optimizationSeed,
 });
+// The owner's Pyrrhic army leaves out the top-tier melee and ranged guardsmen and the melee specialist (his
+// export: topTierExcluded guardsmen melee/ranged, specialists melee) — the page's profile does not, so every
+// owner scenario is asked with those three excluded, or the answer is a march he cannot make.
+const OWNER_WINDOW = ['archer-3', 'spearman-3', 'swordsman-1'];
+const owner = (b, fields) => ({ ...b, ...fields, excludedTroopIds: OWNER_WINDOW, optimizationSeed: b.optimizationSeed ? { ...b.optimizationSeed, excludedTroopIds: OWNER_WINDOW } : b.optimizationSeed });
 const scenarios = [
-  ['owner 7 000', (b) => ({ ...b, inputValue: 7000, authorityValue: 2000 })],
-  ['owner 12 000', (b) => ({ ...b, inputValue: 12000, authorityValue: 2000 })],
-  ['owner 20 000', (b) => ({ ...b, inputValue: 20000, authorityValue: 2000 })],
-  ['owner 11 000', (b) => ({ ...b, inputValue: 11000, authorityValue: 2000 })],
-  ['live, hunters only', (b) => hire({ ...b, inputValue: 20000, authorityValue: 2180 }, { 'epic-monster-hunter-6': 83 })],
-  ['evening', (b) => hire({ ...b, inputValue: 11000, authorityValue: 2180 }, { 'epic-monster-hunter-6': 83, 'legionary-6': 9999, 'chariot-6': 10, 'arbalester-6': 60 })],
+  ['owner 7 000', (b) => owner(b, { inputValue: 7000, authorityValue: 2000 })],
+  ['owner 12 000', (b) => owner(b, { inputValue: 12000, authorityValue: 2000 })],
+  ['owner 20 000', (b) => owner(b, { inputValue: 20000, authorityValue: 2000 })],
+  ['owner 11 000', (b) => owner(b, { inputValue: 11000, authorityValue: 2000 })],
+  ['live, hunters only', (b) => hire(owner(b, { inputValue: 20000, authorityValue: 2180 }), { 'epic-monster-hunter-6': 83 })],
+  ['evening', (b) => hire(owner(b, { inputValue: 11000, authorityValue: 2180 }), { 'epic-monster-hunter-6': 83, 'legionary-6': 9999, 'chariot-6': 10, 'arbalester-6': 60 })],
   ['first-run, 3 bears', (b) => hire(firstRun({ ...b, inputValue: 20000, authorityValue: 40000 }), { 'bear-5': 3 })],
   ['first-run, 10 bears', (b) => hire(firstRun({ ...b, inputValue: 20000, authorityValue: 40000 }), { 'bear-5': 10 })],
   ['first-run, hunters 83', (b) => hire(firstRun({ ...b, inputValue: 20000, authorityValue: 40000 }), { 'epic-monster-hunter-6': 83 })],
@@ -154,7 +159,7 @@ function save() {
   const blob = new Blob([JSON.stringify({ capturedAt: new Date().toISOString(), bases, results }, null, 1)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'totalstack-2026-09-18-dataset.json';
+  a.download = 'totalstack-2026-09-18-dataset-window.json';
   a.click();
   console.log('saved', results.length, 'answers');
 }
@@ -194,3 +199,11 @@ Caveat for the owner's scenarios (7 000 / 12 000 / 20 000 / 11 000, live, evenin
 (the second M's base: archer-1, spearman-1, swordsman-1; the Total Optimization and Elite bases: archer-1,
 swordsman-1) replays the owner's scenarios with those exclusions. The first M's base and both optimize bases
 are the clean ones for those scenarios; the optimize answers carry their own `excludedTroopIds` in the response.
+
+## Fourth run (to do): the owner's own troop window
+
+The third run's owner scenarios were asked on the page's profile, which fields Archer III, Spearman III and
+Swordsman I; the owner's Pyrrhic army leaves those out, so those answers are marches he cannot make and the
+benchmark marks them "outside the army's window" and pins nothing against them. The snippet above now asks
+every owner scenario with those three excluded (`OWNER_WINDOW`) and downloads `totalstack-2026-09-18-dataset-window.json`.
+Same steps: reload, paste, three Generate presses at None, three at Damage / Silver, `run()`.
