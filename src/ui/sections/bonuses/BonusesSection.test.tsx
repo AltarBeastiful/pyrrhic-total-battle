@@ -349,13 +349,14 @@ test('an artifact is equipped from its chip and levelled from its gear', async (
   expect(totals(card()).Strength).toBe('0 %');
 });
 
-test('a permanent source is always on, and its gear opens the sheet that moves the TOTAL', () => {
+test('a permanent source is on while something is recorded in it, and its gear opens the sheet that moves the TOTAL', () => {
   renderWithTheme(<BonusesSection />);
   expand();
   openGroup('Permanent');
 
-  const chip = within(card()).getByRole('checkbox', { name: 'Hall of Fame, on every march' });
-  expect((chip as HTMLInputElement).checked).toBe(true);
+  // Nothing recorded yet: the chip reads as off, because to the TOTAL it is (owner, 2026-09-17).
+  const empty = within(card()).getByRole('checkbox', { name: 'Set Hall of Fame' });
+  expect((empty as HTMLInputElement).checked).toBe(false);
   expect(within(card()).queryByRole('switch', { name: 'Hall of Fame' })).toBeNull();
 
   fireEvent.click(within(card()).getByRole('button', { name: 'Edit Hall of Fame' }));
@@ -365,6 +366,9 @@ test('a permanent source is always on, and its gear opens the sheet that moves t
   done(sheet);
 
   expect(totals(card()).Health).toBe('+40 %');
+  // And with a value in it, it is on — always, with no switch to flip.
+  const chip = within(card()).getByRole('checkbox', { name: 'Hall of Fame, on every march' });
+  expect((chip as HTMLInputElement).checked).toBe(true);
 });
 
 test('a title is worn from its chip, with what it is worth written under the name', () => {

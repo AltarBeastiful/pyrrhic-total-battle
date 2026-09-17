@@ -7,8 +7,9 @@
  * pixels a source, and the thing that configures a source nowhere near the thing that switches it
  * on. A chip is the name with what it is worth under it, on when it is tinted and ringed, the gear on
  * its own corner and the dot once something is recorded — so a whole family reads at a glance and
- * every control of a source is under one thumb. A source that counts on every march is **pinned**:
- * always on, the pin before its name, its body and its gear both opening the editor.
+ * every control of a source is under one thumb. A source that counts on every march has no state to
+ * switch: its body and its gear both open the editor, and it is on while something is recorded in
+ * it and reads as off while nothing is (owner, 2026-09-17), the way the permanent chips do.
  *
  * Progressive disclosure (D-35): a family with nothing configured in it is its Add button and
  * nothing else, so a returning player reads the card without walking past empty headings.
@@ -30,7 +31,7 @@ function apply(target: ToggleTarget, on: boolean): void {
 
 /** The chip's accessible name says the state, because the ground colour cannot (rule 24). */
 function toggleLabel(row: SourceRow): string {
-  if (row.locked === true) return `${row.name}, on every march`;
+  if (row.locked === true) return row.value === '' ? `Set ${row.name}` : `${row.name}, on every march`;
   return row.on ? `${row.name}, on for this march` : `Switch on ${row.name}`;
 }
 
@@ -44,8 +45,7 @@ function Chip({ row, onEdit }: { row: SourceRow; onEdit: (target: EditorTarget) 
     <SourceChip
       name={row.name}
       value={value}
-      checked={row.on}
-      pinned={row.locked === true}
+      checked={row.locked === true ? row.value !== '' : row.on}
       dotted={editor !== undefined && row.value !== ''}
       disabled={row.isDisabled ?? false}
       toggleLabel={toggleLabel(row)}

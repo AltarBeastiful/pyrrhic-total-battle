@@ -38,9 +38,6 @@ import { captainEntryFor, captainRecord } from './rows';
 /** What the card says when a fourth captain is tapped. One line, and never more than one. */
 export const CAPTAIN_CAP_MESSAGE = 'Three captains at most march together. Take one out first.';
 
-/** The line under the heading, in our own words (rule 26). */
-export const CAPTAIN_HELPER = 'A captain’s bonuses only count while that captain marches.';
-
 /** "—" then ★1…★6: the seven steps the captain tables carry, by their index in the star table. */
 const NO_STAR = '—';
 const STAR_OPTIONS = [NO_STAR, ...Array.from({ length: MAX_CAPTAIN_STAR }, (_, i) => `★${String(i + 1)}`)];
@@ -260,9 +257,8 @@ export function CaptainChips({ chips, isRefused, onEnlist, onConfigure }: Captai
 
   return (
     <Stack gap="xs">
-      <Text size="xs" c="dimmed">
-        {CAPTAIN_HELPER}
-      </Text>
+      {/* No helper line over the chips (owner, 2026-09-17: "remove the sentence"): that a captain's
+          bonuses count only while the captain marches is what the family's own count says. */}
       <Group
         role="group"
         aria-label="Captains and hero"

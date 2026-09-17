@@ -244,7 +244,10 @@ export function BonusesSection() {
     },
     permanent: {
       title: 'Permanent',
-      summary: `${String(permanent.length)} always on`,
+      // What is recorded of what is listed: an always-on source with nothing in it is off to the TOTAL.
+      summary: `${String(permanent.filter((chip) => chip.value !== '').length)} of ${String(
+        permanent.length,
+      )} set, always on`,
       body: (
         <PermanentChips
           chips={permanent}

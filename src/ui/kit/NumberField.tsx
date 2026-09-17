@@ -12,6 +12,12 @@ import type { ReactNode } from 'react';
 
 export interface NumberFieldProps {
   label: string;
+  /**
+   * What a screen reader calls the field when its visible label is not enough on its own: four
+   * fields under one heading may each show only "Guardsmen", and still be "Guardsmen training
+   * cost reduction" to anyone who cannot see the heading (the temple sheet).
+   */
+  accessibleName?: string;
   /** `null` is an empty field; only reachable when `allowEmpty`. */
   value: number | null;
   onChange: (value: number | null) => void;
@@ -39,6 +45,7 @@ export interface NumberFieldProps {
 
 export function NumberField({
   label,
+  accessibleName,
   value,
   onChange,
   min = 0,
@@ -69,7 +76,12 @@ export function NumberField({
       // The phone keyboard this field asks for: the digits pad for a count, the decimal one only
       // where a fraction is meant. Through `attributes` because Mantine writes `inputMode` itself,
       // after the props it was given, and `attributes.input` is the one thing it writes last.
-      attributes={{ input: { inputMode: allowDecimal ? 'decimal' : 'numeric' } }}
+      attributes={{
+        input: {
+          inputMode: allowDecimal ? 'decimal' : 'numeric',
+          ...(accessibleName === undefined ? {} : { 'aria-label': accessibleName }),
+        },
+      }}
       {...(enterKeyHint === undefined ? {} : { enterKeyHint })}
       {...(max === undefined ? {} : { max })}
       {...(placeholder === undefined ? {} : { placeholder })}
