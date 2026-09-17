@@ -608,7 +608,12 @@ export interface ScoredShape {
   rungs: { entry: Effective; count: number }[];
   march: ReturnType<typeof marchOf>;
   /** The final march: what the stock the repeats burned still allows. */
-  finale: { rungs: { entry: Effective; count: number }[]; march: ReturnType<typeof marchOf> } | null;
+  finale: {
+    rungs: { entry: Effective; count: number }[];
+    /** The mercenaries the final march fields: the leftovers under a ladder, the sizer's own under the sizer. */
+    mercs: { entry: Effective; count: number }[];
+    march: ReturnType<typeof marchOf>;
+  } | null;
   /** `marches` × the repeated march, plus the final march. */
   total: number;
   silver: number;
@@ -658,7 +663,23 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
         if (finaleLadder.length === 0) continue;
         const attempt = marchOf([...finaleLadder, ...leftovers], enemyStacks);
         if (attempt.silver > finaleBudget) continue;
-        if (!finale || attempt.damage > finale.march.damage) finale = { rungs: finaleLadder, march: attempt };
+        if (!finale || attempt.damage > finale.march.damage) {
+          finale = { rungs: finaleLadder, mercs: leftovers, march: attempt };
+        }
+      }
+    }
+    // The sizer's own final march under each method, the leftovers as its caps (owner's export of
+    // 2026-09-17, `tools/theorycraft/out/96-branches.md` §C: the ladder finale hit for 5 135 846 at
+    // 3 893 700 silver burning 24, the sizer under MS relaxed for 6 079 432 at 2 739 400 burning 14).
+    if (context.sizer) {
+      for (const method of Object.values(SIZER_DEPTHS)) {
+        const sized = context.sizer(leftovers, method);
+        if (sized.rungs.length === 0 || sized.mercs.length === 0) continue;
+        const attempt = marchOf([...sized.rungs, ...sized.mercs], enemyStacks);
+        if (attempt.silver > finaleBudget) continue;
+        if (!finale || attempt.damage > finale.march.damage) {
+          finale = { rungs: sized.rungs, mercs: sized.mercs, march: attempt };
+        }
       }
     }
     return finale;
@@ -863,6 +884,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     march: ReturnType<typeof marchOf>;
     finale: ReturnType<typeof marchOf> | null;
     finaleRungs: { entry: Effective; count: number }[];
+    finaleMercs: { entry: Effective; count: number }[];
     total: number;
     /** Total silver the plan spends — filled in where the efficiency is judged. */
     spent?: number;
@@ -1069,6 +1091,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           march: scored.march,
           finale: scored.finale?.march ?? null,
           finaleRungs: scored.finale?.rungs ?? [],
+          finaleMercs: scored.finale?.mercs ?? [],
           total: scored.total,
           depth,
           scale,
@@ -1217,9 +1240,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
 
   const chosen = best as Candidate;
   const march = toMarch(chosen.rungs, chosen.mercs, chosen.march);
-  const finale = chosen.finale
-    ? toMarch(chosen.finaleRungs, leftoversOf(chosen, stock), chosen.finale)
-    : undefined;
+  const finale = chosen.finale ? toMarch(chosen.finaleRungs, chosen.finaleMercs, chosen.finale) : undefined;
   // The frontier the UI shows: only the plans nothing else beats on every resource at once, thinned to a
   // readable number. This is also where the recommendation comes from when no silver budget was given.
   const summarise = (candidate: Candidate): PlanTotals & { label: string } => {
@@ -1246,8 +1267,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       counts: m.counts,
       ...(candidate.finale && candidate.finaleRungs.length > 0
         ? {
-            finaleCounts: toMarch(candidate.finaleRungs, leftoversOf(candidate, stock), candidate.finale)
-              .counts,
+            finaleCounts: toMarch(candidate.finaleRungs, candidate.finaleMercs, candidate.finale).counts,
           }
         : {}),
       totalDamage: Math.round(candidate.total),
@@ -1721,17 +1741,4 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         }
       : {}),
   };
-}
-
-/** The mercenaries a plan leaves for its final march: the stock less one chunk a repeat. */
-function leftoversOf(
-  candidate: { marches: number; mercs: { entry: Effective; count: number }[] },
-  stock: Record<string, number>,
-): { entry: Effective; count: number }[] {
-  return candidate.mercs
-    .map((merc) => ({
-      entry: merc.entry,
-      count: Math.max(0, (stock[merc.entry.id] ?? 0) - candidate.marches * chunks(merc.count)),
-    }))
-    .filter((merc) => merc.count > 0);
 }
