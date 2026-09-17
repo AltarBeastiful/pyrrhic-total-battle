@@ -10,13 +10,16 @@
  * scrolling". One sticky element per column and no split inside it is the only arrangement in which
  * that cannot happen.
  *
- * **And it sticks only while the March fits the window** (owner, 2026-09-15: "I want to avoid double
- * scrollbars; make this change so we always avoid scroll bars on the battle summary"). Design rule
- * 17 allows a supporting pane to stick, and forbids one that scrolls independently of the page — so
- * the pane is never given a scroll of its own: when the March grows past the room the window leaves
- * it, it gives up the stick and the page carries it, top to bottom. `usePaneFits` measures it, on
- * the pane's own height and the window's, because opening a fold or planning a longer march is what
- * makes the March outgrow the window in the first place.
+ * **And it sticks at both ends when the March is taller than the window** (owner, 2026-09-17: "the
+ * right panel should move with the scroll so the recap is shown always, or not far from the
+ * scroll"). Design rule 17 allows a supporting pane to stick and forbids one that scrolls
+ * independently of the page — so the pane is never given a scroll of its own. While the March fits
+ * the room the window leaves it, its head is pinned and that is that. Once it does not, the page
+ * carries it, its tail pins above the command bar as the page scrolls down past it, and its head —
+ * the recap — pins back under the app bar's line the moment the page scrolls up. `usePaneStick`
+ * measures and decides, on the pane's own height, the window's and the way the page last moved,
+ * because opening a fold or planning a longer march is what makes the March outgrow the window in
+ * the first place.
  */
 import { Box } from '@mantine/core';
 import { useRef } from 'react';
@@ -25,19 +28,25 @@ import { MarchSection } from '@/ui/sections/march';
 import { Panel } from '@/ui/kit';
 
 import classes from './shell.module.css';
-import { usePaneFits } from './usePaneFits';
+import { usePaneStick } from './usePaneStick';
 
 export function MarchPane() {
   const pane = useRef<HTMLDivElement>(null);
-  const fits = usePaneFits(pane);
+  const stand = usePaneStick(pane);
 
   return (
     // Unnamed on purpose: the March section inside carries the name, and two landmarks called
     // "March" would be one too many.
+    //
+    // The stand is a class for its `position` and, for the two stands that need one, an inline `top`
+    // in px: the tail stand's is a negative sticky inset the stylesheet cannot know, and the flow
+    // stand's is the offset that keeps the pane where the last scroll left it.
     <Box
       component="aside"
       ref={pane}
-      className={fits ? classes.pane : `${classes.pane} ${classes.paneFlowing}`}
+      className={stand.mode === 'flow' ? `${classes.pane} ${classes.paneFlowing}` : classes.pane}
+      data-stand={stand.mode}
+      {...(stand.mode === 'top' ? {} : { style: { top: stand.top } })}
     >
       {/* One surface for the whole pane, as the spike drew it (investigation 0009,
           `v1-desktop.jpg`) and as direction A lights it: the recap, Generate and the March are one

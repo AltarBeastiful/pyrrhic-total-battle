@@ -11,7 +11,7 @@
  *
  * The bar is in the flow, at the end of the frame: the page reserves its height and the last row of
  * the setup can always be scrolled clear of it. The March pane measures the same height out of the
- * window (`shell/usePaneFits.ts`), so the bar never lands on the pills.
+ * window (`shell/usePaneStick.ts`), so the bar never lands on the pills.
  *
  * Between 1024 and 1199 px the March has no pane to live in, so the bar carries the answer too and
  * the sheet opens from it: the answer and Generate travel together at every width (design rule 2).

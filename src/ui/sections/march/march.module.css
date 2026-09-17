@@ -56,7 +56,8 @@
 /* The March pane took a scroll of its own here until 2026-09-15 — a `max-height` at the window less
    the command bar and an `overflow-y: auto` inside it. It is gone, and nothing replaced it: the pane
    never scrolls on its own (design rule 17), it sticks while the March fits the window and travels
-   with the page once it does not (`shell/MarchPane.tsx`, `shell/usePaneFits.ts`). */
+   with the page once it does not, its head pinned when the page scrolls up and its tail when it
+   scrolls down (`shell/MarchPane.tsx`, `shell/usePaneStick.ts`). */
 /* The one line under the body size: a label over a figure, a card's meta, a column head. It is the
    theme's `--pyr-meta`, said here so the March never writes a bare `12px`. */
 .meta {

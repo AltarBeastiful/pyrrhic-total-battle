@@ -71,15 +71,14 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   expect(problems).toEqual([]);
 });
 
-test('a March taller than the window is carried by the page, never by a scroll of its own', async ({
-  page,
-}) => {
+test('a March taller than the window sticks at both ends, never by a scroll of its own', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
   // The default 1280×720 window leaves a pane 568 px (measured): a march of this size is 655 px
-  // against it, so this is the case the old `max-height` answered with a scrollbar. It is still the
-  // case after the 2026-09-15 move — what left the pane was 116 px of reference and actions, not
-  // enough to bring a full march inside a 720 px window.
+  // against it, so this is the case the old `max-height` answered with a scrollbar, and the case the
+  // 2026-09-15 rule answered by letting the page carry the pane top to bottom — which put the recap
+  // off screen with the first flick (owner, 2026-09-17: "the right panel should move with the scroll
+  // so the recap is shown always, or not far from the scroll").
   await generate(page, { leadership: 4100 });
 
   const pane = await paneFrame(page);
@@ -87,23 +86,28 @@ test('a March taller than the window is carried by the page, never by a scroll o
   // passing vacuously.
   expect(
     pane.height,
-    'this march now fits the pane — the flowing case this test is about is gone',
+    'this march now fits the pane — the two-ended case this test is about is gone',
   ).toBeGreaterThan(pane.room);
   expect(pane.scrollers, 'the March took a scroll of its own (design rule 17)').toEqual([]);
-  // The two columns open on the same line, in this state as in the other one: a flowing pane keeps
-  // its `position: relative` but must not keep the sticky `top` as an offset (measured 16 px low).
+  // The two columns open on the same line, in this stand as in the others.
   expect(pane.top, 'the pane starts below the first setup card').toBe(pane.setupTop);
 
   // The answer arrives a frame after the March changes size — it is a `ResizeObserver`'s word — so it
-  // is polled rather than sampled the instant the summary settles. A pane that never gives up the
-  // stick would have to hide its own tail to do it, which is what this fails on.
+  // is polled rather than sampled the instant the summary settles. At the top of the page a March this
+  // tall takes the **tail** stand: sticky, with a negative `top` that does nothing until the page has
+  // scrolled past it and then holds its tail above the command bar.
   await expect
-    .poll(async () => (await paneFrame(page)).position, {
-      message: 'a March taller than its room kept the stick',
+    .poll(async () => (await paneFrame(page)).stand, {
+      message: 'a March taller than its room did not take the tail stand',
     })
-    .toBe('relative');
+    .toBe('tail');
+  const tail = await paneFrame(page);
+  expect(tail.position).toBe('sticky');
+  expect(tail.offset, 'the tail stand is a negative sticky top').toBeLessThan(0);
+  expect(tail.top, 'the tail stand moved the pane before the page did').toBe(tail.setupTop);
 
-  // And the tail is reached the way the rule says it must be: by scrolling the page to its end.
+  // The page scrolls to its end: the tail is on screen, held above the command bar — and reached the
+  // way the rule says it must be, by the page's own scroll.
   await page.evaluate(() => {
     const view = globalThis as unknown as {
       scrollTo: (x: number, y: number) => void;
@@ -113,10 +117,38 @@ test('a March taller than the window is carried by the page, never by a scroll o
   });
   await settle(page);
   const scrolled = await paneFrame(page);
+  expect(scrolled.stand).toBe('tail');
+  // The line the tail holds is the pane's own top plus its room: 24 px above the command bar.
   expect(
     scrolled.bottom,
     'the end of the March cannot be brought on screen by the page scroll',
-  ).toBeLessThanOrEqual(scrolled.viewport + 1);
+  ).toBeLessThanOrEqual(16 + scrolled.room + 1);
+  expect(scrolled.top, 'the head is off the top of the window in the tail stand').toBeLessThan(0);
+
+  // A short turn of the wheel up — shorter than the head is off screen, or the head would simply pin:
+  // the pane lets go of the tail and travels with the page, so the recap comes down with it rather
+  // than waiting for the top of the page.
+  await page.mouse.move(640, 300);
+  await page.mouse.wheel(0, -40);
+  await expect
+    .poll(async () => (await paneFrame(page)).stand, {
+      message: 'a scroll up did not let the tail go',
+    })
+    .toBe('flow');
+  const flowing = await paneFrame(page);
+  expect(flowing.position).toBe('relative');
+  expect(flowing.top, 'the pane did not come down with the page').toBeGreaterThan(scrolled.top);
+
+  // And once its head is back on the line, the head pins: the recap stays on screen from here up.
+  await page.mouse.wheel(0, -4000);
+  await expect
+    .poll(async () => (await paneFrame(page)).stand, {
+      message: 'scrolling up did not pin the head',
+    })
+    .toBe('top');
+  const head = await paneFrame(page);
+  expect(head.position).toBe('sticky');
+  expect(head.top, 'the head is not on its line').toBe(head.setupTop);
 
   expect(problems).toEqual([]);
 });
@@ -145,7 +177,7 @@ test('a March that fits the room keeps the stick — the point of the foot panel
   expect(problems).toEqual([]);
 });
 
-test('the plan method’s March is taller than its room, and the page carries it', async ({ page }) => {
+test('the plan method’s March is taller than its room, and sticks at both ends', async ({ page }) => {
   const problems = watchConsole(page);
   // The one method whose pane cannot stick, and the reason it cannot: the plan block is part of the
   // answer and **arrives open** (S-59), so its figures are on screen from the first frame rather than
@@ -171,19 +203,31 @@ test('the plan method’s March is taller than its room, and the page carries it
   test.info().annotations.push({ type: 'measured', description: `plan open — ${withPlan}` });
   process.stdout.write(`  measured — plan open: ${withPlan}\n`);
 
-  // What is true, rather than what would be tidier: a March this tall is **carried by the page**.
+  // What is true, rather than what would be tidier: a March this tall **sticks at both ends**. Which
+  // stand it is in right now depends on where the click on the method left the page — the pane holds
+  // its place when the March grows under a pinned head — so the end that matters is asserted where it
+  // shows: the page scrolled to its end, the tail is pinned above the command bar, on screen.
   expect(
     open.height,
-    'the plan method now fits its room — the flowing case this test is about is gone',
+    'the plan method now fits its room — the two-ended case this test is about is gone',
   ).toBeGreaterThan(open.room);
+  await page.evaluate(() => {
+    const view = globalThis as unknown as {
+      scrollTo: (x: number, y: number) => void;
+      document: { documentElement: { scrollHeight: number } };
+    };
+    view.scrollTo(0, view.document.documentElement.scrollHeight);
+  });
   await expect
-    .poll(async () => (await paneFrame(page)).position, {
-      message: 'a March taller than its room with the plan open kept the stick',
+    .poll(async () => (await paneFrame(page)).stand, {
+      message: 'a March taller than its room with the plan open did not pin its tail at the end of the page',
     })
-    .toBe('relative');
+    .toBe('tail');
+  const atEnd = await paneFrame(page);
+  expect(atEnd.bottom, 'the tail is not on its line').toBeLessThanOrEqual(16 + atEnd.room + 1);
 
-  // And closing the block — the chevron's whole purpose — gives the pane its stick back, if not its
-  // room: measured on this account, what is left is still taller than 740 px.
+  // And closing the block — the chevron's whole purpose — shortens the March, if not to its room:
+  // measured on this account, what is left is still taller than 740 px.
   await fold.click();
   await expect(fold).toHaveAttribute('aria-expanded', 'false');
   // The fold animates its own height, so the shorter March arrives a few frames later rather than on the

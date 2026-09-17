@@ -419,16 +419,19 @@ export function marchPane(page: Page): Locator {
 }
 
 /**
- * The pane as the frame laid it out: whether it sticks or travels with the page, how tall the March
- * is, the room the window leaves it, where its top edge is (beside `setupTop`), and every box inside
- * it that holds more than it shows.
+ * The pane as the frame laid it out: which stand it is in (`top` — head pinned; `tail` — tail pinned
+ * above the command bar; `flow` — travelling with the page between the two), its `position` and the
+ * `top` written on it, how tall the March is, the room the window leaves it, where its top edge is
+ * (beside `setupTop`), and every box inside it that holds more than it shows.
  *
- * The decision is the app's (`shell/usePaneFits.ts`); a spec reads it here rather than working it out
- * again. The room is spelled out — the window, less the pane's own top, the command bar and 24 px of
- * air — because a spec that borrowed the app's own arithmetic could not notice it drifting.
+ * The decision is the app's (`shell/usePaneStick.ts`); a spec reads it here rather than working it
+ * out again. The room is spelled out — the window, less the pane's own top, the command bar and 24 px
+ * of air — because a spec that borrowed the app's own arithmetic could not notice it drifting.
  */
 export function paneFrame(page: Page): Promise<{
+  stand: string;
   position: string;
+  offset: number;
   height: number;
   room: number;
   bottom: number;
@@ -442,6 +445,7 @@ export function paneFrame(page: Page): Promise<{
       innerHeight: number;
       getComputedStyle: (element: unknown) => {
         position: string;
+        top: string;
         overflowX: string;
         overflowY: string;
         fontSize: string;
@@ -460,10 +464,21 @@ export function paneFrame(page: Page): Promise<{
       return declared.endsWith('rem') ? value * (Number.parseFloat(root.fontSize) || 16) : value;
     };
     const pane = view.document.querySelector('aside') as unknown as {
+      dataset: { stand?: string };
       getBoundingClientRect: () => { height: number; bottom: number; top: number };
       querySelectorAll: (selector: string) => Iterable<unknown>;
     } | null;
-    const empty = { position: 'none', height: 0, room: 0, bottom: 0, viewport: 0, top: 0, setupTop: 0 };
+    const empty = {
+      stand: 'none',
+      position: 'none',
+      offset: 0,
+      height: 0,
+      room: 0,
+      bottom: 0,
+      viewport: 0,
+      top: 0,
+      setupTop: 0,
+    };
     if (pane === null) return { ...empty, scrollers: [] };
     // The first setup card, whose own top edge the pane shares (both columns open on the same line).
     const first = view.document.querySelector('#troops') as unknown as {
@@ -487,8 +502,11 @@ export function paneFrame(page: Page): Promise<{
     }
 
     const rect = pane.getBoundingClientRect();
+    const style = view.getComputedStyle(pane);
     return {
-      position: view.getComputedStyle(pane).position,
+      stand: pane.dataset.stand ?? 'none',
+      position: style.position,
+      offset: Math.round(Number.parseFloat(style.top) || 0),
       height: Math.round(rect.height),
       room: Math.round(
         view.innerHeight - length('--mantine-spacing-lg', 16) - length('--pyr-commandbar-height', 92) - 24,

@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------------------------
    The frame's own CSS: the four shapes Mantine has no prop for (spike 0009's `frame.css`, trimmed
    to what frame V1 uses). Nothing here is a colour, a radius or a spacing — those are theme
-   tokens; `--pyr-appbar-height` is the 64 px both bars and the sticky pane are measured from.
+   tokens; `--pyr-appbar-height` is the 64 px both bars are measured from.
    --------------------------------------------------------------------------------------------- */
 
 /* One column of chrome and content, so a short page still puts the bottom bar on the bottom edge
@@ -60,10 +60,13 @@
    column makes that impossible: everything in the March moves together, so nothing in it can cover
    anything else in it.
 
-   The one scroll of design rule 17 is the page's, and the pane never takes one of its own: it
-   sticks only while the March fits the room above (`usePaneFits.ts` — the window, less this `top`,
-   less the command bar, less a little air), and `paneFlowing` below is what a March that does not
-   fit gets instead.
+   The one scroll of design rule 17 is the page's, and the pane never takes one of its own. A March
+   that fits the room above (`usePaneStick.ts` — the window, less this `top`, less the command bar,
+   less a little air) sticks here, head pinned, and keeps it. A March that does not **sticks at both
+   ends** (owner, 2026-09-17): this same rule pins its head when the page scrolls up, an inline
+   negative `top` pins its tail above the command bar when the page scrolls down, and `paneFlowing`
+   below carries it between the two. The hook writes `data-stand` — `top`, `tail` or `flow` — for
+   anyone reading the DOM.
 
    The Grid column it sits in runs the height of the row, which is the containing block a sticky
    element travels inside: that is what lets the pane follow the setup all the way down. */
@@ -73,21 +76,21 @@
   width: var(--pyr-pane-width);
 }
 
-/* A March taller than the room the window leaves it travels with the page instead of sticking: a
-   pane that followed the setup from there would have to hide its own tail, and giving it a scroll of
-   its own is the second scroller design rule 17 forbids (owner, 2026-09-15: "make this change so we
-   always avoid scroll bars on the battle summary" — 919 px of March against 768 px of room on their
-   own plan, with every fold shut).
+/* Between its two stuck stands a March taller than the window travels with the page, at the inline
+   `top` offset that holds it exactly where the last scroll left it — so turning the wheel around
+   never jumps the pane, it only changes which edge will catch first. A pane that scrolled on its own
+   here would be the second scroller design rule 17 forbids (owner, 2026-09-15: "make this change so
+   we always avoid scroll bars on the battle summary").
 
-   `top: auto` is not a detail: `top` is inherited from the rule above, and on a relative box it is an
-   *offset*, so the pane would sit 16 px below the first setup card instead of on its line (owner,
-   2026-09-15: "the battle summary is slightly below the troop selection form"). Aligned by giving the
-   offset back up, not by moving the setup.
+   `top: auto` is the fallback under that inline offset, and it is not a detail: `top` is inherited
+   from the rule above, and on a relative box it is an *offset*, so a pane with no offset written
+   would sit 16 px below the first setup card instead of on its line (owner, 2026-09-15: "the battle
+   summary is slightly below the troop selection form").
 
    `relative` rather than `static`, and not for a look either: the pane is the containing block the
    dozen `VisuallyHidden` labels inside the HP profile are positioned against, and against the initial
    containing block they add ~1 100 px of empty page under the app. `sticky` above is positioned
-   too, so the labels are contained in both states; only this one has to say so. */
+   too, so the labels are contained in every stand; only this one has to say so. */
 .paneFlowing {
   position: relative;
   top: auto;

@@ -310,7 +310,7 @@ variable, `--pyr-meta`, so restoring the 13 px floor is a one-line change; the t
   **one object** (owner, 2026-09-15) — the figures, the army, the counts, the left-out row, the notices and
   the plan's own block together, because the plan's assessment *is* the answer. The plan **arrives open**
   (2026-09-16, S-59) and **collapses on demand**: it reads as a part of the answer rather than a fold to
-  hunt for, and closing it is how a player whose pane no longer sticks gets one that does
+  hunt for, and closing it is how a player whose pane no longer fits the window gets one that does
   (`docs/investigations/0020-the-plan-screen.md` §1, D-5). **Where it stands was amended the same day** (owner,
   2026-09-16: *"we should first see the army then the details to change them afterwards"*): the order in the
   pane is **answer · army · left out · plan**, because the block is a *control* — reading another plan puts
@@ -319,19 +319,30 @@ variable, `--pyr-meta`, so restoring the 13 px floor is a one-line change; the t
   Nothing pins itself *inside* the column, because a block pinned inside its
   column is a block the rest of the column scrolls behind. It carries **no `max-height` and no `overflow`**:
   a scroll inside the pane is the second scroller design rule 17 forbids. What decides instead is
-  `shell/usePaneFits.ts`, which measures the March against `100dvh − --mantine-spacing-lg −
+  `shell/usePaneStick.ts`, which measures the March against `100dvh − --mantine-spacing-lg −
   --pyr-commandbar-height − 24 px` — the window less the pane's own sticky top, less the bar the pane must
   never be hidden under, less a little air — and re-measures on every change to the March or the window. It
-  fits, so the pane sticks; it does not fit, and the pane stops sticking and the page carries it. Measured
+  fits, so the pane sticks with its head pinned and keeps it. **It does not fit, and the pane sticks at both
+  ends** (owner, 2026-09-17: *"the right panel should move with the scroll so the recap is shown always, or
+  not far from the scroll"*): the page carries it while its middle is on screen; when the page scrolls down
+  past it, its tail pins 24 px above the command bar (a sticky box with a *negative* `top`, since a sticky
+  box only ever moves down from its natural place and the pane's is the head of its column); and the moment
+  the page scrolls up, the pane lets go where it stands (`position: relative` at that offset) and travels
+  with the page until its head is back on the line, where it pins again. Whichever way the wheel turns, the
+  recap is one flick away — the sidebar of any documentation site or store, and the pattern rule 16 says to
+  copy rather than invent. The pane writes its stand on itself (`data-stand`: `top`, `tail`, `flow`) and the
+  e2e helper `paneFrame()` reads it. Before that (2026-09-15 to 17) a March that did not fit was simply
+  carried by the page top to bottom, so the recap left the screen with the first flick and came back with
+  the last. Measured
   on a real march (leadership 84 300): **655 px with one warning alert, 553 px without**, against **740 / 640
-  / 560 px** of room at 1400×900 / 1280×800 / 1280×720 — it sticks at 1400×900 and flows at 1280×720 and at
-  1280×800-with-a-warning. Before the March's second half moved to the foot of the setup column it was
-  **771 px** against 768 px of room and stuck at no window size at all. The command bar's taller reserve
+  / 560 px** of room at 1400×900 / 1280×800 / 1280×720 — it fits at 1400×900 and is two-ended at 1280×720
+  and at 1280×800-with-a-warning. Before the March's second half moved to the foot of the setup column it
+  was **771 px** against 768 px of room and fit at no window size at all. The command bar's taller reserve
   (§1) costs the pane about **28 px** of room at every method, and that is the price of the sentence saying why the Objective is locked.
   **Amended 2026-09-16 (S-59):** the plan method's pane is the exception the plan block makes — measured with
   `paneFrame()` at 1400×900, **740 px of March against 740 px of room** with the block folded and **998 px
-  open**, so that pane sticks by nothing at all folded and flows while the plan is showing, which is what its
-  chevron is for (`docs/investigations/0020-the-plan-screen.md` §1).
+  open**, so that pane fits by nothing at all folded and is two-ended while the plan is showing, which is
+  what its chevron is for (`docs/investigations/0020-the-plan-screen.md` §1).
 - **Alignment.** Everything left-aligned; figures right-aligned in their column; nothing centred. A figure's
   name is a caption *under* it only for the hero — everywhere else the label comes first, because those are
   read as a list.

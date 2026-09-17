@@ -493,7 +493,7 @@ scroll"* — and the second is the one defect S-56 had just left open.
   Generate off the row.
 - **Measured, both halves.** The desktop bar is **88 px** with nothing to say and **119.7 px** with one note
   line, so `--pyr-commandbar-height` (`ui/theme.ts`) went 5.75rem → **7.5rem** and the jsdom fallback in
-  `shell/usePaneFits.ts` went 92 → **112** with it (`MarchPane.test.tsx` asserts `paneRoom()` is
+  `shell/usePaneFits.ts` (now `usePaneStick.ts`) went 92 → **112** with it (`MarchPane.test.tsx` asserts `paneRoom()` is
   `innerHeight − 152`): the pane loses about **28 px** of room at every method, which is the price of the note
   line. The pane itself, measured with `paneFrame()` (`e2e/helpers.ts`) on a real march at leadership
   84 300: **771 px against 768 px** of room at 1400×900 before, and **655 px with one warning alert / 553 px

@@ -371,7 +371,7 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       // The desktop command bar's own height (design plan §5.6, `CommandBar.dc.html`): 14 px of
       // padding, a 13 px label, the row — a 40 px well beside the 44 px Generate — and 14 px of
       // padding, plus the one line both bars may carry above the fields. Said once, and read twice:
-      // the bar is laid out from it, and `usePaneFits.ts` subtracts it from the window so the March
+      // the bar is laid out from it, and `usePaneStick.ts` subtracts it from the window so the March
       // pane never lands under it.
       //
       // It is the bar's **tallest** state, not its everyday one, because a reserve that moves would
