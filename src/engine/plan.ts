@@ -461,7 +461,16 @@ function marchOf(
   };
 }
 
-/** Rungs of `depth` types whose lowest sits `gap` above `mercenaryHp`, each 2 % above the one below. */
+/**
+ * Rungs of `depth` types whose lowest sits `gap` above `mercenaryHp`, each 2 % above the one below.
+ *
+ * `order` is which type takes which rung, biggest rung first. Left out, it is the ranking's own: the
+ * strongest `depth` types, the weakest per HP on the top rung (the biggest stack, the first the enemy wipes)
+ * and the strongest on the lowest. That rule was measured wrong on the owner's export of 2026-09-18
+ * (`tools/theorycraft/out/98-rung-order.md`): with the sweet spot's own mercenaries and rung sizes, the best
+ * of all 5 040 assignments hit for 5 426 465 against the rule's 5 143 988 — 5.5 % for the same silver — and a
+ * swap climb reaches that best in 84 battles. `makeScorer` learns the order once a depth by that climb.
+ */
 function ladder(
   troops: Effective[],
   depth: number,
@@ -469,11 +478,9 @@ function ladder(
   gap: number,
   leadership: number,
   scale = 1,
+  order?: Effective[],
 ): { entry: Effective; count: number }[] {
-  // The strongest `depth` types, weakest first: the weakest takes the top rung (biggest stack, dies
-  // unstruck) and the strongest takes the lowest (smallest stack, most strikes) — `troops` is sorted
-  // weakest-per-HP first, so the tail is the set we want and its own order is the rung order.
-  const chosen = troops.slice(-depth);
+  const chosen = order ?? troops.slice(-depth);
   const floor = mercenaryHp * (1 + gap) * scale;
   const out: { entry: Effective; count: number }[] = [];
   let used = 0;
@@ -622,7 +629,15 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     let finale: ScoredShape['finale'] = null;
     for (const finaleDepth of DEPTHS) {
       for (const finaleGrowth of LADDER_GROWTHS) {
-        const finaleLadder = ladder(troops, finaleDepth, leftoverHp, gap, leadership, finaleGrowth);
+        const finaleLadder = ladder(
+          troops,
+          finaleDepth,
+          leftoverHp,
+          gap,
+          leadership,
+          finaleGrowth,
+          orderFor(finaleDepth, leftoverHp, finaleGrowth, leftovers),
+        );
         if (finaleLadder.length === 0) continue;
         const attempt = marchOf([...finaleLadder, ...leftovers], enemyStacks);
         if (attempt.silver > finaleBudget) continue;
@@ -652,6 +667,50 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
   // only stay the same within that run.
   let cachedKey = '';
   let cachedFinale: ScoredShape['finale'] = null;
+
+  /**
+   * Which type takes which rung, learned once a depth: from the ranking's order, every pairwise swap is
+   * tried on the first ladder of that depth the search asks for (its mercenaries, its rung sizes), the best
+   * improving swap taken, until none improves. Measured to reach the best of all assignments in 84 battles
+   * (`out/98`), and the best order held across leadership caps and mercenary vectors on the same account.
+   */
+  const rungOrders = new Map<number, Effective[]>();
+  const orderFor = (
+    depth: number,
+    mercenaryHp: number,
+    scale: number,
+    vector: { entry: Effective; count: number }[],
+  ): Effective[] => {
+    const held = rungOrders.get(depth);
+    if (held) return held;
+    let order = troops.slice(-depth);
+    const damageOf = (candidate: Effective[]): number => {
+      const rungs = ladder(troops, depth, mercenaryHp, gap, leadership, scale, candidate);
+      return rungs.length === 0 ? -Infinity : marchOf([...rungs, ...vector], enemyStacks).damage;
+    };
+    let current = damageOf(order);
+    // A ladder the leadership cannot pay for teaches nothing: answer with the ranking's order and learn
+    // from the first request that fits. (The first ladders the grid asks for field every mercenary at its
+    // cap, and on a real account those are the ones over the cap — measured: learning on them kept the
+    // ranking's order for good, `out/98`.)
+    if (!Number.isFinite(current)) return order;
+    for (;;) {
+      let best: { order: Effective[]; damage: number } | undefined;
+      for (let i = 0; i < order.length; i += 1) {
+        for (let j = i + 1; j < order.length; j += 1) {
+          const trial = [...order];
+          [trial[i], trial[j]] = [trial[j] as Effective, trial[i] as Effective];
+          const damage = damageOf(trial);
+          if (damage > current && (!best || damage > best.damage)) best = { order: trial, damage };
+        }
+      }
+      if (!best) break;
+      order = best.order;
+      current = best.damage;
+    }
+    rungOrders.set(depth, order);
+    return order;
+  };
 
   return (marches, counts, depth, scale, silverBudget) => {
     let vector = mercTypes.map((entry) => ({
@@ -683,7 +742,17 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     const mercenaryHp = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
     const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
     const rungs =
-      sizerMethod !== undefined ? sizedRungs : ladder(troops, depth, mercenaryHp, gap, leadership, scale);
+      sizerMethod !== undefined
+        ? sizedRungs
+        : ladder(
+            troops,
+            depth,
+            mercenaryHp,
+            gap,
+            leadership,
+            scale,
+            orderFor(depth, mercenaryHp, scale, vector),
+          );
     if (rungs.length === 0) return null;
     const march = marchOf([...rungs, ...vector], enemyStacks);
     if (budgetPerMarch !== undefined && march.silver > budgetPerMarch) return null;
@@ -1027,6 +1096,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const evaluateVector = (
     vector: { entry: Effective; count: number }[],
     only?: { depth: number; scale: number },
+    laddersOnly = false,
   ): Candidate | null => {
     let pick: Candidate | null = null;
     const fielded = vector.filter((merc) => merc.count > 0);
@@ -1039,9 +1109,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // (its scale means nothing) when the flag is on.
     const depths: readonly number[] = only
       ? [only.depth]
-      : sizerShape
+      : sizerShape && !laddersOnly
         ? [...Object.keys(SIZER_DEPTHS).map(Number), ...DEPTHS]
         : DEPTHS;
+    /**
+     * A sizer shape may field fewer mercenaries than the vector it was given (Military Science does), and
+     * that smaller vector is one the grid never holds — so the ladders were never scored on it. Measured on
+     * the owner's export of 2026-09-18 (`tools/theorycraft/out/97-shelter-margin.md` §C): with the sweet
+     * spot's own mercenaries the tight ladder hit for 5 343 795 against the sizer's 5 143 988 for the same
+     * silver, and the search had never seen it. Every vector a sizer shape settles on is scored with the
+     * ladders too.
+     */
+    const derived: { entry: Effective; count: number }[][] = [];
     for (const depth of depths) {
       for (const scale of only ? [only.scale] : depth <= 0 ? [1] : LADDER_GROWTHS) {
         const scored = score(marches, counts, depth, scale, input.silverBudget);
@@ -1061,6 +1140,19 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         };
         if (!pick || candidate.total > pick.total) pick = candidate;
         record(candidate);
+        if (depth <= 0 && scored.mercs.some((merc, index) => merc.count !== vector[index]?.count)) {
+          derived.push(scored.mercs);
+        }
+      }
+    }
+    if (!laddersOnly) {
+      const seen = new Set<string>([vector.map((merc) => merc.count).join(',')]);
+      for (const mercs of derived) {
+        const key = mercs.map((merc) => merc.count).join(',');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const candidate = evaluateVector(mercs, undefined, true);
+        if (candidate && (!pick || candidate.total > pick.total)) pick = candidate;
       }
     }
     return pick;

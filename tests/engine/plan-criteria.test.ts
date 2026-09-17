@@ -82,11 +82,15 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
   expect(sweet.repeat.damage).toBeGreaterThan(thrift.repeat.damage);
   expect(most.repeat.damage).toBeGreaterThan(sweet.repeat.damage);
 
-  // The two efficiencies sit where the notes say they do.
-  expect(thrift.bestFor.hired).toBe(true);
-  expect(perHired(thrift)).toBe(Math.max(...rows.map(perHired)));
-  expect(most.bestFor.silver).toBe(true);
-  expect(perSilver(most)).toBe(Math.max(...rows.map(perSilver)));
+  // The two efficiency notes sit on exactly one stop each, and on the stop that has the figure. (Which stop
+  // that is depends on the army: at 12 000 leadership the sweet spot is the best a silver, not the most
+  // damage, because silver is not flat across that bar.)
+  const silverNotes = rows.filter((row) => row.bestFor.silver);
+  const hiredNotes = rows.filter((row) => row.bestFor.hired);
+  expect(silverNotes).toHaveLength(1);
+  expect(hiredNotes).toHaveLength(1);
+  expect(perSilver(silverNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perSilver)));
+  expect(perHired(hiredNotes[0] as PlanRow)).toBe(Math.max(...rows.map(perHired)));
 
   // The sweet spot is not beaten on both ratios by either end.
   for (const end of [thrift, most]) {
@@ -153,13 +157,18 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       expect(plan.recommend?.repeat.damage).toBe(
         planMarch(input.request, plan.recommend?.counts ?? {}).summary.avgDamage,
       );
-      // Measured 2026-09-18 (`out/95`, `out/96`): 7 · 10 · 14 burned; thrift 548 476 a hired; sweet 1.8064 ·
-      // 494 851, campaign 20 924 965 for 10 957 600; most 6 242 452 at 2.2788; the plan 24 814 601; ~1 s.
+      // Measured 2026-09-18 after the ladder learned its rung order (`out/98`): 8 · 11 · 14 burned; thrift
+      // 529 687 a hired; sweet 1.9459 · 484 597, campaign 22 045 361 for 10 957 600; most 6 242 452 at 2.2788;
+      // the plan 24 814 601. Re-based from the morning's 7 · 10 · 14 (thrift 548 476, sweet 1.8064 · 494 851,
+      // campaign 20 924 965): the 7-burn thrift end is dominated on the campaign by the new 8-burn plan — the
+      // same silver, the same 35 hired burned over the four marches, 10 % more damage — so it left the
+      // frontier, and the sweet spot gained 7.7 % of damage for 2 % of damage a hired unit. A floor is
+      // re-based only for a change measured better on the campaign, and the note says which.
       expectCriteria(plan, {
-        thriftPerHired: under(548_476),
-        sweetPerSilver: under(1.8064),
-        sweetPerHired: under(494_851),
-        sweetCampaignDamage: under(20_924_965),
+        thriftPerHired: under(529_687),
+        sweetPerSilver: under(1.9459),
+        sweetPerHired: under(484_597),
+        sweetCampaignDamage: under(22_045_361),
         sweetCampaignSilverCeiling: over(10_957_600),
         mostDamage: under(6_242_452),
         mostPerSilver: under(2.2788),
@@ -173,17 +182,20 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       const plan = planCampaign(
         buildPlanRequest(profile, { ...setup, housing: { ...setup.housing, leadership: 12_000 } }),
       );
-      // Measured 2026-09-18: 9 · 13 · 17 burned; thrift 602 630 a hired; sweet 1.4644 · 529 175, campaign
-      // 28 804 801 for 18 790 400; most 8 185 823 at 1.7426; the plan 32 231 242.
+      // Measured 2026-09-18 after the ladder learned its rung order: 10 · 13 · 19 burned, all ladders; thrift
+      // 636 133 a hired; sweet 1.5831 · 563 760, campaign 29 660 413 for 18 585 800; most 8 281 474 at 1.5186;
+      // the plan 32 518 195. Re-based from 9 · 13 · 17 (thrift 602 630, sweet 1.4644 · 529 175, campaign
+      // 28 804 801 for 18 790 400, most 8 185 823 at 1.7426): every sweet-spot figure rose and its silver fell;
+      // the most-damage stop does 1.2 % more for 16 % more silver, which is the trade its name promises.
       expectCriteria(plan, {
-        thriftPerHired: under(602_630),
-        sweetPerSilver: under(1.4644),
-        sweetPerHired: under(529_175),
-        sweetCampaignDamage: under(28_804_801),
-        sweetCampaignSilverCeiling: over(18_790_400),
-        mostDamage: under(8_185_823),
-        mostPerSilver: under(1.7426),
-        campaignDamage: under(32_231_242),
+        thriftPerHired: under(636_133),
+        sweetPerSilver: under(1.5831),
+        sweetPerHired: under(563_760),
+        sweetCampaignDamage: under(29_660_413),
+        sweetCampaignSilverCeiling: over(18_585_800),
+        mostDamage: under(8_281_474),
+        mostPerSilver: under(1.5186),
+        campaignDamage: under(32_518_195),
       });
     }, 120_000);
   },

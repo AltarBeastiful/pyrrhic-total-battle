@@ -176,8 +176,8 @@ describe('the search does not get worse', () => {
   test('the plan this army produces, frozen', () => {
     // Measured 2026-09-15 with the ladder's scale hill-climbed (`plan.ts`, SCALE_STEPS).
     expect(PLAN.marches).toBe(15);
-    expect(PLAN.totalDamage).toBe(18_331_217);
-    expect(PLAN.silver).toBe(33_288_500);
+    expect(PLAN.totalDamage).toBe(18_333_467);
+    expect(PLAN.silver).toBe(33_284_700);
     expect(PLAN.mercLost).toBe(45);
     expect(PLAN.march.counts).toEqual({
       'archer-2': 2_569,
@@ -198,8 +198,12 @@ describe('the search does not get worse', () => {
     // does **not** carry — the count the UI needs to be honest about the bar it draws. It is a big number
     // because a frontier is a big number: 190 plans here, of which three are worth a stop (the bar carries
     // three since 2026-09-18). Every other figure in this test is unmoved, because the plan is the same plan.
+    //
+    // 18 331 217 → 18 333 467 damage and 33 288 500 → 33 284 700 silver on 2026-09-18, when the ladder
+    // started learning which type takes which rung (`out/98`): the repeated march is the same march to the
+    // unit, and the final march gained 2 250 damage for 3 800 silver less from a better rung order.
     expect(PLAN.alternatives).toHaveLength(3);
-    expect(PLAN.leftOut).toBe(187);
+    expect(PLAN.leftOut).toBe(188);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained
@@ -210,7 +214,7 @@ describe('the search does not get worse', () => {
   test('and the two rates it reaches are floors, not ceilings', () => {
     // Damage is the objective; the two ratios are the trade. All three may only improve — this is the
     // assertion that fails if the search loses a lever (the scale, the counts, the finale).
-    expect(PLAN.totalDamage).toBeGreaterThanOrEqual(18_331_217);
+    expect(PLAN.totalDamage).toBeGreaterThanOrEqual(18_333_467);
     expect(PLAN.mostEfficient?.damagePerSilver ?? 0).toBeGreaterThanOrEqual(2.49);
     expect(PLAN.mostThrifty?.damagePerMercenary ?? 0).toBeGreaterThanOrEqual(816_726);
     expect(PLAN.recommend).toBeDefined();
