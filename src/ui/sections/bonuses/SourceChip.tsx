@@ -75,6 +75,7 @@ export function SourceChip({
   // The tooltip's target is a box around the chip rather than the chip itself: Mantine's `Chip` hands
   // its props to the hidden input, and a hover never lands on a hidden input. In a portal, so a
   // popover-anchored gear and a card's own overflow leave it alone; on focus too, for the keyboard.
+  // Its look and its half-second delay are the theme's (`theme.ts`, `Tooltip`).
   const described =
     details.length === 0 ? (
       chip

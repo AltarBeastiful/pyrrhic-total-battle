@@ -293,6 +293,24 @@ export const theme: MantineThemeOverride = createTheme({
     Divider: { styles: { root: { borderColor: 'var(--pyr-hairline)' } } },
     Menu: { styles: { divider: { borderColor: 'var(--pyr-hairline)' } } },
     Popover: { defaultProps: { shadow: 'md', withArrow: false } },
+    // A tooltip is a small sheet, not an inverted black box (owner, 2026-09-17: "more mellow, more
+    // blending in"): the sheet surface, the pane's own hairline and shadow, the page's ink, 8 × 12 of
+    // padding. And it waits half a second, so a cursor crossing a row of chips on its way somewhere
+    // else raises nothing; the one that stops gets its answer.
+    Tooltip: {
+      defaultProps: { openDelay: 500, radius: 'sm', withArrow: false, transitionProps: { duration: 120 } },
+      styles: {
+        tooltip: {
+          background: 'var(--mantine-color-default)',
+          color: 'var(--mantine-color-text)',
+          border: '1px solid var(--pyr-pane-border)',
+          boxShadow: 'var(--pyr-panel-shadow)',
+          padding: '0.5rem 0.75rem',
+          fontSize: 'var(--mantine-font-size-xs)',
+          lineHeight: 1.4,
+        },
+      },
+    },
     Modal: { defaultProps: { radius: 'md' } },
     Drawer: { defaultProps: { radius: 'md' } },
     Card: { defaultProps: { withBorder: false, padding: 'md', radius: 'md' } },
