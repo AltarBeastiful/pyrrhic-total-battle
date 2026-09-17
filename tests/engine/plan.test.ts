@@ -372,6 +372,32 @@ describe(
       expect([...golds].sort((a, b) => a - b)).toEqual(golds);
     });
 
+    test(
+      'the sizer shape never makes the plan worse, and can only add a shape the ladder cannot express',
+      () => {
+        // Owner, 2026-09-17: a put-back beat the plan's own march. Behind `sizerShape` the search also scores
+        // the Elite sizer over every troop type for each mercenary vector; the total can only go up.
+        const req = request();
+        const ladder = planCampaign({ request: req, marchTarget: 4, alternatives: 3, barAxis: 'burn' });
+        const both = planCampaign({
+          request: req,
+          marchTarget: 4,
+          alternatives: 3,
+          barAxis: 'burn',
+          sizerShape: true,
+        });
+        expect(both.totalDamage).toBeGreaterThanOrEqual(ladder.totalDamage);
+        expect(both.marches).toBe(ladder.marches);
+        // Whatever shape won, its counts are fieldable and its damage is the battle's own.
+        expect(used(req, both.march.counts, 'leadership')).toBeLessThanOrEqual(req.housing.leadership);
+        expect(both.march.damage).toBe(planMarch(req, both.march.counts).summary.avgDamage);
+        // Three stops, never more (owner, 2026-09-17: "keep 3 spot on the slider each time").
+        expect(both.alternatives.length).toBeLessThanOrEqual(3);
+        expect(both.alternatives.some((row) => row.pick === 'step')).toBe(false);
+      },
+      TIMEOUT,
+    );
+
     test('merging near stops: two plans that burn the same and sit within the tolerance are one stop', () => {
       // The candidate fix to the silver axis (`mergeNearStops`): measured on the owner's bar, `best-for-silver`
       // and `most-damage` burned 22 each at 6 905 207 and 6 920 621 damage a march — one plan to the eye.

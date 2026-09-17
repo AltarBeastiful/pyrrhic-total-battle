@@ -25,7 +25,7 @@ import type { StackRequest } from '../../src/engine/types';
 import { MERC_IDS, Report, loadOwner, n, scenarioC, withHousing } from './harness';
 
 const HORIZONS = [3, 4, 10];
-const KEEP = 4;
+const KEEP = 3;
 
 const perSilver = (row: PlanTotals): number =>
   row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0;

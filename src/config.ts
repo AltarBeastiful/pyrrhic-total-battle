@@ -38,12 +38,11 @@ export const CAMPAIGN = {
    */
   marches: 4,
   /**
-   * The most plans the S-55 bar may carry. Since S-59 the engine offers only its four named answers (sweet
-   * spot, most damage, best for silver, spare the stock — `PlanPick`), deduplicated, so this only ever
-   * truncates that list and never pads it; four is "every answer", which is what the owner's review of
-   * 2026-09-15 asked for ("we should have less option").
+   * The most plans the S-55 bar may carry. **Three** (owner, 2026-09-17: *"my definite verdict is keep 3 spot
+   * on the slider each time"*): the thrift end, the sweet spot and the most damage, and never a filler
+   * between them. The engine only ever truncates to this; it never pads.
    */
-  planAlternatives: 4,
+  planAlternatives: 3,
   /**
    * **S-58 — the two candidate fixes for "the plan drops a whole hired type"**, each behind its own flag so
    * they can be measured against each other before either ships (owner, 2026-09-15: *"implement both behind
@@ -60,7 +59,7 @@ export const CAMPAIGN = {
    * 2 331 500 silver at the same 17 burned, and the thrift end fields 10 legionaries instead of none; B only
    * hides the legionary-free plan, and with A on it has nothing left to hide.
    */
-  planFixes: { tokenFloor: true, refuseDroppedTypes: false },
+  planFixes: { tokenFloor: true, refuseDroppedTypes: false, sizerShape: false },
   /**
    * **The bar's axis** — `'burn'` since the owner's decision of 2026-09-17 (review of 2026-09-16 put both
    * axes behind this flag so `tools/theorycraft/91` could measure them; this is the answer it produced).
