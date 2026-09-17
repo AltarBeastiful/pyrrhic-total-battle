@@ -2,68 +2,7 @@
 
 Every sequence is four marches: the sizers re-sized each march on the stock the last one left (Generate four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. Each march priced by `simulateBattle` on its counts.
 
-Run: 2026-09-17T19:41:48.008Z, commit ff1e7f7
-
-## 2026-09-17 export, its setup (7 000 leadership)
-
-The plan offers 4 stops.
-
-| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
-|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 22,493,346 | 10,957,600 | 93 | 2.05 | 241,864 |
-| Tier ladder · Generate (average damage) | 4 | 25,952,553 | 14,192,200 | 93 | 1.83 | 279,060 |
-| Troops first · all types | 4 | 23,441,856 | 10,957,600 | 55 | 2.14 | 426,216 |
-| Troops first · Generate (average damage) | 4 | 25,833,694 | 14,192,200 | 86 | 1.82 | 300,392 |
-| Complete optimization · sweet-spot | 4 | 21,662,734 | 10,957,600 | 47 | 1.98 | 460,909 |
-| Complete optimization · more-mercs | 4 | 22,133,839 | 10,957,600 | 50 | 2.02 | 442,677 |
-| Complete optimization · steady-max | 4 | 23,264,491 | 10,957,600 | 53 | 2.12 | 438,953 |
-| Complete optimization · all-in | 4 | 22,518,504 | 14,337,600 | 93 | 1.57 | 242,134 |
-
-## 2026-09-17 export, 12 000 leadership
-
-The plan offers 4 stops.
-
-| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
-|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 32,417,040 | 18,790,400 | 93 | 1.73 | 348,570 |
-| Tier ladder · Generate (average damage) | 4 | 33,361,705 | 20,399,600 | 93 | 1.64 | 358,728 |
-| Troops first · all types | 4 | 33,438,122 | 18,790,400 | 70 | 1.78 | 477,687 |
-| Troops first · Generate (average damage) | 4 | 34,283,252 | 21,204,200 | 85 | 1.62 | 403,332 |
-| Complete optimization · silver-saver | 4 | 25,145,044 | 14,231,900 | 51 | 1.77 | 493,040 |
-| Complete optimization · sweet-spot | 4 | 32,231,242 | 18,790,400 | 67 | 1.72 | 481,063 |
-| Complete optimization · steady-max | 4 | 32,518,195 | 21,057,500 | 73 | 1.54 | 445,455 |
-| Complete optimization · all-in | 4 | 31,652,798 | 22,422,900 | 93 | 1.41 | 340,353 |
-
-## live account of 2026-09-18 (one hired type, 20 000 leadership)
-
-The plan offers 4 stops.
-
-| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
-|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 26,530,424 | 31,236,000 | 30 | 0.85 | 884,347 |
-| Tier ladder · Generate (average damage) | 4 | 31,495,858 | 45,750,400 | 30 | 0.69 | 1,049,862 |
-| Troops first · all types | 4 | 26,530,424 | 31,236,000 | 30 | 0.85 | 884,347 |
-| Troops first · Generate (average damage) | 4 | 31,495,858 | 45,750,400 | 30 | 0.69 | 1,049,862 |
-| Complete optimization · silver-saver | 4 | 21,453,290 | 20,537,200 | 22 | 1.04 | 975,150 |
-| Complete optimization · sweet-spot | 4 | 29,677,128 | 30,607,200 | 25 | 0.97 | 1,187,085 |
-| Complete optimization · steady-max | 4 | 30,215,378 | 30,270,800 | 28 | 1.00 | 1,079,121 |
-| Complete optimization · all-in | 4 | 31,218,724 | 31,092,400 | 30 | 1.00 | 1,040,624 |
-
-## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
-
-The plan offers 5 stops.
-
-| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
-|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 72,384,395 | 17,179,200 | 874 | 4.21 | 82,820 |
-| Tier ladder · Generate (average damage) | 4 | 80,658,235 | 30,800,000 | 874 | 2.62 | 92,286 |
-| Troops first · all types | 4 | 29,111,661 | 17,179,200 | 78 | 1.69 | 373,226 |
-| Troops first · Generate (average damage) | 4 | 52,075,835 | 0 | 874 | 52075835.00 | 59,583 |
-| Complete optimization · silver-saver | 4 | 22,179,294 | 13,217,400 | 49 | 1.68 | 452,639 |
-| Complete optimization · sweet-spot | 4 | 26,023,854 | 17,179,200 | 58 | 1.51 | 448,687 |
-| Complete optimization · more-mercs | 4 | 27,096,537 | 17,179,200 | 61 | 1.58 | 444,206 |
-| Complete optimization · steady-max | 4 | 30,107,115 | 17,179,200 | 70 | 1.75 | 430,102 |
-| Complete optimization · all-in | 4 | 29,111,661 | 17,179,200 | 78 | 1.69 | 373,226 |
+Run: 2026-09-17T19:55:51.678Z, commit 82971f9
 
 ## first-run army, Bear V ×1 (20 000 leadership)
 
@@ -136,8 +75,69 @@ The plan offers 3 stops.
 | Troops first · all types | 4 | 8,628,782 | 6,083,200 | 24 | 1.42 | 359,533 |
 | Troops first · Generate (average damage) | 4 | 8,633,665 | 6,157,800 | 24 | 1.40 | 359,736 |
 | TotalStack · optimize (as captured, repeated) | 4 | 8,911,356 | 6,084,400 | 24 | 1.46 | 371,307 |
-| Kai’s calculator · extract (as captured, repeated) | 4 | 8,118,806 | 6,203,200 | 24 | 1.31 | 338,284 |
+| Kai’s calculator · extract (as captured, repeated) | 4 | 8,792,837 | 6,203,200 | 27 | 1.42 | 325,661 |
 | Complete optimization · sweet-spot | 4 | 8,193,505 | 6,083,200 | 19 | 1.35 | 431,237 |
 | Complete optimization · steady-max | 4 | 8,331,398 | 6,083,200 | 21 | 1.37 | 396,733 |
 | Complete optimization · all-in | 4 | 8,154,596 | 6,250,700 | 24 | 1.30 | 339,775 |
+
+## 2026-09-17 export, its setup (7 000 leadership)
+
+The plan offers 4 stops.
+
+| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
+|---|---|---|---|---|---|---|
+| Tier ladder · all types | 4 | 22,493,346 | 10,957,600 | 93 | 2.05 | 241,864 |
+| Tier ladder · Generate (average damage) | 4 | 25,952,553 | 14,192,200 | 93 | 1.83 | 279,060 |
+| Troops first · all types | 4 | 23,441,856 | 10,957,600 | 55 | 2.14 | 426,216 |
+| Troops first · Generate (average damage) | 4 | 25,833,694 | 14,192,200 | 86 | 1.82 | 300,392 |
+| Complete optimization · sweet-spot | 4 | 21,662,734 | 10,957,600 | 47 | 1.98 | 460,909 |
+| Complete optimization · more-mercs | 4 | 22,133,839 | 10,957,600 | 50 | 2.02 | 442,677 |
+| Complete optimization · steady-max | 4 | 23,264,491 | 10,957,600 | 53 | 2.12 | 438,953 |
+| Complete optimization · all-in | 4 | 22,518,504 | 14,337,600 | 93 | 1.57 | 242,134 |
+
+## 2026-09-17 export, 12 000 leadership
+
+The plan offers 4 stops.
+
+| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
+|---|---|---|---|---|---|---|
+| Tier ladder · all types | 4 | 32,417,040 | 18,790,400 | 93 | 1.73 | 348,570 |
+| Tier ladder · Generate (average damage) | 4 | 33,361,705 | 20,399,600 | 93 | 1.64 | 358,728 |
+| Troops first · all types | 4 | 33,438,122 | 18,790,400 | 70 | 1.78 | 477,687 |
+| Troops first · Generate (average damage) | 4 | 34,283,252 | 21,204,200 | 85 | 1.62 | 403,332 |
+| Complete optimization · silver-saver | 4 | 25,145,044 | 14,231,900 | 51 | 1.77 | 493,040 |
+| Complete optimization · sweet-spot | 4 | 32,231,242 | 18,790,400 | 67 | 1.72 | 481,063 |
+| Complete optimization · steady-max | 4 | 32,518,195 | 21,057,500 | 73 | 1.54 | 445,455 |
+| Complete optimization · all-in | 4 | 31,652,798 | 22,422,900 | 93 | 1.41 | 340,353 |
+
+## live account of 2026-09-18 (one hired type, 20 000 leadership)
+
+The plan offers 4 stops.
+
+| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
+|---|---|---|---|---|---|---|
+| Tier ladder · all types | 4 | 26,530,424 | 31,236,000 | 30 | 0.85 | 884,347 |
+| Tier ladder · Generate (average damage) | 4 | 31,495,858 | 45,750,400 | 30 | 0.69 | 1,049,862 |
+| Troops first · all types | 4 | 26,530,424 | 31,236,000 | 30 | 0.85 | 884,347 |
+| Troops first · Generate (average damage) | 4 | 31,495,858 | 45,750,400 | 30 | 0.69 | 1,049,862 |
+| Complete optimization · silver-saver | 4 | 21,453,290 | 20,537,200 | 22 | 1.04 | 975,150 |
+| Complete optimization · sweet-spot | 4 | 29,677,128 | 30,607,200 | 25 | 0.97 | 1,187,085 |
+| Complete optimization · steady-max | 4 | 30,215,378 | 30,270,800 | 28 | 1.00 | 1,079,121 |
+| Complete optimization · all-in | 4 | 31,218,724 | 31,092,400 | 30 | 1.00 | 1,040,624 |
+
+## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
+
+The plan offers 5 stops.
+
+| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |
+|---|---|---|---|---|---|---|
+| Tier ladder · all types | 4 | 72,384,395 | 17,179,200 | 874 | 4.21 | 82,820 |
+| Tier ladder · Generate (average damage) | 4 | 80,658,235 | 30,800,000 | 874 | 2.62 | 92,286 |
+| Troops first · all types | 4 | 29,111,661 | 17,179,200 | 78 | 1.69 | 373,226 |
+| Troops first · Generate (average damage) | 4 | 52,075,835 | 0 | 874 | — | 59,583 |
+| Complete optimization · silver-saver | 4 | 22,179,294 | 13,217,400 | 49 | 1.68 | 452,639 |
+| Complete optimization · sweet-spot | 4 | 26,023,854 | 17,179,200 | 58 | 1.51 | 448,687 |
+| Complete optimization · more-mercs | 4 | 27,096,537 | 17,179,200 | 61 | 1.58 | 444,206 |
+| Complete optimization · steady-max | 4 | 30,107,115 | 17,179,200 | 70 | 1.75 | 430,102 |
+| Complete optimization · all-in | 4 | 29,111,661 | 17,179,200 | 78 | 1.69 | 373,226 |
 

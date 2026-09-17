@@ -31,8 +31,15 @@
  * date and the figure — and a proposal that moves one moves the pin with it.
  *
  * The table each case measured is written to `tools/theorycraft/out/benchmark-latest.md`, the figures to
- * `benchmark-latest.json` beside it (what a before/after comparison reads). Runs where the owner's export is
- * (skipped elsewhere).
+ * `benchmark-latest.json` beside it (what a before/after comparison reads). The first-run and 4 000 cases run
+ * everywhere; the owner's cases run where his export is.
+ *
+ * Read the rows knowing what they are not (validator, 2026-09-18): the plan may play fewer marches than the
+ * horizon when its stock runs out, while a sizer sequence goes on with troops alone, so a "four-march" share
+ * can compare three marches with four; a captured answer is one march repeated on its own stock, never
+ * re-sized as its stock drains (conservative for it); the 4 000 case's troop types are the ones TotalStack's
+ * answer fielded, and TotalStack was asked for damage a silver where this table ranks damage. Both searches
+ * run under the app's own budgets (`CAMPAIGN.budgets`).
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
@@ -62,7 +69,7 @@ const TOTALSTACK_CAPTURE = new URL(
 );
 const KAI_EXTRACT = new URL('../../docs/research/fixtures/kai-extract-2026-09-15-4000.json', import.meta.url);
 const HORIZON = 4;
-const SEARCH_BUDGET_MS = 3_000;
+const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
 const SILVER_FLOOR = 0.95;
 const OUT = new URL('../../tools/theorycraft/out/', import.meta.url);
 const REPORT = new URL('benchmark-latest.md', OUT);
@@ -160,10 +167,17 @@ function greedy(
   return campaignOf(first, name, 'sizer', marches);
 }
 
-/** A march another calculator answered, played as captured while the stock lasts (a hired stack clamped to what is left). */
+/**
+ * A march another calculator answered, played as captured while its stock lasts: the stock is the query's cap
+ * or the captured count where that is larger (Kai's extract was made at 18/18, above the query's caps), and a
+ * hired stack is clamped to what is left.
+ */
 function asCaptured(base: StackRequest, name: string, counts: Record<string, number>): Campaign {
   const mercIds = hiredIds(base);
   const caps = { ...base.caps };
+  for (const id of mercIds) {
+    if (caps[id] !== undefined) caps[id] = Math.max(caps[id], counts[id] ?? 0);
+  }
   const marches: Record<string, number>[] = [];
   for (let i = 0; i < HORIZON; i += 1) {
     const march = { ...counts };
@@ -181,7 +195,8 @@ function asCaptured(base: StackRequest, name: string, counts: Record<string, num
 
 const countsOf = (result: StackResult): Record<string, number> =>
   Object.fromEntries(result.stacks.map((s) => [s.unitId, s.count]));
-const perSilver = (c: Campaign): number => c.damage / Math.max(1, c.silver);
+/** Damage a silver, or NaN for a sequence that spent none (a ratio it does not have, never a record). */
+const perSilver = (c: Campaign): number => (c.silver > 0 ? c.damage / c.silver : NaN);
 const perHired = (c: Campaign): number => c.damage / Math.max(1, c.burned);
 
 // ---- the scenarios ---------------------------------------------------------------------------------------
@@ -199,6 +214,8 @@ interface Pinned {
   winsHired: boolean;
   /** The share of the best sizer sequence's damage a silver the plan's best stop reaches (0.95 unless a case says why). */
   silverFloor?: number;
+  /** Against the calculators outside this repo, where a case has them: the same two readings. */
+  externals?: { damageFloor: number; winsHired: boolean };
 }
 
 interface Scenario {
@@ -336,12 +353,20 @@ function fourThousand(): Scenario {
       { name: 'Kai’s calculator · extract (as captured, repeated)', counts: kaiCounts },
     ],
     // Measured 2026-09-18: three stops; 96.5 % of the best sizer sequence's damage. TotalStack's own answer,
-    // repeated, out-hits every row here (8.91 M against the plan's 8.33 M, same silver, 24 burned against 21).
-    pinned: { refuses: false, stops: 3, sweetLosesOnBoth: false, damageFloor: 0.96, winsHired: true },
+    // repeated, out-hits every row here by 3.2 % (Troops first · Generate) to 9.3 % (the all-in) at the same
+    // silver, 24 burned against the plan's 21; the plan keeps the better damage a hired.
+    pinned: {
+      refuses: false,
+      stops: 3,
+      sweetLosesOnBoth: false,
+      damageFloor: 0.96,
+      winsHired: true,
+      externals: { damageFloor: 0.93, winsHired: true },
+    },
   };
 }
 
-function scenarios(profile: Profile): Scenario[] {
+function ownerScenarios(profile: Profile): Scenario[] {
   const setup = profile.setups[0];
   if (!setup) throw new Error('no setup');
   const at = (leadership: number, p: Profile = profile): StackRequest =>
@@ -387,19 +412,26 @@ function scenarios(profile: Profile): Scenario[] {
         11_000,
       ),
       externals: [],
-      // Measured 2026-09-18: the sizers field the unlimited legionaries by the authority pool alone — 2 180 a
-      // march, 874 burned over four, and Generate under Troops first answers a march of legionaries and no
-      // troops at all (no silver, 52 M damage) — so their damage and their damage a silver are not a yardstick
-      // here; the plan's 30.1 M at 70 burned is 37 % of that damage and wins a hired by four times.
+      // Measured 2026-09-18: the sizers field the unlimited legionaries by the authority pool alone — 2 017 to
+      // 2 064 a march, 874 burned over four — and Generate under Troops first answers a march of legionaries
+      // and no troops at all (no silver, 52 M damage), so their damage is no yardstick here: the plan's 30.1 M
+      // at 70 burned is 37 % of it and wins a hired by four times. A row without silver has no ratio a silver,
+      // and the Tier ladder's 4.21 a silver rides on legionaries that cost gold, not silver: 41 % of it is pinned.
       pinned: {
         refuses: false,
         stops: 5,
         sweetLosesOnBoth: false,
         damageFloor: 0.37,
         winsHired: true,
-        silverFloor: 0,
+        silverFloor: 0.41,
       },
     },
+  ];
+}
+
+/** The cases that need no export: a first-run army with one hired type, and the 4 000 case two calculators answered. */
+function commonScenarios(): Scenario[] {
+  return [
     {
       label: 'first-run army, Bear V ×1 (20 000 leadership)',
       request: firstRun({ id: 'bear-5', cap: 1 }, 20_000),
@@ -465,7 +497,12 @@ function measure(scenario: Scenario): Measured {
   let plan: CampaignPlan | null = null;
   let refusal: string | null = null;
   try {
-    plan = planCampaign({ request, marchTarget: HORIZON, ...CAMPAIGN.planFixes });
+    plan = planCampaign({
+      request,
+      marchTarget: HORIZON,
+      budgetMs: CAMPAIGN.budgets.plan,
+      ...CAMPAIGN.planFixes,
+    });
   } catch (error) {
     refusal = error instanceof Error ? error.message : String(error);
   }
@@ -495,7 +532,7 @@ function record(label: string, measured: Measured): void {
     '|---|---|---|---|---|---|---|',
     ...measured.rows.map(
       (c) =>
-        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.burned)} | ${perSilver(c).toFixed(2)} | ${n(perHired(c))} |`,
+        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |`,
     ),
     '',
   ];
@@ -512,7 +549,7 @@ function record(label: string, measured: Measured): void {
       damage: Math.round(c.damage),
       silver: c.silver,
       burned: c.burned,
-      perSilver: Math.round(perSilver(c) * 1000) / 1000,
+      perSilver: Number.isFinite(perSilver(c)) ? Math.round(perSilver(c) * 1000) / 1000 : null,
       perHired: Math.round(perHired(c)),
     })),
   });
@@ -525,17 +562,22 @@ function check(scenario: Scenario, measured: Measured): void {
     .map((c) => `${c.name}: ${n(c.damage)} / ${n(c.silver)} / ${n(c.burned)}`)
     .join('; ');
   expect(measured.refusal !== null, `the plan refuses (${measured.refusal ?? 'no'})`).toBe(pinned.refuses);
-  if (!measured.plan) return;
-  expect(measured.plan.alternatives.length, `stops on the bar (${tell})`).toBe(pinned.stops);
+  expect(measured.plan?.alternatives.length ?? 0, `stops on the bar (${tell})`).toBe(pinned.stops);
   const sizers = measured.rows.filter((c) => c.kind === 'sizer');
+  // Four sizer sequences, each of at least one march: a floor against nothing would hold of anything.
+  expect(sizers.length).toBe(4);
+  for (const c of sizers) expect(c.marches, `${c.name} played no march`).toBeGreaterThan(0);
+  if (!measured.plan) return;
   const plan = measured.rows.filter((c) => c.kind === 'plan');
+  const externals = measured.rows.filter((c) => c.kind === 'external');
   const sweet = plan.find((c) => c.name.endsWith('sweet-spot'));
   const most = plan.reduce<Campaign | undefined>((b, c) => (!b || c.damage > b.damage ? c : b), undefined);
   if (!sweet || !most) throw new Error('no sweet spot or top');
   const bestSizerDamage = Math.max(...sizers.map((c) => c.damage));
-  const bestSizerPerSilver = Math.max(...sizers.map(perSilver));
+  const finite = (values: number[]): number => Math.max(...values.filter(Number.isFinite));
+  const bestSizerPerSilver = finite(sizers.map(perSilver));
   const bestSizerPerHired = Math.max(...sizers.map(perHired));
-  const planPerSilver = Math.max(...plan.map(perSilver));
+  const planPerSilver = finite(plan.map(perSilver));
   const planPerHired = Math.max(...plan.map(perHired));
   expect(
     most.damage,
@@ -551,40 +593,53 @@ function check(scenario: Scenario, measured: Measured): void {
   expect(sweetLoses, `the sweet spot beaten on both ratios by a sizer sequence (${tell})`).toBe(
     pinned.sweetLosesOnBoth,
   );
+  if (externals.length > 0) {
+    if (!pinned.externals) throw new Error('a case with external rows must pin them');
+    const bestExternalDamage = Math.max(...externals.map((c) => c.damage));
+    const bestExternalPerHired = Math.max(...externals.map(perHired));
+    expect(
+      most.damage,
+      `the plan's hardest campaign against the other calculators (${tell})`,
+    ).toBeGreaterThanOrEqual(pinned.externals.damageFloor * bestExternalDamage);
+    expect(
+      planPerHired > bestExternalPerHired,
+      `the plan's best a hired beats the other calculators (${tell})`,
+    ).toBe(pinned.externals.winsHired);
+  }
 }
 
 // ---- the suite -------------------------------------------------------------------------------------------
 
-describe.skipIf(!existsSync(OWNER_EXPORT))(
-  'the plan against Tier ladder, Troops first and the other calculators, over four marches',
-  () => {
-    const profile = ownerProfile();
-    const cases = profile ? scenarios(profile) : [];
-    if (profile) {
-      mkdirSync(OUT, { recursive: true });
-      writeFileSync(
-        REPORT,
-        '# The plan against Tier ladder, Troops first and the other calculators — the latest run of `tests/engine/plan-benchmark.test.ts`\n\n' +
-          'Every sequence is four marches: the sizers re-sized each march on the stock the last one left (Generate ' +
-          'four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. ' +
-          'Each march priced by `simulateBattle` on its counts.\n\n' +
-          `Run: ${new Date().toISOString()}, commit ${process.env.GIT_COMMIT ?? '(working tree)'}\n\n`,
-      );
-      writeFileSync(
-        FIGURES,
-        `${JSON.stringify({ run: new Date().toISOString(), scenarios: [] }, null, 1)}\n`,
-      );
-    }
-    for (const scenario of cases) {
-      test(
-        scenario.label,
-        () => {
-          const measured = measure(scenario);
-          record(scenario.label, measured);
-          check(scenario, measured);
-        },
-        300_000,
-      );
-    }
-  },
+mkdirSync(OUT, { recursive: true });
+writeFileSync(
+  REPORT,
+  '# The plan against Tier ladder, Troops first and the other calculators — the latest run of `tests/engine/plan-benchmark.test.ts`\n\n' +
+    'Every sequence is four marches: the sizers re-sized each march on the stock the last one left (Generate ' +
+    'four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. ' +
+    'Each march priced by `simulateBattle` on its counts.\n\n' +
+    `Run: ${new Date().toISOString()}, commit ${process.env.GIT_COMMIT ?? '(working tree)'}\n\n`,
 );
+writeFileSync(FIGURES, `${JSON.stringify({ run: new Date().toISOString(), scenarios: [] }, null, 1)}\n`);
+
+const runAll = (cases: Scenario[]): void => {
+  for (const scenario of cases) {
+    test(
+      scenario.label,
+      () => {
+        const measured = measure(scenario);
+        record(scenario.label, measured);
+        check(scenario, measured);
+      },
+      300_000,
+    );
+  }
+};
+
+describe('the plan against Tier ladder, Troops first and the other calculators, over four marches', () => {
+  runAll(commonScenarios());
+});
+
+describe.skipIf(!existsSync(OWNER_EXPORT))('the same, on the owner’s account', () => {
+  const profile = ownerProfile();
+  runAll(profile ? ownerScenarios(profile) : []);
+});

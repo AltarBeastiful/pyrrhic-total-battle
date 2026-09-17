@@ -1,0 +1,34 @@
+{
+ "note": "TotalStack's new 'Total Optimization' method, pressed by the owner in his own browser on 2026-09-18 (Pro trial, profile 'hey'), read off the Battle Summary by the coordinator. Settings as the page showed them: leadership 7 000, authority 2 000, dominance 0, priority 'Damage / Silver', enemy 4 standard (1/1/1/1), guardsmen G1–G3 (all three categories at G3), specialists S1, mercenaries EMH 6 ×142 · ABT 6 ×50 · LGN 6 ×42 · CHR 6 ×20, bonuses as displayed in the TOTAL card (health: melee +36 %, mounted +19 %, guardsmen +54 %; strength: melee +72 %, mounted +38 %, guardsmen +54 %; the rest 0), temple '—'. His TotalStack profile is NOT his Pyrrhic export: it fields Archer III and Spearman III, which the export's setup leaves out.",
+ "capturedAt": "2026-09-18",
+ "kind": "totalstack-total-optimization",
+ "settings": {
+  "leadership": 7000,
+  "authority": 2000,
+  "dominance": 0,
+  "priority": "damagePerSilver",
+  "method": "total-optimization",
+  "enemy": { "flying": 1, "melee": 1, "ranged": 1, "mounted": 1 },
+  "mercenaryCaps": { "epic-monster-hunter-6": 142, "arbalester-6": 50, "legionary-6": 42, "chariot-6": 20 },
+  "bonuses": {
+   "health": { "melee": 36, "mounted": 19, "guardsmen": 54 },
+   "strength": { "melee": 72, "mounted": 38, "guardsmen": 54 }
+  }
+ },
+ "answer": {
+  "troopCounts": { "archer-3": 537, "rider-3": 239, "rider-2": 426, "spearman-3": 437, "archer-2": 959, "spearman-2": 779, "spearman-1": 1408, "rider-1": 774 },
+  "mercenaryCounts": { "arbalester-6": 44, "epic-monster-hunter-6": 42, "chariot-6": 20, "legionary-6": 37 },
+  "removedFromFormation": ["archer-1", "swordsman-1"],
+  "leadershipUsed": 6998,
+  "authorityUsed": 163,
+  "summary": {
+   "damageByTroops": 3510337,
+   "damageByMercenaries": 9842458,
+   "minimumDamage": 13151734,
+   "averageDamage": 13352794,
+   "damagePerSilver": 4.175,
+   "damagePerGold": 11511,
+   "recovery": { "time": "12d 23h", "silver": 3198200, "dragonCoins": 0, "gold": 1160 }
+  }
+ }
+}
