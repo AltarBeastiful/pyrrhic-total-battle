@@ -154,18 +154,21 @@ export async function seedHiredStock(page: Page): Promise<void> {
   const card = page.locator('#mercenaries');
   await card.getByRole('button', { name: 'Hire mercenary…' }).click();
   const search = page.getByRole('textbox', { name: 'Search mercenaries' });
-  await search.fill('Bear');
-  await page.getByRole('option', { name: 'Bear V tier 5' }).click();
+  // The hunter the owner hires (83 owned on his account of 2026-09-18), not a monster: since S-75 every hired
+  // stack stands under the lowest troop stack, and a Bear V (66 000 HP a unit) is sheltered ten at a time by a
+  // first-run army — one stop on the bar, and a journey with nothing to slide.
+  await search.fill('Epic Monster Hunter');
+  await page.getByRole('option', { name: 'Epic Monster Hunter VI tier 6' }).click();
   await search.press('Escape');
 
-  // Hired reads "owned unlimited" until the pill's own popover says otherwise, and unlimited is not a
-  // figure the plan can ration (the pill's popover, J2 of `mercenaries.spec.ts`).
-  await card.getByRole('button', { name: 'Bear V: owned unlimited' }).click();
+  // Hired reads "owned unlimited" until the pill's own popover says otherwise (the pill's popover, J2 of
+  // `mercenaries.spec.ts`); the plan bounds an unlimited type by the authority pool and the shelter.
+  await card.getByRole('button', { name: 'Epic Monster Hunter VI: owned unlimited' }).click();
   const owned = page.getByRole('dialog').getByRole('textbox', { name: 'Owned' });
-  await owned.fill('500');
+  await owned.fill('83');
   await owned.press('Tab');
   await page.keyboard.press('Escape');
-  await expect(card.getByRole('button', { name: /^Bear V: owned 500$/ })).toBeVisible();
+  await expect(card.getByRole('button', { name: /^Epic Monster Hunter VI: owned 83$/ })).toBeVisible();
 
   // The hired stock is paid for out of authority, so the pool has to have room for it.
   await fillHousing(page, 'Authority', 40_000);

@@ -10,10 +10,9 @@ Every sequence is four marches: the sizers re-sized each march on the stock the 
 | Tier ladder · Generate (average damage) | 25,952,553 | 14,192,200 | 93 | 1.83 | 279,060 |
 | Troops first · all types | 23,441,856 | 10,957,600 | 55 | 2.14 | 426,216 |
 | Troops first · Generate (average damage) | 25,833,694 | 14,192,200 | 86 | 1.82 | 300,392 |
-| Complete optimization · silver-saver | 18,330,331 | 9,275,500 | 35 | 1.98 | 523,724 |
-| Complete optimization · sweet-spot | 20,684,777 | 10,581,400 | 55 | 1.95 | 376,087 |
-| Complete optimization · more-mercs | 22,485,059 | 10,957,600 | 59 | 2.05 | 381,103 |
-| Complete optimization · steady-max | 24,814,601 | 10,957,600 | 64 | 2.26 | 387,728 |
+| Complete optimization · sweet-spot | 21,662,734 | 10,957,600 | 47 | 1.98 | 460,909 |
+| Complete optimization · more-mercs | 22,133,839 | 10,957,600 | 50 | 2.02 | 442,677 |
+| Complete optimization · steady-max | 23,264,491 | 10,957,600 | 53 | 2.12 | 438,953 |
 | Complete optimization · all-in | 22,518,504 | 14,337,600 | 93 | 1.57 | 242,134 |
 
 ## 2026-09-17 export, 12 000 leadership

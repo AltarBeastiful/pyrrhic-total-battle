@@ -14,7 +14,7 @@
  * 2026-09-18):
  *
  *  - the plan's hardest-hitting stop (the steady max, or the all-in sequence where it beats it) reaches at
- *    least 94 % of the best sizer sequence's four-march damage;
+ *    least 89 % of the best sizer sequence's four-march damage;
  *  - the plan's best stop **a hired unit** beats every sizer sequence on that ratio;
  *  - the plan's best stop **a silver** reaches at least 95 % of the best sizer sequence's.
  *
@@ -45,8 +45,13 @@ const OWNER_EXPORT =
   process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
 const HORIZON = 4;
 const SEARCH_BUDGET_MS = 3_000;
-/** Measured 2026-09-18: 94.9 % on the 2026-09-17 export at 12 000 leadership, 95.6 % at 7 000, 100 % live. */
-const DAMAGE_FLOOR = 0.94;
+/**
+ * Measured 2026-09-18: 89.6 % on the 2026-09-17 export at its setup, 94.9 % at 12 000, 99 % live. The 7 000
+ * case fell from 95.6 % when every hired stack was made to stand under the troops and every hired type kept
+ * (S-75): the sizer sequences it is measured against shelter nothing — their hired stacks die first — and
+ * the owner chose the shelter over those 6 %.
+ */
+const DAMAGE_FLOOR = 0.89;
 const SILVER_FLOOR = 0.95;
 const REPORT = new URL('../../tools/theorycraft/out/benchmark-latest.md', import.meta.url);
 const n = (value: number): string => Math.round(value).toLocaleString('en-US');
@@ -229,8 +234,12 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
 
     test('on the 2026-09-17 export at its setup', () => {
       if (!profile || !setup) throw new Error('no profile');
+      // Pinned 2026-09-18: the plain Troops-first sequence beat the sweet spot on both ratios (2.14 · 426 216
+      // against 1.95 · 376 087) until every hired type was kept and every hired stack sheltered (S-75), which
+      // moved the sweet spot to 11 burned; it keeps its damage a hired unit above that sequence now (460 909
+      // against 426 216) and loses a silver only.
       expectPlanWins('2026-09-17 export, its setup (7 000 leadership)', profile, setup, {
-        sweetLosesOnBoth: true,
+        sweetLosesOnBoth: false,
       });
     }, 300_000);
 

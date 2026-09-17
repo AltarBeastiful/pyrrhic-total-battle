@@ -582,6 +582,12 @@ export interface ShapeContext {
     | undefined;
   /** The troop stacks scored at `WINNER_RUNGS_DEPTH`: the search's winner, once there is one. */
   winnerRungs?: (() => { entry: Effective; count: number }[]) | undefined;
+  /**
+   * How many marches each type's stock sustains: the stock itself, or `Infinity` for a mercenary hired as
+   * **unlimited** (no cap entered), whose count `stock` bounds by the authority pool and whose stock never
+   * runs out. Defaults to `stock`.
+   */
+  sustain?: Record<string, number> | undefined;
 }
 
 /**
@@ -636,6 +642,7 @@ export type ShapeScorer = (
 /** The scorer of an account whose table is already built, so a sweep does not rebuild it per shape. */
 export function makeScorer(context: ShapeContext): ShapeScorer {
   const { troops, mercTypes, stock, leadership, enemyStacks, gap } = context;
+  const sustain = context.sustain ?? stock;
   const noFinale = context.finale === false;
 
   /**
@@ -653,7 +660,10 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     if (silverLeft !== undefined && silverLeft <= 0) return null;
     const spentStock: Record<string, number> = { ...stock };
     for (const merc of fielded)
-      spentStock[merc.entry.id] = (stock[merc.entry.id] ?? 0) - marches * chunks(merc.count);
+      spentStock[merc.entry.id] =
+        (sustain[merc.entry.id] ?? 0) === Infinity
+          ? (stock[merc.entry.id] ?? 0)
+          : (stock[merc.entry.id] ?? 0) - marches * chunks(merc.count);
     const leftovers = mercTypes
       .map((entry) => ({ entry, count: Math.max(0, spentStock[entry.id] ?? 0) }))
       .filter((merc) => merc.count > 0);
@@ -773,7 +783,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     // `marches` from the counts (`marchesFor`), so this never bites there — but a caller may pass both, and
     // the two must not disagree: fielding a count the stock cannot sustain burns mercenaries it does not have.
     for (const merc of fielded) {
-      if (lastsMarches(stock[merc.entry.id] ?? 0, merc.count) < marches) return null;
+      if (lastsMarches(sustain[merc.entry.id] ?? 0, merc.count) < marches) return null;
     }
     // what the enemy can kill in one march, and the HP the mercenaries need shelter from
     const mercenaryHp = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
@@ -853,7 +863,26 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const table = effectiveTable(request);
   const troops = rankTroops(table);
   const mercTypes = table.filter((entry) => entry.pool === 'authority');
-  const stock = request.caps;
+  /**
+   * **Unlimited mercenaries** (owner, 2026-09-18: *"when a merc is unlimited and is put in, don't put more,
+   * and lower it so the health stack still makes sense — below the troops"*). A type hired with no cap has no
+   * entry in `caps`; it used to read as a stock of nothing and was never fielded. It is bounded by the
+   * authority pool instead — the only limit the game puts on it — its stock never runs out (`sustain`), and
+   * every shape keeps its stack under the lowest troop stack: the ladders by construction, the sizer's
+   * shapes by the clamp in `sizer` below, the all-in by its own shelter test.
+   */
+  const unlimited = new Set(
+    request.units
+      .filter((unit) => unit.pool === 'authority' && request.caps[unit.id] === undefined)
+      .map((unit) => unit.id),
+  );
+  const stock: Record<string, number> = { ...request.caps };
+  const sustain: Record<string, number> = { ...request.caps };
+  for (const entry of table) {
+    if (!unlimited.has(entry.id)) continue;
+    stock[entry.id] = Math.max(0, Math.floor(request.housing.authority / Math.max(1, entry.cost)));
+    sustain[entry.id] = Infinity;
+  }
   const leadership = request.housing.leadership;
 
   /**
@@ -967,7 +996,19 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const frontier: Candidate[] = [];
   const consider = (candidate: Candidate): void => {
     frontier.push(candidate);
-    if (!best || candidate.total > best.total) best = candidate;
+    // The winner stands on more than one troop stack: a single stack sheltering a mountain of hired units is
+    // the extreme the band refuses (owner, 2026-09-15: "not a strategy"), and with a mercenary hired as
+    // unlimited it is also the march that does the most damage — measured: 820 hunters under one stack of
+    // troops — so it would set the band's yardstick and empty the band. A one-stack march may still win
+    // when nothing else scores at all.
+    const stands = candidate.rungs.length > 1;
+    if (
+      !best ||
+      (stands && best.rungs.length <= 1) ||
+      (stands === best.rungs.length > 1 && candidate.total > best.total)
+    ) {
+      best = candidate;
+    }
   };
   /** One bucket per silver level, holding the best damage and the best damage-per-mercenary found there. */
   // 1.2× a bucket: fine enough to read the curve's shape, coarse enough to be one line per level. Sixty
@@ -1068,10 +1109,20 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       .filter((stack) => stack.count > 0)
       .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
       .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
-    return {
-      rungs: stacks.filter((stack) => stack.entry.pool === 'leadership'),
-      mercs: stacks.filter((stack) => stack.entry.pool === 'authority'),
-    };
+    const rungs = stacks.filter((stack) => stack.entry.pool === 'leadership');
+    // The shelter: every hired stack under the lowest troop stack, or the enemy — which wipes the
+    // highest-HP living stack first — takes it before the troops have died (owner, 2026-09-18: *"lower it
+    // so the health stack still makes sense, below the troops"*). A hired stack the sizer sized over that
+    // line is lowered to just under it; one that cannot be is left out of this shape.
+    const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+    const sheltered = stacks
+      .filter((stack) => stack.entry.pool === 'authority')
+      .map((stack) => {
+        if (!Number.isFinite(floor) || stack.count * stack.entry.hp < floor) return stack;
+        return { entry: stack.entry, count: Math.max(0, Math.ceil(floor / stack.entry.hp) - 1) };
+      })
+      .filter((stack) => stack.count > 0);
+    return { rungs, mercs: sheltered };
   };
   let winnerRungs: { entry: Effective; count: number }[] = [];
   const score = makeScorer({
@@ -1084,6 +1135,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     finale: planned !== 1,
     ...(sizerShape ? { sizer } : {}),
     winnerRungs: () => winnerRungs,
+    sustain,
   });
   /** Silver one candidate spends: its repeats, plus its final march. */
   const marchedSilver = (candidate: Candidate): number =>
@@ -1151,7 +1203,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     let tight: Candidate | null = null;
     const fielded = vector.filter((merc) => merc.count > 0);
     if (fielded.length === 0) return null;
-    const marches = targetRepeats ?? marchesFor(stock, fielded);
+    const marches = targetRepeats ?? marchesFor(sustain, fielded);
     if (marches < 1) return null;
     const counts: Record<string, number> = {};
     for (const merc of vector) counts[merc.entry.id] = merc.count;
@@ -1319,7 +1371,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const currentMarches =
         targetRepeats ??
         marchesFor(
-          stock,
+          sustain,
           vector.filter((merc) => merc.count > 0),
         );
       for (let index = 0; index < vector.length; index += 1) {
@@ -1496,7 +1548,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * monster the account owns as well as the hired soldiers, and a monster with no cap is not something the
    * plan rations.
    */
-  const stocked = mercTypes.filter((entry) => (stock[entry.id] ?? 0) > 0);
+  const stocked = mercTypes.filter((entry) => (stock[entry.id] ?? 0) > 0 || unlimited.has(entry.id));
   const inBand = (row: PlanTotals): boolean =>
     hiredOf(row.counts) * 2 >= goal.hired &&
     row.damagePerSilver * 2 >= goal.perSilver &&
@@ -1766,6 +1818,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         finale: false,
         ...(sizerShape ? { sizer } : {}),
         winnerRungs: () => winnerRungs,
+        sustain,
       });
       let found: Candidate | null = null;
       for (let share = 1; share > 0.04 && !found; share -= 0.05) {
@@ -1817,6 +1870,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (!found) break;
       played.push(found);
       for (const merc of found.mercs) {
+        if (unlimited.has(merc.entry.id)) continue;
         remaining[merc.entry.id] = Math.max(0, (remaining[merc.entry.id] ?? 0) - chunks(merc.count));
       }
     }
@@ -1972,7 +2026,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // A ladder is priced in whole units, so a plan rarely lands exactly on a budget: silver counts as
       // binding when the plan spends nearly all of it.
       silver: input.silverBudget !== undefined && total.silver >= input.silverBudget * 0.9,
-      mercenaries: chosen.mercs.some((merc) => merc.count >= (stock[merc.entry.id] ?? 0)),
+      mercenaries: chosen.mercs.some(
+        (merc) => !unlimited.has(merc.entry.id) && merc.count >= (stock[merc.entry.id] ?? 0),
+      ),
       leadership: leadershipUsed >= leadership * 0.999,
       marches: input.marchTarget !== undefined,
     },

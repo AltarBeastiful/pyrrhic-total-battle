@@ -48,12 +48,15 @@ export const CAMPAIGN = {
    * - `refuseDroppedTypes` — fix B: the grid keeps its zero samples and the frontier **band** refuses to
    *   offer a plan that fields none of a stocked type, counting them in `leftOut` like its other refusals.
    *
-   * **A is on, B is off** (owner, 2026-09-17: *"A alone"*), from the cross review `tools/theorycraft/out/91`:
+   * **A and B are on.** A alone on 2026-09-17 (*"A alone"*, from the cross review `tools/theorycraft/out/91`);
+   * B joined it on 2026-09-18 (*"mercs still are being left out, which I find odd — I prefer to have multiple
+   * stacks of mercs, it seems to work best"*): the bar never offers a plan that fields none of a hired type
+   * the account holds. From the cross review:
    * on his export at horizon 4, A moves the sweet spot from 5 333 606 to **5 518 119** damage a march for
    * 2 331 500 silver at the same 17 burned, and the thrift end fields 10 legionaries instead of none; B only
    * hides the legionary-free plan, and with A on it has nothing left to hide.
    */
-  planFixes: { tokenFloor: true, refuseDroppedTypes: false, sizerShape: true },
+  planFixes: { tokenFloor: true, refuseDroppedTypes: true, sizerShape: true },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
    * keeps, the sweet spot in the middle of the rungs nothing beats on both ratios, and the most damage —

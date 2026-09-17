@@ -10,6 +10,7 @@ import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import type { PlanRepeat } from '@/engine/plan';
+import { effectiveUnit } from '@/engine/units';
 
 /** A small but complete army: four troop types and three mercenaries with a stock to spend. */
 function request(silver = false): StackRequest {
@@ -277,6 +278,49 @@ describe(
       const golds = rows.map((row) => row.repeat.gold);
       expect([...golds].sort((a, b) => a - b)).toEqual(golds);
     });
+
+    test(
+      'a mercenary hired as unlimited is fielded, bounded, and kept under the troops',
+      () => {
+        // Owner, 2026-09-18: "when a merc is unlimited and is put in, don't put more, and lower it so the health
+        // stack still makes sense — below the troops". No cap entered used to read as a stock of nothing.
+        const req = request();
+        const first = req.units.find((unit) => unit.pool === 'authority');
+        if (!first) throw new Error('no mercenary');
+        const caps = { ...req.caps };
+        delete caps[first.id];
+        const plan = planCampaign({
+          request: { ...req, caps },
+          marchTarget: 4,
+          tokenFloor: true,
+          sizerShape: true,
+        });
+        const hp = new Map(
+          req.units.map((unit) => [
+            unit.id,
+            effectiveUnit(unit, req.totals, req.enemy, req.activeEvents).hpPerUnit,
+          ]),
+        );
+        for (const row of plan.alternatives) {
+          // Fielded, and never more than the authority pool pays for.
+          expect(row.counts[first.id] ?? 0).toBeGreaterThan(0);
+          expect((row.counts[first.id] ?? 0) * first.cost).toBeLessThanOrEqual(req.housing.authority);
+          // Under the lowest troop stack, so the enemy takes the troops first.
+          const troops = req.units.filter(
+            (unit) => unit.pool === 'leadership' && (row.counts[unit.id] ?? 0) > 0,
+          );
+          const floor = Math.min(
+            ...troops.map((unit) => (row.counts[unit.id] ?? 0) * (hp.get(unit.id) ?? 0)),
+          );
+          expect((row.counts[first.id] ?? 0) * (hp.get(first.id) ?? 0)).toBeLessThan(floor);
+          // It stands on more than one troop stack.
+          expect(troops.length).toBeGreaterThan(1);
+        }
+        // The stock of an unlimited type never binds.
+        expect(plan.binding.mercenaries).toBe(false);
+      },
+      TIMEOUT,
+    );
 
     test(
       'the sizer shape never makes the plan worse, and can only add a shape the ladder cannot express',

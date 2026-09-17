@@ -184,18 +184,20 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // buys more than the last), so there is no knee and the middle of the efficient rungs stands — 5 %
       // less silver and 2.5 % more a hired unit than the 11, for 2.4 % less a silver. A floor is re-based only
       // for a change measured and explained, and the note says which.
-      // Least silver here is the 7-burn tight ladder: 4 177 683 for 2 178 700 (17 % less silver than the sweet
-      // spot) at 1.918 a silver · 596 812 a hired — it beats the sweet spot on both ratios, which the saving
-      // stop may.
+      // Measured 2026-09-18 with every hired type kept (S-58 B) and every hired stack sheltered under the
+      // troops: 11 · 12 · 13 · 27 burned; no silver saver (the cheaper marches left of the sweet spot drop a
+      // type or are not as efficient a silver); sweet 5 330 563 for 2 739 400 at 1.9459 · 484 597, campaign
+      // 21 662 734 for 10 957 600; steady max 5 864 482 at 2.1408 (it was the unsheltered MS-relaxed march at
+      // 6 242 452: the shelter costs 6 % of damage here, which is the owner's choice); the plan 23 264 491.
       expectCriteria(plan, {
         leastPerHired: under(596_812),
-        sweetPerSilver: under(1.8994),
-        sweetPerHired: under(496_507),
-        sweetCampaignDamage: under(20_684_777),
-        sweetCampaignSilverCeiling: over(10_581_400),
-        mostDamage: under(6_242_452),
-        mostPerSilver: under(2.2788),
-        campaignDamage: under(24_814_601),
+        sweetPerSilver: under(1.9459),
+        sweetPerHired: under(484_596),
+        sweetCampaignDamage: under(21_662_734),
+        sweetCampaignSilverCeiling: over(10_957_600),
+        mostDamage: under(5_864_482),
+        mostPerSilver: under(2.1408),
+        campaignDamage: under(23_264_491),
       });
       expect(Date.now() - started).toBeLessThan(10_000);
     }, 120_000);
