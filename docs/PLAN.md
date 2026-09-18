@@ -834,6 +834,10 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-09-18 (past midnight) — **TotalStack on the owner's own window.** Fourth kit run in fixtures; on his
+  seven troop types the plan's hardest stop beats TotalStack's best by 52 % at 7 000 and 34 % at 12 000 for
+  less silver, matches it on the live account; TotalStack keeps the better damage a hired at 7 000/12 000.
+  Benchmark 03b; stage table updated.
 - 2026-09-18 (late night) — **S-78, and the stage table.** Proposal 2 narrowed: the bar keeps burn as its axis
   (the fielded axis understated the low-end cost and moved four sweet spots), the all-in gate reads fielded,
   the sweep is finer. Benchmark 03; the four stages side by side in `out/benchmark-2026-09-18-stages.md`.

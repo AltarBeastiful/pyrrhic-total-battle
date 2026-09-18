@@ -200,10 +200,17 @@ Caveat for the owner's scenarios (7 000 / 12 000 / 20 000 / 11 000, live, evenin
 swordsman-1) replays the owner's scenarios with those exclusions. The first M's base and both optimize bases
 are the clean ones for those scenarios; the optimize answers carry their own `excludedTroopIds` in the response.
 
-## Fourth run (to do): the owner's own troop window
+## Fourth run, 2026-09-18 22:46 (`docs/research/fixtures/totalstack-2026-09-18-dataset-window.json`): the owner's own troop window
 
 The third run's owner scenarios were asked on the page's profile, which fields Archer III, Spearman III and
 Swordsman I; the owner's Pyrrhic army leaves those out, so those answers are marches he cannot make and the
 benchmark marks them "outside the army's window" and pins nothing against them. The snippet above now asks
 every owner scenario with those three excluded (`OWNER_WINDOW`) and downloads `totalstack-2026-09-18-dataset-window.json`.
 Same steps: reload, paste, three Generate presses at None, three at Damage / Silver, `run()`.
+
+Done: nine bases (four Generate presses, five priority searches), 140 answers, all successful, every owner
+scenario answered on his seven troop types. The benchmark reads this run first and the third only for a
+scenario this one lacks. On his own window the plan's hardest stop beats TotalStack's best by 52 % at 7 000
+(24 814 601 for 10 957 600 silver against 16 323 066 for 16 016 000) and 34 % at 12 000, matches it on the live
+account (1.02×), and the evening case remains no yardstick (TotalStack fields ~2 000 unlimited legionaries at
+no silver). TotalStack's thriftiest answers keep the better damage a hired unit at 7 000 and 12 000.

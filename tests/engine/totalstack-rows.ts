@@ -14,10 +14,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { unitById } from '@/data';
 import type { StackRequest, UnitDef } from '@/engine/types';
 
-const DATASET = new URL(
-  '../../docs/research/fixtures/totalstack-2026-09-18-dataset-full.json',
-  import.meta.url,
-);
+/**
+ * Two runs of the kit: the fourth (2026-09-18 22:46) asks the owner's scenarios on his own troop window and is
+ * read first; the third (22:44) asked them on the page's wider profile and is read only for a scenario the
+ * fourth does not hold.
+ */
+const DATASETS = [
+  new URL('../../docs/research/fixtures/totalstack-2026-09-18-dataset-window.json', import.meta.url),
+  new URL('../../docs/research/fixtures/totalstack-2026-09-18-dataset-full.json', import.meta.url),
+];
 
 interface Answer {
   method: string;
@@ -63,28 +68,28 @@ export interface TotalStackRow {
 
 /** TotalStack's rows for a benchmark label, or none where the dataset is absent or holds no answer for it. */
 export function totalstackRows(label: string): TotalStackRow[] {
-  if (!existsSync(DATASET)) return [];
-  const data = JSON.parse(readFileSync(DATASET, 'utf8')) as { results: Answer[] };
   const kitName = Object.entries(SCENARIOS).find(([, benchmark]) => benchmark === label)?.[0];
   if (!kitName) return [];
-  const rows: TotalStackRow[] = [];
-  const seen = new Set<string>();
-  for (const answer of data.results) {
-    if (answer.scenario !== kitName || (answer.status !== 200 && answer.status !== 201)) continue;
-    const calc = answer.response.calculation ?? answer.response;
-    const counts = { ...(calc.troopCounts ?? {}), ...(calc.mercenaryCounts ?? {}) };
-    const method = methodOf(answer.method);
-    const optimize = answer.method.startsWith('calculations/optimize');
-    // A Generate body pressed while the page was excluding types replays with those exclusions: say so.
-    const excluded = answer.request.excludedTroopIds ?? [];
-    const window = !optimize && excluded.length > 0 ? ` (page excluding ${excluded.join(', ')})` : '';
-    const name = `TotalStack · ${method}${optimize ? ` (${answer.priority})` : ''}${window}`;
-    const key = `${name}|${JSON.stringify(counts)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    rows.push({ name, counts });
+  for (const dataset of DATASETS) {
+    if (!existsSync(dataset)) continue;
+    const data = JSON.parse(readFileSync(dataset, 'utf8')) as { results: Answer[] };
+    const rows: TotalStackRow[] = [];
+    const seen = new Set<string>();
+    for (const answer of data.results) {
+      if (answer.scenario !== kitName || (answer.status !== 200 && answer.status !== 201)) continue;
+      const calc = answer.response.calculation ?? answer.response;
+      const counts = { ...(calc.troopCounts ?? {}), ...(calc.mercenaryCounts ?? {}) };
+      const method = methodOf(answer.method);
+      const optimize = answer.method.startsWith('calculations/optimize');
+      const name = `TotalStack · ${method}${optimize ? ` (${answer.priority})` : ''}`;
+      const key = `${name}|${JSON.stringify(counts)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({ name, counts });
+    }
+    if (rows.length > 0) return rows;
   }
-  return rows;
+  return [];
 }
 
 /** The scenario's request widened to every unit a captured answer fields, so no stack is silently dropped. */

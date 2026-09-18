@@ -411,21 +411,49 @@ function ownerScenarios(profile: Profile): Scenario[] {
       label: '2026-09-17 export, its setup (7 000 leadership)',
       request: buildStackRequest(profile, setup),
       externals: [],
-      pinned: { refuses: false, stops: 5, sweetLosesOnBoth: false, damageFloor: 0.95, winsHired: true },
+      // TotalStack on the owner's own troop window (fourth run, 2026-09-18): its best is the priority search under
+      // M's at 16 323 066 for 16 016 000 silver; the plan's steady max 24 814 601 for 10 957 600 is 1.52× it. Its
+      // thriftiest answer keeps the better damage a hired.
+      pinned: {
+        refuses: false,
+        stops: 5,
+        sweetLosesOnBoth: false,
+        damageFloor: 0.95,
+        winsHired: true,
+        externals: { damageFloor: 1.52, winsHired: false },
+      },
     },
     {
       label: '2026-09-17 export, 12 000 leadership',
       request: at(12_000),
       externals: [],
       // Measured 2026-09-18 before the proposals: 94.9 % of the sizers' damage, four stops (no more-mercs rung).
-      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: false, damageFloor: 0.94, winsHired: true },
+      // TotalStack on the owner's window: best 24 167 160 for 21 785 600 silver; the plan's 32 518 195 for
+      // 18 790 400 is 1.34× it; TotalStack's thriftiest keeps the better damage a hired.
+      pinned: {
+        refuses: false,
+        stops: 4,
+        sweetLosesOnBoth: false,
+        damageFloor: 0.94,
+        winsHired: true,
+        externals: { damageFloor: 1.34, winsHired: false },
+      },
     },
     {
       label: 'live account of 2026-09-18 (one hired type, 20 000 leadership)',
       request: live([{ id: 'epic-monster-hunter-6', cap: 83 }], 20_000),
       externals: [],
       // Measured 2026-09-18: 99.1 %, four stops.
-      pinned: { refuses: false, stops: 4, sweetLosesOnBoth: false, damageFloor: 0.99, winsHired: true },
+      // TotalStack on the owner's window: Total Optimization 30 466 476 for 31 335 200; the plan's 31 218 724 is
+      // 1.02× it and wins a hired.
+      pinned: {
+        refuses: false,
+        stops: 4,
+        sweetLosesOnBoth: false,
+        damageFloor: 0.99,
+        winsHired: true,
+        externals: { damageFloor: 1.02, winsHired: true },
+      },
     },
     {
       label: 'live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)',
@@ -444,6 +472,8 @@ function ownerScenarios(profile: Profile): Scenario[] {
       // and no troops at all (no silver, 52 M damage), so their damage is no yardstick here: the plan's 30.1 M
       // at 70 burned is 37 % of it and wins a hired by four times. A row without silver has no ratio a silver,
       // and the Tier ladder's 4.21 a silver rides on legionaries that cost gold, not silver: 41 % of it is pinned.
+      // TotalStack on the owner's window: its priority search fields ~2 000 unlimited legionaries at no silver for
+      // 80 137 589 — no yardstick, as with the sizers; the plan's 30 107 115 is 37 % of it and wins a hired.
       pinned: {
         refuses: false,
         stops: 5,
@@ -451,6 +481,7 @@ function ownerScenarios(profile: Profile): Scenario[] {
         damageFloor: 0.37,
         winsHired: true,
         silverFloor: 0.41,
+        externals: { damageFloor: 0.37, winsHired: true },
       },
     },
   ];
