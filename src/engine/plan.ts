@@ -1829,7 +1829,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       candidate.finale === null
         ? null
         : toMarch(candidate.finaleRungs, candidate.finaleMercs, candidate.finale);
-    const silver = candidate.marches * m.silver + (candidate.finale?.silver ?? 0);
+    // The finale's silver is the recap's own (`last`, priced under the account's temple level and training
+    // discounts like every repeat), not the search's raw `marchOf` figure (S-91, 2026-09-18): every profile
+    // in the repo has no discount, so the two agreed to the unit until the criterion was run under one —
+    // where the raw figure overstated a discounted finale by a quarter (the e2e seed: 26 427 050 against the
+    // recap's 24 394 200 over four marches). The search's own ranking keeps reading the raw figure on both
+    // the repeat and the finale, consistently; this is the campaign the bar prints.
+    const silver = candidate.marches * m.silver + (last?.silver ?? 0);
     const mercLost = candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0);
     /**
      * The plan's shape in the engine's own terms: how deep the march is (its troop stacks), how many hired

@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
-import { getUnits } from '@/data';
+import { GROUPS, getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan, PlanRow, PlanTotals } from '@/engine/plan';
 import type { StackRequest, UnitDef } from '@/engine/types';
@@ -717,85 +717,111 @@ describe('the reference table names only plans the bar may offer', () => {
  * troops-only tail (which revives nothing, and so must add nothing) and every march of the `all-in`'s
  * sequence.
  */
-describe('a stop’s campaign is the sum of what its marches cost', () => {
-  /** The marches a stop plays, first to last, the way `PlanTotals` says to read them. */
-  const marchesOf = (row: PlanTotals): Record<string, number>[] => {
-    if (row.sequence) return row.sequence;
-    const tail = row.tail?.marches ?? 0;
-    const repeats = row.marches - (row.finaleCounts ? 1 : 0) - tail;
-    const marches = Array.from({ length: repeats }, () => row.counts);
-    if (row.finaleCounts) marches.push(row.finaleCounts);
-    for (let index = 0; index < tail; index += 1) marches.push(row.tail?.counts ?? {});
-    return marches;
-  };
-
-  for (const scenario of scenarios) {
-    test(
-      scenario.label,
-      () => {
-        const planned = ((): CampaignPlan | string => {
-          try {
-            return planCampaign({
-              request: scenario.request,
-              marchTarget: HORIZON,
-              budgetMs: CAMPAIGN.budgets.plan,
-              ...CAMPAIGN.planFixes,
-              putBack: CAMPAIGN.putBack,
-            });
-          } catch (error) {
-            return error instanceof Error ? error.message : String(error);
-          }
-        })();
-        if (typeof planned === 'string') {
-          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
-          return;
-        }
-        const plan = planned;
-        const rows: { what: string; row: PlanTotals }[] = [
-          ...plan.alternatives.map((row) => ({ what: `stop ${row.pick}`, row: row as PlanTotals })),
-          { what: 'the plan itself', row: plan as PlanTotals },
-        ];
-        const failures: string[] = [];
-        for (const { what, row } of rows) {
-          const marches = marchesOf(row);
-          if (marches.length !== row.marches) {
-            failures.push(
-              `${what}: ${String(marches.length)} marches to price, ${String(row.marches)} played`,
-            );
-            continue;
-          }
-          const sum = { silver: 0, gold: 0, seconds: 0 };
-          for (const counts of marches) {
-            const { recovery } = planMarch(scenario.request, counts).summary;
-            sum.silver += recovery.silver;
-            sum.gold += recovery.gold;
-            sum.seconds += recovery.seconds;
-          }
-          for (const key of ['silver', 'gold', 'seconds'] as const) {
-            if (row[key] !== sum[key]) {
-              failures.push(
-                `${what}: ${key} ${row[key].toLocaleString('en-US')} against the recap's ` +
-                  `${sum[key].toLocaleString('en-US')} over ${String(marches.length)} marches ` +
-                  `(Δ ${(sum[key] - row[key]).toLocaleString('en-US')})`,
-              );
-            }
-          }
-          // And the repeated march's own three prices are the recap's, which is what makes the sum above
-          // readable as `played × repeat + the finale` on the bar itself.
-          if (row.sequence) continue;
-          const { recovery } = planMarch(scenario.request, row.counts).summary;
-          for (const key of ['silver', 'gold', 'seconds'] as const) {
-            if (row.repeat[key] !== recovery[key]) {
-              failures.push(
-                `${what}: repeat ${key} ${row.repeat[key].toLocaleString('en-US')} against the recap's ` +
-                  `${recovery[key].toLocaleString('en-US')}`,
-              );
-            }
-          }
-        }
-        expect(failures.join('\n'), `the bar disagrees with the recap\n${failures.join('\n')}`).toBe('');
-      },
-      300_000,
-    );
-  }
+/**
+ * The recap prices a march under the account's own recovery settings — temple level, training cost
+ * reductions, training speed — and the bar's campaign has to be that pricing summed. Every profile in
+ * the repo has temple 0 and no reductions, so a total that read one march off the search's raw pricing
+ * agreed with the recap to the unit here and would not on the first account with a discount (S-91,
+ * 2026-09-18: the finale's silver). So the criterion runs twice: as the accounts are, and under a temple
+ * and discounts every group, which is the reading that tells the two pricings apart.
+ */
+const WITH_DISCOUNTS = (request: StackRequest): StackRequest => ({
+  ...request,
+  recovery: {
+    ...request.recovery,
+    templeLevel: 20,
+    trainingCostReduction: Object.fromEntries(GROUPS.map((group) => [group, 25])),
+    trainingSpeed: Object.fromEntries(GROUPS.map((group) => [group, 30])),
+  },
 });
+
+const campaignIsItsMarchesSum = (title: string, variant: (request: StackRequest) => StackRequest): unknown =>
+  describe(title, () => {
+    /** The marches a stop plays, first to last, the way `PlanTotals` says to read them. */
+    const marchesOf = (row: PlanTotals): Record<string, number>[] => {
+      if (row.sequence) return row.sequence;
+      const tail = row.tail?.marches ?? 0;
+      const repeats = row.marches - (row.finaleCounts ? 1 : 0) - tail;
+      const marches = Array.from({ length: repeats }, () => row.counts);
+      if (row.finaleCounts) marches.push(row.finaleCounts);
+      for (let index = 0; index < tail; index += 1) marches.push(row.tail?.counts ?? {});
+      return marches;
+    };
+
+    for (const scenario of scenarios) {
+      const request = variant(scenario.request);
+      test(
+        scenario.label,
+        () => {
+          const planned = ((): CampaignPlan | string => {
+            try {
+              return planCampaign({
+                request,
+                marchTarget: HORIZON,
+                budgetMs: CAMPAIGN.budgets.plan,
+                ...CAMPAIGN.planFixes,
+                putBack: CAMPAIGN.putBack,
+              });
+            } catch (error) {
+              return error instanceof Error ? error.message : String(error);
+            }
+          })();
+          if (typeof planned === 'string') {
+            expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+            return;
+          }
+          const plan = planned;
+          const rows: { what: string; row: PlanTotals }[] = [
+            ...plan.alternatives.map((row) => ({ what: `stop ${row.pick}`, row: row as PlanTotals })),
+            { what: 'the plan itself', row: plan as PlanTotals },
+          ];
+          const failures: string[] = [];
+          for (const { what, row } of rows) {
+            const marches = marchesOf(row);
+            if (marches.length !== row.marches) {
+              failures.push(
+                `${what}: ${String(marches.length)} marches to price, ${String(row.marches)} played`,
+              );
+              continue;
+            }
+            const sum = { silver: 0, gold: 0, seconds: 0 };
+            for (const counts of marches) {
+              const { recovery } = planMarch(request, counts).summary;
+              sum.silver += recovery.silver;
+              sum.gold += recovery.gold;
+              sum.seconds += recovery.seconds;
+            }
+            for (const key of ['silver', 'gold', 'seconds'] as const) {
+              if (row[key] !== sum[key]) {
+                failures.push(
+                  `${what}: ${key} ${row[key].toLocaleString('en-US')} against the recap's ` +
+                    `${sum[key].toLocaleString('en-US')} over ${String(marches.length)} marches ` +
+                    `(Δ ${(sum[key] - row[key]).toLocaleString('en-US')})`,
+                );
+              }
+            }
+            // And the repeated march's own three prices are the recap's, which is what makes the sum above
+            // readable as `played × repeat + the finale` on the bar itself.
+            if (row.sequence) continue;
+            const { recovery } = planMarch(request, row.counts).summary;
+            for (const key of ['silver', 'gold', 'seconds'] as const) {
+              if (row.repeat[key] !== recovery[key]) {
+                failures.push(
+                  `${what}: repeat ${key} ${row.repeat[key].toLocaleString('en-US')} against the recap's ` +
+                    `${recovery[key].toLocaleString('en-US')}`,
+                );
+              }
+            }
+          }
+          expect(failures.join('\n'), `the bar disagrees with the recap\n${failures.join('\n')}`).toBe('');
+        },
+        300_000,
+      );
+    }
+  });
+
+campaignIsItsMarchesSum('a stop’s campaign is the sum of what its marches cost', (request) => request);
+campaignIsItsMarchesSum(
+  'a stop’s campaign is the sum of what its marches cost — under a temple and training discounts',
+  WITH_DISCOUNTS,
+);
