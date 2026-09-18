@@ -23,9 +23,19 @@
  * Like Troops, this card describes the *account*: everything is written to the active profile, and
  * nothing here is read from the battle setup or from the march on screen.
  */
-import { Badge, Button, Group, Popover, Stack, Switch, Text, UnstyledButton } from '@mantine/core';
-import { Plus } from 'lucide-react';
-import { lazy, useId, useMemo, useState } from 'react';
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Group,
+  Popover,
+  Stack,
+  Switch,
+  Text,
+  UnstyledButton,
+} from '@mantine/core';
+import { Pencil, Plus, Undo2 } from 'lucide-react';
+import { lazy, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
@@ -54,6 +64,22 @@ export function MercenariesSection() {
 
   const mercenaries = profile?.mercenaries;
   const [editor, setEditor] = useState<{ merc?: CustomMercenary } | null>(null);
+  const [undo, setUndo] = useState<Removed | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const offerUndo = (removed: Removed): void => {
+    if (undoTimer.current !== null) clearTimeout(undoTimer.current);
+    setUndo(removed);
+    undoTimer.current = setTimeout(() => {
+      setUndo(null);
+      undoTimer.current = null;
+    }, UNDO_MS);
+  };
+  useEffect(
+    () => () => {
+      if (undoTimer.current !== null) clearTimeout(undoTimer.current);
+    },
+    [],
+  );
 
   const owned = useMemo(() => (mercenaries === undefined ? [] : ownedRows(mercenaries)), [mercenaries]);
   const ownedIds = useMemo(() => owned.map((entry) => entry.id), [owned]);
@@ -90,11 +116,44 @@ export function MercenariesSection() {
     patch({ selected: [...mercenaries.selected, { id, cap: null }] });
   };
 
+  /**
+   * A removal is one press on the pill and comes with a way back (owner, 2026-09-18: "deletion on
+   * click on the pill, with a disappearing message: bring back, or cancel"): what was removed, and
+   * where it stood, kept for `UNDO_MS` under the row. Put back slots a hired one back at its old
+   * index — a hire made in between keeps its place — and a custom one at the end of its own list.
+   */
   const release = (id: string): void => {
+    const at = mercenaries.selected.findIndex((entry) => entry.id === id);
+    const removed = {
+      selected: mercenaries.selected.filter((entry) => entry.id === id),
+      custom: mercenaries.custom.filter((entry) => entry.id === id),
+      at: Math.max(0, at),
+      what: owned.find((entry) => entry.id === id)?.unit.name ?? 'Mercenary',
+    };
     patch({
       selected: mercenaries.selected.filter((entry) => entry.id !== id),
       custom: mercenaries.custom.filter((entry) => entry.id !== id),
     });
+    offerUndo(removed);
+  };
+
+  const releaseAll = (): void => {
+    const removed = {
+      selected: mercenaries.selected,
+      custom: mercenaries.custom,
+      at: 0,
+      what: `${String(owned.length)} mercenaries`,
+    };
+    patch({ selected: [], custom: [] });
+    offerUndo(removed);
+  };
+
+  const putBack = (): void => {
+    if (undo === null) return;
+    const selected = [...mercenaries.selected];
+    selected.splice(Math.min(undo.at, selected.length), 0, ...undo.selected);
+    patch({ selected, custom: [...mercenaries.custom, ...undo.custom] });
+    setUndo(null);
   };
 
   const setCap = (id: string, cap: number | null): void => {
@@ -113,11 +172,16 @@ export function MercenariesSection() {
     setEditor(null);
   };
 
+  // No × on the pill any more: the pill's own body removes it (owner, 2026-09-18), and the badge —
+  // or a custom one's pencil — is the way into its editor.
   const items: PillRowItem[] = owned.map((entry) => ({
     id: entry.id,
     label: entry.isCustom ? (
       <CustomPill
         entry={entry}
+        onRemove={() => {
+          release(entry.id);
+        }}
         onEdit={() => {
           const merc = mercenaries.custom.find((custom) => custom.id === entry.id);
           if (merc !== undefined) setEditor({ merc });
@@ -126,15 +190,14 @@ export function MercenariesSection() {
     ) : (
       <HiredPill
         entry={entry}
+        onRemove={() => {
+          release(entry.id);
+        }}
         onCap={(cap) => {
           setCap(entry.id, cap);
         }}
       />
     ),
-    removeLabel: `Remove ${entry.unit.name}`,
-    onRemove: () => {
-      release(entry.id);
-    },
   }));
 
   return (
@@ -161,8 +224,12 @@ export function MercenariesSection() {
             emptyMessage="No mercenary of that name. Add it by hand."
             width={240}
           />
+          {/* Quiet, in the muted ink (owner, 2026-09-18: "greyish but still visible, as it's seldom
+              used"): a mercenary the tables do not carry is a rare thing to type in. */}
           <Button
             variant="subtle"
+            color="gray"
+            c="dimmed"
             leftSection={<Plus size={14} aria-hidden="true" />}
             onClick={() => {
               setEditor({});
@@ -171,17 +238,29 @@ export function MercenariesSection() {
             Custom mercenary
           </Button>
           {owned.length > 0 && (
-            <Button
-              variant="subtle"
-              size="compact-sm"
-              onClick={() => {
-                patch({ selected: [], custom: [] });
-              }}
-            >
+            <Button variant="subtle" size="compact-sm" onClick={releaseAll}>
               Deselect all
             </Button>
           )}
         </div>
+
+        {/* The way back, for `UNDO_MS` after a removal: one line under the row, a live region so it
+            is read out, and a button that puts back exactly what went. Then it goes by itself. */}
+        {undo !== null && (
+          <Group role="status" gap="xs" wrap="nowrap">
+            <Text span size="sm" c="dimmed">
+              {`${undo.what} removed.`}
+            </Text>
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              leftSection={<Undo2 size={14} aria-hidden />}
+              onClick={putBack}
+            >
+              Put back
+            </Button>
+          </Group>
+        )}
 
         {owned.length === 0 && (
           <Text size="sm" c="dimmed">
@@ -217,6 +296,17 @@ export function MercenariesSection() {
  * The count badge's three sizes, inline for the same reason `TierBadge` writes its own: the theme's
  * `Badge.vars` land on the element's `style`, and only an inline value outranks them.
  */
+/** How long the way back stays under the row after a removal. */
+const UNDO_MS = 6000;
+
+/** What a removal took, and where it stood, so "Put back" restores exactly that. */
+interface Removed {
+  selected: Profile['mercenaries']['selected'];
+  custom: Profile['mercenaries']['custom'];
+  at: number;
+  what: string;
+}
+
 const COUNT_BADGE = {
   '--badge-fz': 'var(--mantine-font-size-xs)',
   '--badge-height': '1.25rem',
@@ -248,21 +338,35 @@ function PillFace({ entry }: { entry: MercenaryRow }) {
           the tier's ink, so the two badges cannot be read as one thing; 13 px, because an owned count
           is information (rule 19) where the tier is a label. `∞` goes through the glyph box inside
           the same badge, so an unlimited pill is exactly as tall as a "1 212" one. */}
-      {!entry.isCustom && (
-        <Badge
-          component="span"
-          variant="default"
-          color="slate"
-          radius="xs"
-          tt="none"
-          fw={600}
-          className={classes.count}
-          style={COUNT_BADGE}
-        >
-          {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
-        </Badge>
-      )}
     </>
+  );
+}
+
+/**
+ * The owned count as a **badge on the pill**, and the button that edits it (owner, 2026-09-18: "the
+ * number in a badge… it's more an input field right now, not a badge on a pill"). Round and
+ * tinted, no edge: the shape a badge has, not a well's. Neutral, never the tier's ink, so the two
+ * badges cannot be read as one thing; 13 px, because an owned count is information (rule 19) where
+ * the tier is a label. `∞` goes through the glyph box inside the same badge, so an unlimited pill is
+ * exactly as tall as a "1 212" one.
+ */
+function CountBadge({ entry, onPress }: { entry: MercenaryRow; onPress: () => void }) {
+  return (
+    <Badge
+      component="button"
+      type="button"
+      variant="light"
+      color="slate"
+      radius="xl"
+      tt="none"
+      fw={600}
+      className={classes.count}
+      style={COUNT_BADGE}
+      aria-label={`${entry.unit.name}: owned ${capSpoken(entry.cap)}`}
+      onClick={onPress}
+    >
+      {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
+    </Badge>
   );
 }
 
@@ -271,7 +375,15 @@ function PillFace({ entry }: { entry: MercenaryRow }) {
  * pill with a plain field — an owned count is typed, never walked to (owner, 2026-09-13) — and the
  * switch that says "as many as the camp pays for".
  */
-function HiredPill({ entry, onCap }: { entry: MercenaryRow; onCap: (cap: number | null) => void }) {
+function HiredPill({
+  entry,
+  onCap,
+  onRemove,
+}: {
+  entry: MercenaryRow;
+  onCap: (cap: number | null) => void;
+  onRemove: () => void;
+}) {
   const [opened, setOpened] = useState(false);
   const name = entry.unit.name;
 
@@ -293,17 +405,20 @@ function HiredPill({ entry, onCap }: { entry: MercenaryRow; onCap: (cap: number 
       trapFocus
       returnFocus
     >
+      {/* Two targets on one pill (owner, 2026-09-18): the body removes the mercenary — one press,
+          with the way back under the row — and the badge opens the owned-count editor. The popover
+          hangs off the badge, which is a real `<button>`, so `aria-expanded` lands where it is
+          allowed (investigation 0007). */}
+      <UnstyledButton className={classes.face} fz="sm" aria-label={`Remove ${name}`} onClick={onRemove}>
+        <PillFace entry={entry} />
+      </UnstyledButton>
       <Popover.Target>
-        <UnstyledButton
-          className={classes.face}
-          fz="sm"
-          aria-label={`${name}: owned ${capSpoken(entry.cap)}`}
-          onClick={() => {
+        <CountBadge
+          entry={entry}
+          onPress={() => {
             setOpened((open) => !open);
           }}
-        >
-          <PillFace entry={entry} />
-        </UnstyledButton>
+        />
       </Popover.Target>
       {/* A width of its own, on the dropdown rather than on the popover, and a field that fills it:
           neither the box nor the control inside it is allowed to be sized by what is typed. */}
@@ -339,12 +454,40 @@ function HiredPill({ entry, onCap }: { entry: MercenaryRow; onCap: (cap: number 
   );
 }
 
-/** A hand-typed one: there is no owned count to set, so its body opens the form it came from. */
-function CustomPill({ entry, onEdit }: { entry: MercenaryRow; onEdit: () => void }) {
+/**
+ * A hand-typed one: there is no owned count to set, so where the badge would be stands the pencil
+ * that reopens the form it came from; its body removes it, like every pill's.
+ */
+function CustomPill({
+  entry,
+  onEdit,
+  onRemove,
+}: {
+  entry: MercenaryRow;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
   return (
-    <UnstyledButton className={classes.face} fz="sm" aria-label={`Edit ${entry.unit.name}`} onClick={onEdit}>
-      <PillFace entry={entry} />
-    </UnstyledButton>
+    <>
+      <UnstyledButton
+        className={classes.face}
+        fz="sm"
+        aria-label={`Remove ${entry.unit.name}`}
+        onClick={onRemove}
+      >
+        <PillFace entry={entry} />
+      </UnstyledButton>
+      <ActionIcon
+        size={22}
+        radius="xl"
+        variant="subtle"
+        color="gray"
+        aria-label={`Edit ${entry.unit.name}`}
+        onClick={onEdit}
+      >
+        <Pencil size={12} aria-hidden />
+      </ActionIcon>
+    </>
   );
 }
 

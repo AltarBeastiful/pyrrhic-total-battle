@@ -44,9 +44,9 @@ const pillNames = (): string[] =>
     .map((button) => button.getAttribute('aria-label') ?? '')
     .filter((name) => !name.startsWith('Remove '));
 
-/** One pill's whole line, as a glance reads it. */
+/** One pill's whole line, as a glance reads it: the pill around the badge that carries the name. */
 const pillText = (name: string): string =>
-  (screen.getByRole('button', { name }).textContent ?? '').replace(/\s+/g, '');
+  (screen.getByRole('button', { name }).closest('.mantine-Pill-root')?.textContent ?? '').replace(/\s+/g, '');
 
 /** Open the picker the way a player does: press it, then type the name. */
 async function find(user: ReturnType<typeof userEvent.setup>, query?: string): Promise<HTMLElement> {
@@ -180,7 +180,7 @@ test('the Unlimited switch gives the quantity back to the camp', async () => {
   expect(pillText('Bear V: owned unlimited')).toContain('∞');
 });
 
-test('the cross gives a mercenary back, and Deselect all empties the camp in one press', async () => {
+test('the pill removes its mercenary in one press, and Put back restores it where it stood', async () => {
   const user = userEvent.setup();
   renderWithTheme(<MercenariesSection />);
   own([
@@ -188,12 +188,42 @@ test('the cross gives a mercenary back, and Deselect all empties the camp in one
     { id: 'abomination-6', cap: 22 },
   ]);
 
+  // The body is the remove (owner, 2026-09-18); no × on the pill any more.
   await user.click(screen.getByRole('button', { name: 'Remove Bear V' }));
   expect(mercs()?.selected).toEqual([{ id: 'abomination-6', cap: 22 }]);
+  expect(screen.queryByRole('button', { name: /^Dismiss|^Remove Bear V$/ })).toBeNull();
+
+  // …and the way back, under the row, in a live region.
+  const status = screen.getByRole('status');
+  expect(status.textContent).toContain('Bear V removed.');
+  await user.click(within(status).getByRole('button', { name: 'Put back' }));
+  expect(mercs()?.selected).toEqual([
+    { id: 'bear-5', cap: null },
+    { id: 'abomination-6', cap: 22 },
+  ]);
+  expect(screen.queryByRole('status')).toBeNull();
+  // The line also goes by itself after six seconds (`UNDO_MS`), which a fake clock under
+  // `userEvent` stalls on in jsdom; the timer is three lines and is read, not tested.
+});
+
+test('Deselect all empties the camp in one press, and Put back fills it again', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<MercenariesSection />);
+  own([
+    { id: 'bear-5', cap: null },
+    { id: 'abomination-6', cap: 22 },
+  ]);
 
   await user.click(screen.getByRole('button', { name: 'Deselect all' }));
   expect(mercs()?.selected).toEqual([]);
   expect(screen.queryByRole('group', { name: 'Mercenaries you own' })).toBeNull();
+
+  expect(screen.getByRole('status').textContent).toContain('2 mercenaries removed.');
+  await user.click(screen.getByRole('button', { name: 'Put back' }));
+  expect(mercs()?.selected).toEqual([
+    { id: 'bear-5', cap: null },
+    { id: 'abomination-6', cap: 22 },
+  ]);
 });
 
 test('the custom sheet adds a mercenary the tables do not carry, and its pill reopens it', async () => {

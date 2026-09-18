@@ -34,15 +34,21 @@ test('a mercenary is hired from the picker, and its pill says how many you own',
   await search.press('Escape');
   await expect(list).toBeHidden();
 
-  // The camp is a row of pills: glyph, code, tier and quantity, counted in the panel's meta.
+  // The camp is a row of pills: glyph, code, tier and, in a badge, the quantity, counted in the
+  // panel's meta. The badge is the button named for what is owned; the pill's body removes.
   await expect(card.getByText('1 hired')).toBeVisible();
-  const pill = card.getByRole('button', { name: 'Bear V: owned unlimited' });
+  const badge = card.getByRole('button', { name: 'Bear V: owned unlimited' });
+  // `has` takes a locator relative to the pill, so the badge is named again rather than reused.
+  const pill = card
+    .locator('.mantine-Pill-root')
+    .filter({ has: page.getByRole('button', { name: 'Bear V: owned unlimited' }) });
   await expect(pill).toContainText('BER');
   await expect(pill).toContainText('V');
-  await expect(pill).toContainText('∞');
+  await expect(badge).toContainText('∞');
+  await expect(pill.getByRole('button', { name: 'Remove Bear V' })).toBeVisible();
 
-  // Pressing the pill opens the quantity under it: a plain field, no step buttons.
-  await pill.click();
+  // Pressing the badge opens the quantity under it: a plain field, no step buttons.
+  await badge.click();
   const editor = page.getByRole('dialog');
   await expect(editor).toBeVisible();
   await expect(editor.getByRole('button', { name: /Increase|Decrease/ })).toHaveCount(0);

@@ -44,8 +44,9 @@ export function PillRow({ label, items, empty, className }: PillRowProps) {
           key={item.id}
           withRemoveButton={item.onRemove !== undefined}
           // Mantine hides the × from screen readers by default, on the assumption that the pill is
-          // removable some other way. Here it is the only way, so it is given back its name and its
-          // place in the tab order.
+          // removable some other way. Where a row asks for one it is the only way, so it is given
+          // back its name and its place in the tab order. (The mercenary pills ask for none since
+          // 2026-09-18: their body removes, with a way back under the row.)
           removeButtonProps={{
             'aria-label': item.removeLabel ?? 'Remove',
             'aria-hidden': false,
