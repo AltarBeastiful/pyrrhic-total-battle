@@ -32,6 +32,7 @@ import {
   Stack,
   Switch,
   Text,
+  Transition,
   UnstyledButton,
 } from '@mantine/core';
 import { Pencil, Plus, Undo2 } from 'lucide-react';
@@ -66,9 +67,11 @@ export function MercenariesSection() {
   const mercenaries = profile?.mercenaries;
   const [editor, setEditor] = useState<{ merc?: CustomMercenary } | null>(null);
   const [undo, setUndo] = useState<Removed | null>(null);
+  const lastUndo = useRef<Removed | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const offerUndo = (removed: Removed): void => {
     if (undoTimer.current !== null) clearTimeout(undoTimer.current);
+    lastUndo.current = removed;
     setUndo(removed);
     undoTimer.current = setTimeout(() => {
       setUndo(null);
@@ -247,22 +250,27 @@ export function MercenariesSection() {
         </div>
 
         {/* The way back, for `UNDO_MS` after a removal: one line under the row, a live region so it
-            is read out, and a button that puts back exactly what went. Then it goes by itself. */}
-        {undo !== null && (
-          <Group role="status" gap="xs" wrap="nowrap">
-            <Text span size="sm" c="dimmed">
-              {`${undo.what} removed.`}
-            </Text>
-            <Button
-              variant="subtle"
-              size="compact-sm"
-              leftSection={<Undo2 size={14} aria-hidden />}
-              onClick={putBack}
-            >
-              Put back
-            </Button>
-          </Group>
-        )}
+            is read out, and a button that puts back exactly what went. Then it goes by itself — on a
+            short fade in and out (owner, 2026-09-18: "a very slight animation"), which the theme
+            turns off for anyone who asked their system for stillness. The last message is kept for
+            the fade-out, since `undo` is already null while the line is still leaving. */}
+        <Transition mounted={undo !== null} transition="fade" duration={160}>
+          {(style) => (
+            <Group role="status" gap="xs" wrap="nowrap" style={style}>
+              <Text span size="sm" c="dimmed">
+                {`${(undo ?? lastUndo.current)?.what ?? ''} removed.`}
+              </Text>
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                leftSection={<Undo2 size={14} aria-hidden />}
+                onClick={putBack}
+              >
+                Put back
+              </Button>
+            </Group>
+          )}
+        </Transition>
 
         {owned.length === 0 && (
           <Text size="sm" c="dimmed">
@@ -364,6 +372,9 @@ const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress:
     // top-left corner (owner, 2026-09-18: "the popup is opened on the far left corner").
     return (
       <Badge
+        // The popover's own props first, so the badge's class, style and press are what stands: the
+        // target's `className` would otherwise write over the badge's, and with it the pointer.
+        {...target}
         ref={ref}
         component="button"
         type="button"
@@ -376,7 +387,6 @@ const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress:
         className={classes.count}
         style={COUNT_BADGE}
         aria-label={`${entry.unit.name}: owned ${capSpoken(entry.cap)}`}
-        {...target}
         onClick={onPress}
       >
         {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
@@ -406,7 +416,11 @@ function HiredPill({
     <Popover
       opened={opened}
       onChange={setOpened}
-      position="bottom-start"
+      // On the badge's **end**, which is the one edge of it that never moves: the badge is
+      // right-aligned on the pill's corner and grows leftward as the figure lands, so a box aligned
+      // on its start walked left with every digit (owner, 2026-09-18: "when inputting numbers…
+      // the tooltip moves; it shouldn't").
+      position="bottom-end"
       withinPortal
       keepMounted={false}
       // The editor must not move while a figure is being typed into it (the owner's phone review,

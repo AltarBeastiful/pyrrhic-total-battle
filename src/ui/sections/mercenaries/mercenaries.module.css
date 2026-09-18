@@ -19,18 +19,25 @@
 }
 
 /* The row. Mantine derives a pill group's gap from the pill's font size; the contract says 8 — and
-   16 between the lines since the count rides the corner (2026-09-18): half of a 20 px badge stands
+   20 between the lines since the count rides the corner (2026-09-18): 14 px of a 20 px badge stand
    above its pill, which at 8 px would land on the pill above. */
 .pills {
   gap: 8px;
-  row-gap: 1rem;
+  row-gap: 1.25rem;
 }
 
-/* The strip a pill keeps for the badge on its corner: 36 px holds a three-figure count ("999" is
-   34 px of badge at 13 px), the usual case; a four-figure one reaches 8 px over the tier badge,
-   which is rare and still reads. The pill's own end padding was 6. */
+/* A pill with a badge on its corner is **one button**: the remove. The pill's own padding moves
+   onto the button (`.face`), so a press on the pill's edge is a press on the pill (owner,
+   2026-09-18: "the whole pill should be clickable to remove it"). The button keeps the chip's 14 px
+   strip at its end for the badge, which hangs above that corner and reaches only into the top
+   padding — so the pill is as wide as its glyph, code and tier, and no wider. */
 .pills :global(.mantine-Pill-root[data-corner]) {
-  padding-inline-end: 2.25rem;
+  padding: 0;
+}
+
+.pills :global(.mantine-Pill-root[data-corner]) .face {
+  height: 100%;
+  padding: 0 0.875rem 0 10px;
 }
 
 /* The pill's body is a button, and a button is one child of the pill's label — so the 6 px inner
@@ -77,13 +84,32 @@
    reads as a column of counts, never squeezed, and its label left to overflow the way the tier
    badge's is — Mantine clips a badge's label to its box, which took the top off "1 212". It is a
    `<button>` — pressing it opens the owned-count editor — so the browser's own button chrome is
-   taken off it; the badge draws the rest. */
-.count {
+   taken off it; the badge draws the rest.
+
+   **It says it is a button** (owner, 2026-09-18: "the badge doesn't show it's clickable; on hover
+   the cursor doesn't change; think about mobile"): the pointer, one tonal step on hover, the
+   theme's focus ring — and a hit area 36 px square through a pseudo-element, so a thumb lands on a
+   20 px badge without the badge growing to 36. Mantine's badge sets its own cursor, which is why
+   `cursor` is said at this specificity. */
+.pills .count {
+  position: relative;
   flex: 0 0 auto;
   border: 0;
   cursor: pointer;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
+}
+
+.pills .count::after {
+  position: absolute;
+  inset: -0.5rem;
+  content: '';
+}
+
+@media (hover: hover) {
+  .pills .count:hover {
+    --badge-bg: var(--mantine-color-slate-filled-hover);
+  }
 }
 
 .count :global(.mantine-Badge-label) {

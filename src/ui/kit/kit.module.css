@@ -28,15 +28,18 @@
    too wide each read as "a bit too wide, maybe because of the config badge" (owner, 2026-09-17);
    the gear is a circle, so at the height of the letters it is further away than its box. */
 /* A badge on a pill's corner (`CornerPill`): the same transparent indicator as the gear's, but
-   **right-aligned on the corner** — its right edge 4 px past the pill's, its middle on the pill's
-   top edge — so a figure that grows wider grows over its own pill. The pill reserves a strip for it
-   (the card that uses it says how wide, on `[data-corner]`), and a wrapping row of these needs the
-   half-badge above the pill in its row gap, as `gearGrid` does for the chips. */
+   **right-aligned on the corner and hung above it** — its right edge 4 px past the pill's, and
+   seven tenths of it above the pill's top edge, so it reaches 6 px into the pill: the pill's own
+   top padding, never its text (owner, 2026-09-18: "lots of space on the right of the pill… get the
+   width down"). A figure that grows wider grows leftward over its own pill's top edge and never
+   over the neighbour, and the pill reserves only the chip's 14 px strip for it (`[data-corner]`,
+   sized by the card). A wrapping row of these needs the badge's 14 px above the pill in its row
+   gap, as `gearGrid` does for the chips' gears. */
 .pillCorner :global(.mantine-Indicator-indicator) {
   padding: 0;
   background: transparent;
   border: none;
-  transform: translate(0.25rem, -50%);
+  transform: translate(0.25rem, -70%);
 }
 
 /* An already-built pill in a `PillRow`: the slot that keeps it in the group's flow. */
