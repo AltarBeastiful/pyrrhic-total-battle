@@ -23,7 +23,8 @@
  *   a silver and its best damage a hired unit. That is the question the method exists to answer;
  * - **one line of totals**, "Fought to the end", because a player who has read the trade still asks what the
  *   whole sequence comes to;
- * - **the reference tail, folded** (the owner, 2026-09-16: the prose goes). What silver buys (the curve),
+ * - **the reference tail, folded** (the owner, 2026-09-16: the prose goes). What silver buys — the plans the
+ *   bar may offer, at what they cost (`CampaignPlan.curve`, over the band since S-88) —
  *   what the plan ran out of, how a row is to be read and how many plans were left off are four dimmed
  *   paragraphs and a table that nobody reads twice, so they sit behind one nested fold named "Reference",
  *   closed until it is asked for (design rule 4). What stays out of it is the one line above and the
@@ -77,7 +78,13 @@ function mercsAMarch(point: PlanFigures): string {
 
 /**
  * Where silver stops buying: the last level at which the next slice still returns a damage a silver. It is
- * read off the curve the engine measured, not assumed — the owner's own plan spends a little under it.
+ * read off the table the engine measured, not assumed — the owner's own plan spends a little under it.
+ *
+ * Since S-88 the table is the **plans the bar may offer**, bucketed by silver, which is two to four rows on
+ * every army measured — so this walks two or three slices rather than ten. It still finds a real level on
+ * eleven of the thirteen scenarios of `tests/engine/plan-scenarios.ts`; on the other two the slope never
+ * falls, the answer is the dearest row itself, and the sentence under the table is dropped rather than
+ * claiming something about a level the table does not reach (see the fold).
  */
 function efficientCeiling(curve: CampaignPlan['curve']): number {
   let ceiling = curve[0]?.silver ?? 0;
@@ -92,7 +99,12 @@ function efficientCeiling(curve: CampaignPlan['curve']): number {
   return ceiling;
 }
 
-/** Six points of the curve, evenly spaced: the shape of what silver buys, at a length a 420 px pane takes. */
+/**
+ * Six points of the table, evenly spaced: the shape of what silver buys, at a length a 420 px pane takes.
+ * Since S-88 the engine's own table is the band's own width — two to four rows on every army measured — so
+ * this thins nothing in practice; it is kept for the account whose band spans more silver levels than a
+ * phone screen has lines.
+ */
 function sampledCurve(curve: CampaignPlan['curve']): CampaignPlan['curve'] {
   if (curve.length <= 6) return curve;
   return Array.from(
@@ -354,16 +366,27 @@ export function PlanFold() {
               {bindingSentence(plan.binding)}
             </Text>
 
-            {/* The curve behind the frontier: what N silver buys, and what it buys a mercenary. Six points of
-                it, evenly spaced, because the frontier list above is thinned for the eye while this is the
-                shape — and the shape is what says how far silver is worth spending. */}
-            {plan.curve.length > 2 && (
+            {/* **The plans this bar may offer, by what they cost**: what N silver buys, and what it buys a
+                mercenary. The owner read this table on 2026-09-18, saw a row at 2.91 damage a silver — better
+                than anything his bar offered — and asked why it was not a stop. It could not have been: the
+                engine bucketed it over every shape its search priced, and that row was a one-troop-stack
+                march the band refuses. Since S-88 the rows are the band the stops are drawn from, plus the
+                stops themselves, so every line here is a plan this bar could put on screen. The **caption
+                says so**, because a table whose rows are not of the bar's own set reads as a bar that missed
+                something (rule 5: one figure, one meaning on the page) — and it is the table's accessible
+                name as well, rather than a second name only a screen reader hears.
+
+                **Two rows are still a comparison** — what the cheaper level buys against the dearer — so the
+                table is drawn from two up, where it used to need three; the band is narrow and two to four
+                rows is what it comes to. A single row is the bar's own figures said twice (rule 5), and is
+                not drawn. */}
+            {plan.curve.length > 1 && (
               <>
-                <Table
-                  horizontalSpacing={6}
-                  verticalSpacing={4}
-                  aria-label="What silver buys along the plan curve"
-                >
+                <Table horizontalSpacing={6} verticalSpacing={4} captionSide="top">
+                  <Table.Caption>
+                    Every plan this bar may offer, at the silver it costs — the levels the stops are chosen
+                    from.
+                  </Table.Caption>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th scope="col">Silver</Table.Th>
@@ -389,10 +412,21 @@ export function PlanFold() {
                     ))}
                   </Table.Tbody>
                 </Table>
-                <Text size="sm" c="dimmed">
-                  {`Past about ${amount(efficientCeiling(plan.curve))} silver, the next slice buys less than one damage a silver — ` +
-                    `beyond that the plan is buying damage with the hired stock rather than with silver.`}
-                </Text>
+                {/* Said only where the table **shows** the slope falling: the ceiling read off it is under
+                    its own dearest row. On a band whose every level still returns a damage a silver the
+                    ceiling is that dearest row, and the sentence would be claiming something about a level
+                    the table does not reach — so it goes (rule 15: nothing on screen without value).
+                    Measured on the thirteen scenarios of `tests/engine/plan-scenarios.ts`: it is said on
+                    eleven of them. */}
+                {/* The ceiling is read off the rows the table draws (`sampledCurve`), so the sentence never names a
+                    level the reader cannot see (rule 15). */}
+                {efficientCeiling(sampledCurve(plan.curve)) <
+                  (plan.curve[plan.curve.length - 1]?.silver ?? 0) && (
+                  <Text size="sm" c="dimmed">
+                    {`Past about ${amount(efficientCeiling(sampledCurve(plan.curve)))} silver, the next plan on this list buys less than one damage a silver — ` +
+                      `beyond that the plan is buying damage with the hired stock rather than with silver.`}
+                  </Text>
+                )}
               </>
             )}
           </Stack>

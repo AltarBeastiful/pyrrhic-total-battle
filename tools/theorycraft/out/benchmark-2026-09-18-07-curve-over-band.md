@@ -2,7 +2,7 @@
 
 Every sequence is four marches: the sizers re-sized each march on the stock the last one left (Generate four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. Each march priced by `simulateBattle` on its counts.
 
-Run: 2026-09-18T15:09:09.335Z, commit (working tree)
+Run: 2026-09-18T14:58:24.575Z, commit (working tree)
 
 ## first-run army, Bear V ×1 (20 000 leadership)
 

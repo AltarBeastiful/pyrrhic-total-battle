@@ -168,11 +168,11 @@ export interface CampaignInput {
    * the bar left behind — so an experiment can ask of any silver level which plan stands there and which rule
    * passed it over (`tools/theorycraft/104-union-slider.test.ts`).
    *
-   * The rows are the frontier's own summaries **plus the best-damage shape recorded at each silver bucket** —
-   * the plans the `curve` is written from, which the frontier itself does not carry: `record` books every
-   * shape the search scores while `consider` keeps only the strongest of each mercenary vector, so a row of
-   * the reference table under the bar usually has no plan on the frontier behind it. `onFrontier` tells the
-   * two apart. Sorted by silver; the `all-in` stop is built march by march outside both and is not among them.
+   * The rows are the frontier's own summaries **plus the marches the bar offers that the search never
+   * summarised** — a stop the put-back pass re-sized after it was chosen, and the `all-in`, which is built
+   * march by march outside the frontier altogether. `onFrontier` tells the two apart. Since S-88 that is the
+   * whole of the reference table's own set as well (`curve` is bucketed over the plans the bar may offer), so
+   * every row of the table under the bar has a row here behind it. Sorted by silver.
    */
   withFrontier?: boolean;
   /**
@@ -269,19 +269,23 @@ export interface PlanTotals {
 }
 
 /**
- * One point of the campaign's own curve: the best damage found at a given silver spend, and the best damage
- * per mercenary found there. Bucketed by silver, because that is the axis a player can actually choose —
- * "this is what N silver buys" — and carried so the UI (and a reader) can see the shape rather than three
- * points picked off it.
+ * One point of the campaign's own curve: at a given silver spend, the most damage **the bar could offer** for
+ * it and the most damage a mercenary it could offer. Bucketed by silver, because that is the axis a player
+ * can actually choose — "this is what N silver buys" — and carried so the UI (and a reader) can see the shape
+ * rather than three points picked off it.
+ *
+ * **Over the plans the bar may offer, not over everything the search prices** (S-88; see `curve`). The owner
+ * read a 2.91-a-silver row of this table on 2026-09-18 and asked why it was not a stop: it was a
+ * one-troop-stack march the band refuses, and no rule could ever have offered it.
  */
 export interface PlanCurvePoint {
   silver: number;
-  /** The most damage any plan found spends this much silver for. */
+  /** The most damage a plan the bar may offer spends this much silver for. */
   damage: number;
   /** Damage per silver at that plan. */
   damagePerSilver: number;
   mercLost: number;
-  /** The most damage a mercenary any plan found spends this much silver for. */
+  /** The most damage a mercenary a plan the bar may offer spends this much silver for. */
   thriftyDamage: number;
   thriftyMercLost: number;
   thriftyPerMercenary: number;
@@ -382,10 +386,10 @@ export type PlanFrontierRow = PlanTotals & {
   label: string;
   /**
    * The frontier carries **this candidate**, by object identity: the row was summarised from a `Candidate`
-   * the search pushed onto `frontier` (`consider`). False for a row that only the **curve** carries — the
-   * best shape recorded at one silver bucket, which the search scored and then threw away because a stronger
-   * shape of the same mercenary vector was the one it kept. It is identity and not counts: a plan the
-   * frontier holds and a bucket's best that field the same march are one row here, and it reads `true`.
+   * the search pushed onto `frontier` (`consider`). False for a march the bar offers that the search never
+   * summarised — a stop the put-back pass re-sized after it was chosen, or the `all-in`, built march by march
+   * outside the frontier. It is identity and not counts: a plan the frontier holds and an offered march that
+   * field the same counts are one row here, and it reads `true`.
    */
   onFrontier: boolean;
   /**
@@ -438,9 +442,14 @@ export interface CampaignPlan extends PlanTotals {
    */
   leftOut: number;
   /**
-   * The campaign's whole curve, bucketed by silver: what that much silver buys, and what it buys per
-   * mercenary. The two are the owner's two slopes, and the bucketing is what makes the shape visible —
-   * the frontier list above is thinned for the eye.
+   * The reference table under the bar, bucketed by silver: what that much silver buys, and what it buys per
+   * mercenary. The two are the owner's two slopes, and the bucketing is what makes the shape visible.
+   *
+   * **Over the plans the bar may offer** (S-88, owner 2026-09-18): the band the stops are drawn from
+   * (`candidates`), plus the stops themselves, so a march the put-back pass re-sized is in the table the
+   * player reads under it. Until then it was bucketed over *every shape the search priced*, and he asked why
+   * the 2.91-a-silver row of his own table was not one of his stops — it was a one-troop-stack march the
+   * frontier threw away and the band refuses. See `offered` below for the figures the change moved.
    */
   curve: PlanCurvePoint[];
   /**
@@ -1284,22 +1293,6 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       best = candidate;
     }
   };
-  /** One bucket per silver level, holding the best damage and the best damage-per-mercenary found there. */
-  // 1.2× a bucket: fine enough to read the curve's shape, coarse enough to be one line per level. Sixty
-  // of them span 10 k to 560 M silver, which is every plan a single account can afford.
-  const BUCKETS = 60;
-  const bucketLog = Math.log(1.2);
-  const bucketOf = (silver: number): number =>
-    Math.min(BUCKETS - 1, Math.max(0, Math.round(Math.log(silver / 10_000) / bucketLog)));
-  const buckets = new Map<
-    number,
-    {
-      best: { damage: number; silver: number; mercs: number };
-      thrifty: { damage: number; silver: number; mercs: number };
-    }
-  >();
-  /** The candidate behind each bucket's `best`, kept only for `CampaignInput.withFrontier`. */
-  const bucketBest = new Map<number, Candidate>();
   /** The plan that buys the most damage per silver — only meaningful before a budget is applied. */
   let light: Candidate | null = null;
   /** The plan that buys the most damage per mercenary over the whole search. */
@@ -1438,7 +1431,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const marchedSilver = (candidate: Candidate): number =>
     candidate.marches * candidate.march.silver + (candidate.finale?.silver ?? 0);
 
-  /** Books one scored shape into everything the search carries: the three picks, the buckets, the peaks. */
+  /** Books one scored shape into the two peaks the payload carries (`mostEfficient`, `mostThrifty`). */
   const record = (candidate: Candidate): void => {
     const { total } = candidate;
     const spent = marchedSilver(candidate);
@@ -1446,28 +1439,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (spent > 0 && (!light || total / spent > light.total / lightSpent)) {
       light = { ...candidate, spent };
     }
-    // The three picks the UI toggles between, measured over every candidate rather than over the thinned
-    // frontier: the most damage a silver and the most damage a mercenary. The third pick the UI toggles
-    // between — the sweet spot — is no longer read here: since 2026-09-16 it is the middle of the *trade* in
-    // hired stock, which is a question about the plans the bar can carry and not about the search's peaks.
+    // The two peaks, measured over every candidate rather than over the thinned frontier: the most damage a
+    // silver and the most damage a mercenary. The sweet spot is not read here: since 2026-09-16 it is the
+    // middle of the *trade* in hired stock, which is a question about the plans the bar can carry and not
+    // about the search's peaks. Neither is the reference table any more (S-88): the `curve` is bucketed over
+    // the plans the bar may offer, at the end of this function, and not over every shape the search prices.
     const { silver: pointSilver, mercs: pointMercs } = ratioOf(candidate);
-    if (pointSilver > 10_000 && pointMercs > 0 && pointSilver < 10_000 * 1.2 ** BUCKETS) {
-      const key = bucketOf(pointSilver);
-      const entry = buckets.get(key) ?? {
-        best: { damage: 0, silver: 0, mercs: 0 },
-        thrifty: { damage: 0, silver: 0, mercs: 0 },
-      };
-      if (total > entry.best.damage) {
-        entry.best = { damage: total, silver: pointSilver, mercs: pointMercs };
-        // The plan behind that bucket, for the diagnostic alone (`CampaignInput.withFrontier`): the curve
-        // carries three figures, and "which march is this row" cannot be asked of three figures.
-        if (input.withFrontier === true) bucketBest.set(key, candidate);
-      }
-      if (total / pointMercs > entry.thrifty.damage / Math.max(1, entry.thrifty.mercs)) {
-        entry.thrifty = { damage: total, silver: pointSilver, mercs: pointMercs };
-      }
-      buckets.set(key, entry);
-    }
     if (pointSilver <= 0 || pointMercs <= 0) return;
     const perSilver = total / pointSilver;
     const perMerc = total / pointMercs;
@@ -2771,16 +2748,79 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
 
   const leadershipUsed = chosen.rungs.reduce((sum, rung) => sum + rung.count * rung.entry.cost, 0);
   const total: PlanTotals = summarise(chosen);
+  /**
+   * A march's identity: its non-zero counts, sorted, so two records of the same march match whatever order
+   * their keys were written in. `sameCounts` above compares the objects' JSON and is key-order dependent; it
+   * is left exactly as it is, because changing what `offer` deduplicates by would be a change to the bar.
+   */
+  const countsKey = (counts: Record<string, number>): string =>
+    Object.entries(counts)
+      .filter(([, count]) => count > 0)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([id, count]) => `${id}:${count}`)
+      .join(',');
+  /**
+   * **The plans the bar may offer** — the set the reference table under it is drawn over (S-88).
+   *
+   * The owner, 2026-09-18, reading that table on his own screen: a row at **2.91 damage a silver**, better
+   * than anything the bar offered him, and he asked why it was not a stop. It could never have been one. The
+   * table used to be bucketed inside `record`, over **every shape the search prices**, while the stops are
+   * drawn from `candidates` — the band, or the undominated frontier when the band keeps nothing — so his
+   * 2.91 row was a one-troop-stack march (Rider III 265 carrying 97 hired) that the frontier threw away and
+   * the band's own criterion exists to refuse (`tools/theorycraft/out/104-union-slider.md`). A reference
+   * table that names a plan no rule could offer is not a reference: it reads as a bar that missed something.
+   *
+   * **As offered, not as searched.** The set is `candidates` *plus the stops themselves*, deduplicated by
+   * counts: the put-back pass re-sizes some stops after they are chosen (`generatedOf`), so the march the
+   * player reads on the bar is not always one the search summarised, and the row he is standing on has to be
+   * findable in the table under it. The generated march a stop was re-sized from stays in as well — it is a
+   * plan of the band in its own right, and the bar could have offered it. Two rows with the same counts are
+   * one plan; the harder-hitting is kept, which is the `all-in` where its sequence shares a repeat's counts.
+   *
+   * Measured on his own bar, 2026-09-18 (`out/105-six-proposals.md` §P4): the table goes from 11 rows to 3,
+   * its peak from 2.759 a silver to 1.987 — which is the best damage a silver on the bar itself — and its
+   * cheapest row from 2 140 100 silver to 5 782 400. **No stop moves**: nothing but the table reads this.
+   */
+  const offered: PlanTotals[] = (() => {
+    const held = new Map<string, PlanTotals>();
+    for (const row of [...candidates, ...stops]) {
+      const key = countsKey(row.counts);
+      const there = held.get(key);
+      if (!there || row.totalDamage > there.totalDamage) held.set(key, row);
+    }
+    return [...held.values()];
+  })();
+  // 1.2× a bucket: fine enough to read the curve's shape, coarse enough to be one line per level. Sixty of
+  // them span 10 k to 560 M silver, which is every plan a single account can afford. The band is narrow, so
+  // the table is a handful of rows — which is the point: they are the levels the player can actually buy.
+  const BUCKETS = 60;
+  const bucketLog = Math.log(1.2);
+  const bucketOf = (silver: number): number =>
+    Math.min(BUCKETS - 1, Math.max(0, Math.round(Math.log(silver / 10_000) / bucketLog)));
+  /** One bucket per silver level, holding the best damage and the best damage-per-mercenary offered there. */
+  const buckets = new Map<number, { best: PlanTotals; thrifty: PlanTotals }>();
+  const perMercOf = (row: PlanTotals): number => row.totalDamage / Math.max(1, row.mercLost);
+  for (const row of offered) {
+    if (row.silver <= 10_000 || row.mercLost <= 0 || row.silver >= 10_000 * 1.2 ** BUCKETS) continue;
+    const key = bucketOf(row.silver);
+    const entry = buckets.get(key);
+    if (!entry) {
+      buckets.set(key, { best: row, thrifty: row });
+      continue;
+    }
+    if (row.totalDamage > entry.best.totalDamage) entry.best = row;
+    if (perMercOf(row) > perMercOf(entry.thrifty)) entry.thrifty = row;
+  }
   const curve: PlanCurvePoint[] = [...buckets.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([, entry]) => ({
       silver: entry.best.silver,
-      damage: Math.round(entry.best.damage),
-      damagePerSilver: entry.best.damage / entry.best.silver,
-      mercLost: entry.best.mercs,
-      thriftyDamage: Math.round(entry.thrifty.damage),
-      thriftyMercLost: entry.thrifty.mercs,
-      thriftyPerMercenary: entry.thrifty.damage / Math.max(1, entry.thrifty.mercs),
+      damage: entry.best.totalDamage,
+      damagePerSilver: entry.best.totalDamage / entry.best.silver,
+      mercLost: entry.best.mercLost,
+      thriftyDamage: entry.thrifty.totalDamage,
+      thriftyMercLost: entry.thrifty.mercLost,
+      thriftyPerMercenary: perMercOf(entry.thrifty),
     }));
   /**
    * The frontier as the caller asked to see it (`CampaignInput.withFrontier`). A stop is matched back to the
@@ -2790,18 +2830,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const frontierRows: PlanFrontierRow[] | undefined =
     input.withFrontier === true
       ? (() => {
-          /**
-           * A march's identity for the diagnostic: its non-zero counts, sorted, so two records of the same
-           * march match whatever order their keys were written in. `sameCounts` above compares the objects'
-           * JSON and is key-order dependent; it is left exactly as it is, because changing what `offer`
-           * deduplicates by would be a change to the bar.
-           */
-          const keyOf = (counts: Record<string, number>): string =>
-            Object.entries(counts)
-              .filter(([, count]) => count > 0)
-              .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-              .map(([id, count]) => `${id}:${count}`)
-              .join(',');
+          /** The march identity above (`countsKey`), which is what a stop and its re-sizing are matched by. */
+          const keyOf = countsKey;
           const stopByKey = new Map<string, PlanPick>();
           const generatorByKey = new Map<string, PlanPick>();
           for (const stop of stops) {
@@ -2822,15 +2852,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
               ...(generatorOf !== undefined ? { generatorOf } : {}),
             };
           };
-          const seen = new Set<Candidate>(frontier);
+          const held = new Set<PlanTotals>(all);
           const onFrontier: PlanFrontierRow[] = all.map((row) => decorate(row, true));
-          const fromCurve: PlanFrontierRow[] = [];
-          for (const candidate of bucketBest.values()) {
-            if (seen.has(candidate)) continue;
-            seen.add(candidate);
-            fromCurve.push(decorate(summarise(candidate), false));
-          }
-          return [...onFrontier, ...fromCurve].sort(
+          // The marches the bar offers that the search never summarised: a stop the put-back pass re-sized
+          // after it was chosen. They are the only rows of the reference table (`offered` above) the frontier
+          // does not already carry, and the diagnostic is what an experiment traces a table row back through.
+          const offFrontier: PlanFrontierRow[] = offered
+            .filter((row) => !held.has(row))
+            .map((row) => decorate(row as TradeRow, false));
+          return [...onFrontier, ...offFrontier].sort(
             (a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage,
           );
         })()

@@ -474,6 +474,36 @@ test('opened, it says what the plan did for this army and reads the trade a marc
   expect(reference.getAttribute('aria-expanded')).toBe('true');
   expect(screen.getByText(sentence)).toBeTruthy();
   expect(screen.getByText(/^Every plan here is fought over the same marches/)).toBeTruthy();
+
+  // **The reference table is the plans this bar may offer** (S-88). The owner read a row of it at 2.91 damage
+  // a silver, better than any stop he was given, and asked why it was not one: it was a march the band
+  // refuses, and the engine buckets the table over the band the stops are drawn from since. So the table
+  // **says whose plans they are**, in a caption that is also its accessible name, and it is drawn from two
+  // rows up — one row is the bar's own figures said twice (rule 5). Queried through the DOM for the same
+  // reason the trade table above is: jsdom keeps a folded panel's table out of the accessibility tree.
+  const caption = [...document.querySelectorAll('caption')].find((node) =>
+    (node.textContent ?? '').startsWith('Every plan this bar may offer'),
+  );
+  if (plan.curve.length > 1) {
+    expect(caption).toBeTruthy();
+    // The caption is the table's accessible name: no aria-label competes with it.
+    expect(caption?.closest('table')?.getAttribute('aria-label')).toBeNull();
+    const levels = [...(caption?.closest('table')?.querySelectorAll('tbody tr') ?? [])];
+    // Six rows at most, evenly spaced; the band is narrow enough that it is usually every row it has.
+    expect(levels).toHaveLength(Math.min(6, plan.curve.length));
+    expect(levels[0]?.textContent ?? '').toContain(amount(plan.curve[0]?.silver ?? 0));
+  } else {
+    expect(caption).toBeUndefined();
+  }
+
+  // And the line under it, when it is there, names a level **of the table** that is not its dearest row: it
+  // is said only where the table itself shows the next level buying less than a damage a silver. On a band
+  // whose every level still pays, there is nothing to say and nothing is said (rule 15).
+  const ceiling = screen.queryByText(/^Past about /);
+  if (ceiling) {
+    const said = /^Past about (.+?) silver/.exec(ceiling.textContent ?? '')?.[1];
+    expect(plan.curve.slice(0, -1).map((point) => amount(point.silver))).toContain(said);
+  }
 }, 60_000);
 
 test('the why is a popover a thumb can open, not a tooltip only a pointer can hover', async () => {

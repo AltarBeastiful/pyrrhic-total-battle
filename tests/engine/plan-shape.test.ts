@@ -219,7 +219,13 @@ describe('the search does not get worse', () => {
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained
     // the silver level that search reaches.
     // 19 → **20** on 2026-09-18: the per-unit sweep vectors reach one more silver level of the curve.
-    expect(PLAN.curve).toHaveLength(20);
+    // 20 → **14** on 2026-09-18 (S-88): the reference table is bucketed over the plans the bar may offer —
+    // the band the stops are drawn from, plus the stops themselves — and no longer over every shape the
+    // search prices, so the levels only the thrown-away shapes reached are gone. The plan is the same plan
+    // and the bar is the same bar (the two assertions above are unmoved); what changed is the table under
+    // it. This army's band is a wide one — 190 plans on the frontier — which is why 14 rows here against the
+    // two to four a real account's band comes to.
+    expect(PLAN.curve).toHaveLength(14);
   });
 
   test('and the two rates it reaches are floors, not ceilings', () => {

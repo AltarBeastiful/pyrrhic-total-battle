@@ -341,6 +341,56 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
 );
 
 /**
+ * **The owner's live camp of 2026-09-18**, beside the benchmark's own armies: the profile he was looking at
+ * when he wrote *"mercs are unshielded on all complete optimization marches"* — arbalesters 485, legionaries
+ * 1 002, bears unlimited, his three captains, 4 975 leadership and 2 180 authority, the two top guardsman
+ * tiers and the top melee specialist he does not own clicked out. It is the camp experiment 106 measured
+ * (`tools/theorycraft/out/106-shelter-live.md`), where **every** stop fielded hired stacks above the troops —
+ * 375 legionaries and 403 arbalesters over a 274 772-HP floor at the sweet spot — and it is the one case in
+ * this file that no benchmark scenario covers, which is exactly why it is here.
+ */
+const liveCamp = (): { label: string; request: StackRequest }[] => {
+  const owner = ownerProfile();
+  if (!owner) return [];
+  const camp = structuredClone(owner);
+  camp.sources.captains = [
+    { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
+    { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+    { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+  ];
+  camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
+  camp.mercenaries.selected = [
+    { id: 'arbalester-6', cap: 485 },
+    { id: 'legionary-6', cap: 1002 },
+    { id: 'bear-5', cap: null },
+  ];
+  const setup = camp.setups[0];
+  if (!setup) return [];
+  return [
+    {
+      label: 'the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)',
+      request: buildStackRequest(camp, {
+        ...setup,
+        active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
+        housing: { ...setup.housing, leadership: 4_975, authority: 2_180 },
+      }),
+    },
+  ];
+};
+
+/**
+ * The armies the two criteria below are held on, built once: the benchmark's own ten
+ * (`plan-scenarios.ts`, its labels and its order), the owner's when his export is where it is, and his live
+ * camp above.
+ */
+const profile = ownerProfile();
+const scenarios: { label: string; request: StackRequest; pinned?: Scenario['pinned'] }[] = [
+  ...commonScenarios(),
+  ...(profile ? ownerScenarios(profile) : []),
+  ...liveCamp(),
+];
+
+/**
  * **The shelter: every hired stack under the lowest troop stack** (owner, 2026-09-18: *"a critical rule is to
  * shield mercs. Right now mercs are unshielded on all complete optimization marches … more damage with a lot
  * of merc spent should trigger a failing test as we're using too much of a rare resource"*, and on 2026-09-18
@@ -395,50 +445,6 @@ describe('every hired stack stands under the lowest troop stack', () => {
     };
   };
 
-  /**
-   * **The owner's live camp of 2026-09-18**, beside the benchmark's own armies: the profile he was looking at
-   * when he wrote *"mercs are unshielded on all complete optimization marches"* — arbalesters 485, legionaries
-   * 1 002, bears unlimited, his three captains, 4 975 leadership and 2 180 authority, the two top guardsman
-   * tiers and the top melee specialist he does not own clicked out. It is the camp experiment 106 measured
-   * (`tools/theorycraft/out/106-shelter-live.md`), where **every** stop fielded hired stacks above the troops —
-   * 375 legionaries and 403 arbalesters over a 274 772-HP floor at the sweet spot — and it is the one case in
-   * this file that no benchmark scenario covers, which is exactly why it is here.
-   */
-  const liveCamp = (): { label: string; request: StackRequest }[] => {
-    const owner = ownerProfile();
-    if (!owner) return [];
-    const camp = structuredClone(owner);
-    camp.sources.captains = [
-      { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
-      { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
-      { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
-    ];
-    camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
-    camp.mercenaries.selected = [
-      { id: 'arbalester-6', cap: 485 },
-      { id: 'legionary-6', cap: 1002 },
-      { id: 'bear-5', cap: null },
-    ];
-    const setup = camp.setups[0];
-    if (!setup) return [];
-    return [
-      {
-        label: 'the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)',
-        request: buildStackRequest(camp, {
-          ...setup,
-          active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
-          housing: { ...setup.housing, leadership: 4_975, authority: 2_180 },
-        }),
-      },
-    ];
-  };
-
-  const profile = ownerProfile();
-  const scenarios: { label: string; request: StackRequest; pinned?: Scenario['pinned'] }[] = [
-    ...commonScenarios(),
-    ...(profile ? ownerScenarios(profile) : []),
-    ...liveCamp(),
-  ];
   for (const scenario of scenarios) {
     test(
       scenario.label,
@@ -514,6 +520,102 @@ describe('every hired stack stands under the lowest troop stack', () => {
             perHired(sweet),
             'the sweet spot gets less out of a hired unit than the steady max',
           ).toBeGreaterThanOrEqual(perHired(steady));
+        }
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **The reference table names only plans the bar may offer** (S-88; the owner, 2026-09-18, reading the table
+ * under his own bar: a row at **2.91 damage a silver**, better than any stop he was offered, and he asked why
+ * it was not one).
+ *
+ * It could never have been one. The table was bucketed inside the search's own `record`, over **every shape
+ * the search prices**, while the stops are drawn from the band (`candidates`) — and that row was a
+ * one-troop-stack march (Rider III 265 carrying 97 hired) the frontier threw away and the band's third
+ * criterion exists to refuse (`tools/theorycraft/out/104-union-slider.md`). A table that names a plan no rule
+ * could offer reads as a bar that missed something, so the `curve` is bucketed over the plans the bar may
+ * offer instead: the band, plus the stops themselves, so a stop the put-back pass re-sized after it was
+ * chosen is in the table the player reads under it.
+ *
+ * Two things are held here, on every army this file builds:
+ *
+ *  - **every row is an offered plan**, matched on the pair the row prints — the campaign's damage and its
+ *    silver — against `plan.trade` (the band, which `withTrade` hands back) and `plan.alternatives` (the
+ *    stops). This is the criterion, and it is the one the owner's question is about;
+ *  - **the table's peak damage a silver is the best of that same set**, and *not* of the stops. Measured on
+ *    the thirteen scenarios, 2026-09-18: on three of them the table's peak is above every stop's — 1.478
+ *    against the bar's 1.370 on the 4 000-leadership case, 1.385 against 1.260 on his live camp and 1.052
+ *    against 1.005 on his live account (on his own bar the two meet at 1.987) — because a band plan the stop
+ *    rules passed over may still be the most efficient thing in the band. That is a true answer to his
+ *    question and not the old one: the row is now a plan the bar *could* have offered, and the five stop
+ *    rules are what did not pick it. Asserting it against the stops would be asserting the bar has no
+ *    efficient plan it declines to name, which is not a property of the bar and would fail on those three.
+ */
+describe('the reference table names only plans the bar may offer', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = ((): CampaignPlan | string => {
+          try {
+            return planCampaign({
+              request: scenario.request,
+              marchTarget: HORIZON,
+              budgetMs: CAMPAIGN.budgets.plan,
+              ...CAMPAIGN.planFixes,
+              putBack: CAMPAIGN.putBack,
+              // The band the stops are drawn from, as the engine kept it — the set this criterion is about.
+              withTrade: true,
+            });
+          } catch (error) {
+            return error instanceof Error ? error.message : String(error);
+          }
+        })();
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const offered: PlanTotals[] = [...(plan.trade ?? []), ...plan.alternatives];
+        expect(offered.length, 'the plan kept no offerable plan at all').toBeGreaterThan(0);
+        expect(plan.curve.length, 'the reference table is empty').toBeGreaterThan(0);
+
+        // Every row, on the pair it prints. A bucket keeps the *most* damage found at its silver level, so
+        // the row is one plan's campaign and not a mixture of two — which is what makes this checkable at all.
+        const strays = plan.curve.filter(
+          (point) => !offered.some((row) => row.silver === point.silver && row.totalDamage === point.damage),
+        );
+        expect(
+          strays.map((point) => `${point.silver} silver / ${point.damage} damage`).join('; '),
+          'the reference table names a plan the bar could not offer',
+        ).toBe('');
+
+        // The peak of the table is the best damage a silver of the offered set — see the note above on why
+        // this is not read against the stops.
+        const peak = Math.max(...plan.curve.map((point) => point.damagePerSilver));
+        const best = Math.max(...offered.map((row) => row.damagePerSilver));
+        expect(peak, 'the table beats every plan the bar may offer on damage a silver').toBeLessThanOrEqual(
+          best + 1e-9,
+        );
+
+        // And **every stop has a row at its own silver level**: the stops are in the set the table is
+        // bucketed over, so the level a player is standing on is a line of the table under him. It is the
+        // level and not the figures — a bucket prints the hardest-hitting plan at it, which on his own bar is
+        // the `all-in` standing where the sweet spot and the steady max also land. The bucket is the engine's
+        // own (1.2× from 10 000 silver, `bucketOf` in `plan.ts`), redrawn here so the assertion reads the
+        // same axis; a campaign under 10 000 silver is left out of the table, and no stop on these armies is.
+        const bucketOf = (silver: number): number =>
+          Math.min(59, Math.max(0, Math.round(Math.log(silver / 10_000) / Math.log(1.2))));
+        const levels = new Set(plan.curve.map((point) => bucketOf(point.silver)));
+        for (const stop of plan.alternatives) {
+          if (stop.silver <= 10_000) continue;
+          expect(
+            levels.has(bucketOf(stop.silver)),
+            `the ${stop.pick} stop at ${stop.silver} silver has no row of the table at its own level`,
+          ).toBe(true);
         }
       },
       300_000,
