@@ -34,10 +34,12 @@
  * `benchmark-latest.json` beside it (what a before/after comparison reads). The first-run and 4 000 cases run
  * everywhere; the owner's cases run where his export is.
  *
- * Read the rows knowing what they are not (validator, 2026-09-18): a plan **stop that repeats a march** may
- * play fewer marches than the horizon when its stock runs out, while a sizer sequence goes on with troops
- * alone, so a "four-march" share can compare three marches with four — the `all-in` is the one stop that
- * always plays the horizon, on troops alone once its stock is spent (2026-09-19); a captured answer is one
+ * Read the rows knowing what they are not (validator, 2026-09-18): a plan **stop that repeats a march** used
+ * to play fewer marches than the horizon when its stock ran out, while a sizer sequence went on with troops
+ * alone, so a "four-march" share could compare three marches with four. Since S-89 (2026-09-18) every stop
+ * plays the horizon — the `all-in` march by march, every other stop by appending the same troops-only march
+ * once per march its stock does not reach (`PlanTotals.tail`) — so the shares below compare four marches with
+ * four on every army the plan answers; a captured answer is one
  * march repeated on its own stock, never
  * re-sized as its stock drains (conservative for it); the 4 000 case's troop types are the ones TotalStack's
  * answer fielded, and TotalStack was asked for damage a silver where this table ranks damage. Both searches
@@ -263,9 +265,15 @@ function measure(scenario: Scenario): Measured {
   const planMs = Math.round(performance.now() - startedAt);
   if (plan) {
     for (const stop of plan.alternatives) {
-      const repeats = stop.marches - (stop.finaleCounts ? 1 : 0);
+      // The campaign a stop actually plays: its own sequence, or its repeated march as many times as its
+      // stock reaches, its last march, and the troops-only marches the horizon leaves over (`PlanTotals.tail`,
+      // S-89 — the same march the `all-in` ends on, appended once per march the stock does not reach).
+      const repeats = stop.marches - (stop.finaleCounts ? 1 : 0) - (stop.tail?.marches ?? 0);
       const marches = stop.sequence ?? Array.from({ length: repeats }, () => stop.counts);
       if (!stop.sequence && stop.finaleCounts) marches.push(stop.finaleCounts);
+      if (!stop.sequence && stop.tail) {
+        for (let i = 0; i < stop.tail.marches; i += 1) marches.push(stop.tail.counts);
+      }
       const campaign = campaignOf(request, `Complete optimization · ${stop.pick}`, 'plan', marches);
       // The engine's own campaign figure and the marches priced one by one must agree.
       expect(Math.abs(campaign.damage - stop.totalDamage)).toBeLessThanOrEqual(1);
@@ -346,9 +354,13 @@ function check(scenario: Scenario, measured: Measured): void {
   expect(planPerSilver, `the plan's best a silver against the sizers (${tell})`).toBeGreaterThanOrEqual(
     (pinned.silverFloor ?? SILVER_FLOOR) * bestSizerPerSilver,
   );
-  const sweetLoses = sizers.some((c) => perSilver(c) >= perSilver(sweet) && perHired(c) >= perHired(sweet));
-  expect(sweetLoses, `the sweet spot beaten on both ratios by a sizer sequence (${tell})`).toBe(
-    pinned.sweetLosesOnBoth,
+  // `>=` on both, so an **exact tie** counts: a sizer sequence that matches the sweet spot on silver and on
+  // the stock is not behind it on either, and since S-89 that is a case which actually happens (Bear V ×1
+  // and ×2 tail into the Tier ladder sizer's own campaign, to the unit). The pin is named for what this
+  // measures rather than for a loss it does not always mean — see `Pinned.sweetNotAheadOnEither`.
+  const notAhead = sizers.some((c) => perSilver(c) >= perSilver(sweet) && perHired(c) >= perHired(sweet));
+  expect(notAhead, `no sizer sequence is behind the sweet spot on either ratio (${tell})`).toBe(
+    pinned.sweetNotAheadOnEither,
   );
   if (externals.length > 0) {
     if (!pinned.externals) throw new Error('a case with external rows must pin them');

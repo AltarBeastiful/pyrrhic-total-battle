@@ -409,13 +409,19 @@ const scenarios: { label: string; request: StackRequest; pinned?: Scenario['pinn
  * `simulateBattle` is handed), so this is the battle's reading of the march and not a second model of it.
  */
 describe('every hired stack stands under the lowest troop stack', () => {
-  /** Every march a stop plays: the `all-in`'s own sequence, or the repeated march and the finale. */
+  /**
+   * Every march a stop plays: the `all-in`'s own sequence, or the repeated march, the finale and the
+   * troops-only tail the horizon leaves over (`PlanTotals.tail`, S-89). The tail fields no hired stack at
+   * all, so it passes the shelter below by construction — it is listed so the criterion is stated over the
+   * *whole* campaign the bar offers rather than over the part of it that predates the tail.
+   */
   const marchesOf = (row: PlanTotals): { counts: Record<string, number>; what: string }[] =>
     row.sequence
       ? row.sequence.map((counts, index) => ({ counts, what: `march ${index + 1} of the sequence` }))
       : [
           { counts: row.counts, what: 'the repeated march' },
           ...(row.finaleCounts ? [{ counts: row.finaleCounts, what: 'the finale' }] : []),
+          ...(row.tail ? [{ counts: row.tail.counts, what: 'the troops-only tail' }] : []),
         ];
 
   /** The hired stacks of one march that are not strictly under the lowest troop stack, as the battle sees it. */
@@ -521,6 +527,34 @@ describe('every hired stack stands under the lowest troop stack', () => {
             'the sweet spot gets less out of a hired unit than the steady max',
           ).toBeGreaterThanOrEqual(perHired(steady));
         }
+
+        /**
+         * **And every stop plays the whole horizon** (S-89; owner, 2026-09-18, choosing P1 of
+         * `tools/theorycraft/out/105-six-proposals.md`).
+         *
+         * The horizon is the campaign the player is committing to (`CAMPAIGN.marches`), and it is what every
+         * row of the bar and every row of the benchmark beside it is measured over. S-76 let a stop whose
+         * hired stock ran out first simply stop there — bear ×1's sweet spot was **one** march of a
+         * four-march horizon, 4 722 842 against the sizers' four-march 23 974 564 — so the bar was comparing
+         * three marches with four and calling the difference a result. Since S-89 the marches left over are
+         * played on troops alone, by the `all-in` inside its own sequence and by every repeated stop as its
+         * `tail`, and this holds it: the plan's own campaign and every stop on the bar reach the horizon.
+         *
+         * **The one army it could not hold on** is one with no troop type at all to size that march from —
+         * `sizer([], 'elite')` comes back with nothing, and a campaign is as short as its stock again. None of
+         * the eleven scenarios here is such an army (each is checked below rather than assumed), and an army
+         * that fields no troops has no march the plan would offer in the first place: the band's own third
+         * criterion refuses anything standing on fewer than two troop stacks.
+         */
+        const fieldsTroops = Object.keys(plan.march.counts).some(
+          (id) => scenario.request.units.find((unit) => unit.id === id)?.pool === 'leadership',
+        );
+        expect(fieldsTroops, 'the plan fields no troop type, so it can size no troops-only march').toBe(true);
+        for (const { what, row } of rows) {
+          expect(row.marches, `${what} plays ${String(row.marches)} of ${String(HORIZON)} marches`).toBe(
+            HORIZON,
+          );
+        }
       },
       300_000,
     );
@@ -579,7 +613,41 @@ describe('the reference table names only plans the bar may offer', () => {
           return;
         }
         const plan = planned;
-        const offered: PlanTotals[] = [...(plan.trade ?? []), ...plan.alternatives];
+        /**
+         * **A band plan priced as it would be offered** (S-89). `trade` is the band as the *search* priced
+         * it, pre-tail; the table under the bar prices every plan the way it would be priced if it were
+         * picked, the troops-only tail included (`plan.ts`, `offered`). So the set this criterion compares
+         * the table against is tailed here too — otherwise the table would be "naming a plan the bar could
+         * not offer" for the one reason it must: it is offering it.
+         *
+         * The tail is read off the bar rather than re-derived: it is the same march for every stop of a
+         * plan, so any stop that carries one carries *the* one. And the two go together — measured over
+         * every scenario here, 2026-09-18: a `trade` row short of the horizon and a stop with a tail appear
+         * on exactly the same three armies (the bear stocks of 1, 2 and 3), and on the other eight every
+         * band plan already plays all four marches. That pairing is asserted below rather than assumed.
+         */
+        const tail = plan.alternatives.find((row) => row.tail)?.tail;
+        const asOffered = (row: PlanTotals): PlanTotals => {
+          const left = HORIZON - row.marches;
+          if (!tail || left <= 0) return row;
+          const totalDamage = row.totalDamage + left * tail.damage;
+          const silver = row.silver + left * tail.silver;
+          return {
+            ...row,
+            totalDamage,
+            silver,
+            seconds: row.seconds + left * tail.seconds,
+            marches: HORIZON,
+            damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
+            damagePerMercenary: row.mercLost > 0 ? totalDamage / row.mercLost : Infinity,
+          };
+        };
+        const short = (plan.trade ?? []).filter((row) => row.marches < HORIZON);
+        expect(
+          short.length > 0,
+          'a band plan short of the horizon and a stop with a tail must go together',
+        ).toBe(tail !== undefined);
+        const offered: PlanTotals[] = [...(plan.trade ?? []).map(asOffered), ...plan.alternatives];
         expect(offered.length, 'the plan kept no offerable plan at all').toBeGreaterThan(0);
         expect(plan.curve.length, 'the reference table is empty').toBeGreaterThan(0);
 

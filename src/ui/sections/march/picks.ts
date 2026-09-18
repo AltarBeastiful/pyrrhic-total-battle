@@ -97,7 +97,8 @@ const fieldsHired = (counts: Record<string, number>): boolean =>
   Object.entries(counts).some(([id, count]) => count > 0 && unitById(id)?.pool !== 'leadership');
 
 /**
- * **The one stop that is a sequence, said in one line** — or `null` for every other stop.
+ * **How a stop is fought, when "N marches of the row above" would not be true of it** — or `null` when it
+ * would, and the caller writes that plain count itself.
  *
  * Every other plan on the bar is one march repeated and a last one to spend what is left, so "a march" names
  * the whole campaign and the figures beside it are that march's. `all-in` is not: it fields every mercenary
@@ -114,16 +115,36 @@ const fieldsHired = (counts: Record<string, number>): boolean =>
  * at all (`src/engine/plan.ts`, the all-in's tail). A reader told only "four marches, each on what the last
  * one left" would take the fourth for another march of mercenaries — the figures beside it are the first
  * march's — so the tail is counted in the same line rather than left to the counts table to reveal.
+ *
+ * **Every stop says it now** (S-89, 2026-09-18). A *repeated* stop whose stock the horizon outruns plays the
+ * marches left over on troops alone as well (`PlanTotals.tail`), and it is the same fact about the same
+ * campaign — so it is said in the same place and in the same words rather than in a second sentence of the
+ * fold's own. Such a row keeps its plain count for the marches it fields hired units on, because those *are*
+ * the march drawn above it, and adds the tail to it: "2 marches, then 2 on troops alone". On bear ×1 that is
+ * the difference between a stop reading "1 march" and a stop reading four, three of them troops alone
+ * (`tools/theorycraft/out/105-six-proposals.md` §P1).
  */
-export function sequenceWords(row: Pick<PlanRow, 'sequence'>): string | null {
+export function sequenceWords(
+  row: Pick<PlanRow, 'sequence' | 'tail'> & Partial<Pick<PlanRow, 'marches' | 'finaleCounts'>>,
+): string | null {
   const sequence = row.sequence ?? [];
   const marches = sequence.length;
-  if (marches < 1) return null;
-  const words = `${String(marches)} march${marches === 1 ? '' : 'es'}, each on what the last one left`;
-  let tail = 0;
-  while (tail < marches && !fieldsHired(sequence[marches - 1 - tail] ?? {})) tail += 1;
-  if (tail === 0 || tail === marches) return words;
-  return `${words}, the last ${tail === 1 ? '' : `${String(tail)} `}on troops alone`;
+  if (marches > 0) {
+    const words = `${String(marches)} march${marches === 1 ? '' : 'es'}, each on what the last one left`;
+    let tail = 0;
+    while (tail < marches && !fieldsHired(sequence[marches - 1 - tail] ?? {})) tail += 1;
+    if (tail === 0 || tail === marches) return words;
+    return `${words}, the last ${tail === 1 ? '' : `${String(tail)} `}on troops alone`;
+  }
+  // A repeated stop with a tail: the marches it fields hired units on, counted the way the fold counts them
+  // when there is no tail at all, and then the troops-only ones.
+  const tail = row.tail;
+  if (!tail || tail.marches < 1) return null;
+  const played = Math.max(0, (row.marches ?? 0) - tail.marches - (row.finaleCounts ? 1 : 0));
+  return (
+    `${String(played)} march${played === 1 ? '' : 'es'}${row.finaleCounts ? ' + a last one' : ''}, ` +
+    `then ${String(tail.marches)} on troops alone`
+  );
 }
 
 /**

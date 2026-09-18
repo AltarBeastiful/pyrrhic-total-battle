@@ -34,8 +34,19 @@ export interface Pinned {
   refuses: boolean;
   /** Stops on the bar. */
   stops: number;
-  /** The sweet spot beaten on both ratios by a sizer sequence. */
-  sweetLosesOnBoth: boolean;
+  /**
+   * **No sizer sequence is behind the sweet spot on either ratio** — that is, some sizer sequence is at least
+   * as efficient a silver *and* at least as efficient a hired unit as the recommendation.
+   *
+   * **Renamed 2026-09-18 (S-89), from `sweetLosesOnBoth`.** The comparator is `>=` on both ratios and has
+   * always been, so an exact tie has always counted; nothing read it that way until the tail made ties
+   * happen. On Bear V ×1 and ×2 the tailed sweet spot is now *literally* the Tier ladder sizer's campaign —
+   * 18 554 768 for 32 525 600, and 18 779 168 for 32 525 600, to the unit on both rows — and a pin called
+   * "loses on both" reading `true` on a plan that lost nothing is a name false on its own row. The
+   * comparator is kept exactly as it is (a tie is not a loss, but it is not being ahead either); only the
+   * name now says what it tests.
+   */
+  sweetNotAheadOnEither: boolean;
   /** The share of the best sizer sequence's four-march damage the plan's hardest campaign reaches. */
   damageFloor: number;
   /** The plan's best stop a hired unit beats every sizer sequence. */
@@ -190,7 +201,7 @@ function fourThousand(): Scenario {
     pinned: {
       refuses: false,
       stops: 3,
-      sweetLosesOnBoth: false,
+      sweetNotAheadOnEither: false,
       damageFloor: 0.96,
       winsHired: true,
       externals: { damageFloor: 0.93, winsHired: true },
@@ -229,7 +240,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // tilting the chord the knee is drawn from, moves the sweet spot from the 11-burn rung to the 10 —
       // 20 924 965 at 1.9097 a silver and 475 567 a hired. Both of those beat the Troops-first sequence's
       // 426 216 a hired, so `winsHired` is true again and no sizer sequence beats the sweet spot on both
-      // ratios any more (`sweetLosesOnBoth` false). The plan's own campaign is untouched at 24 814 601 (95.6 %
+      // ratios any more (`sweetNotAheadOnEither` false). The plan's own campaign is untouched at 24 814 601 (95.6 %
       // of the best sizer), and so is the steady max at 6 242 452 a march.
       label: '2026-09-17 export, its setup (7 000 leadership)',
       request: buildStackRequest(profile, setup),
@@ -253,7 +264,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       pinned: {
         refuses: false,
         stops: 4,
-        sweetLosesOnBoth: false,
+        sweetNotAheadOnEither: false,
         damageFloor: 0.89,
         winsHired: true,
         externals: { damageFloor: 1.42, winsHired: false },
@@ -275,7 +286,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       pinned: {
         refuses: false,
         stops: 4,
-        sweetLosesOnBoth: false,
+        sweetNotAheadOnEither: false,
         damageFloor: 0.94,
         winsHired: true,
         externals: { damageFloor: 1.34, winsHired: false },
@@ -291,7 +302,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       pinned: {
         refuses: false,
         stops: 4,
-        sweetLosesOnBoth: false,
+        sweetNotAheadOnEither: false,
         damageFloor: 0.99,
         winsHired: true,
         externals: { damageFloor: 1.02, winsHired: true },
@@ -319,7 +330,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       pinned: {
         refuses: false,
         stops: 5,
-        sweetLosesOnBoth: false,
+        sweetNotAheadOnEither: false,
         damageFloor: 0.37,
         winsHired: true,
         silverFloor: 0.41,
@@ -339,7 +350,16 @@ export function commonScenarios(): Scenario[] {
       // Measured 2026-09-18, once the horizon became a ceiling: one stop of **one** march — a stock of one
       // bear sustains no repeat — 4 722 842 for 8 131 400, 19.8 % of the four-march sizers' damage and the
       // best of every row a silver (0.581 against 0.570). It refused outright before.
-      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: false, damageFloor: 0.19, winsHired: false },
+      // Re-based 2026-09-18 (S-89), the troops-only tail on the repeated stops: the one stop stopped where
+      // the stock did, and the three marches the horizon still had room for were the whole of the gap to the
+      // sizers, which march on with troops alone. It plays them now — 4 722 842 for 8 131 400 over one march
+      // → **18 554 768 for 32 525 600 over four** — so 19.8 % → **77.6 %** of the sizers' damage
+      // (`damageFloor` 0.19 → **0.77**). The stop is still the best of every row a silver and still loses a
+      // hired unit to the Generate rows, and `repeat` is untouched at 4 722 842 / 8 131 400 / 1 burned.
+      // `sweetNotAheadOnEither` false → **true**, and it is an exact tie rather than a loss: with one bear a march
+      // and troops for the rest, the stop plays **literally the Tier ladder sizer's campaign** — 18 554 768
+      // for 32 525 600 on both rows, to the unit — and the test counts an equal pair of ratios as beaten.
+      pinned: { refuses: false, stops: 1, sweetNotAheadOnEither: true, damageFloor: 0.77, winsHired: false },
     },
     {
       label: 'first-run army, Bear V ×2 (20 000 leadership)',
@@ -348,7 +368,14 @@ export function commonScenarios(): Scenario[] {
       // Measured 2026-09-18, once the horizon became a ceiling: one stop of **two** marches — two bears
       // fielded, then the one the chunk left — 9 557 884 for 16 262 800, 39.9 % of the four-march sizers'
       // damage and the best of every row a silver (0.588 against 0.577). It refused outright before.
-      pinned: { refuses: false, stops: 1, sweetLosesOnBoth: false, damageFloor: 0.39, winsHired: false },
+      // Re-based 2026-09-18 (S-89), the troops-only tail on the repeated stops: the two marches the stock
+      // reaches are followed by two on troops alone — 9 557 884 for 16 262 800 over two → **18 779 168 for
+      // 32 525 600 over four** — so 39.9 % → **78.3 %** of the sizers (`damageFloor` 0.39 → **0.78**), and
+      // damage a hired unit 4 778 942 → 9 389 584 on the same two burned. `repeat` is untouched at
+      // 4 835 042 / 8 131 400 / 1 burned. `sweetNotAheadOnEither` false → **true** for the same reason as ×1: the
+      // tailed campaign *is* the Tier ladder sizer's, 18 779 168 for 32 525 600 on both rows, and an equal
+      // pair of ratios counts as beaten.
+      pinned: { refuses: false, stops: 1, sweetNotAheadOnEither: true, damageFloor: 0.78, winsHired: false },
     },
     {
       label: 'first-run army, Bear V ×3 (20 000 leadership)',
@@ -371,10 +398,18 @@ export function commonScenarios(): Scenario[] {
       // **75.1 %** of TotalStack's best. At equal silver it is 98.6 % of TotalStack's M's Preservation
       // (19 388 676 for 32 535 200). Its ratios move with it — 0.595 → 0.588 a silver, 4 835 042 →
       // 6 371 923 a hired — and the stop count, the stops' own marches and every other row are unmoved.
+      // Re-based 2026-09-18 (S-89), the same tail on the **repeated** stops: the sweet spot played three
+      // marches of the four and now plays the fourth on troops alone — 14 168 526 for 24 394 200 →
+      // **18 779 168 for 32 525 600** — which is 58.8 % → **78.0 %** of the sizers and, against TotalStack's
+      // own answers as captured, 96.9 % of its M's Preservation at the same silver (19 388 676 for
+      // 32 535 200) where the `all-in` beside it reaches 98.6 %. Not one pin moves: the `all-in` is still
+      // this case's hardest campaign at 19 115 768, so `damageFloor` stays 0.79 and the externals' 0.75, and
+      // the sweet spot is still beaten on both ratios by the Tier ladder sizer (0.577 / 6 259 723 against
+      // 0.588 / 6 371 923), which is what `sweetNotAheadOnEither` has said here since the shelter went in.
       pinned: {
         refuses: false,
         stops: 2,
-        sweetLosesOnBoth: true,
+        sweetNotAheadOnEither: true,
         damageFloor: 0.79,
         winsHired: false,
         externals: { damageFloor: 0.75, winsHired: false },
@@ -398,6 +433,9 @@ export function commonScenarios(): Scenario[] {
       // could not before; every pinned figure is unmoved (86.5 % of the sizers, 82.1 % of TotalStack).
       // Unmoved again on 2026-09-19 by the all-in's tail: 10 · 9 · 8 · 7 already lasts the whole horizon, so
       // this case has no tail to play and not one figure of it changed.
+      // Unmoved a third time on 2026-09-18 by S-89, the tail on the repeated stops: the sweet spot's **six**
+      // bears a march — S-87 lowered the Elite sizer's eight to six to shelter them, 396 000 HP under the
+      // troop floor, 21 135 368 — last the four marches too, so there is nothing here for a tail to fill.
       // **Re-based 2026-09-18 (S-87), the shelter over every hired type.** The bears are capped, so S-77 let
       // the Elite sizer stand them on top: eight of them, 528 000 HP over a lowest troop stack of 449 280.
       // Sheltered they are **six** — 396 000 HP — and the sweet spot's campaign falls from 21 732 276 to
@@ -408,7 +446,7 @@ export function commonScenarios(): Scenario[] {
       pinned: {
         refuses: false,
         stops: 2,
-        sweetLosesOnBoth: true,
+        sweetNotAheadOnEither: true,
         damageFloor: 0.86,
         winsHired: false,
         externals: { damageFloor: 0.81, winsHired: false },
@@ -423,7 +461,7 @@ export function commonScenarios(): Scenario[] {
       pinned: {
         refuses: false,
         stops: 3,
-        sweetLosesOnBoth: false,
+        sweetNotAheadOnEither: false,
         damageFloor: 0.98,
         winsHired: true,
         externals: { damageFloor: 0.98, winsHired: true },

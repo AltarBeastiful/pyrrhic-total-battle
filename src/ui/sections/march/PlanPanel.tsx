@@ -170,15 +170,19 @@ export function PlanFold() {
   const rows = plan.alternatives;
   const sweet = sweetSpotOf(plan);
   const each = shown.repeat;
-  const repeated = shown.marches - (shown.finaleCounts ? 1 : 0);
+  // The marches the row above is actually fought: the campaign's own count, less its last march and less the
+  // troops-only tail a stop plays when the horizon outruns its hired stock (`PlanTotals.tail`, S-89). The
+  // tail is not this march repeated, so counting it here would say the player fields mercenaries four times
+  // where the stock pays for one.
+  const repeated = shown.marches - (shown.finaleCounts ? 1 : 0) - (shown.tail?.marches ?? 0);
   /**
    * **How the stop on screen is fought**, in the one sentence that stop's own shape allows.
    *
-   * Every stop but one is a march repeated and a last one to spend the remainder, so the row counts the
-   * repeats and says "+ a last one". The `all-in` stop is a **sequence**: it shelters every mercenary it can
-   * on the first march, marches on what the stock has left, and plays out the horizon on troops alone once
-   * the stock is spent — so the march above it is not the campaign and counting repeats of it would be false
-   * (`PlanTotals.sequence`, and `sequenceWords` in `./picks` where the words live).
+   * A stop that is simply a march repeated and a last one to spend the remainder counts its repeats here and
+   * says "+ a last one". Two shapes need more than that count and say so in their own words (`./picks`): the
+   * `all-in`, which is a **sequence** — every mercenary the troops can shelter on the first march, then what
+   * the stock has left, then troops alone once it is spent — and, since S-89, any repeated stop the horizon
+   * outruns, which plays the marches left over on troops alone too (`PlanTotals.sequence` and `.tail`).
    */
   const sequence = sequenceWords(shown);
   const best = sweet === null ? null : (rows[sweet] ?? null);

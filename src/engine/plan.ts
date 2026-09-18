@@ -239,6 +239,38 @@ export interface PlanTotals {
    */
   sequence?: Record<string, number>[] | undefined;
   /**
+   * **The troops-only marches a repeated stop plays once its hired stock is spent** (S-89; owner, 2026-09-18,
+   * choosing P1 of `tools/theorycraft/out/105-six-proposals.md`). S-76 made the horizon a *ceiling*: a stop
+   * whose stock the horizon outruns plays fewer marches than the horizon has room for, and stopped there.
+   * S-81 gave the `all-in` the marches left over — the Elite sizer over every troop type with no mercenary in
+   * it — and this is the same offer to every **repeated** stop.
+   *
+   * It is the same march for every stop of a plan, because it is the same question: the army's own best march
+   * with nothing hired in it. So it is carried once, with the number of times it is played, rather than as
+   * `marches − played` copies of one counts map — and `counts` above stays the **repeated** march, which is
+   * what the bar draws and what `repeat` prices. Absent on a stop that already fills the horizon, on the
+   * `all-in` (whose `sequence` carries its own tail), and on any request with no horizon to fill (a budget or
+   * a single-march question).
+   *
+   * The campaign totals above **include** it: `totalDamage`, `silver`, `gold` (nought — a march with no hired
+   * stack costs no revive gold), `seconds` and `marches`, and both ratios are computed over them. `mercLost`
+   * is not: the tail burns nothing, which is why it raises damage a hired unit and eases damage a silver
+   * (bear ×1: 4 722 842 → 18 554 768 damage for a burn of 1 either way). No stop rule reads either — the bar
+   * is ordered on `repeat.mercLost`, the sweet spot's chord on `repeat.damage`, the band and `bestFor` on the
+   * plan's own march — which is what lets the tail be added after every one of them has run.
+   */
+  tail?:
+    | {
+        /** The troops-only march itself, as counts — the same one for every stop of this plan. */
+        counts: Record<string, number>;
+        /** How many times it is played: the horizon less the marches the stop's own stock reaches. */
+        marches: number;
+        damage: number;
+        silver: number;
+        seconds: number;
+      }
+    | undefined;
+  /**
    * What **one** of the plan's identical marches is, on its own, without the final march spread over it —
    * the same march the March section draws, priced by the plan's own arithmetic. `totalDamage` and `silver`
    * above include the finale, which is why a row showing `totalDamage / marches` disagrees with the March
@@ -277,6 +309,12 @@ export interface PlanTotals {
  * **Over the plans the bar may offer, not over everything the search prices** (S-88; see `curve`). The owner
  * read a 2.91-a-silver row of this table on 2026-09-18 and asked why it was not a stop: it was a
  * one-troop-stack march the band refuses, and no rule could ever have offered it.
+ *
+ * **And priced as it would be offered** (S-89): every row here is a campaign of the **whole horizon**, the
+ * troops-only tail included, because that is what the bar would hand the player if he picked it. The set is
+ * the one place the tail is applied to a plan that is not a stop — `trade`, the knee and the two peaks are
+ * the search's own figures — and it has to be, or the table would print a one-march campaign and a four-march
+ * one side by side and call them two levels of the same ladder.
  */
 export interface PlanCurvePoint {
   silver: number;
@@ -2375,6 +2413,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * "spend less … spend more".
    */
   /**
+   * **The march a campaign plays once its hired stock is spent**: the Elite sizer over every troop type, with
+   * no mercenary in the request, priced by `toMarch` exactly as every other march here is — so its silver and
+   * its seconds are the recap's.
+   *
+   * `elite` names the method because the app's own default does; with nothing hired to preserve, all three
+   * methods sized the same march to the unit on every army measured (2026-09-19). It is the **same** march
+   * whatever stop is asking for it — the army's best march with nothing hired in it is one question, not five
+   * — so it is sized **once** a plan and handed to the `all-in`'s sequence (S-81) and to every repeated stop
+   * the horizon outruns (S-89) alike. Lazily, because a plan whose stops all fill the horizon never needs it
+   * and `sizeStacks` is not free. `null` for an army with no troop type to field: then a campaign is as short
+   * as its stock, exactly as it was.
+   */
+  let sizedTail: PlanMarch | null | undefined;
+  const troopsOnlyMarch = (): PlanMarch | null => {
+    if (sizedTail === undefined) {
+      const sized = sizer([], 'elite');
+      sizedTail = sized.rungs.length > 0 ? toMarch(sized.rungs, [], marchOf(sized.rungs, enemyStacks)) : null;
+    }
+    return sizedTail;
+  };
+  /**
    * **All in**: every mercenary the troops can shelter on the first march, then each next march on what the
    * stock has left, for the horizon. Each march is the strongest shape — ladders, the sizer's methods, the
    * winner's rungs — that fields the most of the remaining stock with every hired stack under the lowest troop
@@ -2484,17 +2543,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (!first) return undefined;
     const marches = played.map((candidate) => toMarch(candidate.rungs, candidate.mercs, candidate.march));
     /**
-     * **The marches the spent stock leaves over**: the sizer over the troop types alone, once, repeated for
-     * each of them. `elite` names the method because the app's own default does — with no mercenary in the
-     * request there is nothing for the two preservation methods to preserve, and all three sized the same
-     * march to the unit on every army measured (2026-09-19: the first-run army at three bears and at 83 Epic
-     * Monster Hunter VI, the 4 000-leadership case, the owner's export at 7 000). An army with no troop type
-     * to field has no tail, and the campaign is as short as it was.
+     * **The marches the spent stock leaves over**: `troopsOnlyMarch` above, once, repeated for each of them.
+     * Since S-89 it is the same march the repeated stops play when the horizon outruns *their* stock, sized
+     * once a plan and shared — the army's best march with nothing hired in it is one question. An army with
+     * no troop type to field has no tail, and the campaign is as short as it was.
      */
     if (marches.length < planned) {
-      const sized = sizer([], 'elite');
-      if (sized.rungs.length > 0) {
-        const tail = toMarch(sized.rungs, [], marchOf(sized.rungs, enemyStacks));
+      const tail = troopsOnlyMarch();
+      if (tail) {
         while (marches.length < planned) marches.push(tail);
       }
     }
@@ -2724,6 +2780,72 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (stops.slice(0, index).some((other) => sameCounts(other, row))) stops.splice(index, 1);
     }
   }
+  /**
+   * **The troops-only tail, on the repeated stops** (S-89; owner, 2026-09-18, choosing P1 from the
+   * six-proposal table of `tools/theorycraft/out/105-six-proposals.md`).
+   *
+   * S-76 made the horizon a ceiling rather than a promise: a stop whose hired stock the horizon outruns plays
+   * the marches its stock reaches and stops. On a first-run army holding one Bear V that is **one** march of a
+   * four-march horizon — 4 722 842 damage for 8 131 400 silver — while every sizer sequence beside it in the
+   * benchmark marches four times, going on with troops alone once the bears are gone. S-81 gave the `all-in`
+   * those marches; this gives them to every other stop, on the owner's word. Measured (105 §P1, on the S-87
+   * engine): exactly 3 stops on 3 of the 13 scenarios move — bear ×1's sweet spot 4 722 842 → **18 554 768**,
+   * bear ×2's 9 557 884 → **18 779 168**, bear ×3's 14 168 526 → **18 779 168** — and every other stop on
+   * every other army already fills the horizon, so nothing else changes at all.
+   *
+   * **It is applied last, after every rule that chooses a stop has run**, and the rules are the reason it can
+   * be: the bar's order and its two ends read `repeat.mercLost`, the sweet spot's chord reads `repeat.damage`
+   * against it, the band and the S-58 B test read the repeated march and the finale, `offer`'s dedupe and the
+   * put-back pass read `counts`, and `bestFor` below reads `perSilver`/`perHired`, which are `repeat`'s own
+   * figures and not the campaign's. Not one of them can see a march appended after the stock is spent, which
+   * is what 105 §P1 measured stop by stop: no stop choice moves, no burn moves, no knee moves, and band
+   * membership is unchanged on all 13 armies. What *does* move is the pair of **campaign** ratios the row
+   * reports — the tail buys damage with no hired unit at all, so damage a hired rises and damage a silver
+   * eases — and the owner accepted that cost when he chose the proposal: on bear ×1 the stop now reports
+   * 18 554 768 damage a hired unit burned, of which no mercenary bought 13 831 926.
+   */
+  const withTail = <T extends PlanTotals>(row: T): T => {
+    // No horizon to fill (a silver budget, or a single march asked for), a stop that already fills it, or the
+    // `all-in`, whose `sequence` carries its own tail march by march.
+    if (planned === undefined || row.sequence !== undefined || row.marches >= planned) return row;
+    const tail = troopsOnlyMarch();
+    if (!tail) return row;
+    const played = planned - row.marches;
+    const totalDamage = row.totalDamage + played * tail.damage;
+    const silver = row.silver + played * tail.silver;
+    return {
+      ...row,
+      tail: {
+        counts: tail.counts,
+        marches: played,
+        damage: tail.damage,
+        silver: tail.silver,
+        seconds: tail.seconds,
+      },
+      totalDamage,
+      silver,
+      // `toMarch` prices gold off the hired stacks alone, so a troops-only march adds none. Summed rather
+      // than assumed, so the line stays true if that ever stops being so.
+      gold: row.gold + played * tail.gold,
+      seconds: row.seconds + played * tail.seconds,
+      // The stock burns nothing more: that is the whole shape of the trade the owner accepted here.
+      mercLost: row.mercLost,
+      marches: planned,
+      damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
+      damagePerMercenary: row.mercLost > 0 ? totalDamage / row.mercLost : Infinity,
+    };
+  };
+  for (let index = 0; index < stops.length; index += 1) {
+    const row = stops[index] as PlanRow;
+    const tailed = withTail(row);
+    if (tailed !== row) {
+      stops[index] = tailed;
+      // `generatedOf` is keyed by object identity and read by the frontier diagnostic below, so the re-keyed
+      // row keeps the march it was sized from.
+      const generated = generatedOf.get(row);
+      if (generated) generatedOf.set(tailed, generated);
+    }
+  }
   const bestStop = (of: (row: PlanTotals) => number): PlanRow | undefined =>
     stops.reduce<PlanRow | undefined>(
       (best, row) => (best === undefined || of(row) > of(best) ? row : best),
@@ -2740,14 +2862,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * The plan the engine recommends, as the bar's own row: the same figures the list carries when the cap
    * above did not cut it off, and a copy of them when it did.
    */
-  const sweetSpot: PlanRow = stops.find((row) => row.pick === 'sweet-spot') ?? {
-    ...sweetSpotBase,
-    pick: 'sweet-spot',
-    bestFor: { silver: false, hired: false },
-  };
+  const sweetSpot: PlanRow =
+    stops.find((row) => row.pick === 'sweet-spot') ??
+    withTail<PlanRow>({
+      ...sweetSpotBase,
+      pick: 'sweet-spot',
+      bestFor: { silver: false, hired: false },
+    });
 
   const leadershipUsed = chosen.rungs.reduce((sum, rung) => sum + rung.count * rung.entry.cost, 0);
-  const total: PlanTotals = summarise(chosen);
+  // The plan's own campaign, tailed like the stops: it is a repeated march with a horizon to fill like any of
+  // them, and the recap that reads it ("… over 4 marches") is describing the same campaign the bar is.
+  const total: PlanTotals = withTail(summarise(chosen));
   /**
    * A march's identity: its non-zero counts, sorted, so two records of the same march match whatever order
    * their keys were written in. `sameCounts` above compares the objects' JSON and is key-order dependent; it
@@ -2780,10 +2906,35 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * Measured on his own bar, 2026-09-18 (`out/105-six-proposals.md` §P4): the table goes from 11 rows to 3,
    * its peak from 2.759 a silver to 1.987 — which is the best damage a silver on the bar itself — and its
    * cheapest row from 2 140 100 silver to 5 782 400. **No stop moves**: nothing but the table reads this.
+   *
+   * **As offered means tailed** (S-89): a plan the bar may offer plays the horizon out on troops alone when
+   * its hired stock runs short, so a candidate is priced here with that tail on it. This is the one set the
+   * tail reaches beyond the stops — `trade`, the knee and the two peaks stay the search's own figures — and
+   * it has to, because a table of levels cannot hold a one-march campaign and a four-march one at once.
    */
+  /**
+   * A tailed copy of a candidate, back to the row the **search** summarised. The frontier diagnostic is a
+   * record of the search, and a copy the pricing made afterwards is the same plan — without this it would
+   * report every tailed candidate as a march the frontier never carried.
+   */
+  const tailedFrom = new Map<PlanTotals, PlanTotals>();
   const offered: PlanTotals[] = (() => {
     const held = new Map<string, PlanTotals>();
-    for (const row of [...candidates, ...stops]) {
+    // **Tailed, like the stops** (S-89). The set is the plans the bar *may offer*, and a plan the bar offers
+    // plays the horizon out on troops alone — so a candidate is priced here the way it would be priced if it
+    // were picked, `withTail` and all. Half-tailing the set printed two readings of one army side by side:
+    // on a first-run army holding one bear the table carried the tailed sweet spot at 32 525 600 silver for
+    // 18 554 768 damage next to an untailed one-march candidate at 1 233 500 for 706 825, one of them a
+    // four-march campaign and the other a one-march one, in a table whose whole premise is that every row is
+    // the same horizon at a different silver. The dedupe below then kept the harder-hitting of a pair, which
+    // on three bears silently dropped a whole level (the untailed 24 394 200 row losing to its own tailed
+    // self at 32 525 600). Tailing the candidates first makes every row one campaign of the same length.
+    const tailed = candidates.map((row) => {
+      const withIt = withTail(row);
+      if (withIt !== row) tailedFrom.set(withIt, row);
+      return withIt;
+    });
+    for (const row of [...tailed, ...stops]) {
       const key = countsKey(row.counts);
       const there = held.get(key);
       if (!there || row.totalDamage > there.totalDamage) held.set(key, row);
@@ -2853,13 +3004,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
             };
           };
           const held = new Set<PlanTotals>(all);
+          /**
+           * **The marches the bar offers that the search never summarised**: a stop the put-back pass
+           * re-sized after it was chosen, and the `all-in`, built march by march outside the frontier. They
+           * are the only rows of the reference table (`offered` above) the frontier does not already carry,
+           * and the diagnostic is what an experiment traces a table row back through.
+           *
+           * **A tailed copy is not one of them** (S-89). The table prices a candidate the way it would be
+           * priced if it were offered — the troops-only tail included — and that copy is a new object, so by
+           * identity alone every tailed candidate would arrive here as a march the frontier never carried,
+           * and a tailed *stop* would be reported twice over: once as its untailed frontier row and once as
+           * an off-frontier row four marches long. `tailedFrom` maps a copy back to the row the search
+           * summarised, which is what `onFrontier` is a claim about.
+           *
+           * So the rows here are the **search's** own figures, pre-tail, and deliberately: this is a record of
+           * what the search found, and a stop's tailed campaign is on `alternatives` where the bar reads it.
+           */
+          const searched = (row: PlanTotals): PlanTotals => tailedFrom.get(row) ?? row;
           const onFrontier: PlanFrontierRow[] = all.map((row) => decorate(row, true));
-          // The marches the bar offers that the search never summarised: a stop the put-back pass re-sized
-          // after it was chosen. They are the only rows of the reference table (`offered` above) the frontier
-          // does not already carry, and the diagnostic is what an experiment traces a table row back through.
           const offFrontier: PlanFrontierRow[] = offered
-            .filter((row) => !held.has(row))
-            .map((row) => decorate(row as TradeRow, false));
+            .filter((row) => !held.has(searched(row)))
+            .map((row) => decorate(searched(row) as TradeRow, false));
           return [...onFrontier, ...offFrontier].sort(
             (a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage,
           );
@@ -2887,12 +3052,22 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // the answers on it (S-59 follow-up: "the sweet spot seems to be too similar with silver save"). Sorted
     // cheapest first like everything else the UI reads, and built here so the order is the engine's rather
     // than a caller's re-derivation of it.
+    //
+    // **Pre-tail, on purpose** (S-89): these are the plans as the **search** priced them, and the shape the
+    // question is about — how the band's marches trade silver against the stock — is a property of the
+    // repeated march, which the tail does not touch. The reference table (`curve`) is the one set priced *as
+    // offered*, tail included, because it is the table drawn under the bar.
     ...(input.withTrade === true
       ? { trade: [...candidates].sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage) }
       : {}),
     // With no budget the recommendation is the sweet spot — the middle of the trade in hired stock, see
     // `sweetSpotBase` above. With a budget the plan *is* the answer and nothing is recommended beside it. The
     // knee and the two peaks are carried for the curve's shape, not for the bar.
+    //
+    // `recommend` is a **stop**, so it carries its tail like every other stop. The three beside it are
+    // **pre-tail** (S-89), for the same reason `trade` is: each is a point of the search's own frontier,
+    // named for where it sits on it, and the tail is the same march added to all of them — it moves every
+    // campaign figure and none of the shape that picked them.
     ...(input.silverBudget === undefined
       ? {
           recommend: sweetSpot,

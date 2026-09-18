@@ -72,12 +72,18 @@ const fieldedOf = (req: StackRequest, counts: Record<string, number>): number =>
     0,
   );
 
-/** The marches a stop plays, first to last: its own sequence, or its repeats and the final march. */
+/**
+ * The marches a stop plays, first to last: its own sequence, or its repeats, the final march and the
+ * troops-only marches the horizon leaves over once its stock is spent (`PlanTotals.tail`, S-89).
+ */
 function marchesOf(row: PlanTotals): Record<string, number>[] {
   if (row.sequence) return row.sequence;
-  const repeats = row.marches - (row.finaleCounts ? 1 : 0);
+  const tail = row.tail?.marches ?? 0;
+  const repeats = row.marches - (row.finaleCounts ? 1 : 0) - tail;
   const marches = Array.from({ length: repeats }, () => row.counts);
-  return row.finaleCounts ? [...marches, row.finaleCounts] : marches;
+  if (row.finaleCounts) marches.push(row.finaleCounts);
+  for (let i = 0; i < tail; i += 1) marches.push(row.tail?.counts ?? {});
+  return marches;
 }
 
 const used = (req: StackRequest, counts: Record<string, number>, pool: string): number =>
@@ -137,27 +143,43 @@ describe(
     );
 
     /**
-     * **The horizon is a ceiling, not a requirement** (owner, 2026-09-18: *"no more magic static numbers"*).
+     * **The horizon is a ceiling on the hired stock, and the troops march on** (owner, 2026-09-18: *"no more
+     * magic static numbers"*, then S-89 from the six-proposal table of the same day).
      *
      * A first-run army holding one or two of a hired type holds **no** count that lasts three repeats, so its
      * grid came back empty, `planCampaign` threw, and the app answered "it needs your mercenaries filled in
-     * first" (`src/ui/sections/march/generate.ts`) to a player who had filled them in. A stock the horizon
-     * outruns plays the marches it lasts; a stock that carries the horizon still plays all four of them.
+     * first" (`src/ui/sections/march/generate.ts`) to a player who had filled them in. S-76 answered it with a
+     * **shorter campaign**: the marches the stock lasts, and no more.
+     *
+     * **Re-based 2026-09-18 (S-89).** A shorter campaign was the wrong half of the answer: the marches the
+     * horizon still had room for were thrown away, and every sizer sequence in the benchmark went on playing
+     * them with troops alone. So the stock is still what decides how many marches field a mercenary — that is
+     * what this test holds, and it is unchanged — but the campaign itself now always reaches the horizon, the
+     * marches left over played on troops alone (`PlanTotals.tail`). On this very army it is the difference
+     * between 4 722 842 damage and **18 554 768** (`tools/theorycraft/out/105-six-proposals.md` §P1).
      */
     test(
-      'a stock the horizon outruns plays a shorter campaign instead of being refused',
+      'a stock the horizon outruns fields hired units for as long as it lasts, then marches on troops alone',
       () => {
         for (const cap of [1, 2]) {
           const req = firstRun({ id: 'bear-5', cap });
           const plan = planCampaign({ request: req, marchTarget: 4, ...CAMPAIGN.planFixes });
-          // One bear lasts one march at a count of one, two bears two: the campaign is exactly that long.
-          expect(plan.marches, `a stock of ${String(cap)} plays as many marches as it lasts`).toBe(cap);
+          // The campaign reaches the horizon whatever the stock is…
+          expect(plan.marches, `a stock of ${String(cap)} still plays the horizon`).toBe(4);
+          // …and one bear fields a march at a count of one, two bears two: the hired marches are exactly that
+          // many, the rest of the campaign being the troops-only tail.
+          expect(
+            plan.marches - (plan.tail?.marches ?? 0),
+            `a stock of ${String(cap)} fields hired units for as many marches as it lasts`,
+          ).toBe(cap);
           expect(plan.alternatives.length).toBeGreaterThan(0);
           for (const row of plan.alternatives) {
             // The plan is about spreading the hired stock, so every stop fields the one type it holds…
             expect(row.counts['bear-5'] ?? 0, `${row.pick} fields the bear`).toBeGreaterThan(0);
-            expect(row.marches).toBeGreaterThanOrEqual(1);
-            expect(row.marches).toBeLessThanOrEqual(4);
+            expect(row.marches).toBe(4);
+            expect(row.marches - (row.tail?.marches ?? 0)).toBeGreaterThanOrEqual(1);
+            // The tail is troops alone, so it can never field the bear.
+            expect(row.tail?.counts['bear-5'] ?? 0, `${row.pick}'s tail hires nothing`).toBe(0);
             // …and never more of it than the stock still has, a chunk of ten lost for good every march.
             let left = cap;
             for (const counts of marchesOf(row)) {
@@ -178,6 +200,101 @@ describe(
           ...CAMPAIGN.planFixes,
         });
         expect(carried.marches).toBe(4);
+      },
+      TIMEOUT,
+    );
+
+    /**
+     * **The troops-only tail, priced** (S-89; owner, 2026-09-18, choosing P1 from the six-proposal table of
+     * `tools/theorycraft/out/105-six-proposals.md`).
+     *
+     * The three armies the proposal moves, and the whole of what it does to them: the stop reaches the
+     * horizon, the marches it does not field a mercenary on are one Elite march of troops alone, and the
+     * campaign is exactly what it was plus that march as many times as the horizon had room for. The
+     * pre-tail figures below are **measured**, on the S-87 engine and on the 07 benchmark run of 2026-09-18
+     * (`tools/theorycraft/out/benchmark-2026-09-18-07-curve-over-band.json`); they are pinned rather than
+     * recomputed so that the arithmetic asserted here is the proposal's and not a restatement of the
+     * engine's.
+     *
+     * `repeat` is pinned too, and it is the point of the design: every rule that chooses a stop reads the
+     * repeated march, so a tail that moved it would be a change to the bar. It does not move.
+     */
+    test(
+      'a repeated stop plays the horizon out on troops alone, and its campaign is the tail added on',
+      () => {
+        // cap → the campaign before the tail (damage, silver, queue) and the repeated march it is made of
+        // (damage, silver, queue, hired burned). Measured 2026-09-18, engine S-87.
+        const before = {
+          1: { campaign: [4_722_842, 8_131_400, 2_269_380], repeat: [4_722_842, 8_131_400, 2_269_380, 1] },
+          2: { campaign: [9_557_884, 16_262_800, 4_538_760], repeat: [4_835_042, 8_131_400, 2_269_380, 1] },
+          3: { campaign: [14_168_526, 24_394_200, 6_808_140], repeat: [4_722_842, 8_131_400, 2_269_380, 1] },
+        } as const;
+        // The tail itself, one Elite march over every troop type this army holds with no mercenary in it —
+        // the same march on all three, because it is the same army (`out/105` §P1).
+        const TAIL = { damage: 4_610_642, silver: 8_131_400, seconds: 2_269_380 };
+
+        for (const cap of [1, 2, 3] as const) {
+          const plan = planCampaign({
+            request: firstRun({ id: 'bear-5', cap }),
+            marchTarget: 4,
+            ...CAMPAIGN.planFixes,
+          });
+          const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot');
+          if (!sweet) throw new Error(`no sweet spot at a stock of ${String(cap)}`);
+          const pin = before[cap];
+
+          // The repeated march is untouched: it is what every stop rule reads.
+          expect(
+            [sweet.repeat.damage, sweet.repeat.silver, sweet.repeat.seconds, sweet.repeat.mercLost],
+            `a stock of ${String(cap)} repeats the same march it did before the tail`,
+          ).toEqual(pin.repeat);
+
+          // The stop reaches the horizon, and the marches it did not reach are the tail.
+          expect(sweet.marches, `a stock of ${String(cap)} plays the horizon`).toBe(4);
+          const tail = sweet.tail;
+          if (!tail) throw new Error(`no tail at a stock of ${String(cap)}`);
+          // One bear fields one march, two fields two, three fields three: the rest is the tail.
+          expect(tail.marches).toBe(4 - cap);
+          expect([tail.damage, tail.silver, tail.seconds]).toEqual([TAIL.damage, TAIL.silver, TAIL.seconds]);
+          // Troops alone: no hired stack at all, which is what makes the tail sheltered by construction.
+          expect(tail.counts['bear-5'] ?? 0).toBe(0);
+
+          // The campaign is what it was, plus the tail as many times as the horizon had room for.
+          expect(
+            [sweet.totalDamage, sweet.silver, sweet.seconds],
+            `a stock of ${String(cap)} adds its tail on`,
+          ).toEqual([
+            pin.campaign[0] + tail.marches * TAIL.damage,
+            pin.campaign[1] + tail.marches * TAIL.silver,
+            pin.campaign[2] + tail.marches * TAIL.seconds,
+          ]);
+          // The stock burns exactly what it burned, so the two ratios follow from the arithmetic above.
+          expect(sweet.mercLost).toBe(cap);
+          expect(sweet.damagePerSilver).toBeCloseTo(sweet.totalDamage / sweet.silver, 9);
+          expect(sweet.damagePerMercenary).toBeCloseTo(sweet.totalDamage / sweet.mercLost, 3);
+
+          // A stop with no finale is its repeated march and its tail, and nothing else.
+          if (!sweet.finaleCounts) {
+            const played = sweet.marches - tail.marches;
+            expect(sweet.totalDamage).toBe(played * sweet.repeat.damage + tail.marches * TAIL.damage);
+            expect(sweet.silver).toBe(played * sweet.repeat.silver + tail.marches * TAIL.silver);
+            expect(sweet.seconds).toBe(played * sweet.repeat.seconds + tail.marches * TAIL.seconds);
+          }
+        }
+
+        // **It is the same march the `all-in` ends on.** Three bears is the one of the three armies that
+        // offers both stops, and the `all-in`'s fourth march — the one it plays once 3 · 2 · 1 has spent the
+        // stock — is this tail to the unit. One question, sized once a plan (`troopsOnlyMarch`, `plan.ts`).
+        const three = planCampaign({
+          request: firstRun({ id: 'bear-5', cap: 3 }),
+          marchTarget: 4,
+          ...CAMPAIGN.planFixes,
+        });
+        const allIn = three.alternatives.find((row) => row.pick === 'all-in');
+        const sweet = three.alternatives.find((row) => row.pick === 'sweet-spot');
+        if (!allIn?.sequence || !sweet?.tail) throw new Error('three bears offers both stops');
+        expect(allIn.sequence).toHaveLength(4);
+        expect(sweet.tail.counts).toEqual(allIn.sequence[allIn.sequence.length - 1]);
       },
       TIMEOUT,
     );

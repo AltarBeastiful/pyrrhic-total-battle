@@ -796,6 +796,51 @@ test('the all-in line counts the marches it fights on troops alone', () => {
 });
 
 /**
+ * **A repeated stop says where its mercenaries run out too** (S-89; owner, 2026-09-18, choosing P1 of
+ * `tools/theorycraft/out/105-six-proposals.md`).
+ *
+ * A stop whose hired stock the horizon outruns plays the marches left over on troops alone, exactly as the
+ * `all-in` does — it just does not need a march-by-march sequence to say so, because the marches it *does*
+ * field mercenaries on are all the same march (`PlanTotals.tail`). So the count on the fold keeps its old
+ * shape for those and the tail is added to it, in the one place the words live (design rule 5): the fold's
+ * summary, the bar's tip and the thumb's value text all read `sequenceWords`.
+ */
+test('a repeated stop with a tail counts the marches it fights on troops alone', () => {
+  const tail = (marches: number): PlanRow['tail'] => ({
+    counts: { 'swordsman-1': 3_048 },
+    marches,
+    damage: 4_610_642,
+    silver: 8_131_400,
+    seconds: 2_269_380,
+  });
+  // The bear ×1 sweet spot: one march of the bear, three on the troops (`out/105` §P1).
+  expect(sequenceWords({ marches: 4, tail: tail(3) })).toBe('1 march, then 3 on troops alone');
+  // The bear ×2 sweet spot: a march and the finale the chunk leaves, then two on the troops.
+  expect(sequenceWords({ marches: 4, finaleCounts: { 'bear-5': 1 }, tail: tail(2) })).toBe(
+    '1 march + a last one, then 2 on troops alone',
+  );
+  expect(sequenceWords({ marches: 4, tail: tail(2) })).toBe('2 marches, then 2 on troops alone');
+  // A stop whose stock lasts the horizon has no tail, and says nothing: the fold writes the plain count.
+  expect(sequenceWords({ marches: 4 })).toBeNull();
+
+  // And the fold collapses to it, in those words.
+  stubLayout();
+  const tailed: PlanRow = {
+    ...(BURN_ROWS[1] as PlanRow),
+    marches: 4,
+    finaleCounts: undefined,
+    tail: tail(3),
+  };
+  const plan: CampaignPlan = { ...BURN, alternatives: [tailed], recommend: tailed };
+  useRunStore.setState({ plan, planPick: 0, includedUnitIds: [], leftOutByPlayer: [] });
+  renderWithTheme(<PlanFold />);
+  const fold = screen.getByRole('button', { name: /^Plan/ });
+  expect(fold.textContent).toContain('1 march, then 3 on troops alone');
+  // The old line counted the tail as another march of the row above, which is the one thing it is not.
+  expect(fold.textContent).not.toContain('4 marches');
+});
+
+/**
  * **The put-back line** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and misses some
  * damage that seems cheap … troops of higher tier are longer to train"*; `PlanRow.putBack`).
  *

@@ -113,9 +113,10 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
   /** Which of the two efficiencies the tip's stop is the bar's best at, or `null` (`./picks`). */
   const efficiency = row === undefined ? null : bestForWords(row);
   /**
-   * The one line the `all-in` stop needs and no other stop has: it is a **sequence**, not a march repeated
-   * (`./picks`, `PlanTotals.sequence`). `null` everywhere else, so the tip keeps its height on every other
-   * stop.
+   * The line a stop needs when "N marches of the row above" would not be true of it: the `all-in`, which is a
+   * **sequence** rather than a march repeated, and any repeated stop the horizon outruns, which plays the
+   * marches left over on troops alone (`./picks`, `PlanTotals.sequence` and `.tail`). `null` on every stop
+   * that simply repeats its march, so the tip keeps its height there.
    */
   const sequence = row === undefined ? null : sequenceWords(row);
 
@@ -329,11 +330,12 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           <Text size="xs" opacity={0.75}>
             {`${compact(row.repeat.gold)} gold a march`}
           </Text>
-          {/* **The stop that is a sequence says so** (S-74). Every other stop on the bar is the march above
-              repeated, so "6.9M damage a march" names the whole campaign; `all-in` shelters every mercenary
-              it can on the first march and then marches on what the stock has left, so the three figures
-              above it are the **first** march's and counting them four times would be false. One line, in the
-              words the fold's own summary uses (`sequenceWords`, `./picks`). */}
+          {/* **A stop the figures above do not describe four times over says so** (S-74, widened in S-89).
+              Most stops are the march above repeated, so "6.9M damage a march" names the whole campaign;
+              `all-in` shelters every mercenary it can on the first march and then marches on what the stock
+              has left, and a repeated stop the horizon outruns marches on troops alone once its stock is
+              spent — for both, the three figures above are one march's and multiplying them out would be
+              false. One line, in the words the fold's own summary uses (`sequenceWords`, `./picks`). */}
           {sequence !== null && (
             <Text size="xs" opacity={0.75}>
               {sequence}
