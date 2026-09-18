@@ -24,7 +24,7 @@ export { NumberField } from './NumberField';
 export type { NumberFieldProps } from './NumberField';
 export { Panel } from './Panel';
 export type { PanelProps, PanelSurface } from './Panel';
-export { PillRow } from './PillRow';
+export { CornerPill, PillRow } from './PillRow';
 export type { PillRowItem, PillRowProps } from './PillRow';
 export { Sections } from './Sections';
 export type { SectionsProps } from './Sections';

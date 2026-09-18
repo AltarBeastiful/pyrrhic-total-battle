@@ -18,9 +18,19 @@
   gap: 8px;
 }
 
-/* The row. Mantine derives a pill group's gap from the pill's font size; the contract says 8. */
+/* The row. Mantine derives a pill group's gap from the pill's font size; the contract says 8 — and
+   16 between the lines since the count rides the corner (2026-09-18): half of a 20 px badge stands
+   above its pill, which at 8 px would land on the pill above. */
 .pills {
   gap: 8px;
+  row-gap: 1rem;
+}
+
+/* The strip a pill keeps for the badge on its corner: 36 px holds a three-figure count ("999" is
+   34 px of badge at 13 px), the usual case; a four-figure one reaches 8 px over the tier badge,
+   which is rare and still reads. The pill's own end padding was 6. */
+.pills :global(.mantine-Pill-root[data-corner]) {
+  padding-inline-end: 2.25rem;
 }
 
 /* The pill's body is a button, and a button is one child of the pill's label — so the 6 px inner

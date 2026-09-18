@@ -27,6 +27,23 @@
    9 px the other side keeps. It was 20 px over a gear inset 2 px, and thirty-one captains at 6 px
    too wide each read as "a bit too wide, maybe because of the config badge" (owner, 2026-09-17);
    the gear is a circle, so at the height of the letters it is further away than its box. */
+/* A badge on a pill's corner (`CornerPill`): the same transparent indicator as the gear's, but
+   **right-aligned on the corner** — its right edge 4 px past the pill's, its middle on the pill's
+   top edge — so a figure that grows wider grows over its own pill. The pill reserves a strip for it
+   (the card that uses it says how wide, on `[data-corner]`), and a wrapping row of these needs the
+   half-badge above the pill in its row gap, as `gearGrid` does for the chips. */
+.pillCorner :global(.mantine-Indicator-indicator) {
+  padding: 0;
+  background: transparent;
+  border: none;
+  transform: translate(0.25rem, -50%);
+}
+
+/* An already-built pill in a `PillRow`: the slot that keeps it in the group's flow. */
+.pillSlot {
+  display: inline-flex;
+}
+
 .cornerGear :global(.mantine-Chip-label) {
   padding-inline-end: 0.875rem;
 }

@@ -46,7 +46,10 @@ const pillNames = (): string[] =>
 
 /** One pill's whole line, as a glance reads it: the pill around the badge that carries the name. */
 const pillText = (name: string): string =>
-  (screen.getByRole('button', { name }).closest('.mantine-Pill-root')?.textContent ?? '').replace(/\s+/g, '');
+  (screen.getByRole('button', { name }).closest('.mantine-Indicator-root')?.textContent ?? '').replace(
+    /\s+/g,
+    '',
+  );
 
 /** Open the picker the way a player does: press it, then type the name. */
 async function find(user: ReturnType<typeof userEvent.setup>, query?: string): Promise<HTMLElement> {

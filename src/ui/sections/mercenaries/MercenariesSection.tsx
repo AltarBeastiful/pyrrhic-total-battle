@@ -41,7 +41,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { count, Glyph, romanTier, tierInk, TierBadge } from '@/ui/domain';
-import { GroupedCombobox, NumberField, Panel, PillRow } from '@/ui/kit';
+import { CornerPill, GroupedCombobox, NumberField, Panel, PillRow } from '@/ui/kit';
 import type { ComboboxGroup, PillRowItem } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 
@@ -177,7 +177,8 @@ export function MercenariesSection() {
   // or a custom one's pencil — is the way into its editor.
   const items: PillRowItem[] = owned.map((entry) => ({
     id: entry.id,
-    label: entry.isCustom ? (
+    label: null,
+    element: entry.isCustom ? (
       <CustomPill
         entry={entry}
         onRemove={() => {
@@ -344,12 +345,11 @@ function PillFace({ entry }: { entry: MercenaryRow }) {
 }
 
 /**
- * The owned count as a **badge on the pill**, and the button that edits it (owner, 2026-09-18: "the
- * number in a badge… it's more an input field right now, not a badge on a pill"). Round and
- * tinted, no edge: the shape a badge has, not a well's. Neutral, never the tier's ink, so the two
- * badges cannot be read as one thing; 13 px, because an owned count is information (rule 19) where
- * the tier is a label. `∞` goes through the glyph box inside the same badge, so an unlimited pill is
- * exactly as tall as a "1 212" one.
+ * The owned count as a **badge on the pill's corner**, and the button that edits it (owner,
+ * 2026-09-18: "a real badge, like the heroes' one but a bit bigger so it's easily readable, in the
+ * upper right corner of the pill"). Round and solid, 20 px against the gear's 18, in the neutral
+ * slate so it never reads as the tier's badge; 13 px, because an owned count is information
+ * (rule 19) where the tier is a label. `∞` goes through the glyph box inside the same badge.
  */
 /** What `Popover.Target` hands its child besides the ref: its ARIA and nothing that styles. */
 type TargetProps = Omit<
@@ -367,8 +367,9 @@ const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress:
         ref={ref}
         component="button"
         type="button"
-        variant="light"
+        variant="filled"
         color="slate"
+        autoContrast
         radius="xl"
         tt="none"
         fw={600}
@@ -420,20 +421,25 @@ function HiredPill({
       returnFocus
     >
       {/* Two targets on one pill (owner, 2026-09-18): the body removes the mercenary — one press,
-          with the way back under the row — and the badge opens the owned-count editor. The popover
-          hangs off the badge, which is a real `<button>`, so `aria-expanded` lands where it is
-          allowed (investigation 0007). */}
-      <UnstyledButton className={classes.face} fz="sm" aria-label={`Remove ${name}`} onClick={onRemove}>
-        <PillFace entry={entry} />
-      </UnstyledButton>
-      <Popover.Target>
-        <CountBadge
-          entry={entry}
-          onPress={() => {
-            setOpened((open) => !open);
-          }}
-        />
-      </Popover.Target>
+          with the way back under the row — and the badge on its top-right corner opens the
+          owned-count editor. The popover hangs off the badge, which is a real `<button>`, so
+          `aria-expanded` lands where it is allowed (investigation 0007). */}
+      <CornerPill
+        corner={
+          <Popover.Target>
+            <CountBadge
+              entry={entry}
+              onPress={() => {
+                setOpened((open) => !open);
+              }}
+            />
+          </Popover.Target>
+        }
+      >
+        <UnstyledButton className={classes.face} fz="sm" aria-label={`Remove ${name}`} onClick={onRemove}>
+          <PillFace entry={entry} />
+        </UnstyledButton>
+      </CornerPill>
       {/* A width of its own, on the dropdown rather than on the popover, and a field that fills it:
           neither the box nor the control inside it is allowed to be sized by what is typed. */}
       <Popover.Dropdown w={CAP_POPOVER_WIDTH} className={classes.capPopover}>
@@ -482,7 +488,19 @@ function CustomPill({
   onRemove: () => void;
 }) {
   return (
-    <>
+    <CornerPill
+      corner={
+        <ActionIcon
+          size={20}
+          radius="xl"
+          variant="default"
+          aria-label={`Edit ${entry.unit.name}`}
+          onClick={onEdit}
+        >
+          <Pencil size={11} aria-hidden />
+        </ActionIcon>
+      }
+    >
       <UnstyledButton
         className={classes.face}
         fz="sm"
@@ -491,17 +509,7 @@ function CustomPill({
       >
         <PillFace entry={entry} />
       </UnstyledButton>
-      <ActionIcon
-        size={22}
-        radius="xl"
-        variant="subtle"
-        color="gray"
-        aria-label={`Edit ${entry.unit.name}`}
-        onClick={onEdit}
-      >
-        <Pencil size={12} aria-hidden />
-      </ActionIcon>
-    </>
+    </CornerPill>
   );
 }
 

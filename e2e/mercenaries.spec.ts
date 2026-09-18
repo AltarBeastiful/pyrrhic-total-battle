@@ -40,7 +40,7 @@ test('a mercenary is hired from the picker, and its pill says how many you own',
   const badge = card.getByRole('button', { name: 'Bear V: owned unlimited' });
   // `has` takes a locator relative to the pill, so the badge is named again rather than reused.
   const pill = card
-    .locator('.mantine-Pill-root')
+    .locator('.mantine-Indicator-root')
     .filter({ has: page.getByRole('button', { name: 'Bear V: owned unlimited' }) });
   await expect(pill).toContainText('BER');
   await expect(pill).toContainText('V');
