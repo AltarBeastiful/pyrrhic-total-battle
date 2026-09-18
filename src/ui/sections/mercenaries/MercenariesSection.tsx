@@ -273,12 +273,8 @@ export function MercenariesSection() {
             </Group>
           )}
         </Transition>
-
-        {owned.length === 0 && (
-          <Text size="sm" c="dimmed">
-            Type a name, or open the list: mercenaries are grouped by tier, lowest first.
-          </Text>
-        )}
+        {/* No line of guidance under an empty camp (owner, 2026-09-18: "the UI speaks for itself"):
+            the picker's own trigger says what to do. */}
       </Stack>
 
       <LazySurface isOpen={editor !== null}>

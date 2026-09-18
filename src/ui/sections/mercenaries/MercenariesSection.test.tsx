@@ -60,7 +60,7 @@ async function find(user: ReturnType<typeof userEvent.setup>, query?: string): P
   return screen.getByRole('listbox');
 }
 
-test('an empty camp is the picker and one line of guidance, and no chips', () => {
+test('an empty camp is the picker alone: no guidance line, no chips', () => {
   renderWithTheme(<MercenariesSection />);
 
   expect(screen.getByRole('heading', { level: 2, name: 'Mercenaries' })).toBeTruthy();
@@ -68,9 +68,8 @@ test('an empty camp is the picker and one line of guidance, and no chips', () =>
   expect(screen.queryByRole('button', { name: 'Deselect all' })).toBeNull();
   expect(screen.queryByText(/selected\)/)).toBeNull();
   expect(screen.getByRole('button', { name: 'Hire mercenary…' })).toBeTruthy();
-  expect(
-    screen.getByText('Type a name, or open the list: mercenaries are grouped by tier, lowest first.'),
-  ).toBeTruthy();
+  // And no line of guidance under it (owner, 2026-09-18): the trigger says what to do.
+  expect(screen.queryByText(/Type a name/)).toBeNull();
   // The Tier / Role / Race chips are gone (owner, 2026-09-13).
   expect(screen.queryByRole('button', { name: 'Guardsmen' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Tier 7' })).toBeNull();
