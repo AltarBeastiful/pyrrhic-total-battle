@@ -2,7 +2,7 @@
 
 Every sequence is four marches: the sizers re-sized each march on the stock the last one left (Generate four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. Each march priced by `simulateBattle` on its counts — damage, retraining silver and the gold its hired stacks cost to revive (the gold column since S-90, 2026-09-18).
 
-Run: 2026-09-18T16:26:41.590Z, commit (working tree)
+Run: 2026-09-18T16:19:34.759Z, commit (working tree)
 
 ## first-run army, Bear V ×1 (20 000 leadership)
 

@@ -690,3 +690,112 @@ describe('the reference table names only plans the bar may offer', () => {
     );
   }
 });
+
+/**
+ * **The bar agrees with the recap** (S-90; the owner, 2026-09-18, choosing the fix for the bug experiment
+ * 105's validator found).
+ *
+ * A stop prints three prices for a campaign — silver, gold and the training queue — and every one of them
+ * has to be the sum of what the game will charge for the marches the stop actually plays. The player can
+ * check it: he clicks a stop, the March section draws its march and the recap under it prints that march's
+ * own recovery (`marchResult` → `recoveryCosts`, the same figures `simulateBattle` hands the app). A campaign
+ * total that is not the sum of those is a number with nothing behind it.
+ *
+ * **Gold was such a number.** `PlanTotals.gold` was `repeats × the repeated march's gold`, with the finale
+ * left out — while `silver` and `seconds` beside it summed `repeats × the march + the finale` — so the last
+ * march of every repeated plan, the one that spends what the stock has left and therefore fields the *most*
+ * hired units of the whole campaign, was revived for free on the bar. Measured here on HEAD before the fix
+ * (the same run this criterion makes, stop by stop): the evening account's silver saver printed **1 944**
+ * gold against 3 192, its sweet spot 2 712 against 3 960; the 12 000 export's silver saver 2 280 against
+ * 3 464 (Δ 1 184, the worst of the eleven armies); his live camp 5 616 against 6 152 at the sweet spot; and
+ * the plan's own campaign was short on every army that plays a finale. Silver and the queue were already
+ * exact everywhere, on every stop of every scenario — which is what said the arithmetic was right and one
+ * line of it was missing.
+ *
+ * Held on the same armies as the shelter above: the benchmark's own scenarios, the owner's export where it
+ * is, and his live camp of 2026-09-18. Over every march the bar offers — the repeats, the finale, the
+ * troops-only tail (which revives nothing, and so must add nothing) and every march of the `all-in`'s
+ * sequence.
+ */
+describe('a stop’s campaign is the sum of what its marches cost', () => {
+  /** The marches a stop plays, first to last, the way `PlanTotals` says to read them. */
+  const marchesOf = (row: PlanTotals): Record<string, number>[] => {
+    if (row.sequence) return row.sequence;
+    const tail = row.tail?.marches ?? 0;
+    const repeats = row.marches - (row.finaleCounts ? 1 : 0) - tail;
+    const marches = Array.from({ length: repeats }, () => row.counts);
+    if (row.finaleCounts) marches.push(row.finaleCounts);
+    for (let index = 0; index < tail; index += 1) marches.push(row.tail?.counts ?? {});
+    return marches;
+  };
+
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = ((): CampaignPlan | string => {
+          try {
+            return planCampaign({
+              request: scenario.request,
+              marchTarget: HORIZON,
+              budgetMs: CAMPAIGN.budgets.plan,
+              ...CAMPAIGN.planFixes,
+              putBack: CAMPAIGN.putBack,
+            });
+          } catch (error) {
+            return error instanceof Error ? error.message : String(error);
+          }
+        })();
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const rows: { what: string; row: PlanTotals }[] = [
+          ...plan.alternatives.map((row) => ({ what: `stop ${row.pick}`, row: row as PlanTotals })),
+          { what: 'the plan itself', row: plan as PlanTotals },
+        ];
+        const failures: string[] = [];
+        for (const { what, row } of rows) {
+          const marches = marchesOf(row);
+          if (marches.length !== row.marches) {
+            failures.push(
+              `${what}: ${String(marches.length)} marches to price, ${String(row.marches)} played`,
+            );
+            continue;
+          }
+          const sum = { silver: 0, gold: 0, seconds: 0 };
+          for (const counts of marches) {
+            const { recovery } = planMarch(scenario.request, counts).summary;
+            sum.silver += recovery.silver;
+            sum.gold += recovery.gold;
+            sum.seconds += recovery.seconds;
+          }
+          for (const key of ['silver', 'gold', 'seconds'] as const) {
+            if (row[key] !== sum[key]) {
+              failures.push(
+                `${what}: ${key} ${row[key].toLocaleString('en-US')} against the recap's ` +
+                  `${sum[key].toLocaleString('en-US')} over ${String(marches.length)} marches ` +
+                  `(Δ ${(sum[key] - row[key]).toLocaleString('en-US')})`,
+              );
+            }
+          }
+          // And the repeated march's own three prices are the recap's, which is what makes the sum above
+          // readable as `played × repeat + the finale` on the bar itself.
+          if (row.sequence) continue;
+          const { recovery } = planMarch(scenario.request, row.counts).summary;
+          for (const key of ['silver', 'gold', 'seconds'] as const) {
+            if (row.repeat[key] !== recovery[key]) {
+              failures.push(
+                `${what}: repeat ${key} ${row.repeat[key].toLocaleString('en-US')} against the recap's ` +
+                  `${recovery[key].toLocaleString('en-US')}`,
+              );
+            }
+          }
+        }
+        expect(failures.join('\n'), `the bar disagrees with the recap\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
+});

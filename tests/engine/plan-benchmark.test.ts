@@ -74,8 +74,11 @@ const n = (value: number): string => Math.round(value).toLocaleString('en-US');
 
 // ---- pricing ---------------------------------------------------------------------------------------------
 
-/** A march from explicit counts, priced as the recap prices it. */
-function price(request: StackRequest, counts: Record<string, number>): { damage: number; silver: number } {
+/** A march from explicit counts, priced as the recap prices it: damage, silver and revive gold. */
+function price(
+  request: StackRequest,
+  counts: Record<string, number>,
+): { damage: number; silver: number; gold: number } {
   const rank = new Map(buildKillOrder(request.units, request.options).map((id, index) => [id, index]));
   const stacks: Stack[] = [];
   for (const unit of request.units) {
@@ -105,7 +108,9 @@ function price(request: StackRequest, counts: Record<string, number>): { damage:
   };
   const result: StackResult = { stacks, pools, dropped: [], warnings: [] };
   const summary = simulateBattle(result, request);
-  return { damage: summary.avgDamage, silver: summary.recovery.silver };
+  // The gold is the hired stacks' own price (S-90): a sizer sequence and a plan stop both pay it, and a
+  // campaign total that leaves one of its marches out of it is what this run's own assertion now catches.
+  return { damage: summary.avgDamage, silver: summary.recovery.silver, gold: summary.recovery.gold };
 }
 
 interface Campaign {
@@ -122,6 +127,8 @@ interface Campaign {
   marches: number;
   damage: number;
   silver: number;
+  /** What the campaign's hired stacks cost to revive, in gold — the recap's figure, summed march by march. */
+  gold: number;
   burned: number;
 }
 
@@ -137,14 +144,16 @@ function campaignOf(
   const mercIds = hiredIds(request);
   let damage = 0;
   let silver = 0;
+  let gold = 0;
   let burned = 0;
   for (const counts of marches) {
     const priced = price(request, counts);
     damage += priced.damage;
     silver += priced.silver;
+    gold += priced.gold;
     burned += mercIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0);
   }
-  return { name, kind, comparable: true, marches: marches.length, damage, silver, burned };
+  return { name, kind, comparable: true, marches: marches.length, damage, silver, gold, burned };
 }
 
 /** A sizer method played for the horizon the way a player plays it: Generate, march, lose a chunk, again. */
@@ -277,6 +286,11 @@ function measure(scenario: Scenario): Measured {
       const campaign = campaignOf(request, `Complete optimization · ${stop.pick}`, 'plan', marches);
       // The engine's own campaign figure and the marches priced one by one must agree.
       expect(Math.abs(campaign.damage - stop.totalDamage)).toBeLessThanOrEqual(1);
+      // **And so must the gold** (S-90). `PlanTotals.gold` left the finale out until 2026-09-18 — the one
+      // campaign total of the four that did — so the row this table printed for a repeated stop was priced
+      // over its repeats alone while the damage beside it was priced over every march. It is asserted to the
+      // unit, not to one gold: the price is a whole number of coins per revived unit.
+      expect(campaign.gold, `${stop.pick}'s gold over its marches`).toBe(stop.gold);
       rows.push(campaign);
     }
   }
@@ -291,11 +305,11 @@ function record(label: string, measured: Measured): void {
       ? `The plan refused: \`${measured.refusal}\`.`
       : `The plan offers ${measured.plan?.alternatives.length ?? 0} stops.`,
     '',
-    '| sequence | marches | four-march damage | silver | hired burned | a silver | a hired |',
-    '|---|---|---|---|---|---|---|',
+    '| sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired |',
+    '|---|---|---|---|---|---|---|---|',
     ...measured.rows.map(
       (c) =>
-        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |`,
+        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.gold)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |`,
     ),
     '',
   ];
@@ -313,6 +327,7 @@ function record(label: string, measured: Measured): void {
       marches: c.marches,
       damage: Math.round(c.damage),
       silver: c.silver,
+      gold: c.gold,
       burned: c.burned,
       perSilver: Number.isFinite(perSilver(c)) ? Math.round(perSilver(c) * 1000) / 1000 : null,
       perHired: Math.round(perHired(c)),
@@ -385,7 +400,8 @@ writeFileSync(
   '# The plan against Tier ladder, Troops first and the other calculators — the latest run of `tests/engine/plan-benchmark.test.ts`\n\n' +
     'Every sequence is four marches: the sizers re-sized each march on the stock the last one left (Generate ' +
     'four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. ' +
-    'Each march priced by `simulateBattle` on its counts.\n\n' +
+    'Each march priced by `simulateBattle` on its counts — damage, retraining silver and the gold its hired ' +
+    'stacks cost to revive (the gold column since S-90, 2026-09-18).\n\n' +
     `Run: ${new Date().toISOString()}, commit ${process.env.GIT_COMMIT ?? '(working tree)'}\n\n`,
 );
 writeFileSync(FIGURES, `${JSON.stringify({ run: new Date().toISOString(), scenarios: [] }, null, 1)}\n`);

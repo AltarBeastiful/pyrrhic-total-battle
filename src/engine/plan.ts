@@ -286,6 +286,13 @@ export interface PlanTotals {
   shape: 'ladder' | SizerMethod | 'winner';
   totalDamage: number;
   silver: number;
+  /**
+   * What the whole campaign's hired stacks cost to bring back, in gold: the repeated march's own gold taken
+   * as many times as it is fought, **plus the finale's** — or, for a plan whose marches differ (`sequence`),
+   * the sum over them. The troops-only tail (`tail`) adds nothing, fielding no hired stack at all. Summed
+   * exactly the way `silver` and `seconds` are, which is what S-90 fixed on 2026-09-18: the finale was left
+   * out here alone. The figure a single march is read by is `repeat.gold`, exactly as silver is.
+   */
   gold: number;
   /**
    * The whole campaign's recovery time, in seconds: the repeated march's own time taken as many times as it
@@ -1845,7 +1852,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       ...(last !== null && candidate.finaleRungs.length > 0 ? { finaleCounts: last.counts } : {}),
       totalDamage: Math.round(candidate.total),
       silver,
-      gold: candidate.marches * m.gold,
+      // The campaign's revive gold: every repeat of the march, **plus the finale's own** (S-90). This line
+      // read `candidate.marches * m.gold` until 2026-09-18 and the finale's hired stacks were revived for
+      // free — the one campaign total of the three that left the last march out, while `silver` and
+      // `seconds` beside it have always summed it. Measured by experiment 105's validator on the evening
+      // account: the silver saver printed 1 944 gold where its four marches cost 3 192.
+      gold: candidate.marches * m.gold + (last?.gold ?? 0),
       // The campaign's training queue: every repeat of the march, plus the finale's own.
       seconds: candidate.marches * m.seconds + (last?.seconds ?? 0),
       mercLost,

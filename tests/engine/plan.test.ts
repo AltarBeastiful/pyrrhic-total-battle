@@ -300,6 +300,92 @@ describe(
     );
 
     /**
+     * **The campaign's gold includes the finale's gold** (S-90; the bug experiment 105's validator found on
+     * 2026-09-18, chosen for a fix by the owner the same day).
+     *
+     * `PlanTotals.gold` was `repeats × the repeated march's gold` and nothing else, while `silver` and
+     * `seconds` beside it have always been `repeats × the march + the finale`. So the last march of every
+     * repeated plan — the one that spends what the stock has left, and therefore the one that fields the
+     * **most** hired units of the campaign — was revived for free on the bar. Measured on this army at a
+     * four-march horizon, before the fix: the silver saver printed **864** gold where its four marches cost
+     * **1 344**, the sweet spot 1 224 against 1 632, the steady max and the plan itself 1 344 against 1 728.
+     * On the owner's evening account the worst of it was 1 248 gold missing from a 3 192-gold campaign.
+     *
+     * Held here the way the queue is held above: against the **recap's own pricing** of each march the stop
+     * plays (`marchResult` → `recoveryCosts`), which is what the March section prints for the same counts, so
+     * the assertion is the battle's reading of the campaign and not a second copy of the plan's arithmetic.
+     */
+    test(
+      'prices the campaign\u2019s revive gold as its marches do, the finale included',
+      () => {
+        const req = request();
+        const plan = planCampaign({
+          request: req,
+          marchTarget: 4,
+          tokenFloor: true,
+          sizerShape: true,
+          putBack: CAMPAIGN.putBack,
+        });
+        const goldOf = (counts: Record<string, number>): number =>
+          planMarch(req, counts).summary.recovery.gold;
+        // The bug needs a finale to show at all: this army's plan plays one, and so does every repeated stop.
+        expect(plan.finale, 'the army must plan a finale for this to be a test of anything').toBeDefined();
+
+        const rows: { what: string; row: PlanTotals }[] = [
+          ...plan.alternatives.map((row) => ({ what: String(row.pick), row: row as PlanTotals })),
+          { what: 'the plan itself', row: plan as PlanTotals },
+        ];
+        for (const { what, row } of rows) {
+          // Every march the stop plays, priced as the recap prices it — the sequence stop included.
+          const marches = marchesOf(row);
+          expect(marches.length, `${what} plays as many marches as it counts`).toBe(row.marches);
+          expect(row.gold, `${what} adds its marches' gold up`).toBe(
+            marches.reduce((sum, counts) => sum + goldOf(counts), 0),
+          );
+          // And, for a repeated stop, that sum written out: the repeats plus the final march.
+          if (row.sequence) continue;
+          const played = row.marches - (row.finaleCounts ? 1 : 0) - (row.tail?.marches ?? 0);
+          expect(row.gold, `${what} prices its repeats and its finale`).toBe(
+            played * row.repeat.gold + (row.finaleCounts ? goldOf(row.finaleCounts) : 0),
+          );
+          // The repeated march's own gold is the recap's too, exactly as `repeat.seconds` is above.
+          expect(row.repeat.gold, `${what} prices its own march`).toBe(goldOf(row.counts));
+          // The finale is not free, which is the whole of what S-90 fixed.
+          if (row.finaleCounts) expect(goldOf(row.finaleCounts)).toBeGreaterThan(0);
+        }
+      },
+      TIMEOUT,
+    );
+
+    /**
+     * **And the troops-only tail adds no gold** (S-89's tail under S-90's sum): a march with no hired stack
+     * on it revives nothing, so a tailed stop's campaign gold is the gold it had before the tail was added.
+     * `withTail` sums `played × tail.gold` rather than assuming the nought, and this is what holds that line
+     * true — a tail that ever fielded a hired unit would fail here rather than quietly under-price it.
+     */
+    test(
+      'a tailed stop\u2019s gold is its untailed gold',
+      () => {
+        for (const cap of [1, 2, 3] as const) {
+          const req = firstRun({ id: 'bear-5', cap });
+          const plan = planCampaign({ request: req, marchTarget: 4, ...CAMPAIGN.planFixes });
+          const goldOf = (counts: Record<string, number>): number =>
+            planMarch(req, counts).summary.recovery.gold;
+          const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot');
+          const tail = sweet?.tail;
+          if (!sweet || !tail) throw new Error(`no tailed stop at a stock of ${String(cap)}`);
+          // The tail march itself, as the recap prices it.
+          expect(goldOf(tail.counts), `the tail of a stock of ${String(cap)} revives nothing`).toBe(0);
+          const played = sweet.marches - tail.marches - (sweet.finaleCounts ? 1 : 0);
+          expect(sweet.gold, `a stock of ${String(cap)} adds no gold for its tail`).toBe(
+            played * sweet.repeat.gold + (sweet.finaleCounts ? goldOf(sweet.finaleCounts) : 0),
+          );
+        }
+      },
+      TIMEOUT,
+    );
+
+    /**
      * **A short type rides the finale; it does not shorten everybody's campaign** (coordinator, 2026-09-18,
      * measuring the first reading of the ceiling on the owner's export at 7 000 with the chariot cap cut to
      * two: the sweet spot and the steady max became two-march campaigns of 9 705 867 and 9 838 204 while the
