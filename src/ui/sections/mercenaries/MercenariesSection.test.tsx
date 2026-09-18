@@ -166,6 +166,11 @@ test('pressing a pill opens the quantity under it: a plain field, no step button
   await user.type(within(editor).getByRole('textbox', { name: 'Owned' }), '22');
   expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 22 }]);
   expect(pillText('Bear V: owned 22')).toContain('22');
+
+  // Enter finishes the number and closes the editor (owner, 2026-09-18); the figure stays.
+  await user.keyboard('{Enter}');
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 22 }]);
 });
 
 test('the Unlimited switch gives the quantity back to the camp', async () => {

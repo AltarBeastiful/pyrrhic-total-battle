@@ -457,32 +457,51 @@ function HiredPill({
       {/* A width of its own, on the dropdown rather than on the popover, and a field that fills it:
           neither the box nor the control inside it is allowed to be sized by what is typed. */}
       <Popover.Dropdown w={CAP_POPOVER_WIDTH} className={classes.capPopover}>
-        <Stack gap="sm">
-          {/* The contract's head: the glyph in its box and the name at 14/600 (`.pop h4`). */}
-          <Group gap={6} wrap="nowrap">
-            <Glyph kind={mercGlyph(entry.unit)} />
-            <Text span fz="0.875rem" fw={600}>
-              {name}
-            </Text>
-          </Group>
-          <NumberField
-            label="Owned"
-            value={entry.cap}
-            min={0}
-            allowEmpty
-            w="100%"
-            description="Empty means as many as the camp pays for."
-            onChange={onCap}
-          />
-          <Switch
-            size="xs"
-            label="Unlimited"
-            checked={entry.cap === null}
-            onChange={(event) => {
-              onCap(event.currentTarget.checked ? null : 0);
-            }}
-          />
-        </Stack>
+        {/* A form, so that **Enter closes the editor** (owner, 2026-09-18): the figure is already
+            written on every keystroke, and Enter is how a typed number is finished. The submit does
+            nothing but close; the focus goes back to the badge, as the popover returns it. */}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            setOpened(false);
+          }}
+          onKeyDown={(event) => {
+            // Enter in the field, whether or not the browser turns it into a submit (jsdom does
+            // not always): the same close. The switch keeps its own keys.
+            if (event.key !== 'Enter' || !(event.target instanceof HTMLInputElement)) return;
+            if (event.target.type === 'checkbox') return;
+            event.preventDefault();
+            setOpened(false);
+          }}
+        >
+          <Stack gap="sm">
+            {/* The contract's head: the glyph in its box and the name at 14/600 (`.pop h4`). */}
+            <Group gap={6} wrap="nowrap">
+              <Glyph kind={mercGlyph(entry.unit)} />
+              <Text span fz="0.875rem" fw={600}>
+                {name}
+              </Text>
+            </Group>
+            <NumberField
+              label="Owned"
+              value={entry.cap}
+              min={0}
+              allowEmpty
+              w="100%"
+              enterKeyHint="done"
+              description="Empty means as many as the camp pays for."
+              onChange={onCap}
+            />
+            <Switch
+              size="xs"
+              label="Unlimited"
+              checked={entry.cap === null}
+              onChange={(event) => {
+                onCap(event.currentTarget.checked ? null : 0);
+              }}
+            />
+          </Stack>
+        </form>
       </Popover.Dropdown>
     </Popover>
   );
