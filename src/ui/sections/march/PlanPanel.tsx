@@ -52,7 +52,7 @@ import { useResultStore } from '@/ui/resultStore';
 import { PlanBar } from './PlanBar';
 import { PlanTrade } from './PlanTrade';
 import { amount, compact, duration, ratio } from './format';
-import { sequenceWords } from './picks';
+import { putBackWords, sequenceWords } from './picks';
 
 import { pickOf, sweetSpotOf, useRunStore } from './runStore';
 
@@ -170,6 +170,7 @@ export function PlanFold() {
    */
   const sequence = sequenceWords(shown);
   const best = sweet === null ? null : (rows[sweet] ?? null);
+  const putBack = putBackWords(shown);
 
   /**
    * Reading the plan another way puts *that* plan's march on screen: every plan on the frontier is computed
@@ -267,6 +268,26 @@ export function PlanFold() {
           </Popover>
           <VisuallyHidden id={whyId}>{WHY}</VisuallyHidden>
         </Group>
+
+        {/* **The low tier that went back into the march**, on the one stop that has one (owner, 2026-09-18:
+            *"generation sometimes skips low-level stacks and misses some damage that seems cheap … troops of
+            higher tier are longer to train"*; `PlanRow.putBack`, `CAMPAIGN.putBack`).
+
+            The pass itself is **transparent** (owner, 2026-09-19: it is *"integrated in the plan slider
+            proposals"*): the bar, its tip and the trade say nothing about it, because a stop is simply the
+            better march now and a player choosing between stops is not choosing between passes. What the fold
+            adds is the one thing the figures above cannot say — *why* this march is not the one the ladder
+            would have sized — and it says it in the three changes the trade's own columns are read by: damage,
+            silver, and the queue under the silver. One line, only when a type went back, and never on a stop
+            that was left alone (design rule 15: nothing on screen without value). The sentence says what the
+            three percentages are measured against — the same march sized without that type — because the
+            pass re-keys the rungs by what they burn, so they are not a change to the row beside it on the
+            bar (`putBackWords`, `./picks`). */}
+        {putBack !== null && (
+          <Text size="sm" c="dimmed">
+            {putBack}
+          </Text>
+        )}
 
         {/* One control over the whole trade: the frontier *is* the axis — the hired units a march burns,
             fewest at one end and most at the other (owner, 2026-09-17) — so a position on it is the choice.

@@ -13,6 +13,7 @@ import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import type { CampaignInput, PlanRepeat, PlanTotals } from '@/engine/plan';
+import { sizeStacks } from '@/engine/stacker';
 import { effectiveUnit } from '@/engine/units';
 import { parseImport } from '@/share/exportImport';
 import { newProfile } from '@/state/defaults';
@@ -823,4 +824,364 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the legionaries stand on top on the 
     },
     TIMEOUT,
   );
+});
+
+/**
+ * **The put-back pass** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and misses some
+ * damage that seems cheap … troops of higher tier are longer to train … add a pass to consider again lower
+ * level troops if the cost for them (silver, silver/damage, total damage) is not too high and we get a nice
+ * reduction in training time"*; the rates are `CAMPAIGN.putBack`, the pass is in `engine/plan.ts`).
+ *
+ * What is held here is the owner's rule and the two things a row must still be after it: a march the recap
+ * prices identically, and a plan whose hired stacks the stock still sustains.
+ */
+const putBackScore = (put: { damage: number; silver: number; seconds: number }): number =>
+  put.silver / CAMPAIGN.putBack.silverPerDamage + put.seconds / CAMPAIGN.putBack.timePerDamage + put.damage;
+
+/**
+ * The put-back the owner's formula takes on one **generated** march, worked out here from the engine's own
+ * pieces — the MS sizer over the march's types plus one, priced by `planMarch` — rather than read off
+ * experiment 103's committed table. It is the same family the pass scores, so the two must agree on which
+ * type goes back; if the sizer or the rates move, this recomputes and the assertion below still means
+ * something.
+ */
+function bestPutBack(req: StackRequest, row: PlanTotals): { unitId: string; score: number } | null {
+  const mercIds = req.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id);
+  const troopIds = req.units.filter((unit) => unit.pool === 'leadership').map((unit) => unit.id);
+  const inMarch = troopIds.filter((id) => (row.counts[id] ?? 0) > 0);
+  const caps: Record<string, number> = { ...req.caps };
+  for (const id of mercIds) caps[id] = row.counts[id] ?? 0;
+  let best: { unitId: string; score: number } | null = null;
+  for (const extra of troopIds.filter((id) => !inMarch.includes(id))) {
+    const sized = sizeStacks({
+      ...req,
+      units: req.units.filter(
+        (unit) => inMarch.includes(unit.id) || unit.id === extra || mercIds.includes(unit.id),
+      ),
+      caps,
+      options: { ...req.options, method: 'ms', relaxedPreservation: false },
+    });
+    const counts: Record<string, number> = {};
+    for (const stack of sized.stacks) if (stack.count > 0) counts[stack.unitId] = stack.count;
+    // The pass refuses a march standing on one troop stack, the extreme the band refuses.
+    if (Object.keys(counts).filter((id) => !mercIds.includes(id)).length < 2) continue;
+    const { summary } = planMarch(req, counts);
+    // A put-back has to shorten the training queue — the clause the owner's sentence turns on, checked before
+    // the score because a large enough damage gain outvotes any rise in it (`putBackOn`).
+    if (summary.recovery.seconds >= row.repeat.seconds) continue;
+    const damage = ((summary.avgDamage - row.repeat.damage) / row.repeat.damage) * 100;
+    const silver = ((row.repeat.silver - summary.recovery.silver) / row.repeat.silver) * 100;
+    const seconds = ((row.repeat.seconds - summary.recovery.seconds) / row.repeat.seconds) * 100;
+    const score = putBackScore({ damage, silver, seconds });
+    if (score < 0 || damage < -CAMPAIGN.putBack.damageLossCap) continue;
+    if (!best || score > best.score) best = { unitId: extra, score };
+  }
+  return best;
+}
+
+/**
+ * **A put-back with no export on the machine** (the twin of the live test below).
+ *
+ * A first-run account — Guardsmen I–III and Specialists I, no bonuses — holding 83 Epic Monster Hunters at
+ * 7 000 leadership takes **Spearman II** back on both of its rung stops, and takes it for nothing: measured
+ * 2026-09-18, +5.4 % damage, 3.5 % of the silver and 8.9 % of the training queue saved on the sweet spot, and
+ * +5.3 % / 3.5 % / 8.9 % on the steady max. That is the owner's case in its purest form — the ladder's own
+ * shape leaves a low tier out, and putting it back is better on every one of the three prices.
+ */
+describe('a put-back on a first-run army', () => {
+  test(
+    'Epic Monster Hunters at 7 000: the rung stops put Spearman II back, and gain on all three prices',
+    () => {
+      const profile = newProfile('first run, hunters');
+      profile.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 83 }];
+      const setup = profile.setups[0];
+      if (!setup) throw new Error('no setup');
+      const req = buildStackRequest(profile, {
+        ...setup,
+        housing: { leadership: 7_000, authority: 40_000, dominance: 0 },
+      });
+      const input: CampaignInput = {
+        request: req,
+        marchTarget: CAMPAIGN.marches,
+        ...CAMPAIGN.planFixes,
+        putBack: CAMPAIGN.putBack,
+      };
+      const plan = planCampaign(input);
+      const put = plan.alternatives.filter((row) => row.putBack !== undefined && !row.sequence);
+      expect(put.length, 'at least one rung stop puts a type back').toBeGreaterThan(0);
+      for (const row of put) {
+        const back = row.putBack;
+        if (!back) throw new Error('no put-back');
+        expect(back.unitId, `${row.pick} puts Spearman II back`).toBe('spearman-2');
+        // Free: more damage, less silver, less queue. Nothing is traded away on this army.
+        expect(back.damage, `${row.pick} gains damage`).toBeGreaterThan(0);
+        expect(back.silver, `${row.pick} saves silver`).toBeGreaterThan(0);
+        expect(back.seconds, `${row.pick} saves training time`).toBeGreaterThan(0);
+        // And the row is still a march the recap prices identically, and a plan the stock sustains.
+        expect(row.repeat.damage).toBe(planMarch(req, row.counts).summary.avgDamage);
+        expect((row.counts['epic-monster-hunter-6'] ?? 0) > 0).toBe(true);
+      }
+      // The rule itself: every put-back the bar carries scores, and none of them costs more damage than the cap.
+      for (const row of plan.alternatives) {
+        if (!row.putBack) continue;
+        expect(putBackScore(row.putBack), `${row.pick} scores`).toBeGreaterThanOrEqual(0);
+        expect(row.putBack.damage, `${row.pick} is inside the loss cap`).toBeGreaterThanOrEqual(
+          -CAMPAIGN.putBack.damageLossCap,
+        );
+      }
+    },
+    TIMEOUT,
+  );
+});
+
+/**
+ * **The put-back on the owner's live army** (2026-09-18, the setup experiment 103 measured: Aydae 43 ★3 alone,
+ * 4 975 leadership, 2 180 authority, the two top guardsman tiers he does not own clicked out, and his own
+ * hired stock — 83 hunters, unlimited legionaries, 10 chariots, 60 arbalesters).
+ *
+ * This is the army the owner was looking at when he wrote the complaint: the plan's steady max was a three-type
+ * ladder, RD2 984 · ARC2 1931 · RD3 532, for 4 777 523 damage, 2 694 300 silver and 13d 7h of training queue,
+ * and one more troop type in it is better on all three (`tools/theorycraft/out/103-put-back-time.md`).
+ */
+const LIVE_HIRED = [
+  { id: 'epic-monster-hunter-6', cap: 83 },
+  { id: 'legionary-6', cap: null },
+  { id: 'chariot-6', cap: 10 },
+  { id: 'arbalester-6', cap: 60 },
+];
+const AYDAE = { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 };
+const THREE_HEROES = [
+  AYDAE,
+  { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+  { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+];
+
+describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own account', () => {
+  const parsed = existsSync(OWNER_EXPORT) ? parseImport(readFileSync(OWNER_EXPORT, 'utf8')) : null;
+  const base = parsed?.kind === 'profile' ? parsed.payload : null;
+  /** One of experiment 103's four setups, through the app's own request builder. */
+  const setupOf = (
+    captains: { id: string; captainId: string; level: number; star: number }[],
+    leadership: number,
+    live: boolean,
+  ): CampaignInput => {
+    if (!base) throw new Error('no profile');
+    const profile = structuredClone(base);
+    if (captains.length > 0) profile.sources.captains = [...captains];
+    if (live) {
+      profile.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: [] };
+      profile.mercenaries.selected = structuredClone(LIVE_HIRED);
+    }
+    const setup = profile.setups[0];
+    if (!setup) throw new Error('no setup');
+    return buildPlanRequest(profile, {
+      ...setup,
+      housing: { ...setup.housing, leadership, ...(live ? { authority: 2_180 } : {}) },
+    });
+  };
+
+  test(
+    'the steady max fields a low tier again: Archer I back, more damage, less silver, five days less queue',
+    () => {
+      const input = setupOf([AYDAE], 4_975, true);
+      const plan = planCampaign(input);
+      const most = plan.alternatives.find((row) => row.pick === 'steady-max');
+      expect(most, 'the steady max is offered').toBeDefined();
+      const back = most?.putBack;
+      expect(back, 'the steady max put a troop type back').toBeDefined();
+      // Archer I scores highest of the five left-out types on his own rates: +2.7 % damage, 18.2 % of the
+      // silver and 38.3 % of the queue, a score of 10.2 against Rider I's 10.1, Spearman I's 9.9 and
+      // Spearman II's 3.4 (`tools/theorycraft/out/103-put-back-time.md`, the "steady-max" block).
+      expect(back?.unitId).toBe('archer-1');
+      expect((most?.counts['archer-1'] ?? 0) > 0, 'Archer I is in the march').toBe(true);
+      // The figures the owner was promised: better than the ladder's 4 777 523 for 2 694 300.
+      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(4_880_000);
+      expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(2_210_000);
+      // And the recap prices it identically — the put-back is priced by `toMarch`, like every other march.
+      expect(most?.repeat.damage).toBe(planMarch(input.request, most?.counts ?? {}).summary.avgDamage);
+      expect(most?.repeat.silver).toBe(planMarch(input.request, most?.counts ?? {}).summary.recovery.silver);
+      expect(most?.repeat.seconds).toBe(
+        planMarch(input.request, most?.counts ?? {}).summary.recovery.seconds,
+      );
+      // Every hired type he holds is still fielded (S-58 B holds through the pass).
+      for (const hired of LIVE_HIRED) {
+        expect(most?.counts[hired.id] ?? 0, `${hired.id} is still fielded`).toBeGreaterThan(0);
+      }
+    },
+    TIMEOUT,
+  );
+
+  /**
+   * **Experiment 103's verdicts, pinned** — the "take" and "keep" of its four setups, recomputed here from the
+   * engine (`bestPutBack` above) rather than read off the report, and checked against what the pass actually
+   * did. The generated marches come from the same plan with the pass switched off, which is the only way to
+   * see the march a verdict is about once the pass has replaced it.
+   */
+  test('the four setups of experiment 103 take and keep what the owner’s rule says', () => {
+    // `want` is what the owner's rule says about the **generated** march; `onBar` is what the stop ends up
+    // carrying. They differ on one row, and the difference is the ladder guard: at 12 000 the rule takes
+    // Spearman I, and taking it would leave "Steady max" 1.5 % under the sweet spot beside it (8 063 238
+    // against 8 185 823), so the engine hands that row its generated march back (`plan.ts`).
+    for (const [title, captains, leadership, live, pick, want, onBar] of [
+      ['Aydae alone, 4 975', [AYDAE], 4_975, true, 'steady-max', 'archer-1', 'archer-1'],
+      ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'sweet-spot', null, null],
+      ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'steady-max', 'spearman-2', 'spearman-2'],
+      ['the export at 12 000', [], 12_000, false, 'steady-max', 'spearman-1', null],
+    ] as const) {
+      const input = setupOf([...captains], leadership, live);
+      const generated = planCampaign({ ...input, putBack: undefined });
+      const before = generated.alternatives.find((row) => row.pick === pick);
+      expect(before, `${title}: ${pick} is offered without the pass`).toBeDefined();
+      if (!before) continue;
+      const verdict = bestPutBack(input.request, before);
+      expect(verdict?.unitId ?? null, `${title}: the rule's verdict on the generated ${pick}`).toBe(want);
+      const after = planCampaign(input).alternatives.find((row) => row.pick === pick);
+      expect(after, `${title}: ${pick} is still offered with the pass`).toBeDefined();
+      expect(after?.putBack?.unitId ?? null, `${title}: what the pass did to ${pick}`).toBe(onBar);
+      if (onBar !== null) {
+        const back = after?.putBack;
+        if (!back) throw new Error('no put-back');
+        expect(putBackScore(back), `${title}: ${pick} scores`).toBeGreaterThanOrEqual(0);
+        expect(back.damage, `${title}: ${pick} is inside the loss cap`).toBeGreaterThanOrEqual(
+          -CAMPAIGN.putBack.damageLossCap,
+        );
+      }
+    }
+  }, 180_000);
+});
+
+/**
+ * **The two guards on the pass** (owner, 2026-09-18: *"consider again lower level troops if the cost for them
+ * … is not too high and we get a nice reduction in training time"*), on the one army measured where the score
+ * alone says yes and the sentence says no: a first-run account holding 42 legionaries and 20 chariots at
+ * 12 000 leadership.
+ *
+ * Its silver saver's cheapest left-out type, Swordsman I, scores **57** — +109.2 % damage — by spending
+ * 182.4 % more silver and sitting 151.8 % longer in the barracks, and the march it makes is dearer than the
+ * sweet spot beside it (5 108 400 against 4 878 400) at 0.706 a silver against 0.858. Both guards refuse it:
+ * the queue one in the engine's own scoring, and the silver saver's own rule after the pass.
+ */
+describe('a put-back never lengthens the queue, and never costs the silver saver its name', () => {
+  test(
+    '42 legionaries and 20 chariots at 12 000: every stop recovers faster, and the saver still saves',
+    () => {
+      const profile = newProfile('first run, legionaries');
+      profile.mercenaries.selected = [
+        { id: 'legionary-6', cap: 42 },
+        { id: 'chariot-6', cap: 20 },
+      ];
+      const setup = profile.setups[0];
+      if (!setup) throw new Error('no setup');
+      const req = buildStackRequest(profile, {
+        ...setup,
+        housing: { leadership: 12_000, authority: 40_000, dominance: 0 },
+      });
+      const input: CampaignInput = {
+        request: req,
+        marchTarget: CAMPAIGN.marches,
+        ...CAMPAIGN.planFixes,
+        putBack: CAMPAIGN.putBack,
+      };
+      const plan = planCampaign(input);
+      // Guard one: a put-back that lengthens the queue is not a put-back, whatever it scores.
+      for (const row of plan.alternatives) {
+        if (!row.putBack) continue;
+        expect(row.putBack.seconds, `${row.pick} recovers faster`).toBeGreaterThan(0);
+        expect(row.putBack.unitId, `${row.pick} did not take the swordsman`).not.toBe('swordsman-1');
+      }
+      // Guard two: the silver saver is still cheaper than the sweet spot and still at least as efficient a
+      // silver — the pair of facts the stop is offered for.
+      const saver = plan.alternatives.find((row) => row.pick === 'silver-saver');
+      const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot');
+      expect(saver, 'the silver saver is offered').toBeDefined();
+      expect(sweet, 'the sweet spot is offered').toBeDefined();
+      if (!saver || !sweet) return;
+      expect(saver.repeat.silver).toBeLessThanOrEqual(sweet.repeat.silver);
+      expect(saver.repeat.damage / saver.repeat.silver).toBeGreaterThanOrEqual(
+        sweet.repeat.damage / sweet.repeat.silver,
+      );
+      // And whatever it is, it is a march the recap prices identically.
+      expect(saver.repeat.damage).toBe(planMarch(req, saver.counts).summary.avgDamage);
+    },
+    TIMEOUT,
+  );
+});
+
+/**
+ * **The queue guard, on the two marches that exercise it** (owner, 2026-09-18: a put-back is for when *"we get
+ * a nice reduction in training time"*).
+ *
+ * The guard is the one refusal the score cannot make on its own: a candidate that lengthens the training queue
+ * is thrown out before it is scored, however well it scores. The owner's export is where that bites — its
+ * `all-in` stop scores a Spearman II put-back on both setups measured, and both of them would sit *longer* in
+ * the barracks. Each case below rebuilds the candidate the pass considered (the MS sizer over the all-in's own
+ * first-march types plus Spearman II, its own hired counts as caps, priced by the battle) and asserts both
+ * halves: the score is positive, so nothing else refuses it, **and** the queue rises, which is what does. Stub
+ * the guard and the first assertion below fails.
+ *
+ * The first-run probe army above (42 legionaries and 20 chariots) does **not** exercise this: its Swordsman I
+ * candidate is refused by the queue guard too, but it would have been dropped a second time by the silver
+ * saver's own rule, so a stubbed guard would still pass there. These two are the clean cases.
+ */
+describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s export', () => {
+  const parsed = existsSync(OWNER_EXPORT) ? parseImport(readFileSync(OWNER_EXPORT, 'utf8')) : null;
+  const base = parsed?.kind === 'profile' ? parsed.payload : null;
+
+  test('the all-in keeps its own march at 7 000 and at 12 000: the put-back scores, and costs queue', () => {
+    if (!base) throw new Error('no profile');
+    for (const leadership of [7_000, 12_000]) {
+      const profile = structuredClone(base);
+      const setup = profile.setups[0];
+      if (!setup) throw new Error('no setup');
+      const input = buildPlanRequest(profile, {
+        ...setup,
+        housing: { ...setup.housing, leadership },
+      });
+      const req = input.request;
+      const plan = planCampaign(input);
+      const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
+      expect(allIn, `${String(leadership)}: the all-in is offered`).toBeDefined();
+      if (!allIn) continue;
+      expect(allIn.putBack, `${String(leadership)}: the all-in kept its own march`).toBeUndefined();
+
+      // The candidate the pass built and refused: the all-in's first march re-sized over its own troop
+      // types plus Spearman II, its hired counts as the sizer's caps — exactly what `putBackOn` scores.
+      const mercIds = req.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id);
+      const inMarch = req.units
+        .filter((unit) => unit.pool === 'leadership' && (allIn.counts[unit.id] ?? 0) > 0)
+        .map((unit) => unit.id);
+      expect(inMarch, `${String(leadership)}: Spearman II is left out`).not.toContain('spearman-2');
+      const caps: Record<string, number> = { ...req.caps };
+      for (const id of mercIds) caps[id] = allIn.counts[id] ?? 0;
+      const sized = sizeStacks({
+        ...req,
+        units: req.units.filter(
+          (unit) => inMarch.includes(unit.id) || unit.id === 'spearman-2' || mercIds.includes(unit.id),
+        ),
+        caps,
+        options: { ...req.options, method: 'ms', relaxedPreservation: false },
+      });
+      const counts: Record<string, number> = {};
+      for (const stack of sized.stacks) if (stack.count > 0) counts[stack.unitId] = stack.count;
+      const { summary } = planMarch(req, counts);
+
+      // It scores — and well: measured 2026-09-18, 5.8 at 7 000 (+8.6 % damage) and 1.9 at 12 000
+      // (+8.0 %). Nothing in the rule refuses it.
+      const damage = ((summary.avgDamage - allIn.repeat.damage) / allIn.repeat.damage) * 100;
+      const silver = ((allIn.repeat.silver - summary.recovery.silver) / allIn.repeat.silver) * 100;
+      const seconds = ((allIn.repeat.seconds - summary.recovery.seconds) / allIn.repeat.seconds) * 100;
+      expect(
+        putBackScore({ damage, silver, seconds }),
+        `${String(leadership)}: the refused candidate would have scored`,
+      ).toBeGreaterThan(0);
+      expect(damage, `${String(leadership)}: and is inside the loss cap`).toBeGreaterThanOrEqual(
+        -CAMPAIGN.putBack.damageLossCap,
+      );
+      // And the queue is the one thing it makes worse, which is why it is not on the bar.
+      expect(
+        summary.recovery.seconds,
+        `${String(leadership)}: the refused candidate sits longer in the barracks`,
+      ).toBeGreaterThan(allIn.repeat.seconds);
+    }
+  }, 180_000);
 });

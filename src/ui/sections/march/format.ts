@@ -61,6 +61,22 @@ export function duration(seconds: number): string {
   return `${String(total)}s`;
 }
 
+/**
+ * A percent **change**, with the sign a reader needs to know which way it went: "+2.4%", "-18.2%", "0%".
+ *
+ * `percent` above writes a figure as entered — a bonus of 5 is "5%" and nothing is being compared. This one
+ * is for a figure that is a difference, where the sign carries as much as the number: the put-back line in
+ * the plan's fold says a march gained 2.4 % of damage and gave back 18.2 % of its silver, and "18.2%" on its
+ * own would read as a rise. Rounded to the tenth it is printed at, so a change of 0.04 % says "0%" rather
+ * than claiming a direction it does not have.
+ */
+export function signedPercent(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  const rounded = Math.round(value * 10) / 10;
+  if (rounded === 0) return '0%';
+  return `${rounded > 0 ? '+' : '-'}${percent(Math.abs(rounded))}`;
+}
+
 /** A difference against the generated result: "+240", "-1 150", "0". */
 export function delta(value: number): string {
   if (!Number.isFinite(value)) return '—';

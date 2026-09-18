@@ -17,6 +17,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
+import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan, PlanRow } from '@/engine/plan';
@@ -109,6 +110,11 @@ function expectCriteria(plan: CampaignPlan, floors: Floors): void {
       continue;
     }
     expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
+    // **Strict, put-back pass or no put-back pass** (2026-09-18). The pass may trade up to
+    // `CAMPAIGN.putBack.damageLossCap` of a march's damage for silver and queue, and on the owner's export at
+    // 12 000 that was enough to put the steady max 1.5 % *under* the sweet spot beside it (8 063 238 against
+    // 8 185 823). The engine walks the bar and hands such a row its generated march back rather than letting
+    // the ladder run backwards, so this assertion stays exactly as S-61 wrote it.
     expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
   }
   if (allIn) {
@@ -157,6 +163,9 @@ describe('the plan’s criteria hold their floors', () => {
       marchTarget: 4,
       tokenFloor: true,
       sizerShape: true,
+      // The put-back pass, at the app's own rates: this army is the one that runs everywhere, so it is where
+      // the pass is held to the criteria on a machine with no export on it (`CAMPAIGN.putBack`).
+      putBack: CAMPAIGN.putBack,
     });
     // Measured 2026-09-18 (least silver 3 burned · sweet spot 5 · most mercs 6): least silver 1 320 822 for
     // 1 069 600 at 440 274 a hired (the tight ladder — a real saving, 30 % less silver than the sweet spot's
@@ -287,6 +296,14 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // two units buy 1 % of damage for 16 % of silver, so no rung fits between it and the top); least silver
       // 6 297 292 for 3 972 200 at 572 481 a hired; sweet 1.7426 · 481 519, campaign 32 231 242 for
       // 18 790 400; most 8 281 474 at 1.5186; the plan 32 518 195.
+      // **Unmoved by the put-back pass** (`CAMPAIGN.putBack`, `engine/plan.ts`), and it is the one bar where
+      // that took a guard. The steady max's ladder (SP2 2117 · RD3 640 · RD2 1115 · RD1 1968 · ARC2 2406,
+      // 8 281 474 for 5 453 300 silver and 20d 23h) scores a put-back of **Spearman I** — 8 063 238 for
+      // 5 013 600 and 16d 9h, 8.1 % of the silver and 21.8 % of the queue for 2.6 % of the damage, a score of
+      // 1.15 — and taking it would have left "Steady max" 1.5 % **under** the sweet spot beside it
+      // (8 185 823). The bar's own invariant wins: the engine walks the ladder from the thrift end and hands
+      // any row that stops out-hitting its neighbour its generated march back, so these floors are the ones
+      // measured before the pass. The other three stops field every troop type they hold already.
       expectCriteria(plan, {
         leastPerHired: under(524_183),
         sweetPerSilver: under(1.7426),

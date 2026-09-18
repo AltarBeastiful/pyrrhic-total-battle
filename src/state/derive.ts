@@ -645,6 +645,9 @@ export function buildPlanRequest(
     // S-58: the two candidate fixes for "the plan drops a whole hired type", both off until the owner picks
     // one from the pair of experiments (`src/config.ts`, `CAMPAIGN.planFixes`).
     ...CAMPAIGN.planFixes,
+    // The put-back pass, at the owner's own exchange rates between damage, silver and the training queue
+    // (`CAMPAIGN.putBack`): the engine has no opinion about them, so the app is what hands them over.
+    putBack: CAMPAIGN.putBack,
   };
 }
 

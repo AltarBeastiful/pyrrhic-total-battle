@@ -362,8 +362,12 @@ function fourThousand(): Scenario {
       { name: 'Kai’s calculator · extract (as captured, repeated)', counts: kaiCounts },
     ],
     // Measured 2026-09-18: three stops; 96.5 % of the best sizer sequence's damage. TotalStack's own answer,
-    // repeated, out-hits every row here by 3.2 % (Troops first · Generate) to 9.3 % (the all-in) at the same
-    // silver, 24 burned against the plan's 21; the plan keeps the better damage a hired.
+    // repeated, out-hits every row here by 3.2 % (Troops first · Generate) at the same silver, 24 burned
+    // against the plan's 21; the plan keeps the better damage a hired.
+    // **Re-measured 2026-09-18 with the put-back pass**: the all-in puts a low tier back for 8 394 732 over
+    // four marches at 6 241 000 silver, against 8 154 596 for 6 250 700 — more damage for slightly less
+    // silver — and the gap to TotalStack's captured answer closes from 9.3 % to **0.25 %** (8 415 312
+    // against 8 394 732). It is the widest of the two put-backs this file measures; the floors are unmoved.
     pinned: {
       refuses: false,
       stops: 3,
@@ -430,6 +434,12 @@ function ownerScenarios(profile: Profile): Scenario[] {
       // Measured 2026-09-18 before the proposals: 94.9 % of the sizers' damage, four stops (no more-mercs rung).
       // TotalStack on the owner's window: best 24 167 160 for 21 785 600 silver; the plan's 32 518 195 for
       // 18 790 400 is 1.34× it; TotalStack's thriftiest keeps the better damage a hired.
+      // **Unmoved by the put-back pass** (`CAMPAIGN.putBack`), and this scenario is where its two refusals are
+      // visible. The steady max scores a Spearman I put-back — 8.1 % of its silver and 21.8 % of its queue for
+      // 2.6 % of its damage — and the ladder guard hands the row back, because taking it would have put
+      // "Steady max" 1.5 % under the sweet spot beside it (8 063 238 against 8 185 823); the all-in scores one
+      // too and the queue guard refuses it, because it lengthened the training queue by 17.5 %. Every figure
+      // here is therefore the one measured before the pass existed.
       pinned: {
         refuses: false,
         stops: 4,
@@ -628,6 +638,9 @@ function measure(scenario: Scenario): Measured {
       marchTarget: HORIZON,
       budgetMs: CAMPAIGN.budgets.plan,
       ...CAMPAIGN.planFixes,
+      // The put-back pass, at the app's own rates (`CAMPAIGN.putBack`): this file measures the plan the app
+      // ships, so a stop here is the march the player would be offered, low tiers put back and all.
+      putBack: CAMPAIGN.putBack,
     });
   } catch (error) {
     refusal = error instanceof Error ? error.message : String(error);

@@ -62,6 +62,22 @@ const CROSSED_TYPES = 4;
 /** Ladder depths tried, in troop rungs. */
 const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
+/**
+ * **What a put-back is worth**, in the owner's own exchange rates — the policy the pass below is steered by
+ * (`src/config.ts`, `CAMPAIGN.putBack`, where the three numbers and their calibration live).
+ *
+ * The engine holds no opinion about them: they are the player's trade between damage, silver and the training
+ * queue, and a caller that does not pass them gets the marches the search generated, untouched.
+ */
+export interface PutBackPolicy {
+  /** Percent of silver saved that is worth one percent of damage. */
+  silverPerDamage: number;
+  /** Percent of recovery time saved that is worth one percent of damage. */
+  timePerDamage: number;
+  /** The most damage, in percent, a put-back may cost — however much it saves. */
+  damageLossCap: number;
+}
+
 export interface CampaignInput {
   /** The app's usual one-march request: units, caps (the mercenary stock), housing, bonuses, enemy, recovery. */
   request: StackRequest;
@@ -115,6 +131,17 @@ export interface CampaignInput {
    * search is the ladder alone, as it was.
    */
   sizerShape?: boolean;
+  /**
+   * **Put a left-out troop type back** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and
+   * misses some damage that seems cheap … add a pass to consider again lower level troops if the cost for them
+   * (silver, silver/damage, total damage) is not too high and we get a nice reduction in training time"*).
+   *
+   * Set, every stop the bar offers is re-sized once more over **its own troop types plus one the account holds
+   * and the march leaves out**, one left-out type at a time, and the best of those replaces the march when the
+   * player's own exchange rates say it is worth it (`putBackOn` in `planCampaign`; the rates are
+   * `CAMPAIGN.putBack`). Omitted, the stops are the marches the search generated, as they were.
+   */
+  putBack?: PutBackPolicy | undefined;
   /**
    * Ask for the **trade** itself — every plan the four answers are drawn from — as `CampaignPlan.trade`.
    *
@@ -301,7 +328,27 @@ export interface PlanRow extends PlanTotals {
    * row to read that did nothing its name promised.
    */
   bestFor: { silver: boolean; hired: boolean };
+  /**
+   * **The troop type the put-back pass added to this march**, and what adding it changed — absent on a stop
+   * the pass left alone, and on every stop when the caller set no policy (`CampaignInput.putBack`).
+   *
+   * The three figures are **percent changes against the march the search generated**, in the sign the player
+   * reads them by: `damage` positive is more damage, `silver` and `seconds` positive are a *saving*. So the
+   * owner's own example reads "+2.7 % damage, 18.2 % of the silver and 38.3 % of the queue saved" from
+   * `{ damage: 2.7, silver: 18.2, seconds: 38.3 }`, and a put-back taken on a small loss carries a negative
+   * `damage`. The UI writes the sentence (`src/ui/sections/march/PlanTrade.tsx`); this is the record of what
+   * was done, so a row can say it and an experiment can check it.
+   */
+  putBack?: { unitId: string; damage: number; silver: number; seconds: number } | undefined;
 }
+
+/**
+ * A plan as the **search** carries it, before it is a row of the bar: the figures, the shape sentence the
+ * record reads a plan by (`PlanRow.label`), and the put-back the pass took on it if it took one. The picks are
+ * chosen over these, so every rule that compares plans — the knee, the band's ratios, the ladder — compares
+ * the marches the player will actually be offered.
+ */
+type TradeRow = PlanTotals & { label: string; putBack?: PlanRow['putBack'] };
 
 export interface CampaignPlan extends PlanTotals {
   /** The repeated march (the plan is this, `marches` times), or the single march if `marches` is 1. */
@@ -1619,7 +1666,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const finale = chosen.finale ? toMarch(chosen.finaleRungs, chosen.finaleMercs, chosen.finale) : undefined;
   // The frontier the UI shows: only the plans nothing else beats on every resource at once, thinned to a
   // readable number. This is also where the recommendation comes from when no silver budget was given.
-  const summarise = (candidate: Candidate): PlanTotals & { label: string } => {
+  const summarise = (candidate: Candidate): TradeRow => {
     const m = toMarch(candidate.rungs, candidate.mercs, candidate.march);
     // The finale, priced the same way — built once here rather than twice, because its counts and its
     // recovery time are both read below.
@@ -1777,6 +1824,181 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const candidates = band.length === 0 ? undominated : band;
 
   /**
+   * **The put-back pass** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and misses some
+   * damage that seems cheap; it is mainly because one thing is not taken into account: troops of higher tier
+   * are longer to train … add a pass to consider again lower level troops if the cost for them (silver,
+   * silver/damage, total damage) is not too high and we get a nice reduction in training time"*).
+   *
+   * **Why the search cannot find these marches itself.** Its two shapes both miss the same family. A ladder is
+   * built over a **prefix** of the damage-per-HP ranking (`ladder`, `rankTroops`), so a low tier never enters
+   * one at all; the sizer's shapes are sized over **every** type the account holds at once (`sizer`). Nobody
+   * ever scored "the march's own types, plus exactly one more" — and that is where the owner's cheap damage
+   * is, because a Spearman I is back in the army in fifteen seconds and a Rider III takes fourteen minutes.
+   * Measured on his live army (`tools/theorycraft/out/103-put-back-time.md`): the steady max is the three-type
+   * ladder RD2 984 · ARC2 1931 · RD3 532 — 4 777 523 damage, 2 694 300 silver, 13d 7h of queue — and the same
+   * march with Archer I put back is 4 904 479 for 2 203 500 and 8d 4h. More damage, less silver, five days
+   * less queue, and no shape the search walks can express it.
+   *
+   * **What is scored.** A march re-sized by the MS sizer over its own troop types plus **one** type the account
+   * holds and it leaves out — every left-out type, one at a time — with the march's own hired counts as the
+   * sizer's caps. Priced by `toMarch`, exactly as the row's own repeat is priced, so the figure a row moves to
+   * is the one the recap will draw for it. Then the player's own rates decide (`CAMPAIGN.putBack`):
+   *
+   * ```
+   * score = (silver saved %) / silverPerDamage + (queue saved %) / timePerDamage + (damage change %)
+   * ```
+   *
+   * taken when the score is not negative **and** the damage loss is inside the cap — the owner's own anchors,
+   * *"2 % damage is okay if there's a reduction in time and a bit of silver; 3 % for a lot of silver and
+   * training time"*. Ties go to the higher score, then to the higher damage.
+   *
+   * **Where it runs, and why there** (owner, 2026-09-19: *"it's supposed to be integrated in the plan slider
+   * proposals so it's transparent to the user"*). On the **burn ladder** — one plan a level of hired units
+   * burned, the set the knee, the sweet spot, "more mercs" and the steady max are all read off — before any of
+   * them is chosen, so no stop is picked on a march a put-back would have improved. A row is replaced in place
+   * and **keeps its burn level**: the levels themselves are settled on the marches the search generated, or a
+   * rung that traded damage for queue would drop out of the ladder and take its stop with it. The two stops
+   * that are not read off the ladder — the silver saver, chosen over the whole band, and the `all-in`, built
+   * march by march outside the frontier — get the same offer once they are known (round two, below). The band
+   * itself is never walked: that is hundreds of rows against a dozen, for a choice the ladder already makes.
+   *
+   * **What the hired counts do.** They are the sizer's *caps*, not its orders: MS sizes every stack to a
+   * matched HP, hired stacks included, so a put-back typically fields **fewer** mercenaries than the ladder it
+   * replaces — the steady max above burns 17 where the ladder burned 20 — and that is part of why it wins, a
+   * smaller hired stack being one the enemy does not wipe first. A count that can only fall is what makes the
+   * rest of the plan safe to leave alone: the burn falls, so the stock lasts at least as many marches
+   * (`lastsMarches` is monotone in the count), so the repeats the row already plays are still sustained and the
+   * finale the search already planned is still affordable. The campaign is therefore `repeats × the new march +
+   * the finale it already had`, and `marches`, `finaleCounts` and the finale's own figures do not move. The two
+   * rules a smaller hired stack could still break are checked rather than assumed: S-58 B (a plan the player is
+   * offered fields a little of everything they hold) and the sustain.
+   *
+   * **What it does not touch.** The winner (`chosen`, and every figure `CampaignPlan` spreads off it), the
+   * frontier, the band, and which answer a row is. It changes what a march *fields* — the burn it sits at may
+   * fall with it, which is why the ladder is re-keyed and the bar re-sorted — and the player is told nothing
+   * about it on the bar: the stops simply are the better marches, and the one sentence the app writes is in
+   * the Details fold (`PlanRow.putBack`). Two stops that arrive at one march after the pass collapse to one,
+   * as they would have at `offer`, and `leftOut` is counted off the list that is left.
+   */
+  /**
+   * The march a put-back row was sized from, kept beside it so a stop whose own rule the put-back breaks can
+   * be handed back the plan the search generated rather than dropped off the bar (the silver saver, below).
+   * Keyed by the row object, and carried across the copy `offer` makes of it.
+   */
+  const generatedOf = new Map<PlanTotals, TradeRow>();
+  const putBackOn = (row: TradeRow): TradeRow | undefined => {
+    const policy = input.putBack;
+    if (policy === undefined) return undefined;
+    // The marches the change is paid for: a sequence row moves its first march only, every other row moves
+    // the one it repeats. A finale always carries troop rungs, so `finaleCounts` is present exactly when the
+    // campaign plays one and `marches` less that one is the repeat count.
+    const repeats = row.sequence ? 1 : row.marches - (row.finaleCounts ? 1 : 0);
+    if (repeats < 1) return undefined;
+    const fielded = troops.filter((entry) => (row.counts[entry.id] ?? 0) > 0);
+    const absent = troops.filter((entry) => (row.counts[entry.id] ?? 0) === 0);
+    if (fielded.length === 0 || absent.length === 0) return undefined;
+    const caps: Record<string, number> = { ...request.caps };
+    for (const entry of mercTypes) caps[entry.id] = row.counts[entry.id] ?? 0;
+    /** A percent change read as a saving: a figure that falls is positive. */
+    const saved = (before: number, after: number): number =>
+      before > 0 ? ((before - after) / before) * 100 : 0;
+    let best: { row: TradeRow; score: number } | undefined;
+    for (const extra of absent) {
+      const keep = new Set([extra.id, ...fielded.map((entry) => entry.id), ...mercIds]);
+      const sized = sizeStacks({
+        ...request,
+        units: request.units.filter((unit) => keep.has(unit.id)),
+        caps,
+        options: { ...request.options, method: 'ms', relaxedPreservation: false },
+      });
+      const picked = sized.stacks
+        .filter((stack) => stack.count > 0)
+        .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
+        .filter((stack): stack is { entry: Effective; count: number } => stack.entry !== undefined);
+      const rungs = picked.filter((stack) => stack.entry.pool === 'leadership');
+      const mercs = picked.filter((stack) => stack.entry.pool === 'authority');
+      // A march on one troop stack is the extreme the band refuses ("not a strategy", owner 2026-09-15); a
+      // put-back that collapsed onto one would walk it back onto the bar through this pass.
+      if (rungs.length < 2) continue;
+      // The sustain, the same test the search applies to every vector it scores: a count the stock cannot
+      // field every march of the run burns mercenaries the account does not have.
+      if (mercs.some((merc) => lastsMarches(sustain[merc.entry.id] ?? 0, merc.count) < repeats)) continue;
+      const counts: Record<string, number> = {};
+      for (const stack of picked) counts[stack.entry.id] = stack.count;
+      const campaign: PlanTotals = {
+        ...row,
+        counts,
+        ...(row.sequence ? { sequence: [counts, ...row.sequence.slice(1)] } : {}),
+      };
+      // S-58 B: the bar never offers a plan with a hole in it, and MS may size a hired stack down to nothing.
+      if (refuseDroppedTypes && !stocked.every((entry) => fieldsInCampaign(campaign, entry.id))) continue;
+      // The `all-in` is *"all the mercs you can safely field"*: every hired stack under the lowest troop stack,
+      // or the enemy — which wipes the highest-HP stack first — takes it before the troops have died.
+      if (row.sequence) {
+        const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+        const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
+        if (floor <= hiredTop) continue;
+      }
+      const march = toMarch(rungs, mercs, marchOf(picked, enemyStacks));
+      /**
+       * **A put-back has to shorten the training queue** (owner, 2026-09-18: *"consider again lower level
+       * troops if the cost for them … is not too high and we **get a nice reduction in training time**"*).
+       * That clause is the pass's whole purpose, not one term of its score: a march that takes longer to come
+       * back is not a put-back however hard it hits, and the score alone cannot say so, because a big enough
+       * damage gain outvotes any rise.
+       *
+       * Measured on a first-run army holding 42 legionaries and 20 chariots at 12 000 leadership: the silver
+       * saver's cheapest left-out type, Swordsman I, came back at **+109.2 % damage** for **182.4 % more
+       * silver** and **151.8 % more queue** — a score of 57 under the owner's rates, and a march that costs
+       * 2.8× the silver of the stop it replaced and sits three days longer in the barracks. The rule says yes;
+       * the sentence the rule came from says no.
+       */
+      if (march.seconds >= row.repeat.seconds) continue;
+      const damage =
+        row.repeat.damage > 0 ? ((march.damage - row.repeat.damage) / row.repeat.damage) * 100 : 0;
+      const silver = saved(row.repeat.silver, march.silver);
+      const seconds = saved(row.repeat.seconds, march.seconds);
+      const score = silver / policy.silverPerDamage + seconds / policy.timePerDamage + damage;
+      if (score < 0 || damage < -policy.damageLossCap) continue;
+      if (best && (best.score > score || (best.score === score && best.row.repeat.damage >= march.damage)))
+        continue;
+      const totalDamage = row.totalDamage + repeats * (march.damage - row.repeat.damage);
+      const campaignSilver = row.silver + repeats * (march.silver - row.repeat.silver);
+      const mercLost = row.mercLost + repeats * (march.mercLost - row.repeat.mercLost);
+      const hired = Object.values(march.mercFielded).reduce((sum, count) => sum + count, 0);
+      best = {
+        score,
+        row: {
+          ...campaign,
+          // The shape sentence the experiments read a row by, rebuilt: its stack count and its silver both
+          // moved, and a sentence that outlives the march it describes is the one thing this field is not.
+          label:
+            `${rungs.length} ${rungs.length === 1 ? 'stack' : 'stacks'} · ${hired} hired · ` +
+            `${compact(march.silver)} silver a march`,
+          // The march is the MS sizer's now, whatever shape the search had reached for.
+          shape: 'ms',
+          totalDamage,
+          silver: campaignSilver,
+          gold: row.gold + repeats * (march.gold - row.repeat.gold),
+          seconds: row.seconds + repeats * (march.seconds - row.repeat.seconds),
+          mercLost,
+          repeat: {
+            damage: march.damage,
+            silver: march.silver,
+            gold: march.gold,
+            seconds: march.seconds,
+            mercLost: march.mercLost,
+          },
+          damagePerSilver: campaignSilver > 0 ? totalDamage / campaignSilver : Infinity,
+          damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+          putBack: { unitId: extra.id, damage, silver, seconds },
+        },
+      };
+    }
+    return best?.row;
+  };
+
+  /**
    * **The sweet spot: the middle of the trade in hired stock** (owner, 2026-09-16).
    *
    * The rule was *the plan closest to the best on both ratios at once* (max of `min(perSilver/peakSilver,
@@ -1824,7 +2046,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * `all-in` offer, and only because an all-in on a stock under a chunk burns no more than the steady max
    * while fielding the whole stock (see below).
    */
-  const ladder = new Map<number, PlanTotals & { label: string }>();
+  const ladder = new Map<number, TradeRow>();
   for (const row of candidates) {
     const held = ladder.get(row.repeat.mercLost);
     if (
@@ -1844,7 +2066,40 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       climbed = damage;
     }
   }
-  const ladderRows = levels.map((burn) => ladder.get(burn) as PlanTotals & { label: string });
+  const ladderRows = levels.map((burn) => ladder.get(burn) as TradeRow);
+  /**
+   * **Round one of the put-back pass, on the ladder itself** (see `putBackOn` above; owner, 2026-09-19: the
+   * pass is *"integrated in the plan slider proposals so it's transparent to the user"*). Every rule below
+   * reads these rows — the efficient rungs, the knee, the sweet spot, "more mercs" and the top of the ladder —
+   * so improving them here is what makes a stop chosen on the march the player is actually offered rather than
+   * on the one the search happened to size.
+   *
+   * **A rung keeps its place, and its burn may fall with it.** The levels above are settled on the generated
+   * marches and are not re-derived: a rung that trades damage for queue would fail the "burning more buys
+   * more" filter, drop out of the ladder and take its stop with it, which is the opposite of what the owner
+   * asked for. What does move is the rung's own burn — a put-back fields at most the hired counts it was
+   * capped by, and MS usually fields fewer — so the ladder is put back in order afterwards, one plan a burn
+   * and the best damage at each, exactly as `ladder` was built. Everything below reads the burn off the rows
+   * (the chord's ends, the middle of the range, the gap "more mercs" sits in), so an out-of-order ladder would
+   * be read as a trade that runs backwards.
+   */
+  if (input.putBack !== undefined) {
+    const put = new Map<number, TradeRow>();
+    for (const row of ladderRows) {
+      const improved = putBackOn(row) ?? row;
+      if (improved !== row) generatedOf.set(improved, row);
+      const held = put.get(improved.repeat.mercLost);
+      if (
+        !held ||
+        improved.repeat.damage > held.repeat.damage ||
+        (improved.repeat.damage === held.repeat.damage && improved.repeat.silver < held.repeat.silver)
+      ) {
+        put.set(improved.repeat.mercLost, improved);
+      }
+    }
+    ladderRows.length = 0;
+    ladderRows.push(...[...put.values()].sort((a, b) => a.repeat.mercLost - b.repeat.mercLost));
+  }
   /**
    * **A rung nothing beats on both efficiencies** (owner, 2026-09-17, reading his own bar: *"12 hired lost got
    * better silver/dmg, better dmg/merc and almost the same damage"* than the sweet spot at 15). His stops, as
@@ -1893,10 +2148,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     row.damagePerSilver >= other.damagePerSilver &&
     row.damagePerMercenary >= other.damagePerMercenary &&
     (row.damagePerSilver > other.damagePerSilver || row.damagePerMercenary > other.damagePerMercenary);
-  const middleOfRange = (rows: (PlanTotals & { label: string })[]): PlanTotals & { label: string } => {
+  const middleOfRange = (rows: TradeRow[]): TradeRow => {
     const burns = rows.map((row) => row.repeat.mercLost);
     const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
-    return rows.reduce<PlanTotals & { label: string }>((held, row) => {
+    return rows.reduce<TradeRow>((held, row) => {
       const away = Math.abs(row.repeat.mercLost - middleBurn);
       const heldAway = Math.abs(held.repeat.mercLost - middleBurn);
       if (away < heldAway) return row;
@@ -1922,7 +2177,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * alone lands one unit from their end (measured: 8 against 10). With fewer than three rungs there is no
    * chord, and the middle rule stands (`middleOfRange` above: the campaign's ratios break a tie, thrift last).
    */
-  const sweetSpotBase: PlanTotals & { label: string } = ((): PlanTotals & { label: string } => {
+  const sweetSpotBase: TradeRow = ((): TradeRow => {
     const rows = sweetPool;
     const first = ladderRows[0];
     const last = ladderRows[ladderRows.length - 1];
@@ -1930,7 +2185,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (rows.length < 3 || !first || !last) return middleOfRange(rows);
     const dx = last.repeat.mercLost - first.repeat.mercLost || 1;
     const dy = last.repeat.damage - first.repeat.damage || 1;
-    let best: (PlanTotals & { label: string }) | undefined;
+    let best: TradeRow | undefined;
     let bestDistance = 0;
     for (const row of rows) {
       const t = (row.repeat.mercLost - first.repeat.mercLost) / dx;
@@ -1947,7 +2202,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     return middleOfRange(rows);
   })();
 
-  const knee = ((): (PlanTotals & { label: string }) | undefined => {
+  const knee = ((): TradeRow | undefined => {
     const points = undominated.filter((point) => Number.isFinite(point.damagePerSilver) && point.silver > 0);
     if (points.length < 3) return points[points.length - 1];
     const first = points[0];
@@ -2006,7 +2261,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * fastest — the descending sequence the benchmark (`tests/engine/plan-benchmark.test.ts`) found the sizers
    * playing and the plan unable to express.
    */
-  const allIn = ((): (PlanTotals & { label: string }) | undefined => {
+  const allIn = ((): TradeRow | undefined => {
     if (planned === undefined || planned < 1) return undefined;
     const remaining: Record<string, number> = { ...stock };
     const played: Candidate[] = [];
@@ -2117,10 +2372,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const sameCounts = (a: PlanTotals, b: PlanTotals): boolean =>
     JSON.stringify(a.counts) === JSON.stringify(b.counts);
   const stops: PlanRow[] = [];
-  const offer = (row: (PlanTotals & { label: string }) | undefined, pick: PlanPick): void => {
+  const offer = (row: TradeRow | undefined, pick: PlanPick): void => {
     if (row === undefined) return;
     if (stops.some((other) => sameCounts(other, row))) return;
-    stops.push({ ...row, pick, bestFor: { silver: false, hired: false } });
+    const stop: PlanRow = { ...row, pick, bestFor: { silver: false, hired: false } };
+    // The march this row was sized from, carried onto the copy: a stop whose own rule its put-back breaks is
+    // handed the generated plan back rather than dropped (the silver saver, after round two).
+    const generated = generatedOf.get(row);
+    if (generated) generatedOf.set(stop, generated);
+    stops.push(stop);
   };
   /**
    * **Five stops** (owner, 2026-09-18, replacing the three of 2026-09-17), thriftiest first — see `PlanPick`.
@@ -2157,7 +2417,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     );
   const leastSilver = leftOfSweet
     .filter((row) => !beatenOnBoth(row))
-    .reduce<(PlanTotals & { label: string }) | undefined>((best, row) => {
+    .reduce<TradeRow | undefined>((best, row) => {
       if (!best) return row;
       if (row.repeat.silver !== best.repeat.silver)
         return row.repeat.silver < best.repeat.silver ? row : best;
@@ -2171,13 +2431,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * top, strictly inside it — the step a player takes when the stock allows more than the knee and less than
    * everything. Two rungs equally near are told apart by damage a unit burned.
    */
-  const moreMercs = ((): (PlanTotals & { label: string }) | undefined => {
+  const moreMercs = ((): TradeRow | undefined => {
     if (!top) return undefined;
     const low = sweetSpotBase.repeat.mercLost;
     const high = top.repeat.mercLost;
     if (high - low < 2) return undefined;
     const middle = (low + high) / 2;
-    let pick: (PlanTotals & { label: string }) | undefined;
+    let pick: TradeRow | undefined;
     for (const row of ladderRows) {
       if (row.repeat.mercLost <= low || row.repeat.mercLost >= high) continue;
       const away = Math.abs(row.repeat.mercLost - middle);
@@ -2207,12 +2467,102 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * campaign that fields 254 hired units where the steady max fields 128.
    */
   if (allIn && top && hiredOf(allIn.counts) > hiredOf(top.counts)) offer(allIn, 'all-in');
-  stops.sort(
-    (a, b) =>
-      a.repeat.mercLost - b.repeat.mercLost ||
-      a.repeat.silver - b.repeat.silver ||
-      a.repeat.damage - b.repeat.damage,
-  );
+
+  /**
+   * **Round two: the stops the ladder did not carry.** The pass above improved the burn ladder, which is where
+   * the sweet spot, "more mercs" and the steady max are read off — but the silver saver is chosen over the
+   * whole band (`leftOfSweet`, which is `candidates` and not `ladderRows`) and the `all-in` is built march by
+   * march outside the frontier altogether. Both are priced marches a put-back can improve, so they get the
+   * same offer here, once the bar knows which ones they are. A row that already carries a put-back is left
+   * alone: one type goes back per stop, and a second round over the same march is a different question
+   * (a march with two cheap types left out) that nobody has measured yet.
+   *
+   * The `all-in` keeps the rule it was **offered** by as well: it is on the bar because its first march fields
+   * more hired units than the steady max's repeat, and a put-back fields at most what it was capped by, so a
+   * put-back that took it under that line would leave the bar carrying a stop whose own reason for being there
+   * had gone.
+   */
+  if (input.putBack !== undefined) {
+    const topHired = top ? hiredOf(top.counts) : 0;
+    for (let index = 0; index < stops.length; index += 1) {
+      const stop = stops[index] as PlanRow;
+      if (stop.putBack !== undefined) continue;
+      const replaced = putBackOn(stop);
+      if (!replaced) continue;
+      if (stop.pick === 'all-in' && hiredOf(replaced.counts) <= topHired) continue;
+      const put: PlanRow = { ...stop, ...replaced };
+      generatedOf.set(put, stop);
+      stops[index] = put;
+    }
+    /**
+     * **The silver saver has to stay a saving.** It is on the bar because it is cheaper than the sweet spot
+     * *and* at least as efficient a silver (`leastSilver` above) — that pair is the stop's whole definition,
+     * and a put-back can break it, because MS sizes a deeper march than the tight ladder it replaces. Measured
+     * on a first-run army holding 42 legionaries and 20 chariots at 12 000 leadership: the saver's put-back
+     * came out **dearer than the sweet spot** (5 108 400 against 4 878 400 a march) at 0.706 a silver against
+     * 0.858 — a "Silver saver" spending more silver than the stop beside it, which is a name false on its own
+     * row. When that happens the **put-back** is dropped and not the stop: the generated march is still a real
+     * saving, and a bar with a hole where its thrifty end was is worse than a bar without a put-back on it.
+     */
+    const saver = stops.findIndex((row) => row.pick === 'silver-saver');
+    const sweet = stops.find((row) => row.pick === 'sweet-spot');
+    const saving = saver < 0 ? undefined : (stops[saver] as PlanRow);
+    if (saving?.putBack && sweet) {
+      const dearer = saving.repeat.silver > sweet.repeat.silver;
+      const worse = perSilver(saving) < perSilver(sweet);
+      const generated = generatedOf.get(saving);
+      if ((dearer || worse) && generated) {
+        stops[saver] = { ...generated, pick: saving.pick, bestFor: saving.bestFor };
+      }
+    }
+  }
+
+  const byBurn = (a: PlanRow, b: PlanRow): number =>
+    a.repeat.mercLost - b.repeat.mercLost ||
+    a.repeat.silver - b.repeat.silver ||
+    a.repeat.damage - b.repeat.damage;
+  stops.sort(byBurn);
+  /**
+   * **Burning more has to buy more** (S-61, and the test `tests/engine/plan-criteria.test.ts` holds on every
+   * army): the bar runs along the hired units a march burns for good, and its whole meaning is that moving
+   * right spends more of the stock and hits harder for it. A put-back may spend up to `damageLossCap` of a
+   * march's damage on silver and on the queue, and on one measured bar that was enough to break the ladder —
+   * the owner's export at 12 000, where the steady max took Spearman I and came out at **8 063 238** against
+   * the sweet spot's **8 185 823** one stop to its left. "Steady max" 1.5 % under "Sweet spot" is a row whose
+   * name is false on its face, which no saving buys back.
+   *
+   * So the ladder is walked from the thrift end and any row that does not out-hit the one before it is handed
+   * its **generated** march back (`generatedOf`) — the put-back goes, never the stop. A row whose generated
+   * march was already not above its neighbour is left exactly as the search made it: that is a plan the bar
+   * carried before this pass existed, and not something to correct here. The `all-in` is exempt, as it is in
+   * the test: it fields every mercenary the troops can shelter, which can cost troops, so it burns the most
+   * and need not hit the hardest.
+   */
+  if (input.putBack !== undefined) {
+    for (let index = 1; index < stops.length; index += 1) {
+      const current = stops[index] as PlanRow;
+      const previous = stops[index - 1] as PlanRow;
+      if (current.pick === 'all-in' || !current.putBack) continue;
+      if (current.repeat.damage > previous.repeat.damage) continue;
+      const generated = generatedOf.get(current);
+      if (!generated) continue;
+      stops[index] = { ...generated, pick: current.pick, bestFor: current.bestFor };
+    }
+    // A reverted row is a different march at a different burn, so the bar is put back in order before the two
+    // efficiencies below are read off it.
+    stops.sort(byBurn);
+    /**
+     * **The dedupe, run again on what the pass left.** `offer` refuses a stop whose counts another already
+     * has, on the marches the search generated; the pass then re-sizes some of them, so two stops can arrive
+     * at one march after that test has been made — and a bar that offers the same march twice is the thing
+     * `offer` exists to prevent, whichever step produced it. The thriftiest of a pair keeps the place, which
+     * is the order `offer` itself kept, and `leftOut` below counts off the list that is left.
+     */
+    for (let index = stops.length - 1; index > 0; index -= 1) {
+      const row = stops[index] as PlanRow;
+      if (stops.slice(0, index).some((other) => sameCounts(other, row))) stops.splice(index, 1);
+    }
+  }
   const bestStop = (of: (row: PlanTotals) => number): PlanRow | undefined =>
     stops.reduce<PlanRow | undefined>(
       (best, row) => (best === undefined || of(row) > of(best) ? row : best),

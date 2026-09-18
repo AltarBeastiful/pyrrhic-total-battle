@@ -68,6 +68,46 @@ export const CAMPAIGN = {
    * nothing here is left to set.
    */
   /**
+   * **What a put-back is worth**, in the owner's own exchange rates (2026-09-18: *"generation sometimes skips
+   * low-level stacks and misses some damage that seems cheap … troops of higher tier are longer to train …
+   * add a pass to consider again lower level troops if the cost for them (silver, silver/damage, total
+   * damage) is not too high and we get a nice reduction in training time"*).
+   *
+   * The plan's own shapes cannot find these marches: a ladder is built over a **prefix** of the damage-per-HP
+   * ranking, so a low tier never enters one, and the sizer's shapes are sized over **every** type at once. The
+   * family "the march's types plus one more" is the one nobody scored — and it is where the cheap damage is.
+   * The pass that scores it (`putBackOn`, `engine/plan.ts`) needs one thing this file can give it: how much
+   * silver and how much queue a percent of damage is worth. Those are a **decision**, not a fact, so they are
+   * three numbers here rather than a constant in the middle of a search:
+   *
+   * ```
+   * score = (silver saved %) / silverPerDamage + (time to recover saved %) / timePerDamage + (damage change %)
+   * take the put-back when it recovers faster, scores ≥ 0, and loses at most damageLossCap of the damage
+   * ```
+   *
+   * **Recovering faster is a condition and not a number**, which is why it has no entry below. The owner asked
+   * for a pass over the low tiers *"if the cost for them … is not too high and we get a nice reduction in
+   * training time"*: the queue is what the pass is for, and a march that sits longer in the barracks is not a
+   * put-back however hard it hits. The score cannot say that on its own — a large enough damage gain outvotes
+   * any rise — so the engine tests it separately (`putBackOn`, `engine/plan.ts`).
+   *
+   * **The owner's own anchors** (2026-09-18, asked for the rate and answering with two points): *"2 % damage
+   * is okay if there's a reduction in time and a bit of silver; 3 % for a lot of silver and training time."*
+   * Five and ten are the rates those two points fix — 5 % of silver and 10 % of queue come to exactly the 2 %
+   * of damage of the first, 10 % and 10 % to the 3 % of the second — and three is where he stops trading at
+   * all, whatever the saving.
+   *
+   * **Calibrated against experiment 103** (`tools/theorycraft/out/103-put-back-time.md`), which tabled every
+   * put-back on four setups the day the rule was written. On his live army (Aydae 43 ★3 alone, 4 975
+   * leadership) the steady max is a three-type ladder — RD2 984 · ARC2 1931 · RD3 532, 4 777 523 damage for
+   * 2 694 300 silver and 13d 7h of queue — and putting **Archer I** back scores 10.2: +2.7 % damage, 18.2 %
+   * of the silver and 38.3 % of the queue saved, better on every count. At the other end, his export at
+   * 12 000 leadership takes Spearman I on a 2.6 % **loss** (1.2, on 8.1 % of silver and 21.8 % of queue) and
+   * refuses Archer I there, which costs 5.8 % — past the cap, and negative besides. Three of the twelve
+   * put-backs measured that day are refused, which is the point: the rule says no as often as it says yes.
+   */
+  putBack: { silverPerDamage: 5, timePerDamage: 10, damageLossCap: 3 },
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

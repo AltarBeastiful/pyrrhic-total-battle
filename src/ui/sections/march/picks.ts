@@ -11,7 +11,10 @@
  * payload because a dozen recorded experiments (`tools/theorycraft/63`…`86`) quote it as a row's identity
  * in their committed reports; a field the record reads is not the UI's to delete.
  */
+import { unitById } from '@/data';
 import type { PlanPick, PlanRow } from '@/engine/plan';
+
+import { signedPercent } from './format';
 
 /**
  * The five answers the bar carries (`PlanPick`), each with the one name it wears — in the owner's own words
@@ -98,8 +101,44 @@ export const BAR_ENDS = { low: 'Fewest hired lost', high: 'Most hired lost' } as
  * One sentence, in one place (design rule 5): the fold's own summary line and the bar's tip both read it, so
  * the stop cannot describe itself one way over the bar and another over the March.
  */
+
 export function sequenceWords(row: Pick<PlanRow, 'sequence'>): string | null {
   const marches = row.sequence?.length ?? 0;
   if (marches < 1) return null;
   return `${String(marches)} march${marches === 1 ? '' : 'es'}, each on what the last one left`;
+}
+
+/**
+ * **The troop type the plan put back into this march, and what it bought** — or `null` for a stop the pass
+ * left alone (owner, 2026-09-18: *"add a pass to consider again lower level troops if the cost for them
+ * (silver, silver/damage, total damage) is not too high and we get a nice reduction in training time"*).
+ *
+ * The engine records the three changes saving-positive, because that is how it scores them
+ * (`PlanRow.putBack`); a reader meets them as **changes to the march**, so the silver and the queue are
+ * flipped and every one of the three wears its sign: a march that gained damage and gave back silver reads
+ * "+2.4% damage, -18.2% silver, -38.3% to recover". The last two are the trade table's own two figures, in its
+ * own order — damage, silver, the queue under the silver — so the line explains the row rather than
+ * introducing a fourth way to read it (design rule 5).
+ *
+ * **What the three are measured against is said out loud**, because it is not the row beside it on the bar.
+ * They compare this march with *the same march sized without the type that went back* — the plan the search
+ * generated for this rung — and the pass re-keys the rungs by what they burn, so a stop can carry a rung
+ * whose put-back cost it 2 % of damage and still show more damage than the bar did before the pass. Without
+ * the clause a reader would take the percentages for a change to the stop they are looking at, which is the
+ * one thing they are not (design rule 5: a figure says what it is a figure of).
+ *
+ * One sentence in one place, like every other row's words here: the fold draws it, and the tests read it from
+ * this function rather than retyping it.
+ */
+export function putBackWords(row: Pick<PlanRow, 'putBack'>): string | null {
+  const put = row.putBack;
+  if (!put) return null;
+  // The unit's **name** and not its pill label: this is a sentence and not a chip, and "SP1 put back" is
+  // the short code a table cell wears (design rule 27 — unit details read as sentences).
+  const unit = unitById(put.unitId);
+  const name = unit?.name ?? unit?.label ?? put.unitId;
+  return (
+    `${name} put back: ${signedPercent(put.damage)} damage, ${signedPercent(-put.silver)} silver, ` +
+    `${signedPercent(-put.seconds)} to recover, against the same march without it.`
+  );
 }

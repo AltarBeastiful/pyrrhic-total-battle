@@ -23,7 +23,7 @@ import { getUnits } from '@/data';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { PlanFold } from './PlanPanel';
-import { BAR_ENDS, bestForWords, planWords, sequenceWords } from './picks';
+import { BAR_ENDS, bestForWords, planWords, putBackWords, sequenceWords } from './picks';
 import { amount, compact, duration, ratio } from './format';
 import { defaultPlanPosition, pickOf, sweetSpotOf, useRunStore } from './runStore';
 
@@ -735,4 +735,57 @@ test('the all-in stop says it is a sequence, on the bar and on the row the fold 
   expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
     `${amount(BURN.totalDamage)} damage`,
   );
+});
+
+/**
+ * **The put-back line** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and misses some
+ * damage that seems cheap … troops of higher tier are longer to train"*; `PlanRow.putBack`).
+ *
+ * The pass itself is transparent (owner, 2026-09-19: it is *"integrated in the plan slider proposals"*), so
+ * the bar, its tip and the trade say nothing about it — what the fold adds is one sentence on the stop on
+ * screen, and only when that stop really put a type back.
+ */
+const PUT_BACK: PlanRow[] = BURN_ROWS.map((row, index) =>
+  index === 1
+    ? {
+        ...row,
+        putBack: { unitId: 'spearman-1', damage: 2.4, silver: 18.2, seconds: 38.3 },
+      }
+    : row,
+);
+const WITH_PUT_BACK: CampaignPlan = {
+  ...PLAN,
+  alternatives: PUT_BACK,
+  recommend: PUT_BACK[1] as PlanRow,
+};
+
+test('the fold says which low tier went back into the march, and only on the stop that did', () => {
+  useRunStore.setState({ plan: WITH_PUT_BACK, planPick: 1, includedUnitIds: [], leftOutByPlayer: [] });
+  renderWithTheme(<PlanFold />);
+
+  // One sentence, in the words `./picks` writes once: the unit's own label, then the three changes in the
+  // trade's own order, each with the sign a reader needs — damage gained, silver and queue given back.
+  const words = putBackWords(PUT_BACK[1] as PlanRow);
+  expect(words).toBe(
+    'Spearman I put back: +2.4% damage, -18.2% silver, -38.3% to recover, against the same march without it.',
+  );
+  expect(screen.getByText(words as string)).toBeTruthy();
+
+  // Nothing about it on the bar or in the trade: a stop is simply the better march (the owner's "transparent
+  // to the user", and design rule 5 — the fold is where the sentence lives, and it lives there once).
+  const trade = document.querySelector(TRADE);
+  expect(trade?.textContent ?? '').not.toContain('put back');
+  const thumb = screen.getByRole('slider', { name: 'Where on the trade to read the plan' });
+  expect(thumb.getAttribute('aria-valuetext') ?? '').not.toContain('put back');
+
+  // Reading another stop drops the line with it: it belongs to the march on screen, not to the plan.
+  fireEvent.keyDown(thumb, { key: 'Home' });
+  expect(useRunStore.getState().planPick).toBe(0);
+
+  // And on a stop the pass left alone the line is not there at all.
+  cleanup();
+  useRunStore.setState({ plan: WITH_PUT_BACK, planPick: 0, includedUnitIds: [], leftOutByPlayer: [] });
+  renderWithTheme(<PlanFold />);
+  expect(putBackWords(PUT_BACK[0] as PlanRow)).toBeNull();
+  expect(screen.queryByText(/put back/)).toBeNull();
 });
