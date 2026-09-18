@@ -452,6 +452,10 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
     // so an unanchored alternative would match every row whatever it was called.
     trade.getByRole('row', { name: /^(Silver saver|Sweet spot|More mercs|Steady max|All in)\b/ }),
   ).toHaveCount(rows - 1);
+  // **The training queue, under the silver it is paid beside** (owner, 2026-09-18: *"troops of higher tier
+  // are longer to train"*). It is a second line inside the silver cell and not a seventh column — the four
+  // heads above are unchanged — and every row carries it in its accessible name as well as on screen.
+  await expect(trade.getByRole('row', { name: /to recover/ })).toHaveCount(rows - 1);
   // **The whole row is the control** (design rule 8), not a button in its first cell: each row is the one
   // focusable thing on its line and says which plan is on screen with `aria-selected`.
   await expect(trade.getByRole('row', { selected: true })).toHaveCount(1);
@@ -479,6 +483,8 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // the old tail still on screen. The four dimmed paragraphs and the curve table that followed it are
   // behind one closed fold now (owner, 2026-09-16: the prose goes; design rule 4).
   await expect(march.getByText(/^Fought to the end: /)).toBeVisible();
+  // The campaign's own training queue rides with its silver, as the march's does on the line over the bar.
+  await expect(march.getByText(/^Fought to the end: /)).toContainText(/ of training /);
   await expect(march.getByText(/^Every plan here is fought over the same marches/)).toBeHidden();
   const reference = march.getByRole('button', { name: /^Reference/ });
   await expect(reference).toHaveAttribute('aria-expanded', 'false');

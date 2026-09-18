@@ -13,6 +13,7 @@ import {
   generateState,
   marchExpectedDamage,
   marchFigure,
+  marchFigureWords,
   marchFoot,
   marchLeftOut,
   marchPillDetails,
@@ -51,6 +52,10 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   expect(await marchExpectedDamage(page)).toBeGreaterThan(0);
   expect(await marchFigure(page, 'Worst opening')).toBeGreaterThan(0);
   expect(await marchFigure(page, 'Silver to recover')).toBeGreaterThan(0);
+  // **And what it costs in time** (owner, 2026-09-18: *"troops of higher tier are longer to train.
+  // Adding training time on the battle summary is the first step."*). It stands with the two coins and it
+  // is read the way the game writes a training queue — "13d 21h", never a count of seconds.
+  await expect(marchFigureWords(page, 'Time to recover')).toHaveText(/^\d+[dhms]( \d+[hms])?$/);
 
   // The pills *are* the counts (owner, 2026-09-13): there is no table under them. The row of
   // whole-march actions is the foot of the setup column at this width (owner, 2026-09-15).

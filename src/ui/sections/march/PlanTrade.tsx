@@ -45,7 +45,7 @@ import type { PlanRow } from '@/engine/plan';
 
 import { Glyph } from '@/ui/domain';
 
-import { amount, compact, per, ratio } from './format';
+import { amount, compact, duration, per, ratio } from './format';
 import { bestForWords, planWords } from './picks';
 import classes from './march.module.css';
 
@@ -158,9 +158,11 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 // off its pane. The ratio cells are unchanged and still read as cells.
                 aria-label={`${planWords(point)}: ${compact(point.repeat.damage)} damage, ${compact(
                   point.repeat.silver,
-                )} silver, ${compact(point.repeat.gold)} gold, ${amount(
-                  point.repeat.mercLost,
-                )} hired lost a march${note === null ? '' : `, ${note}`}`}
+                )} silver, ${duration(point.repeat.seconds)} to recover, ${compact(
+                  point.repeat.gold,
+                )} gold, ${amount(point.repeat.mercLost)} hired lost a march${
+                  note === null ? '' : `, ${note}`
+                }`}
                 aria-selected={current}
                 // The row on screen, the way the objectives strip says it: one tonal step for the eye, and
                 // for a reader the two attributes that mean it. Never colour alone (rule 24) — and the
@@ -235,7 +237,24 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                     </Text>
                   </Group>
                 </Table.Td>
-                <Table.Td ta="end">{compact(point.repeat.silver)}</Table.Td>
+                {/* **Silver, and the training queue under it** (owner, 2026-09-18: *"troops of higher
+                    tier are longer to train"*). Time is the second price a march is paid in and the one the
+                    silver figure hides: two stops an hour apart in silver can be a week apart in training,
+                    which is exactly the trade this table exists to show.
+
+                    Under the figure rather than in a column of its own. A seventh head measured 505 px in a
+                    462 px pane when gold was tried as one (see the row's accessible name above), and the
+                    heads are what set these columns' widths — "🪙 Silver" is wider than either figure — so a
+                    second line inside the cell costs the table nothing sideways. It is the same muted ink
+                    and the same regular weight every explaining line in this block uses, at the table's own
+                    size (`inherit`, which is 12 px here): the silver is the figure, the queue is the note
+                    under it, and the row's accessible name says both. */}
+                <Table.Td ta="end">
+                  {compact(point.repeat.silver)}
+                  <Text span inherit display="block" fw={400} c="dimmed">
+                    {duration(point.repeat.seconds)}
+                  </Text>
+                </Table.Td>
                 <Table.Td ta="end">{amount(point.repeat.mercLost)}</Table.Td>
                 <Table.Td ta="end">
                   {ratio(per(point.repeat.damage, point.repeat.silver), PER_SILVER_DECIMALS)}

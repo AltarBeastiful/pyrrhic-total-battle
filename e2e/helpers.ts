@@ -682,6 +682,17 @@ export async function marchFigure(page: Page, label: string): Promise<number> {
   return figureNumber(await value.innerText());
 }
 
+/**
+ * The same figure as **words** rather than as a number: the recap's training queue is written "13d 21h"
+ * (`format.ts`, `duration`), which is not a figure `figureNumber` can read and is exactly the point.
+ */
+export function marchFigureWords(page: Page, label: string): Locator {
+  return page
+    .locator('[aria-label="March figures"]')
+    .first()
+    .locator(`xpath=.//dt[contains(., ${JSON.stringify(label)})]/following-sibling::dd[1]`);
+}
+
 /** The hero figure: the expected damage, the first thing the recap prints. */
 export async function marchExpectedDamage(page: Page): Promise<number> {
   const recap = page.locator('[aria-label="This march in figures"]').first();

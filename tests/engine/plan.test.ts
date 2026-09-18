@@ -215,6 +215,45 @@ describe(
       TIMEOUT,
     );
 
+    /**
+     * **The training queue is a price like the other two** (owner, 2026-09-18: *"generation sometimes skips
+     * low-level stacks and misses some damage that seems cheap; it is mainly because one thing is not taken
+     * into account: troops of higher tier are longer to train"*).
+     *
+     * `PlanRepeat.seconds` is what the March's recap prints for the same counts, to the second, exactly as
+     * `repeat.damage` already agrees with the battle's own figure. The plan prices a march the way this file
+     * prices everything — the troops retrained, the hired units revived for gold — so the equality is against
+     * a request whose recovery plan is `retrain`, which is the app's default and the one this army uses.
+     */
+    test(
+      'prices a march\u2019s recovery time as the recap does, and the campaign as the sum of its marches',
+      () => {
+        const req = planCampaign({ request: request() });
+        const its = planMarch(request(), req.march.counts);
+        expect(req.march.seconds).toBeGreaterThan(0);
+        expect(req.march.seconds).toBe(its.summary.recovery.seconds);
+
+        // Every stop the bar offers says the same thing about the march it repeats.
+        for (const row of req.alternatives) {
+          expect(row.repeat.seconds, `${row.pick} prices its own march`).toBe(
+            planMarch(request(), row.counts).summary.recovery.seconds,
+          );
+          // A stop's campaign is its marches' queues added up, whether it repeats one march or plays a
+          // sequence of different ones (`PlanTotals.seconds`).
+          const queue = marchesOf(row).reduce(
+            (sum, counts) => sum + planMarch(request(), counts).summary.recovery.seconds,
+            0,
+          );
+          expect(row.seconds, `${row.pick} adds its marches up`).toBe(queue);
+        }
+
+        // The plan itself: its repeats plus its finale, the same arithmetic its damage obeys above.
+        const repeated = req.marches - (req.finale ? 1 : 0);
+        expect(req.seconds).toBe(repeated * req.march.seconds + (req.finale?.seconds ?? 0));
+      },
+      TIMEOUT,
+    );
+
     test('never fields more of a mercenary than the stock has, and lasts the marches the stock allows', () => {
       const req = request();
       const plan = planCampaign({ request: req });

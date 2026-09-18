@@ -123,10 +123,10 @@ function compareRows(stacks: SavedStack[]): { metrics: Row[]; counts: Row[] } {
     pick('Damage per silver', (stack) => stack.summary.damagePerSilver, ratio, 'high'),
     pick('Damage per gold', (stack) => stack.summary.damagePerGold, ratio, 'high'),
     pick('Damage per dragon coin', (stack) => stack.summary.damagePerDragonCoin, ratio, 'high'),
-    pick('Recovery silver', (stack) => stack.summary.recovery.silver, amount, 'low'),
-    pick('Recovery gold', (stack) => stack.summary.recovery.gold, amount, 'low'),
-    pick('Recovery dragon coins', (stack) => stack.summary.recovery.dragonCoins, amount, 'low'),
-    pick('Recovery time', (stack) => stack.summary.recovery.seconds, duration, 'low'),
+    pick('Silver to recover', (stack) => stack.summary.recovery.silver, amount, 'low'),
+    pick('Gold to recover', (stack) => stack.summary.recovery.gold, amount, 'low'),
+    pick('Dragon coins to recover', (stack) => stack.summary.recovery.dragonCoins, amount, 'low'),
+    pick('Time to recover', (stack) => stack.summary.recovery.seconds, duration, 'low'),
   ];
 
   const unitIds: string[] = [];

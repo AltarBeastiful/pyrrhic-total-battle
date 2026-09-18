@@ -26,7 +26,7 @@ import type { BattleSummary } from '@/engine/types';
 import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { amount, percent, ratio } from './format';
+import { amount, duration, percent, ratio } from './format';
 import { hiredLost, hiredStock } from './hired';
 import classes from './march.module.css';
 import { useMarch } from './useMarch';
@@ -81,6 +81,30 @@ export function MarchRecap() {
       glyph: <Glyph kind="gold" />,
     },
     {
+      /**
+       * **What the march costs in time** (owner, 2026-09-18: *"generation sometimes skips low-level stacks
+       * and misses some damage that seems cheap; it is mainly because one thing is not taken into account:
+       * troops of higher tier are longer to train. Adding training time on the battle summary is the first
+       * step."*).
+       *
+       * It sits with the two it belongs to — silver and gold are what the losses cost, this is how long they
+       * take — and it is read the way the game writes a training queue ("5d 23h", `duration`). Lower is
+       * better, like the two coins: a march that hits as hard and is back a day sooner is the better march,
+       * and that is the comparison this figure exists to make.
+       *
+       * **One figure for the whole march**, not a split: the engine already sums the two halves the way the
+       * recovery plan on the Battle card says (`recoveryCosts`), and a hired unit revives for gold in no
+       * time at all, so the figure is the troops' training queue and nothing has to be said twice.
+       */
+      key: 'time',
+      label: 'Time to recover',
+      value: summary.recovery.seconds,
+      previous: was((value) => value.recovery.seconds),
+      format: duration,
+      betterWhen: 'lower' as const,
+      glyph: <Glyph kind="time" />,
+    },
+    {
       key: 'perSilver',
       label: 'Damage per silver',
       value: summary.damagePerSilver,
@@ -126,7 +150,7 @@ export function MarchRecap() {
             {amount(summary.avgDamage)}
           </Text>
           <Group gap="xs" wrap="nowrap">
-            {/* The one figure that carried no mark while the four under it did (rule 21). */}
+            {/* The one figure that carried no mark while every figure under it did (rule 21). */}
             <Glyph kind="averageDamage" />
             <Text span size="sm" c="dimmed">
               Expected damage
@@ -143,7 +167,7 @@ export function MarchRecap() {
           </Group>
         </Stack>
 
-        {/* The four figures as the spacing contract draws them: a **2-column grid, 8 × 16 gaps**,
+        {/* The figures as the spacing contract draws them: a **2-column grid, 8 × 16 gaps**,
             the label 12 px muted with its glyph in the fixed box over a 15/600 tabular figure
             (`MarchPaneSpacing.dc.html`, `.figs`). They were four full-width rows of label-then-value
             before, which is four lines of a 420 px pane spent on four numbers. */}

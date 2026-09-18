@@ -51,7 +51,7 @@ import { useResultStore } from '@/ui/resultStore';
 
 import { PlanBar } from './PlanBar';
 import { PlanTrade } from './PlanTrade';
-import { amount, compact, ratio } from './format';
+import { amount, compact, duration, ratio } from './format';
 import { sequenceWords } from './picks';
 
 import { pickOf, sweetSpotOf, useRunStore } from './runStore';
@@ -213,13 +213,23 @@ export function PlanFold() {
             `Glyph` (design rule 21). */}
         <Group gap="xs" align="flex-start" wrap="nowrap">
           <Text size="sm" c="dimmed">
+            {/* **The third price, said in the same breath as the other two** (owner, 2026-09-18: *"troops
+                of higher tier are longer to train"*). A march is paid for in silver, in hired units that do
+                not come back, and in the days its losses sit in the training queue — and the third is the
+                one a player cannot read off the counts, because it is a fact about the *tiers* fielded
+                rather than about how many. `repeat.seconds` is the march this line is describing, the same
+                one the trade's own rows print (`PlanRepeat.seconds`). */}
             {best === null
               ? `It spends the silver box you set: ${amount(each.damage)} damage a march for ${amount(
                   each.silver,
-                )} silver, using ${mercsAMarch(shown)} of the hired stock each time.`
+                )} silver and ${duration(each.seconds)} of training, using ${mercsAMarch(
+                  shown,
+                )} of the hired stock each time.`
               : `The sweet spot it found for this army is ${amount(
                   best.repeat.damage,
-                )} damage a march, spending ${mercsAMarch(best)} of the hired stock each time.`}
+                )} damage a march, spending ${mercsAMarch(best)} of the hired stock and ${duration(
+                  best.repeat.seconds,
+                )} of training each time.`}
           </Text>
           {/* **A popover and not a tooltip** (design rules 18 and 24). It was a `Tooltip` with
               `touch: false`, which on a phone — the frame this app is designed at first — meant the
@@ -279,9 +289,14 @@ export function PlanFold() {
             to a hundred marches at once, and the figures above are the ones they march. It is the one line of
             the old tail that stays out of the fold below, because it answers a question the trade raises. */}
         <Text size="sm" c="dimmed">
+          {/* The campaign's own training queue rides with its silver, for the same reason the march's does
+              on the line above: `PlanTotals.seconds` is every march of the plan plus its finale, which is
+              the figure that says whether a plan is a fortnight or a season. */}
           {`Fought to the end: ${amount(plan.totalDamage)} damage and ${amount(
             plan.silver,
-          )} silver over ${amount(plan.marches)} marches, with ${amount(plan.mercLost)} of the hired stock gone.`}
+          )} silver over ${amount(plan.marches)} marches — ${duration(
+            plan.seconds,
+          )} of training — with ${amount(plan.mercLost)} of the hired stock gone.`}
         </Text>
 
         {/* **The prose goes behind a chevron** (the owner, 2026-09-16; design rule 4 — fold what is read

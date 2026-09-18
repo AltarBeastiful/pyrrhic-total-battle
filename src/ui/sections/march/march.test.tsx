@@ -24,7 +24,7 @@ import type * as WorkerClient from '@/worker/client';
 
 import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
-import { amount } from './format';
+import { amount, duration } from './format';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
 import { useRunStore } from './runStore';
@@ -138,12 +138,40 @@ test('the recap is the figures a march is compared by, the expected damage first
 
   const summary = lastResult()?.summary;
   expect(screen.getByText(amount(summary?.avgDamage ?? 0))).toBeTruthy();
-  for (const label of ['Worst opening', 'Silver to recover', 'Gold to recover', 'Damage per silver']) {
+  for (const label of [
+    'Worst opening',
+    'Silver to recover',
+    'Gold to recover',
+    'Time to recover',
+    'Damage per silver',
+  ]) {
     expect(screen.getByText(label)).toBeTruthy();
   }
   // How many times the army swings is a fact about a stack, so it is said in the unit sheet alone
   // (owner, 2026-09-13) and never in the recap.
   expect(screen.queryByText('Hits landed')).toBeNull();
+});
+
+/**
+ * **What the march costs in time**, beside what it costs in coin (owner, 2026-09-18: *"generation sometimes
+ * skips low-level stacks and misses some damage that seems cheap; it is mainly because one thing is not taken
+ * into account: troops of higher tier are longer to train. Adding training time on the battle summary is the
+ * first step."*).
+ *
+ * The figure is the engine's own `recovery.seconds` — the recap computes nothing — written the way the game
+ * writes a training queue, and it is **one figure for the whole march**: the recap never splits it by pool.
+ */
+test('the recap says how long the march takes to recover, in the training queue\u2019s own words', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+
+  const seconds = lastResult()?.summary.recovery.seconds ?? 0;
+  expect(seconds).toBeGreaterThan(0);
+  const figures = screen.getByLabelText('March figures');
+  const time = within(figures).getByText('Time to recover').closest('dt')?.nextElementSibling;
+  expect(time?.textContent).toContain(duration(seconds));
+  // "5d 23h", never "509 400": a queue is read in days and hours, not in seconds (`format.ts`).
+  expect(time?.textContent).not.toContain(amount(seconds));
 });
 
 test('the recap says which way every figure moved since the previous run', async () => {

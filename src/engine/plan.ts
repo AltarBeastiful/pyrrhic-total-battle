@@ -144,6 +144,21 @@ export interface PlanMarch {
   damage: number;
   silver: number;
   gold: number;
+  /**
+   * How long the march's losses take to come back into the army, in seconds — the third price a march is
+   * paid for, beside silver and gold, and the one the owner went looking for on 2026-09-18: *"generation
+   * sometimes skips low-level stacks and misses some damage that seems cheap; it is mainly because one
+   * thing is not taken into account: troops of higher tier are longer to train."* A Spearman I is back in
+   * fifteen seconds and a Rider III takes fourteen minutes, so two marches of the same silver are not the
+   * same march at all.
+   *
+   * Priced the way this file prices everything else (`toMarch`): the **troops are retrained** — every unit
+   * lost, at `training.seconds` divided by the account's training speed — and the **hired units are
+   * revived**, which the game charges in gold and no time at all (a mercenary has no `training` block).
+   * So this figure is the troop side's alone, and it is what `recoveryCosts` reports for the same counts
+   * under the retrain plan (`src/engine/recovery.ts`).
+   */
+  seconds: number;
   /** Units fielded of each mercenary type. */
   mercFielded: Record<string, number>;
   /** Mercenary units lost for good to this march. */
@@ -158,6 +173,8 @@ export interface PlanRepeat {
   silver: number;
   /** What the march's hired stacks cost to bring back: the engine prices mercenaries in gold, not silver. */
   gold: number;
+  /** What one march of it takes to recover, in seconds — `PlanMarch.seconds`, for the march the stop repeats. */
+  seconds: number;
   mercLost: number;
 }
 
@@ -190,6 +207,12 @@ export interface PlanTotals {
   totalDamage: number;
   silver: number;
   gold: number;
+  /**
+   * The whole campaign's recovery time, in seconds: the repeated march's own time taken as many times as it
+   * is fought, plus the finale's — or, for a plan whose marches differ (`sequence`), the sum over them. The
+   * figure a single march is read by is `repeat.seconds`, exactly as silver is.
+   */
+  seconds: number;
   mercLost: number;
   marches: number;
   /** The two criteria, reported side by side: damage bought per silver, and per irreplaceable mercenary. */
@@ -1130,15 +1153,20 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         const one = reviveOne(merc.entry.unit, merc.count, request.recovery);
         return sum + one.gold;
       }, 0);
-    const silver = rungs.reduce(
-      (sum, rung) => sum + retrainOne(rung.entry.unit, rung.count, request.recovery).silver,
-      0,
-    );
+    // One `retrainOne` per rung, read twice: the silver it costs and the time it takes. The hired stacks add
+    // nothing to the second — the game revives them for gold and a mercenary has no training block at all —
+    // which is precisely why a march that leans on them recovers faster than its silver suggests.
+    const troopRecovery = rungs.map((rung) => retrainOne(rung.entry.unit, rung.count, request.recovery));
+    const silver = troopRecovery.reduce((sum, one) => sum + one.silver, 0);
+    const seconds = troopRecovery.reduce((sum, one) => sum + one.seconds, 0);
     return {
       counts,
       damage: Math.round(totals.damage),
       silver: Math.round(silver),
       gold: Math.round(gold),
+      // Rounded once, on the sum, the way `recoveryCosts` rounds its own — rounding each rung first would
+      // drift by a second a stack against the recap the March draws.
+      seconds: Math.round(seconds),
       mercFielded,
       mercLost: totals.mercLost,
       strikes: Math.round(totals.strikes),
@@ -1593,6 +1621,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   // readable number. This is also where the recommendation comes from when no silver budget was given.
   const summarise = (candidate: Candidate): PlanTotals & { label: string } => {
     const m = toMarch(candidate.rungs, candidate.mercs, candidate.march);
+    // The finale, priced the same way — built once here rather than twice, because its counts and its
+    // recovery time are both read below.
+    const last =
+      candidate.finale === null
+        ? null
+        : toMarch(candidate.finaleRungs, candidate.finaleMercs, candidate.finale);
     const silver = candidate.marches * m.silver + (candidate.finale?.silver ?? 0);
     const mercLost = candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0);
     /**
@@ -1613,18 +1647,22 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         `${stacks} ${stacks === 1 ? 'stack' : 'stacks'} · ${hired} hired · ` +
         `${compact(m.silver)} silver a march`,
       counts: m.counts,
-      ...(candidate.finale && candidate.finaleRungs.length > 0
-        ? {
-            finaleCounts: toMarch(candidate.finaleRungs, candidate.finaleMercs, candidate.finale).counts,
-          }
-        : {}),
+      ...(last !== null && candidate.finaleRungs.length > 0 ? { finaleCounts: last.counts } : {}),
       totalDamage: Math.round(candidate.total),
       silver,
       gold: candidate.marches * m.gold,
+      // The campaign's training queue: every repeat of the march, plus the finale's own.
+      seconds: candidate.marches * m.seconds + (last?.seconds ?? 0),
       mercLost,
       // The repeated march's own figures, which `toMarch` already priced and the totals above spread the
       // finale over: these are what the March section reports for the plan's own march.
-      repeat: { damage: m.damage, silver: m.silver, gold: m.gold, mercLost: m.mercLost },
+      repeat: {
+        damage: m.damage,
+        silver: m.silver,
+        gold: m.gold,
+        seconds: m.seconds,
+        mercLost: m.mercLost,
+      },
       shape: candidate.depth === WINNER_RUNGS_DEPTH ? 'winner' : (SIZER_DEPTHS[candidate.depth] ?? 'ladder'),
       marches: candidate.marches + (candidate.finale ? 1 : 0),
       damagePerSilver: silver > 0 ? candidate.total / silver : Infinity,
@@ -2048,6 +2086,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const totalDamage = marches.reduce((sum, march) => sum + march.damage, 0);
     const silver = marches.reduce((sum, march) => sum + march.silver, 0);
     const gold = marches.reduce((sum, march) => sum + march.gold, 0);
+    // No march of this stop is the one above it repeated, so its recovery time is summed over the sequence
+    // like its damage and its silver, and `repeat.seconds` below is the **first** march's alone.
+    const seconds = marches.reduce((sum, march) => sum + march.seconds, 0);
     const mercLost = marches.reduce((sum, march) => sum + march.mercLost, 0);
     const hired = Object.values(head.mercFielded).reduce((sum, count) => sum + count, 0);
     return {
@@ -2057,8 +2098,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       totalDamage,
       silver,
       gold,
+      seconds,
       mercLost,
-      repeat: { damage: head.damage, silver: head.silver, gold: head.gold, mercLost: head.mercLost },
+      repeat: {
+        damage: head.damage,
+        silver: head.silver,
+        gold: head.gold,
+        seconds: head.seconds,
+        mercLost: head.mercLost,
+      },
       shape: first.depth === WINNER_RUNGS_DEPTH ? 'winner' : (SIZER_DEPTHS[first.depth] ?? 'ladder'),
       marches: marches.length,
       damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,

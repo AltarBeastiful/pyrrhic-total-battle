@@ -24,7 +24,7 @@ import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { PlanFold } from './PlanPanel';
 import { BAR_ENDS, bestForWords, planWords, sequenceWords } from './picks';
-import { amount, compact, ratio } from './format';
+import { amount, compact, duration, ratio } from './format';
 import { defaultPlanPosition, pickOf, sweetSpotOf, useRunStore } from './runStore';
 
 /** A small army with a hired stock: enough for the planner to have a real plan to show. */
@@ -518,7 +518,7 @@ const BURN_ROWS: PlanRow[] = [
     silver: 11,
     totalDamage: 101,
     bestFor: { silver: false, hired: true },
-    repeat: { damage: 4_100_000, silver: 2_000_000, gold: 11_400, mercLost: 9 },
+    repeat: { damage: 4_100_000, silver: 2_000_000, gold: 11_400, seconds: 950_400, mercLost: 9 },
   },
   {
     ...(ROWS[0] as PlanRow),
@@ -526,7 +526,7 @@ const BURN_ROWS: PlanRow[] = [
     silver: 12,
     totalDamage: 102,
     bestFor: { silver: false, hired: false },
-    repeat: { damage: 5_200_000, silver: 2_100_000, gold: 12_100, mercLost: 12 },
+    repeat: { damage: 5_200_000, silver: 2_100_000, gold: 12_100, seconds: 1_036_800, mercLost: 12 },
   },
   {
     ...(ROWS[0] as PlanRow),
@@ -534,7 +534,7 @@ const BURN_ROWS: PlanRow[] = [
     silver: 13,
     totalDamage: 103,
     bestFor: { silver: false, hired: false },
-    repeat: { damage: 6_200_000, silver: 2_200_000, gold: 22_000, mercLost: 17 },
+    repeat: { damage: 6_200_000, silver: 2_200_000, gold: 22_000, seconds: 1_123_200, mercLost: 17 },
   },
   {
     ...(ROWS[0] as PlanRow),
@@ -542,7 +542,7 @@ const BURN_ROWS: PlanRow[] = [
     silver: 14,
     totalDamage: 104,
     bestFor: { silver: true, hired: false },
-    repeat: { damage: 6_900_000, silver: 2_300_000, gold: 33_700, mercLost: 22 },
+    repeat: { damage: 6_900_000, silver: 2_300_000, gold: 33_700, seconds: 1_209_600, mercLost: 22 },
   },
   // The one stop that is a sequence rather than a march repeated: it carries `PlanTotals.sequence`, four
   // marches that differ, and nothing else about a row changes for it.
@@ -555,7 +555,7 @@ const BURN_ROWS: PlanRow[] = [
     marches: 4,
     finaleCounts: undefined,
     bestFor: { silver: false, hired: false },
-    repeat: { damage: 7_400_000, silver: 2_400_000, gold: 48_000, mercLost: 30 },
+    repeat: { damage: 7_400_000, silver: 2_400_000, gold: 48_000, seconds: 1_296_000, mercLost: 30 },
   },
 ];
 
@@ -648,6 +648,46 @@ test('the two efficiencies are notes on the stops that have them, not stops of t
   fireEvent.keyDown(thumb, { key: 'ArrowLeft' });
   expect(useRunStore.getState().planPick).toBe(dearest);
   expect(thumb.getAttribute('aria-valuetext') ?? '').toContain('best a silver');
+});
+
+/**
+ * **The training queue, under the silver it is paid beside** (owner, 2026-09-18: *"generation sometimes skips
+ * low-level stacks and misses some damage that seems cheap; it is mainly because one thing is not taken into
+ * account: troops of higher tier are longer to train"*).
+ *
+ * Two stops an hour apart in silver can be a week apart in training, and the silver column cannot say so. The
+ * figure goes **inside the silver cell** rather than into a seventh column: a seventh head measured 505 px in
+ * a 462 px pane when gold was tried as one, which is why gold rides the tip instead.
+ */
+test('every stop says how long its march takes to recover, under the silver it costs', () => {
+  stubLayout();
+  primeBurn();
+  renderWithTheme(<PlanFold />);
+
+  const rows = tradeRows();
+  for (const [index, row] of rows.entries()) {
+    const point = BURN_ROWS[index] as PlanRow;
+    expect(row.textContent ?? '', `${point.pick} prints its queue`).toContain(duration(point.repeat.seconds));
+    // And in the row's accessible name beside its silver, because a figure drawn in the muted ink is a
+    // figure half the readers do not get (design rule 24).
+    expect(row.getAttribute('aria-label') ?? '').toContain(`${duration(point.repeat.seconds)} to recover`);
+  }
+  // Read in the game's own words, never as a count of seconds.
+  expect(rows[0]?.textContent ?? '').toContain('11d 0h');
+  expect(rows[0]?.textContent ?? '').not.toContain(amount(950_400));
+
+  // **Still six columns.** The queue is a second line inside the silver cell, not a head of its own.
+  const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
+  expect(headers).toEqual(['Plan', '🎯 Damage', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+
+  // The line over the bar says it for the plan the fold is reading, and "Fought to the end" for the whole
+  // campaign — the same two places its silver is said (design rule 5: one name, said where it is expected).
+  expect(screen.getByText(/sweet spot it found/).textContent ?? '').toContain(
+    `${duration((BURN_ROWS[1] as PlanRow).repeat.seconds)} of training`,
+  );
+  expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
+    `${duration(BURN.seconds)} of training`,
+  );
 });
 
 test('the tip carries the gold a march the trade has no room for', () => {
