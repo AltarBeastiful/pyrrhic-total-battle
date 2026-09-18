@@ -156,6 +156,26 @@ export interface CampaignInput {
    */
   withTrade?: boolean;
   /**
+   * Ask for the **frontier itself** — every plan the search summarised, whether the band kept it or not — as
+   * `CampaignPlan.frontier`.
+   *
+   * A **diagnostic for experiments, never read by the UI** (the app's own request does not carry it, see
+   * `buildPlanRequest`): `withTrade` hands back the plans the stops were chosen *from*, which is already the
+   * band's filtered view, so a question about what the band and the stop rules *left behind* — the rows the
+   * bar never offered and why — cannot be answered from outside the engine at all. Each row carries the two
+   * verdicts (`undominated`, `inBand`), the stop it became if it became one, and the stop it was the
+   * **generator** of — the march a put-back re-sized, which is the same stop one pass earlier and not a plan
+   * the bar left behind — so an experiment can ask of any silver level which plan stands there and which rule
+   * passed it over (`tools/theorycraft/104-union-slider.test.ts`).
+   *
+   * The rows are the frontier's own summaries **plus the best-damage shape recorded at each silver bucket** —
+   * the plans the `curve` is written from, which the frontier itself does not carry: `record` books every
+   * shape the search scores while `consider` keeps only the strongest of each mercenary vector, so a row of
+   * the reference table under the bar usually has no plan on the frontier behind it. `onFrontier` tells the
+   * two apart. Sorted by silver; the `all-in` stop is built march by march outside both and is not among them.
+   */
+  withFrontier?: boolean;
+  /**
    * Wall-clock budget, the way S-54's search has one: the plan answers with its best find when it runs out,
    * so a press on Generate is bounded and a longer budget buys a better plan rather than a different kind of
    * answer. Omitted: the search runs to completion (tens of seconds on a full account).
@@ -352,6 +372,42 @@ export interface PlanRow extends PlanTotals {
  */
 type TradeRow = PlanTotals & { label: string; putBack?: PlanRow['putBack'] };
 
+/**
+ * One row of the frontier as a **diagnostic** (`CampaignInput.withFrontier`): the plan the search summarised,
+ * plus the verdicts passed on it — whether the frontier carried it at all, whether nothing else beat it on
+ * all three resources, whether the band kept it, and which stop of the bar it became. Not a payload a screen
+ * reads.
+ */
+export type PlanFrontierRow = PlanTotals & {
+  label: string;
+  /**
+   * The frontier carries **this candidate**, by object identity: the row was summarised from a `Candidate`
+   * the search pushed onto `frontier` (`consider`). False for a row that only the **curve** carries — the
+   * best shape recorded at one silver bucket, which the search scored and then threw away because a stronger
+   * shape of the same mercenary vector was the one it kept. It is identity and not counts: a plan the
+   * frontier holds and a bucket's best that field the same march are one row here, and it reads `true`.
+   */
+  onFrontier: boolean;
+  /**
+   * It is in the engine's own undominated set — which a row the frontier never carried cannot be, so this is
+   * always false when `onFrontier` is.
+   */
+  undominated: boolean;
+  /** The band kept it: not a token field, not a silver sink, more than one troop stack (and S-58 B). */
+  inBand: boolean;
+  /**
+   * The stop the bar offers this plan as, when it offers it. Matched on the row's **counts**, sorted, so the
+   * key order two records were built in cannot tell one march from itself.
+   */
+  stop?: PlanPick | undefined;
+  /**
+   * The stop this plan was the **generator** of: the march the put-back pass re-sized into a stop
+   * (`generatedOf`). Such a row is on the bar — it is that stop one pass earlier — and counting it as a plan
+   * the bar left behind reads a pass over the same march as a missed offer.
+   */
+  generatorOf?: PlanPick | undefined;
+};
+
 export interface CampaignPlan extends PlanTotals {
   /** The repeated march (the plan is this, `marches` times), or the single march if `marches` is 1. */
   march: PlanMarch;
@@ -387,6 +443,13 @@ export interface CampaignPlan extends PlanTotals {
    * the frontier list above is thinned for the eye.
    */
   curve: PlanCurvePoint[];
+  /**
+   * **Every plan the search summarised**, and the plan behind each bucket of the `curve`, sorted by silver —
+   * each carrying whether the frontier held it (`onFrontier`), whether it is undominated, whether the band
+   * kept it and which stop it became. Present only when the caller asked for it
+   * (`CampaignInput.withFrontier`) — a diagnostic for experiments, not something the UI draws.
+   */
+  frontier?: PlanFrontierRow[] | undefined;
   /**
    * The **sweet spot**: the middle of the trade in hired stock, present only when no silver budget was given.
    * With a budget the plan *is* the answer and there is nothing left to balance. It is the bar's
@@ -1176,6 +1239,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       thrifty: { damage: number; silver: number; mercs: number };
     }
   >();
+  /** The candidate behind each bucket's `best`, kept only for `CampaignInput.withFrontier`. */
+  const bucketBest = new Map<number, Candidate>();
   /** The plan that buys the most damage per silver — only meaningful before a budget is applied. */
   let light: Candidate | null = null;
   /** The plan that buys the most damage per mercenary over the whole search. */
@@ -1331,7 +1396,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         best: { damage: 0, silver: 0, mercs: 0 },
         thrifty: { damage: 0, silver: 0, mercs: 0 },
       };
-      if (total > entry.best.damage) entry.best = { damage: total, silver: pointSilver, mercs: pointMercs };
+      if (total > entry.best.damage) {
+        entry.best = { damage: total, silver: pointSilver, mercs: pointMercs };
+        // The plan behind that bucket, for the diagnostic alone (`CampaignInput.withFrontier`): the curve
+        // carries three figures, and "which march is this row" cannot be asked of three figures.
+        if (input.withFrontier === true) bucketBest.set(key, candidate);
+      }
       if (total / pointMercs > entry.thrifty.damage / Math.max(1, entry.thrifty.mercs)) {
         entry.thrifty = { damage: total, silver: pointSilver, mercs: pointMercs };
       }
@@ -2636,8 +2706,62 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       thriftyMercLost: entry.thrifty.mercs,
       thriftyPerMercenary: entry.thrifty.damage / Math.max(1, entry.thrifty.mercs),
     }));
+  /**
+   * The frontier as the caller asked to see it (`CampaignInput.withFrontier`). A stop is matched back to the
+   * row it came from by the put-back's own bookkeeping (`generatedOf`, which holds the generated march a
+   * re-sized stop was made from) and otherwise by its counts, which is the same test `offer` deduplicates by.
+   */
+  const frontierRows: PlanFrontierRow[] | undefined =
+    input.withFrontier === true
+      ? (() => {
+          /**
+           * A march's identity for the diagnostic: its non-zero counts, sorted, so two records of the same
+           * march match whatever order their keys were written in. `sameCounts` above compares the objects'
+           * JSON and is key-order dependent; it is left exactly as it is, because changing what `offer`
+           * deduplicates by would be a change to the bar.
+           */
+          const keyOf = (counts: Record<string, number>): string =>
+            Object.entries(counts)
+              .filter(([, count]) => count > 0)
+              .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+              .map(([id, count]) => `${id}:${count}`)
+              .join(',');
+          const stopByKey = new Map<string, PlanPick>();
+          const generatorByKey = new Map<string, PlanPick>();
+          for (const stop of stops) {
+            stopByKey.set(keyOf(stop.counts), stop.pick);
+            const generated = generatedOf.get(stop);
+            if (generated) generatorByKey.set(keyOf(generated.counts), stop.pick);
+          }
+          const decorate = (row: TradeRow, held: boolean): PlanFrontierRow => {
+            const key = keyOf(row.counts);
+            const stop = stopByKey.get(key);
+            const generatorOf = generatorByKey.get(key);
+            return {
+              ...row,
+              onFrontier: held,
+              undominated: held && undominated.includes(row),
+              inBand: inBand(row),
+              ...(stop !== undefined ? { stop } : {}),
+              ...(generatorOf !== undefined ? { generatorOf } : {}),
+            };
+          };
+          const seen = new Set<Candidate>(frontier);
+          const onFrontier: PlanFrontierRow[] = all.map((row) => decorate(row, true));
+          const fromCurve: PlanFrontierRow[] = [];
+          for (const candidate of bucketBest.values()) {
+            if (seen.has(candidate)) continue;
+            seen.add(candidate);
+            fromCurve.push(decorate(summarise(candidate), false));
+          }
+          return [...onFrontier, ...fromCurve].sort(
+            (a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage,
+          );
+        })()
+      : undefined;
   return {
     curve,
+    ...(frontierRows !== undefined ? { frontier: frontierRows } : {}),
     ...total,
     march,
     finale,
