@@ -212,9 +212,10 @@ export interface PlanTotals {
   finaleCounts?: Record<string, number> | undefined;
   /**
    * Every march of the campaign, first to last, when they **differ** — the `all-in` stop, which fields every
-   * mercenary the troops can shelter and then marches on what is left. Absent for a plan that repeats one
-   * march and plays a finale; then `counts` × the repeats plus `finaleCounts` is the campaign. `repeat` is the
-   * first march's figures either way, and the totals are the whole sequence's.
+   * mercenary the troops can shelter, marches on what is left, and plays the rest of the horizon on troops
+   * alone once the stock is spent. Absent for a plan that repeats one march and plays a finale; then `counts`
+   * × the repeats plus `finaleCounts` is the campaign. `repeat` is the first march's figures either way, and
+   * the totals are the whole sequence's. It is always as long as the horizon.
    */
   sequence?: Record<string, number>[] | undefined;
   /**
@@ -295,12 +296,13 @@ export interface PlanCurvePoint {
  *  - `steady-max` — the top of the ladder: the most mercenaries the troops shelter **every march of the
  *    horizon**, and the most damage a repeated march does;
  *  - `all-in` — every mercenary the troops can shelter on the first march, then each next march on what the
- *    stock has left (`PlanTotals.sequence`): the campaign that spends the stock fastest. It is offered when
- *    its first march **fields** more hired units than the steady max's repeat, which is the one reading on
- *    this bar that is a count rather than a cost: a stock smaller than a chunk burns the same whatever it
- *    fields, so 10 · 9 · 8 · 7 tied the steady max and was dropped as a duplicate of it, on the very armies
- *    where TotalStack's priority search answers 26 486 216 over four marches (ten bears) and 25 439 016
- *    (three) against this plan's 21 732 276 and 14 168 526.
+ *    stock has left, then troops alone for the rest of the horizon (`PlanTotals.sequence`): the campaign that
+ *    spends the stock fastest, played to the end. It is offered when its first march **fields** more hired
+ *    units than the steady max's repeat, which is the one reading on this bar that is a count rather than a
+ *    cost: a stock smaller than a chunk burns the same whatever it fields, so 10 · 9 · 8 · 7 tied the steady
+ *    max and was dropped as a duplicate of it, on the very armies where TotalStack's priority search answers
+ *    26 486 216 over four marches (ten bears) and 25 439 016 (three) against this plan's 21 732 276 and
+ *    19 115 768.
  */
 export type PlanPick = 'silver-saver' | 'sweet-spot' | 'more-mercs' | 'steady-max' | 'all-in';
 
@@ -2260,6 +2262,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * the stock is tried whole, then at 95 %, 90 %… until a shape shelters it. The campaign that spends the stock
    * fastest — the descending sequence the benchmark (`tests/engine/plan-benchmark.test.ts`) found the sizers
    * playing and the plan unable to express.
+   *
+   * **And when the stock runs out before the horizon does, it marches on troops alone** (owner, 2026-09-19:
+   * *"continue for the measured additions"*). This stop is the one plan on the bar that is a *sequence*, so
+   * unlike every other row it has a march count of its own to fill: spending the stock fastest is the point of
+   * it, and stopping the campaign the moment the stock is gone threw away every march the horizon still had
+   * room for. Measured on a first-run army holding three Bear V at 20 000 leadership (2026-09-18): the all-in
+   * played 3 · 2 · 1 for **14 505 126** damage over three marches of a four-march horizon, where TotalStack
+   * answers **19 388 676** at equal silver — and the whole of the gap was the fourth march. Playing it, the
+   * stop is **19 115 768** for 32 525 600 silver: 98.6 % of TotalStack's answer at the same silver, where it
+   * was 74.8 % (2026-09-19).
+   *
+   * The tail is the sizer's own march over **every troop type the account holds, with no mercenaries**: there
+   * is no hired stock left to plan, and a march of troops alone is the sizer's job rather than this method's
+   * (the same sentence `repeatsFor` makes about a finale with nothing left in it). It is repeated for each
+   * march the horizon has left, it is priced by `toMarch` like every other march here — so its silver and its
+   * seconds are the recap's — and it passes this stop's shelter test trivially, having no hired stack to
+   * shelter. The campaign's two ratios do move — the tail's damage is spread over the same hired burned, so
+   * damage a hired rises (bears ×3: 4 835 042 → 6 371 923) and damage a silver eases (0.595 → 0.588) — but no
+   * rule reads them here: the offer rule still reads the **first** march's hired count, the S-76
+   * ceiling still gives a *repeated* stop no finale when its hired is spent, and `repeat` is still the first
+   * march's figures alone.
    */
   const allIn = ((): TradeRow | undefined => {
     if (planned === undefined || planned < 1) return undefined;
@@ -2337,6 +2360,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const first = played[0];
     if (!first) return undefined;
     const marches = played.map((candidate) => toMarch(candidate.rungs, candidate.mercs, candidate.march));
+    /**
+     * **The marches the spent stock leaves over**: the sizer over the troop types alone, once, repeated for
+     * each of them. `elite` names the method because the app's own default does — with no mercenary in the
+     * request there is nothing for the two preservation methods to preserve, and all three sized the same
+     * march to the unit on every army measured (2026-09-19: the first-run army at three bears and at 83 Epic
+     * Monster Hunter VI, the 4 000-leadership case, the owner's export at 7 000). An army with no troop type
+     * to field has no tail, and the campaign is as short as it was.
+     */
+    if (marches.length < planned) {
+      const sized = sizer([], 'elite');
+      if (sized.rungs.length > 0) {
+        const tail = toMarch(sized.rungs, [], marchOf(sized.rungs, enemyStacks));
+        while (marches.length < planned) marches.push(tail);
+      }
+    }
     const head = marches[0] as PlanMarch;
     const totalDamage = marches.reduce((sum, march) => sum + march.damage, 0);
     const silver = marches.reduce((sum, march) => sum + march.silver, 0);

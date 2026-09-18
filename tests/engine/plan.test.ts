@@ -528,7 +528,8 @@ describe(
  * on what its first march **fields** instead — the one place the engine reads a count rather than a cost.
  *
  * TotalStack's own priority search answers exactly those campaigns: 26 486 216 over four marches with ten
- * bears in stock and 25 439 016 with three, against this plan's 21 732 276 and 14 168 526.
+ * bears in stock and 25 439 016 with three, against this plan's 21 732 276 and 19 115 768 (2026-09-19, the
+ * all-in's tail).
  */
 describe('a stock smaller than a chunk still has an all-in', () => {
   test(
@@ -574,29 +575,135 @@ describe('a stock smaller than a chunk still has an all-in', () => {
   );
 
   test(
-    'three bears: the all-in fields 3 · 2 · 1 and stops when the stock is gone',
+    'three bears: the all-in fields 3 · 2 · 1 and then marches on troops alone',
     () => {
       const req = firstRun({ id: 'bear-5', cap: 3 });
       const plan = planCampaign({ request: req, marchTarget: CAMPAIGN.marches, ...CAMPAIGN.planFixes });
       const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
       expect(allIn, 'the all-in stop is offered').toBeDefined();
-      expect((allIn?.sequence ?? []).map((march) => march['bear-5'] ?? 0)).toEqual([3, 2, 1]);
+      expect((allIn?.sequence ?? []).map((march) => march['bear-5'] ?? 0)).toEqual([3, 2, 1, 0]);
       // It is the hardest-hitting campaign on this bar, which is the point of offering it: measured
-      // 2026-09-18, 14 505 126 against the repeat's 14 168 526 (one bear a march for three marches).
+      // 2026-09-19, 19 115 768 against the repeat's 14 168 526 (one bear a march for three marches).
       expect(allIn?.totalDamage ?? 0).toBeGreaterThan(
         Math.max(...plan.alternatives.filter((row) => row.pick !== 'all-in').map((row) => row.totalDamage)),
       );
-      // **It plays three marches, not the horizon's four** (measured 2026-09-18). The all-in stops where the
-      // stock does: its rule is "every mercenary the troops can shelter, then what is left", and after 3 · 2 ·
-      // 1 there is nothing left to shelter. TotalStack's priority search marches a fourth time on troops alone
-      // and reaches 25 439 016 where this bar's best is 14 505 126, so a march with no hired stack in it is
-      // damage this method leaves on the table — but it is the sizer's march, not a plan of the hired stock,
-      // and nothing else about the horizon changed here (S-76: the horizon is a ceiling).
-      expect(allIn?.marches).toBe(3);
-      expect(allIn?.sequence?.length).toBe(3);
+      // **And it plays the horizon** (2026-09-19). It used to stop where the stock did — 14 505 126 over
+      // three marches of a four-march horizon — and the whole of the gap to TotalStack was the march it never
+      // played. The fourth is the sizer's own march over the troop types, no hired stack in it, and the
+      // campaign is 19 115 768 at 32 525 600 silver against TotalStack's 19 388 676 at 32 535 200.
+      expect(allIn?.marches).toBe(CAMPAIGN.marches);
+      expect(allIn?.sequence?.length).toBe(CAMPAIGN.marches);
+      expect(allIn?.totalDamage ?? 0).toBeGreaterThanOrEqual(19_000_000);
     },
     TIMEOUT,
   );
+});
+
+/**
+ * **The horizon the all-in plays out on troops alone** (owner, 2026-09-19: *"continue for the measured
+ * additions"*).
+ *
+ * Every other stop repeats one march and spends what is left in a finale, so the horizon is a ceiling it
+ * never has to fill (S-76). The `all-in` is the one stop that is a **sequence**, and spending the stock
+ * fastest is the whole of it: once the hired stock is gone the marches the horizon still has room for are the
+ * sizer's own march over the troop types, with no mercenary in it. Measured on a first-run army holding three
+ * Bear V at 20 000 leadership: 3 · 2 · 1 was 14 505 126 for 24 394 200 silver over three marches of four, and
+ * the tail march is 4 610 642 for 8 131 400 — 19 115 768 at 32 525 600 against TotalStack's 19 388 676 at
+ * 32 535 200, which is 98.6 % of its answer at the same silver.
+ */
+describe('the all-in plays the horizon', () => {
+  /** The marches of a stop, priced one by one by the battle itself — `marchResult` → `simulateBattle`. */
+  const priced = (req: StackRequest, marches: Record<string, number>[]): { damage: number; silver: number } =>
+    marches.reduce<{ damage: number; silver: number }>(
+      (sum, counts) => {
+        const { summary } = planMarch(req, counts);
+        return { damage: sum.damage + summary.avgDamage, silver: sum.silver + summary.recovery.silver };
+      },
+      { damage: 0, silver: 0 },
+    );
+
+  test.each([3, 10])(
+    '%i bears: the sequence is the horizon, and its totals are the marches priced one by one',
+    (cap) => {
+      const req = firstRun({ id: 'bear-5', cap });
+      const plan = planCampaign({ request: req, marchTarget: CAMPAIGN.marches, ...CAMPAIGN.planFixes });
+      const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
+      expect(allIn, 'the all-in stop is offered').toBeDefined();
+      const sequence = allIn?.sequence ?? [];
+      // Exactly the horizon: no march fewer, and — the S-76 ceiling — no march more.
+      expect(sequence.length).toBe(CAMPAIGN.marches);
+      expect(allIn?.marches).toBe(CAMPAIGN.marches);
+
+      // Every march is fieldable, and the ones the spent stock left over are troops alone: no hired unit in
+      // them, and a real march of troops rather than an empty one.
+      for (const counts of sequence) {
+        expect(used(req, counts, 'leadership')).toBeLessThanOrEqual(req.housing.leadership);
+        expect(used(req, counts, 'authority')).toBeLessThanOrEqual(req.housing.authority);
+        const troops = Object.entries(counts).filter(
+          ([id]) => req.units.find((unit) => unit.id === id)?.pool === 'leadership',
+        );
+        expect(troops.reduce((sum, [, count]) => sum + count, 0)).toBeGreaterThan(0);
+      }
+      // A stock of three lasts three marches, so the last is the tail; ten bears field 10 · 9 · 8 · 7 and
+      // there is no tail at all (measured 2026-09-19).
+      const tails = sequence.filter((counts) => fieldedOf(req, counts) === 0);
+      expect(tails.length).toBe(cap === 3 ? 1 : 0);
+      for (const tail of tails) expect(tail['bear-5'] ?? 0).toBe(0);
+
+      // The row's own figures are the campaign's marches, priced by the battle: nothing is spread, summed
+      // twice or left out.
+      const sum = priced(req, sequence);
+      expect(Math.abs((allIn?.totalDamage ?? 0) - sum.damage)).toBeLessThanOrEqual(1);
+      expect(Math.abs((allIn?.silver ?? 0) - sum.silver)).toBeLessThanOrEqual(1);
+      // The first march's own figures are `repeat`, as they always were — the tail never touches them.
+      const head = sequence[0];
+      if (!head) throw new Error('no first march');
+      expect(allIn?.repeat.damage).toBe(planMarch(req, head).summary.avgDamage);
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'three bears: the campaign clears nineteen million',
+    () => {
+      const req = firstRun({ id: 'bear-5', cap: 3 });
+      const plan = planCampaign({ request: req, marchTarget: CAMPAIGN.marches, ...CAMPAIGN.planFixes });
+      const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
+      // Measured 2026-09-19: 19 115 768 for 32 525 600 silver, where the stop stopped at 14 505 126 for
+      // 24 394 200 before the tail.
+      expect(allIn?.totalDamage ?? 0).toBeGreaterThanOrEqual(19_000_000);
+    },
+    TIMEOUT,
+  );
+
+  /**
+   * **A stock that lasts the horizon is untouched.** The owner's export holds 234 hired units over four
+   * types, and its all-in already fielded hired on all four marches: measured 2026-09-18 at 22 518 504 for
+   * 14 337 600 silver over four marches, and the tail cannot fire on it.
+   */
+  describe.skipIf(!existsSync(OWNER_EXPORT))('the owner’s account at 7 000 leadership', () => {
+    test(
+      'the all-in is the campaign it was, hired on every march of it',
+      () => {
+        const parsed = parseImport(readFileSync(OWNER_EXPORT, 'utf8'));
+        if (parsed.kind !== 'profile') throw new Error('no profile');
+        const setup = parsed.payload.setups[0];
+        if (!setup) throw new Error('no setup');
+        const input = buildPlanRequest(parsed.payload, setup);
+        const plan = planCampaign(input);
+        const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
+        expect(allIn, 'the all-in stop is offered').toBeDefined();
+        expect(allIn?.marches).toBe(CAMPAIGN.marches);
+        expect(allIn?.sequence?.length).toBe(CAMPAIGN.marches);
+        for (const counts of allIn?.sequence ?? []) {
+          expect(fieldedOf(input.request, counts), 'every march of it fields hired units').toBeGreaterThan(0);
+        }
+        expect(allIn?.totalDamage).toBe(22_518_504);
+        expect(allIn?.silver).toBe(14_337_600);
+      },
+      TIMEOUT,
+    );
+  });
 });
 
 /**

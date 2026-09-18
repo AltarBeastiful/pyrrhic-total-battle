@@ -89,6 +89,14 @@ export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
 export const BAR_ENDS = { low: 'Fewest hired lost', high: 'Most hired lost' } as const;
 
 /**
+ * Whether a march of the sequence fields any hired unit. A count whose id the tables do not carry is a
+ * **custom mercenary** — the one kind of unit the player describes by hand, and always of the authority pool
+ * (`buildUnits`, `src/state/derive.ts`) — so an unknown id counts as hired rather than as a troop.
+ */
+const fieldsHired = (counts: Record<string, number>): boolean =>
+  Object.entries(counts).some(([id, count]) => count > 0 && unitById(id)?.pool !== 'leadership');
+
+/**
  * **The one stop that is a sequence, said in one line** — or `null` for every other stop.
  *
  * Every other plan on the bar is one march repeated and a last one to spend what is left, so "a march" names
@@ -100,12 +108,22 @@ export const BAR_ENDS = { low: 'Fewest hired lost', high: 'Most hired lost' } as
  *
  * One sentence, in one place (design rule 5): the fold's own summary line and the bar's tip both read it, so
  * the stop cannot describe itself one way over the bar and another over the March.
+ *
+ * **And it says where the mercenaries run out** (2026-09-19). The stop plays the whole horizon now: when the
+ * stock is spent before the last march, the marches left over are the sizer's own, troops and no hired stack
+ * at all (`src/engine/plan.ts`, the all-in's tail). A reader told only "four marches, each on what the last
+ * one left" would take the fourth for another march of mercenaries — the figures beside it are the first
+ * march's — so the tail is counted in the same line rather than left to the counts table to reveal.
  */
-
 export function sequenceWords(row: Pick<PlanRow, 'sequence'>): string | null {
-  const marches = row.sequence?.length ?? 0;
+  const sequence = row.sequence ?? [];
+  const marches = sequence.length;
   if (marches < 1) return null;
-  return `${String(marches)} march${marches === 1 ? '' : 'es'}, each on what the last one left`;
+  const words = `${String(marches)} march${marches === 1 ? '' : 'es'}, each on what the last one left`;
+  let tail = 0;
+  while (tail < marches && !fieldsHired(sequence[marches - 1 - tail] ?? {})) tail += 1;
+  if (tail === 0 || tail === marches) return words;
+  return `${words}, the last ${tail === 1 ? '' : `${String(tail)} `}on troops alone`;
 }
 
 /**

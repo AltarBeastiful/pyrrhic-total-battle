@@ -738,6 +738,34 @@ test('the all-in stop says it is a sequence, on the bar and on the row the fold 
 });
 
 /**
+ * **The all-in says where its mercenaries run out** (2026-09-19). The stop plays the whole horizon now: once
+ * the hired stock is spent, the marches the horizon still has room for are the sizer's own — troops and no
+ * hired stack at all (`src/engine/plan.ts`, the all-in's tail). Measured on a first-run army holding three
+ * Bear V, that is 3 · 2 · 1 and then one march of troops alone.
+ */
+test('the all-in line counts the marches it fights on troops alone', () => {
+  const hired = (bears: number): Record<string, number> => ({ 'swordsman-1': 3_048, 'bear-5': bears });
+  const alone: Record<string, number> = { 'swordsman-1': 3_048 };
+  const words = (sequence: Record<string, number>[]): string | null => sequenceWords({ sequence });
+
+  // Three bears over a four-march horizon: 3 · 2 · 1, and the fourth on the troops.
+  expect(words([hired(3), hired(2), hired(1), alone])).toBe(
+    '4 marches, each on what the last one left, the last on troops alone',
+  );
+  // Two of them, counted rather than named one by one — the line stays one line.
+  expect(words([hired(3), hired(1), alone, alone])).toBe(
+    '4 marches, each on what the last one left, the last 2 on troops alone',
+  );
+  // Ten bears field 10 · 9 · 8 · 7: the stock lasts the horizon and there is no tail to say.
+  expect(words([hired(10), hired(9), hired(8), hired(7)])).toBe('4 marches, each on what the last one left');
+  // A **custom** mercenary is a unit the tables do not carry, and it is always of the authority pool: its
+  // march fields hired units and is not a march of troops alone.
+  expect(words([hired(3), { 'swordsman-1': 3_048, 'my-own-beast': 4 }])).toBe(
+    '2 marches, each on what the last one left',
+  );
+});
+
+/**
  * **The put-back line** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and misses some
  * damage that seems cheap … troops of higher tier are longer to train"*; `PlanRow.putBack`).
  *

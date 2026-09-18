@@ -34,9 +34,11 @@
  * `benchmark-latest.json` beside it (what a before/after comparison reads). The first-run and 4 000 cases run
  * everywhere; the owner's cases run where his export is.
  *
- * Read the rows knowing what they are not (validator, 2026-09-18): the plan may play fewer marches than the
- * horizon when its stock runs out, while a sizer sequence goes on with troops alone, so a "four-march" share
- * can compare three marches with four; a captured answer is one march repeated on its own stock, never
+ * Read the rows knowing what they are not (validator, 2026-09-18): a plan **stop that repeats a march** may
+ * play fewer marches than the horizon when its stock runs out, while a sizer sequence goes on with troops
+ * alone, so a "four-march" share can compare three marches with four — the `all-in` is the one stop that
+ * always plays the horizon, on troops alone once its stock is spent (2026-09-19); a captured answer is one
+ * march repeated on its own stock, never
  * re-sized as its stock drains (conservative for it); the 4 000 case's troop types are the ones TotalStack's
  * answer fielded, and TotalStack was asked for damage a silver where this table ranks damage. Both searches
  * run under the app's own budgets (`CAMPAIGN.budgets`).
@@ -532,13 +534,20 @@ function commonScenarios(): Scenario[] {
       // the bar's own axis and was dropped as a duplicate of it. 1 → **2** stops, and the new one is the
       // plan's hardest campaign here: 14 505 126 against 14 168 526, which is 58.8 % → **60.2 %** of the
       // sizers and 55.7 % → **57.0 %** of TotalStack's answer. Nothing else on this case moved.
+      // Re-based 2026-09-19, the all-in's tail: the stop stopped where the stock did — 3 · 2 · 1, three
+      // marches of a four-march horizon — and the fourth march was the whole of the gap to the sizers, which
+      // go on with troops alone. It now plays it: 14 505 126 for 24 394 200 over three marches →
+      // **19 115 768 for 32 525 600 over four**, which is 60.2 % → **79.4 %** of the sizers and 57.0 % →
+      // **75.1 %** of TotalStack's best. At equal silver it is 98.6 % of TotalStack's M's Preservation
+      // (19 388 676 for 32 535 200). Its ratios move with it — 0.595 → 0.588 a silver, 4 835 042 →
+      // 6 371 923 a hired — and the stop count, the stops' own marches and every other row are unmoved.
       pinned: {
         refuses: false,
         stops: 2,
         sweetLosesOnBoth: true,
-        damageFloor: 0.6,
+        damageFloor: 0.79,
         winsHired: false,
-        externals: { damageFloor: 0.57, winsHired: false },
+        externals: { damageFloor: 0.75, winsHired: false },
       },
     },
     {
@@ -557,6 +566,8 @@ function commonScenarios(): Scenario[] {
       // 45 577 400 silver against the repeat's 21 732 276 for 32 525 600, so 40 % more silver to spend the
       // stock four times faster for slightly less damage. The bar can show that as a poor deal now, which it
       // could not before; every pinned figure is unmoved (86.5 % of the sizers, 82.1 % of TotalStack).
+      // Unmoved again on 2026-09-19 by the all-in's tail: 10 · 9 · 8 · 7 already lasts the whole horizon, so
+      // this case has no tail to play and not one figure of it changed.
       pinned: {
         refuses: false,
         stops: 2,

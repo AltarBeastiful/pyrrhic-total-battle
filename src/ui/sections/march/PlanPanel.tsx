@@ -164,9 +164,9 @@ export function PlanFold() {
    *
    * Every stop but one is a march repeated and a last one to spend the remainder, so the row counts the
    * repeats and says "+ a last one". The `all-in` stop is a **sequence**: it shelters every mercenary it can
-   * on the first march and then marches on what the stock has left, so no two of its marches are the same
-   * one and counting repeats of the march above would be false (`PlanTotals.sequence`, and `sequenceWords`
-   * in `./picks` where the words live).
+   * on the first march, marches on what the stock has left, and plays out the horizon on troops alone once
+   * the stock is spent — so the march above it is not the campaign and counting repeats of it would be false
+   * (`PlanTotals.sequence`, and `sequenceWords` in `./picks` where the words live).
    */
   const sequence = sequenceWords(shown);
   const best = sweet === null ? null : (rows[sweet] ?? null);
