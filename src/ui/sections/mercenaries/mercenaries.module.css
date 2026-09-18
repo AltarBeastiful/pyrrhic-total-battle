@@ -63,10 +63,16 @@
   border-radius: 50%;
 }
 
-/* The one figure on the pill: how many you own, tabular so a row of pills reads as a column of
-   counts, and `∞` through `Glyph`'s box so an "unlimited" pill is exactly as tall as a "1 212" one. */
+/* The one figure on the pill, in its badge (2026-09-18): how many you own, tabular so a row of pills
+   reads as a column of counts, never squeezed, and its label left to overflow the way the tier
+   badge's is — Mantine clips a badge's label to its box, which took the top off "1 212". */
 .count {
+  flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
+}
+
+.count :global(.mantine-Badge-label) {
+  overflow: visible;
 }
 
 /* ---------------------------------------------------------------------------------------------

@@ -77,16 +77,25 @@ test('the owned-count editor does not move while the figure is typed', async ({ 
   }
   await search.press('Escape');
 
-  await card.getByRole('button', { name: 'Abomination VI: owned unlimited' }).click();
+  const face = card.getByRole('button', { name: /^Abomination VI: owned/ });
+  await face.click();
   const editor = page.getByRole('dialog');
   await expect(editor).toBeVisible();
 
-  const box = async (): Promise<{ x: number; width: number }> => {
+  // What must not happen is the box sliding along the pill as the figure lands — its alignment
+  // flipping to the pill's end. The pill itself may wrap to the next line once its count badge makes
+  // the row too wide for 390 px (the 2026-09-18 badge added 14 px to a pill), and the editor is right
+  // to follow it there: then it opens on the pill's own start, which is the alignment under test.
+  const box = async (): Promise<{ x: number; width: number; pillX: number; pillY: number }> => {
+    const pill = await face.evaluate((node) => {
+      const { x, y } = node.getBoundingClientRect();
+      return { x, y };
+    });
     const rect = await editor.evaluate((node) => {
       const { x, width } = node.getBoundingClientRect();
       return { x, width };
     });
-    return rect;
+    return { x: rect.x, width: rect.width, pillX: pill.x, pillY: pill.y };
   };
 
   const before = await box();
@@ -96,7 +105,11 @@ test('the owned-count editor does not move while the figure is typed', async ({ 
   await expect(card.getByRole('button', { name: /^Abomination VI: owned 1.212$/ })).toBeVisible();
 
   const after = await box();
-  expect(after.x, 'the editor moved sideways as the figure was typed').toBeCloseTo(before.x, 0);
+  if (Math.abs(after.pillY - before.pillY) < 0.5) {
+    expect(after.x, 'the editor moved sideways as the figure was typed').toBeCloseTo(before.x, 0);
+  } else {
+    expect(after.x, 'the pill wrapped and the editor did not open on its start').toBeCloseTo(after.pillX, 0);
+  }
   expect(after.width, 'the editor changed width as the figure was typed').toBeCloseTo(before.width, 0);
 });
 

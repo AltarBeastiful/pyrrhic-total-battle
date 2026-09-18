@@ -23,7 +23,7 @@
  * Like Troops, this card describes the *account*: everything is written to the active profile, and
  * nothing here is read from the battle setup or from the march on screen.
  */
-import { Button, Group, Popover, Stack, Switch, Text, UnstyledButton } from '@mantine/core';
+import { Badge, Button, Group, Popover, Stack, Switch, Text, UnstyledButton } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { lazy, useId, useMemo, useState } from 'react';
 
@@ -213,6 +213,16 @@ export function MercenariesSection() {
  * Inline spans rather than a flex row: the pill's own label box already centres its line, and a
  * `<div>` inside a `<button>` is not HTML.
  */
+/**
+ * The count badge's three sizes, inline for the same reason `TierBadge` writes its own: the theme's
+ * `Badge.vars` land on the element's `style`, and only an inline value outranks them.
+ */
+const COUNT_BADGE = {
+  '--badge-fz': 'var(--mantine-font-size-xs)',
+  '--badge-height': '1.25rem',
+  '--badge-padding-x': '0.375rem',
+} as const;
+
 function PillFace({ entry }: { entry: MercenaryRow }) {
   const tier = entry.unit.tier;
   return (
@@ -232,16 +242,26 @@ function PillFace({ entry }: { entry: MercenaryRow }) {
       ) : (
         <TierBadge tier={tier} />
       )}
-      {/* The quantity is a plain tabular figure, and `∞` goes through the glyph box like every other
-          non-Latin mark on the page, so an unlimited pill is exactly as tall as a "1 212" one. */}
-      {!entry.isCustom &&
-        (entry.cap === null ? (
-          <Glyph kind="unlimited" />
-        ) : (
-          <Text span size="xs" className={classes.count}>
-            {count(entry.cap)}
-          </Text>
-        ))}
+      {/* The quantity as a **badge** (owner, 2026-09-18: "move the hired mercs number in a badge"): the
+          one figure on the pill reads as a figure rather than as the end of the name, and it is the
+          obvious place to press to change it — though the whole face is that button. Neutral, never
+          the tier's ink, so the two badges cannot be read as one thing; 13 px, because an owned count
+          is information (rule 19) where the tier is a label. `∞` goes through the glyph box inside
+          the same badge, so an unlimited pill is exactly as tall as a "1 212" one. */}
+      {!entry.isCustom && (
+        <Badge
+          component="span"
+          variant="default"
+          color="slate"
+          radius="xs"
+          tt="none"
+          fw={600}
+          className={classes.count}
+          style={COUNT_BADGE}
+        >
+          {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
+        </Badge>
+      )}
     </>
   );
 }
