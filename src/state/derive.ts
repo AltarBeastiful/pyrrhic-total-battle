@@ -557,7 +557,7 @@ function normalizeEnemy(formation: Partial<Record<Category, number>>): EnemyForm
 
 /** The enemy formation an active event forces, if any (Arachne's: 2 of each). The last one wins. */
 export function eventEnemyFormation(
-  setup: BattleSetup,
+  setup: Pick<BattleSetup, 'active'>,
   tables: DeriveTables = DEFAULT_TABLES,
 ): EnemyFormation | undefined {
   let forced: EventRecord['enemyFormation'] | undefined;

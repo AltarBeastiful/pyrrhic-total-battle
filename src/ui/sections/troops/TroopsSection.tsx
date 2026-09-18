@@ -26,7 +26,7 @@ import { useId } from 'react';
 import { CATEGORIES } from '@/data/types';
 import type { UnitDef } from '@/data/types';
 import type { ProfileTroops, TierRange } from '@/state/schema';
-import { selectActiveProfile, useStore } from '@/state/store';
+import { useActiveProfileSlice, useStore } from '@/state/store';
 import { Glyph, GroupMarker } from '@/ui/domain';
 import type { GlyphKind } from '@/ui/domain';
 import { ChipRow, Panel, TierSelect } from '@/ui/kit';
@@ -59,7 +59,9 @@ const NAME_WIDTH = 120;
 const CHIP_HEIGHT = 26;
 
 export function TroopsSection() {
-  const profile = useStore(selectActiveProfile);
+  // Only the two fields this card reads (`useActiveProfileSlice`): a keystroke elsewhere on the
+  // page — the housing, a bonus — must not re-render eight tier steppers and their chips.
+  const profile = useActiveProfileSlice((current) => ({ id: current.id, troops: current.troops }));
   const updateProfile = useStore((state) => state.updateProfile);
   const titleId = useId();
 

@@ -40,7 +40,7 @@ import { forwardRef, lazy, useEffect, useId, useMemo, useRef, useState } from 'r
 import type { ComponentPropsWithoutRef } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
-import { selectActiveProfile, useStore } from '@/state/store';
+import { useActiveProfileSlice, useStore } from '@/state/store';
 import { count, Glyph, romanTier, tierInk, TierBadge } from '@/ui/domain';
 import { CornerPill, GroupedCombobox, NumberField, Panel, PillRow } from '@/ui/kit';
 import type { ComboboxGroup, PillRowItem } from '@/ui/kit';
@@ -60,7 +60,9 @@ const CustomMercenarySheet = lazy(() =>
 const CAP_POPOVER_WIDTH = 280;
 
 export function MercenariesSection() {
-  const profile = useStore(selectActiveProfile);
+  // Only the two fields this card reads (`useActiveProfileSlice`), so a keystroke elsewhere on the
+  // page does not re-render the camp.
+  const profile = useActiveProfileSlice((current) => ({ id: current.id, mercenaries: current.mercenaries }));
   const updateProfile = useStore((state) => state.updateProfile);
   const titleId = useId();
 

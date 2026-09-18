@@ -23,7 +23,7 @@ import { useId, useState } from 'react';
 import { CATEGORIES } from '@/data/types';
 import { eventEnemyFormation } from '@/state/derive';
 import type { SetupMethod } from '@/state/schema';
-import { selectActiveSetup, useStore } from '@/state/store';
+import { useActiveSetupSlice, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
 import { ChoiceList, NumberField, Panel, Sections, SwitchRow } from '@/ui/kit';
 import { useResultStore } from '@/ui/resultStore';
@@ -43,7 +43,15 @@ import type { Formation } from './formation';
 import { OrderSheet } from './OrderSheet';
 
 export function BattleSection() {
-  const setup = useStore(selectActiveSetup);
+  // Only the four fields this card reads (`useActiveSetupSlice`): the housing is typed in the bar
+  // under this card, and every keystroke there used to re-render the method cards and the enemy
+  // fields for nothing.
+  const setup = useActiveSetupSlice((current) => ({
+    recoveryPlan: current.recoveryPlan,
+    options: current.options,
+    enemy: current.enemy,
+    active: current.active,
+  }));
   const updateActiveSetup = useStore((state) => state.updateActiveSetup);
   const error = useResultStore((state) => state.error);
   // "Custom" is a mode, not a formation: it stays chosen while the four fields still read 1·1·1·1.

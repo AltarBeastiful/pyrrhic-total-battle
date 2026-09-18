@@ -52,19 +52,29 @@ export function useGenerateRun(): GenerateRun {
  * twice by two controls that exist at two different widths.
  */
 export function useGenerateShortcut(): void {
-  const { press } = useGenerateRun();
-
+  // Bound once and **subscribed to nothing**: the frame is the parent of every card on the page,
+  // and until 2026-09-18 this hook read the profile and the setup through `useGenerateRun`, so a
+  // keystroke in a housing field re-rendered the frame and, under it, Troops, Battle, Mercenaries
+  // and the March for nothing — measured 19 + 16 + 11 ms a keystroke with a React profiler on
+  // each card, which the owner felt as "all inputs a bit sluggish". What the shortcut needs it
+  // reads off the stores at the moment it is pressed.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.repeat) return;
       event.preventDefault();
-      press();
+      if (useResultStore.getState().running) {
+        cancelGenerate();
+        return;
+      }
+      const state = useStore.getState();
+      if (blockedReason(selectActiveProfile(state), selectActiveSetup(state)) !== null) return;
+      void runGenerate();
     };
     globalThis.document.addEventListener('keydown', onKeyDown);
     return () => {
       globalThis.document.removeEventListener('keydown', onKeyDown);
     };
-  }, [press]);
+  }, []);
 }
 
 export interface BarForm {
