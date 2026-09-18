@@ -35,7 +35,8 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { Pencil, Plus, Undo2 } from 'lucide-react';
-import { lazy, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { forwardRef, lazy, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ComponentPropsWithoutRef } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
@@ -350,25 +351,38 @@ function PillFace({ entry }: { entry: MercenaryRow }) {
  * the tier is a label. `∞` goes through the glyph box inside the same badge, so an unlimited pill is
  * exactly as tall as a "1 212" one.
  */
-function CountBadge({ entry, onPress }: { entry: MercenaryRow; onPress: () => void }) {
-  return (
-    <Badge
-      component="button"
-      type="button"
-      variant="light"
-      color="slate"
-      radius="xl"
-      tt="none"
-      fw={600}
-      className={classes.count}
-      style={COUNT_BADGE}
-      aria-label={`${entry.unit.name}: owned ${capSpoken(entry.cap)}`}
-      onClick={onPress}
-    >
-      {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
-    </Badge>
-  );
-}
+/** What `Popover.Target` hands its child besides the ref: its ARIA and nothing that styles. */
+type TargetProps = Omit<
+  ComponentPropsWithoutRef<'button'>,
+  'color' | 'style' | 'className' | 'children' | 'type' | 'onClick'
+>;
+
+const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress: () => void } & TargetProps>(
+  function CountBadge({ entry, onPress, ...target }, ref) {
+    // `ref` and `...target` are the popover's: `Popover.Target` anchors its dropdown on the element it
+    // is handed a reference to and stamps its ARIA on it. Without them the editor opened at the page's
+    // top-left corner (owner, 2026-09-18: "the popup is opened on the far left corner").
+    return (
+      <Badge
+        ref={ref}
+        component="button"
+        type="button"
+        variant="light"
+        color="slate"
+        radius="xl"
+        tt="none"
+        fw={600}
+        className={classes.count}
+        style={COUNT_BADGE}
+        aria-label={`${entry.unit.name}: owned ${capSpoken(entry.cap)}`}
+        {...target}
+        onClick={onPress}
+      >
+        {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
+      </Badge>
+    );
+  },
+);
 
 /**
  * One mercenary the tables carry. Its body is the quantity: press it and a popover opens under the
