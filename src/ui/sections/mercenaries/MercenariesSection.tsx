@@ -432,7 +432,11 @@ function HiredPill({
       // pill under it does.
       middlewares={{ flip: { crossAxis: false } }}
       trapFocus
-      returnFocus
+      // The focus is **not** handed back to the badge when the editor closes (owner, 2026-09-18:
+      // "when finished entering, the badge seems selected with a white outline; useless"): a return
+      // after Enter lands as a keyboard focus, and the badge lit its ring for nothing more to do
+      // there. Nothing is focused instead; the browser keeps the next Tab starting from the pill.
+      returnFocus={false}
     >
       {/* Two targets on one pill (owner, 2026-09-18): the body removes the mercenary — one press,
           with the way back under the row — and the badge on its top-right corner opens the

@@ -167,10 +167,12 @@ test('pressing a pill opens the quantity under it: a plain field, no step button
   expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 22 }]);
   expect(pillText('Bear V: owned 22')).toContain('22');
 
-  // Enter finishes the number and closes the editor (owner, 2026-09-18); the figure stays.
+  // Enter finishes the number and closes the editor (owner, 2026-09-18); the figure stays, and the
+  // badge is not left wearing a focus ring for nothing.
   await user.keyboard('{Enter}');
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(mercs()?.selected).toEqual([{ id: 'bear-5', cap: 22 }]);
+  expect(document.activeElement).not.toBe(screen.getByRole('button', { name: 'Bear V: owned 22' }));
 });
 
 test('the Unlimited switch gives the quantity back to the camp', async () => {
