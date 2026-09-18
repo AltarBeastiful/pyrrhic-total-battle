@@ -8,6 +8,7 @@
  * knows about class names any more — that was the Tailwind kit's job.
  */
 import type { Pool, UnitDef } from '../../data/types';
+import { tierInk } from '../kit/tiers';
 
 export type UnitGroup = 'guardsmen' | 'specialists' | 'engineers' | 'monsters' | 'mercenaries';
 
@@ -75,18 +76,10 @@ export function poolInk(pool: Pool): string {
 }
 
 /**
- * The nine troop and mercenary tiers have a colour each (design plan §5.5, direction A): grey I,
- * green II, blue III, violet IV, then the five the game gives its own metals and stones. A tier ink
- * is the scheme's *filled* shade — 7 on a light page, 5 on a dark one — which is the pair
- * `pnpm contrast` checks; Mantine's `-text` is shade 4 in the dark and would read a step paler than
- * the artboards.
- *
- * Tier 0 is a hand-typed mercenary with no tier at all: it gets the muted ink and no hue.
+ * The tier inks live in the kit (`kit/tiers.ts`), where the stepper writes "G3" in one; re-exported
+ * here so the domain keeps reading them from the one place that knows what a unit is.
  */
-export function tierInk(tier: number): string {
-  if (!Number.isFinite(tier) || tier < 1 || tier > 9) return 'var(--mantine-color-dimmed)';
-  return `var(--mantine-color-tier${String(Math.round(tier))}-filled)`;
-}
+export { tierInk } from '../kit/tiers';
 
 /**
  * The tonal wash under a tier's ink — the 12 % the palette checks that ink against. Written with

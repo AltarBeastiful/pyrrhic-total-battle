@@ -68,6 +68,11 @@ asserts `tier2`, `tier3` and `tier4` stay equal to `guardsmen`, `specialists` an
 one tier with no hue, a slate whose dark ink lands on `#99a5a3` (the design's Ash, to the nearest step the
 luminance ladder can reach — the ladder is what guarantees the nine tier inks read at one loudness).
 
+**The troop steppers write their value in the tier ink** (S-92, 2026-09-18): "G3" on the Troops card is the
+same `tierInk(3)` as the "III" badge and the march pill, one colour a tier whatever the group, on the text
+alone — TotalStack's arrangement (investigation 0021). Tiers I–VI agree with TotalStack in hue; its VII–IX
+(yellow, silver, green) were not copied, for the reason the note gives, and stay the owner's call.
+
 **The one gilded object is Generate** (`GOLD` in `palette.ts`): `linear-gradient(180deg, #e0c070, #c19a3f)`
 lettered in `#1a1408`, with `0 1px 0 rgb(255 255 255 / 35%) inset, 0 6px 16px rgb(201 162 74 / 25%)`. It is
 the same in both schemes, because it is the game's trim rather than a surface, and `pnpm contrast` checks its

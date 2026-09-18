@@ -69,6 +69,20 @@ test('the arrow keys walk the stepper, and Home reaches the "—" position', asy
   expect(onChange).toHaveBeenLastCalledWith(5);
 });
 
+test('the value is written in its tier\'s ink, and the "—" position in the muted one', () => {
+  renderWithTheme(
+    <>
+      <TierSelect label="Guardsmen from" prefix="G" tiers={TIERS} value={3} onChange={() => {}} />
+      <TierSelect label="Specialists from" prefix="S" tiers={TIERS} value={3} onChange={() => {}} />
+      <TierSelect label="Monsters to" prefix="M" tiers={TIERS} value={null} allowNone onChange={() => {}} />
+    </>,
+  );
+  // One colour a tier, whatever the group: G3 and S3 share the tier III ink.
+  expect(stepper('Guardsmen from').style.color).toBe('var(--mantine-color-tier3-filled)');
+  expect(stepper('Specialists from').style.color).toBe('var(--mantine-color-tier3-filled)');
+  expect(stepper('Monsters to').style.color).toBe('var(--mantine-color-dimmed)');
+});
+
 test('clampTier holds the range from both ends', () => {
   expect(clampTier(7, 2, 4)).toBe(4);
   expect(clampTier(1, 2, 4)).toBe(2);

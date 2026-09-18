@@ -12,12 +12,18 @@
  * The value carries `role="spinbutton"` and the arrows are siblings of it rather than its children,
  * so a keyboard gets the arrow keys on the value itself *and* two real buttons, and no widget ends
  * up nested inside another (investigation 0007's own lesson, and axe's `nested-interactive`).
+ *
+ * **The value is written in its tier's ink** (owner, 2026-09-18: *"G1-G2 S1 … should have colors …
+ * the colors are the same for all troops, only the mnemonic Gx Sx should be colored"*), as
+ * TotalStack's stepper does (investigation 0021): one colour a tier whatever the group, on the text
+ * alone — the well, the arrows and the "—" position stay as they are. The ink is `tierInk`, the same
+ * one a tier badge and a march pill are drawn in, so "G3" here and "III" on the pill agree.
  */
 import { ActionIcon, Group, Text } from '@mantine/core';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import classes from './kit.module.css';
-import { clampTier, type TierPrefix } from './tiers';
+import { clampTier, tierInk, type TierPrefix } from './tiers';
 
 const NONE = '—';
 
@@ -105,6 +111,7 @@ export function TierSelect({
         className={classes.stepperValue}
         fz="0.8125rem"
         fw={600}
+        c={shown === null ? 'dimmed' : tierInk(shown)}
         onKeyDown={(event) => {
           const key = event.key;
           if (key === 'ArrowUp' || key === 'ArrowRight') step(1);
