@@ -11,6 +11,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 1 | 4 722 842 | 0.58 | 4 722 842 | 23 899 764 | — |
 | 03 S-78 all-in gate + finer sweep | 1 | 4 722 842 | 0.58 | 4 722 842 | 23 899 764 | — |
 | 03b + TotalStack on the owner's window | 1 | 4 722 842 | 0.58 | 4 722 842 | 23 899 764 | — |
+| 04 S-80 put-back pass | 1 | 4 722 842 | 0.58 | 4 722 842 | 23 899 764 | — |
+| 05 S-81 all-in tail | 1 | 4 722 842 | 0.58 | 4 722 842 | 23 899 764 | — |
 
 ## first-run army, Bear V ×2 (20 000 leadership)
 
@@ -21,6 +23,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 1 | 9 557 884 | 0.59 | 4 778 942 | 23 974 564 | — |
 | 03 S-78 all-in gate + finer sweep | 1 | 9 557 884 | 0.59 | 4 778 942 | 23 974 564 | — |
 | 03b + TotalStack on the owner's window | 1 | 9 557 884 | 0.59 | 4 778 942 | 23 974 564 | — |
+| 04 S-80 put-back pass | 1 | 9 557 884 | 0.59 | 4 778 942 | 23 974 564 | — |
+| 05 S-81 all-in tail | 1 | 9 557 884 | 0.59 | 4 778 942 | 23 974 564 | — |
 
 ## first-run army, Bear V ×3 (20 000 leadership)
 
@@ -31,6 +35,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 1 | 14 168 526 | 0.58 | 4 722 842 | 24 086 764 | 25 439 016 |
 | 03 S-78 all-in gate + finer sweep | 2 | 14 505 126 | 0.59 | 4 835 042 | 24 086 764 | 25 439 016 |
 | 03b + TotalStack on the owner's window | 2 | 14 505 126 | 0.59 | 4 835 042 | 24 086 764 | 25 439 016 |
+| 04 S-80 put-back pass | 2 | 14 505 126 | 0.59 | 4 835 042 | 24 086 764 | 25 439 016 |
+| 05 S-81 all-in tail | 2 | 19 115 768 | 0.59 | 6 371 923 | 24 086 764 | 25 439 016 |
 
 ## first-run army, Bear V ×10 (20 000 leadership)
 
@@ -41,6 +47,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 1 | 21 732 276 | 0.67 | 5 433 069 | 25 133 964 | 26 486 216 |
 | 03 S-78 all-in gate + finer sweep | 2 | 21 732 276 | 0.67 | 5 433 069 | 25 133 964 | 26 486 216 |
 | 03b + TotalStack on the owner's window | 2 | 21 732 276 | 0.67 | 5 433 069 | 25 133 964 | 26 486 216 |
+| 04 S-80 put-back pass | 2 | 21 732 276 | 0.67 | 5 433 069 | 25 133 964 | 26 486 216 |
+| 05 S-81 all-in tail | 2 | 21 732 276 | 0.67 | 5 433 069 | 25 133 964 | 26 486 216 |
 
 ## first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)
 
@@ -51,6 +59,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 03 S-78 all-in gate + finer sweep | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 03b + TotalStack on the owner's window | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
+| 04 S-80 put-back pass | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
+| 05 S-81 all-in tail | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
 
@@ -61,6 +71,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 3 | 8 331 398 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 | 03 S-78 all-in gate + finer sweep | 3 | 8 331 398 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 | 03b + TotalStack on the owner's window | 3 | 8 331 398 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
+| 04 S-80 put-back pass | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
+| 05 S-81 all-in tail | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 
 ## 2026-09-17 export, its setup (7 000 leadership)
 
@@ -71,6 +83,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 4 | 24 814 601 | 2.27 | 393 667 | 25 952 553 | — |
 | 03 S-78 all-in gate + finer sweep | 5 | 24 814 601 | 2.27 | 478 506 | 25 952 553 | — |
 | 03b + TotalStack on the owner's window | 5 | 24 814 601 | 2.27 | 478 506 | 25 952 553 | 16 323 066 |
+| 04 S-80 put-back pass | 5 | 24 814 601 | 2.27 | 478 506 | 25 952 553 | 16 323 066 |
+| 05 S-81 all-in tail | 5 | 24 814 601 | 2.27 | 478 506 | 25 952 553 | 16 323 066 |
 
 ## 2026-09-17 export, 12 000 leadership
 
@@ -81,6 +95,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | — |
 | 03 S-78 all-in gate + finer sweep | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | — |
 | 03b + TotalStack on the owner's window | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
+| 04 S-80 put-back pass | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
+| 05 S-81 all-in tail | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
 
 ## live account of 2026-09-18 (one hired type, 20 000 leadership)
 
@@ -91,6 +107,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 4 | 31 218 724 | 1.04 | 1 187 085 | 31 495 858 | — |
 | 03 S-78 all-in gate + finer sweep | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | — |
 | 03b + TotalStack on the owner's window | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
+| 04 S-80 put-back pass | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
+| 05 S-81 all-in tail | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
 
@@ -101,4 +119,6 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 02 S-77 shelter + tie | 5 | 30 107 115 | 1.75 | 452 639 | 80 658 235 | — |
 | 03 S-78 all-in gate + finer sweep | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | — |
 | 03b + TotalStack on the owner's window | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
+| 04 S-80 put-back pass | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
+| 05 S-81 all-in tail | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 
