@@ -1,0 +1,1620 @@
+{
+ "run": "2026-09-18T13:15:30.605Z",
+ "scenarios": [
+  {
+   "label": "first-run army, Bear V ×1 (20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot"
+   ],
+   "planMs": 24,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 18554768,
+     "silver": 32525600,
+     "burned": 1,
+     "perSilver": 0.57,
+     "perHired": 18554768
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 23899764,
+     "silver": 56000000,
+     "burned": 1,
+     "perSilver": 0.427,
+     "perHired": 23899764
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 18554768,
+     "silver": 32525600,
+     "burned": 1,
+     "perSilver": 0.57,
+     "perHired": 18554768
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 23899764,
+     "silver": 56000000,
+     "burned": 1,
+     "perSilver": 0.427,
+     "perHired": 23899764
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 1,
+     "damage": 4722842,
+     "silver": 8131400,
+     "burned": 1,
+     "perSilver": 0.581,
+     "perHired": 4722842
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Bear V ×2 (20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot"
+   ],
+   "planMs": 29,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 18779168,
+     "silver": 32525600,
+     "burned": 2,
+     "perSilver": 0.577,
+     "perHired": 9389584
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 23974564,
+     "silver": 56000000,
+     "burned": 2,
+     "perSilver": 0.428,
+     "perHired": 11987282
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 18779168,
+     "silver": 32525600,
+     "burned": 2,
+     "perSilver": 0.577,
+     "perHired": 9389584
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 23974564,
+     "silver": 56000000,
+     "burned": 2,
+     "perSilver": 0.428,
+     "perHired": 11987282
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 2,
+     "damage": 9557884,
+     "silver": 16262800,
+     "burned": 2,
+     "perSilver": 0.588,
+     "perHired": 4778942
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Bear V ×3 (20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "all-in"
+   ],
+   "planMs": 17,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19115768,
+     "silver": 32525600,
+     "burned": 3,
+     "perSilver": 0.588,
+     "perHired": 6371923
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 24086764,
+     "silver": 56000000,
+     "burned": 3,
+     "perSilver": 0.43,
+     "perHired": 8028921
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19115768,
+     "silver": 32525600,
+     "burned": 3,
+     "perSilver": 0.588,
+     "perHired": 6371923
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 24086764,
+     "silver": 56000000,
+     "burned": 3,
+     "perSilver": 0.43,
+     "perHired": 8028921
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19388676,
+     "silver": 32535200,
+     "burned": 3,
+     "perSilver": 0.596,
+     "perHired": 6462892
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 25439016,
+     "silver": 56000000,
+     "burned": 3,
+     "perSilver": 0.454,
+     "perHired": 8479672
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19388676,
+     "silver": 32535200,
+     "burned": 3,
+     "perSilver": 0.596,
+     "perHired": 6462892
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19144808,
+     "silver": 32529600,
+     "burned": 3,
+     "perSilver": 0.589,
+     "perHired": 6381603
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 24096024,
+     "silver": 56000000,
+     "burned": 3,
+     "perSilver": 0.43,
+     "perHired": 8032008
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19144808,
+     "silver": 32529600,
+     "burned": 3,
+     "perSilver": 0.589,
+     "perHired": 6381603
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19144808,
+     "silver": 32529600,
+     "burned": 3,
+     "perSilver": 0.589,
+     "perHired": 6381603
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 3,
+     "damage": 14168526,
+     "silver": 24394200,
+     "burned": 3,
+     "perSilver": 0.581,
+     "perHired": 4722842
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19115768,
+     "silver": 32525600,
+     "burned": 3,
+     "perSilver": 0.588,
+     "perHired": 6371923
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Bear V ×10 (20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "all-in"
+   ],
+   "planMs": 25,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21788376,
+     "silver": 32525600,
+     "burned": 4,
+     "perSilver": 0.67,
+     "perHired": 5447094
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 25133964,
+     "silver": 56000000,
+     "burned": 4,
+     "perSilver": 0.449,
+     "perHired": 6283491
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21135368,
+     "silver": 32525600,
+     "burned": 4,
+     "perSilver": 0.65,
+     "perHired": 5283842
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 25133964,
+     "silver": 56000000,
+     "burned": 4,
+     "perSilver": 0.449,
+     "perHired": 6283491
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 22156792,
+     "silver": 32529600,
+     "burned": 4,
+     "perSilver": 0.681,
+     "perHired": 5539198
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 26486216,
+     "silver": 56000000,
+     "burned": 4,
+     "perSilver": 0.473,
+     "perHired": 6621554
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 22156792,
+     "silver": 32529600,
+     "burned": 4,
+     "perSilver": 0.681,
+     "perHired": 5539198
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21164408,
+     "silver": 32529600,
+     "burned": 4,
+     "perSilver": 0.651,
+     "perHired": 5291102
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 25143224,
+     "silver": 56000000,
+     "burned": 4,
+     "perSilver": 0.449,
+     "perHired": 6285806
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21164408,
+     "silver": 32529600,
+     "burned": 4,
+     "perSilver": 0.651,
+     "perHired": 5291102
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21798088,
+     "silver": 32529600,
+     "burned": 4,
+     "perSilver": 0.67,
+     "perHired": 5449522
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21798088,
+     "silver": 32529600,
+     "burned": 4,
+     "perSilver": 0.67,
+     "perHired": 5449522
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21135368,
+     "silver": 32525600,
+     "burned": 4,
+     "perSilver": 0.65,
+     "perHired": 5283842
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21700948,
+     "silver": 45577400,
+     "burned": 4,
+     "perSilver": 0.476,
+     "perHired": 5425237
+    }
+   ]
+  },
+  {
+   "label": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "planMs": 42,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 27526898,
+     "silver": 32525600,
+     "burned": 30,
+     "perSilver": 0.846,
+     "perHired": 917563
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30340395,
+     "silver": 33291200,
+     "burned": 30,
+     "perSilver": 0.911,
+     "perHired": 1011347
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30230189,
+     "silver": 32525600,
+     "burned": 29,
+     "perSilver": 0.929,
+     "perHired": 1042420
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30436414,
+     "silver": 32908400,
+     "burned": 30,
+     "perSilver": 0.925,
+     "perHired": 1014547
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30587159,
+     "silver": 32533600,
+     "burned": 29,
+     "perSilver": 0.94,
+     "perHired": 1054730
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30256091,
+     "silver": 34075200,
+     "burned": 30,
+     "perSilver": 0.888,
+     "perHired": 1008536
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30587159,
+     "silver": 32533600,
+     "burned": 29,
+     "perSilver": 0.94,
+     "perHired": 1054730
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30259229,
+     "silver": 32529600,
+     "burned": 29,
+     "perSilver": 0.93,
+     "perHired": 1043422
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 29766047,
+     "silver": 34064000,
+     "burned": 30,
+     "perSilver": 0.874,
+     "perHired": 992202
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30259229,
+     "silver": 32529600,
+     "burned": 29,
+     "perSilver": 0.93,
+     "perHired": 1043422
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 27551106,
+     "silver": 32529600,
+     "burned": 30,
+     "perSilver": 0.847,
+     "perHired": 918370
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 29766047,
+     "silver": 34064000,
+     "burned": 30,
+     "perSilver": 0.874,
+     "perHired": 992202
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 29021204,
+     "silver": 32525600,
+     "burned": 25,
+     "perSilver": 0.892,
+     "perHired": 1160848
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30057473,
+     "silver": 32525600,
+     "burned": 28,
+     "perSilver": 0.924,
+     "perHired": 1073481
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 28781642,
+     "silver": 36125500,
+     "burned": 30,
+     "perSilver": 0.797,
+     "perHired": 959388
+    }
+   ]
+  },
+  {
+   "label": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "planMs": 630,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8616048,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.416,
+     "perHired": 359002
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8620931,
+     "silver": 6157800,
+     "burned": 24,
+     "perSilver": 1.4,
+     "perHired": 359205
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8628782,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.418,
+     "perHired": 359533
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8633665,
+     "silver": 6157800,
+     "burned": 24,
+     "perSilver": 1.402,
+     "perHired": 359736
+    },
+    {
+     "name": "TotalStack · optimize (as captured, repeated)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8911356,
+     "silver": 6084400,
+     "burned": 24,
+     "perSilver": 1.465,
+     "perHired": 371307
+    },
+    {
+     "name": "Kai’s calculator · extract (as captured, repeated)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8792837,
+     "silver": 6203200,
+     "burned": 27,
+     "perSilver": 1.417,
+     "perHired": 325661
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8911356,
+     "silver": 6084400,
+     "burned": 24,
+     "perSilver": 1.465,
+     "perHired": 371307
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8903339,
+     "silver": 6086400,
+     "burned": 24,
+     "perSilver": 1.463,
+     "perHired": 370972
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8911356,
+     "silver": 6084400,
+     "burned": 24,
+     "perSilver": 1.465,
+     "perHired": 371307
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8489697,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.396,
+     "perHired": 353737
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8489697,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.396,
+     "perHired": 353737
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8489697,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.396,
+     "perHired": 353737
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8415312,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.383,
+     "perHired": 350638
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8415312,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.383,
+     "perHired": 350638
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8415312,
+     "silver": 6083200,
+     "burned": 24,
+     "perSilver": 1.383,
+     "perHired": 350638
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8193505,
+     "silver": 6083200,
+     "burned": 19,
+     "perSilver": 1.347,
+     "perHired": 431237
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8331398,
+     "silver": 6083200,
+     "burned": 21,
+     "perSilver": 1.37,
+     "perHired": 396733
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 8394732,
+     "silver": 6241000,
+     "burned": 24,
+     "perSilver": 1.345,
+     "perHired": 349781
+    }
+   ]
+  },
+  {
+   "label": "2026-09-17 export, its setup (7 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "sweet-spot",
+    "more-mercs",
+    "steady-max",
+    "all-in"
+   ],
+   "planMs": 1429,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 22493346,
+     "silver": 10957600,
+     "burned": 93,
+     "perSilver": 2.053,
+     "perHired": 241864
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 25952553,
+     "silver": 14192200,
+     "burned": 93,
+     "perSilver": 1.829,
+     "perHired": 279060
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 23441856,
+     "silver": 10957600,
+     "burned": 55,
+     "perSilver": 2.139,
+     "perHired": 426216
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 25833694,
+     "silver": 14192200,
+     "burned": 86,
+     "perSilver": 1.82,
+     "perHired": 300392
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 11429180,
+     "silver": 10972800,
+     "burned": 16,
+     "perSilver": 1.042,
+     "perHired": 714324
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 16323066,
+     "silver": 16016000,
+     "burned": 51,
+     "perSilver": 1.019,
+     "perHired": 320060
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 9816482,
+     "silver": 8400000,
+     "burned": 51,
+     "perSilver": 1.169,
+     "perHired": 192480
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 11423156,
+     "silver": 10965600,
+     "burned": 16,
+     "perSilver": 1.042,
+     "perHired": 713947
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 16050682,
+     "silver": 19600000,
+     "burned": 51,
+     "perSilver": 0.819,
+     "perHired": 314719
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 13992468,
+     "silver": 12696000,
+     "burned": 24,
+     "perSilver": 1.102,
+     "perHired": 583020
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 12390790,
+     "silver": 10965600,
+     "burned": 51,
+     "perSilver": 1.13,
+     "perHired": 242957
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 12390790,
+     "silver": 10965600,
+     "burned": 51,
+     "perSilver": 1.13,
+     "perHired": 242957
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21662734,
+     "silver": 10957600,
+     "burned": 47,
+     "perSilver": 1.977,
+     "perHired": 460909
+    },
+    {
+     "name": "Complete optimization · more-mercs",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 22133839,
+     "silver": 10957600,
+     "burned": 50,
+     "perSilver": 2.02,
+     "perHired": 442677
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 23264491,
+     "silver": 10957600,
+     "burned": 53,
+     "perSilver": 2.123,
+     "perHired": 438953
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 22518504,
+     "silver": 14337600,
+     "burned": 93,
+     "perSilver": 1.571,
+     "perHired": 242134
+    }
+   ]
+  },
+  {
+   "label": "2026-09-17 export, 12 000 leadership",
+   "refusal": null,
+   "stops": [
+    "silver-saver",
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "planMs": 1026,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 32417040,
+     "silver": 18790400,
+     "burned": 93,
+     "perSilver": 1.725,
+     "perHired": 348570
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 33361705,
+     "silver": 20399600,
+     "burned": 93,
+     "perSilver": 1.635,
+     "perHired": 358728
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 33438122,
+     "silver": 18790400,
+     "burned": 70,
+     "perSilver": 1.78,
+     "perHired": 477687
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 34283252,
+     "silver": 21204200,
+     "burned": 85,
+     "perSilver": 1.617,
+     "perHired": 403332
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19684292,
+     "silver": 18808800,
+     "burned": 24,
+     "perSilver": 1.047,
+     "perHired": 820179
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 24167160,
+     "silver": 21785600,
+     "burned": 40,
+     "perSilver": 1.109,
+     "perHired": 604179
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 24167160,
+     "silver": 21785600,
+     "burned": 40,
+     "perSilver": 1.109,
+     "perHired": 604179
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 19546364,
+     "silver": 18800000,
+     "burned": 24,
+     "perSilver": 1.04,
+     "perHired": 814432
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 24021084,
+     "silver": 21763200,
+     "burned": 40,
+     "perSilver": 1.104,
+     "perHired": 600527
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 24021084,
+     "silver": 21763200,
+     "burned": 40,
+     "perSilver": 1.104,
+     "perHired": 600527
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 18455090,
+     "silver": 18800000,
+     "burned": 51,
+     "perSilver": 0.982,
+     "perHired": 361865
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 21938682,
+     "silver": 33600000,
+     "burned": 51,
+     "perSilver": 0.653,
+     "perHired": 430170
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 18455090,
+     "silver": 18800000,
+     "burned": 51,
+     "perSilver": 0.982,
+     "perHired": 361865
+    },
+    {
+     "name": "Complete optimization · silver-saver",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 25145044,
+     "silver": 14231900,
+     "burned": 51,
+     "perSilver": 1.767,
+     "perHired": 493040
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 32231242,
+     "silver": 18790400,
+     "burned": 67,
+     "perSilver": 1.715,
+     "perHired": 481063
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 32518195,
+     "silver": 21057500,
+     "burned": 73,
+     "perSilver": 1.544,
+     "perHired": 445455
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 31652798,
+     "silver": 22422900,
+     "burned": 93,
+     "perSilver": 1.412,
+     "perHired": 340353
+    }
+   ]
+  },
+  {
+   "label": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
+   "refusal": null,
+   "stops": [
+    "silver-saver",
+    "sweet-spot",
+    "steady-max",
+    "all-in"
+   ],
+   "planMs": 40,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 26530424,
+     "silver": 31236000,
+     "burned": 30,
+     "perSilver": 0.849,
+     "perHired": 884347
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 31495858,
+     "silver": 45750400,
+     "burned": 30,
+     "perSilver": 0.688,
+     "perHired": 1049862
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 26530424,
+     "silver": 31236000,
+     "burned": 30,
+     "perSilver": 0.849,
+     "perHired": 884347
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 31495858,
+     "silver": 45750400,
+     "burned": 30,
+     "perSilver": 0.688,
+     "perHired": 1049862
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 27224644,
+     "silver": 31346400,
+     "burned": 30,
+     "perSilver": 0.869,
+     "perHired": 907488
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 27224644,
+     "silver": 31346400,
+     "burned": 30,
+     "perSilver": 0.869,
+     "perHired": 907488
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 27224644,
+     "silver": 31346400,
+     "burned": 30,
+     "perSilver": 0.869,
+     "perHired": 907488
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30466476,
+     "silver": 31335200,
+     "burned": 30,
+     "perSilver": 0.972,
+     "perHired": 1015549
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30466476,
+     "silver": 31335200,
+     "burned": 30,
+     "perSilver": 0.972,
+     "perHired": 1015549
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30466476,
+     "silver": 31335200,
+     "burned": 30,
+     "perSilver": 0.972,
+     "perHired": 1015549
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30466476,
+     "silver": 31335200,
+     "burned": 30,
+     "perSilver": 0.972,
+     "perHired": 1015549
+    },
+    {
+     "name": "Complete optimization · silver-saver",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 18681950,
+     "silver": 18583900,
+     "burned": 20,
+     "perSilver": 1.005,
+     "perHired": 934098
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 29677128,
+     "silver": 30607200,
+     "burned": 25,
+     "perSilver": 0.97,
+     "perHired": 1187085
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30215378,
+     "silver": 30270800,
+     "burned": 28,
+     "perSilver": 0.998,
+     "perHired": 1079121
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 31218724,
+     "silver": 31092400,
+     "burned": 30,
+     "perSilver": 1.004,
+     "perHired": 1040624
+    }
+   ]
+  },
+  {
+   "label": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
+   "refusal": null,
+   "stops": [
+    "silver-saver",
+    "sweet-spot",
+    "more-mercs",
+    "steady-max",
+    "all-in"
+   ],
+   "planMs": 597,
+   "rows": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 72384395,
+     "silver": 17179200,
+     "burned": 874,
+     "perSilver": 4.213,
+     "perHired": 82820
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 80658235,
+     "silver": 30800000,
+     "burned": 874,
+     "perSilver": 2.619,
+     "perHired": 92286
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 29111661,
+     "silver": 17179200,
+     "burned": 78,
+     "perSilver": 1.695,
+     "perHired": 373226
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "damage": 52075835,
+     "silver": 0,
+     "burned": 874,
+     "perSilver": null,
+     "perHired": 59583
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 33668799,
+     "silver": 17236000,
+     "burned": 74,
+     "perSilver": 1.953,
+     "perHired": 454984
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 80137589,
+     "silver": 30800000,
+     "burned": 864,
+     "perSilver": 2.602,
+     "perHired": 92752
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 33668799,
+     "silver": 17236000,
+     "burned": 74,
+     "perSilver": 1.953,
+     "perHired": 454984
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 34018330,
+     "silver": 17233600,
+     "burned": 74,
+     "perSilver": 1.974,
+     "perHired": 459707
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 56713817,
+     "silver": 30800000,
+     "burned": 428,
+     "perSilver": 1.841,
+     "perHired": 132509
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 34018330,
+     "silver": 17233600,
+     "burned": 74,
+     "perSilver": 1.974,
+     "perHired": 459707
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 74271086,
+     "silver": 17233600,
+     "burned": 864,
+     "perSilver": 4.31,
+     "perHired": 85962
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 80137589,
+     "silver": 30800000,
+     "burned": 864,
+     "perSilver": 2.602,
+     "perHired": 92752
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "damage": 66639898,
+     "silver": 16332000,
+     "burned": 868,
+     "perSilver": 4.08,
+     "perHired": 76774
+    },
+    {
+     "name": "Complete optimization · silver-saver",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 22179294,
+     "silver": 13217400,
+     "burned": 49,
+     "perSilver": 1.678,
+     "perHired": 452639
+    },
+    {
+     "name": "Complete optimization · sweet-spot",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 28367940,
+     "silver": 17104800,
+     "burned": 58,
+     "perSilver": 1.658,
+     "perHired": 489102
+    },
+    {
+     "name": "Complete optimization · more-mercs",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 29265102,
+     "silver": 17179200,
+     "burned": 67,
+     "perSilver": 1.704,
+     "perHired": 436793
+    },
+    {
+     "name": "Complete optimization · steady-max",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 30107115,
+     "silver": 17179200,
+     "burned": 70,
+     "perSilver": 1.753,
+     "perHired": 430102
+    },
+    {
+     "name": "Complete optimization · all-in",
+     "kind": "plan",
+     "comparable": true,
+     "marches": 4,
+     "damage": 29111661,
+     "silver": 17179200,
+     "burned": 78,
+     "perSilver": 1.695,
+     "perHired": 373226
+    }
+   ]
+  }
+ ]
+}

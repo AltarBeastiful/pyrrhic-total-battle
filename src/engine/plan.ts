@@ -658,6 +658,42 @@ function ladder(
 }
 
 /**
+ * **The shelter** (S-87, restoring S-75's rule for every hired type; owner, 2026-09-18: *"a critical rule is to
+ * shield mercs. Right now mercs are unshielded on all complete optimization marches … more damage with a lot of
+ * merc spent should trigger a failing test as we're using too much of a rare resource"*, and earlier the same
+ * day: *"when a merc is unlimited and is put in, don't put more, and lower it so the health stack still makes
+ * sense — below the troops"*).
+ *
+ * The enemy wipes the **highest-HP living stack** first (`buildKillOrder`, and the journal `marchOf` runs), so a
+ * hired stack whose total HP reaches the lowest troop stack's is the enemy's first kill: the rarest resource on
+ * the field, spent before a single troop has died. Every shape the plan offers therefore lowers a hired stack
+ * that stands at or above that line to **just under it** — `ceil(floor / hp) − 1`, the most units that still sit
+ * strictly below — and a type whose very first unit is not under is left out of that shape (its count becomes
+ * nothing, and the callers drop it).
+ *
+ * Applied to **every** hired type, capped or unlimited. S-77 had narrowed it to the unlimited ones on the
+ * argument that the battle model already prices a sponge on top (the burn is `ceil(n / 10)` wherever the stack
+ * stands, so the two ratios judge it like any other march); measured on the owner's live camp of 2026-09-18
+ * (`tools/theorycraft/out/106-shelter-live.md`) that reading put 375 legionaries and 403 arbalesters — 4 296 375
+ * and 3 675 360 HP — on top of a 274 772-HP troop floor at the sweet spot, and 830 legionaries, 400 arbalesters
+ * and 10 bears at the steady max. The owner's rule is about the stock, not about the model's arithmetic, and it
+ * costs damage on purpose: it is the trade he asked for.
+ */
+function shelterUnder(
+  rungs: { entry: Effective; count: number }[],
+  mercs: { entry: Effective; count: number }[],
+): { entry: Effective; count: number }[] {
+  if (rungs.length === 0 || mercs.length === 0) return mercs;
+  const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+  if (!Number.isFinite(floor) || floor <= 0) return mercs;
+  return mercs.map((merc) =>
+    merc.count * merc.entry.hp < floor || merc.entry.hp <= 0
+      ? merc
+      : { entry: merc.entry, count: Math.max(0, Math.ceil(floor / merc.entry.hp) - 1) },
+  );
+}
+
+/**
  * How many marches a stock of `held` sustains while fielding `count` every time: one chunk of ten is lost
  * per march, and the count has to still be there to field on the last of them, so
  * `floor((held − count) / chunks(count)) + 1`. The whole stock therefore fields at most ten times over
@@ -824,10 +860,15 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
           orderFor(finaleDepth, leftoverHp, finaleGrowth, leftovers),
         );
         if (finaleLadder.length === 0) continue;
-        const attempt = marchOf([...finaleLadder, ...leftovers], enemyStacks);
+        // The finale shelters like every other march (S-87): the ladder is built above the leftovers, but a
+        // rung is a whole number of units — `floor(target / hp)` — so a heavy troop type can land a hair under
+        // the stack it was meant to clear, and the leftovers are lowered under whatever the ladder came out at.
+        const under = shelterUnder(finaleLadder, leftovers).filter((merc) => merc.count > 0);
+        if (under.length === 0) continue;
+        const attempt = marchOf([...finaleLadder, ...under], enemyStacks);
         if (attempt.silver > finaleBudget) continue;
         if (!finale || attempt.damage > finale.march.damage) {
-          finale = { rungs: finaleLadder, mercs: leftovers, march: attempt };
+          finale = { rungs: finaleLadder, mercs: under, march: attempt };
         }
       }
     }
@@ -942,6 +983,21 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
             orderFor(depth, mercenaryHp, scale, vector),
           );
     if (rungs.length === 0) return null;
+    /**
+     * **The shelter, on every shape this scorer answers with** (S-87, `shelterUnder`): the ladders, whose rungs
+     * are whole units and can round under the stack they were sized to clear; the **winner's rungs**
+     * (`WINNER_RUNGS_DEPTH`), which are one march's troops carrying another march's mercenaries and were never
+     * checked against them at all — measured on the owner's live camp, the steady max stood 830 legionaries,
+     * 400 arbalesters and 10 bears over a 274 772-HP floor; and the sizer's shapes, which `sizer` has already
+     * lowered, so this is a second reading of the same rule rather than a second rule.
+     *
+     * A hired stack is lowered here rather than the ladder raised: the ladder is what the march *costs*, and
+     * buying troops to stand over a hired stack is the opposite of the trade the owner asked for. The counts the
+     * caller passed are its request; `mercs` below is what the shape fields.
+     */
+    vector = shelterUnder(rungs, vector);
+    fielded = vector.filter((merc) => merc.count > 0);
+    if (fielded.length === 0) return null;
     const march = marchOf([...rungs, ...vector], enemyStacks);
     if (budgetPerMarch !== undefined && march.silver > budgetPerMarch) return null;
     // the final march: the stock the uniform marches burn, and the silver they leave
@@ -1008,9 +1064,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * **Unlimited mercenaries** (owner, 2026-09-18: *"when a merc is unlimited and is put in, don't put more,
    * and lower it so the health stack still makes sense — below the troops"*). A type hired with no cap has no
    * entry in `caps`; it used to read as a stock of nothing and was never fielded. It is bounded by the
-   * authority pool instead — the only limit the game puts on it — its stock never runs out (`sustain`), and
-   * every shape keeps its stack under the lowest troop stack: the ladders by construction, the sizer's
-   * shapes by the clamp in `sizer` below, the all-in by its own shelter test.
+   * authority pool instead — the only limit the game puts on it — and its stock never runs out (`sustain`).
+   *
+   * What it no longer decides is the **shelter**: since S-87 every hired stack of every shape stands under the
+   * lowest troop stack, capped or unlimited (`shelterUnder`, and the note beside it). This set is what bounds an
+   * uncapped stock and what keeps it out of the rationing rules — `outrun`, `anchorOf`, `binding.mercenaries` —
+   * not which stacks the enemy is allowed to kill first.
    */
   const unlimited = new Set(
     request.units
@@ -1332,32 +1391,34 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
       .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
     const rungs = stacks.filter((stack) => stack.entry.pool === 'leadership');
-    // The shelter: an **unlimited** hired stack under the lowest troop stack, or the enemy — which wipes the
-    // highest-HP living stack first — takes it before the troops have died (owner, 2026-09-18: *"when a merc
-    // is unlimited and is put in, don't put more, and lower it so the health stack still makes sense — below
-    // the troops"*). A stack the sizer sized over that line is lowered to just under it; one that cannot be is
-    // left out of this shape.
-    //
-    // **Only the unlimited types** (S-77). Clamping every hired type read that sentence — which is about the
-    // one case where nothing else bounds a stack — as a rule for all of them, and it costs damage: on the
-    // owner's export at 7 000 the unsheltered MS-relaxed march stood **34 legionaries on top** as the enemy's
-    // first kill — a sponge, every other stack one kill slot later, the arbalesters striking three times
-    // instead of two — for **6 242 452** damage a march against **5 864 482** sheltered, at one more legionary
-    // burned and 48 gold (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §A). The battle model
-    // prices that already — `marchOf` runs the journal, and the burn is `ceil(n / 10)` wherever the stack
-    // stands — so the two ratios judge a hired sponge like any other march, and a capped type keeps the count
-    // the sizer gave it wherever it stands. The other shapes are unchanged: the ladders shelter by
-    // construction (every rung is built above `mercenaryHp`), and the all-in shelters every type by its own
-    // test, because that stop is the one the owner asked for as *"all the mercs you can safely field"*.
-    const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
-    const sheltered = stacks
-      .filter((stack) => stack.entry.pool === 'authority')
-      .map((stack) => {
-        if (!unlimited.has(stack.entry.id)) return stack;
-        if (!Number.isFinite(floor) || stack.count * stack.entry.hp < floor) return stack;
-        return { entry: stack.entry, count: Math.max(0, Math.ceil(floor / stack.entry.hp) - 1) };
-      })
-      .filter((stack) => stack.count > 0);
+    /**
+     * The shelter: a hired stack under the lowest troop stack, or the enemy — which wipes the highest-HP living
+     * stack first — takes it before the troops have died. A stack the sizer sized over that line is lowered to
+     * just under it (`shelterUnder`); one whose first unit is already over is left out of this shape.
+     *
+     * **Every hired type, capped or not** (S-87, restoring S-75's rule; owner, 2026-09-18: *"a critical rule is
+     * to shield mercs. Right now mercs are unshielded on all complete optimization marches … more damage with a
+     * lot of merc spent should trigger a failing test as we're using too much of a rare resource"*). S-77 had
+     * narrowed this to the **unlimited** types, reading his earlier sentence — *"when a merc is unlimited and is
+     * put in, don't put more, and lower it so the health stack still makes sense — below the troops"* — as being
+     * only about the one case where nothing else bounds a stack, and on the argument that the battle model
+     * prices a sponge already (`marchOf` runs the journal, and the burn is `ceil(n / 10)` wherever the stack
+     * stands). It buys damage: on his export at 7 000 the unsheltered MS-relaxed march stands **34 legionaries
+     * on top** as the enemy's first kill — every other stack one kill slot later, the arbalesters striking three
+     * times instead of two — for **6 242 452** a march against **5 864 482** sheltered
+     * (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §A). And it is not the rule he asked for: on
+     * his live camp of 2026-09-18 every stop fielded hired stacks above the troops — 375 legionaries and 403
+     * arbalesters over a 274 772-HP floor at the sweet spot, 830 · 400 · 10 bears at the steady max
+     * (`tools/theorycraft/out/106-shelter-live.md`) — because a capped type is just as rare as an unlimited one
+     * once it is gone. The damage is the price of the shelter, and the shelter is the instruction.
+     *
+     * The other half of S-77 stands unchanged: the sweet spot's tie is still broken on the campaign's two
+     * ratios (`middleOfRange`).
+     */
+    const sheltered = shelterUnder(
+      rungs,
+      stacks.filter((stack) => stack.entry.pool === 'authority'),
+    ).filter((stack) => stack.count > 0);
     return { rungs, mercs: sheltered };
   };
   let winnerRungs: { entry: Effective; count: number }[] = [];
@@ -1988,15 +2049,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
         .filter((stack): stack is { entry: Effective; count: number } => stack.entry !== undefined);
       const rungs = picked.filter((stack) => stack.entry.pool === 'leadership');
-      const mercs = picked.filter((stack) => stack.entry.pool === 'authority');
+      /**
+       * **A put-back is sheltered like every other march** (S-87). MS sizes every stack to a matched HP, hired
+       * stacks included, so its hired stacks land *at* the troop line rather than under it — the very place the
+       * enemy strikes first. They are lowered to just under the lowest rung (`shelterUnder`), which is the same
+       * direction this pass already moves them: a put-back fields at most the counts it was capped by, so the
+       * burn can only fall and the sustain, the repeats and the finale the row already had all still hold.
+       */
+      const mercs = shelterUnder(
+        rungs,
+        picked.filter((stack) => stack.entry.pool === 'authority'),
+      ).filter((stack) => stack.count > 0);
       // A march on one troop stack is the extreme the band refuses ("not a strategy", owner 2026-09-15); a
       // put-back that collapsed onto one would walk it back onto the bar through this pass.
       if (rungs.length < 2) continue;
       // The sustain, the same test the search applies to every vector it scores: a count the stock cannot
       // field every march of the run burns mercenaries the account does not have.
       if (mercs.some((merc) => lastsMarches(sustain[merc.entry.id] ?? 0, merc.count) < repeats)) continue;
+      // What the march fields, once the hired stacks are sheltered — `picked` was what the sizer proposed.
+      const fields = [...rungs, ...mercs];
       const counts: Record<string, number> = {};
-      for (const stack of picked) counts[stack.entry.id] = stack.count;
+      for (const stack of fields) counts[stack.entry.id] = stack.count;
       const campaign: PlanTotals = {
         ...row,
         counts,
@@ -2004,14 +2077,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       };
       // S-58 B: the bar never offers a plan with a hole in it, and MS may size a hired stack down to nothing.
       if (refuseDroppedTypes && !stocked.every((entry) => fieldsInCampaign(campaign, entry.id))) continue;
-      // The `all-in` is *"all the mercs you can safely field"*: every hired stack under the lowest troop stack,
-      // or the enemy — which wipes the highest-HP stack first — takes it before the troops have died.
-      if (row.sequence) {
-        const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
-        const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
-        if (floor <= hiredTop) continue;
-      }
-      const march = toMarch(rungs, mercs, marchOf(picked, enemyStacks));
+      // The shelter, read back off the march this pass will price (S-87; it was the `all-in`'s own test alone,
+      // because that stop is *"all the mercs you can safely field"*). `shelterUnder` has just lowered every
+      // hired stack under the lowest rung, so this refuses only a march it could not: one whose first hired
+      // unit is already over the troop line.
+      const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+      const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
+      if (floor <= hiredTop) continue;
+      const march = toMarch(rungs, mercs, marchOf(fields, enemyStacks));
       /**
        * **A put-back has to shorten the training queue** (owner, 2026-09-18: *"consider again lower level
        * troops if the cost for them … is not too high and we **get a nice reduction in training time**"*).
@@ -2394,6 +2467,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
             if (!scored || scored.rungs.length === 0) continue;
             const fielded = scored.mercs.filter((merc) => merc.count > 0);
             if (fielded.length === 0) continue;
+            // Every shape the scorer answers with is sheltered since S-87 (`shelterUnder`), so this is the
+            // rule read back off the shape rather than the one place it is applied — which is what it was
+            // when this stop alone was *"all the mercs you can safely field"*.
             const troopFloor = Math.min(...scored.rungs.map((rung) => rung.count * rung.entry.hp));
             const hiredTop = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
             if (troopFloor <= hiredTop) continue;

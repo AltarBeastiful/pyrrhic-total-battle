@@ -1,48 +1,58 @@
 
-## live camp — 3 stops
+## live camp — 5 stops
 
 
-## sweet-spot (elite) — 9,158,459 damage, 1,942,700 silver, 80 burned — 2 hired stack(s) at or above the lowest troop stack (274,772 HP): legionary-6 375 = 4,296,375 HP, arbalester-6 403 = 3,675,360 HP
-
-| kill order | stack | count | total HP | hired |
-|---|---|---|---|---|
-| 1 | legionary-6 | 375 | 4,296,375 | **yes** |
-| 2 | arbalester-6 | 403 | 3,675,360 | **yes** |
-| 3 | archer-1 | 1,158 | 277,920 |  |
-| 4 | spearman-1 | 918 | 277,236 |  |
-| 5 | rider-1 | 470 | 276,360 |  |
-| 6 | archer-2 | 639 | 276,048 |  |
-| 7 | spearman-2 | 508 | 275,844 |  |
-| 8 | rider-2 | 260 | 275,080 |  |
-| 9 | rider-3 | 146 | 274,772 |  |
-| 10 | bear-5 | 2 | 188,760 | **yes** |
-
-## more-mercs (elite) — 10,280,266 damage, 1,942,700 silver, 101 burned — 2 hired stack(s) at or above the lowest troop stack (274,772 HP): legionary-6 584 = 6,690,888 HP, arbalester-6 403 = 3,675,360 HP
+## silver-saver (ms) — 2,419,933 damage, 2,119,800 silver, 6 burned — 0 hired stack(s) at or above the lowest troop stack (781,030 HP): none
 
 | kill order | stack | count | total HP | hired |
 |---|---|---|---|---|
-| 1 | legionary-6 | 584 | 6,690,888 | **yes** |
-| 2 | arbalester-6 | 403 | 3,675,360 | **yes** |
-| 3 | archer-1 | 1,158 | 277,920 |  |
-| 4 | spearman-1 | 918 | 277,236 |  |
-| 5 | rider-1 | 470 | 276,360 |  |
-| 6 | archer-2 | 639 | 276,048 |  |
-| 7 | spearman-2 | 508 | 275,844 |  |
-| 8 | rider-2 | 260 | 275,080 |  |
-| 9 | rider-3 | 146 | 274,772 |  |
-| 10 | bear-5 | 2 | 188,760 | **yes** |
+| 1 | rider-1 | 1,333 | 783,804 |  |
+| 2 | rider-2 | 739 | 781,862 |  |
+| 3 | rider-3 | 415 | 781,030 |  |
+| 4 | bear-5 | 8 | 755,040 | **yes** |
+| 5 | arbalester-6 | 40 | 364,800 | **yes** |
+| 6 | legionary-6 | 10 | 114,570 | **yes** |
 
-## steady-max (winner) — 11,972,385 damage, 1,942,700 silver, 124 burned — 3 hired stack(s) at or above the lowest troop stack (274,772 HP): legionary-6 830 = 9,509,310 HP, arbalester-6 400 = 3,648,000 HP, bear-5 10 = 943,800 HP
+## sweet-spot (ms) — 3,060,838 damage, 2,707,500 silver, 7 burned — 0 hired stack(s) at or above the lowest troop stack (1,035,100 HP): none
 
 | kill order | stack | count | total HP | hired |
 |---|---|---|---|---|
-| 1 | legionary-6 | 830 | 9,509,310 | **yes** |
-| 2 | arbalester-6 | 400 | 3,648,000 | **yes** |
-| 3 | bear-5 | 10 | 943,800 | **yes** |
-| 4 | archer-1 | 1,158 | 277,920 |  |
-| 5 | spearman-1 | 918 | 277,236 |  |
-| 6 | rider-1 | 470 | 276,360 |  |
-| 7 | archer-2 | 639 | 276,048 |  |
-| 8 | spearman-2 | 508 | 275,844 |  |
-| 9 | rider-2 | 260 | 275,080 |  |
-| 10 | rider-3 | 146 | 274,772 |  |
+| 1 | spearman-2 | 1,915 | 1,039,845 |  |
+| 2 | rider-2 | 980 | 1,036,840 |  |
+| 3 | rider-3 | 550 | 1,035,100 |  |
+| 4 | bear-5 | 10 | 943,800 | **yes** |
+| 5 | arbalester-6 | 50 | 456,000 | **yes** |
+| 6 | legionary-6 | 10 | 114,570 | **yes** |
+
+## more-mercs (ms) — 3,193,268 damage, 2,707,500 silver, 8 burned — 0 hired stack(s) at or above the lowest troop stack (1,035,100 HP): none
+
+| kill order | stack | count | total HP | hired |
+|---|---|---|---|---|
+| 1 | spearman-2 | 1,915 | 1,039,845 |  |
+| 2 | rider-2 | 980 | 1,036,840 |  |
+| 3 | rider-3 | 550 | 1,035,100 |  |
+| 4 | bear-5 | 10 | 943,800 | **yes** |
+| 5 | arbalester-6 | 60 | 547,200 | **yes** |
+| 6 | legionary-6 | 10 | 114,570 | **yes** |
+
+## steady-max (ms) — 3,458,128 damage, 2,707,500 silver, 10 burned — 0 hired stack(s) at or above the lowest troop stack (1,035,100 HP): none
+
+| kill order | stack | count | total HP | hired |
+|---|---|---|---|---|
+| 1 | spearman-2 | 1,915 | 1,039,845 |  |
+| 2 | rider-2 | 980 | 1,036,840 |  |
+| 3 | rider-3 | 550 | 1,035,100 |  |
+| 4 | bear-5 | 10 | 943,800 | **yes** |
+| 5 | arbalester-6 | 80 | 729,600 | **yes** |
+| 6 | legionary-6 | 10 | 114,570 | **yes** |
+
+## all-in (ms) — 4,569,485 damage, 2,707,500 silver, 22 burned — 0 hired stack(s) at or above the lowest troop stack (1,035,100 HP): none
+
+| kill order | stack | count | total HP | hired |
+|---|---|---|---|---|
+| 1 | spearman-2 | 1,915 | 1,039,845 |  |
+| 2 | rider-2 | 980 | 1,036,840 |  |
+| 3 | rider-3 | 550 | 1,035,100 |  |
+| 4 | legionary-6 | 90 | 1,031,130 | **yes** |
+| 5 | arbalester-6 | 113 | 1,030,560 | **yes** |
+| 6 | bear-5 | 10 | 943,800 | **yes** |

@@ -20,10 +20,13 @@ import { describe, expect, test } from 'vitest';
 import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
-import type { CampaignPlan, PlanRow } from '@/engine/plan';
+import type { CampaignPlan, PlanRow, PlanTotals } from '@/engine/plan';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import { parseImport } from '@/share/exportImport';
-import { buildPlanRequest } from '@/state/derive';
+import { buildPlanRequest, buildStackRequest } from '@/state/derive';
+
+import type { Scenario } from './plan-scenarios';
+import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from './plan-scenarios';
 
 const OWNER_EXPORT =
   process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
@@ -242,16 +245,33 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // unit (484 597 → 494 851). A **silver saver is offered again** at that new 7-burn rung — 16 747 720 over
       // four marches at 521 449 a hired — which is why `leastPerHired` drops from a floor nothing exercised.
       // The steady max and the plan itself are untouched: 6 242 452 at 2.2788, campaign 24 814 601.
+      // **Re-based 2026-09-18 (S-87): every hired stack is sheltered again, capped or unlimited.** This is the
+      // account S-77's sponge was measured on, so it is where the owner's *"a critical rule is to shield
+      // mercs"* costs the most — and the bar lands exactly back on the four stops S-75 measured here, to the
+      // unit. The burn ladder is 11 · 12 · 13 · 27: sweet spot 5 330 563 a march for 2 739 400 (**1.9459** a
+      // silver, **484 597** a hired), campaign 21 662 734 for 10 957 600; more mercs 5 487 598; steady max
+      // 5 864 482 at **2.1408** (it was the unsheltered MS-relaxed march at 6 242 452 — the shelter costs
+      // 6.1 % of the top march here); the plan **23 264 491** against 24 814 601.
+      //
+      // Three floors fall and are explained by that one change: `sweetPerHired` 494 851 → 484 597 (the
+      // recommendation moves from the 10-burn rung to the 11, which buys 3.5 % more campaign damage for 2 %
+      // less a hired unit), `mostDamage` and `mostPerSilver` with the sponge, and `campaignDamage` with them.
+      // Two floors **rise**: `sweetPerSilver` 1.8064 → 1.9459 and `sweetCampaignDamage` 20 924 965 →
+      // 21 662 734. **No silver saver is offered** — nothing left of the 11-burn rung is as efficient a silver
+      // as it is — so `leastPerHired` is again a floor nothing on this army exercises; it is kept at the
+      // figure the armies that do offer one were measured at, and `expectCriteria` reads it only then.
       expectCriteria(plan, {
         leastPerHired: under(521_449),
-        sweetPerSilver: under(1.8064),
-        sweetPerHired: under(494_851),
-        sweetCampaignDamage: under(20_924_965),
+        sweetPerSilver: under(1.9459),
+        sweetPerHired: under(484_597),
+        sweetCampaignDamage: under(21_662_734),
         sweetCampaignSilverCeiling: over(10_957_600),
-        mostDamage: under(6_242_452),
-        mostPerSilver: under(2.2788),
-        campaignDamage: under(24_814_601),
+        mostDamage: under(5_864_482),
+        mostPerSilver: under(2.1408),
+        campaignDamage: under(23_264_491),
       });
+      // 1 429 ms measured on 2026-09-18 (benchmark 06) against 7 113 ms before the shelter: a sheltered vector is reached
+      // from many directions at once, so the climb and the sweep re-score far fewer distinct shapes.
       expect(Date.now() - started).toBeLessThan(10_000);
     }, 120_000);
 
@@ -267,7 +287,9 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       expect(sweet).toBeDefined();
       // 22 000 000 → 20 900 000 on 2026-09-18: the knee moved from the 11-burn rung to the 10 when the sweep's
       // per-unit vectors improved the ladder's 7-burn rung and tilted the chord (see the floors above).
-      expect(sweet.totalDamage).toBeGreaterThanOrEqual(20_900_000);
+      // 20 900 000 → **21 600 000** later that day (S-87): with every hired stack sheltered the ladder is
+      // 11 · 12 · 13 and the sweet spot is its 11-burn rung again, 21 662 734 over four marches.
+      expect(sweet.totalDamage).toBeGreaterThanOrEqual(21_600_000);
       // **The silver saver is excluded, as it is in `expectCriteria`** (re-based 2026-09-18). That stop is
       // defined to be cheaper than the sweet spot *and* at least as efficient a silver, so it can only ever
       // tie or beat it on the first ratio, and a thriftier march usually beats it on the second too: the rule
@@ -317,3 +339,184 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
     }, 120_000);
   },
 );
+
+/**
+ * **The shelter: every hired stack under the lowest troop stack** (owner, 2026-09-18: *"a critical rule is to
+ * shield mercs. Right now mercs are unshielded on all complete optimization marches … more damage with a lot
+ * of merc spent should trigger a failing test as we're using too much of a rare resource"*, and on 2026-09-18
+ * before it: *"when a merc is unlimited and is put in, don't put more, and lower it so the health stack still
+ * makes sense (below the troops)"*).
+ *
+ * The enemy wipes the **highest-HP living stack** first (`buildKillOrder`, `simulateBattle`), so a hired stack
+ * whose total HP reaches the lowest troop stack's is the enemy's first kill — the rarest resource on the
+ * field spent before a single troop has died. S-75 sheltered the sizer's shapes; S-77 narrowed that to the
+ * *unlimited* types on a sponge argument, and S-87 restored it for **every** hired type on every shape the
+ * plan offers.
+ *
+ * This holds on **every scenario the benchmark builds** (`plan-scenarios.ts` — the same armies and the same
+ * flags, pins and all), over every march the bar can play: each stop's repeated march, its finale, and every
+ * march of the `all-in`'s sequence. The stacks are the engine's own (`planMarch` builds exactly what
+ * `simulateBattle` is handed), so this is the battle's reading of the march and not a second model of it.
+ */
+describe('every hired stack stands under the lowest troop stack', () => {
+  /** Every march a stop plays: the `all-in`'s own sequence, or the repeated march and the finale. */
+  const marchesOf = (row: PlanTotals): { counts: Record<string, number>; what: string }[] =>
+    row.sequence
+      ? row.sequence.map((counts, index) => ({ counts, what: `march ${index + 1} of the sequence` }))
+      : [
+          { counts: row.counts, what: 'the repeated march' },
+          ...(row.finaleCounts ? [{ counts: row.finaleCounts, what: 'the finale' }] : []),
+        ];
+
+  /** The hired stacks of one march that are not strictly under the lowest troop stack, as the battle sees it. */
+  const exposedIn = (
+    request: StackRequest,
+    counts: Record<string, number>,
+  ): { line: string; floor: number } => {
+    const { result } = planMarch(request, counts);
+    const troops = result.stacks.filter((stack) => stack.pool === 'leadership');
+    const hired = result.stacks.filter((stack) => stack.pool === 'authority');
+    if (hired.length === 0) return { line: '', floor: Infinity };
+    if (troops.length === 0) return { line: 'no troop stack at all shelters the hired ones', floor: 0 };
+    const floor = Math.min(...troops.map((stack) => stack.totalHp));
+    const over = hired.filter((stack) => stack.totalHp >= floor);
+    return {
+      floor,
+      line:
+        over.length === 0
+          ? ''
+          : over
+              .map(
+                (stack) =>
+                  `${stack.unitId} ${stack.count} = ${Math.round(stack.totalHp).toLocaleString('en-US')} HP ` +
+                  `at or above the lowest troop stack (${Math.round(floor).toLocaleString('en-US')} HP)`,
+              )
+              .join('; '),
+    };
+  };
+
+  /**
+   * **The owner's live camp of 2026-09-18**, beside the benchmark's own armies: the profile he was looking at
+   * when he wrote *"mercs are unshielded on all complete optimization marches"* — arbalesters 485, legionaries
+   * 1 002, bears unlimited, his three captains, 4 975 leadership and 2 180 authority, the two top guardsman
+   * tiers and the top melee specialist he does not own clicked out. It is the camp experiment 106 measured
+   * (`tools/theorycraft/out/106-shelter-live.md`), where **every** stop fielded hired stacks above the troops —
+   * 375 legionaries and 403 arbalesters over a 274 772-HP floor at the sweet spot — and it is the one case in
+   * this file that no benchmark scenario covers, which is exactly why it is here.
+   */
+  const liveCamp = (): { label: string; request: StackRequest }[] => {
+    const owner = ownerProfile();
+    if (!owner) return [];
+    const camp = structuredClone(owner);
+    camp.sources.captains = [
+      { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
+      { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+      { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+    ];
+    camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
+    camp.mercenaries.selected = [
+      { id: 'arbalester-6', cap: 485 },
+      { id: 'legionary-6', cap: 1002 },
+      { id: 'bear-5', cap: null },
+    ];
+    const setup = camp.setups[0];
+    if (!setup) return [];
+    return [
+      {
+        label: 'the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)',
+        request: buildStackRequest(camp, {
+          ...setup,
+          active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
+          housing: { ...setup.housing, leadership: 4_975, authority: 2_180 },
+        }),
+      },
+    ];
+  };
+
+  const profile = ownerProfile();
+  const scenarios: { label: string; request: StackRequest; pinned?: Scenario['pinned'] }[] = [
+    ...commonScenarios(),
+    ...(profile ? ownerScenarios(profile) : []),
+    ...liveCamp(),
+  ];
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = ((): CampaignPlan | string => {
+          try {
+            return planCampaign({
+              request: scenario.request,
+              marchTarget: HORIZON,
+              budgetMs: CAMPAIGN.budgets.plan,
+              ...CAMPAIGN.planFixes,
+              putBack: CAMPAIGN.putBack,
+            });
+          } catch (error) {
+            return error instanceof Error ? error.message : String(error);
+          }
+        })();
+        if (typeof planned === 'string') {
+          // A scenario the plan refuses has no march to shelter; the benchmark pins the refusal itself.
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const failures: string[] = [];
+        const rows: { what: string; row: PlanTotals }[] = [
+          ...plan.alternatives.map((row) => ({ what: `stop ${row.pick}`, row: row as PlanTotals })),
+          // The plan's own march, which the payload carries beside the bar.
+          { what: 'the plan itself', row: plan as PlanTotals },
+        ];
+        for (const { what, row } of rows) {
+          for (const march of marchesOf(row)) {
+            const { line } = exposedIn(scenario.request, march.counts);
+            if (line) failures.push(`${what}, ${march.what}: ${line}`);
+          }
+        }
+        expect(failures.join('\n'), `exposed hired stacks\n${failures.join('\n')}`).toBe('');
+
+        /**
+         * **And the burn never exceeds what the troops shelter** (the owner's *"too much of a rare resource"*,
+         * stated on the figures a row carries): a march burns one chunk of ten per hired stack it fields, so
+         * its `repeat.mercLost` can never be more than the hired units standing on the field — every one of
+         * which the assertion above has just put under the troops. A shape that burned stock it did not field,
+         * or fielded a stack the troops do not shelter, breaks one of the two.
+         */
+        for (const row of plan.alternatives) {
+          const fielded = hiredOf(row.counts);
+          expect(
+            row.repeat.mercLost,
+            `${row.pick} burns more than the hired units its troops shelter`,
+          ).toBeLessThanOrEqual(fielded);
+        }
+
+        /**
+         * **And the recommendation is never the worse deal in the rare resource** (the owner's *"too much of a
+         * rare resource"* in the one form that is measurable without a number of our own): the sweet spot's
+         * damage a hired unit burned is at least the steady max's. The bar runs left to right from thrift to
+         * the top, the sweet spot sits left of the steady max, and a recommendation that got **less** out of
+         * each unit of the stock than the stop spending more of it would be recommending the waste.
+         *
+         * Measured on every scenario here, 2026-09-18, before it was pinned: it holds on each of the seven that
+         * offer both stops, and never by a hair — the sweet spot gets **7.4 %** more out of a hired unit than
+         * the steady max on the owner's export at 7 000, 10.5 % at 12 000, 10.7 % on the e2e seed, 12.3 % on his
+         * live account at 20 000, 20.3 % on its evening form, 23.9 % on the 4 000 case and 26.4 % on his live
+         * camp. (The four bear armies offer no steady max: their whole stock is one or two stops.) The two
+         * stops it does **not** speak about are the ones the bar defines out of the comparison — the silver
+         * saver, which is allowed to beat the sweet spot on both ratios because it pays for it in damage, and
+         * the `all-in`, which fields every mercenary the troops shelter and is the last stop whatever it costs.
+         */
+        const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot');
+        const steady = plan.alternatives.find((row) => row.pick === 'steady-max');
+        if (sweet && steady) {
+          expect(
+            perHired(sweet),
+            'the sweet spot gets less out of a hired unit than the steady max',
+          ).toBeGreaterThanOrEqual(perHired(steady));
+        }
+      },
+      300_000,
+    );
+  }
+});
