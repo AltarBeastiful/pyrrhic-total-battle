@@ -823,12 +823,60 @@ export function commonScenarios(): Scenario[] {
       // **Nothing here is registered as a baseline**: these are the figures of the day the plan first
       // fielded a monster, and what an acceptable trade on a monster camp is, is the owner's call —
       // `tests/engine/plan-baseline.proposed.json` carries the measured bar.
+      //
+      // ---- **Re-measured 2026-09-19 (S-102), and the three pins below moved with it.** ----------------
+      //
+      // The owner: *"monsters should be there if dominance has been set and damage is interesting; they
+      // have a cost in silver but in dragon coins also, which are both constrained; but at least, apart
+      // from mercs, they can be trained just like troops."* So a dominance monster left the burn axis:
+      // `mercLost` counts the **authority** pool alone, and a monster's price is its silver, its queue and
+      // its dragon coins. This is the one army in the file that holds a dominance pool, so it is the one
+      // army the change can move — the other fourteen are byte-identical to snapshot 17, the three stop
+      // pins and four criteria floors that were red before it are red after it and nothing else is.
+      //
+      // **The bar, before → after** (S-101's snapshot 17 against this run; every figure from
+      // `tools/theorycraft/out/benchmark-2026-09-19-{17-totalstack-floors,18-monsters-trained}.md`):
+      //
+      //   | stop          | damage                 | silver                 | burn      | coins  | a silver    | a hired               | a coin |
+      //   | silver-saver  | — → 61 696 768          | — → 25 764 300          | — → 18   | 31 680 | — → 2.39    | — → 3 427 598        | 1 947  |
+      //   | sweet-spot    | 91 948 255 → 77 280 595 | 35 274 000 → 35 450 400 | 97 → 24  | 28 440 → 31 680 | 2.61 → 2.18 | 947 920 → 3 220 025 | 2 439 |
+      //   | more-mercs    | 94 687 477 → 78 871 786 | 35 349 600 → 35 450 400 | 106 → 26 | 29 520 → 31 680 | 2.68 → 2.22 | 893 278 → 3 033 530 | 2 490 |
+      //   | steady-max    | 95 348 743 → 95 348 743 | 35 458 800 → 35 458 800 | 112 → 32 | 31 080 | 2.69 → 2.69 | 851 328 → 2 979 648 | 3 068 |
+      //   | all-in        | — → 82 845 061          | — → 35 450 400          | — → 33   | 31 680 | — → 2.34    | — → 2 510 456        | 2 615  |
+      //
+      // The **hardest** stop does not move at all — steady-max, 95 348 743 for 35 458 800 — which is why
+      // `damageFloor` is untouched at 0.91 (measured 0.9113 both days, the best sizer sequence being the
+      // same 104 626 942). What moved is the *shape* of the bar and the three pins that describe it:
+      //
+      //  - **`stops` 3 → 5.** The bar is ordered on `repeat.mercLost`, and on this camp that figure used
+      //    to be dominated by monster chunks: three stops stood at 97, 106 and 112. With the monsters off
+      //    the axis the whole bar spreads over the 32 authority chunks its 83 hunters and 6 bears can lose,
+      //    and the ladder finds five rungs there — 18 · 24 · 26 · 32 · 33 — including a **silver saver**
+      //    and an **all-in** this camp never offered before. The silver saver is the news: 61 696 768 for
+      //    **25 764 300** silver, ten million under every other answer on the table, at 18 chunks.
+      //  - **`winsHired` false → true.** The plan's best damage a hired unit is the silver saver's
+      //    3 427 598 against the best sizer sequence's 3 077 263 (Troops first · Generate). It was 947 920
+      //    against 1 361 029 before, and the reason it was behind is the reason it is not now: the sizers'
+      //    marches burn 33–34 authority chunks where the plan's thrift end burns 18, and the pooled axis
+      //    hid that behind 84 monster chunks both sides were paying anyway.
+      //  - **`sweetNotAheadOnEither` true → false.** No sizer sequence now matches the sweet spot on both
+      //    ratios at once: the best of them a silver (2.81) is behind it a hired (3 077 263 against
+      //    3 220 025), and the best a hired is behind it a silver.
+      //
+      // **The trade to judge, and it is a real one**: the sweet spot and the "more mercs" stop each give up
+      // about 16 % of their damage (91.9 M → 77.3 M, 94.7 M → 78.9 M) and half a point of damage a silver
+      // (2.61 → 2.18, 2.68 → 2.22) for roughly four times the damage a hired unit and a quarter of the burn.
+      // Every stop now trains the camp's monsters to the housing — 84 chunks, **31 680 dragon coins** a
+      // campaign on four of the five — because monsters are no longer rationed by an axis that made them
+      // look like spent mercenaries, which is the owner's *"monsters should be there if dominance has been
+      // set"*. Whether 16 % of the sweet spot's damage is worth what it buys is his call; nothing here is a
+      // registered baseline and the proposal carries the measured bar.
       pinned: {
         refuses: false,
-        stops: 3,
-        sweetNotAheadOnEither: true,
+        stops: 5,
+        sweetNotAheadOnEither: false,
         damageFloor: 0.91,
-        winsHired: false,
+        winsHired: true,
       },
     },
     fourThousand(),

@@ -24,7 +24,7 @@ import type * as WorkerClient from '@/worker/client';
 
 import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
-import { amount, duration } from './format';
+import { amount, duration, ratio } from './format';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
 import { useRunStore } from './runStore';
@@ -150,6 +150,56 @@ test('the recap is the figures a march is compared by, the expected damage first
   // How many times the army swings is a fact about a stack, so it is said in the unit sheet alone
   // (owner, 2026-09-13) and never in the recap.
   expect(screen.queryByText('Hits landed')).toBeNull();
+  // And the two figures a march only has when it trains a monster are not among them on an account with
+  // no dominance pool (S-102, design rule 15) — the case below is the other half of this one.
+  expect(screen.queryByText('Dragon coins to recover')).toBeNull();
+  expect(screen.queryByText('Damage per dragon coin')).toBeNull();
+});
+
+/**
+ * **The third price a march is paid in, and what it bought** (S-102, 2026-09-19; the owner: *"monsters have
+ * a 3-cost: training time, silver and dragon coins. TotalStack computes the total of dragon coins needed for
+ * a stack if present and the dmg/dragon coins."*).
+ *
+ * A dominance monster is **trained**, not hired: it never touches "Hired lost" below (that figure is the
+ * authority pool's, `./hired`, and so is the engine's own burn axis since S-102). Its price is the silver and
+ * the queue it shares with the troops plus these coins, which nothing else in the game spends — so the recap
+ * says them, and says what they bought beside "Damage per silver".
+ *
+ * **Both only while the march spends one** (design rule 15). The figures are the engine's own
+ * (`recovery.dragonCoins`, `damagePerDragonCoin`); the recap computes nothing.
+ */
+test('the recap says the dragon coins a monster march costs, and what they bought', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  expect(lastResult()?.summary.recovery.dragonCoins).toBe(0);
+
+  // Open the monster tier window and house a dominance pool, the way the Battle card would: experiment
+  // 110's camp, tiers 3–5 against 900 dominance.
+  const before = lastResult();
+  act(() => {
+    const state = useStore.getState();
+    const active = selectActiveProfile(state);
+    if (active) {
+      state.updateProfile(active.id, (current) => ({
+        troops: { ...current.troops, monsters: { min: 3, max: 5 } },
+      }));
+    }
+    state.updateActiveSetup({ housing: { leadership: 4100, authority: 0, dominance: 900 } });
+  });
+  fireEvent.click(screen.getByRole('button', { name: /^Generate march/ }));
+  await waitFor(() => {
+    expect(lastResult()).not.toBe(before);
+  });
+
+  const summary = lastResult()?.summary;
+  const coins = summary?.recovery.dragonCoins ?? 0;
+  expect(coins, 'a march that houses 900 dominance trains monsters back').toBeGreaterThan(0);
+  const figures = screen.getByLabelText('March figures');
+  const cost = within(figures).getByText('Dragon coins to recover').closest('dt')?.nextElementSibling;
+  expect(cost?.textContent).toContain(amount(coins));
+  const per = within(figures).getByText('Damage per dragon coin').closest('dt')?.nextElementSibling;
+  expect(per?.textContent).toContain(ratio(summary?.damagePerDragonCoin ?? 0));
 });
 
 /**

@@ -720,6 +720,59 @@ test('every stop says how long its march takes to recover, under the silver it c
   );
 });
 
+/**
+ * **The dragon coins, in the silver cell beside the queue** (S-102, 2026-09-19; the owner: *"monsters should
+ * be there if dominance has been set and damage is interesting; they have a cost in silver but in dragon
+ * coins also, which are both constrained; but at least, apart from mercs, they can be trained just like
+ * troops."*).
+ *
+ * A dominance monster is trained rather than hired, so S-102 took its chunks off the **Hired lost** column —
+ * that column is the authority pool's, and only that pool is a stock the player cannot train back. What a
+ * monster costs is the silver, the queue and the coins, and the first two already share this cell, so the
+ * third joins them rather than taking a seventh head the table has no room for.
+ *
+ * **And only while a march spends one** (design rule 15: nothing on screen without a value). Every army in
+ * this repo but a monster camp spends none, so the ordinary bar must say nothing at all about coins.
+ */
+test('a stop that trains monsters says what it costs in dragon coins, and one that does not says nothing', () => {
+  stubLayout();
+  // The bar as every army without a dominance pool draws it: not one row mentions a coin, in the cells or
+  // in the names a screen reader hears.
+  primeBurn();
+  renderWithTheme(<PlanFold />);
+  const plain = tradeRows();
+  expect(plain.map((row) => row.textContent ?? '').join('\n')).not.toContain('dragon coin');
+  expect(plain.map((row) => row.getAttribute('aria-label') ?? '').join('\n')).not.toContain('dragon coin');
+  cleanup();
+
+  // The same bar on a monster camp: the sweet spot's march trains 6 840 coins' worth of monsters back
+  // (experiment 110's 900-dominance camp, the figure the engine measured on 2026-09-19).
+  const camp: CampaignPlan = {
+    ...BURN,
+    alternatives: BURN_ROWS.map((row, index) =>
+      index === 1 ? { ...row, repeat: { ...row.repeat, dragonCoins: 6_840 } } : row,
+    ),
+  };
+  useRunStore.setState({ plan: camp, planPick: 1, includedUnitIds: [], leftOutByPlayer: [] });
+  renderWithTheme(<PlanFold />);
+  const rows = tradeRows();
+  const monster = rows[1];
+  // In the cell, under the queue and after it — the three prices of one march, read in one place.
+  expect(monster?.textContent ?? '').toContain(`${amount(6_840)} dragon coins`);
+  // And in the row's accessible name, because a figure drawn in the muted ink is a figure half the readers
+  // do not get (design rule 24).
+  expect(monster?.getAttribute('aria-label') ?? '').toContain(`${amount(6_840)} dragon coins`);
+  // The other four stops spend no coin and say so by saying nothing.
+  for (const index of [0, 2, 3, 4]) {
+    expect(rows[index]?.textContent ?? '', `stop ${String(index)} is silent about coins`).not.toContain(
+      'dragon coin',
+    );
+  }
+  // **Still six columns**: the coins are a line inside the silver cell, never a head of their own.
+  const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+});
+
 test('the tip carries the gold a march the trade has no room for', () => {
   stubLayout();
   primeBurn();

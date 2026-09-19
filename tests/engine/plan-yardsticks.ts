@@ -37,6 +37,11 @@ export interface Rival {
   counts: Record<string, number>;
   damage: number;
   silver: number;
+  /**
+   * **Chunks of the `authority` pool this march loses for good** (S-102) — the same reading as a stop's
+   * `PlanTotals.mercLost`, which is what every criterion here compares it against. A dominance monster is
+   * not in it: it is trained again, so it costs silver, queue and dragon coins rather than stock.
+   */
   burn: number;
   /** The hired units the march fields, every hired pool together (S-96) — what the `all-in` is offered on. */
   hired: number;
@@ -75,6 +80,16 @@ export const shelteredRivals = (request: StackRequest, repeats = 0): Rival[] => 
   // pool's mercenaries are, and a yardstick that counted a monster as a troop would put it in the shelter's
   // floor and leave its chunks out of the burn.
   const hiredIds = request.units.filter((unit) => unit.pool !== 'leadership').map((unit) => unit.id);
+  /**
+   * **And the chunks that are actually *burned* are the `authority` pool's alone** (S-102, 2026-09-19). A
+   * rival's `burn` below is compared, cell for cell, against a stop's `repeat.mercLost`, and since S-102
+   * that figure counts hired soldiers and monster mercenaries only: a dominance monster is trained again
+   * rather than hired again, so it is a price and not a stock. Counting it on one side of that comparison
+   * and not on the other would make every criterion about the burn read a different resource on each side.
+   * Identical to `hiredIds` on every army in this file but the monster camp, none of the others holding a
+   * dominance unit.
+   */
+  const burnedIds = request.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id);
   const hp = new Map(table.map((entry) => [entry.id, entry.hp] as const));
   const out: Rival[] = [];
   const seen = new Set<string>();
@@ -142,7 +157,7 @@ export const shelteredRivals = (request: StackRequest, repeats = 0): Rival[] => 
         // openings against a stop priced on the bad flip would beat it on arithmetic alone.
         damage: summary.minDamage,
         silver: summary.recovery.silver,
-        burn: hiredIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0),
+        burn: burnedIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0),
         hired: hiredIds.reduce((sum, id) => sum + (counts[id] ?? 0), 0),
         seconds: summary.recovery.seconds,
         key,
@@ -196,6 +211,26 @@ export interface RareStock {
   /** Chunks of ten lost over the **monsters**: monster mercenaries and dominance monsters together. */
   monstersLost: number;
   /**
+   * **Chunks of the `authority` pool alone — the bar's burn** (S-102, 2026-09-19; the owner: *"apart from
+   * mercs, they [monsters] can be trained just like troops"*). The hired soldiers and the monster
+   * mercenaries: the units the game *revives* for gold and never trains, which is the one stock a march
+   * takes off the board for good. It is `PlanTotals.mercLost` to the chunk, and `plan-criteria.test.ts`
+   * holds that identity on every army.
+   *
+   * Until S-102 the burn was `soldiersLost + monstersLost`, every non-leadership chunk pooled. That reading
+   * counted a **dominance** monster as spent stock, which it is not: a monster is recruited again, ten at a
+   * time, for silver, queue time and dragon coins. So the two readings above are now a **split by race**
+   * and this one is the **split by pool**, and only this one is burn.
+   */
+  hiredLost: number;
+  /**
+   * **Chunks of the `dominance` pool — a cost, never burn** (S-102). What a march loses of the monsters it
+   * trained, counted so the criteria can report it beside the burn rather than inside it. Nought on every
+   * army in this repo but a monster camp, and `soldiersLost + monstersLost === hiredLost + dominanceLost`
+   * by construction (a dominance unit is a monster by construction — `src/data/index.ts`).
+   */
+  dominanceLost: number;
+  /**
    * The dragon coins the losses cost to recruit again — the dominance pool's own price, `chunks(n)` ×
    * `training.dragonCoins` (`src/engine/recovery.ts`). Nought for a troop (no such line) and for a
    * mercenary (no `training` block at all), monster mercenaries included: a monster hired for authority is
@@ -211,16 +246,23 @@ export interface RareStock {
 export function rareStockOf(units: UnitDef[], counts: Record<string, number>): RareStock {
   let soldiersLost = 0;
   let monstersLost = 0;
+  let hiredLost = 0;
+  let dominanceLost = 0;
   let dragonCoins = 0;
   for (const unit of units) {
     const count = Math.floor(counts[unit.id] ?? 0);
     if (count <= 0 || unit.pool === 'leadership') continue;
     const burn = chunks(count);
+    // The split by **race**, which is the owner's *"merc/dmg and monster/dmg"* (S-98)…
     if (isMonsterUnit(unit)) monstersLost += burn;
     else soldiersLost += burn;
-    if (unit.pool === 'dominance') dragonCoins += burn * (unit.training?.dragonCoins ?? 0);
+    // …and the split by **pool**, which is what is burned and what is merely paid for (S-102).
+    if (unit.pool === 'dominance') {
+      dominanceLost += burn;
+      dragonCoins += burn * (unit.training?.dragonCoins ?? 0);
+    } else hiredLost += burn;
   }
-  return { soldiersLost, monstersLost, dragonCoins };
+  return { soldiersLost, monstersLost, hiredLost, dominanceLost, dragonCoins };
 }
 
 /**
@@ -232,3 +274,17 @@ export const perSoldierOf = (damage: number, soldiersLost: number): number =>
   damage / Math.max(1, soldiersLost);
 export const perMonsterOf = (damage: number, monstersLost: number): number =>
   damage / Math.max(1, monstersLost);
+/**
+ * **Damage a dragon coin** (S-102, 2026-09-19; the owner: *"TotalStack computes the total of dragon coins
+ * needed for a stack if present and the dmg/dragon coins."*). The third currency a monster is paid in, read
+ * on the same zero rule as the two above: a campaign that spends no coin — which is every army in this repo
+ * but a monster camp — comes back at `damage / 1` rather than at `Infinity`, so it sits in the column beside
+ * one that does instead of topping it by arithmetic.
+ *
+ * **The engine's own `PlanTotals.damagePerDragonCoin` answers `Infinity` for that case and this answers the
+ * damage**, and the difference is deliberate: the payload's figure is read by one player about one plan, and
+ * this one is a **column** every rival on the benchmark's table is sorted in, where an `Infinity` in a row
+ * that spends nothing would win a comparison it never entered.
+ */
+export const perDragonCoinOf = (damage: number, dragonCoins: number): number =>
+  damage / Math.max(1, dragonCoins);

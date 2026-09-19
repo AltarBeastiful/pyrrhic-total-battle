@@ -172,9 +172,14 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                   point.repeat.silver,
                 )} silver, ${duration(point.repeat.seconds)} to recover, ${compact(
                   point.repeat.gold,
-                )} gold, ${amount(point.repeat.mercLost)} hired lost a march${
-                  note === null ? '' : `, ${note}`
-                }`}
+                )} gold, ${
+                  // The third currency, in the row's own name and only while the march spends one (design
+                  // rule 15). A reader meets it in the same breath as the silver and the queue it rides
+                  // with in the cell (S-102).
+                  (point.repeat.dragonCoins ?? 0) > 0
+                    ? `${amount(point.repeat.dragonCoins ?? 0)} dragon coins, `
+                    : ''
+                }${amount(point.repeat.mercLost)} hired lost a march${note === null ? '' : `, ${note}`}`}
                 aria-selected={current}
                 // The row on screen, the way the objectives strip says it: one tonal step for the eye, and
                 // for a reader the two attributes that mean it. Never colour alone (rule 24) — and the
@@ -265,6 +270,19 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                   {compact(point.repeat.silver)}
                   <Text span inherit display="block" fw={400} c="dimmed">
                     {duration(point.repeat.seconds)}
+                    {/* **And the dragon coins, on the marches that spend any** (S-102; the owner,
+                        2026-09-19: *"they have a cost in silver but in dragon coins also, which are both
+                        constrained"*). A dominance monster is trained rather than hired, so it leaves the
+                        "Hired lost" column two cells along and its whole price is here: the silver above,
+                        the queue beside it and this. Same muted ink, same line, no seventh head — the
+                        table measured 505 px in a 462 px pane the last time a price was tried as a column
+                        of its own (see the row's accessible name above).
+
+                        **Drawn only while the figure is positive** (design rule 15: nothing on screen
+                        without a value). Every army in this repo but a monster camp spends no coin at all,
+                        and a "· 0 dragon coins" on every row of every bar would be a column of noughts. */}
+                    {(point.repeat.dragonCoins ?? 0) > 0 &&
+                      ` · ${amount(point.repeat.dragonCoins ?? 0)} dragon coins`}
                   </Text>
                 </Table.Td>
                 <Table.Td ta="end">{amount(point.repeat.mercLost)}</Table.Td>

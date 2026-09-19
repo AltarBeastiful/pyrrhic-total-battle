@@ -22,8 +22,9 @@
  *  - its **damage a silver** and **damage a hired unit** are not lower;
  *  - since S-98, and **only where the registered file carries them**: the **hired soldiers burned**, the
  *    **monsters burned** and the **dragon coins** are not higher, and **damage a hired soldier** and
- *    **damage a monster** are not lower. They are additive — a baseline registered before this story holds
- *    none of them and is judged on exactly what it always was;
+ *    **damage a monster** are not lower — and since S-102 **damage a dragon coin** likewise. They are
+ *    additive — a baseline registered before this story holds none of them and is judged on exactly what it
+ *    always was;
  *  - the scenario's standing **ratios** — the plan's hardest campaign over the best sizer sequence's, and
  *    over each comparable captured answer — are not lower. That is the "a given scenario should not be
  *    worse" of the rule, stated on the comparison the benchmark exists to make; since S-98 the same standing
@@ -76,6 +77,19 @@ export interface BaselineTotals {
   dragonCoins?: number;
   perSoldier?: number;
   perMonster?: number;
+  /**
+   * **Damage a dragon coin** (S-102, 2026-09-19; the owner: *"monsters have a 3-cost: training time, silver
+   * and dragon coins … TotalStack computes the total of dragon coins needed for a stack if present and the
+   * dmg/dragon coins."*). `dragonCoins` above is what the campaign's monsters cost to train again; this is
+   * what that purse bought. Optional and additive on exactly the terms the five above it are.
+   *
+   * It belongs here and not among the costs because a **dominance monster left the burn** in the same story:
+   * it is trained rather than hired, so `burned` is the authority pool's chunks and a monster's price is the
+   * silver, the queue and these coins. A baseline registered before S-102 holds a `burned` that pooled both,
+   * which is the same figure on every army holding no dominance unit and a different one on a monster camp —
+   * the owner re-bases that army or he does not, as he does with any other trade.
+   */
+  perDragonCoin?: number;
 }
 
 export interface BaselineScenario {
@@ -97,6 +111,14 @@ export interface BaselineScenario {
      */
     perSoldier?: { bestSizer: number; externals: Record<string, number> };
     perMonster?: { bestSizer: number; externals: Record<string, number> };
+    /**
+     * And the same standing on **damage a dragon coin** (S-102). Optional on the same terms: a baseline that
+     * predates it is judged on exactly what it holds. Nought-coin armies read `damage / 1` on both sides
+     * (the table's zero rule), so on every scenario but a monster camp this standing is the damage standing
+     * restated — which is true of `perSoldier` and `perMonster` on most armies too, and is why the review
+     * page names the standings that **moved**.
+     */
+    perDragonCoin?: { bestSizer: number; externals: Record<string, number> };
     /**
      * And the third of the owner's three readings, **damage a silver** (S-101). It completes *"silver/dmg,
      * merc/dmg and monster/dmg"*: the two above were registered by S-98 and this one was not, so until now
@@ -182,7 +204,7 @@ export function compareToBaseline(
     costlier('soldiersLost', 'hired soldiers burned');
     costlier('monstersLost', 'monsters burned');
     costlier('dragonCoins', 'dragon coins');
-    const thinner = (key: 'perSoldier' | 'perMonster', label: string): void => {
+    const thinner = (key: 'perSoldier' | 'perMonster' | 'perDragonCoin', label: string): void => {
       const was = before[key];
       const now = after[key];
       if (was === undefined || now === undefined || now >= was - SLACK) return;
@@ -190,6 +212,7 @@ export function compareToBaseline(
     };
     thinner('perSoldier', 'damage a hired soldier');
     thinner('perMonster', 'damage a monster');
+    thinner('perDragonCoin', 'damage a dragon coin');
   };
 
   for (const [pick, before] of Object.entries(was.stops)) {
@@ -231,6 +254,7 @@ export function compareToBaseline(
     ['damage a hired soldier', was.ratios.perSoldier, now.ratios.perSoldier],
     ['damage a monster', was.ratios.perMonster, now.ratios.perMonster],
     ['damage a silver', was.ratios.perSilver, now.ratios.perSilver],
+    ['damage a dragon coin', was.ratios.perDragonCoin, now.ratios.perDragonCoin],
   ] as const) {
     if (!was_ || !now_) continue;
     if (now_.bestSizer < was_.bestSizer - SLACK) {

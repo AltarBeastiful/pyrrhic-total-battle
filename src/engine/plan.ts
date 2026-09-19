@@ -278,9 +278,13 @@ export interface PlanMarch {
    * same counts under the retrain plan (`src/engine/recovery.ts`).
    */
   seconds: number;
-  /** Units fielded of each mercenary type. */
+  /** Units fielded of each hired type — every pool but `leadership` (S-96). */
   mercFielded: Record<string, number>;
-  /** Mercenary units lost for good to this march. */
+  /**
+   * **Chunks of the `authority` pool this march loses for good** (S-102): the hired soldiers and the monster
+   * mercenaries, one in every ten of each stack. A **dominance** monster is not counted — it is trained
+   * again, and its whole price is the silver, the `seconds` and the `dragonCoins` beside this (`marchOf`).
+   */
   mercLost: number;
   strikes: number;
   stacks: number;
@@ -301,6 +305,12 @@ export interface PlanRepeat {
   dragonCoins?: number;
   /** What one march of it takes to recover, in seconds — `PlanMarch.seconds`, for the march the stop repeats. */
   seconds: number;
+  /**
+   * The march's **authority** chunks — `PlanMarch.mercLost` (S-102). Damage a dragon coin for this one march
+   * is `damage / (dragonCoins ?? 0)` where the coins are positive, read the way the trade table already
+   * reads damage a silver and damage a hired off this struct; the campaign's own is
+   * `PlanTotals.damagePerDragonCoin`.
+   */
   mercLost: number;
 }
 
@@ -389,11 +399,34 @@ export interface PlanTotals {
    * figure a single march is read by is `repeat.seconds`, exactly as silver is.
    */
   seconds: number;
+  /**
+   * **The campaign's `authority` chunks** — the one rare stock the whole bar is ordered by (S-102). A
+   * dominance monster is not in it: it is trained again rather than hired again, so what it costs the player
+   * is `silver`, `seconds` and `dragonCoins` above, and `damagePerDragonCoin` below is what those coins
+   * bought. The troops-only tail (`tail`) adds nothing here either — it fields no hired stack at all.
+   */
   mercLost: number;
   marches: number;
   /** The two criteria, reported side by side: damage bought per silver, and per irreplaceable mercenary. */
   damagePerSilver: number;
   damagePerMercenary: number;
+  /**
+   * **Damage bought per dragon coin** (S-102; the owner, 2026-09-19: *"monsters have a 3-cost: training
+   * time, silver and dragon coins. TotalStack computes the total of dragon coins needed for a stack if
+   * present and the dmg/dragon coins."*). The third price a dominance monster is paid in, read as the two
+   * beside it are: `totalDamage / dragonCoins` over the whole campaign.
+   *
+   * `Infinity` when the campaign spends no coin at all, exactly as `damagePerSilver` answers `Infinity` for
+   * a campaign that spends no silver — a ratio nothing was divided by, which every reader of these three
+   * already has to guard. It is what a plan with no monster in it reports, which is every army in this repo
+   * but a monster camp, and it is why the UI draws the figure only while the coins are positive (design rule
+   * 15: nothing on screen without a value).
+   *
+   * **Reported, never ranked.** No stop rule, band, ladder or ratio comparison reads it: the search is
+   * ordered on damage, silver and `mercLost` (`marchOf`), and this is a price the payload prints so the
+   * player can see what the third currency bought him.
+   */
+  damagePerDragonCoin: number;
 }
 
 /**
@@ -814,21 +847,40 @@ function marchOf(
      * fielded **0 of 20**), so nothing exercised it; widening the hired set without this line first would have
      * let the search field monsters for nothing and ranked the bar on a lie.
      *
-     * **`mercLost` stays the one rare-stock axis**, monsters and mercenaries pooled into it, because the
-     * owner's rule is the same sentence for both — *"a critical rule is to shield mercs … we're using too
-     * much of a rare resource"* — and "burned" on the bar means the chunks of rare stock a march does not get
-     * back, whichever pool paid for them.
+     * **`mercLost` counts the `authority` pool alone** (S-102, 2026-09-19; the owner: *"monsters should be
+     * there if dominance has been set and damage is interesting; they have a cost in silver but in dragon
+     * coins also, which are both constrained; but at least, apart from mercs, they can be trained just like
+     * troops."*).
+     *
+     * S-96 pooled the dominance chunks into this axis, on the reading that "burned" means any rare stock a
+     * march does not get back. The owner's sentence says it is not the same stock. A **mercenary** is hired:
+     * spend it and it is gone until the player hires another, which is why the bar is ordered by it at all.
+     * A **monster** is *trained* — the Army tab recruits it again, ten at a time, for silver, for queue time
+     * and for dragon coins (`retrainOne`, `training.dragonCoins`) — so it is a **price**, paid in three
+     * currencies, and not a stock that drains. A trained unit on the burn axis made the bar rank a monster
+     * camp as though every march took something irreplaceable off the board.
+     *
+     * So the burn is the authority pool's chunks — the hired soldiers and the **monster mercenaries** (Bear
+     * V, Cyclops V), which are revived for gold and never trained — and the dominance pool leaves the axis.
+     * It keeps everything else S-96 gave it: it is fielded, it is sheltered under the lowest troop stack
+     * (`shelterUnder`), it has to fit its own housing (`fitsHousing`), and its whole recovery bill is billed
+     * here and on the payload. The gold stays on the wider condition because `retrainOne` bills it for every
+     * non-leadership pool: a monster's chunk does not return its tenth unit either, and the Temple's line for
+     * it is the recap's own rule (`src/engine/recovery.ts`).
      *
      * **Dragon coins are not read here, and so never enter the ranking.** Like the revive gold they are a
      * price the payload *prints* — `toMarch` computes them under the account's own recovery settings for
-     * `PlanMarch.dragonCoins` — and not a figure any stop rule, ratio, band or burn ladder is ordered by. The
-     * search ranks on damage, silver and `mercLost`, exactly as it did before the monsters.
+     * `PlanMarch.dragonCoins`, and `PlanTotals.damagePerDragonCoin` reports what they bought — and not a
+     * figure any stop rule, ratio, band or burn ladder is ordered by. The search ranks on damage, silver and
+     * `mercLost`, exactly as it did before the monsters; what changed in S-102 is only which pool the last of
+     * those three counts, and a monster's own three costs now ride entirely in the silver, the queue and the
+     * coins.
      */
     const one = retrainOne(entry.unit, stack.count, SEARCH_RECOVERY);
     silver += one.silver;
     if (entry.pool !== 'leadership') {
-      mercLost += chunks(stack.count);
       gold += one.gold;
+      if (entry.pool === 'authority') mercLost += chunks(stack.count);
     }
   }
   return {
@@ -1398,6 +1450,25 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // dominance monster is uncapped by construction — `caps` is written only for the mercenaries the player
     // selected (`buildUnits`) — so this is the line that gives a monster a stock at all.
     stock[entry.id] = Math.max(0, Math.floor(request.housing[entry.pool] / Math.max(1, entry.cost)));
+    /**
+     * **What a dominance stack's sustain is, said outright** (S-102; the owner, 2026-09-19: *"apart from
+     * mercs, they can be trained just like troops"*).
+     *
+     * The dominance pool is **housing, not a stock that runs out**. A monster lost in a march is recruited
+     * again in the Army tab, ten at a time, for silver, for queue time and for dragon coins — the price
+     * `marchOf` and `toMarch` already bill — and the housing it stood in is free again the moment it is
+     * back. There is no count of monsters the account "has left" to be rationed over four marches, which is
+     * what `sustain`, `lastsMarches`, `anchorFor` and `outrun` exist to ration. So a dominance type is
+     * `Infinity` here and its anchor is the whole pool at every march count (`anchorOf`): **no anchoring and
+     * no `lastsMarches` on a monster**, and a monster camp can never be the type that shortens a campaign
+     * (`carriesHorizon`, `repeatsFor`).
+     *
+     * It lands on the same line as an **unlimited mercenary** and for a different reason, which is worth
+     * knowing apart: the uncapped mercenary is Infinity because the player told the app he holds no
+     * particular number of them, and the monster is Infinity because the question does not apply to it. A
+     * mercenary the player *does* cap is rationed, and after S-102 it is the only thing the bar's burn axis
+     * counts.
+     */
     sustain[entry.id] = Infinity;
   }
   const leadership = request.housing.leadership;
@@ -2304,6 +2375,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // the repeat and the finale, consistently; this is the campaign the bar prints.
     const silver = candidate.marches * m.silver + (last?.silver ?? 0);
     const mercLost = candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0);
+    // The third currency, summed exactly as the silver above is, and named here because the ratio at the
+    // foot of this row divides by it (S-102).
+    const dragonCoins = candidate.marches * m.dragonCoins + (last?.dragonCoins ?? 0);
     /**
      * The plan's shape in the engine's own terms: how deep the march is (its troop stacks), how many hired
      * units ride it, and what one march of it costs. It replaced `N× 7 rungs + finale`, which named the
@@ -2332,7 +2406,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // account: the silver saver printed 1 944 gold where its four marches cost 3 192.
       gold: candidate.marches * m.gold + (last?.gold ?? 0),
       // The dominance pool's own price, summed exactly the same way (S-96).
-      dragonCoins: candidate.marches * m.dragonCoins + (last?.dragonCoins ?? 0),
+      dragonCoins,
       // The campaign's training queue: every repeat of the march, plus the finale's own.
       seconds: candidate.marches * m.seconds + (last?.seconds ?? 0),
       mercLost,
@@ -2350,6 +2424,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       marches: candidate.marches + (candidate.finale ? 1 : 0),
       damagePerSilver: silver > 0 ? candidate.total / silver : Infinity,
       damagePerMercenary: mercLost > 0 ? candidate.total / mercLost : Infinity,
+      // The monsters' own third price, read as the two above it (S-102): `Infinity` on a campaign that
+      // spends no coin, which is every army but a monster camp.
+      damagePerDragonCoin: dragonCoins > 0 ? candidate.total / dragonCoins : Infinity,
     };
   };
   const all = frontier.map(summarise);
@@ -2658,6 +2735,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const totalDamage = row.totalDamage + repeats * (march.damage - row.repeat.damage);
       const campaignSilver = row.silver + repeats * (march.silver - row.repeat.silver);
       const mercLost = row.mercLost + repeats * (march.mercLost - row.repeat.mercLost);
+      const campaignCoins = row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0));
       const hired = Object.values(march.mercFielded).reduce((sum, count) => sum + count, 0);
       best = {
         score,
@@ -2673,7 +2751,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           totalDamage,
           silver: campaignSilver,
           gold: row.gold + repeats * (march.gold - row.repeat.gold),
-          dragonCoins: row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0)),
+          dragonCoins: campaignCoins,
           seconds: row.seconds + repeats * (march.seconds - row.repeat.seconds),
           mercLost,
           repeat: {
@@ -2686,6 +2764,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           },
           damagePerSilver: campaignSilver > 0 ? totalDamage / campaignSilver : Infinity,
           damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+          damagePerDragonCoin: campaignCoins > 0 ? totalDamage / campaignCoins : Infinity,
           putBack: { unitId: extra.id, damage, silver, seconds },
         },
       };
@@ -2784,6 +2863,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         const totalDamage = row.totalDamage + repeats * (march.damage - row.repeat.damage);
         const campaignSilver = row.silver + repeats * (march.silver - row.repeat.silver);
         const mercLost = row.mercLost + repeats * (march.mercLost - row.repeat.mercLost);
+        const campaignCoins = row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0));
         const hired = Object.values(march.mercFielded).reduce((sum, count) => sum + count, 0);
         best = {
           ...campaign,
@@ -2794,7 +2874,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           totalDamage,
           silver: campaignSilver,
           gold: row.gold + repeats * (march.gold - row.repeat.gold),
-          dragonCoins: row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0)),
+          dragonCoins: campaignCoins,
           seconds: row.seconds + repeats * (march.seconds - row.repeat.seconds),
           mercLost,
           repeat: {
@@ -2807,6 +2887,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           },
           damagePerSilver: campaignSilver > 0 ? totalDamage / campaignSilver : Infinity,
           damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+          damagePerDragonCoin: campaignCoins > 0 ? totalDamage / campaignCoins : Infinity,
         };
       }
     }
@@ -3392,6 +3473,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       marches: marches.length,
       damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
       damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+      damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
     };
   })();
 
@@ -3632,6 +3714,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const played = planned - row.marches;
     const totalDamage = row.totalDamage + played * tail.damage;
     const silver = row.silver + played * tail.silver;
+    // A troops-only march trains no monster, so it spends no coin either; summed rather than assumed, for
+    // the same reason the gold below is (S-102).
+    const dragonCoins = row.dragonCoins + played * tail.dragonCoins;
     return {
       ...row,
       tail: {
@@ -3646,13 +3731,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // `toMarch` prices gold off the hired stacks alone, so a troops-only march adds none. Summed rather
       // than assumed, so the line stays true if that ever stops being so.
       gold: row.gold + played * tail.gold,
-      dragonCoins: row.dragonCoins + played * tail.dragonCoins,
+      dragonCoins,
       seconds: row.seconds + played * tail.seconds,
       // The stock burns nothing more: that is the whole shape of the trade the owner accepted here.
       mercLost: row.mercLost,
       marches: planned,
       damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
       damagePerMercenary: row.mercLost > 0 ? totalDamage / row.mercLost : Infinity,
+      damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
     };
   };
   for (let index = 0; index < stops.length; index += 1) {

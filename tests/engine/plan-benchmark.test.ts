@@ -113,7 +113,7 @@ import { HORIZON, OWNER_EXPORT, commonScenarios, ownerProfile, ownerScenarios } 
 // The rare-stock readings the owner asked for on 2026-09-19 — "at least the same as TotalStack full opt in
 // silver/dmg, merc/dmg and monster/dmg" — defined once, beside the sheltered-march yardstick, so this table
 // and `plan-criteria.test.ts` split the stock the same way (S-98).
-import { perMonsterOf, perSoldierOf, rareStockOf } from './plan-yardsticks';
+import { perDragonCoinOf, perMonsterOf, perSoldierOf, rareStockOf } from './plan-yardsticks';
 import { totalstackRows, widenedFor } from './totalstack-rows';
 
 const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
@@ -207,12 +207,17 @@ interface Campaign {
   burned: number;
   /**
    * **The rare stock split** (S-98, 2026-09-19; the owner: *"at least the same as TotalStack full opt in
-   * silver/dmg, merc/dmg and monster/dmg"*). `burned` above is the one axis the bar is ordered by, the
-   * chunks of ten every hired pool loses together; these two are the same chunks told apart — the hired
-   * **soldiers** and the **monsters** (monster mercenaries and dominance monsters, `isMonsterUnit` in
-   * `plan-yardsticks.ts`, which states the definition and what TotalStack's `monsterSaving` does and does
-   * not say about it). `soldiersLost + monstersLost === burned` on every row, by construction here and by
-   * criterion in `plan-criteria.test.ts` on the bar itself.
+   * silver/dmg, merc/dmg and monster/dmg"*). The hired **soldiers** and the **monsters** — monster
+   * mercenaries and dominance monsters together, `isMonsterUnit` in `plan-yardsticks.ts`, which states the
+   * definition and what TotalStack's `monsterSaving` does and does not say about it.
+   *
+   * **They no longer add up to `burned`** (S-102, 2026-09-19). They did while every non-leadership chunk was
+   * burn; since the owner's *"apart from mercs, they can be trained just like troops"* the burn is the
+   * **authority** pool alone, so `soldiersLost + monstersLost === burned + the dominance chunks` and the two
+   * agree exactly on any army holding no dominance unit — which is every scenario here but the monster camp.
+   * `monstersLost` is therefore a **cost** reading now, not a share of the burn: on a monster camp it is the
+   * dominance chunks the march trained again plus whatever monster mercenaries rode with them, and the
+   * coins those chunks cost are the column beside it.
    */
   soldiersLost: number;
   monstersLost: number;
@@ -221,14 +226,19 @@ interface Campaign {
 }
 
 /**
- * The ids whose chunks the `hired burned` column counts: **every pool but `leadership`** (S-96, 2026-09-19).
- * The bar is ordered by the rare stock a march does not get back, and since S-96 that is the dominance pool's
- * monsters as well as the authority pool's mercenaries — `PlanTotals.mercLost` pools them, so the column that
- * is compared against it has to pool them too. It read `=== 'authority'` until then, which was the same set
- * on every army this file measured before the monster camp was added: none of the ten holds a dominance unit.
+ * The ids whose chunks the `hired burned` column counts: **the `authority` pool** (S-102, 2026-09-19).
+ *
+ * S-96 widened this to every non-leadership pool, because `PlanTotals.mercLost` had just been widened the
+ * same way and a column compared against it has to read the same set. The owner's word of 2026-09-19 —
+ * *"apart from mercs, they [monsters] can be trained just like troops"* — narrowed both back: a mercenary is
+ * hired and revived, a monster is **trained again** for silver, queue time and dragon coins, so only the
+ * first is a stock a march does not get back. The column follows `mercLost`, as it always has.
+ *
+ * The same set on every army this file measured before the monster camp, none of the twelve older scenarios
+ * holding a dominance unit — which is why their `burned` figures are byte-identical across this change.
  */
 const hiredIds = (request: StackRequest): string[] =>
-  request.units.filter((u) => u.pool !== 'leadership').map((u) => u.id);
+  request.units.filter((u) => u.pool === 'authority').map((u) => u.id);
 
 function campaignOf(
   request: StackRequest,
@@ -334,6 +344,18 @@ const perHired = (c: Campaign): number => c.damage / Math.max(1, c.burned);
  */
 const perSoldier = (c: Campaign): number => perSoldierOf(c.damage, c.soldiersLost);
 const perMonster = (c: Campaign): number => perMonsterOf(c.damage, c.monstersLost);
+/**
+ * **Damage a dragon coin** (S-102, 2026-09-19; the owner: *"TotalStack computes the total of dragon coins
+ * needed for a stack if present and the dmg/dragon coins."*). The third currency a monster is paid in, read
+ * on the same zero rule: a campaign that spends no coin — every row of every scenario here but the monster
+ * camp — reads at `damage / 1` rather than topping the column by arithmetic.
+ *
+ * **A captured answer's coins are priced by our engine, exactly as its silver and its gold are.** TotalStack
+ * sends no `monsterCaps` and comes back with an empty `monsterCounts` in all 308 captured answers
+ * (`plan-yardsticks.ts` on `monsterSaving`), so no row here carries a coin figure of its own; every row on
+ * the table is the same `recoveryCosts` arithmetic over the counts it answered with.
+ */
+const perDragonCoin = (c: Campaign): number => perDragonCoinOf(c.damage, c.dragonCoins);
 
 // ---- the owner's goal: Total Optimization on the three rare readings (S-101) --------------------------------
 
@@ -513,6 +535,9 @@ function asBaseline(measured: Measured): BaselineScenario | null {
     dragonCoins: c.dragonCoins,
     perSoldier: perSoldier(c),
     perMonster: perMonster(c),
+    // And the third currency's ratio (S-102), appended after the five S-98 added for the same reason: a
+    // proposal written before this story and one written after differ by this one line.
+    perDragonCoin: perDragonCoin(c),
   });
   const stops: Record<string, BaselineTotals> = {};
   for (const row of measured.rows) {
@@ -565,6 +590,9 @@ function asBaseline(measured: Measured): BaselineScenario | null {
       dragonCoins: plan.dragonCoins,
       perSoldier: perSoldierOf(plan.totalDamage, planRare.soldiersLost),
       perMonster: perMonsterOf(plan.totalDamage, planRare.monstersLost),
+      // The engine's own `PlanTotals.damagePerDragonCoin` answers `Infinity` where no coin was spent; the
+      // baseline's column is a figure a run is compared on, so it takes the table's zero rule (S-102).
+      perDragonCoin: perDragonCoinOf(plan.totalDamage, plan.dragonCoins),
     },
     ratios: {
       bestSizer: bestSizer > 0 ? best / bestSizer : 0,
@@ -576,6 +604,11 @@ function asBaseline(measured: Measured): BaselineScenario | null {
       // comparable captured answer's. Added after `externals` so an older proposal's lines are untouched.
       perSoldier: standing(perSoldier),
       perMonster: standing(perMonster),
+      // The monsters' own third price, standing where the two above it do (S-102): the bar's best damage a
+      // dragon coin over the best sizer sequence's and over each comparable captured answer's. Their coins
+      // are our engine's pricing of the counts they answered with — no calculator outside this repo reports
+      // one — so the quotient is two marches compared, not two arithmetics.
+      perDragonCoin: standing(perDragonCoin),
       // The third of the owner's three readings (S-101), added last for the same reason: his goal names
       // *"silver/dmg, merc/dmg and monster/dmg"*, and only the last two of those were registered. Damage a
       // silver was on the table as a **pin** (`silverFloor`, against the sizers) and in every row of the
@@ -629,12 +662,13 @@ function record(label: string, measured: Measured): void {
       : `The plan offers ${measured.plan?.alternatives.length ?? 0} stops.`,
     '',
     '| sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired |' +
-      ' soldiers burned | monsters burned | dragon coins | a soldier | a monster |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+      ' soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
     ...measured.rows.map(
       (c) =>
         `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.gold)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |` +
-        ` ${n(c.soldiersLost)} | ${n(c.monstersLost)} | ${n(c.dragonCoins)} | ${n(perSoldier(c))} | ${n(perMonster(c))} |`,
+        ` ${n(c.soldiersLost)} | ${n(c.monstersLost)} | ${n(c.dragonCoins)} | ${n(perSoldier(c))} | ${n(perMonster(c))} |` +
+        ` ${n(perDragonCoin(c))} |`,
     ),
     '',
     goalLine(measured),
@@ -669,6 +703,10 @@ function record(label: string, measured: Measured): void {
       dragonCoins: c.dragonCoins,
       perSoldier: Math.round(perSoldier(c)),
       perMonster: Math.round(perMonster(c)),
+      // S-102, appended last for the reason S-98's five were: every field above is written exactly as it
+      // was, so a snapshot taken before this story and one taken after differ by this line and by the
+      // figures the monster camp itself moved.
+      perDragonCoin: Math.round(perDragonCoin(c)),
     })),
   });
   writeFileSync(FIGURES, `${JSON.stringify(figures, null, 1)}\n`);
@@ -793,12 +831,19 @@ writeFileSync(
     'four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. ' +
     'Each march priced by `simulateBattle` on its counts — damage, retraining silver and the gold its hired ' +
     'stacks cost to revive (the gold column since S-90, 2026-09-18).\n\n' +
-    'The last five columns are the rare stock read the way the owner asked for it on 2026-09-19 (S-98): the ' +
-    'chunks of ten burned told apart into **hired soldiers** and **monsters** — monster mercenaries and ' +
+    'The last six columns are the rare stock read the way the owner asked for it on 2026-09-19 (S-98): the ' +
+    'chunks of ten told apart into **hired soldiers** and **monsters** — monster mercenaries and ' +
     'dominance monsters together, `isMonsterUnit` in `tests/engine/plan-yardsticks.ts` — the dragon coins ' +
-    'the monsters cost to recruit again, and damage a soldier and damage a monster beside damage a hired ' +
-    'unit. `soldiers burned + monsters burned = hired burned` on every row; a campaign that burned none of ' +
-    'one kind reads its ratio at `damage / 1`, exactly as `a hired` has always done.\n\n' +
+    'the monsters cost to recruit again, and damage a soldier, damage a monster and damage a dragon coin ' +
+    'beside damage a hired unit. A campaign that spent none of one kind reads its ratio at `damage / 1`, ' +
+    'exactly as `a hired` has always done.\n\n' +
+    '**`hired burned` is the `authority` pool alone since S-102** (2026-09-19; the owner: *"apart from ' +
+    'mercs, they [monsters] can be trained just like troops"*). A mercenary is hired and revived for gold, ' +
+    'so it is a stock a march does not get back; a dominance monster is trained again ten at a time for ' +
+    'silver, queue time and dragon coins, so it is a **price** and it leaves the burn. `soldiers burned + ' +
+    'monsters burned = hired burned` therefore holds on every army that houses no dominance unit — all but ' +
+    'the monster camp below — and on that one the difference is exactly the dominance chunks, which the ' +
+    'dragon-coin column prices.\n\n' +
     'Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · ' +
     'Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier ' +
     'and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three ' +

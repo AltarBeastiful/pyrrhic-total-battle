@@ -643,9 +643,25 @@ describe('every hired stack stands under the lowest troop stack', () => {
  *     steady-max fields no dominance stack (the army holds 12 types, housing 900)
  *     all-in     fields no dominance stack (the army holds 12 types, housing 900)
  *     ```
- *  2. **the burn counts them** — a stop's `repeat.mercLost` is exactly the chunks of ten its march loses over
- *     **every** non-leadership stack it fields, monsters and mercenaries together. The bar is ordered by that
- *     one figure, so a pool billed as a troop retrain would ride the whole bar for free;
+ *  2. **the burn counts hired chunks only** — a stop's `repeat.mercLost` is exactly the chunks of ten its
+ *     march loses over its **`authority`** stacks: the hired soldiers and the monster mercenaries, which the
+ *     game revives for gold and never trains. S-96 wrote this over every non-leadership stack, monsters
+ *     pooled in; S-102 narrowed it on the owner's word (2026-09-19: *"apart from mercs, they [monsters] can
+ *     be trained just like troops"*). A dominance monster is recruited again ten at a time for silver, queue
+ *     time and **dragon coins**, so it is a price the recap-sum criterion above already checks in three
+ *     currencies, not a stock the bar is ordered by — and the chunks it does lose are counted there and
+ *     reported apart. Measured on HEAD (83cd5a4) before the change, on the monster camp alone, where the
+ *     bar's burn pooled 23 to 28 chunks a march of which only 8 were hired:
+ *
+ *     ```
+ *     silver-saver burns 3 where its march loses 23 chunks of hired stock
+ *     sweet-spot   burns 5 where its march loses 25 chunks of hired stock
+ *     more-mercs   burns 6 where its march loses 26 chunks of hired stock
+ *     steady-max   burns 8 where its march loses 28 chunks of hired stock
+ *     ```
+ *
+ *     (that reading is this criterion's own, taken with S-102's engine and S-96's rule; the same sentence
+ *     said the other way round — S-102's rule against S-96's engine — is in the recap-sum criterion above);
  *  3. **every stack of a hired pool is sheltered** — restated here over `pool !== 'leadership'` for the one
  *     army where it is not vacuous, and so that a widening of the hired set without a widening of the shelter
  *     is caught by the criterion that names the pools rather than by the one that names the mercenaries;
@@ -699,13 +715,13 @@ describe('the plan fields the pools the account holds', () => {
               );
             }
           }
-          // 2. the burn is the chunks of every hired stack, whatever pool paid for it.
+          // 2. the burn is the chunks of every **authority** stack — the stock the game revives rather than
+          // trains (S-102). A dominance monster's chunks are a cost the recap-sum criterion checks in
+          // silver, queue and dragon coins, and are counted there apart from the burn.
           if (!row.sequence) {
             const burn = Object.entries(row.counts).reduce(
               (sum, [id, count]) =>
-                count > 0 && (byId.get(id)?.pool ?? 'leadership') !== 'leadership'
-                  ? sum + chunks(count)
-                  : sum,
+                count > 0 && byId.get(id)?.pool === 'authority' ? sum + chunks(count) : sum,
               0,
             );
             if (row.repeat.mercLost !== burn) {
@@ -1000,15 +1016,36 @@ const campaignIsItsMarchesSum = (title: string, variant: (request: StackRequest)
             }
             // **And the rare stock adds up the same way** (S-98, 2026-09-19; the owner: *"at least the
             // same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*). The benchmark and
-            // the registered baseline now print the chunks of ten told apart — the hired **soldiers** and
+            // the registered baseline print the chunks of ten told apart — the hired **soldiers** and
             // the **monsters**, monster mercenaries and dominance monsters together (`isMonsterUnit`) —
-            // and a split is only a reading of the bar's own burn if the two halves come back to it. So:
-            // the split over the marches the stop plays is exactly `mercLost`, the one axis the search is
-            // ordered by, on every stop of every army; and the coins the same split prices are the recap's
-            // `dragonCoins`, which is what ties the shared definition to `recoveryCosts`.
+            // and the coins the same split prices are the recap's `dragonCoins`, which is what ties the
+            // shared definition to `recoveryCosts`.
+            //
+            // **The burn counts hired chunks only** (S-102, 2026-09-19; the owner: *"monsters … have a cost
+            // in silver but in dragon coins also, which are both constrained; but at least, apart from
+            // mercs, they can be trained just like troops."*). The bar's one rare-stock axis is the
+            // **authority** pool: the hired soldiers and the monster mercenaries, which the game revives for
+            // gold and never trains. A **dominance** monster is recruited again ten at a time, for silver,
+            // queue time and dragon coins, so it is a *price* the three columns above already carry and not
+            // a stock a march takes off the board. Its chunks are counted here and reported **apart**,
+            // never added to the bar's burn.
+            //
+            // **Measured on HEAD (83cd5a4) before the change**, which is what this line is for: it failed on
+            // the monster camp alone — both readings of it, plain and under a temple and training discounts
+            // — on all three stops and on the plan itself:
+            //
+            //   stop sweet-spot: 32 authority chunks (28 soldier + 4 monster-mercenary) against the bar's
+            //     97 burned, with 65 dominance chunks counted apart
+            //   stop more-mercs:  32 … against the bar's 106 burned, with 74 dominance chunks counted apart
+            //   stop steady-max:  32 … against the bar's 112 burned, with 80 dominance chunks counted apart
+            //   the plan itself:  32 … against the bar's 112 burned, with 80 dominance chunks counted apart
+            //
+            // and passed unchanged on the other fourteen armies, none of which houses a dominance unit.
             const rare = marches.reduce<{
               soldiersLost: number;
               monstersLost: number;
+              hiredLost: number;
+              dominanceLost: number;
               dragonCoins: number;
             }>(
               (into, counts) => {
@@ -1016,16 +1053,34 @@ const campaignIsItsMarchesSum = (title: string, variant: (request: StackRequest)
                 return {
                   soldiersLost: into.soldiersLost + one.soldiersLost,
                   monstersLost: into.monstersLost + one.monstersLost,
+                  hiredLost: into.hiredLost + one.hiredLost,
+                  dominanceLost: into.dominanceLost + one.dominanceLost,
                   dragonCoins: into.dragonCoins + one.dragonCoins,
                 };
               },
-              { soldiersLost: 0, monstersLost: 0, dragonCoins: 0 },
+              { soldiersLost: 0, monstersLost: 0, hiredLost: 0, dominanceLost: 0, dragonCoins: 0 },
             );
-            if (rare.soldiersLost + rare.monstersLost !== row.mercLost) {
+            if (rare.hiredLost !== row.mercLost) {
               failures.push(
-                `${what}: ${rare.soldiersLost.toLocaleString('en-US')} soldier chunks + ` +
-                  `${rare.monstersLost.toLocaleString('en-US')} monster chunks against the bar's ` +
-                  `${row.mercLost.toLocaleString('en-US')} burned`,
+                `${what}: ${rare.hiredLost.toLocaleString('en-US')} authority chunks ` +
+                  `(${rare.soldiersLost.toLocaleString('en-US')} soldier + ` +
+                  `${(rare.hiredLost - rare.soldiersLost).toLocaleString('en-US')} monster-mercenary) ` +
+                  `against the bar's ${row.mercLost.toLocaleString('en-US')} burned, with ` +
+                  `${rare.dominanceLost.toLocaleString('en-US')} dominance chunks counted apart`,
+              );
+            }
+            // The dominance chunks are a reading of their own and never a negative correction to the burn:
+            // they are counted, they are at least nought, and the two splits — by race and by pool — are
+            // two readings of the same chunks of ten.
+            if (rare.dominanceLost < 0) {
+              failures.push(`${what}: ${String(rare.dominanceLost)} dominance chunks`);
+            }
+            if (rare.soldiersLost + rare.monstersLost !== rare.hiredLost + rare.dominanceLost) {
+              failures.push(
+                `${what}: the race split (${rare.soldiersLost.toLocaleString('en-US')} soldier + ` +
+                  `${rare.monstersLost.toLocaleString('en-US')} monster) and the pool split ` +
+                  `(${rare.hiredLost.toLocaleString('en-US')} hired + ` +
+                  `${rare.dominanceLost.toLocaleString('en-US')} dominance) count different chunks`,
               );
             }
             if (rare.dragonCoins !== sum.dragonCoins) {

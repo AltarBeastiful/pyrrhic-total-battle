@@ -52,6 +52,27 @@ export function MarchRecap() {
   const was = <T,>(pick: (value: BattleSummary) => T): T | undefined =>
     previous === null ? undefined : pick(previous);
 
+  /**
+   * **The third currency, and the ratio over it** (S-102, 2026-09-19; the owner: *"monsters have a 3-cost:
+   * training time, silver and dragon coins. TotalStack computes the total of dragon coins needed for a stack
+   * if present and the dmg/dragon coins."*).
+   *
+   * A dominance monster is **trained**, not hired: it does not come off the "Hired lost" figure below (that
+   * count is the authority pool's, `./hired`, and so is the engine's own burn axis since S-102). What it
+   * costs is on this block instead — the silver and the queue it shares with the troops, plus these coins,
+   * which nothing else in the game spends.
+   *
+   * **Both lines only while the march spends a coin** (`docs/design-rules.md` rule 15, *nothing on screen
+   * without value*). Every march that fields no monster spends none, which is every march an account without
+   * a dominance pool can make, and a "0 dragon coins" beside a "∞ per dragon coin" would be two figures
+   * saying nothing.
+   *
+   * The two names are the app's own, not new words for this block: **Dragon coins to recover** is the third
+   * of "Silver to recover" and "Gold to recover", and **Damage per dragon coin** is what the Battle card's
+   * objective picker and the saved-march table have called this ratio all along (rule 5, one name a thing;
+   * rule 26, our own words).
+   */
+  const coins = summary.recovery.dragonCoins;
   const figures = [
     {
       key: 'worst',
@@ -80,6 +101,21 @@ export function MarchRecap() {
       betterWhen: 'lower' as const,
       glyph: <Glyph kind="gold" />,
     },
+    // The coins sit with the two prices they belong to — silver, gold, coins — because they are the same
+    // question asked of a third purse, and the queue below is how long all three take to come back.
+    ...(coins > 0
+      ? [
+          {
+            key: 'dragonCoins',
+            label: 'Dragon coins to recover',
+            value: coins,
+            previous: was((value) => value.recovery.dragonCoins),
+            format: amount,
+            betterWhen: 'lower' as const,
+            glyph: <Glyph kind="dragonCoin" />,
+          },
+        ]
+      : []),
     {
       /**
        * **What the march costs in time** (owner, 2026-09-18: *"generation sometimes skips low-level stacks
@@ -112,6 +148,19 @@ export function MarchRecap() {
       format: ratio,
       betterWhen: 'higher' as const,
     },
+    // Beside "Damage per silver" and read exactly as it is: what the rarest of the three purses bought.
+    ...(coins > 0
+      ? [
+          {
+            key: 'perDragonCoin',
+            label: 'Damage per dragon coin',
+            value: summary.damagePerDragonCoin,
+            previous: was((value) => value.damagePerDragonCoin),
+            format: ratio,
+            betterWhen: 'higher' as const,
+          },
+        ]
+      : []),
   ];
 
   // **What this march burns of the hired stock** (owner, 2026-09-17: "a merc lost count with a percent of
