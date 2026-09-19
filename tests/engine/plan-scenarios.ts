@@ -724,3 +724,103 @@ export function commonScenarios(): Scenario[] {
     fourThousand(),
   ];
 }
+
+/**
+ * **The owner's live camp of 2026-09-18**, beside the benchmark's own armies: the profile he was looking at
+ * when he wrote *"mercs are unshielded on all complete optimization marches"* — arbalesters 485, legionaries
+ * 1 002, bears unlimited, his three captains, 4 975 leadership and 2 180 authority, the two top guardsman
+ * tiers and the top melee specialist he does not own clicked out. It is the camp experiment 106 measured
+ * (`tools/theorycraft/out/106-shelter-live.md`), where **every** stop fielded hired stacks above the troops —
+ * 375 legionaries and 403 arbalesters over a 274 772-HP floor at the sweet spot — and it is the one case in
+ * this file that no benchmark scenario covers, which is exactly why it is here.
+ */
+const liveCamp = (): { label: string; request: StackRequest }[] => {
+  const owner = ownerProfile();
+  if (!owner) return [];
+  const camp = structuredClone(owner);
+  camp.sources.captains = [
+    { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
+    { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+    { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+  ];
+  camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
+  camp.mercenaries.selected = [
+    { id: 'arbalester-6', cap: 485 },
+    { id: 'legionary-6', cap: 1002 },
+    { id: 'bear-5', cap: null },
+  ];
+  const setup = camp.setups[0];
+  if (!setup) return [];
+  return [
+    {
+      label: 'the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)',
+      request: buildStackRequest(camp, {
+        ...setup,
+        active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
+        housing: { ...setup.housing, leadership: 4_975, authority: 2_180 },
+      }),
+    },
+  ];
+};
+
+/**
+ * **His camp of 2026-09-19, at both readings of the Battle card** (S-93; the owner: *"using Troops first I can
+ * get 2 009 810 … by adding back troops, impossible with Complete optimization … no eco silver spot to allow
+ * me to maximize silver/dmg with lower silver and training time whilst preserving merc spent low"*).
+ *
+ * One hired type with a **small** stock and a small leadership — the shape no scenario above has: on this army
+ * a hired stack is large enough that the ladder sheltering it can only be three rungs deep, so every stop the
+ * bar offered was a three-stack march at thirteen days of queue while the seven-stack march he builds by hand
+ * costs less silver, burns half as much stock and recovers in five. The two readings are the `localStorage`
+ * dump of that evening (4 975 / 2 180, 450 hunters) and the figures in his message (5 100 / 2 200, 120), and
+ * both are here because the stock is what the thrift end turns on. Measured in
+ * `tools/theorycraft/out/107-put-back-mercs.md` and `out/108-thrift-end.md`.
+ */
+const hisCamp = (): { label: string; request: StackRequest }[] => {
+  const owner = ownerProfile();
+  if (!owner) return [];
+  return (
+    [
+      ['his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)', 4_975, 2_180, 450],
+      ['his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)', 5_100, 2_200, 120],
+    ] as const
+  ).flatMap(([label, leadership, authority, cap]) => {
+    const camp = structuredClone(owner);
+    camp.sources.captains = [
+      { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
+      { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+      { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+    ];
+    camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
+    camp.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap }];
+    const setup = camp.setups[0];
+    if (!setup) return [];
+    return [
+      {
+        label,
+        request: buildStackRequest(camp, {
+          ...setup,
+          active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
+          housing: { ...setup.housing, leadership, authority },
+        }),
+      },
+    ];
+  });
+};
+
+/**
+ * **The armies the criteria are held on** — the shared scenario list, built once and read by
+ * `tests/engine/plan-criteria.test.ts` and by the theorycraft experiments that measure a rule against the
+ * same set (`tools/theorycraft/112-band-yardstick.test.ts`). Fifteen: the benchmark's own twelve
+ * (`commonScenarios` and `ownerScenarios` above, their labels and their order), the live camp of
+ * 2026-09-18, and his camp of 2026-09-19 at both readings of the Battle card.
+ *
+ * It lives here rather than in the criteria file so that an experiment measuring a change to a rule
+ * measures it on exactly the armies the criteria will judge it on — a list copied into an experiment drifts
+ * from the one that holds the engine, which is what happened between experiment 108 and S-97's three new
+ * armies.
+ */
+export function criteriaScenarios(): { label: string; request: StackRequest; pinned?: Pinned }[] {
+  const profile = ownerProfile();
+  return [...commonScenarios(), ...(profile ? ownerScenarios(profile) : []), ...liveCamp(), ...hisCamp()];
+}

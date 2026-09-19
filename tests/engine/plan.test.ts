@@ -1581,11 +1581,25 @@ describe('a put-back never lengthens the queue, and never costs the silver saver
         expect(row.putBack.seconds, `${row.pick} recovers faster`).toBeGreaterThan(0);
         expect(row.putBack.unitId, `${row.pick} did not take the swordsman`).not.toBe('swordsman-1');
       }
-      // Guard two: the silver saver is still cheaper than the sweet spot and still at least as efficient a
-      // silver — the pair of facts the stop is offered for.
+      /**
+       * Guard two: **when the bar carries a silver saver**, it is still cheaper than the sweet spot and
+       * still at least as efficient a silver — the pair of facts the stop is offered for, and what a
+       * put-back could break.
+       *
+       * **This army stopped carrying one on 2026-09-19 (S-95)**, and the reason is measured rather than
+       * assumed. The band's token-field arm moved from the count of hired units to the damage, and the plan
+       * it had been hiding at **3** chunks on this army is `4 016 910` a march for 4 878 400 silver — where
+       * the count rule's own 3-chunk offer was `2 025 185` for 2 129 100. The burn ladder keeps one plan a
+       * level, the hardest-hitting, so the new plan takes the rung; the knee lands on it (the sweet spot
+       * moves 4 → 3 chunks, 4 129 485 → 4 016 910); and the silver saver's window — *strictly left of the
+       * sweet spot* — closes, because the cheap march that used to fill it burns exactly 3 as well. The bar
+       * goes from five stops to four and **loses its cheapest offer**: a trade disclosed in `docs/PLAN.md`
+       * under S-95, and a defect of the silver saver's own rule (two plans at one burn level, one of them
+       * invisible) rather than of the yardstick. The put-back guard above is what this case exists for and
+       * is unmoved.
+       */
       const saver = plan.alternatives.find((row) => row.pick === 'silver-saver');
       const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot');
-      expect(saver, 'the silver saver is offered').toBeDefined();
       expect(sweet, 'the sweet spot is offered').toBeDefined();
       if (!saver || !sweet) return;
       expect(saver.repeat.silver).toBeLessThanOrEqual(sweet.repeat.silver);

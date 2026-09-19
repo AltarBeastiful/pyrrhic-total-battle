@@ -106,9 +106,31 @@ describe('S-58 — the plan fixes', () => {
         refuseDroppedTypes: true,
       });
 
+      /**
+       * **A hole is a hole in the *campaign*, not in one of its marches** — the engine's own reading of
+       * S-58 B (`fieldsInCampaign`, `plan.ts`): *"a type the horizon outruns is spent in the finale rather
+       * than in the repeat, and a plan that spends it there has no hole in it"*. The band's filter has
+       * always said that; this test said the narrower thing — every type in the **repeated** march — and the
+       * two never disagreed, because no plan that spent a type only in its finale had ever reached a stop.
+       *
+       * **Measured on 2026-09-19 (S-95)**, when the band's token-field arm moved from the count of hired
+       * units to the damage: this army's bar goes from four stops to five, and its new silver saver is
+       * `catapult-1 100 · archer-3 308 · archer-2 538 · archer-1 950 · arbalester-7 10 · chariot-6 10` at 2
+       * chunks — 1 089 402 a march for 1 069 600 — which fields no Arbalester VI in the ten marches it
+       * repeats and spends all thirty of them in the **finale**. Under the older yardstick the same bar's
+       * thrift stop fielded ten of them a march. The assertion is corrected to the rule the engine states,
+       * with the march the correction was measured on written down beside it.
+       */
+      const fieldsInCampaign = (row: (typeof fixed.alternatives)[number], id: string): boolean =>
+        (row.counts[id] ?? 0) > 0 ||
+        (row.finaleCounts?.[id] ?? 0) > 0 ||
+        (row.sequence?.some((march) => (march[id] ?? 0) > 0) ?? false);
       for (const row of fixed.alternatives) {
         for (const id of ids) {
-          expect(row.counts[id] ?? 0, 'the band must not offer a plan with a hole in it').toBeGreaterThan(0);
+          expect(
+            fieldsInCampaign(row, id),
+            `the band must not offer a plan with a hole in it — ${row.pick} fields no ${id} in its whole campaign`,
+          ).toBe(true);
         }
       }
       // The count and the list have to agree, the way they do for the band's other three refusals: the UI

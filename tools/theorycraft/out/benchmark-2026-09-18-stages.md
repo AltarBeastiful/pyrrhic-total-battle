@@ -38,6 +38,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 1 | 18 189 008 | 0.56 | 18 189 008 | 18 535 192 | — |
 | 13 S-96 dominance-pool monsters | 1 | 18 189 008 | 0.56 | 18 189 008 | 18 535 192 | — |
 | 14 S-97 the top of the burn ladder | 1 | 18 189 008 | 0.56 | 18 189 008 | 18 535 192 | — |
+| 15 S-95 the band's damage yardstick | 1 | 18 189 008 | 0.56 | 18 189 008 | 18 535 192 | — |
 
 ## first-run army, Bear V ×2 (20 000 leadership)
 
@@ -61,6 +62,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 1 | 18 413 408 | 0.57 | 9 206 704 | 18 609 992 | — |
 | 13 S-96 dominance-pool monsters | 1 | 18 413 408 | 0.57 | 9 206 704 | 18 609 992 | — |
 | 14 S-97 the top of the burn ladder | 1 | 18 413 408 | 0.57 | 9 206 704 | 18 609 992 | — |
+| 15 S-95 the band's damage yardstick | 1 | 18 413 408 | 0.57 | 9 206 704 | 18 609 992 | — |
 
 ## first-run army, Bear V ×3 (20 000 leadership)
 
@@ -84,6 +86,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 2 | 18 750 008 | 0.58 | 6 250 003 | 18 750 008 | 21 427 548 |
 | 13 S-96 dominance-pool monsters | 2 | 18 750 008 | 0.58 | 6 250 003 | 18 750 008 | 21 427 548 |
 | 14 S-97 the top of the burn ladder | 2 | 18 750 008 | 0.58 | 6 250 003 | 18 750 008 | 21 427 548 |
+| 15 S-95 the band's damage yardstick | 2 | 18 750 008 | 0.58 | 6 250 003 | 18 750 008 | 21 427 548 |
 
 ## first-run army, Bear V ×10 (20 000 leadership)
 
@@ -107,6 +110,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 2 | 20 893 375 | 0.64 | 5 223 344 | 21 152 576 | 22 474 748 |
 | 13 S-96 dominance-pool monsters | 2 | 20 893 375 | 0.64 | 5 223 344 | 21 152 576 | 22 474 748 |
 | 14 S-97 the top of the burn ladder | 2 | 20 893 375 | 0.64 | 5 223 344 | 21 152 576 | 22 474 748 |
+| 15 S-95 the band's damage yardstick | 2 | 20 893 375 | 0.64 | 5 223 344 | 21 152 576 | 22 474 748 |
 
 ## first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)
 
@@ -130,6 +134,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 3 | 29 841 879 | 0.91 | 1 146 218 | 30 054 424 | 30 221 279 |
 | 13 S-96 dominance-pool monsters | 3 | 29 841 879 | 0.91 | 1 146 218 | 30 054 424 | 30 221 279 |
 | 14 S-97 the top of the burn ladder | 3 | 29 841 879 | 0.91 | 1 146 218 | 30 054 424 | 30 221 279 |
+| 15 S-95 the band's damage yardstick | 3 | 29 841 879 | 0.91 | 1 146 218 | 30 054 424 | 30 221 279 |
 
 ## first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)
 
@@ -151,6 +156,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | — | — | — | — | — | — |
 | 13 S-96 dominance-pool monsters | 3 | 95 348 743 | 2.69 | 947 920 | 104 626 942 | — |
 | 14 S-97 the top of the burn ladder | 3 | 95 348 743 | 2.69 | 947 920 | 104 626 942 | — |
+| 15 S-95 the band's damage yardstick | 3 | 95 348 743 | 2.69 | 947 920 | 104 626 942 | — |
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
 
@@ -174,6 +180,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 3 | 8 519 930 | 1.40 | 425 508 | 8 519 930 | 8 762 880 |
 | 13 S-96 dominance-pool monsters | 3 | 8 519 930 | 1.40 | 425 508 | 8 519 930 | 8 762 880 |
 | 14 S-97 the top of the burn ladder | 3 | 8 519 930 | 1.40 | 425 508 | 8 519 930 | 8 762 880 |
+| 15 S-95 the band's damage yardstick | 3 | 8 519 930 | 1.40 | 425 508 | 8 519 930 | 8 762 880 |
 
 ## 2026-09-17 export, its setup (7 000 leadership)
 
@@ -197,6 +204,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 5 | 23 619 920 | 2.08 | 463 349 | 24 634 972 | 13 742 586 |
 | 13 S-96 dominance-pool monsters | 5 | 23 619 920 | 2.08 | 463 349 | 24 634 972 | 13 742 586 |
 | 14 S-97 the top of the burn ladder | 5 | 23 619 920 | 2.08 | 463 349 | 24 634 972 | 13 742 586 |
+| 15 S-95 the band's damage yardstick | 5 | 23 619 920 | 2.08 | 537 039 | 24 634 972 | 13 742 586 |
 
 ## 2026-09-17 export, 12 000 leadership
 
@@ -220,6 +228,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 4 | 31 546 458 | 1.73 | 602 313 | 33 277 720 | 22 894 812 |
 | 13 S-96 dominance-pool monsters | 4 | 31 546 458 | 1.73 | 602 313 | 33 277 720 | 22 894 812 |
 | 14 S-97 the top of the burn ladder | 3 | 31 963 845 | 1.80 | 470 843 | 33 277 720 | 22 894 812 |
+| 15 S-95 the band's damage yardstick | 3 | 31 963 845 | 1.80 | 470 843 | 33 277 720 | 22 894 812 |
 
 ## live account of 2026-09-18 (one hired type, 20 000 leadership)
 
@@ -243,6 +252,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 4 | 29 743 332 | 1.00 | 1 130 835 | 25 300 624 | 29 222 440 |
 | 13 S-96 dominance-pool monsters | 4 | 29 743 332 | 1.00 | 1 130 835 | 25 300 624 | 29 222 440 |
 | 14 S-97 the top of the burn ladder | 4 | 29 743 332 | 1.00 | 1 130 835 | 25 300 624 | 29 222 440 |
+| 15 S-95 the band's damage yardstick | 4 | 29 743 332 | 1.00 | 1 130 835 | 25 300 624 | 29 222 440 |
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
 
@@ -266,9 +276,11 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 12 S-94 reliable damage | 4 | 31 714 657 | 1.79 | 481 873 | 36 832 597 | 36 832 597 |
 | 13 S-96 dominance-pool monsters | 4 | 31 714 657 | 1.79 | 481 873 | 36 832 597 | 36 832 597 |
 | 14 S-97 the top of the burn ladder | 4 | 31 714 657 | 1.79 | 481 873 | 36 832 597 | 36 832 597 |
+| 15 S-95 the band's damage yardstick | 5 | 31 714 657 | 1.79 | 461 316 | 36 832 597 | 36 832 597 |
 
 ## Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
 | 14 S-97 the top of the burn ladder | 3 | 18 744 735 | 2.09 | 419 836 | 19 767 678 | — |
+| 15 S-95 the band's damage yardstick | 3 | 18 744 735 | 2.09 | 419 836 | 19 767 678 | — |

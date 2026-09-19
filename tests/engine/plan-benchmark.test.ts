@@ -52,11 +52,15 @@
  *     sets `registeredBy` and renames it. Until he does, the baseline half asserts nothing and the report
  *     says so.
  *
- * **Four pins are failing as of 2026-09-19 (S-94)**, left failing on purpose for him to judge with the
- * proposal in hand: `stops` on the 7 000 export (4 registered, 5 offered), on the 12 000 export (5, 4) and on
- * the evening account (5, 4), and `externals.damageFloor` on his live account at 20 000 (1.02 registered,
- * 1.018 measured). The reliable reading moved the bar on those armies; whether the trade is worth a new
- * baseline is his call, not this file's.
+ * **Three pins are failing as of 2026-09-19 (S-95)**, left failing on purpose for him to judge with the
+ * proposal in hand: `stops` on the 7 000 export (4 registered, 5 offered) and on the 12 000 export (5, 4),
+ * and `externals.damageFloor` on his live account at 20 000 (1.02 registered, 1.018 measured). The reliable
+ * reading moved the bar on those armies; whether the trade is worth a new baseline is his call, not this
+ * file's.
+ *
+ * S-94 left **four**: the evening account's `stops` pin (5 registered, 4 offered) came back on its own when
+ * the band's token-field arm moved from the count of hired units to the damage (S-95), because the bar
+ * carries five stops there again. No pin was touched to make that happen.
  *
  * The table each case measured is written to `tools/theorycraft/out/benchmark-latest.md`, the figures to
  * `benchmark-latest.json` beside it (what a before/after comparison reads). The first-run and 4 000 cases run

@@ -21,15 +21,13 @@ import { CAMPAIGN } from '@/config';
 import { GROUPS, getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan, PlanRow, PlanTotals } from '@/engine/plan';
-import { effectiveTable, lastsMarches, rankTroops } from '@/engine/plan';
 import { chunks } from '@/engine/recovery';
-import { sizeStacks } from '@/engine/stacker';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import { parseImport } from '@/share/exportImport';
-import { buildPlanRequest, buildStackRequest } from '@/state/derive';
+import { buildPlanRequest } from '@/state/derive';
 
-import type { Scenario } from './plan-scenarios';
-import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from './plan-scenarios';
+import { HORIZON, criteriaScenarios } from './plan-scenarios';
+import { countsKey, repeatsOf, shelteredRivals } from './plan-yardsticks';
 
 const OWNER_EXPORT =
   process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
@@ -427,100 +425,12 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
 );
 
 /**
- * **The owner's live camp of 2026-09-18**, beside the benchmark's own armies: the profile he was looking at
- * when he wrote *"mercs are unshielded on all complete optimization marches"* — arbalesters 485, legionaries
- * 1 002, bears unlimited, his three captains, 4 975 leadership and 2 180 authority, the two top guardsman
- * tiers and the top melee specialist he does not own clicked out. It is the camp experiment 106 measured
- * (`tools/theorycraft/out/106-shelter-live.md`), where **every** stop fielded hired stacks above the troops —
- * 375 legionaries and 403 arbalesters over a 274 772-HP floor at the sweet spot — and it is the one case in
- * this file that no benchmark scenario covers, which is exactly why it is here.
+ * The armies every criterion below is held on: the shared list of `plan-scenarios.ts` — the benchmark's
+ * own twelve, the owner's live camp of 2026-09-18 and his camp of 2026-09-19 at both readings of the Battle
+ * card. It is exported from there so that a theorycraft experiment measuring a rule runs on exactly the
+ * armies the criteria will judge it on.
  */
-const liveCamp = (): { label: string; request: StackRequest }[] => {
-  const owner = ownerProfile();
-  if (!owner) return [];
-  const camp = structuredClone(owner);
-  camp.sources.captains = [
-    { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
-    { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
-    { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
-  ];
-  camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
-  camp.mercenaries.selected = [
-    { id: 'arbalester-6', cap: 485 },
-    { id: 'legionary-6', cap: 1002 },
-    { id: 'bear-5', cap: null },
-  ];
-  const setup = camp.setups[0];
-  if (!setup) return [];
-  return [
-    {
-      label: 'the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)',
-      request: buildStackRequest(camp, {
-        ...setup,
-        active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
-        housing: { ...setup.housing, leadership: 4_975, authority: 2_180 },
-      }),
-    },
-  ];
-};
-
-/**
- * **His camp of 2026-09-19, at both readings of the Battle card** (S-93; the owner: *"using Troops first I can
- * get 2 009 810 … by adding back troops, impossible with Complete optimization … no eco silver spot to allow
- * me to maximize silver/dmg with lower silver and training time whilst preserving merc spent low"*).
- *
- * One hired type with a **small** stock and a small leadership — the shape no scenario above has: on this army
- * a hired stack is large enough that the ladder sheltering it can only be three rungs deep, so every stop the
- * bar offered was a three-stack march at thirteen days of queue while the seven-stack march he builds by hand
- * costs less silver, burns half as much stock and recovers in five. The two readings are the `localStorage`
- * dump of that evening (4 975 / 2 180, 450 hunters) and the figures in his message (5 100 / 2 200, 120), and
- * both are here because the stock is what the thrift end turns on. Measured in
- * `tools/theorycraft/out/107-put-back-mercs.md` and `out/108-thrift-end.md`.
- */
-const hisCamp = (): { label: string; request: StackRequest }[] => {
-  const owner = ownerProfile();
-  if (!owner) return [];
-  return (
-    [
-      ['his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)', 4_975, 2_180, 450],
-      ['his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)', 5_100, 2_200, 120],
-    ] as const
-  ).flatMap(([label, leadership, authority, cap]) => {
-    const camp = structuredClone(owner);
-    camp.sources.captains = [
-      { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
-      { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
-      { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
-    ];
-    camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
-    camp.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap }];
-    const setup = camp.setups[0];
-    if (!setup) return [];
-    return [
-      {
-        label,
-        request: buildStackRequest(camp, {
-          ...setup,
-          active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
-          housing: { ...setup.housing, leadership, authority },
-        }),
-      },
-    ];
-  });
-};
-
-/**
- * The armies the two criteria below are held on, built once: the benchmark's own ten
- * (`plan-scenarios.ts`, its labels and its order), the owner's when his export is where it is, his live
- * camp above, and his camp of 2026-09-19 at both readings.
- */
-const profile = ownerProfile();
-const scenarios: { label: string; request: StackRequest; pinned?: Scenario['pinned'] }[] = [
-  ...commonScenarios(),
-  ...(profile ? ownerScenarios(profile) : []),
-  ...liveCamp(),
-  ...hisCamp(),
-];
+const scenarios = criteriaScenarios();
 
 /**
  * **The shelter: every hired stack under the lowest troop stack** (owner, 2026-09-18: *"a critical rule is to
@@ -1192,142 +1102,6 @@ describe('the bar’s damage is the recap’s worst opening', () => {
   }
 });
 
-/**
- * **The sheltered marches the account can field by hand**, and what each of them costs — the yardstick the
- * two criteria below are stated against (S-93).
- *
- * For each prefix of the troop ranking (`rankTroops`, the strongest k types by damage per HP) and each of the
- * three sizer methods, the sizer's own march over those types with every hired type at its stock, then every
- * hired stack lowered under the lowest troop stack (`shelterUnder`'s rule, restated here). That is the
- * owner's own recipe — *"Troops first"*, then the lower tiers put back, one tier at a time — and the full
- * prefix is the march he sent on 2026-09-19. It is built from the **sizer and the shelter alone**, never from
- * the plan's search, so it is an independent yardstick rather than a second reading of the same code; every
- * figure is `planMarch`'s, which is the recap's.
- *
- * A rival has to be a march **the bar's own rules would let it offer**: more than one troop stack (the band's
- * third criterion) and every hired type the account holds on the field (S-58 B). A troops-only march would
- * beat every stop on the burn and is not a plan this method is about at all.
- */
-interface Rival {
-  what: string;
-  counts: Record<string, number>;
-  damage: number;
-  silver: number;
-  burn: number;
-  /** The hired units the march fields, every hired pool together (S-96) — what the `all-in` is offered on. */
-  hired: number;
-  seconds: number;
-  key: string;
-  /** The most marches this one can be **repeated**: the hired stock loses a chunk of ten a march. */
-  repeats: number;
-}
-
-/**
- * The marches a stop **repeats**: its campaign less the finale and less the troops-only tail, or one for the
- * `all-in`, whose marches all differ and whose `repeat` is the first of them. A rival is only a rival when
- * the stock can field it that often — a march that spends a type's whole stock at once is not an answer to a
- * plan that has to march four times.
- */
-const repeatsOf = (row: PlanTotals): number =>
-  row.sequence ? 1 : Math.max(1, row.marches - (row.finaleCounts ? 1 : 0) - (row.tail?.marches ?? 0));
-const countsKey = (counts: Record<string, number>): string =>
-  JSON.stringify(
-    Object.entries(counts)
-      .filter(([, count]) => count > 0)
-      .sort(),
-  );
-/**
- * **Anchored** (S-97, the `repeats` argument): every hired type capped at the largest count its stock still
- * fields on each of `repeats` marches — `lastsMarches`, one chunk of ten lost a march. A march the account
- * can send **once** is no answer to a stop that has to march four times, and the two criteria that speak
- * about the *rungs* of the bar ask for the family at the repeats the rung plays. Left out (0), the caps are
- * the account's own whole stock, which is what the `all-in` is about and what the two criteria that predate
- * this one have always asked for.
- */
-const shelteredRivals = (request: StackRequest, repeats = 0): Rival[] => {
-  const table = effectiveTable(request);
-  const ranked = rankTroops(table);
-  // **Every hired pool** (S-96): the dominance pool's monsters are rare stock exactly as the authority
-  // pool's mercenaries are, and a yardstick that counted a monster as a troop would put it in the shelter's
-  // floor and leave its chunks out of the burn.
-  const hiredIds = request.units.filter((unit) => unit.pool !== 'leadership').map((unit) => unit.id);
-  const hp = new Map(table.map((entry) => [entry.id, entry.hp] as const));
-  const out: Rival[] = [];
-  const seen = new Set<string>();
-  const caps: Record<string, number> = { ...request.caps };
-  if (repeats > 0) {
-    for (const id of hiredIds) {
-      const held = request.caps[id];
-      if (held === undefined) continue;
-      let anchor = 0;
-      for (let count = held; count >= 1; count -= 1) {
-        if (lastsMarches(held, count) >= repeats) {
-          anchor = count;
-          break;
-        }
-      }
-      caps[id] = anchor;
-    }
-  }
-  for (let depth = 1; depth <= ranked.length; depth += 1) {
-    const chosen = new Set(ranked.slice(-depth).map((entry) => entry.id));
-    for (const method of ['elite', 'ms', 'msRelaxed'] as const) {
-      const sized = sizeStacks({
-        ...request,
-        caps,
-        units: request.units.filter((unit) => chosen.has(unit.id) || unit.pool !== 'leadership'),
-        options: {
-          ...request.options,
-          method: method === 'msRelaxed' ? 'ms' : method,
-          relaxedPreservation: method === 'msRelaxed',
-        },
-      });
-      const counts: Record<string, number> = {};
-      for (const stack of sized.stacks) if (stack.count > 0) counts[stack.unitId] = stack.count;
-      const troopHp = Object.entries(counts)
-        .filter(([id]) => !hiredIds.includes(id))
-        .map(([id, count]) => count * (hp.get(id) ?? 0));
-      if (troopHp.length < 2) continue;
-      const floor = Math.min(...troopHp);
-      for (const id of hiredIds) {
-        const unitHp = hp.get(id) ?? 0;
-        if (unitHp <= 0) continue;
-        const most = Math.max(0, Math.ceil(floor / unitHp) - 1);
-        if ((counts[id] ?? 0) > most) counts[id] = most;
-      }
-      if (!hiredIds.every((id) => (counts[id] ?? 0) > 0)) continue;
-      const key = countsKey(counts);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const { summary } = planMarch(request, counts);
-      out.push({
-        repeats: Math.min(
-          ...hiredIds.map((id) => {
-            const held = request.caps[id];
-            return held === undefined ? Infinity : lastsMarches(held, counts[id] ?? 0);
-          }),
-        ),
-        what: `the sizer’s sheltered march over ${String(depth)} troop types (${method}) — ${Object.entries(
-          counts,
-        )
-          .filter(([, count]) => count > 0)
-          .map(([id, count]) => `${id} ${String(count)}`)
-          .join(' · ')}`,
-        counts,
-        // The same reading the bar is on since 2026-09-19 (S-94): a rival priced on the midpoint of the two
-        // openings against a stop priced on the bad flip would beat it on arithmetic alone.
-        damage: summary.minDamage,
-        silver: summary.recovery.silver,
-        burn: hiredIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0),
-        hired: hiredIds.reduce((sum, id) => sum + (counts[id] ?? 0), 0),
-        seconds: summary.recovery.seconds,
-        key,
-      });
-    }
-  }
-  return out;
-};
-
 /** The plan every criterion below reads, or the refusal message the benchmark pins. */
 const planFor = (request: StackRequest): CampaignPlan | string => {
   try {
@@ -1524,6 +1298,94 @@ describe('the thrift end is offered', () => {
  * and 3 387 893 a march while six sheltered marches above it reach 3 438 030 to **4 773 281**
  * (`tools/theorycraft/out/111-coverage-and-all-in.md` §A).
  */
+/**
+ * **The thrift half of the trade is not refused by the band** (S-95; the owner, 2026-09-19, on his camp at
+ * 5 100 / 2 200 with 120 hunters: his seven-type march with 25 hunters costs less silver than the bar's
+ * recommendation, burns three chunks against five and recovers in 5d 14h against 8d 21h, *"and there is no
+ * eco silver spot"*).
+ *
+ * The bar's four answers are all drawn from the **band** (`candidates`, `plan.ts`), so a family of marches
+ * the band refuses is a family no stop rule downstream can ever offer, however well it scores. Until S-95 the
+ * band's token-field arm read the *count* of hired units — at least half the winner's fielded hired — and on
+ * his camp the winner fields 100, so it asked 50 and put every plan of his own family outside the bar's reach.
+ *
+ * Stated here over the **marches the account can field** (`shelteredRivals`), on the three readings the bar
+ * and the recap print and nothing else: when one of them burns **less** of the stock than the sweet spot,
+ * costs **no more silver**, and still does at least **half** the damage of the bar's **steady max**
+ * (`BAND_SHARE` below) — the plans the bar draws from have to carry one no dearer in the stock.
+ *
+ * **The half is the band's fraction, not the band's denominator.** `inBand` measures a march against the
+ * plan's own **winner** (`chosenPoint.repeat.damage`), which is not a figure anything outside the engine
+ * can read; this criterion is stated over what the bar prints, so it takes the same fraction against the
+ * **steady max** — the top rung the bar carries. Measured over the fifteen
+ * (`tools/theorycraft/out/112-band-yardstick.md`), the steady max is **never below** the winner: equal on
+ * ten of them, and above it on the five where S-97's top-of-the-bar pass reaches past the winner's own burn
+ * (the 12 000 export 8 014 627 against 8 153 756, his camp of 2026-09-19 2 792 387 against 2 873 382, his
+ * localStorage dump 2 396 472 against 3 976 648, his live camp of 2026-09-18 2 868 384 against 4 358 805,
+ * Aydae alone 3 387 893 against 4 773 281). So stating it this way asks for **at least** as much damage as
+ * the band's own arm does, never less. It says nothing about which stop is picked:
+ * that is the silver saver's business, and experiment 112 §C measures why the silver saver cannot pick his
+ * march (of every thrifty sheltered march on all fifteen armies, **not one** is also at least as efficient a
+ * silver as the sweet spot once both are read on the worst opening — his own is 1.046 against 1.081).
+ *
+ * **Measured on HEAD (4c74cfb), which is what it is for**: it fails on **two** of the fifteen armies —
+ * his camp of 2026-09-19 at 5 100 / 2 200 (the cheapest such march burns **3** — 1 968 177 for 1 991 000 in
+ * 5d 13h — and the plans the bar draws from start at **5**) and his live camp of 2026-09-18 (**7** —
+ * 2 230 444 for 1 942 700 in 5d 9h — against **8**). Both pass under the damage yardstick
+ * (`tools/theorycraft/out/112-band-yardstick.md` §C).
+ */
+const BAND_SHARE = 0.5;
+
+describe('the thrift half of the trade is not refused by the band', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot');
+        const most = plan.alternatives.find((row) => row.pick === 'steady-max');
+        // An army whose bar has no knee and no top rung has no thrift half to refuse.
+        if (!sweet || !most) return;
+        const thrifty = shelteredRivals(scenario.request).filter(
+          (rival) =>
+            rival.repeats >= repeatsOf(sweet) &&
+            rival.burn < sweet.repeat.mercLost &&
+            rival.silver <= sweet.repeat.silver &&
+            rival.damage >= BAND_SHARE * most.repeat.damage,
+        );
+        if (thrifty.length === 0) return;
+        const cheapest = thrifty.reduce((held, rival) => (rival.burn < held.burn ? rival : held));
+        /**
+         * **The plans the bar draws from**: the band (`withTrade`) and the stops themselves. The two are not
+         * the same set — a stop is re-sized after the band is drawn (the put-back and the tighter shape), so
+         * a stop's burn can sit under every band row's, which is measured and not hypothetical (his camp at
+         * 5 100 / 2 200: band 7, sweet spot 5).
+         */
+        const reach = Math.min(
+          ...[...(plan.trade ?? []), ...plan.alternatives].map((row) => row.repeat.mercLost),
+        );
+        expect(
+          reach,
+          `${cheapest.what} burns ${String(cheapest.burn)} — ` +
+            `${Math.round(cheapest.damage).toLocaleString('en-US')} damage for ` +
+            `${cheapest.silver.toLocaleString('en-US')} silver, ` +
+            `${String(Math.round(cheapest.seconds / 3_600))} h — against the sweet spot's ` +
+            `${sweet.repeat.damage.toLocaleString('en-US')} for ` +
+            `${sweet.repeat.silver.toLocaleString('en-US')} at ${String(sweet.repeat.mercLost)} burned and ` +
+            `the steady max's ${most.repeat.damage.toLocaleString('en-US')}, and the thriftiest plan the bar ` +
+            `draws from burns ${String(reach)}`,
+        ).toBeLessThanOrEqual(cheapest.burn);
+      },
+      300_000,
+    );
+  }
+});
+
 describe('the bar’s top rung is not beaten by a sheltered march the account can field at a higher burn', () => {
   for (const scenario of scenarios) {
     test(

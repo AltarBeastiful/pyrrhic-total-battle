@@ -2,7 +2,7 @@
   "registeredBy": null,
   "registeredAt": null,
   "reading": "worst-opening",
-  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T06:30:54.633Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
+  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T07:17:00.962Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
   "scenarios": {
     "first-run army, Bear V ×1 (20 000 leadership)": {
       "stops": {
@@ -318,15 +318,25 @@
       "stops": {
         "silver-saver": {
           "marches": 4,
-          "damage": 16217218,
-          "silver": 8293900,
-          "gold": 2568,
-          "seconds": 2002425,
-          "burned": 35,
-          "perSilver": 1.9553187282219462,
-          "perHired": 463349.0857142857
+          "damage": 16115314,
+          "silver": 8695000,
+          "gold": 2544,
+          "seconds": 2098590,
+          "burned": 32,
+          "perSilver": 1.8534001150086257,
+          "perHired": 503603.5625
         },
         "sweet-spot": {
+          "marches": 4,
+          "damage": 18796348,
+          "silver": 10906900,
+          "gold": 2760,
+          "seconds": 2631030,
+          "burned": 35,
+          "perSilver": 1.7233446717215708,
+          "perHired": 537038.5142857142
+        },
+        "more-mercs": {
           "marches": 4,
           "damage": 20079262,
           "silver": 10581400,
@@ -335,16 +345,6 @@
           "burned": 44,
           "perSilver": 1.8975997505056041,
           "perHired": 456346.86363636365
-        },
-        "more-mercs": {
-          "marches": 4,
-          "damage": 21834211,
-          "silver": 10957600,
-          "gold": 3632,
-          "seconds": 2659020,
-          "burned": 50,
-          "perSilver": 1.9926088742060306,
-          "perHired": 436684.22
         },
         "steady-max": {
           "marches": 4,
@@ -514,17 +514,17 @@
     },
     "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)": {
       "stops": {
-        "sweet-spot": {
+        "silver-saver": {
           "marches": 4,
-          "damage": 25539281,
-          "silver": 17037600,
+          "damage": 23474915,
+          "silver": 13945500,
           "gold": 3472,
-          "seconds": 4038975,
+          "seconds": 3308895,
           "burned": 53,
-          "perSilver": 1.4989952223317837,
-          "perHired": 481873.22641509434
+          "perSilver": 1.68333261625614,
+          "perHired": 442922.92452830187
         },
-        "more-mercs": {
+        "sweet-spot": {
           "marches": 4,
           "damage": 28140302,
           "silver": 17072400,
@@ -533,6 +533,16 @@
           "burned": 61,
           "perSilver": 1.6482920971861015,
           "perHired": 461316.4262295082
+        },
+        "more-mercs": {
+          "marches": 4,
+          "damage": 29851070,
+          "silver": 17179200,
+          "gold": 4872,
+          "seconds": 4136040,
+          "burned": 70,
+          "perSilver": 1.7376286439415107,
+          "perHired": 426443.85714285716
         },
         "steady-max": {
           "marches": 4,

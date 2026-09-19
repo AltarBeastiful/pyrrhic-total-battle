@@ -1,5 +1,5 @@
 {
- "run": "2026-09-19T07:42:44.120Z",
+ "run": "2026-09-19T07:04:03.776Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,7 +7,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 55,
+   "planMs": 59,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -110,7 +110,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 73,
+   "planMs": 59,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -214,7 +214,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 49,
+   "planMs": 54,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -440,7 +440,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 80,
+   "planMs": 87,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -680,7 +680,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 137,
+   "planMs": 144,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -943,7 +943,7 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 8877,
+   "planMs": 8544,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1094,7 +1094,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 603,
+   "planMs": 670,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1400,7 +1400,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1634,
+   "planMs": 1575,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -1709,7 +1709,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 1826,
+   "planMs": 1466,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -1986,7 +1986,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 89,
+   "planMs": 90,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -2261,7 +2261,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1191,
+   "planMs": 1112,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -2583,7 +2583,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 957,
+   "planMs": 926,
    "baseline": {
     "stops": {
      "sweet-spot": {

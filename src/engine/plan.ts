@@ -161,27 +161,34 @@ export interface CampaignInput {
    */
   putBack?: PutBackPolicy | undefined;
   /**
-   * **The band's token-field yardstick, switchable** — a diagnostic for `tools/theorycraft/108-thrift-end.
-   * test.ts`, never set by the app, kept so the measurement behind S-93 can be re-run.
+   * **The band's token-field yardstick, switchable** — a diagnostic for
+   * `tools/theorycraft/108-thrift-end.test.ts` and `112-band-yardstick.test.ts`, never set by the app, kept
+   * so the measurements behind S-93 and S-95 can be re-run against the engine that shipped.
    *
-   * The band refuses a plan that fields a **token** of the hired stock, and the yardstick it measures that
-   * against is `winner` by default: half the hired units the plan's own winning march fields (`inBand`). The
-   * owner's complaint of 2026-09-19 was read as that rule's fault, and experiment 108 measured all five
-   * readings over thirteen armies (§A/§C of `out/108-thrift-end.md`):
+   * The band refuses a plan that fields a **token** of the account's effort, and the yardstick it measures
+   * that against is `damage` by default since S-95: half the damage the plan's own winning march does
+   * (`inBand`). The readings, all measured over the fifteen armies `plan-criteria.test.ts` holds its criteria
+   * on (`out/112-band-yardstick.md` §A, 2026-09-19):
    *
-   *  - `winner` — today's, and the one that ships;
-   *  - `hired` / `burn` with a floor of half the **sweet spot's** fielded hired or burn: on his own camp they
-   *    move the band's thinnest plan from 50 hired to 38 and still refuse the seven-stack march he builds by
-   *    hand, and they cost the 7 000 export's sweet spot 21 % of its damage;
-   *  - `none` — no token criterion at all: on that same export the bar's thrift end becomes a **506 032**-damage
-   *    march for 278 400 silver, 8.6 % of the steady max's, which is the extreme the owner's instruction names;
-   *  - `damage` — at least half the winner's damage a march: it refuses every one of those extremes and admits
-   *    his seven-stack march, and it was not needed in the end — with the **tighter shape** (S-93) both of the
-   *    criteria in `tests/engine/plan-criteria.test.ts` hold under today's yardstick as they do under this one,
-   *    and this one costs the 7 000 export's sweet spot 16 % of its campaign. The measured answer was that the
-   *    missing **shape** was the defect and not the yardstick.
+   *  - `damage` — the rule, and what ships: the worst plan the band keeps anywhere in the fifteen is 37.8 %
+   *    of that army's steady max, it admits the owner's own hand-built family (41 band plans on his camp of
+   *    2026-09-19 where the count admitted none), and it costs three recommendations a move — one up
+   *    (+14.6 % on the evening account), two down (−8.8 % on the 7 000 export for 4.2 % more silver and three
+   *    chunks less of the stock, −36.5 % on his live camp of 2026-09-18 for 22 % less silver, half the queue
+   *    and a fourth stop);
+   *  - `winner` — the rule until S-95: half the winner's **fielded hired**. On the three smallest first-run
+   *    armies the winner itself fields a token of the stock, so the arm asks for almost nothing and the band
+   *    keeps a march worth **14.4 %** of the steady max — the extreme the arm exists to refuse;
+   *  - `hired` / `burn` with a floor of half the **sweet spot's** fielded hired or burn: measured in
+   *    experiment 108 and again here as R4 — on the live account at 20 000 the silver saver falls 40.8 % in
+   *    damage, and on his own camp the *recommendation* falls 14.3 % at the same silver;
+   *  - `damageMin` at half the **sweet spot's** damage (112's R3): the same bars as `damage` on every one of
+   *    the fifteen, with a floor 3 to 10 points lower — it buys nothing and refuses less;
+   *  - `none` — no token criterion at all: experiment 108 measured the 7 000 export's thrift end falling to a
+   *    **506 032**-damage march for 278 400 silver, 8.6 % of the steady max's, which is the extreme the
+   *    owner's instruction names.
    */
-  bandHired?: { mode: 'winner' | 'none' | 'damage' } | { mode: 'hired' | 'burn'; min: number };
+  bandHired?: { mode: 'winner' | 'none' | 'damage' } | { mode: 'hired' | 'burn' | 'damageMin'; min: number };
   /**
    * **The sheltered-maximum vectors, behind a flag** — the same diagnostic, for §B of experiment 108.
    *
@@ -2368,18 +2375,46 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * sink the owner says he would never choose. A plan is near the goal when its march is not a token field and
    * not a silver sink:
    *
-   *   **mercenaries** — it fields at least **half the hired troops the plan's own march fields** (the goal's
-   *   mercenary share is the yardstick, so a horizon that legitimately fields few mercenaries is not punished
-   *   for it); **silver** — it returns at least **half the plan's own damage a silver**; and **the march**
-   *   itself must be more than a single troop stack (experiment 72's criterion, and the owner's own "the
-   *   least silver plan would never be chosen … is not a strategy" — the plan a one-stack march describes is
-   *   exactly the cheapest row the frontier used to carry).
+   *   **the goal** — its march does at least **half the damage the plan's own winning march does** (S-95:
+   *   *"we're too far off from our goal"* is a sentence about the goal, and the goal is damage; a count of
+   *   hired units is not); **silver** — it returns at least **half the plan's own damage a silver**; and
+   *   **the march** itself must be more than a single troop stack (experiment 72's criterion, and the
+   *   owner's own "the least silver plan would never be chosen … is not a strategy" — the plan a one-stack
+   *   march describes is exactly the cheapest row the frontier used to carry).
    *
    * Every threshold is measured against `chosen`, never a free-standing number, so the plan itself is always
-   * inside the band. Measured on the account
+   * inside the band (its own march does exactly its own damage). Measured on the account
    * (`tools/theorycraft/out/74-row-figures.md` §2b): at a target of 10 the band keeps 31 of 46 frontier rows,
    * at 20 it keeps 15 of 31, the plan and the sweet spot pass at both, and the two ratio picks — the cheapest
    * one-stack march and the 9-mercenary silver sink — are the first rows it refuses.
+   *
+   * **The first arm read the count until S-95** (2026-09-19): *"it fields at least half the hired troops the
+   * plan's own march fields"*. Experiment 112 re-measured the four readings of it over the fifteen armies the
+   * criteria are held on (`tools/theorycraft/out/112-band-yardstick.md`), and the count loses on the rule's
+   * own terms. **The extremes it lets in**: on the first-run armies with one, two and three Bear V the
+   * winner's march fields a token of the stock itself, so half of it asks for almost nothing and the band
+   * keeps a march worth **14.4 to 14.7 %** of the steady max's damage — the *"don't show the extremes"* the
+   * arm exists to refuse. On damage the worst the band keeps anywhere in the fifteen is **37.8 %**. **The
+   * plans it refuses**: on the owner's camp of 2026-09-19 (5 100 / 2 200, 120 hunters) the winner fields 100
+   * hired, so the count asks 50 and every one of the **41** band plans of his own hand-built family — five
+   * troop stacks and twenty to thirty hunters — was outside it; on his live camp of 2026-09-18 the band's
+   * thriftiest plan burned **8** chunks while the sizer's own sheltered march at **7** does 2 230 444 for
+   * 1 942 700 in 5d 9h. The damage reading admits both families and refuses both extremes.
+   *
+   * **What it costs, disclosed rather than smoothed** (`112-band-yardstick.md` §A): the band's thriftiest
+   * rungs are new rungs of the burn ladder, so the knee can move onto one of them. **Four** recommendations
+   * move and two bars gain a thrift stop. His live camp of 2026-09-18 gains the thrift stop outright — a **three**-stop bar becomes four, the
+   * recommendation 3 544 681 at 12 chunks and 8d 16h becomes 2 249 888 at **4** chunks and **4d 19h** for
+   * 22 % less silver. **The march it leaves is not kept**: the bar's new *more mercs* is a different plan
+   * (3 285 305 for 2 635 500 at 10 chunks), 7.3 % less damage for 16.4 % **more** silver than the 12-chunk
+   * march that is gone, so that army trades its old recommendation for a thrift stop and a dearer middle. The 7 000 export's
+   * recommendation falls 4 870 455 → 4 442 817 a march (−8.8 %, campaign −6.4 %) for **4.2 % more** silver at
+   * 10 → **7** chunks, which is the one fall that is worse on two readings at once and is a trade the owner
+   * is shown, not one this file adjusts. The evening account's **rises** 6 189 687 → 7 096 423 (+14.6 %,
+   * campaign +10.2 %) at the same silver, and it gains a silver saver — the fifth stop that brings back the
+   * `stops` pin S-94 left red on that army. His own localStorage dump gains the thrift stop he asked for,
+   * `silver-saver` at **3** chunks: thirty hunters over five troop stacks, 1 882 911 for 1 790 200 in
+   * **6d 21h**, beside a recommendation that moves 5 → 4 chunks for 1.6 % of its damage.
    */
   const mercIds = new Set(mercTypes.map((entry) => entry.id));
   const hiredOf = (counts: Record<string, number>): number =>
@@ -2401,15 +2436,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     (row.counts[id] ?? 0) > 0 ||
     (row.finaleCounts?.[id] ?? 0) > 0 ||
     (row.sequence?.some((march) => (march[id] ?? 0) > 0) ?? false);
-  // The yardstick itself (`CampaignInput.bandHired`), so experiment 108's five readings run on one engine.
-  // `winner` is the rule, and the only one the app ever asks for.
+  /**
+   * **The token-field arm**, and the one place its yardstick is decided (`CampaignInput.bandHired`, so
+   * experiments 108 and 112 run every reading of it on one engine). `damage` is the rule since S-95 and the
+   * only one the app ever asks for: a plan is a token field when its march does **less than half the damage
+   * the plan's own winning march does**. `winner` is the reading it replaced — half the winner's *fielded
+   * hired* — kept named so the measurement behind S-95 can be re-run against the engine that shipped.
+   */
   const notToken = (row: PlanTotals): boolean => {
-    const rule = input.bandHired ?? { mode: 'winner' as const };
+    const rule = input.bandHired ?? { mode: 'damage' as const };
     if (rule.mode === 'none') return true;
     if (rule.mode === 'hired') return hiredOf(row.counts) >= rule.min;
     if (rule.mode === 'burn') return row.repeat.mercLost >= rule.min;
-    if (rule.mode === 'damage') return row.repeat.damage * 2 >= chosenPoint.repeat.damage;
-    return hiredOf(row.counts) * 2 >= goal.hired;
+    if (rule.mode === 'damageMin') return row.repeat.damage >= rule.min;
+    if (rule.mode === 'winner') return hiredOf(row.counts) * 2 >= goal.hired;
+    return row.repeat.damage * 2 >= chosenPoint.repeat.damage;
   };
   const inBand = (row: PlanTotals): boolean =>
     notToken(row) &&
@@ -2428,11 +2469,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * never a free-standing number, so the plan is always inside it. A plan is near the goal when its march is
    * not a token field and not a silver sink:
    *
-   *   **mercenaries** — it fields at least **half the hired troops the plan's own march fields** (the goal's
-   *   mercenary share is the yardstick, so a horizon that legitimately fields few mercenaries is not punished
-   *   for it); **silver** — it returns at least **half the plan's own damage a silver**; and **the march**
-   *   itself must be more than a single troop stack (experiment 72's criterion, and the owner's own "the
-   *   least silver plan would never be chosen … is not a strategy").
+   *   **the goal** — its march does at least **half the damage the plan's own winning march does** (S-95:
+   *   *"we're too far off from our goal"* is a sentence about the goal, and the goal is damage; a count of
+   *   hired units is not); **silver** — it returns at least **half the plan's own damage a silver**; and
+   *   **the march** itself must be more than a single troop stack (experiment 72's criterion, and the
+   *   owner's own "the least silver plan would never be chosen … is not a strategy").
    *
    * Measured on the account (`tools/theorycraft/out/74-row-figures.md` §2b): at a target of 10 the band keeps
    * 31 of 46 frontier rows, at 20 it keeps 15 of 31, and the plan and the sweet spot pass at both.

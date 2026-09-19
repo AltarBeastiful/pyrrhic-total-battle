@@ -183,7 +183,13 @@ describe.skipIf(!process.env.THEORY)('108 — the thrift end of the bar', () => 
       of: (sweet: { hired: number; burn: number }) => Partial<CampaignInput>;
     }
     const YARDSTICKS: Variant[] = [
-      { key: 'A1', title: 'today — half the winner’s fielded hired', of: () => ({}) },
+      // **Named explicitly since S-95** (2026-09-19): the engine's own default moved to the damage
+      // reading this file's A5 measured, so `{}` no longer means "half the winner's fielded hired".
+      {
+        key: 'A1',
+        title: 'the rule until S-95 — half the winner’s fielded hired',
+        of: () => ({ bandHired: { mode: 'winner' } }),
+      },
       {
         key: 'A2',
         title: 'half the sweet spot’s fielded hired',
