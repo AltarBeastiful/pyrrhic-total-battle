@@ -6,23 +6,27 @@ page itself sent for each `(route, flag set)` — its `url`, its `init` (method,
 `body` — and then `run()` replays those bodies over ten scenarios.
 
 This script does the second half from the terminal. It reads the bases out of the fourth run's dataset,
-`docs/research/fixtures/totalstack-2026-09-18-dataset-window.json`, and replays them over **seven scenarios the
+`docs/research/fixtures/totalstack-2026-09-18-dataset-window.json`, and replays them over **ten scenarios the
 benchmark has no TotalStack row for**. Every scenario is derived with the kit's own helpers (`zero`, `firstRun`,
 `hire`, `owner`, `OWNER_WINDOW`), copied field for field, so no field name is guessed.
 
 ## Running it
 
 ```sh
-node tools/totalstack/replay.mjs          # dry run — forges the bodies, prints them, sends nothing
-node tools/totalstack/replay.mjs --send   # sends them
+node tools/totalstack/replay.mjs                                    # dry run — prints the bodies, sends nothing
+TOTALSTACK_SESSION_ID=<uuid> node tools/totalstack/replay.mjs --send # sends them
 ```
+
+`--send` **refuses to run** without `TOTALSTACK_SESSION_ID`, and says so: TotalStack identifies the caller by
+the `x-session-id` header and this script takes that value from the environment only. It is never printed and
+never written.
 
 **Dry run is the default.** `--send` is the only thing that sends. Other flags: `--verbose` (print every forged
 body instead of one per scenario), `--delay=<ms>` (400 by default, the kit's own pacing), `--origin=<url>`
 (`https://totalstack.ca`), `--monster-min-tier=<n>`, `--out=<path>`.
 
-9 bases × 7 scenarios = **98 answers** (28 Generate at priority _none_, 70 priority searches, one per
-objective), sent one at a time, 400 ms apart — about a minute plus the server's own time. A request that throws
+9 bases × 10 scenarios = **140 answers** (40 Generate at priority _none_, 100 priority searches, one per
+objective), sent one at a time, 400 ms apart — about two minutes plus the server's own time. A request that throws
 or comes back outside 2xx is retried **once** and then recorded as it stands, status and all: a failure is a row
 in the fixture, never a gap in it.
 
@@ -32,32 +36,66 @@ The answers land in `docs/research/fixtures/totalstack-2026-09-19-replay.json`, 
 
 **The trial ends 2026-09-20.** After that the bases still replay but the answers will not come back.
 
-## The token never leaves the request
+## Headers, and the token
 
-`init.headers` holds the headers the owner's browser sent, which may carry his session token. The script
-forwards that object to `fetch` untouched and **never reads, prints or writes a header value**. The dry run
-prints bodies only. The fixture it writes holds `url` and `body` per base — **no `init`** — so nothing from the
-headers reaches disk. Do not add a line that logs `init`.
+**Updated 2026-09-19**, from a `POST /api/calculations/optimize` the owner captured that came back 200. There
+is **no authorization header at all**: the route is identified by `x-session-id` (a uuid, his session) and
+`x-calculation-request-id` (a uuid the page mints per calculation). So the script sends
 
-Node's `fetch` has no cookie jar, so the `credentials: 'include'` the page relied on does nothing here. If the
-answers come back 401/403 the session was a cookie the capture never recorded; set `TOTALSTACK_COOKIE` in the
-environment and the script forwards it as a `Cookie` header, with the same rule — it is never printed and never
-written. Failing that, paste the kit's snippet in the page console as before.
+- `x-session-id` — from the environment variable **`TOTALSTACK_SESSION_ID`**, required by `--send`;
+- `x-calculation-request-id` — a fresh `crypto.randomUUID()` **per request** (a retry gets a new one);
+- `content-type: application/json`, `origin: https://totalstack.ca`, `referer: https://totalstack.ca/`;
+- every other stored header from `init.headers`, forwarded opaquely, **minus** any key whose _name_ matches
+  `/authorization|cookie|set-cookie|content-type|origin|referer|x-session-id|x-calculation-request-id/i`.
 
-## The seven scenarios
+Keys are filtered **by name**. The script never reads, prints or writes a header value — the dry run prints
+bodies only, and the fixture holds `url` and `body` per base, **no `init`**. Do not add a line that logs
+headers.
 
-| scenario                          | leadership / authority | hired (caps)                           | troop window                                                   | monsters      |
-| --------------------------------- | ---------------------- | -------------------------------------- | -------------------------------------------------------------- | ------------- |
-| `first-run, 1 bear`               | 20 000 / 40 000        | Bear V 1                               | first-run (G1–3, S1, nothing excluded, no bonuses)             | off           |
-| `first-run, 2 bears`              | 20 000 / 40 000        | Bear V 2                               | ″                                                              | off           |
-| `live camp of 2026-09-18`         | 4 975 / 2 180          | ABT 485 · LGN 1 002 · Bear V **9 999** | owner's (archer-3 · spearman-3 · swordsman-1 excluded)         | off           |
-| `camp of 2026-09-19, hunters 450` | 4 975 / 2 180          | EMH 450                                | owner's, guardsmen melee+ranged and specialists melee excluded | off           |
-| `camp of 2026-09-19, hunters 120` | 5 100 / 2 200          | EMH 120                                | ″                                                              | off           |
-| `monsters, first-run army`        | 20 000 / 40 000        | none                                   | first-run                                                      | **tiers 1–9** |
-| `monsters, owner's window`        | 4 975 / 2 180          | EMH 450                                | owner's, same category exclusions                              | **tiers 1–9** |
+**Every name the script sets is dropped from the stored headers first, and that is not cosmetic.** The capture
+carries `Content-Type`; the script adds `content-type`. A JS object keeps both, and `fetch` builds `Headers`
+from an object by **appending**, so the two casings merge into one comma-joined value —
+`content-type: application/json, application/json`. No JSON body parser accepts that, so the server parsed no
+body and its validator answered `{"message":"Required","field":""}` — an empty path, i.e. the root of the
+schema: _the body itself is missing_. That is what made the first attempt fail 140/140 on both routes while the
+earlier version, which forwarded the stored headers untouched, was answered 201. The dry run now prints the
+final header **names**, flags any duplicate casing, and prints the serialised body's byte length and first 80
+characters, so the same failure is visible without sending.
+
+## The body schema
+
+`TEMPLATE` in the script **is** his own 2026-09-19 request, verbatim from that 200: leadership 5 225, dominance
+100, authority 2 120, monsters at tier 3, Epic Monster Hunter **V** 80 with bears and cyclopes at 6, guardsmen
++60/+60 and army +3/+3. Every scenario is built on it, so every key of the current schema goes out — including
+the ones the 2026-09-18 bodies had none of: `dominanceValue`, `templeLevel`, `trainingCostReductions`,
+`trainingSpeedBonuses`, `recoveryPlan`, `reviveAllTroops`, and the `giant` row of the two bonus maps.
+
+The order is: **template → the stored base body → the scenario's fields**. Laying the stored body over the
+template is what keeps each base's own method flags (`monsterSaving`, `enforceOrdering`, `relaxedPreservation`
+…), its tier windows and **its bonuses** — the first-run army's zeros and the owner's export's guardsmen +54 —
+rather than the template's. The two bonus maps are merged key-wise so `giant` is always present, and on the
+Generate route (`/api/calculations`) the three optimize-only keys — `objective`, `deepOptimizationSeeds`,
+`optimizationSeed` — are dropped unless the stored base had them (none does).
+
+## The ten scenarios
+
+| scenario                                | L / dominance / authority    | hired (caps)                                  | troop window                                                   | monsters      |
+| --------------------------------------- | ---------------------------- | --------------------------------------------- | -------------------------------------------------------------- | ------------- |
+| `first-run, 1 bear`                     | 20 000 / 100 / 40 000        | Bear V 1                                      | first-run (G1–3, S1, nothing excluded, no bonuses)             | off           |
+| `first-run, 2 bears`                    | 20 000 / 100 / 40 000        | Bear V 2                                      | ″                                                              | off           |
+| `live camp of 2026-09-18`               | 4 975 / 100 / 2 180          | ABT 485 · LGN 1 002 · Bear V **9 999**        | owner's (archer-3 · spearman-3 · swordsman-1 excluded)         | off           |
+| `camp of 2026-09-19, hunters 450`       | 4 975 / 100 / 2 180          | EMH 450                                       | owner's, guardsmen melee+ranged and specialists melee excluded | off           |
+| `camp of 2026-09-19, hunters 120`       | 5 100 / 100 / 2 200          | EMH 120                                       | ″                                                              | off           |
+| `his TotalStack profile 2026-09-19`     | **5 225 / 100 / 2 120**      | EMH **V** 80 (caps also bears 6 · cyclopes 6) | the template's own                                             | **tier 3–3**  |
+| `monsters, first-run army`              | 20 000 / **20 000** / 40 000 | none                                          | first-run                                                      | **tiers 3–9** |
+| `monsters, owner's window`              | 4 975 / **20 000** / 2 180   | EMH 450                                       | owner's, same category exclusions                              | **tiers 3–9** |
+| `monsters, camp 110 — dominance 900`    | 20 000 / **900** / 2 180     | EMH 83 · Bear V 6                             | first-run                                                      | **tiers 3–5** |
+| `monsters, camp 110 — dominance 20 000` | 20 000 / **20 000** / 2 180  | EMH 83 · Bear V 6                             | first-run                                                      | **tiers 3–5** |
 
 The first two fill the two bear armies `tests/engine/plan-scenarios.ts` pins and the kit answered only at 3 and
-10 bears. The next three are the owner's own camps as his browser held them.
+10 bears. The next three are the owner's own camps as his browser held them; the sixth is his TotalStack
+profile as it stood on 2026-09-19. The last two mirror the two dominance camps
+`tools/theorycraft/110-monster-shelter.test.ts` measures the plan on, so its tables and these answers line up.
 
 **"No cap" is `9999`.** TotalStack's body has no null or absent form for an uncapped type: `selectedMercenaryIds`
 _is_ the set of hired ids and `mercenaryCaps` carries a number for each, so a type with no cap entry is a type
@@ -69,17 +107,17 @@ hired the same way.
 ## The monsters scenarios
 
 TotalStack switches the dominance pool on with **`monsterMinTier` / `monsterMaxTier`**, narrows it with
-`excludedMonsterIds`, and answers in `monsterCounts`. Every base of the capture carries
+`excludedMonsterIds`, and answers in `monsterCounts`. Every base of the 2026-09-18 capture carries
 `monsterMinTier: 3, monsterMaxTier: 0` — a maximum below the minimum, i.e. **off** — which is why all 140
-captured answers have `monsterCounts: {}` and `dominanceValue: null`. **Total Optimization is
+captured answers have `monsterCounts: {}` and `dominanceValue: null`. His 2026-09-19 request has them on, at
+tier 3–3 with 100 dominance. **Total Optimization is
 `monsterSaving=true`** (the doc's base table), so the two monsters scenarios are answered under it like every
 other base.
 
 The tiers come from the engine's own table, `src/data/tables/monsters.json`: 28 dominance monsters, four a tier,
 **tiers 3 to 9** (Battle Boar, Emerald Dragon, Stone Gargoyle, Water Elemental at 3 … Devastator II, Fire
-Phoenix II, Kraken II, Trickster II at 9). The script sends `monsterMinTier: 1` (the instruction's value —
-harmless, since nothing below 3 exists) and `monsterMaxTier: 9`. Use `--monster-min-tier=3` to send the page's
-own lower bound instead, should a monsters request come back outside 2xx.
+Phoenix II, Kraken II, Trickster II at 9). **The minimum sent is never below 3** — nothing exists there, and his
+own 2026-09-19 request bottoms out at 3. `--monster-min-tier=<n>` raises it; it cannot lower it past 3.
 
 **The request body carries no dominance field.** Its forty keys hold `monsterMinTier`, `monsterMaxTier` and
 `excludedMonsterIds` and nothing else about the pool — no `dominanceValue`, no dominance housing. The _response_
