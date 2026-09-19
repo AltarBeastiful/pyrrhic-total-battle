@@ -278,7 +278,16 @@ describe(
           // The stock burns exactly what it burned, so the two ratios follow from the arithmetic above.
           expect(sweet.mercLost).toBe(cap);
           expect(sweet.damagePerSilver).toBeCloseTo(sweet.totalDamage / sweet.silver, 9);
-          expect(sweet.damagePerMercenary).toBeCloseTo(sweet.totalDamage / sweet.mercLost, 3);
+          /**
+           * **And damage a hired unit is the hired stacks' own damage over the burn** (S-105, 2026-09-19).
+           *
+           * The tail fields no hired stack, so it adds to neither side of this ratio: the figure the stop
+           * reports is its repeated march's hired damage over its burn, before and after the tail alike. It
+           * divided `totalDamage` until this story — which on a stock of one bear handed the chunk credit
+           * for the 13 831 926 the troops-only marches struck for, and is exactly what the owner read as
+           * *"it says over a million but in total they do less than 1M"*.
+           */
+          expect(sweet.damagePerMercenary).toBeCloseTo(sweet.hiredDamage / sweet.mercLost, 3);
 
           // A stop with no finale is its repeated march and its tail, and nothing else.
           if (!sweet.finaleCounts) {
@@ -286,6 +295,8 @@ describe(
             expect(sweet.totalDamage).toBe(played * sweet.repeat.damage + tail.marches * TAIL.damage);
             expect(sweet.silver).toBe(played * sweet.repeat.silver + tail.marches * TAIL.silver);
             expect(sweet.seconds).toBe(played * sweet.repeat.seconds + tail.marches * TAIL.seconds);
+            // And the hired stacks' own damage is the repeats' alone: the tail fields none (S-105).
+            expect(sweet.hiredDamage).toBe(played * sweet.repeat.hiredDamage);
           }
         }
 

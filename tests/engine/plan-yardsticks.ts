@@ -269,6 +269,14 @@ export function rareStockOf(units: UnitDef[], counts: Record<string, number>): R
  * Damage a hired soldier and damage a monster, on the **same** zero rule `perHired` has always used: a
  * campaign that burned none of one kind is read at `damage / 1` rather than at `Infinity`, so a row that
  * spends no monster is comparable with one that does instead of being a record no rival can reach.
+ *
+ * **The `damage` a caller passes is that group's own** since S-105 (2026-09-19; the owner, on the hired
+ * column: *"dmg per hired is still broken: it shows a damage per hired almost above total damage"*): what
+ * the hired soldiers struck for, and what the monsters struck for, taken off the enemy-first journal the
+ * campaign's damage is summed from (`plan-benchmark.test.ts`, `price`). Every caller passed the **whole**
+ * campaign's damage until then, so a chunk of one kind was credited with every point the troops and the
+ * other kind struck for. These two functions are the zero rule and nothing else; the numerator is the
+ * caller's, and the caller now has one per group.
  */
 export const perSoldierOf = (damage: number, soldiersLost: number): number =>
   damage / Math.max(1, soldiersLost);

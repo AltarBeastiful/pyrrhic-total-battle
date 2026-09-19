@@ -10,7 +10,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-09-19T16:04:09.807Z, commit (working tree)
+Run: 2026-09-19T15:50:38.191Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 

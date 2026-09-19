@@ -266,6 +266,12 @@ describe('the search does not get worse', () => {
     // worse — 18 617 972 → **17 340 367** damage, 2.4942 → **2.3192** a silver, 816 790 → **661 893** a
     // mercenary. The note above says what the plan became and why. They are floors as they always were: a
     // change that finds more reliable damage on this army passes here.
+    // **Not re-based 2026-09-19 (S-105)**, and therefore **failing**: damage a hired unit is now the hired
+    // stacks' own damage over the burn (`PlanTotals.damagePerMercenary`), where it was the whole campaign's
+    // damage over it. The third floor reads **377 848** on this army against the 661 893 registered — the
+    // same plan, the same burn, a numerator that is the part of the campaign the mercenaries struck for. Only
+    // the owner re-bases a floor, so it is left as he registered it (the other two are unmoved to the unit:
+    // neither reads "a hired").
     expect(PLAN.totalDamage).toBeGreaterThanOrEqual(17_340_367);
     expect(PLAN.mostEfficient?.damagePerSilver ?? 0).toBeGreaterThanOrEqual(2.31);
     expect(PLAN.mostThrifty?.damagePerMercenary ?? 0).toBeGreaterThanOrEqual(661_893);

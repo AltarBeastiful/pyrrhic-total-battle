@@ -13,6 +13,14 @@
  * march is a row too, played as captured while the stock lasts. Every march is priced by `simulateBattle` on
  * its counts.
  *
+ * **The three rare readings changed on 2026-09-19** (S-105): `a hired`, `a soldier` and `a monster` divide
+ * **that group's own damage**, not the whole campaign's. The owner, on the hired column: *"it says over a
+ * million but in total they do less than 1M"*, and *"dmg per hired is still broken: it shows a damage per
+ * hired almost above total damage"*. Each numerator is the group's share of the same enemy-first journal the
+ * damage column is summed from (`price`), so the three are shares of that column and never a second
+ * arithmetic beside it. The `a silver` and `a dragon coin` columns are untouched: they price a whole march,
+ * and the whole march's damage is what they bought.
+ *
  * **The reading changed on 2026-09-19** (S-94): the damage column is every march's **worst opening**
  * (`minDamage`, the enemy-first journal) where it was the midpoint of the two openings, on every row of every
  * scenario. The owner will not spend on a coin flip, the plan is ranked on the bad flip, and a table that
@@ -124,7 +132,7 @@ import { HORIZON, OWNER_EXPORT, commonScenarios, ownerProfile, ownerScenarios } 
 // The rare-stock readings the owner asked for on 2026-09-19 — "at least the same as TotalStack full opt in
 // silver/dmg, merc/dmg and monster/dmg" — defined once, beside the sheltered-march yardstick, so this table
 // and `plan-criteria.test.ts` split the stock the same way (S-98).
-import { perDragonCoinOf, perMonsterOf, perSoldierOf, rareStockOf } from './plan-yardsticks';
+import { isMonsterUnit, perDragonCoinOf, perMonsterOf, perSoldierOf, rareStockOf } from './plan-yardsticks';
 import { totalstackRows, widenedFor } from './totalstack-rows';
 
 const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
@@ -151,7 +159,16 @@ const n = (value: number): string => Math.round(value).toLocaleString('en-US');
 function price(
   request: StackRequest,
   counts: Record<string, number>,
-): { damage: number; silver: number; gold: number; dragonCoins: number; seconds: number } {
+): {
+  damage: number;
+  hiredDamage: number;
+  soldierDamage: number;
+  monsterDamage: number;
+  silver: number;
+  gold: number;
+  dragonCoins: number;
+  seconds: number;
+} {
   const rank = new Map(buildKillOrder(request.units, request.options).map((id, index) => [id, index]));
   const stacks: Stack[] = [];
   for (const unit of request.units) {
@@ -181,10 +198,43 @@ function price(
   };
   const result: StackResult = { stacks, pools, dropped: [], warnings: [] };
   const summary = simulateBattle(result, request);
+  /**
+   * **What each group of stacks itself dealt, in that same worst opening** (S-105, 2026-09-19; the owner:
+   * *"dmg per hired is still broken: it shows a damage per hired almost above total damage"*).
+   *
+   * `summary.damageByPool` is the **midpoint** of the two openings, so it cannot be the numerator of a
+   * column this table reads on the worst one (S-94). The enemy-first journal is where `minDamage` above
+   * comes from, and its army lines carry the stack that struck them — so the split is that journal summed
+   * by unit, which makes the three figures below shares of the damage column to the unit and never a second
+   * arithmetic beside it.
+   *
+   * The three groups are the three denominators the table already prints: the **authority** pool for
+   * `hired burned`, and the split by race — monsters and hired soldiers, `isMonsterUnit` in
+   * `plan-yardsticks.ts` — for `soldiers burned` and `monsters burned`. Troops are in none of them: they are
+   * not rare stock, and no reading here counts them.
+   */
+  const dealt = new Map<string, number>();
+  for (const entry of summary.journals.enemyFirst.entries) {
+    if (entry.actor !== 'army') continue;
+    dealt.set(entry.unitId, (dealt.get(entry.unitId) ?? 0) + entry.damage);
+  }
+  let hiredDamage = 0;
+  let soldierDamage = 0;
+  let monsterDamage = 0;
+  for (const unit of request.units) {
+    const struck = dealt.get(unit.id) ?? 0;
+    if (struck <= 0 || unit.pool === 'leadership') continue;
+    if (unit.pool === 'authority') hiredDamage += struck;
+    if (isMonsterUnit(unit)) monsterDamage += struck;
+    else soldierDamage += struck;
+  }
   // The gold is the hired stacks' own price (S-90): a sizer sequence and a plan stop both pay it, and a
   // campaign total that leaves one of its marches out of it is what this run's own assertion now catches.
   return {
     damage: summary.minDamage,
+    hiredDamage,
+    soldierDamage,
+    monsterDamage,
     silver: summary.recovery.silver,
     gold: summary.recovery.gold,
     // The fourth price, and the rarest (S-98): dragon coins, which only the dominance pool ever charges —
@@ -210,6 +260,16 @@ interface Campaign {
   comparable: boolean;
   marches: number;
   damage: number;
+  /**
+   * **What the campaign's own rare stacks dealt**, out of the damage above (S-105, 2026-09-19): the hired
+   * stacks' share of every march's worst opening (`hiredDamage`, the `authority` pool — the one `burned`
+   * counts), and the same split by race for the ratios beside it (`soldierDamage`, `monsterDamage`). They
+   * are the numerators of `perHired`, `perSoldier` and `perMonster` below; the column they used to divide
+   * was `damage` itself, which handed the stock credit for every point the troops struck for.
+   */
+  hiredDamage: number;
+  soldierDamage: number;
+  monsterDamage: number;
   silver: number;
   /** What the campaign's hired stacks cost to revive, in gold — the recap's figure, summed march by march. */
   gold: number;
@@ -259,6 +319,9 @@ function campaignOf(
 ): Campaign {
   const mercIds = hiredIds(request);
   let damage = 0;
+  let hiredDamage = 0;
+  let soldierDamage = 0;
+  let monsterDamage = 0;
   let silver = 0;
   let gold = 0;
   let dragonCoins = 0;
@@ -269,6 +332,10 @@ function campaignOf(
   for (const counts of marches) {
     const priced = price(request, counts);
     damage += priced.damage;
+    // The three rare readings' numerators, summed march by march exactly as the damage above is (S-105).
+    hiredDamage += priced.hiredDamage;
+    soldierDamage += priced.soldierDamage;
+    monsterDamage += priced.monsterDamage;
     silver += priced.silver;
     gold += priced.gold;
     dragonCoins += priced.dragonCoins;
@@ -284,6 +351,9 @@ function campaignOf(
     comparable: true,
     marches: marches.length,
     damage,
+    hiredDamage,
+    soldierDamage,
+    monsterDamage,
     silver,
     gold,
     seconds,
@@ -347,14 +417,28 @@ const countsOf = (result: StackResult): Record<string, number> =>
   Object.fromEntries(result.stacks.map((s) => [s.unitId, s.count]));
 /** Damage a silver, or NaN for a sequence that spent none (a ratio it does not have, never a record). */
 const perSilver = (c: Campaign): number => (c.silver > 0 ? c.damage / c.silver : NaN);
-const perHired = (c: Campaign): number => c.damage / Math.max(1, c.burned);
+/**
+ * **Damage a hired unit is the hired stacks' own damage per hired unit lost** (S-105, 2026-09-19; the owner:
+ * *"it says over a million but in total they do less than 1M"*, then *"dmg per hired is still broken: it
+ * shows a damage per hired almost above total damage"*). It read `c.damage / burned` — the **whole**
+ * campaign's worst opening over the chunks of the authority pool — so on a table where the troops do most of
+ * the hitting the column printed nearly the damage column again. The numerator is the part of that opening
+ * the hired stacks struck for (`price`), which is the reading `PlanTotals.damagePerMercenary` is on.
+ *
+ * The zero rule is unchanged: `damage / 1` for a campaign that burned nothing, never `Infinity`.
+ */
+const perHired = (c: Campaign): number => c.hiredDamage / Math.max(1, c.burned);
 /**
  * Damage a hired soldier and damage a monster (S-98), on `perHired`'s own zero rule: a campaign that spent
  * none of one kind reads at `damage / 1`, never at `Infinity`, so a row that fields no monster sits in the
  * same column as one that does instead of topping it by arithmetic.
+ *
+ * **And on its own numerator since S-105**, for the reason `perHired` above is: a soldier chunk is worth what
+ * the hired soldiers struck for, a monster chunk what the monsters did. The three splits are drawn off the
+ * same enemy-first journal the damage column is, so each is a share of it.
  */
-const perSoldier = (c: Campaign): number => perSoldierOf(c.damage, c.soldiersLost);
-const perMonster = (c: Campaign): number => perMonsterOf(c.damage, c.monstersLost);
+const perSoldier = (c: Campaign): number => perSoldierOf(c.soldierDamage, c.soldiersLost);
+const perMonster = (c: Campaign): number => perMonsterOf(c.monsterDamage, c.monstersLost);
 /**
  * **Damage a dragon coin** (S-102, 2026-09-19; the owner: *"TotalStack computes the total of dragon coins
  * needed for a stack if present and the dmg/dragon coins."*). The third currency a monster is paid in, read
@@ -582,16 +666,26 @@ function asBaseline(measured: Measured): BaselineScenario | null {
   const best = Math.max(...plans.map((c) => c.damage));
   const bestSizer = Math.max(...sizers.map((c) => c.damage));
   // The plan's own campaign, split over exactly the marches the bar prices it on (S-98). `plan.mercLost`
-  // is the pooled figure the search is ordered by; this is the same chunks told apart.
-  const planRare = marchesOf(plan as PlanTotals).reduce<{ soldiersLost: number; monstersLost: number }>(
+  // is the pooled figure the search is ordered by; this is the same chunks told apart — and, since S-105,
+  // the damage each of those two groups struck for, priced off the same marches by `price` so the two
+  // ratios below divide a numerator of their own rather than the campaign's whole damage.
+  const planRare = marchesOf(plan as PlanTotals).reduce<{
+    soldiersLost: number;
+    monstersLost: number;
+    soldierDamage: number;
+    monsterDamage: number;
+  }>(
     (into, counts) => {
       const one = rareStockOf(measured.request.units, counts);
+      const struck = price(measured.request, counts);
       return {
         soldiersLost: into.soldiersLost + one.soldiersLost,
         monstersLost: into.monstersLost + one.monstersLost,
+        soldierDamage: into.soldierDamage + struck.soldierDamage,
+        monsterDamage: into.monsterDamage + struck.monsterDamage,
       };
     },
-    { soldiersLost: 0, monstersLost: 0 },
+    { soldiersLost: 0, monstersLost: 0, soldierDamage: 0, monsterDamage: 0 },
   );
   /** The best reading of one ratio over a set of campaigns, and the plan's standing against it (S-98). */
   const standing = (
@@ -616,12 +710,14 @@ function asBaseline(measured: Measured): BaselineScenario | null {
       seconds: plan.seconds,
       burned: plan.mercLost,
       perSilver: plan.silver > 0 ? plan.totalDamage / plan.silver : null,
-      perHired: plan.totalDamage / Math.max(1, plan.mercLost),
+      // The engine's own `hiredDamage` over its own burn (S-105) — the same ratio as
+      // `PlanTotals.damagePerMercenary`, on the table's zero rule rather than on the payload's `Infinity`.
+      perHired: plan.hiredDamage / Math.max(1, plan.mercLost),
       soldiersLost: planRare.soldiersLost,
       monstersLost: planRare.monstersLost,
       dragonCoins: plan.dragonCoins,
-      perSoldier: perSoldierOf(plan.totalDamage, planRare.soldiersLost),
-      perMonster: perMonsterOf(plan.totalDamage, planRare.monstersLost),
+      perSoldier: perSoldierOf(planRare.soldierDamage, planRare.soldiersLost),
+      perMonster: perMonsterOf(planRare.monsterDamage, planRare.monstersLost),
       // The engine's own `PlanTotals.damagePerDragonCoin` answers `Infinity` where no coin was spent; the
       // baseline's column is a figure a run is compared on, so it takes the table's zero rule (S-102).
       perDragonCoin: perDragonCoinOf(plan.totalDamage, plan.dragonCoins),
@@ -748,6 +844,12 @@ function record(label: string, measured: Measured): void {
       // was, so a snapshot taken before this story and one taken after differ by this line and by the
       // figures the monster camp itself moved.
       perDragonCoin: Math.round(perDragonCoin(c)),
+      // S-105, appended last for the same reason: the numerators of the three rare readings above, so a
+      // reader of the snapshot can see what the hired stacks, the hired soldiers and the monsters of this
+      // campaign actually struck for beside the ratios they are divided into.
+      hiredDamage: Math.round(c.hiredDamage),
+      soldierDamage: Math.round(c.soldierDamage),
+      monsterDamage: Math.round(c.monsterDamage),
     })),
   });
   writeFileSync(FIGURES, `${JSON.stringify(figures, null, 1)}\n`);
@@ -875,6 +977,12 @@ writeFileSync(
     'four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. ' +
     'Each march priced by `simulateBattle` on its counts — damage, retraining silver and the gold its hired ' +
     'stacks cost to revive (the gold column since S-90, 2026-09-18).\n\n' +
+    '**`a hired`, `a soldier` and `a monster` are each that group\u2019s own damage over its own chunks ' +
+    'since S-105** (2026-09-19; the owner: *"dmg per hired is still broken: it shows a damage per hired ' +
+    'almost above total damage"*). The numerator is the group\u2019s share of the same enemy-first journal ' +
+    'the damage column is summed from, so the three are shares of that column. They divided the campaign\u2019s ' +
+    'whole damage until this run, which credited a chunk of rare stock with every point the troops struck ' +
+    'for.\n\n' +
     'The last six columns are the rare stock read the way the owner asked for it on 2026-09-19 (S-98): the ' +
     'chunks of ten told apart into **hired soldiers** and **monsters** — monster mercenaries and ' +
     'dominance monsters together, `isMonsterUnit` in `tests/engine/plan-yardsticks.ts` — the dragon coins ' +

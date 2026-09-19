@@ -350,8 +350,8 @@ export function PlanFold() {
             <Text size="sm" c="dimmed">
               Every plan here is fought over the same marches — the horizon the app plans over — so a row is
               the march you repeat: what it hits for, what it costs in silver and what it burns of the hired
-              stock for good. The two ratio columns divide that one march's damage by its own silver and by
-              its own hired losses.
+              stock for good. Per silver divides that one march's damage by its own silver; Per hired divides
+              what its hired stacks themselves hit for by the hired units it loses for good.
             </Text>
 
             {/* The extremes are not offered (owner, 2026-09-15: "just don't show the extremes"), so the fold
@@ -411,7 +411,11 @@ export function PlanFold() {
                         <Table.Td>{amount(point.silver)}</Table.Td>
                         <Table.Td ta="end">{amount(point.damage)}</Table.Td>
                         <Table.Td ta="end">{ratio(point.damagePerSilver)}</Table.Td>
-                        <Table.Td ta="end">{ratio(point.damage / Math.max(1, point.mercLost))}</Table.Td>
+                        {/* **The hired stacks' own damage over the hired units lost** (S-105), the same
+                            reading the trade's "Per hired" prints: the column divided the whole campaign's
+                            damage by its burn until 2026-09-19, which credited the stock with every point
+                            the troops and the troops-only tail struck for (design rule 5). */}
+                        <Table.Td ta="end">{ratio(point.hiredDamage / Math.max(1, point.mercLost))}</Table.Td>
                       </Table.Tr>
                     ))}
                   </Table.Tbody>

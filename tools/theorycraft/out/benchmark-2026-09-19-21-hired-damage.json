@@ -1,5 +1,5 @@
 {
- "run": "2026-09-19T16:04:09.808Z",
+ "run": "2026-09-19T15:50:38.192Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,7 +7,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 57,
+   "planMs": 64,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -265,7 +265,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 80,
+   "planMs": 73,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -524,7 +524,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 66,
+   "planMs": 55,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -925,7 +925,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 87,
+   "planMs": 80,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1346,7 +1346,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 138,
+   "planMs": 135,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1808,7 +1808,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 12030,
+   "planMs": 12532,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -2147,7 +2147,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 763,
+   "planMs": 884,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -2685,7 +2685,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 2010,
+   "planMs": 1922,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -3222,7 +3222,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 1864,
+   "planMs": 1753,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -3706,7 +3706,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 86,
+   "planMs": 81,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -4185,7 +4185,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1322,
+   "planMs": 1281,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -4707,7 +4707,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1387,
+   "planMs": 1286,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -4962,7 +4962,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 929,
+   "planMs": 902,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -5336,7 +5336,7 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 131,
+   "planMs": 143,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -5669,7 +5669,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 100,
+   "planMs": 93,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -6039,7 +6039,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 3496,
+   "planMs": 3301,
    "baseline": {
     "stops": {
      "silver-saver": {

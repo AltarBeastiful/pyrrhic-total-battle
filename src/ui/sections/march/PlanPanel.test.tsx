@@ -380,7 +380,10 @@ test('the two ratio columns are the march’s own, not the campaign’s', () => 
   // march (0020 §D-3), which is what stops a row named for a ratio from being beaten on that ratio by the row
   // above it.
   expect(cells.at(-2)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.silver, 3));
-  expect(cells.at(-1)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.mercLost));
+  // "Per hired" is the hired stacks' own damage over the hired units the march loses (S-105), not the
+  // march's whole worst opening over them — the owner read the old column as *"a damage per hired almost
+  // above total damage"*.
+  expect(cells.at(-1)?.textContent).toBe(ratio(row.repeat.hiredDamage / row.repeat.mercLost));
   // The campaign's ratios are what they used to be, and they are not what the row prints.
   expect(cells.at(-2)?.textContent).not.toBe(ratio(row.damagePerSilver, 3));
 
@@ -531,9 +534,12 @@ test('the why is a popover a thumb can open, not a tooltip only a pointer can ho
  * `bestFor` and the sort key is invented.
  *
  * `bestFor` is **not** invented either: on these figures the best damage a silver is the dearest stop
- * (3.00 against 2.82 · 2.48 · 2.05) and the best damage a hired unit is the thriftiest (456 k against 433 k ·
- * 365 k · 314 k), which is the engine's own claim about an account whose mercenaries are priced in gold — the
- * dear end and the thrift end (`PlanRow.bestFor`, `src/engine/plan.ts`).
+ * (3.00 against 2.82 · 2.48 · 2.05) and the best damage a hired unit is the thriftiest, which is the engine's
+ * own claim about an account whose mercenaries are priced in gold — the dear end and the thrift end
+ * (`PlanRow.bestFor`, `src/engine/plan.ts`). Damage a hired unit is the **hired stacks' own** damage over the
+ * hired units lost since S-105 (`repeat.hiredDamage / repeat.mercLost`), so each row carries that figure too:
+ * 137 k against 120 k · 110 k · 100 k · 90 k, the same order the whole-march reading gave (456 k against
+ * 433 k · 365 k · 314 k · 247 k) and a third of its level, which is the story in one line.
  *
  * **Five rows since 2026-09-18** (`PlanPick`): the owner asked for a "more mercs" step between the knee and
  * the top and then for a stop that fills every mercenary the troops can shelter, so the bar carries the whole
@@ -548,7 +554,14 @@ const BURN_ROWS: PlanRow[] = [
     silver: 11,
     totalDamage: 101,
     bestFor: { silver: false, hired: true },
-    repeat: { damage: 4_100_000, silver: 2_000_000, gold: 11_400, seconds: 950_400, mercLost: 9 },
+    repeat: {
+      damage: 4_100_000,
+      hiredDamage: 1_230_000,
+      silver: 2_000_000,
+      gold: 11_400,
+      seconds: 950_400,
+      mercLost: 9,
+    },
   },
   {
     ...(ROWS[0] as PlanRow),
@@ -556,7 +569,14 @@ const BURN_ROWS: PlanRow[] = [
     silver: 12,
     totalDamage: 102,
     bestFor: { silver: false, hired: false },
-    repeat: { damage: 5_200_000, silver: 2_100_000, gold: 12_100, seconds: 1_036_800, mercLost: 12 },
+    repeat: {
+      damage: 5_200_000,
+      hiredDamage: 1_440_000,
+      silver: 2_100_000,
+      gold: 12_100,
+      seconds: 1_036_800,
+      mercLost: 12,
+    },
   },
   {
     ...(ROWS[0] as PlanRow),
@@ -564,7 +584,14 @@ const BURN_ROWS: PlanRow[] = [
     silver: 13,
     totalDamage: 103,
     bestFor: { silver: false, hired: false },
-    repeat: { damage: 6_200_000, silver: 2_200_000, gold: 22_000, seconds: 1_123_200, mercLost: 17 },
+    repeat: {
+      damage: 6_200_000,
+      hiredDamage: 1_870_000,
+      silver: 2_200_000,
+      gold: 22_000,
+      seconds: 1_123_200,
+      mercLost: 17,
+    },
   },
   {
     ...(ROWS[0] as PlanRow),
@@ -572,7 +599,14 @@ const BURN_ROWS: PlanRow[] = [
     silver: 14,
     totalDamage: 104,
     bestFor: { silver: true, hired: false },
-    repeat: { damage: 6_900_000, silver: 2_300_000, gold: 33_700, seconds: 1_209_600, mercLost: 22 },
+    repeat: {
+      damage: 6_900_000,
+      hiredDamage: 2_200_000,
+      silver: 2_300_000,
+      gold: 33_700,
+      seconds: 1_209_600,
+      mercLost: 22,
+    },
   },
   // The one stop that is a sequence rather than a march repeated: it carries `PlanTotals.sequence`, four
   // marches that differ, and nothing else about a row changes for it.
@@ -585,7 +619,14 @@ const BURN_ROWS: PlanRow[] = [
     marches: 4,
     finaleCounts: undefined,
     bestFor: { silver: false, hired: false },
-    repeat: { damage: 7_400_000, silver: 2_400_000, gold: 48_000, seconds: 1_296_000, mercLost: 30 },
+    repeat: {
+      damage: 7_400_000,
+      hiredDamage: 2_700_000,
+      silver: 2_400_000,
+      gold: 48_000,
+      seconds: 1_296_000,
+      mercLost: 30,
+    },
   },
 ];
 

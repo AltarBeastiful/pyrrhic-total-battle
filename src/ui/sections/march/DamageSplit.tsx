@@ -12,10 +12,18 @@
  * value (rule 15).
  *
  * The fourth figure is the one the recap above has never carried (backlog, 2026-09-17: "the recap
- * shows no damage per hired unit") — the expected damage over the hired units this march burns for
- * good. **Ten hired units cost one** (`chunks()`, the engine's own recovery rule), which is the same
- * count the plan's trade prints as "Hired lost", so the two agree on a march. Like every ratio in
- * this app it wears no glyph, exactly as "Damage per silver" and "Per silver" do.
+ * shows no damage per hired unit") — **the hired line's own damage** over the hired units this march
+ * burns for good. **Ten hired units cost one** (`chunks()`, the engine's own recovery rule), which is
+ * the same count the plan's trade prints as "Hired lost", so the two agree on a march. Like every
+ * ratio in this app it wears no glyph, exactly as "Damage per silver" and "Per silver" do.
+ *
+ * **The numerator is 👑 Hired, not the whole march** (S-105, 2026-09-19; the owner: *"it says over a
+ * million but in total they do less than 1M"*, and *"dmg per hired is still broken: it shows a damage
+ * per hired almost above total damage"*). It divided `avgDamage` — the three figures beside it added
+ * up — by the hired units lost, so on a march whose troops do most of the hitting it printed more than
+ * the Hired figure two cells to its left, which is what he read. It is the Hired figure over the
+ * chunks that bought it: one line of this block divided by another, both already on screen, and the
+ * same reading the plan's trade prints as "Per hired" (design rule 5 — one name, one thing).
  *
  * The figures are `Figures` in the contract's grid, all on one line while there is room and two
  * across below the two-pane width, where a 390 px sheet has no room for three seven-figure numbers.
@@ -30,10 +38,12 @@ import { compact, per, percent, ratio } from './format';
 import { hiredLost, type HiredStack } from './hired';
 
 /**
- * The two figures this block reads, and nothing else: a fixture in a test is the pair of numbers, not
- * a whole battle (`Pick` the way `battle.ts` picks a stack's one field it needs).
+ * The one figure this block reads, and nothing else: a fixture in a test is that map of pools, not a
+ * whole battle (`Pick` the way `battle.ts` picks a stack's one field it needs). It read `avgDamage`
+ * beside it until S-105, for the ratio at the end — which is now the 👑 line over the hired units lost,
+ * so the whole block is `damageByPool` and the counts.
  */
-export type DamageSplitSummary = Pick<BattleSummary, 'avgDamage' | 'damageByPool'>;
+export type DamageSplitSummary = Pick<BattleSummary, 'damageByPool'>;
 /** A stack, as far as the hired count is concerned. */
 export type DamageSplitStack = HiredStack;
 
@@ -77,7 +87,7 @@ export function DamageSplit({ summary, stacks }: DamageSplitProps) {
     {
       key: 'perHired',
       label: 'Damage a hired unit',
-      value: ratio(per(summary.avgDamage, hiredLost(stacks))),
+      value: ratio(per(authority, hiredLost(stacks))),
     },
   ];
 

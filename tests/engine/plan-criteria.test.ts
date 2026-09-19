@@ -55,7 +55,14 @@ function request(): StackRequest {
 }
 
 const perSilver = (row: PlanRow): number => row.repeat.damage / row.repeat.silver;
-const perHired = (row: PlanRow): number => row.repeat.damage / Math.max(1, row.repeat.mercLost);
+/**
+ * **Damage a hired unit is the hired stacks' own damage per hired unit lost** (S-105, 2026-09-19; the owner:
+ * *"dmg per hired is still broken: it shows a damage per hired almost above total damage"*). The numerator
+ * read `repeat.damage` — the whole march's worst opening — until then, so on a march whose troops do most of
+ * the hitting the figure was nearly the march's own damage. It is the engine's own reading
+ * (`PlanRow.bestFor`, `PlanTotals.damagePerMercenary`), on the zero rule this file has always used.
+ */
+const perHired = (row: PlanRow): number => row.repeat.hiredDamage / Math.max(1, row.repeat.mercLost);
 /**
  * The hired units a march **fields**. The bar runs along the burn — what the stock pays — and this is the one
  * reading the engine takes off the counts: the `all-in` is offered when its first march fields more than the
@@ -850,7 +857,9 @@ describe('the reference table names only plans the bar may offer', () => {
             seconds: row.seconds + left * tail.seconds,
             marches: HORIZON,
             damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
-            damagePerMercenary: row.mercLost > 0 ? totalDamage / row.mercLost : Infinity,
+            // The tail fields no hired stack, so it adds to neither `hiredDamage` nor `mercLost` and this
+            // ratio is the row's own, untouched (S-105 — `withTail` in `plan.ts` says the same).
+            damagePerMercenary: row.mercLost > 0 ? row.hiredDamage / row.mercLost : Infinity,
           };
         };
         const short = (plan.trade ?? []).filter((row) => row.marches < HORIZON);
@@ -1129,12 +1138,18 @@ campaignIsItsMarchesSum(
  * the enemy-first journal's, so a stop's damage is the least the player is ever handed rather than the
  * average of a coin toss he cannot influence.
  *
- * Two things, on every army this file builds, and both against `planMarch` — the recap's own arithmetic, not
- * a second model of it:
+ * Four things, on every army this file builds, and all four against `planMarch` — the recap's own
+ * arithmetic, not a second model of it:
  *
  *  - every stop's **repeated march** prices at exactly the recap's `minDamage` on its own counts;
  *  - every stop's **campaign** is the sum of its marches' `minDamage` — the repeats, the finale and the
- *    troops-only tail, or the `all-in`'s sequence — to the unit, and so is the plan's own campaign.
+ *    troops-only tail, or the `all-in`'s sequence — to the unit, and so is the plan's own campaign;
+ *  - and since S-105 the same two of the **hired stacks' own share** of that opening
+ *    (`PlanRepeat.hiredDamage`, `PlanTotals.hiredDamage` — the numerator of damage a hired unit): the
+ *    `authority` pool's lines of the very journal the two figures above are summed from. It is the check
+ *    that keeps *"damage a hired unit"* honest, because the figure it divides is now a part of a march's
+ *    damage rather than the whole of it — the owner, 2026-09-19: *"it says over a million but in total they
+ *    do less than 1M"*.
  *
  * **Measured on HEAD (f0d2759) before the switch**, which is what it is for: it failed on all thirteen
  * armies, every stop of every one of them, by the half-strike the army-first journal inserts. The owner's
@@ -1145,6 +1160,29 @@ campaignIsItsMarchesSum(
  * (`tools/theorycraft/out/109-reliable-damage.md` §A has the gap on every stop of every army).
  */
 describe('the bar’s damage is the recap’s worst opening', () => {
+  /**
+   * **And what its hired stacks struck for, off the same journal** (S-105, 2026-09-19).
+   *
+   * `PlanTotals.hiredDamage` is the numerator of damage a hired unit, and it is a figure the recap can check
+   * exactly as it checks the damage beside it: the enemy-first journal `minDamage` is summed from carries
+   * every army line with the stack that struck it, so the **authority** pool's share of that march is the
+   * sum of its own lines. A march fields at most one stack a type, so the stack's pool is the test.
+   *
+   * It is read off `planMarch` — the recap's own arithmetic, `simulateBattle` on the counts — and never off
+   * the plan, which is what makes this a second reading of the march and not a restatement of the engine's.
+   */
+  const hiredWorstOpening = (request: StackRequest, counts: Record<string, number>): number => {
+    const { result, summary } = planMarch(request, counts);
+    const hired = new Set(
+      result.stacks.filter((stack) => stack.pool === 'authority').map((stack) => stack.unitId),
+    );
+    if (hired.size === 0) return 0;
+    return summary.journals.enemyFirst.entries.reduce(
+      (sum, entry) => (entry.actor === 'army' && hired.has(entry.unitId) ? sum + entry.damage : sum),
+      0,
+    );
+  };
+
   /** The marches a stop plays, first to last — the same reading `campaignIsItsMarchesSum` makes. */
   const marchesOf = (row: PlanTotals): Record<string, number>[] => {
     if (row.sequence) return row.sequence;
@@ -1181,6 +1219,15 @@ describe('the bar’s damage is the recap’s worst opening', () => {
                   `(Δ ${(row.repeat.damage - minDamage).toLocaleString('en-US')})`,
               );
             }
+            // The repeated march's hired share, on the same journal (S-105).
+            const hired = hiredWorstOpening(scenario.request, row.counts);
+            if (Math.abs(row.repeat.hiredDamage - hired) > 1) {
+              failures.push(
+                `${what}: repeat hired damage ${row.repeat.hiredDamage.toLocaleString('en-US')} against the ` +
+                  `recap's ${Math.round(hired).toLocaleString('en-US')} ` +
+                  `(Δ ${Math.round(row.repeat.hiredDamage - hired).toLocaleString('en-US')})`,
+              );
+            }
           }
           const sum = marchesOf(row).reduce(
             (total, counts) => total + planMarch(scenario.request, counts).summary.minDamage,
@@ -1191,6 +1238,20 @@ describe('the bar’s damage is the recap’s worst opening', () => {
               `${what}: campaign ${row.totalDamage.toLocaleString('en-US')} against the recap's ` +
                 `${sum.toLocaleString('en-US')} over ${String(row.marches)} marches ` +
                 `(Δ ${(row.totalDamage - sum).toLocaleString('en-US')})`,
+            );
+          }
+          // **And the hired stacks' own share of it** (S-105): the same marches, the same journals, the
+          // authority pool's lines alone. `Math.round` because the engine rounds the figure once a march,
+          // exactly as it rounds the damage above (`marchOf`).
+          const hiredSum = marchesOf(row).reduce(
+            (total, counts) => total + hiredWorstOpening(scenario.request, counts),
+            0,
+          );
+          if (Math.abs(row.hiredDamage - hiredSum) > row.marches) {
+            failures.push(
+              `${what}: hired damage ${row.hiredDamage.toLocaleString('en-US')} against the recap's ` +
+                `${Math.round(hiredSum).toLocaleString('en-US')} over ${String(row.marches)} marches ` +
+                `(Δ ${Math.round(row.hiredDamage - hiredSum).toLocaleString('en-US')})`,
             );
           }
         }

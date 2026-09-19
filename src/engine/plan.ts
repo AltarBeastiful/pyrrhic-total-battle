@@ -251,6 +251,13 @@ export interface PlanMarch {
    * openings: see `marchOf` for the owner's reason (S-94, 2026-09-19).
    */
   damage: number;
+  /**
+   * **What the march's hired stacks themselves dealt**, in that same worst opening (S-105, 2026-09-19): the
+   * enemy-first journal's army lines that belong to an `authority` stack, summed (`marchOf`). `damage` above
+   * is the whole march's; this is the part of it the hired stock bought, and it is what
+   * `PlanTotals.damagePerMercenary` divides by the chunks the march burns.
+   */
+  hiredDamage: number;
   silver: number;
   gold: number;
   /**
@@ -294,6 +301,13 @@ export interface PlanMarch {
 export interface PlanRepeat {
   /** The repeated march's **worst opening**, the recap's `minDamage` on its counts (S-94; `marchOf`). */
   damage: number;
+  /**
+   * **The hired stacks' own share of that opening** — `PlanMarch.hiredDamage` for the march the stop repeats
+   * (S-105). Damage a hired unit for this one march is `hiredDamage / mercLost`, which is what the trade
+   * table's "Per hired" column prints and what the bar's `bestFor.hired` is read on; the campaign's own is
+   * `PlanTotals.damagePerMercenary`.
+   */
+  hiredDamage: number;
   silver: number;
   /** What the march's hired stacks cost to bring back: the engine prices mercenaries in gold, not silver. */
   gold: number;
@@ -343,8 +357,11 @@ export interface PlanTotals {
    *
    * The campaign totals above **include** it: `totalDamage`, `silver`, `gold` (nought — a march with no hired
    * stack costs no revive gold), `seconds` and `marches`, and both ratios are computed over them. `mercLost`
-   * is not: the tail burns nothing, which is why it raises damage a hired unit and eases damage a silver
-   * (bear ×1: 4 722 842 → 18 554 768 damage for a burn of 1 either way). No stop rule reads either — the bar
+   * is not: the tail burns nothing (bear ×1: 4 722 842 → 18 554 768 damage for a burn of 1 either way), so it
+   * eases damage a silver. **Nor is `hiredDamage`** (S-105): a troops-only march fields no hired stack, so it
+   * adds nothing to what the hired stock dealt and damage a hired unit no longer moves with the tail at all —
+   * where until S-105 the tail raised it by every point of damage no mercenary struck for. No stop rule reads
+   * any of the three — the bar
    * is ordered on `repeat.mercLost`, the sweet spot's chord on `repeat.damage`, the band and `bestFor` on the
    * plan's own march — which is what lets the tail be added after every one of them has run.
    */
@@ -379,6 +396,16 @@ export interface PlanTotals {
    * counts (S-94; `marchOf`). `tests/engine/plan-criteria.test.ts` holds it to the unit on every army.
    */
   totalDamage: number;
+  /**
+   * **What the campaign's hired stacks themselves dealt** (S-105, 2026-09-19): `PlanMarch.hiredDamage` summed
+   * over exactly the marches `totalDamage` is summed over — the repeated march as many times as it is fought,
+   * plus the finale, or every march of a `sequence`. The **troops-only tail adds nothing**, fielding no hired
+   * stack at all, which is the same reason it adds nothing to `mercLost`.
+   *
+   * It is the numerator of `damagePerMercenary` below, and it is the whole of S-105: a figure that says what
+   * the hired stock bought has to be read off the stacks the stock paid for.
+   */
+  hiredDamage: number;
   silver: number;
   /**
    * What the whole campaign's hired stacks cost to bring back, in gold: the repeated march's own gold taken
@@ -409,6 +436,29 @@ export interface PlanTotals {
   marches: number;
   /** The two criteria, reported side by side: damage bought per silver, and per irreplaceable mercenary. */
   damagePerSilver: number;
+  /**
+   * **Damage a hired unit is the hired stacks' own damage per hired unit lost** (S-105, 2026-09-19; the
+   * owner, on being shown the column twice: *"it says over a million but in total they do less than 1M"*,
+   * and *"dmg per hired is still broken: it shows a damage per hired almost above total damage"*).
+   *
+   * `hiredDamage / mercLost` — the numerator is the part of the campaign's worst opening the **authority**
+   * stacks struck for, the denominator the chunks of ten that pool loses for good. Until S-105 the numerator
+   * was `totalDamage`, the **whole** campaign's damage, troops and monsters and tail included, so a march
+   * whose troops did nearly all the hitting and whose one hunter stack lost a single chunk reported the whole
+   * march as the worth of that chunk. Measured on his TotalStack profile the same day: the silver saver's
+   * worst opening is **1 000 201**, of which its hired stacks dealt **168 840**, and it loses **1** hired unit
+   * — so the column read **1 000 201** where the honest answer is **168 840**; the sweet spot's 2 087 912 /
+   * 551 544 over 5 lost read 417 582 against **110 309**.
+   *
+   * It is one definition and every rule that says "a hired" reads it: `bestFor.hired` and the trade table's
+   * "Per hired" (on `repeat.hiredDamage`, the same arithmetic over one march), the silver saver's
+   * `beatenOnBoth`, the sweet spot's efficient rungs and its tie-break, the S-99 cut's four readings, the
+   * reference table's "A mercenary" column and the search's own `mostThrifty`. The **undominated frontier is
+   * not** among them, and deliberately: it is ordered on `silver`, `mercLost` and `totalDamage` — three
+   * figures, not a ratio — so nothing there changed with this story.
+   *
+   * `Infinity` when the campaign burns nothing at all, exactly as before.
+   */
   damagePerMercenary: number;
   /**
    * **Damage bought per dragon coin** (S-102; the owner, 2026-09-19: *"monsters have a 3-cost: training
@@ -449,6 +499,12 @@ export interface PlanCurvePoint {
   silver: number;
   /** The most damage a plan the bar may offer spends this much silver for. */
   damage: number;
+  /**
+   * **That plan's own hired damage** — `PlanTotals.hiredDamage` of the row this bucket kept (S-105). The
+   * table's "A mercenary" column is `hiredDamage / mercLost` off this row, the same arithmetic the bar's own
+   * "Per hired" is, so the two agree on a plan that appears in both.
+   */
+  hiredDamage: number;
   /** Damage per silver at that plan. */
   damagePerSilver: number;
   mercLost: number;
@@ -844,11 +900,25 @@ export function rankHired(request: StackRequest, table: Effective[] = effectiveT
  * The strikes follow the damage for the same reason — they are that journal's own hit count, and a figure
  * printed beside a damage taken from a different battle would describe neither. Building one journal instead
  * of two also halves the work in the hottest loop of the search.
+ *
+ * **And the hired stacks' own share of that same journal** (`hiredDamage`, S-105, 2026-09-19): the sum of the
+ * enemy-first journal's army lines that belong to an **authority** stack, which is the pool `mercLost` beside
+ * it counts. It is taken off the journal this function already built — one pass over its entries, no second
+ * battle — so the two figures describe one fight, entry for entry, and `hiredDamage ≤ damage` by
+ * construction. `PlanTotals.damagePerMercenary` is what divides it by the burn.
  */
 function marchOf(
   stacks: { entry: Effective; count: number }[],
   enemyStacks: number,
-): { damage: number; silver: number; gold: number; mercLost: number; strikes: number; stacks: Stack[] } {
+): {
+  damage: number;
+  hiredDamage: number;
+  silver: number;
+  gold: number;
+  mercLost: number;
+  strikes: number;
+  stacks: Stack[];
+} {
   const byId = new Map(stacks.map((stack) => [stack.entry.id, stack.entry]));
   const built: Stack[] = stacks
     .filter((stack) => stack.count > 0)
@@ -895,6 +965,19 @@ function marchOf(
       (a, b) => b.totalHp - a.totalHp || (byId.get(a.unitId)?.rank ?? 0) - (byId.get(b.unitId)?.rank ?? 0),
     );
   const enemyFirst = buildJournal(built, enemyStacks, false);
+  /**
+   * **What the hired stacks themselves dealt, in that same journal** (S-105). The ids of the `authority`
+   * stacks — the pool `mercLost` below counts, the one the Temple never brings the tenth unit back to — and
+   * the sum of their own army lines. A march fields at most one stack a type (`byId` above is keyed on the
+   * id), so the set is the test.
+   */
+  const hiredIds = new Set(built.filter((stack) => stack.pool === 'authority').map((stack) => stack.unitId));
+  let hiredDamage = 0;
+  if (hiredIds.size > 0) {
+    for (const entry of enemyFirst.entries) {
+      if (entry.actor === 'army' && hiredIds.has(entry.unitId)) hiredDamage += entry.damage;
+    }
+  }
   let silver = 0;
   let gold = 0;
   let mercLost = 0;
@@ -957,6 +1040,7 @@ function marchOf(
   }
   return {
     damage: Math.round(enemyFirst.totalDamage),
+    hiredDamage: Math.round(hiredDamage),
     silver,
     gold,
     mercLost,
@@ -1486,6 +1570,9 @@ function priceMarch(
   return {
     counts,
     damage: Math.round(totals.damage),
+    // The hired stacks' own share of that same opening, straight off the journal `marchOf` ran (S-105): it
+    // is a damage and not a price, so it is carried through rather than re-derived from this bill.
+    hiredDamage: Math.round(totals.hiredDamage),
     silver: Math.round(silver),
     gold: Math.round(gold),
     dragonCoins: Math.round(dragonCoins),
@@ -2035,8 +2122,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     /** The ladder the march was built on, carried so the climb can refine it as well as the counts. */
     depth: number;
     scale: number;
-    /** Its silver and its losses, counted once (`ratioOf`) — every candidate is judged on them. */
-    ratios?: { silver: number; mercs: number };
+    /**
+     * Its silver, its losses and what its hired stacks dealt, counted once (`ratioOf`) — every candidate is
+     * judged on them. The third is S-105's: damage a hired unit is the hired stacks' own damage over the
+     * chunks they cost, so the peak this file keeps under that name needs the numerator beside the burn.
+     */
+    ratios?: { silver: number; mercs: number; hired: number };
   }
   let best: Candidate | null = null;
   const frontier: Candidate[] = [];
@@ -2069,7 +2160,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     totals: ReturnType<typeof marchOf>,
   ): PlanMarch => priceMarch(request.recovery, rungs, mercs, totals);
 
-  const ratioOf = (candidate: Candidate): { silver: number; mercs: number } => {
+  const ratioOf = (candidate: Candidate): { silver: number; mercs: number; hired: number } => {
     // Counted once per candidate and kept: `record` reads the *current* best's ratios again on every
     // candidate it sees, and re-adding a plan's whole arithmetic for each of those is pure repetition.
     if (candidate.ratios !== undefined) return candidate.ratios;
@@ -2077,6 +2168,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const ratios = {
       silver: candidate.marches * m.silver + (candidate.finale?.silver ?? 0),
       mercs: candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0),
+      // What the campaign's hired stacks themselves dealt (S-105) — the numerator of damage a hired unit.
+      hired: candidate.marches * m.hiredDamage + (candidate.finale?.hiredDamage ?? 0),
     };
     candidate.ratios = ratios;
     return ratios;
@@ -2142,10 +2235,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // middle of the *trade* in hired stock, which is a question about the plans the bar can carry and not
     // about the search's peaks. Neither is the reference table any more (S-88): the `curve` is bucketed over
     // the plans the bar may offer, at the end of this function, and not over every shape the search prices.
-    const { silver: pointSilver, mercs: pointMercs } = ratioOf(candidate);
+    const { silver: pointSilver, mercs: pointMercs, hired: pointHired } = ratioOf(candidate);
     if (pointSilver <= 0 || pointMercs <= 0) return;
     const perSilver = total / pointSilver;
-    const perMerc = total / pointMercs;
+    // **The hired stacks' own damage over the chunks they cost** (S-105): `mostThrifty` is *"the plan that
+    // buys the most damage per mercenary"*, and since this story that sentence means one thing everywhere.
+    const perMerc = pointHired / pointMercs;
     if (perSilver > peakSilver) {
       peakSilver = perSilver;
       light = { ...candidate, spent: pointSilver };
@@ -2846,6 +2941,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // the repeat and the finale, consistently; this is the campaign the bar prints.
     const silver = candidate.marches * m.silver + (last?.silver ?? 0);
     const mercLost = candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0);
+    // **What the campaign's hired stacks dealt** (S-105), summed exactly the way the damage is: the repeated
+    // march's own hired damage as many times as it is fought, plus the finale's. The troops-only tail, added
+    // later by `withTail`, fields no hired stack and adds nothing to it.
+    const hiredDamage = candidate.marches * m.hiredDamage + (last?.hiredDamage ?? 0);
     // The third currency, summed exactly as the silver above is, and named here because the ratio at the
     // foot of this row divides by it (S-102).
     const dragonCoins = candidate.marches * m.dragonCoins + (last?.dragonCoins ?? 0);
@@ -2869,6 +2968,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       counts: m.counts,
       ...(last !== null && candidate.finaleRungs.length > 0 ? { finaleCounts: last.counts } : {}),
       totalDamage: Math.round(candidate.total),
+      hiredDamage,
       silver,
       // The campaign's revive gold: every repeat of the march, **plus the finale's own** (S-90). This line
       // read `candidate.marches * m.gold` until 2026-09-18 and the finale's hired stacks were revived for
@@ -2885,6 +2985,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // finale over: these are what the March section reports for the plan's own march.
       repeat: {
         damage: m.damage,
+        hiredDamage: m.hiredDamage,
         silver: m.silver,
         gold: m.gold,
         dragonCoins: m.dragonCoins,
@@ -2894,7 +2995,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       shape: candidate.depth === WINNER_RUNGS_DEPTH ? 'winner' : (SIZER_DEPTHS[candidate.depth] ?? 'ladder'),
       marches: candidate.marches + (candidate.finale ? 1 : 0),
       damagePerSilver: silver > 0 ? candidate.total / silver : Infinity,
-      damagePerMercenary: mercLost > 0 ? candidate.total / mercLost : Infinity,
+      // Damage a hired unit is the **hired stacks' own** damage over the chunks they cost (S-105).
+      damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
       // The monsters' own third price, read as the two above it (S-102): `Infinity` on a campaign that
       // spends no coin, which is every army but a monster camp.
       damagePerDragonCoin: dragonCoins > 0 ? candidate.total / dragonCoins : Infinity,
@@ -3322,6 +3424,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (best && (best.score > score || (best.score === score && best.row.repeat.damage >= march.damage)))
         continue;
       const totalDamage = row.totalDamage + repeats * (march.damage - row.repeat.damage);
+      // The hired stacks' own damage moves with the march exactly as the campaign's damage does (S-105):
+      // the repeats are the marches that changed, and neither the finale nor the tail is one of them.
+      const hiredDamage = row.hiredDamage + repeats * (march.hiredDamage - row.repeat.hiredDamage);
       const campaignSilver = row.silver + repeats * (march.silver - row.repeat.silver);
       const mercLost = row.mercLost + repeats * (march.mercLost - row.repeat.mercLost);
       const campaignCoins = row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0));
@@ -3338,6 +3443,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           // The march is the MS sizer's now, whatever shape the search had reached for.
           shape: 'ms',
           totalDamage,
+          hiredDamage,
           silver: campaignSilver,
           gold: row.gold + repeats * (march.gold - row.repeat.gold),
           dragonCoins: campaignCoins,
@@ -3345,6 +3451,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           mercLost,
           repeat: {
             damage: march.damage,
+            hiredDamage: march.hiredDamage,
             silver: march.silver,
             gold: march.gold,
             dragonCoins: march.dragonCoins,
@@ -3352,7 +3459,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
             mercLost: march.mercLost,
           },
           damagePerSilver: campaignSilver > 0 ? totalDamage / campaignSilver : Infinity,
-          damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+          damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
           damagePerDragonCoin: campaignCoins > 0 ? totalDamage / campaignCoins : Infinity,
           putBack: { unitId: extra.id, damage, silver, seconds },
         },
@@ -3450,6 +3557,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         }
         if (best && best.repeat.damage >= march.damage) continue;
         const totalDamage = row.totalDamage + repeats * (march.damage - row.repeat.damage);
+        // The hired stacks' own damage, moved with the march the same way (S-105).
+        const hiredDamage = row.hiredDamage + repeats * (march.hiredDamage - row.repeat.hiredDamage);
         const campaignSilver = row.silver + repeats * (march.silver - row.repeat.silver);
         const mercLost = row.mercLost + repeats * (march.mercLost - row.repeat.mercLost);
         const campaignCoins = row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0));
@@ -3461,6 +3570,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
             `${compact(march.silver)} silver a march`,
           shape: SIZER_DEPTHS[Number(key)] ?? 'ladder',
           totalDamage,
+          hiredDamage,
           silver: campaignSilver,
           gold: row.gold + repeats * (march.gold - row.repeat.gold),
           dragonCoins: campaignCoins,
@@ -3468,6 +3578,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           mercLost,
           repeat: {
             damage: march.damage,
+            hiredDamage: march.hiredDamage,
             silver: march.silver,
             gold: march.gold,
             dragonCoins: march.dragonCoins,
@@ -3475,7 +3586,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
             mercLost: march.mercLost,
           },
           damagePerSilver: campaignSilver > 0 ? totalDamage / campaignSilver : Infinity,
-          damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+          damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
           damagePerDragonCoin: campaignCoins > 0 ? totalDamage / campaignCoins : Infinity,
         };
       }
@@ -3609,8 +3720,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    */
   const perSilver = (row: PlanTotals): number =>
     row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0;
+  /**
+   * **Damage a hired unit, on the march a stop repeats** — the hired stacks' own share of that march's worst
+   * opening over the chunks of ten it loses for good (S-105, 2026-09-19; the owner: *"dmg per hired is still
+   * broken: it shows a damage per hired almost above total damage"*). It read `repeat.damage`, the whole
+   * march's, until then. Every rule below that says "a hired" is this one function: the efficient rungs the
+   * sweet spot is read off, the silver saver's `beatenOnBoth`, the `more-mercs` tie-break and `bestFor.hired`.
+   */
   const perHired = (row: PlanTotals): number =>
-    row.repeat.mercLost > 0 ? row.repeat.damage / row.repeat.mercLost : 0;
+    row.repeat.mercLost > 0 ? row.repeat.hiredDamage / row.repeat.mercLost : 0;
   const efficientRows = ladderRows.filter(
     (row) =>
       !ladderRows.some(
@@ -4033,6 +4151,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     const head = marches[0] as PlanMarch;
     const totalDamage = marches.reduce((sum, march) => sum + march.damage, 0);
+    // The hired stacks' own damage over the whole sequence (S-105), summed march by march like the damage
+    // above it: the troops-only marches this sequence ends on field no hired stack and add nothing.
+    const hiredDamage = marches.reduce((sum, march) => sum + march.hiredDamage, 0);
     const silver = marches.reduce((sum, march) => sum + march.silver, 0);
     const gold = marches.reduce((sum, march) => sum + march.gold, 0);
     const dragonCoins = marches.reduce((sum, march) => sum + march.dragonCoins, 0);
@@ -4046,6 +4167,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       counts: head.counts,
       sequence: marches.map((march) => march.counts),
       totalDamage,
+      hiredDamage,
       silver,
       gold,
       dragonCoins,
@@ -4053,6 +4175,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       mercLost,
       repeat: {
         damage: head.damage,
+        hiredDamage: head.hiredDamage,
         silver: head.silver,
         gold: head.gold,
         dragonCoins: head.dragonCoins,
@@ -4062,7 +4185,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       shape: first.depth === WINNER_RUNGS_DEPTH ? 'winner' : (SIZER_DEPTHS[first.depth] ?? 'ladder'),
       marches: marches.length,
       damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
-      damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+      // Damage a hired unit: the hired stacks' own damage over the chunks they cost (S-105).
+      damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
       damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
     };
   })();
@@ -4290,10 +4414,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * put-back pass read `counts`, and `bestFor` below reads `perSilver`/`perHired`, which are `repeat`'s own
    * figures and not the campaign's. Not one of them can see a march appended after the stock is spent, which
    * is what 105 §P1 measured stop by stop: no stop choice moves, no burn moves, no knee moves, and band
-   * membership is unchanged on all 13 armies. What *does* move is the pair of **campaign** ratios the row
-   * reports — the tail buys damage with no hired unit at all, so damage a hired rises and damage a silver
-   * eases — and the owner accepted that cost when he chose the proposal: on bear ×1 the stop now reports
-   * 18 554 768 damage a hired unit burned, of which no mercenary bought 13 831 926.
+   * membership is unchanged on all 13 armies. What *does* move is the campaign's **damage a silver**, which
+   * the tail eases by buying damage for silver alone.
+   *
+   * **Damage a hired unit no longer moves with it at all** (S-105, 2026-09-19). It used to, and that was the
+   * complaint: the tail fields no hired stack, so under the old reading it handed the stock credit for damage
+   * no mercenary struck for — on bear ×1 the stop reported 18 554 768 damage a hired unit burned, of which no
+   * mercenary bought 13 831 926. Since S-105 the ratio is `hiredDamage / mercLost` and the tail adds to
+   * neither, so the figure the row prints is the same before and after this pass.
    */
   const withTail = <T extends PlanTotals>(row: T): T => {
     // No horizon to fill (a silver budget, or a single march asked for), a stop that already fills it, or the
@@ -4325,9 +4453,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       seconds: row.seconds + played * tail.seconds,
       // The stock burns nothing more: that is the whole shape of the trade the owner accepted here.
       mercLost: row.mercLost,
+      // **And no hired stack strikes in it** (S-105), so what the hired stock dealt is untouched — which is
+      // why damage a hired unit below is the same figure before and after this pass.
+      hiredDamage: row.hiredDamage,
       marches: planned,
       damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
-      damagePerMercenary: row.mercLost > 0 ? totalDamage / row.mercLost : Infinity,
+      damagePerMercenary: row.mercLost > 0 ? row.hiredDamage / row.mercLost : Infinity,
       damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
     };
   };
@@ -4501,7 +4632,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     Math.min(BUCKETS - 1, Math.max(0, Math.round(Math.log(silver / 10_000) / bucketLog)));
   /** One bucket per silver level, holding the best damage and the best damage-per-mercenary offered there. */
   const buckets = new Map<number, { best: PlanTotals; thrifty: PlanTotals }>();
-  const perMercOf = (row: PlanTotals): number => row.totalDamage / Math.max(1, row.mercLost);
+  // Damage a mercenary, on the one reading this file has of it since S-105: the hired stacks' own damage
+  // over the chunks they cost. `Math.max(1, …)` is the column's own zero rule, unchanged — a row that burns
+  // nothing is read at its hired damage rather than topping the bucket with an `Infinity`.
+  const perMercOf = (row: PlanTotals): number => row.hiredDamage / Math.max(1, row.mercLost);
   for (const row of offered) {
     if (row.silver <= 10_000 || row.mercLost <= 0 || row.silver >= 10_000 * 1.2 ** BUCKETS) continue;
     const key = bucketOf(row.silver);
@@ -4518,6 +4652,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     .map(([, entry]) => ({
       silver: entry.best.silver,
       damage: entry.best.totalDamage,
+      hiredDamage: entry.best.hiredDamage,
       damagePerSilver: entry.best.totalDamage / entry.best.silver,
       mercLost: entry.best.mercLost,
       thriftyDamage: entry.thrifty.totalDamage,

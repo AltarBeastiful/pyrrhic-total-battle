@@ -522,7 +522,6 @@ test('the damage split says what each pool hit for, its share, and what a hired 
   renderWithTheme(
     <DamageSplit
       summary={{
-        avgDamage: 5_200_000,
         damageByPool: { leadership: 3_224_000, authority: 1_976_000, dominance: 0 },
       }}
       stacks={[
@@ -538,8 +537,9 @@ test('the damage split says what each pool hit for, its share, and what a hired 
   // Compact figures with the share beside them: 3.22M of 5.2M is 62 %, 1.98M is 38 %.
   expect(within(split).getByText('3.2M · 62%')).toBeTruthy();
   expect(within(split).getByText('2M · 38%')).toBeTruthy();
-  // 5 200 000 over 26 hired units lost.
-  expect(within(split).getByText('200 000')).toBeTruthy();
+  // **The hired line over the hired units lost** (S-105): 1 976 000 over 26, not the march's whole
+  // 5 200 000 over 26 — the owner read the old figure as *"a damage per hired almost above total damage"*.
+  expect(within(split).getByText('76 000')).toBeTruthy();
   // Three figures, and no fourth: nothing fought out of the dominance pool (design rule 15).
   expect(within(split).queryByText('Monsters')).toBeNull();
   expect(within(split).getAllByRole('term')).toHaveLength(3);

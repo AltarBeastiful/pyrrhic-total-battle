@@ -1,6 +1,6 @@
 # The baseline, stage by stage
 
-24 readings of the bar, in the order the stories ran — every benchmark snapshot in `tools/theorycraft/out/`, so each story's effect on each scenario is one row. A figure carries the verdict against the **row above it**: ▲ harder-hitting, ▼ less, `=` identical to the unit, `+` a stop the stage gained, `—` a stop it does not offer.
+25 readings of the bar, in the order the stories ran — every benchmark snapshot in `tools/theorycraft/out/`, so each story's effect on each scenario is one row. A figure carries the verdict against the **row above it**: ▲ harder-hitting, ▼ less, `=` identical to the unit, `+` a stop the stage gained, `—` a stop it does not offer.
 
 | stage | reading | scenarios | run |
 |---|---|---|---|
@@ -27,6 +27,7 @@
 | 18 monsters-trained | worst-opening (inferred) | 15 | 2026-09-19T10:29:12.263Z |
 | 19 replay-v2 | worst-opening (inferred) | 16 | 2026-09-19T10:55:03.835Z |
 | 20 hired-prefix | worst-opening (inferred) | 16 | 2026-09-19T12:41:34.833Z |
+| 21 hired-damage | worst-opening (inferred) | 16 | 2026-09-19T15:50:38.192Z |
 | proposal (plan-baseline.proposed.json) | worst-opening | 16 | — |
 
 ## first-run army, Bear V ×3 (20 000 leadership)
@@ -56,6 +57,7 @@
 | 18 monsters-trained | 2 | = 18,413,408 | = 18,750,008 | = 1.0000 |
 | 19 replay-v2 | 2 | = 18,413,408 | = 18,750,008 | = 1.0000 |
 | 20 hired-prefix | 2 | = 18,413,408 | = 18,750,008 | = 1.0000 |
+| 21 hired-damage | 2 | = 18,413,408 | = 18,750,008 | = 1.0000 |
 | proposal (plan-baseline.proposed.json) | 2 | = 18,413,408 | = 18,750,008 | = 1.0000 |
 
 ## first-run army, Bear V ×10 (20 000 leadership)
@@ -85,6 +87,7 @@
 | 18 monsters-trained | 2 | = 20,769,608 | = 20,893,375 | = 0.9877 |
 | 19 replay-v2 | 2 | = 20,769,608 | = 20,893,375 | = 0.9877 |
 | 20 hired-prefix | 2 | = 20,769,608 | = 20,893,375 | = 0.9877 |
+| 21 hired-damage | 2 | = 20,769,608 | = 20,893,375 | = 0.9877 |
 | proposal (plan-baseline.proposed.json) | 2 | = 20,769,608 | = 20,893,375 | = 0.9877 |
 
 ## first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)
@@ -114,6 +117,7 @@
 | 18 monsters-trained | 3 | = 28,655,444 | = 29,691,713 | = 29,841,879 | = 0.9929 |
 | 19 replay-v2 | 3 | = 28,655,444 | = 29,691,713 | = 29,841,879 | = 0.9929 |
 | 20 hired-prefix | 3 | = 28,655,444 | = 29,691,713 | = 29,841,879 | = 0.9929 |
+| 21 hired-damage | 3 | = 28,655,444 | = 29,691,713 | = 29,841,879 | = 0.9929 |
 | proposal (plan-baseline.proposed.json) | 3 | = 28,655,444 | = 29,691,713 | = 29,841,879 | = 0.9929 |
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
@@ -143,6 +147,7 @@
 | 18 monsters-trained | 3 | = 8,084,653 | = 8,222,546 | = 8,519,930 | = 1.0000 |
 | 19 replay-v2 | 3 | = 8,084,653 | = 8,222,546 | = 8,519,930 | = 1.0000 |
 | 20 hired-prefix | 3 | = 8,084,653 | = 8,222,546 | = 8,519,930 | = 1.0000 |
+| 21 hired-damage | 3 | = 8,084,653 | = 8,222,546 | = 8,519,930 | = 1.0000 |
 | proposal (plan-baseline.proposed.json) | 3 | = 8,084,653 | = 8,222,546 | = 8,519,930 | = 1.0000 |
 
 ## 2026-09-17 export, its setup (7 000 leadership)
@@ -172,7 +177,8 @@
 | 18 monsters-trained | 5 | = 16,115,314 | = 18,796,348 | = 20,079,262 | = 22,770,620 | = 23,619,920 | = 0.9588 |
 | 19 replay-v2 | 5 | = 16,115,314 | = 18,796,348 | = 20,079,262 | = 22,770,620 | = 23,619,920 | = 0.9588 |
 | 20 hired-prefix | 5 | = 16,115,314 | = 18,796,348 | = 20,079,262 | = 22,770,620 | = 23,619,920 | = 0.9588 |
-| proposal (plan-baseline.proposed.json) | 5 | = 16,115,314 | = 18,796,348 | = 20,079,262 | = 22,770,620 | = 23,619,920 | = 0.9588 |
+| 21 hired-damage | 5 | = 16,115,314 | = 18,796,348 | ▲ 21,363,106 | = 22,770,620 | = 23,619,920 | = 0.9588 |
+| proposal (plan-baseline.proposed.json) | 5 | = 16,115,314 | = 18,796,348 | = 21,363,106 | = 22,770,620 | = 23,619,920 | = 0.9588 |
 
 ## 2026-09-17 export, 12 000 leadership
 
@@ -201,6 +207,7 @@
 | 18 monsters-trained | 3 | = 22,531,695 | = 31,546,458 | — | = 31,963,845 | — | = 0.9605 |
 | 19 replay-v2 | 3 | = 22,531,695 | = 31,546,458 | — | = 31,963,845 | — | = 0.9605 |
 | 20 hired-prefix | 3 | = 22,531,695 | = 31,546,458 | — | = 31,963,845 | — | = 0.9605 |
+| 21 hired-damage | 3 | = 22,531,695 | = 31,546,458 | — | = 31,963,845 | — | = 0.9605 |
 | proposal (plan-baseline.proposed.json) | 3 | = 22,531,695 | = 31,546,458 | — | = 31,963,845 | — | = 0.9605 |
 
 ## live account of 2026-09-18 (one hired type, 20 000 leadership)
@@ -230,6 +237,7 @@
 | 18 monsters-trained | 4 | = 20,891,829 | = 28,270,883 | = 28,727,202 | = 29,743,332 | = 1.1756 |
 | 19 replay-v2 | 4 | = 20,891,829 | = 28,270,883 | = 28,727,202 | = 29,743,332 | = 1.1756 |
 | 20 hired-prefix | 4 | = 20,891,829 | = 28,270,883 | = 28,727,202 | = 29,743,332 | = 1.1756 |
+| 21 hired-damage | 4 | = 20,891,829 | = 28,270,883 | = 28,727,202 | = 29,743,332 | = 1.1756 |
 | proposal (plan-baseline.proposed.json) | 4 | = 20,891,829 | = 28,270,883 | = 28,727,202 | = 29,743,332 | = 1.1756 |
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
@@ -259,7 +267,8 @@
 | 18 monsters-trained | 5 | = 23,474,915 | = 28,140,302 | = 29,851,070 | = 30,693,083 | = 31,714,657 | = 0.8610 |
 | 19 replay-v2 | 5 | = 23,474,915 | = 28,140,302 | = 29,851,070 | = 30,693,083 | = 31,714,657 | = 0.8610 |
 | 20 hired-prefix | 5 | = 23,474,915 | = 28,140,302 | = 29,851,070 | = 30,693,083 | = 31,714,657 | = 0.8610 |
-| proposal (plan-baseline.proposed.json) | 5 | = 23,474,915 | = 28,140,302 | = 29,851,070 | = 30,693,083 | = 31,714,657 | = 0.8610 |
+| 21 hired-damage | 4 | — | ▲ 29,851,070 | ▲ 30,596,009 | = 30,693,083 | = 31,714,657 | = 0.8610 |
+| proposal (plan-baseline.proposed.json) | 4 | — | = 29,851,070 | = 30,596,009 | = 30,693,083 | = 31,714,657 | = 0.8610 |
 
 ## first-run army, Bear V ×1 (20 000 leadership)
 
@@ -288,6 +297,7 @@
 | 18 monsters-trained | 1 | = 18,189,008 | = 0.9813 |
 | 19 replay-v2 | 1 | = 18,189,008 | = 0.9813 |
 | 20 hired-prefix | 1 | = 18,189,008 | = 0.9813 |
+| 21 hired-damage | 1 | = 18,189,008 | = 0.9813 |
 | proposal (plan-baseline.proposed.json) | 1 | = 18,189,008 | = 0.9813 |
 
 ## first-run army, Bear V ×2 (20 000 leadership)
@@ -317,6 +327,7 @@
 | 18 monsters-trained | 1 | = 18,413,408 | = 0.9894 |
 | 19 replay-v2 | 1 | = 18,413,408 | = 0.9894 |
 | 20 hired-prefix | 1 | = 18,413,408 | = 0.9894 |
+| 21 hired-damage | 1 | = 18,413,408 | = 0.9894 |
 | proposal (plan-baseline.proposed.json) | 1 | = 18,413,408 | = 0.9894 |
 
 ## first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)
@@ -346,7 +357,8 @@
 | 18 monsters-trained | 5 | + 61,696,768 | ▼ 77,280,595 | ▼ 78,871,786 | = 95,348,743 | + 82,845,061 | = 0.9113 |
 | 19 replay-v2 | 5 | = 61,696,768 | = 77,280,595 | = 78,871,786 | = 95,348,743 | = 82,845,061 | = 0.9113 |
 | 20 hired-prefix | 4 | — | ▲ 89,196,808 | ▲ 93,298,414 | ▲ 97,458,367 | ▲ 102,971,902 | ▲ 0.9842 |
-| proposal (plan-baseline.proposed.json) | 4 | — | = 89,196,808 | = 93,298,414 | = 97,458,367 | = 102,971,902 | = 0.9842 |
+| 21 hired-damage | 3 | — | ▲ 93,298,414 | — | = 97,458,367 | = 102,971,902 | = 0.9842 |
+| proposal (plan-baseline.proposed.json) | 3 | — | = 93,298,414 | — | = 97,458,367 | = 102,971,902 | = 0.9842 |
 
 ## Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)
 
@@ -375,6 +387,7 @@
 | 18 monsters-trained | 3 | = 15,533,933 | = 17,630,102 | = 18,744,735 | = 0.9483 |
 | 19 replay-v2 | 3 | = 15,533,933 | = 17,630,102 | = 18,744,735 | = 0.9483 |
 | 20 hired-prefix | 3 | = 15,533,933 | = 17,630,102 | = 18,744,735 | = 0.9483 |
+| 21 hired-damage | 3 | = 15,533,933 | = 17,630,102 | = 18,744,735 | = 0.9483 |
 | proposal (plan-baseline.proposed.json) | 3 | = 15,533,933 | = 17,630,102 | = 18,744,735 | = 0.9483 |
 
 ## the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)
@@ -404,7 +417,8 @@
 | 18 monsters-trained | 4 | = 8,980,108 | = 12,086,359 | = 15,306,859 | = 10,899,547 | = 0.3035 |
 | 19 replay-v2 | 4 | = 8,980,108 | = 12,086,359 | = 15,306,859 | = 10,899,547 | = 0.3035 |
 | 20 hired-prefix | 4 | = 8,980,108 | = 12,086,359 | = 15,306,859 | = 10,899,547 | = 0.3035 |
-| proposal (plan-baseline.proposed.json) | 4 | = 8,980,108 | = 12,086,359 | = 15,306,859 | = 10,899,547 | = 0.3035 |
+| 21 hired-damage | 4 | = 8,980,108 | ▼ 11,029,591 | = 15,306,859 | = 10,899,547 | = 0.3035 |
+| proposal (plan-baseline.proposed.json) | 4 | = 8,980,108 | = 11,029,591 | = 15,306,859 | = 10,899,547 | = 0.3035 |
 
 ## his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)
 
@@ -433,7 +447,8 @@
 | 18 monsters-trained | 4 | = 7,561,467 | = 9,068,238 | = 10,294,068 | = 13,842,678 | = 0.5534 |
 | 19 replay-v2 | 4 | = 7,561,467 | = 9,068,238 | = 10,294,068 | = 13,842,678 | = 0.5534 |
 | 20 hired-prefix | 4 | = 7,561,467 | = 9,068,238 | = 10,294,068 | = 13,842,678 | = 0.5534 |
-| proposal (plan-baseline.proposed.json) | 4 | = 7,561,467 | = 9,068,238 | = 10,294,068 | = 13,842,678 | = 0.5534 |
+| 21 hired-damage | 3 | — | ▲ 9,182,631 | = 10,294,068 | = 13,842,678 | = 0.5534 |
+| proposal (plan-baseline.proposed.json) | 3 | — | = 9,182,631 | = 10,294,068 | = 13,842,678 | = 0.5534 |
 
 ## his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)
 
@@ -462,6 +477,7 @@
 | 18 monsters-trained | 4 | = 10,156,338 | = 10,197,781 | = 11,196,175 | = 11,585,381 | = 1.0139 |
 | 19 replay-v2 | 4 | = 10,156,338 | = 10,197,781 | = 11,196,175 | = 11,585,381 | = 1.0139 |
 | 20 hired-prefix | 4 | = 10,156,338 | = 10,197,781 | = 11,196,175 | = 11,585,381 | = 1.0139 |
+| 21 hired-damage | 4 | = 10,156,338 | = 10,197,781 | = 11,196,175 | = 11,585,381 | = 1.0139 |
 | proposal (plan-baseline.proposed.json) | 4 | = 10,156,338 | = 10,197,781 | = 11,196,175 | = 11,585,381 | = 1.0139 |
 
 ## his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)
@@ -491,4 +507,5 @@
 | 18 monsters-trained | — | — | — | — | — |
 | 19 replay-v2 | 3 | + 4,919,095 | + 8,182,228 | + 8,408,431 | + 0.9723 |
 | 20 hired-prefix | 3 | = 4,919,095 | = 8,182,228 | = 8,408,431 | = 0.9723 |
+| 21 hired-damage | 3 | = 4,919,095 | = 8,182,228 | = 8,408,431 | = 0.9723 |
 | proposal (plan-baseline.proposed.json) | 3 | = 4,919,095 | = 8,182,228 | = 8,408,431 | = 0.9723 |

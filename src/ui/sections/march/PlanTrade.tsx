@@ -9,8 +9,9 @@
  * - **every row is named**, and the name is the engine's `pick` in our words (`./picks`), because the
  *   shape sentence it wore before named a silver figure that is a *column* of this very table and counted
  *   "stacks" one way where the table counts them another;
- * - **Per silver and Per hired are the march's own ratios** (`repeat.damage` over `repeat.silver` and over
- *   `repeat.mercLost`), not the campaign's. They were the campaign's beside three columns that were the
+ * - **Per silver and Per hired are the march's own ratios** (`repeat.damage` over `repeat.silver`, and
+ *   `repeat.hiredDamage` over `repeat.mercLost`), not the campaign's. They were the campaign's beside three
+ *   columns that were the
  *   march's, which is what let a row named for a ratio be *beaten* on that ratio by the row above it; now
  *   every figure on a row is a fact about the one march the recap above is drawing, and the campaign totals
  *   still live in "Fought to the end" at the foot of the block;
@@ -289,7 +290,15 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 <Table.Td ta="end">
                   {ratio(per(point.repeat.damage, point.repeat.silver), PER_SILVER_DECIMALS)}
                 </Table.Td>
-                <Table.Td ta="end">{ratio(per(point.repeat.damage, point.repeat.mercLost))}</Table.Td>
+                {/* **Per hired is the hired stacks' own damage over the hired units lost** (S-105,
+                    2026-09-19; the owner, reading this column: *"it says over a million but in total they
+                    do less than 1M"*, then *"dmg per hired is still broken: it shows a damage per hired
+                    almost above total damage"*). It divided the **whole** march's worst opening — the
+                    figure two cells to the left — by the chunks the hired stock loses, so on a march whose
+                    troops do most of the hitting it printed nearly the Worst column again. The numerator is
+                    the part of that opening the hired stacks struck for (`PlanRepeat.hiredDamage`), which
+                    is the one reading of "a hired" the engine has (design rule 5). */}
+                <Table.Td ta="end">{ratio(per(point.repeat.hiredDamage, point.repeat.mercLost))}</Table.Td>
               </Table.Tr>
             );
           })}
