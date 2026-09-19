@@ -58,7 +58,7 @@ const ROWS = PLAN.alternatives;
 const ENDS = BAR_ENDS;
 
 // The table's own name carries the unit its heads stopped repeating (S-59 screen review).
-const TRADE = 'table[aria-label="Every plan on the trade, one repeated march each"]';
+const TRADE = 'table[aria-label="Every plan on the trade, one repeated march each, at its worst opening"]';
 
 /** The trade's rows, in the DOM, so a case can point at the same one twice. */
 function tradeRows(): HTMLElement[] {
@@ -206,7 +206,7 @@ test('the tip names the plan under the pointer, not the one on screen', () => {
   expect(shown?.textContent ?? '').toContain(planWords(wanted));
   expect(shown?.textContent ?? '').not.toContain(planWords(selected));
   // It carries the figure a player compares plans by, and nothing else.
-  expect(shown?.textContent ?? '').toContain(`${compact(wanted.repeat.damage)} damage a march`);
+  expect(shown?.textContent ?? '').toContain(`${compact(wanted.repeat.damage)} worst opening a march`);
   // Two lines and no third: it used to close with "the sweet spot" over a tip already naming the plan
   // **Sweet spot**, above a bar marked "Sweet spot" in the same brass (design rule 5).
   expect(shown?.textContent ?? '').not.toContain('the sweet spot');
@@ -304,7 +304,7 @@ test('the block opens on its own — the plan is part of the answer, not a fold 
   // march at a time, not a campaign total.
   const shown = pickOf(PLAN, defaultPlanPosition(PLAN));
   const repeated = shown.marches - (shown.finaleCounts ? 1 : 0);
-  expect(fold.textContent).toContain('damage a march');
+  expect(fold.textContent).toContain('worst opening a march');
   // One march is a word of its own, and a recommendation whose plan repeats only once is a case the row has to
   // get right: the old rule never produced one on this army, and the middle-of-the-trade rule does.
   expect(fold.textContent).toContain(
@@ -355,7 +355,7 @@ test('a row prices the march the recap is drawing, and the engine’s own battle
   if (!plan) throw new Error('no plan to draw');
 
   // The owner's complaint of 2026-09-15: the row's figures were the plan spread over its marches, finale
-  // included, so the plan on screen read one damage a march and the row that named it read another. The row is
+  // included, so the plan on screen read one damage figure and the row that named it read another. The row is
   // the **repeated** march now, and the engine's `repeat` is what proves it: the real battle of that very
   // march — the call the March section makes — reports the same figure, to the unit.
   const shown = pickOf(plan, defaultPlanPosition(plan));
@@ -444,7 +444,7 @@ test('opened, it says what the plan did for this army and reads the trade a marc
   // the unit is the table's own and is said once in its name. And 👑 is gone from "Hired lost": it is the
   // authority pool's glyph, printed two blocks above this table on the same screen (rule 21).
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🎯 Damage', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
   expect(document.querySelector(TRADE)?.getAttribute('aria-label')).toContain('march');
   // The sweet spot is named by the row's own **name**, and never a second time under it: "the sweet spot"
   // under a row called "Sweet spot" is the same words twice on one line (rule 5).
@@ -629,7 +629,7 @@ test('the bar names its ends after the hired stock, and every row is its own ans
   // to 505 px in a 462 px pane — the sideways scroller the six heads were tuned down to avoid (rule 17) —
   // so the figure is carried by the bar's tip and by the row's own accessible name instead.
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🎯 Damage', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
   expect(rows[3]?.getAttribute('aria-label') ?? '').toContain(`${compact(33_700)} gold`);
   expect(rows[3]?.getAttribute('aria-label') ?? '').toContain('22 hired lost');
 });
@@ -708,7 +708,7 @@ test('every stop says how long its march takes to recover, under the silver it c
 
   // **Still six columns.** The queue is a second line inside the silver cell, not a head of its own.
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🎯 Damage', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
 
   // The line over the bar says it for the plan the fold is reading, and "Fought to the end" for the whole
   // campaign — the same two places its silver is said (design rule 5: one name, said where it is expected).
@@ -731,7 +731,7 @@ test('the tip carries the gold a march the trade has no room for', () => {
   expect(shown).not.toBeNull();
   // The stop's own name, its damage, and the gold — the third line the trade has no column for.
   expect(shown?.textContent ?? '').toContain(planWords(BURN_ROWS[last] as PlanRow));
-  expect(shown?.textContent ?? '').toContain(`${compact(7_400_000)} damage a march`);
+  expect(shown?.textContent ?? '').toContain(`${compact(7_400_000)} worst opening a march`);
   expect(shown?.textContent ?? '').toContain(`${compact(48_000)} gold a march`);
 });
 
@@ -761,9 +761,10 @@ test('the all-in stop says it is a sequence, on the bar and on the row the fold 
   // Every other stop is still a march repeated, and says nothing about a sequence.
   expect(sequenceWords(BURN_ROWS[0] as PlanRow)).toBeNull();
 
-  // "Fought to the end" is unmoved: it is the campaign's own totals, not the stop's.
+  // "Fought to the end" is unmoved: it is the campaign's own totals, not the stop's — and it names the
+  // reading the plan is on since S-94, the same "worst opening" the trade's own column head carries.
   expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
-    `${amount(BURN.totalDamage)} damage`,
+    `${amount(BURN.totalDamage)} worst-opening damage`,
   );
 });
 

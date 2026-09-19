@@ -242,7 +242,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           // 2026-09-17 and it rides along in the same words as the note on the row below (`./picks`).
           const best = bestForWords(shown);
           const run = sequenceWords(shown);
-          return `${planWords(shown)}, ${compact(shown.repeat.damage)} damage a march${
+          return `${planWords(shown)}, ${compact(shown.repeat.damage)} worst opening a march${
             best === null ? '' : `, ${best}`
           }${run === null ? '' : `, ${run}`}`;
         }}
@@ -321,7 +321,11 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
               **Sweet spot**, above a bar whose mark says "Sweet spot" in the same brass — the same words
               three times in one glance (design rule 5, the owner's own cut of 2026-09-16). */}
           <Text size="xs" opacity={0.75}>
-            {`${compact(row.repeat.damage)} damage a march`}
+            {/* **The plan's damage is its worst opening**, and it says so (S-94, 2026-09-19): the figure
+              is the enemy-first journal's, the same number and the same words the recap prints under
+              "Worst opening" when this stop is on screen (design rules 5 and 26 — one name a thing,
+              through the whole flow). */}
+            {`${compact(row.repeat.damage)} worst opening a march`}
           </Text>
           {/* **What the march costs in gold** — the hired stacks' own price, which silver never pays
               (`PlanRepeat.gold`). The bar is ordered by the hired stock, so "what does sparing it cost me"
@@ -331,7 +335,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
             {`${compact(row.repeat.gold)} gold a march`}
           </Text>
           {/* **A stop the figures above do not describe four times over says so** (S-74, widened in S-89).
-              Most stops are the march above repeated, so "6.9M damage a march" names the whole campaign;
+              Most stops are the march above repeated, so "6.9M worst opening a march" names the campaign;
               `all-in` shelters every mercenary it can on the first march and then marches on what the stock
               has left, and a repeated stop the horizon outruns marches on troops alone once its stock is
               spent — for both, the three figures above are one march's and multiplying them out would be

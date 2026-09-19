@@ -177,7 +177,19 @@ describe('the plan’s criteria hold their floors', () => {
     // 1 069 600 at 440 274 a hired (the tight ladder — a real saving, 30 % less silver than the sweet spot's
     // 1 529 400); sweet 1.2211 a silver · 373 524 a hired, campaign 7 521 725 for 6 089 100; most 2 006 473
     // a march at 1.3119; the plan 7 868 855.
-
+    // **Measured again 2026-09-19 (S-94), and NOT re-based** (owner, the same day: *"the benchmark is like
+    // non-regression tests. A given scenario should not be worse, or it's a discrepancy, or a new baseline
+    // needs to be registered by me if the trade is ok."*). Every figure here is now the march's **worst
+    // opening** where it was the midpoint of the two openings (`marchOf`). On this army the bar does not move
+    // at all — the same four stops at the same 3 · 5 · 6 · 6 burned, the same counts — so every figure falls
+    // by exactly the half-strike the army-first journal used to add and by nothing else: sweet 1.2211 →
+    // **1.1830** a silver and 373 524 → **361 842** a hired, its campaign 7 521 725 → **7 346 498** for the
+    // same 6 089 100 silver; the steady max 2 006 473 → **1 948 064** a march at 1.3119 → **1.2737**; the
+    // plan 7 868 855 → **7 693 628**. `leastPerHired` is unmoved at 440 274 — the silver saver's three-burn
+    // ladder is the one march on this bar whose opening stack takes the same strike either way.
+    //
+    // The floors below are left at the figures they were registered at, so **six of the eight now fail**.
+    // The measured set is in `tests/engine/plan-baseline.proposed.json` for the owner to register.
     expectCriteria(plan, {
       leastPerHired: under(440_274),
       sweetPerSilver: under(1.2211),
@@ -212,9 +224,12 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       expect(input.request.totals.health.mounted).toBe(21);
       const started = Date.now();
       const plan = planCampaign(input);
-      // The plan prices a march exactly as the recap will: its own figure for the sweet spot is the battle's.
+      // The plan prices a march exactly as the recap will: its own figure for the sweet spot is the battle's
+      // **worst opening** since 2026-09-19 (S-94 — the owner will not spend on a coin flip; `marchOf`). The
+      // criterion that holds this on every army is "the bar's damage is the recap's worst opening" below;
+      // this line stays where it is because this test is the one that walks his own account end to end.
       expect(plan.recommend?.repeat.damage).toBe(
-        planMarch(input.request, plan.recommend?.counts ?? {}).summary.avgDamage,
+        planMarch(input.request, plan.recommend?.counts ?? {}).summary.minDamage,
       );
       // Measured 2026-09-18, once every burn level between the ends has a rung: 7 · 10 · 12 · 14 burned;
       // least silver 4 541 421 for 2 722 500 at 648 774 a hired; sweet 4 965 077 for 2 614 000 at 1.8994 ·
@@ -263,6 +278,31 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // 21 662 734. **No silver saver is offered** — nothing left of the 11-burn rung is as efficient a silver
       // as it is — so `leastPerHired` is again a floor nothing on this army exercises; it is kept at the
       // figure the armies that do offer one were measured at, and `expectCriteria` reads it only then.
+      // **Re-based 2026-09-19 (S-94): the plan is ranked, priced and printed on the worst opening** — the
+      // enemy-first journal, the recap's own "Worst opening" — and no longer on the midpoint of the two
+      // openings the coin decides (`marchOf`; the owner: *"it's too risky for me to spend 3M silver on a coin
+      // flip"*). This account's bar moves **4 → 5 stops** and left along the burn: 7 · 10 · 12 · 14 · 26
+      // where it was 11 · 12 · 13 · 27. A **silver saver** is offered again at the 7-burn rung — 3 583 107 a
+      // march for 1 851 500 silver, **511 872** a hired unit, which is what `leastPerHired` now holds — and
+      // the knee follows it from the 11 to the **10**: sweet spot 4 870 455 a march for 2 614 000, so
+      // **1.8632** a silver (was 1.9459) and **487 046** a hired (was 484 597, a floor that rises), campaign
+      // **20 079 262** for 10 581 400 (was 21 662 734 for 10 957 600).
+      //
+      // Two floors **rise** and they are the interesting ones: the steady max climbs a rung, 13 → 14 burned,
+      // for **5 913 067** a march at **2.1585** a silver against 5 864 482 at 2.1408 — more *reliable* damage
+      // than the old bar's best march, for the same silver a unit. The plan's own campaign is 22 770 620
+      // against 23 264 491, which is the same campaign read honestly: the marches it sums are worth
+      // 22 770 620 on the bad flip and were being sold at 23 264 491. Measured gap on every stop:
+      // `tools/theorycraft/out/109-reliable-damage.md` §A.
+      //
+      // **Not re-based** (owner, 2026-09-19: a new baseline is registered by him, not by us). The floors
+      // stay at the figures registered on the midpoint reading, so **four of the eight now fail** —
+      // `leastPerHired` 521 449 against 511 872, `sweetPerSilver` 1.9459 against 1.8632,
+      // `sweetCampaignDamage` 21 662 734 against 20 079 262, `campaignDamage` 23 264 491 against 22 770 620,
+      // and `sweetCampaignSilverCeiling` is the one that now *passes with room* (10 581 400 under
+      // 10 957 600). Two floors would **rise** if he registers them: `sweetPerHired` 484 597 → 487 046 and
+      // the steady max 5 864 482 → **5 913 067** a march at 2.1408 → **2.1585** a silver, which is more
+      // reliable damage than the old bar's best march for the same silver a unit.
       expectCriteria(plan, {
         leastPerHired: under(521_449),
         sweetPerSilver: under(1.9459),
@@ -292,6 +332,12 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // per-unit vectors improved the ladder's 7-burn rung and tilted the chord (see the floors above).
       // 20 900 000 → **21 600 000** later that day (S-87): with every hired stack sheltered the ladder is
       // 11 · 12 · 13 and the sweet spot is its 11-burn rung again, 21 662 734 over four marches.
+      // 21 600 000 → **20 000 000** on 2026-09-19 (S-94): the campaign is the sum of its marches' **worst
+      // openings** now, and the knee moved from the 11-burn rung to the 10 with the reliable reading —
+      // 20 079 262 over four marches. The figure is lower because it is the one the player is guaranteed,
+      // not because the plan got worse: the same bar's steady max hits harder on this reading than the old
+      // bar's did (5 913 067 against 5 864 482). **The threshold is left at 21 600 000 and therefore fails**,
+      // for the owner to register with the rest (2026-09-19).
       expect(sweet.totalDamage).toBeGreaterThanOrEqual(21_600_000);
       // **The silver saver is excluded, as it is in `expectCriteria`** (re-based 2026-09-18). That stop is
       // defined to be cheaper than the sweet spot *and* at least as efficient a silver, so it can only ever
@@ -346,6 +392,22 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // a silver against 8 281 474 at 1.5186, so 1.2 % less damage for 15 % more of it a silver, and the
       // Spearman I put-back that row used to carry is gone with it. The plan's own campaign is unmoved at
       // 32 518 195.
+      // **Re-based 2026-09-19 (S-94): the worst opening, everywhere** (`marchOf`). The bar loses a stop —
+      // **5 → 4** — and it is the `all-in`: on this reading it played 31 308 140 over four marches for
+      // 23 696 200 silver and 90 burned against the steady max's 31 546 458 for 18 790 400 and 67, behind on
+      // all three figures a stop prints, so the engine no longer offers it (`plan.ts`, and the criterion
+      // "no stop of the bar is beaten by another stop of the same bar" holds it). The three rungs left of it
+      // shift one place left: silver saver 9 → **8** burned (4 763 589 a march, **595 449** a hired), sweet
+      // spot 10 → **9** (6 269 353 for 4 668 300 — **1.3430** a silver and **696 595** a hired, a floor that
+      // rises 3 % because the knee moved onto a thriftier rung), more mercs 13 and steady max 17 unmoved in
+      // burn at **8 014 627** a march and **1.7061** a silver. The plan's campaign is **31 546 458** where
+      // the midpoint reading sold 32 518 195 — the same marches, read on the flip the player actually gets.
+      //
+      // **Not re-based** (owner, 2026-09-19). The floors stay where they were registered, so **six of the
+      // eight now fail**: `leastPerHired` 645 859 against 595 449, `sweetPerSilver` 1.4481 against 1.3430,
+      // `sweetCampaignDamage` 28 748 251 against 27 104 076, `mostDamage` 8 185 823 against 8 014 627,
+      // `mostPerSilver` 1.7426 against 1.7061 and `campaignDamage` 32 518 195 against 31 546 458. One would
+      // **rise**: `sweetPerHired` 676 035 → **696 595**, the knee moving onto a thriftier rung.
       expectCriteria(plan, {
         leastPerHired: under(645_859),
         sweetPerSilver: under(1.4481),
@@ -893,6 +955,90 @@ campaignIsItsMarchesSum(
 );
 
 /**
+ * **The bar's damage is the recap's worst opening** (S-94; the owner, 2026-09-19: *"average damage is not
+ * average for sure; it's too risky for me to spend 3M silver on a coin flip to get 1M damage or 3M. We want
+ * reliable damage actually."*).
+ *
+ * The game decides who opens the fight, 50/50, so a march has two damage figures and no third: the
+ * enemy-first journal (`minDamage`, the recap's **Worst opening**) and the army-first one (`maxDamage`).
+ * `avgDamage` is their midpoint — a number no single fight ever pays out — and until 2026-09-19 it was what
+ * the plan ranked, priced and printed. The plan now stands on the bad flip: every figure the bar carries is
+ * the enemy-first journal's, so a stop's damage is the least the player is ever handed rather than the
+ * average of a coin toss he cannot influence.
+ *
+ * Two things, on every army this file builds, and both against `planMarch` — the recap's own arithmetic, not
+ * a second model of it:
+ *
+ *  - every stop's **repeated march** prices at exactly the recap's `minDamage` on its own counts;
+ *  - every stop's **campaign** is the sum of its marches' `minDamage` — the repeats, the finale and the
+ *    troops-only tail, or the `all-in`'s sequence — to the unit, and so is the plan's own campaign.
+ *
+ * **Measured on HEAD (f0d2759) before the switch**, which is what it is for: it failed on all thirteen
+ * armies, every stop of every one of them, by the half-strike the army-first journal inserts. The owner's
+ * export at 7 000 read `sweet-spot: repeat 5 330 563 against the recap's worst opening 5 230 687 (Δ 99 876)`
+ * and `campaign 21 662 734 against 21 363 106 (Δ 299 628)`; the widest repeat was his live camp's
+ * `sweet-spot`, `3 060 838 against 2 777 322 (Δ 283 516)` — 9.3 % of the figure the bar printed — and the
+ * widest campaign the same camp's `all-in`, `13 841 084 against 11 815 339 (Δ 2 025 745)`
+ * (`tools/theorycraft/out/109-reliable-damage.md` §A has the gap on every stop of every army).
+ */
+describe('the bar’s damage is the recap’s worst opening', () => {
+  /** The marches a stop plays, first to last — the same reading `campaignIsItsMarchesSum` makes. */
+  const marchesOf = (row: PlanTotals): Record<string, number>[] => {
+    if (row.sequence) return row.sequence;
+    const tail = row.tail?.marches ?? 0;
+    const repeats = row.marches - (row.finaleCounts ? 1 : 0) - tail;
+    const marches = Array.from({ length: repeats }, () => row.counts);
+    if (row.finaleCounts) marches.push(row.finaleCounts);
+    for (let index = 0; index < tail; index += 1) marches.push(row.tail?.counts ?? {});
+    return marches;
+  };
+
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const failures: string[] = [];
+        const rows: { what: string; row: PlanTotals }[] = [
+          ...plan.alternatives.map((row) => ({ what: `stop ${row.pick}`, row: row as PlanTotals })),
+          { what: 'the plan itself', row: plan as PlanTotals },
+        ];
+        for (const { what, row } of rows) {
+          if (!row.sequence) {
+            const { minDamage } = planMarch(scenario.request, row.counts).summary;
+            if (row.repeat.damage !== minDamage) {
+              failures.push(
+                `${what}: repeat ${row.repeat.damage.toLocaleString('en-US')} against the recap's worst ` +
+                  `opening ${minDamage.toLocaleString('en-US')} ` +
+                  `(Δ ${(row.repeat.damage - minDamage).toLocaleString('en-US')})`,
+              );
+            }
+          }
+          const sum = marchesOf(row).reduce(
+            (total, counts) => total + planMarch(scenario.request, counts).summary.minDamage,
+            0,
+          );
+          if (row.totalDamage !== sum) {
+            failures.push(
+              `${what}: campaign ${row.totalDamage.toLocaleString('en-US')} against the recap's ` +
+                `${sum.toLocaleString('en-US')} over ${String(row.marches)} marches ` +
+                `(Δ ${(row.totalDamage - sum).toLocaleString('en-US')})`,
+            );
+          }
+        }
+        expect(failures.join('\n'), `the bar is not on the worst opening\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
+});
+
+/**
  * **The sheltered marches the account can field by hand**, and what each of them costs — the yardstick the
  * two criteria below are stated against (S-93).
  *
@@ -985,7 +1131,9 @@ const shelteredRivals = (request: StackRequest): Rival[] => {
           .map(([id, count]) => `${id} ${String(count)}`)
           .join(' · ')}`,
         counts,
-        damage: summary.avgDamage,
+        // The same reading the bar is on since 2026-09-19 (S-94): a rival priced on the midpoint of the two
+        // openings against a stop priced on the bad flip would beat it on arithmetic alone.
+        damage: summary.minDamage,
         silver: summary.recovery.silver,
         burn: hiredIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0),
         seconds: summary.recovery.seconds,
@@ -1183,6 +1331,29 @@ describe('the thrift end is offered', () => {
  *
  * It is stated over `plan.alternatives` alone: no model of the plan, no second search — the rows the app
  * draws, compared with each other.
+ *
+ * **The engine enforces it since S-94** (2026-09-19): the `all-in` is not offered when a stop beside it burns
+ * strictly less of the stock and is behind on neither damage nor silver (`plan.ts`, just before the two
+ * efficiencies are read off the bar). It held by construction until the plan moved onto the worst opening,
+ * and then stopped holding on two armies — the owner's export at 12 000 (31 308 140 for 23 696 200 and 90
+ * burned against the steady max's 31 546 458 for 18 790 400 and 67) and his live camp (11 815 339 for
+ * 11 241 300 and 130 against 12 086 359 for 9 849 200 and 37). Both bars are one stop shorter now.
+ *
+ * **What the three figures cannot see is tempo, and that is where the exceptions are.** The `all-in` is the
+ * one stop offered on what its first march **fields** rather than on what it burns (`expectCriteria` above
+ * already exempts it from "burning more buys more" for exactly this reason), because on a stock smaller than
+ * a chunk two campaigns that burn the same chunks are told apart by nothing else. So a pair holding the
+ * `all-in` is judged here only when the `all-in` burns **strictly more** of the stock than the other stop —
+ * then it is the dearer offer in the resource that does not come back and has to buy something. Two measured
+ * pairs it passes over, both 2026-09-19: a first-run army holding three Bear V, where 3 · 2 · 1 plays
+ * 18 750 008 over four marches against the sweet spot's 18 413 408 for the same 32 525 600 silver and the
+ * same 3 chunks; and one holding ten, where 10 · 9 · 8 · 7 plays **20 893 375 for 36 013 400** against six
+ * bears a march at **20 769 608 for 32 525 600**, both burning the same 4 chunks — 10.7 % more silver for
+ * 0.6 % more damage, with the stock spent four times faster. (Experiment 101 §B measured that same shape
+ * under the midpoint reading, where it was 40 % more silver for slightly *less* damage; the figures here are
+ * this engine's.) Dropping either would take a real offer away to satisfy an arithmetic; this criterion
+ * speaks about what the **rungs** do to each other, and about an `all-in` that spends more of the stock for
+ * nothing.
  */
 describe('no stop of the bar is beaten by another stop of the same bar', () => {
   for (const scenario of scenarios) {
@@ -1198,6 +1369,12 @@ describe('no stop of the bar is beaten by another stop of the same bar', () => {
         for (const stop of planned.alternatives) {
           for (const other of planned.alternatives) {
             if (other === stop) continue;
+            // The tempo exception (see the note above): a pair holding the `all-in` counts only when the
+            // `all-in` burns strictly more of the stock than the other stop. Equal chunks means the same
+            // place on the bar's own axis reached at a different speed, which the three figures cannot see.
+            if (other.pick === 'all-in' || (stop.pick === 'all-in' && other.mercLost >= stop.mercLost)) {
+              continue;
+            }
             const beats =
               other.totalDamage >= stop.totalDamage &&
               other.silver <= stop.silver &&

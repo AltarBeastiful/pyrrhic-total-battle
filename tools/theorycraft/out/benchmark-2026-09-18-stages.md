@@ -1,6 +1,6 @@
-# The plan across the stages of 2026-09-18 — before, S-76, S-77, the put-back, the all-in tail, the shelter, the reference table, the tail on the repeated stops, the finale's gold, the finale's silver, the tighter shape
+# The plan across the stages of 2026-09-18 and 2026-09-19 — before, S-76, S-77, the put-back, the all-in tail, the shelter, the reference table, the tail on the repeated stops, the finale's gold, the finale's silver, the tighter shape, reliable damage
 
-Every figure is a four-march campaign from the benchmark snapshots in this folder (`benchmark-2026-09-18-NN-*.json`): the plan's hardest stop, its best stop a silver, its best stop a hired unit, the stops on the bar, and beside them the best sizer sequence and the best comparable answer from TotalStack's dataset (rows that field troop types the army does not hold are left out).
+Every figure is a four-march campaign from the benchmark snapshots in this folder (`benchmark-2026-09-1N-NN-*.json`): the plan's hardest stop, its best stop a silver, its best stop a hired unit, the stops on the bar, and beside them the best sizer sequence and the best comparable answer from TotalStack's dataset (rows that field troop types the army does not hold are left out).
 
 **No timing is compared across these rows.** Each snapshot carries the `planMs` of the machine it was taken on, and the 08 run was taken on a machine under a foreign job at 800 % CPU — its `planMs` are two to three times the 07 run's on the large scenarios, and so is the 07 *engine* re-timed on that same machine (the 2026-09-17 export at 7 000: 2 302 ms on the 07 engine against 1 733 on the 08 engine, best of three each, back to back). Read the damage columns; time the search on one machine at one sitting.
 
@@ -9,7 +9,12 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 **10 moves no figure either.** S-91 priced the finale's silver as the recap does (under the account's temple level and training discounts) instead of the search's raw figure; every profile in the repo has no discount, so the two agree to the unit here and the snapshot is identical to 09. The criterion that tells them apart runs under a 25 % discount on every group and a level-20 temple, where the raw figure overstated a discounted finale by a quarter.
 
 **11 is S-93, the tighter shape**: every rung of the burn ladder, and the `all-in`'s own march builder, now score the sizer over each **prefix** of the troop ranking, and a rung takes that march only when it is behind on none of damage, silver, the stock burned and the training queue. The `all-in` moves on **eight** of the ten scenarios (Bear V ×1 and ×2 carry no such stop): it fields what a deeper ladder shelters, and it pays for it on two of them — the live account at 20 000 spends 31 092 400 → 42 085 900 silver for 1.3 % more damage, and the bear armies buy theirs at 54 % and 23 % more silver. The owner's export at 12 000 gains a fifth stop while its knee walks from the 17-burn rung to the 10.
+
+**12 is S-94, and from it on the damage columns are a different reading.** Up to and including 11 every figure in this table is a march's *expected* damage — the midpoint of the two openings the game's coin decides. From 12 on it is the **worst opening**, the enemy-first journal, on every row of every scenario: the plan is ranked, priced and printed on it (owner, 2026-09-19: *"average damage is not average for sure; it's too risky for me to spend 3M silver on a coin flip to get 1M damage or 3M. We want reliable damage actually."*), so the sizer sequences and the captured answers it is measured against are priced on it too. **A 12 figure is therefore not comparable in level to an 11 figure**, and the fall between the two rows is not a plan that got worse. The bridge is the worst/expected ratio of each army's own hardest campaign, measured on the 12 bar and printed under each table below; `tools/theorycraft/out/109-reliable-damage.md` §A has the gap on every stop of every army and §C has this same comparison in both readings. What did move, and is a real move: the bar re-ranked on the bad flip is a different bar — the owner's export at 7 000 gains a fifth stop and its `all-in` gains 20.4 % of reliable damage a march, his 12 000 loses its `all-in` (it stood behind the steady max on damage, silver **and** the stock at once), and the evening account loses its silver saver.
+
 ## first-run army, Bear V ×1 (20 000 leadership)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9803** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -26,8 +31,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
 | 10 S-91 the finale's silver | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
 | 11 S-93 the tighter shape | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
+| 12 S-94 reliable damage | 1 | 18 189 008 | 0.56 | 18 189 008 | 18 535 192 | — |
 
 ## first-run army, Bear V ×2 (20 000 leadership)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9805** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -44,8 +52,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
 | 10 S-91 the finale's silver | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
 | 11 S-93 the tighter shape | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
+| 12 S-94 reliable damage | 1 | 18 413 408 | 0.57 | 9 206 704 | 18 609 992 | — |
 
 ## first-run army, Bear V ×3 (20 000 leadership)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9809** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -62,8 +73,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 2 | 19 115 768 | 0.59 | 6 371 923 | 24 086 764 | 25 439 016 |
 | 10 S-91 the finale's silver | 2 | 19 115 768 | 0.59 | 6 371 923 | 24 086 764 | 25 439 016 |
 | 11 S-93 the tighter shape | 2 | 22 661 258 | 0.58 | 7 553 753 | 24 086 764 | 25 439 016 |
+| 12 S-94 reliable damage | 2 | 18 750 008 | 0.58 | 6 250 003 | 18 750 008 | 21 427 548 |
 
 ## first-run army, Bear V ×10 (20 000 leadership)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9669** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -80,8 +94,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 2 | 21 700 948 | 0.65 | 5 425 237 | 25 133 964 | 26 486 216 |
 | 10 S-91 the finale's silver | 2 | 21 700 948 | 0.65 | 5 425 237 | 25 133 964 | 26 486 216 |
 | 11 S-93 the tighter shape | 2 | 25 039 888 | 0.65 | 6 259 972 | 25 133 964 | 26 486 216 |
+| 12 S-94 reliable damage | 2 | 20 893 375 | 0.64 | 5 223 344 | 21 152 576 | 22 474 748 |
 
 ## first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9841** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -98,8 +115,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 10 S-91 the finale's silver | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 11 S-93 the tighter shape | 3 | 30 324 441 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
+| 12 S-94 reliable damage | 3 | 29 841 879 | 0.91 | 1 146 218 | 30 054 424 | 30 221 279 |
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9874** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -116,8 +136,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 | 10 S-91 the finale's silver | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 | 11 S-93 the tighter shape | 3 | 8 628 782 | 1.42 | 431 237 | 8 633 665 | 8 911 356 |
+| 12 S-94 reliable damage | 3 | 8 519 930 | 1.40 | 425 508 | 8 519 930 | 8 762 880 |
 
 ## 2026-09-17 export, its setup (7 000 leadership)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **1.0000** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -134,8 +157,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 4 | 23 264 491 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
 | 10 S-91 the finale's silver | 4 | 23 264 491 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
 | 11 S-93 the tighter shape | 4 | 23 447 087 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
+| 12 S-94 reliable damage | 5 | 23 619 920 | 2.08 | 463 349 | 24 634 972 | 13 742 586 |
 
 ## 2026-09-17 export, 12 000 leadership
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9788** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -152,8 +178,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
 | 10 S-91 the finale's silver | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
 | 11 S-93 the tighter shape | 5 | 33 028 417 | 1.72 | 598 922 | 34 283 252 | 24 167 160 |
+| 12 S-94 reliable damage | 4 | 31 546 458 | 1.73 | 602 313 | 33 277 720 | 22 894 812 |
 
 ## live account of 2026-09-18 (one hired type, 20 000 leadership)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **1.0000** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -170,8 +199,11 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 | 10 S-91 the finale's silver | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 | 11 S-93 the tighter shape | 4 | 31 628 813 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
+| 12 S-94 reliable damage | 4 | 29 743 332 | 1.00 | 1 130 835 | 25 300 624 | 29 222 440 |
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
+
+Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is **0.9874** of its own expected damage (the worst opening over the midpoint of the two openings).
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
 |---|---|---|---|---|---|---|
@@ -188,4 +220,5 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 09 S-90 the finale's gold | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 | 10 S-91 the finale's silver | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 | 11 S-93 the tighter shape | 5 | 32 348 459 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
+| 12 S-94 reliable damage | 4 | 31 714 657 | 1.79 | 481 873 | 36 832 597 | 36 832 597 |
 

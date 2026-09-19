@@ -13,6 +13,7 @@
     "e2e",
     "scripts",
     "tools",
+    "tests/engine/plan-baseline.ts",
     "src/data/types.ts",
     "src/data/schema.ts",
     "src/pwa/precache.ts",

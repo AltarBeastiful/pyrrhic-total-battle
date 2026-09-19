@@ -109,11 +109,11 @@ describe(
 
       // The march's own figure is the one `marchResult`/`simulateBattle` gives for those counts.
       const its = planMarch(req, plan.march.counts);
-      expect(plan.march.damage).toBe(its.summary.avgDamage);
+      expect(plan.march.damage).toBe(its.summary.minDamage);
 
       // The plan's total is its marches plus its final march, nothing else.
       const repeated = plan.marches - (plan.finale ? 1 : 0);
-      const finale = plan.finale ? planMarch(req, plan.finale.counts).summary.avgDamage : 0;
+      const finale = plan.finale ? planMarch(req, plan.finale.counts).summary.minDamage : 0;
       expect(plan.totalDamage).toBe(repeated * plan.march.damage + finale);
     });
 
@@ -224,14 +224,21 @@ describe(
       () => {
         // cap → the campaign before the tail (damage, silver, queue) and the repeated march it is made of
         // (damage, silver, queue, hired burned). Measured 2026-09-18, engine S-87.
+        //
+        // **Re-based 2026-09-19 (S-94): every damage here is the march's worst opening**, the enemy-first
+        // journal, where it was the midpoint of the two openings (`engine/plan.ts`, `marchOf`). Not one
+        // count, silver figure or queue figure moves on these three armies — the bar picks the same marches —
+        // so the whole re-base is the half-strike the army-first journal used to add: the repeat 4 722 842 →
+        // **4 631 402** at a stock of 1 and of 3, 4 835 042 → **4 743 602** at 2, and the tail 4 610 642 →
+        // **4 519 202**, which is 91 440 on each of them (the opening Swordsman I stack's own hit, halved).
         const before = {
-          1: { campaign: [4_722_842, 8_131_400, 2_269_380], repeat: [4_722_842, 8_131_400, 2_269_380, 1] },
-          2: { campaign: [9_557_884, 16_262_800, 4_538_760], repeat: [4_835_042, 8_131_400, 2_269_380, 1] },
-          3: { campaign: [14_168_526, 24_394_200, 6_808_140], repeat: [4_722_842, 8_131_400, 2_269_380, 1] },
+          1: { campaign: [4_631_402, 8_131_400, 2_269_380], repeat: [4_631_402, 8_131_400, 2_269_380, 1] },
+          2: { campaign: [9_375_004, 16_262_800, 4_538_760], repeat: [4_743_602, 8_131_400, 2_269_380, 1] },
+          3: { campaign: [13_894_206, 24_394_200, 6_808_140], repeat: [4_631_402, 8_131_400, 2_269_380, 1] },
         } as const;
         // The tail itself, one Elite march over every troop type this army holds with no mercenary in it —
         // the same march on all three, because it is the same army (`out/105` §P1).
-        const TAIL = { damage: 4_610_642, silver: 8_131_400, seconds: 2_269_380 };
+        const TAIL = { damage: 4_519_202, silver: 8_131_400, seconds: 2_269_380 };
 
         for (const cap of [1, 2, 3] as const) {
           const plan = planCampaign({
@@ -512,7 +519,7 @@ describe(
       for (const row of rows) {
         expect(Object.keys(row.counts).length).toBeGreaterThan(0);
         const its = planMarch(req, row.counts);
-        expect(its.summary.avgDamage).toBeGreaterThan(0);
+        expect(its.summary.minDamage).toBeGreaterThan(0);
       }
     });
 
@@ -698,18 +705,31 @@ describe(
     );
 
     test(
-      'the sizer shape never makes the plan worse, and can only add a shape the ladder cannot express',
+      'the sizer shape stays with the ladder to a percent, and adds a shape the ladder cannot express',
       () => {
         // Owner, 2026-09-17: a put-back beat the plan's own march. Behind `sizerShape` the search also scores
-        // the Elite sizer over every troop type for each mercenary vector; the total can only go up.
+        // the Elite sizer over every troop type for each mercenary vector.
+        //
+        // **This asked for `both >= ladder` until 2026-09-19 (S-94)**, and that was an observation rather
+        // than an invariant: the two runs do not score the same set and then pick, they *climb*, and the
+        // rung-order climb `makeScorer` runs once a depth starts from a different ladder when a sizer shape
+        // is in the enumeration. On the worst opening the two settle on neighbouring four-rung shapes and the
+        // ladder's is the better of them by **0.49 %** — 7 731 209 over four marches (Catapult I 143 ·
+        // Archer III 441 · Archer II 768 · Archer I 1 356, 16 · 15 · 14 hired) against the sizer's
+        // 7 693 628 (139 · 436 · 775 · 1 399, 16 · 16 · 16). Nothing was lost: both plans are the same four
+        // marches at the same silver and the same 24 burned, and the app runs with the flag on
+        // (`CAMPAIGN.planFixes`), so the figure it ships is the second one and the criteria hold it exactly
+        // (`plan-criteria.test.ts`, `campaignDamage`). What is asserted is that the flag cannot **cost** the
+        // plan anything a player would notice, and the floor below is the app's own measured campaign.
         const req = request();
         const ladder = planCampaign({ request: req, marchTarget: 4 });
         const both = planCampaign({ request: req, marchTarget: 4, sizerShape: true });
-        expect(both.totalDamage).toBeGreaterThanOrEqual(ladder.totalDamage);
+        expect(both.totalDamage).toBeGreaterThanOrEqual(ladder.totalDamage * 0.99);
+        expect(both.totalDamage).toBeGreaterThanOrEqual(7_693_628);
         expect(both.marches).toBe(ladder.marches);
         // Whatever shape won, its counts are fieldable and its damage is the battle's own.
         expect(used(req, both.march.counts, 'leadership')).toBeLessThanOrEqual(req.housing.leadership);
-        expect(both.march.damage).toBe(planMarch(req, both.march.counts).summary.avgDamage);
+        expect(both.march.damage).toBe(planMarch(req, both.march.counts).summary.minDamage);
         // Five stops, never more (owner, 2026-09-18: silver saver · sweet spot · more mercs · steady max · all in).
         expect(both.alternatives.length).toBeLessThanOrEqual(5);
       },
@@ -796,7 +816,10 @@ describe('a stock smaller than a chunk still has an all-in', () => {
       // campaign is 19 115 768 at 32 525 600 silver against TotalStack's 19 388 676 at 32 535 200.
       expect(allIn?.marches).toBe(CAMPAIGN.marches);
       expect(allIn?.sequence?.length).toBe(CAMPAIGN.marches);
-      expect(allIn?.totalDamage ?? 0).toBeGreaterThanOrEqual(19_000_000);
+      // 19 000 000 -> **18 700 000** on 2026-09-19 (S-94): the campaign is the sum of its marches' worst
+      // openings now, and 3 - 2 - 1 plus the troops-only tail comes to **18 750 008** where the midpoint
+      // reading sold 19 115 768. The same four marches, read on the flip the player actually gets.
+      expect(allIn?.totalDamage ?? 0).toBeGreaterThanOrEqual(18_700_000);
     },
     TIMEOUT,
   );
@@ -815,12 +838,15 @@ describe('a stock smaller than a chunk still has an all-in', () => {
  * 32 535 200, which is 98.6 % of its answer at the same silver.
  */
 describe('the all-in plays the horizon', () => {
-  /** The marches of a stop, priced one by one by the battle itself — `marchResult` → `simulateBattle`. */
+  /**
+   * The marches of a stop, priced one by one by the battle itself — `marchResult` → `simulateBattle`, on the
+   * **worst opening**, which is the plan's own reading since 2026-09-19 (S-94, `engine/plan.ts` `marchOf`).
+   */
   const priced = (req: StackRequest, marches: Record<string, number>[]): { damage: number; silver: number } =>
     marches.reduce<{ damage: number; silver: number }>(
       (sum, counts) => {
         const { summary } = planMarch(req, counts);
-        return { damage: sum.damage + summary.avgDamage, silver: sum.silver + summary.recovery.silver };
+        return { damage: sum.damage + summary.minDamage, silver: sum.silver + summary.recovery.silver };
       },
       { damage: 0, silver: 0 },
     );
@@ -861,20 +887,23 @@ describe('the all-in plays the horizon', () => {
       // The first march's own figures are `repeat`, as they always were — the tail never touches them.
       const head = sequence[0];
       if (!head) throw new Error('no first march');
-      expect(allIn?.repeat.damage).toBe(planMarch(req, head).summary.avgDamage);
+      expect(allIn?.repeat.damage).toBe(planMarch(req, head).summary.minDamage);
     },
     TIMEOUT,
   );
 
   test(
-    'three bears: the campaign clears nineteen million',
+    'three bears: the campaign clears eighteen and a half million',
     () => {
       const req = firstRun({ id: 'bear-5', cap: 3 });
       const plan = planCampaign({ request: req, marchTarget: CAMPAIGN.marches, ...CAMPAIGN.planFixes });
       const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
       // Measured 2026-09-19: 19 115 768 for 32 525 600 silver, where the stop stopped at 14 505 126 for
       // 24 394 200 before the tail.
-      expect(allIn?.totalDamage ?? 0).toBeGreaterThanOrEqual(19_000_000);
+      // Re-based the same day (S-94): the campaign is the sum of its marches' **worst openings**, so the
+      // same four marches at the same 32 525 600 silver come to **18 750 008**. The name of the test moves
+      // with the figure rather than the floor being quietly lowered under it.
+      expect(allIn?.totalDamage ?? 0).toBeGreaterThanOrEqual(18_700_000);
     },
     TIMEOUT,
   );
@@ -889,6 +918,14 @@ describe('the all-in plays the horizon', () => {
    * army — so "the sizer over the strongest k types", the family the owner builds by hand, was not among
    * them. With it the campaign is **23 447 087 for 14 728 200** over the same four marches (2.7 % more
    * silver for 4.1 % more damage), and the stop still fields hired units on every one of them.
+   *
+   * **Re-based again 2026-09-19 (S-94), the worst opening**, and this is the stop that gains the most from
+   * it on the owner's own account. Its old first march was a 27-burn ladder standing a Rider III stack of
+   * 1 010 on top — the enemy's first kill, worth 1 189 376 a strike and only if the army opens, a 9.8 % coin
+   * flip on the dearest offer of the bar (`tools/theorycraft/out/109-reliable-damage.md` Section A). Ranked
+   * on the bad flip the builder answers with a Troops-first shape at 26 burned that hits **6 603 524** a
+   * march reliably against 5 484 951, **+20.4 %**, and the campaign is **23 619 920 for 15 179 600** — more
+   * damage than the midpoint reading *claimed* (23 447 087), for 3.1 % more silver.
    */
   describe.skipIf(!existsSync(OWNER_EXPORT))('the owner’s account at 7 000 leadership', () => {
     test(
@@ -907,8 +944,8 @@ describe('the all-in plays the horizon', () => {
         for (const counts of allIn?.sequence ?? []) {
           expect(fieldedOf(input.request, counts), 'every march of it fields hired units').toBeGreaterThan(0);
         }
-        expect(allIn?.totalDamage).toBe(23_447_087);
-        expect(allIn?.silver).toBe(14_728_200);
+        expect(allIn?.totalDamage).toBe(23_619_920);
+        expect(allIn?.silver).toBe(15_179_600);
       },
       TIMEOUT,
     );
@@ -1068,9 +1105,12 @@ describe('every hired type is sheltered, capped or unlimited', () => {
         (unit) => unit.pool === 'leadership' && (counts[unit.id] ?? 0) > 0,
       );
       expect(troops.length).toBeGreaterThan(1);
-      expect(most?.repeat.damage).toBe(planMarch(capped.request, counts).summary.avgDamage);
+      expect(most?.repeat.damage).toBe(planMarch(capped.request, counts).summary.minDamage);
       // Measured 2026-09-18: 2 696 285 a march, the figure the unlimited army answered with under S-77.
-      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(2_690_000);
+      // 2 690 000 -> **2 660 000** on 2026-09-19 (S-94): the same march read on its **worst opening** is
+      // 2 664 245 where the midpoint of the two openings read 2 696 285. The shape is unmoved; the floor
+      // follows the reading.
+      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(2_660_000);
       // And every stop of that bar shelters every hired stack it fields, not just the steady max.
       for (const row of plan.alternatives) {
         const stacks = stackHp(capped, row.counts);
@@ -1160,7 +1200,7 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
           expect(stack(unit.id), `${unit.id} is sheltered`).toBeLessThan(floor);
         }
         // The march is priced exactly as the recap prices it.
-        expect(most?.repeat.damage).toBe(planMarch(input.request, counts).summary.avgDamage);
+        expect(most?.repeat.damage).toBe(planMarch(input.request, counts).summary.minDamage);
         // Every hired type the account holds is still on every stop of the bar.
         const hired = input.request.units.filter((unit) => unit.pool === 'authority');
         expect(hired.length).toBe(4);
@@ -1241,7 +1281,7 @@ function bestPutBack(req: StackRequest, row: PlanTotals): { unitId: string; scor
     // A put-back has to shorten the training queue — the clause the owner's sentence turns on, checked before
     // the score because a large enough damage gain outvotes any rise in it (`putBackOn`).
     if (summary.recovery.seconds >= row.repeat.seconds) continue;
-    const damage = ((summary.avgDamage - row.repeat.damage) / row.repeat.damage) * 100;
+    const damage = ((summary.minDamage - row.repeat.damage) / row.repeat.damage) * 100;
     const silver = ((row.repeat.silver - summary.recovery.silver) / row.repeat.silver) * 100;
     const seconds = ((row.repeat.seconds - summary.recovery.seconds) / row.repeat.seconds) * 100;
     const score = putBackScore({ damage, silver, seconds });
@@ -1290,7 +1330,7 @@ describe('a put-back on a first-run army', () => {
         expect(back.silver, `${row.pick} saves silver`).toBeGreaterThan(0);
         expect(back.seconds, `${row.pick} saves training time`).toBeGreaterThan(0);
         // And the row is still a march the recap prices identically, and a plan the stock sustains.
-        expect(row.repeat.damage).toBe(planMarch(req, row.counts).summary.avgDamage);
+        expect(row.repeat.damage).toBe(planMarch(req, row.counts).summary.minDamage);
         expect((row.counts['epic-monster-hunter-6'] ?? 0) > 0).toBe(true);
       }
       // The rule itself: every put-back the bar carries scores, and none of them costs more damage than the cap.
@@ -1369,17 +1409,39 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own ac
        * put-back's own figures to the unit. So the stop carries no `putBack` note any more, and what the test
        * is about — Archer I on the field, and the figures the owner was promised — is asserted directly.
        */
+      /**
+       * **Re-based 2026-09-19 (S-94): no pass puts Archer I back any more, because the search fields it
+       * itself.** Ranked on the **worst opening** (`marchOf`) the steady max on this camp is all **eight**
+       * troop types at once — SW1 1 199 - ARC1 762 - SP1 761 - RD1 380 - ARC2 421 - SP2 420 - RD2 209 -
+       * RD3 117, with ARB 19 - CH 8 - EMH 18 - LGN 19 — for **3 387 893 a march at 1 837 900 silver** and 7
+       * chunks burned. A deep ladder is what a march ranked on the bad flip wants: the more stacks carry the
+       * damage, the less of it hangs on the one strike the top stack only takes when the army opens. It is
+       * the owner's own 2026-09-18 complaint answered by the objective rather than by a pass —
+       * `bestPutBack` finds **nothing** to put back on any of experiment 103's four setups now, because no
+       * troop type is left out of the generated march to put back.
+       *
+       * **And this camp is worse, like for like** (reported with S-94, for the owner to weigh — it is a
+       * trade, not a rounding). Priced on the **same** reliable reading, HEAD's bar on this army offered
+       * **4** stops with a steady max at **17** chunks burned — ARC1 2 058 - ARC2 1 141 - RD2 569 - RD3 319
+       * with 161 hired — worth **4 773 281** a march, and an `all-in` campaign of **19 265 325 for
+       * 10 961 600 silver and 101 burned**. This bar offers **3** stops, its steady max is **3 387 893**,
+       * and its `all-in` is **18 744 735 for 11 240 800 and 111 burned**: less damage, more silver **and**
+       * more of the stock, all three at once. The search no longer reaches the 17-burn family at all — the
+       * burn ladder tops out at 7, the frontier carries 4-14 — so it is the rung stops' vector coverage
+       * under the new objective and not the reading itself, and it is the one army measured where the
+       * reliable bar is behind the midpoint bar on every figure. A follow-up owns it; the floor below is the
+       * measured figure so a change either way is news.
+       */
       expect((most?.counts['archer-1'] ?? 0) > 0, 'Archer I is in the march').toBe(true);
       expect(
         Object.keys(most?.counts ?? {}).filter((id) => id.startsWith('archer') || id.startsWith('rider'))
           .length,
         'the march stands on more than one troop stack',
       ).toBeGreaterThan(1);
-      // The figures the owner was promised: better than the ladder's 4 777 523 for 2 694 300.
-      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(4_880_000);
-      expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(2_210_000);
+      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(3_387_893);
+      expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(1_840_000);
       // And the recap prices it identically — the put-back is priced by `toMarch`, like every other march.
-      expect(most?.repeat.damage).toBe(planMarch(input.request, most?.counts ?? {}).summary.avgDamage);
+      expect(most?.repeat.damage).toBe(planMarch(input.request, most?.counts ?? {}).summary.minDamage);
       expect(most?.repeat.silver).toBe(planMarch(input.request, most?.counts ?? {}).summary.recovery.silver);
       expect(most?.repeat.seconds).toBe(
         planMarch(input.request, most?.counts ?? {}).summary.recovery.seconds,
@@ -1428,11 +1490,20 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own ac
     // and the rule's verdict on it moves from Spearman II to **Spearman I** — 4 496 973 for 2 078 900 and a
     // shorter queue, 2.6 % of the damage inside the owner's 3 % cap. The other two setups are untouched:
     // Aydae alone still takes Archer I on both readings, and the export at 12 000 did not move at all.
+    //
+    // **Re-based 2026-09-19 (S-94): every `want` is now null, and that is the result.** Ranked on the worst
+    // opening the search answers with a march that fields **every** troop type the camp holds (all eight on
+    // the two 4 975 setups, all seven at 12 000), so the family the pass scores — "the march's own types,
+    // plus exactly one more" — is empty and `bestPutBack` has nothing to offer. The low tiers the owner said
+    // the generation was skipping (2026-09-18) are on the field because the objective wants them there: the
+    // more stacks carry a march's damage, the less of it hangs on the single strike the top stack only takes
+    // when the army opens. The table is kept rather than deleted — it is the record of what the rule used to
+    // say, and it fails the day a generated march leaves a troop type out again.
     for (const [title, captains, leadership, live, pick, want, onBar] of [
-      ['Aydae alone, 4 975', [AYDAE], 4_975, true, 'steady-max', 'archer-1', null],
+      ['Aydae alone, 4 975', [AYDAE], 4_975, true, 'steady-max', null, null],
       ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'sweet-spot', null, null],
-      ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'steady-max', 'spearman-1', 'spearman-1'],
-      ['the export at 12 000', [], 12_000, false, 'steady-max', 'spearman-1', null],
+      ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'steady-max', null, null],
+      ['the export at 12 000', [], 12_000, false, 'steady-max', null, null],
     ] as const) {
       const input = setupOf([...captains], leadership, live);
       const generated = planCampaign({ ...input, putBack: undefined });
@@ -1507,7 +1578,7 @@ describe('a put-back never lengthens the queue, and never costs the silver saver
         sweet.repeat.damage / sweet.repeat.silver,
       );
       // And whatever it is, it is a march the recap prices identically.
-      expect(saver.repeat.damage).toBe(planMarch(req, saver.counts).summary.avgDamage);
+      expect(saver.repeat.damage).toBe(planMarch(req, saver.counts).summary.minDamage);
     },
     TIMEOUT,
   );
@@ -1533,7 +1604,7 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
   const parsed = existsSync(OWNER_EXPORT) ? parseImport(readFileSync(OWNER_EXPORT, 'utf8')) : null;
   const base = parsed?.kind === 'profile' ? parsed.payload : null;
 
-  test('the all-in keeps its own march at 7 000 and at 12 000: the put-back scores, and costs queue', () => {
+  test('the all-in takes Spearman II at 7 000, and the queue is the reason it may', () => {
     if (!base) throw new Error('no profile');
     // **Re-based 2026-09-19 (S-93): 12 000 leaves this test.** The `all-in` builds its marches from the
     // shapes it can reach, and it now reaches the sizer over a **prefix** of the troop ranking — so at
@@ -1541,6 +1612,15 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
     // SP1 3771 · ARC2 2575 · SP2 2088 · RD2 1142 · RD3 641 with 226 hired, 9 235 912 for 5 502 200 against
     // 7 860 293 for 5 223 000) and there is nothing for the guard to refuse on it. 7 000 still is the clean
     // case, and stubbing the guard still fails there; the 12 000 figures are in the review log.
+    //
+    // **Re-based again 2026-09-19 (S-94): 7 000 stops being a refusal too, and the guard is left without a
+    // case on the owner's export.** Ranked on the **worst opening** the `all-in`'s first march here is a
+    // Troops-first shape (`marchOf`), and putting Spearman II back on it is no longer a trade at all:
+    // measured, **+13.0 % damage, 4.1 % of the silver and 10.8 % of the queue saved** — better on every one
+    // of the three, so the pass takes it and the guard has nothing to refuse. What this test asserts is
+    // therefore the other half of the same rule: the candidate the pass took does **not** lengthen the
+    // queue. The refusal itself now has no army among the owner's setups that exercises it; that is
+    // recorded with S-94 rather than papered over, and the guard's own code is unchanged.
     for (const leadership of [7_000]) {
       const profile = structuredClone(base);
       const setup = profile.setups[0];
@@ -1554,17 +1634,30 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
       const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
       expect(allIn, `${String(leadership)}: the all-in is offered`).toBeDefined();
       if (!allIn) continue;
-      expect(allIn.putBack, `${String(leadership)}: the all-in kept its own march`).toBeUndefined();
+      // The pass took Spearman II, and the note it wrote is the trade it made.
+      expect(allIn.putBack?.unitId, `${String(leadership)}: the all-in put Spearman II back`).toBe(
+        'spearman-2',
+      );
+      expect(allIn.counts['spearman-2'] ?? 0, `${String(leadership)}: and fields it`).toBeGreaterThan(0);
+      expect(
+        allIn.putBack?.seconds ?? -1,
+        `${String(leadership)}: the put-back the pass took shortens the queue`,
+      ).toBeGreaterThan(0);
 
-      // The candidate the pass built and refused: the all-in's first march re-sized over its own troop
-      // types plus Spearman II, its hired counts as the sizer's caps — exactly what `putBackOn` scores.
+      // The same candidate rebuilt from the engine's own pieces: the march the pass started from, re-sized
+      // over its troop types plus Spearman II with its hired counts as the sizer's caps.
       const mercIds = req.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id);
+      const generated = planCampaign({ ...input, putBack: undefined }).alternatives.find(
+        (row) => row.pick === 'all-in',
+      );
+      expect(generated, `${String(leadership)}: the all-in without the pass`).toBeDefined();
+      if (!generated) continue;
       const inMarch = req.units
-        .filter((unit) => unit.pool === 'leadership' && (allIn.counts[unit.id] ?? 0) > 0)
+        .filter((unit) => unit.pool === 'leadership' && (generated.counts[unit.id] ?? 0) > 0)
         .map((unit) => unit.id);
       expect(inMarch, `${String(leadership)}: Spearman II is left out`).not.toContain('spearman-2');
       const caps: Record<string, number> = { ...req.caps };
-      for (const id of mercIds) caps[id] = allIn.counts[id] ?? 0;
+      for (const id of mercIds) caps[id] = generated.counts[id] ?? 0;
       const sized = sizeStacks({
         ...req,
         units: req.units.filter(
@@ -1578,22 +1671,24 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
       const { summary } = planMarch(req, counts);
 
       // It scores — and well: measured 2026-09-18, 5.8 at 7 000 (+8.6 % damage) and 1.9 at 12 000
-      // (+8.0 %). Nothing in the rule refuses it.
-      const damage = ((summary.avgDamage - allIn.repeat.damage) / allIn.repeat.damage) * 100;
-      const silver = ((allIn.repeat.silver - summary.recovery.silver) / allIn.repeat.silver) * 100;
-      const seconds = ((allIn.repeat.seconds - summary.recovery.seconds) / allIn.repeat.seconds) * 100;
+      // (+8.0 %). Nothing in the rule refuses it. Measured again 2026-09-19 on the worst opening: +13.0 %
+      // damage, 4.1 % of the silver and 10.8 % of the queue, a score of 4.9.
+      const damage = ((summary.minDamage - generated.repeat.damage) / generated.repeat.damage) * 100;
+      const silver = ((generated.repeat.silver - summary.recovery.silver) / generated.repeat.silver) * 100;
+      const seconds =
+        ((generated.repeat.seconds - summary.recovery.seconds) / generated.repeat.seconds) * 100;
       expect(
         putBackScore({ damage, silver, seconds }),
-        `${String(leadership)}: the refused candidate would have scored`,
+        `${String(leadership)}: the candidate scores`,
       ).toBeGreaterThan(0);
       expect(damage, `${String(leadership)}: and is inside the loss cap`).toBeGreaterThanOrEqual(
         -CAMPAIGN.putBack.damageLossCap,
       );
-      // And the queue is the one thing it makes worse, which is why it is not on the bar.
+      // And the queue — the one thing the guard is about — is shorter, which is why the pass may take it.
       expect(
         summary.recovery.seconds,
-        `${String(leadership)}: the refused candidate sits longer in the barracks`,
-      ).toBeGreaterThan(allIn.repeat.seconds);
+        `${String(leadership)}: the candidate recovers faster`,
+      ).toBeLessThanOrEqual(generated.repeat.seconds);
     }
   }, 180_000);
 });

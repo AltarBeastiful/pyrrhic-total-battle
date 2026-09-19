@@ -88,9 +88,9 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
         // that is the role that lets a *row* carry `aria-selected`, and it is what the raised ground
         // says in colour (design rule 24 — never colour alone).
         role="grid"
-        // The heads print "Damage" and "Silver" with no unit, so the unit is said once, here, where a
-        // reader meets the table (design rule 5: say it where it is expected, not five times over).
-        aria-label="Every plan on the trade, one repeated march each"
+        // The heads print "Worst" and "Silver" with no unit and no reading, so both are said once, here,
+        // where a reader meets the table (design rule 5: say it where it is expected, not five times over).
+        aria-label="Every plan on the trade, one repeated march each, at its worst opening"
       >
         <Table.Thead>
           <Table.Tr>
@@ -114,8 +114,20 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 picker and has no column heads at all) — but its figure tiles are exactly this shape, a glyph
                 then a short caps label ("🔒 MINIMUM DAMAGE", "🪙 SILVER"), and its ratios are written as
                 "DAMAGE / SILVER". Ours stay our own words (rule 26): "Per silver", "Per hired". */}
+            {/* **The recap's own 🔒, and its word shortened to one** (S-94, 2026-09-19). The column was
+                "🎯 Damage", which is the recap's mark and word for the *expected* damage — the midpoint of
+                the two openings the game's coin decides — while the figure under it has been the
+                **enemy-first** journal since the owner said he would not spend 3M silver on a coin flip.
+                Two names and two glyphs for one number, on two blocks of one screen, is what design rules 5
+                and 26 are about and rule 21 says of the marks.
+
+                The recap calls it "Worst opening" and this head says **"Worst"**, for the same reason the
+                objectives strip does (`TradeoffStrip.tsx`, where the four figures share one line): at
+                1400×900 the pane is 420 px and "🔒 Worst opening" widens the table past its column, which
+                design rule 17 and `e2e/generate.spec.ts` both refuse. The word the head drops is said once,
+                in the table's own name above — which is where its unit is said too. */}
             <Table.Th scope="col" ta="end">
-              <Glyph kind="averageDamage" /> Damage
+              <Glyph kind="minimumDamage" /> Worst
             </Table.Th>
             <Table.Th scope="col" ta="end">
               <Glyph kind="silver" /> Silver
@@ -156,7 +168,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 // the figure is read off the bar's tip (`PlanBar.tsx`) and carried here as the row's own
                 // name, where a screen reader meets it — never colour, never a column that pushes the table
                 // off its pane. The ratio cells are unchanged and still read as cells.
-                aria-label={`${planWords(point)}: ${compact(point.repeat.damage)} damage, ${compact(
+                aria-label={`${planWords(point)}: ${compact(point.repeat.damage)} worst opening, ${compact(
                   point.repeat.silver,
                 )} silver, ${duration(point.repeat.seconds)} to recover, ${compact(
                   point.repeat.gold,
@@ -186,7 +198,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
               >
                 <Table.Th scope="row" className={nameCell}>
                   {/* The name, and nothing beside it. It wore a 🎯 when the row was the one on screen —
-                      the same glyph heading the Damage column two cells along — and "the sweet spot"
+                      the same glyph heading the Worst column two cells along — and "the sweet spot"
                       under a row already named "Sweet spot" (design rules 5 and 21). The raised ground,
                       the heavier name and `aria-selected` say the first; the row's own name says the
                       second, as does the marker on the bar above. */}
@@ -220,7 +232,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                       radius="xs"
                       w={40}
                       role="progressbar"
-                      aria-label={`${planWords(point)}, damage a march`}
+                      aria-label={`${planWords(point)}, worst opening a march`}
                       aria-valuemin={0}
                       aria-valuemax={loudest}
                       aria-valuenow={point.repeat.damage}

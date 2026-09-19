@@ -26,6 +26,10 @@
  * and never read, which is a defect rather than a decision: the command bar's Objective control is live while
  * this method is chosen and changes nothing. See `PlanTotals` for how the two criteria are reported.
  *
+ * **Damage here means the worst opening** (S-94, 2026-09-19): the enemy-first journal's total, the figure the
+ * recap prints under that name, and never the midpoint of the two openings. One line decides it — `marchOf`,
+ * where the owner's reason is written out — and every figure this file reports follows from that one.
+ *
  * Pure data in, pure data out (ADR-0006): no React, no store, no DOM.
  */
 import type { UnitDef } from '../data/types';
@@ -220,6 +224,11 @@ export interface CampaignInput {
 export interface PlanMarch {
   /** Kill order: highest total HP first. */
   counts: Record<string, number>;
+  /**
+   * The march's **worst opening** — the enemy-first journal's total, which is `simulateBattle`'s `minDamage`
+   * on these counts to the unit and what the recap prints under that name. Not the midpoint of the two
+   * openings: see `marchOf` for the owner's reason (S-94, 2026-09-19).
+   */
   damage: number;
   silver: number;
   gold: number;
@@ -248,6 +257,7 @@ export interface PlanMarch {
 
 /** What one of a plan's identical marches is, on its own — see `PlanTotals.repeat`. */
 export interface PlanRepeat {
+  /** The repeated march's **worst opening**, the recap's `minDamage` on its counts (S-94; `marchOf`). */
   damage: number;
   silver: number;
   /** What the march's hired stacks cost to bring back: the engine prices mercenaries in gold, not silver. */
@@ -316,6 +326,11 @@ export interface PlanTotals {
    * and record only — the counts are the plan.
    */
   shape: 'ladder' | SizerMethod | 'winner';
+  /**
+   * The campaign's damage: the sum of its marches' **worst openings** — the repeats, the finale and the
+   * troops-only tail, or every march of a `sequence` — each of them `simulateBattle`'s `minDamage` on its own
+   * counts (S-94; `marchOf`). `tests/engine/plan-criteria.test.ts` holds it to the unit on every army.
+   */
   totalDamage: number;
   silver: number;
   /**
@@ -635,10 +650,44 @@ export function rankTroops(table: Effective[]): Effective[] {
 
 /**
  * One march, scored through the engine's own journal: the stacks are built from the counts exactly as
- * `simulateBattle` would build them, and the two journals (the enemy striking first, and us) give the damage
- * and the strikes. This is cheaper than a full simulation and just as exact — the round structure, the attack
- * order and the lost strikes all come from `battle.ts`, not from a closed form that assumes the two orders
- * agree (they do not, whenever a rung's count makes its base damage larger than the rung above it).
+ * `simulateBattle` would build them, and the journal gives the damage and the strikes. This is cheaper than a
+ * full simulation and just as exact — the round structure, the attack order and the lost strikes all come from
+ * `battle.ts`, not from a closed form that assumes the kill order and the attack order agree (they do not,
+ * whenever a rung's count makes its base damage larger than the rung above it).
+ *
+ * ---
+ *
+ * **The damage of a plan is the enemy-first journal's total — the bad flip, not the midpoint** (S-94; the
+ * owner, 2026-09-19: *"average damage is not average for sure; it's too risky for me to spend 3M silver on a
+ * coin flip to get 1M damage or 3M. We want reliable damage actually."*).
+ *
+ * The game decides who opens the fight, 50/50, and the two outcomes are two different battles: a stack at kill
+ * position 1 strikes **0** times when the enemy opens and **1** when we do (`battle.ts`, `expectedHits`), so
+ * `max − min` is exactly the opening stack's own per-hit damage. Until 2026-09-19 this line scored the
+ * **midpoint** of the two journals, which is a figure no single fight ever pays out: half the time the player
+ * spends the silver and the stock the bar quoted and is handed less damage than it printed. Measured over the
+ * thirteen armies of `tests/engine/plan-criteria.test.ts` (`tools/theorycraft/out/109-reliable-damage.md`
+ * §A): the midpoint stood 1.2–4.0 % above the worst opening on most stops, 9.3 % on the owner's live camp's
+ * sweet spot and **33 %** on a bear army's `all-in`, whose whole top stack strikes only if we open. That is
+ * the coin flip he is refusing, and it is widest exactly where the bar spends the most.
+ *
+ * So this is **the** definition, and everything the plan says about damage follows from it without a second
+ * reading anywhere: `PlanMarch.damage` (`toMarch`), `PlanRepeat.damage` and `PlanTotals.totalDamage`
+ * (`summarise`), the two ratios, the burn ladder and its knee, the band, the curve, the put-back and
+ * tighter-shape percentages, the `all-in`'s sequence and the troops-only tail are each computed from the
+ * figure returned here.
+ *
+ * **Hard-switched, with no `CampaignInput` option beside it**, on purpose. An `objective: 'reliable' |
+ * 'expected'` would have to be threaded through `makeScorer`, the ladder, the sizer shapes, the put-back and
+ * the tail to reach this line — every one of which would then have two behaviours to pin, two sets of floors
+ * in the criteria and two benchmark columns — to offer a reading the owner has just rejected for himself. The
+ * player who wants the other two figures already has them, on the march the bar hands him: the Battle card's
+ * recap prints **Worst opening**, the expected damage and the best, and `simulateBattle` is untouched. One
+ * definition here, three figures there.
+ *
+ * The strikes follow the damage for the same reason — they are that journal's own hit count, and a figure
+ * printed beside a damage taken from a different battle would describe neither. Building one journal instead
+ * of two also halves the work in the hottest loop of the search.
  */
 function marchOf(
   stacks: { entry: Effective; count: number }[],
@@ -676,7 +725,6 @@ function marchOf(
     })
     .sort((a, b) => b.totalHp - a.totalHp);
   const enemyFirst = buildJournal(built, enemyStacks, false);
-  const armyFirst = buildJournal(built, enemyStacks, true);
   const byId = new Map(stacks.map((stack) => [stack.entry.id, stack.entry]));
   let silver = 0;
   let gold = 0;
@@ -702,11 +750,11 @@ function marchOf(
     }
   }
   return {
-    damage: Math.round((enemyFirst.totalDamage + armyFirst.totalDamage) / 2),
+    damage: Math.round(enemyFirst.totalDamage),
     silver,
     gold,
     mercLost,
-    strikes: (enemyFirst.friendlyHits + armyFirst.friendlyHits) / 2,
+    strikes: enemyFirst.friendlyHits,
     stacks: built,
   };
 }
@@ -3176,6 +3224,61 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (generated) generatedOf.set(tailed, generated);
     }
   }
+  /**
+   * **The `all-in` is not offered when a stop beside it beats it outright** (S-94, 2026-09-19; the owner,
+   * 2026-09-18: *"more damage with a lot of merc spent should trigger a failing test as we're using too much
+   * of a rare resource"* — and worse than that, a stop that spends **more** silver *and* more of the stock
+   * than the one beside it and hits **less** hard).
+   *
+   * That stop is on the bar for one reason: its first march **fields** more hired units than the steady max's
+   * repeat, and the player may want the stock spent fastest (*"a last stop: all mercs possible"*). It is
+   * allowed to cost whatever it costs for that. What it may not be is behind on **all three** of the figures
+   * a stop prints — the campaign's damage, its silver and the hired units burned for good — because then it
+   * has bought nothing at all with what it spent, and its reason for being on the bar has gone. The same
+   * sentence the put-back pass already makes about it ("a put-back that took it under that line would leave
+   * the bar carrying a stop whose own reason for being there had gone"), on the campaign rather than on the
+   * hired count.
+   *
+   * The criterion that says so is S-93's — *"no stop of the bar is beaten by another stop of the same bar"*
+   * in `tests/engine/plan-criteria.test.ts`, written when the tighter shape's own prefix shapes produced one.
+   * It held by construction until the plan moved onto the worst opening, and then stopped holding on two
+   * armies: the owner's export at 12 000, where the `all-in` came out at **31 308 140 for 23 696 200 silver
+   * and 90 burned** against the steady max's **31 546 458 for 18 790 400 and 67**, and his live camp, at
+   * **11 815 339 for 11 241 300 and 130** against **12 086 359 for 9 849 200 and 37**. Both bars are one stop
+   * shorter now, and honest.
+   *
+   * **Only the `all-in` is dropped, only as the beaten row, and only when it burns strictly more of the
+   * stock.** The owner's own sentence is "more silver *and* more of the stock for less damage", and the
+   * stock is the half that matters: when the two burn the **same** chunks, the difference between them is
+   * *tempo*, which the campaign's three figures cannot see. Measured on a first-run army holding ten Bear V,
+   * 2026-09-19 **on this reading**: the `all-in` plays 10 · 9 · 8 · 7 for **20 893 375 over four marches at
+   * 36 013 400 silver**, the sweet spot six bears a march for **20 769 608 at 32 525 600**, and both burn the
+   * same **4** chunks — **10.7 % more silver for 0.6 % more damage**, with the stock spent four times faster.
+   * That is a trade a player may take or refuse, and the point of the stop is that the bar can show it.
+   * (Experiment 101 §B measured the same shape under the midpoint reading, where it was a *poor* deal: 40 %
+   * more silver for slightly **less** damage. The figures above are this engine's.) Dropping it there would
+   * take away the offer the stop exists to make.
+   *
+   * The other four stops are rungs of the burn ladder and are never dropped here: the `all-in` beating one of
+   * them is the bar *working*, and it does on a stock smaller than a chunk, where "three bears once, then two,
+   * then one" and "one bear a march" burn the same chunk for the same silver.
+   * `tests/engine/plan-criteria.test.ts` states both halves.
+   *
+   * Last of all, after the tail, so the comparison is on the campaigns the rows actually carry.
+   */
+  const lastIn = stops.findIndex((row) => row.pick === 'all-in');
+  if (lastIn >= 0) {
+    const row = stops[lastIn] as PlanRow;
+    const beaten = stops.some(
+      (other) =>
+        other !== row &&
+        other.totalDamage >= row.totalDamage &&
+        other.silver <= row.silver &&
+        other.mercLost < row.mercLost,
+    );
+    if (beaten) stops.splice(lastIn, 1);
+  }
+
   const bestStop = (of: (row: PlanTotals) => number): PlanRow | undefined =>
     stops.reduce<PlanRow | undefined>(
       (best, row) => (best === undefined || of(row) > of(best) ? row : best),

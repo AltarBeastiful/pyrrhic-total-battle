@@ -645,13 +645,15 @@ test('complete optimization answers with a plan, and the March draws it instead 
   // the answer's headline on the row either way.
   const fold = screen.getByRole('button', { name: /^Plan/ });
   expect(fold.getAttribute('aria-expanded')).toBe('true');
-  expect(fold.textContent).toContain('damage a march');
+  expect(fold.textContent).toContain('worst opening a march');
 
   // The trade the plan chose from, one row per answer the engine offers: a plan the player may be asked to
   // march.
   // Its name carries the unit its column heads stopped repeating (S-59 screen review, 2026-09-16), and it
   // is a `grid` because each of its rows is a control the player picks between.
-  const trade = screen.getByRole('grid', { name: 'Every plan on the trade, one repeated march each' });
+  const trade = screen.getByRole('grid', {
+    name: 'Every plan on the trade, one repeated march each, at its worst opening',
+  });
   expect(within(trade).getAllByRole('row').length).toBeGreaterThan(2);
 
   // And it folds away on request: the chevron is how a player whose pane no longer sticks gets one that
@@ -660,7 +662,7 @@ test('complete optimization answers with a plan, and the March draws it instead 
   await waitFor(() => {
     expect(fold.getAttribute('aria-expanded')).toBe('false');
   });
-  expect(fold.textContent).toContain('damage a march');
+  expect(fold.textContent).toContain('worst opening a march');
 
   // And it *replaces* the objectives comparison: five more searches to compare one battle would explain
   // nothing that a plan over ten marches has not already said.

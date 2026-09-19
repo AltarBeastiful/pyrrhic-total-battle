@@ -413,7 +413,7 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // The plan itself, **open on arrival** — it is part of the answer, not a fold to hunt for (S-59). No tap.
   const fold = march.getByRole('button', { name: /^Plan / });
   await expect(fold).toHaveAttribute('aria-expanded', 'true');
-  await expect(fold).toContainText(/damage a march/);
+  await expect(fold).toContainText(/worst opening a march/);
   await expect(fold).toContainText(/\d+ marches?/);
 
   // **The army first, the plan after it** (owner, 2026-09-16: *"we should first see the army then the
@@ -434,11 +434,15 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // hired stock that does not come back.
   // A `grid` since the screen review of 2026-09-16: every row of it is a control, and the unit its heads
   // stopped repeating is carried once, in the table's own name.
-  const trade = march.getByRole('grid', { name: 'Every plan on the trade, one repeated march each' });
+  const trade = march.getByRole('grid', {
+    name: 'Every plan on the trade, one repeated march each, at its worst opening',
+  });
   await expect(trade).toBeVisible();
   // A glyph and two words per head, on one line: they read "Damage a march" until an auto-laid table in a
-  // 420 px pane set them as "Damage a / march" and "Silver / a / march" (design rule 19).
-  await expect(trade.getByRole('columnheader', { name: 'Damage', exact: true })).toBeVisible();
+  // 420 px pane set them as "Damage a / march" and "Silver / a / march" (design rule 19). The damage head
+  // is the recap's own name for the figure under it since S-94 (2026-09-19) — the plan is ranked and
+  // printed on the **worst opening**, and one thing has one name through the flow (design rules 5 and 26).
+  await expect(trade.getByRole('columnheader', { name: 'Worst', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Silver', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Hired lost' })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();

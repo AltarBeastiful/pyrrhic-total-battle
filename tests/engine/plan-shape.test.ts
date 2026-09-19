@@ -183,16 +183,30 @@ describe('the search does not get worse', () => {
     // what this test exists to notice: **18 333 467 → 18 617 972** damage over 15 → **17** marches, fielding
     // five of each hired type a march instead of seven (a thriftier march lasts longer), for
     // 33 284 700 → 37 966 200 silver and 45 → **51** hired units lost. Damage is the objective and it went up.
-    expect(PLAN.marches).toBe(17);
-    expect(PLAN.totalDamage).toBe(18_617_972);
-    expect(PLAN.silver).toBe(37_966_200);
-    expect(PLAN.mercLost).toBe(51);
+    //
+    // **Re-based 2026-09-19 (S-94): the plan's damage is the enemy-first journal's, not the midpoint of the
+    // two openings** (`engine/plan.ts`, `marchOf` — the owner: *"it's too risky for me to spend 3M silver on
+    // a coin flip"*). This army is where the old reading was doing the most work, and the new shape is the
+    // point of the change rather than a casualty of it: the frozen plan was **two** enormous troop stacks
+    // (Archer II 2 569 · Archer III 1 417) carrying five of each hired type, and the top one is the enemy's
+    // first kill — it strikes once if we open and **not at all** if the monster does. Ranked on the bad
+    // flip the search answers with **four** troop rungs (Catapult I 143 · Archer III 440 · Archer II 767 ·
+    // Archer I 1 354) carrying **nine** of each hired type, a march whose damage does not depend on the
+    // coin: 17 340 367 over **13** marches for 19 604 400 silver and 39 hired units lost, against
+    // 18 617 972 over 17 for 37 966 200 and 51. Half the silver, a quarter less of the stock, and a campaign
+    // worth 93 % of a figure the player was only ever handed half the time.
+    expect(PLAN.marches).toBe(13);
+    expect(PLAN.totalDamage).toBe(17_340_367);
+    expect(PLAN.silver).toBe(19_604_400);
+    expect(PLAN.mercLost).toBe(39);
     expect(PLAN.march.counts).toEqual({
-      'archer-2': 2_569,
-      'archer-3': 1_417,
-      'arbalester-6': 5,
-      'arbalester-7': 5,
-      'chariot-6': 5,
+      'catapult-1': 143,
+      'archer-3': 440,
+      'archer-2': 767,
+      'archer-1': 1_354,
+      'arbalester-6': 9,
+      'arbalester-7': 9,
+      'chariot-6': 9,
     });
     // 11 → 9 → **3** on 2026-09-15. The list stopped being an even sample of the frontier and became the
     // **named picks** the owner asked for — "a few 4-5 common, good picks to have a slider control how much
@@ -213,7 +227,9 @@ describe('the search does not get worse', () => {
     expect(PLAN.alternatives).toHaveLength(4);
     // 309 → **310** on 2026-09-18 with the per-unit sweep vectors: the frontier carries one more plan, and
     // the bar still carries four stops, so one more is left out. Nothing the search used to find was lost.
-    expect(PLAN.leftOut).toBe(310);
+    // 310 → **288** on 2026-09-19 (S-94): the undominated set is smaller on the worst opening, because two
+    // plans that used to be told apart by half a strike of a top stack now tie and one of them is dominated.
+    expect(PLAN.leftOut).toBe(288);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained
@@ -225,7 +241,8 @@ describe('the search does not get worse', () => {
     // and the bar is the same bar (the two assertions above are unmoved); what changed is the table under
     // it. This army's band is a wide one — 190 plans on the frontier — which is why 14 rows here against the
     // two to four a real account's band comes to.
-    expect(PLAN.curve).toHaveLength(14);
+    // 14 → **13** on 2026-09-19 (S-94): one silver level fewer, with the band above.
+    expect(PLAN.curve).toHaveLength(13);
   });
 
   test('and the two rates it reaches are floors, not ceilings', () => {
@@ -233,9 +250,14 @@ describe('the search does not get worse', () => {
     // assertion that fails if the search loses a lever (the scale, the counts, the finale).
     // 18 333 467 → 18 617 972 on 2026-09-18 (the per-unit sweep vectors, see above). The two rates are
     // unmoved to the unit: 2.4942 a silver and 816 790 a mercenary.
-    expect(PLAN.totalDamage).toBeGreaterThanOrEqual(18_617_972);
-    expect(PLAN.mostEfficient?.damagePerSilver ?? 0).toBeGreaterThanOrEqual(2.49);
-    expect(PLAN.mostThrifty?.damagePerMercenary ?? 0).toBeGreaterThanOrEqual(816_726);
+    // **Re-based 2026-09-19 (S-94)**: all three are the same quantities read on the **worst opening** rather
+    // than on the midpoint of the two openings, so they are floors at a new level and not a search that got
+    // worse — 18 617 972 → **17 340 367** damage, 2.4942 → **2.3192** a silver, 816 790 → **661 893** a
+    // mercenary. The note above says what the plan became and why. They are floors as they always were: a
+    // change that finds more reliable damage on this army passes here.
+    expect(PLAN.totalDamage).toBeGreaterThanOrEqual(17_340_367);
+    expect(PLAN.mostEfficient?.damagePerSilver ?? 0).toBeGreaterThanOrEqual(2.31);
+    expect(PLAN.mostThrifty?.damagePerMercenary ?? 0).toBeGreaterThanOrEqual(661_893);
     expect(PLAN.recommend).toBeDefined();
     // **Every name is true of the row that wears it** (S-59): no plan the bar carries beats the row named for
     // a figure, on that figure. What the UI may rely on is the names, not the winner's presence — the search

@@ -198,6 +198,11 @@ function fourThousand(): Scenario {
     // four marches at 6 241 000 silver, against 8 154 596 for 6 250 700 — more damage for slightly less
     // silver — and the gap to TotalStack's captured answer closes from 9.3 % to **0.25 %** (8 415 312
     // against 8 394 732). It is the widest of the two put-backs this file measures; the floors are unmoved.
+    // **Re-based 2026-09-19 (S-94), every row priced on the worst opening.** The bar does not move — three
+    // stops, the same counts, the same burn, a coin flip of 1.1–1.3 % on each of them — and the shares rise
+    // because TotalStack's captured answer and the Generate rows give up more of themselves than ours do:
+    // the sizers 0.999 → **1.000** and the two captured answers 0.968 → **0.972**. **Neither pin is
+    // re-based** (see the bear ×1 case above): 0.96 and 0.93 stand, and both still pass.
     pinned: {
       refuses: false,
       stops: 3,
@@ -261,6 +266,20 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // sweet spot on both ratios, and its best stop a silver is 0.993 of theirs. The search also got
       // **five times faster** on this case — 7 113 ms → 1 404 ms — because a sheltered vector collapses onto
       // the same counts from many directions and the climb stops re-scoring them.
+      // **Re-based 2026-09-19 (S-94), the plan ranked and priced on the worst opening.** The bar moves left
+      // and grows: **4 → 5 stops**, because the ladder's thrift end improves on the reliable reading and a
+      // **silver saver** is offered again at 7 burned (3 583 107 a march for 1 851 500 silver, 511 872 a
+      // hired unit). The knee follows it from the 11-burn rung to the **10** — the sweet spot is 4 870 455 a
+      // march where the 11 was 5 230 687 — the steady max climbs from the 13 to the **14** at 5 913 067
+      // (+2.6 % of reliable damage), and the `all-in` gains the most of any stop on this account:
+      // 5 484 951 → **6 603 524**, **+20.4 %**, its 27-burn ladder replaced by a Troops-first shape with a
+      // Spearman II put-back. Shares: the sizers 0.903 → **0.959** and TotalStack's best answer on this
+      // window 1.436 → **1.719** — the captured answers are searched on average damage and lose a third of
+      // themselves at this reading.
+      // **No pin here is re-based** (owner, 2026-09-19: a new baseline is registered by him, not by us).
+      // `damageFloor` 0.89 and `externals` 1.42 stand and still pass; **`stops` stays 4 and now FAILS**,
+      // because the reliable bar offers five. The measured five-stop bar is in
+      // `tests/engine/plan-baseline.proposed.json` for him to register.
       pinned: {
         refuses: false,
         stops: 4,
@@ -295,6 +314,20 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // hardest campaign on the bar is the `all-in` at **33 028 417** for 22 702 100, against 32 518 195, so
       // the plan's share of the sizers rises: 0.94 → **0.96** (the best sizer sequence is unmoved at
       // 34 283 252) and of TotalStack's best answer on this window 1.34 → **1.36**.
+      // **Re-based 2026-09-19 (S-94), the plan ranked and priced on the worst opening.** Five stops still,
+      // and the whole bar shifts one rung left: the silver saver 9 → **8** burned (4 763 589 a march), the
+      // sweet spot 10 → **9** (6 269 353), the more-mercs and steady-max rungs unmoved at 13 and 17, the
+      // `all-in` at 24. The hardest campaign is the steady max's 31 546 458 where the midpoint reading gave
+      // the `all-in` 33 028 417, and the best sizer sequence (Troops first · Generate) falls from 34 283 252
+      // to 33 277 720 — less than the plan does — so this is the one army of the ten whose share **falls**:
+      // 0.963 → **0.948**. TotalStack's best is barely moved: 1.367 → **1.378**. And the bar is
+      // **5 → 4 stops**: the `all-in` played 31 308 140 for 23 696 200 silver and 90 burned against the
+      // steady max's 31 546 458 for 18 790 400 and 67 — behind on every figure a stop prints — so the engine
+      // stopped offering it (S-94, `plan.ts`).
+      // **No pin here is re-based** (owner, 2026-09-19). Two of them now **FAIL** and are left failing for
+      // him to judge: `damageFloor` 0.96 against a measured 0.948 (a scenario that got worse on the share,
+      // and the one army of the ten that did), and `stops` 5 against the four the bar now offers. The
+      // measured figures are in `tests/engine/plan-baseline.proposed.json`.
       pinned: {
         refuses: false,
         stops: 5,
@@ -311,6 +344,17 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // Measured 2026-09-18: 99.1 %, four stops.
       // TotalStack on the owner's window: Total Optimization 30 466 476 for 31 335 200; the plan's 31 218 724 is
       // 1.02× it and wins a hired.
+      // **Re-based 2026-09-19 (S-94), the plan ranked and priced on the worst opening.** Four stops still,
+      // the same rungs but for the silver saver, which climbs 4 → **5** burned and gains **+25.4 %** of
+      // reliable damage a march there (3 612 405 → 4 528 272): its old march leant on one Spearman I stack
+      // worth 600 387 a strike that only lands if the army opens. The other three stops keep their counts
+      // and give up 0.9–1.4 % with the reading. The sizers lose much more, so the plan's share rises past
+      // parity: 1.004 → **1.176**. TotalStack's captured answers hold up better than the sizers do and the
+      // plan's edge over them narrows: 1.038 → **1.018**, still a win.
+      // **No pin here is re-based** (owner, 2026-09-19). `damageFloor` 0.99 stands and passes;
+      // **`externals.damageFloor` 1.02 now FAILS** against the measured 1.018 — the plan's lead over
+      // TotalStack's own answers narrows on this army, which is exactly the kind of "worse" the owner wants
+      // to judge himself. `tests/engine/plan-baseline.proposed.json` carries the measured pair.
       pinned: {
         refuses: false,
         stops: 4,
@@ -339,6 +383,26 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // and the Tier ladder's 4.21 a silver rides on legionaries that cost gold, not silver: 41 % of it is pinned.
       // TotalStack on the owner's window: its priority search fields ~2 000 unlimited legionaries at no silver for
       // 80 137 589 — no yardstick, as with the sizers; the plan's 30 107 115 is 37 % of it and wins a hired.
+      // **Re-based 2026-09-19 (S-94), the plan ranked and priced on the worst opening.** This is the army
+      // where the rivals' coin flip was largest and the pin least meaningful: the legionary wall both the
+      // sizers and TotalStack answer here is ~2 000 unlimited legionaries in one stack, which strikes only
+      // if the army opens — 36 832 597 over four marches at the midpoint, **and the same 36 832 597 is what
+      // it keeps** once priced on the bad flip only because its repeats carry it, while the *expected*
+      // figure it used to be measured against was 80 137 589. The plan's share of it therefore rises
+      // 0.401 → **0.861** on both the sizers and the captured answers (`damageFloor` and `externals`
+      // 0.37 → **0.86**), and the pin finally says something. The bar itself loses a stop — **5 → 4**: the
+      // silver saver is gone, because the ladder's thrift end no longer clears the sweet spot on damage a
+      // silver at this reading — the knee moves 13 → **11** burned, and the steady max climbs 17 → **19**
+      // for **+5.6 %** of reliable damage a march (7 566 423 → 7 987 079). And `silverFloor` could go: it is
+      // 0.41 because the Tier ladder's 4.21 damage a silver rode on that same legionary wall, and on the
+      // reliable reading the wall's damage collapses while its silver does not — the plan's best stop a
+      // silver is now **1.075×** the best sizer sequence's, so the case would hold the file's ordinary 95 %
+      // floor like every other army.
+      // **No pin here is re-based** (owner, 2026-09-19). `damageFloor` 0.37, `externals` 0.37 and
+      // `silverFloor` 0.41 all stand and all pass — by a wide margin now, which is the discrepancy for him
+      // to judge; **`stops` stays 5 and now FAILS**, because the reliable bar offers four (the silver saver
+      // is gone: nothing left of the sweet spot clears it on damage a silver at this reading).
+      // `tests/engine/plan-baseline.proposed.json` carries the measured bar.
       pinned: {
         refuses: false,
         stops: 5,
@@ -371,6 +435,19 @@ export function commonScenarios(): Scenario[] {
       // `sweetNotAheadOnEither` false → **true**, and it is an exact tie rather than a loss: with one bear a march
       // and troops for the rest, the stop plays **literally the Tier ladder sizer's campaign** — 18 554 768
       // for 32 525 600 on both rows, to the unit — and the test counts an equal pair of ratios as beaten.
+      // **Re-based 2026-09-19 (S-94), every row priced on the worst opening.** The plan's own stop is
+      // unmoved — one bear a march, the same counts, 18 189 008 over four marches where the midpoint read
+      // 18 554 768 (98.0 % of it) — but the Tier ladder's **Generate** row, which searches on *average*
+      // damage, loses far more of itself: 23 899 764 → 18 535 192, because the march it answers leans on a
+      // stack that only strikes when the army opens. So the plan's share of the best sizer sequence rises
+      // 0.776 → **0.981** on the same marches. The stop count, the counts and `sweetNotAheadOnEither` are
+      // untouched: the tailed campaign is still literally the Tier ladder sizer's, 18 189 008 for 32 525 600
+      // on both rows at this reading too.
+      // **The pin is NOT re-based** (owner, 2026-09-19: *"the benchmark is like non-regression tests. A
+      // given scenario should not be worse, or it's a discrepancy, or a new baseline needs to be registered
+      // by me if the trade is ok."*). `damageFloor` stays at the 0.77 it was measured at on the midpoint
+      // reading; the reliable figure above is in `tests/engine/plan-baseline.proposed.json` for him to
+      // register. This floor **passes** at 0.98 measured against 0.77, so nothing here fails.
       pinned: { refuses: false, stops: 1, sweetNotAheadOnEither: true, damageFloor: 0.77, winsHired: false },
     },
     {
@@ -387,6 +464,11 @@ export function commonScenarios(): Scenario[] {
       // 4 835 042 / 8 131 400 / 1 burned. `sweetNotAheadOnEither` false → **true** for the same reason as ×1: the
       // tailed campaign *is* the Tier ladder sizer's, 18 779 168 for 32 525 600 on both rows, and an equal
       // pair of ratios counts as beaten.
+      // **Re-based 2026-09-19 (S-94), every row priced on the worst opening**, for the same reason as ×1 and
+      // by the same arithmetic: the stop is the same march (18 413 408 over four marches against the
+      // midpoint's 18 779 168, 98.1 % of it) and the sizers' average-damage Generate rows give up much more,
+      // so the share rises 0.783 → **0.989**. Nothing else on this case moves. The pin is **not** re-based
+      // (see ×1 above and `plan-baseline.proposed.json`): it stays at 0.78 and passes.
       pinned: { refuses: false, stops: 1, sweetNotAheadOnEither: true, damageFloor: 0.78, winsHired: false },
     },
     {
@@ -418,6 +500,15 @@ export function commonScenarios(): Scenario[] {
       // this case's hardest campaign at 19 115 768, so `damageFloor` stays 0.79 and the externals' 0.75, and
       // the sweet spot is still beaten on both ratios by the Tier ladder sizer (0.577 / 6 259 723 against
       // 0.588 / 6 371 923), which is what `sweetNotAheadOnEither` has said here since the shelter went in.
+      // **Re-based 2026-09-19 (S-94), the plan ranked and priced on the worst opening.** This is the army
+      // where the old reading cost the most: the `all-in`'s first march stood one enormous Archer III stack
+      // that strikes **once if we open and not at all if the monster does** — 6 054 272 expected against
+      // 4 044 264 worst, a 33 % coin flip on the dearest stop of the bar (`out/109-reliable-damage.md` §A).
+      // Ranked on the bad flip the search finds a different first march for the same one chunk burned:
+      // 4 855 802 worst against 4 044 264, **+20.1 %** of reliable damage, and the campaign 16 539 794 →
+      // 19 411 328. With the sizers re-priced too the plan's share is 0.941 → **1.000** and TotalStack's
+      // best 0.891 → **0.875**, both stops kept. **Neither pin is re-based** (see ×1 above): 0.79 and 0.75
+      // stand, both pass, and the measured pair is in `plan-baseline.proposed.json` for the owner.
       pinned: {
         refuses: false,
         stops: 2,
@@ -455,6 +546,12 @@ export function commonScenarios(): Scenario[] {
       // now this case's hardest campaign, so the plan's share of the sizers is 86.5 % → **86.3 %** (the floor
       // of 0.86 still holds) and of TotalStack's priority search 82.1 % → **81.9 %**, which is the one pin
       // that moves: 0.82 → **0.81**. Both stops, both ratios and the stop count are otherwise unmoved.
+      // **Re-based 2026-09-19 (S-94), the plan ranked and priced on the worst opening.** The same Archer III
+      // coin flip as ×3 sat on this bar's `all-in` — 6 316 072 expected against 4 306 064 worst, 31.8 % — and
+      // ranking on the bad flip buys **+25.0 %** of reliable damage a march there (5 384 084), the sizer's
+      // own shape with a Spearman II put-back rather than the one giant stack. The sweet spot's six bears are
+      // untouched. Shares: the sizers 0.996 → **0.988** and TotalStack's priority search 0.945 → **0.930**.
+      // **Neither pin is re-based** (see ×1 above): 0.86 and 0.81 stand and both pass.
       pinned: {
         refuses: false,
         stops: 2,
@@ -470,6 +567,12 @@ export function commonScenarios(): Scenario[] {
       externals: [],
       // Measured 2026-09-18: 98.8 %, three stops (no silver saver, no more-mercs rung).
       // TotalStack's M's Preservation: 30 587 159 over four marches; the plan reaches 98.2 % and wins a hired.
+      // **Re-based 2026-09-19 (S-94), every row priced on the worst opening.** The quietest army of the ten:
+      // the coin flip here is 1.2–1.9 % on every stop (`out/109-reliable-damage.md` §A) and the bar does not
+      // move at all — the same three stops, the same counts, the same burn. Only the level drops with the
+      // reading, and it drops on the rivals too, so the two shares barely shift: the sizers 0.996 →
+      // **0.993** and TotalStack's M's Preservation 0.991 → **0.987**. **Neither pin is re-based** (see the
+      // bear ×1 case above): 0.98 and 0.98 stand, and both still pass.
       pinned: {
         refuses: false,
         stops: 3,

@@ -1,0 +1,2269 @@
+{
+ "reading": "reliable",
+ "run": "2026-09-19T02:13:26.223Z",
+ "scenarios": [
+  {
+   "label": "first-run army, Bear V ×1 (20 000 leadership)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 1,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 1,
+     "marches": 4,
+     "repeat": {
+      "min": 4631402,
+      "avg": 4722842,
+      "max": 4814282,
+      "silver": 8131400,
+      "mercLost": 1
+     },
+     "campaign": {
+      "min": 18189008,
+      "avg": 18554768,
+      "silver": 32525600
+     },
+     "gap": {
+      "what": "swordsman-1 3,048",
+      "hit": 182880,
+      "isTopHp": true
+     },
+     "putBack": null
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18189008,
+     "avg": 18554768,
+     "silver": 32525600,
+     "burned": 1
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18535192,
+     "avg": 23899764,
+     "silver": 56000000,
+     "burned": 1
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18189008,
+     "avg": 18554768,
+     "silver": 32525600,
+     "burned": 1
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18535192,
+     "avg": 23899764,
+     "silver": 56000000,
+     "burned": 1
+    }
+   ],
+   "frontier": {
+    "rows": 2,
+    "widest": {
+     "what": "8 stacks · 1 hired · 1.2M silver a march (706,825 expected, 681,782 worst)",
+     "gap": 0.03543026916139073
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "first-run army, Bear V ×2 (20 000 leadership)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 1,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 1,
+     "marches": 4,
+     "repeat": {
+      "min": 4743602,
+      "avg": 4835042,
+      "max": 4926482,
+      "silver": 8131400,
+      "mercLost": 1
+     },
+     "campaign": {
+      "min": 18413408,
+      "avg": 18779168,
+      "silver": 32525600
+     },
+     "gap": {
+      "what": "swordsman-1 3,048",
+      "hit": 182880,
+      "isTopHp": true
+     },
+     "putBack": null
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18413408,
+     "avg": 18779168,
+     "silver": 32525600,
+     "burned": 2
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18609992,
+     "avg": 23974564,
+     "silver": 56000000,
+     "burned": 2
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18413408,
+     "avg": 18779168,
+     "silver": 32525600,
+     "burned": 2
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18609992,
+     "avg": 23974564,
+     "silver": 56000000,
+     "burned": 2
+    }
+   ],
+   "frontier": {
+    "rows": 7,
+    "widest": {
+     "what": "8 stacks · 2 hired · 2.5M silver a march (1,414,245 expected, 1,364,088 worst)",
+     "gap": 0.03546556643297307
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "first-run army, Bear V ×3 (20 000 leadership)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 1,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 1,
+     "marches": 4,
+     "repeat": {
+      "min": 4631402,
+      "avg": 4722842,
+      "max": 4814282,
+      "silver": 8131400,
+      "mercLost": 1
+     },
+     "campaign": {
+      "min": 18413408,
+      "avg": 18779168,
+      "silver": 32525600
+     },
+     "gap": {
+      "what": "swordsman-1 3,048",
+      "hit": 182880,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "elite",
+     "burn": 1,
+     "marches": 4,
+     "repeat": {
+      "min": 4855802,
+      "avg": 4947242,
+      "max": 5038682,
+      "silver": 8131400,
+      "mercLost": 1
+     },
+     "campaign": {
+      "min": 18750008,
+      "avg": 19115768,
+      "silver": 32525600
+     },
+     "gap": {
+      "what": "swordsman-1 3,048",
+      "hit": 182880,
+      "isTopHp": true
+     },
+     "putBack": null
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18750008,
+     "avg": 19115768,
+     "silver": 32525600,
+     "burned": 3
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18722192,
+     "avg": 24086764,
+     "silver": 56000000,
+     "burned": 3
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18750008,
+     "avg": 19115768,
+     "silver": 32525600,
+     "burned": 3
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18722192,
+     "avg": 24086764,
+     "silver": 56000000,
+     "burned": 3
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 19022916,
+     "avg": 19388676,
+     "silver": 32535200,
+     "burned": 3
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 21427548,
+     "avg": 25439016,
+     "silver": 56000000,
+     "burned": 3
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 19022916,
+     "avg": 19388676,
+     "silver": 32535200,
+     "burned": 3
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 18778808,
+     "avg": 19144808,
+     "silver": 32529600,
+     "burned": 3
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 18741088,
+     "avg": 24096024,
+     "silver": 56000000,
+     "burned": 3
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 18778808,
+     "avg": 19144808,
+     "silver": 32529600,
+     "burned": 3
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 18778808,
+     "avg": 19144808,
+     "silver": 32529600,
+     "burned": 3
+    }
+   ],
+   "frontier": {
+    "rows": 3,
+    "widest": {
+     "what": "8 stacks · 1 hired · 1.2M silver a march (706,825 expected, 681,782 worst)",
+     "gap": 0.03543026916139073
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "first-run army, Bear V ×10 (20 000 leadership)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 1,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 1,
+     "marches": 4,
+     "repeat": {
+      "min": 5192402,
+      "avg": 5283842,
+      "max": 5375282,
+      "silver": 8131400,
+      "mercLost": 1
+     },
+     "campaign": {
+      "min": 20769608,
+      "avg": 21135368,
+      "silver": 32525600
+     },
+     "gap": {
+      "what": "swordsman-1 3,048",
+      "hit": 182880,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "ms",
+     "burn": 1,
+     "marches": 4,
+     "repeat": {
+      "min": 5384084,
+      "avg": 5616757,
+      "max": 5849430,
+      "silver": 9920400,
+      "mercLost": 1
+     },
+     "campaign": {
+      "min": 20893375,
+      "avg": 21608011,
+      "silver": 36013400
+     },
+     "gap": {
+      "what": "archer-1 5,573",
+      "hit": 465346,
+      "isTopHp": true
+     },
+     "putBack": "spearman-2 (5.6 % damage, -0.1 % silver, 1.5 % queue)"
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 21152576,
+     "avg": 21788376,
+     "silver": 32525600,
+     "burned": 4
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 19769392,
+     "avg": 25133964,
+     "silver": 56000000,
+     "burned": 4
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 20769608,
+     "avg": 21135368,
+     "silver": 32525600,
+     "burned": 4
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 19769392,
+     "avg": 25133964,
+     "silver": 56000000,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 21539692,
+     "avg": 22156792,
+     "silver": 32529600,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 22474748,
+     "avg": 26486216,
+     "silver": 56000000,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 21539692,
+     "avg": 22156792,
+     "silver": 32529600,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 20798408,
+     "avg": 21164408,
+     "silver": 32529600,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 19788288,
+     "avg": 25143224,
+     "silver": 56000000,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 20798408,
+     "avg": 21164408,
+     "silver": 32529600,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 21162288,
+     "avg": 21798088,
+     "silver": 32529600,
+     "burned": 4
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 21162288,
+     "avg": 21798088,
+     "silver": 32529600,
+     "burned": 4
+    }
+   ],
+   "frontier": {
+    "rows": 19,
+    "widest": {
+     "what": "7 stacks · 8 hired · 8.5M silver a march (4,790,727 expected, 4,586,374 worst)",
+     "gap": 0.04265594762548565
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 6,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 6,
+     "marches": 4,
+     "repeat": {
+      "min": 7109888,
+      "avg": 7201328,
+      "max": 7292768,
+      "silver": 8131400,
+      "mercLost": 6
+     },
+     "campaign": {
+      "min": 28655444,
+      "avg": 29021204,
+      "silver": 32525600
+     },
+     "gap": {
+      "what": "swordsman-1 3,048",
+      "hit": 182880,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "elite",
+     "burn": 7,
+     "marches": 4,
+     "repeat": {
+      "min": 7498490,
+      "avg": 7589930,
+      "max": 7681370,
+      "silver": 8131400,
+      "mercLost": 7
+     },
+     "campaign": {
+      "min": 29691713,
+      "avg": 30057473,
+      "silver": 32525600
+     },
+     "gap": {
+      "what": "swordsman-1 3,048",
+      "hit": 182880,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "elite",
+     "burn": 9,
+     "marches": 4,
+     "repeat": {
+      "min": 7897408,
+      "avg": 8047249,
+      "max": 8197090,
+      "silver": 8514200,
+      "mercLost": 9
+     },
+     "campaign": {
+      "min": 29841879,
+      "avg": 30324441,
+      "silver": 33291200
+     },
+     "gap": {
+      "what": "archer-1 3,589",
+      "hit": 299682,
+      "isTopHp": true
+     },
+     "putBack": null
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 26655281,
+     "avg": 27526898,
+     "silver": 32525600,
+     "burned": 30
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 29942175,
+     "avg": 30340395,
+     "silver": 33291200,
+     "burned": 30
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 29864429,
+     "avg": 30230189,
+     "silver": 32525600,
+     "burned": 29
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 30054424,
+     "avg": 30436414,
+     "silver": 32908400,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 30221279,
+     "avg": 30587159,
+     "silver": 32533600,
+     "burned": 29
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29758471,
+     "avg": 30256091,
+     "silver": 34075200,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 30221279,
+     "avg": 30587159,
+     "silver": 32533600,
+     "burned": 29
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29893229,
+     "avg": 30259229,
+     "silver": 32529600,
+     "burned": 29
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29168019,
+     "avg": 29766047,
+     "silver": 34064000,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29893229,
+     "avg": 30259229,
+     "silver": 32529600,
+     "burned": 29
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 26679309,
+     "avg": 27551106,
+     "silver": 32529600,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29168019,
+     "avg": 29766047,
+     "silver": 34064000,
+     "burned": 30
+    }
+   ],
+   "frontier": {
+    "rows": 31,
+    "widest": {
+     "what": "8 stacks · 39 hired · 4.4M silver a march (3,400,875 expected, 3,310,507 worst)",
+     "gap": 0.026571985150880287
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 4,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 4,
+     "marches": 4,
+     "repeat": {
+      "min": 2031002,
+      "avg": 2058215,
+      "max": 2085428,
+      "silver": 1520800,
+      "mercLost": 4
+     },
+     "campaign": {
+      "min": 8084653,
+      "avg": 8193505,
+      "silver": 6083200
+     },
+     "gap": {
+      "what": "swordsman-1 564",
+      "hit": 54426,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "elite",
+     "burn": 5,
+     "marches": 4,
+     "repeat": {
+      "min": 2048786,
+      "avg": 2075999,
+      "max": 2103212,
+      "silver": 1520800,
+      "mercLost": 5
+     },
+     "campaign": {
+      "min": 8222546,
+      "avg": 8331398,
+      "silver": 6083200
+     },
+     "gap": {
+      "what": "swordsman-1 564",
+      "hit": 54426,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "ms",
+     "burn": 7,
+     "marches": 4,
+     "repeat": {
+      "min": 2447995,
+      "avg": 2475208,
+      "max": 2502421,
+      "silver": 1520800,
+      "mercLost": 7
+     },
+     "campaign": {
+      "min": 8519930,
+      "avg": 8628782,
+      "silver": 6083200
+     },
+     "gap": {
+      "what": "swordsman-1 564",
+      "hit": 54426,
+      "isTopHp": true
+     },
+     "putBack": "swordsman-1 (10.1 % damage, 3.3 % silver, 11.9 % queue)"
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 8463273,
+     "avg": 8616048,
+     "silver": 6083200,
+     "burned": 24
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 8461931,
+     "avg": 8620931,
+     "silver": 6157800,
+     "burned": 24
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 8519930,
+     "avg": 8628782,
+     "silver": 6083200,
+     "burned": 24
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 8518588,
+     "avg": 8633665,
+     "silver": 6157800,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · optimize (as captured, repeated)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8762880,
+     "avg": 8911356,
+     "silver": 6084400,
+     "burned": 24
+    },
+    {
+     "name": "Kai’s calculator · extract (as captured, repeated)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8616241,
+     "avg": 8792837,
+     "silver": 6203200,
+     "burned": 27
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8762880,
+     "avg": 8911356,
+     "silver": 6084400,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8750417,
+     "avg": 8903339,
+     "silver": 6086400,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8762880,
+     "avg": 8911356,
+     "silver": 6084400,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8380649,
+     "avg": 8489697,
+     "silver": 6083200,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8380649,
+     "avg": 8489697,
+     "silver": 6083200,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8380649,
+     "avg": 8489697,
+     "silver": 6083200,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8262390,
+     "avg": 8415312,
+     "silver": 6083200,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8262390,
+     "avg": 8415312,
+     "silver": 6083200,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8262390,
+     "avg": 8415312,
+     "silver": 6083200,
+     "burned": 24
+    }
+   ],
+   "frontier": {
+    "rows": 824,
+    "widest": {
+     "what": "7 stacks · 17 hired · 1.5M silver a march (1,005,457 expected, 971,484 worst)",
+     "gap": 0.03378861552507964
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "2026-09-17 export, its setup (7 000 leadership)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 10,
+   "stops": [
+    {
+     "pick": "silver-saver",
+     "shape": "ladder",
+     "burn": 7,
+     "marches": 4,
+     "repeat": {
+      "min": 3583107,
+      "avg": 3650146,
+      "max": 3717185,
+      "silver": 1851500,
+      "mercLost": 7
+     },
+     "campaign": {
+      "min": 16217218,
+      "avg": 16418335,
+      "silver": 8293900
+     },
+     "gap": {
+      "what": "spearman-1 909",
+      "hit": 134078,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "sweet-spot",
+     "shape": "ladder",
+     "burn": 10,
+     "marches": 4,
+     "repeat": {
+      "min": 4870455,
+      "avg": 4965077,
+      "max": 5059698,
+      "silver": 2614000,
+      "mercLost": 10
+     },
+     "campaign": {
+      "min": 20079262,
+      "avg": 20363128,
+      "silver": 10581400
+     },
+     "gap": {
+      "what": "spearman-1 1,283",
+      "hit": 189243,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "more-mercs",
+     "shape": "elite",
+     "burn": 12,
+     "marches": 4,
+     "repeat": {
+      "min": 5387722,
+      "avg": 5487598,
+      "max": 5587474,
+      "silver": 2739400,
+      "mercLost": 12
+     },
+     "campaign": {
+      "min": 21834211,
+      "avg": 22133839,
+      "silver": 10957600
+     },
+     "gap": {
+      "what": "spearman-1 1,272",
+      "hit": 187620,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "elite",
+     "burn": 14,
+     "marches": 4,
+     "repeat": {
+      "min": 5913067,
+      "avg": 5913067,
+      "max": 5913067,
+      "silver": 2739400,
+      "mercLost": 14
+     },
+     "campaign": {
+      "min": 22770620,
+      "avg": 22870496,
+      "silver": 10957600
+     },
+     "gap": {
+      "what": "spearman-1 1,272",
+      "hit": 187620,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "ms",
+     "burn": 26,
+     "marches": 4,
+     "repeat": {
+      "min": 6603524,
+      "avg": 6603524,
+      "max": 6603524,
+      "silver": 3802400,
+      "mercLost": 26
+     },
+     "campaign": {
+      "min": 23619920,
+      "avg": 23619920,
+      "silver": 15179600
+     },
+     "gap": {
+      "what": "spearman-2 2,458",
+      "hit": 696843,
+      "isTopHp": false
+     },
+     "putBack": "spearman-2 (13.0 % damage, 4.1 % silver, 10.8 % queue)"
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 18589604,
+     "avg": 22493346,
+     "silver": 10957600,
+     "burned": 93
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 24032714,
+     "avg": 25952553,
+     "silver": 14192200,
+     "burned": 93
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 23341980,
+     "avg": 23441856,
+     "silver": 10957600,
+     "burned": 55
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 24634972,
+     "avg": 25833694,
+     "silver": 14192200,
+     "burned": 86
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 11013524,
+     "avg": 11429180,
+     "silver": 10972800,
+     "burned": 16
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 13742586,
+     "avg": 16323066,
+     "silver": 16016000,
+     "burned": 51
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 7807482,
+     "avg": 9816482,
+     "silver": 8400000,
+     "burned": 51
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 11007500,
+     "avg": 11423156,
+     "silver": 10965600,
+     "burned": 16
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 7807482,
+     "avg": 16050682,
+     "silver": 19600000,
+     "burned": 51
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 13253664,
+     "avg": 13992468,
+     "silver": 12696000,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8487048,
+     "avg": 12390790,
+     "silver": 10965600,
+     "burned": 51
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 8487048,
+     "avg": 12390790,
+     "silver": 10965600,
+     "burned": 51
+    }
+   ],
+   "frontier": {
+    "rows": 2187,
+    "widest": {
+     "what": "3 stacks · 103 hired · 3.1M silver a march (3,373,386 expected, 3,064,938 worst)",
+     "gap": 0.09143572659636341
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "2026-09-17 export, 12 000 leadership",
+   "benchmark": true,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 9,
+   "stops": [
+    {
+     "pick": "silver-saver",
+     "shape": "ladder",
+     "burn": 8,
+     "marches": 4,
+     "repeat": {
+      "min": 4763589,
+      "avg": 4864996,
+      "max": 4966402,
+      "silver": 2799600,
+      "mercLost": 8
+     },
+     "campaign": {
+      "min": 22586784,
+      "avg": 23062201,
+      "silver": 13096400
+     },
+     "gap": {
+      "what": "spearman-1 1,375",
+      "hit": 202813,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "sweet-spot",
+     "shape": "ladder",
+     "burn": 9,
+     "marches": 4,
+     "repeat": {
+      "min": 6269353,
+      "avg": 6438388,
+      "max": 6607423,
+      "silver": 4668300,
+      "mercLost": 9
+     },
+     "campaign": {
+      "min": 27104076,
+      "avg": 27782377,
+      "silver": 18702500
+     },
+     "gap": {
+      "what": "spearman-1 2,292",
+      "hit": 338070,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "more-mercs",
+     "shape": "ladder",
+     "burn": 13,
+     "marches": 4,
+     "repeat": {
+      "min": 7161246,
+      "avg": 7328880,
+      "max": 7496514,
+      "silver": 4629400,
+      "mercLost": 13
+     },
+     "campaign": {
+      "min": 28986315,
+      "avg": 29660413,
+      "silver": 18585800
+     },
+     "gap": {
+      "what": "spearman-1 2,273",
+      "hit": 335268,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "elite",
+     "burn": 17,
+     "marches": 4,
+     "repeat": {
+      "min": 8014627,
+      "avg": 8185823,
+      "max": 8357018,
+      "silver": 4697600,
+      "mercLost": 17
+     },
+     "campaign": {
+      "min": 31546458,
+      "avg": 32231242,
+      "silver": 18790400
+     },
+     "gap": {
+      "what": "spearman-1 2,179",
+      "hit": 321403,
+      "isTopHp": false
+     },
+     "putBack": null
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 28513298,
+     "avg": 32417040,
+     "silver": 18790400,
+     "burned": 93
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 30640313,
+     "avg": 33361705,
+     "silver": 20399600,
+     "burned": 93
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 32753338,
+     "avg": 33438122,
+     "silver": 18790400,
+     "burned": 70
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 33277720,
+     "avg": 34283252,
+     "silver": 21204200,
+     "burned": 85
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 18971864,
+     "avg": 19684292,
+     "silver": 18808800,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 22894812,
+     "avg": 24167160,
+     "silver": 21785600,
+     "burned": 40
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 22894812,
+     "avg": 24167160,
+     "silver": 21785600,
+     "burned": 40
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 18833644,
+     "avg": 19546364,
+     "silver": 18800000,
+     "burned": 24
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 22753836,
+     "avg": 24021084,
+     "silver": 21763200,
+     "burned": 40
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 22753836,
+     "avg": 24021084,
+     "silver": 21763200,
+     "burned": 40
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 14551348,
+     "avg": 18455090,
+     "silver": 18800000,
+     "burned": 51
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 7807482,
+     "avg": 21938682,
+     "silver": 33600000,
+     "burned": 51
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 14551348,
+     "avg": 18455090,
+     "silver": 18800000,
+     "burned": 51
+    }
+   ],
+   "frontier": {
+    "rows": 1852,
+    "widest": {
+     "what": "4 stacks · 50 hired · 5.8M silver a march (4,506,877 expected, 4,098,353 worst)",
+     "gap": 0.09064458604040004
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": null,
+   "knee": 6,
+   "stops": [
+    {
+     "pick": "silver-saver",
+     "shape": "ladder",
+     "burn": 5,
+     "marches": 4,
+     "repeat": {
+      "min": 4528272,
+      "avg": 4528272,
+      "max": 4528272,
+      "silver": 4414200,
+      "mercLost": 5
+     },
+     "campaign": {
+      "min": 20891829,
+      "avg": 20891829,
+      "silver": 20901800
+     },
+     "gap": {
+      "what": "rider-1 1,106",
+      "hit": 359450,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "sweet-spot",
+     "shape": "winner",
+     "burn": 6,
+     "marches": 4,
+     "repeat": {
+      "min": 7096072,
+      "avg": 7096072,
+      "max": 7096072,
+      "silver": 7732100,
+      "mercLost": 6
+     },
+     "campaign": {
+      "min": 28270883,
+      "avg": 28270883,
+      "silver": 30516200
+     },
+     "gap": {
+      "what": "rider-1 1,938",
+      "hit": 629850,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "ladder",
+     "burn": 7,
+     "marches": 4,
+     "repeat": {
+      "min": 7354938,
+      "avg": 7354938,
+      "max": 7354938,
+      "silver": 7732100,
+      "mercLost": 7
+     },
+     "campaign": {
+      "min": 28727202,
+      "avg": 28727202,
+      "silver": 30179700
+     },
+     "gap": {
+      "what": "rider-1 1,938",
+      "hit": 629850,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "winner",
+     "burn": 9,
+     "marches": 4,
+     "repeat": {
+      "min": 7840310,
+      "avg": 7840310,
+      "max": 7840310,
+      "silver": 7732100,
+      "mercLost": 9
+     },
+     "campaign": {
+      "min": 29743332,
+      "avg": 29743332,
+      "silver": 30928400
+     },
+     "gap": {
+      "what": "rider-1 1,938",
+      "hit": 629850,
+      "isTopHp": false
+     },
+     "putBack": null
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 25300624,
+     "avg": 26530424,
+     "silver": 31236000,
+     "burned": 30
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 23239806,
+     "avg": 31495858,
+     "silver": 45750400,
+     "burned": 30
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 25300624,
+     "avg": 26530424,
+     "silver": 31236000,
+     "burned": 30
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 23239806,
+     "avg": 31495858,
+     "silver": 45750400,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 25980608,
+     "avg": 27224644,
+     "silver": 31346400,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 25980608,
+     "avg": 27224644,
+     "silver": 31346400,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 25980608,
+     "avg": 27224644,
+     "silver": 31346400,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29222440,
+     "avg": 30466476,
+     "silver": 31335200,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29222440,
+     "avg": 30466476,
+     "silver": 31335200,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29222440,
+     "avg": 30466476,
+     "silver": 31335200,
+     "burned": 30
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 29222440,
+     "avg": 30466476,
+     "silver": 31335200,
+     "burned": 30
+    }
+   ],
+   "frontier": {
+    "rows": 47,
+    "widest": {
+     "what": "7 stacks · 10 hired · 7.8M silver a march (4,674,935 expected, 4,367,485 worst)",
+     "gap": 0.06576562027065617
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
+   "benchmark": true,
+   "refusal": null,
+   "reading": null,
+   "knee": 11,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "ladder",
+     "burn": 11,
+     "marches": 4,
+     "repeat": {
+      "min": 6189687,
+      "avg": 6189687,
+      "max": 6189687,
+      "silver": 4247600,
+      "mercLost": 11
+     },
+     "campaign": {
+      "min": 25539281,
+      "avg": 25708281,
+      "silver": 17037600
+     },
+     "gap": {
+      "what": "rider-1 1,064",
+      "hit": 345800,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "more-mercs",
+     "shape": "ladder",
+     "burn": 14,
+     "marches": 4,
+     "repeat": {
+      "min": 7096423,
+      "avg": 7096423,
+      "max": 7096423,
+      "silver": 4259200,
+      "mercLost": 14
+     },
+     "campaign": {
+      "min": 28140302,
+      "avg": 28309302,
+      "silver": 17072400
+     },
+     "gap": {
+      "what": "rider-1 1,067",
+      "hit": 346775,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "elite",
+     "burn": 19,
+     "marches": 4,
+     "repeat": {
+      "min": 7987079,
+      "avg": 8156079,
+      "max": 8325079,
+      "silver": 4294800,
+      "mercLost": 19
+     },
+     "campaign": {
+      "min": 30693083,
+      "avg": 31369083,
+      "silver": 17179200
+     },
+     "gap": {
+      "what": "spearman-1 2,030",
+      "hit": 313635,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "ms",
+     "burn": 24,
+     "marches": 4,
+     "repeat": {
+      "min": 8238793,
+      "avg": 8474406,
+      "max": 8710018,
+      "silver": 4458800,
+      "mercLost": 24
+     },
+     "campaign": {
+      "min": 31714657,
+      "avg": 32119270,
+      "silver": 18768000
+     },
+     "gap": {
+      "what": "spearman-1 3,050",
+      "hit": 471225,
+      "isTopHp": true
+     },
+     "putBack": "spearman-1 (7.4 % damage, 9.1 % silver, 24.8 % queue)"
+    }
+   ],
+   "rivals": [
+    {
+     "name": "Tier ladder · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 28558757,
+     "avg": 72384395,
+     "silver": 17179200,
+     "burned": 874
+    },
+    {
+     "name": "Tier ladder · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 36832597,
+     "avg": 80658235,
+     "silver": 30800000,
+     "burned": 874
+    },
+    {
+     "name": "Troops first · all types",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 28435661,
+     "avg": 29111661,
+     "silver": 17179200,
+     "burned": 78
+    },
+    {
+     "name": "Troops first · Generate (average damage)",
+     "kind": "sizer",
+     "comparable": true,
+     "marches": 4,
+     "min": 8250197,
+     "avg": 52075835,
+     "silver": 0,
+     "burned": 874
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 32984363,
+     "avg": 33668799,
+     "silver": 17236000,
+     "burned": 74
+    },
+    {
+     "name": "TotalStack · priority search under M’s (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 36832597,
+     "avg": 80137589,
+     "silver": 30800000,
+     "burned": 864
+    },
+    {
+     "name": "TotalStack · priority search under M’s (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 32984363,
+     "avg": 33668799,
+     "silver": 17236000,
+     "burned": 74
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 33333894,
+     "avg": 34018330,
+     "silver": 17233600,
+     "burned": 74
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 36832597,
+     "avg": 56713817,
+     "silver": 30800000,
+     "burned": 428
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 33333894,
+     "avg": 34018330,
+     "silver": 17233600,
+     "burned": 74
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 30966094,
+     "avg": 74271086,
+     "silver": 17233600,
+     "burned": 864
+    },
+    {
+     "name": "TotalStack · priority search under Elite (averageDamage)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 36832597,
+     "avg": 80137589,
+     "silver": 30800000,
+     "burned": 864
+    },
+    {
+     "name": "TotalStack · priority search under Elite (damagePerSilver)",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "min": 22905506,
+     "avg": 66639898,
+     "silver": 16332000,
+     "burned": 868
+    }
+   ],
+   "frontier": {
+    "rows": 1406,
+    "widest": {
+     "what": "1 stack · 460 hired · 4.6M silver a march (7,082,069 expected, 4,927,346 worst)",
+     "gap": 0.3042504951589712
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
+   "benchmark": false,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 8,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 8,
+     "marches": 4,
+     "repeat": {
+      "min": 2880077,
+      "avg": 3039002,
+      "max": 3197927,
+      "silver": 2217900,
+      "mercLost": 8
+     },
+     "campaign": {
+      "min": 10870675,
+      "avg": 11423825,
+      "silver": 8596400
+     },
+     "gap": {
+      "what": "rider-1 978",
+      "hit": 317850,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "more-mercs",
+     "shape": "elite",
+     "burn": 9,
+     "marches": 4,
+     "repeat": {
+      "min": 2933049,
+      "avg": 3091974,
+      "max": 3250899,
+      "silver": 2217900,
+      "mercLost": 9
+     },
+     "campaign": {
+      "min": 11029591,
+      "avg": 11582741,
+      "silver": 8596400
+     },
+     "gap": {
+      "what": "rider-1 978",
+      "hit": 317850,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "ms",
+     "burn": 10,
+     "marches": 4,
+     "repeat": {
+      "min": 3285305,
+      "avg": 3285305,
+      "max": 3285305,
+      "silver": 2635500,
+      "mercLost": 10
+     },
+     "campaign": {
+      "min": 12086359,
+      "avg": 12162734,
+      "silver": 9849200
+     },
+     "gap": {
+      "what": "spearman-2 1,290",
+      "hit": 381969,
+      "isTopHp": false
+     },
+     "putBack": "spearman-2 (9.6 % damage, 1.9 % silver, 5.5 % queue)"
+    }
+   ],
+   "rivals": [],
+   "frontier": {
+    "rows": 551,
+    "widest": {
+     "what": "1 stack · 41 hired · 1.8M silver a march (2,258,894 expected, 1,404,020 worst)",
+     "gap": 0.37844803695968027
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
+   "benchmark": false,
+   "refusal": null,
+   "reading": "reliable",
+   "knee": 4,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "ladder",
+     "burn": 4,
+     "marches": 4,
+     "repeat": {
+      "min": 2385168,
+      "avg": 2520042,
+      "max": 2654915,
+      "silver": 2268000,
+      "mercLost": 4
+     },
+     "campaign": {
+      "min": 9068238,
+      "avg": 9549235,
+      "silver": 8746700
+     },
+     "gap": {
+      "what": "spearman-2 911",
+      "hit": 269747,
+      "isTopHp": true
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "elite",
+     "burn": 5,
+     "marches": 4,
+     "repeat": {
+      "min": 2423299,
+      "avg": 2423299,
+      "max": 2423299,
+      "silver": 2264700,
+      "mercLost": 5
+     },
+     "campaign": {
+      "min": 9182631,
+      "avg": 9259006,
+      "silver": 8736800
+     },
+     "gap": {
+      "what": "spearman-2 871",
+      "hit": 257903,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "elite",
+     "burn": 18,
+     "marches": 4,
+     "repeat": {
+      "min": 3976648,
+      "avg": 4489913,
+      "max": 5003177,
+      "silver": 2844600,
+      "mercLost": 18
+     },
+     "campaign": {
+      "min": 15906592,
+      "avg": 17959652,
+      "silver": 11378400
+     },
+     "gap": {
+      "what": "rider-2 1,593",
+      "hit": 1026529,
+      "isTopHp": true
+     },
+     "putBack": null
+    }
+   ],
+   "rivals": [],
+   "frontier": {
+    "rows": 103,
+    "widest": {
+     "what": "1 stack · 374 hired · 3.5M silver a march (7,665,239 expected, 6,050,983 worst)",
+     "gap": 0.21059434676466057
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  },
+  {
+   "label": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
+   "benchmark": false,
+   "refusal": null,
+   "reading": null,
+   "knee": 5,
+   "stops": [
+    {
+     "pick": "sweet-spot",
+     "shape": "elite",
+     "burn": 5,
+     "marches": 4,
+     "repeat": {
+      "min": 2509413,
+      "avg": 2509413,
+      "max": 2509413,
+      "silver": 2321200,
+      "mercLost": 5
+     },
+     "campaign": {
+      "min": 10156338,
+      "avg": 10618373,
+      "silver": 9503600
+     },
+     "gap": {
+      "what": "spearman-2 893",
+      "hit": 264417,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "more-mercs",
+     "shape": "elite",
+     "burn": 8,
+     "marches": 4,
+     "repeat": {
+      "min": 2549800,
+      "avg": 2549800,
+      "max": 2549800,
+      "silver": 2755200,
+      "mercLost": 8
+     },
+     "campaign": {
+      "min": 10197781,
+      "avg": 10645961,
+      "silver": 10729000
+     },
+     "gap": {
+      "what": "rider-2 914",
+      "hit": 588982,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "steady-max",
+     "shape": "elite",
+     "burn": 10,
+     "marches": 4,
+     "repeat": {
+      "min": 2873382,
+      "avg": 2873382,
+      "max": 2873382,
+      "silver": 2755200,
+      "mercLost": 10
+     },
+     "campaign": {
+      "min": 11196175,
+      "avg": 11700418,
+      "silver": 11037400
+     },
+     "gap": {
+      "what": "rider-2 914",
+      "hit": 588982,
+      "isTopHp": false
+     },
+     "putBack": null
+    },
+    {
+     "pick": "all-in",
+     "shape": "ms",
+     "burn": 11,
+     "marches": 4,
+     "repeat": {
+      "min": 3160072,
+      "avg": 3450546,
+      "max": 3741020,
+      "silver": 2775600,
+      "mercLost": 11
+     },
+     "campaign": {
+      "min": 11585381,
+      "avg": 12402330,
+      "silver": 11202400
+     },
+     "gap": {
+      "what": "spearman-2 1,962",
+      "hit": 580948,
+      "isTopHp": true
+     },
+     "putBack": "spearman-2 (0.9 % damage, 4.8 % silver, 12.4 % queue)"
+    }
+   ],
+   "rivals": [],
+   "frontier": {
+    "rows": 79,
+    "widest": {
+     "what": "2 stacks · 70 hired · 2.9M silver a march (2,835,422 expected, 2,307,014 worst)",
+     "gap": 0.1863595612928164
+    },
+    "widestUnsheltered": null,
+    "unshelteredRows": 0
+   }
+  }
+ ]
+}

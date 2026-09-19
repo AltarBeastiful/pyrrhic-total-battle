@@ -219,7 +219,7 @@ export function PlanFold() {
     <Disclosure
       title="Plan"
       defaultOpened
-      summary={`${compact(each.damage)} damage a march · ${
+      summary={`${compact(each.damage)} worst opening a march · ${
         sequence ??
         `${amount(repeated)} march${repeated === 1 ? '' : 'es'}${shown.finaleCounts ? ' + a last one' : ''}`
       }`}
@@ -237,14 +237,14 @@ export function PlanFold() {
                 rather than about how many. `repeat.seconds` is the march this line is describing, the same
                 one the trade's own rows print (`PlanRepeat.seconds`). */}
             {best === null
-              ? `It spends the silver box you set: ${amount(each.damage)} damage a march for ${amount(
+              ? `It spends the silver box you set: ${amount(each.damage)} worst opening a march for ${amount(
                   each.silver,
                 )} silver and ${duration(each.seconds)} of training, using ${mercsAMarch(
                   shown,
                 )} of the hired stock each time.`
               : `The sweet spot it found for this army is ${amount(
                   best.repeat.damage,
-                )} damage a march, spending ${mercsAMarch(best)} of the hired stock and ${duration(
+                )} worst opening a march, spending ${mercsAMarch(best)} of the hired stock and ${duration(
                   best.repeat.seconds,
                 )} of training each time.`}
           </Text>
@@ -329,7 +329,7 @@ export function PlanFold() {
           {/* The campaign's own training queue rides with its silver, for the same reason the march's does
               on the line above: `PlanTotals.seconds` is every march of the plan plus its finale, which is
               the figure that says whether a plan is a fortnight or a season. */}
-          {`Fought to the end: ${amount(plan.totalDamage)} damage and ${amount(
+          {`Fought to the end: ${amount(plan.totalDamage)} worst-opening damage and ${amount(
             plan.silver,
           )} silver over ${amount(plan.marches)} marches — ${duration(
             plan.seconds,
@@ -395,7 +395,7 @@ export function PlanFold() {
                     <Table.Tr>
                       <Table.Th scope="col">Silver</Table.Th>
                       <Table.Th scope="col" ta="end">
-                        Damage
+                        Worst opening
                       </Table.Th>
                       <Table.Th scope="col" ta="end">
                         A silver

@@ -13,6 +13,14 @@
  * march is a row too, played as captured while the stock lasts. Every march is priced by `simulateBattle` on
  * its counts.
  *
+ * **The reading changed on 2026-09-19** (S-94): the damage column is every march's **worst opening**
+ * (`minDamage`, the enemy-first journal) where it was the midpoint of the two openings, on every row of every
+ * scenario. The owner will not spend on a coin flip, the plan is ranked on the bad flip, and a table that
+ * ranked the plan against its rivals on a different figure would be comparing two arithmetics. The figures
+ * below are therefore **lower in level** than every snapshot up to `benchmark-2026-09-19-11-thrift-end`; the
+ * per-scenario worst/expected ratio that bridges the two is in `benchmark-2026-09-19-12-reliable-damage.md`
+ * and in `tools/theorycraft/out/109-reliable-damage.md` §C. `price()` below is the one place it is decided.
+ *
  * **The scenarios** are the main use cases of the calculators, each pinned to what the engine does today so
  * that a change either way is news:
  *
@@ -24,11 +32,26 @@
  *    the plan refuses or offers one stop), and with the hunter at 83 (the e2e seed);
  *  - the 4 000-leadership case of 2026-09-15, the one case two other calculators answered.
  *
- * What must hold on every case the plan answers, or the plan is changing numbers rather than improving on
- * the sizers: its hardest-hitting campaign reaches the pinned share of the best sizer sequence's four-march
- * damage, its best stop a hired unit beats every sizer sequence unless pinned otherwise, and its best stop a
- * silver reaches 95 % of the best sizer sequence's. The pins are measured, not chosen — each carries the
- * date and the figure — and a proposal that moves one moves the pin with it.
+ * **Two things hold a run, and they answer different questions.**
+ *
+ *  1. **The hand pins** (`plan-scenarios.ts`): its hardest-hitting campaign reaches the pinned share of the
+ *     best sizer sequence's four-march damage, its best stop a hired unit beats every sizer sequence unless
+ *     pinned otherwise, its best stop a silver reaches 95 % of the best sizer sequence's, and the bar carries
+ *     the pinned number of stops. They say *how far above the sizers* the plan must stand, and each was
+ *     chosen by a person, dated and explained on its own scenario.
+ *  2. **The registered baseline** (`plan-baseline.ts`, `checkBaseline` below), since 2026-09-19: the figures
+ *     the **owner** has registered as acceptable, stop by stop, which no run may come in under — *"the
+ *     benchmark is like non-regression tests. A given scenario should not be worse, or it's a discrepancy, or
+ *     a new baseline needs to be registered by me if the trade is ok."* Nothing in this repo re-bases either
+ *     of them. `pnpm bench:baseline` writes `tests/engine/plan-baseline.proposed.json`; the owner reads it,
+ *     sets `registeredBy` and renames it. Until he does, the baseline half asserts nothing and the report
+ *     says so.
+ *
+ * **Four pins are failing as of 2026-09-19 (S-94)**, left failing on purpose for him to judge with the
+ * proposal in hand: `stops` on the 7 000 export (4 registered, 5 offered), on the 12 000 export (5, 4) and on
+ * the evening account (5, 4), and `externals.damageFloor` on his live account at 20 000 (1.02 registered,
+ * 1.018 measured). The reliable reading moved the bar on those armies; whether the trade is worth a new
+ * baseline is his call, not this file's.
  *
  * The table each case measured is written to `tools/theorycraft/out/benchmark-latest.md`, the figures to
  * `benchmark-latest.json` beside it (what a before/after comparison reads). The first-run and 4 000 cases run
@@ -61,6 +84,8 @@ import { effectiveUnit, hitDamage } from '@/engine/units';
 
 // The scenarios themselves, and their pins, live beside this file (`plan-scenarios.ts`) since S-87, so that
 // `plan-criteria.test.ts` can hold the shelter criterion on every army this benchmark builds.
+import type { Baseline, BaselineScenario, BaselineTotals } from './plan-baseline';
+import { compareToBaseline, registeredBaseline } from './plan-baseline';
 import type { Scenario } from './plan-scenarios';
 import { HORIZON, OWNER_EXPORT, commonScenarios, ownerProfile, ownerScenarios } from './plan-scenarios';
 import { totalstackRows, widenedFor } from './totalstack-rows';
@@ -74,11 +99,22 @@ const n = (value: number): string => Math.round(value).toLocaleString('en-US');
 
 // ---- pricing ---------------------------------------------------------------------------------------------
 
-/** A march from explicit counts, priced as the recap prices it: damage, silver and revive gold. */
+/**
+ * A march from explicit counts, priced as the recap prices it: damage, silver and revive gold.
+ *
+ * **Damage is the worst opening since 2026-09-19** (S-94; the owner: *"average damage is not average for
+ * sure; it's too risky for me to spend 3M silver on a coin flip to get 1M damage or 3M. We want reliable
+ * damage actually."*). Every row of this table — the plan's stops, the sizer sequences and the captured
+ * answers alike — is priced on `summary.minDamage`, the enemy-first journal, because the plan is now ranked
+ * on it: a rival priced on the midpoint of the two openings against a plan priced on the bad flip would win
+ * a comparison the arithmetic made rather than the march. The Generate rows keep their **own** objective
+ * (average damage): that is what the other calculator answers, and only the reading it is scored on here has
+ * changed.
+ */
 function price(
   request: StackRequest,
   counts: Record<string, number>,
-): { damage: number; silver: number; gold: number } {
+): { damage: number; silver: number; gold: number; seconds: number } {
   const rank = new Map(buildKillOrder(request.units, request.options).map((id, index) => [id, index]));
   const stacks: Stack[] = [];
   for (const unit of request.units) {
@@ -110,7 +146,14 @@ function price(
   const summary = simulateBattle(result, request);
   // The gold is the hired stacks' own price (S-90): a sizer sequence and a plan stop both pay it, and a
   // campaign total that leaves one of its marches out of it is what this run's own assertion now catches.
-  return { damage: summary.avgDamage, silver: summary.recovery.silver, gold: summary.recovery.gold };
+  return {
+    damage: summary.minDamage,
+    silver: summary.recovery.silver,
+    gold: summary.recovery.gold,
+    // The training queue rides with the other two prices: the registered baseline records it so the owner
+    // sees the whole trade when he judges one (`plan-baseline.ts`).
+    seconds: summary.recovery.seconds,
+  };
 }
 
 interface Campaign {
@@ -129,6 +172,8 @@ interface Campaign {
   silver: number;
   /** What the campaign's hired stacks cost to revive, in gold — the recap's figure, summed march by march. */
   gold: number;
+  /** How long its losses sit in the training queue, in seconds, summed march by march. */
+  seconds: number;
   burned: number;
 }
 
@@ -145,15 +190,17 @@ function campaignOf(
   let damage = 0;
   let silver = 0;
   let gold = 0;
+  let seconds = 0;
   let burned = 0;
   for (const counts of marches) {
     const priced = price(request, counts);
     damage += priced.damage;
     silver += priced.silver;
     gold += priced.gold;
+    seconds += priced.seconds;
     burned += mercIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0);
   }
-  return { name, kind, comparable: true, marches: marches.length, damage, silver, gold, burned };
+  return { name, kind, comparable: true, marches: marches.length, damage, silver, gold, seconds, burned };
 }
 
 /** A sizer method played for the horizon the way a player plays it: Generate, march, lose a chunk, again. */
@@ -224,6 +271,8 @@ interface Measured {
    * than against a memory of how long the suite felt.
    */
   planMs: number;
+  /** Which stop each plan row is, by object identity — the baseline is keyed on the engine's own `pick`. */
+  picks: Map<Campaign, string>;
 }
 
 function measure(scenario: Scenario): Measured {
@@ -257,6 +306,9 @@ function measure(scenario: Scenario): Measured {
   }
   let plan: CampaignPlan | null = null;
   let refusal: string | null = null;
+  // Which stop each plan row is, by object identity: the row's `name` is prose and the baseline is keyed on
+  // the engine's own `pick`.
+  const picks = new Map<Campaign, string>();
   const startedAt = performance.now();
   try {
     plan = planCampaign({
@@ -284,6 +336,7 @@ function measure(scenario: Scenario): Measured {
         for (let i = 0; i < stop.tail.marches; i += 1) marches.push(stop.tail.counts);
       }
       const campaign = campaignOf(request, `Complete optimization · ${stop.pick}`, 'plan', marches);
+      picks.set(campaign, stop.pick);
       // The engine's own campaign figure and the marches priced one by one must agree.
       expect(Math.abs(campaign.damage - stop.totalDamage)).toBeLessThanOrEqual(1);
       // **And so must the gold** (S-90). `PlanTotals.gold` left the finale out until 2026-09-18 — the one
@@ -294,7 +347,57 @@ function measure(scenario: Scenario): Measured {
       rows.push(campaign);
     }
   }
-  return { rows, plan, refusal, planMs };
+  return { rows, plan, refusal, planMs, picks };
+}
+
+/**
+ * This run's figures in the shape the registered baseline holds (`plan-baseline.ts`): every stop the bar
+ * offered, the plan's own campaign, and the standing ratios against the sizers and the captured answers. It
+ * is what `pnpm bench:baseline` writes out for the owner and what `check` compares a run against.
+ */
+function asBaseline(measured: Measured): BaselineScenario | null {
+  const { plan } = measured;
+  if (!plan) return null;
+  const totals = (c: Campaign): BaselineTotals => ({
+    marches: c.marches,
+    damage: Math.round(c.damage),
+    silver: c.silver,
+    gold: c.gold,
+    seconds: c.seconds,
+    burned: c.burned,
+    perSilver: Number.isFinite(perSilver(c)) ? perSilver(c) : null,
+    perHired: perHired(c),
+  });
+  const stops: Record<string, BaselineTotals> = {};
+  for (const row of measured.rows) {
+    const pick = measured.picks.get(row);
+    if (pick !== undefined) stops[pick] = totals(row);
+  }
+  const sizers = measured.rows.filter((c) => c.kind === 'sizer');
+  const externals = measured.rows.filter((c) => c.kind === 'external' && c.comparable);
+  const best = Math.max(...measured.rows.filter((c) => c.kind === 'plan').map((c) => c.damage));
+  const bestSizer = Math.max(...sizers.map((c) => c.damage));
+  return {
+    stops,
+    // The plan's own campaign is the engine's figures, not a row of the table: the criterion in
+    // `plan-criteria.test.ts` already holds them equal to its marches' sum.
+    plan: {
+      marches: plan.marches,
+      damage: plan.totalDamage,
+      silver: plan.silver,
+      gold: plan.gold,
+      seconds: plan.seconds,
+      burned: plan.mercLost,
+      perSilver: plan.silver > 0 ? plan.totalDamage / plan.silver : null,
+      perHired: plan.totalDamage / Math.max(1, plan.mercLost),
+    },
+    ratios: {
+      bestSizer: bestSizer > 0 ? best / bestSizer : 0,
+      externals: Object.fromEntries(
+        externals.filter((c) => c.damage > 0).map((c) => [c.name, best / c.damage]),
+      ),
+    },
+  };
 }
 
 function record(label: string, measured: Measured): void {
@@ -320,6 +423,9 @@ function record(label: string, measured: Measured): void {
     refusal: measured.refusal,
     stops: measured.plan?.alternatives.map((stop) => stop.pick) ?? [],
     planMs: measured.planMs,
+    // The shape a registered baseline holds, carried in the run's own figures so `pnpm bench:baseline` can
+    // write a proposal out of this file without running the suite twice (`plan-baseline.ts`).
+    baseline: asBaseline(measured),
     rows: measured.rows.map((c) => ({
       name: c.name,
       kind: c.kind,
@@ -328,12 +434,45 @@ function record(label: string, measured: Measured): void {
       damage: Math.round(c.damage),
       silver: c.silver,
       gold: c.gold,
+      seconds: c.seconds,
       burned: c.burned,
       perSilver: Number.isFinite(perSilver(c)) ? Math.round(perSilver(c) * 1000) / 1000 : null,
       perHired: Math.round(perHired(c)),
     })),
   });
   writeFileSync(FIGURES, `${JSON.stringify(figures, null, 1)}\n`);
+}
+
+/**
+ * **The registered baseline, if the owner has registered one** (2026-09-19: *"the benchmark is like
+ * non-regression tests. A given scenario should not be worse, or it's a discrepancy, or a new baseline needs
+ * to be registered by me if the trade is ok."*).
+ *
+ * Read once for the whole file. `null` — no `plan-baseline.json`, or one that still reads
+ * `registeredBy: null` — means nothing below is asserted and the run says so in its report, so a tree with
+ * no baseline is an honest "not measured yet" rather than a silent pass. `pnpm bench:baseline` writes the
+ * proposal the owner registers.
+ */
+const BASELINE: Baseline | null = registeredBaseline();
+
+function checkBaseline(scenario: Scenario, measured: Measured): void {
+  if (!BASELINE) return;
+  const was = BASELINE.scenarios[scenario.label];
+  if (!was) {
+    // A scenario the baseline does not hold is news, not a failure: the owner registers armies, and one he
+    // has not registered has nothing to be worse than.
+    process.stdout.write(`  baseline — ${scenario.label}: not registered\n`);
+    return;
+  }
+  const now = asBaseline(measured);
+  expect(now, `${scenario.label}: the plan refused an army the baseline holds`).not.toBeNull();
+  if (!now) return;
+  const { failures, added } = compareToBaseline(was, now);
+  for (const line of added) process.stdout.write(`  baseline — ${scenario.label}: ${line}\n`);
+  expect(
+    failures.join('\n'),
+    `this run is behind the baseline the owner registered\n${failures.join('\n')}`,
+  ).toBe('');
 }
 
 function check(scenario: Scenario, measured: Measured): void {
@@ -405,6 +544,16 @@ writeFileSync(
     `Run: ${new Date().toISOString()}, commit ${process.env.GIT_COMMIT ?? '(working tree)'}\n\n`,
 );
 writeFileSync(FIGURES, `${JSON.stringify({ run: new Date().toISOString(), scenarios: [] }, null, 1)}\n`);
+appendFileSync(
+  REPORT,
+  BASELINE === null
+    ? 'No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads ' +
+        '`registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes ' +
+        'a proposal for the owner to register.\n\n'
+    : `Held against the baseline ${BASELINE.registeredBy ?? ''} registered on ${BASELINE.registeredAt ?? '—'}` +
+        ` (${BASELINE.reading}): no stop may hit less hard, cost more silver or burn more of the stock than` +
+        ' the figures in `tests/engine/plan-baseline.json`.\n\n',
+);
 
 const runAll = (cases: Scenario[]): void => {
   for (const scenario of cases) {
@@ -413,6 +562,7 @@ const runAll = (cases: Scenario[]): void => {
       () => {
         const measured = measure(scenario);
         record(scenario.label, measured);
+        checkBaseline(scenario, measured);
         check(scenario, measured);
       },
       300_000,
