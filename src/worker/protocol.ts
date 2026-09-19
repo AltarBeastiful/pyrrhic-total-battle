@@ -2,11 +2,12 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search' | 'plan', id, request }  and  { kind: 'cancel', id }
+ * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize', id, request }  and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
  *           { kind: 'progress', id, progress }   (searches only, zero or more)
  *           { kind: 'search', id, result }
  *           { kind: 'plan', id, result }
+ *           { kind: 'resize', id, result }   (`null` when no shape could be built)
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message } }
  *
@@ -14,7 +15,7 @@
  * flattened to `{ message }`: an `Error` does not survive `postMessage` in every browser, and the stack
  * trace of a worker frame is useless to the user anyway.
  */
-import type { CampaignInput, CampaignPlan } from '@/engine/plan';
+import type { CampaignInput, CampaignPlan, MarchWithin, ResizedMarch } from '@/engine/plan';
 import type {
   BattleSummary,
   SearchProgress,
@@ -45,13 +46,32 @@ export interface PlanJob {
   request: CampaignInput;
 }
 
+/**
+ * **One stop of a plan, re-sized over another set of troop types** (S-104): what a press on a "Left out —
+ * tap to put back" pill runs. It is its own message rather than an option on `stack` because it is a
+ * different job — `stack` is `sizeStacks`, and this is the plan's own rules over one march (`resizeMarchOver`)
+ * — and because it runs off the main thread for the same reason `plan` does: it sizes a dozen shapes and
+ * plays a battle for each.
+ */
+export interface ResizeInput {
+  /** The march's whole army, as the snapshot carries it: the left-out row is read off it. */
+  request: StackRequest;
+  within: MarchWithin;
+}
+
+export interface ResizeJob {
+  kind: 'resize';
+  id: JobId;
+  request: ResizeInput;
+}
+
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
 export interface CancelJob {
   kind: 'cancel';
   id: JobId;
 }
 
-export type CalcRequestMessage = StackJob | SearchJob | PlanJob | CancelJob;
+export type CalcRequestMessage = StackJob | SearchJob | PlanJob | ResizeJob | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -78,6 +98,13 @@ export interface PlanDoneMessage {
   result: CampaignPlan;
 }
 
+/** A re-sized march, or `null` when not one shape over those types could be built. */
+export interface ResizeDoneMessage {
+  kind: 'resize';
+  id: JobId;
+  result: ResizedMarch | null;
+}
+
 export interface CancelledMessage {
   kind: 'cancelled';
   id: JobId;
@@ -94,6 +121,7 @@ export type CalcResponseMessage =
   | SearchProgressMessage
   | SearchDoneMessage
   | PlanDoneMessage
+  | ResizeDoneMessage
   | CancelledMessage
   | ErrorMessage;
 
@@ -133,6 +161,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
     case 'stack':
     case 'search':
     case 'plan':
+    case 'resize':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -152,6 +181,9 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'search':
     case 'plan':
       return isRecord(value.result);
+    // The one answer that may be nothing: an army with no troop type to field over gets no march at all.
+    case 'resize':
+      return value.result === null || isRecord(value.result);
     case 'cancelled':
       return true;
     case 'error':

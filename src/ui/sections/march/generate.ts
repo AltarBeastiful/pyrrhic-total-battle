@@ -10,8 +10,9 @@
  * Plain functions rather than a hook: the same run has to be startable from an event handler in either
  * half of the page, and everything it reads or writes already lives in a store.
  */
-import { planMarch, withMethod } from '@/engine';
-import type { StackRequest } from '@/engine/types';
+import { planMarch, shelterCounts, withMethod } from '@/engine';
+import type { CampaignPlan } from '@/engine/plan';
+import type { BattleSummary, StackRequest, StackResult } from '@/engine/types';
 import { buildPlanRequest, buildStackRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { getCalcClient } from '@/ui/calcClient';
@@ -19,7 +20,8 @@ import { readStoredResult, useResultStore } from '@/ui/resultStore';
 import { CAMPAIGN } from '@/config';
 import { isAbortError } from '@/worker/client';
 
-import { setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
+import { pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
+import type { MarchResize } from './runStore';
 
 /**
  * The two wall-clock budgets, as `src/config.ts` sets them. They are re-exported under the names the March
@@ -163,21 +165,54 @@ export function refusalOf(error: unknown): string {
 /** Abort handle of the re-size in flight: two quick presses must not race each other onto the screen. */
 let resizing: AbortController | null = null;
 
+/** What a March edit was: the types the press put back, and the ones it took out. */
+export interface MarchEdit {
+  putBack?: readonly string[];
+  tookOut?: readonly string[];
+}
+
+/** One answer on its way to the screen: the march to draw, and the line to write under the pills. */
+interface Resized {
+  result: StackResult;
+  summary: BattleSummary;
+  resize: MarchResize;
+}
+
 /**
  * Re-size the march on screen after a March edit, without a Generate.
  *
- * Only the sizer runs, and only on the types that are left: a priority search is an answer to the
- * objective, and re-running it would overwrite the player's own tweak with the solver's opinion. The
- * *whole* available army stays in the snapshot's request — it is what the left-out row lists — and the
- * filtered copy is what the engine is called with.
+ * **On a plan** (S-104; owner, 2026-09-19: *"I'm able to put it back in and the plan then computes safely
+ * the best course of action with the new parameters in mind (the spot selected, monster or any other troop
+ * put back) without putting out another, because then we're manually fixing the reco without clicking
+ * Generate"*) the selected stop is re-sized **inside the plan's own rules**: `resizeMarchOver` over exactly
+ * the troop types that are in, with that stop's hired counts as caps and every hired stack sheltered under
+ * the lowest troop stack. Until then this ran the plain sizer on the filtered request — `sizeStacks` through
+ * the worker's `stack` job, which knows the request's *full* mercenary caps and knows nothing about the
+ * shelter, because the shelter lives inside `planCampaign` — so a put-back replaced a sheltered stop with an
+ * unsheltered sizer march carrying the mercenaries on top. That is the owner's *"adding back troops doesn't
+ * shield the mercs"*, reported three times.
  *
- * Nothing here touches `lastRunFingerprint`: a tweak is still an answer to the form as it stands, so
- * the march must not go stale under it.
+ * **On a sizer run** (Elite, Military Science) it is still the sizer over the types that are left — a
+ * priority search is an answer to the objective, and re-running it would overwrite the player's own tweak
+ * with the solver's opinion — but its answer is **sheltered** too (`shelterCounts`): the owner's rule is
+ * about every stack the app generates, not about the plan alone. `sizeStacks` itself is untouched, so its
+ * parity with TotalStack is untouched.
+ *
+ * The *whole* available army stays in the snapshot's request — it is what the left-out row lists — and the
+ * filtered copy is what the engine is called with. Nothing here touches `lastRunFingerprint`: a tweak is
+ * still an answer to the form as it stands, so the march must not go stale under it.
  */
-export async function resizeMarch(includedUnitIds: string[], leftOutByPlayer: string[]): Promise<void> {
+export async function resizeMarch(
+  includedUnitIds: string[],
+  leftOutByPlayer: string[],
+  edit: MarchEdit = {},
+): Promise<void> {
   const snapshot = useResultStore.getState().last;
   if (snapshot === null) return;
-  useRunStore.getState().setIncluded(includedUnitIds, leftOutByPlayer);
+  const run = useRunStore.getState();
+  const plan = run.plan;
+  const position = run.planPick;
+  run.setIncluded(includedUnitIds, leftOutByPlayer);
 
   resizing?.abort();
   const controller = new AbortController();
@@ -185,27 +220,142 @@ export async function resizeMarch(includedUnitIds: string[], leftOutByPlayer: st
   const included = new Set(includedUnitIds);
 
   try {
-    const { result, summary } = await getCalcClient().stack(
-      { ...snapshot.request, units: snapshot.request.units.filter((unit) => included.has(unit.id)) },
-      controller.signal,
-    );
+    const resized =
+      plan === null
+        ? await sizedAgain(snapshot.request, included, edit, controller.signal)
+        : await planStopAgain(snapshot.request, plan, position, included, controller.signal);
     if (controller.signal.aborted) return;
+    if (resized === null) {
+      useResultStore
+        .getState()
+        .setError('There is no march over those types: put a troop type back to size one.');
+      return;
+    }
     useResultStore.getState().setResult({
       request: snapshot.request,
-      result,
-      summary,
+      result: resized.result,
+      summary: resized.summary,
       profileId: snapshot.profileId,
       setupId: snapshot.setupId,
       // The same run, re-sized: keeping the stamp keeps everything keyed on it (the objective
       // comparison, five searches long) from starting again at every press on a pill.
       at: snapshot.at,
     });
+    useRunStore.getState().setResize(resized.resize);
   } catch (error) {
     if (isAbortError(error)) return;
     useResultStore
       .getState()
       .setError(error instanceof Error ? error.message : 'The march could not be re-sized.');
   }
+}
+
+/**
+ * **One stop of the plan, re-sized in place** (S-104). The stop is the one the bar is reading — the plan's
+ * own recommendation until the player moves it (`pickOf`, `planPick`) — and it is what says how much hired
+ * stock the re-size may spend: its counts are the sizer's caps and never its orders, so the burn can only
+ * fall and the repeats the plan already planned are still sustained. The troops are **not** capped: they are
+ * rationed by leadership, and capping them at the stop's counts is the 2026-09-15 defect written up in the
+ * plan branch of `runGenerate` above.
+ */
+async function planStopAgain(
+  request: StackRequest,
+  plan: CampaignPlan,
+  position: number,
+  included: Set<string>,
+  signal: AbortSignal,
+): Promise<Resized | null> {
+  const stop = pickOf(plan, position);
+  const troopIds: string[] = [];
+  const hired: Record<string, number> = {};
+  /** Mercenary types the player put back that this stop spends none of: the pane names them. */
+  const noStock: string[] = [];
+  for (const unit of request.units) {
+    if (!included.has(unit.id)) continue;
+    if (unit.pool === 'leadership') {
+      troopIds.push(unit.id);
+      continue;
+    }
+    const inStop = stop.counts[unit.id] ?? 0;
+    /**
+     * **The two kinds of hired stock cap differently** (S-104, S-102; the owner, 2026-09-19: *"the spot
+     * selected, **monster or any other troop** put back"*, and *"apart from mercs, they can be trained just
+     * like troops"*).
+     *
+     * A **mercenary** is capped at the stop's own count, so the burn can only fall and the campaign the plan
+     * planned is still sustained — and one the stop spends **none** of stays at nothing, because that is the
+     * rare stock the plan decided not to spend and a put-back is not a new plan. The pane says so rather
+     * than leaving the pill to bounce back without a word.
+     *
+     * A **monster** is capped at **its own pool** — `housing.dominance / cost`, the same bound
+     * `planCampaign` gives an uncapped hired type — because it is *trained*, not spent: there is no stock of
+     * monsters to ration over the horizon (`sustain` is `Infinity` for a dominance type since S-102), so a
+     * stop that fields none of one the player owns has decided nothing about it. Its silver, its queue and
+     * its dragon coins are billed on the answer like any other stack's.
+     */
+    if (unit.pool === 'dominance') {
+      hired[unit.id] = Math.max(inStop, Math.floor(request.housing.dominance / Math.max(1, unit.cost)));
+      continue;
+    }
+    hired[unit.id] = inStop;
+    if (inStop <= 0) noStock.push(unit.id);
+  }
+  const answer = await getCalcClient().resize({ request, within: { troopIds, hired } }, signal);
+  if (answer === null) return null;
+  const { result, summary } = planMarch(request, answer.counts);
+  // Read off the **stop** rather than off the press: two put-backs in a row both show, in the order a
+  // player would say them, whichever pill was pressed last.
+  const inStop = new Set(Object.keys(stop.counts).filter((id) => (stop.counts[id] ?? 0) > 0));
+  const putBack = request.units.map((unit) => unit.id).filter((id) => included.has(id) && !inStop.has(id));
+  const named = new Set(noStock);
+  return {
+    result,
+    summary,
+    resize: {
+      putBack,
+      tookOut: [...inStop].filter((id) => !included.has(id)),
+      // What was asked for and is not in the march. A mercenary the stop spends none of is said in its own
+      // words below (`noStock`), so it is not counted twice.
+      unfielded: [
+        ...new Set([...answer.unfielded, ...putBack.filter((id) => (answer.counts[id] ?? 0) <= 0)]),
+      ].filter((id) => !named.has(id)),
+      noStock: noStock.filter((id) => (answer.counts[id] ?? 0) <= 0),
+      inPlan: true,
+    },
+  };
+}
+
+/** A March edit on a sizer run: the sizer over the types that are left, with its answer sheltered. */
+async function sizedAgain(
+  request: StackRequest,
+  included: Set<string>,
+  edit: MarchEdit,
+  signal: AbortSignal,
+): Promise<Resized> {
+  const { result, summary } = await getCalcClient().stack(
+    { ...request, units: request.units.filter((unit) => included.has(unit.id)) },
+    signal,
+  );
+  const counts: Record<string, number> = {};
+  for (const stack of result.stacks) counts[stack.unitId] = stack.count;
+  // Every hired stack under the lowest troop stack, on this path too (S-104): the sizer sizes them to a
+  // matched HP, which is exactly the line the enemy strikes first.
+  const safe = shelterCounts(request, counts);
+  const lowered = Object.keys(safe).some((id) => safe[id] !== counts[id]);
+  const shown = lowered ? planMarch(request, safe) : { result, summary };
+  const putBack = [...(edit.putBack ?? [])];
+  return {
+    result: shown.result,
+    summary: shown.summary,
+    resize: {
+      putBack,
+      tookOut: [...(edit.tookOut ?? [])],
+      unfielded: putBack.filter((id) => (safe[id] ?? 0) <= 0),
+      // There is no stop on this path, so nothing can be short of the stock a stop decided to spend.
+      noStock: [],
+      inPlan: false,
+    },
+  };
 }
 
 /**

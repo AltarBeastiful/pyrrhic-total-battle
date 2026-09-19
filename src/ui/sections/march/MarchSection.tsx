@@ -32,7 +32,7 @@ import { PlanFold } from './PlanPanel';
 import { amount } from './format';
 import { MarchActions, MarchDetailsFold, MarchObjectives, MarchSavedFold } from './MarchFoot';
 import { MarchGenerateButton } from './MarchGenerateButton';
-import { MarchLeftOut, MarchPills } from './MarchPills';
+import { MarchLeftOut, MarchPills, MarchResized } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
 import { useRunStore } from './runStore';
 import { UnitSheet } from './UnitSheet';
@@ -56,6 +56,8 @@ export function MarchSection() {
   // The counts' edit mode lives in the run store: the row that switches it is on the other side of the
   // page from the pills it turns into fields (`MarchFoot.tsx`, `runStore.ts`).
   const editing = useRunStore((state) => state.editingCounts);
+  // A March edit has been computed, so the pane has a line to write under the pills (S-104).
+  const resized = useRunStore((state) => state.resize !== null);
   const titleId = useId();
 
   const { snapshot, result, summary } = march;
@@ -152,8 +154,15 @@ export function MarchSection() {
         </div>
       )}
 
-      {/* 3 — what this march leaves at home. */}
-      {snapshot !== null && march.leftOut.length > 0 && <MarchLeftOut leftOut={march.leftOut} />}
+      {/* 3 — what this march leaves at home, and what the last edit to it did (S-104). One part, because
+          they are one thing: the row is what a player presses and the line is the answer he gets back. The
+          line outlives the row — "Put back all" empties it — so the part is drawn for either. */}
+      {snapshot !== null && (march.leftOut.length > 0 || resized) && (
+        <Stack gap={8}>
+          <MarchLeftOut leftOut={march.leftOut} />
+          <MarchResized units={snapshot.request.units} />
+        </Stack>
+      )}
 
       {/* 4 — the plan behind a complete optimization (S-59). It is **not a fold to hunt for** (the owner
           asked for the nine-line explanation that stood above the figures to go, and for the block to be

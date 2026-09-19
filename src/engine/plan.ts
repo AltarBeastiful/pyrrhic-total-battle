@@ -1368,6 +1368,318 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
 }
 
 /** The scorer of one request, with the account's table built from it — the shorthand for a standalone sweep. */
+// ---- One march, re-sized in place (S-104) ---------------------------------------------------------------
+
+/**
+ * **What one march costs the account, under its own recovery settings** — one `retrainOne` per stack the
+ * march fields, whatever pool it is drawn from, which is exactly what `recoveryCosts` sums for the same
+ * counts under the retrain plan, so the four prices below are the recap's own (S-90, S-91, and S-96 for the
+ * pool).
+ *
+ * It reads the same for every pool and says something different about each, because `retrainOne` bills a
+ * non-leadership stack by chunks of ten and folds the units a chunk does not return into `reviveOne`'s
+ * gold: a **troop** costs per-unit silver and per-unit queue and no gold; a **mercenary** has no `training`
+ * block at all, so it costs only the revive gold this line has always added; a **dominance monster** has
+ * one, so it costs chunk silver, chunk queue, chunk **dragon coins** and the revive gold together. Until
+ * S-96 the gold was read off the hired stacks and the silver and the queue off the rungs alone, which was
+ * the same arithmetic while the only hired pool was authority and dropped a monster's whole training bill
+ * the moment one could be fielded.
+ *
+ * Module-level since S-104, so the re-size below prices a march exactly as `planCampaign` prices one: it
+ * was that search's own closure over `request.recovery`, and two copies of a price list is how a bar and a
+ * recap come to disagree.
+ */
+function priceMarch(
+  recovery: RecoverySettings,
+  rungs: { entry: Effective; count: number }[],
+  mercs: { entry: Effective; count: number }[],
+  totals: ReturnType<typeof marchOf>,
+): PlanMarch {
+  const counts: Record<string, number> = {};
+  for (const rung of rungs) counts[rung.entry.id] = rung.count;
+  const mercFielded: Record<string, number> = {};
+  for (const merc of mercs) {
+    if (merc.count > 0) {
+      counts[merc.entry.id] = merc.count;
+      mercFielded[merc.entry.id] = merc.count;
+    }
+  }
+  const bill = [...rungs, ...mercs]
+    .filter((stack) => stack.count > 0)
+    .map((stack) => retrainOne(stack.entry.unit, stack.count, recovery));
+  const silver = bill.reduce((sum, one) => sum + one.silver, 0);
+  const seconds = bill.reduce((sum, one) => sum + one.seconds, 0);
+  const gold = bill.reduce((sum, one) => sum + one.gold, 0);
+  const dragonCoins = bill.reduce((sum, one) => sum + one.dragonCoins, 0);
+  return {
+    counts,
+    damage: Math.round(totals.damage),
+    silver: Math.round(silver),
+    gold: Math.round(gold),
+    dragonCoins: Math.round(dragonCoins),
+    // Rounded once, on the sum, the way `recoveryCosts` rounds its own — rounding each rung first would
+    // drift by a second a stack against the recap the March draws.
+    seconds: Math.round(seconds),
+    mercFielded,
+    mercLost: totals.mercLost,
+    strikes: Math.round(totals.strikes),
+    stacks: rungs.length + mercs.filter((merc) => merc.count > 0).length,
+  };
+}
+
+/**
+ * **The sizer's own shape for one set of hired counts**: the stacks `sizeStacks` fields under `method` with
+ * those counts as its caps, and every hired stack lowered under the lowest troop stack.
+ *
+ * `troopIds` is the set of troop types it may field. Left out, every type the account holds — which is all
+ * the search ever asked for until S-93 gave it a **prefix** of the troop ranking, and all the March pane
+ * ever asked for until S-104 gave it the stop's own types plus the one being put back.
+ *
+ * The shelter: a hired stack under the lowest troop stack, or the enemy — which wipes the highest-HP living
+ * stack first — takes it before the troops have died. A stack the sizer sized over that line is lowered to
+ * just under it (`shelterUnder`); one whose first unit is already over is left out of this shape.
+ *
+ * **Every hired type, capped or not** (S-87, restoring S-75's rule; owner, 2026-09-18: *"a critical rule is
+ * to shield mercs. Right now mercs are unshielded on all complete optimization marches … more damage with a
+ * lot of merc spent should trigger a failing test as we're using too much of a rare resource"*). S-77 had
+ * narrowed this to the **unlimited** types, reading his earlier sentence — *"when a merc is unlimited and is
+ * put in, don't put more, and lower it so the health stack still makes sense — below the troops"* — as being
+ * only about the one case where nothing else bounds a stack, and on the argument that the battle model
+ * prices a sponge already (`marchOf` runs the journal, and the burn is `ceil(n / 10)` wherever the stack
+ * stands). It buys damage: on his export at 7 000 the unsheltered MS-relaxed march stands **34 legionaries
+ * on top** as the enemy's first kill — every other stack one kill slot later, the arbalesters striking three
+ * times instead of two — for **6 242 452** a march against **5 864 482** sheltered
+ * (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §A). And it is not the rule he asked for: on
+ * his live camp of 2026-09-18 every stop fielded hired stacks above the troops — 375 legionaries and 403
+ * arbalesters over a 274 772-HP floor at the sweet spot, 830 · 400 · 10 bears at the steady max
+ * (`tools/theorycraft/out/106-shelter-live.md`) — because a capped type is just as rare as an unlimited one
+ * once it is gone. The damage is the price of the shelter, and the shelter is the instruction.
+ *
+ * **Every pool but `leadership`** (S-96): the rule is about what the enemy kills first, which knows nothing
+ * about pools, and a dominance monster is the rarest stock on the field of all.
+ */
+function sizedShape(
+  request: StackRequest,
+  byId: Map<string, Effective>,
+  mercs: { entry: Effective; count: number }[],
+  method: SizerMethod,
+  troopIds?: ReadonlySet<string>,
+): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } {
+  const caps: Record<string, number> = { ...request.caps };
+  const fieldedIds = new Set<string>();
+  for (const merc of mercs) {
+    caps[merc.entry.id] = merc.count;
+    if (merc.count > 0) fieldedIds.add(merc.entry.id);
+  }
+  const sized = sizeStacks({
+    ...request,
+    caps,
+    units: request.units.filter((unit) =>
+      unit.pool === 'leadership' ? (troopIds?.has(unit.id) ?? true) : fieldedIds.has(unit.id),
+    ),
+    options: {
+      ...request.options,
+      method: method === 'elite' ? 'elite' : 'ms',
+      relaxedPreservation: method === 'msRelaxed',
+    },
+  });
+  const stacks = sized.stacks
+    .filter((stack) => stack.count > 0)
+    .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
+    .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
+  const rungs = stacks.filter((stack) => stack.entry.pool === 'leadership');
+  const sheltered = shelterUnder(
+    rungs,
+    stacks.filter((stack) => stack.entry.pool !== 'leadership'),
+  ).filter((stack) => stack.count > 0);
+  return { rungs, mercs: sheltered };
+}
+
+/** The troop types a re-sized march must field, and the hired counts it may spend. */
+export interface MarchWithin {
+  /**
+   * The troop types to field: the selected stop's own, **plus** the one being put back, or **less** the one
+   * being taken out. Every one of them has to be in the answer — that is the owner's *"without putting out
+   * another"* — and one that cannot be fielded at all is named in `ResizedMarch.unfielded` rather than
+   * quietly dropped.
+   */
+  troopIds: readonly string[];
+  /**
+   * **A cap per hired type**, by unit id: what the re-size may field of each, and never what it must. The
+   * engine holds no opinion about where they come from — it fields at most what it is given — and the caller
+   * reads them off the two kinds of hired stock (`src/ui/sections/march/generate.ts`):
+   *
+   *  - an **authority** type is capped at the **selected stop's own count** (S-80's reason: a count that can
+   *    only fall is what makes the rest of the plan safe to leave alone — the burn falls, so the stock lasts
+   *    at least as many marches, `lastsMarches` being monotone in the count, so the repeats the stop already
+   *    plays are still sustained and the finale the search already planned is still affordable). A mercenary
+   *    the stop spends none of therefore stays at nothing: that is the rare stock the plan decided not to
+   *    spend, and a put-back is not a new plan.
+   *  - a **dominance** type is capped at **its own pool** — `housing.dominance / cost`, exactly as
+   *    `planCampaign`'s `unlimited`/`stock` bounds it — because a monster is *trained*, not spent (S-102;
+   *    the owner, 2026-09-19: *"apart from mercs, they can be trained just like troops"*, and *"monster or
+   *    any other troop put back"*). There is no stock of monsters to ration over the horizon
+   *    (`sustain` is `Infinity` for them), so a stop that fields none of a monster the player owns is not a
+   *    decision about scarcity, and putting one back has to be able to field it. Its three prices — silver,
+   *    queue and dragon coins — are billed on the answer like any other stack's.
+   */
+  hired: Record<string, number>;
+  /** How much room the lowest rung leaves above the biggest hired stack; the plan's own by default. */
+  gap?: number;
+}
+
+/** A march the March pane can draw, with how it was built and what it could not field. */
+export interface ResizedMarch extends PlanMarch {
+  /** The sizer under one of its three methods, or the tight ladder over the same types. */
+  shape: SizerMethod | 'ladder';
+  /** Troop types `MarchWithin.troopIds` asked for that no shape could field; empty when every one is in. */
+  unfielded: string[];
+}
+
+/**
+ * **Putting a type back re-sizes the selected stop inside the plan's rules** (S-104, 2026-09-19).
+ *
+ * The owner, for the third time that day: *"Adding back troops doesn't shield the mercs"* — and what he
+ * means by it, in his own words: *"I'm able to put it back in and the plan then computes safely the best
+ * course of action with the new parameters in mind (the spot selected, monster or any other troop put back)
+ * without putting out another, because then we're manually fixing the reco without clicking Generate."*
+ *
+ * **What was wrong.** A put-back pill ran the plain sizer on the snapshot's request filtered to the types
+ * that are in (`MarchPills` → `formation.ts` → `generate.ts`), through the worker's `stack` job. That is
+ * `sizeStacks` and nothing else: it knows the request's full mercenary caps and it does not know the
+ * shelter, which lives here, inside `planCampaign` (`shelterUnder`, S-87). So a stop the plan had sheltered
+ * came back as an unsheltered sizer march with the mercenaries standing on top — the enemy's first kill,
+ * the rarest stock on the field spent before a troop has died — and the plan's own rules left the screen
+ * the moment the player touched a pill.
+ *
+ * **The rule this answers with.** Given the types to field and the stop's hired counts, the best march over
+ * **exactly** those troop types:
+ *
+ *  - the sizer under each of its three methods (`SIZER_DEPTHS`) with those hired counts as caps, sheltered
+ *    (`sizedShape`) — S-93's own machinery, the family a player builds by hand;
+ *  - the tight ladder over the same types, at each of the `LADDER_GROWTHS`, with the hired stacks sheltered
+ *    under it — the shape the search reaches for when the sizer spends too much silver;
+ *  - priced by `priceMarch` on the **worst opening** (S-94, `marchOf`), which is the figure the bar prints
+ *    and the recap draws;
+ *  - and the best of them by damage, a tie going to the cheaper march and then to the shorter queue.
+ *
+ * Three promises hold over every shape it answers with, and the tests read them back off the answer
+ * (`tests/engine/plan-resize.test.ts`): every hired and dominance stack stands **strictly under** the lowest
+ * troop stack; no hired count is above the stop's; and every troop type asked for is fielded, or named.
+ * What it does **not** do is plan again — the campaign, its horizon, its finale and the rest of the bar are
+ * the plan's, untouched: this is one stop's march, re-sized in place, *"without clicking Generate"*.
+ */
+export function resizeMarchOver(request: StackRequest, within: MarchWithin): ResizedMarch | null {
+  const table = effectiveTable(request);
+  const troops = rankTroops(table);
+  const byId = new Map(table.map((entry) => [entry.id, entry]));
+  const enemyStacks = enemySquadCount(request.enemy);
+  const gap = within.gap ?? DEFAULT_GAP;
+  const wantedIds = new Set(within.troopIds);
+  // In the ranking's own order, which is the order `ladder` hands out its rungs in.
+  const wanted = troops.filter((entry) => wantedIds.has(entry.id));
+  if (wanted.length === 0) return null;
+  /**
+   * **The hired stock is capped at the stop's; the troops are not capped at all** (the note in
+   * `src/ui/sections/march/generate.ts`, 2026-09-15: capping the troop types at the plan's own counts left
+   * a left-out stack's leadership *unused*, so leaving a type out changed nothing — the owner's *"before,
+   * when I left out a troop, it would equilibrate again the troops and mercs"*). The troops are rationed by
+   * leadership, which the sizer already respects; the caller's request may carry a stop's counts as caps
+   * (the plan bar writes them there so the recap can draw that stop), so they are dropped here and the
+   * hired caps below are the only ones the sizer sees.
+   */
+  const caps: Record<string, number> = {};
+  const asked: { entry: Effective; count: number }[] = [];
+  for (const entry of table) {
+    if (entry.pool === 'leadership') continue;
+    const count = Math.max(0, Math.floor(within.hired[entry.id] ?? 0));
+    caps[entry.id] = count;
+    if (count > 0) asked.push({ entry, count });
+  }
+  const sizing: StackRequest = { ...request, caps };
+
+  const shapes: {
+    rungs: { entry: Effective; count: number }[];
+    mercs: { entry: Effective; count: number }[];
+    shape: SizerMethod | 'ladder';
+  }[] = [];
+  for (const method of Object.values(SIZER_DEPTHS)) {
+    shapes.push({ ...sizedShape(sizing, byId, asked, method, wantedIds), shape: method });
+  }
+  if (asked.length > 0) {
+    // The ladder is built above the biggest hired stack as it is asked for, then the hired stacks are
+    // lowered under whatever the rungs came out at: a rung is a whole number of units, so a heavy troop
+    // type can land a hair under the stack it was meant to clear (the same second reading `finaleFor`
+    // makes of its own ladders).
+    const hiredHp = Math.max(...asked.map((merc) => merc.count * merc.entry.hp));
+    for (const scale of LADDER_GROWTHS) {
+      const rungs = ladder(troops, wanted.length, hiredHp, gap, request.housing.leadership, scale, wanted);
+      if (rungs.length === 0) continue;
+      shapes.push({
+        rungs,
+        mercs: shelterUnder(rungs, asked).filter((merc) => merc.count > 0),
+        shape: 'ladder',
+      });
+    }
+  }
+
+  /** Best by damage; a tie goes to the cheaper march, and then to the one back in the barracks sooner. */
+  const beats = (candidate: ResizedMarch, held: ResizedMarch): boolean => {
+    if (candidate.unfielded.length !== held.unfielded.length)
+      return candidate.unfielded.length < held.unfielded.length;
+    if (candidate.damage !== held.damage) return candidate.damage > held.damage;
+    if (candidate.silver !== held.silver) return candidate.silver < held.silver;
+    return candidate.seconds < held.seconds;
+  };
+
+  let best: ResizedMarch | null = null;
+  for (const shape of shapes) {
+    const rungs = shape.rungs.filter((rung) => rung.count > 0);
+    const mercs = shape.mercs.filter((merc) => merc.count > 0);
+    if (rungs.length === 0) continue;
+    // A march the camp can house (S-96, `fitsHousing`): an uncapped hired type reads the whole of its own
+    // pool, and a dozen of them read it a dozen times over.
+    if (!fitsHousing(request.housing, rungs, mercs)) continue;
+    // The shelter, read back off the march that will be drawn (S-87). `shelterUnder` has already lowered
+    // every hired stack under the lowest rung, so this refuses only one it could not: a type whose very
+    // first unit already stands over the troop line.
+    const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+    const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
+    if (mercs.length > 0 && floor <= hiredTop) continue;
+    const march = priceMarch(request.recovery, rungs, mercs, marchOf([...rungs, ...mercs], enemyStacks));
+    const candidate: ResizedMarch = {
+      ...march,
+      shape: shape.shape,
+      unfielded: wanted.filter((entry) => (march.counts[entry.id] ?? 0) <= 0).map((entry) => entry.id),
+    };
+    if (best === null || beats(candidate, best)) best = candidate;
+  }
+  return best;
+}
+
+/**
+ * **The shelter, applied to a march's counts** (S-87, and S-104 for the caller).
+ *
+ * Every hired stack — every pool but `leadership` — lowered to just under the lowest troop stack, and one
+ * whose first unit is already over is lowered to nothing. It is the same rule `shelterUnder` states for a
+ * shape, said about the counts a march is drawn from, so that the one path that does not go through the
+ * plan can obey it too: a March edit on a **sizer** run (Elite, Military Science) re-sizes through
+ * `sizeStacks`, which has never known about the shelter, and the owner's rule is about every stack the app
+ * generates rather than about the plan alone. `sizeStacks` itself is untouched — it answers TotalStack's
+ * own question, and its parity with TotalStack is a separate promise.
+ */
+export function shelterCounts(request: StackRequest, counts: Record<string, number>): Record<string, number> {
+  const fielded = effectiveTable(request)
+    .filter((entry) => (counts[entry.id] ?? 0) > 0)
+    .map((entry) => ({ entry, count: counts[entry.id] ?? 0 }));
+  const rungs = fielded.filter((stack) => stack.entry.pool === 'leadership');
+  const hired = fielded.filter((stack) => stack.entry.pool !== 'leadership');
+  if (rungs.length === 0 || hired.length === 0) return { ...counts };
+  const out: Record<string, number> = { ...counts };
+  for (const stack of shelterUnder(rungs, hired)) out[stack.entry.id] = stack.count;
+  return out;
+}
+
 export function shapeScorer(request: StackRequest, gap: number = DEFAULT_GAP, finale = true): ShapeScorer {
   const table = effectiveTable(request);
   return makeScorer({
@@ -1678,56 +1990,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   let heavy: Candidate | null = null;
   let peakSilver = 0;
   let peakMercenary = 0;
+  /** This search's four prices for one march, under the account's own recovery settings (`priceMarch`). */
   const toMarch = (
     rungs: { entry: Effective; count: number }[],
     mercs: { entry: Effective; count: number }[],
     totals: ReturnType<typeof marchOf>,
-  ): PlanMarch => {
-    const counts: Record<string, number> = {};
-    for (const rung of rungs) counts[rung.entry.id] = rung.count;
-    const mercFielded: Record<string, number> = {};
-    for (const merc of mercs) {
-      if (merc.count > 0) {
-        counts[merc.entry.id] = merc.count;
-        mercFielded[merc.entry.id] = merc.count;
-      }
-    }
-    /**
-     * **One `retrainOne` per stack the march fields, whatever pool it is drawn from** — which is exactly what
-     * `recoveryCosts` sums for the same counts under the retrain plan, so the four prices below are the
-     * recap's own (S-90, S-91, and S-96 for the pool).
-     *
-     * It reads the same for every pool and says something different about each, because `retrainOne` bills a
-     * non-leadership stack by chunks of ten and folds the units a chunk does not return into `reviveOne`'s
-     * gold: a **troop** costs per-unit silver and per-unit queue and no gold; a **mercenary** has no
-     * `training` block at all, so it costs only the revive gold this line has always added; a **dominance
-     * monster** has one, so it costs chunk silver, chunk queue, chunk **dragon coins** and the revive gold
-     * together. Until S-96 the gold was read off the hired stacks and the silver and the queue off the rungs
-     * alone, which was the same arithmetic while the only hired pool was authority and dropped a monster's
-     * whole training bill the moment one could be fielded.
-     */
-    const recovery = [...rungs, ...mercs]
-      .filter((stack) => stack.count > 0)
-      .map((stack) => retrainOne(stack.entry.unit, stack.count, request.recovery));
-    const silver = recovery.reduce((sum, one) => sum + one.silver, 0);
-    const seconds = recovery.reduce((sum, one) => sum + one.seconds, 0);
-    const gold = recovery.reduce((sum, one) => sum + one.gold, 0);
-    const dragonCoins = recovery.reduce((sum, one) => sum + one.dragonCoins, 0);
-    return {
-      counts,
-      damage: Math.round(totals.damage),
-      silver: Math.round(silver),
-      gold: Math.round(gold),
-      dragonCoins: Math.round(dragonCoins),
-      // Rounded once, on the sum, the way `recoveryCosts` rounds its own — rounding each rung first would
-      // drift by a second a stack against the recap the March draws.
-      seconds: Math.round(seconds),
-      mercFielded,
-      mercLost: totals.mercLost,
-      strikes: Math.round(totals.strikes),
-      stacks: rungs.length + mercs.filter((merc) => merc.count > 0).length,
-    };
-  };
+  ): PlanMarch => priceMarch(request.recovery, rungs, mercs, totals);
 
   const ratioOf = (candidate: Candidate): { silver: number; mercs: number } => {
     // Counted once per candidate and kept: `record` reads the *current* best's ratios again on every
@@ -1761,63 +2029,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      * burned, more damage, a quarter less silver and half the queue. Omitted: every troop type, as before.
      */
     depth?: number,
-  ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } => {
-    const caps: Record<string, number> = { ...request.caps };
-    const fieldedIds = new Set<string>();
-    for (const merc of mercs) {
-      caps[merc.entry.id] = merc.count;
-      if (merc.count > 0) fieldedIds.add(merc.entry.id);
-    }
-    const prefix = depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id));
-    const sized = sizeStacks({
-      ...request,
-      caps,
-      units: request.units.filter((unit) =>
-        unit.pool === 'leadership' ? (prefix?.has(unit.id) ?? true) : fieldedIds.has(unit.id),
-      ),
-      options: {
-        ...request.options,
-        method: method === 'elite' ? 'elite' : 'ms',
-        relaxedPreservation: method === 'msRelaxed',
-      },
-    });
-    const stacks = sized.stacks
-      .filter((stack) => stack.count > 0)
-      .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
-      .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
-    const rungs = stacks.filter((stack) => stack.entry.pool === 'leadership');
-    /**
-     * The shelter: a hired stack under the lowest troop stack, or the enemy — which wipes the highest-HP living
-     * stack first — takes it before the troops have died. A stack the sizer sized over that line is lowered to
-     * just under it (`shelterUnder`); one whose first unit is already over is left out of this shape.
-     *
-     * **Every hired type, capped or not** (S-87, restoring S-75's rule; owner, 2026-09-18: *"a critical rule is
-     * to shield mercs. Right now mercs are unshielded on all complete optimization marches … more damage with a
-     * lot of merc spent should trigger a failing test as we're using too much of a rare resource"*). S-77 had
-     * narrowed this to the **unlimited** types, reading his earlier sentence — *"when a merc is unlimited and is
-     * put in, don't put more, and lower it so the health stack still makes sense — below the troops"* — as being
-     * only about the one case where nothing else bounds a stack, and on the argument that the battle model
-     * prices a sponge already (`marchOf` runs the journal, and the burn is `ceil(n / 10)` wherever the stack
-     * stands). It buys damage: on his export at 7 000 the unsheltered MS-relaxed march stands **34 legionaries
-     * on top** as the enemy's first kill — every other stack one kill slot later, the arbalesters striking three
-     * times instead of two — for **6 242 452** a march against **5 864 482** sheltered
-     * (`tools/theorycraft/out/101-shelter-cost-and-ten-bears.md` §A). And it is not the rule he asked for: on
-     * his live camp of 2026-09-18 every stop fielded hired stacks above the troops — 375 legionaries and 403
-     * arbalesters over a 274 772-HP floor at the sweet spot, 830 · 400 · 10 bears at the steady max
-     * (`tools/theorycraft/out/106-shelter-live.md`) — because a capped type is just as rare as an unlimited one
-     * once it is gone. The damage is the price of the shelter, and the shelter is the instruction.
-     *
-     * The other half of S-77 stands unchanged: the sweet spot's tie is still broken on the campaign's two
-     * ratios (`middleOfRange`).
-     */
-    const sheltered = shelterUnder(
-      rungs,
-      // **Every pool but `leadership`** (S-96): the rule is about what the enemy kills first, which knows
-      // nothing about pools, and a dominance monster is the rarest stock on the field of all.
-      stacks.filter((stack) => stack.entry.pool !== 'leadership'),
-    ).filter((stack) => stack.count > 0);
-    return { rungs, mercs: sheltered };
-  };
+  ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } =>
+    sizedShape(
+      request,
+      byId,
+      mercs,
+      method,
+      // The prefix as a set of ids, which is what `sizedShape` filters on: `troops` is the ranking, weakest
+      // per HP first, so its last `depth` entries are the strongest `depth` types.
+      depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id)),
+    );
   let winnerRungs: { entry: Effective; count: number }[] = [];
   const score = makeScorer({
     troops,

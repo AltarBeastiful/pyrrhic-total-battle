@@ -85,6 +85,36 @@ export interface TradeoffFigures {
 }
 
 /**
+ * **What the last March edit did** (S-104), for the one line the pane writes under the pills.
+ *
+ * It is the owner's own promise, read back off the answer: the types he put back are in, the types he took
+ * out are out, nothing else was pushed out, and the hired stacks stand under his troops. Run state like
+ * everything else here — Generate forgets it, moving the plan bar forgets it, and nothing about it is
+ * stored, shared or synced.
+ */
+export interface MarchResize {
+  /** Types that are in this march and were not in the one the run generated. */
+  putBack: string[];
+  /** Types that were in it and are out of it now. */
+  tookOut: string[];
+  /** Types that were asked for and that no shape could field at all: they are back in the left-out row. */
+  unfielded: string[];
+  /**
+   * **Mercenary types the selected stop spends none of** (S-104). They are not "would not fit": the plan
+   * decided not to spend that rare stock, a put-back is not a new plan (`MarchWithin.hired`), and the pane
+   * says which of the two it is. A **monster** never lands here — it is trained rather than spent, so it is
+   * capped by its own pool and a put-back fields it (S-102).
+   */
+  noStock: string[];
+  /**
+   * The re-size went through the **plan's own rules** — the selected stop's hired counts as caps, sheltered,
+   * nothing else pushed out (`resizeMarchOver`) — rather than through the plain sizer, which is what a
+   * March edit on an Elite or a Military Science run still runs (sheltered too, since S-104).
+   */
+  inPlan: boolean;
+}
+
+/**
  * What a priority search traded away: its winning selection against the army you would have marched
  * with every unit type (`SearchResult.baseline`). Kept for the run, not for the document — it explains
  * the result on screen and nothing else.
@@ -167,6 +197,9 @@ export interface RunState {
   includedUnitIds: string[];
   /** Of those, the ones the player took out by hand; the rest were the solver's own decision. */
   leftOutByPlayer: string[];
+  /** What the last March edit did, or `null` when the march on screen is the run's own (S-104). */
+  resize: MarchResize | null;
+  setResize: (resize: MarchResize | null) => void;
   /** The winner against the all-types army; `null` when the result did not come from a priority. */
   tradeoff: SearchTradeoff | null;
   /**
@@ -189,7 +222,10 @@ export interface RunState {
   setProgress: (progress: SearchProgress) => void;
   /** A finished Generate: the solver's own selection, and no March edit left over from before it. */
   finish: (includedUnitIds: string[], tradeoff?: SearchTradeoff | null, plan?: CampaignPlan | null) => void;
-  /** A March edit: the new list to size on, and who is out by hand. */
+  /**
+   * A March edit: the new list to size on, and who is out by hand. It clears the re-size line — the edit
+   * has not been computed yet, and the sentence under the pills must never describe the march before it.
+   */
   setIncluded: (includedUnitIds: string[], leftOutByPlayer: string[]) => void;
   cancel: () => void;
   /** Keep the summary a new result replaces; called with `null` when there is nothing to keep. */
@@ -204,10 +240,14 @@ export const useRunStore = create<RunState>()((set, get) => ({
   lastRunFingerprint: null,
   includedUnitIds: [],
   leftOutByPlayer: [],
+  resize: null,
   tradeoff: null,
   plan: null,
   planPick: 0,
   controller: null,
+  setResize: (resize) => {
+    set({ resize });
+  },
   start: (controller, fingerprint) => {
     set({
       controller,
@@ -217,6 +257,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       editingCounts: false,
       includedUnitIds: [],
       leftOutByPlayer: [],
+      resize: null,
       tradeoff: null,
       plan: null,
       planPick: 0,
@@ -235,6 +276,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       progress: null,
       includedUnitIds,
       leftOutByPlayer: [],
+      resize: null,
       tradeoff,
       plan,
       // a fresh plan opens on the one it recommends rather than at the cheap end of its frontier
@@ -245,7 +287,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
     set({ planPick });
   },
   setIncluded: (includedUnitIds, leftOutByPlayer) => {
-    set({ includedUnitIds, leftOutByPlayer });
+    set({ includedUnitIds, leftOutByPlayer, resize: null });
   },
   cancel: () => {
     get().controller?.abort();
@@ -264,6 +306,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       lastRunFingerprint: null,
       includedUnitIds: [],
       leftOutByPlayer: [],
+      resize: null,
       tradeoff: null,
       plan: null,
       planPick: 0,

@@ -5,16 +5,17 @@
  * browser, jsdom, a Node script) or constructing one throws, it transparently falls back to the same
  * jobs on the main thread. Callers get one interface and never branch on it.
  */
-import type { CampaignInput, CampaignPlan } from '@/engine/plan';
+import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, StackRequest, SearchResult } from '@/engine/types';
 
-import { runPlan, runSearch, runStack } from './jobs';
+import { runPlan, runResize, runSearch, runStack } from './jobs';
 import {
   errorPayload,
   isCalcResponseMessage,
   nextJobId,
   type CalcRequestMessage,
   type JobId,
+  type ResizeInput,
   type StackOutcome,
 } from './protocol';
 
@@ -27,6 +28,8 @@ export interface CalcClient {
   search(request: SearchRequest, onProgress?: ProgressHandler, signal?: AbortSignal): Promise<SearchResult>;
   /** Complete optimization v2 (S-55): the campaign planned from the army alone. */
   plan(request: CampaignInput, signal?: AbortSignal): Promise<CampaignPlan>;
+  /** S-104: one stop of a plan re-sized over the troop types that are in, inside the plan's own rules. */
+  resize(request: ResizeInput, signal?: AbortSignal): Promise<ResizedMarch | null>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -79,6 +82,7 @@ function createWorkerClient(worker: Worker): CalcClient {
         return;
       case 'search':
       case 'plan':
+      case 'resize':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -133,6 +137,8 @@ function createWorkerClient(worker: Worker): CalcClient {
     search: (request, onProgress, signal) =>
       send<SearchResult>({ kind: 'search', id: nextJobId('search'), request }, signal, onProgress),
     plan: (request, signal) => send<CampaignPlan>({ kind: 'plan', id: nextJobId('plan'), request }, signal),
+    resize: (request, signal) =>
+      send<ResizedMarch | null>({ kind: 'resize', id: nextJobId('resize'), request }, signal),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -179,6 +185,7 @@ export function createInlineClient(): CalcClient {
       ),
     plan: (request, signal) =>
       run(() => runPlan(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }), signal),
+    resize: (request, signal) => run(() => runResize(request), signal),
     dispose() {
       disposed = true;
     },

@@ -4,7 +4,7 @@
  * (S-54) off the main thread so the UI never freezes. It imports nothing but the engine and this folder's protocol: no React, no
  * store, no DOM.
  */
-import { runPlan, runSearch, runStack } from './jobs';
+import { runPlan, runResize, runSearch, runStack } from './jobs';
 import { errorPayload, isCalcRequestMessage } from './protocol';
 import type { CalcResponseMessage } from './protocol';
 import type { SearchProgress } from '@/engine/types';
@@ -39,6 +39,10 @@ ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
     if (message.kind === 'stack') {
       const { result, summary } = runStack(message.request);
       post({ kind: 'stack', id, result, summary });
+      return;
+    }
+    if (message.kind === 'resize') {
+      post({ kind: 'resize', id, result: runResize(message.request) });
       return;
     }
     if (message.kind === 'plan') {

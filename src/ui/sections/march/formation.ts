@@ -25,21 +25,30 @@ const excluding = (ids: readonly string[], unitId: string): string[] => ids.filt
  */
 export function removeFromFormation(unitId: string): void {
   const { includedUnitIds, leftOutByPlayer } = useRunStore.getState();
-  void resizeMarch(excluding(includedUnitIds, unitId), including(leftOutByPlayer, unitId));
+  void resizeMarch(excluding(includedUnitIds, unitId), including(leftOutByPlayer, unitId), {
+    tookOut: [unitId],
+  });
 }
 
-/** Put a type back in the march and re-size: it is in, and the sizer decides its count like any other. */
+/**
+ * Put a type back in the march and re-size: it is in, and the sizer decides its count like any other —
+ * inside the plan's rules when the march on screen is a plan's stop (S-104, `resizeMarch`).
+ */
 export function putBackInMarch(unitId: string): void {
   const { includedUnitIds, leftOutByPlayer } = useRunStore.getState();
-  void resizeMarch(including(includedUnitIds, unitId), excluding(leftOutByPlayer, unitId));
+  void resizeMarch(including(includedUnitIds, unitId), excluding(leftOutByPlayer, unitId), {
+    putBack: [unitId],
+  });
 }
 
 /** Put every left-out type back at once — one re-size, not one per type. */
 export function putBackAllInMarch(unitIds: readonly string[]): void {
   const { includedUnitIds, leftOutByPlayer } = useRunStore.getState();
   const back = new Set(unitIds);
+  const added = unitIds.filter((id) => !includedUnitIds.includes(id));
   void resizeMarch(
-    [...includedUnitIds, ...unitIds.filter((id) => !includedUnitIds.includes(id))],
+    [...includedUnitIds, ...added],
     leftOutByPlayer.filter((id) => !back.has(id)),
+    { putBack: added },
   );
 }

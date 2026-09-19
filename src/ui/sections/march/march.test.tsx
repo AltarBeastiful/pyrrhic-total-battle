@@ -719,6 +719,67 @@ test('complete optimization answers with a plan, and the March draws it instead 
   expect(useRunStore.getState().tradeoff).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Objectives compared' })).toBeNull();
 }, 30_000);
+test('putting a type back on a plan re-sizes that stop inside the plan’s rules, and the pane says so', async () => {
+  // S-104, the owner's report of 2026-09-19 — *"adding back troops doesn't shield the mercs"*, and what he
+  // asked for instead: *"I'm able to put it back in and the plan then computes safely the best course of
+  // action with the new parameters in mind (the spot selected, monster or any other troop put back) without
+  // putting out another, because then we're manually fixing the reco without clicking Generate."* The plan
+  // needs a hired stock to spread, so the harness hands it one, as the "answers with a plan" case does.
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [
+    { id: 'epic-monster-hunter-6', cap: 92 },
+    { id: 'arbalester-6', cap: 76 },
+    { id: 'legionary-6', cap: 72 },
+    { id: 'chariot-6', cap: 37 },
+  ];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 4_100, authority: 2_000, dominance: 0 },
+      options: { ...current.options, method: 'plan' },
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  const plan = useRunStore.getState().plan;
+  const generated = lastResult();
+  if (plan === null || !generated) throw new Error('the plan method answered with no plan');
+  const marching = new Set(generated.result.stacks.map((stack) => stack.unitId));
+  const absent = generated.request.units.find((unit) => unit.pool === 'leadership' && !marching.has(unit.id));
+  if (!absent) throw new Error('this plan fields every troop type: nothing to put back');
+
+  fireEvent.click(leftOutPill(absent, 'the search'));
+  await waitFor(() => {
+    expect(useRunStore.getState().resize).not.toBeNull();
+  });
+
+  // It went through the plan's own rules (`resizeMarchOver`) and not through the plain sizer.
+  expect(useRunStore.getState().resize?.inPlan).toBe(true);
+  // And the pane says so, in the one line under the pills (design rule 15).
+  expect(screen.getByText(/^Re-sized with .*nothing else was pushed out/)).toBeTruthy();
+
+  const stacks = lastResult()?.result.stacks ?? [];
+  const troops = stacks.filter((stack) => stack.pool === 'leadership');
+  const hired = stacks.filter((stack) => stack.pool !== 'leadership');
+  expect(troops.length).toBeGreaterThan(0);
+  expect(hired.length).toBeGreaterThan(0);
+  // The shelter: every hired stack strictly under the lowest troop stack (S-87), which is the whole report.
+  expect(Math.max(...hired.map((stack) => stack.totalHp))).toBeLessThan(
+    Math.min(...troops.map((stack) => stack.totalHp)),
+  );
+  // And it spends no more of the stock than the stop the bar is reading planned to.
+  const stop = plan.recommend ?? plan;
+  for (const stack of hired) {
+    expect(stack.count).toBeLessThanOrEqual(stop.counts[stack.unitId] ?? 0);
+  }
+  // The bar is still the plan's — the tweaked march is the pane's — and no run was started.
+  expect(useRunStore.getState().plan).toBe(plan);
+  expect(lastResult()?.at).toBe(generated.at);
+}, 30_000);
+
 test('a warning from the engine is an alert under the recap', async () => {
   renderWithTheme(<Page />);
   await generate();

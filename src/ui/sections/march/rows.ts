@@ -9,6 +9,7 @@ import { retrainOne, reviveOne } from '@/engine';
 import type { BattleSummary, Pool, Stack, StackRequest, StackResult, UnitDef } from '@/engine/types';
 import { unitGroupOf } from '@/ui/domain';
 
+import type { MarchResize } from './runStore';
 import { findUnit } from './units';
 
 // ---- The march as pills, one block per pool ------------------------------------------------------
@@ -106,6 +107,40 @@ export function leftOutOf(
     out.push({ unit, reason: byHand.has(unit.id) ? 'you' : 'search' });
   }
   return out.sort((a, b) => a.unit.tier - b.unit.tier || a.unit.name.localeCompare(b.unit.name));
+}
+
+/**
+ * **The one line a March edit writes** (S-104; design rule 15 — nothing on screen without value, and rule 5 —
+ * never say the same thing twice). The pills already say what is marching and the left-out row says what is
+ * not; what neither can say is that the answer under them is *this* player's tweak and that it was computed
+ * under the plan's own rules. That is the owner's whole complaint of 2026-09-19, so it is worth a line and
+ * exactly a line.
+ *
+ * It is his own promise back to him: the types he put back are in, nothing else was pushed out, and his
+ * hired stacks stand under his troops. A type that could not be fielded at all is named rather than left to
+ * reappear in the left-out row without a word.
+ */
+export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): string {
+  const name = (id: string): string => findUnit(id, units)?.name ?? id;
+  // Two names read; three is a list nobody reads, so it becomes a count.
+  const names = (ids: readonly string[]): string =>
+    ids.length > 2 ? `${String(ids.length)} types` : ids.map(name).join(' and ');
+  const what: string[] = [];
+  if (resize.putBack.length > 0) what.push(`${names(resize.putBack)} put back`);
+  if (resize.tookOut.length > 0) what.push(`${names(resize.tookOut)} left out`);
+  const head = what.length === 0 ? 'Re-sized' : `Re-sized with ${what.join(' and ')}`;
+  const rule = resize.inPlan
+    ? ' — nothing else was pushed out, and your hired stacks stay under the troops.'
+    : ' — your hired stacks stay under the troops.';
+  const missed =
+    resize.unfielded.length > 0 ? ` ${names(resize.unfielded)} could not be fielded at all.` : '';
+  // Said in its own words, because it is a different fact: not "it would not fit" but "this plan spends none
+  // of it" — the rare stock the stop decided to keep (S-104, `MarchWithin.hired`).
+  const spent =
+    resize.noStock.length > 0
+      ? ` This stop spends no ${names(resize.noStock)}, so it could not be fielded.`
+      : '';
+  return head + rule + missed + spent;
 }
 
 // ---- The counts to copy -------------------------------------------------------------------------

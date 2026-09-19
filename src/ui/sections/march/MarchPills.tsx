@@ -27,8 +27,9 @@ import { copyText } from '@/ui/profile/download';
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
 import { amount } from './format';
 import classes from './march.module.css';
-import { countsText } from './rows';
+import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
+import { useRunStore } from './runStore';
 
 /** How long "Copied" stays on screen. */
 const COPIED_MS = 1500;
@@ -172,6 +173,26 @@ export function MarchLeftOut({ leftOut }: MarchLeftOutProps) {
         </Button>
       </Group>
     </Stack>
+  );
+}
+
+/**
+ * **What the last March edit did**, in one line under the pills (S-104; design rule 15, and rule 5 — the
+ * pills say what is marching, the left-out row says what is not, and neither of them can say this).
+ *
+ * The owner, 2026-09-19: *"I'm able to put it back in and the plan then computes safely the best course of
+ * action with the new parameters in mind … without putting out another, because then we're manually fixing
+ * the reco without clicking Generate."* The plan bar keeps showing the plan's own stops — the bar's rows are
+ * the plan's, the tweaked march is the pane's — so this line is where the pane says the two have parted, and
+ * on what terms. It draws nothing until an edit has been computed (`RunState.resize`).
+ */
+export function MarchResized({ units }: { units: readonly UnitDef[] }) {
+  const resize = useRunStore((state) => state.resize);
+  if (resize === null) return null;
+  return (
+    <Text span role="status" className={classes.meta} c="dimmed">
+      {resizeWords(resize, units)}
+    </Text>
   );
 }
 
