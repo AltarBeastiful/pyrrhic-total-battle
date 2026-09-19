@@ -84,7 +84,7 @@ import { CAMPAIGN } from '@/config';
 import { planCampaign } from '@/engine';
 import { simulateBattle } from '@/engine/battle';
 import { buildKillOrder } from '@/engine/killOrder';
-import type { CampaignPlan } from '@/engine/plan';
+import type { CampaignPlan, PlanTotals } from '@/engine/plan';
 import { chunks } from '@/engine/recovery';
 import { searchPriority } from '@/engine/search';
 import { sizeStacks } from '@/engine/stacker';
@@ -97,6 +97,10 @@ import type { Baseline, BaselineScenario, BaselineTotals } from './plan-baseline
 import { compareToBaseline, registeredBaseline } from './plan-baseline';
 import type { Scenario } from './plan-scenarios';
 import { HORIZON, OWNER_EXPORT, commonScenarios, ownerProfile, ownerScenarios } from './plan-scenarios';
+// The rare-stock readings the owner asked for on 2026-09-19 — "at least the same as TotalStack full opt in
+// silver/dmg, merc/dmg and monster/dmg" — defined once, beside the sheltered-march yardstick, so this table
+// and `plan-criteria.test.ts` split the stock the same way (S-98).
+import { perMonsterOf, perSoldierOf, rareStockOf } from './plan-yardsticks';
 import { totalstackRows, widenedFor } from './totalstack-rows';
 
 const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
@@ -123,7 +127,7 @@ const n = (value: number): string => Math.round(value).toLocaleString('en-US');
 function price(
   request: StackRequest,
   counts: Record<string, number>,
-): { damage: number; silver: number; gold: number; seconds: number } {
+): { damage: number; silver: number; gold: number; dragonCoins: number; seconds: number } {
   const rank = new Map(buildKillOrder(request.units, request.options).map((id, index) => [id, index]));
   const stacks: Stack[] = [];
   for (const unit of request.units) {
@@ -159,6 +163,10 @@ function price(
     damage: summary.minDamage,
     silver: summary.recovery.silver,
     gold: summary.recovery.gold,
+    // The fourth price, and the rarest (S-98): dragon coins, which only the dominance pool ever charges —
+    // taken off the recap exactly as the silver and the gold above are, so the column and the bar's own
+    // `PlanTotals.dragonCoins` are one figure (asserted on every plan row in `measure`).
+    dragonCoins: summary.recovery.dragonCoins,
     // The training queue rides with the other two prices: the registered baseline records it so the owner
     // sees the whole trade when he judges one (`plan-baseline.ts`).
     seconds: summary.recovery.seconds,
@@ -184,6 +192,19 @@ interface Campaign {
   /** How long its losses sit in the training queue, in seconds, summed march by march. */
   seconds: number;
   burned: number;
+  /**
+   * **The rare stock split** (S-98, 2026-09-19; the owner: *"at least the same as TotalStack full opt in
+   * silver/dmg, merc/dmg and monster/dmg"*). `burned` above is the one axis the bar is ordered by, the
+   * chunks of ten every hired pool loses together; these two are the same chunks told apart — the hired
+   * **soldiers** and the **monsters** (monster mercenaries and dominance monsters, `isMonsterUnit` in
+   * `plan-yardsticks.ts`, which states the definition and what TotalStack's `monsterSaving` does and does
+   * not say about it). `soldiersLost + monstersLost === burned` on every row, by construction here and by
+   * criterion in `plan-criteria.test.ts` on the bar itself.
+   */
+  soldiersLost: number;
+  monstersLost: number;
+  /** What the campaign's monsters cost to recruit again, in dragon coins — the recap's figure, summed. */
+  dragonCoins: number;
 }
 
 /**
@@ -206,17 +227,37 @@ function campaignOf(
   let damage = 0;
   let silver = 0;
   let gold = 0;
+  let dragonCoins = 0;
   let seconds = 0;
   let burned = 0;
+  let soldiersLost = 0;
+  let monstersLost = 0;
   for (const counts of marches) {
     const priced = price(request, counts);
     damage += priced.damage;
     silver += priced.silver;
     gold += priced.gold;
+    dragonCoins += priced.dragonCoins;
     seconds += priced.seconds;
     burned += mercIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0);
+    const rare = rareStockOf(request.units, counts);
+    soldiersLost += rare.soldiersLost;
+    monstersLost += rare.monstersLost;
   }
-  return { name, kind, comparable: true, marches: marches.length, damage, silver, gold, seconds, burned };
+  return {
+    name,
+    kind,
+    comparable: true,
+    marches: marches.length,
+    damage,
+    silver,
+    gold,
+    seconds,
+    burned,
+    soldiersLost,
+    monstersLost,
+    dragonCoins,
+  };
 }
 
 /** A sizer method played for the horizon the way a player plays it: Generate, march, lose a chunk, again. */
@@ -273,8 +314,31 @@ const countsOf = (result: StackResult): Record<string, number> =>
 /** Damage a silver, or NaN for a sequence that spent none (a ratio it does not have, never a record). */
 const perSilver = (c: Campaign): number => (c.silver > 0 ? c.damage / c.silver : NaN);
 const perHired = (c: Campaign): number => c.damage / Math.max(1, c.burned);
+/**
+ * Damage a hired soldier and damage a monster (S-98), on `perHired`'s own zero rule: a campaign that spent
+ * none of one kind reads at `damage / 1`, never at `Infinity`, so a row that fields no monster sits in the
+ * same column as one that does instead of topping it by arithmetic.
+ */
+const perSoldier = (c: Campaign): number => perSoldierOf(c.damage, c.soldiersLost);
+const perMonster = (c: Campaign): number => perMonsterOf(c.damage, c.monstersLost);
 
 // ---- one scenario ----------------------------------------------------------------------------------------
+
+/**
+ * The marches a stop (or the plan itself) plays, first to last, the way `PlanTotals` says to read them: its
+ * own sequence, or the repeated march, the finale and the troops-only tail the horizon leaves over
+ * (`PlanTotals.tail`, S-89). Lifted out of `measure` by S-98 so `asBaseline` can split the **plan's own**
+ * campaign over exactly the marches the bar prices it on.
+ */
+const marchesOf = (row: PlanTotals): Record<string, number>[] => {
+  if (row.sequence) return row.sequence;
+  const tail = row.tail?.marches ?? 0;
+  const repeats = row.marches - (row.finaleCounts ? 1 : 0) - tail;
+  const marches = Array.from({ length: repeats }, () => row.counts);
+  if (row.finaleCounts) marches.push(row.finaleCounts);
+  for (let index = 0; index < tail; index += 1) marches.push(row.tail?.counts ?? {});
+  return marches;
+};
 
 interface Measured {
   rows: Campaign[];
@@ -289,6 +353,8 @@ interface Measured {
   planMs: number;
   /** Which stop each plan row is, by object identity — the baseline is keyed on the engine's own `pick`. */
   picks: Map<Campaign, string>;
+  /** The army measured, so the plan's own campaign can be split over its units (S-98). */
+  request: StackRequest;
 }
 
 function measure(scenario: Scenario): Measured {
@@ -345,12 +411,7 @@ function measure(scenario: Scenario): Measured {
       // The campaign a stop actually plays: its own sequence, or its repeated march as many times as its
       // stock reaches, its last march, and the troops-only marches the horizon leaves over (`PlanTotals.tail`,
       // S-89 — the same march the `all-in` ends on, appended once per march the stock does not reach).
-      const repeats = stop.marches - (stop.finaleCounts ? 1 : 0) - (stop.tail?.marches ?? 0);
-      const marches = stop.sequence ?? Array.from({ length: repeats }, () => stop.counts);
-      if (!stop.sequence && stop.finaleCounts) marches.push(stop.finaleCounts);
-      if (!stop.sequence && stop.tail) {
-        for (let i = 0; i < stop.tail.marches; i += 1) marches.push(stop.tail.counts);
-      }
+      const marches = marchesOf(stop as PlanTotals);
       const campaign = campaignOf(request, `Complete optimization · ${stop.pick}`, 'plan', marches);
       picks.set(campaign, stop.pick);
       // The engine's own campaign figure and the marches priced one by one must agree.
@@ -360,10 +421,13 @@ function measure(scenario: Scenario): Measured {
       // over its repeats alone while the damage beside it was priced over every march. It is asserted to the
       // unit, not to one gold: the price is a whole number of coins per revived unit.
       expect(campaign.gold, `${stop.pick}'s gold over its marches`).toBe(stop.gold);
+      // **And the dragon coins** (S-98), for the same reason and in the same way: the column this table now
+      // prints is the recap's, and `PlanTotals.dragonCoins` is the bar's — one figure or a bug.
+      expect(campaign.dragonCoins, `${stop.pick}'s dragon coins over its marches`).toBe(stop.dragonCoins);
       rows.push(campaign);
     }
   }
-  return { rows, plan, refusal, planMs, picks };
+  return { rows, plan, refusal, planMs, picks, request };
 }
 
 /**
@@ -383,6 +447,13 @@ function asBaseline(measured: Measured): BaselineScenario | null {
     burned: c.burned,
     perSilver: Number.isFinite(perSilver(c)) ? perSilver(c) : null,
     perHired: perHired(c),
+    // The rare stock told apart, and the coins (S-98) — added after the fields above and never among them,
+    // so a proposal written before this story and one written after differ only by these five lines.
+    soldiersLost: c.soldiersLost,
+    monstersLost: c.monstersLost,
+    dragonCoins: c.dragonCoins,
+    perSoldier: perSoldier(c),
+    perMonster: perMonster(c),
   });
   const stops: Record<string, BaselineTotals> = {};
   for (const row of measured.rows) {
@@ -391,8 +462,32 @@ function asBaseline(measured: Measured): BaselineScenario | null {
   }
   const sizers = measured.rows.filter((c) => c.kind === 'sizer');
   const externals = measured.rows.filter((c) => c.kind === 'external' && c.comparable);
-  const best = Math.max(...measured.rows.filter((c) => c.kind === 'plan').map((c) => c.damage));
+  const plans = measured.rows.filter((c) => c.kind === 'plan');
+  const best = Math.max(...plans.map((c) => c.damage));
   const bestSizer = Math.max(...sizers.map((c) => c.damage));
+  // The plan's own campaign, split over exactly the marches the bar prices it on (S-98). `plan.mercLost`
+  // is the pooled figure the search is ordered by; this is the same chunks told apart.
+  const planRare = marchesOf(plan as PlanTotals).reduce<{ soldiersLost: number; monstersLost: number }>(
+    (into, counts) => {
+      const one = rareStockOf(measured.request.units, counts);
+      return {
+        soldiersLost: into.soldiersLost + one.soldiersLost,
+        monstersLost: into.monstersLost + one.monstersLost,
+      };
+    },
+    { soldiersLost: 0, monstersLost: 0 },
+  );
+  /** The best reading of one ratio over a set of campaigns, and the plan's standing against it (S-98). */
+  const standing = (
+    of: (c: Campaign) => number,
+  ): { bestSizer: number; externals: Record<string, number> } => {
+    const ours = Math.max(...plans.map(of));
+    const theirs = Math.max(...sizers.map(of));
+    return {
+      bestSizer: theirs > 0 ? ours / theirs : 0,
+      externals: Object.fromEntries(externals.filter((c) => of(c) > 0).map((c) => [c.name, ours / of(c)])),
+    };
+  };
   return {
     stops,
     // The plan's own campaign is the engine's figures, not a row of the table: the criterion in
@@ -406,12 +501,22 @@ function asBaseline(measured: Measured): BaselineScenario | null {
       burned: plan.mercLost,
       perSilver: plan.silver > 0 ? plan.totalDamage / plan.silver : null,
       perHired: plan.totalDamage / Math.max(1, plan.mercLost),
+      soldiersLost: planRare.soldiersLost,
+      monstersLost: planRare.monstersLost,
+      dragonCoins: plan.dragonCoins,
+      perSoldier: perSoldierOf(plan.totalDamage, planRare.soldiersLost),
+      perMonster: perMonsterOf(plan.totalDamage, planRare.monstersLost),
     },
     ratios: {
       bestSizer: bestSizer > 0 ? best / bestSizer : 0,
       externals: Object.fromEntries(
         externals.filter((c) => c.damage > 0).map((c) => [c.name, best / c.damage]),
       ),
+      // The two standings the owner's floors will be pinned on, beside the damage one above (S-98): the
+      // bar's best damage a hired soldier and a monster over the best sizer sequence's and over each
+      // comparable captured answer's. Added after `externals` so an older proposal's lines are untouched.
+      perSoldier: standing(perSoldier),
+      perMonster: standing(perMonster),
     },
   };
 }
@@ -424,11 +529,13 @@ function record(label: string, measured: Measured): void {
       ? `The plan refused: \`${measured.refusal}\`.`
       : `The plan offers ${measured.plan?.alternatives.length ?? 0} stops.`,
     '',
-    '| sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired |',
-    '|---|---|---|---|---|---|---|---|',
+    '| sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired |' +
+      ' soldiers burned | monsters burned | dragon coins | a soldier | a monster |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
     ...measured.rows.map(
       (c) =>
-        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.gold)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |`,
+        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.gold)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |` +
+        ` ${n(c.soldiersLost)} | ${n(c.monstersLost)} | ${n(c.dragonCoins)} | ${n(perSoldier(c))} | ${n(perMonster(c))} |`,
     ),
     '',
   ];
@@ -454,6 +561,13 @@ function record(label: string, measured: Measured): void {
       burned: c.burned,
       perSilver: Number.isFinite(perSilver(c)) ? Math.round(perSilver(c) * 1000) / 1000 : null,
       perHired: Math.round(perHired(c)),
+      // S-98, appended: every field above is written exactly as it was, so a snapshot taken before this
+      // story and one taken after differ by these five lines and by nothing else.
+      soldiersLost: c.soldiersLost,
+      monstersLost: c.monstersLost,
+      dragonCoins: c.dragonCoins,
+      perSoldier: Math.round(perSoldier(c)),
+      perMonster: Math.round(perMonster(c)),
     })),
   });
   writeFileSync(FIGURES, `${JSON.stringify(figures, null, 1)}\n`);
@@ -557,6 +671,12 @@ writeFileSync(
     'four times), the plan as its own repeats and finale, a captured answer repeated while its stock lasts. ' +
     'Each march priced by `simulateBattle` on its counts — damage, retraining silver and the gold its hired ' +
     'stacks cost to revive (the gold column since S-90, 2026-09-18).\n\n' +
+    'The last five columns are the rare stock read the way the owner asked for it on 2026-09-19 (S-98): the ' +
+    'chunks of ten burned told apart into **hired soldiers** and **monsters** — monster mercenaries and ' +
+    'dominance monsters together, `isMonsterUnit` in `tests/engine/plan-yardsticks.ts` — the dragon coins ' +
+    'the monsters cost to recruit again, and damage a soldier and damage a monster beside damage a hired ' +
+    'unit. `soldiers burned + monsters burned = hired burned` on every row; a campaign that burned none of ' +
+    'one kind reads its ratio at `damage / 1`, exactly as `a hired` has always done.\n\n' +
     `Run: ${new Date().toISOString()}, commit ${process.env.GIT_COMMIT ?? '(working tree)'}\n\n`,
 );
 writeFileSync(FIGURES, `${JSON.stringify({ run: new Date().toISOString(), scenarios: [] }, null, 1)}\n`);

@@ -4,7 +4,7 @@ Every sequence is four marches: the sizers re-sized each march on the stock the 
 
 The last five columns are the rare stock read the way the owner asked for it on 2026-09-19 (S-98): the chunks of ten burned told apart into **hired soldiers** and **monsters** — monster mercenaries and dominance monsters together, `isMonsterUnit` in `tests/engine/plan-yardsticks.ts` — the dragon coins the monsters cost to recruit again, and damage a soldier and damage a monster beside damage a hired unit. `soldiers burned + monsters burned = hired burned` on every row; a campaign that burned none of one kind reads its ratio at `damage / 1`, exactly as `a hired` has always done.
 
-Run: 2026-09-19T08:05:33.082Z, commit (working tree)
+Run: 2026-09-19T07:58:42.912Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 

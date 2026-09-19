@@ -20,6 +20,10 @@
  *
  *  - its campaign **damage** is not lower, its **silver** not higher, the **hired units burned** not higher;
  *  - its **damage a silver** and **damage a hired unit** are not lower;
+ *  - since S-98, and **only where the registered file carries them**: the **hired soldiers burned**, the
+ *    **monsters burned** and the **dragon coins** are not higher, and **damage a hired soldier** and
+ *    **damage a monster** are not lower. They are additive — a baseline registered before this story holds
+ *    none of them and is judged on exactly what it always was;
  *  - the scenario's standing **ratios** — the plan's hardest campaign over the best sizer sequence's, and
  *    over each comparable captured answer — are not lower. That is the "a given scenario should not be
  *    worse" of the rule, stated on the comparison the benchmark exists to make;
@@ -52,6 +56,24 @@ export interface BaselineTotals {
   burned: number;
   perSilver: number | null;
   perHired: number;
+  /**
+   * **The rare stock told apart, and the coins** (S-98, 2026-09-19; the owner: *"at least the same as
+   * TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*). `burned` above is the pooled axis the
+   * bar is ordered by; these are the same chunks of ten split into the **hired soldiers** and the
+   * **monsters** (monster mercenaries and dominance monsters — `isMonsterUnit` in `plan-yardsticks.ts`
+   * states the definition and what TotalStack's `monsterSaving` does and does not say about it), plus the
+   * dragon coins the monsters cost to recruit again.
+   *
+   * **Optional, and that is the point**: a baseline the owner registered before this story holds none of
+   * them, and a run is never failed against a figure that was never registered. Where he registers one that
+   * does hold them, each is asserted in its own direction — the two costs and the coins not higher, the two
+   * ratios not lower — exactly as `burned` and `perHired` beside them.
+   */
+  soldiersLost?: number;
+  monstersLost?: number;
+  dragonCoins?: number;
+  perSoldier?: number;
+  perMonster?: number;
 }
 
 export interface BaselineScenario {
@@ -65,6 +87,14 @@ export interface BaselineScenario {
     bestSizer: number;
     /** Over each comparable captured answer, by its row name. */
     externals: Record<string, number>;
+    /**
+     * The same two standings read on **damage a hired soldier** and on **damage a monster** (S-98): the
+     * bar's best over the best sizer sequence's and over each comparable captured answer's. They are what
+     * the owner's TotalStack floors will be pinned on once his replay fixture lands. Optional for the same
+     * reason the totals above are: a baseline that predates them is not failed against them.
+     */
+    perSoldier?: { bestSizer: number; externals: Record<string, number> };
+    perMonster?: { bestSizer: number; externals: Record<string, number> };
   };
 }
 
@@ -132,6 +162,25 @@ export function compareToBaseline(
         `${what}: damage a hired unit ${n(after.perHired)} against the registered ${n(before.perHired)}`,
       );
     }
+    // **The rare-stock readings, additively** (S-98): each is judged only when the registered file carries
+    // it *and* this run measured it, so a baseline written before the story is held to exactly what it was.
+    const costlier = (key: 'soldiersLost' | 'monstersLost' | 'dragonCoins', label: string): void => {
+      const was = before[key];
+      const now = after[key];
+      if (was === undefined || now === undefined || now <= was) return;
+      failures.push(`${what}: ${label} ${n(now)} against the registered ${n(was)}`);
+    };
+    costlier('soldiersLost', 'hired soldiers burned');
+    costlier('monstersLost', 'monsters burned');
+    costlier('dragonCoins', 'dragon coins');
+    const thinner = (key: 'perSoldier' | 'perMonster', label: string): void => {
+      const was = before[key];
+      const now = after[key];
+      if (was === undefined || now === undefined || now >= was - SLACK) return;
+      failures.push(`${what}: ${label} ${n(now)} against the registered ${n(was)}`);
+    };
+    thinner('perSoldier', 'damage a hired soldier');
+    thinner('perMonster', 'damage a monster');
   };
 
   for (const [pick, before] of Object.entries(was.stops)) {
@@ -164,6 +213,33 @@ export function compareToBaseline(
     }
     if (after < before - SLACK) {
       failures.push(`against "${name}": ${ratio(after)} against the registered ${ratio(before)}`);
+    }
+  }
+
+  // The two rare-stock standings (S-98), read exactly as the damage one above and reported in its own
+  // words. Skipped whole where the registered file does not carry them.
+  for (const [label, was_, now_] of [
+    ['damage a hired soldier', was.ratios.perSoldier, now.ratios.perSoldier],
+    ['damage a monster', was.ratios.perMonster, now.ratios.perMonster],
+  ] as const) {
+    if (!was_ || !now_) continue;
+    if (now_.bestSizer < was_.bestSizer - SLACK) {
+      failures.push(
+        `against the best sizer sequence on ${label}: ${ratio(now_.bestSizer)} against the registered ` +
+          `${ratio(was_.bestSizer)}`,
+      );
+    }
+    for (const [name, before] of Object.entries(was_.externals)) {
+      const after = now_.externals[name];
+      if (after === undefined) {
+        failures.push(`the captured answer "${name}" is no longer priced on this army (${label})`);
+        continue;
+      }
+      if (after < before - SLACK) {
+        failures.push(
+          `against "${name}" on ${label}: ${ratio(after)} against the registered ${ratio(before)}`,
+        );
+      }
     }
   }
   return { failures, added };

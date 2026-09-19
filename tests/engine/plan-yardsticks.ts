@@ -14,7 +14,7 @@ import type { PlanTotals } from '@/engine/plan';
 import { effectiveTable, lastsMarches, rankTroops } from '@/engine/plan';
 import { chunks } from '@/engine/recovery';
 import { sizeStacks } from '@/engine/stacker';
-import type { StackRequest } from '@/engine/types';
+import type { StackRequest, UnitDef } from '@/engine/types';
 
 /**
  * **The sheltered marches the account can field by hand**, and what each of them costs — the yardstick the
@@ -151,3 +151,84 @@ export const shelteredRivals = (request: StackRequest, repeats = 0): Rival[] => 
   }
   return out;
 };
+
+// ---- the rare stock a march spends, split (S-98) ----------------------------------------------------------
+
+/**
+ * **Which hired units are monsters** — the one place the benchmark, the registered baseline and the criteria
+ * agree on the owner's two yardsticks (2026-09-19: *"at least the same as TotalStack full opt in silver/dmg,
+ * merc/dmg and monster/dmg"*).
+ *
+ * A unit is a **monster** when its own group is `monster`, and that is two kinds of unit at once: the
+ * **dominance pool's** monsters (`kind: 'monster'`, group `monster` by construction — `src/data/index.ts`)
+ * and the **authority pool's monster mercenaries**, the hires that carry the `monster` tag rather than a
+ * soldier's role (Bear V, Cyclops V, Abomination VI, the Golden Dragon; against Epic Monster Hunter VI,
+ * Legionary VI, Arbalester VI and Chariot VI, which carry `guardsmen` or `specialist`). Everything else the
+ * account hires — every non-leadership unit that is not one of those — is a **hired soldier**. Troops are
+ * neither: they are not rare stock, they come back from the training queue, and no reading here counts them.
+ *
+ * **What TotalStack's `monsterSaving` says about the split: nothing, and that is the finding** (S-98, read
+ * off `docs/research/totalstack-capture-2026-09-18.md` and the two dataset fixtures beside it). Pressed
+ * against the same scenario with the flag on and off, the answers differ in `mercenaryCounts` **only** —
+ * Epic Monster Hunter VI 142 → 34 on the 7 000 export, Legionary VI 2 017 → 926 on the evening account,
+ * Bear V 10 → 6 on the ten-bear army — while `troopCounts` is identical to the unit and `monsterCounts` is
+ * empty in all 280 captured answers (no `monsterCaps` is ever sent; the dominance side is driven by
+ * `monsterMinTier`/`monsterMaxTier` and `excludedMonsterIds`). So the flag is a **shelter over the whole
+ * hired pool**, and in TotalStack's own vocabulary "monster" means "hired unit": Bear V and Cyclops V sit in
+ * `mercenaryCaps` beside Epic Monster Hunter VI, and the flag saves the soldier hires exactly as it saves the
+ * beasts. It draws its line by **pool**, not by race, and therefore offers no evidence for either reading of
+ * "mstr/dmg".
+ *
+ * The split below is drawn by **race** all the same, and the reason is the owner's account rather than
+ * TotalStack's payload: he holds no dominance unit today, so a `monstersLost` that counted only the dominance
+ * pool would be nought on every army he plays and *"monster/dmg"* would be a floor with nothing under it. By
+ * the group it is a live reading on his own stock (his Bear V and Cyclops V), and it becomes the dominance
+ * pool's reading too the day he houses one. `soldiersLost + monstersLost` is `PlanTotals.mercLost` either
+ * way — the pooled rare-stock axis the whole bar is ordered by is untouched (`plan.ts`; nothing here is read
+ * by the search) — and `plan-criteria.test.ts` holds that identity on every army.
+ */
+export const isMonsterUnit = (unit: UnitDef): boolean => unit.group === 'monster';
+
+/** The rare stock one march spends, as the three readings the owner asked for (S-98). */
+export interface RareStock {
+  /** Chunks of ten lost over the **hired soldiers**: every non-leadership unit that is not a monster. */
+  soldiersLost: number;
+  /** Chunks of ten lost over the **monsters**: monster mercenaries and dominance monsters together. */
+  monstersLost: number;
+  /**
+   * The dragon coins the losses cost to recruit again — the dominance pool's own price, `chunks(n)` ×
+   * `training.dragonCoins` (`src/engine/recovery.ts`). Nought for a troop (no such line) and for a
+   * mercenary (no `training` block at all), monster mercenaries included: a monster hired for authority is
+   * paid for in authority, not in coins.
+   */
+  dragonCoins: number;
+}
+
+/**
+ * The split of one march's counts. Read off the **counts**, the way the benchmark's `hired burned` column
+ * and the criteria's own burn reading are, so the three agree to the chunk.
+ */
+export function rareStockOf(units: UnitDef[], counts: Record<string, number>): RareStock {
+  let soldiersLost = 0;
+  let monstersLost = 0;
+  let dragonCoins = 0;
+  for (const unit of units) {
+    const count = Math.floor(counts[unit.id] ?? 0);
+    if (count <= 0 || unit.pool === 'leadership') continue;
+    const burn = chunks(count);
+    if (isMonsterUnit(unit)) monstersLost += burn;
+    else soldiersLost += burn;
+    if (unit.pool === 'dominance') dragonCoins += burn * (unit.training?.dragonCoins ?? 0);
+  }
+  return { soldiersLost, monstersLost, dragonCoins };
+}
+
+/**
+ * Damage a hired soldier and damage a monster, on the **same** zero rule `perHired` has always used: a
+ * campaign that burned none of one kind is read at `damage / 1` rather than at `Infinity`, so a row that
+ * spends no monster is comparable with one that does instead of being a record no rival can reach.
+ */
+export const perSoldierOf = (damage: number, soldiersLost: number): number =>
+  damage / Math.max(1, soldiersLost);
+export const perMonsterOf = (damage: number, monstersLost: number): number =>
+  damage / Math.max(1, monstersLost);

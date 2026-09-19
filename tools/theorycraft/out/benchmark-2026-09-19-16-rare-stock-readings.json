@@ -1,5 +1,5 @@
 {
- "run": "2026-09-19T08:05:33.082Z",
+ "run": "2026-09-19T07:58:42.913Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,7 +7,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 69,
+   "planMs": 46,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -153,7 +153,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 68,
+   "planMs": 58,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -300,7 +300,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 46,
+   "planMs": 58,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -630,7 +630,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 89,
+   "planMs": 91,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -979,7 +979,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 120,
+   "planMs": 119,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1361,7 +1361,7 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 9096,
+   "planMs": 9108,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1575,7 +1575,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 666,
+   "planMs": 633,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -2019,7 +2019,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1602,
+   "planMs": 1691,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -2467,7 +2467,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 1450,
+   "planMs": 1530,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -2868,7 +2868,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 95,
+   "planMs": 79,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -3267,7 +3267,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1106,
+   "planMs": 1132,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -3733,7 +3733,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 966,
+   "planMs": 1019,
    "baseline": {
     "stops": {
      "sweet-spot": {

@@ -27,7 +27,7 @@ import { parseImport } from '@/share/exportImport';
 import { buildPlanRequest } from '@/state/derive';
 
 import { HORIZON, criteriaScenarios } from './plan-scenarios';
-import { countsKey, repeatsOf, shelteredRivals } from './plan-yardsticks';
+import { countsKey, rareStockOf, repeatsOf, shelteredRivals } from './plan-yardsticks';
 
 const OWNER_EXPORT =
   process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
@@ -991,6 +991,42 @@ const campaignIsItsMarchesSum = (title: string, variant: (request: StackRequest)
                     `(Δ ${(sum[key] - row[key]).toLocaleString('en-US')})`,
                 );
               }
+            }
+            // **And the rare stock adds up the same way** (S-98, 2026-09-19; the owner: *"at least the
+            // same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*). The benchmark and
+            // the registered baseline now print the chunks of ten told apart — the hired **soldiers** and
+            // the **monsters**, monster mercenaries and dominance monsters together (`isMonsterUnit`) —
+            // and a split is only a reading of the bar's own burn if the two halves come back to it. So:
+            // the split over the marches the stop plays is exactly `mercLost`, the one axis the search is
+            // ordered by, on every stop of every army; and the coins the same split prices are the recap's
+            // `dragonCoins`, which is what ties the shared definition to `recoveryCosts`.
+            const rare = marches.reduce<{
+              soldiersLost: number;
+              monstersLost: number;
+              dragonCoins: number;
+            }>(
+              (into, counts) => {
+                const one = rareStockOf(request.units, counts);
+                return {
+                  soldiersLost: into.soldiersLost + one.soldiersLost,
+                  monstersLost: into.monstersLost + one.monstersLost,
+                  dragonCoins: into.dragonCoins + one.dragonCoins,
+                };
+              },
+              { soldiersLost: 0, monstersLost: 0, dragonCoins: 0 },
+            );
+            if (rare.soldiersLost + rare.monstersLost !== row.mercLost) {
+              failures.push(
+                `${what}: ${rare.soldiersLost.toLocaleString('en-US')} soldier chunks + ` +
+                  `${rare.monstersLost.toLocaleString('en-US')} monster chunks against the bar's ` +
+                  `${row.mercLost.toLocaleString('en-US')} burned`,
+              );
+            }
+            if (rare.dragonCoins !== sum.dragonCoins) {
+              failures.push(
+                `${what}: the split prices ${rare.dragonCoins.toLocaleString('en-US')} dragon coins ` +
+                  `against the recap's ${sum.dragonCoins.toLocaleString('en-US')}`,
+              );
             }
             // And the repeated march's own three prices are the recap's, which is what makes the sum above
             // readable as `played × repeat + the finale` on the bar itself.
