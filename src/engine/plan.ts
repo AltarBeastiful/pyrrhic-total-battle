@@ -36,11 +36,25 @@ import type { UnitDef } from '../data/types';
 import { buildJournal } from './battle';
 import type { Pool } from '../data/types';
 import { enemySquadCount } from './battle';
+import { buildKillOrder } from './killOrder';
 import { effectiveUnit, hitDamage } from './units';
-import { CHUNK, chunks, retrainOne, reviveOne } from './recovery';
+import { CHUNK, chunks, retrainOne } from './recovery';
 import { simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
-import type { BattleSummary, Stack, StackRequest, StackResult } from './types';
+import type { BattleSummary, Housing, RecoverySettings, Stack, StackRequest, StackResult } from './types';
+
+/**
+ * What the **search** prices a march's losses at: the bare game, no temple and no training discounts. The
+ * figures a plan *prints* are re-priced under the account's own `request.recovery` by `toMarch` (S-91), so
+ * this is the yardstick the candidates are ranked against and nothing a player reads. One object, hoisted out
+ * of `marchOf`, which builds a stack's bill once per stack of every march of every shape the search scores.
+ */
+const SEARCH_RECOVERY: RecoverySettings = {
+  templeLevel: 0,
+  trainingCostReduction: {},
+  trainingSpeed: {},
+  plan: { mode: 'retrain' },
+};
 
 /** How much room the lowest troop rung leaves above the biggest mercenary stack. */
 export const DEFAULT_GAP = 0.25;
@@ -233,6 +247,15 @@ export interface PlanMarch {
   silver: number;
   gold: number;
   /**
+   * **Dragon coins the march's losses cost to bring back** (S-96, 2026-09-19). The fourth price the recap
+   * prints (`BattleSummary.recovery.dragonCoins`) and the one only the **dominance** pool ever charges: a
+   * monster is recruited again ten at a time at `training.dragonCoins` a chunk, where a troop has no such
+   * line and a mercenary has no `training` block at all. Nought on every army that holds no monster, which
+   * is every army this repo measured before S-96 — and the reason the figure could be left out until the
+   * plan could field one.
+   */
+  dragonCoins: number;
+  /**
    * How long the march's losses take to come back into the army, in seconds — the third price a march is
    * paid for, beside silver and gold, and the one the owner went looking for on 2026-09-18: *"generation
    * sometimes skips low-level stacks and misses some damage that seems cheap; it is mainly because one
@@ -240,11 +263,12 @@ export interface PlanMarch {
    * fifteen seconds and a Rider III takes fourteen minutes, so two marches of the same silver are not the
    * same march at all.
    *
-   * Priced the way this file prices everything else (`toMarch`): the **troops are retrained** — every unit
-   * lost, at `training.seconds` divided by the account's training speed — and the **hired units are
-   * revived**, which the game charges in gold and no time at all (a mercenary has no `training` block).
-   * So this figure is the troop side's alone, and it is what `recoveryCosts` reports for the same counts
-   * under the retrain plan (`src/engine/recovery.ts`).
+   * Priced the way this file prices everything else (`toMarch`): every stack the march fields is
+   * **retrained** — a troop per unit at `training.seconds` divided by the account's training speed, a
+   * monster per chunk of ten — and a **mercenary** adds nothing at all, having no `training` block: the game
+   * brings it back for gold and no time. So a march that leans on hired soldiers recovers faster than its
+   * silver suggests, and one that leans on monsters does not. It is what `recoveryCosts` reports for the
+   * same counts under the retrain plan (`src/engine/recovery.ts`).
    */
   seconds: number;
   /** Units fielded of each mercenary type. */
@@ -262,6 +286,12 @@ export interface PlanRepeat {
   silver: number;
   /** What the march's hired stacks cost to bring back: the engine prices mercenaries in gold, not silver. */
   gold: number;
+  /**
+   * The march's dragon coins — `PlanMarch.dragonCoins`, the dominance pool's own price (S-96). The engine
+   * always writes it; it is optional only so that a row built by hand to draw the bar with (the UI's own
+   * fixtures) need not carry a figure that is nought on every army but a monster camp. Read it as `?? 0`.
+   */
+  dragonCoins?: number;
   /** What one march of it takes to recover, in seconds — `PlanMarch.seconds`, for the march the stop repeats. */
   seconds: number;
   mercLost: number;
@@ -341,6 +371,11 @@ export interface PlanTotals {
    * out here alone. The figure a single march is read by is `repeat.gold`, exactly as silver is.
    */
   gold: number;
+  /**
+   * The whole campaign's **dragon coins**, summed exactly the way `gold` is (S-96). Nought unless the plan
+   * fields a dominance monster: the coins are that pool's own recruiting price, ten monsters at a time.
+   */
+  dragonCoins: number;
   /**
    * The whole campaign's recovery time, in seconds: the repeated march's own time taken as many times as it
    * is fought, plus the finale's — or, for a plan whose marches differ (`sequence`), the sum over them. The
@@ -610,10 +645,18 @@ export interface Effective {
   cost: number;
   pool: Pool;
   damagePerUnit: number;
+  /**
+   * The type's place in the account's **kill order** (`buildKillOrder`), which is what breaks a tie in total
+   * HP: the enemy wipes the highest-HP living stack first and picks by rank when two stacks carry the same
+   * HP, exactly as `sizeStacks` and the Battle card's recap order them (S-96).
+   */
+  rank: number;
   unit: UnitDef;
 }
 
 export function effectiveTable(request: StackRequest): Effective[] {
+  // The kill order once for the table, not once a stack: it is a property of the army, not of a march.
+  const rank = new Map(buildKillOrder(request.units, request.options).map((id, index) => [id, index]));
   return request.units.map((unit) => {
     const eff = effectiveUnit(unit, request.totals, request.enemy, request.activeEvents);
     const { damage } = hitDamage(eff, 1);
@@ -627,6 +670,7 @@ export function effectiveTable(request: StackRequest): Effective[] {
       cost: unit.cost,
       pool: unit.pool,
       damagePerUnit: damage,
+      rank: rank.get(unit.id) ?? 0,
       unit,
     };
   });
@@ -693,6 +737,7 @@ function marchOf(
   stacks: { entry: Effective; count: number }[],
   enemyStacks: number,
 ): { damage: number; silver: number; gold: number; mercLost: number; strikes: number; stacks: Stack[] } {
+  const byId = new Map(stacks.map((stack) => [stack.entry.id, stack.entry]));
   const built: Stack[] = stacks
     .filter((stack) => stack.count > 0)
     .map((stack) => {
@@ -723,30 +768,60 @@ function marchOf(
         strikeTwoSquadsChance: 0,
       };
     })
-    .sort((a, b) => b.totalHp - a.totalHp);
+    /**
+     * **Highest total HP first, the kill order breaking a tie** (S-96). The enemy picks the biggest living
+     * stack, and when two carry the same HP it picks by rank — which is how `sizeStacks` and the Battle
+     * card's recap have always ordered them (`buildKillOrder`). This line sorted on the HP alone until
+     * S-96, so a tie fell to the order the *shape* happened to assemble its stacks in and the plan read a
+     * different battle from the one the recap draws for the same counts. No army in this repo could tie
+     * before the plan could field monsters: measured on experiment 110's 20 000-dominance camp
+     * (2026-09-19), the sweet spot stands Black Dragon 4 and Crystal Dragon 10 at **3 600 000 HP each**,
+     * and the two readings of that one march differ by **3 744 000** damage (188 477 435 against
+     * 192 221 435) because a dragon that dies one slot later strikes once more.
+     */
+    .sort(
+      (a, b) => b.totalHp - a.totalHp || (byId.get(a.unitId)?.rank ?? 0) - (byId.get(b.unitId)?.rank ?? 0),
+    );
   const enemyFirst = buildJournal(built, enemyStacks, false);
-  const byId = new Map(stacks.map((stack) => [stack.entry.id, stack.entry]));
   let silver = 0;
   let gold = 0;
   let mercLost = 0;
   for (const stack of built) {
     const entry = byId.get(stack.unitId);
     if (!entry) continue;
-    if (entry.pool === 'authority') {
+    /**
+     * **The bill is read off the pool, and every pool but `leadership` is hired stock** (S-96, 2026-09-19;
+     * the owner: *"fix why the monsters are not shielded in the generated stack"*).
+     *
+     * `retrainOne` already bills a non-leadership stack **by chunks of ten** and folds the units a chunk does
+     * not return into `reviveOne`'s gold (`src/engine/recovery.ts`, `byChunk = unit.pool !== 'leadership'`),
+     * so one call a stack is the whole price whatever pool it is drawn from: a mercenary has no `training`
+     * block at all, so its silver, its queue and its dragon coins are nought and its gold is the revive line
+     * this branch has always added; a **dominance monster** has one, so it costs chunk silver, chunk queue,
+     * chunk dragon coins *and* the same revive gold.
+     *
+     * Until S-96 the branch read `pool === 'authority'` and a dominance stack fell into the troop side: it was
+     * billed as a per-unit troop retrain, burned **no** stock and cost no gold and no dragon coins — free on
+     * the one axis the whole bar is ordered by. The plan never fielded one (experiment 110: on a camp with 20
+     * monster types and 20 000 dominance the Battle card's sizers field 17–21 monster stacks and the plan
+     * fielded **0 of 20**), so nothing exercised it; widening the hired set without this line first would have
+     * let the search field monsters for nothing and ranked the bar on a lie.
+     *
+     * **`mercLost` stays the one rare-stock axis**, monsters and mercenaries pooled into it, because the
+     * owner's rule is the same sentence for both — *"a critical rule is to shield mercs … we're using too
+     * much of a rare resource"* — and "burned" on the bar means the chunks of rare stock a march does not get
+     * back, whichever pool paid for them.
+     *
+     * **Dragon coins are not read here, and so never enter the ranking.** Like the revive gold they are a
+     * price the payload *prints* — `toMarch` computes them under the account's own recovery settings for
+     * `PlanMarch.dragonCoins` — and not a figure any stop rule, ratio, band or burn ladder is ordered by. The
+     * search ranks on damage, silver and `mercLost`, exactly as it did before the monsters.
+     */
+    const one = retrainOne(entry.unit, stack.count, SEARCH_RECOVERY);
+    silver += one.silver;
+    if (entry.pool !== 'leadership') {
       mercLost += chunks(stack.count);
-      gold += reviveOne(entry.unit, stack.count, {
-        templeLevel: 0,
-        trainingCostReduction: {},
-        trainingSpeed: {},
-        plan: { mode: 'revive' },
-      }).gold;
-    } else {
-      silver += retrainOne(entry.unit, stack.count, {
-        templeLevel: 0,
-        trainingCostReduction: {},
-        trainingSpeed: {},
-        plan: { mode: 'retrain' },
-      }).silver;
+      gold += one.gold;
     }
   }
   return {
@@ -808,7 +883,15 @@ const buildLadder = ladder;
  * strictly below — and a type whose very first unit is not under is left out of that shape (its count becomes
  * nothing, and the callers drop it).
  *
- * Applied to **every** hired type, capped or unlimited. S-77 had narrowed it to the unlimited ones on the
+ * Applied to **every** hired type of **every** hired pool, capped or unlimited (S-96 for the pool; the owner,
+ * 2026-09-19: *"fix why the monsters are not shielded in the generated stack"*). This function never knew
+ * about pools — it takes the rungs and the stacks to lower — and the three callers that hand it their stacks
+ * filtered on `pool === 'authority'` until S-96, which is not a narrowing of the rule so much as the whole
+ * reason it was never reached with a monster: `mercTypes` held no dominance type either, so the plan fielded
+ * none (experiment 110). The filters read `pool !== 'leadership'` now, and the rule reads as it always did:
+ * the enemy wipes the highest-HP living stack first, whatever pool paid for it.
+ *
+ * S-77 had narrowed it to the unlimited ones on the
  * argument that the battle model already prices a sponge on top (the burn is `ceil(n / 10)` wherever the stack
  * stands, so the two ratios judge it like any other march); measured on the owner's live camp of 2026-09-18
  * (`tools/theorycraft/out/106-shelter-live.md`) that reading put 375 legionaries and 403 arbalesters — 4 296 375
@@ -828,6 +911,48 @@ function shelterUnder(
       ? merc
       : { entry: merc.entry, count: Math.max(0, Math.ceil(floor / merc.entry.hp) - 1) },
   );
+}
+
+/**
+ * **A march the account can actually house** (S-96, 2026-09-19).
+ *
+ * Every unit standing on the field occupies its pool: a troop the leadership, a mercenary the authority, a
+ * monster the dominance. `ladder` has always refused a ladder the **leadership** cannot pay for (`used <=
+ * leadership`); this is that same sentence said about the other two pools, which nothing had to say while the
+ * plan fielded one or two hired types whose cost is a unit or two apiece.
+ *
+ * It is the dominance pool that makes it matter. A hired type with no cap is bounded by its own pool
+ * (`unlimited`, `stock`), *as if it were the only one there* — which is true of the single unlimited
+ * mercenary an account hires and false of a monster camp, where **twelve to twenty** uncapped monster types
+ * each read the whole pool. Measured on experiment 110's camps before this check (2026-09-19): on the
+ * 900-dominance camp the ladder shapes proposed marches needing **4 693 to 10 739** dominance, five to twelve
+ * times the housing the player has, and even at 20 000 the `all-in` asked for 20 632. The sizer's shapes never
+ * did — `sizeStacks` fills a pool and stops — so this is the one family that needed telling.
+ *
+ * Measured on the ten benchmark scenarios the same day: not one stop of not one of them comes within an order
+ * of magnitude of its authority pool (the widest is the 2026-09-17 export's `all-in`, 267 of 2 180), so no
+ * army that predates the monsters is touched by it.
+ */
+function fitsHousing(
+  housing: Housing,
+  rungs: { entry: Effective; count: number }[],
+  hired: { entry: Effective; count: number }[],
+): boolean {
+  let leadership = 0;
+  let authority = 0;
+  let dominance = 0;
+  // Two lists rather than one concatenation: this runs once per shape the search prices, and the array the
+  // spread would build is the only allocation in the whole check.
+  for (const list of [rungs, hired]) {
+    for (const stack of list) {
+      if (stack.count <= 0) continue;
+      const used = stack.count * stack.entry.cost;
+      if (stack.entry.pool === 'leadership') leadership += used;
+      else if (stack.entry.pool === 'authority') authority += used;
+      else dominance += used;
+    }
+  }
+  return leadership <= housing.leadership && authority <= housing.authority && dominance <= housing.dominance;
 }
 
 /**
@@ -870,7 +995,7 @@ function marchesFor(
 export interface ShapeContext {
   /** Troop types, weakest per HP first — `rankTroops` of the account's table. */
   troops: Effective[];
-  /** The mercenary types of the account's table. */
+  /** The **hired** types of the account's table: every pool but `leadership` (S-96). */
   mercTypes: Effective[];
   /** What the account holds, by unit id. */
   stock: Record<string, number>;
@@ -897,9 +1022,15 @@ export interface ShapeContext {
   /** The troop stacks scored at `WINNER_RUNGS_DEPTH`: the search's winner, once there is one. */
   winnerRungs?: (() => { entry: Effective; count: number }[]) | undefined;
   /**
-   * How many marches each type's stock sustains: the stock itself, or `Infinity` for a mercenary hired as
-   * **unlimited** (no cap entered), whose count `stock` bounds by the authority pool and whose stock never
-   * runs out. Defaults to `stock`.
+   * The housing every shape has to fit inside (`fitsHousing`, S-96). Left out, only the leadership is checked
+   * — which is what `ladder` does on its own and all that was ever needed before the plan could field a pool
+   * carrying a dozen uncapped types. `shapeScorer` and `planCampaign` both pass the request's own.
+   */
+  housing?: Housing | undefined;
+  /**
+   * How many marches each type's stock sustains: the stock itself, or `Infinity` for a hired type held as
+   * **unlimited** (no cap entered), whose count `stock` bounds by that type's **own pool** — authority for a
+   * mercenary, dominance for a monster (S-96) — and whose stock never runs out. Defaults to `stock`.
    */
   sustain?: Record<string, number> | undefined;
 }
@@ -1002,6 +1133,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
         // the stack it was meant to clear, and the leftovers are lowered under whatever the ladder came out at.
         const under = shelterUnder(finaleLadder, leftovers).filter((merc) => merc.count > 0);
         if (under.length === 0) continue;
+        if (context.housing && !fitsHousing(context.housing, finaleLadder, under)) continue;
         const attempt = marchOf([...finaleLadder, ...under], enemyStacks);
         if (attempt.silver > finaleBudget) continue;
         if (!finale || attempt.damage > finale.march.damage) {
@@ -1135,6 +1267,9 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     vector = shelterUnder(rungs, vector);
     fielded = vector.filter((merc) => merc.count > 0);
     if (fielded.length === 0) return null;
+    // And it has to fit in the army's own housing (S-96, `fitsHousing`): a shape asking for more dominance
+    // than the camp holds is not a march the player can send, whatever it hits for.
+    if (context.housing && !fitsHousing(context.housing, rungs, fielded)) return null;
     const march = marchOf([...rungs, ...vector], enemyStacks);
     if (budgetPerMarch !== undefined && march.silver > budgetPerMarch) return null;
     // the final march: the stock the uniform marches burn, and the silver they leave
@@ -1170,9 +1305,12 @@ export function shapeScorer(request: StackRequest, gap: number = DEFAULT_GAP, fi
   const table = effectiveTable(request);
   return makeScorer({
     troops: rankTroops(table),
-    mercTypes: table.filter((entry) => entry.pool === 'authority'),
+    // Every non-leadership pool is hired stock (S-96): the authority pool's mercenaries and the dominance
+    // pool's monsters alike. See `planCampaign`'s own `mercTypes` for the owner's sentence.
+    mercTypes: table.filter((entry) => entry.pool !== 'leadership'),
     stock: request.caps,
     leadership: request.housing.leadership,
+    housing: request.housing,
     enemyStacks: enemySquadCount(request.enemy),
     gap,
     finale,
@@ -1196,12 +1334,36 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const enemyStacks = enemySquadCount(request.enemy);
   const table = effectiveTable(request);
   const troops = rankTroops(table);
-  const mercTypes = table.filter((entry) => entry.pool === 'authority');
   /**
-   * **Unlimited mercenaries** (owner, 2026-09-18: *"when a merc is unlimited and is put in, don't put more,
+   * **The hired set: every pool but `leadership`** (S-96, 2026-09-19; the owner: *"fix why the monsters are
+   * not shielded in the generated stack"*).
+   *
+   * A march is built from two kinds of unit — the troops the **leadership** pool pays for, which are retrained
+   * per unit and come back, and everything else, which is a rare stock spent ten at a time. The game has two
+   * of the second kind: the **authority** pool's mercenaries (`kind === 'mercenary'`, the Legionaries and the
+   * Bear V he hires) and the **dominance** pool's monsters (`src/data/tables/monsters.json`, 28 types over
+   * tiers 3–9, unlocked by the profile's `troops.monsters` tier window). This line read `=== 'authority'`
+   * until S-96 and the second kind was simply not in the search: measured on a camp holding 20 monster types
+   * and 20 000 dominance (experiment 110, `tools/theorycraft/out/110-monster-shelter.md`), the Battle card's
+   * sizers field **17 to 21** monster stacks and the plan fielded **0 of 20 types held** — on all three
+   * stops, on every march of every stop, finale and tail included. The monsters were not *unsheltered*; they
+   * were absent, which is why `shelterUnder` was never reached with one and why the criterion that guards the
+   * shelter passed vacuously.
+   *
+   * Widening it here widens every rule that reads it — the grid the search crosses, `stocked` and S-58 B, the
+   * put-back's caps, `tighterShape`, the `all-in`'s march builder and the band's hired count — because each of
+   * them was always a statement about *hired stock* and only ever spelled `authority` because that was the
+   * only pool the plan could reach.
+   */
+  const mercTypes = table.filter((entry) => entry.pool !== 'leadership');
+  /**
+   * **Unlimited hired types** (owner, 2026-09-18: *"when a merc is unlimited and is put in, don't put more,
    * and lower it so the health stack still makes sense — below the troops"*). A type hired with no cap has no
-   * entry in `caps`; it used to read as a stock of nothing and was never fielded. It is bounded by the
-   * authority pool instead — the only limit the game puts on it — and its stock never runs out (`sustain`).
+   * entry in `caps`; it used to read as a stock of nothing and was never fielded. It is bounded by **its own
+   * pool** instead — the only limit the game puts on it — and its stock never runs out (`sustain`). Since
+   * S-96 that is the dominance pool for a monster as well as the authority pool for a mercenary, and it is
+   * how a monster enters the search at all: no monster carries a cap, because `caps` is written only for the
+   * mercenaries the player selected.
    *
    * What it no longer decides is the **shelter**: since S-87 every hired stack of every shape stands under the
    * lowest troop stack, capped or unlimited (`shelterUnder`, and the note beside it). This set is what bounds an
@@ -1210,14 +1372,17 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    */
   const unlimited = new Set(
     request.units
-      .filter((unit) => unit.pool === 'authority' && request.caps[unit.id] === undefined)
+      .filter((unit) => unit.pool !== 'leadership' && request.caps[unit.id] === undefined)
       .map((unit) => unit.id),
   );
   const stock: Record<string, number> = { ...request.caps };
   const sustain: Record<string, number> = { ...request.caps };
   for (const entry of table) {
     if (!unlimited.has(entry.id)) continue;
-    stock[entry.id] = Math.max(0, Math.floor(request.housing.authority / Math.max(1, entry.cost)));
+    // **Bounded by the type's own pool** (S-96): authority for a mercenary, dominance for a monster. Every
+    // dominance monster is uncapped by construction — `caps` is written only for the mercenaries the player
+    // selected (`buildUnits`) — so this is the line that gives a monster a stock at all.
+    stock[entry.id] = Math.max(0, Math.floor(request.housing[entry.pool] / Math.max(1, entry.cost)));
     sustain[entry.id] = Infinity;
   }
   const leadership = request.housing.leadership;
@@ -1441,23 +1606,33 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         mercFielded[merc.entry.id] = merc.count;
       }
     }
-    const gold = mercs
-      .filter((merc) => merc.count > 0)
-      .reduce((sum, merc) => {
-        const one = reviveOne(merc.entry.unit, merc.count, request.recovery);
-        return sum + one.gold;
-      }, 0);
-    // One `retrainOne` per rung, read twice: the silver it costs and the time it takes. The hired stacks add
-    // nothing to the second — the game revives them for gold and a mercenary has no training block at all —
-    // which is precisely why a march that leans on them recovers faster than its silver suggests.
-    const troopRecovery = rungs.map((rung) => retrainOne(rung.entry.unit, rung.count, request.recovery));
-    const silver = troopRecovery.reduce((sum, one) => sum + one.silver, 0);
-    const seconds = troopRecovery.reduce((sum, one) => sum + one.seconds, 0);
+    /**
+     * **One `retrainOne` per stack the march fields, whatever pool it is drawn from** — which is exactly what
+     * `recoveryCosts` sums for the same counts under the retrain plan, so the four prices below are the
+     * recap's own (S-90, S-91, and S-96 for the pool).
+     *
+     * It reads the same for every pool and says something different about each, because `retrainOne` bills a
+     * non-leadership stack by chunks of ten and folds the units a chunk does not return into `reviveOne`'s
+     * gold: a **troop** costs per-unit silver and per-unit queue and no gold; a **mercenary** has no
+     * `training` block at all, so it costs only the revive gold this line has always added; a **dominance
+     * monster** has one, so it costs chunk silver, chunk queue, chunk **dragon coins** and the revive gold
+     * together. Until S-96 the gold was read off the hired stacks and the silver and the queue off the rungs
+     * alone, which was the same arithmetic while the only hired pool was authority and dropped a monster's
+     * whole training bill the moment one could be fielded.
+     */
+    const recovery = [...rungs, ...mercs]
+      .filter((stack) => stack.count > 0)
+      .map((stack) => retrainOne(stack.entry.unit, stack.count, request.recovery));
+    const silver = recovery.reduce((sum, one) => sum + one.silver, 0);
+    const seconds = recovery.reduce((sum, one) => sum + one.seconds, 0);
+    const gold = recovery.reduce((sum, one) => sum + one.gold, 0);
+    const dragonCoins = recovery.reduce((sum, one) => sum + one.dragonCoins, 0);
     return {
       counts,
       damage: Math.round(totals.damage),
       silver: Math.round(silver),
       gold: Math.round(gold),
+      dragonCoins: Math.round(dragonCoins),
       // Rounded once, on the sum, the way `recoveryCosts` rounds its own — rounding each rung first would
       // drift by a second a stack against the recap the March draws.
       seconds: Math.round(seconds),
@@ -1551,7 +1726,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      */
     const sheltered = shelterUnder(
       rungs,
-      stacks.filter((stack) => stack.entry.pool === 'authority'),
+      // **Every pool but `leadership`** (S-96): the rule is about what the enemy kills first, which knows
+      // nothing about pools, and a dominance monster is the rarest stock on the field of all.
+      stacks.filter((stack) => stack.entry.pool !== 'leadership'),
     ).filter((stack) => stack.count > 0);
     return { rungs, mercs: sheltered };
   };
@@ -1561,6 +1738,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     mercTypes,
     stock,
     leadership,
+    housing: request.housing,
     enemyStacks,
     gap,
     finale: planned !== 1,
@@ -2005,6 +2183,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // `seconds` beside it have always summed it. Measured by experiment 105's validator on the evening
       // account: the silver saver printed 1 944 gold where its four marches cost 3 192.
       gold: candidate.marches * m.gold + (last?.gold ?? 0),
+      // The dominance pool's own price, summed exactly the same way (S-96).
+      dragonCoins: candidate.marches * m.dragonCoins + (last?.dragonCoins ?? 0),
       // The campaign's training queue: every repeat of the march, plus the finale's own.
       seconds: candidate.marches * m.seconds + (last?.seconds ?? 0),
       mercLost,
@@ -2014,6 +2194,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         damage: m.damage,
         silver: m.silver,
         gold: m.gold,
+        dragonCoins: m.dragonCoins,
         seconds: m.seconds,
         mercLost: m.mercLost,
       },
@@ -2064,9 +2245,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     Object.entries(counts).reduce((sum, [id, count]) => sum + (mercIds.has(id) ? count : 0), 0);
   const goal = { hired: hiredOf(chosenPoint.counts), perSilver: chosenPoint.damagePerSilver };
   /**
-   * The types the account holds a stock of, for S-58 B. Only the *stocked* ones: the authority pool is every
-   * monster the account owns as well as the hired soldiers, and a monster with no cap is not something the
-   * plan rations.
+   * The types the account holds a stock of, for S-58 B. Only the *stocked* ones — every hired type of every
+   * hired pool since S-96, which on a camp that has unlocked the monster tiers is the dominance table too:
+   * a monster carries no cap, so it enters here through `unlimited` and the pool is what bounds it.
    */
   const stocked = mercTypes.filter((entry) => (stock[entry.id] ?? 0) > 0 || unlimited.has(entry.id));
   /**
@@ -2242,7 +2423,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
        */
       const mercs = shelterUnder(
         rungs,
-        picked.filter((stack) => stack.entry.pool === 'authority'),
+        // Every pool but `leadership`, as everywhere else the shelter is applied (S-96).
+        picked.filter((stack) => stack.entry.pool !== 'leadership'),
       ).filter((stack) => stack.count > 0);
       // A march on one troop stack is the extreme the band refuses ("not a strategy", owner 2026-09-15); a
       // put-back that collapsed onto one would walk it back onto the bar through this pass.
@@ -2309,12 +2491,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           totalDamage,
           silver: campaignSilver,
           gold: row.gold + repeats * (march.gold - row.repeat.gold),
+          dragonCoins: row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0)),
           seconds: row.seconds + repeats * (march.seconds - row.repeat.seconds),
           mercLost,
           repeat: {
             damage: march.damage,
             silver: march.silver,
             gold: march.gold,
+            dragonCoins: march.dragonCoins,
             seconds: march.seconds,
             mercLost: march.mercLost,
           },
@@ -2428,12 +2612,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           totalDamage,
           silver: campaignSilver,
           gold: row.gold + repeats * (march.gold - row.repeat.gold),
+          dragonCoins: row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0)),
           seconds: row.seconds + repeats * (march.seconds - row.repeat.seconds),
           mercLost,
           repeat: {
             damage: march.damage,
             silver: march.silver,
             gold: march.gold,
+            dragonCoins: march.dragonCoins,
             seconds: march.seconds,
             mercLost: march.mercLost,
           },
@@ -2775,6 +2961,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         mercTypes,
         stock: remaining,
         leadership,
+        housing: request.housing,
         enemyStacks,
         gap,
         finale: false,
@@ -2926,6 +3113,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const totalDamage = marches.reduce((sum, march) => sum + march.damage, 0);
     const silver = marches.reduce((sum, march) => sum + march.silver, 0);
     const gold = marches.reduce((sum, march) => sum + march.gold, 0);
+    const dragonCoins = marches.reduce((sum, march) => sum + march.dragonCoins, 0);
     // No march of this stop is the one above it repeated, so its recovery time is summed over the sequence
     // like its damage and its silver, and `repeat.seconds` below is the **first** march's alone.
     const seconds = marches.reduce((sum, march) => sum + march.seconds, 0);
@@ -2938,12 +3126,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       totalDamage,
       silver,
       gold,
+      dragonCoins,
       seconds,
       mercLost,
       repeat: {
         damage: head.damage,
         silver: head.silver,
         gold: head.gold,
+        dragonCoins: head.dragonCoins,
         seconds: head.seconds,
         mercLost: head.mercLost,
       },
@@ -3205,6 +3395,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // `toMarch` prices gold off the hired stacks alone, so a troops-only march adds none. Summed rather
       // than assumed, so the line stays true if that ever stops being so.
       gold: row.gold + played * tail.gold,
+      dragonCoins: row.dragonCoins + played * tail.dragonCoins,
       seconds: row.seconds + played * tail.seconds,
       // The stock burns nothing more: that is the whole shape of the trade the owner accepted here.
       mercLost: row.mercLost,

@@ -59,13 +59,17 @@ const perHired = (row: PlanRow): number => row.repeat.damage / Math.max(1, row.r
 /**
  * The hired units a march **fields**. The bar runs along the burn — what the stock pays — and this is the one
  * reading the engine takes off the counts: the `all-in` is offered when its first march fields more than the
- * steady max's repeat (`plan.ts`). The unit ids are the authority pool's; every army here holds only hired
- * soldiers in it.
+ * steady max's repeat (`plan.ts`).
+ *
+ * **Every pool but `leadership`** (S-96, 2026-09-19): the dominance pool's monsters are hired stock exactly as
+ * the authority pool's mercenaries are, burned a chunk of ten at a time and pooled into the same `mercLost`.
+ * It read `=== 'authority'` until then, which named the same set on every army this file held before the
+ * monster camp: none of them owns a dominance unit.
  */
 const hiredOf = (counts: Record<string, number>): number =>
   Object.entries(counts).reduce(
     (sum, [id, count]) =>
-      getUnits().find((unit) => unit.id === id)?.pool === 'authority' ? sum + count : sum,
+      getUnits().find((unit) => unit.id === id)?.pool !== 'leadership' ? sum + count : sum,
     0,
   );
 const under = (measured: number): number => measured * 0.999;
@@ -531,6 +535,12 @@ const scenarios: { label: string; request: StackRequest; pinned?: Scenario['pinn
  * *unlimited* types on a sponge argument, and S-87 restored it for **every** hired type on every shape the
  * plan offers.
  *
+ * **Every hired pool since S-96** (2026-09-19): the stacks read here are `pool !== 'leadership'`, so the
+ * dominance pool's monsters are held to the same line as the authority pool's mercenaries. It named the same
+ * stacks on every army that predates the monster camp — none of them owns a dominance unit — and on the camp
+ * that does, it would have passed **vacuously** while the plan fielded no monster at all, which is why the
+ * criterion beside it ("the plan fields the pools the account holds") exists.
+ *
  * This holds on **every scenario the benchmark builds** (`plan-scenarios.ts` — the same armies and the same
  * flags, pins and all), over every march the bar can play: each stop's repeated march, its finale, and every
  * march of the `all-in`'s sequence. The stacks are the engine's own (`planMarch` builds exactly what
@@ -559,7 +569,10 @@ describe('every hired stack stands under the lowest troop stack', () => {
   ): { line: string; floor: number } => {
     const { result } = planMarch(request, counts);
     const troops = result.stacks.filter((stack) => stack.pool === 'leadership');
-    const hired = result.stacks.filter((stack) => stack.pool === 'authority');
+    // **Every pool but `leadership`** (S-96): the shelter is about what the enemy kills first, and a
+    // dominance monster is hired stock exactly as an authority mercenary is. On the ten armies that predate
+    // the monster camp this names the same stacks it always did.
+    const hired = result.stacks.filter((stack) => stack.pool !== 'leadership');
     if (hired.length === 0) return { line: '', floor: Infinity };
     if (troops.length === 0) return { line: 'no troop stack at all shelters the hired ones', floor: 0 };
     const floor = Math.min(...troops.map((stack) => stack.totalHp));
@@ -683,6 +696,142 @@ describe('every hired stack stands under the lowest troop stack', () => {
             HORIZON,
           );
         }
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **The plan fields the pools the account holds** (S-96; the owner, 2026-09-19: *"fix why the monsters are
+ * not shielded in the generated stack"*).
+ *
+ * The question he asked was about the shelter, and the answer was that there was nothing to shelter: on a
+ * camp that has unlocked the monster tiers the Battle card's sizers field a stack for every monster type it
+ * holds — **17 to 21** of them on the 20 000-dominance reading — and the plan fielded **none**. `mercTypes`,
+ * `unlimited`, the sizer's unit filter, the three `shelterUnder` call sites and `marchOf`'s billing were each
+ * typed to `pool === 'authority'`, so a dominance unit was dropped before any rule could reach it
+ * (`tools/theorycraft/out/110-monster-shelter.md`). The shelter criterion above therefore **passed
+ * vacuously** on such a camp: a march with no monster in it has no monster standing over the troops. This is
+ * the criterion that does not.
+ *
+ * Four things, on every army this file builds:
+ *
+ *  1. **the pools the army holds are the pools the plan fields** — an account with a dominance pool and
+ *     monster types in its window has at least one monster stack on every stop's repeated march, and the same
+ *     for the authority pool it always had. This is the half that **fails on HEAD** (e2b8d3e), on all three
+ *     stops of the monster camp at once:
+ *
+ *     ```
+ *     sweet-spot fields no dominance stack (the army holds 12 types, housing 900)
+ *     steady-max fields no dominance stack (the army holds 12 types, housing 900)
+ *     all-in     fields no dominance stack (the army holds 12 types, housing 900)
+ *     ```
+ *  2. **the burn counts them** — a stop's `repeat.mercLost` is exactly the chunks of ten its march loses over
+ *     **every** non-leadership stack it fields, monsters and mercenaries together. The bar is ordered by that
+ *     one figure, so a pool billed as a troop retrain would ride the whole bar for free;
+ *  3. **every stack of a hired pool is sheltered** — restated here over `pool !== 'leadership'` for the one
+ *     army where it is not vacuous, and so that a widening of the hired set without a widening of the shelter
+ *     is caught by the criterion that names the pools rather than by the one that names the mercenaries;
+ *  4. **the march fits the housing** — a march asking for more of a pool than the camp has room for is not a
+ *     march the player can send. Measured 2026-09-19 before the check went into the engine (`fitsHousing`,
+ *     `plan.ts`): with each of a dozen uncapped monster types bounded by the *whole* dominance pool, the
+ *     ladder shapes proposed marches needing **4 693 to 10 739** dominance against this camp's 900, five to
+ *     twelve times the room it has.
+ */
+describe('the plan fields the pools the account holds', () => {
+  /** Every march a stop plays — the same reading the shelter criterion above makes. */
+  const marchesOf = (row: PlanTotals): { counts: Record<string, number>; what: string }[] =>
+    row.sequence
+      ? row.sequence.map((counts, index) => ({ counts, what: `march ${index + 1} of the sequence` }))
+      : [
+          { counts: row.counts, what: 'the repeated march' },
+          ...(row.finaleCounts ? [{ counts: row.finaleCounts, what: 'the finale' }] : []),
+          ...(row.tail ? [{ counts: row.tail.counts, what: 'the troops-only tail' }] : []),
+        ];
+
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const byId = new Map(scenario.request.units.map((unit) => [unit.id, unit]));
+        /** The hired pools this army actually holds: room in the pool **and** a type to put in it. */
+        const held = (['authority', 'dominance'] as const).filter(
+          (pool) =>
+            scenario.request.housing[pool] > 0 && scenario.request.units.some((unit) => unit.pool === pool),
+        );
+        const failures: string[] = [];
+        for (const row of plan.alternatives) {
+          // 1. the pools the army holds are the pools the stop fields, on the march it repeats (or, for the
+          // `all-in`, on the first march of its sequence — the one `repeat` prices and the bar draws).
+          const first = row.sequence?.[0] ?? row.counts;
+          for (const pool of held) {
+            const fielded = Object.entries(first).filter(
+              ([id, count]) => count > 0 && byId.get(id)?.pool === pool,
+            );
+            if (fielded.length === 0) {
+              failures.push(
+                `${row.pick} fields no ${pool} stack (the army holds ` +
+                  `${String(scenario.request.units.filter((unit) => unit.pool === pool).length)} types, ` +
+                  `housing ${scenario.request.housing[pool].toLocaleString('en-US')})`,
+              );
+            }
+          }
+          // 2. the burn is the chunks of every hired stack, whatever pool paid for it.
+          if (!row.sequence) {
+            const burn = Object.entries(row.counts).reduce(
+              (sum, [id, count]) =>
+                count > 0 && (byId.get(id)?.pool ?? 'leadership') !== 'leadership'
+                  ? sum + chunks(count)
+                  : sum,
+              0,
+            );
+            if (row.repeat.mercLost !== burn) {
+              failures.push(
+                `${row.pick} burns ${String(row.repeat.mercLost)} where its march loses ${String(burn)} ` +
+                  'chunks of hired stock',
+              );
+            }
+          }
+          for (const march of marchesOf(row)) {
+            const { result } = planMarch(scenario.request, march.counts);
+            // 3. every hired stack of every hired pool, under the lowest troop stack.
+            const troops = result.stacks.filter((stack) => stack.pool === 'leadership');
+            const hired = result.stacks.filter((stack) => stack.pool !== 'leadership');
+            if (troops.length > 0 && hired.length > 0) {
+              const floor = Math.min(...troops.map((stack) => stack.totalHp));
+              for (const stack of hired.filter((stack) => stack.totalHp >= floor)) {
+                failures.push(
+                  `${row.pick}, ${march.what}: ${stack.unitId} ${String(stack.count)} = ` +
+                    `${Math.round(stack.totalHp).toLocaleString('en-US')} HP (${stack.pool}) at or above the ` +
+                    `lowest troop stack (${Math.round(floor).toLocaleString('en-US')} HP)`,
+                );
+              }
+            }
+            // 4. and the march fits the housing, pool by pool.
+            for (const pool of ['leadership', 'authority', 'dominance'] as const) {
+              const used = result.stacks
+                .filter((stack) => stack.pool === pool)
+                .reduce((sum, stack) => sum + stack.count * (byId.get(stack.unitId)?.cost ?? 0), 0);
+              if (used > scenario.request.housing[pool]) {
+                failures.push(
+                  `${row.pick}, ${march.what}: ${used.toLocaleString('en-US')} ${pool} used of ` +
+                    `${scenario.request.housing[pool].toLocaleString('en-US')} the camp holds`,
+                );
+              }
+            }
+          }
+        }
+        expect(
+          failures.join('\n'),
+          `the plan does not field the pools the account holds\n${failures.join('\n')}`,
+        ).toBe('');
       },
       300_000,
     );
@@ -912,14 +1061,19 @@ const campaignIsItsMarchesSum = (title: string, variant: (request: StackRequest)
               );
               continue;
             }
-            const sum = { silver: 0, gold: 0, seconds: 0 };
+            // **Dragon coins ride with the other three since S-96**: the recap prices them
+            // (`BattleSummary.recovery.dragonCoins`) and the dominance pool charges them, so a campaign that
+            // fields monsters has a fourth price the bar has to add up the same way. Nought on every army
+            // that holds none, which is the ten that predate the monster camp.
+            const sum = { silver: 0, gold: 0, dragonCoins: 0, seconds: 0 };
             for (const counts of marches) {
               const { recovery } = planMarch(request, counts).summary;
               sum.silver += recovery.silver;
               sum.gold += recovery.gold;
+              sum.dragonCoins += recovery.dragonCoins;
               sum.seconds += recovery.seconds;
             }
-            for (const key of ['silver', 'gold', 'seconds'] as const) {
+            for (const key of ['silver', 'gold', 'dragonCoins', 'seconds'] as const) {
               if (row[key] !== sum[key]) {
                 failures.push(
                   `${what}: ${key} ${row[key].toLocaleString('en-US')} against the recap's ` +
@@ -932,10 +1086,10 @@ const campaignIsItsMarchesSum = (title: string, variant: (request: StackRequest)
             // readable as `played × repeat + the finale` on the bar itself.
             if (row.sequence) continue;
             const { recovery } = planMarch(request, row.counts).summary;
-            for (const key of ['silver', 'gold', 'seconds'] as const) {
-              if (row.repeat[key] !== recovery[key]) {
+            for (const key of ['silver', 'gold', 'dragonCoins', 'seconds'] as const) {
+              if ((row.repeat[key] ?? 0) !== recovery[key]) {
                 failures.push(
-                  `${what}: repeat ${key} ${row.repeat[key].toLocaleString('en-US')} against the recap's ` +
+                  `${what}: repeat ${key} ${(row.repeat[key] ?? 0).toLocaleString('en-US')} against the recap's ` +
                     `${recovery[key].toLocaleString('en-US')}`,
                 );
               }

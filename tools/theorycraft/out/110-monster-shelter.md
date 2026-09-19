@@ -4,6 +4,8 @@ The enemy wipes the highest-HP living stack first, so a stack of a rare resource
 
 A *monster mercenary* is a `mercenary` tagged `monster` (Bear V, Cyclops V, Gargoyle V …), paid from the **authority** pool. A *dominance monster* is the `monsters.json` table, `pool === "dominance"` — TotalStack’s `monsterMinTier`/`monsterMaxTier` units. The owner’s camps hold only the first kind, so the second is measured on a synthetic camp built here.
 
+> **Read as of 2026-09-19, after S-96.** Everything below §"What this shows" was written on the engine of the morning of 2026-09-19 (HEAD `e2b8d3e`), where the plan fielded **no** dominance monster at all and `shelterUnder` was therefore never reached with one. S-96 applied the fix §2 names, so the tables **above** that section are the engine as it is now — every stop fields the monsters it can house, sheltered, and the burn counts them — while §1 and §2 describe the defect and the plan for it as they were found. §3 and §4, which are about the Battle card’s sizers and about the naming trap, are unchanged by S-96 and still read true.
+
 The data knows 28 dominance monsters (tiers 3–9) and 28 monster mercenaries.
 
 ## first-run army, Bear V ×1 (20 000 leadership)
@@ -498,7 +500,49 @@ Monster types in the army: bear-5 (monster merc (authority)), cyclops-5 (monster
 | 12 | gargoyle-5 | 7 | 399,000 | monster merc (authority) |
 | 13 | bear-5 | 3 | 198,000 | monster merc (authority) |
 
-Over every march of every stop: **0** march(es) with a rare stack at or above the lowest troop stack; **6** monster stack(s) fielded, of which **0** from the dominance pool (the army holds 0 dominance type(s), housing 0).
+### all-in (winner) — 4 marches, 11 burned
+
+**march 1 of the sequence** — lowest troop stack 4,749,120 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | rider-3 | 5,046 | 4,844,160 | troop (leadership) |
+| 2 | archer-3 | 9,894 | 4,749,120 | troop (leadership) |
+| 3 | gargoyle-5 | 83 | 4,731,000 | monster merc (authority) |
+| 4 | cyclops-5 | 6 | 810,000 | monster merc (authority) |
+| 5 | bear-5 | 6 | 396,000 | monster merc (authority) |
+
+**march 2 of the sequence** — lowest troop stack 4,749,120 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | rider-3 | 5,046 | 4,844,160 | troop (leadership) |
+| 2 | archer-3 | 9,894 | 4,749,120 | troop (leadership) |
+| 3 | gargoyle-5 | 83 | 4,731,000 | monster merc (authority) |
+| 4 | cyclops-5 | 5 | 675,000 | monster merc (authority) |
+| 5 | bear-5 | 5 | 330,000 | monster merc (authority) |
+
+**march 3 of the sequence** — lowest troop stack 4,749,120 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | rider-3 | 5,046 | 4,844,160 | troop (leadership) |
+| 2 | archer-3 | 9,894 | 4,749,120 | troop (leadership) |
+| 3 | gargoyle-5 | 83 | 4,731,000 | monster merc (authority) |
+| 4 | cyclops-5 | 4 | 540,000 | monster merc (authority) |
+| 5 | bear-5 | 4 | 264,000 | monster merc (authority) |
+
+**march 4 of the sequence** — lowest troop stack 4,749,120 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | rider-3 | 5,046 | 4,844,160 | troop (leadership) |
+| 2 | archer-3 | 9,894 | 4,749,120 | troop (leadership) |
+| 3 | gargoyle-5 | 83 | 4,731,000 | monster merc (authority) |
+| 4 | cyclops-5 | 3 | 405,000 | monster merc (authority) |
+| 5 | bear-5 | 3 | 198,000 | monster merc (authority) |
+
+Over every march of every stop: **0** march(es) with a rare stack at or above the lowest troop stack; **18** monster stack(s) fielded, of which **0** from the dominance pool (the army holds 0 dominance type(s), housing 0).
 
 ## synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) — (b) the Battle card’s sizer methods
 
@@ -600,7 +644,7 @@ Monster types in the army: battle-boar (monster (dominance)), desert-vanquisher 
 ## synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 — (a) the plan’s stops
 
 
-### sweet-spot (elite) — 4 marches, 7 burned
+### sweet-spot (elite) — 4 marches, 23 burned
 
 **the repeated march** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
 
@@ -616,44 +660,17 @@ Monster types in the army: battle-boar (monster (dominance)), desert-vanquisher 
 | 8 | archer-3 | 939 | 450,720 | troop (leadership) |
 | 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
 | 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 60 | 365,400 | merc (authority) |
-| 12 | bear-5 | 4 | 264,000 | monster merc (authority) |
-
-**the finale** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
-
-| kill order | stack | count | total HP | what |
-|---|---|---|---|---|
-| 1 | swordsman-1 | 3,048 | 457,200 | troop (leadership) |
-| 2 | archer-1 | 3,042 | 456,300 | troop (leadership) |
-| 3 | spearman-1 | 3,036 | 455,400 | troop (leadership) |
-| 4 | rider-1 | 1,515 | 454,500 | troop (leadership) |
-| 5 | archer-2 | 1,680 | 453,600 | troop (leadership) |
-| 6 | spearman-2 | 1,677 | 452,790 | troop (leadership) |
-| 7 | rider-2 | 837 | 451,980 | troop (leadership) |
-| 8 | archer-3 | 939 | 450,720 | troop (leadership) |
-| 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
-| 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 65 | 395,850 | merc (authority) |
-| 12 | bear-5 | 3 | 198,000 | monster merc (authority) |
-
-### steady-max (elite) — 4 marches, 8 burned
-
-**the repeated march** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
-
-| kill order | stack | count | total HP | what |
-|---|---|---|---|---|
-| 1 | swordsman-1 | 3,048 | 457,200 | troop (leadership) |
-| 2 | archer-1 | 3,042 | 456,300 | troop (leadership) |
-| 3 | spearman-1 | 3,036 | 455,400 | troop (leadership) |
-| 4 | rider-1 | 1,515 | 454,500 | troop (leadership) |
-| 5 | archer-2 | 1,680 | 453,600 | troop (leadership) |
-| 6 | spearman-2 | 1,677 | 452,790 | troop (leadership) |
-| 7 | rider-2 | 837 | 451,980 | troop (leadership) |
-| 8 | archer-3 | 939 | 450,720 | troop (leadership) |
-| 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
-| 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
-| 12 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 11 | gorgon-medusa | 12 | 432,000 | monster (dominance) |
+| 12 | ettin | 3 | 432,000 | monster (dominance) |
+| 13 | many-armed-guardian | 11 | 429,000 | monster (dominance) |
+| 14 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
+| 15 | fearsome-manticore | 3 | 414,000 | monster (dominance) |
+| 16 | ice-phoenix | 8 | 408,000 | monster (dominance) |
+| 17 | flaming-centaur | 3 | 396,000 | monster (dominance) |
+| 18 | desert-vanquisher | 3 | 378,000 | monster (dominance) |
+| 19 | water-elemental | 50 | 285,000 | monster (dominance) |
+| 20 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 21 | magic-dragon | 2 | 90,000 | monster (dominance) |
 
 **the finale** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
 
@@ -670,43 +687,23 @@ Monster types in the army: battle-boar (monster (dominance)), desert-vanquisher 
 | 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
 | 10 | rider-3 | 468 | 449,280 | troop (leadership) |
 | 11 | epic-monster-hunter-6 | 62 | 377,580 | merc (authority) |
-| 12 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 12 | water-elemental | 46 | 262,200 | monster (dominance) |
+| 13 | battle-boar | 22 | 257,400 | monster (dominance) |
+| 14 | emerald-dragon | 19 | 256,500 | monster (dominance) |
+| 15 | gorgon-medusa | 7 | 252,000 | monster (dominance) |
+| 16 | desert-vanquisher | 2 | 252,000 | monster (dominance) |
+| 17 | stone-gargoyle | 16 | 249,600 | monster (dominance) |
+| 18 | many-armed-guardian | 6 | 234,000 | monster (dominance) |
+| 19 | magic-dragon | 5 | 225,000 | monster (dominance) |
+| 20 | ice-phoenix | 4 | 204,000 | monster (dominance) |
+| 21 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 22 | ettin | 1 | 144,000 | monster (dominance) |
+| 23 | fearsome-manticore | 1 | 138,000 | monster (dominance) |
+| 24 | flaming-centaur | 1 | 132,000 | monster (dominance) |
 
-### all-in (elite) — 4 marches, 10 burned
+### more-mercs (elite) — 4 marches, 26 burned
 
-**march 1 of the sequence** — lowest troop stack 529,920 HP; **0** rare stack(s) at or above it
-
-| kill order | stack | count | total HP | what |
-|---|---|---|---|---|
-| 1 | archer-1 | 3,589 | 538,350 | troop (leadership) |
-| 2 | spearman-1 | 3,582 | 537,300 | troop (leadership) |
-| 3 | rider-1 | 1,788 | 536,400 | troop (leadership) |
-| 4 | archer-2 | 1,982 | 535,140 | troop (leadership) |
-| 5 | spearman-2 | 1,979 | 534,330 | troop (leadership) |
-| 6 | rider-2 | 987 | 532,980 | troop (leadership) |
-| 7 | archer-3 | 1,108 | 531,840 | troop (leadership) |
-| 8 | spearman-3 | 1,106 | 530,880 | troop (leadership) |
-| 9 | rider-3 | 552 | 529,920 | troop (leadership) |
-| 10 | epic-monster-hunter-6 | 83 | 505,470 | merc (authority) |
-| 11 | bear-5 | 6 | 396,000 | monster merc (authority) |
-
-**march 2 of the sequence** — lowest troop stack 529,920 HP; **0** rare stack(s) at or above it
-
-| kill order | stack | count | total HP | what |
-|---|---|---|---|---|
-| 1 | archer-1 | 3,589 | 538,350 | troop (leadership) |
-| 2 | spearman-1 | 3,582 | 537,300 | troop (leadership) |
-| 3 | rider-1 | 1,788 | 536,400 | troop (leadership) |
-| 4 | archer-2 | 1,982 | 535,140 | troop (leadership) |
-| 5 | spearman-2 | 1,979 | 534,330 | troop (leadership) |
-| 6 | rider-2 | 987 | 532,980 | troop (leadership) |
-| 7 | archer-3 | 1,108 | 531,840 | troop (leadership) |
-| 8 | spearman-3 | 1,106 | 530,880 | troop (leadership) |
-| 9 | rider-3 | 552 | 529,920 | troop (leadership) |
-| 10 | epic-monster-hunter-6 | 74 | 450,660 | merc (authority) |
-| 11 | bear-5 | 5 | 330,000 | monster merc (authority) |
-
-**march 3 of the sequence** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+**the repeated march** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
 
 | kill order | stack | count | total HP | what |
 |---|---|---|---|---|
@@ -720,10 +717,19 @@ Monster types in the army: battle-boar (monster (dominance)), desert-vanquisher 
 | 8 | archer-3 | 939 | 450,720 | troop (leadership) |
 | 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
 | 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 66 | 401,940 | merc (authority) |
-| 12 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 11 | water-elemental | 78 | 444,600 | monster (dominance) |
+| 12 | gorgon-medusa | 12 | 432,000 | monster (dominance) |
+| 13 | ettin | 3 | 432,000 | monster (dominance) |
+| 14 | many-armed-guardian | 11 | 429,000 | monster (dominance) |
+| 15 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
+| 16 | fearsome-manticore | 3 | 414,000 | monster (dominance) |
+| 17 | ice-phoenix | 8 | 408,000 | monster (dominance) |
+| 18 | flaming-centaur | 3 | 396,000 | monster (dominance) |
+| 19 | desert-vanquisher | 3 | 378,000 | monster (dominance) |
+| 20 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 21 | magic-dragon | 2 | 90,000 | monster (dominance) |
 
-**march 4 of the sequence** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+**the finale** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
 
 | kill order | stack | count | total HP | what |
 |---|---|---|---|---|
@@ -737,10 +743,81 @@ Monster types in the army: battle-boar (monster (dominance)), desert-vanquisher 
 | 8 | archer-3 | 939 | 450,720 | troop (leadership) |
 | 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
 | 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 59 | 359,310 | merc (authority) |
-| 12 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 11 | epic-monster-hunter-6 | 62 | 377,580 | merc (authority) |
+| 12 | water-elemental | 46 | 262,200 | monster (dominance) |
+| 13 | battle-boar | 22 | 257,400 | monster (dominance) |
+| 14 | emerald-dragon | 19 | 256,500 | monster (dominance) |
+| 15 | gorgon-medusa | 7 | 252,000 | monster (dominance) |
+| 16 | desert-vanquisher | 2 | 252,000 | monster (dominance) |
+| 17 | stone-gargoyle | 16 | 249,600 | monster (dominance) |
+| 18 | many-armed-guardian | 6 | 234,000 | monster (dominance) |
+| 19 | magic-dragon | 5 | 225,000 | monster (dominance) |
+| 20 | ice-phoenix | 4 | 204,000 | monster (dominance) |
+| 21 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 22 | ettin | 1 | 144,000 | monster (dominance) |
+| 23 | fearsome-manticore | 1 | 138,000 | monster (dominance) |
+| 24 | flaming-centaur | 1 | 132,000 | monster (dominance) |
 
-Over every march of every stop: **0** march(es) with a rare stack at or above the lowest troop stack; **8** monster stack(s) fielded, of which **0** from the dominance pool (the army holds 12 dominance type(s), housing 900).
+### steady-max (elite) — 4 marches, 28 burned
+
+**the repeated march** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | swordsman-1 | 3,048 | 457,200 | troop (leadership) |
+| 2 | archer-1 | 3,042 | 456,300 | troop (leadership) |
+| 3 | spearman-1 | 3,036 | 455,400 | troop (leadership) |
+| 4 | rider-1 | 1,515 | 454,500 | troop (leadership) |
+| 5 | archer-2 | 1,680 | 453,600 | troop (leadership) |
+| 6 | spearman-2 | 1,677 | 452,790 | troop (leadership) |
+| 7 | rider-2 | 837 | 451,980 | troop (leadership) |
+| 8 | archer-3 | 939 | 450,720 | troop (leadership) |
+| 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
+| 10 | rider-3 | 468 | 449,280 | troop (leadership) |
+| 11 | water-elemental | 76 | 433,200 | monster (dominance) |
+| 12 | gorgon-medusa | 12 | 432,000 | monster (dominance) |
+| 13 | ettin | 3 | 432,000 | monster (dominance) |
+| 14 | many-armed-guardian | 11 | 429,000 | monster (dominance) |
+| 15 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
+| 16 | fearsome-manticore | 3 | 414,000 | monster (dominance) |
+| 17 | ice-phoenix | 8 | 408,000 | monster (dominance) |
+| 18 | flaming-centaur | 3 | 396,000 | monster (dominance) |
+| 19 | desert-vanquisher | 3 | 378,000 | monster (dominance) |
+| 20 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 21 | magic-dragon | 2 | 90,000 | monster (dominance) |
+| 22 | battle-boar | 3 | 35,100 | monster (dominance) |
+| 23 | emerald-dragon | 1 | 13,500 | monster (dominance) |
+
+**the finale** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | swordsman-1 | 3,048 | 457,200 | troop (leadership) |
+| 2 | archer-1 | 3,042 | 456,300 | troop (leadership) |
+| 3 | spearman-1 | 3,036 | 455,400 | troop (leadership) |
+| 4 | rider-1 | 1,515 | 454,500 | troop (leadership) |
+| 5 | archer-2 | 1,680 | 453,600 | troop (leadership) |
+| 6 | spearman-2 | 1,677 | 452,790 | troop (leadership) |
+| 7 | rider-2 | 837 | 451,980 | troop (leadership) |
+| 8 | archer-3 | 939 | 450,720 | troop (leadership) |
+| 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
+| 10 | rider-3 | 468 | 449,280 | troop (leadership) |
+| 11 | epic-monster-hunter-6 | 62 | 377,580 | merc (authority) |
+| 12 | water-elemental | 46 | 262,200 | monster (dominance) |
+| 13 | battle-boar | 22 | 257,400 | monster (dominance) |
+| 14 | emerald-dragon | 19 | 256,500 | monster (dominance) |
+| 15 | gorgon-medusa | 7 | 252,000 | monster (dominance) |
+| 16 | desert-vanquisher | 2 | 252,000 | monster (dominance) |
+| 17 | stone-gargoyle | 16 | 249,600 | monster (dominance) |
+| 18 | many-armed-guardian | 6 | 234,000 | monster (dominance) |
+| 19 | magic-dragon | 5 | 225,000 | monster (dominance) |
+| 20 | ice-phoenix | 4 | 204,000 | monster (dominance) |
+| 21 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 22 | ettin | 1 | 144,000 | monster (dominance) |
+| 23 | fearsome-manticore | 1 | 138,000 | monster (dominance) |
+| 24 | flaming-centaur | 1 | 132,000 | monster (dominance) |
+
+Over every march of every stop: **0** march(es) with a rare stack at or above the lowest troop stack; **71** monster stack(s) fielded, of which **65** from the dominance pool (the army holds 12 dominance type(s), housing 900).
 
 ## synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 — (b) the Battle card’s sizer methods
 
@@ -897,24 +974,36 @@ Monster types in the army: ancient-terror (monster (dominance)), battle-boar (mo
 ## synthetic camp — **dominance monsters** at full pressure (tiers 3–7, 20 000 dominance) with EMH 83 · Bear V 6 — (a) the plan’s stops
 
 
-### sweet-spot (elite) — 4 marches, 7 burned
+### sweet-spot (ladder) — 4 marches, 74 burned
 
-**the repeated march** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+**the repeated march** — lowest troop stack 4,724,640 HP; **0** rare stack(s) at or above it
 
 | kill order | stack | count | total HP | what |
 |---|---|---|---|---|
-| 1 | swordsman-1 | 3,048 | 457,200 | troop (leadership) |
-| 2 | archer-1 | 3,042 | 456,300 | troop (leadership) |
-| 3 | spearman-1 | 3,036 | 455,400 | troop (leadership) |
-| 4 | rider-1 | 1,515 | 454,500 | troop (leadership) |
-| 5 | archer-2 | 1,680 | 453,600 | troop (leadership) |
-| 6 | spearman-2 | 1,677 | 452,790 | troop (leadership) |
-| 7 | rider-2 | 837 | 451,980 | troop (leadership) |
-| 8 | archer-3 | 939 | 450,720 | troop (leadership) |
-| 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
-| 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 60 | 365,400 | merc (authority) |
-| 12 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 1 | rider-3 | 5,020 | 4,819,200 | troop (leadership) |
+| 2 | archer-3 | 9,843 | 4,724,640 | troop (leadership) |
+| 3 | desert-vanquisher | 30 | 3,780,000 | monster (dominance) |
+| 4 | fearsome-manticore | 27 | 3,726,000 | monster (dominance) |
+| 5 | wind-lord | 4 | 3,720,000 | monster (dominance) |
+| 6 | flaming-centaur | 28 | 3,696,000 | monster (dominance) |
+| 7 | troll-rider | 11 | 3,630,000 | monster (dominance) |
+| 8 | ettin | 25 | 3,600,000 | monster (dominance) |
+| 9 | crystal-dragon | 10 | 3,600,000 | monster (dominance) |
+| 10 | black-dragon | 4 | 3,600,000 | monster (dominance) |
+| 11 | jungle-destroyer | 9 | 3,510,000 | monster (dominance) |
+| 12 | ruby-golem | 9 | 3,510,000 | monster (dominance) |
+| 13 | destructive-colossus | 4 | 3,480,000 | monster (dominance) |
+| 14 | ancient-terror | 4 | 3,360,000 | monster (dominance) |
+| 15 | ice-phoenix | 35 | 1,785,000 | monster (dominance) |
+| 16 | magic-dragon | 36 | 1,620,000 | monster (dominance) |
+| 17 | many-armed-guardian | 38 | 1,482,000 | monster (dominance) |
+| 18 | gorgon-medusa | 36 | 1,296,000 | monster (dominance) |
+| 19 | stone-gargoyle | 55 | 858,000 | monster (dominance) |
+| 20 | emerald-dragon | 60 | 810,000 | monster (dominance) |
+| 21 | battle-boar | 59 | 690,300 | monster (dominance) |
+| 22 | water-elemental | 105 | 598,500 | monster (dominance) |
+| 23 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
+| 24 | bear-5 | 4 | 264,000 | monster merc (authority) |
 
 **the finale** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
 
@@ -930,27 +1019,55 @@ Monster types in the army: ancient-terror (monster (dominance)), battle-boar (mo
 | 8 | archer-3 | 939 | 450,720 | troop (leadership) |
 | 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
 | 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 65 | 395,850 | merc (authority) |
-| 12 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 11 | emerald-dragon | 33 | 445,500 | monster (dominance) |
+| 12 | water-elemental | 78 | 444,600 | monster (dominance) |
+| 13 | battle-boar | 38 | 444,600 | monster (dominance) |
+| 14 | stone-gargoyle | 28 | 436,800 | monster (dominance) |
+| 15 | gorgon-medusa | 12 | 432,000 | monster (dominance) |
+| 16 | ettin | 3 | 432,000 | monster (dominance) |
+| 17 | many-armed-guardian | 11 | 429,000 | monster (dominance) |
+| 18 | fearsome-manticore | 3 | 414,000 | monster (dominance) |
+| 19 | ice-phoenix | 8 | 408,000 | monster (dominance) |
+| 20 | magic-dragon | 9 | 405,000 | monster (dominance) |
+| 21 | flaming-centaur | 3 | 396,000 | monster (dominance) |
+| 22 | jungle-destroyer | 1 | 390,000 | monster (dominance) |
+| 23 | ruby-golem | 1 | 390,000 | monster (dominance) |
+| 24 | desert-vanquisher | 3 | 378,000 | monster (dominance) |
+| 25 | epic-monster-hunter-6 | 62 | 377,580 | merc (authority) |
+| 26 | crystal-dragon | 1 | 360,000 | monster (dominance) |
+| 27 | troll-rider | 1 | 330,000 | monster (dominance) |
+| 28 | bear-5 | 3 | 198,000 | monster merc (authority) |
 
-### steady-max (elite) — 4 marches, 8 burned
+### more-mercs (ladder) — 4 marches, 82 burned
 
-**the repeated march** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+**the repeated march** — lowest troop stack 4,724,640 HP; **0** rare stack(s) at or above it
 
 | kill order | stack | count | total HP | what |
 |---|---|---|---|---|
-| 1 | swordsman-1 | 3,048 | 457,200 | troop (leadership) |
-| 2 | archer-1 | 3,042 | 456,300 | troop (leadership) |
-| 3 | spearman-1 | 3,036 | 455,400 | troop (leadership) |
-| 4 | rider-1 | 1,515 | 454,500 | troop (leadership) |
-| 5 | archer-2 | 1,680 | 453,600 | troop (leadership) |
-| 6 | spearman-2 | 1,677 | 452,790 | troop (leadership) |
-| 7 | rider-2 | 837 | 451,980 | troop (leadership) |
-| 8 | archer-3 | 939 | 450,720 | troop (leadership) |
-| 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
-| 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
-| 12 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 1 | rider-3 | 5,020 | 4,819,200 | troop (leadership) |
+| 2 | archer-3 | 9,843 | 4,724,640 | troop (leadership) |
+| 3 | desert-vanquisher | 30 | 3,780,000 | monster (dominance) |
+| 4 | ettin | 26 | 3,744,000 | monster (dominance) |
+| 5 | fearsome-manticore | 27 | 3,726,000 | monster (dominance) |
+| 6 | wind-lord | 4 | 3,720,000 | monster (dominance) |
+| 7 | flaming-centaur | 28 | 3,696,000 | monster (dominance) |
+| 8 | troll-rider | 11 | 3,630,000 | monster (dominance) |
+| 9 | crystal-dragon | 10 | 3,600,000 | monster (dominance) |
+| 10 | black-dragon | 4 | 3,600,000 | monster (dominance) |
+| 11 | jungle-destroyer | 9 | 3,510,000 | monster (dominance) |
+| 12 | ruby-golem | 9 | 3,510,000 | monster (dominance) |
+| 13 | destructive-colossus | 4 | 3,480,000 | monster (dominance) |
+| 14 | ancient-terror | 4 | 3,360,000 | monster (dominance) |
+| 15 | ice-phoenix | 44 | 2,244,000 | monster (dominance) |
+| 16 | magic-dragon | 45 | 2,025,000 | monster (dominance) |
+| 17 | many-armed-guardian | 47 | 1,833,000 | monster (dominance) |
+| 18 | gorgon-medusa | 45 | 1,620,000 | monster (dominance) |
+| 19 | stone-gargoyle | 64 | 998,400 | monster (dominance) |
+| 20 | emerald-dragon | 70 | 945,000 | monster (dominance) |
+| 21 | battle-boar | 70 | 819,000 | monster (dominance) |
+| 22 | water-elemental | 114 | 649,800 | monster (dominance) |
+| 23 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
+| 24 | bear-5 | 4 | 264,000 | monster merc (authority) |
 
 **the finale** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
 
@@ -966,61 +1083,57 @@ Monster types in the army: ancient-terror (monster (dominance)), battle-boar (mo
 | 8 | archer-3 | 939 | 450,720 | troop (leadership) |
 | 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
 | 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 62 | 377,580 | merc (authority) |
-| 12 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 11 | emerald-dragon | 33 | 445,500 | monster (dominance) |
+| 12 | water-elemental | 78 | 444,600 | monster (dominance) |
+| 13 | battle-boar | 38 | 444,600 | monster (dominance) |
+| 14 | stone-gargoyle | 28 | 436,800 | monster (dominance) |
+| 15 | gorgon-medusa | 12 | 432,000 | monster (dominance) |
+| 16 | ettin | 3 | 432,000 | monster (dominance) |
+| 17 | many-armed-guardian | 11 | 429,000 | monster (dominance) |
+| 18 | fearsome-manticore | 3 | 414,000 | monster (dominance) |
+| 19 | ice-phoenix | 8 | 408,000 | monster (dominance) |
+| 20 | magic-dragon | 9 | 405,000 | monster (dominance) |
+| 21 | flaming-centaur | 3 | 396,000 | monster (dominance) |
+| 22 | jungle-destroyer | 1 | 390,000 | monster (dominance) |
+| 23 | ruby-golem | 1 | 390,000 | monster (dominance) |
+| 24 | desert-vanquisher | 3 | 378,000 | monster (dominance) |
+| 25 | epic-monster-hunter-6 | 62 | 377,580 | merc (authority) |
+| 26 | crystal-dragon | 1 | 360,000 | monster (dominance) |
+| 27 | troll-rider | 1 | 330,000 | monster (dominance) |
+| 28 | bear-5 | 3 | 198,000 | monster merc (authority) |
 
-### all-in (elite) — 4 marches, 10 burned
+### steady-max (ladder) — 4 marches, 91 burned
 
-**march 1 of the sequence** — lowest troop stack 529,920 HP; **0** rare stack(s) at or above it
-
-| kill order | stack | count | total HP | what |
-|---|---|---|---|---|
-| 1 | archer-1 | 3,589 | 538,350 | troop (leadership) |
-| 2 | spearman-1 | 3,582 | 537,300 | troop (leadership) |
-| 3 | rider-1 | 1,788 | 536,400 | troop (leadership) |
-| 4 | archer-2 | 1,982 | 535,140 | troop (leadership) |
-| 5 | spearman-2 | 1,979 | 534,330 | troop (leadership) |
-| 6 | rider-2 | 987 | 532,980 | troop (leadership) |
-| 7 | archer-3 | 1,108 | 531,840 | troop (leadership) |
-| 8 | spearman-3 | 1,106 | 530,880 | troop (leadership) |
-| 9 | rider-3 | 552 | 529,920 | troop (leadership) |
-| 10 | epic-monster-hunter-6 | 83 | 505,470 | merc (authority) |
-| 11 | bear-5 | 6 | 396,000 | monster merc (authority) |
-
-**march 2 of the sequence** — lowest troop stack 529,920 HP; **0** rare stack(s) at or above it
-
-| kill order | stack | count | total HP | what |
-|---|---|---|---|---|
-| 1 | archer-1 | 3,589 | 538,350 | troop (leadership) |
-| 2 | spearman-1 | 3,582 | 537,300 | troop (leadership) |
-| 3 | rider-1 | 1,788 | 536,400 | troop (leadership) |
-| 4 | archer-2 | 1,982 | 535,140 | troop (leadership) |
-| 5 | spearman-2 | 1,979 | 534,330 | troop (leadership) |
-| 6 | rider-2 | 987 | 532,980 | troop (leadership) |
-| 7 | archer-3 | 1,108 | 531,840 | troop (leadership) |
-| 8 | spearman-3 | 1,106 | 530,880 | troop (leadership) |
-| 9 | rider-3 | 552 | 529,920 | troop (leadership) |
-| 10 | epic-monster-hunter-6 | 74 | 450,660 | merc (authority) |
-| 11 | bear-5 | 5 | 330,000 | monster merc (authority) |
-
-**march 3 of the sequence** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+**the repeated march** — lowest troop stack 4,748,160 HP; **0** rare stack(s) at or above it
 
 | kill order | stack | count | total HP | what |
 |---|---|---|---|---|
-| 1 | swordsman-1 | 3,048 | 457,200 | troop (leadership) |
-| 2 | archer-1 | 3,042 | 456,300 | troop (leadership) |
-| 3 | spearman-1 | 3,036 | 455,400 | troop (leadership) |
-| 4 | rider-1 | 1,515 | 454,500 | troop (leadership) |
-| 5 | archer-2 | 1,680 | 453,600 | troop (leadership) |
-| 6 | spearman-2 | 1,677 | 452,790 | troop (leadership) |
-| 7 | rider-2 | 837 | 451,980 | troop (leadership) |
-| 8 | archer-3 | 939 | 450,720 | troop (leadership) |
-| 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
-| 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 66 | 401,940 | merc (authority) |
-| 12 | bear-5 | 4 | 264,000 | monster merc (authority) |
+| 1 | rider-3 | 5,045 | 4,843,200 | troop (leadership) |
+| 2 | archer-3 | 9,892 | 4,748,160 | troop (leadership) |
+| 3 | desert-vanquisher | 30 | 3,780,000 | monster (dominance) |
+| 4 | ettin | 26 | 3,744,000 | monster (dominance) |
+| 5 | fearsome-manticore | 27 | 3,726,000 | monster (dominance) |
+| 6 | wind-lord | 4 | 3,720,000 | monster (dominance) |
+| 7 | flaming-centaur | 28 | 3,696,000 | monster (dominance) |
+| 8 | troll-rider | 11 | 3,630,000 | monster (dominance) |
+| 9 | crystal-dragon | 10 | 3,600,000 | monster (dominance) |
+| 10 | black-dragon | 4 | 3,600,000 | monster (dominance) |
+| 11 | jungle-destroyer | 9 | 3,510,000 | monster (dominance) |
+| 12 | ruby-golem | 9 | 3,510,000 | monster (dominance) |
+| 13 | destructive-colossus | 4 | 3,480,000 | monster (dominance) |
+| 14 | ancient-terror | 4 | 3,360,000 | monster (dominance) |
+| 15 | ice-phoenix | 56 | 2,856,000 | monster (dominance) |
+| 16 | magic-dragon | 57 | 2,565,000 | monster (dominance) |
+| 17 | many-armed-guardian | 59 | 2,301,000 | monster (dominance) |
+| 18 | gorgon-medusa | 57 | 2,052,000 | monster (dominance) |
+| 19 | stone-gargoyle | 76 | 1,185,600 | monster (dominance) |
+| 20 | emerald-dragon | 81 | 1,093,500 | monster (dominance) |
+| 21 | battle-boar | 79 | 924,300 | monster (dominance) |
+| 22 | water-elemental | 126 | 718,200 | monster (dominance) |
+| 23 | epic-monster-hunter-6 | 69 | 420,210 | merc (authority) |
+| 24 | bear-5 | 4 | 264,000 | monster merc (authority) |
 
-**march 4 of the sequence** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
+**the finale** — lowest troop stack 449,280 HP; **0** rare stack(s) at or above it
 
 | kill order | stack | count | total HP | what |
 |---|---|---|---|---|
@@ -1034,10 +1147,144 @@ Monster types in the army: ancient-terror (monster (dominance)), battle-boar (mo
 | 8 | archer-3 | 939 | 450,720 | troop (leadership) |
 | 9 | spearman-3 | 938 | 450,240 | troop (leadership) |
 | 10 | rider-3 | 468 | 449,280 | troop (leadership) |
-| 11 | epic-monster-hunter-6 | 59 | 359,310 | merc (authority) |
-| 12 | bear-5 | 3 | 198,000 | monster merc (authority) |
+| 11 | emerald-dragon | 33 | 445,500 | monster (dominance) |
+| 12 | water-elemental | 78 | 444,600 | monster (dominance) |
+| 13 | battle-boar | 38 | 444,600 | monster (dominance) |
+| 14 | stone-gargoyle | 28 | 436,800 | monster (dominance) |
+| 15 | gorgon-medusa | 12 | 432,000 | monster (dominance) |
+| 16 | ettin | 3 | 432,000 | monster (dominance) |
+| 17 | many-armed-guardian | 11 | 429,000 | monster (dominance) |
+| 18 | fearsome-manticore | 3 | 414,000 | monster (dominance) |
+| 19 | ice-phoenix | 8 | 408,000 | monster (dominance) |
+| 20 | magic-dragon | 9 | 405,000 | monster (dominance) |
+| 21 | flaming-centaur | 3 | 396,000 | monster (dominance) |
+| 22 | jungle-destroyer | 1 | 390,000 | monster (dominance) |
+| 23 | ruby-golem | 1 | 390,000 | monster (dominance) |
+| 24 | desert-vanquisher | 3 | 378,000 | monster (dominance) |
+| 25 | epic-monster-hunter-6 | 62 | 377,580 | merc (authority) |
+| 26 | crystal-dragon | 1 | 360,000 | monster (dominance) |
+| 27 | troll-rider | 1 | 330,000 | monster (dominance) |
+| 28 | bear-5 | 3 | 198,000 | monster merc (authority) |
 
-Over every march of every stop: **0** march(es) with a rare stack at or above the lowest troop stack; **8** monster stack(s) fielded, of which **0** from the dominance pool (the army holds 20 dominance type(s), housing 20,000).
+### all-in (elite) — 4 marches, 270 burned
+
+**march 1 of the sequence** — lowest troop stack 4,795,200 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | archer-3 | 10,010 | 4,804,800 | troop (leadership) |
+| 2 | rider-3 | 4,995 | 4,795,200 | troop (leadership) |
+| 3 | water-elemental | 818 | 4,662,600 | monster (dominance) |
+| 4 | battle-boar | 396 | 4,633,200 | monster (dominance) |
+| 5 | emerald-dragon | 343 | 4,630,500 | monster (dominance) |
+| 6 | stone-gargoyle | 296 | 4,617,600 | monster (dominance) |
+| 7 | gorgon-medusa | 128 | 4,608,000 | monster (dominance) |
+| 8 | magic-dragon | 102 | 4,590,000 | monster (dominance) |
+| 9 | many-armed-guardian | 117 | 4,563,000 | monster (dominance) |
+| 10 | ice-phoenix | 89 | 4,539,000 | monster (dominance) |
+| 11 | desert-vanquisher | 36 | 4,536,000 | monster (dominance) |
+| 12 | flaming-centaur | 34 | 4,488,000 | monster (dominance) |
+| 13 | ettin | 31 | 4,464,000 | monster (dominance) |
+| 14 | fearsome-manticore | 32 | 4,416,000 | monster (dominance) |
+| 15 | destructive-colossus | 5 | 4,350,000 | monster (dominance) |
+| 16 | crystal-dragon | 12 | 4,320,000 | monster (dominance) |
+| 17 | jungle-destroyer | 11 | 4,290,000 | monster (dominance) |
+| 18 | ruby-golem | 11 | 4,290,000 | monster (dominance) |
+| 19 | troll-rider | 13 | 4,290,000 | monster (dominance) |
+| 20 | ancient-terror | 5 | 4,200,000 | monster (dominance) |
+| 21 | wind-lord | 4 | 3,720,000 | monster (dominance) |
+| 22 | black-dragon | 4 | 3,600,000 | monster (dominance) |
+| 23 | epic-monster-hunter-6 | 83 | 505,470 | merc (authority) |
+| 24 | bear-5 | 6 | 396,000 | monster merc (authority) |
+
+**march 2 of the sequence** — lowest troop stack 4,795,200 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | archer-3 | 10,010 | 4,804,800 | troop (leadership) |
+| 2 | rider-3 | 4,995 | 4,795,200 | troop (leadership) |
+| 3 | water-elemental | 818 | 4,662,600 | monster (dominance) |
+| 4 | battle-boar | 396 | 4,633,200 | monster (dominance) |
+| 5 | emerald-dragon | 343 | 4,630,500 | monster (dominance) |
+| 6 | stone-gargoyle | 296 | 4,617,600 | monster (dominance) |
+| 7 | gorgon-medusa | 128 | 4,608,000 | monster (dominance) |
+| 8 | magic-dragon | 102 | 4,590,000 | monster (dominance) |
+| 9 | many-armed-guardian | 117 | 4,563,000 | monster (dominance) |
+| 10 | ice-phoenix | 89 | 4,539,000 | monster (dominance) |
+| 11 | desert-vanquisher | 36 | 4,536,000 | monster (dominance) |
+| 12 | flaming-centaur | 34 | 4,488,000 | monster (dominance) |
+| 13 | ettin | 31 | 4,464,000 | monster (dominance) |
+| 14 | fearsome-manticore | 32 | 4,416,000 | monster (dominance) |
+| 15 | destructive-colossus | 5 | 4,350,000 | monster (dominance) |
+| 16 | crystal-dragon | 12 | 4,320,000 | monster (dominance) |
+| 17 | jungle-destroyer | 11 | 4,290,000 | monster (dominance) |
+| 18 | ruby-golem | 11 | 4,290,000 | monster (dominance) |
+| 19 | troll-rider | 13 | 4,290,000 | monster (dominance) |
+| 20 | ancient-terror | 5 | 4,200,000 | monster (dominance) |
+| 21 | wind-lord | 4 | 3,720,000 | monster (dominance) |
+| 22 | black-dragon | 4 | 3,600,000 | monster (dominance) |
+| 23 | epic-monster-hunter-6 | 74 | 450,660 | merc (authority) |
+| 24 | bear-5 | 5 | 330,000 | monster merc (authority) |
+
+**march 3 of the sequence** — lowest troop stack 4,795,200 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | archer-3 | 10,010 | 4,804,800 | troop (leadership) |
+| 2 | rider-3 | 4,995 | 4,795,200 | troop (leadership) |
+| 3 | water-elemental | 818 | 4,662,600 | monster (dominance) |
+| 4 | battle-boar | 396 | 4,633,200 | monster (dominance) |
+| 5 | emerald-dragon | 343 | 4,630,500 | monster (dominance) |
+| 6 | stone-gargoyle | 296 | 4,617,600 | monster (dominance) |
+| 7 | gorgon-medusa | 128 | 4,608,000 | monster (dominance) |
+| 8 | magic-dragon | 102 | 4,590,000 | monster (dominance) |
+| 9 | many-armed-guardian | 117 | 4,563,000 | monster (dominance) |
+| 10 | ice-phoenix | 89 | 4,539,000 | monster (dominance) |
+| 11 | desert-vanquisher | 36 | 4,536,000 | monster (dominance) |
+| 12 | flaming-centaur | 34 | 4,488,000 | monster (dominance) |
+| 13 | ettin | 31 | 4,464,000 | monster (dominance) |
+| 14 | fearsome-manticore | 32 | 4,416,000 | monster (dominance) |
+| 15 | destructive-colossus | 5 | 4,350,000 | monster (dominance) |
+| 16 | crystal-dragon | 12 | 4,320,000 | monster (dominance) |
+| 17 | jungle-destroyer | 11 | 4,290,000 | monster (dominance) |
+| 18 | ruby-golem | 11 | 4,290,000 | monster (dominance) |
+| 19 | troll-rider | 13 | 4,290,000 | monster (dominance) |
+| 20 | ancient-terror | 5 | 4,200,000 | monster (dominance) |
+| 21 | wind-lord | 4 | 3,720,000 | monster (dominance) |
+| 22 | black-dragon | 4 | 3,600,000 | monster (dominance) |
+| 23 | epic-monster-hunter-6 | 66 | 401,940 | merc (authority) |
+| 24 | bear-5 | 4 | 264,000 | monster merc (authority) |
+
+**march 4 of the sequence** — lowest troop stack 4,795,200 HP; **0** rare stack(s) at or above it
+
+| kill order | stack | count | total HP | what |
+|---|---|---|---|---|
+| 1 | archer-3 | 10,010 | 4,804,800 | troop (leadership) |
+| 2 | rider-3 | 4,995 | 4,795,200 | troop (leadership) |
+| 3 | water-elemental | 818 | 4,662,600 | monster (dominance) |
+| 4 | battle-boar | 396 | 4,633,200 | monster (dominance) |
+| 5 | emerald-dragon | 343 | 4,630,500 | monster (dominance) |
+| 6 | stone-gargoyle | 296 | 4,617,600 | monster (dominance) |
+| 7 | gorgon-medusa | 128 | 4,608,000 | monster (dominance) |
+| 8 | magic-dragon | 102 | 4,590,000 | monster (dominance) |
+| 9 | many-armed-guardian | 117 | 4,563,000 | monster (dominance) |
+| 10 | ice-phoenix | 89 | 4,539,000 | monster (dominance) |
+| 11 | desert-vanquisher | 36 | 4,536,000 | monster (dominance) |
+| 12 | flaming-centaur | 34 | 4,488,000 | monster (dominance) |
+| 13 | ettin | 31 | 4,464,000 | monster (dominance) |
+| 14 | fearsome-manticore | 32 | 4,416,000 | monster (dominance) |
+| 15 | destructive-colossus | 5 | 4,350,000 | monster (dominance) |
+| 16 | crystal-dragon | 12 | 4,320,000 | monster (dominance) |
+| 17 | jungle-destroyer | 11 | 4,290,000 | monster (dominance) |
+| 18 | ruby-golem | 11 | 4,290,000 | monster (dominance) |
+| 19 | troll-rider | 13 | 4,290,000 | monster (dominance) |
+| 20 | ancient-terror | 5 | 4,200,000 | monster (dominance) |
+| 21 | wind-lord | 4 | 3,720,000 | monster (dominance) |
+| 22 | black-dragon | 4 | 3,600,000 | monster (dominance) |
+| 23 | epic-monster-hunter-6 | 59 | 359,310 | merc (authority) |
+| 24 | bear-5 | 3 | 198,000 | monster merc (authority) |
+
+Over every march of every stop: **0** march(es) with a rare stack at or above the lowest troop stack; **198** monster stack(s) fielded, of which **188** from the dominance pool (the army holds 20 dominance type(s), housing 20,000).
 
 ## synthetic camp — **dominance monsters** at full pressure (tiers 3–7, 20 000 dominance) with EMH 83 · Bear V 6 — (b) the Battle card’s sizer methods
 
@@ -1411,19 +1658,19 @@ Over every march of every stop: **0** march(es) with a rare stack at or above th
 | first-run army, Bear V ×10 (20 000 leadership) | Troops first (`ms`) | — | 0 exposed stack(s) | monster stacks fielded: 1 |
 | first-run army, Bear V ×10 (20 000 leadership) | Troops first + *Allow damage trades* (`msRelaxed`) | — | 1 exposed stack(s) | monster stacks fielded: 1 |
 | first-run army, Bear V ×10 (20 000 leadership) | Troops first + *Monsters after mercenaries* (`strictMercsAboveMonsters`) | — | 0 exposed stack(s) | monster stacks fielded: 1 |
-| synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) | plan | 1 stops | 0 march(es) with an exposed rare stack | monster stacks fielded: 6 |
+| synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) | plan | 2 stops | 0 march(es) with an exposed rare stack | monster stacks fielded: 18 |
 | synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) | Tier ladder (`elite`) | — | 2 exposed stack(s) | monster stacks fielded: 3 |
 | synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) | Tier ladder + *Monsters after troops* (`monstersLast`) | — | 2 exposed stack(s) | monster stacks fielded: 3 |
 | synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) | Troops first (`ms`) | — | 0 exposed stack(s) | monster stacks fielded: 3 |
 | synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) | Troops first + *Allow damage trades* (`msRelaxed`) | — | 2 exposed stack(s) | monster stacks fielded: 3 |
 | synthetic camp — Bear V 6 · Cyclops V 6 capped, Gargoyle V **unlimited** (20 000 / 2 180) | Troops first + *Monsters after mercenaries* (`strictMercsAboveMonsters`) | — | 0 exposed stack(s) | monster stacks fielded: 3 |
-| synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 | plan | 3 stops | 0 march(es) with an exposed rare stack | monster stacks fielded: 8 (dominance: 0 of 12 types held) |
+| synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 | plan | 3 stops | 0 march(es) with an exposed rare stack | monster stacks fielded: 71 (dominance: 65 of 12 types held) |
 | synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 | Tier ladder (`elite`) | — | 1 exposed stack(s) | monster stacks fielded: 13 |
 | synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 | Tier ladder + *Monsters after troops* (`monstersLast`) | — | 1 exposed stack(s) | monster stacks fielded: 13 |
 | synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 | Troops first (`ms`) | — | 0 exposed stack(s) | monster stacks fielded: 13 |
 | synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 | Troops first + *Allow damage trades* (`msRelaxed`) | — | 0 exposed stack(s) | monster stacks fielded: 13 |
 | synthetic camp — **dominance monsters** unlocked (tiers 3–5, 900 dominance) with EMH 83 · Bear V 6 | Troops first + *Monsters after mercenaries* (`strictMercsAboveMonsters`) | — | 0 exposed stack(s) | monster stacks fielded: 13 |
-| synthetic camp — **dominance monsters** at full pressure (tiers 3–7, 20 000 dominance) with EMH 83 · Bear V 6 | plan | 3 stops | 0 march(es) with an exposed rare stack | monster stacks fielded: 8 (dominance: 0 of 20 types held) |
+| synthetic camp — **dominance monsters** at full pressure (tiers 3–7, 20 000 dominance) with EMH 83 · Bear V 6 | plan | 4 stops | 0 march(es) with an exposed rare stack | monster stacks fielded: 198 (dominance: 188 of 20 types held) |
 | synthetic camp — **dominance monsters** at full pressure (tiers 3–7, 20 000 dominance) with EMH 83 · Bear V 6 | Tier ladder (`elite`) | — | 21 exposed stack(s) | monster stacks fielded: 21 |
 | synthetic camp — **dominance monsters** at full pressure (tiers 3–7, 20 000 dominance) with EMH 83 · Bear V 6 | Tier ladder + *Monsters after troops* (`monstersLast`) | — | 1 exposed stack(s) | monster stacks fielded: 17 |
 | synthetic camp — **dominance monsters** at full pressure (tiers 3–7, 20 000 dominance) with EMH 83 · Bear V 6 | Troops first (`ms`) | — | 0 exposed stack(s) | monster stacks fielded: 17 |

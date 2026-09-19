@@ -30,6 +30,11 @@
  *    hired as unlimited, 11 000);
  *  - a first-run army with Bear V at a stock of 1, 2, 3 and 10 (experiment 101 §B: the small stocks where
  *    the plan refuses or offers one stop), and with the hunter at 83 (the e2e seed);
+ *  - a first-run army that has unlocked the **monster tiers** — 12 dominance types over tiers 3–5 against a
+ *    900 dominance pool, experiment 110's camp (added 2026-09-19, S-96: the first scenario here with a pool
+ *    other than leadership and authority in it, and the one that holds the plan to fielding and sheltering
+ *    the monsters it can house). Its 20 000-dominance sibling is not here because its search does not
+ *    finish inside `CAMPAIGN.budgets.plan` — see `monsterCamp` in `plan-scenarios.ts`;
  *  - the 4 000-leadership case of 2026-09-15, the one case two other calculators answered.
  *
  * **Two things hold a run, and they answer different questions.**
@@ -177,8 +182,15 @@ interface Campaign {
   burned: number;
 }
 
+/**
+ * The ids whose chunks the `hired burned` column counts: **every pool but `leadership`** (S-96, 2026-09-19).
+ * The bar is ordered by the rare stock a march does not get back, and since S-96 that is the dominance pool's
+ * monsters as well as the authority pool's mercenaries — `PlanTotals.mercLost` pools them, so the column that
+ * is compared against it has to pool them too. It read `=== 'authority'` until then, which was the same set
+ * on every army this file measured before the monster camp was added: none of the ten holds a dominance unit.
+ */
 const hiredIds = (request: StackRequest): string[] =>
-  request.units.filter((u) => u.pool === 'authority').map((u) => u.id);
+  request.units.filter((u) => u.pool !== 'leadership').map((u) => u.id);
 
 function campaignOf(
   request: StackRequest,

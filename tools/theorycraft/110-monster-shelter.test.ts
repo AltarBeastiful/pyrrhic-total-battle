@@ -262,7 +262,14 @@ describe.skipIf(!process.env.THEORY)('110 — where monsters stand in the march'
         'A *monster mercenary* is a `mercenary` tagged `monster` (Bear V, Cyclops V, Gargoyle V …), paid from ' +
         'the **authority** pool. A *dominance monster* is the `monsters.json` table, `pool === "dominance"` — ' +
         'TotalStack’s `monsterMinTier`/`monsterMaxTier` units. The owner’s camps hold only the first kind, so ' +
-        'the second is measured on a synthetic camp built here.',
+        'the second is measured on a synthetic camp built here.\n\n' +
+        '> **Read as of 2026-09-19, after S-96.** Everything below §"What this shows" was written on the ' +
+        'engine of the morning of 2026-09-19 (HEAD `e2b8d3e`), where the plan fielded **no** dominance ' +
+        'monster at all and `shelterUnder` was therefore never reached with one. S-96 applied the fix §2 ' +
+        'names, so the tables **above** that section are the engine as it is now — every stop fields the ' +
+        'monsters it can house, sheltered, and the burn counts them — while §1 and §2 describe the defect ' +
+        'and the plan for it as they were found. §3 and §4, which are about the Battle card\u2019s sizers ' +
+        'and about the naming trap, are unchanged by S-96 and still read true.',
     );
     report.add(
       `\nThe data knows ${n(units.filter(isDominanceMonster).length)} dominance monsters (tiers ` +

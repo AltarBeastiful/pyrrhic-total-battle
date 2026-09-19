@@ -92,6 +92,50 @@ function firstRun(hired: { id: string; cap: number }, leadership: number): Stack
   return buildStackRequest(profile, { ...setup, housing: { leadership, authority: 40_000, dominance: 0 } });
 }
 
+/**
+ * **A camp that has unlocked the monster tiers** (S-96) — the first-run army again, with the e2e seed's 83
+ * hunters and six Bear V hired, and the profile's `troops.monsters` tier window opened on tiers **3–5**
+ * against a **900** dominance pool. That window is 12 of the 28 types in `src/data/tables/monsters.json`,
+ * each of them uncapped (a monster carries no `caps` entry — only a selected mercenary does), so the whole
+ * dominance pool is what bounds every one of them, and at 900 it binds hard: the stops fielded here stand at
+ * 795 to 898 of the 900 the camp holds.
+ *
+ * It is experiment 110's 900-dominance camp to the unit (`tools/theorycraft/110-monster-shelter.test.ts`,
+ * `out/110-monster-shelter.md`), one of the two the owner's *"fix why the monsters are not shielded in the
+ * generated stack"* was measured on: the Battle card's sizers field a monster stack for every type there and
+ * the plan fielded **0 of 12 types held**, on every stop, on every march of every stop. No scenario above
+ * holds a dominance unit at all — the benchmark's ten armies are mercenaries and troops — so nothing in this
+ * file exercised the monster pool before it.
+ *
+ * **Experiment 110's other monster camp — tiers 3–7 at 20 000 dominance — is deliberately *not* registered
+ * here, and the reason is a finding of its own.** It is the larger picture (20 monster types, four stops, all
+ * twenty fielded and sheltered on each of them), but its search **does not finish inside the app's own plan
+ * budget**: `CAMPAIGN.budgets.plan` is 25 000 ms and that camp's search ran **25 846 to 28 009 ms** in every
+ * run measured on 2026-09-19 — alone and inside this suite alike — so it is always cut off and the bar it
+ * answers with is whatever the search had reached when the clock ran out rather than what the engine finds.
+ * A scenario whose pins are the clock's is not a non-regression test.
+ *
+ * **The 900 camp is registered because its search finishes**, and the pins below depend on that: about
+ * **7 100 ms** run alone and **8 500 to 9 200 ms** inside this suite, a margin of roughly **2.7×** under the
+ * same 25 000 ms budget, so the bar is the engine's answer and the same one on every machine. Widening the
+ * search to a pool that carries a dozen to twenty uncapped types is what costs the larger camp its budget;
+ * that is an open follow-up, not this scenario.
+ */
+function monsterCamp(): StackRequest {
+  const profile = newProfile('first run');
+  profile.mercenaries.selected = [
+    { id: 'epic-monster-hunter-6', cap: 83 },
+    { id: 'bear-5', cap: 6 },
+  ];
+  profile.troops.monsters = { min: 3, max: 5 };
+  const setup = profile.setups[0];
+  if (!setup) throw new Error('no setup');
+  return buildStackRequest(profile, {
+    ...setup,
+    housing: { leadership: 20_000, authority: 2_180, dominance: 900 },
+  });
+}
+
 interface Capture {
   request: {
     inputValue: number;
@@ -580,6 +624,42 @@ export function commonScenarios(): Scenario[] {
         damageFloor: 0.98,
         winsHired: true,
         externals: { damageFloor: 0.98, winsHired: true },
+      },
+    },
+    {
+      label:
+        'first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)',
+      request: monsterCamp(),
+      externals: [],
+      // **Added 2026-09-19 (S-96), the first scenario in this file that holds a dominance pool**, and the
+      // first whose plan fields a monster at all. Measured that day on the engine that widened the hired set
+      // to every non-leadership pool — **three stops** (sweet spot, more mercs, steady max), each of them
+      // fielding **9, 9 and 11** of the camp's 12 monster types — 95, 123 and 125 monster units — with every
+      // monster stack under the lowest troop stack and **795, 879 and 898** of the 900 dominance in use, and
+      // the burn counting them: 23 · 26 · 28 chunks a march, 97 · 106 · 112 over the campaign, against the
+      // **0 of 12** the plan fielded on the same camp the day before (experiment 110). They are also the
+      // first stops in this file to carry a **dragon-coin** price: 6 840 · 7 200 · 7 720 a march.
+      //
+      // **What the shares say.** The plan's hardest campaign is the steady max's 95 348 743 over four
+      // marches for 35 458 800 silver, which is **0.911** of the best sizer sequence (Troops first ·
+      // Generate, 104 626 942 for 37 290 800) and **0.958** of its damage a silver — so this army holds the
+      // file's ordinary 95 % silver floor with no exception. Against the two plain sizer rows, the ones a
+      // player actually clicks, the plan is ahead on both readings at once: Tier ladder · all types plays
+      // 79 635 913 for 35 450 400 and Troops first · all types 82 845 061 for the same, where the plan's
+      // *sweet spot* alone reaches 91 948 255 for 35 274 000 — more damage, less silver, and 97 chunks of
+      // stock against their 114 and 113. `winsHired` is `false` because the two Generate rows search on
+      // average damage and field far fewer, larger stacks (1 361 029 a chunk against the plan's 947 920),
+      // and `sweetNotAheadOnEither` is `true` for the same row.
+      //
+      // **Nothing here is registered as a baseline**: these are the figures of the day the plan first
+      // fielded a monster, and what an acceptable trade on a monster camp is, is the owner's call —
+      // `tests/engine/plan-baseline.proposed.json` carries the measured bar.
+      pinned: {
+        refuses: false,
+        stops: 3,
+        sweetNotAheadOnEither: true,
+        damageFloor: 0.91,
+        winsHired: false,
       },
     },
     fourThousand(),

@@ -1,4 +1,4 @@
-# The plan across the stages of 2026-09-18 and 2026-09-19 — before, S-76, S-77, the put-back, the all-in tail, the shelter, the reference table, the tail on the repeated stops, the finale's gold, the finale's silver, the tighter shape, reliable damage
+# The plan across the stages of 2026-09-18 and 2026-09-19 — before, S-76, S-77, the put-back, the all-in tail, the shelter, the reference table, the tail on the repeated stops, the finale's gold, the finale's silver, the tighter shape, reliable damage, the dominance-pool monsters
 
 Every figure is a four-march campaign from the benchmark snapshots in this folder (`benchmark-2026-09-1N-NN-*.json`): the plan's hardest stop, its best stop a silver, its best stop a hired unit, the stops on the bar, and beside them the best sizer sequence and the best comparable answer from TotalStack's dataset (rows that field troop types the army does not hold are left out).
 
@@ -11,6 +11,8 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 **11 is S-93, the tighter shape**: every rung of the burn ladder, and the `all-in`'s own march builder, now score the sizer over each **prefix** of the troop ranking, and a rung takes that march only when it is behind on none of damage, silver, the stock burned and the training queue. The `all-in` moves on **eight** of the ten scenarios (Bear V ×1 and ×2 carry no such stop): it fields what a deeper ladder shelters, and it pays for it on two of them — the live account at 20 000 spends 31 092 400 → 42 085 900 silver for 1.3 % more damage, and the bear armies buy theirs at 54 % and 23 % more silver. The owner's export at 12 000 gains a fifth stop while its knee walks from the 17-burn rung to the 10.
 
 **12 is S-94, and from it on the damage columns are a different reading.** Up to and including 11 every figure in this table is a march's *expected* damage — the midpoint of the two openings the game's coin decides. From 12 on it is the **worst opening**, the enemy-first journal, on every row of every scenario: the plan is ranked, priced and printed on it (owner, 2026-09-19: *"average damage is not average for sure; it's too risky for me to spend 3M silver on a coin flip to get 1M damage or 3M. We want reliable damage actually."*), so the sizer sequences and the captured answers it is measured against are priced on it too. **A 12 figure is therefore not comparable in level to an 11 figure**, and the fall between the two rows is not a plan that got worse. The bridge is the worst/expected ratio of each army's own hardest campaign, measured on the 12 bar and printed under each table below; `tools/theorycraft/out/109-reliable-damage.md` §A has the gap on every stop of every army and §C has this same comparison in both readings. What did move, and is a real move: the bar re-ranked on the bad flip is a different bar — the owner's export at 7 000 gains a fifth stop and its `all-in` gains 20.4 % of reliable damage a march, his 12 000 loses its `all-in` (it stood behind the steady max on damage, silver **and** the stock at once), and the evening account loses its silver saver.
+
+**13 is S-96, the dominance-pool monsters**, and it moves **no figure of any scenario 12 measured** — checked field by field: every damage, silver, gold, queue, hired burned, damage a silver and damage a hired unit of every row of every one of the ten armies is identical to the unit, because not one of them owns a dominance unit and the widening only reaches an army that does. What it costs them in search time is below what this benchmark resolves, and two sittings disagree on the sign: three alternating rounds back to back on one machine put the ten at a median 4 776 ms on the 12 engine and 4 353 ms on the 13 (−8.9 %, the small armies slower and the large ones faster), while a second sitting put the same ten at 4 864 ms and 5 174 ms (+6.4 %). **Read no timing across the rows of this table** — the note at the top of the file applies here too. What 13 adds is an **eleventh scenario**, the first with a pool other than leadership and authority in it: a first-run army with the monster tiers 3–5 unlocked against 900 dominance (experiment 110's camp; its search finishes in about 7.1 s alone and 8.5–9.2 s inside the suite, a 2.7× margin under the 25 000 ms plan budget, which is why its figures are the engine's and not the clock's). On it the plan fielded **0 of 12 monster types** at stage 12 and fields 9, 9 and 11 of them at stage 13 — every monster stack under the lowest troop stack, 795 to 898 of the 900 dominance in use, and the burn counting them (97 · 106 · 112 chunks over four marches). Experiment 110's larger camp — tiers 3–7 at 20 000 dominance, where the plan fields all twenty types — is **not** in the table: its search ran 25 846–28 009 ms in every run measured, alone and in parallel alike, against the 25 000 ms `CAMPAIGN.budgets.plan`, so it is always cut off and the bar it answers with is whatever the search had reached when the clock ran out.
 
 ## first-run army, Bear V ×1 (20 000 leadership)
 
@@ -32,6 +34,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
 | 11 S-93 the tighter shape | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
 | 12 S-94 reliable damage | 1 | 18 189 008 | 0.56 | 18 189 008 | 18 535 192 | — |
+| 13 S-96 dominance-pool monsters | 1 | 18 189 008 | 0.56 | 18 189 008 | 18 535 192 | — |
 
 ## first-run army, Bear V ×2 (20 000 leadership)
 
@@ -53,6 +56,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
 | 11 S-93 the tighter shape | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
 | 12 S-94 reliable damage | 1 | 18 413 408 | 0.57 | 9 206 704 | 18 609 992 | — |
+| 13 S-96 dominance-pool monsters | 1 | 18 413 408 | 0.57 | 9 206 704 | 18 609 992 | — |
 
 ## first-run army, Bear V ×3 (20 000 leadership)
 
@@ -74,6 +78,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 2 | 19 115 768 | 0.59 | 6 371 923 | 24 086 764 | 25 439 016 |
 | 11 S-93 the tighter shape | 2 | 22 661 258 | 0.58 | 7 553 753 | 24 086 764 | 25 439 016 |
 | 12 S-94 reliable damage | 2 | 18 750 008 | 0.58 | 6 250 003 | 18 750 008 | 21 427 548 |
+| 13 S-96 dominance-pool monsters | 2 | 18 750 008 | 0.58 | 6 250 003 | 18 750 008 | 21 427 548 |
 
 ## first-run army, Bear V ×10 (20 000 leadership)
 
@@ -95,6 +100,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 2 | 21 700 948 | 0.65 | 5 425 237 | 25 133 964 | 26 486 216 |
 | 11 S-93 the tighter shape | 2 | 25 039 888 | 0.65 | 6 259 972 | 25 133 964 | 26 486 216 |
 | 12 S-94 reliable damage | 2 | 20 893 375 | 0.64 | 5 223 344 | 21 152 576 | 22 474 748 |
+| 13 S-96 dominance-pool monsters | 2 | 20 893 375 | 0.64 | 5 223 344 | 21 152 576 | 22 474 748 |
 
 ## first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)
 
@@ -116,6 +122,27 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 11 S-93 the tighter shape | 3 | 30 324 441 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 12 S-94 reliable damage | 3 | 29 841 879 | 0.91 | 1 146 218 | 30 054 424 | 30 221 279 |
+| 13 S-96 dominance-pool monsters | 3 | 29 841 879 | 0.91 | 1 146 218 | 30 054 424 | 30 221 279 |
+
+## first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)
+
+| stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
+|---|---|---|---|---|---|---|
+| 00 before | — | — | — | — | — | — |
+| 01 S-76 horizon ceiling | — | — | — | — | — | — |
+| 02 S-77 shelter + tie | — | — | — | — | — | — |
+| 03 S-78 all-in gate + finer sweep | — | — | — | — | — | — |
+| 03b + TotalStack on the owner's window | — | — | — | — | — | — |
+| 04 S-80 put-back pass | — | — | — | — | — | — |
+| 05 S-81 all-in tail | — | — | — | — | — | — |
+| 06 S-87 shelter, every hired type | — | — | — | — | — | — |
+| 07 S-88 reference table over the band | — | — | — | — | — | — |
+| 08 S-89 tail on the repeated stops | — | — | — | — | — | — |
+| 09 S-90 the finale's gold | — | — | — | — | — | — |
+| 10 S-91 the finale's silver | — | — | — | — | — | — |
+| 11 S-93 the tighter shape | — | — | — | — | — | — |
+| 12 S-94 reliable damage | — | — | — | — | — | — |
+| 13 S-96 dominance-pool monsters | 3 | 95 348 743 | 2.69 | 947 920 | 104 626 942 | — |
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
 
@@ -137,6 +164,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 | 11 S-93 the tighter shape | 3 | 8 628 782 | 1.42 | 431 237 | 8 633 665 | 8 911 356 |
 | 12 S-94 reliable damage | 3 | 8 519 930 | 1.40 | 425 508 | 8 519 930 | 8 762 880 |
+| 13 S-96 dominance-pool monsters | 3 | 8 519 930 | 1.40 | 425 508 | 8 519 930 | 8 762 880 |
 
 ## 2026-09-17 export, its setup (7 000 leadership)
 
@@ -158,6 +186,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 4 | 23 264 491 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
 | 11 S-93 the tighter shape | 4 | 23 447 087 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
 | 12 S-94 reliable damage | 5 | 23 619 920 | 2.08 | 463 349 | 24 634 972 | 13 742 586 |
+| 13 S-96 dominance-pool monsters | 5 | 23 619 920 | 2.08 | 463 349 | 24 634 972 | 13 742 586 |
 
 ## 2026-09-17 export, 12 000 leadership
 
@@ -179,6 +208,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
 | 11 S-93 the tighter shape | 5 | 33 028 417 | 1.72 | 598 922 | 34 283 252 | 24 167 160 |
 | 12 S-94 reliable damage | 4 | 31 546 458 | 1.73 | 602 313 | 33 277 720 | 22 894 812 |
+| 13 S-96 dominance-pool monsters | 4 | 31 546 458 | 1.73 | 602 313 | 33 277 720 | 22 894 812 |
 
 ## live account of 2026-09-18 (one hired type, 20 000 leadership)
 
@@ -200,6 +230,7 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 | 11 S-93 the tighter shape | 4 | 31 628 813 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 | 12 S-94 reliable damage | 4 | 29 743 332 | 1.00 | 1 130 835 | 25 300 624 | 29 222 440 |
+| 13 S-96 dominance-pool monsters | 4 | 29 743 332 | 1.00 | 1 130 835 | 25 300 624 | 29 222 440 |
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
 
@@ -221,4 +252,5 @@ Bridge between the 11 and 12 rows on this army: the 12 bar's hardest campaign is
 | 10 S-91 the finale's silver | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 | 11 S-93 the tighter shape | 5 | 32 348 459 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 | 12 S-94 reliable damage | 4 | 31 714 657 | 1.79 | 481 873 | 36 832 597 | 36 832 597 |
+| 13 S-96 dominance-pool monsters | 4 | 31 714 657 | 1.79 | 481 873 | 36 832 597 | 36 832 597 |
 

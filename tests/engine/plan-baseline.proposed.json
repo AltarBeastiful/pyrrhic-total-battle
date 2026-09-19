@@ -2,7 +2,7 @@
   "registeredBy": null,
   "registeredAt": null,
   "reading": "worst-opening",
-  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T02:32:01.640Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
+  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T04:07:22.045Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
   "scenarios": {
     "first-run army, Bear V ×1 (20 000 leadership)": {
       "stops": {
@@ -206,6 +206,54 @@
           "TotalStack · priority search under Elite (damagePerSilver)": 1.023102700255372,
           "TotalStack · Elite Preservation": 1.1185401765840337
         }
+      }
+    },
+    "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)": {
+      "stops": {
+        "sweet-spot": {
+          "marches": 4,
+          "damage": 91948255,
+          "silver": 35274000,
+          "gold": 44840,
+          "seconds": 10497360,
+          "burned": 97,
+          "perSilver": 2.6066863695639846,
+          "perHired": 947920.1546391753
+        },
+        "more-mercs": {
+          "marches": 4,
+          "damage": 94687477,
+          "silver": 35349600,
+          "gold": 48440,
+          "seconds": 10542720,
+          "burned": 106,
+          "perSilver": 2.678601087423903,
+          "perHired": 893278.0849056604
+        },
+        "steady-max": {
+          "marches": 4,
+          "damage": 95348743,
+          "silver": 35458800,
+          "gold": 48728,
+          "seconds": 10608240,
+          "burned": 112,
+          "perSilver": 2.689000840411971,
+          "perHired": 851328.0625
+        }
+      },
+      "plan": {
+        "marches": 4,
+        "damage": 95348743,
+        "silver": 35458800,
+        "gold": 48728,
+        "seconds": 10608240,
+        "burned": 112,
+        "perSilver": 2.689000840411971,
+        "perHired": 851328.0625
+      },
+      "ratios": {
+        "bestSizer": 0.9113211298864111,
+        "externals": {}
       }
     },
     "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)": {
