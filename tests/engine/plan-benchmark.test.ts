@@ -41,6 +41,12 @@
  *    (4 975 / 2 180 with 450 hunters, 5 100 / 2 200 with 120). They have held the plan's *criteria* since
  *    S-93 and S-97; what kept them off this table was that no calculator outside this repo had answered
  *    them, and the replay of 2026-09-19 answered all three.
+ *  - **his own TotalStack profile** (added 2026-09-19, S-103): 5 225 leadership, 2 120 authority and 100
+ *    dominance with the monster window on tier 3, Epic Monster Hunter V ×80 and the bonuses he typed into
+ *    the page. It is the one army here whose request is the captured request rather than a reconstruction
+ *    of it, so the quotients under its table are two searches over one army. The second replay of that
+ *    morning also gave the **monster camp** its first captured answers, which is why scenario 11 carries
+ *    external rows and floors now where it carried none.
  *
  * **The owner's goal is measured on every scenario that can carry it** (S-101): under each table, a `goal`
  * line reads the plan's best stop against the captured **Total Optimization** row on the three readings he
@@ -49,6 +55,11 @@
  * (`Pinned.totalOptimization`), never at the goal: a reading the bar has not reached is a discrepancy for
  * the owner to judge, and a benchmark red for a target rather than for a regression would stop being a
  * non-regression suite.
+ *
+ * **A fourth reading joins it where a dragon coin is actually spent** (S-103): the monster camp and his
+ * TotalStack profile, the two armies on this table that house a dominance pool. On the other fourteen
+ * neither side spends a coin, both read at `damage / 1`, and a "standing" that repeats the damage column is
+ * left out of the goal line and out of the pins rather than printed as if it meant something.
  *
  * **Two things hold a run, and they answer different questions.**
  *
@@ -365,11 +376,17 @@ const perDragonCoin = (c: Campaign): number => perDragonCoinOf(c.damage, c.drago
  */
 const TOTAL_OPTIMIZATION = 'TotalStack · Total Optimization';
 
-/** One scenario's three standings against that row, or `null` where the table has no comparable one. */
+/** One scenario's standings against that row, or `null` where the table has no comparable one. */
 interface Standings {
   perSilver: number;
   perSoldier: number;
   perMonster: number;
+  /**
+   * **Damage a dragon coin** (S-103), the fourth reading and the one only a monster camp has: where no coin
+   * is spent both sides read at `damage / 1` and this repeats the damage column, so it is reported and
+   * pinned only on a table where one was (`Pinned.totalOptimization.perDragonCoin`).
+   */
+  perDragonCoin: number;
 }
 
 /**
@@ -393,7 +410,12 @@ function standingsAgainstTotalOptimization(plans: Campaign[], externals: Campaig
     const ours = Math.max(...plans.map(of).filter(Number.isFinite));
     return Number.isFinite(theirs) && theirs > 0 && Number.isFinite(ours) ? ours / theirs : NaN;
   };
-  return { perSilver: over(perSilver), perSoldier: over(perSoldier), perMonster: over(perMonster) };
+  return {
+    perSilver: over(perSilver),
+    perSoldier: over(perSoldier),
+    perMonster: over(perMonster),
+    perDragonCoin: over(perDragonCoin),
+  };
 }
 
 /** The three readings in the order the owner names them, for the report and for the assertions. */
@@ -402,6 +424,16 @@ const GOAL_READINGS = [
   ['damage a hired soldier', 'perSoldier'],
   ['damage a monster', 'perMonster'],
 ] as const;
+/**
+ * **The fourth reading, where a table has one** (S-103): damage a dragon coin. It is not in `GOAL_READINGS`
+ * because the owner's goal names three and because on the fourteen armies that spend no coin it is the
+ * damage column read twice; the goal line appends it and `check` pins it only on a scenario whose rows
+ * actually pay in coins.
+ */
+const COIN_READING = ['damage a dragon coin', 'perDragonCoin'] as const;
+const PINNED_READINGS = [...GOAL_READINGS, COIN_READING] as const;
+/** True where a dragon coin was spent at all — by a stop or by a captured answer priced on this army. */
+const spendsCoins = (rows: Campaign[]): boolean => rows.some((c) => c.dragonCoins > 0);
 
 // ---- one scenario ----------------------------------------------------------------------------------------
 
@@ -643,13 +675,22 @@ function goalLine(measured: Measured): string {
     return { what, text: `${what} **${value.toFixed(3)}**${value >= 1 ? ' ✓' : ' ✗'}`, below: value < 1 };
   });
   const below = read.filter((one) => one.below);
+  // The fourth reading, only where a coin was actually spent (S-103): on an army that houses no dominance
+  // unit both sides read `damage / 1` and the quotient repeats the damage column.
+  const coin = standings[COIN_READING[1]];
+  const coinLine =
+    spendsCoins([...plans, ...externals]) && Number.isFinite(coin)
+      ? ` And the fourth currency, where one is spent: **${COIN_READING[0]} ${coin.toFixed(3)}**` +
+        `${coin >= 1 ? ' ✓' : ' ✗'} — the monsters’ own price (S-102).`
+      : '';
   return (
     '**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as ' +
     'TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: ' +
     `${read.map((one) => one.text).join(', ')}. ` +
     (below.length === 0
       ? 'All three are at or above the goal.'
-      : `**Below the goal: ${below.map((one) => one.what).join(', ')}** — a discrepancy for the owner, not a pin.`)
+      : `**Below the goal: ${below.map((one) => one.what).join(', ')}** — a discrepancy for the owner, not a pin.`) +
+    coinLine
   );
 }
 
@@ -809,8 +850,11 @@ function check(scenario: Scenario, measured: Measured): void {
     throw new Error('a case pinned against Total Optimization no longer has a comparable row for it');
   }
   if (standings && pinned.totalOptimization) {
-    for (const [what, key] of GOAL_READINGS) {
+    // The owner's three, and the coins where the scenario pins them (S-103): a reading a scenario does not
+    // carry is left out of the pin rather than floored at a figure that repeats the damage column.
+    for (const [what, key] of PINNED_READINGS) {
       const floor = pinned.totalOptimization[key];
+      if (floor === undefined) continue;
       // A reading neither side has (no silver spent) is not a floor: it is compared only where it exists.
       if (!Number.isFinite(standings[key])) continue;
       expect(

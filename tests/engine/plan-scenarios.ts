@@ -80,6 +80,16 @@ export interface Pinned {
     perSoldier: number;
     /** Damage a monster chunk, best stop over TotalStack's Total Optimization. */
     perMonster: number;
+    /**
+     * **Damage a dragon coin, best stop over TotalStack's Total Optimization** (S-103, 2026-09-19; the
+     * owner: *"TotalStack computes the total of dragon coins needed for a stack if present and the
+     * dmg/dragon coins."*), the fourth standing and the one only a **monster camp** has. It is optional,
+     * and deliberately so: on an army that houses no dominance unit neither side spends a coin, both sides
+     * read at `damage / 1` and the quotient is the damage column again, which is a floor that says nothing.
+     * A scenario carries it exactly when a coin is spent on its table, so the fourteen armies pinned before
+     * this story keep the three readings they were pinned on, to the digit.
+     */
+    perDragonCoin?: number;
   };
 }
 
@@ -177,6 +187,21 @@ function firstRun(hired: { id: string; cap: number }, leadership: number): Stack
  * same 25 000 ms budget, so the bar is the engine's answer and the same one on every machine. Widening the
  * search to a pool that carries a dozen to twenty uncapped types is what costs the larger camp its budget;
  * that is an open follow-up, not this scenario.
+ *
+ * ---- **The 20 000-dominance camp, answered by TotalStack on 2026-09-19 (S-103)** ---------------------------
+ *
+ * The second replay of that morning asked the page **both** of experiment 110's camps, so the sibling this
+ * docstring turns down now has four captured answers of its own. They are recorded here and **asserted
+ * nowhere**, because the scenario they would belong to is the one whose search does not finish: a row is
+ * priced on a scenario's request, and pinning one against a bar the clock cut off would pin the clock.
+ *
+ * Its Total Optimization answer fields **2 730 monster units over the same 12 types** — Water Elemental 916,
+ * Battle Boar 446, Emerald Dragon 387, Stone Gargoyle 335, Gorgon Medusa 144, Many-Armed Guardian 133,
+ * Magic Dragon 115, Ice Phoenix 102, Desert Vanquisher 41, Flaming Centaur 39, Ettin 35, Fearsome Manticore
+ * 37 — for **19 999 of the 20 000** dominance, beside the same 6 Bear V and 65 Epic Monster Hunter VI it
+ * answers the 900 camp with. Its M's Preservation answer fields 3 037 units of 8 types and no hunter. The
+ * shape of the finding is that the page fills the pool to the unit at either size, which is the one thing
+ * the 900 camp below already shows against a bar that finishes.
  */
 function monsterCamp(): StackRequest {
   const profile = newProfile('first run');
@@ -578,6 +603,9 @@ export function ownerScenarios(profile: Profile): Scenario[] {
     // against, and the replay of 2026-09-19 gave each of them four (`totalstack-rows.ts`).
     ...liveCamp(profile),
     ...hisCamp(profile),
+    // **His own TotalStack profile, S-103 (2026-09-19)** — scenario 16, appended after the fifteen and
+    // changing nothing above it.
+    ...totalStackProfile(profile),
   ];
 }
 
@@ -871,12 +899,39 @@ export function commonScenarios(): Scenario[] {
       // look like spent mercenaries, which is the owner's *"monsters should be there if dominance has been
       // set"*. Whether 16 % of the sweet spot's damage is worth what it buys is his call; nothing here is a
       // registered baseline and the proposal carries the measured bar.
+      //
+      // ---- **TotalStack answers this camp, S-103 (2026-09-19)** ---------------------------------------
+      //
+      // The second replay of that morning asked the page experiment 110's own camp, and its answers are the
+      // first captured rows this scenario has ever had — three of them (`totalstack-rows.ts`), and the first
+      // rows in this file to field a **dominance monster**, every earlier run having come back with an empty
+      // `monsterCounts`.
+      //
+      // **What Total Optimization plays here**: **131 monster units over all 12 of the camp's types** —
+      // Water Elemental 46, Battle Boar 22, Emerald Dragon 20, Stone Gargoyle 17, Gorgon Medusa 6,
+      // Many-Armed Guardian 6, Ice Phoenix 5, Magic Dragon 5 and one each of Desert Vanquisher, Ettin,
+      // Fearsome Manticore and Flaming Centaur — for **898 of the 900** dominance, beside **6 Bear V** and
+      // **65 Epic Monster Hunter VI** of the 83 the camp holds. Priced by our engine over four marches it is
+      // **79 770 931** damage for **35 454 400** silver, 32 authority chunks and **31 680 dragon coins**;
+      // its Elite Preservation answer is the same march to the unit, and its M's Preservation answer drops
+      // the hunter entirely (64 727 476 for 34 658 400 at 4 chunks over the campaign).
+      //
+      // **The four standings, all of them the plan's** (the goal line under the table, measured this day):
+      // **1.1951** a silver, **1.5469** a hired soldier, **1.1953** a monster and **1.2184** a dragon coin —
+      // the first army in this file measured on the coins, and the first to clear all four readings at once.
+      // The damage column says the same: the plan's hardest campaign is **1.1953×** the best captured
+      // answer's, which is what `externals.damageFloor` pins. `externals.winsHired` is **false** and reads
+      // as an artefact of the burn rather than a loss: M's Preservation fields no hunter at all, so it burns
+      // **4** chunks over four marches against the plan's 18 at its thrift end, and a damage-a-hired ratio
+      // whose denominator is four is not a march anyone sends.
       pinned: {
         refuses: false,
         stops: 5,
         sweetNotAheadOnEither: false,
         damageFloor: 0.91,
         winsHired: true,
+        externals: { damageFloor: 1.19, winsHired: false },
+        totalOptimization: { perSilver: 1.19, perSoldier: 1.54, perMonster: 1.19, perDragonCoin: 1.21 },
       },
     },
     fourThousand(),
@@ -1070,14 +1125,127 @@ const hisCamp = (owner: Profile): Scenario[] => {
 };
 
 /**
+ * **His own TotalStack profile, as it stood on 2026-09-19** (S-103) — scenario 16, and the one army on this
+ * table whose request is not a reconstruction of what the page was asked but *the request itself*: every
+ * figure below is read off the body the second replay sent
+ * (`docs/research/fixtures/totalstack-2026-09-19-replay-v2.json`, the scenario `his TotalStack profile
+ * 2026-09-19`), which is the page's own template filled in by him in his own browser.
+ *
+ * **What it is**: **5 225** leadership, **2 120** authority and **100** dominance; guardsmen I–III with the
+ * top **melee and ranged** tiers clicked out (so Archer III and Spearman III are gone and Rider III stands);
+ * specialists I; the **monster window on tier 3 alone**, which is the four types `src/data` holds there
+ * (Battle Boar, Emerald Dragon, Stone Gargoyle, Water Elemental); **Epic Monster Hunter V ×80** hired; his
+ * own bonuses as he typed them into the page — **guardsmen +60 health and +60 strength, army +3 and +3** —
+ * an even enemy formation and temple 0.
+ *
+ * **Three readings of his profile are deliberately not ours to change, and each is worth stating.**
+ *
+ *  - **Swordsman I is on the field here**, where every other owner scenario in this file leaves it out. His
+ *    Pyrrhic export clicks out the top *melee specialist* and its specialist window is I–I, so the two
+ *    together remove the type; the profile he gave TotalStack excludes no specialist category at all
+ *    (`specialistExcludedCategories: []`, `excludedTroopIds: []`) and its answers field 1 257 to 1 264 of
+ *    them. This scenario is *his TotalStack profile*, so it holds what that profile holds — and it has to:
+ *    an army without Swordsman I would make all four captured answers rows the player cannot make
+ *    (`comparable: false`, `plan-benchmark.test.ts`), and the scenario would stand against nothing.
+ *  - **Bear V and Cyclops V are capped but not hired.** His `mercenaryCaps` carries six of each, and his
+ *    `selectedMercenaryIds` carries **only** the hunter — a cap is what the account owns, the selection is
+ *    what the march may field — so the page fields neither, and neither is selected here. Handing our plan
+ *    two monster mercenaries the page was not offered would win the comparison in the setup rather than on
+ *    the field.
+ *  - **The bonuses are his page's, not his export's.** The other owner scenarios derive their totals from
+ *    his captains through `buildStackRequest`; this one overrides them with the single source below, so the
+ *    quotients under its table are two answers to *one* army rather than two arithmetics — which is the
+ *    whole reason a scenario built from a captured request is worth having.
+ */
+/**
+ * **Pinned 2026-09-19 (S-103), measured that day**, on the bar the engine offers for his page's own army.
+ *
+ * **Three stops** — a silver saver at 7 authority chunks (4 919 095 over four marches for **4 431 600**
+ * silver), the sweet spot at 19 (8 182 228 for 8 340 000) and the steady max at 25 (8 408 431 for
+ * 8 702 400) — and **no `all-in`**, the bar offering one only where it is not behind the top stop on every
+ * figure a stop prints (S-94) and this army's not being offered. Every one of the three fields **all four**
+ * tier-3 types — 18 units for 97 dominance at the thrift end, 20 for 99 at the other two — which is **16
+ * monster chunks** and **3 840 dragon coins** a campaign, so the coins are a real column here rather than
+ * the `damage / 1` the fourteen older armies read. (Total Optimization fields 19 units for the whole 100.)
+ *
+ * **Against the sizers**: `damageFloor` **0.97** — the hardest campaign is 8 408 431 against Troops first ·
+ * Generate's 8 647 583, the narrowest gap of any army in this file that is not a wall — and `winsHired` is
+ * true by a wide margin (702 728 a chunk at the thrift end against 479 623). The plan's best stop a silver
+ * is **1.110**, **1.156×** the best sizer sequence's, so the file's ordinary 95 % silver floor holds with
+ * no exception, and no sizer sequence matches the sweet spot on both ratios at once.
+ *
+ * **Against his page**: the plan is ahead on all four readings, and this is the like-for-like table the
+ * whole scenario exists for — the same army, the same bonuses, the same stock, the same enemy, one search
+ * against the other. **1.3080** a silver, **3.0058** a hired soldier, **1.2402** a monster and **1.2402** a
+ * dragon coin (the last two are equal because both sides train exactly the same 16 chunks for the same
+ * 3 840 coins, so the quotient is the damage column). Total Optimization answers this profile with
+ * **6 779 808** for 7 989 200 silver at 29 chunks; the plan's steady max hits 24 % harder for 9 % more
+ * silver, and its silver saver hits 73 % as hard for **55 %** of the silver at a quarter of the burn.
+ * `externals.winsHired` is **false** for the reason it is false on the monster camp: M's Preservation
+ * fields no hunter at all here either (5 187 364 at **0** burned), so the ratio's denominator is the floor
+ * of 1 that `perHired` uses rather than a stock any march spent.
+ */
+const TOTALSTACK_PROFILE_PINS: Pinned = {
+  refuses: false,
+  stops: 3,
+  sweetNotAheadOnEither: false,
+  damageFloor: 0.97,
+  winsHired: true,
+  externals: { damageFloor: 1.24, winsHired: false },
+  totalOptimization: { perSilver: 1.3, perSoldier: 3.0, perMonster: 1.24, perDragonCoin: 1.24 },
+};
+
+const totalStackProfile = (owner: Profile): Scenario[] => {
+  const camp = structuredClone(owner);
+  camp.troops.guardsmen = { min: 1, max: 3 };
+  camp.troops.specialists = { min: 1, max: 1 };
+  camp.troops.monsters = { min: 3, max: 3 };
+  camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: [] };
+  camp.mercenaries.selected = [{ id: 'epic-monster-hunter-5', cap: 80 }];
+  camp.recovery = { ...camp.recovery, templeLevel: 0 };
+  const setup = camp.setups[0];
+  if (!setup) return [];
+  /** His bonuses as the page holds them: guardsmen +60 / +60 and army +3 / +3, and nothing else. */
+  const source: ResolvedSource = {
+    id: 'totalstack-profile-2026-09-19',
+    label: 'his TotalStack profile',
+    kind: 'custom',
+    health: { guardsmen: 60, army: 3 },
+    strength: { guardsmen: 60, army: 3 },
+  };
+  const request = buildStackRequest(camp, {
+    ...setup,
+    // No captain is active: the totals below replace the export's derived bonuses outright, and an active
+    // list that still named three would read as if they were in them.
+    active: { ...setup.active, captains: [] },
+    housing: { leadership: 5_225, authority: 2_120, dominance: 100 },
+  });
+  return [
+    {
+      label:
+        'his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)',
+      request: { ...request, totals: aggregateBonuses([source]) },
+      externals: [],
+      pinned: TOTALSTACK_PROFILE_PINS,
+    },
+  ];
+};
+
+/**
  * **The armies the criteria are held on** — the shared scenario list, built once and read by
  * `tests/engine/plan-criteria.test.ts` and by the theorycraft experiments that measure a rule against the
- * same set (`tools/theorycraft/112-band-yardstick.test.ts`). Still the same **fifteen**, in the same order
- * and under the same labels, and since S-101 they are simply *the benchmark's own scenarios*: the three
- * camps this function used to append by hand — the live camp of 2026-09-18 and his camp of 2026-09-19 at
- * both readings of the Battle card — are benchmark scenarios in their own right now (the replay of that day
- * gave each of them a captured answer to stand against), so appending them here a second time would hold
- * every criterion on the same army twice.
+ * same set (`tools/theorycraft/112-band-yardstick.test.ts`). **Sixteen** since S-103 (2026-09-19), the
+ * fifteen of S-101 in the same order and under the same labels with **his own TotalStack profile** appended
+ * after them, and since S-101 they are simply *the benchmark's own scenarios*: the three camps this function
+ * used to append by hand — the live camp of 2026-09-18 and his camp of 2026-09-19 at both readings of the
+ * Battle card — are benchmark scenarios in their own right now (the replay of that day gave each of them a
+ * captured answer to stand against), so appending them here a second time would hold every criterion on the
+ * same army twice.
+ *
+ * The sixteenth is here for the same reason and by the same route: nothing is added to this list, it is
+ * `commonScenarios` and `ownerScenarios` as they stand, so an army the benchmark measures is an army every
+ * criterion is held on — which is what S-103 wanted of his profile, the one request on the table the page
+ * itself was handed.
  *
  * It lives here rather than in the criteria file so that an experiment measuring a change to a rule
  * measures it on exactly the armies the criteria will judge it on — a list copied into an experiment drifts

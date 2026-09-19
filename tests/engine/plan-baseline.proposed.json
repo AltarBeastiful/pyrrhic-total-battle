@@ -2,7 +2,7 @@
   "registeredBy": null,
   "registeredAt": null,
   "reading": "worst-opening",
-  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T10:29:12.263Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
+  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T10:55:03.835Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
   "scenarios": {
     "first-run army, Bear V ×1 (20 000 leadership)": {
       "stops": {
@@ -609,22 +609,42 @@
       },
       "ratios": {
         "bestSizer": 0.9113211298864111,
-        "externals": {},
+        "externals": {
+          "TotalStack · M’s Preservation": 1.4730798865075474,
+          "TotalStack · Total Optimization": 1.1952818126191858,
+          "TotalStack · Elite Preservation": 1.1952818126191858
+        },
         "perSoldier": {
           "bestSizer": 1.2636072265210618,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 0.06808410079206549,
+            "TotalStack · Total Optimization": 1.5468483876664296,
+            "TotalStack · Elite Preservation": 1.5468483876664296
+          }
         },
         "perMonster": {
           "bestSizer": 0.5047921548486978,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 1.2626399027207549,
+            "TotalStack · Total Optimization": 1.1952818126191858,
+            "TotalStack · Elite Preservation": 1.1952818126191858
+          }
         },
         "perDragonCoin": {
           "bestSizer": 0.7770596038211447,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 1.0844294660004081,
+            "TotalStack · Total Optimization": 1.2183567510867377,
+            "TotalStack · Elite Preservation": 1.2183567510867377
+          }
         },
         "perSilver": {
           "bestSizer": 0.9584050782984246,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 1.439828531663034,
+            "TotalStack · Total Optimization": 1.1951334928797832,
+            "TotalStack · Elite Preservation": 1.1951334928797832
+          }
         }
       }
     },
@@ -1814,6 +1834,114 @@
             "TotalStack · M’s Preservation": 1.6655600400184696,
             "TotalStack · Total Optimization": 1.2967411609231372,
             "TotalStack · Elite Preservation": 1.2967411609231372
+          }
+        }
+      }
+    },
+    "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)": {
+      "stops": {
+        "silver-saver": {
+          "marches": 4,
+          "damage": 4919095,
+          "silver": 4431600,
+          "gold": 5184,
+          "seconds": 1003305,
+          "burned": 7,
+          "perSilver": 1.1100042873905587,
+          "perHired": 702727.8571428572,
+          "soldiersLost": 7,
+          "monstersLost": 16,
+          "dragonCoins": 3840,
+          "perSoldier": 702727.8571428572,
+          "perMonster": 307443.4375,
+          "perDragonCoin": 1281.0143229166667
+        },
+        "sweet-spot": {
+          "marches": 4,
+          "damage": 8182228,
+          "silver": 8340000,
+          "gold": 6120,
+          "seconds": 2052570,
+          "burned": 19,
+          "perSilver": 0.9810824940047962,
+          "perHired": 430643.5789473684,
+          "soldiersLost": 19,
+          "monstersLost": 16,
+          "dragonCoins": 3840,
+          "perSoldier": 430643.5789473684,
+          "perMonster": 511389.25,
+          "perDragonCoin": 2130.788541666667
+        },
+        "steady-max": {
+          "marches": 4,
+          "damage": 8408431,
+          "silver": 8702400,
+          "gold": 6384,
+          "seconds": 2370000,
+          "burned": 25,
+          "perSilver": 0.9662197784519213,
+          "perHired": 336337.24,
+          "soldiersLost": 25,
+          "monstersLost": 16,
+          "dragonCoins": 3840,
+          "perSoldier": 336337.24,
+          "perMonster": 525526.9375,
+          "perDragonCoin": 2189.6955729166666
+        }
+      },
+      "plan": {
+        "marches": 4,
+        "damage": 7731757,
+        "silver": 8244000,
+        "gold": 5904,
+        "seconds": 1998615,
+        "burned": 16,
+        "perSilver": 0.9378647501213003,
+        "perHired": 483234.8125,
+        "soldiersLost": 16,
+        "monstersLost": 16,
+        "dragonCoins": 3840,
+        "perSoldier": 483234.8125,
+        "perMonster": 483234.8125,
+        "perDragonCoin": 2013.4783854166667
+      },
+      "ratios": {
+        "bestSizer": 0.9723446424278321,
+        "externals": {
+          "TotalStack · M’s Preservation": 1.6209448575422893,
+          "TotalStack · Total Optimization": 1.2402166846022777,
+          "TotalStack · Elite Preservation": 1.2402166846022777
+        },
+        "perSoldier": {
+          "bestSizer": 1.465167135735478,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.1354691625925725,
+            "TotalStack · Total Optimization": 3.0058532420302844,
+            "TotalStack · Elite Preservation": 3.0058532420302844
+          }
+        },
+        "perMonster": {
+          "bestSizer": 0.9723446424278321,
+          "externals": {
+            "TotalStack · M’s Preservation": 1.215708643156717,
+            "TotalStack · Total Optimization": 1.2402166846022777,
+            "TotalStack · Elite Preservation": 1.2402166846022777
+          }
+        },
+        "perDragonCoin": {
+          "bestSizer": 0.9723446424278321,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.8104724287711447,
+            "TotalStack · Total Optimization": 1.2402166846022777,
+            "TotalStack · Elite Preservation": 1.2402166846022777
+          }
+        },
+        "perSilver": {
+          "bestSizer": 1.1558325835709085,
+          "externals": {
+            "TotalStack · M’s Preservation": 1.6823291574419248,
+            "TotalStack · Total Optimization": 1.308008464667532,
+            "TotalStack · Elite Preservation": 1.308008464667532
           }
         }
       }
