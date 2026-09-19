@@ -1,6 +1,6 @@
 # The baseline, reviewed
 
-**15 scenarios · 28 campaigns read · 268 readings judged · 143 ▲ · 98 ▼ · 27 = · 1 stop lost · 1 stop gained · reading: worst-opening.** Every fall is listed once more, sorted by size, under [Trades to judge](#trades-to-judge); every rise under [Rises](#rises).
+**16 scenarios · 28 campaigns read · 268 readings judged · 143 ▲ · 98 ▼ · 27 = · 1 stop lost · 1 stop gained · reading: worst-opening.** Every fall is listed once more, sorted by size, under [Trades to judge](#trades-to-judge); every rise under [Rises](#rises).
 
 - **From** — tools/theorycraft/out/benchmark-2026-09-18-06-shelter-all-types.json — a benchmark snapshot, run 2026-09-18T13:15:30.605Z; reading: average damage (inferred from the stage number). Rebuilt from the snapshot's table rows.
 - **To** — tests/engine/plan-baseline.proposed.json — `registeredBy: null` — a **proposal**, not a baseline; reading: worst-opening.
@@ -269,11 +269,12 @@ Not carried by both sides — nothing to compare.
 
 ## first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)
 
-**New — the *from* side does not hold this scenario.** It offers 3 stops: `sweet-spot`, `more-mercs`, `steady-max`. Nothing here is a regression; it is a bar to register for the first time.
+**New — the *from* side does not hold this scenario.** It offers 4 stops: `sweet-spot`, `more-mercs`, `steady-max`, `all-in`. Nothing here is a regression; it is a bar to register for the first time.
 
-- `sweet-spot` — 91,948,255 damage · 35,274,000 silver · 97 burned · 2.6067 a silver · 947,920.15 a hired · 121d 11h
-- `more-mercs` — 94,687,477 damage · 35,349,600 silver · 106 burned · 2.6786 a silver · 893,278.08 a hired · 122d 0h
-- `steady-max` — 95,348,743 damage · 35,458,800 silver · 112 burned · 2.6890 a silver · 851,328.06 a hired · 122d 18h
+- `sweet-spot` — 89,196,808 damage · 35,230,800 silver · 24 burned · 2.5318 a silver · 3,716,533.67 a hired · 121d 6h
+- `more-mercs` — 93,298,414 damage · 35,230,800 silver · 26 burned · 2.6482 a silver · 3,588,400.54 a hired · 121d 6h
+- `steady-max` — 97,458,367 damage · 36,436,800 silver · 32 burned · 2.6747 a silver · 3,045,573.97 a hired · 133d 18h
+- `all-in` — 102,971,902 damage · 37,316,000 silver · 34 burned · 2.7595 a silver · 3,028,585.35 a hired · 143d 6h
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
 
@@ -743,6 +744,14 @@ Not carried by both sides — nothing to compare.
 - `more-mercs` — 10,197,781 damage · 10,729,000 silver · 34 burned · 0.9505 a silver · 299,934.74 a hired · 53d 16h
 - `steady-max` — 11,196,175 damage · 11,037,400 silver · 39 burned · 1.0144 a silver · 287,081.41 a hired · 55d 7h
 - `all-in` — 11,585,381 damage · 11,202,400 silver · 41 burned · 1.0342 a silver · 282,570.27 a hired · 56d 10h
+
+## his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)
+
+**New — the *from* side does not hold this scenario.** It offers 3 stops: `silver-saver`, `sweet-spot`, `steady-max`. Nothing here is a regression; it is a bar to register for the first time.
+
+- `silver-saver` — 4,919,095 damage · 4,431,600 silver · 7 burned · 1.1100 a silver · 702,727.86 a hired · 11d 14h
+- `sweet-spot` — 8,182,228 damage · 8,340,000 silver · 19 burned · 0.9811 a silver · 430,643.58 a hired · 23d 18h
+- `steady-max` — 8,408,431 damage · 8,702,400 silver · 25 burned · 0.9662 a silver · 336,337.24 a hired · 27d 10h
 
 ## Trades to judge
 
