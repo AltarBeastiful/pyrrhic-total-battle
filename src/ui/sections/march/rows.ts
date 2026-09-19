@@ -117,8 +117,9 @@ export function leftOutOf(
  * exactly a line.
  *
  * It is his own promise back to him: the types he put back are in, nothing else was pushed out, and his
- * hired stacks stand under his troops. A type that could not be fielded at all is named rather than left to
- * reappear in the left-out row without a word.
+ * hired stacks are worked out again from the floor the edit leaves — the most the troops shelter, and not
+ * the count the stop was standing under them before it (S-107). A type that could not be fielded at all is
+ * named rather than left to reappear in the left-out row without a word.
  */
 export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): string {
   const name = (id: string): string => findUnit(id, units)?.name ?? id;
@@ -129,16 +130,20 @@ export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): str
   if (resize.putBack.length > 0) what.push(`${names(resize.putBack)} put back`);
   if (resize.tookOut.length > 0) what.push(`${names(resize.tookOut)} left out`);
   const head = what.length === 0 ? 'Re-sized' : `Re-sized with ${what.join(' and ')}`;
+  // **"Re-sized to what the troops shelter"** (S-107): the hired stacks are not carried over from the stop
+  // any more, they are worked out again from the floor the edit leaves — which is the whole of the owner's
+  // *"I'm left with a merc stack that's below what could be added with proper shielding"*. The sentence says
+  // what the answer is, not only that it is safe.
   const rule = resize.inPlan
-    ? ' — nothing else was pushed out, and your hired stacks stay under the troops.'
+    ? ' — nothing else was pushed out, and your hired stacks are re-sized to what the troops shelter.'
     : ' — your hired stacks stay under the troops.';
   const missed =
     resize.unfielded.length > 0 ? ` ${names(resize.unfielded)} could not be fielded at all.` : '';
-  // Said in its own words, because it is a different fact: not "it would not fit" but "this plan spends none
-  // of it" — the rare stock the stop decided to keep (S-104, `MarchWithin.hired`).
+  // Said in its own words, because it is a different fact: not "it would not fit" but "there is none to
+  // spend" — a stock too small to last every march this stop plays (S-107, `MarchWithin.hired`).
   const spent =
     resize.noStock.length > 0
-      ? ` This stop spends no ${names(resize.noStock)}, so it could not be fielded.`
+      ? ` Your ${names(resize.noStock)} stock cannot last every march of this stop, so it could not be fielded.`
       : '';
   return head + rule + missed + spent;
 }

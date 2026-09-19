@@ -10,7 +10,7 @@
  * Plain functions rather than a hook: the same run has to be startable from an event handler in either
  * half of the page, and everything it reads or writes already lives in a store.
  */
-import { planMarch, shelterCounts, withMethod } from '@/engine';
+import { largestSustained, planMarch, planRepeats, shelterCounts, withMethod } from '@/engine';
 import type { CampaignPlan } from '@/engine/plan';
 import type { BattleSummary, StackRequest, StackResult } from '@/engine/types';
 import { buildPlanRequest, buildStackRequest } from '@/state/derive';
@@ -252,11 +252,18 @@ export async function resizeMarch(
 
 /**
  * **One stop of the plan, re-sized in place** (S-104). The stop is the one the bar is reading — the plan's
- * own recommendation until the player moves it (`pickOf`, `planPick`) — and it is what says how much hired
- * stock the re-size may spend: its counts are the sizer's caps and never its orders, so the burn can only
- * fall and the repeats the plan already planned are still sustained. The troops are **not** capped: they are
- * rationed by leadership, and capping them at the stop's counts is the 2026-09-15 defect written up in the
- * plan branch of `runGenerate` above.
+ * own recommendation until the player moves it (`pickOf`, `planPick`) — and it is what says how many marches
+ * the re-size has to keep affordable. The troops are **not** capped: they are rationed by leadership, and
+ * capping them at the stop's counts is the 2026-09-15 defect written up in the plan branch of `runGenerate`
+ * above.
+ *
+ * **Nor is the hired stock capped at the stop's own count any more** (S-107, 2026-09-19; the owner: *"taking
+ * out one group, like SP1, doesn't compute again the mercs and I'm left with a merc stack that's below what
+ * could be added with proper shielding"*). S-104 read the stop's counts as the ceiling, on the argument that
+ * a count that can only fall keeps the rest of the plan safe. It does — and it also makes the edit he is
+ * complaining about a no-op: taking a troop type out gives its leadership back to the stacks that are left,
+ * which raises the troop floor, which shelters **more** hired units than the stop was standing under it, and
+ * a ceiling at the stop's count throws every one of them away. See `capOf` below for what replaces it.
  */
 async function planStopAgain(
   request: StackRequest,
@@ -268,37 +275,53 @@ async function planStopAgain(
   const stop = pickOf(plan, position);
   const troopIds: string[] = [];
   const hired: Record<string, number> = {};
-  /** Mercenary types the player put back that this stop spends none of: the pane names them. */
+  /** Hired types the player asked for that the account cannot spend on every march of this stop. */
   const noStock: string[] = [];
+  /** The marches this stop's own march is played, which is what a mercenary count has to last. */
+  const repeats = planRepeats(stop);
+  /**
+   * **The two kinds of hired stock cap differently** (S-104, S-102; the owner, 2026-09-19: *"the spot
+   * selected, **monster or any other troop** put back"*, and *"apart from mercs, they can be trained just
+   * like troops"*).
+   *
+   * A **monster** is capped at **its own pool** — `housing.dominance / cost`, the same bound `planCampaign`
+   * gives an uncapped hired type — because it is *trained*, not spent: there is no stock of monsters to
+   * ration over the horizon (`sustain` is `Infinity` for a dominance type since S-102), so a stop that
+   * fields none of one the player owns has decided nothing about it. Its silver, its queue and its dragon
+   * coins are billed on the answer like any other stack's.
+   *
+   * A **mercenary** is capped at what the account can spend on **every march this stop plays** (S-107):
+   * `largestSustained(stock, repeats)`, the engine's own anchor — the stock the player entered, or the whole
+   * authority pool for a type hired with no cap, read through the arithmetic `planCampaign` rations every
+   * hired type by. That is the one bound the re-size must keep, because the campaign behind the march on
+   * screen is sized on it; everything else is the sizer's business, and it is the sizer and the shelter that
+   * decide the count the march actually fields (`resizeMarchOver` → `shelterUnder`). The stop's own count is
+   * **not** a ceiling: it is what the troops sheltered *before* the edit, and the edit is what changes the
+   * floor.
+   *
+   * A type the bound puts at nothing — an empty stock, or one too small to last the repeats — is named in
+   * the pane rather than left to bounce back without a word.
+   */
+  const capOf = (unit: { id: string; pool: string; cost: number }): number => {
+    if (unit.pool === 'dominance') {
+      const inStop = stop.counts[unit.id] ?? 0;
+      return Math.max(inStop, Math.floor(request.housing.dominance / Math.max(1, unit.cost)));
+    }
+    const held = request.caps[unit.id];
+    // A mercenary hired with no cap is bounded by its own pool and never runs out (`planCampaign`'s
+    // `unlimited`): there is no stock to make last, so the pool is the whole of the bound.
+    if (held === undefined) return Math.floor(request.housing.authority / Math.max(1, unit.cost));
+    return largestSustained(held, repeats);
+  };
   for (const unit of request.units) {
     if (!included.has(unit.id)) continue;
     if (unit.pool === 'leadership') {
       troopIds.push(unit.id);
       continue;
     }
-    const inStop = stop.counts[unit.id] ?? 0;
-    /**
-     * **The two kinds of hired stock cap differently** (S-104, S-102; the owner, 2026-09-19: *"the spot
-     * selected, **monster or any other troop** put back"*, and *"apart from mercs, they can be trained just
-     * like troops"*).
-     *
-     * A **mercenary** is capped at the stop's own count, so the burn can only fall and the campaign the plan
-     * planned is still sustained — and one the stop spends **none** of stays at nothing, because that is the
-     * rare stock the plan decided not to spend and a put-back is not a new plan. The pane says so rather
-     * than leaving the pill to bounce back without a word.
-     *
-     * A **monster** is capped at **its own pool** — `housing.dominance / cost`, the same bound
-     * `planCampaign` gives an uncapped hired type — because it is *trained*, not spent: there is no stock of
-     * monsters to ration over the horizon (`sustain` is `Infinity` for a dominance type since S-102), so a
-     * stop that fields none of one the player owns has decided nothing about it. Its silver, its queue and
-     * its dragon coins are billed on the answer like any other stack's.
-     */
-    if (unit.pool === 'dominance') {
-      hired[unit.id] = Math.max(inStop, Math.floor(request.housing.dominance / Math.max(1, unit.cost)));
-      continue;
-    }
-    hired[unit.id] = inStop;
-    if (inStop <= 0) noStock.push(unit.id);
+    const cap = capOf(unit);
+    hired[unit.id] = cap;
+    if (cap <= 0) noStock.push(unit.id);
   }
   const answer = await getCalcClient().resize({ request, within: { troopIds, hired } }, signal);
   if (answer === null) return null;

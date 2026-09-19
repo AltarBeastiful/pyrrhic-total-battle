@@ -27,6 +27,8 @@ import { sizeStacks } from '@/engine/stacker';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import { parseImport } from '@/share/exportImport';
 import { buildPlanRequest } from '@/state/derive';
+import { hiredLost } from '@/ui/sections/march/hired';
+import { worstDamageByPool, worstPer } from '@/ui/sections/march/worst';
 
 import { HORIZON, criteriaScenarios } from './plan-scenarios';
 import { countsKey, rareStockOf, repeatsOf, shelteredRivals } from './plan-yardsticks';
@@ -1228,6 +1230,37 @@ describe('the bar’s damage is the recap’s worst opening', () => {
                   `(Δ ${Math.round(row.repeat.hiredDamage - hired).toLocaleString('en-US')})`,
               );
             }
+            /**
+             * **And the three ratios the recap prints are the bar's own** (S-108, 2026-09-19; the owner:
+             * *"damage/silver differs in the plan table and in the battle summary"*). The recap read
+             * `simulateBattle`'s `damagePerSilver`, `damagePerDragonCoin` and a midpoint pool split — all
+             * three computed from `avgDamage` — while the bar divides the worst opening, so one march
+             * printed two figures. The recap's own functions are called here (`@/ui/sections/march/worst`,
+             * with `hiredLost` for the chunks), never a copy of their arithmetic, and each is held to the
+             * bar's to the third decimal.
+             */
+            const { result, summary } = planMarch(scenario.request, row.counts);
+            const same = (what: string, screen: number, bar: number): void => {
+              if (Math.abs(screen - bar) > 5e-4) {
+                failures.push(`${what}: the recap reads ${screen.toFixed(4)}, the bar ${bar.toFixed(4)}`);
+              }
+            };
+            same(
+              `${what}: damage per silver`,
+              worstPer(summary, summary.recovery.silver),
+              row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0,
+            );
+            same(
+              `${what}: damage per dragon coin`,
+              worstPer(summary, summary.recovery.dragonCoins),
+              (row.repeat.dragonCoins ?? 0) > 0 ? row.repeat.damage / (row.repeat.dragonCoins ?? 1) : 0,
+            );
+            const lost = hiredLost(result.stacks);
+            same(
+              `${what}: damage a hired unit`,
+              lost > 0 ? worstDamageByPool(summary.journals.enemyFirst, result.stacks).authority / lost : 0,
+              row.repeat.mercLost > 0 ? row.repeat.hiredDamage / row.repeat.mercLost : 0,
+            );
           }
           const sum = marchesOf(row).reduce(
             (total, counts) => total + planMarch(scenario.request, counts).summary.minDamage,
@@ -1855,6 +1888,105 @@ describe('no stop is beaten by the same march with its cheapest hired type left 
           failures.join('\n'),
           `stops beaten by the same march with its cheapest hired type left out\n${failures.join('\n')}`,
         ).toBe('');
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **A bar with a saving on it carries a silver saver** (S-106, 2026-09-19; the owner, the morning after
+ * S-105: *"it seems the last change made us lose some of the stops on the slider. I only get sweet spot and
+ * steady max in my usual setup"*).
+ *
+ * The thrift stop is defined over the **band** — the cheapest march left of the sweet spot that costs no
+ * more silver, is at least as efficient a silver, and that no other such march beats (`leastSilver`,
+ * `plan.ts`). The first two halves are properties of the two marches; the third was *"beaten on both
+ * ratios"*, and a ratio can move without a march moving: S-105 re-read damage a hired unit and **two bars
+ * lost their thrift stop that day** — the evening account (5 stops → 4) and his 450-hunter camp (4 → 3) —
+ * while every march on both of them stayed exactly where it was.
+ *
+ * So the third half is read here as it is read in the engine since S-106: a candidate is beaten only when
+ * another candidate **left of the sweet spot** has at least its damage, at most its silver and at most its
+ * burn, with one of the three strictly better — the same domination S-93's `tighterShape` and S-94's all-in
+ * offer make. Where a candidate survives that, the bar has to carry a `silver-saver`.
+ *
+ * Stated over `plan.trade`, which is the band the stops are drawn from plus the recommendation, so it asks
+ * only for a stop the rules could actually have offered — never for a march no arm of the bar can reach.
+ *
+ * **Measured on HEAD (987784b), which is what it is for**: it fails on **two** of the seventeen armies —
+ * his export at 12 000, where a 9-burn band plan stands at 4 289 725 for **2 477 300** silver (1.732 a
+ * silver against the sweet spot's 1.706) and the bar's saver costs **2 614 000**; and his live account of
+ * 2026-09-18 at 20 000, where a 4-burn plan stands at 3 694 764 for **3 602 400** (1.026 against 0.918) and
+ * the bar's saver costs **4 414 200**. Both are savings the ratio rule threw away, and both are the stop
+ * the bar offers after S-106.
+ *
+ * **It does not fail on the two armies that lost their saver outright**, and that is worth saying here: on
+ * the evening account and on the 450-hunter camp the ratio rule moved the **sweet spot** one rung right, and
+ * a dearer sweet spot raises the efficiency a saver has to clear above every cheaper plan — so this
+ * criterion is *vacuous* there rather than red (the evening account's 10-burn plan reaches 1.700 a silver
+ * against that bar's 1.794). What catches those two is the benchmark's own `stops` pin, 5 and 4, red on
+ * HEAD and green after. The two rules are one change: both the pool the knee is read off and the test that
+ * drops a saving now judge on the figures.
+ */
+describe('a bar with a saving on it carries a silver saver', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const sweet = planned.alternatives.find((row) => row.pick === 'sweet-spot');
+        expect(sweet).toBeDefined();
+        const knee = sweet as PlanRow;
+        const kneePerSilver = knee.repeat.damage / knee.repeat.silver;
+        const left = (planned.trade ?? []).filter(
+          (row) =>
+            row.repeat.mercLost < knee.repeat.mercLost &&
+            row.repeat.silver <= knee.repeat.silver &&
+            row.repeat.damage / row.repeat.silver >= kneePerSilver,
+        );
+        const beaten = (row: PlanTotals): boolean =>
+          left.some(
+            (other) =>
+              other !== row &&
+              other.repeat.damage >= row.repeat.damage &&
+              other.repeat.silver <= row.repeat.silver &&
+              other.repeat.mercLost <= row.repeat.mercLost &&
+              (other.repeat.damage > row.repeat.damage ||
+                other.repeat.silver < row.repeat.silver ||
+                other.repeat.mercLost < row.repeat.mercLost),
+          );
+        const savings = left.filter((row) => !beaten(row));
+        if (savings.length === 0) return;
+        const cheapest = savings.reduce((held, row) => (row.repeat.silver < held.repeat.silver ? row : held));
+        const saving =
+          `a band plan stands left of the sweet spot at ${String(cheapest.repeat.mercLost)} burned — ` +
+          `${cheapest.repeat.damage.toLocaleString('en-US')} for ` +
+          `${cheapest.repeat.silver.toLocaleString('en-US')} silver, ` +
+          `${(cheapest.repeat.damage / cheapest.repeat.silver).toFixed(3)} a silver against the sweet ` +
+          `spot's ${knee.repeat.damage.toLocaleString('en-US')} for ` +
+          `${knee.repeat.silver.toLocaleString('en-US')} at ${kneePerSilver.toFixed(3)} and ` +
+          `${String(knee.repeat.mercLost)} burned — and no other such plan beats it on damage, silver ` +
+          `and burn`;
+        const saver = planned.alternatives.find((row) => row.pick === 'silver-saver');
+        expect(
+          saver !== undefined,
+          `${saving}, but the bar carries no silver saver ` +
+            `(${planned.alternatives.map((row) => row.pick).join(', ')})`,
+        ).toBe(true);
+        // And it is **that** plan: `leastSilver` is the cheapest of them, so a saver dearer than one the
+        // band holds is a saving the player was not offered — which is how the ratio rule dropped rungs.
+        expect(
+          (saver as PlanRow).repeat.silver,
+          `${saving}, and the bar's silver saver costs ` +
+            `${(saver as PlanRow).repeat.silver.toLocaleString('en-US')} silver for ` +
+            `${(saver as PlanRow).repeat.damage.toLocaleString('en-US')} at ` +
+            `${String((saver as PlanRow).repeat.mercLost)} burned`,
+        ).toBeLessThanOrEqual(cheapest.repeat.silver);
       },
       300_000,
     );

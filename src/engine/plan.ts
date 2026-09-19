@@ -450,12 +450,17 @@ export interface PlanTotals {
    * — so the column read **1 000 201** where the honest answer is **168 840**; the sweet spot's 2 087 912 /
    * 551 544 over 5 lost read 417 582 against **110 309**.
    *
-   * It is one definition and every rule that says "a hired" reads it: `bestFor.hired` and the trade table's
-   * "Per hired" (on `repeat.hiredDamage`, the same arithmetic over one march), the silver saver's
-   * `beatenOnBoth`, the sweet spot's efficient rungs and its tie-break, the S-99 cut's four readings, the
-   * reference table's "A mercenary" column and the search's own `mostThrifty`. The **undominated frontier is
-   * not** among them, and deliberately: it is ordered on `silver`, `mercLost` and `totalDamage` — three
-   * figures, not a ratio — so nothing there changed with this story.
+   * It is one definition and every reader that says "a hired" reads it: `bestFor.hired` and the trade
+   * table's "Per hired" (on `repeat.hiredDamage`, the same arithmetic over one march), the reference
+   * table's "A mercenary" column and the search's own `mostThrifty`. The **undominated frontier is not**
+   * among them, and deliberately: it is ordered on `silver`, `mercLost` and `totalDamage` — three figures,
+   * not a ratio.
+   *
+   * **No rule that keeps or drops a stop reads it any more** (S-106, 2026-09-19). It did — the silver
+   * saver's "beaten on both", the sweet spot's efficient rungs and its tie-break, the `more-mercs`
+   * tie-break and the S-99 cut's four readings — and S-105 moved five of the sixteen benchmark bars by
+   * re-attributing this one column, on armies where not a single march had changed. Those five rules judge
+   * on the figures a stop prints instead (`beatsOnFigures`, `earns`): damage, silver, the burn, the coins.
    *
    * `Infinity` when the campaign burns nothing at all, exactly as before.
    */
@@ -538,7 +543,8 @@ export interface PlanCurvePoint {
  *  - `silver-saver` — the cheapest march left of the sweet spot that costs no more silver and is at least as
  *    efficient a silver: on every account measured it is the tight ladder, every troop rung just above the
  *    mercenaries, some of the stock riding with it;
- *  - `sweet-spot` — the knee of damage against burn over the rungs nothing beats on both ratios;
+ *  - `sweet-spot` — the knee of damage against burn over the rungs nothing beats on the figures (S-106:
+ *    at least the damage, at most the silver, at most the burn);
  *  - `more-mercs` — the rung nearest the middle of the gap between the sweet spot and the steady max;
  *  - `steady-max` — the top of the ladder: the most mercenaries the troops shelter **every march of the
  *    horizon**, and the most damage a repeated march does;
@@ -1181,6 +1187,36 @@ export function lastsMarches(held: number, count: number): number {
   return Math.floor((held - count) / chunks(count)) + 1;
 }
 
+/**
+ * **The largest count a stock of `held` can field on each of `marches` marches** — `lastsMarches` read the
+ * other way round, and the bound the search anchors every hired type on (`largestFor` in `planCampaign`,
+ * which is this function). `0` when no count lasts that long at all: a stock of two holds nothing that
+ * survives three marches, which is the whole of *"no feasible plan for this army"* on a first-run account.
+ *
+ * Exported for the **re-size** (S-107, 2026-09-19; the owner: *"taking out one group, like SP1, doesn't
+ * compute again the mercs and I'm left with a merc stack that's below what could be added with proper
+ * shielding"*). A March edit that takes a troop type out makes the stacks that are left grow, which raises
+ * the floor, which shelters more hired units than the stop was standing under it — so the cap the re-size
+ * is given cannot be the stop's own count. It is this instead: what the stock sustains over the marches the
+ * stop plays, so the campaign the plan planned is still affordable and the sizer is free to field the rest.
+ */
+export function largestSustained(held: number, marches: number): number {
+  for (let count = Math.floor(held); count >= 1; count -= 1) {
+    if (lastsMarches(held, count) >= marches) return count;
+  }
+  return 0;
+}
+
+/**
+ * **How many times a stop's own march is played** — its repeats, the finale and the troops-only tail set
+ * aside. `1` for a stop whose marches all differ (the `all-in`, `PlanTotals.sequence`): the march on screen
+ * is its first, and the stock it may spend is whatever the account holds.
+ */
+export function planRepeats(row: Pick<PlanTotals, 'marches' | 'sequence' | 'finaleCounts' | 'tail'>): number {
+  if (row.sequence) return 1;
+  return Math.max(1, row.marches - (row.finaleCounts ? 1 : 0) - (row.tail?.marches ?? 0));
+}
+
 function marchesFor(
   stock: Record<string, number>,
   mercs: { entry: { id: string }; count: number }[],
@@ -1668,12 +1704,18 @@ export interface MarchWithin {
    * engine holds no opinion about where they come from — it fields at most what it is given — and the caller
    * reads them off the two kinds of hired stock (`src/ui/sections/march/generate.ts`):
    *
-   *  - an **authority** type is capped at the **selected stop's own count** (S-80's reason: a count that can
-   *    only fall is what makes the rest of the plan safe to leave alone — the burn falls, so the stock lasts
-   *    at least as many marches, `lastsMarches` being monotone in the count, so the repeats the stop already
-   *    plays are still sustained and the finale the search already planned is still affordable). A mercenary
-   *    the stop spends none of therefore stays at nothing: that is the rare stock the plan decided not to
-   *    spend, and a put-back is not a new plan.
+   *  - an **authority** type is capped at what the account can spend on **every march the stop plays**
+   *    (S-107, 2026-09-19) — `largestSustained(stock, repeats)`, or the whole authority pool for a type
+   *    hired with no cap — and **not** at the stop's own count. It was the stop's count until then (S-80's
+   *    reason: a count that can only fall keeps the rest of the plan affordable), and that made the owner's
+   *    own edit a no-op: *"taking out one group, like SP1, doesn't compute again the mercs and I'm left with
+   *    a merc stack that's below what could be added with proper shielding"*. Taking a troop type out hands
+   *    its leadership to the stacks that are left, which raises the troop floor, which shelters **more**
+   *    hired units than the stop was standing under it — and a ceiling at the stop's count threw all of them
+   *    away. The sustain bound keeps what S-80 was protecting (the campaign is still affordable at the count
+   *    the re-size fields, `lastsMarches` being monotone) while the **floor** decides the rest: the sizer
+   *    fields what it can and `shelterUnder` lowers it under the lowest rung, so a put-back that lowers the
+   *    floor still re-derives downward exactly as it did.
    *  - a **dominance** type is capped at **its own pool** — `housing.dominance / cost`, exactly as
    *    `planCampaign`'s `unlimited`/`stock` bounds it — because a monster is *trained*, not spent (S-102;
    *    the owner, 2026-09-19: *"apart from mercs, they can be trained just like troops"*, and *"monster or
@@ -1947,14 +1989,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   /**
    * The largest count of a type that still allows `marches` marches: fielding n loses `chunks(n)` for good, so
    * a constant n lasts `floor((stock − n) / chunks(n)) + 1`. Smaller counts last longer, and the whole grid of
-   * interest is the set of these maxima and a few fractions below them.
+   * interest is the set of these maxima and a few fractions below them. It is `largestSustained` above,
+   * exported since S-107 so the March pane's re-size bounds a hired type by the very arithmetic the search
+   * anchors it on.
    */
-  const largestFor = (held: number, marches: number): number => {
-    for (let count = held; count >= 1; count -= 1) {
-      if (Math.floor((held - count) / chunks(count)) + 1 >= marches) return count;
-    }
-    return 0;
-  };
+  const largestFor = largestSustained;
 
   /**
    * The marches the campaign may play. A target caps both the grid's march count and every candidate's, so
@@ -3137,7 +3176,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    *  - **k is earned** when the strongest campaign of prefix k stands at least as high as the strongest
    *    campaign over **all** of them on the four readings the bar prints — total damage, damage a silver,
    *    damage a hired unit burned and damage a dragon coin — and higher on one. That is the damage saying
-   *    so, in the shape S-93 says it in and in the currencies the owner's own goal line is read in;
+   *    so, in the shape S-93 says it in and in the currencies the owner's own goal line is read in. These
+   *    four are the one comparison in this file that S-106 left on ratios, and the note on `readings`
+   *    below measures what happened when they were tried as figures;
    *  - the cut is the **smallest** earned k — the deepest drop the damage pays for — and the whole hired set
    *    when none is earned, which is every army in this repo that houses no dominance pool (measured, §D of
    *    the same experiment: no prefix of any of them beats the bar on damage at all).
@@ -3173,6 +3214,30 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // prefix to beat, and the band's own fallback (an empty band draws from the unbanded frontier) handles
     // it, as before.
     if (!whole) return stockedRanked.length;
+    /**
+     * **These four stay ratios, and S-106 measured why** (2026-09-19). Every other rule that drops a plan
+     * moved to the figures that day — `beatsOnFigures`, the two tie-breaks — because a ratio changed when
+     * S-105 changed what *damage a hired unit* means, and five bars moved with it on armies where no march
+     * had moved. This one did not move: the monster camp earned the same cut of 10 before and after S-105,
+     * and its bar is the same bar.
+     *
+     * It is also the one comparison here that a figures test cannot make, and the reason is what the cut is
+     * **for**. A prefix spends the room it frees on more of the types it keeps, so the two families are not
+     * two answers to one question — they sit at different places on the frontier. Measured on the monster
+     * camp the day this was written, over the plans the bar could offer: the strongest **full-set** campaign
+     * is 66 409 153 for 25 764 300 silver, 24 chunks and 31 680 coins, while the prefix-10 family reaches
+     * **97 458 367 for 36 436 800, 32 and 28 200** — half again the damage, for 41 % more silver. On the
+     * four *figures* no prefix campaign of that camp is behind on none of them (the cheapest that out-damages
+     * the full set costs 27 396 900), so the cut is never earned, S-58 B asks for all fourteen types again,
+     * and the camp's sweet spot falls **93 298 414 → 66 409 153** with its coins rising 28 200 → 31 680.
+     * That is a 28 % regression bought by a consistency the measurement does not support.
+     *
+     * So the four readings the bar prints are kept — total damage, damage a silver, damage a hired unit
+     * burned and damage a dragon coin — and the strongest campaign of prefix k has to stand at least as high
+     * as the strongest campaign over all of them on every one of them, and higher on one. The ratios are
+     * what makes two campaigns at different spends comparable at all, which is the question this rule asks
+     * and **not** the question `beatsOnFigures` asks of two rungs of one ladder.
+     */
     const readings = (row: PlanTotals): number[] => [
       row.totalDamage,
       row.damagePerSilver,
@@ -3710,13 +3775,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     ladderRows.push(...[...put.values()].sort((a, b) => a.repeat.mercLost - b.repeat.mercLost));
   }
   /**
-   * **A rung nothing beats on both efficiencies** (owner, 2026-09-17, reading his own bar: *"12 hired lost got
-   * better silver/dmg, better dmg/merc and almost the same damage"* than the sweet spot at 15). His stops, as
-   * the app drew them: 10 burned at 1.280 a silver / 568 182 a hired, **12 at 1.320 / 511 100**, the sweet spot
-   * at 15 at 1.263 / 442 961, 19 at 1.409 / 399 460 — the recommendation lost to the stop beside it on both of
-   * the two things the slider balances. A plan another rung beats on damage a silver *and* damage a hired unit
-   * is not a compromise between them, so it is neither the sweet spot nor a filler; the two ends keep their
-   * places by definition. On his numbers this leaves 10, 12 and 19, and the middle of that range is 12.
+   * **Damage a silver, on the march a stop repeats.** Still a ratio, and still read by the rules that ask
+   * *"is this stop a saving?"* — the silver saver's own definition below and `bestFor.silver`.
    */
   const perSilver = (row: PlanTotals): number =>
     row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0;
@@ -3724,20 +3784,52 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * **Damage a hired unit, on the march a stop repeats** — the hired stacks' own share of that march's worst
    * opening over the chunks of ten it loses for good (S-105, 2026-09-19; the owner: *"dmg per hired is still
    * broken: it shows a damage per hired almost above total damage"*). It read `repeat.damage`, the whole
-   * march's, until then. Every rule below that says "a hired" is this one function: the efficient rungs the
-   * sweet spot is read off, the silver saver's `beatenOnBoth`, the `more-mercs` tie-break and `bestFor.hired`.
+   * march's, until then.
+   *
+   * **It is a printed column and `bestFor.hired`, and no longer a rule that drops a stop** (S-106,
+   * 2026-09-19): see `beatsOnFigures` under it.
    */
   const perHired = (row: PlanTotals): number =>
     row.repeat.mercLost > 0 ? row.repeat.hiredDamage / row.repeat.mercLost : 0;
+  /**
+   * **One march beats another when it is behind on none of the figures it prints** (S-106, 2026-09-19; the
+   * owner, the morning after S-105 redefined damage a hired unit: *"it seems the last change made us lose
+   * some of the stops on the slider. I only get sweet spot and steady max in my usual setup"*).
+   *
+   * The rule under it was *"a rung nothing beats on both efficiencies"* (owner, 2026-09-17, reading his own
+   * bar: *"12 hired lost got better silver/dmg, better dmg/merc and almost the same damage"* than the sweet
+   * spot at 15). What he was pointing at is a **dominated** plan: another rung of the same ladder that is
+   * not worse on anything he pays and better on something he gets. A pair of **ratios** is not that test —
+   * both of them carry the same numerator, so a change in how the damage is attributed moves both
+   * denominators' quotients at once and re-orders rungs nobody's march moved. S-105 changed exactly that
+   * numerator for `perHired` (the whole march's damage → the hired stacks' own), and five bars moved with
+   * it: the evening account and his 450-hunter camp lost their silver saver, the monster camp lost its
+   * *more mercs*, and two more-mercs rungs slid along the burn axis. No plan on any of those armies became
+   * a worse march that day.
+   *
+   * So the rules that **drop** a plan judge on the figures a stop prints, which is the reading S-93's
+   * `tighterShape` and S-94's all-in offer already make and the one the criteria are written in: a march is
+   * beaten when another has **at least its damage, at most its silver and at most its burn**, with one of
+   * the three strictly better. Nothing is traded against anything, so no exchange rate has to exist; and a
+   * figure that is a measurement rather than an attribution cannot be moved by re-reading a column.
+   *
+   * Read on the **repeated march** here (`repeat`), which is what the bar's order, its chord and its two
+   * ends are read on. The campaign's own figures break ties, below.
+   */
+  const beatsOnFigures = (other: PlanTotals, row: PlanTotals): boolean =>
+    other.repeat.damage >= row.repeat.damage &&
+    other.repeat.silver <= row.repeat.silver &&
+    other.repeat.mercLost <= row.repeat.mercLost &&
+    (other.repeat.damage > row.repeat.damage ||
+      other.repeat.silver < row.repeat.silver ||
+      other.repeat.mercLost < row.repeat.mercLost);
+  /**
+   * **The rungs no other rung beats on the figures** (S-106). The two ends keep their places by definition;
+   * what this removes from the sweet spot's pool is a rung the ladder itself answers better — same burn or
+   * less, same silver or less, and as much damage.
+   */
   const efficientRows = ladderRows.filter(
-    (row) =>
-      !ladderRows.some(
-        (other) =>
-          other !== row &&
-          perSilver(other) >= perSilver(row) &&
-          perHired(other) >= perHired(row) &&
-          (perSilver(other) > perSilver(row) || perHired(other) > perHired(row)),
-      ),
+    (row) => !ladderRows.some((other) => other !== row && beatsOnFigures(other, row)),
   );
   /** The plans the sweet spot is read off: the efficient rungs (the whole band if none stands). */
   const sweetPool = efficientRows.length > 0 ? efficientRows : candidates;
@@ -3755,15 +3847,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * against 20 684 777 at 1.9548 and 376 087. Thrift was handing the recommendation a plan another stop
    * dominates, which is the one thing the sweet spot must never be.
    *
-   * So a tie is broken by the campaign's own two ratios (`damagePerSilver`, `damagePerMercenary` — the whole
-   * run, repeats and finale, not the repeated march alone): the rung the other does not beat on both wins, and
-   * only when neither dominates does thrift decide, as it always did. Two plans at the *same* burn are still
-   * told apart by damage.
+   * So a tie is broken by the campaign's own figures (S-106, 2026-09-19, replacing the campaign's two
+   * *ratios*): **the harder campaign wins, and the cheaper one where the damage ties** — `totalDamage` then
+   * `silver` over the whole run, repeats and finale and tail, not the repeated march alone. The two things a
+   * player compares two whole plans by, in his own order, and neither of them moves when a column is
+   * re-attributed. Only when the two campaigns are the same damage for the same silver does thrift decide,
+   * as it always did. Two plans at the *same* burn are still told apart by the repeated march's damage.
+   *
+   * On the tie this note was written for (his export at 7 000 with the capped sponge march), the 11 is still
+   * the answer: 22 045 361 damage against the 10's 20 684 777, which is the same choice the two ratios made.
    */
-  const dominates = (row: PlanTotals, other: PlanTotals): boolean =>
-    row.damagePerSilver >= other.damagePerSilver &&
-    row.damagePerMercenary >= other.damagePerMercenary &&
-    (row.damagePerSilver > other.damagePerSilver || row.damagePerMercenary > other.damagePerMercenary);
   const middleOfRange = (rows: TradeRow[]): TradeRow => {
     const burns = rows.map((row) => row.repeat.mercLost);
     const middleBurn = (Math.min(...burns) + Math.max(...burns)) / 2;
@@ -3773,8 +3866,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (away < heldAway) return row;
       if (away > heldAway) return held;
       if (row.repeat.mercLost !== held.repeat.mercLost) {
-        if (dominates(row, held)) return row;
-        if (dominates(held, row)) return held;
+        if (row.totalDamage !== held.totalDamage) return row.totalDamage > held.totalDamage ? row : held;
+        if (row.silver !== held.silver) return row.silver < held.silver ? row : held;
         return row.repeat.mercLost < held.repeat.mercLost ? row : held;
       }
       return row.repeat.damage > held.repeat.damage ? row : held;
@@ -3782,7 +3875,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
 
   /**
-   * **The sweet spot is the knee of damage against burn** over the rungs nothing beats on both ratios (owner,
+   * **The sweet spot is the knee of damage against burn** over the rungs nothing beats on the figures (owner,
    * 2026-09-18, on the middle of the range landing one unit from the thrift end: *"best optimization still
    * doesn't offer enough splits"*). Measured on his latest export (`tools/theorycraft/out/99-three-stops.md`):
    * silver is flat from 7 to 10 burned because the troop ladder is sized off the biggest hired stack and the
@@ -4217,11 +4310,19 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * not a smaller march for its own sake — and that no other such march beats on both ratios. Over the band
    * and not the ladder, because the ladder keeps one plan a level, the best damage there, and the cheapest
    * plan at that level is a different one: the vector's tight ladder (`tight` in `evaluateVector`). The
-   * "beaten on both" test is taken among the marches left of the sweet spot only: the tight ladders of one
-   * account share one shape and so one pair of ratios to the third decimal, and against the whole band the
-   * dearest of them beat every cheaper one by a hair (measured on the owner's live account: 1.0706 a silver
-   * and 962 801 a hired at 60 hunters against 1.0708 and 962 605 at 40), which left no least-silver stop at
-   * all. Equal silver is allowed and the fewest burned breaks the tie; absent when nothing qualifies.
+   * "beaten" test is taken among the marches left of the sweet spot only: the tight ladders of one account
+   * share one shape and so one pair of ratios to the third decimal, and against the whole band the dearest
+   * of them beat every cheaper one by a hair (measured on the owner's live account: 1.0706 a silver and
+   * 962 801 a hired at 60 hunters against 1.0708 and 962 605 at 40), which left no least-silver stop at all.
+   * Equal silver is allowed and the fewest burned breaks the tie; absent when nothing qualifies.
+   *
+   * **And "beaten" is read on the figures** (S-106, 2026-09-19; the owner: *"it seems the last change made
+   * us lose some of the stops on the slider"*): another march left of the sweet spot with at least this
+   * one's damage, at most its silver and at most its burn (`beatsOnFigures`). It was the same pair of
+   * ratios the efficient rungs used, and when S-105 re-read one of them the **evening account and his
+   * 450-hunter camp lost their silver saver** without a single march changing — the thrift end was dropped
+   * because a dearer march now printed a larger quotient, not because it was a better march. A stop the bar
+   * exists to offer is not removed by an attribution.
    */
   const leftOfSweet = candidates.filter(
     (row) =>
@@ -4229,16 +4330,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       row.repeat.silver <= sweetSpotBase.repeat.silver &&
       perSilver(row) >= perSilver(sweetSpotBase),
   );
-  const beatenOnBoth = (row: PlanTotals): boolean =>
-    leftOfSweet.some(
-      (other) =>
-        other !== row &&
-        perSilver(other) >= perSilver(row) &&
-        perHired(other) >= perHired(row) &&
-        (perSilver(other) > perSilver(row) || perHired(other) > perHired(row)),
-    );
+  const beaten = (row: PlanTotals): boolean =>
+    leftOfSweet.some((other) => other !== row && beatsOnFigures(other, row));
   const leastSilver = leftOfSweet
-    .filter((row) => !beatenOnBoth(row))
+    .filter((row) => !beaten(row))
     .reduce<TradeRow | undefined>((best, row) => {
       if (!best) return row;
       if (row.repeat.silver !== best.repeat.silver)
@@ -4251,7 +4346,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   /**
    * More mercenaries: the rung of the ladder nearest the middle of the gap between the sweet spot and the
    * top, strictly inside it — the step a player takes when the stock allows more than the knee and less than
-   * everything. Two rungs equally near are told apart by damage a unit burned.
+   * everything. Two rungs equally near are told apart by the **campaign's own figures**, damage then silver
+   * (S-106), exactly as the middle rule above breaks its tie: it read damage a hired unit until 2026-09-19,
+   * and when S-105 re-attributed that column the monster camp's *more mercs* vanished and the 7 000 export's
+   * and live camp's landed on a different rung, on ladders where no march had moved.
    */
   const moreMercs = ((): TradeRow | undefined => {
     if (!top) return undefined;
@@ -4264,7 +4362,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (row.repeat.mercLost <= low || row.repeat.mercLost >= high) continue;
       const away = Math.abs(row.repeat.mercLost - middle);
       const held = pick ? Math.abs(pick.repeat.mercLost - middle) : Infinity;
-      if (away < held || (away === held && pick && perHired(row) > perHired(pick))) pick = row;
+      if (away < held) {
+        pick = row;
+        continue;
+      }
+      if (away > held || !pick) continue;
+      if (row.totalDamage !== pick.totalDamage) {
+        if (row.totalDamage > pick.totalDamage) pick = row;
+        continue;
+      }
+      if (row.silver < pick.silver) pick = row;
     }
     return pick;
   })();

@@ -12,7 +12,7 @@ import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { StackRequest, UnitDef } from '@/engine/types';
-import type { CampaignInput, PlanRepeat, PlanTotals } from '@/engine/plan';
+import type { CampaignInput, PlanTotals } from '@/engine/plan';
 import { sizeStacks } from '@/engine/stacker';
 import { effectiveUnit } from '@/engine/units';
 import { parseImport } from '@/share/exportImport';
@@ -631,29 +631,32 @@ describe(
       for (const row of rows) {
         expect(['silver-saver', 'sweet-spot', 'more-mercs', 'steady-max', 'all-in']).toContain(row.pick);
       }
-      // The sweet spot is a plan no rung of the ladder beats on both efficiencies at once (owner, 2026-09-17:
-      // his sweet spot at 15 burned lost to the 12 stop on damage a silver *and* a hired).
+      // **The sweet spot is a plan no rung of the ladder beats on the figures** (S-106, 2026-09-19,
+      // replacing the two *ratios* this asserted from 2026-09-17: *"12 hired lost got better silver/dmg,
+      // better dmg/merc and almost the same damage"*). What he was pointing at is a dominated plan — a rung
+      // with at least its damage for no more silver and no more of the stock — and a pair of ratios is not
+      // that test: both carry the same numerator, so re-reading how the damage is attributed (S-105) moved
+      // the rule on five armies whose marches had not moved. The rule is the one `beatsOnFigures` states in
+      // `plan.ts`, and the one this file's own criteria are written in.
       const rungs = new Map<number, (typeof trade)[number]>();
       for (const row of trade) {
         const held = rungs.get(row.repeat.mercLost);
         if (!held || row.repeat.damage > held.repeat.damage) rungs.set(row.repeat.mercLost, row);
       }
-      const ratios = (row: { repeat: PlanRepeat }) => ({
-        silver: row.repeat.damage / row.repeat.silver,
-        hired: row.repeat.damage / row.repeat.mercLost,
-      });
       for (const row of rows) {
         if (row.pick !== 'sweet-spot') continue;
-        const own = ratios(row);
         for (const rung of rungs.values()) {
-          const other = ratios(rung);
           const beats =
-            other.silver >= own.silver &&
-            other.hired >= own.hired &&
-            (other.silver > own.silver || other.hired > own.hired);
-          expect(beats, `${row.pick} at ${String(row.repeat.mercLost)} burned is beaten on both ratios`).toBe(
-            false,
-          );
+            rung.repeat.damage >= row.repeat.damage &&
+            rung.repeat.silver <= row.repeat.silver &&
+            rung.repeat.mercLost <= row.repeat.mercLost &&
+            (rung.repeat.damage > row.repeat.damage ||
+              rung.repeat.silver < row.repeat.silver ||
+              rung.repeat.mercLost < row.repeat.mercLost);
+          expect(
+            beats,
+            `${row.pick} at ${String(row.repeat.mercLost)} burned is beaten on damage, silver and burn`,
+          ).toBe(false);
         }
       }
       // Exactly one stop is the bar's best damage a silver and exactly one its best damage a hired unit.

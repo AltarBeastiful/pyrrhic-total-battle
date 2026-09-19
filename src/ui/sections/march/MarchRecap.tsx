@@ -28,6 +28,7 @@ import { Figures } from '@/ui/kit';
 
 import { amount, duration, percent, ratio } from './format';
 import { hiredLost, hiredStock } from './hired';
+import { worstPer } from './worst';
 import classes from './march.module.css';
 import { useMarch } from './useMarch';
 
@@ -140,11 +141,18 @@ export function MarchRecap() {
       betterWhen: 'lower' as const,
       glyph: <Glyph kind="time" />,
     },
+    /**
+     * **On the worst opening, like the bar's** (S-108, 2026-09-19; the owner: *"damage/silver differs in the
+     * plan table and in the battle summary"*). `summary.damagePerSilver` divides `avgDamage`, the midpoint
+     * of the two openings, which is TotalStack's own reading of its Battle Summary and what the priority
+     * search optimises — so that field stays as it is and this block divides `minDamage` instead, the figure
+     * two rows above it and the one the plan's trade prints. One name, one thing (design rule 5).
+     */
     {
       key: 'perSilver',
       label: 'Damage per silver',
-      value: summary.damagePerSilver,
-      previous: was((value) => value.damagePerSilver),
+      value: worstPer(summary, summary.recovery.silver),
+      previous: was((value) => worstPer(value, value.recovery.silver)),
       format: ratio,
       betterWhen: 'higher' as const,
     },
@@ -154,8 +162,8 @@ export function MarchRecap() {
           {
             key: 'perDragonCoin',
             label: 'Damage per dragon coin',
-            value: summary.damagePerDragonCoin,
-            previous: was((value) => value.damagePerDragonCoin),
+            value: worstPer(summary, coins),
+            previous: was((value) => worstPer(value, value.recovery.dragonCoins)),
             format: ratio,
             betterWhen: 'higher' as const,
           },

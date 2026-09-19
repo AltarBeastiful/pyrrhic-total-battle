@@ -102,5 +102,5 @@ export type {
 // Campaign* exports.
 export { DEFAULT_GAP, planCampaign, marchResult as planMarch } from './plan';
 // S-104 — one stop of a plan re-sized in place, and the shelter said about a march's counts.
-export { resizeMarchOver, shelterCounts } from './plan';
+export { largestSustained, planRepeats, resizeMarchOver, shelterCounts } from './plan';
 export type { CampaignInput, CampaignPlan, MarchWithin, PlanMarch, PlanTotals, ResizedMarch } from './plan';

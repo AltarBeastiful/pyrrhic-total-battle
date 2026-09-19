@@ -606,6 +606,9 @@ export function ownerScenarios(profile: Profile): Scenario[] {
     // **His own TotalStack profile, S-103 (2026-09-19)** — scenario 16, appended after the fifteen and
     // changing nothing above it.
     ...totalStackProfile(profile),
+    // **His usual setup, S-106 (2026-09-19)** — scenario 17, appended after the sixteen and changing
+    // nothing above it.
+    ...usualSetup(profile),
   ];
 }
 
@@ -1278,6 +1281,89 @@ const totalStackProfile = (owner: Profile): Scenario[] => {
     },
   ];
 };
+
+/**
+ * **Pinned 2026-09-19 (S-106), measured that day** on the bar the engine offers for the camp he plays.
+ *
+ * **Two stops** — the sweet spot at 2 authority chunks a march (11 417 051 over four marches for 8 090 400
+ * silver, 5 760 dragon coins) and the steady max at 4 (11 721 371 for 8 695 200 and 4 320 coins) — and this
+ * is the army his *"I only get sweet spot and steady max"* was read off. **Two is what its ladder holds**:
+ * the burn ladder is **1 · 2 · 4** and nothing else, so there is no rung strictly inside the gap between the
+ * knee and the top for a *more mercs*, and its thrift rung is **21 % less efficient a silver** than the
+ * sweet spot (1.256 against 1.440, 2 497 753 for 1 989 000 against 2 924 497 for 2 031 000) — 2 % of the
+ * silver saved for 15 % of the damage given up — so the silver saver's own rule refuses it, as it should.
+ *
+ * Before S-105 this bar carried three, and the third was not a saving: the ratio rule threw the **top** rung
+ * out of the pool the knee is read off, which put the recommendation on the thriftiest march of the three —
+ * 10 136 819 against the 11 417 051 the knee now recommends, 11 % less damage for 1.5 % less silver. S-106
+ * leaves the better recommendation in place and does not manufacture a stop to sit under it.
+ *
+ * **Against the sizers**: the hardest campaign on the bar is the steady max's 11 721 371 against the best
+ * sizer sequence's 11 892 528 (Troops first · Generate), which is **0.9856** — hence the 0.98 floor, the
+ * narrowest of any army in this file — and `winsHired` is true by a wide margin, **422 679** a chunk at the
+ * sweet spot against the sizers' best 307 403 (Troops first over every type). The plan's best stop a silver
+ * is **1.41**, 1.32× the best sizer sequence's, so the file's ordinary 95 % silver floor holds with no
+ * exception, and no sizer sequence is at least as efficient as the sweet spot on both ratios at once.
+ *
+ * There is no captured answer for this camp — the priority-search route has refused every call since
+ * 2026-09-19 — so it carries neither an `externals` block nor a Total Optimization floor.
+ */
+const USUAL_SETUP_PINS: Pinned = {
+  refuses: false,
+  stops: 2,
+  sweetNotAheadOnEither: false,
+  damageFloor: 0.98,
+  winsHired: true,
+};
+
+/**
+ * **His usual setup, as his own app showed it on 2026-09-19** (S-106) — scenario 17, and the army his
+ * *"it seems the last change made us lose some of the stops on the slider. I only get sweet spot and steady
+ * max in my usual setup"* was read off. It is the camp he plays: **Aydae 43★3 alone** of his three captains,
+ * **5 200** leadership, **2 000** authority and **200** dominance, guardsmen I–III with the top melee and
+ * ranged tiers clicked out (so Archer III and Spearman III are gone and Rider III stands), specialists I
+ * (Swordsman I is on the field, and the search leaves it out of the harder stops), the **monster window on
+ * tier 3** — Battle Boar, Emerald Dragon, Stone Gargoyle, Water Elemental — **Epic Monster Hunter VI ×90**
+ * hired, and temple 0.
+ *
+ * **The bonuses are the export's own**, derived through `buildStackRequest` from the sources his profile
+ * carries with Aydae the one active captain: the eight permanent rows, of which only **Army Modernization**
+ * holds values (+2 health on melee, ranged and mounted), which is what his page's *"Other: 2 of 8 sources
+ * on"* is counting. Nothing is overridden here — unlike his TotalStack profile above, this is his Pyrrhic
+ * account as it stands.
+ *
+ * **How close it is to his screen.** The steady max's march is his, to the unit: Archer I 1 313 · Rider I
+ * 654 · Archer II 726 · Spearman II 725 · Rider II 361 · Rider III 203 · Epic Monster Hunter VI 32 · Water
+ * Elemental 18 · Battle Boar 8 · Emerald Dragon 7 · Stone Gargoyle 6, for **2 232 600** silver, **2 976**
+ * gold, **1 080** dragon coins, 7 d 11 h of queue and **4** hired units lost — every one of those figures
+ * his, and the worst opening **3 025 937** against the 3 041 561 his app printed, **0.51 % under**. The
+ * counts being identical to the unit, the gap is a bonus his live account carries and this export does not.
+ */
+function usualSetup(profile: Profile): Scenario[] {
+  const camp = structuredClone(profile);
+  camp.sources.captains = [{ id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 }];
+  camp.troops.guardsmen = { min: 1, max: 3 };
+  camp.troops.specialists = { min: 1, max: 1 };
+  camp.troops.monsters = { min: 3, max: 3 };
+  camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: [] };
+  camp.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 90 }];
+  camp.recovery = { ...camp.recovery, templeLevel: 0 };
+  const setup = camp.setups[0];
+  if (!setup) return [];
+  return [
+    {
+      label:
+        'his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)',
+      request: buildStackRequest(camp, {
+        ...setup,
+        active: { ...setup.active, captains: ['ww8j0qwv'] },
+        housing: { leadership: 5_200, authority: 2_000, dominance: 200 },
+      }),
+      externals: [],
+      pinned: USUAL_SETUP_PINS,
+    },
+  ];
+}
 
 /**
  * **The armies the criteria are held on** — the shared scenario list, built once and read by

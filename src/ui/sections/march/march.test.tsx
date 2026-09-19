@@ -15,6 +15,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { unitById } from '@/data';
+import { largestSustained, planRepeats } from '@/engine';
 import type { Objective, UnitDef } from '@/engine/types';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
@@ -147,6 +148,19 @@ test('the recap is the figures a march is compared by, the expected damage first
   ]) {
     expect(screen.getByText(label)).toBeTruthy();
   }
+  /**
+   * **And "Damage per silver" is the bar's own reading** (S-108, 2026-09-19; the owner: *"damage/silver
+   * differs in the plan table and in the battle summary"*). It printed `summary.damagePerSilver`, which
+   * divides `avgDamage` — the midpoint of the two openings, TotalStack's reading of its Battle Summary and
+   * the priority search's own objective — while the plan's trade divides the **worst opening** since S-94.
+   * The two fields still differ on this very march, which is why the assertion is worth making: the recap
+   * reads the figure two rows above it.
+   */
+  const perSilver = screen.getByText('Damage per silver').closest('dt')?.nextElementSibling;
+  const silver = summary?.recovery.silver ?? 0;
+  expect(silver).toBeGreaterThan(0);
+  expect(perSilver?.textContent).toContain(ratio((summary?.minDamage ?? 0) / silver));
+  expect(summary?.damagePerSilver).toBeGreaterThan((summary?.minDamage ?? 0) / silver);
   // How many times the army swings is a fact about a stack, so it is said in the unit sheet alone
   // (owner, 2026-09-13) and never in the recap.
   expect(screen.queryByText('Hits landed')).toBeNull();
@@ -198,8 +212,12 @@ test('the recap says the dragon coins a monster march costs, and what they bough
   const figures = screen.getByLabelText('March figures');
   const cost = within(figures).getByText('Dragon coins to recover').closest('dt')?.nextElementSibling;
   expect(cost?.textContent).toContain(amount(coins));
+  // **On the worst opening, like the plan's** (S-108): `summary.damagePerDragonCoin` divides the midpoint
+  // of the two openings, which is TotalStack's reading of its Battle Summary and the priority search's own
+  // objective; the recap divides the figure it prints two rows above, so the two screens agree.
   const per = within(figures).getByText('Damage per dragon coin').closest('dt')?.nextElementSibling;
-  expect(per?.textContent).toContain(ratio(summary?.damagePerDragonCoin ?? 0));
+  expect(per?.textContent).toContain(ratio((summary?.minDamage ?? 0) / coins));
+  expect(summary?.minDamage).toBeLessThan(summary?.avgDamage ?? 0);
 });
 
 /**
@@ -519,16 +537,28 @@ test('the details are folded away until they are asked for, and open on the HP p
  * march burns are the only two things it reads, so the fixture is those two.
  */
 test('the damage split says what each pool hit for, its share, and what a hired unit was worth', () => {
+  // **The enemy-first journal, not the midpoint** (S-108): the block is summed from the same journal the
+  // plan's bar reads, so the two screens print one figure for one march (the owner: *"damage/silver differs
+  // in the plan table and in the battle summary"*). Two army lines here, one a pool.
   renderWithTheme(
     <DamageSplit
       summary={{
-        damageByPool: { leadership: 3_224_000, authority: 1_976_000, dominance: 0 },
+        journals: {
+          enemyFirst: {
+            entries: [
+              { n: 1, actor: 'army', unitId: 'archer-1', damage: 1_800_000, hits: 2 },
+              { n: 2, actor: 'enemy', unitId: 'archer-1', damage: 9_999_999, hits: 1 },
+              { n: 3, actor: 'army', unitId: 'archer-1', damage: 1_424_000, hits: 1 },
+              { n: 4, actor: 'army', unitId: 'epic-monster-hunter-6', damage: 1_976_000, hits: 2 },
+            ],
+          },
+        },
       }}
       stacks={[
-        { pool: 'leadership', count: 4_100 },
+        { unitId: 'archer-1', pool: 'leadership', count: 4_100 },
         // 260 hired units cost 26 for good: ten of them are one (`chunks`), which is what the plan's
         // trade prints as "Hired lost" for the same march.
-        { pool: 'authority', count: 260 },
+        { unitId: 'epic-monster-hunter-6', pool: 'authority', count: 260 },
       ]}
     />,
   );
@@ -770,10 +800,23 @@ test('putting a type back on a plan re-sizes that stop inside the plan’s rules
   expect(Math.max(...hired.map((stack) => stack.totalHp))).toBeLessThan(
     Math.min(...troops.map((stack) => stack.totalHp)),
   );
-  // And it spends no more of the stock than the stop the bar is reading planned to.
+  /**
+   * **And it spends no more of the stock than the campaign the bar is reading can afford** (S-107,
+   * 2026-09-19): the bound is what the account sustains over the marches this stop plays
+   * (`largestSustained`), not the stop's own count — which was the ceiling until then, and which made
+   * taking a troop type out a no-op (the owner: *"I'm left with a merc stack that's below what could be
+   * added with proper shielding"*).
+   */
   const stop = plan.recommend ?? plan;
+  const repeats = planRepeats(stop);
   for (const stack of hired) {
-    expect(stack.count).toBeLessThanOrEqual(stop.counts[stack.unitId] ?? 0);
+    const unit = generated.request.units.find((one) => one.id === stack.unitId);
+    const held = generated.request.caps[stack.unitId];
+    const bound =
+      held === undefined
+        ? Math.floor(generated.request.housing.authority / Math.max(1, unit?.cost ?? 1))
+        : largestSustained(held, repeats);
+    expect(stack.count).toBeLessThanOrEqual(bound);
   }
   // The bar is still the plan's — the tweaked march is the pane's — and no run was started.
   expect(useRunStore.getState().plan).toBe(plan);

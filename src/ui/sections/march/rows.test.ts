@@ -29,7 +29,7 @@ const note = (over: Partial<MarchResize>): MarchResize => ({
 
 test('a put-back on a plan names the type and promises the two rules', () => {
   expect(resizeWords(note({ putBack: [idOf(0)] }), UNITS)).toBe(
-    `Re-sized with ${nameOf(0)} put back — nothing else was pushed out, and your hired stacks stay under the troops.`,
+    `Re-sized with ${nameOf(0)} put back — nothing else was pushed out, and your hired stacks are re-sized to what the troops shelter.`,
   );
 });
 
@@ -58,10 +58,11 @@ test('a sizer run makes only the shelter promise: there is no plan to push anyth
   expect(words).not.toContain('nothing else was pushed out');
 });
 
-test('a mercenary the stop spends none of is a different fact, and is said as one', () => {
-  // S-104: not "it would not fit" but "this plan decided not to spend that stock" (`MarchWithin.hired`).
-  // A monster never reads this way — it is trained rather than spent, so it is capped by its own pool.
+test('a hired stock too small to last the stop is a different fact, and is said as one', () => {
+  // S-107: not "it would not fit" but "there is none of it to spend on every march this stop plays"
+  // (`MarchWithin.hired`). A monster never reads this way — it is trained rather than spent, so it is
+  // capped by its own pool and a stop that fields none of one has decided nothing about it.
   expect(resizeWords(note({ putBack: [idOf(0)], noStock: [idOf(0)] }), UNITS)).toContain(
-    `This stop spends no ${nameOf(0)}, so it could not be fielded.`,
+    `Your ${nameOf(0)} stock cannot last every march of this stop, so it could not be fielded.`,
   );
 });
