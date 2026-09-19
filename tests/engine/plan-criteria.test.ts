@@ -1214,6 +1214,8 @@ interface Rival {
   damage: number;
   silver: number;
   burn: number;
+  /** The hired units the march fields, every hired pool together (S-96) — what the `all-in` is offered on. */
+  hired: number;
   seconds: number;
   key: string;
   /** The most marches this one can be **repeated**: the hired stock loses a chunk of ten a march. */
@@ -1234,19 +1236,46 @@ const countsKey = (counts: Record<string, number>): string =>
       .filter(([, count]) => count > 0)
       .sort(),
   );
-const shelteredRivals = (request: StackRequest): Rival[] => {
+/**
+ * **Anchored** (S-97, the `repeats` argument): every hired type capped at the largest count its stock still
+ * fields on each of `repeats` marches — `lastsMarches`, one chunk of ten lost a march. A march the account
+ * can send **once** is no answer to a stop that has to march four times, and the two criteria that speak
+ * about the *rungs* of the bar ask for the family at the repeats the rung plays. Left out (0), the caps are
+ * the account's own whole stock, which is what the `all-in` is about and what the two criteria that predate
+ * this one have always asked for.
+ */
+const shelteredRivals = (request: StackRequest, repeats = 0): Rival[] => {
   const table = effectiveTable(request);
   const ranked = rankTroops(table);
-  const hiredIds = request.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id);
+  // **Every hired pool** (S-96): the dominance pool's monsters are rare stock exactly as the authority
+  // pool's mercenaries are, and a yardstick that counted a monster as a troop would put it in the shelter's
+  // floor and leave its chunks out of the burn.
+  const hiredIds = request.units.filter((unit) => unit.pool !== 'leadership').map((unit) => unit.id);
   const hp = new Map(table.map((entry) => [entry.id, entry.hp] as const));
   const out: Rival[] = [];
   const seen = new Set<string>();
+  const caps: Record<string, number> = { ...request.caps };
+  if (repeats > 0) {
+    for (const id of hiredIds) {
+      const held = request.caps[id];
+      if (held === undefined) continue;
+      let anchor = 0;
+      for (let count = held; count >= 1; count -= 1) {
+        if (lastsMarches(held, count) >= repeats) {
+          anchor = count;
+          break;
+        }
+      }
+      caps[id] = anchor;
+    }
+  }
   for (let depth = 1; depth <= ranked.length; depth += 1) {
     const chosen = new Set(ranked.slice(-depth).map((entry) => entry.id));
     for (const method of ['elite', 'ms', 'msRelaxed'] as const) {
       const sized = sizeStacks({
         ...request,
-        units: request.units.filter((unit) => chosen.has(unit.id) || unit.pool === 'authority'),
+        caps,
+        units: request.units.filter((unit) => chosen.has(unit.id) || unit.pool !== 'leadership'),
         options: {
           ...request.options,
           method: method === 'msRelaxed' ? 'ms' : method,
@@ -1290,6 +1319,7 @@ const shelteredRivals = (request: StackRequest): Rival[] => {
         damage: summary.minDamage,
         silver: summary.recovery.silver,
         burn: hiredIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0),
+        hired: hiredIds.reduce((sum, id) => sum + (counts[id] ?? 0), 0),
         seconds: summary.recovery.seconds,
         key,
       });
@@ -1361,6 +1391,7 @@ describe('no stop is beaten on every reading by a sheltered march the account ca
             damage: row.repeat.damage,
             silver: row.repeat.silver,
             burn: row.repeat.mercLost,
+            hired: hiredOf(row.counts),
             seconds: row.repeat.seconds,
             key: countsKey(row.counts),
           });
@@ -1463,6 +1494,127 @@ describe('the thrift end is offered', () => {
             `${sweet.repeat.silver.toLocaleString('en-US')} at ${String(sweet.repeat.mercLost)} burned, and ` +
             `the bar's thriftiest stop (${thriftiestStop.pick}) burns ${String(thriftiestStop.repeat.mercLost)}`,
         ).toBeLessThanOrEqual(cheapest.burn);
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **The bar's top rung is not beaten by a sheltered march the account can field at a higher burn** (S-97,
+ * 2026-09-19; the owner's own camp, *"Aydae alone"* at 4 975, is where it was found).
+ *
+ * The bar runs along the hired units a march burns and is read left to right as *"spend less … spend more"*.
+ * Its dearest **rung** — the `steady-max`, the top of the burn ladder — claims to be the hardest march the
+ * account can repeat. A sheltered march it can field that burns **more** and hits **harder** is therefore a
+ * rung the ladder should have carried and a stop the player was never offered: the bar stops short of what
+ * the army can do, and no rule downstream can put it back, because the ladder's levels are settled on the
+ * marches the search generated.
+ *
+ * The yardstick is `shelteredRivals` **at the rung's own repeats** — every hired type capped at the largest
+ * count that lasts the campaign, so a march the account can send once is not counted against a stop that has
+ * to march four times. It is the sizer and the shelter alone, never the plan's search, and every figure is
+ * `planMarch`'s, which is the recap's.
+ *
+ * **Measured on HEAD (7b5e02e), which is what it is for**: it fails on **four** of the fifteen armies —
+ * the owner's export at 12 000 (top rung 17 chunks for 8 014 627 against the sizer over five of its troop
+ * types, 22 chunks for 8 153 756), his live camp of 2026-09-18 (10 for 3 285 305 against 12 for 3 544 681
+ * and 21 for 3 891 819), his camp of 2026-09-19's localStorage dump (5 for 2 423 299 against 10 for
+ * 2 793 778 and 18 for 3 976 648) and **Aydae alone at 4 975**, where the ladder tops out at **7** chunks
+ * and 3 387 893 a march while six sheltered marches above it reach 3 438 030 to **4 773 281**
+ * (`tools/theorycraft/out/111-coverage-and-all-in.md` §A).
+ */
+describe('the bar’s top rung is not beaten by a sheltered march the account can field at a higher burn', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        // The burn ladder's own top. The `all-in` is not a rung of it — it is a *sequence*, offered on what
+        // its first march fields rather than on what it burns — so it is neither the top nor a cover for it.
+        const rungs = planned.alternatives.filter((row) => row.pick !== 'all-in');
+        expect(rungs.length, 'the bar carries a rung').toBeGreaterThan(0);
+        const top = rungs.reduce((held, row) => (row.repeat.mercLost > held.repeat.mercLost ? row : held));
+        const repeats = repeatsOf(top);
+        const failures = shelteredRivals(scenario.request, repeats)
+          .filter(
+            (rival) =>
+              rival.repeats >= repeats &&
+              rival.burn > top.repeat.mercLost &&
+              rival.damage > top.repeat.damage,
+          )
+          .map(
+            (rival) =>
+              `the bar's top rung (${top.pick}, ${top.repeat.damage.toLocaleString('en-US')} damage for ` +
+              `${top.repeat.silver.toLocaleString('en-US')} silver at ${String(top.repeat.mercLost)} burned) is ` +
+              `beaten by ${rival.what} (${Math.round(rival.damage).toLocaleString('en-US')} for ` +
+              `${rival.silver.toLocaleString('en-US')} at ${String(rival.burn)} burned)`,
+          );
+        expect(failures.join('\n'), `the bar stops short\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **An `all-in` is offered whenever a sheltered march fields more hired than the steady max and is behind it
+ * on neither damage nor silver** (S-97, 2026-09-19).
+ *
+ * That stop exists for one sentence — *"a last stop: all mercs possible … fill all the mercs you can safely"*
+ * (owner, 2026-09-18) — and S-94 gave the engine leave to drop it when a thriftier stop beats it on the
+ * campaign's own figures. What the drop must not do is take away an offer the account can plainly make: when
+ * the player can put **more** of his stock on the field, hit at least as hard for it and pay **less** silver
+ * than the bar's top rung, a bar with no `all-in` on it is a bar that has hidden the one march this stop is
+ * for. The honest answer to a stop that is behind is to re-size it at its own hired counts, and to drop it
+ * only when nothing at that burn clears the rung beside it (`plan.ts`, the `all-in`'s own builder).
+ *
+ * **Equal silver is left to the campaign**, and that is a measured line rather than a cautious one. The
+ * owner's export at 12 000 can field 178 hired for 8 903 181 a march at the steady max's own 4 697 600 —
+ * more of the stock and 11 % more damage for the same silver — and the campaign behind it is *still* behind
+ * that stop on damage, silver and the stock at once (31 308 140 for 23 696 200 and 90 burned, against
+ * 31 963 845 for 21 035 600 and 82), because the stock it spends in one march is the stock the three behind
+ * it do not have. Re-sizing it does not change that (experiment 111 §C), so the bar is right to drop it
+ * there, and this criterion says so by asking for a **strictly cheaper** march.
+ *
+ * **Measured on HEAD (7b5e02e)**: it fails on the owner's live camp of 2026-09-18, where the sizer over five
+ * of its troop types fields **96** hired against the steady max's 93 for **3 544 681** a march against
+ * 3 285 305 and **2 264 700** silver against 2 635 500 — more of the stock, more damage, 14 % less silver —
+ * and the bar carries no `all-in` at all.
+ */
+describe('an all-in is offered whenever a sheltered march fields more hired than the steady max for less silver', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        if (planned.alternatives.some((row) => row.pick === 'all-in')) return;
+        const rungs = planned.alternatives.filter((row) => row.pick !== 'all-in');
+        expect(rungs.length, 'the bar carries a rung').toBeGreaterThan(0);
+        const top = rungs.reduce((held, row) => (row.repeat.mercLost > held.repeat.mercLost ? row : held));
+        const fielded = hiredOf(top.counts);
+        const asks = shelteredRivals(scenario.request)
+          .filter(
+            (rival) =>
+              rival.hired > fielded && rival.damage >= top.repeat.damage && rival.silver < top.repeat.silver,
+          )
+          .map(
+            (rival) =>
+              `${rival.what} fields ${String(rival.hired)} hired for ` +
+              `${Math.round(rival.damage).toLocaleString('en-US')} damage and ` +
+              `${rival.silver.toLocaleString('en-US')} silver, against the bar's top rung (${top.pick}) at ` +
+              `${String(fielded)} hired, ${top.repeat.damage.toLocaleString('en-US')} and ` +
+              `${top.repeat.silver.toLocaleString('en-US')} — and the bar offers no all-in`,
+          );
+        expect(asks.join('\n'), `an all-in is owed\n${asks.join('\n')}`).toBe('');
       },
       300_000,
     );

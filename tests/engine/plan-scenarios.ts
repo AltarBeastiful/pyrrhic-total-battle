@@ -83,6 +83,37 @@ function liveProfile(profile: Profile, hired: { id: string; cap: number | null }
   return live;
 }
 
+/**
+ * **"Aydae alone, 4 975"** — the camp of experiment 103, added 2026-09-19 (S-97): the owner's export with
+ * **one** captain enlisted (Aydae 43 ★3), the two top guardsman tiers he does not own clicked out, his live
+ * hired stock (hunters 83, legionaries unlimited, chariots 10, arbalesters 60) and 4 975 leadership against
+ * 2 180 authority. It is built to the unit the way `tests/engine/plan.test.ts` builds it.
+ *
+ * **Why it is a scenario at all.** It is the one army S-94 disclosed as a like-for-like loss: priced on the
+ * same reliable reading, the engine before that story offered **4** stops with a 17-chunk steady max at
+ * **4 773 281** a march, and S-94's bar offered **3**, a 7-chunk steady max at **3 387 893**, and an `all-in`
+ * campaign worse on damage, silver *and* the stock at once. The cause was search coverage rather than the
+ * reading — the burn ladder's top (experiment 111), which S-97 restores — and an army that has already
+ * caught one whole-bar regression is an army the benchmark should be watching.
+ */
+function aydaeAlone(profile: Profile): StackRequest {
+  const camp = structuredClone(profile);
+  camp.sources.captains = [{ id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 }];
+  camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: [] };
+  camp.mercenaries.selected = [
+    { id: 'epic-monster-hunter-6', cap: 83 },
+    { id: 'legionary-6', cap: null },
+    { id: 'chariot-6', cap: 10 },
+    { id: 'arbalester-6', cap: 60 },
+  ];
+  const setup = camp.setups[0];
+  if (!setup) throw new Error('no setup');
+  return buildStackRequest(camp, {
+    ...setup,
+    housing: { ...setup.housing, leadership: 4_975, authority: 2_180 },
+  });
+}
+
 /** A first-run army (Guardsmen I–III, Specialists I, no bonuses) with one hired type at a stock. */
 function firstRun(hired: { id: string; cap: number }, leadership: number): StackRequest {
   const profile = newProfile('first run');
@@ -455,6 +486,34 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         winsHired: true,
         silverFloor: 0.41,
         externals: { damageFloor: 0.37, winsHired: true },
+      },
+    },
+    {
+      label: 'Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)',
+      request: aydaeAlone(profile),
+      externals: [],
+      // **Added 2026-09-19 (S-97)**, and its pins are the figures of the day the burn ladder's top came
+      // back (`aydaeAlone` above, and `tools/theorycraft/out/111-coverage-and-all-in.md` §A). Measured on
+      // the engine of that story: **3 stops** — the sweet spot at 10 chunks (4 074 558 a march for
+      // 1 948 300 silver), the steady max at **17** (4 773 281 for 2 203 500) and the `all-in` at 26
+      // (5 366 544 for 2 705 500) — against S-94's 3 stops topping out at **7** chunks and 3 387 893.
+      //
+      // The bar's hardest campaign is the `all-in`'s **18 744 735 for 11 240 800** silver, which is
+      // **0.948** of the best sizer sequence (Tier ladder · Generate, 19 767 678 for 10 575 600) — hence
+      // the 0.94 floor — and its best stop a silver is the sweet spot's **2.022**, 1.08× the same
+      // sequence's, so the file's ordinary 95 % silver floor holds with no exception.
+      //
+      // `winsHired` is **false**, and it is the unlimited legionaries that make it so rather than a weak
+      // bar: Troops first over every type fields 28 chunks' worth for 13 629 206 — 486 757 a chunk —
+      // where the plan's best a chunk is the sweet spot's 419 836, and the plan out-damages that row by
+      // 38 % (18 744 735 against 13 629 206) at 53 % more silver. `sweetNotAheadOnEither` is false: no
+      // sizer sequence here is at least as efficient as the sweet spot on both ratios at once.
+      pinned: {
+        refuses: false,
+        stops: 3,
+        sweetNotAheadOnEither: false,
+        damageFloor: 0.94,
+        winsHired: false,
       },
     },
   ];

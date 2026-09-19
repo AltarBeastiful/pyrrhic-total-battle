@@ -229,7 +229,12 @@ describe('the search does not get worse', () => {
     // the bar still carries four stops, so one more is left out. Nothing the search used to find was lost.
     // 310 → **288** on 2026-09-19 (S-94): the undominated set is smaller on the worst opening, because two
     // plans that used to be told apart by half a strike of a top stack now tie and one of them is dominated.
-    expect(PLAN.leftOut).toBe(288);
+    // 288 → **283** on 2026-09-19 (S-97), the top of the burn ladder: the sheltered maximum over each
+    // prefix of the troop ranking is scored above the winner's own burn, and on this army the marches it
+    // adds **dominate more rows than they add** — the undominated set comes to five fewer. Every figure
+    // above is unmoved to the unit: the plan is the same plan and the bar is the same four stops, so this
+    // army's top rung was never one of the short ones.
+    expect(PLAN.leftOut).toBe(283);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained

@@ -1017,6 +1017,8 @@ export interface ShapeContext {
     | ((
         mercs: { entry: Effective; count: number }[],
         method: SizerMethod,
+        /** Over a prefix of the troop ranking (S-93, S-97) — the strongest `prefix` types. All of them when left out. */
+        prefix?: number,
       ) => { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] })
     | undefined;
   /** The troop stacks scored at `WINNER_RUNGS_DEPTH`: the search's winner, once there is one. */
@@ -1082,6 +1084,12 @@ export type ShapeScorer = (
   depth: number,
   scale: number,
   silverBudget?: number,
+  /**
+   * For a sizer shape (`SIZER_DEPTHS`), the **prefix of the troop ranking** it is sized over — the strongest
+   * `prefix` types the leadership pays for, which is the family the owner builds by hand ("Troops first",
+   * then the low tiers put back). Left out, the sizer is asked for every troop type, as it always was.
+   */
+  prefix?: number,
 ) => ScoredShape | null;
 
 /** The scorer of an account whose table is already built, so a sweep does not rebuild it per shape. */
@@ -1207,7 +1215,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     return order;
   };
 
-  return (marches, counts, depth, scale, silverBudget) => {
+  return (marches, counts, depth, scale, silverBudget, prefix) => {
     let vector = mercTypes.map((entry) => ({
       entry,
       count: Math.max(0, Math.floor(counts[entry.id] ?? 0)),
@@ -1223,7 +1231,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       if (sizedRungs.length === 0) return null;
     } else if (sizerMethod !== undefined) {
       if (!context.sizer) return null;
-      const sized = context.sizer(fielded, sizerMethod);
+      const sized = context.sizer(fielded, sizerMethod, prefix);
       sizedRungs = sized.rungs;
       const byId = new Map(sized.mercs.map((merc) => [merc.entry.id, merc.count]));
       vector = mercTypes.map((entry) => ({ entry, count: Math.max(0, byId.get(entry.id) ?? 0) }));
@@ -1861,49 +1869,97 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
 
   /**
-   * **The sheltered-maximum vectors** (`CampaignInput.shelteredMax`, off unless an experiment asks). For each
-   * prefix length `k` of the troop ranking,
-   * the **biggest** tight ladder over `k` types the leadership pays for, and the most hired units its own
-   * floor shelters: `ceil(floor / hp) − 1` per hired type, capped by that type's sustainable anchor. No
-   * constant — the ladder's cost and the shelter decide.
+   * **The sheltered maximum at each prefix length of the troop ranking**: the **biggest** tight ladder over
+   * `k` types the leadership pays for, and the most hired units its own floor shelters — `ceil(floor / hp) − 1`
+   * per hired type, capped by that type's sustainable anchor. No constant: the ladder's cost and the shelter
+   * decide, and the two ends of the family are "one huge troop stack sheltering everything" and "every troop
+   * type the account holds, sheltering a handful".
+   *
+   * It is the family the *player* builds by hand — *"using Troops first"*, then the low tiers put back one at
+   * a time — read here as a **hired vector** rather than as a shape, because that is what the search is short
+   * of: a ladder is sized off the biggest hired stack and the sizer shapes are sized over every troop type at
+   * once, so the counts that only a shallow, tall ladder can shelter are counts no vector in the grid carries.
+   * Once the vector is scored, `tighterShape` finds the prefix that fields it best.
+   *
+   * Two callers: `CampaignInput.shelteredMax`, which puts them in the **grid** (experiment 108 §B), and the
+   * top of the burn ladder below (S-97), which sweeps the ones above the winner's own burn.
    */
-  if (input.shelteredMax === true) {
-    const maxDepth = Math.min(troops.length, Math.max(...DEPTHS));
+  const maxShelterDepth = Math.min(troops.length, Math.max(...DEPTHS));
+  /** The floor of the biggest depth-`k` tight ladder the leadership pays for, or 0 if none fits. */
+  const biggestFloor = (depth: number): number => {
+    const rungsAt = (hp: number): { entry: Effective; count: number }[] =>
+      buildLadder(troops, depth, hp, gap, leadership, 1);
+    if (rungsAt(1).length === 0) return 0;
+    let high = 1;
+    while (high < 1e12 && rungsAt(high * 2).length > 0) high *= 2;
+    let low = high;
+    high *= 2;
+    while (low + 1 < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (rungsAt(mid).length > 0) low = mid;
+      else high = mid;
+    }
+    const rungs = rungsAt(low);
+    return rungs.length === 0 ? 0 : Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+  };
+  interface ShelteredMax {
+    marches: number;
+    vector: { entry: Effective; count: number }[];
+    /** The sizer shape this vector is the shelter of, where one is — its method's depth and its prefix. */
+    shape?: { depth: number; prefix: number };
+  }
+  const shelteredMaxima = (): ShelteredMax[] => {
+    const out: ShelteredMax[] = [];
     const seenShelter = new Set<string>();
-    /** The floor of the biggest depth-`k` tight ladder the leadership pays for, or 0 if none fits. */
-    const biggestFloor = (depth: number): number => {
-      const rungsAt = (hp: number): { entry: Effective; count: number }[] =>
-        buildLadder(troops, depth, hp, gap, leadership, 1);
-      if (rungsAt(1).length === 0) return 0;
-      let high = 1;
-      while (high < 1e12 && rungsAt(high * 2).length > 0) high *= 2;
-      let low = high;
-      high *= 2;
-      while (low + 1 < high) {
-        const mid = Math.floor((low + high) / 2);
-        if (rungsAt(mid).length > 0) low = mid;
-        else high = mid;
-      }
-      const rungs = rungsAt(low);
-      return rungs.length === 0 ? 0 : Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+    const take = (one: ShelteredMax): void => {
+      if (one.vector.every((merc) => merc.count <= 0)) return;
+      const key = `${one.vector.map((merc) => merc.count).join(',')}|${one.shape?.depth ?? ''}|${one.shape?.prefix ?? ''}`;
+      if (seenShelter.has(key)) return;
+      seenShelter.add(key);
+      out.push(one);
     };
     for (const marches of gridMarches) {
       const anchors = mercTypes.map((entry) => anchorOf(entry.id, marches));
-      for (let depth = 1; depth <= maxDepth; depth += 1) {
+      const whole = mercTypes.map((entry, index) => ({ entry, count: anchors[index] ?? 0 }));
+      for (let depth = 1; depth <= maxShelterDepth; depth += 1) {
         const floorHp = biggestFloor(depth);
         if (floorHp <= 0) continue;
-        const vector = mercTypes.map((entry, index) => ({
-          entry,
-          count: Math.max(0, Math.min(anchors[index] ?? 0, Math.ceil(floorHp / Math.max(1, entry.hp)) - 1)),
-        }));
-        if (vector.every((merc) => merc.count <= 0)) continue;
-        const key = vector.map((merc) => merc.count).join(',');
-        if (seenShelter.has(key)) continue;
-        seenShelter.add(key);
-        vectors.push(vector);
+        take({
+          marches,
+          vector: mercTypes.map((entry, index) => ({
+            entry,
+            count: Math.max(0, Math.min(anchors[index] ?? 0, Math.ceil(floorHp / Math.max(1, entry.hp)) - 1)),
+          })),
+        });
+      }
+      /**
+       * **And the sizer's own sheltered maximum over each prefix**, which is the same question asked of the
+       * other shape the plan can build. A tight ladder spends the leadership on rungs 2 % apart; the sizer
+       * spends it its own way, and on an army whose troops are cheap the two floors — and so the two
+       * shelters — are far apart. Measured on the owner's export at 12 000 (experiment 111 §B): the tight
+       * ladder's maxima all sit at or under the winner's own burn and the pass reaches nothing, while the
+       * sizer over seven of its troop types shelters **19** chunks for 8 903 181 a march against the bar's
+       * top rung of 8 014 627 at 17. It is also the family the criterion is stated against
+       * (`shelteredRivals`, `tests/engine/plan-criteria.test.ts`) and the one the owner builds by hand.
+       */
+      if (sizerShape) {
+        for (let prefix = 1; prefix <= troops.length; prefix += 1) {
+          for (const [key, method] of Object.entries(SIZER_DEPTHS)) {
+            const sized = sizer(whole, method, prefix);
+            if (sized.rungs.length < 2) continue;
+            const fielded = new Map(sized.mercs.map((merc) => [merc.entry.id, merc.count]));
+            take({
+              marches,
+              vector: mercTypes.map((entry) => ({ entry, count: fielded.get(entry.id) ?? 0 })),
+              shape: { depth: Number(key), prefix },
+            });
+          }
+        }
       }
     }
-  }
+    return out;
+  };
+  if (input.shelteredMax === true) vectors.push(...shelteredMaxima().map((one) => one.vector));
 
   // the grid: every march count, then fractions of the largest count each type can carry at that count
   for (const vector of vectors) {
@@ -2133,6 +2189,91 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         })),
       );
     }
+    /**
+     * **The top of the bar** (S-97, 2026-09-19; the owner's own camp, *"Aydae alone"* at 4 975, is where it
+     * was missing).
+     *
+     * The sweep above walks **down** from the winner's own burn, so the winner's burn is the ceiling of what
+     * the bar is *offered*: the sweep proposes no level above it, and the rung stops are whatever the levels
+     * under it hold. (A level above it can still turn up by accident — a sizer shape re-derives the hired
+     * counts it is given, so a swept vector can come back dearer than the level it was built for, which is
+     * where the 8, 9 and 10-chunk rows on the *"Aydae alone"* camp come from. What no rule asks for is the
+     * march that *fields the most the troops shelter*, and that is the one the bar is short of.) That was harmless while the winner was the dearest march the search could find. It stopped being
+     * so when the plan moved onto the worst opening (S-94): a march ranked on the bad flip wants **many**
+     * stacks carrying the damage, so the winner became a deep ladder over every troop type the account
+     * holds — and a deep ladder has a **low floor**, which is exactly what shelters the fewest hired units.
+     * The winner went thrifty and took the bar's whole top with it. Measured on that camp (experiment 111
+     * §A): the burn ladder topped out at **7** chunks and 3 387 893 a march, while the sizer's own sheltered
+     * marches over 7, 6, 5, 4 and 3 of its troop types — each hired type at the largest count that lasts the
+     * three repeats a rung plays — stand at **10, 12, 13, 17 and 23** chunks for 4 074 558, 3 688 939,
+     * 3 438 030, **4 773 281** and 4 771 665, up to **41 %** more reliable damage at prices the bar simply
+     * did not offer. On ten of the fifteen armies measured there was a sheltered march above the top rung
+     * that out-hit it.
+     *
+     * **Why the search cannot reach them by itself**, and why a *vector* is what it is short of. Its two
+     * shapes size their troops from the hired stack: a ladder's floor is the biggest hired stack times the
+     * gap (`ladder`), and the sizer's shapes are sized over **every** troop type at once (`sizer`). Neither
+     * can be asked "stand as few, as tall troop stacks as the leadership pays for, and field everything they
+     * shelter" — and `tighterShape`, which does score the sizer over a prefix, only ever **caps** a row at
+     * its own hired counts, so it tightens a march and can never raise one. `shelteredMaxima` above is that
+     * question asked directly, once per prefix length, and this pass scores both halves of its answer: the
+     * hired **vector** through the whole sweep, and the **shape** that shelters it through the scorer's own
+     * prefix (see the note inside the loop — the vector alone comes back as the winner's own march on an
+     * account whose troops are cheap).
+     *
+     * **It is scored, not chosen** — the winner is restored afterwards, and that is a measured decision
+     * rather than a scruple. The winner is the **band's yardstick**: a plan is offered only if it fields at
+     * least half the hired units the winner's own march fields (`goal.hired`, `notToken`). Letting these
+     * vectors win moved that yardstick on the owner's camp of 2026-09-19 (the localStorage dump, 450
+     * hunters) and emptied the thrift end with it — the bar's band went from 4 · 5 · 8 burned to 8 · 9 · 10,
+     * its thriftiest stop from **4** chunks to **8**, and `tests/engine/plan-criteria.test.ts`'s *"the thrift
+     * end is offered"* — S-93's criterion, the owner's *"no eco silver spot"* in one line — began to fail on
+     * it. Frozen, the band keeps its thrift levels on that camp — 4 · 5 · 8 chunks are all still offered and
+     * S-93's criterion passes — and every army's top is offered. Its **bar** still moves, because the levels
+     * above the winner are new rungs and the rules that pick stops read the whole ladder: that camp's sweet
+     * spot goes 4 → 5 chunks (2 385 168 → 2 423 299 a march) and its steady max 5 → 18. What the freeze
+     * buys is that the thrift end is still *there* to be picked.
+     *
+     * What the freeze leaves as it was: the plan's **own** campaign — `CampaignPlan.totalDamage` and the
+     * march and finale beside it, the *"Fought to the end"* line the app prints under the bar — is still
+     * the winner of the search over the shapes every rung is drawn from. The bar has always been able to
+     * carry a campaign above it (the `all-in` does on most armies, and on the *"Aydae alone"* camp it did
+     * before this pass existed), so nothing new is said there; what is new is that a **rung** can too.
+     */
+    const frozen = best;
+    for (const one of shelteredMaxima()) {
+      if (stop()) break;
+      if (burnOf(one.vector) <= topBurn) continue;
+      sweep(one.vector);
+      /**
+       * **And the shape itself, not only the counts.** A vector alone is not enough here: `evaluateVector`
+       * builds ladders and the sizer over the **whole** army, and on an account whose troops are cheap the
+       * whole-army sizer's own floor lowers the vector straight back to the winner's own burn — measured on
+       * the owner's export at 12 000, where all five swept vectors (18 to 22 chunks) came back as the same
+       * 17-chunk march at 8 014 627. The shape that shelters that much stock is the sizer over a **prefix**,
+       * so it is scored as such, through the scorer, which gives it the finale and the repeats every other
+       * candidate gets.
+       */
+      const shape = one.shape;
+      if (!shape) continue;
+      const counts: Record<string, number> = {};
+      for (const merc of one.vector) counts[merc.entry.id] = merc.count;
+      const scored = score(one.marches, counts, shape.depth, 1, input.silverBudget, shape.prefix);
+      if (!scored || scored.rungs.length < 2) continue;
+      consider({
+        marches: one.marches,
+        mercs: scored.mercs,
+        rungs: scored.rungs,
+        march: scored.march,
+        finale: scored.finale?.march ?? null,
+        finaleRungs: scored.finale?.rungs ?? [],
+        finaleMercs: scored.finale?.mercs ?? [],
+        total: scored.total,
+        depth: shape.depth,
+        scale: 1,
+      });
+    }
+    best = frozen;
   }
 
   const chosen = best as Candidate;
@@ -2969,16 +3110,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         winnerRungs: () => winnerRungs,
         sustain,
       });
-      let found: Candidate | null = null;
-      for (let share = 1; share > 0.04 && !found; share -= 0.05) {
-        const counts: Record<string, number> = {};
-        let any = false;
-        for (const entry of mercTypes) {
-          const count = Math.floor((remaining[entry.id] ?? 0) * share);
-          counts[entry.id] = count;
-          if (count > 0) any = true;
-        }
-        if (!any) break;
+      /**
+       * Every shape this stop may play at one hired vector — the ladders, the winner's own rungs, the sizer
+       * under each method over the whole army and (S-93) over each prefix of the troop ranking — each of
+       * them sheltered, judged the way this stop judges: **the most of the stock fielded first, the most
+       * damage with it second**, and on a tie in both, the cheaper march. `seed` is what it has to beat.
+       */
+      /**
+       * How this stop tells two shapes of one march apart: **the most of the stock fielded first, the most
+       * damage with it second** (owner, 2026-09-18: *"a last stop: all mercs possible … fill all the mercs
+       * you can safely"*).
+       */
+      const fieldsMost = (candidate: Candidate, held: Candidate | null): boolean =>
+        !held ||
+        hiredOfVector(candidate.mercs) > hiredOfVector(held.mercs) ||
+        (hiredOfVector(candidate.mercs) === hiredOfVector(held.mercs) && candidate.total > held.total);
+      const strongest = (
+        counts: Record<string, number>,
+        seed: Candidate | null,
+        keep: (candidate: Candidate, held: Candidate | null) => boolean = fieldsMost,
+      ): Candidate | null => {
+        let found = seed;
         const depths = [
           ...(sizerShape ? Object.keys(SIZER_DEPTHS).map(Number) : []),
           ...(winnerRungs.length > 0 ? [WINNER_RUNGS_DEPTH] : []),
@@ -3008,14 +3160,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
               depth,
               scale,
             };
-            // The most of the stock first, the most damage with it second.
-            if (
-              !found ||
-              hiredOfVector(candidate.mercs) > hiredOfVector(found.mercs) ||
-              (hiredOfVector(candidate.mercs) === hiredOfVector(found.mercs) && candidate.total > found.total)
-            ) {
-              found = candidate;
-            }
+            if (keep(candidate, found)) found = candidate;
           }
         }
         /**
@@ -3077,17 +3222,82 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
               depth: Number(key),
               scale: 1,
             };
-            if (
-              !found ||
-              hiredOfVector(candidate.mercs) > hiredOfVector(found.mercs) ||
-              (hiredOfVector(candidate.mercs) === hiredOfVector(found.mercs) && candidate.total > found.total)
-            ) {
-              found = candidate;
-            }
+            if (keep(candidate, found)) found = candidate;
           }
         }
+        return found;
+      };
+      let found: Candidate | null = null;
+      for (let share = 1; share > 0.04 && !found; share -= 0.05) {
+        const counts: Record<string, number> = {};
+        let any = false;
+        for (const entry of mercTypes) {
+          const count = Math.floor((remaining[entry.id] ?? 0) * share);
+          counts[entry.id] = count;
+          if (count > 0) any = true;
+        }
+        if (!any) break;
+        found = strongest(counts, found);
       }
       if (!found) break;
+      /**
+       * **Re-sized at the vector it settled on** (S-97, 2026-09-19; the validator: the honest answer to a
+       * stop that is behind on every figure is *"re-size it at its burn"*, because what it exists to do is
+       * field the most hired the troops shelter).
+       *
+       * The walk above asks each shape *"how much of the remaining stock can you shelter?"* at a share of
+       * the stock, and answers with the shape that shelters the most — a question about the **hired**
+       * count, in which a ladder sized off a whole 95 % of the stock is scored, and its silver is whatever
+       * it is. Nobody then asked the other half: *"now that this is what the march fields, what is the best
+       * shape for it?"* The ladders and the winner's rungs re-sized off the **fielded** stack are smaller
+       * and cheaper than the ones sized off the share, and the sizer's prefixes are sized against the real
+       * caps rather than against a share of them — so this is the same march asked for properly, and it
+       * can only field at least as much hired stock as the walk settled on (the rule below is the walk's
+       * own). Measured on the owner's *"Aydae alone"* camp (experiment 111 §C) and on the two armies where
+       * the stop was being dropped outright, the 12 000 export and his live camp of 2026-09-18.
+       */
+      const settled: Candidate = found;
+      const pinned: Record<string, number> = {};
+      for (const merc of settled.mercs) pinned[merc.entry.id] = merc.count;
+      /**
+       * Judged the way S-93's `tighterShape` judges a rung, and for the same reason: a march that is behind
+       * on **none** of the readings it prints is the same answer done better, so there is nothing to trade
+       * and no rate to set. The readings here are the **four** this stop is made of — the hired units it
+       * fields, the chunks of stock it burns, its damage and its silver — with one of them strictly better.
+       * (Not the training queue, which is S-93's fourth: `marchOf` does not price it, and a stop built march
+       * by march has no repeat for it to be read off.)
+       *
+       * **The chunks are one of the four and not a side condition** (2026-09-19, the validator): a shape
+       * that fields the same hired for the same damage and the same silver while burning **fewer** chunks is
+       * strictly better in the one resource that does not come back, and reading the strictness off the
+       * other three alone would refuse it. The cap below it — no more chunks than the march it replaces —
+       * is the half that protects the marches behind this one, which are sized on what it leaves: measured
+       * on the owner's live camp of 2026-09-18 without it, the sequence's first march gained and the
+       * campaign lost, 11 815 339 → 10 899 547 for 130 → 133 chunks burned.
+       */
+      const tighter = (candidate: Candidate, held: Candidate | null): boolean => {
+        if (hiredOfVector(candidate.mercs) < hiredOfVector(settled.mercs)) return false;
+        if (candidate.march.mercLost > settled.march.mercLost) return false;
+        if (candidate.march.damage < settled.march.damage) return false;
+        if (candidate.march.silver > settled.march.silver) return false;
+        if (
+          candidate.march.damage === settled.march.damage &&
+          candidate.march.silver === settled.march.silver &&
+          candidate.march.mercLost === settled.march.mercLost &&
+          hiredOfVector(candidate.mercs) === hiredOfVector(settled.mercs)
+        ) {
+          return false;
+        }
+        return (
+          !held ||
+          candidate.march.damage > held.march.damage ||
+          (candidate.march.damage === held.march.damage &&
+            (candidate.march.silver < held.march.silver ||
+              (candidate.march.silver === held.march.silver &&
+                candidate.march.mercLost < held.march.mercLost)))
+        );
+      };
+      found = strongest(pinned, null, tighter) ?? settled;
       played.push(found);
       for (const merc of found.mercs) {
         if (unlimited.has(merc.entry.id)) continue;

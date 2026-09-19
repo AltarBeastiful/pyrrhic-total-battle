@@ -1,0 +1,2834 @@
+[
+ {
+  "label": "first-run army, Bear V ×1 (20 000 leadership)",
+  "ms": 66,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 1,
+    "hired": 1,
+    "repDamage": 4631402,
+    "repSilver": 8131400,
+    "damage": 18189008,
+    "silver": 32525600,
+    "mercLost": 1,
+    "marches": 4,
+    "shape": "elite"
+   }
+  ],
+  "band": [
+   [
+    1,
+    4631402
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 3969464,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4241662,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4034225,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4377208,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4423608,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4215121,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4600639,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4425826,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4631402,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 1
+   }
+  ],
+  "anchored": []
+ },
+ {
+  "label": "first-run army, Bear V ×2 (20 000 leadership)",
+  "ms": 51,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 1,
+    "hired": 2,
+    "repDamage": 4743602,
+    "repSilver": 8131400,
+    "damage": 18413408,
+    "silver": 32525600,
+    "mercLost": 2,
+    "marches": 4,
+    "shape": "elite"
+   }
+  ],
+  "band": [
+   [
+    1,
+    4743602
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4006864,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4279062,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4071625,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4452008,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4498408,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4289921,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4675439,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4538026,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 1,
+    "hired": 2,
+    "damage": 4743602,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 1
+   }
+  ],
+  "anchored": []
+ },
+ {
+  "label": "first-run army, Bear V ×3 (20 000 leadership)",
+  "ms": 45,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 1,
+    "hired": 1,
+    "repDamage": 4631402,
+    "repSilver": 8131400,
+    "damage": 18413408,
+    "silver": 32525600,
+    "mercLost": 3,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 1,
+    "hired": 3,
+    "repDamage": 4855802,
+    "repSilver": 8131400,
+    "damage": 18750008,
+    "silver": 32525600,
+    "mercLost": 3,
+    "marches": 4,
+    "shape": "elite"
+   }
+  ],
+  "band": [
+   [
+    1,
+    4631402
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4044264,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4316462,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4109025,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4526808,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4573208,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4364721,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4750239,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4650226,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 1,
+    "hired": 3,
+    "damage": 4855802,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 3969464,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4241662,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4034225,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4377208,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4423608,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4215121,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4600639,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4425826,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 1,
+    "hired": 1,
+    "damage": 4631402,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "first-run army, Bear V ×10 (20 000 leadership)",
+  "ms": 61,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 1,
+    "hired": 6,
+    "repDamage": 5192402,
+    "repSilver": 8131400,
+    "damage": 20769608,
+    "silver": 32525600,
+    "mercLost": 4,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 1,
+    "hired": 10,
+    "repDamage": 5384084,
+    "repSilver": 9920400,
+    "damage": 20893375,
+    "silver": 36013400,
+    "mercLost": 4,
+    "marches": 4,
+    "shape": "ms"
+   }
+  ],
+  "band": [
+   [
+    1,
+    5192402
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 1,
+    "hired": 10,
+    "damage": 4306064,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 1,
+    "hired": 10,
+    "damage": 4578262,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 1,
+    "hired": 10,
+    "damage": 4370825,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 1,
+    "hired": 10,
+    "damage": 5050408,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 1,
+    "hired": 10,
+    "damage": 5096808,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 1,
+    "hired": 10,
+    "damage": 4888321,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 1,
+    "hired": 9,
+    "damage": 5199039,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 2
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 5211226,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 1,
+    "hired": 6,
+    "damage": 5192402,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 5
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 4231264,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 4503462,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 4296025,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 4900808,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 4947208,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 4738721,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 5124239,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 1,
+    "hired": 8,
+    "damage": 5211226,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 1,
+    "hired": 6,
+    "damage": 5192402,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 5
+   }
+  ]
+ },
+ {
+  "label": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
+  "ms": 97,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 6,
+    "hired": 60,
+    "repDamage": 7109888,
+    "repSilver": 8131400,
+    "damage": 28655444,
+    "silver": 32525600,
+    "mercLost": 25,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 7,
+    "hired": 69,
+    "repDamage": 7498490,
+    "repSilver": 8131400,
+    "damage": 29691713,
+    "silver": 32525600,
+    "mercLost": 28,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 9,
+    "hired": 83,
+    "repDamage": 7897408,
+    "repSilver": 8514200,
+    "damage": 29841879,
+    "silver": 33291200,
+    "mercLost": 30,
+    "marches": 4,
+    "shape": "elite"
+   }
+  ],
+  "band": [
+   [
+    4,
+    6246326
+   ],
+   [
+    5,
+    6678107
+   ],
+   [
+    6,
+    7109888
+   ],
+   [
+    7,
+    7498490
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 8,
+    "hired": 73,
+    "damage": 7671203,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 2
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 5126658,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 5398856,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 5191419,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6691596,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6737996,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6529509,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6915027,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 7897408,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 4925160,
+    "silver": 14000000,
+    "seconds": 8400000,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 5197358,
+    "silver": 12114800,
+    "seconds": 6137760,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 4989921,
+    "silver": 11436600,
+    "seconds": 5323920,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 6288600,
+    "silver": 11825600,
+    "seconds": 5790720,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 6335000,
+    "silver": 9908000,
+    "seconds": 3983400,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 6126513,
+    "silver": 8939000,
+    "seconds": 3070050,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 6512031,
+    "silver": 9064600,
+    "seconds": 3131670,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 7292914,
+    "silver": 8514200,
+    "seconds": 2623065,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 7498490,
+    "silver": 8131400,
+    "seconds": 2269380,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+  "ms": 7087,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 23,
+    "hired": 168,
+    "repDamage": 23947236,
+    "repSilver": 8803800,
+    "damage": 91948255,
+    "silver": 35274000,
+    "mercLost": 97,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "more-mercs",
+    "burn": 26,
+    "hired": 196,
+    "repDamage": 24860310,
+    "repSilver": 8829000,
+    "damage": 94687477,
+    "silver": 35349600,
+    "mercLost": 106,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 28,
+    "hired": 198,
+    "repDamage": 25080732,
+    "repSilver": 8865400,
+    "damage": 95348743,
+    "silver": 35458800,
+    "mercLost": 112,
+    "marches": 4,
+    "shape": "elite"
+   }
+  ],
+  "band": [
+   [
+    19,
+    16169381
+   ],
+   [
+    20,
+    16898611
+   ],
+   [
+    21,
+    17808422
+   ],
+   [
+    22,
+    19004664
+   ],
+   [
+    23,
+    23947236
+   ],
+   [
+    24,
+    19961763
+   ],
+   [
+    25,
+    15304667
+   ],
+   [
+    26,
+    24860310
+   ],
+   [
+    27,
+    25031598
+   ],
+   [
+    28,
+    25080732
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 29,
+    "hired": 209,
+    "damage": 21140179,
+    "silver": 8862600,
+    "seconds": 2654580,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 12670348,
+    "silver": 14731200,
+    "seconds": 8785200,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 13671962,
+    "silver": 12846000,
+    "seconds": 6522960,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 14469205,
+    "silver": 12167800,
+    "seconds": 5709120,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 16543137,
+    "silver": 12556800,
+    "seconds": 6175920,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 17244329,
+    "silver": 10639200,
+    "seconds": 4368600,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 17765258,
+    "silver": 9670200,
+    "seconds": 3455250,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 19155456,
+    "silver": 9795800,
+    "seconds": 3516870,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 30,
+    "hired": 219,
+    "damage": 20711592,
+    "silver": 9245400,
+    "seconds": 3008265,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 12394050,
+    "silver": 14731200,
+    "seconds": 8785200,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 13395664,
+    "silver": 12846000,
+    "seconds": 6522960,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 14118107,
+    "silver": 12167800,
+    "seconds": 5709120,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 15990541,
+    "silver": 12556800,
+    "seconds": 6175920,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 16691733,
+    "silver": 10639200,
+    "seconds": 4368600,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 17212662,
+    "silver": 9670200,
+    "seconds": 3455250,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 18528060,
+    "silver": 9795800,
+    "seconds": 3516870,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 9 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 19882698,
+    "silver": 9245400,
+    "seconds": 3008265,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 10 troop types (elite)",
+    "burn": 28,
+    "hired": 203,
+    "damage": 20743066,
+    "silver": 8862600,
+    "seconds": 2654580,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
+  "ms": 629,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 4,
+    "hired": 36,
+    "repDamage": 2031002,
+    "repSilver": 1520800,
+    "damage": 8084653,
+    "silver": 6083200,
+    "mercLost": 19,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 5,
+    "hired": 37,
+    "repDamage": 2048786,
+    "repSilver": 1520800,
+    "damage": 8222546,
+    "silver": 6083200,
+    "mercLost": 21,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 7,
+    "hired": 51,
+    "repDamage": 2447995,
+    "repSilver": 1520800,
+    "damage": 8519930,
+    "silver": 6083200,
+    "mercLost": 24,
+    "marches": 4,
+    "shape": "ms"
+   }
+  ],
+  "band": [
+   [
+    4,
+    2031002
+   ],
+   [
+    5,
+    2048786
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 7,
+    "hired": 53,
+    "damage": 1475475,
+    "silver": 2287600,
+    "seconds": 1065120,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 7,
+    "hired": 53,
+    "damage": 1708198,
+    "silver": 2175200,
+    "seconds": 930240,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 7,
+    "hired": 53,
+    "damage": 1935160,
+    "silver": 2135600,
+    "seconds": 882720,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 7,
+    "hired": 53,
+    "damage": 1838354,
+    "silver": 1805400,
+    "seconds": 592305,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 7,
+    "hired": 53,
+    "damage": 2136761,
+    "silver": 1647000,
+    "seconds": 453075,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 7,
+    "hired": 53,
+    "damage": 2224044,
+    "silver": 1573400,
+    "seconds": 388305,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 7,
+    "hired": 51,
+    "damage": 2447995,
+    "silver": 1520800,
+    "seconds": 342060,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 6,
+    "hired": 39,
+    "damage": 1232471,
+    "silver": 2287600,
+    "seconds": 1065120,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 6,
+    "hired": 39,
+    "damage": 1418682,
+    "silver": 2175200,
+    "seconds": 930240,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 6,
+    "hired": 39,
+    "damage": 1600348,
+    "silver": 2135600,
+    "seconds": 882720,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 6,
+    "hired": 39,
+    "damage": 1467974,
+    "silver": 1805400,
+    "seconds": 592305,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 6,
+    "hired": 39,
+    "damage": 1708567,
+    "silver": 1647000,
+    "seconds": 453075,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 6,
+    "hired": 39,
+    "damage": 1925578,
+    "silver": 1573400,
+    "seconds": 388305,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 6,
+    "hired": 39,
+    "damage": 1963561,
+    "silver": 1520800,
+    "seconds": 342060,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "2026-09-17 export, its setup (7 000 leadership)",
+  "ms": 1484,
+  "stops": [
+   {
+    "pick": "silver-saver",
+    "burn": 7,
+    "hired": 64,
+    "repDamage": 3583107,
+    "repSilver": 1851500,
+    "damage": 16217218,
+    "silver": 8293900,
+    "mercLost": 35,
+    "marches": 4,
+    "shape": "ladder"
+   },
+   {
+    "pick": "sweet-spot",
+    "burn": 10,
+    "hired": 86,
+    "repDamage": 4870455,
+    "repSilver": 2614000,
+    "damage": 20079262,
+    "silver": 10581400,
+    "mercLost": 44,
+    "marches": 4,
+    "shape": "ladder"
+   },
+   {
+    "pick": "more-mercs",
+    "burn": 12,
+    "hired": 109,
+    "repDamage": 5387722,
+    "repSilver": 2739400,
+    "damage": 21834211,
+    "silver": 10957600,
+    "mercLost": 50,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 14,
+    "hired": 127,
+    "repDamage": 5913067,
+    "repSilver": 2739400,
+    "damage": 22770620,
+    "silver": 10957600,
+    "mercLost": 55,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 26,
+    "hired": 247,
+    "repDamage": 6603524,
+    "repSilver": 3802400,
+    "damage": 23619920,
+    "silver": 15179600,
+    "mercLost": 92,
+    "marches": 4,
+    "shape": "ms"
+   }
+  ],
+  "band": [
+   [
+    7,
+    4442817
+   ],
+   [
+    8,
+    4208215
+   ],
+   [
+    9,
+    4479017
+   ],
+   [
+    10,
+    4870455
+   ],
+   [
+    11,
+    5230687
+   ],
+   [
+    12,
+    5387722
+   ],
+   [
+    13,
+    5670385
+   ],
+   [
+    14,
+    5913067
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 14,
+    "hired": 129,
+    "damage": 6198747,
+    "silver": 2739400,
+    "seconds": 664755,
+    "repeats": 2
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 16,
+    "hired": 156,
+    "damage": 6095244,
+    "silver": 2882000,
+    "seconds": 789600,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 19,
+    "hired": 177,
+    "damage": 6510286,
+    "silver": 3176800,
+    "seconds": 1047810,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 22,
+    "hired": 209,
+    "damage": 6549552,
+    "silver": 3718000,
+    "seconds": 1521600,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 25,
+    "hired": 242,
+    "damage": 6547279,
+    "silver": 3792400,
+    "seconds": 1610880,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 27,
+    "hired": 254,
+    "damage": 5845009,
+    "silver": 3966800,
+    "seconds": 1820160,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 14,
+    "hired": 127,
+    "damage": 5913067,
+    "silver": 2739400,
+    "seconds": 664755,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 15,
+    "hired": 137,
+    "damage": 5716279,
+    "silver": 2882000,
+    "seconds": 789600,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 17,
+    "hired": 155,
+    "damage": 5862082,
+    "silver": 3176800,
+    "seconds": 1047810,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 20,
+    "hired": 187,
+    "damage": 5901348,
+    "silver": 3718000,
+    "seconds": 1521600,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 22,
+    "hired": 208,
+    "damage": 5025877,
+    "silver": 3966800,
+    "seconds": 1820160,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 22,
+    "hired": 208,
+    "damage": 5789652,
+    "silver": 3792400,
+    "seconds": 1610880,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "2026-09-17 export, 12 000 leadership",
+  "ms": 1316,
+  "stops": [
+   {
+    "pick": "silver-saver",
+    "burn": 10,
+    "hired": 86,
+    "repDamage": 4870455,
+    "repSilver": 2614000,
+    "damage": 22531695,
+    "silver": 12539600,
+    "mercLost": 48,
+    "marches": 4,
+    "shape": "ladder"
+   },
+   {
+    "pick": "sweet-spot",
+    "burn": 17,
+    "hired": 156,
+    "repDamage": 8014627,
+    "repSilver": 4697600,
+    "damage": 31546458,
+    "silver": 18790400,
+    "mercLost": 67,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 22,
+    "hired": 201,
+    "repDamage": 8153756,
+    "repSilver": 5446000,
+    "damage": 31963845,
+    "silver": 21035600,
+    "mercLost": 82,
+    "marches": 4,
+    "shape": "elite"
+   }
+  ],
+  "band": [
+   [
+    8,
+    5946474
+   ],
+   [
+    9,
+    6269353
+   ],
+   [
+    10,
+    6311741
+   ],
+   [
+    11,
+    6485133
+   ],
+   [
+    12,
+    6779194
+   ],
+   [
+    13,
+    7161246
+   ],
+   [
+    14,
+    7314470
+   ],
+   [
+    15,
+    7160929
+   ],
+   [
+    16,
+    7596083
+   ],
+   [
+    17,
+    8014627
+   ],
+   [
+    22,
+    8153756
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 19,
+    "hired": 178,
+    "damage": 8903181,
+    "silver": 4697600,
+    "seconds": 1141020,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 20,
+    "hired": 192,
+    "damage": 8347786,
+    "silver": 4941400,
+    "seconds": 1354455,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 24,
+    "hired": 223,
+    "damage": 8801960,
+    "silver": 5446000,
+    "seconds": 1796250,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 27,
+    "hired": 254,
+    "damage": 6825950,
+    "silver": 6800000,
+    "seconds": 3120000,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 27,
+    "hired": 254,
+    "damage": 7892594,
+    "silver": 6501600,
+    "seconds": 2761920,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 27,
+    "hired": 254,
+    "damage": 8492728,
+    "silver": 6374000,
+    "seconds": 2608800,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 17,
+    "hired": 156,
+    "damage": 8014627,
+    "silver": 4697600,
+    "seconds": 1141020,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 18,
+    "hired": 170,
+    "damage": 7590902,
+    "silver": 4941400,
+    "seconds": 1354455,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 22,
+    "hired": 208,
+    "damage": 6006818,
+    "silver": 6800000,
+    "seconds": 3120000,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 22,
+    "hired": 208,
+    "damage": 6941792,
+    "silver": 6501600,
+    "seconds": 2761920,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 22,
+    "hired": 208,
+    "damage": 7458174,
+    "silver": 6374000,
+    "seconds": 2608800,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 22,
+    "hired": 201,
+    "damage": 8153756,
+    "silver": 5446000,
+    "seconds": 1796250,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
+  "ms": 70,
+  "stops": [
+   {
+    "pick": "silver-saver",
+    "burn": 5,
+    "hired": 49,
+    "repDamage": 4528272,
+    "repSilver": 4414200,
+    "damage": 20891829,
+    "silver": 20901800,
+    "mercLost": 22,
+    "marches": 4,
+    "shape": "ladder"
+   },
+   {
+    "pick": "sweet-spot",
+    "burn": 6,
+    "hired": 60,
+    "repDamage": 7096072,
+    "repSilver": 7732100,
+    "damage": 28270883,
+    "silver": 30516200,
+    "mercLost": 25,
+    "marches": 4,
+    "shape": "winner"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 7,
+    "hired": 68,
+    "repDamage": 7354938,
+    "repSilver": 7732100,
+    "damage": 28727202,
+    "silver": 30179700,
+    "mercLost": 28,
+    "marches": 4,
+    "shape": "ladder"
+   },
+   {
+    "pick": "all-in",
+    "burn": 9,
+    "hired": 83,
+    "repDamage": 7840310,
+    "repSilver": 7732100,
+    "damage": 29743332,
+    "silver": 30928400,
+    "mercLost": 30,
+    "marches": 4,
+    "shape": "winner"
+   }
+  ],
+  "band": [
+   [
+    4,
+    6448908
+   ],
+   [
+    5,
+    6772490
+   ],
+   [
+    6,
+    7096072
+   ],
+   [
+    7,
+    7354938
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6012190,
+    "silver": 11437600,
+    "seconds": 5325120,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6268318,
+    "silver": 10804800,
+    "seconds": 4565760,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 4331402,
+    "silver": 8915600,
+    "seconds": 2888520,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6184780,
+    "silver": 9104000,
+    "seconds": 3011700,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6121535,
+    "silver": 8219600,
+    "seconds": 2239020,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 9,
+    "hired": 83,
+    "damage": 6729633,
+    "silver": 7809000,
+    "seconds": 1880325,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 5785683,
+    "silver": 11437600,
+    "seconds": 5325120,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 6041811,
+    "silver": 10804800,
+    "seconds": 4565760,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 4104895,
+    "silver": 8915600,
+    "seconds": 2888520,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 5731766,
+    "silver": 9104000,
+    "seconds": 3011700,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 5668521,
+    "silver": 8219600,
+    "seconds": 2239020,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 7,
+    "hired": 69,
+    "damage": 6276619,
+    "silver": 7809000,
+    "seconds": 1880325,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
+  "ms": 957,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 11,
+    "hired": 99,
+    "repDamage": 6189687,
+    "repSilver": 4247600,
+    "damage": 25539281,
+    "silver": 17037600,
+    "mercLost": 53,
+    "marches": 4,
+    "shape": "ladder"
+   },
+   {
+    "pick": "more-mercs",
+    "burn": 14,
+    "hired": 126,
+    "repDamage": 7096423,
+    "repSilver": 4259200,
+    "damage": 28140302,
+    "silver": 17072400,
+    "mercLost": 61,
+    "marches": 4,
+    "shape": "ladder"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 19,
+    "hired": 171,
+    "repDamage": 7987079,
+    "repSilver": 4294800,
+    "damage": 30693083,
+    "silver": 17179200,
+    "mercLost": 76,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 24,
+    "hired": 232,
+    "repDamage": 8238793,
+    "repSilver": 4458800,
+    "damage": 31714657,
+    "silver": 18768000,
+    "mercLost": 88,
+    "marches": 4,
+    "shape": "ms"
+   }
+  ],
+  "band": [
+   [
+    10,
+    5137894
+   ],
+   [
+    11,
+    6189687
+   ],
+   [
+    12,
+    5853016
+   ],
+   [
+    13,
+    6502716
+   ],
+   [
+    14,
+    7096423
+   ],
+   [
+    15,
+    6213688
+   ],
+   [
+    16,
+    6008727
+   ],
+   [
+    17,
+    7706408
+   ],
+   [
+    18,
+    7954721
+   ],
+   [
+    19,
+    7987079
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 20,
+    "hired": 184,
+    "damage": 7585307,
+    "silver": 4294800,
+    "seconds": 1034010,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 22,
+    "hired": 211,
+    "damage": 6955851,
+    "silver": 4520400,
+    "seconds": 1231080,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 25,
+    "hired": 243,
+    "damage": 8703595,
+    "silver": 5007200,
+    "seconds": 1656390,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 27,
+    "hired": 263,
+    "damage": 7671130,
+    "silver": 4903200,
+    "seconds": 1588290,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 35,
+    "hired": 334,
+    "damage": 6885554,
+    "silver": 5942800,
+    "seconds": 2511360,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 49,
+    "hired": 477,
+    "damage": 6187865,
+    "silver": 6290800,
+    "seconds": 2928960,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 19,
+    "hired": 172,
+    "damage": 7016333,
+    "silver": 4294800,
+    "seconds": 1034010,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 20,
+    "hired": 191,
+    "damage": 7506232,
+    "silver": 4520400,
+    "seconds": 1231080,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 22,
+    "hired": 217,
+    "damage": 7871265,
+    "silver": 5007200,
+    "seconds": 1656390,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 24,
+    "hired": 237,
+    "damage": 6838800,
+    "silver": 4903200,
+    "seconds": 1588290,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 32,
+    "hired": 308,
+    "damage": 6279731,
+    "silver": 5942800,
+    "seconds": 2511360,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 46,
+    "hired": 451,
+    "damage": 5714472,
+    "silver": 6290800,
+    "seconds": 2928960,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)",
+  "ms": 878,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 10,
+    "hired": 84,
+    "repDamage": 4074558,
+    "repSilver": 1948300,
+    "damage": 15533933,
+    "silver": 7682800,
+    "mercLost": 37,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 17,
+    "hired": 161,
+    "repDamage": 4773281,
+    "repSilver": 2203500,
+    "damage": 17630102,
+    "silver": 8448400,
+    "mercLost": 58,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 26,
+    "hired": 244,
+    "repDamage": 5366544,
+    "repSilver": 2705500,
+    "damage": 18744735,
+    "silver": 11240800,
+    "mercLost": 111,
+    "marches": 4,
+    "shape": "ms"
+   }
+  ],
+  "band": [
+   [
+    4,
+    2613210
+   ],
+   [
+    5,
+    2926178
+   ],
+   [
+    6,
+    3314477
+   ],
+   [
+    7,
+    3387893
+   ],
+   [
+    8,
+    3110814
+   ],
+   [
+    9,
+    3199996
+   ],
+   [
+    10,
+    4074558
+   ],
+   [
+    17,
+    4773281
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 7,
+    "hired": 65,
+    "damage": 3465527,
+    "silver": 1837900,
+    "seconds": 377130,
+    "repeats": 2
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 10,
+    "hired": 86,
+    "damage": 4229826,
+    "silver": 1948300,
+    "seconds": 473910,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 12,
+    "hired": 104,
+    "damage": 3844207,
+    "silver": 2063700,
+    "seconds": 574965,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 13,
+    "hired": 122,
+    "damage": 3541542,
+    "silver": 1995500,
+    "seconds": 523500,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 18,
+    "hired": 166,
+    "damage": 4254372,
+    "silver": 2203500,
+    "seconds": 709050,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 26,
+    "hired": 244,
+    "damage": 5366544,
+    "silver": 2705500,
+    "seconds": 1157100,
+    "repeats": 1
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 31,
+    "hired": 303,
+    "damage": 4987062,
+    "silver": 2845100,
+    "seconds": 1324620,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 8 troop types (elite)",
+    "burn": 7,
+    "hired": 64,
+    "damage": 3387893,
+    "silver": 1837900,
+    "seconds": 377130,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 10,
+    "hired": 84,
+    "damage": 4074558,
+    "silver": 1948300,
+    "seconds": 473910,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 12,
+    "hired": 102,
+    "damage": 3688939,
+    "silver": 2063700,
+    "seconds": 574965,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 13,
+    "hired": 120,
+    "damage": 3438030,
+    "silver": 1995500,
+    "seconds": 523500,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 17,
+    "hired": 161,
+    "damage": 4773281,
+    "silver": 2203500,
+    "seconds": 709050,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 23,
+    "hired": 218,
+    "damage": 4771665,
+    "silver": 2705500,
+    "seconds": 1157100,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 28,
+    "hired": 277,
+    "damage": 4524613,
+    "silver": 2845100,
+    "seconds": 1324620,
+    "repeats": 3
+   }
+  ]
+ },
+ {
+  "label": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
+  "ms": 473,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 12,
+    "hired": 96,
+    "repDamage": 3544681,
+    "repSilver": 2264700,
+    "damage": 12864487,
+    "silver": 8736800,
+    "mercLost": 43,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 15,
+    "hired": 143,
+    "repDamage": 4358805,
+    "repSilver": 2635500,
+    "damage": 15306859,
+    "silver": 9849200,
+    "mercLost": 52,
+    "marches": 4,
+    "shape": "ms"
+   },
+   {
+    "pick": "all-in",
+    "burn": 25,
+    "hired": 235,
+    "repDamage": 3370177,
+    "repSilver": 1974900,
+    "damage": 10899547,
+    "silver": 6653700,
+    "mercLost": 133,
+    "marches": 4,
+    "shape": "ms"
+   }
+  ],
+  "band": [
+   [
+    8,
+    2603524
+   ],
+   [
+    9,
+    2735954
+   ],
+   [
+    10,
+    2868384
+   ],
+   [
+    11,
+    2751707
+   ],
+   [
+    12,
+    3544681
+   ],
+   [
+    13,
+    2949313
+   ],
+   [
+    21,
+    3891819
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 7,
+    "hired": 55,
+    "damage": 2230444,
+    "silver": 1942700,
+    "seconds": 467940,
+    "repeats": 152
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 8,
+    "hired": 68,
+    "damage": 2763914,
+    "silver": 2044700,
+    "seconds": 557040,
+    "repeats": 113
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 12,
+    "hired": 96,
+    "damage": 3544681,
+    "silver": 2264700,
+    "seconds": 749190,
+    "repeats": 73
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 13,
+    "hired": 117,
+    "damage": 2949313,
+    "silver": 2217900,
+    "seconds": 718680,
+    "repeats": 61
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 21,
+    "hired": 194,
+    "damage": 3891819,
+    "silver": 2687500,
+    "seconds": 1135500,
+    "repeats": 35
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 36,
+    "hired": 347,
+    "damage": 2509790,
+    "silver": 2844600,
+    "seconds": 1324440,
+    "repeats": 16
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 7,
+    "hired": 55,
+    "damage": 2230444,
+    "silver": 1942700,
+    "seconds": 467940,
+    "repeats": 152
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 8,
+    "hired": 68,
+    "damage": 2763914,
+    "silver": 2044700,
+    "seconds": 557040,
+    "repeats": 113
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 12,
+    "hired": 96,
+    "damage": 3544681,
+    "silver": 2264700,
+    "seconds": 749190,
+    "repeats": 73
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 13,
+    "hired": 117,
+    "damage": 2949313,
+    "silver": 2217900,
+    "seconds": 718680,
+    "repeats": 61
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 21,
+    "hired": 194,
+    "damage": 3891819,
+    "silver": 2687500,
+    "seconds": 1135500,
+    "repeats": 35
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 36,
+    "hired": 347,
+    "damage": 2509790,
+    "silver": 2844600,
+    "seconds": 1324440,
+    "repeats": 16
+   }
+  ]
+ },
+ {
+  "label": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
+  "ms": 115,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 5,
+    "hired": 48,
+    "repDamage": 2423299,
+    "repSilver": 2264700,
+    "damage": 9182631,
+    "silver": 8736800,
+    "mercLost": 18,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "more-mercs",
+    "burn": 10,
+    "hired": 97,
+    "repDamage": 2793778,
+    "repSilver": 2687500,
+    "damage": 10294068,
+    "silver": 10005200,
+    "mercLost": 33,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 18,
+    "hired": 174,
+    "repDamage": 3976648,
+    "repSilver": 2844600,
+    "damage": 13842678,
+    "silver": 10476500,
+    "mercLost": 57,
+    "marches": 4,
+    "shape": "elite"
+   }
+  ],
+  "band": [
+   [
+    4,
+    2385168
+   ],
+   [
+    5,
+    1502083
+   ],
+   [
+    8,
+    2396472
+   ],
+   [
+    10,
+    2793778
+   ],
+   [
+    18,
+    3976648
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 3,
+    "hired": 28,
+    "damage": 1912734,
+    "silver": 1942700,
+    "seconds": 467940,
+    "repeats": 141
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 4,
+    "hired": 35,
+    "damage": 1987686,
+    "silver": 2044700,
+    "seconds": 557040,
+    "repeats": 104
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 5,
+    "hired": 48,
+    "damage": 2423299,
+    "silver": 2264700,
+    "seconds": 749190,
+    "repeats": 81
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 6,
+    "hired": 59,
+    "damage": 1698144,
+    "silver": 2217900,
+    "seconds": 718680,
+    "repeats": 66
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 10,
+    "hired": 97,
+    "damage": 2793778,
+    "silver": 2687500,
+    "seconds": 1135500,
+    "repeats": 36
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 18,
+    "hired": 174,
+    "damage": 3976648,
+    "silver": 2844600,
+    "seconds": 1324440,
+    "repeats": 16
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 3,
+    "hired": 28,
+    "damage": 1912734,
+    "silver": 1942700,
+    "seconds": 467940,
+    "repeats": 141
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 4,
+    "hired": 35,
+    "damage": 1987686,
+    "silver": 2044700,
+    "seconds": 557040,
+    "repeats": 104
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 5,
+    "hired": 48,
+    "damage": 2423299,
+    "silver": 2264700,
+    "seconds": 749190,
+    "repeats": 81
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 6,
+    "hired": 59,
+    "damage": 1698144,
+    "silver": 2217900,
+    "seconds": 718680,
+    "repeats": 66
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 10,
+    "hired": 97,
+    "damage": 2793778,
+    "silver": 2687500,
+    "seconds": 1135500,
+    "repeats": 36
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 18,
+    "hired": 174,
+    "damage": 3976648,
+    "silver": 2844600,
+    "seconds": 1324440,
+    "repeats": 16
+   }
+  ]
+ },
+ {
+  "label": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
+  "ms": 76,
+  "stops": [
+   {
+    "pick": "sweet-spot",
+    "burn": 5,
+    "hired": 50,
+    "repDamage": 2509413,
+    "repSilver": 2321200,
+    "damage": 10156338,
+    "silver": 9503600,
+    "mercLost": 25,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "more-mercs",
+    "burn": 8,
+    "hired": 80,
+    "repDamage": 2549800,
+    "repSilver": 2755200,
+    "damage": 10197781,
+    "silver": 10729000,
+    "mercLost": 34,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "steady-max",
+    "burn": 10,
+    "hired": 100,
+    "repDamage": 2873382,
+    "repSilver": 2755200,
+    "damage": 11196175,
+    "silver": 11037400,
+    "mercLost": 39,
+    "marches": 4,
+    "shape": "elite"
+   },
+   {
+    "pick": "all-in",
+    "burn": 11,
+    "hired": 110,
+    "repDamage": 3160072,
+    "repSilver": 2775600,
+    "damage": 11585381,
+    "silver": 11202400,
+    "mercLost": 41,
+    "marches": 4,
+    "shape": "ms"
+   }
+  ],
+  "band": [
+   [
+    7,
+    2307014
+   ],
+   [
+    8,
+    2468805
+   ],
+   [
+    9,
+    2630596
+   ],
+   [
+    10,
+    2792387
+   ]
+  ],
+  "rivals": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 3,
+    "hired": 29,
+    "damage": 1968177,
+    "silver": 1991000,
+    "seconds": 479175,
+    "repeats": 31
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 4,
+    "hired": 35,
+    "damage": 2007677,
+    "silver": 2095600,
+    "seconds": 570570,
+    "repeats": 22
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 5,
+    "hired": 50,
+    "damage": 2509413,
+    "silver": 2321200,
+    "seconds": 767640,
+    "repeats": 15
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 6,
+    "hired": 60,
+    "damage": 1732439,
+    "silver": 2273200,
+    "seconds": 736290,
+    "repeats": 11
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 10,
+    "hired": 100,
+    "damage": 2873382,
+    "silver": 2755200,
+    "seconds": 1164240,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 12,
+    "hired": 120,
+    "damage": 3131559,
+    "silver": 2916400,
+    "seconds": 1357680,
+    "repeats": 1
+   }
+  ],
+  "anchored": [
+   {
+    "what": "the sizer over 7 troop types (elite)",
+    "burn": 3,
+    "hired": 29,
+    "damage": 1968177,
+    "silver": 1991000,
+    "seconds": 479175,
+    "repeats": 31
+   },
+   {
+    "what": "the sizer over 6 troop types (elite)",
+    "burn": 4,
+    "hired": 35,
+    "damage": 2007677,
+    "silver": 2095600,
+    "seconds": 570570,
+    "repeats": 22
+   },
+   {
+    "what": "the sizer over 5 troop types (elite)",
+    "burn": 5,
+    "hired": 50,
+    "damage": 2509413,
+    "silver": 2321200,
+    "seconds": 767640,
+    "repeats": 15
+   },
+   {
+    "what": "the sizer over 4 troop types (elite)",
+    "burn": 6,
+    "hired": 60,
+    "damage": 1732439,
+    "silver": 2273200,
+    "seconds": 736290,
+    "repeats": 11
+   },
+   {
+    "what": "the sizer over 2 troop types (elite)",
+    "burn": 10,
+    "hired": 100,
+    "damage": 2807977,
+    "silver": 2916400,
+    "seconds": 1357680,
+    "repeats": 3
+   },
+   {
+    "what": "the sizer over 3 troop types (elite)",
+    "burn": 10,
+    "hired": 100,
+    "damage": 2873382,
+    "silver": 2755200,
+    "seconds": 1164240,
+    "repeats": 3
+   }
+  ]
+ }
+]

@@ -2,7 +2,7 @@
   "registeredBy": null,
   "registeredAt": null,
   "reading": "worst-opening",
-  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T04:07:22.045Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
+  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T06:30:54.633Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
   "scenarios": {
     "first-run army, Bear V ×1 (20 000 leadership)": {
       "stops": {
@@ -394,35 +394,15 @@
       "stops": {
         "silver-saver": {
           "marches": 4,
-          "damage": 22586784,
-          "silver": 13096400,
-          "gold": 3224,
-          "seconds": 3163410,
-          "burned": 42,
-          "perSilver": 1.7246559359824074,
-          "perHired": 537780.5714285715
+          "damage": 22531695,
+          "silver": 12539600,
+          "gold": 3272,
+          "seconds": 3029760,
+          "burned": 48,
+          "perSilver": 1.7968432007400554,
+          "perHired": 469410.3125
         },
         "sweet-spot": {
-          "marches": 4,
-          "damage": 27104076,
-          "silver": 18702500,
-          "gold": 3440,
-          "seconds": 4513410,
-          "burned": 45,
-          "perSilver": 1.4492220826092768,
-          "perHired": 602312.8
-        },
-        "more-mercs": {
-          "marches": 4,
-          "damage": 28986315,
-          "silver": 18585800,
-          "gold": 3912,
-          "seconds": 4484835,
-          "burned": 55,
-          "perSilver": 1.5595946905702203,
-          "perHired": 527023.9090909091
-        },
-        "steady-max": {
           "marches": 4,
           "damage": 31546458,
           "silver": 18790400,
@@ -431,6 +411,16 @@
           "burned": 67,
           "perSilver": 1.6788603755108993,
           "perHired": 470842.6567164179
+        },
+        "steady-max": {
+          "marches": 4,
+          "damage": 31963845,
+          "silver": 21035600,
+          "gold": 5784,
+          "seconds": 6529770,
+          "burned": 82,
+          "perSilver": 1.5195119226454201,
+          "perHired": 389802.98780487804
         }
       },
       "plan": {
@@ -444,15 +434,15 @@
         "perHired": 470842.6567164179
       },
       "ratios": {
-        "bestSizer": 0.9479753420606941,
+        "bestSizer": 0.9605178780277014,
         "externals": {
-          "TotalStack · M’s Preservation": 1.6628022423099806,
-          "TotalStack · priority search under M’s (averageDamage)": 1.3778867456959245,
-          "TotalStack · priority search under M’s (damagePerSilver)": 1.3778867456959245,
-          "TotalStack · Total Optimization": 1.6750055379617454,
-          "TotalStack · priority search under Elite (averageDamage)": 4.040541880211827,
-          "TotalStack · priority search under Elite (damagePerSilver)": 2.1679405921705674,
-          "TotalStack · Elite Preservation": 2.1679405921705674
+          "TotalStack · M’s Preservation": 1.6848025581461052,
+          "TotalStack · priority search under M’s (averageDamage)": 1.3961173824008688,
+          "TotalStack · priority search under M’s (damagePerSilver)": 1.3961173824008688,
+          "TotalStack · Total Optimization": 1.6971673139834225,
+          "TotalStack · priority search under Elite (averageDamage)": 4.09400175370241,
+          "TotalStack · priority search under Elite (damagePerSilver)": 2.196624326488515,
+          "TotalStack · Elite Preservation": 2.196624326488515
         }
       }
     },
@@ -586,6 +576,54 @@
           "TotalStack · priority search under Elite (damagePerSilver)": 1.3845866142402616,
           "TotalStack · Elite Preservation": 1.024173633264822
         }
+      }
+    },
+    "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)": {
+      "stops": {
+        "sweet-spot": {
+          "marches": 4,
+          "damage": 15533933,
+          "silver": 7682800,
+          "gold": 2440,
+          "seconds": 1798860,
+          "burned": 37,
+          "perSilver": 2.0219103712188264,
+          "perHired": 419836.02702702704
+        },
+        "steady-max": {
+          "marches": 4,
+          "damage": 17630102,
+          "silver": 8448400,
+          "gold": 4120,
+          "seconds": 2504280,
+          "burned": 58,
+          "perSilver": 2.086797736849581,
+          "perHired": 303967.275862069
+        },
+        "all-in": {
+          "marches": 4,
+          "damage": 18744735,
+          "silver": 11240800,
+          "gold": 7848,
+          "seconds": 5130960,
+          "burned": 111,
+          "perSilver": 1.6675623621094584,
+          "perHired": 168871.48648648648
+        }
+      },
+      "plan": {
+        "marches": 4,
+        "damage": 13473938,
+        "silver": 7351600,
+        "gold": 2032,
+        "seconds": 1508520,
+        "burned": 28,
+        "perSilver": 1.8327898688720823,
+        "perHired": 481212.0714285714
+      },
+      "ratios": {
+        "bestSizer": 0.9482517370021911,
+        "externals": {}
       }
     }
   }

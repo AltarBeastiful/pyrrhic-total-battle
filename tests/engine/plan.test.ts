@@ -1432,14 +1432,29 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own ac
        * reliable bar is behind the midpoint bar on every figure. A follow-up owns it; the floor below is the
        * measured figure so a change either way is news.
        */
+      /**
+       * **Re-based 2026-09-19 (S-97): the follow-up above, done — the steady max is the 17-chunk march
+       * again, and it is the same 4 773 281.** The coverage defect was the burn sweep: it walks **down**
+       * from the winner's own burn, so the winner's burn is the ceiling of the whole bar, and on the bad
+       * flip the winner is a deep ladder over every troop type — the shape with the **lowest** floor, which
+       * shelters the fewest hired units. The search now scores the **sheltered maximum over each prefix of
+       * the troop ranking** above that ceiling (`plan.ts`, "the top of the bar"), shape and all, and this
+       * camp's bar goes back to ARC1 2 058 - ARC2 1 141 - RD2 569 - RD3 319 with 161 hired: **4 773 281 a
+       * march for 2 203 500 silver at 17 chunks**, the exact figure S-94 measured the engine before it at,
+       * with the sweet spot at 10 chunks and 4 074 558. Archer I is still on the field and no pass put it
+       * there — the search fields it itself, as it has since S-94. The two floors below are the measured
+       * figures, so a change either way is news; `tests/engine/plan-criteria.test.ts` holds the rule this
+       * camp taught ("the bar's top rung is not beaten by a sheltered march the account can field at a
+       * higher burn") on all fifteen armies, and the camp is a benchmark scenario of its own since S-97.
+       */
       expect((most?.counts['archer-1'] ?? 0) > 0, 'Archer I is in the march').toBe(true);
       expect(
         Object.keys(most?.counts ?? {}).filter((id) => id.startsWith('archer') || id.startsWith('rider'))
           .length,
         'the march stands on more than one troop stack',
       ).toBeGreaterThan(1);
-      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(3_387_893);
-      expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(1_840_000);
+      expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(4_773_281);
+      expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(2_203_500);
       // And the recap prices it identically — the put-back is priced by `toMarch`, like every other march.
       expect(most?.repeat.damage).toBe(planMarch(input.request, most?.counts ?? {}).summary.minDamage);
       expect(most?.repeat.silver).toBe(planMarch(input.request, most?.counts ?? {}).summary.recovery.silver);
