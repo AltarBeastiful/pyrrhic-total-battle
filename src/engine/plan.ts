@@ -733,6 +733,78 @@ export function rankTroops(table: Effective[]): Effective[] {
 }
 
 /**
+ * **The hired ranking: what a point of a type's own pool buys, and whether that pool is contested at all**
+ * (S-99, 2026-09-19; the owner, on being shown that the plan pays a chunk of ten for every type the account
+ * holds: *"you can drop when the damage says so"*).
+ *
+ * The ranking exists to answer one question — *which type would the march give up first?* — so it is built
+ * out of what giving a type up actually **frees**: the room it stood in. Two readings, in that order.
+ *
+ * **1. Is the type's pool contested?** A pool is contested when the stocks its hired types carry ask for more
+ * of it than the camp houses — `Σ stock × cost > housing[pool]`, with an uncapped type's stock being the
+ * whole pool as the search reads it (`planCampaign`). On the benchmark's monster camp the twelve uncapped
+ * monster types ask **10 739** dominance against **900**, 11.9× the housing, while the two capped authority
+ * types ask **209** against **2 180**. Leaving a monster out gives the monsters above it room they can use;
+ * leaving a mercenary out gives back authority nobody is short of — the hunter is held at its cap of 83, not
+ * at what the pool would pay for. So every type of an uncontested pool ranks **above** every type of a
+ * contested one, whatever the quotient below says: a type that is costing nobody room is not the type a
+ * march gives up first. Without this reading the rate alone puts **Bear V last of fourteen** on that camp
+ * (1 781 damage an authority point against Epic Monster Hunter VI's 14 393) and the family would drop the
+ * bear before the water elemental, which frees 21 points of a pool with 1 971 to spare.
+ *
+ * **2. Inside a pool, damage per point of it.** `damagePerUnit / cost` is the exchange rate the pool itself
+ * sets — a pool is one shared constraint, so the type that buys the most damage a point is the type to fill
+ * it with — and `effectiveTable` computes both halves already.
+ *
+ * **The rate is per *pool*, so the raw quotient cannot be sorted across pools.** An authority point and a
+ * dominance point are not the same thing and no exchange rate between them exists anywhere in the game or in
+ * this file. What *is* comparable is each type's **standing inside its own pool**: its rate over the best
+ * rate that pool offers, so the first type of every pool stands at 1. That keeps each pool's own order
+ * exactly as the rate gives it (dividing a pool by one number does not re-order it) and never asks which of
+ * two pools is worth more.
+ *
+ * **Two rejected readings, and why** (measured on the monster camp, `tools/theorycraft/out/113-monster-
+ * economy.md` §D1). *Damage per chunk of ten* — what the stack costs to put back — is the same number for
+ * every type (a chunk is ten units whatever the pool), so it ranks on `damagePerUnit` alone and ignores the
+ * housing: it puts Ettin (208 320 a unit) above Epic Monster Hunter VI (57 570) and would drop the hunter
+ * first, the one stack carrying 3 972 384 of that march's damage. *Damage per unit of HP* is the troop
+ * ranking's rule (`rankTroops`) and answers a different question — which type makes the best sponge — not
+ * which is worth housing. The two readings above are the ones that reproduce the measurement: the four types
+ * they rank last are exactly the four the best sizer sequence never fields.
+ */
+export function rankHired(request: StackRequest, table: Effective[] = effectiveTable(request)): Effective[] {
+  const hired = table.filter((entry) => entry.pool !== 'leadership');
+  // The stock the search reads for each type, which is the cap the player entered or — for a type hired with
+  // no cap, every dominance monster among them — that type's own whole pool (`planCampaign`, `unlimited`).
+  const stockOf = (entry: Effective): number =>
+    request.caps[entry.id] ?? Math.floor(request.housing[entry.pool] / Math.max(1, entry.cost));
+  const asked = new Map<Pool, number>();
+  for (const entry of hired) {
+    asked.set(entry.pool, (asked.get(entry.pool) ?? 0) + stockOf(entry) * entry.cost);
+  }
+  const contested = (entry: Effective): boolean => (asked.get(entry.pool) ?? 0) > request.housing[entry.pool];
+  const perPoolPoint = (entry: Effective): number => entry.damagePerUnit / Math.max(1, entry.cost);
+  const bestInPool = new Map<Pool, number>();
+  for (const entry of hired) {
+    const rate = perPoolPoint(entry);
+    if (rate > (bestInPool.get(entry.pool) ?? 0)) bestInPool.set(entry.pool, rate);
+  }
+  // Its standing inside its own pool. A pool whose every type is worth nothing has no best to stand
+  // against; its types keep the kill order's own tie-break rather than dividing by zero.
+  const standing = (entry: Effective): number => {
+    const best = bestInPool.get(entry.pool) ?? 0;
+    return best > 0 ? perPoolPoint(entry) / best : 0;
+  };
+  return [...hired].sort(
+    (a, b) =>
+      Number(contested(a)) - Number(contested(b)) ||
+      standing(b) - standing(a) ||
+      perPoolPoint(b) - perPoolPoint(a) ||
+      a.rank - b.rank,
+  );
+}
+
+/**
  * One march, scored through the engine's own journal: the stacks are built from the counts exactly as
  * `simulateBattle` would build them, and the journal gives the damage and the strikes. This is cheaper than a
  * full simulation and just as exact — the round structure, the attack order and the lost strikes all come from
@@ -2207,7 +2279,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     /** The sizer shape this vector is the shelter of, where one is — its method's depth and its prefix. */
     shape?: { depth: number; prefix: number };
   }
-  const shelteredMaxima = (): ShelteredMax[] => {
+  const shelteredMaxima = (hiredPrefix?: ReadonlySet<string>): ShelteredMax[] => {
     const out: ShelteredMax[] = [];
     const seenShelter = new Set<string>();
     const take = (one: ShelteredMax): void => {
@@ -2218,8 +2290,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       out.push(one);
     };
     for (const marches of gridMarches) {
-      const anchors = mercTypes.map((entry) => anchorOf(entry.id, marches));
+      // **Over a prefix of the hired ranking** (S-99): a type outside it is anchored at nothing, so the
+      // tight ladder's shelter and the sizer's own fill both go to the types that are left — which is the
+      // whole of the family, the pool being what they were sharing.
+      const anchors = mercTypes.map((entry) =>
+        hiredPrefix && !hiredPrefix.has(entry.id) ? 0 : anchorOf(entry.id, marches),
+      );
       const whole = mercTypes.map((entry, index) => ({ entry, count: anchors[index] ?? 0 }));
+      if (whole.every((merc) => merc.count <= 0)) continue;
       for (let depth = 1; depth <= maxShelterDepth; depth += 1) {
         const floorHp = biggestFloor(depth);
         if (floorHp <= 0) continue;
@@ -2258,7 +2336,105 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     return out;
   };
-  if (input.shelteredMax === true) vectors.push(...shelteredMaxima().map((one) => one.vector));
+  /**
+   * The types the account holds a stock of, for S-58 B. Only the *stocked* ones — every hired type of every
+   * hired pool since S-96, which on a camp that has unlocked the monster tiers is the dominance table too:
+   * a monster carries no cap, so it enters here through `unlimited` and the pool is what bounds it.
+   *
+   * Read here rather than beside the band since S-99: the passes below ask which of their own marches field
+   * a *prefix* of them, and that question is asked while the search is still running.
+   */
+  const stocked = mercTypes.filter((entry) => (stock[entry.id] ?? 0) > 0 || unlimited.has(entry.id));
+  /** The hired types by what a point of their own pool buys, best first (S-99, `rankHired`). */
+  const hiredRanking = rankHired(request, table);
+  /**
+   * **The hired prefix family** (S-99): for each k, the shapes built from the first k hired types with the
+   * rest at **zero**.
+   *
+   * The grid crosses `CROSSED_TYPES` types against each other and rides every further one on a share of its
+   * own largest count — and neither list carries a zero once S-58 A's `tokenFloor` is on, so **no vector the
+   * search prices ever leaves a hired type out**. Every march it can offer therefore pays a chunk of ten for
+   * every type the account holds, whatever that type is worth: measured on the monster camp
+   * (`tools/theorycraft/out/113-monster-economy.md` §B), the four types worth least a point of dominance held
+   * **48 %** of the march's monster chunks for **5 %** of its damage, and the pool they were sharing is what
+   * the types above them could not fill.
+   *
+   * Two families are added per prefix, and they are the two the search already knows how to build:
+   *
+   *  - **the prefix's own anchors at each of the grid's shares** — the riding rule (`shares`), which is what
+   *    the grid does to every type it does not cross, asked of the prefix alone;
+   *  - **the sheltered maxima over the prefix** (`shelteredMaxima` above) — the tight ladders' floors and the
+   *    sizer's own shapes, which is where the gain is: `sizeStacks` fills a pool from the top of its own order
+   *    and stops, so with the tail at zero the types that are left get the whole pool and the bigger stacks.
+   *
+   * **The crossed product is not repeated per prefix**, on purpose: it is `5^CROSSED_TYPES` shapes a prefix
+   * and a fourteen-type camp would spend its whole budget on the thirteen of them. The family's job is to put
+   * the subspace in front of the hill-climb — which walks each type's count over `[1, …MERC_FRACTIONS, 0]` and
+   * so crosses it itself — and not to re-walk the grid thirteen times.
+   */
+  /** The stocked types in that order — the ranking S-58 B's cut is read along (`hiredCut`). */
+  const stockedRanked = hiredRanking.filter((entry) => stocked.includes(entry));
+  /**
+   * How many types of the stocked ranking a march fields, when what it fields is a **prefix** of it —
+   * `−1` when it leaves a hole, and the ranking's whole length when it fields every type the account holds.
+   * The one reading of "this march is a member of the prefix family" the search makes (S-99).
+   */
+  const prefixFielded = (fields: (id: string) => boolean): number => {
+    let length = 0;
+    while (length < stockedRanked.length && fields(stockedRanked[length]?.id ?? '')) length += 1;
+    for (let index = length; index < stockedRanked.length; index += 1) {
+      if (fields(stockedRanked[index]?.id ?? '')) return -1;
+    }
+    return length;
+  };
+  const hiredPrefixSets: ReadonlySet<string>[] = [];
+  for (let k = 1; k < hiredRanking.length; k += 1)
+    hiredPrefixSets.push(new Set(hiredRanking.slice(0, k).map((entry) => entry.id)));
+  /**
+   * Every sheltered maximum the search scores — the whole hired set's (S-97) and each prefix's (S-99) —
+   * computed once and kept, because both the grid below and the top-of-the-bar pass read them and the sizer
+   * calls behind them are the expensive half.
+   */
+  let shelteredWhole: ShelteredMax[] | null = null;
+  let shelteredPrefixes: ShelteredMax[] | null = null;
+  const shelteredOverWhole = (): ShelteredMax[] => (shelteredWhole ??= shelteredMaxima());
+  const shelteredOverPrefixes = (): ShelteredMax[] =>
+    (shelteredPrefixes ??= hiredPrefixSets.flatMap((prefix) => shelteredMaxima(prefix)));
+  if (input.shelteredMax === true) vectors.push(...shelteredOverWhole().map((one) => one.vector));
+  /** The prefix family's own vectors, scored after the search settles (see the pass below). */
+  const prefixVectors: { entry: Effective; count: number }[][] = [];
+  {
+    const seenPrefix = new Set<string>();
+    const takePrefix = (vector: { entry: Effective; count: number }[]): void => {
+      if (vector.every((merc) => merc.count <= 0)) return;
+      const key = vector.map((merc) => merc.count).join(',');
+      if (seenPrefix.has(key)) return;
+      seenPrefix.add(key);
+      prefixVectors.push(vector);
+    };
+    for (const prefix of hiredPrefixSets) {
+      for (const marches of gridMarches) {
+        for (const share of [1, ...MERC_FRACTIONS]) {
+          takePrefix(
+            mercTypes.map((entry) => ({
+              entry,
+              count: prefix.has(entry.id) ? Math.round(anchorOf(entry.id, marches) * share) : 0,
+            })),
+          );
+        }
+        // S-58 A's thrift end, read over the prefix: one chunk of each type that is in it.
+        if (tokenFloor) {
+          takePrefix(
+            mercTypes.map((entry) => ({
+              entry,
+              count: prefix.has(entry.id) ? Math.min(CHUNK, anchorOf(entry.id, marches)) : 0,
+            })),
+          );
+        }
+      }
+    }
+    for (const one of shelteredOverPrefixes()) takePrefix(one.vector);
+  }
 
   // the grid: every march count, then fractions of the largest count each type can carry at that count
   for (const vector of vectors) {
@@ -2464,30 +2640,38 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       }
       consider(candidate);
     };
-    for (let burn = topBurn - 1; burn >= 1; burn -= 1) {
-      if (stop()) break;
-      // the level as it has always been read: each type rounded up to a whole chunk
-      sweep(
-        winner.mercs.map((merc) => ({
-          entry: merc.entry,
-          count: Math.min(
-            stock[merc.entry.id] ?? 0,
-            merc.count <= 0 ? 0 : CHUNK * Math.ceil((merc.count * burn) / topBurn / CHUNK),
-          ),
-        })),
-      );
-      // and the same level per unit — a type the winner fields keeps at least one of itself, because a
-      // thriftier level is not a reason to drop a type the account holds (S-58 A's thrift end, here)
-      sweep(
-        winner.mercs.map((merc) => ({
-          entry: merc.entry,
-          count:
-            merc.count <= 0
-              ? 0
-              : Math.max(1, Math.min(stock[merc.entry.id] ?? 0, Math.round((merc.count * burn) / topBurn))),
-        })),
-      );
-    }
+    /** The burn ladder under one march: every level below its own, at both readings of a level. */
+    const walkDown = (from: { entry: Effective; count: number }[], fromBurn: number): void => {
+      for (let burn = fromBurn - 1; burn >= 1; burn -= 1) {
+        if (stop()) break;
+        // the level as it has always been read: each type rounded up to a whole chunk
+        sweep(
+          from.map((merc) => ({
+            entry: merc.entry,
+            count: Math.min(
+              stock[merc.entry.id] ?? 0,
+              merc.count <= 0 ? 0 : CHUNK * Math.ceil((merc.count * burn) / fromBurn / CHUNK),
+            ),
+          })),
+        );
+        // and the same level per unit — a type the march fields keeps at least one of itself, because a
+        // thriftier level is not a reason to drop a type the account holds (S-58 A's thrift end, here)
+        sweep(
+          from.map((merc) => ({
+            entry: merc.entry,
+            count:
+              merc.count <= 0
+                ? 0
+                : Math.max(
+                    1,
+                    Math.min(stock[merc.entry.id] ?? 0, Math.round((merc.count * burn) / fromBurn)),
+                  ),
+          })),
+        );
+      }
+    };
+    walkDown(winner.mercs, topBurn);
+
     /**
      * **The top of the bar** (S-97, 2026-09-19; the owner's own camp, *"Aydae alone"* at 4 975, is where it
      * was missing).
@@ -2540,7 +2724,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      * before this pass existed), so nothing new is said there; what is new is that a **rung** can too.
      */
     const frozen = best;
-    for (const one of shelteredMaxima()) {
+    // **And the same maxima over each hired prefix** (S-99): the top of the bar is the march that fields the
+    // most the troops shelter, and on a camp whose pool is shared a dozen ways that march is the one over the
+    // types worth housing — the rest at zero. Same pass, same freeze, one more family in it.
+    for (const one of [...shelteredOverWhole(), ...shelteredOverPrefixes()]) {
       if (stop()) break;
       if (burnOf(one.vector) <= topBurn) continue;
       sweep(one.vector);
@@ -2572,6 +2759,69 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         scale: 1,
       });
     }
+    /**
+     * **The hired prefix family** (S-99, 2026-09-19), scored where S-97's family is scored and under the
+     * same freeze, for the same measured reason.
+     *
+     * *Where.* The grid, the hill-climb and the burn ladder above are the search as it was, vector for
+     * vector: this pass runs after them and adds candidates to the **frontier**, so a prefix march is
+     * offered wherever it beats what the bar already has and nothing else about the search moves. Put in the
+     * grid instead — measured 2026-09-19, which is how this pass came to sit here — the extra candidates
+     * changed which shapes seeded the hill-climb on every army in the file, and the search is a walk over
+     * plateaus: the owner's export at 7 000 lost a hired type off its *repeated* march, his live camp of
+     * 2026-09-18 lost its silver saver, and the monster camp's own winner came out **3 M lower** than it does
+     * from here. The family is a set of shapes the search was short of, not a different search.
+     *
+     * *Frozen.* `best` is restored afterwards exactly as S-97 restores it, and the note there is the whole
+     * argument: the winner is the **band's yardstick** (`goal`, `notToken`), so letting these marches win
+     * moves the floor every offered plan is measured against and empties the thrift end with it. Measured on
+     * this camp with the freeze lifted: the sweet spot rose to 2.563 damage a silver and the bar's own
+     * silver saver — 13 705 087 for 5 633 900 at three chunks — stopped clearing it, so a five-stop bar
+     * became three. Frozen, the yardstick is the one the search settled on and the thrift end keeps its
+     * levels.
+     *
+     * Three things are scored, and they are the three the family is made of: the prefix's own **vectors**
+     * (its anchors at each of the grid's shares, and its sheltered maxima), the sizer **shape** that
+     * shelters each of those maxima — the top-of-the-bar pass above scores that shape only for a vector
+     * burning *more* than the winner, and a prefix usually burns less, which is exactly where its marches
+     * are — and the **burn ladder under the best of them**, so the thrift end is offered over the types the
+     * damage kept as well as over all of them.
+     */
+    for (const vector of prefixVectors) {
+      if (stop()) break;
+      const candidate = evaluateVector(vector);
+      if (candidate) consider(candidate);
+    }
+    for (const one of shelteredOverPrefixes()) {
+      if (stop()) break;
+      const candidate = evaluateVector(one.vector);
+      if (candidate) consider(candidate);
+      const shape = one.shape;
+      if (!shape) continue;
+      const counts: Record<string, number> = {};
+      for (const merc of one.vector) counts[merc.entry.id] = merc.count;
+      const scored = score(one.marches, counts, shape.depth, 1, input.silverBudget, shape.prefix);
+      if (!scored || scored.rungs.length < 2) continue;
+      consider({
+        marches: one.marches,
+        mercs: scored.mercs,
+        rungs: scored.rungs,
+        march: scored.march,
+        finale: scored.finale?.march ?? null,
+        finaleRungs: scored.finale?.rungs ?? [],
+        finaleMercs: scored.finale?.mercs ?? [],
+        total: scored.total,
+        depth: shape.depth,
+        scale: 1,
+      });
+    }
+    const prefixBest = frontier.reduce<Candidate | null>((held, candidate) => {
+      const fielded = new Set(candidate.mercs.filter((merc) => merc.count > 0).map((merc) => merc.entry.id));
+      const length = prefixFielded((id) => fielded.has(id));
+      if (length <= 0 || length >= stockedRanked.length) return held;
+      return !held || candidate.total > held.total ? candidate : held;
+    }, null);
+    if (prefixBest) walkDown(prefixBest.mercs, burnOf(prefixBest.mercs));
     best = frozen;
   }
 
@@ -2719,12 +2969,6 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     Object.entries(counts).reduce((sum, [id, count]) => sum + (mercIds.has(id) ? count : 0), 0);
   const goal = { hired: hiredOf(chosenPoint.counts), perSilver: chosenPoint.damagePerSilver };
   /**
-   * The types the account holds a stock of, for S-58 B. Only the *stocked* ones — every hired type of every
-   * hired pool since S-96, which on a camp that has unlocked the monster tiers is the dominance table too:
-   * a monster carries no cap, so it enters here through `unlimited` and the pool is what bounds it.
-   */
-  const stocked = mercTypes.filter((entry) => (stock[entry.id] ?? 0) > 0 || unlimited.has(entry.id));
-  /**
    * Whether a **campaign** fields a type at all: its repeated march, its final march, or — for the `all-in`
    * stop, whose marches all differ — any march of its sequence. S-58 B is a question about the plan and not
    * about one of its marches: a type the horizon outruns is spent in the finale rather than in the repeat
@@ -2734,6 +2978,24 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     (row.counts[id] ?? 0) > 0 ||
     (row.finaleCounts?.[id] ?? 0) > 0 ||
     (row.sequence?.some((march) => (march[id] ?? 0) > 0) ?? false);
+  /**
+   * **What S-58 B asks of a plan, said exactly** (S-99, 2026-09-19).
+   *
+   * *"A plan the player is offered fields a little of everything they hold"* is a sentence about the march he
+   * **sends**, so a required type has to be on the march the plan repeats — or, for the `all-in`, on the
+   * first march of its sequence, the one the bar prices and draws. The campaign-wide reading
+   * (`fieldsInCampaign`) is kept for the one case it was written for and no other: a type the **horizon
+   * outruns** (`outrun`, S-89), which no count of can last the repeats and which the plan therefore spends in
+   * the finale. A plan that spends it there has no hole in it; a plan that leaves a type it *could* repeat to
+   * the finale has one.
+   *
+   * It read the campaign for every type until S-99, and nothing in the search had ever offered the
+   * difference: measured on the owner's export at 7 000 the day the prefix family went in, the *"more
+   * mercs"* rung became a march fielding no legionary at all with 33 of them in the finale three marches
+   * later — a hole the band was letting through, on the army whose bar the rule was written for.
+   */
+  const fieldsRequired = (row: PlanTotals, id: string): boolean =>
+    outrun(id) ? fieldsInCampaign(row, id) : ((row.sequence?.[0] ?? row.counts)[id] ?? 0) > 0;
   /**
    * **The token-field arm**, and the one place its yardstick is decided (`CampaignInput.bandHired`, so
    * experiments 108 and 112 run every reading of it on one engine). `damage` is the rule since S-95 and the
@@ -2750,15 +3012,120 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (rule.mode === 'winner') return hiredOf(row.counts) * 2 >= goal.hired;
     return row.repeat.damage * 2 >= chosenPoint.repeat.damage;
   };
+  /**
+   * **The cut: where S-58 B stops asking** (S-99, 2026-09-19; the owner, on the monster camp's chunk bill:
+   * *"you can drop when the damage says so"*).
+   *
+   * S-58 B is *"a plan the player is offered fields a little of everything they hold"* (2026-09-18:
+   * *"mercs still are being left out, which I find odd — I prefer to have multiple stacks of mercs, it seems
+   * to work best"*), and on every army he plays it is right: a type left out of the bar was a type the grid's
+   * zero sample had thrown away for nothing. It stopped being right the day the plan could field a
+   * **dominance pool**, where a dozen uncapped types share 900 points and asking for a little of each is an
+   * order to split the pool a dozen ways and pay a chunk of ten for every split — on the monster camp, 48 %
+   * of a march's monster chunks for 5 % of its damage (`tools/theorycraft/out/113-monster-economy.md` §B).
+   *
+   * So the rule is kept and given a **cut**, and the cut is measured rather than set:
+   *
+   *  - the set it is measured over is **the plans the bar could offer if this rule let it** — the undominated
+   *    frontier through the band's other three arms (`notToken`, the silver arm, more than one troop stack).
+   *    Not every candidate the search priced: a one-troop-stack march is not an answer this rule has any
+   *    business weighing, and on most armies it out-hits the winner;
+   *  - a plan belongs to **prefix k** when the stocked types its repeated march fields are exactly the first
+   *    k of `hiredRanking`. A hole in the middle is no prefix and is weighed with neither family;
+   *  - **k is earned** when the strongest campaign of prefix k stands at least as high as the strongest
+   *    campaign over **all** of them on the four readings the bar prints — total damage, damage a silver,
+   *    damage a hired unit burned and damage a dragon coin — and higher on one. That is the damage saying
+   *    so, in the shape S-93 says it in and in the currencies the owner's own goal line is read in;
+   *  - the cut is the **smallest** earned k — the deepest drop the damage pays for — and the whole hired set
+   *    when none is earned, which is every army in this repo that houses no dominance pool (measured, §D of
+   *    the same experiment: no prefix of any of them beats the bar on damage at all).
+   *
+   * **Read on the march a plan repeats**, not on the campaign: a finale is sized from whatever the repeats
+   * left and fields it, so campaign-wide every plan on every army fields every type and no prefix could ever
+   * be earned. What S-58 B then *asks* of a plan is still the campaign-wide reading it has always asked
+   * (`fieldsInCampaign` above); this is only how the two families are told apart when they are weighed.
+   *
+   * A type **above** the cut is still asked for on every plan the bar offers. A type below it may be left
+   * out — or fielded, the search decides — and a plan with a hole *above* the cut is refused as it was.
+   */
+  const hiredCut = ((): number => {
+    if (!refuseDroppedTypes || stockedRanked.length < 2) return stockedRanked.length;
+    const offerable = undominated.filter(
+      (row) =>
+        notToken(row) &&
+        row.damagePerSilver * 2 >= goal.perSilver &&
+        Object.keys(row.counts).filter((id) => !mercIds.has(id)).length > 1,
+    );
+    /** The prefix of the stocked ranking a plan's repeated march fields, or −1 when it leaves a hole. */
+    const prefixOf = (row: PlanTotals): number => {
+      const march = row.sequence?.[0] ?? row.counts;
+      return prefixFielded((id) => (march[id] ?? 0) > 0);
+    };
+    const strongest = (k: number): PlanTotals | undefined =>
+      offerable.reduce<PlanTotals | undefined>(
+        (held, row) => (prefixOf(row) === k && (!held || row.totalDamage > held.totalDamage) ? row : held),
+        undefined,
+      );
+    const whole = strongest(stockedRanked.length);
+    // Nothing the bar could offer fields every type the account holds: there is no full-set answer for a
+    // prefix to beat, and the band's own fallback (an empty band draws from the unbanded frontier) handles
+    // it, as before.
+    if (!whole) return stockedRanked.length;
+    const readings = (row: PlanTotals): number[] => [
+      row.totalDamage,
+      row.damagePerSilver,
+      row.damagePerMercenary,
+      row.damagePerDragonCoin,
+    ];
+    const mark = readings(whole);
+    for (let k = 1; k < stockedRanked.length; k += 1) {
+      const best = strongest(k);
+      if (!best) continue;
+      const theirs = readings(best);
+      if (
+        theirs.every((value, index) => value >= (mark[index] ?? 0)) &&
+        theirs.some((value, index) => value > (mark[index] ?? 0))
+      ) {
+        return k;
+      }
+    }
+    return stockedRanked.length;
+  })();
+  /** The stocked types every plan the bar offers still has to field: the ranking down to the cut (S-99). */
+  const required = stockedRanked.slice(0, hiredCut);
+  /**
+   * **What a stop may fill with** (S-99): every hired type the account holds, less the ones under the cut.
+   * Identical to the whole hired set on every army that earns no cut, which is every army in this repo that
+   * houses no dominance pool.
+   *
+   * It is read by the `all-in` alone, and that stop is where it has to be read. *"All the mercs you can
+   * safely field"* is a sentence about the stock worth fielding: with nothing to stop it the stop fills the
+   * pool with the types the cut has just said cost more than they bring, and on the monster camp that is the
+   * difference between a stop the bar carries and one the steady max beats on damage, silver and burn at
+   * once. Every other stop is a plan off the frontier, where the cut is a **permission** and the search
+   * decides — a type under it may be fielded or left out, whichever the damage prefers.
+   */
+  const fillable = new Set(
+    mercTypes
+      .filter((entry) => !stocked.includes(entry) || required.includes(entry))
+      .map((entry) => entry.id),
+  );
+  /**
+   * The hired units a march fields **of the stock a stop fills with** (S-99) — `hiredOf` read over
+   * `fillable` instead of over every hired type. It is what the `all-in`'s offer rule compares, on both
+   * sides: the stop fills the pool with the types the cut keeps, so counting the types under the cut on the
+   * steady max's side of that comparison and not on the all-in's would be weighing two different stocks. The
+   * same figure as `hiredOf` on every army that earns no cut.
+   */
+  const filledOf = (counts: Record<string, number>): number =>
+    Object.entries(counts).reduce((sum, [id, count]) => sum + (fillable.has(id) ? count : 0), 0);
   const inBand = (row: PlanTotals): boolean =>
     notToken(row) &&
     row.damagePerSilver * 2 >= goal.perSilver &&
     Object.keys(row.counts).filter((id) => !mercIds.has(id)).length > 1 &&
-    // S-58 B (`refuseDroppedTypes`): a plan the player is offered fields a little of everything they hold.
-    // The band can empty out if the *winner* drops a type; the fallback below draws the four answers from the
-    // unbanded frontier rather than handing back an empty bar, which is the graceful degradation the other
-    // three refusals have.
-    (!refuseDroppedTypes || stocked.every((entry) => fieldsInCampaign(row, entry.id)));
+    // S-58 B (`refuseDroppedTypes`), down to the cut S-99 measures: a plan the player is offered fields a
+    // little of everything they hold, bar the types the damage says to drop (`required`).
+    (!refuseDroppedTypes || required.every((entry) => fieldsRequired(row, entry.id)));
 
   /**
    * **The plans the four answers are drawn from.** The band is the owner's instruction of 2026-09-15 —
@@ -2921,8 +3288,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         counts,
         ...(row.sequence ? { sequence: [counts, ...row.sequence.slice(1)] } : {}),
       };
-      // S-58 B: the bar never offers a plan with a hole in it, and MS may size a hired stack down to nothing.
-      if (refuseDroppedTypes && !stocked.every((entry) => fieldsInCampaign(campaign, entry.id))) continue;
+      // S-58 B, down to S-99's cut: the bar never offers a plan with a hole in it above the cut, and MS may
+      // size a hired stack down to nothing.
+      if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(campaign, entry.id))) continue;
       // The shelter, read back off the march this pass will price (S-87; it was the `all-in`'s own test alone,
       // because that stop is *"all the mercs you can safely field"*). `shelterUnder` has just lowered every
       // hired stack under the lowest rung, so this refuses only a march it could not: one whose first hired
@@ -3061,8 +3429,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         const counts: Record<string, number> = {};
         for (const stack of fields) counts[stack.entry.id] = stack.count;
         const campaign: PlanTotals = { ...row, counts };
-        // S-58 B: the bar never offers a plan with a hole in it.
-        if (refuseDroppedTypes && !stocked.every((entry) => fieldsInCampaign(campaign, entry.id))) continue;
+        // S-58 B, down to S-99's cut: the bar never offers a plan with a hole in it above the cut.
+        if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(campaign, entry.id))) continue;
         const march = toMarch(rungs, mercs, marchOf(fields, enemyStacks));
         if (
           march.damage < row.repeat.damage ||
@@ -3575,7 +3943,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         const counts: Record<string, number> = {};
         let any = false;
         for (const entry of mercTypes) {
-          const count = Math.floor((remaining[entry.id] ?? 0) * share);
+          // S-99: the types under the cut are not filled with — see `fillable`.
+          const count = fillable.has(entry.id) ? Math.floor((remaining[entry.id] ?? 0) * share) : 0;
           counts[entry.id] = count;
           if (count > 0) any = true;
         }
@@ -3795,7 +4164,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * and the point of the stop is that the bar can now show it as one; on the owner's own account it is the
    * campaign that fields 254 hired units where the steady max fields 128.
    */
-  if (allIn && top && hiredOf(allIn.counts) > hiredOf(top.counts)) offer(allIn, 'all-in');
+  if (allIn && top && filledOf(allIn.counts) > filledOf(top.counts)) offer(allIn, 'all-in');
 
   /**
    * **Round two: the stops the ladder did not carry.** The pass above improved the burn ladder, which is where
@@ -3812,14 +4181,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * had gone.
    */
   if (input.putBack !== undefined) {
-    const topHired = top ? hiredOf(top.counts) : 0;
+    const topHired = top ? filledOf(top.counts) : 0;
     for (let index = 0; index < stops.length; index += 1) {
       const stop = stops[index] as PlanRow;
       if (stop.putBack !== undefined) continue;
       // S-93, the same three steps as on the ladder. `tighterShape` answers nothing for the `all-in` (its
       // marches all differ and its own builder scores these prefix shapes); `keeps` holds that stop's own
       // rule through the put-back, as it always did.
-      const keeps = (row: PlanTotals): boolean => stop.pick !== 'all-in' || hiredOf(row.counts) > topHired;
+      const keeps = (row: PlanTotals): boolean => stop.pick !== 'all-in' || filledOf(row.counts) > topHired;
       const first = tighterShape(stop);
       if (first && keeps(first)) stops[index] = { ...stop, ...first };
       const before = stops[index] as PlanRow;

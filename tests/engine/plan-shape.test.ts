@@ -234,7 +234,13 @@ describe('the search does not get worse', () => {
     // adds **dominate more rows than they add** — the undominated set comes to five fewer. Every figure
     // above is unmoved to the unit: the plan is the same plan and the bar is the same four stops, so this
     // army's top rung was never one of the short ones.
-    expect(PLAN.leftOut).toBe(283);
+    // 283 → **322** on 2026-09-19 (S-99), the hired prefix family: the plan over a prefix of the hired
+    // ranking is scored beside the whole-set shapes, under the same freeze S-97's family is scored under, so
+    // the frontier carries 39 more undominated plans and the bar still carries the same four stops. Every
+    // figure above is unmoved to the unit: this test asks `planCampaign` for the bare search — no
+    // `planFixes`, so S-58 B is off and there is no cut to earn — and the family's marches are simply 39
+    // more plans nothing else dominates. The plan is the same plan and the bar is the same four stops.
+    expect(PLAN.leftOut).toBe(322);
     // Moved 18 → 19 on 2026-09-15, when the grid stopped crossing every mercenary type against every other
     // (`CROSSED_TYPES`, which is what made an account fielding monsters hang) and the climb took the
     // per-type shares over. The plan is the same plan — every figure above is unmoved — and the curve gained

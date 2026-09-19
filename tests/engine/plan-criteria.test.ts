@@ -21,7 +21,9 @@ import { CAMPAIGN } from '@/config';
 import { GROUPS, getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan, PlanRow, PlanTotals } from '@/engine/plan';
+import { effectiveTable, lastsMarches, rankHired } from '@/engine/plan';
 import { chunks } from '@/engine/recovery';
+import { sizeStacks } from '@/engine/stacker';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import { parseImport } from '@/share/exportImport';
 import { buildPlanRequest } from '@/state/derive';
@@ -1658,6 +1660,140 @@ describe('no stop of the bar is beaten by another stop of the same bar', () => {
           }
         }
         expect(failures.join('\n'), `stops beaten by another stop\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **No stop is beaten on damage, silver and burn at once by the same march with its cheapest hired type left
+ * out** (S-99, 2026-09-19; the owner, shown where the plan's monster chunks go: *"you can drop when the
+ * damage says so"*).
+ *
+ * The bar's whole claim at a stop is that it is the best march at that price. Until S-99 no vector the search
+ * priced ever left a hired type out — the grid crosses `CROSSED_TYPES` types and rides every further one on a
+ * share of its own largest count, and with S-58 A's `tokenFloor` on neither list carries a zero — so every
+ * march the bar could offer paid a chunk of ten for every type the account holds, whatever that type was
+ * worth. On the benchmark's monster camp, where a dozen uncapped monster types share a **900**-dominance
+ * pool, the four types worth least a point of dominance held **48 %** of a march's monster chunks for **5 %**
+ * of its damage (`tools/theorycraft/out/113-monster-economy.md` §B).
+ *
+ * This is that sentence as a test, and it is the **prefix** reading: a stop's cheapest hired type is the last
+ * of `rankHired` among the types its repeated march fields — the one that buys the least damage a point of
+ * its own pool — and the rival is the march the sizer builds over the stop's own troop types with that type
+ * left out and the rest free to fill the pool it was in. The stop loses when the rival is behind it on
+ * **none** of damage, silver and the hired stock burned, and ahead on one: that is the same reading S-93's
+ * criterion above makes, on the three figures the bar is drawn from.
+ *
+ * The rival is built from the **sizer and the shelter alone** (`sizeStacks`, then every hired stack lowered
+ * under the lowest troop stack), never from the plan's search, so it is an independent yardstick; it has to
+ * be a march the account can repeat as often as the stop does (`lastsMarches`), and it is priced by
+ * `planMarch`, which is the recap's arithmetic.
+ *
+ * **On HEAD (c4eeb3f) it fails on the monster camp**, and there alone of the sixteen armies — the `all-in`,
+ * the one stop of that bar that fields every type the camp holds at the count the troops shelter:
+ *
+ * ```
+ * all-in (21,140,179 damage, 8,862,600 silver, 9 burned) is beaten by the same march without
+ *   water-elemental — the sizer over 10 troop types (elite) (23,017,203, 8,840,200, 9)
+ * ```
+ *
+ * Water Elemental is the last of `rankHired` there: 4 636 damage a unit for **3** dominance apiece against
+ * Flaming Centaur's 226 600 for 21 — 1 545 damage a point against 10 790, the worst standing in the one pool
+ * the camp over-subscribes. Leaving it out is worth **1 877 024** damage a march for 22 400 silver *less* and
+ * not a chunk more of the hired stock.
+ */
+describe('no stop is beaten by the same march with its cheapest hired type left out', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const table = effectiveTable(scenario.request);
+        const ranked = rankHired(scenario.request, table);
+        const hp = new Map(table.map((entry) => [entry.id, entry.hp] as const));
+        const byId = new Map(scenario.request.units.map((unit) => [unit.id, unit]));
+        const failures: string[] = [];
+        for (const stop of planned.alternatives) {
+          const march = stop.sequence?.[0] ?? stop.counts;
+          const fielded = ranked.filter((entry) => (march[entry.id] ?? 0) > 0);
+          // A march fielding one hired type has nothing to leave out and still be a march the bar offers.
+          if (fielded.length < 2) continue;
+          const dropped = fielded[fielded.length - 1] as (typeof fielded)[number];
+          const keptHired = fielded.slice(0, -1).map((entry) => entry.id);
+          const troopIds = Object.keys(march).filter(
+            (id) => (march[id] ?? 0) > 0 && byId.get(id)?.pool === 'leadership',
+          );
+          const repeats = repeatsOf(stop);
+          const keep = new Set([...troopIds, ...keptHired]);
+          for (const method of ['elite', 'ms', 'msRelaxed'] as const) {
+            const sized = sizeStacks({
+              ...scenario.request,
+              units: scenario.request.units.filter((unit) => keep.has(unit.id)),
+              options: {
+                ...scenario.request.options,
+                method: method === 'msRelaxed' ? 'ms' : method,
+                relaxedPreservation: method === 'msRelaxed',
+              },
+            });
+            const counts: Record<string, number> = {};
+            for (const stack of sized.stacks) if (stack.count > 0) counts[stack.unitId] = stack.count;
+            const troopHp = troopIds.map((id) => (counts[id] ?? 0) * (hp.get(id) ?? 0)).filter((x) => x > 0);
+            // The band's third criterion: a march on one troop stack is not a plan the bar would offer.
+            if (troopHp.length < 2) continue;
+            const floor = Math.min(...troopHp);
+            for (const id of keptHired) {
+              const unitHp = hp.get(id) ?? 0;
+              if (unitHp <= 0) continue;
+              const most = Math.max(0, Math.ceil(floor / unitHp) - 1);
+              if ((counts[id] ?? 0) > most) counts[id] = most;
+            }
+            // Every kept type still on the field, and the dropped one still off it: anything else is a
+            // different march and not this stop's own answer with one type left out.
+            if (!keptHired.every((id) => (counts[id] ?? 0) > 0)) continue;
+            if ((counts[dropped.id] ?? 0) > 0) continue;
+            // And the account has to be able to send it as often as the stop repeats.
+            const lasts = Math.min(
+              ...keptHired.map((id) => {
+                const held = scenario.request.caps[id];
+                return held === undefined ? Infinity : lastsMarches(held, counts[id] ?? 0);
+              }),
+            );
+            if (lasts < repeats) continue;
+            const { summary } = planMarch(scenario.request, counts);
+            const burn = Object.entries(counts).reduce(
+              (sum, [id, count]) =>
+                count > 0 && byId.get(id)?.pool === 'authority' ? sum + chunks(count) : sum,
+              0,
+            );
+            const damage = summary.minDamage;
+            const silver = summary.recovery.silver;
+            const beats =
+              damage >= stop.repeat.damage &&
+              silver <= stop.repeat.silver &&
+              burn <= stop.repeat.mercLost &&
+              (damage > stop.repeat.damage || silver < stop.repeat.silver || burn < stop.repeat.mercLost);
+            if (!beats) continue;
+            failures.push(
+              `${stop.pick} (${stop.repeat.damage.toLocaleString('en-US')} damage, ` +
+                `${stop.repeat.silver.toLocaleString('en-US')} silver, ${String(stop.repeat.mercLost)} ` +
+                `burned) is beaten by the same march without ${dropped.id} — the sizer over ` +
+                `${String(troopIds.length)} troop types (${method}) ` +
+                `(${Math.round(damage).toLocaleString('en-US')}, ${silver.toLocaleString('en-US')}, ` +
+                `${String(burn)})`,
+            );
+            break;
+          }
+        }
+        expect(
+          failures.join('\n'),
+          `stops beaten by the same march with its cheapest hired type left out\n${failures.join('\n')}`,
+        ).toBe('');
       },
       300_000,
     );

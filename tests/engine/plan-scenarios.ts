@@ -924,6 +924,54 @@ export function commonScenarios(): Scenario[] {
       // as an artefact of the burn rather than a loss: M's Preservation fields no hunter at all, so it burns
       // **4** chunks over four marches against the plan's 18 at its thrift end, and a damage-a-hired ratio
       // whose denominator is four is not a march anyone sends.
+      //
+      // ---- **The hired prefix family, S-99 (2026-09-19)** ---------------------------------------------
+      //
+      // The owner, shown where the plan's monster chunks go (experiment 113): *"you can drop when the damage
+      // says so."* The search gained a family of shapes it had never priced — the plan over a **prefix** of
+      // the hired ranking, the types worth least a point of their own pool at **zero** — and S-58 B gained a
+      // **cut**, the point below which it stops asking for a little of everything. This camp is the one army
+      // in the file that earns a cut — **10 of its 14** hired types, with Stone Gargoyle, Emerald Dragon,
+      // Battle Boar and Water Elemental below it: the four worth least a point of dominance held 48 % of a
+      // march's monster chunks for 5 % of its damage, and the pool they were sharing is what the eight above
+      // them could not fill.
+      //
+      // **The bar, before → after** (S-103's snapshot 19 against snapshot 20, campaign figures over the
+      // horizon — damage / silver / burn):
+      //
+      //   | stop         | damage                     | silver                  | burn     |
+      //   | silver-saver | 61 696 768 → **not offered** | 25 764 300 → —        | 18 → —   |
+      //   | sweet-spot   | 77 280 595 → **89 196 808**  | 35 450 400 → 35 230 800 | 24 → 24 |
+      //   | more-mercs   | 78 871 786 → **93 298 414**  | 35 450 400 → 35 230 800 | 26 → 26 |
+      //   | steady-max   | 95 348 743 → **97 458 367**  | 35 458 800 → 36 436 800 | 32 → 32 |
+      //   | all-in       | 82 845 061 → **102 971 902** | 35 450 400 → 37 316 000 | 33 → 34 |
+      //
+      // Four stops gain 15.4 %, 18.3 %, 2.2 % and 24.3 % of their damage; the hardest campaign on the bar
+      // goes from 95 348 743 to **102 971 902**, which is **0.984** of the best sizer sequence's four-march
+      // damage where it was 0.911, and its monster chunks fall from 84 a campaign to 48. The `all-in` is the
+      // march experiment 113 §D1 measured by narrowing the *request* to the top eight monster types
+      // (102 971 902 for 37 316 000 on 48 monster and 30 soldier chunks) — the search reaches it by itself
+      // now.
+      //
+      // **What each stop fields**, before → after: the five stops of snapshot 19 each stood **13 or 14** of
+      // the camp's 14 hired types; the four of snapshot 20 stand **11** (sweet spot and more mercs — the
+      // ranking's first eleven, Emerald Dragon, Battle Boar and Water Elemental left at home) and **10**
+      // (steady max and all-in, Stone Gargoyle left out as well). The types they drop are the bottom of
+      // `rankHired`: 1 545 to 1 852 damage a point of dominance against Flaming Centaur's 10 790.
+      //
+      // **The four standings against Total Optimization** rise with it — 1.1951 → **1.226** a silver,
+      // 1.5469 → **1.565** a hired soldier, 1.1953 → **2.259** a monster and 1.2184 → **1.512** a dragon
+      // coin. The pins below are left where S-103 measured them: they are floors, and a floor a run clears
+      // by more than it used to is not a reason to raise the floor without the owner.
+      //
+      // **`stops` stays 5 and fails (the bar offers 4): a lost stop is a trade only the owner registers.** It is a trade, not a saving. The stop that goes is the **silver saver**, and
+      // it goes because the sweet spot got better: that stop is offered only when a march left of the sweet
+      // spot is *at least as efficient a silver* as it (`leastSilver`, `plan.ts`), and the sweet spot's own
+      // damage a silver on this camp rose with the family while the thrift end's did not — the cheapest
+      // rungs are mostly troops, and dropping a monster type from a march that is already small buys little.
+      // The bar keeps its four other stops at the same four burn levels and every one of them hits harder.
+      // Whether a thrift stop is worth 15 % of the sweet spot's damage is the owner's call; nothing on this
+      // camp is a registered baseline and `plan-baseline.proposed.json` carries the measured bar.
       pinned: {
         refuses: false,
         stops: 5,
