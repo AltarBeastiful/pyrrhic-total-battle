@@ -1,5 +1,5 @@
 {
- "run": "2026-09-19T00:24:00.297Z",
+ "run": "2026-09-19T00:18:22.166Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,7 +7,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 37,
+   "planMs": 42,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -77,7 +77,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 46,
+   "planMs": 40,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -148,7 +148,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 42,
+   "planMs": 39,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -315,7 +315,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 55,
+   "planMs": 62,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -495,7 +495,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 105,
+   "planMs": 89,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -687,7 +687,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 797,
+   "planMs": 763,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -916,7 +916,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1751,
+   "planMs": 1673,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -1122,7 +1122,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1310,
+   "planMs": 1237,
    "rows": [
     {
      "name": "Tier ladder · all types",
@@ -1545,7 +1545,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 745,
+   "planMs": 711,
    "rows": [
     {
      "name": "Tier ladder · all types",

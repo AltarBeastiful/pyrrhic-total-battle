@@ -21,6 +21,9 @@ import { CAMPAIGN } from '@/config';
 import { GROUPS, getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan, PlanRow, PlanTotals } from '@/engine/plan';
+import { effectiveTable, lastsMarches, rankTroops } from '@/engine/plan';
+import { chunks } from '@/engine/recovery';
+import { sizeStacks } from '@/engine/stacker';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import { parseImport } from '@/share/exportImport';
 import { buildPlanRequest, buildStackRequest } from '@/state/derive';
@@ -326,14 +329,31 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // (8 185 823). The bar's own invariant wins: the engine walks the ladder from the thrift end and hands
       // any row that stops out-hitting its neighbour its generated march back, so these floors are the ones
       // measured before the pass. The other three stops field every troop type they hold already.
+      // **Re-based 2026-09-19 (S-93), the tighter shape.** Every rung of the burn ladder is now re-sized by
+      // the sizer over each **prefix** of the troop ranking and takes the result when it is behind on none of
+      // damage, silver, the stock burned and the training queue. On this army that is the whole ladder: the
+      // rungs move down the burn axis (the same marches for fewer chunks) and the bar becomes
+      // 9 · 10 · 13 · 17 · 19 burned, **4 → 5 stops** — a **silver saver** at 5 812 728 for 3 734 200 and
+      // 10d 10h (645 859 a hired unit, where the floor below was measured on other armies).
+      //
+      // Three floors fall and one rises, all from one move: the knee of damage against burn now lands on the
+      // **10**-burn rung instead of the 17, because the thrift end of the ladder got better and tilted the
+      // chord. The sweet spot is 6 760 346 a march for 4 668 300 — 1.4481 a silver and **676 035** a hired
+      // unit against 1.7426 and 481 519, campaign 28 748 251 against 32 231 242. It buys 40 % more damage out
+      // of each hired unit for 17 % less damage a march; it is the recommendation moving left along the bar,
+      // which is what the owner asked for on 2026-09-19 (*"with full opt I still get 70 mercs even with the
+      // sweet spot"*). The steady max is the 17-burn rung the sweet spot used to be — 8 185 823 at **1.7426**
+      // a silver against 8 281 474 at 1.5186, so 1.2 % less damage for 15 % more of it a silver, and the
+      // Spearman I put-back that row used to carry is gone with it. The plan's own campaign is unmoved at
+      // 32 518 195.
       expectCriteria(plan, {
-        leastPerHired: under(524_183),
-        sweetPerSilver: under(1.7426),
-        sweetPerHired: under(481_519),
-        sweetCampaignDamage: under(32_231_242),
-        sweetCampaignSilverCeiling: over(18_790_400),
-        mostDamage: under(8_281_474),
-        mostPerSilver: under(1.5186),
+        leastPerHired: under(645_859),
+        sweetPerSilver: under(1.4481),
+        sweetPerHired: under(676_035),
+        sweetCampaignDamage: under(28_748_251),
+        sweetCampaignSilverCeiling: over(18_702_500),
+        mostDamage: under(8_185_823),
+        mostPerSilver: under(1.7426),
         campaignDamage: under(32_518_195),
       });
     }, 120_000);
@@ -379,15 +399,61 @@ const liveCamp = (): { label: string; request: StackRequest }[] => {
 };
 
 /**
+ * **His camp of 2026-09-19, at both readings of the Battle card** (S-93; the owner: *"using Troops first I can
+ * get 2 009 810 … by adding back troops, impossible with Complete optimization … no eco silver spot to allow
+ * me to maximize silver/dmg with lower silver and training time whilst preserving merc spent low"*).
+ *
+ * One hired type with a **small** stock and a small leadership — the shape no scenario above has: on this army
+ * a hired stack is large enough that the ladder sheltering it can only be three rungs deep, so every stop the
+ * bar offered was a three-stack march at thirteen days of queue while the seven-stack march he builds by hand
+ * costs less silver, burns half as much stock and recovers in five. The two readings are the `localStorage`
+ * dump of that evening (4 975 / 2 180, 450 hunters) and the figures in his message (5 100 / 2 200, 120), and
+ * both are here because the stock is what the thrift end turns on. Measured in
+ * `tools/theorycraft/out/107-put-back-mercs.md` and `out/108-thrift-end.md`.
+ */
+const hisCamp = (): { label: string; request: StackRequest }[] => {
+  const owner = ownerProfile();
+  if (!owner) return [];
+  return (
+    [
+      ['his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)', 4_975, 2_180, 450],
+      ['his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)', 5_100, 2_200, 120],
+    ] as const
+  ).flatMap(([label, leadership, authority, cap]) => {
+    const camp = structuredClone(owner);
+    camp.sources.captains = [
+      { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
+      { id: '9kfdv1z0', captainId: 'alexander', level: 36, star: 0 },
+      { id: 'h9i5fjdc', captainId: 'leonidas', level: 41, star: 0 },
+    ];
+    camp.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: ['melee'] };
+    camp.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap }];
+    const setup = camp.setups[0];
+    if (!setup) return [];
+    return [
+      {
+        label,
+        request: buildStackRequest(camp, {
+          ...setup,
+          active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
+          housing: { ...setup.housing, leadership, authority },
+        }),
+      },
+    ];
+  });
+};
+
+/**
  * The armies the two criteria below are held on, built once: the benchmark's own ten
- * (`plan-scenarios.ts`, its labels and its order), the owner's when his export is where it is, and his live
- * camp above.
+ * (`plan-scenarios.ts`, its labels and its order), the owner's when his export is where it is, his live
+ * camp above, and his camp of 2026-09-19 at both readings.
  */
 const profile = ownerProfile();
 const scenarios: { label: string; request: StackRequest; pinned?: Scenario['pinned'] }[] = [
   ...commonScenarios(),
   ...(profile ? ownerScenarios(profile) : []),
   ...liveCamp(),
+  ...hisCamp(),
 ];
 
 /**
@@ -825,3 +891,333 @@ campaignIsItsMarchesSum(
   'a stop’s campaign is the sum of what its marches cost — under a temple and training discounts',
   WITH_DISCOUNTS,
 );
+
+/**
+ * **The sheltered marches the account can field by hand**, and what each of them costs — the yardstick the
+ * two criteria below are stated against (S-93).
+ *
+ * For each prefix of the troop ranking (`rankTroops`, the strongest k types by damage per HP) and each of the
+ * three sizer methods, the sizer's own march over those types with every hired type at its stock, then every
+ * hired stack lowered under the lowest troop stack (`shelterUnder`'s rule, restated here). That is the
+ * owner's own recipe — *"Troops first"*, then the lower tiers put back, one tier at a time — and the full
+ * prefix is the march he sent on 2026-09-19. It is built from the **sizer and the shelter alone**, never from
+ * the plan's search, so it is an independent yardstick rather than a second reading of the same code; every
+ * figure is `planMarch`'s, which is the recap's.
+ *
+ * A rival has to be a march **the bar's own rules would let it offer**: more than one troop stack (the band's
+ * third criterion) and every hired type the account holds on the field (S-58 B). A troops-only march would
+ * beat every stop on the burn and is not a plan this method is about at all.
+ */
+interface Rival {
+  what: string;
+  counts: Record<string, number>;
+  damage: number;
+  silver: number;
+  burn: number;
+  seconds: number;
+  key: string;
+  /** The most marches this one can be **repeated**: the hired stock loses a chunk of ten a march. */
+  repeats: number;
+}
+
+/**
+ * The marches a stop **repeats**: its campaign less the finale and less the troops-only tail, or one for the
+ * `all-in`, whose marches all differ and whose `repeat` is the first of them. A rival is only a rival when
+ * the stock can field it that often — a march that spends a type's whole stock at once is not an answer to a
+ * plan that has to march four times.
+ */
+const repeatsOf = (row: PlanTotals): number =>
+  row.sequence ? 1 : Math.max(1, row.marches - (row.finaleCounts ? 1 : 0) - (row.tail?.marches ?? 0));
+const countsKey = (counts: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(counts)
+      .filter(([, count]) => count > 0)
+      .sort(),
+  );
+const shelteredRivals = (request: StackRequest): Rival[] => {
+  const table = effectiveTable(request);
+  const ranked = rankTroops(table);
+  const hiredIds = request.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id);
+  const hp = new Map(table.map((entry) => [entry.id, entry.hp] as const));
+  const out: Rival[] = [];
+  const seen = new Set<string>();
+  for (let depth = 1; depth <= ranked.length; depth += 1) {
+    const chosen = new Set(ranked.slice(-depth).map((entry) => entry.id));
+    for (const method of ['elite', 'ms', 'msRelaxed'] as const) {
+      const sized = sizeStacks({
+        ...request,
+        units: request.units.filter((unit) => chosen.has(unit.id) || unit.pool === 'authority'),
+        options: {
+          ...request.options,
+          method: method === 'msRelaxed' ? 'ms' : method,
+          relaxedPreservation: method === 'msRelaxed',
+        },
+      });
+      const counts: Record<string, number> = {};
+      for (const stack of sized.stacks) if (stack.count > 0) counts[stack.unitId] = stack.count;
+      const troopHp = Object.entries(counts)
+        .filter(([id]) => !hiredIds.includes(id))
+        .map(([id, count]) => count * (hp.get(id) ?? 0));
+      if (troopHp.length < 2) continue;
+      const floor = Math.min(...troopHp);
+      for (const id of hiredIds) {
+        const unitHp = hp.get(id) ?? 0;
+        if (unitHp <= 0) continue;
+        const most = Math.max(0, Math.ceil(floor / unitHp) - 1);
+        if ((counts[id] ?? 0) > most) counts[id] = most;
+      }
+      if (!hiredIds.every((id) => (counts[id] ?? 0) > 0)) continue;
+      const key = countsKey(counts);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const { summary } = planMarch(request, counts);
+      out.push({
+        repeats: Math.min(
+          ...hiredIds.map((id) => {
+            const held = request.caps[id];
+            return held === undefined ? Infinity : lastsMarches(held, counts[id] ?? 0);
+          }),
+        ),
+        what: `the sizer’s sheltered march over ${String(depth)} troop types (${method}) — ${Object.entries(
+          counts,
+        )
+          .filter(([, count]) => count > 0)
+          .map(([id, count]) => `${id} ${String(count)}`)
+          .join(' · ')}`,
+        counts,
+        damage: summary.avgDamage,
+        silver: summary.recovery.silver,
+        burn: hiredIds.reduce((sum, id) => sum + chunks(counts[id] ?? 0), 0),
+        seconds: summary.recovery.seconds,
+        key,
+      });
+    }
+  }
+  return out;
+};
+
+/** The plan every criterion below reads, or the refusal message the benchmark pins. */
+const planFor = (request: StackRequest): CampaignPlan | string => {
+  try {
+    return planCampaign({
+      request,
+      marchTarget: HORIZON,
+      budgetMs: CAMPAIGN.budgets.plan,
+      ...CAMPAIGN.planFixes,
+      putBack: CAMPAIGN.putBack,
+      withTrade: true,
+      withFrontier: true,
+    });
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+};
+
+/**
+ * **No stop is beaten on every reading by a sheltered march the account can field** (S-93; the owner,
+ * 2026-09-19: *"using Troops first I can get 2 009 810 … by adding back troops, impossible with Complete
+ * optimization … I thought we had tests for this"*).
+ *
+ * The bar runs along the hired units a march burns, and a stop's whole claim is that it is the best march at
+ * that price. A march that does **at least as much damage for no more silver, no more of the hired stock and
+ * no longer in the barracks** — with one of those strictly better — is that stop's own answer done better:
+ * whatever rule picked the stop passed over a plan the player can field by hand, which is exactly what he
+ * did. The four readings are the four the bar and the recap print, and they are the repeated march's own.
+ *
+ * The rivals are `shelteredRivals` above, plus the plans the search itself summarised (`withFrontier`),
+ * priced by their own `repeat` and filtered by the same two rules.
+ */
+describe('no stop is beaten on every reading by a sheltered march the account can field', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const hiredIds = scenario.request.units
+          .filter((unit) => unit.pool === 'authority')
+          .map((unit) => unit.id);
+        const rivals = shelteredRivals(scenario.request);
+        for (const row of plan.frontier ?? []) {
+          // Only the plans the bar may **offer**: a row the frontier dominated has a worse campaign behind
+          // the same repeated march (the two are judged on different figures — the campaign's damage and
+          // silver against the repeat's), and the band's own three refusals apply to a rival as to a stop.
+          if (!row.undominated || !row.inBand) continue;
+          const troopStacks = Object.entries(row.counts).filter(
+            ([id, count]) => count > 0 && !hiredIds.includes(id),
+          ).length;
+          if (troopStacks < 2) continue;
+          if (!hiredIds.every((id) => (row.counts[id] ?? 0) > 0)) continue;
+          rivals.push({
+            repeats: repeatsOf(row),
+            what: `the frontier’s ${row.label}`,
+            counts: row.counts,
+            damage: row.repeat.damage,
+            silver: row.repeat.silver,
+            burn: row.repeat.mercLost,
+            seconds: row.repeat.seconds,
+            key: countsKey(row.counts),
+          });
+        }
+        const failures: string[] = [];
+        for (const stop of plan.alternatives) {
+          const mine = countsKey(stop.counts);
+          const repeats = repeatsOf(stop);
+          /**
+           * **The `all-in` is judged on what it fields**, as it is everywhere else in this file: it is
+           * offered because its first march fields more hired units than the steady max's repeat (owner,
+           * 2026-09-18: *"a last stop: all mercs possible … fill all the mercs you can safely"*), so a march
+           * that spends less of everything by fielding **less** of the stock is not that stop's answer done
+           * better — it is a different question. A march that fields as much and costs less is. Measured on
+           * the owner's export at 7 000, 2026-09-19: the `all-in` stands 254 hired under two rungs, and the
+           * sizer over five of his seven troop types fields 161 for more damage and half the queue — fewer
+           * of the stock, so not a rival here; on the e2e seed both shapes field the whole stock of 83 and
+           * the sizer's hit for 8 047 249 against 7 708 571 at a quarter less silver, which is one.
+           */
+          const fields = (counts: Record<string, number>): number =>
+            hiredIds.reduce((sum, id) => sum + (counts[id] ?? 0), 0);
+          const mustField = stop.pick === 'all-in' ? fields(stop.counts) : 0;
+          for (const rival of rivals) {
+            if (rival.key === mine) continue;
+            if (rival.repeats < repeats) continue;
+            if (fields(rival.counts) < mustField) continue;
+            const better =
+              rival.damage >= stop.repeat.damage &&
+              rival.silver <= stop.repeat.silver &&
+              rival.burn <= stop.repeat.mercLost &&
+              rival.seconds <= stop.repeat.seconds &&
+              (rival.damage > stop.repeat.damage ||
+                rival.silver < stop.repeat.silver ||
+                rival.burn < stop.repeat.mercLost ||
+                rival.seconds < stop.repeat.seconds);
+            if (!better) continue;
+            failures.push(
+              `${stop.pick} (${stop.repeat.damage.toLocaleString('en-US')} damage, ` +
+                `${stop.repeat.silver.toLocaleString('en-US')} silver, ${String(stop.repeat.mercLost)} burned, ` +
+                `${String(Math.round(stop.repeat.seconds / 3_600))} h) is beaten on every reading by ` +
+                `${rival.what} (${Math.round(rival.damage).toLocaleString('en-US')}, ` +
+                `${rival.silver.toLocaleString('en-US')}, ${String(rival.burn)}, ` +
+                `${String(Math.round(rival.seconds / 3_600))} h)`,
+            );
+            break;
+          }
+        }
+        expect(failures.join('\n'), `stops beaten on every reading\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **The thrift end is offered** (S-93; the owner, 2026-09-19: *"no eco silver spot to allow me to maximize
+ * silver/dmg with lower silver and training time whilst preserving merc spent low"*).
+ *
+ * The silver saver's own definition is a plan left of the sweet spot that costs no more silver and is at
+ * least as efficient a silver (`leastSilver`, `plan.ts`). Stated over the band alone that is very nearly a
+ * tautology — the stop is *chosen* from the band by exactly that test — so it is stated here over the
+ * **marches the account can field** (`shelteredRivals`): when one of those stands left of the sweet spot,
+ * costs no more silver and is at least as efficient a silver, the bar has to carry a thrift stop that is
+ * **no dearer in the stock** than it. A bar whose thriftiest offer burns twice what the player reaches by
+ * hand is the complaint in one line.
+ */
+describe('the thrift end is offered', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const plan = planned;
+        const sweet = plan.alternatives.find((row) => row.pick === 'sweet-spot') as PlanRow;
+        expect(sweet).toBeDefined();
+        const kneePerSilver = sweet.repeat.damage / sweet.repeat.silver;
+        const thrifty = shelteredRivals(scenario.request).filter(
+          (rival) =>
+            rival.repeats >= repeatsOf(sweet) &&
+            rival.burn < sweet.repeat.mercLost &&
+            rival.silver <= sweet.repeat.silver &&
+            rival.damage / rival.silver >= kneePerSilver,
+        );
+        if (thrifty.length === 0) return;
+        const cheapest = thrifty.reduce((held, rival) => (rival.burn < held.burn ? rival : held));
+        const thriftiestStop = plan.alternatives.reduce((held, row) =>
+          row.repeat.mercLost < held.repeat.mercLost ? row : held,
+        );
+        expect(
+          thriftiestStop.repeat.mercLost,
+          `${cheapest.what} stands left of the sweet spot at ${String(cheapest.burn)} burned — ` +
+            `${Math.round(cheapest.damage).toLocaleString('en-US')} damage for ` +
+            `${cheapest.silver.toLocaleString('en-US')} silver, ` +
+            `${String(Math.round(cheapest.seconds / 3_600))} h — against the sweet spot's ` +
+            `${sweet.repeat.damage.toLocaleString('en-US')} for ` +
+            `${sweet.repeat.silver.toLocaleString('en-US')} at ${String(sweet.repeat.mercLost)} burned, and ` +
+            `the bar's thriftiest stop (${thriftiestStop.pick}) burns ${String(thriftiestStop.repeat.mercLost)}`,
+        ).toBeLessThanOrEqual(cheapest.burn);
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **No stop of the bar is beaten by another stop of the same bar** — on the three figures a stop's campaign
+ * prints: damage, silver and the hired units burned for good (owner, 2026-09-18: *"more damage with a lot of
+ * merc spent should trigger a failing test as we're using too much of a rare resource"* — and worse than
+ * that, a stop that spends **more** of both resources for **less** damage than a stop standing beside it on
+ * the same bar).
+ *
+ * The bar is read left to right as "spend less … spend more", and each stop's claim is that moving right buys
+ * something. `expectCriteria` already holds that on the repeated march's damage for the rung stops; this is
+ * the campaign's own reading and it speaks about **every** stop, the `all-in` included. That stop is offered
+ * on what its first march *fields* and may cost whatever it costs — but a campaign that hits less hard than
+ * one beside it for more silver *and* more of the stock is not a dearer offer, it is a worse one, and there
+ * is no reading of the bar under which a player would take it.
+ *
+ * It is stated over `plan.alternatives` alone: no model of the plan, no second search — the rows the app
+ * draws, compared with each other.
+ */
+describe('no stop of the bar is beaten by another stop of the same bar', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const failures: string[] = [];
+        for (const stop of planned.alternatives) {
+          for (const other of planned.alternatives) {
+            if (other === stop) continue;
+            const beats =
+              other.totalDamage >= stop.totalDamage &&
+              other.silver <= stop.silver &&
+              other.mercLost <= stop.mercLost &&
+              (other.totalDamage > stop.totalDamage ||
+                other.silver < stop.silver ||
+                other.mercLost < stop.mercLost);
+            if (!beats) continue;
+            failures.push(
+              `${stop.pick} (${stop.totalDamage.toLocaleString('en-US')} damage, ` +
+                `${stop.silver.toLocaleString('en-US')} silver, ${String(stop.mercLost)} burned) is beaten ` +
+                `by ${other.pick} (${other.totalDamage.toLocaleString('en-US')}, ` +
+                `${other.silver.toLocaleString('en-US')}, ${String(other.mercLost)})`,
+            );
+            break;
+          }
+        }
+        expect(failures.join('\n'), `stops beaten by another stop\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
+});

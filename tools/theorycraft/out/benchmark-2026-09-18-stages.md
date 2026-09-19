@@ -1,4 +1,4 @@
-# The plan across the stages of 2026-09-18 — before, S-76, S-77, the put-back, the all-in tail, the shelter, the reference table, the tail on the repeated stops, the finale's gold, the finale's silver
+# The plan across the stages of 2026-09-18 — before, S-76, S-77, the put-back, the all-in tail, the shelter, the reference table, the tail on the repeated stops, the finale's gold, the finale's silver, the tighter shape
 
 Every figure is a four-march campaign from the benchmark snapshots in this folder (`benchmark-2026-09-18-NN-*.json`): the plan's hardest stop, its best stop a silver, its best stop a hired unit, the stops on the bar, and beside them the best sizer sequence and the best comparable answer from TotalStack's dataset (rows that field troop types the army does not hold are left out).
 
@@ -8,6 +8,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 
 **10 moves no figure either.** S-91 priced the finale's silver as the recap does (under the account's temple level and training discounts) instead of the search's raw figure; every profile in the repo has no discount, so the two agree to the unit here and the snapshot is identical to 09. The criterion that tells them apart runs under a 25 % discount on every group and a level-20 temple, where the raw figure overstated a discounted finale by a quarter.
 
+**11 is S-93, the tighter shape**: every rung of the burn ladder, and the `all-in`'s own march builder, now score the sizer over each **prefix** of the troop ranking, and a rung takes that march only when it is behind on none of damage, silver, the stock burned and the training queue. The `all-in` moves on **eight** of the ten scenarios (Bear V ×1 and ×2 carry no such stop): it fields what a deeper ladder shelters, and it pays for it on two of them — the live account at 20 000 spends 31 092 400 → 42 085 900 silver for 1.3 % more damage, and the bear armies buy theirs at 54 % and 23 % more silver. The owner's export at 12 000 gains a fifth stop while its knee walks from the 17-burn rung to the 10.
 ## first-run army, Bear V ×1 (20 000 leadership)
 
 | stage | stops | plan best damage | plan best a silver | plan best a hired | best sizer damage | best TotalStack damage (comparable) |
@@ -24,6 +25,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
 | 09 S-90 the finale's gold | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
 | 10 S-91 the finale's silver | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
+| 11 S-93 the tighter shape | 1 | 18 554 768 | 0.57 | 18 554 768 | 23 899 764 | — |
 
 ## first-run army, Bear V ×2 (20 000 leadership)
 
@@ -41,6 +43,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
 | 09 S-90 the finale's gold | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
 | 10 S-91 the finale's silver | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
+| 11 S-93 the tighter shape | 1 | 18 779 168 | 0.58 | 9 389 584 | 23 974 564 | — |
 
 ## first-run army, Bear V ×3 (20 000 leadership)
 
@@ -58,6 +61,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 2 | 19 115 768 | 0.59 | 6 371 923 | 24 086 764 | 25 439 016 |
 | 09 S-90 the finale's gold | 2 | 19 115 768 | 0.59 | 6 371 923 | 24 086 764 | 25 439 016 |
 | 10 S-91 the finale's silver | 2 | 19 115 768 | 0.59 | 6 371 923 | 24 086 764 | 25 439 016 |
+| 11 S-93 the tighter shape | 2 | 22 661 258 | 0.58 | 7 553 753 | 24 086 764 | 25 439 016 |
 
 ## first-run army, Bear V ×10 (20 000 leadership)
 
@@ -75,6 +79,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 2 | 21 700 948 | 0.65 | 5 425 237 | 25 133 964 | 26 486 216 |
 | 09 S-90 the finale's gold | 2 | 21 700 948 | 0.65 | 5 425 237 | 25 133 964 | 26 486 216 |
 | 10 S-91 the finale's silver | 2 | 21 700 948 | 0.65 | 5 425 237 | 25 133 964 | 26 486 216 |
+| 11 S-93 the tighter shape | 2 | 25 039 888 | 0.65 | 6 259 972 | 25 133 964 | 26 486 216 |
 
 ## first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)
 
@@ -92,6 +97,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 09 S-90 the finale's gold | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 | 10 S-91 the finale's silver | 3 | 30 057 473 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
+| 11 S-93 the tighter shape | 3 | 30 324 441 | 0.92 | 1 160 848 | 30 436 414 | 30 587 159 |
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
 
@@ -109,6 +115,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 | 09 S-90 the finale's gold | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
 | 10 S-91 the finale's silver | 3 | 8 394 732 | 1.37 | 431 237 | 8 633 665 | 8 911 356 |
+| 11 S-93 the tighter shape | 3 | 8 628 782 | 1.42 | 431 237 | 8 633 665 | 8 911 356 |
 
 ## 2026-09-17 export, its setup (7 000 leadership)
 
@@ -126,6 +133,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 4 | 23 264 491 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
 | 09 S-90 the finale's gold | 4 | 23 264 491 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
 | 10 S-91 the finale's silver | 4 | 23 264 491 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
+| 11 S-93 the tighter shape | 4 | 23 447 087 | 2.12 | 460 909 | 25 952 553 | 16 323 066 |
 
 ## 2026-09-17 export, 12 000 leadership
 
@@ -143,6 +151,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
 | 09 S-90 the finale's gold | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
 | 10 S-91 the finale's silver | 4 | 32 518 195 | 1.77 | 493 040 | 34 283 252 | 24 167 160 |
+| 11 S-93 the tighter shape | 5 | 33 028 417 | 1.72 | 598 922 | 34 283 252 | 24 167 160 |
 
 ## live account of 2026-09-18 (one hired type, 20 000 leadership)
 
@@ -160,6 +169,7 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 | 09 S-90 the finale's gold | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 | 10 S-91 the finale's silver | 4 | 31 218 724 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
+| 11 S-93 the tighter shape | 4 | 31 628 813 | 1.00 | 1 187 085 | 31 495 858 | 30 466 476 |
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
 
@@ -177,4 +187,5 @@ Every figure is a four-march campaign from the benchmark snapshots in this folde
 | 08 S-89 tail on the repeated stops | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 | 09 S-90 the finale's gold | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 | 10 S-91 the finale's silver | 5 | 30 107 115 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
+| 11 S-93 the tighter shape | 5 | 32 348 459 | 1.75 | 489 102 | 80 658 235 | 80 137 589 |
 

@@ -883,6 +883,12 @@ describe('the all-in plays the horizon', () => {
    * **A stock that lasts the horizon is untouched.** The owner's export holds 234 hired units over four
    * types, and its all-in already fielded hired on all four marches: measured 2026-09-18 at 22 518 504 for
    * 14 337 600 silver over four marches, and the tail cannot fire on it.
+   *
+   * **Re-based 2026-09-19 (S-93), the sizer over a prefix of the troop ranking.** This stop builds its
+   * marches one at a time from the shapes it can reach, and the sizer was only ever asked for the *whole*
+   * army — so "the sizer over the strongest k types", the family the owner builds by hand, was not among
+   * them. With it the campaign is **23 447 087 for 14 728 200** over the same four marches (2.7 % more
+   * silver for 4.1 % more damage), and the stop still fields hired units on every one of them.
    */
   describe.skipIf(!existsSync(OWNER_EXPORT))('the owner’s account at 7 000 leadership', () => {
     test(
@@ -901,8 +907,8 @@ describe('the all-in plays the horizon', () => {
         for (const counts of allIn?.sequence ?? []) {
           expect(fieldedOf(input.request, counts), 'every march of it fields hired units').toBeGreaterThan(0);
         }
-        expect(allIn?.totalDamage).toBe(22_518_504);
-        expect(allIn?.silver).toBe(14_337_600);
+        expect(allIn?.totalDamage).toBe(23_447_087);
+        expect(allIn?.silver).toBe(14_728_200);
       },
       TIMEOUT,
     );
@@ -1353,13 +1359,22 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own ac
       const plan = planCampaign(input);
       const most = plan.alternatives.find((row) => row.pick === 'steady-max');
       expect(most, 'the steady max is offered').toBeDefined();
-      const back = most?.putBack;
-      expect(back, 'the steady max put a troop type back').toBeDefined();
-      // Archer I scores highest of the five left-out types on his own rates: +2.7 % damage, 18.2 % of the
-      // silver and 38.3 % of the queue, a score of 10.2 against Rider I's 10.1, Spearman I's 9.9 and
-      // Spearman II's 3.4 (`tools/theorycraft/out/103-put-back-time.md`, the "steady-max" block).
-      expect(back?.unitId).toBe('archer-1');
+      /**
+       * **Re-based 2026-09-19 (S-93): the march is the same, and a different pass reaches it.** Archer I used
+       * to come back through the put-back — it scored highest of the five left-out types on the owner's own
+       * rates, +2.7 % damage for 18.2 % of the silver and 38.3 % of the queue, a score of 10.2 against Rider
+       * I's 10.1 (`tools/theorycraft/out/103-put-back-time.md`) — and the **tighter shape** now sizes that
+       * march before the put-back is offered anything: the sizer over the whole of this camp's troop ranking,
+       * ARC1 2058 · ARC2 1141 · RD2 569 · RD3 319, at **4 904 479 for 2 203 500 and 8d 5h**, which is the
+       * put-back's own figures to the unit. So the stop carries no `putBack` note any more, and what the test
+       * is about — Archer I on the field, and the figures the owner was promised — is asserted directly.
+       */
       expect((most?.counts['archer-1'] ?? 0) > 0, 'Archer I is in the march').toBe(true);
+      expect(
+        Object.keys(most?.counts ?? {}).filter((id) => id.startsWith('archer') || id.startsWith('rider'))
+          .length,
+        'the march stands on more than one troop stack',
+      ).toBeGreaterThan(1);
       // The figures the owner was promised: better than the ladder's 4 777 523 for 2 694 300.
       expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(4_880_000);
       expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(2_210_000);
@@ -1398,14 +1413,24 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own ac
     // (`want` null); with the pass the sweet spot is the 11-burn rung with **Spearman I** back, 4 346 683 for
     // 2 078 900 silver — a better march at every reading than the one it replaced.
     //
+    // **Re-based 2026-09-19 by the tighter shape** (S-93): two `onBar` verdicts become **null**, and neither
+    // is a march lost. The pass sizes the same march the put-back was reaching for, and it runs first — so
+    // the row is already the sizer's over a prefix of the ranking and the put-back has nothing left to add.
+    // Aydae alone: the steady max is ARC1 2058 · ARC2 1141 · RD2 569 · RD3 319 at 4 904 479 for 2 203 500,
+    // which is the Archer I put-back's own figures to the unit. Three heroes: the sweet spot is the sizer
+    // over **all seven** of that camp's troop types at 3 942 841 for 1 942 700 and 5d 10h, where the
+    // Spearman I put-back it used to carry cost 2 078 900 and 6d 19h. `want` — the rule's verdict on the
+    // *generated* march — is untouched on every row: the tighter shape runs inside the put-back pass, so a
+    // plan asked for without it is the plan the search generated, exactly as before.
+    //
     // **Re-based 2026-09-18 by the shelter** (S-87, every hired type under the troops): on that same setup the
     // generated steady max is now the 12-burn rung ARB 40 · CH 8 · EMH 38 · LEG 27 (4 616 996 for 2 268 000),
     // and the rule's verdict on it moves from Spearman II to **Spearman I** — 4 496 973 for 2 078 900 and a
     // shorter queue, 2.6 % of the damage inside the owner's 3 % cap. The other two setups are untouched:
     // Aydae alone still takes Archer I on both readings, and the export at 12 000 did not move at all.
     for (const [title, captains, leadership, live, pick, want, onBar] of [
-      ['Aydae alone, 4 975', [AYDAE], 4_975, true, 'steady-max', 'archer-1', 'archer-1'],
-      ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'sweet-spot', null, 'spearman-1'],
+      ['Aydae alone, 4 975', [AYDAE], 4_975, true, 'steady-max', 'archer-1', null],
+      ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'sweet-spot', null, null],
       ['three heroes, 4 975', THREE_HEROES, 4_975, true, 'steady-max', 'spearman-1', 'spearman-1'],
       ['the export at 12 000', [], 12_000, false, 'steady-max', 'spearman-1', null],
     ] as const) {
@@ -1510,7 +1535,13 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
 
   test('the all-in keeps its own march at 7 000 and at 12 000: the put-back scores, and costs queue', () => {
     if (!base) throw new Error('no profile');
-    for (const leadership of [7_000, 12_000]) {
+    // **Re-based 2026-09-19 (S-93): 12 000 leaves this test.** The `all-in` builds its marches from the
+    // shapes it can reach, and it now reaches the sizer over a **prefix** of the troop ranking — so at
+    // 12 000 its first march is no longer the two-rung ladder that left Spearman II out (it is
+    // SP1 3771 · ARC2 2575 · SP2 2088 · RD2 1142 · RD3 641 with 226 hired, 9 235 912 for 5 502 200 against
+    // 7 860 293 for 5 223 000) and there is nothing for the guard to refuse on it. 7 000 still is the clean
+    // case, and stubbing the guard still fails there; the 12 000 figures are in the review log.
+    for (const leadership of [7_000]) {
       const profile = structuredClone(base);
       const setup = profile.setups[0];
       if (!setup) throw new Error('no setup');

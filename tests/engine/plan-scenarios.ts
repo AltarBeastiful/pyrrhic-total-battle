@@ -283,13 +283,25 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // "Steady max" 1.5 % under the sweet spot beside it (8 063 238 against 8 185 823); the all-in scores one
       // too and the queue guard refuses it, because it lengthened the training queue by 17.5 %. Every figure
       // here is therefore the one measured before the pass existed.
+      // **Re-based 2026-09-19 (S-93), the tighter shape** — every rung of the burn ladder re-sized by the
+      // sizer over each **prefix** of the troop ranking, taken only where it is behind on none of damage,
+      // silver, the stock burned and the queue. On this army the whole ladder moves down the burn axis (the
+      // same marches for fewer chunks): 11 · 17 · 19 becomes 9 · 10 · 13 · 17 · 19 and a **silver saver** is
+      // offered again — **4 → 5 stops**, 25 905 397 over four marches for 15 900 200 at 645 859 a hired unit.
+      // The knee follows the better thrift end from the 17-burn rung to the 10, so the recommendation is
+      // 28 748 251 for 18 702 500 where it was 32 231 242 for 18 790 400, and the 17 is now the steady max at
+      // 8 185 823 a march (1.7426 a silver, against the Spearman-I put-back's 8 281 474 at 1.5186 — the put-
+      // back is gone, because the tighter shape reaches a better march before it is offered anything). The
+      // hardest campaign on the bar is the `all-in` at **33 028 417** for 22 702 100, against 32 518 195, so
+      // the plan's share of the sizers rises: 0.94 → **0.96** (the best sizer sequence is unmoved at
+      // 34 283 252) and of TotalStack's best answer on this window 1.34 → **1.36**.
       pinned: {
         refuses: false,
-        stops: 4,
+        stops: 5,
         sweetNotAheadOnEither: false,
-        damageFloor: 0.94,
+        damageFloor: 0.96,
         winsHired: true,
-        externals: { damageFloor: 1.34, winsHired: false },
+        externals: { damageFloor: 1.36, winsHired: false },
       },
     },
     {

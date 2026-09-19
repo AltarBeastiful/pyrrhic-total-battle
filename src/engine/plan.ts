@@ -143,6 +143,38 @@ export interface CampaignInput {
    */
   putBack?: PutBackPolicy | undefined;
   /**
+   * **The band's token-field yardstick, switchable** — a diagnostic for `tools/theorycraft/108-thrift-end.
+   * test.ts`, never set by the app, kept so the measurement behind S-93 can be re-run.
+   *
+   * The band refuses a plan that fields a **token** of the hired stock, and the yardstick it measures that
+   * against is `winner` by default: half the hired units the plan's own winning march fields (`inBand`). The
+   * owner's complaint of 2026-09-19 was read as that rule's fault, and experiment 108 measured all five
+   * readings over thirteen armies (§A/§C of `out/108-thrift-end.md`):
+   *
+   *  - `winner` — today's, and the one that ships;
+   *  - `hired` / `burn` with a floor of half the **sweet spot's** fielded hired or burn: on his own camp they
+   *    move the band's thinnest plan from 50 hired to 38 and still refuse the seven-stack march he builds by
+   *    hand, and they cost the 7 000 export's sweet spot 21 % of its damage;
+   *  - `none` — no token criterion at all: on that same export the bar's thrift end becomes a **506 032**-damage
+   *    march for 278 400 silver, 8.6 % of the steady max's, which is the extreme the owner's instruction names;
+   *  - `damage` — at least half the winner's damage a march: it refuses every one of those extremes and admits
+   *    his seven-stack march, and it was not needed in the end — with the **tighter shape** (S-93) both of the
+   *    criteria in `tests/engine/plan-criteria.test.ts` hold under today's yardstick as they do under this one,
+   *    and this one costs the 7 000 export's sweet spot 16 % of its campaign. The measured answer was that the
+   *    missing **shape** was the defect and not the yardstick.
+   */
+  bandHired?: { mode: 'winner' | 'none' | 'damage' } | { mode: 'hired' | 'burn'; min: number };
+  /**
+   * **The sheltered-maximum vectors, behind a flag** — the same diagnostic, for §B of experiment 108.
+   *
+   * Set, the search also scores, for each prefix length `k` of the troop ranking, the hired counts the
+   * **biggest** tight ladder over `k` types shelters at this leadership. Measured over the same thirteen
+   * armies: it adds frontier rows (his camp of 2026-09-19: 54 → 67; the 4 000 case: 825 → 826) and costs 10
+   * to 40 % of the search, and it moved **neither** criterion on any army — the family the plan was missing is
+   * the sizer over a prefix (`tighterShape`), which is a *shape* and not a vector. Off, and off in the app.
+   */
+  shelteredMax?: boolean;
+  /**
    * Ask for the **trade** itself — every plan the four answers are drawn from — as `CampaignPlan.trade`.
    *
    * Omitted, the payload carries what a screen draws and nothing else. Asked for, it carries the whole set
@@ -566,7 +598,7 @@ export interface Effective {
   unit: UnitDef;
 }
 
-function effectiveTable(request: StackRequest): Effective[] {
+export function effectiveTable(request: StackRequest): Effective[] {
   return request.units.map((unit) => {
     const eff = effectiveUnit(unit, request.totals, request.enemy, request.activeEvents);
     const { damage } = hitDamage(eff, 1);
@@ -595,7 +627,7 @@ const COMPACT = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFra
 const compact = (value: number): string => COMPACT.format(Math.round(value));
 
 /** Troop types ordered weakest-per-HP first: the weakest takes the top rung and dies unstruck. */
-function rankTroops(table: Effective[]): Effective[] {
+export function rankTroops(table: Effective[]): Effective[] {
   return table
     .filter((entry) => entry.pool === 'leadership')
     .sort((a, b) => a.damagePerUnit / a.hp - b.damagePerUnit / b.hp);
@@ -710,6 +742,9 @@ function ladder(
   });
   return used <= leadership ? out : [];
 }
+
+/** `planCampaign` shadows `ladder` with its own burn ladder, so it reaches the builder by this name. */
+const buildLadder = ladder;
 
 /**
  * **The shelter** (S-87, restoring S-75's rule for every hired type; owner, 2026-09-18: *"a critical rule is to
@@ -1407,6 +1442,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const sizer = (
     mercs: { entry: Effective; count: number }[],
     method: SizerMethod,
+    /**
+     * **Over a prefix of the troop ranking** (S-93), instead of over every type the account holds. The sizer's
+     * shape is the app's own, and the search only ever asked it for the whole army — so the family "the sizer
+     * over the strongest k types", which is what a player builds when he leaves the low tiers out and then
+     * puts some of them back, was never scored. Measured on the e2e seed (`out/108-thrift-end.md`): the
+     * `all-in`'s first march hit for 7 708 571 at 11 434 600 silver and 1 478 h of queue where the sizer over
+     * every one of its nine troop types hits for 8 047 249 at 8 514 200 and 729 h — the same nine chunks
+     * burned, more damage, a quarter less silver and half the queue. Omitted: every troop type, as before.
+     */
+    depth?: number,
   ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } => {
     const caps: Record<string, number> = { ...request.caps };
     const fieldedIds = new Set<string>();
@@ -1414,10 +1459,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       caps[merc.entry.id] = merc.count;
       if (merc.count > 0) fieldedIds.add(merc.entry.id);
     }
+    const prefix = depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id));
     const sized = sizeStacks({
       ...request,
       caps,
-      units: request.units.filter((unit) => unit.pool === 'leadership' || fieldedIds.has(unit.id)),
+      units: request.units.filter((unit) =>
+        unit.pool === 'leadership' ? (prefix?.has(unit.id) ?? true) : fieldedIds.has(unit.id),
+      ),
       options: {
         ...request.options,
         method: method === 'elite' ? 'elite' : 'ms',
@@ -1585,6 +1633,51 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     return pick;
   };
+
+  /**
+   * **The sheltered-maximum vectors** (`CampaignInput.shelteredMax`, off unless an experiment asks). For each
+   * prefix length `k` of the troop ranking,
+   * the **biggest** tight ladder over `k` types the leadership pays for, and the most hired units its own
+   * floor shelters: `ceil(floor / hp) − 1` per hired type, capped by that type's sustainable anchor. No
+   * constant — the ladder's cost and the shelter decide.
+   */
+  if (input.shelteredMax === true) {
+    const maxDepth = Math.min(troops.length, Math.max(...DEPTHS));
+    const seenShelter = new Set<string>();
+    /** The floor of the biggest depth-`k` tight ladder the leadership pays for, or 0 if none fits. */
+    const biggestFloor = (depth: number): number => {
+      const rungsAt = (hp: number): { entry: Effective; count: number }[] =>
+        buildLadder(troops, depth, hp, gap, leadership, 1);
+      if (rungsAt(1).length === 0) return 0;
+      let high = 1;
+      while (high < 1e12 && rungsAt(high * 2).length > 0) high *= 2;
+      let low = high;
+      high *= 2;
+      while (low + 1 < high) {
+        const mid = Math.floor((low + high) / 2);
+        if (rungsAt(mid).length > 0) low = mid;
+        else high = mid;
+      }
+      const rungs = rungsAt(low);
+      return rungs.length === 0 ? 0 : Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+    };
+    for (const marches of gridMarches) {
+      const anchors = mercTypes.map((entry) => anchorOf(entry.id, marches));
+      for (let depth = 1; depth <= maxDepth; depth += 1) {
+        const floorHp = biggestFloor(depth);
+        if (floorHp <= 0) continue;
+        const vector = mercTypes.map((entry, index) => ({
+          entry,
+          count: Math.max(0, Math.min(anchors[index] ?? 0, Math.ceil(floorHp / Math.max(1, entry.hp)) - 1)),
+        }));
+        if (vector.every((merc) => merc.count <= 0)) continue;
+        const key = vector.map((merc) => merc.count).join(',');
+        if (seenShelter.has(key)) continue;
+        seenShelter.add(key);
+        vectors.push(vector);
+      }
+    }
+  }
 
   // the grid: every march count, then fractions of the largest count each type can carry at that count
   for (const vector of vectors) {
@@ -1938,8 +2031,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     (row.counts[id] ?? 0) > 0 ||
     (row.finaleCounts?.[id] ?? 0) > 0 ||
     (row.sequence?.some((march) => (march[id] ?? 0) > 0) ?? false);
+  // The yardstick itself (`CampaignInput.bandHired`), so experiment 108's five readings run on one engine.
+  // `winner` is the rule, and the only one the app ever asks for.
+  const notToken = (row: PlanTotals): boolean => {
+    const rule = input.bandHired ?? { mode: 'winner' as const };
+    if (rule.mode === 'none') return true;
+    if (rule.mode === 'hired') return hiredOf(row.counts) >= rule.min;
+    if (rule.mode === 'burn') return row.repeat.mercLost >= rule.min;
+    if (rule.mode === 'damage') return row.repeat.damage * 2 >= chosenPoint.repeat.damage;
+    return hiredOf(row.counts) * 2 >= goal.hired;
+  };
   const inBand = (row: PlanTotals): boolean =>
-    hiredOf(row.counts) * 2 >= goal.hired &&
+    notToken(row) &&
     row.damagePerSilver * 2 >= goal.perSilver &&
     Object.keys(row.counts).filter((id) => !mercIds.has(id)).length > 1 &&
     // S-58 B (`refuseDroppedTypes`): a plan the player is offered fields a little of everything they hold.
@@ -2177,6 +2280,124 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
 
   /**
+   * **The tighter shape** (S-93; owner, 2026-09-19: *"using Troops first I can get 2 009 810 … by adding back
+   * troops, impossible with Complete optimization … also no eco silver spot to allow me to maximize
+   * silver/dmg with lower silver and training time whilst preserving merc spent low. I thought we had tests
+   * for this."*).
+   *
+   * The same march, re-sized by the **sizer over a prefix of the troop ranking** — its own hired counts as the
+   * caps, one prefix at a time, under each of the three methods — and taken only when the result is at least
+   * as good on **every one of the four readings the bar and the recap print**: damage, silver, the stock
+   * burned and the training queue, with one of them strictly better. No exchange rate and no cap: this pass
+   * has nothing to trade, because a march that is behind on none of the four is simply the same answer done
+   * better.
+   *
+   * **Why the search cannot find these itself.** Its two shapes are a ladder over a prefix and the sizer over
+   * *every* troop type (`sizer`, `evaluateVector`). Nobody ever asked the sizer for a **prefix**, and that is
+   * the family a player builds by hand: "Troops first" leaves the low tiers out, and he puts them back one
+   * tier at a time. Measured on his own camp of 2026-09-19 (`tools/theorycraft/out/108-thrift-end.md`): the
+   * bar's "more mercs" rung was 2 479 800 a march for 2 775 600 silver, 5 burned and 13d 18h of queue, and
+   * the sizer over five of his seven troop types with the same five chunks is **2 509 413 for 2 321 200 and
+   * 8d 21h** — more damage, 16 % less silver, 35 % less queue, the same stock. The criterion
+   * `tests/engine/plan-criteria.test.ts` holds it on every army, and it is the owner's own sentence turned
+   * into a test.
+   *
+   * It runs where the put-back runs and just before it, on the burn ladder and then on the two stops the
+   * ladder does not carry, so a stop is chosen on the march the player is offered. A row it replaces keeps its
+   * place on the ladder and is **not** registered in `generatedOf`: the put-back can be handed its old march
+   * back because it spends damage, and this one never does.
+   *
+   * **The finale is not re-sized, and that is safe rather than free** (the same reading the put-back makes of
+   * itself, above). A finale is sized from the stock the repeats leave — `stock − repeats × chunks(count)`,
+   * worked out when the candidate was scored — and a tightened march is behind on **none** of the four
+   * readings, the stock burned included, so its repeats leave **at least** as much as the finale was sized
+   * for. The finale therefore stays feasible and affordable, and `marches`, `finaleCounts` and the finale's
+   * own figures do not move; what it does not do is spend the stock the tightening freed. Measured over the
+   * thirteen armies of `tests/engine/plan-criteria.test.ts`, 2026-09-19: the burn moves on **one** of them,
+   * the owner's export at 12 000 — its silver saver 11 → 9 burned and its steady max 19 → 17, three repeats
+   * each — so at most **6 hired units** of that account's 254 are left in the barracks that the finale could
+   * have fielded. On the other twelve the tightened rows burn exactly what they burned and there is nothing
+   * to spend. Re-sizing it would mean re-running `finaleFor`, which lives inside the scorer and is keyed on a
+   * ladder depth and scale a prefix-sizer shape has no name for; the under-use is recorded here instead.
+   */
+  const tighterShape = (row: TradeRow): TradeRow | undefined => {
+    // Repeated rows only. The one row of a plan whose marches all differ is the `all-in`, and it is built
+    // march by march by its own builder — which scores these same prefix shapes itself; a pass that moved its
+    // first march alone would leave the marches behind it sized against a stock the first no longer spends.
+    if (!sizerShape || row.sequence) return undefined;
+    const repeats = row.marches - (row.finaleCounts ? 1 : 0);
+    if (repeats < 1) return undefined;
+    const asked = mercTypes
+      .map((entry) => ({ entry, count: row.counts[entry.id] ?? 0 }))
+      .filter((merc) => merc.count > 0);
+    if (asked.length === 0) return undefined;
+    let best: TradeRow | undefined;
+    for (let prefix = 1; prefix <= troops.length; prefix += 1) {
+      for (const [key, method] of Object.entries(SIZER_DEPTHS)) {
+        const sized = sizer(asked, method, prefix);
+        const rungs = sized.rungs;
+        const mercs = sized.mercs.filter((merc) => merc.count > 0);
+        // A march on one troop stack is the extreme the band refuses (owner, 2026-09-15: "not a strategy").
+        if (rungs.length < 2 || mercs.length === 0) continue;
+        if (mercs.some((merc) => lastsMarches(sustain[merc.entry.id] ?? 0, merc.count) < repeats)) continue;
+        const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+        const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
+        if (floor <= hiredTop) continue;
+        const fields = [...rungs, ...mercs];
+        const counts: Record<string, number> = {};
+        for (const stack of fields) counts[stack.entry.id] = stack.count;
+        const campaign: PlanTotals = { ...row, counts };
+        // S-58 B: the bar never offers a plan with a hole in it.
+        if (refuseDroppedTypes && !stocked.every((entry) => fieldsInCampaign(campaign, entry.id))) continue;
+        const march = toMarch(rungs, mercs, marchOf(fields, enemyStacks));
+        if (
+          march.damage < row.repeat.damage ||
+          march.silver > row.repeat.silver ||
+          march.seconds > row.repeat.seconds ||
+          march.mercLost > row.repeat.mercLost
+        ) {
+          continue;
+        }
+        if (
+          march.damage === row.repeat.damage &&
+          march.silver === row.repeat.silver &&
+          march.seconds === row.repeat.seconds &&
+          march.mercLost === row.repeat.mercLost
+        ) {
+          continue;
+        }
+        if (best && best.repeat.damage >= march.damage) continue;
+        const totalDamage = row.totalDamage + repeats * (march.damage - row.repeat.damage);
+        const campaignSilver = row.silver + repeats * (march.silver - row.repeat.silver);
+        const mercLost = row.mercLost + repeats * (march.mercLost - row.repeat.mercLost);
+        const hired = Object.values(march.mercFielded).reduce((sum, count) => sum + count, 0);
+        best = {
+          ...campaign,
+          label:
+            `${rungs.length} ${rungs.length === 1 ? 'stack' : 'stacks'} · ${hired} hired · ` +
+            `${compact(march.silver)} silver a march`,
+          shape: SIZER_DEPTHS[Number(key)] ?? 'ladder',
+          totalDamage,
+          silver: campaignSilver,
+          gold: row.gold + repeats * (march.gold - row.repeat.gold),
+          seconds: row.seconds + repeats * (march.seconds - row.repeat.seconds),
+          mercLost,
+          repeat: {
+            damage: march.damage,
+            silver: march.silver,
+            gold: march.gold,
+            seconds: march.seconds,
+            mercLost: march.mercLost,
+          },
+          damagePerSilver: campaignSilver > 0 ? totalDamage / campaignSilver : Infinity,
+          damagePerMercenary: mercLost > 0 ? totalDamage / mercLost : Infinity,
+        };
+      }
+    }
+    return best;
+  };
+
+  /**
    * **The sweet spot: the middle of the trade in hired stock** (owner, 2026-09-16).
    *
    * The rule was *the plan closest to the best on both ratios at once* (max of `min(perSilver/peakSilver,
@@ -2263,9 +2484,22 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    */
   if (input.putBack !== undefined) {
     const put = new Map<number, TradeRow>();
-    for (const row of ladderRows) {
-      const improved = putBackOn(row) ?? row;
-      if (improved !== row) generatedOf.set(improved, row);
+    for (const rung of ladderRows) {
+      // S-93, three steps in one: the tighter shape, so the put-back is offered the better march; the
+      // put-back; and the tighter shape **again** on what it left, because a put-back spends damage for
+      // silver and queue and can land on a march a prefix of the sizer beats on all four readings at once
+      // (measured on his camp of 2026-09-19: the "more mercs" rung's Spearman II put-back, 2 479 800 for
+      // 2 775 600 and 13d 18h, against the sizer over five of his seven types at 2 509 413 for 2 321 200
+      // and 8d 21h with the same fifty hunters). A row the second pass moves is no longer the put-back's
+      // march, so it drops the note; the march it was **generated** from is still kept, because the bar's
+      // own "burning more buys more" guard may still have to hand it back.
+      const row = tighterShape(rung) ?? rung;
+      const replaced = putBackOn(row);
+      const taken = replaced ?? row;
+      const tightened = tighterShape(taken);
+      const improved = tightened ?? taken;
+      if (replaced) generatedOf.set(improved, row);
+      if (tightened && replaced) improved.putBack = undefined;
       const held = put.get(improved.repeat.mercLost);
       if (
         !held ||
@@ -2549,6 +2783,74 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
             }
           }
         }
+        /**
+         * **And the sizer over each prefix of the troop ranking** (S-93), at this share and no other. The
+         * loop above asks the sizer for the whole army and the ladders for a prefix; nobody asked the
+         * **sizer** for a prefix, and that is the family the owner builds by hand — *"using Troops first I
+         * can get 2 009 810 … by adding back troops, impossible with Complete optimization"*. Measured
+         * before it was added (`out/108-thrift-end.md`): this stop's first march was beaten on all four
+         * readings at once — damage, silver, the stock burned and the training queue — on four of the
+         * thirteen armies, by nothing more exotic than the sizer over five, six, seven or nine of their
+         * troop types.
+         *
+         * **Inside the share walk, and dominated candidates refused** (2026-09-19, the validator's D1). It
+         * ran after the walk and always asked at the **whole** remaining stock, so on an army whose ladders
+         * only shelter a fraction of it a prefix shape came back with more hired units than the walk had
+         * settled on and took the row on the "most of the stock first" tie-break whatever it cost: measured
+         * on the owner's evening account, the campaign went 29 111 661 for 17 179 200 silver and 78 burned
+         * to **28 647 490 for 24 858 800 and 175** — less damage for 45 % more silver and 2.2× the stock,
+         * a row the "more mercs" stop beside it beat on all three at once. Asking at the walk's own share
+         * puts the two families on the same question; and a candidate the one already found beats on damage,
+         * silver **and** the stock burned is refused outright, which is the bar's own rule
+         * (`tests/engine/plan-criteria.test.ts`, "no stop of the bar is beaten by another stop of the same
+         * bar") stated where the choice is made.
+         */
+        for (let prefix = 1; prefix <= troops.length && sizerShape; prefix += 1) {
+          for (const [key, method] of Object.entries(SIZER_DEPTHS)) {
+            const asked = mercTypes
+              .map((entry) => ({ entry, count: counts[entry.id] ?? 0 }))
+              .filter((merc) => merc.count > 0);
+            if (asked.length === 0) break;
+            const sized = sizer(asked, method, prefix);
+            const fielded = sized.mercs.filter((merc) => merc.count > 0);
+            // More than one troop stack, the band's own third criterion: a mountain of hired units under a
+            // single stack is the extreme the owner refuses ("not a strategy"), and on his camp of
+            // 2026-09-19 the sizer over one type would have put 450 hunters behind 2 487 Rider III.
+            if (sized.rungs.length < 2 || fielded.length === 0) continue;
+            const troopFloor = Math.min(...sized.rungs.map((rung) => rung.count * rung.entry.hp));
+            const hiredTop = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
+            if (troopFloor <= hiredTop) continue;
+            const march = marchOf([...sized.rungs, ...fielded], enemyStacks);
+            // Beaten by the shape already found on all three of the campaign's own figures: not an offer.
+            if (
+              found &&
+              found.march.damage >= march.damage &&
+              found.march.silver <= march.silver &&
+              found.march.mercLost <= march.mercLost
+            ) {
+              continue;
+            }
+            const candidate: Candidate = {
+              marches: 1,
+              mercs: fielded,
+              rungs: sized.rungs,
+              march,
+              finale: null,
+              finaleRungs: [],
+              finaleMercs: [],
+              total: march.damage,
+              depth: Number(key),
+              scale: 1,
+            };
+            if (
+              !found ||
+              hiredOfVector(candidate.mercs) > hiredOfVector(found.mercs) ||
+              (hiredOfVector(candidate.mercs) === hiredOfVector(found.mercs) && candidate.total > found.total)
+            ) {
+              found = candidate;
+            }
+          }
+        }
       }
       if (!found) break;
       played.push(found);
@@ -2722,11 +3024,19 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     for (let index = 0; index < stops.length; index += 1) {
       const stop = stops[index] as PlanRow;
       if (stop.putBack !== undefined) continue;
-      const replaced = putBackOn(stop);
-      if (!replaced) continue;
-      if (stop.pick === 'all-in' && hiredOf(replaced.counts) <= topHired) continue;
-      const put: PlanRow = { ...stop, ...replaced };
-      generatedOf.set(put, stop);
+      // S-93, the same three steps as on the ladder. `tighterShape` answers nothing for the `all-in` (its
+      // marches all differ and its own builder scores these prefix shapes); `keeps` holds that stop's own
+      // rule through the put-back, as it always did.
+      const keeps = (row: PlanTotals): boolean => stop.pick !== 'all-in' || hiredOf(row.counts) > topHired;
+      const first = tighterShape(stop);
+      if (first && keeps(first)) stops[index] = { ...stop, ...first };
+      const before = stops[index] as PlanRow;
+      const replaced = putBackOn(before);
+      const taken = replaced && keeps(replaced) ? { ...before, ...replaced } : before;
+      const tightened = tighterShape(taken);
+      const put: PlanRow =
+        tightened && keeps(tightened) ? { ...taken, ...tightened, putBack: undefined } : taken;
+      if (replaced && keeps(replaced)) generatedOf.set(put, before);
       stops[index] = put;
     }
     /**
@@ -2777,7 +3087,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     for (let index = 1; index < stops.length; index += 1) {
       const current = stops[index] as PlanRow;
       const previous = stops[index - 1] as PlanRow;
-      if (current.pick === 'all-in' || !current.putBack) continue;
+      // The rows this may hand back are the ones a pass re-sized (`generatedOf`) — the put-back's, and since
+      // S-93 a put-back the tighter shape moved on afterwards, which carries no note of its own.
+      if (current.pick === 'all-in' || !generatedOf.has(current)) continue;
       if (current.repeat.damage > previous.repeat.damage) continue;
       const generated = generatedOf.get(current);
       if (!generated) continue;
