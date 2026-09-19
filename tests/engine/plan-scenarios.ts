@@ -55,6 +55,32 @@ export interface Pinned {
   silverFloor?: number;
   /** Against the calculators outside this repo, where a case has them: the same two readings. */
   externals?: { damageFloor: number; winsHired: boolean };
+  /**
+   * **The floors against TotalStack's Total Optimization** (S-101, 2026-09-19), the owner's own goal stated
+   * on the row he compares against: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and
+   * monster/dmg"*.
+   *
+   * Three standings of the plan's **best stop** — its best damage a silver, its best damage a hired soldier
+   * chunk and its best damage a monster chunk (`perSoldier` / `perMonster` of `plan-yardsticks.ts`, S-98's
+   * readings) — each over the same reading of the `TotalStack · Total Optimization` row, both priced by our
+   * engine on the same request and on the same worst opening. A scenario carries this block exactly when a
+   * **comparable** Total Optimization row is on its table.
+   *
+   * **They are measured, never aspirational.** Each is today's figure floored to two decimals, so the pin is
+   * a non-regression line and not a wish: where the plan is already past the goal the floor sits just under
+   * 1.0-and-above, and where it is **behind** the goal the floor sits just under the measured value and the
+   * shortfall is reported as a discrepancy (the run's `goal` line, and the story's own table) rather than
+   * pinned at 1.0. Pinning a goal the bar does not reach would make the benchmark red for a reason that is
+   * not a regression, which is the one thing it must not do.
+   */
+  totalOptimization?: {
+    /** Damage a silver, best stop over TotalStack's Total Optimization. */
+    perSilver: number;
+    /** Damage a hired-soldier chunk, best stop over TotalStack's Total Optimization. */
+    perSoldier: number;
+    /** Damage a monster chunk, best stop over TotalStack's Total Optimization. */
+    perMonster: number;
+  };
 }
 
 export interface Scenario {
@@ -278,6 +304,11 @@ function fourThousand(): Scenario {
     // because TotalStack's captured answer and the Generate rows give up more of themselves than ours do:
     // the sizers 0.999 → **1.000** and the two captured answers 0.968 → **0.972**. **Neither pin is
     // re-based** (see the bear ×1 case above): 0.96 and 0.93 stand, and both still pass.
+    // **The floors against Total Optimization, measured 2026-09-19 (S-101)**: 1.0166 a silver, **1.2185** a
+    // hired soldier chunk, 1.0166 a monster chunk. The four hired types of this query are all soldier hires,
+    // so the monster reading is `damage / 1` on both sides and repeats the damage column; the soldier one is
+    // the plan 22 % ahead on the stock at a better damage a silver. All three are at or above the goal —
+    // the only one of the five first-run-sized cases where that is so.
     pinned: {
       refuses: false,
       stops: 3,
@@ -285,6 +316,7 @@ function fourThousand(): Scenario {
       damageFloor: 0.96,
       winsHired: true,
       externals: { damageFloor: 0.93, winsHired: true },
+      totalOptimization: { perSilver: 1.01, perSoldier: 1.21, perMonster: 1.01 },
     },
   };
 }
@@ -355,6 +387,12 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // `damageFloor` 0.89 and `externals` 1.42 stand and still pass; **`stops` stays 4 and now FAILS**,
       // because the reliable bar offers five. The measured five-stop bar is in
       // `tests/engine/plan-baseline.proposed.json` for him to register.
+      // **The floors against Total Optimization, measured 2026-09-19 (S-101)**, and this army carries the
+      // widest discrepancy of the fifteen on the owner's own goal: **2.0702** a silver and **2.1458** a
+      // monster chunk, against **0.7806** a hired *soldier* chunk. The plan hits twice as hard for the
+      // silver and for the rare beast, and gives up a fifth of the soldier reading doing it, because its
+      // stops field the capped legionaries where Total Optimization answers this window with far fewer,
+      // larger soldier stacks. The floor is pinned at the 0.78 measured, not at the 1.0 wanted.
       pinned: {
         refuses: false,
         stops: 4,
@@ -362,6 +400,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         damageFloor: 0.89,
         winsHired: true,
         externals: { damageFloor: 1.42, winsHired: false },
+        totalOptimization: { perSilver: 2.07, perSoldier: 0.78, perMonster: 2.14 },
       },
     },
     {
@@ -403,6 +442,10 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // him to judge: `damageFloor` 0.96 against a measured 0.948 (a scenario that got worse on the share,
       // and the one army of the ten that did), and `stops` 5 against the four the bar now offers. The
       // measured figures are in `tests/engine/plan-baseline.proposed.json`.
+      // **The floors against Total Optimization, measured 2026-09-19 (S-101)**: **1.7936** a silver and
+      // **1.6972** a monster chunk, against **0.6000** a hired soldier chunk — the same shape as the 7 000
+      // export above and the deepest soldier shortfall of the fifteen. It is the one reading of the three on
+      // which this account is behind TotalStack's full optimisation, and it is pinned at 0.60 measured.
       pinned: {
         refuses: false,
         stops: 5,
@@ -410,6 +453,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         damageFloor: 0.96,
         winsHired: true,
         externals: { damageFloor: 1.36, winsHired: false },
+        totalOptimization: { perSilver: 1.79, perSoldier: 0.6, perMonster: 1.69 },
       },
     },
     {
@@ -430,6 +474,11 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // **`externals.damageFloor` 1.02 now FAILS** against the measured 1.018 — the plan's lead over
       // TotalStack's own answers narrows on this army, which is exactly the kind of "worse" the owner wants
       // to judge himself. `tests/engine/plan-baseline.proposed.json` carries the measured pair.
+      // **The floors against Total Optimization, measured 2026-09-19 (S-101)**, and this is the army where
+      // the owner's goal is met on all three at once: **1.0718** a silver, **1.1609** a hired soldier chunk,
+      // **1.0178** a monster chunk (the hunter is a soldier hire and no monster is fielded, so the last is
+      // the damage column read through `damage / 1` on both sides). One hired type and a large leadership is
+      // the shape the plan answers best.
       pinned: {
         refuses: false,
         stops: 4,
@@ -437,6 +486,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         damageFloor: 0.99,
         winsHired: true,
         externals: { damageFloor: 1.02, winsHired: true },
+        totalOptimization: { perSilver: 1.07, perSoldier: 1.16, perMonster: 1.01 },
       },
     },
     {
@@ -478,6 +528,11 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // to judge; **`stops` stays 5 and now FAILS**, because the reliable bar offers four (the silver saver
       // is gone: nothing left of the sweet spot clears it on damage a silver at this reading).
       // `tests/engine/plan-baseline.proposed.json` carries the measured bar.
+      // **The floors against Total Optimization, measured 2026-09-19 (S-101)**: **1.0241** a hired soldier
+      // chunk, against **0.9237** a silver and **0.9514** a monster chunk. The account holds four hired
+      // types here and the plan keeps every one of them; Total Optimization answers with the legionary wall
+      // that costs no silver, so the silver reading is the one it wins. Two of the three are under the goal
+      // and pinned where they measure.
       pinned: {
         refuses: false,
         stops: 5,
@@ -486,6 +541,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         winsHired: true,
         silverFloor: 0.41,
         externals: { damageFloor: 0.37, winsHired: true },
+        totalOptimization: { perSilver: 0.92, perSoldier: 1.02, perMonster: 0.95 },
       },
     },
     {
@@ -516,6 +572,12 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         winsHired: false,
       },
     },
+    // **The three camps, S-101 (2026-09-19)** — scenarios 13, 14 and 15, appended after the twelve and
+    // changing nothing above them. They are the armies `criteriaScenarios` has held the plan's criteria on
+    // since S-93 and S-97; what they lacked to be benchmark scenarios was an outside answer to stand
+    // against, and the replay of 2026-09-19 gave each of them four (`totalstack-rows.ts`).
+    ...liveCamp(profile),
+    ...hisCamp(profile),
   ];
 }
 
@@ -551,7 +613,23 @@ export function commonScenarios(): Scenario[] {
       // by me if the trade is ok."*). `damageFloor` stays at the 0.77 it was measured at on the midpoint
       // reading; the reliable figure above is in `tests/engine/plan-baseline.proposed.json` for him to
       // register. This floor **passes** at 0.98 measured against 0.77, so nothing here fails.
-      pinned: { refuses: false, stops: 1, sweetNotAheadOnEither: true, damageFloor: 0.77, winsHired: false },
+      // **Its first captured answers, 2026-09-19 (S-101)**: the replay asked TotalStack this army, which no
+      // capture had ever covered, and the three Generate rows it came back with are all **the same march as
+      // ours plus one bear's worth of troops** — its Elite Preservation and its Total Optimization are
+      // identical to the unit (18 217 808 for 32 529 600 over four marches) and its M's Preservation is
+      // behind both (17 582 756 for 32 538 400). Ours is 18 189 008 for 32 525 600: **0.9984** of the best
+      // of them on damage, for 4 000 silver less, and the same one chunk burned. `winsHired` against them is
+      // **false** by exactly that margin — the burn is one chunk on every row here, so damage a hired unit
+      // *is* the damage column — and the three floors against Total Optimization all read 0.99.
+      pinned: {
+        refuses: false,
+        stops: 1,
+        sweetNotAheadOnEither: true,
+        damageFloor: 0.77,
+        winsHired: false,
+        externals: { damageFloor: 0.99, winsHired: false },
+        totalOptimization: { perSilver: 0.99, perSoldier: 0.99, perMonster: 0.99 },
+      },
     },
     {
       label: 'first-run army, Bear V ×2 (20 000 leadership)',
@@ -572,7 +650,21 @@ export function commonScenarios(): Scenario[] {
       // midpoint's 18 779 168, 98.1 % of it) and the sizers' average-damage Generate rows give up much more,
       // so the share rises 0.783 → **0.989**. Nothing else on this case moves. The pin is **not** re-based
       // (see ×1 above and `plan-baseline.proposed.json`): it stays at 0.78 and passes.
-      pinned: { refuses: false, stops: 1, sweetNotAheadOnEither: true, damageFloor: 0.78, winsHired: false },
+      // **Its first captured answers, 2026-09-19 (S-101)**, and they read exactly as ×1's do: TotalStack's
+      // Elite Preservation and Total Optimization are the same march to the unit (18 442 208 for
+      // 32 529 600), its M's Preservation is behind both (17 807 156), and ours is 18 413 408 for
+      // 32 525 600 — **0.9984** of the best of them for 4 000 silver less at the same two chunks. Both
+      // armies' answers differ from ours by one troop stack's worth of rounding and nothing else, which is
+      // the honest reading of a case where the stock decides the march and both calculators know it.
+      pinned: {
+        refuses: false,
+        stops: 1,
+        sweetNotAheadOnEither: true,
+        damageFloor: 0.78,
+        winsHired: false,
+        externals: { damageFloor: 0.99, winsHired: false },
+        totalOptimization: { perSilver: 0.99, perSoldier: 0.99, perMonster: 0.99 },
+      },
     },
     {
       label: 'first-run army, Bear V ×3 (20 000 leadership)',
@@ -612,6 +704,11 @@ export function commonScenarios(): Scenario[] {
       // 19 411 328. With the sizers re-priced too the plan's share is 0.941 → **1.000** and TotalStack's
       // best 0.891 → **0.875**, both stops kept. **Neither pin is re-based** (see ×1 above): 0.79 and 0.75
       // stand, both pass, and the measured pair is in `plan-baseline.proposed.json` for the owner.
+      // **The floors against Total Optimization, measured 2026-09-19 (S-101)**: 0.9986 a silver and 0.9985
+      // on both rare readings. The bear is a monster and the only hired type here, so `soldiersLost` is
+      // nought on every row and damage a soldier and damage a monster are the same reading of the same
+      // campaign — all three floors are one chunk's worth of damage apart from the goal, and all three are
+      // under it, which is the discrepancy this army reports.
       pinned: {
         refuses: false,
         stops: 2,
@@ -619,6 +716,7 @@ export function commonScenarios(): Scenario[] {
         damageFloor: 0.79,
         winsHired: false,
         externals: { damageFloor: 0.75, winsHired: false },
+        totalOptimization: { perSilver: 0.99, perSoldier: 0.99, perMonster: 0.99 },
       },
     },
     {
@@ -655,6 +753,11 @@ export function commonScenarios(): Scenario[] {
       // own shape with a Spearman II put-back rather than the one giant stack. The sweet spot's six bears are
       // untouched. Shares: the sizers 0.996 → **0.988** and TotalStack's priority search 0.945 → **0.930**.
       // **Neither pin is re-based** (see ×1 above): 0.86 and 0.81 stand and both pass.
+      // **The floors against Total Optimization, measured 2026-09-19 (S-101)**: 0.9987 a silver, **1.0046**
+      // a monster chunk (and the same figure a soldier chunk, the bear being the only hired type and a
+      // monster). This is the first of the three bear armies where the stock is large enough for the plan's
+      // shape to matter, and the first where it is **ahead** of Total Optimization on the stock while still
+      // a shade behind it a silver.
       pinned: {
         refuses: false,
         stops: 2,
@@ -662,6 +765,7 @@ export function commonScenarios(): Scenario[] {
         damageFloor: 0.86,
         winsHired: false,
         externals: { damageFloor: 0.81, winsHired: false },
+        totalOptimization: { perSilver: 0.99, perSoldier: 1.0, perMonster: 1.0 },
       },
     },
     {
@@ -676,6 +780,11 @@ export function commonScenarios(): Scenario[] {
       // reading, and it drops on the rivals too, so the two shares barely shift: the sizers 0.996 →
       // **0.993** and TotalStack's M's Preservation 0.991 → **0.987**. **Neither pin is re-based** (see the
       // bear ×1 case above): 0.98 and 0.98 stand, and both still pass.
+      // **The floors against Total Optimization, measured 2026-09-19 (S-101)**: 0.9934 a silver, **1.1120**
+      // a hired soldier chunk, 0.9983 a monster chunk. The hunter is a *soldier* hire, so this army's
+      // monster reading is the `damage / 1` floor on both sides and says only what the damage column says;
+      // the soldier reading is the live one, and it is the plan 11 % ahead on the stock for a 0.7 % loss a
+      // silver — the trade the bar exists to make, on the quietest army of the fifteen.
       pinned: {
         refuses: false,
         stops: 3,
@@ -683,6 +792,7 @@ export function commonScenarios(): Scenario[] {
         damageFloor: 0.98,
         winsHired: true,
         externals: { damageFloor: 0.98, winsHired: true },
+        totalOptimization: { perSilver: 0.99, perSoldier: 1.11, perMonster: 0.99 },
       },
     },
     {
@@ -731,12 +841,14 @@ export function commonScenarios(): Scenario[] {
  * 1 002, bears unlimited, his three captains, 4 975 leadership and 2 180 authority, the two top guardsman
  * tiers and the top melee specialist he does not own clicked out. It is the camp experiment 106 measured
  * (`tools/theorycraft/out/106-shelter-live.md`), where **every** stop fielded hired stacks above the troops —
- * 375 legionaries and 403 arbalesters over a 274 772-HP floor at the sweet spot — and it is the one case in
- * this file that no benchmark scenario covers, which is exactly why it is here.
+ * 375 legionaries and 403 arbalesters over a 274 772-HP floor at the sweet spot.
+ *
+ * **A benchmark scenario since S-101** (2026-09-19), where it had been a criteria-only army: the replay of
+ * that day asked TotalStack this exact camp, so the one thing it was missing — a captured answer to stand
+ * against — is now on its table, and an army with an outside answer belongs on the bar the benchmark draws.
+ * Its request is built exactly as it always was; only its place in the file moved.
  */
-const liveCamp = (): { label: string; request: StackRequest }[] => {
-  const owner = ownerProfile();
-  if (!owner) return [];
+const liveCamp = (owner: Profile): Scenario[] => {
   const camp = structuredClone(owner);
   camp.sources.captains = [
     { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
@@ -759,6 +871,35 @@ const liveCamp = (): { label: string; request: StackRequest }[] => {
         active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
         housing: { ...setup.housing, leadership: 4_975, authority: 2_180 },
       }),
+      externals: [],
+      // **Pinned 2026-09-19 (S-101), every figure measured that day.** Four stops — sweet spot, more mercs,
+      // steady max, `all-in` — at 19 · 37 · 52 · 133 chunks over the campaign.
+      //
+      // **This is the bear-wall army, and it is why its floors read the way they do.** Its bears are
+      // *unlimited*, so every rival here spends the rare stock without a ceiling: the Tier ladder sizer
+      // burns **398** chunks for 43.9 M, Troops first · Generate **353** for 50.4 M, and TotalStack's Total
+      // Optimization **374** for 49.2 M at 6.32 damage a silver, while the plan's hardest stop is the steady
+      // max's 15.3 M for **52**. So the two damage floors are low by construction — **0.30** of the best
+      // sizer sequence and **0.31** of the best captured answer — and `silverFloor` is **0.28** for the same
+      // reason the evening account's was 0.41: a wall of bears costs authority and gold, not silver, and a
+      // damage-a-silver column that prices it at nothing is not a yardstick the plan can be held to.
+      //
+      // What the plan does win, and the reason this army earns its place: **damage a hired unit**, by three
+      // to five times (the sweet spot's 472 637 against the best sizer sequence's 318 635 and Total
+      // Optimization's 131 630 — `winsHired` and `externals.winsHired` both true), and the two rare-stock
+      // readings against Total Optimization outright: **4.2076** a hired soldier chunk and **2.1765** a
+      // monster chunk. Against **0.2593** a silver, which is the widest single discrepancy on the owner's
+      // goal anywhere in the fifteen and is pinned at what it measures.
+      pinned: {
+        refuses: false,
+        stops: 4,
+        sweetNotAheadOnEither: false,
+        damageFloor: 0.3,
+        winsHired: true,
+        silverFloor: 0.28,
+        externals: { damageFloor: 0.31, winsHired: true },
+        totalOptimization: { perSilver: 0.25, perSoldier: 4.2, perMonster: 2.17 },
+      },
     },
   ];
 };
@@ -775,16 +916,86 @@ const liveCamp = (): { label: string; request: StackRequest }[] => {
  * dump of that evening (4 975 / 2 180, 450 hunters) and the figures in his message (5 100 / 2 200, 120), and
  * both are here because the stock is what the thrift end turns on. Measured in
  * `tools/theorycraft/out/107-put-back-mercs.md` and `out/108-thrift-end.md`.
+ *
+ * **Benchmark scenarios since S-101**, for the same reason as the live camp above: the replay of 2026-09-19
+ * asked TotalStack both of them, and the four Generate answers it came back with are now rows on their
+ * tables. The requests are untouched.
  */
-const hisCamp = (): { label: string; request: StackRequest }[] => {
-  const owner = ownerProfile();
-  if (!owner) return [];
+const hisCamp = (owner: Profile): Scenario[] => {
   return (
     [
-      ['his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)', 4_975, 2_180, 450],
-      ['his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)', 5_100, 2_200, 120],
+      {
+        label: 'his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)',
+        leadership: 4_975,
+        authority: 2_180,
+        cap: 450,
+        // **Pinned 2026-09-19 (S-101), measured that day.** Four stops — silver saver, sweet spot, more
+        // mercs, steady max — at 12 · 15 · 33 · 57 chunks; no `all-in`, this being one of the two armies
+        // where the top of the bar is the steady max itself.
+        //
+        // **A large stock and a small leadership**, which is the shape that splits the two yardsticks
+        // apart. The sizers spend the whole 450 hunters — **156** chunks over four marches — for
+        // 25 012 889 at 1.796 a silver, so the plan's hardest stop (13 842 678 for 57 chunks) is
+        // **0.5534** of them on damage and **0.7357** of them a silver: both floors are pinned under 1,
+        // and `silverFloor` at **0.73** for the same reason the two wall armies have one. Against the
+        // *captured* answers the reading inverts completely — the plan is **2.1553×** TotalStack's Total
+        // Optimization on damage — because the page answers this camp with a 156-chunk march of its own
+        // that hits 6 422 616, less than half of ours.
+        //
+        // `winsHired` is **false** by a hair and by an honest one: Troops first over every type reaches
+        // 637 578 a chunk on a 12-chunk march where the plan's silver saver reaches 630 122 on the same
+        // 12 — 1.2 % apart — while out-damaging that sizer row by 28 %. `externals.winsHired` is false for
+        // a different reason: TotalStack's M's Preservation answers this camp by fielding **no hunter at
+        // all**, so its whole campaign burns nothing and `damage / 1` puts it top of that column by
+        // arithmetic rather than by a march.
+        //
+        // **All three floors against Total Optimization are above the goal**: **1.6034** a silver,
+        // **15.3051** a hired soldier chunk (its answer burns 156 chunks to our 12 on the thriftiest stop)
+        // and **2.1553** a monster chunk, which on a camp with no monster on either side is the damage
+        // column read through `damage / 1`.
+        pinned: {
+          refuses: false,
+          stops: 4,
+          sweetNotAheadOnEither: false,
+          damageFloor: 0.55,
+          winsHired: false,
+          silverFloor: 0.73,
+          externals: { damageFloor: 2.15, winsHired: false },
+          totalOptimization: { perSilver: 1.6, perSoldier: 15.3, perMonster: 2.15 },
+        } as Pinned,
+      },
+      {
+        label: 'his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)',
+        leadership: 5_100,
+        authority: 2_200,
+        cap: 120,
+        // **Pinned 2026-09-19 (S-101), measured that day.** Four stops — sweet spot, more mercs, steady
+        // max, `all-in` — at 25 · 34 · 39 · 41 chunks, the tight ladder a small stock draws.
+        //
+        // The same camp at the reading of his own message, and **the stock is the whole difference**: with
+        // 120 hunters instead of 450 the sizers can only spend 42 chunks, their best sequence reaches
+        // 11 426 058, and the plan's `all-in` **beats it** — 11 585 381, a share of **1.0139** — at
+        // **1.0811** of its damage a silver, so this army holds the file's ordinary 95 % silver floor with
+        // no exception where its 450-hunter sibling needs one. Against the captured answers it is
+        // **1.7593×** Total Optimization on damage.
+        //
+        // `winsHired` and `externals.winsHired` are false for the same two reasons as the sibling: Troops
+        // first over every type reaches 656 059 a chunk on a 12-chunk march (the plan's best stop is the
+        // sweet spot's 406 254 on 25), and TotalStack's M's Preservation again fields **no hunter at all**.
+        // **All three floors against Total Optimization clear the goal**: **1.2967** a silver, **2.5911** a
+        // hired soldier chunk, **1.7593** a monster chunk.
+        pinned: {
+          refuses: false,
+          stops: 4,
+          sweetNotAheadOnEither: false,
+          damageFloor: 1.01,
+          winsHired: false,
+          externals: { damageFloor: 1.75, winsHired: false },
+          totalOptimization: { perSilver: 1.29, perSoldier: 2.59, perMonster: 1.75 },
+        } as Pinned,
+      },
     ] as const
-  ).flatMap(([label, leadership, authority, cap]) => {
+  ).flatMap(({ label, leadership, authority, cap, pinned }) => {
     const camp = structuredClone(owner);
     camp.sources.captains = [
       { id: 'ww8j0qwv', captainId: 'aydae', level: 43, star: 3 },
@@ -803,6 +1014,8 @@ const hisCamp = (): { label: string; request: StackRequest }[] => {
           active: { ...setup.active, captains: ['h9i5fjdc', '9kfdv1z0', 'ww8j0qwv'] },
           housing: { ...setup.housing, leadership, authority },
         }),
+        externals: [],
+        pinned,
       },
     ];
   });
@@ -811,9 +1024,12 @@ const hisCamp = (): { label: string; request: StackRequest }[] => {
 /**
  * **The armies the criteria are held on** — the shared scenario list, built once and read by
  * `tests/engine/plan-criteria.test.ts` and by the theorycraft experiments that measure a rule against the
- * same set (`tools/theorycraft/112-band-yardstick.test.ts`). Fifteen: the benchmark's own twelve
- * (`commonScenarios` and `ownerScenarios` above, their labels and their order), the live camp of
- * 2026-09-18, and his camp of 2026-09-19 at both readings of the Battle card.
+ * same set (`tools/theorycraft/112-band-yardstick.test.ts`). Still the same **fifteen**, in the same order
+ * and under the same labels, and since S-101 they are simply *the benchmark's own scenarios*: the three
+ * camps this function used to append by hand — the live camp of 2026-09-18 and his camp of 2026-09-19 at
+ * both readings of the Battle card — are benchmark scenarios in their own right now (the replay of that day
+ * gave each of them a captured answer to stand against), so appending them here a second time would hold
+ * every criterion on the same army twice.
  *
  * It lives here rather than in the criteria file so that an experiment measuring a change to a rule
  * measures it on exactly the armies the criteria will judge it on — a list copied into an experiment drifts
@@ -822,5 +1038,5 @@ const hisCamp = (): { label: string; request: StackRequest }[] => {
  */
 export function criteriaScenarios(): { label: string; request: StackRequest; pinned?: Pinned }[] {
   const profile = ownerProfile();
-  return [...commonScenarios(), ...(profile ? ownerScenarios(profile) : []), ...liveCamp(), ...hisCamp()];
+  return [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
 }

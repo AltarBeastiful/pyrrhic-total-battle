@@ -425,10 +425,16 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
 );
 
 /**
- * The armies every criterion below is held on: the shared list of `plan-scenarios.ts` — the benchmark's
- * own twelve, the owner's live camp of 2026-09-18 and his camp of 2026-09-19 at both readings of the Battle
- * card. It is exported from there so that a theorycraft experiment measuring a rule runs on exactly the
- * armies the criteria will judge it on.
+ * The armies every criterion below is held on: the shared list of `plan-scenarios.ts` — the **fifteen** the
+ * benchmark itself measures. It is exported from there so that a theorycraft experiment measuring a rule
+ * runs on exactly the armies the criteria will judge it on.
+ *
+ * The same fifteen armies, under the same labels and in the same order, as before S-101 (2026-09-19); what
+ * changed is where three of them are declared. The owner's live camp of 2026-09-18 and his camp of
+ * 2026-09-19 at both readings of the Battle card used to be appended to this list by hand, because no
+ * calculator outside the repo had answered them and so they could not be benchmark scenarios. The replay of
+ * 2026-09-19 answered all three, they are benchmark scenarios 13, 14 and 15 now, and the list stopped
+ * appending them a second time.
  */
 const scenarios = criteriaScenarios();
 

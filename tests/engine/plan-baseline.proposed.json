@@ -2,7 +2,7 @@
   "registeredBy": null,
   "registeredAt": null,
   "reading": "worst-opening",
-  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T07:58:42.913Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
+  "note": "Proposed, not registered. Measured by `pnpm bench:baseline` from the benchmark run of 2026-09-19T09:49:54.061Z; every damage figure is a march's worst opening (the enemy-first journal, S-94). To register: read it, set `registeredBy` to your name and `registeredAt` to the date, and rename this file to `plan-baseline.json`.",
   "scenarios": {
     "first-run army, Bear V ×1 (20 000 leadership)": {
       "stops": {
@@ -39,14 +39,34 @@
       },
       "ratios": {
         "bestSizer": 0.9813228802809272,
-        "externals": {},
+        "externals": {
+          "TotalStack · M’s Preservation": 1.034479918847762,
+          "TotalStack · Total Optimization": 0.9984191292388195,
+          "TotalStack · Elite Preservation": 0.9984191292388195
+        },
         "perSoldier": {
           "bestSizer": 0.9813228802809272,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 1.034479918847762,
+            "TotalStack · Total Optimization": 0.9984191292388195,
+            "TotalStack · Elite Preservation": 0.9984191292388195
+          }
         },
         "perMonster": {
           "bestSizer": 0.9813228802809272,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 1.034479918847762,
+            "TotalStack · Total Optimization": 0.9984191292388195,
+            "TotalStack · Elite Preservation": 0.9984191292388195
+          }
+        },
+        "perSilver": {
+          "bestSizer": 1,
+          "externals": {
+            "TotalStack · M’s Preservation": 1.0348870241113468,
+            "TotalStack · Total Optimization": 0.9985419148758856,
+            "TotalStack · Elite Preservation": 0.9985419148758856
+          }
         }
       }
     },
@@ -85,14 +105,34 @@
       },
       "ratios": {
         "bestSizer": 0.9894366424230596,
-        "externals": {},
+        "externals": {
+          "TotalStack · M’s Preservation": 1.034045414102061,
+          "TotalStack · Total Optimization": 0.9984383648639035,
+          "TotalStack · Elite Preservation": 0.9984383648639035
+        },
         "perSoldier": {
           "bestSizer": 0.9894366424230596,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 1.034045414102061,
+            "TotalStack · Total Optimization": 0.9984383648639035,
+            "TotalStack · Elite Preservation": 0.9984383648639035
+          }
         },
         "perMonster": {
           "bestSizer": 0.9894366424230596,
-          "externals": {}
+          "externals": {
+            "TotalStack · M’s Preservation": 1.034045414102061,
+            "TotalStack · Total Optimization": 0.9984383648639035,
+            "TotalStack · Elite Preservation": 0.9984383648639035
+          }
+        },
+        "perSilver": {
+          "bestSizer": 1,
+          "externals": {
+            "TotalStack · M’s Preservation": 1.034452348372313,
+            "TotalStack · Total Optimization": 0.9985611528665677,
+            "TotalStack · Elite Preservation": 0.9985611528665677
+          }
         }
       }
     },
@@ -178,6 +218,18 @@
             "TotalStack · priority search under Elite (damagePerSilver)": 0.9984663563310302,
             "TotalStack · Elite Preservation": 0.9984663563310302
           }
+        },
+        "perSilver": {
+          "bestSizer": 1,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.9859446419639247,
+            "TotalStack · priority search under M’s (averageDamage)": 1.5065782417369833,
+            "TotalStack · priority search under M’s (damagePerSilver)": 0.9859446419639247,
+            "TotalStack · Total Optimization": 0.9985891477760865,
+            "TotalStack · priority search under Elite (averageDamage)": 1.7225402063409987,
+            "TotalStack · priority search under Elite (damagePerSilver)": 0.9985891477760865,
+            "TotalStack · Elite Preservation": 0.9985891477760865
+          }
         }
       }
     },
@@ -262,6 +314,18 @@
             "TotalStack · priority search under Elite (averageDamage)": 1.055845508211726,
             "TotalStack · priority search under Elite (damagePerSilver)": 0.9872928201336264,
             "TotalStack · Elite Preservation": 0.9872928201336264
+          }
+        },
+        "perSilver": {
+          "bestSizer": 0.981894971090046,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.96436672573986,
+            "TotalStack · priority search under M’s (averageDamage)": 1.5910952501363278,
+            "TotalStack · priority search under M’s (damagePerSilver)": 0.96436672573986,
+            "TotalStack · Total Optimization": 0.9987380883904701,
+            "TotalStack · priority search under Elite (averageDamage)": 1.8071025038048227,
+            "TotalStack · priority search under Elite (damagePerSilver)": 0.9815650485186224,
+            "TotalStack · Elite Preservation": 0.9815650485186224
           }
         }
       }
@@ -363,6 +427,18 @@
             "TotalStack · priority search under Elite (damagePerSilver)": 1.023102700255372,
             "TotalStack · Elite Preservation": 1.1185401765840337
           }
+        },
+        "perSilver": {
+          "bestSizer": 0.9942166649159775,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.9827186988629818,
+            "TotalStack · priority search under M’s (averageDamage)": 1.0452922670940772,
+            "TotalStack · priority search under M’s (damagePerSilver)": 0.9827186988629818,
+            "TotalStack · Total Optimization": 0.9933809588929846,
+            "TotalStack · priority search under Elite (averageDamage)": 1.0661017276917617,
+            "TotalStack · priority search under Elite (damagePerSilver)": 1.0661017276917617,
+            "TotalStack · Elite Preservation": 1.1130484859419552
+          }
         }
       }
     },
@@ -438,6 +514,10 @@
         },
         "perMonster": {
           "bestSizer": 0.5926131874643233,
+          "externals": {}
+        },
+        "perSilver": {
+          "bestSizer": 0.9584050782984246,
           "externals": {}
         }
       }
@@ -541,6 +621,20 @@
             "TotalStack · priority search under M’s (averageDamage)": 0.973659883866106,
             "TotalStack · priority search under M’s (damagePerSilver)": 0.9722750967718375,
             "TotalStack · Total Optimization": 1.0166193572836661,
+            "TotalStack · priority search under Elite (averageDamage)": 1.0311701577872747,
+            "TotalStack · priority search under Elite (damagePerSilver)": 1.0311701577872747,
+            "TotalStack · Elite Preservation": 1.0311701577872747
+          }
+        },
+        "perSilver": {
+          "bestSizer": 1,
+          "externals": {
+            "TotalStack · optimize (as captured, repeated)": 0.9724668922275395,
+            "Kai’s calculator · extract (as captured, repeated)": 1.0083281162035933,
+            "TotalStack · M’s Preservation": 0.9724668922275395,
+            "TotalStack · priority search under M’s (averageDamage)": 0.9741720668665615,
+            "TotalStack · priority search under M’s (damagePerSilver)": 0.9724668922275395,
+            "TotalStack · Total Optimization": 1.0166193572836664,
             "TotalStack · priority search under Elite (averageDamage)": 1.0311701577872747,
             "TotalStack · priority search under Elite (damagePerSilver)": 1.0311701577872747,
             "TotalStack · Elite Preservation": 1.0311701577872747
@@ -675,6 +769,18 @@
             "TotalStack · priority search under Elite (damagePerSilver)": 2.783054838384324,
             "TotalStack · Elite Preservation": 2.783054838384324
           }
+        },
+        "perSilver": {
+          "bestSizer": 0.975522213625408,
+          "externals": {
+            "TotalStack · M’s Preservation": 2.0703824324300233,
+            "TotalStack · priority search under M’s (averageDamage)": 2.42183755664306,
+            "TotalStack · priority search under M’s (damagePerSilver)": 2.235773001479651,
+            "TotalStack · Total Optimization": 2.0701562144827776,
+            "TotalStack · priority search under Elite (averageDamage)": 5.216803670119186,
+            "TotalStack · priority search under Elite (damagePerSilver)": 2.6849435199281513,
+            "TotalStack · Elite Preservation": 2.6849435199281513
+          }
         }
       }
     },
@@ -774,6 +880,18 @@
             "TotalStack · priority search under Elite (averageDamage)": 4.09400175370241,
             "TotalStack · priority search under Elite (damagePerSilver)": 2.196624326488515,
             "TotalStack · Elite Preservation": 2.196624326488515
+          }
+        },
+        "perSilver": {
+          "bestSizer": 1.0308385203116073,
+          "externals": {
+            "TotalStack · M’s Preservation": 1.7813992549218967,
+            "TotalStack · priority search under M’s (averageDamage)": 1.7097894157874085,
+            "TotalStack · priority search under M’s (damagePerSilver)": 1.7097894157874085,
+            "TotalStack · Total Optimization": 1.7936333602734045,
+            "TotalStack · priority search under Elite (averageDamage)": 7.732830065425173,
+            "TotalStack · priority search under Elite (damagePerSilver)": 2.3214792316088544,
+            "TotalStack · Elite Preservation": 2.3214792316088544
           }
         }
       }
@@ -889,6 +1007,18 @@
             "TotalStack · priority search under Elite (averageDamage)": 1.0178250686800965,
             "TotalStack · priority search under Elite (damagePerSilver)": 1.0178250686800965,
             "TotalStack · Elite Preservation": 1.0178250686800965
+          }
+        },
+        "perSilver": {
+          "bestSizer": 1.2340051047989073,
+          "externals": {
+            "TotalStack · M’s Preservation": 1.205955091788214,
+            "TotalStack · priority search under M’s (averageDamage)": 1.205955091788214,
+            "TotalStack · priority search under M’s (damagePerSilver)": 1.205955091788214,
+            "TotalStack · Total Optimization": 1.0717877031556728,
+            "TotalStack · priority search under Elite (averageDamage)": 1.0717877031556728,
+            "TotalStack · priority search under Elite (damagePerSilver)": 1.0717877031556728,
+            "TotalStack · Elite Preservation": 1.0717877031556728
           }
         }
       }
@@ -1020,6 +1150,18 @@
             "TotalStack · priority search under Elite (damagePerSilver)": 1.3845866142402616,
             "TotalStack · Elite Preservation": 1.024173633264822
           }
+        },
+        "perSilver": {
+          "bestSizer": 1.0747345551488814,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.9336110045449201,
+            "TotalStack · priority search under M’s (averageDamage)": 1.4940184244090973,
+            "TotalStack · priority search under M’s (damagePerSilver)": 0.9336110045449201,
+            "TotalStack · Total Optimization": 0.9236927534934744,
+            "TotalStack · priority search under Elite (averageDamage)": 1.4940184244090973,
+            "TotalStack · priority search under Elite (damagePerSilver)": 1.273905049807892,
+            "TotalStack · Elite Preservation": 0.9943222523809301
+          }
         }
       }
     },
@@ -1096,6 +1238,343 @@
         "perMonster": {
           "bestSizer": 0.9482517370021911,
           "externals": {}
+        },
+        "perSilver": {
+          "bestSizer": 0.9579420008625354,
+          "externals": {}
+        }
+      }
+    },
+    "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)": {
+      "stops": {
+        "sweet-spot": {
+          "marches": 4,
+          "damage": 8980108,
+          "silver": 7241900,
+          "gold": 1664,
+          "seconds": 1716330,
+          "burned": 19,
+          "perSilver": 1.2400209889669838,
+          "perHired": 472637.2631578947,
+          "soldiersLost": 15,
+          "monstersLost": 4,
+          "dragonCoins": 0,
+          "perSoldier": 598673.8666666667,
+          "perMonster": 2245027
+        },
+        "more-mercs": {
+          "marches": 4,
+          "damage": 12086359,
+          "silver": 9849200,
+          "gold": 5264,
+          "seconds": 3687240,
+          "burned": 37,
+          "perSilver": 1.2271411891321122,
+          "perHired": 326658.35135135136,
+          "soldiersLost": 33,
+          "monstersLost": 4,
+          "dragonCoins": 0,
+          "perSoldier": 366253.30303030304,
+          "perMonster": 3021589.75
+        },
+        "steady-max": {
+          "marches": 4,
+          "damage": 15306859,
+          "silver": 9849200,
+          "gold": 6344,
+          "seconds": 3687240,
+          "burned": 52,
+          "perSilver": 1.5541220606749786,
+          "perHired": 294362.67307692306,
+          "soldiersLost": 48,
+          "monstersLost": 4,
+          "dragonCoins": 0,
+          "perSoldier": 318892.8958333333,
+          "perMonster": 3826714.75
+        },
+        "all-in": {
+          "marches": 4,
+          "damage": 10899547,
+          "silver": 6653700,
+          "gold": 17504,
+          "seconds": 3370335,
+          "burned": 133,
+          "perSilver": 1.6381181898793153,
+          "perHired": 81951.48120300751,
+          "soldiersLost": 125,
+          "monstersLost": 8,
+          "dragonCoins": 0,
+          "perSoldier": 87196.376,
+          "perMonster": 1362443.375
+        }
+      },
+      "plan": {
+        "marches": 4,
+        "damage": 10835596,
+        "silver": 10457300,
+        "gold": 6800,
+        "seconds": 4423260,
+        "burned": 37,
+        "perSilver": 1.0361753033765886,
+        "perHired": 292853.9459459459,
+        "soldiersLost": 33,
+        "monstersLost": 4,
+        "dragonCoins": 0,
+        "perSoldier": 328351.3939393939,
+        "perMonster": 2708899
+      },
+      "ratios": {
+        "bestSizer": 0.3034946219769842,
+        "externals": {
+          "TotalStack · M’s Preservation": 0.4322504747823987,
+          "TotalStack · Total Optimization": 0.3109266884909813,
+          "TotalStack · Elite Preservation": 0.3109266884909813
+        },
+        "perSoldier": {
+          "bestSizer": 1.610461056184329,
+          "externals": {
+            "TotalStack · M’s Preservation": 3.8545576455808277,
+            "TotalStack · Total Optimization": 4.207637521562736,
+            "TotalStack · Elite Preservation": 4.207637521562736
+          }
+        },
+        "perMonster": {
+          "bestSizer": 1.517473109884921,
+          "externals": {
+            "TotalStack · M’s Preservation": 3.4580037982591896,
+            "TotalStack · Total Optimization": 2.176486819436869,
+            "TotalStack · Elite Preservation": 2.176486819436869
+          }
+        },
+        "perSilver": {
+          "bestSizer": 0.28981169292373876,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.3606893375650894,
+            "TotalStack · Total Optimization": 0.2593448056375321,
+            "TotalStack · Elite Preservation": 0.2593448056375321
+          }
+        }
+      }
+    },
+    "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)": {
+      "stops": {
+        "silver-saver": {
+          "marches": 4,
+          "damage": 7561467,
+          "silver": 7313300,
+          "gold": 848,
+          "seconds": 2257230,
+          "burned": 12,
+          "perSilver": 1.033933655121491,
+          "perHired": 630122.25,
+          "soldiersLost": 12,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 630122.25,
+          "perMonster": 7561467
+        },
+        "sweet-spot": {
+          "marches": 4,
+          "damage": 9068238,
+          "silver": 8746700,
+          "gold": 1016,
+          "seconds": 2734500,
+          "burned": 15,
+          "perSilver": 1.0367610641727738,
+          "perHired": 604549.2,
+          "soldiersLost": 15,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 604549.2,
+          "perMonster": 9068238
+        },
+        "more-mercs": {
+          "marches": 4,
+          "damage": 10294068,
+          "silver": 10005200,
+          "gold": 2288,
+          "seconds": 3874440,
+          "burned": 33,
+          "perSilver": 1.0288717866709312,
+          "perHired": 311941.45454545453,
+          "soldiersLost": 33,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 311941.45454545453,
+          "perMonster": 10294068
+        },
+        "steady-max": {
+          "marches": 4,
+          "damage": 13842678,
+          "silver": 10476500,
+          "gold": 3944,
+          "seconds": 4441260,
+          "burned": 57,
+          "perSilver": 1.3213074977330215,
+          "perHired": 242854,
+          "soldiersLost": 57,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 242854,
+          "perMonster": 13842678
+        }
+      },
+      "plan": {
+        "marches": 4,
+        "damage": 9102150,
+        "silver": 9806300,
+        "gold": 1808,
+        "seconds": 3790740,
+        "burned": 27,
+        "perSilver": 0.9281941201064622,
+        "perHired": 337116.6666666667,
+        "soldiersLost": 27,
+        "monstersLost": 0,
+        "dragonCoins": 0,
+        "perSoldier": 337116.6666666667,
+        "perMonster": 9102150
+      },
+      "ratios": {
+        "bestSizer": 0.5534217978578964,
+        "externals": {
+          "TotalStack · M’s Preservation": 2.7670325479199698,
+          "TotalStack · Total Optimization": 2.1553021385678357,
+          "TotalStack · Elite Preservation": 2.1553021385678357
+        },
+        "perSoldier": {
+          "bestSizer": 0.9883061366609261,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.1259560306841324,
+            "TotalStack · Total Optimization": 15.3051452865935,
+            "TotalStack · Elite Preservation": 15.3051452865935
+          }
+        },
+        "perMonster": {
+          "bestSizer": 0.5534217978578964,
+          "externals": {
+            "TotalStack · M’s Preservation": 2.7670325479199698,
+            "TotalStack · Total Optimization": 2.1553021385678357,
+            "TotalStack · Elite Preservation": 2.1553021385678357
+          }
+        },
+        "perSilver": {
+          "bestSizer": 0.7357052510978375,
+          "externals": {
+            "TotalStack · M’s Preservation": 2.059381108446675,
+            "TotalStack · Total Optimization": 1.6034386358037238,
+            "TotalStack · Elite Preservation": 1.6034386358037238
+          }
+        }
+      }
+    },
+    "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)": {
+      "stops": {
+        "sweet-spot": {
+          "marches": 4,
+          "damage": 10156338,
+          "silver": 9503600,
+          "gold": 1792,
+          "seconds": 3482760,
+          "burned": 25,
+          "perSilver": 1.0686832358264238,
+          "perHired": 406253.52,
+          "soldiersLost": 25,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 406253.52,
+          "perMonster": 10156338
+        },
+        "more-mercs": {
+          "marches": 4,
+          "damage": 10197781,
+          "silver": 10729000,
+          "gold": 2416,
+          "seconds": 4636920,
+          "burned": 34,
+          "perSilver": 0.9504875570882655,
+          "perHired": 299934.73529411765,
+          "soldiersLost": 34,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 299934.73529411765,
+          "perMonster": 10197781
+        },
+        "steady-max": {
+          "marches": 4,
+          "damage": 11196175,
+          "silver": 11037400,
+          "gold": 2808,
+          "seconds": 4780200,
+          "burned": 39,
+          "perSilver": 1.0143851812926958,
+          "perHired": 287081.41025641025,
+          "soldiersLost": 39,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 287081.41025641025,
+          "perMonster": 11196175
+        },
+        "all-in": {
+          "marches": 4,
+          "damage": 11585381,
+          "silver": 11202400,
+          "gold": 2888,
+          "seconds": 4874880,
+          "burned": 41,
+          "perSilver": 1.0341874062700849,
+          "perHired": 282570.26829268294,
+          "soldiersLost": 41,
+          "monstersLost": 0,
+          "dragonCoins": 0,
+          "perSoldier": 282570.26829268294,
+          "perMonster": 11585381
+        }
+      },
+      "plan": {
+        "marches": 4,
+        "damage": 10953190,
+        "silver": 11488600,
+        "gold": 2808,
+        "seconds": 5336760,
+        "burned": 39,
+        "perSilver": 0.9533964103546124,
+        "perHired": 280851.0256410256,
+        "soldiersLost": 39,
+        "monstersLost": 0,
+        "dragonCoins": 0,
+        "perSoldier": 280851.0256410256,
+        "perMonster": 10953190
+      },
+      "ratios": {
+        "bestSizer": 1.013943829096614,
+        "externals": {
+          "TotalStack · M’s Preservation": 2.259033496942947,
+          "TotalStack · Total Optimization": 1.7593251034755892,
+          "TotalStack · Elite Preservation": 1.7593251034755892
+        },
+        "perSoldier": {
+          "bestSizer": 0.6192332092083181,
+          "externals": {
+            "TotalStack · M’s Preservation": 0.07921537581983548,
+            "TotalStack · Total Optimization": 2.59108825826924,
+            "TotalStack · Elite Preservation": 2.59108825826924
+          }
+        },
+        "perMonster": {
+          "bestSizer": 1.013943829096614,
+          "externals": {
+            "TotalStack · M’s Preservation": 2.259033496942947,
+            "TotalStack · Total Optimization": 1.7593251034755892,
+            "TotalStack · Elite Preservation": 1.7593251034755892
+          }
+        },
+        "perSilver": {
+          "bestSizer": 1.0810756972215456,
+          "externals": {
+            "TotalStack · M’s Preservation": 1.6655600400184696,
+            "TotalStack · Total Optimization": 1.2967411609231372,
+            "TotalStack · Elite Preservation": 1.2967411609231372
+          }
         }
       }
     }

@@ -26,7 +26,9 @@
  *    none of them and is judged on exactly what it always was;
  *  - the scenario's standing **ratios** — the plan's hardest campaign over the best sizer sequence's, and
  *    over each comparable captured answer — are not lower. That is the "a given scenario should not be
- *    worse" of the rule, stated on the comparison the benchmark exists to make;
+ *    worse" of the rule, stated on the comparison the benchmark exists to make; since S-98 the same standing
+ *    is held on **damage a hired soldier** and on **damage a monster**, and since S-101 on **damage a
+ *    silver** too, which is the owner's *"silver/dmg, merc/dmg and monster/dmg"* complete;
  *  - a stop the baseline holds and the run does not offer is a **failure**: the bar lost an answer;
  *  - a stop the run offers and the baseline does not is **reported, not failed**: a new offer is news for the
  *    owner to register, not a regression.
@@ -95,6 +97,13 @@ export interface BaselineScenario {
      */
     perSoldier?: { bestSizer: number; externals: Record<string, number> };
     perMonster?: { bestSizer: number; externals: Record<string, number> };
+    /**
+     * And the third of the owner's three readings, **damage a silver** (S-101). It completes *"silver/dmg,
+     * merc/dmg and monster/dmg"*: the two above were registered by S-98 and this one was not, so until now
+     * a run could give up ground a silver against a captured answer without the baseline noticing. Optional
+     * on the same terms as the two above — a baseline that predates it is judged on exactly what it holds.
+     */
+    perSilver?: { bestSizer: number; externals: Record<string, number> };
   };
 }
 
@@ -216,11 +225,12 @@ export function compareToBaseline(
     }
   }
 
-  // The two rare-stock standings (S-98), read exactly as the damage one above and reported in its own
-  // words. Skipped whole where the registered file does not carry them.
+  // The rare-stock standings (S-98) and damage a silver beside them (S-101), read exactly as the damage one
+  // above and reported in their own words. Skipped whole where the registered file does not carry them.
   for (const [label, was_, now_] of [
     ['damage a hired soldier', was.ratios.perSoldier, now.ratios.perSoldier],
     ['damage a monster', was.ratios.perMonster, now.ratios.perMonster],
+    ['damage a silver', was.ratios.perSilver, now.ratios.perSilver],
   ] as const) {
     if (!was_ || !now_) continue;
     if (now_.bestSizer < was_.bestSizer - SLACK) {

@@ -35,7 +35,20 @@
  *    other than leadership and authority in it, and the one that holds the plan to fielding and sheltering
  *    the monsters it can house). Its 20 000-dominance sibling is not here because its search does not
  *    finish inside `CAMPAIGN.budgets.plan` — see `monsterCamp` in `plan-scenarios.ts`;
- *  - the 4 000-leadership case of 2026-09-15, the one case two other calculators answered.
+ *  - the 4 000-leadership case of 2026-09-15, the one case two other calculators answered;
+ *  - **his three camps** (added 2026-09-19, S-101): the live camp of 2026-09-18 (arbalesters 485,
+ *    legionaries 1 002, bears unlimited) and his camp of 2026-09-19 at both readings of the Battle card
+ *    (4 975 / 2 180 with 450 hunters, 5 100 / 2 200 with 120). They have held the plan's *criteria* since
+ *    S-93 and S-97; what kept them off this table was that no calculator outside this repo had answered
+ *    them, and the replay of 2026-09-19 answered all three.
+ *
+ * **The owner's goal is measured on every scenario that can carry it** (S-101): under each table, a `goal`
+ * line reads the plan's best stop against the captured **Total Optimization** row on the three readings he
+ * named — *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"* — and says
+ * which are at or above 1.0 and which are below. The three are **pinned at what they measure today**
+ * (`Pinned.totalOptimization`), never at the goal: a reading the bar has not reached is a discrepancy for
+ * the owner to judge, and a benchmark red for a target rather than for a regression would stop being a
+ * non-regression suite.
  *
  * **Two things hold a run, and they answer different questions.**
  *
@@ -322,6 +335,52 @@ const perHired = (c: Campaign): number => c.damage / Math.max(1, c.burned);
 const perSoldier = (c: Campaign): number => perSoldierOf(c.damage, c.soldiersLost);
 const perMonster = (c: Campaign): number => perMonsterOf(c.damage, c.monstersLost);
 
+// ---- the owner's goal: Total Optimization on the three rare readings (S-101) --------------------------------
+
+/**
+ * The name `totalstack-rows.ts` gives the captured **Total Optimization** answer — TotalStack's `monsterSaving`
+ * body, which is the row the owner names when he states his goal.
+ */
+const TOTAL_OPTIMIZATION = 'TotalStack · Total Optimization';
+
+/** One scenario's three standings against that row, or `null` where the table has no comparable one. */
+interface Standings {
+  perSilver: number;
+  perSoldier: number;
+  perMonster: number;
+}
+
+/**
+ * **The owner's goal, measured** (2026-09-19: *"at least the same as TotalStack full opt in silver/dmg,
+ * merc/dmg and monster/dmg"*).
+ *
+ * The plan's **best stop** on each of the three readings, over the same reading of TotalStack's Total
+ * Optimization row — both campaigns priced by our own engine, on the same request, over the same four
+ * marches and on the same worst opening, so the quotient is the two answers and not two arithmetics. `≥ 1.0`
+ * is the goal met; anything under it is a **discrepancy** the run reports and the story writes up, never a
+ * pin (`Pinned.totalOptimization` says why).
+ *
+ * A reading neither side has — a campaign that spent no silver — comes back `NaN` and is shown as `—`
+ * rather than counted either way.
+ */
+function standingsAgainstTotalOptimization(plans: Campaign[], externals: Campaign[]): Standings | null {
+  const row = externals.find((c) => c.name === TOTAL_OPTIMIZATION);
+  if (!row) return null;
+  const over = (of: (c: Campaign) => number): number => {
+    const theirs = of(row);
+    const ours = Math.max(...plans.map(of).filter(Number.isFinite));
+    return Number.isFinite(theirs) && theirs > 0 && Number.isFinite(ours) ? ours / theirs : NaN;
+  };
+  return { perSilver: over(perSilver), perSoldier: over(perSoldier), perMonster: over(perMonster) };
+}
+
+/** The three readings in the order the owner names them, for the report and for the assertions. */
+const GOAL_READINGS = [
+  ['damage a silver', 'perSilver'],
+  ['damage a hired soldier', 'perSoldier'],
+  ['damage a monster', 'perMonster'],
+] as const;
+
 // ---- one scenario ----------------------------------------------------------------------------------------
 
 /**
@@ -517,8 +576,48 @@ function asBaseline(measured: Measured): BaselineScenario | null {
       // comparable captured answer's. Added after `externals` so an older proposal's lines are untouched.
       perSoldier: standing(perSoldier),
       perMonster: standing(perMonster),
+      // The third of the owner's three readings (S-101), added last for the same reason: his goal names
+      // *"silver/dmg, merc/dmg and monster/dmg"*, and only the last two of those were registered. Damage a
+      // silver was on the table as a **pin** (`silverFloor`, against the sizers) and in every row of the
+      // report, but never as a standing the baseline holds, so a run that gave up ground on it against a
+      // captured answer was not a failure. It is one now.
+      perSilver: standing((c) => (Number.isFinite(perSilver(c)) ? perSilver(c) : 0)),
     },
   };
+}
+
+/**
+ * **The goal line** (S-101): one sentence a scenario, under its table, saying where the bar stands against
+ * TotalStack's Total Optimization on the owner's own three readings and which of them are **below** it. A
+ * scenario whose table holds no comparable Total Optimization row says so instead, and says nothing about a
+ * goal it was never measured on.
+ */
+function goalLine(measured: Measured): string {
+  const plans = measured.rows.filter((c) => c.kind === 'plan');
+  const externals = measured.rows.filter((c) => c.kind === 'external' && c.comparable);
+  if (plans.length === 0) return 'No stop to measure against TotalStack’s Total Optimization.';
+  const standings = standingsAgainstTotalOptimization(plans, externals);
+  if (!standings) {
+    return (
+      'No comparable `TotalStack · Total Optimization` row on this army, so the owner’s goal ' +
+      '(*"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*) is not ' +
+      'measured here.'
+    );
+  }
+  const read = GOAL_READINGS.map(([what, key]) => {
+    const value = standings[key];
+    if (!Number.isFinite(value)) return { what, text: `${what} —`, below: false };
+    return { what, text: `${what} **${value.toFixed(3)}**${value >= 1 ? ' ✓' : ' ✗'}`, below: value < 1 };
+  });
+  const below = read.filter((one) => one.below);
+  return (
+    '**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as ' +
+    'TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: ' +
+    `${read.map((one) => one.text).join(', ')}. ` +
+    (below.length === 0
+      ? 'All three are at or above the goal.'
+      : `**Below the goal: ${below.map((one) => one.what).join(', ')}** — a discrepancy for the owner, not a pin.`)
+  );
 }
 
 function record(label: string, measured: Measured): void {
@@ -537,6 +636,8 @@ function record(label: string, measured: Measured): void {
         `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.gold)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |` +
         ` ${n(c.soldiersLost)} | ${n(c.monstersLost)} | ${n(c.dragonCoins)} | ${n(perSoldier(c))} | ${n(perMonster(c))} |`,
     ),
+    '',
+    goalLine(measured),
     '',
   ];
   appendFileSync(REPORT, `${lines.join('\n')}\n`);
@@ -659,6 +760,27 @@ function check(scenario: Scenario, measured: Measured): void {
       `the plan's best a hired beats the other calculators (${tell})`,
     ).toBe(pinned.externals.winsHired);
   }
+  // **The floors against Total Optimization** (S-101). Every scenario whose table holds a comparable
+  // `TotalStack · Total Optimization` row pins all three of the owner's readings and nothing else does, so
+  // a row that appears or disappears is caught here rather than silently dropping a floor.
+  const standings = standingsAgainstTotalOptimization(plan, externals);
+  if (standings && !pinned.totalOptimization) {
+    throw new Error('a case with a comparable Total Optimization row must pin the three readings against it');
+  }
+  if (!standings && pinned.totalOptimization) {
+    throw new Error('a case pinned against Total Optimization no longer has a comparable row for it');
+  }
+  if (standings && pinned.totalOptimization) {
+    for (const [what, key] of GOAL_READINGS) {
+      const floor = pinned.totalOptimization[key];
+      // A reading neither side has (no silver spent) is not a floor: it is compared only where it exists.
+      if (!Number.isFinite(standings[key])) continue;
+      expect(
+        standings[key],
+        `the plan's best stop against TotalStack's Total Optimization on ${what} (${tell})`,
+      ).toBeGreaterThanOrEqual(floor);
+    }
+  }
 }
 
 // ---- the suite -------------------------------------------------------------------------------------------
@@ -677,6 +799,10 @@ writeFileSync(
     'the monsters cost to recruit again, and damage a soldier and damage a monster beside damage a hired ' +
     'unit. `soldiers burned + monsters burned = hired burned` on every row; a campaign that burned none of ' +
     'one kind reads its ratio at `damage / 1`, exactly as `a hired` has always done.\n\n' +
+    'Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · ' +
+    'Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier ' +
+    'and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three ' +
+    'are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.\n\n' +
     `Run: ${new Date().toISOString()}, commit ${process.env.GIT_COMMIT ?? '(working tree)'}\n\n`,
 );
 writeFileSync(FIGURES, `${JSON.stringify({ run: new Date().toISOString(), scenarios: [] }, null, 1)}\n`);
