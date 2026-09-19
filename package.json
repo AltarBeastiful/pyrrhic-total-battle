@@ -23,6 +23,7 @@
     "data:check": "node scripts/data-check.ts",
     "data:compare": "node tools/totalstack-sync/compare.ts",
     "bench:baseline": "vitest run tests/engine/plan-benchmark.test.ts; node scripts/plan-baseline.ts",
+    "bench:review": "node scripts/plan-baseline-review.ts",
     "icons": "node src/pwa/generate-icons.mjs",
     "e2e": "playwright test",
     "contrast": "node scripts/contrast-check.ts",

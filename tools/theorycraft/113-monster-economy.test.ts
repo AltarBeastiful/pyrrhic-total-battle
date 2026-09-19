@@ -223,7 +223,10 @@ const rowLine = (row: Campaign): string =>
 function stackTable(request: StackRequest, counts: Record<string, number>): string[] {
   const byId = new Map(request.units.map((unit) => [unit.id, unit]));
   const evaluated = evaluateCounts(request, counts);
-  const out = ['| # | stack | what | count | chunk | total HP | strikes | damage (worst opening) |', '|---|---|---|---|---|---|---|---|'];
+  const out = [
+    '| # | stack | what | count | chunk | total HP | strikes | damage (worst opening) |',
+    '|---|---|---|---|---|---|---|---|',
+  ];
   for (const line of lines(evaluated)) {
     const unit = byId.get(line.unitId);
     const what =
@@ -248,7 +251,10 @@ function stackTable(request: StackRequest, counts: Record<string, number>): stri
 describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
   it('measures where the plan’s monster chunks go and what would bring them back', () => {
     const report = new Report('113-monster-economy');
-    const all: Scenario[] = [...commonScenarios(), ...(ownerProfile() ? ownerScenarios(ownerProfile()!) : [])];
+    const all: Scenario[] = [
+      ...commonScenarios(),
+      ...(ownerProfile() ? ownerScenarios(ownerProfile()!) : []),
+    ];
     const camp = all.find((scenario) => scenario.label.startsWith(MONSTER_CAMP));
     if (!camp) throw new Error('the monster camp is not among the benchmark scenarios');
     const request = camp.request;
@@ -291,9 +297,7 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
       ['elite', 'Tier ladder'],
       ['ms', 'Troops first'],
     ] as const) {
-      sizerRows.push(
-        greedy(request, method, `${title} · all types`, (r) => countsOf(sizeStacks(r).stacks)),
-      );
+      sizerRows.push(greedy(request, method, `${title} · all types`, (r) => countsOf(sizeStacks(r).stacks)));
       sizerRows.push(
         greedy(request, method, `${title} · Generate (average damage)`, (r) =>
           countsOf(
@@ -340,7 +344,20 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
       const later = row.marches.slice(1);
       const same = later.every((counts) => JSON.stringify(counts) === JSON.stringify(row.marches[0]));
       report.add(
-        `\nMarches 2–${row.marches.length}: ${same ? 'identical to march 1' : 'they differ — ' + later.map((counts, index) => `march ${index + 2}: ${Object.entries(counts).filter(([, c]) => c > 0).map(([id, c]) => `${id} ${n(c)}`).join(' · ')}`).join('; ')}`,
+        `\nMarches 2–${row.marches.length}: ${
+          same
+            ? 'identical to march 1'
+            : 'they differ — ' +
+              later
+                .map(
+                  (counts, index) =>
+                    `march ${index + 2}: ${Object.entries(counts)
+                      .filter(([, c]) => c > 0)
+                      .map(([id, c]) => `${id} ${n(c)}`)
+                      .join(' · ')}`,
+                )
+                .join('; ')
+        }`,
       );
     }
 
@@ -373,9 +390,13 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
     );
 
     // the chunk rule as the plan prices it vs. the recap
-    report.add('\n**`chunks(n)` as the plan bills it against `recoveryCosts`** — the same stops, march by march:');
+    report.add(
+      '\n**`chunks(n)` as the plan bills it against `recoveryCosts`** — the same stops, march by march:',
+    );
     report.add('');
-    report.add('| stop | plan `mercLost` (campaign) | Σ `chunks(n)` over hired stacks | recap dragon coins | plan `dragonCoins` | recap silver | plan silver |');
+    report.add(
+      '| stop | plan `mercLost` (campaign) | Σ `chunks(n)` over hired stacks | recap dragon coins | plan `dragonCoins` | recap silver | plan silver |',
+    );
     report.add('|---|---|---|---|---|---|---|');
     for (const stop of plan.alternatives) {
       const marches = marchesOf(stop);
@@ -460,10 +481,7 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
     const neither = planOf(request, { tokenFloor: false, refuseDroppedTypes: false });
     const withoutRows = new Map<string, Campaign>();
     for (const stop of without.alternatives) {
-      withoutRows.set(
-        stop.pick,
-        campaignOf(request, `S-58 B off · ${stop.pick}`, 'plan', marchesOf(stop)),
-      );
+      withoutRows.set(stop.pick, campaignOf(request, `S-58 B off · ${stop.pick}`, 'plan', marchesOf(stop)));
     }
     report.add(
       `\n**S-58 B off** (\`refuseDroppedTypes: false\`) — the same camp, the same budgets, ` +
@@ -551,7 +569,9 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
         'column, read off `plan.alternatives`).',
     );
     report.add('');
-    report.add('| burn (chunks a march) | soldier | monster | damage a march | silver a march | a burn chunk | a silver | burning more buys more | stop |');
+    report.add(
+      '| burn (chunks a march) | soldier | monster | damage a march | silver a march | a burn chunk | a silver | burning more buys more | stop |',
+    );
     report.add('|---|---|---|---|---|---|---|---|---|');
     for (const burn of burns) {
       const row = rungs.get(burn)!;
@@ -576,7 +596,9 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
       (unit) => unit.pool === 'leadership' && (rivalCounts[unit.id] ?? 0) > 0,
     ).length;
     const stocked = request.units.filter(
-      (unit) => unit.pool !== 'leadership' && (request.caps[unit.id] === undefined || (request.caps[unit.id] ?? 0) > 0),
+      (unit) =>
+        unit.pool !== 'leadership' &&
+        (request.caps[unit.id] === undefined || (request.caps[unit.id] ?? 0) > 0),
     );
     const droppedByRival = stocked.filter((unit) =>
       best.marches.every((counts) => (counts[unit.id] ?? 0) <= 0),
@@ -613,7 +635,9 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
     report.add(
       `| band, the silver arm (≥ half the plan’s damage a silver) | ${(rivalPriced.damage / rivalPriced.silver) * 2 >= plan.damagePerSilver ? 'passes' : 'refused'} (${ratio(rivalPriced.damage / rivalPriced.silver)} against half of ${ratio(plan.damagePerSilver)}) |`,
     );
-    report.add(`| band, more than one troop stack | ${rivalTroopStacks > 1 ? 'passes' : 'refused'} (${rivalTroopStacks}) |`);
+    report.add(
+      `| band, more than one troop stack | ${rivalTroopStacks > 1 ? 'passes' : 'refused'} (${rivalTroopStacks}) |`,
+    );
     report.add(
       `| S-58 B, fields every stocked hired type | ${droppedByRival.length === 0 ? 'passes' : `**refused** — it never fields ${droppedByRival.map((unit) => unit.id).join(', ')}`} |`,
     );
@@ -724,13 +748,13 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
         if (count <= 0 || count >= CHUNK) continue;
         const hp = hpOf.get(unit.id) ?? 0;
         const cap = request.caps[unit.id];
-        const pool = unit.pool === 'dominance' ? request.housing.dominance - dominance : request.housing.authority - authority;
+        const pool =
+          unit.pool === 'dominance'
+            ? request.housing.dominance - dominance
+            : request.housing.authority - authority;
         const room = Math.floor(pool / Math.max(1, unit.cost)) + count;
         const fits =
-          mode === 'raise' &&
-          CHUNK * hp < floor &&
-          room >= CHUNK &&
-          (cap === undefined || cap >= CHUNK);
+          mode === 'raise' && CHUNK * hp < floor && room >= CHUNK && (cap === undefined || cap >= CHUNK);
         if (fits) {
           if (unit.pool === 'dominance') dominance += (CHUNK - count) * unit.cost;
           else authority += (CHUNK - count) * unit.cost;
@@ -745,7 +769,9 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
     };
     report.add('\nThe **room** the shelter leaves a monster type on the steady max’s own march:');
     report.add('');
-    report.add('| type | fielded | HP each | most the shelter allows | ten units’ HP | a chunk’s worth fits? |');
+    report.add(
+      '| type | fielded | HP each | most the shelter allows | ten units’ HP | a chunk’s worth fits? |',
+    );
     report.add('|---|---|---|---|---|---|');
     const steadyCounts = steady.marches[0] ?? {};
     const steadyFloor = floorOf(steadyCounts);
@@ -773,7 +799,8 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
     report.add('');
     report.add(ROW_HEAD);
     report.add(ROW_RULE);
-    for (const row of [...rows.filter((row) => row.kind === 'plan'), ...minimumRows]) report.add(rowLine(row));
+    for (const row of [...rows.filter((row) => row.kind === 'plan'), ...minimumRows])
+      report.add(rowLine(row));
 
     // (3) S-58 B relaxed
     report.add(
@@ -783,7 +810,9 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
         'both mercenary types — which the table below answers.',
     );
     report.add('');
-    report.add('| stop | S-58 B on: types fielded | S-58 B off: types fielded | still fields both mercenaries? |');
+    report.add(
+      '| stop | S-58 B on: types fielded | S-58 B off: types fielded | still fields both mercenaries? |',
+    );
     report.add('|---|---|---|---|');
     for (const stop of without.alternatives) {
       const on = plan.alternatives.find((other) => other.pick === stop.pick);
@@ -802,9 +831,7 @@ describe.skipIf(!process.env.THEORY)('113 — the monster economy', () => {
                 ),
               ).size,
             );
-      report.add(
-        `| ${stop.pick} | ${typesOf(on)} | ${typesOf(stop)} | ${fieldsMerc ? 'yes' : '**no**'} |`,
-      );
+      report.add(`| ${stop.pick} | ${typesOf(on)} | ${typesOf(stop)} | ${fieldsMerc ? 'yes' : '**no**'} |`);
     }
 
     // ---- the ten older scenarios ---------------------------------------------------------------------------
