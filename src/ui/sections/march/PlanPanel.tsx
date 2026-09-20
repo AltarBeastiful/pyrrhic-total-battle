@@ -192,6 +192,12 @@ export function PlanFold() {
    * Reading the plan another way puts *that* plan's march on screen: every plan on the frontier is computed
    * together, so the position is a choice between answers rather than another run. Everything else about the
    * run is left alone.
+   *
+   * **The request carries the account's own caps** (S-112): the stop's counts used to be written over them
+   * here, and that is what stopped a take-out re-computing the mercenaries, because `capOf` reads the caps
+   * as the stock a hired type may be spent out of. The stop itself is not lost — it is `pickOf(plan, next)`,
+   * a line above — and neither `marchResult` here nor `resizeMarchOver` on the next edit reads caps for it.
+   * The note in `runGenerate`'s plan branch carries the whole of the reason.
    */
   const read = (next: number): void => {
     setPlanPick(next);
@@ -204,7 +210,7 @@ export function PlanFold() {
     const its = planMarch(request, point.counts);
     useRunStore.getState().setIncluded(Object.keys(point.counts), []);
     useResultStore.getState().setResult({
-      request: { ...withMethod(request, 'elite'), caps: { ...request.caps, ...point.counts } },
+      request: withMethod(request, 'elite'),
       result: its.result,
       summary: its.summary,
       profileId: profile.id,

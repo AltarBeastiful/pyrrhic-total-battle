@@ -28,7 +28,7 @@ import { restoreLastResult } from './generate';
 import { amount, duration, ratio } from './format';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
-import { useRunStore } from './runStore';
+import { pickOf, useRunStore } from './runStore';
 
 // The whole page shares one calculation client; in jsdom it is the same engine, on the main thread.
 vi.mock('@/ui/calcClient', async () => {
@@ -821,6 +821,107 @@ test('putting a type back on a plan re-sizes that stop inside the plan’s rules
   // The bar is still the plan's — the tweaked march is the pane's — and no run was started.
   expect(useRunStore.getState().plan).toBe(plan);
   expect(lastResult()?.at).toBe(generated.at);
+}, 30_000);
+
+test('taking a troop out of the far-right stop re-computes the mercenaries upward', async () => {
+  /**
+   * **S-112**, the owner's report of 2026-09-20, the fourth on the same edit: *"if I choose total opt with
+   * the highest merc spent slider option, and take out a troop, the number of mercs used in a march doesn't
+   * go up. I thought we had simplified enough the slider that it would always mean 'select on the far right,
+   * always get the most mercs I can safely use in march'."*
+   *
+   * The engine had been right since S-107 — the bound is what the stock sustains over the stop's marches,
+   * never the stop's own count. The March pane defeated it by writing the plan's counts over
+   * `StackRequest.caps`, which is where `capOf` reads the **stock** from: on the `all-in` (a `sequence`, so
+   * `planRepeats` is 1) `largestSustained(stopCount, 1)` is the stop's count to the unit, so the ceiling the
+   * fix removed was handed straight back. The troops re-computed and the mercenaries could not.
+   *
+   * So this test drives the two halves the report names — the bar at its far right, then a take-out — through
+   * the real pane, and asks for the two things that were wrong: the caps are the **account's**, and the
+   * hired count **rises**.
+   */
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  const stock: Record<string, number> = {
+    'epic-monster-hunter-6': 92,
+    'arbalester-6': 76,
+    'legionary-6': 72,
+    'chariot-6': 37,
+  };
+  stocked.mercenaries.selected = Object.entries(stock).map(([id, cap]) => ({ id, cap }));
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 4_100, authority: 2_000, dominance: 0 },
+      options: { ...current.options, method: 'plan' },
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  const plan = useRunStore.getState().plan;
+  const generated = lastResult();
+  if (plan === null || !generated) throw new Error('the plan method answered with no plan');
+
+  /**
+   * **The request the pane holds carries the account's own stock**, and not the hired spend the plan
+   * decided. This is the whole defect: every reader downstream — `capOf` for the bound, `hiredStock` for the
+   * recap's *"% of the stock"* — asks these caps what the account owns.
+   */
+  for (const [id, cap] of Object.entries(stock)) expect(generated.request.caps[id]).toBe(cap);
+
+  // The far right of the bar: *"the most mercs I can safely use in march"*. Arrow keys rather than a press
+  // on the track, because the track's geometry is zero in jsdom and the value is what this is about.
+  const bar = screen.getByRole('slider', { name: 'Where on the trade to read the plan' });
+  const last = plan.alternatives.length - 1;
+  for (let step = 0; step < plan.alternatives.length; step += 1)
+    fireEvent.keyDown(bar, { key: 'ArrowRight' });
+  await waitFor(() => {
+    expect(useRunStore.getState().planPick).toBe(last);
+  });
+  const stop = pickOf(plan, last);
+  const hiredOf = (snapshot: ReturnType<typeof lastResult>): number =>
+    (snapshot?.result.stacks ?? [])
+      .filter((stack) => stack.pool !== 'leadership')
+      .reduce((sum, stack) => sum + stack.count, 0);
+  const before = hiredOf(lastResult());
+  expect(before).toBeGreaterThan(0);
+
+  // Out goes the **lowest** troop stack, which is the one the shelter stands on: its leadership goes to the
+  // stacks that are left, the floor rises, and more hired units fit under it than the stop was standing on.
+  const troopStacks = (lastResult()?.result.stacks ?? []).filter((stack) => stack.pool === 'leadership');
+  const floorStack = troopStacks.reduce((low, stack) => (stack.totalHp < low.totalHp ? stack : low));
+  const floorUnit = unitById(floorStack.unitId);
+  if (!floorUnit) throw new Error(`${floorStack.unitId} is not in the tables`);
+  fireEvent.click(stackPill(floorUnit, floorStack.count));
+  await waitFor(() => {
+    expect(useRunStore.getState().resize).not.toBeNull();
+  });
+
+  const after = lastResult();
+  const hired = (after?.result.stacks ?? []).filter((stack) => stack.pool !== 'leadership');
+  const troops = (after?.result.stacks ?? []).filter((stack) => stack.pool === 'leadership');
+  // The type he took out is out, and the plan's own rules still drew the march.
+  expect(after?.result.stacks.some((stack) => stack.unitId === floorUnit.id)).toBe(false);
+  expect(useRunStore.getState().resize?.inPlan).toBe(true);
+
+  // **The report, answered**: the mercenaries went up, not sideways.
+  expect(hiredOf(after)).toBeGreaterThan(before);
+  // At least one hired type stands above what that stop fielded — the count the old ceiling pinned it to.
+  expect(hired.some((stack) => stack.count > (stop.counts[stack.unitId] ?? 0))).toBe(true);
+
+  // And it is still safe: every hired stack under the lowest troop stack (S-87), and no type spent past what
+  // the account sustains over the marches this stop plays (S-107), read off the **profile's** stock.
+  expect(Math.max(...hired.map((stack) => stack.totalHp))).toBeLessThan(
+    Math.min(...troops.map((stack) => stack.totalHp)),
+  );
+  const repeats = planRepeats(stop);
+  for (const stack of hired) {
+    const held = stock[stack.unitId];
+    if (held === undefined) throw new Error(`${stack.unitId} is not one of the account's mercenaries`);
+    expect(stack.count).toBeLessThanOrEqual(largestSustained(held, repeats));
+  }
 }, 30_000);
 
 test('a warning from the engine is an alert under the recap', async () => {

@@ -74,24 +74,27 @@ export async function runGenerate(): Promise<void> {
       const chosen = planned.recommend ?? planned;
       const itsMarch = planMarch(request, chosen.counts);
       /**
-       * The caps the march's request carries are **the hired spend the plan decided**, and nothing else.
+       * **The caps the march's request carries are the account's own stock, and nothing else** (S-112,
+       * 2026-09-20; the owner, for the fourth time: *"if I choose total opt with the highest merc spent
+       * slider option, and take out a troop, the number of mercs used in a march doesn't go up"*).
        *
-       * The plan rations the *hired stock* over the marches, so a March edit must not spend more of it than
-       * the plan does. It does not ration the troops: they are rationed by leadership, which the sizer
-       * already respects. Capping the troop types at the plan's own counts as well — which is what this did
-       * until 2026-09-15 — left a left-out stack's leadership **unused**: every surviving type was already at
-       * its ceiling, so leaving one out changed nothing at all (measured, `tools/theorycraft/out/76-plan-resize.md`;
-       * the owner's *"before, when I left out a troop, it would equilibrate again the troops and mercs"*).
+       * They used to be **the hired spend the plan decided** — the stop's own counts, written over the stock
+       * here and again in `PlanPanel`'s bar — on the argument that a March edit must not spend more of the
+       * stock than the plan does. That argument was answered by S-107, which moved the bound into
+       * `planStopAgain` where it can be *computed* (`largestSustained(stock, repeats)`) instead of frozen.
+       * What the write did after that was defeat it: `capOf` reads `request.caps` **as the stock**, so the
+       * bound came out at `largestSustained(stopCount, repeats)` — exactly the stop's own count on the
+       * `all-in` (a `sequence`, so `planRepeats` is 1), and *below* it on every repeated stop. Taking a
+       * troop type out hands its leadership to the stacks that are left, which raises the floor, which
+       * shelters more hired units — and the ceiling threw every one of them away. The troops re-computed;
+       * the mercenaries could not.
+       *
+       * Nothing needs the stop's counts here: `marchResult` does not read caps, `resizeMarchOver` replaces
+       * them with its own, and the one other reader — `hiredStock`, the recap's *"% of the stock"* — wants
+       * the stock too and was dividing by the march. A caller that needs the stop's counts reads them off
+       * the stop (`pickOf(plan, planPick).counts`).
        */
-      const hiredCaps: Record<string, number> = {};
-      for (const unit of request.units) {
-        const count = chosen.counts[unit.id];
-        if (unit.pool === 'authority' && count !== undefined) hiredCaps[unit.id] = count;
-      }
-      const marchRequest: StackRequest = {
-        ...withMethod(request, 'elite'),
-        caps: { ...request.caps, ...hiredCaps },
-      };
+      const marchRequest: StackRequest = withMethod(request, 'elite');
       useRunStore.getState().rememberPrevious(previous);
       useResultStore.getState().setResult({ ...common, request: marchRequest, ...itsMarch });
       useRunStore.getState().finish(Object.keys(chosen.counts), null, planned);
