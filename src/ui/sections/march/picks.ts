@@ -207,3 +207,115 @@ export function putBackWords(row: Pick<PlanRow, 'putBack'>): string | null {
     `${signedPercent(-put.seconds)} to recover, against the same march without it.`
   );
 }
+
+// ---- The insight table (S-113) -------------------------------------------------------------------------
+/**
+ * **Which rate the trade's last column is showing.** The table drew two rate columns until S-113 — "Per
+ * silver" and "Per hired" — and drawing a third was never possible: a seventh head measured **505 px in a
+ * 462 px pane** and was cut (`PlanTrade.tsx`). So the two become **one column the player switches**, which
+ * is the owner's own words for it (2026-09-20: *"letting you choose easily and switch between objective
+ * with added knowledge"*) and gives a column back.
+ */
+export type RateKey = 'silver' | 'gold' | 'hired';
+
+export interface RateColumn {
+  key: RateKey;
+  /** The column's head, and the segmented control's own label: one name per thing (design rule 5). */
+  head: string;
+  /** The reading, off the row's own repeated march — every figure in this table is one march's (S-59). */
+  of: (row: PlanRow) => number;
+  /**
+   * Whether a best-in-column mark may be drawn on it. **False for `hired`**: `docs/investigations/0019`
+   * §2.3 measured damage a hired unit rising monotonically while the march collapses, and §1 calls it
+   * *"never the right compass"*. It is a fact the table carries, never a race it declares won.
+   */
+  markable: boolean;
+  /** `ratio`'s decimals: three on silver, where the owner's plans differ in the third (S-59). */
+  decimals: number;
+}
+
+const RATES: Record<RateKey, RateColumn> = {
+  silver: {
+    key: 'silver',
+    head: 'Per silver',
+    of: (row) => (row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0),
+    markable: true,
+    decimals: 3,
+  },
+  gold: {
+    key: 'gold',
+    head: 'Per gold',
+    of: (row) => (row.repeat.gold > 0 ? row.repeat.damage / row.repeat.gold : 0),
+    markable: true,
+    decimals: 2,
+  },
+  hired: {
+    key: 'hired',
+    head: 'Per hired',
+    of: (row) => (row.repeat.mercLost > 0 ? row.repeat.hiredDamage / row.repeat.mercLost : 0),
+    markable: false,
+    decimals: 2,
+  },
+};
+
+/**
+ * The rates **this army actually spends**, in the order the table offers them (design rule 15: nothing on
+ * screen without a value).
+ *
+ * `gold` is here because experiment 120 measured it over the sixteen benchmark armies: it is the **only
+ * fact naming its stop on 6 of them** — it points at a march nothing else on the table points at — while
+ * *per hour of queue* was the sole namer on **none** and *per dragon coin* exists on two armies and is sole
+ * on none. So the queue stays the note under Silver and the coins stay beside it, and gold gets the switch.
+ */
+export function rateColumns(rows: readonly PlanRow[]): RateColumn[] {
+  const spends = (of: (row: PlanRow) => number): boolean => rows.some((row) => of(row) > 0);
+  const out: RateColumn[] = [RATES.silver];
+  if (spends((row) => row.repeat.gold)) out.push(RATES.gold);
+  if (spendsStock(rows.map((row) => row.repeat))) out.push(RATES.hired);
+  return out;
+}
+
+/** The rate to show, given what the player last chose and what this army spends. */
+export function rateColumn(rows: readonly PlanRow[], wanted: RateKey): RateColumn {
+  const offered = rateColumns(rows);
+  return offered.find((column) => column.key === wanted) ?? offered[0] ?? RATES.silver;
+}
+
+/**
+ * **Which row is the best on one column**, or `null` when the mark would say nothing.
+ *
+ * Nothing is marked when every row reads the same — a mark on all five rows is ink that carries no
+ * decision — and nothing is marked when two rows tie for the top, because "the best" is a claim about one
+ * row and the table would be making it twice (design rule 5).
+ */
+export function bestOn(
+  rows: readonly PlanRow[],
+  of: (row: PlanRow) => number,
+  better: 'higher' | 'lower',
+): number | null {
+  if (rows.length < 2) return null;
+  const figures = rows.map((row) => of(row));
+  if (figures.some((figure) => !Number.isFinite(figure))) return null;
+  const top = better === 'higher' ? Math.max(...figures) : Math.min(...figures);
+  if (figures.every((figure) => figure === top)) return null;
+  const holders = figures.filter((figure) => figure === top).length;
+  if (holders !== 1) return null;
+  return figures.indexOf(top);
+}
+
+/** Every mark the trade draws, read once so a row cannot be called best two different ways. */
+export interface TableMarks {
+  damage: number | null;
+  silver: number | null;
+  hiredLost: number | null;
+  rate: number | null;
+}
+
+export function tableMarks(rows: readonly PlanRow[], rate: RateColumn): TableMarks {
+  return {
+    damage: bestOn(rows, (row) => row.repeat.damage, 'higher'),
+    silver: bestOn(rows, (row) => row.repeat.silver, 'lower'),
+    hiredLost: bestOn(rows, (row) => row.repeat.mercLost, 'lower'),
+    rate: rate.markable ? bestOn(rows, rate.of, 'higher') : null,
+  };
+}

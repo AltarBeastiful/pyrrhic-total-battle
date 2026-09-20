@@ -6,36 +6,36 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | first-run army, Bear V ×1 (20 000 leadership) | 1 | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | — | sweet-spot | — | sweet-spot * | **1** |
 | first-run army, Bear V ×2 (20 000 leadership) | 1 | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | — | sweet-spot * | **1** |
-| first-run army, Bear V ×3 (20 000 leadership) | 1 | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | — | sweet-spot * | **1** |
-| first-run army, Bear V ×10 (20 000 leadership) | 1 | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | — | sweet-spot * | **1** |
-| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 4 | steady-max | silver-saver | silver-saver | silver-saver | steady-max | sweet-spot | steady-max | — | sweet-spot * | **3** |
-| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 4 | steady-max | silver-saver | silver-saver | silver-saver | steady-max | silver-saver | steady-max | — | sweet-spot * | **2** |
-| 2026-09-17 export, its setup (7 000 leadership) | 3 | steady-max | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | — | sweet-spot * | **2** |
-| 2026-09-17 export, 12 000 leadership | 4 | steady-max | silver-saver | silver-saver | silver-saver | steady-max | sweet-spot | steady-max | — | sweet-spot * | **3** |
-| live account of 2026-09-18 (one hired type, 20 000 leadership) | 4 | steady-max | silver-saver | silver-saver | silver-saver | silver-saver | sweet-spot | silver-saver | — | silver-saver * | **3** |
-| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 4 | steady-max | silver-saver | silver-saver | silver-saver | steady-max | silver-saver | steady-max | — | sweet-spot * | **2** |
-| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 3 | steady-max | sweet-spot | sweet-spot | sweet-spot | steady-max | sweet-spot | sweet-spot | — | sweet-spot * | **2** |
-| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 4 | steady-max | silver-saver | silver-saver | silver-saver | steady-max | sweet-spot | silver-saver | — | sweet-spot * | **3** |
-| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 3 | steady-max | sweet-spot | sweet-spot | sweet-spot | steady-max | sweet-spot | sweet-spot | — | sweet-spot * | **2** |
-| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 4 | steady-max | silver-saver | silver-saver | silver-saver | steady-max | sweet-spot | silver-saver | — | silver-saver * | **3** |
-| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 4 | steady-max | silver-saver | silver-saver | silver-saver | silver-saver | more-mercs | silver-saver | steady-max | silver-saver * | **3** |
-| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 4 | steady-max | silver-saver | silver-saver | silver-saver | silver-saver | steady-max | silver-saver | steady-max | silver-saver * | **2** |
+| first-run army, Bear V ×3 (20 000 leadership) | 2 | all-in | sweet-spot | sweet-spot | sweet-spot | all-in | all-in | all-in | — | all-in * | **2** |
+| first-run army, Bear V ×10 (20 000 leadership) | 2 | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | — | all-in * | **1** |
+| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 4 | all-in | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | sweet-spot | — | sweet-spot * | **2** |
+| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 3 | steady-max | silver-saver | silver-saver | silver-saver | silver-saver | sweet-spot | silver-saver | — | sweet-spot * | **3** |
+| 2026-09-17 export, its setup (7 000 leadership) | 5 | steady-max | silver-saver | silver-saver | silver-saver | more-mercs | sweet-spot | silver-saver | — | sweet-spot * | **4** |
+| 2026-09-17 export, 12 000 leadership | 4 | steady-max | silver-saver | silver-saver | silver-saver | silver-saver | sweet-spot | silver-saver | — | sweet-spot * | **3** |
+| live account of 2026-09-18 (one hired type, 20 000 leadership) | 4 | all-in | silver-saver | silver-saver | silver-saver | silver-saver | sweet-spot | silver-saver | — | silver-saver * | **3** |
+| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 5 | all-in | silver-saver | silver-saver | silver-saver | all-in | sweet-spot | all-in | — | sweet-spot * | **3** |
+| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 4 | all-in | sweet-spot | sweet-spot | sweet-spot | all-in | sweet-spot | sweet-spot | — | sweet-spot * | **2** |
+| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 4 | steady-max | silver-saver | silver-saver | silver-saver | steady-max | sweet-spot | steady-max | — | sweet-spot * | **3** |
+| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 4 | steady-max | silver-saver | silver-saver | silver-saver | silver-saver | silver-saver | silver-saver | — | sweet-spot * | **2** |
+| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 5 | all-in | silver-saver | silver-saver | silver-saver | all-in | silver-saver | silver-saver | — | silver-saver * | **2** |
+| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 4 | steady-max | silver-saver | silver-saver | silver-saver | silver-saver | more-mercs | silver-saver | more-mercs | sweet-spot * | **3** |
+| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 3 | steady-max | sweet-spot | sweet-spot | sweet-spot | sweet-spot | more-mercs | sweet-spot | steady-max | sweet-spot * | **3** |
 
 ## The two questions, answered
 
 
-**Is a best mark worth its ink?** Over **16 armies**, the marks land on **2.13 different stops on average**, and on **4** of them a single stop wins everything. The marks disagree on the rest, which is the table doing its job.
+**Is a best mark worth its ink?** Over **16 armies**, the marks land on **2.38 different stops on average**, and on **3** of them a single stop wins everything. The marks disagree on the rest, which is the table doing its job.
 
 **Which rate columns name a stop nothing else does?**
 
 | fact | names a stop on | is the only fact naming it on |
 |---|---|---|
-| Worst opening | 16 of 16 | **2** |
+| Worst opening | 16 of 16 | **7** |
 | Silver | 16 of 16 | **0** |
 | Queue | 16 of 16 | **0** |
 | Hired lost | 16 of 16 | **0** |
-| Per silver | 16 of 16 | **0** |
-| Per gold | 15 of 16 | **6** |
+| Per silver | 16 of 16 | **1** |
+| Per gold | 15 of 16 | **7** |
 | Per hour of queue | 16 of 16 | **0** |
 | Per dragon coin | 2 of 16 | **0** |
 

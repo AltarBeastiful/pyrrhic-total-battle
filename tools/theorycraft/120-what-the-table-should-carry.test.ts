@@ -25,9 +25,9 @@
 import { describe, it } from 'vitest';
 
 import { planCampaign } from '../../src/engine/plan';
-import type { PlanRow } from '../../src/engine/plan';
+import type { PlanPick, PlanRow } from '../../src/engine/plan';
 import type { StackRequest } from '../../src/engine/types';
-import { commonScenarios, ownerProfile, ownerScenarios } from '../../tests/engine/plan-scenarios';
+import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../../tests/engine/plan-scenarios';
 import { Report, n } from './harness';
 
 /** One reading of a stop, and which way is better. */
@@ -114,7 +114,7 @@ describe.skipIf(!process.env.THEORY)('what the insight table should carry', () =
     for (const scenario of scenarios) {
       let rows: PlanRow[];
       try {
-        rows = planCampaign({ request: scenario.request, marches: 4 }).alternatives;
+        rows = planCampaign({ request: scenario.request, marchTarget: HORIZON }).alternatives;
       } catch {
         continue; // an army the plan refuses is not a table question
       }
@@ -127,7 +127,7 @@ describe.skipIf(!process.env.THEORY)('what the insight table should carry', () =
       // How many *different* stops hold at least one best, ignoring the fact nothing may win (0019 §2.3).
       const markable = FACTS.filter((fact) => fact.neverBest !== true);
       const holders = new Set(
-        markable.map((fact) => named.get(fact.key)?.pick).filter((pick): pick is string => pick !== undefined),
+        markable.map((fact) => named.get(fact.key)?.pick).filter((pick): pick is PlanPick => pick !== undefined),
       );
       distinctPerArmy.push(holders.size);
 

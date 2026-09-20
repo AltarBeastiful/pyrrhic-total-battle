@@ -166,14 +166,17 @@ trap §3 of that investigation warns about, one column over.
 `tools/theorycraft/out/120-what-the-table-should-carry.md`, over the **16 benchmark armies** the baseline is
 registered on). Two questions had to be answered before a column was drawn:
 
-- **Is a best-in-column mark worth its ink?** The marks land on **2.13 different stops on average**, and on
-  every one of the **12 armies whose bar has more than one stop** they disagree — the four armies where a
-  single stop wins everything are the four whose bar *has* a single stop. So the marks are the table doing
-  its job, not a ranking with extra steps.
+- **Is a best-in-column mark worth its ink?** The marks land on **2.38 different stops on average**, and a
+  single stop wins everything on only **3** armies — the ones whose bar is one or two stops long. So the
+  marks are the table doing its job, not a ranking with extra steps.
 - **Which rate earns a column?** Counted as *"how often is this the only fact naming its stop"*: **Per gold
-  is the sole namer on 6 of 16 armies** — it points at a stop nothing else on the table points at. **Per hour
-  of queue is the sole namer on 0**, always agreeing with Silver or Per silver; **Per dragon coin** exists on
-  2 armies and is sole on none; **Silver, Queue and Hired lost** never disagree with each other at all.
+  is the sole namer on 7 of 16 armies** — it points at a stop nothing else on the table points at, usually
+  the sweet spot where every other column names the silver saver. **Per hour of queue is the sole namer on
+  0**, always agreeing with Silver or Per silver; **Per dragon coin** exists on 2 armies and is sole on none;
+  **Silver, Queue and Hired lost** never disagree with each other at all. *(Corrected on the second run: the
+  first passed `marches` to `planCampaign`, which `CampaignInput` does not have, so every bar was planned on
+  the engine's own horizon rather than the app's `CAMPAIGN.marches` = 4. `pnpm typecheck` caught it; the
+  figures above are the app's horizon, and the conclusion is the same one, more strongly.)*
 
 **So S-113 is built as the segmented control, and it pays for itself in width.** The two rate columns the
 table draws today (Per silver, Per hired) collapse into **one switchable rate column** — Per silver · Per
