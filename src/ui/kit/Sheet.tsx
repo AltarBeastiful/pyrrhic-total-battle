@@ -14,6 +14,8 @@ import { Box, Divider, Drawer, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import type { ReactNode } from 'react';
 
+import { useOpenEditor } from './openEditors';
+
 export interface SheetProps {
   opened: boolean;
   onClose: () => void;
@@ -35,6 +37,11 @@ export function Sheet({ opened, onClose, title, description, children, footer, s
   // `getInitialValueInEffect: false` so the first paint is already the right anchor; jsdom has no
   // `matchMedia`, and the fallback there is the phone shape, which is the one we test.
   const wide = useMediaQuery('(min-width: 48em)', false, { getInitialValueInEffect: false });
+
+  // A sheet is a setup editor, so `Ctrl`/`⌘ + Enter` closes it on its way to the march
+  // (`openEditors.ts`). Everything on one saves as it is typed — the footer's only word is Done —
+  // so there is nothing for the close to lose.
+  useOpenEditor(opened, onClose);
 
   return (
     <Drawer

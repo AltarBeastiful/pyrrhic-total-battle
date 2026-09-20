@@ -31,7 +31,7 @@ import { useState } from 'react';
 
 import type { Pool } from '@/engine/types';
 import { Glyph } from '@/ui/domain';
-import { ChoiceList } from '@/ui/kit';
+import { ChoiceList, useOpenEditor } from '@/ui/kit';
 import { amount, MarchGenerateButton, MarchQuickSummary } from '@/ui/sections/march';
 
 import {
@@ -215,6 +215,12 @@ interface ObjectiveChipProps {
  */
 function ObjectiveChip({ value, title, locked, onChange }: ObjectiveChipProps) {
   const [opened, setOpened] = useState(false);
+
+  // The objective is part of the setup, so this popover closes with the rest of them when the
+  // march is generated from the keyboard (`kit/openEditors.ts`).
+  useOpenEditor(opened, () => {
+    setOpened(false);
+  });
 
   return (
     <Popover

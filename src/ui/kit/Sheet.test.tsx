@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { Button } from '@mantine/core';
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, expect, test } from 'vitest';
 
+import { closeOpenEditors } from './openEditors';
 import { Sheet } from './Sheet';
 import { renderWithTheme } from './testRender';
 
@@ -75,4 +76,21 @@ test('the close button closes it too', async () => {
   await waitFor(() => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+});
+
+test('the march shortcut closes it: a sheet is a setup editor, and it is over the answer', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example />);
+  await user.click(screen.getByRole('button', { name: 'Edit the unit' }));
+  await screen.findByRole('dialog');
+
+  // What `Ctrl`/`⌘ + Enter` does before it generates (`shell/useGenerateRun.ts`).
+  act(() => {
+    expect(closeOpenEditors()).toBe(true);
+  });
+
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  expect(closeOpenEditors()).toBe(false);
 });

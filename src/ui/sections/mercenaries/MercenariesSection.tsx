@@ -42,7 +42,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import type { CustomMercenary, Profile } from '@/state/schema';
 import { useActiveProfileSlice, useStore } from '@/state/store';
 import { count, Glyph, romanTier, tierInk, TierBadge } from '@/ui/domain';
-import { CornerPill, GroupedCombobox, NumberField, Panel, PillRow } from '@/ui/kit';
+import { CornerPill, GroupedCombobox, NumberField, Panel, PillRow, useOpenEditor } from '@/ui/kit';
 import type { ComboboxGroup, PillRowItem } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
 
@@ -409,6 +409,12 @@ function HiredPill({
 }) {
   const [opened, setOpened] = useState(false);
   const name = entry.unit.name;
+
+  // The owned-count editor is a setup editor, so `Ctrl`/`⌘ + Enter` closes it before the march runs
+  // (`kit/openEditors.ts`): the figure is written on every keystroke, so the close keeps it.
+  useOpenEditor(opened, () => {
+    setOpened(false);
+  });
 
   return (
     <Popover

@@ -13,6 +13,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { newRoot } from '@/state/defaults';
 import { selectActiveSetup, useStore } from '@/state/store';
 
+import { registerOpenEditor } from '../kit/openEditors';
 import { ThemeHarness } from '../kit/testRender';
 import { useResultStore } from '../resultStore';
 import { useRunStore } from '../sections/march/runStore';
@@ -388,4 +389,23 @@ test('Ctrl + Enter generates from anywhere on the page, but never while blocked'
   fireEvent.keyDown(document, { key: 'Enter', metaKey: true });
   fireEvent.keyDown(document, { key: 'Enter' });
   expect(calls.run).toBe(2);
+});
+
+test('the shortcut puts down the setup editor it was pressed in — but not while blocked', () => {
+  const { rerender } = renderShell();
+  const close = vi.fn();
+  const unregister = registerOpenEditor(close);
+
+  // Blocked, the keystroke does nothing at all: the field that is missing is very often the one in
+  // the editor, and closing it would take it away.
+  fireEvent.keyDown(document, { key: 'Enter', ctrlKey: true });
+  expect(close).not.toHaveBeenCalled();
+
+  withHousing();
+  rerender(<Shell />);
+  fireEvent.keyDown(document, { key: 'Enter', ctrlKey: true });
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(calls.run).toBe(1);
+
+  unregister();
 });

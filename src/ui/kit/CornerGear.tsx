@@ -9,6 +9,7 @@ import { Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import classes from './kit.module.css';
+import { useOpenEditor } from './openEditors';
 
 export interface CornerGearProps {
   /** The gear's own accessible name: "Set Aydae's level". */
@@ -40,6 +41,13 @@ export function CornerGear({
   opened,
   onOpenedChange,
 }: CornerGearProps) {
+  // The editor behind the gear is a setup editor like a sheet is, so `Ctrl`/`⌘ + Enter` shuts it
+  // before it generates (`openEditors.ts`). Only when the caller drives it: left uncontrolled, the
+  // popover's open state is Mantine's own and nothing here can put it down.
+  useOpenEditor(opened === true && onOpenedChange !== undefined, () => {
+    onOpenedChange?.(false);
+  });
+
   const gear = (
     <ActionIcon
       size={size}

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { closeOpenEditors } from '@/ui/kit';
 
 import { useResultStore } from '../resultStore';
 import { cancelGenerate, runGenerate } from '../sections/march/generate';
@@ -50,6 +51,13 @@ export function useGenerateRun(): GenerateRun {
  * `Ctrl`/`⌘ + Enter` generates from anywhere, including from inside a field — which is exactly
  * where a player's hands are when they want it. Bound once, by the frame, so it cannot be bound
  * twice by two controls that exist at two different widths.
+ *
+ * It also **puts down whatever setup editor is open** on its way (`kit/openEditors.ts`, owner ask
+ * of 2026-09-20): a sheet or a chip's popover is over the answer, so a march generated from inside
+ * one could not be read without closing it by hand first. Only editors — the March sheet holds the
+ * answer and stays up for the new one, and a modal dialog is a question that must still be
+ * answered. A blocked setup closes nothing: the field that is missing is very often the one in the
+ * editor.
  */
 export function useGenerateShortcut(): void {
   // Bound once and **subscribed to nothing**: the frame is the parent of every card on the page,
@@ -68,6 +76,7 @@ export function useGenerateShortcut(): void {
       }
       const state = useStore.getState();
       if (blockedReason(selectActiveProfile(state), selectActiveSetup(state)) !== null) return;
+      closeOpenEditors();
       void runGenerate();
     };
     globalThis.document.addEventListener('keydown', onKeyDown);

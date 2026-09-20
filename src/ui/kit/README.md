@@ -59,6 +59,12 @@ want set the same way.
 | `SwitchRow`       | `Switch labelPosition="left"`             | a setting as a full row, sentence under the name                           |
 | `TierSelect`      | `NativeSelect size="xs"`                  | one end of a tier range, "—" for none, clamped by its partner              |
 
+Beside the composites, `openEditors.ts` is the register they keep: a `Sheet`, a `CornerGear`'s
+popover and the two editors a section anchors itself (a mercenary's cap, the phone's objective) say
+there that they are open, so `Ctrl`/`⌘ + Enter` can put the editor down on its way to the march
+(`shell/useGenerateRun.ts`). The March sheet and a modal `Dialog` stay out of it: one carries the
+answer, the other is a question.
+
 `src/ui/domain` is the same contract for the components that know what a _unit_ is: `UnitTile`,
 `GroupMarker`, `TierBadge`, `CaptainChip`, `MarchRow`/`MarchTable`, `PoolGauge`, `DeltaText`,
 `StatBar`, and `Glyph` — the one way a game concept is drawn (Unicode emoji, `glyphs.ts` is the map).

@@ -7,6 +7,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   chooseObjective,
+  dismissMarchSheet,
   fillHousing,
   generate,
   generateButton,
@@ -600,6 +601,36 @@ test('mobile: a finished Generate opens the recap, and a swipe down puts it away
 
   // The bar is under it again, with the answer it carried all along.
   await expect(generateButton(page)).toBeVisible();
+
+  expect(problems).toEqual([]);
+});
+
+/**
+ * The shortcut, and what it puts down (owner, 2026-09-20: *"a shortcut to run generate without
+ * moving the cursor too much… also if it can close the popup as well"*). A plain `Enter` is the key
+ * that commits a figure and a run on every committed figure is a run paid for on every edit, so the
+ * pair stays `Ctrl`/`⌘ + Enter` — and it now leaves the editor it was pressed in, because that
+ * editor is over the answer it just asked for.
+ */
+test('Ctrl + Enter from inside an editor closes it and generates', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+  await fillHousing(page, 'Leadership', 4100);
+
+  // A captain's level editor: a popover raised from the gear on the chip, over the page.
+  const chip = page.getByRole('checkbox', { name: /Beowulf/ });
+  await page.locator(`label[for="${String(await chip.getAttribute('id'))}"]`).click();
+  await page.getByRole('button', { name: /^(Set|Change) Beowulf’s level$/ }).click();
+  const level = page.getByRole('textbox', { name: 'Base level' });
+  await expect(level).toBeVisible();
+
+  // Pressed with the hands where they already are — inside the editor's own field.
+  await level.press('ControlOrMeta+Enter');
+
+  await expect(level).toHaveCount(0);
+  await settle(page);
+  await dismissMarchSheet(page);
+  expect(await marchStackCount(page)).toBeGreaterThan(0);
 
   expect(problems).toEqual([]);
 });

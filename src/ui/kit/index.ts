@@ -22,6 +22,7 @@ export { GroupedCombobox } from './GroupedCombobox';
 export type { ComboboxGroup, ComboboxOption, GroupedComboboxProps } from './GroupedCombobox';
 export { NumberField } from './NumberField';
 export type { NumberFieldProps } from './NumberField';
+export { closeOpenEditors, registerOpenEditor, useOpenEditor } from './openEditors';
 export { Panel } from './Panel';
 export type { PanelProps, PanelSurface } from './Panel';
 export { CornerPill, PillRow } from './PillRow';
