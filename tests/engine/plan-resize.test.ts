@@ -454,3 +454,128 @@ describe('taking a type out re-derives the hired count up to what the shelter al
     );
   }
 });
+
+/**
+ * **S-117 — a press never answers with a march the stop beats.**
+ *
+ * The owner, 2026-09-20: *"I'm not that sure any more that when removing or adding a troop … we should not
+ * compute again the best possible outcome."* The defect underneath his doubt was not the objective but the
+ * candidate list: nothing in the family `resizeMarchOver` builds was *"this march, with that one type taken
+ * out or put in, and nothing else touched"*, and that family is a strict subset of the one `planCampaign`
+ * walked to build the stop. So a press could only move the player to a **different** march, and on three of
+ * the fourteen stops measured it moved them to a worse one — 85.3 % of the damage for 101 % of the silver on
+ * his live account, and investigation 0024 §5's 5 143 823 for 2 498 200 against 5 763 382 for 2 449 200.
+ *
+ * The contract, on the press that changes **no type at all** — a put-back whose type cannot be fielded, a
+ * `Put back all` over types that do not fit: **the answer never deals less damage than the march it
+ * replaced.** `MarchWithin.stop` is what makes it true; `beats` is untouched.
+ *
+ * The test proves it is **not vacuous** in the same pass: it counts the stops where the family's own best
+ * (the same call with no `stop`, which is the re-size as S-107 shipped it) falls short of the stop's own
+ * march, and fails if that count is zero — a corpus where the defect cannot fire would make the assertion
+ * above prove nothing.
+ */
+describe('S-117 · the march on screen is a candidate of its own re-size', () => {
+  test('a press that changes no type never lowers the damage, and the corpus can tell', () => {
+    let bound = 0;
+    let stops = 0;
+    for (const scenario of criteriaScenarios()) {
+      const plan = planFor(scenario.request);
+      if (plan === null) continue;
+      for (const stop of plan.alternatives) {
+        const fielded = troopIdsOf(scenario.request).filter((id) => (stop.counts[id] ?? 0) > 0);
+        if (fielded.length === 0) continue;
+        const caps = capsFor(scenario.request, stop.counts, planRepeats(stop));
+        const within = { troopIds: fielded, hired: caps };
+        const answer = resizeMarchOver(scenario.request, { ...within, stop: stop.counts });
+        expect(answer).not.toBeNull();
+        const got = answer as ResizedMarch;
+        stops += 1;
+        holds(scenario.request, caps, fielded, got);
+
+        // What the stop's own march is worth, priced the way the answer is (S-94, the worst opening).
+        const itsOwn = Math.round(planMarch(scenario.request, stop.counts).summary.minDamage);
+        expect(
+          got.damage,
+          `${scenario.label} · ${stop.pick}: the press answered with ${got.damage.toLocaleString(
+            'en-US',
+          )} where the march on screen deals ${itsOwn.toLocaleString('en-US')}`,
+        ).toBeGreaterThanOrEqual(itsOwn);
+
+        // Non-vacuity: the family on its own — the re-size as it shipped before S-117 — falls short here.
+        const family = resizeMarchOver(scenario.request, within);
+        if (family !== null && family.damage < itsOwn) bound += 1;
+      }
+    }
+    expect(stops).toBeGreaterThan(0);
+    expect(
+      bound,
+      'no stop in the corpus beats the shapes the re-size builds, so the assertion above proves nothing',
+    ).toBeGreaterThan(0);
+  }, 180_000);
+});
+
+/**
+ * **S-117 — the dial takes wins and never trades.**
+ *
+ * `MarchWithin.fills` offers the same shapes at a smaller leadership pool. Experiment 119 measured that dial
+ * on a **generated stop** and found 0 marches worth taking, which retired S-115; after an **edit** the type
+ * set, the troop floor and the kill order have all moved, and 363 marches gave dominations — the export at
+ * 96 % of its pool deals 102.2 % of the full-pool answer's damage for 96 % of the silver at identical burn.
+ *
+ * The contract is the one that makes the dial safe to apply with no control on screen: **a fill below 100 is
+ * taken only when it dominates** — at least the damage, no more silver, no more hired burnt, and no more
+ * troop types left unfielded. A fill that merely trades damage for silver is never taken, whatever its rate.
+ */
+describe('S-117 · a smaller leadership pool is taken only when it dominates', () => {
+  test('every dialled answer beats the full-pool one on damage, silver and burn', () => {
+    let dialled = 0;
+    let edits = 0;
+    for (const scenario of criteriaScenarios()) {
+      const plan = planFor(scenario.request);
+      if (plan === null) continue;
+      for (const stop of plan.alternatives) {
+        const troops = troopIdsOf(scenario.request);
+        const fielded = troops.filter((id) => (stop.counts[id] ?? 0) > 0);
+        if (fielded.length <= 2) continue;
+        const caps = capsFor(scenario.request, stop.counts, planRepeats(stop));
+        // The two edits a player makes first: the lowest type out, and the highest.
+        for (const gone of [fielded[0], fielded[fielded.length - 1]]) {
+          if (gone === undefined) continue;
+          const wanted = fielded.filter((id) => id !== gone);
+          const within = { troopIds: wanted, hired: caps, stop: stop.counts };
+          const flat = resizeMarchOver(scenario.request, within);
+          const dial = resizeMarchOver(scenario.request, { ...within, fills: CAMPAIGN.editFills });
+          if (flat === null || dial === null) continue;
+          edits += 1;
+          holds(scenario.request, caps, wanted, dial);
+          expect(dial.fill).toBeGreaterThan(0);
+          expect(dial.fill).toBeLessThanOrEqual(100);
+          if (dial.fill >= 100) {
+            // No fill dominated, so the answer is the full-pool one, unchanged.
+            expect(dial.damage).toBe(flat.damage);
+            expect(dial.silver).toBe(flat.silver);
+            continue;
+          }
+          dialled += 1;
+          const where = `${scenario.label} · ${stop.pick} · without ${gone} at ${String(dial.fill)} %`;
+          expect(dial.damage, `${where}: less damage than the full pool`).toBeGreaterThanOrEqual(flat.damage);
+          expect(dial.silver, `${where}: more silver than the full pool`).toBeLessThanOrEqual(flat.silver);
+          expect(dial.mercLost, `${where}: more hired burnt than the full pool`).toBeLessThanOrEqual(
+            flat.mercLost,
+          );
+          expect(dial.unfielded.length).toBeLessThanOrEqual(flat.unfielded.length);
+          // And it is a win rather than a draw: something is strictly better, or it would not be taken.
+          expect(
+            dial.damage > flat.damage || dial.silver < flat.silver || dial.mercLost < flat.mercLost,
+            `${where}: taken without beating the full pool on anything`,
+          ).toBe(true);
+        }
+      }
+    }
+    expect(edits).toBeGreaterThan(0);
+    // Reported rather than asserted: whether a benchmark army has a dominating fill at all is a fact about
+    // those armies, and the contract above has to hold whether it is 0 or every one of them.
+    expect(dialled).toBeLessThanOrEqual(edits);
+  }, 180_000);
+});

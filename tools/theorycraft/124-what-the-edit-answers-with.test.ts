@@ -57,6 +57,7 @@ import { sizeStacks } from '../../src/engine/stacker';
 import type { StackRequest, UnitDef } from '../../src/engine/types';
 import { newRoot } from '../../src/state/defaults';
 import type { BattleSetup, Profile } from '../../src/state/schema';
+import { CAMPAIGN } from '../../src/config';
 import { buildPlanRequest, buildStackRequest } from '../../src/state/derive';
 import { parseImport } from '../../src/share/exportImport';
 import { hiredLost } from '../../src/ui/sections/march/hired';
@@ -65,6 +66,8 @@ import { EXPORT_2026_09_17, Report, evaluateCounts, loadLiveAccount, n } from '.
 const HUNTER = 'epic-monster-hunter-6';
 /** Shares of the leadership pool the dial is turned to in §B. */
 const FILLS = [100, 98, 96, 94, 92, 90, 85, 80, 75, 70, 60, 50] as const;
+/** The list that ships (`CAMPAIGN.editFills`), read here so the report says what the app does. */
+const EDIT_FILLS = CAMPAIGN.editFills;
 /** `CAMPAIGN.putBack`, the owner's own exchange rates — read here rather than imported, so the report says them. */
 const SILVER_PER_DAMAGE = 5;
 const TIME_PER_DAMAGE = 10;
@@ -516,6 +519,51 @@ describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
         LOSS_CAP,
       )} % of the damage lost).`,
     );
+
+    /**
+     * **What the shipped list actually takes** (S-117 step 2): the same edits run through the engine's own
+     * dial — `MarchWithin.fills` = `CAMPAIGN.editFills` — against the same edits with no dial at all. This is
+     * the sweep above read back through the rule that ships, which takes a fill **only when it dominates**.
+     */
+    report.add('');
+    report.add(`**Through the engine, with \`CAMPAIGN.editFills\` = [${EDIT_FILLS.join(', ')}]**:`);
+    report.add('');
+    report.add('| army | stop | edit | no dial | with the dial | fill | damage | silver | queue | burn |');
+    report.add('|---|---|---|---|---|---|---|---|---|---|');
+    let dialTaken = 0;
+    let dialSeen = 0;
+    for (const { army, base, plan } of prepared) {
+      if (plan === null) continue;
+      for (const stop of plan.alternatives) {
+        for (const edit of editsOf(base, stop)) {
+          const within = withinFor(base, stop, edit.included);
+          const flat = resizeMarchOver(base, within);
+          const dial = resizeMarchOver(base, { ...within, fills: EDIT_FILLS });
+          if (flat === null || dial === null) continue;
+          dialSeen += 1;
+          if (dial.fill >= 100) continue;
+          dialTaken += 1;
+          const was = price(base, flat.counts);
+          const now = price(base, dial.counts);
+          report.add(
+            `| ${army.name.split(',')[0]} | ${stop.pick} | ${edit.label} | ${n(was.damage)} · ${n(
+              was.silver,
+            )} · ${n(was.burn)} | ${n(now.damage)} · ${n(now.silver)} · ${n(now.burn)} | **${n(
+              dial.fill,
+            )} %** | ${pct(now.damage, was.damage)} | ${pct(now.silver, was.silver)} | ${pct(
+              now.seconds,
+              was.seconds,
+            )} | ${n(now.burn)} vs ${n(was.burn)} |`,
+          );
+        }
+      }
+    }
+    report.add('');
+    report.add(
+      `**${n(dialTaken)} of ${n(dialSeen)} edits** are answered at a smaller pool. Every one of them ` +
+        'deals at least the damage of the full-pool answer for no more silver and no more hired burnt — ' +
+        'the engine takes nothing else.',
+    );
     if (takeRows.length > 0) {
       report.add('');
       report.add('| army | stop | edit | fill | damage | — | silver saved | queue saved | score |');
@@ -589,8 +637,10 @@ describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
     // ---- D -------------------------------------------------------------------------------------------
     report.h('D. What one re-size costs');
     report.add('');
-    report.add('| army | troop types | hired types | one `resizeMarchOver` | a 12-fill dial |');
-    report.add('|---|---|---|---|---|');
+    report.add(
+      '| army | troop types | hired types | no dial | with `CAMPAIGN.editFills` | what the dial adds |',
+    );
+    report.add('|---|---|---|---|---|---|');
     for (const { army, base, plan } of prepared) {
       if (plan === null) continue;
       const stop = plan.alternatives[Math.min(1, plan.alternatives.length - 1)];
@@ -599,13 +649,23 @@ describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
       if (edit === undefined) continue;
       const within = withinFor(base, stop, edit.included);
       const runs = 25;
+      // Warm the JIT on both shapes before either is timed, or the first one measured pays for the second.
+      for (let i = 0; i < 5; i += 1) {
+        resizeMarchOver(base, within);
+        resizeMarchOver(base, { ...within, fills: EDIT_FILLS });
+      }
       const t0 = performance.now();
       for (let i = 0; i < runs; i += 1) resizeMarchOver(base, within);
       const one = (performance.now() - t0) / runs;
+      const t1 = performance.now();
+      for (let i = 0; i < runs; i += 1) resizeMarchOver(base, { ...within, fills: EDIT_FILLS });
+      const dialled = (performance.now() - t1) / runs;
       report.add(
         `| ${army.name} | ${n(within.troopIds.length)} | ${n(Object.keys(within.hired).length)} | ${n(
           Math.round(one * 100) / 100,
-        )} ms | ≈ ${n(Math.round(one * 12))} ms |`,
+        )} ms | ${n(Math.round(dialled * 100) / 100)} ms | +${n(
+          Math.round((dialled - one) * 100) / 100,
+        )} ms |`,
       );
     }
 

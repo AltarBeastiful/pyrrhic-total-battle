@@ -140,6 +140,14 @@ export interface MarchResize {
    * March edit on an Elite or a Military Science run still runs (sheltered too, since S-104).
    */
   inPlan: boolean;
+  /**
+   * **The share of the leadership pool the answer was sized against**, as a percentage (S-117,
+   * `ResizedMarch.fill`). `100` on all but the few edits where a smaller pool answered with at least the
+   * damage for no more silver and no more hired burnt, which is the only case the engine takes one. It is
+   * said in the line below because the player can see the leadership bar short of full and would otherwise
+   * have to account for it themselves.
+   */
+  fill: number;
 }
 
 /**

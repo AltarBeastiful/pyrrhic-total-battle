@@ -108,6 +108,32 @@ export const CAMPAIGN = {
    */
   putBack: { silverPerDamage: 5, timePerDamage: 10, damageLossCap: 3 },
   /**
+   * **The fills of the leadership pool a March edit re-sizes at** (S-117; owner, 2026-09-20: *"I'm not that
+   * sure any more that when removing or adding a troop … we should not compute again the best possible
+   * outcome, checking if less leadership buys us something"*).
+   *
+   * Every march the app offers fills the leadership pool to its last point. Experiment 119 asked whether a
+   * smaller fill was worth offering on a **generated stop** and answered no — 12 stops × 10 fills, **0**
+   * marches with at least the stop's damage for no more silver and no more burn — and S-115 was retired on
+   * it. After an **edit** the question is a different one: the type set is not the stop's, the troop floor
+   * has moved and the kill order with it. Measured there (experiment 124 §B,
+   * `tools/theorycraft/out/124-what-the-edit-answers-with.md`), 33 edits × 11 fills gave **9 dominations** —
+   * at least the damage, no more silver, no more hired burnt — and the engine takes **only** those, so this
+   * list can add damage or take away cost and can never trade one for the other.
+   *
+   * **Why these six.** Every domination measured sits at 98, 96, 94, 92 or 90 % of the pool, and none was
+   * ever found below 90 — under the crossover the fill starts taking mercenaries with it (investigation
+   * 0023's `(stock × hpPerUnit) / troopFloor`) and the damage falls off a cliff the dominance test refuses
+   * anyway. Sampling the five that pay and stopping is the whole of the list; each one costs about
+   * **0.25 ms** (§D), so the press stays a press.
+   *
+   * There is deliberately **no control on screen** for this. A win needs no control: the player is not being
+   * asked to trade anything. The fills that merely *trade* — 25 of the 363 pass `putBack`'s own rates above —
+   * are **not** taken, because the plan applies those rates at Generate time where the owner registered
+   * them, and a trade swapped into a march the player is holding is a different promise.
+   */
+  editFills: [98, 96, 94, 92, 90],
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

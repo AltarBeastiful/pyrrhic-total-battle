@@ -652,6 +652,18 @@ Experiment 119 turned the dial on stops as generated: 0 dominations, which retir
 
 **Over 363 lower fills**: **9** dominations, and **25** the owner's own put-back rule would take (score ≥ 0, recovers faster, at most 3 % of the damage lost).
 
+**Through the engine, with `CAMPAIGN.editFills` = [98, 96, 94, 92, 90]**:
+
+| army | stop | edit | no dial | with the dial | fill | damage | silver | queue | burn |
+|---|---|---|---|---|---|---|---|---|---|
+| the 2026-09-17 export | silver-saver | take out spearman-2 | 4,987,569 · 2,655,800 · 15 | 5,097,182 · 2,549,200 · 15 | **96 %** | 102.2 % | 96 % | 95.9 % | 15 vs 15 |
+| the 2026-09-17 export | sweet-spot | take out spearman-2 | 4,987,569 · 2,655,800 · 15 | 5,097,182 · 2,549,200 · 15 | **96 %** | 102.2 % | 96 % | 95.9 % | 15 vs 15 |
+| the 2026-09-17 export | more-mercs | take out spearman-2 | 4,987,569 · 2,655,800 · 15 | 5,097,182 · 2,549,200 · 15 | **96 %** | 102.2 % | 96 % | 95.9 % | 15 vs 15 |
+| the 2026-09-17 export | steady-max | take out spearman-2 | 4,987,569 · 2,655,800 · 15 | 5,097,182 · 2,549,200 · 15 | **96 %** | 102.2 % | 96 % | 95.9 % | 15 vs 15 |
+| 0024’s account | sweet-spot | take out spearman-2 | 5,143,823 · 2,498,200 · 3 | 5,255,703 · 2,257,200 · 3 | **90 %** | 102.2 % | 90.4 % | 90.7 % | 3 vs 3 |
+
+**5 of 33 edits** are answered at a smaller pool. Every one of them deals at least the damage of the full-pool answer for no more silver and no more hired burnt — the engine takes nothing else.
+
 | army | stop | edit | fill | damage | — | silver saved | queue saved | score |
 |---|---|---|---|---|---|---|---|---|
 | the 2026-09-17 export | silver-saver | take out spearman-2 | 98 % | -0.5 % | +2 % silver | 53,600 silver saved | 12,420 s saved | 0.1 |
@@ -743,12 +755,12 @@ Rebuilt from `sizedShape`’s own recipe — `sizeStacks` under the method, then
 ## D. What one re-size costs
 
 
-| army | troop types | hired types | one `resizeMarchOver` | a 12-fill dial |
-|---|---|---|---|---|
-| a first-run army, 12 000 leadership (hires nothing) | 9 | 0 | 0.21 ms | ≈ 2 ms |
-| the live account, 20 000 leadership · 83 EMH | 6 | 1 | 0.22 ms | ≈ 3 ms |
-| the 2026-09-17 export, its own setup (four hired types) | 6 | 4 | 0.24 ms | ≈ 3 ms |
-| 0024’s account, 5 600 / 2 180 / 800 dominance · 27 EMH | 4 | 5 | 0.3 ms | ≈ 4 ms |
+| army | troop types | hired types | no dial | with `CAMPAIGN.editFills` | what the dial adds |
+|---|---|---|---|---|---|
+| a first-run army, 12 000 leadership (hires nothing) | 9 | 0 | 0.18 ms | 1.01 ms | +0.83 ms |
+| the live account, 20 000 leadership · 83 EMH | 6 | 1 | 0.19 ms | 1.13 ms | +0.95 ms |
+| the 2026-09-17 export, its own setup (four hired types) | 6 | 4 | 0.24 ms | 1.35 ms | +1.11 ms |
+| 0024’s account, 5 600 / 2 180 / 800 dominance · 27 EMH | 4 | 5 | 0.28 ms | 1.46 ms | +1.18 ms |
 
 ## E. What the edit is allowed to spend, against what the stop spends
 

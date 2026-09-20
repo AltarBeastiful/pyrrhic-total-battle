@@ -24,6 +24,7 @@ const note = (over: Partial<MarchResize>): MarchResize => ({
   unfielded: [],
   noStock: [],
   inPlan: true,
+  fill: 100,
   ...over,
 });
 

@@ -352,7 +352,7 @@ async function planStopAgain(
    * 2 449 200). The engine ranks it like every other shape; nothing about the ranking changes.
    */
   const answer = await getCalcClient().resize(
-    { request, within: { troopIds, hired, stop: stop.counts } },
+    { request, within: { troopIds, hired, stop: stop.counts, fills: CAMPAIGN.editFills } },
     signal,
   );
   if (answer === null) return null;
@@ -375,6 +375,7 @@ async function planStopAgain(
       ].filter((id) => !named.has(id)),
       noStock: noStock.filter((id) => (answer.counts[id] ?? 0) <= 0),
       inPlan: true,
+      fill: answer.fill,
     },
   };
 }
@@ -408,6 +409,8 @@ async function sizedAgain(
       // There is no stop on this path, so nothing can be short of the stock a stop decided to spend.
       noStock: [],
       inPlan: false,
+      // The sizer fills the pool, as it always has: the dial is the plan's re-size and not this one (S-117).
+      fill: 100,
     },
   };
 }

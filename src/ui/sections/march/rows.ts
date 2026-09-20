@@ -145,7 +145,15 @@ export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): str
     resize.noStock.length > 0
       ? ` Your ${names(resize.noStock)} stock cannot last every march of this stop, so it could not be fielded.`
       : '';
-  return head + rule + missed + spent;
+  // **The one case a march does not fill the leadership pool** (S-117). The engine only ever sizes under
+  // the pool when doing so answers with at least the damage for no more silver and no more hired burnt, so
+  // this says the win rather than asking the player to weigh anything: what it explains is the gap they can
+  // see on the leadership bar. Nothing is drawn on the ordinary edit, where the fill is 100 (rule 15).
+  const dialled =
+    resize.fill > 0 && resize.fill < 100
+      ? ` It fields ${String(resize.fill)} % of your leadership: the rest bought no damage and cost silver.`
+      : '';
+  return head + rule + missed + spent + dialled;
 }
 
 // ---- The counts to copy -------------------------------------------------------------------------
