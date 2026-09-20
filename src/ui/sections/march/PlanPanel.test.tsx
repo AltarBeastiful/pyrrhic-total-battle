@@ -136,6 +136,9 @@ beforeEach(() => {
   useRunStore.setState({
     plan: PLAN,
     planPick: defaultPlanPosition(PLAN),
+    // The bar has not been moved yet: the stop a *player* chose is what the next run opens on, and one
+    // case's move must not be the next case's memory.
+    chosenStop: null,
     includedUnitIds: [],
     leftOutByPlayer: [],
   });
@@ -1041,4 +1044,67 @@ test('the best figure in each column is marked, and Per hired never is', () => {
   const noted = tradeRows().findIndex((row) => (row.textContent ?? '').includes('best a silver'));
   const label = tradeRows()[noted]?.getAttribute('aria-label') ?? '';
   expect(label.match(/best a silver/gu) ?? []).toHaveLength(1);
+});
+
+// ---- Where the next run opens the bar ------------------------------------------------------------
+/**
+ * *"Remember the position of the slider when clicking generate again — last position remembered seems like
+ * a good choice"* (owner, 2026-09-20). Four cases: the first plan of a session, the plan after a move, a
+ * frontier that has lost stops since, and what a fresh account forgets.
+ */
+test('a first plan opens on the engine’s recommendation: nobody has moved the bar yet', () => {
+  useRunStore.getState().finish([], null, PLAN);
+  expect(useRunStore.getState().chosenStop).toBeNull();
+  expect(useRunStore.getState().planPick).toBe(defaultPlanPosition(PLAN));
+});
+
+test('the next plan opens on the stop the player last read', () => {
+  const away = anotherStop();
+  const chosen = ROWS[away];
+  if (chosen === undefined) throw new Error('too few plans to move between');
+
+  useRunStore.getState().setPlanPick(away);
+  expect(useRunStore.getState().chosenStop).toEqual({ kind: chosen.pick, at: away });
+
+  // A second Generate, same army: the recommendation is where it was, and the bar is where he left it.
+  useRunStore.getState().finish([], null, PLAN);
+  expect(useRunStore.getState().planPick).toBe(away);
+  expect(pickOf(PLAN, useRunStore.getState().planPick).pick).toBe(chosen.pick);
+});
+
+test('it is remembered by which answer it is, so a shorter frontier opens on the same one', () => {
+  // The fixture's four stops are what makes this case say anything: the kind has to land somewhere the
+  // index alone would not have gone.
+  expect(ROWS.length).toBeGreaterThanOrEqual(3);
+  const at = defaultPlanPosition(PLAN);
+  const chosen = ROWS[at];
+  if (chosen === undefined || at === 0)
+    throw new Error('the fixture must recommend a stop off the cheap end');
+  useRunStore.getState().setPlanPick(at);
+
+  // A search that collapses the cheap end into the stop above it carries one fewer: every kind the player
+  // could be on has moved down a place. The **kind** opens where it really is (`at - 1`); the index alone
+  // would have opened on the stop next to it, which is a plan he never chose.
+  const shorter = { ...PLAN, alternatives: ROWS.slice(1) };
+  useRunStore.getState().finish([], null, shorter);
+  expect(useRunStore.getState().planPick).toBe(at - 1);
+  expect(pickOf(shorter, useRunStore.getState().planPick).pick).toBe(chosen.pick);
+});
+
+test('a frontier without that answer at all falls back to the position, clamped to it', () => {
+  const last = ROWS.length - 1;
+  if (ROWS.length < 2) throw new Error('too few plans to clamp');
+  useRunStore.getState().setPlanPick(last);
+
+  const first = ROWS[0];
+  if (first === undefined) throw new Error('a plan always carries one stop');
+  const one = { ...PLAN, alternatives: [first] };
+  useRunStore.getState().finish([], null, one);
+  expect(useRunStore.getState().planPick).toBe(0);
+});
+
+test('another account forgets it: reset is the profile’s own broom', () => {
+  useRunStore.getState().setPlanPick(anotherStop());
+  useRunStore.getState().reset();
+  expect(useRunStore.getState().chosenStop).toBeNull();
 });

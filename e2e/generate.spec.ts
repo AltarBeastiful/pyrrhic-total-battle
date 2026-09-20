@@ -4,6 +4,7 @@
  * they do with the answer — read the counts, copy them all, edit one by hand.
  */
 import { expect, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 
 import {
   chooseObjective,
@@ -631,6 +632,60 @@ test('Ctrl + Enter from inside an editor closes it and generates', async ({ page
   await settle(page);
   await dismissMarchSheet(page);
   expect(await marchStackCount(page)).toBeGreaterThan(0);
+
+  expect(problems).toEqual([]);
+});
+
+/**
+ * The bar opens where it was left (owner, 2026-09-20: *"remember the position of the slider when clicking
+ * generate again — last position remembered seems like a good choice"*). The plan's own recommendation
+ * still leads the first run of a session; what the second one must not do is put the player back on it.
+ */
+test('a second Generate opens the plan bar on the stop the player last read', async ({ page }) => {
+  const problems = watchConsole(page);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openApp(page);
+  await seedHiredStock(page);
+
+  await page.locator('#battle').getByRole('radio', { name: 'Complete optimization' }).click();
+  await generate(page, { leadership: 20_000 });
+
+  const march = marchSection(page);
+  const trade = march.getByRole('grid', { name: /^Every plan on the trade/ });
+  const stops = trade.getByRole('row', { name: /^(Silver saver|Sweet spot|More mercs|Steady max|All in)\b/ });
+  const count = await stops.count();
+  expect(count, 'the bar needs two stops to have anywhere to be left').toBeGreaterThan(1);
+
+  /** Which answer a row is, off the name it carries: the figures after it move, the name does not. */
+  const nameOf = async (row: Locator): Promise<string> =>
+    /^(Silver saver|Sweet spot|More mercs|Steady max|All in)/.exec(
+      (await row.getAttribute('aria-label')) ?? '',
+    )?.[0] ?? '';
+
+  const opened = await nameOf(trade.getByRole('row', { selected: true }));
+  const dearest = stops.nth(count - 1);
+  const wanted = await nameOf(dearest);
+  expect(wanted, 'the dearest stop must be another plan than the one it opened on').not.toBe(opened);
+
+  // He reads the dearest stop — the most of the hired stock a march may burn.
+  await dearest.click();
+  await expect(trade.getByRole('row', { selected: true })).toHaveAttribute(
+    'aria-label',
+    new RegExp(`^${wanted}`),
+  );
+  const bar = march.getByRole('slider', { name: 'Where on the trade to read the plan' });
+  const thumb = await bar.getAttribute('aria-valuenow');
+
+  // Generate again, same army: the bar is where he left it, and so is the march under it.
+  await generateButton(page).click();
+  await settle(page);
+  await dismissMarchSheet(page);
+
+  await expect(trade.getByRole('row', { selected: true })).toHaveAttribute(
+    'aria-label',
+    new RegExp(`^${wanted}`),
+  );
+  await expect(bar).toHaveAttribute('aria-valuenow', String(thumb));
 
   expect(problems).toEqual([]);
 });

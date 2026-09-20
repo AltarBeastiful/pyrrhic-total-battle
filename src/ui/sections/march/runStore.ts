@@ -11,7 +11,7 @@
  */
 import { create } from 'zustand';
 
-import type { CampaignPlan, PlanRow } from '@/engine/plan';
+import type { CampaignPlan, PlanPick, PlanRow } from '@/engine/plan';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
@@ -70,6 +70,34 @@ export function sweetSpotOf(plan: CampaignPlan): number | null {
  */
 export function defaultPlanPosition(plan: CampaignPlan): number {
   return sweetSpotOf(plan) ?? positionOf(plan, plan) ?? 0;
+}
+
+/**
+ * **The stop the player last read**, kept so the next Generate opens on it (owner, 2026-09-20: *"remember
+ * the position of the slider when clicking generate again — last position remembered seems like a good
+ * choice"*).
+ *
+ * It is held as the stop's **kind** first and its index second. The bar is one of five named answers in a
+ * fixed order (`PlanPick`), but a fresh search can carry fewer of them — two stops that come out as one
+ * plan collapse to one — so an index alone would move the player somewhere they never chose. The index is
+ * the fallback for the frontier that has not got the kind any more, clamped to it.
+ */
+export interface ChosenStop {
+  kind: PlanPick | null;
+  at: number;
+}
+
+/**
+ * Where a new plan opens: on the stop the player last read, or — until they have moved the bar at all — on
+ * the engine's own recommendation. Asked before the run's march is built (`runGenerate`) and again when the
+ * run is filed (`finish`), from the same two inputs, so the thumb and the march on screen are one stop.
+ */
+export function openingPosition(plan: CampaignPlan, chosen: ChosenStop | null): number {
+  if (chosen === null) return defaultPlanPosition(plan);
+  const rows = plan.alternatives;
+  const byKind = chosen.kind === null ? -1 : rows.findIndex((row) => row.pick === chosen.kind);
+  if (byKind >= 0) return byKind;
+  return Math.max(0, Math.min(rows.length - 1, chosen.at));
 }
 
 /** The handful of figures the trade-off table compares; everything else in a summary is noise there. */
@@ -216,6 +244,12 @@ export interface RunState {
    */
   planPick: PlanPosition;
   setPlanPick: (pick: PlanPosition) => void;
+  /**
+   * The stop the player last moved the bar to, and what kind of answer it was (`openingPosition`). It
+   * outlives the run it was chosen in — that is the whole of its job — and, like the rest of this store, it
+   * is never stored, shared or synced: a reload opens on the engine's recommendation again.
+   */
+  chosenStop: ChosenStop | null;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
@@ -244,6 +278,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   tradeoff: null,
   plan: null,
   planPick: 0,
+  chosenStop: null,
   controller: null,
   setResize: (resize) => {
     set({ resize });
@@ -279,12 +314,19 @@ export const useRunStore = create<RunState>()((set, get) => ({
       resize: null,
       tradeoff,
       plan,
-      // a fresh plan opens on the one it recommends rather than at the cheap end of its frontier
-      planPick: plan === null ? 0 : defaultPlanPosition(plan),
+      // A fresh plan opens where the player last left the bar, and on the one the engine recommends until
+      // they have moved it at all (`openingPosition`) — never at the cheap end of the frontier.
+      planPick: plan === null ? 0 : openingPosition(plan, get().chosenStop),
     });
   },
   setPlanPick: (planPick) => {
-    set({ planPick });
+    // Only the player moves the bar (`PlanFold`'s `read`), so every call here is a choice worth keeping
+    // for the next run. The kind is read off the plan on screen, which is the bar that was moved.
+    const plan = get().plan;
+    set({
+      planPick,
+      chosenStop: { kind: plan === null ? null : pickOf(plan, planPick).pick, at: planPick },
+    });
   },
   setIncluded: (includedUnitIds, leftOutByPlayer) => {
     set({ includedUnitIds, leftOutByPlayer, resize: null });
@@ -310,6 +352,8 @@ export const useRunStore = create<RunState>()((set, get) => ({
       tradeoff: null,
       plan: null,
       planPick: 0,
+      // Another account is another army, so the stop it would open on means nothing here.
+      chosenStop: null,
       controller: null,
     });
   },

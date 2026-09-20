@@ -20,7 +20,7 @@ import { readStoredResult, useResultStore } from '@/ui/resultStore';
 import { CAMPAIGN } from '@/config';
 import { isAbortError } from '@/worker/client';
 
-import { pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
+import { openingPosition, pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 import type { MarchResize } from './runStore';
 
 /**
@@ -71,7 +71,14 @@ export async function runGenerate(): Promise<void> {
         { ...buildPlanRequest(profile, setup), budgetMs: PLAN_BUDGET_MS },
         controller.signal,
       );
-      const chosen = planned.recommend ?? planned;
+      /**
+       * **Where the bar opens** (`openingPosition`, owner 2026-09-20): the stop the player last read, and
+       * the engine's own recommendation until they have moved it. It is decided here rather than after the
+       * march is built, because the march on screen is that stop's own — asking `finish` for the position
+       * and `planned.recommend` for the counts would put the thumb on one plan and its figures on another.
+       */
+      const at = openingPosition(planned, useRunStore.getState().chosenStop);
+      const chosen = pickOf(planned, at);
       const itsMarch = planMarch(request, chosen.counts);
       /**
        * **The caps the march's request carries are the account's own stock, and nothing else** (S-112,
@@ -264,9 +271,9 @@ export async function resizeMarch(
 }
 
 /**
- * **One stop of the plan, re-sized in place** (S-104). The stop is the one the bar is reading — the plan's
- * own recommendation until the player moves it (`pickOf`, `planPick`) — and it is what says how many marches
- * the re-size has to keep affordable. The troops are **not** capped: they are rationed by leadership, and
+ * **One stop of the plan, re-sized in place** (S-104). The stop is the one the bar is reading — where the last
+ * run left it, and the plan's own recommendation until the player has moved it at all (`openingPosition`,
+ * `planPick`) — and it is what says how many marches the re-size has to keep affordable. The troops are **not** capped: they are rationed by leadership, and
  * capping them at the stop's counts is the 2026-09-15 defect written up in the plan branch of `runGenerate`
  * above.
  *
