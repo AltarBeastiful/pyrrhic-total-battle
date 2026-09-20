@@ -12,6 +12,10 @@ hired types), and **the dominance account of investigation 0024** (5 600 / 2 180
 (S-94/S-108), silver and queue are `recoveryCosts(...).plan`, burn is `hiredLost` — the three figures the bar
 prints. Everything below is from that file.
 
+**Built 2026-09-21**, in three commits — `caae039` (step 1), `35c440f` (steps 2 and 3) and this one.
+Change 3 (the trades) is deliberately **not** built and is the owner's to ask for; §4 says why. What the
+build measured against the plan is in §6.
+
 ## 0. What a press runs today
 
 `removeFromFormation` / `putBackInMarch` (`src/ui/sections/march/formation.ts`) → `resizeMarch` →
@@ -227,3 +231,33 @@ on one grid and a lower bound on what a finer one would find. It does not touch 
 spend** (§E, the 5.9× and the 6.3×): S-107 and S-102 both have their reasons and re-opening them is a
 separate story with real benchmark risk, where this one has none. And every figure is the worst opening
 against each account's own fixed enemy formation; nothing here measures a different enemy.
+
+## 6. What the build measured, against what the plan predicted
+
+| | the plan said | the build measured |
+|---|---|---|
+| no-op presses that lose damage | 3 of 14 → 0 | **3 → 0**, and a fourth (the live all-in, 90.6 %) came back to 100 % as well |
+| the one dominated edit | fixed | **3 883 970 → 4 546 337, +17.1 %** |
+| edits where churn should still win | untouched | untouched — the live silver saver still answers at 169.9 %, the export's at 166.6 % |
+| the dial's yield after change 1 | "can only lower the yield" | **14 → 9** dominations on the four armies |
+| what the shipped list takes | — | **5 of 33** edits on the four armies, **9 of 102** on the benchmark corpus |
+| cost of the dial | ≈ 3 ms | **+0.83 to +1.18 ms** (5 fills shipped, not 12) |
+| benchmark baselines moved | none | **none** — 18 leaves moved and every one is `run` or `planMs` |
+| `plan-resize.test.ts` pins re-pinned | 38 → 72 and 49 → 62 expected to move | **neither moved**; 24/24 held and two tests were added |
+
+**Two things the plan got wrong, both caught before they shipped.** §1's first draft had the untouched
+march *win ties outright*, which would have refused the export's 196.8 %-damage answer; adding the
+candidate is the whole fix, because in every case where the old answer was worse the untouched march has
+more damage. And §3 step 2 expected the pinned counts to move: they did not, because the dial only ever
+takes a march that dominates, and on those two camps nothing did.
+
+**One thing the plan under-measured.** It sized the defect on four armies. On the benchmark corpus the
+family falls short of the stop on **13 of 53** stops, worst **−22.9 %** — the 900-dominance camp answering
+19 882 698 where its own stop deals 25 783 940. The regression test asserts that count is not zero, so a
+future change that makes the contract vacuous fails rather than passes quietly.
+
+**Driven in the real browser**, on 0024's account rebuilt from `localStorage` at 1 512 px: the plan draws
+its sweet spot at **5 698 946** with EMH 17 · ED 19 · WE 44 · SG 16 · BB 21, which is experiment 124's §E
+to the unit; taking Spearman II out answers **5 255 703 for 2 257 200 silver** — the predicted dialled
+march — the pool bar reads **5 040 of 5 600 leadership**, the pane writes *"It fields 90 % of your
+leadership: the rest bought no damage and cost silver."*, and the console is clean.

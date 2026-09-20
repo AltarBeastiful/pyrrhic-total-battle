@@ -67,3 +67,16 @@ test('a hired stock too small to last the stop is a different fact, and is said 
     `Your ${nameOf(0)} stock cannot last every march of this stop, so it could not be fielded.`,
   );
 });
+
+test('a march under the leadership pool says so, and says why the gap is a win', () => {
+  // S-117: the engine sizes under the pool only where doing so answers with at least the damage for no
+  // more silver and no more hired burnt, so the sentence states the win rather than offering a trade —
+  // what it explains is the gap the player can see on the leadership bar.
+  const words = resizeWords(note({ tookOut: [idOf(1)], fill: 96 }), UNITS);
+  expect(words).toContain('It fields 96 % of your leadership');
+  expect(words).toContain('the rest bought no damage and cost silver');
+});
+
+test('the ordinary edit says nothing about leadership: a full pool is not news (rule 15)', () => {
+  expect(resizeWords(note({ tookOut: [idOf(1)] }), UNITS)).not.toContain('of your leadership');
+});
