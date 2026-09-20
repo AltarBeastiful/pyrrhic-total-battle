@@ -95,7 +95,13 @@ function price(base: StackRequest, counts: Record<string, number>): Priced {
  * from the path a pill press actually runs: a monster at its whole dominance pool, a capped mercenary at
  * what the stock sustains over the stop's repeats, an uncapped one at its authority pool.
  */
-function withinFor(request: StackRequest, stop: PlanTotals, included: Set<string>): MarchWithin {
+function withinFor(
+  request: StackRequest,
+  stop: PlanTotals,
+  included: Set<string>,
+  /** S-117: the stop's own counts travel with the edit. Left out, this is the re-size as S-107 shipped it. */
+  carryStop = true,
+): MarchWithin {
   const repeats = planRepeats(stop);
   const troopIds: string[] = [];
   const hired: Record<string, number> = {};
@@ -107,7 +113,7 @@ function withinFor(request: StackRequest, stop: PlanTotals, included: Set<string
     }
     hired[unit.id] = capOf(request, stop, unit, repeats);
   }
-  return { troopIds, hired };
+  return carryStop ? { troopIds, hired, stop: stop.counts } : { troopIds, hired };
 }
 
 function capOf(request: StackRequest, stop: PlanTotals, unit: UnitDef, repeats: number): number {
@@ -332,28 +338,35 @@ describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
       '**First, the press that changes no type at all** — `resizeMarchOver` over the stop’s own troop set:',
     );
     report.add('');
-    report.add('| army | stop | the stop | the same types, re-sized | damage | silver | queue | burn |');
-    report.add('|---|---|---|---|---|---|---|---|');
+    report.add(
+      '| army | stop | the stop | **before** (S-107) | **after** (S-117) | before, of the stop | after, of the stop |',
+    );
+    report.add('|---|---|---|---|---|---|---|');
     let noops = 0;
     let noopsWorse = 0;
+    let noopsWorseAfter = 0;
     for (const { army, base, plan } of prepared) {
       if (plan === null) continue;
       for (const stop of plan.alternatives) {
         const inMarch = new Set(Object.keys(stop.counts).filter((id) => (stop.counts[id] ?? 0) > 0));
-        const answer = resizeMarchOver(base, withinFor(base, stop, inMarch));
-        if (answer === null) continue;
+        const before = resizeMarchOver(base, withinFor(base, stop, inMarch, false));
+        const after = resizeMarchOver(base, withinFor(base, stop, inMarch));
+        if (before === null || after === null) continue;
         const was = price(base, stop.counts);
-        const now = price(base, answer.counts);
+        const then = price(base, before.counts);
+        const now = price(base, after.counts);
         noops += 1;
-        const worse = now.damage < was.damage && now.silver >= was.silver;
-        if (worse) noopsWorse += 1;
+        if (then.damage < was.damage && then.silver >= was.silver) noopsWorse += 1;
+        if (now.damage < was.damage && now.silver >= was.silver) noopsWorseAfter += 1;
         report.add(
           `| ${army.name.split(',')[0]} | ${stop.pick} | ${n(was.damage)} · ${n(was.silver)} · ${n(
             was.burn,
-          )} | ${n(now.damage)} · ${n(now.silver)} · ${n(now.burn)} | ${pct(now.damage, was.damage)} | ${pct(
+          )} | ${n(then.damage)} · ${n(then.silver)} · ${n(then.burn)} | ${n(now.damage)} · ${n(
             now.silver,
-            was.silver,
-          )} | ${pct(now.seconds, was.seconds)} | ${n(now.burn)} vs ${n(was.burn)} |`,
+          )} · ${n(now.burn)} | ${pct(then.damage, was.damage)} · ${pct(then.silver, was.silver)} | ${pct(
+            now.damage,
+            was.damage,
+          )} · ${pct(now.silver, was.silver)} |`,
         );
       }
     }
@@ -361,7 +374,7 @@ describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
     report.add(
       `**${n(noops)} stops re-sized over their own types**: **${n(
         noopsWorse,
-      )}** answer with **less damage for no less silver** than the march the player was already looking at.`,
+      )}** answered with less damage for no less silver before S-117, **${n(noopsWorseAfter)}** after.`,
     );
 
     for (const { army, base, plan } of prepared) {

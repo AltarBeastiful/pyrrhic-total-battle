@@ -1725,14 +1725,59 @@ export interface MarchWithin {
    *    queue and dragon coins — are billed on the answer like any other stack's.
    */
   hired: Record<string, number>;
+  /**
+   * **The counts of the march the player is looking at** — the selected stop's own (S-117). Left out, the
+   * re-size answers from the shapes it builds alone, which is what it did until then and is the defect:
+   * nothing in the family it searches is *"this march, with that one type taken out or put in, and nothing
+   * else touched"*, and the family is a strict subset of the one `planCampaign` walked to build the stop
+   * (mercenary vectors × depths × growths × a learned rung order). So a press could only move the player to
+   * a **different** march, and on three of the fourteen stops measured it moved them to a worse one: a press
+   * that changes no type at all — a put-back whose type cannot be fielded — answered at **85.3 %** of the
+   * damage for 101 % of the silver on the owner's live account, and at 5 143 823 for 2 498 200 against
+   * 5 763 382 for 2 449 200 on the dominance account of investigation 0024
+   * (`tools/theorycraft/out/124-what-the-edit-answers-with.md` §A).
+   *
+   * Given here, the stop's own march joins the candidates: its troop counts with the edit applied — the
+   * taken-out type dropped, the put-back type sized into the leadership the stop left unused — and its hired
+   * counts re-sheltered under whatever floor that leaves. It is then ranked by `beats` like every other
+   * shape and **nothing about the ranking changes**: in all four cases where the answer was worse than the
+   * march it replaced, the untouched march has more damage, so damage-first picks it the moment it is on the
+   * table. Where the freed leadership genuinely buys damage — 196.8 % of it on the export's silver saver —
+   * the re-sized march still wins, exactly as it should.
+   */
+  stop?: Record<string, number>;
+  /**
+   * **Shares of the leadership pool to size the same shapes at**, as percentages, biggest first (S-117). Left
+   * out, the re-size fills the pool, which is what every march the app has ever offered does.
+   *
+   * A lower fill is taken **only when it dominates** the full-pool answer — at least its damage, no more
+   * silver, no more hired burnt — so this can add damage or take away cost and can never trade one for the
+   * other. Experiment 119 measured the same dial on a stop **as generated** and found 0 dominations in 120
+   * marches, which is why S-115 was retired and why there is no control for this on screen. After an **edit**
+   * the answer differs: the type set is not the stop's, the troop floor has moved and the kill order with it,
+   * and 363 marches gave **14** dominations — +2.2 % damage for −4 % silver at identical burn on the
+   * 2026-09-17 export at 96 % of the pool, and the same damage at 90 % as at 100 % on 0024's steady max,
+   * where the last tenth of the leadership buys nothing and costs 207 600 silver and 41 070 seconds of queue.
+   */
+  fills?: readonly number[];
   /** How much room the lowest rung leaves above the biggest hired stack; the plan's own by default. */
   gap?: number;
 }
 
 /** A march the March pane can draw, with how it was built and what it could not field. */
 export interface ResizedMarch extends PlanMarch {
-  /** The sizer under one of its three methods, or the tight ladder over the same types. */
-  shape: SizerMethod | 'ladder';
+  /**
+   * The sizer under one of its three methods, the tight ladder over the same types, or `stop` — the march
+   * the player was looking at, with the edit applied and nothing else touched (S-117, `MarchWithin.stop`).
+   */
+  shape: SizerMethod | 'ladder' | 'stop';
+  /**
+   * **The share of the leadership pool this march was sized against**, as a percentage; `100` unless the
+   * dial found a smaller pool that dominates (S-117, `MarchWithin.fills`). The pane says it in the one line
+   * a March edit writes, because a march that leaves leadership unspent is a thing the player can see on the
+   * pool bar and would otherwise have to explain to themselves.
+   */
+  fill: number;
   /** Troop types `MarchWithin.troopIds` asked for that no shape could field; empty when every one is in. */
   unfielded: string[];
 }
@@ -1799,30 +1844,79 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
   }
   const sizing: StackRequest = { ...request, caps };
 
-  const shapes: {
+  type Shape = {
     rungs: { entry: Effective; count: number }[];
     mercs: { entry: Effective; count: number }[];
-    shape: SizerMethod | 'ladder';
-  }[] = [];
-  for (const method of Object.values(SIZER_DEPTHS)) {
-    shapes.push({ ...sizedShape(sizing, byId, asked, method, wantedIds), shape: method });
-  }
-  if (asked.length > 0) {
-    // The ladder is built above the biggest hired stack as it is asked for, then the hired stacks are
-    // lowered under whatever the rungs came out at: a rung is a whole number of units, so a heavy troop
-    // type can land a hair under the stack it was meant to clear (the same second reading `finaleFor`
-    // makes of its own ladders).
-    const hiredHp = Math.max(...asked.map((merc) => merc.count * merc.entry.hp));
-    for (const scale of LADDER_GROWTHS) {
-      const rungs = ladder(troops, wanted.length, hiredHp, gap, request.housing.leadership, scale, wanted);
-      if (rungs.length === 0) continue;
-      shapes.push({
-        rungs,
-        mercs: shelterUnder(rungs, asked).filter((merc) => merc.count > 0),
-        shape: 'ladder',
-      });
+    shape: SizerMethod | 'ladder' | 'stop';
+  };
+
+  /**
+   * **The shapes this family builds at one fill of the leadership pool** — the sizer under each of its three
+   * methods, and the tight ladder at each of the `LADDER_GROWTHS`. The fill is passed rather than read off
+   * `request` so the dial (S-117) can ask for the same shapes at a smaller pool without rebuilding anything
+   * else: `sizeStacks` rations the troops by the leadership it is given, and `ladder` refuses a ladder that
+   * pool cannot pay for.
+   */
+  const shapesAt = (leadership: number): Shape[] => {
+    const housed: StackRequest = { ...sizing, housing: { ...sizing.housing, leadership } };
+    const out: Shape[] = [];
+    for (const method of Object.values(SIZER_DEPTHS)) {
+      out.push({ ...sizedShape(housed, byId, asked, method, wantedIds), shape: method });
     }
-  }
+    if (asked.length > 0) {
+      // The ladder is built above the biggest hired stack as it is asked for, then the hired stacks are
+      // lowered under whatever the rungs came out at: a rung is a whole number of units, so a heavy troop
+      // type can land a hair under the stack it was meant to clear (the same second reading `finaleFor`
+      // makes of its own ladders).
+      const hiredHp = Math.max(...asked.map((merc) => merc.count * merc.entry.hp));
+      for (const scale of LADDER_GROWTHS) {
+        const rungs = ladder(troops, wanted.length, hiredHp, gap, leadership, scale, wanted);
+        if (rungs.length === 0) continue;
+        out.push({
+          rungs,
+          mercs: shelterUnder(rungs, asked).filter((merc) => merc.count > 0),
+          shape: 'ladder',
+        });
+      }
+    }
+    return out;
+  };
+
+  /**
+   * **The march the player is looking at, with the edit applied and nothing else touched** (S-117,
+   * `MarchWithin.stop`). Its troop counts are the stop's own — the taken-out type is simply absent from
+   * `wanted`, and a put-back type the stop fields none of is sized into the leadership the stop left unused,
+   * which is the most it can hold without moving another stack. Its hired counts are the stop's, lowered
+   * under whatever floor that leaves (`shelterUnder` lowers and never raises), because the stop's own
+   * shelter was computed against a floor the edit has moved.
+   */
+  const stopShape = (): Shape | null => {
+    const counts = within.stop;
+    if (counts === undefined) return null;
+    const rungs: { entry: Effective; count: number }[] = [];
+    let used = 0;
+    for (const entry of wanted) {
+      const held = Math.max(0, Math.floor(counts[entry.id] ?? 0));
+      if (held > 0) rungs.push({ entry, count: held });
+      used += held * entry.cost;
+    }
+    if (rungs.length === 0) return null;
+    // The put-back: whatever the leadership the stop did not spend can pay for, at most.
+    const room = Math.max(0, request.housing.leadership - used);
+    for (const entry of wanted) {
+      if ((counts[entry.id] ?? 0) > 0) continue;
+      const fits = Math.floor(room / Math.max(1, entry.cost));
+      if (fits > 0) rungs.push({ entry, count: fits });
+      break;
+    }
+    const hired = asked
+      .map((merc) => ({
+        entry: merc.entry,
+        count: Math.min(merc.count, Math.max(0, Math.floor(counts[merc.entry.id] ?? 0))),
+      }))
+      .filter((merc) => merc.count > 0);
+    return { rungs, mercs: shelterUnder(rungs, hired).filter((merc) => merc.count > 0), shape: 'stop' };
+  };
 
   /** Best by damage; a tie goes to the cheaper march, and then to the one back in the barracks sooner. */
   const beats = (candidate: ResizedMarch, held: ResizedMarch): boolean => {
@@ -1833,27 +1927,72 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
     return candidate.seconds < held.seconds;
   };
 
-  let best: ResizedMarch | null = null;
-  for (const shape of shapes) {
+  /** One shape priced, or `null` where it is not a march this camp can field. */
+  const priceShape = (shape: Shape, leadership: number, fill: number): ResizedMarch | null => {
     const rungs = shape.rungs.filter((rung) => rung.count > 0);
     const mercs = shape.mercs.filter((merc) => merc.count > 0);
-    if (rungs.length === 0) continue;
+    if (rungs.length === 0) return null;
     // A march the camp can house (S-96, `fitsHousing`): an uncapped hired type reads the whole of its own
-    // pool, and a dozen of them read it a dozen times over.
-    if (!fitsHousing(request.housing, rungs, mercs)) continue;
+    // pool, and a dozen of them read it a dozen times over. The leadership checked is the fill's, so a
+    // dialled-down march has to fit the pool it was sized against and not the one the account holds.
+    if (!fitsHousing({ ...request.housing, leadership }, rungs, mercs)) return null;
     // The shelter, read back off the march that will be drawn (S-87). `shelterUnder` has already lowered
     // every hired stack under the lowest rung, so this refuses only one it could not: a type whose very
     // first unit already stands over the troop line.
     const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
     const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
-    if (mercs.length > 0 && floor <= hiredTop) continue;
+    if (mercs.length > 0 && floor <= hiredTop) return null;
     const march = priceMarch(request.recovery, rungs, mercs, marchOf([...rungs, ...mercs], enemyStacks));
-    const candidate: ResizedMarch = {
+    return {
       ...march,
       shape: shape.shape,
+      fill,
       unfielded: wanted.filter((entry) => (march.counts[entry.id] ?? 0) <= 0).map((entry) => entry.id),
     };
-    if (best === null || beats(candidate, best)) best = candidate;
+  };
+
+  /** The best march of one fill, the stop's own shape thrown in at the full pool. */
+  const bestAt = (fill: number): ResizedMarch | null => {
+    const leadership =
+      fill === 100 ? request.housing.leadership : Math.floor((request.housing.leadership * fill) / 100);
+    const shapes: Shape[] = shapesAt(leadership);
+    if (fill === 100) {
+      const own = stopShape();
+      if (own !== null) shapes.push(own);
+    }
+    let best: ResizedMarch | null = null;
+    for (const shape of shapes) {
+      const candidate = priceShape(shape, leadership, fill);
+      if (candidate === null) continue;
+      if (best === null || beats(candidate, best)) best = candidate;
+    }
+    return best;
+  };
+
+  const full = bestAt(100);
+  if (full === null || within.fills === undefined) return full;
+
+  /**
+   * **The dial** (S-117): the same shapes at a smaller pool, taken **only when the answer dominates** the
+   * full-pool one — at least its damage, no more silver, no more hired burnt, and strictly better on one of
+   * the three. A fill that merely trades damage for silver is not taken: nobody can make that trade on the
+   * player's behalf without saying so, and the rates that would say so (`CAMPAIGN.putBack`) are the owner's
+   * to extend here. Among several dominating fills the ordinary `beats` picks, so the biggest pool that
+   * dominates wins a tie and the answer stays as close to the march the player knows as the wins allow.
+   */
+  const dominates = (candidate: ResizedMarch): boolean =>
+    candidate.unfielded.length <= full.unfielded.length &&
+    candidate.damage >= full.damage &&
+    candidate.silver <= full.silver &&
+    candidate.mercLost <= full.mercLost &&
+    (candidate.damage > full.damage || candidate.silver < full.silver || candidate.mercLost < full.mercLost);
+
+  let best = full;
+  for (const fill of within.fills) {
+    if (fill >= 100 || fill <= 0) continue;
+    const candidate = bestAt(fill);
+    if (candidate === null || !dominates(candidate)) continue;
+    if (best === full || beats(candidate, best)) best = candidate;
   }
   return best;
 }

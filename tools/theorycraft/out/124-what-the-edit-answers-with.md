@@ -6,24 +6,24 @@ For every stop and every edit: what the app answers with today, against **the st
 
 **First, the press that changes no type at all** — `resizeMarchOver` over the stop’s own troop set:
 
-| army | stop | the stop | the same types, re-sized | damage | silver | queue | burn |
-|---|---|---|---|---|---|---|---|
-| a first-run army | silver-saver | 1,462,876 · 4,302,400 · 0 | 1,462,876 · 4,302,400 · 0 | 100 % | 100 % | 100 % | 0 vs 0 |
-| a first-run army | sweet-spot | 2,710,128 · 4,878,400 · 0 | 2,710,128 · 4,878,400 · 0 | 100 % | 100 % | 100 % | 0 vs 0 |
-| a first-run army | steady-max | 2,959,404 · 6,860,800 · 0 | 2,959,404 · 6,860,800 · 0 | 100 % | 100 % | 100 % | 0 vs 0 |
-| the live account | silver-saver | 3,694,764 · 3,602,400 · 4 | 6,276,619 · 7,809,000 · 7 | 169.9 % | 216.8 % | 221.4 % | 7 vs 4 |
-| the live account | sweet-spot | 7,096,072 · 7,732,100 · 6 | 6,276,619 · 7,809,000 · 7 | 88.5 % | 101 % | 103.1 % | 7 vs 6 |
-| the live account | steady-max | 7,354,938 · 7,732,100 · 7 | 6,276,619 · 7,809,000 · 7 | 85.3 % | 101 % | 103.1 % | 7 vs 7 |
-| the live account | all-in | 7,840,310 · 7,732,100 · 9 | 7,102,552 · 7,475,800 · 9 | 90.6 % | 96.7 % | 96.6 % | 9 vs 9 |
-| the 2026-09-17 export | silver-saver | 3,549,139 · 1,985,200 · 6 | 5,913,067 · 2,739,400 · 14 | 166.6 % | 138 % | 139.1 % | 14 vs 6 |
-| the 2026-09-17 export | sweet-spot | 4,442,817 · 2,722,500 · 7 | 5,913,067 · 2,739,400 · 14 | 133.1 % | 100.6 % | 101.4 % | 14 vs 7 |
-| the 2026-09-17 export | more-mercs | 5,230,687 · 2,739,400 · 11 | 5,913,067 · 2,739,400 · 14 | 113 % | 100 % | 100 % | 14 vs 11 |
-| the 2026-09-17 export | steady-max | 5,913,067 · 2,739,400 · 14 | 5,913,067 · 2,739,400 · 14 | 100 % | 100 % | 100 % | 14 vs 14 |
-| the 2026-09-17 export | all-in | 6,603,524 · 3,802,400 · 26 | 6,603,524 · 3,802,400 · 26 | 100 % | 100 % | 100 % | 26 vs 26 |
-| 0024’s account | sweet-spot | 5,698,946 · 2,499,000 · 2 | 5,760,896 · 2,549,400 · 3 | 101.1 % | 102 % | 104 % | 3 vs 2 |
-| 0024’s account | steady-max | 5,763,382 · 2,449,200 · 3 | 5,143,823 · 2,498,200 · 3 | 89.3 % | 102 % | 103.7 % | 3 vs 3 |
+| army | stop | the stop | **before** (S-107) | **after** (S-117) | before, of the stop | after, of the stop |
+|---|---|---|---|---|---|---|
+| a first-run army | silver-saver | 1,462,876 · 4,302,400 · 0 | 1,462,876 · 4,302,400 · 0 | 1,462,876 · 4,302,400 · 0 | 100 % · 100 % | 100 % · 100 % |
+| a first-run army | sweet-spot | 2,710,128 · 4,878,400 · 0 | 2,710,128 · 4,878,400 · 0 | 2,710,128 · 4,878,400 · 0 | 100 % · 100 % | 100 % · 100 % |
+| a first-run army | steady-max | 2,959,404 · 6,860,800 · 0 | 2,959,404 · 6,860,800 · 0 | 2,959,404 · 6,860,800 · 0 | 100 % · 100 % | 100 % · 100 % |
+| the live account | silver-saver | 3,694,764 · 3,602,400 · 4 | 6,276,619 · 7,809,000 · 7 | 6,276,619 · 7,809,000 · 7 | 169.9 % · 216.8 % | 169.9 % · 216.8 % |
+| the live account | sweet-spot | 7,096,072 · 7,732,100 · 6 | 6,276,619 · 7,809,000 · 7 | 7,096,072 · 7,732,100 · 6 | 88.5 % · 101 % | 100 % · 100 % |
+| the live account | steady-max | 7,354,938 · 7,732,100 · 7 | 6,276,619 · 7,809,000 · 7 | 7,354,938 · 7,732,100 · 7 | 85.3 % · 101 % | 100 % · 100 % |
+| the live account | all-in | 7,840,310 · 7,732,100 · 9 | 7,102,552 · 7,475,800 · 9 | 7,840,310 · 7,732,100 · 9 | 90.6 % · 96.7 % | 100 % · 100 % |
+| the 2026-09-17 export | silver-saver | 3,549,139 · 1,985,200 · 6 | 5,913,067 · 2,739,400 · 14 | 5,913,067 · 2,739,400 · 14 | 166.6 % · 138 % | 166.6 % · 138 % |
+| the 2026-09-17 export | sweet-spot | 4,442,817 · 2,722,500 · 7 | 5,913,067 · 2,739,400 · 14 | 5,913,067 · 2,739,400 · 14 | 133.1 % · 100.6 % | 133.1 % · 100.6 % |
+| the 2026-09-17 export | more-mercs | 5,230,687 · 2,739,400 · 11 | 5,913,067 · 2,739,400 · 14 | 5,913,067 · 2,739,400 · 14 | 113 % · 100 % | 113 % · 100 % |
+| the 2026-09-17 export | steady-max | 5,913,067 · 2,739,400 · 14 | 5,913,067 · 2,739,400 · 14 | 5,913,067 · 2,739,400 · 14 | 100 % · 100 % | 100 % · 100 % |
+| the 2026-09-17 export | all-in | 6,603,524 · 3,802,400 · 26 | 6,603,524 · 3,802,400 · 26 | 6,603,524 · 3,802,400 · 26 | 100 % · 100 % | 100 % · 100 % |
+| 0024’s account | sweet-spot | 5,698,946 · 2,499,000 · 2 | 5,760,896 · 2,549,400 · 3 | 5,760,896 · 2,549,400 · 3 | 101.1 % · 102 % | 101.1 % · 102 % |
+| 0024’s account | steady-max | 5,763,382 · 2,449,200 · 3 | 5,143,823 · 2,498,200 · 3 | 5,763,382 · 2,449,200 · 3 | 89.3 % · 102 % | 100 % · 100 % |
 
-**14 stops re-sized over their own types**: **3** answer with **less damage for no less silver** than the march the player was already looking at.
+**14 stops re-sized over their own types**: **3** answered with less damage for no less silver before S-117, **0** after.
 
 ### a first-run army, 12 000 leadership (hires nothing)
 
@@ -71,10 +71,10 @@ For every stop and every edit: what the app answers with today, against **the st
 | sweet-spot | take out archer-1 | 6,353,749 · 2,792,000 · 3 | 4,791,926 · 2,075,100 · 2 | 132.6 % | 134.5 % | 135.1 % | 3 vs 2 | the re-size wins or trades |
 | sweet-spot | take out spearman-2 | 5,143,823 · 2,498,200 · 3 | 4,796,958 · 2,108,500 · 2 | 107.2 % | 118.5 % | 121 % | 3 vs 2 | the re-size wins or trades |
 | steady-max | take out archer-1 | 5,399,245 · 2,732,800 · 3 | 4,630,200 · 1,977,900 · 3 | 116.6 % | 138.2 % | 137.6 % | 3 vs 3 | the re-size wins or trades |
-| steady-max | take out rider-3 | 3,883,970 · 2,331,000 · 3 | 4,546,337 · 2,085,200 · 3 | 85.4 % | 111.8 % | 113.9 % | 3 vs 3 | **the untouched march wins outright** |
+| steady-max | take out rider-3 | 4,546,337 · 2,085,200 · 3 | 4,546,337 · 2,085,200 · 3 | 100 % | 100 % | 100 % | 3 vs 3 | the re-size wins or trades |
 | steady-max | put back spearman-2 | 5,760,896 · 2,549,400 · 3 | 1,387,524 · 1,113,200 · 0 | 415.2 % | 229 % | 743.6 % | 3 vs 0 | the re-size wins or trades |
 
-**Over 33 edits**: the untouched march wins **outright** — at least the damage, no more silver, no more burn — on **1** of them. 18 answers cost more silver than the stop they edited and 21 take longer to recover.
+**Over 33 edits**: the untouched march wins **outright** — at least the damage, no more silver, no more burn — on **0** of them. 18 answers cost more silver than the stop they edited and 21 take longer to recover.
 
 ## B. The leadership dial, turned on the march after the edit
 
@@ -470,8 +470,8 @@ Experiment 119 turned the dial on stops as generated: 0 dominations, which retir
 | 96 % | elite | 5,731,414 | 98.1 % | 2,807,800 | 96 % | 794,085 | 96 % | 15 | -0.7 | a trade |
 | 94 % | elite | 5,674,225 | 97.1 % | 2,749,000 | 94 % | 777,225 | 94 % | 15 | -1.1 | a trade |
 | 92 % | elite | 5,580,006 | 95.5 % | 2,690,800 | 92 % | 761,010 | 92 % | 15 | -2.1 | a trade |
-| 90 % | elite | 4,854,469 | 83.1 % | 2,632,400 | 90 % | 744,480 | 90 % | 15 | -13.9 | a trade |
-| 85 % | elite | 4,762,143 | 81.5 % | 2,486,000 | 85 % | 702,975 | 85 % | 15 | -14 | a trade |
+| 90 % | stop | 4,945,583 | 84.6 % | 2,268,700 | 77.6 % | 641,220 | 77.5 % | 14 | -8.6 | a trade |
+| 85 % | stop | 4,945,583 | 84.6 % | 2,268,700 | 77.6 % | 641,220 | 77.5 % | 14 | -8.6 | a trade |
 | 80 % | elite | 5,019,825 | 85.9 % | 2,339,400 | 80 % | 661,305 | 79.9 % | 14 | -8.1 | a trade |
 | 75 % | elite | 4,822,642 | 82.5 % | 2,193,200 | 75 % | 619,965 | 75 % | 14 | -10 | a trade |
 | 70 % | elite | 3,956,978 | 67.7 % | 2,047,000 | 70 % | 578,625 | 70 % | 13 | -23.3 | a trade |
@@ -560,7 +560,7 @@ Experiment 119 turned the dial on stops as generated: 0 dominations, which retir
 | 90 % | elite | 5,157,330 | 81.2 % | 2,538,000 | 90.9 % | 904,800 | 91.5 % | 3 | -16.2 | a trade |
 | 85 % | ms | 5,611,992 | 88.3 % | 2,410,800 | 86.3 % | 862,710 | 87.3 % | 3 | -7.7 | a trade |
 | 80 % | elite | 4,891,775 | 77 % | 2,284,400 | 81.8 % | 821,430 | 83.1 % | 3 | -17.7 | a trade |
-| 75 % | elite | 4,665,383 | 73.4 % | 2,132,000 | 76.4 % | 764,220 | 77.3 % | 3 | -19.6 | a trade |
+| 75 % | stop | 4,791,926 | 75.4 % | 2,075,100 | 74.3 % | 731,490 | 74 % | 2 | -16.8 | a trade |
 | 70 % | elite | 4,789,653 | 75.4 % | 1,982,400 | 71 % | 708,690 | 71.7 % | 3 | -16 | a trade |
 | 60 % | elite | 3,938,738 | 62 % | 1,700,400 | 60.9 % | 608,190 | 61.5 % | 3 | -26.3 | a trade |
 | 50 % | elite | 3,758,779 | 59.2 % | 1,421,200 | 50.9 % | 509,370 | 51.5 % | 3 | -26.2 | a trade |
@@ -611,27 +611,27 @@ Experiment 119 turned the dial on stops as generated: 0 dominations, which retir
 | 90 % | elite | 5,248,610 | 97.2 % | 2,485,200 | 90.9 % | 870,390 | 91.6 % | 3 | -0.1 | a trade |
 | 85 % | elite | 5,172,923 | 95.8 % | 2,361,200 | 86.4 % | 830,490 | 87.4 % | 3 | -0.2 | a trade |
 | 80 % | elite | 4,704,951 | 87.1 % | 2,237,200 | 81.9 % | 790,590 | 83.2 % | 3 | -7.6 | a trade |
-| 75 % | elite | 3,883,970 | 71.9 % | 2,113,200 | 77.3 % | 750,690 | 79 % | 3 | -21.4 | a trade |
+| 75 % | stop | 4,630,200 | 85.8 % | 1,977,900 | 72.4 % | 690,360 | 72.7 % | 3 | -6 | a trade |
 | 70 % | elite | 3,883,970 | 71.9 % | 1,988,800 | 72.8 % | 710,460 | 74.8 % | 3 | -20.1 | a trade |
 | 60 % | elite | 3,808,971 | 70.5 % | 1,715,600 | 62.8 % | 615,540 | 64.8 % | 3 | -18.5 | a trade |
 | 50 % | elite | 3,375,004 | 62.5 % | 1,436,400 | 52.6 % | 516,930 | 54.4 % | 3 | -23.4 | a trade |
 
-**steady-max · take out rider-3** — the answer today (elite): 3,883,970 damage, 2,331,000 silver, 564,375 s queue, 3 hired lost
+**steady-max · take out rider-3** — the answer today (stop): 4,546,337 damage, 2,085,200 silver, 495,525 s queue, 3 hired lost
 
 | fill | shape | damage | of the answer | silver | of it | queue | of it | burn | score | verdict |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 100 % | elite | 3,883,970 | 100 % | 2,331,000 | 100 % | 564,375 | 100 % | 3 | 0 | the answer |
-| 98 % | elite | 3,883,970 | 100 % | 2,289,400 | 98.2 % | 556,095 | 98.5 % | 3 | 0.5 | **dominates** |
-| 96 % | elite | 3,883,970 | 100 % | 2,248,200 | 96.4 % | 548,145 | 97.1 % | 3 | 1 | **dominates** |
-| 94 % | elite | 3,883,970 | 100 % | 2,206,600 | 94.7 % | 539,865 | 95.7 % | 3 | 1.5 | **dominates** |
-| 92 % | elite | 3,883,970 | 100 % | 2,165,000 | 92.9 % | 531,585 | 94.2 % | 3 | 2 | **dominates** |
-| 90 % | elite | 3,883,970 | 100 % | 2,123,400 | 91.1 % | 523,305 | 92.7 % | 3 | 2.5 | **dominates** |
-| 85 % | elite | 3,752,970 | 96.6 % | 2,019,400 | 86.6 % | 502,605 | 89.1 % | 3 | 0.4 | a trade |
-| 80 % | elite | 3,571,704 | 92 % | 1,898,600 | 81.5 % | 471,825 | 83.6 % | 3 | -2.7 | a trade |
-| 75 % | elite | 3,790,070 | 97.6 % | 1,786,200 | 76.6 % | 446,085 | 79 % | 3 | 4.4 | **the put-back rule takes it** |
-| 70 % | elite | 3,568,836 | 91.9 % | 1,659,800 | 71.2 % | 411,945 | 73 % | 3 | 0.3 | a trade |
-| 60 % | elite | 3,152,458 | 81.2 % | 1,424,000 | 61.1 % | 353,910 | 62.7 % | 3 | -7.3 | a trade |
-| 50 % | elite | 2,791,588 | 71.9 % | 1,190,800 | 51.1 % | 297,390 | 52.7 % | 3 | -13.6 | a trade |
+| 100 % | stop | 4,546,337 | 100 % | 2,085,200 | 100 % | 495,525 | 100 % | 3 | 0 | the answer |
+| 98 % | stop | 4,546,337 | 100 % | 2,085,200 | 100 % | 495,525 | 100 % | 3 | 0 | a trade |
+| 96 % | stop | 4,546,337 | 100 % | 2,085,200 | 100 % | 495,525 | 100 % | 3 | 0 | a trade |
+| 94 % | stop | 4,546,337 | 100 % | 2,085,200 | 100 % | 495,525 | 100 % | 3 | 0 | a trade |
+| 92 % | stop | 4,546,337 | 100 % | 2,085,200 | 100 % | 495,525 | 100 % | 3 | 0 | a trade |
+| 90 % | elite | 3,883,970 | 85.4 % | 2,123,400 | 101.8 % | 523,305 | 105.6 % | 3 | -15.5 | a trade |
+| 85 % | elite | 3,752,970 | 82.5 % | 2,019,400 | 96.8 % | 502,605 | 101.4 % | 3 | -17 | a trade |
+| 80 % | elite | 3,571,704 | 78.6 % | 1,898,600 | 91.1 % | 471,825 | 95.2 % | 3 | -19.2 | a trade |
+| 75 % | elite | 3,790,070 | 83.4 % | 1,786,200 | 85.7 % | 446,085 | 90 % | 3 | -12.8 | a trade |
+| 70 % | elite | 3,568,836 | 78.5 % | 1,659,800 | 79.6 % | 411,945 | 83.1 % | 3 | -15.7 | a trade |
+| 60 % | elite | 3,152,458 | 69.3 % | 1,424,000 | 68.3 % | 353,910 | 71.4 % | 3 | -21.5 | a trade |
+| 50 % | elite | 2,791,588 | 61.4 % | 1,190,800 | 57.1 % | 297,390 | 60 % | 3 | -26 | a trade |
 
 **steady-max · put back spearman-2** — the answer today (elite): 5,760,896 damage, 2,549,400 silver, 782,925 s queue, 3 hired lost
 
@@ -650,7 +650,7 @@ Experiment 119 turned the dial on stops as generated: 0 dominations, which retir
 | 60 % | elite | 3,871,742 | 67.2 % | 1,545,000 | 60.6 % | 479,055 | 61.2 % | 2 | -21 | a trade |
 | 50 % | elite | 2,804,811 | 48.7 % | 1,304,400 | 51.2 % | 409,350 | 52.3 % | 2 | -36.8 | a trade |
 
-**Over 363 lower fills**: **14** dominations, and **26** the owner's own put-back rule would take (score ≥ 0, recovers faster, at most 3 % of the damage lost).
+**Over 363 lower fills**: **9** dominations, and **25** the owner's own put-back rule would take (score ≥ 0, recovers faster, at most 3 % of the damage lost).
 
 | army | stop | edit | fill | damage | — | silver saved | queue saved | score |
 |---|---|---|---|---|---|---|---|---|
@@ -678,7 +678,6 @@ Experiment 119 turned the dial on stops as generated: 0 dominations, which retir
 | the 2026-09-17 export | all-in | take out spearman-2 | 90 % | -2.4 % | +10 % silver | 396,800 silver saved | 182,160 s saved | 0.6 |
 | 0024’s account | sweet-spot | take out spearman-2 | 98 % | -0.4 % | +1.8 % silver | 44,800 silver saved | 11,670 s saved | 0.1 |
 | 0024’s account | sweet-spot | take out spearman-2 | 85 % | -2.8 % | +14.5 % silver | 362,200 silver saved | 103,545 s saved | 1.5 |
-| 0024’s account | steady-max | take out rider-3 | 75 % | -2.4 % | +23.4 % silver | 544,800 silver saved | 118,290 s saved | 4.4 |
 | 0024’s account | steady-max | put back spearman-2 | 98 % | -0.4 % | +1.8 % silver | 45,800 silver saved | 12,345 s saved | 0.1 |
 
 ## C. The three sizer shapes the chooser sees, at the full pool
@@ -746,10 +745,10 @@ Rebuilt from `sizedShape`’s own recipe — `sizeStacks` under the method, then
 
 | army | troop types | hired types | one `resizeMarchOver` | a 12-fill dial |
 |---|---|---|---|---|
-| a first-run army, 12 000 leadership (hires nothing) | 9 | 0 | 0.2 ms | ≈ 2 ms |
-| the live account, 20 000 leadership · 83 EMH | 6 | 1 | 0.23 ms | ≈ 3 ms |
-| the 2026-09-17 export, its own setup (four hired types) | 6 | 4 | 0.25 ms | ≈ 3 ms |
-| 0024’s account, 5 600 / 2 180 / 800 dominance · 27 EMH | 4 | 5 | 0.31 ms | ≈ 4 ms |
+| a first-run army, 12 000 leadership (hires nothing) | 9 | 0 | 0.21 ms | ≈ 2 ms |
+| the live account, 20 000 leadership · 83 EMH | 6 | 1 | 0.22 ms | ≈ 3 ms |
+| the 2026-09-17 export, its own setup (four hired types) | 6 | 4 | 0.24 ms | ≈ 3 ms |
+| 0024’s account, 5 600 / 2 180 / 800 dominance · 27 EMH | 4 | 5 | 0.3 ms | ≈ 4 ms |
 
 ## E. What the edit is allowed to spend, against what the stop spends
 

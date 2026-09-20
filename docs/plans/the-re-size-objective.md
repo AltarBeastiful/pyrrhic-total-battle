@@ -107,17 +107,29 @@ Three changes, all inside `resizeMarchOver`, in this order.
 candidate list gains one more march built from them: the stop's counts with the edit applied — the taken-out
 type dropped, or the put-back type sized into the leadership the stop left unused — and every hired stack
 re-sheltered (`shelterCounts`, which lowers and never raises, so nothing else moves). It is then a candidate
-like any other. **And it wins ties outright**: where nothing in the family beats it on damage, silver *and*
-burn, the answer is the march the player was already looking at. This is the S-94 *"beaten outright"* rule
-said about a re-size instead of about the all-in.
+like any other, and **`beats` is not touched**.
 
-*Fixes:* the three no-op presses in §A, and it is a floor under every other edit — a press can no longer hand
-back a march the stop dominates.
+**Adding it is the whole fix, and the reason is arithmetic.** A first draft of this plan had the untouched
+march also *win ties outright* — refuse any answer it was not dominated by. That rule is wrong: on the
+export's silver saver the churned answer is 196.8 % of the untouched march's damage for 177 % of its silver,
+which the untouched march does not dominate and must not beat, and the rule would have thrown away the
+damage the freed leadership genuinely buys. It is also unnecessary. In **all four** cases where today's
+answer is worse than the march it replaced — the three no-op presses and the one edit of §A — the untouched
+march has **more damage**: 7 096 072 · 7 354 938 · 5 763 382 · 4 546 337 against 6 276 619 · 6 276 619 ·
+5 143 823 · 3 883 970. Damage-first `beats` therefore picks it the moment it is in the list. The stop's march
+never lost on the objective; it lost by not being on the table.
+
+*Fixes:* the three no-op presses and the one dominated edit of §A. *Cannot break:* S-107's own test
+(`hunters 450`, 38 → 72) keeps its answer, because the untouched candidate there carries 38 hunters and less
+damage and loses on damage exactly as it should.
 
 **2. The dial: the same shapes at lower fills, dominations only.** The shape loop runs at each fill of a
-short list (`[100, 98, 96, 94, 92, 90]` is enough to catch all 14 — every domination measured is at one of those
-five lower fills, and none was ever found below 90 %), and a lower fill is taken **only when it dominates** the full-pool answer:
-at least its damage, no more silver, no more burn. No new control, no new stop, nothing for the player to
+short list (`[100, 98, 96, 94, 92, 90]` is enough to catch all 14 — every domination measured is at one of
+those five lower fills, and none was ever found below 90 %), and a lower fill is taken **only when it
+dominates** the full-pool answer: at least its damage, no more silver, no more burn. **The count of 14 is
+measured against today's answer and has to be re-measured after change 1**, which raises the full-pool answer
+on four of the 33 edits and can only lower the yield; experiment 124 is re-run between the two steps for
+exactly that reason. No new control, no new stop, nothing for the player to
 decide — this is the *"just take the wins"* half of the owner's own question of 2026-09-20, which 119 could
 not answer on a stop and can be answered here.
 

@@ -343,7 +343,18 @@ async function planStopAgain(
     hired[unit.id] = cap;
     if (cap <= 0) noStock.push(unit.id);
   }
-  const answer = await getCalcClient().resize({ request, within: { troopIds, hired } }, signal);
+  /**
+   * **The stop's own counts travel with the edit** (S-117). Until then the re-size answered from the shapes
+   * it builds alone, and the march the player was looking at was not one of them — so a press could only
+   * move them to a *different* march, and on three of the fourteen stops measured it moved them to a worse
+   * one (`tools/theorycraft/out/124-what-the-edit-answers-with.md` §A: 85.3 % of the damage for 101 % of the
+   * silver on his live account's steady max, and 0024 §5's 5 143 823 for 2 498 200 against 5 763 382 for
+   * 2 449 200). The engine ranks it like every other shape; nothing about the ranking changes.
+   */
+  const answer = await getCalcClient().resize(
+    { request, within: { troopIds, hired, stop: stop.counts } },
+    signal,
+  );
   if (answer === null) return null;
   const { result, summary } = planMarch(request, answer.counts);
   // Read off the **stop** rather than off the press: two put-backs in a row both show, in the order a
