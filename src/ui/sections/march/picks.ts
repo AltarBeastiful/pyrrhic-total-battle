@@ -230,7 +230,16 @@ export interface RateColumn {
    * *"never the right compass"*. It is a fact the table carries, never a race it declares won.
    */
   markable: boolean;
-  /** `ratio`'s decimals: three on silver, where the owner's plans differ in the third (S-59). */
+  /**
+   * `ratio`'s decimals.
+   *
+   * **Three on silver**, and measured: at two it printed `0.54` on all three of the owner's plans beside a
+   * row *named* "Best for silver" (S-59 screen review, 2026-09-16) — a column that decides a name was
+   * rounding the decision away. Three is enough on a real account (1.89 · 2.37 · 2.96 at the app's
+   * horizon); a seeded army whose plans tie at three decimals is showing the same figure, and a sixth
+   * decimal would be noise dressed as a difference (design rule 5). The gold and hired rates are whole
+   * thousands apart on every army measured, so they keep `ratio`'s own two.
+   */
   decimals: number;
 }
 

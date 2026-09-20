@@ -23,7 +23,6 @@ import {
   accountButton,
   bonusTotal,
   bonusesCard,
-  bonusesDisclosure,
   closeMarchSheet,
   dismissMarchSheet,
   fillHousing,
@@ -351,15 +350,13 @@ async function journey2(page: Page): Promise<void> {
 }
 
 /**
- * J3 — the bonuses changed: unfold the sources, enlist a captain, set its level on the gear, watch
- * the TOTAL move. Budget: ≤ 6 taps.
+ * J3 — the bonuses changed: enlist a captain, set its level on the gear, watch the TOTAL move.
+ * Budget: ≤ 6 taps. It used to open on a tap of the "Sources" line, which is gone (owner,
+ * 2026-09-19), so the journey is one tap shorter than its budget was written for.
  */
 async function journey3(page: Page): Promise<void> {
   const taps = new Taps();
   expect(await bonusTotal(page, 'Health')).toBe('0 %');
-
-  await taps.tap(bonusesDisclosure(page));
-  await expect(bonusesDisclosure(page)).toHaveAttribute('aria-expanded', 'true');
 
   await taps.tap(await chipLabel(page, 'Beowulf'));
   await expect(captainChip(page, 'Beowulf')).toBeChecked();
@@ -451,6 +448,34 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   await expect(trade.getByRole('columnheader', { name: 'Silver', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Hired lost' })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();
+
+  // **One rate column, and the player switches it** (S-113). The two rate columns the table drew until
+  // 2026-09-20 could never become three — a seventh head measured 505 px in a 462 px pane — so they became
+  // one switch, and the column that width bought is **Per gold**: experiment 120 measured it as the only
+  // fact naming its stop on 7 of the 16 benchmark armies.
+  const rates = march.getByRole('radiogroup', { name: 'Which rate the trade shows' });
+  await expect(rates).toBeVisible();
+  // The **label** is what a finger lands on: the kit's segmented control is a radio group whose inputs are
+  // the hidden half of the control, which is how a screen reader is given the choice and how a keyboard
+  // moves between the three. Both halves are asserted — the role for the reader, the label for the thumb.
+  await expect(rates.getByRole('radio', { name: 'Per gold' })).toHaveCount(1);
+  await rates.getByText('Per gold', { exact: true }).click();
+  await expect(trade.getByRole('columnheader', { name: 'Per gold' })).toBeVisible();
+  await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toHaveCount(0);
+  await rates.getByText('Per silver', { exact: true }).click();
+  await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();
+
+  // And the constraint the whole story is built around: **the table still fits its pane**. Measured at
+  // 1400×900, where the pane is 462 px and a seventh column made a 505 px table — the sideways scroller
+  // design rule 17 allows this table but the desktop has never needed. The phone is allowed its scroller,
+  // so the check is the desktop's.
+  if (!phone) {
+    const fits = await trade.evaluate((node) => {
+      const wrap = node.parentElement;
+      return wrap === null ? true : wrap.scrollWidth <= wrap.clientWidth;
+    });
+    expect(fits, 'the trade fits its pane with the rate switch on it').toBe(true);
+  }
   // The head row, then one row per stop — never a table with nothing in it, and every row named. One kind
   // of name: a row is **which answer it is** and nothing else (`src/ui/sections/march/picks.ts`), five
   // stops at most along the hired stock the bar runs on.
