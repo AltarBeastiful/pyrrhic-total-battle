@@ -25,7 +25,7 @@ import type * as WorkerClient from '@/worker/client';
 
 import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
-import { amount, compact, duration, ratio } from './format';
+import { amount, compactTwo, duration, ratio } from './format';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
 import { hiredLost } from './hired';
@@ -1090,11 +1090,16 @@ test('the recap says what a hired unit bought, and re-says it when the march is 
       snapshot.summary.journals.enemyFirst,
       snapshot.result.stacks,
     ).authority;
-    return `· ${compact(hiredDamage / lost, 2)} a hired unit`;
+    return `· ${compactTwo(hiredDamage / lost)} a hired unit`;
   };
 
   const line = screen.getByText(/a hired unit$/);
   expect(line.textContent).toBe(saidNow());
+  // …and it is printed in the owner's own notation (2026-09-20): at most one decimal, spent only
+  // where it buys a second digit — "325K", "1.2M", never "431.78K". (This fixture's hired stack is
+  // the biggest on the field, so it strikes nothing in the worst opening and the figure is a plain
+  // nought: the hired units bought no damage at all, which is the fact the line is there to carry.)
+  expect(line.textContent).toMatch(/^· \d+(\.\d)?[KMB]? a hired unit$/u);
   // The share of the account's whole stock is gone from the card, which is what the figure replaced.
   expect(screen.queryByText(/% of \d/)).toBeNull();
 

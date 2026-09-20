@@ -190,7 +190,45 @@ opposite of the "cost be damned" end it is meant to be. So S-114 owns a decision
 whether the bar compares campaigns or marches, and what a row with a different horizon means on it. It is
 also the only story here that moves a benchmark baseline, which is the owner's to register.
 
-## 5. What is deliberately not in this plan
+## 5. S-115 — the leadership dial: a march that does not fill the pool
+
+**Asked for by the owner** (2026-09-20): *"we were supposed to also explore using a bit less leadership, if
+the damage is still good and the ratios are better."* Measured first, in
+`docs/investigations/0023-less-leadership.md` and `tools/theorycraft/out/118-less-leadership.md`.
+
+**What the measurement says the story is worth.** On the owner's live account, fielding **92 %** of the
+leadership pool keeps **95.2 %** of the damage for **92 %** of the silver — 625,000 silver a march, at 0.89
+damage a silver against 0.86. At 75 % the rate is **0.98, up 13.3 %**, for 85 % of the damage. On an army
+that hires nothing the dial is exactly flat (0.56 at every fill) and buys nothing but a smaller bill.
+
+**Why it is not a sixth stop on the bar.** Hired units lost is **9 at every fill** on the live account and 27
+on the export: the dial moves silver and queue time and touches the burn axis the bar is ordered on not at
+all. It is a second dimension, not a further point along the first. On the joint (damage, silver) frontier it
+supplies 12 of 14 undominated marches on the live account — and the plan's own stops still hold both ends —
+so the two families are complementary and the frontier wants both.
+
+**The one thing that must not ship without its guard.** Between 75 % and 70 % the live account's hired damage
+goes **2,685,730 → 0**: every troop rung shrinks below the hunters' 798,626 HP at once (the ladder sizes them
+all alike), the hunters become the biggest stack on the field, and the biggest stack strikes zero times. 38 %
+of the march's damage for a 6 % saving. The floor is **closed-form** — `fill ≥ hiredTop / troopFloor`, here
+72.4 %, confirmed by bisection to the tenth — so the engine can compute it before it offers anything, and an
+army whose hired stacks already stand above the lowest rung has no floor to fall through at all.
+
+**The story, then**, in the order the risk sits:
+
+1. `planTroopsOnly` and `planCampaign` gain the fill as a *second* search axis, bounded below by the floor —
+   never an offer the engine knows costs the player every hired blow.
+2. The stops carry which fill they field, and the block says it in the army's own words ("92 % of your
+   leadership"), the way S-112 made every other line read the army it is about.
+3. The floor is drawn, not hidden: *"below 72 % of your leadership your hunters stop striking"* is the single
+   most useful sentence this investigation produced, and it is the kind of thing the player cannot work out
+   from the screen.
+
+**It moves a benchmark baseline** — a bar that offers cheaper marches is a bar whose scenarios change — which
+is the owner's to register, and it wants S-113's table to land first: a dial with no table beside it is a
+second control over the same one-row answer, which is the complaint S-113 exists to answer.
+
+## 6. What is deliberately not in this plan
 
 - **Changing the sizer's shape.** 115 §B measured hill-climbing past the sizer's flat HP profile gaining
   **1.4 – 4.3 %**. §C found the sizer **beating** the best vector on a grid stepped in tens (100.6 %) while

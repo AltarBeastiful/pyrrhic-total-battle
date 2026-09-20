@@ -15,25 +15,34 @@ export function amount(value: number): string {
   return count(Math.round(value));
 }
 
-const COMPACT = [
-  new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 }),
-  new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }),
-  new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }),
-] as const;
+const COMPACT_WHOLE = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
+const COMPACT_TENTH = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 
 /**
  * The same figure with the digits a glance needs: "1.7M", "890K". Only for places where the line
  * has to stay short — the phone bar's quick summary — never where a number is read off and typed
  * into the game.
- *
- * `decimals` is there for the same measured reason `ratio`'s is (S-59, below): a figure a player *compares*
- * marches by has to be printed to where two marches differ. One decimal is enough for the phone bar's
- * summary, which is read rather than compared; the recap's damage a hired unit is compared with the last
- * run's, so it carries two (S-112, the owner: *"the dmg per merc using a small notation: 265k, 1.23m"*).
  */
-export function compact(value: number, decimals: 0 | 1 | 2 = 1): string {
+export function compact(value: number): string {
   if (!Number.isFinite(value)) return '—';
-  return (COMPACT[decimals] ?? COMPACT[1]).format(Math.round(value));
+  return COMPACT_TENTH.format(Math.round(value));
+}
+
+/**
+ * The shortest compact figure that still says something: **two digits at least, and no more than the
+ * magnitude needs** — "325K", "12K", "1.2M".
+ *
+ * The rule is the owner's, for the recap's damage a hired unit (2026-09-20: *"simplify … with only 325k,
+ * no commas needed there. Only for 1.2m you need comma so at least you get 2 numbers"*), and the reason it
+ * is not simply `compact` is the reason `ratio` carries decimals (S-59): a figure a player *compares*
+ * against the last run has to be printed to where two runs differ. "432K" differs from "418K"; "1M" does
+ * not differ from "1M", so a million-sized ratio is the one place the decimal has to be spent.
+ */
+export function compactTwo(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  const whole = COMPACT_WHOLE.format(Math.round(value));
+  const digits = whole.replace(/\D/gu, '').length;
+  return digits >= 2 ? whole : COMPACT_TENTH.format(Math.round(value));
 }
 
 /**

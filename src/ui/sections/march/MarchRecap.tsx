@@ -26,7 +26,7 @@ import type { BattleSummary } from '@/engine/types';
 import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { amount, compact, duration, ratio } from './format';
+import { amount, compactTwo, duration, ratio } from './format';
 import { hiredLost, hiredStock } from './hired';
 import { worstDamageByPool, worstPer } from './worst';
 import classes from './march.module.css';
@@ -214,11 +214,12 @@ export function MarchRecap() {
       <Group gap={6} wrap="nowrap" align="baseline">
         <DeltaText value={lost} format={amount} betterWhen="lower" />
         {/* Drawn only while the march really lost some (design rule 15): with nothing burned there is no
-            denominator, and "— a hired unit" beside a nought is a line about nothing. Two decimals, because
-            this figure is read against the last run's (`compact`, `./format`). */}
+            denominator, and "— a hired unit" beside a nought is a line about nothing. `compactTwo` is the
+            owner's own notation for it — "325K", "1.2M": short, and never so short that two runs print the
+            same figure (`./format`). */}
         {lost > 0 && (
           <Text span size="xs" c="dimmed">
-            {`· ${compact(hiredDamage / lost, 2)} a hired unit`}
+            {`· ${compactTwo(hiredDamage / lost)} a hired unit`}
           </Text>
         )}
       </Group>
