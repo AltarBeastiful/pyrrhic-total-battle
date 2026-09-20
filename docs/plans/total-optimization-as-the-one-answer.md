@@ -162,6 +162,13 @@ that ratio rising monotonically with the horizon while the march collapses, and 
 is *"never the right compass"*. It belongs in the table as a fact; a best-in-column mark on it would be the
 trap §3 of that investigation warns about, one column over.
 
+**One row the table has earned since this plan was written** (experiment 119, §5 below): a *Tier ladder*
+column, or at least a footing line, saying what the plan is worth against the method the player would
+otherwise pick. On the owner's live account the bar's cheapest stop deals 3 694 764 for 3 602 400 silver at
+**1.03 damage a silver on 4 hired units**, while the best march reachable by simply fielding fewer troops —
+the Tier ladder at its best fill — reaches **0.99 on 8**. That is the answer to *"why this method"* in one
+row of figures, which is the whole reason S-113 exists.
+
 ## 4. S-114 — the bar carries the objective corners, and the select can retire
 
 Experiment 117 asked it: for each objective, what the priority search answers against the best stop.
@@ -190,49 +197,43 @@ opposite of the "cost be damned" end it is meant to be. So S-114 owns a decision
 whether the bar compares campaigns or marches, and what a row with a different horizon means on it. It is
 also the only story here that moves a benchmark baseline, which is the owner's to register.
 
-## 5. S-115 — the leadership dial: a march that does not fill the pool
+## 5. S-115 — the leadership dial: measured, and **not built**
 
-**Asked for by the owner** (2026-09-20): *"we were supposed to also explore using a bit less leadership, if
-the damage is still good and the ratios are better."* Measured in
-`docs/investigations/0023-less-leadership.md` and `tools/theorycraft/out/118-less-leadership.md`.
+**The owner asked the sizing question directly** (2026-09-20): *"so what's our next move? Offer one more stop
+on the slider for lowering leadership? Or just take the wins if it's in a small percent of the closest stop
+there is on it?"* Experiment 119 answers it by turning the dial on **every stop of every bar** —
+`tools/theorycraft/out/119-dial-against-the-stops.md`, 12 stops × 10 lower fills, each stop re-fielded by the
+engine itself (its own types, its own hired counts as caps, `ms` so the shelter applies as `shelterUnder`
+does).
 
-**The rule the story is built on, and it is closed-form.** The hired count is the smaller of the **stock**
-the account owns and the **shelter ceiling** `floor((troopFloor − 1) / hpPerUnit)`. The ladder's rungs all
-scale with the fill, so the ceiling scales with it, and the fill where it stops clearing the stock is
-`(stock × hpPerUnit) / troopFloor` at the full pool. **Above that crossover the dial costs no mercenaries;
-below it, every point of leadership given up takes some with it.** Predicted 72.4 % on the owner's live
-account against 75 % measured as the last full-stock fill and 70 % as the first short one, with the ceiling
-exact to the unit wherever it binds (80, 74, 68, 57).
+**Neither option survives the measurement.**
 
-**What it is worth, where it is free.** The live account goes **0.86 → 0.98 damage a silver, up 14 %**, at
-75 % of the pool with all 83 hunters still fielded, for 85 % of the damage; at 92 % it keeps **95.2 % of the
-damage for 92 % of the silver**, 625 000 silver a march. Past the crossover it keeps paying in a second
-currency: 9 hired lost → 8 at 70 % → 6 at 50 %, at a **better** damage a hired unit (323 582 against
-298 414), because the last three hunters of a stock of 83 cost a whole chunk of ten for 3.6 % more damage.
+- **Nothing to take quietly: 0 dominations in 120 pairs.** Not one fill gave at least a stop's damage for no
+  more silver and no more burn. On a stop the dial is a *bad* trade, because a stop's troop set is already a
+  subset and shrinking the pool re-shuffles its rungs rather than scaling them: on the live account's four
+  stops, **97 % of the leadership costs 8–9 % of the damage for 2.5 % of the silver.** The two marches that
+  came within 2 % — the export's *more mercs* and *all in* at 97 % — buy **+1.2 % of rate for −1.9 % of
+  damage**, which is too small to spend a control on and too visible to swap in behind the player's back.
+- **No new stop either: the bar already beats the dial on the bar's own reading.** The live account's
+  **silver-saver reaches 1.03 damage a silver; the dial's best fill reaches 0.99 — and spends 8 hired units
+  against silver-saver's 4.** A "less leadership" row would be a worse row than one already on the bar.
 
-**And where it must not be offered at all.** The 2026-09-17 export's 129 hired units already sit under its
-lowest rung at the full pool — crossover **100 %**, mercenaries carrying **82 %** of the march — so its best
-rate is at 100 % and 97 % of the leadership costs **13.6 %** of the damage. Two hired armies, opposite
-answers, one formula that tells them apart before any search runs. A dial offered blindly is a worse app for
-half the accounts, which is why this story's first deliverable is the **crossover**, not the sweep.
+**Why 118 looked like a 14 % win.** It measured the dial against the **Tier ladder's** full-pool march, which
+is what the `elite` method answers: 0.86 a silver. The plan already turns that army into 1.03. The dial's
+finding is therefore **evidence for S-113's table**, not a story of its own, and it is the single most
+persuasive line the table can carry: *the plan's cheapest stop beats the best you can get by simply fielding
+fewer troops — by 3.4 %, at half the hired burn.*
 
-**The shelter is never what is traded.** Sized by the raw `elite` ladder instead, the same 70 % march puts
-the hunters at the head of the kill queue and throws 2 685 730 damage away: **5 419 461 sheltered against
-4 151 856 bare, +30.5 % on the same 5 466 200 silver and one chunk of stock less.** That is goal 1 of the
-project in one figure (`docs/PLAN.md` §1), and it is the floor under every fine-tuning this plan adds.
+**What survives, and where it lives.** The crossover `(stock × hpPerUnit) / troopFloor` and the shelter's
+**+30.5 % for the same silver** are not dial findings, they are findings about the idea the app is built on:
+they live in goal 1 (`docs/PLAN.md` §1) and `docs/investigations/0023-less-leadership.md`.
 
-**The story, in the order the risk sits:**
-
-1. The engine computes the crossover and **says whether the dial is free at all** for this army. An account
-   whose shelter already binds at the full pool is told its march is as large as its troops can shelter.
-2. `planTroopsOnly` and `planCampaign` gain the fill as a *second* search axis, over the free region first.
-3. The stops carry which fill they field, in the army's own words ("92 % of your leadership"), the way S-112
-   made every other line read the army it is about — and the burn column already carries the stock the dial
-   gives back, so the bar's own axis reads it without a new column.
-
-**It moves a benchmark baseline** — a bar that offers cheaper marches is a bar whose scenarios change — which
-is the owner's to register, and it wants S-113's table to land first: a dial with no table beside it is a
-second control over the same one-row answer, which is the complaint S-113 exists to answer.
+**One defect the sweep surfaced, for S-114 rather than here.** On the 2026-09-17 export the plain sheltered
+ladder march deals **6 198 747 for the same 2 739 400 silver and the same 14 hired lost** as `steady-max`'s
+**5 913 067** — more damage, same price, same stock. Part of that is the horizon by design (`steady-max`
+repeats every march of four, a one-off ladder march does not; 0019 §2.1 measures the best single march at
+82.3 % of the best campaign), and part of it is the same 4 % gap experiment 117 measured on pure damage. It
+is a one-march question, which is exactly what S-114 owns.
 
 ## 6. What is deliberately not in this plan
 
