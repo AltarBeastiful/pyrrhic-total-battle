@@ -162,6 +162,26 @@ that ratio rising monotonically with the horizon while the march collapses, and 
 is *"never the right compass"*. It belongs in the table as a fact; a best-in-column mark on it would be the
 trap §3 of that investigation warns about, one column over.
 
+**The layout question is now measured, not assumed** (experiment 120,
+`tools/theorycraft/out/120-what-the-table-should-carry.md`, over the **16 benchmark armies** the baseline is
+registered on). Two questions had to be answered before a column was drawn:
+
+- **Is a best-in-column mark worth its ink?** The marks land on **2.13 different stops on average**, and on
+  every one of the **12 armies whose bar has more than one stop** they disagree — the four armies where a
+  single stop wins everything are the four whose bar *has* a single stop. So the marks are the table doing
+  its job, not a ranking with extra steps.
+- **Which rate earns a column?** Counted as *"how often is this the only fact naming its stop"*: **Per gold
+  is the sole namer on 6 of 16 armies** — it points at a stop nothing else on the table points at. **Per hour
+  of queue is the sole namer on 0**, always agreeing with Silver or Per silver; **Per dragon coin** exists on
+  2 armies and is sole on none; **Silver, Queue and Hired lost** never disagree with each other at all.
+
+**So S-113 is built as the segmented control, and it pays for itself in width.** The two rate columns the
+table draws today (Per silver, Per hired) collapse into **one switchable rate column** — Per silver · Per
+gold · Per hired, each offered only where the army spends that resource (design rule 15) — which is the
+owner's *"switch between objective"*, costs a control and **gives back a column**, and that freed column is
+what lets Per gold on screen at all inside the 462 px pane. Queue stays the note under Silver and the dragon
+coins stay beside it: the measurement says neither would ever name a stop of its own.
+
 **One row the table has earned since this plan was written** (experiment 119, §5 below): a *Tier ladder*
 column, or at least a footing line, saying what the plan is worth against the method the player would
 otherwise pick. On the owner's live account the bar's cheapest stop deals 3 694 764 for 3 602 400 silver at
