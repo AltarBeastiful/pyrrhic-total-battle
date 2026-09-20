@@ -5,23 +5,32 @@ leadership, if the damage is still good and the ratios are better. Create a new 
 theorycrafting and game knowledge we have."*
 
 Every march this app has ever offered fills the leadership pool to its last point. That is an assumption
-nothing has ever tested: the sizer's whole job is *"how big can each stack be"*, and the plan's stops vary
-the army by **dropping whole types** (S-99, S-111), which under-fills leadership only as a side effect of a
-type leaving. Nothing had asked what happens when the same march is fielded **smaller**.
+nothing had tested: the sizer's whole job is *"how big can each stack be"*, and the plan's stops vary the
+army by **dropping whole types** (S-99, S-111), which under-fills leadership only as a side effect of a type
+leaving. Nothing had asked what the same march is worth fielded **smaller**.
 
-Everything below is measured, not argued:
-`tools/theorycraft/118-less-leadership.test.ts` → `tools/theorycraft/out/118-less-leadership.md`. Damage is
-the **worst opening** (the enemy strikes first, S-94/S-108) and so is the hired/troop split — `damageByPool`
-splits the *midpoint*, and mixing the two arithmetics on one row is the bug S-108 was written for. Silver and
-queue are `recoveryCosts` under each account's own recovery settings. The sizer is the tier ladder at every
-fill, so the dial is the only thing moving between rows.
+Measured in `tools/theorycraft/118-less-leadership.test.ts` →
+`tools/theorycraft/out/118-less-leadership.md`. Damage is the **worst opening** (S-94/S-108) and so is the
+hired/troop split — `damageByPool` splits the *midpoint*, and two arithmetics on one row is the bug S-108 was
+written for. Silver and queue are `recoveryCosts` under each account's own recovery settings.
+
+> **Corrected, 2026-09-20.** The first run of this investigation swept the raw `elite` ladder, which has **no
+> shelter ceiling**, and reported a "damage cliff" as a property of the dial. The owner caught it: *"your
+> cliff explanation is all wrong, merc should have been changed in numbers if the troops shrink. They should
+> always be shielded to do more damage, that's the main point of the calculator!"* He is right, and the code
+> agrees with him — `stacker.ts` applies `troopFloor - 1` under `ms`, and `planCampaign` applies
+> `shelterUnder` to **every** shape it answers with (S-87). No march this app offers walks into that cliff.
+> §§3–6 below are the corrected reading; the cliff survives only as §4, which is where it belongs: as the
+> measurement of what the shelter is *worth*.
 
 ## 1. The answer in one line
 
-**On an army that hires nothing the dial buys nothing. On an army that hires, it buys a great deal — until it
-falls off a cliff that can be computed before it is reached.**
+**The dial is free while the player's hired stock is what limits his mercenaries, and costs mercenaries the
+moment the shelter is what limits them instead.** That crossover is a closed form, it is different for every
+account, and on one of the two hired armies measured it sits at exactly 100 % — which is to say some armies
+should not turn the dial at all.
 
-## 2. Troops only: exactly linear, exactly worthless as a ratio
+## 2. Troops only: exactly linear, and worth nothing as a ratio
 
 A first-run army at 12 000 leadership, from 100 % of the pool down to 20 %:
 
@@ -32,109 +41,97 @@ A first-run army at 12 000 leadership, from 100 % of the pool down to 20 %:
 | 50 % (6,000) | 1,354,681 | 50 % | 2,439,000 | 50 % | **0.56** |
 | 20 % (2,400) | 541,615 | 20 % | 975,400 | 20 % | **0.56** |
 
-Damage and silver both scale with the pool to the tenth of a per cent, so the rate is **0.56 at every fill**,
-and the best rate the sweep can find is 0.56. This is the same flatness experiment 116 measured on the share
-axis, now confirmed on the leadership axis: a troops-only march has no efficient size, only a size you can
-afford. The dial is still a real control there — 15 of the 17 undominated (damage, silver) marches on the
-joint frontier come from it — but it is a *"spend less today"* dial, never a *"spend better"* one.
+Damage and silver both scale with the pool to the tenth of a per cent, so the rate is **0.56 at every fill**.
+This is the flatness experiment 116 measured on the share axis, confirmed on the leadership axis: a
+troops-only march has no efficient size, only a size you can afford. The dial is still a real control there —
+it supplies 15 of the 17 undominated (damage, silver) marches on the joint frontier — but it is a *"spend
+less today"* dial, never a *"spend better"* one.
 
-## 3. With mercenaries, the rate really does rise
+## 3. With mercenaries, sheltered, the rate really does rise — up to a point
 
-The owner's live account — 20 000 leadership, 83 epic monster hunters, one hired type:
+The owner's live account: 20 000 leadership, 83 epic monster hunters, one hired type, **every march
+sheltered**:
 
-| leadership | damage | of full | silver | of full | damage a silver | hired damage |
+| leadership | damage | of full | silver | damage a silver | hired units | hired lost | damage a hired unit |
+|---|---|---|---|---|---|---|---|
+| 100 % (20,000) | 6,729,633 | 100 % | 7,809,000 | 0.86 | 83 | 9 | 298,414 |
+| 92 % (18,400) | 6,405,266 | **95.2 %** | 7,184,000 | 0.89 | 83 | 9 | 298,414 |
+| 85 % (17,000) | 6,122,589 | 91 % | 6,637,600 | 0.92 | 83 | 9 | 298,414 |
+| **75 %** (15,000) | 5,717,537 | 85 % | 5,856,200 | **0.98** | **83** | 9 | 298,414 |
+| 70 % (14,000) | 5,419,461 | 80.5 % | 5,466,200 | **0.99** | **80** | **8** | **323,582** |
+| 60 % (12,000) | 4,627,561 | 68.8 % | 4,685,600 | 0.99 | 68 | 7 | 314,337 |
+| 50 % (10,000) | 3,865,733 | 57.4 % | 3,904,200 | 0.99 | 57 | 6 | 307,403 |
+
+**Why the rate rises at all**: mercenaries cost **authority**, troops cost **leadership**. While the stock is
+what limits the hired count, turning the dial down cuts the troops' damage *and* their silver bill in the
+same proportion and leaves the hired damage — 40 % of this march — exactly where it was. A constant numerator
+over a falling denominator is the whole of the effect: **0.86 → 0.98, up 14 %, with every hunter still on the
+field.**
+
+**And the dial gives stock back, which the first draft got wrong.** Hired units lost falls 9 → 8 → 7 → 6 as
+the fill comes down, because the shelter ceiling starts binding and the sizer fields fewer hunters. The dial
+is *not* orthogonal to the bar's burn axis; it is a second way of reaching a lower burn, and on this account
+a better one at 70 %: **one chunk of stock less for 80.5 % of the damage, at 323 582 damage a hired unit
+against 298 414** — the last three hunters of a stock of 83 cost a whole chunk of ten and buy 3.6 % more
+hired damage.
+
+## 4. What the shelter is worth: the same dial with it switched off
+
+The same account, same fills, sized by the raw `elite` ladder, which keeps the hired count the authority
+housing allows however small the troops become:
+
+| leadership | hired units | tallest hired stack | lowest troop rung | striking | total damage | against sheltered |
 |---|---|---|---|---|---|---|
-| 100 % (20,000) | 6,729,633 | 100 % | 7,809,000 | 100 % | 0.86 | 2,685,730 |
-| 92 % (18,400) | 6,405,266 | **95.2 %** | 7,184,000 | 92 % | **0.89** | 2,685,730 |
-| 85 % (17,000) | 6,122,589 | 91 % | 6,637,600 | 85 % | **0.92** | 2,685,730 |
-| 75 % (15,000) | 5,717,537 | 85 % | 5,856,200 | 75 % | **0.98** | 2,685,730 |
-| 70 % (14,000) | 4,151,856 | 61.7 % | 5,466,200 | 70 % | 0.76 | **0** |
+| 75 % | 83 | 798,626 | 826,198 | 1 of 1 | 5,717,537 | 100 % |
+| **70 %** | **83** | **798,626** | **771,620** | **0 of 1** | **4,151,856** | **76.6 %** |
+| 50 % | 83 | 798,626 | 551,426 | 0 of 1 | 2,965,016 | 76.7 % |
 
-**Why it rises**: mercenaries cost **authority**, troops cost **leadership**. Turning the dial down cuts the
-troops' damage *and* their silver bill in the same proportion, while the hired damage — 40 % of this march —
-does not move at all. A constant numerator over a falling denominator is the whole of the effect.
+At 70 % the unsheltered march puts the hunters at the **head** of the kill queue — 798 626 HP against a
+771 620 top rung — and the biggest stack strikes zero times, so 2 685 730 damage becomes 0. The sheltered
+march at the same fill fields **80** hunters at 769 760 HP, last in the queue, striking twice for 2 588 656.
 
-What it is worth, on each army measured:
+**Same silver — 5 466 200 on both — and the sheltered march deals 30.5 % more damage while burning one chunk
+of stock less.** That figure is the project's first goal in one number (`docs/PLAN.md` §1).
 
-| army | best rate | at | damage kept | under a 95 % damage floor | silver saved there |
-|---|---|---|---|---|---|
-| first-run, no hired | 0.56 (+0 %) | 92 % | 92 % | +0 % | 146,000 |
-| live account, 83 EMH | 0.98 (**+13.3 %**) | 75 % | 85 % | **+3.5 %** at 92 % | **625,000** |
-| 2026-09-17 export, four hired types | 4.02 (**+146.8 %**) | 20 % | **49.4 %** | **+2 %** at 95 % | 136,400 |
+## 5. The crossover, in closed form
 
-The export's +146.8 % is the warning in the table, not the prize: the best *rate* on a hired army is at the
-smallest march the dial can make, because the hired damage is free of leadership and the troops are all that
-is being paid for. A rate maximised alone walks the player down to half the damage. It is the same trap 0019
-§2.3 named for damage-per-mercenary, on a new axis — **which is why the dial needs a damage floor beside it,
-not a "best" mark.**
+The hired count is the smaller of two bounds: **the stock the account owns** and **the shelter ceiling**,
+`floor((troopFloor − 1) / hpPerUnit)`. The ladder's rungs all scale with the fill, so the ceiling scales with
+it too, and the fill where the ceiling stops clearing the stock is
 
-## 4. The cliff, and the closed form that predicts it
+> **crossover = (stock × hpPerUnit) / troopFloor at the full pool** — the tallest hired stack the account
+> could ever field, over the lowest rung it can build.
 
-Between 75 % and 70 % on the live account the hired damage goes **2,685,730 → 0**: 38 % of the march's damage
-for a 6 % saving. The kill order says exactly why.
+**Above it the dial is free of hired cost. Below it every point of leadership given up takes mercenaries with
+it.** Measured against predicted:
 
-**75 % of the pool** — the hunters are the *smallest* stack on the field, so they are killed last and strike
-twice:
+| army | crossover | last fill fielding the whole stock | first fill fielding less |
+|---|---|---|---|
+| live account, 83 EMH | **72.4 %** | 75 % (83 units) | 70 % (80 units) |
+| 2026-09-17 export, 129 hired units | **100.0 %** | 100 % (129 units) | 97 % (125 units) |
 
-| # | stack | units | total HP | hits | damage |
-|---|---|---|---|---|---|
-| 1 | ARC1 | 3,491 | 837,840 | 0 | 0 |
-| … | … | … | … | … | … |
-| 7 | RD3 | 439 | 826,198 | 2 | 1,140,698 |
-| 8 | **EMH6** | **83** | **798,626** | **2** | **2,685,730** |
+The ceiling is exact at every fill where it binds: it allows 80 at 70 %, 74 at 65 %, 68 at 60 %, 57 at 50 %,
+and the sizer fields exactly 80, 74, 68 and 57.
 
-**70 % of the pool** — the hunters have not changed (authority is untouched), but every troop stack has
-shrunk below them, so they are now the *biggest* stack on the field. The biggest stack is destroyed first and
-**strikes zero times**:
+## 6. Which is why one of these armies must not turn the dial
 
-| # | stack | units | total HP | hits | damage |
-|---|---|---|---|---|---|
-| 1 | **EMH6** | **83** | **798,626** | **0** | **0** |
-| 2 | ARC1 | 3,257 | 781,680 | 0 | 0 |
-| … | … | … | … | … | … |
+The 2026-09-17 export's stock (129 units, 361 152 HP) already sits **just under** its lowest rung (361 200 HP)
+at the full pool. Its crossover is 100 %, so its mercenaries — carrying **5 084 274 of 6 198 747, 82 % of the
+march** — start shrinking from the very first turn of the dial. Its best damage a silver is at **100 % of the
+pool (2.26)**, and its sweep is not even monotone: 97 % of the leadership costs **13.6 %** of the damage,
+because the four hired types re-shuffle under a lower floor.
 
-83 units were carrying 2,685,730 of 5,717,537 — 47 % of the march — and the dial threw them away in one
-step of five per cent.
+So the two hired armies measured give **opposite** answers, and one formula tells them apart before any
+search runs:
 
-**It is a cliff and not a slope because of the ladder itself.** The tier ladder sizes every rung to nearly
-the same total HP (837,840 … 826,198 at 75 %), so the whole troop wall crosses the hired stack's HP at one
-fill rather than one rung at a time. That gives a closed form: the lowest rung is `troopFloor × fill`, it has
-to stay above `hiredTop`, so the dial is safe down to
-
-> **fill ≥ hiredTop / troopFloor** — here 798,626 / 1,102,852 = **72.4 %**
-
-and the report **tests** the prediction rather than stating it: bisection to the tenth of a per cent finds
-the last fill that keeps every hired blow at **72.4 %**. The prediction holds exactly.
-
-## 5. Two regimes, and the app can tell them apart before it turns the dial
-
-The 2026-09-17 export has no cliff at all: its tallest hired stack (1,331,818 HP) already stands **above** the
-lowest rung (361,200) at the full pool, so the hired stacks are at the head of the queue before the dial is
-touched, 3 of its 4 strike at every fill, and the hired damage is 1,641,448 from 100 % down to 20 %.
-
-So there are exactly two regimes, and one comparison at the full pool tells them apart:
-
-- **`hiredTop < troopFloor`** — the hired stacks are sheltered. The dial is safe down to
-  `hiredTop / troopFloor` and catastrophic one step below it.
-- **`hiredTop ≥ troopFloor`** — there is no shelter to lose. The dial costs troop damage and nothing else,
-  all the way down.
-
-## 6. The dial spends no hired stock, which is why it is a second control
-
-Hired units lost is **9 at every fill** on the live account and **27 at every fill** on the export. The dial
-moves silver and queue time; it does not touch the burn the plan's bar is ordered on. It is orthogonal to
-that bar, not a sixth stop on it.
-
-And the two families genuinely need each other. On the joint (damage, silver) frontier of the plan's stops
-and the dial's marches together, the dial supplies **12 of 14** undominated marches on the live account,
-**14 of 17** on the export and **15 of 17** on the first-run army — while the plan's stops still hold both
-ends, `silver-saver` beating every dial march near its price (3,694,764 damage for 3,602,400 silver, against
-the 65 % dial's 3,855,107 for 5,075,600) and `all-in` topping the whole frontier. Dropping a type and
-shrinking every stack are different moves, and the frontier wants both.
+- **crossover < 100 %** (live account, 72.4 %) — there is a free region. Down to the crossover the dial buys
+  rate at no cost in stock; past it, it trades damage for stock and silver together.
+- **crossover ≥ 100 %** (the export) — the shelter already binds at the full pool. This march is as large as
+  its troops can shelter, and every smaller one costs mercenaries. **Do not offer the dial.**
 
 ## 7. What this does not say
 
 The model scores **damage dealt against a fixed enemy formation**. It cannot know that a smaller march is
 still enough to take the target, or that a bigger one is overkill — that is the player's own read of the map,
-and it is precisely the read the dial is there to serve. Nothing here argues for turning the dial down by
-default; it argues for **offering** it, with its floor drawn on.
+and it is exactly the read the dial is there to serve. Nothing here argues for turning the dial down by
+default; it argues for **offering** it where the crossover says it is free, and for saying so where it is not.

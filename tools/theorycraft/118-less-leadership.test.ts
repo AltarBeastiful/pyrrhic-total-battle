@@ -2,20 +2,30 @@
  * 118 — **is a full leadership pool always the right march?** (owner, 2026-09-20: *"we were supposed to
  * also explore using a bit less leadership, if the damage is still good and the ratios are better."*)
  *
- * Every march the app has ever offered fills the leadership pool to the last point it can. That is one
- * assumption, never measured: the sizer's whole job is *"how big can each stack be"*, and the plan's stops
- * vary the army by **dropping whole types** (S-99, S-111), which under-fills leadership only as a side
- * effect of a type leaving. Nothing has ever asked what happens when the same march is fielded **smaller**.
+ * Every march the app has ever offered fills the leadership pool to its last point. That is one assumption,
+ * never measured: the sizer's whole job is *"how big can each stack be"*, and the plan's stops vary the army
+ * by **dropping whole types** (S-99, S-111), which under-fills leadership only as a side effect of a type
+ * leaving. Nothing has ever asked what happens when the same march is fielded **smaller**.
  *
- * The dial here is the housing figure itself: size the army for 95 %, 90 %, 80 %… of the leadership the
- * account actually has, and read the fight. Three armies, on both sides of the hired line, because the
- * mechanism that could pay is a hired one: **mercenaries cost authority, not leadership** (0015, 0019), and
- * the enemy destroys the **highest-HP stack first**, so the troops are what shelters them. Shrinking the
- * troops shrinks the silver bill and leaves the hired damage where it is — until the troop stacks fall
- * under the hired ones' HP, at which point the shelter breaks and the hired damage goes with it.
+ * **The first run of this experiment got the answer wrong, and the owner caught it** (2026-09-20: *"your
+ * cliff explanation is all wrong, merc should have been changed in numbers if the troops shrink. They should
+ * always be shielded to do more damage, that's the main point of the calculator!"*). It swept the raw
+ * `elite` ladder, which has **no shelter ceiling** — `stacker.ts` applies `troopFloor - 1` only under `ms`,
+ * and `planCampaign` applies `shelterUnder` to every shape it answers with (S-87). So the hired count stayed
+ * where the authority housing put it while the troops shrank underneath, the hired stack became the tallest
+ * on the field, and the damage fell off a cliff that **no march this app offers would ever walk into**. Both
+ * sizers are swept below, side by side, because the contrast is the point: the cliff is what the shelter is
+ * *for*.
  *
- * Every figure below is `simulateBattle` on the sized march and `recoveryCosts` on its stacks; damage is
- * the **worst opening** (`minDamage`, S-108), which is what the recap and the bar read.
+ * The mechanic underneath: the enemy destroys **one stack per attack, always the one with the highest total
+ * HP**, so a stack's damage is decided by its kill position. A hired stack sized under the lowest troop rung
+ * is killed last and strikes most; one sized over it is killed first and strikes nothing. Turning the dial
+ * down lowers the troop floor, so the sheltered hired count has to come down with it — that is the whole
+ * interaction, and it is a **ceiling on the hired count**, never a floor under the dial.
+ *
+ * Every figure is `simulateBattle` on the sized march and `recoveryCosts` on its stacks; damage and the
+ * hired/troop split are both the **worst opening** (S-108), because `damageByPool` splits the midpoint and
+ * two arithmetics on one row is the bug S-108 was written for.
  *
  * `THEORY=1 pnpm vitest run tools/theorycraft/118-less-leadership.test.ts`
  */
@@ -38,6 +48,9 @@ import { EXPORT_2026_09_17, Report, evaluateCounts, loadLiveAccount, n, table } 
 /** The dial, as a share of the leadership the account holds. */
 const FILLS = [100, 97, 95, 92, 90, 85, 80, 75, 70, 65, 60, 50, 40, 30, 20] as const;
 
+/** `elite` is the ladder with **no** ceiling on the hired stacks; `ms` lowers them under the troop floor. */
+type Sizer = 'elite' | 'ms';
+
 interface Reading {
   fill: number;
   leadership: number;
@@ -47,16 +60,15 @@ interface Reading {
   seconds: number;
   gold: number;
   hiredDamage: number;
-  troopDamage: number;
+  hiredUnits: number;
   hiredUnitsLost: number;
-  /** The smallest troop stack's total HP — the floor a hired stack has to stay under to be sheltered. */
+  /** The smallest troop stack's total HP — what the shelter ceiling is computed from. */
   troopFloor: number;
   /** The biggest hired stack's total HP. Above the floor, the enemy comes for it first. */
   hiredTop: number;
   /** Hired stacks that land at least one blow in the worst opening, over the hired stacks fielded. */
   hiredStriking: number;
   hiredStacks: number;
-  /** Blows the hired stacks land between them, worst opening. */
   hiredHits: number;
   stacks: number;
 }
@@ -69,30 +81,26 @@ function firstRun(): { profile: Profile; setup: BattleSetup } {
   return { profile, setup };
 }
 
-/** Size and fight the army the ladder would field for `leadership` points, and price the losses. */
-function readAt(base: StackRequest, leadership: number): Reading {
-  const request: StackRequest = {
-    ...base,
-    housing: { ...base.housing, leadership },
-    // The tier ladder, so the dial is the only thing moving between rows.
-    options: { ...base.options, method: 'elite' },
-  };
+function requestAt(base: StackRequest, leadership: number, method: Sizer): StackRequest {
+  return { ...base, housing: { ...base.housing, leadership }, options: { ...base.options, method } };
+}
+
+/** Size and fight the army the sizer would field for `leadership` points, and price the losses. */
+function readAt(base: StackRequest, leadership: number, method: Sizer): Reading {
+  const request = requestAt(base, leadership, method);
   const result = sizeStacks(request);
-  const { summary } = evaluateCounts(request, Object.fromEntries(
-    result.stacks.map((stack) => [stack.unitId, stack.count]),
-  ));
+  const { summary } = evaluateCounts(
+    request,
+    Object.fromEntries(result.stacks.map((stack) => [stack.unitId, stack.count])),
+  );
   const bill = recoveryCosts(result.stacks, request.units, request.recovery).plan;
   const troops = result.stacks.filter((stack) => stack.pool !== 'authority');
   const hired = result.stacks.filter((stack) => stack.pool === 'authority');
-  // Who actually swings, read off the journal rather than argued from the HP: the enemy destroys the
-  // highest-HP stack standing, so a stack's place in the queue — not its size — decides its blows.
+  // Who actually swings, read off the journal rather than argued from the HP.
   const blows = new Map<string, number>();
   for (const entry of summary.journals.enemyFirst.entries) {
     if (entry.actor === 'army') blows.set(entry.unitId, (blows.get(entry.unitId) ?? 0) + 1);
   }
-  // The **worst opening**, not the midpoint: `summary.damageByPool` splits `avgDamage`, and a stack that
-  // strikes nothing in the bad flip still carries a share of it (S-108). Every other figure in this row is
-  // the worst opening, and two arithmetics on one row is exactly the bug S-108 was written for.
   const worst = worstDamageByPool(summary.journals.enemyFirst, result.stacks);
   return {
     fill: 0,
@@ -103,7 +111,7 @@ function readAt(base: StackRequest, leadership: number): Reading {
     seconds: bill.seconds,
     gold: bill.gold,
     hiredDamage: worst.authority,
-    troopDamage: worst.leadership + worst.dominance,
+    hiredUnits: hired.reduce((sum, stack) => sum + stack.count, 0),
     hiredUnitsLost: hiredLost(result.stacks),
     troopFloor: troops.length === 0 ? 0 : Math.min(...troops.map((stack) => stack.totalHp)),
     hiredTop: hired.length === 0 ? 0 : Math.max(...hired.map((stack) => stack.totalHp)),
@@ -116,9 +124,11 @@ function readAt(base: StackRequest, leadership: number): Reading {
 
 const pct = (part: number, whole: number): string =>
   whole === 0 ? '—' : `${n(Math.round((part / whole) * 1000) / 10)} %`;
+const rate = (row: Reading): number => (row.silver > 0 ? row.damage / row.silver : 0);
+const per = (value: number, over: number): string => (over > 0 ? n(Math.round(value / over)) : '—');
 
 describe.skipIf(!process.env.THEORY)('less leadership', () => {
-  it('turns the dial down on three armies and reads every fight', () => {
+  it('turns the dial down with the shelter on and off, and reads every fight', () => {
     const report = new Report('118-less-leadership');
 
     const parsed = parseImport(readFileSync(EXPORT_2026_09_17, 'utf8'));
@@ -151,106 +161,77 @@ describe.skipIf(!process.env.THEORY)('less leadership', () => {
       report.h(army.name);
       const base = buildStackRequest(army.profile, army.setup);
       const full = base.housing.leadership;
-      const rows = FILLS.map((fill) => ({
-        ...readAt(base, Math.floor((full * fill) / 100)),
-        fill,
-      }));
-      const top = rows[0];
-      if (!top) throw new Error('no reading');
+      const sweep = (method: Sizer): Reading[] =>
+        FILLS.map((fill) => ({ ...readAt(base, Math.floor((full * fill) / 100), method), fill }));
+      const sheltered = sweep('ms');
+      const bare = sweep('elite');
+      const top = sheltered[0];
+      const bareTop = bare[0];
+      if (!top || !bareTop) throw new Error('no reading');
+      const hires = top.hiredStacks > 0;
 
       report.add('');
       report.add(
-        '| leadership | used | stacks | damage | of full | silver | of full | damage a silver | hired damage | hired lost | queue (s) |',
+        hires
+          ? '**The dial with the shelter on** (`ms` — every hired stack lowered under the lowest troop rung, which is what `planCampaign` does to every shape it answers with, S-87):'
+          : '**The dial** (this army hires nothing, so the shelter has nothing to hold and both sizers field the same march):',
+      );
+      report.add('');
+      report.add(
+        '| leadership | damage | of full | silver | of full | damage a silver | hired units | hired damage | hired lost | damage a hired unit | queue (s) |',
       );
       report.add('|---|---|---|---|---|---|---|---|---|---|---|');
-      for (const row of rows) {
+      for (const row of sheltered) {
         report.add(
-          `| ${n(row.fill)} % (${n(row.leadership)}) | ${n(row.used)} | ${row.stacks} | ${n(row.damage)} | ${pct(
-            row.damage,
-            top.damage,
-          )} | ${n(row.silver)} | ${pct(row.silver, top.silver)} | ${n(
-            Math.round((row.silver > 0 ? row.damage / row.silver : 0) * 100) / 100,
-          )} | ${n(row.hiredDamage)} | ${n(row.hiredUnitsLost)} | ${n(row.seconds)} |`,
+          `| ${n(row.fill)} % (${n(row.leadership)}) | ${n(row.damage)} | ${pct(row.damage, top.damage)} | ${n(
+            row.silver,
+          )} | ${pct(row.silver, top.silver)} | ${n(Math.round(rate(row) * 100) / 100)} | ${n(
+            row.hiredUnits,
+          )} | ${n(row.hiredDamage)} | ${n(row.hiredUnitsLost)} | ${per(
+            row.hiredDamage,
+            row.hiredUnitsLost,
+          )} | ${n(row.seconds)} |`,
         );
       }
 
-      // Where the dial actually pays, if anywhere: the best rate, and the cheapest march that still
-      // deals 95 % of what the full pool deals.
-      const rate = (row: Reading): number => (row.silver > 0 ? row.damage / row.silver : 0);
-      const bestRate = rows.reduce((best, row) => (rate(row) > rate(best) ? row : best));
-      const good = rows.filter((row) => row.damage >= top.damage * 0.95);
-      const cheapestGood = good.reduce((best, row) => (row.silver < best.silver ? row : best));
-      report.add('');
-      report.add(
-        `**Best damage a silver**: ${n(bestRate.fill)} % of the pool — ${n(
-          Math.round(rate(bestRate) * 100) / 100,
-        )} against ${n(Math.round(rate(top) * 100) / 100)} at the full pool (**${pct(
-          rate(bestRate) - rate(top),
-          rate(top),
-        )}** better), for ${pct(bestRate.damage, top.damage)} of the damage.`,
-      );
-      for (const floor of [95, 90, 85] as const) {
-        const allowed = rows.filter((row) => row.damage >= (top.damage * floor) / 100);
-        const pick = allowed.reduce((best, row) => (rate(row) > rate(best) ? row : best), allowed[0] ?? top);
+      if (hires) {
+        // The contrast that explains why the shelter exists at all.
         report.add('');
         report.add(
-          `**Best rate that still deals ${String(floor)} % of the damage**: ${n(pick.fill)} % of the pool — ${n(
-            Math.round(rate(pick) * 100) / 100,
-          )} damage a silver (${pct(rate(pick) - rate(top), rate(top))} better than the full pool), ${n(
-            pick.damage,
-          )} damage, ${n(pick.silver)} silver, saving ${n(top.silver - pick.silver)}.`,
-        );
-      }
-
-      report.add('');
-      report.add(
-        `**Cheapest march still worth 95 % of the damage**: ${n(cheapestGood.fill)} % of the pool — ${n(
-          cheapestGood.damage,
-        )} damage (${pct(cheapestGood.damage, top.damage)}) for ${n(cheapestGood.silver)} silver (${pct(
-          cheapestGood.silver,
-          top.silver,
-        )}), saving ${n(top.silver - cheapestGood.silver)}.`,
-      );
-
-      // The shelter, where there is one to break: the troops' smallest stack against the hired top.
-      if (top.hiredStacks > 0) {
-        report.add('');
-        report.add(
-          'The shelter, read off the journal — a hired stack strikes only while troop stacks stand above it in the queue:',
+          '**The same dial with the shelter off** (`elite`, which keeps the hired count the authority housing allows however small the troops become) — this is the march the first run of this experiment measured, and the one no plan offers:',
         );
         report.add('');
         report.add(
-          '| leadership | smallest troop stack HP | biggest hired stack HP | hired stacks striking | hired blows | hired damage | of full |',
+          '| leadership | hired units | tallest hired stack | lowest troop rung | hired stacks striking | hired damage | total damage | against the sheltered march |',
         );
-        report.add('|---|---|---|---|---|---|---|');
-        for (const row of rows) {
+        report.add('|---|---|---|---|---|---|---|---|');
+        for (const [index, row] of bare.entries()) {
+          const mirror = sheltered[index];
           report.add(
-            `| ${n(row.fill)} % | ${n(row.troopFloor)} | ${n(row.hiredTop)} | ${String(
+            `| ${n(row.fill)} % | ${n(row.hiredUnits)} | ${n(row.hiredTop)} | ${n(row.troopFloor)} | ${String(
               row.hiredStriking,
-            )} of ${String(row.hiredStacks)} | ${String(row.hiredHits)} | ${n(row.hiredDamage)} | ${pct(
-              row.hiredDamage,
-              top.hiredDamage,
-            )} |`,
+            )} of ${String(row.hiredStacks)} | ${n(row.hiredDamage)} | ${n(row.damage)} | ${
+              mirror ? pct(row.damage, mirror.damage) : '—'
+            } |`,
           );
         }
 
-        // Where the hired damage falls off a cliff, the two marches either side of it are printed in
-        // full: the mechanism is the kill order, and a kill order is a table, not an argument.
-        const cliff = rows.findIndex(
-          (row, index) => index > 0 && row.hiredDamage < (rows[index - 1]?.hiredDamage ?? 0) * 0.5,
+        // Where the unsheltered march falls off its cliff, both marches are printed in full: the mechanism
+        // is the kill order, and a kill order is a table, not an argument.
+        const cliff = bare.findIndex(
+          (row, index) => index > 0 && row.hiredDamage < (bare[index - 1]?.hiredDamage ?? 0) * 0.5,
         );
-        const before = cliff > 0 ? rows[cliff - 1] : undefined;
-        const after = cliff > 0 ? rows[cliff] : undefined;
-        if (before && after) {
-          for (const row of [before, after]) {
-            const request: StackRequest = {
-              ...base,
-              housing: { ...base.housing, leadership: row.leadership },
-              options: { ...base.options, method: 'elite' },
-            };
+        const at = cliff > 0 ? bare[cliff] : undefined;
+        if (at) {
+          for (const method of ['elite', 'ms'] as const) {
+            const request = requestAt(base, at.leadership, method);
             const sized = sizeStacks(request);
             report.add('');
-            report.add(`**${n(row.fill)} % of the pool** — the march in kill order:`);
+            report.add(
+              `**${n(at.fill)} % of the pool, ${
+                method === 'elite' ? 'shelter off' : 'shelter on'
+              }** — the march in kill order:`,
+            );
             report.add('');
             report.add(
               table(
@@ -262,41 +243,85 @@ describe.skipIf(!process.env.THEORY)('less leadership', () => {
             );
           }
         }
+
+        // **The ceiling, in closed form.** `stacker.ts` sizes the hired pool under `troopFloor - 1`, and the
+        // ladder's rungs all scale with the fill, so the sheltered hired count scales with it too. Predicted
+        // against measured at every fill, rather than asserted.
+        const unit = top.hiredUnits > 0 ? top.hiredTop / top.hiredUnits : 0;
+        if (unit > 0) {
+          report.add('');
+          report.add(
+            `**The ceiling, predicted against measured.** The stacker lowers the hired pool under \`troopFloor - 1\`, so the tallest hired stack may hold \`floor((troopFloor - 1) / ${n(
+              Math.round(unit),
+            )} HP a unit)\` units — unless its own stock or its authority housing binds first:`,
+          );
+          report.add('');
+          report.add('| leadership | lowest troop rung | ceiling it allows | hired units fielded | what bound |');
+          report.add('|---|---|---|---|---|');
+          for (const row of sheltered) {
+            const allowed = Math.floor((row.troopFloor - 1) / unit);
+            report.add(
+              `| ${n(row.fill)} % | ${n(row.troopFloor)} | ${n(allowed)} | ${n(row.hiredUnits)} | ${
+                row.hiredUnits < allowed ? 'the stock' : 'the shelter'
+              } |`,
+            );
+          }
+        }
       }
 
-      // **The floor, in closed form.** The tier ladder sizes every rung to nearly the same total HP —
-      // 837,840 … 826,198 on the live account at 75 % — so the whole troop wall crosses the tallest hired
-      // stack at one fill rather than one rung at a time, which is why the hired damage falls off a cliff
-      // instead of sloping. That predicts the cliff exactly: the lowest rung is `troopFloor × fill`, and it
-      // has to stay above `hiredTop`, so the dial is safe down to `hiredTop / troopFloor` and no further.
-      // The prediction is *tested* here by bisection to the nearest 0.1 % rather than asserted.
-      if (top.hiredStacks > 0 && top.hiredDamage > 0) {
-        const predicted = (top.hiredTop / top.troopFloor) * 100;
-        let safe = 100;
-        let broken = 0;
-        for (let step = 0; step < 14; step += 1) {
-          const mid = (safe + broken) / 2;
-          const reading = readAt(base, Math.floor((full * mid) / 100));
-          if (reading.hiredDamage >= top.hiredDamage) safe = mid;
-          else broken = mid;
-        }
+      // **The crossover.** The hired count is the smaller of two bounds: the stock the account owns and the
+      // shelter ceiling `floor((troopFloor - 1) / hp)`. Above the fill where the ceiling still clears the
+      // stock, turning the dial down costs troop damage and troop silver only — the hired damage is free,
+      // which is why the rate climbs. Below it the shelter binds, and every point of leadership given up
+      // takes mercenaries with it. The crossover is `stock × hp / troopFloor` at the full pool, which is the
+      // tallest hired stack the account could ever field over the lowest rung it can build.
+      if (hires && top.hiredUnits > 0) {
+        const crossover = (top.hiredTop / top.troopFloor) * 100;
+        const measured = sheltered.find(
+          (row) => row.hiredUnits < (top.hiredUnits ?? 0) || row.hiredUnits * 1 < top.hiredUnits,
+        );
+        const lastFree = [...sheltered].reverse().find((row) => row.hiredUnits >= top.hiredUnits);
         report.add('');
         report.add(
-          top.hiredTop < top.troopFloor
-            ? `**The floor**: the lowest rung is \`${n(top.troopFloor)} × fill\` and the tallest hired stack is ${n(
+          crossover < 100
+            ? `**The crossover**: the stock (${n(top.hiredUnits)} units, ${n(
                 top.hiredTop,
-              )}, so the ladder predicts the shelter breaking at **${n(
-                Math.round(predicted * 10) / 10,
-              )} %** of the pool. Bisection finds the last fill that keeps every hired blow at **${n(
-                Math.round(safe * 10) / 10,
-              )} %** — ${Math.abs(safe - predicted) <= 1 ? 'the prediction holds' : '**the prediction misses**'}.`
-            : `**No floor to fall through**: the tallest hired stack (${n(
-                top.hiredTop,
-              )}) already stands above the lowest rung (${n(
+              )} HP) still fits under the lowest rung (${n(
                 top.troopFloor,
-              )}) at the full pool, so the hired stacks are at the head of the queue before the dial is touched and shrinking the troops cannot move them. Bisection confirms it: every hired blow survives to ${n(
-                Math.round(safe * 10) / 10,
-              )} % of the pool. This army's dial costs troop damage and nothing else.`,
+              )}) down to **${n(Math.round(crossover * 10) / 10)} %** of the pool. Measured: the last fill that fields the whole stock is **${n(
+                lastFree?.fill ?? 0,
+              )} %**, and the first that fields less is ${n(measured?.fill ?? 0)} % (${n(
+                measured?.hiredUnits ?? 0,
+              )} units). Above the crossover the dial is free of hired cost; below it every point of leadership takes mercenaries with it.`
+            : `**No free region**: the stock (${n(top.hiredUnits)} units) already asks ${n(
+                Math.round(crossover),
+              )} % of this army's lowest rung, so the **shelter is what binds the hired count at the full pool** and the dial takes mercenaries away from the first point it is turned. This army's march is as large as its troops can shelter, and nothing smaller is cheaper *per damage*.`,
+        );
+      }
+
+      // What the dial is worth, on the march the app would actually field.
+      const bestRate = sheltered.reduce((best, row) => (rate(row) > rate(best) ? row : best));
+      report.add('');
+      report.add(
+        `**Best damage a silver**: ${n(bestRate.fill)} % of the pool — ${n(
+          Math.round(rate(bestRate) * 100) / 100,
+        )} against ${n(Math.round(rate(top) * 100) / 100)} at the full pool (**${pct(
+          rate(bestRate) - rate(top),
+          rate(top),
+        )}** better), for ${pct(bestRate.damage, top.damage)} of the damage.`,
+      );
+      for (const floor of [95, 90, 85] as const) {
+        const allowed = sheltered.filter((row) => row.damage >= (top.damage * floor) / 100);
+        const pick = allowed.reduce((best, row) => (rate(row) > rate(best) ? row : best), allowed[0] ?? top);
+        report.add('');
+        report.add(
+          `**Best rate that still deals ${String(floor)} % of the damage**: ${n(pick.fill)} % of the pool — ${n(
+            Math.round(rate(pick) * 100) / 100,
+          )} damage a silver (${pct(rate(pick) - rate(top), rate(top))} better than the full pool), ${n(
+            pick.damage,
+          )} damage, ${n(pick.silver)} silver saving ${n(top.silver - pick.silver)}, ${n(
+            pick.hiredUnitsLost,
+          )} hired lost against ${n(top.hiredUnitsLost)}.`,
         );
       }
 
@@ -305,12 +330,19 @@ describe.skipIf(!process.env.THEORY)('less leadership', () => {
       const priced = stops.map((stop) => {
         const { result, summary } = evaluateCounts(base, stop.counts);
         const bill = recoveryCosts(result.stacks, base.units, base.recovery).plan;
-        return { name: stop.pick, damage: summary.minDamage, silver: bill.silver, family: 'plan' as const };
+        return {
+          name: stop.pick,
+          damage: summary.minDamage,
+          silver: bill.silver,
+          burn: hiredLost(result.stacks),
+          family: 'plan' as const,
+        };
       });
-      const dialled = rows.map((row) => ({
+      const dialled = sheltered.map((row) => ({
         name: `${String(row.fill)} % of the pool`,
         damage: row.damage,
         silver: row.silver,
+        burn: row.hiredUnitsLost,
         family: 'dial' as const,
       }));
       const both = [...priced, ...dialled];
@@ -322,7 +354,8 @@ describe.skipIf(!process.env.THEORY)('less leadership', () => {
                 other !== one &&
                 other.damage >= one.damage &&
                 other.silver <= one.silver &&
-                (other.damage > one.damage || other.silver < one.silver),
+                other.burn <= one.burn &&
+                (other.damage > one.damage || other.silver < one.silver || other.burn < one.burn),
             ),
         )
         .sort((a, b) => a.silver - b.silver);
@@ -330,15 +363,17 @@ describe.skipIf(!process.env.THEORY)('less leadership', () => {
       report.add(
         `**The joint frontier** — the plan's ${String(priced.length)} stops and the dial's ${String(
           dialled.length,
-        )} marches, on (damage, silver) together. ${String(
+        )} sheltered marches, undominated on (damage, silver, **hired lost**) together. ${String(
           frontier.filter((one) => one.family === 'dial').length,
-        )} of the ${String(frontier.length)} undominated marches come from the dial:`,
+        )} of the ${String(frontier.length)} come from the dial:`,
       );
       report.add('');
-      report.add('| silver | damage | march | from |');
-      report.add('|---|---|---|---|');
+      report.add('| silver | damage | hired lost | march | from |');
+      report.add('|---|---|---|---|---|');
       for (const one of frontier) {
-        report.add(`| ${n(one.silver)} | ${n(one.damage)} | ${one.name} | ${one.family} |`);
+        report.add(
+          `| ${n(one.silver)} | ${n(one.damage)} | ${n(one.burn)} | ${one.name} | ${one.family} |`,
+        );
       }
     }
 
