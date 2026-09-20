@@ -11,7 +11,7 @@ import { expect, test } from 'vitest';
 
 import type { PlanRepeat, PlanRow } from '@/engine/plan';
 
-import { bestOn, rateColumn, rateColumns, tableMarks } from './picks';
+import { PER_SILVER, bestOn, tableMarks } from './picks';
 
 /** A row is only ever read through `repeat` here, so the rest of `PlanTotals` is filled once and shared. */
 function row(pick: PlanRow['pick'], repeat: Partial<PlanRepeat>): PlanRow {
@@ -46,31 +46,6 @@ function row(pick: PlanRow['pick'], repeat: Partial<PlanRepeat>): PlanRow {
   };
 }
 
-test('the rate column is offered only for what the army actually spends', () => {
-  // An army that hires nothing and buys no gold has one rate to show, and the switch has nothing to switch.
-  const troopsOnly = [row('silver-saver', {}), row('sweet-spot', { damage: 2_000_000 })];
-  expect(rateColumns(troopsOnly).map((column) => column.key)).toEqual(['silver']);
-
-  // Gold, because experiment 120 measured it as the **only** fact naming its stop on 7 of the 16 benchmark
-  // armies — the one rate that points somewhere the rest of the table does not.
-  const buysGold = troopsOnly.map((one) => row(one.pick, { ...one.repeat, gold: 500 }));
-  expect(rateColumns(buysGold).map((column) => column.key)).toEqual(['silver', 'gold']);
-
-  // And the hired rate wherever a march burns stock (S-112's own reading, `spendsStock`).
-  const burns = troopsOnly.map((one) =>
-    row(one.pick, { ...one.repeat, gold: 500, mercLost: 4, hiredDamage: 400_000 }),
-  );
-  expect(rateColumns(burns).map((column) => column.key)).toEqual(['silver', 'gold', 'hired']);
-});
-
-test('a rate the army does not spend falls back to the one it does', () => {
-  const troopsOnly = [row('silver-saver', {}), row('sweet-spot', { damage: 2_000_000 })];
-  // The player switched to "Per hired" on one army and opened another that hires nothing: the table shows
-  // the rate it has rather than a column of dashes (design rule 15).
-  expect(rateColumn(troopsOnly, 'hired').key).toBe('silver');
-  expect(rateColumn(troopsOnly, 'silver').key).toBe('silver');
-});
-
 test('a mark is drawn only where it is a claim about one row', () => {
   const rows = [row('silver-saver', { damage: 1_000_000 }), row('sweet-spot', { damage: 2_000_000 })];
 
@@ -85,24 +60,26 @@ test('a mark is drawn only where it is a claim about one row', () => {
   expect(bestOn(rows, () => Number.NaN, 'higher')).toBe(null);
 });
 
-test('damage a hired unit is never marked best', () => {
+test('damage a hired unit is never marked best, and every other column is', () => {
   // `docs/investigations/0019` §2.3 measured this ratio **rising** while the march collapses, and §1 calls
   // it "never the right compass". It is a fact the table carries; a best mark on it is the trap itself.
   const rows = [
     row('silver-saver', { damage: 3_000_000, silver: 3_000_000, mercLost: 2, hiredDamage: 1_000_000 }),
     row('all-in', { damage: 4_000_000, silver: 8_000_000, mercLost: 9, hiredDamage: 900_000 }),
   ];
-  const hired = rateColumn(rows, 'hired');
-  expect(hired.key).toBe('hired');
-  expect(hired.markable).toBe(false);
-  // The silver saver *is* the better hired rate (500 000 against 100 000) and still wears no mark.
-  expect(hired.of(rows[0] as PlanRow)).toBeGreaterThan(hired.of(rows[1] as PlanRow));
-  expect(tableMarks(rows, hired).rate).toBe(null);
+  const marks = tableMarks(rows);
+
+  // `TableMarks` has no field for the hired rate at all, which is the strongest form the ban can take: the
+  // silver saver *is* the better hired rate here — 500 000 a hired unit against 100 000 — and there is
+  // nowhere for the table to say so.
+  expect(Object.keys(marks).sort()).toEqual(['damage', 'hiredLost', 'perSilver', 'silver']);
+  const perHired = (one: PlanRow): number => one.repeat.hiredDamage / one.repeat.mercLost;
+  expect(perHired(rows[0] as PlanRow)).toBeGreaterThan(perHired(rows[1] as PlanRow));
 
   // Every other mark on the same rows is drawn as usual: the ban is on one column, not on the table.
-  const marks = tableMarks(rows, rateColumn(rows, 'silver'));
   expect(marks.damage).toBe(1); // all-in hits hardest
   expect(marks.silver).toBe(0); // the silver saver is cheapest
   expect(marks.hiredLost).toBe(0); // …and burns the least stock
-  expect(marks.rate).toBe(0); // 1.0 a silver against 0.5
+  expect(marks.perSilver).toBe(0); // 1.0 a silver against 0.5
+  expect(PER_SILVER.decimals).toBe(3); // where the owner's plans differ (S-59)
 });

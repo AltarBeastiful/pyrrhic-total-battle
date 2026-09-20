@@ -178,12 +178,20 @@ registered on). Two questions had to be answered before a column was drawn:
   the engine's own horizon rather than the app's `CAMPAIGN.marches` = 4. `pnpm typecheck` caught it; the
   figures above are the app's horizon, and the conclusion is the same one, more strongly.)*
 
-**So S-113 is built as the segmented control, and it pays for itself in width.** The two rate columns the
-table draws today (Per silver, Per hired) collapse into **one switchable rate column** — Per silver · Per
-gold · Per hired, each offered only where the army spends that resource (design rule 15) — which is the
-owner's *"switch between objective"*, costs a control and **gives back a column**, and that freed column is
-what lets Per gold on screen at all inside the 462 px pane. Queue stays the note under Silver and the dragon
-coins stay beside it: the measurement says neither would ever name a stop of its own.
+**What was built from that, and what came back out.** The **best-in-column marks shipped** and stand. The
+rate columns were also collapsed into **one switchable column** — Per silver · Per gold · Per hired, a
+segmented control over the table — so that three rates could share the width of two and Per gold could exist
+inside the 462 px pane at all. **The owner read it and reverted it the same day** (2026-09-20: *"I don't
+understand the selector per silver, gold, hired. Revert it."*), so the table keeps its two fixed rate columns
+and has no control over them.
+
+**The lesson is about the control, not the column.** Per gold's measurement stands — it is still the only
+fact naming its stop on 7 of 16 armies — and so does the width arithmetic that says a seventh head does not
+fit. What failed is a control that has to be understood *before* it shows anything: the table's other facts
+are all visible at once, and this one asked the player to know what "Per gold" would tell him in order to
+find out. Whatever shape gold eventually takes has to be **readable without being operated** — which is the
+same standard the marks met and the switch did not. Queue stays the note under Silver and the dragon coins
+stay beside it either way: the measurement says neither would ever name a stop of its own.
 
 **One row the table has earned since this plan was written** (experiment 119, §5 below): a *Tier ladder*
 column, or at least a footing line, saying what the plan is worth against the method the player would

@@ -367,42 +367,36 @@ test('a row prices the march the recap is drawing, and the engine’s own battle
   expect(planMarch(request(), shown.counts).summary.recovery.silver).toBe(shown.repeat.silver);
 });
 
-test('the rate column is the march’s own ratio, whichever rate the player switches to', async () => {
-  const user = userEvent.setup();
+test('the two ratio columns are the march’s own, not the campaign’s', () => {
   renderWithTheme(<PlanFold />);
   const row: PlanRow | undefined = ROWS[defaultPlanPosition(PLAN)];
   expect(row).toBeDefined();
   if (row === undefined) return;
 
-  const lastCell = (): string =>
-    [
-      ...(document.querySelector(`${TRADE} tbody tr[data-current]`)?.querySelectorAll('td') ?? []),
-    ].at(-1)?.textContent ?? '';
+  const cells = [
+    ...(document.querySelector(`${TRADE} tbody tr[data-current]`)?.querySelectorAll('td') ?? []),
+  ];
+  // Damage a march, Silver a march, Hired lost, Per silver, Per hired — and the last two divide the row's own
+  // march (0020 §D-3), which is what stops a row named for a ratio from being beaten on that ratio by the row
+  // above it.
+  expect(cells.at(-2)?.textContent).toBe(ratio(row.repeat.damage / row.repeat.silver, 3));
+  // "Per hired" is the hired stacks' own damage over the hired units the march loses (S-105), not the
+  // march's whole worst opening over them — the owner read the old column as *"a damage per hired almost
+  // above total damage"*.
+  expect(cells.at(-1)?.textContent).toBe(ratio(row.repeat.hiredDamage / row.repeat.mercLost));
+  // The campaign's ratios are what they used to be, and they are not what the row prints.
+  expect(cells.at(-2)?.textContent).not.toBe(ratio(row.damagePerSilver, 3));
 
-  // Damage a march, Silver a march, Hired lost, and **one** rate — which divides the row's own march
-  // (0020 §D-3), the thing that stops a row named for a ratio from being beaten on that ratio by the row
-  // above it. The campaign's own ratio is a different figure and is not what the row prints.
-  expect(lastCell()).toBe(ratio(row.repeat.damage / row.repeat.silver, 3));
-  expect(lastCell()).not.toBe(ratio(row.damagePerSilver, 3));
-
-  // "Per silver" is printed to where the plans actually differ. At two decimals the whole column read
+  // And "Per silver" is printed to where the plans actually differ. At two decimals the whole column read
   // "0.54" on the owner's own account — three rows, one figure — so the row named "Best for silver" was
   // indistinguishable from the two beneath it on the very ratio it is named for.
   const perSilver = [...(document.querySelectorAll(`${TRADE} tbody tr`) ?? [])].map(
-    (line) => [...line.querySelectorAll('td')].at(-1)?.textContent ?? '',
+    (line) => [...line.querySelectorAll('td')].at(-2)?.textContent ?? '',
   );
   const exact = ROWS.map((point) => point.repeat.damage / point.repeat.silver);
   if (new Set(exact.map((value) => value.toFixed(6))).size === ROWS.length) {
     expect(new Set(perSilver).size).toBe(ROWS.length);
   }
-
-  // **The switch** (S-113): the same column, a different rate, and the head says which one. "Per hired" is
-  // the hired stacks' own damage over the hired units the march loses (S-105), not the march's whole worst
-  // opening over them — the owner read the old column as *"a damage per hired almost above total damage"*.
-  await user.click(screen.getByRole('radio', { name: 'Per hired' }));
-  const heads = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(heads.at(-1)).toBe('Per hired');
-  expect(lastCell()).toBe(ratio(row.repeat.hiredDamage / row.repeat.mercLost));
 });
 
 test('the trade says how many plans the band refused, and nothing when it refused none', () => {
@@ -453,7 +447,7 @@ test('opened, it says what the plan did for this army and reads the trade a marc
   // the unit is the table's own and is said once in its name. And 👑 is gone from "Hired lost": it is the
   // authority pool's glyph, printed two blocks above this table on the same screen (rule 21).
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver']);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
   expect(document.querySelector(TRADE)?.getAttribute('aria-label')).toContain('march');
   // The sweet spot is named by the row's own **name**, and never a second time under it: "the sweet spot"
   // under a row called "Sweet spot" is the same words twice on one line (rule 5).
@@ -676,7 +670,7 @@ test('the bar names its ends after the hired stock, and every row is its own ans
   // to 505 px in a 462 px pane — the sideways scroller the six heads were tuned down to avoid (rule 17) —
   // so the figure is carried by the bar's tip and by the row's own accessible name instead.
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver']);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
   expect(rows[3]?.getAttribute('aria-label') ?? '').toContain(`${compact(33_700)} gold`);
   expect(rows[3]?.getAttribute('aria-label') ?? '').toContain('22 hired lost');
 });
@@ -755,7 +749,7 @@ test('every stop says how long its march takes to recover, under the silver it c
 
   // **Still six columns.** The queue is a second line inside the silver cell, not a head of its own.
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver']);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
 
   // The line over the bar says it for the plan the fold is reading, and "Fought to the end" for the whole
   // campaign — the same two places its silver is said (design rule 5: one name, said where it is expected).
@@ -817,7 +811,7 @@ test('a stop that trains monsters says what it costs in dragon coins, and one th
   }
   // **Still six columns**: the coins are a line inside the silver cell, never a head of their own.
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver']);
+  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
 });
 
 test('the tip carries the gold a march the trade has no room for', () => {
@@ -1047,63 +1041,4 @@ test('the best figure in each column is marked, and Per hired never is', () => {
   const noted = tradeRows().findIndex((row) => (row.textContent ?? '').includes('best a silver'));
   const label = tradeRows()[noted]?.getAttribute('aria-label') ?? '';
   expect(label.match(/best a silver/gu) ?? []).toHaveLength(1);
-});
-
-test('the rate switch offers only what the army spends, and Per gold marks its own row', async () => {
-  const user = userEvent.setup();
-  // A bar that burns stock and buys gold: all three rates are real figures on it.
-  primeBurn();
-  renderWithTheme(<PlanFold />);
-
-  // Three rates, in the order the table offers them — and the control's labels are the column's own words,
-  // so a head cannot be called one thing and its switch another (design rule 5).
-  const group = screen.getByRole('radiogroup', { name: 'Which rate the trade shows' });
-  expect(within(group).getAllByRole('radio').map((one) => one.getAttribute('value'))).toEqual([
-    'silver',
-    'gold',
-    'hired',
-  ]);
-
-  // **Per gold is the column S-113 bought with the width the switch gave back.** Experiment 120 measured it
-  // as the only fact naming its stop on 7 of the 16 benchmark armies — a march nothing else on the table
-  // points at — which is the whole reason it is offered.
-  await user.click(within(group).getByRole('radio', { name: 'Per gold' }));
-  const heads = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(heads).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per gold']);
-
-  const rates = BURN_ROWS.map((row) => row.repeat.damage / row.repeat.gold);
-  const best = rates.indexOf(Math.max(...rates));
-  const marked = tradeRows().flatMap((row, index) =>
-    [...row.querySelectorAll('td')].at(-1)?.getAttribute('data-best') === 'true' ? [index] : [],
-  );
-  expect(marked).toEqual([best]);
-  // Gold has no note under the row's name the way silver and hired do, so its mark goes into the row's own
-  // accessible name — or it would not exist for a screen reader at all (design rule 24).
-  expect(tradeRows()[best]?.getAttribute('aria-label') ?? '').toContain('best a gold');
-});
-
-test('an army that spends one rate is given no switch at all', () => {
-  // Nothing hired, no gold: one rate, and a control with one option is a label pretending to be a choice
-  // (design rule 15).
-  const troopsOnly: CampaignPlan = {
-    ...BURN,
-    alternatives: BURN_ROWS.map((row) => ({
-      ...row,
-      gold: 0,
-      mercLost: 0,
-      repeat: { ...row.repeat, gold: 0, mercLost: 0, hiredDamage: 0 },
-    })),
-  };
-  useRunStore.setState({
-    plan: troopsOnly,
-    planPick: defaultPlanPosition(troopsOnly),
-    includedUnitIds: [],
-    leftOutByPlayer: [],
-  });
-  renderWithTheme(<PlanFold />);
-
-  expect(screen.queryByRole('radiogroup', { name: 'Which rate the trade shows' })).toBeNull();
-  const heads = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  // …and the two stock columns are gone with it, which is S-112's own reading of the same bar.
-  expect(heads).toEqual(['Plan', '🔒 Worst', '🪙 Silver', 'Per silver']);
 });

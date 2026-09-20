@@ -210,93 +210,31 @@ export function putBackWords(row: Pick<PlanRow, 'putBack'>): string | null {
 
 // ---- The insight table (S-113) -------------------------------------------------------------------------
 /**
- * **Which rate the trade's last column is showing.** The table drew two rate columns until S-113 — "Per
- * silver" and "Per hired" — and drawing a third was never possible: a seventh head measured **505 px in a
- * 462 px pane** and was cut (`PlanTrade.tsx`). So the two become **one column the player switches**, which
- * is the owner's own words for it (2026-09-20: *"letting you choose easily and switch between objective
- * with added knowledge"*) and gives a column back.
- */
-export type RateKey = 'silver' | 'gold' | 'hired';
-
-export interface RateColumn {
-  key: RateKey;
-  /** The column's head, and the segmented control's own label: one name per thing (design rule 5). */
-  head: string;
-  /** The reading, off the row's own repeated march — every figure in this table is one march's (S-59). */
-  of: (row: PlanRow) => number;
-  /**
-   * Whether a best-in-column mark may be drawn on it. **False for `hired`**: `docs/investigations/0019`
-   * §2.3 measured damage a hired unit rising monotonically while the march collapses, and §1 calls it
-   * *"never the right compass"*. It is a fact the table carries, never a race it declares won.
-   */
-  markable: boolean;
-  /**
-   * `ratio`'s decimals.
-   *
-   * **Three on silver**, and measured: at two it printed `0.54` on all three of the owner's plans beside a
-   * row *named* "Best for silver" (S-59 screen review, 2026-09-16) — a column that decides a name was
-   * rounding the decision away. Three is enough on a real account (1.89 · 2.37 · 2.96 at the app's
-   * horizon); a seeded army whose plans tie at three decimals is showing the same figure, and a sixth
-   * decimal would be noise dressed as a difference (design rule 5). The gold and hired rates are whole
-   * thousands apart on every army measured, so they keep `ratio`'s own two.
-   */
-  decimals: number;
-}
-
-const RATES: Record<RateKey, RateColumn> = {
-  silver: {
-    key: 'silver',
-    head: 'Per silver',
-    of: (row) => (row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0),
-    markable: true,
-    decimals: 3,
-  },
-  gold: {
-    key: 'gold',
-    head: 'Per gold',
-    of: (row) => (row.repeat.gold > 0 ? row.repeat.damage / row.repeat.gold : 0),
-    markable: true,
-    decimals: 2,
-  },
-  hired: {
-    key: 'hired',
-    head: 'Per hired',
-    of: (row) => (row.repeat.mercLost > 0 ? row.repeat.hiredDamage / row.repeat.mercLost : 0),
-    markable: false,
-    decimals: 2,
-  },
-};
-
-/**
- * The rates **this army actually spends**, in the order the table offers them (design rule 15: nothing on
- * screen without a value).
+ * **Which column the table's best-in-column mark is read off** (S-113).
  *
- * `gold` is here because experiment 120 measured it over the sixteen benchmark armies: it is the **only
- * fact naming its stop on 6 of them** — it points at a march nothing else on the table points at — while
- * *per hour of queue* was the sole namer on **none** and *per dragon coin* exists on two armies and is sole
- * on none. So the queue stays the note under Silver and the coins stay beside it, and gold gets the switch.
- */
-export function rateColumns(rows: readonly PlanRow[]): RateColumn[] {
-  const spends = (of: (row: PlanRow) => number): boolean => rows.some((row) => of(row) > 0);
-  const out: RateColumn[] = [RATES.silver];
-  if (spends((row) => row.repeat.gold)) out.push(RATES.gold);
-  if (spendsStock(rows.map((row) => row.repeat))) out.push(RATES.hired);
-  return out;
-}
-
-/** The rate to show, given what the player last chose and what this army spends. */
-export function rateColumn(rows: readonly PlanRow[], wanted: RateKey): RateColumn {
-  const offered = rateColumns(rows);
-  return offered.find((column) => column.key === wanted) ?? offered[0] ?? RATES.silver;
-}
-
-/**
- * **Which row is the best on one column**, or `null` when the mark would say nothing.
+ * Only the silver rate is markable. The table draws two rate columns — "Per silver" and "Per hired" — and
+ * **Per hired may never wear a mark**: `docs/investigations/0019` §2.3 measured that ratio rising
+ * monotonically while the march collapses, and §1 calls it *"never the right compass"*. It is a fact the
+ * table carries, never a race it declares won.
  *
- * Nothing is marked when every row reads the same — a mark on all five rows is ink that carries no
- * decision — and nothing is marked when two rows tie for the top, because "the best" is a claim about one
- * row and the table would be making it twice (design rule 5).
+ * *(A third rate, "Per gold", was measured as worth a column — experiment 120 found it the only fact naming
+ * its stop on 7 of the 16 benchmark armies — and built as a switch over a single rate column on 2026-09-20.
+ * The owner read the switch and said it did not explain itself, so it was reverted the same day. The
+ * measurement stands in `tools/theorycraft/out/120-what-the-table-should-carry.md` for whatever shape gold
+ * eventually takes; what the table does **not** have is a control nobody asked for.)*
  */
+export const PER_SILVER = {
+  head: 'Per silver',
+  of: (row: PlanRow): number => (row.repeat.silver > 0 ? row.repeat.damage / row.repeat.silver : 0),
+  /**
+   * `ratio`'s decimals, and three is measured: at two it printed `0.54` on all three of the owner's plans
+   * beside a row *named* "Best for silver" (S-59 screen review, 2026-09-16) — a column that decides a name
+   * was rounding the decision away. Three is enough on a real account (1.89 · 2.37 · 2.96 at the app's
+   * horizon); a sixth decimal would be noise dressed as a difference (design rule 5).
+   */
+  decimals: 3,
+} as const;
+
 export function bestOn(
   rows: readonly PlanRow[],
   of: (row: PlanRow) => number,
@@ -317,14 +255,15 @@ export interface TableMarks {
   damage: number | null;
   silver: number | null;
   hiredLost: number | null;
-  rate: number | null;
+  perSilver: number | null;
 }
 
-export function tableMarks(rows: readonly PlanRow[], rate: RateColumn): TableMarks {
+export function tableMarks(rows: readonly PlanRow[]): TableMarks {
   return {
     damage: bestOn(rows, (row) => row.repeat.damage, 'higher'),
     silver: bestOn(rows, (row) => row.repeat.silver, 'lower'),
     hiredLost: bestOn(rows, (row) => row.repeat.mercLost, 'lower'),
-    rate: rate.markable ? bestOn(rows, rate.of, 'higher') : null,
+    // Per silver, and **not** Per hired: see `PER_SILVER` above.
+    perSilver: bestOn(rows, PER_SILVER.of, 'higher'),
   };
 }
