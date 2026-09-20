@@ -15,16 +15,25 @@ export function amount(value: number): string {
   return count(Math.round(value));
 }
 
-const COMPACT = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+const COMPACT = [
+  new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 }),
+  new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }),
+  new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }),
+] as const;
 
 /**
  * The same figure with the digits a glance needs: "1.7M", "890K". Only for places where the line
  * has to stay short — the phone bar's quick summary — never where a number is read off and typed
  * into the game.
+ *
+ * `decimals` is there for the same measured reason `ratio`'s is (S-59, below): a figure a player *compares*
+ * marches by has to be printed to where two marches differ. One decimal is enough for the phone bar's
+ * summary, which is read rather than compared; the recap's damage a hired unit is compared with the last
+ * run's, so it carries two (S-112, the owner: *"the dmg per merc using a small notation: 265k, 1.23m"*).
  */
-export function compact(value: number): string {
+export function compact(value: number, decimals: 0 | 1 | 2 = 1): string {
   if (!Number.isFinite(value)) return '—';
-  return COMPACT.format(Math.round(value));
+  return (COMPACT[decimals] ?? COMPACT[1]).format(Math.round(value));
 }
 
 /**

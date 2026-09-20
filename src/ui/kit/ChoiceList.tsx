@@ -21,6 +21,7 @@
  */
 import { Button, Group, Radio, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
+import { ChevronDown } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 /**
@@ -102,11 +103,23 @@ export function ChoiceList({
           ))}
         </Stack>
       )}
+      {/* The fold's own control, and it has to look like one (owner, 2026-09-19: *"the button to
+          change stacking algo should be more visible on mobile"*). It was `subtle` and
+          `compact-sm` — 26 px of brass text under a bordered card, which read as a caption on the
+          card rather than as the way to the other three options, and was under every touch-target
+          floor there is (the review of 2026-09-13 made the same finding about a 34 px chip).
+
+          Now it is what it does: a bordered button the width of the cards above it, at the 44 px a
+          thumb needs, with the chevron that says a list opens under it (design rules 8 and 19). No
+          new component and no CSS — `variant="default"` is the same outline the option cards wear,
+          so the fold reads as one block. */}
       {folded && (
         <Button
-          variant="subtle"
-          size="compact-sm"
-          mt={6}
+          variant="default"
+          fullWidth
+          h={44}
+          mt="xs"
+          rightSection={<ChevronDown size={16} aria-hidden />}
           onClick={() => {
             setExpanded(true);
           }}

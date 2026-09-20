@@ -1898,6 +1898,311 @@ export function shapeScorer(request: StackRequest, gap: number = DEFAULT_GAP, fi
 }
 
 /**
+ * **The plan for an army that hires nothing** (S-111; owner, 2026-09-20: *"build the troops only
+ * frontier"*, after experiment 115 measured that the Tier ladder march is not this army's best play).
+ *
+ * `planCampaign` below refuses an army with no hired stock, and for a reason as far as it goes: its whole
+ * search spreads a stock over marches, and there is no stock here. But refusing answers the wrong question.
+ * With nothing draining, every march is **identical and repeatable** — the campaign is one march times the
+ * horizon — and the question that is left, *which march*, still has two dozen answers on a frontier.
+ *
+ * **What is traded.** Damage against the two things a troop march really costs: the **silver** that retrains
+ * what died, and the **training queue** it sits in (the recap's *time to recover*, the owner's speedups).
+ * There is no third axis here — `mercLost` is 0 on every row and a march that spends no dominance spends no
+ * dragon coin — which is why these stops are ordered on silver where the hired bar is ordered on burn.
+ *
+ * **The family searched, and why it is this one** (experiment 116, `out/116-troops-only-frontier.md`, five
+ * armies from the first-run ten types to a 24-type G1–G6 account):
+ *
+ * - **tier windows** — every type whose tier is in `[lo, hi]`, O(T²) of them. On all three armies small
+ *   enough to enumerate every one of the 1 023 subsets against, this family contains the **true optimum**,
+ *   at 6 shapes priced instead of 1 023.
+ * - **greedy backward elimination** — from the whole army, drop the type whose removal costs the least
+ *   damage, and again, keeping every march on the way. Also 100 % of the optimum on those three, and on the
+ *   24-type army it finds a march the windows do not: **178 175 929** against 172 630 993, 3.2 % more.
+ * - **the whole army**, always — the Tier ladder's own march, so the bar can show the player where the march
+ *   Generate answers with today actually sits.
+ *
+ * The family the search already had — the sizer over a **prefix** of `rankTroops` — was measured and
+ * rejected: **91.6 %** of the optimum on the first-run army at 12 000 and 20 000 leadership (2 710 128
+ * against 2 959 404 at 12 000), 91.7 % at 4 100, and **38.9 %** of the best found on the 24-type one, because the winning subset is a
+ * *tier window* and not a prefix of a damage-per-HP ranking.
+ *
+ * Every march is built by the app's own sizer over its subset (`sizedShape`, which is `sizeStacks`), so a
+ * stop the bar offers is a march the March pane can re-size and the player can type into the game.
+ *
+ * **One sizing, where the hired search crosses three.** `sizedShape` is asked for `elite` only, because with
+ * nothing hired the other two are the same march: `ms` and `msRelaxed` differ from it by a ceiling written on
+ * the authority and dominance pools, and experiment 114 §A measured the three producing **identical counts to
+ * the unit** on a hired-free army at 4 100, 12 000 and 20 000 leadership. So the family this searches is the
+ * Elite sizer's subsets, and on this army that is every subset there is.
+ */
+function planTroopsOnly(input: CampaignInput): CampaignPlan {
+  const { request } = input;
+  const enemyStacks = enemySquadCount(request.enemy);
+  const table = effectiveTable(request);
+  const byId = new Map(table.map((entry) => [entry.id, entry]));
+  const troopIds = table.filter((entry) => entry.pool === 'leadership').map((entry) => entry.id);
+  /** The campaign is the march repeated, so the horizon only multiplies; one march when none was asked for. */
+  const marches = input.marchTarget === undefined ? 1 : Math.max(1, Math.floor(input.marchTarget));
+
+  interface Shape {
+    ids: string[];
+    rungs: { entry: Effective; count: number }[];
+    march: PlanMarch;
+  }
+  const priced = new Map<string, Shape>();
+  /** Size one subset and price it, or `null` when the leadership pays for nothing in it. */
+  const shapeOf = (ids: readonly string[]): Shape | null => {
+    if (ids.length === 0) return null;
+    const key = [...ids].sort((a, b) => (a < b ? -1 : 1)).join(',');
+    const already = priced.get(key);
+    if (already) return already;
+    const sized = sizedShape(request, byId, [], 'elite', new Set(ids));
+    if (sized.rungs.length === 0) return null;
+    const shape: Shape = {
+      ids: sized.rungs.map((rung) => rung.entry.id),
+      rungs: sized.rungs,
+      march: priceMarch(request.recovery, sized.rungs, [], marchOf(sized.rungs, enemyStacks)),
+    };
+    priced.set(key, shape);
+    return shape;
+  };
+
+  const shapes: Shape[] = [];
+  const take = (shape: Shape | null): void => {
+    if (shape && !shapes.includes(shape)) shapes.push(shape);
+  };
+
+  // The whole army first, so it is in the set whatever the two families find.
+  take(shapeOf(troopIds));
+  // Tier windows.
+  const tiers = [...new Set(troopIds.map((id) => byId.get(id)?.unit.tier ?? 0))].sort((a, b) => a - b);
+  for (const lo of tiers) {
+    for (const hi of tiers) {
+      if (hi < lo) continue;
+      take(
+        shapeOf(
+          troopIds.filter((id) => {
+            const tier = byId.get(id)?.unit.tier ?? 0;
+            return tier >= lo && tier <= hi;
+          }),
+        ),
+      );
+    }
+  }
+  // Greedy backward elimination, keeping every march it passes through.
+  {
+    let live = [...troopIds];
+    while (live.length > 1) {
+      let best: { ids: string[]; shape: Shape } | null = null;
+      for (const id of live) {
+        const without = live.filter((other) => other !== id);
+        const shape = shapeOf(without);
+        if (!shape) continue;
+        if (!best || shape.march.damage > best.shape.march.damage) best = { ids: without, shape };
+      }
+      if (!best) break;
+      take(best.shape);
+      live = best.ids;
+    }
+  }
+
+  const totalsOf = (shape: Shape): PlanTotals => {
+    const { march } = shape;
+    const totalDamage = marches * march.damage;
+    const silver = marches * march.silver;
+    return {
+      counts: march.counts,
+      shape: 'elite',
+      totalDamage,
+      // No hired stack is fielded, so none of that damage is hired damage and none of the stock is lost.
+      hiredDamage: 0,
+      silver,
+      gold: marches * march.gold,
+      dragonCoins: marches * march.dragonCoins,
+      seconds: marches * march.seconds,
+      mercLost: 0,
+      marches,
+      damagePerSilver: silver > 0 ? totalDamage / silver : 0,
+      // `Infinity`-safe as everywhere else: nothing hired is lost, so the ratio has no denominator.
+      damagePerMercenary: Infinity,
+      damagePerDragonCoin: Infinity,
+      repeat: {
+        damage: march.damage,
+        hiredDamage: 0,
+        silver: march.silver,
+        gold: march.gold,
+        dragonCoins: march.dragonCoins,
+        seconds: march.seconds,
+        mercLost: 0,
+      },
+    };
+  };
+
+  const all = shapes.map(totalsOf);
+  /**
+   * **The frontier: undominated on more damage for less silver.** The queue is not a third axis to be
+   * undominated on — experiment 116 measured the silver frontier and the queue frontier as the same list on
+   * the two biggest armies and within two marches of each other on the three smallest — so it is carried as
+   * a *figure on every row* rather than as a dimension of the search, which is what lets a player who is
+   * short of speedups read the bar for himself.
+   */
+  const undominated = all.filter(
+    (one) =>
+      !all.some(
+        (other) =>
+          other !== one &&
+          other.totalDamage >= one.totalDamage &&
+          other.silver <= one.silver &&
+          (other.totalDamage > one.totalDamage || other.silver < one.silver),
+      ),
+  );
+  /**
+   * Two subsets can price to the **same** damage for the same silver — a tier window and the greedy walk
+   * meeting on one march, or two types the sizer fields identically — and a strict-improvement test keeps
+   * both of them. They are one plan; the reference table under the bar draws a row a plan
+   * (`PlanPanel.tsx`, keyed on the silver) and would draw two rows with one key. Deduplicated here, where
+   * the frontier is defined, rather than in the table that reads it.
+   */
+  const seenPoint = new Set<string>();
+  const frontier = undominated
+    .sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage)
+    .filter((one) => {
+      const key = `${String(one.silver)}|${String(one.totalDamage)}`;
+      if (seenPoint.has(key)) return false;
+      seenPoint.add(key);
+      return true;
+    });
+
+  /**
+   * **The stops**, in the bar's own left-to-right order — spend less … spend more — and under the bar's own
+   * rule that a name is worn by one plan only (`offer` in `planCampaign`):
+   *
+   * - **silver saver** — the cheapest march on the frontier that still earns its place: the thrift end of a
+   *   troops-only frontier is four tier-1 stacks at **0.2 damage a silver** against the whole army's 0.56
+   *   (experiment 116), and that is not an answer anybody would stand on. The rule is *at least half the best
+   *   rate on the frontier*.
+   * - **sweet spot** — the knee: the plan furthest above the straight line between the two ends, which is
+   *   where one more silver stops buying its share of damage. It is the bar's default stand.
+   * - **steady max** — the most damage the army can do, which is the frontier's dear end.
+   *
+   * **It is one criterion where the hired band has three** (`inBand`, and the S-111 review is right to say
+   * so): that band also asks for at least half the winner's *damage* and refuses a march standing on a
+   * single troop stack. Neither is dropped by oversight. The damage floor would refuse this bar's own
+   * thrift end — the silver saver at 12 000 leadership is 49.4 % of the steady max — and refusing it is
+   * exactly what the owner did *not* ask for here: with no stock to ration, a cheap march is the whole point
+   * of the left end. The single-stack rule is unreachable rather than dropped: a one-stack march is the
+   * enemy's first kill and strikes **zero** times (`expectedHits(1, N)` = 0, measured at 115 §F, where one
+   * type alone deals 0 damage), so it is dominated by every other shape and never reaches the frontier.
+   */
+  const cheapestRate = frontier.length > 0 ? Math.max(...frontier.map((row) => row.damagePerSilver)) : 0;
+  const worth = frontier.filter((row) => row.damagePerSilver >= cheapestRate / 2);
+  const band = worth.length > 0 ? worth : frontier;
+  const stops: PlanRow[] = [];
+  const offer = (row: PlanTotals | undefined, pick: PlanPick): void => {
+    if (!row) return;
+    if (stops.some((already) => already.counts === row.counts)) return;
+    stops.push({
+      ...row,
+      pick,
+      label: `${String(Object.keys(row.counts).length)} stacks · ${String(
+        Math.round(row.repeat.silver),
+      )} silver a march`,
+      bestFor: { silver: false, hired: false },
+    });
+  };
+  const first = band[0];
+  const last = band.at(-1);
+  offer(first, 'silver-saver');
+  /** The knee, on the chord between the two ends of the band; the ends themselves are never the knee. */
+  const knee = ((): PlanTotals | undefined => {
+    if (!first || !last || band.length < 3 || last.silver === first.silver) return undefined;
+    const slope = (last.totalDamage - first.totalDamage) / (last.silver - first.silver);
+    let best: { row: PlanTotals; gap: number } | undefined;
+    for (const row of band.slice(1, -1)) {
+      const gap = row.totalDamage - (first.totalDamage + slope * (row.silver - first.silver));
+      if (!best || gap > best.gap) best = { row, gap };
+    }
+    return best?.row;
+  })();
+  offer(knee, 'sweet-spot');
+  offer(last, 'steady-max');
+  // Left to right, cheapest first, like every bar this app draws.
+  stops.sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage);
+  /**
+   * **A bar too short for a knee still has to name the row it opens on** (found by the S-111 review, which
+   * swept 270 troop-window × leadership armies and found **60** with one or two stops — every G1-only army,
+   * every G1–G2 one).
+   *
+   * There is no knee inside a band of two, so nothing wore `sweet-spot`, and the two readers of "where does
+   * this bar stand?" then disagreed: the plan's own totals took the **dearest** stop and `recommend` took the
+   * **cheapest**. On screen that is `PlanBar` painting the brass *Sweet spot* mark on the row `PlanTrade`
+   * names *Silver saver*, `PlanPanel` writing *"the sweet spot it found for this army is …"* about one row
+   * and *"Fought to the end …"* about another — design rule 5 broken three ways over.
+   *
+   * So the stand is chosen **once**, and the row it lands on wears the word the copy uses for it. Where
+   * there is a knee it is the knee, as on the hired bar; where there is not it is the **dearest** stop —
+   * with two answers on the bar, *spend less* and *hit hardest*, the one to recommend is the one that hits.
+   */
+  const stand: PlanRow | undefined = stops.find((row) => row.pick === 'sweet-spot') ?? stops.at(-1);
+  if (stand && stand.pick !== 'sweet-spot') stand.pick = 'sweet-spot';
+  const bestRate = stops.reduce<PlanRow | undefined>(
+    (best, row) => (best === undefined || row.damagePerSilver > best.damagePerSilver ? row : best),
+    undefined,
+  );
+  for (const row of stops) row.bestFor = { silver: row === bestRate, hired: false };
+
+  if (!stand) {
+    // No shape the leadership pays for: an army with no troop type it can field, or a pool too small for a
+    // single unit of anything. It is a refusal, and it says which resource is missing rather than talking
+    // about mercenaries this army does not have (`refusalOf`, `src/ui/sections/march/generate.ts`).
+    throw new Error('planCampaign: no march fits this army’s housing');
+  }
+  const chosen = stand;
+  const chosenShape = shapes.find((shape) => shape.march.counts === chosen.counts);
+  if (!chosenShape) throw new Error('planCampaign: the chosen stop has no shape');
+  const leadershipUsed = chosenShape.rungs.reduce((sum, rung) => sum + rung.count * rung.entry.cost, 0);
+
+  return {
+    /** The reference table under the bar: one row a plan the bar may offer, which here is the frontier. */
+    curve: frontier.map((row) => ({
+      silver: row.silver,
+      damage: row.totalDamage,
+      hiredDamage: 0,
+      damagePerSilver: row.damagePerSilver,
+      mercLost: 0,
+      thriftyDamage: row.totalDamage,
+      thriftyMercLost: 0,
+      thriftyPerMercenary: Infinity,
+    })),
+    ...chosen,
+    march: chosenShape.march,
+    binding: {
+      silver: input.silverBudget !== undefined && chosen.silver >= input.silverBudget * 0.9,
+      // Nothing is hired, so nothing hired binds; the leadership is what the march is sized against.
+      mercenaries: false,
+      leadership: leadershipUsed >= request.housing.leadership * 0.999,
+      marches: input.marchTarget !== undefined,
+    },
+    alternatives: stops,
+    leftOut: Math.max(0, frontier.length - stops.length),
+    ...(input.withTrade === true ? { trade: [...frontier] } : {}),
+    ...(input.silverBudget === undefined
+      ? {
+          // The same row the plan's own totals are, and the same row the bar opens on: one stand, not two.
+          recommend: chosen,
+          knee: { ...(knee ?? chosen), label: 'the knee' },
+          mostEfficient: bestRate ?? chosen,
+          // Nothing hired is spent, so "the plan that buys the most damage a mercenary" has no meaning here:
+          // every row's ratio is `Infinity`. The field is the bar's own stand rather than a second opinion.
+          mostThrifty: chosen,
+        }
+      : {}),
+  };
+}
+
+/**
  * Plan the campaign. The only inputs are the army and the enemy: the marches, the counts, and the split
  * between the two resources all fall out of them.
  */
@@ -1985,6 +2290,30 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     sustain[entry.id] = Infinity;
   }
   const leadership = request.housing.leadership;
+
+  /**
+   * **The army that hires nothing goes to its own planner** (S-111), and this is the earliest point at which
+   * that is knowable: `stock` is what a type holds, and an uncapped monster's stock is the pool it stands in,
+   * which the loop above has just written.
+   *
+   * The test is *"can this army put one unit that is spent for good on the field?"*, and it is **two**
+   * questions rather than one — a stock, **and** a pool with room for a unit of it. The first draft of this
+   * gate asked only for the stock and left two crashes standing (found by the S-111 review): a bear in the
+   * stock with **no authority housing**, and a mercenary selected on an account whose pool is still typed at
+   * zero. Both hold stock, neither can field it, and both went down the search's path to the throw. Every
+   * shape the search prices is checked by `fitsHousing`, so a hired type with no room is a type no candidate
+   * can ever carry.
+   *
+   * **Nothing that answers today can reach this branch**, which is the load-bearing claim of the story: a
+   * plan the search returns has at least one hired unit on the field, and that is exactly what this refuses.
+   * Held by measurement rather than by argument — the gate replayed over all 34 scenarios of
+   * `tests/engine/plan-scenarios.ts` marks none of them, and the regenerated benchmark payload is
+   * byte-identical on every field of all 17 armies but `run` and `planMs`.
+   */
+  const hiresNothing = mercTypes.every(
+    (entry) => (stock[entry.id] ?? 0) <= 0 || request.housing[entry.pool] < entry.cost,
+  );
+  if (hiresNothing) return planTroopsOnly(input);
 
   /**
    * The largest count of a type that still allows `marches` marches: fielding n loses `chunks(n)` for good, so

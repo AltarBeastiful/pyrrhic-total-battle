@@ -47,7 +47,7 @@ import type { PlanRow } from '@/engine/plan';
 import { Glyph } from '@/ui/domain';
 
 import { amount, compact, duration, per, ratio } from './format';
-import { bestForWords, planWords } from './picks';
+import { bestForWords, planWords, spendsStock } from './picks';
 import classes from './march.module.css';
 
 export interface PlanTradeProps {
@@ -70,6 +70,8 @@ export interface PlanTradeProps {
 const PER_SILVER_DECIMALS = 3;
 
 export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps) {
+  // Whether this bar trades a hired stock at all; the two stock columns hang off it (S-112, `./picks`).
+  const spendsHired = spendsStock(rows);
   const loudest = Math.max(1, ...rows.map((row) => row.repeat.damage));
   // Two module classes on one cell: the name's own width rules, and the pin that keeps it on the left edge
   // while the figures scroll. Composed here because `className` may only ever carry a module value
@@ -133,15 +135,25 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
             <Table.Th scope="col" ta="end">
               <Glyph kind="silver" /> Silver
             </Table.Th>
-            <Table.Th scope="col" ta="end">
-              <Glyph kind="mercenaries" /> Hired lost
-            </Table.Th>
+            {/* **The two stock columns draw only where there is a stock** (S-112, design rule 15). On an
+                army that hires nothing — which has had a bar of its own since S-111 — "Hired lost" was a
+                column of noughts and "Per hired" a column of dashes: four cells of width, in a 420 px pane
+                where a seventh column was measured at 505 px and cut, spent saying nothing. The same
+                reading decides the bar's ends and the recap's row (`spendsStock`, `./picks`), so the block
+                either speaks of a stock throughout or never. */}
+            {spendsHired && (
+              <Table.Th scope="col" ta="end">
+                <Glyph kind="mercenaries" /> Hired lost
+              </Table.Th>
+            )}
             <Table.Th scope="col" ta="end">
               Per silver
             </Table.Th>
-            <Table.Th scope="col" ta="end">
-              Per hired
-            </Table.Th>
+            {spendsHired && (
+              <Table.Th scope="col" ta="end">
+                Per hired
+              </Table.Th>
+            )}
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -180,7 +192,12 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                   (point.repeat.dragonCoins ?? 0) > 0
                     ? `${amount(point.repeat.dragonCoins ?? 0)} dragon coins, `
                     : ''
-                }${amount(point.repeat.mercLost)} hired lost a march${note === null ? '' : `, ${note}`}`}
+                }${
+                  // Said in the row's own name only where the bar trades a stock, for the same reason the
+                  // column is drawn only there (S-112): a reader is told what the march spends, not what it
+                  // does not have.
+                  spendsHired ? `${amount(point.repeat.mercLost)} hired lost a march` : ''
+                }${note === null ? '' : `${spendsHired ? ', ' : ''}${note}`}`}
                 aria-selected={current}
                 // The row on screen, the way the objectives strip says it: one tonal step for the eye, and
                 // for a reader the two attributes that mean it. Never colour alone (rule 24) — and the
@@ -286,7 +303,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                       ` · ${amount(point.repeat.dragonCoins ?? 0)} dragon coins`}
                   </Text>
                 </Table.Td>
-                <Table.Td ta="end">{amount(point.repeat.mercLost)}</Table.Td>
+                {spendsHired && <Table.Td ta="end">{amount(point.repeat.mercLost)}</Table.Td>}
                 <Table.Td ta="end">
                   {ratio(per(point.repeat.damage, point.repeat.silver), PER_SILVER_DECIMALS)}
                 </Table.Td>
@@ -298,7 +315,9 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                     troops do most of the hitting it printed nearly the Worst column again. The numerator is
                     the part of that opening the hired stacks struck for (`PlanRepeat.hiredDamage`), which
                     is the one reading of "a hired" the engine has (design rule 5). */}
-                <Table.Td ta="end">{ratio(per(point.repeat.hiredDamage, point.repeat.mercLost))}</Table.Td>
+                {spendsHired && (
+                  <Table.Td ta="end">{ratio(per(point.repeat.hiredDamage, point.repeat.mercLost))}</Table.Td>
+                )}
               </Table.Tr>
             );
           })}

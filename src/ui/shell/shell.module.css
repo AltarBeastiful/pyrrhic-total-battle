@@ -416,6 +416,48 @@
   box-shadow: var(--pyr-sheet-shadow);
 }
 
+/* The sheet's header is also what a thumb slides down to close it (`MarchSheet.tsx`, owner
+   2026-09-19). The whole row is the target — 60 px of Mantine's own header, full width — and the
+   handle inside it is the sign that it is one.
+
+   `touch-action: none` is what makes the gesture ours: without it the browser claims the touch for
+   a scroll after a few pixels and sends a `pointercancel` instead of the moves. It costs the one
+   thing a header can otherwise do, which is scroll the sheet from its top edge; the body under it,
+   which is all of the March, keeps its own scroll untouched.
+
+   The grabber has room of its own above the title rather than a line of its own: a row of 60 px is
+   already taller than the 20 px M3 gives the handle, and a second row would push the recap down. */
+.sheetGrip {
+  cursor: grab;
+  touch-action: none;
+  /* The sheet's own material, not the page's. Mantine paints a sticky modal header with
+     `--mantine-color-body` so that the body cannot show through it; here the body it occludes is
+     the sheet, so the page ground drew a visible band across the top of it — plainly in the dark
+     scheme, where the two are three steps apart. One surface (docs/design.md §2), and it still
+     occludes: `--pyr-pane` is opaque. */
+  background: var(--pyr-pane);
+  padding-top: calc(var(--mb-padding, var(--mantine-spacing-md)) + 0.375rem);
+}
+
+.sheetGrip[data-dragging] {
+  cursor: grabbing;
+}
+
+/* M3's drag handle: 32 × 4 dp, fully rounded, centred on the top edge, in the ink a muted line
+   carries. Decorative — the sheet's Close button and `Escape` are the ways to it that a keyboard
+   and a screen reader are given (`MarchSheet.tsx`). */
+.grabber {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  translate: -50% 0;
+  width: 2rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--mantine-color-dimmed);
+  opacity: 0.45;
+}
+
 /* Both bars carry the page's own faint top light, so the chrome and the panels are one material. */
 .barSurface {
   background: var(--pyr-bar);

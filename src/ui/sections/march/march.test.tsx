@@ -25,10 +25,12 @@ import type * as WorkerClient from '@/worker/client';
 
 import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
-import { amount, duration, ratio } from './format';
+import { amount, compact, duration, ratio } from './format';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
+import { hiredLost } from './hired';
 import { pickOf, useRunStore } from './runStore';
+import { worstDamageByPool } from './worst';
 
 // The whole page shares one calculation client; in jsdom it is the same engine, on the main thread.
 vi.mock('@/ui/calcClient', async () => {
@@ -1058,3 +1060,60 @@ test('a cached result belonging to another march is left alone', async () => {
   expect(lastResult()).toBeNull();
   expect(screen.getByText(/Nothing generated yet/)).toBeTruthy();
 });
+
+/**
+ * S-112 — **the recap's hired line says what the stock bought** (owner, 2026-09-20: *"in the battle summary,
+ * instead of the percent of total mercs spent, replace it with the dmg per merc using a small notation:
+ * 265k, 1.23m… and note this should be updated with each generate and troop left out recalculation"*).
+ *
+ * The share of the account's stock was a fact about the account; this is a fact about the march, and it is
+ * the one the bar's "Per hired" column already prints — so the two screens say one thing (design rule 5).
+ */
+test('the recap says what a hired unit bought, and re-says it when the march is re-sized', async () => {
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 92 }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup({ housing: { leadership: 4_100, authority: 2_000, dominance: 0 } });
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  /** The figure as the engine defines it (S-105 over S-108): the authority stacks' own worst opening. */
+  const saidNow = (): string => {
+    const snapshot = lastResult();
+    if (!snapshot) throw new Error('no march');
+    const lost = hiredLost(snapshot.result.stacks);
+    const hiredDamage = worstDamageByPool(
+      snapshot.summary.journals.enemyFirst,
+      snapshot.result.stacks,
+    ).authority;
+    return `· ${compact(hiredDamage / lost, 2)} a hired unit`;
+  };
+
+  const line = screen.getByText(/a hired unit$/);
+  expect(line.textContent).toBe(saidNow());
+  // The share of the account's whole stock is gone from the card, which is what the figure replaced.
+  expect(screen.queryByText(/% of \d/)).toBeNull();
+
+  // **And it follows a re-size, not just a Generate.** Leaving a troop type out re-sizes the march in place
+  // (`resizeMarch`) — the hired stacks are re-derived under a new troop floor (S-107), so both halves of
+  // this ratio move and the card has to be reading the march it is drawing.
+  const before = line.textContent;
+  // A **troop** type, explicitly: leaving the hired stack out would leave nothing hired to divide by, and
+  // the line would rightly disappear instead of moving (design rule 15). The first stack of this march is
+  // the hired one, so the index is found rather than assumed.
+  const troopAt = lastResult()?.result.stacks.findIndex((stack) => stack.pool === 'leadership') ?? -1;
+  if (troopAt < 0) throw new Error('this march fields no troops');
+  const { unit, count } = stackAt(troopAt);
+  fireEvent.click(stackPill(unit, count));
+  await waitFor(() => {
+    expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
+  });
+  await waitFor(() => {
+    expect(screen.getByText(/a hired unit$/).textContent).toBe(saidNow());
+  });
+  expect(screen.getByText(/a hired unit$/).textContent).not.toBe(before);
+}, 30_000);

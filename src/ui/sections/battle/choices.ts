@@ -19,7 +19,24 @@ export interface MethodChoice {
 export const isMethod = (value: string): value is SetupMethod =>
   (METHODS as readonly string[]).includes(value);
 
+/**
+ * The four, **the plan first** (owner, 2026-09-19: *"reorder complete automatization to first and
+ * default"*). It leads because it is the one choice that answers the question a player brings to the
+ * app — how many marches this army can fight, how big each one is and what it carries — while the
+ * other three are sizings for a player who wants to fix the order of the fall themselves.
+ *
+ * He asked for it to be the **default** too, and that is measured and deliberately not done yet: the
+ * plan refuses an army that hires nothing, and a first-run profile hires nothing, so the opening
+ * Generate of a new account would answer a refusal instead of a march (`state/defaults.ts` carries
+ * the reason at the line). The order here is the card's alone — the stored ids and the order
+ * `METHODS` lists them in are untouched, nothing is migrated, and no link changes meaning.
+ */
 export const METHOD_CHOICES: readonly MethodChoice[] = [
+  {
+    value: 'plan',
+    title: 'Complete optimization',
+    description: 'Plans the marches your army can fight: how big each one is, and what it carries.',
+  },
   {
     value: 'elite',
     title: 'Tier ladder',
@@ -34,11 +51,6 @@ export const METHOD_CHOICES: readonly MethodChoice[] = [
     value: 'custom',
     title: 'Your own order',
     description: 'You decide which stack falls first.',
-  },
-  {
-    value: 'plan',
-    title: 'Complete optimization',
-    description: 'Plans the marches your army can fight: how big each one is, and what it carries.',
   },
 ];
 

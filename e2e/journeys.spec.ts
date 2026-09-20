@@ -25,6 +25,7 @@ import {
   bonusesCard,
   bonusesDisclosure,
   closeMarchSheet,
+  dismissMarchSheet,
   fillHousing,
   generateButton,
   housingValue,
@@ -194,6 +195,9 @@ async function seedProfile(page: Page): Promise<void> {
   await generateButton(page).first().click();
   await settle(page);
   await expect.poll(() => marchAnswer(page), { timeout: 30_000 }).not.toContain('No march yet');
+  // Below 1200 px the run has opened the March sheet on its own (2026-09-19); the seeding is done
+  // through the page behind it, so it goes away again before anything else is asked of it.
+  await dismissMarchSheet(page);
   // Both halves of the profile are written debounced: the document through the account menu's own
   // word, the cached result under its own key.
   await waitForSaved(page);
@@ -263,16 +267,19 @@ async function journey1(page: Page, phone: boolean): Promise<void> {
   record('J1 screens the page travels on its own', Math.abs(landed - atTheForm), 0);
 
   if (phone) {
-    // The bar is sticky and it carries the new answer: nothing to scroll to read it.
-    await expect(recapSummary(page)).toBeInViewport();
-    record('J1 screens to read the recap', 0, 0);
-
-    // Tap 3 — the sheet *is* the March: the recap first, then the army, then the counts, all of it
-    // inside the sheet and none of it in the page behind.
-    await taps.tap(recapSummary(page));
+    // **There is no tap 3 any more** (owner, 2026-09-19: *"generate should open recap by default
+    // when finished"*). The sheet *is* the March — the recap first, then the army, then the counts,
+    // all of it inside the sheet and none of it in the page behind — and the run opens it, so the
+    // daily march is two taps: the number that changed, and Generate. The budget stays at 3, which
+    // is what it is for: a ceiling, and this is now a tap under it.
     const sheet = page.getByRole('dialog', { name: 'March' });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByText(/^Expected damage/)).toBeVisible();
+
+    // Nothing to scroll to read it either: the sheet is the window under the app bar.
+    await expect(sheet.getByText(/^Expected damage/)).toBeInViewport();
+    record('J1 screens to read the recap', 0, 0);
+
     await expect(marchPills(page).first()).toBeVisible();
 
     // The pills are the counts (owner, 2026-09-13): the first one is the first count to read.
@@ -327,8 +334,8 @@ async function journey2(page: Page): Promise<void> {
   await taps.tap(generateButton(page).first());
   await settle(page);
 
-  // The march itself is one tap away in the sheet on a phone and in the pane on a desktop; reading
-  // it is not part of the journey's budget, so the sheet is opened outside the counter.
+  // The march itself is in the sheet on a phone — where the run has just opened it — and in the pane
+  // on a desktop; reading it is not part of the journey's budget either way.
   const sheet = (await recapSummary(page).count()) > 0;
   if (sheet) await openMarchSheet(page);
   await expect(marchPills(page).first()).toBeVisible({ timeout: 30_000 });
@@ -403,12 +410,10 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   await taps.tap(generateButton(page).first());
   await settle(page);
 
-  // On a phone the March is the sheet the bottom bar opens; on a desktop it is the pane's column.
+  // On a phone the March is the sheet, and the finished run opened it (2026-09-19) — a tap this
+  // journey used to spend; on a desktop it is the pane's column, which was never hidden.
   const march = phone ? page.getByRole('dialog', { name: 'March' }) : page.locator('#march');
-  if (phone) {
-    await taps.tap(recapSummary(page));
-    await expect(march).toBeVisible();
-  }
+  if (phone) await expect(march).toBeVisible();
 
   // The plan itself, **open on arrival** — it is part of the answer, not a fold to hunt for (S-59). No tap.
   const fold = march.getByRole('button', { name: /^Plan / });

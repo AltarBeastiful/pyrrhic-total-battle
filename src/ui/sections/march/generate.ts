@@ -156,6 +156,16 @@ export function cancelGenerate(): void {
  * run that fails for another reason is a bug, and hiding the message would only make it harder to report.
  */
 export function refusalOf(error: unknown): string {
+  // **The housing, not the mercenaries** (S-111). The plan used to refuse every army with no hired stock and
+  // this sentence sent the player to the Mercenaries card; since S-111 an army that hires nothing gets a
+  // plan of its own, and the only refusal left is a march that does not fit — a pool with no room in it for
+  // a single unit of anything the account holds. Sending him to hire a mercenary would be wrong advice.
+  if (error instanceof Error && error.message.includes('no march fits')) {
+    return (
+      'There is no march to plan from this army. Check the housing on the bar: a pool has to hold at least ' +
+      'one unit of something you own.'
+    );
+  }
   if (error instanceof Error && error.message.includes('no feasible plan')) {
     return (
       'There is no campaign to plan from this army. This method spreads the hired stock you own over the ' +

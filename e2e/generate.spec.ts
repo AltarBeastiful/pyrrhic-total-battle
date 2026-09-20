@@ -553,3 +553,53 @@ test('mobile: the bar carries the answer, and the recap is one tap away', async 
 
   expect(problems).toEqual([]);
 });
+
+/**
+ * The two things the phone's sheet does by itself (owner, 2026-09-19: *"on mobile, generate should
+ * open recap by default when finished. Also it would help to be able to close it with a gesture like
+ * sliding down"*). Both are gestures rather than markup, so only a browser can answer for them.
+ */
+test('mobile: a finished Generate opens the recap, and a swipe down puts it away', async ({ page }) => {
+  const problems = watchConsole(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openApp(page);
+
+  const sheet = page.getByRole('dialog', { name: 'March' });
+  await expect(sheet).toHaveCount(0);
+
+  // Nothing is pressed but Generate, and nothing is asked for afterwards: the answer *is* the sheet.
+  await fillHousing(page, 'Leadership', 4100);
+  await generateButton(page).click();
+  await settle(page);
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText(/^Expected damage/)).toBeVisible();
+
+  // The slide-up has to *finish* before the header can be measured: for its first 300 ms the sheet
+  // is still below the window, and a drag started at those coordinates lands on the page behind it.
+  await sheet.evaluate(async (node) => {
+    const element = node as unknown as {
+      getAnimations: (options?: { subtree?: boolean }) => { finished: Promise<unknown> }[];
+    };
+    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished));
+  });
+
+  // And the way back out is a swipe down its header — M3's drag handle, with the whole 60 px row
+  // round it as the target. Driven with the pointer rather than the touchscreen because that is what
+  // the sheet listens to, and what a trackpad on a narrow window sends as well.
+  const header = sheet.locator('header').first();
+  const box = await header.boundingBox();
+  if (box === null) throw new Error('the sheet has no header to drag');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 40, { steps: 4 });
+  await page.mouse.move(x, y + 220, { steps: 8 });
+  await page.mouse.up();
+  await expect(sheet).toBeHidden();
+
+  // The bar is under it again, with the answer it carried all along.
+  await expect(generateButton(page)).toBeVisible();
+
+  expect(problems).toEqual([]);
+});

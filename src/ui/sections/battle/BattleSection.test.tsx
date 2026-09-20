@@ -117,6 +117,9 @@ test('a method card is chosen by pressing anywhere on it, its sentence included'
   renderWithTheme(<BattleSection />);
 
   const list = screen.getByRole('radiogroup', { name: 'Stacking method' });
+  // Complete optimization leads the card since 2026-09-19 (owner: "reorder complete automatization
+  // to first"); a new march still starts on the tier ladder, which is the second one.
+  expect(within(list).getAllByRole('radio')[0]?.getAttribute('aria-label')).toBe('Complete optimization');
   expect(within(list).getByRole('radio', { name: 'Tier ladder' }).getAttribute('aria-checked')).toBe('true');
 
   await user.click(screen.getByText('Hired units only fall once all of your troops have.'));

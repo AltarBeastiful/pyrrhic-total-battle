@@ -72,6 +72,13 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
     housing: defaultHousing(),
     enemy: defaultEnemyFormation(),
     options: {
+      // The tier ladder, still — and the owner knows it is not the method he would pick. He asked
+      // on 2026-09-19 for Complete optimization to be "first and default"; it is first on the card
+      // now (`sections/battle/choices.ts`), and the default is **left here to revisit**, because the
+      // plan refuses an army that hires nothing: a first-run profile holds no mercenary, so the
+      // opening Generate answered "There is no campaign to plan from this army" instead of a march
+      // (measured on the built app, 26 e2e journeys). It is safe the day the plan can plan a
+      // mercenary-free army, or the day a first run is expected to ask for mercenaries first.
       method: 'elite',
       // PLAN §3.3: the "mercs above monsters" chain is not what the captured run does, so it is off.
       strictMercsAboveMonsters: false,

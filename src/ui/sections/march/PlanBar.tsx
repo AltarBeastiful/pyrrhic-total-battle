@@ -30,7 +30,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { PlanRow } from '@/engine/plan';
 
 import { compact } from './format';
-import { BAR_ENDS, bestForWords, planWords, sequenceWords } from './picks';
+import { barEnds, bestForWords, planWords, sequenceWords, spendsStock } from './picks';
 import classes from './march.module.css';
 
 /** Everything the mapping needs, in the two coordinate spaces it uses — and they are not the same one. */
@@ -96,6 +96,10 @@ function tipTransform(x: number, band: number): string {
 }
 
 export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: PlanBarProps) {
+  // What the stops are really ordered by (S-112): the hired stock where there is one, silver where there is
+  // not. It names the two ends and decides whether the tip carries a gold line at all.
+  const spendsHired = spendsStock(rows);
+  const ends = barEnds(spendsHired);
   const band = useRef<HTMLDivElement>(null);
   const slider = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -330,10 +334,16 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           {/* **What the march costs in gold** — the hired stacks' own price, which silver never pays
               (`PlanRepeat.gold`). The bar is ordered by the hired stock, so "what does sparing it cost me"
               is the question every stop is asking. It is the figure the trade has no room for — see
-              `PlanTrade.tsx` on the seventh column — so the tip is where it is read. */}
-          <Text size="xs" opacity={0.75}>
-            {`${compact(row.repeat.gold)} gold a march`}
-          </Text>
+              `PlanTrade.tsx` on the seventh column — so the tip is where it is read.
+
+              **Only where a march buys some** (S-112, design rule 15). Gold is what reviving a hired stack
+              costs, so a bar with no stock on it printed "0 gold a march" on every tip — a figure that is
+              not a fact about the plan, only about a resource it never touches. */}
+          {row.repeat.gold > 0 && (
+            <Text size="xs" opacity={0.75}>
+              {`${compact(row.repeat.gold)} gold a march`}
+            </Text>
+          )}
           {/* **A stop the figures above do not describe four times over says so** (S-74, widened in S-89).
               Most stops are the march above repeated, so "6.9M worst opening a march" names the campaign;
               `all-in` shelters every mercenary it can on the first march and then marches on what the stock
@@ -353,7 +363,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           marker above is nudged out of, done in words instead. */}
       <Group justify="space-between" align="center" wrap="nowrap">
         <Text size="xs" c="dimmed">
-          {BAR_ENDS.low}
+          {ends.low}
         </Text>
         {/* The way back to the marker above, in words: the mark says where the sweet spot is, this says how
             to get there, and it is only drawn while the bar is somewhere else. */}
@@ -369,7 +379,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           </Button>
         )}
         <Text size="xs" c="dimmed">
-          {BAR_ENDS.high}
+          {ends.high}
         </Text>
       </Group>
     </Box>

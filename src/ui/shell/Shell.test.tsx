@@ -221,7 +221,7 @@ test('the summary opens a sheet that holds the whole March section', async () =>
   expect(within(sheet).getByText('recap')).toBeTruthy();
 });
 
-test('a run that lands with the sheet shut is said out loud, and the bar is marked', async () => {
+test('a finished run opens the sheet on the answer, and marks the bar under it', async () => {
   renderShell();
   const bar = screen.getByRole('button', { name: 'Open the march recap' });
   // The app bar keeps a status line of its own for "Copied", so every live region is read together.
@@ -231,21 +231,61 @@ test('a run that lands with the sheet shut is said out loud, and the bar is mark
       .map((node) => node.textContent ?? '')
       .join('');
   expect(status()).toBe('');
+  expect(screen.queryByRole('dialog', { name: 'March' })).toBeNull();
 
   act(() => {
     useResultStore.getState().setResult(fakeResult(12, 19_639_721));
   });
-  await waitFor(() => {
-    expect(status()).toMatch(/^March generated: 12 stacks, 19639721 expected damage\./);
-  });
-  // The eye's half of the same signal, and only where motion is welcome (the class carries a
-  // `prefers-reduced-motion` guard of its own).
-  expect(bar.querySelector('[class*="pulse"]')).not.toBeNull();
 
-  // Opening the sheet is reading the answer: there is nothing left to announce.
-  fireEvent.click(bar);
+  // The owner's own words, 2026-09-19: the answer to a Generate is the March arriving, not a line
+  // in the bar and a second tap to read it.
+  const sheet = await screen.findByRole('dialog', { name: 'March' });
+  expect(within(sheet).getByText('recap')).toBeTruthy();
+  // …and with it on screen there is nothing left for the bar to announce: the sentence is written
+  // only while the sheet is shut, which is now only when the frame did not open it.
+  expect(status()).toBe('');
+  // The eye's half of that signal is still on the bar for when the sheet is closed again, and only
+  // where motion is welcome (the class carries a `prefers-reduced-motion` guard of its own).
+  expect(bar.querySelector('[class*="pulse"]')).not.toBeNull();
+});
+
+test('at 1400 px a run opens nothing: the answer is already in the pane', () => {
+  desktop();
+  renderShell();
+
+  act(() => {
+    useResultStore.getState().setResult(fakeResult(12, 19_639_721));
+  });
+  expect(screen.queryByRole('dialog', { name: 'March' })).toBeNull();
+});
+
+/**
+ * A finger on the sheet's header: down, a few moves, up. The moves and the release are on the
+ * document, which is where `useDrag` listens for them once a drag has begun.
+ */
+function swipeDown(node: Element, by: number): void {
+  fireEvent.pointerDown(node, { button: 0, pointerId: 1, clientX: 120, clientY: 100 });
+  fireEvent.pointerMove(document, { pointerId: 1, clientX: 120, clientY: 100 + Math.round(by / 2) });
+  fireEvent.pointerMove(document, { pointerId: 1, clientX: 120, clientY: 100 + by });
+  fireEvent.pointerUp(document, { pointerId: 1, clientX: 120, clientY: 100 + by });
+}
+
+test('a swipe down over the sheet closes it; a short pull springs back', async () => {
+  renderShell();
+  fireEvent.click(screen.getByRole('button', { name: 'Open the march recap' }));
+  const sheet = await screen.findByRole('dialog', { name: 'March' });
+  const grip = sheet.querySelector('header');
+  if (grip === null) throw new Error('the sheet has no header to drag');
+
+  // 16 px rather than a more lifelike 40: the other way out of a drag is a *fling*, which is a
+  // speed, and two synthetic events share a clock that cannot be flung believably. Under the 24 px
+  // a fling needs, only the distance can decide — which is exactly what is being asserted.
+  swipeDown(grip, 16);
+  expect(screen.queryByRole('dialog', { name: 'March' })).not.toBeNull();
+
+  swipeDown(grip, 140);
   await waitFor(() => {
-    expect(status()).toBe('');
+    expect(screen.queryByRole('dialog', { name: 'March' })).toBeNull();
   });
 });
 

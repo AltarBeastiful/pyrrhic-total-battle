@@ -107,9 +107,16 @@ export function generateButton(page: Page): Locator {
   return page.getByRole('button', { name: /^Generate march/ });
 }
 
-/** The wrapper the button sits in: it carries `data-state` (ready / stale / running / blocked). */
+/**
+ * The wrapper the button sits in: it carries `data-state` (ready / stale / running / blocked).
+ *
+ * The **first** one, because below 1200 px there are two Generates on screen the moment a run
+ * finishes — the bar's and the one inside the March sheet the run opens (2026-09-19) — and they are
+ * the same control: one `useGenerateRun`, one state, drawn twice by design (design rule 2, the
+ * answer and the action travel together).
+ */
 export function generateState(page: Page): Locator {
-  return generateButton(page).locator('xpath=..');
+  return generateButton(page).first().locator('xpath=..');
 }
 
 /**
@@ -126,7 +133,16 @@ export async function fillHousing(page: Page, pool: Pool, value: number): Promis
   await field.blur();
 }
 
-/** Fill the three housing capacities and run the engine, waiting for the summary to settle. */
+/**
+ * Fill the three housing capacities and run the engine, waiting for the summary to settle — and,
+ * below 1200 px, put the sheet the run opened away again.
+ *
+ * A finished run opens the March sheet itself since 2026-09-19 (the owner's *"generate should open
+ * recap by default when finished"*, `ui/shell/Shell.tsx`). That is the answer arriving, and it is
+ * asserted where it belongs — `generate.spec.ts`'s two mobile tests and J1 in `journeys.spec.ts`.
+ * Everywhere else a spec only wanted *a march*, and a focus trap over the page it is about to read
+ * is not what it asked for: this leaves the page where it was.
+ */
 export async function generate(
   page: Page,
   housing: { leadership?: number; authority?: number; dominance?: number } = {},
@@ -136,6 +152,13 @@ export async function generate(
   if (housing.dominance !== undefined) await fillHousing(page, 'Dominance', housing.dominance);
   await generateButton(page).click();
   await settle(page);
+  await dismissMarchSheet(page);
+}
+
+/** Close the March sheet if the frame opened it on the run that just finished; no-op if it did not. */
+export async function dismissMarchSheet(page: Page): Promise<void> {
+  if ((await marchSheet(page).count()) === 0) return;
+  await closeMarchSheet(page);
 }
 
 /**
@@ -542,9 +565,12 @@ export function marchSheet(page: Page): Locator {
  * Open it from the bar's summary and wait for it to settle — really settle: the sheet slides up and
  * fades in over 300 ms, and a half-transparent surface reads as a contrast failure that is not
  * there (the same trap `a11y.spec.ts` already avoids with the account menu).
+ *
+ * It opens nothing when the frame has already opened it on a finished run (2026-09-19): "open the
+ * March sheet" is the same instruction either way, and a press on a summary under the scrim is not.
  */
 export async function openMarchSheet(page: Page): Promise<Locator> {
-  await recapSummary(page).click();
+  if ((await marchSheet(page).count()) === 0) await recapSummary(page).click();
   const sheet = marchSheet(page);
   await expect(sheet).toBeVisible();
   await sheet.evaluate(async (node) => {

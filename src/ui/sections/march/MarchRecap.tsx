@@ -26,9 +26,9 @@ import type { BattleSummary } from '@/engine/types';
 import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { amount, duration, percent, ratio } from './format';
+import { amount, compact, duration, ratio } from './format';
 import { hiredLost, hiredStock } from './hired';
-import { worstPer } from './worst';
+import { worstDamageByPool, worstPer } from './worst';
 import classes from './march.module.css';
 import { useMarch } from './useMarch';
 
@@ -171,13 +171,41 @@ export function MarchRecap() {
       : []),
   ];
 
-  // **What this march burns of the hired stock** (owner, 2026-09-17: "a merc lost count with a percent of
-  // all mercs available, to see how big the drop is"). The count is the one the plan's trade prints as
-  // "Hired lost" (`./hired`); the share is of every hired unit the account owns across the types the
-  // march could draw on, and it is left unsaid while one of them is uncapped. No delta: the previous run
-  // is kept as a summary, and a summary carries no stacks.
+  /**
+   * **What this march burns of the hired stock, and what that bought** (owner, 2026-09-17: *"a merc lost
+   * count with a percent of all mercs available, to see how big the drop is"*, then 2026-09-20: *"instead of
+   * the percent of total mercs spent, replace it with the dmg per merc using a small notation: 265k,
+   * 1.23m"*).
+   *
+   * The count is the one the plan's trade prints as "Hired lost" (`./hired`). Beside it used to sit the
+   * share of the account's whole stock; it is **damage a hired unit** now — the one figure that says whether
+   * spending the stock was worth it, and the same question the bar's "Per hired" column answers, so the two
+   * screens agree (design rule 5).
+   *
+   * **One definition, and it is S-105's**: the *hired stacks' own* damage over the hired units lost, never
+   * the whole march's damage over them — that was the defect the owner reported twice in one day (*"it says
+   * over a million but in total they do less than 1M"*). And on the **worst opening**, like every other
+   * ratio on this card since S-108, summed from the enemy-first journal by `worstDamageByPool` — the same
+   * function the Details fold's split uses, so the split and this figure are terms of one sum.
+   *
+   * It is computed from `result.stacks` and this run's own journal, so it follows every recomputation the
+   * card follows: a Generate, and a put-back or a leave-out re-sizing the march in place (`resizeMarch`
+   * writes a new snapshot, `useMarch` re-reads it). No delta against the previous run: the previous run is
+   * kept as a summary and a summary carries no stacks, so the numerator cannot be recomputed for it.
+   */
   const lost = hiredLost(result.stacks);
   const stock = hiredStock(snapshot.request);
+  const hiredDamage = worstDamageByPool(summary.journals.enemyFirst, result.stacks).authority;
+  /**
+   * **Drawn only where the march has a stock to lose** (S-112, design rule 15), the way the dragon-coin row
+   * has been since S-102. A march that fields nothing hired printed "Hired lost 0 · 0 % of 0" — a row whose
+   * figure, share and denominator are all nothing — and since S-111 a whole bar of such marches is an
+   * ordinary answer rather than an oddity. The test is the *account's* stock and not the march's: a player
+   * who holds mercenaries and is looking at a march that fields none needs to see that it fields none.
+   */
+  // `null` is *"a type is hired with no cap"* — an account that plainly holds stock — so it counts as held,
+  // not as none. Reading it as zero would hide the row from exactly the players who spend the most of it.
+  const holdsStock = stock === null || stock > 0 || lost > 0;
   const hired = {
     key: 'hired',
     label: 'Hired lost',
@@ -185,9 +213,12 @@ export function MarchRecap() {
     value: (
       <Group gap={6} wrap="nowrap" align="baseline">
         <DeltaText value={lost} format={amount} betterWhen="lower" />
-        {stock !== null && stock > 0 && (
+        {/* Drawn only while the march really lost some (design rule 15): with nothing burned there is no
+            denominator, and "— a hired unit" beside a nought is a line about nothing. Two decimals, because
+            this figure is read against the last run's (`compact`, `./format`). */}
+        {lost > 0 && (
           <Text span size="xs" c="dimmed">
-            {`· ${percent(Math.round((lost / stock) * 100))} of ${amount(stock)}`}
+            {`· ${compact(hiredDamage / lost, 2)} a hired unit`}
           </Text>
         )}
       </Group>
@@ -245,7 +276,7 @@ export function MarchRecap() {
                 />
               ),
             })),
-            hired,
+            ...(holdsStock ? [hired] : []),
           ]}
         />
       </Stack>

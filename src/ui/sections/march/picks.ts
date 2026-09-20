@@ -82,11 +82,37 @@ export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
  * or that its far end is the only plan spending the stock. The words match the trade's "Hired lost" head for
  * the same reason (rule 5).
  *
- * **One pair, because there is one bar** (review of 2026-09-18). It was a record keyed by an axis the
- * payload carried; the silver ordering it was the other half of was retired with `CampaignPlan.barAxis`,
- * and a map of one entry is a choice nobody makes.
+ * **Two pairs, because there are two kinds of army** (S-112). It was one pair; an army that hires nothing
+ * has no stock to order along, and since S-111 it has a bar all the same — ordered on the silver its stops
+ * really differ by. Naming those ends after a stock the account does not hold was the plainest of the
+ * hired-word defects the S-111 review found on that bar. The pair is chosen by `spendsStock` below, which is
+ * the one place this app asks whether a plan trades a stock at all.
  */
 export const BAR_ENDS = { low: 'Fewest hired lost', high: 'Most hired lost' } as const;
+
+/** The same two words for a bar with no stock on it: what its stops really run from and to. */
+export const SILVER_BAR_ENDS = { low: 'Least silver', high: 'Most damage' } as const;
+
+/**
+ * **Does this bar trade a hired stock at all?** — the one reading the whole plan block turns on (S-112).
+ *
+ * `mercLost` is the units a campaign never gets back, and it is zero on every stop of an army that hires
+ * nothing (`planTroopsOnly`, S-111). Asked of the **bar** rather than of the stop on screen: a hired army
+ * whose thrifty stop happens to burn nothing is still trading a stock, and its columns, its axis and its
+ * thesis are all about that trade.
+ *
+ * Every hired word in the block reads this — the bar's ends, the trade's two columns, the recap's row, the
+ * thesis, the campaign line, the curve's column — so an army either sees all of them or none, and no screen
+ * can say "0.0 of the hired stock" about a stock that does not exist.
+ */
+export function spendsStock(rows: readonly { mercLost: number }[]): boolean {
+  return rows.some((row) => row.mercLost > 0);
+}
+
+/** The words under the bar, for the resource its stops are actually ordered by. */
+export function barEnds(spendsHired: boolean): { low: string; high: string } {
+  return spendsHired ? BAR_ENDS : SILVER_BAR_ENDS;
+}
 
 /**
  * Whether a march of the sequence fields any hired unit. A count whose id the tables do not carry is a

@@ -18,19 +18,23 @@
  * That last line is design rule 5 as resolved on 2026-09-13 (investigation 0011: 97 of the sheet's
  * 98 lines were repeated from the section under it). On a phone the sheet *is* the March: the page
  * holds the setup, the bar holds the answer, and the whole march — recap, tiles, counts, trade-off,
- * details — is one tap away at full height. Nothing scrolls the page on the player's behalf any
- * more, so a Generate leaves the thumb exactly where it was; the bar's summary changes under it, and
- * says so out loud for anyone who cannot see it change.
+ * details — is at full height in it. Nothing scrolls the page on the player's behalf any more, so a
+ * Generate leaves the thumb exactly where it was.
+ *
+ * **A finished run opens that sheet itself** (owner, 2026-09-19), and a swipe down over its header
+ * closes it again (`MarchSheet.tsx`): the answer to a press on Generate is the sheet arriving, not a
+ * line in the bar and a second tap to read it. The bar's summary still changes under the scrim, and
+ * still says so out loud for anyone who cannot see it, for the times the frame opens nothing.
  *
  * The width decides in JavaScript rather than in CSS because the March section itself moves: it is
  * in the pane on a desktop and in the sheet on a phone, and rendering it in both places would put
  * the same anchor on the page twice.
  */
-import { Container, Drawer, Grid, Stack, Text, VisuallyHidden } from '@mantine/core';
-import { lazy, useEffect, useState } from 'react';
+import { Container, Grid, Stack, Text, VisuallyHidden } from '@mantine/core';
+import { lazy, useEffect, useRef, useState } from 'react';
 
 import { selectTheme, useStore } from '@/state/store';
-import { amount, MarchFoot, MarchSection, restoreLastResult } from '@/ui/sections/march';
+import { amount, MarchFoot, restoreLastResult } from '@/ui/sections/march';
 
 import { LazySurface } from '../lazy';
 import { initResultPersistence, useResultStore } from '../resultStore';
@@ -42,6 +46,7 @@ import { BottomBar } from './BottomBar';
 import { DESKTOP_BAR } from './command';
 import { CommandBar } from './CommandBar';
 import { MarchPane } from './MarchPane';
+import { MarchSheet } from './MarchSheet';
 import classes from './shell.module.css';
 import { useGenerateShortcut } from './useGenerateRun';
 import { TWO_PANES, useMediaQuery } from './useMediaQuery';
@@ -86,12 +91,32 @@ export function Shell() {
 
   useEffect(() => watchSystemTheme(() => useStore.getState().doc.ui.theme), []);
 
-  // A run that lands while the March is off screen is a change nobody can see: the bar says so.
-  const run = useLastRun();
+  /**
+   * A run that lands while the March is off screen is a change nobody can see. Where the March is
+   * the sheet, **the sheet opens itself on it** (owner, 2026-09-19: *"on mobile, generate should
+   * open recap by default when finished"*): a Generate is a question, and the answer arriving
+   * behind a shut sheet was the one tap of J1 that bought nothing — the player pressed Generate and
+   * then had to ask for what they had just asked for. Where there is a pane it opens nothing, the
+   * answer being already on screen.
+   *
+   * The *run count* is what is watched rather than the width, and the width is read at the moment
+   * the run lands: a window that narrows after a run must not raise a sheet nobody asked for.
+   *
+   * The bar's two signals below are unchanged and stay right: the sentence is written only while
+   * the sheet is shut, which is now only when the frame did not open it.
+   */
+  const run = useLastRun(() => {
+    if (wide) return;
+    setRecapOpen(true);
+  });
   const announcement = recapOpen ? '' : run.sentence;
 
   const openRecap = (): void => {
     setRecapOpen(true);
+  };
+
+  const closeRecap = (): void => {
+    setRecapOpen(false);
   };
 
   const dismissShare = (): void => {
@@ -178,26 +203,7 @@ export function Shell() {
               polish list): a control outside a focus trap that the pointer can still reach is a trap
               that does not hold, so the bar goes under the scrim and the sheet carries its own
               Generate — the answer and the action still travel together. */}
-          <Drawer
-            opened={recapOpen}
-            onClose={() => {
-              setRecapOpen(false);
-            }}
-            position="bottom"
-            size="calc(100dvh - var(--pyr-appbar-height))"
-            radius={0}
-            padding="lg"
-            // Over both bars (250) and under a kit `Sheet` (320), so a unit sheet raised from the
-            // March inside this one lands on top of it rather than behind it (`theme.ts`).
-            zIndex={300}
-            title="March"
-            // The sheet is the March pane's own material, with 20 px on its two top corners alone
-            // (artboard `PhoneSheetA.dc.html`, `.sheet`); Mantine's `radius` would round all four.
-            classNames={{ content: classes.sheet }}
-            closeButtonProps={{ 'aria-label': 'Close' }}
-          >
-            <MarchSection />
-          </Drawer>
+          <MarchSheet opened={recapOpen} onClose={closeRecap} />
         </>
       )}
 
@@ -213,10 +219,22 @@ export function Shell() {
  *
  * The store is subscribed to rather than watched with an effect, because that is what it is: an
  * external source of changes, and the sentence is written in its callback. The run that was already
- * in the cache when the app opened is not a run — restoring yesterday's march is not news.
+ * in the cache when the app opened is not a run — restoring yesterday's march is not news, and a
+ * **re-size is not a run either**: putting a type back keeps the snapshot's own stamp, on purpose
+ * (`generate.ts`), so the sheet the edit was made in does not re-open itself under the thumb.
+ *
+ * `onFinish` is called from the same place the sentence is written, because that is the moment a run
+ * lands; it is held in a ref so the subscription is made once and still calls today's callback.
  */
-function useLastRun(): { index: number; sentence: string } {
+function useLastRun(onFinish: () => void): { index: number; sentence: string } {
   const [run, setRun] = useState({ index: 0, sentence: '' });
+  const finish = useRef(onFinish);
+
+  // In an effect rather than in the body of the render: a ref is not written to while rendering,
+  // and the subscription below only ever reads it from a store event, long after this has run.
+  useEffect(() => {
+    finish.current = onFinish;
+  });
 
   useEffect(() => {
     // The restore above has already landed by now: effects run in the order they are written.
@@ -231,6 +249,7 @@ function useLastRun(): { index: number; sentence: string } {
           last.summary.avgDamage,
         )} expected damage. Open the summary to read it.`,
       }));
+      finish.current();
     });
   }, []);
 
