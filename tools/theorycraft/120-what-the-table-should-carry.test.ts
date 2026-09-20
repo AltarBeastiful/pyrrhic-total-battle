@@ -150,6 +150,41 @@ describe.skipIf(!process.env.THEORY)('what the insight table should carry', () =
       );
     }
 
+    report.h('Does the engine’s own note agree with the table’s mark?');
+    report.add('');
+    report.add(
+      'The row already wears *“best a silver”* under its name (`PlanRow.bestFor`, the engine’s reading). If the table now marks the best cell of the Per silver column from `repeat`, the two must name the same row — or one screen says one thing two ways (design rule 5).',
+    );
+    report.add('');
+    report.add('| army | the engine’s `bestFor.silver` | the column’s best cell | agree |');
+    report.add('|---|---|---|---|');
+    let agreements = 0;
+    let compared = 0;
+    for (const scenario of scenarios) {
+      let rows: PlanRow[];
+      try {
+        rows = planCampaign({ request: scenario.request, marchTarget: HORIZON }).alternatives;
+      } catch {
+        continue;
+      }
+      if (rows.length === 0) continue;
+      const noted = rows.find((row) => row.bestFor.silver)?.pick ?? null;
+      const marked = winner(rows, FACTS.find((fact) => fact.key === 'perSilver') as Fact)?.pick ?? null;
+      compared += 1;
+      if (noted === marked) agreements += 1;
+      report.add(
+        `| ${scenario.label} | ${noted ?? '—'} | ${marked ?? '—'} | ${noted === marked ? 'yes' : '**no**'} |`,
+      );
+    }
+    report.add('');
+    report.add(
+      `**${String(agreements)} of ${String(compared)} agree.** ${
+        agreements === compared
+          ? 'So the mark and the note are one fact: the note names it in words under the row, the mark shows which cell it is, and the row’s accessible name may say it only once.'
+          : '**They disagree**, which is a finding of its own: the note and the column are reading different figures and the table would contradict itself.'
+      }`,
+    );
+
     report.h('The two questions, answered');
     report.add('');
     const spread = distinctPerArmy.reduce((sum, one) => sum + one, 0) / Math.max(1, distinctPerArmy.length);

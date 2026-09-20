@@ -987,3 +987,58 @@ test('the fold says which low tier went back into the march, and only on the sto
   expect(putBackWords(PUT_BACK[0] as PlanRow)).toBeNull();
   expect(screen.queryByText(/put back/)).toBeNull();
 });
+
+test('the best figure in each column is marked, and Per hired never is', () => {
+  stubLayout();
+  primeBurn();
+  renderWithTheme(<PlanFold />);
+
+  const heads = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent ?? '');
+  const marked = tradeRows().map((row) =>
+    [...row.querySelectorAll('th, td')].map((cell) => cell.getAttribute('data-best') === 'true'),
+  );
+  /** Which rows carry the mark in one column, by the column's head. */
+  const column = (head: string): number[] => {
+    const index = heads.indexOf(head);
+    return marked.flatMap((cells, row) => (cells[index] === true ? [row] : []));
+  };
+
+  // **One mark a column, and it is a claim about one row** (`tableMarks`, `./picks`). Measured before it
+  // was drawn: over the sixteen benchmark armies the marks land on 2.38 different stops on average, so a
+  // table of five rows really does have more than one winner on it (experiment 120).
+  expect(column('🔒 Worst')).toEqual([BURN_ROWS.length - 1]); // All in hits hardest
+  expect(column('🪙 Silver')).toEqual([0]); // the silver saver is the cheapest march
+  expect(column('🪖 Hired lost')).toEqual([0]); // …and burns the least stock
+  expect(column('Per silver')).toHaveLength(1);
+
+  // **Never on Per hired** (`docs/investigations/0019` §2.3: the ratio rises while the march collapses, and
+  // §1 calls it "never the right compass"). The column carries the fact; the table declares no winner.
+  expect(column('Per hired')).toEqual([]);
+
+  // The mark's own key, once, under the table it explains (design rule 5) — a mark nobody can decode is
+  // decoration.
+  expect(document.querySelector(`${TRADE} caption`)?.textContent).toBe(
+    'The heavier figure in a column is the best of the bar.',
+  );
+
+  // And for a reader who cannot see weight or ink (design rule 24): the marks are in the row's own name —
+  // except the rate's, which the note under the name already says in the same breath ("best a silver").
+  const top = tradeRows()[BURN_ROWS.length - 1]?.getAttribute('aria-label') ?? '';
+  const saver = tradeRows()[0]?.getAttribute('aria-label') ?? '';
+  expect(top).toContain('most damage on the bar');
+  expect(saver).toContain('least silver on the bar');
+  expect(saver).toContain('fewest hired lost on the bar');
+  expect(saver).not.toContain('most damage');
+
+  // The rate's mark lands on the row with the best damage a silver, computed here from the same figures
+  // the table prints — the column is not marked from the engine's `bestFor` but must agree with it, and
+  // experiment 120 measured that agreement on **16 of 16** benchmark armies.
+  const rates = BURN_ROWS.map((row) => row.repeat.damage / row.repeat.silver);
+  expect(column('Per silver')).toEqual([rates.indexOf(Math.max(...rates))]);
+
+  // …and the note under that row's name says it once. The label carries the note (`bestForWords`) and the
+  // rate's mark deliberately adds nothing, because that would be the same fact twice (design rule 5).
+  const noted = tradeRows().findIndex((row) => (row.textContent ?? '').includes('best a silver'));
+  const label = tradeRows()[noted]?.getAttribute('aria-label') ?? '';
+  expect(label.match(/best a silver/gu) ?? []).toHaveLength(1);
+});

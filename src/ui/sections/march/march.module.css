@@ -317,3 +317,28 @@
       transform 120ms ease-out;
   }
 }
+
+/* **The best figure in a column** (S-113, `PlanTrade.tsx`). Two signals, because colour is never the only
+   one (design rule 24): the **weight** first — the table body sets every cell to 600, so 800 is the step a
+   reader sees at a glance and the one that survives a colour-blind eye and a printed page — and the ink
+   second. The ink is `--mantine-color-anchor`, which `theme.ts` resolves to brass 7 on a light page and
+   brass 5 on a dark one and which `pnpm contrast` already checks against all four surfaces; no new colour
+   is invented for a mark (rule 23).
+
+   The queue line under the silver and the note under a plan's name keep their own muted ink and their own
+   weight: they are the subordinate lines of their cells, and a mark on the figure is not a mark on them. */
+.compare :global(tbody td[data-best]),
+.compare :global(tbody th[data-best]) {
+  color: var(--mantine-color-anchor);
+  font-weight: 800;
+}
+
+/* The one line that says what the mark is. Muted, at the table's own size, under the table — the caption
+   slot Mantine draws last, which is where a key belongs: after the figures it explains. */
+.compare :global(caption).compareKey {
+  caption-side: bottom;
+  padding-top: 0.375rem;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  text-align: start;
+}

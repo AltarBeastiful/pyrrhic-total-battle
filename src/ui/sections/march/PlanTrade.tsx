@@ -47,7 +47,7 @@ import type { PlanRow } from '@/engine/plan';
 import { Glyph } from '@/ui/domain';
 
 import { amount, compact, duration, per, ratio } from './format';
-import { bestForWords, planWords, spendsStock } from './picks';
+import { bestForWords, planWords, rateColumn, spendsStock, tableMarks } from './picks';
 import classes from './march.module.css';
 
 export interface PlanTradeProps {
@@ -72,6 +72,16 @@ const PER_SILVER_DECIMALS = 3;
 export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps) {
   // Whether this bar trades a hired stock at all; the two stock columns hang off it (S-112, `./picks`).
   const spendsHired = spendsStock(rows);
+  /**
+   * **The best figure in each column, marked** (S-113). Measured before it was drawn (experiment 120, over
+   * the sixteen benchmark armies): the marks land on **2.38 different stops on average**, and a single stop
+   * wins everything on only three armies — the ones whose bar is one or two stops long. So the marks are
+   * the table doing its job rather than a ranking with extra steps.
+   *
+   * Read once, here, so a row cannot be called best two different ways (`tableMarks`, `./picks`), and
+   * **never on Per hired**: 0019 §2.3 measured that ratio rising while the march collapses.
+   */
+  const marks = tableMarks(rows, rateColumn(rows, 'silver'));
   const loudest = Math.max(1, ...rows.map((row) => row.repeat.damage));
   // Two module classes on one cell: the name's own width rules, and the pin that keeps it on the left edge
   // while the figures scroll. Composed here because `className` may only ever carry a module value
@@ -197,7 +207,19 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                   // column is drawn only there (S-112): a reader is told what the march spends, not what it
                   // does not have.
                   spendsHired ? `${amount(point.repeat.mercLost)} hired lost a march` : ''
-                }${note === null ? '' : `${spendsHired ? ', ' : ''}${note}`}`}
+                }${note === null ? '' : `${spendsHired ? ', ' : ''}${note}`}${
+                  // **The marks, for a reader who cannot see them** (design rule 24). The rate's mark is
+                  // deliberately absent: `note` above is the same fact in the same breath, and saying it
+                  // twice is what rule 5 is about.
+                  [
+                    marks.damage === index ? 'most damage' : null,
+                    marks.silver === index ? 'least silver' : null,
+                    spendsHired && marks.hiredLost === index ? 'fewest hired lost' : null,
+                  ]
+                    .filter((word): word is string => word !== null)
+                    .map((word) => `, ${word} on the bar`)
+                    .join('')
+                }`}
                 aria-selected={current}
                 // The row on screen, the way the objectives strip says it: one tonal step for the eye, and
                 // for a reader the two attributes that mean it. Never colour alone (rule 24) — and the
@@ -245,7 +267,10 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                     </Text>
                   )}
                 </Table.Th>
-                <Table.Td ta="end">
+                {/* `data-best` is the mark, and `march.module.css` gives it **weight and ink, in that
+                    order**: colour is never the only signal (design rule 24), and the weight is what a
+                    reader sees first when the two schemes render the ink differently. */}
+                <Table.Td ta="end" data-best={marks.damage === index ? 'true' : undefined}>
                   <Group gap="xs" wrap="nowrap" justify="flex-end">
                     {/* The bar is decoration beside its own figure, and `StatBar` draws one this way:
                         a role, its bounds and the figure as the value text. `brass` is the theme's
@@ -284,7 +309,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                     and the same regular weight every explaining line in this block uses, at the table's own
                     size (`inherit`, which is 12 px here): the silver is the figure, the queue is the note
                     under it, and the row's accessible name says both. */}
-                <Table.Td ta="end">
+                <Table.Td ta="end" data-best={marks.silver === index ? 'true' : undefined}>
                   {compact(point.repeat.silver)}
                   <Text span inherit display="block" fw={400} c="dimmed">
                     {duration(point.repeat.seconds)}
@@ -303,8 +328,16 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                       ` · ${amount(point.repeat.dragonCoins ?? 0)} dragon coins`}
                   </Text>
                 </Table.Td>
-                {spendsHired && <Table.Td ta="end">{amount(point.repeat.mercLost)}</Table.Td>}
-                <Table.Td ta="end">
+                {spendsHired && (
+                  <Table.Td ta="end" data-best={marks.hiredLost === index ? 'true' : undefined}>
+                    {amount(point.repeat.mercLost)}
+                  </Table.Td>
+                )}
+                {/* The rate's own mark **is** the note already under this row's name: experiment 120 asked
+                    the engine's `bestFor.silver` and this column's best cell of all sixteen benchmark
+                    armies and they named the same row **16 times of 16**. So the cell shows *where* and the
+                    note says *what*, and the row's accessible name says it once (below). */}
+                <Table.Td ta="end" data-best={marks.rate === index ? 'true' : undefined}>
                   {ratio(per(point.repeat.damage, point.repeat.silver), PER_SILVER_DECIMALS)}
                 </Table.Td>
                 {/* **Per hired is the hired stacks' own damage over the hired units lost** (S-105,
@@ -322,6 +355,13 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
             );
           })}
         </Table.Tbody>
+        {/* **What the mark means, said once, under the thing it marks** (design rule 5). A mark nobody can
+            decode is decoration, and the alternative — a key beside every head — is the width this table
+            has never had. `Table.Caption` is the designed slot for it (rule 23) and Mantine puts it below
+            the table, where a reader meets it after the figures rather than before them. */}
+        <Table.Caption className={classes.compareKey ?? undefined}>
+          The heavier figure in a column is the best of the bar.
+        </Table.Caption>
       </Table>
     </div>
   );
