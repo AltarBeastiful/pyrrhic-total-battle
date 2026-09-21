@@ -633,7 +633,18 @@ export function ownerScenarios(profile: Profile): Scenario[] {
          * 1.0958 — and its best damage a hired soldier chunk is **300,662 against their 11,478**, which is
          * the unlimited legionaries: their answer spends 2,017 of them and ours keeps the stock.
          */
-        externals: { damageFloor: 1.09, winsHired: true },
+        /**
+         * **Re-pinned 1.09 → 0.94 on 2026-09-22, hours after it was first set**, and the reason is the
+         * capture completing rather than anything moving in the engine: the first run of that morning had
+         * the `optimize` route refused (403), so this army's hardest captured row was a *Generate* one at
+         * 1.0958. With the cookie supplied the priority searches answered too, and its hardest row is now
+         * **`priority search under Elite (averageDamage)`** at 23,501,117, which our plan's hardest campaign
+         * (18,744,735) reaches **0.7976** of. S-119 §2 called this exact understatement out before it
+         * landed, and this army is where it bites hardest: 1.09 → 0.79 in one capture.
+         *
+         * `winsHired` stays **true** and only just — 300,662 a hired soldier chunk against their 299,062.
+         */
+        externals: { damageFloor: 0.79, winsHired: true },
         /**
          * **Damage a silver is 0.9508 — under his goal of 1.0, and pinned where it measures** rather than at
          * the goal (the rule S-101 set and S-118 applied to seven others). Their Total Optimization answers
@@ -644,7 +655,7 @@ export function ownerScenarios(profile: Profile): Scenario[] {
          * dominance pool), so the reading is `damage / 1` on both and `check` skips it as non-finite — the
          * same treatment the 4 000 case gives it.
          */
-        totalOptimization: { perSilver: 0.95, perSoldier: 26.19, perMonster: 1.09 },
+        totalOptimization: { perSilver: 0.99, perSoldier: 1.0, perMonster: 1.14 },
       },
     },
     // **The three camps, S-101 (2026-09-19)** — scenarios 13, 14 and 15, appended after the twelve and
@@ -1393,7 +1404,17 @@ const USUAL_SETUP_PINS: Pinned = {
    * soldier chunk beats theirs outright — **422,679 against 0**, their M's Preservation fielding no
    * mercenary at all on this army.
    */
-  externals: { damageFloor: 1.27, winsHired: true },
+  /**
+   * **Re-pinned 1.27 → 1.04 on 2026-09-22**, for the same reason as `Aydae alone` above: the completed
+   * capture gave this army its priority-search rows, and its hardest is now
+   * **`priority search under M's (damagePerSilver)`**, which the plan reaches **1.0432** of. Still ahead of
+   * every calculator here on damage — the margin is what the fuller comparison took away, not the lead.
+   *
+   * **`winsHired` flips to `false` on the same evidence**: their priority searches get **461,105** out of a
+   * hired soldier chunk where our best stop gets 422,679. Against the *sizers* the plan still wins it
+   * (307,403), which is what the unqualified `winsHired: true` above still pins.
+   */
+  externals: { damageFloor: 1.04, winsHired: false },
   /**
    * **All four readings are at or above his goal here**, which makes this the third of the three
    * dominance-housing armies to clear it and the only one of them that does so on every reading: damage a
@@ -1404,7 +1425,7 @@ const USUAL_SETUP_PINS: Pinned = {
    * and coin readings are the live ones, this being one of the three armies on the table that houses a
    * dominance pool (200) and spends coins on it.
    */
-  totalOptimization: { perSilver: 1.3, perSoldier: 1.27, perMonster: 1.02, perDragonCoin: 1.27 },
+  totalOptimization: { perSilver: 1.29, perSoldier: 0.96, perMonster: 1.28, perDragonCoin: 1.27 },
 };
 
 /**

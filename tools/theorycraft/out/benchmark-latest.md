@@ -12,7 +12,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-09-21T22:43:15.260Z, commit (working tree)
+Run: 2026-09-21T23:36:04.588Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 
@@ -388,14 +388,20 @@ The plan offers 3 stops.
 | Troops first · Generate (damage per gold) | 4 | 8 · 4,975 | 6,494,548 | 7,351,600 | 512 | 8 | 0.88 | 291,224 | 8 | 0 | 0 | 291,224 | 0 | 6,494,548 |
 | Troops first · Generate (damage per dragon coin) | 4 | 8 · 4,975 | 13,629,206 | 7,351,600 | 2,064 | 28 | 1.85 | 338,016 | 28 | 0 | 0 | 338,016 | 0 | 13,629,206 |
 | Troops first · allow damage trades | 4 | 8 · 4,975 | 13,629,206 | 7,351,600 | 2,064 | 28 | 1.85 | 338,016 | 28 | 0 | 0 | 338,016 | 0 | 13,629,206 |
-| TotalStack · M’s Preservation | 4 | 7 · 4,975 | 11,432,859 | 7,797,200 | 62,424 | 866 | 1.47 | 6,183 | 866 | 0 | 0 | 6,183 | 0 | 11,432,859 |
-| TotalStack · Total Optimization | 4 | 7 · 4,975 | 17,106,725 | 7,794,000 | 62,040 | 864 | 2.19 | 11,478 | 864 | 0 | 0 | 11,478 | 0 | 17,106,725 |
+| TotalStack · M’s Preservation | 4 | 7 · 4,975 | 16,511,384 | 7,794,800 | 2,624 | 40 | 2.12 | 299,062 | 40 | 0 | 0 | 299,062 | 0 | 16,511,384 |
+| TotalStack · priority search under M’s (averageDamage) | 4 | 1 · 4,974 | 18,789,597 | 13,927,200 | 62,040 | 864 | 1.35 | 9,441 | 864 | 0 | 0 | 9,441 | 0 | 18,789,597 |
+| TotalStack · priority search under M’s (damagePerSilver) | 4 | 1 · 4,974 | 12,929,213 | 5,968,800 | 7,704 | 108 | 2.17 | 119,715 | 108 | 0 | 0 | 119,715 | 0 | 12,929,213 |
+| TotalStack · Total Optimization | 4 | 7 · 4,975 | 16,378,468 | 7,794,000 | 2,624 | 40 | 2.10 | 299,062 | 40 | 0 | 0 | 299,062 | 0 | 16,378,468 |
+| TotalStack · priority search under Elite (averageDamage) | 4 | 1 · 4,974 | 23,501,117 | 13,927,200 | 15,992 | 224 | 1.69 | 104,916 | 224 | 0 | 0 | 104,916 | 0 | 23,501,117 |
+| TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 4,975 | 16,378,468 | 7,794,000 | 2,624 | 40 | 2.10 | 299,062 | 40 | 0 | 0 | 299,062 | 0 | 16,378,468 |
 | TotalStack · Elite Preservation | 4 | 7 · 4,975 | 17,106,725 | 7,794,000 | 62,040 | 864 | 2.19 | 11,478 | 864 | 0 | 0 | 11,478 | 0 | 17,106,725 |
+| TotalStack · priority search under Elite (averageDamage) | 4 | 4 · 4,975 | 19,767,786 | 10,575,600 | 62,040 | 864 | 1.87 | 14,706 | 864 | 0 | 0 | 14,706 | 0 | 19,767,786 |
+| TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 4,975 | 17,106,725 | 7,794,000 | 62,040 | 864 | 2.19 | 11,478 | 864 | 0 | 0 | 11,478 | 0 | 17,106,725 |
 | Complete optimization · sweet-spot | 4 | 7 · 4,975 | 15,533,933 | 7,682,800 | 2,440 | 37 | 2.02 | 300,662 | 37 | 0 | 0 | 300,662 | 0 | 15,533,933 |
 | Complete optimization · steady-max | 4 | 4 · 4,975 | 17,630,102 | 8,448,400 | 4,120 | 58 | 2.09 | 237,879 | 58 | 0 | 0 | 237,879 | 0 | 17,630,102 |
 | Complete optimization · all-in | 4 | 3 · 4,975 | 18,744,735 | 11,240,800 | 7,848 | 111 | 1.67 | 133,301 | 111 | 0 | 0 | 133,301 | 0 | 18,744,735 |
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **0.951** ✗, damage a hired soldier **26.195** ✓, damage a monster —. **Below the goal: damage a silver** — a discrepancy for the owner, not a pin.
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **0.993** ✗, damage a hired soldier **1.005** ✓, damage a monster —. **Below the goal: damage a silver** — a discrepancy for the owner, not a pin.
 
 ## the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)
 
@@ -535,11 +541,17 @@ The plan offers 2 stops.
 | Troops first · allow damage trades | 4 | 8 · 5,200 | 10,574,240 | 7,989,600 | 544 | 8 | 1.32 | 307,403 | 8 | 20 | 4,320 | 307,403 | 187,737 | 2,448 |
 | Tier ladder · monsters after troops | 4 | 8 · 5,200 | 8,572,792 | 7,989,600 | 2,192 | 33 | 1.07 | 0 | 33 | 20 | 4,320 | 0 | 187,737 | 1,984 |
 | Troops first · monsters after mercenaries | 4 | 8 · 5,200 | 10,574,240 | 7,989,600 | 544 | 8 | 1.32 | 307,403 | 8 | 20 | 4,320 | 307,403 | 187,737 | 2,448 |
-| TotalStack · M’s Preservation | 4 | 7 · 5,200 | 7,098,212 | 8,418,400 | 0 | 0 | 0.84 | 0 | 0 | 24 | 3,840 | 0 | 103,293 | 1,848 |
-| TotalStack · Total Optimization | 4 | 7 · 5,200 | 9,167,008 | 8,449,600 | 2,192 | 33 | 1.08 | 0 | 33 | 20 | 4,320 | 0 | 171,047 | 2,122 |
+| TotalStack · M’s Preservation | 4 | 7 · 5,200 | 9,138,264 | 8,451,200 | 288 | 4 | 1.08 | 323,582 | 4 | 20 | 4,320 | 323,582 | 154,358 | 2,115 |
+| TotalStack · priority search under M’s (averageDamage) | 4 | 3 · 5,200 | 11,041,652 | 11,617,600 | 2,192 | 33 | 0.95 | 150,515 | 33 | 20 | 4,320 | 150,515 | 103,393 | 2,556 |
+| TotalStack · priority search under M’s (damagePerSilver) | 4 | 6 · 5,200 | 11,235,848 | 8,929,600 | 896 | 16 | 1.26 | 258,866 | 16 | 20 | 4,320 | 258,866 | 171,047 | 2,601 |
+| TotalStack · Total Optimization | 4 | 7 · 5,200 | 9,172,640 | 8,449,600 | 256 | 4 | 1.09 | 436,836 | 4 | 20 | 4,320 | 436,836 | 136,403 | 2,123 |
+| TotalStack · priority search under Elite (averageDamage) | 4 | 7 · 5,200 | 10,526,996 | 8,483,200 | 544 | 8 | 1.24 | 461,105 | 8 | 16 | 4,800 | 461,105 | 133,808 | 2,193 |
+| TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 5,200 | 10,526,996 | 8,483,200 | 544 | 8 | 1.24 | 461,105 | 8 | 16 | 4,800 | 461,105 | 133,808 | 2,193 |
 | TotalStack · Elite Preservation | 4 | 7 · 5,200 | 9,167,008 | 8,449,600 | 2,192 | 33 | 1.08 | 0 | 33 | 20 | 4,320 | 0 | 171,047 | 2,122 |
+| TotalStack · priority search under Elite (averageDamage) | 4 | 3 · 5,200 | 10,948,229 | 11,611,200 | 2,192 | 33 | 0.94 | 150,515 | 33 | 20 | 4,320 | 150,515 | 103,393 | 2,534 |
+| TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 5,200 | 9,167,008 | 8,449,600 | 2,192 | 33 | 1.08 | 0 | 33 | 20 | 4,320 | 0 | 171,047 | 2,122 |
 | Complete optimization · sweet-spot | 4 | 8 · 5,200 | 11,417,051 | 8,090,400 | 544 | 8 | 1.41 | 422,679 | 8 | 23 | 5,760 | 422,679 | 159,797 | 1,982 |
 | Complete optimization · steady-max | 4 | 6 · 5,200 | 11,721,371 | 8,695,200 | 808 | 14 | 1.35 | 265,799 | 14 | 20 | 4,320 | 265,799 | 175,220 | 2,713 |
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.301** ✓, damage a hired soldier —, damage a monster **1.024** ✓. All three are at or above the goal. And the fourth currency, where one is spent: **damage a dragon coin 1.279** ✓ — the monsters’ own price (S-102).
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.300** ✓, damage a hired soldier **0.968** ✗, damage a monster **1.285** ✓. **Below the goal: damage a hired soldier** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.278** ✓ — the monsters’ own price (S-102).
 

@@ -65,21 +65,31 @@ Read these as *marker floors*, not as the goal: winning a marker by fielding a t
 At the 5 % tolerance, over all seventeen armies: **we beat them on 5**, are short on 9, and on **3 no stop of
 ours fits their budget at all**.
 
+**Re-measured 2026-09-22 on complete captures** — the cookie that entitles the `optimize` route is now
+supplied from the environment, so all 168 answers came back 2xx and every army carries its priority-search
+rows. §2 is no longer a lower bound on their side.
+
 | ✓ beat | short | no stop fits |
 |---|---|---|
 | 7 000 export **+55.5 %** | Bear ×1, ×2 −0.2 % | monster camp, 900 dominance |
-| **his usual setup +27.9 %** | e2e seed −1.3 % | 12 000 export |
-| his TotalStack profile +20.7 % | 4 000 case −2.8 % | camp of 2026-09-19, message |
-| camp 2026-09-19 dump +17.7 % | Bear ×10 −7.0 % | |
-| live account +1.8 % | Aydae alone −9.2 % | |
-| | Bear ×3 −12.5 % | |
+| his TotalStack profile +20.7 % | e2e seed −1.3 % | 12 000 export |
+| camp 2026-09-19 dump +17.7 % | 4 000 case −2.8 % | camp of 2026-09-19, message |
+| **his usual setup +4.3 %** | Bear ×10 −7.0 % | |
+| live account +1.8 % | Bear ×3 −12.5 % | |
 | | live account, evening −13.9 % | |
+| | **Aydae alone −20.2 %** | |
 | | **live camp 2026-09-18 −77.9 %** | |
 
-**Known understatement**: the `optimize` route answered 403 to the terminal on 2026-09-22 (§5.2), so the
-newer scenarios carry Generate rows only. "Their hardest row" is a *lower bound* on several armies and some
-verdicts will get worse once the priority-search rows land. **W2 must complete before any of these numbers
-is treated as final.**
+**What the complete capture cost us, and it is the honest half of the story.** The two armies captured for
+the first time that morning had only Generate rows while `optimize` was refused, so their verdicts flattered
+us. With the priority searches in: **his usual setup +27.9 % → +4.3 %** and **Aydae alone −9.2 % → −20.2 %**.
+Two registered pins moved with them — `Aydae alone`'s `externals.damageFloor` **1.09 → 0.79** (its hardest
+row is now `priority search under Elite (averageDamage)` at 23,501,117 against our 18,744,735) and `his usual
+setup`'s `externals.winsHired` **true → false** (their priority searches get 461,105 out of a hired soldier
+chunk where our best stop gets 422,679).
+
+The count did not move — 5 beats before and after — but four of the five are now his own large accounts and
+the margin on the camp he plays is a twentieth of what it looked like.
 
 ---
 
@@ -165,16 +175,20 @@ and the six marker floors of §1 beside it. The ratio table stays as the derived
 *Acceptance*: every army prints a verdict; the five current beats are pinned; a run that turns a beat into a
 short is red. **No engine change in W1** — it is the instrument.
 
-### 5.2 W2 — Complete the external rows
+### 5.2 W2 — Complete the external rows — **done 2026-09-22**
 
-The `optimize` route answers **403 `proRequired`** to any terminal client and **200** to the identical body
-inside the page: his HAR of a 200 carries no cookie and no authorization header and `document.cookie` is
-empty, so the entitlement rides on an **HttpOnly** cookie. `replay.mjs --emit=<path>` writes a console
-snippet for the 120 optimize calls; run it in the page, drop the download into `docs/research/fixtures/`, add
-it **last** to `DATASETS`.
+The `optimize` route answered **403 `proRequired`** to every terminal client while answering **200** to the
+identical body in the page. Proven to be a cookie: same page, same body, same session id, only the flag
+differing — `credentials: 'include'` 200, `credentials: 'omit'` 403 — and `document.cookie` empty, so an
+**HttpOnly** one, stripped from Chrome's sanitised HAR export. `x-session-id` identifies the *calculation*
+and entitles nobody.
 
-*Acceptance*: every army has `priority search under Elite` and `under M's` rows; §2 re-measured. **Blocks the
-honesty of every verdict in §2.**
+`replay.mjs` takes **`TOTALSTACK_COOKIE`** from the environment beside the session id; with it, **168/168
+answers came back 2xx** (120 optimize, 48 Generate) at 1.5 s pacing. `--emit` remains for running the
+optimize half in the page when the cookie should not leave the browser.
+
+*Done*: every army has its `priority search under Elite` and `under M's` rows, §2 is re-measured, and the two
+pins the fuller comparison moved are re-pinned at measured.
 
 ### 5.3 W3 — Make the search converge on a large dominance pool (H9)
 
@@ -244,7 +258,7 @@ objective before it reaches the sizer, so the method radio is inert.
 | # | work | unblocks / worth | risk |
 |---|---|---|---|
 | 1 | **W1** matched-spend instrument | makes everything below measurable and non-regressing | none — no engine change |
-| 2 | **W2** complete external rows | honesty of every verdict | his hour, in the page |
+| 2 | ~~**W2** complete external rows~~ **done 2026-09-22** | §2 is no longer a lower bound | — |
 | 3 | **W5** H3 reads gold + coins | correctness vs the definition; cheap | small |
 | 4 | **W4** burn ladder capacity | −77.9 % → positive, plus the 3 G0 armies | pins move |
 | 5 | **W6** order of death (S-116) | G5 + G6, the coin marker | specified already |
