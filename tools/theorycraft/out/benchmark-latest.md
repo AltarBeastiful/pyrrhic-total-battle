@@ -10,7 +10,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-09-19T18:16:29.604Z, commit (working tree)
+Run: 2026-09-21T20:56:11.409Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 
@@ -123,17 +123,17 @@ The plan offers 4 stops.
 
 | sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 79,635,913 | 35,450,400 | 49,056 | 34 | 2.25 | 287,394 | 30 | 84 | 31,680 | 250,913 | 630,722 | 2,514 |
-| Tier ladder · Generate (average damage) | 4 | 103,438,192 | 37,939,200 | 51,184 | 34 | 2.73 | 584,975 | 30 | 46 | 26,200 | 569,471 | 1,483,855 | 3,948 |
-| Troops first · all types | 4 | 82,845,061 | 35,450,400 | 48,992 | 33 | 2.34 | 425,201 | 29 | 84 | 31,680 | 406,470 | 630,722 | 2,615 |
-| Troops first · Generate (average damage) | 4 | 104,626,942 | 37,290,800 | 49,888 | 34 | 2.81 | 622,813 | 30 | 47 | 26,760 | 601,135 | 1,467,569 | 3,910 |
-| TotalStack · M’s Preservation | 4 | 64,727,476 | 34,658,400 | 46,208 | 4 | 1.87 | 645,150 | 0 | 72 | 22,880 | 0 | 656,346 | 2,829 |
-| TotalStack · Total Optimization | 4 | 79,770,931 | 35,454,400 | 48,872 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
-| TotalStack · Elite Preservation | 4 | 79,770,931 | 35,454,400 | 48,872 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
-| Complete optimization · sweet-spot | 4 | 89,196,808 | 35,230,800 | 48,240 | 24 | 2.53 | 476,719 | 20 | 60 | 28,200 | 487,913 | 1,022,696 | 3,163 |
-| Complete optimization · more-mercs | 4 | 93,298,414 | 35,230,800 | 49,088 | 26 | 2.65 | 597,802 | 22 | 60 | 28,200 | 604,494 | 1,032,046 | 3,308 |
-| Complete optimization · steady-max | 4 | 97,458,367 | 36,436,800 | 48,776 | 32 | 2.67 | 543,725 | 28 | 57 | 28,200 | 521,221 | 1,147,440 | 3,456 |
-| Complete optimization · all-in | 4 | 102,971,902 | 37,316,000 | 49,808 | 34 | 2.76 | 594,278 | 30 | 48 | 27,040 | 561,315 | 1,429,491 | 3,808 |
+| Tier ladder · all types | 4 | 79,635,913 | 35,450,400 | 5,536 | 34 | 2.25 | 287,394 | 30 | 84 | 31,680 | 250,913 | 630,722 | 2,514 |
+| Tier ladder · Generate (average damage) | 4 | 103,438,192 | 37,939,200 | 19,984 | 34 | 2.73 | 584,975 | 30 | 46 | 26,200 | 569,471 | 1,483,855 | 3,948 |
+| Troops first · all types | 4 | 82,845,061 | 35,450,400 | 5,472 | 33 | 2.34 | 425,201 | 29 | 84 | 31,680 | 406,470 | 630,722 | 2,615 |
+| Troops first · Generate (average damage) | 4 | 104,626,942 | 37,290,800 | 18,928 | 34 | 2.81 | 622,813 | 30 | 47 | 26,760 | 601,135 | 1,467,569 | 3,910 |
+| TotalStack · M’s Preservation | 4 | 64,727,476 | 34,658,400 | 6,336 | 4 | 1.87 | 645,150 | 0 | 72 | 22,880 | 0 | 656,346 | 2,829 |
+| TotalStack · Total Optimization | 4 | 79,770,931 | 35,454,400 | 4,072 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
+| TotalStack · Elite Preservation | 4 | 79,770,931 | 35,454,400 | 4,072 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
+| Complete optimization · sweet-spot | 4 | 89,196,808 | 35,230,800 | 9,424 | 24 | 2.53 | 476,719 | 20 | 60 | 28,200 | 487,913 | 1,022,696 | 3,163 |
+| Complete optimization · more-mercs | 4 | 93,298,414 | 35,230,800 | 10,272 | 26 | 2.65 | 597,802 | 22 | 60 | 28,200 | 604,494 | 1,032,046 | 3,308 |
+| Complete optimization · steady-max | 4 | 97,458,367 | 36,436,800 | 14,232 | 32 | 2.67 | 543,725 | 28 | 57 | 28,200 | 521,221 | 1,147,440 | 3,456 |
+| Complete optimization · all-in | 4 | 102,971,902 | 37,316,000 | 17,888 | 34 | 2.76 | 594,278 | 30 | 48 | 27,040 | 561,315 | 1,429,491 | 3,808 |
 
 **Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.226** ✓, damage a hired soldier **1.525** ✓, damage a monster **2.375** ✓. All three are at or above the goal. And the fourth currency, where one is spent: **damage a dragon coin 1.512** ✓ — the monsters’ own price (S-102).
 
@@ -348,16 +348,16 @@ The plan offers 3 stops.
 
 | sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 6,739,348 | 7,990,800 | 6,752 | 29 | 0.84 | 0 | 29 | 16 | 3,840 | 0 | 126,953 | 1,755 |
-| Tier ladder · Generate (average damage) | 4 | 8,444,893 | 9,547,400 | 6,752 | 29 | 0.88 | 105,962 | 29 | 16 | 3,840 | 105,962 | 97,163 | 2,199 |
-| Troops first · all types | 4 | 7,673,968 | 7,990,800 | 5,856 | 16 | 0.96 | 104,118 | 16 | 16 | 3,840 | 104,118 | 126,953 | 1,998 |
-| Troops first · Generate (average damage) | 4 | 8,647,583 | 9,142,200 | 6,672 | 28 | 0.95 | 105,324 | 28 | 16 | 3,840 | 105,324 | 102,779 | 2,252 |
-| TotalStack · M’s Preservation | 4 | 5,187,364 | 7,862,000 | 5,568 | 0 | 0.66 | 0 | 0 | 12 | 1,920 | 0 | 130,251 | 2,702 |
-| TotalStack · Total Optimization | 4 | 6,779,808 | 7,989,200 | 6,816 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
-| TotalStack · Elite Preservation | 4 | 6,779,808 | 7,989,200 | 6,816 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
-| Complete optimization · silver-saver | 4 | 4,919,095 | 4,431,600 | 5,184 | 7 | 1.11 | 131,856 | 7 | 16 | 3,840 | 131,856 | 116,603 | 1,281 |
-| Complete optimization · sweet-spot | 4 | 8,182,228 | 8,340,000 | 6,120 | 19 | 0.98 | 109,005 | 19 | 16 | 3,840 | 109,005 | 118,153 | 2,131 |
-| Complete optimization · steady-max | 4 | 8,408,431 | 8,702,400 | 6,384 | 25 | 0.97 | 100,404 | 25 | 16 | 3,840 | 100,404 | 110,928 | 2,190 |
+| Tier ladder · all types | 4 | 6,739,348 | 7,990,800 | 1,952 | 29 | 0.84 | 0 | 29 | 16 | 3,840 | 0 | 126,953 | 1,755 |
+| Tier ladder · Generate (average damage) | 4 | 8,444,893 | 9,547,400 | 1,952 | 29 | 0.88 | 105,962 | 29 | 16 | 3,840 | 105,962 | 97,163 | 2,199 |
+| Troops first · all types | 4 | 7,673,968 | 7,990,800 | 1,056 | 16 | 0.96 | 104,118 | 16 | 16 | 3,840 | 104,118 | 126,953 | 1,998 |
+| Troops first · Generate (average damage) | 4 | 8,647,583 | 9,142,200 | 1,872 | 28 | 0.95 | 105,324 | 28 | 16 | 3,840 | 105,324 | 102,779 | 2,252 |
+| TotalStack · M’s Preservation | 4 | 5,187,364 | 7,862,000 | 0 | 0 | 0.66 | 0 | 0 | 12 | 1,920 | 0 | 130,251 | 2,702 |
+| TotalStack · Total Optimization | 4 | 6,779,808 | 7,989,200 | 1,952 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
+| TotalStack · Elite Preservation | 4 | 6,779,808 | 7,989,200 | 1,952 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
+| Complete optimization · silver-saver | 4 | 4,919,095 | 4,431,600 | 480 | 7 | 1.11 | 131,856 | 7 | 16 | 3,840 | 131,856 | 116,603 | 1,281 |
+| Complete optimization · sweet-spot | 4 | 8,182,228 | 8,340,000 | 1,320 | 19 | 0.98 | 109,005 | 19 | 16 | 3,840 | 109,005 | 118,153 | 2,131 |
+| Complete optimization · steady-max | 4 | 8,408,431 | 8,702,400 | 1,584 | 25 | 0.97 | 100,404 | 25 | 16 | 3,840 | 100,404 | 110,928 | 2,190 |
 
 **Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.308** ✓, damage a hired soldier —, damage a monster **0.911** ✗. **Below the goal: damage a monster** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.240** ✓ — the monsters’ own price (S-102).
 
@@ -367,12 +367,12 @@ The plan offers 2 stops.
 
 | sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 8,572,792 | 7,989,600 | 13,200 | 33 | 1.07 | 0 | 33 | 20 | 4,320 | 0 | 187,737 | 1,984 |
-| Tier ladder · Generate (average damage) | 4 | 11,780,261 | 11,670,000 | 13,360 | 33 | 1.01 | 150,515 | 33 | 18 | 3,960 | 150,515 | 134,246 | 2,975 |
-| Troops first · all types | 4 | 10,574,240 | 7,989,600 | 11,552 | 8 | 1.32 | 307,403 | 8 | 20 | 4,320 | 307,403 | 187,737 | 2,448 |
-| Troops first · Generate (average damage) | 4 | 11,892,528 | 11,071,800 | 13,064 | 30 | 1.07 | 165,566 | 30 | 20 | 4,080 | 165,566 | 126,534 | 2,915 |
-| Complete optimization · sweet-spot | 4 | 11,417,051 | 8,090,400 | 10,976 | 8 | 1.41 | 422,679 | 8 | 23 | 5,760 | 422,679 | 159,797 | 1,982 |
-| Complete optimization · steady-max | 4 | 11,721,371 | 8,695,200 | 11,816 | 14 | 1.35 | 265,799 | 14 | 20 | 4,320 | 265,799 | 175,220 | 2,713 |
+| Tier ladder · all types | 4 | 8,572,792 | 7,989,600 | 2,192 | 33 | 1.07 | 0 | 33 | 20 | 4,320 | 0 | 187,737 | 1,984 |
+| Tier ladder · Generate (average damage) | 4 | 11,780,261 | 11,670,000 | 2,192 | 33 | 1.01 | 150,515 | 33 | 18 | 3,960 | 150,515 | 134,246 | 2,975 |
+| Troops first · all types | 4 | 10,574,240 | 7,989,600 | 544 | 8 | 1.32 | 307,403 | 8 | 20 | 4,320 | 307,403 | 187,737 | 2,448 |
+| Troops first · Generate (average damage) | 4 | 11,892,528 | 11,071,800 | 1,960 | 30 | 1.07 | 165,566 | 30 | 20 | 4,080 | 165,566 | 126,534 | 2,915 |
+| Complete optimization · sweet-spot | 4 | 11,417,051 | 8,090,400 | 544 | 8 | 1.41 | 422,679 | 8 | 23 | 5,760 | 422,679 | 159,797 | 1,982 |
+| Complete optimization · steady-max | 4 | 11,721,371 | 8,695,200 | 808 | 14 | 1.35 | 265,799 | 14 | 20 | 4,320 | 265,799 | 175,220 | 2,713 |
 
 No comparable `TotalStack · Total Optimization` row on this army, so the owner’s goal (*"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*) is not measured here.
 

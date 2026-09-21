@@ -254,6 +254,8 @@ export function bestOn(
 export interface TableMarks {
   damage: number | null;
   silver: number | null;
+  /** The cheapest stop at the Temple; a price, so lower is better, exactly as the silver is. */
+  gold: number | null;
   hiredLost: number | null;
   perSilver: number | null;
 }
@@ -262,6 +264,7 @@ export function tableMarks(rows: readonly PlanRow[]): TableMarks {
   return {
     damage: bestOn(rows, (row) => row.repeat.damage, 'higher'),
     silver: bestOn(rows, (row) => row.repeat.silver, 'lower'),
+    gold: bestOn(rows, (row) => row.repeat.gold, 'lower'),
     hiredLost: bestOn(rows, (row) => row.repeat.mercLost, 'lower'),
     // Per silver, and **not** Per hired: see `PER_SILVER` above.
     perSilver: bestOn(rows, PER_SILVER.of, 'higher'),

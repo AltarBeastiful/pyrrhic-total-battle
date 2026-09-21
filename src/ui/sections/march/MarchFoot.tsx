@@ -1,7 +1,7 @@
 /**
- * The March's second half (owner, 2026-09-15): everything that *explains* the answer, or acts on the
- * whole march, rather than being the answer. On a desktop these four blocks sit at the foot of the
- * setup column so the March pane stays shorter than it — which is what lets the pane stick
+ * The March's second half (owner, 2026-09-15): everything that *explains* the answer rather than being
+ * it. On a desktop these three blocks sit at the foot of the setup column so the March pane stays
+ * shorter than it — which is what lets the pane stick
  * with its head pinned for good (`shell/usePaneStick.ts`: a pane that does not fit the room the window
  * leaves it sticks at both ends instead, and its recap is one flick of the wheel away rather than on screen).
  * Measured the same day: the pane was **771 px against 768 px of room at 1400×900**, so it did not
@@ -13,12 +13,13 @@
  * Generate already relies on (design rule 5). Nothing here is drawn twice on one screen at any width.
  *
  * What stays in the pane is what the pane is *for*: the figures, the army, what it left at home, the
- * plan's own assessment (`PlanSizing`, `PlanFold`). What moves down here is reference and
- * whole-march actions — the objective comparison, the damage split with the HP profile and the
- * battle story, the saved list, and the row that copies, edits, saves or shares the counts.
+ * plan's own assessment (`PlanSizing`, `PlanFold`) — and, since 2026-09-21, the marks that copy, edit,
+ * keep and send the march, which are on the March's heading at both widths and belong to no host but the
+ * card itself (`MarchActions`). What is down here is reference: the objective comparison, the damage
+ * split with the HP profile and the battle story, and the saved list.
  */
-import { Button, Group, Stack, Text } from '@mantine/core';
-import { Share2 } from 'lucide-react';
+import { Group, Stack, Text } from '@mantine/core';
+import { BookmarkPlus, Share2 } from 'lucide-react';
 import { lazy, useState } from 'react';
 
 import { version as gameData } from '@/data';
@@ -34,7 +35,7 @@ import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 import { MARCH_FOOT_ANCHOR } from '@/ui/shell/march';
 
 import { DamageSplit } from './DamageSplit';
-import { MarchCountsBar } from './MarchPills';
+import { MarchAction, MarchCountsBar } from './MarchPills';
 import classes from './march.module.css';
 import { amount } from './format';
 import { TradeoffStrip } from './TradeoffStrip';
@@ -130,10 +131,17 @@ export function MarchSavedFold() {
 
 /**
  * The things a player does with a whole march: copy every count, edit them by hand, keep the march,
- * send it. One part, because they are one kind of thing.
+ * send it. One toolbar, because they are one kind of thing.
+ *
+ * **Marks, on the March's own title line** (owner, 2026-09-21: *"editing count, copy and share could be
+ * closer to summary and use icons to avoid crowding the ui"*). They were five labelled buttons at the
+ * foot of the setup column, a whole page away from the figures and the pills they act on — the owner
+ * reads the answer in the pane and had to travel to the other end of the page to copy it. As marks they
+ * cost the pane no line at all: they sit beside the "12 stacks" meta on the March's heading
+ * (`MarchSection.tsx`), at both widths, which is the one row on the card that was half empty.
  *
  * The edit mode it switches lives in the run store, not here: the stack pills it turns into fields are
- * in the March pane on the other side of the page (`runStore.ts`, `editingCounts`).
+ * in the March pane, which is the other side of the page on a desktop (`runStore.ts`, `editingCounts`).
  */
 export function MarchActions() {
   const march = useMarch();
@@ -181,45 +189,31 @@ export function MarchActions() {
   if (snapshot === null || result === null || summary === null) return null;
 
   return (
-    <Stack gap="sm">
-      <Group gap="sm" wrap="wrap">
-        <MarchCountsBar
-          countRows={march.rows}
-          editing={editing}
-          onEditing={setEditing}
-          edited={march.edited}
-          onUndo={() => {
-            useResultStore.getState().resetCounts();
-          }}
-        />
-        {/* Generate is the one filled control on this page (docs/design.md §1). */}
-        <Button
-          size="compact-sm"
-          variant="default"
-          onClick={() => {
-            setSaving(true);
-          }}
-        >
-          Save this march
-        </Button>
-        <Button
-          size="compact-sm"
-          variant="default"
-          leftSection={<Share2 size={14} aria-hidden />}
-          onClick={share}
-        >
-          Share
-        </Button>
-        <Text span role="status" className={classes.meta} c="dimmed">
-          {notice}
-        </Text>
-      </Group>
-      {march.edited && (
-        <Text className={classes.meta} c="dimmed">
-          Counts edited by hand. The figures are recomputed on them; nothing is re-sized, so the housing is
-          yours to balance.
-        </Text>
-      )}
+    // `nowrap`, and 4 px apart: a toolbar on a heading line that wrapped would push the title off its
+    // own row. Five marks are 170 px, which the 360 dp pane has beside "12 stacks".
+    <Group gap={4} wrap="nowrap">
+      <MarchCountsBar
+        countRows={march.rows}
+        editing={editing}
+        onEditing={setEditing}
+        edited={march.edited}
+        onUndo={() => {
+          useResultStore.getState().resetCounts();
+        }}
+      />
+      {/* Generate is the one filled control on this page (docs/design.md §1), so these are all subtle
+          marks; only the edit toggle fills, and only while it is on. */}
+      <MarchAction
+        label="Save this march"
+        icon={<BookmarkPlus size={16} aria-hidden />}
+        onClick={() => {
+          setSaving(true);
+        }}
+      />
+      <MarchAction label="Share" icon={<Share2 size={16} aria-hidden />} onClick={share} />
+      <Text span role="status" className={classes.meta} c="dimmed">
+        {notice}
+      </Text>
       {saving && (
         <LazySurface isOpen={saving}>
           <MarchNameDialog
@@ -227,7 +221,7 @@ export function MarchActions() {
             title="Save this march"
             description="It is kept inside the active profile, with the march it came from."
             confirmLabel="Save this march"
-            initialName={`${setup?.name ?? 'March'} — ${amount(summary.avgDamage)} expected`}
+            initialName={`${setup?.name ?? 'March'}, ${amount(summary.avgDamage)} expected`}
             onConfirm={saveMarch}
             onCancel={() => {
               setSaving(false);
@@ -235,16 +229,33 @@ export function MarchActions() {
           />
         </LazySurface>
       )}
-    </Stack>
+    </Group>
+  );
+}
+
+/**
+ * **What a hand edit did to the figures**, under them, and only while it is true (design rule 15). It
+ * used to hang under the row of buttons at the foot of the page; the row is a toolbar on the heading now
+ * and a sentence cannot live on a heading line, so the line moved to the one place it is about — the
+ * figures it explains (`MarchSection.tsx`, part 1).
+ */
+export function MarchEditedNote() {
+  const { edited } = useMarch();
+  if (!edited) return null;
+  return (
+    <Text className={classes.meta} c="dimmed">
+      Counts edited by hand. The figures are recomputed on them; nothing is re-sized, so the housing is yours
+      to balance.
+    </Text>
   );
 }
 
 /**
  * The foot of the setup column: the March's second half as one panel, in the order a player reads it
- * — what the objective bought, then what happened, then what is saved, then what to do with it.
+ * — what the objective bought, then what happened, then what is saved.
  *
  * It draws from the first load, before any march has been run: the saved list is where "nothing saved
- * yet" is discovered, and the other three parts take their hairline with them when they have nothing
+ * yet" is discovered, and the other two parts take their hairline with them when they have nothing
  * to say (`kit/Sections.tsx`).
  */
 export function MarchFoot() {
@@ -255,14 +266,13 @@ export function MarchFoot() {
       title="This march in full"
       titleId={`${MARCH_FOOT_ANCHOR}-title`}
     >
-      {/* The four blocks are the *direct* children on purpose: a part that has nothing to say
+      {/* The three blocks are the *direct* children on purpose: a part that has nothing to say
           renders nothing, and takes its hairline and its 16 px with it (`kit/Sections.tsx`). A
           wrapper `<div>` would leave an empty part behind. */}
       <Sections>
         <MarchObjectives />
         <MarchDetailsFold />
         <MarchSavedFold />
-        <MarchActions />
       </Sections>
     </Panel>
   );

@@ -28,7 +28,7 @@ export function TitleChips({ profileId, families }: TitleChipsProps) {
             {family.label}
           </Text>
           <ChipRow
-            label={`Titles — ${family.label.toLowerCase()}`}
+            label={`Titles: ${family.label.toLowerCase()}`}
             gap={8}
             items={family.chips.map((chip) => ({
               value: chip.id,

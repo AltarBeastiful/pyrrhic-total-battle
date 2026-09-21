@@ -73,6 +73,30 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
   // Whether this bar trades a hired stock at all; the two stock columns hang off it (S-112, `./picks`).
   const spendsHired = spendsStock(rows);
   /**
+   * **The other purse, in a column of its own** (owner, 2026-09-21: *"monsters are revived using gold for a
+   * substantial sum and mercs aren't cheap either if there's many — why not comparing, or at least inform?
+   * … using revive the highest elite, it should say the gold anyway, as we're not training, we're reviving
+   * with gold"*).
+   *
+   * It was measured before it was drawn and refused once, the same day (experiment 126): the stop that
+   * spends least gold is the stop that burns least stock on fourteen benchmark armies of fourteen, so the
+   * column looked like "Hired lost" in another unit. **Thirteen of those fourteen field no monster** — the
+   * measurement answered "does gold *rank* the stops differently", and the owner is asking the other
+   * question, which is what a march *costs*. Under the plan a new setup now opens on, a monster stack is
+   * revived rather than trained: its price leaves the silver column altogether and lands here, and a bar
+   * whose stops differ by a monster differs by thousands of gold that nothing on screen said.
+   *
+   * So: **the gold**, drawn only on a bar that spends any (design rule 15), which is every army that hires or
+   * revives and no other.
+   *
+   * **And the gold alone** (owner, 2026-09-21: *"in the plan table, let's remove dragon coins below gold; we
+   * can keep it in the battle summary, it's enough there"*). The coins rode here under the gold for an hour,
+   * as the queue rides under the silver; two muted second lines in a seven-column table is a table being read
+   * twice. The recap says the coins with their own mark and their own ratio, which is where a player meets
+   * them (`MarchRecap`, design rule 5).
+   */
+  const spendsGold = rows.some((row) => row.repeat.gold > 0);
+  /**
    * **The best figure in each column, marked** (S-113). Measured before it was drawn (experiment 120, over
    * the sixteen benchmark armies): the marks land on **2.38 different stops on average**, and a single stop
    * wins everything on only three armies — the ones whose bar is one or two stops long. So the marks are
@@ -95,15 +119,20 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
         // 4 rather than 6: measured at 1400×900, the heads on one line each made a 498 px table in a
         // 462 px pane — a sideways scroller in the March where there was none (design rule 17 allows the
         // table one, the desktop has never needed it). Four pixels a side over six cells is 24 of the 36.
-        horizontalSpacing={4}
+        // 2 since the gold took a column back (2026-09-21): seven heads over six, and the pixels a cell are
+        // what keep the whole table inside a 462 px pane — the pane's own e2e refuses a scroller anywhere
+        // inside it (`paneFrame().scrollers`), which is the rule that cut this column in 2026-09-16. The
+        // figures are right-aligned under heads wider than themselves, so the air between two columns is
+        // the head's, not the padding's.
+        horizontalSpacing={2}
         verticalSpacing={6}
         // A `grid` rather than a plain table, because every row is a control the player picks between:
         // that is the role that lets a *row* carry `aria-selected`, and it is what the raised ground
         // says in colour (design rule 24 — never colour alone).
         role="grid"
-        // The heads print "Worst" and "Silver" with no unit and no reading, so both are said once, here,
+        // The heads print "Damage" and "Silver" with no unit and no reading, so both are said once, here,
         // where a reader meets the table (design rule 5: say it where it is expected, not five times over).
-        aria-label="Every plan on the trade, one repeated march each, at its worst opening"
+        aria-label="Every plan on the trade, one repeated march each"
       >
         <Table.Thead>
           <Table.Tr>
@@ -127,33 +156,45 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 picker and has no column heads at all) — but its figure tiles are exactly this shape, a glyph
                 then a short caps label ("🔒 MINIMUM DAMAGE", "🪙 SILVER"), and its ratios are written as
                 "DAMAGE / SILVER". Ours stay our own words (rule 26): "Per silver", "Per hired". */}
-            {/* **The recap's own 🔒, and its word shortened to one** (S-94, 2026-09-19). The column was
-                "🎯 Damage", which is the recap's mark and word for the *expected* damage — the midpoint of
-                the two openings the game's coin decides — while the figure under it has been the
-                **enemy-first** journal since the owner said he would not spend 3M silver on a coin flip.
-                Two names and two glyphs for one number, on two blocks of one screen, is what design rules 5
-                and 26 are about and rule 21 says of the marks.
+            {/* **The recap's own 🔒 over the word the column is about** (S-94, 2026-09-19; the word since
+                the owner's read of 2026-09-21: *"worst column in plan table should read Damage, it's easier
+                to understand"*). The head was "🎯 Damage", which is the recap's mark and word for the
+                *expected* damage — the midpoint of the two openings the game's coin decides — while the
+                figure under it has been the **enemy-first** journal since the owner said he would not spend
+                3M silver on a coin flip. Two names and two glyphs for one number, on two blocks of one
+                screen, is what design rules 5 and 26 are about and rule 21 says of the marks.
 
-                The recap calls it "Worst opening" and this head says **"Worst"**, for the same reason the
-                objectives strip does (`TradeoffStrip.tsx`, where the four figures share one line): at
+                So the **mark** is what keeps the two apart and the word says what the column holds: 🔒 is the
+                worst opening wherever it is drawn — the recap's row, the objectives strip, this head — and 🎯
+                stays the expected damage. "Worst" alone was a superlative that never said *of what*, which is
+                the one thing a column of seven-figure numbers has to say. The whole phrase does not fit: at
                 1400×900 the pane is 420 px and "🔒 Worst opening" widens the table past its column, which
                 design rule 17 and `e2e/generate.spec.ts` both refuse. The word the head drops is said once,
                 in the table's own name above — which is where its unit is said too. */}
             <Table.Th scope="col" ta="end">
-              <Glyph kind="minimumDamage" /> Worst
+              <Glyph kind="minimumDamage" /> Damage
             </Table.Th>
             <Table.Th scope="col" ta="end">
               <Glyph kind="silver" /> Silver
             </Table.Th>
+            {spendsGold && (
+              <Table.Th scope="col" ta="end">
+                <Glyph kind="gold" /> Gold
+              </Table.Th>
+            )}
             {/* **The two stock columns draw only where there is a stock** (S-112, design rule 15). On an
                 army that hires nothing — which has had a bar of its own since S-111 — "Hired lost" was a
                 column of noughts and "Per hired" a column of dashes: four cells of width, in a 420 px pane
                 where a seventh column was measured at 505 px and cut, spent saying nothing. The same
                 reading decides the bar's ends and the recap's row (`spendsStock`, `./picks`), so the block
                 either speaks of a stock throughout or never. */}
+            {/* **"Hired"**, not "Hired lost", since the gold took a column back (2026-09-21): the same cut
+                as "Worst opening" → "Worst" two heads along, for the same reason and with the same answer —
+                what is lost is said in the table's own name, in the row's, and by the axis under the bar. It
+                is 28 px of a 462 px pane. */}
             {spendsHired && (
               <Table.Th scope="col" ta="end">
-                <Glyph kind="mercenaries" /> Hired lost
+                <Glyph kind="mercenaries" /> Hired
               </Table.Th>
             )}
             <Table.Th scope="col" ta="end">
@@ -184,24 +225,20 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 // aims — and it answers the two keys a control answers. Its focus ring is the theme's, drawn
                 // by `march.module.css` off Mantine's own variables.
                 tabIndex={0}
-                // **Gold a march, where the table has no room for it** (review of 2026-09-16). It was built
-                // as a seventh column first and measured at 1400×900: the heads came to a **505 px table in
-                // a 462 px pane**, which is the sideways scroller the six-column table was tuned down to
-                // `horizontalSpacing={4}` to avoid (design rule 17, and `e2e/generate.spec.ts` holds it). So
-                // the figure is read off the bar's tip (`PlanBar.tsx`) and carried here as the row's own
-                // name, where a screen reader meets it — never colour, never a column that pushes the table
-                // off its pane. The ratio cells are unchanged and still read as cells.
-                aria-label={`${planWords(point)}: ${compact(point.repeat.damage)} worst opening, ${compact(
+                // **Every figure of the row, in the order the cells stand.** Gold was the one figure with no
+                // cell of its own from the review of 2026-09-16 — built as a seventh column, measured at
+                // 1400×900 as a **505 px table in a 462 px pane**, and cut back to this name and the bar's
+                // tip. It has a column again since 2026-09-21 (the owner: *"we're not training, we're
+                // reviving with gold"*), so the table takes the sideways scroller design rule 17 allows it
+                // and the plan's name is pinned through it; the tip stopped saying it the same day (rule 5).
+                aria-label={`${planWords(point)}: ${compact(point.repeat.damage)} damage, ${compact(
                   point.repeat.silver,
                 )} silver, ${duration(point.repeat.seconds)} to recover, ${compact(
                   point.repeat.gold,
                 )} gold, ${
-                  // The third currency, in the row's own name and only while the march spends one (design
-                  // rule 15). A reader meets it in the same breath as the silver and the queue it rides
-                  // with in the cell (S-102).
-                  (point.repeat.dragonCoins ?? 0) > 0
-                    ? `${amount(point.repeat.dragonCoins ?? 0)} dragon coins, `
-                    : ''
+                  // The coins are **not** in the row's name: they are not in the row (owner, 2026-09-21).
+                  // The recap carries them, with their mark and the ratio they bought (`MarchRecap`).
+                  ''
                 }${
                   // Said in the row's own name only where the bar trades a stock, for the same reason the
                   // column is drawn only there (S-112): a reader is told what the march spends, not what it
@@ -214,6 +251,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                   [
                     marks.damage === index ? 'most damage' : null,
                     marks.silver === index ? 'least silver' : null,
+                    spendsGold && marks.gold === index ? 'least gold' : null,
                     spendsHired && marks.hiredLost === index ? 'fewest hired lost' : null,
                   ]
                     .filter((word): word is string => word !== null)
@@ -243,7 +281,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
               >
                 <Table.Th scope="row" className={nameCell}>
                   {/* The name, and nothing beside it. It wore a 🎯 when the row was the one on screen —
-                      the same glyph heading the Worst column two cells along — and "the sweet spot"
+                      the same glyph heading the Damage column two cells along — and "the sweet spot"
                       under a row already named "Sweet spot" (design rules 5 and 21). The raised ground,
                       the heavier name and `aria-selected` say the first; the row's own name says the
                       second, as does the marker on the bar above. */}
@@ -271,16 +309,20 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                     order**: colour is never the only signal (design rule 24), and the weight is what a
                     reader sees first when the two schemes render the ink differently. */}
                 <Table.Td ta="end" data-best={marks.damage === index ? 'true' : undefined}>
-                  <Group gap="xs" wrap="nowrap" justify="flex-end">
+                  {/* 6 px between the bar and its figure, and a 28 px bar: the column gave 18 px to the
+                      gold's on 2026-09-21, and a bar is a *shape* — it is read against the row above it,
+                      not measured, so what it costs the table matters and what it is worth in pixels does
+                      not (design rule 15). */}
+                  <Group gap={6} wrap="nowrap" justify="flex-end">
                     {/* The bar is decoration beside its own figure, and `StatBar` draws one this way:
                         a role, its bounds and the figure as the value text. `brass` is the theme's
                         damage accent, the same one `StatBar` paints a boosted stat in. */}
                     <Progress.Root
                       size="sm"
                       radius="xs"
-                      w={40}
+                      w={28}
                       role="progressbar"
-                      aria-label={`${planWords(point)}, worst opening a march`}
+                      aria-label={`${planWords(point)}, damage a march`}
                       aria-valuemin={0}
                       aria-valuemax={loudest}
                       aria-valuenow={point.repeat.damage}
@@ -313,21 +355,15 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                   {compact(point.repeat.silver)}
                   <Text span inherit display="block" fw={400} c="dimmed">
                     {duration(point.repeat.seconds)}
-                    {/* **And the dragon coins, on the marches that spend any** (S-102; the owner,
-                        2026-09-19: *"they have a cost in silver but in dragon coins also, which are both
-                        constrained"*). A dominance monster is trained rather than hired, so it leaves the
-                        "Hired lost" column two cells along and its whole price is here: the silver above,
-                        the queue beside it and this. Same muted ink, same line, no seventh head — the
-                        table measured 505 px in a 462 px pane the last time a price was tried as a column
-                        of its own (see the row's accessible name above).
-
-                        **Drawn only while the figure is positive** (design rule 15: nothing on screen
-                        without a value). Every army in this repo but a monster camp spends no coin at all,
-                        and a "· 0 dragon coins" on every row of every bar would be a column of noughts. */}
-                    {(point.repeat.dragonCoins ?? 0) > 0 &&
-                      ` · ${amount(point.repeat.dragonCoins ?? 0)} dragon coins`}
                   </Text>
                 </Table.Td>
+                {/* **What this march costs that silver does not pay**: the Temple's gold, one figure and
+                    nothing under it. */}
+                {spendsGold && (
+                  <Table.Td ta="end" data-best={marks.gold === index ? 'true' : undefined}>
+                    {compact(point.repeat.gold)}
+                  </Table.Td>
+                )}
                 {spendsHired && (
                   <Table.Td ta="end" data-best={marks.hiredLost === index ? 'true' : undefined}>
                     {amount(point.repeat.mercLost)}
@@ -345,7 +381,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                     do less than 1M"*, then *"dmg per hired is still broken: it shows a damage per hired
                     almost above total damage"*). It divided the **whole** march's worst opening — the
                     figure two cells to the left — by the chunks the hired stock loses, so on a march whose
-                    troops do most of the hitting it printed nearly the Worst column again. The numerator is
+                    troops do most of the hitting it printed nearly the Damage column again. The numerator is
                     the part of that opening the hired stacks struck for (`PlanRepeat.hiredDamage`), which
                     is the one reading of "a hired" the engine has (design rule 5). */}
                 {spendsHired && (
@@ -359,9 +395,6 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
             decode is decoration, and the alternative — a key beside every head — is the width this table
             has never had. `Table.Caption` is the designed slot for it (rule 23) and Mantine puts it below
             the table, where a reader meets it after the figures rather than before them. */}
-        <Table.Caption className={classes.compareKey ?? undefined}>
-          The heavier figure in a column is the best of the bar.
-        </Table.Caption>
       </Table>
     </div>
   );

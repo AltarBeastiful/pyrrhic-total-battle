@@ -42,6 +42,7 @@
 import { ActionIcon, Group, Popover, Stack, Table, Text, VisuallyHidden } from '@mantine/core';
 import { Info } from 'lucide-react';
 import { useId, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import { planMarch, withMethod } from '@/engine';
 import type { CampaignPlan, PlanTotals } from '@/engine/plan';
@@ -64,16 +65,71 @@ import { pickOf, sweetSpotOf, useRunStore } from './runStore';
 type PlanFigures = Pick<PlanTotals, 'repeat'>;
 
 /**
- * How much of the hired stock a march burns, in words a figure can carry: "1.5" or "0".
- *
- * The figure is `repeat` and not a share of the plan's losses — see the column note under the table: what a
- * player marches is the repeated march, and it is the one the March at the top of the pane is drawing.
- * `PlanTotals.repeat` agrees with that battle **to the unit** (`tools/theorycraft/out/74-row-figures.md` §1),
- * which is what makes the row and the recap above it say the same thing.
+ * A figure inside the sentence above the table: **bold, and nothing else** (owner, 2026-09-21: *"highlight
+ * softly, not too much — maybe just bold the numbers"*). It keeps the line's own muted ink, so the sentence
+ * reads as a sentence and the eye still lands on what it can compare.
  */
-function mercsAMarch(point: PlanFigures): string {
-  const each = point.repeat.mercLost;
-  return each >= 10 ? amount(each) : each.toFixed(1);
+function Figure({ children }: { children: ReactNode }) {
+  return (
+    <Text span inherit fw={600}>
+      {children}
+    </Text>
+  );
+}
+
+/**
+ * **What one march of this plan costs, in the order a player counts it**: the damage it deals, then what it
+ * is paid with — the mercenaries that never come back, the silver, the gold the Temple asks, and the days
+ * its losses sit in the queue.
+ *
+ * One sentence where the block had three strings (owner, 2026-09-21: *"make the text before the plan table
+ * more readable"*), and a price of nought is left out of it rather than printed as one (design rule 15): an
+ * army that hires nothing says nothing about a stock, and a march that opens no Temple says nothing about
+ * gold. `mercLost` is **units gone for good** — the tenth of each chunk the Temple cannot return — so it is
+ * counted in mercenaries, and one of them is "1 mercenary".
+ */
+function spentOn(point: PlanFigures, spendsHired: boolean): ReactNode[] {
+  const { mercLost, silver, gold, seconds } = point.repeat;
+  const parts: ReactNode[] = [];
+  if (spendsHired && mercLost > 0) {
+    parts.push(
+      <>
+        <Figure>{amount(mercLost)}</Figure>
+        {mercLost === 1 ? ' mercenary' : ' mercenaries'}
+      </>,
+    );
+  }
+  // Compact, like the cells of the table under it: the sentence and the row a player reads next to it name
+  // the same figure the same way (design rule 5). The mercenaries stay a plain count — one is "1".
+  parts.push(
+    <>
+      <Figure>{compact(silver)}</Figure> silver
+    </>,
+  );
+  if (gold > 0) {
+    parts.push(
+      <>
+        <Figure>{compact(gold)}</Figure> gold
+      </>,
+    );
+  }
+  parts.push(
+    <>
+      <Figure>{duration(seconds)}</Figure> of training
+    </>,
+  );
+  return parts;
+}
+
+/** The parts of a sentence, read as one: "a, b and c". */
+function sentenceList(parts: ReactNode[]): ReactNode {
+  return parts.map((part, index) => (
+    // The list is built here in one pass and never re-ordered, so its index is a stable key.
+    <span key={index}>
+      {index === 0 ? '' : index === parts.length - 1 ? ' and ' : ', '}
+      {part}
+    </span>
+  ));
 }
 
 /**
@@ -131,7 +187,7 @@ function bindingSentence(binding: CampaignPlan['binding']): string {
   if (binding.silver) return 'The silver box is what ends the plan: more silver would buy more marches.';
   if (binding.leadership)
     return 'Your leadership is what ends the plan: every point of it is spent, so a bigger march needs more of it.';
-  return 'Nothing binds yet — the plan stops where more troops stop paying for themselves.';
+  return 'Nothing binds yet: the plan stops where more troops stop paying for themselves.';
 }
 
 /**
@@ -145,7 +201,7 @@ function bindingSentence(binding: CampaignPlan['binding']): string {
  */
 const WHY = [
   'Damage is paid for twice over: with silver, which you earn back, and with the hired stock, which is gone',
-  'for good. Silver buys a deeper march — more of it, and every march hits harder for it. The hired stock',
+  'for good. Silver buys a deeper march: more of it, and every march hits harder for it. The hired stock',
   'hits harder still and takes no leadership, but a stack loses a tenth of itself every march it is fielded,',
   'so the same stock is worth more spent thinly over many marches than all at once. Which of the two runs out',
   'first is only visible over a whole sequence of marches, and planning the sequence is what this method does.',
@@ -172,7 +228,7 @@ const WHY = [
 const WHY_TROOPS_ONLY = [
   'With nothing hired in the march there is only one thing to weigh: a bigger march hits harder and costs',
   'more silver and more days in the training queue to bring back. Nothing here is spent for good, so every',
-  'plan on the bar is a march you can repeat as often as you like — the bar runs from the least silver to',
+  'plan on the bar is a march you can repeat as often as you like; the bar runs from the least silver to',
   'the most damage, and each plan says what it hits for and what it costs to stand back up.',
 ].join(' ');
 
@@ -201,11 +257,6 @@ export function PlanFold() {
   const spendsHired = spendsStock(rows);
   const sweet = sweetSpotOf(plan);
   const each = shown.repeat;
-  // The marches the row above is actually fought: the campaign's own count, less its last march and less the
-  // troops-only tail a stop plays when the horizon outruns its hired stock (`PlanTotals.tail`, S-89). The
-  // tail is not this march repeated, so counting it here would say the player fields mercenaries four times
-  // where the stock pays for one.
-  const repeated = shown.marches - (shown.finaleCounts ? 1 : 0) - (shown.tail?.marches ?? 0);
   /**
    * **How the stop on screen is fought**, in the one sentence that stop's own shape allows.
    *
@@ -256,10 +307,16 @@ export function PlanFold() {
     <Disclosure
       title="Plan"
       defaultOpened
-      summary={`${compact(each.damage)} worst opening a march · ${
-        sequence ??
-        `${amount(repeated)} march${repeated === 1 ? '' : 'es'}${shown.finaleCounts ? ' + a last one' : ''}`
-      }`}
+      /**
+       * **The damage a march, and nothing after it** (owner, 2026-09-21). A plain count of marches rode here
+       * behind a `·` — "3 marches + a last one" — which is the *campaign's* shape on a line that names one
+       * march's figure, and the campaign line under the table says it in full (design rule 5).
+       *
+       * A stop that is **not** simply that march repeated still says so, because that is not a count but the
+       * only place its shape is written: the `all-in`'s sequence, and a stop the horizon outruns (S-74,
+       * S-89, `sequenceWords`). Every other stop now reads as one figure.
+       */
+      summary={`${compact(each.damage)} damage a march${sequence === null ? '' : ` · ${sequence}`}`}
     >
       <Stack gap="md">
         {/* What the plan did for *this* army, in its own figures, with the general why behind the glyph
@@ -273,26 +330,17 @@ export function PlanFold() {
                 one a player cannot read off the counts, because it is a fact about the *tiers* fielded
                 rather than about how many. `repeat.seconds` is the march this line is describing, the same
                 one the trade's own rows print (`PlanRepeat.seconds`). */}
-            {best === null
-              ? `It spends the silver box you set: ${amount(each.damage)} worst opening a march for ${amount(
-                  each.silver,
-                )} silver and ${duration(each.seconds)} of training, using ${mercsAMarch(
-                  shown,
-                )} of the hired stock each time.`
-              : spendsHired
-                ? `The sweet spot it found for this army is ${amount(
-                    best.repeat.damage,
-                  )} worst opening a march, spending ${mercsAMarch(best)} of the hired stock and ${duration(
-                    best.repeat.seconds,
-                  )} of training each time.`
-                : // Nothing is spent for good here, so the clause that named a share of the stock is
-                  // replaced by the price that really is paid: the silver, and the days in the queue
-                  // (S-112).
-                  `The sweet spot it found for this army is ${amount(
-                    best.repeat.damage,
-                  )} worst opening a march, for ${amount(best.repeat.silver)} silver and ${duration(
-                    best.repeat.seconds,
-                  )} of training each time.`}
+            {best === null ? (
+              <>
+                It spends the silver box you set: <Figure>{compact(each.damage)}</Figure> damage a march,
+                spending {sentenceList(spentOn(shown, spendsHired))} each time.
+              </>
+            ) : (
+              <>
+                The sweet spot it found for this army is <Figure>{compact(best.repeat.damage)}</Figure> damage
+                a march, spending {sentenceList(spentOn(best, spendsHired))} each time.
+              </>
+            )}
           </Text>
           {/* **A popover and not a tooltip** (design rules 18 and 24). It was a `Tooltip` with
               `touch: false`, which on a phone — the frame this app is designed at first — meant the
@@ -375,12 +423,12 @@ export function PlanFold() {
           {/* The campaign's own training queue rides with its silver, for the same reason the march's does
               on the line above: `PlanTotals.seconds` is every march of the plan plus its finale, which is
               the figure that says whether a plan is a fortnight or a season. */}
-          {`Fought to the end: ${amount(plan.totalDamage)} worst-opening damage and ${amount(
+          {`Fought to the end: ${amount(plan.totalDamage)} damage and ${amount(
             plan.silver,
-          )} silver over ${amount(plan.marches)} marches — ${duration(plan.seconds)} of training${
+          )} silver over ${amount(plan.marches)} marches, ${duration(plan.seconds)} of training${
             // The clause that closes the line is what the campaign spends for good, and a campaign that
             // spends nothing for good says nothing there rather than "0 of the hired stock gone" (S-112).
-            spendsHired ? ` — with ${amount(plan.mercLost)} of the hired stock gone.` : '.'
+            spendsHired ? `, with ${amount(plan.mercLost)} of the hired stock gone.` : '.'
           }`}
         </Text>
 
@@ -397,14 +445,14 @@ export function PlanFold() {
                 above is drawing, and the two ratio columns weigh that one march. */}
             <Text size="sm" c="dimmed">
               {spendsHired
-                ? `Every plan here is fought over the same marches — the horizon the app plans over — so a ` +
+                ? `Every plan here is fought over the same marches, the horizon the app plans over, so a ` +
                   `row is the march you repeat: what it hits for, what it costs in silver and what it burns ` +
                   `of the hired stock for good. Per silver divides that one march's damage by its own ` +
                   `silver; Per hired divides what its hired stacks themselves hit for by the hired units it ` +
                   `loses for good.`
                 : // The two stock columns are not drawn on this bar, so the sentence that explains them is
                   // not written either (S-112, design rule 5: the caption describes the table on screen).
-                  `Every plan here is fought over the same marches — the horizon the app plans over — so a ` +
+                  `Every plan here is fought over the same marches, the horizon the app plans over, so a ` +
                   `row is the march you repeat: what it hits for, what it costs in silver, and how long its ` +
                   `losses sit in the training queue. Per silver divides that one march's damage by its own ` +
                   `silver.`}
@@ -416,13 +464,13 @@ export function PlanFold() {
             {plan.leftOut > 0 && (
               <Text size="sm" c="dimmed">
                 {spendsHired
-                  ? `${amount(plan.leftOut)} of the plans the search kept are off the goal — a march that ` +
-                    `fields a token share of the hired stock, or silver spent far past what it returns — and ` +
-                    `are not offered here.`
+                  ? `${amount(plan.leftOut)} of the plans the search kept are off the goal: a march that ` +
+                    `fields a token share of the hired stock, or silver spent far past what it returns. ` +
+                    `They are not offered here.`
                   : // The reasons a plan is left off differ with the axis: with no stock to field a token
                     // share of, what is cut is the thrift end that buys almost nothing for its silver
                     // (`planTroopsOnly`'s band rule) and the levels between two stops (S-112).
-                    `${amount(plan.leftOut)} of the plans the search kept are not offered here — the ` +
+                    `${amount(plan.leftOut)} of the plans the search kept are not offered here: the ` +
                     `cheapest ones buy too little for their silver to be worth standing on, and the rest sit ` +
                     `between the stops above.`}
               </Text>
@@ -451,7 +499,7 @@ export function PlanFold() {
               <>
                 <Table horizontalSpacing={6} verticalSpacing={4} captionSide="top">
                   <Table.Caption>
-                    Every plan this bar may offer, at the silver it costs — the levels the stops are chosen
+                    Every plan this bar may offer, at the silver it costs: the levels the stops are chosen
                     from.
                   </Table.Caption>
                   <Table.Thead>
@@ -508,8 +556,8 @@ export function PlanFold() {
                       // stock, and higher tiers — dearer to bring back, slower in the queue — where there is
                       // not (S-112).
                       spendsHired
-                        ? ' — beyond that the plan is buying damage with the hired stock rather than with silver.'
-                        : ' — beyond that the extra silver is going into higher tiers, which cost more to bring back and sit longer in the queue.'
+                        ? '. Beyond that the plan is buying damage with the hired stock rather than with silver.'
+                        : '. Beyond that the extra silver is going into higher tiers, which cost more to bring back and sit longer in the queue.'
                     }`}
                   </Text>
                 )}

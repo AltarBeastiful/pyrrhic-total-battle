@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { simulateBattle } from '../../src/engine/battle';
 import { buildKillOrder } from '../../src/engine/killOrder';
+import { recoveryCosts } from '../../src/engine/recovery';
 import { sizeStacks } from '../../src/engine/stacker';
 import type { StackResult, UnitDef } from '../../src/engine/types';
 import { countsByLabel, hpProfile, makeRequest, totalsFrom } from '../helpers/request';
@@ -318,12 +319,33 @@ describe('relaxed preservation (investigation 0003, D-04)', () => {
       units,
       options: { method: 'ms', relaxedPreservation: true },
     });
-    const plain = simulateBattle(sizeStacks(plainRequest), plainRequest);
-    const relaxed = simulateBattle(sizeStacks(relaxedRequest), relaxedRequest);
+    const plainResult = sizeStacks(plainRequest);
+    const relaxedResult = sizeStacks(relaxedRequest);
+    const plain = simulateBattle(plainResult, plainRequest);
+    const relaxed = simulateBattle(relaxedResult, relaxedRequest);
     expect(relaxed.avgDamage).toBeGreaterThan(plain.avgDamage);
     expect(relaxed.minDamage).toBeGreaterThan(plain.minDamage);
-    // The trade is paid in gold: two more monsters to bring back.
-    expect(relaxed.recovery.gold).toBeGreaterThan(plain.recovery.gold);
+    /**
+     * **And it is free under a retrain**, which this line is here to pin rather than to praise. The trade
+     * grows BB to 6 and ED to 5 — both still inside one chunk of ten — and a monster is billed by the
+     * chunk, so the retrain bill does not move by a coin. It read `gold` until 2026-09-21, when a monster
+     * stopped being bought back from the Temple under this plan and became a unit the Lair recruits
+     * (`retrainOne`).
+     *
+     * Whether *that* is the game's own arithmetic is the one open question of the recovery model
+     * (`src/engine/recovery.ts`): it turns on whether a monster's `training.silver` is the price of one
+     * monster or of ten, which a screenshot of the Lair's recruit screen would settle. Under a **revive**
+     * the same trade is paid for, and visibly: two more monsters to buy back from the Temple.
+     */
+    expect(relaxed.recovery).toEqual(plain.recovery);
+    const reviveGold = (result: StackResult): number =>
+      recoveryCosts(result.stacks, units, {
+        templeLevel: 0,
+        trainingCostReduction: {},
+        trainingSpeed: {},
+        plan: { mode: 'revive' },
+      }).revive.gold;
+    expect(reviveGold(relaxedResult)).toBeGreaterThan(reviveGold(plainResult));
   });
 
   it('grows a capped mercenary stack too (mp-bear army leaves authority nearly empty)', () => {

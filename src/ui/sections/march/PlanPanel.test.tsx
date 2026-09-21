@@ -58,7 +58,7 @@ const ROWS = PLAN.alternatives;
 const ENDS = BAR_ENDS;
 
 // The table's own name carries the unit its heads stopped repeating (S-59 screen review).
-const TRADE = 'table[aria-label="Every plan on the trade, one repeated march each, at its worst opening"]';
+const TRADE = 'table[aria-label="Every plan on the trade, one repeated march each"]';
 
 /** The trade's rows, in the DOM, so a case can point at the same one twice. */
 function tradeRows(): HTMLElement[] {
@@ -209,7 +209,7 @@ test('the tip names the plan under the pointer, not the one on screen', () => {
   expect(shown?.textContent ?? '').toContain(planWords(wanted));
   expect(shown?.textContent ?? '').not.toContain(planWords(selected));
   // It carries the figure a player compares plans by, and nothing else.
-  expect(shown?.textContent ?? '').toContain(`${compact(wanted.repeat.damage)} worst opening a march`);
+  expect(shown?.textContent ?? '').toContain(`${compact(wanted.repeat.damage)} damage a march`);
   // Two lines and no third: it used to close with "the sweet spot" over a tip already naming the plan
   // **Sweet spot**, above a bar marked "Sweet spot" in the same brass (design rule 5).
   expect(shown?.textContent ?? '').not.toContain('the sweet spot');
@@ -306,11 +306,13 @@ test('the block opens on its own — the plan is part of the answer, not a fold 
   // headline that describes a plan the body is not showing is a lie. Read the way the owner asked for it: a
   // march at a time, not a campaign total.
   const shown = pickOf(PLAN, defaultPlanPosition(PLAN));
+  expect(fold.textContent).toContain('damage a march');
+  // **And nothing after it** (owner, 2026-09-21): the count of marches this row carried behind a `·` is the
+  // campaign's shape on a line that names one march's figure, and the campaign line under the table says it
+  // in full. A stop whose shape is *not* that march repeated still says so — that is `sequenceWords`, tested
+  // on the all-in below — but this one is, so the row is one figure.
   const repeated = shown.marches - (shown.finaleCounts ? 1 : 0);
-  expect(fold.textContent).toContain('worst opening a march');
-  // One march is a word of its own, and a recommendation whose plan repeats only once is a case the row has to
-  // get right: the old rule never produced one on this army, and the middle-of-the-trade rule does.
-  expect(fold.textContent).toContain(
+  expect(fold.textContent).not.toContain(
     `${repeated} ${repeated === 1 ? 'march' : 'marches'}${shown.finaleCounts ? ' + a last one' : ''}`,
   );
 });
@@ -444,13 +446,22 @@ test('opened, it says what the plan did for this army and reads the trade a marc
     expect(rows[index]?.textContent ?? '').toContain(planWords(row));
     expect(drawn).not.toContain(row.label);
   }
-  // The columns are the decision: what a march hits for, what it costs and what it burns — the three that
-  // name a game resource behind their own glyph, then the two ratios. **A glyph and two words at most**: the
-  // heads carried "a march" until 2026-09-16 and a 420 px pane broke them over three and four lines, while
-  // the unit is the table's own and is said once in its name. And 👑 is gone from "Hired lost": it is the
-  // authority pool's glyph, printed two blocks above this table on the same screen (rule 21).
+  // The columns are the decision: what a march hits for, what it costs in each of the two purses and what
+  // it burns — the four that name a game resource behind their own glyph, then the two ratios. **A glyph
+  // and one word**: the heads carried "a march" until 2026-09-16 and a 420 px pane broke them over three
+  // and four lines, while the unit is the table's own and is said once in its name; "Hired lost" lost its
+  // second word to the gold on 2026-09-21. And 👑 is gone from the hired head: it is the authority pool's
+  // glyph, printed two blocks above this table on the same screen (rule 21).
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(headers).toEqual([
+    'Plan',
+    '🔒 Damage',
+    '🪙 Silver',
+    '💰 Gold',
+    '🪖 Hired',
+    'Per silver',
+    'Per hired',
+  ]);
   expect(document.querySelector(TRADE)?.getAttribute('aria-label')).toContain('march');
   // The sweet spot is named by the row's own **name**, and never a second time under it: "the sweet spot"
   // under a row called "Sweet spot" is the same words twice on one line (rule 5).
@@ -475,7 +486,7 @@ test('opened, it says what the plan did for this army and reads the trade a marc
         ? 'The mercenary stock is what ends the plan: silver alone would not buy more damage.'
         : binds.silver
           ? 'The silver box is what ends the plan: more silver would buy more marches.'
-          : 'Nothing binds yet — the plan stops where more troops stop paying for themselves.';
+          : 'Nothing binds yet: the plan stops where more troops stop paying for themselves.';
   fireEvent.click(reference);
   expect(reference.getAttribute('aria-expanded')).toBe('true');
   expect(screen.getByText(sentence)).toBeTruthy();
@@ -669,11 +680,22 @@ test('the bar names its ends after the hired stock, and every row is its own ans
   expect(rows.map((row) => row.textContent ?? '').join('\n')).not.toContain('Step');
   expect(rows.map((row) => row.textContent ?? '').join('\n')).not.toContain('hired lost');
 
-  // **Gold has no column.** Built as a seventh head and measured in a browser at 1400×900, the table came
-  // to 505 px in a 462 px pane — the sideways scroller the six heads were tuned down to avoid (rule 17) —
-  // so the figure is carried by the bar's tip and by the row's own accessible name instead.
+  // **Gold has a column** (owner, 2026-09-21: *"monsters are revived using gold for a substantial sum and
+  // mercs aren't cheap either… why not comparing, or at least inform?"*). It was built as a seventh head in
+  // 2026-09-16, measured at 1400×900 as a 505 px table in a 462 px pane, and cut back to the bar's tip; it
+  // is back, the hired head gave a word towards its width, and the table takes the sideways scroller rule
+  // 17 allows it with the plan's name pinned through it.
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(headers).toEqual([
+    'Plan',
+    '🔒 Damage',
+    '🪙 Silver',
+    '💰 Gold',
+    '🪖 Hired',
+    'Per silver',
+    'Per hired',
+  ]);
+  expect(rows[3]?.textContent ?? '').toContain(compact(33_700));
   expect(rows[3]?.getAttribute('aria-label') ?? '').toContain(`${compact(33_700)} gold`);
   expect(rows[3]?.getAttribute('aria-label') ?? '').toContain('22 hired lost');
 });
@@ -750,9 +772,18 @@ test('every stop says how long its march takes to recover, under the silver it c
   expect(rows[0]?.textContent ?? '').toContain('11d 0h');
   expect(rows[0]?.textContent ?? '').not.toContain(amount(950_400));
 
-  // **Still six columns.** The queue is a second line inside the silver cell, not a head of its own.
+  // **The queue is a second line inside the silver cell**, not a head of its own — as the dragon coins are
+  // a second line inside the gold cell beside it.
   const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(headers).toEqual([
+    'Plan',
+    '🔒 Damage',
+    '🪙 Silver',
+    '💰 Gold',
+    '🪖 Hired',
+    'Per silver',
+    'Per hired',
+  ]);
 
   // The line over the bar says it for the plan the fold is reading, and "Fought to the end" for the whole
   // campaign — the same two places its silver is said (design rule 5: one name, said where it is expected).
@@ -765,32 +796,32 @@ test('every stop says how long its march takes to recover, under the silver it c
 });
 
 /**
- * **The dragon coins, in the silver cell beside the queue** (S-102, 2026-09-19; the owner: *"monsters should
- * be there if dominance has been set and damage is interesting; they have a cost in silver but in dragon
- * coins also, which are both constrained; but at least, apart from mercs, they can be trained just like
- * troops."*).
+ * **The dragon coins are not in this table** (owner, 2026-09-21: *"in the plan table, let's remove dragon
+ * coins below gold; we can keep it in the battle summary, it's enough there"*).
  *
- * A dominance monster is trained rather than hired, so S-102 took its chunks off the **Hired lost** column —
- * that column is the authority pool's, and only that pool is a stock the player cannot train back. What a
- * monster costs is the silver, the queue and the coins, and the first two already share this cell, so the
- * third joins them rather than taking a seventh head the table has no room for.
+ * They were a line in the silver cell from S-102, then a line under the gold for an hour on 2026-09-21 when
+ * the silver column was cut back to silver and its queue. Two muted second lines in a seven-column table is
+ * a table read twice, and the recap says the coins with their own mark and their own ratio a screen above
+ * (`MarchRecap`, design rule 5: said once, where it is expected).
  *
- * **And only while a march spends one** (design rule 15: nothing on screen without a value). Every army in
- * this repo but a monster camp spends none, so the ordinary bar must say nothing at all about coins.
+ * So the bar says nothing about a coin on **any** army — the one with a monster camp behind it included —
+ * and the gold column beside it is unchanged by whether the march trains a monster.
  */
-test('a stop that trains monsters says what it costs in dragon coins, and one that does not says nothing', () => {
+test('the trade says nothing about a dragon coin, on a monster camp or anywhere else', () => {
   stubLayout();
-  // The bar as every army without a dominance pool draws it: not one row mentions a coin, in the cells or
-  // in the names a screen reader hears.
   primeBurn();
   renderWithTheme(<PlanFold />);
   const plain = tradeRows();
   expect(plain.map((row) => row.textContent ?? '').join('\n')).not.toContain('dragon coin');
   expect(plain.map((row) => row.getAttribute('aria-label') ?? '').join('\n')).not.toContain('dragon coin');
+  const heads = ['Plan', '🔒 Damage', '🪙 Silver', '💰 Gold', '🪖 Hired', 'Per silver', 'Per hired'];
+  expect([...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent)).toEqual(heads);
+  const before = plain.map((row) => row.textContent ?? '');
   cleanup();
 
   // The same bar on a monster camp: the sweet spot's march trains 6 840 coins' worth of monsters back
-  // (experiment 110's 900-dominance camp, the figure the engine measured on 2026-09-19).
+  // (experiment 110's 900-dominance camp, the figure the engine measured on 2026-09-19). Not a cell, not a
+  // head, not a row name — and every row reads exactly as it did without them.
   const camp: CampaignPlan = {
     ...BURN,
     alternatives: BURN_ROWS.map((row, index) =>
@@ -800,24 +831,13 @@ test('a stop that trains monsters says what it costs in dragon coins, and one th
   useRunStore.setState({ plan: camp, planPick: 1, includedUnitIds: [], leftOutByPlayer: [] });
   renderWithTheme(<PlanFold />);
   const rows = tradeRows();
-  const monster = rows[1];
-  // In the cell, under the queue and after it — the three prices of one march, read in one place.
-  expect(monster?.textContent ?? '').toContain(`${amount(6_840)} dragon coins`);
-  // And in the row's accessible name, because a figure drawn in the muted ink is a figure half the readers
-  // do not get (design rule 24).
-  expect(monster?.getAttribute('aria-label') ?? '').toContain(`${amount(6_840)} dragon coins`);
-  // The other four stops spend no coin and say so by saying nothing.
-  for (const index of [0, 2, 3, 4]) {
-    expect(rows[index]?.textContent ?? '', `stop ${String(index)} is silent about coins`).not.toContain(
-      'dragon coin',
-    );
-  }
-  // **Still six columns**: the coins are a line inside the silver cell, never a head of their own.
-  const headers = [...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent);
-  expect(headers).toEqual(['Plan', '🔒 Worst', '🪙 Silver', '🪖 Hired lost', 'Per silver', 'Per hired']);
+  expect(rows.map((row) => row.textContent ?? '')).toEqual(before);
+  expect(rows.map((row) => row.textContent ?? '').join('\n')).not.toContain(compact(6_840));
+  expect(rows.map((row) => row.getAttribute('aria-label') ?? '').join('\n')).not.toContain('dragon coin');
+  expect([...document.querySelectorAll(`${TRADE} thead th`)].map((th) => th.textContent)).toEqual(heads);
 });
 
-test('the tip carries the gold a march the trade has no room for', () => {
+test('the tip says which answer a stop is and how it is fought, and leaves the figures to the table', () => {
   stubLayout();
   primeBurn();
   renderWithTheme(<PlanFold />);
@@ -826,10 +846,13 @@ test('the tip carries the gold a march the trade has no room for', () => {
   fireEvent.pointerMove(bar(), { clientX: TRACK.left + TRACK.width });
   const shown = tip();
   expect(shown).not.toBeNull();
-  // The stop's own name, its damage, and the gold — the third line the trade has no column for.
+  // The stop's own name and its damage. The gold was the third line here from S-112, because the trade had
+  // no column for it; it has one since 2026-09-21, so the tip stopped saying it (design rule 5).
   expect(shown?.textContent ?? '').toContain(planWords(BURN_ROWS[last] as PlanRow));
-  expect(shown?.textContent ?? '').toContain(`${compact(7_400_000)} worst opening a march`);
-  expect(shown?.textContent ?? '').toContain(`${compact(48_000)} gold a march`);
+  expect(shown?.textContent ?? '').toContain(`${compact(7_400_000)} damage a march`);
+  expect(shown?.textContent ?? '').not.toContain('gold a march');
+  // …and the table is where it is read, on the row the bar is pointing at.
+  expect(tradeRows()[last]?.textContent ?? '').toContain(compact(48_000));
 });
 
 test('the all-in stop says it is a sequence, on the bar and on the row the fold collapses to', () => {
@@ -861,7 +884,7 @@ test('the all-in stop says it is a sequence, on the bar and on the row the fold 
   // "Fought to the end" is unmoved: it is the campaign's own totals, not the stop's — and it names the
   // reading the plan is on since S-94, the same "worst opening" the trade's own column head carries.
   expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
-    `${amount(BURN.totalDamage)} worst-opening damage`,
+    `${amount(BURN.totalDamage)} damage`,
   );
 });
 
@@ -1009,20 +1032,21 @@ test('the best figure in each column is marked, and Per hired never is', () => {
   // **One mark a column, and it is a claim about one row** (`tableMarks`, `./picks`). Measured before it
   // was drawn: over the sixteen benchmark armies the marks land on 2.38 different stops on average, so a
   // table of five rows really does have more than one winner on it (experiment 120).
-  expect(column('🔒 Worst')).toEqual([BURN_ROWS.length - 1]); // All in hits hardest
+  expect(column('🔒 Damage')).toEqual([BURN_ROWS.length - 1]); // All in hits hardest
   expect(column('🪙 Silver')).toEqual([0]); // the silver saver is the cheapest march
-  expect(column('🪖 Hired lost')).toEqual([0]); // …and burns the least stock
+  // The Temple's own column, marked like the two prices above it (2026-09-21): a price, so lowest wins.
+  expect(column('💰 Gold')).toEqual([0]);
+  expect(column('🪖 Hired')).toEqual([0]); // …and burns the least stock
   expect(column('Per silver')).toHaveLength(1);
 
   // **Never on Per hired** (`docs/investigations/0019` §2.3: the ratio rises while the march collapses, and
   // §1 calls it "never the right compass"). The column carries the fact; the table declares no winner.
   expect(column('Per hired')).toEqual([]);
 
-  // The mark's own key, once, under the table it explains (design rule 5) — a mark nobody can decode is
-  // decoration.
-  expect(document.querySelector(`${TRADE} caption`)?.textContent).toBe(
-    'The heavier figure in a column is the best of the bar.',
-  );
+  // **And no key under the table** (owner, 2026-09-21): the mark is heavier and in the anchor's ink on the
+  // one cell that holds it, which is a thing a reader sees rather than a thing they look up — and the row's
+  // own name says it in words for anyone who cannot (design rule 24, asserted a few lines above).
+  expect(document.querySelector(`${TRADE} caption`)).toBeNull();
 
   // And for a reader who cannot see weight or ink (design rule 24): the marks are in the row's own name —
   // except the rate's, which the note under the name already says in the same breath ("best a silver").

@@ -647,7 +647,7 @@ export function marchSection(page: Page): Locator {
  * marching stack, coloured by tier. A press **leaves that type out**, which is what the name says.
  */
 export function marchPills(page: Page): Locator {
-  return marchSection(page).getByRole('button', { name: /— leave out$/ });
+  return marchSection(page).getByRole('button', { name: /: leave out$/ });
 }
 
 /** The mark in a pill's corner: the only way into the unit sheet. */
@@ -657,7 +657,7 @@ export function marchPillDetails(page: Page): Locator {
 
 /** The small outlined row under the pools: the types the search or the player left out. */
 export function marchLeftOut(page: Page): Locator {
-  return marchSection(page).getByRole('button', { name: /— put back$/ });
+  return marchSection(page).getByRole('button', { name: /: put back$/ });
 }
 
 /**

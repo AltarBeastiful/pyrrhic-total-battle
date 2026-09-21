@@ -243,13 +243,35 @@ potions or gold per unit, the gold divided by the temple multiplier. Since `n �
 revived at all: it has to be recruited again, which is what a "revive all" still costs in silver and in time. So:
 **Retrain** = Σ troops `n × training.silver × (1 − trainingCostReduction[group]/100)` + Σ monsters
 `chunks(n) × training.silver`, time the same split on `training.seconds` divided by `1 + trainingSpeed[group]/100`,
-dragon coins = Σ monsters `chunks(n) × training.dragonCoins`, plus the monsters' revive gold (monsters cannot be
-retrained back into the march); **Revive** = gold Σ all `(n − chunks(n)) × revival.gold /
-templeMultiplier[templeLevel]`, plus silver Σ all `chunks(n) × training.silver × (1 − reduction)` and time Σ all
-`chunks(n) × training.seconds / (1 + speed)` for the tenth that cannot come back; **Selective** = revive the
-top-N unit types by tier, retrain the rest. These reproduce every silver, gold, dragon-coin and duration figure
-of the seven captured runs exactly — revive-all silver (216,000 → 173,880) and revive-all time (1 d 2 h →
-21 h 40 m) included (battle-model-observations §4). The temple divisor applies to gold only.
+dragon coins = Σ monsters `chunks(n) × training.dragonCoins`, plus the **mercenaries'** revive gold — a hired
+unit is the one thing the game cannot recruit again, so the Temple returns it under every plan, while a monster
+is recruited in the Lair ten at a time and costs the three prices above and no gold (owner, 2026-09-21; until
+then the captured "retrain all" gold line was read as the *monsters'* revival and a retrain spent gold on every
+march that fielded one); **Revive** = gold Σ all `ceil((n − chunks(n)) × revival.gold /
+templeMultiplier[templeLevel])` — **rounded up, stack by stack**, which is the game's own arithmetic and not
+a rounded total (owner's Temple screen of 2026-09-21 beside the journal that filled it: seven stacks, seven
+exact matches, three of them a coin out under round-to-nearest). That capture is the only set of revive
+figures in the repo that comes from the game rather than from TotalStack, and it confirms the rest of the
+line to the coin as well — the Temple offers exactly `n − chunks(n)` of every stack (10 → 9, 18 → 16,
+37 → 33, 13 → 11, 14 → 12, 174 → 156, 623 → 560) and asks the per-unit `revival.gold` our tables already
+carry (rider 8, spearman 4, hunter 8, water elemental 48, battle boar 96, emerald dragon 112, stone gargoyle
+128). His temple is **level 15** and discounted all of it by **35 %**, which corrected the table: that entry read
+**1.53**, the game's own two-decimal display, where the capture measures exactly `1 / 0.65` = **1.5385** — the
+one level in `TEMPLE_MULTIPLIER` this repo has measured rather than transcribed, and ~0.5 % on every revive
+figure of that account. The Temple's other two currencies are not modelled and are not meant to be: its silver
+line belongs to a specific event, and sacred potions have no reliable source (owner, 2026-09-21), plus silver Σ all `chunks(n) × training.silver × (1 − reduction)` and time Σ all
+`chunks(n) × training.seconds / (1 + speed)` for the tenth that cannot come back; **Selective** = revive **every stack at the top tier of each unit family the player ticks** — guardsmen,
+specialists, monsters, engineers, all of them by default and the monsters alone on a new setup — and retrain
+the rest (owner, 2026-09-21, replacing a count of top types by tier: three types off one list is three monsters
+on an account with three monster tiers, and the guardsmen were retrained without their owner ever having said
+so). It was the single best *type* a family fielded for a few hours the same day, which reads identically on a
+tier holding one type and left three of his four M3 monsters in the training queue: *"for guardsmen the max is
+G3 so all G3 in the march should count as revived; monsters max is M3 so all M3 stacks in the march should count
+as revived."* The tier is read off the march, not off the account. These reproduce every silver, dragon-coin and
+duration figure of the seven captured runs exactly — revive-all silver (216,000 → 173,880) and revive-all time
+(1 d 2 h → 21 h 40 m) included (battle-model-observations §4) — and the four runs' retrain **gold** (2,752 ·
+1,520 · 1,536 · 432) is nought under the reading above, which is the one figure of theirs this model now
+deliberately parts with. The temple divisor applies to gold only.
 Summary metrics: stacks, min/avg/max damage, damage per silver, per gold, per dragon coin, retrain silver,
 retrain gold, time to retrain. Shown with deltas when the user edits counts manually.
 
@@ -604,6 +626,17 @@ scroll"* — and the second is the one defect S-56 had just left open.
   muted `.barNote` line **above** the fields, beside the existing `.barMessage`, and not a `description` under
   the field: measured the same day, a line under a field took the bar from 88 px to **119.7 px** and pushed
   Generate off the row.
+  **Amended 2026-09-21** (owner: *"could be on the right side of the objective to avoid too high bar… keep it
+  on two lines though for readability, and be aware of mobile"*): neither line is drawn any more. From
+  1200 px the sentence is the select's own `description` again, re-ordered after the input and laid out in a
+  **second column beside** it — two lines at 13 px in 16.25 rem, inside the 59 px the label and the well
+  already take, so the bar does not grow (the description is 11 px wherever Mantine sizes an input, two
+  under `sm`, which is under rule 19's floor: the size is set on the column); below 1200 px it is behind an **ⓘ** next to the control
+  (`shell/ObjectiveWhy.tsx`, a popover in the shape `PlanPanel.tsx` uses), because the 1024–1199 bar carries
+  the answer as well and the phone's four chips share 366 px. Measured that day: the desktop bar is **87 px**
+  locked or not, at 1024, 1100, 1400 and 1663 (it was 119 at 1400 and **134 at 1100**, over the 120 px
+  reserve), and the phone bar is **121 px** instead of 164. The reserve itself stays at 7.5rem: it covers the
+  bar's tallest state — 109 px, a pool over its ceiling — and the March pane's stands are laid out from it.
 - **Measured, both halves.** The desktop bar is **88 px** with nothing to say and **119.7 px** with one note
   line, so `--pyr-commandbar-height` (`ui/theme.ts`) went 5.75rem → **7.5rem** and the jsdom fallback in
   `shell/usePaneFits.ts` (now `usePaneStick.ts`) went 92 → **112** with it (`MarchPane.test.tsx` asserts `paneRoom()` is

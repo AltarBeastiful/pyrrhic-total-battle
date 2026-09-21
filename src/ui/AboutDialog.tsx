@@ -69,7 +69,7 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
         </Text>
         <Text size="xs" c="dimmed">
           Game concepts are drawn with the platform&apos;s own Unicode emoji; interface icons from Lucide,
-          ISC; type set in Inter and Fraunces, SIL Open Font License. All bundled with the app — nothing is
+          ISC; type set in Inter and Fraunces, SIL Open Font License. All bundled with the app; nothing is
           fetched from anyone else.
         </Text>
       </Stack>

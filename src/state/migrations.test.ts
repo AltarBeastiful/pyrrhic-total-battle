@@ -245,6 +245,63 @@ describe('migrate', () => {
     expect(migrated.setup).not.toHaveProperty('campaign');
   });
 
+  it('v4 → v5 drops the unexplained remainder, both what was typed and whether it counted', () => {
+    // Owner, 2026-09-19: the remainder left the card, so a figure typed into it has nowhere left to
+    // be read, switched on or corrected. A source that still fed the totals with no chip to show for
+    // it would be worse than one that is simply gone, so both halves go.
+    const fixture = v1Fixture();
+    const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+    (profile.sources as Record<string, unknown>).unknown = { health: { army: 11.5 }, strength: {} };
+    const setups = profile.setups as Record<string, unknown>[];
+    setups[0]!.active = { ...(setups[0]!.active as Record<string, unknown>), unknown: true };
+
+    const migrated = migrate({ ...fixture, schemaVersion: 4 });
+    expect(migrated.profiles[0]?.sources).not.toHaveProperty('unknown');
+    for (const setup of migrated.profiles[0]?.setups ?? []) {
+      expect(setup.active).not.toHaveProperty('unknown');
+    }
+    // Everything else the Other section holds is untouched.
+    expect(migrated.profiles[0]?.sources.dragon.health).toEqual({ army: 2 });
+    expect(migrated.profiles[0]?.setups[0]?.active.otherPills).toEqual(['personal']);
+  });
+
+  it('v4 → v5 reaches inside a saved stack, whose captured setup carried the same flag', () => {
+    const root = newRoot('desktop');
+    const setup = root.profiles[0]?.setups[0];
+    if (setup === undefined) throw new Error('newRoot() must create one setup');
+    const raw = JSON.parse(JSON.stringify(newSavedStack('Bear', setup, 'device-a'))) as {
+      setup: { active: Record<string, unknown> };
+    };
+    raw.setup.active = { ...raw.setup.active, unknown: true };
+
+    const migrated = migrateSavedStack(raw, 4);
+    expect(migrated.setup.active).not.toHaveProperty('unknown');
+  });
+
+  it('v5 → v6 drops the count of top types from every recovery plan', () => {
+    // Owner, 2026-09-21: a selective recovery is chosen in families now, so the count of types it used
+    // to be says nothing. A plan that names no family revives all five (`engine/types.ts`), which is
+    // the nearest thing to "the top three types" an old document meant.
+    const fixture = v1Fixture();
+    const migrated = migrate({ ...fixture, schemaVersion: 5 });
+    for (const setup of migrated.profiles[0]?.setups ?? []) {
+      expect(setup.recoveryPlan).toEqual({ mode: 'selective' });
+    }
+  });
+
+  it('v5 → v6 reaches inside a saved stack, whose captured setup carried the same count', () => {
+    const root = newRoot('desktop');
+    const setup = root.profiles[0]?.setups[0];
+    if (setup === undefined) throw new Error('newRoot() must create one setup');
+    const raw = JSON.parse(JSON.stringify(newSavedStack('Bear', setup, 'device-a'))) as {
+      setup: { recoveryPlan: Record<string, unknown> };
+    };
+    raw.setup.recoveryPlan = { mode: 'selective', selectiveTop: 3 };
+
+    const migrated = migrateSavedStack(raw, 5);
+    expect(migrated.setup.recoveryPlan).toEqual({ mode: 'selective' });
+  });
+
   it('round-trips a freshly created document', () => {
     const root = newRoot('desktop');
     expect(migrate(JSON.parse(JSON.stringify(root)))).toEqual(root);

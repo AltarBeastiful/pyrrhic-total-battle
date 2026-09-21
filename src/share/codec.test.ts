@@ -73,12 +73,11 @@ function realisticProfile(): Profile {
   profile.sources.titles = ['baron', 'count', 'duke'];
   profile.sources.vipLevel = 12;
   profile.sources.dragon = { health: bonusMap(2), strength: bonusMap(4) };
-  profile.sources.unknown = { health: { army: 11.5 }, strength: { army: 9.25 } };
   profile.recovery = {
     templeLevel: 20,
     trainingCostReduction: { guardsmen: 12.5, specialist: 12.5, engineers: 8 },
     trainingSpeed: { guardsmen: 30, specialist: 30 },
-    plan: { mode: 'selective', selectiveTop: 3 },
+    plan: { mode: 'selective', reviveFamilies: ['guardsmen', 'monsters'] },
   };
 
   const first = profile.setups[0]!;
@@ -269,6 +268,78 @@ describe('battle links', () => {
     const link = await buildBattleLink(setup, counts, summary);
     console.warn(`[pyrrhic] share size — battle link: ${link.length} chars (budget 1,500)`);
     expect(link.length).toBeLessThanOrEqual(1_500);
+  });
+
+  /**
+   * What a link leaves out has meant the tier ladder since v1, because that is what `buildSetup`
+   * defaults to. The day that default moves — Complete optimization is first on the card now and the
+   * owner asked for it to be the default too (`state/defaults.ts`, 2026-09-19) — the template has to
+   * be **pinned at `elite`** rather than allowed to follow, or every link ever written that omitted
+   * the method comes back meaning something else. This is the test that would say so.
+   */
+  it('names the method whenever it is not the tier ladder, and leaves it out when it is', async () => {
+    const { setup, counts } = battleFixture();
+    const ladder: BattleSetup = { ...setup, options: { ...setup.options, method: 'elite' } };
+    const plan: BattleSetup = { ...setup, options: { ...setup.options, method: 'plan' } };
+
+    for (const written of [ladder, plan]) {
+      const decoded = await decodeShare(await buildBattleLink(written, counts));
+      if (decoded.kind !== 'battle') throw new Error('wrong kind');
+      expect(decoded.setup.options.method).toBe(written.options.method);
+    }
+
+    // And the tier-ladder one really is the shorter payload: it names no method at all.
+    expect((await buildBattleLink(ladder, counts)).length).toBeLessThan(
+      (await buildBattleLink(plan, counts)).length,
+    );
+  });
+});
+
+describe('a link written before v5', () => {
+  it('reads VIP and the dragon as the version that wrote it meant them: on', async () => {
+    // `4 → 5` flipped two *defaults* (owner, 2026-09-19), and a stripped payload carries no key for a
+    // value that was its version's default: a v4 link left both out to mean **on**. Restoring it
+    // against today's template would switch off two sources the sender was counting, which is the
+    // whole reason `SHARE_SETUP_TEMPLATE_V4` is kept.
+    const { setup, counts } = battleFixture();
+    const { vip: _vip, dragon: _dragon, ...active } = setup.active;
+    const asV4 = { ...setup, active } as unknown as BattleSetup;
+
+    const decoded = await decodeShare(
+      await encodeShare({
+        kind: 'battle',
+        schemaVersion: 4,
+        dataVersion: CURRENT_DATA_VERSION,
+        setup: asV4,
+        counts,
+        summary: null,
+      }),
+    );
+    if (decoded.kind !== 'battle') throw new Error('wrong kind');
+    expect(decoded.setup.active.vip).toBe(true);
+    expect(decoded.setup.active.dragon).toBe(true);
+
+    // A link written by this build means what this build's defaults say: both off.
+    const today = await decodeShare(await buildBattleLink(setup, counts));
+    if (today.kind !== 'battle') throw new Error('wrong kind');
+    expect(today.setup.active.vip).toBe(false);
+    expect(today.setup.active.dragon).toBe(false);
+  });
+
+  it('drops a figure typed into the unexplained remainder', async () => {
+    const profile = newProfile('Old account', DEVICE);
+    const sources = { ...profile.sources, unknown: { health: { army: 11.5 }, strength: {} } };
+
+    const decoded = await decodeShare(
+      await encodeShare({
+        kind: 'profile',
+        schemaVersion: 4,
+        dataVersion: CURRENT_DATA_VERSION,
+        profile: { ...profile, sources } as unknown as Profile,
+      }),
+    );
+    if (decoded.kind !== 'profile') throw new Error('wrong kind');
+    expect(decoded.profile.sources).not.toHaveProperty('unknown');
   });
 });
 

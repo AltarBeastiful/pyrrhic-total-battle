@@ -38,7 +38,7 @@ import type { Pool } from '../data/types';
 import { enemySquadCount } from './battle';
 import { buildKillOrder } from './killOrder';
 import { effectiveUnit, hitDamage } from './units';
-import { CHUNK, chunks, retrainOne } from './recovery';
+import { CHUNK, chunks, recoveryCosts, retrainOne } from './recovery';
 import { simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
 import type { BattleSummary, Housing, RecoverySettings, Stack, StackRequest, StackResult } from './types';
@@ -1563,19 +1563,21 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
 // ---- One march, re-sized in place (S-104) ---------------------------------------------------------------
 
 /**
- * **What one march costs the account, under its own recovery settings** — one `retrainOne` per stack the
- * march fields, whatever pool it is drawn from, which is exactly what `recoveryCosts` sums for the same
- * counts under the retrain plan, so the four prices below are the recap's own (S-90, S-91, and S-96 for the
- * pool).
+ * **What one march costs the account, under its own recovery settings** — `recoveryCosts` on the counts the
+ * march fields, read at the plan the player picked, so the four prices below *are* the recap's (S-90, S-91,
+ * S-96 for the pool, and 2026-09-21 for the plan).
  *
- * It reads the same for every pool and says something different about each, because `retrainOne` bills a
- * non-leadership stack by chunks of ten and folds the units a chunk does not return into `reviveOne`'s
- * gold: a **troop** costs per-unit silver and per-unit queue and no gold; a **mercenary** has no `training`
- * block at all, so it costs only the revive gold this line has always added; a **dominance monster** has
- * one, so it costs chunk silver, chunk queue, chunk **dragon coins** and the revive gold together. Until
- * S-96 the gold was read off the hired stacks and the silver and the queue off the rungs alone, which was
- * the same arithmetic while the only hired pool was authority and dropped a monster's whole training bill
- * the moment one could be fielded.
+ * It says something different about each pool because `retrainOne` and `reviveOne` under it do: a **troop**
+ * retrained costs per-unit silver and per-unit queue and no gold; a **monster** is recruited ten at a time,
+ * so it costs chunk silver, chunk queue and chunk **dragon coins**; a **mercenary** cannot be recruited at
+ * all, so it costs the Temple's gold whatever the plan says (owner, 2026-09-21). Revived instead of
+ * retrained, a stack's silver becomes gold, which is the whole point of the plan and what the bar could not
+ * say until this line read it.
+ *
+ * It called `retrainOne` per stack until then — the **retrain** bill, on every account, whatever plan was
+ * chosen — so a player who revives his monsters read a silver figure he was not going to spend and a gold
+ * figure of nought beside a recap that said otherwise. The arithmetic is unchanged to the coin for a retrain
+ * plan (`recoveryCosts` sums exactly those calls for it), which is every account this repo measures.
  *
  * Module-level since S-104, so the re-size below prices a march exactly as `planCampaign` prices one: it
  * was that search's own closure over `request.recovery`, and two copies of a price list is how a bar and a
@@ -1596,13 +1598,15 @@ function priceMarch(
       mercFielded[merc.entry.id] = merc.count;
     }
   }
-  const bill = [...rungs, ...mercs]
-    .filter((stack) => stack.count > 0)
-    .map((stack) => retrainOne(stack.entry.unit, stack.count, recovery));
-  const silver = bill.reduce((sum, one) => sum + one.silver, 0);
-  const seconds = bill.reduce((sum, one) => sum + one.seconds, 0);
-  const gold = bill.reduce((sum, one) => sum + one.gold, 0);
-  const dragonCoins = bill.reduce((sum, one) => sum + one.dragonCoins, 0);
+  const fielded = [...rungs, ...mercs].filter((stack) => stack.count > 0);
+  // `recoveryCosts` reads a stack's id and its count and nothing else of it; the rest of `Stack` is the
+  // battle's business and no part of a bill (`engine/recovery.ts`).
+  const bill = recoveryCosts(
+    fielded.map((stack) => ({ unitId: stack.entry.unit.id, count: stack.count }) as Stack),
+    fielded.map((stack) => stack.entry.unit),
+    recovery,
+  ).plan;
+  const { silver, seconds, gold, dragonCoins } = bill;
   return {
     counts,
     damage: Math.round(totals.damage),

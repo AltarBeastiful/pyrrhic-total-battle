@@ -94,7 +94,7 @@ export function useAccountSection(): AppMenuSection | null {
             id: 'account-verify',
             label: 'Confirm your email address',
             description: verificationSent
-              ? 'A confirmation email is on its way — look in your spam folder too'
+              ? 'A confirmation email is on its way; look in your spam folder too'
               : 'Saving needs a confirmed address. Choose this to send the email again',
             icon: <MailCheck size={ICON} aria-hidden />,
             disabled: working,

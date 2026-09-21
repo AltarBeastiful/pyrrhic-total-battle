@@ -114,7 +114,7 @@ export function UnitTile({
 
   if (!onPress) {
     return (
-      <span title={`${GROUP_LABEL[group]} — ${unit.name}`}>
+      <span title={`${GROUP_LABEL[group]}: ${unit.name}`}>
         {face}
         <VisuallyHidden>{name}</VisuallyHidden>
       </span>

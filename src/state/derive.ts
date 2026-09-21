@@ -392,13 +392,6 @@ export function resolveSources(
     out.push(toSource(nextId('dragon'), 'Dragon', 'dragon', value));
   }
 
-  if (active.unknown) {
-    const value = draft();
-    addInto(value.health, sources.unknown.health);
-    addInto(value.strength, sources.unknown.strength);
-    out.push(toSource(nextId('unknown'), 'Unknown Sources', 'other', value));
-  }
-
   for (const entry of activeEntries(sources.custom, active.custom)) {
     const value = draft();
     addInto(value.health, entry.health);
@@ -599,7 +592,9 @@ function recoverySettings(profile: Profile, setup: BattleSetup): RecoverySetting
     trainingSpeed: { ...profile.recovery.trainingSpeed },
     plan: {
       mode: plan.mode,
-      ...(plan.selectiveTop === undefined ? {} : { selectiveTop: plan.selectiveTop }),
+      // No list is *"every family"*, and the engine reads it that way (`RecoverySettings.plan`); an
+      // empty one is the player having ticked nothing, which is a retrain, so it is passed as it is.
+      ...(plan.reviveFamilies === undefined ? {} : { reviveFamilies: [...plan.reviveFamilies] }),
     },
   };
 }

@@ -44,6 +44,7 @@
  */
 import { ActionIcon, Box, NumberInput, Text, UnstyledButton } from '@mantine/core';
 import { Info } from 'lucide-react';
+import { useState } from 'react';
 
 import type { Category, Race, UnitDef } from '../../data/types';
 import { Glyph } from './Glyph';
@@ -89,7 +90,7 @@ export function StackPill({ unit, count, editing = false, onCount, onLeaveOut, o
   const figure = formatCount(count);
 
   // What the press does, in the words the row under the pools answers with ("put back").
-  const name = `${unit.name}, ${figure} — leave out`;
+  const name = `${unit.name}, ${figure}: leave out`;
 
   // The code and the tier are two spans, not one string (owner, 2026-09-13). One string ellipsised
   // from its end, so a narrow track drew "ARC III" as "ARC I" — a different unit and a wrong count
@@ -118,20 +119,7 @@ export function StackPill({ unit, count, editing = false, onCount, onLeaveOut, o
       {editing ? (
         <div className={classes.pillBody}>
           {label}
-          <NumberInput
-            size="xs"
-            w="100%"
-            aria-label={`${unit.name} count`}
-            value={count}
-            min={0}
-            max={MAX_COUNT}
-            styles={{ input: { textAlign: 'center', fontWeight: 700 } }}
-            onChange={(next) => {
-              if (onCount === undefined) return;
-              const parsed = typeof next === 'number' ? next : Number(String(next).replace(/[^\d]/g, ''));
-              onCount(Number.isNaN(parsed) ? 0 : parsed);
-            }}
-          />
+          <CountField unit={unit} count={count} {...(onCount === undefined ? {} : { onCount })} />
         </div>
       ) : (
         <UnstyledButton
@@ -163,6 +151,52 @@ export function StackPill({ unit, count, editing = false, onCount, onLeaveOut, o
   );
 }
 
+/**
+ * The count as a field, in place, while the march's counts are being edited by hand.
+ *
+ * **An emptied box is not a removed stack** (owner, 2026-09-21: *"if I erase the content of the field of
+ * a merc, the merc is deleted. It should only be deleted on 'done editing' cause it can prevent me from
+ * typing"*). Erasing a count is the first half of typing another one, and the pill used to vanish into
+ * the "Left out" row between the two — taking the focused field with it, mid-keystroke.
+ *
+ * So the box keeps its own emptiness, and only that: every real figure is written straight through to
+ * the march, as it has always been, and so is the **0** an empty box means — the figures under the pills
+ * answer what is on screen at every keystroke (design rule 1). What waits for "Done editing" is the
+ * *removal*: a stack at 0 keeps its pill until the mode is left (`sections/march/useMarch.ts`).
+ *
+ * Mounted only while the mode is on, which is what makes the emptiness safe to hold here: leaving the
+ * mode takes the field with it, and the next one opens on the march's own figure.
+ */
+function CountField({
+  unit,
+  count,
+  onCount,
+}: {
+  unit: UnitDef;
+  count: number;
+  onCount?: (count: number) => void;
+}) {
+  const [blank, setBlank] = useState(false);
+  return (
+    <NumberInput
+      size="xs"
+      w="100%"
+      aria-label={`${unit.name} count`}
+      value={blank ? '' : count}
+      min={0}
+      max={MAX_COUNT}
+      styles={{ input: { textAlign: 'center', fontWeight: 700 } }}
+      onChange={(next) => {
+        const text = typeof next === 'number' ? String(next) : String(next).replace(/[^\d]/g, '');
+        setBlank(text === '');
+        if (onCount === undefined) return;
+        const parsed = Number(text);
+        onCount(text === '' || Number.isNaN(parsed) ? 0 : parsed);
+      }}
+    />
+  );
+}
+
 /** Who left this type out. The word is part of the pill's name, and `data-left-out` styles it. */
 export type LeftOutReason = 'you' | 'search';
 
@@ -178,7 +212,7 @@ const LEFT_OUT_WORDS: Record<LeftOutReason, string> = {
  * march, not part of it.
  *
  * It is the off half of the pill's toggle, so it says so: `aria-pressed={false}` and a name that
- * names the press, "Archer I, left out by you — put back".
+ * names the press, "Archer I, left out by you: put back".
  *
  * The name carries the *reason* too, because a player wants to know whether they took a type out or
  * the solver did; the press itself is the same either way — the type goes back in and the sizer
@@ -199,7 +233,7 @@ export function LeftOutPill({
     <UnstyledButton
       className={classes.leftOutPill}
       data-left-out={reason}
-      aria-label={`${unit.name}, ${LEFT_OUT_WORDS[reason]} — put back`}
+      aria-label={`${unit.name}, ${LEFT_OUT_WORDS[reason]}: put back`}
       aria-pressed={false}
       onClick={onPutBack}
     >

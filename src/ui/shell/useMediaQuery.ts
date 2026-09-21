@@ -16,6 +16,15 @@ import { useCallback, useSyncExternalStore } from 'react';
  */
 export const TWO_PANES = '(min-width: 1200px)';
 
+/**
+ * **A machine you can type a shortcut on.** No browser answers "is there a keyboard"; what it answers is
+ * how the pointer works, and a pointer that is fine and can hover is a desktop or a laptop — the only
+ * place `Ctrl`/`⌘ + Enter` can be pressed at all. A tablet with a keyboard case reads as touch and is
+ * told nothing, which is the safe way round: the hint is a *reminder*, never the way the action is
+ * discovered (`sections/march/MarchGenerateButton.tsx`).
+ */
+export const HAS_KEYBOARD = '(hover: hover) and (pointer: fine)';
+
 function list(query: string): MediaQueryList | null {
   if (typeof globalThis.matchMedia !== 'function') return null;
   return globalThis.matchMedia(query);

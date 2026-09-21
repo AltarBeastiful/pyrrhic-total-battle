@@ -77,7 +77,9 @@ export function MarchRecap() {
   const figures = [
     {
       key: 'worst',
-      label: 'Worst opening',
+      // **"Damage"** (owner, 2026-09-21: the same cut the trade's head took the same day — the figure is
+      // the enemy-first journal's either way, and "worst opening" was a term a player had to learn).
+      label: 'Damage',
       value: summary.minDamage,
       previous: was((value) => value.minDamage),
       format: amount,

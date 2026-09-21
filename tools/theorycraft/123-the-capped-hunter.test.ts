@@ -103,7 +103,13 @@ function ownersAccount(dominance = 800, stock = 27): { profile: Profile; setup: 
 
   const setup: BattleSetup = {
     ...first,
-    active: { ...first.active, captains: ['ww8j0qwv'], events: ['ragnarok-fenrir'], vip: false, dragon: false },
+    active: {
+      ...first.active,
+      captains: ['ww8j0qwv'],
+      events: ['ragnarok-fenrir'],
+      vip: false,
+      dragon: false,
+    },
     housing: { leadership: 5_600, authority: 2_180, dominance },
     enemy: { melee: 1, ranged: 1, mounted: 1, flying: 1 },
     options: {
@@ -114,7 +120,7 @@ function ownersAccount(dominance = 800, stock = 27): { profile: Profile; setup: 
       relaxedPreservation: false,
     },
     priority: 'damagePerSilver',
-    recoveryPlan: { mode: 'selective', selectiveTop: 3 },
+    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'] },
   };
   return { profile, setup };
 }
@@ -122,7 +128,10 @@ function ownersAccount(dominance = 800, stock = 27): { profile: Profile; setup: 
 /** The worst-opening damage and the retraining bill of one explicit count vector. */
 function price(base: StackRequest, counts: Record<string, number>): { damage: number; silver: number } {
   const { result, summary } = evaluateCounts(base, counts);
-  return { damage: summary.minDamage, silver: recoveryCosts(result.stacks, base.units, base.recovery).plan.silver };
+  return {
+    damage: summary.minDamage,
+    silver: recoveryCosts(result.stacks, base.units, base.recovery).plan.silver,
+  };
 }
 
 /** The two ratios the bar prints on a row — the **repeat's**, which is what the UI draws (`PlanTrade`). */
@@ -186,19 +195,31 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
       ['worst opening', n(topSummary.minDamage), '5,763,382'],
       ['silver', n(top.repeat.silver), '2,449,200'],
       ['gold', n(top.repeat.gold), '9,024'],
-      ['dragon coins', n(top.repeat.dragonCoins), '2,920'],
+      ['dragon coins', n(top.repeat.dragonCoins ?? 0), '2,920'],
       ['time to recover', hhmm(top.repeat.seconds), '8d 6h'],
       ['hired lost', n(top.repeat.mercLost), '3'],
-      ['leadership used', `${n(topResult.pools.leadership.used)} of ${n(topResult.pools.leadership.capacity)}`, '5,590 of 5,600'],
-      ['authority used', `${n(topResult.pools.authority.used)} of ${n(topResult.pools.authority.capacity)}`, '21 of 2,180'],
-      ['dominance used', `${n(topResult.pools.dominance.used)} of ${n(topResult.pools.dominance.capacity)}`, '628 of 800'],
+      [
+        'leadership used',
+        `${n(topResult.pools.leadership.used)} of ${n(topResult.pools.leadership.capacity)}`,
+        '5,590 of 5,600',
+      ],
+      [
+        'authority used',
+        `${n(topResult.pools.authority.used)} of ${n(topResult.pools.authority.capacity)}`,
+        '21 of 2,180',
+      ],
+      [
+        'dominance used',
+        `${n(topResult.pools.dominance.used)} of ${n(topResult.pools.dominance.capacity)}`,
+        '628 of 800',
+      ],
       ['campaign damage', n(top.totalDamage), '22,582,807'],
       ['campaign silver', n(top.silver), '9,717,200'],
       ['campaign marches', n(top.marches), '4'],
       ['sweet · worst opening', n(sweet.repeat.damage), '5,698,946 (he read 5.7M)'],
       ['sweet · silver', n(sweet.repeat.silver), '2,499,000 (he read 2.5M)'],
       ['sweet · time', hhmm(sweet.repeat.seconds), '8d 17h'],
-      ['sweet · dragon coins', n(sweet.repeat.dragonCoins), '2,520'],
+      ['sweet · dragon coins', n(sweet.repeat.dragonCoins ?? 0), '2,520'],
       ['sweet · hired lost', n(sweet.repeat.mercLost), '2'],
       ['sweet · per silver', perSilver(sweet).toFixed(3), '2.280'],
       ['sweet · per hired', n(Math.round(perHired(sweet))), '482,450'],
@@ -300,7 +321,9 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
       '**The same army at every horizon.** `CAMPAIGN.marches` (`src/config.ts`) is **4**; nothing else changes between these runs.',
     );
     report.add('');
-    report.add('| horizon | repeats | hunters a march | rows the bar carries | damage a march | campaign damage |');
+    report.add(
+      '| horizon | repeats | hunters a march | rows the bar carries | damage a march | campaign damage |',
+    );
     report.add('|---|---|---|---|---|---|');
     for (const target of [1, 2, 3, 4, 5, 6]) {
       const at = planCampaign({ ...buildPlanRequest(profile, setup), marchTarget: target });
@@ -383,7 +406,9 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
     );
     if (cheaper.length > 0) {
       report.add('');
-      report.add('| plan | hunters | chunks | silver a march | damage a march | per silver | ≤ sweet’s silver | ≥ sweet’s rate |');
+      report.add(
+        '| plan | hunters | chunks | silver a march | damage a march | per silver | ≤ sweet’s silver | ≥ sweet’s rate |',
+      );
       report.add('|---|---|---|---|---|---|---|---|');
       for (const row of [...cheaper].sort((a, b) => a.repeat.silver - b.repeat.silver).slice(0, 12)) {
         report.add(
@@ -403,14 +428,10 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
     );
     if (cheaper.length > 0) {
       const bestRate = cheaper.reduce((best, row) => (perSilver(row) > perSilver(best) ? row : best));
-      const cheapest = cheaper.reduce((best, row) =>
-        row.repeat.silver < best.repeat.silver ? row : best,
-      );
+      const cheapest = cheaper.reduce((best, row) => (row.repeat.silver < best.repeat.silver ? row : best));
       report.add('');
       report.add(
-        `**Which of the three tests actually refuses them.** Of the ${n(
-          cheaper.length,
-        )} cheaper plans, **${n(
+        `**Which of the three tests actually refuses them.** Of the ${n(cheaper.length)} cheaper plans, **${n(
           cheaper.filter((row) => row.repeat.silver <= sweet.repeat.silver).length,
         )}** cost no more silver than the sweet spot — so the silver test refuses almost none of them — while **${n(
           cheaper.filter((row) => perSilver(row) >= perSilver(sweet)).length,
@@ -447,9 +468,7 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
     report.add('');
     report.add('| pool | stacks | units |');
     report.add('|---|---|---|');
-    report.add(
-      `| authority | ${HUNTER} | ${n(top.counts[HUNTER] ?? 0)} |`,
-    );
+    report.add(`| authority | ${HUNTER} | ${n(top.counts[HUNTER] ?? 0)} |`);
     report.add(
       `| dominance | ${monsterUnits.map((unit) => unit.label).join(', ')} | ${n(
         monsterUnits.reduce((sum, unit) => sum + (top.counts[unit.id] ?? 0), 0),
@@ -478,7 +497,7 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
           hiredUnitsOf(allInRow.counts),
         )} hired units in all**, for ${n(allInRow.repeat.damage)} worst-opening at ${n(
           allInRow.repeat.silver,
-        )} silver and ${n(allInRow.repeat.dragonCoins)} dragon coins.`,
+        )} silver and ${n(allInRow.repeat.dragonCoins ?? 0)} dragon coins.`,
       );
       report.add('');
       report.add('| stack | the all-in’s first march | the Steady max he was shown |');
@@ -550,7 +569,9 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
         `All three arms hold, and the row goes. **The control is the horizon-1 run**, where the all-in burns ${String(
           allInRow.mercLost,
         )} chunks and the dearest rung beside it burns ${String(
-          atOne.alternatives.filter((row) => row.pick !== 'all-in').reduce((most, row) => Math.max(most, row.mercLost), 0),
+          atOne.alternatives
+            .filter((row) => row.pick !== 'all-in')
+            .reduce((most, row) => Math.max(most, row.mercLost), 0),
         )} — nothing burns **strictly** fewer, the rule cannot fire, and the row survives. That is the whole difference between the two runs.`,
       );
       report.add('');
@@ -632,9 +653,7 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
 
     // Two perturbations that move one thing each: the camp itself, and the room it stands in.
     report.add('');
-    report.add(
-      '**The same account with the monster camp off** \u2014 everything else untouched:',
-    );
+    report.add('**The same account with the monster camp off** \u2014 everything else untouched:');
     {
       const noMonsters = ownersAccount(800, 27);
       noMonsters.profile.troops = { ...noMonsters.profile.troops, monsters: null };
@@ -653,7 +672,9 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
       report.add(
         `Rows: **${other.alternatives.map((row) => row.pick).join(' \u00b7 ')}** \u2014 against **${rows
           .map((row) => row.pick)
-          .join(' \u00b7 ')}** with the camp on. Take the monsters away and the stop that fields all 27 is offered, and survives.`,
+          .join(
+            ' \u00b7 ',
+          )}** with the camp on. Take the monsters away and the stop that fields all 27 is offered, and survives.`,
       );
     }
 
@@ -668,7 +689,9 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
       '**Where the All in comes back.** Two sweeps, each moving one thing. His account is the first line of each.',
     );
     report.add('');
-    report.add('| dominance housed | over-subscribed by | rows | hunters on the dearest stop | hired units on it |');
+    report.add(
+      '| dominance housed | over-subscribed by | rows | hunters on the dearest stop | hired units on it |',
+    );
     report.add('|---|---|---|---|---|');
     for (const dominance of [800, 900, 1_000, 1_100, 1_200, 1_600, 2_400, 3_200]) {
       const army = ownersAccount(dominance, 27);
@@ -756,10 +779,18 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
       )}) and the stock does not.`,
     );
     report.add('');
-    report.add('| hunters | worst opening | silver | chunks a march | marches the stock lasts | 4-march campaign | chunks spent |');
+    report.add(
+      '| hunters | worst opening | silver | chunks a march | marches the stock lasts | 4-march campaign | chunks spent |',
+    );
     report.add('|---|---|---|---|---|---|---|');
     for (const row of sweepRows) {
-      if (row.hunters % 3 !== 0 && row.hunters !== 21 && row.hunters !== 27 && row.hunters !== marchPeak.hunters && row.hunters !== campaignPeak.hunters) {
+      if (
+        row.hunters % 3 !== 0 &&
+        row.hunters !== 21 &&
+        row.hunters !== 27 &&
+        row.hunters !== marchPeak.hunters &&
+        row.hunters !== campaignPeak.hunters
+      ) {
         continue;
       }
       const note = [
@@ -809,9 +840,7 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
     report.add(
       `And the campaign the engine actually planned — three repeats and a re-sized finale — is **${n(
         top.totalDamage,
-      )}**, which is **below** the flat model's ${n(
-        fieldedRow?.campaign ?? 0,
-      )}: its finale is worth ${n(
+      )}**, which is **below** the flat model's ${n(fieldedRow?.campaign ?? 0)}: its finale is worth ${n(
         top.totalDamage - 3 * top.repeat.damage,
       )}, where simply repeating the march with the ${n(27 - 3 * chunks(21))} hunters the stock has left is worth ${n(
         sweepRows[27 - 3 * chunks(21)]?.damage ?? 0,
@@ -842,7 +871,10 @@ describe.skipIf(!process.env.THEORY)('the capped hunter', () => {
       .map((unit) => unit.id);
     const capOf = (unit: { id: string; pool: string; cost: number }): number => {
       if (unit.pool === 'dominance') {
-        return Math.max(top.counts[unit.id] ?? 0, Math.floor(base.housing.dominance / Math.max(1, unit.cost)));
+        return Math.max(
+          top.counts[unit.id] ?? 0,
+          Math.floor(base.housing.dominance / Math.max(1, unit.cost)),
+        );
       }
       const held = base.caps[unit.id];
       if (held === undefined) return Math.floor(base.housing.authority / Math.max(1, unit.cost));

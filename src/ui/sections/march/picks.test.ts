@@ -64,21 +64,34 @@ test('damage a hired unit is never marked best, and every other column is', () =
   // `docs/investigations/0019` §2.3 measured this ratio **rising** while the march collapses, and §1 calls
   // it "never the right compass". It is a fact the table carries; a best mark on it is the trap itself.
   const rows = [
-    row('silver-saver', { damage: 3_000_000, silver: 3_000_000, mercLost: 2, hiredDamage: 1_000_000 }),
-    row('all-in', { damage: 4_000_000, silver: 8_000_000, mercLost: 9, hiredDamage: 900_000 }),
+    row('silver-saver', {
+      damage: 3_000_000,
+      silver: 3_000_000,
+      gold: 11_400,
+      mercLost: 2,
+      hiredDamage: 1_000_000,
+    }),
+    row('all-in', {
+      damage: 4_000_000,
+      silver: 8_000_000,
+      gold: 48_000,
+      mercLost: 9,
+      hiredDamage: 900_000,
+    }),
   ];
   const marks = tableMarks(rows);
 
   // `TableMarks` has no field for the hired rate at all, which is the strongest form the ban can take: the
   // silver saver *is* the better hired rate here — 500 000 a hired unit against 100 000 — and there is
   // nowhere for the table to say so.
-  expect(Object.keys(marks).sort()).toEqual(['damage', 'hiredLost', 'perSilver', 'silver']);
+  expect(Object.keys(marks).sort()).toEqual(['damage', 'gold', 'hiredLost', 'perSilver', 'silver']);
   const perHired = (one: PlanRow): number => one.repeat.hiredDamage / one.repeat.mercLost;
   expect(perHired(rows[0] as PlanRow)).toBeGreaterThan(perHired(rows[1] as PlanRow));
 
   // Every other mark on the same rows is drawn as usual: the ban is on one column, not on the table.
   expect(marks.damage).toBe(1); // all-in hits hardest
   expect(marks.silver).toBe(0); // the silver saver is cheapest
+  expect(marks.gold).toBe(0); // …at the Temple too (2026-09-21): a price, so lowest wins
   expect(marks.hiredLost).toBe(0); // …and burns the least stock
   expect(marks.perSilver).toBe(0); // 1.0 a silver against 0.5
   expect(PER_SILVER.decimals).toBe(3); // where the owner's plans differ (S-59)

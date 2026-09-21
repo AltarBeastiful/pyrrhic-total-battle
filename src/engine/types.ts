@@ -81,11 +81,29 @@ export interface StackingOptions {
 }
 
 export type RecoveryMode = 'retrain' | 'revive' | 'selective';
+
+/**
+ * The five families an army is read in — the game's four `group` values plus mercenaries, which are a
+ * `kind` and not a group (`unitFamily` in `recovery.ts` is the one place that decides which a unit is).
+ * They are what the interface colours units by (`ui/domain/unitGroup.ts` re-exports these) and what a
+ * selective recovery is chosen in.
+ */
+export const UNIT_FAMILIES = ['guardsmen', 'specialists', 'engineers', 'monsters', 'mercenaries'] as const;
+export type UnitFamily = (typeof UNIT_FAMILIES)[number];
+
 export interface RecoverySettings {
   templeLevel: number; // 0..45
   trainingCostReduction: Partial<Record<Group, number>>; // percent
   trainingSpeed: Partial<Record<Group, number>>; // percent
-  plan: { mode: RecoveryMode; selectiveTop?: number };
+  /**
+   * `selective` revives the **top type of each family listed**, and retrains everything else; the list
+   * absent means all five (`UNIT_FAMILIES`). Until 2026-09-21 it was `selectiveTop`, a count of types
+   * taken off one list sorted by tier — TotalStack's own "TOP 1 / TOP 2 / TOP 3" — which the owner
+   * could not read as an answer to the question he was asking ("revive top monster, revive top
+   * guardsmen"): the top three types of an army with four monster tiers are three monsters, and his
+   * guardsmen were retrained without his ever having said so.
+   */
+  plan: { mode: RecoveryMode; reviveFamilies?: readonly UnitFamily[] };
 }
 
 export interface StackRequest {

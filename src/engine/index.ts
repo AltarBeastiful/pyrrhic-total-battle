@@ -41,8 +41,11 @@ export {
   reviveOne,
   templeDivisor,
   TEMPLE_MULTIPLIER,
+  unitFamily,
 } from './recovery';
 export type { RecoveryBreakdown } from './recovery';
+// The one value `types.ts` exports: the five families a unit is read in, in display order.
+export { UNIT_FAMILIES } from './types';
 export type {
   BattleJournal,
   BattleSummary,
@@ -60,6 +63,7 @@ export type {
   RecoveryCost,
   RecoveryMode,
   RecoverySettings,
+  UnitFamily,
   ResolvedSource,
   SearchProgress,
   SearchRequest,

@@ -2,22 +2,24 @@
  * The march as TotalStack's own recap, in our colours (design plan §5.5, the owner's corrections of
  * 2026-09-13): **one block per housing pool** — the pool's figure in the pool's colour beside its
  * glyph, then the stacks that pool paid for as two-line pills coloured by tier, as many across as
- * fit at 78 px. Under the pools, the types this march left out as a small outlined row. Under that,
- * the two things a player does with a whole march: copy every count, or edit them by hand.
+ * fit at 78 px. Under the pools, the types this march left out as a small outlined row. What a player
+ * does with a whole march — copy every count, edit them by hand — is a row of marks on the March's own
+ * title line, beside the answer it acts on (`MarchFoot.tsx`, `MarchActions`; owner, 2026-09-21).
  *
  * A press on a stack pill **takes that type out of the march** (owner, 2026-09-13): the march is
  * re-sized on the spot and the type drops into the "Left out" row, where a press puts it back. That
  * is the whole gesture — the ⓘ in the pill's corner is the unit sheet, and copying is "Copy all
- * counts" under the pools.
+ * counts" on the title line.
  *
  * It replaces three blocks that said the same thing three times (design rule 5): the grid of 44 px
  * unit tiles, the row of pool gauges, and the "counts to copy" table whose every figure is one
  * press away in the unit sheet. The pool's figure *is* the gauge, written rather than drawn; **the
  * pills are the counts**.
  */
-import { Button, Group, Stack, Text } from '@mantine/core';
+import { ActionIcon, Button, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { Copy, Pencil, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import type { UnitDef } from '@/engine/types';
 import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
@@ -71,7 +73,26 @@ export interface MarchPillsProps {
  */
 export function MarchPills({ rows, editing, onCount, onDetails }: MarchPillsProps) {
   return (
-    <Stack gap="lg">
+    <Stack
+      gap="lg"
+      /**
+       * **Esc is "Done editing"** (owner, 2026-09-21). The hand that is typing counts is already on the
+       * keyboard, and the way out of the mode was a press on a mark at the other end of the card.
+       *
+       * On the grid rather than on the window, and the key is stopped here: the March is a focus trap
+       * on a phone (`shell/MarchSheet.tsx`) and a sheet's own Esc closes the sheet — one Escape must
+       * not do both. Anywhere else on the page the key still belongs to whatever is open there.
+       */
+      onKeyDown={
+        editing
+          ? (event) => {
+              if (event.key !== 'Escape') return;
+              event.stopPropagation();
+              useRunStore.getState().setEditingCounts(false);
+            }
+          : undefined
+      }
+    >
       {rows.map((row) => {
         const over = row.used > row.capacity;
         return (
@@ -146,7 +167,7 @@ export function MarchLeftOut({ leftOut }: MarchLeftOutProps) {
   return (
     <Stack gap={8}>
       <Text span className={classes.meta} c="dimmed">
-        Left out — tap to put back
+        Left out
       </Text>
       {/* One row, two kinds: the pill carries `data-left-out="you" | "search"` and says which in
           its name, because a player wants to know whether they took a type out or the solver did.
@@ -207,53 +228,82 @@ export interface MarchCountsBarProps {
 }
 
 /**
- * The two things a player does with a whole march, under the pills: copy every count at once, or
- * turn each pill's count into a field in place. **This row is the copy control** (owner,
- * 2026-09-13): a press on a pill leaves its type out, so there is no second, smaller copy hiding in
- * the grid — and the count on a pill is still text a player can select by hand.
+ * **One whole-march action, as a mark** (owner, 2026-09-21: *"editing count, copy and share could be
+ * closer to summary and use icons to avoid crowding the ui"*). Five labelled buttons were a row of
+ * sentences wide enough to need a line of its own at the foot of the page; the same five as marks fit
+ * on the March's own title line, beside the answer they act on.
+ *
+ * The **name is the label**, word for word, so nothing is lost with the words: a reader hears "Copy all
+ * counts", and a pointer reads it in the tooltip the theme draws. These are interface chrome and
+ * therefore Lucide, never emoji — the game's own vocabulary is what a `Glyph` is for (design rule 21).
+ *
+ * A toggle passes `pressed`, which fills the mark and says so (`aria-pressed`); a plain action leaves it
+ * out.
+ */
+export interface MarchActionProps {
+  label: string;
+  icon: ReactNode;
+  onClick: () => void;
+  /** A mode this mark switches: filled while it is on. */
+  pressed?: boolean;
+}
+
+export function MarchAction({ label, icon, onClick, pressed }: MarchActionProps) {
+  return (
+    <Tooltip label={label} withinPortal>
+      <ActionIcon
+        size="lg"
+        variant={pressed === true ? 'filled' : 'subtle'}
+        {...(pressed === true ? {} : { color: 'gray' })}
+        aria-label={label}
+        {...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
+        onClick={onClick}
+      >
+        {icon}
+      </ActionIcon>
+    </Tooltip>
+  );
+}
+
+/**
+ * The two things a player does with the counts: copy every one of them at once, or turn each pill's
+ * count into a field in place. **This is the copy control** (owner, 2026-09-13): a press on a pill
+ * leaves its type out, so there is no second, smaller copy hiding in the grid — and the count on a pill
+ * is still text a player can select by hand.
+ *
+ * Marks rather than sentences since 2026-09-21, and no row of their own: they are part of the toolbar
+ * on the March's title line (`MarchFoot.tsx`, `MarchActions`), so this hands over the marks themselves
+ * and lets its host space them.
  */
 export function MarchCountsBar({ countRows, editing, onEditing, edited, onUndo }: MarchCountsBarProps) {
   const [flash, setFlash] = useFlash();
 
   return (
-    <Group gap="sm" wrap="wrap">
-      <Button
-        size="compact-sm"
-        variant="default"
-        leftSection={<Copy size={14} aria-hidden />}
+    <>
+      {/* What the last press did, where a row of marks can still say it: 12 px muted, before the marks,
+          and empty the rest of the time (design rule 15). */}
+      <Text span role="status" size="xs" c="dimmed">
+        {flash}
+      </Text>
+      <MarchAction
+        label="Copy all counts"
+        icon={<Copy size={16} aria-hidden />}
         onClick={() => {
           void copyText(countsText(countRows));
           setFlash('Copied');
         }}
-      >
-        Copy all counts
-      </Button>
-      {/* One toggle, not a pair of modes (owner, 2026-09-13): editing is a state the button names,
-          and there is only one copy on the page — the button beside it. */}
-      <Button
-        size="compact-sm"
-        variant={editing ? 'filled' : 'default'}
-        aria-pressed={editing}
-        leftSection={<Pencil size={14} aria-hidden />}
+      />
+      {/* One toggle, not a pair of modes (owner, 2026-09-13): editing is a state the mark names, and
+          there is only one copy on the page — the mark beside it. */}
+      <MarchAction
+        label={editing ? 'Done editing' : 'Edit counts'}
+        pressed={editing}
+        icon={<Pencil size={16} aria-hidden />}
         onClick={() => {
           onEditing(!editing);
         }}
-      >
-        {editing ? 'Done editing' : 'Edit counts'}
-      </Button>
-      {edited && (
-        <Button
-          size="compact-sm"
-          variant="default"
-          leftSection={<Undo2 size={14} aria-hidden />}
-          onClick={onUndo}
-        >
-          Undo
-        </Button>
-      )}
-      <Text span role="status" size="xs" c="dimmed">
-        {flash}
-      </Text>
-    </Group>
+      />
+      {edited && <MarchAction label="Undo" icon={<Undo2 size={16} aria-hidden />} onClick={onUndo} />}
+    </>
   );
 }

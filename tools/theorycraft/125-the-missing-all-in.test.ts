@@ -106,7 +106,8 @@ function liveAccount(
       relaxedPreservation: false,
     },
     priority: 'damagePerSilver',
-    recoveryPlan: { mode: 'selective', selectiveTop: 3 },
+    // His own plan as the app now spells it (2026-09-21): the top monster revived, the rest retrained.
+    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'] },
   };
   return { profile, setup };
 }

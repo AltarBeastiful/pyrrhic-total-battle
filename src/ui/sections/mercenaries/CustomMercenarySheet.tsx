@@ -111,7 +111,7 @@ export function CustomMercenarySheet({ opened, initial, onSubmit, onClose }: Cus
         <TextInput
           label="Name"
           value={draft.name}
-          description="Required — it is how the mercenary shows up in your camp."
+          description="Required: it is how the mercenary shows up in your camp."
           placeholder="Spider Queen"
           onChange={(event) => {
             set('name', event.currentTarget.value);

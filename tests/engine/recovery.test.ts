@@ -4,9 +4,16 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { chunks, recoveryCosts, templeDivisor } from '../../src/engine/recovery';
+import {
+  chunks,
+  recoveryCosts,
+  retrainOne,
+  reviveOne,
+  templeDivisor,
+  unitFamily,
+} from '../../src/engine/recovery';
 import type { RecoverySettings, Stack, UnitDef } from '../../src/engine/types';
-import { monsterSet, troopSet } from '../helpers/units';
+import { mercenarySet, monsterSet, troopSet } from '../helpers/units';
 
 const UNITS: UnitDef[] = [
   ...troopSet('ARC1', 'SP2', 'ARC2', 'RD1', 'SP3', 'ARC3', 'RD2', 'RD3'),
@@ -82,8 +89,12 @@ describe('retrain all — run ep-8stacks at temple 0', () => {
     expect(cost.dragonCoins).toBe(1_080);
   });
 
-  it("reproduces the gold (2,752 = the monsters' revive gold: they cannot be retrained)", () => {
-    expect(cost.gold).toBe(2_752);
+  it('spends no gold at all: every unit of this army can be recruited again', () => {
+    // It was **2,752** until 2026-09-21 — the monsters' revival, which the captured run's "retrain
+    // all" gold line was read as (owner: *"in retrain everything, we should retrain monsters"*). A
+    // monster is recruited in the Lair ten at a time, which the silver and the coins above already
+    // bill in full; only a *hired* unit cannot be recruited again, and this army fields none.
+    expect(cost.gold).toBe(0);
   });
 
   it('reproduces the duration shown as "5d 23h"', () => {
@@ -112,14 +123,23 @@ describe('run temple20-training-reductions (temple 20, guardsmen −30 % cost / 
     expect(Math.floor((cost.retrain.seconds % 86_400) / 3_600)).toBe(3);
   });
 
-  it('divides the gold by the temple multiplier (2,752 / 1.81 = 1,520)', () => {
+  it('has no gold left to divide by the temple multiplier under the retrain plan', () => {
+    // The divisor is the Temple's and is still exactly the game's table; what changed is that a
+    // retrain does not visit the Temple for a monster any more (2026-09-21; the figure was 1,520 =
+    // 2,752 / 1.81). The revive plan below is where the divisor is checked on a real figure.
     expect(templeDivisor(20)).toBe(1.81);
-    expect(cost.retrain.gold).toBe(1_520);
+    expect(cost.retrain.gold).toBe(0);
   });
 
-  it('reproduces revive-all gold at temple 0 and temple 20 (13,520 → 7,470)', () => {
+  it('reproduces revive-all gold at temple 0, and rounds each stack up under a temple (13,520 → 7,477)', () => {
+    // Temple 0 is the captured figure to the coin and always was: with no divisor there is nothing to
+    // round. Under a temple it is **7,477 and not the captured 7,470** since 2026-09-21: the game asks a
+    // whole price per stack and rounds it **up** (`reviveOne`, measured on the owner's own Temple screen
+    // — seven stacks, seven exact matches, three of them a coin out under round-to-nearest), where the
+    // captured run's total was rounded once at the end. Seven gold on 7,470, and the game's arithmetic
+    // rather than a third-party tool's.
     expect(recoveryCosts(EP8, UNITS, settings()).revive.gold).toBe(13_520);
-    expect(cost.revive.gold).toBe(7_470);
+    expect(cost.revive.gold).toBe(7_477);
   });
 
   // S-30, 2026-09-13: the Temple revives 90 % of the fallen ("here you can revive up to 90 % of your
@@ -148,7 +168,7 @@ describe('run temple20-training-reductions (temple 20, guardsmen −30 % cost / 
 });
 
 describe('other captured runs', () => {
-  it('reproduces run mp-10stacks (silver 1,294,800, gold 1,536, "4d 11h")', () => {
+  it('reproduces run mp-10stacks (silver 1,294,800, "4d 11h"; its 1,536 gold was the monsters\u2019)', () => {
     const army = [
       stack('ARC1', 455),
       stack('SP2', 251),
@@ -172,12 +192,13 @@ describe('other captured runs', () => {
     ];
     const cost = recoveryCosts(withTier1, units, settings()).retrain;
     expect(cost.silver).toBe(1_294_800);
-    expect(cost.gold).toBe(1_536);
+    // 1,536 under the old reading, where a retrain revived the monsters (2026-09-21).
+    expect(cost.gold).toBe(0);
     expect(cost.dragonCoins).toBe(1_080);
     expect(Math.floor(cost.seconds / 3_600)).toBe(4 * 24 + 11);
   });
 
-  it('reproduces run ep-round-to-10s (Water Elemental 10 → 120 dragon coins, 432 gold)', () => {
+  it('reproduces run ep-round-to-10s (Water Elemental 10 → 120 dragon coins; its 432 gold was the monster\u2019s)', () => {
     const army = [
       stack('ARC1', 660),
       stack('ARC2', 363),
@@ -192,7 +213,8 @@ describe('other captured runs', () => {
     const cost = recoveryCosts(army, UNITS, settings()).retrain;
     expect(cost.silver).toBe(1_364_600);
     expect(cost.dragonCoins).toBe(120);
-    expect(cost.gold).toBe(432);
+    // 432 under the old reading (2026-09-21): the ten elementals are recruited again, not revived.
+    expect(cost.gold).toBe(0);
   });
 
   it('reproduces run bonus-eng-nodom, an army with no monsters at all', () => {
@@ -218,6 +240,70 @@ describe('other captured runs', () => {
   });
 });
 
+/**
+ * **The owner's own Temple, 2026-09-21** — the one set of revive figures in this repo that comes from the
+ * *game* rather than from TotalStack, captured beside the journal of the march that filled it.
+ *
+ * The journal's losses and the Temple's offers pin the 90 % rule stack by stack: 10 → 9, 18 → 16, 37 → 33,
+ * 13 → 11, 14 → 12, 174 → 156, 623 → 560 — every one of them `n − chunks(n)` exactly. The gold beside each
+ * offer pins the rest: the per-unit `revival.gold` of our tables (rider 8, spearman 4, hunter 8, water
+ * elemental 48, battle boar 96, emerald dragon 112, stone gargoyle 128), a **35 % discount** on that
+ * account's temple, and a **ceiling** on each stack's own price.
+ *
+ * **His temple is level 15**, which is how this capture corrected the table: the entry read 1.53 — the
+ * game's own two-decimal display — where the seven stacks measure exactly `1 / 0.65`. It is the one level
+ * this repo has ever measured, and the test below runs through `templeLevel: 15` rather than applying a
+ * factor by hand, so the table and the formula are held together by the game's own figures.
+ */
+describe('the owner’s Temple, 2026-09-21 (the game’s own figures)', () => {
+  /** His temple, and the discount it was measured to apply: `TEMPLE_MULTIPLIER[15]` is `1 / 0.65`. */
+  const TEMPLE = 15;
+  /** unit · lost in the march · offered by the Temple · gold asked for that offer. */
+  const CAPTURED: [string, number, number, number][] = [
+    ['rider-3', 174, 156, 812],
+    ['spearman-2', 623, 560, 1_456],
+    ['battle-boar', 18, 16, 999],
+    ['water-elemental', 37, 33, 1_030],
+    ['stone-gargoyle', 13, 11, 916],
+    ['emerald-dragon', 14, 12, 874],
+    ['epic-monster-hunter-6', 10, 9, 47],
+  ];
+
+  it('offers 90 % of every fallen stack, and asks the gold our tables price it at', () => {
+    const units = [
+      ...troopSet('RD3', 'SP2'),
+      ...monsterSet('BB', 'WE', 'SG', 'ED'),
+      ...mercenarySet('epic-monster-hunter-6'),
+    ];
+    for (const [id, lost, offered, gold] of CAPTURED) {
+      const unit = units.find((one) => one.id === id);
+      if (unit === undefined) throw new Error(`${id} is not in the tables`);
+      expect(lost - chunks(lost), `${id}: the Temple's own count`).toBe(offered);
+      expect(
+        reviveOne(unit, lost, settings({ templeLevel: TEMPLE })).gold,
+        `${id}: the gold the Temple asked`,
+      ).toBe(gold);
+    }
+  });
+});
+
+describe('what a retrain cannot bring back', () => {
+  it('charges the Temple for a hired unit under every plan, and for nothing else', () => {
+    // Owner, 2026-09-21: a mercenary can never be retrained — there is no camp to recruit it from —
+    // so its retrain *is* its revival, which is why it is not one of the families the Battle card
+    // offers to tick. A monster, beside it, costs silver, coins and a queue and no gold at all.
+    const merc = mercenarySet('wyvern-2')[0]!;
+    const monster = UNITS.find((unit) => unit.pool === 'dominance')!;
+    expect(retrainOne(merc, 40, settings())).toEqual(reviveOne(merc, 40, settings()));
+    expect(retrainOne(merc, 40, settings()).gold).toBeGreaterThan(0);
+    const retrained = retrainOne(monster, 40, settings());
+    expect(retrained.gold).toBe(0);
+    expect(retrained.silver).toBeGreaterThan(0);
+    expect(retrained.dragonCoins).toBeGreaterThan(0);
+    expect(reviveOne(monster, 40, settings()).gold).toBeGreaterThan(0);
+  });
+});
+
 describe('recovery plans', () => {
   it('exposes each mode and the one the plan selected', () => {
     const breakdown = recoveryCosts(EP8, UNITS, settings({ plan: { mode: 'revive' } }));
@@ -225,21 +311,53 @@ describe('recovery plans', () => {
     expect(breakdown.retrain.silver).toBeGreaterThan(breakdown.revive.silver);
   });
 
-  it('revives the top-N unit types by tier and retrains the rest (selective)', () => {
-    const breakdown = recoveryCosts(EP8, UNITS, settings({ plan: { mode: 'selective', selectiveTop: 3 } }));
-    expect(breakdown.selectiveRevived).toHaveLength(3);
-    // Tier 3 first: the three tier-3 troops and monsters sort above the tier-1 and tier-2 stacks.
-    for (const id of breakdown.selectiveRevived) {
-      expect(UNITS.find((unit) => unit.id === id)?.tier).toBe(3);
-    }
+  it('revives every stack at the top tier of each family, and retrains the rest (selective)', () => {
+    // Owner, 2026-09-21: *"for guardsmen the max is G3 so all G3 in the march should count as revived;
+    // monsters max is M3 so all M3 stacks in the march should count as revived."* It was one *type* a
+    // family, which reads the same on a tier that holds one type and leaves three of four M3 monsters
+    // in the training queue on a camp that fields four.
+    const breakdown = recoveryCosts(EP8, UNITS, settings({ plan: { mode: 'selective' } }));
+    const fielded = EP8.map((stack) => UNITS.find((candidate) => candidate.id === stack.unitId)!);
+    const topOf = (family: string): number =>
+      Math.max(...fielded.filter((one) => unitFamily(one) === family).map((one) => one.tier));
+    // Every stack of this army at its own family's top tier, and nothing else: three tier-3 guardsmen
+    // (archer, spearman, rider) and all four tier-3 monsters.
+    const expected = fielded
+      .filter((unit) => unit.tier === topOf(unitFamily(unit)))
+      .map((unit) => unit.id)
+      .sort();
+    expect([...breakdown.selectiveRevived].sort()).toEqual(expected);
+    expect(breakdown.selectiveRevived).toHaveLength(7);
+
     expect(breakdown.selective.silver).toBeLessThan(breakdown.retrain.silver);
     expect(breakdown.selective.gold).toBeGreaterThan(breakdown.retrain.gold);
     expect(breakdown.plan).toEqual(breakdown.selective);
   });
 
+  it('leaves out of the Temple every family the plan does not name', () => {
+    const all = recoveryCosts(EP8, UNITS, settings({ plan: { mode: 'selective' } }));
+    const monsters = recoveryCosts(
+      EP8,
+      UNITS,
+      settings({ plan: { mode: 'selective', reviveFamilies: ['monsters'] } }),
+    );
+    // The four M3 monsters and not one of them (owner, 2026-09-21), and no guardsman.
+    expect(monsters.selectiveRevived).toHaveLength(4);
+    for (const id of monsters.selectiveRevived) {
+      expect(unitFamily(UNITS.find((unit) => unit.id === id)!)).toBe('monsters');
+    }
+    expect(monsters.selective.gold).toBeLessThan(all.selective.gold);
+
+    // No family at all is "retrain everything", to the coin: the mode stops being a third answer.
+    const none = recoveryCosts(EP8, UNITS, settings({ plan: { mode: 'selective', reviveFamilies: [] } }));
+    expect(none.selectiveRevived).toEqual([]);
+    expect(none.selective).toEqual(none.retrain);
+  });
+
   it('treats temple level 0 as no discount at all', () => {
     expect(templeDivisor(0)).toBe(1);
-    expect(templeDivisor(15)).toBe(1.53);
+    // 15 is the one level measured against the game rather than read off its display (2026-09-21).
+    expect(templeDivisor(15)).toBe(1.5385);
     expect(templeDivisor(45)).toBe(5.91);
   });
 });

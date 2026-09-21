@@ -97,7 +97,12 @@ describe('objectiveScore', () => {
     const request = makeRequest({ units: ALL });
     const summary = simulateBattle(sizeStacks(request), request);
     expect(objectiveScore(summary, 'avgDamage')).toBe(summary.avgDamage);
-    expect(objectiveScore(summary, 'damagePerGold')).toBe(summary.damagePerGold);
+    expect(objectiveScore(summary, 'damagePerSilver')).toBe(summary.damagePerSilver);
+    // Gold is the one field this army cannot answer with: it hires nothing, and since 2026-09-21 its
+    // monsters are recruited again rather than revived, so nothing here opens the Temple. That is the
+    // unmeasurable case the test below is about, and it scores −Infinity rather than the summary's nought.
+    expect(summary.recovery.gold).toBe(0);
+    expect(objectiveScore(summary, 'damagePerGold')).toBe(-Infinity);
   });
 
   it('scores an unmeasurable ratio −Infinity rather than zero', () => {

@@ -33,7 +33,6 @@ import { describe, it } from 'vitest';
 
 import { planCampaign } from '../../src/engine/plan';
 import { recoveryCosts } from '../../src/engine/recovery';
-import { sizeStacks } from '../../src/engine/stacker';
 import type { StackRequest } from '../../src/engine/types';
 import { newRoot } from '../../src/state/defaults';
 import type { BattleSetup, Profile } from '../../src/state/schema';
@@ -79,7 +78,13 @@ function ownersAccount(dominance = 1_200): { profile: Profile; setup: BattleSetu
 
   const setup: BattleSetup = {
     ...first,
-    active: { ...first.active, captains: ['ww8j0qwv'], events: ['ragnarok-fenrir'], vip: false, dragon: false },
+    active: {
+      ...first.active,
+      captains: ['ww8j0qwv'],
+      events: ['ragnarok-fenrir'],
+      vip: false,
+      dragon: false,
+    },
     housing: { leadership: 5_600, authority: 2_180, dominance },
     enemy: { melee: 1, ranged: 1, mounted: 1, flying: 1 },
     options: {
@@ -90,7 +95,7 @@ function ownersAccount(dominance = 1_200): { profile: Profile; setup: BattleSetu
       relaxedPreservation: false,
     },
     priority: 'damagePerSilver',
-    recoveryPlan: { mode: 'selective', selectiveTop: 3 },
+    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'] },
   };
   return { profile, setup };
 }
@@ -141,7 +146,9 @@ describe.skipIf(!process.env.THEORY)('the owner’s missing All in', () => {
       const rows = plan.alternatives.map((stop) => ({ pick: stop.pick, ...read(base, stop.counts) }));
 
       report.add('');
-      report.add('| stop | damage | silver | hired lost | hunters | monster units | lowest troop rung | the hunters’ stack |');
+      report.add(
+        '| stop | damage | silver | hired lost | hunters | monster units | lowest troop rung | the hunters’ stack |',
+      );
       report.add('|---|---|---|---|---|---|---|---|');
       for (const row of rows) {
         report.add(
@@ -164,7 +171,11 @@ describe.skipIf(!process.env.THEORY)('the owner’s missing All in', () => {
           )} / ${n(top.hunterHp)}) − 1\` = **${n(ceiling)}**, his stock holds **64**, and his authority houses **${n(
             byAuthority,
           )}**. He is fielding **${n(top.hunters)}** — bound by **${
-            ceiling <= Math.min(64, byAuthority) ? 'the shelter' : ceiling === 0 ? 'nothing it can field' : 'his stock or his authority'
+            ceiling <= Math.min(64, byAuthority)
+              ? 'the shelter'
+              : ceiling === 0
+                ? 'nothing it can field'
+                : 'his stock or his authority'
           }**.`,
         );
         report.add('');
@@ -201,7 +212,13 @@ describe.skipIf(!process.env.THEORY)('the owner’s missing All in', () => {
         for (let hunters = 10; hunters <= Math.min(houses, 200); hunters += 10) steps.add(hunters);
         for (const hunters of [...steps].sort((a, b) => a - b)) {
           const one = read(base, { ...top.counts, [HUNTER]: hunters });
-          rows.push({ hunters, damage: one.damage, silver: one.silver, burn: one.burn, stackHp: one.hunterStackHp });
+          rows.push({
+            hunters,
+            damage: one.damage,
+            silver: one.silver,
+            burn: one.burn,
+            stackHp: one.hunterStackHp,
+          });
         }
         const fielded = read(base, top.counts);
         const peak = rows.reduce((best, row) => (row.damage > best.damage ? row : best));

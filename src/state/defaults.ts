@@ -64,9 +64,11 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
       hero: false,
       events: [],
       otherPills: [],
-      vip: true,
-      dragon: true,
-      unknown: true,
+      // Off until the player says otherwise (owner, 2026-09-19). A fresh account has VIP 0 and an
+      // empty dragon, so both used to stand on and empty: two chips claiming to count for a march
+      // they add nothing to, and two lines in the header's "sources on" that were never chosen.
+      vip: false,
+      dragon: false,
       custom: [],
     },
     housing: defaultHousing(),
@@ -88,7 +90,14 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
       relaxedPreservation: false,
     },
     priority: 'none',
-    recoveryPlan: { mode: 'retrain' },
+    /**
+     * **Revive the top monster, retrain the rest** (owner, 2026-09-21). It was "retrain everything",
+     * which is the cheapest plan in silver and the one nobody plays: a monster stack is the slowest
+     * thing in the queue and the Temple is what a player opens after an epic march. Only the monsters
+     * are ticked, because reviving a top troop type is a choice a player makes, and this is the plan
+     * they start from (`ui/sections/battle/BattleSection.tsx`).
+     */
+    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'] },
   };
 }
 
@@ -123,7 +132,6 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
       titles: [],
       vipLevel: 0,
       dragon: { health: {}, strength: {} },
-      unknown: { health: {}, strength: {} },
       custom: [],
     },
     recovery: {
@@ -236,6 +244,17 @@ const TEMPLATE_DEVICE = '00000000-0000-4000-8000-000000000001';
 
 /** A setup with every field at its default value, for `stripDefaults` (ADR-0005). */
 export const SHARE_SETUP_TEMPLATE: BattleSetup = buildSetup(TEMPLATE_ID, TEMPLATE_DEVICE, 'Default', 0);
+
+/**
+ * The same template as it stood at schemaVersion 4, because `4 → 5` changed two *defaults*: VIP and
+ * the dragon went from on to off. A stripped payload can only be restored with the defaults of its
+ * own version (`share/codec.ts`), and a v4 link that left both out meant **on** — restoring it
+ * against today's template would quietly switch off two sources the sender was counting.
+ */
+export const SHARE_SETUP_TEMPLATE_V4: BattleSetup = {
+  ...SHARE_SETUP_TEMPLATE,
+  active: { ...SHARE_SETUP_TEMPLATE.active, vip: true, dragon: true },
+};
 
 /** A profile with every field at its default value and no setups/stacks (those are stripped separately). */
 export const SHARE_PROFILE_TEMPLATE: Profile = {

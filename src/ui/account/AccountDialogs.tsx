@@ -169,7 +169,7 @@ function SignInDialog() {
         onClose={close}
         title="Account created"
         size="sm"
-        description="Check your inbox to confirm your address. Until it is confirmed, your profiles cannot be saved to the account — everything in this browser keeps working as it always has."
+        description="Check your inbox to confirm your address. Until it is confirmed, your profiles cannot be saved to the account; everything in this browser keeps working as it always has."
         footer={
           <Group justify="flex-end" gap="sm">
             <Button
@@ -448,7 +448,7 @@ function ConflictDialog() {
       }}
       title="Saved on another device"
       size="sm"
-      description={`Another device saved to this account${when === '' ? '' : ` on ${when}`}, after this browser last loaded it. Both ways out lose something — export first if you want to keep both.`}
+      description={`Another device saved to this account${when === '' ? '' : ` on ${when}`}, after this browser last loaded it. Both ways out lose something, so export first if you want to keep both.`}
       footer={
         <Group justify="flex-end" gap="sm" wrap="wrap">
           <ExportFirstButton />
@@ -477,14 +477,14 @@ function ConflictDialog() {
         <Text size="sm">
           <Text span fw={600} inherit>
             Load the other device&rsquo;s copy
-          </Text>{' '}
-          — everything changed in this browser since version {version} is discarded.
+          </Text>
+          : everything changed in this browser since version {version} is discarded.
         </Text>
         <Text size="sm">
           <Text span fw={600} inherit>
             Overwrite with this device
-          </Text>{' '}
-          — everything the other device saved (version {conflict?.serverVersion ?? 0}) is replaced by what is
+          </Text>
+          : everything the other device saved (version {conflict?.serverVersion ?? 0}) is replaced by what is
           here.
         </Text>
       </Stack>

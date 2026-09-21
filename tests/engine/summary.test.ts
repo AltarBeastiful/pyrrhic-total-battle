@@ -111,7 +111,11 @@ describe('summary of run ep-8stacks', () => {
     expect(summary.recovery.dragonCoins).toBe(1_080);
     expect(summary.damagePerSilver).toBeCloseTo(summary.avgDamage / summary.recovery.silver, 6);
     expect(summary.damagePerDragonCoin).toBeCloseTo(summary.avgDamage / 1_080, 6);
-    expect(summary.damagePerGold).toBeCloseTo(summary.avgDamage / summary.recovery.gold, 6);
+    // **And no gold at all under a retrain** (2026-09-21): this army hires nothing, and a monster is
+    // recruited again in the Lair rather than bought back from the Temple, so the third purse is not
+    // opened. A ratio with nothing under the line is reported as nought, never as `Infinity`.
+    expect(summary.recovery.gold).toBe(0);
+    expect(summary.damagePerGold).toBe(0);
   });
 
   it('carries the model notes the UI shows next to the numbers', () => {

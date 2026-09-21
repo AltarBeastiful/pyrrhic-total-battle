@@ -59,6 +59,9 @@ export function useMarch(): MarchView {
   // What the account does not own at all is not a march decision and never reaches here:
   // `buildStackRequest` never puts it in the request.
   const leftOutByPlayer = useRunStore((state) => state.leftOutByPlayer);
+  // Counts are being typed into the pills (`MarchCountsBar`), which changes what the *army* looks
+  // like, never what the figures are computed from.
+  const editing = useRunStore((state) => state.editingCounts);
 
   // The store hands out the same profile and setup objects until one of them is edited, so this is
   // rebuilt only when something a march is actually computed from moved.
@@ -86,7 +89,30 @@ export function useMarch(): MarchView {
       : null;
     const result = edits?.result ?? snapshot.result;
     const summary = edits?.summary ?? snapshot.summary;
-    const pools = poolRows({ result, units: snapshot.request.units });
+
+    /**
+     * **While the counts are being edited by hand, the pills are the fields** (owner, 2026-09-21: *"it
+     * should only be deleted on done editing cause it can prevent me from typing"*).
+     *
+     * So the army is drawn from the **generated** list with what has been typed into it, rather than from
+     * the edited march: a stack typed down to nothing — which is what an emptied box means, and every box
+     * is empty for a moment between two figures — keeps its pill, in its place, instead of falling into
+     * the "Left out" row and taking the focused field with it. And the order is the one the march was
+     * generated in, so a figure landing does not re-sort the grid under the cursor.
+     *
+     * Nothing else follows this reading: the figures, the plan and the recovery are all computed from
+     * `result`, the edited march, at every keystroke as before. Leaving the mode is what moves a stack at
+     * 0 out of the army — one place where a removal can be seen happening.
+     */
+    const army = editing
+      ? {
+          ...result,
+          stacks: snapshot.result.stacks.map((stack) => {
+            const typed = counts[stack.unitId];
+            return typed === undefined ? stack : { ...stack, count: Math.max(0, Math.round(typed)) };
+          }),
+        }
+      : result;
 
     return {
       snapshot,
@@ -97,8 +123,8 @@ export function useMarch(): MarchView {
       edited: edits !== null,
       overflow: edits?.overflow ?? [],
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
-      pools,
-      leftOut: leftOutOf(snapshot.request.units, result, leftOutByPlayer),
+      pools: poolRows({ result: army, units: snapshot.request.units, keepEmpty: editing }),
+      leftOut: leftOutOf(snapshot.request.units, army, leftOutByPlayer, editing),
     };
-  }, [snapshot, counts, leftOutByPlayer, previous, stale]);
+  }, [snapshot, counts, editing, leftOutByPlayer, previous, stale]);
 }

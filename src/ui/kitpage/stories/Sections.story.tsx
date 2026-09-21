@@ -24,7 +24,7 @@ const story: KitStory = {
           label="Figures in a part"
           layout="grid"
           items={[
-            { key: 'min', label: 'Worst opening', value: '4 519 202', glyph: <Glyph kind="minimumDamage" /> },
+            { key: 'min', label: 'Damage', value: '4 519 202', glyph: <Glyph kind="minimumDamage" /> },
             { key: 'silver', label: 'Silver to recover', value: '8 131 400', glyph: <Glyph kind="silver" /> },
             { key: 'gold', label: 'Gold to recover', value: '0', glyph: <Glyph kind="gold" /> },
             { key: 'ratio', label: 'Damage per silver', value: '0.57' },

@@ -12,7 +12,20 @@
  *   revive gold     = Σ all      (n − chunks(n)) × revival.gold / templeMultiplier[level]
  *   revive silver   = Σ all      chunks(n) × training.silver × (1 − reduction[group] / 100)
  *   revive time     = Σ all      chunks(n) × training.seconds / (1 + speed[group] / 100)
- *   retrain gold    = the monsters' revive gold (monsters cannot be retrained back into the march)
+ *   retrain gold    = the *mercenaries'* revive gold (only the camp's hired units cannot be recruited again)
+ *   selective       = revive every stack at the top tier of each chosen family, retrain the rest
+ *
+ * **Monsters are retrained** (owner, 2026-09-21: *"in retrain everything, we should retrain monsters; for
+ * now it seems even retrain with everything revives monsters"*). Until then this file read the captured
+ * "retrain all" gold line as *"a monster cannot be retrained back into the march"* and charged the Temple
+ * for 90 % of every monster stack even under the retrain plan — so the plan a player picks to spend no
+ * gold spent gold, and the recap's "Gold to recover" was never nought on a march that fielded a monster.
+ * A monster is recruited again in the Lair, ten at a time, for silver, dragon coins and a queue, which is
+ * exactly what `chunks(n)` already bills. A **mercenary** is the one unit that cannot: there is no camp to
+ * recruit it from, so a lost hired unit is the Temple's or it is gone, and its "retrain" is its revival.
+ * (The four captured runs' retrain gold — 2,752 · 1,520 · 1,536 · 432 — was the monsters' revival under
+ * the old reading; it is nought now on every one of those armies, and their silver, coins and queues are
+ * unchanged. `tests/engine/recovery.test.ts` carries both figures.)
  *
  * The in-game screens (2026-09-13 capture) explain the shape, and the owner confirmed there is no "retrain"
  * dialog and no hospital: **retraining is just recruiting the lost units again in the Army tab** at the
@@ -29,7 +42,8 @@
  * 2,752 = the monsters' chunk-discounted revive gold; 13,520 = the whole army's).
  */
 import type { Group, Pool, UnitDef } from '../data/types';
-import type { RecoveryCost, RecoveryMode, RecoverySettings, Stack } from './types';
+import { UNIT_FAMILIES } from './types';
+import type { RecoveryCost, RecoveryMode, RecoverySettings, Stack, UnitFamily } from './types';
 
 /** Temple level → revival cost divisor, from the game's temple table (level 0 = 1). */
 export const TEMPLE_MULTIPLIER: Record<number, number> = {
@@ -48,7 +62,15 @@ export const TEMPLE_MULTIPLIER: Record<number, number> = {
   12: 1.4,
   13: 1.44,
   14: 1.48,
-  15: 1.53,
+  /**
+   * **1.5385, measured** (the owner's Temple, level 15, 2026-09-21): seven stacks of one capture — three
+   * monster types, a mounted troop, a spearman and an Epic Monster Hunter VI — are reproduced to the coin
+   * by a **35 % discount**, which is `1 / 0.65`. The table read **1.53** here, a transcription of the
+   * game's own two-decimal display, and it is the one entry this repo has ever measured: it made every
+   * revive figure on his account ~0.5 % dear (812 read as 816, 999 as 1 004). The neighbours are still
+   * displays rather than measurements — level 15 is simply the level we have a capture of.
+   */
+  15: 1.5385,
   16: 1.58,
   17: 1.63,
   18: 1.68,
@@ -91,6 +113,27 @@ export function templeDivisor(level: number): number {
   return TEMPLE_MULTIPLIER[Math.max(0, Math.round(level))] ?? 1;
 }
 
+/**
+ * Which of the five families a unit belongs to (`UNIT_FAMILIES`), and the one place that decides it.
+ *
+ * `kind` comes first: a mercenary's `group` is read off its tags and would otherwise make it a
+ * guardsman, and the game's own fourth group is the singular "monster".
+ */
+export function unitFamily(unit: UnitDef): UnitFamily {
+  if (unit.kind === 'mercenary') return 'mercenaries';
+  if (unit.kind === 'monster') return 'monsters';
+  switch (unit.group) {
+    case 'specialist':
+      return 'specialists';
+    case 'engineers':
+      return 'engineers';
+    case 'monster':
+      return 'monsters';
+    default:
+      return 'guardsmen';
+  }
+}
+
 function percent(map: Partial<Record<Group, number>>, group: Group | undefined): number {
   return group === undefined ? 0 : (map[group] ?? 0);
 }
@@ -108,12 +151,17 @@ function add(into: RecoveryCost, other: RecoveryCost): RecoveryCost {
   };
 }
 
-/** Retrain one stack: per-unit silver and time for troops, per-chunk for monsters and mercenaries. */
+/**
+ * Retrain one stack: per-unit silver and time for troops, per batch of ten for monsters — which is how
+ * the Lair recruits them, and therefore the whole stack's price.
+ *
+ * A **mercenary** is the exception and the only one (owner, 2026-09-21): it cannot be recruited again at
+ * all, so what it costs to put a lost hired unit back is what the Temple charges, under every plan.
+ */
 export function retrainOne(unit: UnitDef, count: number, settings: RecoverySettings): RecoveryCost {
   const cost = empty();
   const training = unit.training;
-  const byChunk = unit.pool !== 'leadership';
-  const billed = byChunk ? chunks(count) : count;
+  const billed = unit.pool === 'leadership' ? count : chunks(count);
   if (training) {
     const reduction = 1 - percent(settings.trainingCostReduction, unit.group) / 100;
     const speed = 1 + percent(settings.trainingSpeed, unit.group) / 100;
@@ -121,9 +169,7 @@ export function retrainOne(unit: UnitDef, count: number, settings: RecoverySetti
     cost.seconds = (billed * training.seconds) / speed;
     cost.dragonCoins = billed * (training.dragonCoins ?? 0);
   }
-  // Monsters and mercenaries cannot be retrained back into the march; the units a chunk does not return
-  // are paid for in gold (this is exactly TotalStack's "retrain all" gold line).
-  if (byChunk) cost.gold = reviveOne(unit, count, settings).gold;
+  if (unit.pool === 'authority') cost.gold = reviveOne(unit, count, settings).gold;
   return cost;
 }
 
@@ -140,7 +186,16 @@ export function reviveOne(unit: UnitDef, count: number, settings: RecoverySettin
   const speed = 1 + percent(settings.trainingSpeed, unit.group) / 100;
   return {
     silver: training ? chunks(count) * training.silver * reduction : 0,
-    gold: (revived * unit.revival.gold) / templeDivisor(settings.templeLevel),
+    /**
+     * **Rounded up, stack by stack** (the owner's own Temple screen, 2026-09-21, beside the journal of the
+     * march that filled it). Seven stacks of that capture — three monster types, a mounted troop, a
+     * spearman and an Epic Monster Hunter VI — are reproduced **to the coin** by `ceil`, and three of the
+     * seven are a coin out under round-to-nearest (811 · 998 · 915 against the game's 812 · 999 · 916).
+     *
+     * A price the game asks is a price it asks in whole gold, and it does not round one down. The sum is
+     * therefore a sum of whole prices, not a rounded total: `recoveryCosts` rounds nothing here any more.
+     */
+    gold: Math.ceil((revived * unit.revival.gold) / templeDivisor(settings.templeLevel)),
     dragonCoins: unit.pool === 'dominance' ? chunks(count) * (unit.training?.dragonCoins ?? 0) : 0,
     seconds: training ? (chunks(count) * training.seconds) / speed : 0,
   };
@@ -152,7 +207,7 @@ export interface RecoveryBreakdown {
   selective: RecoveryCost;
   /** The plan the user picked in `settings.plan`. */
   plan: RecoveryCost;
-  /** Unit ids revived under the selective plan (top-N by tier); everything else is retrained. */
+  /** Unit ids revived under the selective plan: every stack at each chosen family's top tier. */
   selectiveRevived: string[];
   byPool: Record<Pool, RecoveryCost>;
 }
@@ -194,11 +249,40 @@ export function recoveryCosts(
     byPool[unit.pool] = add(byPool[unit.pool], one);
   }
 
-  const top = Math.max(0, settings.plan.selectiveTop ?? 0);
-  const revivedIds = [...resolved]
-    .sort((a, b) => b.unit.tier - a.unit.tier || a.unit.id.localeCompare(b.unit.id))
-    .slice(0, top)
-    .map((entry) => entry.unit.id);
+  /**
+   * **Every stack at the top tier of each family the plan revives** (owner, 2026-09-21: *"for guardsmen
+   * the max is G3 so all G3 in the march should count as revived; monsters max is M3 so all M3 stacks in
+   * the march should count as revived"*).
+   *
+   * It was the single best *type* a family fielded, which is the same thing only where a tier holds one
+   * type: on the owner's own account G3 is the mounted rung alone — the other two are excluded at the
+   * top — so his guardsmen looked right, while his four M3 monsters had one revived and three retrained.
+   * That is what he was looking at when he asked. A tier is what the game trains and what a player thinks
+   * in: "revive my elite" means the elite, not one of it.
+   *
+   * The top tier is read **off the march**, not off the account: what a player revives is the best thing
+   * they actually fielded. A family with no stack here contributes nothing, and one the plan does not
+   * name is retrained whole.
+   */
+  // Mercenaries are never in a player's hands to tick (`BattleSection`): they cannot be recruited
+  // again, so the Temple returns them under every plan and `retrainOne` charges exactly that for
+  // them. Listing them here or not changes no figure; the default does, for the sentence it writes.
+  const families = new Set<UnitFamily>(settings.plan.reviveFamilies ?? UNIT_FAMILIES);
+  const topTier = new Map<UnitFamily, number>();
+  for (const { unit } of resolved) {
+    const family = unitFamily(unit);
+    if (!families.has(family)) continue;
+    const standing = topTier.get(family);
+    if (standing === undefined || unit.tier > standing) topTier.set(family, unit.tier);
+  }
+  const revivedIds = [
+    ...new Set(
+      resolved
+        .filter(({ unit }) => topTier.get(unitFamily(unit)) === unit.tier)
+        .sort((a, b) => b.unit.tier - a.unit.tier || a.unit.id.localeCompare(b.unit.id))
+        .map(({ unit }) => unit.id),
+    ),
+  ];
   const revivedSet = new Set(revivedIds);
   let selective = empty();
   for (const { stack, unit } of resolved) {

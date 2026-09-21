@@ -437,16 +437,22 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // A `grid` since the screen review of 2026-09-16: every row of it is a control, and the unit its heads
   // stopped repeating is carried once, in the table's own name.
   const trade = march.getByRole('grid', {
-    name: 'Every plan on the trade, one repeated march each, at its worst opening',
+    name: 'Every plan on the trade, one repeated march each',
   });
   await expect(trade).toBeVisible();
   // A glyph and two words per head, on one line: they read "Damage a march" until an auto-laid table in a
-  // 420 px pane set them as "Damage a / march" and "Silver / a / march" (design rule 19). The damage head
-  // is the recap's own name for the figure under it since S-94 (2026-09-19) — the plan is ranked and
-  // printed on the **worst opening**, and one thing has one name through the flow (design rules 5 and 26).
-  await expect(trade.getByRole('columnheader', { name: 'Worst', exact: true })).toBeVisible();
+  // 420 px pane set them as "Damage a / march" and "Silver / a / march" (design rule 19). The head says
+  // **"Damage"** and wears the recap's 🔒 (owner, 2026-09-21: *"easier to understand"*): the mark is what
+  // says *which* damage — the plan is ranked and printed on the **worst opening** — and the table's own
+  // name above says it in words, so one thing keeps one name through the flow (design rules 5, 21 and 26).
+  await expect(trade.getByRole('columnheader', { name: 'Damage', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Silver', exact: true })).toBeVisible();
-  await expect(trade.getByRole('columnheader', { name: 'Hired lost' })).toBeVisible();
+  // **Gold, and "Hired" beside it** (owner, 2026-09-21: *"monsters are revived using gold for a substantial
+  // sum and mercs aren't cheap either… why not comparing, or at least inform?"*). The Temple's price had no
+  // column from 2026-09-16 to that day, and the hired head gave its second word towards this one's width —
+  // what is lost is said by the table's own name and by the axis under the bar.
+  await expect(trade.getByRole('columnheader', { name: 'Gold', exact: true })).toBeVisible();
+  await expect(trade.getByRole('columnheader', { name: 'Hired', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();
 
   // The head row, then one row per stop — never a table with nothing in it, and every row named. One kind

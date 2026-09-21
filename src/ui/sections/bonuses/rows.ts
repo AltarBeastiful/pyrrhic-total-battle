@@ -527,14 +527,14 @@ export function totalsSummary(profile: Profile, setup: BattleSetup): TotalsSumma
 /** The one line every editor opens with: the screen its figures are read on, in our own words. */
 export const WHERE: Record<EditorTarget['kind'], string> = {
   equipment:
-    'a captain’s five equipment slots — each piece shows its type and its quality. Gems and enchantments are typed separately, because the quality table does not carry them.',
+    'a captain’s five equipment slots, each showing its type and its quality. Gems and enchantments are typed separately, because the quality table does not carry them.',
   permanent:
-    'wherever it is granted — read the percentage off that screen and type it on the key it applies to.',
+    'wherever it is granted. Read the percentage off that screen and type it on the key it applies to.',
   custom:
-    'wherever the bonus comes from — a temporary buff, a new source, anything the lists above miss. Type the percentage on the key it applies to.',
-  vip: 'the VIP screen — your level, and the army bonus written next to it.',
+    'wherever the bonus comes from: a temporary buff, a new source, anything the lists above miss. Type the percentage on the key it applies to.',
+  vip: 'the VIP screen: your level, and the army bonus written next to it.',
   dragon:
-    'the Dragon screen — the army bonuses it grants at its current level, plus what its equipped runes add.',
+    'the Dragon screen: the army bonuses it grants at its current level, plus what its equipped runes add.',
   remainder:
     'a real battle report, or the march window on a monster: compare the army bonuses it lists with the figures above and type the difference here.',
   recovery: 'the Temple for its level; the cost and speed bonuses sit on your barracks and workshops.',

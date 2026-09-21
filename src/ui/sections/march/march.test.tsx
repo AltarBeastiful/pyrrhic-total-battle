@@ -105,7 +105,7 @@ function stackAt(index = 0): { unit: UnitDef; count: number } {
  * is direct, the name says so, and the corner mark is the only way into the unit sheet.
  */
 function stackPill(unit: UnitDef, count: number): HTMLElement {
-  return screen.getByRole('button', { name: `${unit.name}, ${amount(count)} — leave out` });
+  return screen.getByRole('button', { name: `${unit.name}, ${amount(count)}: leave out` });
 }
 
 /**
@@ -113,7 +113,7 @@ function stackPill(unit: UnitDef, count: number): HTMLElement {
  * *who* left it out, because a player wants to know which of the two it was.
  */
 function leftOutPill(unit: UnitDef, reason: 'you' | 'the search' = 'the search'): HTMLElement {
-  return screen.getByRole('button', { name: `${unit.name}, left out by ${reason} — put back` });
+  return screen.getByRole('button', { name: `${unit.name}, left out by ${reason}: put back` });
 }
 
 /** The corner mark on a pill, and the same name on any other way into the sheet. */
@@ -121,18 +121,22 @@ function detailsButtons(unit: UnitDef): HTMLElement[] {
   return screen.getAllByRole('button', { name: `Details: ${unit.name}` });
 }
 
-test('the recap comes first, then the pills, then the two count actions', async () => {
+test('the marks are on the heading, then the recap, then the pills', async () => {
   renderWithTheme(<Page />);
   await generate();
 
+  const stacks = screen.getByText(/^\d[\d\s]* stacks$/);
+  const copyAll = screen.getByRole('button', { name: 'Copy all counts' });
   const recap = screen.getByText(/^Expected damage/);
   const pills = screen.getByRole('group', { name: 'Leadership stacks' });
-  const copyAll = screen.getByRole('button', { name: 'Copy all counts' });
 
   const follows = (first: Element, second: Element): boolean =>
     (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  // The heading line reads "March · 12 stacks · the marks" (owner, 2026-09-21): what a player does
+  // with the march is beside the answer now, not a page below it at the foot of the setup column.
+  expect(follows(stacks, copyAll)).toBe(true);
+  expect(follows(copyAll, recap)).toBe(true);
   expect(follows(recap, pills)).toBe(true);
-  expect(follows(pills, copyAll)).toBe(true);
 });
 
 test('the recap is the figures a march is compared by, the expected damage first', async () => {
@@ -142,7 +146,8 @@ test('the recap is the figures a march is compared by, the expected damage first
   const summary = lastResult()?.summary;
   expect(screen.getByText(amount(summary?.avgDamage ?? 0))).toBeTruthy();
   for (const label of [
-    'Worst opening',
+    // "Worst opening" until 2026-09-21; the figure is the same enemy-first journal's (owner: one word).
+    'Damage',
     'Silver to recover',
     'Gold to recover',
     'Time to recover',
@@ -499,6 +504,45 @@ test('editing counts is a mode, and Undo puts the generated ones back', async ()
   // Three battles are played out here (the run, the edit, the undo): a busy machine needs the room.
 }, 20_000);
 
+test('an emptied count keeps its pill until the mode is left', async () => {
+  // Owner, 2026-09-21: *"if I erase the content of the field of a merc, the merc is deleted. It should
+  // only be deleted on done editing cause it can prevent me from typing."* Erasing is the first half of
+  // typing another figure, and the pill used to fall into the "Left out" row between the two, taking
+  // the focused field with it.
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Edit counts' }));
+  const field = screen.getByLabelText(`${unit.name} count`);
+  fireEvent.change(field, { target: { value: '' } });
+
+  // The box stays empty — that is what makes the next digit possible — and the march is already
+  // computed on the 0 it means.
+  await waitFor(() => {
+    expect(useResultStore.getState().manualCounts[unit.id]).toBe(0);
+  });
+  expect(screen.getByLabelText(`${unit.name} count`)).toHaveProperty('value', '');
+  expect(screen.queryByRole('button', { name: `${unit.name}, left out by you: put back` })).toBeNull();
+
+  // …and the digits that follow land in the same field, which never moved.
+  fireEvent.change(screen.getByLabelText(`${unit.name} count`), { target: { value: '12' } });
+  await waitFor(() => {
+    expect(useResultStore.getState().manualCounts[unit.id]).toBe(12);
+  });
+  expect(screen.getByLabelText(`${unit.name} count`)).toHaveProperty('value', '12');
+
+  // Emptied again and left there, the removal lands where the owner asked for it: on "Done editing".
+  fireEvent.change(screen.getByLabelText(`${unit.name} count`), { target: { value: '' } });
+  await waitFor(() => {
+    expect(useResultStore.getState().manualCounts[unit.id]).toBe(0);
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Done editing' }));
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: new RegExp(`^${unit.name}, left out by`) })).toBeTruthy();
+  });
+}, 25_000);
+
 test('the details are folded away until they are asked for, and open on the HP profile', async () => {
   renderWithTheme(<Page />);
   await generate();
@@ -727,14 +771,14 @@ test('complete optimization answers with a plan, and the March draws it instead 
   // the answer's headline on the row either way.
   const fold = screen.getByRole('button', { name: /^Plan/ });
   expect(fold.getAttribute('aria-expanded')).toBe('true');
-  expect(fold.textContent).toContain('worst opening a march');
+  expect(fold.textContent).toContain('damage a march');
 
   // The trade the plan chose from, one row per answer the engine offers: a plan the player may be asked to
   // march.
   // Its name carries the unit its column heads stopped repeating (S-59 screen review, 2026-09-16), and it
   // is a `grid` because each of its rows is a control the player picks between.
   const trade = screen.getByRole('grid', {
-    name: 'Every plan on the trade, one repeated march each, at its worst opening',
+    name: 'Every plan on the trade, one repeated march each',
   });
   expect(within(trade).getAllByRole('row').length).toBeGreaterThan(2);
 
@@ -744,7 +788,7 @@ test('complete optimization answers with a plan, and the March draws it instead 
   await waitFor(() => {
     expect(fold.getAttribute('aria-expanded')).toBe('false');
   });
-  expect(fold.textContent).toContain('worst opening a march');
+  expect(fold.textContent).toContain('damage a march');
 
   // And it *replaces* the objectives comparison: five more searches to compare one battle would explain
   // nothing that a plan over ten marches has not already said.
@@ -791,7 +835,7 @@ test('putting a type back on a plan re-sizes that stop inside the plan’s rules
   // It went through the plan's own rules (`resizeMarchOver`) and not through the plain sizer.
   expect(useRunStore.getState().resize?.inPlan).toBe(true);
   // And the pane says so, in the one line under the pills (design rule 15).
-  expect(screen.getByText(/^Re-sized with .*nothing else was pushed out/)).toBeTruthy();
+  expect(screen.getByText(/^Re-sized with .*Nothing else was pushed out/)).toBeTruthy();
 
   const stacks = lastResult()?.result.stacks ?? [];
   const troops = stacks.filter((stack) => stack.pool === 'leadership');

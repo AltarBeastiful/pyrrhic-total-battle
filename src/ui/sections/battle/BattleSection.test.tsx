@@ -247,18 +247,44 @@ test('the plan method switches off the rules that belonged to the method it came
 });
 
 // ---- What the losses cost ------------------------------------------------------------------------
-test('the selective recovery plan asks how many unit types to revive', async () => {
+test('the selective recovery plan asks which families come back, the monsters to begin with', async () => {
+  // Owner, 2026-09-21: *"unit types to revive is not clear. We should allow more flexibility like:
+  // checkboxes for revive top monster, revive top guardsmen"*, then *"make the default revive the top
+  // types with only monsters selected"* — and no box for the mercenaries, which can never be retrained.
   const user = userEvent.setup();
   renderWithTheme(<BattleSection />);
-  expect(screen.queryByLabelText('Unit types to revive')).toBeNull();
 
   // Three whole rows, never a dropdown (design rule 8).
   const plans = screen.getByRole('radiogroup', { name: 'Recovery plan' });
   expect(screen.queryByRole('combobox', { name: 'Recovery plan' })).toBeNull();
   expect(within(plans).getAllByRole('radio')).toHaveLength(3);
-  await user.click(within(plans).getByText('Gold for your highest tiers, silver and time for the rest.'));
-  expect(setup()?.recoveryPlan).toEqual({ mode: 'selective', selectiveTop: 3 });
 
-  type('Unit types to revive', '2');
-  expect(setup()?.recoveryPlan).toEqual({ mode: 'selective', selectiveTop: 2 });
+  // A new setup opens on this plan, with the monsters alone (`state/defaults.ts`).
+  expect(setup()?.recoveryPlan).toEqual({ mode: 'selective', reviveFamilies: ['monsters'] });
+  const boxes = screen.getAllByRole('checkbox');
+  expect(boxes.map((box) => (box as HTMLInputElement).checked)).toEqual([false, false, true, false]);
+  // Four families, in the order the two columns read down: guardsmen over monsters, specialists over
+  // engineers. No mercenaries: the Temple returns them whatever this says.
+  expect(screen.queryByRole('checkbox', { name: /mercenaries/i })).toBeNull();
+  // **Each box says which tier it means** (owner, 2026-09-21: *"maybe we should also precise this next
+  // to top monsters / top guardsmen"*), in the account's own shorthand — the same G3/S1/M3 the Troops
+  // card's head writes. The default profile fields guardsmen G1–G3 and specialists S1.
+  expect(screen.getByRole('checkbox', { name: /Top guardsmen G3/ })).toBeTruthy();
+  expect(screen.getByRole('checkbox', { name: /Top specialists S1/ })).toBeTruthy();
+
+  // Tick one and it lands in the card's own order, not the order of the taps.
+  await user.click(screen.getByRole('checkbox', { name: /Top guardsmen/ }));
+  expect(setup()?.recoveryPlan).toEqual({
+    mode: 'selective',
+    reviveFamilies: ['guardsmen', 'monsters'],
+  });
+
+  // Another plan takes the boxes away; coming back keeps what was ticked.
+  await user.click(within(plans).getByText(/^Silver, dragon coins and training time/));
+  expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+  await user.click(within(plans).getByText(/^Revive Mercenaries and elite troops/));
+  expect(setup()?.recoveryPlan).toEqual({
+    mode: 'selective',
+    reviveFamilies: ['guardsmen', 'monsters'],
+  });
 });

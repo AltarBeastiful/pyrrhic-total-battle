@@ -30,6 +30,23 @@
   vertical-align: -0.2em;
 }
 
+/* The picture a glyph may be drawn with instead of an emoji (`glyphs.ts`, `GLYPH_ART`): it fills the
+   box it is given and nothing more — `contain`, so a mark that is not square keeps its shape, and the
+   box keeps the line's metrics whatever the picture's own proportions are. */
+/* The metal taken out of a glyph the platform draws in the wrong one (`glyphs.ts`, `GREYED_GLYPHS`):
+   🪙 is a gold coin in every emoji font, and silver is what our figure means. A touch brighter than a
+   plain greyscale, so the coin does not read as a disabled control. */
+.glyphGreyed {
+  filter: grayscale(1) brightness(1.12);
+}
+
+.glyphArt {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
 /* The group's colour bar at the head of a row: 4 px and 20 px tall, as direction A draws it
    (artboard `.gm i`), stretching with the line when the line is taller than that. */
 .marker {

@@ -30,7 +30,13 @@ import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
 import { PlanFold } from './PlanPanel';
 import { amount } from './format';
-import { MarchActions, MarchDetailsFold, MarchObjectives, MarchSavedFold } from './MarchFoot';
+import {
+  MarchActions,
+  MarchDetailsFold,
+  MarchEditedNote,
+  MarchObjectives,
+  MarchSavedFold,
+} from './MarchFoot';
 import { MarchGenerateButton } from './MarchGenerateButton';
 import { MarchLeftOut, MarchPills, MarchResized } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
@@ -53,8 +59,8 @@ export function MarchSection() {
   const twoPanes = useMediaQuery(TWO_PANES);
 
   const [sheetUnit, setSheetUnit] = useState<UnitDef | null>(null);
-  // The counts' edit mode lives in the run store: the row that switches it is on the other side of the
-  // page from the pills it turns into fields (`MarchFoot.tsx`, `runStore.ts`).
+  // The counts' edit mode lives in the run store: the mark that switches it is on this card's heading
+  // and the pills it turns into fields are further down it (`MarchFoot.tsx`, `runStore.ts`).
   const editing = useRunStore((state) => state.editingCounts);
   // A March edit has been computed, so the pane has a line to write under the pills (S-104).
   const resized = useRunStore((state) => state.resize !== null);
@@ -86,9 +92,10 @@ export function MarchSection() {
     // (the owner's review of 2026-09-13: "the battle summary is crammed and misses clear
     // separation"). `Sections` is the one place that draws that (`kit/Sections.tsx`,
     // `docs/design.md` §4); every direct child below is a part, and a part that is not on screen
-    // takes its line with it. The spacing contract's four — recap · pools and pills · left out ·
-    // actions — are the first four, and everything the March has that the artboard does not follows
-    // in the same rhythm rather than in a rhythm of its own.
+    // takes its line with it. The spacing contract's parts — recap · pools and pills · left out — are
+    // the first three (its fourth, the row of actions, is a toolbar on the heading since 2026-09-21),
+    // and everything the March has that the artboard does not follows in the same rhythm rather than
+    // in a rhythm of its own.
     <Sections
       component="section"
       id={MARCH_ANCHOR}
@@ -117,18 +124,26 @@ export function MarchSection() {
             ) : (
               <span />
             )}
-            {/* The stack count is the card's meta, in the one shape every card's meta has: 12 px
-                muted, right-aligned beside the title (docs/design.md §4). It was a badge, which is
-                a box inside a box for a two-word summary. */}
-            {result !== null && (
-              <Text span className={classes.meta} c="dimmed">
-                {`${String(result.stacks.length)} stacks`}
-              </Text>
-            )}
+            {/* The end of the heading line: what the march is, then what to do with it. The stack
+                count is the card's meta, in the one shape every card's meta has — 12 px muted,
+                right-aligned beside the title (docs/design.md §4) — and the marks that copy, edit,
+                keep and send the march follow it (owner, 2026-09-21: *"editing count, copy and share
+                could be closer to summary"*; `MarchFoot.tsx`, `MarchActions`). This row was half
+                empty, and the toolbar was a page away at the foot of the setup column. */}
+            <Group gap={6} wrap="nowrap">
+              {result !== null && (
+                <Text span className={classes.meta} c="dimmed">
+                  {`${String(result.stacks.length)} stacks`}
+                </Text>
+              )}
+              <MarchActions />
+            </Group>
           </Group>
         )}
 
         <MarchRecap />
+        {/* What a hand edit did to the figures above, while it is true. */}
+        <MarchEditedNote />
         {/* No sizing line under the figures any more (owner, 2026-09-17: "remove Planned from the army…"):
             what the plan sized is the Plan block's own row, two parts down, and the line said it twice. */}
         {/* Generate is the command bar's on a desktop and nowhere else (design plan §5.6): the
@@ -178,13 +193,7 @@ export function MarchSection() {
           plan, and `Sections` gives a part that is not on screen no line to take with it. */}
       <PlanFold />
 
-      {/* 5 — the things a player does with a whole march: copy the counts, edit them, keep it, send
-          it. One part, because they are one kind of thing. **In the sheet only** (owner, 2026-09-15):
-          on a desktop they are the foot of the setup column instead (`MarchFoot.tsx`), because the
-          pane has to stay shorter than the column it sits beside for it to stick. */}
-      {!twoPanes && <MarchActions />}
-
-      {/* 6 — anything worth a look about this particular march. Alerts are the one tinted block the
+      {/* 5 — anything worth a look about this particular march. Alerts are the one tinted block the
           design still allows (docs/design.md §2), and they are gathered into one part so they never
           stripe the pane. */}
       {snapshot !== null && result !== null && notices(march, result, otherMarch) && (
@@ -217,11 +226,11 @@ export function MarchSection() {
         </Stack>
       )}
 
-      {/* 7 — what the objective bought. The sheet's only: on a desktop it is the first block of the
+      {/* 6 — what the objective bought. The sheet's only: on a desktop it is the first block of the
           setup column's foot (`MarchFoot.tsx`), out of the 280 px the pane cannot spare. */}
       {!twoPanes && <MarchObjectives />}
 
-      {/* 8 — everything that is folded away. The folds share one part: a hairline between two
+      {/* 7 — everything that is folded away. The folds share one part: a hairline between two
           collapsed rows is a rule between two rules. The plan used to lead them (S-55); it is part 2
           now, where the answer is, and what is left here is reference.
 

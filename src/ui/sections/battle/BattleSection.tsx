@@ -17,15 +17,26 @@
  * Everything written here belongs to the *march*, not to the account: it all goes to the active
  * battle setup.
  */
-import { Alert, Box, Group, NumberInput, SegmentedControl, SimpleGrid, Stack, Text } from '@mantine/core';
+import {
+  Alert,
+  Box,
+  Checkbox,
+  Group,
+  NumberInput,
+  SegmentedControl,
+  SimpleGrid,
+  Stack,
+  Text,
+} from '@mantine/core';
 import { useId, useState } from 'react';
 
 import { CATEGORIES } from '@/data/types';
+import type { UnitFamily } from '@/engine/types';
 import { eventEnemyFormation } from '@/state/derive';
 import type { SetupMethod } from '@/state/schema';
-import { useActiveSetupSlice, useStore } from '@/state/store';
-import { Glyph } from '@/ui/domain';
-import { ChoiceList, NumberField, Panel, Sections, SwitchRow } from '@/ui/kit';
+import { useActiveProfileSlice, useActiveSetupSlice, useStore } from '@/state/store';
+import { Glyph, GROUP_LABEL } from '@/ui/domain';
+import { ChoiceList, Panel, Sections, SwitchRow } from '@/ui/kit';
 import { useResultStore } from '@/ui/resultStore';
 
 import { appliesTo, isMethod, isRecoveryMode, METHOD_CHOICES, optionsFor, RECOVERY_CHOICES } from './choices';
@@ -42,6 +53,40 @@ import {
 import type { Formation } from './formation';
 import { OrderSheet } from './OrderSheet';
 
+/**
+ * The families a player chooses between, **in the order the two columns read down** (owner,
+ * 2026-09-21): guardsmen over monsters on the left, specialists over engineers on the right — the two
+ * families an epic march is won and lost with first, then the two it rarely fields. A two-column grid
+ * fills row by row, so the list is written in the order the cells are laid, not the order they are read.
+ *
+ * **Mercenaries are not one of them.** A hired unit cannot be recruited again — there is no camp to
+ * recruit it from — so the Temple returns it under every plan and there is nothing here to decide
+ * (owner, 2026-09-21; `engine/recovery.ts`, `retrainOne`). A box that cannot be unticked is a box that
+ * should not be drawn (design rule 15).
+ */
+const REVIVABLE = ['guardsmen', 'specialists', 'monsters', 'engineers'] as const satisfies UnitFamily[];
+
+/**
+ * **The tier each box is about, in the account's own shorthand** (owner, 2026-09-21: *"maybe we should
+ * also precise this next to top monsters / top guardsmen… ex: (RD 3), all M3"*).
+ *
+ * "Top guardsmen" is a rule, and a rule a player has to hold in their head is a rule they will read
+ * wrong: what the Temple actually returns is **every stack at the family's top tier**, which on this
+ * account is a figure the Troops card above already names — G3, S1, M3, the same letters and the same
+ * numbers `rangeSummary` writes in that card's head (`sections/troops/rows.ts`, design rule 5).
+ *
+ * The *account's* top tier and not the march's: the card is read before a march exists, and the two
+ * agree on every march that fields the rung. A family the account does not field at all says nothing,
+ * and its box is drawn all the same — the plan is the setup's, and a player may field that family
+ * tomorrow.
+ */
+const FAMILY_PREFIX: Record<(typeof REVIVABLE)[number], string> = {
+  guardsmen: 'G',
+  specialists: 'S',
+  monsters: 'M',
+  engineers: 'E',
+};
+
 export function BattleSection() {
   // Only the four fields this card reads (`useActiveSetupSlice`): the housing is typed in the bar
   // under this card, and every keystroke there used to re-render the method cards and the enemy
@@ -53,6 +98,9 @@ export function BattleSection() {
     active: current.active,
   }));
   const updateActiveSetup = useStore((state) => state.updateActiveSetup);
+  // The tier ranges alone, for the shorthand beside each family's box; a keystroke anywhere else on the
+  // account does not re-render this card for it.
+  const troops = useActiveProfileSlice((current) => ({ troops: current.troops }))?.troops;
   const error = useResultStore((state) => state.error);
   // "Custom" is a mode, not a formation: it stays chosen while the four fields still read 1·1·1·1.
   const [isManual, setManual] = useState(false);
@@ -67,7 +115,9 @@ export function BattleSection() {
   const formation: Formation = forced ?? setup.enemy;
   const mode = forced === undefined && isManual ? 'custom' : detectMode(formation);
   const editable = mode === 'custom' && forced === undefined;
-  const selectiveTop = recoveryPlan.selectiveTop ?? 3;
+  // No list stored is *every family* (`RecoverySettings.plan`); a new setup arrives with the monsters
+  // alone, which is the plan the owner plays (`state/defaults.ts`).
+  const reviveFamilies: readonly UnitFamily[] = recoveryPlan.reviveFamilies ?? REVIVABLE;
   const rules = optionsFor(options.method);
 
   const writeFormation = (next: Formation): void => {
@@ -226,21 +276,73 @@ export function BattleSection() {
             onChange={(value) => {
               if (!isRecoveryMode(value)) return;
               updateActiveSetup({
-                recoveryPlan: value === 'selective' ? { mode: value, selectiveTop } : { mode: value },
+                // The families are written under every plan, not only the one that reads them: a
+                // player who looks at "Retrain everything" and comes back finds their own ticks where
+                // they left them, instead of all four back on.
+                recoveryPlan: { mode: value, reviveFamilies: [...reviveFamilies] },
               });
             }}
           />
+          {/**
+           * **Which families come back from the Temple** (owner, 2026-09-21: *"unit types to revive is
+           * not clear. We should allow more flexibility like: checkboxes for revive top monster, revive
+           * top guardsmen, all selected by default"*).
+           *
+           * It was a number — "Unit types to revive: 3" — which the player had to translate into an
+           * army: three types off one list sorted by tier, so an account with four monster tiers spent
+           * the whole allowance on monsters and retrained its guardsmen without ever having been asked.
+           * Five boxes, all ticked, say the same thing as an answer to the question a player actually
+           * has, and each one is a decision they can see: *the top guardsman comes back, the top
+           * monster comes back.*
+           *
+           * Whole rows are the target (design rule 8) and the family wears the mark it wears
+           * everywhere else in the app (rule 21).
+           */}
           {recoveryPlan.mode === 'selective' && (
-            <NumberField
-              label="Unit types to revive"
-              description="The highest tiers are revived, everything else is retrained."
-              value={selectiveTop}
-              min={1}
-              max={20}
-              onChange={(value) => {
-                updateActiveSetup({ recoveryPlan: { mode: 'selective', selectiveTop: value ?? 1 } });
+            <Checkbox.Group
+              label="Which troop types to revive"
+              description="Select which troop types to revive using gold. When selecting a troop type, the best troops only will be revived."
+              value={[...reviveFamilies]}
+              onChange={(chosen) => {
+                updateActiveSetup({
+                  recoveryPlan: {
+                    mode: 'selective',
+                    // Filtered out of the card's own list, never stored in the order they were ticked.
+                    reviveFamilies: REVIVABLE.filter((family) => chosen.includes(family)),
+                  },
+                });
               }}
-            />
+            >
+              {/* Two across, as the four enemy fields above are: a family is two words. */}
+              <SimpleGrid cols={2} spacing={8} mt={8} maw={520}>
+                {REVIVABLE.map((family) => (
+                  <Checkbox
+                    key={family}
+                    value={family}
+                    size="xs"
+                    label={
+                      <Group gap={6} wrap="nowrap">
+                        <Glyph kind={family} />
+                        <Text span size="xs">
+                          {`Top ${GROUP_LABEL[family].toLowerCase()}`}
+                        </Text>
+                        {/* A real space, not the row's gap: the accessible-name algorithm only puts one
+                            between *block* boxes, so without it the box is announced "Top guardsmenG3"
+                            (the same trap `MercenariesSection`'s picker rows carry a note about). CSS
+                            gaps are not text. */}{' '}
+                        {/* The tier itself, muted, where the account fields one: "Top monsters M3" reads
+                            as the rule *and* as the units it will hand the Temple. */}
+                        {troops?.[family] != null && (
+                          <Text span size="xs" c="dimmed">
+                            {`${FAMILY_PREFIX[family]}${String(troops[family].max)}`}
+                          </Text>
+                        )}
+                      </Group>
+                    }
+                  />
+                ))}
+              </SimpleGrid>
+            </Checkbox.Group>
           )}
         </Stack>
 

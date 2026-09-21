@@ -1,25 +1,26 @@
 /**
- * The five families the interface colours units by, and the one place that decides which one a
- * `UnitDef` belongs to (design plan §6.1). The data model has four `group` values plus a `kind`; the
- * interface has five families, because mercenaries are their own colour whatever their tags say.
+ * The five families the interface colours units by (design plan §6.1). The data model has four `group`
+ * values plus a `kind`; the interface has five families, because mercenaries are their own colour
+ * whatever their tags say.
+ *
+ * **The families themselves are the engine's** (`engine/types.ts`, `UNIT_FAMILIES`, and `unitFamily`
+ * which decides which one a unit is): a selective recovery is chosen in them too, so they cannot be one
+ * list here and another there (design rule 5). What is this module's own is what a family *looks* like —
+ * its name in a sentence, its ink and its ground.
  *
  * A family's name is also a theme colour name (`src/ui/theme.ts`), which is what lets a component
  * write `var(--mantine-color-${group}-text)` and get the right ink in either scheme. Nothing here
  * knows about class names any more — that was the Tailwind kit's job.
  */
 import type { Pool, UnitDef } from '../../data/types';
+import { UNIT_FAMILIES, unitFamily } from '@/engine';
+import type { UnitFamily } from '@/engine/types';
 import { tierInk } from '../kit/tiers';
 
-export type UnitGroup = 'guardsmen' | 'specialists' | 'engineers' | 'monsters' | 'mercenaries';
+export type UnitGroup = UnitFamily;
 
 /** Display order: the order the game lists them in, mercenaries last. */
-export const UNIT_GROUPS = [
-  'guardsmen',
-  'specialists',
-  'engineers',
-  'monsters',
-  'mercenaries',
-] as const satisfies readonly UnitGroup[];
+export const UNIT_GROUPS = UNIT_FAMILIES;
 
 /** What a group is called in a sentence. */
 export const GROUP_LABEL: Record<UnitGroup, string> = {
@@ -31,22 +32,11 @@ export const GROUP_LABEL: Record<UnitGroup, string> = {
 };
 
 /**
- * Which family a unit is drawn as. Mercenaries are decided by `kind` first — a mercenary's `group`
- * comes from its tags and would otherwise paint it as a guardsman.
+ * Which family a unit is drawn as — the engine's own reading of it, under the name the interface has
+ * always called it by (`unitFamily`).
  */
 export function unitGroupOf(unit: UnitDef): UnitGroup {
-  if (unit.kind === 'mercenary') return 'mercenaries';
-  if (unit.kind === 'monster') return 'monsters';
-  switch (unit.group) {
-    case 'specialist':
-      return 'specialists';
-    case 'engineers':
-      return 'engineers';
-    case 'monster':
-      return 'monsters';
-    default:
-      return 'guardsmen';
-  }
+  return unitFamily(unit);
 }
 
 /** The group's ink, right in either scheme: shade 7 on a light page, shade 4 on a dark one. */

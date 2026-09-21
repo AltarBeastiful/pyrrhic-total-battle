@@ -118,7 +118,7 @@ function compareRows(stacks: SavedStack[]): { metrics: Row[]; counts: Row[] } {
   const metrics: Row[] = [
     pick('Stacks', (stack) => stack.counts.length, amount, 'none'),
     pick('Expected damage', (stack) => stack.summary.avgDamage, amount, 'high'),
-    pick('Worst opening', (stack) => stack.summary.minDamage, amount, 'high'),
+    pick('Damage', (stack) => stack.summary.minDamage, amount, 'high'),
     pick('Best opening', (stack) => stack.summary.maxDamage, amount, 'high'),
     pick('Damage per silver', (stack) => stack.summary.damagePerSilver, ratio, 'high'),
     pick('Damage per gold', (stack) => stack.summary.damagePerGold, ratio, 'high'),

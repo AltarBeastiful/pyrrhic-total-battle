@@ -226,7 +226,7 @@ function dominanceAccount(dominance = 800, stock = 27): { profile: Profile; setu
       relaxedPreservation: false,
     },
     priority: 'damagePerSilver',
-    recoveryPlan: { mode: 'selective', selectiveTop: 3 },
+    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'] },
   };
   return { profile, setup };
 }

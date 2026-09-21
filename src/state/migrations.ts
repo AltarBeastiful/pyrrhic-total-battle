@@ -99,6 +99,62 @@ function withoutCompleteMethod(setup: Record<string, unknown>): Record<string, u
   return { ...rest, options: { ...options, method: 'plan' } };
 }
 
+/**
+ * `4 → 5` for one profile (owner, 2026-09-19): the unexplained remainder is gone from the card, so the
+ * figures a player typed into it have nowhere left to be read, switched on or corrected — and a source
+ * that still counts towards a march with no chip to show for it is worse than one that is simply gone.
+ * Both halves go: `sources.unknown` (what was typed) and every setup's `active.unknown` (whether it
+ * counted), inside the profile's saved stacks as well, because each of those carries a whole setup.
+ */
+export function dropUnexplainedRemainder(profile: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...profile };
+  if (isPlainObject(out.sources)) {
+    const { unknown: _unknown, ...sources } = out.sources;
+    out.sources = sources;
+  }
+  if (Array.isArray(out.setups)) out.setups = out.setups.map(withoutRemainderFlag);
+  if (Array.isArray(out.savedStacks)) {
+    out.savedStacks = out.savedStacks.map((stack) =>
+      isPlainObject(stack) ? { ...stack, setup: withoutRemainderFlag(stack.setup) } : stack,
+    );
+  }
+  return out;
+}
+
+/** One setup: the flag that said whether the remainder counted for this march. */
+function withoutRemainderFlag(setup: unknown): unknown {
+  if (!isPlainObject(setup) || !isPlainObject(setup.active)) return setup;
+  const { unknown: _unknown, ...active } = setup.active;
+  return { ...setup, active };
+}
+
+/**
+ * `5 → 6` for one profile (owner, 2026-09-21): a selective recovery is chosen in **families** now — the
+ * top type of each one the player ticks — so the count of types it used to be (`selectiveTop`, and
+ * TotalStack's own "TOP 1 / TOP 2 / TOP 3") has nothing left to say. Dropping it is the whole
+ * migration: a plan that names no family revives all five, which is what the card offers a player who
+ * has never opened it, and the nearest thing to "the top three types" an old document meant.
+ *
+ * Every setup, and the whole setup inside every saved stack.
+ */
+export function dropSelectiveTop(profile: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...profile };
+  if (Array.isArray(out.setups)) out.setups = out.setups.map(withoutSelectiveTop);
+  if (Array.isArray(out.savedStacks)) {
+    out.savedStacks = out.savedStacks.map((stack) =>
+      isPlainObject(stack) ? { ...stack, setup: withoutSelectiveTop(stack.setup) } : stack,
+    );
+  }
+  return out;
+}
+
+/** One setup: the count of top types its recovery plan was sized by. */
+function withoutSelectiveTop(setup: unknown): unknown {
+  if (!isPlainObject(setup) || !isPlainObject(setup.recoveryPlan)) return setup;
+  const { selectiveTop: _selectiveTop, ...recoveryPlan } = setup.recoveryPlan;
+  return { ...setup, recoveryPlan };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -110,12 +166,16 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `1 → 2`: march exclusions move from `profile.troops` to `BattleSetup.excludedUnitIds`.
  * `2 → 3`: the setup's `pinnedUnitIds` and `excludedUnitIds` are dropped (S-53).
  * `3 → 4`: the `complete` method becomes `plan` and the setup's `campaign` is dropped (S-56).
+ * `4 → 5`: the unexplained remainder is dropped, both what was typed and whether it counted.
+ * `5 → 6`: a selective recovery is chosen in families, so the count of top types is dropped.
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
   1: (doc) => ({ ...doc, schemaVersion: 2, profiles: migrateProfiles(doc, splitTroopExclusions) }),
   2: (doc) => ({ ...doc, schemaVersion: 3, profiles: migrateProfiles(doc, dropSetupUnitLists) }),
   3: (doc) => ({ ...doc, schemaVersion: 4, profiles: migrateProfiles(doc, dropCompleteMethod) }),
+  4: (doc) => ({ ...doc, schemaVersion: 5, profiles: migrateProfiles(doc, dropUnexplainedRemainder) }),
+  5: (doc) => ({ ...doc, schemaVersion: 6, profiles: migrateProfiles(doc, dropSelectiveTop) }),
 };
 
 /**
@@ -131,10 +191,12 @@ export const profileMigrations: MigrationTable = {
   1: splitTroopExclusions,
   2: dropSetupUnitLists,
   3: dropCompleteMethod,
+  4: dropUnexplainedRemainder,
+  5: dropSelectiveTop,
 };
 /**
- * A saved stack carries a *whole setup*, so `3 → 4` reaches inside it: the same two edits as a profile's
- * (`dropCompleteMethod`), applied to `setup` rather than to every entry of `setups`.
+ * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5` and `5 → 6` reach inside it: the same
+ * edits as a profile's, applied to `setup` rather than to every entry of `setups`.
  */
 const migrateSavedStackSetup: Migration = (doc) => {
   const setup = doc.setup;
@@ -145,6 +207,8 @@ export const savedStackMigrations: MigrationTable = {
   1: identity,
   2: identity,
   3: migrateSavedStackSetup,
+  4: (doc) => ({ ...doc, setup: withoutRemainderFlag(doc.setup) }),
+  5: (doc) => ({ ...doc, setup: withoutSelectiveTop(doc.setup) }),
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -393,7 +393,7 @@ test('a title is worn from its chip, with what it is worth written under the nam
   expand();
   openGroup('Titles');
 
-  const health = within(card()).getByRole('group', { name: 'Titles — health' });
+  const health = within(card()).getByRole('group', { name: 'Titles: health' });
   const chip = within(health).getByRole('checkbox', { name: 'Administrator' });
   expect(chipLabel(chip).textContent).toContain('+25 % HP army');
 

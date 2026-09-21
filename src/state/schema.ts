@@ -19,10 +19,11 @@ import { z } from 'zod';
 
 import { BONUS_KEYS, CATEGORIES, GROUPS, QUALITIES, RACES, SPECIAL_KEYS } from '../data/types';
 import type { BonusMap, Category, SpecialMap } from '../data/types';
+import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 6;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -191,7 +192,6 @@ export const sourcesSchema = z.object({
     strength: bonusMapSchema,
     special: specialMapSchema.optional(),
   }),
-  unknown: z.object({ health: bonusMapSchema, strength: bonusMapSchema }),
   custom: z.array(customSourceSchema),
 });
 export type ProfileSources = z.infer<typeof sourcesSchema>;
@@ -222,9 +222,16 @@ export const OBJECTIVES = [
   'damagePerDragonCoin',
 ] as const satisfies readonly Objective[];
 
+/**
+ * What the losses are paid with. `selective` revives **the top type of each family named**, and
+ * retrains everything else; no list at all means all five, which is what the Battle card offers a
+ * player who has never opened it (owner, 2026-09-21, replacing `selectiveTop` — a count of types off
+ * one list sorted by tier, which he could not read as an answer to "revive top monster, revive top
+ * guardsmen"; migration `5 → 6`).
+ */
 export const recoveryPlanSchema = z.object({
   mode: z.enum(RECOVERY_MODES),
-  selectiveTop: z.int().min(0).optional(),
+  reviveFamilies: z.array(z.enum(UNIT_FAMILIES)).optional(),
 });
 export type RecoveryPlan = z.infer<typeof recoveryPlanSchema>;
 
@@ -270,7 +277,6 @@ export const activeSourcesSchema = z.object({
   otherPills: z.array(z.string()),
   vip: z.boolean(),
   dragon: z.boolean(),
-  unknown: z.boolean(),
   custom: z.array(z.string()),
 });
 export type ActiveSources = z.infer<typeof activeSourcesSchema>;

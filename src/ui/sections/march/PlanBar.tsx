@@ -246,7 +246,7 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
           // 2026-09-17 and it rides along in the same words as the note on the row below (`./picks`).
           const best = bestForWords(shown);
           const run = sequenceWords(shown);
-          return `${planWords(shown)}, ${compact(shown.repeat.damage)} worst opening a march${
+          return `${planWords(shown)}, ${compact(shown.repeat.damage)} damage a march${
             best === null ? '' : `, ${best}`
           }${run === null ? '' : `, ${run}`}`;
         }}
@@ -329,21 +329,12 @@ export function PlanBar({ rows, position, hovered, onHover, onSelect, sweet }: P
               is the enemy-first journal's, the same number and the same words the recap prints under
               "Worst opening" when this stop is on screen (design rules 5 and 26 — one name a thing,
               through the whole flow). */}
-            {`${compact(row.repeat.damage)} worst opening a march`}
+            {`${compact(row.repeat.damage)} damage a march`}
           </Text>
-          {/* **What the march costs in gold** — the hired stacks' own price, which silver never pays
-              (`PlanRepeat.gold`). The bar is ordered by the hired stock, so "what does sparing it cost me"
-              is the question every stop is asking. It is the figure the trade has no room for — see
-              `PlanTrade.tsx` on the seventh column — so the tip is where it is read.
-
-              **Only where a march buys some** (S-112, design rule 15). Gold is what reviving a hired stack
-              costs, so a bar with no stock on it printed "0 gold a march" on every tip — a figure that is
-              not a fact about the plan, only about a resource it never touches. */}
-          {row.repeat.gold > 0 && (
-            <Text size="xs" opacity={0.75}>
-              {`${compact(row.repeat.gold)} gold a march`}
-            </Text>
-          )}
+          {/* The gold a march costs was read here from S-112 until 2026-09-21, because the trade had no
+              column for it. It has one now (`PlanTrade.tsx`, "Gold"), with the dragon coins under it and the
+              cheapest stop marked, so the tip does not say it a second time (design rule 5). The tip keeps
+              what no cell carries: which answer this stop is, what it deals, and how it is fought. */}
           {/* **A stop the figures above do not describe four times over says so** (S-74, widened in S-89).
               Most stops are the march above repeated, so "6.9M worst opening a march" names the campaign;
               `all-in` shelters every mercenary it can on the first march and then marches on what the stock

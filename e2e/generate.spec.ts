@@ -59,10 +59,12 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   // is read the way the game writes a training queue — "13d 21h", never a count of seconds.
   await expect(marchFigureWords(page, 'Time to recover')).toHaveText(/^\d+[dhms]( \d+[hms])?$/);
 
-  // The pills *are* the counts (owner, 2026-09-13): there is no table under them. The row of
-  // whole-march actions is the foot of the setup column at this width (owner, 2026-09-15).
+  // The pills *are* the counts (owner, 2026-09-13): there is no table under them. What a player does
+  // with the whole march is a row of marks on the March's own heading, beside the answer they act on
+  // (owner, 2026-09-21), and no longer a row of buttons at the foot of the setup column.
   await expect(marchSection(page).getByRole('table')).toHaveCount(0);
-  await expect(marchFoot(page).getByRole('button', { name: 'Copy all counts' })).toBeVisible();
+  await expect(marchSection(page).getByRole('button', { name: 'Copy all counts' })).toBeVisible();
+  await expect(marchFoot(page).getByRole('button', { name: 'Copy all counts' })).toHaveCount(0);
 
   // The leadership pool is spent, not merely allocated. A pool is a vessel filled to the brim, so
   // its figure reads "used … of total" rather than as a fraction (D-19).
@@ -448,7 +450,7 @@ test('counts are edited in an explicit mode, and put back with Undo', async ({ p
   // on the hand-typed counts the moment one changes.
   await expect(pills.getByRole('button', { name: /^Increase / })).toHaveCount(0);
   await field.fill('1');
-  const undo = marchFoot(page).getByRole('button', { name: 'Undo' });
+  const undo = marchSection(page).getByRole('button', { name: 'Undo' });
   await expect(undo).toBeVisible();
   expect(await marchExpectedDamage(page)).not.toBe(damage);
 

@@ -92,7 +92,7 @@ export function TradeoffStrip({ tradeoff }: TradeoffStripProps) {
       <Sentence>
         {`“${objectiveTitle(
           tradeoff.objective,
-        )}” keeps every type — none of them can be left at home without losing damage.`}
+        )}” keeps every type: none of them can be left at home without losing damage.`}
       </Sentence>
     );
   }

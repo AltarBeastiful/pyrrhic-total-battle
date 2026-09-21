@@ -36,6 +36,12 @@ interface PoolRowsInput {
   result: StackResult;
   /** The unit types the march was computed from. */
   units: readonly UnitDef[];
+  /**
+   * Counts are being edited by hand, so a stack typed down to nothing **keeps its pill** — the pill is
+   * the field the player is typing in (owner, 2026-09-21). It drops into the "Left out" row when the
+   * mode is left, not between two keystrokes.
+   */
+  keepEmpty?: boolean;
 }
 
 /**
@@ -48,11 +54,11 @@ interface PoolRowsInput {
  *
  * A pool with no stacks and no capacity is left out of the list rather than drawn empty.
  */
-export function poolRows({ result, units }: PoolRowsInput): PoolRow[] {
+export function poolRows({ result, units, keepEmpty = false }: PoolRowsInput): PoolRow[] {
   const byPool = new Map<Pool, PillEntry[]>();
 
   for (const stack of result.stacks) {
-    if (stack.count <= 0) continue;
+    if (stack.count <= 0 && !keepEmpty) continue;
     const unit = findUnit(stack.unitId, units);
     if (unit === undefined) continue;
     const entry: PillEntry = { unit, count: stack.count };
@@ -96,8 +102,12 @@ export function leftOutOf(
   units: readonly UnitDef[],
   result: StackResult,
   leftOutByPlayer: readonly string[],
+  /** As `poolRows`: while counts are being edited by hand, a stack at 0 is still one of the pills. */
+  keepEmpty = false,
 ): LeftOutUnit[] {
-  const marching = new Set(result.stacks.filter((stack) => stack.count > 0).map((s) => s.unitId));
+  const marching = new Set(
+    result.stacks.filter((stack) => keepEmpty || stack.count > 0).map((s) => s.unitId),
+  );
   const byHand = new Set(leftOutByPlayer);
   const seen = new Set<string>();
   const out: LeftOutUnit[] = [];
@@ -135,8 +145,8 @@ export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): str
   // *"I'm left with a merc stack that's below what could be added with proper shielding"*. The sentence says
   // what the answer is, not only that it is safe.
   const rule = resize.inPlan
-    ? ' — nothing else was pushed out, and your hired stacks are re-sized to what the troops shelter.'
-    : ' — your hired stacks stay under the troops.';
+    ? '. Nothing else was pushed out, and your hired stacks are re-sized to what the troops shelter.'
+    : '. Your hired stacks stay under the troops.';
   const missed =
     resize.unfielded.length > 0 ? ` ${names(resize.unfielded)} could not be fielded at all.` : '';
   // Said in its own words, because it is a different fact: not "it would not fit" but "there is none to

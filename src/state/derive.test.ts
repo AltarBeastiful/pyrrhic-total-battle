@@ -154,6 +154,7 @@ describe('resolveSources — permanent, titles, hero, pills, VIP, dragon, custom
     const { profile, setup } = fixture();
     profile.sources.vipLevel = 12;
     profile.sources.vipManual = { health: 40, strength: 45 };
+    setup.active.vip = true;
 
     expect(vipNeedsManual(profile)).toBe(true);
     const vip = sourceById(resolveSources(profile, setup), 'vip');
@@ -166,28 +167,25 @@ describe('resolveSources — permanent, titles, hero, pills, VIP, dragon, custom
     );
   });
 
-  it('includes dragon, unknown sources and custom sources when they are active', () => {
+  it('includes the dragon and custom sources when they are active', () => {
     const { profile, setup } = fixture();
     profile.sources.dragon = {
       health: { army: 12 },
       strength: { army: 12 },
       special: { doubleDamageChance: 1 },
     };
-    profile.sources.unknown = { health: { melee: 3 }, strength: {} };
     profile.sources.custom = [{ id: 'x1', name: 'Guild buff', health: { army: 5 }, strength: { army: 5 } }];
+    setup.active.dragon = true;
     setup.active.custom = ['x1'];
 
     const sources = resolveSources(profile, setup);
     expect(sourceById(sources, 'dragon')?.special).toEqual({ doubleDamageChance: 1 });
-    expect(sourceById(sources, 'unknown')?.health).toEqual({ melee: 3 });
     expect(sourceById(sources, 'custom:x1')?.label).toBe('Guild buff');
 
     setup.active.dragon = false;
-    setup.active.unknown = false;
     setup.active.custom = [];
     const off = resolveSources(profile, setup);
     expect(sourceById(off, 'dragon')).toBeUndefined();
-    expect(sourceById(off, 'unknown')).toBeUndefined();
     expect(sourceById(off, 'custom:x1')).toBeUndefined();
   });
 });
@@ -433,11 +431,13 @@ describe('buildStackRequest', () => {
       roundTo10: false,
       relaxedPreservation: false,
     });
+    // A new setup opens on "revive the top types" with the monsters alone (owner, 2026-09-21;
+    // `state/defaults.ts`), and the list is carried to the engine as it stands.
     expect(request.recovery).toEqual({
       templeLevel: 0,
       trainingCostReduction: {},
       trainingSpeed: {},
-      plan: { mode: 'retrain' },
+      plan: { mode: 'selective', reviveFamilies: ['monsters'] },
     });
   });
 
@@ -454,14 +454,17 @@ describe('buildStackRequest', () => {
       relaxedPreservation: false,
       customOrder: ['archer-1', 'rider-1'],
     };
-    setup.recoveryPlan = { mode: 'selective', selectiveTop: 3 };
+    setup.recoveryPlan = { mode: 'selective', reviveFamilies: ['guardsmen', 'monsters'] };
 
     const request = buildStackRequest(profile, setup);
     expect(request.housing).toEqual({ leadership: 500000, authority: 1200, dominance: 900 });
     expect(request.options.customOrder).toEqual(['archer-1', 'rider-1']);
     expect(request.recovery.templeLevel).toBe(30);
     expect(request.recovery.trainingCostReduction).toEqual({ guardsmen: 12 });
-    expect(request.recovery.plan).toEqual({ mode: 'selective', selectiveTop: 3 });
+    expect(request.recovery.plan).toEqual({
+      mode: 'selective',
+      reviveFamilies: ['guardsmen', 'monsters'],
+    });
   });
 
   it('fields the same army from every march of the profile', () => {

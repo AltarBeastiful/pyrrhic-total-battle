@@ -1,5 +1,5 @@
 {
- "run": "2026-09-19T18:16:29.605Z",
+ "run": "2026-09-21T20:56:11.410Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,7 +7,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 51,
+   "planMs": 61,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -265,7 +265,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 59,
+   "planMs": 72,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -524,7 +524,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 56,
+   "planMs": 58,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -925,7 +925,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 89,
+   "planMs": 87,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1346,7 +1346,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 144,
+   "planMs": 158,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1809,14 +1809,14 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 12853,
+   "planMs": 12800,
    "baseline": {
     "stops": {
      "sweet-spot": {
       "marches": 4,
       "damage": 89196808,
       "silver": 35230800,
-      "gold": 48240,
+      "gold": 9424,
       "seconds": 10479360,
       "burned": 24,
       "perSilver": 2.5317849154716896,
@@ -1832,7 +1832,7 @@
       "marches": 4,
       "damage": 93298414,
       "silver": 35230800,
-      "gold": 49088,
+      "gold": 10272,
       "seconds": 10479360,
       "burned": 26,
       "perSilver": 2.6482059447983013,
@@ -1848,7 +1848,7 @@
       "marches": 4,
       "damage": 97458367,
       "silver": 36436800,
-      "gold": 48776,
+      "gold": 14232,
       "seconds": 11557695,
       "burned": 32,
       "perSilver": 2.6747235487199754,
@@ -1864,7 +1864,7 @@
       "marches": 4,
       "damage": 102971902,
       "silver": 37316000,
-      "gold": 49808,
+      "gold": 17888,
       "seconds": 12379425,
       "burned": 34,
       "perSilver": 2.759457122949941,
@@ -1881,7 +1881,7 @@
      "marches": 4,
      "damage": 95348743,
      "silver": 35458800,
-     "gold": 48728,
+     "gold": 12264,
      "seconds": 10608240,
      "burned": 32,
      "perSilver": 2.689000840411971,
@@ -1941,7 +1941,7 @@
      "marches": 4,
      "damage": 79635913,
      "silver": 35450400,
-     "gold": 49056,
+     "gold": 5536,
      "seconds": 10618320,
      "burned": 34,
      "perSilver": 2.246,
@@ -1963,7 +1963,7 @@
      "marches": 4,
      "damage": 103438192,
      "silver": 37939200,
-     "gold": 51184,
+     "gold": 19984,
      "seconds": 12996870,
      "burned": 34,
      "perSilver": 2.726,
@@ -1985,7 +1985,7 @@
      "marches": 4,
      "damage": 82845061,
      "silver": 35450400,
-     "gold": 48992,
+     "gold": 5472,
      "seconds": 10618320,
      "burned": 33,
      "perSilver": 2.337,
@@ -2007,7 +2007,7 @@
      "marches": 4,
      "damage": 104626942,
      "silver": 37290800,
-     "gold": 49888,
+     "gold": 18928,
      "seconds": 12365985,
      "burned": 34,
      "perSilver": 2.806,
@@ -2029,7 +2029,7 @@
      "marches": 4,
      "damage": 64727476,
      "silver": 34658400,
-     "gold": 46208,
+     "gold": 6336,
      "seconds": 10204380,
      "burned": 4,
      "perSilver": 1.868,
@@ -2051,7 +2051,7 @@
      "marches": 4,
      "damage": 79770931,
      "silver": 35454400,
-     "gold": 48872,
+     "gold": 4072,
      "seconds": 10622220,
      "burned": 32,
      "perSilver": 2.25,
@@ -2073,7 +2073,7 @@
      "marches": 4,
      "damage": 79770931,
      "silver": 35454400,
-     "gold": 48872,
+     "gold": 4072,
      "seconds": 10622220,
      "burned": 32,
      "perSilver": 2.25,
@@ -2095,7 +2095,7 @@
      "marches": 4,
      "damage": 89196808,
      "silver": 35230800,
-     "gold": 48240,
+     "gold": 9424,
      "seconds": 10479360,
      "burned": 24,
      "perSilver": 2.532,
@@ -2117,7 +2117,7 @@
      "marches": 4,
      "damage": 93298414,
      "silver": 35230800,
-     "gold": 49088,
+     "gold": 10272,
      "seconds": 10479360,
      "burned": 26,
      "perSilver": 2.648,
@@ -2139,7 +2139,7 @@
      "marches": 4,
      "damage": 97458367,
      "silver": 36436800,
-     "gold": 48776,
+     "gold": 14232,
      "seconds": 11557695,
      "burned": 32,
      "perSilver": 2.675,
@@ -2161,7 +2161,7 @@
      "marches": 4,
      "damage": 102971902,
      "silver": 37316000,
-     "gold": 49808,
+     "gold": 17888,
      "seconds": 12379425,
      "burned": 34,
      "perSilver": 2.759,
@@ -2186,7 +2186,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 793,
+   "planMs": 956,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -2724,7 +2724,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 2032,
+   "planMs": 2210,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -3261,7 +3261,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 1831,
+   "planMs": 2160,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -3745,7 +3745,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 83,
+   "planMs": 103,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -4225,7 +4225,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1312,
+   "planMs": 1455,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -4785,7 +4785,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1294,
+   "planMs": 1443,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -5040,7 +5040,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 884,
+   "planMs": 986,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -5415,7 +5415,7 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 129,
+   "planMs": 145,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -5786,7 +5786,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 91,
+   "planMs": 98,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -6156,14 +6156,14 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 3260,
+   "planMs": 3874,
    "baseline": {
     "stops": {
      "silver-saver": {
       "marches": 4,
       "damage": 4919095,
       "silver": 4431600,
-      "gold": 5184,
+      "gold": 480,
       "seconds": 1003305,
       "burned": 7,
       "perSilver": 1.1100042873905587,
@@ -6179,7 +6179,7 @@
       "marches": 4,
       "damage": 8182228,
       "silver": 8340000,
-      "gold": 6120,
+      "gold": 1320,
       "seconds": 2052570,
       "burned": 19,
       "perSilver": 0.9810824940047962,
@@ -6195,7 +6195,7 @@
       "marches": 4,
       "damage": 8408431,
       "silver": 8702400,
-      "gold": 6384,
+      "gold": 1584,
       "seconds": 2370000,
       "burned": 25,
       "perSilver": 0.9662197784519213,
@@ -6212,7 +6212,7 @@
      "marches": 4,
      "damage": 7731757,
      "silver": 8244000,
-     "gold": 5904,
+     "gold": 1056,
      "seconds": 1998615,
      "burned": 16,
      "perSilver": 0.9378647501213003,
@@ -6269,7 +6269,7 @@
      "marches": 4,
      "damage": 6739348,
      "silver": 7990800,
-     "gold": 6752,
+     "gold": 1952,
      "seconds": 1746480,
      "burned": 29,
      "perSilver": 0.843,
@@ -6291,7 +6291,7 @@
      "marches": 4,
      "damage": 8444893,
      "silver": 9547400,
-     "gold": 6752,
+     "gold": 1952,
      "seconds": 3110325,
      "burned": 29,
      "perSilver": 0.885,
@@ -6313,7 +6313,7 @@
      "marches": 4,
      "damage": 7673968,
      "silver": 7990800,
-     "gold": 5856,
+     "gold": 1056,
      "seconds": 1746480,
      "burned": 16,
      "perSilver": 0.96,
@@ -6335,7 +6335,7 @@
      "marches": 4,
      "damage": 8647583,
      "silver": 9142200,
-     "gold": 6672,
+     "gold": 1872,
      "seconds": 2755335,
      "burned": 28,
      "perSilver": 0.946,
@@ -6357,7 +6357,7 @@
      "marches": 4,
      "damage": 5187364,
      "silver": 7862000,
-     "gold": 5568,
+     "gold": 0,
      "seconds": 1671060,
      "burned": 0,
      "perSilver": 0.66,
@@ -6379,7 +6379,7 @@
      "marches": 4,
      "damage": 6779808,
      "silver": 7989200,
-     "gold": 6816,
+     "gold": 1952,
      "seconds": 1745160,
      "burned": 29,
      "perSilver": 0.849,
@@ -6401,7 +6401,7 @@
      "marches": 4,
      "damage": 6779808,
      "silver": 7989200,
-     "gold": 6816,
+     "gold": 1952,
      "seconds": 1745160,
      "burned": 29,
      "perSilver": 0.849,
@@ -6423,7 +6423,7 @@
      "marches": 4,
      "damage": 4919095,
      "silver": 4431600,
-     "gold": 5184,
+     "gold": 480,
      "seconds": 1003305,
      "burned": 7,
      "perSilver": 1.11,
@@ -6445,7 +6445,7 @@
      "marches": 4,
      "damage": 8182228,
      "silver": 8340000,
-     "gold": 6120,
+     "gold": 1320,
      "seconds": 2052570,
      "burned": 19,
      "perSilver": 0.981,
@@ -6467,7 +6467,7 @@
      "marches": 4,
      "damage": 8408431,
      "silver": 8702400,
-     "gold": 6384,
+     "gold": 1584,
      "seconds": 2370000,
      "burned": 25,
      "perSilver": 0.966,
@@ -6491,14 +6491,14 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 4249,
+   "planMs": 4851,
    "baseline": {
     "stops": {
      "sweet-spot": {
       "marches": 4,
       "damage": 11417051,
       "silver": 8090400,
-      "gold": 10976,
+      "gold": 544,
       "seconds": 1821660,
       "burned": 8,
       "perSilver": 1.411184984673193,
@@ -6514,7 +6514,7 @@
       "marches": 4,
       "damage": 11721371,
       "silver": 8695200,
-      "gold": 11816,
+      "gold": 808,
       "seconds": 2379300,
       "burned": 14,
       "perSilver": 1.348027762443647,
@@ -6531,7 +6531,7 @@
      "marches": 4,
      "damage": 11417051,
      "silver": 8090400,
-     "gold": 10976,
+     "gold": 544,
      "seconds": 1821660,
      "burned": 8,
      "perSilver": 1.411184984673193,
@@ -6572,7 +6572,7 @@
      "marches": 4,
      "damage": 8572792,
      "silver": 7989600,
-     "gold": 13200,
+     "gold": 2192,
      "seconds": 1761180,
      "burned": 33,
      "perSilver": 1.073,
@@ -6594,7 +6594,7 @@
      "marches": 4,
      "damage": 11780261,
      "silver": 11670000,
-     "gold": 13360,
+     "gold": 2192,
      "seconds": 5101680,
      "burned": 33,
      "perSilver": 1.009,
@@ -6616,7 +6616,7 @@
      "marches": 4,
      "damage": 10574240,
      "silver": 7989600,
-     "gold": 11552,
+     "gold": 544,
      "seconds": 1761180,
      "burned": 8,
      "perSilver": 1.324,
@@ -6638,7 +6638,7 @@
      "marches": 4,
      "damage": 11892528,
      "silver": 11071800,
-     "gold": 13064,
+     "gold": 1960,
      "seconds": 4575375,
      "burned": 30,
      "perSilver": 1.074,
@@ -6660,7 +6660,7 @@
      "marches": 4,
      "damage": 11417051,
      "silver": 8090400,
-     "gold": 10976,
+     "gold": 544,
      "seconds": 1821660,
      "burned": 8,
      "perSilver": 1.411,
@@ -6682,7 +6682,7 @@
      "marches": 4,
      "damage": 11721371,
      "silver": 8695200,
-     "gold": 11816,
+     "gold": 808,
      "seconds": 2379300,
      "burned": 14,
      "perSilver": 1.348,

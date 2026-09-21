@@ -82,7 +82,13 @@ function ownersAccount(dominance = 1_200): { profile: Profile; setup: BattleSetu
   profile.sources.vipLevel = 7;
   const setup: BattleSetup = {
     ...first,
-    active: { ...first.active, captains: ['ww8j0qwv'], events: ['ragnarok-fenrir'], vip: false, dragon: false },
+    active: {
+      ...first.active,
+      captains: ['ww8j0qwv'],
+      events: ['ragnarok-fenrir'],
+      vip: false,
+      dragon: false,
+    },
     housing: { leadership: 5_600, authority: 2_180, dominance },
     enemy: { melee: 1, ranged: 1, mounted: 1, flying: 1 },
     options: {
@@ -93,7 +99,7 @@ function ownersAccount(dominance = 1_200): { profile: Profile; setup: BattleSetu
       relaxedPreservation: false,
     },
     priority: 'damagePerSilver',
-    recoveryPlan: { mode: 'selective', selectiveTop: 3 },
+    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'] },
   };
   return { profile, setup };
 }
@@ -102,7 +108,16 @@ function ownersAccount(dominance = 1_200): { profile: Profile; setup: BattleSetu
 function queue(
   base: StackRequest,
   counts: Record<string, number>,
-): { id: string; label: string; pool: string; count: number; totalHp: number; perHp: number; hits: number; damage: number }[] {
+): {
+  id: string;
+  label: string;
+  pool: string;
+  count: number;
+  totalHp: number;
+  perHp: number;
+  hits: number;
+  damage: number;
+}[] {
   const { result, summary } = evaluateCounts(base, counts);
   const blows = new Map<string, number>();
   for (const entry of summary.journals.enemyFirst.entries) {
@@ -156,7 +171,11 @@ describe.skipIf(!process.env.THEORY)('the order of death', () => {
       report.add('');
       report.add('| type | pool | HP a unit | damage a unit | **damage a point of HP** | in the march |');
       report.add('|---|---|---|---|---|---|');
-      const fielded = new Set(Object.entries(top.counts).filter(([, c]) => c > 0).map(([id]) => id));
+      const fielded = new Set(
+        Object.entries(top.counts)
+          .filter(([, c]) => c > 0)
+          .map(([id]) => id),
+      );
       const ranked = base.units
         .map((unit) => {
           const effective = effectiveUnit(unit, base.totals, base.enemy, base.activeEvents);
@@ -193,7 +212,9 @@ describe.skipIf(!process.env.THEORY)('the order of death', () => {
         );
       }
       const inversions = lines.flatMap((line, index) =>
-        lines.slice(index + 1).flatMap((later) => (later.perHp < line.perHp - 1e-9 ? [[line, later] as const] : [])),
+        lines
+          .slice(index + 1)
+          .flatMap((later) => (later.perHp < line.perHp - 1e-9 ? [[line, later] as const] : [])),
       );
       report.add('');
       report.add(
@@ -201,7 +222,10 @@ describe.skipIf(!process.env.THEORY)('the order of death', () => {
           ? '**No inversions**: every stack that dies later turns HP into damage at least as well as the one before it, which is the ideal order.'
           : `**${String(inversions.length)} inversions** — a stack that dies *later* turns HP into damage *worse* than one that died before it: ${inversions
               .slice(0, 8)
-              .map(([a, b]) => `${a.label} (${n(Math.round(a.perHp * 1000) / 1000)}) before ${b.label} (${n(Math.round(b.perHp * 1000) / 1000)})`)
+              .map(
+                ([a, b]) =>
+                  `${a.label} (${n(Math.round(a.perHp * 1000) / 1000)}) before ${b.label} (${n(Math.round(b.perHp * 1000) / 1000)})`,
+              )
               .join('; ')}.`,
       );
 

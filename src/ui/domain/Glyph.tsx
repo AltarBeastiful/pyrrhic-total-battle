@@ -19,7 +19,7 @@
  * glyphs down its left edge lines up. This is why the shape is a *class* and not a prop — there is
  * one box, it is not negotiable, and `scale` only moves the em it is measured in.
  */
-import { GLYPHS, type GlyphKind } from './glyphs';
+import { GLYPH_ART, GLYPHS, GREYED_GLYPHS, type GlyphKind } from './glyphs';
 import classes from './domain.module.css';
 
 export interface GlyphProps {
@@ -33,14 +33,28 @@ export interface GlyphProps {
 
 export function Glyph({ kind, label, scale = 1, className }: GlyphProps) {
   const style = scale === 1 ? undefined : { fontSize: `${String(scale)}em` };
-  const box = className === undefined ? classes.glyph : `${classes.glyph ?? ''} ${className}`;
+  // The box is the shape (one class, never a prop), plus the tint for a glyph the platform draws in the
+  // wrong metal (`GREYED_GLYPHS`), plus whatever the caller adds.
+  const box = [classes.glyph, GREYED_GLYPHS.has(kind) ? classes.glyphGreyed : undefined, className]
+    .filter((one): one is string => one !== undefined)
+    .join(' ');
+  // A kind with a picture of its own draws it *inside the box*, at the box's own size, so the line is
+  // measured exactly as it is for an emoji (`GLYPH_ART`). The `<img>` is always decoration: the box
+  // around it already carries the name, or is hidden, so a reader never hears the mark twice.
+  const art = GLYPH_ART[kind];
+  const mark =
+    art === undefined ? (
+      GLYPHS[kind]
+    ) : (
+      <img className={classes.glyphArt} src={art} alt="" aria-hidden="true" draggable={false} />
+    );
   return label === undefined ? (
     <span aria-hidden="true" className={box} style={style}>
-      {GLYPHS[kind]}
+      {mark}
     </span>
   ) : (
     <span role="img" aria-label={label} className={box} style={style}>
-      {GLYPHS[kind]}
+      {mark}
     </span>
   );
 }

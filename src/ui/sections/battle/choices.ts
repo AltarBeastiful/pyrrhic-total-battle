@@ -168,20 +168,27 @@ export interface RecoveryChoice {
  * what that costs you besides the coin.
  */
 export const RECOVERY_CHOICES: readonly RecoveryChoice[] = [
+  /**
+   * **The plan a new setup opens on leads the list** (owner, 2026-09-21): it is the one a player picks
+   * after an epic march — the Temple for what is slow to train, the barracks for the rest — and a list is
+   * read from the top. It was third, under two plans nobody plays.
+   */
+  {
+    value: 'selective',
+    title: RECOVERY_LABELS.selective,
+    description: 'Revive Mercenaries and elite troops using gold, retrain the rest.',
+  },
   {
     value: 'retrain',
     title: RECOVERY_LABELS.retrain,
-    description: 'Silver and training time bring every lost unit back.',
+    // Every lost unit *you can recruit again*: a hired one you cannot, so the Temple returns it under
+    // this plan too, and that is the only gold a retrain spends (owner, 2026-09-21).
+    description: 'Silver, dragon coins and training time bring back everything but your hired units.',
   },
   {
     value: 'revive',
     title: RECOVERY_LABELS.revive,
     description: 'Gold brings every lost unit back at once, with no wait.',
-  },
-  {
-    value: 'selective',
-    title: RECOVERY_LABELS.selective,
-    description: 'Gold for your highest tiers, silver and time for the rest.',
   },
 ];
 

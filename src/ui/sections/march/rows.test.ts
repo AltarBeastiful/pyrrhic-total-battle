@@ -30,7 +30,7 @@ const note = (over: Partial<MarchResize>): MarchResize => ({
 
 test('a put-back on a plan names the type and promises the two rules', () => {
   expect(resizeWords(note({ putBack: [idOf(0)] }), UNITS)).toBe(
-    `Re-sized with ${nameOf(0)} put back — nothing else was pushed out, and your hired stacks are re-sized to what the troops shelter.`,
+    `Re-sized with ${nameOf(0)} put back. Nothing else was pushed out, and your hired stacks are re-sized to what the troops shelter.`,
   );
 });
 
@@ -55,7 +55,7 @@ test('a type that could not be fielded is said outright rather than left to reap
 
 test('a sizer run makes only the shelter promise: there is no plan to push anything out of', () => {
   const words = resizeWords(note({ putBack: [idOf(0)], inPlan: false }), UNITS);
-  expect(words).toContain('your hired stacks stay under the troops');
+  expect(words).toContain('Your hired stacks stay under the troops');
   expect(words).not.toContain('nothing else was pushed out');
 });
 
