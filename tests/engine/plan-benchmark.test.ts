@@ -65,7 +65,8 @@
  * non-regression suite.
  *
  * **A fourth reading joins it where a dragon coin is actually spent** (S-103): the monster camp and his
- * TotalStack profile, the two armies on this table that house a dominance pool. On the other fourteen
+ * TotalStack profile and his usual setup, the three armies on this table that house a dominance pool (the
+ * count read "two" until scenario 17 was added by S-106). On the other fourteen
  * neither side spends a coin, both read at `damage / 1`, and a "standing" that repeats the damage column is
  * left out of the goal line and out of the pins rather than printed as if it meant something.
  *
@@ -249,8 +250,19 @@ function price(
 
 interface Campaign {
   name: string;
-  /** Who produced the marches: one of ours, or a calculator outside this repo. */
-  kind: 'sizer' | 'plan' | 'external';
+  /**
+   * Who produced the marches: one of ours, or a calculator outside this repo.
+   *
+   * **`variant` is every other algorithm the app offers** (S-118, 2026-09-21; the owner: *"make it run
+   * for all our algorithm in the future"*) — the sizer option flags and the four objectives beside
+   * `avgDamage`. They are priced, tabled and written to the payload exactly as a `sizer` row is, and
+   * they are **deliberately left out of `bestSizer`**, which every `damageFloor` and `winsHired` pin is
+   * measured against. Folding fifteen rows into that maximum would re-base those pins as a side effect
+   * of widening the coverage, and a benchmark that moves its own floors while adding rows is not a
+   * non-regression suite. Whether a variant should count as a sizer is the owner's call, and the day he
+   * takes it the change is one word here plus the pins he registers.
+   */
+  kind: 'sizer' | 'variant' | 'plan' | 'external';
   /**
    * False for a captured answer that fields a troop type the scenario's army does not hold (TotalStack's
    * profile fields Archer III, Spearman III and Swordsman I where the owner's export leaves them out): priced
@@ -258,6 +270,17 @@ interface Campaign {
    * cannot make.
    */
   comparable: boolean;
+  /**
+   * **The troop stacks the campaign's first march fields, and the leadership it spends** (S-118).
+   * The reading that makes a march with no troops in it *visible*: an objective is free to leave every
+   * leadership type at home — `damagePerSilver` does it on all three armies here that house a
+   * dominance pool, and `avgDamage` under Troops first does it on two more — and until this column
+   * existed the only sign was a damage figure that happened to be low. `Troops first · Generate
+   * (average damage)` has read 8,250,197 against Tier ladder's 36,832,597 on the evening account
+   * since S-101, and nothing in the table said why.
+   */
+  troopTypes: number;
+  leadershipUsed: number;
   marches: number;
   damage: number;
   /**
@@ -345,11 +368,27 @@ function campaignOf(
     soldiersLost += rare.soldiersLost;
     monstersLost += rare.monstersLost;
   }
+  // The first march's shape, which is what a reader needs to see that a march fields no troops at all.
+  const first = marches[0] ?? {};
+  const leadershipIds = new Set(
+    request.units.filter((unit) => unit.pool === 'leadership').map((unit) => unit.id),
+  );
+  let troopTypes = 0;
+  let leadershipUsed = 0;
+  for (const unit of request.units) {
+    if (!leadershipIds.has(unit.id)) continue;
+    const count = Math.floor(first[unit.id] ?? 0);
+    if (count <= 0) continue;
+    troopTypes += 1;
+    leadershipUsed += count * unit.cost;
+  }
   return {
     name,
     kind,
     comparable: true,
     marches: marches.length,
+    troopTypes,
+    leadershipUsed,
     damage,
     hiredDamage,
     soldierDamage,
@@ -370,8 +409,10 @@ function greedy(
   method: 'elite' | 'ms',
   name: string,
   pick: (request: StackRequest) => Record<string, number>,
+  kind: Campaign['kind'] = 'sizer',
+  flags: Partial<StackRequest['options']> = {},
 ): Campaign {
-  const first: StackRequest = { ...base, options: { ...base.options, method } };
+  const first: StackRequest = { ...base, options: { ...base.options, method, ...flags } };
   const mercIds = hiredIds(first);
   const caps = { ...first.caps };
   const marches: Record<string, number>[] = [];
@@ -384,7 +425,7 @@ function greedy(
       if (caps[id] !== undefined) caps[id] = Math.max(0, caps[id] - chunks(counts[id] ?? 0));
     }
   }
-  return campaignOf(first, name, 'sizer', marches);
+  return campaignOf(first, name, kind, marches);
 }
 
 /**
@@ -537,6 +578,31 @@ const marchesOf = (row: PlanTotals): Record<string, number>[] => {
   return marches;
 };
 
+/**
+ * **The four objectives beside `avgDamage`**, as the Battle card names them (`ui/sections/battle/choices.ts`).
+ * A Generate with one of these selected does not run the sizer at all — `runGenerate` branches on the
+ * objective first — so a method row without them measures only half of what the button does.
+ */
+const OTHER_OBJECTIVES = [
+  ['minDamage', 'best worst case'],
+  ['damagePerSilver', 'damage per silver'],
+  ['damagePerGold', 'damage per gold'],
+  ['damagePerDragonCoin', 'damage per dragon coin'],
+] as const;
+
+/**
+ * **The sizer switches**, and whether each needs a dominance pool to mean anything (`engine/stacker.ts`):
+ * *Allow damage trades* grows a hired stack past the floor while the worst opening improves, and works on any
+ * army; *Monsters after troops* and *Monsters after mercenaries* write a ceiling on the **dominance** pool, so
+ * on an army with no monster in it they answer exactly what the plain row answers.
+ */
+const SIZER_VARIANTS: readonly ['elite' | 'ms', string, string, Partial<StackRequest['options']>, boolean][] =
+  [
+    ['ms', 'Troops first', 'allow damage trades', { relaxedPreservation: true }, false],
+    ['elite', 'Tier ladder', 'monsters after troops', { monstersLast: true }, true],
+    ['ms', 'Troops first', 'monsters after mercenaries', { strictMercsAboveMonsters: true }, true],
+  ];
+
 interface Measured {
   rows: Campaign[];
   plan: CampaignPlan | null;
@@ -557,6 +623,8 @@ interface Measured {
 function measure(scenario: Scenario): Measured {
   const { request } = scenario;
   const rows: Campaign[] = [];
+  const housesMonsters =
+    request.housing.dominance > 0 && request.units.some((unit) => unit.pool === 'dominance');
   for (const [method, title] of [
     ['elite', 'Tier ladder'],
     ['ms', 'Troops first'],
@@ -566,6 +634,32 @@ function measure(scenario: Scenario): Measured {
       greedy(request, method, `${title} · Generate (average damage)`, (r) =>
         countsOf(searchPriority({ request: r, objective: 'avgDamage', budgetMs: SEARCH_BUDGET_MS }).result),
       ),
+    );
+    // **Every other objective the Battle card offers** (S-118). `avgDamage` above is the one this table has
+    // asked for since it was written, and the four below had no row on any army — which is how a march that
+    // fields *no troops at all* stayed invisible: `damagePerSilver` empties the leadership pool on every
+    // army here that houses a dominance pool, because dropping the troops takes the silver bill down far
+    // faster than it takes the damage. They are `variant` rows, so no pin moves (see `Campaign.kind`).
+    for (const [objective, words] of OTHER_OBJECTIVES) {
+      rows.push(
+        greedy(
+          request,
+          method,
+          `${title} · Generate (${words})`,
+          (r) => countsOf(searchPriority({ request: r, objective, budgetMs: SEARCH_BUDGET_MS }).result),
+          'variant',
+        ),
+      );
+    }
+  }
+  // **The sizer flags** (S-118): the three switches the Battle card puts under the method, each a row of its
+  // own so a change to one is a change a reader can see. Two of them only *do* anything on an army that
+  // houses monsters — they write a ceiling on the dominance pool — so on the fourteen armies that hold none
+  // they would be a second copy of the row above and are left off rather than printed as filler.
+  for (const [method, title, words, flags, needsMonsters] of SIZER_VARIANTS) {
+    if (needsMonsters && !housesMonsters) continue;
+    rows.push(
+      greedy(request, method, `${title} · ${words}`, (r) => countsOf(sizeStacks(r)), 'variant', flags),
     );
   }
   // The captured answers: the case's own (the 2026-09-15 capture, Kai's extract) and TotalStack's dataset of
@@ -798,12 +892,12 @@ function record(label: string, measured: Measured): void {
       ? `The plan refused: \`${measured.refusal}\`.`
       : `The plan offers ${measured.plan?.alternatives.length ?? 0} stops.`,
     '',
-    '| sequence | marches | four-march damage | silver | gold | hired burned | a silver | a hired |' +
+    '| sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired |' +
       ' soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
     ...measured.rows.map(
       (c) =>
-        `| ${c.name} | ${c.marches} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.gold)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |` +
+        `| ${c.name} | ${c.marches} | ${c.troopTypes === 0 ? '**none**' : `${String(c.troopTypes)} · ${n(c.leadershipUsed)}`} | ${n(c.damage)} | ${n(c.silver)} | ${n(c.gold)} | ${n(c.burned)} | ${Number.isFinite(perSilver(c)) ? perSilver(c).toFixed(2) : '—'} | ${n(perHired(c))} |` +
         ` ${n(c.soldiersLost)} | ${n(c.monstersLost)} | ${n(c.dragonCoins)} | ${n(perSoldier(c))} | ${n(perMonster(c))} |` +
         ` ${n(perDragonCoin(c))} |`,
     ),
@@ -826,6 +920,8 @@ function record(label: string, measured: Measured): void {
       kind: c.kind,
       comparable: c.comparable,
       marches: c.marches,
+      troopTypes: c.troopTypes,
+      leadershipUsed: c.leadershipUsed,
       damage: Math.round(c.damage),
       silver: c.silver,
       gold: c.gold,
@@ -996,6 +1092,16 @@ writeFileSync(
     'monsters burned = hired burned` therefore holds on every army that houses no dominance unit — all but ' +
     'the monster camp below — and on that one the difference is exactly the dominance chunks, which the ' +
     'dragon-coin column prices.\n\n' +
+    '**Every algorithm the app offers has a row since S-118** (2026-09-21; the owner: *"make it run for ' +
+    'all our algorithm in the future"*): the two sizers, the three sizer switches under them (the two ' +
+    'monster ceilings only where a dominance pool exists, being a copy of the plain row otherwise), and ' +
+    '**all five objectives** — this table asked only for average damage until then. The **troops** column ' +
+    'is what those rows needed to be readable: it is the troop types the first march fields and the ' +
+    'leadership it spends, and it reads **none** where an objective left every troop type at home. That ' +
+    'happens on **8 of the 227** rows, and it is not new — `Troops first · Generate (average damage)` has ' +
+    'been an empty march on the evening account and on Aydae-alone since S-101, showing only as a damage ' +
+    'figure four times too low. The added rows are `variant` kind, so **no pin moves**: `bestSizer` is ' +
+    'still the two plain sizers and their average-damage Generate.\n\n' +
     'Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · ' +
     'Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier ' +
     'and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three ' +

@@ -341,7 +341,12 @@ function fourThousand(): Scenario {
       damageFloor: 0.96,
       winsHired: true,
       externals: { damageFloor: 0.93, winsHired: true },
-      totalOptimization: { perSilver: 1.01, perSoldier: 1.21, perMonster: 1.01 },
+      // **`perSoldier` re-pinned 1.21 → 1.01 on 2026-09-21, by the owner** (*"lets pin the benchmark where
+      // we fall short with total stack and review them later"*). Measured today: **1.0134843**. The plan is
+      // still **above** his goal of 1.0 on all three readings here; what it lost is the 22 % margin S-101
+      // recorded. **Not a trade he has accepted — a shortfall he has parked**, so that the suite is red for
+      // new regressions rather than for this one, and the gap stays on the table to be explained.
+      totalOptimization: { perSilver: 1.01, perSoldier: 1.01, perMonster: 1.01 },
     },
   };
 }
@@ -478,7 +483,11 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         damageFloor: 0.96,
         winsHired: true,
         externals: { damageFloor: 1.36, winsHired: false },
-        totalOptimization: { perSilver: 1.79, perSoldier: 0.6, perMonster: 1.69 },
+        // **`perSilver` re-pinned 1.79 → 1.71 on 2026-09-21, by the owner** (same call). Measured today:
+        // **1.7171112**. It has been **masked** since S-106 behind this scenario's `stops` assertion (5
+        // registered, 3 offered), which fires first and stops the test — so it was short and invisible.
+        // Far above his goal of 1.0; parked for review with the rest.
+        totalOptimization: { perSilver: 1.71, perSoldier: 0.6, perMonster: 1.69 },
       },
     },
     {
@@ -510,8 +519,26 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         sweetNotAheadOnEither: false,
         damageFloor: 0.99,
         winsHired: true,
-        externals: { damageFloor: 1.02, winsHired: true },
-        totalOptimization: { perSilver: 1.07, perSoldier: 1.16, perMonster: 1.01 },
+        // **`externals.damageFloor` re-pinned 1.02 → 1.01 on 2026-09-21, by the owner** (same call as the
+        // 4 000 case above). Measured today: **1.0178251** — the plan's hardest campaign is 29,743,332
+        // against the best captured answer's 29,222,440, still ahead of every calculator on this army but
+        // by less than the 2 % S-95 recorded. It is the pin S-94 first left red on 2026-09-19; parked now
+        // rather than left failing, and to be reviewed with the other three.
+        externals: { damageFloor: 1.01, winsHired: true },
+        // **`perSilver` 1.07 → 1.03 and `perSoldier` 1.16 → 1.04, re-pinned 2026-09-21 by the owner** (same
+        // call). Measured today: **1.0325419** a silver and **1.0425534** a hired soldier chunk.
+        //
+        // **This army is where the masking runs deepest, and it took three runs to see the bottom of it.**
+        // The three assertions fire in file order — `externals.damageFloor`, then `perSilver`, then
+        // `perSoldier` — and `expect` stops the test at the first failure, so each pin parked uncovered the
+        // next one below it: the run of 11 reds showed only `damageFloor`, the run of 8 only `perSilver`,
+        // and this one `perSoldier`. All three had been short since S-106; only the first was visible. The
+        // lesson for the review: *"pin where we fall short"* is iterative on a scenario that carries more
+        // than one floor, and a green suite after one pass is not proof the rest are met.
+        //
+        // All three are still **above** his goal of 1.0 — what they lost is the margin S-101 recorded, not
+        // the goal. `perMonster` 1.01 is unmoved (no monster on either side; `damage / 1` both ways).
+        totalOptimization: { perSilver: 1.03, perSoldier: 1.04, perMonster: 1.01 },
       },
     },
     {
@@ -823,7 +850,10 @@ export function commonScenarios(): Scenario[] {
         damageFloor: 0.98,
         winsHired: true,
         externals: { damageFloor: 0.98, winsHired: true },
-        totalOptimization: { perSilver: 0.99, perSoldier: 1.11, perMonster: 0.99 },
+        // **`perSoldier` re-pinned 1.11 → 1.04 on 2026-09-21, by the owner** (same call as the 4 000 case).
+        // Measured today: **1.0410258**. Above his goal of 1.0, below the margin S-101 recorded; parked for
+        // review, not accepted.
+        totalOptimization: { perSilver: 0.99, perSoldier: 1.04, perMonster: 0.99 },
       },
     },
     {
@@ -982,7 +1012,11 @@ export function commonScenarios(): Scenario[] {
         damageFloor: 0.91,
         winsHired: true,
         externals: { damageFloor: 1.19, winsHired: false },
-        totalOptimization: { perSilver: 1.19, perSoldier: 1.54, perMonster: 1.19, perDragonCoin: 1.21 },
+        // **`perSoldier` re-pinned 1.54 → 1.52 on 2026-09-21, by the owner** (same call). Measured today:
+        // **1.5252922** — the narrowest of the seven, and **masked** since S-106 behind this camp's `stops`
+        // assertion (5 registered, 4 offered). Far above his goal of 1.0. The other three readings, the
+        // dragon coin among them, are unmoved and still pass on this, the benchmark's largest monster camp.
+        totalOptimization: { perSilver: 1.19, perSoldier: 1.52, perMonster: 1.19, perDragonCoin: 1.21 },
       },
     },
     fourThousand(),
@@ -1052,7 +1086,11 @@ const liveCamp = (owner: Profile): Scenario[] => {
         winsHired: true,
         silverFloor: 0.28,
         externals: { damageFloor: 0.31, winsHired: true },
-        totalOptimization: { perSilver: 0.25, perSoldier: 4.2, perMonster: 2.17 },
+        // **`perSoldier` re-pinned 4.2 → 1.94 on 2026-09-21, by the owner** (same call as the 4 000 case).
+        // Measured today: **1.9452876**. The widest of the four falls — this army's unlimited legionaries
+        // are what made the 4.2, and the plan gets less out of a hired soldier chunk than it did — and the
+        // one most worth explaining when the four are reviewed. Still above his goal of 1.0.
+        totalOptimization: { perSilver: 0.25, perSoldier: 1.94, perMonster: 2.17 },
       },
     },
   ];
@@ -1243,7 +1281,15 @@ const TOTALSTACK_PROFILE_PINS: Pinned = {
   damageFloor: 0.97,
   winsHired: true,
   externals: { damageFloor: 1.24, winsHired: false },
-  totalOptimization: { perSilver: 1.3, perSoldier: 3.0, perMonster: 1.24, perDragonCoin: 1.24 },
+  // **`perMonster` re-pinned 1.24 → 0.91 on 2026-09-21, by the owner** (same call). Measured today:
+  // **0.9114433**, and this is the one of the seven that is **below his goal of 1.0** — the plan gets less
+  // damage out of a monster chunk here than TotalStack's Total Optimization does. It is the `✗` the run's
+  // goal line has been printing on this army, so it was never hidden from a reader; what was hidden is that
+  // the *pin* was short too, behind this scenario's `externals.winsHired` assertion. **The most important
+  // of the seven to review**: it is a dominance reading, on one of the three armies here that house a
+  // dominance pool, and S-116 is about exactly that ordering. `perDragonCoin` 1.24 is met at 1.2402 and is
+  // left alone.
+  totalOptimization: { perSilver: 1.3, perSoldier: 3.0, perMonster: 0.91, perDragonCoin: 1.24 },
 };
 
 const totalStackProfile = (owner: Profile): Scenario[] => {
@@ -1368,7 +1414,8 @@ function usualSetup(profile: Profile): Scenario[] {
 /**
  * **The armies the criteria are held on** — the shared scenario list, built once and read by
  * `tests/engine/plan-criteria.test.ts` and by the theorycraft experiments that measure a rule against the
- * same set (`tools/theorycraft/112-band-yardstick.test.ts`). **Sixteen** since S-103 (2026-09-19), the
+ * same set (`tools/theorycraft/112-band-yardstick.test.ts`). **Seventeen** since S-106 (2026-09-19; sixteen from
+ * S-103 until his usual setup was appended), the
  * fifteen of S-101 in the same order and under the same labels with **his own TotalStack profile** appended
  * after them, and since S-101 they are simply *the benchmark's own scenarios*: the three camps this function
  * used to append by hand — the live camp of 2026-09-18 and his camp of 2026-09-19 at both readings of the
