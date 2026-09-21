@@ -56,6 +56,25 @@ priority-search calls**. The owner is opening a new account (2026-09-22) for S-1
 5. Add the new path to `DATASETS` in `tests/engine/totalstack-rows.ts`, **last**, so no scenario an earlier
    run answered changes its row by this one's arrival (the rule S-101 set).
 
+### The `optimize` half runs in the page, and why (2026-09-22)
+
+`--send` gets **403 `proRequired`** on every `/api/calculations/optimize` call even with Pro active and the
+browser's own `x-session-id`. It is not the session, the body or the headers: the owner's HAR of a **200**
+was replayed verbatim from Node — bare, then with origin and referer, then with the full browser header set
+— and all three came back 403, while the _same body_ run inside the page came back **200**. His HAR carries
+no cookie and no authorization header and `document.cookie` in the page is empty, so the entitlement rides
+on an **HttpOnly** cookie the browser attaches by itself and no terminal client can have. Copying it out
+would mean handling a credential, so the fetch is made where it already lives instead.
+
+```sh
+TOTALSTACK_SESSION_ID=<uuid> node tools/totalstack/replay.mjs --emit=~/totalstack-optimize-snippet.js
+```
+
+That writes a **self-contained console snippet** for the 120 optimize calls (the Generate half still goes
+from the terminal with `--send`). Open `https://totalstack.ca` signed in with Pro, DevTools → Console, paste
+the whole file: it runs, prints progress every ten, and downloads
+`totalstack-optimize-<date>.json`. Drop that into `docs/research/fixtures/`.
+
 **What one good run buys**: the benchmark goes from **15 scored armies to 17**, and the 20 000-dominance camp
 gets rows to stand against once it is registered.
 

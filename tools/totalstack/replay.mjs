@@ -639,6 +639,87 @@ async function main() {
         `${retyped.length} retyped${retyped.length ? ` (${retyped.join(', ')})` : ''}, ` +
         `${dropped.length} undefined and dropped by JSON.stringify${dropped.length ? ` (${dropped.join(', ')})` : ''}`,
     );
+    /**
+     * **`--emit=<path>`: the composed bodies, for the calls Node cannot make** (S-119, 2026-09-22).
+     *
+     * The `optimize` route answers **403 `proRequired`** to this script and **200** to the same body run
+     * inside the page, with the same `x-session-id` and the owner's Pro active — his own HAR of a 200 shows
+     * no cookie and no authorization header, `document.cookie` in the page is empty, so the entitlement
+     * rides on an **HttpOnly** cookie the browser attaches and no terminal client has. That is not a thing
+     * to copy out of a browser: it is a credential. So the bodies are emitted instead and the fetch is made
+     * where the credential already lives.
+     */
+    const emit = value('emit', null);
+    if (emit) {
+      const rows = planned
+        .filter((item) => 'objective' in item.body)
+        .map((item) => ({
+          method: item.key,
+          scenario: item.name,
+          priority: item.priority,
+          url: item.base.url,
+          body: item.body,
+        }));
+      const session = process.env.TOTALSTACK_SESSION_ID ?? '<paste your x-session-id here>';
+      writeFileSync(
+        emit,
+        `/*\n` +
+          ` * TotalStack — the ${rows.length} \`optimize\` calls, to be run IN THE PAGE.\n` +
+          ` *\n` +
+          ` * Why here and not from the terminal: \`/api/calculations/optimize\` answers **403 proRequired**\n` +
+          ` * to any terminal client and **200** to the identical body run inside the page, with the same\n` +
+          ` * x-session-id and Pro active. A HAR of a working call shows no cookie and no authorization\n` +
+          ` * header, and \`document.cookie\` in the page is empty — so the entitlement rides on an\n` +
+          ` * **HttpOnly** cookie the browser attaches by itself. That cookie is a credential; it is not\n` +
+          ` * copied out of the browser, so the fetch is made where it already lives. The Generate route\n` +
+          ` * needs none of this and \`replay.mjs --send\` still does that half from the terminal.\n` +
+          ` *\n` +
+          ` * HOW TO RUN\n` +
+          ` *   1. Open https://totalstack.ca, signed in, Pro active.\n` +
+          ` *   2. DevTools → Console. Paste this whole file. It starts at once.\n` +
+          ` *   3. It prints progress and, when done, downloads **totalstack-optimize-<date>.json**.\n` +
+          ` *   4. Move that file into docs/research/fixtures/ and say where it is.\n` +
+          ` */\n` +
+          `(async () => {\n` +
+          `  const SESSION = ${JSON.stringify(session)};\n` +
+          `  const ROWS = ${JSON.stringify(rows)};\n` +
+          `  const out = [];\n` +
+          `  for (let i = 0; i < ROWS.length; i += 1) {\n` +
+          `    const item = ROWS[i];\n` +
+          `    let status = 0, response = null;\n` +
+          `    for (let attempt = 0; attempt < 2; attempt += 1) {\n` +
+          `      try {\n` +
+          `        const res = await fetch(item.url, {\n` +
+          `          method: 'POST',\n` +
+          `          headers: {\n` +
+          `            'content-type': 'application/json',\n` +
+          `            'x-session-id': SESSION,\n` +
+          `            'x-calculation-request-id': crypto.randomUUID(),\n` +
+          `          },\n` +
+          `          body: JSON.stringify(item.body),\n` +
+          `        });\n` +
+          `        status = res.status;\n` +
+          `        response = await res.json().catch(() => null);\n` +
+          `        if (status >= 200 && status < 300) break;\n` +
+          `      } catch (e) { status = String(e); }\n` +
+          `      await new Promise((r) => setTimeout(r, 400));\n` +
+          `    }\n` +
+          `    out.push({ method: item.method, scenario: item.scenario, priority: item.priority, status, request: item.body, response });\n` +
+          `    if (i % 10 === 0 || i === ROWS.length - 1) console.log(\`\${i + 1}/\${ROWS.length} — last \${status}\`);\n` +
+          `    await new Promise((r) => setTimeout(r, 250));\n` +
+          `  }\n` +
+          `  const ok = out.filter((o) => o.status >= 200 && o.status < 300).length;\n` +
+          `  console.log(\`done — \${ok}/\${out.length} at 2xx\`);\n` +
+          `  const blob = new Blob([JSON.stringify({ capturedAt: new Date().toISOString(), results: out })], { type: 'application/json' });\n` +
+          `  const a = document.createElement('a');\n` +
+          `  a.href = URL.createObjectURL(blob);\n` +
+          `  a.download = \`totalstack-optimize-\${new Date().toISOString().slice(0, 10)}.json\`;\n` +
+          `  a.click();\n` +
+          `})();\n`,
+      );
+      console.log(`\nemitted a console snippet for ${rows.length} optimize calls to ${emit}`);
+      console.log('Paste it into the TotalStack page console; it downloads the answers as JSON.');
+    }
     console.log(`\ndry run: ${planned.length} bodies forged, none sent. Add --send to send them.`);
     return;
   }
