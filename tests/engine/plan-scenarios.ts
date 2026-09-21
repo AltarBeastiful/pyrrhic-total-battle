@@ -622,6 +622,29 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         sweetNotAheadOnEither: false,
         damageFloor: 0.94,
         winsHired: false,
+        /**
+         * **Its first captured answers, 2026-09-22 (S-119).** This army and his usual setup were the two the
+         * benchmark could score against nothing; the capture on his new account answered both on the
+         * Generate route (48 of 48 at 2xx; the whole `optimize` route came back 403 again, so no
+         * `priority search` row joins them). Pinned at what they measure today, the file's rule.
+         *
+         * The plan's hardest campaign is **1.0958×** the best comparable captured row — `M's Preservation`
+         * is the weakest of the three at 1.6395, `Total Optimization` and `Elite Preservation` tie at
+         * 1.0958 — and its best damage a hired soldier chunk is **300,662 against their 11,478**, which is
+         * the unlimited legionaries: their answer spends 2,017 of them and ours keeps the stock.
+         */
+        externals: { damageFloor: 1.09, winsHired: true },
+        /**
+         * **Damage a silver is 0.9508 — under his goal of 1.0, and pinned where it measures** rather than at
+         * the goal (the rule S-101 set and S-118 applied to seven others). Their Total Optimization answers
+         * with the legionary wall that costs almost no silver, which is the same shape that wins them the
+         * silver reading on the evening account.
+         *
+         * `perMonster` is pinned at the damage ratio because **neither side fields a monster here** (no
+         * dominance pool), so the reading is `damage / 1` on both and `check` skips it as non-finite — the
+         * same treatment the 4 000 case gives it.
+         */
+        totalOptimization: { perSilver: 0.95, perSoldier: 26.19, perMonster: 1.09 },
       },
     },
     // **The three camps, S-101 (2026-09-19)** — scenarios 13, 14 and 15, appended after the twelve and
@@ -1360,6 +1383,28 @@ const USUAL_SETUP_PINS: Pinned = {
   sweetNotAheadOnEither: false,
   damageFloor: 0.98,
   winsHired: true,
+  /**
+   * **Its first captured answers, 2026-09-22 (S-119)** — the camp he actually plays, and until this capture
+   * the benchmark scored it against nothing at all. The Generate route answered all four flag sets; the
+   * `optimize` route came back 403 as it did on 2026-09-19, so there is no `priority search` row here.
+   *
+   * The plan's hardest campaign is **1.2786×** the best comparable captured row (`Total Optimization` and
+   * `Elite Preservation` tie there; `M's Preservation` is weaker at 1.6513), and its best damage a hired
+   * soldier chunk beats theirs outright — **422,679 against 0**, their M's Preservation fielding no
+   * mercenary at all on this army.
+   */
+  externals: { damageFloor: 1.27, winsHired: true },
+  /**
+   * **All four readings are at or above his goal here**, which makes this the third of the three
+   * dominance-housing armies to clear it and the only one of them that does so on every reading: damage a
+   * silver **1.3007**, damage a monster **1.0244**, damage a dragon coin **1.2786**.
+   *
+   * `perSoldier` is pinned at the damage ratio because **this army hires one type and their answer spends
+   * none of it in chunks their side counts** — the reading is non-finite and `check` skips it. The monster
+   * and coin readings are the live ones, this being one of the three armies on the table that houses a
+   * dominance pool (200) and spends coins on it.
+   */
+  totalOptimization: { perSilver: 1.3, perSoldier: 1.27, perMonster: 1.02, perDragonCoin: 1.27 },
 };
 
 /**

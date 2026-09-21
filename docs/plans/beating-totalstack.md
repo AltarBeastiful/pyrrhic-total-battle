@@ -44,33 +44,39 @@ audit, and it is the part of this plan most likely to change engine code.
 ## 1. Where we stand under that definition
 
 For each army: TotalStack's **hardest comparable captured row**, and the best stop on our bar that spends
-**≤ their silver, ≤ their burn, ≤ their gold and ≤ their dragon coins**.
+no more than **5 %** over their silver, burn, gold and dragon coins (§7).
 
-| army | their hardest row | their damage | our best within their budget | verdict |
-|---|---|---|---|---|
-| first-run, Bear V ×1 | Total Optimization | 18,217,808 | sweet-spot 18,189,008 | −0.2 % |
-| first-run, Bear V ×2 | Total Optimization | 18,442,208 | sweet-spot 18,413,408 | −0.2 % |
-| first-run, Bear V ×3 | search under M's (avg) | 21,427,548 | all-in 18,750,008 | **−12.5 %** |
-| first-run, Bear V ×10 | search under M's (avg) | 22,474,748 | all-in 20,893,375 | −7.0 % |
-| first-run, hunters ×83 (e2e seed) | M's Preservation | 30,221,279 | steady-max 29,691,713 | −1.8 % |
-| monster camp, 900 dominance | Total Optimization | 79,770,931 | — | **no stop fits** |
-| the 4 000 case of 2026-09-15 | optimize (captured) | 8,762,880 | all-in 8,519,930 | −2.8 % |
-| 2026-09-17 export, 7 000 | search under M's (avg) | 13,742,586 | sweet-spot 18,796,348 | **✓ +36.8 %** |
-| 2026-09-17 export, 12 000 | search under M's (avg) | 22,894,812 | — | **no stop fits** |
-| live account, 20 000 | Total Optimization | 29,222,440 | all-in 29,743,332 | **✓ +1.8 %** |
-| live account, evening | search under M's (avg) | 36,832,597 | all-in 31,714,657 | **−13.9 %** |
-| Aydae alone, 4 975 | — | — | — | not measured |
-| live camp of 2026-09-18 | Total Optimization | 49,229,801 | all-in 10,899,547 | **−77.9 %** |
-| camp of 2026-09-19, dump | Total Optimization | 6,422,616 | silver-saver 7,561,467 | **✓ +17.7 %** |
-| camp of 2026-09-19, message | Total Optimization | 6,585,128 | — | **no stop fits** |
-| his TotalStack profile | Total Optimization | 6,779,808 | silver-saver 4,919,095 | **−27.4 %** |
-| his usual setup | — | — | — | not measured |
+**Re-measured 2026-09-22, on all seventeen armies** — the capture of that morning gave `Aydae alone` and
+`his usual setup` their first captured answers, so nothing on the table is unscored any more.
 
-**We beat TotalStack on 3 of the 15 armies that can be measured.** We are short on 9 and cannot enter the
-comparison on 3. Two armies have no captured answer at all.
+| army | verdict at matched spend |
+|---|---|
+| **2026-09-17 export, 7 000** | **✓ +55.5 %** |
+| **his usual setup** (the camp he plays) | **✓ +27.9 %** |
+| **his TotalStack profile** | **✓ +20.7 %** |
+| **camp of 2026-09-19, dump** | **✓ +17.7 %** |
+| **live account, 20 000** | **✓ +1.8 %** |
+| first-run, Bear V ×1 | −0.2 % |
+| first-run, Bear V ×2 | −0.2 % |
+| first-run, hunters ×83 (e2e seed) | −1.3 % |
+| the 4 000 case of 2026-09-15 | −2.8 % |
+| first-run, Bear V ×10 | −7.0 % |
+| Aydae alone, 4 975 | −9.2 % |
+| first-run, Bear V ×3 | **−12.5 %** |
+| live account, evening | **−13.9 %** |
+| live camp of 2026-09-18 | **−77.9 %** |
+| monster camp, 900 dominance | **no stop fits** |
+| 2026-09-17 export, 12 000 | **no stop fits** |
+| camp of 2026-09-19, message | **no stop fits** |
 
-This is a much harsher reading than the ratio table the benchmark prints today (where we lead on 8 of 15),
-and the difference is the whole point of his definition: **a ratio win that spends more is not a win.**
+**We beat TotalStack on 5 of 17.** We are short on 9, and on 3 no stop we offer is cheap enough to enter the
+comparison at all.
+
+**The camp he actually plays is one of the five**, which the 2026-09-22 capture is what established — it had
+been scored against nothing until then.
+
+This is a much harsher reading than the ratio table the benchmark prints (where we lead on 10 of 17), and
+the difference is the whole point of his definition: **a ratio win that spends more is not a win.**
 
 ### The ratio table, for reference
 

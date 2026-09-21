@@ -71,6 +71,25 @@ const DATASETS = [
   new URL('../../docs/research/fixtures/totalstack-2026-09-18-dataset-full.json', import.meta.url),
   new URL('../../docs/research/fixtures/totalstack-2026-09-19-replay-m3.json', import.meta.url),
   new URL('../../docs/research/fixtures/totalstack-2026-09-19-replay-v2.json', import.meta.url),
+  /**
+   * **The capture of 2026-09-22 (S-119), on the owner's new account, and it is last for the reason the two
+   * before it are ordered as they are**: the first dataset that answers a scenario wins it, so an arrival
+   * here can only add armies and never re-write a figure an earlier run pinned.
+   *
+   * **48 of 168 at 2xx, and the 120 that failed are the whole `optimize` route** — 403, exactly as the two
+   * replays of 2026-09-19 were (Pro is required there and was not active on the new account). The Generate
+   * route answered every one of its 48 calls, which is what matters: `methodOf` reads **Total Optimization,
+   * M's Preservation and Elite Preservation off Generate**, and only the two `priority search under …` rows
+   * come from `optimize`. So this run contributes every row the goal line and the pins are stated against,
+   * and none of the priority-search rows.
+   *
+   * **It is the run that ends the benchmark's two blind armies** — `Aydae alone` and `his usual setup`, the
+   * camp he actually plays — which had no captured answer of any kind and printed `—` on every reading.
+   *
+   * Its responses carry the counts at the **root** rather than under `calculation`; `answer.response
+   * .calculation ?? answer.response` below already read both shapes, so nothing here changed for it.
+   */
+  new URL('../../docs/research/fixtures/totalstack-2026-09-22-replay.json', import.meta.url),
 ];
 
 interface Answer {
@@ -136,6 +155,12 @@ const SCENARIOS: Record<string, string> = {
     'first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)',
   'his TotalStack profile 2026-09-19 (5 225 / dominance 100 / 2 120, monsters tier 3, EMH V 80 · bears 6 · cyclopes 6)':
     'his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)',
+  // **The two the capture of 2026-09-22 adds** (S-119), and the only two benchmark armies that had no
+  // captured answer of any kind — the second being the camp he plays.
+  'Aydae alone, 4 975 (EMH 83 · legionaries uncapped · chariots 10 · arbalesters 60, 4 975 / 2 180)':
+    'Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)',
+  'his usual setup 2026-09-19 (Aydae alone, 5 200 / 2 000 / dominance 200, monsters tier 3, EMH VI 90)':
+    'his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)',
 };
 
 /** What the page calls the body's flags. */

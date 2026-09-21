@@ -1,5 +1,5 @@
 {
- "run": "2026-09-21T22:13:02.008Z",
+ "run": "2026-09-21T22:43:15.261Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,7 +7,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 44,
+   "planMs": 36,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -497,7 +497,7 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 41,
+   "planMs": 42,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -988,7 +988,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 47,
+   "planMs": 37,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1631,7 +1631,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 56,
+   "planMs": 55,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -3005,7 +3005,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 9659,
+   "planMs": 9747,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -3668,7 +3668,7 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 729,
+   "planMs": 730,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -4458,7 +4458,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 2003,
+   "planMs": 1811,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -5245,7 +5245,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 1758,
+   "planMs": 1679,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -5977,7 +5977,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 81,
+   "planMs": 79,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -6703,7 +6703,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1264,
+   "planMs": 1185,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -7515,7 +7515,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1277,
+   "planMs": 1269,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -7585,10 +7585,18 @@
     },
     "ratios": {
      "bestSizer": 0.9482517370021911,
-     "externals": {},
+     "externals": {
+      "TotalStack · M’s Preservation": 1.6395492151175834,
+      "TotalStack · Total Optimization": 1.0957524014678437,
+      "TotalStack · Elite Preservation": 1.0957524014678437
+     },
      "perSoldier": {
       "bestSizer": 0.889489770611019,
-      "externals": {}
+      "externals": {
+       "TotalStack · M’s Preservation": 48.628149145355735,
+       "TotalStack · Total Optimization": 26.194922846365028,
+       "TotalStack · Elite Preservation": 26.194922846365028
+      }
      },
      "perMonster": {
       "bestSizer": 0,
@@ -7596,11 +7604,19 @@
      },
      "perDragonCoin": {
       "bestSizer": 0.9482517370021911,
-      "externals": {}
+      "externals": {
+       "TotalStack · M’s Preservation": 1.6395492151175834,
+       "TotalStack · Total Optimization": 1.0957524014678437,
+       "TotalStack · Elite Preservation": 1.0957524014678437
+      }
      },
      "perSilver": {
       "bestSizer": 0.9579420008625354,
-      "externals": {}
+      "externals": {
+       "TotalStack · M’s Preservation": 1.4231942608374297,
+       "TotalStack · Total Optimization": 0.9507665295961463,
+       "TotalStack · Elite Preservation": 0.9507665295961463
+      }
      }
     }
    },
@@ -7918,6 +7934,78 @@
      "monsterDamage": 0
     },
     {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "troopTypes": 7,
+     "leadershipUsed": 4975,
+     "damage": 11432859,
+     "silver": 7797200,
+     "gold": 62424,
+     "seconds": 1898940,
+     "burned": 866,
+     "perSilver": 1.466,
+     "perHired": 6183,
+     "soldiersLost": 866,
+     "monstersLost": 0,
+     "dragonCoins": 0,
+     "perSoldier": 6183,
+     "perMonster": 0,
+     "perDragonCoin": 11432859,
+     "hiredDamage": 5354371,
+     "soldierDamage": 5354371,
+     "monsterDamage": 0
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "troopTypes": 7,
+     "leadershipUsed": 4975,
+     "damage": 17106725,
+     "silver": 7794000,
+     "gold": 62040,
+     "seconds": 1896300,
+     "burned": 864,
+     "perSilver": 2.195,
+     "perHired": 11478,
+     "soldiersLost": 864,
+     "monstersLost": 0,
+     "dragonCoins": 0,
+     "perSoldier": 11478,
+     "perMonster": 0,
+     "perDragonCoin": 17106725,
+     "hiredDamage": 9916877,
+     "soldierDamage": 9916877,
+     "monsterDamage": 0
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "troopTypes": 7,
+     "leadershipUsed": 4975,
+     "damage": 17106725,
+     "silver": 7794000,
+     "gold": 62040,
+     "seconds": 1896300,
+     "burned": 864,
+     "perSilver": 2.195,
+     "perHired": 11478,
+     "soldiersLost": 864,
+     "monstersLost": 0,
+     "dragonCoins": 0,
+     "perSoldier": 11478,
+     "perMonster": 0,
+     "perDragonCoin": 17106725,
+     "hiredDamage": 9916877,
+     "soldierDamage": 9916877,
+     "monsterDamage": 0
+    },
+    {
      "name": "Complete optimization · sweet-spot",
      "kind": "plan",
      "comparable": true,
@@ -8000,7 +8088,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 864,
+   "planMs": 818,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -8613,7 +8701,7 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 126,
+   "planMs": 123,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -9222,7 +9310,7 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 85,
+   "planMs": 94,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -9830,7 +9918,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 3323,
+   "planMs": 3179,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -10449,7 +10537,7 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 4258,
+   "planMs": 4085,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -10503,22 +10591,38 @@
     },
     "ratios": {
      "bestSizer": 0.985608022112708,
-     "externals": {},
+     "externals": {
+      "TotalStack · M’s Preservation": 1.6513131757687711,
+      "TotalStack · Total Optimization": 1.2786474060020456,
+      "TotalStack · Elite Preservation": 1.2786474060020456
+     },
      "perSoldier": {
       "bestSizer": 1.375,
       "externals": {}
      },
      "perMonster": {
       "bestSizer": 0.9333258760926189,
-      "externals": {}
+      "externals": {
+       "TotalStack · M’s Preservation": 1.6963321285658965,
+       "TotalStack · Total Optimization": 1.0243932383655057,
+       "TotalStack · Elite Preservation": 1.0243932383655057
+      }
      },
      "perDragonCoin": {
       "bestSizer": 0.912084213018144,
-      "externals": {}
+      "externals": {
+       "TotalStack · M’s Preservation": 1.4678339340166853,
+       "TotalStack · Total Optimization": 1.2786474060020456,
+       "TotalStack · Elite Preservation": 1.2786474060020456
+      }
      },
      "perSilver": {
       "bestSizer": 1.0662519059095446,
-      "externals": {}
+      "externals": {
+       "TotalStack · M’s Preservation": 1.673649600064468,
+       "TotalStack · Total Optimization": 1.3007459627497446,
+       "TotalStack · Elite Preservation": 1.3007459627497446
+      }
      }
     }
    },
@@ -10882,6 +10986,78 @@
      "hiredDamage": 2459224,
      "soldierDamage": 2459224,
      "monsterDamage": 3754740
+    },
+    {
+     "name": "TotalStack · M’s Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "troopTypes": 7,
+     "leadershipUsed": 5200,
+     "damage": 7098212,
+     "silver": 8418400,
+     "gold": 0,
+     "seconds": 2145900,
+     "burned": 0,
+     "perSilver": 0.843,
+     "perHired": 0,
+     "soldiersLost": 0,
+     "monstersLost": 24,
+     "dragonCoins": 3840,
+     "perSoldier": 0,
+     "perMonster": 103293,
+     "perDragonCoin": 1848,
+     "hiredDamage": 0,
+     "soldierDamage": 0,
+     "monsterDamage": 2479040
+    },
+    {
+     "name": "TotalStack · Total Optimization",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "troopTypes": 7,
+     "leadershipUsed": 5200,
+     "damage": 9167008,
+     "silver": 8449600,
+     "gold": 2192,
+     "seconds": 2164080,
+     "burned": 33,
+     "perSilver": 1.085,
+     "perHired": 0,
+     "soldiersLost": 33,
+     "monstersLost": 20,
+     "dragonCoins": 4320,
+     "perSoldier": 0,
+     "perMonster": 171047,
+     "perDragonCoin": 2122,
+     "hiredDamage": 0,
+     "soldierDamage": 0,
+     "monsterDamage": 3420948
+    },
+    {
+     "name": "TotalStack · Elite Preservation",
+     "kind": "external",
+     "comparable": true,
+     "marches": 4,
+     "troopTypes": 7,
+     "leadershipUsed": 5200,
+     "damage": 9167008,
+     "silver": 8449600,
+     "gold": 2192,
+     "seconds": 2164080,
+     "burned": 33,
+     "perSilver": 1.085,
+     "perHired": 0,
+     "soldiersLost": 33,
+     "monstersLost": 20,
+     "dragonCoins": 4320,
+     "perSoldier": 0,
+     "perMonster": 171047,
+     "perDragonCoin": 2122,
+     "hiredDamage": 0,
+     "soldierDamage": 0,
+     "monsterDamage": 3420948
     },
     {
      "name": "Complete optimization · sweet-spot",
