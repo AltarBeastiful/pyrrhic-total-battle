@@ -352,7 +352,19 @@ async function planStopAgain(
    * 2 449 200). The engine ranks it like every other shape; nothing about the ranking changes.
    */
   const answer = await getCalcClient().resize(
-    { request, within: { troopIds, hired, stop: stop.counts, fills: CAMPAIGN.editFills } },
+    {
+      request,
+      within: {
+        troopIds,
+        hired,
+        stop: stop.counts,
+        fills: CAMPAIGN.editFills,
+        // S-117 change 3: where no fill wins outright, one may still trade at the player's own rates —
+        // the same `CAMPAIGN.putBack` the plan applies to a stop at Generate time. The answer carries
+        // what the trade cost and the pane says it, because a trade is not a win and must not read as one.
+        putBack: CAMPAIGN.putBack,
+      },
+    },
     signal,
   );
   if (answer === null) return null;
@@ -376,6 +388,7 @@ async function planStopAgain(
       noStock: noStock.filter((id) => (answer.counts[id] ?? 0) <= 0),
       inPlan: true,
       fill: answer.fill,
+      ...(answer.traded === undefined ? {} : { traded: answer.traded }),
     },
   };
 }

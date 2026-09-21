@@ -562,7 +562,59 @@ describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
     report.add(
       `**${n(dialTaken)} of ${n(dialSeen)} edits** are answered at a smaller pool. Every one of them ` +
         'deals at least the damage of the full-pool answer for no more silver and no more hired burnt — ' +
-        'the engine takes nothing else.',
+        'the engine takes nothing else without the rates.',
+    );
+
+    /**
+     * **Change 3** (the owner, 2026-09-21: *"do change 3 too"*): with `CAMPAIGN.putBack` passed as well, a
+     * fill that merely **trades** may be taken — but only where nothing wins outright, and only inside his
+     * own rates. Each row below is a press that answered with a win before change 3 and answers with a
+     * priced trade after it.
+     */
+    report.add('');
+    report.add('**And with `CAMPAIGN.putBack` passed too — the trades change 3 allows**:');
+    report.add('');
+    report.add('| army | stop | edit | fill | damage | silver | queue | burn | score |');
+    report.add('|---|---|---|---|---|---|---|---|---|');
+    let tradeTaken = 0;
+    for (const { army, base, plan } of prepared) {
+      if (plan === null) continue;
+      for (const stop of plan.alternatives) {
+        for (const edit of editsOf(base, stop)) {
+          const within = withinFor(base, stop, edit.included);
+          const wins = resizeMarchOver(base, { ...within, fills: EDIT_FILLS });
+          const rated = resizeMarchOver(base, {
+            ...within,
+            fills: EDIT_FILLS,
+            putBack: CAMPAIGN.putBack,
+          });
+          if (wins === null || rated === null || rated.traded === undefined) continue;
+          tradeTaken += 1;
+          const cost = rated.traded;
+          const score =
+            cost.silver / CAMPAIGN.putBack.silverPerDamage +
+            cost.seconds / CAMPAIGN.putBack.timePerDamage +
+            cost.damage;
+          const was = price(base, wins.counts);
+          const now = price(base, rated.counts);
+          report.add(
+            `| ${army.name.split(',')[0]} | ${stop.pick} | ${edit.label} | **${n(rated.fill)} %** | ${signed(
+              cost.damage,
+            )} | −${n(Math.round(cost.silver * 10) / 10)} % (${n(was.silver - now.silver)}) | −${n(
+              Math.round(cost.seconds * 10) / 10,
+            )} % (${n(Math.round(was.seconds - now.seconds))} s) | ${n(now.burn)} vs ${n(was.burn)} | ${n(
+              Math.round(score * 10) / 10,
+            )} |`,
+          );
+        }
+      }
+    }
+    report.add('');
+    report.add(
+      `**${n(tradeTaken)} of ${n(dialSeen)} edits** take a trade — every one of them a press where no ` +
+        'fill wins outright, inside the cap of ' +
+        `${n(CAMPAIGN.putBack.damageLossCap)} % of the damage, recovering faster, and scoring at least 0 ` +
+        "on the owner's own rates. Each says what it cost in the line the pane writes.",
     );
     if (takeRows.length > 0) {
       report.add('');

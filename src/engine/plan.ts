@@ -1760,6 +1760,26 @@ export interface MarchWithin {
    * where the last tenth of the leadership buys nothing and costs 207 600 silver and 41 070 seconds of queue.
    */
   fills?: readonly number[];
+  /**
+   * **The player's own exchange rates between damage, silver and the training queue** (S-117 change 3,
+   * `CAMPAIGN.putBack`). Left out, a smaller pool is taken only where it **dominates** — and that is the
+   * whole of the dial.
+   *
+   * Given, the dial may also take a fill that merely **trades**: the same rule `putBackOn` applies to a
+   * stop at Generate time, said about a leadership fill instead of about a troop type put back.
+   *
+   * ```
+   * score = (silver saved %) / silverPerDamage + (queue saved %) / timePerDamage + (damage change %)
+   * taken when it recovers faster, scores ≥ 0, and loses at most damageLossCap of the damage
+   * ```
+   *
+   * A trade is only ever looked at when **nothing dominates** — a march that is better on every count is
+   * never given up for one that is worse on damage, whatever it saves. And because a trade spends damage
+   * the player did not ask to spend on that press, the answer carries what it cost (`ResizedMarch.traded`)
+   * and the pane says it in the one line a March edit writes. Measured on the four armies of experiment
+   * 124: 25 of 363 fills pass, worth up to **−2.8 % of the damage for −23.4 % of the silver**.
+   */
+  putBack?: PutBackPolicy;
   /** How much room the lowest rung leaves above the biggest hired stack; the plan's own by default. */
   gap?: number;
 }
@@ -1778,6 +1798,17 @@ export interface ResizedMarch extends PlanMarch {
    * pool bar and would otherwise have to explain to themselves.
    */
   fill: number;
+  /**
+   * **What a fill below 100 cost, where it was a trade rather than a win** (S-117 change 3): the change in
+   * damage, silver and queue against the full-pool answer, in percent, damage signed as a change and the
+   * other two as **savings** — the reading `putBackOn` already uses. Absent on every other answer, which is
+   * the ordinary case: a dominating fill gives up nothing, so there is nothing to say about it beyond the
+   * fill itself.
+   *
+   * It exists so the pane can state the trade rather than perform it silently. A win needs no disclosure; a
+   * trade made on the player's behalf does.
+   */
+  traded?: { damage: number; silver: number; seconds: number };
   /** Troop types `MarchWithin.troopIds` asked for that no shape could field; empty when every one is in. */
   unfielded: string[];
 }
@@ -1973,12 +2004,16 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
   if (full === null || within.fills === undefined) return full;
 
   /**
-   * **The dial** (S-117): the same shapes at a smaller pool, taken **only when the answer dominates** the
-   * full-pool one — at least its damage, no more silver, no more hired burnt, and strictly better on one of
-   * the three. A fill that merely trades damage for silver is not taken: nobody can make that trade on the
-   * player's behalf without saying so, and the rates that would say so (`CAMPAIGN.putBack`) are the owner's
-   * to extend here. Among several dominating fills the ordinary `beats` picks, so the biggest pool that
-   * dominates wins a tie and the answer stays as close to the march the player knows as the wins allow.
+   * **The dial** (S-117): the same shapes at a smaller pool, in two rounds that never mix.
+   *
+   * **A win first.** A fill dominates when it deals at least the full pool's damage for no more silver, no
+   * more hired burnt and no more types left unfielded, and is strictly better on one of them. Among several,
+   * the ordinary `beats` picks, so the biggest pool that dominates wins a tie and the answer stays as close
+   * to the march the player knows as the wins allow.
+   *
+   * **A trade only if no win** (change 3, `MarchWithin.putBack`). A fill that gives up damage is looked at
+   * only when nothing dominates, and only against the player's own rates: a march better on every count is
+   * never given up for one that is worse on damage, whatever it saves.
    */
   const dominates = (candidate: ResizedMarch): boolean =>
     candidate.unfielded.length <= full.unfielded.length &&
@@ -1988,13 +2023,57 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
     (candidate.damage > full.damage || candidate.silver < full.silver || candidate.mercLost < full.mercLost);
 
   let best = full;
+  /** The fills that gave up damage, kept aside in case no fill wins outright. */
+  const traded: ResizedMarch[] = [];
   for (const fill of within.fills) {
     if (fill >= 100 || fill <= 0) continue;
     const candidate = bestAt(fill);
-    if (candidate === null || !dominates(candidate)) continue;
-    if (best === full || beats(candidate, best)) best = candidate;
+    if (candidate === null) continue;
+    if (dominates(candidate)) {
+      if (best === full || beats(candidate, best)) best = candidate;
+      continue;
+    }
+    traded.push(candidate);
   }
-  return best;
+  if (best !== full || within.putBack === undefined) return best;
+
+  /**
+   * **The trade, at the player's own rates** (S-117 change 3; the owner, 2026-09-21, having read what the
+   * dial leaves on the table: *"do change 3 too"*).
+   *
+   * The same arithmetic `putBackOn` applies to a stop at Generate time — `CAMPAIGN.putBack`, calibrated on
+   * his own two anchors (*"2 % damage is okay if there's a reduction in time and a bit of silver; 3 % for a
+   * lot of silver and training time"*) — said here about a leadership fill instead of a troop type put back.
+   * A trade has to **recover faster** as well as score, because the queue is what the rates were written
+   * for and a march that sits longer in the barracks is not one of these however much silver it saves; and
+   * it may never burn more of the hired stock or leave a type unfielded that the full pool fielded, which
+   * are not damage and are not on the scale.
+   *
+   * Ties go to the higher score and then to the higher damage, so the cheapest reading of a trade never
+   * wins over an equally-scored kinder one.
+   */
+  const policy = within.putBack;
+  const saved = (before: number, after: number): number =>
+    before > 0 ? ((before - after) / before) * 100 : 0;
+  let taken: { march: ResizedMarch; score: number } | null = null;
+  for (const candidate of traded) {
+    if (candidate.unfielded.length > full.unfielded.length) continue;
+    if (candidate.mercLost > full.mercLost) continue;
+    if (candidate.seconds >= full.seconds) continue;
+    const damage = -saved(full.damage, candidate.damage);
+    if (-damage > policy.damageLossCap) continue;
+    const silver = saved(full.silver, candidate.silver);
+    const seconds = saved(full.seconds, candidate.seconds);
+    const score = silver / policy.silverPerDamage + seconds / policy.timePerDamage + damage;
+    if (score < 0) continue;
+    if (
+      taken !== null &&
+      (score < taken.score || (score === taken.score && candidate.damage <= taken.march.damage))
+    )
+      continue;
+    taken = { march: { ...candidate, traded: { damage, silver, seconds } }, score };
+  }
+  return taken?.march ?? best;
 }
 
 /**

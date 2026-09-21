@@ -148,6 +148,12 @@ export interface MarchResize {
    * have to account for it themselves.
    */
   fill: number;
+  /**
+   * **What a smaller pool cost, where taking it was a trade and not a win** (S-117 change 3,
+   * `ResizedMarch.traded`): damage as a signed change, silver and queue as savings, all in percent.
+   * Absent on every other answer — a dominating fill gives up nothing, so there is nothing to disclose.
+   */
+  traded?: { damage: number; silver: number; seconds: number };
 }
 
 /**

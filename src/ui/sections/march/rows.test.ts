@@ -80,3 +80,22 @@ test('a march under the leadership pool says so, and says why the gap is a win',
 test('the ordinary edit says nothing about leadership: a full pool is not news (rule 15)', () => {
   expect(resizeWords(note({ tookOut: [idOf(1)] }), UNITS)).not.toContain('of your leadership');
 });
+
+test('a trade says what it cost before what it bought: the cost is the part nobody chose', () => {
+  // S-117 change 3. A win and a trade both leave the leadership bar short of full, and they must not read
+  // alike: the win explains a gap, the trade states a price paid at the player's own rates.
+  const words = resizeWords(
+    note({ tookOut: [idOf(1)], fill: 90, traded: { damage: -2.4, silver: 10, seconds: 10 } }),
+    UNITS,
+  );
+  expect(words).toContain('It fields 90 % of your leadership, at your own rates:');
+  expect(words).toContain('2.4 % less damage for 10.0 % less silver and 10.0 % less training');
+  // And it never claims the gap was free, which is the other reading's whole sentence.
+  expect(words).not.toContain('bought no damage');
+});
+
+test('a win at a smaller pool still reads as a win, not as a price', () => {
+  const words = resizeWords(note({ tookOut: [idOf(1)], fill: 96 }), UNITS);
+  expect(words).toContain('the rest bought no damage and cost silver');
+  expect(words).not.toContain('at your own rates');
+});

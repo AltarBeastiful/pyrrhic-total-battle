@@ -145,14 +145,29 @@ export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): str
     resize.noStock.length > 0
       ? ` Your ${names(resize.noStock)} stock cannot last every march of this stop, so it could not be fielded.`
       : '';
-  // **The one case a march does not fill the leadership pool** (S-117). The engine only ever sizes under
-  // the pool when doing so answers with at least the damage for no more silver and no more hired burnt, so
-  // this says the win rather than asking the player to weigh anything: what it explains is the gap they can
-  // see on the leadership bar. Nothing is drawn on the ordinary edit, where the fill is 100 (rule 15).
+  /**
+   * **The one case a march does not fill the leadership pool** (S-117), which is two cases and they must not
+   * read alike.
+   *
+   * A **win** — the fill deals at least the full pool's damage for no more silver and no more hired burnt —
+   * asks the player to weigh nothing, so the line simply explains the gap they can see on the leadership
+   * bar. A **trade** (change 3) spends damage they did not ask to spend on that press, at their own rates
+   * (`CAMPAIGN.putBack`), so it is stated in full: what it cost and what it bought, in that order, because
+   * the cost is the part they did not choose. Nothing is drawn on the ordinary edit, where the fill is 100
+   * (rule 15).
+   */
+  const percent = (value: number): string => `${(Math.round(value * 10) / 10).toFixed(1)} %`;
+  const traded = resize.traded;
   const dialled =
-    resize.fill > 0 && resize.fill < 100
-      ? ` It fields ${String(resize.fill)} % of your leadership: the rest bought no damage and cost silver.`
-      : '';
+    resize.fill <= 0 || resize.fill >= 100
+      ? ''
+      : traded === undefined
+        ? ` It fields ${String(resize.fill)} % of your leadership: the rest bought no damage and cost silver.`
+        : ` It fields ${String(resize.fill)} % of your leadership, at your own rates: ${percent(
+            -traded.damage,
+          )} less damage for ${percent(traded.silver)} less silver and ${percent(
+            traded.seconds,
+          )} less training.`;
   return head + rule + missed + spent + dialled;
 }
 

@@ -662,7 +662,17 @@ Experiment 119 turned the dial on stops as generated: 0 dominations, which retir
 | the 2026-09-17 export | steady-max | take out spearman-2 | 4,987,569 · 2,655,800 · 15 | 5,097,182 · 2,549,200 · 15 | **96 %** | 102.2 % | 96 % | 95.9 % | 15 vs 15 |
 | 0024’s account | sweet-spot | take out spearman-2 | 5,143,823 · 2,498,200 · 3 | 5,255,703 · 2,257,200 · 3 | **90 %** | 102.2 % | 90.4 % | 90.7 % | 3 vs 3 |
 
-**5 of 33 edits** are answered at a smaller pool. Every one of them deals at least the damage of the full-pool answer for no more silver and no more hired burnt — the engine takes nothing else.
+**5 of 33 edits** are answered at a smaller pool. Every one of them deals at least the damage of the full-pool answer for no more silver and no more hired burnt — the engine takes nothing else without the rates.
+
+**And with `CAMPAIGN.putBack` passed too — the trades change 3 allows**:
+
+| army | stop | edit | fill | damage | silver | queue | burn | score |
+|---|---|---|---|---|---|---|---|---|
+| the 2026-09-17 export | all-in | take out archer-2 | **90 %** | -2.6 % | −10 % (403,200) | −10 % (189,840 s) | 27 vs 27 | 0.4 |
+| the 2026-09-17 export | all-in | take out spearman-2 | **90 %** | -2.4 % | −10 % (396,800) | −10 % (182,160 s) | 27 vs 27 | 0.6 |
+| 0024’s account | steady-max | put back spearman-2 | **98 %** | -0.4 % | −1.8 % (45,800) | −1.6 % (12,345 s) | 3 vs 3 | 0.1 |
+
+**3 of 33 edits** take a trade — every one of them a press where no fill wins outright, inside the cap of 3 % of the damage, recovering faster, and scoring at least 0 on the owner's own rates. Each says what it cost in the line the pane writes.
 
 | army | stop | edit | fill | damage | — | silver saved | queue saved | score |
 |---|---|---|---|---|---|---|---|---|
@@ -757,10 +767,10 @@ Rebuilt from `sizedShape`’s own recipe — `sizeStacks` under the method, then
 
 | army | troop types | hired types | no dial | with `CAMPAIGN.editFills` | what the dial adds |
 |---|---|---|---|---|---|
-| a first-run army, 12 000 leadership (hires nothing) | 9 | 0 | 0.18 ms | 1.01 ms | +0.83 ms |
-| the live account, 20 000 leadership · 83 EMH | 6 | 1 | 0.19 ms | 1.13 ms | +0.95 ms |
-| the 2026-09-17 export, its own setup (four hired types) | 6 | 4 | 0.24 ms | 1.35 ms | +1.11 ms |
-| 0024’s account, 5 600 / 2 180 / 800 dominance · 27 EMH | 4 | 5 | 0.28 ms | 1.46 ms | +1.18 ms |
+| a first-run army, 12 000 leadership (hires nothing) | 9 | 0 | 0.22 ms | 1.14 ms | +0.92 ms |
+| the live account, 20 000 leadership · 83 EMH | 6 | 1 | 0.23 ms | 1.22 ms | +0.99 ms |
+| the 2026-09-17 export, its own setup (four hired types) | 6 | 4 | 0.25 ms | 1.42 ms | +1.16 ms |
+| 0024’s account, 5 600 / 2 180 / 800 dominance · 27 EMH | 4 | 5 | 0.3 ms | 1.67 ms | +1.37 ms |
 
 ## E. What the edit is allowed to spend, against what the stop spends
 

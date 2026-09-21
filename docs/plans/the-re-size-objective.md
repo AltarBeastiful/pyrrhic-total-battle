@@ -12,9 +12,9 @@ hired types), and **the dominance account of investigation 0024** (5 600 / 2 180
 (S-94/S-108), silver and queue are `recoveryCosts(...).plan`, burn is `hiredLost` — the three figures the bar
 prints. Everything below is from that file.
 
-**Built 2026-09-21**, in three commits — `caae039` (step 1), `35c440f` (steps 2 and 3) and this one.
-Change 3 (the trades) is deliberately **not** built and is the owner's to ask for; §4 says why. What the
-build measured against the plan is in §6.
+**Built 2026-09-21**, in four commits — `caae039` (change 1), `35c440f` (change 2), `8871829` (driven and
+closed) and one more for **change 3**, which the owner asked for on reading what a wins-only dial leaves on
+the table: *"do change 3 too."* What the build measured against the plan is in §6, change 3 in §7.
 
 ## 0. What a press runs today
 
@@ -261,3 +261,29 @@ its sweet spot at **5 698 946** with EMH 17 · ED 19 · WE 44 · SG 16 · BB 21,
 to the unit; taking Spearman II out answers **5 255 703 for 2 257 200 silver** — the predicted dialled
 march — the pool bar reads **5 040 of 5 600 leadership**, the pane writes *"It fields 90 % of your
 leadership: the rest bought no damage and cost silver."*, and the console is clean.
+
+## 7. Change 3, as built
+
+`MarchWithin.putBack` carries the rates. Where **nothing wins outright**, the dial may take a fill that
+merely trades, under exactly the arithmetic `putBackOn` applies to a stop at Generate time: it recovers
+faster, scores `silver % / 5 + queue % / 10 + damage %` at or above zero, loses at most 3 % of the damage,
+and burns no more of the hired stock. A win is never given up for a trade.
+
+**It discloses.** `ResizedMarch.traded` carries what the fill cost and the pane states it — *"It fields 90 %
+of your leadership, at your own rates: 2.2 % less damage for 8.9 % less silver and 8.3 % less training."* —
+against the win's own sentence, which says the gap was free. That distinction is the reason a trade made on
+the player's behalf is allowed at all, so both readings have a test.
+
+**What it adds**, on top of the 9 wins: **6 more of the 102** benchmark edits answer at a smaller pool,
+worst **-2.7 % damage for 10 % of the silver and 10 % of the queue**. On the four armies of experiment 124
+it is 3 more of 33. Fifteen of 102 presses now leave leadership unspent - nine because it buys nothing, six
+because the player's own rates say the silver and the queue are worth more than the damage.
+
+**One contract was relaxed and one was added.** The dial test now asserts that with **no** policy passed a
+taken fill never gives up damage and never carries `traded` - the wins-only promise, kept exactly - and a
+second test asserts that with the policy every trade is inside the rates, never replaces a win, never burns
+more hired, and discloses figures a reader can re-derive from the two marches.
+
+**Driven in the real browser** on 0024's account at 4 000 leadership, whose sweet spot trades on its first
+press: taking Rider III out answers at **3 600 of 4 000 leadership** with the sentence above, and the
+console is clean.

@@ -559,6 +559,9 @@ describe('S-117 · a smaller leadership pool is taken only when it dominates', (
           }
           dialled += 1;
           const where = `${scenario.label} · ${stop.pick} · without ${gone} at ${String(dial.fill)} %`;
+          // With no policy passed, a taken fill is a win and nothing else: it never gives up damage, so it
+          // never has a trade to disclose.
+          expect(dial.traded, `${where}: a trade was taken without the rates being given`).toBeUndefined();
           expect(dial.damage, `${where}: less damage than the full pool`).toBeGreaterThanOrEqual(flat.damage);
           expect(dial.silver, `${where}: more silver than the full pool`).toBeLessThanOrEqual(flat.silver);
           expect(dial.mercLost, `${where}: more hired burnt than the full pool`).toBeLessThanOrEqual(
@@ -577,5 +580,99 @@ describe('S-117 · a smaller leadership pool is taken only when it dominates', (
     // Reported rather than asserted: whether a benchmark army has a dominating fill at all is a fact about
     // those armies, and the contract above has to hold whether it is 0 or every one of them.
     expect(dialled).toBeLessThanOrEqual(edits);
+  }, 180_000);
+});
+
+/**
+ * **S-117 change 3 — a trade is taken only inside the player's own rates, and it says what it cost.**
+ *
+ * The owner, 2026-09-21, having read what a dominations-only dial leaves on the table: *"do change 3 too"*.
+ * `MarchWithin.putBack` lets a fill that gives up damage be taken as well — the same `CAMPAIGN.putBack`
+ * arithmetic `putBackOn` applies to a stop at Generate time, said about a leadership fill.
+ *
+ * Four promises, over every take-out of every stop of every benchmark scenario:
+ *
+ *  1. a trade is never taken when a **win** exists — the answer with the rates is at least as good on damage
+ *     as the answer without them whenever the latter dialled at all;
+ *  2. every trade is **inside the rates**: it recovers faster, scores at least zero, and loses no more than
+ *     `damageLossCap` of the damage;
+ *  3. it never burns more of the hired stock and never leaves a type unfielded that the full pool fielded —
+ *     neither of those is damage, and neither is on the scale the rates weigh;
+ *  4. it **discloses**: `traded` is present exactly when the answer gave up damage, and its three figures
+ *     are the ones a reader can check against the two marches.
+ */
+describe('S-117 · a trade is taken at the owner’s rates, and never in place of a win', () => {
+  test('every trade recovers faster, scores, stays inside the cap and says what it cost', () => {
+    let trades = 0;
+    let edits = 0;
+    for (const scenario of criteriaScenarios()) {
+      const plan = planFor(scenario.request);
+      if (plan === null) continue;
+      for (const stop of plan.alternatives) {
+        const troops = troopIdsOf(scenario.request);
+        const fielded = troops.filter((id) => (stop.counts[id] ?? 0) > 0);
+        if (fielded.length <= 2) continue;
+        const caps = capsFor(scenario.request, stop.counts, planRepeats(stop));
+        for (const gone of [fielded[0], fielded[fielded.length - 1]]) {
+          if (gone === undefined) continue;
+          const wanted = fielded.filter((id) => id !== gone);
+          const within = { troopIds: wanted, hired: caps, stop: stop.counts };
+          const full = resizeMarchOver(scenario.request, within);
+          const wins = resizeMarchOver(scenario.request, { ...within, fills: CAMPAIGN.editFills });
+          const rated = resizeMarchOver(scenario.request, {
+            ...within,
+            fills: CAMPAIGN.editFills,
+            putBack: CAMPAIGN.putBack,
+          });
+          if (full === null || wins === null || rated === null) continue;
+          edits += 1;
+          holds(scenario.request, caps, wanted, rated);
+          const where = `${scenario.label} · ${stop.pick} · without ${gone}`;
+
+          // 1 — a win is never given up for a trade.
+          if (wins.fill < 100) {
+            expect(rated.traded, `${where}: a trade was taken where a fill wins outright`).toBeUndefined();
+            expect(rated.damage).toBe(wins.damage);
+            expect(rated.silver).toBe(wins.silver);
+            continue;
+          }
+
+          // 4 — disclosure, both ways round: a trade says so, and an answer that gave up nothing does not.
+          if (rated.fill >= 100 || rated.damage >= full.damage) {
+            expect(rated.traded, `${where}: nothing was given up, so nothing is disclosed`).toBeUndefined();
+            continue;
+          }
+          trades += 1;
+          const cost = rated.traded;
+          expect(cost, `${where}: damage was given up without saying so`).toBeDefined();
+          if (cost === undefined) continue;
+
+          // 2 — inside the rates, re-derived here from the two marches rather than read back.
+          const saved = (before: number, after: number): number =>
+            before > 0 ? ((before - after) / before) * 100 : 0;
+          const damage = -saved(full.damage, rated.damage);
+          const silver = saved(full.silver, rated.silver);
+          const seconds = saved(full.seconds, rated.seconds);
+          expect(cost.damage).toBeCloseTo(damage, 6);
+          expect(cost.silver).toBeCloseTo(silver, 6);
+          expect(cost.seconds).toBeCloseTo(seconds, 6);
+          expect(rated.seconds, `${where}: a trade that recovers no faster`).toBeLessThan(full.seconds);
+          expect(-damage, `${where}: past the damage cap`).toBeLessThanOrEqual(
+            CAMPAIGN.putBack.damageLossCap,
+          );
+          const score =
+            silver / CAMPAIGN.putBack.silverPerDamage + seconds / CAMPAIGN.putBack.timePerDamage + damage;
+          expect(score, `${where}: taken on a negative score`).toBeGreaterThanOrEqual(0);
+
+          // 3 — and never with the rare stock, which the rates do not weigh.
+          expect(rated.mercLost, `${where}: a trade that burns more hired`).toBeLessThanOrEqual(
+            full.mercLost,
+          );
+          expect(rated.unfielded.length).toBeLessThanOrEqual(full.unfielded.length);
+        }
+      }
+    }
+    expect(edits).toBeGreaterThan(0);
+    expect(trades).toBeLessThanOrEqual(edits);
   }, 180_000);
 });
