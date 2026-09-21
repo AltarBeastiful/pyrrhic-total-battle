@@ -123,6 +123,48 @@
   border-radius: var(--mantine-radius-xs);
 }
 
+/* The two ends of the stepper (owner, 2026-09-21: a glance cannot tell the movable arrow from the
+   fixed one). Stock `ActionIcon` spent the whole difference on ink — 13.0:1 against 1.75:1 in the
+   light scheme, 17.6:1 against 5.3:1 in the dark one — and put its *only* box on the dead end, so
+   in the dark scheme the arrow that cannot be pressed was the one that looked like a button. The
+   box moves to the live end and the dead end changes shape (`TierSelect.tsx`).
+
+   A key: the raised ground and the hairline the account pill and an unchecked chip already wear, at
+   the border width Mantine's subtle variant already reserves, so nothing reflows. */
+.stepperKey:not(:disabled) {
+  border: 1px solid var(--pyr-well-border);
+  background: var(--pyr-raised);
+}
+
+/* Under a pointer, and only under a pointer — the same guard the chip carries (`theme.module.css`):
+   a phone keeps `:hover` on the last thing a thumb landed on. The declaration above beats Mantine's
+   own hover rule on order, so the key states its own: one step further from the well, which is
+   darker on a light page and lighter on a dark one without naming either. */
+@media (hover: hover) {
+  .stepper .stepperKey:not(:disabled):hover {
+    background: color-mix(in srgb, var(--pyr-raised) 92%, var(--mantine-color-text));
+  }
+}
+
+/* One invariant, and the whole fix rests on it: **a box means you can press it**. Mantine paints
+   `--mantine-color-disabled` on every disabled control, and on our dark well that is a *lighter*
+   tile than the well — so a locked stepper looked like two live keys and an end looked like the
+   only button in the row. Nothing that cannot be pressed keeps a ground. */
+.stepper .stepperKey:disabled,
+.stepper .stepperEnd:disabled {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* An end of the range keeps its chevron and is greyed (owner, 2026-09-21) — the second signal, read
+   only once the missing box has already said it. Six tenths of the muted ink over the well puts it
+   at 2.59:1 light and 3.45:1 dark, about a fifth of the live arrow's 13.0 / 17.6 in either scheme:
+   plainly inert, and still plainly there, which `--mantine-color-disabled-color` was not (1.75:1 on
+   the light well). Disabled controls are outside 1.4.3, so this is a design floor, not a WCAG one. */
+.stepper .stepperEnd:disabled {
+  color: color-mix(in srgb, var(--mantine-color-dimmed) 60%, transparent);
+}
+
 /* ---------------------------------------------------------------------------------------------
    THE FIGURE (the owner's review of 2026-09-13: "the percentages could just be numbers with
    minimal text"). Three declarations for the shape every figure on the page now takes: the label

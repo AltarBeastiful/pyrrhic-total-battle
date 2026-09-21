@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { TierSelect } from './TierSelect';
+import classes from './kit.module.css';
 import { clampTier } from './tiers';
 import { renderWithTheme } from './testRender';
 
@@ -81,6 +82,21 @@ test('the value is written in its tier\'s ink, and the "—" position in the mut
   expect(stepper('Guardsmen from').style.color).toBe('var(--mantine-color-tier3-filled)');
   expect(stepper('Specialists from').style.color).toBe('var(--mantine-color-tier3-filled)');
   expect(stepper('Monsters to').style.color).toBe('var(--mantine-color-dimmed)');
+});
+
+test('the end a range stops at is faded and boxless, and the one that can still step is a key', () => {
+  renderWithTheme(
+    // G1 is the floor of the group, so "down" is the end; "up" still has G2..G5 to walk.
+    <TierSelect label="Guardsmen from" prefix="G" tiers={TIERS} value={1} onChange={() => {}} />,
+  );
+  const down = screen.getByRole('button', { name: 'Guardsmen from: one tier down' });
+  const up = screen.getByRole('button', { name: 'Guardsmen from: one tier up' });
+  expect(down.classList.contains(String(classes.stepperEnd))).toBe(true);
+  expect(up.classList.contains(String(classes.stepperKey))).toBe(true);
+  // Both ends keep the arrow (owner, 2026-09-21): the ground the key wears is what a glance reads
+  // first, so the grey is never the only signal (design rule 24).
+  expect(down.querySelector('.lucide-chevron-left')).not.toBe(null);
+  expect(up.querySelector('.lucide-chevron-right')).not.toBe(null);
 });
 
 test('clampTier holds the range from both ends', () => {

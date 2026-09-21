@@ -13,6 +13,18 @@
  * so a keyboard gets the arrow keys on the value itself *and* two real buttons, and no widget ends
  * up nested inside another (investigation 0007's own lesson, and axe's `nested-interactive`).
  *
+ * **A live end is a key; a dead end is the same arrow, greyed** (owner, 2026-09-21: *"it's actually
+ * hard to distinguish at first glance which arrow is movable and which is not"*, then *"can't we
+ * still use arrows … and grey them out a bit"*). Stock `ActionIcon`s left the whole difference to a
+ * shade of grey, which is a signal you can only read by holding the two arrows side by side — and
+ * at rest the dead ones sit at opposite ends of two different wells, with nothing beside them to
+ * compare against. Worse, Mantine's `--mantine-color-disabled` is `dark-6`, 1.42:1 lighter than our
+ * dark well, so in the dark scheme the arrow that *cannot* be pressed was the only one wearing a
+ * box. Both ends keep their chevron; what carries the state is **the box, and only then the grey**
+ * (design rule 24 — the grey is never on its own): an end that can still be stepped wears the
+ * raised ground and hairline every pressable thing on the page wears, and an end that cannot wears
+ * no ground at all and is faded to 2.6:1 light / 3.5:1 dark against the live arrow's 13.0 / 17.6.
+ *
  * **The value is written in its tier's ink** (owner, 2026-09-18: *"G1-G2 S1 … should have colors …
  * the colors are the same for all troops, only the mnemonic Gx Sx should be colored"*), as
  * TotalStack's stepper does (investigation 0021): one colour a tier whatever the group, on the text
@@ -47,6 +59,43 @@ export interface TierSelectProps {
   max?: number | undefined;
   disabled?: boolean;
   w?: number | string;
+}
+
+const CHEVRON = { down: ChevronLeft, up: ChevronRight } as const;
+
+/**
+ * One end of the well. `atLimit` is the range ending here — the tier is the lowest the other end
+ * still allows, or the highest the group has — and it is the whole of the difference between a key
+ * and a faded arrow. The button is disabled either way, so a screen reader and a keyboard read the
+ * end exactly as they did before; what changed is what a glance gets.
+ */
+function StepperEnd({
+  direction,
+  label,
+  atLimit,
+  disabled,
+  onPress,
+}: {
+  direction: 'down' | 'up';
+  label: string;
+  atLimit: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const Chevron = CHEVRON[direction];
+  return (
+    <ActionIcon
+      variant="subtle"
+      color="gray"
+      size={22}
+      disabled={disabled || atLimit}
+      className={atLimit ? classes.stepperEnd : classes.stepperKey}
+      aria-label={`${label}: one tier ${direction}`}
+      onClick={onPress}
+    >
+      <Chevron size={13} aria-hidden />
+    </ActionIcon>
+  );
 }
 
 export function TierSelect({
@@ -86,18 +135,15 @@ export function TierSelect({
 
   return (
     <Group gap={0} wrap="nowrap" w={w} className={classes.stepper}>
-      <ActionIcon
-        variant="subtle"
-        color="gray"
-        size={22}
-        disabled={disabled || at <= 0}
-        aria-label={`${label}: one tier down`}
-        onClick={() => {
+      <StepperEnd
+        direction="down"
+        label={label}
+        atLimit={at <= 0}
+        disabled={disabled}
+        onPress={() => {
           step(-1);
         }}
-      >
-        <ChevronLeft size={13} aria-hidden />
-      </ActionIcon>
+      />
       <Text
         component="div"
         role="spinbutton"
@@ -124,18 +170,15 @@ export function TierSelect({
       >
         {text}
       </Text>
-      <ActionIcon
-        variant="subtle"
-        color="gray"
-        size={22}
-        disabled={disabled || at === steps.length - 1}
-        aria-label={`${label}: one tier up`}
-        onClick={() => {
+      <StepperEnd
+        direction="up"
+        label={label}
+        atLimit={at === steps.length - 1}
+        disabled={disabled}
+        onPress={() => {
           step(1);
         }}
-      >
-        <ChevronRight size={13} aria-hidden />
-      </ActionIcon>
+      />
     </Group>
   );
 }
