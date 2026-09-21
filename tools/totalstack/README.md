@@ -56,7 +56,41 @@ priority-search calls**. The owner is opening a new account (2026-09-22) for S-1
 5. Add the new path to `DATASETS` in `tests/engine/totalstack-rows.ts`, **last**, so no scenario an earlier
    run answered changes its row by this one's arrival (the rule S-101 set).
 
-### The `optimize` half runs in the page, and why (2026-09-22)
+### The `optimize` half: the cookie, or the page (2026-09-22)
+
+`--send` gets **403 `proRequired`** on every `/api/calculations/optimize` call even with Pro active and the
+browser's own `x-session-id`. **What carries the entitlement is a cookie, proven in the page** — same body,
+same session id, same headers, only the flag differing:
+
+| `credentials` | status |
+| ------------- | ------ |
+| `'include'`   | 200    |
+| `'omit'`      | 403    |
+
+and `document.cookie` is empty, so it is an **HttpOnly** cookie: invisible to JS, stripped from Chrome's
+sanitised HAR export, attached by the browser by itself. `x-session-id` identifies the _calculation_; it does
+not entitle the caller. (Ruled out first: Pro really is active — his HAR of a 200 proves it — and timing,
+the run having been repeated after that 200 and still refused. His exact body was replayed from Node bare,
+with origin and referer, and with the full browser header set; all three 403.)
+
+**So there are two ways to run it, and direct requests are one of them.**
+
+**(a) From the terminal, with the cookie.** Set `TOTALSTACK_COOKIE` beside the session id and both routes
+answer:
+
+```sh
+TOTALSTACK_SESSION_ID=<uuid> TOTALSTACK_COOKIE='<the Cookie header>' \
+  node tools/totalstack/replay.mjs --send --out=docs/research/fixtures/totalstack-<date>-replay.json
+```
+
+Read it from DevTools → Network → any `/api/` request → Request Headers → `Cookie`. The script never prints,
+logs or stores it — it goes into the request and nowhere else, exactly as the session id does, and the
+fixture holds `url` and `body` per base and **no headers at all**. _Wired 2026-09-22 and not yet exercised:
+nobody has run it with a cookie set._
+
+**(b) From the page, with no credential leaving the browser.**
+
+### The console snippet
 
 `--send` gets **403 `proRequired`** on every `/api/calculations/optimize` call even with Pro active and the
 browser's own `x-session-id`. It is not the session, the body or the headers: the owner's HAR of a **200**

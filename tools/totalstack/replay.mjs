@@ -63,6 +63,26 @@ const DEFAULT_ORIGIN = 'https://totalstack.ca';
 const DEFAULT_DELAY_MS = 400;
 /** The one secret the script takes, and only from the environment. Never printed. */
 const SESSION_ENV = 'TOTALSTACK_SESSION_ID';
+/**
+ * **The cookie env var — what makes `optimize` answer from the terminal** (S-119, 2026-09-22).
+ *
+ * `x-session-id` identifies the *calculation*; it does not entitle the caller. **Proven in the page**, same
+ * body, same session id, same headers, only the flag differing: `credentials: 'include'` → **200**,
+ * `credentials: 'omit'` → **403 proRequired**. So the entitlement is a cookie — and `document.cookie` is
+ * empty, so an **HttpOnly** one, invisible to JS and stripped from Chrome's sanitised HAR export. That is
+ * why every terminal attempt was refused while the identical body ran fine in the browser.
+ *
+ * Set it and the whole capture, both routes, runs from here:
+ *
+ *     TOTALSTACK_SESSION_ID=<uuid> TOTALSTACK_COOKIE='<the Cookie header>' node … --send
+ *
+ * Read it from DevTools → Network → any `/api/` request → Request Headers → `Cookie`, or from
+ * Application → Cookies. **The script never prints, logs or stores it**: it goes into the request and
+ * nowhere else, exactly as the session id does, and the fixture holds `url` and `body` per base and no
+ * headers at all. Without it the Generate route still answers and `--emit` writes the console snippet for
+ * the rest.
+ */
+const COOKIE_ENV = 'TOTALSTACK_COOKIE';
 
 // ---- the command line ------------------------------------------------------------------------------------
 const argv = process.argv.slice(2);
@@ -515,6 +535,9 @@ function headersFor(stored) {
     origin: DEFAULT_ORIGIN,
     referer: `${DEFAULT_ORIGIN}/`,
     'x-session-id': process.env[SESSION_ENV] ?? '',
+    // The entitlement, when the caller has supplied one (see `COOKIE_ENV`). Absent, `optimize` answers 403
+    // and the Generate route is unaffected.
+    ...(process.env[COOKIE_ENV] ? { cookie: process.env[COOKIE_ENV] } : {}),
     // A fresh uuid a request: the page mints one per calculation and the server keys on it.
     'x-calculation-request-id': randomUUID(),
   };
