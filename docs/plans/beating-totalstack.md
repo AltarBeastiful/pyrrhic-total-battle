@@ -1,282 +1,278 @@
-# Beating TotalStack everywhere — implementation plan (S-119)
+# Beating TotalStack on every marker — implementation plan (S-119)
 
-**Owner, 2026-09-21**: *"write a plan to beat total stack everywhere, adding missing cases if necessary …
-this should also include fixing the no leadership at all on some cases."*
+**Owner, 2026-09-21**: *"write a plan to beat total stack everywhere … this should also include fixing the
+no leadership at all on some cases."* → *"beat means using constrained resources to produce better damage
+with a fixed silver/merc/gold/dragon coins set. So we can derive its being more efficient in the markers
+related. verify we're using the proper heuristics or change them."* → **2026-09-22**: *"write the full plan
+to improve our algorithm against all markers with totalstack as a benchmark minimum goal."*
 
-Everything below is measured, from the benchmark run committed in 2eaf10b
-(`tools/theorycraft/out/benchmark-latest.{md,json}`, seventeen armies, 227 rows of our own algorithms since
-S-118). No figure here is recalled; each is in that payload.
-
----
-
-## 0. What "beat" means — settled
-
-**Owner, 2026-09-21**: *"beat means using constrained resources to produce better damage with a fixed
-silver/merc/gold/dragon coins set. So we can derive its being more efficient in the markers related. verify
-we're using the proper heuristics or change them."*
-
-So the test is **dominance at matched spend**, not a ratio:
-
-> Take any march TotalStack answers with. Read its four costs — silver, hired chunks burned, revive gold,
-> dragon coins. **We beat it when the bar offers a stop that spends no more of any of the four and deals
-> more damage.**
-
-Two consequences, and they settle the other two questions he was asked.
-
-- **The four ratios follow for free.** If our damage is higher and none of the four costs is, then
-  `damage / silver`, `damage / soldier`, `damage / monster` and `damage / dragon coin` are each at least
-  theirs by construction. His *"all four ≥ 1.0 everywhere"* is therefore not a second target but the
-  **derived marker** of this one — which is exactly what *"we can derive its being more efficient in the
-  markers related"* says. The ratios stay in the benchmark as the readable symptom; the matched-spend test
-  becomes what the work is steered by.
-- **Per-reading best stop stays** (his answer): each marker may read off whichever stop is best for it,
-  because under a dominance test the stop that dominates dominates on all of them at once.
-
-**Where the old goal was too kind.** The S-101 goal compared ratios against `TotalStack · Total
-Optimization` alone. A ratio can be won by *spending more and getting proportionally more* — and §1 shows
-three armies where we "win" on ratio and have **no stop cheap enough to enter the comparison at all**.
-
-**The mandate on heuristics.** *"verify we're using the proper heuristics or change them"* — §3 is that
-audit, and it is the part of this plan most likely to change engine code.
+Every figure below is measured, from the benchmark committed in `847ce14`
+(`tools/theorycraft/out/benchmark-latest.{md,json}` — seventeen armies, 227 rows of our own algorithms since
+S-118, all seventeen carrying captured TotalStack rows since the capture of 2026-09-22). Nothing is recalled.
 
 ---
 
-## 1. Where we stand under that definition
+## 0. The objective, and what "minimum" means
 
-For each army: TotalStack's **hardest comparable captured row**, and the best stop on our bar that spends
-no more than **5 %** over their silver, burn, gold and dragon coins (§7).
+**TotalStack is the floor, not the target.** The target is his own standing objective — *"best damage over a
+campaign using my constrained resources"*. TotalStack is how we know we are not fooling ourselves: an army
+where a public calculator does better is an army where our answer is provably improvable.
 
-**Re-measured 2026-09-22, on all seventeen armies** — the capture of that morning gave `Aydae alone` and
-`his usual setup` their first captured answers, so nothing on the table is unscored any more.
+**The test is dominance at matched spend.**
 
-| army | verdict at matched spend |
-|---|---|
-| **2026-09-17 export, 7 000** | **✓ +55.5 %** |
-| **his usual setup** (the camp he plays) | **✓ +27.9 %** |
-| **his TotalStack profile** | **✓ +20.7 %** |
-| **camp of 2026-09-19, dump** | **✓ +17.7 %** |
-| **live account, 20 000** | **✓ +1.8 %** |
-| first-run, Bear V ×1 | −0.2 % |
-| first-run, Bear V ×2 | −0.2 % |
-| first-run, hunters ×83 (e2e seed) | −1.3 % |
-| the 4 000 case of 2026-09-15 | −2.8 % |
-| first-run, Bear V ×10 | −7.0 % |
-| Aydae alone, 4 975 | −9.2 % |
-| first-run, Bear V ×3 | **−12.5 %** |
-| live account, evening | **−13.9 %** |
-| live camp of 2026-09-18 | **−77.9 %** |
-| monster camp, 900 dominance | **no stop fits** |
-| 2026-09-17 export, 12 000 | **no stop fits** |
-| camp of 2026-09-19, message | **no stop fits** |
+> Take any march TotalStack answers with. Read its costs. **We beat it when the bar offers a stop that
+> spends no more of any of them — within 5 % — and deals more damage.**
 
-**We beat TotalStack on 5 of 17.** We are short on 9, and on 3 no stop we offer is cheap enough to enter the
-comparison at all.
+Every marker ratio follows by construction: more damage at no more cost makes `damage / silver`,
+`damage / soldier`, `damage / monster` and `damage / dragon coin` each at least theirs. His *"all four ≥ 1.0
+everywhere"* is the **derived reading**, not a second target. The per-reading best stop stays, because a stop
+that dominates dominates on all of them at once.
 
-**The camp he actually plays is one of the five**, which the 2026-09-22 capture is what established — it had
-been scored against nothing until then.
+**5 % is the tolerance he set** (*"ok to exceed within reasonable bounds"*), and it is not load-bearing:
+swept over the payload the verdict moves 3 → 4 → 4 → 5 → 5 beats at 0/5/10/20/50 %. **Loosening it does not
+rescue us**, which is how we know every gap below is real rather than an artefact of a strict gate.
 
-This is a much harsher reading than the ratio table the benchmark prints (where we lead on 10 of 17), and
-the difference is the whole point of his definition: **a ratio win that spends more is not a win.**
+---
 
-### The ratio table, for reference
+## 1. The markers, and where we stand on each
 
-Kept because it is what the benchmark pins and what the goal line prints. `✗` is below 1.0.
+Six resources decide a march. Each row is **our best stop against their best captured row on that marker
+alone**, over the seventeen armies.
 
-| army | a silver | a soldier | a monster | a coin |
+| marker | direction | we win | tie | **we lose** |
 |---|---|---|---|---|
-| Bear V ×1 / ×2 / ×3 | 0.999 ✗ | — | 1.000 | 0.998 ✗ |
-| Bear V ×10 | 0.999 ✗ | — | 1.153 | 1.005 |
-| e2e seed | 0.993 ✗ | 1.041 | — | 0.998 ✗ |
-| monster camp | 1.226 | 1.525 | 2.375 | 1.512 |
-| 4 000 case | 1.017 | 1.013 | — | 1.017 |
-| 7 000 / 12 000 export | 2.070 / 1.717 | 1.306 / 1.073 | — | 2.146 / 1.697 |
-| live account 20 000 | 1.033 | 1.043 | — | 1.018 |
-| live account, evening | 0.924 ✗ | 1.081 | — | 0.951 ✗ |
-| live camp 2026-09-18 | 0.259 ✗ | 1.945 | — | 0.311 ✗ |
-| dump / message camps | 1.603 / 1.297 | — | — | 2.155 / 1.759 |
-| his TotalStack profile | 1.308 | — | 0.911 ✗ | 1.240 |
+| damage | max | 9 | 0 | **8** |
+| silver | min | 14 | 0 | 3 |
+| hired burned | min | 6 | 4 | **7** |
+| revive gold | min | 7 | 3 | **7** |
+| **dragon coins** | min | **0** | 14 | **3** |
+| training queue | min | 13 | 0 | 4 |
+
+**Dragon coins is the marker we never win.** The fourteen ties are armies that spend no coin; on **all three
+that do**, we spend more than TotalStack. That is the dominance pool, and it shares a root with G5.
+
+**Silver and queue are our strengths** (14 and 13 wins) — the plan is built to ration. **Damage, burn and
+gold are roughly even**, which is the honest summary: we are not behind across the board, we are behind in
+specific, diagnosable places.
+
+Read these as *marker floors*, not as the goal: winning a marker by fielding a tiny march is not winning.
+§2 is the composite that cannot be gamed that way.
 
 ---
 
-## 2. The gaps, diagnosed
+## 2. The composite: dominance at matched spend
 
-### G0 — The bar has no stop inside their budget at all (3 armies)
+At the 5 % tolerance, over all seventeen armies: **we beat them on 5**, are short on 9, and on **3 no stop of
+ours fits their budget at all**.
 
-On the monster camp, the 12 000 export and the 2026-09-19 message camp, **every stop we offer spends more of
-at least one resource than TotalStack's hardest row.** We are not losing the comparison; we are not in it.
-This is a **coverage** defect in the burn ladder rather than a quality one, and it is invisible in the ratio
-table — all three read as comfortable wins there (1.226, 1.717, 1.297 a silver).
+| ✓ beat | short | no stop fits |
+|---|---|---|
+| 7 000 export **+55.5 %** | Bear ×1, ×2 −0.2 % | monster camp, 900 dominance |
+| **his usual setup +27.9 %** | e2e seed −1.3 % | 12 000 export |
+| his TotalStack profile +20.7 % | 4 000 case −2.8 % | camp of 2026-09-19, message |
+| camp 2026-09-19 dump +17.7 % | Bear ×10 −7.0 % | |
+| live account +1.8 % | Aydae alone −9.2 % | |
+| | Bear ×3 −12.5 % | |
+| | live account, evening −13.9 % | |
+| | **live camp 2026-09-18 −77.9 %** | |
 
-### G1 — The plan refuses to spend an unlimited stock (live camp, −77.9 %)
+**Known understatement**: the `optimize` route answered 403 to the terminal on 2026-09-22 (§5.2), so the
+newer scenarios carry Generate rows only. "Their hardest row" is a *lower bound* on several armies and some
+verdicts will get worse once the priority-search rows land. **W2 must complete before any of these numbers
+is treated as final.**
+
+---
+
+## 3. The gaps, diagnosed
+
+### G0 — No stop of ours is inside their budget (3 armies)
+
+Every stop we offer spends more of at least one resource than their hardest row. We are not losing the
+comparison, we are not in it. Invisible in the ratio table, where all three read as comfortable wins (1.226,
+1.717, 1.297 a silver). **A coverage defect in the burn ladder, not a quality one.**
+
+### G1 — The plan will not spend an unlimited stock (live camp, −77.9 %)
 
 | row | damage | silver | burn | troop types |
 |---|---|---|---|---|
 | `TotalStack · Total Optimization` | **49,229,801** | 7,794,000 | 374 | 7 |
-| our `Tier ladder · all types` (the sizer!) | **43,923,310** | 7,770,800 | 398 | 7 |
+| **our own `Tier ladder · all types`** | **43,923,310** | 7,770,800 | 398 | 7 |
 | our best stop (`steady-max`) | 15,306,859 | 9,849,200 | 52 | 4 |
-| our `all-in` | 10,899,547 | 6,653,700 | 133 | 2 |
 
-**Our own sizer is within 11 % of TotalStack here. Our plan is 3.2× behind our own sizer.** The camp holds
-bears *unlimited*; the burn ladder tops out at 52 chunks where the sizer spends 398 and TotalStack 374. The
-ladder's ceiling is the search winner's burn, and on an unlimited stock the winner is a thrifty deep ladder
-nowhere near the army's capacity. S-97 added a top pass for exactly this and it is plainly not enough.
-
-**The biggest single win in the file**, and it likely also carries G0 and G4.
+**Our sizer is within 11 % of TotalStack. Our plan is 3.2× behind our own sizer.** Bears are unlimited here;
+the ladder tops out at 52 chunks where the sizer spends 398. The ladder's ceiling is the search winner's
+burn, and on an unlimited stock the winner is a thrifty deep ladder nowhere near the army's capacity. S-97
+added a top pass for this and it is not enough. **The damage is provably reachable — our own sizer reaches
+it.**
 
 ### G2 — Our sizer is out-sized at identical cost (4 000 case, −2.8 %)
 
-| row | damage | silver | burn | troop types |
-|---|---|---|---|---|
-| `TotalStack · M's Preservation` | **8,762,880** | 6,084,400 | 24 | 8 |
-| our `Troops first · all types` | 8,519,930 | 6,083,200 | 24 | 8 |
-
-Same army, same stock, **same silver, same burn, same eight troop types**, 2.9 % more damage. No horizon,
-stock or objective explains it: our flat-profile sizing simply loses to theirs head to head. The cleanest
-isolated defect here and the best place to learn what their sizer does differently.
+`TotalStack · M's Preservation` **8,762,880** against our `Troops first · all types` 8,519,930 — same army,
+same stock, **same silver, same burn, same eight troop types**. Nothing about horizons or objectives explains
+it; our flat profile loses to theirs head to head. The cleanest isolated defect in the file.
 
 ### G3 — Their single-march search beats ours on small armies (−12.5 %)
 
-Bear V ×3: their `priority search under M's (averageDamage)` reaches **21,427,548** at 56,000,000 silver;
-our `Generate (average damage)` reaches 18,722,192 at the **same** silver. Three troop types and three bears
-— small enough to solve near-exactly, so this is a correctness question, not a budget one.
+Bear ×3: their `priority search under M's (averageDamage)` **21,427,548** at 56,000,000 silver; ours
+18,722,192 at the *same* silver. Three troop types and three bears — small enough to solve near-exactly, so
+this is correctness, not budget.
 
-### G4 — The evening account, −13.9 %
+### G4 — The evening account, −13.9 % at matched cost
 
-Their 36,832,597 against our all-in's 31,714,657. An unlimited hired type again; probably G1 in a milder
-form.
+Their 36,832,597 against our all-in's 31,714,657. Unlimited hired type again; likely G1 in a milder form.
 
-### G5 — Damage a monster below 1.0 on a dominance army (0.911)
+### G5 — Damage a monster, 0.911 on a dominance army
 
-`his TotalStack profile`. The only ratio still under the goal after S-118's pinning, on one of the three
-armies housing a dominance pool. **S-116 (the order of death) is already written against this exact
-mechanism** — sheltered monster stacks ordered by rounding rather than by damage per point of HP, measured
-there at 8.3 %. Treat G5 as S-116's acceptance test, not as separate work.
+`his TotalStack profile`. The only ratio under the goal after S-118's pinning. **S-116 (the order of death)
+is already written against this mechanism** — sheltered monster stacks ordered by rounding rather than by
+damage per point of HP, measured at 8.3 % there. G5 is S-116's acceptance test, not separate work.
+
+### G6 — Dragon coins, lost on every army that spends one (new, 2026-09-22)
+
+§1: 0 wins, 3 losses, 14 ties. We field more monster chunks than TotalStack does for our damage on all three
+dominance armies. Shares a root with G5 — which monsters, in which order, at what size — but is measured on a
+different axis, so it needs its own acceptance criterion.
 
 ---
 
-## 3. The heuristics audit (his explicit mandate)
+## 4. The heuristics audit — his explicit mandate
 
-*"verify we're using the proper heuristics or change them."* Each of these is a heuristic the plan uses that
-§1 now gives us grounds to doubt. Each item is *measure first, then decide* — an experiment before a change.
+*"verify we're using the proper heuristics or change them."* Each is a heuristic §1–§3 give grounds to
+doubt. Each is **measure first, then decide**: an experiment before a change.
 
-| # | heuristic | where | the doubt §1 raises |
+| # | heuristic | where | the doubt |
 |---|---|---|---|
-| H1 | the burn ladder's ceiling is the search winner's burn | `plan.ts` | G0/G1: on an unlimited stock the winner is thrifty, so the ladder never reaches the army's capacity |
+| H1 | the burn ladder's ceiling is the search winner's burn | `plan.ts` | G0/G1 — on an unlimited stock the winner is thrifty, so the ladder never reaches capacity |
 | H2 | the band refuses a stop fielding under half the winner's hired units | `plan.ts` | may be what removes the stops that would fit their budget (G0) |
-| H3 | `beatsOnFigures` — dominance on damage, silver and burn | `plan.ts` (S-106) | it does **not** read gold or dragon coins, and his definition names all four |
-| H4 | the sizer's flat HP profile, `ceiling − i·δ` | `stacker.ts` | G2: beaten at identical cost by their M's Preservation |
+| H3 | `beatsOnFigures` dominates on damage, silver and burn | `plan.ts` | **reads neither gold nor dragon coins** — a correctness gap against §0, and G6 is what it costs |
+| H4 | the sizer's flat HP profile, `ceiling − i·δ` | `stacker.ts` | G2 — beaten at identical cost |
 | H5 | `RANK_SPREAD`, the δ between stacks | `stacker.ts` | never swept against a rival; the obvious knob behind H4 |
-| H6 | the greedy descent + restarts in `searchPriority` | `search.ts` | G3: 14 % behind on an army small enough to solve exactly |
-| H7 | the shelter's one flat ceiling per type | `stacker.ts` | G5 / S-116 |
-| H8 | the knee that picks the sweet spot | `plan.ts` | it picks on ratios, and the ratios are now the derived marker rather than the target |
-
-**H3 is a correctness gap against his own words** and is cheap: the dominance test should read gold and
-dragon coins too, or the plan can prefer a stop that is dearer in a resource it never looks at.
+| H6 | greedy descent + restarts in `searchPriority` | `search.ts` | G3 — 14 % behind on an army solvable exactly |
+| H7 | the shelter's one flat ceiling per type | `stacker.ts` | G5/G6 — the relative order of sheltered stacks falls out of rounding |
+| H8 | the knee that picks the sweet spot | `plan.ts` | picks on ratios, and ratios are now the derived marker rather than the target |
+| H9 | the search is budget-bound on a large dominance pool | `plan.ts` | it fills any clock (§5.3), so its answer is the machine's |
 
 ---
 
-## 4. The "no leadership at all" cases — his answer: tell now, floor after
+## 5. Workstreams
 
-Since S-118 the benchmark's **troops** column reads `none` on **8 of our 227 rows**:
+### 5.1 W1 — Make the target measurable (do first)
 
-| rows | army |
-|---|---|
-| Tier ladder + Troops first · **damage per silver** | monster camp, his TotalStack profile, his usual setup |
-| Troops first · **average damage** | live account evening; Aydae alone |
+Matched spend becomes the benchmark's **primary reading**: a verdict column per army (their hardest
+comparable row, our best stop inside their budget at 5 %, the delta), a pin per army so a regression is red,
+and the six marker floors of §1 beside it. The ratio table stays as the derived reading.
 
-`runGenerate` branches on `setup.priority` before it reaches the sizer, so an objective makes the method
-radio inert. `damagePerSilver` then empties the leadership pool on **every army housing a dominance pool and
-on none that does not**: on his own camp, 2,369,400 → 173,600 silver for 2,855,908 → 776,837 damage, so
-1.24 → 5.85 a silver. The search is winning the game it was given.
+*Acceptance*: every army prints a verdict; the five current beats are pinned; a run that turns a beat into a
+short is red. **No engine change in W1** — it is the instrument.
 
-Two of the eight are on **average damage** — the objective this table has always used. `Troops first ·
-Generate (average damage)` has read 8,250,197 against Tier ladder's 36,832,597 on the evening account since
-S-101. The symptom was in the benchmark; no column and no assertion looked at it.
+### 5.2 W2 — Complete the external rows
 
-**Chosen (owner, 2026-09-21): fix the telling now, floor the search after.**
+The `optimize` route answers **403 `proRequired`** to any terminal client and **200** to the identical body
+inside the page: his HAR of a 200 carries no cookie and no authorization header and `document.cookie` is
+empty, so the entitlement rides on an **HttpOnly** cookie. `replay.mjs --emit=<path>` writes a console
+snippet for the 120 optimize calls; run it in the page, drop the download into `docs/research/fixtures/`, add
+it **last** to `DATASETS`.
 
-- **S-119a, telling.** The method radio says it is inert while an objective is selected; the March pane marks
-  an answer that fields no troop stack and names the objective that chose it. No figure moves, no pin moves.
-- **S-119b, floor.** `searchPriority` refuses a selection with no troop stack — or fewer than two, matching
-  the band's own third criterion. This changes what four objectives answer on six armies, so the affected
-  pins move and **he registers them**; it is a story of its own, behind S-119a.
+*Acceptance*: every army has `priority search under Elite` and `under M's` rows; §2 re-measured. **Blocks the
+honesty of every verdict in §2.**
+
+### 5.3 W3 — Make the search converge on a large dominance pool (H9)
+
+`CAMPAIGN.budgets.plan` is 40 s (raised 2026-09-22). The 20 000-dominance camp still runs 40,843–40,934 ms —
+it fills whatever clock it is given, so its bar is the machine's and it cannot be registered. The four
+captured answers it already has stay unusable until it converges.
+
+*Acceptance*: that camp finishes inside the budget with margin over three runs; then it is registered as
+scenario 18 with pins that are the engine's.
+
+### 5.4 W4 — The burn ladder reaches the army's capacity (H1, H2)
+
+The largest single win available. On an unlimited or very deep stock the ladder must extend to what the army
+can actually field — our own sizer's 398 chunks on the live camp is the existence proof — and the band must
+not delete the thrifty stops that would fit a rival's budget.
+
+*Acceptance*: live camp −77.9 % → **positive**; the three G0 armies get a stop inside their budget; no army
+regresses in §2. Expect stop counts and several pins to move — **he registers them**.
+
+### 5.5 W5 — The dominance test reads all the markers (H3)
+
+`beatsOnFigures` gains gold and dragon coins. Small, and a correctness fix against his own definition.
+
+*Acceptance*: no stop survives that another beats on all six markers; G6's three armies improve, or the
+measurement says why not.
+
+### 5.6 W6 — The order of death (S-116) — G5, G6
+
+Already specified in `docs/plans/the-order-of-death.md`: order sheltered stacks by damage per point of HP
+rising as total HP falls, as a local reordering inside `shelterUnder`. Measured ceiling 8.3 % on his account,
+0 % with mercenaries alone.
+
+*Acceptance*: damage a monster ≥ 1.0 on his TotalStack profile; dragon coins no longer lost on all three
+coin-spending armies.
+
+### 5.7 W7 — Our flat profile against theirs (H4, H5)
+
+Isolate on the 4 000 case, where the comparison is exactly controlled. Sweep `RANK_SPREAD` and the ceiling
+solve; compare stack for stack against their M's Preservation answer.
+
+*Acceptance*: ≥ +2.9 % at identical silver, burn and troop count on that case, and the finding stated as a
+rule rather than a tuned constant.
+
+### 5.8 W8 — The single-march search (H6)
+
+The bear armies are small enough to enumerate. Establish the true optimum by exhaustive search offline, then
+measure how far `searchPriority` is from it and why.
+
+*Acceptance*: ≥ +12.5 % on Bear ×3 at the same silver; the gap to the exact optimum stated for each bear
+army.
+
+### 5.9 W9 — No leadership at all (his choice: tell now, floor after)
+
+Eight of 227 rows field **no troop stack**: `damagePerSilver` on every army housing a dominance pool, and
+`avgDamage` under Troops first on the evening account and Aydae-alone. `runGenerate` branches on the
+objective before it reaches the sizer, so the method radio is inert.
+
+- **W9a, telling**: the method radio says it is inert while an objective is selected; the March pane marks a
+  troopless answer and names the objective that chose it. **No figure moves, no pin moves.**
+- **W9b, floor**: `searchPriority` refuses a selection with no troop stack (or fewer than two, the band's own
+  criterion). Changes what four objectives answer on six armies — pins move, **he registers them**.
 
 ---
 
-## 5. The missing cases, and the blocker
+## 6. Order, and why
 
-**Two benchmark armies have no captured answer** — `Aydae alone, 4 975` and `his usual setup of 2026-09-19`,
-the second being the camp he actually plays. "Everywhere" currently excludes the army that matters most.
-
-**The blocker is capture, not code.** Every external row is a captured TotalStack response, and the replays
-of 2026-09-19 answered **403 on all 170 priority-search calls** (Pro required, trial lapsed). The Generate
-route still answers.
-
-- **Without him**: nothing can be added that measures anything against TotalStack.
-- **One capture session buys**: his usual setup and Aydae-alone get external rows — 15 scored armies → 17.
-  The highest-value hour in this plan, and his to spend.
-
-**The kit is prepared (2026-09-22).** He is opening a new account, so `tools/totalstack/replay.mjs` gained
-the two missing armies — `Aydae alone, 4 975` and `his usual setup 2026-09-19` — built field for field from
-`plan-scenarios.ts` (`aydaeAlone`, `usualSetup`); both keep the **melee specialist**, unlike the two
-2026-09-19 camps, because their `topTierExcluded.specialists` is empty. The dry run prints twelve scenarios
-and 9 × 12 = **168 answers**. The run-book is in `tools/totalstack/README.md` — sign in with Pro active, copy
-`x-session-id` off any `/api/calculations` request, dry-run, then `--send --out=…-2026-09-22-replay.json`,
-then add that path **last** to `DATASETS` in `tests/engine/totalstack-rows.ts`.
-
----
-
-## 6. The work, in the order the figures justify
-
-| # | work | gap | expected |
+| # | work | unblocks / worth | risk |
 |---|---|---|---|
-| 1 | **Matched-spend becomes the benchmark's primary reading** — a column and a pin per army, the ratios kept as the derived marker | §0 | the target becomes measurable and non-regressing; ~half a day |
-| 2 | **H1/H2: the burn ladder reaches the army's real capacity** | G0, G1, G4 | −77.9 % → positive on the live camp; 3 "no stop fits" armies enter the comparison |
-| 3 | **H3: the dominance test reads gold and dragon coins** | §0 | correctness against his own definition; small |
-| 4 | **Capture session** (his usual setup, Aydae-alone) | §5 | 15 → 17 scored armies |
-| 5 | **S-116, the order of death** | G5 | 0.911 → ≥ 1.0 a monster; +8.3 % measured |
-| 6 | **H4/H5: our flat profile against theirs** on the 4 000 case | G2 | +2.9 % at identical cost, probably generalises |
-| 7 | **H6: the single-march search** on small armies | G3 | +12.5 % on the bears |
-| 8 | **S-119a telling, then S-119b floor** | §4 | 8 rows |
+| 1 | **W1** matched-spend instrument | makes everything below measurable and non-regressing | none — no engine change |
+| 2 | **W2** complete external rows | honesty of every verdict | his hour, in the page |
+| 3 | **W5** H3 reads gold + coins | correctness vs the definition; cheap | small |
+| 4 | **W4** burn ladder capacity | −77.9 % → positive, plus the 3 G0 armies | pins move |
+| 5 | **W6** order of death (S-116) | G5 + G6, the coin marker | specified already |
+| 6 | **W7** flat profile | +2.9 %, probably generalises | isolated |
+| 7 | **W8** single-march search | +12.5 % on the bears | isolated |
+| 8 | **W3** converge the big camp | scenario 18 registrable | engine work |
+| 9 | **W9a** then **W9b** | 8 rows | W9b moves pins |
 
-**Not in this plan**, and still open on the benchmark: 4 × `winsHired` where the plan now *beats* a pin that
-says it should not, and 3 × stop-count drift. Pinning those is a re-base, not a fix, and is his call.
+W1 and W2 come first because everything after them is judged by them. W5 is third because it is a correctness
+gap against the definition and costs almost nothing.
 
 ---
 
-## 7. Answered, 2026-09-22
+## 7. What must not regress
 
-- **"ok to exceed within reasonable bounds."** The matched-spend test allows a stop to exceed any one of the
-  four costs by **5 %**, and the overspend is printed beside the verdict. The number is not load-bearing and
-  that is measured rather than assumed — swept over the committed payload, the verdict barely moves:
+- **The 5 beats of §2 stay beats.** That is what pinning them in W1 is for.
+- **Silver and queue** (14 and 13 marker wins) are what the plan is for; a change that buys damage by
+  spending freely is a different product, not a better one.
+- **The seven reds already on the benchmark** are not in this plan: four `winsHired` pins the plan now
+  *beats*, and three stop counts. Pinning them is a re-base and his call.
+- **No pin is re-based by a worker.** A scenario must not get worse, or it is a discrepancy, or he registers
+  the trade.
 
-  | tolerance | beat | short | no stop fits |
-  |---|---|---|---|
-  | 0 % | 3 | 9 | 3 |
-  | **5 %** | **4** | **8** | **3** |
-  | 10 % | 4 | 8 | 3 |
-  | 20 % | 5 | 9 | 1 |
-  | 50 % | 5 | 9 | 1 |
-
-  **Loosening the bound does not rescue us** — even at 50 % we beat TotalStack on 5 of 15. So every gap in
-  §2 is real and none of them is an artefact of a strict gate. 5 % is chosen because it is the loosest bound
-  that still means "matched spend"; past 20 % the comparison stops being one.
-
-- **"raise budget."** `CAMPAIGN.budgets.plan` is **40 000 ms** (was 25 000). **It does not do what it was
-  raised for, and that is a finding** (`tools/theorycraft/129-the-big-monster-camp.test.ts`): the
-  20 000-dominance camp was read as running 25 846–28 009 ms against a 25 000 ms cap, which looked like a
-  slight overrun. At a 40 000 ms cap it runs **40 843–40 934 ms**. The search is **budget-bound at every
-  budget**, so that camp still cannot be registered — its bar would be the machine's, not the engine's.
-  Making it converge on a twenty-type dominance pool is engine work and belongs in §6 as its own item.
-
-  **The raise is kept anyway, because a longer clock is a strictly better bar there**: at 25 s the camp
-  offers **2** stops and 1,916,803,326 damage for 89,969,600 silver; at 40 s it offers **4** and
-  1,924,609,434 for **88,360,000** — more damage for less silver. It costs an ordinary account nothing: the
-  slowest of the seventeen benchmark armies is the 900-dominance camp at 8 598–8 750 ms, and every army he
-  plays is under 4 200 ms.
+---
 
 ## 8. Still open
 
-- **Make the plan search converge on a large dominance pool.** Until it does, the 20 000-dominance camp and
-  its four captured answers stay unregistered whatever the budget is. New, and it belongs in §6 above the
-  small-army search work.
+- **May a marker be exceeded beyond 5 % when the damage plainly pays for it?** The tolerance is uniform
+  today; an army where they spend 0 gold makes gold a hard gate no damage can buy past.
+- **Is the training queue a marker he wants gated**, or only reported? It is our second-best marker, so
+  gating it costs nothing today — but it would constrain W4, which buys damage by fielding more.
