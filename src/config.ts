@@ -141,8 +141,31 @@ export const CAMPAIGN = {
   budgets: {
     /** One march: the sizing, or the priority search behind it. */
     search: 8_000,
-    /** The S-55 plan: far more candidates than a single-march search, so a longer cap — and still a
-     * bounded one. */
-    plan: 25_000,
+    /**
+     * The S-55 plan: far more candidates than a single-march search, so a longer cap — and still a bounded
+     * one.
+     *
+     * **40 s since 2026-09-22 (S-119), raised from 25 s at the owner's word** (*"raise budget"*).
+     *
+     * **What it does not do is let the 20 000-dominance camp finish, and that was the premise** — measured
+     * in `tools/theorycraft/129-the-big-monster-camp.test.ts`. Experiment 110's larger camp (monster tiers
+     * 3–7, twenty uncapped types) was read on 2026-09-19 as running **25 846–28 009 ms** against a 25 000 ms
+     * cap, which looked like a search that just overran. It is not: at a 40 000 ms cap it runs **40 843–
+     * 40 934 ms**. The search is **budget-bound at every budget** — it fills whatever clock it is given — so
+     * that camp still cannot be registered as a benchmark scenario, because its bar would be the machine's
+     * rather than the engine's. Making it converge is engine work, not a number here.
+     *
+     * **The raise is kept because a longer clock is a strictly better bar on it** (§B of the same
+     * experiment): at 25 s that camp offers **2** stops and a hardest campaign of 1,916,803,326 for
+     * 89,969,600 silver; at 40 s it offers **4** — a silver saver at 24 chunks and a steady max at 32 join
+     * it — and 1,924,609,434 for **88,360,000**, more damage for less silver. The cap is not a duration, so
+     * a player who does not own a five-figure dominance pool never meets it.
+     *
+     * **It costs an ordinary account nothing, and that is measured rather than argued.** The slowest of the
+     * seventeen benchmark armies is the **900**-dominance camp at 8 598–8 750 ms, and every army he actually
+     * plays is under 4 200 ms (`benchmark-latest.json`, `planMs`). Raising the ceiling moves no wait a
+     * player will meet.
+     */
+    plan: 40_000,
   },
 } as const;

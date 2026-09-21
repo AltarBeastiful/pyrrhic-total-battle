@@ -374,6 +374,58 @@ const scenarios = [
       ...(body.optimizationSeed ? { optimizationSeed: { ...TEMPLATE.optimizationSeed } } : {}),
     }),
   ],
+  /**
+   * **The two armies the benchmark can score against nothing** (S-119, 2026-09-21). Every other scenario here
+   * has a captured TotalStack row; these two have none, so `tests/engine/plan-benchmark.test.ts` prints `—`
+   * for them on every reading and the owner's *"beat TotalStack everywhere"* has two blind armies — one of
+   * them the camp he actually plays. Both are built from `tests/engine/plan-scenarios.ts`, field for field.
+   */
+  [
+    'Aydae alone, 4 975 (EMH 83 · legionaries uncapped · chariots 10 · arbalesters 60, 4 975 / 2 180)',
+    (body) =>
+      hire(
+        owner(
+          {
+            ...body,
+            // `aydaeAlone`: `topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: [] }` — the
+            // melee specialist stays, unlike the 2026-09-19 camps above.
+            guardsmenExcludedCategories: ['melee', 'ranged'],
+            specialistExcludedCategories: [],
+          },
+          { inputValue: 4975, authorityValue: 2180 },
+        ),
+        {
+          'epic-monster-hunter-6': 83,
+          'legionary-6': UNLIMITED,
+          'chariot-6': 10,
+          'arbalester-6': 60,
+        },
+      ),
+  ],
+  [
+    'his usual setup 2026-09-19 (Aydae alone, 5 200 / 2 000 / dominance 200, monsters tier 3, EMH VI 90)',
+    (body) =>
+      withMonsters(
+        hire(
+          owner(
+            {
+              ...body,
+              // `usualSetup`: guardsmen I–III, specialists I–I, the top melee and ranged guardsmen out and
+              // the melee specialist in, monsters on tier 3 alone.
+              guardsmenMinTier: 1,
+              guardsmenMaxTier: 3,
+              specialistMinTier: 1,
+              specialistMaxTier: 1,
+              guardsmenExcludedCategories: ['melee', 'ranged'],
+              specialistExcludedCategories: [],
+            },
+            { inputValue: 5200, authorityValue: 2000 },
+          ),
+          { 'epic-monster-hunter-6': 90 },
+        ),
+        { min: 3, max: 3, dominance: 200 },
+      ),
+  ],
   [
     `monsters, first-run army (tiers ${MONSTER_MIN_TIER}–${MONSTER_MAX_TIER}, dominance 20 000, no mercenaries)`,
     (body) =>

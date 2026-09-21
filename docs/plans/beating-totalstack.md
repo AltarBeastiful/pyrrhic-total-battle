@@ -209,9 +209,14 @@ route still answers.
 - **Without him**: nothing can be added that measures anything against TotalStack.
 - **One capture session buys**: his usual setup and Aydae-alone get external rows — 15 scored armies → 17.
   The highest-value hour in this plan, and his to spend.
-- **Also**: the **20 000-dominance camp** already has four captured answers recorded in `plan-scenarios.ts`
-  and asserted nowhere, because its search overruns `CAMPAIGN.budgets.plan` (25 846–28 009 ms against a
-  25 000 ms cap). Registering it needs a budget decision, not a capture.
+
+**The kit is prepared (2026-09-22).** He is opening a new account, so `tools/totalstack/replay.mjs` gained
+the two missing armies — `Aydae alone, 4 975` and `his usual setup 2026-09-19` — built field for field from
+`plan-scenarios.ts` (`aydaeAlone`, `usualSetup`); both keep the **melee specialist**, unlike the two
+2026-09-19 camps, because their `topTierExcluded.specialists` is empty. The dry run prints twelve scenarios
+and 9 × 12 = **168 answers**. The run-book is in `tools/totalstack/README.md` — sign in with Pro active, copy
+`x-session-id` off any `/api/calculations` request, dry-run, then `--send --out=…-2026-09-22-replay.json`,
+then add that path **last** to `DATASETS` in `tests/engine/totalstack-rows.ts`.
 
 ---
 
@@ -233,12 +238,39 @@ says it should not, and 3 × stop-count drift. Pinning those is a re-base, not a
 
 ---
 
-## 7. Still open
+## 7. Answered, 2026-09-22
 
-- **Which of the four costs may we exceed, if any?** The matched-spend test as written requires all four
-  to be ≤ theirs. On an army where they spend 0 gold, that is a hard constraint we may not be able to meet
-  while out-damaging them. If a stop beats them on damage, silver and burn but spends 8 more gold, is that a
-  win? (My suggestion: yes, with gold and coins reported rather than gated, since §3/H3 shows the plan does
-  not even look at them today.)
-- **The 20 000-dominance camp**: raise `CAMPAIGN.budgets.plan` past ~28 s so its search finishes, or leave
-  it out?
+- **"ok to exceed within reasonable bounds."** The matched-spend test allows a stop to exceed any one of the
+  four costs by **5 %**, and the overspend is printed beside the verdict. The number is not load-bearing and
+  that is measured rather than assumed — swept over the committed payload, the verdict barely moves:
+
+  | tolerance | beat | short | no stop fits |
+  |---|---|---|---|
+  | 0 % | 3 | 9 | 3 |
+  | **5 %** | **4** | **8** | **3** |
+  | 10 % | 4 | 8 | 3 |
+  | 20 % | 5 | 9 | 1 |
+  | 50 % | 5 | 9 | 1 |
+
+  **Loosening the bound does not rescue us** — even at 50 % we beat TotalStack on 5 of 15. So every gap in
+  §2 is real and none of them is an artefact of a strict gate. 5 % is chosen because it is the loosest bound
+  that still means "matched spend"; past 20 % the comparison stops being one.
+
+- **"raise budget."** `CAMPAIGN.budgets.plan` is **40 000 ms** (was 25 000). **It does not do what it was
+  raised for, and that is a finding** (`tools/theorycraft/129-the-big-monster-camp.test.ts`): the
+  20 000-dominance camp was read as running 25 846–28 009 ms against a 25 000 ms cap, which looked like a
+  slight overrun. At a 40 000 ms cap it runs **40 843–40 934 ms**. The search is **budget-bound at every
+  budget**, so that camp still cannot be registered — its bar would be the machine's, not the engine's.
+  Making it converge on a twenty-type dominance pool is engine work and belongs in §6 as its own item.
+
+  **The raise is kept anyway, because a longer clock is a strictly better bar there**: at 25 s the camp
+  offers **2** stops and 1,916,803,326 damage for 89,969,600 silver; at 40 s it offers **4** and
+  1,924,609,434 for **88,360,000** — more damage for less silver. It costs an ordinary account nothing: the
+  slowest of the seventeen benchmark armies is the 900-dominance camp at 8 598–8 750 ms, and every army he
+  plays is under 4 200 ms.
+
+## 8. Still open
+
+- **Make the plan search converge on a large dominance pool.** Until it does, the 20 000-dominance camp and
+  its four captured answers stay unregistered whatever the budget is. New, and it belongs in §6 above the
+  small-army search work.

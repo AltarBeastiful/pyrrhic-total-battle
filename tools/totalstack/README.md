@@ -25,7 +25,7 @@ never written.
 body instead of one per scenario), `--delay=<ms>` (400 by default, the kit's own pacing), `--origin=<url>`
 (`https://totalstack.ca`), `--monster-min-tier=<n>`, `--out=<path>`.
 
-9 bases × 10 scenarios = **140 answers** (40 Generate at priority _none_, 100 priority searches, one per
+9 bases × 12 scenarios = **168 answers** (40 Generate at priority _none_, 100 priority searches, one per
 objective), sent one at a time, 400 ms apart — about two minutes plus the server's own time. A request that throws
 or comes back outside 2xx is retried **once** and then recorded as it stands, status and all: a failure is a row
 in the fixture, never a gap in it.
@@ -34,7 +34,30 @@ The answers land in `docs/research/fixtures/totalstack-2026-09-19-replay.json`, 
 `capturedAt`, `bases`, `results` with `method`, `scenario`, `priority`, `status`, `request`, `response` — so
 `tests/engine/totalstack-rows.ts` can read it by adding the path to its `DATASETS` list.
 
-**The trial ends 2026-09-20.** After that the bases still replay but the answers will not come back.
+**The 2026-09-19 trial ended 2026-09-20**, and the replays of that morning answered **403 on all 170
+priority-search calls**. The owner is opening a new account (2026-09-22) for S-119's capture.
+
+### Running S-119's capture
+
+1. Sign in at `https://totalstack.ca` on the new account, with **Pro active** — the Generate route answers
+   without it, the `optimize` route does not, and it is the `optimize` rows the benchmark most wants.
+2. Open the devtools network panel, press **Generate** once, and copy the `x-session-id` header off any
+   request to `/api/calculations`. It is a uuid.
+3. Dry-run first and read the twelve scenario lines — the bodies are printed, nothing is sent:
+   ```sh
+   node tools/totalstack/replay.mjs
+   ```
+4. Then send:
+   ```sh
+   TOTALSTACK_SESSION_ID=<uuid> node tools/totalstack/replay.mjs --send --out=docs/research/fixtures/totalstack-2026-09-22-replay.json
+   ```
+   168 answers, 400 ms apart — about two minutes plus the server's time. A non-2xx is retried once and then
+   recorded **as a row**, so a lapsed subscription shows up as 403s in the fixture rather than as silence.
+5. Add the new path to `DATASETS` in `tests/engine/totalstack-rows.ts`, **last**, so no scenario an earlier
+   run answered changes its row by this one's arrival (the rule S-101 set).
+
+**What one good run buys**: the benchmark goes from **15 scored armies to 17**, and the 20 000-dominance camp
+gets rows to stand against once it is registered.
 
 ## Headers, and the token
 
@@ -77,7 +100,7 @@ rather than the template's. The two bonus maps are merged key-wise so `giant` is
 Generate route (`/api/calculations`) the three optimize-only keys — `objective`, `deepOptimizationSeeds`,
 `optimizationSeed` — are dropped unless the stored base had them (none does).
 
-## The ten scenarios
+## The twelve scenarios
 
 | scenario                                | L / dominance / authority    | hired (caps)                                  | troop window                                                   | monsters      |
 | --------------------------------------- | ---------------------------- | --------------------------------------------- | -------------------------------------------------------------- | ------------- |
@@ -91,6 +114,15 @@ Generate route (`/api/calculations`) the three optimize-only keys — `objective
 | `monsters, owner's window`              | 4 975 / **20 000** / 2 180   | EMH 450                                       | owner's, same category exclusions                              | **tiers 3–9** |
 | `monsters, camp 110 — dominance 900`    | 20 000 / **900** / 2 180     | EMH 83 · Bear V 6                             | first-run                                                      | **tiers 3–5** |
 | `monsters, camp 110 — dominance 20 000` | 20 000 / **20 000** / 2 180  | EMH 83 · Bear V 6                             | first-run                                                      | **tiers 3–5** |
+| **`Aydae alone, 4 975`**                | 4 975 / 100 / 2 180          | EMH 83 · LGN **9 999** · CHR 10 · ABT 60      | owner's, guardsmen melee+ranged excluded, **specialists kept** | off           |
+| **`his usual setup 2026-09-19`**        | **5 200 / 200 / 2 000**      | EMH VI 90                                     | ″, G1–3 and S1–1                                               | **tier 3–3**  |
+
+**The last two are S-119's, added 2026-09-22**, and they are the reason a new capture is worth running at all:
+they are the only two armies on the benchmark with **no captured answer of any kind**, so
+`plan-benchmark.test.ts` prints `—` for them on every reading and _"beat TotalStack everywhere"_ has two blind
+spots — one of them **the camp the owner actually plays**. Both are built field for field from
+`tests/engine/plan-scenarios.ts` (`aydaeAlone` and `usualSetup`); note that both keep the **melee specialist**,
+unlike the two 2026-09-19 camps above, because their `topTierExcluded.specialists` is empty.
 
 The first two fill the two bear armies `tests/engine/plan-scenarios.ts` pins and the kit answered only at 3 and
 10 bears. The next three are the owner's own camps as his browser held them; the sixth is his TotalStack
