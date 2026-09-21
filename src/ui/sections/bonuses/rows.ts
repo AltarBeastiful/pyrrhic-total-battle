@@ -41,14 +41,7 @@ import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
 import { captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 
-import {
-  describeContribution,
-  FALLBACK_STAR_KEYS,
-  isEmptyBonus,
-  mergeBonus,
-  rowValue,
-  sourceLabel,
-} from './labels';
+import { describeContribution, FALLBACK_STAR_KEYS, isEmptyBonus, mergeBonus, rowValue } from './labels';
 import type { BonusLike } from './labels';
 import { singleKey } from './values';
 
@@ -75,7 +68,6 @@ export type EditorTarget =
   | { kind: 'custom'; id: string }
   | { kind: 'vip' }
   | { kind: 'dragon' }
-  | { kind: 'remainder' }
   | { kind: 'recovery' };
 
 /** What a row's switch writes: one id in a list of the active setup, or one of its four flags. */
@@ -412,15 +404,6 @@ function otherGroup(profile: Profile, setup: BattleSetup): SourceGroup {
         editor: { kind: 'custom', id: entry.id },
       }),
     ),
-    row({
-      id: 'remainder',
-      name: 'Unexplained remainder',
-      value: rowValue(sources.unknown),
-      lines: describeContribution(sources.unknown),
-      on: active.unknown,
-      toggle: { flag: 'unknown' },
-      editor: { kind: 'remainder' },
-    }),
   ];
   return {
     id: 'other',
@@ -457,18 +440,38 @@ function eventsGroup(setup: BattleSetup): SourceGroup {
   };
 }
 
+/**
+ * What the temple and the eight training fields are worth, one line each — and no line at all while
+ * nothing has been typed into them (owner, 2026-09-19).
+ *
+ * The chip is a locked one, so it reads as on while it carries a value and as off while it carries
+ * none, the way the permanent chips do. A level-0 temple divides revival costs by 1, and saying so
+ * gave an untouched profile a chip that looked switched on for a march it changes nothing in.
+ */
+function recoveryLines(recovery: Profile['recovery']): string[] {
+  const lines: string[] = [];
+  if (recovery.templeLevel > 0) {
+    lines.push(`revival costs divided by ${String(templeDivisor(recovery.templeLevel))}`);
+  }
+  const trained =
+    Object.keys(recovery.trainingCostReduction).length + Object.keys(recovery.trainingSpeed).length;
+  if (trained > 0) lines.push(`${String(trained)} training ${trained === 1 ? 'bonus' : 'bonuses'}`);
+  return lines;
+}
+
 function recoveryGroup(profile: Profile): SourceGroup {
-  const divisor = templeDivisor(profile.recovery.templeLevel);
+  const lines = recoveryLines(profile.recovery);
   return {
     id: 'recovery',
     title: 'Recovery',
-    caption: 'always on',
+    caption: lines.length === 0 ? 'nothing set yet' : 'always on',
     empty: '',
     rows: [
       row({
         id: 'recovery',
         name: 'Temple and training',
-        value: `revival costs divided by ${String(divisor)}`,
+        value: lines.join(', '),
+        lines,
         on: true,
         locked: true,
         editor: { kind: 'recovery' },
@@ -535,8 +538,6 @@ export const WHERE: Record<EditorTarget['kind'], string> = {
   vip: 'the VIP screen: your level, and the army bonus written next to it.',
   dragon:
     'the Dragon screen: the army bonuses it grants at its current level, plus what its equipped runes add.',
-  remainder:
-    'a real battle report, or the march window on a monster: compare the army bonuses it lists with the figures above and type the difference here.',
   recovery: 'the Temple for its level; the cost and speed bonuses sit on your barracks and workshops.',
 };
 
@@ -552,5 +553,5 @@ export const PERMANENT_WHERE: Record<string, string> = {
   unionOfTriumph: 'Union of Triumph: the bonus for the number of Golden Passes on the account.',
 };
 
-export { artifactRecord, captainRecord, equipmentRecord, isEmptyBonus, sourceLabel };
+export { artifactRecord, captainRecord, equipmentRecord, isEmptyBonus };
 export type { BonusKey };

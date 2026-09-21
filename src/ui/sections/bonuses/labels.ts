@@ -199,16 +199,6 @@ export function chipValue(bonus: BonusLike, limit = 2): ChipValue {
   return { ...(key === undefined ? {} : { key }), text };
 }
 
-/**
- * Our own name for a source the engine labelled: the stored ids and the resolver's labels never
- * change, the words the player reads do.
- */
-const RENAMED: Record<string, string> = { 'Unknown Sources': 'Unexplained remainder' };
-
-export function sourceLabel(label: string): string {
-  return RENAMED[label] ?? label;
-}
-
 /** `armyStrengthAndHealth` → "Army strength and health": the random-bonus options read as sentences. */
 export function humanizeOption(option: string): string {
   const spaced = option

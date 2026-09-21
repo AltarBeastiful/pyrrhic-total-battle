@@ -70,6 +70,24 @@ export function poolProblem(pool: Pool, value: number): string | null {
  * objective is the *bar's* control rather than a rule of one method, so it keeps its place in the tab
  * order's story and says why it cannot be used. The owner chose it after seeing both alternatives —
  * hiding it, and making the plan honour it — and the second is still open as engine work.
+ *
+ * **Where the sentence goes is the bar's room, not the state** (owner, 2026-09-21: *"could be on the
+ * right side of the objective to avoid too high bar… keep it on two lines though for readability, and
+ * be aware of mobile"*). It used to be printed under the field on both bars, and both bars paid for it
+ * in height — the one edge of the window a thumb and a Generate share: 88 px to 119.7 at 1400,
+ * 87 to 134 at 1100, 120 to 164 at 390 (measured 2026-09-21). So:
+ *
+ * - **from 1200 px** (`TWO_PANES`, where the March has a pane of its own and the bar carries no answer)
+ *   it stands **beside** the select, two lines in a column of its own, inside the height the labels and
+ *   wells already take — the bar does not grow at all (`CommandBar.tsx`);
+ * - **below it**, on the 1024–1199 bar and on the phone's, there is no such room — the four wells
+ *   already share the row with the answer — so the sentence goes behind the **ⓘ** beside the control
+ *   and is read on a press (`ObjectiveWhy.tsx`), never on a hover a thumb does not have.
+ *
+ * It is one sentence in one constant either way, and it reaches a screen reader at every width: as the
+ * field's own `description` where it is drawn, and as the bubble's `aria-describedby` where it is not —
+ * on top of the phone chip's accessible name, which has said *"Objective: decided by the plan"* since
+ * the day the control was locked.
  */
 export const OBJECTIVE_LOCKED_REASON =
   'The plan weighs damage against what it costs, so it decides this itself.';

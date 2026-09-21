@@ -75,14 +75,6 @@ function totals(scope: HTMLElement): Record<string, string> {
   return out;
 }
 
-/** The line that unfolds the sources. */
-const disclosure = (): HTMLElement => within(card()).getByRole('button', { name: /^Sources/ });
-
-function expand(): void {
-  const trigger = disclosure();
-  if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
-}
-
 /**
  * Open one of the two foot folds (artifacts, titles). Every other family is on screen the moment
  * the sources are, so for those this is a no-op — the name is kept so a test reads as the journey.
@@ -142,12 +134,24 @@ test('the header carries the TOTAL as four labelled figures', () => {
   renderWithTheme(<BonusesSection />);
 
   expect(within(card()).getByRole('heading', { level: 2, name: 'Bonuses' })).toBeTruthy();
+  // Nothing is on: a new account has chosen no captain, worn no title and switched nothing on.
   expect(totals(card())).toEqual({
     Health: '0 %',
     Strength: '0 %',
     Special: '0 %',
-    'Sources on': '3',
+    'Sources on': '0',
   });
+});
+
+test('VIP and the dragon start switched off', () => {
+  renderWithTheme(<BonusesSection />);
+  // Owner, 2026-09-19. A fresh account is VIP 0 with an empty dragon, so both stood on and empty:
+  // two chips claiming to count for a march they add nothing to. They are a choice now, like every
+  // other switchable source, and the count above says none.
+  expect(setup()?.active.vip).toBe(false);
+  expect(setup()?.active.dragon).toBe(false);
+  expect((sourceChip('VIP level 0') as HTMLInputElement).checked).toBe(false);
+  expect((sourceChip('Dragon') as HTMLInputElement).checked).toBe(false);
 });
 
 test('a source switched on with nothing typed in it reads "—" on its own chip, and nowhere else', () => {
@@ -157,34 +161,35 @@ test('a source switched on with nothing typed in it reads "—" on its own chip,
   // player could do nothing with. The chip that has no value says so, where the value would be.
   expect(within(card()).queryByText(/on but empty/)).toBeNull();
 
-  expand();
   // No fold to open: the Other family is on screen with the sources (owner, 2026-09-17).
   expect(within(card()).queryByRole('button', { name: /^Other/ })).toBeNull();
-  const chip = sourceChip('Dragon');
-  expect(chipLabel(chip).textContent).toContain('—');
+  // The dragon starts off, so it has to be switched on before it can be on and empty.
+  fireEvent.click(sourceChip('Dragon'));
+  expect(setup()?.active.dragon).toBe(true);
+  expect(chipLabel(sourceChip('Dragon')).textContent).toContain('—');
 
-  fireEvent.click(chip);
+  fireEvent.click(sourceChip('Dragon'));
   expect(setup()?.active.dragon).toBe(false);
 });
 
-test('the sources are folded away by default and the choice is remembered per device', () => {
-  const first = renderWithTheme(<BonusesSection />);
-  expect(disclosure().getAttribute('aria-expanded')).toBe('false');
-
-  fireEvent.click(disclosure());
-  expect(disclosure().getAttribute('aria-expanded')).toBe('true');
-  expect(globalThis.localStorage.getItem('pyrrhic.ui.v1')).toContain('"bonusesExpanded":true');
-
-  first.unmount();
+test('the sources are not behind a fold: the captains are on screen with the TOTAL', () => {
   renderWithTheme(<BonusesSection />);
-  expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+
+  // Owner, 2026-09-19: the "Sources" line named nothing a player was looking for and cost the daily
+  // journey a tap before it began. Nothing has to be pressed to reach the family that changes most.
+  expect(within(card()).queryByRole('button', { name: /^Sources/ })).toBeNull();
+  expect(captainChip('Beowulf')).toBeTruthy();
+  expect(within(card()).getByText('Hero and captains')).toBeTruthy();
+
+  // The two families set once keep a fold each, and the audit is still the last one (charter rule 4).
+  expect(within(card()).getByRole('button', { name: /^Artifacts/ })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: /^Titles/ })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Every key and what feeds it' })).toBeTruthy();
 });
 
 // ---- the captain chips --------------------------------------------------------------------------
 test('the row shows the hero and every captain the tables know, and none of them is an Add button', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
-
   const row = within(card()).getByRole('group', { name: 'Captains and hero' });
   expect(within(row).getAllByRole('checkbox')).toHaveLength(captainTable.length + 1);
   expect(within(row).getByRole('checkbox', { name: 'Send Hero on this march' })).toBeTruthy();
@@ -196,8 +201,6 @@ test('the row shows the hero and every captain the tables know, and none of them
 
 test('the captain grid is one tab stop, the arrows walk it, and only its own gear is reachable', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
-
   const row = within(card()).getByRole('group', { name: 'Captains and hero' });
   const chips = within(row).getAllByRole('checkbox');
   const gears = within(row).getAllByRole('button');
@@ -216,8 +219,6 @@ test('the captain grid is one tab stop, the arrows walk it, and only its own gea
 
 test('a chip sends its captain on the march and takes it off again, and the TOTAL follows', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
-
   fireEvent.click(captainChip('Beowulf'));
   expect(setup()?.active.captains).toHaveLength(1);
   expect(profile()?.sources.captains).toHaveLength(1);
@@ -230,8 +231,6 @@ test('a chip sends its captain on the march and takes it off again, and the TOTA
 
 test('a captain that touches no stack carries no gear, and can still ride along', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
-
   expect(within(card()).queryByRole('button', { name: /Carter’s level$/ })).toBeNull();
   expect(within(card()).getByRole('button', { name: /Beowulf’s level$/ })).toBeTruthy();
 
@@ -241,8 +240,6 @@ test('a captain that touches no stack carries no gear, and can still ride along'
 
 test('the fourth captain is refused, in one line, and the chip stays off', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
-
   for (const name of ['Beowulf', 'Aydae', 'Skadi']) fireEvent.click(captainChip(name));
   expect(setup()?.active.captains).toHaveLength(3);
   expect(within(card()).queryByText(CAPTAIN_CAP_MESSAGE)).toBeNull();
@@ -263,8 +260,6 @@ test('the fourth captain is refused, in one line, and the chip stays off', () =>
 test('the gear opens an anchored popover with the level and the stars, and never enlists anybody', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
-  expand();
-
   await user.click(captainGear('Aydae'));
   expect(captainGear('Aydae').getAttribute('aria-expanded')).toBe('true');
   expect(screen.getByRole('textbox', { name: 'Base level' })).toBeTruthy();
@@ -279,8 +274,6 @@ test('the gear opens an anchored popover with the level and the stars, and never
 test('the popover computes the bonus live and the chip takes a dot once a level is set', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
-  expand();
-
   fireEvent.click(captainChip('Aydae'));
   await user.click(captainGear('Aydae'));
   typeNumber(document.body, 'Base level', '20');
@@ -298,8 +291,6 @@ test('the popover computes the bonus live and the chip takes a dot once a level 
 test('a levelled captain moves the TOTAL, stars included', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
-  expand();
-
   fireEvent.click(captainChip('Beowulf'));
   await user.click(captainGear('Beowulf'));
   typeNumber(document.body, 'Base level', '20');
@@ -315,8 +306,6 @@ test('a levelled captain moves the TOTAL, stars included', async () => {
 test('the hero leads the row and its gear opens the pick', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
-  expand();
-
   await user.click(within(card()).getByRole('button', { name: /^(Set|Change) Hero’s level$/ }));
   await chooseIn(user, document.body, 'Leading this march', 'Svyatogor');
 
@@ -331,7 +320,6 @@ test('the hero leads the row and its gear opens the pick', async () => {
 test('an artifact is equipped from its chip and levelled from its gear', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
-  expand();
   openGroup('Artifacts');
 
   const row = within(card()).getByRole('group', { name: 'Artifacts' });
@@ -351,7 +339,6 @@ test('an artifact is equipped from its chip and levelled from its gear', async (
 
 test('a permanent source is on while something is recorded in it, and its gear opens the sheet that moves the TOTAL', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
   openGroup('Permanent');
 
   // Nothing recorded yet: the chip reads as off, because to the TOTAL it is (owner, 2026-09-17).
@@ -373,7 +360,6 @@ test('a permanent source is on while something is recorded in it, and its gear o
 
 test('a hover over a source chip raises every line it is worth', async () => {
   renderWithTheme(<BonusesSection />);
-  expand();
   fireEvent.click(within(card()).getByRole('button', { name: 'Edit Hall of Fame' }));
   const sheet = screen.getByRole('dialog');
   typeNumber(sheet, 'Army health', '40');
@@ -390,7 +376,6 @@ test('a hover over a source chip raises every line it is worth', async () => {
 
 test('a title is worn from its chip, with what it is worth written under the name', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
   openGroup('Titles');
 
   const health = within(card()).getByRole('group', { name: 'Titles: health' });
@@ -407,8 +392,6 @@ test('a title is worn from its chip, with what it is worth written under the nam
 // ---- the row groups -------------------------------------------------------------------------------
 test('a family with nothing configured is one Add line, and adding puts a chip in', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
-
   expect(within(card()).queryByRole('group', { name: 'Equipment' })).toBeNull();
 
   fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
@@ -424,7 +407,6 @@ test('a family with nothing configured is one Add line, and adding puts a chip i
 test('editing a piece of equipment in its sheet moves the TOTAL', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
-  expand();
   openGroup('Equipment');
   fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
   done(screen.getByRole('dialog'));
@@ -440,12 +422,13 @@ test('editing a piece of equipment in its sheet moves the TOTAL', async () => {
   );
 });
 
-test('the temple and training chip wears the pin, is always on, and keeps its sheet', () => {
+test('the temple chip is off until something is typed into it, then on every march', () => {
   renderWithTheme(<BonusesSection />);
-  expand();
-
-  const chip = within(card()).getByRole('checkbox', { name: 'Temple and training, on every march' });
-  expect((chip as HTMLInputElement).checked).toBe(true);
+  // A level-0 temple divides revival costs by 1, which is no bonus at all: the chip used to say so
+  // and read as switched on for it (owner, 2026-09-19). Untouched, it is a chip with nothing in it.
+  const empty = within(card()).getByRole('checkbox', { name: 'Set Temple and training' });
+  expect((empty as HTMLInputElement).checked).toBe(false);
+  expect(chipLabel(empty).textContent).toContain('—');
 
   fireEvent.click(within(card()).getByRole('button', { name: 'Edit Temple and training' }));
   const sheet = screen.getByRole('dialog');
@@ -455,13 +438,14 @@ test('the temple and training chip wears the pin, is always on, and keeps its sh
 
   expect(profile()?.recovery.templeLevel).toBe(30);
   expect(profile()?.recovery.trainingCostReduction).toEqual({ guardsmen: 12.5 });
+  const filled = within(card()).getByRole('checkbox', { name: 'Temple and training, on every march' });
+  expect((filled as HTMLInputElement).checked).toBe(true);
   expect(within(card()).getByText(/revival costs divided by 3.84/)).toBeTruthy();
 });
 
 test('every battle setup keeps its own selection of sources', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
-  expand();
   fireEvent.click(captainChip('Beowulf'));
   const first = setup();
 

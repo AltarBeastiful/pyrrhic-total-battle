@@ -1,7 +1,7 @@
 /**
  * What the three header figures are made of, key by key, with the sources that fed each one — the
- * block a player opens when the game's own march window disagrees with ours and the difference has
- * to go into the unexplained remainder.
+ * block a player opens when the game's own march window disagrees with ours, to find which source
+ * the difference is in.
  *
  * It is the last fold of the card: the header is the answer, this is the audit.
  */
@@ -13,7 +13,7 @@ import type { TotalRow } from '@/state/derive';
 import type { BattleSetup, Profile } from '@/state/schema';
 import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain';
 
-import { AGAINST_LABELS, BONUS_LABELS, formatPercent, sourceLabel } from './labels';
+import { AGAINST_LABELS, BONUS_LABELS, formatPercent } from './labels';
 
 /** Keys nothing feeds are not worth a line. */
 const carries = (row: TotalRow): boolean => row.value !== 0 || row.contributors.length > 0;
@@ -73,7 +73,7 @@ function Rows({ rows, empty }: { rows: TotalRow[]; empty: string }) {
             <Line
               key={`${contributor.sourceId}-${String(index)}`}
               dim
-              label={sourceLabel(contributor.label)}
+              label={contributor.label}
               value={formatPercent(contributor.value)}
             />
           ))}

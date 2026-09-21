@@ -2,20 +2,24 @@
  * Bonuses (design plan §7.3, journey J3) — every health and strength source the account owns, and
  * which of them count for this march.
  *
- * The card is **one line until you open it**: the TOTAL as four labelled figures — health, strength
- * and double damage for the whole army, then how many sources feed them — plus a badge when one of
- * those is switched on with nothing typed in. That is what a player checks after changing a
- * captain's level, and it is above the fold on a phone (J3: open, find, change, see the TOTAL move).
+ * The card opens on the TOTAL — health, strength and double damage for the whole army, then how many
+ * sources feed them, four labelled figures a player checks after changing a captain's level — and the
+ * hero and the captains are **right under it**, with no line to press first.
  *
- * Unfolded, the sources are **every family on screen at once**, each a row of chips behind its
- * name and its count (owner, 2026-09-17; the canvas "Bonuses card redesign"): the hero and the
- * captains, the equipment, the permanent sources, the odds and ends, the events, the temple — the
- * families a player touches on an ordinary day, in the order they touch them. The accordion that
- * held them, one fold each with the captains alone open, hid the obvious ones and drew the rest as
- * switch rows with the gear on the far side of the card; now every source is a chip — TotalStack's
- * own picker, mimicked (D-34) — tinted when it is on, its gear on its own corner, so a whole family
- * reads at a glance. The two families set once, artifacts and titles, keep a fold each at the foot
- * of the list, remembered per device like the card itself (D7), and the audit is the last fold.
+ * There used to be a "Sources" fold over the whole list, collapsed by default and remembered per
+ * device (D7). It is gone (owner, 2026-09-19: *"the sources title and the fact it can be hidden is
+ * useless. Lets just have heroes rightaway so it's clearer and more understandable in the first
+ * place"*). It hid the captains, which change every fight, behind a word that named nothing a player
+ * was looking for, and it cost the daily journey a tap before it began. Charter rule 4 still asks us
+ * to fold what is configured once, and we still do — one fold each for artifacts and titles at the
+ * foot of the list, and the audit last — but a fold over *everything* was not that rule.
+ *
+ * What is left is **every family on screen at once**, each a row of chips behind its name and its
+ * count (owner, 2026-09-17; the canvas "Bonuses card redesign"): the hero and the captains, the
+ * equipment, the permanent sources, the odds and ends, the events, the temple — the families a
+ * player touches on an ordinary day, in the order they touch them. Every source is a chip —
+ * TotalStack's own picker, mimicked (D-34) — tinted when it is on, its gear on its own corner, so a
+ * whole family reads at a glance.
  */
 import { Alert, Stack } from '@mantine/core';
 import { useId, useMemo, useState } from 'react';
@@ -32,7 +36,7 @@ import { CaptainChips } from './CaptainChips';
 import { FamilyRow } from './FamilyRow';
 import { artifactChips, captainChips, permanentChips, titleChips, type CaptainTarget } from './chips';
 import { EquipmentSheet } from './EquipmentSheet';
-import { CustomSheet, DragonSheet, PermanentSheet, RemainderSheet } from './FreeFormSheets';
+import { CustomSheet, DragonSheet, PermanentSheet } from './FreeFormSheets';
 import { VipSheet } from './OtherSheets';
 import { PermanentChips } from './PermanentChips';
 import { RecoverySheet } from './RecoverySheet';
@@ -51,7 +55,7 @@ import { SourceChips } from './SourceChips';
 import { TitleChips } from './TitleChips';
 import { TotalsBreakdown } from './TotalsBreakdown';
 import { TotalsFigures } from './TotalsFigures';
-import { readExpanded, readFold, writeExpanded, writeFold, type BonusesFold } from './uiPrefs';
+import { readFold, writeFold, type BonusesFold } from './uiPrefs';
 
 /**
  * The families on screen, in the order a player touches them on an ordinary day: who rides, what
@@ -65,7 +69,6 @@ export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const titleId = useId();
-  const [expanded, setExpanded] = useState(readExpanded);
   const [folds, setFolds] = useState<Record<BonusesFold, boolean>>(() => ({
     artifacts: readFold('artifacts'),
     titles: readFold('titles'),
@@ -262,7 +265,7 @@ export function BonusesSection() {
     },
     other: { title: 'Other', summary: caption('other'), body: chipGroup('other') },
     events: { title: 'Events', summary: caption('events'), body: chipGroup('events') },
-    recovery: { title: 'Recovery', summary: 'always on', body: chipGroup('recovery') },
+    recovery: { title: 'Recovery', summary: caption('recovery'), body: chipGroup('recovery') },
   };
 
   return (
@@ -282,59 +285,47 @@ export function BonusesSection() {
       <Sections>
         <TotalsFigures summary={summary} />
 
-        {/*
-          No summary beside the title: the TOTAL is already above it and stays there, and a second
-          line saying the same thing would only be cut in half at 390 px (rule 5).
-        */}
-        <Disclosure
-          title="Sources"
-          opened={expanded}
-          onChange={(next) => {
-            setExpanded(next);
-            writeExpanded(next);
-          }}
-        >
-          <Stack gap="lg">
-            {caveats.map((caveat) => (
-              <Alert key={caveat} color="brass" variant="light">
-                {caveat}
-              </Alert>
+        {/* One part of the card, under the TOTAL's hairline: everything a source is and does. */}
+        <Stack gap="lg">
+          {caveats.map((caveat) => (
+            <Alert key={caveat} color="brass" variant="light">
+              {caveat}
+            </Alert>
+          ))}
+          <Stack gap="md">
+            {ORDER.map((id) => (
+              <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
+                {panels[id].body}
+              </FamilyRow>
             ))}
-            <Stack gap="md">
-              {ORDER.map((id) => (
-                <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
-                  {panels[id].body}
-                </FamilyRow>
-              ))}
-            </Stack>
-            {/* The folds share one part, as the March's do: a hairline between two collapsed rows
-                is a rule between two rules. The two families set once, then the audit. */}
-            <Stack gap={0}>
-              {FOLDED.map((id) => (
-                <Disclosure
-                  key={id}
-                  title={panels[id].title}
-                  summary={panels[id].summary}
-                  opened={folds[id]}
-                  onChange={(next) => {
-                    setFolds((current) => ({ ...current, [id]: next }));
-                    writeFold(id, next);
-                  }}
-                >
-                  {panels[id].body}
-                </Disclosure>
-              ))}
-              <Disclosure title="Every key and what feeds it">
-                <TotalsBreakdown profile={profile} setup={setup} />
-              </Disclosure>
-            </Stack>
-            {/* The battle setup closes the form (owner, 2026-09-17: "experiment with moving the battle
-                setup at the end of the form"; it stood first, one 16 px gap over the captains, "too
-                crowded"). What is on this march is chosen above; which named setup holds that choice —
-                keep it, rename it, copy it — is the last thing on the card, with its own room. */}
-            <SetupBar profile={profile} setup={setup} />
           </Stack>
-        </Disclosure>
+          {/* The folds share one part, as the March's do: a hairline between two collapsed rows
+              is a rule between two rules. The two families set once, then the audit. */}
+          <Stack gap={0}>
+            {FOLDED.map((id) => (
+              <Disclosure
+                key={id}
+                title={panels[id].title}
+                summary={panels[id].summary}
+                opened={folds[id]}
+                onChange={(next) => {
+                  setFolds((current) => ({ ...current, [id]: next }));
+                  writeFold(id, next);
+                }}
+              >
+                {panels[id].body}
+              </Disclosure>
+            ))}
+            <Disclosure title="Every key and what feeds it">
+              <TotalsBreakdown profile={profile} setup={setup} />
+            </Disclosure>
+          </Stack>
+          {/* The battle setup closes the form (owner, 2026-09-17: "experiment with moving the battle
+              setup at the end of the form"; it stood first, one 16 px gap over the captains, "too
+              crowded"). What is on this march is chosen above; which named setup holds that choice —
+              keep it, rename it, copy it — is the last thing on the card, with its own room. */}
+          <SetupBar profile={profile} setup={setup} />
+        </Stack>
       </Sections>
 
       {editor?.kind === 'equipment' && <EquipmentSheet {...sheet} entryId={editor.id} />}
@@ -342,7 +333,6 @@ export function BonusesSection() {
       {editor?.kind === 'custom' && <CustomSheet {...sheet} entryId={editor.id} />}
       {editor?.kind === 'vip' && <VipSheet {...sheet} />}
       {editor?.kind === 'dragon' && <DragonSheet {...sheet} />}
-      {editor?.kind === 'remainder' && <RemainderSheet {...sheet} />}
       {editor?.kind === 'recovery' && <RecoverySheet {...sheet} />}
     </Panel>
   );

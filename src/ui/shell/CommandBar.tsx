@@ -27,8 +27,10 @@ import { NumberField } from '@/ui/kit';
 import { MarchGenerateButton, MarchQuickSummary } from '@/ui/sections/march';
 
 import { OBJECTIVE_CHOICES, OBJECTIVE_LOCKED_REASON, POOL_LABELS, POOLS, useCommandBar } from './command';
+import { ObjectiveWhy } from './ObjectiveWhy';
 import classes from './shell.module.css';
 import { useBarForm } from './useGenerateRun';
+import { TWO_PANES, useMediaQuery } from './useMediaQuery';
 
 /** The objective in one line each: the sentence under it is the Battle card's business, not a bar's. */
 const OBJECTIVE_DATA = OBJECTIVE_CHOICES.map((choice) => ({ value: choice.value, label: choice.title }));
@@ -40,9 +42,20 @@ export interface CommandBarProps {
   pulse?: number;
 }
 
+/**
+ * The two columns the objective's field becomes while it is locked: `['label', 'input', 'description']`
+ * puts the sentence *after* the well in the DOM, and the grid in `shell.module.css` puts it beside it —
+ * reading order and drawing order the same way round (`OBJECTIVE_LOCKED_REASON`).
+ */
+const BESIDE: ('label' | 'input' | 'description' | 'error')[] = ['label', 'input', 'description', 'error'];
+
 export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
   const { housing, priority, problems, message, objectiveLocked, setPool, setObjective } = useCommandBar();
   const form = useBarForm();
+  // Room, not width for its own sake: from 1200 px the March is a pane and the bar's row is the wells
+  // and Generate alone, which is the only state the sentence fits into (owner, 2026-09-21).
+  const beside = useMediaQuery(TWO_PANES);
+  const printed = objectiveLocked && beside;
 
   if (housing === null) return null;
 
@@ -92,15 +105,27 @@ export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
             // `description` slot rather than a paragraph of our own: a caller's `aria-describedby` is
             // overwritten by the input's (`Input.mjs`), so the slot is the only way the sentence is
             // *linked* to the control instead of merely sitting near it — and it renders at `xs`,
-            // which this theme sets to 13 px, inside rule 19's floor. It costs the bar ~32 px of
-            // height (measured 2026-09-15: 88 px to 119.7), which is why the token that reserves it
-            // (`theme.ts`) is the bar's tallest state rather than its everyday one.
+            // which this theme sets to 13 px, inside rule 19's floor.
+            //
+            // **Beside the well, never under it** (owner, 2026-09-21): the slot under a field costs the
+            // bar ~32 px of height (measured 2026-09-15: 88 px to 119.7) on the one edge of the window
+            // a thumb and a Generate share. Re-ordered and laid out in two columns, the same slot is
+            // two lines in the room the label and the well already take, and the bar does not move.
             disabled={objectiveLocked}
-            {...(objectiveLocked ? { description: OBJECTIVE_LOCKED_REASON } : {})}
+            {...(printed
+              ? {
+                  description: OBJECTIVE_LOCKED_REASON,
+                  inputWrapperOrder: BESIDE,
+                  classNames: { root: classes.objectiveBeside, description: classes.objectiveNote },
+                }
+              : {})}
             onChange={(value) => {
               if (value !== null) setObjective(value);
             }}
           />
+          {/* Below 1200 px the row has the answer on it too and there is no column to give the
+              sentence, so it goes behind the ⓘ instead of standing the bar up another line. */}
+          {objectiveLocked && !beside && <ObjectiveWhy className={classes.objectiveWhy} />}
         </div>
         {onOpenRecap !== undefined && (
           <UnstyledButton

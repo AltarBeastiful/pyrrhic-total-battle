@@ -96,12 +96,29 @@ test('the objective is one select, and it writes the priority', async () => {
 });
 
 /**
+ * The width the bar answers with, for the two tests below: `useMediaQuery` asks the browser one
+ * question — `TWO_PANES` — and jsdom's stub says no to every query (`kit/testRender.tsx`), which is
+ * the narrow bar. A test that wants the wide one answers that query itself.
+ */
+function atLeast1200(): void {
+  const stub = window.matchMedia;
+  vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+    ...(stub(query) as MediaQueryList),
+    matches: query === '(min-width: 1200px)',
+  }));
+}
+
+/**
  * The one method that ignores the objective (owner, 2026-09-15). `planCampaign` declares an
  * `objective` and never reads it, and `generate.ts` returns the plan before the priority search, so
  * the control is locked rather than left looking live — with the sentence that says why, wired to
  * the field rather than merely beside it.
+ *
+ * From 1200 px the sentence is **printed**, in the column beside the well (owner, 2026-09-21), and it
+ * is still the field's own `description`: the one slot a disabled control's name can point at.
  */
-test('the objective is locked, and says why, while the plan decides it', async () => {
+test('the objective is locked, and prints why beside it, while the plan decides it', async () => {
+  atLeast1200();
   render(<CommandBar />, { wrapper: ThemeHarness });
 
   const live = () => screen.getByRole('combobox', { name: 'Objective' }) as HTMLInputElement;
@@ -120,6 +137,8 @@ test('the objective is locked, and says why, while the plan decides it', async (
   const describedBy = live().getAttribute('aria-describedby');
   expect(describedBy).not.toBeNull();
   expect(reason.id).toBe(describedBy);
+  // Printed, so there is nothing to press for it.
+  expect(screen.queryByRole('button', { name: /Why the objective/ })).toBeNull();
 
   // And it goes back to live the moment the method stops deciding it.
   useStore.getState().updateActiveSetup((current) => ({
@@ -129,6 +148,38 @@ test('the objective is locked, and says why, while the plan decides it', async (
     expect(live().disabled).toBe(false);
   });
   expect(screen.queryByText(/decides this itself/)).toBeNull();
+});
+
+/**
+ * Below 1200 px the same bar carries the answer as well and the row has no column to spare, so the
+ * sentence is behind the ⓘ instead of standing the bar up another line (owner, 2026-09-21). The
+ * button carries the words as its description, because a popover says nothing until it is opened.
+ */
+test('below 1200 px the reason is behind the ⓘ, and the bar keeps its one row', async () => {
+  const user = userEvent.setup();
+  render(<CommandBar />, { wrapper: ThemeHarness });
+
+  expect(screen.queryByRole('button', { name: /Why the objective/ })).toBeNull();
+
+  useStore.getState().updateActiveSetup((current) => ({
+    options: { ...current.options, method: 'plan' },
+  }));
+
+  const why = await screen.findByRole('button', { name: 'Why the objective is decided by the plan' });
+  const said = document.getElementById(why.getAttribute('aria-describedby') ?? '');
+  expect(said?.textContent).toMatch(/decides this itself/);
+  // The field says nothing of its own here: the sentence is not printed twice.
+  const objective = screen.getByRole('combobox', { name: 'Objective' }) as HTMLInputElement;
+  expect(objective.disabled).toBe(true);
+  expect(objective.getAttribute('aria-describedby')).toBeNull();
+
+  // A press opens it. Two copies of the sentence are then on screen and that is the design: the one
+  // in the dropdown is what is read, the one behind `aria-describedby` is what is heard — a popover's
+  // contents are not in the accessibility tree until it is open.
+  await user.click(why);
+  await waitFor(() => {
+    expect(screen.getAllByText(/The plan weighs damage/)).toHaveLength(2);
+  });
 });
 
 test('Generate is in the bar, and says why it cannot run', async () => {
@@ -188,12 +239,17 @@ test('the fourth chip opens the objective, and choosing one closes it', async ()
 /**
  * The same lock on a phone, where the objective is a chip that opens a popover rather than a select:
  * a chip that opened a list of choices it will not take would be worse than one that cannot open. The
- * reason cannot live in a tooltip (a disabled control fires no hover) or in the popover (it does not
- * open), so the bar carries it in its own note line — and the chip's name says it too, the way
+ * reason cannot live in a tooltip (a disabled control fires no hover) or in that popover (it does not
+ * open), so it is the ⓘ next to the chip that holds it (owner, 2026-09-21; it was a note line above
+ * the chips, which cost the 390 px bar 44 px of height) — and the chip's name says it too, the way
  * Generate's does.
  */
-test('the phone objective chip locks with the plan, and the bar says why', async () => {
+test('the phone objective chip locks with the plan, and the ⓘ beside it says why', async () => {
+  const user = userEvent.setup();
   render(<BottomBar onOpenRecap={() => undefined} />, { wrapper: ThemeHarness });
+
+  // Nothing to explain while the objective is the player's to pick: the row is four chips.
+  expect(screen.queryByRole('button', { name: /Why the objective/ })).toBeNull();
 
   useStore.getState().updateActiveSetup((current) => ({
     options: { ...current.options, method: 'plan' },
@@ -201,11 +257,23 @@ test('the phone objective chip locks with the plan, and the bar says why', async
 
   const chip = await screen.findByRole('button', { name: 'Objective: decided by the plan' });
   expect((chip as HTMLButtonElement).disabled).toBe(true);
-  expect(screen.getByText(/decides this itself/)).toBeTruthy();
+  const why = screen.getByRole('button', { name: 'Why the objective is decided by the plan' });
+  // It stands in the chips' own row, beside the chip it speaks for, and it is not the form's submit.
+  expect(why.parentElement).toBe(chip.parentElement);
+  expect(why.getAttribute('type')).toBe('button');
+  expect(document.getElementById(why.getAttribute('aria-describedby') ?? '')?.textContent).toMatch(
+    /decides this itself/,
+  );
 
-  // And it does not open: a trap over choices that cannot be taken is worse than a dead chip.
-  await userEvent.setup().click(chip);
+  // And the chip does not open: a trap over choices that cannot be taken is worse than a dead chip.
+  await user.click(chip);
   expect(screen.queryByRole('radiogroup', { name: 'Objective' })).toBeNull();
+
+  // The ⓘ does open, and says it in words.
+  await user.click(why);
+  await waitFor(() => {
+    expect(screen.getAllByText(/The plan weighs damage/)).toHaveLength(2);
+  });
 });
 
 test('the phone bar keeps the answer and Generate on its second row', () => {

@@ -18,6 +18,8 @@ import {
   generateState,
   housingChip,
   marchSection,
+  objectiveChip,
+  objectiveSelect,
   openApp,
   settle,
   watchConsole,
@@ -31,6 +33,55 @@ async function box(locator: Locator) {
   const found = await locator.boundingBox();
   if (found === null) throw new Error('the element is not on the page');
   return found;
+}
+
+/** Choose Complete optimization: the one method that decides the objective for itself. */
+async function lockObjective(page: Page): Promise<void> {
+  const battle = page.locator('#battle');
+  const change = battle.getByRole('button', { name: 'Change Stacking method' });
+  if ((await change.count()) > 0) await change.click();
+  await battle.getByRole('radio', { name: 'Complete optimization' }).click();
+}
+
+/** The ⓘ that carries the locked objective's reason where the bar has no room to print it. */
+const objectiveWhy = (page: Page): Locator =>
+  page.getByRole('button', { name: 'Why the objective is decided by the plan' });
+
+/**
+ * What a control is painted with: the five declarations that make two of them the same object.
+ *
+ * `e2e/` compiles without the DOM lib (`e2e/helpers.ts` explains why), so the snippet handed to the
+ * browser describes only the shape it touches, and the cast sits inside the callback because the
+ * function is serialised and cannot close over anything declared out here.
+ */
+interface Paint {
+  background: string;
+  border: string;
+  ink: string;
+  shadow: string;
+  opacity: string;
+}
+
+async function paint(control: Locator): Promise<Paint> {
+  return control.evaluate((node): Paint => {
+    const view = globalThis as unknown as {
+      getComputedStyle: (element: unknown) => {
+        backgroundColor: string;
+        borderColor: string;
+        color: string;
+        boxShadow: string;
+        opacity: string;
+      };
+    };
+    const style = view.getComputedStyle(node);
+    return {
+      background: style.backgroundColor,
+      border: style.borderColor,
+      ink: style.color,
+      shadow: style.boxShadow,
+      opacity: style.opacity,
+    };
+  });
 }
 
 test.describe('on a phone', () => {
@@ -76,6 +127,68 @@ test.describe('on a phone', () => {
     // And the chip says which pool it is in words, not in an emoji alone.
     await expect(chip).toContainText('Lead');
   });
+
+  /**
+   * **The locked objective's reason is a press, not a paragraph** (owner, 2026-09-21). It was two
+   * lines of prose above the chips, which took the 390 px bar from 120 px to 164 — a quarter of the
+   * height of the keyboard it shares this edge of the window with. The ⓘ next to the chip holds it
+   * now, at the row's own 44 px, and the row still fits: four chips and the button on one line.
+   */
+  test('a locked objective is an ⓘ beside the chip, and the bar does not grow for it', async ({ page }) => {
+    await openApp(page);
+
+    const before = Math.round((await box(bar(page))).height);
+    await lockObjective(page);
+    await expect(objectiveChip(page)).toBeDisabled();
+
+    const why = objectiveWhy(page);
+    const target = await box(why);
+    expect(Math.round(target.height)).toBe(44);
+    // On the chips' own line, to the right of the chip it speaks for, and the bar is as it was.
+    const chip = await box(objectiveChip(page));
+    expect(Math.round(target.y)).toBe(Math.round(chip.y));
+    expect(target.x).toBeGreaterThan(chip.x);
+    expect(Math.round((await box(bar(page))).height)).toBe(before);
+
+    // Nothing is drawn until it is pressed: the one copy on the page is the clipped one the button
+    // is described by, which is how a popover says anything to a screen reader before it opens.
+    const said = page.getByText('The plan weighs damage against what it costs, so it decides this itself.');
+    await expect(said).toHaveCount(1);
+    expect(Math.round((await box(said)).height)).toBeLessThanOrEqual(1);
+
+    await why.click();
+    await expect(said).toHaveCount(2);
+    await expect(said.last()).toBeVisible();
+    expect((await box(said.last())).height).toBeGreaterThan(16);
+  });
+
+  /**
+   * The bar is one control set drawn twice, so it has to be one *material* twice over (owner,
+   * 2026-09-19: *"I need the same color of desktop wide mode in mobile mode"*). Only a browser can
+   * check it: the chips are the app's own CSS and the wells one width up are Mantine's, and the two
+   * had drifted apart in both schemes — `#101413` against `#2b3231` in the dark one, because the
+   * chips read the well token the artboards draw with and Mantine overrides it on every input
+   * wrapper — while a locked objective was greyed out at 1400 px and looked live at 390.
+   */
+  test('a chip is the same material as the well it is one width up', async ({ page }) => {
+    await openApp(page);
+
+    // The plan decides the objective for itself: the one state the fourth chip is locked in.
+    const battle = page.locator('#battle');
+    await battle.getByRole('button', { name: 'Change Stacking method' }).click();
+    await battle.getByRole('radio', { name: 'Complete optimization' }).click();
+    await expect(objectiveChip(page)).toBeDisabled();
+
+    const chip = await paint(housingChip(page, 'Leadership'));
+    const locked = await paint(objectiveChip(page));
+
+    await page.setViewportSize({ width: 1400, height: 900 });
+    const well = await paint(page.getByRole('textbox', { name: 'Leadership', exact: true }));
+    const disabled = await paint(objectiveSelect(page));
+
+    expect(chip, 'a housing chip and the housing well it becomes').toEqual(well);
+    expect(locked, 'a locked objective chip and the locked objective select').toEqual(disabled);
+  });
 });
 
 test.describe('between 1024 and 1199 px', () => {
@@ -97,6 +210,48 @@ test.describe('between 1024 and 1199 px', () => {
     // The March has no pane at this width, so the answer is in the bar and opens the sheet.
     await page.getByRole('button', { name: 'Open the march recap' }).click();
     await expect(page.getByRole('dialog', { name: 'March' })).toBeVisible();
+  });
+
+  /**
+   * The width where the sentence cannot be printed at all: the four wells share this row with the
+   * answer and Generate, and there is no column left for it (measured 2026-09-21, 14 px *short* of
+   * the four wells' own 220 px). So this bar takes the phone's answer — the ⓘ — and stays one row.
+   */
+  test('the reason is behind the ⓘ here too, and the bar stays one row', async ({ page }) => {
+    await openApp(page);
+
+    const before = Math.round((await box(bar(page))).height);
+    await lockObjective(page);
+    await expect(objectiveSelect(page)).toBeDisabled();
+
+    await expect(objectiveWhy(page)).toBeVisible();
+    // Nothing under the well: with no description rendered, the select has nothing to point at.
+    await expect(objectiveSelect(page)).not.toHaveAttribute('aria-describedby', /./);
+    expect(Math.round((await box(bar(page))).height)).toBe(before);
+  });
+
+  /**
+   * **The wells give way, Generate never does.** The row is the tightest here — four wells, the
+   * answer and the gold button on 1 052 px — and `.commandFields` asks for what is left of the row
+   * rather than for the width of everything in it (`flex: 1 1 0`, `shell.module.css`). With `auto`
+   * it asked for more than the row had and the shrink came off Generate: measured 2026-09-21, a
+   * button whose own label wrapped inside a height the bar pins at 44 px, so nothing *looked* wrong
+   * until you read it. The button carries a `Ctrl ↵` hint wherever the pointer is fine, which is
+   * 45 px of the width this protects — hence a comparison rather than a number: the same button, at
+   * the widest window and at the narrowest, is the same size.
+   */
+  test('Generate is the same button at 1 100 px as at 1 663, with the objective locked', async ({ page }) => {
+    await openApp(page);
+    await lockObjective(page);
+    // Housing in, so the button is live and carries its full label rather than "Add housing first".
+    await (await editHousing(page, 'Leadership')).fill('84300');
+
+    const tight = await box(generateButton(page));
+    await page.setViewportSize({ width: 1663, height: 887 });
+    const roomy = await box(generateButton(page));
+
+    expect(Math.round(tight.width)).toBe(Math.round(roomy.width));
+    expect(Math.round(tight.height)).toBe(Math.round(roomy.height));
   });
 });
 
@@ -125,5 +280,38 @@ test.describe('on a desktop', () => {
     await expect(field).toHaveAttribute('aria-invalid', 'true');
 
     expect(problems).toEqual([]);
+  });
+
+  /**
+   * **A locked objective costs the bar nothing** (owner, 2026-09-21: *"could be on the right side of
+   * the objective to avoid too high bar"*). The sentence used to be printed under the well and the
+   * bar grew by a third to carry it — 88 px to 119.7 at 1400, and 134 at 1100, over the 120 px
+   * `--pyr-commandbar-height` reserves for it. Only a browser can check this: it is a measurement of
+   * a wrapped paragraph in a flex row, and the grid that fixes it is CSS the tests cannot render.
+   */
+  test('the reason stands beside the objective, and the bar keeps its height', async ({ page }) => {
+    await openApp(page);
+
+    const before = Math.round((await box(bar(page))).height);
+    await lockObjective(page);
+    await expect(objectiveSelect(page)).toBeDisabled();
+
+    const reason = bar(page).getByText(
+      'The plan weighs damage against what it costs, so it decides this itself.',
+    );
+    await expect(reason).toBeVisible();
+    // Printed, so there is nothing to press for it.
+    await expect(objectiveWhy(page)).toHaveCount(0);
+
+    // Beside the well, not under it: the next column along, and two lines of it (owner: *"keep it on
+    // two lines though for readability"*). 13 px is the design's one caption size and Mantine writes
+    // 11 px inline on a sized input's description, so the size is asserted where it is drawn.
+    const well = await box(objectiveSelect(page));
+    const said = await box(reason);
+    expect(said.x).toBeGreaterThan(well.x + well.width);
+    await expect(reason).toHaveCSS('font-size', '13px');
+    expect(Math.round(said.height)).toBeGreaterThan(24);
+    expect(Math.round(said.height)).toBeLessThanOrEqual(44);
+    expect(Math.round((await box(bar(page))).height)).toBe(before);
   });
 });

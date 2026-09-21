@@ -316,18 +316,6 @@ export function bonusesCard(page: Page): Locator {
   return page.locator('#bonuses');
 }
 
-/** The line that unfolds the sources; its `aria-expanded` is the card's open state. */
-export function bonusesDisclosure(page: Page): Locator {
-  return bonusesCard(page).getByRole('button', { name: /^Sources/ });
-}
-
-/** Unfold the sources, if they are not already. */
-export async function openBonuses(page: Page): Promise<void> {
-  const trigger = bonusesDisclosure(page);
-  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click();
-  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-}
-
 /**
  * One of the four labelled figures of the TOTAL ("Health", "Strength", "Special", "Sources on"),
  * read from the card's own header rather than from an editor repeating it.

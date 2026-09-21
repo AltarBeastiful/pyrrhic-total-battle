@@ -341,6 +341,17 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
   const surfaces = (scheme: 'light' | 'dark'): Record<string, string> => {
     const s = SURFACE[scheme];
     const depth = DEPTH[scheme];
+    // The ground and the edge a field actually wears. Mantine declares `--input-bg` and `--input-bd`
+    // again on **every input wrapper**, once per variant (`@mantine/core/styles.css`), and a
+    // declaration on the wrapper beats one on `<html>`: these two are what a field is painted with,
+    // whatever the theme says below. So they are written here, as what they are, and both bars read
+    // them — the desktop's through Mantine, the phone's through its housing chips, which are built
+    // by hand and have to wear the same ground as the field one of them becomes under a thumb
+    // (owner, 2026-09-19: *"I need the same color of desktop wide mode in mobile mode"*).
+    const field =
+      scheme === 'light'
+        ? { bg: 'var(--mantine-color-white)', bd: 'var(--mantine-color-gray-4)' }
+        : { bg: 'var(--mantine-color-dark-6)', bd: 'var(--mantine-color-dark-4)' };
     return {
       '--pyr-page': s.page,
       '--pyr-hairline': s.hairline,
@@ -365,9 +376,18 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       '--pyr-command': depth.command,
       '--pyr-command-shadow': depth.commandShadow,
       '--pyr-sheet-shadow': depth.sheetShadow,
-      // Every control you type into is a well cut into the panel (artboard `.input`, `.sel b`).
-      '--input-bg': s.sunken,
-      '--input-bd': depth.wellBorder,
+      // A control you type into, and anything hand-built that has to pass for one. The artboards
+      // draw it as a well cut into the panel (`CommandBar.dc.html`, `.input`: `#101413`), and these
+      // two used to say so — `s.sunken` and `depth.wellBorder`. They never reached a field: Mantine
+      // overrides both on the wrapper (see `field` above), so the app has always painted its fields
+      // Anvil, and only the phone's chips, written by hand, wore the well. One of the two had to
+      // give; the owner asked for the field. Restoring the artboard is a whole-app change — 47
+      // fields, the contrast script and the kit baselines — and belongs in a story of its own.
+      '--pyr-input-bg': field.bg,
+      '--pyr-input-bd': field.bd,
+      // Mantine's own pair, pointed at the same values, so nothing can drift back apart.
+      '--input-bg': field.bg,
+      '--input-bd': field.bd,
       '--mantine-color-body': s.page,
       '--mantine-color-text': s.ink,
       '--mantine-color-dimmed': s.muted,
@@ -393,9 +413,17 @@ export const cssVariablesResolver: CSSVariablesResolver = (mantineTheme) => {
       // pane never lands under it.
       //
       // It is the bar's **tallest** state, not its everyday one, because a reserve that moves would
-      // give the pane a different room depending on a Battle-card setting: measured 2026-09-15, 88 px
-      // with nothing to say and 119.7 px with the Objective locked by the plan method (that state
-      // carries a one-line `description` under the field). 7.5rem covers it.
+      // give the pane a different room depending on what the bar has to say. It was measured against
+      // a locked Objective, which printed its reason under the well and stood the bar up to 119.7 px
+      // at 1400 — and to 134 at 1100, over this very reserve. That sentence stands *beside* the well
+      // since 2026-09-21 (`CommandBar.tsx`) and the lock now costs the bar nothing: measured that
+      // day, 87 px with nothing to say and 109 px with a pool over its ceiling, at every desktop
+      // width from 1024 up.
+      //
+      // 7.5rem is **kept** at 120 px all the same. It is a reserve, not a measurement: it has to
+      // cover the tallest bar and it does, with room for a message that wraps. The pane's stands are
+      // measured against it (`usePaneStick.ts`, and the table its test walks), and moving a number
+      // the whole March pane is laid out from to win 11 px is not a trade this page needs.
       '--pyr-commandbar-height': '7.5rem',
       // M3's supporting pane, widened from 380 to 420 px by the owner's review of 2026-09-13 ("the
       // right side battle summary could take a bit more space — a bit crammed compared to the content

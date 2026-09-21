@@ -12,7 +12,12 @@
  */
 import { battleSetupSchema, savedSummarySchema, SCHEMA_VERSION, stackCountSchema } from '../state/schema';
 import type { BattleSetup, Profile, SavedSummary, StackCount } from '../state/schema';
-import { CURRENT_DATA_VERSION, SHARE_PROFILE_TEMPLATE, SHARE_SETUP_TEMPLATE } from '../state/defaults';
+import {
+  CURRENT_DATA_VERSION,
+  SHARE_PROFILE_TEMPLATE,
+  SHARE_SETUP_TEMPLATE,
+  SHARE_SETUP_TEMPLATE_V4,
+} from '../state/defaults';
 import { migrateProfile } from '../state/migrations';
 import { z } from 'zod';
 
@@ -103,19 +108,25 @@ export function restoreDefaults<T>(stripped: unknown, defaults: T): T {
 
 // ---- Payload packing ---------------------------------------------------------------------------------
 /**
- * Note for future schema versions: a stripped payload can only be restored with the *defaults of its own
- * version*. The current templates are still the right ones at v3, because no shape change since v1 has
- * touched a default an older link relied on: v2 *added* two setup fields whose default — the empty
- * array — is exactly what a v1 setup meant by not having them, and v3 *removes* both, so an older
- * link restores unchanged and the schema drops what no longer exists. A version that changes an
- * existing default must keep a copy of the older template next to its migration.
+ * A stripped payload can only be restored with the *defaults of its own version*, so a version that
+ * changes an existing default has to keep a copy of the older template — which is what
+ * `SHARE_SETUP_TEMPLATE_V4` is. Up to v4 no template was needed: v2 *added* two setup fields whose
+ * default, the empty array, is exactly what a v1 setup meant by not having them, and v3 *removes*
+ * both, so an older link restores unchanged and the schema drops what no longer exists. `4 → 5` is
+ * the first one that flips a default a link relies on: VIP and the dragon are off now, and a v4 link
+ * that left them out meant on.
+ *
+ * Only the *setup* template is versioned. v5 drops `sources.unknown` without changing a default: a
+ * link that stripped it restores nothing, and one that carried a figure has it dropped by
+ * `dropUnexplainedRemainder`, which is the point of removing it.
  */
 function packSetup(setup: BattleSetup): unknown {
   return stripDefaults(setup, SHARE_SETUP_TEMPLATE) ?? {};
 }
 
-function unpackSetup(value: unknown): BattleSetup {
-  return battleSetupSchema.parse(restoreDefaults(value, SHARE_SETUP_TEMPLATE));
+function unpackSetup(value: unknown, schemaVersion: number): BattleSetup {
+  const template = schemaVersion <= 4 ? SHARE_SETUP_TEMPLATE_V4 : SHARE_SETUP_TEMPLATE;
+  return battleSetupSchema.parse(restoreDefaults(value, template));
 }
 
 /** Saved stacks are not part of a profile link (PLAN §2.1: tiers, mercenaries, bonuses and setups). */
@@ -129,7 +140,9 @@ function unpackProfile(value: unknown, schemaVersion: number): Profile {
   const source = isPlainObject(value) ? value : {};
   const { setups, ...rest } = source;
   const restored = restoreDefaults(rest, SHARE_PROFILE_TEMPLATE) as Record<string, unknown>;
-  const parsedSetups = (Array.isArray(setups) ? setups : []).map(unpackSetup);
+  const parsedSetups = (Array.isArray(setups) ? setups : []).map((entry) =>
+    unpackSetup(entry, schemaVersion),
+  );
   const profile = migrateProfile({ ...restored, setups: parsedSetups, savedStacks: [] }, schemaVersion);
   if (profile.setups.length === 0) return profile;
   const active = profile.setups.some((setup) => setup.id === profile.activeSetupId);
@@ -230,7 +243,7 @@ export async function decodeShare(fragment: string): Promise<SharePayload> {
     kind: 'battle',
     schemaVersion: wire.v,
     dataVersion: wire.d,
-    setup: unpackSetup(body.s),
+    setup: unpackSetup(body.s, wire.v),
     counts: z.array(stackCountSchema).parse(body.c ?? []),
     summary: body.m === undefined ? null : savedSummarySchema.parse(body.m),
   };

@@ -5,12 +5,13 @@
  * of 44 and 48 px (the review of 2026-09-13: a 34 px chip is under every touch-target floor there
  * is, and the row is the one thing on this page a thumb lands on all day):
  *
- * - **row 1** — the three housing pools as *value chips* ("🛡️ Lead 84 300"), and a fourth chip
- *   carrying the objective by name. A chip is the figure, not a field, until a thumb lands on it:
- *   then it becomes a plain input **in its own place**, with its value selected so the next
- *   keystroke replaces it, and `Enter` or leaving it puts the figure back (design rule 9). The
- *   glyph and the pool's short name stay put through all of it — an emoji is never the only label,
- *   and a chip that loses its word when it opens is a chip you have to remember the meaning of.
+ * - **row 1** — the three housing pools as *value chips* ("🛡️ Lead 84 300"), a fourth chip carrying
+ *   the objective by name, and — only while that chip is locked — the ⓘ that says why. A chip is the
+ *   figure, not a field, until a thumb lands on it: then it becomes a plain input **in its own place**,
+ *   with its value selected so the next keystroke replaces it, and `Enter` or leaving it puts the
+ *   figure back (design rule 9). The glyph and the pool's short name stay put through all of it — an
+ *   emoji is never the only label, and a chip that loses its word when it opens is a chip you have to
+ *   remember the meaning of.
  * - **row 2** — the answer in one line, whose whole half opens the March sheet, and Generate.
  *
  * Sticky rather than fixed: as the last block of the frame it is pinned to the bottom edge while
@@ -34,14 +35,8 @@ import { Glyph } from '@/ui/domain';
 import { ChoiceList, useOpenEditor } from '@/ui/kit';
 import { amount, MarchGenerateButton, MarchQuickSummary } from '@/ui/sections/march';
 
-import {
-  OBJECTIVE_CHOICES,
-  OBJECTIVE_LOCKED_REASON,
-  POOL_LABELS,
-  POOL_SHORT,
-  POOLS,
-  useCommandBar,
-} from './command';
+import { OBJECTIVE_CHOICES, POOL_LABELS, POOL_SHORT, POOLS, useCommandBar } from './command';
+import { ObjectiveWhy } from './ObjectiveWhy';
 import classes from './shell.module.css';
 import { useBarForm } from './useGenerateRun';
 
@@ -69,9 +64,6 @@ export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
           {message}
         </p>
       )}
-      {/* Why the objective chip is locked, in the bar's own line above the chips. A note, not an
-          alert: nothing has gone wrong. */}
-      {objectiveLocked && <p className={classes.barNote}>{OBJECTIVE_LOCKED_REASON}</p>}
       {housing !== null && (
         <div className={classes.housingRow}>
           {POOLS.map((pool) => (
@@ -91,6 +83,12 @@ export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
             locked={objectiveLocked}
             onChange={setObjective}
           />
+          {/* Why that chip cannot be pressed, behind the ⓘ rather than in a line of its own above the
+              chips (owner, 2026-09-21). The line was two lines of prose at 390 px and it stood the bar
+              up from 120 px to 164 — a quarter of the height of the keyboard it shares the bottom of
+              the window with, spent on a sentence that is read once. At the row's own 44 px, because
+              this is the phone and everything on this row is something a thumb lands on. */}
+          {objectiveLocked && <ObjectiveWhy size={44} className={classes.chipWhy} />}
         </div>
       )}
       <div className={classes.answerRow}>
@@ -208,10 +206,10 @@ interface ObjectiveChipProps {
  * review of 2026-09-13 could not tell what it opened without pressing it.
  *
  * While the plan method is chosen the chip is locked (owner, 2026-09-15). The reason cannot live in a
- * tooltip and cannot live in the popover — a disabled control fires no hover, and this one does not
- * open — so it goes in the bar's note line, and the chip's own accessible name carries it as well,
- * the way Generate's does (`MarchGenerateButton.tsx`): *"a disabled button fires no hover, so a
- * tooltip alone would hide the one thing the player needs to read."*
+ * tooltip and cannot live in this popover — a disabled control fires no hover, and this one does not
+ * open — so it is the ⓘ standing next to it that holds it (`ObjectiveWhy.tsx`), and the chip's own
+ * accessible name carries it as well, the way Generate's does (`MarchGenerateButton.tsx`): *"a disabled
+ * button fires no hover, so a tooltip alone would hide the one thing the player needs to read."*
  */
 function ObjectiveChip({ value, title, locked, onChange }: ObjectiveChipProps) {
   const [opened, setOpened] = useState(false);

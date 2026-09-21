@@ -15,16 +15,6 @@ import { openApp, watchConsole } from './helpers';
 /** The Bonuses card. Its sheets are portalled, so they live outside this locator. */
 const bonusesCard = (page: Page): Locator => page.locator('#bonuses');
 
-/** The line that unfolds the sources; its `aria-expanded` is the card's open state. */
-const bonusesDisclosure = (page: Page): Locator =>
-  bonusesCard(page).getByRole('button', { name: /^Sources/ });
-
-async function openBonuses(page: Page): Promise<void> {
-  const trigger = bonusesDisclosure(page);
-  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click();
-  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-}
-
 /**
  * One of the four labelled figures of the TOTAL ("Health", "Strength", "Special", "Sources on"),
  * read from the card's own header rather than from an editor repeating it.
@@ -58,19 +48,25 @@ async function tapCaptain(page: Page, name: string): Promise<void> {
   await (await chipLabel(page, name)).click();
 }
 
-test('the card is the TOTAL until it is opened', async ({ page }) => {
+test('the card opens on the TOTAL with the captains already under it', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
   const card = bonusesCard(page);
   await expect(card.getByRole('heading', { level: 2, name: 'Bonuses' })).toBeVisible();
-  await expect(bonusesDisclosure(page)).toHaveAttribute('aria-expanded', 'false');
+  // No "Sources" line to press first (owner, 2026-09-19): the family that changes every fight is
+  // the first thing under the figures.
+  await expect(card.getByRole('button', { name: /^Sources/ })).toHaveCount(0);
+  // The chip's own input is visually hidden behind its label, so the label is what "on screen" means.
+  await expect(await chipLabel(page, 'Beowulf')).toBeVisible();
 
-  // Four labelled figures, all readable without opening anything.
+  // Four labelled figures, all readable at a glance.
   expect(await bonusTotal(page, 'Health')).toBe('0 %');
   expect(await bonusTotal(page, 'Strength')).toBe('0 %');
   expect(await bonusTotal(page, 'Special')).toBe('0 %');
-  expect(await bonusTotal(page, 'Sources on')).toBe('3');
+  // None: a new account has chosen no captain, worn no title and switched nothing on. VIP and the
+  // dragon used to stand on and empty here, and counted three (owner, 2026-09-19).
+  expect(await bonusTotal(page, 'Sources on')).toBe('0');
 
   expect(problems).toEqual([]);
 });
@@ -78,7 +74,6 @@ test('the card is the TOTAL until it is opened', async ({ page }) => {
 test('a captain enlisted and levelled through its gear moves the TOTAL', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
-  await openBonuses(page);
 
   // Every captain is already on screen: the chips are the form, so there is nothing to add.
   await expect(bonusesCard(page).getByRole('button', { name: 'Add captain' })).toHaveCount(0);
@@ -123,7 +118,6 @@ test('a captain enlisted and levelled through its gear moves the TOTAL', async (
 test('the fourth captain is refused, in one line', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
-  await openBonuses(page);
 
   for (const name of ['Beowulf', 'Aydae', 'Skadi']) await tapCaptain(page, name);
   await tapCaptain(page, 'Brann');
@@ -136,10 +130,9 @@ test('the fourth captain is refused, in one line', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('the card remembers being open, and the sources survive a reload', async ({ page }) => {
+test('what was set on a source survives a reload', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
-  await openBonuses(page);
   await tapCaptain(page, 'Beowulf');
 
   await captainGear(page, 'Beowulf').click();
@@ -164,7 +157,6 @@ test('the card remembers being open, and the sources survive a reload', async ({
   await page.reload();
   await page.waitForLoadState('networkidle');
 
-  await expect(bonusesDisclosure(page)).toHaveAttribute('aria-expanded', 'true');
   await expect(captainChip(page, 'Beowulf')).toBeChecked();
   expect(await bonusTotal(page, 'Health')).toBe('+12 %');
 

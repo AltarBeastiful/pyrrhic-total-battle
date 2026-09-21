@@ -189,10 +189,17 @@
   gap: 0.5rem;
 }
 
-/* A housing value as a chip: the same well the desktop bar types into, at the 44 px a thumb needs
-   (the review of 2026-09-13 measured 34). The glyph keeps a box of its own so the three chips read
-   as a column of figures, and the pool's short name stands over the figure — an emoji is never the
-   only label, and at 390 px the four of them do not fit on one line beside their words. */
+/* A housing value as a chip: **the same material as the field the desktop bar types into**, at the
+   44 px a thumb needs (the review of 2026-09-13 measured 34). The glyph keeps a box of its own so
+   the three chips read as a column of figures, and the pool's short name stands over the figure —
+   an emoji is never the only label, and at 390 px the four of them do not fit on one line beside
+   their words.
+
+   The ground and the edge are `--pyr-input-bg` / `--pyr-input-bd` (`theme.ts`), which are what
+   Mantine paints a field with, rather than the well the artboard draws: the chip has to be the same
+   colour as the same control one breakpoint away (owner, 2026-09-19), and it is the desktop bar
+   that carries the app's other 46 fields with it. No inset shadow for the same reason — a Mantine
+   field has none. */
 .chip {
   display: flex;
   min-width: 0;
@@ -202,10 +209,9 @@
   flex: 1 0 auto;
   align-items: center;
   gap: 0.1875rem;
-  border: 1px solid var(--pyr-well-border);
+  border: 1px solid var(--pyr-input-bd);
   border-radius: var(--mantine-radius-sm);
-  background: var(--pyr-sunken);
-  box-shadow: var(--pyr-well-shadow);
+  background: var(--pyr-input-bg);
   padding: 0 0.3125rem;
   color: var(--mantine-color-text);
   font-size: var(--mantine-font-size-xs);
@@ -255,7 +261,9 @@
 }
 
 @media (hover: hover) {
-  .chip:hover {
+  /* Not over the two chips that have something to say with the same edge: a figure the bar cannot
+     march with keeps its error colour under the pointer, and a locked objective stays locked. */
+  .chip:hover:not(:disabled, [data-error]) {
     border-color: var(--mantine-color-default-border);
   }
 }
@@ -269,6 +277,21 @@
   min-width: 3.75rem;
   flex: 1 1 auto;
   justify-content: space-between;
+}
+
+/* Locked while the plan decides the objective for itself (owner, 2026-09-15). The desktop `Select`
+   is given Mantine's own disabled state and this one was given none at all, so at 390 px the one
+   control in the bar that cannot be pressed looked exactly like the three that can. These are the
+   four declarations Mantine writes on a disabled input (`@mantine/core/styles.css`,
+   `.m_8fb7ebe7:disabled`), so the control now reads the same at both widths.
+
+   Never the only signal (design rule 24): the reason is in the bar's note line above the chips and
+   in the chip's own accessible name (`BottomBar.tsx`). */
+.objectiveChip:disabled {
+  background: var(--mantine-color-disabled);
+  color: var(--mantine-color-disabled-color);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .objectiveName {
@@ -345,11 +368,17 @@
 }
 
 /* The wells take the room they need and no more: at 1100 px a field that shares the row four ways
-   is 220 px, and at 1600 px it is still 220 px rather than the 341 px the review measured. */
+   is 220 px, and at 1600 px it is still 220 px rather than the 341 px the review measured.
+
+   **The wells give way to Generate, never the other way round** (2026-09-21): the basis is 0, so this
+   box asks for what the row has left after the gold button and the answer rather than for the width
+   of everything in it. With `auto` it asked for more than the row had the moment the locked objective
+   grew a second column, and the shrink came off Generate — measured at 1200 and 1300, a button whose
+   own label wrapped. */
 .commandFields {
   display: flex;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   align-items: end;
   gap: var(--mantine-spacing-md);
 }
@@ -368,14 +397,84 @@
   line-height: 1.35;
 }
 
-/* A note that is not a complaint: why a control in the bar cannot be used, in the phone bar's own
-   line above the chips. Muted, never the error colour, and not a `role="alert"` — nothing has gone
-   wrong (owner, 2026-09-15: the Objective is locked while the plan decides it). */
-.barNote {
+/* ---- Why the Objective is locked (owner, 2026-09-15; where it is drawn, owner 2026-09-21) --------
+   The sentence used to be a line of its own — a `description` under the desktop well, a muted
+   paragraph over the phone's chips — and both bars paid for it in height on the one edge of the
+   window a thumb and a Generate share: 88 px to 119.7 at 1400, 87 to 134 at 1100, 120 to 164 at 390.
+   It is the same sentence in the same words (`command.ts`); only its room changes.
+
+   **From 1200 px it stands beside the well**, and the field becomes two columns to hold it: the
+   label and the well on the left, the sentence on the right, spanning both of their rows. 16.25rem
+   is what two lines of it come to at 13 px, measured at 1200, 1300, 1400 and 1663 — the column has a
+   width rather than a share of the row, because a share would re-wrap it at every window. Its 40 px
+   fit inside the 59 the label and the well already take, so the bar does not move. Mantine is told
+   to put the description *after* the input (`inputWrapperOrder`, `CommandBar.tsx`), so the reading
+   order is the drawing order. */
+.objectiveBeside {
+  display: grid;
+  grid-template-columns: minmax(0, 13.75rem) minmax(11rem, 16.25rem);
+  column-gap: var(--mantine-spacing-md);
+}
+
+/* 31rem is the two columns and the gap between them; without it the flex row hands this field the
+   13.75rem every other one is capped at and the sentence has nowhere to go. The three wells beside
+   it are `flex: 1 1 0` and take what is left: 220 px each from about 1400 px, and 153 at 1200 —
+   still twice the width of the chip that carries the same figure on a phone. */
+.commandFields > .objectiveBeside {
+  max-width: 31rem;
+  flex: 0 1 31rem;
+}
+
+.objectiveBeside :global(.mantine-InputWrapper-label) {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+/* The 2 px Mantine puts under an input that has something after it in the wrapper's order
+   (`--input-margin-bottom`, set inline, so it is the property and not the variable that is
+   overridden here): what follows this one is in the next column, not under it, and those 2 px were
+   the whole of the difference between this field and the three wells beside it. */
+.objectiveBeside :global(.mantine-Input-wrapper) {
+  grid-row: 2;
+  grid-column: 1;
+  margin-bottom: 0;
+}
+
+/* The sentence: the second column, over both rows, sunk so its two lines read against the well
+   beside it rather than hanging off the top of the label. */
+.objectiveNote {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  align-self: end;
   margin: 0;
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
+  padding-bottom: 0.3125rem;
   line-height: 1.35;
+}
+
+/* **13 px, the design's one caption size** (design rule 19: information text is never smaller).
+   `theme.ts` points `--input-description-size` at `xs` for exactly this reason, and Mantine writes
+   the variable again *inline* on every description whose input has a size — 2 px under `sm`, which
+   is 11 px in our ramp. A variable set inline cannot be answered with a variable, so the size is
+   set here, on a selector that outranks Mantine's own. */
+.objectiveBeside :global(.mantine-InputWrapper-description) {
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* Below 1200 px there is no such column — the wells share the row with the answer, and a phone's
+   four chips share 366 px of it — so the sentence goes behind the ⓘ (`ObjectiveWhy.tsx`). On the
+   desktop bar it is the size the March pane's own ⓘ is, dropped to the middle of the well beside
+   it: (40 − 22) ÷ 2. */
+.commandFields > .objectiveWhy {
+  margin-bottom: 0.5625rem;
+  flex: 0 0 auto;
+  align-self: end;
+}
+
+/* On the phone it is the chip row's own 44 px, and it gives up none of that width to a chip that
+   wants more room for its figure: a flex item may not shrink under the floor a thumb needs. */
+.housingRow > .chipWhy {
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 /* The three pools and the objective are the biggest wells on the page here too (docs/design.md §4:

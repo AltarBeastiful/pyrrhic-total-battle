@@ -1,9 +1,9 @@
 /**
- * The four editors that are nothing but the 13-key grid: a permanent source, a source of your own,
- * your dragon, and the remainder a battle report leaves unexplained.
+ * The three editors that are nothing but the 13-key grid: a permanent source, a source of your own,
+ * and your dragon.
  *
  * They differ in one line of wording and in whether the row can be named or deleted, so they share
- * one shell here rather than repeating the grid four times.
+ * one shell here rather than repeating the grid three times.
  */
 import { Stack, TextInput } from '@mantine/core';
 
@@ -133,29 +133,6 @@ export function DragonSheet({ profile, summary, onClose }: FreeFormProps) {
           updateSources(profile.id, (current) => ({
             ...current,
             dragon: applyBonusValues(current.dragon, next),
-          }));
-        }}
-      />
-    </SourceSheet>
-  );
-}
-
-export function RemainderSheet({ profile, summary, onClose }: FreeFormProps) {
-  return (
-    <SourceSheet
-      size="lg"
-      title="Unexplained remainder"
-      where={WHERE.remainder}
-      summary={summary}
-      onClose={onClose}
-    >
-      <BonusKeyGrid
-        withSpecial={false}
-        value={{ health: profile.sources.unknown.health, strength: profile.sources.unknown.strength }}
-        onChange={(next) => {
-          updateSources(profile.id, (current) => ({
-            ...current,
-            unknown: { health: next.health, strength: next.strength },
           }));
         }}
       />

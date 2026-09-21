@@ -31,8 +31,6 @@ export interface BonusValues {
 export interface BonusKeyGridProps {
   value: BonusValues;
   onChange: (next: BonusValues) => void;
-  /** Special strength keys are meaningless for a few editors (the unexplained remainder). */
-  withSpecial?: boolean;
 }
 
 /** Sets or clears one key; an empty field removes the key instead of storing a 0. */
@@ -47,7 +45,7 @@ function setKey<K extends string>(
   return next;
 }
 
-export function BonusKeyGrid({ value, onChange, withSpecial = true }: BonusKeyGridProps) {
+export function BonusKeyGrid({ value, onChange }: BonusKeyGridProps) {
   const bonusField = (bucket: 'health' | 'strength', key: BonusKey) => (
     <NumberField
       key={`${bucket}-${key}`}
@@ -74,24 +72,22 @@ export function BonusKeyGrid({ value, onChange, withSpecial = true }: BonusKeyGr
           {BONUS_KEYS.map((key) => bonusField('strength', key))}
         </SimpleGrid>
       </FieldGroup>
-      {withSpecial && (
-        <Disclosure title="Special strength" summary="Double damage and second strikes">
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
-            {SPECIAL_KEYS.map((key: SpecialKey) => (
-              <NumberField
-                key={key}
-                label={SPECIAL_LABELS[key]}
-                allowEmpty
-                allowDecimal
-                value={value.special?.[key] ?? null}
-                onChange={(next) => {
-                  onChange({ ...value, special: setKey(value.special ?? {}, key, next) });
-                }}
-              />
-            ))}
-          </SimpleGrid>
-        </Disclosure>
-      )}
+      <Disclosure title="Special strength" summary="Double damage and second strikes">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+          {SPECIAL_KEYS.map((key: SpecialKey) => (
+            <NumberField
+              key={key}
+              label={SPECIAL_LABELS[key]}
+              allowEmpty
+              allowDecimal
+              value={value.special?.[key] ?? null}
+              onChange={(next) => {
+                onChange({ ...value, special: setKey(value.special ?? {}, key, next) });
+              }}
+            />
+          ))}
+        </SimpleGrid>
+      </Disclosure>
     </Stack>
   );
 }

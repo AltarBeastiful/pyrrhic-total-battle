@@ -22,7 +22,7 @@ export type ActiveListKey =
 export type EntryListKey = 'captains' | 'equipment' | 'artifacts' | 'custom';
 
 /** The on/off sources of `setup.active` that have no list of their own. */
-export type ActiveFlagKey = 'hero' | 'vip' | 'dragon' | 'unknown';
+export type ActiveFlagKey = 'hero' | 'vip' | 'dragon';
 
 const ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 

@@ -1,10 +1,14 @@
 /**
- * The one piece of Bonuses view state that belongs to the device rather than to the document:
- * whether the list of sources is unfolded (design plan §7.3, decision D7 — "collapsed by default,
- * expanded state remembered per device").
+ * The Bonuses view state that belongs to the device rather than to the document: which of the two
+ * foot folds — artifacts, titles — a player left open.
+ *
+ * The whole card used to fold too, collapsed by default and remembered here under `bonusesExpanded`
+ * (D7). That fold is gone (owner, 2026-09-19), and with it the only preference this module had on a
+ * first visit; a stored `bonusesExpanded` from an older build is simply never read again, which is
+ * all a retired UI preference needs, since nothing derives from it.
  *
  * It lives under the shared `pyrrhic.ui.v1` object in `localStorage`, beside the saved document but
- * never inside it: a share link and a sync must not carry "this device likes its bonuses open".
+ * never inside it: a share link and a sync must not carry "this device likes its titles open".
  * Every read and every write is guarded — a private window, a full quota and a blocked origin all
  * throw, and none of them is a reason to lose the card.
  *
@@ -13,8 +17,6 @@
  */
 const KEY = 'pyrrhic.ui.v1';
 
-/** The field of that object this card owns. */
-export const BONUSES_EXPANDED = 'bonusesExpanded';
 /** The two families folded at the foot of the list (artifacts, titles), each remembered the same way. */
 export const BONUSES_FOLDS = 'bonusesFolds';
 export type BonusesFold = 'artifacts' | 'titles';
@@ -30,26 +32,13 @@ function readAll(): Record<string, unknown> {
   }
 }
 
-/** Was the card left open? Anything but a stored `true` means collapsed, which is the default. */
-export function readExpanded(): boolean {
-  return readAll()[BONUSES_EXPANDED] === true;
-}
-
-/** Writes that one field and keeps every other one: the object is shared with the rest of the UI. */
-export function writeExpanded(expanded: boolean): void {
-  try {
-    globalThis.localStorage?.setItem(KEY, JSON.stringify({ ...readAll(), [BONUSES_EXPANDED]: expanded }));
-  } catch {
-    // No storage (private window, full quota): the card simply forgets between visits.
-  }
-}
-
 /** Was one of the two foot folds left open? Anything but a stored `true` means folded. */
 export function readFold(fold: BonusesFold): boolean {
   const folds = readAll()[BONUSES_FOLDS];
   return typeof folds === 'object' && folds !== null && (folds as Record<string, unknown>)[fold] === true;
 }
 
+/** Writes that one field and keeps every other one: the object is shared with the rest of the UI. */
 export function writeFold(fold: BonusesFold, open: boolean): void {
   try {
     const all = readAll();
