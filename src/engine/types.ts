@@ -246,7 +246,16 @@ export interface SearchRequest {
    * army with no leadership types would have no admissible candidate at all.
    */
   troopFloor?: number;
+  /**
+   * **Which damage a ratio objective divides** (S-134, 2026-09-22). `'average'` is today's search exactly and
+   * is the default; `'worst'` divides `minDamage`, the reading S-94 fixed for the whole plan and the one
+   * `plan-benchmark.test.ts` prices every row on.
+   */
+  reading?: DamageReading;
 }
+
+/** The two openings a march can be judged on: the coin-flip average, or the one where the enemy strikes first. */
+export type DamageReading = 'average' | 'worst';
 
 export interface SearchProgress {
   evaluated: number;

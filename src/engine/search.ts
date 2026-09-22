@@ -22,6 +22,7 @@
 import { battleScore, simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
 import type {
+  DamageReading,
   BattleScore,
   Objective,
   SearchProgress,
@@ -65,18 +66,43 @@ function now(): number {
  * no monsters so no dragon coins) is not a score of zero — it is unmeasurable, and scores −Infinity so the
  * search never prefers it.
  */
-export function objectiveScore(summary: BattleScore, objective: Objective): number {
+export function objectiveScore(
+  summary: BattleScore,
+  objective: Objective,
+  reading: DamageReading = 'average',
+): number {
+  // **Which damage a ratio divides** (S-134). `BattleScore.damagePerSilver` and its two siblings are built
+  // on the *average* of the two openings (`scoreOf`, `battle.ts`), so every ratio objective ranks marches by
+  // a number the owner has already ruled out planning on: *"average damage is not average for sure; it's too
+  // risky for me to spend 3M silver on a coin flip to get 1M damage or 3M. We want reliable damage
+  // actually"* (S-94, 2026-09-19) — on which reading `plan-benchmark.test.ts` prices **every** row. So the
+  // plan judges on the worst opening while the search optimises the average, and this is the one function
+  // where the two meet. `'worst'` divides `minDamage` instead; `'average'` is today's arithmetic exactly.
+  const damage = reading === 'worst' ? summary.minDamage : summary.avgDamage;
+  const per = (cost: number): number => (cost > 0 ? damage / cost : -Infinity);
   switch (objective) {
     case 'avgDamage':
       return summary.avgDamage;
     case 'minDamage':
       return summary.minDamage;
     case 'damagePerSilver':
-      return summary.recovery.silver > 0 ? summary.damagePerSilver : -Infinity;
+      return reading === 'worst'
+        ? per(summary.recovery.silver)
+        : summary.recovery.silver > 0
+          ? summary.damagePerSilver
+          : -Infinity;
     case 'damagePerGold':
-      return summary.recovery.gold > 0 ? summary.damagePerGold : -Infinity;
+      return reading === 'worst'
+        ? per(summary.recovery.gold)
+        : summary.recovery.gold > 0
+          ? summary.damagePerGold
+          : -Infinity;
     case 'damagePerDragonCoin':
-      return summary.recovery.dragonCoins > 0 ? summary.damagePerDragonCoin : -Infinity;
+      return reading === 'worst'
+        ? per(summary.recovery.dragonCoins)
+        : summary.recovery.dragonCoins > 0
+          ? summary.damagePerDragonCoin
+          : -Infinity;
   }
 }
 
@@ -124,7 +150,7 @@ export function searchPriority(
       subset,
       scoped,
       result,
-      score: objectiveScore(battleScore(result, scoped), request.objective),
+      score: objectiveScore(battleScore(result, scoped), request.objective, request.reading),
     };
     cache.set(key, evaluation);
     evaluated += 1;
