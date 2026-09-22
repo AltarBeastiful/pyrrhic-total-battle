@@ -436,7 +436,41 @@ measure how far `searchPriority` is from it and why.
 *Acceptance*: ≥ +12.5 % on Bear ×3 at the same silver; the gap to the exact optimum stated for each bear
 army.
 
-### 5.9 W9 — No leadership at all (his choice: tell now, floor after)
+### 5.9 W9 — No leadership at all — **done 2026-09-22 (S-129), and no floor was needed**
+
+`searchPriority` refuses a selection when **any other selection it evaluated has at least its damage for at
+most its burn** — `STRATEGIES.stock` of `engine/trades.ts`, swept once over the field rather than compared
+pairwise. That is the whole change, and it has no constant in it.
+
+**The floor W9b specified turned out to be unnecessary**, which is the interesting part. Troops cost
+leadership and **leadership is not burn** (`mercLost` is the authority pool alone, S-102), so a troopless
+march is nearly always beaten by one that keeps its troops at *no extra cost in the rare resource*. Nothing
+has to forbid a troopless answer when something already beats it. The benchmark's **8 troopless rows are
+0**, and experiment 136 reads **0 of 85** answers beaten on stock where it read 17.
+
+*One wrong turn worth recording*: comparing each candidate against the **whole army alone** — the obvious
+cheap version — is wrong, and the benchmark caught it in one run. A candidate refused for being beaten by the
+whole army is replaced by the next best *ratio*, which the refused one may itself beat: on Aydae alone,
+12,671,899 at 874 chunks was refused and 8,599,955 at 871 took its place. It also left three troopless
+answers standing, at 1, 0 and 0 chunks, because the whole army burns more than they do and so cannot beat
+them. The field, not a reference march, is what a dominance test has to be taken over.
+
+*What it is worth* — the defect the plan opened on:
+
+| army · objective | before | after |
+|---|---|---|
+| his usual setup · Tier ladder · damage per silver | 1,436,400, **no troops**, 33 chunks | **11,780,261**, 2 troops, 33 |
+| his usual setup · Troops first · damage per silver | 1,436,400, **no troops**, 33 chunks | **11,472,532**, 8 troops, **8** |
+| Aydae alone · Troops first · average damage | 8,157,173, **no troops**, 874 | **23,501,117**, 1 troop, **224** |
+| Aydae alone · Troops first · damage per silver | 12,929,213, 1 troop, 108 | **17,204,587**, 7 troops, **48** |
+
+*Cost*: matched spend unmoved (five beats, no army worse). Two armies red because their **own sizer rows**
+improved so far that `bestSizer` jumped and the plan's share of it fell under a pin — a rival getting better,
+not a plan getting worse. Five `search.test.ts` pins move, and one of them,
+*"finds the monsters-only peak that no chain of one- or two-type drops leads to"*, **asserts the very answer
+the owner calls unplayable**. That test and this rule cannot both be right; which goes is his call.
+
+### 5.9b W9a — the telling (still open)
 
 Eight of 227 rows field **no troop stack**: `damagePerSilver` on every army housing a dominance pool, and
 `avgDamage` under Troops first on the evening account and Aydae-alone. `runGenerate` branches on the
@@ -462,7 +496,8 @@ objective before it reaches the sizer, so the method radio is inert.
 | 6 | **W7** flat profile | +2.9 %, probably generalises | isolated |
 | 7 | **W8** single-march search | +12.5 % on the bears | isolated |
 | 8 | **W3** converge the big camp | scenario 18 registrable | engine work |
-| 9 | **W9a** then **W9b** | 8 rows | W9b moves pins |
+| 9 | ~~**W9b** the floor~~ **done 2026-09-22** — and no floor was needed | **8 troopless rows → 0**, up to 8.2× the damage for identical stock | 5 search pins + 2 armies move |
+| 10 | **W9a** the telling | the method radio says it is inert while an objective is selected | none |
 
 W1 and W2 come first because everything after them is judged by them. W5 is third because it is a correctness
 gap against the definition and costs almost nothing.
