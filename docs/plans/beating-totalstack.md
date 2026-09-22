@@ -606,6 +606,47 @@ against the steady max's **15,306,859**, which is **3.6×**. It is outside the s
 That is exactly G1's diagnosis (*"the plan will not spend an unlimited stock"*) confirmed from a second
 direction, and it is a question about the spend ceiling, not about which types the family reaches.
 
+## 5.10 W10 — the bar does not offer what the plan already found (S-137/S-138, 2026-09-23)
+
+**G0 is mostly a stop rule, not a reach problem, and that is measured.** Two experiments ran it down.
+
+**143 — which marker refuses us, row by row.** Of the captured rows the bar fails to dominate, **22** have
+no stop inside their budget and **46** we fit and simply hit less hard. The refusals are narrow: **`gold` 15
+and `burned` 15**, silver 4, coins 2. **Six** are on a marker the rival spends *nothing* of, where no
+tolerance can help. And **ten are within 20 %** of the budget. On the 12 000-leadership export — the worst
+G0 army, six of nine rows out — the misses are **three chunks of burn** (45 against the 42 they allow) and
+**27 gold** (2 984 against 2 956.8).
+
+**Then the frontier.** That army's bar offers stops at **45 · 67 · 82** chunks, and the frontier they were
+chosen from holds **476 rows at 44 or fewer** — the best burning **42** for **26 135 439**, which is *more*
+damage than the silver saver's 20 864 973 at *less* burn, marked `undominated` **and** `inBand`, and offered
+as nothing. The thrift end is picked by **silver**, so a plan that spends more silver for far less burn can
+never be a pick however well it would fit a rival's budget.
+
+**144 — so has the plan already reached it?** For every row no *stop* fits inside, every undominated
+frontier row priced over the same horizon on the same arithmetic:
+
+| | |
+|---|---|
+| rows with no stop of ours inside their budget | **22** |
+| of those, rows an **undominated frontier plan does fit** | **14** |
+| of those, plans that fit **and out-damage the row** | **6** |
+| rows with nothing on the frontier that fits | **8** |
+
+**Fourteen of the twenty-two are a stop rule; six are beats available with no new search at all.** All six
+of the 12 000 export's no-fit rows are rescued, four as beats (+5.4 %, +5.4 %, +6.0 %, +6.0 %); his camp of
+2026-09-19 as his message reads it gains two at **+31.9 %**. The counts are a **lower bound** — the frontier
+was capped at 300 rows on five armies, one of which holds 1 999 undominated rows.
+
+The remaining **8** are what W4's reach work is for, and they are now separated from the rest instead of
+sharing one bucket with them.
+
+**What it needs is his decision, not more measurement.** The bar keeps three stops by his own instruction
+(*"keep 3 spot on the slider each time"*), so this is not "offer more rows". The thrift end is currently the
+**silver**-thriftiest undominated plan; the measurement says a **burn**-thriftiest one fits far more rival
+budgets. Which end the slider's first stop should read — or whether it should carry both — is a product
+call, and the figures above are what it should be taken on.
+
 ### 5.9b W9a — the telling (still open)
 
 Eight of 227 rows field **no troop stack**: `damagePerSilver` on every army housing a dominance pool, and
