@@ -490,6 +490,52 @@ internally consistent — but it is a verdict **at his settings**, and this plan
 `STRATEGIES.stock`, the burn alone, is the one reading in `trades.ts` that is provably
 setting-independent — an argument for it that was not available when it was written.
 
+**And the caveat 137 left is now closed, experiment 138 (S-131)** — the real verdicts, not one synthetic
+pair: §2's matched-spend standing per army, what each of the five objectives answers with under both sizer
+methods, and the trade gates of S-128, each re-run under all three settings.
+
+| what was re-asked | how many answers move with the setting |
+|---|---|
+| §2's verdict, per army | **3 of 17** |
+| an objective's answer (army × method × objective) | **34 of 170** — and *all 34 are `damage per gold`* |
+| a trade gate's verdict (army × strategy) | **0 of 68** |
+
+**Four of the five objectives are setting-stable on every army.** `average damage`, `best worst case`,
+`damage per silver` and `damage per dragon coin` answer with the identical shape under `retrain`, `revive`
+and `selective · monsters`. That is the finding W9 was waiting on: **the troopless defect §5.9 is about is
+not a property of a setting**, so the floor does not have to be stated per setting — and, being a rule about
+*which unit types* a selection fields rather than about what they cost, it reads none of the three moving
+columns at all.
+
+**`damage per gold` is the one objective the setting owns**, and it owns it completely: 34 of 34. Under
+`revive` it collapses to a troopless march on 15 of the 17 armies (`0t/1` or `0t/3`), where under `retrain`
+and under the app's own default it fields troops everywhere. Nothing had seen this, because no run had ever
+varied the mode. It is the same defect as `damage per silver`'s, on a larger population, and the same floor
+answers both.
+
+**The three armies whose §2 verdict moves, and the marker that moved it** (§D of the experiment, their
+hardest row against the cheapest our stops come in at):
+
+| army | setting | it turns on | theirs | ours |
+|---|---|---|---:|---:|
+| monster tiers 3–5 at 900 dominance | `retrain` **beat +22.2 %** → `selective` **no stop fits** | **gold** | 4,072 | **9,424** |
+| his camp of 2026-09-19 (localStorage) | `retrain` **beat +17.7 %** → `revive` **no stop fits** | **silver** | 790,400 | **880,300** |
+| his usual setup of 2026-09-19 | `beat +4.3 %` throughout; only the no-fit count moves | — | — | 4 → 2 rows |
+
+Both obstructions are the **setting moving our side and their side by different factors**, never a march
+getting worse. On the monster camp, `selective · monsters` revives the top monster type — which only *we*
+field, since TotalStack answers with no monster at all — so our gold goes 1,952 → 9,424 while their 4,072
+does not move, and §2's hard-zero-ish gate on a marker they barely spend closes. On his camp under `revive`
+both silver bills fall about tenfold, but theirs falls 9.9× and ours 8.3×, so ours lands 6.1 % over a budget
+the tolerance allows 5 % on — a near miss manufactured entirely by the setting.
+
+**So §2's headline standing is a standing at the app's default.** At `selective · monsters` it is 5 beats,
+9 short, 3 with no stop inside their budget — the figure this plan has always quoted. At **`retrain` it is
+6 / 9 / 2**: the monster camp, G0's last holdout and the army §3 records as *"out on gold rather than by a
+near miss"*, is a **+22.2 % beat** there. That is not a licence to re-quote the better number; it is the
+measurement that says which setting the number belongs to, and that G0's residual on that army is a
+recovery-plan artefact rather than a reach defect.
+
 <details><summary>What the reverted rule bought, kept for the next attempt</summary>
 
 `searchPriority` refuses a selection when **any other selection it evaluated has at least its damage for at
