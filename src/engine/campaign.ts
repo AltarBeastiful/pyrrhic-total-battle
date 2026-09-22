@@ -27,7 +27,14 @@ import { simulateBattle } from './battle';
 import { chunks } from './recovery';
 import { EXHAUSTIVE_LIMIT, objectiveScore, PROGRESS_EVERY, searchPriority } from './search';
 import { sizeStacks } from './stacker';
-import type { BattleSummary, Objective, SearchProgress, StackRequest, StackResult } from './types';
+import type {
+  DamageReading,
+  BattleSummary,
+  Objective,
+  SearchProgress,
+  StackRequest,
+  StackResult,
+} from './types';
 
 // ---- Campaign ------------------------------------------------------------------------------------
 export interface CampaignSettings {
@@ -233,18 +240,31 @@ export interface CompleteResult {
  * campaign's damage over the campaign's cost, and a zero denominator is unmeasurable (−Infinity), never a
  * score of zero — the same rule `objectiveScore` applies to one battle.
  */
-export function campaignScore(summary: CampaignSummary, objective: Objective): number {
+export function campaignScore(
+  summary: CampaignSummary,
+  objective: Objective,
+  reading: DamageReading = 'worst',
+): number {
+  // **The ratios divide the worst opening** (S-134; the owner: *"1. yes"*), for the reason `objectiveScore`
+  // gives and on the same default. This function is stage **two** of `searchComplete` — the stage the
+  // docstring above calls the one that *decides*, where stage one only proposes — so a reading that stopped
+  // at `objectiveScore` would have left the deciding half of this search ranking the coin flip while every
+  // other comparison in the repo had moved to the bad one. It was a second copy of the same arithmetic and
+  // drifted exactly the way a second copy does; the owner caught it by asking whether any of this reached
+  // Total Optimization (2026-09-22).
+  const damage = reading === 'worst' ? summary.totalMin : summary.totalAvg;
+  const per = (cost: number): number => (cost > 0 ? damage / cost : -Infinity);
   switch (objective) {
     case 'avgDamage':
       return summary.totalAvg;
     case 'minDamage':
       return summary.totalMin;
     case 'damagePerSilver':
-      return summary.silver > 0 ? summary.totalAvg / summary.silver : -Infinity;
+      return per(summary.silver);
     case 'damagePerGold':
-      return summary.gold > 0 ? summary.totalAvg / summary.gold : -Infinity;
+      return per(summary.gold);
     case 'damagePerDragonCoin':
-      return summary.dragonCoins > 0 ? summary.totalAvg / summary.dragonCoins : -Infinity;
+      return per(summary.dragonCoins);
   }
 }
 
@@ -352,7 +372,9 @@ export function searchComplete(
         subset,
         result,
         summary,
-        score: objectiveScore(summary, request.objective),
+        // Stage one, on the same reading stage two decides with (S-134) — passed rather than
+        // defaulted, so the two stages cannot drift apart again.
+        score: objectiveScore(summary, request.objective, 'worst'),
       };
       singles.set(key, evaluation);
       tick();
