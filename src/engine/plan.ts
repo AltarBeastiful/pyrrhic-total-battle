@@ -4360,20 +4360,46 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    *
    * So the rules that **drop** a plan judge on the figures a stop prints, which is the reading S-93's
    * `tighterShape` and S-94's all-in offer already make and the one the criteria are written in: a march is
-   * beaten when another has **at least its damage, at most its silver and at most its burn**, with one of
-   * the three strictly better. Nothing is traded against anything, so no exchange rate has to exist; and a
-   * figure that is a measurement rather than an attribution cannot be moved by re-reading a column.
+   * beaten when another has **at least its damage and at most each of its four costs** — silver, the burn,
+   * the gold and the dragon coins (S-122; it read the first two alone until then) — with one of the five
+   * strictly better. Nothing is traded against anything, so no exchange rate has to exist; and a figure that
+   * is a measurement rather than an attribution cannot be moved by re-reading a column.
    *
    * Read on the **repeated march** here (`repeat`), which is what the bar's order, its chord and its two
    * ends are read on. The campaign's own figures break ties, below.
    */
-  const beatsOnFigures = (other: PlanTotals, row: PlanTotals): boolean =>
-    other.repeat.damage >= row.repeat.damage &&
-    other.repeat.silver <= row.repeat.silver &&
-    other.repeat.mercLost <= row.repeat.mercLost &&
-    (other.repeat.damage > row.repeat.damage ||
-      other.repeat.silver < row.repeat.silver ||
-      other.repeat.mercLost < row.repeat.mercLost);
+  /**
+   * **The costs a march charges, all four of them** (S-122, 2026-09-22; the owner, 2026-09-21: *"beat means
+   * using constrained resources to produce better damage with a fixed **silver/merc/gold/dragon coins**
+   * set"*).
+   *
+   * This read **silver and the burn** and nothing else, which made it a dominance test on two of the four
+   * currencies a march actually spends. A rung that cost the same silver and the same hired chunks for the
+   * same damage but **twice the gold**, or twice the dragon coins, was declared its neighbour's equal and
+   * removed from the pool — the two prices the monsters are paid in were invisible to the one rule that
+   * decides which rungs the sweet spot is read off.
+   *
+   * `dragonCoins` is optional on `PlanRepeat` and reads 0 where it is absent, which is every army that
+   * houses no dominance unit; on those the test is exactly what it was, because gold moves with the burn
+   * there and a pair that ties on both ties on it.
+   */
+  const costsOf = (row: PlanTotals): number[] => [
+    row.repeat.silver,
+    row.repeat.mercLost,
+    row.repeat.gold,
+    row.repeat.dragonCoins ?? 0,
+  ];
+  /**
+   * **One march beats another when it is behind on none of the figures it prints** — at least its damage, at
+   * most each of its four costs, and strictly better on one of the five.
+   */
+  const beatsOnFigures = (other: PlanTotals, row: PlanTotals): boolean => {
+    const mine = costsOf(other);
+    const theirs = costsOf(row);
+    if (other.repeat.damage < row.repeat.damage) return false;
+    if (mine.some((cost, index) => cost > (theirs[index] ?? 0))) return false;
+    return other.repeat.damage > row.repeat.damage || mine.some((cost, index) => cost < (theirs[index] ?? 0));
+  };
   /**
    * **The rungs no other rung beats on the figures** (S-106). The two ends keep their places by definition;
    * what this removes from the sweet spot's pool is a rung the ladder itself answers better — same burn or

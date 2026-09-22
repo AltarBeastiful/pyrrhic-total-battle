@@ -229,7 +229,7 @@ doubt. Each is **measure first, then decide**: an experiment before a change.
 |---|---|---|---|
 | H1 | the burn ladder's ceiling is the search winner's burn | `plan.ts` | G0/G1 — on an unlimited stock the winner is thrifty, so the ladder never reaches capacity |
 | H2 | the band refuses a stop fielding under half the winner's hired units | `plan.ts` | may be what removes the stops that would fit their budget (G0) |
-| H3 | `beatsOnFigures` dominates on damage, silver and burn | `plan.ts` | **reads neither gold nor dragon coins** — a correctness gap against §0, and G6 is what it costs |
+| H3 | ~~`beatsOnFigures` dominates on damage, silver and burn~~ **fixed S-125** | `plan.ts` | It read neither gold nor coins — a real gap against §0. Widened, and **measured to change nothing**: 0 of 53 stops dominated before and after, no stop count moved. G6 was mis-attributed to it; that is H7/W6. |
 | H4 | the sizer's flat HP profile, `ceiling − i·δ` | `stacker.ts` | G2 — beaten at identical cost |
 | H5 | `RANK_SPREAD`, the δ between stacks | `stacker.ts` | never swept against a rival; the obvious knob behind H4 |
 | H6 | greedy descent + restarts in `searchPriority` | `search.ts` | G3 — 14 % behind on an army solvable exactly |
@@ -382,12 +382,34 @@ not delete the thrifty stops that would fit a rival's budget.
 *Acceptance*: live camp −77.9 % → **positive**; the three G0 armies get a stop inside their budget; no army
 regresses in §2. Expect stop counts and several pins to move — **he registers them**.
 
-### 5.5 W5 — The dominance test reads all the markers (H3)
+### 5.5 W5 — The dominance test reads all the markers (H3) — **done 2026-09-22 (S-125), and it moved nothing**
 
-`beatsOnFigures` gains gold and dragon coins. Small, and a correctness fix against his own definition.
+`beatsOnFigures` — the one rule that removes a rung from the pool the sweet spot and the silver saver are
+read off — judged on **damage, silver and the burn**. It now judges on damage and **all four costs the
+owner's definition names**: silver, the burn, the revive gold and the dragon coins.
 
-*Acceptance*: no stop survives that another beats on all six markers; G6's three armies improve, or the
-measurement says why not.
+**Acceptance, and the honest reading of it.** The criterion as written — *"no stop survives that another
+beats on all six markers"* — was **already met before the change**: experiment 130 asks it of every stop on
+every benchmark army and reads **0 of 53** dominated, both before and after. And the widened rule changes
+**no stop count on any of the seventeen armies**, no pin, and nothing on the benchmark.
+
+**So W5 buys nothing measurable today, and it is kept anyway** — that is a judgement, and here is the case
+for it. The rule is what decides which rungs are *comparable*, and until this story it was a dominance test
+on two of the four currencies a march spends: a rung costing the same silver and the same hired chunks for
+the same damage but twice the gold was declared its neighbour's equal. That it never *bit* on today's
+ladders is a fact about today's ladders, not about the rule — **W4 is about to rebuild those ladders and W6
+about to reorder the monsters**, and a ranking rule that is wrong-but-inert is the kind of thing that starts
+biting silently the moment the thing it ranks changes.
+
+It is also not vacuous: over the 136 campaign-level pairs of plan rows in the payload, exactly **one** is
+called a beat by the old rule and **gold vetoes it**. The reading discriminates; it just does not bind where
+`beatsOnFigures` is applied.
+
+**G6 does not improve, and the measurement says why.** The three coin-spending armies are untouched, which
+is what should have been expected: G6 is about *which* monsters are fielded, how many and in what order —
+that is S-116, which is **W6** — and not about which rung of a burn ladder the sweet spot is read off. W5
+was mis-filed as G6's fix in the first draft of this plan; W6 is its fix, and W5 is a correctness repair
+standing on its own.
 
 ### 5.6 W6 — The order of death (S-116) — G5, G6
 
@@ -434,7 +456,7 @@ objective before it reaches the sizer, so the method radio is inert.
 | 0 | ~~**W0** the simulator's dead work~~ **done 2026-09-22** | 1.17×, and it found that the **sizer** is 85–90 % of a candidate | none — proven equivalent |
 | 1 | ~~**W1** matched-spend instrument~~ **done 2026-09-22** | makes everything below measurable and non-regressing | none — no engine change |
 | 2 | ~~**W2** complete external rows~~ **done 2026-09-22** | §2 is no longer a lower bound | — |
-| 3 | **W5** H3 reads gold + coins | correctness vs the definition; cheap | small |
+| 3 | ~~**W5** H3 reads gold + coins~~ **done 2026-09-22** | correctness vs the definition — **measured to move nothing**; G6's fix is W6, not this | none |
 | 4 | **W4** burn ladder capacity | −77.9 % → positive, plus the 3 G0 armies | pins move |
 | 5 | **W6** order of death (S-116) | G5 + G6, the coin marker | specified already |
 | 6 | **W7** flat profile | +2.9 %, probably generalises | isolated |
