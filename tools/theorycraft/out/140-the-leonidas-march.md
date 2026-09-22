@@ -80,3 +80,22 @@ His screenshot reads **2 096 973 expected damage (−25 % worse)** over **2 007 
 
 **What is not reproduced is his screen.** No row here fields Spearman I at all, and his screen’s march does. And the same counts he was shown price far apart from what he was shown: his strip reads **2 096 973 expected**, and those counts on this army price at the figure in §E. The army rebuilt here is therefore a *neighbour* of his, not his — its bonus sources are not the ones his page was reading. Until his own export is on this machine the gap cannot be closed, and the dominance leak in §D is the one finding here that stands without it.
 
+
+## §G — his march is this army with the archers taken out
+
+Experiment 139 measured that `sizeStacks` **selects nothing**: every type in the request gets a rung and the pool is rationed across all of them, so a generated march fields *every* troop type the army holds and can only drop one by rounding its count to zero (34 of 34 cells). His screen fields five troop types. This army holds seven. So the hypothesis is not that the search passed Archer II over — it is that **Archer II was never in the request**.
+
+| march | shape | widest stack apart from his screen |
+|---|---|---:|
+| Tier ladder · all seven types | archer-1 1401 · archer-2 775 · rider-1 504 · rider-2 279 · rider-3 156 · spearman-1 995 · spearman-2 551 · battle-boar 19 · emerald-dragon 23 · stone-gargoyle 20 · water-elemental 55 · epic-monster-hunter-6 10 | 1,401 |
+| Tier ladder · **archers removed** | rider-1 824 · rider-2 456 · rider-3 256 · spearman-1 1626 · spearman-2 902 · battle-boar 19 · emerald-dragon 23 · stone-gargoyle 20 · water-elemental 55 · epic-monster-hunter-6 10 | 5 |
+| Troops first · all seven types | archer-1 1401 · archer-2 775 · rider-1 504 · rider-2 279 · rider-3 156 · spearman-1 995 · spearman-2 551 · battle-boar 12 · emerald-dragon 15 · stone-gargoyle 13 · water-elemental 36 · epic-monster-hunter-6 10 | 1,401 |
+| Troops first · **archers removed** | rider-1 824 · rider-2 456 · rider-3 256 · spearman-1 1626 · spearman-2 902 · battle-boar 19 · emerald-dragon 23 · stone-gargoyle 20 · water-elemental 55 · epic-monster-hunter-6 10 | 5 |
+| **his screen** | rider-1 826 · rider-2 458 · rider-3 257 · spearman-1 1621 · spearman-2 897 · battle-boar 20 · emerald-dragon 20 · stone-gargoyle 20 · water-elemental 50 · epic-monster-hunter-6 10 | 0 |
+
+**With the archers out of the request, the sizer answers with his screen to within five units on the widest stack** — where the same sizer over all seven types is more than a thousand apart. That closes the case: the march he was shown is what this engine answers when it is handed five troop types, and the two it was not handed are the archers.
+
+**And his hand-crafted march is the prefix the ranking already points at.** Experiment 139 §B3 reads his export’s troop ranking, weakest per HP first, as **SP1 · ARC1 · RD1 · SP2 · RD2 · ARC2 · RD3** — so its strongest five are **RD1 · SP2 · RD2 · ARC2 · RD3**, which is his set exactly. What he built by hand is a depth-5 prefix of our own hero-aware ranking; what he was shown is not a prefix of anything, because two of its members were missing from the list.
+
+The open question this leaves is **why** the archers were not in that request — a setup that clicks them out, or a troop window that does not hold them — and that is a question about his profile, not about the search.
+

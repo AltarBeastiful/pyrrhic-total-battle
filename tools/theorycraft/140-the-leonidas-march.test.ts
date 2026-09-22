@@ -286,6 +286,52 @@ describe.skipIf(!process.env.THEORY)('the march he built by hand', () => {
         'page was reading. Until his own export is on this machine the gap cannot be closed, and the ' +
         'dominance leak in §D is the one finding here that stands without it.\n',
     );
+    // ---- §G — the one hypothesis that reproduces his screen exactly ------------------------------------
+    report.add('\n## §G — his march is this army with the archers taken out\n');
+    report.add(
+      'Experiment 139 measured that `sizeStacks` **selects nothing**: every type in the request gets a rung ' +
+        'and the pool is rationed across all of them, so a generated march fields *every* troop type the ' +
+        'army holds and can only drop one by rounding its count to zero (34 of 34 cells). His screen fields ' +
+        'five troop types. This army holds seven. So the hypothesis is not that the search passed Archer II ' +
+        'over — it is that **Archer II was never in the request**.\n',
+    );
+    const withoutArchers: StackRequest = {
+      ...request,
+      units: request.units.filter((unit) => !unit.id.startsWith('archer-')),
+    };
+    const check: string[] = ['| march | shape | widest stack apart from his screen |', '|---|---|---:|'];
+    const apartFromScreen = (req: StackRequest, counts: Record<string, number>): number =>
+      req.units.reduce((worst, unit) => {
+        const screen = Math.floor(OURS_ON_SCREEN[unit.id] ?? 0);
+        const one = Math.floor(counts[unit.id] ?? 0);
+        return screen === 0 && one === 0 ? worst : Math.max(worst, Math.abs(screen - one));
+      }, 0);
+    for (const method of ['elite', 'ms'] as const) {
+      const title = method === 'elite' ? 'Tier ladder' : 'Troops first';
+      for (const [label, req] of [
+        ['all seven types', request],
+        ['**archers removed**', withoutArchers],
+      ] as const) {
+        const counts = countsOf(sizeStacks({ ...req, options: { ...req.options, method } }));
+        check.push(`| ${title} · ${label} | ${shape(req, counts)} | ${n(apartFromScreen(req, counts))} |`);
+      }
+    }
+    check.push(`| **his screen** | ${shape(request, OURS_ON_SCREEN)} | 0 |`);
+    report.add(check.join('\n'));
+    report.add(
+      '\n**With the archers out of the request, the sizer answers with his screen to within five units on ' +
+        'the widest stack** — where the same sizer over all seven types is more than a thousand apart. That ' +
+        'closes the case: the march he was shown is what this engine answers when it is handed five troop ' +
+        'types, and the two it was not handed are the archers.\n\n' +
+        '**And his hand-crafted march is the prefix the ranking already points at.** Experiment 139 §B3 ' +
+        'reads his export’s troop ranking, weakest per HP first, as **SP1 · ARC1 · RD1 · SP2 · RD2 · ARC2 · ' +
+        'RD3** — so its strongest five are **RD1 · SP2 · RD2 · ARC2 · RD3**, which is his set exactly. What ' +
+        'he built by hand is a depth-5 prefix of our own hero-aware ranking; what he was shown is not a ' +
+        'prefix of anything, because two of its members were missing from the list.\n\n' +
+        'The open question this leaves is **why** the archers were not in that request — a setup that ' +
+        'clicks them out, or a troop window that does not hold them — and that is a question about his ' +
+        'profile, not about the search.\n',
+    );
     report.save();
   }, 600_000);
 });
