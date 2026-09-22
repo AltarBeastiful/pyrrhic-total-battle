@@ -19,10 +19,10 @@
  * subsets answers whatever its seed happens to land on (investigation 0013: the zero-bonus fixture army
  * scored 1.118 on seed 1 and 4.310, the true optimum, on seed 7).
  */
-import { simulateBattle } from './battle';
+import { battleScore, simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
 import type {
-  BattleSummary,
+  BattleScore,
   Objective,
   SearchProgress,
   SearchRequest,
@@ -65,7 +65,7 @@ function now(): number {
  * no monsters so no dragon coins) is not a score of zero — it is unmeasurable, and scores −Infinity so the
  * search never prefers it.
  */
-export function objectiveScore(summary: BattleSummary, objective: Objective): number {
+export function objectiveScore(summary: BattleScore, objective: Objective): number {
   switch (objective) {
     case 'avgDamage':
       return summary.avgDamage;
@@ -80,10 +80,18 @@ export function objectiveScore(summary: BattleSummary, objective: Objective): nu
   }
 }
 
+/**
+ * One candidate, scored. **It carries no `BattleSummary`** (S-123, 2026-09-22): a summary is a battle report
+ * — two journals with an entry list each, the damage split by pool, the model notes — and the search builds
+ * thousands of these against a wall-clock budget to read *one number* off them. `battleScore` answers that
+ * number off the same two journal totals without writing the report down, and the two candidates that
+ * actually leave this function get their summary at the end, where a reader will use it.
+ */
 interface Evaluation {
   subset: string[];
+  /** The army as it was scored, kept so the winner's full summary is built from exactly that request. */
+  scoped: StackRequest;
   result: StackResult;
-  summary: BattleSummary;
   score: number;
 }
 
@@ -112,12 +120,11 @@ export function searchPriority(
       units: request.request.units.filter((unit) => included.has(unit.id)),
     };
     const result = sizeStacks(scoped);
-    const summary = simulateBattle(result, scoped);
     const evaluation: Evaluation = {
       subset,
+      scoped,
       result,
-      summary,
-      score: objectiveScore(summary, request.objective),
+      score: objectiveScore(battleScore(result, scoped), request.objective),
     };
     cache.set(key, evaluation);
     evaluated += 1;
@@ -266,7 +273,9 @@ export function searchPriority(
   return {
     includedUnitIds: winner.subset,
     result: winner.result,
-    summary: winner.summary,
+    // The whole battle report, for the two candidates a reader ever sees: the winner and the army the user
+    // would have had without the search. Every other candidate was scored and discarded.
+    summary: simulateBattle(winner.result, winner.scoped),
     score: winner.score,
     evaluated,
     exhaustive,
@@ -276,7 +285,7 @@ export function searchPriority(
     baseline: {
       includedUnitIds: baseline.subset,
       result: baseline.result,
-      summary: baseline.summary,
+      summary: simulateBattle(baseline.result, baseline.scoped),
     },
   };
 }

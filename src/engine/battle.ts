@@ -23,7 +23,15 @@
  */
 import type { Pool } from '../data/types';
 import { recoveryCosts } from './recovery';
-import type { BattleJournal, BattleSummary, JournalEntry, Stack, StackRequest, StackResult } from './types';
+import type {
+  BattleJournal,
+  BattleScore,
+  BattleSummary,
+  JournalEntry,
+  Stack,
+  StackRequest,
+  StackResult,
+} from './types';
 
 /** Journal hit counter of the stack at kill position `position` (1-based). */
 export function expectedHits(position: number, enemyStacks: number, armyFirst: boolean): number {
@@ -62,6 +70,61 @@ export function attackOrder(stacks: Pick<Stack, 'count' | 'strengthPerUnit'>[]):
 }
 
 /**
+ * **The battle itself, walked once and reported move by move** (S-123, 2026-09-22) — the single place the
+ * round structure is written, so the four readings drawn off it cannot drift apart.
+ *
+ * `visit(isArmy, index)` is called for every move in journal order. It replaced three copies of this loop:
+ * `battleSequence` materialised a `Move[]`, `buildJournal` walked one to count hits and then walked the
+ * moves again to write entries, and `hitsPerStack` walked a **second, identical** sequence to count the same
+ * hits over again — so `simulateBattle` ran the whole battle **four** times (twice an orientation) and
+ * sorted the attack order four times, to answer two questions.
+ *
+ * The one behavioural subtlety is the cursor. `nextAttacker` used `attackers.find(...)`, a scan from the
+ * top on every single attack. A cursor is exact here rather than an approximation, and the reason is that
+ * within one round eligibility is **monotone**: a stack that has acted stays acted until the round ends, and
+ * a stack that is dead stays dead for good. Nothing a round does can make an attacker the cursor has already
+ * passed eligible again, so advancing past it can never skip a move `find` would have made.
+ */
+function walkBattle(
+  stackCount: number,
+  enemyStacks: number,
+  armyFirst: boolean,
+  attackers: readonly number[],
+  visit: (isArmy: boolean, index: number) => void,
+): void {
+  if (stackCount <= 0 || enemyStacks <= 0) return;
+  const dead = new Array<boolean>(stackCount).fill(false);
+  const acted = new Array<boolean>(stackCount).fill(false);
+  let cursor = 0;
+  const attack = (): void => {
+    while (cursor < attackers.length) {
+      const index = attackers[cursor] ?? -1;
+      if (index >= 0 && !dead[index] && !acted[index]) {
+        acted[index] = true;
+        visit(true, index);
+        return;
+      }
+      cursor += 1;
+    }
+  };
+
+  if (armyFirst) attack();
+  let killed = 0;
+  while (killed < stackCount) {
+    for (let k = 0; k < enemyStacks && killed < stackCount; k += 1) {
+      visit(false, killed);
+      dead[killed] = true;
+      killed += 1;
+      if (k < enemyStacks - 1 && killed < stackCount) attack();
+    }
+    // End-of-round sweep: everyone still alive who has not struck this round, in attack order.
+    for (const index of attackers) if (!dead[index] && !acted[index]) visit(true, index);
+    acted.fill(false);
+    cursor = 0;
+  }
+}
+
+/**
  * The move sequence of one battle, in journal order. `order` lists the stack indices in attack order
  * (default: the kill order itself, which is the case whenever health and strength bonuses move together).
  */
@@ -69,40 +132,29 @@ export function battleSequence(
   stackCount: number,
   enemyStacks: number,
   armyFirst: boolean,
-  order?: number[],
+  order?: readonly number[],
 ): Move[] {
   const moves: Move[] = [];
-  if (stackCount <= 0 || enemyStacks <= 0) return moves;
   const attackers = order ?? Array.from({ length: stackCount }, (_unused, index) => index);
-  const dead = new Array<boolean>(stackCount).fill(false);
-  const acted = new Array<boolean>(stackCount).fill(false);
-  const nextAttacker = (): number | undefined => attackers.find((index) => !dead[index] && !acted[index]);
-  const attack = (): void => {
-    const index = nextAttacker();
-    if (index === undefined) return;
-    acted[index] = true;
-    moves.push({ actor: 'army', index });
-  };
-
-  if (armyFirst) attack();
-  let killed = 0;
-  while (killed < stackCount) {
-    for (let k = 0; k < enemyStacks && killed < stackCount; k += 1) {
-      moves.push({ actor: 'enemy', index: killed });
-      dead[killed] = true;
-      killed += 1;
-      if (k < enemyStacks - 1 && killed < stackCount) attack();
-    }
-    // End-of-round sweep: everyone still alive who has not struck this round, in attack order.
-    for (const index of attackers) if (!dead[index] && !acted[index]) moves.push({ actor: 'army', index });
-    acted.fill(false);
-  }
+  walkBattle(stackCount, enemyStacks, armyFirst, attackers, (isArmy, index) => {
+    moves.push({ actor: isArmy ? 'army' : 'enemy', index });
+  });
   return moves;
 }
 
-/** One journal: the same numbered entry list TotalStack and the game's report print. */
-export function buildJournal(stacks: Stack[], enemyStacks: number, armyFirst: boolean): BattleJournal {
-  const moves = battleSequence(stacks.length, enemyStacks, armyFirst, attackOrder(stacks));
+/**
+ * One journal **and the per-stack hit counts it was built from** (S-123). The counts fall out of the same
+ * walk that writes the entries; `simulateBattle` needs both and used to ask for them separately, which ran
+ * the battle a second time to recompute a number it was already holding.
+ */
+function journalWithHits(
+  stacks: Stack[],
+  enemyStacks: number,
+  armyFirst: boolean,
+  order?: readonly number[],
+): { journal: BattleJournal; hits: number[] } {
+  const attackers = order ?? attackOrder(stacks);
+  const moves = battleSequence(stacks.length, enemyStacks, armyFirst, attackers);
   const totalHits = stacks.map(() => 0);
   for (const move of moves) {
     if (move.actor === 'army') totalHits[move.index] = (totalHits[move.index] ?? 0) + 1;
@@ -141,15 +193,39 @@ export function buildJournal(stacks: Stack[], enemyStacks: number, armyFirst: bo
 
   // TotalStack labels the journal "<n> rounds" where n is the number of entries; we keep that meaning so a
   // user can compare 1:1 with its screen.
-  return { entries, rounds: entries.length, friendlyHits, totalDamage };
+  return { journal: { entries, rounds: entries.length, friendlyHits, totalDamage }, hits: totalHits };
 }
 
-function hitsPerStack(stacks: Stack[], enemyStacks: number, armyFirst: boolean): number[] {
-  const counts = stacks.map(() => 0);
-  for (const move of battleSequence(stacks.length, enemyStacks, armyFirst, attackOrder(stacks))) {
-    if (move.actor === 'army') counts[move.index] = (counts[move.index] ?? 0) + 1;
-  }
-  return counts;
+/** One journal: the same numbered entry list TotalStack and the game's report print. */
+export function buildJournal(
+  stacks: Stack[],
+  enemyStacks: number,
+  armyFirst: boolean,
+  order?: readonly number[],
+): BattleJournal {
+  return journalWithHits(stacks, enemyStacks, armyFirst, order).journal;
+}
+
+/**
+ * **What one orientation of the battle deals, with nothing written down** (S-123): the journal's
+ * `totalDamage` and no entry list, no hit counters, no allocation at all beyond the walk itself.
+ *
+ * This is what the priority search actually needs from a candidate it is about to compare and throw away —
+ * two of these and a recovery bill answer every objective. `buildJournal` allocates roughly two entry
+ * objects a stack, twice an orientation, and on a large army the search asks for thousands of candidates
+ * against a wall-clock budget: the garbage was the cost, not the arithmetic.
+ */
+function journalDamage(
+  stacks: Stack[],
+  enemyStacks: number,
+  armyFirst: boolean,
+  attackers: readonly number[],
+): number {
+  let total = 0;
+  walkBattle(stacks.length, enemyStacks, armyFirst, attackers, (isArmy, index) => {
+    if (isArmy) total += stacks[index]?.damagePerHit ?? 0;
+  });
+  return total;
 }
 
 const MODEL_NOTES = [
@@ -177,14 +253,65 @@ export function expectedDoubleDamageFactor(stack: Pick<Stack, 'doubleDamageChanc
   return 1 + stack.doubleDamageChance / 100;
 }
 
+/**
+ * **The seven figures an objective is scored on, and nothing a reader would want** (S-123, 2026-09-22).
+ *
+ * The same arithmetic `simulateBattle` does below — deliberately the same lines, in the same order, on the
+ * same two journal totals — with the entry lists, the hit counters, the pool split and the model notes left
+ * unbuilt. `objectiveScore` reads exactly this shape, so the priority search can score a candidate without
+ * writing down a battle report it is about to discard, and the two functions cannot answer differently
+ * because `scoreOf` is the only place either of them computes a number.
+ *
+ * The attack order is sorted **once** here and handed to both orientations; it does not depend on which
+ * side opens.
+ */
+export function battleScore(result: StackResult, request: StackRequest): BattleScore {
+  const stacks = result.stacks;
+  const enemyStacks = enemySquadCount(request.enemy);
+  const order = attackOrder(stacks);
+  return scoreOf(
+    journalDamage(stacks, enemyStacks, false, order),
+    journalDamage(stacks, enemyStacks, true, order),
+    stacks,
+    request,
+  );
+}
+
+/**
+ * The scored half of a battle, from the two journal totals. One definition, two callers (S-123).
+ *
+ * The rounding is load-bearing and is left exactly as it was: `maxDamage` is the rounded army-first total,
+ * while the **average** is taken over the *unrounded* one, and the three ratios divide the **displayed**
+ * (rounded) average the way TotalStack's own summary does.
+ */
+function scoreOf(minimum: number, maximum: number, stacks: Stack[], request: StackRequest): BattleScore {
+  const average = Math.round((minimum + maximum) / 2);
+  const recovery = recoveryCosts(stacks, request.units, request.recovery).plan;
+  const per = (cost: number): number => (cost > 0 ? average / cost : 0);
+  return {
+    minDamage: minimum,
+    maxDamage: Math.round(maximum),
+    avgDamage: average,
+    recovery,
+    damagePerSilver: per(recovery.silver),
+    damagePerGold: per(recovery.gold),
+    damagePerDragonCoin: per(recovery.dragonCoins),
+  };
+}
+
 export function simulateBattle(result: StackResult, request: StackRequest): BattleSummary {
   const stacks = result.stacks;
   const enemyStacks = enemySquadCount(request.enemy);
-  const enemyFirst = buildJournal(stacks, enemyStacks, false);
-  const armyFirst = buildJournal(stacks, enemyStacks, true);
+  // One sort of the attack order, and one walk of the battle an orientation: both journals carry the hit
+  // counters the pool split is read from, which is what `hitsPerStack` used to run the battle again for.
+  const order = attackOrder(stacks);
+  const first = journalWithHits(stacks, enemyStacks, false, order);
+  const second = journalWithHits(stacks, enemyStacks, true, order);
+  const enemyFirst = first.journal;
+  const armyFirst = second.journal;
 
-  const enemyFirstHits = hitsPerStack(stacks, enemyStacks, false);
-  const armyFirstHits = hitsPerStack(stacks, enemyStacks, true);
+  const enemyFirstHits = first.hits;
+  const armyFirstHits = second.hits;
   const damageByPool: Record<Pool, number> = { leadership: 0, authority: 0, dominance: 0 };
   // The game prints no total: a report's damage is the sum of its own hit lines, features included once.
   // So both bounds are exactly that sum — minimum with the enemy striking first, maximum with us — and a
@@ -195,27 +322,14 @@ export function simulateBattle(result: StackResult, request: StackRequest): Batt
     const best = (armyFirstHits[index] ?? 0) * stack.damagePerHit;
     damageByPool[stack.pool] += (worst + best) / 2;
   });
-  const maximum = armyFirst.totalDamage;
   for (const pool of Object.keys(damageByPool) as Pool[]) {
     damageByPool[pool] = Math.round(damageByPool[pool]);
   }
 
-  const minimum = enemyFirst.totalDamage;
-  const average = Math.round((minimum + maximum) / 2);
-  const recovery = recoveryCosts(stacks, request.units, request.recovery).plan;
-  // The ratios are computed from the *displayed* (rounded) average, the way TotalStack's summary does it.
-  const per = (cost: number): number => (cost > 0 ? average / cost : 0);
-
   return {
+    ...scoreOf(enemyFirst.totalDamage, armyFirst.totalDamage, stacks, request),
     stackCount: stacks.length,
-    minDamage: minimum,
-    maxDamage: Math.round(maximum),
-    avgDamage: average,
     damageByPool,
-    recovery,
-    damagePerSilver: per(recovery.silver),
-    damagePerGold: per(recovery.gold),
-    damagePerDragonCoin: per(recovery.dragonCoins),
     journals: { enemyFirst, armyFirst },
     modelNotes: [...MODEL_NOTES],
   };

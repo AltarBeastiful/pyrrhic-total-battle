@@ -180,16 +180,31 @@ export interface RecoveryCost {
   seconds: number;
 }
 
-export interface BattleSummary {
-  stackCount: number;
+/**
+ * **Everything an objective is scored on, and nothing else** (S-123, 2026-09-22).
+ *
+ * `objectiveScore` reads exactly these seven fields, and the priority search calls it once per candidate —
+ * thousands of times on a large army, against a wall-clock budget. The rest of `BattleSummary` below is for
+ * a **reader**: the two journals with their entry lists, the damage split by pool, the model notes. Building
+ * those for a candidate that is about to be compared and thrown away is work nobody asked for, so
+ * `battleScore` in `engine/battle.ts` produces this half on its own and `simulateBattle` produces the whole.
+ *
+ * They are one type by inheritance rather than two by coincidence, so the arithmetic cannot drift: a summary
+ * *is* a score with a reader's half attached.
+ */
+export interface BattleScore {
   minDamage: number; // enemy strikes first, no probabilistic extras
   maxDamage: number; // army strikes first
   avgDamage: number; // (min + max) / 2 with double-damage / strike-two expectations applied
-  damageByPool: Record<Pool, number>;
   recovery: RecoveryCost;
   damagePerSilver: number;
   damagePerGold: number;
   damagePerDragonCoin: number;
+}
+
+export interface BattleSummary extends BattleScore {
+  stackCount: number;
+  damageByPool: Record<Pool, number>;
   journals: { enemyFirst: BattleJournal; armyFirst: BattleJournal };
   /** Explains which parts of the model are validated in game (ADR-0006). */
   modelNotes: string[];
