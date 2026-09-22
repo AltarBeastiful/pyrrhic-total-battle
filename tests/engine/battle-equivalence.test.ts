@@ -31,7 +31,7 @@ import type {
   StackResult,
 } from '@/engine/types';
 
-import { commonScenarios } from './plan-scenarios';
+import { commonScenarios, ownerProfile, ownerScenarios } from './plan-scenarios';
 
 // ---- the implementation this refactor replaced, verbatim -------------------------------------------------
 
@@ -178,7 +178,16 @@ function subsetsOf(request: StackRequest, seed: number): StackRequest[] {
 }
 
 describe('the refactored battle simulator answers exactly what the old one did', () => {
-  const scenarios = commonScenarios();
+  /**
+   * **The owner's own armies too, where his export is** (S-126, 2026-09-22). S-123 compared only
+   * `commonScenarios()`, and that is six first-run armies plus the 4 000 case — none of which has an
+   * uncapped hired type, a camp's worth of authority, or the ten-stack shapes the live camp produces. The
+   * first time an owner army was priced by hand after the refactor it printed `min === avg === max`, which
+   * is a startling enough reading to want the old implementation's opinion on. It agrees; but the gap was
+   * real and this closes it.
+   */
+  const profile = ownerProfile();
+  const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
 
   it('has armies to compare', () => {
     expect(scenarios.length).toBeGreaterThan(0);
