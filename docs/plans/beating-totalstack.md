@@ -23,6 +23,10 @@ where a public calculator does better is an army where our answer is provably im
 > Take any march TotalStack answers with. Read its costs. **We beat it when the bar offers a stop that
 > spends no more of any of them — within 5 % — and deals more damage.**
 
+**"Any of them" is the four his sentence names**: silver, hired burned, revive gold, dragon coins. The
+training queue is the fifth thing a march spends and it is **reported on every table and gates nothing** —
+see §8, where the measurement that settled it is written down.
+
 Every marker ratio follows by construction: more damage at no more cost makes `damage / silver`,
 `damage / soldier`, `damage / monster` and `damage / dragon coin` each at least theirs. His *"all four ≥ 1.0
 everywhere"* is the **derived reading**, not a second target. The per-reading best stop stays, because a stop
@@ -41,17 +45,27 @@ alone**, over the seventeen armies.
 
 | marker | direction | we win | tie | **we lose** |
 |---|---|---|---|---|
-| damage | max | 9 | 0 | **8** |
-| silver | min | 14 | 0 | 3 |
+| damage | max | 8 | 0 | **9** |
+| silver | min | 13 | 0 | 4 |
 | hired burned | min | 6 | 4 | **7** |
 | revive gold | min | 7 | 3 | **7** |
-| **dragon coins** | min | **0** | 14 | **3** |
-| training queue | min | 13 | 0 | 4 |
+| **dragon coins** | min | **0** | 15 | **2** |
+| training queue | min | 12 | 0 | 5 |
 
-**Dragon coins is the marker we never win.** The fourteen ties are armies that spend no coin; on **all three
-that do**, we spend more than TotalStack. That is the dominance pool, and it shares a root with G5.
+**Re-measured 2026-09-22 (S-121), and it had been stale.** This table read 9/14/6/7/0/13 wins until then —
+which is exactly what `git show 847ce14:tools/theorycraft/out/benchmark-latest.json` still gives, to the
+digit. That payload is the **incomplete** capture, taken while the `optimize` route was still answering 403:
+§2 was re-measured when the capture completed in `bf19b01` and this table was not, so it was scoring us
+against two armies whose priority-search rows had not arrived yet. Four of the six markers moved by exactly
+one army when they did. It is now written out of the run itself (`tests/engine/plan-benchmark.test.ts`, the
+standing at the end of `benchmark-latest.md`), so it cannot go stale again.
 
-**Silver and queue are our strengths** (14 and 13 wins) — the plan is built to ration. **Damage, burn and
+**Dragon coins is the marker we never win.** Fifteen of the seventeen armies spend no coin at all and read as
+ties; of the three that do, we lose two — the monster camp at **27,040 against 22,880** and his TotalStack
+profile at **3,840 against 1,920** — and **his usual setup is an exact tie at 4,320 each**. That is the
+dominance pool, and it shares a root with G5.
+
+**Silver and queue are our strengths** (13 and 12 wins) — the plan is built to ration. **Damage, burn and
 gold are roughly even**, which is the honest summary: we are not behind across the board, we are behind in
 specific, diagnosable places.
 
@@ -101,6 +115,17 @@ Every stop we offer spends more of at least one resource than their hardest row.
 comparison, we are not in it. Invisible in the ratio table, where all three read as comfortable wins (1.226,
 1.717, 1.297 a silver). **A coverage defect in the burn ladder, not a quality one.**
 
+**And since S-121 the run names the resource**, which is the first thing W4 and W5 have to answer for:
+
+| army | the marker every stop overspends | of their marches, none of ours fits |
+|---|---|---|
+| monster camp, 900 dominance | **gold** | 3 of 3 |
+| 12 000 export | **hired burned** | 6 of 9 |
+| camp of 2026-09-19, message | **silver** | 3 of 3 |
+
+Three armies, three different resources — so this is one defect only in the sense that the ladder is too
+narrow in every direction at once, not that one knob fixes all three.
+
 ### G1 — The plan will not spend an unlimited stock (live camp, −77.9 %)
 
 | row | damage | silver | burn | troop types |
@@ -131,17 +156,40 @@ this is correctness, not budget.
 
 Their 36,832,597 against our all-in's 31,714,657. Unlimited hired type again; likely G1 in a milder form.
 
+### The diagnostic that separates "we cannot" from "the bar does not" (S-121)
+
+The standing's last column asks the same matched-spend question of **every algorithm the app offers** — the
+two sizers, their three switches and all five objectives — rather than of the bar's stops. Where it stands
+above the bar's own column, the damage is provably reachable by this engine today and the plan is simply not
+reaching it. Six armies say so:
+
+| army | the bar | any algorithm |
+|---|---|---|
+| live account, evening | 1/9 | **5/9** |
+| his usual setup | 5/9 | **7/9** |
+| e2e seed | 4/8 | **6/8** |
+| camp of 2026-09-19, message | 0/3 | **2/3** |
+| Aydae alone | 0/9 | **1/9** |
+| live camp 2026-09-18 | 0/3 | 0/3 — the one G1 army where even the sizer is short at matched spend |
+
+It is **never pinned and never a verdict**: it scores a product nobody ships. It is the cheapest existing
+evidence for W4, and it is what turns "our plan loses" into "our plan will not spend what our own sizer
+spends" on five of the six.
+
 ### G5 — Damage a monster, 0.911 on a dominance army
 
 `his TotalStack profile`. The only ratio under the goal after S-118's pinning. **S-116 (the order of death)
 is already written against this mechanism** — sheltered monster stacks ordered by rounding rather than by
 damage per point of HP, measured at 8.3 % there. G5 is S-116's acceptance test, not separate work.
 
-### G6 — Dragon coins, lost on every army that spends one (new, 2026-09-22)
+### G6 — Dragon coins, never won on an army that spends one (2026-09-22, corrected S-121)
 
-§1: 0 wins, 3 losses, 14 ties. We field more monster chunks than TotalStack does for our damage on all three
-dominance armies. Shares a root with G5 — which monsters, in which order, at what size — but is measured on a
-different axis, so it needs its own acceptance criterion.
+§1: 0 wins, 2 losses, 15 ties. On the monster camp we spend **27,040 coins against their 22,880** and on his
+TotalStack profile **3,840 against 1,920**; on his usual setup the two sides are level at 4,320. So the claim
+this gap was first written with — *"on all three that do, we spend more"* — was one army too strong, and it
+came from the same stale payload §1 did. The shape of it stands: we never come out **ahead** on a coin.
+Shares a root with G5 — which monsters, in which order, at what size — but is measured on a different axis,
+so it needs its own acceptance criterion.
 
 ---
 
@@ -166,14 +214,38 @@ doubt. Each is **measure first, then decide**: an experiment before a change.
 
 ## 5. Workstreams
 
-### 5.1 W1 — Make the target measurable (do first)
+### 5.1 W1 — Make the target measurable — **done 2026-09-22 (S-121)**
 
-Matched spend becomes the benchmark's **primary reading**: a verdict column per army (their hardest
-comparable row, our best stop inside their budget at 5 %, the delta), a pin per army so a regression is red,
-and the six marker floors of §1 beside it. The ratio table stays as the derived reading.
+Matched spend is the benchmark's **primary reading**, above the goal line on every army's table rather than
+beside it. `tests/engine/matched-spend.ts` holds the arithmetic — pure, no engine import, twelve unit tests
+of its own so a tolerance comparison is debuggable in a quarter of a second rather than only inside a
+three-minute suite.
 
-*Acceptance*: every army prints a verdict; the five current beats are pinned; a run that turns a beat into a
-short is red. **No engine change in W1** — it is the instrument.
+Each army now prints their hardest comparable march with its four costs, the bar's best stop inside that
+budget at 5 % and the delta; how many of **all** their comparable marches the bar dominates and how many have
+no stop of ours inside them at all; what **any** algorithm the app offers would have dominated (the
+diagnostic that tells G1 and G4 apart from the rest); and the six marker floors. `Pinned.matched` pins the
+delta on all seventeen, at measured. The run ends with a standing over every army — §1's and §2's tables,
+written out of the payload, so neither can go stale again.
+
+**Four things the build changed, each measured rather than argued** — three about the plan, one a defect it
+found in the benchmark's own data:
+
+1. **The gate is four costs, not five.** §2's table reproduces exactly on silver, gold, coins and burn, and
+   not with the queue added — which also answers §8's second open question the other way round.
+2. **§1 was stale**, measured on the incomplete capture; four of its six markers moved by one army.
+3. **`expect.soft`**: every pin in `check` and `checkBaseline` now reports independently. Seven armies are
+   red, and on each of them every assertion below the first failure was invisible.
+4. **Eight armies carried two different captured marches under one name.** `methodOf` read `monsterSaving`
+   on the Generate route — it is what *Total Optimization* means — and not on `optimize`, so the two
+   `priority search under Elite` bases came back as twins with different counts (on the 12 000 export,
+   22,753,836 for 21,763,200 silver and 7,807,482 for 33,600,000). No figure was wrong, because nothing that
+   picks a row reads the name; what was wrong is that `asBaseline` keys `ratios.externals` by name through
+   `Object.fromEntries`, so one of each pair would have **overwritten** the other in a registered baseline.
+   Named apart now, and a hard assertion in `measure` refuses any table with two rows of one name.
+
+**No engine change** — it is the instrument. **No pin moved**: `bestSizer`, the ratio floors and the
+baseline are untouched, and the only new floors are the ones this story measured.
 
 ### 5.2 W2 — Complete the external rows — **done 2026-09-22**
 
@@ -257,7 +329,7 @@ objective before it reaches the sizer, so the method radio is inert.
 
 | # | work | unblocks / worth | risk |
 |---|---|---|---|
-| 1 | **W1** matched-spend instrument | makes everything below measurable and non-regressing | none — no engine change |
+| 1 | ~~**W1** matched-spend instrument~~ **done 2026-09-22** | makes everything below measurable and non-regressing | none — no engine change |
 | 2 | ~~**W2** complete external rows~~ **done 2026-09-22** | §2 is no longer a lower bound | — |
 | 3 | **W5** H3 reads gold + coins | correctness vs the definition; cheap | small |
 | 4 | **W4** burn ladder capacity | −77.9 % → positive, plus the 3 G0 armies | pins move |
@@ -279,6 +351,14 @@ gap against the definition and costs almost nothing.
   spending freely is a different product, not a better one.
 - **The seven reds already on the benchmark** are not in this plan: four `winsHired` pins the plan now
   *beats*, and three stop counts. Pinning them is a re-base and his call.
+- **And six more outside it, measured 2026-09-22 (S-121) and pre-existing at `bf19b01`** — verified by
+  running the two files in a worktree at HEAD, where they fail identically. Five in
+  `tests/engine/plan-criteria.test.ts` (the engine-tests army at horizon 4; the owner's 7 000 and 12 000; the
+  sweet spot's campaign at 7 000; the monster camp's shelter criterion) and one in `plan-shape.test.ts`. **Five
+  of the six are damage-a-hired floors** — `expected 261254 to be greater than or equal to 439833`, and four
+  more of that shape — which is the same reading the four `winsHired` pins above are on. They are recorded
+  here so that "the tree was red before this work" is a measurement and not a claim, and because one root
+  probably explains eleven of the thirteen.
 - **No pin is re-based by a worker.** A scenario must not get worse, or it is a discrepancy, or he registers
   the trade.
 
@@ -288,5 +368,11 @@ gap against the definition and costs almost nothing.
 
 - **May a marker be exceeded beyond 5 % when the damage plainly pays for it?** The tolerance is uniform
   today; an army where they spend 0 gold makes gold a hard gate no damage can buy past.
-- **Is the training queue a marker he wants gated**, or only reported? It is our second-best marker, so
-  gating it costs nothing today — but it would constrain W4, which buys damage by fielding more.
+- **Is the training queue a marker he wants gated**, or only reported? **Measured, S-121, and the guess
+  written here first was wrong.** It read *"it is our second-best marker, so gating it costs nothing
+  today"*. Adding `seconds` to the four costs of §0 takes the standing from **5 beats / 9 short / 3 with no
+  stop inside their budget** to **3 / 10 / 4**: his own TotalStack profile falls **+20.7 % → −27.4 %**, his
+  camp of 2026-09-19 goes from **+17.7 %** to no stop fitting at all, the live camp from −77.9 % to −81.8 %
+  and the e2e seed from −1.3 % to −1.8 %. **Gating the queue costs two of the five armies we beat.** It is
+  reported and not gated until he says otherwise, and it would constrain W4, which buys damage by fielding
+  more.

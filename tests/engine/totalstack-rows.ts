@@ -1,10 +1,11 @@
 /**
  * TotalStack's answers to the benchmark's scenarios, read from the datasets the owner captured in his own
  * browser on 2026-09-18 (`docs/research/totalstack-capture-2026-09-18.md`, the third run: six bases, eighty
- * answers) and **replayed on 2026-09-19** for the five armies those runs never asked (S-101). One row a
- * method and priority: the three Generate methods as the page names them, and the priority search under
- * Elite and under M's for each objective — the replay contributes Generate rows only, its `optimize` calls
- * having come back 403 (see `DATASETS` below).
+ * answers) and **replayed on 2026-09-19** for the five armies those runs never asked (S-101), and again on
+ * 2026-09-22 with the cookie that entitles the `optimize` route (S-119). One row a method and priority: the
+ * three Generate methods as the page names them, and the **three** priority searches — under Elite, under
+ * M's and under Total Optimization — for each objective (the third of those was folded into the first and
+ * named as such until S-121; see `methodOf`).
  *
  * TotalStack sends no method name; the method is the body's flags (the doc has the table). Its answers to the
  * owner's scenarios field Archer III, Spearman III and Swordsman I, which his Pyrrhic export leaves out, so a row
@@ -76,12 +77,11 @@ const DATASETS = [
    * before it are ordered as they are**: the first dataset that answers a scenario wins it, so an arrival
    * here can only add armies and never re-write a figure an earlier run pinned.
    *
-   * **48 of 168 at 2xx, and the 120 that failed are the whole `optimize` route** — 403, exactly as the two
-   * replays of 2026-09-19 were (Pro is required there and was not active on the new account). The Generate
-   * route answered every one of its 48 calls, which is what matters: `methodOf` reads **Total Optimization,
-   * M's Preservation and Elite Preservation off Generate**, and only the two `priority search under …` rows
-   * come from `optimize`. So this run contributes every row the goal line and the pins are stated against,
-   * and none of the priority-search rows.
+   * **168 of 168 at 2xx** — 120 `optimize` and 48 Generate — since the capture was completed on 2026-09-22.
+   * It answered 403 to the whole `optimize` route at first, exactly as the two replays of 2026-09-19 did;
+   * the entitlement turned out to be an **HttpOnly cookie** rather than the session id, and with it supplied
+   * from the environment every call came back. So this run contributes the priority-search rows as well as
+   * the Generate ones, which is what took `his usual setup` from +27.9 % to +4.3 % at matched spend.
    *
    * **It is the run that ends the benchmark's two blind armies** — `Aydae alone` and `his usual setup`, the
    * camp he actually plays — which had no captured answer of any kind and printed `—` on every reading.
@@ -163,12 +163,34 @@ const SCENARIOS: Record<string, string> = {
     'his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)',
 };
 
-/** What the page calls the body's flags. */
+/**
+ * What the page calls the body's flags.
+ *
+ * **The `optimize` route reads `monsterSaving` too since S-121** (2026-09-22), and until it did, **eight of
+ * the seventeen armies carried two different captured marches under one name**. Three `optimize` bases are
+ * in the fixtures — `relaxedPreservation=true`, and `relaxedPreservation=false` with `monsterSaving` both
+ * ways — and the name distinguished only the first, so the pair under Elite came back as two rows called
+ * `TotalStack · priority search under Elite (…)` with different counts. They are genuinely different
+ * answers: on the owner's 12 000 export one is 22,753,836 damage for 21,763,200 silver and the other
+ * 7,807,482 for 33,600,000.
+ *
+ * **What it cost.** The table printed them as twins, and `asBaseline`'s `ratios.externals` is keyed by name
+ * — `Object.fromEntries` — so one of every colliding pair silently **overwrote** the other and the
+ * registered baseline would have held a standing against whichever came last. Nothing that picks a row reads
+ * the name (`matchedSpend` walks the array, and the pins take a maximum over it), so no figure on the table
+ * was ever wrong; what was wrong is that a reader, and a baseline, could not tell the two apart.
+ *
+ * The Generate route's own `monsterSaving` has always been named — it is what *Total Optimization* means —
+ * so the optimize half now says the same word for the same flag.
+ */
 function methodOf(key: string): string {
   const optimize = key.startsWith('calculations/optimize');
   const relaxed = key.includes('relaxedPreservation=true');
   const saving = key.includes('monsterSaving=true');
-  if (optimize) return relaxed ? 'priority search under M’s' : 'priority search under Elite';
+  if (optimize) {
+    if (relaxed) return 'priority search under M’s';
+    return saving ? 'priority search under Total Optimization' : 'priority search under Elite';
+  }
   if (saving) return 'Total Optimization';
   return relaxed ? 'M’s Preservation' : 'Elite Preservation';
 }

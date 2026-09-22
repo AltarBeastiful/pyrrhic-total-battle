@@ -91,6 +91,33 @@ export interface Pinned {
      */
     perDragonCoin?: number;
   };
+  /**
+   * **Dominance at matched spend** (S-121, 2026-09-22), the benchmark's **primary** reading and the one the
+   * owner's own definition of beating another calculator reduces to: *"beat means using constrained
+   * resources to produce better damage with a fixed silver/merc/gold/dragon coins set."*
+   *
+   * A scenario carries this block exactly when a **comparable** march from a calculator outside this repo is
+   * on its table — the same rule `externals` above follows, so a captured row that appears or disappears is
+   * caught here rather than silently dropping a floor.
+   *
+   * **Measured, never aspirational**, for the reason `totalOptimization` above is: five of the seventeen
+   * armies beat TotalStack today and twelve do not, and a benchmark red for a target rather than for a
+   * regression would stop being a non-regression suite. What is pinned is *today's standing*, so that the
+   * day a change takes it away the run says so.
+   */
+  matched?: {
+    /**
+     * A stop of ours fits inside their hardest comparable march's budget at all. Pinned `false` on the
+     * armies where none does (§3's G0) and **asserted only when `true`**: a stop appearing inside their
+     * budget later is the coverage defect being fixed, which is news for the report rather than a failure.
+     */
+    fits: boolean;
+    /**
+     * Our best fitting stop's damage over theirs, minus one — the figure `docs/plans/beating-totalstack.md`
+     * §2 tables, floored to four decimals below what it measures. Absent where nothing fits.
+     */
+    delta?: number;
+  };
 }
 
 export interface Scenario {
@@ -347,6 +374,13 @@ function fourThousand(): Scenario {
       // recorded. **Not a trade he has accepted — a shortfall he has parked**, so that the suite is red for
       // new regressions rather than for this one, and the gap stays on the table to be explained.
       totalOptimization: { perSilver: 1.01, perSoldier: 1.01, perMonster: 1.01 },
+      // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+      // definition of beating another calculator reduces to. Their hardest comparable march is
+      // `TotalStack · optimize (as captured, repeated)`,
+      // and the bar's best stop inside its budget at 5 % hits **-2.77 %** against it.
+      // Over all of their comparable marches the bar dominates **6/11**, and every one of them has a stop of ours inside it.
+      // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+      matched: { fits: true, delta: -0.0278 },
     },
   };
 }
@@ -431,6 +465,13 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         winsHired: true,
         externals: { damageFloor: 1.42, winsHired: false },
         totalOptimization: { perSilver: 2.07, perSoldier: 0.78, perMonster: 2.14 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · priority search under M’s (averageDamage)`,
+        // and the bar's best stop inside its budget at 5 % hits **+55.45 %** against it.
+        // Over all of their comparable marches the bar dominates **5/8**, and **3** of them have no stop of ours inside at all.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: 0.5545 },
       },
     },
     {
@@ -488,6 +529,14 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         // registered, 3 offered), which fires first and stops the test — so it was short and invisible.
         // Far above his goal of 1.0; parked for review with the rest.
         totalOptimization: { perSilver: 1.71, perSoldier: 0.6, perMonster: 1.69 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · priority search under M’s (averageDamage)`,
+        // and **no stop of ours fits inside its budget at 5 %** — the bar is not losing that
+        // comparison, it is not in it (§3's G0).
+        // Over all of their comparable marches the bar dominates **3/9**, and **6** of them have no stop of ours inside at all.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: false },
       },
     },
     {
@@ -539,6 +588,13 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         // All three are still **above** his goal of 1.0 — what they lost is the margin S-101 recorded, not
         // the goal. `perMonster` 1.01 is unmoved (no monster on either side; `damage / 1` both ways).
         totalOptimization: { perSilver: 1.03, perSoldier: 1.04, perMonster: 1.01 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · Total Optimization`,
+        // and the bar's best stop inside its budget at 5 % hits **+1.78 %** against it.
+        // Over all of their comparable marches the bar dominates **7/7**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: 0.0178 },
       },
     },
     {
@@ -594,6 +650,13 @@ export function ownerScenarios(profile: Profile): Scenario[] {
         silverFloor: 0.41,
         externals: { damageFloor: 0.37, winsHired: true },
         totalOptimization: { perSilver: 0.92, perSoldier: 1.02, perMonster: 0.95 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · priority search under M’s (averageDamage)`,
+        // and the bar's best stop inside its budget at 5 % hits **-13.90 %** against it.
+        // Over all of their comparable marches the bar dominates **1/9**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.139 },
       },
     },
     {
@@ -656,6 +719,13 @@ export function ownerScenarios(profile: Profile): Scenario[] {
          * same treatment the 4 000 case gives it.
          */
         totalOptimization: { perSilver: 0.99, perSoldier: 1.0, perMonster: 1.14 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · priority search under Elite (averageDamage)`,
+        // and the bar's best stop inside its budget at 5 % hits **-20.24 %** against it.
+        // Over all of their comparable marches the bar dominates **0/9**, and **1** of them have no stop of ours inside at all.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.2024 },
       },
     },
     // **The three camps, S-101 (2026-09-19)** — scenarios 13, 14 and 15, appended after the twelve and
@@ -721,6 +791,13 @@ export function commonScenarios(): Scenario[] {
         winsHired: false,
         externals: { damageFloor: 0.99, winsHired: false },
         totalOptimization: { perSilver: 0.99, perSoldier: 0.99, perMonster: 0.99 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · Total Optimization`,
+        // and the bar's best stop inside its budget at 5 % hits **-0.16 %** against it.
+        // Over all of their comparable marches the bar dominates **1/3**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.0016 },
       },
     },
     {
@@ -756,6 +833,13 @@ export function commonScenarios(): Scenario[] {
         winsHired: false,
         externals: { damageFloor: 0.99, winsHired: false },
         totalOptimization: { perSilver: 0.99, perSoldier: 0.99, perMonster: 0.99 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · Total Optimization`,
+        // and the bar's best stop inside its budget at 5 % hits **-0.16 %** against it.
+        // Over all of their comparable marches the bar dominates **1/3**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.0016 },
       },
     },
     {
@@ -809,6 +893,13 @@ export function commonScenarios(): Scenario[] {
         winsHired: false,
         externals: { damageFloor: 0.75, winsHired: false },
         totalOptimization: { perSilver: 0.99, perSoldier: 0.99, perMonster: 0.99 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · priority search under M’s (averageDamage)`,
+        // and the bar's best stop inside its budget at 5 % hits **-12.50 %** against it.
+        // Over all of their comparable marches the bar dominates **1/7**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.125 },
       },
     },
     {
@@ -858,6 +949,13 @@ export function commonScenarios(): Scenario[] {
         winsHired: false,
         externals: { damageFloor: 0.81, winsHired: false },
         totalOptimization: { perSilver: 0.99, perSoldier: 1.0, perMonster: 1.0 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · priority search under M’s (averageDamage)`,
+        // and the bar's best stop inside its budget at 5 % hits **-7.04 %** against it.
+        // Over all of their comparable marches the bar dominates **1/8**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.0704 },
       },
     },
     {
@@ -888,6 +986,13 @@ export function commonScenarios(): Scenario[] {
         // Measured today: **1.0410258**. Above his goal of 1.0, below the margin S-101 recorded; parked for
         // review, not accepted.
         totalOptimization: { perSilver: 0.99, perSoldier: 1.04, perMonster: 0.99 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · M’s Preservation`,
+        // and the bar's best stop inside its budget at 5 % hits **-1.26 %** against it.
+        // Over all of their comparable marches the bar dominates **4/8**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.0126 },
       },
     },
     {
@@ -1051,6 +1156,14 @@ export function commonScenarios(): Scenario[] {
         // assertion (5 registered, 4 offered). Far above his goal of 1.0. The other three readings, the
         // dragon coin among them, are unmoved and still pass on this, the benchmark's largest monster camp.
         totalOptimization: { perSilver: 1.19, perSoldier: 1.52, perMonster: 1.19, perDragonCoin: 1.21 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · Total Optimization`,
+        // and **no stop of ours fits inside its budget at 5 %** — the bar is not losing that
+        // comparison, it is not in it (§3's G0).
+        // Over all of their comparable marches the bar dominates **0/3**, and **3** of them have no stop of ours inside at all.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: false },
       },
     },
     fourThousand(),
@@ -1125,6 +1238,13 @@ const liveCamp = (owner: Profile): Scenario[] => {
         // are what made the 4.2, and the plan gets less out of a hired soldier chunk than it did — and the
         // one most worth explaining when the four are reviewed. Still above his goal of 1.0.
         totalOptimization: { perSilver: 0.25, perSoldier: 1.94, perMonster: 2.17 },
+        // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+        // definition of beating another calculator reduces to. Their hardest comparable march is
+        // `TotalStack · Total Optimization`,
+        // and the bar's best stop inside its budget at 5 % hits **-77.86 %** against it.
+        // Over all of their comparable marches the bar dominates **0/3**, and every one of them has a stop of ours inside it.
+        // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+        matched: { fits: true, delta: -0.7786 },
       },
     },
   ];
@@ -1188,6 +1308,13 @@ const hisCamp = (owner: Profile): Scenario[] => {
           silverFloor: 0.73,
           externals: { damageFloor: 2.15, winsHired: false },
           totalOptimization: { perSilver: 1.6, perSoldier: 15.3, perMonster: 2.15 },
+          // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+          // definition of beating another calculator reduces to. Their hardest comparable march is
+          // `TotalStack · Total Optimization`,
+          // and the bar's best stop inside its budget at 5 % hits **+17.73 %** against it.
+          // Over all of their comparable marches the bar dominates **2/3**, and **1** of them have no stop of ours inside at all.
+          // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+          matched: { fits: true, delta: 0.1773 },
         } as Pinned,
       },
       {
@@ -1218,6 +1345,14 @@ const hisCamp = (owner: Profile): Scenario[] => {
           winsHired: false,
           externals: { damageFloor: 1.75, winsHired: false },
           totalOptimization: { perSilver: 1.29, perSoldier: 2.59, perMonster: 1.75 },
+          // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+          // definition of beating another calculator reduces to. Their hardest comparable march is
+          // `TotalStack · Total Optimization`,
+          // and **no stop of ours fits inside its budget at 5 %** — the bar is not losing that
+          // comparison, it is not in it (§3's G0).
+          // Over all of their comparable marches the bar dominates **0/3**, and **3** of them have no stop of ours inside at all.
+          // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+          matched: { fits: false },
         } as Pinned,
       },
     ] as const
@@ -1324,6 +1459,13 @@ const TOTALSTACK_PROFILE_PINS: Pinned = {
   // dominance pool, and S-116 is about exactly that ordering. `perDragonCoin` 1.24 is met at 1.2402 and is
   // left alone.
   totalOptimization: { perSilver: 1.3, perSoldier: 3.0, perMonster: 0.91, perDragonCoin: 1.24 },
+  // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+  // definition of beating another calculator reduces to. Their hardest comparable march is
+  // `TotalStack · Total Optimization`,
+  // and the bar's best stop inside its budget at 5 % hits **+20.69 %** against it.
+  // Over all of their comparable marches the bar dominates **2/3**, and **1** of them have no stop of ours inside at all.
+  // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+  matched: { fits: true, delta: 0.2068 },
 };
 
 const totalStackProfile = (owner: Profile): Scenario[] => {
@@ -1426,6 +1568,13 @@ const USUAL_SETUP_PINS: Pinned = {
    * dominance pool (200) and spends coins on it.
    */
   totalOptimization: { perSilver: 1.29, perSoldier: 0.96, perMonster: 1.28, perDragonCoin: 1.27 },
+  // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
+  // definition of beating another calculator reduces to. Their hardest comparable march is
+  // `TotalStack · priority search under M’s (damagePerSilver)`,
+  // and the bar's best stop inside its budget at 5 % hits **+4.32 %** against it.
+  // Over all of their comparable marches the bar dominates **5/9**, and **4** of them have no stop of ours inside at all.
+  // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
+  matched: { fits: true, delta: 0.0432 },
 };
 
 /**

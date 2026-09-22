@@ -134,6 +134,12 @@ import { HORIZON, OWNER_EXPORT, commonScenarios, ownerProfile, ownerScenarios } 
 // silver/dmg, merc/dmg and monster/dmg" — defined once, beside the sheltered-march yardstick, so this table
 // and `plan-criteria.test.ts` split the stock the same way (S-98).
 import { isMonsterUnit, perDragonCoinOf, perMonsterOf, perSoldierOf, rareStockOf } from './plan-yardsticks';
+// **Dominance at matched spend** (S-121), the reading the owner's definition of *beating* reduces to, and
+// since this story the table's **primary** one: the ratios below it are what a stop that costs no more and
+// hits harder gives you for free. Its arithmetic is a module of its own so it has unit tests that run in a
+// quarter of a second (`matched-spend.test.ts`) rather than only inside this three-minute suite.
+import type { Contender, MatchedSpend } from './matched-spend';
+import { MARKERS, TOLERANCE, markerFloors, matchedSpend, verdictWord } from './matched-spend';
 import { totalstackRows, widenedFor } from './totalstack-rows';
 
 const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
@@ -677,6 +683,18 @@ function measure(scenario: Scenario): Measured {
     }
     rows.push(row);
   }
+  /**
+   * **No two rows on one table may share a name** (S-121, 2026-09-22). A hard throw, because it says the
+   * data or this file is wrong rather than that the engine is: `asBaseline` keys `ratios.externals` by name
+   * through `Object.fromEntries`, so a collision does not fail, it **overwrites** — one of the pair's
+   * standings simply never reaches the baseline. Eight armies carried such a pair until `methodOf` was
+   * taught to read `monsterSaving` on the `optimize` route, and nothing said so.
+   */
+  const names = new Set<string>();
+  for (const row of rows) {
+    expect(names.has(row.name), `two rows on ${scenario.label} are both called "${row.name}"`).toBe(false);
+    names.add(row.name);
+  }
   let plan: CampaignPlan | null = null;
   let refusal: string | null = null;
   // Which stop each plan row is, by object identity: the row's `name` is prose and the baseline is keyed on
@@ -884,7 +902,107 @@ function goalLine(measured: Measured): string {
   );
 }
 
+// ---- the primary reading: dominance at matched spend (S-121) ---------------------------------------------
+
+/**
+ * **The two sides of the comparison**: every stop the bar offered, and every march a calculator outside this
+ * repo answered that the army could actually field.
+ *
+ * *Ours* is the **plan's stops** and nothing else, because the sentence being tested is about the bar — the
+ * thing the app recommends. The sizers and the fifteen variant rows beside them are what we *could* have
+ * answered with, and on more than one army here they hit harder than every stop does (§3's G1 is exactly
+ * that: our own Tier ladder within 11 % of TotalStack where our best stop is 3.2× behind it). That is worth
+ * knowing and it is printed below as a diagnostic, but a verdict that let the bar claim a sizer's march
+ * would be scoring a product nobody ships.
+ */
+const contenders = (rows: Campaign[], kind: Campaign['kind']): Contender[] =>
+  rows.filter((c) => c.kind === kind && c.comparable);
+
+interface Verdict {
+  matched: MatchedSpend;
+  /**
+   * **The same question asked of everything we can answer with** — the stops, the two sizers, their three
+   * switches and all five objectives. Never pinned and never a verdict: it is the diagnostic that told us
+   * G1 and G4 apart from the rest, because an army where *this* beats them and the bar does not is an army
+   * where the damage is provably reachable and the plan is simply not reaching it.
+   */
+  anything: MatchedSpend;
+  floors: ReturnType<typeof markerFloors>;
+}
+
+function verdictOf(measured: Measured): Verdict {
+  const plans = contenders(measured.rows, 'plan');
+  const externals = contenders(measured.rows, 'external');
+  const everything = measured.rows.filter((c) => c.kind !== 'external' && c.comparable);
+  return {
+    matched: matchedSpend(plans, externals),
+    anything: matchedSpend(everything, externals),
+    floors: markerFloors(plans, externals),
+  };
+}
+
+const pct = (value: number): string =>
+  Number.isFinite(value) ? `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)} %` : '—';
+
+/**
+ * **The verdict block** (S-121): three or four lines under each army's table saying, in the owner's own
+ * terms, whether the bar beat the other calculator on this army and where it did not.
+ *
+ * It leads with their **hardest** row — the figure `docs/plans/beating-totalstack.md` §2 is tabled on — then
+ * says how many of their rows *in total* the bar dominates, because beating their biggest march is not the
+ * same as beating all of them and the plan's title says *everywhere*. The six marker floors follow as the
+ * derived reading, and the `anything` line is printed only when it disagrees with the verdict, which is the
+ * only time it is news.
+ */
+function verdictLines(verdict: Verdict): string[] {
+  const { matched, anything, floors } = verdict;
+  if (!matched.hardest) {
+    return [
+      '**Matched spend — not measured**: no comparable march from a calculator outside this repo on this ' +
+        'army, so there is nothing to be better or worse than.',
+    ];
+  }
+  const word = verdictWord(matched.hardest);
+  const them = matched.hardest.theirs;
+  const us = matched.hardest.ours;
+  const lines = [
+    `**Matched spend — ${word.toUpperCase()}** (owner, 2026-09-21: *"beat means using constrained ` +
+      'resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest ' +
+      `comparable march is \`${them.name}\` at ${n(them.damage)} for ${n(them.silver)} silver, ` +
+      `${n(them.gold)} gold, ${n(them.dragonCoins)} coins, ${n(them.burned)} burned, ${n(them.seconds)} s. ` +
+      (us
+        ? `Our best stop inside that budget (${(TOLERANCE * 100).toFixed(0)} %) is \`${us.name}\` at ` +
+          `${n(us.damage)} — **${pct(matched.hardest.delta)}**.`
+        : `**No stop of ours fits inside it**, over ${matched.hardest.over.join(', ')}.`),
+    '',
+    `**Over all ${String(matched.rows.length)} of their comparable marches**, the bar dominates ` +
+      `**${String(matched.rowsBeaten)}** at matched spend` +
+      (matched.worst
+        ? `; the one it does worst on is \`${matched.worst.theirs.name}\` at ${pct(matched.worst.delta)}.`
+        : '; none of its stops fits inside any of them.'),
+  ];
+  if (anything.rowsBeaten > matched.rowsBeaten) {
+    lines.push(
+      '',
+      `**But the damage is reachable**: counting every algorithm the app offers — the sizers, their ` +
+        `switches and all five objectives — ${String(anything.rowsBeaten)} of their ${String(anything.rows.length)} ` +
+        `marches are dominated, against the bar's ${String(matched.rowsBeaten)}. The gap between those two ` +
+        'numbers is the plan failing to reach what this engine can already do, not the engine losing.',
+    );
+  }
+  if (floors.length > 0) {
+    lines.push(
+      '',
+      `**The six markers**, our best against theirs on each alone: ${floors
+        .map((one) => `${one.marker} ${one.standing === 'win' ? '✓' : one.standing === 'tie' ? '=' : '✗'}`)
+        .join(', ')}.`,
+    );
+  }
+  return lines;
+}
+
 function record(label: string, measured: Measured): void {
+  const verdict = verdictOf(measured);
   const lines = [
     `## ${label}`,
     '',
@@ -902,6 +1020,11 @@ function record(label: string, measured: Measured): void {
         ` ${n(perDragonCoin(c))} |`,
     ),
     '',
+    // **The primary reading since S-121**, above the goal line rather than beside it: the ratios the goal
+    // line reads are what a stop that costs no more and hits harder gives you for free, so the dominance
+    // question is asked first and the derived one after it.
+    ...verdictLines(verdict),
+    '',
     goalLine(measured),
     '',
   ];
@@ -915,6 +1038,33 @@ function record(label: string, measured: Measured): void {
     // The shape a registered baseline holds, carried in the run's own figures so `pnpm bench:baseline` can
     // write a proposal out of this file without running the suite twice (`plan-baseline.ts`).
     baseline: asBaseline(measured),
+    // **The matched-spend verdict** (S-121), carried in the payload so the standing table at the end of the
+    // run — and any later before/after comparison — reads the same figures the assertions did rather than
+    // recomputing them from the rows and drifting.
+    matched: {
+      tolerance: TOLERANCE,
+      verdict: verdictWord(verdict.matched.hardest),
+      hardest: verdict.matched.hardest?.theirs.name ?? null,
+      theirDamage: Math.round(verdict.matched.hardest?.theirs.damage ?? 0),
+      ourStop: verdict.matched.hardest?.ours?.name ?? null,
+      ourDamage: Math.round(verdict.matched.hardest?.ours?.damage ?? 0),
+      delta: Number.isFinite(verdict.matched.hardest?.delta ?? Number.NaN)
+        ? Math.round((verdict.matched.hardest?.delta ?? 0) * 10_000) / 10_000
+        : null,
+      over: verdict.matched.hardest?.over ?? [],
+      rows: verdict.matched.rows.length,
+      rowsBeaten: verdict.matched.rowsBeaten,
+      unfitted: verdict.matched.unfitted,
+      worst: verdict.matched.worst
+        ? {
+            name: verdict.matched.worst.theirs.name,
+            delta: Math.round(verdict.matched.worst.delta * 10_000) / 10_000,
+          }
+        : null,
+      // The diagnostic, never a verdict: what every algorithm the app offers would have dominated.
+      anythingBeaten: verdict.anything.rowsBeaten,
+      floors: verdict.floors,
+    },
     rows: measured.rows.map((c) => ({
       name: c.name,
       kind: c.kind,
@@ -977,19 +1127,33 @@ function checkBaseline(scenario: Scenario, measured: Measured): void {
   if (!now) return;
   const { failures, added } = compareToBaseline(was, now);
   for (const line of added) process.stdout.write(`  baseline — ${scenario.label}: ${line}\n`);
-  expect(
-    failures.join('\n'),
-    `this run is behind the baseline the owner registered\n${failures.join('\n')}`,
-  ).toBe('');
+  expect
+    .soft(failures.join('\n'), `this run is behind the baseline the owner registered\n${failures.join('\n')}`)
+    .toBe('');
 }
 
+/**
+ * **Every pin reports, and no pin hides another** (S-121, 2026-09-22). The assertions below are
+ * `expect.soft`, which records a failure and carries on, where they used to be `expect`, which stops the
+ * test at the first one.
+ *
+ * It is not a style change. Seven of the seventeen armies are red today, and on each of those every
+ * assertion *after* the failing one was invisible — the live account of 2026-09-18 hid three shortfalls one
+ * behind another (`externals.damageFloor` behind `perSilver` behind `perSoldier`) and a masking-blind audit
+ * on 2026-09-21 found three more standing behind failures on `stops` and `winsHired`. A non-regression suite
+ * that reports one problem an army at a time makes a change look clean because it broke something early.
+ * The structural checks — a case with external rows that pins none, a table with no sweet spot — stay hard
+ * throws, because those say the file is wrong rather than the engine.
+ */
 function check(scenario: Scenario, measured: Measured): void {
   const { pinned } = scenario;
   const tell = measured.rows
     .map((c) => `${c.name}: ${n(c.damage)} / ${n(c.silver)} / ${n(c.burned)}`)
     .join('; ');
-  expect(measured.refusal !== null, `the plan refuses (${measured.refusal ?? 'no'})`).toBe(pinned.refuses);
-  expect(measured.plan?.alternatives.length ?? 0, `stops on the bar (${tell})`).toBe(pinned.stops);
+  expect
+    .soft(measured.refusal !== null, `the plan refuses (${measured.refusal ?? 'no'})`)
+    .toBe(pinned.refuses);
+  expect.soft(measured.plan?.alternatives.length ?? 0, `stops on the bar (${tell})`).toBe(pinned.stops);
   const sizers = measured.rows.filter((c) => c.kind === 'sizer');
   // Four sizer sequences, each of at least one march: a floor against nothing would hold of anything.
   expect(sizers.length).toBe(4);
@@ -1006,36 +1170,36 @@ function check(scenario: Scenario, measured: Measured): void {
   const bestSizerPerHired = Math.max(...sizers.map(perHired));
   const planPerSilver = finite(plan.map(perSilver));
   const planPerHired = Math.max(...plan.map(perHired));
-  expect(
-    most.damage,
-    `the plan's hardest campaign against the best sizer sequence (${tell})`,
-  ).toBeGreaterThanOrEqual(pinned.damageFloor * bestSizerDamage);
-  expect(planPerHired > bestSizerPerHired, `the plan's best a hired beats the sizers (${tell})`).toBe(
-    pinned.winsHired,
-  );
-  expect(planPerSilver, `the plan's best a silver against the sizers (${tell})`).toBeGreaterThanOrEqual(
-    (pinned.silverFloor ?? SILVER_FLOOR) * bestSizerPerSilver,
-  );
+  expect
+    .soft(most.damage, `the plan's hardest campaign against the best sizer sequence (${tell})`)
+    .toBeGreaterThanOrEqual(pinned.damageFloor * bestSizerDamage);
+  expect
+    .soft(planPerHired > bestSizerPerHired, `the plan's best a hired beats the sizers (${tell})`)
+    .toBe(pinned.winsHired);
+  expect
+    .soft(planPerSilver, `the plan's best a silver against the sizers (${tell})`)
+    .toBeGreaterThanOrEqual((pinned.silverFloor ?? SILVER_FLOOR) * bestSizerPerSilver);
   // `>=` on both, so an **exact tie** counts: a sizer sequence that matches the sweet spot on silver and on
   // the stock is not behind it on either, and since S-89 that is a case which actually happens (Bear V ×1
   // and ×2 tail into the Tier ladder sizer's own campaign, to the unit). The pin is named for what this
   // measures rather than for a loss it does not always mean — see `Pinned.sweetNotAheadOnEither`.
   const notAhead = sizers.some((c) => perSilver(c) >= perSilver(sweet) && perHired(c) >= perHired(sweet));
-  expect(notAhead, `no sizer sequence is behind the sweet spot on either ratio (${tell})`).toBe(
-    pinned.sweetNotAheadOnEither,
-  );
+  expect
+    .soft(notAhead, `no sizer sequence is behind the sweet spot on either ratio (${tell})`)
+    .toBe(pinned.sweetNotAheadOnEither);
   if (externals.length > 0) {
     if (!pinned.externals) throw new Error('a case with external rows must pin them');
     const bestExternalDamage = Math.max(...externals.map((c) => c.damage));
     const bestExternalPerHired = Math.max(...externals.map(perHired));
-    expect(
-      most.damage,
-      `the plan's hardest campaign against the other calculators (${tell})`,
-    ).toBeGreaterThanOrEqual(pinned.externals.damageFloor * bestExternalDamage);
-    expect(
-      planPerHired > bestExternalPerHired,
-      `the plan's best a hired beats the other calculators (${tell})`,
-    ).toBe(pinned.externals.winsHired);
+    expect
+      .soft(most.damage, `the plan's hardest campaign against the other calculators (${tell})`)
+      .toBeGreaterThanOrEqual(pinned.externals.damageFloor * bestExternalDamage);
+    expect
+      .soft(
+        planPerHired > bestExternalPerHired,
+        `the plan's best a hired beats the other calculators (${tell})`,
+      )
+      .toBe(pinned.externals.winsHired);
   }
   // **The floors against Total Optimization** (S-101). Every scenario whose table holds a comparable
   // `TotalStack · Total Optimization` row pins all three of the owner's readings and nothing else does, so
@@ -1055,11 +1219,54 @@ function check(scenario: Scenario, measured: Measured): void {
       if (floor === undefined) continue;
       // A reading neither side has (no silver spent) is not a floor: it is compared only where it exists.
       if (!Number.isFinite(standings[key])) continue;
-      expect(
-        standings[key],
-        `the plan's best stop against TotalStack's Total Optimization on ${what} (${tell})`,
-      ).toBeGreaterThanOrEqual(floor);
+      expect
+        .soft(
+          standings[key],
+          `the plan's best stop against TotalStack's Total Optimization on ${what} (${tell})`,
+        )
+        .toBeGreaterThanOrEqual(floor);
     }
+  }
+
+  // **The primary reading** (S-121): dominance at matched spend, the sentence the owner wrote. It sits last
+  // in this function and it is the first thing the report prints, and with `expect.soft` above the order no
+  // longer decides what a reader gets to see.
+  const verdict = verdictOf(measured);
+  if (externals.length > 0 && !pinned.matched) {
+    throw new Error('a case with external rows must pin its matched-spend standing');
+  }
+  if (externals.length === 0 && pinned.matched) {
+    throw new Error('a case pinned at matched spend no longer has a comparable row to match against');
+  }
+  if (pinned.matched) {
+    const { hardest, rowsBeaten, rows, unfitted } = verdict.matched;
+    const how =
+      `${verdictWord(hardest)} against \`${hardest?.theirs.name ?? '—'}\`, ` +
+      `${String(rowsBeaten)}/${String(rows.length)} of their marches dominated, ` +
+      `${String(unfitted)} with no stop of ours inside them`;
+    if (pinned.matched.fits) {
+      // Their budget had a stop of ours inside it when this was pinned; a run where none fits any more has
+      // taken the bar out of the comparison, which is the regression G0 describes on three other armies.
+      expect.soft(hardest?.ours != null, `a stop of ours still fits their hardest march (${how})`).toBe(true);
+      if (hardest?.ours && pinned.matched.delta !== undefined) {
+        expect
+          .soft(hardest.delta, `the bar against their hardest march at matched spend (${how})`)
+          .toBeGreaterThanOrEqual(pinned.matched.delta);
+      }
+    } else if (hardest?.ours) {
+      // Pinned at "nothing of ours fits" and something now does: the coverage defect is being fixed, so it
+      // is reported rather than failed, and the owner registers the new floor when he judges it.
+      process.stdout.write(
+        `  matched spend — ${scenario.label}: a stop now fits their hardest march (${pct(hardest.delta)})\n`,
+      );
+    }
+    // **`rowsBeaten` is reported and not pinned**, deliberately. It counts marches in a *captured fixture*
+    // (`totalstack-rows.ts`), and the row set moves when a capture lands: the capture of 2026-09-22 took
+    // `his usual setup` from +27.9 % to +4.3 % by adding rows nobody's engine had touched. An absolute count
+    // over a set the engine does not control would go red on a fixture edit and stay green while a row we
+    // lose is added — a discrepancy manufactured by a data file, which is the one thing a non-regression pin
+    // must not be. The delta above is a ratio against a **named** row, so it moves only when a march does.
+    process.stdout.write(`  matched spend — ${scenario.label}: ${how}\n`);
   }
 }
 
@@ -1142,4 +1349,149 @@ describe('the plan against Tier ladder, Troops first and the other calculators, 
 describe.skipIf(!existsSync(OWNER_EXPORT))('the same, on the owner’s account', () => {
   const profile = ownerProfile();
   runAll(profile ? ownerScenarios(profile) : []);
+});
+
+/**
+ * **The standing, over every army the run measured** (S-121, 2026-09-22) — the two tables
+ * `docs/plans/beating-totalstack.md` opens with, written out of this run's own payload so the plan is a
+ * reading of the benchmark and never a memory of one.
+ *
+ * It is registered **after both describes** and reads `benchmark-latest.json`, which `record` has appended
+ * to once per scenario by then. `record` runs before `checkBaseline` and `check` inside every test, so an
+ * army whose pins are red is still counted here — a standing that silently dropped the failing armies would
+ * flatter exactly the cases this file exists to watch.
+ *
+ * **The two aggregate pins are §7's**: *"Silver and queue are what the plan is for; a change that buys
+ * damage by spending freely is a different product, not a better one."* They are the only floors here, and
+ * they are floors on **counts of armies**, so a change that trades a silver win for a damage win on one army
+ * is red and the owner registers it if the trade is one he wants.
+ */
+const ARMIES_MEASURED = 17;
+/**
+ * **Armies where our best stop beats their best comparable march on that marker alone** — measured on the
+ * payload of 2026-09-22, never taken from the plan's prose.
+ *
+ * Only the two §7 names are floored, and each sits exactly at what the run measures: *"Silver and queue are
+ * what the plan is for; a change that buys damage by spending freely is a different product, not a better
+ * one."* The other four are reported and not floored — damage, burn, gold and the coins are where the work
+ * of §5 happens, and a floor on them would go red for the change being made rather than for a regression.
+ */
+const MARKER_WINS: Partial<Record<(typeof MARKERS)[number][0], number>> = {
+  silver: 13,
+  seconds: 12,
+};
+/** Armies the bar dominates at matched spend on their hardest comparable march — §2's count, measured. */
+const ARMIES_BEATEN = 5;
+
+describe('the standing at matched spend, over every army above', () => {
+  test('writes it, and holds the two floors §7 names', () => {
+    const figures = JSON.parse(readFileSync(FIGURES, 'utf8')) as {
+      scenarios: {
+        label: string;
+        matched?: {
+          verdict: string;
+          hardest: string | null;
+          ourStop: string | null;
+          delta: number | null;
+          over: string[];
+          rows: number;
+          rowsBeaten: number;
+          unfitted: number;
+          anythingBeaten: number;
+          worst: { name: string; delta: number } | null;
+          floors: { marker: string; ours: number; theirs: number; standing: string }[];
+        } | null;
+      }[];
+    };
+    const measured = figures.scenarios.filter((one) => one.matched?.hardest);
+    const lines = [
+      '',
+      '## The standing at matched spend',
+      '',
+      'The reading the owner’s definition of *beating* another calculator reduces to (2026-09-21: ' +
+        '*"beat means using constrained resources to produce better damage with a fixed ' +
+        'silver/merc/gold/dragon coins set"*), asked of every army above: **their hardest comparable march, ' +
+        `our best stop that spends no more of any of the four costs within ${(TOLERANCE * 100).toFixed(0)} %, ` +
+        'and the damage between them.** The ratio floors under each table are the derived reading — a stop ' +
+        'that costs no more and hits harder is more efficient on all of them at once.',
+      '',
+      '| army | verdict | their hardest march | our stop | Δ | of their marches | none fits | any algorithm |',
+      '|---|---|---|---|---|---|---|---|',
+      ...measured.map((one) => {
+        const m = one.matched;
+        if (!m) return '';
+        return (
+          `| ${one.label} | **${m.verdict}** | ${m.hardest ?? '—'} | ${m.ourStop ?? `— (over ${m.over.join(', ')})`} | ` +
+          `${m.delta === null ? '—' : `${m.delta >= 0 ? '+' : ''}${(m.delta * 100).toFixed(1)} %`} | ` +
+          `${String(m.rowsBeaten)}/${String(m.rows)} | ${String(m.unfitted)} | ${String(m.anythingBeaten)}/${String(m.rows)} |`
+        );
+      }),
+      '',
+      'The last column is the diagnostic, never a verdict: how many of their marches **any** algorithm the ' +
+        'app offers would have dominated — the sizers, their switches and all five objectives. An army ' +
+        'where it is ahead of the column beside it is an army where the damage is provably reachable and ' +
+        'the bar is simply not reaching it.',
+      '',
+      '### The six markers',
+      '',
+      'Our best stop against their best comparable march **on each marker alone**, counted over the armies ' +
+        'above. Read them as floors rather than as the goal: winning a marker by fielding a tiny march is ' +
+        'not winning, which is what the table above is for.',
+      '',
+      '| marker | direction | we win | tie | we lose |',
+      '|---|---|---|---|---|',
+    ];
+    const counts = new Map<string, { win: number; tie: number; lose: number }>();
+    for (const one of measured) {
+      for (const floor of one.matched?.floors ?? []) {
+        const into = counts.get(floor.marker) ?? { win: 0, tie: 0, lose: 0 };
+        into[floor.standing as 'win' | 'tie' | 'lose'] += 1;
+        counts.set(floor.marker, into);
+      }
+    }
+    for (const [marker, direction] of MARKERS) {
+      const c = counts.get(marker) ?? { win: 0, tie: 0, lose: 0 };
+      lines.push(`| ${marker} | ${direction} | ${String(c.win)} | ${String(c.tie)} | ${String(c.lose)} |`);
+    }
+    const beaten = measured.filter((one) => one.matched?.verdict === 'beat').length;
+    lines.push(
+      '',
+      `**${String(beaten)} of ${String(measured.length)}** armies are beaten at matched spend on their ` +
+        `hardest comparable march; ${String(
+          measured.filter((one) => one.matched?.verdict === 'no stop fits').length,
+        )} have no stop of ours inside their budget at all.`,
+      '',
+    );
+    appendFileSync(REPORT, `${lines.join('\n')}\n`);
+    /**
+     * **The floors below are held only on a whole run**, and the standing is written either way.
+     *
+     * They are counts *over armies*, so a run that measured a different set of armies is not a run they mean
+     * anything on. Three ordinary things produce one: a tree without the owner's export (the second
+     * `describe` is skipped and only the common cases run), `vitest -t "Bear V ×3"` — the normal way to
+     * iterate on one army of a three-minute suite — and `--shard`. Each truncates the payload at module load
+     * and records what it ran, and a floor of "13 armies win on silver" against six armies would be red for
+     * the command line rather than for the engine.
+     *
+     * A *lost* army is a partial run too — `measure` throwing skips `record` — and that is the right
+     * outcome: the army's own test is red where the throw happened, and this table says it is not holding
+     * its floors rather than quietly counting sixteen as seventeen.
+     */
+    if (figures.scenarios.length !== ARMIES_MEASURED) {
+      process.stdout.write(
+        `  the standing — ${String(figures.scenarios.length)} of ${String(ARMIES_MEASURED)} armies ran, ` +
+          'so the floors are reported and not held\n',
+      );
+      return;
+    }
+    for (const [marker, floor] of Object.entries(MARKER_WINS)) {
+      expect
+        .soft(
+          counts.get(marker)?.win ?? 0,
+          `armies where our best stop wins on ${marker} alone (§7: what the plan is for)`,
+        )
+        .toBeGreaterThanOrEqual(floor);
+    }
+    expect.soft(beaten, 'armies beaten at matched spend').toBeGreaterThanOrEqual(ARMIES_BEATEN);
+  });
 });
