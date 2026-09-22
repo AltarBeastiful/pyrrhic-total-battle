@@ -6,9 +6,13 @@ with a fixed silver/merc/gold/dragon coins set. So we can derive its being more 
 related. verify we're using the proper heuristics or change them."* → **2026-09-22**: *"write the full plan
 to improve our algorithm against all markers with totalstack as a benchmark minimum goal."*
 
-Every figure below is measured, from the benchmark committed in `847ce14`
-(`tools/theorycraft/out/benchmark-latest.{md,json}` — seventeen armies, 227 rows of our own algorithms since
-S-118, all seventeen carrying captured TotalStack rows since the capture of 2026-09-22). Nothing is recalled.
+Every figure below is measured, from the benchmark payload committed in **`43f212b`**
+(`tools/theorycraft/out/benchmark-latest.{md,json}` — seventeen armies, 393 rows, all seventeen carrying
+captured TotalStack rows since the capture of 2026-09-22). Nothing is recalled.
+
+*It said `847ce14` until S-121, and that was the whole of §1's trouble below: `847ce14` is the payload from
+**before** the capture completed. §1 and §2 are now written out of the run itself, by the standing at the end
+of `benchmark-latest.md`, so the provenance cannot drift from the figures again.*
 
 ---
 
@@ -32,9 +36,17 @@ Every marker ratio follows by construction: more damage at no more cost makes `d
 everywhere"* is the **derived reading**, not a second target. The per-reading best stop stays, because a stop
 that dominates dominates on all of them at once.
 
-**5 % is the tolerance he set** (*"ok to exceed within reasonable bounds"*), and it is not load-bearing:
-swept over the payload the verdict moves 3 → 4 → 4 → 5 → 5 beats at 0/5/10/20/50 %. **Loosening it does not
-rescue us**, which is how we know every gap below is real rather than an artefact of a strict gate.
+**5 % is the tolerance he set** (*"ok to exceed within reasonable bounds"*). Swept over the payload the
+verdict moves **4 → 5 → 5 → 6 → 6** beats at 0 / 5 / 10 / 20 / 50 %, and the sweep says two different things
+— *(re-measured S-121; the figure written here first, `3 → 4 → 4 → 5 → 5`, matched no payload in the repo and
+is withdrawn)*:
+
+- **On the armies we are merely behind on, loosening does not rescue us.** One army crosses anywhere between
+  0 % and 50 %, and §3's deficits — −77.9 %, −20.2 %, −13.9 %, −12.5 % — are nowhere near a gate. Those gaps
+  are real.
+- **On the three armies where no stop of ours fits at all, it does.** At 20 % that count drops **3 → 1**. So
+  the tolerance *is* load-bearing for G0, and what that tells us is about G0 rather than about the gate —
+  see below.
 
 ---
 
@@ -126,6 +138,21 @@ comparison, we are not in it. Invisible in the ratio table, where all three read
 Three armies, three different resources — so this is one defect only in the sense that the ladder is too
 narrow in every direction at once, not that one knob fixes all three.
 
+**And two of the three are near misses, which is new** (S-121, from the tolerance sweep in §0). Widening the
+gate to 20 % — not a proposal, a probe — puts a stop inside two of these budgets:
+
+| army | at 5 % | at 20 % | at 50 % |
+|---|---|---|---|
+| camp of 2026-09-19, message | no stop fits | **+54.2 %** | +75.9 % |
+| 12 000 export | no stop fits | −8.9 % | −8.9 % |
+| monster camp, 900 dominance | no stop fits | no stop fits | **no stop fits** |
+
+So G0 is really **two** defects. On the first two armies the bar has a march that would win handsomely and
+misses the budget by a few per cent of one resource — a ladder granularity problem, squarely W4. On the
+monster camp no tolerance helps, because the obstruction is **gold** and every stop we offer pays it: that
+one is W5 and W6, not W4. The +54.2 % is the strongest single piece of evidence in this file that the
+damage is there and only the coverage is missing.
+
 ### G1 — The plan will not spend an unlimited stock (live camp, −77.9 %)
 
 | row | damage | silver | burn | troop types |
@@ -167,7 +194,7 @@ reaching it. Six armies say so:
 |---|---|---|
 | live account, evening | 1/9 | **5/9** |
 | his usual setup | 5/9 | **7/9** |
-| e2e seed | 4/8 | **6/8** |
+| e2e seed | 5/9 | **7/9** |
 | camp of 2026-09-19, message | 0/3 | **2/3** |
 | Aydae alone | 0/9 | **1/9** |
 | live camp 2026-09-18 | 0/3 | 0/3 — the one G1 army where even the sizer is short at matched spend |
@@ -214,6 +241,79 @@ doubt. Each is **measure first, then decide**: an experiment before a change.
 
 ## 5. Workstreams
 
+### 5.0 W0 — The simulator stops doing the same work four times — **done 2026-09-22 (S-123)**
+
+Not in this plan as written; slotted in at the owner's word (*"ok slot them in as long as you're using
+benchmark and test to ensure no regression"*) because W3 is blocked on the planner filling any clock it is
+given, and because the two defects were plainly dead work rather than a design.
+
+`simulateBattle` walked the whole battle **four** times — `buildJournal` twice, then `hitsPerStack` twice to
+recount hit counters the first pair had already counted — and sorted the attack order four times with it. It
+now walks each orientation once and sorts once. Beside it, `battleScore` answers the **seven figures an
+objective is scored on** and nothing else: the priority search reads one number off a candidate and was
+paying for two journals with an entry list each, a pool split, and a freshly allocated 12-element
+`modelNotes` array, thousands of times, for candidates it compared and threw away.
+
+*Acceptance, and it is the strongest kind available here*: `tests/engine/battle-equivalence.test.ts` keeps
+the **pre-refactor implementation verbatim** and deep-equals the whole `BattleSummary` against the new one
+over every subset of every common army, plus the shapes a sized army never produces (no stacks, one stack,
+enemy formations of 1, 2, 3, 4, 8 and 13 squads). If it passes, the refactor is invisible to every caller.
+
+*Measured*: **1.17×** end-to-end on `searchPriority` over 14 runs, with `evaluated` **identical on every
+one** — the same candidates explored, so no answer moved.
+
+**And it measured something worth more than the speed-up.** Per candidate: `sizeStacks` **0.067–0.128 ms**
+against the entire battle simulation's **0.005–0.017 ms**. **The sizer is 85–90 % of the cost and the battle
+is ~10 %**, which is why the win is 1.17× and not the 3–5× it was guessed at. Whatever is done next for
+speed is done to `stacker.ts`, not to `battle.ts`.
+
+### 5.0b Where a clock actually binds — **done 2026-09-22 (S-124)**
+
+The owner: *"pin where we spend time and especially where we're constrained by a budget."* Every army now
+records `planMs`, `searchMs`, the number of search calls and whether the planner left **budget-bound**, and
+the standing prints them. Nothing is asserted on a timing — a floor would be red on a slow machine — because
+the point is not the number, it is what it licenses anyone to claim.
+
+**And measured, it says something nobody had checked: on this benchmark, neither search is budget-bound.**
+
+| | planner | priority search |
+|---|---|---|
+| armies that fill their clock | **0 of 17** | **0 of 17** |
+| worst seen | monster camp, **9,643 ms of 40,000** (24 %) | monster camp, **1,957 ms a call of 8,000** (24 %) |
+
+So **on every army this repo scores itself on, a faster engine returns the same plan sooner and nothing
+more.** The one case measured to fill its clock is the **20 000-dominance camp** — experiment 129, 40,843 to
+40,934 ms against a 40,000 ms cap — and it is not a scenario here *precisely because* it does not converge,
+which is what W3 is for. Until W3 registers it, *"faster means better answers"* is a claim about **one army,
+and it is not on the table**.
+
+That correction matters because the argument had already been made the other way round twice in one
+afternoon — W0's first justification, and then this section's own first draft — each time from the shape of
+the code rather than from a reading. The second reading is the useful one: the priority search costs far
+more of a run than the planner does (78 s over forty calls against 9.6 s on the monster camp), and inside a
+call the **sizer** is 85–90 % of it. A run that wants to be shorter goes after `stacker.ts`.
+
+### 5.0c AssemblyScript — **deferred, and on purpose**
+
+The owner asked whether rewriting the hot planner in AssemblyScript would help. **Deferred until the data
+model is refactored and a profile pins where the budgets bind**, for three reasons that do not need a WASM
+toolchain to establish:
+
+1. **Amdahl.** Any split that leaves the sizer in TypeScript caps the win at `1 / (its share)`. On the
+   search's candidate loop the sizer is 85–90 %, so leaving it behind caps the whole exercise near 1.2×.
+2. **Boundary placement.** `sizeStacks` produces the stacks `score()` consumes, inside the per-candidate
+   loop. Putting those two on opposite sides of a WASM boundary marshals an army in and out thousands of
+   times a plan — the worst available split, and the one a "port the scoring nucleus" proposal describes.
+3. **The prerequisite is the experiment.** A WASM port needs a flat numeric interface: unit ids as dense
+   integer indices, counts in typed arrays, no `Record<string, number>` or `Map<string, …>` in the hot loop.
+   That refactor is required work either way — so **do it in TypeScript first**, where it can be debugged
+   and where the 17-army benchmark can hold it to the unit. If it captures most of the win, the port is
+   unnecessary; if it does not, it has produced the exact profile that would size one.
+4. **And §5.0b removed the reason to hurry.** Nothing on this benchmark is budget-bound, so no amount of
+   speed changes an answer here today. The one army where it would is the 20 000-dominance camp, and the
+   honest way to reach it is W3 — make the search converge — not a faster implementation of a search that
+   does not.
+
 ### 5.1 W1 — Make the target measurable — **done 2026-09-22 (S-121)**
 
 Matched spend is the benchmark's **primary reading**, above the goal line on every army's table rather than
@@ -224,8 +324,10 @@ three-minute suite.
 Each army now prints their hardest comparable march with its four costs, the bar's best stop inside that
 budget at 5 % and the delta; how many of **all** their comparable marches the bar dominates and how many have
 no stop of ours inside them at all; what **any** algorithm the app offers would have dominated (the
-diagnostic that tells G1 and G4 apart from the rest); and the six marker floors. `Pinned.matched` pins the
-delta on all seventeen, at measured. The run ends with a standing over every army — §1's and §2's tables,
+diagnostic that tells G1 and G4 apart from the rest); and the six marker floors. `Pinned.matched` carries a
+floor on all seventeen: **fourteen pin the delta** at measured, and the **three G0 armies pin `fits: false`
+and assert nothing** — a stop appearing inside their budget is the coverage defect being fixed, so it is
+reported and left for him to register. Those three are unfloored until W4 gives them a stop. The run ends with a standing over every army — §1's and §2's tables,
 written out of the payload, so neither can go stale again.
 
 **Four things the build changed, each measured rather than argued** — three about the plan, one a defect it
@@ -329,6 +431,7 @@ objective before it reaches the sizer, so the method radio is inert.
 
 | # | work | unblocks / worth | risk |
 |---|---|---|---|
+| 0 | ~~**W0** the simulator's dead work~~ **done 2026-09-22** | 1.17×, and it found that the **sizer** is 85–90 % of a candidate | none — proven equivalent |
 | 1 | ~~**W1** matched-spend instrument~~ **done 2026-09-22** | makes everything below measurable and non-regressing | none — no engine change |
 | 2 | ~~**W2** complete external rows~~ **done 2026-09-22** | §2 is no longer a lower bound | — |
 | 3 | **W5** H3 reads gold + coins | correctness vs the definition; cheap | small |
@@ -347,18 +450,23 @@ gap against the definition and costs almost nothing.
 ## 7. What must not regress
 
 - **The 5 beats of §2 stay beats.** That is what pinning them in W1 is for.
-- **Silver and queue** (14 and 13 marker wins) are what the plan is for; a change that buys damage by
-  spending freely is a different product, not a better one.
-- **The seven reds already on the benchmark** are not in this plan: four `winsHired` pins the plan now
-  *beats*, and three stop counts. Pinning them is a re-base and his call.
+- **Silver and queue** (13 and 12 marker wins) are what the plan is for; a change that buys damage by
+  spending freely is a different product, not a better one. They are the benchmark's only two aggregate
+  floors, at exactly those counts.
+- **The seven red armies already on the benchmark** are not in this plan. They carried **seven** visible
+  assertions before S-121 and carry **fifteen** after it, because `expect.soft` stopped one failure hiding
+  the rest: **10** of the damage-a-hired family (6 against the other calculators, 4 against the sizers), **3**
+  stop counts and **2** `sweetNotAheadOnEither`. Nothing got worse — eight failures were always there and
+  were invisible. Pinning any of them is a re-base and his call.
 - **And six more outside it, measured 2026-09-22 (S-121) and pre-existing at `bf19b01`** — verified by
-  running the two files in a worktree at HEAD, where they fail identically. Five in
+  running the two files in a worktree at `bf19b01`, where they fail identically. Five in
   `tests/engine/plan-criteria.test.ts` (the engine-tests army at horizon 4; the owner's 7 000 and 12 000; the
   sweet spot's campaign at 7 000; the monster camp's shelter criterion) and one in `plan-shape.test.ts`. **Five
   of the six are damage-a-hired floors** — `expected 261254 to be greater than or equal to 439833`, and four
-  more of that shape — which is the same reading the four `winsHired` pins above are on. They are recorded
-  here so that "the tree was red before this work" is a measurement and not a claim, and because one root
-  probably explains eleven of the thirteen.
+  more of that shape — which is the same reading **10 of the benchmark's 15** failing assertions are on.
+  They are recorded here so that "the tree was red before this work" is a measurement and not a claim, and
+  because one reading — what a chunk of hired stock is worth — accounts for **15 of the 21** failures in the
+  tree.
 - **No pin is re-based by a worker.** A scenario must not get worse, or it is a discrepancy, or he registers
   the trade.
 

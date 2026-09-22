@@ -10,3 +10,7 @@ test-results/
 .claude/settings.local.json
 docs/design-canvas/*.html
 !docs/design-canvas/*.dc.html
+
+# The benchmark writes its run here and promotes it only when whole (S-121b).
+tools/theorycraft/out/benchmark-run.json
+tools/theorycraft/out/benchmark-run.md

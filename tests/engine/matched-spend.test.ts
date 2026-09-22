@@ -100,6 +100,24 @@ describe('one army’s standing at matched spend', () => {
     expect(standing.worst).toBeNull();
   });
 
+  it('breaks a tie on their hardest march by the tightest budget, never by array order', () => {
+    // Twelve of the seventeen armies have two or more captured rows at their top damage, and on the
+    // evening account three of them carry wildly different budgets. Which one a pin is measured against
+    // must not be decided by the order a capture fixture happens to list them in.
+    const loose = at('their loose march', 1_000, { silver: 5_000, gold: 400, burned: 40 });
+    const tight = at('their tight march', 1_000, { silver: 900, gold: 4, burned: 2 });
+    const ours = [at('steady-max', 1_100, { silver: 1_000, gold: 10, burned: 5 })];
+    // Same two rows, both orders, same answer — and the answer is the one that is actually hard to match.
+    for (const theirs of [
+      [loose, tight],
+      [tight, loose],
+    ]) {
+      const standing = matchedSpend(ours, theirs);
+      expect(standing.hardest?.theirs.name).toBe('their tight march');
+      expect(verdictWord(standing.hardest)).toBe('no stop fits');
+    }
+  });
+
   it('an army with no comparable row is not measured rather than won', () => {
     const standing = matchedSpend([at('all-in', 5_000, { silver: 10 })], []);
     expect(verdictWord(standing.hardest)).toBe('not measured');
@@ -154,5 +172,14 @@ describe('the six marker floors', () => {
   it('says nothing at all where one side has no row', () => {
     expect(markerFloors([], [at('theirs', 1, { silver: 1 })])).toEqual([]);
     expect(markerFloors([at('ours', 1, { silver: 1 })], [])).toEqual([]);
+  });
+
+  it('ignores a march of theirs that dealt nothing, which would win every cost by not fighting', () => {
+    const ours = [at('all-in', 2_000, { silver: 5_000, gold: 50 })];
+    const theirs = [at('theirs', 1_500, { silver: 7_000, gold: 80 }), at('a march that never was', 0, {})];
+    const floors = Object.fromEntries(markerFloors(ours, theirs).map((one) => [one.marker, one]));
+    expect(floors.silver?.standing).toBe('win');
+    expect(floors.gold?.standing).toBe('win');
+    expect(floors.silver?.theirs).toBe(7_000);
   });
 });

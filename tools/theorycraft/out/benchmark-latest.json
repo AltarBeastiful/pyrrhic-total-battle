@@ -1,5 +1,5 @@
 {
- "run": "2026-09-22T00:20:40.722Z",
+ "run": "2026-09-22T08:59:36.082Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,7 +7,12 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 40,
+   "planMs": 36,
+   "searchMs": 4069,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -83,7 +88,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "short",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 18217808,
     "ourStop": "Complete optimization · sweet-spot",
     "ourDamage": 18189008,
@@ -554,6 +559,11 @@
     "sweet-spot"
    ],
    "planMs": 39,
+   "searchMs": 3842,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -629,7 +639,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "short",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 18442208,
     "ourStop": "Complete optimization · sweet-spot",
     "ourDamage": 18413408,
@@ -1100,7 +1110,12 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 37,
+   "planMs": 33,
+   "searchMs": 3807,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -1855,7 +1870,12 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 53,
+   "planMs": 48,
+   "searchMs": 3754,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -2607,7 +2627,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 104,
+   "planMs": 94,
+   "searchMs": 3853,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -3404,7 +3429,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 11069,
+   "planMs": 9548,
+   "searchMs": 77739,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -3531,7 +3561,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "no stop fits",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 79770931,
     "ourStop": null,
     "ourDamage": 0,
@@ -4122,7 +4152,12 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 768,
+   "planMs": 712,
+   "searchMs": 9672,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -4262,7 +4297,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "short",
-    "hardest": "TotalStack · optimize (as captured, repeated)",
+    "hardest": "TotalStack · M’s Preservation",
     "theirDamage": 8762880,
     "ourStop": "Complete optimization · all-in",
     "ourDamage": 8519930,
@@ -4976,7 +5011,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1946,
+   "planMs": 1817,
+   "searchMs": 4218,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -5850,7 +5890,12 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 1812,
+   "planMs": 1712,
+   "searchMs": 4469,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -6647,7 +6692,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 93,
+   "planMs": 81,
+   "searchMs": 446,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -6795,7 +6845,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "beat",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 29222440,
     "ourStop": "Complete optimization · all-in",
     "ourDamage": 29743332,
@@ -7485,7 +7535,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1303,
+   "planMs": 1196,
+   "searchMs": 4240,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -7649,7 +7704,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "short",
-    "hardest": "TotalStack · priority search under M’s (averageDamage)",
+    "hardest": "TotalStack · priority search under Total Optimization (averageDamage)",
     "theirDamage": 36832597,
     "ourStop": "Complete optimization · all-in",
     "ourDamage": 31714657,
@@ -8361,7 +8416,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1354,
+   "planMs": 1241,
+   "searchMs": 8960,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -9158,7 +9218,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 891,
+   "planMs": 816,
+   "searchMs": 2109,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -9282,7 +9347,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "short",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 49229801,
     "ourStop": "Complete optimization · all-in",
     "ourDamage": 10899547,
@@ -9827,7 +9892,12 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 134,
+   "planMs": 122,
+   "searchMs": 441,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -9947,7 +10017,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "beat",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 6422616,
     "ourStop": "Complete optimization · silver-saver",
     "ourDamage": 7561467,
@@ -10492,7 +10562,12 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 99,
+   "planMs": 101,
+   "searchMs": 457,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {
@@ -10612,7 +10687,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "no stop fits",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 6585128,
     "ourStop": null,
     "ourDamage": 0,
@@ -11155,7 +11230,12 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 3533,
+   "planMs": 3388,
+   "searchMs": 7395,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "silver-saver": {
@@ -11263,7 +11343,7 @@
    "matched": {
     "tolerance": 0.05,
     "verdict": "beat",
-    "hardest": "TotalStack · Total Optimization",
+    "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 6779808,
     "ourStop": "Complete optimization · sweet-spot",
     "ourDamage": 8182228,
@@ -11830,7 +11910,12 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 4461,
+   "planMs": 4149,
+   "searchMs": 7413,
+   "searchCalls": 40,
+   "planBudgetMs": 40000,
+   "searchBudgetMs": 8000,
+   "planBudgetBound": false,
    "baseline": {
     "stops": {
      "sweet-spot": {

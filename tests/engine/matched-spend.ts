@@ -50,10 +50,20 @@ export interface Contender extends Spend {
 /**
  * **The tolerance the owner set** (2026-09-22: *"ok to exceed within reasonable bounds"*).
  *
- * It is not load-bearing, and that is the point of recording it rather than tuning it: swept over the payload
- * of 2026-09-22 the verdict moved 3 → 4 → 4 → 5 → 5 beats at 0/5/10/20/50 %. **Loosening it does not rescue
- * us**, which is how we know the gaps §3 of `docs/plans/beating-totalstack.md` lists are real rather than an
- * artefact of a strict gate.
+ * **Swept, and the sweep says two different things** (re-measured S-121b; the figure written here first —
+ * *"3 → 4 → 4 → 5 → 5"* — matched no payload in the repo and is withdrawn). Over the payload of 2026-09-22
+ * the verdict reads **4 / 5 / 5 / 6 / 6 beats at 0 / 5 / 10 / 20 / 50 %**:
+ *
+ *  - **On the armies we are merely behind on, loosening does not rescue us.** One army crosses between 5 %
+ *    and 50 %, and the deficits of §3 — −77.9 %, −20.2 %, −13.9 %, −12.5 % — are nowhere near a gate.
+ *  - **On the three armies no stop of ours fits at all (§3's G0), it does.** At 20 % the count drops
+ *    **3 → 1**: the 12 000 export becomes a −8.9 % short, and his camp of 2026-09-19 as his message reads
+ *    it becomes a **+54.2 % beat**. Only the monster camp stays out at every tolerance, and it is out on
+ *    **gold** rather than by a near miss.
+ *
+ * That second reading is a finding about G0 rather than about the gate: two of those three armies are a
+ * *coverage* defect a few per cent wide, which is what W4 is for — and it is why this constant is recorded
+ * and swept rather than tuned. It stays at 5 % because 5 % is what he said.
  */
 export const TOLERANCE = 0.05;
 
@@ -150,8 +160,35 @@ export interface MatchedSpend {
   worst: RowVerdict | null;
 }
 
+/**
+ * The hardest of a set of marches: most damage, then the smaller total of the four costs, then the name.
+ *
+ * **The tie-break exists for determinism, and that is all it claims.** Twelve of the seventeen armies have
+ * two or more captured rows at their top damage — six of them on the live account of 2026-09-18 — and on the
+ * evening account three tied rows carry very different budgets (62,040 gold and 864 burned against 30,616
+ * and 428). Left to array order, *which* row a pin is measured against would be decided by the order a
+ * capture fixture happens to list its answers in, so re-ordering a dataset could silently re-point a pin
+ * while the pin itself never changed.
+ *
+ * **The second key is a crude one and is not defended as a ranking**: silver, gold, coins and burn are
+ * summed, and silver runs to millions where burn runs to tens, so in practice it reads "the row that spent
+ * less silver". There is no exchange rate between these four anywhere in this repo — §0 is a *dominance*
+ * test precisely so that none has to exist — and inventing one here would be the wrong place. What earns it
+ * its keep is measured rather than argued: over the payload of 2026-09-22 it leaves **every army's delta
+ * identical** to array order while pinning the choice down, on the ten armies whose named row it moves.
+ *
+ * The principled alternative — *the tied row inside whose budget fewest of our stops fit*, which is what
+ * "hardest" would really mean — needs `ours` to decide `theirs`, and has not been measured. If a future
+ * capture makes this choice matter to a delta, that is the version to reach for.
+ */
 const byDamage = (rows: readonly Contender[]): Contender | null =>
-  rows.reduce<Contender | null>((best, row) => (!best || row.damage > best.damage ? row : best), null);
+  rows.reduce<Contender | null>((best, row) => {
+    if (!best) return row;
+    if (row.damage !== best.damage) return row.damage > best.damage ? row : best;
+    const spend = (one: Contender): number => COSTS.reduce((sum, cost) => sum + one[cost], 0);
+    if (spend(row) !== spend(best)) return spend(row) < spend(best) ? row : best;
+    return row.name < best.name ? row : best;
+  }, null);
 
 /**
  * One row of theirs against all of ours: the best-damage stop that fits inside their budget wins the
@@ -177,7 +214,8 @@ function against(theirs: Contender, ours: readonly Contender[], tolerance: numbe
         ? []
         : // Which markers stopped *every* stop of ours: a marker is named only where no stop of ours came
           // in under it, so the list is the army's real obstruction rather than the nearest stop's.
-          COSTS.filter((cost) => ours.every((one) => one[cost] > theirs[cost] * (1 + tolerance) + 1e-9)),
+          // Read through `overspentOn`, so the report and the gate are one comparison, not two spellings.
+          COSTS.filter((cost) => ours.every((one) => overspentOn(one, theirs, tolerance).includes(cost))),
   };
 }
 
@@ -250,14 +288,17 @@ export interface MarkerFloor {
  * an answer.
  */
 export function markerFloors(ours: readonly Contender[], theirs: readonly Contender[]): MarkerFloor[] {
-  if (ours.length === 0 || theirs.length === 0) return [];
+  // A march that dealt nothing is not a march, and it would win every *cost* marker by not fighting — the
+  // same filter `matchedSpend` puts on their rows, for the same reason.
+  const rivals = theirs.filter((row) => row.damage > 0);
+  if (ours.length === 0 || rivals.length === 0) return [];
   return MARKERS.map(([marker, direction]) => {
     const pick = (rows: readonly Contender[]): number =>
       direction === 'max'
         ? Math.max(...rows.map((row) => row[marker]))
         : Math.min(...rows.map((row) => row[marker]));
     const us = pick(ours);
-    const them = pick(theirs);
+    const them = pick(rivals);
     const better = direction === 'max' ? us > them : us < them;
     const worse = direction === 'max' ? us < them : us > them;
     return { marker, ours: us, theirs: them, standing: better ? 'win' : worse ? 'lose' : 'tie' };

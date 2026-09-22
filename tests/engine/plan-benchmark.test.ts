@@ -110,7 +110,7 @@
  * answer fielded, and TotalStack was asked for damage a silver where this table ranks damage. Both searches
  * run under the app's own budgets (`CAMPAIGN.budgets`).
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
@@ -145,8 +145,24 @@ import { totalstackRows, widenedFor } from './totalstack-rows';
 const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
 const SILVER_FLOOR = 0.95;
 const OUT = new URL('../../tools/theorycraft/out/', import.meta.url);
-const REPORT = new URL('benchmark-latest.md', OUT);
-const FIGURES = new URL('benchmark-latest.json', OUT);
+/**
+ * **The run writes to its own file, and only a whole run is promoted** (S-121b, 2026-09-22).
+ *
+ * `benchmark-latest.{md,json}` are **committed artefacts** — the plan's §1 and §2 are read out of them, and
+ * a `git diff` on them is how a change is reviewed. They used to be written directly, scenario by scenario,
+ * from module load: so `vitest run tests/engine/plan-benchmark.test.ts -t "Bear V ×3"` — the ordinary way to
+ * iterate on one army of a three-minute suite — truncated both to a **one-army** payload with no standing
+ * section and left them that way in the working tree, ready to be committed by accident. It happened during
+ * this story: a `git diff --stat` taken mid-run read `-10,573` lines.
+ *
+ * So every run writes `benchmark-run.{md,json}`, and the standing test at the end — which only passes on a
+ * complete run — copies them over the committed pair. A filtered run never reaches it, and never touches
+ * them.
+ */
+const REPORT = new URL('benchmark-run.md', OUT);
+const FIGURES = new URL('benchmark-run.json', OUT);
+const FINAL_REPORT = new URL('benchmark-latest.md', OUT);
+const FINAL_FIGURES = new URL('benchmark-latest.json', OUT);
 const n = (value: number): string => Math.round(value).toLocaleString('en-US');
 
 // ---- pricing ---------------------------------------------------------------------------------------------
@@ -620,6 +636,27 @@ interface Measured {
    * than against a memory of how long the suite felt.
    */
   planMs: number;
+  /**
+   * **Wall time spent inside `searchPriority`** on this army, summed over the ten Generate rows that call it
+   * (S-124, 2026-09-22; the owner: *"pin where we spend time and especially where we're constrained by a
+   * budget"*).
+   *
+   * The two searches this repo ships are budgeted differently and only one of them is actually **bound** by
+   * its budget, which is the distinction that decides whether making something faster buys a better answer
+   * or only a shorter wait. `planCampaign` fills whatever clock it is given — experiment 129 measured the
+   * 20 000-dominance camp at 40,843–40,934 ms against a 40,000 ms cap — so a millisecond saved there is one
+   * more candidate considered, and the answer improves. `searchPriority` finishes well inside its 8 000 ms
+   * on every army here, so a millisecond saved there is a millisecond the player waits less and **nothing
+   * else**. Until this story that difference had never been written down anywhere a run could see it, and
+   * the first perf refactor of the engine was justified out loud on the wrong one of the two.
+   */
+  searchMs: number;
+  /**
+   * How many times this army called into the priority search — **ten rows, each re-searched once a march**,
+   * so forty on a four-march horizon. `searchMs` is their sum, and the budget is **per call**, so the two
+   * are only comparable through this number.
+   */
+  searchCalls: number;
   /** Which stop each plan row is, by object identity — the baseline is keyed on the engine's own `pick`. */
   picks: Map<Campaign, string>;
   /** The army measured, so the plan's own campaign can be split over its units (S-98). */
@@ -629,6 +666,17 @@ interface Measured {
 function measure(scenario: Scenario): Measured {
   const { request } = scenario;
   const rows: Campaign[] = [];
+  // Every call into the priority search on this army, timed (S-124). It is wrapped here rather than inside
+  // the engine so that measuring costs the app nothing.
+  let searchMs = 0;
+  let searchCalls = 0;
+  const timedSearch = (r: StackRequest, objective: Parameters<typeof searchPriority>[0]['objective']) => {
+    const startedSearch = performance.now();
+    const found = searchPriority({ request: r, objective, budgetMs: SEARCH_BUDGET_MS });
+    searchMs += performance.now() - startedSearch;
+    searchCalls += 1;
+    return found;
+  };
   const housesMonsters =
     request.housing.dominance > 0 && request.units.some((unit) => unit.pool === 'dominance');
   for (const [method, title] of [
@@ -638,7 +686,7 @@ function measure(scenario: Scenario): Measured {
     rows.push(greedy(request, method, `${title} · all types`, (r) => countsOf(sizeStacks(r))));
     rows.push(
       greedy(request, method, `${title} · Generate (average damage)`, (r) =>
-        countsOf(searchPriority({ request: r, objective: 'avgDamage', budgetMs: SEARCH_BUDGET_MS }).result),
+        countsOf(timedSearch(r, 'avgDamage').result),
       ),
     );
     // **Every other objective the Battle card offers** (S-118). `avgDamage` above is the one this table has
@@ -652,7 +700,7 @@ function measure(scenario: Scenario): Measured {
           request,
           method,
           `${title} · Generate (${words})`,
-          (r) => countsOf(searchPriority({ request: r, objective, budgetMs: SEARCH_BUDGET_MS }).result),
+          (r) => countsOf(timedSearch(r, objective).result),
           'variant',
         ),
       );
@@ -736,7 +784,7 @@ function measure(scenario: Scenario): Measured {
       rows.push(campaign);
     }
   }
-  return { rows, plan, refusal, planMs, picks, request };
+  return { rows, plan, refusal, planMs, searchMs: Math.round(searchMs), searchCalls, picks, request };
 }
 
 /**
@@ -1035,6 +1083,14 @@ function record(label: string, measured: Measured): void {
     refusal: measured.refusal,
     stops: measured.plan?.alternatives.map((stop) => stop.pick) ?? [],
     planMs: measured.planMs,
+    // **Where the time went, and whether a clock was binding** (S-124). Timings are machine-dependent and
+    // nothing here is asserted on them; what is worth recording is the *shape* — which of the two searches
+    // spent the time, and whether either of them ran out of budget rather than out of ideas.
+    searchMs: measured.searchMs,
+    searchCalls: measured.searchCalls,
+    planBudgetMs: CAMPAIGN.budgets.plan,
+    searchBudgetMs: SEARCH_BUDGET_MS,
+    planBudgetBound: measured.planMs >= CAMPAIGN.budgets.plan * 0.98,
     // The shape a registered baseline holds, carried in the run's own figures so `pnpm bench:baseline` can
     // write a proposal out of this file without running the suite twice (`plan-baseline.ts`).
     baseline: asBaseline(measured),
@@ -1123,7 +1179,10 @@ function checkBaseline(scenario: Scenario, measured: Measured): void {
     return;
   }
   const now = asBaseline(measured);
-  expect(now, `${scenario.label}: the plan refused an army the baseline holds`).not.toBeNull();
+  // Soft (S-121b), and the early return below is exactly why: a hard failure here threw out of
+  // `checkBaseline`, and `check` — every hand pin on the army — never ran at all. That is the masking this
+  // story set out to remove, left in the one place it could still happen.
+  expect.soft(now, `${scenario.label}: the plan refused an army the baseline holds`).not.toBeNull();
   if (!now) return;
   const { failures, added } = compareToBaseline(was, now);
   for (const line of added) process.stdout.write(`  baseline — ${scenario.label}: ${line}\n`);
@@ -1157,7 +1216,9 @@ function check(scenario: Scenario, measured: Measured): void {
   const sizers = measured.rows.filter((c) => c.kind === 'sizer');
   // Four sizer sequences, each of at least one march: a floor against nothing would hold of anything.
   expect(sizers.length).toBe(4);
-  for (const c of sizers) expect(c.marches, `${c.name} played no march`).toBeGreaterThan(0);
+  // Soft (S-121b): a sizer that plays no march is an **engine** outcome, not a broken file — the report's
+  // own preamble records troopless rows on two armies already — so it must not stop the pins below it.
+  for (const c of sizers) expect.soft(c.marches, `${c.name} played no march`).toBeGreaterThan(0);
   if (!measured.plan) return;
   const plan = measured.rows.filter((c) => c.kind === 'plan');
   const externals = measured.rows.filter((c) => c.kind === 'external' && c.comparable);
@@ -1388,6 +1449,12 @@ describe('the standing at matched spend, over every army above', () => {
     const figures = JSON.parse(readFileSync(FIGURES, 'utf8')) as {
       scenarios: {
         label: string;
+        planMs: number;
+        searchMs: number;
+        searchCalls: number;
+        planBudgetMs: number;
+        searchBudgetMs: number;
+        planBudgetBound: boolean;
         matched?: {
           verdict: string;
           hardest: string | null;
@@ -1453,6 +1520,56 @@ describe('the standing at matched spend, over every army above', () => {
       const c = counts.get(marker) ?? { win: 0, tie: 0, lose: 0 };
       lines.push(`| ${marker} | ${direction} | ${String(c.win)} | ${String(c.tie)} | ${String(c.lose)} |`);
     }
+    /**
+     * **Where the time goes, and where a clock is actually binding** (S-124, 2026-09-22; the owner: *"pin
+     * where we spend time and especially where we're constrained by a budget"*).
+     *
+     * **Nothing here is asserted.** A timing floor would be red on a slower machine and green on a faster
+     * one, which is the opposite of what every other line in this file does. It is written down because the
+     * distinction it draws decides what a performance change is *worth*: on an army whose planner ran out of
+     * clock, a faster engine returns a **better plan**; on one that finished early, it returns the same plan
+     * sooner. Those are different products and they were being argued for interchangeably.
+     */
+    const bound = figures.scenarios.filter((one) => one.planBudgetBound);
+    lines.push(
+      '',
+      '### Where the time goes, and where a clock binds',
+      '',
+      'Not asserted, and deliberately — a timing floor would be red on a slow machine. It is here because ' +
+        'it decides what a speed-up is **worth**. `planCampaign` on an army marked *bound* stopped because ' +
+        'it ran out of clock rather than out of ideas, so making it faster buys a **better plan**; ' +
+        'everywhere else a speed-up buys the same plan sooner and nothing more.',
+      '',
+      '| army | planner | of its budget | bound? | search, all calls | a call | of its budget |',
+      '|---|---|---|---|---|---|---|',
+      ...figures.scenarios.map((one) => {
+        const planShare = ((one.planMs / Math.max(1, one.planBudgetMs)) * 100).toFixed(0);
+        // The search budget is **per call** and `searchMs` is the sum of forty of them, so the share is
+        // taken on the average call. Summing them against one budget would read 979 % and mean nothing.
+        const perCall = one.searchMs / Math.max(1, one.searchCalls);
+        const searchShare = ((perCall / Math.max(1, one.searchBudgetMs)) * 100).toFixed(0);
+        return (
+          `| ${one.label} | ${n(one.planMs)} ms | ${planShare} % | ` +
+          `${one.planBudgetBound ? '**yes**' : 'no'} | ${n(one.searchMs)} ms over ${String(one.searchCalls)} | ` +
+          `${n(perCall)} ms | ${searchShare} % |`
+        );
+      }),
+      '',
+      `**${String(bound.length)} of ${String(figures.scenarios.length)}** armies leave the planner ` +
+        `budget-bound${bound.length > 0 ? `: ${bound.map((one) => one.label).join('; ')}` : ''}, and the ` +
+        'priority search is bound on none of them either.',
+      '',
+      '**So on this table a speed-up buys latency and not answer quality**, and that is worth stating ' +
+        'plainly because it is the opposite of what the engine felt like. The one army measured to fill ' +
+        'its clock is the **20 000-dominance camp** (experiment 129: 40,843–40,934 ms against a 40,000 ms ' +
+        'cap), and it is not a scenario here *precisely because* it does not converge — which is what W3 ' +
+        'is for. Until W3 registers it, "faster means better answers" is a claim about **one army, and it ' +
+        'is not on this table**.',
+      '',
+      'The other reading: the priority search costs far more of a run than the planner does — 78 s over ' +
+        'forty calls against 9.6 s on the monster camp — and within a call the **sizer** is 85–90 % of it ' +
+        '(experiment 131). A run that wants to be shorter goes after `stacker.ts`.',
+    );
     const beaten = measured.filter((one) => one.matched?.verdict === 'beat').length;
     lines.push(
       '',
@@ -1467,11 +1584,17 @@ describe('the standing at matched spend, over every army above', () => {
      * **The floors below are held only on a whole run**, and the standing is written either way.
      *
      * They are counts *over armies*, so a run that measured a different set of armies is not a run they mean
-     * anything on. Three ordinary things produce one: a tree without the owner's export (the second
-     * `describe` is skipped and only the common cases run), `vitest -t "Bear V ×3"` — the normal way to
-     * iterate on one army of a three-minute suite — and `--shard`. Each truncates the payload at module load
-     * and records what it ran, and a floor of "13 armies win on silver" against six armies would be red for
-     * the command line rather than for the engine.
+     * anything on. Two things produce one and they behave differently:
+     *
+     *  - **A tree without the owner's export.** The second `describe` is skipped, only the common cases run,
+     *    and this test still runs — so it writes the standing, says how many armies it saw, and holds
+     *    nothing. A floor of "13 armies win on silver" against six armies would be red for the machine
+     *    rather than for the engine.
+     *  - **A `-t` filter**, the normal way to iterate on one army of a three-minute suite. This test is
+     *    filtered out with everything else, so nothing here runs at all — and that is why the committed
+     *    artefacts are written through `benchmark-run.*` and promoted only from here (see `REPORT`).
+     *
+     * `--shard` is **not** one of them: vitest shards by file, so this single file is never split.
      *
      * A *lost* army is a partial run too — `measure` throwing skips `record` — and that is the right
      * outcome: the army's own test is red where the throw happened, and this table says it is not holding
@@ -1479,11 +1602,14 @@ describe('the standing at matched spend, over every army above', () => {
      */
     if (figures.scenarios.length !== ARMIES_MEASURED) {
       process.stdout.write(
-        `  the standing — ${String(figures.scenarios.length)} of ${String(ARMIES_MEASURED)} armies ran, ` +
-          'so the floors are reported and not held\n',
+        `  the standing — ${String(figures.scenarios.length)} of ${String(ARMIES_MEASURED)} armies ran, so ` +
+          'the floors are not held and `benchmark-latest.{md,json}` are left as they were\n',
       );
       return;
     }
+    // A whole run, so it may speak for the committed artefacts.
+    copyFileSync(REPORT, FINAL_REPORT);
+    copyFileSync(FIGURES, FINAL_FIGURES);
     for (const [marker, floor] of Object.entries(MARKER_WINS)) {
       expect
         .soft(
