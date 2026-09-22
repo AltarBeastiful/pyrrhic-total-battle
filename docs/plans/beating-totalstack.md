@@ -436,7 +436,35 @@ measure how far `searchPriority` is from it and why.
 *Acceptance*: ≥ +12.5 % on Bear ×3 at the same silver; the gap to the exact optimum stated for each bear
 army.
 
-### 5.9 W9 — No leadership at all — **done 2026-09-22 (S-129), and no floor was needed**
+### 5.9 W9 — No leadership at all — **attempted and reverted 2026-09-22 (S-129)**
+
+**The rule is reverted and W9 is open again.** What follows is what it bought, what it cost, and the
+measurement that stopped it — all of it worth keeping, because the next attempt starts from here.
+
+*The cost that stopped it.* Refusing a selection that another beats for the same stock made **`damage per
+silver` answer within 2 % of `average damage` on 16 of 17 armies** — four of the five objectives went inert.
+The reason is structural rather than a bug: on the search's own dominance army the troops add damage and cost
+**only silver** (no chunks, no coins), so a filter that does not read silver discards every trade the
+objective is about, and one that does read silver keeps the degenerate cheap march it was meant to remove.
+
+*And the two cases are the same march.* `search.test.ts`'s *"finds the monsters-only peak that no chain of
+one- or two-type drops leads to"* demands the search **find** a monsters-only march at ratio 4.3098; the
+owner calls the troopless march on his own camp unplayable. They are structurally identical — a cheap,
+high-ratio selection that empties the leadership pool — so no dominance rule keeps one and refuses the other.
+A **floor** is needed, not a trade. (His revised reading of that test, 2026-09-22: it is about *coverage* —
+*"in a march with dominance, find if varying monsters or dominance used or retiring monsters leads to
+criteria improvement"* — so the peak must be **reachable**, not necessarily **answered with**.)
+
+*And the criteria are not all in view.* The owner, same day: *"gold/dragon coins depending on the revival
+setting. Are you sure you have all the criteria in view? monsters added more criteria to watch."* He is
+right. The five markers are complete, but their **values depend on `RecoverySettings.plan.mode`** — under
+`retrain` a monster costs silver, queue and **dragon coins** and no gold; under `revive` it costs **gold**;
+under `selective` the top type of each listed family is revived and the rest retrained. The benchmark is not
+even uniform: the 4 000 capture hardcodes `retrain` (`plan-scenarios.ts:330`) while his own profile default
+is `{ mode: 'selective', reviveFamilies: ['monsters'] }`. **Every dominance verdict in this plan is
+conditional on a setting nothing has varied**, and that is measured before W9 is attempted again.
+
+<details><summary>What the reverted rule bought, kept for the next attempt</summary>
 
 `searchPriority` refuses a selection when **any other selection it evaluated has at least its damage for at
 most its burn** — `STRATEGIES.stock` of `engine/trades.ts`, swept once over the field rather than compared
@@ -470,6 +498,8 @@ not a plan getting worse. Five `search.test.ts` pins move, and one of them,
 *"finds the monsters-only peak that no chain of one- or two-type drops leads to"*, **asserts the very answer
 the owner calls unplayable**. That test and this rule cannot both be right; which goes is his call.
 
+</details>
+
 ### 5.9b W9a — the telling (still open)
 
 Eight of 227 rows field **no troop stack**: `damagePerSilver` on every army housing a dominance pool, and
@@ -496,7 +526,7 @@ objective before it reaches the sizer, so the method radio is inert.
 | 6 | **W7** flat profile | +2.9 %, probably generalises | isolated |
 | 7 | **W8** single-march search | +12.5 % on the bears | isolated |
 | 8 | **W3** converge the big camp | scenario 18 registrable | engine work |
-| 9 | ~~**W9b** the floor~~ **done 2026-09-22** — and no floor was needed | **8 troopless rows → 0**, up to 8.2× the damage for identical stock | 5 search pins + 2 armies move |
+| 9 | **W9b** the floor — *attempted, reverted* | 8 troopless rows; a trade rule cannot do it, a floor can | blocked on the recovery-mode study |
 | 10 | **W9a** the telling | the method radio says it is inert while an objective is selected | none |
 
 W1 and W2 come first because everything after them is judged by them. W5 is third because it is a correctness

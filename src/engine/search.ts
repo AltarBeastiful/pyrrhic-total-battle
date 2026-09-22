@@ -20,8 +20,6 @@
  * scored 1.118 on seed 1 and 4.310, the true optimum, on seed 7).
  */
 import { battleScore, simulateBattle } from './battle';
-import { chunks } from './recovery';
-import type { Priced } from './trades';
 import { sizeStacks } from './stacker';
 import type {
   BattleScore,
@@ -91,8 +89,6 @@ export function objectiveScore(summary: BattleScore, objective: Objective): numb
  */
 interface Evaluation {
   subset: string[];
-  /** Damage and the costs, for the stock rule below. Priced once, with the score. */
-  priced: Priced;
   /** The army as it was scored, kept so the winner's full summary is built from exactly that request. */
   scoped: StackRequest;
   result: StackResult;
@@ -124,23 +120,11 @@ export function searchPriority(
       units: request.request.units.filter((unit) => included.has(unit.id)),
     };
     const result = sizeStacks(scoped);
-    const scored = battleScore(result, scoped);
     const evaluation: Evaluation = {
       subset,
       scoped,
       result,
-      priced: {
-        damage: scored.minDamage,
-        silver: scored.recovery.silver,
-        gold: scored.recovery.gold,
-        dragonCoins: scored.recovery.dragonCoins,
-        hired: result.stacks.reduce(
-          (sum, stack) => sum + (stack.pool === 'authority' ? chunks(stack.count) : 0),
-          0,
-        ),
-        seconds: scored.recovery.seconds,
-      },
-      score: objectiveScore(scored, request.objective),
+      score: objectiveScore(battleScore(result, scoped), request.objective),
     };
     cache.set(key, evaluation);
     evaluated += 1;
@@ -150,75 +134,13 @@ export function searchPriority(
     return evaluation;
   };
 
-  /**
-   * **The whole army, and the one thing no answer may be beaten on** (S-129, 2026-09-22; the owner: *"tier
-   * ladder/troops first with objective dmg/silver made unplayable tradeoff, never shielding anything and
-   * just bringing out mercs because they cost no silver … should we just add a small rule to those 2
-   * algorithms like checks merc lost tradeoffs?"*).
-   *
-   * An objective here scores a march on **one resource**, and a mercenary costs gold and stock, never
-   * silver. Troops are the only thing on the field that costs silver at all — so *"best damage per silver"*,
-   * asked with nothing to hold it down, has an honest optimum of **field no troops**, and this search finds
-   * it correctly. The question is badly posed, not the answer.
-   *
-   * The way out needs no constant, because **leadership is not burn**: `mercLost` counts the authority pool
-   * alone (S-102), so every troop the army holds is free in the one resource a march does not get back.
-   * Measured by experiment 136 over every objective of every benchmark army: **17 of 85** answers are beaten
-   * by the whole army on stock alone, and the **three that field no troops** are each beaten at *identical*
-   * burn — 7,616,394 against 18,757,120 at ten chunks apiece, 156,845 against 1,684,837 at eight, 359,100
-   * against 2,143,198 at nine. Two and a half, ten and six times the damage for not one extra chunk.
-   *
-   * So a candidate is refused when the **whole formation** — this search's own first evaluation, the army
-   * the player would have without asking anything — has at least its damage for at most its burn. That is
-   * `trades.ts`'s `stock` reading, and it weighs nothing against anything: more damage for more stock is a
-   * trade the player may want, and less damage for the same stock is not a trade at all.
-   *
-   * The whole formation itself is never refused: it is what the refusal is measured against, and a search
-   * that rejected every candidate would have nothing to answer with.
-   */
-  const whole = evaluate(ids);
   const consider = (candidate: Evaluation): void => {
     if (!best || candidate.score > best.score) best = candidate;
   };
 
-  /**
-   * **The selections nothing else beats at no extra stock** — the frontier the winner is chosen from.
-   *
-   * Comparing each candidate against the **whole army alone** was the first shape of this rule and it is
-   * wrong, in a way the benchmark caught within one run: a candidate refused for being beaten by the whole
-   * army is replaced by the next best *ratio*, which the refused one may itself beat. Measured on *"Aydae
-   * alone"*: `damage per silver` answered 12,671,899 at 874 chunks, that answer was refused, and what took
-   * its place was **8,599,955 at 871** — four million less damage for the same stock, which is the exact
-   * fault the rule exists to remove, reintroduced by the rule.
-   *
-   * So the test is over the whole evaluated field: a selection is out when **any** other has at least its
-   * damage for at most its burn. Sorted by damage descending and burn ascending, one sweep does it — the
-   * least burn seen so far belongs to a selection that already hits at least as hard, so a candidate is
-   * beaten exactly when that figure is at or under its own.
-   *
-   * It is `STRATEGIES.stock` of `engine/trades.ts` — *at least the damage for at most the burn* — computed
-   * in one pass rather than by comparing every pair, because the field here runs to tens of thousands of
-   * selections on a large army and `beats` over all of them would be quadratic. `trades.test.ts` holds the
-   * reading; this holds the sweep, and the two say the same thing.
-   */
-  const frontierOf = (rows: readonly Evaluation[]): Evaluation[] => {
-    const sorted = [...rows].sort(
-      (a, b) => b.priced.damage - a.priced.damage || a.priced.hired - b.priced.hired,
-    );
-    const out: Evaluation[] = [];
-    let leastBurn = Infinity;
-    for (const row of sorted) {
-      if (leastBurn <= row.priced.hired) continue;
-      out.push(row);
-      leastBurn = row.priced.hired;
-    }
-    return out;
-  };
-
   // Always score the full formation first, so a zero budget still returns something usable — and keep it as
-  // the baseline the winner is compared against. It is `whole` above, scored before `consider` exists
-  // because the refusal rule is measured against it (S-129); `evaluate` caches, so this costs one lookup.
-  const baseline = whole;
+  // the baseline the winner is compared against.
+  const baseline = evaluate(ids);
   consider(baseline);
 
   let exhaustive = false;
@@ -346,20 +268,7 @@ export function searchPriority(
     for (let moved = true; moved && !stop();) moved = shrink() || grow();
   }
 
-  /**
-   * **The winner is the best score on that frontier** (S-129). `best` above is the best score over
-   * *everything*, which is what a reader of the progress callback is watching and what the search would have
-   * answered before this story; it is kept for that and is no longer the answer.
-   *
-   * The whole army is always on the frontier — nothing can beat it on damage while burning less, since it
-   * fields every type the account holds — so there is always something to answer with.
-   */
-  const eligible = frontierOf([...cache.values()]);
-  const onFrontier = eligible.reduce<Evaluation | undefined>(
-    (held, row) => (!held || row.score > held.score ? row : held),
-    undefined,
-  );
-  const winner = onFrontier ?? best ?? evaluate(ids);
+  const winner = best ?? evaluate(ids);
   onProgress?.({ evaluated, bestScore: winner.score, elapsedMs: now() - started });
   return {
     includedUnitIds: winner.subset,
