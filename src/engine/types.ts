@@ -247,9 +247,14 @@ export interface SearchRequest {
    */
   troopFloor?: number;
   /**
-   * **Which damage a ratio objective divides** (S-134, 2026-09-22). `'average'` is today's search exactly and
-   * is the default; `'worst'` divides `minDamage`, the reading S-94 fixed for the whole plan and the one
-   * `plan-benchmark.test.ts` prices every row on.
+   * **Which damage a ratio objective divides** (S-134, 2026-09-22). **`'worst'` is the default**: it divides
+   * `minDamage`, the reading S-94 fixed for the whole plan and the one `plan-benchmark.test.ts` already
+   * prices every row on. `'average'` is the pre-S-134 arithmetic, kept so both can be measured.
+   *
+   * The owner settled it on 2026-09-22: *"if we don't open the fight the first troop dies and the rest
+   * follows it's a 50/50 coin flip so damage to check is more about the worst case damage"*. Until this
+   * story the plan judged the bad flip while the search optimised the coin flip, and `scoreOf` in
+   * `battle.ts` — which builds the three ratios on the average — was the one place the two met.
    */
   reading?: DamageReading;
 }

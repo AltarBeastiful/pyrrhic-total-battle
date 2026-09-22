@@ -120,14 +120,14 @@ export const OBJECTIVE_CHOICES: readonly ObjectiveChoice[] = [
     description: 'March with every unit type you own.',
   },
   {
-    value: 'avgDamage',
-    title: 'Highest average damage',
-    description: 'The best expected damage over both openings.',
-  },
-  {
     value: 'minDamage',
     title: 'Best worst case',
     description: 'The most damage when the monster strikes first.',
+  },
+  {
+    value: 'avgDamage',
+    title: 'Highest average damage',
+    description: 'The best expected damage over both openings — a coin flip, not a floor.',
   },
   {
     value: 'damagePerSilver',

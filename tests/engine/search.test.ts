@@ -63,7 +63,16 @@ describe('damage per silver', () => {
    * restarts — answered whatever its seed landed on: 1.1176 on seed 1, 3.9226 on seeds 2 and 3, the real
    * 4.3098 on seed 7. The pool-shaped starting points are what make it reproducible.
    */
-  const PER_SILVER_OPTIMUM = 4.3098;
+  /**
+   * **Re-based 2026-09-22 (S-134), by the owner**, and the only figure on this file that moved: the ratio
+   * objectives now divide the **worst** opening rather than the average of the two (*"if we don't open the
+   * fight the first troop dies and the rest follows it's a 50/50 coin flip so damage to check is more about
+   * the worst case damage"*, then *"1. yes"* to switching them). The peak is the same march — the assertion
+   * below on `includedUnitIds` is untouched and still passes — priced on the reliable half of the flip
+   * instead of on its midpoint. The old figure was **4.3098**; it is kept here because the story of how this
+   * search was built is told against it, and because the gap between the two is what the change is worth.
+   */
+  const PER_SILVER_OPTIMUM = 3.4819196;
 
   it('finds the monsters-only peak that no chain of one- or two-type drops leads to', () => {
     const found = search(ALL, 'damagePerSilver');
@@ -97,7 +106,12 @@ describe('objectiveScore', () => {
     const request = makeRequest({ units: ALL });
     const summary = simulateBattle(sizeStacks(request), request);
     expect(objectiveScore(summary, 'avgDamage')).toBe(summary.avgDamage);
-    expect(objectiveScore(summary, 'damagePerSilver')).toBe(summary.damagePerSilver);
+    // **The ratios divide the worst opening since S-134** (owner: *"1. yes"*), so the default reading is no
+    // longer `BattleScore.damagePerSilver` — which `scoreOf` builds on the average of the two openings — but
+    // the same bill over `minDamage`. Both readings are asserted, so the change is pinned in both
+    // directions rather than replaced by its successor.
+    expect(objectiveScore(summary, 'damagePerSilver')).toBe(summary.minDamage / summary.recovery.silver);
+    expect(objectiveScore(summary, 'damagePerSilver', 'average')).toBe(summary.damagePerSilver);
     // Gold is the one field this army cannot answer with: it hires nothing, and since 2026-09-21 its
     // monsters are recruited again rather than revived, so nothing here opens the Temple. That is the
     // unmeasurable case the test below is about, and it scores −Infinity rather than the summary's nought.

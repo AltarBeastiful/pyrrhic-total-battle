@@ -108,6 +108,33 @@ export const CAMPAIGN = {
    */
   putBack: { silverPerDamage: 5, timePerDamage: 10, damageLossCap: 3 },
   /**
+   * **What a percent of each cost is worth against a percent of damage** (S-135, 2026-09-22) — the rates the
+   * rating uses to choose between two marches that **dominance cannot separate**, and nothing else.
+   *
+   * They are policy, not fact, which is why they are here beside `putBack` rather than inside an engine. The
+   * two that were already measured stay exactly as `putBack` set them from the owner's own anchors of
+   * 2026-09-18: **silver 5**, **queue 10**. The other three are his of 2026-09-22, asked for in the same
+   * form: *"silver/gold/merc seems almost same … dragon coins a bit less important, training time almost
+   * never unless entirely free."*
+   *
+   * Read a number as *"this many percent of this cost equals one percent of damage"*, so **larger means less
+   * important**. Silver, gold and the hired burn sit together at 5; dragon coins are a step behind; the
+   * training queue is the thing he will trade away almost without limit.
+   *
+   * **Damage is the worst opening, never the average** (S-134). The rates were given against reliable
+   * damage, and applying them to the coin-flip midpoint would be a different bargain than the one he struck.
+   *
+   * **The rates alone are not the rule.** He also fixed *when* a cost difference counts at all: *"sometimes
+   * gold is low (if only reviving mercs per ex) so a 30 % drop on a 100 gold coins is meaningless to me as I
+   * have around 170k … but a 10 % drop on an 8k revival is."* A percentage of a trivial bill is noise, and
+   * **170 000 is explicitly not a constant to write down** (*"other players might vary so not to be used as
+   * a literal figure in calculations"*). The significance therefore comes from the **spread of that cost
+   * across the marches being rated** — where every candidate pays about the same gold, the gold axis
+   * carries no weight however large its percentages look — which needs no figure from the player and no
+   * magic number here.
+   */
+  markerRates: { silver: 5, gold: 5, hired: 5, dragonCoins: 8, seconds: 40 },
+  /**
    * **The fills of the leadership pool a March edit re-sizes at** (S-117; owner, 2026-09-20: *"I'm not that
    * sure any more that when removing or adding a troop … we should not compute again the best possible
    * outcome, checking if less leadership buys us something"*).

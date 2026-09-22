@@ -69,7 +69,7 @@ function now(): number {
 export function objectiveScore(
   summary: BattleScore,
   objective: Objective,
-  reading: DamageReading = 'average',
+  reading: DamageReading = 'worst',
 ): number {
   // **Which damage a ratio divides** (S-134). `BattleScore.damagePerSilver` and its two siblings are built
   // on the *average* of the two openings (`scoreOf`, `battle.ts`), so every ratio objective ranks marches by
@@ -77,7 +77,10 @@ export function objectiveScore(
   // risky for me to spend 3M silver on a coin flip to get 1M damage or 3M. We want reliable damage
   // actually"* (S-94, 2026-09-19) — on which reading `plan-benchmark.test.ts` prices **every** row. So the
   // plan judges on the worst opening while the search optimises the average, and this is the one function
-  // where the two meet. `'worst'` divides `minDamage` instead; `'average'` is today's arithmetic exactly.
+  // where the two meet. **`'worst'` is the default since S-134** (owner, 2026-09-22, asked whether to
+  // switch the ratio objectives to the worst opening: *"1. yes"*); `'average'` is the pre-S-134 arithmetic,
+  // kept so an experiment can still price both and so the change has a measured counterpart rather than a
+  // memory of one.
   const damage = reading === 'worst' ? summary.minDamage : summary.avgDamage;
   const per = (cost: number): number => (cost > 0 ? damage / cost : -Infinity);
   switch (objective) {
