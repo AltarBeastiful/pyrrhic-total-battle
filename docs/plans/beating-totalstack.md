@@ -462,7 +462,33 @@ right. The five markers are complete, but their **values depend on `RecoverySett
 under `selective` the top type of each listed family is revived and the rest retrained. The benchmark is not
 even uniform: the 4 000 capture hardcodes `retrain` (`plan-scenarios.ts:330`) while his own profile default
 is `{ mode: 'selective', reviveFamilies: ['monsters'] }`. **Every dominance verdict in this plan is
-conditional on a setting nothing has varied**, and that is measured before W9 is attempted again.
+conditional on a setting nothing has varied**.
+
+**Measured, experiment 137 (S-130)** — `retrain` against `revive`, on the three armies housing a dominance
+pool:
+
+| cost | movement across the three armies | |
+|---|---|---|
+| silver | 8,862,600 → 1,546,000 · 1,997,700 → 262,500 · 1,997,400 → 269,600 | **÷5.7 to ÷7.6** |
+| gold | 1,392 → 84,576 · 576 → 20,568 · 648 → 22,104 | **×34 to ×61** |
+| training queue | 2,654,580 → 612,630 · 436,620 → 80,865 · 440,295 → 85,530 | **÷4.3 to ÷5.4** |
+| **dragon coins** | 7,920 → 7,920 · 960 → 960 · 1,080 → 1,080 | **unmoved** |
+| **hired burned** | 10 → 10 · 8 → 8 · 9 → 9 | **unmoved** |
+
+**Two of the five costs belong to the march alone; three belong to the march *and* the setting.** Coins are
+what a monster costs to recruit again whatever else is revived, and the burn is the authority pool, which no
+recovery plan touches. Silver, gold and the queue move by factors of five to sixty.
+
+So a comparison taken on **coins and the burn** travels between accounts. One that reads **silver, gold or
+the queue must say which setting it is on** — `damage per silver` on a revive account is asked of a silver
+bill five times smaller than the same march on a retrain account, which is the same army and the same march
+posing a different question. `selective · monsters`, the app's own default, sits with `retrain` rather than
+between the two.
+
+**What that obliges.** §2's matched-spend verdict prices both sides on our own engine, so it stays
+internally consistent — but it is a verdict **at his settings**, and this plan says so from here on.
+`STRATEGIES.stock`, the burn alone, is the one reading in `trades.ts` that is provably
+setting-independent — an argument for it that was not available when it was written.
 
 <details><summary>What the reverted rule bought, kept for the next attempt</summary>
 
