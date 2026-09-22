@@ -584,6 +584,28 @@ Tier ladder fills the pool because it takes no such ceiling unless `monstersLast
 (`src/engine/stacker.ts:271`). **There is no leak here and nothing to fix**; what §A of 139 measures is a
 shelter, and the section's own wording is what was wrong.
 
+**The prefix family is not a §2 lever, and that retires a claim this plan made** (experiment 142, S-136,
+2026-09-23). 139 measured that on **26 of 34** cells the best single type to drop is not the bottom of
+`rankTroops`, so the sets it points at are outside the plan's prefix family by construction — and this plan
+called that *"the real structural finding"*. Priced properly, it is not. 142 sweeps every prefix **with one
+further type removed from inside it** — the smallest family that reaches those sets — and asks the §2
+question of each: more worst-case damage for no more silver, gold, dragon coins or hired burn.
+
+**0 of the 17 armies** have a non-prefix shape that is strictly better than the bar's best stop, at zero
+tolerance. Eleven of them gain damage and **every single one buys it by spending more**. And §B: adding the
+best non-prefix shape to the bar improves **no** army's matched-spend standing — not one row enters a budget
+it was outside, not one more row is dominated.
+
+139's count was over **damage alone**, and reading it as a §2 opportunity was the error. Widening the family
+would buy damage the plan is right to refuse: §7's *"a different product, not a better one"*.
+
+**One figure in it is worth keeping, and it belongs to G1 rather than here.** On the owner's live camp of
+2026-09-18 — the −77.9 % army, this plan's widest deficit — `prefix 5 − rider-1` hits for **54,949,740**
+against the steady max's **15,306,859**, which is **3.6×**. It is outside the stop's costs, so it is not a
+§2 beat; what it says is that the damage on that army is *reachable* and the bar declines to spend for it.
+That is exactly G1's diagnosis (*"the plan will not spend an unlimited stock"*) confirmed from a second
+direction, and it is a question about the spend ceiling, not about which types the family reaches.
+
 ### 5.9b W9a — the telling (still open)
 
 Eight of 227 rows field **no troop stack**: `damagePerSilver` on every army housing a dominance pool, and
