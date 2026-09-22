@@ -134,13 +134,34 @@ export function searchPriority(
     return evaluation;
   };
 
+  /** How many troop stacks a candidate's **sized** result fields — the floor reads the march, not the subset. */
+  const troopStacksOf = (evaluation: Evaluation): number =>
+    evaluation.result.stacks.filter((stack) => stack.pool === 'leadership').length;
+
+  // Always score the full formation first, so a zero budget still returns something usable — and keep it as
+  // the baseline the winner is compared against. It is evaluated before `consider` exists in anger because
+  // the floor below is armed off it.
+  const baseline = evaluate(ids);
+
+  /**
+   * **The playability floor** (W9, S-133). Armed only where the whole formation itself meets it, so an army
+   * that cannot field the troops asked for is searched exactly as it is today and `best` can never end up
+   * undefined. A candidate under the floor is still evaluated, still walked through by the drop and grow
+   * chains, and simply cannot become the answer.
+   */
+  const floor = Math.max(0, request.troopFloor ?? 0);
+  const floorArmed = floor > 0 && troopStacksOf(baseline) >= floor;
+  /** The best thing the floor turned down, for the telling. */
+  let refused: Evaluation | undefined;
+
   const consider = (candidate: Evaluation): void => {
+    if (floorArmed && troopStacksOf(candidate) < floor) {
+      if (!refused || candidate.score > refused.score) refused = candidate;
+      return;
+    }
     if (!best || candidate.score > best.score) best = candidate;
   };
 
-  // Always score the full formation first, so a zero budget still returns something usable — and keep it as
-  // the baseline the winner is compared against.
-  const baseline = evaluate(ids);
   consider(baseline);
 
   let exhaustive = false;
@@ -287,5 +308,16 @@ export function searchPriority(
       result: baseline.result,
       summary: simulateBattle(baseline.result, baseline.scoped),
     },
+    // Only where something was actually turned down; `undefined` keeps a result built with the floor off
+    // byte-identical to one built before this story.
+    ...(refused
+      ? {
+          refused: {
+            includedUnitIds: refused.subset,
+            score: refused.score,
+            troopStacks: troopStacksOf(refused),
+          },
+        }
+      : {}),
   };
 }

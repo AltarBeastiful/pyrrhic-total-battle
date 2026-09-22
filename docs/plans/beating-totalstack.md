@@ -572,6 +572,18 @@ the owner calls unplayable**. That test and this rule cannot both be right; whic
 
 </details>
 
+**A correction, and the owner caught it** (2026-09-22). Experiment 139 reported that `Troops first · all
+types` leaves **211 of 600 dominance** unspent on his own pools and this plan called it a leak. He asked
+*"are you sure it's a dominance leak and not a dominance optimization? it feels you're missing something"* —
+and he is right. `sizeStacks` sets `monsterCeiling = troopFloor - 1` whenever the method is `ms`
+(`src/engine/stacker.ts:268-270`), so every monster stack is held **strictly below the lowest troop stack's
+HP**. Filling the dominance pool would raise a monster stack over that line and make the rarest thing on the
+field the enemy's first kill. The unspent 211 is the shelter binding — the rule he himself asked for on
+2026-09-19 (*"fix why the monsters are not shielded in the generated stack"*) — doing exactly its job. The
+Tier ladder fills the pool because it takes no such ceiling unless `monstersLast` is set
+(`src/engine/stacker.ts:271`). **There is no leak here and nothing to fix**; what §A of 139 measures is a
+shelter, and the section's own wording is what was wrong.
+
 ### 5.9b W9a — the telling (still open)
 
 Eight of 227 rows field **no troop stack**: `damagePerSilver` on every army housing a dominance pool, and

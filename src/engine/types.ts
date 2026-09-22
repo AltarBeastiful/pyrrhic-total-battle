@@ -226,6 +226,26 @@ export interface SearchRequest {
   /** Wall-clock budget; the search returns the best found so far when exceeded. */
   budgetMs: number;
   seed?: number;
+  /**
+   * **W9 — the playability floor: how many troop stacks an answer must field** (S-133, 2026-09-22).
+   *
+   * `0` or absent is today's search exactly, and that is the default everywhere until the owner registers
+   * the pins a higher value moves. `1` refuses an answer that fields no troop stack at all; `2` is the
+   * band's own criterion (*"the march itself must be more than a single troop stack"*, `plan.ts`).
+   *
+   * **It gates what may *win*, never what is *explored*.** The search still evaluates and still walks
+   * through troopless subsets — experiment 138's coverage count is identical at every value — so the
+   * monsters-only peak `search.test.ts` asks for is still *reached*; it simply cannot be the answer. That
+   * is the owner's own reading of that test (2026-09-22): it is about **coverage**, so the peak must be
+   * reachable, not necessarily answered with. `SearchResult.refused` carries it when the floor turns it
+   * down, so the UI can say what was refused rather than silently offering something else.
+   *
+   * **The floor only engages when the army can actually meet it**: it is armed off the baseline (the
+   * all-types formation, always the search's first evaluation), so an army whose whole formation fields
+   * fewer troop stacks than the floor asks for is searched exactly as it is today. Without that guard an
+   * army with no leadership types would have no admissible candidate at all.
+   */
+  troopFloor?: number;
 }
 
 export interface SearchProgress {
@@ -255,6 +275,16 @@ export interface SearchResult {
    * `minDamage` / `avgDamage` / `recovery`.
    */
   baseline: { includedUnitIds: string[]; result: StackResult; summary: BattleSummary };
+  /**
+   * **The highest-scoring selection the playability floor turned down** (`SearchRequest.troopFloor`, S-133),
+   * or absent where the floor was off, inert, or refused nothing that would have won.
+   *
+   * It is recorded so the March pane can say *"the best reading was a march with no troops in it, and it was
+   * not offered"* instead of presenting the runner-up as though nothing had been rejected. Read it only
+   * against the winner: a refused candidate that scored **below** the winner is not a trade the player gave
+   * up, and the UI must not present one as if it were.
+   */
+  refused?: { includedUnitIds: string[]; score: number; troopStacks: number };
 }
 
 export type { BonusKey, Category, Group, Pool, SpecialKey, StrengthAgainstKey, UnitDef };
