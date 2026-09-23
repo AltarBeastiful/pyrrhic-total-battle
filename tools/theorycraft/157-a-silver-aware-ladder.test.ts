@@ -79,9 +79,27 @@ const SHORT: Record<string, string> = {
   'all-in': 'AI',
 };
 const EXHAUSTIVE = 5_000;
-/** `QUEUE=free` runs the first reading: damage held, the training queue left free. Its own report. */
-const HOLD_QUEUE = process.env.QUEUE !== 'free';
-
+/**
+ * Three readings of "better", each its own report:
+ *  - `strict` (default) — least silver, damage and training queue both held;
+ *  - `QUEUE=free` — least silver, damage held, the queue left free (the first run);
+ *  - `QUEUE=rated` — the **owner's own rating** (`CAMPAIGN.markerRates`, S-135: *"this many percent of this cost
+ *    equals one percent of damage"* — silver 5, gold 5, hired 5, dragon coins 8, queue 40): the assignment with
+ *    the best score, damage held, kept only where the score is positive.
+ */
+const MODE = process.env.QUEUE === 'free' ? 'free' : process.env.QUEUE === 'rated' ? 'rated' : 'strict';
+const HOLD_QUEUE = MODE === 'strict';
+const RATES = CAMPAIGN.markerRates;
+/** Percent saved on a cost (positive = cheaper), 0 on a bill of nothing. */
+const saved = (before: number, after: number): number => (before > 0 ? ((before - after) / before) * 100 : 0);
+/** The owner's rating of `after` against `before`: damage change % plus each cost saved % over its rate. */
+const rating = (before: Campaign, after: Campaign): number =>
+  (before.damage > 0 ? ((after.damage - before.damage) / before.damage) * 100 : 0) +
+  saved(before.silver, after.silver) / RATES.silver +
+  saved(before.gold, after.gold) / RATES.gold +
+  saved(before.burned, after.burned) / RATES.hired +
+  saved(before.dragonCoins, after.dragonCoins) / RATES.dragonCoins +
+  saved(before.seconds, after.seconds) / RATES.seconds;
 /** One march priced the battle's way: its worst-opening damage and the silver its recovery plan costs. */
 const score = (
   request: StackRequest,
@@ -118,7 +136,7 @@ const retype = (
     });
     return lead <= request.housing.leadership ? next : null;
   };
-  let best: { counts: Record<string, number>; silver: number } | null = null;
+  let best: { counts: Record<string, number>; silver: number; score: number } | null = null;
   let tried = 0;
   const consider = (types: number[]): number => {
     const c = build(types);
@@ -129,8 +147,17 @@ const retype = (
     // No longer a training queue either (owner: "check if it improves all criteria"; the first run lost up to
     // 0.5 % of queue on 12 use cases to the rounding up of each re-typed stack).
     if (HOLD_QUEUE && s.seconds > base.seconds + 1e-6) return Infinity;
+    if (MODE === 'rated') {
+      // The rating on one march: the hired stacks are the march's own, so only damage, silver and queue move.
+      const score =
+        (base.damage > 0 ? ((s.damage - base.damage) / base.damage) * 100 : 0) +
+        saved(base.silver, s.silver) / RATES.silver +
+        saved(base.seconds, s.seconds) / RATES.seconds;
+      if (score > 1e-9 && (!best || score > best.score)) best = { counts: c, silver: s.silver, score };
+      return -score;
+    }
     if (s.silver < base.silver - 1e-6 && (!best || s.silver < best.silver))
-      best = { counts: c, silver: s.silver };
+      best = { counts: c, silver: s.silver, score: 0 };
     return s.silver;
   };
   const k = slots.length;
@@ -160,7 +187,7 @@ const retype = (
       .filter((s) => s.pool === 'leadership')
       .map((s) => table.findIndex((t) => t.id === s.unitId));
     let current = start;
-    let currentSilver = base.silver;
+    let currentSilver = MODE === 'rated' ? 0 : base.silver;
     for (let step = 0; step < 60; step += 1) {
       let moved: { types: number[]; silver: number } | null = null;
       const neighbours: number[][] = [];
@@ -186,7 +213,7 @@ const retype = (
       currentSilver = moved.silver;
     }
   }
-  const found = best as { counts: Record<string, number>; silver: number } | null;
+  const found = best as { counts: Record<string, number>; silver: number; score: number } | null;
   return found ? { counts: found.counts, tried, exhaustive } : null;
 };
 
@@ -202,7 +229,9 @@ describe.skipIf(!process.env.THEORY)('a silver-aware ladder', () => {
   it('re-types every stop and rates every use case on every criterion', () => {
     const profile = ownerProfile();
     const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
-    const report = new Report(`157-a-silver-aware-ladder${HOLD_QUEUE ? '' : '-queue-free'}`);
+    const report = new Report(
+      `157-a-silver-aware-ladder${MODE === 'strict' ? '' : MODE === 'free' ? '-queue-free' : '-rated'}`,
+    );
     report.add('# 157 — a silver-aware ladder, rated on every benchmark use case\n');
     report.add(
       'Every march of every stop on the bar as shipped (hired saver, fold to five, troop wall), its troop types ' +
@@ -213,9 +242,9 @@ describe.skipIf(!process.env.THEORY)('a silver-aware ladder', () => {
     const summary: string[] = [
       '| use case | stops re-typed | ' +
         READINGS.map((r) => r.head).join(' | ') +
-        ' | TS beaten | TS no fit | bar criteria |\n|---|---|' +
+        ' | TS beaten | TS no fit | bar criteria | rating (best stop / worst stop) |\n|---|---|' +
         '---|'.repeat(READINGS.length) +
-        '---|---|---|',
+        '---|---|---|---|',
     ];
     const stopRows: string[] = [];
     const better: Record<string, number> = {};
@@ -230,6 +259,8 @@ describe.skipIf(!process.env.THEORY)('a silver-aware ladder', () => {
       broken: 0,
       cases: 0,
       allCriteriaNoWorse: 0,
+      rated: 0,
+      ratedWorse: 0,
     };
 
     for (const scenario of scenarios) {
@@ -257,6 +288,7 @@ describe.skipIf(!process.env.THEORY)('a silver-aware ladder', () => {
         marches: Record<string, number>[];
       }[] = [];
       let retyped = 0;
+      const ratings: number[] = [];
       for (const stop of plan.alternatives) {
         totals.stops += 1;
         const marches = marchesOf(stop as PlanTotals);
@@ -273,6 +305,10 @@ describe.skipIf(!process.env.THEORY)('a silver-aware ladder', () => {
         const changed = next.some((m, i) => m !== marches[i]);
         const a = campaignOf(scenario.request, stop.pick, 'plan', marches);
         const b = campaignOf(scenario.request, stop.pick, 'plan', next);
+        const r = rating(a, b);
+        ratings.push(r);
+        totals.rated += 1;
+        if (r < -1e-9) totals.ratedWorse += 1;
         before.push(a);
         after.push(b);
         const first = next[0] ?? {};
@@ -363,7 +399,8 @@ describe.skipIf(!process.env.THEORY)('a silver-aware ladder', () => {
             const v = show(r, barBest(after, r));
             return Math.abs(c) > 1e-9 ? `**${v} (${c > 0 ? '+' : '−'}${Math.abs(c).toFixed(1)} %)**` : v;
           }).join(' | ') +
-          ` | ${String(va.rowsBeaten)} → ${String(vb.rowsBeaten)} | ${String(va.unfitted)} → ${String(vb.unfitted)} | ${broken.join('; ') || '✓'} |`,
+          ` | ${String(va.rowsBeaten)} → ${String(vb.rowsBeaten)} | ${String(va.unfitted)} → ${String(vb.unfitted)} | ${broken.join('; ') || '✓'} | ` +
+          `${Math.max(...ratings).toFixed(2)} / ${Math.min(...ratings).toFixed(2)} |`,
       );
     }
 
@@ -372,7 +409,9 @@ describe.skipIf(!process.env.THEORY)('a silver-aware ladder', () => {
     report.add(
       `\n\n**${String(totals.retyped)} of ${String(totals.stops)}** stops re-typed. **${String(totals.allCriteriaNoWorse)} of ${String(totals.cases)}** ` +
         `use cases read no worse on any of the ten criteria. TotalStack at matched spend: ${String(totals.beforeBeat)} / ${String(totals.beforeOut)} → ` +
-        `${String(totals.afterBeat)} / ${String(totals.afterOut)} (dominated / no stop fits). Use cases where a bar criterion breaks: ${String(totals.broken)}.\n\n` +
+        `${String(totals.afterBeat)} / ${String(totals.afterOut)} (dominated / no stop fits). Use cases where a bar criterion breaks: ${String(totals.broken)}. ` +
+        `The owner's rating (\`CAMPAIGN.markerRates\`, damage-percent equivalents; positive = better) reads a stop **worse** on ` +
+        `**${String(totals.ratedWorse)} of ${String(totals.rated)}** stops.\n\n` +
         '| criterion | use cases better | use cases worse |\n|---|---:|---:|\n' +
         READINGS.map(
           (r) => `| ${r.head} | ${String(better[r.head] ?? 0)} | ${String(worse[r.head] ?? 0)} |`,

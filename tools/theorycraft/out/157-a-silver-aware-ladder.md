@@ -4,28 +4,28 @@ Every march of every stop on the bar as shipped (hired saver, fold to five, troo
 
 ## Every use case — the bar re-typed against the bar as shipped
 
-| use case | stops re-typed | most damage | least silver | fewest hired lost | least gold | fewest coins | shortest queue | dmg a silver | dmg a merc | dmg a gold | dmg a coin | TS beaten | TS no fit | bar criteria |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| first-run army, Bear V ×1 (20 000 leader | 0 of 1 | 18,189,008 | 32,525,600 | 1 | 0 | 0 | 2,522 h | 0.559 | 112,200 | 0 | — | 1 → 1 | 0 → 0 | ✓ |
-| first-run army, Bear V ×2 (20 000 leader | 0 of 1 | 18,413,408 | 32,525,600 | 2 | 160 | 0 | 2,522 h | 0.566 | 168,300 | 115,084 | — | 1 → 1 | 0 → 0 | ✓ |
-| first-run army, Bear V ×3 (20 000 leader | 0 of 2 | 18,750,008 | 32,525,600 | 3 | 0 | 0 | 2,522 h | 0.576 | 224,400 | 39,063 | — | 2 → 2 | 0 → 0 | ✓ |
-| first-run army, Bear V ×10 (20 000 leade | 1 of 2 | 20,893,375 | 32,525,600 | 4 | 3,200 | 0 | 2,522 h | 0.639 | 776,050 | 6,491 | — | 2 → 2 | 0 → 0 | ✓ |
-| first-run army, Epic Monster Hunter VI × | 0 of 4 | 29,841,879 | 32,525,600 | 11 | 736 | 0 | 2,522 h | 0.913 | 423,145 | 30,603 | — | 5 → 5 | 0 → 0 | ✓ |
-| first-run army, monster tiers 3–5 at 900 | 0 of 5 | 102,971,902 | 34,921,200 | 15 | 9,424 | 24,120 | 2,861 h | 2.759 | 597,802 | 9,465 | 3,808 | 0 → 0 | 3 → 3 | ✓ |
-| the 4 000-leadership case of 2026-09-15  | 0 of 3 | 8,519,930 | 3,820,600 | 19 | 736 | 0 | 238 h | 1.401 | 265,255 | 7,083 | — | 6 → 6 | 0 → 0 | ✓ |
-| 2026-09-17 export, its setup (7 000 lead | 1 of 5 | **23,701,457 (+0.3 %)** | 8,695,000 | 26 | 2,112 | 0 | 583 h | 2.078 | 357,360 | 7,140 | — | 6 → 6 | 3 → 3 | ✓ |
-| 2026-09-17 export, 12 000 leadership | 1 of 4 | **33,889,365 (+6.0 %)** | 12,129,500 | 30 | 2,408 | 0 | 814 h | 1.754 | 369,197 | 9,003 | — | 3 → 3 | 2 → 2 | ✓ |
-| live account of 2026-09-18 (one hired ty | 1 of 4 | 29,743,332 | **18,597,200 (+1.9 %)** | 20 | 1,368 | 0 | **1,312 h (+0.4 %)** | **0.982 (+2.0 %)** | 317,110 | 16,063 | — | 9 → 9 | 0 → 0 | ✓ |
-| live account, evening (hunters 83, legio | 5 of 5 | **31,722,835 (+0.0 %)** | **12,339,300 (+0.0 %)** | 32 | 2,296 | 0 | **814 h (+0.0 %)** | **1.787 (+0.0 %)** | 301,580 | 8,378 | — | 1 → 1 | 0 → 0 | ✓ |
-| Aydae alone, 4 975 (one captain, four hi | 0 of 4 | 18,744,735 | 5,764,300 | 19 | 1,288 | 0 | 324 h | 2.087 | 325,749 | 7,320 | — | 0 → 0 | 0 → 0 | ✓ |
-| the owner’s live camp of 2026-09-18 (arb | 1 of 5 | 30,986,506 | **6,704,900 (+1.0 %)** | 16 | 1,448 | 0 | 477 h | 2.541 | 232,812 | 5,705 | — | 0 → 0 | 0 → 0 | ✓ |
-| his camp of 2026-09-19, the localStorage | 1 of 5 | 23,589,127 | 7,313,300 | 6 | 392 | 0 | 510 h | 1.808 | 318,189 | 16,934 | — | 2 → 2 | 1 → 1 | ✓ |
-| his camp of 2026-09-19, as his message r | 5 of 5 | 11,585,381 | **8,069,100 (+3.6 %)** | 15 | 1,056 | 0 | **749 h (+0.9 %)** | **1.171 (+9.6 %)** | 258,218 | 7,010 | — | 2 → 2 | 1 → 1 | order at MM; SW beats MM |
-| his TotalStack profile of 2026-09-19 (5  | 0 of 3 | 8,408,431 | 4,431,600 | 7 | 480 | 3,840 | 279 h | 1.110 | 131,856 | 10,248 | 2,190 | 2 → 2 | 1 → 1 | ✓ |
-| his usual setup of 2026-09-19 (Aydae alo | 0 of 3 | 11,721,371 | 6,127,800 | 5 | 352 | 3,960 | 375 h | 1.411 | 422,679 | 23,250 | 2,713 | 5 → 5 | 2 → 2 | ✓ |
+| use case | stops re-typed | most damage | least silver | fewest hired lost | least gold | fewest coins | shortest queue | dmg a silver | dmg a merc | dmg a gold | dmg a coin | TS beaten | TS no fit | bar criteria | rating (best stop / worst stop) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| first-run army, Bear V ×1 (20 000 leader | 0 of 1 | 18,189,008 | 32,525,600 | 1 | 0 | 0 | 2,522 h | 0.559 | 112,200 | 0 | — | 1 → 1 | 0 → 0 | ✓ | 0.00 / 0.00 |
+| first-run army, Bear V ×2 (20 000 leader | 0 of 1 | 18,413,408 | 32,525,600 | 2 | 160 | 0 | 2,522 h | 0.566 | 168,300 | 115,084 | — | 1 → 1 | 0 → 0 | ✓ | 0.00 / 0.00 |
+| first-run army, Bear V ×3 (20 000 leader | 0 of 2 | 18,750,008 | 32,525,600 | 3 | 0 | 0 | 2,522 h | 0.576 | 224,400 | 39,063 | — | 2 → 2 | 0 → 0 | ✓ | 0.00 / 0.00 |
+| first-run army, Bear V ×10 (20 000 leade | 1 of 2 | 20,893,375 | 32,525,600 | 4 | 3,200 | 0 | 2,522 h | 0.639 | 776,050 | 6,491 | — | 2 → 2 | 0 → 0 | ✓ | 0.00 / 0.00 |
+| first-run army, Epic Monster Hunter VI × | 0 of 4 | 29,841,879 | 32,525,600 | 11 | 736 | 0 | 2,522 h | 0.913 | 423,145 | 30,603 | — | 5 → 5 | 0 → 0 | ✓ | 0.00 / 0.00 |
+| first-run army, monster tiers 3–5 at 900 | 0 of 5 | 102,971,902 | 34,921,200 | 15 | 9,424 | 24,120 | 2,861 h | 2.759 | 597,802 | 9,465 | 3,808 | 0 → 0 | 3 → 3 | ✓ | 0.00 / 0.00 |
+| the 4 000-leadership case of 2026-09-15  | 0 of 3 | 8,519,930 | 3,820,600 | 19 | 736 | 0 | 238 h | 1.401 | 265,255 | 7,083 | — | 6 → 6 | 0 → 0 | ✓ | 0.00 / 0.00 |
+| 2026-09-17 export, its setup (7 000 lead | 1 of 5 | **23,701,457 (+0.3 %)** | 8,695,000 | 26 | 2,112 | 0 | 583 h | 2.078 | 357,360 | 7,140 | — | 6 → 6 | 3 → 3 | ✓ | 1.79 / 0.00 |
+| 2026-09-17 export, 12 000 leadership | 1 of 4 | **33,889,365 (+6.0 %)** | 12,129,500 | 30 | 2,408 | 0 | 814 h | 1.754 | 369,197 | 9,003 | — | 3 → 3 | 2 → 2 | ✓ | 6.34 / 0.00 |
+| live account of 2026-09-18 (one hired ty | 1 of 4 | 29,743,332 | **18,597,200 (+1.9 %)** | 20 | 1,368 | 0 | **1,312 h (+0.4 %)** | **0.982 (+2.0 %)** | 317,110 | 16,063 | — | 9 → 9 | 0 → 0 | ✓ | 0.39 / 0.00 |
+| live account, evening (hunters 83, legio | 5 of 5 | **31,722,835 (+0.0 %)** | **12,339,300 (+0.0 %)** | 32 | 2,296 | 0 | **814 h (+0.0 %)** | **1.787 (+0.0 %)** | 301,580 | 8,378 | — | 1 → 1 | 0 → 0 | ✓ | 0.09 / 0.00 |
+| Aydae alone, 4 975 (one captain, four hi | 0 of 4 | 18,744,735 | 5,764,300 | 19 | 1,288 | 0 | 324 h | 2.087 | 325,749 | 7,320 | — | 0 → 0 | 0 → 0 | ✓ | 0.00 / 0.00 |
+| the owner’s live camp of 2026-09-18 (arb | 1 of 5 | 30,986,506 | **6,704,900 (+1.0 %)** | 16 | 1,448 | 0 | 477 h | 2.541 | 232,812 | 5,705 | — | 0 → 0 | 0 → 0 | ✓ | 0.23 / 0.00 |
+| his camp of 2026-09-19, the localStorage | 1 of 5 | 23,589,127 | 7,313,300 | 6 | 392 | 0 | 510 h | 1.808 | 318,189 | 16,934 | — | 2 → 2 | 1 → 1 | ✓ | 0.26 / 0.00 |
+| his camp of 2026-09-19, as his message r | 5 of 5 | 11,585,381 | **8,069,100 (+3.6 %)** | 15 | 1,056 | 0 | **749 h (+0.9 %)** | **1.171 (+9.6 %)** | 258,218 | 7,010 | — | 2 → 2 | 1 → 1 | order at MM; SW beats MM | 8.85 / 0.74 |
+| his TotalStack profile of 2026-09-19 (5  | 0 of 3 | 8,408,431 | 4,431,600 | 7 | 480 | 3,840 | 279 h | 1.110 | 131,856 | 10,248 | 2,190 | 2 → 2 | 1 → 1 | ✓ | 0.00 / 0.00 |
+| his usual setup of 2026-09-19 (Aydae alo | 0 of 3 | 11,721,371 | 6,127,800 | 5 | 352 | 3,960 | 375 h | 1.411 | 422,679 | 23,250 | 2,713 | 5 → 5 | 2 → 2 | ✓ | 0.00 / 0.00 |
 
 
-**16 of 61** stops re-typed. **17 of 17** use cases read no worse on any of the ten criteria. TotalStack at matched spend: 47 / 13 → 47 / 13 (dominated / no stop fits). Use cases where a bar criterion breaks: 1.
+**16 of 61** stops re-typed. **17 of 17** use cases read no worse on any of the ten criteria. TotalStack at matched spend: 47 / 13 → 47 / 13 (dominated / no stop fits). Use cases where a bar criterion breaks: 1. The owner's rating (`CAMPAIGN.markerRates`, damage-percent equivalents; positive = better) reads a stop **worse** on **0 of 61** stops.
 
 | criterion | use cases better | use cases worse |
 |---|---:|---:|
