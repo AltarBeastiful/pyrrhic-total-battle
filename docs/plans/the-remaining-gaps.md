@@ -61,6 +61,10 @@ rows still ahead 3 → 2. Suite unchanged.
 165: on his camp of 2026-09-19 as the message reads it, filling the hired to the sustain under SW's troops rates
 **+10.22** against SW (+20.69 against the top). The §2b fix does not reach it. Find the step that loses it, as 165 did.
 
+**Measured, 166:** a stale finale, left behind by S-93's `tighterShape`. The owner, 2026-09-23, chose the guarded
+fix (handed back wherever a stop ends up beaten), which leaves this camp's gap open. **Kept open as S-140** in
+`beating-totalstack.md` §8, to revisit.
+
 ## 2d. A gated finale — to measure (experiment 167)
 
 165: sizing the live camp's finale on the march's own ladder adds about +10 (+13.71 → +23.75), but ungated it costs

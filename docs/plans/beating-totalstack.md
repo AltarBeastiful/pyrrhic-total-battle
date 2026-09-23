@@ -722,3 +722,11 @@ gap against the definition and costs almost nothing.
   and the e2e seed from −1.3 % to −1.8 %. **Gating the queue costs two of the five armies we beat.** It is
   reported and not gated until he says otherwise, and it would constrain W4, which buys damage by fielding
   more.
+- **S-140 — the message camp's stale finale (open, to revisit; owner, 2026-09-23).** On his camp of
+  2026-09-19 as the message reads it, S-93's `tighterShape` lowers SW's repeat from 70 to 50 hunters but keeps
+  the finale sized for the old repeat. A fourth repeat is then sustained and beats the finale on every reading:
+  **+10.22** against SW once re-typed, +20.69 against the top stop (experiment 166). Shipped only guarded: the
+  fourth repeat is handed back wherever it leaves a stop beaten, so this camp's gap stays open. Rejected for now:
+  the plain variant (SW beats MX on this camp and on his usual setup, which breaks "no stop beaten") and
+  dropping the beaten rung (TotalStack at matched spend 70 → 67, usual setup 5 → 2). To revisit: a rule that keeps
+  the gain without a beaten stop and without losing the matched-spend standing.
