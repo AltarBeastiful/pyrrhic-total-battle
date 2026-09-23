@@ -641,6 +641,10 @@ was capped at 300 rows on five armies, one of which holds 1 999 undominated rows
 The remaining **8** are what W4's reach work is for, and they are now separated from the rest instead of
 sharing one bucket with them.
 
+**The implementation plan is `docs/plans/the-stops-the-bar-offers.md`** (S-139), which carries the whole
+mandatory metric set — the six markers and the four ratio floors, *damage a merc* among them — because the
+first version of this comparison left that one out and putting it back changed which option was free.
+
 **What it needs is his decision, not more measurement.** The bar keeps three stops by his own instruction
 (*"keep 3 spot on the slider each time"*), so this is not "offer more rows". The thrift end is currently the
 **silver**-thriftiest undominated plan; the measurement says a **burn**-thriftiest one fits far more rival
