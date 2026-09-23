@@ -187,6 +187,14 @@ export interface CampaignInput {
    */
   foldTo?: number | undefined;
   /**
+   * **The fewest troop stacks a plan the bar offers may stand on** — the band's third arm, experiment 72's
+   * criterion. Omitted it is **2**, as it has always been. Exposed for experiment 151 (2026-09-23), which found
+   * the owner's live camp's hardest sheltered plans — a single Rider III wall of 2 441 with every hired stack
+   * under it, 30 986 506 over four marches at 2.541 damage a silver — refused by this arm alone. Not set by
+   * the app.
+   */
+  bandTroopStacks?: number | undefined;
+  /**
    * **Put a left-out troop type back** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and
    * misses some damage that seems cheap … add a pass to consider again lower level troops if the cost for them
    * (silver, silver/damage, total damage) is not too high and we get a nice reduction in training time"*).
@@ -3734,6 +3742,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * the plan's own winning march does**. `winner` is the reading it replaced — half the winner's *fielded
    * hired* — kept named so the measurement behind S-95 can be re-run against the engine that shipped.
    */
+  // The band's third arm: the fewest troop stacks a plan the bar offers may stand on (`CampaignInput.bandTroopStacks`).
+  const bandTroopStacks = Math.max(1, input.bandTroopStacks ?? 2);
   const notToken = (row: PlanTotals): boolean => {
     const rule = input.bandHired ?? { mode: 'damage' as const };
     if (rule.mode === 'none') return true;
@@ -3787,7 +3797,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       (row) =>
         notToken(row) &&
         row.damagePerSilver * 2 >= goal.perSilver &&
-        Object.keys(row.counts).filter((id) => !mercIds.has(id)).length > 1,
+        Object.keys(row.counts).filter((id) => !mercIds.has(id)).length >= bandTroopStacks,
     );
     /** The prefix of the stocked ranking a plan's repeated march fields, or −1 when it leaves a hole. */
     const prefixOf = (row: PlanTotals): number => {
@@ -3879,7 +3889,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const inBand = (row: PlanTotals): boolean =>
     notToken(row) &&
     row.damagePerSilver * 2 >= goal.perSilver &&
-    Object.keys(row.counts).filter((id) => !mercIds.has(id)).length > 1 &&
+    Object.keys(row.counts).filter((id) => !mercIds.has(id)).length >= bandTroopStacks &&
     // S-58 B (`refuseDroppedTypes`), down to the cut S-99 measures: a plan the player is offered fields a
     // little of everything they hold, bar the types the damage says to drop (`required`).
     (!refuseDroppedTypes || required.every((entry) => fieldsRequired(row, entry.id)));
