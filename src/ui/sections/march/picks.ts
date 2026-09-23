@@ -28,6 +28,7 @@ import { signedPercent } from './format';
  * stops that both claimed "most" would read as the same answer twice.
  */
 const PICK_WORD: Record<PlanPick, string> = {
+  'burn-saver': 'Hired saver',
   'silver-saver': 'Silver saver',
   'sweet-spot': 'Sweet spot',
   'more-mercs': 'More mercs',

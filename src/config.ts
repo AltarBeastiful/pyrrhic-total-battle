@@ -55,8 +55,13 @@ export const CAMPAIGN = {
    * on his export at horizon 4, A moves the sweet spot from 5 333 606 to **5 518 119** damage a march for
    * 2 331 500 silver at the same 17 burned, and the thrift end fields 10 legionaries instead of none; B only
    * hides the legionary-free plan, and with A on it has nothing left to hide.
+   *
+   * - `burnSaver` — W10 (`docs/plans/the-stops-the-bar-offers.md`, 2026-09-23): the bar also offers the
+   *   band's fewest-burn plan, where it keeps the bar's order (`'guard'`, `CampaignInput.burnSaver`).
+   *   Experiment 146: 47 of TotalStack's rows dominated and 17 no stop fits, against 45 and 22 without it,
+   *   and no benchmark army reads worse on any of the seven markers.
    */
-  planFixes: { tokenFloor: true, refuseDroppedTypes: true, sizerShape: true },
+  planFixes: { tokenFloor: true, refuseDroppedTypes: true, sizerShape: true, burnSaver: 'guard' as const },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
    * keeps, the sweet spot in the middle of the rungs nothing beats on both ratios, and the most damage —

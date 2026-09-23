@@ -1,6 +1,8 @@
 # The stops the bar offers — implementation plan (W10)
 
-**Status: waiting on one decision from the owner.** Everything below is measured; nothing is implemented.
+**Status: implemented (2026-09-23) as `burnSaver: 'guard'`, with two corrections validation found — see §9.**
+One decision is still owed (§9.3); §3's three-or-four is answered by the owner: keep every stop the search
+finds and fold to the three best afterwards.
 
 This plan exists because a comparison went out with a mandatory metric missing from it. The owner:
 *"you're still missing one of the mandatory metric merc spent."* He was right — every table in the thread
@@ -164,3 +166,62 @@ registers it (`feedback-benchmark-non-regression`).
 4. §6, every step.
 5. Re-run 138's sweep over the three recovery settings against the new bar (§7's first risk).
 6. Commit with every moved figure named; the owner registers the pins.
+
+---
+
+## 9. Validation, and what shipped (2026-09-23)
+
+Experiment 146 (`tools/theorycraft/146-the-hired-saver-shipped.test.ts`) runs **`planCampaign` itself** with
+and without the stop — 145 priced a raw frontier row beside the bar, and never saw the put-back pass, the
+burn walk, the second dedupe, the tail or the `all-in` drop that the engine applies to every stop.
+
+### 9.1 Four corrections to this plan
+
+1. **§4.1–4.3 point at the wrong bar.** `plan.ts:~2339` is the **troops-only** bar, where no stop burns
+   anything; the stops 145 measured are on the hired bar (`plan.ts:~4880`), which is sorted on the **burn**,
+   not the silver. The change is there.
+2. **§4.2's tie-break is not 145's rule, and it is worse.** Ties at one burn broken on damage read
+   **45 / 16**; broken on silver (the band's own order, what 145 did) **47 / 13**. Shipped: silver.
+3. **The stop breaks S-61 on three armies** (5.4 was not true as written). The fewest-burn plan can hit harder
+   than a stop to its right: on the owner's live account it hits **5 478 162 at 1 burned**, the silver saver
+   **3 694 764 at 4** — for half the silver, so neither beats the other and the burn-ordered bar cannot hold
+   both. On Bear V ×10 it shares the sweet spot's burn.
+4. **"Four rows is the most the bar has drawn" (§7) is not so**: the hired bar already carries up to five,
+   and with the stop two armies reach **six** (the 7 000 export, the evening account).
+
+### 9.2 The four rules, measured on the engine (all seven markers, three recovery settings)
+
+| rule | default | retrain | revive | floors down | S-61 breaks |
+|---|---|---|---|---|---|
+| today | 45 / 22 | 47 / 20 | 45 / 20 | — | — |
+| offer everywhere (`silver`) | 47 / 13 | 49 / 11 | 49 / 11 | none | 3 armies |
+| same, damage tie (`damage`) | 45 / 16 | 47 / 14 | 47 / 14 | none | 4 armies |
+| **withhold where it breaks the order (`guard`) — shipped** | **47 / 17** | **49 / 15** | **49 / 15** | **none** | **none** |
+| fold the stops it out-hits (`fold`) | 47 / 13 | 49 / 11 | 49 / 11 | least silver, damage a silver/gold on 3 | none |
+
+(rows dominated / rows no stop fits.) `guard` is the only rule that is a pure gain on every marker, every
+setting and every criterion. No other stop moves on any army (`tests/engine/plan-stops.test.ts` asserts it).
+
+### 9.3 The decision still owed
+
+The four rows `guard` leaves unfitted and `silver` would open are the 12 000 export's — where the stop and the
+silver saver are a **silver-against-burn trade** the burn-ordered bar cannot draw. Opening them needs either
+S-61 relaxed for the thrift pair (as it already is for the `all-in`), or the fold of the next step choosing
+between them. That is the owner's call, not a measurement.
+
+### 9.4 Pins that moved (not re-based — the owner registers them)
+
+`plan-benchmark` "stops on the bar", +1 on: Epic Monster Hunter ×83 (3 → 4), Aydae alone 4 975 (3 → 4),
+evening account (5 → 6), live camp 09-18 (4 → 5), his camp as his message reads it (4 → 5), his camp
+localStorage (4 → 5), his usual setup (2 → 3), and on two already-red armies (monster tiers 4 → 5, 7 000
+export 5 → 6). `plan-criteria` "at his setup (7 000)" — already red on a ratio floor — now stops earlier, on
+`expectCriteria`'s **≤ 5 stops**. No damage or ratio assertion moved. Suite: 18 failed / 1 129 passed, against
+13 / 1 134 before; the five new reds are all stop-count pins.
+
+### 9.5 Next: the fold
+
+The owner, 2026-09-23: *"we should try to fold uninteresting stops … as long as we spend all the time possible
+to find the best solutions, they can be filtered in the end to retain the three best ones."* So the search and
+the stop rules keep offering everything; a final pass keeps the three best. It has to be measured the way 146
+is — all seven markers, matched spend, the criteria — and 145's B-swap already shows the price of dropping a
+stop is real (damage a merc −0.6 % on one army).

@@ -150,6 +150,26 @@ export interface CampaignInput {
    */
   sizerShape?: boolean;
   /**
+   * **The hired saver** (`docs/plans/the-stops-the-bar-offers.md`, W10; experiments 144–146). Set, the bar
+   * also offers the band's plan that burns the **fewest** hired units over the campaign — a plan the frontier
+   * already holds and the bar never offered, because every other stop is picked along silver or off the burn
+   * ladder's rungs. Two plans at one burn resolve to the **cheaper** (the band's own order): breaking the tie
+   * on damage instead, as the W10 plan first wrote it, opened 3 fewer of TotalStack's rows (146: 45 / 16
+   * against 47 / 13).
+   *
+   * - `'guard'` — **what the app ships** (`CAMPAIGN.planFixes`): the saver is withheld wherever it would
+   *   break the bar's own order (S-61) — a stop at the same burn or less, or a stop to its right it out-hits.
+   *   Measured over the seventeen benchmark armies (146): 47 rows dominated and 17 no stop fits, against
+   *   45 and 22 without it; no army reads worse on any of the seven markers.
+   * - `'silver'` — offered wherever `offer` accepts it: 47 / 13, but S-61 breaks on three armies.
+   * - `'damage'` — the same with the damage tie-break, for the record.
+   * - `'fold'` — offered, and the stops it out-hits dropped: 47 / 13, but the least silver and the damage a
+   *   silver fall on three armies, a regression.
+   *
+   * Omitted, the bar is the five stops it was.
+   */
+  burnSaver?: 'damage' | 'silver' | 'guard' | 'fold' | undefined;
+  /**
    * **Put a left-out troop type back** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and
    * misses some damage that seems cheap … add a pass to consider again lower level troops if the cost for them
    * (silver, silver/damage, total damage) is not too high and we get a nice reduction in training time"*).
@@ -540,6 +560,8 @@ export interface PlanCurvePoint {
  * stock actually pays, `ceil(n/10)` over the hired stacks fielded. Each is a definition over the plans the
  * band keeps (`tools/theorycraft/out/99`):
  *
+ *  - `burn-saver` — the fewest mercenaries burned the band holds (W10, `CampaignInput.burnSaver`), offered
+ *    only where it keeps the bar's order: it is left of every other stop, and hits less than all of them;
  *  - `silver-saver` — the cheapest march left of the sweet spot that costs no more silver and is at least as
  *    efficient a silver: on every account measured it is the tight ladder, every troop rung just above the
  *    mercenaries, some of the stock riding with it;
@@ -557,7 +579,7 @@ export interface PlanCurvePoint {
  *    26 486 216 over four marches (ten bears) and 25 439 016 (three) against this plan's 21 732 276 and
  *    19 115 768.
  */
-export type PlanPick = 'silver-saver' | 'sweet-spot' | 'more-mercs' | 'steady-max' | 'all-in';
+export type PlanPick = 'burn-saver' | 'silver-saver' | 'sweet-spot' | 'more-mercs' | 'steady-max' | 'all-in';
 
 /**
  * A plan the bar offers: one of the four answers above, priced.
@@ -4957,6 +4979,35 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   offer(leastSilver, 'silver-saver');
   offer(moreMercs, 'more-mercs');
   /**
+   * **The fewest hired units burned the band holds** (W10, `CampaignInput.burnSaver`). Offered after the
+   * ladder's stops so that none of them loses its row to it: when the fewest-burn plan already stands on the
+   * bar under another name, `offer` refuses the duplicate and the bar is what it was.
+   */
+  const burnSaver = ((): TradeRow | undefined => {
+    const rule = input.burnSaver;
+    if (rule === undefined) return undefined;
+    // `candidates` is sorted cheapest first, so on a tie the first row met is the cheaper one.
+    let pick: TradeRow | undefined;
+    for (const row of candidates) {
+      if (!pick || row.mercLost < pick.mercLost) {
+        pick = row;
+        continue;
+      }
+      if (row.mercLost > pick.mercLost) continue;
+      if (rule === 'damage') {
+        if (row.totalDamage !== pick.totalDamage) {
+          if (row.totalDamage > pick.totalDamage) pick = row;
+          continue;
+        }
+        if (row.silver < pick.silver) pick = row;
+      } else if (row.silver < pick.silver || (row.silver === pick.silver && row.totalDamage > pick.totalDamage)) {
+        pick = row;
+      }
+    }
+    return pick;
+  })();
+  offer(burnSaver, 'burn-saver');
+  /**
    * **Offered when its first march fields more hired units than the steady max's repeat** (owner, 2026-09-18:
    * *"a last stop: all mercs possible … fill all the mercs you can safely"*). On an account whose whole stock
    * the troops already shelter every march, "all in" *is* the steady max and would be a second row of it.
@@ -5077,6 +5128,30 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     for (let index = stops.length - 1; index > 0; index -= 1) {
       const row = stops[index] as PlanRow;
       if (stops.slice(0, index).some((other) => sameCounts(other, row))) stops.splice(index, 1);
+    }
+  }
+  /**
+   * **The hired saver keeps the bar's order or it is not offered** (W10, experiment 146). It is chosen on the
+   * campaign's burn over the whole band, not off the ladder, so it can land where S-61 forbids a stop: at the
+   * burn of another stop, or left of a stop it out-hits. Measured on the owner's live account: the saver at
+   * **1** burned a march hits 5 478 162, the silver saver to its right at **4** only 3 694 764 — for half the
+   * silver, which is why neither beats the other and why the bar cannot hold both in its burn order. Under
+   * `'guard'` the saver gives way; under `'fold'` the stops it out-hits do, which 146 measured as a loss.
+   */
+  {
+    const saverAt = stops.findIndex((row) => row.pick === 'burn-saver');
+    const saver = saverAt < 0 ? undefined : (stops[saverAt] as PlanRow);
+    if (saver && (input.burnSaver === 'guard' || input.burnSaver === 'fold')) {
+      const outHit = stops.filter(
+        (row) =>
+          row !== saver &&
+          row.pick !== 'all-in' &&
+          (row.repeat.mercLost <= saver.repeat.mercLost || row.repeat.damage <= saver.repeat.damage),
+      );
+      if (outHit.length > 0) {
+        if (input.burnSaver === 'guard') stops.splice(saverAt, 1);
+        else for (const row of outHit) stops.splice(stops.indexOf(row), 1);
+      }
     }
   }
   /**
