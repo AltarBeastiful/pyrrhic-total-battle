@@ -94,7 +94,7 @@ export const CAMPAIGN = {
     foldTo: 5,
     bandTroopStacks: 1,
     retype: 'rated' as const,
-    tierCandidate: false,
+    tierCandidate: true,
   },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
