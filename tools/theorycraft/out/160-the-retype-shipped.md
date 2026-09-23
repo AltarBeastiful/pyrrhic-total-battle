@@ -7,25 +7,25 @@ The bar with `retype: 'rated'` (the pass inside `planCampaign`, before S-94 and 
 | use case | stops off → on | re-typed | rated better / equal / worse | worst | most damage | least silver | fewest hired lost | least gold | fewest coins | shortest queue | dmg a silver | dmg a merc | dmg a gold | dmg a coin | TS beaten | TS no fit | criteria on the new bar | pass time |
 |---|---|---|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---:|
 | first-run army, Bear V ×1 (20 000 leader | 1 → 1 | 0 | 0 / 1 / 0 | 0.00 | 18,189,008 | 32,525,600 | 1 | 0 | 0 | 2,522 h | 0.559 | 112,200 | 0 | — | 1 → 1 | 0 → 0 | ✓ | 27 ms |
-| first-run army, Bear V ×2 (20 000 leader | 1 → 1 | 0 | 0 / 1 / 0 | 0.00 | 18,413,408 | 32,525,600 | 2 | 160 | 0 | 2,522 h | 0.566 | 168,300 | 115,084 | — | 1 → 1 | 0 → 0 | ✓ | 27 ms |
+| first-run army, Bear V ×2 (20 000 leader | 1 → 1 | 0 | 0 / 1 / 0 | 0.00 | 18,413,408 | 32,525,600 | 2 | 160 | 0 | 2,522 h | 0.566 | 168,300 | 115,084 | — | 1 → 1 | 0 → 0 | ✓ | 25 ms |
 | first-run army, Bear V ×3 (20 000 leader | 2 → 2 | 1 | 1 / 1 / 0 | 0.00 | **19,040,500 (+1.5 %)** | 32,525,600 | 3 | 0 | 0 | 2,522 h | **0.585 (+1.5 %)** | 224,400 | **39,668 (+1.5 %)** | — | 2 → 8 | 0 → 0 | ✓ | 26 ms |
-| first-run army, Bear V ×10 (20 000 leade | 2 → 2 | 1 | 1 / 1 / 0 | 0.00 | **21,290,233 (+1.9 %)** | 32,525,600 | 4 | 3,200 | 0 | 2,522 h | 0.639 | 776,050 | 6,491 | — | 2 → 2 | 0 → 0 | ✓ | 37 ms |
-| first-run army, Epic Monster Hunter VI × | 4 → 4 | 3 | 3 / 1 / 0 | 0.00 | **30,140,049 (+1.0 %)** | 32,525,600 | 11 | 736 | 0 | 2,522 h | **0.922 (+1.0 %)** | 423,145 | 30,603 | — | 5 → 7 | 0 → 0 | ✓ | 69 ms |
-| first-run army, monster tiers 3–5 at 900 | 5 → 5 | 4 | 4 / 1 / 0 | 0.00 | **103,197,710 (+0.2 %)** | 34,921,200 | 15 | 9,424 | 24,120 | 2,861 h | **2.766 (+0.2 %)** | 597,802 | **9,496 (+0.3 %)** | **3,816 (+0.2 %)** | 0 → 0 | 3 → 3 | ✓ | 165 ms |
-| the 4 000-leadership case of 2026-09-15  | 3 → 3 | 2 | 2 / 1 / 0 | 0.00 | **8,985,057 (+5.5 %)** | 3,820,600 | 19 | 736 | 0 | 238 h | **1.476 (+5.4 %)** | 265,255 | **7,254 (+2.4 %)** | — | 6 → 10 | 0 → 0 | ✓ | 36 ms |
-| 2026-09-17 export, its setup (7 000 lead | 5 → 5 | 4 | 3 / 1 / 0 | 0.00 | **24,291,732 (+3.1 %)** | 8,695,000 | 26 | 2,112 | 0 | 583 h | **2.216 (+6.7 %)** | 357,360 | **7,252 (+1.6 %)** | — | 6 → 6 | 3 → 3 | ✓ | 33 ms |
-| 2026-09-17 export, 12 000 leadership | 4 → 4 | 3 | 3 / 1 / 0 | 0.00 | **34,617,571 (+8.3 %)** | 12,129,500 | 30 | 2,408 | 0 | 814 h | **1.833 (+4.5 %)** | 369,197 | **9,304 (+3.3 %)** | — | 3 → 3 | 2 → 2 | ✓ | 34 ms |
+| first-run army, Bear V ×10 (20 000 leade | 2 → 2 | 1 | 1 / 1 / 0 | 0.00 | **21,290,233 (+1.9 %)** | 32,525,600 | 4 | 3,200 | 0 | 2,522 h | 0.639 | 776,050 | 6,491 | — | 2 → 2 | 0 → 0 | ✓ | 35 ms |
+| first-run army, Epic Monster Hunter VI × | 4 → 4 | 3 | 3 / 1 / 0 | 0.00 | **30,140,049 (+1.0 %)** | 32,525,600 | 11 | 736 | 0 | 2,522 h | **0.922 (+1.0 %)** | 423,145 | 30,603 | — | 5 → 7 | 0 → 0 | ✓ | 64 ms |
+| first-run army, monster tiers 3–5 at 900 | 5 → 5 | 4 | 4 / 1 / 0 | 0.00 | **103,197,710 (+0.2 %)** | 34,921,200 | 15 | 9,424 | 24,120 | 2,861 h | **2.766 (+0.2 %)** | 597,802 | **9,496 (+0.3 %)** | **3,816 (+0.2 %)** | 0 → 0 | 3 → 3 | ✓ | 136 ms |
+| the 4 000-leadership case of 2026-09-15  | 3 → 3 | 2 | 2 / 1 / 0 | 0.00 | **8,985,057 (+5.5 %)** | 3,820,600 | 19 | 736 | 0 | 238 h | **1.476 (+5.4 %)** | 265,255 | **7,254 (+2.4 %)** | — | 6 → 10 | 0 → 0 | ✓ | 32 ms |
+| 2026-09-17 export, its setup (7 000 lead | 5 → 5 | 4 | 4 / 1 / 0 | 0.00 | **24,936,555 (+5.8 %)** | 8,695,000 | 26 | 2,112 | 0 | 583 h | **2.216 (+6.7 %)** | 357,360 | **7,252 (+1.6 %)** | — | 6 → 6 | 3 → 3 | ✓ | 28 ms |
+| 2026-09-17 export, 12 000 leadership | 4 → 4 | 3 | 3 / 1 / 0 | 0.00 | **34,617,571 (+8.3 %)** | 12,129,500 | 30 | 2,408 | 0 | 814 h | **1.833 (+4.5 %)** | 369,197 | **9,304 (+3.3 %)** | — | 3 → 3 | 2 → 2 | ✓ | 32 ms |
 | live account of 2026-09-18 (one hired ty | 4 → 4 | 0 | 0 / 4 / 0 | 0.00 | 29,743,332 | 18,959,900 | 20 | 1,368 | 0 | 1,317 h | 0.963 | 317,110 | 16,063 | — | 9 → 9 | 0 → 0 | ✓ | 6 ms |
-| live account, evening (hunters 83, legio | 5 → 5 | 4 | 3 / 1 / 0 | 0.00 | **34,103,988 (+7.5 %)** | 12,339,900 | 32 | 2,296 | 0 | 814 h | **1.985 (+11.1 %)** | **332,927 (+10.4 %)** | **8,941 (+6.7 %)** | — | 1 → 6 | 0 → 0 | ✓ | 53 ms |
+| live account, evening (hunters 83, legio | 5 → 5 | 4 | 4 / 1 / 0 | 0.00 | **34,784,291 (+9.7 %)** | 12,339,900 | 32 | 2,296 | 0 | 814 h | **1.985 (+11.1 %)** | **332,927 (+10.4 %)** | **8,941 (+6.7 %)** | — | 1 → 6 | 0 → 0 | ✓ | 56 ms |
 | Aydae alone, 4 975 (one captain, four hi | 4 → 4 | 3 | 3 / 1 / 0 | 0.00 | **18,750,522 (+0.0 %)** | 5,764,300 | 19 | 1,288 | 0 | 324 h | **2.089 (+0.1 %)** | 325,749 | 7,320 | — | 0 → 0 | 0 → 0 | ✓ | 17 ms |
-| the owner’s live camp of 2026-09-18 (arb | 5 → 5 | 3 | 3 / 2 / 0 | 0.00 | **31,541,795 (+1.8 %)** | 6,773,900 | 16 | 1,448 | 0 | 477 h | **2.586 (+1.8 %)** | 232,812 | 5,705 | — | 0 → 0 | 0 → 0 | ✓ | 8 ms |
-| his camp of 2026-09-19, the localStorage | 5 → 5 | 2 | 2 / 3 / 0 | 0.00 | 23,589,127 | 7,313,300 | 6 | 392 | 0 | 510 h | 1.808 | 318,189 | 16,934 | — | 2 → 2 | 1 → 1 | ✓ | 38 ms |
-| his camp of 2026-09-19, as his message r | 5 → 5 | 4 | 4 / 0 / 0 | 0.75 | **11,587,344 (+0.0 %)** | **7,741,400 (+7.5 %)** | 15 | 1,056 | 0 | **657 h (+13.1 %)** | **1.167 (+9.2 %)** | 258,218 | **7,011 (+0.0 %)** | — | 2 → 2 | 1 → 1 | ✓ | 12 ms |
-| his TotalStack profile of 2026-09-19 (5  | 3 → 3 | 2 | 2 / 1 / 0 | 0.00 | **8,443,234 (+0.4 %)** | 4,431,600 | 7 | 480 | 3,840 | 279 h | 1.110 | 131,856 | 10,248 | **2,199 (+0.4 %)** | 2 → 2 | 1 → 1 | ✓ | 21 ms |
+| the owner’s live camp of 2026-09-18 (arb | 5 → 5 | 3 | 3 / 2 / 0 | 0.00 | **31,541,795 (+1.8 %)** | 6,773,900 | 16 | 1,448 | 0 | 477 h | **2.586 (+1.8 %)** | 232,812 | 5,705 | — | 0 → 0 | 0 → 0 | ✓ | 7 ms |
+| his camp of 2026-09-19, the localStorage | 5 → 5 | 2 | 2 / 3 / 0 | 0.00 | 23,589,127 | 7,313,300 | 6 | 392 | 0 | 510 h | 1.808 | 318,189 | 16,934 | — | 2 → 2 | 1 → 1 | ✓ | 33 ms |
+| his camp of 2026-09-19, as his message r | 5 → 5 | 4 | 4 / 0 / 0 | 0.75 | **11,587,344 (+0.0 %)** | **7,741,400 (+7.5 %)** | 15 | 1,056 | 0 | **657 h (+13.1 %)** | **1.167 (+9.2 %)** | 258,218 | **7,011 (+0.0 %)** | — | 2 → 2 | 1 → 1 | ✓ | 10 ms |
+| his TotalStack profile of 2026-09-19 (5  | 3 → 3 | 2 | 2 / 1 / 0 | 0.00 | **8,443,234 (+0.4 %)** | 4,431,600 | 7 | 480 | 3,840 | 279 h | 1.110 | 131,856 | 10,248 | **2,199 (+0.4 %)** | 2 → 2 | 1 → 1 | ✓ | 18 ms |
 | his usual setup of 2026-09-19 (Aydae alo | 3 → 3 | 2 | 2 / 1 / 0 | 0.00 | **11,756,170 (+0.3 %)** | 6,127,800 | 5 | 352 | 3,960 | 375 h | **1.419 (+0.6 %)** | 422,679 | 23,250 | **2,721 (+0.3 %)** | 5 → 5 | 2 → 2 | ✓ | 16 ms |
 
 
-**Stops**: 61 without the pass, 61 with it; 38 carry a re-typing. **The owner’s rating, stop by stop** (58 matched by name): **36 better, 22 equal, 0 worse**; the worst 0.00 (first-run army, Bear V ×1 (20 000 leader SW). Stops whose campaign damage fell: 0. **17 of 17** use cases read no worse on any of the ten readings. **TotalStack at matched spend**: 47 / 13 → 64 / 13 (dominated / no stop fits). Use cases where a bar criterion breaks with the pass: 0.
+**Stops**: 61 without the pass, 61 with it; 38 carry a re-typing. **The owner’s rating, stop by stop** (60 matched by name): **38 better, 22 equal, 0 worse**; the worst 0.00 (first-run army, Bear V ×1 (20 000 leader SW). Stops whose campaign damage fell: 0. **17 of 17** use cases read no worse on any of the ten readings. **TotalStack at matched spend**: 47 / 13 → 64 / 13 (dominated / no stop fits). Use cases where a bar criterion breaks with the pass: 0.
 
 | reading | use cases better | use cases worse |
 |---|---:|---:|
@@ -43,10 +43,6 @@ The bar with `retype: 'rated'` (the pass inside `planCampaign`, before S-94 and 
 
 **Stops on one bar only**:
 
-- 2026-09-17 export, its setup (7 000 lead: MM only with the pass
-- 2026-09-17 export, its setup (7 000 lead: AI only without the pass
-- live account, evening (hunters 83, legio: MM only with the pass
-- live account, evening (hunters 83, legio: AI only without the pass
 - his camp of 2026-09-19, as his message r: SS only with the pass
 - his camp of 2026-09-19, as his message r: MM only without the pass
 
@@ -57,10 +53,10 @@ Every stop of both bars, one campaign each (the stop counts differ when the fold
 
 | | without the pass | with it | change |
 |---|---:|---:|---:|
-| queue, summed | 88,131 h | 85,959 h | -2.46 % |
-| speed-ups consumed, first campaign, summed | 88,139 h | 85,967 h | -2.46 % |
+| queue, summed | 88,131 h | 86,949 h | -1.34 % |
+| speed-ups consumed, first campaign, summed | 88,139 h | 86,958 h | -1.34 % |
 | waste in that | 0.01 % | 0.01 % | |
-| campaigns the stock pays, summed over stops | 692 | 712 | 2.89 % |
+| campaigns the stock pays, summed over stops | 692 | 705 | 1.88 % |
 
 Matched stops the stock pays fewer whole campaigns of: **1**:
 
@@ -69,7 +65,7 @@ Matched stops the stock pays fewer whole campaigns of: **1**:
 
 ## Time
 
-The pass as the engine clocks it (`CampaignPlan.retype.ms`): slowest **165 ms** (first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)). Runs its deadline cut: 0.
+The pass as the engine clocks it (`CampaignPlan.retype.ms`): slowest **136 ms** (first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)). Runs its deadline cut: 0.
 
 
 ## Against 157 and 158
@@ -95,12 +91,14 @@ The pass as the engine clocks it (`CampaignPlan.retype.ms`): slowest **165 ms** 
 | 2026-09-17 export, its setup (7 00 | HS | spearman-1 1,218, spearman-2 664, rider-2 357, rider-1 630, archer-1 1,385, rider-3 189, archer-2 740 | spearman-1 1,218, spearman-2 664, rider-2 357, rider-1 630, archer-1 1,385, rider-3 189, archer-2 740 | 15,079,846 → 15,315,363 | 10,186,900 → 10,187,600 | 1.480 → 1.503 | 683 h → 683 h | 1.56 |
 | 2026-09-17 export, its setup (7 00 | SW | spearman-1 1,337, spearman-2 728, rider-2 391, rider-1 691, archer-1 1,520, rider-3 207, archer-2 812 | spearman-1 1,337, spearman-2 728, rider-2 391, rider-1 691, archer-1 1,520, rider-3 207, archer-2 812 | 18,796,348 → 19,031,865 | 10,906,900 → 10,907,600 | 1.723 → 1.745 | 731 h → 731 h | 1.25 |
 | 2026-09-17 export, its setup (7 00 | MX | archer-1 1,569, spearman-1 1,272, rider-1 696, archer-2 866, spearman-2 703, rider-2 384, rider-3 215 | spearman-1 1,275, spearman-2 708, archer-1 1,562, rider-1 695, rider-2 386, archer-2 862, rider-3 215 | 22,770,620 → 24,291,732 | 10,957,600 → 10,960,100 | 2.078 → 2.216 | 739 h → 740 h | 6.67 |
+| 2026-09-17 export, its setup (7 00 | AI | archer-2 2,932, rider-2 1,303, rider-3 731 | archer-2 2,190, spearman-2 1,776, rider-3 547, rider-2 969 | 23,563,675 → 24,936,555 | 15,169,600 → 12,715,900 | 1.553 → 1.961 | 1,790 h → 1,213 h | 17.52 |
 | 2026-09-17 export, 12 000 leadersh | HS | spearman-1 2,145, spearman-2 1,169, rider-2 628, rider-1 1,108, archer-1 2,439, rider-3 333, archer-2 1,303 | spearman-1 2,145, spearman-2 1,169, rider-2 628, rider-1 1,108, archer-1 2,439, rider-3 333, archer-2 1,303 | 21,679,374 → 22,404,202 | 17,808,200 → 17,808,900 | 1.217 → 1.258 | 1,194 h → 1,195 h | 3.34 |
 | 2026-09-17 export, 12 000 leadersh | SW | archer-1 2,687, spearman-1 2,179, rider-1 1,193, archer-2 1,485, spearman-2 1,205, rider-2 659, rider-3 370 | archer-1 2,687, spearman-1 2,179, spearman-2 1,210, rider-1 1,191, archer-2 1,483, rider-3 371, rider-2 658 | 31,546,458 → 34,445,770 | 18,790,400 → 18,793,200 | 1.679 → 1.833 | 1,268 h → 1,269 h | 9.19 |
 | 2026-09-17 export, 12 000 leadersh | MX | rider-1 2,007, archer-2 2,499, spearman-2 2,027, rider-2 1,108, rider-3 622 | spearman-1 3,659, spearman-2 2,032, rider-2 1,112, rider-3 624, archer-2 2,483 | 31,963,845 → 34,617,571 | 21,035,600 → 20,720,700 | 1.520 → 1.671 | 1,814 h → 1,811 h | 8.61 |
 | live account, evening (hunters 83, | HS | archer-1 2,306, rider-1 923, spearman-2 979, spearman-1 1,727, archer-2 1,183, rider-3 266, rider-2 464 | archer-1 2,306, spearman-2 1,000, rider-1 905, spearman-1 1,727, archer-2 1,183, rider-3 266, rider-2 464 | 19,234,820 → 20,528,010 | 15,338,100 → 15,336,600 | 1.254 → 1.338 | 1,010 h → 1,013 h | 6.72 |
 | live account, evening (hunters 83, | SW | archer-1 2,668, rider-1 1,067, spearman-2 1,133, spearman-1 1,998, archer-2 1,369, rider-3 308, rider-2 537 | archer-1 2,668, rider-1 1,067, spearman-2 1,133, spearman-1 1,998, archer-2 1,369, rider-3 308, rider-2 537 | 28,140,302 → 29,432,388 | 17,072,400 → 17,071,800 | 1.648 → 1.724 | 1,124 h → 1,125 h | 4.59 |
 | live account, evening (hunters 83, | MX | archer-1 2,560, spearman-1 2,030, rider-1 1,040, archer-2 1,414, spearman-2 1,122, rider-2 575, rider-3 322 | archer-1 2,560, spearman-2 1,130, spearman-1 2,025, rider-1 1,039, archer-2 1,411, rider-2 575, rider-3 322 | 30,693,083 → 34,103,988 | 17,179,200 → 17,179,800 | 1.787 → 1.985 | 1,149 h → 1,150 h | 11.11 |
+| live account, evening (hunters 83, | AI | spearman-1 3,050, rider-1 1,563, archer-2 2,124, rider-2 865, rider-3 485 | spearman-1 3,476, spearman-2 1,931, rider-2 989, rider-3 555, archer-2 2,410 | 31,714,657 → 34,784,291 | 18,768,000 → 19,233,100 | 1.690 → 1.809 | 1,539 h → 1,667 h | 8.49 |
 | Aydae alone, 4 975 (one captain, f | SW | archer-1 1,004, spearman-1 1,002, rider-1 500, archer-2 554, spearman-2 553, rider-2 276, rider-3 155 | spearman-1 1,004, archer-1 1,002, rider-2 278, rider-1 499, spearman-2 553, archer-2 552, rider-3 155 | 15,533,933 → 15,598,199 | 7,682,800 → 7,684,400 | 2.022 → 2.030 | 500 h → 500 h | 0.41 |
 | Aydae alone, 4 975 (one captain, f | MX | archer-1 2,058, archer-2 1,141, rider-2 569, rider-3 319 | archer-1 2,058, rider-3 321, archer-2 1,138, rider-2 568 | 17,630,102 → 17,649,575 | 8,448,400 → 8,449,700 | 2.087 → 2.089 | 696 h → 696 h | 0.10 |
 | Aydae alone, 4 975 (one captain, f | AI | archer-2 1,945, rider-2 970, rider-3 545 | spearman-2 1,945, rider-3 546, archer-2 1,938 | 18,744,735 → 18,750,522 | 11,240,800 → 11,241,200 | 1.668 → 1.668 | 1,425 h → 1,425 h | 0.03 |

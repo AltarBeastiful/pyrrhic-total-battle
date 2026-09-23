@@ -4730,7 +4730,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * ceiling still gives a *repeated* stop no finale when its hired is spent, and `repeat` is still the first
    * march's figures alone.
    */
-  const allIn = ((): TradeRow | undefined => {
+  const buildAllIn = (floorHired?: number): TradeRow | undefined => {
     if (planned === undefined || planned < 1) return undefined;
     const remaining: Record<string, number> = { ...stock };
     const played: Candidate[] = [];
@@ -4765,6 +4765,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         !held ||
         hiredOfVector(candidate.mercs) > hiredOfVector(held.mercs) ||
         (hiredOfVector(candidate.mercs) === hiredOfVector(held.mercs) && candidate.total > held.total);
+      const hitsHardest =
+        (floor: number) =>
+        (candidate: Candidate, held: Candidate | null): boolean =>
+          hiredOfVector(candidate.mercs) > floor &&
+          (!held ||
+            candidate.march.damage > held.march.damage ||
+            (candidate.march.damage === held.march.damage && candidate.march.silver < held.march.silver));
       const strongest = (
         counts: Record<string, number>,
         seed: Candidate | null,
@@ -4878,7 +4885,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           if (count > 0) any = true;
         }
         if (!any) break;
-        found = strongest(counts, found);
+        found = strongest(
+          counts,
+          found,
+          floorHired === undefined ? fieldsMost : hitsHardest(i === 0 ? floorHired : 0),
+        );
       }
       if (!found) break;
       /**
@@ -5000,7 +5011,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
       damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
     };
-  })();
+  };
+  const allIn = buildAllIn();
 
   const sameCounts = (a: PlanTotals, b: PlanTotals): boolean =>
     JSON.stringify(a.counts) === JSON.stringify(b.counts);
@@ -5716,14 +5728,50 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const lastIn = stops.findIndex((row) => row.pick === 'all-in');
   if (lastIn >= 0) {
     const row = stops[lastIn] as PlanRow;
-    const beaten = stops.some(
-      (other) =>
-        other !== row &&
-        other.totalDamage >= row.totalDamage &&
-        other.silver <= row.silver &&
-        other.mercLost < row.mercLost,
-    );
-    if (beaten) stops.splice(lastIn, 1);
+    const beatenOf = (candidate: PlanTotals): boolean =>
+      stops.some(
+        (other, at) =>
+          at !== lastIn &&
+          other.totalDamage >= candidate.totalDamage &&
+          other.silver <= candidate.silver &&
+          other.mercLost < candidate.mercLost,
+      );
+    /**
+     * **Where the re-typing is what beat it** (W11), the all-in is rebuilt rather than dropped: each march the
+     * hardest-hitting sheltered shape, the first still fielding more hired than the top rung, re-typed. On the
+     * 7 000 export the fastest-spending sequence (242 hired first) gained 2 508 from the pass while the steady
+     * max gained 1 521 112, so S-94 dropped it; the rebuilt one (209 hired, 6 550 179 at 3 717 800) plays
+     * 24 936 555 for 12 715 900 and 73 burned, unbeaten. Kept only if nothing beats it; an all-in S-94 dropped
+     * without the pass stays dropped.
+     */
+    if (beatenOf(row)) {
+      const rungs = stops.filter((_, at) => at !== lastIn);
+      const topRung = rungs.reduce<PlanRow | undefined>(
+        (held, other) => (!held || other.repeat.mercLost > held.repeat.mercLost ? other : held),
+        undefined,
+      );
+      let kept: PlanRow | undefined;
+      // Only where the pass is what beat it: on the stops as they were before the re-typing, the all-in stood.
+      const unRetyped = stops.map((other) => beforeRetype.get(other) ?? other);
+      const stoodBefore = !unRetyped.some(
+        (other, at) =>
+          at !== lastIn &&
+          other.totalDamage >= (unRetyped[lastIn] as PlanRow).totalDamage &&
+          other.silver <= (unRetyped[lastIn] as PlanRow).silver &&
+          other.mercLost < (unRetyped[lastIn] as PlanRow).mercLost,
+      );
+      if (topRung && retypeRates !== undefined && stoodBefore) {
+        const topHired = filledOf(topRung.counts);
+        const built = buildAllIn(topHired);
+        if (built && filledOf(built.counts) > topHired) {
+          const stop: PlanRow = { ...built, pick: 'all-in', bestFor: row.bestFor };
+          const next = retypeRow(stop);
+          if (!beatenOf(next)) kept = next;
+        }
+      }
+      if (kept) stops[lastIn] = kept;
+      else stops.splice(lastIn, 1);
+    }
   }
 
   /**

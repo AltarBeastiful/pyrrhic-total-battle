@@ -965,8 +965,11 @@ describe('the all-in plays the horizon', () => {
         // `markerRates` puts Rider II back instead of Spearman II — 23,619,920 → 23,563,675 damage (−0.24 %)
         // for 15,179,600 → 15,169,600 silver, 6,608 → 6,576 gold, 92 → 91 hired, 1,793 h → 1,790 h (rating
         // +0.094; experiment 161).
-        expect(allIn?.totalDamage).toBe(23_563_675);
-        expect(allIn?.silver).toBe(15_169_600);
+        // **Risen 2026-09-23 (W11, the all-in rebuilt after re-typing)**: 23,563,675 → 24,936,555 damage for
+        // 15,169,600 → 12,715,900 silver — better on both, so the build registers it. Each march is the
+        // hardest-hitting sheltered shape, the first still fielding more hired than the top rung, re-typed.
+        expect(allIn?.totalDamage).toBe(24_936_555);
+        expect(allIn?.silver).toBe(12_715_900);
       },
       TIMEOUT,
     );
