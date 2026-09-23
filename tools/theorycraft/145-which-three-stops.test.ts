@@ -53,10 +53,28 @@ describe.skipIf(!process.env.THEORY)('which three stops', () => {
       A: { beaten: 0, unfitted: 0 },
       B: { beaten: 0, unfitted: 0 },
       C: { beaten: 0, unfitted: 0 },
+      Bswap: { beaten: 0, unfitted: 0 },
     };
+    /**
+     * **The four ratio floors, per rule** (owner, 2026-09-23: *"you're still missing one of the mandatory
+     * metric merc spent"* — and he is right, every table above this story read damage a silver and left
+     * damage a **merc** out, which is one of the floors his goal is stated on).
+     *
+     * A rule that only **adds** a stop can never lower the bar's best on any marker; one that **swaps** a
+     * stop out can, which is exactly why `Bswap` is measured beside `B` rather than assumed equal to it.
+     * Each entry counts the armies on which that rule's best reading is **worse than the bar's today**.
+     */
+    const floors: Record<string, Record<string, number>> = {
+      A: {},
+      B: {},
+      C: {},
+      Bswap: {},
+    };
+    /** Which army each drop happened on, so a count of one can be read rather than trusted. */
+    const dropped: string[] = [];
     const rows: string[] = [
-      '| army | today | A · re-axis | B · + lowest burn | C · + best a silver |',
-      '|---|---|---|---|---|',
+      '| army | today | A · re-axis | B · + lowest burn | C · + best a silver | B-swap |',
+      '|---|---|---|---|---|---|',
     ];
     for (const scenario of scenarios) {
       let plan;
@@ -95,6 +113,10 @@ describe.skipIf(!process.env.THEORY)('which three stops', () => {
       const highest = bestAt((a, b) => a.mercLost > b.mercLost);
       const bestRate = bestAt((a, b) => perSilver(a) > perSilver(b));
 
+      // **B, but at three stops**: the same added plan with `more-mercs` dropped, which is the swap the
+      // owner's *"keep three spots can mean keep the three best options"* allows. It is the only rule here
+      // that can take an option away, so it is the only one whose ratio floors can fall.
+      const withoutMiddle = today.filter((row) => !row.name.includes('more-mercs'));
       const sets: Record<string, Campaign[]> = {
         today,
         A: [
@@ -104,9 +126,36 @@ describe.skipIf(!process.env.THEORY)('which three stops', () => {
         ],
         B: [...today, priceRow(lowest, `+burn@${String(lowest.mercLost)}`)],
         C: [...today, priceRow(bestRate, `+rate@${String(bestRate.mercLost)}`)],
+        Bswap: [...withoutMiddle, priceRow(lowest, `+burn@${String(lowest.mercLost)}`)],
       };
+      /** The bar's best reading on each marker and each ratio, over whichever stops the rule offers. */
+      const readings = (set: Campaign[]): Record<string, number> => ({
+        damage: Math.max(...set.map((c) => c.damage)),
+        'damage a silver': Math.max(...set.map((c) => (c.silver > 0 ? c.damage / c.silver : 0))),
+        'damage a merc': Math.max(...set.map((c) => c.hiredDamage / Math.max(1, c.burned))),
+        'damage a gold': Math.max(...set.map((c) => (c.gold > 0 ? c.damage / c.gold : 0))),
+        'damage a coin': Math.max(...set.map((c) => (c.dragonCoins > 0 ? c.damage / c.dragonCoins : 0))),
+        'least silver': -Math.min(...set.map((c) => c.silver)),
+        'least burn': -Math.min(...set.map((c) => c.burned)),
+      });
+      const base = readings(today);
+      for (const key of ['A', 'B', 'C', 'Bswap']) {
+        const mine = readings(sets[key] ?? []);
+        for (const marker of Object.keys(base)) {
+          if ((mine[marker] ?? 0) < (base[marker] ?? 0) - 1e-9) {
+            const bucket = floors[key];
+            if (bucket) bucket[marker] = (bucket[marker] ?? 0) + 1;
+            if (key === 'Bswap') {
+              dropped.push(
+                `**${scenario.label.slice(0, 44)}** — ${marker}: ` +
+                  `${n(base[marker] ?? 0)} → ${n(mine[marker] ?? 0)}`,
+              );
+            }
+          }
+        }
+      }
       const said: string[] = [];
-      for (const key of ['today', 'A', 'B', 'C']) {
+      for (const key of ['today', 'A', 'B', 'C', 'Bswap']) {
         const verdict = matchedSpend((sets[key] ?? []) as Contender[], theirs as Contender[]);
         const entry = tally[key];
         if (entry) {
@@ -121,7 +170,7 @@ describe.skipIf(!process.env.THEORY)('which three stops', () => {
     report.add(
       '\n## The totals, over every captured row on every army\n\n' +
         '| rule | rows dominated | rows no stop fits |\n|---|---:|---:|\n' +
-        (['today', 'A', 'B', 'C'] as const)
+        (['today', 'A', 'B', 'C', 'Bswap'] as const)
           .map((key) => {
             const entry = tally[key];
             const name =
@@ -131,7 +180,9 @@ describe.skipIf(!process.env.THEORY)('which three stops', () => {
                   ? '**A** — re-axis all three onto burn'
                   : key === 'B'
                     ? '**B** — today + lowest-burn plan'
-                    : '**C** — today + best damage-a-silver plan';
+                    : key === 'C'
+                      ? '**C** — today + best damage-a-silver plan'
+                      : '**B-swap** — B at three stops, `more-mercs` dropped';
             return `| ${name} | ${n(entry?.beaten ?? 0)} | ${n(entry?.unfitted ?? 0)} |`;
           })
           .join('\n') +
@@ -141,6 +192,49 @@ describe.skipIf(!process.env.THEORY)('which three stops', () => {
         'different armies**, which is the finding: B opens rows that were refused on the **burn**, C opens ' +
         'rows refused on **silver** and turns two of them into beats. Neither subsumes the other, and 144’s ' +
         'ceiling of 14 rescued rows needs both.\n',
+    );
+    report.add(
+      '\n## The four ratio floors, and the one rule that can lower them\n\n' +
+        'The owner’s goal is stated on **damage a silver, damage a merc and damage a monster** at least ' +
+        'matching the other calculator, and every table before this story left **damage a merc** out. A ' +
+        'rule that only *adds* a stop cannot lower the bar’s best on any marker — the old stops are still ' +
+        'there — so only **B-swap**, which drops `more-mercs`, can. Armies where each rule reads **worse ' +
+        'than the bar does today**:\n\n' +
+        '| rule | ' +
+        [
+          'damage',
+          'damage a silver',
+          'damage a merc',
+          'damage a gold',
+          'damage a coin',
+          'least silver',
+          'least burn',
+        ].join(' | ') +
+        ' |\n|---|' +
+        '---:|'.repeat(7) +
+        '\n' +
+        (['A', 'B', 'C', 'Bswap'] as const)
+          .map(
+            (key) =>
+              `| ${key} | ` +
+              [
+                'damage',
+                'damage a silver',
+                'damage a merc',
+                'damage a gold',
+                'damage a coin',
+                'least silver',
+                'least burn',
+              ]
+                .map((marker) => String(floors[key]?.[marker] ?? 0))
+                .join(' | ') +
+              ' |',
+          )
+          .join('\n') +
+        '\n' +
+        (dropped.length > 0
+          ? `\n**Where B-swap gives something up**, which is the whole cost of holding to three stops:\n\n- ${dropped.join('\n- ')}\n`
+          : ''),
     );
     report.save();
   }, 3_600_000);
