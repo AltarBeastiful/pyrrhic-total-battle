@@ -277,6 +277,13 @@ export interface CampaignInput {
    */
   retype?: 'rated' | undefined;
   /**
+   * **Tier order as a candidate of the re-typing** (W13 §2 step 1, `docs/plans/every-ordering.md`, experiment
+   * 169): `retypeMarch` also tries the march's own types in S-22's kill order over its own slots, and seeds its
+   * climb from the march as it is, that tier order and the ranking's order (`RetypeOptions.tierCandidate`).
+   * Every guard after it is untouched. Omitted, the re-typing is exactly the one before.
+   */
+  tierCandidate?: boolean | undefined;
+  /**
    * **The band's token-field yardstick, switchable** — a diagnostic for
    * `tools/theorycraft/108-thrift-end.test.ts` and `112-band-yardstick.test.ts`, never set by the app, kept
    * so the measurements behind S-93 and S-95 can be re-run against the engine that shipped.
@@ -5522,7 +5529,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       return counts;
     }
     retypeLog.marches += 1;
-    const found = retypeMarch(request, counts, retypeRates, { deadline: retypeDeadline });
+    const found = retypeMarch(request, counts, retypeRates, {
+      deadline: retypeDeadline,
+      ...(input.tierCandidate === true ? { tierCandidate: true } : {}),
+    });
     if (found?.cut) retypeLog.cut = true;
     let out = counts;
     if (found) {

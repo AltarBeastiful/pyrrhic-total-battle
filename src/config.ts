@@ -77,6 +77,14 @@ export const CAMPAIGN = {
    * - `retype` — the rated re-typing (W11 §3, `docs/plans/the-rated-retyping.md`): every march of every stop has
    *   its troop types re-chosen by the owner's rating (`markerRates`, handed over as `putBack.rates`), hired
    *   stacks and damage held, before the fold. Experiment 160 measures it on the engine's own bar.
+   * - `tierCandidate` — tier order as a candidate of the re-typing (W13 §2 step 1, `docs/plans/every-ordering.md`):
+   *   `retypeMarch` also tries the march's own types in S-22's kill order over its own slots and seeds its climb
+   *   from three starts (as it is, tier order, the ranking's order), then offers the kept march its own tier order
+   *   on its own slots. Experiment 169, `budgetMs` off, against HEAD: 8 stops better / 53 equal / 0 worse, no
+   *   reading worse, TotalStack at matched spend 70/13 unchanged, every criterion held; the owner's permanent test
+   *   (no march beaten by its own tier order) 19 pass / 3 fail → 22 / 0. **Off** until the owner registers the one
+   *   pin it moves: the 7 000 export's all-in, 24,936,555 → 24,945,884 damage for 12,715,900 → 12,717,200 silver
+   *   (rated +0.03; `tests/engine/plan.test.ts`, "the all-in is the campaign it was").
    */
   planFixes: {
     tokenFloor: true,
@@ -86,6 +94,7 @@ export const CAMPAIGN = {
     foldTo: 5,
     bandTroopStacks: 1,
     retype: 'rated' as const,
+    tierCandidate: false,
   },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band

@@ -17,7 +17,8 @@
  * `authority` stack, as the plan counts `mercLost`) is carried too, so the rating forgets no cost; it cannot
  * move, since the hired stacks are kept.
  */
-import { marchResult, effectiveTable } from './plan';
+import { buildKillOrder } from './killOrder';
+import { marchResult, effectiveTable, rankTroops } from './plan';
 import type { Bill, MarkerRates } from './rating';
 import { rate } from './rating';
 import { chunks } from './recovery';
@@ -34,7 +35,20 @@ export interface RetypeOptions {
    * it the search stops and returns the best assignment found so far (W11 §3.5).
    */
   deadline?: number | undefined;
+  /**
+   * **Tier order as a candidate, and three seeds** (W13 §2 step 1, `docs/plans/every-ordering.md`, experiment
+   * 169; `CAMPAIGN.planFixes.tierCandidate`). The march's own types in S-22's kill order over its own slots —
+   * the first to die on the biggest slot, each type at least its slot's HP, not re-scaled — are always tried
+   * (one battle), and the climb starts from three places: the march as it is, that tier order, and the
+   * ranking's order (`rankTroops`, the weakest per HP on the biggest slot). The best positive rating over all
+   * of them is kept, and then offered its own types in kill order over its **own** slots (§3's twin), taken
+   * while it rates above it. Off, the search is exactly the one before.
+   */
+  tierCandidate?: boolean | undefined;
 }
+
+/** Which start the kept assignment was found from (a diagnostic of experiment 169). */
+export type RetypeSeed = 'as-is' | 'tier' | 'ranking' | 'exhaustive';
 
 export interface Retyped {
   /** The re-typed march: the hired stacks as they were, the troop stacks re-chosen. */
@@ -47,6 +61,8 @@ export interface Retyped {
   exhaustive: boolean;
   /** The deadline stopped the search before it finished. */
   cut: boolean;
+  /** Where the kept assignment was found (`tierCandidate` only). */
+  seed?: RetypeSeed | undefined;
 }
 
 /** A march's bill, the battle's way: worst-opening damage and every cost its recovery carries. */
@@ -102,17 +118,33 @@ export function retypeMarch(
     return lead <= request.housing.leadership ? next : null;
   };
 
-  let best: { counts: Record<string, number>; rating: number } | null = null;
+  let best: { counts: Record<string, number>; rating: number; seed?: RetypeSeed } | null = null;
   let tried = 0;
+  const tierCandidate = options.tierCandidate === true;
+  /** The start the search is climbing from, credited with any best it finds (`tierCandidate` only). */
+  let from: RetypeSeed | undefined;
+  /** Every assignment already battled, so three climbs never battle one twice (`tierCandidate` only). */
+  const seen = new Map<string, number>();
   /** The candidate's rating, or −∞ when it does not fit or deals less damage. */
   const consider = (types: number[]): number => {
+    const key = tierCandidate ? types.join(',') : '';
+    if (tierCandidate) {
+      const hit = seen.get(key);
+      if (hit !== undefined) return hit;
+    }
     const c = build(types);
-    if (!c) return -Infinity;
+    if (!c) {
+      if (tierCandidate) seen.set(key, -Infinity);
+      return -Infinity;
+    }
     tried += 1;
     const bill = marchBill(request, c);
-    if (bill.damage < base.damage - 1e-6) return -Infinity;
-    const score = rate(base, bill, rates);
-    if (score > 1e-9 && (!best || score > best.rating)) best = { counts: c, rating: score };
+    const score = bill.damage < base.damage - 1e-6 ? -Infinity : rate(base, bill, rates);
+    if (tierCandidate) seen.set(key, score);
+    if (score > 1e-9 && (!best || score > best.rating))
+      best = tierCandidate
+        ? { counts: c, rating: score, seed: from as RetypeSeed }
+        : { counts: c, rating: score };
     return score;
   };
 
@@ -121,7 +153,29 @@ export function retypeMarch(
   let perms = 1;
   for (let i = 0; i < k; i += 1) perms *= m - i;
   const exhaustive = perms <= EXHAUSTIVE;
+  const asIs = troopStacks.map((s) => table.findIndex((t) => t.id === s.unitId));
+  let tier = asIs;
+  let ranking = asIs;
+  if (tierCandidate) {
+    // The march's own types laid over its own slots, biggest slot first, in a given order of first to die.
+    const bySlotHp = slots.map((_, i) => i).sort((a, b) => (slots[b] ?? 0) - (slots[a] ?? 0));
+    const laid = (rank: Map<string, number>): number[] => {
+      const types = [...asIs].sort(
+        (a, b) =>
+          (rank.get(table[a]?.id ?? '') ?? Infinity) - (rank.get(table[b]?.id ?? '') ?? Infinity) || a - b,
+      );
+      const out = [...asIs];
+      bySlotHp.forEach((slot, i) => (out[slot] = types[i] as number));
+      return out;
+    };
+    tier = laid(new Map(buildKillOrder(request.units, request.options).map((id, i) => [id, i])));
+    ranking = laid(new Map(rankTroops(effectiveTable(request)).map((entry, i) => [entry.id, i])));
+    // Tier order is always tried, whatever the search below: one battle.
+    from = 'tier';
+    consider(tier);
+  }
   if (exhaustive) {
+    from = 'exhaustive';
     const walk = (acc: number[], used: Set<number>): void => {
       if (outOfTime()) return;
       if (acc.length === k) {
@@ -141,34 +195,97 @@ export function retypeMarch(
   } else {
     // A best-improvement climb from the march as it stands (rating 0 against itself): swap two slots, or put
     // an unused type in a slot; move to the best neighbour while it rates higher than where the climb stands.
-    let current = troopStacks.map((s) => table.findIndex((t) => t.id === s.unitId));
-    let currentScore = 0;
-    for (let step = 0; step < CLIMB_STEPS && !outOfTime(); step += 1) {
-      let moved: { types: number[]; score: number } | null = null;
-      const neighbours: number[][] = [];
-      for (let a = 0; a < k; a += 1) {
-        for (let b = a + 1; b < k; b += 1) {
-          const next = [...current];
-          [next[a], next[b]] = [next[b] as number, next[a] as number];
-          neighbours.push(next);
+    const climb = (start: number[], startScore: number): void => {
+      let current = start;
+      let currentScore = startScore;
+      for (let step = 0; step < CLIMB_STEPS && !outOfTime(); step += 1) {
+        let moved: { types: number[]; score: number } | null = null;
+        const neighbours: number[][] = [];
+        for (let a = 0; a < k; a += 1) {
+          for (let b = a + 1; b < k; b += 1) {
+            const next = [...current];
+            [next[a], next[b]] = [next[b] as number, next[a] as number];
+            neighbours.push(next);
+          }
+          for (let t = 0; t < m; t += 1) {
+            if (current.includes(t)) continue;
+            const next = [...current];
+            next[a] = t;
+            neighbours.push(next);
+          }
         }
-        for (let t = 0; t < m; t += 1) {
-          if (current.includes(t)) continue;
-          const next = [...current];
-          next[a] = t;
-          neighbours.push(next);
+        for (const next of neighbours) {
+          if (outOfTime()) break;
+          const s = consider(next);
+          if (s > currentScore + 1e-6 && (!moved || s > moved.score)) moved = { types: next, score: s };
         }
+        if (!moved) break;
+        current = moved.types;
+        currentScore = moved.score;
       }
-      for (const next of neighbours) {
-        if (outOfTime()) break;
-        const s = consider(next);
-        if (s > currentScore + 1e-6 && (!moved || s > moved.score)) moved = { types: next, score: s };
+    };
+    if (!tierCandidate) climb(asIs, 0);
+    else {
+      const same = (a: number[], b: number[]): boolean => a.every((t, i) => t === b[i]);
+      const tierScore = seen.get(tier.join(',')) ?? -Infinity;
+      from = 'as-is';
+      climb(asIs, 0);
+      if (!same(tier, asIs)) {
+        from = 'tier';
+        climb(tier, tierScore);
       }
-      if (!moved) break;
-      current = moved.types;
-      currentScore = moved.score;
+      if (!same(ranking, asIs) && !same(ranking, tier)) {
+        from = 'ranking';
+        climb(ranking, consider(ranking));
+      }
     }
   }
-  const found = best as { counts: Record<string, number>; rating: number } | null;
-  return found ? { counts: found.counts, rating: found.rating, tried, exhaustive, cut } : null;
+  if (tierCandidate && best !== null && !cut) {
+    // **The kept march against its own tier order** (§3's twin): the assignment kept was rated on the slots of
+    // the march handed in, and each type rounded up to whole units, so it stands on slots of its own — where
+    // its own types in kill order can rate above it. Taken while it does, still above the march handed in and
+    // holding its damage (experiment 169 §D: three marches of the message camp, +0.03 each).
+    const killRank = new Map(buildKillOrder(request.units, request.options).map((id, i) => [id, i]));
+    const byId = new Map(table.map((entry) => [entry.id, entry]));
+    for (let round = 0; round < 3; round += 1) {
+      const kept = best as { counts: Record<string, number>; rating: number; seed?: RetypeSeed };
+      const own = marchResult(request, kept.counts).result.stacks.filter(
+        (s) => s.pool === 'leadership' && s.count > 0,
+      );
+      const ownSlots = own.map((s) => s.totalHp).sort((a, b) => b - a);
+      const ownTypes = own
+        .map((s) => s.unitId)
+        .sort((a, b) => (killRank.get(a) ?? Infinity) - (killRank.get(b) ?? Infinity));
+      const twin: Record<string, number> = { ...hired };
+      let lead = 0;
+      ownTypes.forEach((id, i) => {
+        const entry = byId.get(id);
+        if (!entry) return;
+        const count = Math.ceil((ownSlots[i] ?? 0) / entry.hp);
+        twin[id] = count;
+        lead += count * entry.cost;
+      });
+      if (lead > request.housing.leadership) break;
+      if (ownTypes.every((id) => twin[id] === kept.counts[id])) break;
+      tried += 1;
+      const bill = marchBill(request, twin);
+      if (bill.damage < base.damage - 1e-6) break;
+      if (!(rate(marchBill(request, kept.counts), bill, rates) > 1e-9)) break;
+      const score = rate(base, bill, rates);
+      if (!(score > 1e-9)) break;
+      best = { counts: twin, rating: score, seed: 'tier' };
+    }
+  }
+  const found = best as { counts: Record<string, number>; rating: number; seed?: RetypeSeed } | null;
+  if (!found) return null;
+  return tierCandidate
+    ? {
+        counts: found.counts,
+        rating: found.rating,
+        tried,
+        exhaustive,
+        cut,
+        seed: found.seed,
+      }
+    : { counts: found.counts, rating: found.rating, tried, exhaustive, cut };
 }
