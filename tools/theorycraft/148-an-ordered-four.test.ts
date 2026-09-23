@@ -46,9 +46,24 @@ const READINGS = [
   { key: 'gold', head: 'least gold', of: (c: Campaign) => c.gold, want: 'min' },
   { key: 'coins', head: 'fewest coins', of: (c: Campaign) => c.dragonCoins, want: 'min' },
   { key: 'queue', head: 'shortest queue', of: (c: Campaign) => c.seconds, want: 'min' },
-  { key: 'perSilver', head: 'dmg a silver', of: (c: Campaign) => (c.silver > 0 ? c.damage / c.silver : 0), want: 'max' },
-  { key: 'perMerc', head: 'dmg a merc', of: (c: Campaign) => c.hiredDamage / Math.max(1, c.burned), want: 'max' },
-  { key: 'perGold', head: 'dmg a gold', of: (c: Campaign) => (c.gold > 0 ? c.damage / c.gold : 0), want: 'max' },
+  {
+    key: 'perSilver',
+    head: 'dmg a silver',
+    of: (c: Campaign) => (c.silver > 0 ? c.damage / c.silver : 0),
+    want: 'max',
+  },
+  {
+    key: 'perMerc',
+    head: 'dmg a merc',
+    of: (c: Campaign) => c.hiredDamage / Math.max(1, c.burned),
+    want: 'max',
+  },
+  {
+    key: 'perGold',
+    head: 'dmg a gold',
+    of: (c: Campaign) => (c.gold > 0 ? c.damage / c.gold : 0),
+    want: 'max',
+  },
   {
     key: 'perCoin',
     head: 'dmg a coin',
@@ -80,6 +95,10 @@ const SHORT: Record<string, string> = {
   'all-in': 'AI',
 };
 const SILVER_SLACK = 0.05;
+/** `MAX_STOPS=5` re-runs with five stops (owner, 2026-09-23: *"ok allow 5 stops"*); `SWEET=always` keeps the
+ * sweet spot whether or not it holds anything alone. Either writes its own report. */
+const MAX_STOPS = Number(process.env.MAX_STOPS ?? 4);
+const SWEET_ALWAYS = process.env.SWEET === 'always';
 
 interface Candidate {
   name: string;
@@ -94,12 +113,15 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
   it('searches the stops and the band for an ordered bar of four by the owner’s rules', () => {
     const profile = ownerProfile();
     const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
-    const report = new Report('148-an-ordered-four');
+    const report = new Report(
+      `148-an-ordered-four${MAX_STOPS !== 4 ? `-${String(MAX_STOPS)}` : ''}${SWEET_ALWAYS ? '-sweet' : ''}`,
+    );
     report.add('# 148 — an ordered bar of four\n');
     report.add(
       'Candidates: the engine’s stops (**HS** hired saver · **SS** silver saver · **SW** sweet spot · **MM** more ' +
         'mercs · **MX** steady max · **AI** all in) and every plan of the band (**b·N**, N its hired burned over ' +
-        'the campaign). Rules: ≤ 4 stops · ordered (S-61) · least silver within 5 % of the stops’ own · the sweet ' +
+        `the campaign). Rules: ≤ ${String(MAX_STOPS)} stops${SWEET_ALWAYS ? ' (the sweet spot always kept)' : ''} ·` +
+        ' ordered (S-61) · least silver within 5 % of the stops’ own · the sweet ' +
         'spot unless it holds nothing alone · every TotalStack row the pool beats still beaten and every row it ' +
         'fits still fitted. Figures are the campaign’s — four marches, worst opening, default recovery; the ' +
         'queue is one training queue’s total over the four marches, speed bonuses on, no speed-up items. A **bold** ' +
@@ -136,7 +158,9 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
       const theirs: Campaign[] = [];
       for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
         if (Object.entries(external.counts).some(([id, c]) => c > 0 && !held.has(id))) continue;
-        theirs.push(asCaptured(widenedFor(scenario.request, external.counts), external.name, external.counts));
+        theirs.push(
+          asCaptured(widenedFor(scenario.request, external.counts), external.name, external.counts),
+        );
       }
       const make = (name: string, row: Candidate['row']): Candidate => {
         const campaign = campaignOf(scenario.request, name, 'plan', marchesOf(row));
@@ -192,7 +216,9 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
       const all = [...stopCands, ...bandCands];
       const covers = (a: Candidate, b: Candidate): boolean =>
         READINGS.every((r, i) =>
-          r.want === 'max' ? (a.values[i] ?? 0) >= (b.values[i] ?? 0) : (a.values[i] ?? 0) <= (b.values[i] ?? 0),
+          r.want === 'max'
+            ? (a.values[i] ?? 0) >= (b.values[i] ?? 0)
+            : (a.values[i] ?? 0) <= (b.values[i] ?? 0),
         ) &&
         [...b.beats].every((x) => a.beats.has(x)) &&
         [...b.fits].every((x) => a.fits.has(x));
@@ -206,7 +232,9 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
       const burnOf = (c: Candidate): number => c.row.repeat.mercLost;
       const damageOf = (c: Candidate): number => c.row.repeat.damage;
       const ordered = (set: Candidate[]): boolean => {
-        const sorted = [...set].sort((a, b) => burnOf(a) - burnOf(b) || a.row.repeat.silver - b.row.repeat.silver);
+        const sorted = [...set].sort(
+          (a, b) => burnOf(a) - burnOf(b) || a.row.repeat.silver - b.row.repeat.silver,
+        );
         for (let i = 1; i < sorted.length; i += 1) {
           const prev = sorted[i - 1] as Candidate;
           const cur = sorted[i] as Candidate;
@@ -224,7 +252,7 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
         const broken: string[] = [];
         if (!ordered(set)) broken.push('order');
         if ((values[1] ?? 0) > poolLeast * (1 + SILVER_SLACK)) broken.push('low silver');
-        if (sweetNeeded && sweet && !set.includes(sweet)) broken.push('sweet spot');
+        if ((sweetNeeded || SWEET_ALWAYS) && sweet && !set.includes(sweet)) broken.push('sweet spot');
         const lostBeats = [...poolBeats].filter((x) => !b.has(x)).length;
         const lostFits = [...poolFits].filter((x) => !f.has(x)).length;
         if (lostBeats > 0 || lostFits > 0) broken.push('beat everything');
@@ -239,11 +267,24 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
           fit: f.size,
         };
       };
-      // Every set of one to four candidates.
-      const sets: Candidate[][] = [];
+      // Every set of one to MAX_STOPS candidates, judged as it is walked and only the best kept: at five stops
+      // over 64 candidates there are 7.6 million, too many to hold (the first five-stop run ran out of memory).
+      type Judged = ReturnType<typeof judge>;
+      const better = (a: Judged, b: Judged): number =>
+        a.broken.length - b.broken.length ||
+        a.lostCount - b.lostCount ||
+        a.lostSum - b.lostSum ||
+        b.beat - a.beat ||
+        b.fit - a.fit ||
+        // The owner keeps four stops, then five: at a tie, the fuller bar.
+        b.set.length - a.set.length;
+      let top: Judged | undefined;
       const walk = (start: number, acc: Candidate[]): void => {
-        if (acc.length > 0) sets.push([...acc]);
-        if (acc.length === 4) return;
+        if (acc.length > 0) {
+          const judged = judge([...acc]);
+          if (!top || better(judged, top) < 0) top = judged;
+        }
+        if (acc.length === MAX_STOPS) return;
         for (let i = start; i < candidates.length; i += 1) {
           acc.push(candidates[i] as Candidate);
           walk(i + 1, acc);
@@ -251,18 +292,6 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
         }
       };
       walk(0, []);
-      const judged = sets.map(judge);
-      judged.sort(
-        (a, b) =>
-          a.broken.length - b.broken.length ||
-          a.lostCount - b.lostCount ||
-          a.lostSum - b.lostSum ||
-          b.beat - a.beat ||
-          b.fit - a.fit ||
-          // The owner keeps four stops: at a tie, the fuller bar.
-          b.set.length - a.set.length,
-      );
-      const top = judged[0];
       if (!top) continue;
       // The chosen bar, re-checked with the real matched-spend verdict rather than the per-stop union.
       const real =
@@ -276,10 +305,19 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
       if (top.broken.length === 0) passed += 1;
       if (top.broken.length === 0 && top.lostCount === 0) lossless += 1;
       const code = (set: Candidate[]): string =>
-        [...set].sort((a, b) => burnOf(a) - burnOf(b) || a.row.repeat.silver - b.row.repeat.silver).map((c) => c.name).join(' · ');
+        [...set]
+          .sort((a, b) => burnOf(a) - burnOf(b) || a.row.repeat.silver - b.row.repeat.silver)
+          .map((c) => c.name)
+          .join(' · ');
       summary.push(
         `| ${scenario.label.slice(0, 40)} | ${code(pool)} | ${code(top.set)} | ${top.broken.length > 0 ? top.broken.join(', ') : 'none'} | ` +
-          `${top.lostCount > 0 ? READINGS.filter((_, i) => (top.losses[i] ?? 0) > 0).map((r) => r.head).join(', ') : 'none'} | ` +
+          `${
+            top.lostCount > 0
+              ? READINGS.filter((_, i) => (top.losses[i] ?? 0) > 0)
+                  .map((r) => r.head)
+                  .join(', ')
+              : 'none'
+          } | ` +
           `${String(realPool.rowsBeaten)} → ${String(real.rowsBeaten)} | ${String(realPool.unfitted)} → ${String(real.unfitted)} | ${sweetNeeded ? 'yes' : 'no — holds nothing alone'} |`,
       );
       // Detail: every candidate on the chosen bar and in the pool, all ten readings; then the bar beside the pool.
@@ -320,8 +358,12 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
             (top.losses[i] ?? 0) > 0
               ? `**${show(r, top.values[i] ?? 0)} (${r.want === 'max' ? '−' : '+'}${(top.losses[i] ?? 0).toFixed(1)} %)**`
               : show(r, top.values[i] ?? 0),
-          ).join(' | ')} | ${String(real.rowsBeaten)} | ${String(real.unfitted)} | ${ordered(top.set) ? '✓' : '✗'} |` +
-          (top.broken.length > 0 ? `\n\n**No bar passes every rule here.** The closest breaks: ${top.broken.join(', ')}.` : ''),
+          ).join(
+            ' | ',
+          )} | ${String(real.rowsBeaten)} | ${String(real.unfitted)} | ${ordered(top.set) ? '✓' : '✗'} |` +
+          (top.broken.length > 0
+            ? `\n\n**No bar passes every rule here.** The closest breaks: ${top.broken.join(', ')}.`
+            : ''),
       );
     }
     report.add('## Summary\n');

@@ -1,8 +1,7 @@
 # The stops the bar offers — implementation plan (W10)
 
-**Status: implemented (2026-09-23) as `burnSaver: 'guard'`, with two corrections validation found — see §9.**
-One decision is still owed (§9.3); §3's three-or-four is answered by the owner: keep every stop the search
-finds and fold to the three best afterwards.
+**Status (2026-09-23): the hired saver and the fold are shipped — `burnSaver: 'silver', foldTo: 5` (§10).**
+The guard of §9 was the first step and is superseded. One trade is owed to the owner (§10.4).
 
 This plan exists because a comparison went out with a mandatory metric missing from it. The owner:
 *"you're still missing one of the mandatory metric merc spent."* He was right — every table in the thread
@@ -225,3 +224,67 @@ to find the best solutions, they can be filtered in the end to retain the three 
 the stop rules keep offering everything; a final pass keeps the three best. It has to be measured the way 146
 is — all seven markers, matched spend, the criteria — and 145's B-swap already shows the price of dropping a
 stop is real (damage a merc −0.6 % on one army).
+
+---
+
+## 10. The fold, shipped (2026-09-23)
+
+The owner, on 147 and 148: *"lets keep four spots … which should keep the sweet spot while ensuring we beat
+everything … Can't we compute that before answering … I still think we need a low silver one that's actually
+one. Is there really no way to keep the bar ordered?"*, then *"ok allow 5 stops and lets build from here"*.
+
+### 10.1 What was measured before building
+
+- **147** — every set of three stops, on ten readings (most damage; least silver, burn, gold, coins, training
+  queue; damage a silver, a merc, a gold, a coin): 12 of 17 armies have a lossless three, but the lossless
+  three often breaks the order or drops the sweet spot.
+- **148** — the stops **and the whole band**, searched exhaustively under the owner's rules (order, a real
+  low-silver stop within 5 %, the sweet spot unless it holds nothing alone, every TotalStack row still beaten
+  and fitted). At four stops 16 of 17 pass and 13 lose nothing; **at five, 16 pass and 15 lose nothing**, and
+  keeping the sweet spot always cost nothing. The band holds better savers: on the 12 000 export plan b·48
+  costs the same 12,129,500 silver as the silver saver and hits harder, and burns just enough to stand right
+  of the hired saver — the bar becomes ordered and loses nothing.
+- **The one army that cannot be ordered**: the owner's live account of 2026-09-18. All four plans burning less
+  than the silver saver's 4 a march hit 5.48M–6.13M against its 3.69M. There the order wins and the bar is
+  the guard's.
+
+### 10.2 The rule (`CampaignInput.foldTo`, `plan.ts`)
+
+The bar is chosen **as a whole** at the end, over the stops and the band, to at most five: the order first
+(S-61), the sweet spot second, then a real low-silver stop, then the fewest of the ten readings lost, then the
+least in sum, then the fuller bar. A band plan enters **only by taking a saver's role truthfully** — the
+silver saver as the bar's cheapest, the hired saver as its fewest burned. The engine cannot see TotalStack;
+149 checks that the rule keeps what 148 could see.
+
+### 10.3 Measured on the engine (149, against the guard of 54c7e3d)
+
+No army reads worse on any of the ten readings; no criterion broken (order, S-93, ≤ 5, sweet spot, one name
+each, two troop stacks); TotalStack rows **47 dominated, no stop fits 17 → 13** (148's own best); the two
+six-stop bars fold to five by dropping more mercs; the fold adds at most 60 ms to a plan. The 12 000 export
+gains the hired saver: fewest burned 45 → 30, least gold 2,984 → 2,408, damage a silver 1.720 → 1.754, damage
+a merc 333,911 → 369,197, damage a gold 6,992 → 9,003.
+
+### 10.4 The trade owed to the owner — the 7 000 export
+
+The ten readings cannot see one thing the benchmark pins: **how far the bar's best stop inside TotalStack's
+hardest march out-hits it**. On the 7 000 export that march is 13,742,586 for 3,472 gold and 51 burned; more
+mercs fits inside it (3,536 gold, 47 burned, within 5 %) and hits **21,363,106, +55.5 %**; the steady max
+does not (4,000 gold, 55 burned). Folding to five drops more mercs — it holds none of the ten readings alone —
+and the best stop inside that budget becomes the sweet spot, **18,796,348, +36.8 %**. The pin (≥ 55.45 %)
+is red and **not re-based**. The three ways out:
+
+| on the 7 000 export | hardest-march margin | fewest burned | least gold | damage a gold |
+|---|---:|---:|---:|---:|
+| five stops, more mercs folded (shipped) | +36.8 % | 26 | 2,112 | 7,140 |
+| five stops, hired saver folded (the bar before W10) | +55.5 % | 32 | 2,544 | 6,810 |
+| six stops | +55.5 % | 26 | 2,112 | 7,140 |
+
+### 10.5 Pins moved (not re-based)
+
+`plan-benchmark` "stops on the bar" (pinned → now): Epic Monster Hunter ×83 3 → 4, Aydae 4 975 3 → 4, the owner's live camp
+4 → 5, his usual setup 2 → 3; on already-red armies the 12 000 export 5 → 4, the 7 000 export 4 → 5, his camp
+as his message reads it 4 → 5, his localStorage camp 4 → 5. `plan-benchmark` 7 000 export: the hardest-march
+margin above. `plan-benchmark` 12 000 export: "the plan's best a hired beats the sizers" turns **green**.
+`plan-criteria` at 12 000 (already red): the silver saver's damage a hired 302,304 → 287,777 against a floor of
+645,213 — the silver saver there is now band plan b·48. Suite: 17 failed / 1 148 passed, against 13 / 1 134
+before W10.

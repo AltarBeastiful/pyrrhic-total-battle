@@ -57,11 +57,20 @@ export const CAMPAIGN = {
    * hides the legionary-free plan, and with A on it has nothing left to hide.
    *
    * - `burnSaver` — W10 (`docs/plans/the-stops-the-bar-offers.md`, 2026-09-23): the bar also offers the
-   *   band's fewest-burn plan, where it keeps the bar's order (`'guard'`, `CampaignInput.burnSaver`).
-   *   Experiment 146: 47 of TotalStack's rows dominated and 17 no stop fits, against 45 and 22 without it,
-   *   and no benchmark army reads worse on any of the seven markers.
+   *   band's fewest-burn plan (`CampaignInput.burnSaver`), everywhere, and leaves it to the fold below.
+   * - `foldTo` — the fold (owner, 2026-09-23: *"ok allow 5 stops"*): the bar re-chosen as a whole, over the
+   *   stops and the band, to at most five stops that keep its order, the sweet spot and a real low-silver
+   *   stop, losing as little as possible of the ten readings. Experiment 149, against the guard of 54c7e3d:
+   *   no benchmark army worse on any reading, no criterion broken, and TotalStack's rows no stop fits
+   *   17 → 13 (47 dominated either way).
    */
-  planFixes: { tokenFloor: true, refuseDroppedTypes: true, sizerShape: true, burnSaver: 'guard' as const },
+  planFixes: {
+    tokenFloor: true,
+    refuseDroppedTypes: true,
+    sizerShape: true,
+    burnSaver: 'silver' as const,
+    foldTo: 5,
+  },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
    * keeps, the sweet spot in the middle of the rungs nothing beats on both ratios, and the most damage —

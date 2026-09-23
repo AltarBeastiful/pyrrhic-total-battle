@@ -157,11 +157,12 @@ export interface CampaignInput {
    * on damage instead, as the W10 plan first wrote it, opened 3 fewer of TotalStack's rows (146: 45 / 16
    * against 47 / 13).
    *
-   * - `'guard'` — **what the app ships** (`CAMPAIGN.planFixes`): the saver is withheld wherever it would
+   * - `'guard'` — shipped in 54c7e3d, replaced by the fold (`foldTo`): the saver is withheld wherever it would
    *   break the bar's own order (S-61) — a stop at the same burn or less, or a stop to its right it out-hits.
    *   Measured over the seventeen benchmark armies (146): 47 rows dominated and 17 no stop fits, against
    *   45 and 22 without it; no army reads worse on any of the seven markers.
-   * - `'silver'` — offered wherever `offer` accepts it: 47 / 13, but S-61 breaks on three armies.
+   * - `'silver'` — offered wherever `offer` accepts it: 47 / 13, but S-61 breaks on three armies — **what the
+   *   app ships, with `foldTo`**, which restores the order (`CAMPAIGN.planFixes`, experiment 149).
    * - `'damage'` — the same with the damage tie-break, for the record.
    * - `'fold'` — offered, and the stops it out-hits dropped: 47 / 13, but the least silver and the damage a
    *   silver fall on three armies, a regression.
@@ -169,6 +170,22 @@ export interface CampaignInput {
    * Omitted, the bar is the five stops it was.
    */
   burnSaver?: 'damage' | 'silver' | 'guard' | 'fold' | undefined;
+  /**
+   * **The fold** (W10 §9.5; owner, 2026-09-23: *"fold uninteresting stops … filtered in the end to retain the
+   * best ones"*, then *"ok allow 5 stops"*). Set, the bar is re-chosen at the end, over the stops the rules
+   * above offered **and the band**, to at most this many stops — experiments 147, 148 and 149:
+   *
+   *  - the bar keeps its order (S-61), a real low-silver stop (within 5 % of the cheapest the stops offered)
+   *    and the sweet spot;
+   *  - among the bars that do, the one that gives up the fewest of the ten readings the plan is judged on
+   *    (the most damage, the least silver, burn, gold, coins and queue, and damage a silver, a hired unit, a
+   *    gold and a coin), then the least in sum, then the fuller bar;
+   *  - a band plan enters **only by taking a role truthfully** — as the silver saver when it is the bar's
+   *    cheapest, as the hired saver when it burns the fewest — so no stop wears a name its figures deny.
+   *
+   * Meant with `burnSaver: 'silver'`: the fold, not the guard, decides where the hired saver stands.
+   */
+  foldTo?: number | undefined;
   /**
    * **Put a left-out troop type back** (owner, 2026-09-18: *"generation sometimes skips low-level stacks and
    * misses some damage that seems cheap … add a pass to consider again lower level troops if the cost for them
@@ -5285,6 +5302,165 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         other.mercLost < row.mercLost,
     );
     if (beaten) stops.splice(lastIn, 1);
+  }
+
+  /**
+   * **The fold** (`CampaignInput.foldTo`; experiments 147–149). Every stop above was chosen by its own rule;
+   * this is the one place the bar is chosen **as a whole**. The readings are the campaign's, as the stops
+   * print them, and a set is judged against the stops the rules offered (the pool): what it keeps of the
+   * pool's best on each reading, whether it is ordered, whether its cheapest stop is still a real saving.
+   *
+   * Measured before it was written (148, the exhaustive search with TotalStack's rows as a sixth rule): at five
+   * stops 16 of 17 benchmark armies have an ordered bar that loses nothing TotalStack is beaten on, 15 of
+   * them losing none of the ten readings, and keeping the sweet spot never cost a reading. The one that
+   * cannot is the owner's live account of 2026-09-18, where every plan burning less than the silver saver
+   * hits harder than it (5.48M–6.13M a march against 3.69M): there the order wins, as it always has, and the
+   * bar is the one the guard offered.
+   */
+  if (input.foldTo !== undefined && stops.length > 0) {
+    const limit = Math.max(1, input.foldTo);
+    const readings: { of: (row: PlanTotals) => number; high: boolean }[] = [
+      { of: (row) => row.totalDamage, high: true },
+      { of: (row) => row.silver, high: false },
+      { of: (row) => row.mercLost, high: false },
+      { of: (row) => row.gold, high: false },
+      { of: (row) => row.dragonCoins, high: false },
+      { of: (row) => row.seconds, high: false },
+      { of: (row) => (row.silver > 0 ? row.totalDamage / row.silver : 0), high: true },
+      { of: (row) => row.hiredDamage / Math.max(1, row.mercLost), high: true },
+      { of: (row) => (row.gold > 0 ? row.totalDamage / row.gold : 0), high: true },
+      { of: (row) => (row.dragonCoins > 0 ? row.totalDamage / row.dragonCoins : 0), high: true },
+    ];
+    const bestOf = (set: readonly PlanTotals[], index: number): number => {
+      const reading = readings[index] as (typeof readings)[number];
+      const values = set.map(reading.of);
+      return reading.high ? Math.max(...values) : Math.min(...values);
+    };
+    const pool = [...stops];
+    const poolBest = readings.map((_, index) => bestOf(pool, index));
+    const lossOn = (value: number, index: number): number => {
+      const reading = readings[index] as (typeof readings)[number];
+      const target = poolBest[index] ?? 0;
+      if (reading.high) return value < target - 1e-9 && target > 0 ? (target - value) / target : 0;
+      if (value > target + 1e-9) return target > 0 ? (value - target) / target : 1;
+      return 0;
+    };
+    const poolLeast = poolBest[1] ?? 0;
+    const sweet = pool.find((row) => row.pick === 'sweet-spot');
+    // The band, priced over the horizon like the stops, less the marches already on the bar.
+    const band = candidates
+      .map((row) => withTail(row))
+      .filter((row) => !pool.some((stop) => sameCounts(stop, row)));
+    const ordered = (set: readonly PlanRow[]): boolean => {
+      const sorted = [...set].sort(byBurn);
+      for (let index = 1; index < sorted.length; index += 1) {
+        const previous = sorted[index - 1] as PlanRow;
+        const current = sorted[index] as PlanRow;
+        if (current.pick === 'all-in') continue;
+        if (current.repeat.mercLost <= previous.repeat.mercLost) return false;
+        if (current.repeat.damage <= previous.repeat.damage) return false;
+      }
+      return true;
+    };
+    interface Judged {
+      set: PlanRow[];
+      /** The order is the bar's own axis (S-61) and is never traded for anything: it is ranked first. */
+      disordered: boolean;
+      /** The sweet spot is the bar's recommendation (`recommend`, `PlanPanel`): ranked second, as hard. */
+      noSweet: boolean;
+      broken: number;
+      lost: number;
+      lostSum: number;
+      named: number;
+    }
+    const judge = (set: PlanRow[]): Judged => {
+      let lost = 0;
+      let lostSum = 0;
+      for (let index = 0; index < readings.length; index += 1) {
+        const loss = lossOn(bestOf(set, index), index);
+        if (loss > 0) {
+          lost += 1;
+          lostSum += loss;
+        }
+      }
+      const broken = bestOf(set, 1) > poolLeast * 1.05 ? 1 : 0;
+      return {
+        set,
+        disordered: !ordered(set),
+        noSweet: sweet !== undefined && !set.includes(sweet),
+        broken,
+        lost,
+        lostSum,
+        named: set.filter((row) => pool.includes(row)).length,
+      };
+    };
+    const better = (a: Judged, b: Judged): boolean => {
+      if (a.disordered !== b.disordered) return !a.disordered;
+      if (a.noSweet !== b.noSweet) return !a.noSweet;
+      if (a.broken !== b.broken) return a.broken < b.broken;
+      if (a.lost !== b.lost) return a.lost < b.lost;
+      if (Math.abs(a.lostSum - b.lostSum) > 1e-12) return a.lostSum < b.lostSum;
+      if (a.set.length !== b.set.length) return a.set.length > b.set.length;
+      return a.named > b.named;
+    };
+    let chosen = judge(pool.length <= limit ? pool : pool.slice(0, limit));
+    const consider = (set: PlanRow[]): void => {
+      if (set.length === 0 || set.length > limit) return;
+      const judged = judge(set);
+      if (better(judged, chosen)) chosen = judged;
+    };
+    /**
+     * **The band plans that could take a saver's role truthfully**, and no others: the band runs to thousands
+     * of plans on a monster camp, and a plan that cannot be the bar's cheapest (within the 5 % the low-silver
+     * rule allows) or its fewest burned can never wear either name. The thirty closest of each are tried.
+     */
+    const asRole = (row: PlanTotals, pick: PlanPick): PlanRow => ({
+      ...(row as TradeRow),
+      pick,
+      bestFor: { silver: false, hired: false },
+    });
+    const SUBSTITUTES = 30;
+    const fewestOther = Math.min(
+      ...pool.filter((row) => row.pick !== 'burn-saver').map((row) => row.mercLost),
+    );
+    const silverBand = band
+      .filter((row) => row.silver <= poolLeast * 1.05)
+      .sort((a, b) => a.silver - b.silver || b.totalDamage - a.totalDamage)
+      .slice(0, SUBSTITUTES)
+      .map((row) => asRole(row, 'silver-saver'));
+    const burnBand = band
+      .filter((row) => row.mercLost < fewestOther)
+      .sort((a, b) => a.mercLost - b.mercLost || b.totalDamage - a.totalDamage)
+      .slice(0, SUBSTITUTES)
+      .map((row) => asRole(row, 'burn-saver'));
+    const cheapest = (set: PlanRow[], row: PlanRow): boolean =>
+      set.every((other) => other === row || other.silver > row.silver);
+    const fewest = (set: PlanRow[], row: PlanRow): boolean =>
+      set.every((other) => other === row || other.mercLost > row.mercLost);
+    for (let mask = 1; mask < 1 << pool.length; mask += 1) {
+      const subset = pool.filter((_, index) => (mask >> index) & 1);
+      if (subset.length > limit) continue;
+      consider(subset);
+      const silverFree = !subset.some((row) => row.pick === 'silver-saver');
+      const burnFree = !subset.some((row) => row.pick === 'burn-saver');
+      const silverTries = silverFree && subset.length < limit ? silverBand : [];
+      const burnTries = burnFree && subset.length < limit ? burnBand : [];
+      for (const silver of silverTries) {
+        const withSilver = [...subset, silver];
+        if (!cheapest(withSilver, silver)) continue;
+        consider(withSilver);
+        if (withSilver.length >= limit) continue;
+        for (const burn of burnTries) {
+          const both = [...withSilver, burn];
+          if (cheapest(both, silver) && fewest(both, burn)) consider(both);
+        }
+      }
+      for (const burn of burnTries) {
+        const withBurn = [...subset, burn];
+        if (fewest(withBurn, burn)) consider(withBurn);
+      }
+    }
+    stops.splice(0, stops.length, ...chosen.set.sort(byBurn));
   }
 
   const bestStop = (of: (row: PlanTotals) => number): PlanRow | undefined =>
