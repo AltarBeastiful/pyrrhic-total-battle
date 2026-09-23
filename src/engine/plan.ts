@@ -43,6 +43,7 @@ import { simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
 import type { Bill, MarkerRates } from './rating';
 import { rate, saved } from './rating';
+import { retypeMarch } from './retype';
 import type { BattleSummary, Housing, RecoverySettings, Stack, StackRequest, StackResult } from './types';
 
 /**
@@ -73,6 +74,14 @@ const RUNG_STEP = 1.02;
 const MERC_FRACTIONS = [0.7, 0.45, 0.2] as const;
 /** Marches the planner will consider spreading the stock over. */
 const MAX_MARCHES = 12;
+/**
+ * **The rated re-typing's share of the plan's budget** (W11 §3.5): the pass stops this fraction of
+ * `budgetMs` after it starts and keeps what it has; every march it did not reach is left as the search made it.
+ * One twentieth — 2 s of the app's 40 s — against a measured worst of well under a second over the seventeen
+ * benchmark armies under Node (`tools/theorycraft/out/160-the-retype-shipped.md`), so it bounds a slow device
+ * without ever cutting a run this repo measures.
+ */
+const RETYPE_SHARE = 0.05;
 /**
  * Mercenary types the grid crosses against each other per march count. Beyond this many, the types with the
  * smallest reach ride one shared fraction of their own largest count instead — see the grid in
@@ -254,6 +263,19 @@ export interface CampaignInput {
    * `CAMPAIGN.putBack`). Omitted, the stops are the marches the search generated, as they were.
    */
   putBack?: PutBackPolicy | undefined;
+  /**
+   * **The rated re-typing** (W11 §3, `docs/plans/the-rated-retyping.md`; experiments 157, 159 and 160). Set to
+   * `'rated'`, every march of every stop — the repeated march, the finale, the troops-only tail and every march
+   * of the `all-in`'s sequence — has its troop types re-chosen by `retypeMarch` (`engine/retype.ts`): hired
+   * stacks kept, each troop slot at least its HP, damage held, the best positive rating by the owner's rates
+   * kept. It runs after the put-back pass and its guard and before the fold, so the fold chooses on re-typed
+   * marches; the band is not re-typed, and a band plan the fold takes as a saver is re-typed once taken.
+   *
+   * The rates are the put-back's (`putBack.rates`, which the app hands over as `CAMPAIGN.markerRates` — one
+   * object, so the two passes can never rate by different numbers): without a put-back policy there are no
+   * rates and the pass does not run. Omitted, the bar is exactly the one before W11 §3.
+   */
+  retype?: 'rated' | undefined;
   /**
    * **The band's token-field yardstick, switchable** — a diagnostic for
    * `tools/theorycraft/108-thrift-end.test.ts` and `112-band-yardstick.test.ts`, never set by the app, kept
@@ -695,6 +717,12 @@ export interface PlanRow extends PlanTotals {
    * percentages above, so the rating is the one figure a test can hold the decision to.
    */
   putBack?: { unitId: string; damage: number; silver: number; seconds: number; rating: number } | undefined;
+  /**
+   * **The rated re-typing this stop took** (`CampaignInput.retype`, W11 §3): how many of its marches it
+   * re-typed, and the owner's rating of the re-typed campaign against the one before (`rate` on the campaign's
+   * bill — damage, silver, gold, hired burn, dragon coins, queue). Absent on a stop it left alone.
+   */
+  retyped?: { marches: number; rating: number } | undefined;
 }
 
 /**
@@ -770,6 +798,12 @@ export interface CampaignPlan extends PlanTotals {
    * instead, and nothing was refused by a band that never applied.
    */
   leftOut: number;
+  /**
+   * **What the rated re-typing did** (`CampaignInput.retype`, W11 §3.5) — a diagnostic, present only when the
+   * pass ran: its wall-clock time, the distinct marches it re-typed out of those it looked at, and whether its
+   * deadline cut it short (marches it did not reach are left as the search made them).
+   */
+  retype?: { ms: number; marches: number; retyped: number; cut: boolean } | undefined;
   /**
    * The reference table under the bar, bucketed by silver: what that much silver buys, and what it buys per
    * mercenary. The two are the owner's two slopes, and the bucketing is what makes the shape visible.
@@ -5369,6 +5403,275 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     stops.sort(byBurn);
   }
   /**
+   * **The rated re-typing** (`CampaignInput.retype`, W11 §3.2; experiments 157, 159 and 160). Complete
+   * optimization chose which troop type stands in each troop stack on damage alone; here every march of every
+   * stop — the repeated march, the finale, the troops-only tail, every march of the `all-in`'s sequence — is
+   * handed to `retypeMarch`, which keeps the hired stacks, keeps every troop slot's HP, holds the damage and
+   * keeps the best positive rating by the owner's rates. Cached by march, so a march two stops share (the tail,
+   * always) is re-typed once and reads the same on both.
+   *
+   * **Where it runs.** After the put-back pass and its guard, so the march it re-types is the one the bar
+   * would otherwise offer; before S-94 and the fold, so every rule that still chooses among the stops reads the
+   * re-typed campaigns — the fold restores the bar's order where a re-typed rung now out-hits the one to its
+   * right. The band is not re-typed (§3.3, below the fold).
+   *
+   * **What it cannot move.** The hired counts are kept to the unit, so the burn, the sustain, S-58 B and the
+   * all-in's own offer rule hold as they held; each troop type is sized to at least its slot's HP, so the
+   * lowest troop stack never falls and the shelter holds. Both are checked on the march it returns rather
+   * than assumed, and a march that failed either would be left as it was.
+   *
+   * **Its clock** (§3.5): `RETYPE_SHARE` of the plan's budget, from the moment the pass starts. Measured in
+   * `tools/theorycraft/out/160-the-retype-shipped.md`.
+   */
+  const retypeRates = input.retype === 'rated' ? input.putBack?.rates : undefined;
+  const retypeDeadline = input.budgetMs === undefined ? Infinity : Date.now() + input.budgetMs * RETYPE_SHARE;
+  const retypeLog = { marches: 0, retyped: 0, cut: false };
+  const retypeCache = new Map<string, Record<string, number>>();
+  const leadershipIds = new Set(
+    table.filter((entry) => entry.pool === 'leadership').map((entry) => entry.id),
+  );
+  const retypeOne = (counts: Record<string, number>): Record<string, number> => {
+    if (retypeRates === undefined) return counts;
+    const key = JSON.stringify(Object.entries(counts).sort());
+    const hit = retypeCache.get(key);
+    if (hit) return hit;
+    if (Date.now() > retypeDeadline) {
+      // Not reached: left as the search made it, and not cached, so it is counted once per ask.
+      retypeLog.cut = true;
+      return counts;
+    }
+    retypeLog.marches += 1;
+    const found = retypeMarch(request, counts, retypeRates, { deadline: retypeDeadline });
+    if (found?.cut) retypeLog.cut = true;
+    let out = counts;
+    if (found) {
+      const next = found.counts;
+      // The hired stacks, kept to the unit.
+      const hiredKept = table.every(
+        (entry) => entry.pool === 'leadership' || (next[entry.id] ?? 0) === (counts[entry.id] ?? 0),
+      );
+      // The shelter: every hired stack under the lowest troop stack, if the march had it before.
+      const shelterOf = (c: Record<string, number>): boolean => {
+        let floor = Infinity;
+        let hiredTop = 0;
+        for (const entry of table) {
+          const hp = (c[entry.id] ?? 0) * entry.hp;
+          if (hp <= 0) continue;
+          if (leadershipIds.has(entry.id)) floor = Math.min(floor, hp);
+          else hiredTop = Math.max(hiredTop, hp);
+        }
+        return hiredTop < floor;
+      };
+      if (hiredKept && (!shelterOf(counts) || shelterOf(next))) {
+        out = next;
+        retypeLog.retyped += 1;
+      }
+    }
+    retypeCache.set(key, out);
+    return out;
+  };
+  /** A march from its counts, priced as every march of the bar is (`toMarch`). */
+  const priceCounts = (counts: Record<string, number>): PlanMarch => {
+    const fields = table
+      .filter((entry) => (counts[entry.id] ?? 0) > 0)
+      .map((entry) => ({ entry, count: counts[entry.id] ?? 0 }));
+    return toMarch(
+      fields.filter((field) => field.entry.pool === 'leadership'),
+      fields.filter((field) => field.entry.pool !== 'leadership'),
+      marchOf(fields, enemyStacks),
+    );
+  };
+  /**
+   * A row with every march re-typed, its campaign re-priced **by difference**: each march that moved adds what
+   * its re-typed march prices at less what it priced at, times the times it is played — the arithmetic
+   * `putBackOn` re-prices a stop by, so a figure the row carries and the search priced is not re-derived.
+   * The same row back when no march moved.
+   */
+  let retypeMs = 0;
+  const retypeRow = <T extends PlanTotals>(row: T): T => {
+    if (retypeRates === undefined) return row;
+    const began = Date.now();
+    try {
+      return retypeRowNow(row);
+    } finally {
+      retypeMs += Date.now() - began;
+    }
+  };
+  const retypeRowNow = <T extends PlanTotals>(row: T): T => {
+    if (retypeRates === undefined) return row;
+    const played: { counts: Record<string, number>; times: number }[] = [];
+    const tailed = row.tail?.marches ?? 0;
+    if (row.sequence) for (const counts of row.sequence) played.push({ counts, times: 1 });
+    else {
+      played.push({ counts: row.counts, times: row.marches - (row.finaleCounts ? 1 : 0) - tailed });
+      if (row.finaleCounts) played.push({ counts: row.finaleCounts, times: 1 });
+      if (row.tail && tailed > 0) played.push({ counts: row.tail.counts, times: tailed });
+    }
+    const moved = played.map(({ counts, times }) => ({ counts, times, next: retypeOne(counts) }));
+    const changed = moved.filter((march) => march.next !== march.counts && march.times > 0);
+    if (changed.length === 0) return row;
+    const delta = { damage: 0, hiredDamage: 0, silver: 0, gold: 0, dragonCoins: 0, seconds: 0, mercLost: 0 };
+    for (const march of changed) {
+      const was = priceCounts(march.counts);
+      const now = priceCounts(march.next);
+      delta.damage += march.times * (now.damage - was.damage);
+      delta.hiredDamage += march.times * (now.hiredDamage - was.hiredDamage);
+      delta.silver += march.times * (now.silver - was.silver);
+      delta.gold += march.times * (now.gold - was.gold);
+      delta.dragonCoins += march.times * (now.dragonCoins - was.dragonCoins);
+      delta.seconds += march.times * (now.seconds - was.seconds);
+      delta.mercLost += march.times * (now.mercLost - was.mercLost);
+    }
+    const nextOf = (counts: Record<string, number>): Record<string, number> =>
+      moved.find((march) => march.counts === counts)?.next ?? retypeOne(counts);
+    const counts = nextOf(row.counts);
+    const repeatMoved = counts !== row.counts;
+    const m = repeatMoved ? priceCounts(counts) : undefined;
+    const totalDamage = row.totalDamage + delta.damage;
+    const hiredDamage = row.hiredDamage + delta.hiredDamage;
+    const silver = row.silver + delta.silver;
+    const dragonCoins = row.dragonCoins + delta.dragonCoins;
+    const mercLost = row.mercLost + delta.mercLost;
+    const tail = row.tail ? nextOf(row.tail.counts) : undefined;
+    const tailMarch = row.tail && tail && tail !== row.tail.counts ? priceCounts(tail) : undefined;
+    const bill = (r: PlanTotals): Bill => ({
+      damage: r.totalDamage,
+      silver: r.silver,
+      gold: r.gold,
+      hired: r.mercLost,
+      dragonCoins: r.dragonCoins,
+      seconds: r.seconds,
+    });
+    const next: T = {
+      ...row,
+      counts,
+      ...(row.finaleCounts ? { finaleCounts: nextOf(row.finaleCounts) } : {}),
+      ...(row.sequence ? { sequence: row.sequence.map(nextOf) } : {}),
+      ...(row.tail && tail && tailMarch
+        ? {
+            tail: {
+              counts: tail,
+              marches: row.tail.marches,
+              damage: tailMarch.damage,
+              silver: tailMarch.silver,
+              seconds: tailMarch.seconds,
+            },
+          }
+        : {}),
+      ...(m
+        ? {
+            repeat: {
+              damage: m.damage,
+              hiredDamage: m.hiredDamage,
+              silver: m.silver,
+              gold: m.gold,
+              dragonCoins: m.dragonCoins,
+              seconds: m.seconds,
+              mercLost: m.mercLost,
+            },
+          }
+        : {}),
+      totalDamage,
+      hiredDamage,
+      silver,
+      gold: row.gold + delta.gold,
+      dragonCoins,
+      seconds: row.seconds + delta.seconds,
+      mercLost,
+      damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
+      damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
+      damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
+    };
+    if (m && 'label' in row) {
+      const stacks = Object.keys(counts).filter(
+        (id) => leadershipIds.has(id) && (counts[id] ?? 0) > 0,
+      ).length;
+      const hired = Object.values(m.mercFielded).reduce((sum, count) => sum + count, 0);
+      (next as T & { label: string }).label =
+        `${stacks} ${stacks === 1 ? 'stack' : 'stacks'} · ${hired} hired · ${compact(m.silver)} silver a march`;
+    }
+    /**
+     * **A silver saver stays one** (plan-criteria, "a bar with a saving on it carries a silver saver"): the stop
+     * is named for its silver, so a re-typing that buys damage or queue with a little more of it is not taken
+     * there — measured on the live account of 2026-09-18, +3 400 silver put it above a band plan it must undercut.
+     */
+    if (
+      (row as Partial<PlanRow>).pick === 'silver-saver' &&
+      (next.silver > row.silver || next.repeat.silver > row.repeat.silver)
+    )
+      return row;
+    (next as T & { retyped?: PlanRow['retyped'] }).retyped = {
+      marches: changed.reduce((sum, march) => sum + march.times, 0),
+      rating: rate(bill(row), bill(next), retypeRates),
+    };
+    return next;
+  };
+  /**
+   * **No reading of the bar may be lost to the pass** (the owner's rule: never forget a marker of a march's
+   * success). The rating can take a re-typing that buys damage with a little silver or queue, and on the
+   * thrift end that raised the bar's least silver on 9 of 17 armies and its shortest queue on 11 (experiment
+   * 160, unguarded; 157-rated read the same). So, on the ten readings the fold judges, a reading the stops held
+   * before the pass and lost after it hands the stop that held it its un-re-typed march back, until none is
+   * lost. Run on the stops the pass re-typed and again on the bar the fold chose, since the fold may keep a
+   * re-typed stop where the one that held the reading was the one it dropped.
+   */
+  const tenReadings = (set: readonly PlanTotals[]): number[] => [
+    Math.max(...set.map((row) => row.totalDamage)),
+    -Math.min(...set.map((row) => row.silver)),
+    -Math.min(...set.map((row) => row.mercLost)),
+    -Math.min(...set.map((row) => row.gold)),
+    -Math.min(...set.map((row) => row.dragonCoins)),
+    -Math.min(...set.map((row) => row.seconds)),
+    Math.max(...set.map((row) => (row.silver > 0 ? row.totalDamage / row.silver : 0))),
+    Math.max(...set.map((row) => row.hiredDamage / Math.max(1, row.mercLost))),
+    Math.max(...set.map((row) => (row.gold > 0 ? row.totalDamage / row.gold : 0))),
+    Math.max(...set.map((row) => (row.dragonCoins > 0 ? row.totalDamage / row.dragonCoins : 0))),
+  ];
+  const keepReadings = (): void => {
+    const unRetyped = stops.map((row) => beforeRetype.get(row) ?? row);
+    const held = tenReadings(unRetyped);
+    const below = (value: number, target: number): boolean => value < target - Math.abs(target) * 1e-12;
+    for (let round = 0; round < stops.length; round += 1) {
+      const now = tenReadings(stops);
+      const lost = now.findIndex((value, index) => below(value, held[index] ?? 0));
+      if (lost < 0) return;
+      const holderAt = unRetyped.findIndex(
+        (row, index) => stops[index] !== row && !below(tenReadings([row])[lost] ?? 0, held[lost] ?? 0),
+      );
+      if (holderAt < 0) return;
+      stops[holderAt] = unRetyped[holderAt] as PlanRow;
+    }
+  };
+  /** The stop a re-typed row was, before the pass: what a collision below hands back. */
+  const beforeRetype = new Map<PlanTotals, PlanRow>();
+  if (retypeRates !== undefined) {
+    for (let index = 0; index < stops.length; index += 1) {
+      const row = stops[index] as PlanRow;
+      const next = retypeRow(row);
+      if (next === row) continue;
+      stops[index] = next;
+      beforeRetype.set(next, row);
+      // The frontier diagnostic reads a re-sized stop back to the march it was made from.
+      generatedOf.set(next, generatedOf.get(row) ?? (row as TradeRow));
+    }
+    // No reading the stops held before the pass is lost to it (`keepReadings`).
+    keepReadings();
+    stops.sort(byBurn);
+    /**
+     * **Two stops at one march** after the pass are one plan, as `offer` and the put-back pass already hold:
+     * the later of a pair is handed its march back rather than dropped, so the bar keeps as many stops as the
+     * rules offered.
+     */
+    for (let index = 1; index < stops.length; index += 1) {
+      const row = stops[index] as PlanRow;
+      if (row.retyped === undefined || !stops.slice(0, index).some((other) => sameCounts(other, row)))
+        continue;
+      const was = beforeRetype.get(row);
+      if (was) stops[index] = was;
+    }
+    stops.sort(byBurn);
+  }
+  /**
    * **The `all-in` is not offered when a stop beside it beats it outright** (S-94, 2026-09-19; the owner,
    * 2026-09-18: *"more damage with a lot of merc spent should trigger a failing test as we're using too much
    * of a rare resource"* — and worse than that, a stop that spends **more** silver *and* more of the stock
@@ -5580,6 +5883,31 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       }
     }
     stops.splice(0, stops.length, ...chosen.set.sort(byBurn));
+    /**
+     * **A band plan the fold took as a saver is re-typed once taken** (W11 §3.3). The band is not re-typed —
+     * a monster camp's runs to thousands of rows, for a choice among a handful — so the fold chose this plan
+     * on its generated marches; re-typed now, it keeps the place only if it still wears its name truthfully
+     * (the bar's cheapest, or its fewest burned), keeps the bar ordered, and is no second copy of a stop.
+     */
+    if (retypeRates !== undefined) {
+      for (let index = 0; index < stops.length; index += 1) {
+        const row = stops[index] as PlanRow;
+        if (pool.includes(row)) continue;
+        const next = retypeRow(row);
+        if (next === row) continue;
+        const trial = stops.map((other) => (other === row ? next : other));
+        const named =
+          (next.pick !== 'silver-saver' || cheapest(trial, next)) &&
+          (next.pick !== 'burn-saver' || fewest(trial, next));
+        const single = !trial.some((other) => other !== next && sameCounts(other, next));
+        if (named && single && (ordered(trial) || chosen.disordered)) {
+          stops[index] = next;
+          beforeRetype.set(next, row);
+        }
+      }
+      keepReadings();
+      stops.sort(byBurn);
+    }
   }
 
   const bestStop = (of: (row: PlanTotals) => number): PlanRow | undefined =>
@@ -5788,6 +6116,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     },
     alternatives,
     leftOut,
+    ...(retypeRates !== undefined
+      ? {
+          retype: {
+            ms: retypeMs,
+            marches: retypeLog.marches,
+            retyped: retypeLog.retyped,
+            cut: retypeLog.cut,
+          },
+        }
+      : {}),
     // The set the four answers came from, when a caller is asking about the trade's *shape* rather than about
     // the answers on it (S-59 follow-up: "the sweet spot seems to be too similar with silver save"). Sorted
     // cheapest first like everything else the UI reads, and built here so the order is the engine's rather

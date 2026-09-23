@@ -74,6 +74,9 @@ export const CAMPAIGN = {
    *   may stand on a single troop stack, every hired stack sheltered under it. Experiments 151, 152 and 154: 2 of
    *   17 use cases put a wall on the bar (3 of 61 stops) — the live camp of 2026-09-18, most damage 15,306,859 →
    *   30,986,506, and the localStorage camp of 2026-09-19, 13,842,678 → 23,589,127 — and nothing else moves.
+   * - `retype` — the rated re-typing (W11 §3, `docs/plans/the-rated-retyping.md`): every march of every stop has
+   *   its troop types re-chosen by the owner's rating (`markerRates`, handed over as `putBack.rates`), hired
+   *   stacks and damage held, before the fold. Experiment 160 measures it on the engine's own bar.
    */
   planFixes: {
     tokenFloor: true,
@@ -82,6 +85,7 @@ export const CAMPAIGN = {
     burnSaver: 'silver' as const,
     foldTo: 5,
     bandTroopStacks: 1,
+    retype: 'rated' as const,
   },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band

@@ -16,12 +16,17 @@ import { describe, expect, test } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import type { CampaignPlan, PlanRow, PlanTotals } from '@/engine/plan';
+import { planMarch } from '@/engine';
 import { planCampaign } from '@/engine/plan';
+import { rate } from '@/engine/rating';
 import type { StackRequest } from '@/engine/types';
 
+import type { Contender } from './matched-spend';
+import { matchedSpend } from './matched-spend';
 import type { Campaign } from './plan-campaign';
-import { campaignOf, marchesOf } from './plan-campaign';
+import { asCaptured, campaignOf, marchesOf } from './plan-campaign';
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from './plan-scenarios';
+import { totalstackRows, widenedFor } from './totalstack-rows';
 
 const profile = ownerProfile();
 const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
@@ -167,4 +172,124 @@ describe('the stops the bar offers', () => {
       expect(now[key] ?? 0, key).toBeGreaterThanOrEqual((was[key] ?? 0) - 1e-9);
     }
   }, 600_000);
+});
+
+/**
+ * **The rated re-typing, on against off** (W11 §4.2–4.3, `docs/plans/the-rated-retyping.md`; experiment 160).
+ * On every benchmark army the bar with `retype: 'rated'` (as shipped in `CAMPAIGN.planFixes`) against the same
+ * request with the pass off: no stop the owner's rating reads worse (`rate` on the campaign bill, matched by
+ * name), no stop's damage lower, every hired stack of every march sheltered, the bar ordered along the burn, at
+ * most five stops — and TotalStack at matched spend no worse than the 47 rows dominated and 13 no stop fits the
+ * bar read before the pass.
+ */
+describe('the rated re-typing', () => {
+  test('ships on', () => {
+    expect(CAMPAIGN.planFixes.retype).toBe('rated');
+  });
+
+  const retypePlan = (request: StackRequest, on: boolean): CampaignPlan | undefined => {
+    try {
+      return planCampaign({
+        request,
+        marchTarget: HORIZON,
+        budgetMs: CAMPAIGN.budgets.plan,
+        ...CAMPAIGN.planFixes,
+        ...(on ? {} : { retype: undefined }),
+        putBack: CAMPAIGN.putBack,
+      });
+    } catch {
+      return undefined;
+    }
+  };
+  const sheltered = (request: StackRequest, counts: Record<string, number>): boolean => {
+    const { result } = planMarch(request, counts);
+    const troops = result.stacks.filter((stack) => stack.pool === 'leadership');
+    if (troops.length === 0) return true;
+    const floor = Math.min(...troops.map((stack) => stack.totalHp));
+    return result.stacks
+      .filter((stack) => stack.pool !== 'leadership')
+      .every((stack) => stack.totalHp < floor);
+  };
+  const totalstack = { before: { beaten: 0, unfitted: 0 }, after: { beaten: 0, unfitted: 0 }, armies: 0 };
+
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const off = retypePlan(scenario.request, false);
+        const on = retypePlan(scenario.request, true);
+        expect(on === undefined).toBe(off === undefined);
+        if (!off || !on || off.alternatives.length === 0) return;
+        totalstack.armies += 1;
+        const priced = (row: PlanRow): Campaign =>
+          campaignOf(scenario.request, row.pick, 'plan', marchesOf(row as PlanTotals));
+        const before = off.alternatives.map(priced);
+        const after = on.alternatives.map(priced);
+        const billOf = (c: Campaign) => ({
+          damage: c.damage,
+          silver: c.silver,
+          gold: c.gold,
+          hired: c.burned,
+          dragonCoins: c.dragonCoins,
+          seconds: c.seconds,
+        });
+        on.alternatives.forEach((row, index) => {
+          const was = off.alternatives.findIndex((other) => other.pick === row.pick);
+          const a = before[was];
+          const b = after[index];
+          if (was < 0 || !a || !b) return;
+          expect(
+            rate(billOf(a), billOf(b), CAMPAIGN.markerRates),
+            `${row.pick} rated`,
+          ).toBeGreaterThanOrEqual(-1e-9);
+          expect(b.damage, `${row.pick} damage`).toBeGreaterThanOrEqual(a.damage);
+        });
+        // The ten readings: none lost to the pass.
+        const was = readings(before);
+        const now = readings(after);
+        const lost = Object.keys(was).filter((key) => (now[key] ?? 0) < (was[key] ?? 0) - 1e-9);
+        expect(lost, `readings the pass lost: ${lost.join(', ')}`).toEqual([]);
+        const rows = on.alternatives;
+        expect(rows.length).toBeLessThanOrEqual(5);
+        for (const row of rows)
+          for (const march of marchesOf(row as PlanTotals))
+            expect(sheltered(scenario.request, march), `${row.pick} sheltered`).toBe(true);
+        const rungs = rows.filter((row) => row.pick !== 'all-in');
+        for (let index = 1; index < rungs.length; index += 1) {
+          const previous = rungs[index - 1] as PlanRow;
+          const current = rungs[index] as PlanRow;
+          expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
+          expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
+        }
+        // TotalStack at matched spend, summed over the armies below.
+        const held = new Set(scenario.request.units.map((unit) => unit.id));
+        const theirs: Campaign[] = [];
+        for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
+          if (!external.name.startsWith('TotalStack')) continue;
+          if (Object.entries(external.counts).some(([id, c]) => c > 0 && !held.has(id))) continue;
+          const row = asCaptured(
+            widenedFor(scenario.request, external.counts),
+            external.name,
+            external.counts,
+          );
+          if (row.damage > 0) theirs.push(row);
+        }
+        if (theirs.length === 0) return;
+        const va = matchedSpend(before as Contender[], theirs as Contender[]);
+        const vb = matchedSpend(after as Contender[], theirs as Contender[]);
+        totalstack.before.beaten += va.rowsBeaten;
+        totalstack.before.unfitted += va.unfitted;
+        totalstack.after.beaten += vb.rowsBeaten;
+        totalstack.after.unfitted += vb.unfitted;
+      },
+      600_000,
+    );
+  }
+
+  test('TotalStack at matched spend is no worse than 47 dominated / 13 no stop fits', () => {
+    if (totalstack.armies < scenarios.length) return;
+    expect(totalstack.before).toEqual({ beaten: 47, unfitted: 13 });
+    expect(totalstack.after.beaten).toBeGreaterThanOrEqual(47);
+    expect(totalstack.after.unfitted).toBeLessThanOrEqual(13);
+  });
 });
