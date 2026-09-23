@@ -34,6 +34,8 @@ import {
 } from '@/engine';
 import { effectiveTable } from '@/engine/plan';
 import type { CampaignPlan, PlanTotals, ResizedMarch } from '@/engine/plan';
+import type { Bill } from '@/engine/rating';
+import { rate } from '@/engine/rating';
 import type { StackRequest } from '@/engine/types';
 
 import { HORIZON, criteriaScenarios } from './plan-scenarios';
@@ -594,10 +596,10 @@ describe('S-117 · a smaller leadership pool is taken only when it dominates', (
  *
  *  1. a trade is never taken when a **win** exists — the answer with the rates is at least as good on damage
  *     as the answer without them whenever the latter dialled at all;
- *  2. every trade is **inside the rates**: it recovers faster, scores at least zero, and loses no more than
- *     `damageLossCap` of the damage;
+ *  2. every trade is **inside the rates**: it recovers faster, scores at least zero on the owner's rating
+ *     (`rate` with `CAMPAIGN.markerRates` since W11 §2.3), and loses no more than `damageLossCap` of the damage;
  *  3. it never burns more of the hired stock and never leaves a type unfielded that the full pool fielded —
- *     neither of those is damage, and neither is on the scale the rates weigh;
+ *     hard rules beside the rating (which since W11 weighs the burn, but may not trade it away here);
  *  4. it **discloses**: `traded` is present exactly when the answer gave up damage, and its three figures
  *     are the ones a reader can check against the two marches.
  */
@@ -660,8 +662,16 @@ describe('S-117 · a trade is taken at the owner’s rates, and never in place o
           expect(-damage, `${where}: past the damage cap`).toBeLessThanOrEqual(
             CAMPAIGN.putBack.damageLossCap,
           );
-          const score =
-            silver / CAMPAIGN.putBack.silverPerDamage + seconds / CAMPAIGN.putBack.timePerDamage + damage;
+          // The owner's rating since W11 §2.3 (`CAMPAIGN.markerRates`), over every cost the march carries.
+          const bill = (m: ResizedMarch): Bill => ({
+            damage: m.damage,
+            silver: m.silver,
+            gold: m.gold,
+            hired: m.mercLost,
+            dragonCoins: m.dragonCoins,
+            seconds: m.seconds,
+          });
+          const score = rate(bill(full), bill(rated), CAMPAIGN.markerRates);
           expect(score, `${where}: taken on a negative score`).toBeGreaterThanOrEqual(0);
 
           // 3 — and never with the rare stock, which the rates do not weigh.

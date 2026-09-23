@@ -13,6 +13,9 @@ import { getUnits } from '@/data';
 import { emptyTotals, planCampaign, planMarch } from '@/engine';
 import type { StackRequest, UnitDef } from '@/engine/types';
 import type { CampaignInput, PlanTotals } from '@/engine/plan';
+import type { Bill } from '@/engine/rating';
+import { rate } from '@/engine/rating';
+import { chunks } from '@/engine/recovery';
 import { sizeStacks } from '@/engine/stacker';
 import { effectiveUnit } from '@/engine/units';
 import { parseImport } from '@/share/exportImport';
@@ -958,8 +961,12 @@ describe('the all-in plays the horizon', () => {
         for (const counts of allIn?.sequence ?? []) {
           expect(fieldedOf(input.request, counts), 'every march of it fields hired units').toBeGreaterThan(0);
         }
-        expect(allIn?.totalDamage).toBe(23_619_920);
-        expect(allIn?.silver).toBe(15_179_600);
+        // **Registered by the owner 2026-09-23 (W11 §2.3, "ok for the trade")**: the put-back rated with
+        // `markerRates` puts Rider II back instead of Spearman II — 23,619,920 → 23,563,675 damage (−0.24 %)
+        // for 15,179,600 → 15,169,600 silver, 6,608 → 6,576 gold, 92 → 91 hired, 1,793 h → 1,790 h (rating
+        // +0.094; experiment 161).
+        expect(allIn?.totalDamage).toBe(23_563_675);
+        expect(allIn?.silver).toBe(15_169_600);
       },
       TIMEOUT,
     );
@@ -1238,8 +1245,36 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
  * What is held here is the owner's rule and the two things a row must still be after it: a march the recap
  * prices identically, and a plan whose hired stacks the stock still sustains.
  */
-const putBackScore = (put: { damage: number; silver: number; seconds: number }): number =>
-  put.silver / CAMPAIGN.putBack.silverPerDamage + put.seconds / CAMPAIGN.putBack.timePerDamage + put.damage;
+/**
+ * The put-back's score since W11 §2.3: the owner's rating (`rate`, `CAMPAIGN.markerRates`) of the put-back
+ * march against the generated one, over damage and every cost a march carries — silver, gold, the hired
+ * burn, dragon coins and the queue. It replaced `silver / 5 + queue / 10 + damage`, which read two costs.
+ */
+const putBackScore = (before: Bill, after: Bill): number => rate(before, after, CAMPAIGN.markerRates);
+/** A generated row's repeated march, as the rating reads it. */
+const repeatBill = (row: PlanTotals): Bill => ({
+  damage: row.repeat.damage,
+  silver: row.repeat.silver,
+  gold: row.repeat.gold,
+  hired: row.repeat.mercLost,
+  dragonCoins: row.repeat.dragonCoins ?? 0,
+  seconds: row.repeat.seconds,
+});
+/** A march priced by the battle, as the rating reads it: the hired burn is a chunk of ten per hired stack. */
+const marchBill = (req: StackRequest, counts: Record<string, number>): Bill => {
+  const { summary } = planMarch(req, counts);
+  let hired = 0;
+  for (const unit of req.units)
+    if (unit.pool === 'authority' && (counts[unit.id] ?? 0) > 0) hired += chunks(counts[unit.id] ?? 0);
+  return {
+    damage: summary.minDamage,
+    silver: summary.recovery.silver,
+    gold: summary.recovery.gold,
+    hired,
+    dragonCoins: summary.recovery.dragonCoins,
+    seconds: summary.recovery.seconds,
+  };
+};
 
 /**
  * The put-back the owner's formula takes on one **generated** march, worked out here from the engine's own
@@ -1296,9 +1331,7 @@ function bestPutBack(req: StackRequest, row: PlanTotals): { unitId: string; scor
     // the score because a large enough damage gain outvotes any rise in it (`putBackOn`).
     if (summary.recovery.seconds >= row.repeat.seconds) continue;
     const damage = ((summary.minDamage - row.repeat.damage) / row.repeat.damage) * 100;
-    const silver = ((row.repeat.silver - summary.recovery.silver) / row.repeat.silver) * 100;
-    const seconds = ((row.repeat.seconds - summary.recovery.seconds) / row.repeat.seconds) * 100;
-    const score = putBackScore({ damage, silver, seconds });
+    const score = putBackScore(repeatBill(row), marchBill(req, counts));
     if (score < 0 || damage < -CAMPAIGN.putBack.damageLossCap) continue;
     if (!best || score > best.score) best = { unitId: extra, score };
   }
@@ -1350,7 +1383,8 @@ describe('a put-back on a first-run army', () => {
       // The rule itself: every put-back the bar carries scores, and none of them costs more damage than the cap.
       for (const row of plan.alternatives) {
         if (!row.putBack) continue;
-        expect(putBackScore(row.putBack), `${row.pick} scores`).toBeGreaterThanOrEqual(0);
+        // The rating the pass took it on (`PlanRow.putBack.rating`, `rate` with `CAMPAIGN.markerRates`).
+        expect(row.putBack.rating, `${row.pick} scores`).toBeGreaterThanOrEqual(0);
         expect(row.putBack.damage, `${row.pick} is inside the loss cap`).toBeGreaterThanOrEqual(
           -CAMPAIGN.putBack.damageLossCap,
         );
@@ -1547,7 +1581,10 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own ac
       if (onBar !== null) {
         const back = after?.putBack;
         if (!back) throw new Error('no put-back');
-        expect(putBackScore(back), `${title}: ${pick} scores`).toBeGreaterThanOrEqual(0);
+        expect(
+          putBackScore(repeatBill(before), marchBill(input.request, after?.counts ?? {})),
+          `${title}: ${pick} scores`,
+        ).toBeGreaterThanOrEqual(0);
         expect(back.damage, `${title}: ${pick} is inside the loss cap`).toBeGreaterThanOrEqual(
           -CAMPAIGN.putBack.damageLossCap,
         );
@@ -1677,11 +1714,12 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
       const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
       expect(allIn, `${String(leadership)}: the all-in is offered`).toBeDefined();
       if (!allIn) continue;
-      // The pass took Spearman II, and the note it wrote is the trade it made.
-      expect(allIn.putBack?.unitId, `${String(leadership)}: the all-in put Spearman II back`).toBe(
-        'spearman-2',
-      );
-      expect(allIn.counts['spearman-2'] ?? 0, `${String(leadership)}: and fields it`).toBeGreaterThan(0);
+      // The pass took Rider II, and the note it wrote is the trade it made. **Registered by the owner
+      // 2026-09-23 (W11 §2.3)**: rated with `markerRates`, Rider II (+12.0 % damage, 4.4 % silver, 11.5 %
+      // queue, one hired fewer) outrates Spearman II (+13.0 %, 4.1 %, 10.8 %); Spearman II, rebuilt below, is
+      // still an admissible candidate — it is outrated, not refused.
+      expect(allIn.putBack?.unitId, `${String(leadership)}: the all-in put Rider II back`).toBe('rider-2');
+      expect(allIn.counts['rider-2'] ?? 0, `${String(leadership)}: and fields it`).toBeGreaterThan(0);
       expect(
         allIn.putBack?.seconds ?? -1,
         `${String(leadership)}: the put-back the pass took shortens the queue`,
@@ -1715,13 +1753,11 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
 
       // It scores — and well: measured 2026-09-18, 5.8 at 7 000 (+8.6 % damage) and 1.9 at 12 000
       // (+8.0 %). Nothing in the rule refuses it. Measured again 2026-09-19 on the worst opening: +13.0 %
-      // damage, 4.1 % of the silver and 10.8 % of the queue, a score of 4.9.
+      // damage, 4.1 % of the silver and 10.8 % of the queue, a score of 4.9 (the retired 5 / 10 score; the
+      // test now holds it to the owner's rating, `markerRates`, W11 §2.3).
       const damage = ((summary.minDamage - generated.repeat.damage) / generated.repeat.damage) * 100;
-      const silver = ((generated.repeat.silver - summary.recovery.silver) / generated.repeat.silver) * 100;
-      const seconds =
-        ((generated.repeat.seconds - summary.recovery.seconds) / generated.repeat.seconds) * 100;
       expect(
-        putBackScore({ damage, silver, seconds }),
+        putBackScore(repeatBill(generated), marchBill(req, counts)),
         `${String(leadership)}: the candidate scores`,
       ).toBeGreaterThan(0);
       expect(damage, `${String(leadership)}: and is inside the loss cap`).toBeGreaterThanOrEqual(

@@ -276,6 +276,9 @@ function editsOf(base: StackRequest, stop: PlanTotals): Edit[] {
   return out;
 }
 
+/** The put-back score this experiment was run under (`CAMPAIGN.putBack` until W11 §2.3). */
+const RETIRED = { silverPerDamage: 5, timePerDamage: 10 } as const;
+
 describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
   it('measures the missing candidate, the dial, the shapes, the cost and the caps', () => {
     const report = new Report('124-what-the-edit-answers-with');
@@ -586,15 +589,14 @@ describe.skipIf(!process.env.THEORY)('what a March edit answers with', () => {
           const rated = resizeMarchOver(base, {
             ...within,
             fills: EDIT_FILLS,
-            putBack: CAMPAIGN.putBack,
+            // The score this experiment measured (5 / 10), retired by W11 §2.3 and kept switchable for it.
+            putBack: { ...CAMPAIGN.putBack, retiredScore: RETIRED },
           });
           if (wins === null || rated === null || rated.traded === undefined) continue;
           tradeTaken += 1;
           const cost = rated.traded;
           const score =
-            cost.silver / CAMPAIGN.putBack.silverPerDamage +
-            cost.seconds / CAMPAIGN.putBack.timePerDamage +
-            cost.damage;
+            cost.silver / RETIRED.silverPerDamage + cost.seconds / RETIRED.timePerDamage + cost.damage;
           const was = price(base, wins.counts);
           const now = price(base, rated.counts);
           report.add(

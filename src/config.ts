@@ -10,6 +10,13 @@
  * decision starts here.)
  */
 
+/**
+ * The owner's rating rates (S-135), one object: `CAMPAIGN.markerRates` below is this, and `CAMPAIGN.putBack`
+ * hands the same object to the put-back, so the two can never read different numbers. The reading of each is
+ * documented at `markerRates`.
+ */
+const MARKER_RATES = { silver: 5, gold: 5, hired: 5, dragonCoins: 8, seconds: 40 } as const;
+
 export const CAMPAIGN = {
   /**
    * Marches a plan is planned over — the horizon the plan method answers at. Four is the owner's own
@@ -95,44 +102,55 @@ export const CAMPAIGN = {
    * The plan's own shapes cannot find these marches: a ladder is built over a **prefix** of the damage-per-HP
    * ranking, so a low tier never enters one, and the sizer's shapes are sized over **every** type at once. The
    * family "the march's types plus one more" is the one nobody scored — and it is where the cheap damage is.
-   * The pass that scores it (`putBackOn`, `engine/plan.ts`) needs one thing this file can give it: how much
-   * silver and how much queue a percent of damage is worth. Those are a **decision**, not a fact, so they are
-   * three numbers here rather than a constant in the middle of a search:
+   * The pass that scores it (`putBackOn`, `engine/plan.ts`) and the March edit's resize dial (S-117 change 3)
+   * both read this policy:
    *
    * ```
-   * score = (silver saved %) / silverPerDamage + (time to recover saved %) / timePerDamage + (damage change %)
+   * score = rate(the march, the put-back, markerRates)      — engine/rating.ts
+   *       = (damage change %) + Σ (cost saved %) / (that cost's rate), over silver, gold, hired, coins, queue
    * take the put-back when it recovers faster, scores ≥ 0, and loses at most damageLossCap of the damage
    * ```
    *
-   * **Recovering faster is a condition and not a number**, which is why it has no entry below. The owner asked
-   * for a pass over the low tiers *"if the cost for them … is not too high and we get a nice reduction in
-   * training time"*: the queue is what the pass is for, and a march that sits longer in the barracks is not a
-   * put-back however hard it hits. The score cannot say that on its own — a large enough damage gain outvotes
-   * any rise — so the engine tests it separately (`putBackOn`, `engine/plan.ts`).
+   * **The rates are `markerRates` below, not numbers of this entry** (W11 §2.3; owner, 2026-09-23: *"use
+   * markerRates for put-back too"*). `rates` is that same object, handed over by reference so every caller
+   * that passes `CAMPAIGN.putBack` passes the owner's one rating; the only figure this entry owns is the cap.
+   * So the queue weighs **40** here where it weighed 10, and gold, the hired burn and dragon coins are counted
+   * where they were not. What that moved is measured, army by army, in
+   * `tools/theorycraft/out/161-the-put-back-rated.md`.
    *
-   * **The owner's own anchors** (2026-09-18, asked for the rate and answering with two points): *"2 % damage
-   * is okay if there's a reduction in time and a bit of silver; 3 % for a lot of silver and training time."*
-   * Five and ten are the rates those two points fix — 5 % of silver and 10 % of queue come to exactly the 2 %
-   * of damage of the first, 10 % and 10 % to the 3 % of the second — and three is where he stops trading at
-   * all, whatever the saving.
+   * **The guard** (`guard: true`, measured in 161 §A2): the rating alone took two put-backs that left their
+   * stop beaten by another stop of the bar — the hunter ×83 army's `all-in`, which S-94 then dropped (most
+   * damage −0.50 %, TotalStack dominated 5 → 4), and the "more mercs" of his camp at 5 100, which the sweet
+   * spot then beat. With the guard such a put-back gives way to the best-rated one that leaves the stop
+   * unbeaten, or to none: over the 17 benchmark armies 1 decision differs from the retired score (the 7 000
+   * export's `all-in`, Rider II for Spearman II, rated +0.094 at −0.24 % damage), 0 stops rate worse,
+   * TotalStack stays 47 / 13 and no bar criterion breaks.
    *
-   * **Calibrated against experiment 103** (`tools/theorycraft/out/103-put-back-time.md`), which tabled every
-   * put-back on four setups the day the rule was written. On his live army (Aydae 43 ★3 alone, 4 975
-   * leadership) the steady max is a three-type ladder — RD2 984 · ARC2 1931 · RD3 532, 4 777 523 damage for
-   * 2 694 300 silver and 13d 7h of queue — and putting **Archer I** back scores 10.2: +2.7 % damage, 18.2 %
-   * of the silver and 38.3 % of the queue saved, better on every count. At the other end, his export at
-   * 12 000 leadership takes Spearman I on a 2.6 % **loss** (1.2, on 8.1 % of silver and 21.8 % of queue) and
-   * refuses Archer I there, which costs 5.8 % — past the cap, and negative besides. Three of the twelve
-   * put-backs measured that day are refused, which is the point: the rule says no as often as it says yes.
+   * **Recovering faster is a condition and not a number**, which is why it has no rate of its own. The owner
+   * asked for a pass over the low tiers *"if the cost for them … is not too high and we get a nice reduction
+   * in training time"*: the queue is what the pass is for, and a march that sits longer in the barracks is not
+   * a put-back however hard it hits. The score cannot say that on its own — a large enough damage gain
+   * outvotes any rise — so the engine tests it separately (`putBackOn`, `engine/plan.ts`).
+   *
+   * **Three is the owner's cap** (2026-09-18, *"2 % damage is okay if there's a reduction in time and a bit of
+   * silver; 3 % for a lot of silver and training time"*): where he stops trading at all, whatever the saving.
+   *
+   * **History — the retired 5 / 10 score** (2026-09-18 → 2026-09-23). Until W11 the entry carried its own two
+   * rates, `silverPerDamage: 5` and `timePerDamage: 10`, fixed by the same two anchors (5 % of silver and 10 %
+   * of queue come to the 2 % of damage of the first, 10 % and 10 % to the 3 % of the second) and calibrated
+   * against experiment 103 (`tools/theorycraft/out/103-put-back-time.md`): on his live army the steady max
+   * with Archer I put back scored 10.2 (+2.7 % damage, 18.2 % of the silver and 38.3 % of the queue saved),
+   * and three of the twelve put-backs measured that day were refused. S-135's `markerRates` kept silver at 5
+   * and moved the queue to 40 (*"training time almost never unless entirely free"*); the put-back now reads
+   * those. The retired score survives only as `PutBackPolicy.retiredScore`, a diagnostic experiment 161 sets.
    */
-  putBack: { silverPerDamage: 5, timePerDamage: 10, damageLossCap: 3 },
+  putBack: { rates: MARKER_RATES, damageLossCap: 3, guard: true },
   /**
    * **What a percent of each cost is worth against a percent of damage** (S-135, 2026-09-22) — the rates the
    * rating uses to choose between two marches that **dominance cannot separate**, and nothing else.
    *
-   * They are policy, not fact, which is why they are here beside `putBack` rather than inside an engine. The
-   * two that were already measured stay exactly as `putBack` set them from the owner's own anchors of
-   * 2026-09-18: **silver 5**, **queue 10**. The other three are his of 2026-09-22, asked for in the same
+   * They are policy, not fact, which is why they are here rather than inside an engine. Silver stays at the
+   * **5** the put-back's anchors of 2026-09-18 set; the queue was 10 there and is **40** here. The other three are his of 2026-09-22, asked for in the same
    * form: *"silver/gold/merc seems almost same … dragon coins a bit less important, training time almost
    * never unless entirely free."*
    *
@@ -152,7 +170,7 @@ export const CAMPAIGN = {
    * carries no weight however large its percentages look — which needs no figure from the player and no
    * magic number here.
    */
-  markerRates: { silver: 5, gold: 5, hired: 5, dragonCoins: 8, seconds: 40 },
+  markerRates: MARKER_RATES,
   /**
    * **The fills of the leadership pool a March edit re-sizes at** (S-117; owner, 2026-09-20: *"I'm not that
    * sure any more that when removing or adding a troop … we should not compute again the best possible

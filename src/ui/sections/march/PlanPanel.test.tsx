@@ -973,7 +973,7 @@ const PUT_BACK: PlanRow[] = BURN_ROWS.map((row, index) =>
   index === 1
     ? {
         ...row,
-        putBack: { unitId: 'spearman-1', damage: 2.4, silver: 18.2, seconds: 38.3 },
+        putBack: { unitId: 'spearman-1', damage: 2.4, silver: 18.2, seconds: 38.3, rating: 3.9 },
       }
     : row,
 );

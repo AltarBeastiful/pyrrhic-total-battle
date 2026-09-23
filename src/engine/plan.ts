@@ -41,6 +41,8 @@ import { effectiveUnit, hitDamage } from './units';
 import { CHUNK, chunks, recoveryCosts, retrainOne } from './recovery';
 import { simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
+import type { Bill, MarkerRates } from './rating';
+import { rate, saved } from './rating';
 import type { BattleSummary, Housing, RecoverySettings, Stack, StackRequest, StackResult } from './types';
 
 /**
@@ -82,18 +84,65 @@ const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 /**
  * **What a put-back is worth**, in the owner's own exchange rates — the policy the pass below is steered by
- * (`src/config.ts`, `CAMPAIGN.putBack`, where the three numbers and their calibration live).
+ * (`src/config.ts`, `CAMPAIGN.putBack`, where the cap lives, and `CAMPAIGN.markerRates`, where the rates do).
  *
- * The engine holds no opinion about them: they are the player's trade between damage, silver and the training
- * queue, and a caller that does not pass them gets the marches the search generated, untouched.
+ * The engine holds no opinion about them: they are the player's trade between damage and every cost a march
+ * carries, and a caller that does not pass them gets the marches the search generated, untouched.
+ *
+ * **Rated with `markerRates` since W11 §2.3** (owner, 2026-09-23: *"use markerRates for put-back too"*): the
+ * put-back and the resize dial score a candidate with `rate` (`engine/rating.ts`) — damage change % plus each
+ * cost saved % over its rate, over silver, gold, the hired burn, dragon coins and the queue — where they
+ * scored silver and the queue alone at 5 and 10. Measured in `tools/theorycraft/out/161-the-put-back-rated.md`.
  */
 export interface PutBackPolicy {
-  /** Percent of silver saved that is worth one percent of damage. */
-  silverPerDamage: number;
-  /** Percent of recovery time saved that is worth one percent of damage. */
-  timePerDamage: number;
+  /** The owner's rates (`CAMPAIGN.markerRates`): percent of each cost worth one percent of damage. */
+  rates: MarkerRates;
   /** The most damage, in percent, a put-back may cost — however much it saves. */
   damageLossCap: number;
+  /**
+   * **The retired score, switchable** — a diagnostic for `tools/theorycraft/161-the-put-back-rated.test.ts`,
+   * never set by the app, kept so the measurement behind W11 §2.3 can be re-run against the rule that shipped
+   * before it: `silver saved % / silverPerDamage + queue saved % / timePerDamage + damage change %` (5 and 10,
+   * the owner's anchors of 2026-09-18). Set, it replaces `rates`.
+   */
+  retiredScore?: { silverPerDamage: number; timePerDamage: number } | undefined;
+  /**
+   * **The bar's guard on a put-back** (W11 §2.3, experiment 161): set, a put-back that leaves its stop beaten
+   * by another stop of the bar is replaced by the best-rated one that does not, or by none.
+   */
+  guard?: boolean | undefined;
+}
+
+/** A march's bill as the rating reads it: its damage and every cost it carries, the hired burn included. */
+const billOf = (march: {
+  damage: number;
+  silver: number;
+  gold: number;
+  dragonCoins?: number | undefined;
+  seconds: number;
+  mercLost: number;
+}): Bill => ({
+  damage: march.damage,
+  silver: march.silver,
+  gold: march.gold,
+  hired: march.mercLost,
+  dragonCoins: march.dragonCoins ?? 0,
+  seconds: march.seconds,
+});
+
+/**
+ * The put-back's score of `after` against `before`: the owner's rating (`rate`), or the retired silver-and-queue
+ * score when the policy asks for it (`PutBackPolicy.retiredScore`).
+ */
+function putBackScore(policy: PutBackPolicy, before: Bill, after: Bill): number {
+  const old = policy.retiredScore;
+  if (old === undefined) return rate(before, after, policy.rates);
+  const damage = before.damage > 0 ? ((after.damage - before.damage) / before.damage) * 100 : 0;
+  return (
+    saved(before.silver ?? 0, after.silver ?? 0) / old.silverPerDamage +
+    saved(before.seconds ?? 0, after.seconds ?? 0) / old.timePerDamage +
+    damage
+  );
 }
 
 export interface CampaignInput {
@@ -640,8 +689,12 @@ export interface PlanRow extends PlanTotals {
    * `{ damage: 2.7, silver: 18.2, seconds: 38.3 }`, and a put-back taken on a small loss carries a negative
    * `damage`. The UI writes the sentence (`src/ui/sections/march/PlanTrade.tsx`); this is the record of what
    * was done, so a row can say it and an experiment can check it.
+   *
+   * `rating` is the score the pass took it on (W11 §2.3): `rate(generated march, put-back march,
+   * markerRates)`, which also weighs gold, the hired burn and dragon coins — none of them among the three
+   * percentages above, so the rating is the one figure a test can hold the decision to.
    */
-  putBack?: { unitId: string; damage: number; silver: number; seconds: number } | undefined;
+  putBack?: { unitId: string; damage: number; silver: number; seconds: number; rating: number } | undefined;
 }
 
 /**
@@ -1820,9 +1873,12 @@ export interface MarchWithin {
    * stop at Generate time, said about a leadership fill instead of about a troop type put back.
    *
    * ```
-   * score = (silver saved %) / silverPerDamage + (queue saved %) / timePerDamage + (damage change %)
+   * score = rate(full pool, fill, rates)   — (damage change %) + Σ (cost saved %) / (its rate), engine/rating.ts
    * taken when it recovers faster, scores ≥ 0, and loses at most damageLossCap of the damage
    * ```
+   *
+   * The rates are `CAMPAIGN.markerRates` since W11 §2.3 (silver, gold and the hired burn 5, coins 8, queue
+   * 40); the dial scored silver and the queue alone at 5 and 10 before it (`PutBackPolicy.retiredScore`).
    *
    * A trade is only ever looked at when **nothing dominates** — a march that is better on every count is
    * never given up for one that is worse on damage, whatever it saves. And because a trade spends damage
@@ -2097,15 +2153,13 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
    * lot of silver and training time"*) — said here about a leadership fill instead of a troop type put back.
    * A trade has to **recover faster** as well as score, because the queue is what the rates were written
    * for and a march that sits longer in the barracks is not one of these however much silver it saves; and
-   * it may never burn more of the hired stock or leave a type unfielded that the full pool fielded, which
-   * are not damage and are not on the scale.
+   * it may never burn more of the hired stock or leave a type unfielded that the full pool fielded — hard
+   * rules, kept beside the rating (which since W11 §2.3 also weighs the burn) rather than traded against it.
    *
    * Ties go to the higher score and then to the higher damage, so the cheapest reading of a trade never
    * wins over an equally-scored kinder one.
    */
   const policy = within.putBack;
-  const saved = (before: number, after: number): number =>
-    before > 0 ? ((before - after) / before) * 100 : 0;
   let taken: { march: ResizedMarch; score: number } | null = null;
   for (const candidate of traded) {
     if (candidate.unfielded.length > full.unfielded.length) continue;
@@ -2115,7 +2169,7 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
     if (-damage > policy.damageLossCap) continue;
     const silver = saved(full.silver, candidate.silver);
     const seconds = saved(full.seconds, candidate.seconds);
-    const score = silver / policy.silverPerDamage + seconds / policy.timePerDamage + damage;
+    const score = putBackScore(policy, billOf(full), billOf(candidate));
     if (score < 0) continue;
     if (
       taken !== null &&
@@ -3957,8 +4011,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * is the one the recap will draw for it. Then the player's own rates decide (`CAMPAIGN.putBack`):
    *
    * ```
-   * score = (silver saved %) / silverPerDamage + (queue saved %) / timePerDamage + (damage change %)
+   * score = rate(the row's repeat, the put-back march, rates)   — engine/rating.ts
+   *       = (damage change %) + Σ (cost saved %) / (its rate), over silver, gold, hired burn, coins, queue
    * ```
+   *
+   * The rates are `CAMPAIGN.markerRates` since W11 §2.3 (owner, 2026-09-23: *"use markerRates for put-back
+   * too"*); until then the score read silver and the queue alone at 5 and 10 (`PutBackPolicy.retiredScore`).
    *
    * taken when the score is not negative **and** the damage loss is inside the cap — the owner's own anchors,
    * *"2 % damage is okay if there's a reduction in time and a bit of silver; 3 % for a lot of silver and
@@ -3998,7 +4056,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * Keyed by the row object, and carried across the copy `offer` makes of it.
    */
   const generatedOf = new Map<PlanTotals, TradeRow>();
-  const putBackOn = (row: TradeRow): TradeRow | undefined => {
+  const putBackOn = (row: TradeRow, admit?: (candidate: TradeRow) => boolean): TradeRow | undefined => {
     const policy = input.putBack;
     if (policy === undefined) return undefined;
     // The marches the change is paid for: a sequence row moves its first march only, every other row moves
@@ -4011,9 +4069,6 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (fielded.length === 0 || absent.length === 0) return undefined;
     const caps: Record<string, number> = { ...request.caps };
     for (const entry of mercTypes) caps[entry.id] = row.counts[entry.id] ?? 0;
-    /** A percent change read as a saving: a figure that falls is positive. */
-    const saved = (before: number, after: number): number =>
-      before > 0 ? ((before - after) / before) * 100 : 0;
     let best: { row: TradeRow; score: number } | undefined;
     for (const extra of absent) {
       const keep = new Set([extra.id, ...fielded.map((entry) => entry.id), ...mercIds]);
@@ -4084,7 +4139,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         row.repeat.damage > 0 ? ((march.damage - row.repeat.damage) / row.repeat.damage) * 100 : 0;
       const silver = saved(row.repeat.silver, march.silver);
       const seconds = saved(row.repeat.seconds, march.seconds);
-      const score = silver / policy.silverPerDamage + seconds / policy.timePerDamage + damage;
+      const score = putBackScore(policy, billOf(row.repeat), billOf(march));
       if (score < 0 || damage < -policy.damageLossCap) continue;
       if (best && (best.score > score || (best.score === score && best.row.repeat.damage >= march.damage)))
         continue;
@@ -4096,7 +4151,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const mercLost = row.mercLost + repeats * (march.mercLost - row.repeat.mercLost);
       const campaignCoins = row.dragonCoins + repeats * (march.dragonCoins - (row.repeat.dragonCoins ?? 0));
       const hired = Object.values(march.mercFielded).reduce((sum, count) => sum + count, 0);
-      best = {
+      const next: { row: TradeRow; score: number } = {
         score,
         row: {
           ...campaign,
@@ -4126,9 +4181,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           damagePerSilver: campaignSilver > 0 ? totalDamage / campaignSilver : Infinity,
           damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
           damagePerDragonCoin: campaignCoins > 0 ? totalDamage / campaignCoins : Infinity,
-          putBack: { unitId: extra.id, damage, silver, seconds },
+          putBack: { unitId: extra.id, damage, silver, seconds, rating: score },
         },
       };
+      // The bar's guard (`PutBackPolicy.guard`): a candidate the bar would refuse is passed over for the next.
+      if (admit && !admit(next.row)) continue;
+      best = next;
     }
     return best?.row;
   };
@@ -5027,7 +5085,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           continue;
         }
         if (row.silver < pick.silver) pick = row;
-      } else if (row.silver < pick.silver || (row.silver === pick.silver && row.totalDamage > pick.totalDamage)) {
+      } else if (
+        row.silver < pick.silver ||
+        (row.silver === pick.silver && row.totalDamage > pick.totalDamage)
+      ) {
         pick = row;
       }
     }
@@ -5258,6 +5319,54 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const generated = generatedOf.get(row);
       if (generated) generatedOf.set(tailed, generated);
     }
+  }
+  /**
+   * **A put-back may not leave its stop beaten** (`PutBackPolicy.guard`, W11 §2.3; experiment 161). The
+   * rating can take a put-back that trades damage for the burn or the queue, and on two benchmark armies that
+   * trade left the stop behind another on every figure the bar prints: the `all-in` of the hunter ×83 army
+   * fell under the steady max and S-94 below dropped it, and the "more mercs" of his camp at 5 100 fell under
+   * the sweet spot. So, on the campaigns the rows now carry (tail included), a put-back stop that another stop
+   * beats — S-94's test for the `all-in`, `plan-criteria`'s "no stop beaten" for the rest — is re-offered its
+   * put-backs over again from the march it was generated from, the best-rated one that leaves it unbeaten
+   * (and, for the `all-in`, still fielding more hired than the steady max), or none.
+   */
+  if (input.putBack?.guard) {
+    const topHired = top ? filledOf(top.counts) : 0;
+    const beaten = (row: PlanTotals & { pick: PlanPick }, index: number): boolean =>
+      stops.some((other, at) => {
+        if (at === index) return false;
+        if (row.pick === 'all-in')
+          return (
+            other.totalDamage >= row.totalDamage &&
+            other.silver <= row.silver &&
+            other.mercLost < row.mercLost
+          );
+        if (other.pick === 'all-in') return false;
+        return (
+          other.totalDamage >= row.totalDamage &&
+          other.silver <= row.silver &&
+          other.mercLost <= row.mercLost &&
+          other.gold <= row.gold &&
+          (other.totalDamage > row.totalDamage ||
+            other.silver < row.silver ||
+            other.mercLost < row.mercLost ||
+            other.gold < row.gold)
+        );
+      });
+    for (let index = 0; index < stops.length; index += 1) {
+      const stop = stops[index] as PlanRow;
+      const generated = generatedOf.get(stop);
+      if (!generated || !beaten(stop, index)) continue;
+      const as = (row: TradeRow): PlanRow => withTail({ ...row, pick: stop.pick, bestFor: stop.bestFor });
+      const replaced = putBackOn(
+        generated,
+        (candidate) =>
+          (stop.pick !== 'all-in' || filledOf(candidate.counts) > topHired) && !beaten(as(candidate), index),
+      );
+      stops[index] = replaced ? as(replaced) : as(generated);
+      if (replaced) generatedOf.set(stops[index] as PlanRow, generated);
+    }
+    stops.sort(byBurn);
   }
   /**
    * **The `all-in` is not offered when a stop beside it beats it outright** (S-94, 2026-09-19; the owner,
