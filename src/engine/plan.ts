@@ -5573,10 +5573,65 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (retypeRates === undefined) return row;
     const began = Date.now();
     try {
-      return retypeRowNow(row);
+      return foldFinale(retypeRowNow(row));
     } finally {
       retypeMs += Date.now() - began;
     }
+  };
+  /**
+   * **The repeat played once more in place of the finale** (W12 §2c, experiment 166, the owner 2026-09-23:
+   * *"ship the guarded variant"*). The tighter shape (S-93) lowers a repeat and keeps the finale the higher
+   * repeat left; from then on the repeat may be sustained one march more and beat that finale, and nothing
+   * in the plan asked. After the re-typing, a row whose repeat every hired stock sustains `repeats + 1`
+   * times (`lastsMarches`) plays it in place of the finale when `rate(finale, repeat, markerRates) > 0` on the
+   * plan's own march prices, S-58 B still held. The row keeps its march count; its totals move by
+   * (repeat − finale). A fold that leaves a stop of the bar beaten by another is handed back below
+   * (`foldedFrom`).
+   */
+  const foldedFrom = new Map<PlanTotals, PlanTotals>();
+  const foldFinale = <T extends PlanTotals>(row: T): T => {
+    if (retypeRates === undefined || row.sequence || !row.finaleCounts) return row;
+    const repeats = row.marches - 1 - (row.tail?.marches ?? 0);
+    if (repeats < 1) return row;
+    for (const entry of mercTypes) {
+      const count = row.counts[entry.id] ?? 0;
+      if (count <= 0) continue;
+      const held = sustain[entry.id] ?? 0;
+      if (held !== Infinity && lastsMarches(held, count) < repeats + 1) return row;
+    }
+    const finale = priceCounts(row.finaleCounts);
+    const repeat = row.repeat;
+    const billOf = (march: PlanMarch | PlanRepeat): Bill => ({
+      damage: march.damage,
+      silver: march.silver,
+      gold: march.gold,
+      hired: march.mercLost,
+      dragonCoins: march.dragonCoins ?? 0,
+      seconds: march.seconds,
+    });
+    if (!(rate(billOf(finale), billOf(repeat), retypeRates) > 0)) return row;
+    const totalDamage = row.totalDamage + repeat.damage - finale.damage;
+    const hiredDamage = row.hiredDamage + repeat.hiredDamage - finale.hiredDamage;
+    const silver = row.silver + repeat.silver - finale.silver;
+    const dragonCoins = row.dragonCoins + (repeat.dragonCoins ?? 0) - finale.dragonCoins;
+    const mercLost = row.mercLost + repeat.mercLost - finale.mercLost;
+    const next: T = {
+      ...row,
+      finaleCounts: undefined,
+      totalDamage,
+      hiredDamage,
+      silver,
+      gold: row.gold + repeat.gold - finale.gold,
+      dragonCoins,
+      seconds: row.seconds + repeat.seconds - finale.seconds,
+      mercLost,
+      damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
+      damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
+      damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
+    };
+    if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(next, entry.id))) return row;
+    foldedFrom.set(next, row);
+    return next;
   };
   const retypeRowNow = <T extends PlanTotals>(row: T): T => {
     if (retypeRates === undefined) return row;
@@ -5762,6 +5817,29 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     // No reading the stops held before the pass is lost to it (`keepReadings`).
     keepReadings();
+    stops.sort(byBurn);
+    /**
+     * **A fold that leaves a stop beaten is handed back** (experiment 166 B2, the owner's choice over the plain
+     * fold and over dropping the beaten rung): a stop whose finale `foldFinale` replaced by its repeat, and that
+     * now beats another stop of the bar or is beaten by one on damage, silver, burn and gold (all-in aside),
+     * plays its finale again.
+     */
+    const beatsOutright = (x: PlanRow, y: PlanRow): boolean =>
+      x !== y &&
+      x.pick !== 'all-in' &&
+      y.pick !== 'all-in' &&
+      x.totalDamage >= y.totalDamage &&
+      x.silver <= y.silver &&
+      x.mercLost <= y.mercLost &&
+      x.gold <= y.gold &&
+      (x.totalDamage > y.totalDamage || x.silver < y.silver || x.mercLost < y.mercLost || x.gold < y.gold);
+    for (let index = 0; index < stops.length; index += 1) {
+      const row = stops[index] as PlanRow;
+      const was = foldedFrom.get(row);
+      if (!was) continue;
+      if (stops.some((other) => beatsOutright(row, other) || beatsOutright(other, row)))
+        stops[index] = { ...(was as PlanRow), pick: row.pick, bestFor: row.bestFor };
+    }
     stops.sort(byBurn);
     /**
      * **Two stops at one march** after the pass are one plan, as `offer` and the put-back pass already hold:
@@ -6049,6 +6127,121 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       }
       keepReadings();
       stops.sort(byBurn);
+    }
+  }
+
+  /**
+   * **The finale sized on the march's own ladder, gated per stop by the rating** (W12 §2d, experiment 167,
+   * the owner 2026-09-23: *"ship the stop variant"*). `finaleFor` spends the leftovers under the finale it
+   * picks from the search's ladders; a repeated stop may do better with the biggest tight ladder the
+   * leadership pays for at some depth (`biggestLadder`), its own leftovers sheltered under it (`shelterUnder`),
+   * the housing and the silver budget checked. It is judged **here, at the bar**, after the fold and the
+   * re-typing, on each stop's own leftovers — gated inside the scorer it held per candidate and still left
+   * stops worse, since the stops are chosen afterwards on other terms (167 §C) — and taken only when
+   * `rate(stop, stop with that finale, markerRates) > 0`, the best-rated such finale, and only when:
+   *  - the silver saver stays the bar's cheapest and the burn saver its fewest burned;
+   *  - no stop beats another outright on damage, silver, burn and gold (all-in aside);
+   *  - every stocked type the cut requires is still fielded (S-58 B);
+   *  - no reading the bar held is lost for more than the swap's own rating (`keepReadings`' rule, §1).
+   * Measured on the benchmark (167 §C): 9 stops better, none worse, no reading worse, TotalStack at matched
+   * spend unchanged. The owner accepted its trade on the message camp.
+   *
+   * A stop whose finale `foldFinale` already replaced by its repeat (experiment 166) is tried on its unfolded
+   * row, and the own-ladder finale is taken only when it rates above the fold, `rate(folded, swapped) > 0`:
+   * where the two compete for one stop, the rating decides.
+   */
+  if (retypeRates !== undefined && planned !== 1) {
+    const tightLadders: { entry: Effective; count: number }[][] = [];
+    for (let depth = 1; depth <= Math.min(troops.length, 8); depth += 1) {
+      const { rungs } = biggestLadder(depth);
+      if (rungs.length > 0) tightLadders.push(rungs);
+    }
+    const beats = (x: PlanTotals, y: PlanTotals): boolean =>
+      x.totalDamage >= y.totalDamage &&
+      x.silver <= y.silver &&
+      x.mercLost <= y.mercLost &&
+      x.gold <= y.gold &&
+      (x.totalDamage > y.totalDamage || x.silver < y.silver || x.mercLost < y.mercLost || x.gold < y.gold);
+    for (let index = 0; index < stops.length; index += 1) {
+      const current = stops[index] as PlanRow;
+      // A stop `foldFinale` folded competes with this finale on its unfolded row: `rate()` decides.
+      const unfolded = foldedFrom.get(current) as PlanRow | undefined;
+      const row: PlanRow = unfolded ? { ...unfolded, pick: current.pick, bestFor: current.bestFor } : current;
+      if (!row.finaleCounts || row.sequence) continue;
+      const repeats = row.marches - 1 - (row.tail?.marches ?? 0);
+      if (repeats < 1) continue;
+      const leftovers = mercTypes
+        .map((entry) => ({
+          entry,
+          count: Math.max(
+            0,
+            (sustain[entry.id] ?? 0) === Infinity
+              ? (stock[entry.id] ?? 0)
+              : (stock[entry.id] ?? 0) - repeats * chunks(row.counts[entry.id] ?? 0),
+          ),
+        }))
+        .filter((merc) => merc.count > 0);
+      if (leftovers.length === 0) continue;
+      const was = priceCounts(row.finaleCounts);
+      const swapped = (counts: Record<string, number>, march: PlanMarch): PlanRow => {
+        const totalDamage = row.totalDamage - was.damage + march.damage;
+        const hiredDamage = row.hiredDamage - was.hiredDamage + march.hiredDamage;
+        const silver = row.silver - was.silver + march.silver;
+        const mercLost = row.mercLost - was.mercLost + march.mercLost;
+        const dragonCoins = row.dragonCoins - was.dragonCoins + march.dragonCoins;
+        return {
+          ...row,
+          finaleCounts: counts,
+          totalDamage,
+          hiredDamage,
+          silver,
+          gold: row.gold - was.gold + march.gold,
+          dragonCoins,
+          seconds: row.seconds - was.seconds + march.seconds,
+          mercLost,
+          damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
+          damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
+          damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
+        };
+      };
+      let best: { next: PlanRow; rating: number } | null = null;
+      for (const rungs of tightLadders) {
+        const under = shelterUnder(rungs, leftovers).filter((merc) => merc.count > 0);
+        if (under.length === 0) continue;
+        if (!fitsHousing(request.housing, rungs, under)) continue;
+        const counts: Record<string, number> = {};
+        for (const field of [...rungs, ...under]) counts[field.entry.id] = field.count;
+        const next = swapped(counts, priceCounts(counts));
+        if (input.silverBudget !== undefined && next.silver > input.silverBudget) continue;
+        const rating = rate(totalsBill(current), totalsBill(next), retypeRates);
+        if (rating > 0 && (!best || rating > best.rating)) best = { next, rating };
+      }
+      if (!best) continue;
+      const { next, rating } = best;
+      const trial = stops.map((other) => (other === current ? next : other));
+      if (next.pick === 'silver-saver' && trial.some((other) => other !== next && other.silver < next.silver))
+        continue;
+      if (
+        next.pick === 'burn-saver' &&
+        trial.some((other) => other !== next && other.mercLost < next.mercLost)
+      )
+        continue;
+      const outright = trial.some(
+        (x) =>
+          x.pick !== 'all-in' &&
+          trial.some((y) => y !== x && y.pick !== 'all-in' && (x === next || y === next) && beats(x, y)),
+      );
+      if (outright) continue;
+      if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(next, entry.id))) continue;
+      const before = tenReadings(stops);
+      const after = tenReadings(trial);
+      const lostWorth = before.some((held, reading) => {
+        const now = after[reading] ?? 0;
+        if (held === 0 || now >= held - Math.abs(held) * 1e-12) return false;
+        return (((held - now) / Math.abs(held)) * 100) / readingRate(retypeRates, reading) > rating;
+      });
+      if (lostWorth) continue;
+      stops[index] = next;
     }
   }
 
