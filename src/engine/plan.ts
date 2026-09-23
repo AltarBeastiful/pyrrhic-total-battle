@@ -3076,11 +3076,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * top of the burn ladder below (S-97), which sweeps the ones above the winner's own burn.
    */
   const maxShelterDepth = Math.min(troops.length, Math.max(...DEPTHS));
-  /** The floor of the biggest depth-`k` tight ladder the leadership pays for, or 0 if none fits. */
-  const biggestFloor = (depth: number): number => {
+  /** The biggest depth-`k` tight ladder the leadership pays for — its rungs and its floor, or none if none fits. */
+  const biggestLadder = (
+    depth: number,
+  ): { rungs: { entry: Effective; count: number }[]; floorHp: number } => {
     const rungsAt = (hp: number): { entry: Effective; count: number }[] =>
       buildLadder(troops, depth, hp, gap, leadership, 1);
-    if (rungsAt(1).length === 0) return 0;
+    if (rungsAt(1).length === 0) return { rungs: [], floorHp: 0 };
     let high = 1;
     while (high < 1e12 && rungsAt(high * 2).length > 0) high *= 2;
     let low = high;
@@ -3091,13 +3093,17 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       else high = mid;
     }
     const rungs = rungsAt(low);
-    return rungs.length === 0 ? 0 : Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+    return rungs.length === 0
+      ? { rungs: [], floorHp: 0 }
+      : { rungs, floorHp: Math.min(...rungs.map((rung) => rung.count * rung.entry.hp)) };
   };
   interface ShelteredMax {
     marches: number;
     vector: { entry: Effective; count: number }[];
     /** The sizer shape this vector is the shelter of, where one is — its method's depth and its prefix. */
     shape?: { depth: number; prefix: number };
+    /** The tight ladder this vector is the shelter of, where it is one of the ladder family (experiment 165). */
+    ladder?: { depth: number; rungs: { entry: Effective; count: number }[] };
   }
   const shelteredMaxima = (hiredPrefix?: ReadonlySet<string>): ShelteredMax[] => {
     const out: ShelteredMax[] = [];
@@ -3119,10 +3125,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const whole = mercTypes.map((entry, index) => ({ entry, count: anchors[index] ?? 0 }));
       if (whole.every((merc) => merc.count <= 0)) continue;
       for (let depth = 1; depth <= maxShelterDepth; depth += 1) {
-        const floorHp = biggestFloor(depth);
+        const { rungs: tight, floorHp } = biggestLadder(depth);
         if (floorHp <= 0) continue;
         take({
           marches,
+          ladder: { depth, rungs: tight },
           vector: mercTypes.map((entry, index) => ({
             entry,
             count: Math.max(0, Math.min(anchors[index] ?? 0, Math.ceil(floorHp / Math.max(1, entry.hp)) - 1)),
@@ -3544,6 +3551,67 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      * before this pass existed), so nothing new is said there; what is new is that a **rung** can too.
      */
     const frozen = best;
+    /**
+     * **A ladder-family maximum, scored on the ladder that defined it** (experiment 165, W12 §2b). The
+     * family's vectors are the hired counts the biggest depth-`k` tight ladder shelters, and until 165 they
+     * were only swept (`sweep`): every shape that sweep scores sizes its troops *from* the hired stack or over
+     * the whole army, so none of them can stand the tall stack the vector was read under, and the vector came
+     * back lowered. Measured on the owner's live camp of 2026-09-18: rider-3 2,487 over arbalester-6 403,
+     * bear-5 49 and legionary-6 408 — a sheltered, sustained march the bar never offered.
+     *
+     * **Admitted only when the owner's rating says so** — `rate(the search's highest-damage candidate, this
+     * one, markerRates) > 0`. Ungated, the shape moved the evening account's and Aydae-alone's tops onto
+     * unlimited legionaries filled to the floor (−132.74 and −75.01 against the bar before). Without the
+     * owner's rates (`CampaignInput.putBack`) there is no rating to gate on, so nothing is scored.
+     */
+    const ownLadderRates = input.putBack?.rates;
+    const campaignBill = (candidate: Candidate): Bill => {
+      const m = toMarch(candidate.rungs, candidate.mercs, candidate.march);
+      const last = candidate.finale
+        ? toMarch(candidate.finaleRungs, candidate.finaleMercs, candidate.finale)
+        : null;
+      const times = candidate.marches;
+      return {
+        damage: candidate.total,
+        silver: times * m.silver + (last?.silver ?? 0),
+        gold: times * m.gold + (last?.gold ?? 0),
+        hired: times * m.mercLost + (last?.mercLost ?? 0),
+        dragonCoins: times * m.dragonCoins + (last?.dragonCoins ?? 0),
+        seconds: times * m.seconds + (last?.seconds ?? 0),
+      };
+    };
+    const scoreOwnLadder = (
+      one: ShelteredMax,
+      ladder: { depth: number; rungs: { entry: Effective; count: number }[] },
+    ): void => {
+      if (ownLadderRates === undefined || ladder.rungs.length === 0) return;
+      const counts: Record<string, number> = {};
+      for (const merc of one.vector) counts[merc.entry.id] = merc.count;
+      // The scorer's winner-rungs path, pointed at this ladder for the one call.
+      const held = winnerRungs;
+      winnerRungs = ladder.rungs;
+      const scored = score(one.marches, counts, WINNER_RUNGS_DEPTH, 1, input.silverBudget);
+      winnerRungs = held;
+      if (!scored || scored.rungs.length === 0) return;
+      const candidate: Candidate = {
+        marches: one.marches,
+        mercs: scored.mercs,
+        rungs: scored.rungs,
+        march: scored.march,
+        finale: scored.finale?.march ?? null,
+        finaleRungs: scored.finale?.rungs ?? [],
+        finaleMercs: scored.finale?.mercs ?? [],
+        total: scored.total,
+        depth: ladder.depth,
+        scale: 1,
+      };
+      const top = frontier.reduce<Candidate | null>(
+        (held, other) => (!held || other.total > held.total ? other : held),
+        null,
+      );
+      if (top && rate(campaignBill(top), campaignBill(candidate), ownLadderRates) <= 0) return;
+      consider(candidate);
+    };
     // **And the same maxima over each hired prefix** (S-99): the top of the bar is the march that fields the
     // most the troops shelter, and on a camp whose pool is shared a dozen ways that march is the one over the
     // types worth housing — the rest at zero. Same pass, same freeze, one more family in it.
@@ -3560,6 +3628,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
        * so it is scored as such, through the scorer, which gives it the finale and the repeats every other
        * candidate gets.
        */
+      if (one.ladder) scoreOwnLadder(one, one.ladder);
       const shape = one.shape;
       if (!shape) continue;
       const counts: Record<string, number> = {};
