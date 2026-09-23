@@ -1,6 +1,6 @@
 # The rated re-typing, in the engine — implementation plan (W11)
 
-**Status: not started (2026-09-23). Two inputs are owed by the owner before step 4 (§6).**
+**Status: not started (2026-09-23). Decisions 2 and 3 of §6 are answered; decision 1 (the training bonuses) is still owed.**
 
 The owner: *"write the plan for the rated re-typing into the engine and use markerRates"*.
 
@@ -39,8 +39,8 @@ rating the engine applies is the put-back score (`CAMPAIGN.putBack`: silver 5, q
 | # | file | change |
 |---|---|---|
 | 2.1 | **new** `src/engine/rating.ts` | `rate(before, after, rates): number` — damage change % plus each cost saved % over its rate; a bill of nothing saves nothing. Pure; unit-tested. |
-| 2.2 | `src/engine/rating.ts` | the **significance rule** `markerRates` states (a cost whose spread across the marches being compared is trivial carries no weight). **Not implemented anywhere today, and 157 did not apply it**; implemented here only if the owner confirms it (§6). |
-| 2.3 | `src/engine/plan.ts`, `putBackOn` | **decision owed (§6):** keep the put-back's own score, or rate put-backs with `markerRates` too. Either way the put-back keeps its two hard rules (recovers faster; loses at most `damageLossCap`). |
+| 2.2 | — | **Banked, not in this plan** (owner, 2026-09-23: *"ship plain rates first and bank the cost change"*). The significance rule `markerRates` states is not implemented anywhere today, and 157 did not apply it. It ships as plain rates first; the rule is §8's open work item. |
+| 2.3 | `src/engine/plan.ts`, `putBackOn` (both scoring sites, today `silver / policy.silverPerDamage + seconds / policy.timePerDamage + damage`) | **the put-back is rated with `markerRates` too** (owner, 2026-09-23: *"use markerRates for put-back too"*): `rate(before, after, CAMPAIGN.markerRates)` replaces the put-back's own score, so the queue weighs 40 there instead of 10 and gold, the hired burn and dragon coins are counted. The put-back keeps its two hard rules (it recovers faster; it loses at most `damageLossCap` of the damage). `CAMPAIGN.putBack` keeps `damageLossCap` only; `silverPerDamage` and `timePerDamage` are retired. **The put-back is a shipped pass, so this moves stops on its own**: it is a separate step (§5 step 3) with its own experiment and its own named pins, before the re-typing is built on top of it. |
 
 ## 3. The re-typing pass
 
@@ -63,20 +63,21 @@ rating the engine applies is the put-back score (`CAMPAIGN.putBack`: silver 5, q
 
 ## 5. Order and non-regression
 
-1. The owner answers §6.
+1. The owner answers §6.1.
 2. `rating.ts` and 4.1.
-3. `retypeMarch` in the engine; **experiment 159** runs it and must reproduce 157-rated's per-stop figures to the unit.
-4. The pass (3.2) behind the flag; 4.2 and 4.3; the full suite against today's 17 failed / 1 149 passed.
-5. Experiment 160 — 157's table and 158's speed-up bill on the engine's own bar, plus the time the pass adds per army (the monster camp is 9.1 s today).
-6. Commit with every moved pin named; the owner registers them (`feedback-benchmark-non-regression`).
+3. **The put-back on `markerRates`** (2.3), alone: an experiment runs every army with the put-back scored both ways, on the ten criteria, TotalStack at matched spend and the criteria. Then the full suite, and a commit that names every moved pin.
+4. `retypeMarch` in the engine; **experiment 159** runs it and must reproduce 157-rated's per-stop figures to the unit.
+5. The pass (3.2) behind the flag; 4.2 and 4.3; the full suite against today's 17 failed / 1 149 passed.
+6. Experiment 160 — 157's table and 158's speed-up bill on the engine's own bar, plus the time the pass adds per army (the monster camp is 9.1 s today).
+7. Commit with every moved pin named; the owner registers them (`feedback-benchmark-non-regression`).
 
-## 6. Owed by the owner
+## 6. Decisions
 
-1. **Training speed and training-cost reduction.** Enter the account's figures, per troop group, so the queue and
-   silver figures are real rather than base. The re-typing's effect on the queue is measured again with them
-   before shipping.
-2. **Put-back score (2.3):** keep `putBack`'s silver 5 / queue 10, or rate put-backs with `markerRates` (queue 40)?
-3. **The significance rule (2.2):** implement it now, or ship the plain rates first?
+1. **Owed — training speed and training-cost reduction.** Enter the account's figures, per troop group, so the
+   queue and silver figures are real rather than base. The re-typing's effect on the queue is measured again with
+   them before shipping.
+2. **Answered 2026-09-23 — the put-back uses `markerRates` too** (2.3).
+3. **Answered 2026-09-23 — plain rates first; the significance rule is banked** (2.2, §8).
 
 ## 7. Risks
 
@@ -84,3 +85,28 @@ rating the engine applies is the put-back score (`CAMPAIGN.putBack`: silver 5, q
   25 s under Node. That cost is not yet measured in the browser, which is why 3.5 exists.
 - **Worst opening only.** The rating holds the worst-opening damage; the average opening is not checked.
 - **One stop pays one fewer campaign** of the owner's stock (158), on a first-run army he does not play.
+
+## 8. Banked: the significance of a cost change
+
+The owner, 2026-09-23: *"bank the cost change (the main objective was to avoid a 50 % gold reduction on a 50 to
+25 gold cost as it's negligible, so we need to find the best way for that)"*.
+
+**The problem, in his example.** The plain rating reads a cost in percent: 50 → 25 gold is a 50 % saving, worth
+50 / 5 = **10 % of damage** at gold's rate — the same weight as 8 000 → 4 000 gold. To him the first is
+nothing. From S-135's note: *"a 30 % drop on a 100 gold … is meaningless to me as I have around 170k … but a 10 %
+drop on an 8k revival is"*, and 170 000 *"not to be used as a literal figure"*.
+
+**Candidate readings to measure, none chosen:**
+
+- **The spread across the marches being compared** (S-135's own wording): a cost counts in proportion to how
+  far apart the candidates are on it, relative to the largest bill among them. 50 → 25 among marches that all
+  cost under 100 gold would carry little weight; the same 50 % on marches paying thousands would carry it all.
+- **A share of the whole bill**: weigh each cost's saving by that cost's share of the march's total price, with
+  the three currencies (silver, gold, coins) put on one scale. That needs an exchange rate between them, which is
+  a policy figure the owner would set.
+- **An absolute floor per currency, derived rather than typed**: e.g. a fraction of the account's own typical
+  bill for that currency over the bar's stops, so no player-specific constant (such as 170 000) is written down.
+
+**How it will be judged:** an experiment on the benchmark armies, listing every decision (put-back taken,
+re-typing kept, fold choice) that the plain rates and each reading disagree on, with all ten criteria for each,
+so the owner chooses with the cases in front of him.
