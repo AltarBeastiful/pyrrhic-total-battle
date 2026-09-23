@@ -5619,12 +5619,17 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     return next;
   };
   /**
-   * **No reading of the bar may be lost to the pass** (the owner's rule: never forget a marker of a march's
-   * success). The rating can take a re-typing that buys damage with a little silver or queue, and on the
-   * thrift end that raised the bar's least silver on 9 of 17 armies and its shortest queue on 11 (experiment
-   * 160, unguarded; 157-rated read the same). So, on the ten readings the fold judges, a reading the stops held
-   * before the pass and lost after it hands the stop that held it its un-re-typed march back, until none is
-   * lost. Run on the stops the pass re-typed and again on the bar the fold chose, since the fold may keep a
+   * **A reading of the bar is given up only when the rating buys it** (the owner's rule: never forget a marker
+   * of a march's success; owner, 2026-09-23: *"rating decides"* — the-remaining-gaps §1). The rating can take a
+   * re-typing that buys damage with a little silver or queue, and on the thrift end that raised the bar's least
+   * silver on 9 of 17 armies and its shortest queue on 11 (experiment 160, unguarded). So, on the ten readings
+   * the fold judges, a reading the stops held before the pass and lost after it is weighed at the owner's rates
+   * — its loss in percent over that cost's rate (damage and the four per-cost ratios at 1, damage-percent) —
+   * and the stop that held it is handed its un-re-typed march back only when that is worth more than the
+   * re-typing's own rating, `rate(generated, re-typed, markerRates)`. Measured on the benchmark armies it never
+   * is (the reading's loss is a term of the stop's own rating); that keeps the Bear V ×1 / ×2 sweet spot's
+   * +1.59 re-typing at +0.09 % queue (TotalStack rows beaten on neither damage nor rating 7 → 3, experiment
+   * 162). Run on the stops the pass re-typed and again on the bar the fold chose, since the fold may keep a
    * re-typed stop where the one that held the reading was the one it dropped.
    */
   const tenReadings = (set: readonly PlanTotals[]): number[] => [
@@ -5639,19 +5644,39 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     Math.max(...set.map((row) => (row.gold > 0 ? row.totalDamage / row.gold : 0))),
     Math.max(...set.map((row) => (row.dragonCoins > 0 ? row.totalDamage / row.dragonCoins : 0))),
   ];
+  /** Each reading's rate, in the order of `tenReadings`: percent of it worth one percent of damage. */
+  const readingRate = (rates: MarkerRates, reading: number): number =>
+    [1, rates.silver, rates.hired, rates.gold, rates.dragonCoins, rates.seconds, 1, 1, 1, 1][reading] ?? 1;
+  const totalsBill = (r: PlanTotals): Bill => ({
+    damage: r.totalDamage,
+    silver: r.silver,
+    gold: r.gold,
+    hired: r.mercLost,
+    dragonCoins: r.dragonCoins,
+    seconds: r.seconds,
+  });
   const keepReadings = (): void => {
+    if (retypeRates === undefined) return;
     const unRetyped = stops.map((row) => beforeRetype.get(row) ?? row);
     const held = tenReadings(unRetyped);
     const below = (value: number, target: number): boolean => value < target - Math.abs(target) * 1e-12;
-    for (let round = 0; round < stops.length; round += 1) {
+    /** Readings the rating has bought: lost, and worth less than the re-typing that lost them. */
+    const bought = new Set<number>();
+    for (let round = 0; round < stops.length * held.length; round += 1) {
       const now = tenReadings(stops);
-      const lost = now.findIndex((value, index) => below(value, held[index] ?? 0));
+      const lost = now.findIndex((value, index) => !bought.has(index) && below(value, held[index] ?? 0));
       if (lost < 0) return;
       const holderAt = unRetyped.findIndex(
         (row, index) => stops[index] !== row && !below(tenReadings([row])[lost] ?? 0, held[lost] ?? 0),
       );
       if (holderAt < 0) return;
-      stops[holderAt] = unRetyped[holderAt] as PlanRow;
+      const was = unRetyped[holderAt] as PlanRow;
+      const target = held[lost] ?? 0;
+      const lossPercent = target !== 0 ? ((target - (now[lost] ?? 0)) / Math.abs(target)) * 100 : 0;
+      const worth = lossPercent / readingRate(retypeRates, lost);
+      const gain = rate(totalsBill(was), totalsBill(stops[holderAt] as PlanRow), retypeRates);
+      if (worth <= gain) bought.add(lost);
+      else stops[holderAt] = was;
     }
   };
   /** The stop a re-typed row was, before the pass: what a collision below hands back. */
