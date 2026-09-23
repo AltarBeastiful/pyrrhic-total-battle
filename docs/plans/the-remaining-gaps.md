@@ -1,6 +1,6 @@
 # The remaining gaps to TotalStack — plan (W12)
 
-**Status: 2026-09-23. Item 1 decided; item 2 measured and refuted (164); item 2b to measure (165); item 3 is the owner’s.**
+**Status: 2026-09-23. §1 shipped (6fe913c); §2 refuted (164); §2b shipped (6a7d00c); §2c and §2d being measured (166, 167); §3 is the owner’s.**
 
 Source: experiments 162 (`tools/theorycraft/out/162-where-totalstack-still-wins.md`) and 163
 (`out/163-an-unsheltered-stop.md`). At 8b1b9a5, **7 of 112** TotalStack rows beat every stop of ours on damage *and*
@@ -52,6 +52,19 @@ does not find it. **This is a search gap, not a policy.**
   the frontier, the fold, or the sustain reading. Then fix that step.
 - **Validate:** 160 and 162 and the benchmark. The march should reach the bar on the live camp (TotalStack rows kept
   3 → 2, since M's Preservation is beaten) with no stop rated worse anywhere.
+
+**Shipped 6a7d00c:** live camp MX 31.54M → 40.09M (+13.71), MM +1.64, the 16 other armies unchanged; TotalStack
+rows still ahead 3 → 2. Suite unchanged.
+
+## 2c. The message camp's gap from SW — to measure (experiment 166)
+
+165: on his camp of 2026-09-19 as the message reads it, filling the hired to the sustain under SW's troops rates
+**+10.22** against SW (+20.69 against the top). The §2b fix does not reach it. Find the step that loses it, as 165 did.
+
+## 2d. A gated finale — to measure (experiment 167)
+
+165: sizing the live camp's finale on the march's own ladder adds about +10 (+13.71 → +23.75), but ungated it costs
+HS −158.67. Measure the same fix admitted only when `rate()` is above 0 against the finale it replaces.
 
 ## 3. An unsheltered stop, flagged — the owner's decision
 
