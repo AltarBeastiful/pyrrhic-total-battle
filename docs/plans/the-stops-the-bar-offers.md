@@ -288,3 +288,22 @@ margin above. `plan-benchmark` 12 000 export: "the plan's best a hired beats the
 `plan-criteria` at 12 000 (already red): the silver saver's damage a hired 302,304 → 287,777 against a floor of
 645,213 — the silver saver there is now band plan b·48. Suite: 17 failed / 1 148 passed, against 13 / 1 134
 before W10.
+
+---
+
+## 11. The troop wall (2026-09-23, shipped)
+
+Experiment 151 found the live camp's bar stopping at 15,306,859 because the band refused every plan standing on
+one troop stack — among them a sheltered Rider III wall of 2,441 at 30,986,506 (2.541 a silver). TotalStack's
+49.2M there exposes every hired stack (bears 24×, legionaries 21×, arbalesters 17× the lowest troop stack),
+is worth 10,290,176 once sheltered, and fields 454 arbalesters a march on a stock of 485 (one march, not four).
+
+The owner: *"yes allow the troop wall"*. `CAMPAIGN.planFixes.bandTroopStacks: 1`. Experiment 154: **2 of 17**
+use cases put a wall on the bar, **3 of 61** stops — the live camp (15.3M → 31.0M, +102 %) and the localStorage
+camp (13.8M → 23.6M, +70 %); nothing else moves. `tests/engine/plan-stops.test.ts` pins the one trade accepted
+with it: on the live camp the fold drops the all-in, least silver +1.8 %, damage a merc −0.5 %.
+
+Pins moved by it (not re-based), both on the live camp's already-red benchmark test: damage a hired soldier
+against Total Optimization 1.94 → 1.924 (the accepted −0.5 %), and the margin inside TotalStack's hardest march
+−77.9 % → −83.0 % — the all-in was the only stop inside that row's 7.79M silver, and that row is the unsheltered
+one-march answer above. Suite 17 failed / 1 149 passed, the same failing tests as before the wall.

@@ -63,6 +63,10 @@ export const CAMPAIGN = {
    *   stop, losing as little as possible of the ten readings. Experiment 149, against the guard of 54c7e3d:
    *   no benchmark army worse on any reading, no criterion broken, and TotalStack's rows no stop fits
    *   17 → 13 (47 dominated either way).
+   * - `bandTroopStacks` — the troop wall (owner, 2026-09-23: *"yes allow the troop wall"*): a plan the bar offers
+   *   may stand on a single troop stack, every hired stack sheltered under it. Experiments 151, 152 and 154: 2 of
+   *   17 use cases put a wall on the bar (3 of 61 stops) — the live camp of 2026-09-18, most damage 15,306,859 →
+   *   30,986,506, and the localStorage camp of 2026-09-19, 13,842,678 → 23,589,127 — and nothing else moves.
    */
   planFixes: {
     tokenFloor: true,
@@ -70,6 +74,7 @@ export const CAMPAIGN = {
     sizerShape: true,
     burnSaver: 'silver' as const,
     foldTo: 5,
+    bandTroopStacks: 1,
   },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band

@@ -10,7 +10,7 @@
  *
  * The rest holds the bar to the fold's own rules: at most five stops, ordered along the burn (S-61), the sweet
  * spot on it, one name a stop, and a name true of its row — the silver saver the bar's cheapest, the hired
- * saver its fewest burned — and every stop more than one troop stack.
+ * saver its fewest burned — and every stop at least one troop stack (a single one is the troop wall).
  */
 import { describe, expect, test } from 'vitest';
 
@@ -33,7 +33,8 @@ const planWith = (request: StackRequest, shipped: boolean): CampaignPlan | undef
       marchTarget: HORIZON,
       budgetMs: CAMPAIGN.budgets.plan,
       ...CAMPAIGN.planFixes,
-      // The bar before W10: no hired saver and no fold.
+      // The bar before W10: no hired saver and no fold. The troop wall stays as configured — it is a band rule,
+      // not a W10 one, and its own trade is pinned apart below.
       ...(shipped ? {} : { burnSaver: undefined, foldTo: undefined }),
       putBack: CAMPAIGN.putBack,
     });
@@ -57,9 +58,10 @@ const readings = (set: Campaign[]): Record<string, number> => ({
 });
 
 describe('the stops the bar offers', () => {
-  test('ship on: the hired saver offered everywhere, and the fold to five', () => {
+  test('ship on: the hired saver offered everywhere, the fold to five, and the troop wall', () => {
     expect(CAMPAIGN.planFixes.burnSaver).toBe('silver');
     expect(CAMPAIGN.planFixes.foldTo).toBe(5);
+    expect(CAMPAIGN.planFixes.bandTroopStacks).toBe(1);
   });
 
   for (const scenario of scenarios) {
@@ -108,15 +110,61 @@ describe('the stops the bar offers', () => {
         if (hired) {
           for (const row of rows) if (row !== hired) expect(row.mercLost).toBeGreaterThan(hired.mercLost);
         }
-        // More than one troop stack on every stop (experiment 72's criterion).
+        // At least one troop stack on every stop: a single one is a wall (owner, 2026-09-23: "yes allow the troop
+        // wall"), its hired stacks sheltered under it — which "every hired stack stands under the lowest troop
+        // stack" in plan-criteria.test.ts holds on every army.
         for (const row of rows) {
           const troops = Object.keys(row.counts).filter(
             (id) => scenario.request.units.find((unit) => unit.id === id)?.pool === 'leadership',
           );
-          expect(troops.length, `${row.pick} troop stacks`).toBeGreaterThan(1);
+          expect(troops.length, `${row.pick} troop stacks`).toBeGreaterThan(0);
         }
       },
       600_000,
     );
   }
+
+  /**
+   * **The troop wall's one trade, accepted by the owner** (2026-09-23, experiments 152 and 154, *"yes allow the
+   * troop wall"*): on his live camp of 2026-09-18 the wall doubles the bar's most damage (15,306,859 →
+   * 30,986,506) and the fold, holding five stops, drops the all-in — so the cheapest stop costs 1.8 % more silver
+   * (6,653,700 → 6,773,900) and the best damage a merc falls 0.5 % (233,912 → 232,812). Pinned here so the trade
+   * cannot grow unnoticed; on every other army the wall changes nothing.
+   */
+  test('the troop wall’s accepted trade on the live camp stays what was accepted', () => {
+    if (!profile) return;
+    const scenario = scenarios.find((s) => s.label.startsWith('the owner’s live camp of 2026-09-18'));
+    if (!scenario) return;
+    const wall = planWith(scenario.request, true);
+    const noWall = ((): CampaignPlan | undefined => {
+      try {
+        return planCampaign({
+          request: scenario.request,
+          marchTarget: HORIZON,
+          budgetMs: CAMPAIGN.budgets.plan,
+          ...CAMPAIGN.planFixes,
+          bandTroopStacks: undefined,
+          putBack: CAMPAIGN.putBack,
+        });
+      } catch {
+        return undefined;
+      }
+    })();
+    expect(wall && noWall).toBeTruthy();
+    if (!wall || !noWall) return;
+    const priced = (plan: CampaignPlan): Campaign[] =>
+      plan.alternatives.map((stop) =>
+        campaignOf(scenario.request, stop.pick, 'plan', marchesOf(stop as PlanTotals)),
+      );
+    const was = readings(priced(noWall));
+    const now = readings(priced(wall));
+    expect(now['most damage']).toBeGreaterThanOrEqual((was['most damage'] ?? 0) * 2);
+    // The two readings it gives up, each within what was accepted.
+    expect(-(now['least silver'] ?? 0)).toBeLessThanOrEqual(-(was['least silver'] ?? 0) * 1.02);
+    expect(now['damage a merc']).toBeGreaterThanOrEqual((was['damage a merc'] ?? 0) * 0.99);
+    for (const key of Object.keys(was)) {
+      if (key === 'least silver' || key === 'damage a merc') continue;
+      expect(now[key] ?? 0, key).toBeGreaterThanOrEqual((was[key] ?? 0) - 1e-9);
+    }
+  }, 600_000);
 });

@@ -190,8 +190,8 @@ export interface CampaignInput {
    * **The fewest troop stacks a plan the bar offers may stand on** — the band's third arm, experiment 72's
    * criterion. Omitted it is **2**, as it has always been. Exposed for experiment 151 (2026-09-23), which found
    * the owner's live camp's hardest sheltered plans — a single Rider III wall of 2 441 with every hired stack
-   * under it, 30 986 506 over four marches at 2.541 damage a silver — refused by this arm alone. Not set by
-   * the app.
+   * under it, 30 986 506 over four marches at 2.541 damage a silver — refused by this arm alone. Set by the app since the owner's *"yes allow
+   * the troop wall"* (2026-09-23, `CAMPAIGN.planFixes`, experiment 154).
    */
   bandTroopStacks?: number | undefined;
   /**
