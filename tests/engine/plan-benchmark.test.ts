@@ -1111,7 +1111,10 @@ const ARMIES_MEASURED = 17;
  */
 const MARKER_WINS: Partial<Record<(typeof MARKERS)[number][0], number>> = {
   silver: 13,
-  seconds: 12,
+  // Registered by the owner 2026-09-24 (W11–W13 trades, "register them all"): 12 → 9. The reading guard
+  // decided by the rating (6fe913c) gives up shortest queue by +0.07–0.08 % on seven armies for rated gains;
+  // the gated finale (7fe146c) won one back.
+  seconds: 9,
 };
 /** Armies the bar dominates at matched spend on their hardest comparable march — §2's count, measured. */
 const ARMIES_BEATEN = 5;

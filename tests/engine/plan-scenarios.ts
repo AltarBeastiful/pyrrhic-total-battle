@@ -786,7 +786,8 @@ export function commonScenarios(): Scenario[] {
       pinned: {
         refuses: false,
         stops: 1,
-        sweetNotAheadOnEither: true,
+        // Registered by the owner 2026-09-24 (W11–W13 trades, "register them all"): the re-typed sweet spot now leads the sizers (6fe913c).
+        sweetNotAheadOnEither: false,
         damageFloor: 0.77,
         winsHired: false,
         externals: { damageFloor: 0.99, winsHired: false },
@@ -828,7 +829,8 @@ export function commonScenarios(): Scenario[] {
       pinned: {
         refuses: false,
         stops: 1,
-        sweetNotAheadOnEither: true,
+        // Registered by the owner 2026-09-24 (W11–W13 trades, "register them all"): the re-typed sweet spot now leads the sizers (6fe913c).
+        sweetNotAheadOnEither: false,
         damageFloor: 0.78,
         winsHired: false,
         externals: { damageFloor: 0.99, winsHired: false },
@@ -944,10 +946,11 @@ export function commonScenarios(): Scenario[] {
       pinned: {
         refuses: false,
         stops: 2,
-        sweetNotAheadOnEither: true,
+        // Registered by the owner 2026-09-24 (W11–W13 trades, "register them all"): the sweet spot now leads the sizers, and the best damage a hired beats the sizers and the other calculators.
+        sweetNotAheadOnEither: false,
         damageFloor: 0.86,
-        winsHired: false,
-        externals: { damageFloor: 0.81, winsHired: false },
+        winsHired: true,
+        externals: { damageFloor: 0.81, winsHired: true },
         totalOptimization: { perSilver: 0.99, perSoldier: 1.0, perMonster: 1.0 },
         // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
         // definition of beating another calculator reduces to. Their hardest comparable march is
@@ -1339,11 +1342,12 @@ const hisCamp = (owner: Profile): Scenario[] => {
         // hired soldier chunk, **1.7593** a monster chunk.
         pinned: {
           refuses: false,
-          stops: 4,
+          // Registered by the owner 2026-09-24 (W11–W13 trades, "register them all"): five stops (the fold, W10), and the best damage a hired now beats the sizers and the other calculators (7fe146c).
+          stops: 5,
           sweetNotAheadOnEither: false,
           damageFloor: 1.01,
-          winsHired: false,
-          externals: { damageFloor: 1.75, winsHired: false },
+          winsHired: true,
+          externals: { damageFloor: 1.75, winsHired: true },
           totalOptimization: { perSilver: 1.29, perSoldier: 2.59, perMonster: 1.75 },
           // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
           // definition of beating another calculator reduces to. Their hardest comparable march is

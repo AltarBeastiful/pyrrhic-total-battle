@@ -165,7 +165,11 @@ describe('the stops the bar offers', () => {
     const now = readings(priced(wall));
     expect(now['most damage']).toBeGreaterThanOrEqual((was['most damage'] ?? 0) * 2);
     // The two readings it gives up, each within what was accepted.
-    expect(-(now['least silver'] ?? 0)).toBeLessThanOrEqual(-(was['least silver'] ?? 0) * 1.02);
+    // Registered by the owner 2026-09-24 ("register them all"): the wall bar's cheapest stop is unchanged at
+    // 6,773,900, but the bar without the wall got cheaper with the re-typing (6,570,800), so the gap grew from
+    // 1.8 % to 3.1 %. Pinned on both: the wall's own figure, and the gap as it stands.
+    expect(-(now['least silver'] ?? 0)).toBeLessThanOrEqual(6_773_900);
+    expect(-(now['least silver'] ?? 0)).toBeLessThanOrEqual(-(was['least silver'] ?? 0) * 1.031);
     expect(now['damage a merc']).toBeGreaterThanOrEqual((was['damage a merc'] ?? 0) * 0.99);
     for (const key of Object.keys(was)) {
       if (key === 'least silver' || key === 'damage a merc') continue;
@@ -225,6 +229,29 @@ describe('the rated re-typing', () => {
           campaignOf(scenario.request, row.pick, 'plan', marchesOf(row as PlanTotals));
         const before = off.alternatives.map(priced);
         const after = on.alternatives.map(priced);
+        // TotalStack at matched spend, summed over **every** army — counted before any assertion below, so an
+        // army that fails one of them still counts (the owner, 2026-09-24: "fix the sum test too"; it summed only
+        // the armies that passed, which read 27/6 while every army read 70/13).
+        const held = new Set(scenario.request.units.map((unit) => unit.id));
+        const theirs: Campaign[] = [];
+        for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
+          if (!external.name.startsWith('TotalStack')) continue;
+          if (Object.entries(external.counts).some(([id, c]) => c > 0 && !held.has(id))) continue;
+          const row = asCaptured(
+            widenedFor(scenario.request, external.counts),
+            external.name,
+            external.counts,
+          );
+          if (row.damage > 0) theirs.push(row);
+        }
+        if (theirs.length > 0) {
+          const va = matchedSpend(before as Contender[], theirs as Contender[]);
+          const vb = matchedSpend(after as Contender[], theirs as Contender[]);
+          totalstack.before.beaten += va.rowsBeaten;
+          totalstack.before.unfitted += va.unfitted;
+          totalstack.after.beaten += vb.rowsBeaten;
+          totalstack.after.unfitted += vb.unfitted;
+        }
         const billOf = (c: Campaign) => ({
           damage: c.damage,
           silver: c.silver,
@@ -238,17 +265,31 @@ describe('the rated re-typing', () => {
           const a = before[was];
           const b = after[index];
           if (was < 0 || !a || !b) return;
-          expect(
-            rate(billOf(a), billOf(b), CAMPAIGN.markerRates),
-            `${row.pick} rated`,
-          ).toBeGreaterThanOrEqual(-1e-9);
-          expect(b.damage, `${row.pick} damage`).toBeGreaterThanOrEqual(a.damage);
+          const rated = rate(billOf(a), billOf(b), CAMPAIGN.markerRates);
+          expect(rated, `${row.pick} rated`).toBeGreaterThanOrEqual(-1e-9);
+          // Registered by the owner 2026-09-24 ("register them all"): damage is held, or a loss is paid for by
+          // the stop's rating, never past the trade he accepted — his camp as the message reads it, the burn
+          // saver 7,402,685 → 6,580,946 (−11.1 %, 15 → 6 hired, rated +14.72; 167, 7fe146c).
+          if (b.damage < a.damage) {
+            expect(rated, `${row.pick} damage lost, paid for by the rating`).toBeGreaterThan(0);
+            expect(b.damage, `${row.pick} damage`).toBeGreaterThanOrEqual(a.damage * 0.888);
+          }
         });
-        // The ten readings: none lost to the pass.
+        // The ten readings. Registered by the owner 2026-09-24 ("register them all"; the rule he accepted on
+        // 2026-09-23, "Accept all of it"): a reading may be given up only where the rating pays for it, and only
+        // the two he accepted, within what was measured — shortest queue +0.08 % (Bear V ×1/×2/×3/×10, Hunter
+        // ×83, tiers 3–5, the localStorage camp) and least silver +0.22 % (Aydae alone; his usual setup +0.08 %).
         const was = readings(before);
         const now = readings(after);
         const lost = Object.keys(was).filter((key) => (now[key] ?? 0) < (was[key] ?? 0) - 1e-9);
-        expect(lost, `readings the pass lost: ${lost.join(', ')}`).toEqual([]);
+        const accepted: Record<string, number> = { 'shortest queue': 0.001, 'least silver': 0.0025 };
+        for (const key of lost) {
+          const bound = accepted[key];
+          expect(bound, `a reading the pass lost that was never accepted: ${key}`).toBeDefined();
+          const from = Math.abs(was[key] ?? 0);
+          const loss = from > 0 ? Math.abs((now[key] ?? 0) - (was[key] ?? 0)) / from : 0;
+          expect(loss, `${key} lost ${(loss * 100).toFixed(3)} %`).toBeLessThanOrEqual(bound ?? 0);
+        }
         const rows = on.alternatives;
         expect(rows.length).toBeLessThanOrEqual(5);
         for (const row of rows)
@@ -261,26 +302,6 @@ describe('the rated re-typing', () => {
           expect(current.repeat.mercLost).toBeGreaterThan(previous.repeat.mercLost);
           expect(current.repeat.damage).toBeGreaterThan(previous.repeat.damage);
         }
-        // TotalStack at matched spend, summed over the armies below.
-        const held = new Set(scenario.request.units.map((unit) => unit.id));
-        const theirs: Campaign[] = [];
-        for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
-          if (!external.name.startsWith('TotalStack')) continue;
-          if (Object.entries(external.counts).some(([id, c]) => c > 0 && !held.has(id))) continue;
-          const row = asCaptured(
-            widenedFor(scenario.request, external.counts),
-            external.name,
-            external.counts,
-          );
-          if (row.damage > 0) theirs.push(row);
-        }
-        if (theirs.length === 0) return;
-        const va = matchedSpend(before as Contender[], theirs as Contender[]);
-        const vb = matchedSpend(after as Contender[], theirs as Contender[]);
-        totalstack.before.beaten += va.rowsBeaten;
-        totalstack.before.unfitted += va.unfitted;
-        totalstack.after.beaten += vb.rowsBeaten;
-        totalstack.after.unfitted += vb.unfitted;
       },
       600_000,
     );

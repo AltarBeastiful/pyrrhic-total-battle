@@ -1507,7 +1507,9 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the put-back on the owner’s own ac
         'the march stands on more than one troop stack',
       ).toBeGreaterThan(1);
       expect(most?.repeat.damage ?? 0).toBeGreaterThanOrEqual(4_773_281);
-      expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(2_203_500);
+      // Registered by the owner 2026-09-24 ("register them all"): 2,203,500 → 2,203,800 (+300 silver, 0.01 %)
+      // for more damage, rated positive (the rated re-typing, d207e15).
+      expect(most?.repeat.silver ?? Infinity).toBeLessThanOrEqual(2_203_800);
       // And the recap prices it identically — the put-back is priced by `toMarch`, like every other march.
       expect(most?.repeat.damage).toBe(planMarch(input.request, most?.counts ?? {}).summary.minDamage);
       expect(most?.repeat.silver).toBe(planMarch(input.request, most?.counts ?? {}).summary.recovery.silver);
@@ -1689,90 +1691,43 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the queue guard on the owner’s exp
   const parsed = existsSync(OWNER_EXPORT) ? parseImport(readFileSync(OWNER_EXPORT, 'utf8')) : null;
   const base = parsed?.kind === 'profile' ? parsed.payload : null;
 
-  test('the all-in takes Spearman II at 7 000, and the queue is the reason it may', () => {
+  // **Registered by the owner 2026-09-24 ("register them all").** The case this test was written on is gone: at
+  // 7 000 the all-in is rebuilt after re-typing (3dcb9b7) and carries no put-back, so "the all-in takes Spearman
+  // II" has nothing left to assert. The rule it guarded — a put-back must recover faster than the march it
+  // replaces — is held instead on every put-back the plan takes on the owner's export, at both leaderships.
+  test('every put-back the plan takes on the owner’s accounts shortens the queue', () => {
     if (!base) throw new Error('no profile');
-    // **Re-based 2026-09-19 (S-93): 12 000 leaves this test.** The `all-in` builds its marches from the
-    // shapes it can reach, and it now reaches the sizer over a **prefix** of the troop ranking — so at
-    // 12 000 its first march is no longer the two-rung ladder that left Spearman II out (it is
-    // SP1 3771 · ARC2 2575 · SP2 2088 · RD2 1142 · RD3 641 with 226 hired, 9 235 912 for 5 502 200 against
-    // 7 860 293 for 5 223 000) and there is nothing for the guard to refuse on it. 7 000 still is the clean
-    // case, and stubbing the guard still fails there; the 12 000 figures are in the review log.
-    //
-    // **Re-based again 2026-09-19 (S-94): 7 000 stops being a refusal too, and the guard is left without a
-    // case on the owner's export.** Ranked on the **worst opening** the `all-in`'s first march here is a
-    // Troops-first shape (`marchOf`), and putting Spearman II back on it is no longer a trade at all:
-    // measured, **+13.0 % damage, 4.1 % of the silver and 10.8 % of the queue saved** — better on every one
-    // of the three, so the pass takes it and the guard has nothing to refuse. What this test asserts is
-    // therefore the other half of the same rule: the candidate the pass took does **not** lengthen the
-    // queue. The refusal itself now has no army among the owner's setups that exercises it; that is
-    // recorded with S-94 rather than papered over, and the guard's own code is unchanged.
-    for (const leadership of [7_000]) {
+    let seen = 0;
+    // The export at both leaderships (no put-back there since the all-in rebuild), and his live Aydae camp at
+    // 4 975, where the steady max puts Archer I back (the test above).
+    for (const [leadership, live] of [
+      [7_000, false],
+      [12_000, false],
+      [4_975, true],
+    ] as const) {
       const profile = structuredClone(base);
+      if (live) {
+        profile.sources.captains = [AYDAE];
+        profile.troops.topTierExcluded = { guardsmen: ['melee', 'ranged'], specialists: [] };
+        profile.mercenaries.selected = structuredClone(LIVE_HIRED);
+      }
       const setup = profile.setups[0];
       if (!setup) throw new Error('no setup');
-      const input = buildPlanRequest(profile, {
-        ...setup,
-        housing: { ...setup.housing, leadership },
-      });
-      const req = input.request;
-      const plan = planCampaign(input);
-      const allIn = plan.alternatives.find((row) => row.pick === 'all-in');
-      expect(allIn, `${String(leadership)}: the all-in is offered`).toBeDefined();
-      if (!allIn) continue;
-      // The pass took Rider II, and the note it wrote is the trade it made. **Registered by the owner
-      // 2026-09-23 (W11 §2.3)**: rated with `markerRates`, Rider II (+12.0 % damage, 4.4 % silver, 11.5 %
-      // queue, one hired fewer) outrates Spearman II (+13.0 %, 4.1 %, 10.8 %); Spearman II, rebuilt below, is
-      // still an admissible candidate — it is outrated, not refused.
-      expect(allIn.putBack?.unitId, `${String(leadership)}: the all-in put Rider II back`).toBe('rider-2');
-      expect(allIn.counts['rider-2'] ?? 0, `${String(leadership)}: and fields it`).toBeGreaterThan(0);
-      expect(
-        allIn.putBack?.seconds ?? -1,
-        `${String(leadership)}: the put-back the pass took shortens the queue`,
-      ).toBeGreaterThan(0);
-
-      // The same candidate rebuilt from the engine's own pieces: the march the pass started from, re-sized
-      // over its troop types plus Spearman II with its hired counts as the sizer's caps.
-      const mercIds = req.units.filter((unit) => unit.pool === 'authority').map((unit) => unit.id);
-      const generated = planCampaign({ ...input, putBack: undefined }).alternatives.find(
-        (row) => row.pick === 'all-in',
+      const plan = planCampaign(
+        buildPlanRequest(profile, {
+          ...setup,
+          housing: { ...setup.housing, leadership, ...(live ? { authority: 2_180 } : {}) },
+        }),
       );
-      expect(generated, `${String(leadership)}: the all-in without the pass`).toBeDefined();
-      if (!generated) continue;
-      const inMarch = req.units
-        .filter((unit) => unit.pool === 'leadership' && (generated.counts[unit.id] ?? 0) > 0)
-        .map((unit) => unit.id);
-      expect(inMarch, `${String(leadership)}: Spearman II is left out`).not.toContain('spearman-2');
-      const caps: Record<string, number> = { ...req.caps };
-      for (const id of mercIds) caps[id] = generated.counts[id] ?? 0;
-      const sized = sizeStacks({
-        ...req,
-        units: req.units.filter(
-          (unit) => inMarch.includes(unit.id) || unit.id === 'spearman-2' || mercIds.includes(unit.id),
-        ),
-        caps,
-        options: { ...req.options, method: 'ms', relaxedPreservation: false },
-      });
-      const counts: Record<string, number> = {};
-      for (const stack of sized.stacks) if (stack.count > 0) counts[stack.unitId] = stack.count;
-      const { summary } = planMarch(req, counts);
-
-      // It scores — and well: measured 2026-09-18, 5.8 at 7 000 (+8.6 % damage) and 1.9 at 12 000
-      // (+8.0 %). Nothing in the rule refuses it. Measured again 2026-09-19 on the worst opening: +13.0 %
-      // damage, 4.1 % of the silver and 10.8 % of the queue, a score of 4.9 (the retired 5 / 10 score; the
-      // test now holds it to the owner's rating, `markerRates`, W11 §2.3).
-      const damage = ((summary.minDamage - generated.repeat.damage) / generated.repeat.damage) * 100;
-      expect(
-        putBackScore(repeatBill(generated), marchBill(req, counts)),
-        `${String(leadership)}: the candidate scores`,
-      ).toBeGreaterThan(0);
-      expect(damage, `${String(leadership)}: and is inside the loss cap`).toBeGreaterThanOrEqual(
-        -CAMPAIGN.putBack.damageLossCap,
-      );
-      // And the queue — the one thing the guard is about — is shorter, which is why the pass may take it.
-      expect(
-        summary.recovery.seconds,
-        `${String(leadership)}: the candidate recovers faster`,
-      ).toBeLessThanOrEqual(generated.repeat.seconds);
+      for (const row of plan.alternatives) {
+        if (!row.putBack) continue;
+        seen += 1;
+        expect(
+          row.putBack.seconds,
+          `${String(leadership)} ${row.pick}: the put-back ${row.putBack.unitId} shortens the queue`,
+        ).toBeGreaterThan(0);
+      }
     }
+    expect(seen, 'the rule has a case on the owner’s accounts').toBeGreaterThan(0);
   }, 180_000);
 });
