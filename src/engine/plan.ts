@@ -44,8 +44,8 @@ import { sizeStacks } from './stacker';
 import type { Bill, MarkerRates } from './rating';
 import { rate, saved } from './rating';
 import { retypeMarch } from './retype';
-import { planKernel } from './fast';
-import type { MarchFigures } from './fast';
+import { LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, planKernel } from './fast';
+import type { LadderKernel, MarchFigures, PlanKernel } from './fast';
 import type {
   BattleSummary,
   Housing,
@@ -78,7 +78,7 @@ export const DEFAULT_GAP = 0.25;
  * it buys troop damage at the cost of silver. The plan's whole shape — how many marches, how big each is, how
  * much the final march can afford — falls out of which of these the campaign can pay for.
  */
-const LADDER_GROWTHS = [1, 1.25, 1.5, 1.8, 2.2, 2.6, 3.2, 4, 5, 6] as const;
+export const LADDER_GROWTHS = [1, 1.25, 1.5, 1.8, 2.2, 2.6, 3.2, 4, 5, 6] as const;
 /** Between consecutive rungs, in HP — wide enough that rounding cannot re-order them. */
 const RUNG_STEP = 1.02;
 /** Fractions of the largest feasible count each mercenary type is offered, beside that count itself. */
@@ -100,7 +100,7 @@ const RETYPE_SHARE = 0.05;
  */
 const CROSSED_TYPES = 4;
 /** Ladder depths tried, in troop rungs. */
-const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+export const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 /**
  * **What a put-back is worth**, in the owner's own exchange rates — the policy the pass below is steered by
@@ -1122,16 +1122,52 @@ class KernelMarch implements MarchOf {
   readonly #source: { entry: Effective; count: number }[];
   readonly #enemyStacks: number;
   #built: Stack[] | undefined;
+  /**
+   * The rounded plan silver the kernel priced with the march (step 4, the scorer's ladders): what
+   * `marchRecovery(recovery, rungs, mercs).silver` answers for these very arrays, and for nothing else.
+   */
+  #billed: { silver: number; recovery: RecoverySettings; rungs: object; mercs: object } | undefined;
 
-  constructor(figures: MarchFigures, source: { entry: Effective; count: number }[], enemyStacks: number) {
-    this.damage = figures.damage;
-    this.hiredDamage = figures.hiredDamage;
-    this.silver = figures.silver;
-    this.gold = figures.gold;
-    this.mercLost = figures.mercLost;
-    this.strikes = figures.strikes;
+  /** `figures` a `MarchFigures`, or the kernel's six figures in that order from `at` (`LadderKernel.out`). */
+  constructor(
+    figures: MarchFigures | Float64Array,
+    source: { entry: Effective; count: number }[],
+    enemyStacks: number,
+    /** Where the six figures start, when `figures` is the kernel's array. */
+    at = 0,
+  ) {
+    if (figures instanceof Float64Array) {
+      this.damage = figures[at] as number;
+      this.hiredDamage = figures[at + 1] as number;
+      this.silver = figures[at + 2] as number;
+      this.gold = figures[at + 3] as number;
+      this.mercLost = figures[at + 4] as number;
+      this.strikes = figures[at + 5] as number;
+    } else {
+      this.damage = figures.damage;
+      this.hiredDamage = figures.hiredDamage;
+      this.silver = figures.silver;
+      this.gold = figures.gold;
+      this.mercLost = figures.mercLost;
+      this.strikes = figures.strikes;
+    }
     this.#source = source;
     this.#enemyStacks = enemyStacks;
+  }
+
+  /** Keep the bill the kernel priced beside the march, for `rungs` and `mercs` under `recovery`. */
+  bill(silver: number, recovery: RecoverySettings, rungs: object, mercs: object): this {
+    this.#billed = { silver, recovery, rungs, mercs };
+    return this;
+  }
+
+  /** That bill's silver, when it was priced for these very arrays under `recovery`; else `undefined`. */
+  billedSilver(recovery: RecoverySettings, rungs: object, mercs: object): number | undefined {
+    const billed = this.#billed;
+    if (billed && billed.recovery === recovery && billed.rungs === rungs && billed.mercs === mercs) {
+      return billed.silver;
+    }
+    return undefined;
   }
 
   get stacks(): Stack[] {
@@ -1630,7 +1666,7 @@ export interface ScoredShape {
 }
 
 /** Scores one shape: `marches` repeats of `counts` behind a ladder of `depth` rungs scaled by `scale`. */
-export type ShapeScorer = (
+export type ShapeScorer = ((
   marches: number,
   counts: Record<string, number>,
   depth: number,
@@ -1642,7 +1678,16 @@ export type ShapeScorer = (
    * then the low tiers put back). Left out, the sizer is asked for every troop type, as it always was.
    */
   prefix?: number,
-) => ScoredShape | null;
+) => ScoredShape | null) & {
+  /**
+   * **A vector's whole ladder grid is about to be asked for** (AssemblyScript roadmap, step 4): until `disarm`,
+   * the ladder shapes asked with these `marches`, this very `counts` object (which must not change meanwhile)
+   * and this `silverBudget` may be answered from one kernel call over every depth and growth. The answers are
+   * the ones asked shape by shape; without a kernel it does nothing.
+   */
+  arm?: (marches: number, counts: Record<string, number>, silverBudget: number | undefined) => void;
+  disarm?: () => void;
+};
 
 /** The scorer of an account whose table is already built, so a sweep does not rebuild it per shape. */
 export function makeScorer(context: ShapeContext): ShapeScorer {
@@ -1676,7 +1721,13 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     const leftoverHp = Math.max(...leftovers.map((merc) => merc.count * merc.entry.hp));
     const finaleBudget = silverLeft === undefined ? Infinity : silverLeft;
     let finale: ScoredShape['finale'] = null;
-    for (const finaleDepth of DEPTHS) {
+    // The whole ladder grid in one kernel call when the host set one (step 4), else — or when a rung order
+    // would be learned inside it — the loop below, which is the reference.
+    const lk = laddersNow();
+    const fast = lk ? finaleOnKernel(lk, spentStock, finaleBudget) : undefined;
+    if (fast !== undefined) finale = fast;
+    // (The kernel answered: nothing left to walk.)
+    for (const finaleDepth of fast === undefined ? DEPTHS : []) {
       for (const finaleGrowth of LADDER_GROWTHS) {
         const finaleLadder = ladder(
           troops,
@@ -1745,6 +1796,8 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
    * (`out/98`), and the best order held across leadership caps and mercenary vectors on the same account.
    */
   const rungOrders = new Map<number, Effective[]>();
+  /** How many orders were learned: a kernel grid read with an older count answered under older orders. */
+  let ordersLearned = 0;
   const log = context.rungOrderLog;
   const orderFor = (
     depth: number,
@@ -1811,10 +1864,229 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       log.tierBattles += battles - rankingBattles;
     }
     rungOrders.set(depth, order);
+    ordersLearned += 1;
     return order;
   };
 
-  return (marches, counts, depth, scale, silverBudget, prefix) => {
+  /** The rest of a shape once its repeated march is known: the final march, and the campaign's three sums. */
+  const finish = (
+    marches: number,
+    counts: Record<string, number>,
+    rungs: { entry: Effective; count: number }[],
+    vector: { entry: Effective; count: number }[],
+    fielded: { entry: Effective; count: number }[],
+    march: ReturnType<typeof marchOf>,
+    silverBudget: number | undefined,
+  ): ScoredShape => {
+    // the final march: the stock the uniform marches burn, and the silver they leave
+    let finale: ScoredShape['finale'];
+    if (noFinale) {
+      finale = null;
+    } else if (silverBudget === undefined) {
+      if (!cacheHit(marches, vector)) {
+        cachedValid = true;
+        cachedMarches = marches;
+        cachedCounts.length = vector.length;
+        for (let i = 0; i < vector.length; i += 1) cachedCounts[i] = (vector[i] as { count: number }).count;
+        cachedFinale = finaleFor(marches, fielded, undefined);
+      }
+      finale = cachedFinale;
+    } else {
+      finale = finaleFor(marches, fielded, silverBudget - marches * march.silver);
+    }
+    return {
+      marches,
+      mercs: vector,
+      counts,
+      rungs,
+      march,
+      finale,
+      total: marches * march.damage + (finale?.march.damage ?? 0),
+      silver: marches * march.silver + (finale?.march.silver ?? 0),
+      mercLost: marches * march.mercLost + (finale?.march.mercLost ?? 0),
+    };
+  };
+
+  /**
+   * **The ladder shapes on the kernel** (AssemblyScript roadmap, step 4; `./fast.ts`): a depth of 1 or more is
+   * checked against the stock, laddered, sheltered, housed, marched and billed in one kernel call, and only the
+   * shape the scorer hands back is built here. The kernel answers exactly what the TypeScript below computes
+   * (`tests/kernel/ladder-kernel.test.ts`), or hands the shape back to it — where a rung order would be learned
+   * (`orderFor` stays here, with its climb and its log), or when no kernel is set.
+   */
+  let laddersOf: PlanKernel | null | undefined;
+  let ladderKernel: LadderKernel | null = null;
+  const laddersNow = (): LadderKernel | null => {
+    const kernel = planKernel();
+    if (kernel !== laddersOf) {
+      laddersOf = kernel;
+      ladderKernel =
+        kernel?.ladders(
+          troops,
+          mercTypes,
+          enemyStacks,
+          SEARCH_RECOVERY,
+          Array.from({ length: 64 }, (_, k) => rungPower(k)),
+          DEPTHS,
+          LADDER_GROWTHS,
+        ) ?? null;
+    }
+    return ladderKernel;
+  };
+
+  /** The scorer's answer for a ladder depth from the kernel, or `undefined` to let the TypeScript answer. */
+  const ladderOnKernel = (
+    lk: LadderKernel,
+    marches: number,
+    counts: Record<string, number>,
+    depth: number,
+    scale: number,
+    silverBudget: number | undefined,
+  ): ScoredShape | null | undefined => {
+    layVector(lk, counts);
+    const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
+    const order = rungOrders.get(depth);
+    const status = lk.shape(marches, depth, scale, order, gap, leadership, context.housing, budgetPerMarch);
+    if (status === LADDER_NONE) return null;
+    if (status === LADDER_ENGINE || order === undefined) return undefined;
+    return shapeOf(lk, marches, counts, order, lk.rungs, lk.sheltered, lk.out, 0, 0, silverBudget);
+  };
+
+  /** The scorer's vector (`max(0, floor(counts[id] ?? 0))`) and what sustains it, into the kernel's input. */
+  const layVector = (lk: LadderKernel, counts: Record<string, number>): void => {
+    const into = lk.vector;
+    const held = lk.held;
+    for (let i = 0; i < mercTypes.length; i += 1) {
+      const entry = mercTypes[i] as Effective;
+      const count = Math.max(0, Math.floor(counts[entry.id] ?? 0));
+      into[i] = count;
+      held[i] = count > 0 ? (sustain[entry.id] ?? 0) : 0;
+    }
+  };
+
+  /** The shape the kernel answered — rungs from `at`, sheltered vector from `at`, figures from `figuresAt`. */
+  const shapeOf = (
+    lk: LadderKernel,
+    marches: number,
+    counts: Record<string, number>,
+    order: readonly Effective[],
+    counted: Float64Array,
+    sheltered: Float64Array,
+    out: Float64Array,
+    at: number,
+    figuresAt: number,
+    silverBudget: number | undefined,
+  ): ScoredShape => {
+    const rungs: { entry: Effective; count: number }[] = [];
+    for (let i = 0; i < order.length; i += 1) {
+      rungs.push({ entry: order[i] as Effective, count: counted[at + i] as number });
+    }
+    const vector: { entry: Effective; count: number }[] = [];
+    const fielded: { entry: Effective; count: number }[] = [];
+    for (let i = 0; i < mercTypes.length; i += 1) {
+      const merc = { entry: mercTypes[i] as Effective, count: sheltered[at + i] as number };
+      vector.push(merc);
+      if (merc.count > 0) fielded.push(merc);
+    }
+    const march = new KernelMarch(out, [...rungs, ...vector], enemyStacks, figuresAt).bill(
+      out[figuresAt + 6] as number,
+      lk.recovery,
+      rungs,
+      vector,
+    );
+    return finish(marches, counts, rungs, vector, fielded, march, silverBudget);
+  };
+
+  /** The armed vector (`arm`): its counts, marches and budget, and the kernel grid read for it. */
+  let armed: { marches: number; counts: Record<string, number>; silverBudget: number | undefined } | null =
+    null;
+  let gridSerial = -1;
+  let gridLearned = -1;
+
+  /** An armed ladder shape from the vector's kernel grid, run once per vector and per order learned. */
+  const gridOnKernel = (
+    lk: LadderKernel,
+    marches: number,
+    counts: Record<string, number>,
+    depth: number,
+    scale: number,
+    silverBudget: number | undefined,
+  ): ScoredShape | null | undefined => {
+    const j = (DEPTHS as readonly number[]).indexOf(depth);
+    const g = (LADDER_GROWTHS as readonly number[]).indexOf(scale);
+    if (j < 0 || g < 0) return ladderOnKernel(lk, marches, counts, depth, scale, silverBudget);
+    let view = lk.gridView();
+    if (gridSerial < 0 || view.serial !== gridSerial || gridLearned !== ordersLearned) {
+      layVector(lk, counts);
+      const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
+      const orders = DEPTHS.map((each) => rungOrders.get(each));
+      const serial = lk.grid(marches, orders, gap, leadership, context.housing, budgetPerMarch);
+      if (serial < 0) return ladderOnKernel(lk, marches, counts, depth, scale, silverBudget);
+      gridSerial = serial;
+      gridLearned = ordersLearned;
+      view = lk.gridView();
+    }
+    const s = j * LADDER_GROWTHS.length + g;
+    const status = view.status[s];
+    if (status === LADDER_NONE) return null;
+    const order = rungOrders.get(depth);
+    if (status !== LADDER_SHAPE || order === undefined) return undefined;
+    return shapeOf(
+      lk,
+      marches,
+      counts,
+      order,
+      view.rungs,
+      view.sheltered,
+      view.out,
+      s * view.stride,
+      s * 8,
+      silverBudget,
+    );
+  };
+
+  /** `finaleFor`'s ladder grid from the kernel, or `undefined` to let the TypeScript run it. */
+  const finaleOnKernel = (
+    lk: LadderKernel,
+    spentStock: Record<string, number>,
+    budget: number,
+  ): ScoredShape['finale'] | undefined => {
+    const m = mercTypes.length;
+    const into = lk.vector;
+    for (let i = 0; i < m; i += 1) into[i] = Math.max(0, spentStock[(mercTypes[i] as Effective).id] ?? 0);
+    const orders = DEPTHS.map((depth) => rungOrders.get(depth));
+    const best = lk.finale(orders, gap, leadership, context.housing, budget);
+    if (best === null) return undefined;
+    if (best < 0) return null;
+    const order = orders[Math.floor(best / LADDER_GROWTHS.length)];
+    if (order === undefined) return undefined;
+    const counted = lk.rungs;
+    const sheltered = lk.sheltered;
+    const rungs: { entry: Effective; count: number }[] = [];
+    for (let i = 0; i < order.length; i += 1)
+      rungs.push({ entry: order[i] as Effective, count: counted[i] as number });
+    const under: { entry: Effective; count: number }[] = [];
+    for (let i = 0; i < m; i += 1) {
+      const count = sheltered[i] as number;
+      if (count > 0) under.push({ entry: mercTypes[i] as Effective, count });
+    }
+    return { rungs, mercs: under, march: new KernelMarch(lk.out, [...rungs, ...under], enemyStacks) };
+  };
+
+  const scorer: ShapeScorer = (marches, counts, depth, scale, silverBudget, prefix) => {
+    if (Number.isInteger(depth) && depth >= 1) {
+      const lk = laddersNow();
+      if (lk) {
+        const fast =
+          armed !== null &&
+          counts === armed.counts &&
+          Object.is(marches, armed.marches) &&
+          silverBudget === armed.silverBudget
+            ? gridOnKernel(lk, marches, counts, depth, scale, silverBudget)
+            : ladderOnKernel(lk, marches, counts, depth, scale, silverBudget);
+        if (fast !== undefined) return fast;
+      }
+    }
     let vector = mercTypes.map((entry) => ({
       entry,
       count: Math.max(0, Math.floor(counts[entry.id] ?? 0)),
@@ -1881,34 +2153,17 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     if (context.housing && !fitsHousing(context.housing, rungs, fielded)) return null;
     const march = marchOf([...rungs, ...vector], enemyStacks);
     if (budgetPerMarch !== undefined && march.silver > budgetPerMarch) return null;
-    // the final march: the stock the uniform marches burn, and the silver they leave
-    let finale: ScoredShape['finale'];
-    if (noFinale) {
-      finale = null;
-    } else if (silverBudget === undefined) {
-      if (!cacheHit(marches, vector)) {
-        cachedValid = true;
-        cachedMarches = marches;
-        cachedCounts.length = vector.length;
-        for (let i = 0; i < vector.length; i += 1) cachedCounts[i] = (vector[i] as { count: number }).count;
-        cachedFinale = finaleFor(marches, fielded, undefined);
-      }
-      finale = cachedFinale;
-    } else {
-      finale = finaleFor(marches, fielded, silverBudget - marches * march.silver);
-    }
-    return {
-      marches,
-      mercs: vector,
-      counts,
-      rungs,
-      march,
-      finale,
-      total: marches * march.damage + (finale?.march.damage ?? 0),
-      silver: marches * march.silver + (finale?.march.silver ?? 0),
-      mercLost: marches * march.mercLost + (finale?.march.mercLost ?? 0),
-    };
+    return finish(marches, counts, rungs, vector, fielded, march, silverBudget);
   };
+  scorer.arm = (marches, counts, silverBudget) => {
+    armed = { marches, counts, silverBudget };
+    gridSerial = -1;
+  };
+  scorer.disarm = () => {
+    armed = null;
+    gridSerial = -1;
+  };
+  return scorer;
 }
 
 /** The scorer of one request, with the account's table built from it — the shorthand for a standalone sweep. */
@@ -3139,7 +3394,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // `toMarch`'s three figures, without the rest of the `PlanMarch` it would build and drop (step 3): its
     // `silver` is the rounded bill, its `mercLost` the march's own, its `hiredDamage` the march's rounded.
     const m = candidate.march;
-    const silver = Math.round(marchRecovery(request.recovery, candidate.rungs, candidate.mercs).silver);
+    // The kernel priced it with the march when the scorer's ladder came from the kernel (step 4).
+    const billed =
+      m instanceof KernelMarch
+        ? m.billedSilver(request.recovery, candidate.rungs, candidate.mercs)
+        : undefined;
+    const silver = Math.round(
+      billed ?? marchRecovery(request.recovery, candidate.rungs, candidate.mercs).silver,
+    );
     const ratios = {
       silver: candidate.marches * silver + (candidate.finale?.silver ?? 0),
       mercs: candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0),
@@ -3282,6 +3544,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      * ladders too.
      */
     const derived: { entry: Effective; count: number }[][] = [];
+    // The whole ladder grid of this vector in one kernel call (step 4); `counts` is not written again.
+    if (!only) score.arm?.(marches, counts, input.silverBudget);
     for (const depth of depths) {
       for (const scale of only ? [only.scale] : depth <= 0 ? [1] : LADDER_GROWTHS) {
         const scored = score(marches, counts, depth, scale, input.silverBudget);
@@ -3307,6 +3571,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         }
       }
     }
+    if (!only) score.disarm?.();
     if (tight && tight !== pick) consider(tight);
     if (!laddersOnly) {
       const seen = new Set<string>([vector.map((merc) => merc.count).join(',')]);

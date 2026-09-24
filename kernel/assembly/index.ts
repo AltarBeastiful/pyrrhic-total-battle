@@ -1155,3 +1155,436 @@ export function enumerate(
   store<f64>(outPtr + ((<usize>E_ADMISSIBLE) << 3), eAdmissible);
   store<f64>(outPtr + ((<usize>E_POSITIVE) << 3), ePositive);
 }
+
+// ---- the scorer's ladders (`makeScorer`, `src/engine/plan.ts`; AssemblyScript roadmap, step 4) -------------
+//
+// One ladder shape of the plan's scorer — the hired vector checked against the stock, the rungs built above
+// its biggest stack, the hired stacks sheltered under the lowest rung, the housing, the march and its bill —
+// in one call (`ladderShape`), and the final march's whole ladder grid in another (`ladderFinale`). Every
+// expression is the engine's, in the engine's order (`ladder`, `shelterUnder`, `fitsHousing`, `lastsMarches`,
+// `marchOf`, `recoveryCosts`), so each figure is the one the TypeScript computes. The rung order the scorer
+// learns (`orderFor`) stays in the engine: a depth whose order is not learned yet is answered `LADDER_ENGINE`
+// as soon as the ranking's ladder fits, which is where the engine would learn it.
+
+const LADDER_NONE = 0; // the engine answers `null` (or skips the finale ladder)
+const LADDER_SHAPE = 1; // a shape: rungs, sheltered vector and figures written
+const LADDER_ENGINE = 2; // the engine must run this one (a rung order is learned there)
+
+const G_TROOPS = 0; // i32 × types: the troop ranking's rows, weakest per HP first
+const G_MERCS = 1; // i32 × types: the hired types' rows, the scorer's `mercTypes` order
+const G_POWERS = 2; // f64 × 64: `rungPower(k)`
+const G_ORDER = 3; // i32 × types: the rung order of one shape (in)
+const G_VECTOR = 4; // f64 × types: the hired vector (in)
+const G_HELD = 5; // f64 × types: what sustains each hired type (in)
+const G_RUNGS = 6; // f64 × types: the rungs' counts (out)
+const G_SHELTERED = 7; // f64 × types: the hired vector sheltered (out)
+const G_OUT = 8; // f64 × 8: damage, hired damage, silver, gold, mercLost, strikes, bill silver
+const G_DEPTHS = 9; // i32 × 32: the finale's depths
+const G_GROWTHS = 10; // f64 × 32: the finale's growths
+const G_LEARNED = 11; // i32 × 32: the finale's depths — 1 when its order is learned
+const G_ORDER_LEN = 12; // i32 × 32: the length of each depth's order
+const G_ORDERS = 13; // i32 × 32 × types: each depth's order
+const G_STATUS = 14; // i32 × 32 × 32: each grid shape's answer (`ladderGrid`)
+const G_GRID_RUNGS = 15; // f64 × 32 × 32 × types: each grid shape's rungs
+const G_GRID_SHELTERED = 16; // f64 × 32 × 32 × types: each grid shape's sheltered vector
+const G_GRID_OUT = 17; // f64 × 32 × 32 × 8: each grid shape's figures and bill
+const G_SLOTS = 18;
+const G_POWER_COUNT = 64;
+const G_GRID = 32;
+
+let gDir: usize = 0;
+let gWorkRungs: usize = 0; // f64 × types
+let gWorkShelter: usize = 0; // f64 × types
+let gMarchRows: usize = 0; // i32 × types
+let gMarchCounts: usize = 0; // f64 × types
+let gFigures: usize = 0; // f64 × 8
+let gOrderRows: usize = 0; // i32: the rows of the ladder being built, sheltered under and marched
+
+@inline function gPtr(slot: i32): usize {
+  return load<usize>(gDir + ((<usize>slot) << 2));
+}
+
+/** Reserve the ladders' scratch once per instance (after `setTable`); answers the pointer of `slot` (`G_*`). */
+export function ladderScratch(slot: i32): usize {
+  if (gDir == 0) {
+    const n = <usize>max(types, 1);
+    gDir = heap.alloc(<usize>G_SLOTS << 2);
+    const grid = <usize>G_GRID;
+    const slot = (s: i32, bytes: usize): void => {
+      store<usize>(gDir + ((<usize>s) << 2), heap.alloc(bytes));
+    };
+    slot(G_TROOPS, n << 2);
+    slot(G_MERCS, n << 2);
+    slot(G_POWERS, <usize>G_POWER_COUNT << 3);
+    slot(G_ORDER, n << 2);
+    slot(G_VECTOR, n << 3);
+    slot(G_HELD, n << 3);
+    slot(G_RUNGS, n << 3);
+    slot(G_SHELTERED, n << 3);
+    slot(G_OUT, 8 << 3);
+    slot(G_DEPTHS, grid << 2);
+    slot(G_GROWTHS, grid << 3);
+    slot(G_LEARNED, grid << 2);
+    slot(G_ORDER_LEN, grid << 2);
+    slot(G_ORDERS, (grid * n) << 2);
+    slot(G_STATUS, (grid * grid) << 2);
+    slot(G_GRID_RUNGS, (grid * grid * n) << 3);
+    slot(G_GRID_SHELTERED, (grid * grid * n) << 3);
+    slot(G_GRID_OUT, (grid * grid * 8) << 3);
+    gWorkRungs = heap.alloc(n << 3);
+    gWorkShelter = heap.alloc(n << 3);
+    gMarchRows = heap.alloc(n << 2);
+    gMarchCounts = heap.alloc(n << 3);
+    gFigures = heap.alloc(8 << 3);
+  }
+  return gPtr(slot);
+}
+
+/** `lastsMarches(held, count)` for a count above 0. */
+@inline function lasts(held: f64, count: f64): f64 {
+  return Math.floor((held - count) / chunks(count)) + 1.0;
+}
+
+/**
+ * `ladder(troops, len, mercenaryHp, gap, leadership, scale, order)` over the `len` rows at `orderPtr`: each
+ * rung's count into `outPtr`; answers whether the leadership pays for it (the engine's `[]` otherwise).
+ */
+function buildLadder(len: i32, orderPtr: usize, mercenaryHp: f64, gap: f64, leadership: f64, scale: f64, outPtr: usize): bool {
+  if (len == 0) return false;
+  const floor = mercenaryHp * (1.0 + gap) * scale;
+  const powers = gPtr(G_POWERS);
+  let used: f64 = 0.0;
+  for (let index = 0; index < len; index += 1) {
+    const row = i32At(orderPtr, index);
+    const hp = floor * f64At(powers, len - 1 - index);
+    const count = Math.max(1.0, Math.floor(hp / cell(row, T_HP)));
+    used += count * cell(row, T_COST);
+    store<f64>(outPtr + ((<usize>index) << 3), count);
+  }
+  return used <= leadership;
+}
+
+/**
+ * `shelterUnder(rungs, mercs)` over the `m` hired types (`G_MERCS`), only those with `mask` — every one, or
+ * those with a count above 0 in `countsPtr` — counted as `mercs`; the others are written 0.
+ */
+function shelter(len: i32, rungsPtr: usize, m: i32, countsPtr: usize, onlyPositive: bool, outPtr: usize): void {
+  const mercs = gPtr(G_MERCS);
+  let floor: f64 = Infinity;
+  for (let r = 0; r < len; r += 1) {
+    floor = Math.min(floor, f64At(rungsPtr, r) * cell(i32At(gOrderRows, r), T_HP));
+  }
+  const lower = len > 0 && isFinite<f64>(floor) && floor > 0;
+  for (let i = 0; i < m; i += 1) {
+    const count = f64At(countsPtr, i);
+    let out = count;
+    if (onlyPositive && !(count > 0)) out = 0.0;
+    else if (lower) {
+      const hp = cell(i32At(mercs, i), T_HP);
+      if (!(count * hp < floor || hp <= 0)) out = Math.max(0.0, Math.ceil(floor / hp) - 1.0);
+    }
+    store<f64>(outPtr + ((<usize>i) << 3), out);
+  }
+}
+
+/**
+ * `fitsHousing(housing, rungs, hired)` then `marchOf([...rungs, ...hired])`, the march's figures into
+ * `gFigures`; answers false when the housing refuses it (no march then).
+ */
+function housedMarch(
+  len: i32,
+  rungsPtr: usize,
+  m: i32,
+  hiredPtr: usize,
+  housed: bool,
+  hL: f64,
+  hA: f64,
+  hD: f64,
+  enemy: i32,
+  searchTemple: f64,
+): bool {
+  const mercs = gPtr(G_MERCS);
+  if (housed) {
+    let leadership: f64 = 0.0;
+    let authority: f64 = 0.0;
+    let dominance: f64 = 0.0;
+    for (let r = 0; r < len; r += 1) {
+      const count = f64At(rungsPtr, r);
+      if (count <= 0) continue;
+      const row = i32At(gOrderRows, r);
+      const used = count * cell(row, T_COST);
+      const pool = <i32>cell(row, T_POOL);
+      if (pool == 0) leadership += used;
+      else if (pool == 1) authority += used;
+      else dominance += used;
+    }
+    // `hired` is the fielded stacks only (a count above 0), where the rungs are every one the ladder built.
+    for (let i = 0; i < m; i += 1) {
+      const count = f64At(hiredPtr, i);
+      if (!(count > 0)) continue;
+      const row = i32At(mercs, i);
+      const used = count * cell(row, T_COST);
+      const pool = <i32>cell(row, T_POOL);
+      if (pool == 0) leadership += used;
+      else if (pool == 1) authority += used;
+      else dominance += used;
+    }
+    if (!(leadership <= hL && authority <= hA && dominance <= hD)) return false;
+  }
+  let n = 0;
+  for (let r = 0; r < len; r += 1) {
+    store<i32>(gMarchRows + ((<usize>n) << 2), i32At(gOrderRows, r));
+    store<f64>(gMarchCounts + ((<usize>n) << 3), f64At(rungsPtr, r));
+    n += 1;
+  }
+  for (let i = 0; i < m; i += 1) {
+    store<i32>(gMarchRows + ((<usize>n) << 2), i32At(mercs, i));
+    store<f64>(gMarchCounts + ((<usize>n) << 3), f64At(hiredPtr, i));
+    n += 1;
+  }
+  march(n, gMarchRows, gMarchCounts, enemy, searchTemple, gFigures);
+  return true;
+}
+
+/**
+ * The part of a ladder shape every depth and scale of one vector shares: the vector at `G_VECTOR` (the counts
+ * already floored) fields something, `marches` is at least 1, the stock at `G_HELD` sustains every fielded
+ * count that many marches (`lastsMarches`). Answers whether it does; the biggest hired stack's HP — what the
+ * ladder is built above — into `gMercenaryHp`.
+ */
+let gMercenaryHp: f64 = 0.0;
+function ladderPrelude(m: i32, marches: f64): bool {
+  const mercs = gPtr(G_MERCS);
+  const vector = gPtr(G_VECTOR);
+  const held = gPtr(G_HELD);
+  let fielded = false;
+  for (let i = 0; i < m; i += 1) if (f64At(vector, i) > 0) fielded = true;
+  if (!fielded || marches < 1) return false;
+  for (let i = 0; i < m; i += 1) {
+    const count = f64At(vector, i);
+    if (count > 0 && lasts(f64At(held, i), count) < marches) return false;
+  }
+  let mercenaryHp: f64 = -Infinity;
+  for (let i = 0; i < m; i += 1) {
+    const count = f64At(vector, i);
+    if (count > 0) mercenaryHp = Math.max(mercenaryHp, count * cell(i32At(mercs, i), T_HP));
+  }
+  gMercenaryHp = mercenaryHp;
+  return true;
+}
+
+/**
+ * One ladder shape once `ladderPrelude` passed: the ladder over the `len` rows at `orderPtr` (the ranking's
+ * when not `learned`), the shelter, the housing, the march, the budget and (with `billed`) the bill, into
+ * `rungsOut`, `shelteredOut` and `out` (six figures, then the bill's silver).
+ */
+function shapeInto(
+  m: i32,
+  len: i32,
+  learned: bool,
+  orderPtr: usize,
+  scale: f64,
+  gap: f64,
+  leadership: f64,
+  housed: bool,
+  hL: f64,
+  hA: f64,
+  hD: f64,
+  budgeted: bool,
+  budgetPerMarch: f64,
+  enemy: i32,
+  searchTemple: f64,
+  billed: bool,
+  rungsOut: usize,
+  shelteredOut: usize,
+  out: usize,
+): i32 {
+  gOrderRows = orderPtr;
+  if (!buildLadder(len, orderPtr, gMercenaryHp, gap, leadership, scale, rungsOut)) return LADDER_NONE;
+  if (!learned) return LADDER_ENGINE;
+  shelter(len, rungsOut, m, gPtr(G_VECTOR), false, shelteredOut);
+  let fielded = false;
+  for (let i = 0; i < m; i += 1) if (f64At(shelteredOut, i) > 0) fielded = true;
+  if (!fielded) return LADDER_NONE;
+  if (!housedMarch(len, rungsOut, m, shelteredOut, housed, hL, hA, hD, enemy, searchTemple)) return LADDER_NONE;
+  for (let f = 0; f < 6; f += 1) store<f64>(out + ((<usize>f) << 3), f64At(gFigures, f));
+  if (budgeted && f64At(out, 2) > budgetPerMarch) return LADDER_NONE;
+  if (billed) {
+    bill(len + m, gMarchRows, gMarchCounts, gFigures);
+    store<f64>(out + 48, f64At(gFigures, 0));
+  }
+  return LADDER_SHAPE;
+}
+
+/**
+ * **One ladder shape of the scorer** (`makeScorer`'s answer for a depth of 1 or more): the vector at
+ * `G_VECTOR` (the counts already floored), `G_HELD` what sustains each type, the order at `G_ORDER` (`len`
+ * rows; the ranking's when `learned` is 0). Answers `LADDER_NONE` where the scorer answers `null`,
+ * `LADDER_ENGINE` where it would learn a rung order, else `LADDER_SHAPE` with the rungs at `G_RUNGS`, the
+ * sheltered vector at `G_SHELTERED` and, at `G_OUT`, the march's six figures, then (with `billed`) the
+ * rounded silver of `recoveryCosts(...).plan` over the fielded stacks, rungs first.
+ */
+export function ladderShape(
+  m: i32,
+  len: i32,
+  learned: i32,
+  marches: f64,
+  scale: f64,
+  gap: f64,
+  leadership: f64,
+  housed: i32,
+  hL: f64,
+  hA: f64,
+  hD: f64,
+  budgeted: i32,
+  budgetPerMarch: f64,
+  enemy: i32,
+  searchTemple: f64,
+  billed: i32,
+): i32 {
+  if (!ladderPrelude(m, marches)) return LADDER_NONE;
+  return shapeInto(
+    m,
+    len,
+    learned != 0,
+    gPtr(G_ORDER),
+    scale,
+    gap,
+    leadership,
+    housed != 0,
+    hL,
+    hA,
+    hD,
+    budgeted != 0,
+    budgetPerMarch,
+    enemy,
+    searchTemple,
+    billed != 0,
+    gPtr(G_RUNGS),
+    gPtr(G_SHELTERED),
+    gPtr(G_OUT),
+  );
+}
+
+/**
+ * **Every ladder shape of one vector** (`evaluateVector`'s grid): `ladderShape` at each of the `nDepths`
+ * depths (orders at `G_ORDERS`, `G_ORDER_LEN`, `G_LEARNED`, as for `ladderFinale`) × `nGrowths` scales
+ * (`G_GROWTHS`), shape `d × nGrowths + g` answered at `G_STATUS` with its rungs, sheltered vector and figures
+ * at that index of `G_GRID_RUNGS`, `G_GRID_SHELTERED` (stride `types`) and `G_GRID_OUT` (stride 8).
+ */
+export function ladderGrid(
+  m: i32,
+  nDepths: i32,
+  nGrowths: i32,
+  marches: f64,
+  gap: f64,
+  leadership: f64,
+  housed: i32,
+  hL: f64,
+  hA: f64,
+  hD: f64,
+  budgeted: i32,
+  budgetPerMarch: f64,
+  enemy: i32,
+  searchTemple: f64,
+): void {
+  const status = gPtr(G_STATUS);
+  const shapes = nDepths * nGrowths;
+  if (!ladderPrelude(m, marches)) {
+    for (let s = 0; s < shapes; s += 1) store<i32>(status + ((<usize>s) << 2), LADDER_NONE);
+    return;
+  }
+  const n = <usize>max(types, 1);
+  for (let d = 0; d < nDepths; d += 1) {
+    const len = i32At(gPtr(G_ORDER_LEN), d);
+    const learned = i32At(gPtr(G_LEARNED), d) != 0;
+    const orderPtr = gPtr(G_ORDERS) + ((<usize>d * n) << 2);
+    for (let g = 0; g < nGrowths; g += 1) {
+      const s = d * nGrowths + g;
+      const answer = shapeInto(
+        m,
+        len,
+        learned,
+        orderPtr,
+        f64At(gPtr(G_GROWTHS), g),
+        gap,
+        leadership,
+        housed != 0,
+        hL,
+        hA,
+        hD,
+        budgeted != 0,
+        budgetPerMarch,
+        enemy,
+        searchTemple,
+        true,
+        gPtr(G_GRID_RUNGS) + ((<usize>s * n) << 3),
+        gPtr(G_GRID_SHELTERED) + ((<usize>s * n) << 3),
+        gPtr(G_GRID_OUT) + ((<usize>s * 8) << 3),
+      );
+      store<i32>(status + ((<usize>s) << 2), answer);
+    }
+  }
+}
+
+/**
+ * **The final march's ladder grid** (`finaleFor`'s loop over depths × growths): the leftovers are the hired
+ * types with a count above 0 at `G_VECTOR`, `nDepths` depths at `G_DEPTHS` (their orders at `G_ORDERS`,
+ * `G_ORDER_LEN`, learned or the ranking's per `G_LEARNED`), `nGrowths` growths at `G_GROWTHS`. The best march
+ * by damage (the first on a tie) under `budget` is written — rungs at `G_RUNGS`, the sheltered leftovers at
+ * `G_SHELTERED` (0 for the rest), figures at `G_OUT` — and its index `depth × nGrowths + growth` answered;
+ * −1 when none, −2 when the engine must run the grid (a rung order would be learned in it).
+ */
+export function ladderFinale(
+  m: i32,
+  nDepths: i32,
+  nGrowths: i32,
+  gap: f64,
+  leadership: f64,
+  housed: i32,
+  hL: f64,
+  hA: f64,
+  hD: f64,
+  budget: f64,
+  enemy: i32,
+  searchTemple: f64,
+): i32 {
+  const mercs = gPtr(G_MERCS);
+  const leftovers = gPtr(G_VECTOR);
+  let leftoverHp: f64 = -Infinity;
+  for (let i = 0; i < m; i += 1) {
+    const count = f64At(leftovers, i);
+    if (count > 0) leftoverHp = Math.max(leftoverHp, count * cell(i32At(mercs, i), T_HP));
+  }
+  const n = <usize>max(types, 1);
+  const outRungs = gPtr(G_RUNGS);
+  const outSheltered = gPtr(G_SHELTERED);
+  const out = gPtr(G_OUT);
+  let best = -1;
+  let bestDamage: f64 = 0.0;
+  for (let d = 0; d < nDepths; d += 1) {
+    const len = i32At(gPtr(G_ORDER_LEN), d);
+    const learned = i32At(gPtr(G_LEARNED), d) != 0;
+    gOrderRows = gPtr(G_ORDERS) + ((<usize>d * n) << 2);
+    for (let g = 0; g < nGrowths; g += 1) {
+      const growth = f64At(gPtr(G_GROWTHS), g);
+      if (!buildLadder(len, gOrderRows, leftoverHp, gap, leadership, growth, gWorkRungs)) continue;
+      if (!learned) return -2;
+      shelter(len, gWorkRungs, m, leftovers, true, gWorkShelter);
+      let any = false;
+      for (let i = 0; i < m; i += 1) if (f64At(gWorkShelter, i) > 0) any = true;
+      if (!any) continue;
+      if (!housedMarch(len, gWorkRungs, m, gWorkShelter, housed != 0, hL, hA, hD, enemy, searchTemple)) continue;
+      if (f64At(gFigures, 2) > budget) continue;
+      const damage = f64At(gFigures, 0);
+      if (best < 0 || damage > bestDamage) {
+        best = d * nGrowths + g;
+        bestDamage = damage;
+        memory.copy(outRungs, gWorkRungs, (<usize>len) << 3);
+        memory.copy(outSheltered, gWorkShelter, (<usize>m) << 3);
+        memory.copy(out, gFigures, 6 << 3);
+      }
+    }
+  }
+  return best;
+}

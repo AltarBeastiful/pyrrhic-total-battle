@@ -14,7 +14,7 @@
 import type { Effective } from './plan';
 import type { Bill } from './rating';
 import type { UnitDef } from '../data/types';
-import type { RecoveryCost, RecoverySettings, StackRequest, StackingOptions } from './types';
+import type { Housing, RecoveryCost, RecoverySettings, StackRequest, StackingOptions } from './types';
 
 /** `marchOf`'s figures (`src/engine/plan.ts`), without its `Stack[]`. */
 export interface MarchFigures {
@@ -32,6 +32,88 @@ export interface PoolSlot {
   cost: number;
   cap: number;
   count: number;
+}
+
+/** `LadderKernel.shape`'s answers. */
+export const LADDER_NONE = 0;
+export const LADDER_SHAPE = 1;
+export const LADDER_ENGINE = 2;
+
+/**
+ * **The scorer's ladders on the kernel** (step 4): one scorer's troops and hired types (`makeScorer`), bound to
+ * one packed request. The caller writes the hired vector and what sustains it (`vector`, `held`, the hired
+ * types' order), then asks; the answers are read off `rungs`, `sheltered` and `out` before the next call.
+ */
+export interface LadderKernel {
+  /** In: the hired vector, each count already `max(0, floor(counts[id] ?? 0))`, `mercTypes` order. */
+  readonly vector: Float64Array;
+  /** In: what sustains each hired type (`sustain[id] ?? 0`); read only where the vector is above 0. */
+  readonly held: Float64Array;
+  /** Out: each rung's count, in the order's order. */
+  rungs: Float64Array;
+  /** Out: the hired vector sheltered under the lowest rung (`shelterUnder`), `mercTypes` order. */
+  sheltered: Float64Array;
+  /**
+   * Out: `marchOf`'s damage, hired damage, silver, gold, mercLost, strikes, then (after `shape`) the rounded
+   * silver of `recoveryCosts(...).plan` under `recovery` over the fielded stacks, rungs first.
+   */
+  out: Float64Array;
+  /** The recovery settings the bill in `out[6]` is priced under (the bound request's own). */
+  readonly recovery: RecoverySettings;
+  /**
+   * One ladder shape of the scorer at `depth` (an integer of 1 or more) and `scale`: `order` the depth's
+   * learned rung order, or `undefined` for the ranking's (`troops.slice(-depth)`). `LADDER_NONE` where the
+   * scorer answers `null`; `LADDER_ENGINE` where it would learn a rung order (or the order cannot be read);
+   * `LADDER_SHAPE` with the answers written.
+   */
+  shape(
+    marches: number,
+    depth: number,
+    scale: number,
+    order: readonly Effective[] | undefined,
+    gap: number,
+    leadership: number,
+    housing: Housing | undefined,
+    budgetPerMarch: number | undefined,
+  ): number;
+  /**
+   * The final march's ladder grid (`finaleFor`): the leftovers are `vector`'s counts above 0; `orders[j]` is
+   * the learned order of the `j`-th depth the kernel was made with, or `undefined`. Answers the index
+   * `j × growths + g` of the best march (answers written), −1 when none, `null` when the engine must run it.
+   */
+  finale(
+    orders: readonly (readonly Effective[] | undefined)[],
+    gap: number,
+    leadership: number,
+    housing: Housing | undefined,
+    budget: number,
+  ): number | null;
+  /**
+   * Every ladder shape of the vector in `vector`/`held` at once: `shape` at each depth the kernel was made
+   * with (`orders` as for `finale`) × each growth, shape `j × growths + g`. −1 when an order cannot be read
+   * (the caller then asks shape by shape); else the grid's serial, and the answers are read with `gridView()`
+   * for as long as its `serial` is that one (a later grid over the same instance overwrites them).
+   */
+  grid(
+    marches: number,
+    orders: readonly (readonly Effective[] | undefined)[],
+    gap: number,
+    leadership: number,
+    housing: Housing | undefined,
+    budgetPerMarch: number | undefined,
+  ): number;
+  /**
+   * The last `grid`'s answers, through views fresh at the call: `status[s]`, and from `s × stride` the rungs
+   * and the sheltered vector, from `s × 8` the six figures and the bill's silver.
+   */
+  gridView(): {
+    status: Int32Array;
+    rungs: Float64Array;
+    sheltered: Float64Array;
+    out: Float64Array;
+    stride: number;
+    serial: number;
+  };
 }
 
 export interface PlanKernel {
@@ -83,6 +165,20 @@ export interface PlanKernel {
     caps: Record<string, number>,
     options: StackingOptions,
   ): { unitId: string; count: number }[] | null;
+  /**
+   * The scorer's ladders (step 4) over `troops` (the ranking, weakest first) and `mercTypes`, marched against
+   * `enemyStacks` under `recovery` (the engine's `SEARCH_RECOVERY`), with `powers[k]` the engine's
+   * `rungPower(k)` and the finale's `depths` × `growths`; `null` unless every entry is bound to one request.
+   */
+  ladders(
+    troops: readonly Effective[],
+    mercTypes: readonly Effective[],
+    enemyStacks: number,
+    recovery: RecoverySettings,
+    powers: readonly number[],
+    depths: readonly number[],
+    growths: readonly number[],
+  ): LadderKernel | null;
 }
 
 let current: PlanKernel | null = null;

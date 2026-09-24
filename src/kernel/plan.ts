@@ -20,7 +20,8 @@
  * TypeScript. `sizePool` needs no table and runs on an instance of its own. Nothing allocates per call.
  */
 import type { UnitDef } from '../data/types';
-import type { MarchFigures, PlanKernel, PoolSlot } from '../engine/fast';
+import type { LadderKernel, MarchFigures, PlanKernel, PoolSlot } from '../engine/fast';
+import { LADDER_ENGINE } from '../engine/fast';
 import type { Effective } from '../engine/plan';
 import { effectiveTable } from '../engine/plan';
 import type { Bill, MarkerRates } from '../engine/rating';
@@ -67,6 +68,146 @@ interface PlanExports {
     spread: number,
     countsPtr: number,
   ): number;
+  ladderScratch(slot: number): number;
+  ladderShape(
+    m: number,
+    len: number,
+    learned: number,
+    marches: number,
+    scale: number,
+    gap: number,
+    leadership: number,
+    housed: number,
+    housingLeadership: number,
+    housingAuthority: number,
+    housingDominance: number,
+    budgeted: number,
+    budgetPerMarch: number,
+    enemy: number,
+    searchTemple: number,
+    billed: number,
+  ): number;
+  ladderGrid(
+    m: number,
+    nDepths: number,
+    nGrowths: number,
+    marches: number,
+    gap: number,
+    leadership: number,
+    housed: number,
+    housingLeadership: number,
+    housingAuthority: number,
+    housingDominance: number,
+    budgeted: number,
+    budgetPerMarch: number,
+    enemy: number,
+    searchTemple: number,
+  ): void;
+  ladderFinale(
+    m: number,
+    nDepths: number,
+    nGrowths: number,
+    gap: number,
+    leadership: number,
+    housed: number,
+    housingLeadership: number,
+    housingAuthority: number,
+    housingDominance: number,
+    budget: number,
+    enemy: number,
+    searchTemple: number,
+  ): number;
+}
+
+/** The ladders' scratch slots, mirrored from `G_*` in `kernel/assembly/index.ts`. */
+const G = {
+  mercs: 1,
+  powers: 2,
+  order: 3,
+  vector: 4,
+  held: 5,
+  rungs: 6,
+  sheltered: 7,
+  out: 8,
+  depths: 9,
+  growths: 10,
+  learned: 11,
+  orderLen: 12,
+  orders: 13,
+  status: 14,
+  gridRungs: 15,
+  gridSheltered: 16,
+  gridOut: 17,
+} as const;
+/** `G_POWER_COUNT` and `G_GRID` of the kernel. */
+const POWER_COUNT = 64;
+const GRID = 32;
+
+/** One instance's ladder scratch (step 4), reserved on the first `ladders` over it. */
+interface LadderScratch {
+  ptr: Record<keyof typeof G, number>;
+  buffer: ArrayBuffer | null;
+  view: {
+    mercs: Int32Array;
+    powers: Float64Array;
+    order: Int32Array;
+    vector: Float64Array;
+    held: Float64Array;
+    rungs: Float64Array;
+    sheltered: Float64Array;
+    out: Float64Array;
+    depths: Int32Array;
+    growths: Float64Array;
+    learned: Int32Array;
+    orderLen: Int32Array;
+    orders: Int32Array;
+    grid: {
+      status: Int32Array;
+      rungs: Float64Array;
+      sheltered: Float64Array;
+      out: Float64Array;
+      stride: number;
+      serial: number;
+    };
+  };
+  /** How many grids ran over this instance: the last one's answers are the scratch's. */
+  serial: number;
+  /** The ladder kernel whose hired types, powers and grid the scratch holds now. */
+  owner: object | null;
+}
+
+function ladderViews(raw: PlanExports, scratch: LadderScratch, types: number): void {
+  // A view over a buffer the memory grew out of is detached, and a detached view has no length: that test
+  // saves reading `memory.buffer` (a getter that costs) on every call.
+  if (scratch.buffer !== null && scratch.view.out.length !== 0) return;
+  const buffer = raw.memory.buffer;
+  if (scratch.buffer === buffer) return;
+  scratch.buffer = buffer;
+  const n = Math.max(1, types);
+  const p = scratch.ptr;
+  scratch.view = {
+    mercs: new Int32Array(buffer, p.mercs, n),
+    powers: new Float64Array(buffer, p.powers, POWER_COUNT),
+    order: new Int32Array(buffer, p.order, n),
+    vector: new Float64Array(buffer, p.vector, n),
+    held: new Float64Array(buffer, p.held, n),
+    rungs: new Float64Array(buffer, p.rungs, n),
+    sheltered: new Float64Array(buffer, p.sheltered, n),
+    out: new Float64Array(buffer, p.out, 8),
+    depths: new Int32Array(buffer, p.depths, GRID),
+    growths: new Float64Array(buffer, p.growths, GRID),
+    learned: new Int32Array(buffer, p.learned, GRID),
+    orderLen: new Int32Array(buffer, p.orderLen, GRID),
+    orders: new Int32Array(buffer, p.orders, GRID * n),
+    grid: {
+      status: new Int32Array(buffer, p.status, GRID * GRID),
+      rungs: new Float64Array(buffer, p.gridRungs, GRID * GRID * n),
+      sheltered: new Float64Array(buffer, p.gridSheltered, GRID * GRID * n),
+      out: new Float64Array(buffer, p.gridOut, GRID * GRID * 8),
+      stride: n,
+      serial: scratch.serial,
+    },
+  };
 }
 
 /** `sizeStacks`' option bits, mirrored from `F_*` in `kernel/assembly/index.ts`. */
@@ -97,6 +238,8 @@ interface Bound {
   sizerOutCounts: Float64Array;
   /** Row of each unit of `request.units`, by identity. */
   rowOfUnit: Map<UnitDef, number>;
+  /** The ladders' scratch (step 4), reserved on the first `ladders` over this instance. */
+  ladder: LadderScratch | null;
 }
 
 function views(bound: Bound): void {
@@ -174,6 +317,7 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
       sizerOutRows: new Int32Array(0),
       sizerOutCounts: new Float64Array(0),
       rowOfUnit: new Map(request.units.map((unit, row) => [unit, row])),
+      ladder: null,
     };
     views(bound);
     byRequest.set(request, bound);
@@ -344,6 +488,194 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         };
       }
       return out;
+    },
+
+    ladders(troops, mercTypes, enemyStacks, recovery, powers, depths, growths): LadderKernel | null {
+      if (!isEmpty(recovery.trainingCostReduction) || !isEmpty(recovery.trainingSpeed)) return null;
+      if (!Number.isInteger(enemyStacks) || enemyStacks < 0 || enemyStacks > 0x7fffffff) return null;
+      const firstEntry = troops[0] ?? mercTypes[0];
+      const first = firstEntry && rowOf.get(firstEntry);
+      if (!first) return null;
+      const bound = first.bound;
+      const m = mercTypes.length;
+      if (troops.length + m > bound.types || troops.length > POWER_COUNT || powers.length < POWER_COUNT)
+        return null;
+      if (depths.length > GRID || growths.length > GRID) return null;
+      if (!depths.every((depth) => Number.isInteger(depth) && depth >= 1)) return null;
+      // Every entry one row of this instance, no row twice: a march then never fields more stacks than the
+      // table has types, the bound the kernel's scratch is sized by.
+      const mercRows = new Int32Array(m);
+      const troopRows = new Int32Array(troops.length);
+      const mercSet = new Set<number>();
+      const troopSet = new Set<number>();
+      for (let i = 0; i < m; i += 1) {
+        const at = rowOf.get(mercTypes[i] as Effective);
+        if (!at || at.bound !== bound || mercSet.has(at.row)) return null;
+        mercSet.add(at.row);
+        mercRows[i] = at.row;
+      }
+      for (let i = 0; i < troops.length; i += 1) {
+        const at = rowOf.get(troops[i] as Effective);
+        if (!at || at.bound !== bound || troopSet.has(at.row) || mercSet.has(at.row)) return null;
+        troopSet.add(at.row);
+        troopRows[i] = at.row;
+      }
+      const raw = bound.raw;
+      if (!bound.ladder) {
+        const ptr = {} as Record<keyof typeof G, number>;
+        for (const key of Object.keys(G) as (keyof typeof G)[]) ptr[key] = raw.ladderScratch(G[key]);
+        bound.ladder = {
+          ptr,
+          buffer: null,
+          view: null as unknown as LadderScratch['view'],
+          owner: null,
+          serial: 0,
+        };
+      }
+      const scratch = bound.ladder;
+      const temple = templeDivisor(recovery.templeLevel);
+      const stride = Math.max(1, bound.types);
+      /** An order's rows — a learned order is a permutation of some troop types — or `null` if not one. */
+      const ordersRows = new WeakMap<readonly Effective[], Int32Array | null>();
+      const rowsOfOrder = (order: readonly Effective[]): Int32Array | null => {
+        let rows = ordersRows.get(order);
+        if (rows !== undefined) return rows;
+        rows = new Int32Array(order.length);
+        const seen = new Set<number>();
+        for (let i = 0; i < order.length; i += 1) {
+          const at = rowOf.get(order[i] as Effective);
+          if (!at || at.bound !== bound || !troopSet.has(at.row) || seen.has(at.row)) {
+            rows = null;
+            break;
+          }
+          seen.add(at.row);
+          rows[i] = at.row;
+        }
+        ordersRows.set(order, rows);
+        return rows;
+      };
+      // `troops.slice(-depth)` for an integer depth of 1 or more.
+      const ranking = (depth: number): Int32Array => troopRows.subarray(Math.max(0, troops.length - depth));
+      const vector = new Float64Array(m);
+      const held = new Float64Array(m);
+      const kernel: LadderKernel = {
+        vector,
+        held,
+        rungs: new Float64Array(0),
+        sheltered: new Float64Array(0),
+        out: new Float64Array(0),
+        recovery: bound.request.recovery,
+        shape(marches, depth, scale, order, gap, leadership, housing, budgetPerMarch) {
+          if (!Number.isInteger(depth) || depth < 1) return LADDER_ENGINE;
+          const rows = order === undefined ? ranking(depth) : rowsOfOrder(order);
+          if (rows === null) return LADDER_ENGINE;
+          activate();
+          const view = scratch.view;
+          view.order.set(rows);
+          view.vector.set(vector);
+          view.held.set(held);
+          return raw.ladderShape(
+            m,
+            rows.length,
+            order === undefined ? 0 : 1,
+            marches,
+            scale,
+            gap,
+            leadership,
+            housing ? 1 : 0,
+            housing ? housing.leadership : 0,
+            housing ? housing.authority : 0,
+            housing ? housing.dominance : 0,
+            budgetPerMarch === undefined ? 0 : 1,
+            budgetPerMarch ?? 0,
+            enemyStacks,
+            temple,
+            1,
+          );
+        },
+        finale(orders, gap, leadership, housing, budget) {
+          activate();
+          const view = scratch.view;
+          if (!layOrders(orders)) return null;
+          view.vector.set(vector);
+          const best = raw.ladderFinale(
+            m,
+            depths.length,
+            growths.length,
+            gap,
+            leadership,
+            housing ? 1 : 0,
+            housing ? housing.leadership : 0,
+            housing ? housing.authority : 0,
+            housing ? housing.dominance : 0,
+            budget,
+            enemyStacks,
+            temple,
+          );
+          return best === -2 ? null : best;
+        },
+        grid(marches, orders, gap, leadership, housing, budgetPerMarch) {
+          activate();
+          const view = scratch.view;
+          if (!layOrders(orders)) return -1;
+          view.vector.set(vector);
+          view.held.set(held);
+          raw.ladderGrid(
+            m,
+            depths.length,
+            growths.length,
+            marches,
+            gap,
+            leadership,
+            housing ? 1 : 0,
+            housing ? housing.leadership : 0,
+            housing ? housing.authority : 0,
+            housing ? housing.dominance : 0,
+            budgetPerMarch === undefined ? 0 : 1,
+            budgetPerMarch ?? 0,
+            enemyStacks,
+            temple,
+          );
+          scratch.serial += 1;
+          return scratch.serial;
+        },
+        gridView() {
+          ladderViews(raw, scratch, bound.types);
+          const grid = scratch.view.grid;
+          grid.serial = scratch.serial;
+          return grid;
+        },
+      };
+      /** Each depth's order into the scratch (the ranking's where none is learned); false if one is unreadable. */
+      const layOrders = (orders: readonly (readonly Effective[] | undefined)[]): boolean => {
+        const view = scratch.view;
+        for (let j = 0; j < depths.length; j += 1) {
+          const order = orders[j];
+          const rows = order === undefined ? ranking(depths[j] as number) : rowsOfOrder(order);
+          if (rows === null) return false;
+          view.learned[j] = order === undefined ? 0 : 1;
+          view.orderLen[j] = rows.length;
+          view.orders.set(rows, j * stride);
+        }
+        return true;
+      };
+      /** Fresh views, and this kernel's hired types, powers and grid in the instance's scratch. */
+      const activate = (): void => {
+        ladderViews(raw, scratch, bound.types);
+        if (scratch.owner !== kernel) {
+          scratch.owner = kernel;
+          const view = scratch.view;
+          view.mercs.set(mercRows);
+          for (let k = 0; k < POWER_COUNT; k += 1) view.powers[k] = powers[k] as number;
+          for (let j = 0; j < depths.length; j += 1) view.depths[j] = depths[j] as number;
+          for (let g = 0; g < growths.length; g += 1) view.growths[g] = growths[g] as number;
+        }
+        const view = scratch.view;
+        kernel.rungs = view.rungs;
+        kernel.sheltered = view.sheltered;
+        kernel.out = view.out;
+      };
+      return kernel;
     },
 
     sizePool(slots: readonly PoolSlot[], capacity: number, ceiling: number | undefined, spread: number) {
