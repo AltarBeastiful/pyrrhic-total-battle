@@ -291,6 +291,20 @@ export interface CampaignInput {
    */
   tierSeed?: boolean | undefined;
   /**
+   * **The all-in spends the stock first** (experiment 174, 2026-09-24; the owner, on his browser setup: *"why
+   * all in on my current setup in my browser doesn't up the mercs to 14?"*). Each march of the `all-in` is
+   * chosen on the **mercenaries** it fields first — the authority pool, whose capped stock `lastsMarches`
+   * counts down — and only then on every hired unit (the dominance pool's monsters, retrained like troops)
+   * and on damage, so the sequence is the descending one the stock allows: whatever is left, fielded while it
+   * is sheltered (14 · 12 · 10 · 9 on a stock of 14). And the bar drops an `all-in` that still fields no more
+   * mercenaries over its campaign than another stop, or that another stop beats on damage and silver while
+   * fielding at least as many.
+   *
+   * **On unless set to `false`**: the engine defaults it on when the field is absent, so the app (which spreads
+   * `CAMPAIGN.planFixes` and does not name it) gets it without a config change. `false` is the bar before 174.
+   */
+  allInDescending?: boolean | undefined;
+  /**
    * **The band's token-field yardstick, switchable** — a diagnostic for
    * `tools/theorycraft/108-thrift-end.test.ts` and `112-band-yardstick.test.ts`, never set by the app, kept
    * so the measurements behind S-93 and S-95 can be re-run against the engine that shipped.
@@ -4851,6 +4865,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     return sizedTail;
   };
+  /** Experiment 174 (`CampaignInput.allInDescending`): on unless the input says `false`. */
+  const descending = input.allInDescending !== false;
+  /**
+   * **The mercenaries** — the authority pool's hired types, capped or not: what the all-in is named for and
+   * what experiment 174's two bar rules count. The dominance pool's monsters are hired stock too, but they are
+   * retrained like troops (S-102) and are not the stock a player means by *"all the mercs"*.
+   */
+  const mercenaryIds = new Set(
+    mercTypes.filter((entry) => entry.pool === 'authority').map((entry) => entry.id),
+  );
+  /** The mercenaries a stop fields over every march of its campaign — its sequence, or repeats, finale and tail. */
+  const mercenariesOver = (row: PlanTotals): number => {
+    const of = (counts: Record<string, number> | undefined): number =>
+      Object.entries(counts ?? {}).reduce((sum, [id, count]) => sum + (mercenaryIds.has(id) ? count : 0), 0);
+    if (row.sequence) return row.sequence.reduce((sum, counts) => sum + of(counts), 0);
+    return (
+      planRepeats(row) * of(row.counts) +
+      of(row.finaleCounts) +
+      (row.tail?.marches ?? 0) * of(row.tail?.counts)
+    );
+  };
   /**
    * **All in**: every mercenary the troops can shelter on the first march, then each next march on what the
    * stock has left, for the horizon. Each march is the strongest shape — ladders, the sizer's methods, the
@@ -4887,6 +4922,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const played: Candidate[] = [];
     const hiredOfVector = (mercs: { entry: Effective; count: number }[]): number =>
       mercs.reduce((sum, merc) => sum + merc.count, 0);
+    const mercenariesOfVector = (mercs: { entry: Effective; count: number }[]): number =>
+      mercs.reduce((sum, merc) => sum + (mercenaryIds.has(merc.entry.id) ? merc.count : 0), 0);
     for (let i = 0; i < planned; i += 1) {
       const single = makeScorer({
         troops,
@@ -4913,10 +4950,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
        * damage with it second** (owner, 2026-09-18: *"a last stop: all mercs possible … fill all the mercs
        * you can safely"*).
        */
-      const fieldsMost = (candidate: Candidate, held: Candidate | null): boolean =>
-        !held ||
-        hiredOfVector(candidate.mercs) > hiredOfVector(held.mercs) ||
-        (hiredOfVector(candidate.mercs) === hiredOfVector(held.mercs) && candidate.total > held.total);
+      const fieldsMost = (candidate: Candidate, held: Candidate | null): boolean => {
+        if (!held) return true;
+        // Experiment 174: the mercenaries first — a retrainable monster fielded is not a mercenary spent,
+        // and counting them as one kept this stop at the sweet spot's ten hunters a march on the owner's
+        // setup of 2026-09-24 while it filled the dominance pool instead.
+        if (descending) {
+          const mine = mercenariesOfVector(candidate.mercs);
+          const theirs = mercenariesOfVector(held.mercs);
+          if (mine !== theirs) return mine > theirs;
+        }
+        return (
+          hiredOfVector(candidate.mercs) > hiredOfVector(held.mercs) ||
+          (hiredOfVector(candidate.mercs) === hiredOfVector(held.mercs) && candidate.total > held.total)
+        );
+      };
       const hitsHardest =
         (floor: number) =>
         (candidate: Candidate, held: Candidate | null): boolean =>
@@ -6030,6 +6078,24 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (kept) stops[lastIn] = kept;
       else stops.splice(lastIn, 1);
     }
+  }
+  /**
+   * **The all-in fields the most mercenaries, or it is not on the bar** (experiment 174, 2026-09-24;
+   * `CampaignInput.allInDescending`). The stop is named for the mercenaries it spends, so it has to field more
+   * of them over its campaign than every other stop does over theirs — and no stop may beat it on damage and
+   * silver while fielding at least as many. S-94 above drops it only when another stop burns *strictly fewer*
+   * chunks, and that let the owner's browser setup of 2026-09-24 carry an all-in playing the sweet spot's ten
+   * hunters a march for less damage, more silver, more gold and a longer queue — the same chunks burned, so
+   * S-94 could not see it. Both halves are `tests/engine/plan-criteria.test.ts`'s, stated where they bind.
+   */
+  const allInAt = stops.findIndex((row) => row.pick === 'all-in');
+  if (descending && allInAt >= 0) {
+    const row = stops[allInAt] as PlanRow;
+    const fielded = mercenariesOver(row);
+    // The second half (beaten on damage and silver by a stop fielding at least as many) needs a stop fielding
+    // at least as many, which the first half already refuses; it is one test here and two in the criteria.
+    if (stops.some((other, at) => at !== allInAt && mercenariesOver(other) >= fielded))
+      stops.splice(allInAt, 1);
   }
 
   /**

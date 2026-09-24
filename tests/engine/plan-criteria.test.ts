@@ -30,6 +30,7 @@ import { buildPlanRequest } from '@/state/derive';
 import { hiredLost } from '@/ui/sections/march/hired';
 import { worstDamageByPool, worstPer } from '@/ui/sections/march/worst';
 
+import { allInFieldsTheMost, allInNotBeaten } from './all-in-rules';
 import { HORIZON, criteriaScenarios } from './plan-scenarios';
 import { countsKey, rareStockOf, repeatsOf, shelteredRivals } from './plan-yardsticks';
 
@@ -1987,6 +1988,49 @@ describe('a bar with a saving on it carries a silver saver', () => {
             `${(saver as PlanRow).repeat.damage.toLocaleString('en-US')} at ` +
             `${String((saver as PlanRow).repeat.mercLost)} burned`,
         ).toBeLessThanOrEqual(cheapest.repeat.silver);
+      },
+      300_000,
+    );
+  }
+});
+
+/**
+ * **The all-in fields the most mercenaries, and nothing beats it while fielding as many** (experiment 174,
+ * 2026-09-24; `all-in-rules.ts` states both rules and why). On every benchmark army, the bar as the app
+ * plans it. Measured before the fix (f4e95d9): both rules held on the seventeen armies and failed on the
+ * eighteenth, his browser setup of 2026-09-24 — the all-in played 10 · 10 · 10 · 10 hunters (40 fielded,
+ * 15 920 012 for 9 965 600) against the sweet spot's 40 (16 334 608 for 9 438 400).
+ */
+describe('an all-in fields more mercenaries over its campaign than every other stop', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const failures = allInFieldsTheMost(scenario.request, planned.alternatives);
+        expect(failures.join('\n'), `an all-in that fields no more\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
+});
+
+describe('no stop beats the all-in on damage and silver while fielding at least as many mercenaries', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const planned = planFor(scenario.request);
+        if (typeof planned === 'string') {
+          expect(scenario.pinned?.refuses ?? false, `unexpected refusal: ${planned}`).toBe(true);
+          return;
+        }
+        const failures = allInNotBeaten(scenario.request, planned.alternatives);
+        expect(failures.join('\n'), `an all-in beaten\n${failures.join('\n')}`).toBe('');
       },
       300_000,
     );

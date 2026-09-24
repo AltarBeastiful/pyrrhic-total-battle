@@ -1099,7 +1099,9 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the same, on the owner’s account',
  * they are floors on **counts of armies**, so a change that trades a silver win for a damage win on one army
  * is red and the owner registers it if the trade is one he wants.
  */
-const ARMIES_MEASURED = 17;
+// 17 → 18 on 2026-09-24 (experiment 174): his browser setup of that day, which carries no captured row and so
+// no matched-spend reading — the two floors below count the same seventeen armies.
+const ARMIES_MEASURED = 18;
 /**
  * **Armies where our best stop beats their best comparable march on that marker alone** — measured on the
  * payload of 2026-09-22, never taken from the plan's prose.

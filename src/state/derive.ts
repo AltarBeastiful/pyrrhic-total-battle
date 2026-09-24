@@ -577,7 +577,10 @@ function stackingOptions(setup: BattleSetup): StackingOptions {
     method: engineMethod(options.method),
     strictMercsAboveMonsters: options.strictMercsAboveMonsters,
     monstersLast: options.monstersLast,
-    roundTo10: options.roundTo10,
+    // "Hired units in tens" is offered for the Elite, MS and custom methods only (`battle/choices.ts`), and the
+    // plan plays sequences such as 14 · 12 · 10 · 9 a tens rule would round away. Owner, 2026-09-24, asked
+    // whether the plan should follow a saved value it never shows: "Plan ignores it".
+    roundTo10: options.method === 'plan' ? false : options.roundTo10,
     relaxedPreservation: options.relaxedPreservation,
     ...(options.customOrder ? { customOrder: [...options.customOrder] } : {}),
   };

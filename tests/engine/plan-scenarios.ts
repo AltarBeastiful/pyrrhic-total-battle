@@ -15,7 +15,7 @@ import { aggregateBonuses } from '@/engine/bonuses';
 import type { ResolvedSource, StackRequest, UnitDef } from '@/engine/types';
 import { parseImport } from '@/share/exportImport';
 import { newProfile } from '@/state/defaults';
-import { buildStackRequest } from '@/state/derive';
+import { buildPlanRequest, buildStackRequest } from '@/state/derive';
 import type { Profile } from '@/state/schema';
 
 export const OWNER_EXPORT =
@@ -740,6 +740,9 @@ export function ownerScenarios(profile: Profile): Scenario[] {
     // **His usual setup, S-106 (2026-09-19)** — scenario 17, appended after the sixteen and changing
     // nothing above it.
     ...usualSetup(profile),
+    // **His browser setup of 2026-09-24, experiment 174** — scenario 18, appended after the seventeen and
+    // changing nothing above them. It reads its own committed fixture, not the export.
+    ...browserSetup(),
   ];
 }
 
@@ -1655,4 +1658,64 @@ function usualSetup(profile: Profile): Scenario[] {
 export function criteriaScenarios(): { label: string; request: StackRequest; pinned?: Pinned }[] {
   const profile = ownerProfile();
   return [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
+}
+
+/**
+ * **Pinned 2026-09-24 (experiment 174), measured that day** with `CampaignInput.allInDescending` on (the
+ * engine's default). Two stops — the sweet spot, ten hunters a march (16 842 084 over four marches for
+ * 9 480 000 silver, 4 hunters lost), and the `all-in`, which spends the stock the way it falls:
+ * **14 · 12 · 10 · 9** hunters for 17 086 508 at 9 479 200, 6 lost. Before 174 the all-in played the sweet
+ * spot's 10 · 10 · 10 · 10 and was beaten by it on damage, silver, gold and queue (15 920 012 for 9 965 600
+ * against 16 334 608 for 9 438 400), which S-94 could not see: both burned the same four chunks.
+ *
+ * No calculator outside this repo has answered this camp, so it carries neither `externals` nor the Total
+ * Optimization floors, and the §7 standing does not count it.
+ */
+const BROWSER_SETUP_PINS: Pinned = {
+  refuses: false,
+  stops: 2,
+  sweetNotAheadOnEither: false,
+  // The all-in's 17 086 508 over the best sizer sequence's 17 013 922: 1.0043. Registered by the owner
+  // 2026-09-24: 1.16 was measured while his saved "Hired units in tens" rounded the sizers' hunters down (14 714
+  // 896); the plan now ignores that option ("Plan ignores it"), the sizers field their hunters whole, and the
+  // plan stays ahead by 0.4 %.
+  damageFloor: 1.0,
+  // The same change: the plan's best damage a hired unit now beats the sizers (it did not while they rounded).
+  winsHired: true,
+};
+
+const BROWSER_SETUP = new URL('../fixtures/owner-browser-2026-09-24.json', import.meta.url);
+
+/**
+ * **His browser setup of 2026-09-24** (owner: *"why all in on my current setup in my browser doesn't up the
+ * mercs to 14? … Check why there's no test for that and add it to test and benchmark"*) — scenario 18, read
+ * from `tests/fixtures/owner-browser-2026-09-24.json` (his localStorage, the active setup only) through the
+ * app's own request builder (`buildPlanRequest`), so it is the request his Generate button sends: **Aydae 50
+ * ★3**, **5 600** leadership, **2 180** authority and **600** dominance, guardsmen I–III with the top melee and
+ * ranged tiers clicked out (Rider III stands), specialists I with the top melee out, the **monster window on
+ * tier 3**, **Epic Monster Hunter VI ×14** hired, temple 19, and the selective recovery that revives monsters.
+ *
+ * The capture left the saved marches out, and the profile schema requires the list, so it is read as empty.
+ */
+export function browserSetupRequest(): StackRequest {
+  const raw = JSON.parse(readFileSync(BROWSER_SETUP, 'utf8')) as { payload: { savedStacks?: unknown[] } };
+  raw.payload.savedStacks ??= [];
+  const parsed = parseImport(JSON.stringify(raw));
+  if (parsed.kind !== 'profile') throw new Error('the browser setup fixture is not a profile');
+  const profile = parsed.payload;
+  const setup = profile.setups.find((one) => one.id === profile.activeSetupId) ?? profile.setups[0];
+  if (!setup) throw new Error('the browser setup fixture has no setup');
+  return buildPlanRequest(profile, setup).request;
+}
+
+function browserSetup(): Scenario[] {
+  return [
+    {
+      label:
+        'his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)',
+      request: browserSetupRequest(),
+      externals: [],
+      pinned: BROWSER_SETUP_PINS,
+    },
+  ];
 }

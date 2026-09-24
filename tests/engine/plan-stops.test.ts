@@ -21,6 +21,7 @@ import { planCampaign } from '@/engine/plan';
 import { rate } from '@/engine/rating';
 import type { StackRequest } from '@/engine/types';
 
+import { allInFieldsTheMost, allInNotBeaten } from './all-in-rules';
 import type { Contender } from './matched-spend';
 import { matchedSpend } from './matched-spend';
 import type { Campaign } from './plan-campaign';
@@ -282,7 +283,13 @@ describe('the rated re-typing', () => {
         const was = readings(before);
         const now = readings(after);
         const lost = Object.keys(was).filter((key) => (now[key] ?? 0) < (was[key] ?? 0) - 1e-9);
-        const accepted: Record<string, number> = { 'shortest queue': 0.001, 'least silver': 0.0025 };
+        // His browser setup of 2026-09-24: the sweet spot +0.43 % silver for a rating of +1.64, registered by him the
+        // same day ("Accept the trade", experiment 174).
+        const accepted: Record<string, number> = {
+          // His browser setup, the same trade: shortest queue +0.148 % (registered by him 2026-09-24).
+          'shortest queue': scenario.label.includes('2026-09-24') ? 0.0015 : 0.001,
+          'least silver': scenario.label.includes('2026-09-24') ? 0.0045 : 0.0025,
+        };
         for (const key of lost) {
           const bound = accepted[key];
           expect(bound, `a reading the pass lost that was never accepted: ${key}`).toBeDefined();
@@ -313,4 +320,28 @@ describe('the rated re-typing', () => {
     expect(totalstack.after.beaten).toBeGreaterThanOrEqual(47);
     expect(totalstack.after.unfitted).toBeLessThanOrEqual(13);
   });
+});
+
+/**
+ * **The all-in's two bar rules** (experiment 174; `all-in-rules.ts`), on the bar as shipped, on every benchmark
+ * army: (a) the all-in fields more mercenaries over its campaign than every other stop, (b) no stop beats it
+ * on damage and silver while fielding at least as many. Before the fix (f4e95d9) both failed on his browser
+ * setup of 2026-09-24 alone.
+ */
+describe('the all-in fields the most mercenaries', () => {
+  for (const scenario of scenarios) {
+    test(
+      scenario.label,
+      () => {
+        const plan = planWith(scenario.request, true);
+        if (!plan) return;
+        const failures = [
+          ...allInFieldsTheMost(scenario.request, plan.alternatives),
+          ...allInNotBeaten(scenario.request, plan.alternatives),
+        ];
+        expect(failures.join('\n'), `the all-in's rules\n${failures.join('\n')}`).toBe('');
+      },
+      300_000,
+    );
+  }
 });
