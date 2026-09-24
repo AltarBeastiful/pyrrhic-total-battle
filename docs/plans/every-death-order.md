@@ -114,6 +114,10 @@ after, on the same armies and settings:
    march rather than to the row. Re-type a silver saver's march under **"silver must not rise"**: take the best
    assignment whose silver is not above the march's own. 175's "silver-guarded best" column says what this leaves.
    Expected: the +24.88 / +15.89 / +12.19 family, if 176 confirms they are silver savers lost whole.
+   The owner, 2026-09-25: the silver saver's rating must not come from damage bought with silver. Per march and
+   for the row, **silver must not rise and damage per silver must not drop**. The step's report ends with a
+   full-criteria recap of every silver saver, before and after, and flags any rise in silver or drop in damage per
+   silver.
 3. **Re-type the marches made after the pass** (suspect b). Either move the pass after the steps that make new marches,
    or run a second pass over the marches the first one never saw, under the same guards and cache. Then run
    `keepReadings` and the fold's hand-back again. Measure which of the two passes the gate, and the time each adds.
