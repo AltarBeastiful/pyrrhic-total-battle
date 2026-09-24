@@ -9,6 +9,7 @@
  */
 import { enemySquadCount } from '../engine/battle';
 import { effectiveTable } from '../engine/plan';
+import type { Effective } from '../engine/plan';
 import type { MarkerRates } from '../engine/rating';
 import { templeDivisor, unitFamily } from '../engine/recovery';
 import type { Pool, RecoveryMode, StackRequest } from '../engine/types';
@@ -30,8 +31,12 @@ export interface PackedRequest {
  * Pack `request` (and the owner's `rates`, for `rate`). Throws on a request the kernel cannot read the way
  * the engine does: two types with one id (`marchResult` would find the first, `marchOf` the last).
  */
-export function packRequest(request: StackRequest, rates: MarkerRates): PackedRequest {
-  const table = effectiveTable(request);
+export function packRequest(
+  request: StackRequest,
+  rates: MarkerRates,
+  /** `effectiveTable(request)` already built (the plan's hot path binds the table it built). */
+  table: readonly Effective[] = effectiveTable(request),
+): PackedRequest {
   const ids = table.map((entry) => entry.id);
   if (new Set(ids).size !== ids.length) throw new Error('packRequest: two unit types share an id');
   const out = new Float64Array(HEADER_SIZE + table.length * TYPE_STRIDE);

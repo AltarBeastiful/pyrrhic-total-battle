@@ -17,6 +17,7 @@
 import type { Pool, UnitDef } from '../data/types';
 import { simulateBattle } from './battle';
 import { buildKillOrder } from './killOrder';
+import { planKernel } from './fast';
 import { CHUNK } from './recovery';
 import { effectiveUnit, hitDamage, type EffectiveUnit } from './units';
 import type { Stack, StackRequest, StackResult, PoolUsage } from './types';
@@ -54,6 +55,9 @@ function sizePool(slots: Slot[], capacity: number, options: PoolOptions): number
   for (const slot of slots) slot.count = 0;
   if (slots.length === 0 || capacity <= 0) return 0;
   const { ceiling } = options;
+  // AssemblyScript roadmap, step 2: the same search and fill in the kernel when the host set one (`./fast.ts`).
+  const fast = planKernel()?.sizePool(slots, capacity, ceiling, RANK_SPREAD);
+  if (fast !== undefined && fast !== null) return fast;
 
   const countsAt = (ceilingHp: number): number[] => {
     const delta = RANK_SPREAD * ceilingHp;

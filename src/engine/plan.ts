@@ -44,6 +44,7 @@ import { sizeStacks } from './stacker';
 import type { Bill, MarkerRates } from './rating';
 import { rate, saved } from './rating';
 import { retypeMarch } from './retype';
+import { planKernel } from './fast';
 import type { BattleSummary, Housing, RecoverySettings, Stack, StackRequest, StackResult } from './types';
 
 /**
@@ -886,7 +887,7 @@ export function marchResult(
   const picked = table
     .filter((entry) => (counts[entry.id] ?? 0) > 0)
     .map((entry) => ({ entry, count: counts[entry.id] ?? 0 }));
-  const { stacks } = marchOf(picked, enemySquadCount(request.enemy));
+  const { stacks } = marchOfTs(picked, enemySquadCount(request.enemy));
   const used: Record<Pool, number> = { leadership: 0, authority: 0, dominance: 0 };
   for (const stack of stacks)
     used[stack.pool] += stack.count * (table.find((e) => e.id === stack.unitId)?.cost ?? 0);
@@ -926,7 +927,7 @@ export interface Effective {
 export function effectiveTable(request: StackRequest): Effective[] {
   // The kill order once for the table, not once a stack: it is a property of the army, not of a march.
   const rank = new Map(buildKillOrder(request.units, request.options).map((id, index) => [id, index]));
-  return request.units.map((unit) => {
+  const table = request.units.map((unit) => {
     const eff = effectiveUnit(unit, request.totals, request.enemy, request.activeEvents);
     const { damage } = hitDamage(eff, 1);
     return {
@@ -943,6 +944,10 @@ export function effectiveTable(request: StackRequest): Effective[] {
       unit,
     };
   });
+  // AssemblyScript roadmap, step 2: a kernel set by the host (`./fast.ts`) packs this request once and knows
+  // these entries, so `marchOf` and `priceMarch` can ask it for their figures. Nothing set, nothing happens.
+  planKernel()?.bindTable(request, table);
+  return table;
 }
 
 /**
@@ -1080,10 +1085,28 @@ export function rankHired(request: StackRequest, table: Effective[] = effectiveT
  * battle — so the two figures describe one fight, entry for entry, and `hiredDamage ≤ damage` by
  * construction. `PlanTotals.damagePerMercenary` is what divides it by the burn.
  */
-function marchOf(
-  stacks: { entry: Effective; count: number }[],
-  enemyStacks: number,
-): {
+export function marchOf(stacks: { entry: Effective; count: number }[], enemyStacks: number): MarchOf {
+  /**
+   * **The figures from the kernel when the host set one** (AssemblyScript roadmap, step 2; `./fast.ts`):
+   * `Object.is` to what `marchOfTs` computes (`tests/kernel/plan-kernel.test.ts`, and the whole plan in
+   * `tests/kernel/plan-equivalence.test.ts`). The `Stack[]` — which only `marchResult` reads, and it calls
+   * `marchOfTs` itself — is built here, by the TypeScript, the first time anything asks for it.
+   */
+  const fast = planKernel()?.march(stacks, enemyStacks, SEARCH_RECOVERY);
+  if (fast) {
+    let built: Stack[] | undefined;
+    return {
+      ...fast,
+      get stacks(): Stack[] {
+        built ??= marchOfTs(stacks, enemyStacks).stacks;
+        return built;
+      },
+    };
+  }
+  return marchOfTs(stacks, enemyStacks);
+}
+
+interface MarchOf {
   damage: number;
   hiredDamage: number;
   silver: number;
@@ -1091,7 +1114,10 @@ function marchOf(
   mercLost: number;
   strikes: number;
   stacks: Stack[];
-} {
+}
+
+/** `marchOf` in TypeScript — the reference. */
+function marchOfTs(stacks: { entry: Effective; count: number }[], enemyStacks: number): MarchOf {
   const byId = new Map(stacks.map((stack) => [stack.entry.id, stack.entry]));
   const built: Stack[] = stacks
     .filter((stack) => stack.count > 0)
@@ -1819,11 +1845,14 @@ function priceMarch(
   const fielded = [...rungs, ...mercs].filter((stack) => stack.count > 0);
   // `recoveryCosts` reads a stack's id and its count and nothing else of it; the rest of `Stack` is the
   // battle's business and no part of a bill (`engine/recovery.ts`).
-  const bill = recoveryCosts(
-    fielded.map((stack) => ({ unitId: stack.entry.unit.id, count: stack.count }) as Stack),
-    fielded.map((stack) => stack.entry.unit),
-    recovery,
-  ).plan;
+  // The kernel's bill when the host set one (`./fast.ts`), summed in this same order; else the engine's.
+  const bill =
+    planKernel()?.bill(fielded, recovery) ??
+    recoveryCosts(
+      fielded.map((stack) => ({ unitId: stack.entry.unit.id, count: stack.count }) as Stack),
+      fielded.map((stack) => stack.entry.unit),
+      recovery,
+    ).plan;
   const { silver, seconds, gold, dragonCoins } = bill;
   return {
     counts,

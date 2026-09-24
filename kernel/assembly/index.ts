@@ -379,6 +379,289 @@ export function battleMany(n: i32, countsPtr: usize, outPtr: usize): void {
   }
 }
 
+// ---- the plan's hot path (AssemblyScript roadmap, step 2) -------------------------------------------------
+
+/**
+ * `marchOf` (`src/engine/plan.ts`) on `n` stacks given **in the caller's order** — row index at `rowsPtr` (i32),
+ * count at `countsPtr` (f64) — against `enemy` squads. The stacks with a count above 0 are sorted the way
+ * `marchOf` sorts them (total HP descending, the rank breaking a tie, stable over the caller's order), so a tie
+ * the rank does not break falls exactly where it falls in the engine. Writes, from `outPtr` (f64):
+ * 0 `round(enemy-first damage)`, 1 `round(hired share of it)`, 2 the silver, 3 the gold, 4 the chunks of
+ * mercenaries lost, 5 the army lines of that journal — the bill `retrainOne` makes under `SEARCH_RECOVERY`
+ * (no reduction, no speed, temple divisor `searchTemple`).
+ */
+export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, searchTemple: f64, outPtr: usize): void {
+  const k = killOrder(n, rowsPtr, countsPtr);
+  attackOrderOf(k);
+  // `buildJournal(built, enemyStacks, false)`: the army lines, their sum and the authority stacks' share of it.
+  let total: f64 = 0.0;
+  let hired: f64 = 0.0;
+  let hits: f64 = 0.0;
+  if (k > 0 && enemy > 0) {
+    memory.fill(dead, 0, <usize>k);
+    memory.fill(acted, 0, <usize>k);
+    cursor = 0;
+    let killed = 0;
+    while (killed < k) {
+      for (let e = 0; e < enemy && killed < k; e += 1) {
+        store<u8>(dead + <usize>killed, 1);
+        killed += 1;
+        if (e < enemy - 1 && killed < k) {
+          const index = nextAttacker(k);
+          if (index >= 0) {
+            const d = f64At(stackDamage, index);
+            total += d;
+            hits += 1.0;
+            if (<i32>cell(i32At(stackType, index), T_POOL) == 1) hired += d;
+          }
+        }
+      }
+      for (let j = 0; j < k; j += 1) {
+        const index = i32At(attackers, j);
+        if (load<u8>(dead + <usize>index) == 0 && load<u8>(acted + <usize>index) == 0) {
+          const d = f64At(stackDamage, index);
+          total += d;
+          hits += 1.0;
+          if (<i32>cell(i32At(stackType, index), T_POOL) == 1) hired += d;
+        }
+      }
+      memory.fill(acted, 0, <usize>k);
+      cursor = 0;
+    }
+  }
+  // The bill, stack by stack in kill order: `retrainOne(unit, count, SEARCH_RECOVERY)`.
+  let silver: f64 = 0.0;
+  let gold: f64 = 0.0;
+  let mercLost: f64 = 0.0;
+  for (let s = 0; s < k; s += 1) {
+    const type = i32At(stackType, s);
+    const count = f64At(stackCount, s);
+    const pool = <i32>cell(type, T_POOL);
+    const billed = pool == 0 ? count : chunks(count);
+    // `cost.silver = billed × training.silver × reduction`, the reduction `1 − 0 / 100`; 0 without training.
+    silver += cell(type, T_HAS_TRAINING) != 0 ? billed * cell(type, T_TRAINING_SILVER) * 1.0 : 0.0;
+    if (pool != 0) {
+      gold +=
+        pool == 1 ? Math.ceil(((count - chunks(count)) * cell(type, T_REVIVAL_GOLD)) / searchTemple) : 0.0;
+      if (pool == 1) mercLost += chunks(count);
+    }
+  }
+  store<f64>(outPtr, jsRound(total));
+  store<f64>(outPtr + 8, jsRound(hired));
+  store<f64>(outPtr + 16, silver);
+  store<f64>(outPtr + 24, gold);
+  store<f64>(outPtr + 32, mercLost);
+  store<f64>(outPtr + 40, hits);
+}
+
+/**
+ * `recoveryCosts(stacks, units, request.recovery).plan` (`src/engine/recovery.ts`) on `n` stacks given in the
+ * caller's order (rows at `rowsPtr`, counts at `countsPtr`; a count of 0 is left out, as `priceMarch` leaves
+ * it out), summed **in that order**, each total rounded. Writes silver, gold, dragon coins, seconds from
+ * `outPtr`.
+ */
+export function bill(n: i32, rowsPtr: usize, countsPtr: usize, outPtr: usize): void {
+  let k = 0;
+  for (let i = 0; i < n; i += 1) {
+    const count = f64At(countsPtr, i);
+    if (!(count > 0)) continue;
+    store<i32>(stackType + ((<usize>k) << 2), i32At(rowsPtr, i));
+    store<f64>(stackCount + ((<usize>k) << 3), count);
+    k += 1;
+  }
+  recoveryBill(k, outPtr);
+}
+
+/** The stacks of `rowsPtr`/`countsPtr` with a count above 0, into `stackType`/`stackCount`/`stackHp`, kill order. */
+function killOrder(n: i32, rowsPtr: usize, countsPtr: usize): i32 {
+  let k = 0;
+  for (let i = 0; i < n; i += 1) {
+    const count = f64At(countsPtr, i);
+    if (!(count > 0)) continue;
+    const t = i32At(rowsPtr, i);
+    store<i32>(stackType + ((<usize>k) << 2), t);
+    store<f64>(stackCount + ((<usize>k) << 3), count);
+    store<f64>(stackHp + ((<usize>k) << 3), count * cell(t, T_HP));
+    k += 1;
+  }
+  for (let i = 1; i < k; i += 1) {
+    const type = i32At(stackType, i);
+    const count = f64At(stackCount, i);
+    const hp = f64At(stackHp, i);
+    const rank = cell(type, T_RANK);
+    let j = i - 1;
+    while (j >= 0) {
+      const prevHp = f64At(stackHp, j);
+      const prevRank = cell(i32At(stackType, j), T_RANK);
+      if (!(hp > prevHp || (hp == prevHp && prevRank > rank))) break;
+      store<i32>(stackType + ((<usize>(j + 1)) << 2), i32At(stackType, j));
+      store<f64>(stackCount + ((<usize>(j + 1)) << 3), f64At(stackCount, j));
+      store<f64>(stackHp + ((<usize>(j + 1)) << 3), prevHp);
+      j -= 1;
+    }
+    store<i32>(stackType + ((<usize>(j + 1)) << 2), type);
+    store<f64>(stackCount + ((<usize>(j + 1)) << 3), count);
+    store<f64>(stackHp + ((<usize>(j + 1)) << 3), hp);
+  }
+  return k;
+}
+
+/** Per-hit damage (`hitDamage`) and attack base of the `k` kill-ordered stacks, then the attack order. */
+function attackOrderOf(k: i32): void {
+  for (let s = 0; s < k; s += 1) {
+    const type = i32At(stackType, s);
+    const count = f64At(stackCount, s);
+    const scale = count * cell(type, T_BASE_STRENGTH);
+    store<f64>(stackDamage + ((<usize>s) << 3), jsRound((scale * cell(type, T_BRACKET)) / 100.0));
+    store<f64>(stackBase + ((<usize>s) << 3), count * cell(type, T_STR));
+  }
+  for (let i = 0; i < k; i += 1) {
+    const base = f64At(stackBase, i);
+    let j = i - 1;
+    while (j >= 0 && f64At(stackBase, i32At(attackers, j)) < base) {
+      store<i32>(attackers + ((<usize>(j + 1)) << 2), i32At(attackers, j));
+      j -= 1;
+    }
+    store<i32>(attackers + ((<usize>(j + 1)) << 2), i);
+  }
+}
+
+/** `walkBattle`'s `attack()`, answering the stack index that strikes (−1 when none is left this round). */
+function nextAttacker(k: i32): i32 {
+  while (cursor < k) {
+    const index = i32At(attackers, cursor);
+    if (load<u8>(dead + <usize>index) == 0 && load<u8>(acted + <usize>index) == 0) {
+      store<u8>(acted + <usize>index, 1);
+      return index;
+    }
+    cursor += 1;
+  }
+  return -1;
+}
+
+/** The plan's recovery bill over the `k` stacks in `stackType`/`stackCount`, in that order (`recoveryCosts`). */
+function recoveryBill(k: i32, outPtr: usize): void {
+  if (mode == 2) {
+    for (let f = 0; f < FAMILIES; f += 1) store<f64>(topTier + ((<usize>f) << 3), -Infinity);
+    for (let s = 0; s < k; s += 1) {
+      const type = i32At(stackType, s);
+      if (cell(type, T_FAMILY_REVIVED) == 0) continue;
+      const slot = topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3);
+      const tier = cell(type, T_TIER);
+      if (tier > load<f64>(slot)) store<f64>(slot, tier);
+    }
+  }
+  let silver: f64 = 0.0;
+  let gold: f64 = 0.0;
+  let dragonCoins: f64 = 0.0;
+  let seconds: f64 = 0.0;
+  for (let s = 0; s < k; s += 1) {
+    const type = i32At(stackType, s);
+    const count = f64At(stackCount, s);
+    const pool = <i32>cell(type, T_POOL);
+    const trained = cell(type, T_HAS_TRAINING) != 0;
+    let revive = mode == 1;
+    if (mode == 2) {
+      revive =
+        cell(type, T_FAMILY_REVIVED) != 0 &&
+        load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER);
+    }
+    if (revive) {
+      const c = chunks(count);
+      silver += trained ? c * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION) : 0.0;
+      gold += reviveGold(type, count);
+      dragonCoins += pool == 2 ? c * cell(type, T_TRAINING_DRAGON_COINS) : 0.0;
+      seconds += trained ? (c * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED) : 0.0;
+    } else {
+      const billed = pool == 0 ? count : chunks(count);
+      if (trained) {
+        silver += billed * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION);
+        dragonCoins += billed * cell(type, T_TRAINING_DRAGON_COINS);
+        seconds += (billed * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED);
+      }
+      gold += pool == 1 ? reviveGold(type, count) : 0.0;
+    }
+  }
+  store<f64>(outPtr, jsRound(silver));
+  store<f64>(outPtr + 8, jsRound(gold));
+  store<f64>(outPtr + 16, jsRound(dragonCoins));
+  store<f64>(outPtr + 24, jsRound(seconds));
+}
+
+// ---- the sizer's pool (`sizePool`, `src/engine/stacker.ts`) --------------------------------------------------
+
+/**
+ * `sizePool(slots, capacity, { ceiling })` on `n` slots in rank order — HP, cost and cap at `hpPtr`, `costPtr`,
+ * `capPtr` (f64) — with `ceiling` NaN for none and `spread` the engine's `RANK_SPREAD`. Writes each slot's count
+ * at `countsPtr` (f64) and answers `capacity − rest`. Needs no table. The binary search's `usedBy(countsAt(h))`
+ * is summed slot by slot in the engine's order, without the array.
+ */
+export function sizePool(
+  n: i32,
+  hpPtr: usize,
+  costPtr: usize,
+  capPtr: usize,
+  capacity: f64,
+  ceiling: f64,
+  spread: f64,
+  countsPtr: usize,
+): f64 {
+  const hasCeiling = !isNaN(ceiling);
+  let maxHp: f64 = -Infinity;
+  for (let i = 0; i < n; i += 1) maxHp = max(maxHp, f64At(hpPtr, i));
+  let low: f64 = 0;
+  let high: f64 = hasCeiling ? ceiling : (capacity + 1) * max(maxHp, 1.0);
+  if (hasCeiling && usedAt(n, hpPtr, costPtr, capPtr, ceiling, spread) <= capacity) low = ceiling;
+  else {
+    for (let step = 0; step < 200; step += 1) {
+      const mid = (low + high) / 2;
+      if (usedAt(n, hpPtr, costPtr, capPtr, mid, spread) <= capacity) low = mid;
+      else high = mid;
+    }
+  }
+  const delta = spread * low;
+  let used: f64 = 0;
+  for (let i = 0; i < n; i += 1) {
+    const count = unitsFor(f64At(hpPtr, i), f64At(costPtr, i), f64At(capPtr, i), low - <f64>i * delta);
+    store<f64>(countsPtr + ((<usize>i) << 3), count);
+    used = used + count * f64At(costPtr, i);
+  }
+  let rest = capacity - used;
+  let changed = true;
+  while (changed && rest > 0) {
+    changed = false;
+    for (let i = 0; i < n; i += 1) {
+      const hp = f64At(hpPtr, i);
+      if (hp <= 0) continue;
+      const cost = f64At(costPtr, i);
+      const next = f64At(countsPtr, i) + 1;
+      if (cost > rest || next > f64At(capPtr, i)) continue;
+      if (hasCeiling && next * hp > ceiling) continue;
+      store<f64>(countsPtr + ((<usize>i) << 3), next);
+      rest -= cost;
+      changed = true;
+    }
+  }
+  return capacity - rest;
+}
+
+/** `unitsForTarget`. */
+@inline function unitsFor(hp: f64, cost: f64, cap: f64, target: f64): f64 {
+  if (hp <= 0 || cost <= 0) return 0;
+  return max(0.0, min(Math.floor(target / hp), cap));
+}
+
+/** `usedBy(countsAt(ceilingHp))`. */
+function usedAt(n: i32, hpPtr: usize, costPtr: usize, capPtr: usize, ceilingHp: f64, spread: f64): f64 {
+  const delta = spread * ceilingHp;
+  let sum: f64 = 0;
+  for (let i = 0; i < n; i += 1) {
+    const count = unitsFor(f64At(hpPtr, i), f64At(costPtr, i), f64At(capPtr, i), ceilingHp - <f64>i * delta);
+    sum = sum + count * f64At(costPtr, i);
+  }
+  return sum;
+}
+
 // ---- the owner's rating ----------------------------------------------------------------------------------
 
 /** `saved` (`rating.ts`): percent saved on a cost, 0 on a bill of nothing. */

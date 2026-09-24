@@ -21,6 +21,7 @@ import { buildKillOrder } from './killOrder';
 import { marchResult, effectiveTable, rankTroops } from './plan';
 import type { Bill, MarkerRates } from './rating';
 import { rate } from './rating';
+import { planKernel } from './fast';
 import { chunks } from './recovery';
 import type { StackRequest } from './types';
 
@@ -67,6 +68,9 @@ export interface Retyped {
 
 /** A march's bill, the battle's way: worst-opening damage and every cost its recovery carries. */
 export function marchBill(request: StackRequest, counts: Record<string, number>): Bill {
+  // The kernel's battle and bill when the host set one (`./fast.ts`; AssemblyScript roadmap, step 2).
+  const fast = planKernel()?.marchBill(request, counts);
+  if (fast) return fast;
   const { summary } = marchResult(request, counts);
   let hired = 0;
   for (const unit of request.units) if (unit.pool === 'authority') hired += chunks(counts[unit.id] ?? 0);

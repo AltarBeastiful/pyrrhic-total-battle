@@ -25,6 +25,9 @@ const PRECACHEABLE = new Set([
   'json',
   'png',
   'svg',
+  // The AssemblyScript kernel the calculation worker loads (AssemblyScript roadmap, step 2): offline, the
+  // plan runs on it as it does online.
+  'wasm',
   'webmanifest',
   'woff',
   'woff2',
