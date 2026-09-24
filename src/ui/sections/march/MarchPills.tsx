@@ -21,7 +21,7 @@ import { Copy, Pencil, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
-import type { UnitDef } from '@/engine/types';
+import type { StackResult, UnitDef } from '@/engine/types';
 import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
 import { copyText } from '@/ui/profile/download';
@@ -32,6 +32,7 @@ import classes from './march.module.css';
 import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { useRunStore } from './runStore';
+import { shelterNote } from './shelter';
 
 /** How long "Copied" stays on screen. */
 const COPIED_MS = 1500;
@@ -213,6 +214,30 @@ export function MarchResized({ units }: { units: readonly UnitDef[] }) {
   return (
     <Text span role="status" className={classes.meta} c="dimmed">
       {resizeWords(resize, units)}
+    </Text>
+  );
+}
+
+/**
+ * **A thin shelter, said under the army** (S-141; owner, 2026-09-24: *"Let's perhaps add a faint warning ? at
+ * least if it at 0.01%"*). The pills are where a player reads the stacks, so the sentence about two of them is
+ * the line under the pills, in the same 12 px muted ink as the other lines the pane writes about the march
+ * it shows (`MarchResized`, `MarchEditedNote`) — no box and no icon: it is a caution, not an error (design
+ * rules 15, 22 and 23). A hired stack the enemy reaches before the troops is the stronger fact, so it keeps
+ * the size and takes the body ink instead of the muted one; colour stays out of it, because red is the
+ * mercenaries' group colour (rule 20). Nothing is drawn while the shelter is wider than
+ * `CAMPAIGN.shelterWarning`.
+ */
+export function MarchShelterNote({ result, units }: { result: StackResult; units: readonly UnitDef[] }) {
+  const note = shelterNote(result, units);
+  if (note === null) return null;
+  return (
+    <Text
+      className={classes.meta}
+      data-shelter={note.tone}
+      {...(note.tone === 'thin' ? { c: 'dimmed' } : {})}
+    >
+      {note.text}
     </Text>
   );
 }

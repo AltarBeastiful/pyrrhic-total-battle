@@ -1166,3 +1166,86 @@ test('the recap says what a hired unit bought, and re-says it when the march is 
   });
   expect(screen.getByText(/a hired unit$/).textContent).not.toBe(before);
 }, 30_000);
+
+test('a thin shelter is a faint line under the army, and a hired stack over the floor a plainer one', async () => {
+  // S-141 (owner, 2026-09-24: *"Let's perhaps add a faint warning ? at least if it at 0.01%"*). The fixture of
+  // the test above: its hired stack is the biggest on the field, so it is not sheltered at all.
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 92 }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup({ housing: { leadership: 4_100, authority: 2_000, dominance: 0 } });
+  });
+  renderWithTheme(<Page />);
+  await generate();
+  const snapshot = lastResult();
+  if (!snapshot) throw new Error('no result');
+  const hunter = unitById('epic-monster-hunter-6');
+  const troops = snapshot.result.stacks.filter((stack) => stack.pool === 'leadership');
+  const lowest = troops.reduce((low, stack) => (stack.totalHp < low.totalHp ? stack : low));
+  const troop = unitById(lowest.unitId);
+  if (!hunter || !troop) throw new Error('the fixture’s units are not in the tables');
+
+  // Not sheltered: the stronger sentence, in the body ink rather than the muted one.
+  const over = screen.getByText(
+    `Your ${hunter.name} stack is heavier than your ${troop.name} stack, so it falls before your troops.`,
+  );
+  expect(over.getAttribute('data-shelter')).toBe('over');
+  expect(over.getAttribute('style') ?? '').not.toContain('dimmed');
+  // No box and no icon: the line is plain text inside the army, not an alert.
+  expect(over.closest('[role="alert"]')).toBeNull();
+
+  /** The march on screen with its hired stack `margin` under the troop floor. */
+  const shelteredBy = (margin: number): void => {
+    act(() => {
+      useResultStore.setState({
+        last: {
+          ...snapshot,
+          result: {
+            ...snapshot.result,
+            stacks: snapshot.result.stacks.map((stack) =>
+              stack.unitId === hunter.id
+                ? { ...stack, totalHp: Math.floor(lowest.totalHp * (1 - margin)) }
+                : stack,
+            ),
+          },
+        },
+      });
+    });
+  };
+
+  shelteredBy(0.0001);
+  // The troop floor here is a few tens of thousands of HP, so one HP is a few thousandths of a percent and the
+  // margin prints as "0.01%" give or take its second digit; the exact figure is `shelter.test.ts`'s.
+  const thin = screen.getByText(
+    new RegExp(
+      `^Your ${hunter.name} stack is only 0\\.01\\d?% lighter than your ${troop.name} stack: ` +
+        'a small HP difference in game could see it fall before your troops\\.$',
+      'u',
+    ),
+  );
+  expect(thin.getAttribute('data-shelter')).toBe('thin');
+  // Faint: the theme's muted ink, at the pane's meta size.
+  expect(thin.getAttribute('style')).toContain('dimmed');
+
+  shelteredBy(0.015);
+  expect(screen.getByText(/only 1\.5% lighter/)).toBeTruthy();
+
+  shelteredBy(0.03);
+  expect(document.querySelector('[data-shelter]')).toBeNull();
+
+  // **And it reads a hand edit**: the generated march back, then the hired stack typed down to one unit —
+  // which the troops shelter by far more than 2 %, so the line goes.
+  act(() => {
+    useResultStore.setState({ last: snapshot });
+  });
+  expect(document.querySelector('[data-shelter="over"]')).not.toBeNull();
+  act(() => {
+    useResultStore.getState().editCount(hunter.id, 1);
+  });
+  await waitFor(() => {
+    expect(document.querySelector('[data-shelter]')).toBeNull();
+  });
+}, 30_000);

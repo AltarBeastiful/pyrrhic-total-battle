@@ -218,6 +218,20 @@ export const CAMPAIGN = {
    */
   editFills: [98, 96, 94, 92, 90],
   /**
+   * **How thin a shelter the March warns about** (S-141; owner, 2026-09-24: *"bank the margin in the backlog
+   * for now. Let's perhaps add a faint warning ? at least if it at 0.01%"*), as a fraction of the lowest troop
+   * stack's total HP.
+   *
+   * The engine's enemy always wipes our highest-HP living stack, so a hired stack is **sheltered** while its
+   * total HP is below the lowest troop stack's. A near-tie is a promise the game may not keep: a rounding or a
+   * stray bonus it counts and we do not, and the hired stack goes first. At HEAD 63 of the bar's 135 marches
+   * shelter within 2 % (the narrowest 0.01 %; experiment 173, `tools/theorycraft/out/173-a-shelter-margin.md`),
+   * and 2 % is the margin the owner judged fair there. The engine does not keep that margin yet — it cost the
+   * live camp's sweet spot 23 % — so the March **says** it instead: a faint line under the army whenever the
+   * largest hired stack is within this fraction of the troop floor (`sections/march/shelter.ts`).
+   */
+  shelterWarning: 0.02,
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

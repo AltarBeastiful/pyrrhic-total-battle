@@ -38,7 +38,7 @@ import {
   MarchSavedFold,
 } from './MarchFoot';
 import { MarchGenerateButton } from './MarchGenerateButton';
-import { MarchLeftOut, MarchPills, MarchResized } from './MarchPills';
+import { MarchLeftOut, MarchPills, MarchResized, MarchShelterNote } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
 import { useRunStore } from './runStore';
 import { UnitSheet } from './UnitSheet';
@@ -157,7 +157,11 @@ export function MarchSection() {
           setup has moved under it (`march.module.css`, `.outOfDate`): the whole answer dims together
           or none of it. */}
       {snapshot !== null && result !== null && summary !== null && (
-        <div data-stale={String(march.stale)} className={march.stale ? classes.outOfDate : undefined}>
+        <Stack
+          gap={8}
+          data-stale={String(march.stale)}
+          className={march.stale ? classes.outOfDate : undefined}
+        >
           <MarchPills
             rows={march.pools}
             editing={editing}
@@ -166,7 +170,10 @@ export function MarchSection() {
             }}
             onDetails={setSheetUnit}
           />
-        </div>
+          {/* How safely the troops shelter the hired stacks, read off the march on screen — generated or
+              edited by hand (S-141). Silent while the shelter is wide. */}
+          <MarchShelterNote result={result} units={snapshot.request.units} />
+        </Stack>
       )}
 
       {/* 3 — what this march leaves at home, and what the last edit to it did (S-104). One part, because
