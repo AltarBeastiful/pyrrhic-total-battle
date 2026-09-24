@@ -22,7 +22,7 @@
     "data:format": "node scripts/data-format.ts",
     "data:check": "node scripts/data-check.ts",
     "data:compare": "node tools/totalstack-sync/compare.ts",
-    "bench:baseline": "vitest run tests/engine/plan-benchmark.test.ts; node scripts/plan-baseline.ts",
+    "bench:baseline": "vitest run --project ts tests/engine/plan-benchmark.test.ts; node scripts/plan-baseline.ts",
     "bench:review": "node scripts/plan-baseline-review.ts",
     "icons": "node src/pwa/generate-icons.mjs",
     "e2e": "playwright test",
@@ -32,7 +32,7 @@
     "size": "size-limit",
     "kernel:build": "asc kernel/assembly/index.ts --config kernel/asconfig.json --target release",
     "kernel:bench": "KERNEL_BENCH=1 vitest run tests/kernel/bench.test.ts",
-    "kernel:bench-plan": "vitest run --config tests/kernel/with-kernel.config.mjs tests/engine/plan-benchmark.test.ts"
+    "kernel:bench-plan": "vitest run --project kernel tests/engine/plan-benchmark.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "5.3.0",

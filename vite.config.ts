@@ -101,8 +101,36 @@ export default defineConfig({
     // UI tests opt into jsdom with a `// @vitest-environment jsdom` docblock
     // (see src/App.test.tsx); `environmentMatchGlobs` was removed in Vitest 4.
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'tools/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
     restoreMocks: true,
+    globalSetup: ['tests/kernel/build.global.ts'],
+    /**
+     * **Two engine paths, one suite** (2026-09-24). The plan engine has a TypeScript path and an
+     * AssemblyScript kernel (`src/engine/fast.ts` `setKernel`); every test is written once and runs on both:
+     *
+     *  - `ts` — every test in the repo, the engine on its TypeScript path (no kernel set);
+     *  - `kernel` — every engine-level test file again, with the plan kernel set for the whole file
+     *    (`tests/kernel/with-kernel.setup.ts`). A failure names its project, so it says which path broke.
+     *
+     * `tests/kernel/**` is `ts`-only: those files set and clear the kernel themselves (parity, and the two
+     * paths held to each other in one process). `vitest run --project kernel` runs one path alone.
+     */
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'ts',
+          include: ['tests/**/*.test.ts', 'tools/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'kernel',
+          include: ['tests/engine/**/*.test.ts', 'src/engine/**/*.test.ts'],
+          setupFiles: ['tests/kernel/with-kernel.setup.ts'],
+        },
+      },
+    ],
   },
 });

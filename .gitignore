@@ -17,3 +17,8 @@ tools/theorycraft/out/benchmark-run.md
 
 # The AssemblyScript kernel, built on demand (`pnpm kernel:build`, or by the parity test when stale).
 kernel/build/
+# The same run with the plan kernel set (the `kernel` vitest project); never committed.
+tools/theorycraft/out/benchmark-run.kernel.json
+tools/theorycraft/out/benchmark-run.kernel.md
+tools/theorycraft/out/benchmark-latest.kernel.json
+tools/theorycraft/out/benchmark-latest.kernel.md

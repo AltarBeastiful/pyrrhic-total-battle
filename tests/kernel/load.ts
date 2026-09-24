@@ -25,8 +25,12 @@ function newestSource(dir: string): number {
 
 let compiled: WebAssembly.Module | null = null;
 
-export function loadKernelModule(): WebAssembly.Module {
-  if (compiled) return compiled;
+/**
+ * Rebuild `kernel/build/kernel.wasm` when it is missing or older than any kernel source. Run once before the
+ * workers start (`./build.global.ts`, vitest's `globalSetup`) so the two projects' parallel files never race
+ * one another into `asc`; `loadKernelModule` still calls it for a file run under another config.
+ */
+export function buildKernelIfStale(): void {
   const sources = Math.max(
     newestSource(join(ROOT, 'kernel/assembly')),
     statSync(join(ROOT, 'kernel/asconfig.json')).mtimeMs,
@@ -38,6 +42,11 @@ export function loadKernelModule(): WebAssembly.Module {
       { cwd: ROOT, stdio: 'inherit' },
     );
   }
+}
+
+export function loadKernelModule(): WebAssembly.Module {
+  if (compiled) return compiled;
+  buildKernelIfStale();
   compiled = compileKernel(readFileSync(WASM));
   return compiled;
 }

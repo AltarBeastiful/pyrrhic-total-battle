@@ -68,6 +68,37 @@ House rules that reviewers do check:
 - TypeScript strict, no `any`; the engine (`src/engine/`) stays free of React, the store and the DOM.
 - Comments explain _why_, not _what_.
 
+## Two engine paths, one test suite
+
+The plan engine exists twice: the TypeScript engine (`src/engine/`, the reference) and the AssemblyScript
+kernel (`kernel/assembly/`, set with `setKernel` in `src/engine/fast.ts`). They must never drift apart, and
+the tests check that on every `pnpm test`, in two vitest projects (`vite.config.ts`):
+
+- **`ts`** runs every test in the repository on the TypeScript path.
+- **`kernel`** runs every engine-level test file again (`tests/engine/**`, `src/engine/**`) with the kernel
+  set for the whole file (`tests/kernel/with-kernel.setup.ts`). A failure is prefixed with its project name,
+  `[ts]` or `[kernel]`, so it says which path broke.
+- `tests/kernel/**` (in `ts` only) holds the two paths to each other in one process: entry-point parity on
+  seeded random inputs, the plan deep-equal on every benchmark army (`plan-equivalence`), and the benchmark's
+  whole table measured both ways and compared figure for figure (`benchmark-equivalence.*`).
+
+```bash
+pnpm test                                   # both paths
+pnpm vitest run --project ts                # the TypeScript path alone
+pnpm vitest run --project kernel            # the kernel path alone
+pnpm vitest run --project kernel tests/engine/plan.test.ts   # one engine file on the kernel
+```
+
+The benchmark (`tests/engine/plan-benchmark.test.ts`) runs in both projects; the kernel's run writes
+`tools/theorycraft/out/benchmark-*.kernel.{md,json}` (gitignored), and only the TypeScript run updates the
+committed `benchmark-latest.*`.
+
+**The rule: a test is written once and runs on both paths.** Only the implementation is duplicated. Never
+write a kernel copy of an engine test; put the test under `tests/engine/` and it runs on both. A new engine
+behaviour is test-first: the new test must go **red on both paths** (`[ts]` and `[kernel]`), then pass on
+both once the change is made in the TypeScript and in the kernel. Both paths must always have the same set
+of failing tests; a test that fails on only one path is drift, whatever the test is about.
+
 ## Reporting a problem
 
 Open an issue with what you did, what you expected and what happened. For a wrong result, the most useful
