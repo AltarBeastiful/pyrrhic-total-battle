@@ -30,7 +30,15 @@ equipment, events and every other bonus are in the packed table, so every battle
 What the kernel changed: the same walk is now ~24× cheaper than in TS, and a whole plan is ×8.2 faster (91b4077). A
 search that was out of the time budget in W13 (step 3, experiment 171: +107 % plan time) may now fit.
 
-## 1. Where the 37 marches are lost (to be confirmed by step 1, not assumed)
+## 1. Where the 37 marches are lost
+
+**Measured by 176 (2026-09-25):** a, the row-level silver-saver guard: 13 marches, +60.34, of which +55.02 is kept under
+"silver must not rise". e, the own-ladder finale, built after the pass and never re-typed: 5 marches, +28.65. Search,
+where `retypeMarch` finds nothing: 8 marches, +2.62. Other, where the pass's own output is not a fixed point (a second
+climb gains): 29 marches, +2.39. c and d, the hand-backs and the deadline lose nothing. Order: step 2 (a), step 3 on the
+own-ladder finale, then step 4.
+
+The suspects, as read from the code before 176:
 
 Candidates, read from `plan.ts` (the re-typing pass, ~6110–6460):
 

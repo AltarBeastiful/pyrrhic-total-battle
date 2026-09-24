@@ -44,6 +44,7 @@ import { sizeStacks } from './stacker';
 import type { Bill, MarkerRates } from './rating';
 import { rate, saved } from './rating';
 import { retypeMarch } from './retype';
+import { planTrace } from './plan-trace';
 import { LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, planKernel } from './fast';
 import type { LadderKernel, MarchFigures, PlanKernel } from './fast';
 import type {
@@ -6142,6 +6143,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (Date.now() > retypeDeadline) {
       // Not reached: left as the search made it, and not cached, so it is counted once per ask.
       retypeLog.cut = true;
+      planTrace.sink?.({
+        step: 'retypeOne',
+        counts,
+        found: null,
+        rating: 0,
+        cut: false,
+        deadline: true,
+        refused: null,
+        out: counts,
+      });
       return counts;
     }
     retypeLog.marches += 1;
@@ -6173,7 +6184,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         out = next;
         retypeLog.retyped += 1;
       }
-    }
+      planTrace.sink?.({
+        step: 'retypeOne',
+        counts,
+        found: next,
+        rating: found.rating,
+        cut: found.cut === true,
+        deadline: false,
+        refused: !hiredKept ? 'hired' : out === next ? null : 'shelter',
+        out,
+      });
+    } else
+      planTrace.sink?.({
+        step: 'retypeOne',
+        counts,
+        found: null,
+        rating: 0,
+        cut: false,
+        deadline: false,
+        refused: null,
+        out,
+      });
     retypeCache.set(key, out);
     return out;
   };
@@ -6199,7 +6230,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (retypeRates === undefined) return row;
     const began = Date.now();
     try {
-      return foldFinale(retypeRowNow(row));
+      const now = retypeRowNow(row);
+      const folded = foldFinale(now);
+      planTrace.sink?.({ step: 'foldFinale', pick: (row as Partial<PlanRow>).pick, folded: folded !== now });
+      return folded;
     } finally {
       retypeMs += Date.now() - began;
     }
@@ -6271,7 +6305,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     const moved = played.map(({ counts, times }) => ({ counts, times, next: retypeOne(counts) }));
     const changed = moved.filter((march) => march.next !== march.counts && march.times > 0);
-    if (changed.length === 0) return row;
+    const traceRow = (silverSaverGuard: boolean): void =>
+      planTrace.sink?.({
+        step: 'retypeRowNow',
+        pick: (row as Partial<PlanRow>).pick,
+        marches: played.map((march) => march.counts),
+        changed: changed.length,
+        silverSaverGuard,
+      });
+    if (changed.length === 0) {
+      traceRow(false);
+      return row;
+    }
     const delta = { damage: 0, hiredDamage: 0, silver: 0, gold: 0, dragonCoins: 0, seconds: 0, mercLost: 0 };
     for (const march of changed) {
       const was = priceCounts(march.counts);
@@ -6360,8 +6405,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (
       (row as Partial<PlanRow>).pick === 'silver-saver' &&
       (next.silver > row.silver || next.repeat.silver > row.repeat.silver)
-    )
+    ) {
+      traceRow(true);
       return row;
+    }
+    traceRow(false);
     (next as T & { retyped?: PlanRow['retyped'] }).retyped = {
       marches: changed.reduce((sum, march) => sum + march.times, 0),
       rating: rate(bill(row), bill(next), retypeRates),
@@ -6425,6 +6473,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const lossPercent = target !== 0 ? ((target - (now[lost] ?? 0)) / Math.abs(target)) * 100 : 0;
       const worth = lossPercent / readingRate(retypeRates, lost);
       const gain = rate(totalsBill(was), totalsBill(stops[holderAt] as PlanRow), retypeRates);
+      planTrace.sink?.({ step: 'keepReadings', pick: was.pick, reading: lost, handedBack: worth > gain });
       if (worth <= gain) bought.add(lost);
       else stops[holderAt] = was;
     }
@@ -6463,8 +6512,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const row = stops[index] as PlanRow;
       const was = foldedFrom.get(row);
       if (!was) continue;
-      if (stops.some((other) => beatsOutright(row, other) || beatsOutright(other, row)))
+      if (stops.some((other) => beatsOutright(row, other) || beatsOutright(other, row))) {
+        planTrace.sink?.({ step: 'foldHandBack', pick: row.pick });
         stops[index] = { ...(was as PlanRow), pick: row.pick, bestFor: row.bestFor };
+      }
     }
     stops.sort(byBurn);
     /**
@@ -6477,7 +6528,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (row.retyped === undefined || !stops.slice(0, index).some((other) => sameCounts(other, row)))
         continue;
       const was = beforeRetype.get(row);
-      if (was) stops[index] = was;
+      if (was) {
+        planTrace.sink?.({ step: 'collisionHandBack', pick: row.pick });
+        stops[index] = was;
+      }
     }
     stops.sort(byBurn);
   }
@@ -6567,6 +6621,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           if (!beatenOf(next)) kept = next;
         }
       }
+      planTrace.sink?.({ step: 'allInS94', outcome: kept ? 'rebuilt' : 'dropped' });
       if (kept) stops[lastIn] = kept;
       else stops.splice(lastIn, 1);
     }
@@ -6586,8 +6641,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const fielded = mercenariesOver(row);
     // The second half (beaten on damage and silver by a stop fielding at least as many) needs a stop fielding
     // at least as many, which the first half already refuses; it is one test here and two in the criteria.
-    if (stops.some((other, at) => at !== allInAt && mercenariesOver(other) >= fielded))
+    if (stops.some((other, at) => at !== allInAt && mercenariesOver(other) >= fielded)) {
+      planTrace.sink?.({ step: 'allInDescending', outcome: 'dropped' });
       stops.splice(allInAt, 1);
+    }
   }
 
   /**
@@ -6746,6 +6803,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         if (fewest(withBurn, burn)) consider(withBurn);
       }
     }
+    planTrace.sink?.({
+      step: 'fold',
+      before: pool.map((row) => row.pick),
+      after: [...chosen.set].sort(byBurn).map((row) => row.pick),
+      band: chosen.set.filter((row) => !pool.includes(row)).map((row) => row.pick),
+    });
     stops.splice(0, stops.length, ...chosen.set.sort(byBurn));
     /**
      * **A band plan the fold took as a saver is re-typed once taken** (W11 §3.3). The band is not re-typed —
@@ -6764,6 +6827,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           (next.pick !== 'silver-saver' || cheapest(trial, next)) &&
           (next.pick !== 'burn-saver' || fewest(trial, next));
         const single = !trial.some((other) => other !== next && sameCounts(other, next));
+        planTrace.sink?.({
+          step: 'foldBandRetype',
+          pick: row.pick,
+          taken: named && single && (ordered(trial) || chosen.disordered),
+          named,
+          single,
+          ordered: ordered(trial) || chosen.disordered,
+        });
         if (named && single && (ordered(trial) || chosen.disordered)) {
           stops[index] = next;
           beforeRetype.set(next, row);
@@ -6885,6 +6956,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         return (((held - now) / Math.abs(held)) * 100) / readingRate(retypeRates, reading) > rating;
       });
       if (lostWorth) continue;
+      planTrace.sink?.({ step: 'ownLadderFinale', pick: next.pick, counts: next.finaleCounts ?? {} });
       stops[index] = next;
     }
   }
