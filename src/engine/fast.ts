@@ -13,7 +13,8 @@
  */
 import type { Effective } from './plan';
 import type { Bill } from './rating';
-import type { RecoveryCost, RecoverySettings, StackRequest } from './types';
+import type { UnitDef } from '../data/types';
+import type { RecoveryCost, RecoverySettings, StackRequest, StackingOptions } from './types';
 
 /** `marchOf`'s figures (`src/engine/plan.ts`), without its `Stack[]`. */
 export interface MarchFigures {
@@ -68,6 +69,20 @@ export interface PlanKernel {
     ceiling: number | undefined,
     spread: number,
   ): number | null;
+  /**
+   * **What `sizeStacks` fields, and nothing it writes for a reader** (step 3): the unit and the count of every
+   * stack of `sizeStacks({ ...request, units, caps, options }).stacks`, in that order, or `null` to let the
+   * engine size it. `units` must be `request.units` filtered in order (the kernel ranks them by the Elite
+   * order of `request.units`); a custom kill order, or a request the kernel cannot pack, answers `null`.
+   * The pools, the drop reasons and the warnings are the engine's alone: a caller that reads them sizes with
+   * `sizeStacks`.
+   */
+  sizeStacks(
+    request: StackRequest,
+    units: readonly UnitDef[],
+    caps: Record<string, number>,
+    options: StackingOptions,
+  ): { unitId: string; count: number }[] | null;
 }
 
 let current: PlanKernel | null = null;

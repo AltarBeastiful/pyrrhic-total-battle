@@ -49,6 +49,7 @@ import {
   T_COST,
   T_FAMILY,
   T_FAMILY_REVIVED,
+  T_ELITE_RANK,
   T_HAS_TRAINING,
   T_HP,
   T_POOL,
@@ -99,6 +100,7 @@ export {
   T_COST,
   T_FAMILY,
   T_FAMILY_REVIVED,
+  T_ELITE_RANK,
   T_HAS_TRAINING,
   T_HP,
   T_POOL,
@@ -474,36 +476,7 @@ export function bill(n: i32, rowsPtr: usize, countsPtr: usize, outPtr: usize): v
 
 /** The stacks of `rowsPtr`/`countsPtr` with a count above 0, into `stackType`/`stackCount`/`stackHp`, kill order. */
 function killOrder(n: i32, rowsPtr: usize, countsPtr: usize): i32 {
-  let k = 0;
-  for (let i = 0; i < n; i += 1) {
-    const count = f64At(countsPtr, i);
-    if (!(count > 0)) continue;
-    const t = i32At(rowsPtr, i);
-    store<i32>(stackType + ((<usize>k) << 2), t);
-    store<f64>(stackCount + ((<usize>k) << 3), count);
-    store<f64>(stackHp + ((<usize>k) << 3), count * cell(t, T_HP));
-    k += 1;
-  }
-  for (let i = 1; i < k; i += 1) {
-    const type = i32At(stackType, i);
-    const count = f64At(stackCount, i);
-    const hp = f64At(stackHp, i);
-    const rank = cell(type, T_RANK);
-    let j = i - 1;
-    while (j >= 0) {
-      const prevHp = f64At(stackHp, j);
-      const prevRank = cell(i32At(stackType, j), T_RANK);
-      if (!(hp > prevHp || (hp == prevHp && prevRank > rank))) break;
-      store<i32>(stackType + ((<usize>(j + 1)) << 2), i32At(stackType, j));
-      store<f64>(stackCount + ((<usize>(j + 1)) << 3), f64At(stackCount, j));
-      store<f64>(stackHp + ((<usize>(j + 1)) << 3), prevHp);
-      j -= 1;
-    }
-    store<i32>(stackType + ((<usize>(j + 1)) << 2), type);
-    store<f64>(stackCount + ((<usize>(j + 1)) << 3), count);
-    store<f64>(stackHp + ((<usize>(j + 1)) << 3), hp);
-  }
-  return k;
+  return killOrderBy(n, rowsPtr, countsPtr, T_RANK);
 }
 
 /** Per-hit damage (`hitDamage`) and attack base of the `k` kill-ordered stacks, then the attack order. */
@@ -660,6 +633,253 @@ function usedAt(n: i32, hpPtr: usize, costPtr: usize, capPtr: usize, ceilingHp: 
     sum = sum + count * f64At(costPtr, i);
   }
   return sum;
+}
+
+// ---- the whole sizer (`sizeStacks`, `src/engine/stacker.ts`; AssemblyScript roadmap, step 3) -----------------
+
+/** `sizeStacks`' option bits (mirrored by `SIZER_FLAGS` in `src/kernel/plan.ts`). */
+const F_MS = 1; // `options.method === 'ms'`
+const F_RELAXED = 2; // `options.relaxedPreservation === true`
+const F_ROUND_TO_10 = 4; // `options.roundTo10`
+const F_MONSTERS_LAST = 8; // `options.monstersLast`
+const F_STRICT = 16; // `options.strictMercsAboveMonsters`
+
+/** `MAX_RELAX_STEPS` and `CHUNK` (`stacker.ts`, `recovery.ts`). */
+const MAX_RELAX_STEPS = 500;
+const CHUNK: f64 = 10;
+
+// Scratch of the sizer, one slot per type, reserved on its first call (`sizeStacks` needs a table).
+let zRow: usize = 0; // i32: row of the i-th slot, rank order
+let zHp: usize = 0; // f64
+let zCost: usize = 0; // f64
+let zCap: usize = 0; // f64
+let zCount: usize = 0; // f64
+let zSpread: f64 = 0;
+let zAvg: f64 = 0;
+let zMin: f64 = 0;
+
+/** `killOrder` with the rank read from `rankSlot`: the stacks with a count above 0, total HP descending. */
+function killOrderBy(n: i32, rowsPtr: usize, countsPtr: usize, rankSlot: i32): i32 {
+  let k = 0;
+  for (let i = 0; i < n; i += 1) {
+    const count = f64At(countsPtr, i);
+    if (!(count > 0)) continue;
+    const t = i32At(rowsPtr, i);
+    store<i32>(stackType + ((<usize>k) << 2), t);
+    store<f64>(stackCount + ((<usize>k) << 3), count);
+    store<f64>(stackHp + ((<usize>k) << 3), count * cell(t, T_HP));
+    k += 1;
+  }
+  for (let i = 1; i < k; i += 1) {
+    const type = i32At(stackType, i);
+    const count = f64At(stackCount, i);
+    const hp = f64At(stackHp, i);
+    const rank = cell(type, rankSlot);
+    let j = i - 1;
+    while (j >= 0) {
+      const prevHp = f64At(stackHp, j);
+      const prevRank = cell(i32At(stackType, j), rankSlot);
+      if (!(hp > prevHp || (hp == prevHp && prevRank > rank))) break;
+      store<i32>(stackType + ((<usize>(j + 1)) << 2), i32At(stackType, j));
+      store<f64>(stackCount + ((<usize>(j + 1)) << 3), f64At(stackCount, j));
+      store<f64>(stackHp + ((<usize>(j + 1)) << 3), prevHp);
+      j -= 1;
+    }
+    store<i32>(stackType + ((<usize>(j + 1)) << 2), type);
+    store<f64>(stackCount + ((<usize>(j + 1)) << 3), count);
+    store<f64>(stackHp + ((<usize>(j + 1)) << 3), hp);
+  }
+  return k;
+}
+
+/**
+ * `relaxPreservation`'s `score()`: `simulateBattle` on `buildStacks(slots)` — the `n` slots' stacks in kill
+ * order (total HP descending, the Elite rank on a tie), the two journal totals — into `zAvg` and `zMin`.
+ */
+function sizerScore(n: i32): void {
+  const k = killOrderBy(n, zRow, zCount, T_ELITE_RANK);
+  attackOrderOf(k);
+  const minimum = journalDamage(k, false);
+  const maximum = journalDamage(k, true);
+  zMin = minimum;
+  zAvg = jsRound((minimum + maximum) / 2.0);
+}
+
+/** `lowest(pool)`: the smallest total HP among the pool's live slots `from … to − 1`; NaN when none is live. */
+function lowestOf(from: i32, to: i32): f64 {
+  let low: f64 = NaN;
+  for (let i = from; i < to; i += 1) {
+    const count = f64At(zCount, i);
+    if (!(count > 0)) continue;
+    const hp = count * f64At(zHp, i);
+    if (isNaN(low) || hp < low) low = hp;
+  }
+  return low;
+}
+
+/** `sizePool(slots, capacity, { ceiling })` on the slots `from … to − 1` (ceiling NaN for none). */
+function sizePoolOf(from: i32, to: i32, capacity: f64, ceiling: f64): void {
+  for (let i = from; i < to; i += 1) store<f64>(zCount + ((<usize>i) << 3), 0.0);
+  if (to - from == 0 || capacity <= 0) return;
+  const off = <usize>from << 3;
+  sizePool(to - from, zHp + off, zCost + off, zCap + off, capacity, ceiling, zSpread, zCount + off);
+}
+
+/** `roundDownToChunks`: every count of the slots `from … to − 1` down to a multiple of ten. */
+function roundDownOf(from: i32, to: i32): void {
+  for (let i = from; i < to; i += 1) {
+    const at = zCount + ((<usize>i) << 3);
+    store<f64>(at, Math.floor(load<f64>(at) / CHUNK) * CHUNK);
+  }
+}
+
+/** `poolUsage`: Σ count × cost over the slots `from … to − 1`, in slot order. */
+function usageOf(from: i32, to: i32): f64 {
+  let sum: f64 = 0;
+  for (let i = from; i < to; i += 1) sum = sum + f64At(zCount, i) * f64At(zCost, i);
+  return sum;
+}
+
+/**
+ * **`sizeStacks(request).stacks`, the unit and the count of each** (`src/engine/stacker.ts`), on the `n` types of
+ * `rowsPtr` (i32 rows of the bound table, `request.units` order) with their caps at `capsPtr` (f64,
+ * `caps[id] ?? MAX_SAFE_INTEGER`), the three housings, the option bits `flags` (`F_*`) and `spread` the
+ * engine's `RANK_SPREAD`. The slots are ranked by the table's Elite rank (`T_ELITE_RANK`), each pool sized by
+ * `sizePool`, the ceilings, the tens and the relaxed-preservation walk exactly as the engine does them; the
+ * stacks are written in `buildStacks`' order (total HP descending, the rank on a tie): row at `outRowsPtr`
+ * (i32), count at `outCountsPtr` (f64). Answers the number of stacks, or −1 when it cannot answer the way the
+ * engine would (a ceiling that is NaN, or a rank order whose pools are not contiguous).
+ */
+export function sizeStacks(
+  n: i32,
+  rowsPtr: usize,
+  capsPtr: usize,
+  housingLeadership: f64,
+  housingAuthority: f64,
+  housingDominance: f64,
+  flags: i32,
+  spread: f64,
+  outRowsPtr: usize,
+  outCountsPtr: usize,
+): i32 {
+  if (zRow == 0) {
+    const size = <usize>max(types, 1);
+    zRow = heap.alloc(size << 2);
+    zHp = heap.alloc(size << 3);
+    zCost = heap.alloc(size << 3);
+    zCap = heap.alloc(size << 3);
+    zCount = heap.alloc(size << 3);
+  }
+  zSpread = spread;
+  // The slots, rank order (`slots.sort((a, b) => a.rank - b.rank)`): insertion by the Elite rank.
+  for (let i = 0; i < n; i += 1) {
+    const row = i32At(rowsPtr, i);
+    const cap = f64At(capsPtr, i);
+    const rank = cell(row, T_ELITE_RANK);
+    let j = i - 1;
+    while (j >= 0 && cell(i32At(zRow, j), T_ELITE_RANK) > rank) {
+      store<i32>(zRow + ((<usize>(j + 1)) << 2), i32At(zRow, j));
+      store<f64>(zCap + ((<usize>(j + 1)) << 3), f64At(zCap, j));
+      j -= 1;
+    }
+    store<i32>(zRow + ((<usize>(j + 1)) << 2), row);
+    store<f64>(zCap + ((<usize>(j + 1)) << 3), cap);
+  }
+  // Pools in rank order are contiguous (the Elite key's first term is the pool): find the two boundaries.
+  let endLeadership = 0;
+  let endAuthority = 0;
+  let previous = 0;
+  for (let i = 0; i < n; i += 1) {
+    const row = i32At(zRow, i);
+    const pool = <i32>cell(row, T_POOL);
+    if (pool < previous) return -1;
+    previous = pool;
+    if (pool == 0) endLeadership = i + 1;
+    if (pool <= 1) endAuthority = i + 1;
+    const hp = cell(row, T_HP);
+    const cost = cell(row, T_COST);
+    // A NaN would make the engine's ceilings NaN, which the kernel's `sizePool` hands back to the engine.
+    if (isNaN(hp) || isNaN(cost) || isNaN(f64At(zCap, i))) return -1;
+    store<f64>(zHp + ((<usize>i) << 3), hp);
+    store<f64>(zCost + ((<usize>i) << 3), cost);
+    store<f64>(zCount + ((<usize>i) << 3), 0.0);
+  }
+  const ms = (flags & F_MS) != 0;
+  const roundTo10 = (flags & F_ROUND_TO_10) != 0;
+
+  sizePoolOf(0, endLeadership, housingLeadership, NaN);
+  const troopFloor = lowestOf(0, endLeadership);
+  const hasFloor = !isNaN(troopFloor);
+  const mercCeiling: f64 = ms && hasFloor ? troopFloor - 1 : NaN;
+  sizePoolOf(endLeadership, endAuthority, housingAuthority, mercCeiling);
+  if (roundTo10) roundDownOf(endLeadership, endAuthority);
+
+  let monsterCeiling: f64 = NaN;
+  let hasMonsterCeiling = false;
+  if (ms && hasFloor) {
+    monsterCeiling = troopFloor - 1;
+    hasMonsterCeiling = true;
+  } else if ((flags & F_MONSTERS_LAST) != 0 && hasFloor) {
+    monsterCeiling = troopFloor - 1;
+    hasMonsterCeiling = true;
+  }
+  if (ms && (flags & F_STRICT) != 0) {
+    const mercFloor = lowestOf(endLeadership, endAuthority);
+    if (!isNaN(mercFloor)) {
+      monsterCeiling = Math.min(hasMonsterCeiling ? monsterCeiling : mercFloor - 1, mercFloor - 1);
+      hasMonsterCeiling = true;
+    }
+  }
+  sizePoolOf(endAuthority, n, housingDominance, monsterCeiling);
+  if (roundTo10) roundDownOf(endAuthority, n);
+
+  if (ms && (flags & F_RELAXED) != 0 && endLeadership < n) {
+    // `relaxPreservation`: the candidates are every slot past the troops, in slot order.
+    const step: f64 = roundTo10 ? CHUNK : 1;
+    let usedAuthority = usageOf(endLeadership, endAuthority);
+    let usedDominance = usageOf(endAuthority, n);
+    sizerScore(n);
+    let currentAvg = zAvg;
+    let currentMin = zMin;
+    for (let attempt = 0; attempt < MAX_RELAX_STEPS; attempt += 1) {
+      let chosen = -1;
+      let chosenAvg: f64 = 0;
+      let chosenMin: f64 = 0;
+      for (let i = endLeadership; i < n; i += 1) {
+        const at = zCount + ((<usize>i) << 3);
+        const count = load<f64>(at);
+        const cost = f64At(zCost, i);
+        if (count + step > f64At(zCap, i)) continue;
+        if (i < endAuthority) {
+          if (usedAuthority + cost * step > housingAuthority) continue;
+        } else if (usedDominance + cost * step > housingDominance) continue;
+        store<f64>(at, count + step);
+        sizerScore(n);
+        store<f64>(at, load<f64>(at) - step);
+        if (chosen < 0 || zAvg > chosenAvg) {
+          chosen = i;
+          chosenAvg = zAvg;
+          chosenMin = zMin;
+        }
+      }
+      if (chosen < 0) break;
+      if (chosenAvg <= currentAvg || chosenMin <= currentMin) break;
+      const at = zCount + ((<usize>chosen) << 3);
+      store<f64>(at, load<f64>(at) + step);
+      if (chosen < endAuthority) usedAuthority += f64At(zCost, chosen) * step;
+      else usedDominance += f64At(zCost, chosen) * step;
+      currentAvg = chosenAvg;
+      currentMin = chosenMin;
+    }
+  }
+
+  // `buildStacks`: the live slots, total HP descending, the rank on a tie.
+  const k = killOrderBy(n, zRow, zCount, T_ELITE_RANK);
+  for (let s = 0; s < k; s += 1) {
+    store<i32>(outRowsPtr + ((<usize>s) << 2), i32At(stackType, s));
+    store<f64>(outCountsPtr + ((<usize>s) << 3), f64At(stackCount, s));
+  }
+  return k;
 }
 
 // ---- the owner's rating ----------------------------------------------------------------------------------

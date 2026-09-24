@@ -72,6 +72,12 @@ export const T = {
   tier: 15,
   /** 1 when the selective plan revives this type's family. */
   familyRevived: 16,
+  /**
+   * The type's place in the **Elite-Preservation** order of `request.units` (`eliteOrder`, `killOrder.ts`) — the
+   * rank `sizeStacks` sorts its slots by and breaks a total-HP tie with whenever the method is not a custom
+   * list (step 3). `rank` above is `buildKillOrder` under the request's own options, which may be custom.
+   */
+  eliteRank: 17,
 } as const;
 export const TYPE_STRIDE = 20;
 

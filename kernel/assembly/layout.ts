@@ -34,6 +34,7 @@ export const T_REVIVAL_GOLD: i32 = 13;
 export const T_FAMILY: i32 = 14;
 export const T_TIER: i32 = 15;
 export const T_FAMILY_REVIVED: i32 = 16;
+export const T_ELITE_RANK: i32 = 17;
 export const TYPE_STRIDE: i32 = 20;
 
 // Record

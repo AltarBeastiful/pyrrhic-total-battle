@@ -10,7 +10,11 @@
  *  - `bill` against `recoveryCosts(...).plan` over the same stacks in the same orders;
  *  - `marchBill` (the re-typing's battle and bill) against the engine's, on the same marches;
  *  - `sizePool` through `sizeStacks` — the whole `StackResult`, deep-equal — under both sizer methods,
- *    relaxed or not, in tens or not, monsters last, strict mercenaries above monsters, with seeded caps.
+ *    relaxed or not, in tens or not, monsters last, strict mercenaries above monsters, with seeded caps;
+ *  - `sizeStacks` (step 3, the whole sizer in the kernel) against the TypeScript `sizeStacks`' stacks — unit,
+ *    order and count, `Object.is` — on seeded subsets and caps under every option, against every enemy
+ *    category alone and the army's own formation, with the swarm event on and off, and with two hired
+ *    stacks forced to tie in total HP.
  *
  * And the fallbacks: entries no bound table built, entries from two tables, and a recovery that is not the
  * bound request's are all answered `null`, so the engine runs its TypeScript.
@@ -19,16 +23,19 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
+import { CATEGORIES } from '@/data/types';
+import type { UnitDef } from '@/data/types';
 import { mulberry32 } from '@/engine';
 import { enemySquadCount } from '@/engine/battle';
 import { setKernel } from '@/engine/fast';
 import type { Effective } from '@/engine/plan';
-import { effectiveTable, marchOf, planCampaign } from '@/engine/plan';
+import { effectiveTable, marchOf, planCampaign, undominatedRows } from '@/engine/plan';
 import type { PlanTotals } from '@/engine/plan';
 import { recoveryCosts } from '@/engine/recovery';
 import { marchBill } from '@/engine/retype';
 import { sizeStacks } from '@/engine/stacker';
-import type { RecoverySettings, Stack, StackRequest } from '@/engine/types';
+import type { EnemyFormation, RecoverySettings, Stack, StackRequest, StackingOptions } from '@/engine/types';
+import { SWARM_EVENT_IDS } from '@/engine/units';
 import { UNIT_FAMILIES } from '@/engine/types';
 import { createPlanKernel } from '@/kernel/plan';
 
@@ -39,6 +46,8 @@ import { loadKernelModule } from './load';
 
 const RANDOM_PER_ARMY = 1_500;
 const ORDERS = 3;
+/** `sizeStacks` inputs per enemy formation and event setting, per army (step 3). */
+const SIZER_CASES = 150;
 const SEARCH_RECOVERY: RecoverySettings = {
   templeLevel: 0,
   trainingCostReduction: {},
@@ -275,6 +284,154 @@ describe('the plan kernel', () => {
       }, 600_000);
     },
   );
+
+  /** Seeded `sizeStacks` inputs over one army: subsets in order, caps, every option; ties forced on a few. */
+  function sizerCases(
+    request: StackRequest,
+    random: () => number,
+    total: number,
+  ): { units: UnitDef[]; caps: Record<string, number>; options: StackingOptions }[] {
+    const out: { units: UnitDef[]; caps: Record<string, number>; options: StackingOptions }[] = [];
+    const hired = request.units.filter((u) => u.pool !== 'leadership');
+    const table = new Map(effectiveTable(request).map((entry) => [entry.id, entry]));
+    for (let i = 0; i < total; i += 1) {
+      const caps: Record<string, number> = random() < 0.3 ? {} : { ...request.caps };
+      const keepTroop = random() < 0.25 ? 1 : 0.4 + 0.6 * random();
+      let units = request.units.filter((u) =>
+        u.pool === 'leadership' ? random() < keepTroop : random() < 0.7,
+      );
+      for (const u of units) {
+        const roll = random();
+        if (roll < 0.3) caps[u.id] = Math.floor(random() * (u.pool === 'leadership' ? 20_000 : 900));
+        else if (roll < 0.35) caps[u.id] = 0;
+        else if (roll < 0.4) caps[u.id] = 10 * Math.floor(random() * 60);
+      }
+      // Two hired stacks at one total HP when the caps bind (every eighth case).
+      if (i % 8 === 7 && hired.length >= 2) {
+        const a = hired[Math.floor(random() * hired.length)] as UnitDef;
+        const b = hired[Math.floor(random() * hired.length)] as UnitDef;
+        const ea = table.get(a.id);
+        const eb = table.get(b.id);
+        if (a !== b && ea && eb) {
+          const m = 1 + Math.floor(random() * 3);
+          caps[a.id] = eb.hp * m;
+          caps[b.id] = ea.hp * m;
+          if (!units.includes(a) || !units.includes(b))
+            units = request.units.filter((u) => units.includes(u) || u === a || u === b);
+        }
+      }
+      const method = random() < 0.5 ? 'ms' : 'elite';
+      out.push({
+        units,
+        caps,
+        options: {
+          ...request.options,
+          method,
+          relaxedPreservation: random() < 0.5,
+          roundTo10: random() < 0.3,
+          monstersLast: random() < 0.5,
+          strictMercsAboveMonsters: random() < 0.5,
+        },
+      });
+    }
+    return out;
+  }
+
+  describe.each(scenarios.map((s, i) => [i, s.label, s.request] as const))(
+    'the whole sizer, army %i: %s',
+    (index, _label, base) => {
+      it('answers sizeStacks’ stacks exactly: every target, events on and off, ties', () => {
+        const kernel = createPlanKernel(loadKernelModule());
+        const random = mulberry32(0x5123 + index);
+        const alone = (category: (typeof CATEGORIES)[number]): EnemyFormation =>
+          Object.fromEntries(CATEGORIES.map((c) => [c, c === category ? 4 : 0])) as EnemyFormation;
+        const enemies: EnemyFormation[] = [base.enemy, ...CATEGORIES.map(alone)];
+        const mismatches: string[] = [];
+        let compared = 0;
+        let ties = 0;
+        for (const enemy of enemies) {
+          for (const activeEvents of [[], [...SWARM_EVENT_IDS]]) {
+            // Housing now and then too small, or 0, for a pool; the recovery the army's own.
+            const housing = { ...base.housing };
+            if (random() < 0.3) housing.authority = Math.floor(housing.authority * random());
+            if (random() < 0.2) housing.dominance = 0;
+            const request: StackRequest = { ...base, enemy, activeEvents, housing };
+            for (const input of sizerCases(request, random, SIZER_CASES)) {
+              setKernel(null);
+              const reference = sizeStacks({ ...request, ...input });
+              if (reference.warnings.some((line) => line.includes(' tie at '))) ties += 1;
+              const ts = reference.stacks.map((stack) => [stack.unitId, stack.count]);
+              const got = kernel.sizeStacks(request, input.units, input.caps, input.options);
+              compared += 1;
+              const fast = got?.map((stack) => [stack.unitId, stack.count]);
+              if (
+                !fast ||
+                fast.length !== ts.length ||
+                ts.some((pair, i) => pair[0] !== fast[i]?.[0] || !Object.is(pair[1], fast[i]?.[1]))
+              ) {
+                if (mismatches.length < 10)
+                  mismatches.push(
+                    `${JSON.stringify(input.options)} ${JSON.stringify(input.caps)}: ts ${JSON.stringify(ts)} kernel ${JSON.stringify(fast)}`,
+                  );
+              }
+            }
+          }
+        }
+        expect(mismatches).toEqual([]);
+        expect(compared).toBe(enemies.length * 2 * SIZER_CASES);
+        process.stderr.write(
+          `sizer army ${String(index)}: ${String(compared)} compared, ${String(ties)} with a tie\n`,
+        );
+      }, 600_000);
+    },
+  );
+
+  it('sizes nothing it cannot size the engine’s way', () => {
+    const kernel = createPlanKernel(loadKernelModule());
+    const request = scenarios[0]?.request as StackRequest;
+    const units = [...request.units];
+    const options = { ...request.options, method: 'ms' as const };
+    expect(kernel.sizeStacks(request, units, request.caps, options)).not.toBeNull();
+    // Out of `request.units`' order, or a unit it does not hold.
+    if (units.length >= 2) expect(kernel.sizeStacks(request, [...units].reverse(), {}, options)).toBeNull();
+    expect(kernel.sizeStacks(request, [{ ...(units[0] as UnitDef) }], {}, options)).toBeNull();
+    // A custom kill order.
+    const custom = { ...options, method: 'custom' as const, customOrder: units.map((u) => u.id).reverse() };
+    expect(kernel.sizeStacks(request, units, {}, custom)).toBeNull();
+  });
+
+  it('keeps exactly the rows the n² scan keeps, in their order (undominatedRows, step 3)', () => {
+    const random = mulberry32(0xd0e);
+    const pick = (values: readonly number[]): number =>
+      values[Math.floor(random() * values.length)] as number;
+    const odd = [NaN, Infinity, -Infinity, 0, -0];
+    for (let trial = 0; trial < 2_000; trial += 1) {
+      const n = Math.floor(random() * 60);
+      const scale = 1 + Math.floor(random() * 6);
+      const figure = (): number => (random() < 0.03 ? pick(odd) : Math.floor(random() * scale));
+      const rows = Array.from({ length: n }, (_unused, id) => ({
+        id,
+        silver: figure(),
+        mercLost: figure(),
+        totalDamage: figure(),
+      }));
+      // A duplicate or two: equal rows beat neither each other nor anything the other does not.
+      if (n > 0 && random() < 0.5)
+        rows.push({ ...(rows[Math.floor(random() * n)] as (typeof rows)[number]), id: n });
+      const naive = rows.filter(
+        (a) =>
+          !rows.some(
+            (b) =>
+              b !== a &&
+              b.silver <= a.silver &&
+              b.mercLost <= a.mercLost &&
+              b.totalDamage >= a.totalDamage &&
+              (b.silver < a.silver || b.mercLost < a.mercLost || b.totalDamage > a.totalDamage),
+          ),
+      );
+      expect(undominatedRows(rows).map((row) => row.id)).toEqual(naive.map((row) => row.id));
+    }
+  });
 
   it('answers null where it cannot answer for the engine', () => {
     const kernel = createPlanKernel(loadKernelModule());

@@ -45,7 +45,17 @@ import type { Bill, MarkerRates } from './rating';
 import { rate, saved } from './rating';
 import { retypeMarch } from './retype';
 import { planKernel } from './fast';
-import type { BattleSummary, Housing, RecoverySettings, Stack, StackRequest, StackResult } from './types';
+import type { MarchFigures } from './fast';
+import type {
+  BattleSummary,
+  Housing,
+  RecoveryCost,
+  RecoverySettings,
+  Stack,
+  StackingOptions,
+  StackRequest,
+  StackResult,
+} from './types';
 
 /**
  * What the **search** prices a march's losses at: the bare game, no temple and no training discounts. The
@@ -1093,17 +1103,41 @@ export function marchOf(stacks: { entry: Effective; count: number }[], enemyStac
    * `marchOfTs` itself — is built here, by the TypeScript, the first time anything asks for it.
    */
   const fast = planKernel()?.march(stacks, enemyStacks, SEARCH_RECOVERY);
-  if (fast) {
-    let built: Stack[] | undefined;
-    return {
-      ...fast,
-      get stacks(): Stack[] {
-        built ??= marchOfTs(stacks, enemyStacks).stacks;
-        return built;
-      },
-    };
-  }
+  if (fast) return new KernelMarch(fast, stacks, enemyStacks);
   return marchOfTs(stacks, enemyStacks);
+}
+
+/**
+ * A kernel march: the figures as own fields, the `Stack[]` built by `marchOfTs` on first read (step 3 — a
+ * class, where step 2 spread the figures into a literal carrying a getter, which the scorer paid for on every
+ * candidate).
+ */
+class KernelMarch implements MarchOf {
+  readonly damage: number;
+  readonly hiredDamage: number;
+  readonly silver: number;
+  readonly gold: number;
+  readonly mercLost: number;
+  readonly strikes: number;
+  readonly #source: { entry: Effective; count: number }[];
+  readonly #enemyStacks: number;
+  #built: Stack[] | undefined;
+
+  constructor(figures: MarchFigures, source: { entry: Effective; count: number }[], enemyStacks: number) {
+    this.damage = figures.damage;
+    this.hiredDamage = figures.hiredDamage;
+    this.silver = figures.silver;
+    this.gold = figures.gold;
+    this.mercLost = figures.mercLost;
+    this.strikes = figures.strikes;
+    this.#source = source;
+    this.#enemyStacks = enemyStacks;
+  }
+
+  get stacks(): Stack[] {
+    this.#built ??= marchOfTs(this.#source, this.#enemyStacks).stacks;
+    return this.#built;
+  }
 }
 
 interface MarchOf {
@@ -1272,7 +1306,7 @@ function ladder(
   const out: { entry: Effective; count: number }[] = [];
   let used = 0;
   chosen.forEach((entry, index) => {
-    const hp = floor * RUNG_STEP ** (chosen.length - 1 - index);
+    const hp = floor * rungPower(chosen.length - 1 - index);
     const count = Math.max(1, Math.floor(hp / entry.hp));
     used += count * entry.cost;
     out.push({ entry, count });
@@ -1282,6 +1316,59 @@ function ladder(
 
 /** `planCampaign` shadows `ladder` with its own burn ladder, so it reaches the builder by this name. */
 const buildLadder = ladder;
+
+/** `b` beats `a` on silver, hired burn and damage at once: no worse on any, better on one. */
+function dominates(
+  b: { silver: number; mercLost: number; totalDamage: number },
+  a: { silver: number; mercLost: number; totalDamage: number },
+): boolean {
+  return (
+    b.silver <= a.silver &&
+    b.mercLost <= a.mercLost &&
+    b.totalDamage >= a.totalDamage &&
+    (b.silver < a.silver || b.mercLost < a.mercLost || b.totalDamage > a.totalDamage)
+  );
+}
+
+const order3 = (x: number, y: number): number => (x < y ? -1 : x > y ? 1 : 0);
+
+/**
+ * **The rows nothing else beats** — exactly `all.filter((a) => !all.some((b) => b !== a && dominates(b, a)))`,
+ * in `all`'s order — without the n² scan (step 3). Sorted by silver, then burn ascending, then damage
+ * descending, every row's dominators come before it; domination is transitive, so a row is dominated exactly
+ * when one of the undominated rows before it dominates it, and only those are kept to compare against. A row
+ * with a NaN figure can neither be beaten nor beat anything (every comparison with NaN is false): it is kept
+ * and left out of the sort, which NaN would make inconsistent.
+ */
+export function undominatedRows<T extends { silver: number; mercLost: number; totalDamage: number }>(
+  all: readonly T[],
+): T[] {
+  const kept = new Set<T>();
+  const ordered: T[] = [];
+  for (const row of all) {
+    if (Number.isNaN(row.silver) || Number.isNaN(row.mercLost) || Number.isNaN(row.totalDamage))
+      kept.add(row);
+    else ordered.push(row);
+  }
+  ordered.sort(
+    (a, b) =>
+      order3(a.silver, b.silver) || order3(a.mercLost, b.mercLost) || order3(b.totalDamage, a.totalDamage),
+  );
+  const front: T[] = [];
+  for (const row of ordered) {
+    if (front.some((other) => dominates(other, row))) continue;
+    front.push(row);
+    kept.add(row);
+  }
+  return all.filter((row) => kept.has(row));
+}
+
+/** `RUNG_STEP ** k`, the same operation, computed once per `k` (step 3: the ladder is built per candidate). */
+const RUNG_POWERS: number[] = [];
+function rungPower(k: number): number {
+  if (k >= 0 && k < 64 && Number.isInteger(k)) return (RUNG_POWERS[k] ??= RUNG_STEP ** k);
+  return RUNG_STEP ** k;
+}
 
 /**
  * **The shelter** (S-87, restoring S-75's rule for every hired type; owner, 2026-09-18: *"a critical rule is to
@@ -1318,7 +1405,9 @@ function shelterUnder(
   mercs: { entry: Effective; count: number }[],
 ): { entry: Effective; count: number }[] {
   if (rungs.length === 0 || mercs.length === 0) return mercs;
-  const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+  // `Math.min(...hps)`, folded one at a time: the same value, NaN and −0 included, without the two arrays.
+  let floor = Infinity;
+  for (const rung of rungs) floor = Math.min(floor, rung.count * rung.entry.hp);
   if (!Number.isFinite(floor) || floor <= 0) return mercs;
   return mercs.map((merc) =>
     merc.count * merc.entry.hp < floor || merc.entry.hp <= 0
@@ -1631,8 +1720,23 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
 
   // One entry is enough: the planner scores all eighty ladders of one shape back to back, and the key can
   // only stay the same within that run.
-  let cachedKey = '';
+  //
+  // The key is `marches` and the vector's counts, compared the way their joined string compared them until
+  // step 3 (`${marches}|${counts.join(',')}`): a number's string is its value's, so `===`, with NaN equal to
+  // NaN — and without writing the string on every call.
+  let cachedValid = false;
+  let cachedMarches = 0;
+  const cachedCounts: number[] = [];
   let cachedFinale: ScoredShape['finale'] = null;
+  const sameNumber = (a: number, b: number): boolean => a === b || (a !== a && b !== b);
+  const cacheHit = (marches: number, vector: readonly { count: number }[]): boolean => {
+    if (!cachedValid || !sameNumber(marches, cachedMarches) || vector.length !== cachedCounts.length)
+      return false;
+    for (let i = 0; i < vector.length; i += 1) {
+      if (!sameNumber((vector[i] as { count: number }).count, cachedCounts[i] as number)) return false;
+    }
+    return true;
+  };
 
   /**
    * Which type takes which rung, learned once a depth: from the ranking's order, every pairwise swap is
@@ -1740,7 +1844,9 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       if (lastsMarches(sustain[merc.entry.id] ?? 0, merc.count) < marches) return null;
     }
     // what the enemy can kill in one march, and the HP the mercenaries need shelter from
-    const mercenaryHp = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
+    // `Math.max(...hps)`, folded one at a time: the same value, without the two arrays (step 3).
+    let mercenaryHp = -Infinity;
+    for (const merc of fielded) mercenaryHp = Math.max(mercenaryHp, merc.count * merc.entry.hp);
     const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
     const rungs =
       sizerMethod !== undefined || depth === WINNER_RUNGS_DEPTH
@@ -1780,9 +1886,11 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     if (noFinale) {
       finale = null;
     } else if (silverBudget === undefined) {
-      const key = `${marches}|${vector.map((merc) => merc.count).join(',')}`;
-      if (key !== cachedKey) {
-        cachedKey = key;
+      if (!cacheHit(marches, vector)) {
+        cachedValid = true;
+        cachedMarches = marches;
+        cachedCounts.length = vector.length;
+        for (let i = 0; i < vector.length; i += 1) cachedCounts[i] = (vector[i] as { count: number }).count;
         cachedFinale = finaleFor(marches, fielded, undefined);
       }
       finale = cachedFinale;
@@ -1827,6 +1935,26 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
  * was that search's own closure over `request.recovery`, and two copies of a price list is how a bar and a
  * recap come to disagree.
  */
+/** `priceMarch`'s bill, unrounded: the plan's recovery of every fielded stack, rungs first. */
+function marchRecovery(
+  recovery: RecoverySettings,
+  rungs: { entry: Effective; count: number }[],
+  mercs: { entry: Effective; count: number }[],
+): RecoveryCost {
+  const fielded = [...rungs, ...mercs].filter((stack) => stack.count > 0);
+  // `recoveryCosts` reads a stack's id and its count and nothing else of it; the rest of `Stack` is the
+  // battle's business and no part of a bill (`engine/recovery.ts`).
+  // The kernel's bill when the host set one (`./fast.ts`), summed in this same order; else the engine's.
+  return (
+    planKernel()?.bill(fielded, recovery) ??
+    recoveryCosts(
+      fielded.map((stack) => ({ unitId: stack.entry.unit.id, count: stack.count }) as Stack),
+      fielded.map((stack) => stack.entry.unit),
+      recovery,
+    ).plan
+  );
+}
+
 function priceMarch(
   recovery: RecoverySettings,
   rungs: { entry: Effective; count: number }[],
@@ -1842,18 +1970,7 @@ function priceMarch(
       mercFielded[merc.entry.id] = merc.count;
     }
   }
-  const fielded = [...rungs, ...mercs].filter((stack) => stack.count > 0);
-  // `recoveryCosts` reads a stack's id and its count and nothing else of it; the rest of `Stack` is the
-  // battle's business and no part of a bill (`engine/recovery.ts`).
-  // The kernel's bill when the host set one (`./fast.ts`), summed in this same order; else the engine's.
-  const bill =
-    planKernel()?.bill(fielded, recovery) ??
-    recoveryCosts(
-      fielded.map((stack) => ({ unitId: stack.entry.unit.id, count: stack.count }) as Stack),
-      fielded.map((stack) => stack.entry.unit),
-      recovery,
-    ).plan;
-  const { silver, seconds, gold, dragonCoins } = bill;
+  const { silver, seconds, gold, dragonCoins } = marchRecovery(recovery, rungs, mercs);
   return {
     counts,
     damage: Math.round(totals.damage),
@@ -1871,6 +1988,23 @@ function priceMarch(
     strikes: Math.round(totals.strikes),
     stacks: rungs.length + mercs.filter((merc) => merc.count > 0).length,
   };
+}
+
+/**
+ * **`sizeStacks(...).stacks` as the plan reads it — the unit and the count of each, in the sizer's order**,
+ * from the kernel when the host set one (AssemblyScript roadmap, step 3; `./fast.ts`), else from `sizeStacks`
+ * itself. Both callers read nothing else off the result: not the pools, the drop reasons or the warnings.
+ */
+function sizedCounts(
+  request: StackRequest,
+  units: UnitDef[],
+  caps: Record<string, number>,
+  options: StackingOptions,
+): readonly { unitId: string; count: number }[] {
+  return (
+    planKernel()?.sizeStacks(request, units, caps, options) ??
+    sizeStacks({ ...request, units, caps, options }).stacks
+  );
 }
 
 /**
@@ -1917,19 +2051,19 @@ function sizedShape(
     caps[merc.entry.id] = merc.count;
     if (merc.count > 0) fieldedIds.add(merc.entry.id);
   }
-  const sized = sizeStacks({
-    ...request,
-    caps,
-    units: request.units.filter((unit) =>
+  const sized = sizedCounts(
+    request,
+    request.units.filter((unit) =>
       unit.pool === 'leadership' ? (troopIds?.has(unit.id) ?? true) : fieldedIds.has(unit.id),
     ),
-    options: {
+    caps,
+    {
       ...request.options,
       method: method === 'elite' ? 'elite' : 'ms',
       relaxedPreservation: method === 'msRelaxed',
     },
-  });
-  const stacks = sized.stacks
+  );
+  const stacks = sized
     .filter((stack) => stack.count > 0)
     .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
     .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
@@ -3002,12 +3136,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // Counted once per candidate and kept: `record` reads the *current* best's ratios again on every
     // candidate it sees, and re-adding a plan's whole arithmetic for each of those is pure repetition.
     if (candidate.ratios !== undefined) return candidate.ratios;
-    const m = toMarch(candidate.rungs, candidate.mercs, candidate.march);
+    // `toMarch`'s three figures, without the rest of the `PlanMarch` it would build and drop (step 3): its
+    // `silver` is the rounded bill, its `mercLost` the march's own, its `hiredDamage` the march's rounded.
+    const m = candidate.march;
+    const silver = Math.round(marchRecovery(request.recovery, candidate.rungs, candidate.mercs).silver);
     const ratios = {
-      silver: candidate.marches * m.silver + (candidate.finale?.silver ?? 0),
+      silver: candidate.marches * silver + (candidate.finale?.silver ?? 0),
       mercs: candidate.marches * m.mercLost + (candidate.finale?.mercLost ?? 0),
       // What the campaign's hired stacks themselves dealt (S-105) — the numerator of damage a hired unit.
-      hired: candidate.marches * m.hiredDamage + (candidate.finale?.hiredDamage ?? 0),
+      hired: candidate.marches * Math.round(m.hiredDamage) + (candidate.finale?.hiredDamage ?? 0),
     };
     candidate.ratios = ratios;
     return ratios;
@@ -3922,17 +4059,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     };
   };
   const all = frontier.map(summarise);
-  const undominated = all.filter(
-    (a) =>
-      !all.some(
-        (b) =>
-          b !== a &&
-          b.silver <= a.silver &&
-          b.mercLost <= a.mercLost &&
-          b.totalDamage >= a.totalDamage &&
-          (b.silver < a.silver || b.mercLost < a.mercLost || b.totalDamage > a.totalDamage),
-      ),
-  );
+  const undominated = undominatedRows(all);
   undominated.sort((a, b) => a.silver - b.silver || a.mercLost - b.mercLost || a.totalDamage - b.totalDamage);
   const chosenPoint = summarise(chosen);
 
@@ -4300,13 +4427,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     let best: { row: TradeRow; score: number } | undefined;
     for (const extra of absent) {
       const keep = new Set([extra.id, ...fielded.map((entry) => entry.id), ...mercIds]);
-      const sized = sizeStacks({
-        ...request,
-        units: request.units.filter((unit) => keep.has(unit.id)),
+      const sized = sizedCounts(
+        request,
+        request.units.filter((unit) => keep.has(unit.id)),
         caps,
-        options: { ...request.options, method: 'ms', relaxedPreservation: false },
-      });
-      const picked = sized.stacks
+        { ...request.options, method: 'ms', relaxedPreservation: false },
+      );
+      const picked = sized
         .filter((stack) => stack.count > 0)
         .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
         .filter((stack): stack is { entry: Effective; count: number } => stack.entry !== undefined);
