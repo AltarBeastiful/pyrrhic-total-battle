@@ -730,3 +730,18 @@ gap against the definition and costs almost nothing.
   the plain variant (SW beats MX on this camp and on his usual setup, which breaks "no stop beaten") and
   dropping the beaten rung (TotalStack at matched spend 70 → 67, usual setup 5 → 2). To revisit: a rule that keeps
   the gain without a beaten stop and without losing the matched-spend standing.
+- **S-141 — a shelter margin (banked; owner, 2026-09-24: "bank the margin in the backlog for now").** At HEAD
+  63 of 135 marches on the bar shelter their hired stacks within 2 % of the lowest troop stack (the narrowest
+  0.01 %), where a rounding or a stray bonus in game could flip which stack the enemy wipes first. Experiment 173
+  (`tools/theorycraft/out/173-a-shelter-margin.md`) measured a configurable margin, `CAMPAIGN.shelterMargin`, with no UI:
+  | margin | stops better / equal / worse | readings worse | TotalStack dominated | marches under 2 % |
+  |---|---|---|---|---|
+  | 1 % | 10 / 30 / 19 | 27 | 72/13 | 51 |
+  | 2 % | 12 / 19 / 26 | 34 | 71/13 | 0 |
+  | 5 % | 14 / 15 / 25 | 35 | 63/11 | 0 |
+  At 2 % the live camp's steady max holds (49.19M → 48.63M) but its sweet spot falls 15.86M → 12.19M (−23 %), the
+  evening bar goes 5 → 3 stops, and the 7 000 all-in drops. The owner judged 2 % fair and asked for a cheaper one.
+  To revisit: why the sweet spot loses 23 % (a rung dropping out?), and whether sizing the troops up instead of
+  the hired down keeps the damage. The engine change, margin 0 byte-identical to the bar, is kept as
+  `docs/research/patches/s141-shelter-margin.patch` (applies to e1ded8e, 2026-09-24; the criteria rivals and
+  the resize test must read the margin too). Meanwhile the March panel shows a faint warning on a thin shelter.

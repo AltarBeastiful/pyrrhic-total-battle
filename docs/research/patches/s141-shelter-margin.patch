@@ -1,0 +1,874 @@
+diff --git a/src/config.ts b/src/config.ts
+index 9f406df..d402542 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -17,6 +17,16 @@
+  */
+ const MARKER_RATES = { silver: 5, gold: 5, hired: 5, dragonCoins: 8, seconds: 40 } as const;
+ 
++/**
++ * The shelter margin (`CAMPAIGN.shelterMargin` below), one number: `planFixes` hands the same one to the plan
++ * so the app and every test that plans as the app plans (`...CAMPAIGN.planFixes`) read it, and the March edit
++ * hands it to the re-size and to `shelterCounts`. The reading is documented at `shelterMargin`.
++ */
++// **0 until a cheaper 2 % is found** (owner, 2026-09-24: "look for a cheaper 2 %"). Experiment 173 measured 2 %
++// against 0: stops 12 better / 19 equal / 26 worse, the live camp's sweet spot −23 %, no march under 2 %; the
++// owner chose to search for a 2 % that costs less (experiment 175) before turning it on.
++const SHELTER_MARGIN = 0;
++
+ export const CAMPAIGN = {
+   /**
+    * Marches a plan is planned over — the horizon the plan method answers at. Four is the owner's own
+@@ -102,7 +112,33 @@ export const CAMPAIGN = {
+     retype: 'rated' as const,
+     tierCandidate: true,
+     tierSeed: false,
++    // The shelter margin (`shelterMargin` below), handed to the plan with the rest of its policy.
++    shelterMargin: SHELTER_MARGIN,
+   },
++  /**
++   * **How far under the lowest troop stack every hired stack stands**, as a fraction of that stack's HP
++   * (owner, 2026-09-24, shown that many marches shelter their hired stacks at 1.00× the lowest troop stack —
++   * below it, but within half a percent: *"2 % seems fair but could be configurable without clogging the ui,
++   * maybe hidden for now and conduct an experiment"*).
++   *
++   * The shelter (S-87) puts every hired stack strictly under the lowest troop stack, because the enemy wipes
++   * the highest-HP living stack first. Strictly under is all it ever asked: a hired stack one HP short of the
++   * floor is sheltered, and the sizer and the ladders land there often, since lowering a stack to *just*
++   * under the line is exactly what `shelterUnder` does. The margin moves the line: every hired stack stands
++   * strictly under `floor × (1 − shelterMargin)`, wherever the engine decides or checks the shelter — the
++   * scorer's shapes and finales, the sizer's shapes, the put-back and the tightening, the `all-in`'s march
++   * builder, the troop wall's finale, the rated re-typing, the March edit's re-size and `shelterCounts`.
++   *
++   * `0` is the strict "below" the rule was before, and plans byte for byte the bar of 3c4b23d. **No control on
++   * screen**, at his word: this file is the setting.
++   *
++   * **2 %, as the owner chose.** Experiment 173 (`tools/theorycraft/out/173-a-shelter-margin.md`, `budgetMs` off,
++   * seventeen benchmark armies): at 0, 63 of the bar's 135 marches stood under 2 % and the narrowest at 0.01 %; at
++   * 2 %, none, the narrowest at 2.09 %. Against 0, stops 12 better / 19 equal / 26 worse by the owner's rating,
++   * TotalStack at matched spend 70 / 13 → 71 / 13, no criterion broken, the tier twin 0 fail. His live camp of
++   * 2026-09-18's steady max 49,190,513 → 48,625,233 (−1.1 %), 51,192 → 50,328 gold, 344 → 340 hired.
++   */
++  shelterMargin: SHELTER_MARGIN,
+   /**
+    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
+    * keeps, the sweet spot in the middle of the rungs nothing beats on both ratios, and the most damage —
+diff --git a/src/engine/plan.ts b/src/engine/plan.ts
+index 6979137..80e0bfb 100644
+--- a/src/engine/plan.ts
++++ b/src/engine/plan.ts
+@@ -290,6 +290,14 @@ export interface CampaignInput {
+    * of the two climbs by damage (the ranking's on a tie). Omitted, the rung order is exactly the one before.
+    */
+   tierSeed?: boolean | undefined;
++  /**
++   * **How far under the lowest troop stack every hired stack stands** (`CAMPAIGN.shelterMargin`; owner,
++   * 2026-09-24: *"2 % seems fair but could be configurable without clogging the ui, maybe hidden for now and
++   * conduct an experiment"*). A fraction of that stack's HP: every hired stack of every shape, every check of
++   * the shelter and every re-typed march stands strictly under `floor × (1 − margin)` (`shelterLine`).
++   * Omitted or `0`, the shelter is the strict "below" it always was.
++   */
++  shelterMargin?: number | undefined;
+   /**
+    * **The band's token-field yardstick, switchable** — a diagnostic for
+    * `tools/theorycraft/108-thrift-end.test.ts` and `112-band-yardstick.test.ts`, never set by the app, kept
+@@ -1276,17 +1284,31 @@ const buildLadder = ladder;
+ function shelterUnder(
+   rungs: { entry: Effective; count: number }[],
+   mercs: { entry: Effective; count: number }[],
++  margin = 0,
+ ): { entry: Effective; count: number }[] {
+   if (rungs.length === 0 || mercs.length === 0) return mercs;
+   const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+   if (!Number.isFinite(floor) || floor <= 0) return mercs;
++  const line = shelterLine(floor, margin);
+   return mercs.map((merc) =>
+-    merc.count * merc.entry.hp < floor || merc.entry.hp <= 0
++    merc.count * merc.entry.hp < line || merc.entry.hp <= 0
+       ? merc
+-      : { entry: merc.entry, count: Math.max(0, Math.ceil(floor / merc.entry.hp) - 1) },
++      : { entry: merc.entry, count: Math.max(0, Math.ceil(line / merc.entry.hp) - 1) },
+   );
+ }
+ 
++/**
++ * **The line a hired stack has to stand under** (`CAMPAIGN.shelterMargin`; owner, 2026-09-24, shown marches
++ * whose hired stacks stood at 1.00× the lowest troop stack: *"2 % seems fair but could be configurable without
++ * clogging the ui, maybe hidden for now and conduct an experiment"*): the lowest troop stack's HP less the
++ * margin, a fraction of it. Every shelter decision and every shelter check reads this line and nothing else, so
++ * a hired stack stands strictly under `floor × (1 − margin)`. A margin of `0` — or none — is the strict "below"
++ * the rule always was, and returns `floor` itself, untouched by any arithmetic.
++ */
++function shelterLine(floor: number, margin: number | undefined): number {
++  return margin !== undefined && margin > 0 ? floor * (1 - margin) : floor;
++}
++
+ /**
+  * **A march the account can actually house** (S-96, 2026-09-19).
+  *
+@@ -1441,6 +1463,8 @@ export interface ShapeContext {
+   sustain?: Record<string, number> | undefined;
+   /** A second climb of the rung order from S-22's tier order (`CampaignInput.tierSeed`). */
+   tierSeed?: boolean | undefined;
++  /** How far under the lowest troop stack every hired stack stands (`CampaignInput.shelterMargin`); 0 left out. */
++  shelterMargin?: number | undefined;
+   /** Where the rung orders learned are counted, when a caller asks (`CampaignPlan.rungOrder`). */
+   rungOrderLog?: RungOrderLog | undefined;
+ }
+@@ -1562,7 +1586,9 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
+         // The finale shelters like every other march (S-87): the ladder is built above the leftovers, but a
+         // rung is a whole number of units — `floor(target / hp)` — so a heavy troop type can land a hair under
+         // the stack it was meant to clear, and the leftovers are lowered under whatever the ladder came out at.
+-        const under = shelterUnder(finaleLadder, leftovers).filter((merc) => merc.count > 0);
++        const under = shelterUnder(finaleLadder, leftovers, context.shelterMargin).filter(
++          (merc) => merc.count > 0,
++        );
+         if (under.length === 0) continue;
+         if (context.housing && !fitsHousing(context.housing, finaleLadder, under)) continue;
+         const attempt = marchOf([...finaleLadder, ...under], enemyStacks);
+@@ -1727,7 +1753,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
+      * buying troops to stand over a hired stack is the opposite of the trade the owner asked for. The counts the
+      * caller passed are its request; `mercs` below is what the shape fields.
+      */
+-    vector = shelterUnder(rungs, vector);
++    vector = shelterUnder(rungs, vector, context.shelterMargin);
+     fielded = vector.filter((merc) => merc.count > 0);
+     if (fielded.length === 0) return null;
+     // And it has to fit in the army's own housing (S-96, `fitsHousing`): a shape asking for more dominance
+@@ -1867,6 +1893,7 @@ function sizedShape(
+   mercs: { entry: Effective; count: number }[],
+   method: SizerMethod,
+   troopIds?: ReadonlySet<string>,
++  margin = 0,
+ ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } {
+   const caps: Record<string, number> = { ...request.caps };
+   const fieldedIds = new Set<string>();
+@@ -1894,6 +1921,7 @@ function sizedShape(
+   const sheltered = shelterUnder(
+     rungs,
+     stacks.filter((stack) => stack.entry.pool !== 'leadership'),
++    margin,
+   ).filter((stack) => stack.count > 0);
+   return { rungs, mercs: sheltered };
+ }
+@@ -1993,6 +2021,8 @@ export interface MarchWithin {
+   putBack?: PutBackPolicy;
+   /** How much room the lowest rung leaves above the biggest hired stack; the plan's own by default. */
+   gap?: number;
++  /** How far under the lowest troop stack every hired stack stands (`CAMPAIGN.shelterMargin`); 0 left out. */
++  shelterMargin?: number | undefined;
+ }
+ 
+ /** A march the March pane can draw, with how it was built and what it could not field. */
+@@ -2063,6 +2093,7 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
+   const byId = new Map(table.map((entry) => [entry.id, entry]));
+   const enemyStacks = enemySquadCount(request.enemy);
+   const gap = within.gap ?? DEFAULT_GAP;
++  const margin = within.shelterMargin ?? 0;
+   const wantedIds = new Set(within.troopIds);
+   // In the ranking's own order, which is the order `ladder` hands out its rungs in.
+   const wanted = troops.filter((entry) => wantedIds.has(entry.id));
+@@ -2103,7 +2134,7 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
+     const housed: StackRequest = { ...sizing, housing: { ...sizing.housing, leadership } };
+     const out: Shape[] = [];
+     for (const method of Object.values(SIZER_DEPTHS)) {
+-      out.push({ ...sizedShape(housed, byId, asked, method, wantedIds), shape: method });
++      out.push({ ...sizedShape(housed, byId, asked, method, wantedIds, margin), shape: method });
+     }
+     if (asked.length > 0) {
+       // The ladder is built above the biggest hired stack as it is asked for, then the hired stacks are
+@@ -2116,7 +2147,7 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
+         if (rungs.length === 0) continue;
+         out.push({
+           rungs,
+-          mercs: shelterUnder(rungs, asked).filter((merc) => merc.count > 0),
++          mercs: shelterUnder(rungs, asked, margin).filter((merc) => merc.count > 0),
+           shape: 'ladder',
+         });
+       }
+@@ -2157,7 +2188,11 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
+         count: Math.min(merc.count, Math.max(0, Math.floor(counts[merc.entry.id] ?? 0))),
+       }))
+       .filter((merc) => merc.count > 0);
+-    return { rungs, mercs: shelterUnder(rungs, hired).filter((merc) => merc.count > 0), shape: 'stop' };
++    return {
++      rungs,
++      mercs: shelterUnder(rungs, hired, margin).filter((merc) => merc.count > 0),
++      shape: 'stop',
++    };
+   };
+ 
+   /** Best by damage; a tie goes to the cheaper march, and then to the one back in the barracks sooner. */
+@@ -2183,7 +2218,7 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
+     // first unit already stands over the troop line.
+     const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+     const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
+-    if (mercs.length > 0 && floor <= hiredTop) return null;
++    if (mercs.length > 0 && shelterLine(floor, margin) <= hiredTop) return null;
+     const march = priceMarch(request.recovery, rungs, mercs, marchOf([...rungs, ...mercs], enemyStacks));
+     return {
+       ...march,
+@@ -2296,7 +2331,12 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
+  * generates rather than about the plan alone. `sizeStacks` itself is untouched — it answers TotalStack's
+  * own question, and its parity with TotalStack is a separate promise.
+  */
+-export function shelterCounts(request: StackRequest, counts: Record<string, number>): Record<string, number> {
++export function shelterCounts(
++  request: StackRequest,
++  counts: Record<string, number>,
++  /** How far under the lowest troop stack every hired stack stands (`CAMPAIGN.shelterMargin`); 0 left out. */
++  margin = 0,
++): Record<string, number> {
+   const fielded = effectiveTable(request)
+     .filter((entry) => (counts[entry.id] ?? 0) > 0)
+     .map((entry) => ({ entry, count: counts[entry.id] ?? 0 }));
+@@ -2304,7 +2344,7 @@ export function shelterCounts(request: StackRequest, counts: Record<string, numb
+   const hired = fielded.filter((stack) => stack.entry.pool !== 'leadership');
+   if (rungs.length === 0 || hired.length === 0) return { ...counts };
+   const out: Record<string, number> = { ...counts };
+-  for (const stack of shelterUnder(rungs, hired)) out[stack.entry.id] = stack.count;
++  for (const stack of shelterUnder(rungs, hired, margin)) out[stack.entry.id] = stack.count;
+   return out;
+ }
+ 
+@@ -2642,6 +2682,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+   // S-58, the two candidate fixes for "the plan drops a whole hired type". Both off unless a caller — the
+   // app through `src/config.ts`, or an experiment — asks for them.
+   const tokenFloor = input.tokenFloor === true;
++  // How far under the lowest troop stack every hired stack stands (`CampaignInput.shelterMargin`), 0 left out.
++  const shelterMargin = input.shelterMargin ?? 0;
+   const refuseDroppedTypes = input.refuseDroppedTypes === true;
+   const enemyStacks = enemySquadCount(request.enemy);
+   const table = effectiveTable(request);
+@@ -3009,6 +3051,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       // The prefix as a set of ids, which is what `sizedShape` filters on: `troops` is the ranking, weakest
+       // per HP first, so its last `depth` entries are the strongest `depth` types.
+       depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id)),
++      shelterMargin,
+     );
+   let winnerRungs: { entry: Effective; count: number }[] = [];
+   const score = makeScorer({
+@@ -3023,6 +3066,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+     ...(sizerShape ? { sizer } : {}),
+     winnerRungs: () => winnerRungs,
+     sustain,
++    shelterMargin,
+     ...seeded,
+   });
+   /** Silver one candidate spends: its repeats, plus its final march. */
+@@ -3214,7 +3258,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+           ladder: { depth, rungs: tight },
+           vector: mercTypes.map((entry, index) => ({
+             entry,
+-            count: Math.max(0, Math.min(anchors[index] ?? 0, Math.ceil(floorHp / Math.max(1, entry.hp)) - 1)),
++            count: Math.max(
++              0,
++              Math.min(
++                anchors[index] ?? 0,
++                Math.ceil(shelterLine(floorHp, shelterMargin) / Math.max(1, entry.hp)) - 1,
++              ),
++            ),
+           })),
+         });
+       }
+@@ -4279,6 +4329,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+         rungs,
+         // Every pool but `leadership`, as everywhere else the shelter is applied (S-96).
+         picked.filter((stack) => stack.entry.pool !== 'leadership'),
++        shelterMargin,
+       ).filter((stack) => stack.count > 0);
+       // A march on one troop stack is the extreme the band refuses ("not a strategy", owner 2026-09-15); a
+       // put-back that collapsed onto one would walk it back onto the bar through this pass.
+@@ -4304,7 +4355,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       // unit is already over the troop line.
+       const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+       const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
+-      if (floor <= hiredTop) continue;
++      if (shelterLine(floor, shelterMargin) <= hiredTop) continue;
+       const march = toMarch(rungs, mercs, marchOf(fields, enemyStacks));
+       /**
+        * **A put-back has to shorten the training queue** (owner, 2026-09-18: *"consider again lower level
+@@ -4439,7 +4490,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+         if (mercs.some((merc) => lastsMarches(sustain[merc.entry.id] ?? 0, merc.count) < repeats)) continue;
+         const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+         const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
+-        if (floor <= hiredTop) continue;
++        if (shelterLine(floor, shelterMargin) <= hiredTop) continue;
+         const fields = [...rungs, ...mercs];
+         const counts: Record<string, number> = {};
+         for (const stack of fields) counts[stack.entry.id] = stack.count;
+@@ -4900,6 +4951,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+         ...(sizerShape ? { sizer } : {}),
+         winnerRungs: () => winnerRungs,
+         sustain,
++        shelterMargin,
+         ...seeded,
+       });
+       /**
+@@ -4946,7 +4998,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+             // when this stop alone was *"all the mercs you can safely field"*.
+             const troopFloor = Math.min(...scored.rungs.map((rung) => rung.count * rung.entry.hp));
+             const hiredTop = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
+-            if (troopFloor <= hiredTop) continue;
++            if (shelterLine(troopFloor, shelterMargin) <= hiredTop) continue;
+             const candidate: Candidate = {
+               marches: 1,
+               mercs: scored.mercs,
+@@ -4998,7 +5050,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+             if (sized.rungs.length < 2 || fielded.length === 0) continue;
+             const troopFloor = Math.min(...sized.rungs.map((rung) => rung.count * rung.entry.hp));
+             const hiredTop = Math.max(...fielded.map((merc) => merc.count * merc.entry.hp));
+-            if (troopFloor <= hiredTop) continue;
++            if (shelterLine(troopFloor, shelterMargin) <= hiredTop) continue;
+             const march = marchOf([...sized.rungs, ...fielded], enemyStacks);
+             // Beaten by the shape already found on all three of the campaign's own figures: not an offer.
+             if (
+@@ -5608,6 +5660,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+     const found = retypeMarch(request, counts, retypeRates, {
+       deadline: retypeDeadline,
+       ...(input.tierCandidate === true ? { tierCandidate: true } : {}),
++      ...(shelterMargin > 0 ? { shelterMargin } : {}),
+     });
+     if (found?.cut) retypeLog.cut = true;
+     let out = counts;
+@@ -5627,7 +5680,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+           if (leadershipIds.has(entry.id)) floor = Math.min(floor, hp);
+           else hiredTop = Math.max(hiredTop, hp);
+         }
+-        return hiredTop < floor;
++        return hiredTop < shelterLine(floor, shelterMargin);
+       };
+       if (hiredKept && (!shelterOf(counts) || shelterOf(next))) {
+         out = next;
+@@ -6292,7 +6345,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       };
+       let best: { next: PlanRow; rating: number } | null = null;
+       for (const rungs of tightLadders) {
+-        const under = shelterUnder(rungs, leftovers).filter((merc) => merc.count > 0);
++        const under = shelterUnder(rungs, leftovers, shelterMargin).filter((merc) => merc.count > 0);
+         if (under.length === 0) continue;
+         if (!fitsHousing(request.housing, rungs, under)) continue;
+         const counts: Record<string, number> = {};
+diff --git a/src/engine/retype.ts b/src/engine/retype.ts
+index c63fd30..d63b143 100644
+--- a/src/engine/retype.ts
++++ b/src/engine/retype.ts
+@@ -45,6 +45,15 @@ export interface RetypeOptions {
+    * while it rates above it. Off, the search is exactly the one before.
+    */
+   tierCandidate?: boolean | undefined;
++  /**
++   * **The shelter margin** (`CAMPAIGN.shelterMargin`; owner, 2026-09-24: *"2 % seems fair but could be
++   * configurable without clogging the ui, maybe hidden for now and conduct an experiment"*). Set above 0, an
++   * assignment is admissible only if every hired stack stays strictly under `floor × (1 − margin)` of its own
++   * lowest troop stack — where the march handed in kept that margin itself. Each type is sized to at least its
++   * slot's HP, so the floor cannot fall and this never bites on a march the plan built; it is the rule stated
++   * rather than assumed. Omitted or 0, the search is exactly the one before.
++   */
++  shelterMargin?: number | undefined;
+ }
+ 
+ /** Which start the kept assignment was found from (a diagnostic of experiment 169). */
+@@ -104,17 +113,25 @@ export function retypeMarch(
+   const hired: Record<string, number> = {};
+   for (const s of result.stacks) if (s.pool !== 'leadership') hired[s.unitId] = s.count;
+   const base = marchBill(request, counts);
++  // The shelter margin, held only where the march handed in held it (`RetypeOptions.shelterMargin`).
++  const margin = options.shelterMargin ?? 0;
++  const hiredTop = Math.max(0, ...result.stacks.filter((s) => s.pool !== 'leadership').map((s) => s.totalHp));
++  const lineOf = (floor: number): number => floor * (1 - margin);
++  const keepMargin = margin > 0 && hiredTop > 0 && hiredTop < lineOf(Math.min(...slots));
+ 
+   const build = (types: number[]): Record<string, number> | null => {
+     const next: Record<string, number> = { ...hired };
+     let lead = 0;
++    let floor = Infinity;
+     types.forEach((ti, slot) => {
+       const t = table[ti];
+       if (!t) return;
+       const count = Math.ceil((slots[slot] ?? 0) / t.hp);
+       next[t.id] = count;
+       lead += count * t.cost;
++      floor = Math.min(floor, count * t.hp);
+     });
++    if (keepMargin && !(hiredTop < lineOf(floor))) return null;
+     return lead <= request.housing.leadership ? next : null;
+   };
+ 
+@@ -258,14 +275,17 @@ export function retypeMarch(
+         .sort((a, b) => (killRank.get(a) ?? Infinity) - (killRank.get(b) ?? Infinity));
+       const twin: Record<string, number> = { ...hired };
+       let lead = 0;
++      let twinFloor = Infinity;
+       ownTypes.forEach((id, i) => {
+         const entry = byId.get(id);
+         if (!entry) return;
+         const count = Math.ceil((ownSlots[i] ?? 0) / entry.hp);
+         twin[id] = count;
+         lead += count * entry.cost;
++        twinFloor = Math.min(twinFloor, count * entry.hp);
+       });
+       if (lead > request.housing.leadership) break;
++      if (keepMargin && !(hiredTop < lineOf(twinFloor))) break;
+       if (ownTypes.every((id) => twin[id] === kept.counts[id])) break;
+       tried += 1;
+       const bill = marchBill(request, twin);
+diff --git a/src/ui/sections/march/generate.ts b/src/ui/sections/march/generate.ts
+index f14a157..9c78d03 100644
+--- a/src/ui/sections/march/generate.ts
++++ b/src/ui/sections/march/generate.ts
+@@ -363,6 +363,8 @@ async function planStopAgain(
+         // the same `CAMPAIGN.putBack` the plan applies to a stop at Generate time. The answer carries
+         // what the trade cost and the pane says it, because a trade is not a win and must not read as one.
+         putBack: CAMPAIGN.putBack,
++        // The shelter margin the plan keeps (`CAMPAIGN.shelterMargin`), kept by the re-size too.
++        shelterMargin: CAMPAIGN.shelterMargin,
+       },
+     },
+     signal,
+@@ -408,7 +410,7 @@ async function sizedAgain(
+   for (const stack of result.stacks) counts[stack.unitId] = stack.count;
+   // Every hired stack under the lowest troop stack, on this path too (S-104): the sizer sizes them to a
+   // matched HP, which is exactly the line the enemy strikes first.
+-  const safe = shelterCounts(request, counts);
++  const safe = shelterCounts(request, counts, CAMPAIGN.shelterMargin);
+   const lowered = Object.keys(safe).some((id) => safe[id] !== counts[id]);
+   const shown = lowered ? planMarch(request, safe) : { result, summary };
+   const putBack = [...(edit.putBack ?? [])];
+diff --git a/tools/theorycraft/173-a-shelter-margin.test.ts b/tools/theorycraft/173-a-shelter-margin.test.ts
+new file mode 100644
+index 0000000..42f92ff
+--- /dev/null
++++ b/tools/theorycraft/173-a-shelter-margin.test.ts
+@@ -0,0 +1,431 @@
++/**
++ * 173 — **a shelter margin** (2026-09-24; the owner, shown that many marches shelter their hired stacks at 1.00× the
++ * lowest troop stack's HP: *"2 % seems fair but could be configurable without clogging the ui, maybe hidden for now
++ * and conduct an experiment"*).
++ *
++ * `CAMPAIGN.shelterMargin` (`src/config.ts`, `CampaignInput.shelterMargin`): every hired stack stands strictly under
++ * `floor × (1 − margin)`. Every benchmark army is planned as the app plans it (`CAMPAIGN.planFixes`, the put-back at
++ * the app's rates), `budgetMs` off, at margins 0, 1 %, 2 % and 5 %. Against margin 0: every stop by `rate()`, the ten
++ * readings, TotalStack at matched spend, the bar's criteria (169's), the owner's tier-twin test (`tier-twin.ts`),
++ * and the margins the bar actually stands at. The owner's two camps in full. At margin 0 the bar is also compared,
++ * byte for byte, with HEAD's (3c4b23d, from a worktree), to hold that the setting moves nothing when it is 0.
++ *
++ * Two phases, so the four margins run in four processes:
++ *
++ * `M173=0.02 THEORY=1 npx vitest run tools/theorycraft/173-a-shelter-margin.test.ts` — plans one margin, dumps it;
++ * `R173=1 THEORY=1 npx vitest run tools/theorycraft/173-a-shelter-margin.test.ts` — reads the four dumps, writes
++ * `out/173-a-shelter-margin.md`. `WT173` is the HEAD worktree (node_modules linked), `D173` the dump folder.
++ */
++/// <reference types="node" />
++import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
++
++import { describe, it } from 'vitest';
++
++import { CAMPAIGN } from '../../src/config';
++import type { CampaignPlan, PlanRow, PlanTotals } from '../../src/engine/plan';
++import { marchResult, planCampaign } from '../../src/engine/plan';
++import type { Bill } from '../../src/engine/rating';
++import { rate } from '../../src/engine/rating';
++import { chunks } from '../../src/engine/recovery';
++import type { StackRequest } from '../../src/engine/types';
++import type { Contender } from '../../tests/engine/matched-spend';
++import { matchedSpend } from '../../tests/engine/matched-spend';
++import type { Campaign } from '../../tests/engine/plan-campaign';
++import { asCaptured, campaignOf, marchesOf } from '../../tests/engine/plan-campaign';
++import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../../tests/engine/plan-scenarios';
++import { twinTest } from '../../tests/engine/tier-twin';
++import { totalstackRows, widenedFor } from '../../tests/engine/totalstack-rows';
++import { Report, n } from './harness';
++
++const SCRATCH =
++  '/tmp/claude-1000/-home-remi-projects-pyrrhic-totalbattle/c483a563-ebd7-4335-848c-c63c59ca2333/scratchpad';
++const WT = process.env.WT173 ?? `${SCRATCH}/head`;
++const DUMPS = process.env.D173 ?? `${SCRATCH}/173`;
++const MARGINS = [0, 0.01, 0.02, 0.05] as const;
++const LIVE = 'the owner’s live camp of 2026-09-18';
++const MESSAGE = 'his camp of 2026-09-19, as his message reads it';
++
++const READINGS = [
++  { head: 'most damage', of: (c: StopBill) => c.damage, high: true },
++  { head: 'least silver', of: (c: StopBill) => c.silver, high: false },
++  { head: 'fewest hired lost', of: (c: StopBill) => c.hired, high: false },
++  { head: 'least gold', of: (c: StopBill) => c.gold, high: false },
++  { head: 'fewest coins', of: (c: StopBill) => c.dragonCoins, high: false },
++  { head: 'shortest queue', of: (c: StopBill) => c.seconds, high: false },
++  { head: 'dmg a silver', of: (c: StopBill) => (c.silver > 0 ? c.damage / c.silver : 0), high: true },
++  { head: 'dmg a merc', of: (c: StopBill) => c.hiredDamage / Math.max(1, c.hired), high: true },
++  { head: 'dmg a gold', of: (c: StopBill) => (c.gold > 0 ? c.damage / c.gold : 0), high: true },
++  { head: 'dmg a coin', of: (c: StopBill) => (c.dragonCoins > 0 ? c.damage / c.dragonCoins : 0), high: true },
++] as const;
++const SHORT: Record<string, string> = {
++  'burn-saver': 'HS',
++  'silver-saver': 'SS',
++  'sweet-spot': 'SW',
++  'more-mercs': 'MM',
++  'steady-max': 'MX',
++  'all-in': 'AI',
++};
++const short = (pick: string): string => SHORT[pick] ?? pick;
++
++interface StopBill extends Bill {
++  damage: number;
++  silver: number;
++  gold: number;
++  hired: number;
++  dragonCoins: number;
++  seconds: number;
++  hiredDamage: number;
++}
++interface Stop {
++  pick: string;
++  bill: StopBill;
++  /** The narrowest margin over the stop's marches that field a hired stack (1 − hired top / troop floor). */
++  margin: number | null;
++  /** Every distinct march's margin. */
++  margins: number[];
++}
++interface Army {
++  label: string;
++  refused?: boolean;
++  stops: Stop[];
++  criteria: string[];
++  twin: { marches: number; pass: number; fail: string[]; inadmissible: number };
++  ts: { rows: number; rowsBeaten: number; unfitted: number };
++  identical?: boolean;
++}
++
++/** `1 − hired top / troop floor` of one march, or `null` where it fields no hired stack. */
++const marginOf = (request: StackRequest, counts: Record<string, number>): number | null => {
++  const { result } = marchResult(request, counts);
++  const troops = result.stacks.filter((s) => s.pool === 'leadership' && s.count > 0);
++  const hired = result.stacks.filter((s) => s.pool !== 'leadership' && s.count > 0);
++  if (troops.length === 0 || hired.length === 0) return null;
++  const floor = Math.min(...troops.map((s) => s.totalHp));
++  return 1 - Math.max(...hired.map((s) => s.totalHp)) / floor;
++};
++
++const sheltered = (request: StackRequest, counts: Record<string, number>): boolean => {
++  const { result } = marchResult(request, counts);
++  const troops = result.stacks.filter((s) => s.pool === 'leadership');
++  if (troops.length === 0) return true;
++  const floor = Math.min(...troops.map((s) => s.totalHp));
++  return result.stacks.filter((s) => s.pool !== 'leadership').every((s) => s.totalHp < floor);
++};
++const sustained = (request: StackRequest, marches: Record<string, number>[]): boolean => {
++  const left: Record<string, number> = {};
++  for (const unit of request.units) {
++    if (unit.pool !== 'authority') continue;
++    const cap = request.caps[unit.id];
++    if (cap !== undefined) left[unit.id] = cap;
++  }
++  for (const march of marches) {
++    for (const [id, cap] of Object.entries(left)) {
++      const count = march[id] ?? 0;
++      if (count > cap) return false;
++      left[id] = cap - chunks(count);
++    }
++  }
++  return true;
++};
++/** 169's criteria, as they were read there. */
++const criteria = (request: StackRequest, rows: PlanRow[], priced: Campaign[]): string[] => {
++  const broken: string[] = [];
++  if (rows.length > 5) broken.push('more than five stops');
++  if (!rows.some((row) => row.pick === 'sweet-spot')) broken.push('no sweet spot');
++  const rungs = rows.filter((row) => row.pick !== 'all-in');
++  for (let i = 1; i < rungs.length; i += 1) {
++    const p = rungs[i - 1] as PlanRow;
++    const q = rungs[i] as PlanRow;
++    if (q.repeat.mercLost <= p.repeat.mercLost || q.repeat.damage <= p.repeat.damage)
++      broken.push(`order at ${short(q.pick)}`);
++  }
++  rows.forEach((x, i) => {
++    const cx = priced[i] as Campaign;
++    rows.forEach((y, k) => {
++      if (x === y || x.pick === 'all-in' || y.pick === 'all-in') return;
++      const cy = priced[k] as Campaign;
++      const dom =
++        cx.damage >= cy.damage &&
++        cx.silver <= cy.silver &&
++        cx.burned <= cy.burned &&
++        cx.gold <= cy.gold &&
++        (cx.damage > cy.damage || cx.silver < cy.silver || cx.burned < cy.burned || cx.gold < cy.gold);
++      if (dom) broken.push(`${short(x.pick)} beats ${short(y.pick)}`);
++    });
++    const marches = marchesOf(x as PlanTotals);
++    if (!marches.every((m) => sheltered(request, m))) broken.push(`${short(x.pick)} unsheltered`);
++    if (!sustained(request, marches)) broken.push(`${short(x.pick)} unsustained`);
++  });
++  return broken;
++};
++
++const scenarioList = () => {
++  const profile = ownerProfile();
++  return [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
++};
++
++type Planner = (input: Record<string, unknown>) => CampaignPlan;
++
++describe.skipIf(!process.env.THEORY || process.env.M173 === undefined)(
++  'a shelter margin — one margin planned',
++  () => {
++    it('plans every army at one margin and dumps it', async () => {
++      const margin = Number(process.env.M173);
++      const head =
++        margin === 0 && existsSync(`${WT}/src/engine/plan.ts`)
++          ? ((await import(`${WT}/src/engine/plan.ts`)) as { planCampaign: Planner })
++          : undefined;
++      const headConfig = head
++        ? ((await import(`${WT}/src/config.ts`)) as {
++            CAMPAIGN: { planFixes: Record<string, unknown>; putBack: unknown };
++          })
++        : undefined;
++      const armies: Army[] = [];
++      for (const scenario of scenarioList()) {
++        const request = scenario.request;
++        let plan: CampaignPlan;
++        try {
++          plan = planCampaign({
++            request,
++            marchTarget: HORIZON,
++            ...CAMPAIGN.planFixes,
++            shelterMargin: margin,
++            putBack: CAMPAIGN.putBack,
++          });
++        } catch {
++          armies.push({
++            label: scenario.label,
++            refused: true,
++            stops: [],
++            criteria: [],
++            twin: { marches: 0, pass: 0, fail: [], inadmissible: 0 },
++            ts: { rows: 0, rowsBeaten: 0, unfitted: 0 },
++          });
++          continue;
++        }
++        const rows = plan.alternatives;
++        const priced = rows.map((row) => campaignOf(request, row.pick, 'plan', marchesOf(row as PlanTotals)));
++        const stops: Stop[] = rows.map((row, i) => {
++          const c = priced[i] as Campaign;
++          const margins = [
++            ...new Set(marchesOf(row as PlanTotals).map((m) => JSON.stringify(Object.entries(m).sort()))),
++          ]
++            .map((key) => marginOf(request, Object.fromEntries(JSON.parse(key) as [string, number][])))
++            .filter((m): m is number => m !== null);
++          return {
++            pick: row.pick,
++            bill: {
++              damage: c.damage,
++              silver: c.silver,
++              gold: c.gold,
++              hired: c.burned,
++              dragonCoins: c.dragonCoins,
++              seconds: c.seconds,
++              hiredDamage: c.hiredDamage,
++            },
++            margin: margins.length > 0 ? Math.min(...margins) : null,
++            margins,
++          };
++        });
++        const twin = twinTest(request, scenario.label, rows, CAMPAIGN.markerRates);
++        const held = new Set(request.units.map((unit) => unit.id));
++        const theirs: Campaign[] = [];
++        for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
++          if (!external.name.startsWith('TotalStack')) continue;
++          if (Object.entries(external.counts).some(([id, c]) => c > 0 && !held.has(id))) continue;
++          const row = asCaptured(widenedFor(request, external.counts), external.name, external.counts);
++          if (row.damage > 0) theirs.push(row);
++        }
++        const ms =
++          theirs.length > 0
++            ? matchedSpend(priced as Contender[], theirs as Contender[])
++            : { rowsBeaten: 0, unfitted: 0 };
++        const army: Army = {
++          label: scenario.label,
++          stops,
++          criteria: criteria(request, rows, priced),
++          twin: {
++            marches: twin.marches,
++            pass: twin.pass,
++            fail: twin.fail,
++            inadmissible: twin.inadmissible.length,
++          },
++          ts: { rows: theirs.length, rowsBeaten: ms.rowsBeaten, unfitted: ms.unfitted },
++        };
++        if (head && headConfig) {
++          const was = head.planCampaign({
++            request,
++            marchTarget: HORIZON,
++            ...headConfig.CAMPAIGN.planFixes,
++            putBack: headConfig.CAMPAIGN.putBack,
++          });
++          army.identical = JSON.stringify(was.alternatives) === JSON.stringify(rows);
++        }
++        armies.push(army);
++      }
++      mkdirSync(DUMPS, { recursive: true });
++      writeFileSync(`${DUMPS}/margin-${String(margin)}.json`, JSON.stringify(armies, null, 1));
++    }, 14_400_000);
++  },
++);
++
++describe.skipIf(!process.env.THEORY || process.env.R173 === undefined)(
++  'a shelter margin — the report',
++  () => {
++    it('writes the report from the four dumps', () => {
++      const at = new Map<number, Army[]>(
++        MARGINS.map((m) => [
++          m,
++          JSON.parse(readFileSync(`${DUMPS}/margin-${String(m)}.json`, 'utf8')) as Army[],
++        ]),
++      );
++      const base = at.get(0) as Army[];
++      const pct = (v: number): string => `${(v * 100).toFixed(2)} %`;
++      const sgn = (v: number): string => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(3)}`;
++      const report = new Report('173-a-shelter-margin');
++      report.add('# 173 — a shelter margin\n');
++      report.add(
++        'Owner, 2026-09-24, shown marches sheltering their hired stacks at 1.00× the lowest troop stack: *"2 % seems ' +
++          'fair but could be configurable without clogging the ui, maybe hidden for now and conduct an experiment"*. ' +
++          '`CAMPAIGN.shelterMargin`: every hired stack strictly under `floor × (1 − margin)`, wherever the engine ' +
++          'decides or checks the shelter. Every benchmark army planned as the app plans it (`CAMPAIGN.planFixes`, the ' +
++          'put-back at the app’s rates), `budgetMs` off. Four-march campaigns priced by `campaignOf` (worst opening). ' +
++          'Stops paired by pick against margin 0; `rate(margin 0, margin m, markerRates)`: **better** > 0, **equal** 0, ' +
++          '**worse** < 0. Criteria are 169’s (the shelter read strictly). Margin of a march = `1 − hired top / troop ' +
++          'floor`.\n',
++      );
++      const identical = base.filter((a) => a.identical !== undefined);
++      report.add(
++        `\n**Margin 0 against HEAD (3c4b23d)**: ${String(identical.filter((a) => a.identical).length)} of ` +
++          `${String(identical.length)} armies byte-identical (\`JSON.stringify(plan.alternatives)\`)` +
++          (identical.some((a) => !a.identical)
++            ? ` — differ: ${identical
++                .filter((a) => !a.identical)
++                .map((a) => a.label)
++                .join('; ')}`
++            : '') +
++          '.\n',
++      );
++
++      // ---- the summary per margin
++      const summary: string[] = [];
++      const stopLines = new Map<number, string[]>();
++      const readingLines = new Map<number, string[]>();
++      for (const m of MARGINS) {
++        const armies = at.get(m) as Army[];
++        let better = 0;
++        let equal = 0;
++        let worse = 0;
++        let worst = { r: Infinity, where: '' };
++        const lines: string[] = [];
++        const worseReadings: string[] = [];
++        const ts = { rows: 0, beaten: 0, out: 0 };
++        let broken = 0;
++        const brokenList: string[] = [];
++        const twin = { marches: 0, pass: 0, fail: 0, inadmissible: 0 };
++        const all: number[] = [];
++        armies.forEach((army) => {
++          const b = base.find((x) => x.label === army.label);
++          ts.rows += army.ts.rows;
++          ts.beaten += army.ts.rowsBeaten;
++          ts.out += army.ts.unfitted;
++          if (army.criteria.length > 0) {
++            broken += 1;
++            brokenList.push(`${army.label.slice(0, 44)}: ${army.criteria.join(', ')}`);
++          }
++          twin.marches += army.twin.marches;
++          twin.pass += army.twin.pass;
++          twin.fail += army.twin.fail.length;
++          twin.inadmissible += army.twin.inadmissible;
++          for (const stop of army.stops) all.push(...stop.margins);
++          if (!b || b.stops.length === 0 || army.stops.length === 0) return;
++          for (const stop of army.stops) {
++            const was = b.stops.find((s) => s.pick === stop.pick);
++            if (!was) {
++              lines.push(`| ${army.label.slice(0, 44)} | ${short(stop.pick)} | appears | | | | | | |`);
++              continue;
++            }
++            const r = rate(was.bill, stop.bill, CAMPAIGN.markerRates);
++            const same = JSON.stringify(was.bill) === JSON.stringify(stop.bill);
++            if (same || Math.abs(r) < 1e-9) equal += 1;
++            else if (r > 0) better += 1;
++            else worse += 1;
++            if (!same && r < worst.r) worst = { r, where: `${army.label.slice(0, 44)} ${short(stop.pick)}` };
++            if (m !== 0 && !same)
++              lines.push(
++                `| ${army.label.slice(0, 44)} | ${short(stop.pick)} | ${sgn(r)} | ` +
++                  `${n(was.bill.damage)} → ${n(stop.bill.damage)} | ${n(was.bill.silver)} → ${n(stop.bill.silver)} | ` +
++                  `${n(was.bill.gold)} → ${n(stop.bill.gold)} | ${String(was.bill.hired)} → ${String(stop.bill.hired)} | ` +
++                  `${n(was.bill.seconds / 3600)} h → ${n(stop.bill.seconds / 3600)} h | ` +
++                  `${was.margin === null ? '—' : pct(was.margin)} → ${stop.margin === null ? '—' : pct(stop.margin)} |`,
++              );
++          }
++          for (const stop of b.stops)
++            if (!army.stops.some((s) => s.pick === stop.pick))
++              lines.push(`| ${army.label.slice(0, 44)} | ${short(stop.pick)} | disappears | | | | | | |`);
++          for (const reading of READINGS) {
++            const best = (stops: Stop[]): number =>
++              reading.high
++                ? Math.max(...stops.map((s) => reading.of(s.bill)))
++                : Math.min(...stops.map((s) => reading.of(s.bill)));
++            const va = best(b.stops);
++            const vb = best(army.stops);
++            const g = va === 0 ? 0 : ((reading.high ? vb - va : va - vb) / Math.abs(va)) * 100;
++            if (g < -1e-9)
++              worseReadings.push(`${army.label.slice(0, 44)}: ${reading.head} ${g.toFixed(3)} %`);
++          }
++        });
++        stopLines.set(m, lines);
++        const under2 = all.filter((v) => v < 0.02).length;
++        const under1 = all.filter((v) => v < 0.01).length;
++        summary.push(
++          `| ${pct(m)} | ${String(better)} / ${String(equal)} / ${String(worse)} | ` +
++            `${worst.r === Infinity || worst.r >= 0 ? '—' : `${sgn(worst.r)} (${worst.where})`} | ${String(worseReadings.length)} | ` +
++            `${String(ts.beaten)} / ${String(ts.out)} of ${String(ts.rows)} | ${String(broken)} | ` +
++            `${String(twin.pass)} pass / ${String(twin.fail)} fail / ${String(twin.inadmissible)} inadm. (${String(twin.marches)}) | ` +
++            `${pct(Math.min(...all))} | ${String(under1)} / ${String(under2)} of ${String(all.length)} |`,
++        );
++        readingLines.set(m, [...worseReadings, ...brokenList.map((b) => `criterion — ${b}`)]);
++      }
++      report.add(
++        '\n## Per margin, against margin 0\n\n| margin | stops better / equal / worse | worst | readings worse | ' +
++          'TotalStack matched spend (dominated / no fit) | armies breaking a criterion | tier twin | min margin on the bar | ' +
++          'marches under 1 % / under 2 % |\n|---|---|---|---:|---|---:|---|---:|---|\n' +
++          summary.join('\n') +
++          '\n',
++      );
++      for (const m of MARGINS) {
++        if (m === 0) {
++          const extra = readingLines.get(0) ?? [];
++          if (extra.length > 0) report.add(`\n**At margin 0**:\n\n- ${extra.join('\n- ')}\n`);
++          continue;
++        }
++        report.add(
++          `\n## Margin ${pct(m)} — every stop that moved\n\n| army | stop | rating | damage | silver | gold | hired | queue | margin |\n|---|---|---:|---|---|---|---|---|---|\n` +
++            ((stopLines.get(m) ?? []).join('\n') || '| (none) | | | | | | | | |') +
++            `\n\n**Readings worse, criteria broken**:\n\n- ${(readingLines.get(m) ?? []).join('\n- ') || 'none'}\n`,
++        );
++      }
++
++      // ---- the owner's two camps
++      for (const camp of [LIVE, MESSAGE]) {
++        const lines: string[] = [];
++        for (const m of [0, 0.02] as const) {
++          const army = (at.get(m) as Army[]).find((a) => a.label.startsWith(camp));
++          if (!army) continue;
++          for (const stop of army.stops)
++            lines.push(
++              `| ${pct(m)} | ${short(stop.pick)} | ${n(stop.bill.damage)} | ${n(stop.bill.silver)} | ${n(stop.bill.gold)} | ` +
++                `${String(stop.bill.hired)} | ${n(stop.bill.seconds / 3600)} h | ${stop.margin === null ? '—' : pct(stop.margin)} |`,
++            );
++        }
++        report.add(
++          `\n## ${camp}\n\n| margin | stop | damage | silver | gold | hired | queue | margin kept |\n|---|---|---:|---:|---:|---:|---:|---:|\n` +
++            lines.join('\n') +
++            '\n',
++        );
++      }
++      report.save();
++    });
++  },
++);
