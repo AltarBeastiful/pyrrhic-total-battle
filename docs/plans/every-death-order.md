@@ -82,6 +82,18 @@ after, on the same armies and settings:
   against 70/13 today) and TotalStack's rows that still beat any stop on damage and rating (the 162 list: 2 today). It
   also gives the moved pins, each with its before and after value, so the owner can decide on each one.
 
+**Each step is test-first, one test for both paths** (the owner, 2026-09-24). Only the implementation is written twice
+(TS and AssemblyScript). A test is written once and runs on both paths, over the same cases, through the same
+`planCampaign` (the `kernel` vitest project). Every step follows this cycle:
+
+1. **Red.** Write the step's test first: the property the step promises, on the benchmark armies. For step 2, for
+   example: "no silver saver's march is beaten, in its own re-typing space, by an assignment whose silver does not
+   rise". Run it and see it **fail on both paths**, with the failing marches named. A test that is already green
+   proves nothing; rewrite it until it catches the gap.
+2. **Green.** Change the TS reference, then the kernel if the step touches it, until the test passes on both paths.
+3. **Validate.** The gate and the full report of this section. The whole-plan equivalence between the two paths is
+   still 0 differences, and the suite's reds are unchanged by name on both paths, apart from the new test, now green.
+
 ## 3. Steps
 
 1. **Experiment 176, the diagnosis.** Trace each of the 37 marches through the pipeline: was it handed to `retypeOne`?
