@@ -1,7 +1,9 @@
 # Every ordering, rated — implementation plan (W13)
 
-**Status: 2026-09-23. Drafted, checked by a subagent against the code, and corrected (this version). Work starts after
-166/167 land in `plan.ts`.**
+**Status: closed 2026-09-24.** Step 1 shipped on (5307266; exp 169: 8 better / 53 equal / 0 worse). Step 2 built and left off
+(8377356; exp 170: 0 of 274 tier climbs beat the ranking's). Step 3 dropped (exp 171: no variant passes the gate — after
+the re-typing 4 better / 54 equal / 3 worse for +107 % plan time; the cheapest, final marches only, gains +0.00 and still
+loses least silver on one army). The owner's tier-twin test is permanent (`tests/engine/tier-twin.test.ts`, 22/0/117).
 
 The owner, 2026-09-23: *"Still think it should be offered as an alternative … so we can improve some stack that actually
 benefit from it. Also I thought we already were exploring all possible ordering … start with the optional rule anyway
