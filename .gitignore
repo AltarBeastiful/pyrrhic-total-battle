@@ -14,3 +14,6 @@ docs/design-canvas/*.html
 # The benchmark writes its run here and promotes it only when whole (S-121b).
 tools/theorycraft/out/benchmark-run.json
 tools/theorycraft/out/benchmark-run.md
+
+# The AssemblyScript kernel, built on demand (`pnpm kernel:build`, or by the parity test when stale).
+kernel/build/

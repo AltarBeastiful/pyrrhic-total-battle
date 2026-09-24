@@ -19,3 +19,6 @@ tests/fixtures/
 
 # Generated experiment outputs (investigation 0015): tables written by the scripts, not hand-formatted.
 tools/theorycraft/out/
+
+# AssemblyScript sources: decorators on top-level functions (`@inline`) are not TypeScript Prettier parses.
+kernel/assembly/

@@ -13,6 +13,8 @@ export default tseslint.config(
       'test-results/**',
       'node_modules/**',
       'docs/**',
+      // AssemblyScript (`i32`, `load<f64>`, `@inline`): its own compiler checks it (`pnpm kernel:build`).
+      'kernel/**',
       // Scratch git worktrees Claude Code parks inside the repo; they are copies of the tree.
       '.claude/**',
     ],
