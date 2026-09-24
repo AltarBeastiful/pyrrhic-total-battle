@@ -1,6 +1,6 @@
 # Every death order, kept — implementation plan (W14)
 
-**Status: proposed 2026-09-24.** Nothing here is built yet. Each step is measured and committed only if it passes the gate (§2).
+**Status: proposed 2026-09-24.** The rating is the criterion at every step, including the rung order (step 5). Nothing here is built yet. Each step is measured and committed only if it passes the gate (§2).
 
 The owner, 2026-09-24: *"Are we properly ordering them for maximizing criterias now? or do we still use some fixed rules?
 are we actually testing all orders possible for troops death to maximize the marche … including heroes and all bonuses"*.
@@ -104,9 +104,19 @@ after, on the same armies and settings:
 
    Pick the one that closes the most rating for the least time. The TS path keeps the same rule, so the two paths give
    the same plan (slower in TS).
-5. **The ladder's rung order on the rating, not only damage** (A2; optional, last). With the kernel, `orderFor` could
-   learn per (depth, vector) as 171 tried, which was dropped for time. Re-measure 171's variants at kernel speed; commit
-   only if one passes the gate.
+5. **The ladder's rung order on the rating** (A2; **required**, the owner 2026-09-24: *"using rating shouldn't be optional
+   but should be properly benchmarked"*). `orderFor` climbs on damage alone. It moves to `rate(·, ·, markerRates)`: a swap
+   is taken when it rates above the current order, as `retypeMarch` already does. The extra cost per candidate is almost
+   nothing, because one kernel call already returns the battle and its bill together (the 1.08 M battles/s of step 1
+   include the bill). What costs is **how often** an order is learned. Three variants, each benchmarked in full (§2):
+   - (a) the rating instead of damage, learned once per depth as today (~84 battles a depth, a few hundred a plan);
+   - (b) (a) learned per (depth, mercenary vector), which is 171's variant;
+   - (c) (b) plus scale, which is W13's step 3 (~3–4 × 10⁵ battles a plan: well under a second in the kernel, several
+     seconds in TS).
+
+   The report gives each variant's rating gain, the full per-march table of §2, the TotalStack rerun, and plan time on
+   both paths. The cheapest variant that passes the gate is committed. If (b) or (c) passes but costs too much in TS,
+   the owner decides: both paths must still give the same plan, so the TS fallback would get slower.
 
 **Not in this plan:** lifting the shelter (A3). It is listed for the owner. If he wants it, it is his rule to change, and it
 would be offered as a separate, rated candidate, as tier order was in W13.
