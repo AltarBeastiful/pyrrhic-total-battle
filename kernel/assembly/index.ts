@@ -588,8 +588,17 @@ export function sizePool(
   else {
     for (let step = 0; step < 200; step += 1) {
       const mid = (low + high) / 2;
+      const wasLow = low;
+      const wasHigh = high;
       if (usedAt(n, hpPtr, costPtr, capPtr, mid, spread) <= capacity) low = mid;
       else high = mid;
+      // A step that leaves both bounds bit for bit where they were is a fixed point — the next step reads
+      // the same two numbers — so the other steps of the engine's 200 would change nothing (step 5).
+      if (
+        reinterpret<u64>(low) == reinterpret<u64>(wasLow) &&
+        reinterpret<u64>(high) == reinterpret<u64>(wasHigh)
+      )
+        break;
     }
   }
   const delta = spread * low;

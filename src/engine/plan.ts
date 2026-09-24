@@ -1120,6 +1120,8 @@ class KernelMarch implements MarchOf {
   readonly mercLost: number;
   readonly strikes: number;
   readonly #source: { entry: Effective; count: number }[];
+  /** Stacks that follow `#source` (step 5: the scorer's rungs and vector, joined only when read). */
+  readonly #tail: { entry: Effective; count: number }[] | undefined;
   readonly #enemyStacks: number;
   #built: Stack[] | undefined;
   /**
@@ -1135,6 +1137,8 @@ class KernelMarch implements MarchOf {
     enemyStacks: number,
     /** Where the six figures start, when `figures` is the kernel's array. */
     at = 0,
+    /** Stacks after `source`: the march is `[...source, ...tail]`, joined the first time `stacks` is read. */
+    tail?: { entry: Effective; count: number }[],
   ) {
     if (figures instanceof Float64Array) {
       this.damage = figures[at] as number;
@@ -1152,6 +1156,7 @@ class KernelMarch implements MarchOf {
       this.strikes = figures.strikes;
     }
     this.#source = source;
+    this.#tail = tail;
     this.#enemyStacks = enemyStacks;
   }
 
@@ -1171,7 +1176,10 @@ class KernelMarch implements MarchOf {
   }
 
   get stacks(): Stack[] {
-    this.#built ??= marchOfTs(this.#source, this.#enemyStacks).stacks;
+    this.#built ??= marchOfTs(
+      this.#tail === undefined ? this.#source : [...this.#source, ...this.#tail],
+      this.#enemyStacks,
+    ).stacks;
     return this.#built;
   }
 }
@@ -1390,11 +1398,35 @@ export function undominatedRows<T extends { silver: number; mercLost: number; to
     (a, b) =>
       order3(a.silver, b.silver) || order3(a.mercLost, b.mercLost) || order3(b.totalDamage, a.totalDamage),
   );
+  /**
+   * **The front's best damage at or under each burn** (step 5), a Fenwick tree of maxima over the rows' burns
+   * ranked. Every front row comes earlier in the sort, so it spends no more silver than the row read now: it
+   * dominates that row when it burns no more and hits for more — or for as much, where one of the other two
+   * is strictly less, which the scan below it settles. So the best damage of the front at or under the row's
+   * burn answers alone when it differs from the row's own, and the scan only runs on a tie.
+   */
+  const burns = [...new Set(ordered.map((row) => row.mercLost))].sort(order3);
+  const best = new Array<number>(burns.length + 1).fill(-Infinity);
+  const rankOf = (burn: number): number => {
+    let low = 0;
+    let high = burns.length - 1;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if ((burns[mid] as number) < burn) low = mid + 1;
+      else high = mid;
+    }
+    return low + 1;
+  };
   const front: T[] = [];
   for (const row of ordered) {
-    if (front.some((other) => dominates(other, row))) continue;
+    const rank = rankOf(row.mercLost);
+    let most = -Infinity;
+    for (let i = rank; i > 0; i -= i & -i) most = Math.max(most, best[i] as number);
+    if (most > row.totalDamage) continue;
+    if (most === row.totalDamage && front.some((other) => dominates(other, row))) continue;
     front.push(row);
     kept.add(row);
+    for (let i = rank; i <= burns.length; i += i & -i) best[i] = Math.max(best[i] as number, row.totalDamage);
   }
   return all.filter((row) => kept.has(row));
 }
@@ -1874,10 +1906,11 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     counts: Record<string, number>,
     rungs: { entry: Effective; count: number }[],
     vector: { entry: Effective; count: number }[],
-    fielded: { entry: Effective; count: number }[],
     march: ReturnType<typeof marchOf>,
     silverBudget: number | undefined,
   ): ScoredShape => {
+    // The vector's fielded stacks, the same objects, filtered only when a final march is walked (step 5).
+    const fieldedOf = (): { entry: Effective; count: number }[] => vector.filter((merc) => merc.count > 0);
     // the final march: the stock the uniform marches burn, and the silver they leave
     let finale: ScoredShape['finale'];
     if (noFinale) {
@@ -1888,11 +1921,11 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
         cachedMarches = marches;
         cachedCounts.length = vector.length;
         for (let i = 0; i < vector.length; i += 1) cachedCounts[i] = (vector[i] as { count: number }).count;
-        cachedFinale = finaleFor(marches, fielded, undefined);
+        cachedFinale = finaleFor(marches, fieldedOf(), undefined);
       }
       finale = cachedFinale;
     } else {
-      finale = finaleFor(marches, fielded, silverBudget - marches * march.silver);
+      finale = finaleFor(marches, fieldedOf(), silverBudget - marches * march.silver);
     }
     return {
       marches,
@@ -1982,19 +2015,16 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       rungs.push({ entry: order[i] as Effective, count: counted[at + i] as number });
     }
     const vector: { entry: Effective; count: number }[] = [];
-    const fielded: { entry: Effective; count: number }[] = [];
     for (let i = 0; i < mercTypes.length; i += 1) {
-      const merc = { entry: mercTypes[i] as Effective, count: sheltered[at + i] as number };
-      vector.push(merc);
-      if (merc.count > 0) fielded.push(merc);
+      vector.push({ entry: mercTypes[i] as Effective, count: sheltered[at + i] as number });
     }
-    const march = new KernelMarch(out, [...rungs, ...vector], enemyStacks, figuresAt).bill(
+    const march = new KernelMarch(out, rungs, enemyStacks, figuresAt, vector).bill(
       out[figuresAt + 6] as number,
       lk.recovery,
       rungs,
       vector,
     );
-    return finish(marches, counts, rungs, vector, fielded, march, silverBudget);
+    return finish(marches, counts, rungs, vector, march, silverBudget);
   };
 
   /** The armed vector (`arm`): its counts, marches and budget, and the kernel grid read for it. */
@@ -2070,7 +2100,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       const count = sheltered[i] as number;
       if (count > 0) under.push({ entry: mercTypes[i] as Effective, count });
     }
-    return { rungs, mercs: under, march: new KernelMarch(lk.out, [...rungs, ...under], enemyStacks) };
+    return { rungs, mercs: under, march: new KernelMarch(lk.out, rungs, enemyStacks, 0, under) };
   };
 
   const scorer: ShapeScorer = (marches, counts, depth, scale, silverBudget, prefix) => {
@@ -2153,7 +2183,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     if (context.housing && !fitsHousing(context.housing, rungs, fielded)) return null;
     const march = marchOf([...rungs, ...vector], enemyStacks);
     if (budgetPerMarch !== undefined && march.silver > budgetPerMarch) return null;
-    return finish(marches, counts, rungs, vector, fielded, march, silverBudget);
+    return finish(marches, counts, rungs, vector, march, silverBudget);
   };
   scorer.arm = (marches, counts, silverBudget) => {
     armed = { marches, counts, silverBudget };
@@ -2260,6 +2290,30 @@ function sizedCounts(
     planKernel()?.sizeStacks(request, units, caps, options) ??
     sizeStacks({ ...request, units, caps, options }).stacks
   );
+}
+
+/**
+ * The key of one `planCampaign` sizer call (step 5): the method, the prefix (`u` for none) and every merc's
+ * id and count in order — exactly what `sizedShape` reads of them. A count is written so that no two numbers
+ * `Object.is` tells apart share a key (`-0` has its own).
+ */
+function sizerKey(
+  mercs: readonly { entry: Effective; count: number }[],
+  method: SizerMethod,
+  depth: number | undefined,
+): string {
+  let key = `${method}|${depth === undefined ? 'u' : Object.is(depth, -0) ? '-0' : depth}`;
+  for (const merc of mercs) {
+    key += `|${merc.entry.id}:${Object.is(merc.count, -0) ? '-0' : merc.count}`;
+  }
+  return key;
+}
+
+/** Fresh stacks with the same entries and counts. */
+function copyStacks(
+  stacks: readonly { entry: Effective; count: number }[],
+): { entry: Effective; count: number }[] {
+  return stacks.map((stack) => ({ entry: stack.entry, count: stack.count }));
 }
 
 /**
@@ -3425,6 +3479,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     tierBattles: 0,
   };
   const seeded = tierSeed ? { tierSeed, rungOrderLog } : {};
+  /** The sizer's answers of this search, by `sizerKey` (step 5); never handed out, only copied. */
+  const sizerMemo = new Map<
+    string,
+    { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] }
+  >();
   /**
    * The Elite sizer over every troop type, the hired counts as caps — what the March pane draws after a
    * put-back, scored inside the search so the plan can find it itself (`CampaignInput.sizerShape`).
@@ -3442,16 +3501,28 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      * burned, more damage, a quarter less silver and half the queue. Omitted: every troop type, as before.
      */
     depth?: number,
-  ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } =>
-    sizedShape(
-      request,
-      byId,
-      mercs,
-      method,
-      // The prefix as a set of ids, which is what `sizedShape` filters on: `troops` is the ranking, weakest
-      // per HP first, so its last `depth` entries are the strongest `depth` types.
-      depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id)),
-    );
+  ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } => {
+    // **Asked once per exact input** (AssemblyScript roadmap, step 5): about half the sizer's calls in one
+    // search repeat an earlier one — the finale's leftovers, a derived vector, a prefix's anchors — and the
+    // answer is a function of what the key holds alone (`sizedShape` reads each merc's id and count, the
+    // method and the prefix, over this search's fixed `request`). Every call answers fresh arrays and fresh
+    // stacks, as the uncached call did, so no caller can reach the kept copy.
+    const key = sizerKey(mercs, method, depth);
+    let kept = sizerMemo.get(key);
+    if (kept === undefined) {
+      kept = sizedShape(
+        request,
+        byId,
+        mercs,
+        method,
+        // The prefix as a set of ids, which is what `sizedShape` filters on: `troops` is the ranking, weakest
+        // per HP first, so its last `depth` entries are the strongest `depth` types.
+        depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id)),
+      );
+      sizerMemo.set(key, kept);
+    }
+    return { rungs: copyStacks(kept.rungs), mercs: copyStacks(kept.mercs) };
+  };
   let winnerRungs: { entry: Effective; count: number }[] = [];
   const score = makeScorer({
     troops,
@@ -3573,7 +3644,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     if (!only) score.disarm?.();
     if (tight && tight !== pick) consider(tight);
-    if (!laddersOnly) {
+    if (!laddersOnly && derived.length > 0) {
       const seen = new Set<string>([vector.map((merc) => merc.count).join(',')]);
       for (const mercs of derived) {
         const key = mercs.map((merc) => merc.count).join(',');
