@@ -409,3 +409,246 @@ export function rateMany(n: i32, basePtr: usize, recordsPtr: usize, outPtr: usiz
     store<f64>(outPtr + ((<usize>i) << 3), rate(basePtr, recordsPtr + <usize>i * recordStride, 0b11111));
   }
 }
+
+// ---- every assignment of types to slots (experiment 175) -------------------------------------------------
+
+/**
+ * `enumerate`'s output slots (f64; mirrored by `ENUMERATION` in `src/kernel/index.ts`, not exported as globals
+ * so the layout check stays the layout's), then three best assignments of `nSlots` i32 each from `assignPtr`.
+ */
+const E_BATTLES = 0;
+const E_COMPLETE = 1;
+const E_BEST_RATING = 2;
+const E_BEST_GUARDED = 3;
+const E_BEST_DAMAGE = 4;
+const E_ADMISSIBLE = 5;
+const E_POSITIVE = 6;
+const E_SIZE = 8;
+
+let eSlots: usize = 0; // f64 × nSlots: each slot's total HP
+let eCands: usize = 0; // i32 × nCand: candidate type indices
+let eRequired: usize = 0; // u8 × nCand: must be placed
+let eCaps: usize = 0; // f64 × types
+let eBase: usize = 0; // record of the march itself
+let eOut: usize = 0;
+let eAssignOut: usize = 0;
+let eCounts: usize = 0; // f64 × types, scratch march
+let eUsed: usize = 0; // u8 × nCand
+let eAssign: usize = 0; // i32 × nSlots, the assignment being built
+let eRec: usize = 0; // one record
+let eLast: usize = 0; // i32 × nCand: the last slot a candidate fits (count within its cap), −1 if none
+let eFirst: usize = 0; // i32 × nCand: the first slot a candidate fits, nSlots if none
+let eDescending: bool = false;
+let eNodes: f64 = 0;
+let eMaxNodes: f64 = 0;
+let eN: i32 = 0;
+let eM: i32 = 0;
+let ePools: i32 = 0;
+let eMax: f64 = 0;
+let eBattles: f64 = 0;
+let eAbort: bool = false;
+let eBestRating: f64 = -Infinity;
+let eBestGuarded: f64 = -Infinity;
+let eBestDamage: f64 = -Infinity;
+let eAdmissible: f64 = 0;
+let ePositive: f64 = 0;
+let eLead: f64 = 0;
+let eAuth: f64 = 0;
+let eDom: f64 = 0;
+
+@inline function copyAssign(which: i32): void {
+  const to = eAssignOut + ((<usize>(which * eN)) << 2);
+  memory.copy(to, eAssign, (<usize>eN) << 2);
+}
+
+function eLeaf(): void {
+  if (eBattles >= eMax) {
+    eAbort = true;
+    return;
+  }
+  eBattles += 1.0;
+  battle(eCounts, eRec);
+  const damage = load<f64>(eRec + ((<usize>R_MIN_DAMAGE) << 3));
+  const baseDamage = load<f64>(eBase + ((<usize>R_MIN_DAMAGE) << 3));
+  if (damage > eBestDamage) {
+    eBestDamage = damage;
+    copyAssign(2);
+  }
+  // `retypeMarch`: admissible when it deals at least the march's worst-opening damage.
+  if (damage < baseDamage - 1e-6) return;
+  eAdmissible += 1.0;
+  const score = rate(eBase, eRec, 0b11111);
+  if (score > 1e-9) ePositive += 1.0;
+  if (score > eBestRating) {
+    eBestRating = score;
+    copyAssign(0);
+  }
+  const silver = load<f64>(eRec + ((<usize>R_SILVER) << 3));
+  if (silver <= load<f64>(eBase + ((<usize>R_SILVER) << 3)) && score > eBestGuarded) {
+    eBestGuarded = score;
+    copyAssign(1);
+  }
+}
+
+function eWalk(slot: i32, unplaced: i32): void {
+  if (eAbort) return;
+  if (slot == eN) {
+    if (unplaced == 0) eLeaf();
+    return;
+  }
+  if (eNodes >= eMaxNodes) {
+    eAbort = true;
+    return;
+  }
+  eNodes += 1.0;
+  // A required candidate still unplaced must fit some slot from this one on.
+  if (unplaced > 0) {
+    for (let c = 0; c < eM; c += 1) {
+      if (load<u8>(eRequired + <usize>c) != 0 && load<u8>(eUsed + <usize>c) == 0 && i32At(eLast, c) < slot) return;
+    }
+    // Slots biggest first: the slots a candidate fits run from its first to the last (the count only grows
+    // with the HP), so the required ones still unplaced can all be placed only if Hall's condition holds on
+    // those nested ranges.
+    if (eDescending) {
+      for (let c = 0; c < eM; c += 1) {
+        if (load<u8>(eRequired + <usize>c) == 0 || load<u8>(eUsed + <usize>c) != 0) continue;
+        const from = i32At(eFirst, c);
+        let need = 0;
+        for (let d = 0; d < eM; d += 1) {
+          if (load<u8>(eRequired + <usize>d) != 0 && load<u8>(eUsed + <usize>d) == 0 && i32At(eFirst, d) >= from)
+            need += 1;
+        }
+        if (need > eN - max(from, slot)) return;
+      }
+    }
+  }
+  const hpSlot = f64At(eSlots, slot);
+  for (let c = 0; c < eM; c += 1) {
+    if (load<u8>(eUsed + <usize>c) != 0) continue;
+    const required = load<u8>(eRequired + <usize>c) != 0;
+    const left = unplaced - (required ? 1 : 0);
+    // The required types still to place must find slots below this one.
+    if (left > eN - slot - 1) continue;
+    const type = i32At(eCands, c);
+    // `retypeMarch`'s sizing: at least the slot's HP.
+    const count = Math.ceil(hpSlot / cell(type, T_HP));
+    if (count > f64At(eCaps, type)) continue;
+    const pool = <i32>cell(type, T_POOL);
+    const used = count * cell(type, T_COST);
+    if (pool == 0) {
+      if ((ePools & 1) != 0 && eLead + used > header(H_HOUSING_LEADERSHIP)) continue;
+      eLead += used;
+    } else if (pool == 1) {
+      if ((ePools & 2) != 0 && eAuth + used > header(H_HOUSING_AUTHORITY)) continue;
+      eAuth += used;
+    } else {
+      if ((ePools & 4) != 0 && eDom + used > header(H_HOUSING_DOMINANCE)) continue;
+      eDom += used;
+    }
+    store<u8>(eUsed + <usize>c, 1);
+    store<i32>(eAssign + ((<usize>slot) << 2), c);
+    store<f64>(eCounts + ((<usize>type) << 3), count);
+    eWalk(slot + 1, left);
+    store<f64>(eCounts + ((<usize>type) << 3), 0.0);
+    store<u8>(eUsed + <usize>c, 0);
+    if (pool == 0) eLead -= used;
+    else if (pool == 1) eAuth -= used;
+    else eDom -= used;
+    if (eAbort) return;
+  }
+}
+
+/**
+ * **Every injective assignment of `nCand` candidate types to `nSlots` slots** (experiment 175): each type sized
+ * `ceil(slotHp / hp)` as `retypeMarch` sizes it, on top of `fixedPtr`'s counts (f64 × types; the candidates at
+ * 0 there), each count at most `capsPtr`'s (f64 × types), the pools of `pools` (bit 0 leadership, 1 authority,
+ * 2 dominance) within housing; every candidate flagged in `requiredPtr` (u8 × nCand) must be placed. Each
+ * assignment is battled and rated against the record at `basePtr` with every cost. Stops after `maxBattles`.
+ * Writes `E_SIZE` f64 at `outPtr` and three assignments (candidate index per slot; i32 × nSlots each) at
+ * `assignPtr`: the best rating with damage held, the same with silver not rising, the most damage (any cost).
+ * Also stops after 16 × `maxBattles` inner nodes of the walk (a required candidate left without a slot it
+ * fits prunes its branch — and, slots biggest first, one where Hall's condition fails for them; the node cap
+ * bounds a walk that prunes without battling).
+ */
+export function enumerate(
+  nSlots: i32,
+  slotsPtr: usize,
+  nCand: i32,
+  candPtr: usize,
+  requiredPtr: usize,
+  fixedPtr: usize,
+  capsPtr: usize,
+  pools: i32,
+  basePtr: usize,
+  maxBattles: f64,
+  outPtr: usize,
+  assignPtr: usize,
+): void {
+  if (eCounts == 0) {
+    const n = <usize>max(types, 1);
+    eCounts = heap.alloc(n << 3);
+    eUsed = heap.alloc(n);
+    eAssign = heap.alloc(n << 2);
+    eLast = heap.alloc(n << 2);
+    eFirst = heap.alloc(n << 2);
+    eRec = heap.alloc(<usize>RECORD_SIZE << 3);
+  }
+  eSlots = slotsPtr;
+  eCands = candPtr;
+  eRequired = requiredPtr;
+  eCaps = capsPtr;
+  eBase = basePtr;
+  eOut = outPtr;
+  eAssignOut = assignPtr;
+  eN = nSlots;
+  eM = nCand;
+  ePools = pools;
+  eMax = maxBattles;
+  eMaxNodes = maxBattles * 16.0;
+  eNodes = 0;
+  eBattles = 0;
+  eAbort = false;
+  eBestRating = -Infinity;
+  eBestGuarded = -Infinity;
+  eBestDamage = -Infinity;
+  eAdmissible = 0;
+  ePositive = 0;
+  memory.copy(eCounts, fixedPtr, (<usize>types) << 3);
+  memory.fill(eUsed, 0, <usize>max(nCand, 1));
+  memory.fill(assignPtr, 0xff, (<usize>(3 * max(nSlots, 1))) << 2);
+  eLead = 0;
+  eAuth = 0;
+  eDom = 0;
+  let required = 0;
+  for (let t = 0; t < types; t += 1) {
+    const used = f64At(fixedPtr, t) * cell(t, T_COST);
+    const pool = <i32>cell(t, T_POOL);
+    if (pool == 0) eLead += used;
+    else if (pool == 1) eAuth += used;
+    else eDom += used;
+  }
+  for (let c = 0; c < nCand; c += 1) {
+    if (load<u8>(requiredPtr + <usize>c) != 0) required += 1;
+    const type = i32At(candPtr, c);
+    let last = -1;
+    let first = nSlots;
+    for (let s = 0; s < nSlots; s += 1) {
+      if (Math.ceil(f64At(slotsPtr, s) / cell(type, T_HP)) <= f64At(capsPtr, type)) {
+        last = s;
+        if (first == nSlots) first = s;
+      }
+    }
+    store<i32>(eLast + ((<usize>c) << 2), last);
+    store<i32>(eFirst + ((<usize>c) << 2), first);
+  }
+  eDescending = true;
+  for (let s = 1; s < nSlots; s += 1) if (f64At(slotsPtr, s) > f64At(slotsPtr, s - 1)) eDescending = false;
+  if (nSlots > 0) eWalk(0, required);
+  store<f64>(outPtr + ((<usize>E_BATTLES) << 3), eBattles);
+  store<f64>(outPtr + ((<usize>E_COMPLETE) << 3), eAbort ? 0.0 : 1.0);
+  store<f64>(outPtr + ((<usize>E_BEST_RATING) << 3), eBestRating);
+  store<f64>(outPtr + ((<usize>E_BEST_GUARDED) << 3), eBestGuarded);
+  store<f64>(outPtr + ((<usize>E_BEST_DAMAGE) << 3), eBestDamage);
+  store<f64>(outPtr + ((<usize>E_ADMISSIBLE) << 3), eAdmissible);
+  store<f64>(outPtr + ((<usize>E_POSITIVE) << 3), ePositive);
+}

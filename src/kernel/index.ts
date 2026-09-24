@@ -25,6 +25,73 @@ interface KernelExports {
   battleMany(n: number, countsPtr: number, outPtr: number): void;
   rate(beforePtr: number, afterPtr: number, mask: number): number;
   rateMany(n: number, basePtr: number, recordsPtr: number, outPtr: number): void;
+  enumerate(
+    nSlots: number,
+    slotsPtr: number,
+    nCand: number,
+    candPtr: number,
+    requiredPtr: number,
+    fixedPtr: number,
+    capsPtr: number,
+    pools: number,
+    basePtr: number,
+    maxBattles: number,
+    outPtr: number,
+    assignPtr: number,
+  ): void;
+}
+
+/** `enumerate`'s output slots, as `kernel/assembly/index.ts` writes them. */
+export const ENUMERATION = {
+  battles: 0,
+  complete: 1,
+  bestRating: 2,
+  bestGuarded: 3,
+  bestDamage: 4,
+  admissible: 5,
+  positive: 6,
+  size: 8,
+} as const;
+
+/** Pools `enumerate` holds within housing: bit 0 leadership, 1 authority, 2 dominance. */
+export const POOL_BITS = { leadership: 1, authority: 2, dominance: 4 } as const;
+
+/**
+ * **Every injective assignment of candidate types to slots** (experiment 175): the space `retypeMarch` walks
+ * when it is at most `EXHAUSTIVE`, walked whole whatever its size, inside the kernel.
+ */
+export interface EnumerationSpec {
+  /** Each slot's total HP; a type on a slot is sized `ceil(slotHp / hp)`, as `retypeMarch` sizes it. */
+  slots: readonly number[];
+  /** Candidate types, as row indices (`Kernel.ids`). */
+  candidates: readonly number[];
+  /** Candidates that must be placed (default none). */
+  required?: readonly boolean[];
+  /** Counts the assignment is laid on top of (row order); the candidates must be 0 here. */
+  fixed: ArrayLike<number>;
+  /** Most units of each type (row order); default none. */
+  caps?: ArrayLike<number>;
+  /** `POOL_BITS` held within housing. */
+  pools: number;
+  /** The record every assignment is rated against (`rate(base, assignment)`, every cost). */
+  base: ArrayLike<number>;
+  /** Stop after this many battles (default unbounded). */
+  maxBattles?: number;
+}
+
+export interface Enumeration {
+  battles: number;
+  /** Every assignment was walked (`maxBattles` not reached). */
+  complete: boolean;
+  /** Assignments holding the base's damage, and those of them rating above 1e-9. */
+  admissible: number;
+  positive: number;
+  /** Best rating with the damage held; candidate index per slot (−1 when none). */
+  best: { rating: number; assignment: number[] };
+  /** The same, silver not rising either. */
+  guarded: { rating: number; assignment: number[] };
+  /** Most worst-opening damage, any cost. */
+  damage: { damage: number; assignment: number[] };
 }
 
 /** One kernel instance bound to one request. Reuse it: a battle allocates nothing. */
@@ -37,6 +104,8 @@ export interface Kernel {
   battleMany(counts: Float64Array): Float64Array;
   /** `rate(before, after, rates)` on two records (or bills in record order); `mask` = costs on both bills. */
   rate(before: ArrayLike<number>, after: ArrayLike<number>, mask?: number): number;
+  /** Every assignment of `spec.candidates` to `spec.slots`, battled and rated in the kernel. */
+  enumerate(spec: EnumerationSpec): Enumeration;
   /** The layout constants the wasm was built with, to check against `./layout.ts`. */
   layout(): Record<string, number>;
 }
@@ -67,6 +136,8 @@ export function createKernel(module: WebAssembly.Module, request: StackRequest, 
   let batch = 0;
   let batchCounts = 0;
   let batchOut = 0;
+  let enumBytes = 0;
+  let enumPtr = 0;
 
   const f64 = (ptr: number, length: number): Float64Array => new Float64Array(raw.memory.buffer, ptr, length);
 
@@ -99,6 +170,68 @@ export function createKernel(module: WebAssembly.Module, request: StackRequest, 
         b[i] = after[i] ?? 0;
       }
       return raw.rate(billA, billB, mask);
+    },
+    enumerate(spec) {
+      const k = spec.slots.length;
+      const m = spec.candidates.length;
+      const bytes =
+        8 * (k + types + types + RECORD_SIZE + ENUMERATION.size) + 4 * (m + 3 * Math.max(1, k)) + m + 16;
+      if (bytes > enumBytes) {
+        enumBytes = bytes;
+        enumPtr = raw.alloc(bytes);
+      }
+      let at = enumPtr;
+      const take = (size: number): number => {
+        const ptr = at;
+        at += size;
+        return ptr;
+      };
+      const slotsPtr = take(8 * Math.max(1, k));
+      const fixedPtr = take(8 * Math.max(1, types));
+      const capsPtr = take(8 * Math.max(1, types));
+      const basePtr = take(8 * RECORD_SIZE);
+      const outPtr = take(8 * ENUMERATION.size);
+      const candPtr = take(4 * Math.max(1, m));
+      const assignPtr = take(4 * 3 * Math.max(1, k));
+      const requiredPtr = take(Math.max(1, m));
+      f64(slotsPtr, k).set(spec.slots);
+      const fixed = f64(fixedPtr, types);
+      const caps = f64(capsPtr, types);
+      for (let t = 0; t < types; t += 1) {
+        fixed[t] = spec.fixed[t] ?? 0;
+        caps[t] = spec.caps?.[t] ?? Infinity;
+      }
+      const base = f64(basePtr, RECORD_SIZE);
+      for (let i = 0; i < RECORD_SIZE; i += 1) base[i] = spec.base[i] ?? 0;
+      new Int32Array(raw.memory.buffer, candPtr, m).set(spec.candidates);
+      const required = new Uint8Array(raw.memory.buffer, requiredPtr, m);
+      for (let c = 0; c < m; c += 1) required[c] = spec.required?.[c] === true ? 1 : 0;
+      raw.enumerate(
+        k,
+        slotsPtr,
+        m,
+        candPtr,
+        requiredPtr,
+        fixedPtr,
+        capsPtr,
+        spec.pools,
+        basePtr,
+        spec.maxBattles ?? Infinity,
+        outPtr,
+        assignPtr,
+      );
+      const out = f64(outPtr, ENUMERATION.size).slice();
+      const assign = new Int32Array(raw.memory.buffer, assignPtr, 3 * k).slice();
+      const nth = (i: number): number[] => Array.from(assign.subarray(i * k, (i + 1) * k));
+      return {
+        battles: out[ENUMERATION.battles] as number,
+        complete: out[ENUMERATION.complete] === 1,
+        admissible: out[ENUMERATION.admissible] as number,
+        positive: out[ENUMERATION.positive] as number,
+        best: { rating: out[ENUMERATION.bestRating] as number, assignment: nth(0) },
+        guarded: { rating: out[ENUMERATION.bestGuarded] as number, assignment: nth(1) },
+        damage: { damage: out[ENUMERATION.bestDamage] as number, assignment: nth(2) },
+      };
     },
     layout() {
       const out: Record<string, number> = {};

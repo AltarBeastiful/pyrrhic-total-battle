@@ -14,15 +14,15 @@ import { describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { mulberry32 } from '@/engine';
-import { marchResult, planCampaign } from '@/engine/plan';
+import { effectiveTable, marchResult, planCampaign } from '@/engine/plan';
 import type { PlanTotals } from '@/engine/plan';
 import type { Bill } from '@/engine/rating';
 import { rate } from '@/engine/rating';
 import { marchBill } from '@/engine/retype';
 import type { RecoverySettings, StackRequest } from '@/engine/types';
 import { UNIT_FAMILIES } from '@/engine/types';
-import { ALL_COSTS, createKernel, expectedLayout, R, RECORD_SIZE } from '@/kernel';
-import type { Kernel } from '@/kernel';
+import { ALL_COSTS, createKernel, expectedLayout, POOL_BITS, R, RECORD_SIZE } from '@/kernel';
+import type { Enumeration, EnumerationSpec, Kernel } from '@/kernel';
 
 import { marchesOf } from '../engine/plan-campaign';
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../engine/plan-scenarios';
@@ -338,4 +338,192 @@ describe('the kernel', () => {
     expect(total.single).toBeGreaterThan(0);
     expect(total.empty).toBeGreaterThan(0);
   });
+});
+
+/**
+ * `Kernel.enumerate` (experiment 175) against the same walk in TypeScript: the same assignments in the same
+ * order, sized, capped and housed the same way, battled by `marchBill` and rated by `rate` — every count and
+ * every best `Object.is`.
+ */
+function enumerateReference(
+  request: StackRequest,
+  ids: readonly string[],
+  spec: EnumerationSpec,
+): Enumeration {
+  const table = effectiveTable(request);
+  const byId = new Map(table.map((entry) => [entry.id, entry]));
+  const rows = ids.map((id) => byId.get(id) as (typeof table)[number]);
+  const k = spec.slots.length;
+  const m = spec.candidates.length;
+  const housing = request.housing;
+  const counts = Array.from(ids, (_, t) => spec.fixed[t] ?? 0);
+  const used = { leadership: 0, authority: 0, dominance: 0 };
+  rows.forEach((row, t) => (used[row.pool] += (counts[t] ?? 0) * row.cost));
+  const bits = {
+    leadership: POOL_BITS.leadership,
+    authority: POOL_BITS.authority,
+    dominance: POOL_BITS.dominance,
+  };
+  const base: Bill = { damage: spec.base[R.minDamage] as number };
+  COSTS.forEach((cost, c) => (base[cost] = spec.base[1 + c] as number));
+  const out: Enumeration = {
+    battles: 0,
+    complete: true,
+    admissible: 0,
+    positive: 0,
+    best: { rating: -Infinity, assignment: Array.from({ length: k }, () => -1) },
+    guarded: { rating: -Infinity, assignment: Array.from({ length: k }, () => -1) },
+    damage: { damage: -Infinity, assignment: Array.from({ length: k }, () => -1) },
+  };
+  const max = spec.maxBattles ?? Infinity;
+  const maxNodes = max * 16;
+  let nodes = 0;
+  const lastFit = spec.candidates.map((t) => {
+    const row = rows[t] as (typeof table)[number];
+    let last = -1;
+    spec.slots.forEach((hp, slot) => {
+      if (Math.ceil(hp / row.hp) <= (spec.caps?.[t] ?? Infinity)) last = slot;
+    });
+    return last;
+  });
+  const firstFit = spec.candidates.map((t) => {
+    const row = rows[t] as (typeof table)[number];
+    const first = spec.slots.findIndex((hp) => Math.ceil(hp / row.hp) <= (spec.caps?.[t] ?? Infinity));
+    return first < 0 ? k : first;
+  });
+  const descending = spec.slots.every((hp, slot) => slot === 0 || hp <= (spec.slots[slot - 1] as number));
+  const open = (c: number): boolean => spec.required?.[c] === true && !inUse[c];
+  const hallFails = (slot: number): boolean =>
+    descending &&
+    spec.candidates.some((_, c) => {
+      if (!open(c)) return false;
+      const from = firstFit[c] as number;
+      const need = spec.candidates.filter((__, d) => open(d) && (firstFit[d] as number) >= from).length;
+      return need > k - Math.max(from, slot);
+    });
+  const inUse = new Array<boolean>(m).fill(false);
+  const assign = new Array<number>(k).fill(-1);
+  let abort = false;
+  const leaf = (): void => {
+    if (out.battles >= max) {
+      abort = true;
+      return;
+    }
+    out.battles += 1;
+    const march = Object.fromEntries(ids.map((id, t) => [id, counts[t] ?? 0]));
+    const bill = marchBill(request, march);
+    if (bill.damage > out.damage.damage) out.damage = { damage: bill.damage, assignment: [...assign] };
+    if (bill.damage < base.damage - 1e-6) return;
+    out.admissible += 1;
+    const score = rate(base, bill, RATES);
+    if (score > 1e-9) out.positive += 1;
+    if (score > out.best.rating) out.best = { rating: score, assignment: [...assign] };
+    if ((bill.silver ?? 0) <= (base.silver ?? 0) && score > out.guarded.rating)
+      out.guarded = { rating: score, assignment: [...assign] };
+  };
+  const walk = (slot: number, unplaced: number): void => {
+    if (abort) return;
+    if (slot === k) {
+      if (unplaced === 0) leaf();
+      return;
+    }
+    if (nodes >= maxNodes) {
+      abort = true;
+      return;
+    }
+    nodes += 1;
+    if (
+      unplaced > 0 &&
+      (spec.candidates.some((_, c) => open(c) && (lastFit[c] as number) < slot) || hallFails(slot))
+    )
+      return;
+    for (let c = 0; c < m; c += 1) {
+      if (inUse[c]) continue;
+      const left = unplaced - (spec.required?.[c] === true ? 1 : 0);
+      if (left > k - slot - 1) continue;
+      const t = spec.candidates[c] as number;
+      const row = rows[t] as (typeof table)[number];
+      const count = Math.ceil((spec.slots[slot] as number) / row.hp);
+      if (count > (spec.caps?.[t] ?? Infinity)) continue;
+      const add = count * row.cost;
+      if ((spec.pools & bits[row.pool]) !== 0 && used[row.pool] + add > housing[row.pool]) continue;
+      used[row.pool] += add;
+      inUse[c] = true;
+      assign[slot] = c;
+      counts[t] = count;
+      walk(slot + 1, left);
+      counts[t] = 0;
+      inUse[c] = false;
+      used[row.pool] -= add;
+      if (abort) return;
+    }
+  };
+  const required = spec.required?.filter((r) => r).length ?? 0;
+  if (k > 0) walk(0, required);
+  out.complete = !abort;
+  return out;
+}
+
+describe('the kernel’s enumeration', () => {
+  it.each(scenarios.map((s, i) => [i, s.label, s.request] as const))(
+    'walks every assignment of army %i (%s) exactly as TypeScript does',
+    (_index, _label, request) => {
+      const kernel = createKernel(loadKernelModule(), request, RATES);
+      const table = effectiveTable(request);
+      const march = planMarches(request)[0];
+      if (!march) return;
+      const stacks = marchResult(request, march).result.stacks;
+      const troops = stacks.filter((s) => s.pool === 'leadership');
+      const hired = stacks.filter((s) => s.pool !== 'leadership');
+      const row = (id: string): number => kernel.ids.indexOf(id);
+      const base = kernel.battle(march);
+      const specs: EnumerationSpec[] = [];
+      // The re-typing space on the three biggest troop slots, the other stacks fixed.
+      const top = troops.slice(0, 3);
+      const fixed = new Float64Array(kernel.types);
+      for (const s of stacks) if (!top.includes(s)) fixed[row(s.unitId)] = s.count;
+      const free = table
+        .map((entry, t) => ({ entry, t }))
+        .filter(({ entry, t }) => entry.pool === 'leadership' && fixed[t] === 0)
+        .map(({ t }) => t);
+      specs.push({
+        slots: top.map((s) => s.totalHp),
+        candidates: free,
+        fixed,
+        pools: POOL_BITS.leadership,
+        base,
+      });
+      specs.push({ ...(specs[0] as EnumerationSpec), maxBattles: 17 });
+      // Hired stacks placed too, required, capped by stock, every pool housed.
+      if (hired.length > 0 && hired.length <= 3) {
+        const low = troops.slice(0, 2);
+        const fixed3 = new Float64Array(kernel.types);
+        for (const s of troops) if (!low.includes(s)) fixed3[row(s.unitId)] = s.count;
+        const hiredRows = hired.map((s) => row(s.unitId));
+        const free3 = table
+          .map((entry, t) => ({ entry, t }))
+          .filter(({ entry, t }) => entry.pool === 'leadership' && fixed3[t] === 0)
+          .map(({ t }) => t);
+        const caps = Float64Array.from(kernel.ids, (id) => request.caps[id] ?? Infinity);
+        specs.push({
+          slots: [...low, ...hired].map((s) => s.totalHp),
+          candidates: [...hiredRows, ...free3],
+          required: [...hiredRows.map(() => true), ...free3.map(() => false)],
+          fixed: fixed3,
+          caps,
+          pools: POOL_BITS.leadership | POOL_BITS.authority | POOL_BITS.dominance,
+          base,
+        });
+      }
+      for (const spec of specs) {
+        const expected = enumerateReference(request, kernel.ids, spec);
+        const actual = kernel.enumerate(spec);
+        expect(actual).toEqual(expected);
+        expect(Object.is(actual.best.rating, expected.best.rating)).toBe(true);
+        expect(Object.is(actual.guarded.rating, expected.guarded.rating)).toBe(true);
+        expect(expected.battles).toBeGreaterThan(0);
+      }
+    },
+    600_000,
+  );
 });
