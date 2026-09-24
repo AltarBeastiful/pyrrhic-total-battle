@@ -284,6 +284,13 @@ export interface CampaignInput {
    */
   tierCandidate?: boolean | undefined;
   /**
+   * **Tier order as a seed of the rung order** (W13 §2 step 2, `docs/plans/every-ordering.md`, experiment
+   * 170): the swap climb that learns which type takes which rung (`makeScorer`'s `orderFor`) climbs a second
+   * time from S-22's tier order — the same types, the first to die on the biggest rung — and keeps the better
+   * of the two climbs by damage (the ranking's on a tie). Omitted, the rung order is exactly the one before.
+   */
+  tierSeed?: boolean | undefined;
+  /**
    * **The band's token-field yardstick, switchable** — a diagnostic for
    * `tools/theorycraft/108-thrift-end.test.ts` and `112-band-yardstick.test.ts`, never set by the app, kept
    * so the measurements behind S-93 and S-95 can be re-run against the engine that shipped.
@@ -811,6 +818,11 @@ export interface CampaignPlan extends PlanTotals {
    * deadline cut it short (marches it did not reach are left as the search made them).
    */
   retype?: { ms: number; marches: number; retyped: number; cut: boolean } | undefined;
+  /**
+   * **What the tier seed did to the rung order** (`CampaignInput.tierSeed`) — a diagnostic, present only when
+   * the seed is on: `RungOrderLog`, over every scorer the plan built.
+   */
+  rungOrder?: RungOrderLog | undefined;
   /**
    * The reference table under the bar, bucketed by silver: what that much silver buys, and what it buys per
    * mercenary. The two are the owner's two slopes, and the bucketing is what makes the shape visible.
@@ -1427,6 +1439,25 @@ export interface ShapeContext {
    * mercenary, dominance for a monster (S-96) — and whose stock never runs out. Defaults to `stock`.
    */
   sustain?: Record<string, number> | undefined;
+  /** A second climb of the rung order from S-22's tier order (`CampaignInput.tierSeed`). */
+  tierSeed?: boolean | undefined;
+  /** Where the rung orders learned are counted, when a caller asks (`CampaignPlan.rungOrder`). */
+  rungOrderLog?: RungOrderLog | undefined;
+}
+
+/**
+ * **The rung orders learned, and what the tier seed added** (`CampaignInput.tierSeed`, experiment 170):
+ * `learned` depths, `tierWon` of them kept from the tier seed's climb (strictly more damage than the
+ * ranking's), `tierTied` where it ended on the same damage, `tierSame` where the tier order was the ranking's
+ * order already (no second climb), and the ladders battled by each climb.
+ */
+export interface RungOrderLog {
+  learned: number;
+  tierWon: number;
+  tierTied: number;
+  tierSame: number;
+  rankingBattles: number;
+  tierBattles: number;
 }
 
 /**
@@ -1570,6 +1601,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
    * (`out/98`), and the best order held across leadership caps and mercenary vectors on the same account.
    */
   const rungOrders = new Map<number, Effective[]>();
+  const log = context.rungOrderLog;
   const orderFor = (
     depth: number,
     mercenaryHp: number,
@@ -1578,30 +1610,61 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
   ): Effective[] => {
     const held = rungOrders.get(depth);
     if (held) return held;
-    let order = troops.slice(-depth);
+    let battles = 0;
     const damageOf = (candidate: Effective[]): number => {
+      battles += 1;
       const rungs = ladder(troops, depth, mercenaryHp, gap, leadership, scale, candidate);
       return rungs.length === 0 ? -Infinity : marchOf([...rungs, ...vector], enemyStacks).damage;
     };
-    let current = damageOf(order);
+    const climb = (start: Effective[], startDamage: number): { order: Effective[]; damage: number } => {
+      let order = start;
+      let current = startDamage;
+      for (;;) {
+        let best: { order: Effective[]; damage: number } | undefined;
+        for (let i = 0; i < order.length; i += 1) {
+          for (let j = i + 1; j < order.length; j += 1) {
+            const trial = [...order];
+            [trial[i], trial[j]] = [trial[j] as Effective, trial[i] as Effective];
+            const damage = damageOf(trial);
+            if (damage > current && (!best || damage > best.damage)) best = { order: trial, damage };
+          }
+        }
+        if (!best) break;
+        order = best.order;
+        current = best.damage;
+      }
+      return { order, damage: current };
+    };
+    const ranking = troops.slice(-depth);
+    const current = damageOf(ranking);
     // A ladder the leadership cannot pay for teaches nothing: answer with the ranking's order and learn
     // from the first request that fits. (The first ladders the grid asks for field every mercenary at its
     // cap, and on a real account those are the ones over the cap — measured: learning on them kept the
     // ranking's order for good, `out/98`.)
-    if (!Number.isFinite(current)) return order;
-    for (;;) {
-      let best: { order: Effective[]; damage: number } | undefined;
-      for (let i = 0; i < order.length; i += 1) {
-        for (let j = i + 1; j < order.length; j += 1) {
-          const trial = [...order];
-          [trial[i], trial[j]] = [trial[j] as Effective, trial[i] as Effective];
-          const damage = damageOf(trial);
-          if (damage > current && (!best || damage > best.damage)) best = { order: trial, damage };
+    if (!Number.isFinite(current)) return ranking;
+    const fromRanking = climb(ranking, current);
+    const damage = fromRanking.damage;
+    let order = fromRanking.order;
+    const rankingBattles = battles;
+    if (context.tierSeed === true) {
+      // W13 §2 step 2: the same types in S-22's tier order — the first to die on the biggest rung — climbed
+      // too, and kept only when it ends strictly above the ranking's climb.
+      const tier = [...ranking].sort((a, b) => a.rank - b.rank);
+      if (tier.some((entry, i) => entry !== ranking[i])) {
+        const tierDamage = damageOf(tier);
+        if (Number.isFinite(tierDamage)) {
+          const fromTier = climb(tier, tierDamage);
+          if (fromTier.damage > damage) {
+            order = fromTier.order;
+            if (log) log.tierWon += 1;
+          } else if (log && fromTier.damage === damage) log.tierTied += 1;
         }
-      }
-      if (!best) break;
-      order = best.order;
-      current = best.damage;
+      } else if (log) log.tierSame += 1;
+    }
+    if (log) {
+      log.learned += 1;
+      log.rankingBattles += rankingBattles;
+      log.tierBattles += battles - rankingBattles;
     }
     rungOrders.set(depth, order);
     return order;
@@ -2909,6 +2972,17 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
 
   const byId = new Map(table.map((entry) => [entry.id, entry]));
   const sizerShape = input.sizerShape === true;
+  /** The tier seed of the rung order (`CampaignInput.tierSeed`), and its diagnostic. */
+  const tierSeed = input.tierSeed === true;
+  const rungOrderLog: RungOrderLog = {
+    learned: 0,
+    tierWon: 0,
+    tierTied: 0,
+    tierSame: 0,
+    rankingBattles: 0,
+    tierBattles: 0,
+  };
+  const seeded = tierSeed ? { tierSeed, rungOrderLog } : {};
   /**
    * The Elite sizer over every troop type, the hired counts as caps — what the March pane draws after a
    * put-back, scored inside the search so the plan can find it itself (`CampaignInput.sizerShape`).
@@ -2949,6 +3023,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     ...(sizerShape ? { sizer } : {}),
     winnerRungs: () => winnerRungs,
     sustain,
+    ...seeded,
   });
   /** Silver one candidate spends: its repeats, plus its final march. */
   const marchedSilver = (candidate: Candidate): number =>
@@ -4825,6 +4900,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         ...(sizerShape ? { sizer } : {}),
         winnerRungs: () => winnerRungs,
         sustain,
+        ...seeded,
       });
       /**
        * Every shape this stop may play at one hired vector — the ladders, the winner's own rungs, the sizer
@@ -6471,6 +6547,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           },
         }
       : {}),
+    ...(tierSeed ? { rungOrder: rungOrderLog } : {}),
     // The set the four answers came from, when a caller is asking about the trade's *shape* rather than about
     // the answers on it (S-59 follow-up: "the sweet spot seems to be too similar with silver save"). Sorted
     // cheapest first like everything else the UI reads, and built here so the order is the engine's rather

@@ -85,6 +85,12 @@ export const CAMPAIGN = {
    *   (no march beaten by its own tier order) 19 pass / 3 fail → 22 / 0. **Off** until the owner registers the one
    *   pin it moves: the 7 000 export's all-in, 24,936,555 → 24,945,884 damage for 12,715,900 → 12,717,200 silver
    *   (rated +0.03; `tests/engine/plan.test.ts`, "the all-in is the campaign it was").
+   * - `tierSeed` — tier order as a seed of the rung order (W13 §2 step 2): the swap climb that learns which type
+   *   takes which rung also climbs from S-22's tier order and keeps the better climb by damage. Experiment 170,
+   *   `tools/theorycraft/out/170-a-tier-seed-for-the-rung-order.md`, `budgetMs` off, against HEAD: of 440 rung
+   *   orders learned, 166 had tier order as the ranking's already, and the tier climb ended above the ranking's
+   *   on 0, level on 265, below on 9 — so the bar is unchanged (0 / 61 / 0, no reading moves, TotalStack 70/13,
+   *   the permanent test 22 / 0) for 14 771 extra ladders battled. **Off**: it finds nothing to improve.
    */
   planFixes: {
     tokenFloor: true,
@@ -95,6 +101,7 @@ export const CAMPAIGN = {
     bandTroopStacks: 1,
     retype: 'rated' as const,
     tierCandidate: true,
+    tierSeed: false,
   },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
