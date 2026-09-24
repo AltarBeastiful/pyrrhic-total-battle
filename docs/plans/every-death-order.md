@@ -56,12 +56,40 @@ Candidates, read from `plan.ts` (the re-typing pass, ~6110–6460):
 Runs are measured with `budgetMs` off. Pins that move are reported; only the owner registers a new baseline
 (the non-regression rule).
 
+**The report every step owes (the owner, 2026-09-24: *"make sure the plan doesn't forget to report on all march use cases
+what it moves on all criterias and redo the bench with TotalStack after"*).** Each step's experiment writes, before vs
+after, on the same armies and settings:
+
+- **Every march use case, none skipped:** on every army of the benchmark, every stop of the bar (silver saver, sweet
+  spot, more, steady max, all-in, and any stop the bar re-chose), and inside each stop, **every march it plays**: the
+  repeated march, the finale, the troops-only tail, each march of the all-in's sequence, and the band rows. A use case
+  the step does not touch is still listed, as "unchanged". Nothing is summarised away.
+- **Every criterion, per march and per stop:**
+  - worst-opening damage and best-opening damage;
+  - silver, gold, hired burned, dragon coins and queue seconds;
+  - damage per silver, per gold, per hired and per dragon coin;
+  - the stop's rating `rate(before, after, markerRates)`;
+  - the shelter margin (the lowest troop stack's HP over the highest hired stack's);
+  - the sustain (how many marches the hired stocks last).
+- **The bar as a whole, per army:**
+  - the ten readings;
+  - the bar criteria (order, no stop beaten, shelter, sustain, ≤ 5 stops, sweet spot, S-58 B);
+  - which stops were re-chosen.
+- **Counts:** stops better / equal / worse per army and in total. Every worse figure is listed with its value, even
+  where the rating says the trade is worth it.
+- **The benchmark rerun with TotalStack, after every step and again at the end of the plan.** Both paths are rerun: the
+  full `plan-benchmark` (TS and kernel). The report gives TotalStack at matched spend (dominated / not dominated,
+  against 70/13 today) and TotalStack's rows that still beat any stop on damage and rating (the 162 list: 2 today). It
+  also gives the moved pins, each with its before and after value, so the owner can decide on each one.
+
 ## 3. Steps
 
 1. **Experiment 176, the diagnosis.** Trace each of the 37 marches through the pipeline: was it handed to `retypeOne`?
    What came back, and which guard refused it (a–e)? Was the shipped march made after the pass, and by which step? The
    output is one table: march → cause → the rating it would have kept. **No engine change.** The steps below are
-   ordered by what it finds; the rest of this section is the expected order.
+   ordered by what it finds; the rest of this section is the expected order. 176 also records the full per-march,
+   per-criterion report of §2 for HEAD, so every later step compares with the same baseline, and reruns the benchmark
+   with TotalStack at HEAD on both paths.
 2. **The silver-saver guard, per march** (suspect a). Keep the rule ("a silver saver stays one"), but apply it to each
    march rather than to the row. Re-type a silver saver's march under **"silver must not rise"**: take the best
    assignment whose silver is not above the march's own. 175's "silver-guarded best" column says what this leaves.
