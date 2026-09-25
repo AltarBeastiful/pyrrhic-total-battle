@@ -155,7 +155,7 @@ describe.skipIf(!process.env.THEORY)('what an unshielded stop would cost', () =>
     for (const scenario of scenarios) {
       const request = scenario.request;
       // The bar today.
-      let bar: Priced | null = null;
+      let bar: Priced | null;
       try {
         const plan = planCampaign({
           request,
