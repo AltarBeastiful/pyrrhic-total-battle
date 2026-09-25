@@ -1,0 +1,259 @@
+diff --git a/src/engine/plan.ts b/src/engine/plan.ts
+index a681379..2d2f953 100644
+--- a/src/engine/plan.ts
++++ b/src/engine/plan.ts
+@@ -94,6 +94,9 @@ const MAX_MARCHES = 12;
+  * without ever cutting a run this repo measures.
+  */
+ const RETYPE_SHARE = 0.05;
++/** TEMPORARY (experiment 178): which of W14 step 3's variants runs. */
++const w14Variant = (): { inBlock: boolean; second: boolean } =>
++  (globalThis as { __w14?: { inBlock: boolean; second: boolean } }).__w14 ?? { inBlock: true, second: false };
+ /**
+  * Mercenary types the grid crosses against each other per march count. Beyond this many, the types with the
+  * smallest reach ride one shared fraction of their own largest count instead — see the grid in
+@@ -6491,9 +6494,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+     dragonCoins: r.dragonCoins,
+     seconds: r.seconds,
+   });
+-  const keepReadings = (): void => {
++  const keepReadings = (base: Map<PlanTotals, PlanRow> = beforeRetype): void => {
+     if (retypeRates === undefined) return;
+-    const unRetyped = stops.map((row) => beforeRetype.get(row) ?? row);
++    const unRetyped = stops.map((row) => base.get(row) ?? row);
+     const held = tenReadings(unRetyped);
+     const below = (value: number, target: number): boolean => value < target - Math.abs(target) * 1e-12;
+     /** Readings the rating has bought: lost, and worth less than the re-typing that lost them. */
+@@ -6909,6 +6912,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       const { rungs } = biggestLadder(depth);
+       if (rungs.length > 0) tightLadders.push(rungs);
+     }
++    /**
++     * **The own-ladder finale, re-typed before it is rated** (W14 step 3, experiment 178; 176's cause e: made
++     * after the re-typing pass, it was never re-typed — 5 marches, +28.65). Each finale the ladder sizes is
++     * offered as sized and as `retypeOne` re-types it, under the pass's own guards and cache: the hired stacks
++     * kept, the shelter held, and on a silver saver step 2's holds (its silver not rising, its damage per silver
++     * not dropping; its queue held too as a third candidate). The rating below chooses among them as it chose
++     * among the ladders.
++     */
++    const ownLadderCandidates = (sized: Record<string, number>, saver: boolean): Record<string, number>[] => {
++      const out = [sized];
++      if (!w14Variant().inBlock) return out;
++      for (const typed of saver ? [retypeOne(sized, true), retypeOne(sized, true, true)] : [retypeOne(sized)])
++        if (!out.includes(typed)) out.push(typed);
++      return out;
++    };
+     const beats = (x: PlanTotals, y: PlanTotals): boolean =>
+       x.totalDamage >= y.totalDamage &&
+       x.silver <= y.silver &&
+@@ -6957,68 +6975,158 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+           damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
+         };
+       };
+-      let best: { next: PlanRow; rating: number } | null = null;
++      const saver = row.pick === 'silver-saver';
++      /** The finale a ladder sizes, as sized (`typed` false) or re-typed, and its rating against the stop. */
++      type Candidate = { next: PlanRow; rating: number; typed: boolean };
++      let best: Candidate | null = null;
++      const typedOnes: Candidate[] = [];
+       for (const rungs of tightLadders) {
+         const under = shelterUnder(rungs, leftovers).filter((merc) => merc.count > 0);
+         if (under.length === 0) continue;
+         if (!fitsHousing(request.housing, rungs, under)) continue;
+-        const counts: Record<string, number> = {};
+-        for (const field of [...rungs, ...under]) counts[field.entry.id] = field.count;
+-        const next = swapped(counts, priceCounts(counts));
+-        if (input.silverBudget !== undefined && next.silver > input.silverBudget) continue;
+-        const rating = rate(totalsBill(current), totalsBill(next), retypeRates);
+-        // A silver saver's finale is judged as it was before its re-typing: the finale the bar took from the
+-        // un-re-typed stop is not kept out by the re-typing of the finale it replaces (W14 step 2, experiment
+-        // 177: otherwise the 7 000 export's silver saver keeps a finale dearer in silver and queue).
+-        const headTakes = ((): boolean => {
+-          if (row.pick !== 'silver-saver' || rating > 0) return false;
+-          const was = beforeRetype.get(current);
+-          if (!was?.finaleCounts || was.sequence) return false;
+-          const old = priceCounts(was.finaleCounts);
+-          const plain = priceCounts(counts);
+-          const bill = totalsBill(was);
+-          const after: Bill = {
+-            damage: bill.damage - old.damage + plain.damage,
+-            silver: bill.silver - old.silver + plain.silver,
+-            gold: bill.gold - old.gold + plain.gold,
+-            hired: bill.hired - old.mercLost + plain.mercLost,
+-            dragonCoins: bill.dragonCoins - old.dragonCoins + plain.dragonCoins,
+-            seconds: bill.seconds - old.seconds + plain.seconds,
+-          };
+-          return rate(bill, after, retypeRates) > 0;
+-        })();
+-        if ((rating > 0 || headTakes) && (!best || rating > best.rating)) best = { next, rating };
++        const sized: Record<string, number> = {};
++        for (const field of [...rungs, ...under]) sized[field.entry.id] = field.count;
++        for (const counts of ownLadderCandidates(sized, saver)) {
++          const typed = counts !== sized;
++          const next = swapped(counts, priceCounts(counts));
++          if (input.silverBudget !== undefined && next.silver > input.silverBudget) continue;
++          const rating = rate(totalsBill(current), totalsBill(next), retypeRates);
++          // A silver saver's finale is judged as it was before its re-typing: the finale the bar took from the
++          // un-re-typed stop is not kept out by the re-typing of the finale it replaces (W14 step 2, experiment
++          // 177: otherwise the 7 000 export's silver saver keeps a finale dearer in silver and queue).
++          const headTakes = ((): boolean => {
++            if (!saver || rating > 0) return false;
++            const was = beforeRetype.get(current);
++            if (!was?.finaleCounts || was.sequence) return false;
++            const old = priceCounts(was.finaleCounts);
++            const plain = priceCounts(counts);
++            const bill = totalsBill(was);
++            const after: Bill = {
++              damage: bill.damage - old.damage + plain.damage,
++              silver: bill.silver - old.silver + plain.silver,
++              gold: bill.gold - old.gold + plain.gold,
++              hired: bill.hired - old.mercLost + plain.mercLost,
++              dragonCoins: bill.dragonCoins - old.dragonCoins + plain.dragonCoins,
++              seconds: bill.seconds - old.seconds + plain.seconds,
++            };
++            return rate(bill, after, retypeRates) > 0;
++          })();
++          // A re-typed finale rates above the stop as it stands: `headTakes` speaks for the finale as sized only.
++          if (!(rating > 0 || (headTakes && !typed))) continue;
++          if (!typed) {
++            if (!best || rating > best.rating) best = { next, rating, typed };
++            continue;
++          }
++          typedOnes.push({ next, rating, typed });
++        }
+       }
+-      if (!best) continue;
+-      const { next, rating } = best;
+-      const trial = stops.map((other) => (other === current ? next : other));
+-      if (next.pick === 'silver-saver' && trial.some((other) => other !== next && other.silver < next.silver))
+-        continue;
+-      if (
+-        next.pick === 'burn-saver' &&
+-        trial.some((other) => other !== next && other.mercLost < next.mercLost)
+-      )
+-        continue;
+-      const outright = trial.some(
+-        (x) =>
+-          x.pick !== 'all-in' &&
+-          trial.some((y) => y !== x && y.pick !== 'all-in' && (x === next || y === next) && beats(x, y)),
+-      );
+-      if (outright) continue;
+-      if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(next, entry.id))) continue;
+-      const before = tenReadings(stops);
+-      const after = tenReadings(trial);
+-      const lostWorth = before.some((held, reading) => {
+-        const now = after[reading] ?? 0;
+-        if (held === 0 || now >= held - Math.abs(held) * 1e-12) return false;
+-        return (((held - now) / Math.abs(held)) * 100) / readingRate(retypeRates, reading) > rating;
+-      });
+-      if (lostWorth) continue;
++      /** The bar's guards on a stop's new finale, as they stood before the re-typing was offered. */
++      const passes = ({ next, rating }: Candidate): boolean => {
++        const trial = stops.map((other) => (other === current ? next : other));
++        if (next.pick === 'silver-saver' && trial.some((other) => other !== next && other.silver < next.silver))
++          return false;
++        if (
++          next.pick === 'burn-saver' &&
++          trial.some((other) => other !== next && other.mercLost < next.mercLost)
++        )
++          return false;
++        const outright = trial.some(
++          (x) =>
++            x.pick !== 'all-in' &&
++            trial.some((y) => y !== x && y.pick !== 'all-in' && (x === next || y === next) && beats(x, y)),
++        );
++        if (outright) return false;
++        if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(next, entry.id))) return false;
++        const before = tenReadings(stops);
++        const after = tenReadings(trial);
++        const lostWorth = before.some((held, reading) => {
++          const now = after[reading] ?? 0;
++          if (held === 0 || now >= held - Math.abs(held) * 1e-12) return false;
++          return (((held - now) / Math.abs(held)) * 100) / readingRate(retypeRates, reading) > rating;
++        });
++        return !lostWorth;
++      };
++      // The finale as sized is judged exactly as before; a re-typed one rating above it is taken instead only
++      // when it passes the same guards, keeps every name true (the silver saver the bar's cheapest, the burn
++      // saver its fewest burned) and loses **no** reading the bar would hold with the sized one — the
++      // re-typing buys no reading with its rating (the gate of W14, §2), on a silver saver as on any stop.
++      const plainBest = best as Candidate | null;
++      const plainTaken = plainBest && passes(plainBest) ? plainBest : null;
++      const held = tenReadings(plainTaken ? stops.map((other) => (other === current ? plainTaken.next : other)) : stops);
++      const namesHold = (next: PlanRow): boolean =>
++        stops.every(
++          (other) =>
++            other === current ||
++            ((other.pick !== 'silver-saver' || next.silver > other.silver) &&
++              (other.pick !== 'burn-saver' || next.mercLost > other.mercLost) &&
++              (next.pick !== 'silver-saver' || other.silver > next.silver) &&
++              (next.pick !== 'burn-saver' || other.mercLost > next.mercLost)),
++        );
++      const typedTaken = typedOnes
++        .filter((c) => !plainTaken || c.rating > plainTaken.rating)
++        .sort((x, y) => y.rating - x.rating)
++        .find((c) => {
++          if (!passes(c) || !namesHold(c.next)) return false;
++          const now = tenReadings(stops.map((other) => (other === current ? c.next : other)));
++          return now.every((value, at) => value >= (held[at] ?? 0) - Math.abs(held[at] ?? 0) * 1e-12);
++        });
++      const taken = typedTaken ?? plainTaken;
++      if (!taken) continue;
++      const { next } = taken;
+       planTrace.sink?.({ step: 'ownLadderFinale', pick: next.pick, counts: next.finaleCounts ?? {} });
+       stops[index] = next;
+     }
+   }
+ 
++  /**
++   * TEMPORARY (W14 step 3, experiment 178, variant ii): a second re-typing pass over the marches the first
++   * never saw — the own-ladder finales and the first pass's own outputs — under the same guards and cache, then
++   * `keepReadings` against the bar before it, the fold's hand-back and the collision hand-back again.
++   */
++  if (retypeRates !== undefined && w14Variant().second) {
++    const beforeSecond = new Map<PlanTotals, PlanRow>();
++    for (let index = 0; index < stops.length; index += 1) {
++      const row = stops[index] as PlanRow;
++      const next = retypeRowNow(row);
++      if (next === row) continue;
++      const trial = stops.map((other) => (other === row ? next : other));
++      const named = trial.every(
++        (other) =>
++          other === next ||
++          ((other.pick !== 'silver-saver' || next.silver > other.silver) &&
++            (other.pick !== 'burn-saver' || next.mercLost > other.mercLost) &&
++            (next.pick !== 'silver-saver' || other.silver > next.silver) &&
++            (next.pick !== 'burn-saver' || other.mercLost > next.mercLost)),
++      );
++      if (!named || trial.some((other) => other !== next && sameCounts(other, next))) continue;
++      // No reading of the bar is bought by the second pass (the gate of W14, §2).
++      const was = tenReadings(stops);
++      const now = tenReadings(trial);
++      if (now.some((value, at) => value < (was[at] ?? 0) - Math.abs(was[at] ?? 0) * 1e-12)) continue;
++      stops[index] = next;
++      beforeSecond.set(next, row);
++      const folded = foldedFrom.get(row);
++      if (folded) foldedFrom.set(next, folded);
++    }
++    keepReadings(beforeSecond);
++    const beatsOutright = (x: PlanRow, y: PlanRow): boolean =>
++      x !== y &&
++      x.pick !== 'all-in' &&
++      y.pick !== 'all-in' &&
++      x.totalDamage >= y.totalDamage &&
++      x.silver <= y.silver &&
++      x.mercLost <= y.mercLost &&
++      x.gold <= y.gold &&
++      (x.totalDamage > y.totalDamage || x.silver < y.silver || x.mercLost < y.mercLost || x.gold < y.gold);
++    for (let index = 0; index < stops.length; index += 1) {
++      const row = stops[index] as PlanRow;
++      const was = beforeSecond.get(row);
++      if (!was) continue;
++      if (stops.some((other) => beatsOutright(row, other) || beatsOutright(other, row))) stops[index] = was;
++    }
++    stops.sort(byBurn);
++  }
++
+   const bestStop = (of: (row: PlanTotals) => number): PlanRow | undefined =>
+     stops.reduce<PlanRow | undefined>(
+       (best, row) => (best === undefined || of(row) > of(best) ? row : best),
