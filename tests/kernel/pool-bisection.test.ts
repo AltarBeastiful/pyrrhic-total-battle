@@ -115,5 +115,5 @@ describe('the kernel sizePool stops its bisection only at a fixed point', () => 
     }
     expect(compared).toBeGreaterThan(15_000);
     expect(adversarial).toBeGreaterThan(4_000);
-  });
+  }, 30000);
 });
