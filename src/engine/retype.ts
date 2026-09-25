@@ -46,6 +46,21 @@ export interface RetypeOptions {
    * while it rates above it. Off, the search is exactly the one before.
    */
   tierCandidate?: boolean | undefined;
+  /**
+   * **Silver must not rise** (W14 step 2, `docs/plans/every-death-order.md` §3.2; experiment 176, suspect a).
+   * When set, an assignment is admissible only when its silver is at most this; the plan passes a silver
+   * saver's march its own silver, so "a silver saver stays one" is held on each march rather than on the row.
+   * Unset, the search is exactly the one before.
+   */
+  silverCeiling?: number | undefined;
+  /**
+   * **Damage per silver must not drop** (the owner, 2026-09-25, W14 step 2: a silver saver's re-typing must not
+   * buy its rating with damage bought through silver). When set, an assignment is admissible only when its
+   * worst-opening damage per silver is at least the march's own. Unset, the search is exactly the one before.
+   */
+  holdDamagePerSilver?: boolean | undefined;
+  /** When set, an assignment is admissible only when its queue seconds are at most this. */
+  secondsCeiling?: number | undefined;
 }
 
 /** Which start the kept assignment was found from (a diagnostic of experiment 169). */
@@ -108,6 +123,14 @@ export function retypeMarch(
   const hired: Record<string, number> = {};
   for (const s of result.stacks) if (s.pool !== 'leadership') hired[s.unitId] = s.count;
   const base = marchBill(request, counts);
+  const ceiling = options.silverCeiling;
+  /** Above the silver ceiling, or below the march's damage per silver, when either is held. */
+  const holdPerSilver = options.holdDamagePerSilver === true;
+  const overCeiling = (bill: Bill): boolean =>
+    (ceiling !== undefined && bill.silver > ceiling + 1e-6) ||
+    // Damage per silver below the march's own (cross-multiplied, so a silver-free march reads as ∞).
+    (holdPerSilver && bill.damage * base.silver < base.damage * bill.silver - 1e-6) ||
+    (options.secondsCeiling !== undefined && bill.seconds > options.secondsCeiling + 1e-6);
 
   const build = (types: number[]): Record<string, number> | null => {
     const next: Record<string, number> = { ...hired };
@@ -143,7 +166,7 @@ export function retypeMarch(
     }
     tried += 1;
     const bill = marchBill(request, c);
-    const score = bill.damage < base.damage - 1e-6 ? -Infinity : rate(base, bill, rates);
+    const score = bill.damage < base.damage - 1e-6 || overCeiling(bill) ? -Infinity : rate(base, bill, rates);
     if (tierCandidate) seen.set(key, score);
     if (score > 1e-9 && (!best || score > best.rating))
       best = tierCandidate
@@ -273,7 +296,7 @@ export function retypeMarch(
       if (ownTypes.every((id) => twin[id] === kept.counts[id])) break;
       tried += 1;
       const bill = marchBill(request, twin);
-      if (bill.damage < base.damage - 1e-6) break;
+      if (bill.damage < base.damage - 1e-6 || overCeiling(bill)) break;
       if (!(rate(marchBill(request, kept.counts), bill, rates) > 1e-9)) break;
       const score = rate(base, bill, rates);
       if (!(score > 1e-9)) break;

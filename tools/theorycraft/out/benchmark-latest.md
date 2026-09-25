@@ -12,7 +12,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-09-24T10:11:40.661Z, commit (working tree)
+Run: 2026-09-25T00:04:35.648Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 
@@ -350,7 +350,7 @@ The plan offers 4 stops.
 | TotalStack · priority search under Elite (averageDamage) | 4 | 1 · 12,000 | 7,807,482 | 33,600,000 | 3,472 | 51 | 0.23 | 153,088 | 51 | 0 | 0 | 153,088 | 0 | 7,807,482 |
 | TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 12,000 | 14,551,348 | 18,800,000 | 3,472 | 51 | 0.77 | 0 | 51 | 0 | 0 | 0 | 0 | 14,551,348 |
 | Complete optimization · burn-saver | 4 | 7 · 11,194 | 22,404,202 | 17,808,900 | 2,408 | 30 | 1.26 | 369,197 | 30 | 0 | 0 | 369,197 | 0 | 22,404,202 |
-| Complete optimization · silver-saver | 4 | 7 · 6,347 | 21,273,264 | 12,129,500 | 3,056 | 48 | 1.75 | 297,347 | 48 | 0 | 0 | 297,347 | 0 | 21,273,264 |
+| Complete optimization · silver-saver | 4 | 7 · 6,347 | 21,675,209 | 12,129,500 | 3,056 | 48 | 1.79 | 297,347 | 48 | 0 | 0 | 297,347 | 0 | 21,675,209 |
 | Complete optimization · sweet-spot | 4 | 7 · 11,999 | 34,445,770 | 18,793,200 | 4,824 | 67 | 1.83 | 333,911 | 67 | 0 | 0 | 333,911 | 0 | 34,445,770 |
 | Complete optimization · steady-max | 4 | 5 · 11,646 | 34,617,571 | 20,720,700 | 5,784 | 82 | 1.67 | 290,661 | 82 | 0 | 0 | 290,661 | 0 | 34,617,571 |
 
@@ -390,7 +390,7 @@ The plan offers 4 stops.
 | TotalStack · Elite Preservation | 4 | 7 · 20,000 | 29,222,440 | 31,335,200 | 2,016 | 30 | 0.93 | 304,167 | 30 | 0 | 0 | 304,167 | 0 | 29,222,440 |
 | TotalStack · priority search under Elite (averageDamage) | 4 | 7 · 20,000 | 29,222,440 | 31,335,200 | 2,016 | 30 | 0.93 | 304,167 | 30 | 0 | 0 | 304,167 | 0 | 29,222,440 |
 | TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 20,000 | 29,222,440 | 31,335,200 | 2,016 | 30 | 0.93 | 304,167 | 30 | 0 | 0 | 304,167 | 0 | 29,222,440 |
-| Complete optimization · silver-saver | 4 | 7 · 9,298 | 18,256,930 | 18,959,900 | 1,368 | 20 | 0.96 | 309,021 | 20 | 0 | 0 | 309,021 | 0 | 18,256,930 |
+| Complete optimization · silver-saver | 4 | 7 · 9,298 | 18,257,371 | 18,600,300 | 1,368 | 20 | 0.98 | 309,021 | 20 | 0 | 0 | 309,021 | 0 | 18,257,371 |
 | Complete optimization · sweet-spot | 4 | 7 · 19,955 | 28,384,288 | 30,928,400 | 1,728 | 24 | 0.92 | 323,582 | 24 | 0 | 0 | 323,582 | 0 | 28,384,288 |
 | Complete optimization · steady-max | 4 | 7 · 19,955 | 28,727,202 | 30,179,700 | 1,904 | 28 | 0.95 | 307,403 | 28 | 0 | 0 | 307,403 | 0 | 28,727,202 |
 | Complete optimization · all-in | 4 | 7 · 19,955 | 29,743,332 | 30,928,400 | 2,016 | 30 | 0.96 | 304,167 | 30 | 0 | 0 | 304,167 | 0 | 29,743,332 |
@@ -401,7 +401,7 @@ The plan offers 4 stops.
 
 **The six markers**, our best against theirs on each alone: damage ✓, silver ✓, burned ✓, gold ✓, dragonCoins =, seconds ✓.
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.033** ✓, damage a hired soldier **1.064** ✓, damage a monster —. All three are at or above the goal.
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.053** ✓, damage a hired soldier **1.064** ✓, damage a monster —. All three are at or above the goal.
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
 
@@ -513,14 +513,14 @@ The plan offers 5 stops.
 | TotalStack · Total Optimization | 4 | 7 · 4,975 | 49,229,801 | 7,794,000 | 59,176 | 374 | 6.32 | 109,269 | 346 | 28 | 0 | 118,111 | 0 | 49,229,801 |
 | TotalStack · Elite Preservation | 4 | 7 · 4,975 | 49,229,801 | 7,794,000 | 59,176 | 374 | 6.32 | 109,269 | 346 | 28 | 0 | 118,111 | 0 | 49,229,801 |
 | Complete optimization · burn-saver | 4 | 7 · 4,573 | 8,820,632 | 7,251,100 | 1,448 | 16 | 1.22 | 257,643 | 12 | 4 | 0 | 260,363 | 249,480 | 8,820,632 |
-| Complete optimization · silver-saver | 4 | 2 · 2,820 | 8,393,455 | 6,773,900 | 5,480 | 34 | 1.24 | 159,825 | 30 | 4 | 0 | 125,695 | 415,800 | 8,393,455 |
+| Complete optimization · silver-saver | 4 | 2 · 2,774 | 8,947,961 | 6,704,900 | 5,480 | 34 | 1.33 | 171,510 | 30 | 4 | 0 | 138,938 | 415,800 | 8,947,961 |
 | Complete optimization · sweet-spot | 4 | 4 · 4,975 | 15,862,148 | 9,850,300 | 6,344 | 52 | 1.61 | 208,337 | 48 | 4 | 0 | 170,258 | 665,280 | 15,862,148 |
 | Complete optimization · more-mercs | 4 | 1 · 4,882 | 31,715,963 | 13,734,000 | 30,120 | 218 | 2.31 | 145,486 | 204 | 14 | 0 | 125,033 | 443,520 | 31,715,963 |
 | Complete optimization · steady-max | 4 | 1 · 4,974 | 49,190,513 | 13,927,200 | 51,192 | 344 | 3.53 | 142,996 | 324 | 20 | 0 | 118,285 | 543,312 | 49,190,513 |
 
-**Matched spend — SHORT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 49,229,801 for 7,794,000 silver, 59,176 gold, 0 coins, 374 burned, 1,896,300 s. Our best stop inside that budget (5 %) is `Complete optimization · burn-saver` at 8,820,632 — **-82.1 %**.
+**Matched spend — SHORT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 49,229,801 for 7,794,000 silver, 59,176 gold, 0 coins, 374 burned, 1,896,300 s. Our best stop inside that budget (5 %) is `Complete optimization · silver-saver` at 8,947,961 — **-81.8 %**.
 
-**Over all 3 of their comparable marches**, the bar dominates **0** at matched spend; the one it does worst on is `TotalStack · Total Optimization` at -82.1 %.
+**Over all 3 of their comparable marches**, the bar dominates **0** at matched spend; the one it does worst on is `TotalStack · Total Optimization` at -81.8 %.
 
 **The six markers**, our best against theirs on each alone: damage ✗, silver ✓, burned ✓, gold ✓, dragonCoins =, seconds ✓.
 
@@ -549,14 +549,14 @@ The plan offers 5 stops.
 | TotalStack · Total Optimization | 4 | 7 · 4,975 | 6,422,616 | 7,794,000 | 11,120 | 156 | 0.82 | 0 | 156 | 0 | 0 | 0 | 0 | 6,422,616 |
 | TotalStack · Elite Preservation | 4 | 7 · 4,975 | 6,422,616 | 7,794,000 | 11,120 | 156 | 0.82 | 0 | 156 | 0 | 0 | 0 | 0 | 6,422,616 |
 | Complete optimization · burn-saver | 4 | 7 · 4,975 | 6,943,378 | 7,733,000 | 392 | 6 | 0.90 | 296,617 | 6 | 0 | 0 | 296,617 | 0 | 6,943,378 |
-| Complete optimization · silver-saver | 4 | 5 · 3,918 | 7,561,467 | 7,313,300 | 848 | 12 | 1.03 | 318,189 | 12 | 0 | 0 | 318,189 | 0 | 7,561,467 |
+| Complete optimization · silver-saver | 4 | 5 · 3,918 | 7,843,070 | 7,313,200 | 848 | 12 | 1.07 | 318,189 | 12 | 0 | 0 | 318,189 | 0 | 7,843,070 |
 | Complete optimization · sweet-spot | 4 | 5 · 4,964 | 9,367,909 | 8,747,300 | 1,016 | 15 | 1.07 | 306,324 | 15 | 0 | 0 | 306,324 | 0 | 9,367,909 |
 | Complete optimization · more-mercs | 4 | 2 · 4,892 | 14,142,349 | 10,354,100 | 3,944 | 57 | 1.37 | 164,062 | 57 | 0 | 0 | 164,062 | 0 | 14,142,349 |
 | Complete optimization · steady-max | 4 | 1 · 4,780 | 23,589,127 | 13,043,800 | 10,480 | 148 | 1.81 | 159,386 | 148 | 0 | 0 | 159,386 | 0 | 23,589,127 |
 
-**Matched spend — BEAT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 6,422,616 for 7,794,000 silver, 11,120 gold, 0 coins, 156 burned, 1,896,300 s. Our best stop inside that budget (5 %) is `Complete optimization · silver-saver` at 7,561,467 — **+17.7 %**.
+**Matched spend — BEAT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 6,422,616 for 7,794,000 silver, 11,120 gold, 0 coins, 156 burned, 1,896,300 s. Our best stop inside that budget (5 %) is `Complete optimization · silver-saver` at 7,843,070 — **+22.1 %**.
 
-**Over all 3 of their comparable marches**, the bar dominates **2** at matched spend; the one it does worst on is `TotalStack · Total Optimization` at +17.7 %.
+**Over all 3 of their comparable marches**, the bar dominates **2** at matched spend; the one it does worst on is `TotalStack · Total Optimization` at +22.1 %.
 
 **The six markers**, our best against theirs on each alone: damage ✓, silver ✓, burned ✗, gold ✗, dragonCoins =, seconds ✓.
 
@@ -622,7 +622,7 @@ The plan offers 3 stops.
 | TotalStack · M’s Preservation | 4 | 8 · 5,225 | 5,187,364 | 7,862,000 | 0 | 0 | 0.66 | 0 | 0 | 12 | 1,920 | 0 | 130,251 | 2,702 |
 | TotalStack · Total Optimization | 4 | 8 · 5,225 | 6,779,808 | 7,989,200 | 1,952 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
 | TotalStack · Elite Preservation | 4 | 8 · 5,225 | 6,779,808 | 7,989,200 | 1,952 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
-| Complete optimization · silver-saver | 4 | 8 · 2,031 | 4,919,095 | 4,431,600 | 480 | 7 | 1.11 | 131,856 | 7 | 16 | 3,840 | 131,856 | 116,603 | 1,281 |
+| Complete optimization · silver-saver | 4 | 8 · 2,031 | 4,935,728 | 4,431,600 | 480 | 7 | 1.11 | 131,856 | 7 | 16 | 3,840 | 131,856 | 116,603 | 1,285 |
 | Complete optimization · sweet-spot | 4 | 7 · 5,225 | 8,250,940 | 8,344,200 | 1,320 | 19 | 0.99 | 109,005 | 19 | 16 | 3,840 | 109,005 | 118,153 | 2,149 |
 | Complete optimization · steady-max | 4 | 6 · 5,221 | 8,443,234 | 8,706,000 | 1,584 | 25 | 0.97 | 100,404 | 25 | 16 | 3,840 | 100,404 | 110,928 | 2,199 |
 
@@ -632,7 +632,7 @@ The plan offers 3 stops.
 
 **The six markers**, our best against theirs on each alone: damage ✓, silver ✓, burned ✗, gold ✗, dragonCoins ✗, seconds ✓.
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.308** ✓, damage a hired soldier —, damage a monster **0.911** ✗. **Below the goal: damage a monster** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.245** ✓ — the monsters’ own price (S-102).
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.312** ✓, damage a hired soldier —, damage a monster **0.911** ✗. **Below the goal: damage a monster** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.245** ✓ — the monsters’ own price (S-102).
 
 ## his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)
 
@@ -725,8 +725,8 @@ The reading the owner’s definition of *beating* another calculator reduces to 
 | live account of 2026-09-18 (one hired type, 20 000 leadership) | **beat** | TotalStack · Elite Preservation | Complete optimization · all-in | +1.8 % | 9/9 | 0 | 9/9 |
 | live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | **short** | TotalStack · priority search under Total Optimization (averageDamage) | Complete optimization · all-in | -5.6 % | 6/9 | 0 | 9/9 |
 | Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | **short** | TotalStack · priority search under Total Optimization (averageDamage) | Complete optimization · all-in | -20.2 % | 0/9 | 0 | 1/9 |
-| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | **short** | TotalStack · Elite Preservation | Complete optimization · burn-saver | -82.1 % | 0/3 | 0 | 0/3 |
-| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | **beat** | TotalStack · Elite Preservation | Complete optimization · silver-saver | +17.7 % | 2/3 | 1 | 2/3 |
+| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | **short** | TotalStack · Elite Preservation | Complete optimization · silver-saver | -81.8 % | 0/3 | 0 | 0/3 |
+| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | **beat** | TotalStack · Elite Preservation | Complete optimization · silver-saver | +22.1 % | 2/3 | 1 | 2/3 |
 | his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | **beat** | TotalStack · Elite Preservation | Complete optimization · silver-saver | +12.2 % | 2/3 | 1 | 2/3 |
 | his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | **beat** | TotalStack · Elite Preservation | Complete optimization · sweet-spot | +21.7 % | 2/3 | 1 | 2/3 |
 | his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | **beat** | TotalStack · priority search under M’s (damagePerSilver) | Complete optimization · steady-max | +4.6 % | 5/9 | 2 | 7/9 |
@@ -752,24 +752,24 @@ Not asserted, and deliberately — a timing floor would be red on a slow machine
 
 | army | planner | of its budget | bound? | search, all calls | a call | of its budget |
 |---|---|---|---|---|---|---|
-| first-run army, Bear V ×1 (20 000 leadership) | 481 ms | 1 % | no | 15,026 ms over 40 | 376 ms | 5 % |
-| first-run army, Bear V ×2 (20 000 leadership) | 348 ms | 1 % | no | 14,215 ms over 40 | 355 ms | 4 % |
-| first-run army, Bear V ×3 (20 000 leadership) | 436 ms | 1 % | no | 15,438 ms over 40 | 386 ms | 5 % |
-| first-run army, Bear V ×10 (20 000 leadership) | 416 ms | 1 % | no | 13,546 ms over 40 | 339 ms | 4 % |
-| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 882 ms | 2 % | no | 13,915 ms over 40 | 348 ms | 4 % |
-| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 14,879 ms | 37 % | no | 123,281 ms over 40 | 3,082 ms | 39 % |
-| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 1,114 ms | 3 % | no | 14,406 ms over 40 | 360 ms | 5 % |
-| 2026-09-17 export, its setup (7 000 leadership) | 2,561 ms | 6 % | no | 5,998 ms over 40 | 150 ms | 2 % |
-| 2026-09-17 export, 12 000 leadership | 2,445 ms | 6 % | no | 6,244 ms over 40 | 156 ms | 2 % |
-| live account of 2026-09-18 (one hired type, 20 000 leadership) | 160 ms | 0 % | no | 638 ms over 40 | 16 ms | 0 % |
-| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 1,819 ms | 5 % | no | 5,988 ms over 40 | 150 ms | 2 % |
-| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 1,641 ms | 4 % | no | 12,256 ms over 40 | 306 ms | 4 % |
-| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 1,062 ms | 3 % | no | 2,571 ms over 40 | 64 ms | 1 % |
-| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 226 ms | 1 % | no | 560 ms over 40 | 14 ms | 0 % |
-| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 132 ms | 0 % | no | 559 ms over 40 | 14 ms | 0 % |
-| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 3,970 ms | 10 % | no | 9,480 ms over 40 | 237 ms | 3 % |
-| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 4,817 ms | 12 % | no | 9,048 ms over 40 | 226 ms | 3 % |
-| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 3,874 ms | 10 % | no | 12,421 ms over 40 | 311 ms | 4 % |
+| first-run army, Bear V ×1 (20 000 leadership) | 377 ms | 1 % | no | 12,380 ms over 40 | 310 ms | 4 % |
+| first-run army, Bear V ×2 (20 000 leadership) | 286 ms | 1 % | no | 11,227 ms over 40 | 281 ms | 4 % |
+| first-run army, Bear V ×3 (20 000 leadership) | 295 ms | 1 % | no | 11,141 ms over 40 | 279 ms | 3 % |
+| first-run army, Bear V ×10 (20 000 leadership) | 379 ms | 1 % | no | 11,347 ms over 40 | 284 ms | 4 % |
+| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 675 ms | 2 % | no | 11,181 ms over 40 | 280 ms | 3 % |
+| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 9,984 ms | 25 % | no | 170,021 ms over 40 | 4,251 ms | 53 % |
+| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 677 ms | 2 % | no | 11,364 ms over 40 | 284 ms | 4 % |
+| 2026-09-17 export, its setup (7 000 leadership) | 1,288 ms | 3 % | no | 4,718 ms over 40 | 118 ms | 1 % |
+| 2026-09-17 export, 12 000 leadership | 1,356 ms | 3 % | no | 4,513 ms over 40 | 113 ms | 1 % |
+| live account of 2026-09-18 (one hired type, 20 000 leadership) | 81 ms | 0 % | no | 480 ms over 40 | 12 ms | 0 % |
+| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 901 ms | 2 % | no | 4,437 ms over 40 | 111 ms | 1 % |
+| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 893 ms | 2 % | no | 9,601 ms over 40 | 240 ms | 3 % |
+| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 549 ms | 1 % | no | 2,213 ms over 40 | 55 ms | 1 % |
+| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 122 ms | 0 % | no | 487 ms over 40 | 12 ms | 0 % |
+| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 76 ms | 0 % | no | 483 ms over 40 | 12 ms | 0 % |
+| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 2,589 ms | 6 % | no | 8,002 ms over 40 | 200 ms | 3 % |
+| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 3,067 ms | 8 % | no | 7,593 ms over 40 | 190 ms | 2 % |
+| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 2,393 ms | 6 % | no | 10,314 ms over 40 | 258 ms | 3 % |
 
 **0 of 18** armies leave the planner budget-bound, and the priority search is bound on none of them either.
 

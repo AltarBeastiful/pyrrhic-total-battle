@@ -1,5 +1,5 @@
 {
- "run": "2026-09-24T10:11:40.673Z",
+ "run": "2026-09-25T00:04:35.680Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,8 +7,8 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 481,
-   "searchMs": 15026,
+   "planMs": 377,
+   "searchMs": 12380,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -558,8 +558,8 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 348,
-   "searchMs": 14215,
+   "planMs": 286,
+   "searchMs": 11227,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -1110,8 +1110,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 436,
-   "searchMs": 15438,
+   "planMs": 295,
+   "searchMs": 11141,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -1870,8 +1870,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 416,
-   "searchMs": 13546,
+   "planMs": 379,
+   "searchMs": 11347,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -2628,8 +2628,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 882,
-   "searchMs": 13915,
+   "planMs": 675,
+   "searchMs": 11181,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -3471,8 +3471,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 14879,
-   "searchMs": 123281,
+   "planMs": 9984,
+   "searchMs": 170021,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -4234,8 +4234,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 1114,
-   "searchMs": 14406,
+   "planMs": 677,
+   "searchMs": 11364,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -5093,8 +5093,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 2561,
-   "searchMs": 5998,
+   "planMs": 1288,
+   "searchMs": 4718,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -5973,8 +5973,8 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 2445,
-   "searchMs": 6244,
+   "planMs": 1356,
+   "searchMs": 4513,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -5999,19 +5999,19 @@
      },
      "silver-saver": {
       "marches": 4,
-      "damage": 21273264,
+      "damage": 21675209,
       "silver": 12129500,
       "gold": 3056,
       "seconds": 2929905,
       "burned": 48,
-      "perSilver": 1.7538450884207923,
+      "perSilver": 1.7869828929469476,
       "perHired": 297347.3333333333,
       "soldiersLost": 48,
       "monstersLost": 0,
       "dragonCoins": 0,
       "perSoldier": 297347.3333333333,
       "perMonster": 0,
-      "perDragonCoin": 21273264
+      "perDragonCoin": 21675209
      },
      "sweet-spot": {
       "marches": 4,
@@ -6737,19 +6737,19 @@
      "marches": 4,
      "troopTypes": 7,
      "leadershipUsed": 6347,
-     "damage": 21273264,
+     "damage": 21675209,
      "silver": 12129500,
      "gold": 3056,
      "seconds": 2929905,
      "burned": 48,
-     "perSilver": 1.754,
+     "perSilver": 1.787,
      "perHired": 297347,
      "soldiersLost": 48,
      "monstersLost": 0,
      "dragonCoins": 0,
      "perSoldier": 297347,
      "perMonster": 0,
-     "perDragonCoin": 21273264,
+     "perDragonCoin": 21675209,
      "hiredDamage": 14272672,
      "soldierDamage": 14272672,
      "monsterDamage": 0
@@ -6813,8 +6813,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 160,
-   "searchMs": 638,
+   "planMs": 81,
+   "searchMs": 480,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -6823,19 +6823,19 @@
     "stops": {
      "silver-saver": {
       "marches": 4,
-      "damage": 18256930,
-      "silver": 18959900,
+      "damage": 18257371,
+      "silver": 18600300,
       "gold": 1368,
-      "seconds": 4741605,
+      "seconds": 4716030,
       "burned": 20,
-      "perSilver": 0.9629233276546817,
+      "perSilver": 0.9815632543561126,
       "perHired": 309020.8,
       "soldiersLost": 20,
       "monstersLost": 0,
       "dragonCoins": 0,
       "perSoldier": 309020.8,
       "perMonster": 0,
-      "perDragonCoin": 18256930
+      "perDragonCoin": 18257371
      },
      "sweet-spot": {
       "marches": 4,
@@ -6948,17 +6948,17 @@
       }
      },
      "perSilver": {
-      "bestSizer": 1.1888194165733477,
+      "bestSizer": 1.211832159280638,
       "externals": {
-       "TotalStack · M’s Preservation": 1.1617965136918549,
-       "TotalStack · priority search under M’s (averageDamage)": 1.1617965136918549,
-       "TotalStack · priority search under M’s (damagePerSilver)": 1.1617965136918549,
-       "TotalStack · Total Optimization": 1.0325419457350236,
-       "TotalStack · priority search under Total Optimization (averageDamage)": 1.0325419457350236,
-       "TotalStack · priority search under Total Optimization (damagePerSilver)": 1.0325419457350236,
-       "TotalStack · Elite Preservation": 1.0325419457350236,
-       "TotalStack · priority search under Elite (averageDamage)": 1.0325419457350236,
-       "TotalStack · priority search under Elite (damagePerSilver)": 1.0325419457350236
+       "TotalStack · M’s Preservation": 1.184286156673025,
+       "TotalStack · priority search under M’s (averageDamage)": 1.184286156673025,
+       "TotalStack · priority search under M’s (damagePerSilver)": 1.184286156673025,
+       "TotalStack · Total Optimization": 1.052529524841172,
+       "TotalStack · priority search under Total Optimization (averageDamage)": 1.052529524841172,
+       "TotalStack · priority search under Total Optimization (damagePerSilver)": 1.052529524841172,
+       "TotalStack · Elite Preservation": 1.052529524841172,
+       "TotalStack · priority search under Elite (averageDamage)": 1.052529524841172,
+       "TotalStack · priority search under Elite (damagePerSilver)": 1.052529524841172
       }
      }
     }
@@ -6989,7 +6989,7 @@
      },
      {
       "marker": "silver",
-      "ours": 18959900,
+      "ours": 18600300,
       "theirs": 31335200,
       "standing": "win"
      },
@@ -7013,7 +7013,7 @@
      },
      {
       "marker": "seconds",
-      "ours": 4741605,
+      "ours": 4716030,
       "theirs": 7625940,
       "standing": "win"
      }
@@ -7555,19 +7555,19 @@
      "marches": 4,
      "troopTypes": 7,
      "leadershipUsed": 9298,
-     "damage": 18256930,
-     "silver": 18959900,
+     "damage": 18257371,
+     "silver": 18600300,
      "gold": 1368,
-     "seconds": 4741605,
+     "seconds": 4716030,
      "burned": 20,
-     "perSilver": 0.963,
+     "perSilver": 0.982,
      "perHired": 309021,
      "soldiersLost": 20,
      "monstersLost": 0,
      "dragonCoins": 0,
      "perSoldier": 309021,
      "perMonster": 0,
-     "perDragonCoin": 18256930,
+     "perDragonCoin": 18257371,
      "hiredDamage": 6180416,
      "soldierDamage": 6180416,
      "monsterDamage": 0
@@ -7656,8 +7656,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1819,
-   "searchMs": 5988,
+   "planMs": 901,
+   "searchMs": 4437,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -8538,8 +8538,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1641,
-   "searchMs": 12256,
+   "planMs": 893,
+   "searchMs": 9601,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -9381,8 +9381,8 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 1062,
-   "searchMs": 2571,
+   "planMs": 549,
+   "searchMs": 2213,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -9407,19 +9407,19 @@
      },
      "silver-saver": {
       "marches": 4,
-      "damage": 8393455,
-      "silver": 6773900,
+      "damage": 8947961,
+      "silver": 6704900,
       "gold": 5480,
-      "seconds": 2712180,
+      "seconds": 2687805,
       "burned": 34,
-      "perSilver": 1.2390875271261754,
-      "perHired": 159825.11764705883,
+      "perSilver": 1.3345405598890363,
+      "perHired": 171510.11764705883,
       "soldiersLost": 30,
       "monstersLost": 4,
       "dragonCoins": 0,
-      "perSoldier": 125695.13333333333,
+      "perSoldier": 138938.13333333333,
       "perMonster": 415800,
-      "perDragonCoin": 8393455
+      "perDragonCoin": 8947961
      },
      "sweet-spot": {
       "marches": 4,
@@ -9528,16 +9528,16 @@
     "verdict": "short",
     "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 49229801,
-    "ourStop": "Complete optimization · burn-saver",
-    "ourDamage": 8820632,
-    "delta": -0.8208,
+    "ourStop": "Complete optimization · silver-saver",
+    "ourDamage": 8947961,
+    "delta": -0.8182,
     "over": [],
     "rows": 3,
     "rowsBeaten": 0,
     "unfitted": 0,
     "worst": {
      "name": "TotalStack · Total Optimization",
-     "delta": -0.8208
+     "delta": -0.8182
     },
     "anythingBeaten": 0,
     "floors": [
@@ -9549,7 +9549,7 @@
      },
      {
       "marker": "silver",
-      "ours": 6773900,
+      "ours": 6704900,
       "theirs": 7794000,
       "standing": "win"
      },
@@ -9994,22 +9994,22 @@
      "comparable": true,
      "marches": 4,
      "troopTypes": 2,
-     "leadershipUsed": 2820,
-     "damage": 8393455,
-     "silver": 6773900,
+     "leadershipUsed": 2774,
+     "damage": 8947961,
+     "silver": 6704900,
      "gold": 5480,
-     "seconds": 2712180,
+     "seconds": 2687805,
      "burned": 34,
-     "perSilver": 1.239,
-     "perHired": 159825,
+     "perSilver": 1.335,
+     "perHired": 171510,
      "soldiersLost": 30,
      "monstersLost": 4,
      "dragonCoins": 0,
-     "perSoldier": 125695,
+     "perSoldier": 138938,
      "perMonster": 415800,
-     "perDragonCoin": 8393455,
-     "hiredDamage": 5434054,
-     "soldierDamage": 3770854,
+     "perDragonCoin": 8947961,
+     "hiredDamage": 5831344,
+     "soldierDamage": 4168144,
      "monsterDamage": 1663200
     },
     {
@@ -10096,8 +10096,8 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 226,
-   "searchMs": 560,
+   "planMs": 122,
+   "searchMs": 487,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -10122,19 +10122,19 @@
      },
      "silver-saver": {
       "marches": 4,
-      "damage": 7561467,
-      "silver": 7313300,
+      "damage": 7843070,
+      "silver": 7313200,
       "gold": 848,
-      "seconds": 2257230,
+      "seconds": 2258460,
       "burned": 12,
-      "perSilver": 1.033933655121491,
+      "perSilver": 1.0724539189410929,
       "perHired": 318189,
       "soldiersLost": 12,
       "monstersLost": 0,
       "dragonCoins": 0,
       "perSoldier": 318189,
       "perMonster": 0,
-      "perDragonCoin": 7561467
+      "perDragonCoin": 7843070
      },
      "sweet-spot": {
       "marches": 4,
@@ -10240,15 +10240,15 @@
     "hardest": "TotalStack · Elite Preservation",
     "theirDamage": 6422616,
     "ourStop": "Complete optimization · silver-saver",
-    "ourDamage": 7561467,
-    "delta": 0.1773,
+    "ourDamage": 7843070,
+    "delta": 0.2212,
     "over": [],
     "rows": 3,
     "rowsBeaten": 2,
     "unfitted": 1,
     "worst": {
      "name": "TotalStack · Total Optimization",
-     "delta": 0.1773
+     "delta": 0.2212
     },
     "anythingBeaten": 2,
     "floors": [
@@ -10260,7 +10260,7 @@
      },
      {
       "marker": "silver",
-      "ours": 7313300,
+      "ours": 7313200,
       "theirs": 7794000,
       "standing": "win"
      },
@@ -10706,19 +10706,19 @@
      "marches": 4,
      "troopTypes": 5,
      "leadershipUsed": 3918,
-     "damage": 7561467,
-     "silver": 7313300,
+     "damage": 7843070,
+     "silver": 7313200,
      "gold": 848,
-     "seconds": 2257230,
+     "seconds": 2258460,
      "burned": 12,
-     "perSilver": 1.034,
+     "perSilver": 1.072,
      "perHired": 318189,
      "soldiersLost": 12,
      "monstersLost": 0,
      "dragonCoins": 0,
      "perSoldier": 318189,
      "perMonster": 0,
-     "perDragonCoin": 7561467,
+     "perDragonCoin": 7843070,
      "hiredDamage": 3818268,
      "soldierDamage": 3818268,
      "monsterDamage": 0
@@ -10807,8 +10807,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 132,
-   "searchMs": 559,
+   "planMs": 76,
+   "searchMs": 483,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -11516,8 +11516,8 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 3970,
-   "searchMs": 9480,
+   "planMs": 2589,
+   "searchMs": 8002,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -11526,19 +11526,19 @@
     "stops": {
      "silver-saver": {
       "marches": 4,
-      "damage": 4919095,
+      "damage": 4935728,
       "silver": 4431600,
       "gold": 480,
       "seconds": 1003305,
       "burned": 7,
-      "perSilver": 1.1100042873905587,
+      "perSilver": 1.1137575593465114,
       "perHired": 131856,
       "soldiersLost": 7,
       "monstersLost": 16,
       "dragonCoins": 3840,
       "perSoldier": 131856,
       "perMonster": 116603.0625,
-      "perDragonCoin": 1281.0143229166667
+      "perDragonCoin": 1285.3458333333333
      },
      "sweet-spot": {
       "marches": 4,
@@ -11617,11 +11617,11 @@
       }
      },
      "perSilver": {
-      "bestSizer": 1.1558325835709085,
+      "bestSizer": 1.1597408153416986,
       "externals": {
-       "TotalStack · M’s Preservation": 1.6823291574419248,
-       "TotalStack · Total Optimization": 1.308008464667532,
-       "TotalStack · Elite Preservation": 1.308008464667532
+       "TotalStack · M’s Preservation": 1.688017638936129,
+       "TotalStack · Total Optimization": 1.3124312507273288,
+       "TotalStack · Elite Preservation": 1.3124312507273288
       }
      }
     }
@@ -12122,19 +12122,19 @@
      "marches": 4,
      "troopTypes": 8,
      "leadershipUsed": 2031,
-     "damage": 4919095,
+     "damage": 4935728,
      "silver": 4431600,
      "gold": 480,
      "seconds": 1003305,
      "burned": 7,
-     "perSilver": 1.11,
+     "perSilver": 1.114,
      "perHired": 131856,
      "soldiersLost": 7,
      "monstersLost": 16,
      "dragonCoins": 3840,
      "perSoldier": 131856,
      "perMonster": 116603,
-     "perDragonCoin": 1281,
+     "perDragonCoin": 1285,
      "hiredDamage": 922992,
      "soldierDamage": 922992,
      "monsterDamage": 1865649
@@ -12197,8 +12197,8 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 4817,
-   "searchMs": 9048,
+   "planMs": 3067,
+   "searchMs": 7593,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -13053,8 +13053,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 3874,
-   "searchMs": 12421,
+   "planMs": 2393,
+   "searchMs": 10314,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,

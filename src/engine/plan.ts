@@ -43,7 +43,7 @@ import { simulateBattle } from './battle';
 import { sizeStacks } from './stacker';
 import type { Bill, MarkerRates } from './rating';
 import { rate, saved } from './rating';
-import { retypeMarch } from './retype';
+import { marchBill, retypeMarch } from './retype';
 import { planTrace } from './plan-trace';
 import { LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, planKernel } from './fast';
 import type { LadderKernel, MarchFigures, PlanKernel } from './fast';
@@ -6135,9 +6135,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const leadershipIds = new Set(
     table.filter((entry) => entry.pool === 'leadership').map((entry) => entry.id),
   );
-  const retypeOne = (counts: Record<string, number>): Record<string, number> => {
+  /**
+   * `holdSilver`: a silver saver's march (W14 step 2, experiment 176): re-typed under **its silver must not
+   * rise and its damage per silver must not drop** (`retypeMarch`'s `silverCeiling` at the march's own silver
+   * and `holdDamagePerSilver`; the owner, 2026-09-25), cached apart from the free re-typing.
+   */
+  const retypeOne = (
+    counts: Record<string, number>,
+    holdSilver = false,
+    holdQueue = false,
+  ): Record<string, number> => {
     if (retypeRates === undefined) return counts;
-    const key = JSON.stringify(Object.entries(counts).sort());
+    const key = `${holdSilver ? 'held|' : ''}${holdQueue ? 'queue|' : ''}${JSON.stringify(Object.entries(counts).sort())}`;
     const hit = retypeCache.get(key);
     if (hit) return hit;
     if (Date.now() > retypeDeadline) {
@@ -6159,6 +6168,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const found = retypeMarch(request, counts, retypeRates, {
       deadline: retypeDeadline,
       ...(input.tierCandidate === true ? { tierCandidate: true } : {}),
+      ...(holdSilver ? { silverCeiling: marchBill(request, counts).silver, holdDamagePerSilver: true } : {}),
+      ...(holdQueue ? { secondsCeiling: marchBill(request, counts).seconds } : {}),
     });
     if (found?.cut) retypeLog.cut = true;
     let out = counts;
@@ -6293,7 +6304,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     foldedFrom.set(next, row);
     return next;
   };
-  const retypeRowNow = <T extends PlanTotals>(row: T): T => {
+  const retypeRowNow = <T extends PlanTotals>(row: T, queueHeld = false): T => {
     if (retypeRates === undefined) return row;
     const played: { counts: Record<string, number>; times: number }[] = [];
     const tailed = row.tail?.marches ?? 0;
@@ -6303,7 +6314,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (row.finaleCounts) played.push({ counts: row.finaleCounts, times: 1 });
       if (row.tail && tailed > 0) played.push({ counts: row.tail.counts, times: tailed });
     }
-    const moved = played.map(({ counts, times }) => ({ counts, times, next: retypeOne(counts) }));
+    /** A silver saver stays one, march by march: each of its marches is re-typed with its silver held. */
+    const holdSilver = (row as Partial<PlanRow>).pick === 'silver-saver';
+    const othersQueue = Math.min(
+      ...stops.filter((o) => o !== row && o.pick !== (row as Partial<PlanRow>).pick).map((o) => o.seconds),
+    );
+    /** The queue is held too once the free re-typing would lose the bar's shortest queue (`queueHeld`). */
+    const holdQueue = holdSilver && queueHeld;
+    const moved = played.map(({ counts, times }) => ({
+      counts,
+      times,
+      next: retypeOne(counts, holdSilver, holdQueue),
+    }));
     const changed = moved.filter((march) => march.next !== march.counts && march.times > 0);
     const traceRow = (silverSaverGuard: boolean): void =>
       planTrace.sink?.({
@@ -6330,7 +6352,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       delta.mercLost += march.times * (now.mercLost - was.mercLost);
     }
     const nextOf = (counts: Record<string, number>): Record<string, number> =>
-      moved.find((march) => march.counts === counts)?.next ?? retypeOne(counts);
+      moved.find((march) => march.counts === counts)?.next ?? retypeOne(counts, holdSilver, holdQueue);
     const counts = nextOf(row.counts);
     const repeatMoved = counts !== row.counts;
     const m = repeatMoved ? priceCounts(counts) : undefined;
@@ -6401,11 +6423,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      * **A silver saver stays one** (plan-criteria, "a bar with a saving on it carries a silver saver"): the stop
      * is named for its silver, so a re-typing that buys damage or queue with a little more of it is not taken
      * there — measured on the live account of 2026-09-18, +3 400 silver put it above a band plan it must undercut.
+     * Held on each march since W14 step 2 (`holdSilver` above; experiment 177); this row-level check stays as
+     * the backstop, so the row's own silver and repeat silver never rise and their damage per silver never
+     * drops.
      */
     if (
       (row as Partial<PlanRow>).pick === 'silver-saver' &&
-      (next.silver > row.silver || next.repeat.silver > row.repeat.silver)
+      (next.silver > row.silver ||
+        next.repeat.silver > row.repeat.silver ||
+        // Damage per silver must not drop either (the owner, 2026-09-25), on the row or on its repeat.
+        next.totalDamage * row.silver < row.totalDamage * next.silver ||
+        next.repeat.damage * row.repeat.silver < row.repeat.damage * next.repeat.silver)
     ) {
+      traceRow(true);
+      return row;
+    }
+    if (holdSilver && Math.min(next.seconds, othersQueue) > Math.min(row.seconds, othersQueue)) {
+      // The bar's shortest queue, held by the silver saver, would be lost (W14 step 2, experiment 177): its
+      // marches are re-typed again with their queue seconds held too, and the row is handed back if even that
+      // loses it. `keepReadings` would buy the loss (worth ≤ 0.014 against a gain ≥ 0.35), but no bar
+      // reading may get worse for a silver saver's re-typing.
+      if (!queueHeld) return retypeRowNow(row, true);
       traceRow(true);
       return row;
     }
@@ -6929,7 +6967,27 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         const next = swapped(counts, priceCounts(counts));
         if (input.silverBudget !== undefined && next.silver > input.silverBudget) continue;
         const rating = rate(totalsBill(current), totalsBill(next), retypeRates);
-        if (rating > 0 && (!best || rating > best.rating)) best = { next, rating };
+        // A silver saver's finale is judged as it was before its re-typing: the finale the bar took from the
+        // un-re-typed stop is not kept out by the re-typing of the finale it replaces (W14 step 2, experiment
+        // 177: otherwise the 7 000 export's silver saver keeps a finale dearer in silver and queue).
+        const headTakes = ((): boolean => {
+          if (row.pick !== 'silver-saver' || rating > 0) return false;
+          const was = beforeRetype.get(current);
+          if (!was?.finaleCounts || was.sequence) return false;
+          const old = priceCounts(was.finaleCounts);
+          const plain = priceCounts(counts);
+          const bill = totalsBill(was);
+          const after: Bill = {
+            damage: bill.damage - old.damage + plain.damage,
+            silver: bill.silver - old.silver + plain.silver,
+            gold: bill.gold - old.gold + plain.gold,
+            hired: bill.hired - old.mercLost + plain.mercLost,
+            dragonCoins: bill.dragonCoins - old.dragonCoins + plain.dragonCoins,
+            seconds: bill.seconds - old.seconds + plain.seconds,
+          };
+          return rate(bill, after, retypeRates) > 0;
+        })();
+        if ((rating > 0 || headTakes) && (!best || rating > best.rating)) best = { next, rating };
       }
       if (!best) continue;
       const { next, rating } = best;
