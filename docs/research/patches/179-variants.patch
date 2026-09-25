@@ -1,0 +1,184 @@
+--- a/src/engine/retype.ts
++++ b/src/engine/retype.ts
+@@ -25,15 +25,11 @@
+ import { chunks } from './recovery';
+ import type { StackRequest } from './types';
+ 
+-/**
+- * Up to this many assignments are tried one by one; above it, the swap/replace climb. **5 040 = 7!**, every
+- * order of seven troop types on seven slots (W14 step 4, experiment 179): the owner's accounts field seven types
+- * on seven slots, a space of 5 040 that sat just above the 5 000 of W11 and so was only climbed (176: the climb
+- * stopped short there on the live accounts, +0.2 to +0.4 a march). A count, never a clock, so the TypeScript path
+- * and the kernel choose the same; 50 000 (eight of eight) was measured too and costs the TypeScript fallback
+- * seconds on the eight-type accounts for +2.0 more.
+- */
+-export const EXHAUSTIVE = 5_040;
++/** Up to this many assignments are tried one by one; above it, the swap/replace climb. */
++export const EXHAUSTIVE = 5_000;
++// TEMPORARY W14 step 4 experiment switch.
++const W14ENV: { exhaustive?: number; seeds?: boolean; cycles?: boolean; twinRestart?: boolean } =
++  typeof process !== 'undefined' && process.env?.W14S4 ? JSON.parse(process.env.W14S4) : {};
+ /** The climb's step cap (157's). */
+ const CLIMB_STEPS = 60;
+ 
+@@ -110,12 +106,13 @@
+  * **Bills already battled, per request** (W14 step 4): a march's bill is a pure function of the request and its
+  * counts, and the plan hands the search the same march several times (a silver saver's finale with and without
+  * its queue held, the own-ladder finales each stop sizes), so the walk re-battles the same assignments. Kept by
+- * request identity (the object `planCampaign` holds for the whole plan) and by engine path, dropped with it. It
+- * never changes a figure, only how often it is computed, so both paths choose the same.
++ * request identity (the object `planCampaign` holds for the whole plan) and by engine path, dropped with it. It never changes a
++ * figure, only how often it is computed, so both paths choose the same.
+  */
+ const billCache = new WeakMap<StackRequest, { path: unknown; bills: Map<string, Bill> }>();
+ /** Entries a request's cache holds before it is cleared (a bound on memory, not on the search). */
+ const BILL_CACHE_SIZE = 200_000;
++export const billCacheStats = { hits: 0, misses: 0 };
+ function cachedBill(request: StackRequest, counts: Record<string, number>): Bill {
+   // One cache per engine path: a request planned on the kernel and then in TS battles again on each.
+   const path = planKernel();
+@@ -128,7 +125,11 @@
+   let key = '';
+   for (const unit of request.units) key += `${String(counts[unit.id] ?? 0)},`;
+   const hit = cache.get(key);
+-  if (hit) return hit;
++  if (hit) {
++    billCacheStats.hits += 1;
++    return hit;
++  }
++  billCacheStats.misses += 1;
+   const bill = marchBill(request, counts);
+   if (cache.size >= BILL_CACHE_SIZE) cache.clear();
+   cache.set(key, bill);
+@@ -215,7 +216,8 @@
+   const m = table.length;
+   let perms = 1;
+   for (let i = 0; i < k; i += 1) perms *= m - i;
+-  const exhaustive = perms <= EXHAUSTIVE;
++  const w14 = (globalThis as { __w14s4?: { exhaustive?: number; seeds?: boolean; cycles?: boolean; twinRestart?: boolean } }).__w14s4 ?? W14ENV;
++  const exhaustive = perms <= (w14.exhaustive ?? EXHAUSTIVE);
+   const asIs = troopStacks.map((s) => table.findIndex((t) => t.id === s.unitId));
+   let tier = asIs;
+   let ranking = asIs;
+@@ -282,6 +284,40 @@
+           const s = consider(next);
+           if (s > currentScore + 1e-6 && (!moved || s > moved.score)) moved = { types: next, score: s };
+         }
++        if (!moved && w14.cycles) {
++          // Second-order moves, only once the first-order ones stall: 3-cycles of slots, and chains (an unused
++          // type into slot a, a's type into slot b, b's type out).
++          const second: number[][] = [];
++          for (let a = 0; a < k; a += 1)
++            for (let b = 0; b < k; b += 1) {
++              if (b === a) continue;
++              for (let c = b + 1; c < k; c += 1) {
++                if (c === a || a > b) continue;
++                const next = [...current];
++                next[a] = current[b] as number;
++                next[b] = current[c] as number;
++                next[c] = current[a] as number;
++                second.push(next);
++                const back = [...current];
++                back[a] = current[c] as number;
++                back[c] = current[b] as number;
++                back[b] = current[a] as number;
++                second.push(back);
++              }
++              for (let t = 0; t < m; t += 1) {
++                if (current.includes(t)) continue;
++                const next = [...current];
++                next[b] = current[a] as number;
++                next[a] = t;
++                second.push(next);
++              }
++            }
++          for (const next of second) {
++            if (outOfTime()) break;
++            const s = consider(next);
++            if (s > currentScore + 1e-6 && (!moved || s > moved.score)) moved = { types: next, score: s };
++          }
++        }
+         if (!moved) break;
+         current = moved.types;
+         currentScore = moved.score;
+@@ -301,6 +337,31 @@
+         from = 'ranking';
+         climb(ranking, consider(ranking));
+       }
++      if (w14.seeds) {
++        // The account's own orders over the march's slots: its first k types in kill order and in the ranking,
++        // biggest slot first.
++        const bySlotHp = slots.map((_, i) => i).sort((a, b) => (slots[b] ?? 0) - (slots[a] ?? 0));
++        const index = new Map(table.map((entry, i) => [entry.id, i]));
++        const account = (ids: string[]): number[] => {
++          const types = ids.map((id) => index.get(id)).filter((t): t is number => t !== undefined).slice(0, k);
++          const out = [...asIs];
++          bySlotHp.forEach((slot, i) => (out[slot] = types[i] as number));
++          return out;
++        };
++        const starts = [
++          { seed: 'tier' as const, types: account(buildKillOrder(request.units, request.options)) },
++          { seed: 'ranking' as const, types: account(rankTroops(effectiveTable(request)).map((e) => e.id)) },
++          { seed: 'tier' as const, types: [...tier].reverse() },
++        ];
++        const done = [asIs, tier, ranking];
++        for (const start of starts) {
++          if (start.types.some((t) => t === undefined) || new Set(start.types).size !== k) continue;
++          if (done.some((d) => same(d, start.types))) continue;
++          done.push(start.types);
++          from = start.seed;
++          climb(start.types, consider(start.types));
++        }
++      }
+     }
+   }
+   if (tierCandidate && best !== null && !cut) {
+--- a/src/engine/plan.ts
++++ b/src/engine/plan.ts
+@@ -6325,13 +6325,17 @@
+     const othersQueue = Math.min(
+       ...stops.filter((o) => o !== row && o.pick !== (row as Partial<PlanRow>).pick).map((o) => o.seconds),
+     );
+-    /**
+-     * The queue is held too once the free re-typing would lose the bar's shortest queue (`queueHeld`), and from
+-     * the start when the silver saver holds that reading (W14 step 4, experiment 179): the stronger search found
+-     * repeats that raise the saver's queue while its finale lowers it, and the own-ladder finale (step 3) later
+-     * replaces that finale, so the row-level check alone let the bar's shortest queue go.
+-     */
+-    const holdQueue = holdSilver && (queueHeld || row.seconds <= othersQueue);
++    /** The queue is held too once the free re-typing would lose the bar's shortest queue (`queueHeld`). */
++    const queueAll =
++      (globalThis as { __w14s4?: { queueAll?: boolean } }).__w14s4?.queueAll === true ||
++      ((globalThis as { __w14s4?: { queueSavers?: boolean } }).__w14s4?.queueSavers === true &&
++        (row as Partial<PlanRow>).pick === 'burn-saver');
++    const queueSS =
++      (globalThis as { __w14s4?: { queueSS?: boolean } }).__w14s4?.queueSS === true && holdSilver && row.seconds <= othersQueue;
++    const queueHolder =
++      (globalThis as { __w14s4?: { queueHolder?: boolean } }).__w14s4?.queueHolder === true && row.seconds <= othersQueue &&
++      ((globalThis as { __w14s4?: { holderPicks?: string[] } }).__w14s4?.holderPicks ?? [String((row as Partial<PlanRow>).pick)]).includes(String((row as Partial<PlanRow>).pick));
++    const holdQueue = ((holdSilver || queueAll) && (queueHeld || queueSS)) || queueHolder;
+     const moved = played.map(({ counts, times }) => ({
+       counts,
+       times,
+@@ -6449,7 +6453,7 @@
+       traceRow(true);
+       return row;
+     }
+-    if (holdSilver && Math.min(next.seconds, othersQueue) > Math.min(row.seconds, othersQueue)) {
++    if ((holdSilver || queueAll) && Math.min(next.seconds, othersQueue) > Math.min(row.seconds, othersQueue)) {
+       // The bar's shortest queue, held by the silver saver, would be lost (W14 step 2, experiment 177): its
+       // marches are re-typed again with their queue seconds held too, and the row is handed back if even that
+       // loses it. `keepReadings` would buy the loss (worth ≤ 0.014 against a gain ≥ 0.35), but no bar
+@@ -6522,8 +6526,10 @@
+       const lossPercent = target !== 0 ? ((target - (now[lost] ?? 0)) / Math.abs(target)) * 100 : 0;
+       const worth = lossPercent / readingRate(retypeRates, lost);
+       const gain = rate(totalsBill(was), totalsBill(stops[holderAt] as PlanRow), retypeRates);
+-      planTrace.sink?.({ step: 'keepReadings', pick: was.pick, reading: lost, handedBack: worth > gain });
+-      if (worth <= gain) bought.add(lost);
++      const caps = (globalThis as { __w14s4?: { readingCaps?: number[] } }).__w14s4?.readingCaps;
++      const overCap = caps !== undefined && lossPercent > (caps[lost] ?? 0) + 1e-9;
++      planTrace.sink?.({ step: 'keepReadings', pick: was.pick, reading: lost, handedBack: worth > gain || overCap });
++      if (worth <= gain && !overCap) bought.add(lost);
+       else stops[holderAt] = was;
+     }
+   };

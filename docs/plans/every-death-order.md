@@ -128,6 +128,17 @@ after, on the same armies and settings:
 
    Pick the one that closes the most rating for the least time. The TS path keeps the same rule, so the two paths give
    the same plan (slower in TS).
+
+   **Result, experiment 179 (2026-09-25): not committed, no variant passes the gate.**
+   - The best, `EXHAUSTIVE` 5 040 (7!), plus the queue held on every march of the silver saver that holds the shortest
+     queue, gives 11/52/0 stops against step 3 and +9.33 rating. But it loses the shortest queue on the live camp of
+     09-18 (+0.54 %) and on the localStorage camp (+0.20 %), and adds 2 `plan-stops` reds.
+   - Cost: +1.5 s with the kernel and +9.8 s in TS. The browser setup goes 2.08 → 2.97 s in TS; under the app's 2 s
+     re-typing clock, TS plans worse than HEAD on three armies.
+   - The stronger climb (ii) gains only +1.56, with 3 stops worse.
+   - The kept variant is `docs/research/patches/179-kept-i-5040-qss.patch`; the others are in `179-variants.patch`.
+   - Revisit once the TS fallback is no longer held to the same answers, or the kernel does the walk fast enough that TS
+     can be dropped.
 5. **The ladder's rung order on the rating** (A2; **required**, the owner 2026-09-24: *"using rating shouldn't be optional
    but should be properly benchmarked"*). `orderFor` climbs on damage alone. It moves to `rate(·, ·, markerRates)`: a swap
    is taken when it rates above the current order, as `retypeMarch` already does. The extra cost per candidate is almost
