@@ -6317,7 +6317,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     /** A silver saver stays one, march by march: each of its marches is re-typed with its silver held. */
     const holdSilver = (row as Partial<PlanRow>).pick === 'silver-saver';
     const othersQueue = Math.min(
-      ...stops.filter((o) => o !== row && o.pick !== (row as Partial<PlanRow>).pick).map((o) => o.seconds),
+      ...stops.filter((o) => o !== (row as Partial<PlanRow>) && o.pick !== (row as Partial<PlanRow>).pick).map((o) => o.seconds),
     );
     /** The queue is held too once the free re-typing would lose the bar's shortest queue (`queueHeld`). */
     const holdQueue = holdSilver && queueHeld;
@@ -6999,11 +6999,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
             const bill = totalsBill(was);
             const after: Bill = {
               damage: bill.damage - old.damage + plain.damage,
-              silver: bill.silver - old.silver + plain.silver,
-              gold: bill.gold - old.gold + plain.gold,
-              hired: bill.hired - old.mercLost + plain.mercLost,
-              dragonCoins: bill.dragonCoins - old.dragonCoins + plain.dragonCoins,
-              seconds: bill.seconds - old.seconds + plain.seconds,
+              silver: bill.silver ?? 0 - old.silver + plain.silver,
+              gold: bill.gold ?? 0 - old.gold + plain.gold,
+              hired: bill.hired ?? 0 - old.mercLost + plain.mercLost,
+              dragonCoins: bill.dragonCoins ?? 0 - old.dragonCoins + plain.dragonCoins,
+              seconds: bill.seconds ?? 0 - old.seconds + plain.seconds,
             };
             return rate(bill, after, retypeRates) > 0;
           })();

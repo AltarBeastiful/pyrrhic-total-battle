@@ -531,7 +531,7 @@ describe.skipIf(!process.env.THEORY)('do the low tiers die first', () => {
         engTot.out += msE.unfitted;
         engineLines.push(
           `| ${label} | ${String(armyAbove)} | ${String(armyPairs)} | ${paired > 0 ? sgn(dmgGain / paired, 1) : '—'} % | ${paired > 0 ? sgn(silverCost / paired, 1) : '—'} % | ${paired > 0 ? sgn(goldCost / paired, 1) : '—'} % | ${per.join(', ')} | ${String(left)} | ` +
-            READINGS.map((rd, k) => ((changes[k] ?? 0) === 0 ? '·' : `${sgn(changes[k] ?? 0, 1)} %`)).join(
+            READINGS.map((_, k) => ((changes[k] ?? 0) === 0 ? '·' : `${sgn(changes[k] ?? 0, 1)} %`)).join(
               ' | ',
             ) +
             ` | ${String(msOff.rowsBeaten)} → ${String(msE.rowsBeaten)} |`,

@@ -313,7 +313,7 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
         `| ${scenario.label.slice(0, 40)} | ${code(pool)} | ${code(top.set)} | ${top.broken.length > 0 ? top.broken.join(', ') : 'none'} | ` +
           `${
             top.lostCount > 0
-              ? READINGS.filter((_, i) => (top.losses[i] ?? 0) > 0)
+              ? READINGS.filter((_, i) => (top?.losses[i] ?? 0) > 0)
                   .map((r) => r.head)
                   .join(', ')
               : 'none'
@@ -343,7 +343,7 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
           shown
             .map(
               (c) =>
-                `| ${c.name}${leftOfSaver.includes(c) ? ' ←' : ''} | ${top.set.includes(c) ? '✓' : ''} | ${String(burnOf(c))} | ${n(Math.round(damageOf(c)))} | ` +
+                `| ${c.name}${leftOfSaver.includes(c) ? ' ←' : ''} | ${top?.set.includes(c) ? '✓' : ''} | ${String(burnOf(c))} | ${n(Math.round(damageOf(c)))} | ` +
                 READINGS.map((r, i) => show(r, c.values[i] ?? 0)).join(' | ') +
                 ' |',
             )
@@ -355,9 +355,9 @@ describe.skipIf(!process.env.THEORY)('an ordered four', () => {
           '---:|---:|---|\n' +
           `| pool: ${code(pool)} | ${READINGS.map((r, i) => show(r, poolBest[i] ?? 0)).join(' | ')} | ${String(realPool.rowsBeaten)} | ${String(realPool.unfitted)} | ${ordered(pool) ? '✓' : '✗'} |\n` +
           `| **chosen: ${code(top.set)}** | ${READINGS.map((r, i) =>
-            (top.losses[i] ?? 0) > 0
-              ? `**${show(r, top.values[i] ?? 0)} (${r.want === 'max' ? '−' : '+'}${(top.losses[i] ?? 0).toFixed(1)} %)**`
-              : show(r, top.values[i] ?? 0),
+            (top?.losses[i] ?? 0) > 0
+              ? `**${show(r, top?.values[i] ?? 0)} (${r.want === 'max' ? '−' : '+'}${(top?.losses[i] ?? 0).toFixed(1)} %)**`
+              : show(r, top?.values[i] ?? 0),
           ).join(
             ' | ',
           )} | ${String(real.rowsBeaten)} | ${String(real.unfitted)} | ${ordered(top.set) ? '✓' : '✗'} |` +

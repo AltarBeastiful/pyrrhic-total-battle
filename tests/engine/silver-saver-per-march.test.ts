@@ -67,11 +67,11 @@ const check = (label: string, request: StackRequest, plan: CampaignPlan, ownLadd
       if (!found || !(found.rating > TOL)) continue;
       const bill = marchBill(request, found.counts);
       const broken = [
-        ...(bill.silver <= own.silver + 1e-6 ? [] : [`raised silver ${String(own.silver)} → ${String(bill.silver)}`]),
-        ...(bill.damage * own.silver >= own.damage * bill.silver - 1e-6
+        ...(bill.silver ?? 0 <= (own.silver ?? 0) + 1e-6 ? [] : [`raised silver ${String(own.silver)} → ${String(bill.silver)}`]),
+        ...(bill.damage * (own.silver ?? 0) >= own.damage * (own.silver ?? 0) - 1e-6
           ? []
-          : [`dropped damage per silver ${(own.damage / own.silver).toFixed(4)} → ${(bill.damage / bill.silver).toFixed(4)}`]),
-        ...(bill.seconds <= own.seconds + 1e-6 ? [] : [`raised queue ${String(own.seconds)} → ${String(bill.seconds)} s`]),
+          : [`dropped damage per silver ${(own.damage / (own.silver ?? 0)).toFixed(4)} → ${(bill.damage / (own.silver ?? 0)).toFixed(4)}`]),
+        ...(bill.seconds ?? 0 <= (own.seconds ?? 0) + 1e-6 ? [] : [`raised queue ${String(own.seconds)} → ${String(bill.seconds)} s`]),
       ];
       fail.push(
         `${label} SS ${role}: +${found.rating.toFixed(3)}` +

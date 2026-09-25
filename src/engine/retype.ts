@@ -127,10 +127,10 @@ export function retypeMarch(
   /** Above the silver ceiling, or below the march's damage per silver, when either is held. */
   const holdPerSilver = options.holdDamagePerSilver === true;
   const overCeiling = (bill: Bill): boolean =>
-    (ceiling !== undefined && bill.silver > ceiling + 1e-6) ||
+    (ceiling !== undefined && (bill.silver ?? 0) > ceiling + 1e-6) ||
     // Damage per silver below the march's own (cross-multiplied, so a silver-free march reads as ∞).
-    (holdPerSilver && bill.damage * base.silver < base.damage * bill.silver - 1e-6) ||
-    (options.secondsCeiling !== undefined && bill.seconds > options.secondsCeiling + 1e-6);
+    (holdPerSilver && bill.damage * (base.silver ?? 0) < base.damage * (bill.silver ?? 0) - 1e-6) ||
+    (options.secondsCeiling !== undefined && (bill.seconds ?? 0) > options.secondsCeiling + 1e-6);
 
   const build = (types: number[]): Record<string, number> | null => {
     const next: Record<string, number> = { ...hired };
