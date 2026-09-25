@@ -35,11 +35,24 @@ import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../../te
 import { loadKernelModule } from '../../tests/kernel/load';
 import { OUT_DIR, Report } from './harness';
 import type { ArmyReport, Figures } from './plan-report';
-import { RATES, billOfFigures, compareReports, fmt, loadJson, renderBaseline, renderComparison, reportArmy, saveJson, short } from './plan-report';
+import {
+  RATES,
+  billOfFigures,
+  compareReports,
+  fmt,
+  loadJson,
+  renderBaseline,
+  renderComparison,
+  reportArmy,
+  saveJson,
+  short,
+} from './plan-report';
 
 const REPS = Number(process.env.REPS177 ?? 3);
 
-const planOnce = (request: StackRequest): { plan: CampaignPlan | string; events: PlanTraceEvent[]; ms: number } => {
+const planOnce = (
+  request: StackRequest,
+): { plan: CampaignPlan | string; events: PlanTraceEvent[]; ms: number } => {
   const events: PlanTraceEvent[] = [];
   planTrace.sink = (e) => events.push(e);
   const began = performance.now();
@@ -50,7 +63,11 @@ const planOnce = (request: StackRequest): { plan: CampaignPlan | string; events:
       ms: performance.now() - began,
     };
   } catch (error) {
-    return { plan: error instanceof Error ? error.message : String(error), events, ms: performance.now() - began };
+    return {
+      plan: error instanceof Error ? error.message : String(error),
+      events,
+      ms: performance.now() - began,
+    };
   } finally {
     planTrace.sink = null;
   }
@@ -108,15 +125,22 @@ describe.skipIf(!process.env.THEORY)('177 — the silver-saver guard, per march'
       times.push({ label: scenario.label, kernel: kernelMs, ts: tsMs, same: bar(planned) === bar(tsPlan) });
       const rechosen: string[] = [];
       for (const e of events) {
-        if (e.step === 'fold' && e.band.length > 0) rechosen.push(`fold took band row(s) as ${e.band.map((p) => short(p ?? '?')).join(', ')}`);
+        if (e.step === 'fold' && e.band.length > 0)
+          rechosen.push(`fold took band row(s) as ${e.band.map((p) => short(p ?? '?')).join(', ')}`);
         if (e.step === 'fold' && e.before.length !== e.after.length)
-          rechosen.push(`fold ${e.before.map((p) => short(p ?? '?')).join('/')} → ${e.after.map((p) => short(p ?? '?')).join('/')}`);
+          rechosen.push(
+            `fold ${e.before.map((p) => short(p ?? '?')).join('/')} → ${e.after.map((p) => short(p ?? '?')).join('/')}`,
+          );
         if (e.step === 'allInS94') rechosen.push(`S-94 all-in ${e.outcome}`);
         if (e.step === 'allInDescending') rechosen.push(`all-in ${e.outcome} (174)`);
         if (e.step === 'ownLadderFinale') rechosen.push(`${short(e.pick ?? '?')} own-ladder finale`);
       }
-      after.push(reportArmy(scenario.label, request, planned, scenario.externals, { rechosen, planMs: kernelMs }));
-      process.stderr.write(`177 ${scenario.label.slice(0, 44)}: kernel ${kernelMs.toFixed(0)} ms, TS ${tsMs.toFixed(0)} ms\n`);
+      after.push(
+        reportArmy(scenario.label, request, planned, scenario.externals, { rechosen, planMs: kernelMs }),
+      );
+      process.stderr.write(
+        `177 ${scenario.label.slice(0, 44)}: kernel ${kernelMs.toFixed(0)} ms, TS ${tsMs.toFixed(0)} ms\n`,
+      );
     }
 
     const before = loadJson(new URL('176-baseline.json', OUT_DIR)).armies;
@@ -143,9 +167,19 @@ describe.skipIf(!process.env.THEORY)('177 — the silver-saver guard, per march'
           }
           const r = rate(billOfFigures(om), billOfFigures(m), RATES);
           const worse = worseOf(om, m);
-          if (m.shelterMargin < om.shelterMargin) worse.push(`shelter margin ${fmt(om.shelterMargin, 3)} → ${fmt(m.shelterMargin, 3)}`);
+          if (m.shelterMargin < om.shelterMargin)
+            worse.push(`shelter margin ${fmt(om.shelterMargin, 3)} → ${fmt(m.shelterMargin, 3)}`);
           const moved = om.key !== m.key || om.times !== m.times;
-          const verdict = !moved && worse.length === 0 ? 'unchanged' : r > 1e-9 ? 'better' : r < -1e-9 ? 'worse' : worse.length ? 'worse' : 'equal';
+          const verdict =
+            !moved && worse.length === 0
+              ? 'unchanged'
+              : r > 1e-9
+                ? 'better'
+                : r < -1e-9
+                  ? 'worse'
+                  : worse.length
+                    ? 'worse'
+                    : 'equal';
           if (verdict === 'better') mb += 1;
           else if (verdict === 'worse') mw += 1;
           else me += 1;
@@ -153,7 +187,10 @@ describe.skipIf(!process.env.THEORY)('177 — the silver-saver guard, per march'
           for (const w of worse) marchWorse.push(`| ${where} | ${fmt(r, 3)} | ${w} |`);
           marchLines.push(`| ${where} | ${verdict} | ${fmt(r, 3)} | ${worse.join('; ') || '—'} |`);
         }
-        if (o) for (const om of o.marches) if (!s.marches.some((m) => m.role === om.role)) marchLines.push(`| ${a.label.slice(0, 44)} | ${short(s.pick)} | ${om.role} | gone | — | — |`);
+        if (o)
+          for (const om of o.marches)
+            if (!s.marches.some((m) => m.role === om.role))
+              marchLines.push(`| ${a.label.slice(0, 44)} | ${short(s.pick)} | ${om.role} | gone | — | — |`);
       }
     }
     gains.sort((x, y) => y.rating - x.rating);
@@ -181,23 +218,35 @@ describe.skipIf(!process.env.THEORY)('177 — the silver-saver guard, per march'
       `**Stops** better / equal / worse: **${String(c.total.better)} / ${String(c.total.equal)} / ${String(c.total.worse)}**` +
         ` (${String(c.stops.filter((s) => s.verdict === 'new').length)} new, ${String(c.stops.filter((s) => s.verdict === 'gone').length)} gone). ` +
         `**Marches** better / equal-or-unchanged / worse: **${String(mb)} / ${String(me)} / ${String(mw)}**. ` +
-        `Σ rating gained over the marches (× times played): ${fmt(gains.reduce((s, g) => s + g.rating, 0), 3)}. ` +
+        `Σ rating gained over the marches (× times played): ${fmt(
+          gains.reduce((s, g) => s + g.rating, 0),
+          3,
+        )}. ` +
         `TotalStack at matched spend (dominated / no stop fits): ${c.total.tsBefore} → ${c.total.tsAfter}; 162's rows: ` +
         `${String(c.total.kept162Before)} → ${String(c.total.kept162After)}. Bar criteria broken: ${criteria.length ? criteria.join('; ') : 'none'}. ` +
         `Readings worse: ${c.perArmy.flatMap((a) => a.readingsWorse.map((r) => `${a.label.slice(0, 44)}: ${r}`)).join('; ') || 'none'}.\n`,
     );
-    report.add('## The marches that gained (rating × times played)\n\n| army | stop | march | rating |\n|---|---|---|---:|');
+    report.add(
+      '## The marches that gained (rating × times played)\n\n| army | stop | march | rating |\n|---|---|---|---:|',
+    );
     for (const g of gains) report.add(`| ${g.where} | ${fmt(g.rating, 3)} |`);
-    report.add('\n## Every worse figure, per march\n\n| army | stop | march | march rating | figure |\n|---|---|---|---:|---|');
+    report.add(
+      '\n## Every worse figure, per march\n\n| army | stop | march | march rating | figure |\n|---|---|---|---:|---|',
+    );
     report.add(marchWorse.length ? marchWorse.join('\n') : '| — | — | — | — | none |');
     report.add('\n## Per stop (paired by pick) and per army\n');
     report.add(renderComparison(c));
-    report.add('\n## Every march use case\n\n| army | stop | march | verdict | rating | worse figures |\n|---|---|---|---|---:|---|');
+    report.add(
+      '\n## Every march use case\n\n| army | stop | march | verdict | rating | worse figures |\n|---|---|---|---|---:|---|',
+    );
     report.add(marchLines.join('\n'));
     report.add(
       `\n## Plan time (best of ${String(REPS)})\n\nkernel Σ ${fmt(kernelTotal)} ms (HEAD’s baseline run: ${fmt(headKernel)} ms, one run); TS Σ ${fmt(tsTotal)} ms.\n\n| army | kernel ms | TS ms | same plan |\n|---|---:|---:|---|`,
     );
-    for (const t of times) report.add(`| ${t.label.slice(0, 60)} | ${fmt(t.kernel)} | ${fmt(t.ts)} | ${t.same ? 'same' : '**differs**'} |`);
+    for (const t of times)
+      report.add(
+        `| ${t.label.slice(0, 60)} | ${fmt(t.kernel)} | ${fmt(t.ts)} | ${t.same ? 'same' : '**differs**'} |`,
+      );
     report.add('\n## After: every army, every stop, every march, every criterion\n');
     report.add(renderBaseline(after));
 
@@ -231,7 +280,8 @@ describe.skipIf(!process.env.THEORY)('177 — the silver-saver guard, per march'
         const om = o.marches.find((z) => z.role === m.role);
         if (!om) continue;
         if (m.silver > om.silver) flags.push(`${m.role} silver +${fmt(m.silver - om.silver)}`);
-        if (m.perSilver < om.perSilver) flags.push(`${m.role} dmg/silver −${fmt(om.perSilver - m.perSilver, 6)}`);
+        if (m.perSilver < om.perSilver)
+          flags.push(`${m.role} dmg/silver −${fmt(om.perSilver - m.perSilver, 6)}`);
       }
       if (flags.length > 0) flagged += 1;
       report.add(
@@ -241,7 +291,9 @@ describe.skipIf(!process.env.THEORY)('177 — the silver-saver guard, per march'
           `${arrow(o.shelterMargin, s.shelterMargin, 3)} | ${arrow(o.sustain, s.sustain)} | ${flags.length ? `**${flags.join('; ')}**` : '—'} |`,
       );
     }
-    report.add(`\nSilver savers flagged (silver rising or damage per silver dropping, stop or march): **${String(flagged)}**.`);
+    report.add(
+      `\nSilver savers flagged (silver rising or damage per silver dropping, stop or march): **${String(flagged)}**.`,
+    );
     saveJson(new URL(`${name}.json`, OUT_DIR), after, { budgetMs: 'off', horizon: HORIZON });
     process.stderr.write(`177 written to ${report.save()}\n`);
   }, 7_200_000);

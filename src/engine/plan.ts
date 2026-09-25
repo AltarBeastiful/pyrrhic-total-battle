@@ -6317,7 +6317,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     /** A silver saver stays one, march by march: each of its marches is re-typed with its silver held. */
     const holdSilver = (row as Partial<PlanRow>).pick === 'silver-saver';
     const othersQueue = Math.min(
-      ...stops.filter((o) => o !== (row as Partial<PlanRow>) && o.pick !== (row as Partial<PlanRow>).pick).map((o) => o.seconds),
+      ...stops
+        .filter((o) => o !== (row as Partial<PlanRow>) && o.pick !== (row as Partial<PlanRow>).pick)
+        .map((o) => o.seconds),
     );
     /** The queue is held too once the free re-typing would lose the bar's shortest queue (`queueHeld`). */
     const holdQueue = holdSilver && queueHeld;

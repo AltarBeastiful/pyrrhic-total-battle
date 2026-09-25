@@ -115,7 +115,15 @@ export const READINGS = [
   { head: 'dmg a coin', of: (c: Figures) => (c.coins > 0 ? c.worst / c.coins : 0), high: true },
 ] as const;
 
-export const CRITERIA = ['order', 'noStopBeaten', 'shelter', 'sustain', 'atMostFive', 'sweetSpot', 's58b'] as const;
+export const CRITERIA = [
+  'order',
+  'noStopBeaten',
+  'shelter',
+  'sustain',
+  'atMostFive',
+  'sweetSpot',
+  's58b',
+] as const;
 export type Criterion = (typeof CRITERIA)[number];
 
 export interface ArmyReport {
@@ -150,7 +158,8 @@ const ratios = (f: Omit<Figures, 'perSilver' | 'perGold' | 'perHired' | 'perCoin
 
 /** The marches a stop plays, with their role and how often — the reading of `marchesOf`, grouped. */
 export function playedOf(row: PlanTotals): { role: string; counts: Record<string, number>; times: number }[] {
-  if (row.sequence) return row.sequence.map((counts, i) => ({ role: `sequence ${String(i + 1)}`, counts, times: 1 }));
+  if (row.sequence)
+    return row.sequence.map((counts, i) => ({ role: `sequence ${String(i + 1)}`, counts, times: 1 }));
   const tail = row.tail?.marches ?? 0;
   const repeats = row.marches - (row.finaleCounts ? 1 : 0) - tail;
   const out = [{ role: 'repeat', counts: row.counts, times: repeats }];
@@ -159,7 +168,10 @@ export function playedOf(row: PlanTotals): { role: string; counts: Record<string
   return out.filter((m) => m.times > 0);
 }
 
-function marchFigures(request: StackRequest, counts: Record<string, number>): Figures & { shelterMargin: number } {
+function marchFigures(
+  request: StackRequest,
+  counts: Record<string, number>,
+): Figures & { shelterMargin: number } {
   const p = price(request, counts);
   const { result, summary } = marchResult(request, counts);
   const mercIds = hiredIds(request);
@@ -183,9 +195,7 @@ function marchFigures(request: StackRequest, counts: Record<string, number>): Fi
 }
 
 function sustainOf(request: StackRequest, row: PlanTotals): number {
-  const capped = request.units.filter(
-    (u) => u.pool !== 'leadership' && request.caps[u.id] !== undefined,
-  );
+  const capped = request.units.filter((u) => u.pool !== 'leadership' && request.caps[u.id] !== undefined);
   if (row.sequence) {
     const used: Record<string, number> = {};
     for (let i = 0; i < row.sequence.length; i += 1) {
@@ -285,10 +295,14 @@ export function reportArmy(
 
   // The bar criteria.
   const crit = {} as ArmyReport['criteria'];
-  const rungs = rows.filter((r) => r.pick !== 'all-in').sort(
-    (a, b) =>
-      a.repeat.mercLost - b.repeat.mercLost || a.repeat.silver - b.repeat.silver || a.repeat.damage - b.repeat.damage,
-  );
+  const rungs = rows
+    .filter((r) => r.pick !== 'all-in')
+    .sort(
+      (a, b) =>
+        a.repeat.mercLost - b.repeat.mercLost ||
+        a.repeat.silver - b.repeat.silver ||
+        a.repeat.damage - b.repeat.damage,
+    );
   const disorder: string[] = [];
   for (let i = 1; i < rungs.length; i += 1) {
     const p = rungs[i - 1] as PlanRow;
@@ -314,19 +328,21 @@ export function reportArmy(
     }
   crit.noStopBeaten = { holds: beaten.length === 0, detail: beaten.join('; ') };
   const exposed = stops.flatMap((s) =>
-    s.marches.filter((m) => m.shelterMargin <= 1).map((m) => `${short(s.pick)} ${m.role} (${m.shelterMargin.toFixed(3)})`),
+    s.marches
+      .filter((m) => m.shelterMargin <= 1)
+      .map((m) => `${short(s.pick)} ${m.role} (${m.shelterMargin.toFixed(3)})`),
   );
   crit.shelter = { holds: exposed.length === 0, detail: exposed.join('; ') };
-  const short_ = stops.filter((s) => s.sustain < s.repeats).map((s) => `${short(s.pick)} lasts ${String(s.sustain)} < ${String(s.repeats)}`);
+  const short_ = stops
+    .filter((s) => s.sustain < s.repeats)
+    .map((s) => `${short(s.pick)} lasts ${String(s.sustain)} < ${String(s.repeats)}`);
   crit.sustain = { holds: short_.length === 0, detail: short_.join('; ') };
   crit.atMostFive = { holds: rows.length <= 5, detail: `${String(rows.length)} stops` };
   crit.sweetSpot = {
     holds: rows.some((r) => r.pick === 'sweet-spot'),
     detail: rows.some((r) => r.pick === 'sweet-spot') ? '' : 'no sweet spot',
   };
-  const stocked = request.units.filter(
-    (u) => u.pool === 'authority' && (request.caps[u.id] ?? 0) > 0,
-  );
+  const stocked = request.units.filter((u) => u.pool === 'authority' && (request.caps[u.id] ?? 0) > 0);
   const unfielded = rows.flatMap((row) =>
     stocked
       .filter((u) => !playedOf(row as PlanTotals).some((m) => (m.counts[u.id] ?? 0) > 0))
@@ -343,16 +359,18 @@ export function reportArmy(
     const row = asCaptured(widenedFor(request, external.counts), external.name, external.counts);
     if (row.damage > 0) theirs.push(row);
   }
-  const ours = stops.map(
-    (s): Campaign =>
-      campaignOf(
-        request,
-        s.pick,
-        'plan',
-        s.marches.flatMap((m) => Array.from({ length: m.times }, () => m.counts)),
-      ),
+  const ours = stops.map((s): Campaign =>
+    campaignOf(
+      request,
+      s.pick,
+      'plan',
+      s.marches.flatMap((m) => Array.from({ length: m.times }, () => m.counts)),
+    ),
   );
-  const ms = theirs.length > 0 ? matchedSpend(ours as Contender[], theirs as Contender[]) : { rowsBeaten: 0, unfitted: 0 };
+  const ms =
+    theirs.length > 0
+      ? matchedSpend(ours as Contender[], theirs as Contender[])
+      : { rowsBeaten: 0, unfitted: 0 };
   const cBill = (c: Campaign): Bill => ({
     damage: c.damage,
     silver: c.silver,
@@ -378,12 +396,25 @@ export function reportArmy(
 
 // ---- the file ------------------------------------------------------------------------------------------
 
-export function saveJson(file: string | URL, reports: ArmyReport[], meta: Record<string, unknown> = {}): void {
+export function saveJson(
+  file: string | URL,
+  reports: ArmyReport[],
+  meta: Record<string, unknown> = {},
+): void {
   writeFileSync(
     file,
-    `${JSON.stringify({ ...meta, armies: reports }, (_, v: unknown) =>
-      typeof v === 'number' && !Number.isFinite(v) ? (Number.isNaN(v) ? 'NaN' : v > 0 ? 'Infinity' : '-Infinity') : v,
-    1)}\n`,
+    `${JSON.stringify(
+      { ...meta, armies: reports },
+      (_, v: unknown) =>
+        typeof v === 'number' && !Number.isFinite(v)
+          ? Number.isNaN(v)
+            ? 'NaN'
+            : v > 0
+              ? 'Infinity'
+              : '-Infinity'
+          : v,
+      1,
+    )}\n`,
   );
 }
 
@@ -461,8 +492,24 @@ export interface StopDelta {
 
 export interface Comparison {
   stops: StopDelta[];
-  perArmy: { label: string; better: number; equal: number; worse: number; readingsWorse: string[]; criteriaBroken: string[]; ts: string }[];
-  total: { better: number; equal: number; worse: number; tsBefore: string; tsAfter: string; kept162Before: number; kept162After: number };
+  perArmy: {
+    label: string;
+    better: number;
+    equal: number;
+    worse: number;
+    readingsWorse: string[];
+    criteriaBroken: string[];
+    ts: string;
+  }[];
+  total: {
+    better: number;
+    equal: number;
+    worse: number;
+    tsBefore: string;
+    tsAfter: string;
+    kept162Before: number;
+    kept162After: number;
+  };
 }
 
 const FIELDS: [keyof Figures, boolean][] = [
@@ -482,17 +529,40 @@ const FIELDS: [keyof Figures, boolean][] = [
 export function compareReports(before: ArmyReport[], after: ArmyReport[]): Comparison {
   const stops: StopDelta[] = [];
   const perArmy: Comparison['perArmy'] = [];
-  const total = { better: 0, equal: 0, worse: 0, tsBefore: '', tsAfter: '', kept162Before: 0, kept162After: 0 };
+  const total = {
+    better: 0,
+    equal: 0,
+    worse: 0,
+    tsBefore: '',
+    tsAfter: '',
+    kept162Before: 0,
+    kept162After: 0,
+  };
   let tsB = [0, 0, 0];
   let tsA = [0, 0, 0];
   for (const a of after) {
     const b = before.find((x) => x.label === a.label);
-    const army = { label: a.label, better: 0, equal: 0, worse: 0, readingsWorse: [] as string[], criteriaBroken: [] as string[], ts: '' };
+    const army = {
+      label: a.label,
+      better: 0,
+      equal: 0,
+      worse: 0,
+      readingsWorse: [] as string[],
+      criteriaBroken: [] as string[],
+      ts: '',
+    };
     if (!b) continue;
     for (const s of a.stops) {
       const o = b.stops.find((x) => x.pick === s.pick);
       if (!o) {
-        stops.push({ label: a.label, pick: s.pick, verdict: 'new', rating: Number.NaN, worse: [], marches: [] });
+        stops.push({
+          label: a.label,
+          pick: s.pick,
+          verdict: 'new',
+          rating: Number.NaN,
+          worse: [],
+          marches: [],
+        });
         continue;
       }
       const r = rate(billOf(o.campaign), billOf(s.campaign), RATES);
@@ -501,9 +571,19 @@ export function compareReports(before: ArmyReport[], after: ArmyReport[]): Compa
         const y = s.campaign[k];
         return high ? y < x * (1 - 1e-12) : y > x * (1 + 1e-12);
       }).map(([k]) => `${k} ${fmt(o.campaign[k], 3)} → ${fmt(s.campaign[k], 3)}`);
-      if (s.shelterMargin < o.shelterMargin) worse.push(`shelter margin ${fmt(o.shelterMargin, 3)} → ${fmt(s.shelterMargin, 3)}`);
+      if (s.shelterMargin < o.shelterMargin)
+        worse.push(`shelter margin ${fmt(o.shelterMargin, 3)} → ${fmt(s.shelterMargin, 3)}`);
       if (s.sustain < o.sustain) worse.push(`sustain ${fmt(o.sustain)} → ${fmt(s.sustain)}`);
-      const verdict = Math.abs(r) < 1e-9 && worse.length === 0 ? 'equal' : r < -1e-9 ? 'worse' : r > 1e-9 ? 'better' : worse.length > 0 ? 'worse' : 'equal';
+      const verdict =
+        Math.abs(r) < 1e-9 && worse.length === 0
+          ? 'equal'
+          : r < -1e-9
+            ? 'worse'
+            : r > 1e-9
+              ? 'better'
+              : worse.length > 0
+                ? 'worse'
+                : 'equal';
       army[verdict] += 1;
       total[verdict] += 1;
       stops.push({
@@ -524,14 +604,23 @@ export function compareReports(before: ArmyReport[], after: ArmyReport[]): Compa
     }
     for (const o of b.stops)
       if (!a.stops.some((x) => x.pick === o.pick))
-        stops.push({ label: a.label, pick: o.pick, verdict: 'gone', rating: Number.NaN, worse: [], marches: [] });
+        stops.push({
+          label: a.label,
+          pick: o.pick,
+          verdict: 'gone',
+          rating: Number.NaN,
+          worse: [],
+          marches: [],
+        });
     a.readings.forEach((r, i) => {
       const o = b.readings[i];
       if (!o) return;
       const worse = r.high ? r.value < o.value * (1 - 1e-12) : r.value > o.value * (1 + 1e-12);
       if (worse) army.readingsWorse.push(`${r.head} ${fmt(o.value, 3)} → ${fmt(r.value, 3)}`);
     });
-    for (const c of CRITERIA) if (b.criteria[c].holds && !a.criteria[c].holds) army.criteriaBroken.push(`${c}: ${a.criteria[c].detail}`);
+    for (const c of CRITERIA)
+      if (b.criteria[c].holds && !a.criteria[c].holds)
+        army.criteriaBroken.push(`${c}: ${a.criteria[c].detail}`);
     army.ts = `${String(b.totalstack.dominated)}/${String(b.totalstack.unfitted)} → ${String(a.totalstack.dominated)}/${String(a.totalstack.unfitted)}`;
     tsB = [tsB[0]! + b.totalstack.dominated, tsB[1]! + b.totalstack.unfitted, tsB[2]! + b.totalstack.rows];
     tsA = [tsA[0]! + a.totalstack.dominated, tsA[1]! + a.totalstack.unfitted, tsA[2]! + a.totalstack.rows];
@@ -551,13 +640,17 @@ export function renderComparison(c: Comparison): string {
       `**TotalStack at matched spend** (dominated / no stop fits): ${c.total.tsBefore} → ${c.total.tsAfter}. ` +
       `**162's rows**: ${String(c.total.kept162Before)} → ${String(c.total.kept162After)}.\n`,
   );
-  out.push('| army | stop | verdict | rating | marches (role: rating, moved) | worse figures |\n|---|---|---|---:|---|---|');
+  out.push(
+    '| army | stop | verdict | rating | marches (role: rating, moved) | worse figures |\n|---|---|---|---:|---|---|',
+  );
   for (const s of c.stops)
     out.push(
       `| ${s.label.slice(0, 44)} | ${short(s.pick)} | ${s.verdict} | ${fmt(s.rating, 3)} | ` +
         `${s.marches.map((m) => `${m.role}: ${fmt(m.rating, 3)}${m.moved ? '' : ' (unchanged)'}`).join('; ')} | ${s.worse.join('; ') || '—'} |`,
     );
-  out.push('\n| army | better / equal / worse | readings worse | criteria broken | TotalStack |\n|---|---|---|---|---|');
+  out.push(
+    '\n| army | better / equal / worse | readings worse | criteria broken | TotalStack |\n|---|---|---|---|---|',
+  );
   for (const a of c.perArmy)
     out.push(
       `| ${a.label.slice(0, 44)} | ${String(a.better)} / ${String(a.equal)} / ${String(a.worse)} | ${a.readingsWorse.join('; ') || '—'} | ${a.criteriaBroken.join('; ') || '—'} | ${a.ts} |`,

@@ -39,7 +39,12 @@ export type PlanTraceEvent =
   | { step: 'collisionHandBack'; pick: string | undefined }
   | { step: 'allInS94'; outcome: 'kept' | 'rebuilt' | 'dropped' }
   | { step: 'allInDescending'; outcome: 'kept' | 'dropped' }
-  | { step: 'fold'; before: (string | undefined)[]; after: (string | undefined)[]; band: (string | undefined)[] }
+  | {
+      step: 'fold';
+      before: (string | undefined)[];
+      after: (string | undefined)[];
+      band: (string | undefined)[];
+    }
   | {
       step: 'foldBandRetype';
       pick: string | undefined;

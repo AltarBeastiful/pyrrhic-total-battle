@@ -89,7 +89,13 @@ describe.skipIf(!process.env.THEORY)('the hired saver, shipped', () => {
       guard: { beaten: 0, unfitted: 0, stops: 0, offered: 0 },
       fold: { beaten: 0, unfitted: 0, stops: 0, offered: 0 },
     };
-    const floorsDown: Record<Variant, Record<string, number>> = { today: {}, silver: {}, damage: {}, guard: {}, fold: {} };
+    const floorsDown: Record<Variant, Record<string, number>> = {
+      today: {},
+      silver: {},
+      damage: {},
+      guard: {},
+      fold: {},
+    };
     const moved: string[] = [];
     const criteria: string[] = [];
     const table: string[] = [
@@ -120,7 +126,9 @@ describe.skipIf(!process.env.THEORY)('the hired saver, shipped', () => {
       const theirs: Campaign[] = [];
       for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
         if (Object.entries(external.counts).some(([id, c]) => c > 0 && !held.has(id))) continue;
-        theirs.push(asCaptured(widenedFor(scenario.request, external.counts), external.name, external.counts));
+        theirs.push(
+          asCaptured(widenedFor(scenario.request, external.counts), external.name, external.counts),
+        );
       }
       const priced = (plan: CampaignPlan): Campaign[] =>
         plan.alternatives.map((stop) =>
@@ -200,7 +208,9 @@ describe.skipIf(!process.env.THEORY)('the hired saver, shipped', () => {
             (id) => scenario.request.units.find((u) => u.id === id)?.pool === 'leadership',
           ).length;
           if (troopStacks < 2) {
-            criteria.push(`**${scenario.label.slice(0, 50)}** (${variant}) — the saver fields ${String(troopStacks)} troop stack`);
+            criteria.push(
+              `**${scenario.label.slice(0, 50)}** (${variant}) — the saver fields ${String(troopStacks)} troop stack`,
+            );
           }
         }
       }
@@ -228,7 +238,9 @@ describe.skipIf(!process.env.THEORY)('the hired saver, shipped', () => {
     );
     report.add(
       '\n\n## Bar criteria on the new bar\n\n' +
-        (criteria.length > 0 ? `- ${criteria.join('\n- ')}` : 'Every bar holds S-61, S-93 and the two-stack rule.'),
+        (criteria.length > 0
+          ? `- ${criteria.join('\n- ')}`
+          : 'Every bar holds S-61, S-93 and the two-stack rule.'),
     );
     report.save();
   }, 7_200_000);

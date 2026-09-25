@@ -45,9 +45,18 @@ const failures: string[] = [];
 const afterPass: string[] = [];
 let checked = 0;
 const keyOf = (counts: Record<string, number>): string =>
-  JSON.stringify(Object.entries(counts).filter(([, c]) => c > 0).sort());
+  JSON.stringify(
+    Object.entries(counts)
+      .filter(([, c]) => c > 0)
+      .sort(),
+  );
 
-const check = (label: string, request: StackRequest, plan: CampaignPlan, ownLadder: Set<string>): string[] => {
+const check = (
+  label: string,
+  request: StackRequest,
+  plan: CampaignPlan,
+  ownLadder: Set<string>,
+): string[] => {
   const fail: string[] = [];
   for (const row of plan.alternatives) {
     if (row.pick !== 'silver-saver') continue;
@@ -67,15 +76,23 @@ const check = (label: string, request: StackRequest, plan: CampaignPlan, ownLadd
       if (!found || !(found.rating > TOL)) continue;
       const bill = marchBill(request, found.counts);
       const broken = [
-        ...(bill.silver ?? 0 <= (own.silver ?? 0) + 1e-6 ? [] : [`raised silver ${String(own.silver)} → ${String(bill.silver)}`]),
+        ...((bill.silver ?? 0 <= (own.silver ?? 0) + 1e-6)
+          ? []
+          : [`raised silver ${String(own.silver)} → ${String(bill.silver)}`]),
         ...(bill.damage * (own.silver ?? 0) >= own.damage * (own.silver ?? 0) - 1e-6
           ? []
-          : [`dropped damage per silver ${(own.damage / (own.silver ?? 0)).toFixed(4)} → ${(bill.damage / (own.silver ?? 0)).toFixed(4)}`]),
-        ...(bill.seconds ?? 0 <= (own.seconds ?? 0) + 1e-6 ? [] : [`raised queue ${String(own.seconds)} → ${String(bill.seconds)} s`]),
+          : [
+              `dropped damage per silver ${(own.damage / (own.silver ?? 0)).toFixed(4)} → ${(bill.damage / (own.silver ?? 0)).toFixed(4)}`,
+            ]),
+        ...((bill.seconds ?? 0 <= (own.seconds ?? 0) + 1e-6)
+          ? []
+          : [`raised queue ${String(own.seconds)} → ${String(bill.seconds)} s`]),
       ];
       fail.push(
         `${label} SS ${role}: +${found.rating.toFixed(3)}` +
-          (broken.length === 0 ? ' with its silver, damage per silver and queue held' : ` but the search ${broken.join(' and ')}`),
+          (broken.length === 0
+            ? ' with its silver, damage per silver and queue held'
+            : ` but the search ${broken.join(' and ')}`),
       );
     }
   }
@@ -106,7 +123,10 @@ describe('W14 step 2: a silver saver’s march is not beaten by a re-typing that
       }
       const fail = check(label.slice(0, 60), scenario.request, plan, ownLadder);
       failures.push(...fail);
-      expect(fail, 'silver-saver marches a re-typing holding silver, damage per silver and queue beats by more than 0.01').toEqual([]);
+      expect(
+        fail,
+        'silver-saver marches a re-typing holding silver, damage per silver and queue beats by more than 0.01',
+      ).toEqual([]);
     },
     120_000,
   );

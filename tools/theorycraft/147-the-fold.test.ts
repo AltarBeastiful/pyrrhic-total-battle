@@ -59,7 +59,12 @@ const READINGS = [
     of: (c: Campaign) => c.hiredDamage / Math.max(1, c.burned),
     want: 'max',
   },
-  { key: 'perGold', head: 'dmg a gold', of: (c: Campaign) => (c.gold > 0 ? c.damage / c.gold : 0), want: 'max' },
+  {
+    key: 'perGold',
+    head: 'dmg a gold',
+    of: (c: Campaign) => (c.gold > 0 ? c.damage / c.gold : 0),
+    want: 'max',
+  },
   {
     key: 'perCoin',
     head: 'dmg a coin',
@@ -137,8 +142,14 @@ describe.skipIf(!process.env.THEORY)('the fold', () => {
 
     /** Per rule: armies it loses nothing on, rows dominated / unfitted, and how often it loses each reading. */
     const tally = Object.fromEntries(
-      RULES.map((rule) => [rule, { lossless: 0, beat: 0, out: 0, lost: {} as Record<string, number>, none: 0 }]),
-    ) as Record<Rule, { lossless: number; beat: number; out: number; lost: Record<string, number>; none: number }>;
+      RULES.map((rule) => [
+        rule,
+        { lossless: 0, beat: 0, out: 0, lost: {} as Record<string, number>, none: 0 },
+      ]),
+    ) as Record<
+      Rule,
+      { lossless: number; beat: number; out: number; lost: Record<string, number>; none: number }
+    >;
     let poolBeat = 0;
     let poolOut = 0;
     const armies: string[] = [];
@@ -163,13 +174,20 @@ describe.skipIf(!process.env.THEORY)('the fold', () => {
       const theirs: Campaign[] = [];
       for (const external of [...scenario.externals, ...totalstackRows(scenario.label)]) {
         if (Object.entries(external.counts).some(([id, c]) => c > 0 && !held.has(id))) continue;
-        theirs.push(asCaptured(widenedFor(scenario.request, external.counts), external.name, external.counts));
+        theirs.push(
+          asCaptured(widenedFor(scenario.request, external.counts), external.name, external.counts),
+        );
       }
       const priced = new Map<PlanRow, Campaign>(
-        stops.map((stop) => [stop, campaignOf(scenario.request, stop.pick, 'plan', marchesOf(stop as PlanTotals))]),
+        stops.map((stop) => [
+          stop,
+          campaignOf(scenario.request, stop.pick, 'plan', marchesOf(stop as PlanTotals)),
+        ]),
       );
       const campaigns = (rows: PlanRow[]): Campaign[] => rows.map((row) => priced.get(row) as Campaign);
-      const verdict = (rows: PlanRow[]): { beat: number; out: number; beaten: Set<string>; fitted: Set<string> } => {
+      const verdict = (
+        rows: PlanRow[],
+      ): { beat: number; out: number; beaten: Set<string>; fitted: Set<string> } => {
         if (theirs.length === 0) return { beat: 0, out: 0, beaten: new Set(), fitted: new Set() };
         const v = matchedSpend(campaigns(rows) as Contender[], theirs as Contender[]);
         return {
@@ -183,7 +201,11 @@ describe.skipIf(!process.env.THEORY)('the fold', () => {
       poolBeat += pool.beat;
       poolOut += pool.out;
       const poolBest = READINGS.map((r) => barBest(campaigns(stops), r));
-      const code = (rows: PlanRow[]): string => [...rows].sort(byBurn).map((r) => SHORT[r.pick] ?? r.pick).join(' · ');
+      const code = (rows: PlanRow[]): string =>
+        [...rows]
+          .sort(byBurn)
+          .map((r) => SHORT[r.pick] ?? r.pick)
+          .join(' · ');
 
       const out: string[] = [`\n## ${scenario.label}\n`];
       // 1. Every stop, every reading.
@@ -200,9 +222,10 @@ describe.skipIf(!process.env.THEORY)('the fold', () => {
         const lost =
           rest.length === 0
             ? []
-            : READINGS.map((r, i) => ({ r, loss: lossOf(barBest(campaigns(rest), r), poolBest[i] ?? 0, r) })).filter(
-                (x) => x.loss > 0,
-              );
+            : READINGS.map((r, i) => ({
+                r,
+                loss: lossOf(barBest(campaigns(rest), r), poolBest[i] ?? 0, r),
+              })).filter((x) => x.loss > 0);
         const v = verdict(rest);
         const onlyBeats = [...pool.beaten].filter((name) => !v.beaten.has(name)).length;
         const onlyFits = [...pool.fitted].filter((name) => !v.fitted.has(name)).length;
@@ -261,7 +284,9 @@ describe.skipIf(!process.env.THEORY)('the fold', () => {
         });
       }
       const cell = (value: number, loss: number, r: Reading): string =>
-        loss > 0 ? `**${show(r, value)} (${r.want === 'max' ? '−' : '+'}${loss.toFixed(1)} %)**` : show(r, value);
+        loss > 0
+          ? `**${show(r, value)} (${r.want === 'max' ? '−' : '+'}${loss.toFixed(1)} %)**`
+          : show(r, value);
       out.push(
         `\n**${stops.length > 3 ? 'The folds beside the pool' : 'The bar already holds three stops or fewer — nothing to fold'}**\n\n` +
           '| set | rule | ' +

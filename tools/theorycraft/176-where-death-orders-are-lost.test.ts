@@ -39,7 +39,9 @@ const TOL = 0.01;
 const sgn = (v: number, digits = 3): string =>
   !Number.isFinite(v) ? '—' : Math.abs(v) < 1e-9 ? '0' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(digits)}`;
 
-const plan = (request: StackRequest): { plan: CampaignPlan | string; events: PlanTraceEvent[]; ms: number } => {
+const plan = (
+  request: StackRequest,
+): { plan: CampaignPlan | string; events: PlanTraceEvent[]; ms: number } => {
   const events: PlanTraceEvent[] = [];
   planTrace.sink = (e) => events.push(e);
   const began = performance.now();
@@ -50,7 +52,11 @@ const plan = (request: StackRequest): { plan: CampaignPlan | string; events: Pla
       ms: performance.now() - began,
     };
   } catch (error) {
-    return { plan: error instanceof Error ? error.message : String(error), events, ms: performance.now() - began };
+    return {
+      plan: error instanceof Error ? error.message : String(error),
+      events,
+      ms: performance.now() - began,
+    };
   } finally {
     planTrace.sink = null;
   }
@@ -77,13 +83,20 @@ function classify(
   reached: boolean,
 ): { letter: string; cause: string; detail: string } {
   const key = keyOf(march);
-  const retypes = events.filter((e): e is Extract<PlanTraceEvent, { step: 'retypeOne' }> => e.step === 'retypeOne');
+  const retypes = events.filter(
+    (e): e is Extract<PlanTraceEvent, { step: 'retypeOne' }> => e.step === 'retypeOne',
+  );
   const asked = retypes.find((e) => keyOf(e.counts) === key);
   const pipeline = ((): { letter: string; cause: string; detail: string } => {
     const own = events.find(
       (e) => e.step === 'ownLadderFinale' && keyOf(e.counts) === key && picks.includes(e.pick ?? ''),
     );
-    if (own) return { letter: 'e', cause: 'own-ladder finale, made after the pass', detail: 'never handed to `retypeOne`' };
+    if (own)
+      return {
+        letter: 'e',
+        cause: 'own-ladder finale, made after the pass',
+        detail: 'never handed to `retypeOne`',
+      };
     if (!asked) {
       const madeBy = retypes.find((e) => keyOf(e.out) === key && keyOf(e.counts) !== key);
       if (madeBy)
@@ -96,17 +109,31 @@ function classify(
     }
     if (asked.deadline) return { letter: 'b', cause: 'deadline', detail: 'the pass clock ran out' };
     if (asked.refused)
-      return { letter: 'd', cause: `retypeOne's ${asked.refused} guard`, detail: `found ${sgn(asked.rating)}` };
+      return {
+        letter: 'd',
+        cause: `retypeOne's ${asked.refused} guard`,
+        detail: `found ${sgn(asked.rating)}`,
+      };
     if (!asked.found)
-      return { letter: 'search', cause: 'handed over, `retypeMarch` finds nothing', detail: 'the climb’s own gap' };
+      return {
+        letter: 'search',
+        cause: 'handed over, `retypeMarch` finds nothing',
+        detail: 'the climb’s own gap',
+      };
     // retypeOne kept it: the row was handed back somewhere.
     const rows = events.filter(
       (e): e is Extract<PlanTraceEvent, { step: 'retypeRowNow' }> =>
         e.step === 'retypeRowNow' && picks.includes(e.pick ?? '') && e.marches.some((m) => keyOf(m) === key),
     );
     if (rows.some((e) => e.silverSaverGuard))
-      return { letter: 'a', cause: 'row-level silver-saver guard', detail: `found ${sgn(asked.rating)}, row handed back` };
-    const kept = events.find((e) => e.step === 'keepReadings' && e.handedBack && picks.includes(e.pick ?? ''));
+      return {
+        letter: 'a',
+        cause: 'row-level silver-saver guard',
+        detail: `found ${sgn(asked.rating)}, row handed back`,
+      };
+    const kept = events.find(
+      (e) => e.step === 'keepReadings' && e.handedBack && picks.includes(e.pick ?? ''),
+    );
     if (kept && kept.step === 'keepReadings')
       return { letter: 'c', cause: '`keepReadings` hand-back', detail: `reading ${String(kept.reading)}` };
     if (events.some((e) => e.step === 'collisionHandBack' && picks.includes(e.pick ?? '')))
@@ -118,7 +145,11 @@ function classify(
         cause: 'band row taken by the fold, its re-typing refused',
         detail: `named ${String(band.named)}, single ${String(band.single)}, ordered ${String(band.ordered)}`,
       };
-    return { letter: 'other', cause: 'kept by `retypeOne`, not shipped', detail: `${String(rows.length)} row events` };
+    return {
+      letter: 'other',
+      cause: 'kept by `retypeOne`, not shipped',
+      detail: `${String(rows.length)} row events`,
+    };
   })();
   if (reached || pipeline.letter === 'search') return pipeline;
   return { ...pipeline, detail: `${pipeline.detail}; the climb also stops short` };
@@ -151,7 +182,9 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
       if (tsCheck.some((f) => scenario.label.includes(f))) {
         const ts = plan(request);
         const bar = (p: CampaignPlan | string): string =>
-          typeof p === 'string' ? p : JSON.stringify([p.alternatives, p.counts, p.finaleCounts, p.totalDamage]);
+          typeof p === 'string'
+            ? p
+            : JSON.stringify([p.alternatives, p.counts, p.finaleCounts, p.totalDamage]);
         const samePlan = bar(ts.plan) === bar(planned);
         const sameTrace = JSON.stringify(ts.events) === JSON.stringify(events);
         tsLines.push(
@@ -161,24 +194,39 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
       }
       const rechosen: string[] = [];
       for (const e of events) {
-        if (e.step === 'fold' && e.band.length > 0) rechosen.push(`fold took band row(s) as ${e.band.map((p) => short(p ?? '?')).join(', ')}`);
+        if (e.step === 'fold' && e.band.length > 0)
+          rechosen.push(`fold took band row(s) as ${e.band.map((p) => short(p ?? '?')).join(', ')}`);
         if (e.step === 'fold' && e.before.length !== e.after.length)
-          rechosen.push(`fold ${e.before.map((p) => short(p ?? '?')).join('/')} → ${e.after.map((p) => short(p ?? '?')).join('/')}`);
+          rechosen.push(
+            `fold ${e.before.map((p) => short(p ?? '?')).join('/')} → ${e.after.map((p) => short(p ?? '?')).join('/')}`,
+          );
         if (e.step === 'allInS94') rechosen.push(`S-94 all-in ${e.outcome}`);
         if (e.step === 'allInDescending') rechosen.push(`all-in ${e.outcome} (174)`);
         if (e.step === 'ownLadderFinale') rechosen.push(`${short(e.pick ?? '?')} own-ladder finale`);
       }
-      baseline.push(reportArmy(scenario.label, request, planned, scenario.externals, { rechosen, planMs: ms }));
+      baseline.push(
+        reportArmy(scenario.label, request, planned, scenario.externals, { rechosen, planMs: ms }),
+      );
       if (typeof planned === 'string') continue;
 
       const kernel = createKernel(module, request, RATES);
       const table = effectiveTable(request);
-      const candidates = table.map((e, t) => ({ e, t })).filter(({ e }) => e.pool === 'leadership').map(({ t }) => t);
-      const seen = new Map<string, { counts: Record<string, number>; stops: Set<string>; roles: Set<string> }>();
+      const candidates = table
+        .map((e, t) => ({ e, t }))
+        .filter(({ e }) => e.pool === 'leadership')
+        .map(({ t }) => t);
+      const seen = new Map<
+        string,
+        { counts: Record<string, number>; stops: Set<string>; roles: Set<string> }
+      >();
       for (const row of planned.alternatives)
         for (const m of playedOf(row as PlanTotals)) {
           const key = keyOf(m.counts);
-          const at = seen.get(key) ?? { counts: m.counts, stops: new Set<string>(), roles: new Set<string>() };
+          const at = seen.get(key) ?? {
+            counts: m.counts,
+            stops: new Set<string>(),
+            roles: new Set<string>(),
+          };
           at.stops.add(row.pick);
           at.roles.add(`${short(row.pick)} ${m.role}`);
           seen.set(key, at);
@@ -190,13 +238,21 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
         const fixed = new Float64Array(kernel.types);
         for (const s of stacks) if (s.pool !== 'leadership') fixed[kernel.ids.indexOf(s.unitId)] = s.count;
         const slots = troops.map((s) => s.totalHp);
-        const a = kernel.enumerate({ slots, candidates, fixed, pools: POOL_BITS.leadership, base: kernel.battle(counts) });
+        const a = kernel.enumerate({
+          slots,
+          candidates,
+          fixed,
+          pools: POOL_BITS.leadership,
+          base: kernel.battle(counts),
+        });
         walked += a.battles;
         if (!(a.best.rating > TOL)) continue;
         let space = 1;
         for (let i = 0; i < slots.length; i += 1) space *= candidates.length - i;
         setKernel(planKernel);
-        const found = retypeMarch(request, counts, RATES, { tierCandidate: CAMPAIGN.planFixes.tierCandidate });
+        const found = retypeMarch(request, counts, RATES, {
+          tierCandidate: CAMPAIGN.planFixes.tierCandidate,
+        });
         setKernel(null);
         const engine = found?.rating ?? 0;
         const reached = engine >= a.best.rating - 5e-4;
@@ -214,11 +270,16 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
           detail: c.detail,
         });
       }
-      process.stderr.write(`176 ${label}: ${String(seen.size)} marches, ${((performance.now() - began) / 1000).toFixed(0)} s\n`);
+      process.stderr.write(
+        `176 ${label}: ${String(seen.size)} marches, ${((performance.now() - began) / 1000).toFixed(0)} s\n`,
+      );
     }
 
     rows.sort((x, y) => y.gain - x.gain);
-    const byCause = new Map<string, { count: number; sum: number; kept: number; gap: number; guarded: number }>();
+    const byCause = new Map<
+      string,
+      { count: number; sum: number; kept: number; gap: number; guarded: number }
+    >();
     for (const r of rows) {
       const k = `${r.letter} — ${r.cause}`;
       const t = byCause.get(k) ?? { count: 0, sum: 0, kept: 0, gap: 0, guarded: 0 };
@@ -294,7 +355,11 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
     report.add(
       `\n## Runtime\n\n${n(walked)} battles walked; ${((performance.now() - began) / 1000).toFixed(1)} s in all (planning, walks, reports).\n`,
     );
-    saveJson(new URL('176-baseline.json', OUT_DIR), baseline, { commit: 'HEAD (9a8cd54)', budgetMs: 'off', horizon: HORIZON });
+    saveJson(new URL('176-baseline.json', OUT_DIR), baseline, {
+      commit: 'HEAD (9a8cd54)',
+      budgetMs: 'off',
+      horizon: HORIZON,
+    });
     process.stderr.write(`176 written to ${report.save()}\n`);
   }, 7_200_000);
 });

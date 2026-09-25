@@ -58,7 +58,11 @@ function price(base: StackRequest, counts: Record<string, number>): Priced {
 
 /** The same plan, fielded on a share of the leadership it used — the engine doing the re-sizing. */
 function refill(base: StackRequest, stop: Record<string, number>, share: number): Priced {
-  const fielded = new Set(Object.entries(stop).filter(([, count]) => count > 0).map(([id]) => id));
+  const fielded = new Set(
+    Object.entries(stop)
+      .filter(([, count]) => count > 0)
+      .map(([id]) => id),
+  );
   const leadershipUsed = base.units
     .filter((unit) => unit.pool === 'leadership')
     .reduce((sum, unit) => sum + (stop[unit.id] ?? 0) * unit.cost, 0);
@@ -148,7 +152,13 @@ describe.skipIf(!process.env.THEORY)('the dial against the stops', () => {
               row.silver,
               own100.silver,
             )} | ${n(row.burn)} | ${
-              share === 100 ? 'the stop itself' : dominates ? '**dominates**' : cheap ? '**within 2 %, cheaper**' : 'a trade'
+              share === 100
+                ? 'the stop itself'
+                : dominates
+                  ? '**dominates**'
+                  : cheap
+                    ? '**within 2 %, cheaper**'
+                    : 'a trade'
             } |`,
           );
         }

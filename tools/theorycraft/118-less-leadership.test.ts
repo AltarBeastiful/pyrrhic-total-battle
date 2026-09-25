@@ -256,7 +256,9 @@ describe.skipIf(!process.env.THEORY)('less leadership', () => {
             )} HP a unit)\` units — unless its own stock or its authority housing binds first:`,
           );
           report.add('');
-          report.add('| leadership | lowest troop rung | ceiling it allows | hired units fielded | what bound |');
+          report.add(
+            '| leadership | lowest troop rung | ceiling it allows | hired units fielded | what bound |',
+          );
           report.add('|---|---|---|---|---|');
           for (const row of sheltered) {
             const allowed = Math.floor((row.troopFloor - 1) / unit);
@@ -371,9 +373,7 @@ describe.skipIf(!process.env.THEORY)('less leadership', () => {
       report.add('| silver | damage | hired lost | march | from |');
       report.add('|---|---|---|---|---|');
       for (const one of frontier) {
-        report.add(
-          `| ${n(one.silver)} | ${n(one.damage)} | ${n(one.burn)} | ${one.name} | ${one.family} |`,
-        );
+        report.add(`| ${n(one.silver)} | ${n(one.damage)} | ${n(one.burn)} | ${one.name} | ${one.family} |`);
       }
     }
 

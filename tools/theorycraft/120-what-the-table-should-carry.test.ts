@@ -46,7 +46,12 @@ const FACTS: Fact[] = [
   { key: 'damage', head: 'Worst opening', up: true, of: (row) => row.repeat.damage },
   { key: 'silver', head: 'Silver', up: false, of: (row) => row.repeat.silver },
   { key: 'queue', head: 'Queue', up: false, of: (row) => row.repeat.seconds },
-  { key: 'hiredLost', head: 'Hired lost', up: false, of: (row) => (row.repeat.mercLost > 0 ? row.repeat.mercLost : null) },
+  {
+    key: 'hiredLost',
+    head: 'Hired lost',
+    up: false,
+    of: (row) => (row.repeat.mercLost > 0 ? row.repeat.mercLost : null),
+  },
   {
     key: 'perSilver',
     head: 'Per silver',
@@ -69,7 +74,8 @@ const FACTS: Fact[] = [
     key: 'perCoin',
     head: 'Per dragon coin',
     up: true,
-    of: (row) => ((row.repeat.dragonCoins ?? 0) > 0 ? row.repeat.damage / (row.repeat.dragonCoins ?? 1) : null),
+    of: (row) =>
+      (row.repeat.dragonCoins ?? 0) > 0 ? row.repeat.damage / (row.repeat.dragonCoins ?? 1) : null,
   },
   {
     key: 'perHired',
@@ -127,7 +133,9 @@ describe.skipIf(!process.env.THEORY)('what the insight table should carry', () =
       // How many *different* stops hold at least one best, ignoring the fact nothing may win (0019 §2.3).
       const markable = FACTS.filter((fact) => fact.neverBest !== true);
       const holders = new Set(
-        markable.map((fact) => named.get(fact.key)?.pick).filter((pick): pick is PlanPick => pick !== undefined),
+        markable
+          .map((fact) => named.get(fact.key)?.pick)
+          .filter((pick): pick is PlanPick => pick !== undefined),
       );
       distinctPerArmy.push(holders.size);
 
@@ -145,7 +153,9 @@ describe.skipIf(!process.env.THEORY)('what the insight table should carry', () =
       report.add(
         `| ${scenario.label} | ${String(rows.length)} | ${FACTS.map((fact) => {
           const row = named.get(fact.key);
-          return row === null || row === undefined ? '—' : `${row.pick}${fact.neverBest === true ? ' *' : ''}`;
+          return row === null || row === undefined
+            ? '—'
+            : `${row.pick}${fact.neverBest === true ? ' *' : ''}`;
         }).join(' | ')} | **${String(holders.size)}** |`,
       );
     }
