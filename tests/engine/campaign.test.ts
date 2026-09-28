@@ -246,7 +246,7 @@ describe('searchComplete', () => {
  * His export lives in his Downloads folder, not in the repo: it is account data, and copying it into
  * `tests/fixtures` would publish it. Anyone else's checkout skips this block.
  */
-const EXPORT = '/home/remi/Downloads/pyrrhic-my-account-2026-09-13.json';
+const EXPORT = 'tests/fixtures/pyrrhic-my-account-2026-09-13.json';
 
 /**
  * The march the export describes: everything the account can field, minus what that setup left out.

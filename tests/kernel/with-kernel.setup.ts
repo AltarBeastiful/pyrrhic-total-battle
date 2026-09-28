@@ -10,4 +10,4 @@ import { createPlanKernel } from '@/kernel/plan';
 import { loadKernelModule } from './load';
 
 setKernel(createPlanKernel(loadKernelModule()));
-process.stderr.write('with-kernel.setup: the plan kernel is set\n');
+process.stdout.write('with-kernel.setup: the plan kernel is set\n');

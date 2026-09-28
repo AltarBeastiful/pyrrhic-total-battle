@@ -26,7 +26,7 @@ import { buildPlanRequest } from '../../src/state/derive';
 import { EXPORT_2026_09_17, Report, n } from './harness';
 
 const EXPORT_LATEST =
-  process.env.PYRRHIC_EXPORT_LATEST ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (3).json';
+  process.env.PYRRHIC_EXPORT_LATEST ?? 'tests/fixtures/pyrrhic-my-account-2026-09-17 (3).json';
 const perS = (row: PlanTotals): number => row.repeat.damage / Math.max(1, row.repeat.silver);
 const perH = (row: PlanTotals): number => row.repeat.damage / Math.max(1, row.repeat.mercLost);
 

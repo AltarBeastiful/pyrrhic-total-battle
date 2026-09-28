@@ -35,7 +35,7 @@ import { HORIZON, criteriaScenarios } from './plan-scenarios';
 import { countsKey, rareStockOf, repeatsOf, shelteredRivals } from './plan-yardsticks';
 
 const OWNER_EXPORT =
-  process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
+  process.env.PYRRHIC_EXPORT_2026_09_17 ?? 'tests/fixtures/pyrrhic-my-account-2026-09-17 (2).json';
 
 /** The engine tests' army: four troop types and three mercenaries with a stock of twenty each. */
 function request(): StackRequest {

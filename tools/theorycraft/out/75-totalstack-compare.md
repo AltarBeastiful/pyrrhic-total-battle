@@ -1,7 +1,7 @@
 
 ## 1. The capture, and the two armies it can be read as
 
-The owner's correction: `guardsmenExcludedCategories` is our `troops.topTierExcluded.guardsmen` — a **top-tier** exclusion, not a ban on the categories. His export's own allocation, read from `/home/remi/Downloads/pyrrhic-my-account-2026-09-13.json`:
+The owner's correction: `guardsmenExcludedCategories` is our `troops.topTierExcluded.guardsmen` — a **top-tier** exclusion, not a ban on the categories. His export's own allocation, read from `tests/fixtures/pyrrhic-my-account-2026-09-13.json`:
 
 | profile field | value |
 |---|---|

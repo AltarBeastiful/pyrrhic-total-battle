@@ -37,7 +37,7 @@ import { parseImport } from '../../src/share/exportImport';
 import type { BattleSetup, Profile } from '../../src/state/schema';
 import { buildStackRequest } from '../../src/state/derive';
 
-export const EXPORT = process.env.PYRRHIC_EXPORT ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-13.json';
+export const EXPORT = process.env.PYRRHIC_EXPORT ?? 'tests/fixtures/pyrrhic-my-account-2026-09-13.json';
 /**
  * The owner's export of 2026-09-17: leadership 7 000 / authority 2 180 on its setup, three captains (Aydae
  * 39 ★3, Alexander 19, Leonidas 36), stock EMH 142 · ABT 50 · CHR 20 · LGN 42. The 2026-09-13 file above
@@ -45,7 +45,7 @@ export const EXPORT = process.env.PYRRHIC_EXPORT ?? '/home/remi/Downloads/pyrrhi
  * experiments from 93 on read this one.
  */
 export const EXPORT_2026_09_17 =
-  process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
+  process.env.PYRRHIC_EXPORT_2026_09_17 ?? 'tests/fixtures/pyrrhic-my-account-2026-09-17 (2).json';
 export const OUT_DIR = new URL('./out/', import.meta.url);
 
 export const MERC_IDS = ['epic-monster-hunter-6', 'arbalester-6', 'legionary-6', 'chariot-6'] as const;

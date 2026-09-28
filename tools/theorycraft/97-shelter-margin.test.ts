@@ -28,7 +28,7 @@ import { buildPlanRequest } from '../../src/state/derive';
 import { Report, evaluateCounts, n } from './harness';
 
 const EXPORT_LATEST =
-  process.env.PYRRHIC_EXPORT_LATEST ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (3).json';
+  process.env.PYRRHIC_EXPORT_LATEST ?? 'tests/fixtures/pyrrhic-my-account-2026-09-17 (3).json';
 const SCALES = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2];
 const short = (id: string): string =>
   id

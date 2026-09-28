@@ -19,7 +19,7 @@ import { buildPlanRequest, buildStackRequest } from '@/state/derive';
 import type { Profile } from '@/state/schema';
 
 export const OWNER_EXPORT =
-  process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
+  process.env.PYRRHIC_EXPORT_2026_09_17 ?? 'tests/fixtures/pyrrhic-my-account-2026-09-17 (2).json';
 const TOTALSTACK_CAPTURE = new URL(
   '../../docs/research/fixtures/totalstack-2026-09-15-optimize.json',
   import.meta.url,

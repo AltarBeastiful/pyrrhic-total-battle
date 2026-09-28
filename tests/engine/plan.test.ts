@@ -23,7 +23,7 @@ import { newProfile } from '@/state/defaults';
 import { buildPlanRequest, buildStackRequest } from '@/state/derive';
 
 const OWNER_EXPORT =
-  process.env.PYRRHIC_EXPORT_2026_09_17 ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-17 (2).json';
+  process.env.PYRRHIC_EXPORT_2026_09_17 ?? 'tests/fixtures/pyrrhic-my-account-2026-09-17 (2).json';
 
 /** A small but complete army: four troop types and three mercenaries with a stock to spend. */
 function request(silver = false): StackRequest {

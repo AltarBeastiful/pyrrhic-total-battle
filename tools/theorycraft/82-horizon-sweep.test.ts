@@ -34,7 +34,7 @@ const THEIR_FIXTURE = new URL(
 );
 const PROFILE = JSON.parse(
   readFileSync(
-    process.env.PYRRHIC_EXPORT ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-13.json',
+    process.env.PYRRHIC_EXPORT ?? 'tests/fixtures/pyrrhic-my-account-2026-09-13.json',
     'utf8',
   ),
 ) as {

@@ -91,7 +91,7 @@ const PROFILE = (() => {
   return raw.payload;
 })();
 function loadOwnerExport(): string {
-  return process.env.PYRRHIC_EXPORT ?? '/home/remi/Downloads/pyrrhic-my-account-2026-09-13.json';
+  return process.env.PYRRHIC_EXPORT ?? 'tests/fixtures/pyrrhic-my-account-2026-09-13.json';
 }
 /** The account's own hired stock — the denominator of "the share of the stock it spends". */
 const STOCK_HELD: Record<string, number> = Object.fromEntries(
