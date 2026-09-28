@@ -1532,18 +1532,23 @@ test('“as is” puts the generated counts back, and the raise is one replay, n
   expect(screen.queryByText(/Raised to what the troops shelter/)).toBeNull();
 });
 
-test('the best position is a raise too, and it says what it did in its own words', async () => {
+test('the best position is a raise too, and it adds no line to the pane', async () => {
   await generateFromAPlan();
   const control = raiseControl('Mercenary');
   const plan = shownCounts();
 
   fireEvent.click(within(control).getByRole('radio', { name: 'Best' }));
   await waitFor(() => {
-    expect(screen.getByText(/hits hardest with under the troops/)).toBeTruthy();
+    expect(control.querySelector<HTMLInputElement>('input[value="best"]')?.checked).toBe(true);
   });
   // The position that promises **damage** and not units: what it fields is at least the plan's own counts
   // (it is a raise, never a cut) and never more than `Most` would field (the same ceiling bounds it).
   const best = shownCounts();
+  // **And the March says nothing about it** (owner, 2026-09-29: *"it moves the ui its unpleasant"*): the
+  // segment and its tooltip are the disclosure, and neither `Most`'s sentence nor a new one is drawn.
+  expect(screen.queryByText(/Raised to what the troops shelter/)).toBeNull();
+  expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
+
   fireEvent.click(within(control).getByRole('radio', { name: 'Most' }));
   await waitFor(() => {
     expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
@@ -1553,8 +1558,6 @@ test('the best position is a raise too, and it says what it did in its own words
     expect(count, `${label} fell below the plan's own count`).toBeGreaterThanOrEqual(plan[label] ?? 0);
     expect(count, `${label} went past what Most fields`).toBeLessThanOrEqual(most[label] ?? count);
   }
-  // Whichever position is on, the March says what the counts are: one sentence, never two.
-  expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
 }, 30_000);
 
 test('the position is remembered: the next Generate arrives already raised', async () => {

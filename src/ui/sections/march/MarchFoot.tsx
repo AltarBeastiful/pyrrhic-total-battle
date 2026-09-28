@@ -245,16 +245,18 @@ export function MarchActions() {
  * on — so it is the sentence that has to carry that fact, once, in the muted ink every other line about the
  * march is written in.
  *
- * **And the two positions say two different things** (S-143). `Most` and `Most, in tens` stand every stack
- * just under the line, so the near tie is the thing to say. `Best` stands them where the march hits hardest,
- * which is often lower down and not a tie at all: what it promises is that every stack still falls after
- * the troops, and it says exactly that and no more.
+ * **`Best` says nothing here, on purpose** (S-143; owner, 2026-09-29: *"remove the text Raised to the counts
+ * this march hits hardest with … it moves the ui its unpleasant"*). The sentence earns its line where the
+ * raise leaves a near tie to warn about; `Best` stands the stacks where the march hits hardest, which is
+ * often lower down and no tie at all, so the line was a paragraph about nothing that also shifted the pane
+ * every time the position changed. The segment the player pressed and its tooltip already say which answer
+ * the counts are — rule 15, nothing on screen without value, read the other way round for once.
  */
 export function MarchEditedNote() {
   const { edited, raiseModes } = useMarch();
   const raising = raiseModes.authority !== 'off' || raiseModes.dominance !== 'off';
   const best = raiseModes.authority === 'best' || raiseModes.dominance === 'best';
-  if (!edited && !raising) return null;
+  if (!edited && (!raising || best)) return null;
   return (
     <Stack gap={2}>
       {edited && (
@@ -263,11 +265,10 @@ export function MarchEditedNote() {
           yours to balance.
         </Text>
       )}
-      {raising && (
+      {raising && !best && (
         <Text className={classes.meta} c="dimmed">
-          {best
-            ? 'Raised to the counts this march hits hardest with under the troops: every stack still falls after your lowest troop stack. Nothing is re-sized; the figures are recomputed on these counts.'
-            : 'Raised to what the troops shelter: each hired stack stands just under your lowest troop stack, and the game decides a near tie. Nothing is re-sized; the figures are recomputed on these counts.'}
+          Raised to what the troops shelter: each hired stack stands just under your lowest troop stack, and
+          the game decides a near tie. Nothing is re-sized; the figures are recomputed on these counts.
         </Text>
       )}
     </Stack>

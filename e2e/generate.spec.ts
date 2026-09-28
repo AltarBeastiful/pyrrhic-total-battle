@@ -802,14 +802,16 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
   await expectChosen('Most');
 
   // **The fourth position promises damage, not units** (S-143): it fields at least the plan's own count and
-  // never more than `Most`, and it says so in its own sentence rather than in `Most`'s.
+  // never more than `Most` — and it adds **no line to the pane** (owner, 2026-09-29: *"it moves the ui its
+  // unpleasant"*), so neither `Most`'s sentence nor any other is drawn under the figures.
   const most = await hunter();
   await press('Best');
-  await expect(march.getByText(/hits hardest with under the troops/)).toBeVisible();
+  await expectChosen('Best');
   const best = await hunter();
   expect(best, 'Best fell below the plan’s own count').toBeGreaterThanOrEqual(before);
   expect(best, 'Best went past what Most fields').toBeLessThanOrEqual(most);
   await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
+  await expect(march.getByText(/hits hardest with under the troops/)).toHaveCount(0);
   // Back to `Most` for the rest of the journey: the positions are one control, and this is the one the
   // Generate below is asked to remember.
   await press('Most');
