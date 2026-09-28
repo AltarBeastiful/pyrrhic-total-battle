@@ -16,7 +16,7 @@ import type { Category, Group as UnitRole, Race } from '@/data/types';
 import type { CustomMercenary } from '@/state/schema';
 import { NumberField, Sheet } from '@/ui/kit';
 
-import { CATEGORY_LABELS, GROUP_LABELS, RACE_LABELS } from './labels';
+import { CATEGORY_LABELS, GROUP_LABELS, RACE_LABELS } from '@/ui/domain';
 
 /** A `Select` value is a string, so "nothing chosen" needs a key of its own. */
 const NONE = 'none';

@@ -53,7 +53,7 @@ import { useResultStore } from '@/ui/resultStore';
 
 import { PlanBar } from './PlanBar';
 import { PlanTrade } from './PlanTrade';
-import { amount, compact, duration, ratio } from './format';
+import { amount, compact, compactRatio, duration, ratio } from './format';
 import { putBackWords, sequenceWords, spendsStock } from './picks';
 
 import { pickOf, sweetSpotOf, useRunStore } from './runStore';
@@ -86,7 +86,7 @@ function Figure({ children }: { children: ReactNode }) {
  * more readable"*), and a price of nought is left out of it rather than printed as one (design rule 15): an
  * army that hires nothing says nothing about a stock, and a march that opens no Temple says nothing about
  * gold. `mercLost` is **units gone for good** — the tenth of each chunk the Temple cannot return — so it is
- * counted in mercenaries, and one of them is "1 mercenary".
+ * counted in **mercs**, the word the trade's own head wears, and one of them is "1 merc".
  */
 function spentOn(point: PlanFigures, spendsHired: boolean): ReactNode[] {
   const { mercLost, silver, gold, seconds } = point.repeat;
@@ -95,12 +95,12 @@ function spentOn(point: PlanFigures, spendsHired: boolean): ReactNode[] {
     parts.push(
       <>
         <Figure>{amount(mercLost)}</Figure>
-        {mercLost === 1 ? ' mercenary' : ' mercenaries'}
+        {mercLost === 1 ? ' merc' : ' mercs'}
       </>,
     );
   }
   // Compact, like the cells of the table under it: the sentence and the row a player reads next to it name
-  // the same figure the same way (design rule 5). The mercenaries stay a plain count — one is "1".
+  // the same figure the same way (design rule 5). The mercs stay a plain count — one is "1".
   parts.push(
     <>
       <Figure>{compact(silver)}</Figure> silver
@@ -183,7 +183,7 @@ function bindingSentence(binding: CampaignPlan['binding']): string {
   if (binding.mercenaries && binding.silver)
     return 'Both resources are spent: more silver and more mercenaries would each buy more damage.';
   if (binding.mercenaries)
-    return 'The mercenary stock is what ends the plan: silver alone would not buy more damage.';
+    return 'The merc stock is what ends the plan: silver alone would not buy more damage.';
   if (binding.silver) return 'The silver box is what ends the plan: more silver would buy more marches.';
   if (binding.leadership)
     return 'Your leadership is what ends the plan: every point of it is spent, so a bigger march needs more of it.';
@@ -200,8 +200,8 @@ function bindingSentence(binding: CampaignPlan['binding']): string {
  * behind a glyph. Unchanged, sentence for sentence.
  */
 const WHY = [
-  'Damage is paid for twice over: with silver, which you earn back, and with the hired stock, which is gone',
-  'for good. Silver buys a deeper march: more of it, and every march hits harder for it. The hired stock',
+  'Damage is paid for twice over: with silver, which you earn back, and with the merc stock, which is gone',
+  'for good. Silver buys a deeper march: more of it, and every march hits harder for it. The merc stock',
   'hits harder still and takes no leadership, but a stack loses a tenth of itself every march it is fielded,',
   'so the same stock is worth more spent thinly over many marches than all at once. Which of the two runs out',
   'first is only visible over a whole sequence of marches, and planning the sequence is what this method does.',
@@ -215,8 +215,8 @@ const WHY = [
   // day — the bar is *"about balancing between burning silver efficiently, which is constrained, and
   // burning mercs efficiently, which is constrained as well"* — and the two efficiencies are notes on the
   // stops that have them rather than stops of their own (`PlanRow.bestFor`, `PlanTrade.tsx`).
-  'The bar runs along that stock, fewest hired lost to most, and each plan says whether it is the one that',
-  'does most with a silver or the one that does most with a hired unit.',
+  'The bar runs along that stock, fewest mercs lost to most, and each plan says whether it is the one that',
+  'does most with a silver or the one that does most with a merc unit.',
 ].join(' ');
 
 /**
@@ -226,7 +226,7 @@ const WHY = [
  * trade and a short one — which is the whole of what changes when nothing drains.
  */
 const WHY_TROOPS_ONLY = [
-  'With nothing hired in the march there is only one thing to weigh: a bigger march hits harder and costs',
+  'With no merc in the march there is only one thing to weigh: a bigger march hits harder and costs',
   'more silver and more days in the training queue to bring back. Nothing here is spent for good, so every',
   'plan on the bar is a march you can repeat as often as you like; the bar runs from the least silver to',
   'the most damage, and each plan says what it hits for and what it costs to stand back up.',
@@ -428,7 +428,7 @@ export function PlanFold() {
           )} silver over ${amount(plan.marches)} marches, ${duration(plan.seconds)} of training${
             // The clause that closes the line is what the campaign spends for good, and a campaign that
             // spends nothing for good says nothing there rather than "0 of the hired stock gone" (S-112).
-            spendsHired ? `, with ${amount(plan.mercLost)} of the hired stock gone.` : '.'
+            spendsHired ? `, with ${amount(plan.mercLost)} of the merc stock gone.` : '.'
           }`}
         </Text>
 
@@ -447,8 +447,8 @@ export function PlanFold() {
               {spendsHired
                 ? `Every plan here is fought over the same marches, the horizon the app plans over, so a ` +
                   `row is the march you repeat: what it hits for, what it costs in silver and what it burns ` +
-                  `of the hired stock for good. Per silver divides that one march's damage by its own ` +
-                  `silver; Per hired divides what its hired stacks themselves hit for by the hired units it ` +
+                  `of the merc stock for good. Per silver divides that one march's damage by its own ` +
+                  `silver; Per merc divides what its merc stacks themselves hit for by the merc units it ` +
                   `loses for good.`
                 : // The two stock columns are not drawn on this bar, so the sentence that explains them is
                   // not written either (S-112, design rule 5: the caption describes the table on screen).
@@ -465,7 +465,7 @@ export function PlanFold() {
               <Text size="sm" c="dimmed">
                 {spendsHired
                   ? `${amount(plan.leftOut)} of the plans the search kept are off the goal: a march that ` +
-                    `fields a token share of the hired stock, or silver spent far past what it returns. ` +
+                    `fields a token share of the merc stock, or silver spent far past what it returns. ` +
                     `They are not offered here.`
                   : // The reasons a plan is left off differ with the axis: with no stock to field a token
                     // share of, what is cut is the thrift end that buys almost nothing for its silver
@@ -530,10 +530,12 @@ export function PlanFold() {
                         {/* **The hired stacks' own damage over the hired units lost** (S-105), the same
                             reading the trade's "Per hired" prints: the column divided the whole campaign's
                             damage by its burn until 2026-09-19, which credited the stock with every point
-                            the troops and the troops-only tail struck for (design rule 5). */}
+                            the troops and the troops-only tail struck for (design rule 5). Printed the same
+                            way the trade prints it, too — `compactRatio` ("137K"), since a six-figure rate
+                            is a figure a glance cannot take in (owner, 2026-09-28). */}
                         {spendsHired && (
                           <Table.Td ta="end">
-                            {ratio(point.hiredDamage / Math.max(1, point.mercLost))}
+                            {compactRatio(point.hiredDamage / Math.max(1, point.mercLost))}
                           </Table.Td>
                         )}
                       </Table.Tr>

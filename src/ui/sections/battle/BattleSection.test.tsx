@@ -122,7 +122,7 @@ test('a method card is chosen by pressing anywhere on it, its sentence included'
   expect(within(list).getAllByRole('radio')[0]?.getAttribute('aria-label')).toBe('Complete optimization');
   expect(within(list).getByRole('radio', { name: 'Tier ladder' }).getAttribute('aria-checked')).toBe('true');
 
-  await user.click(screen.getByText('Hired units only fall once all of your troops have.'));
+  await user.click(screen.getByText('Mercs only fall once all of your troops have.'));
   expect(options()?.method).toBe('ms');
   expect(within(list).getByRole('radio', { name: 'Troops first' }).getAttribute('aria-checked')).toBe('true');
 });
@@ -149,7 +149,7 @@ test('a rule writes the march, and only the rules that apply to the method are o
   fireEvent.click(rule('Monsters after troops') as HTMLElement);
   expect(options()?.monstersLast).toBe(true);
 
-  fireEvent.click(rule('Hired units in tens') as HTMLElement);
+  fireEvent.click(rule('Mercs in tens') as HTMLElement);
   expect(options()?.roundTo10).toBe(true);
 
   // Troops first: the trade rules take its place, and the tier-ladder rule is switched off with it.
@@ -166,7 +166,7 @@ test('a rule writes the march, and only the rules that apply to the method are o
   // Your own order: nothing but the tens rule means anything.
   fireEvent.click(screen.getByRole('radio', { name: 'Your own order' }));
   expect(screen.getAllByRole('switch')).toHaveLength(1);
-  expect(rule('Hired units in tens')).toBeTruthy();
+  expect(rule('Mercs in tens')).toBeTruthy();
   expect(options()?.relaxedPreservation).toBe(false);
 });
 
@@ -196,7 +196,7 @@ test('on a phone the stacking method folds to the chosen one too (D-54)', async 
   await user.click(within(methods).getByRole('button', { name: 'Change Stacking method' }));
   // Every method the card offers, the plan one (S-55) included.
   expect(within(methods).getAllByRole('radio')).toHaveLength(METHOD_CHOICES.length);
-  await user.click(within(methods).getByText('Hired units only fall once all of your troops have.'));
+  await user.click(within(methods).getByText('Mercs only fall once all of your troops have.'));
   expect(options()?.method).toBe('ms');
   expect(within(methods).getAllByRole('radio')).toHaveLength(1);
 });

@@ -4,7 +4,7 @@
  * merc lost count with a percent of all mercs available, to see how big the drop is").
  *
  * **Ten hired units cost one** (`chunks()`, the engine's own recovery rule), which is the same count
- * the plan's trade prints as "Hired lost" and the Details fold divides the damage by, so the three
+ * the plan's trade prints as "Merc" and the Details fold divides the damage by, so the three
  * agree on a march. The stock is the caps the request carries for its authority units — the owned
  * counts the Mercenaries card records — and it is unknown while any hired type on the march has no
  * cap at all, because "unlimited" is not a stock a share can be taken of.

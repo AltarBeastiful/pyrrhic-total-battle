@@ -175,7 +175,7 @@ export function refusalOf(error: unknown): string {
   }
   if (error instanceof Error && error.message.includes('no feasible plan')) {
     return (
-      'There is no campaign to plan from this army. This method spreads the hired stock you own over the ' +
+      'There is no campaign to plan from this army. This method spreads the merc stock you own over the ' +
       'marches you set, so it needs your mercenaries filled in first.'
     );
   }

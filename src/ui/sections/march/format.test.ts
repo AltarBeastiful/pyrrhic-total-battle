@@ -1,16 +1,17 @@
 /**
  * `format.ts`, where a figure is turned into the words a player reads.
  *
- * Two helpers are here, and each for the same reason: the **shape** of what they print is the thing that was
+ * Three helpers are here, and each for the same reason: the **shape** of what they print is the thing that was
  * asked for, not a detail of it. `signedPercent`'s sign carries meaning rather than decoration — the plan's
  * put-back line says a march gained damage and gave silver back, and a reader who meets "18.2%" where
- * "-18.2%" was meant reads a rise for a saving. `compactTwo`'s digit count is the owner's own rule. The rest
- * of the file is exercised through the screens that draw it (`march.test.tsx`, `PlanPanel.test.tsx`), which
- * is where a format is worth holding.
+ * "-18.2%" was meant reads a rise for a saving. `compactTwo`'s digit count is the owner's own rule, and
+ * `compactRatio`'s threshold is the one decision inside it — where a rate stops being comparable digit by
+ * digit and starts being a figure to take in. The rest of the file is exercised through the screens that draw
+ * it (`march.test.tsx`, `PlanPanel.test.tsx`), which is where a format is worth holding.
  */
 import { expect, test } from 'vitest';
 
-import { compact, compactTwo, signedPercent } from './format';
+import { bonusLines, compact, compactRatio, compactTwo, signedPercent } from './format';
 
 test('signedPercent wears its sign, rounds to the tenth it prints, and claims no direction at zero', () => {
   // A gain and a loss, at the one decimal `percent` gives a fractional figure.
@@ -29,6 +30,17 @@ test('signedPercent wears its sign, rounds to the tenth it prints, and claims no
   // The same guard every figure in this file has: nothing to divide by prints as an em dash, not as NaN.
   expect(signedPercent(Number.NaN)).toBe('—');
   expect(signedPercent(Number.POSITIVE_INFINITY)).toBe('—');
+});
+
+test('a unit’s two brackets read as two lines, and a type no bonus touches reads zero', () => {
+  // The tooltip and the unit sheet both say them, in this order — health first, the way the Bonuses card
+  // is filled in and the way the sheet's own bars stand (`bonusLines`, `UnitSheet`).
+  expect(bonusLines(43.5, 12)).toEqual(['Health: +43.5%', 'Strength: +12%']);
+  // A type nothing in the account reaches is a real answer and not a missing figure: "0%" says the
+  // bonuses do not touch it, where a dash would leave the reader wondering whether it was measured.
+  expect(bonusLines(0, 0)).toEqual(['Health: 0%', 'Strength: 0%']);
+  // And the same guard as everything else here: a bonus that was never computed is not a bonus of nought.
+  expect(bonusLines(Number.NaN, 5)).toEqual(['Health: —', 'Strength: +5%']);
 });
 
 test('compactTwo spends a decimal only where it buys a second digit', () => {
@@ -51,4 +63,25 @@ test('compactTwo spends a decimal only where it buys a second digit', () => {
   // Nothing to divide by prints as an em dash, as everywhere else in the file.
   expect(compactTwo(Number.NaN)).toBe('—');
   expect(compactTwo(Number.POSITIVE_INFINITY)).toBe('—');
+});
+
+test('compactRatio is a ratio below a hundred and a compact figure above it', () => {
+  // **Above the threshold the digits the owner asked to be rid of** (2026-09-28): a hired unit striking
+  // for 325 000 is "325K" in the plan's tables and on the recap's line about the same figure.
+  expect(compactRatio(325_000)).toBe('325K');
+  expect(compactRatio(1_230_000)).toBe('1.2M');
+  expect(compactRatio(137_000)).toBe('137K');
+  expect(compactRatio(99_999)).toBe('100K');
+  // **At the threshold and under it, `ratio` itself**: a figure a player chooses a row by is printed to
+  // where two rows differ (S-59) — three plans at 2.91 · 2.37 · 2.96 are three rows.
+  expect(compactRatio(2.91)).toBe('2.91');
+  expect(compactRatio(94.25)).toBe('94.25');
+  expect(compactRatio(99.99)).toBe('99.99');
+  expect(compactRatio(100)).toBe('100');
+  // And the decimals are the caller's, the way they are `ratio`'s: the trade's per silver column asks
+  // for three.
+  expect(compactRatio(2.9104, 3)).toBe('2.910');
+  // Nothing to divide by prints as an em dash, as everywhere else in the file.
+  expect(compactRatio(Number.NaN)).toBe('—');
+  expect(compactRatio(Number.POSITIVE_INFINITY)).toBe('—');
 });

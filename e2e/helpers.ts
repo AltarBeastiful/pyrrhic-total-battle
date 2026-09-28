@@ -683,16 +683,26 @@ function figureNumber(text: string): number {
 }
 
 /**
- * One recap figure by the words it is written in ("Worst opening", "Silver to recover"). The recap
- * travels with Generate, so it is looked up on the page rather than inside the section: it is in
- * the pane's header on a desktop and in the section on a phone — one of the two, never both.
+ * One recap figure by the words it is written in ("Damage", "Silver to recover"). The recap travels
+ * with Generate, so it is looked up on the page rather than inside the section: it is in the pane's
+ * header on a desktop and in the section on a phone — one of the two, never both.
+ *
+ * The label is matched against the **text node** the figure is written in, and not against the whole
+ * `dt`: a label opens with a glyph and no space, so the element's own text is "🔒Damage" and no equality
+ * on it can carry a word without the mark ("🪙Silver to recover"). The mark is anyone's device; the word
+ * is ours, and it is its own node (`Figures`, `src/ui/kit`).
+ *
+ * Matching the node is also what keeps two figures apart that share a word: "Damage" and "Damage per
+ * silver" both stand in `[aria-label="March figures"]` since the 2026-09-21 rename, and `contains(., …)`
+ * on the element would answer with both.
  */
 export async function marchFigure(page: Page, label: string): Promise<number> {
   const value = page
     .locator('[aria-label="March figures"]')
     .first()
-    // `contains`, not `=`: a figure's label may open with a glyph ("🪙 Silver to recover").
-    .locator(`xpath=.//dt[contains(., ${JSON.stringify(label)})]/following-sibling::dd[1]`);
+    .locator(
+      `xpath=.//dt[.//text()[normalize-space(.) = ${JSON.stringify(label)}]]/following-sibling::dd[1]`,
+    );
   return figureNumber(await value.innerText());
 }
 
@@ -704,7 +714,9 @@ export function marchFigureWords(page: Page, label: string): Locator {
   return page
     .locator('[aria-label="March figures"]')
     .first()
-    .locator(`xpath=.//dt[contains(., ${JSON.stringify(label)})]/following-sibling::dd[1]`);
+    .locator(
+      `xpath=.//dt[.//text()[normalize-space(.) = ${JSON.stringify(label)}]]/following-sibling::dd[1]`,
+    );
 }
 
 /** The hero figure: the expected damage, the first thing the recap prints. */

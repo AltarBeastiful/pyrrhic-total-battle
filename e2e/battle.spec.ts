@@ -44,14 +44,14 @@ test('the method card is pressed anywhere, its rule rides on it, and the march c
   // Design rule 8: the press lands on the card's own sentence, not on a radio the size of a pea.
   const method = card.getByRole('radiogroup', { name: 'Stacking method' });
   await expect(method.getByRole('radio', { name: 'Tier ladder', exact: true })).toBeChecked();
-  await method.getByText('Hired units only fall once all of your troops have.').click();
+  await method.getByText('Mercs only fall once all of your troops have.').click();
   await expect(method.getByRole('radio', { name: 'Troops first', exact: true })).toBeChecked();
 
   // The rules on screen are the ones that mean something for that method, and the row toggles.
   await expect(card.getByRole('switch')).toHaveCount(3);
   // Mantine's switch input covers the whole row, so the press a player makes anywhere on it lands
   // on the control itself; its accessible name is the label and the sentence under it, run together.
-  const tens = card.getByRole('switch', { name: /^Hired units in tens/ });
+  const tens = card.getByRole('switch', { name: /^Mercs in tens/ });
   await expect(tens).not.toBeChecked();
   await tens.click();
   await expect(tens).toBeChecked();

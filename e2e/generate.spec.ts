@@ -50,9 +50,11 @@ test('Generate fills the pools and produces the recap and the counts', async ({ 
   }
   expect(await marchStackCount(page)).toBeGreaterThan(0);
 
-  // The recap: a march that fields units always does damage, whoever strikes first.
+  // The recap: a march that fields units always does damage, whoever strikes first. The worst opening is
+  // the figure headed **Damage** since 2026-09-21 — the owner read "largest damage" there and asked for the
+  // word the recap's own journalist writes it in (S-94; `MarchRecap`, design rule 5).
   expect(await marchExpectedDamage(page)).toBeGreaterThan(0);
-  expect(await marchFigure(page, 'Worst opening')).toBeGreaterThan(0);
+  expect(await marchFigure(page, 'Damage')).toBeGreaterThan(0);
   expect(await marchFigure(page, 'Silver to recover')).toBeGreaterThan(0);
   // **And what it costs in time** (owner, 2026-09-18: *"troops of higher tier are longer to train.
   // Adding training time on the battle summary is the first step."*). It stands with the two coins and it
@@ -297,6 +299,30 @@ test('a press on a pill leaves that type out of the march, and puts it back', as
   expect(problems).toEqual([]);
 });
 
+test('the unit sheet says what a type is filed under, and flags a squad the tables do not carry', async ({
+  page,
+}) => {
+  const problems = watchConsole(page);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openApp(page);
+  // The e2e seed hires the Epic Monster Hunter VI — one of the four mercenaries of the 2026-09-18 pull whose
+  // tags carry a role and no squad, so this is the live case of the alert rather than a fixture.
+  await seedHiredStock(page);
+  await page.locator('#battle').getByRole('radio', { name: 'Complete optimization' }).click();
+  await generate(page, { leadership: 20_000 });
+
+  const hunter = page.getByRole('button', { name: 'Details: Epic Monster Hunter VI' }).first();
+  await hunter.click();
+  const sheet = page.getByRole('dialog', { name: 'Epic Monster Hunter VI' });
+  await expect(sheet).toBeVisible();
+  // The heading: the family and the tier, then the one facet the tags do carry.
+  await expect(sheet.getByText('Mercenaries VI · Guardsmen')).toBeVisible();
+  // …and the alert, which says what is missing rather than showing a shorter list (owner, 2026-09-28).
+  await expect(sheet.getByText(/^No squad is recorded for Epic Monster Hunter VI/)).toBeVisible();
+
+  expect(problems).toEqual([]);
+});
+
 test('the pill’s corner mark opens the unit sheet over the sticky pane', async ({ page }) => {
   const problems = watchConsole(page);
   // Two panes: the March is the sticky pane on the right and the command bar is on the bottom edge,
@@ -308,6 +334,19 @@ test('the pill’s corner mark opens the unit sheet over the sticky pane', async
   const mark = marchPillDetails(page).first();
   const name = (await mark.getAttribute('aria-label'))?.replace('Details: ', '') ?? '';
   expect(name).not.toBe('');
+  // **The mark previews what it opens** (owner, 2026-09-28): the two brackets this march fields the type
+  // in, one line each — and the figures are the sheet's own, checked against it below (design rule 5).
+  await mark.hover();
+  const tip = page.getByRole('tooltip');
+  await expect(tip).toBeVisible();
+  const lines = (await tip.innerText())
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  expect(lines).toHaveLength(2);
+  expect(lines[0]).toMatch(/^Health: [+−-]?\d/u);
+  expect(lines[1]).toMatch(/^Strength: [+−-]?\d/u);
+
   await mark.click();
 
   // The sheet is on top of everything the page pins to an edge, so its heading can be read and its
@@ -315,6 +354,12 @@ test('the pill’s corner mark opens the unit sheet over the sticky pane', async
   const sheet = page.getByRole('dialog', { name });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole('heading', { name })).toBeVisible();
+  // …and it writes the same two figures out beside the bars they move: one figure, one notation, wherever
+  // the page prints it.
+  for (const line of lines) {
+    const percent = line.slice(line.indexOf(': ') + 2);
+    expect(await sheet.getByText(percent, { exact: true }).count()).toBeGreaterThan(0);
+  }
   const leaveOut = sheet.getByRole('button', { name: 'Leave out' });
   await expect(leaveOut).toBeVisible();
 
@@ -654,13 +699,15 @@ test('a second Generate opens the plan bar on the stop the player last read', as
 
   const march = marchSection(page);
   const trade = march.getByRole('grid', { name: /^Every plan on the trade/ });
-  const stops = trade.getByRole('row', { name: /^(Silver saver|Sweet spot|More mercs|Steady max|All in)\b/ });
+  const stops = trade.getByRole('row', {
+    name: /^(Merc saver|Silver saver|Sweet spot|More mercs|Steady max|All in)\b/,
+  });
   const count = await stops.count();
   expect(count, 'the bar needs two stops to have anywhere to be left').toBeGreaterThan(1);
 
   /** Which answer a row is, off the name it carries: the figures after it move, the name does not. */
   const nameOf = async (row: Locator): Promise<string> =>
-    /^(Silver saver|Sweet spot|More mercs|Steady max|All in)/.exec(
+    /^(Merc saver|Silver saver|Sweet spot|More mercs|Steady max|All in)/.exec(
       (await row.getAttribute('aria-label')) ?? '',
     )?.[0] ?? '';
 
@@ -669,7 +716,7 @@ test('a second Generate opens the plan bar on the stop the player last read', as
   const wanted = await nameOf(dearest);
   expect(wanted, 'the dearest stop must be another plan than the one it opened on').not.toBe(opened);
 
-  // He reads the dearest stop — the most of the hired stock a march may burn.
+  // He reads the dearest stop — the most of the merc stock a march may burn.
   await dearest.click();
   await expect(trade.getByRole('row', { selected: true })).toHaveAttribute(
     'aria-label',

@@ -58,7 +58,7 @@ export function MarchRecap() {
    * training time, silver and dragon coins. TotalStack computes the total of dragon coins needed for a stack
    * if present and the dmg/dragon coins."*).
    *
-   * A dominance monster is **trained**, not hired: it does not come off the "Hired lost" figure below (that
+   * A dominance monster is **trained**, not hired: it does not come off the "Merc lost" figure below (that
    * count is the authority pool's, `./hired`, and so is the engine's own burn axis since S-102). What it
    * costs is on this block instead — the silver and the queue it shares with the troops, plus these coins,
    * which nothing else in the game spends.
@@ -179,9 +179,9 @@ export function MarchRecap() {
    * the percent of total mercs spent, replace it with the dmg per merc using a small notation: 265k,
    * 1.23m"*).
    *
-   * The count is the one the plan's trade prints as "Hired lost" (`./hired`). Beside it used to sit the
-   * share of the account's whole stock; it is **damage a hired unit** now — the one figure that says whether
-   * spending the stock was worth it, and the same question the bar's "Per hired" column answers, so the two
+   * The count is the one the plan's trade prints as the merc column (`./hired`). Beside it used to sit the
+   * share of the account's whole stock; it is **damage a merc** now — the one figure that says whether
+   * spending the stock was worth it, and the same question the bar's "Per merc" column answers, so the two
    * screens agree (design rule 5).
    *
    * **One definition, and it is S-105's**: the *hired stacks' own* damage over the hired units lost, never
@@ -200,7 +200,7 @@ export function MarchRecap() {
   const hiredDamage = worstDamageByPool(summary.journals.enemyFirst, result.stacks).authority;
   /**
    * **Drawn only where the march has a stock to lose** (S-112, design rule 15), the way the dragon-coin row
-   * has been since S-102. A march that fields nothing hired printed "Hired lost 0 · 0 % of 0" — a row whose
+   * has been since S-102. A march that fields nothing hired printed "Merc lost 0 · 0 % of 0" — a row whose
    * figure, share and denominator are all nothing — and since S-111 a whole bar of such marches is an
    * ordinary answer rather than an oddity. The test is the *account's* stock and not the march's: a player
    * who holds mercenaries and is looking at a march that fields none needs to see that it fields none.
@@ -210,18 +210,18 @@ export function MarchRecap() {
   const holdsStock = stock === null || stock > 0 || lost > 0;
   const hired = {
     key: 'hired',
-    label: 'Hired lost',
+    label: 'Merc lost',
     glyph: <Glyph kind="mercenaries" />,
     value: (
       <Group gap={6} wrap="nowrap" align="baseline">
         <DeltaText value={lost} format={amount} betterWhen="lower" />
         {/* Drawn only while the march really lost some (design rule 15): with nothing burned there is no
-            denominator, and "— a hired unit" beside a nought is a line about nothing. `compactTwo` is the
+            denominator, and "— a merc" beside a nought is a line about nothing. `compactTwo` is the
             owner's own notation for it — "325K", "1.2M": short, and never so short that two runs print the
             same figure (`./format`). */}
         {lost > 0 && (
           <Text span size="xs" c="dimmed">
-            {`· ${compactTwo(hiredDamage / lost)} a hired unit`}
+            {`· ${compactTwo(hiredDamage / lost)} a merc`}
           </Text>
         )}
       </Group>

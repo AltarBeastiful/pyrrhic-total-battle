@@ -123,7 +123,12 @@ export function useMarch(): MarchView {
       edited: edits !== null,
       overflow: edits?.overflow ?? [],
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
-      pools: poolRows({ result: army, units: snapshot.request.units, keepEmpty: editing }),
+      pools: poolRows({
+        result: army,
+        units: snapshot.request.units,
+        totals: snapshot.request.totals,
+        keepEmpty: editing,
+      }),
       leftOut: leftOutOf(snapshot.request.units, army, leftOutByPlayer, editing),
     };
   }, [snapshot, counts, editing, leftOutByPlayer, previous, stale]);

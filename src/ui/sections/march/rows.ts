@@ -5,12 +5,39 @@
  * the components below stay declarative and the reasoning that decides "this type is in the march,
  * that one is left out" is testable on its own.
  */
-import { retrainOne, reviveOne } from '@/engine';
-import type { BattleSummary, Pool, Stack, StackRequest, StackResult, UnitDef } from '@/engine/types';
+import { healthPercent, retrainOne, reviveOne, strengthPercent } from '@/engine';
+import type {
+  BattleSummary,
+  BonusTotals,
+  Pool,
+  Stack,
+  StackRequest,
+  StackResult,
+  UnitDef,
+} from '@/engine/types';
 import { unitGroupOf } from '@/ui/domain';
 
 import type { MarchResize } from './runStore';
 import { findUnit } from './units';
+
+/**
+ * **What this march's bonuses give one type**, in the two brackets the Bonuses card is filled in: "43.5" is
+ * +43.5 % health. Both are the engine's own sums for the type's keys (`healthPercent` and `strengthPercent`,
+ * `src/engine/units.ts`) — the strength one carrying the event strength, which is what the march is really
+ * fielded with.
+ *
+ * Read off the *totals* rather than off a stack, so it answers for a type that is not marching too: the unit
+ * sheet shows it for every type it can be opened on, and the pill's corner mark previews it for the ones
+ * that are.
+ */
+export interface UnitBonus {
+  health: number;
+  strength: number;
+}
+
+export function unitBonus(unit: UnitDef, totals: BonusTotals): UnitBonus {
+  return { health: healthPercent(unit, totals), strength: strengthPercent(unit, totals) };
+}
 
 // ---- The march as pills, one block per pool ------------------------------------------------------
 /** A stack of the march, as one pill draws it. */
@@ -18,6 +45,8 @@ interface PillEntry {
   unit: UnitDef;
   /** Units of this type in the march. */
   count: number;
+  /** What the march's bonuses add to this type — the corner mark's tooltip (`UnitBonus`). */
+  bonus: UnitBonus;
 }
 
 /** One housing pool: what it paid for, and the stacks it is paying for, in kill order. */
@@ -37,6 +66,13 @@ interface PoolRowsInput {
   /** The unit types the march was computed from. */
   units: readonly UnitDef[];
   /**
+   * The bonuses the march was computed under, so a pill's corner mark can say what they give its type
+   * (`unitBonus`). The request's own totals and never the live setup's: the pills are drawn under a march
+   * the run store already holds, and a form edited since must not restate them (the recap's "out of date"
+   * line is what says the setup moved).
+   */
+  totals: BonusTotals;
+  /**
    * Counts are being edited by hand, so a stack typed down to nothing **keeps its pill** — the pill is
    * the field the player is typing in (owner, 2026-09-21). It drops into the "Left out" row when the
    * mode is left, not between two keystrokes.
@@ -54,14 +90,14 @@ interface PoolRowsInput {
  *
  * A pool with no stacks and no capacity is left out of the list rather than drawn empty.
  */
-export function poolRows({ result, units, keepEmpty = false }: PoolRowsInput): PoolRow[] {
+export function poolRows({ result, units, totals, keepEmpty = false }: PoolRowsInput): PoolRow[] {
   const byPool = new Map<Pool, PillEntry[]>();
 
   for (const stack of result.stacks) {
     if (stack.count <= 0 && !keepEmpty) continue;
     const unit = findUnit(stack.unitId, units);
     if (unit === undefined) continue;
-    const entry: PillEntry = { unit, count: stack.count };
+    const entry: PillEntry = { unit, count: stack.count, bonus: unitBonus(unit, totals) };
     const list = byPool.get(stack.pool);
     if (list === undefined) byPool.set(stack.pool, [entry]);
     else list.push(entry);
@@ -145,8 +181,8 @@ export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): str
   // *"I'm left with a merc stack that's below what could be added with proper shielding"*. The sentence says
   // what the answer is, not only that it is safe.
   const rule = resize.inPlan
-    ? '. Nothing else was pushed out, and your hired stacks are re-sized to what the troops shelter.'
-    : '. Your hired stacks stay under the troops.';
+    ? '. Nothing else was pushed out, and your merc stacks are re-sized to what the troops shelter.'
+    : '. Your merc stacks stay under the troops.';
   const missed =
     resize.unfielded.length > 0 ? ` ${names(resize.unfielded)} could not be fielded at all.` : '';
   // Said in its own words, because it is a different fact: not "it would not fit" but "there is none to

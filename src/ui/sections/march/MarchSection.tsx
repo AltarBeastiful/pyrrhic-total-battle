@@ -259,6 +259,7 @@ export function MarchSection() {
         <UnitSheet
           unit={sheetUnit}
           row={march.rows.find((row) => row.unit.id === sheetUnit?.id)}
+          totals={snapshot.request.totals}
           totalDamage={summary.journals.enemyFirst.totalDamage}
           onClose={() => {
             setSheetUnit(null);

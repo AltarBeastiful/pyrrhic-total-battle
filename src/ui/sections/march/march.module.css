@@ -153,38 +153,40 @@
     inset 0 -1px 0 var(--pyr-hairline);
 }
 
-/* The campaign's plans (S-54, `CampaignPanel.tsx`) name themselves in two lines — the sizing, and how
-   many mercenaries it fields — inside one cell, so the five figures beside them fit a 420 px pane.
-   It is the one cell of that table allowed to wrap, for the reason `.compareName` is below. */
-/* Written as two classes so it outweighs the `nowrap` every other cell of the table carries: capped
-   rather than merely allowed to wrap, because without a ceiling "Troops first, with damage trades"
-   sets the column and pushes the last two figures out of a 420 px pane, where the same name over two
-   lines costs one line and shows them. */
+/* The plan's name on the trade's first cell, sized to its own content since 2026-09-28 (`PlanTrade.tsx`
+   writes the two classes: this one and the pin). The two lines it holds — the row's name, and the
+   efficiency it is the bar's best at (`.planNote` below) — are what the column is measured against. */
 .compare .planCell {
-  /* A **floor, and no ceiling any more** (S-59, 2026-09-16). The 8 rem floor and the 9.5 rem ceiling were
-     sized for the shape sentences ("3 stacks · 135 hired · 1.6M silver a march"), which came out one word
-     per line in an auto-laid table on a 390 px sheet; an auto table now lays out three short names, the
-     longest of them "Spare the stock", so the ceiling has nothing to hold back and is gone with them.
+  /* **The column is its own content, and nothing else** (owner, 2026-09-28: *"the plan column seem to have
+     unnecessary space on the right — change for proper sizing"*).
 
-     The floor is **7 rem**, and it was measured rather than guessed: at 5.5 rem an auto layout gave the
-     column 97.8 px and the name wrapped — "Sweet / spot" over "the sweet / spot", four lines for a row
-     whose figures are one — where 7 rem (112 px) sets the longest name on one line and "the sweet spot"
-     on one below it.
+     It carried a `min-width` floor from S-59 to here — 8 rem, then 7, then 6.5, then 6.25 — each measured
+     against the names of its day, and each of them a **floor** in name only: an auto-laid table hands its
+     widest column most of the room left over, so the cell was never the floor's width. Measured on the
+     four-stop bar `seedHiredStock` primes, that floor's column was **103 px at 1400×900 and 100 px at
+     390**, holding sixteen to twenty-eight pixels of air between a name and the damage bar beside it, on
+     the one table on the page whose every other cell is a figure.
 
-     **6.5 rem since the screen review of 2026-09-16**, when the note under the name went (rule 5: the row
-     is already called "Sweet spot") and the heads stopped wrapping. 104 px still sets the longest of the
-     four names, "Spare the stock", on one line at the table's 12 px; the eight pixels it gives back are
-     part of the 36 that keep a 462 px pane free of a sideways scroller. The cell may still wrap, because
-     the engine names the rows and a longer name is its to give.
+     So the floor goes and the name stops being allowed to break: the cell is as wide as the longest thing
+     in it — `Merc saver` over `best merc` at the table's 12 px / 600 — plus the share of its own slack an
+     auto layout hands every column, **87 px at 1400×900 and 77 px at 390**, and the free space it gives up
+     is spread over the seven columns instead of landing on this one. On the phone that is the whole of the
+     37 px the table stops scrolling for: 448 px of table in 358 px of sheet before, 411 after. At
+     1400×900 the table is 462 px in a 462 px pane either way — no scroller, which is what
+     `paneFrame().scrollers` in `e2e/generate.spec.ts` holds the pane to. The note (`.planNote` below)
+     keeps its own `normal`: it is a second line inside the cell, and a long one wraps rather than widening
+     the table.
 
-     **The note came back on 2026-09-17**, and the floor held: the cell now carries the efficiency a stop is
-     the bar's best at under the name (`.planNote` below) — "best a hired" over "Spare the stock". Measured
-     at 1400×900, the column is 107 px and the table 462 px in a 462 px pane, with no
-     scroller; at 390 px the column is the 100 px floor, the name wraps to two lines and the row is 70 px.
-     It is not the note of the S-59 review that rule 5 cut: that one printed "the sweet spot" under a row
-     called "Sweet spot", and this one says something no other cell on the row does. */
-  min-width: 6.25rem;
-  white-space: normal;
+     The name is nowrap on the same reading that removed the floor — a name broken over two lines is the
+     height the floor was there to prevent — and a longer name the engine may one day give simply widens
+     the table, which design rule 17 allows it its scroller for. */
+  white-space: nowrap;
+  /* **Six pixels of gutter, and not the floor crept back** (same review). Without it the cell ends two
+     pixels from the damage bar's own two at 390 px, and the name and the bar read as one figure —
+     "Merc saver ▬ 5M". The padding this table's cells carry is 2 px a side (`horizontalSpacing={2}`,
+     `PlanTrade.tsx`), so six here is ten between a name and the figure it is compared with; the column is
+     **81 px** at that width and **91 px** at 1400×900. */
+  padding-right: 0.375rem;
 }
 
 /* The efficiency a stop is the bar's best at, under the plan's name (`PlanTrade.tsx`, owner 2026-09-17).

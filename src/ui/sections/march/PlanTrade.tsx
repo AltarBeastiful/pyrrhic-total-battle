@@ -9,7 +9,7 @@
  * - **every row is named**, and the name is the engine's `pick` in our words (`./picks`), because the
  *   shape sentence it wore before named a silver figure that is a *column* of this very table and counted
  *   "stacks" one way where the table counts them another;
- * - **Per silver and Per hired are the march's own ratios** (`repeat.damage` over `repeat.silver`, and
+ * - **Per silver and Per merc are the march's own ratios** (`repeat.damage` over `repeat.silver`, and
  *   `repeat.hiredDamage` over `repeat.mercLost`), not the campaign's. They were the campaign's beside three
  *   columns that were the
  *   march's, which is what let a row named for a ratio be *beaten* on that ratio by the row above it; now
@@ -20,7 +20,11 @@
  *   damage wherever it is drawn, its length is that row measured against its own list, and no other block
  *   joins it;
  * - the two seven-figure columns print in `compact` figures ("6.83M"), because a seven-digit number beside
- *   a bar is a number nobody reads at a glance.
+ *   a bar is a number nobody reads at a glance — and **the third figure the table prints in three digits
+ *   at most is "Per merc", since 2026-09-28**: a merc unit's own damage is a count of hundreds of
+ *   thousands on a real account, so it prints in `compactRatio` ("325K", owner: *"simplify the plan table
+ *   display of merc damage: use 3 digits at most"*), the notation the recap's line about that same figure
+ *   already wears.
  *
  * The owner's screen review of the built table (2026-09-16) took four more things off it, and each is a rule:
  *
@@ -30,12 +34,19 @@
  *   `grid`, which is what makes a selected *row* a thing ARIA can say;
  * - **one glyph, one meaning** (rule 21, `docs/design.md`): "Hired lost" wore 👑, which is the authority
  *   pool's glyph two blocks above it on the same screen, and the plan on screen wore a second 🎯 beside its
- *   name while 🎯 already headed "Damage". The hired stock has its own glyph now and the row on screen is
+ *   name while 🎯 already headed "Damage". The stock had a glyph of its own until 2026-09-28 and the row on screen is
  *   marked by the raised ground and its heavier name alone;
  * - **the heads are a glyph and two words**, never three lines of "Silver / a / march" (rule 19). Every row of
  *   this table *is* one march — the line above the bar and the fold's own summary both say so — so the unit
  *   belongs in the table's name, not repeated in five heads;
  * - **"the sweet spot" is not printed under a row named "Sweet spot"** (rule 5).
+ *
+ * **"Merc" and never "hired"** (owner, 2026-09-28: *"change hired with merc in the text"*). The stock this
+ * table trades is the **mercenaries** the account has hired; the *act* of hiring keeps its word in the
+ * Mercenaries card ("Hire mercenary…", "3 hired"), and every *label* for the stock says merc — the two heads
+ * ("Merc", "Per merc"), the figure the row's accessible name counts ("6 mercs lost a march"), the mark the
+ * cheapest stop wears ("fewest mercs lost"), the axis under the bar (`BAR_ENDS`) and the fold's own prose.
+ * One name for one thing, said where a reader meets it (design rule 5).
  *
  * The row on screen is raised with `--pyr-raised` exactly as the objectives strip's row is.
  */
@@ -46,12 +57,12 @@ import type { PlanRow } from '@/engine/plan';
 
 import { Glyph } from '@/ui/domain';
 
-import { amount, compact, duration, per, ratio } from './format';
+import { amount, compact, compactRatio, duration, per, ratio } from './format';
 import { bestForWords, planWords, spendsStock, tableMarks } from './picks';
 import classes from './march.module.css';
 
 export interface PlanTradeProps {
-  /** Every plan the bar offers, thriftiest first — the hired units a march burns is what sorts them. */
+  /** Every plan the bar offers, thriftiest first — the merc units a march burns is what sorts them. */
   rows: PlanRow[];
   /** Which of them the March is showing. */
   position: number;
@@ -70,7 +81,7 @@ export interface PlanTradeProps {
 const PER_SILVER_DECIMALS = 3;
 
 export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps) {
-  // Whether this bar trades a hired stock at all; the two stock columns hang off it (S-112, `./picks`).
+  // Whether this bar trades a merc stock at all; the two stock columns hang off it (S-112, `./picks`).
   const spendsHired = spendsStock(rows);
   /**
    * **The other purse, in a column of its own** (owner, 2026-09-21: *"monsters are revived using gold for a
@@ -80,7 +91,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
    *
    * It was measured before it was drawn and refused once, the same day (experiment 126): the stop that
    * spends least gold is the stop that burns least stock on fourteen benchmark armies of fourteen, so the
-   * column looked like "Hired lost" in another unit. **Thirteen of those fourteen field no monster** — the
+   * column looked like the merc column in another unit. **Thirteen of those fourteen field no monster** — the
    * measurement answered "does gold *rank* the stops differently", and the owner is asking the other
    * question, which is what a march *costs*. Under the plan a new setup now opens on, a monster stack is
    * revived rather than trained: its price leaves the silver column altogether and lands here, and a bar
@@ -103,7 +114,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
    * the table doing its job rather than a ranking with extra steps.
    *
    * Read once, here, so a row cannot be called best two different ways (`tableMarks`, `./picks`), and
-   * **never on Per hired**: 0019 §2.3 measured that ratio rising while the march collapses.
+   * **never on Per merc**: 0019 §2.3 measured that ratio rising while the march collapses.
    */
   const marks = tableMarks(rows);
   const loudest = Math.max(1, ...rows.map((row) => row.repeat.damage));
@@ -139,10 +150,10 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
             <Table.Th scope="col" className={classes.pinned}>
               Plan
             </Table.Th>
-            {/* The glyphs are the three columns that name a game resource — damage, silver, the hired
-                stock — and they come from `GLYPHS` (design rule 21: emoji are the game's vocabulary, and
-                one component draws them). The row's own name and the two ratios derived from these three
-                carry none.
+            {/* The glyphs are the three columns that name a game resource — damage, silver, the gold —
+                and they come from `GLYPHS` (design rule 21: emoji are the game's vocabulary, and one
+                component draws them). The merc column, the row's own name and the two ratios derived from
+                these figures carry none: the stock's own mark 🪖 was one of the four until 2026-09-28.
 
                 **A glyph and a two-word head at most, all on one line** (design rule 19). They read
                 "🎯 Damage a march" and "🪙 Silver a march" until 2026-09-16, which an auto-laid table in a
@@ -155,7 +166,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 table (`docs/investigations/0008-totalstack-method-enemy-results.md`; `0006` is the captain
                 picker and has no column heads at all) — but its figure tiles are exactly this shape, a glyph
                 then a short caps label ("🔒 MINIMUM DAMAGE", "🪙 SILVER"), and its ratios are written as
-                "DAMAGE / SILVER". Ours stay our own words (rule 26): "Per silver", "Per hired". */}
+                "DAMAGE / SILVER". Ours stay our own words (rule 26): "Per silver", "Per merc". */}
             {/* **The recap's own 🔒 over the word the column is about** (S-94, 2026-09-19; the word since
                 the owner's read of 2026-09-21: *"worst column in plan table should read Damage, it's easier
                 to understand"*). The head was "🎯 Damage", which is the recap's mark and word for the
@@ -183,18 +194,26 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
               </Table.Th>
             )}
             {/* **The two stock columns draw only where there is a stock** (S-112, design rule 15). On an
-                army that hires nothing — which has had a bar of its own since S-111 — "Hired lost" was a
-                column of noughts and "Per hired" a column of dashes: four cells of width, in a 420 px pane
+                army that hires nothing — which has had a bar of its own since S-111 — the merc column was
+                a column of noughts and "Per merc" a column of dashes: four cells of width, in a 420 px pane
                 where a seventh column was measured at 505 px and cut, spent saying nothing. The same
                 reading decides the bar's ends and the recap's row (`spendsStock`, `./picks`), so the block
                 either speaks of a stock throughout or never. */}
-            {/* **"Hired"**, not "Hired lost", since the gold took a column back (2026-09-21): the same cut
+            {/* **"Merc"**, not "Hired lost", since the gold took a column back (2026-09-21): the same cut
                 as "Worst opening" → "Worst" two heads along, for the same reason and with the same answer —
                 what is lost is said in the table's own name, in the row's, and by the axis under the bar. It
-                is 28 px of a 462 px pane. */}
+                is 28 px of a 462 px pane.
+
+                **And it wears no glyph since 2026-09-28** (owner: *"remove the emoji in the column
+                🪖 Hired so it just reads Merc"*), which is the last of the four marks this table used to
+                carry: 🔒 on the damage, 🪙 on the silver and 💰 on the gold name a *resource* whose glyph
+                is the game's own, and the stock wore 🪖 for the same reason — but this head is a
+                count of mercenaries, and the three columns beside it already say what a march spends.
+                The word is the owner's own ("merc", the word the bar's two ends and the fold's sentence
+                use), one name for one thing (design rule 5). */}
             {spendsHired && (
               <Table.Th scope="col" ta="end">
-                <Glyph kind="mercenaries" /> Hired
+                Merc
               </Table.Th>
             )}
             <Table.Th scope="col" ta="end">
@@ -202,7 +221,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
             </Table.Th>
             {spendsHired && (
               <Table.Th scope="col" ta="end">
-                Per hired
+                Per merc
               </Table.Th>
             )}
           </Table.Tr>
@@ -242,8 +261,14 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 }${
                   // Said in the row's own name only where the bar trades a stock, for the same reason the
                   // column is drawn only there (S-112): a reader is told what the march spends, not what it
-                  // does not have.
-                  spendsHired ? `${amount(point.repeat.mercLost)} hired lost a march` : ''
+                  // does not have. **A count and not a noun** (2026-09-28): "6 mercs lost a march", with the
+                  // singular on the one figure a march can lose exactly one of, because this line is a
+                  // sentence a reader hears rather than a cell they scan.
+                  spendsHired
+                    ? `${amount(point.repeat.mercLost)} ${
+                        point.repeat.mercLost === 1 ? 'merc' : 'mercs'
+                      } lost a march`
+                    : ''
                 }${note === null ? '' : `${spendsHired ? ', ' : ''}${note}`}${
                   // **The marks, for a reader who cannot see them** (design rule 24). The rate's mark is
                   // deliberately absent: `note` above is the same fact in the same breath, and saying it
@@ -252,7 +277,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                     marks.damage === index ? 'most damage' : null,
                     marks.silver === index ? 'least silver' : null,
                     spendsGold && marks.gold === index ? 'least gold' : null,
-                    spendsHired && marks.hiredLost === index ? 'fewest hired lost' : null,
+                    spendsHired && marks.hiredLost === index ? 'fewest mercs lost' : null,
                   ]
                     .filter((word): word is string => word !== null)
                     .map((word) => `, ${word} on the bar`)
@@ -292,7 +317,7 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                       one of them was *"inefficient and causes frustration"* — it measured as the "Most
                       damage" stop to 0.2 %). So they stopped being rows and became a note on a row: one
                       muted line under the name, in the same words as the columns it is read off, "Per
-                      silver" and "Per hired" (design rule 5).
+                      silver" and "Per merc" (design rule 5).
 
                       `size="xs"` is the table's own 13 px and not `--pyr-meta`'s 12: this is information a
                       player chooses by, and design rule 19 puts a floor under that. The ink is the muted
@@ -376,16 +401,22 @@ export function PlanTrade({ rows, position, hovered, onSelect }: PlanTradeProps)
                 <Table.Td ta="end" data-best={marks.perSilver === index ? 'true' : undefined}>
                   {ratio(per(point.repeat.damage, point.repeat.silver), PER_SILVER_DECIMALS)}
                 </Table.Td>
-                {/* **Per hired is the hired stacks' own damage over the hired units lost** (S-105,
+                {/* **Per merc is the merc stacks' own damage over the merc units lost** (S-105,
                     2026-09-19; the owner, reading this column: *"it says over a million but in total they
                     do less than 1M"*, then *"dmg per hired is still broken: it shows a damage per hired
                     almost above total damage"*). It divided the **whole** march's worst opening — the
-                    figure two cells to the left — by the chunks the hired stock loses, so on a march whose
+                    figure two cells to the left — by the chunks the merc stock loses, so on a march whose
                     troops do most of the hitting it printed nearly the Damage column again. The numerator is
-                    the part of that opening the hired stacks struck for (`PlanRepeat.hiredDamage`), which
-                    is the one reading of "a hired" the engine has (design rule 5). */}
+                    the part of that opening the merc stacks struck for (`PlanRepeat.hiredDamage`), which
+                    is the one reading of "a merc" the engine has (design rule 5). */}
                 {spendsHired && (
-                  <Table.Td ta="end">{ratio(per(point.repeat.hiredDamage, point.repeat.mercLost))}</Table.Td>
+                  <Table.Td ta="end">
+                    {/* A merc unit's own damage is a **headline figure** on a real account, not a rate
+                        read off at two decimals: six digits of it bought the owner nothing a glance could
+                        take in, and it prints in the same short form the recap's line about this same
+                        figure wears (`./format`, owner 2026-09-28). */}
+                    {compactRatio(per(point.repeat.hiredDamage, point.repeat.mercLost))}
+                  </Table.Td>
                 )}
               </Table.Tr>
             );

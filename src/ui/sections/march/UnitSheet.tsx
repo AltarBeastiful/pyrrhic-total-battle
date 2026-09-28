@@ -5,18 +5,27 @@
  * It opens from the figure under a tile and from a row's info button, and it is the one place that
  * holds every action about a single type: leave it out, put it back, edit its count.
  */
-import { Button, Group, Stack, Text } from '@mantine/core';
+import { Alert, Button, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
-import type { UnitDef } from '@/engine/types';
-import { GROUP_LABEL, romanTier, StatBar, unitGroupOf, UnitTile } from '@/ui/domain';
+import { healthMultiplier, strengthMultiplier } from '@/engine';
+import type { BonusTotals, UnitDef } from '@/engine/types';
+import {
+  facetWords,
+  GROUP_LABEL,
+  romanTier,
+  squadUnknown,
+  StatBar,
+  unitGroupOf,
+  UnitTile,
+} from '@/ui/domain';
 import { Sections, Sheet } from '@/ui/kit';
 
 import classes from './march.module.css';
 
 import { putBackInMarch, removeFromFormation } from './formation';
-import { amount, duration, percent, ratio } from './format';
-import type { MarchStackRow } from './rows';
+import { amount, duration, percent, ratio, signedPercent } from './format';
+import { unitBonus, type MarchStackRow } from './rows';
 
 /**
  * One part of the sheet: the same head every figure on the page wears — **12 px muted above what it
@@ -40,6 +49,11 @@ export interface UnitSheetProps {
   unit: UnitDef | null;
   /** Its stack, when it is marching. */
   row?: MarchStackRow | undefined;
+  /**
+   * The bonuses the march on screen was computed under (`StackRequest.totals`), so the sheet can say what
+   * they give **this** type — the two figures beside its bars, and the tooltip on the pill that opens it.
+   */
+  totals: BonusTotals;
   /** Damage of the whole march, so the stack's share can be said as a share. */
   totalDamage: number;
   onClose: () => void;
@@ -47,20 +61,42 @@ export interface UnitSheetProps {
   onEditCount: () => void;
 }
 
-export function UnitSheet({ unit, row, totalDamage, onClose, onEditCount }: UnitSheetProps) {
+export function UnitSheet({ unit, row, totals, totalDamage, onClose, onEditCount }: UnitSheetProps) {
   if (unit === null) return null;
 
   const group = unitGroupOf(unit);
   const stack = row?.stack;
   const share =
     row === undefined || totalDamage <= 0 ? 0 : (row.stack.damagePerHit * row.hits * 100) / totalDamage;
+  /**
+   * **What this march's bonuses do to this type** (owner, 2026-09-28) — the engine's own two sums for it
+   * (`unitBonus`, `./rows`), printed beside the bars they move.
+   *
+   * For a type that is **not marching** there is no stack to read them off, and the bars are computed from
+   * the same two multipliers the engine stacks a marching one with (`effectiveUnit`, `src/engine/units.ts`)
+   * — so the percent and the gap between the bars agree on every type the sheet can be opened on, marching
+   * or not. A flat pair of bars under "+43.5 %" would be the sheet arguing with itself.
+   */
+  const bonus = unitBonus(unit, totals);
+  const boostedHealth = stack?.hpPerUnit ?? Math.round(unit.health * healthMultiplier(unit, totals));
+  const boostedStrength = stack?.strengthPerUnit ?? unit.strength * strengthMultiplier(unit, totals);
+  /**
+   * **What this type is filed under** (owner, 2026-09-28: *"add the category it fits in (guardsmen, mounted
+   * for RD2; specialist melee for SW1…)"*), read off the keys the bonuses reach (`facetWords`, `domain`) and
+   * written under the name: "Guardsmen II · Mounted", "Specialists I · Melee", "Monsters III · Mounted,
+   * Beast". The heading carries the family and the tier, so the line adds only the squads and races the type
+   * also answers to — the ones a bonus can be bought for.
+   */
+  const facets = facetWords(unit);
 
   return (
     <Sheet
       opened
       onClose={onClose}
       title={unit.name}
-      description={`${GROUP_LABEL[group]} ${romanTier(unit.tier)}`}
+      description={`${GROUP_LABEL[group]} ${romanTier(unit.tier)}${
+        facets.length === 0 ? '' : ` · ${facets.join(', ')}`
+      }`}
       footer={
         <Group gap="xs">
           {row === undefined && (
@@ -135,16 +171,29 @@ export function UnitSheet({ unit, row, totalDamage, onClose, onEditCount }: Unit
 
         <Block title="Unit">
           <Stack gap="sm">
+            {/* **The one facet the app can be missing, said out loud** (owner, 2026-09-28: *"alert if
+                something is missing"*). A type with no squad in its keys is a type no squad bonus reaches —
+                which is what its bars show — and a reader who cannot find the squad anywhere on the sheet
+                would take the shorter list for the whole truth. Brass, the app's own "worth a look" ink, and
+                not an error: the type plays perfectly well, its bonuses are just narrower than they look. */}
+            {squadUnknown(unit) && (
+              <Alert color="brass" title="Worth a look">
+                {`No squad is recorded for ${unit.name} — melee, ranged, mounted or flying — so no squad bonus ` +
+                  `reaches it. Everything else it is filed under still applies.`}
+              </Alert>
+            )}
             <StatBar
               label="Health"
               base={unit.health}
-              boosted={stack?.hpPerUnit ?? unit.health}
+              boosted={boostedHealth}
+              bonus={signedPercent(bonus.health)}
               format={amount}
             />
             <StatBar
               label="Strength"
               base={unit.strength}
-              boosted={stack?.strengthPerUnit ?? unit.strength}
+              boosted={boostedStrength}
+              bonus={signedPercent(bonus.strength)}
               format={ratio}
             />
           </Stack>

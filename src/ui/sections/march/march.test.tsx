@@ -17,18 +17,21 @@ import { CAMPAIGN } from '@/config';
 import { unitById } from '@/data';
 import { largestSustained, planRepeats } from '@/engine';
 import type { Objective, UnitDef } from '@/engine/types';
+import { updateSources } from '@/state/actions/bonuses';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { facetWords, squadUnknown } from '@/ui/domain';
 import { renderWithTheme } from '@/ui/kit/testRender';
 import { initResultPersistence, LAST_RESULT_KEY, useResultStore } from '@/ui/resultStore';
 import type * as WorkerClient from '@/worker/client';
 
 import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
-import { amount, compactTwo, duration, ratio } from './format';
+import { amount, bonusLines, compactTwo, duration, ratio, signedPercent } from './format';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
 import { hiredLost } from './hired';
+import { unitBonus } from './rows';
 import { pickOf, useRunStore } from './runStore';
 import { worstDamageByPool } from './worst';
 
@@ -182,7 +185,7 @@ test('the recap is the figures a march is compared by, the expected damage first
  * a 3-cost: training time, silver and dragon coins. TotalStack computes the total of dragon coins needed for
  * a stack if present and the dmg/dragon coins."*).
  *
- * A dominance monster is **trained**, not hired: it never touches "Hired lost" below (that figure is the
+ * A dominance monster is **trained**, not hired: it never touches "Merc lost" below (that figure is the
  * authority pool's, `./hired`, and so is the engine's own burn axis since S-102). Its price is the silver and
  * the queue it shares with the troops plus these coins, which nothing else in the game spends — so the recap
  * says them, and says what they bought beside "Damage per silver".
@@ -421,6 +424,66 @@ test('the corner mark, and nothing else on the pill, opens the unit sheet', asyn
   expect(writeText).not.toHaveBeenCalled();
 }, 15_000);
 
+/**
+ * **The corner mark says what this march's bonuses give its type, and the sheet it opens says it again
+ * where the figures are** (owner, 2026-09-28: *"in the detail of a troop in the battle summary, add the
+ * percent of bonus in health and strength in a good place. And on the hover of the information badge
+ * opening the troop detail, add a tooltip to read those with text like Health: +xx.x% / Strength:
+ * +xx.x%"*).
+ *
+ * One pair of figures, two places and one set of words (design rule 5): the hover is what a player
+ * comparing two pills reads without leaving the pane, and the sheet's bars — base against the value with
+ * every bonus — carry the percentages of the gap between them.
+ */
+test('the corner mark previews the type’s bonuses, and the sheet writes them beside its bars', async () => {
+  // One permanent source, worth +40 % health and +12 % strength to the whole army (`army` is the key that
+  // reaches every unit), so the two lines are a real measurement rather than two noughts.
+  const owner = profile();
+  if (owner === undefined) throw new Error('the harness has an active profile');
+  act(() => {
+    updateSources(owner.id, (sources) => ({
+      ...sources,
+      permanent: [
+        ...sources.permanent,
+        { id: 'test-bonus', name: 'Test bonus', health: { army: 40 }, strength: { army: 12 } },
+      ],
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+  const totals = lastResult()?.request.totals;
+  if (totals === undefined) throw new Error('a run carries the bonuses it was computed under');
+
+  // The engine's own two sums for this type, read exactly as the components read them (`unitBonus`), and
+  // written as the March writes a signed percent.
+  const bonus = unitBonus(unit, totals);
+  const [healthLine, strengthLine] = bonusLines(bonus.health, bonus.strength);
+  expect(healthLine).toBe('Health: +40%');
+  expect(strengthLine).toBe('Strength: +12%');
+
+  const [mark] = detailsButtons(unit);
+  fireEvent.mouseEnter(mark as HTMLElement);
+  expect(await screen.findByText(healthLine)).toBeTruthy();
+  expect(screen.getByText(strengthLine)).toBeTruthy();
+  // …and they are the mark's own description as well: a tooltip a screen reader only meets while it is
+  // open is a figure half the readers do not get (design rule 24).
+  const describedBy = mark?.getAttribute('aria-describedby') ?? '';
+  expect(describedBy).not.toBe('');
+  expect(document.getElementById(describedBy)?.textContent).toBe(`${healthLine} ${strengthLine}`);
+
+  fireEvent.click(mark as HTMLElement);
+  const sheet = await screen.findByRole('dialog', { name: unit.name });
+  // The same two percentages, each on the label line of the bar it moves.
+  expect(within(sheet).getByText(signedPercent(bonus.health))).toBeTruthy();
+  expect(within(sheet).getByText(signedPercent(bonus.strength))).toBeTruthy();
+  // And the bar under the health one is the value the engine stacks this type with (`effectiveUnit`), so
+  // the gap a reader sees *is* the percent above it.
+  expect(
+    within(sheet).getByText(amount(Math.round((unit.health * (100 + bonus.health)) / 100))),
+  ).toBeTruthy();
+}, 15_000);
+
 test('a type the sizer dropped is offered again when it is put back, and stays out if it still does not fit', async () => {
   // 20 leadership is enough for nine of the ten types the default profile owns: one is left out.
   setLeadership(20);
@@ -573,8 +636,8 @@ test('the details are folded away until they are asked for, and open on the HP p
   // This march hires nobody (authority 0 in the harness), so the hired figures say so rather than
   // dividing by nothing: "—" is what `ratio` prints for a resource of zero.
   expect(within(split).getByText('Troops')).toBeTruthy();
-  expect(within(split).getByText('Hired')).toBeTruthy();
-  expect(within(split).getByText('Damage a hired unit')).toBeTruthy();
+  expect(within(split).getByText('Mercs')).toBeTruthy();
+  expect(within(split).getByText('Damage a merc')).toBeTruthy();
   expect(within(split).getByText('—')).toBeTruthy();
 }, 25_000);
 
@@ -603,7 +666,7 @@ test('the damage split says what each pool hit for, its share, and what a hired 
       stacks={[
         { unitId: 'archer-1', pool: 'leadership', count: 4_100 },
         // 260 hired units cost 26 for good: ten of them are one (`chunks`), which is what the plan's
-        // trade prints as "Hired lost" for the same march.
+        // trade prints as "Merc" for the same march.
         { unitId: 'epic-monster-hunter-6', pool: 'authority', count: 260 },
       ]}
     />,
@@ -615,7 +678,8 @@ test('the damage split says what each pool hit for, its share, and what a hired 
   expect(within(split).getByText('2M · 38%')).toBeTruthy();
   // **The hired line over the hired units lost** (S-105): 1 976 000 over 26, not the march's whole
   // 5 200 000 over 26 — the owner read the old figure as *"a damage per hired almost above total damage"*.
-  expect(within(split).getByText('76 000')).toBeTruthy();
+  // Printed in the short notation since 2026-09-28, like the trade's "Per merc": 76 000 is "76K".
+  expect(within(split).getByText('76K')).toBeTruthy();
   // Three figures, and no fourth: nothing fought out of the dominance pool (design rule 15).
   expect(within(split).queryByText('Monsters')).toBeNull();
   expect(within(split).getAllByRole('term')).toHaveLength(3);
@@ -639,6 +703,58 @@ test('the unit sheet opens from a tile and says what the stack does, in sentence
   expect(within(sheet).queryByRole('button', { name: /put back/i })).toBeNull();
   expect(within(sheet).getByRole('button', { name: 'Leave out' })).toBeTruthy();
 });
+
+/**
+ * **What the type is filed under, under its name** (owner, 2026-09-28: *"in the details of a troop, add the
+ * category it fits in (guardsmen, mounted for RD2; specialist melee for SW1…)"*).
+ *
+ * The heading carries the family and the tier; the line adds the squads and races the same type answers to —
+ * which are the ones a bonus can be bought for, because both are read off the same keys the engine sums
+ * (`facetWords`, `src/ui/domain`).
+ */
+test('the unit sheet says what its type is filed under', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+
+  fireEvent.click(detailsButtons(unit)[0] as HTMLElement);
+  const sheet = await screen.findByRole('dialog', { name: unit.name });
+
+  const words = facetWords(unit);
+  expect(words.length, 'the first stack is a troop with a squad').toBeGreaterThan(0);
+  expect(within(sheet).getByText(new RegExp(`· ${words.join(', ')}$`))).toBeTruthy();
+  expect(squadUnknown(unit)).toBe(false);
+});
+
+/**
+ * **A type the tables carry no squad for says so** — the other half of the same ask: *"alert if something is
+ * missing"*. The four mercenaries of the 2026-09-18 pull carry a role and no squad, so no squad bonus reaches
+ * them, and a heading that simply stopped would let a reader take the shorter list for the whole truth.
+ */
+test('a type with no squad on file is flagged in its sheet, where the bars are', async () => {
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 92 }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup({ housing: { leadership: 4_100, authority: 2_000, dominance: 0 } });
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  const unit = unitById('epic-monster-hunter-6');
+  if (unit === undefined) throw new Error('the monster hunter is not in the tables');
+  expect(squadUnknown(unit)).toBe(true);
+  fireEvent.click(detailsButtons(unit)[0] as HTMLElement);
+
+  const sheet = await screen.findByRole('dialog', { name: unit.name });
+  // The heading names the family, the tier and the one facet the tags do carry…
+  expect(within(sheet).getByText(/^Mercenaries VI · Guardsmen$/)).toBeTruthy();
+  // …and the alert says what is missing, in the block the two bars are in.
+  const alert = within(sheet).getByText(/^No squad is recorded for /);
+  expect(alert.textContent).toContain('melee, ranged, mounted or flying');
+}, 20_000);
 
 test('leaving a type out from its sheet takes it out of the march and re-sizes the rest', async () => {
   renderWithTheme(<Page />);
@@ -1111,7 +1227,7 @@ test('a cached result belonging to another march is left alone', async () => {
  * 265k, 1.23m… and note this should be updated with each generate and troop left out recalculation"*).
  *
  * The share of the account's stock was a fact about the account; this is a fact about the march, and it is
- * the one the bar's "Per hired" column already prints — so the two screens say one thing (design rule 5).
+ * the one the bar's "Per merc" column already prints — so the two screens say one thing (design rule 5).
  */
 test('the recap says what a hired unit bought, and re-says it when the march is re-sized', async () => {
   const root = newRoot();
@@ -1134,16 +1250,16 @@ test('the recap says what a hired unit bought, and re-says it when the march is 
       snapshot.summary.journals.enemyFirst,
       snapshot.result.stacks,
     ).authority;
-    return `· ${compactTwo(hiredDamage / lost)} a hired unit`;
+    return `· ${compactTwo(hiredDamage / lost)} a merc`;
   };
 
-  const line = screen.getByText(/a hired unit$/);
+  const line = screen.getByText(/a merc$/);
   expect(line.textContent).toBe(saidNow());
   // …and it is printed in the owner's own notation (2026-09-20): at most one decimal, spent only
   // where it buys a second digit — "325K", "1.2M", never "431.78K". (This fixture's hired stack is
   // the biggest on the field, so it strikes nothing in the worst opening and the figure is a plain
   // nought: the hired units bought no damage at all, which is the fact the line is there to carry.)
-  expect(line.textContent).toMatch(/^· \d+(\.\d)?[KMB]? a hired unit$/u);
+  expect(line.textContent).toMatch(/^· \d+(\.\d)?[KMB]? a merc$/u);
   // The share of the account's whole stock is gone from the card, which is what the figure replaced.
   expect(screen.queryByText(/% of \d/)).toBeNull();
 
@@ -1162,9 +1278,9 @@ test('the recap says what a hired unit bought, and re-says it when the march is 
     expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
   });
   await waitFor(() => {
-    expect(screen.getByText(/a hired unit$/).textContent).toBe(saidNow());
+    expect(screen.getByText(/a merc$/).textContent).toBe(saidNow());
   });
-  expect(screen.getByText(/a hired unit$/).textContent).not.toBe(before);
+  expect(screen.getByText(/a merc$/).textContent).not.toBe(before);
 }, 30_000);
 
 test('a thin shelter is a faint line under the army, and a hired stack over the floor a plainer one', async () => {

@@ -24,6 +24,14 @@
  *   17 px — the 22 px mark, 3 px in from the border, less the 8 px of padding the body already
  *   keeps — so the code and the tier never run under it.
  *
+ * **The mark previews what it opens, on hover** (owner, 2026-09-28: *"on the hover of the information badge
+ * opening the troop detail, add a tooltip to read those"*): the two brackets the march fields this type in,
+ * one line each ("Health: +43.5%", "Strength: +12%", `bonus` and `bonusLines`). They are the figures the
+ * sheet's own bars are labelled with, said early for a player who is comparing two pills rather than one
+ * type — and the sheet is where they are *reachable*, since a hover is not a thing a thumb has (rule 18).
+ * A `Tooltip` and not the `Popover` `PlanPanel`'s ⓘ wears: that one carries a paragraph nobody else has,
+ * this one repeats two figures that are one press away.
+ *
  * In edit mode the count *is* a field, in place, every keystroke re-sizes the march — and the corner
  * mark stands down, because a button over the top-right of a 30 px field is a press the player aimed
  * at the field.
@@ -42,9 +50,9 @@
  * tier is `flex: 0 0 auto`; what an impossible track costs is a letter of a four-letter mercenary
  * code ("HHA… VII"), never the numeral that says which unit this is.
  */
-import { ActionIcon, Box, NumberInput, Text, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Box, NumberInput, Text, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { Info } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type { Category, Race, UnitDef } from '../../data/types';
 import { Glyph } from './Glyph';
@@ -82,10 +90,31 @@ export interface StackPillProps {
   onLeaveOut?: () => void;
   /** The 22 px mark in the corner: open the unit sheet. */
   onDetails: () => void;
+  /**
+   * **What this march's bonuses give the type**, as the corner mark's tooltip — one line each, already
+   * written ("Health: +43.5%", "Strength: +12%"), because the words and the notation are the March's
+   * (`bonusLines`, `sections/march/format.ts`) and this component draws pills for the kit page too.
+   *
+   * It is the *preview of what the mark opens*: the unit sheet carries the same two figures beside the bars
+   * they move, which is where a thumb reads them — a hover is not a thing a phone has (design rule 18).
+   */
+  bonus?: readonly string[];
 }
 
-export function StackPill({ unit, count, editing = false, onCount, onLeaveOut, onDetails }: StackPillProps) {
+export function StackPill({
+  unit,
+  count,
+  editing = false,
+  onCount,
+  onLeaveOut,
+  onDetails,
+  bonus,
+}: StackPillProps) {
   const ink = tierInk(unit.tier);
+  // The tooltip's words are also the mark's description: Mantine's `Tooltip` links nothing for a screen
+  // reader until it is open, and a figure only a hovering eye gets is a figure half the readers do not get
+  // (design rule 24) — the same pairing `PlanPanel`'s ⓘ makes.
+  const bonusId = useId();
   const roman = romanTier(unit.tier) || String(unit.tier);
   const figure = formatCount(count);
 
@@ -136,17 +165,34 @@ export function StackPill({ unit, count, editing = false, onCount, onLeaveOut, o
         </UnstyledButton>
       )}
       {!editing && (
-        <ActionIcon
-          className={classes.pillInfo}
-          variant="subtle"
-          color="gray"
-          size={22}
-          aria-label={`Details: ${unit.name}`}
-          onClick={onDetails}
+        <Tooltip
+          // One line per bracket, and no type of its own: a tooltip reads the way every other tooltip on
+          // the page reads (the theme's own 12 px, its own ink, its own half-second delay — design rule 23).
+          label={
+            <Box>
+              {bonus?.map((line) => (
+                <Box key={line}>{line}</Box>
+              ))}
+            </Box>
+          }
+          disabled={bonus === undefined}
+          withArrow
+          multiline
         >
-          <Info size={16} aria-hidden />
-        </ActionIcon>
+          <ActionIcon
+            className={classes.pillInfo}
+            variant="subtle"
+            color="gray"
+            size={22}
+            aria-label={`Details: ${unit.name}`}
+            {...(bonus === undefined ? {} : { 'aria-describedby': bonusId })}
+            onClick={onDetails}
+          >
+            <Info size={16} aria-hidden />
+          </ActionIcon>
+        </Tooltip>
       )}
+      {!editing && bonus !== undefined && <VisuallyHidden id={bonusId}>{bonus.join(' ')}</VisuallyHidden>}
     </Box>
   );
 }

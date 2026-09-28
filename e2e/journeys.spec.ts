@@ -415,8 +415,11 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // The plan itself, **open on arrival** — it is part of the answer, not a fold to hunt for (S-59). No tap.
   const fold = march.getByRole('button', { name: /^Plan / });
   await expect(fold).toHaveAttribute('aria-expanded', 'true');
-  await expect(fold).toContainText(/worst opening a march/);
-  await expect(fold).toContainText(/\d+ marches?/);
+  // The summary carries **one march's figure and nothing after it** (owner, 2026-09-21: a plain count of
+  // marches rode here behind a `·` and named the *campaign* on a line that names a march). The campaign's
+  // own count is the line under the trade, which is where a reader meets how long the sequence is.
+  await expect(fold).toContainText(/damage a march/);
+  await expect(march.getByText(/^Fought to the end: /)).toContainText(/\d+ marches?/);
 
   // **The army first, the plan after it** (owner, 2026-09-16: *"we should first see the army then the
   // details to change them afterwards"*). The block is a *control* — reading another plan puts another
@@ -447,23 +450,25 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // name above says it in words, so one thing keeps one name through the flow (design rules 5, 21 and 26).
   await expect(trade.getByRole('columnheader', { name: 'Damage', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Silver', exact: true })).toBeVisible();
-  // **Gold, and "Hired" beside it** (owner, 2026-09-21: *"monsters are revived using gold for a substantial
-  // sum and mercs aren't cheap either… why not comparing, or at least inform?"*). The Temple's price had no
-  // column from 2026-09-16 to that day, and the hired head gave its second word towards this one's width —
-  // what is lost is said by the table's own name and by the axis under the bar.
+  // **Gold, and the merc column beside it** (owner, 2026-09-21: *"monsters are revived using gold for a
+  // substantial sum and mercs aren't cheap either… why not comparing, or at least inform?"*). The Temple's
+  // price had no column from 2026-09-16 to that day, and the stock head gave its second word towards this
+  // one's width — what is lost is said by the table's own name and by the axis under the bar. That head is
+  // **"Merc" and wears no glyph** since 2026-09-28 (owner: *"remove the emoji in the column 🪖 Hired so it
+  // just reads Merc"*): the stock is a count of units, and the three marks beside it name resources.
   await expect(trade.getByRole('columnheader', { name: 'Gold', exact: true })).toBeVisible();
-  await expect(trade.getByRole('columnheader', { name: 'Hired', exact: true })).toBeVisible();
+  await expect(trade.getByRole('columnheader', { name: 'Merc', exact: true })).toBeVisible();
   await expect(trade.getByRole('columnheader', { name: 'Per silver' })).toBeVisible();
 
   // The head row, then one row per stop — never a table with nothing in it, and every row named. One kind
   // of name: a row is **which answer it is** and nothing else (`src/ui/sections/march/picks.ts`), five
-  // stops at most along the hired stock the bar runs on.
+  // stops at most along the merc stock the bar runs on.
   const rows = await trade.getByRole('row').count();
   expect(rows).toBeGreaterThan(1);
   await expect(
-    // Anchored at the start of the accessible name: every row's name *ends* with "… N hired lost a march",
+    // Anchored at the start of the accessible name: every row's name *ends* with "… N mercs lost a march",
     // so an unanchored alternative would match every row whatever it was called.
-    trade.getByRole('row', { name: /^(Silver saver|Sweet spot|More mercs|Steady max|All in)\b/ }),
+    trade.getByRole('row', { name: /^(Merc saver|Silver saver|Sweet spot|More mercs|Steady max|All in)\b/ }),
   ).toHaveCount(rows - 1);
   // **The training queue, under the silver it is paid beside** (owner, 2026-09-18: *"troops of higher tier
   // are longer to train"*). It is a second line inside the silver cell and not a seventh column — the four
@@ -497,7 +502,7 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   // behind one closed fold now (owner, 2026-09-16: the prose goes; design rule 4).
   await expect(march.getByText(/^Fought to the end: /)).toBeVisible();
   // The campaign's own training queue rides with its silver, as the march's does on the line over the bar.
-  await expect(march.getByText(/^Fought to the end: /)).toContainText(/ of training /);
+  await expect(march.getByText(/^Fought to the end: /)).toContainText(/ of training/);
   await expect(march.getByText(/^Every plan here is fought over the same marches/)).toBeHidden();
   const reference = march.getByRole('button', { name: /^Reference/ });
   await expect(reference).toHaveAttribute('aria-expanded', 'false');

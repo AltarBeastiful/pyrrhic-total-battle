@@ -60,6 +60,29 @@ export function ratio(value: number, decimals = 2): string {
   return Math.abs(value) >= 100 ? amount(value) : value.toFixed(decimals);
 }
 
+/**
+ * **A ratio that is also a headline figure**: `ratio`'s decimals while the figure is small, `compactTwo`'s
+ * three digits once it is not.
+ *
+ * The figure this exists for is the damage a hired unit — a hired stack's own damage over the hired units
+ * it burns for good (`PlanRepeat.hiredDamage` over `mercLost`) — which is a ratio at one end of its range
+ * and a six-figure number on a real account: a hired stack with a million points behind it strikes for
+ * **325 000** a unit, and the plan's tables printed all six of those digits. The owner read them there on
+ * 2026-09-28 (*"simplify the plan table display of merc damage: use 3 digits at most … like nnnK or nnnM
+ * or n.nnM"*), which is the rule he had already set for the recap's line about this same figure ("only
+ * 325k, no commas needed there", `compactTwo`) — so the plan's tables and the recap's line agree at the
+ * magnitudes this figure lives at, which is where the owner met both (design rule 5).
+ *
+ * **Under 100 the decimals stay**, and for `ratio`'s own reason (S-59): this column is read by comparing a
+ * row against the row above it, and three plans at 2.91 · 2.37 · 2.96 have to stay three different figures.
+ * Above 100 the magnitude is what tells them apart, and the fourth, fifth and sixth digits say nothing a
+ * glance can use — the notation is what a reader sees.
+ */
+export function compactRatio(value: number, decimals = 2): string {
+  if (!Number.isFinite(value)) return '—';
+  return Math.abs(value) >= 100 ? compactTwo(value) : ratio(value, decimals);
+}
+
 /** A percentage as entered (5 → "5%", 2.5 → "2.5%"). */
 export function percent(value: number): string {
   if (!Number.isFinite(value)) return '—';
@@ -93,6 +116,24 @@ export function signedPercent(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   if (rounded === 0) return '0%';
   return `${rounded > 0 ? '+' : '-'}${percent(Math.abs(rounded))}`;
+}
+
+/**
+ * **What one type's bonuses come to, in the two words the unit sheet and the corner mark use** (owner,
+ * 2026-09-28: *"on the hover of the information badge opening the troop detail, add a tooltip to read those
+ * with text like Health: +xx.x% / Strength: +xx.x%"*).
+ *
+ * Two lines and not a sentence: they are the two brackets the Bonuses card is filled in, both read off the
+ * same march (`healthPercent` and `strengthPercent`, `src/engine/units.ts`), and the sheet's own bars are
+ * labelled with those two words (`UnitSheet`). The colon is what makes a *line* of a tooltip read as a
+ * figure rather than as a phrase — and it is the shape the owner asked for, kept.
+ *
+ * `signedPercent` and not `percent`: a bonus of 0 is worth printing as "0%" rather than as "+0%", and every
+ * other figure carries the sign a reader needs to know which way it went (design rule 5 — one figure, one
+ * shape, wherever the screen prints it).
+ */
+export function bonusLines(health: number, strength: number): [string, string] {
+  return [`Health: ${signedPercent(health)}`, `Strength: ${signedPercent(strength)}`];
 }
 
 /** A difference against the generated result: "+240", "-1 150", "0". */

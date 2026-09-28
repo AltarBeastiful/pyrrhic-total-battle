@@ -45,7 +45,7 @@ export const METHOD_CHOICES: readonly MethodChoice[] = [
   {
     value: 'ms',
     title: 'Troops first',
-    description: 'Hired units only fall once all of your troops have.',
+    description: 'Mercs only fall once all of your troops have.',
   },
   {
     value: 'custom',
@@ -74,7 +74,7 @@ export const OPTION_CHOICES: readonly OptionChoice[] = [
   {
     key: 'relaxedPreservation',
     label: 'Allow damage trades',
-    description: 'Let a hired stack grow past your smallest troop stack when that raises the damage.',
+    description: 'Let a merc stack grow past your smallest troop stack when that raises the damage.',
     methods: ['ms'],
   },
   {
@@ -91,7 +91,7 @@ export const OPTION_CHOICES: readonly OptionChoice[] = [
   },
   {
     key: 'roundTo10',
-    label: 'Hired units in tens',
+    label: 'Mercs in tens',
     description: 'Mercenary and monster stacks become multiples of ten, because reviving works in tens.',
     methods: ['elite', 'ms', 'custom'],
   },
@@ -181,9 +181,9 @@ export const RECOVERY_CHOICES: readonly RecoveryChoice[] = [
   {
     value: 'retrain',
     title: RECOVERY_LABELS.retrain,
-    // Every lost unit *you can recruit again*: a hired one you cannot, so the Temple returns it under
+    // Every lost unit *you can recruit again*: a merc one you cannot, so the Temple returns it under
     // this plan too, and that is the only gold a retrain spends (owner, 2026-09-21).
-    description: 'Silver, dragon coins and training time bring back everything but your hired units.',
+    description: 'Silver, dragon coins and training time bring back everything but your mercs.',
   },
   {
     value: 'revive',

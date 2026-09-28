@@ -26,9 +26,16 @@ import { signedPercent } from './format';
  * the superlative was read as the cheapest march the app could think of — and the top of the ladder is now
  * the most mercenaries the troops shelter **every** march, which `all-in` beats on the first march alone. Two
  * stops that both claimed "most" would read as the same answer twice.
+ *
+ * **"Merc saver", and not "Hired saver"** (owner, 2026-09-28: *"change hired with merc in the text"*). The
+ * stop is the bar's fewest-burn rung, so its name is the resource it saves, and that resource is the merc
+ * stock everywhere in this block since the trade's own head reads "Merc" (`PlanTrade.tsx`) — the two words
+ * under the bar read "Fewest mercs lost … Most mercs lost" and a stop named "Hired saver" standing between
+ * them was the last place on the bar speaking of a stock in the other word (design rule 5: one name per
+ * thing).
  */
 const PICK_WORD: Record<PlanPick, string> = {
-  'burn-saver': 'Hired saver',
+  'burn-saver': 'Merc saver',
   'silver-saver': 'Silver saver',
   'sweet-spot': 'Sweet spot',
   'more-mercs': 'More mercs',
@@ -51,7 +58,7 @@ export function planWords(row: Pick<PlanRow, 'pick'>): string {
 }
 
 /** The words for the two efficiencies, keyed the way `PlanRow.bestFor` is. */
-const BEST_FOR_WORD = { silver: 'best a silver', hired: 'best a hired' } as const;
+const BEST_FOR_WORD = { silver: 'best silver', hired: 'best merc' } as const;
 
 /**
  * **The two efficiencies, in the words the stop that has one wears** (owner, 2026-09-17: the bar is *"about
@@ -59,15 +66,15 @@ const BEST_FOR_WORD = { silver: 'best a silver', hired: 'best a hired' } as cons
  * silver" stop that is the top of the ladder to 0.2 % is *"inefficient and causes frustration"*).
  *
  * `null` when the stop is neither. Of the stops the bar carries exactly one is the best damage a silver and
- * exactly one the best damage a hired unit (`PlanRow.bestFor`, `src/engine/plan.ts`), and nothing stops the
+ * exactly one the best damage a merc unit (`PlanRow.bestFor`, `src/engine/plan.ts`), and nothing stops the
  * same stop being both — so the two words join rather than stacking into a second line.
  *
- * The words are the trade's own column heads, "Per silver" and "Per hired", said the short way (design rule
+ * The words are the trade's own column heads, "Per silver" and "Per merc", said the short way (design rule
  * 5: one name per thing). A note under a row's name, the row's accessible name and the bar's tip all read
  * this one function, so a stop cannot claim an efficiency in one place and a different one in another.
  */
 export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
-  if (row.bestFor.silver && row.bestFor.hired) return 'best a silver and a hired';
+  if (row.bestFor.silver && row.bestFor.hired) return 'best silver and merc';
   if (row.bestFor.silver) return BEST_FOR_WORD.silver;
   if (row.bestFor.hired) return BEST_FOR_WORD.hired;
   return null;
@@ -76,35 +83,35 @@ export function bestForWords(row: Pick<PlanRow, 'bestFor'>): string | null {
 /**
  * The two words under the bar, naming its ends — the resource `CampaignPlan.alternatives` is sorted along.
  *
- * They are the axis's own name and not decoration: the stops run along the hired units a march burns for
+ * They are the axis's own name and not decoration: the stops run along the merc units a march burns for
  * good (thriftiest first), and calling those ends "Least silver … Most silver" would name the one resource
  * the bar is *not* ordered by — a *stop* may be called "Silver saver" (it is the thriftiest efficient rung)
  * and the dear end "All in", but an axis named after either would claim the whole bar is sorted by silver,
- * or that its far end is the only plan spending the stock. The words match the trade's "Hired lost" head for
+ * or that its far end is the only plan spending the stock. The words match the trade's merc head for
  * the same reason (rule 5).
  *
  * **Two pairs, because there are two kinds of army** (S-112). It was one pair; an army that hires nothing
  * has no stock to order along, and since S-111 it has a bar all the same — ordered on the silver its stops
  * really differ by. Naming those ends after a stock the account does not hold was the plainest of the
- * hired-word defects the S-111 review found on that bar. The pair is chosen by `spendsStock` below, which is
+ * stock-word defects the S-111 review found on that bar. The pair is chosen by `spendsStock` below, which is
  * the one place this app asks whether a plan trades a stock at all.
  */
-export const BAR_ENDS = { low: 'Fewest hired lost', high: 'Most hired lost' } as const;
+export const BAR_ENDS = { low: 'Fewest mercs lost', high: 'Most mercs lost' } as const;
 
 /** The same two words for a bar with no stock on it: what its stops really run from and to. */
 export const SILVER_BAR_ENDS = { low: 'Least silver', high: 'Most damage' } as const;
 
 /**
- * **Does this bar trade a hired stock at all?** — the one reading the whole plan block turns on (S-112).
+ * **Does this bar trade a merc stock at all?** — the one reading the whole plan block turns on (S-112).
  *
  * `mercLost` is the units a campaign never gets back, and it is zero on every stop of an army that hires
  * nothing (`planTroopsOnly`, S-111). Asked of the **bar** rather than of the stop on screen: a hired army
  * whose thrifty stop happens to burn nothing is still trading a stock, and its columns, its axis and its
  * thesis are all about that trade.
  *
- * Every hired word in the block reads this — the bar's ends, the trade's two columns, the recap's row, the
- * thesis, the campaign line, the curve's column — so an army either sees all of them or none, and no screen
- * can say "0.0 of the hired stock" about a stock that does not exist.
+ * Every word about the stock in the block reads this — the bar's ends, the trade's two columns, the recap's
+ * row, the thesis, the campaign line, the curve's column — so an army either sees all of them or none, and
+ * no screen can say "0.0 of the merc stock" about a stock that does not exist.
  */
 export function spendsStock(rows: readonly { mercLost: number }[]): boolean {
   return rows.some((row) => row.mercLost > 0);
@@ -116,9 +123,9 @@ export function barEnds(spendsHired: boolean): { low: string; high: string } {
 }
 
 /**
- * Whether a march of the sequence fields any hired unit. A count whose id the tables do not carry is a
+ * Whether a march of the sequence fields any merc unit. A count whose id the tables do not carry is a
  * **custom mercenary** — the one kind of unit the player describes by hand, and always of the authority pool
- * (`buildUnits`, `src/state/derive.ts`) — so an unknown id counts as hired rather than as a troop.
+ * (`buildUnits`, `src/state/derive.ts`) — so an unknown id counts as a merc rather than as a troop.
  */
 const fieldsHired = (counts: Record<string, number>): boolean =>
   Object.entries(counts).some(([id, count]) => count > 0 && unitById(id)?.pool !== 'leadership');
@@ -138,7 +145,7 @@ const fieldsHired = (counts: Record<string, number>): boolean =>
  * the stop cannot describe itself one way over the bar and another over the March.
  *
  * **And it says where the mercenaries run out** (2026-09-19). The stop plays the whole horizon now: when the
- * stock is spent before the last march, the marches left over are the sizer's own, troops and no hired stack
+ * stock is spent before the last march, the marches left over are the sizer's own, troops and no merc stack
  * at all (`src/engine/plan.ts`, the all-in's tail). A reader told only "four marches, each on what the last
  * one left" would take the fourth for another march of mercenaries — the figures beside it are the first
  * march's — so the tail is counted in the same line rather than left to the counts table to reveal.
@@ -146,7 +153,7 @@ const fieldsHired = (counts: Record<string, number>): boolean =>
  * **Every stop says it now** (S-89, 2026-09-18). A *repeated* stop whose stock the horizon outruns plays the
  * marches left over on troops alone as well (`PlanTotals.tail`), and it is the same fact about the same
  * campaign — so it is said in the same place and in the same words rather than in a second sentence of the
- * fold's own. Such a row keeps its plain count for the marches it fields hired units on, because those *are*
+ * fold's own. Such a row keeps its plain count for the marches it fields merc units on, because those *are*
  * the march drawn above it, and adds the tail to it: "2 marches, then 2 on troops alone". On bear ×1 that is
  * the difference between a stop reading "1 march" and a stop reading four, three of them troops alone
  * (`tools/theorycraft/out/105-six-proposals.md` §P1).
@@ -213,8 +220,8 @@ export function putBackWords(row: Pick<PlanRow, 'putBack'>): string | null {
 /**
  * **Which column the table's best-in-column mark is read off** (S-113).
  *
- * Only the silver rate is markable. The table draws two rate columns — "Per silver" and "Per hired" — and
- * **Per hired may never wear a mark**: `docs/investigations/0019` §2.3 measured that ratio rising
+ * Only the silver rate is markable. The table draws two rate columns — "Per silver" and "Per merc" — and
+ * **Per merc may never wear a mark**: `docs/investigations/0019` §2.3 measured that ratio rising
  * monotonically while the march collapses, and §1 calls it *"never the right compass"*. It is a fact the
  * table carries, never a race it declares won.
  *
@@ -267,7 +274,7 @@ export function tableMarks(rows: readonly PlanRow[]): TableMarks {
     silver: bestOn(rows, (row) => row.repeat.silver, 'lower'),
     gold: bestOn(rows, (row) => row.repeat.gold, 'lower'),
     hiredLost: bestOn(rows, (row) => row.repeat.mercLost, 'lower'),
-    // Per silver, and **not** Per hired: see `PER_SILVER` above.
+    // Per silver, and **not** Per merc: see `PER_SILVER` above.
     perSilver: bestOn(rows, PER_SILVER.of, 'higher'),
   };
 }

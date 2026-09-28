@@ -3,6 +3,7 @@ export { CaptainChip } from './CaptainChip';
 export type { CaptainChipProps } from './CaptainChip';
 export { DeltaText } from './DeltaText';
 export type { DeltaTextProps } from './DeltaText';
+export { CATEGORY_LABELS, facetWords, GROUP_LABELS, RACE_LABELS, squadUnknown } from './facets';
 export { count } from './format';
 export { Glyph } from './Glyph';
 export type { GlyphProps } from './Glyph';

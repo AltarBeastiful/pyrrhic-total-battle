@@ -27,7 +27,7 @@ import domainClasses from '@/ui/domain/domain.module.css';
 import { copyText } from '@/ui/profile/download';
 
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
-import { amount } from './format';
+import { amount, bonusLines } from './format';
 import classes from './march.module.css';
 import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
@@ -131,6 +131,9 @@ export function MarchPills({ rows, editing, onCount, onDetails }: MarchPillsProp
                     key={entry.unit.id}
                     unit={entry.unit}
                     count={entry.count}
+                    // What the march's bonuses give this type, as the corner mark's tooltip — the same two
+                    // figures the unit sheet draws beside its bars (`bonusLines`, `./format`).
+                    bonus={bonusLines(entry.bonus.health, entry.bonus.strength)}
                     editing={editing}
                     onCount={(next) => {
                       onCount(entry.unit.id, next);
