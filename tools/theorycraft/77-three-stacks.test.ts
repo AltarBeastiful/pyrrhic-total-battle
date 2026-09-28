@@ -29,10 +29,7 @@ const THEIR_FIXTURE = new URL(
   import.meta.url,
 );
 const PROFILE = JSON.parse(
-  readFileSync(
-    process.env.PYRRHIC_EXPORT ?? 'tests/fixtures/pyrrhic-my-account-2026-09-13.json',
-    'utf8',
-  ),
+  readFileSync(process.env.PYRRHIC_EXPORT ?? 'tests/fixtures/pyrrhic-my-account-2026-09-13.json', 'utf8'),
 ) as {
   payload: {
     troops: {
