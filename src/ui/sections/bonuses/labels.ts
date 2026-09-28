@@ -209,14 +209,11 @@ export function humanizeOption(option: string): string {
 }
 
 /**
- * What a source is worth, as a **row** says it: "+25 % health (guardsmen)". The key's name rides in
- * the brackets because the row's own name is the source, not what it feeds; health and strength of
- * the same key and the same size share one line, because that is how the game writes them.
- *
- * A source that feeds more than one key says the first line and counts the rest, so every row of a
- * list is one line tall whatever is behind it. The whole thing is in the editor behind the gear.
+ * What a source is worth, as a **row** says it, line by line: "+25 % health (guardsmen)". The key's
+ * name rides in the brackets because the row's own name is the source, not what it feeds; health and
+ * strength of the same key and the same size share one line, because that is how the game writes them.
  */
-function valueLines(bonus: BonusLike): string[] {
+export function rowLines(bonus: BonusLike): string[] {
   const byKey = new Map<string, { label: string; health?: number; strength?: number }>();
   const line = (key: string, label: string) => {
     const found = byKey.get(key) ?? { label };
@@ -251,9 +248,14 @@ function valueLines(bonus: BonusLike): string[] {
   return lines;
 }
 
-/** The one line a source row carries; empty when nothing is typed yet. */
+/**
+ * The one line a source row carries: the first line, then how many are behind it, so every row of a
+ * list is one line tall whatever is behind it. Everything is in the editor behind the gear, and in a
+ * captain's popover, which lists the lines themselves (`rowLines`) rather than counting them (owner,
+ * 2026-09-28: *"at this level should always show all rows, never 'and x more'"*).
+ */
 export function rowValue(bonus: BonusLike): string {
-  const lines = valueLines(bonus);
+  const lines = rowLines(bonus);
   const first = lines[0];
   if (first === undefined) return '';
   return lines.length === 1 ? first : `${first} and ${String(lines.length - 1)} more`;
@@ -261,7 +263,7 @@ export function rowValue(bonus: BonusLike): string {
 
 /** Is this source switched on for nothing? The header counts these and warns about them. */
 export function isEmptyBonus(bonus: BonusLike): boolean {
-  return valueLines(bonus).length === 0;
+  return rowLines(bonus).length === 0;
 }
 
 /** Two contributions on one source (an equipment quality row plus its gem), added key by key. */

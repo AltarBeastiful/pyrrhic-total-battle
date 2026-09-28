@@ -316,7 +316,10 @@ export function BonusesSection() {
                 {panels[id].body}
               </Disclosure>
             ))}
-            <Disclosure title="Every key and what feeds it">
+            {/* Renamed from "Every key and what feeds it" (owner, 2026-09-28: *"this section should be
+                renamed Summary"*): it already recaps the hero and the captains under every key they
+                feed, so the name says what the block is rather than what it contains. */}
+            <Disclosure title="Summary">
               <TotalsBreakdown profile={profile} setup={setup} />
             </Disclosure>
           </Stack>

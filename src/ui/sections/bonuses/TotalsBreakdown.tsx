@@ -3,7 +3,9 @@
  * block a player opens when the game's own march window disagrees with ours, to find which source
  * the difference is in.
  *
- * It is the last fold of the card: the header is the answer, this is the audit.
+ * It is the last fold of the card — the **Summary** since 2026-09-28 (owner: *"this section should be
+ * renamed Summary"*; it was "Every key and what feeds it") — the header is the answer, this is the
+ * audit. The hero and the captains are recapped here with everything else, under each key they feed.
  */
 import { Group, Stack, Text } from '@mantine/core';
 

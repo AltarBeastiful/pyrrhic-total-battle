@@ -28,7 +28,7 @@ import { heroes as heroTable } from '@/data';
 import { setActiveFlag, updateSources } from '@/state/actions/bonuses';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { CaptainChip } from '@/ui/domain';
-import { Figures, NumberField, Sections, useRovingTabs } from '@/ui/kit';
+import { Figures, NumberField, Sections, useRovingTabs, type Figure } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
 import { captainBonusLines, MAX_CAPTAIN_STAR, type CaptainChipRow, type CaptainTarget } from './chips';
@@ -37,6 +37,21 @@ import { captainEntryFor, captainRecord } from './rows';
 
 /** What the card says when a fourth captain is tapped. One line, and never more than one. */
 export const CAPTAIN_CAP_MESSAGE = 'Three captains at most march together. Take one out first.';
+
+/**
+ * One figure per line the source is worth — the popover's own block. The first row wears the label,
+ * the rows under it none, so the value column reads as the list it is. A source worth nothing still
+ * gets its one row, saying so (owner, 2026-09-28: *"at this level should always show all rows, never
+ * 'and x more'"*).
+ */
+function worthItems(lines: string[], label: string, empty: string): Figure[] {
+  const rows = lines.length === 0 ? [empty] : lines;
+  return rows.map((value, index) => ({
+    key: `worth-${String(index)}`,
+    label: index === 0 ? label : '',
+    value,
+  }));
+}
 
 /** "—" then ★1…★6: the seven steps the captain tables carry, by their index in the star table. */
 const NO_STAR = '—';
@@ -66,7 +81,6 @@ function CaptainLevelEditor({ captainId }: { captainId: string }) {
   };
 
   const lines = captainBonusLines(captainId, level, star);
-  const footer = lines[0] ?? 'Nothing at this level yet.';
   return (
     // Two parts and one hairline, like every other card on the page (docs/design.md §4); the footer
     // is a **figure** and not a dimmed sentence — label 12 muted over the value at 15/600, the same
@@ -103,7 +117,7 @@ function CaptainLevelEditor({ captainId }: { captainId: string }) {
         label="What this captain adds"
         layout="grid"
         columns={1}
-        items={[{ key: 'worth', label: 'At this level', value: footer }]}
+        items={worthItems(lines, 'At this level', 'Nothing at this level yet.')}
       />
     </Sections>
   );
@@ -114,6 +128,9 @@ function HeroEditor() {
   const profile = useStore(selectActiveProfile);
   if (profile === undefined) return null;
   const hero = heroTable.find((record) => record.id === profile.sources.hero);
+  // Every line the hero is worth, not just the first: Svyatogor's block feeds army health and army
+  // strength, and a hero whose block is empty — Haemon, Meriones — still gets its one row.
+  const worth = hero === undefined ? [] : describeContribution(hero.bonus);
   return (
     <Sections aria-label="Hero">
       <Stack gap="xs" w={220}>
@@ -148,16 +165,7 @@ function HeroEditor() {
           label="What this hero adds"
           layout="grid"
           columns={1}
-          items={[
-            {
-              key: 'worth',
-              label: 'On this march',
-              value:
-                hero === undefined
-                  ? 'No hero chosen'
-                  : (describeContribution(hero.bonus)[0] ?? 'No figures yet'),
-            },
-          ]}
+          items={worthItems(worth, 'On this march', hero === undefined ? 'No hero chosen' : 'No figures yet')}
         />
         {hero?.aloneOnly === true && (
           <Text size="xs" c="dimmed">

@@ -18,7 +18,7 @@ import {
 } from '@/data';
 import type { BattleSetup, Profile } from '@/state/schema';
 
-import { chipValue, describeContribution, rowValue } from './labels';
+import { chipValue, describeContribution, rowLines, rowValue } from './labels';
 import { artifactWorth, captainEntryFor, captainWorth, hasStackEffect } from './rows';
 
 /** The highest star rating a captain's table carries: none, then ★1…★6. */
@@ -183,10 +183,14 @@ export function titleChips(setup: BattleSetup): TitleFamilyRow[] {
   }));
 }
 
-/** What a captain is worth at this level and star rating, as the popover's footer says it. */
+/**
+ * What a captain is worth at this level and star rating, as the popover says it: **one entry per
+ * line**, never "and 1 more". A captain's health and strength blocks move on different star tables
+ * (Aydae's are 20 and 35 at ★1), so the two lines are what the player is looking for when they set
+ * the star.
+ */
 export function captainBonusLines(captainId: string, level: number, star: number): string[] {
   const record = captainTable.find((entry) => entry.id === captainId);
   if (record === undefined) return [];
-  const line = rowValue(captainWorth(record, { id: '', captainId, level, star }));
-  return line === '' ? [] : [line];
+  return rowLines(captainWorth(record, { id: '', captainId, level, star }));
 }

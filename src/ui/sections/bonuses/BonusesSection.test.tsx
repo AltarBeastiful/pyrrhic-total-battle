@@ -182,9 +182,10 @@ test('the sources are not behind a fold: the captains are on screen with the TOT
   expect(within(card()).getByText('Hero and captains')).toBeTruthy();
 
   // The two families set once keep a fold each, and the audit is still the last one (charter rule 4).
+  // It is named "Summary" since 2026-09-28 (owner: "this section should be renamed Summary").
   expect(within(card()).getByRole('button', { name: /^Artifacts/ })).toBeTruthy();
   expect(within(card()).getByRole('button', { name: /^Titles/ })).toBeTruthy();
-  expect(within(card()).getByRole('button', { name: 'Every key and what feeds it' })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Summary' })).toBeTruthy();
 });
 
 // ---- the captain chips --------------------------------------------------------------------------
@@ -286,6 +287,26 @@ test('the popover computes the bonus live and the chip takes a dot once a level 
   // The gear renames itself once there is something to change, and the chip wears the dot.
   expect(within(card()).getByRole('button', { name: 'Change Aydae’s level' })).toBeTruthy();
   expect(chipLabel(captainChip('Aydae')).querySelector('[class*="chipDot"]')).not.toBeNull();
+});
+
+test('the popover lists every line a captain is worth, never "and 1 more"', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  await user.click(captainGear('Aydae'));
+  typeNumber(document.body, 'Base level', '20');
+  // Aydae's two blocks do not move together at ★1 — 20 % health against 35 % strength — so a row
+  // summary would say "+20 % health (guardsmen) and 1 more" (owner, 2026-09-28: *"at this level should
+  // always show all rows"*). The popover says both, in its own two rows.
+  await chooseIn(user, document.body, 'Star level', '★1');
+
+  const worth = screen.getByLabelText('What this captain adds');
+  expect([...worth.querySelectorAll('dd')].map((node) => node.textContent)).toEqual([
+    '+20 % health (guardsmen)',
+    '+35 % strength (guardsmen)',
+  ]);
+  // The label is worn by the first row alone: the block reads as one figure with two lines.
+  expect(screen.getByText('At this level')).toBeTruthy();
+  expect(within(worth).queryByText(/ and 1 more/)).toBeNull();
 });
 
 test('a levelled captain moves the TOTAL, stars included', async () => {
