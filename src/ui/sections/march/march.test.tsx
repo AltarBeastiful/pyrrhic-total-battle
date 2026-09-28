@@ -484,6 +484,65 @@ test('the corner mark previews the type’s bonuses, and the sheet writes them b
   ).toBeTruthy();
 }, 15_000);
 
+/**
+ * **The sheet says where those two figures come from** (owner, 2026-09-28: *"in the troop detail, add a
+ * field that details where they get their bonuses from for a troop, listing the bonuses applied source and
+ * amount"*). One row per source — named as the Bonuses card names it, with the amount that source gives
+ * **this** type — which is the Summary block of that card narrowed to the keys the type answers to.
+ *
+ * Two sources, one of which only a melee-answering type gets, and the rows have to **add up to the figure
+ * on the bar above them**: a list that says something the bars do not is the sheet arguing with itself.
+ */
+test('the sheet lists every source of the type’s bonuses, with what each one gives it', async () => {
+  const owner = profile();
+  if (owner === undefined) throw new Error('the harness has an active profile');
+  act(() => {
+    updateSources(owner.id, (sources) => ({
+      ...sources,
+      permanent: [
+        ...sources.permanent,
+        { id: 'feeds-army', name: 'Army banner', health: { army: 40 }, strength: { army: 12 } },
+        { id: 'feeds-melee', name: 'Melee drill', health: { melee: 25 }, strength: {} },
+      ],
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+  const totals = lastResult()?.request.totals;
+  if (totals === undefined) throw new Error('a run carries the bonuses it was computed under');
+
+  const [mark] = detailsButtons(unit);
+  fireEvent.click(mark as HTMLElement);
+  const sheet = await screen.findByRole('dialog', { name: unit.name });
+
+  const list = within(sheet).getByLabelText('Where the bonuses come from');
+  const rows = [...list.querySelectorAll('dt')].map((term) => ({
+    name: term.textContent,
+    amount: term.nextElementSibling?.textContent ?? '',
+  }));
+  // Resolution order, and the melee source only where melee is one of the type's keys.
+  expect(rows.map((row) => row.name)).toEqual(
+    unit.keys.includes('melee') ? ['Army banner', 'Melee drill'] : ['Army banner'],
+  );
+  expect(rows[0]?.amount).toBe('+40% health / +12% strength');
+
+  // The invariant: what the list says is what the bar says. The amounts are read back out of the text, so
+  // this compares the screen against the engine's own sums (`unitBonus`) rather than one helper with itself.
+  const sum = rows
+    .map((row) => ({
+      health: Number(/([+-][\d.]+)% health/.exec(row.amount)?.[1] ?? 0),
+      strength: Number(/([+-][\d.]+)% strength/.exec(row.amount)?.[1] ?? 0),
+    }))
+    .reduce(
+      (total, row) => ({ health: total.health + row.health, strength: total.strength + row.strength }),
+      { health: 0, strength: 0 },
+    );
+  const bonus = unitBonus(unit, totals);
+  expect(sum.health).toBeCloseTo(bonus.health, 6);
+  expect(sum.strength).toBeCloseTo(bonus.strength, 6);
+}, 15_000);
+
 test('a type the sizer dropped is offered again when it is put back, and stays out if it still does not fit', async () => {
   // 20 leadership is enough for nine of the ten types the default profile owns: one is left out.
   setLeadership(20);
@@ -1364,4 +1423,198 @@ test('a thin shelter is a faint line under the army, and a hired stack over the 
   await waitFor(() => {
     expect(document.querySelector('[data-shelter]')).toBeNull();
   });
+}, 30_000);
+
+// ---- The sheltered raise (S-142) ------------------------------------------------------------------
+/**
+ * The march **as the pills show it**, which is not the same thing as the result the engine filed: every
+ * assertion below is about what the player reads and copies, not about what `useResultStore.last` holds —
+ * the raise is a replay of the counts on the march on screen, and the generated answer is deliberately
+ * left exactly as it came out of the search.
+ */
+function shownCounts(): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const tile of document.querySelectorAll('#march [data-stack]')) {
+    const label = tile.getAttribute('data-stack');
+    if (label !== null) out[label] = Number(tile.getAttribute('data-count'));
+  }
+  return out;
+}
+
+/** Every stack on screen, with the pool that pays for it and its health a unit, off the filed result. */
+function shownStacks(): { label: string; pool: string; hp: number; count: number }[] {
+  const counts = shownCounts();
+  return (lastResult()?.result.stacks ?? []).map((stack) => {
+    const unit = unitById(stack.unitId);
+    return {
+      label: unit?.label ?? stack.unitId,
+      pool: stack.pool,
+      hp: stack.hpPerUnit,
+      count: counts[unit?.label ?? stack.unitId] ?? 0,
+    };
+  });
+}
+
+/** The total HP of the largest hired stack on screen, and of the lowest troop stack it must stay under. */
+function shelterNow(): { hired: number; floor: number } {
+  const shown = shownStacks();
+  const total = (one: { hp: number; count: number }): number => one.hp * one.count;
+  const troops = shown.filter((one) => one.pool === 'leadership' && one.count > 0).map(total);
+  const hired = shown.filter((one) => one.pool !== 'leadership' && one.count > 0).map(total);
+  return { hired: Math.max(...hired), floor: Math.min(...troops) };
+}
+
+/**
+ * **An army whose plan stops below the shelter** — the case the whole control is for. The plan spreads the
+ * stock over `CAMPAIGN.marches` marches, so on a troop floor this high it fields far fewer mercenaries than
+ * the troops would shelter (measured on this seed: 30 of the 44 that fit); a raise spends one march's worth
+ * of a stock the account owns.
+ */
+async function generateFromAPlan(): Promise<void> {
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 92 }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 12_000, authority: 2_000, dominance: 0 },
+      options: { ...current.options, method: 'plan' },
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+}
+
+const raiseControl = (pool: string): HTMLElement =>
+  screen.getByRole('radiogroup', { name: `${pool} counts` });
+
+test('the raise is offered on a hired pool, and lifts the counts where the troops shelter them', async () => {
+  await generateFromAPlan();
+  const before = shownCounts();
+  expect(Object.keys(before).length, 'the plan fields no hired stack to raise').toBeGreaterThan(0);
+
+  const mercenaries = raiseControl('Mercenary');
+  // A march with no monsters has no monsters' control, and the troops are what shelters: never raised.
+  expect(screen.queryByRole('radiogroup', { name: 'Monster counts' })).toBeNull();
+  expect(screen.queryByRole('radiogroup', { name: 'Troop counts' })).toBeNull();
+
+  const filed = lastResult();
+  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'Most' }));
+  await waitFor(() => {
+    expect(shownCounts()).not.toEqual(before);
+  });
+
+  // **No Generate was run**: the answer the search filed is the same object, untouched.
+  expect(lastResult()).toBe(filed);
+
+  // And every stack it moved stands strictly under the lowest troop stack — the promise of the control.
+  const { hired, floor } = shelterNow();
+  expect(hired).toBeLessThan(floor);
+});
+
+test('“as is” puts the generated counts back, and the raise is one replay, not a solve', async () => {
+  await generateFromAPlan();
+  const generated = shownCounts();
+  const mercenaries = raiseControl('Mercenary');
+
+  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'Most' }));
+  await waitFor(() => {
+    expect(shownCounts()).not.toEqual(generated);
+  });
+  // The sentence under the figures says what happened, in the same muted ink as the hand-edit line.
+  expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
+
+  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'As is' }));
+  await waitFor(() => {
+    expect(shownCounts()).toEqual(generated);
+  });
+  expect(screen.queryByText(/Raised to what the troops shelter/)).toBeNull();
+});
+
+test('the best position is a raise too, and it says what it did in its own words', async () => {
+  await generateFromAPlan();
+  const control = raiseControl('Mercenary');
+  const plan = shownCounts();
+
+  fireEvent.click(within(control).getByRole('radio', { name: 'Best' }));
+  await waitFor(() => {
+    expect(screen.getByText(/hits hardest with under the troops/)).toBeTruthy();
+  });
+  // The position that promises **damage** and not units: what it fields is at least the plan's own counts
+  // (it is a raise, never a cut) and never more than `Most` would field (the same ceiling bounds it).
+  const best = shownCounts();
+  fireEvent.click(within(control).getByRole('radio', { name: 'Most' }));
+  await waitFor(() => {
+    expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
+  });
+  const most = shownCounts();
+  for (const [label, count] of Object.entries(best)) {
+    expect(count, `${label} fell below the plan's own count`).toBeGreaterThanOrEqual(plan[label] ?? 0);
+    expect(count, `${label} went past what Most fields`).toBeLessThanOrEqual(most[label] ?? count);
+  }
+  // Whichever position is on, the March says what the counts are: one sentence, never two.
+  expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
+}, 30_000);
+
+test('the position is remembered: the next Generate arrives already raised', async () => {
+  await generateFromAPlan();
+  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Most' }));
+  await waitFor(() => {
+    expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
+  });
+
+  await generate();
+
+  // The rule outlived the run it was set in — the owner's *"remember position when clicking generate again"*.
+  expect(useRunStore.getState().raiseModes.authority).toBe('most');
+  const filed = lastResult();
+  const counts = shownCounts();
+  const raised = (filed?.result.stacks ?? []).some(
+    (stack) => stack.pool === 'authority' && (counts[unitById(stack.unitId)?.label ?? ''] ?? 0) > stack.count,
+  );
+  expect(raised, 'the new march came back at the generated counts').toBe(true);
+  expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
+}, 30_000);
+
+test('a count typed by hand is the player’s last word, and wins over the raise', async () => {
+  await generateFromAPlan();
+  const mercenaries = raiseControl('Mercenary');
+  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'Most' }));
+  await waitFor(() => {
+    expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
+  });
+
+  const hunter = unitById('epic-monster-hunter-6');
+  if (hunter === undefined) throw new Error('the hunter is not in the tables');
+  act(() => {
+    useResultStore.getState().editCount(hunter.id, 3);
+  });
+  await waitFor(() => {
+    expect(shownCounts()[hunter.label]).toBe(3);
+  });
+  // The raise is still standing for the rest: the position is not undone by a typed figure.
+  expect(useRunStore.getState().raiseModes.authority).toBe('most');
+});
+
+test('a sizer’s march offers no raise: its exact fill has already taken the pool and the shelter', async () => {
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 92 }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 12_000, authority: 2_000, dominance: 0 },
+      // Tier ladder, the default: `sizePool` fills authority to the brim, so there is nothing to ask for.
+      options: { ...current.options, method: 'elite' },
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  // The mercenary **is** marching — the pool is drawn — and the control is not, because nothing it could
+  // offer is left (design rule 15).
+  expect(shownStacks().some((stack) => stack.pool === 'authority')).toBe(true);
+  expect(screen.queryByRole('radiogroup', { name: 'Mercenary counts' })).toBeNull();
 }, 30_000);

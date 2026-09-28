@@ -19,9 +19,10 @@
  * and the page never has to travel to it.
  */
 import { Alert, Group, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 
 import type { Pool, UnitDef } from '@/engine/types';
+import { resolveSources } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Sections } from '@/ui/kit';
 import { useResultStore } from '@/ui/resultStore';
@@ -67,6 +68,8 @@ export function MarchSection() {
   const titleId = useId();
 
   const { snapshot, result, summary } = march;
+  // A raise is on: the hired stacks are standing as high as the troops still shelter them (S-142).
+  const raising = march.raiseModes.authority !== 'off' || march.raiseModes.dominance !== 'off';
 
   // A result that belongs to another profile or another march entirely — a different fact from
   // "the setup moved", which the recap says in one line of its own now (owner, 2026-09-13: the
@@ -82,6 +85,18 @@ export function MarchSection() {
     snapshot === null || summary === null || result === null
       ? ''
       : `March generated: ${amount(result.stacks.length)} stacks, ${amount(summary.avgDamage)} expected damage.`;
+
+  /**
+   * The sources the Bonuses card is filled in, for the names and the order of the unit sheet's list of
+   * feeds. **The live profile and setup**, as the Bonuses Summary resolves them, because that resolution is
+   * what carries the readable labels ("Beowulf L20 ★3") and it is the only one on this screen: the amounts
+   * beside them still come from the march's own totals, so a setup edited since the run moves a label but
+   * never a figure (the recap's "out of date" line is what says the setup moved).
+   */
+  const sources = useMemo(
+    () => (profile === undefined || setup === undefined ? [] : resolveSources(profile, setup)),
+    [profile, setup],
+  );
 
   return (
     // No ground of its own at either width (M-09 polish list, spike 0009's `v1-desktop.jpg`): the
@@ -169,10 +184,18 @@ export function MarchSection() {
               useResultStore.getState().editCount(unitId, count);
             }}
             onDetails={setSheetUnit}
+            raiseModes={march.raiseModes}
+            canRaise={march.canRaise}
+            onRaise={(pool, mode) => {
+              useRunStore.getState().setRaiseMode(pool, mode);
+            }}
           />
           {/* How safely the troops shelter the hired stacks, read off the march on screen — generated or
-              edited by hand (S-141). Silent while the shelter is wide. */}
-          <MarchShelterNote result={result} units={snapshot.request.units} />
+              edited by hand (S-141). Silent while the shelter is wide, and silent while the raise is on:
+              "as high as it can go and still fall after your troops" **is** the margin this line warns
+              about, so warning about it after every press would be the pane arguing with the control. The
+              raise's own sentence carries the fact instead (`MarchEditedNote`, S-142). */}
+          {!raising && <MarchShelterNote result={result} units={snapshot.request.units} />}
         </Stack>
       )}
 
@@ -260,6 +283,7 @@ export function MarchSection() {
           unit={sheetUnit}
           row={march.rows.find((row) => row.unit.id === sheetUnit?.id)}
           totals={snapshot.request.totals}
+          sources={sources}
           totalDamage={summary.journals.enemyFirst.totalDamage}
           onClose={() => {
             setSheetUnit(null);

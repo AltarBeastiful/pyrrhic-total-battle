@@ -16,9 +16,18 @@
  * press away in the unit sheet. The pool's figure *is* the gauge, written rather than drawn; **the
  * pills are the counts**.
  */
-import { ActionIcon, Button, Group, Stack, Text, Tooltip } from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  Group,
+  SegmentedControl,
+  Stack,
+  Text,
+  Tooltip,
+  VisuallyHidden,
+} from '@mantine/core';
 import { Copy, Pencil, Undo2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import type { StackResult, UnitDef } from '@/engine/types';
@@ -29,6 +38,8 @@ import { copyText } from '@/ui/profile/download';
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
 import { amount, bonusLines } from './format';
 import classes from './march.module.css';
+import { raisesPool } from './raise';
+import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { useRunStore } from './runStore';
@@ -65,6 +76,102 @@ export interface MarchPillsProps {
   onCount: (unitId: string, count: number) => void;
   /** A pill's corner mark: the unit sheet for that one type. */
   onDetails: (unit: UnitDef) => void;
+  /** The sheltered raise (S-142): the position of each hired pool's control, and whether it is offered. */
+  raiseModes: RaiseModes;
+  canRaise: boolean;
+  onRaise: (pool: RaisedPool, mode: RaiseMode) => void;
+}
+
+/** What each position of the raise control is called, and the one line that explains it (rule 26). */
+const RAISE_CHOICES: readonly { mode: RaiseMode; label: string; help: string }[] = [
+  {
+    mode: 'off',
+    label: 'As is',
+    help: 'The counts the march was generated with.',
+  },
+  {
+    mode: 'tens',
+    label: 'Most, in tens',
+    help: 'Every stack as high as it can go and still fall after your troops, in tens of units.',
+  },
+  {
+    mode: 'most',
+    label: 'Most',
+    help: 'Every stack as high as it can go and still fall after your troops.',
+  },
+  {
+    mode: 'best',
+    label: 'Best',
+    help: 'The counts this march hits hardest with under your troops, which can be fewer units than Most.',
+  },
+];
+
+/** What the control is called, per pool: the group carries the pool's own name. */
+const RAISE_LABEL: Record<RaisedPool, string> = {
+  authority: 'Mercenary counts',
+  dominance: 'Monster counts',
+};
+
+const isRaiseMode = (value: string): value is RaiseMode =>
+  RAISE_CHOICES.some((choice) => choice.mode === value);
+
+/**
+ * **How high this pool's stacks are asked to stand** (S-142; owner, 2026-09-29: *"a slider with three
+ * options: default count, maximize number and spent (rounding to the nearest 10 number that's still
+ * shielded), maximize global (going to nearest count that's still shielded not caring about rounding to
+ * 10)"*), and the fourth the owner added the same day — *"give both positions but defer the best damage
+ * option to after the most is implemented as a second step"* (S-143).
+ *
+ * It sits under the pool's own figure and above its pills, so it is read with the stacks it moves, on the
+ * mercenaries' block and the monsters' block and nowhere else — the troops are what shelters, never what is
+ * sheltered. Stock Mantine, four short segments, no custom CSS (rule 23); each segment names itself in one
+ * sentence for a pointer or a keyboard (the tooltip), and the group says the same thing once for a reader
+ * that never sees it (the hidden line below).
+ *
+ * `Best` is a **different promise** and not a better `Most`: `Most` fields the most units the troops
+ * shelter, `Best` fields the counts that hit hardest, which can be fewer (a stack with more total HP climbs
+ * the kill order and strikes in fewer rounds — see `raise.ts`). Both are raises, because the march on screen
+ * is always the floor they start from.
+ *
+ * Nothing here computes anything: the position is run state (`runStore.raiseModes`) and the counts it means
+ * are derived from the march in `useMarch`, which is what lets the position survive a Generate.
+ */
+export function MarchRaiseControl({
+  pool,
+  value,
+  onChange,
+}: {
+  pool: RaisedPool;
+  value: RaiseMode;
+  onChange: (mode: RaiseMode) => void;
+}) {
+  const helpId = useId();
+  return (
+    <>
+      <SegmentedControl
+        size="xs"
+        fullWidth
+        maw={360}
+        value={value}
+        aria-label={RAISE_LABEL[pool]}
+        aria-describedby={helpId}
+        data={RAISE_CHOICES.map((choice) => ({
+          value: choice.mode,
+          label: (
+            <Tooltip label={choice.help} withinPortal withArrow>
+              <span>{choice.label}</span>
+            </Tooltip>
+          ),
+        }))}
+        onChange={(next) => {
+          if (isRaiseMode(next)) onChange(next);
+        }}
+      />
+      <VisuallyHidden id={helpId}>
+        {RAISE_CHOICES.map((choice) => `${choice.label}: ${choice.help}`).join(' ')}
+      </VisuallyHidden>
+    </>
+  );
 }
 
 /**
@@ -72,7 +179,15 @@ export interface MarchPillsProps {
  * pane stays on screen while the setup scrolls past it (`shell/MarchPane.tsx`), so this block and
  * the whole-march actions under it travel together and neither can cover the other.
  */
-export function MarchPills({ rows, editing, onCount, onDetails }: MarchPillsProps) {
+export function MarchPills({
+  rows,
+  editing,
+  onCount,
+  onDetails,
+  raiseModes,
+  canRaise,
+  onRaise,
+}: MarchPillsProps) {
   return (
     <Stack
       gap="lg"
@@ -96,6 +211,9 @@ export function MarchPills({ rows, editing, onCount, onDetails }: MarchPillsProp
     >
       {rows.map((row) => {
         const over = row.used > row.capacity;
+        // The pool this row's raise control speaks for, or `null` when there is none to draw — a named
+        // `const` because a narrowing on `row.pool` does not survive into the control's own callbacks.
+        const raisable = canRaise && raisesPool(row.pool) && row.entries.length > 0 ? row.pool : null;
         return (
           <Stack key={row.pool} gap="xs">
             {/* The pool line, to the spacing contract (`MarchPaneSpacing.dc.html`, `.pool`): the
@@ -120,6 +238,17 @@ export function MarchPills({ rows, editing, onCount, onDetails }: MarchPillsProp
                 {`of ${amount(row.capacity)} ${POOL_LABEL[row.pool].toLowerCase()}`}
               </Text>
             </Group>
+            {/* How high these stacks are asked to stand, read with the stacks it moves (S-142). Drawn on the
+                hired pools of a plan's march only, and only while there is a stack to raise. */}
+            {raisable !== null && (
+              <MarchRaiseControl
+                pool={raisable}
+                value={raiseModes[raisable]}
+                onChange={(mode) => {
+                  onRaise(raisable, mode);
+                }}
+              />
+            )}
             {row.entries.length > 0 && (
               <div
                 className={domainClasses.pillGrid}

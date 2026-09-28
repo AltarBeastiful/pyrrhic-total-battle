@@ -15,6 +15,9 @@ import type { CampaignPlan, PlanPick, PlanRow } from '@/engine/plan';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
+import { NO_RAISE } from './raise';
+import type { RaiseMode, RaiseModes } from './raise';
+
 /**
  * Where on the bar the March is read (S-55; one control since the owner's review of 2026-09-14).
  *
@@ -264,6 +267,19 @@ export interface RunState {
    * is never stored, shared or synced: a reload opens on the engine's recommendation again.
    */
   chosenStop: ChosenStop | null;
+  /**
+   * **How high the hired stacks are asked to stand** (S-142): one position per hired pool, `off` until the
+   * player moves it. The owner asked for a **standing rule** and not a one-shot — *"also remember position
+   * when clicking generate again"* (2026-09-29) — so it outlives every run the way `chosenStop` does: a new
+   * march arrives already raised, whichever stop or method produced it.
+   *
+   * It lives here rather than with the counts it moves (`useResultStore.manualCounts`) precisely because
+   * those are cleared by every new result: this is the *instruction*, the raise is derived fresh from it on
+   * each march (`useMarch`). View state like the rest of this store: never stored, shared or synced, and
+   * cleared only by `reset()` — so a reload opens on the generated counts again.
+   */
+  raiseModes: RaiseModes;
+  setRaiseMode: (pool: keyof RaiseModes, mode: RaiseMode) => void;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
@@ -293,6 +309,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   plan: null,
   planPick: 0,
   chosenStop: null,
+  raiseModes: NO_RAISE,
   controller: null,
   setResize: (resize) => {
     set({ resize });
@@ -345,6 +362,10 @@ export const useRunStore = create<RunState>()((set, get) => ({
   setIncluded: (includedUnitIds, leftOutByPlayer) => {
     set({ includedUnitIds, leftOutByPlayer, resize: null });
   },
+  setRaiseMode: (pool, mode) => {
+    // A **new object**: the March reads this through a selector, and writing in place would never reach it.
+    set((state) => ({ raiseModes: { ...state.raiseModes, [pool]: mode } }));
+  },
   cancel: () => {
     get().controller?.abort();
     // A cancelled run produced no result, so the fingerprint it was started with means nothing: the
@@ -366,8 +387,10 @@ export const useRunStore = create<RunState>()((set, get) => ({
       tradeoff: null,
       plan: null,
       planPick: 0,
-      // Another account is another army, so the stop it would open on means nothing here.
+      // Another account is another army, so the stop it would open on means nothing here — and neither
+      // does a count the previous one asked to raise its hired stacks to.
       chosenStop: null,
+      raiseModes: NO_RAISE,
       controller: null,
     });
   },

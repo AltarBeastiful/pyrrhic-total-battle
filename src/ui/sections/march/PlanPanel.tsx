@@ -237,7 +237,14 @@ export function PlanFold() {
   const plan = useRunStore((state) => state.plan);
   const position = useRunStore((state) => state.planPick);
   const setPlanPick = useRunStore((state) => state.setPlanPick);
-  const edited = useRunStore((state) => state.leftOutByPlayer.length > 0);
+  // The march on screen is not the one the plan sized: a type was left out by hand, or a raise is standing
+  // (S-142 — the same fact, and the plan's own figures say neither).
+  const edited = useRunStore(
+    (state) =>
+      state.leftOutByPlayer.length > 0 ||
+      state.raiseModes.authority !== 'off' ||
+      state.raiseModes.dominance !== 'off',
+  );
   // Which of the trade's rows the bar's pointer is on. It lives here because the bar and the table are one
   // thing (invariants 0020 §D-2): the bar says which plan, the table says what it is worth, and the two
   // must be reading the same row.
@@ -569,11 +576,11 @@ export function PlanFold() {
         </Disclosure>
 
         {/* Not folded: a warning behind a chevron is not a warning. The figures above are of a march the
-            player has since changed by hand, which is the one thing on this block that can be out of date. */}
+            player has since changed — by hand, or by a raise left standing (S-142) — which is the one thing
+            on this block that can be out of date. */}
         {edited && (
           <Text size="sm" c="dimmed">
-            The march on screen has been edited by hand since it was planned; the plan behind it has not
-            moved.
+            The march on screen has changed since it was planned; the plan behind it has not moved.
           </Text>
         )}
       </Stack>

@@ -3,6 +3,7 @@
  * fields (a press on a pill in the March, a type the priority left at home), and the three things
  * they do with the answer — read the counts, copy them all, edit one by hand.
  */
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import type { Locator } from '@playwright/test';
 
@@ -319,6 +320,9 @@ test('the unit sheet says what a type is filed under, and flags a squad the tabl
   await expect(sheet.getByText('Mercenaries VI · Guardsmen')).toBeVisible();
   // …and the alert, which says what is missing rather than showing a shorter list (owner, 2026-09-28).
   await expect(sheet.getByText(/^No squad is recorded for Epic Monster Hunter VI/)).toBeVisible();
+  // The sheet also says where its two figures come from (owner, 2026-09-28). Nothing is switched on in
+  // this account, which is its own case: one line rather than an empty block.
+  await expect(sheet.getByText('No bonus source on this march reaches this type.')).toBeVisible();
 
   expect(problems).toEqual([]);
 });
@@ -735,6 +739,99 @@ test('a second Generate opens the plan bar on the stop the player last read', as
     new RegExp(`^${wanted}`),
   );
   await expect(bar).toHaveAttribute('aria-valuenow', String(thumb));
+
+  expect(problems).toEqual([]);
+});
+
+/**
+ * **The sheltered raise** (S-142). The plan spreads the hired stock over `CAMPAIGN.marches` marches, so on
+ * an army with room to shelter more it fields fewer mercenaries than the troops would carry. The control on
+ * the mercenaries' block lifts them to what the shelter allows — a **replay of the counts** on the march on
+ * screen, never another search: the answer the engine filed is left exactly as it came out. And the position
+ * is remembered, the way the plan bar remembers its stop, so the next Generate arrives already raised.
+ */
+test('the sheltered raise lifts the hired counts without a Generate, and the position survives one', async ({
+  page,
+}) => {
+  const problems = watchConsole(page);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openApp(page);
+  await seedHiredStock(page);
+  await page.locator('#battle').getByRole('radio', { name: 'Complete optimization' }).click();
+  // A troop floor high enough that the plan's own rationing, not the shelter, is what stops it.
+  await generate(page, { leadership: 20_000 });
+
+  const march = marchSection(page);
+  const control = march.getByRole('radiogroup', { name: 'Mercenary counts' });
+  await expect(control).toBeVisible();
+  // The troops are what shelters, never what is sheltered: there is no control of their own.
+  await expect(march.getByRole('radiogroup', { name: 'Troop counts' })).toHaveCount(0);
+
+  /** The hunter's line as the pills read it: "EMH6 30". */
+  const hunter = async (): Promise<number> =>
+    Number(
+      /^EMH6 (\d+)$/.exec(
+        (await marchStackLabels(page)).find((line) => line.startsWith('EMH6')) ?? '',
+      )?.[1] ?? 0,
+    );
+
+  /**
+   * A position is pressed the way a thumb presses it: **the label**, not the radio. Mantine's segmented
+   * control keeps the input itself invisible (that is how the segment is drawn), so a click has to land on
+   * the word — while a state assertion is still made against the radio.
+   */
+  const press = async (name: string): Promise<void> => {
+    await control.getByText(name, { exact: true }).click();
+  };
+  /** What the control is holding: the radio's own state, which is what a keyboard and a reader see. */
+  const expectChosen = async (name: string): Promise<void> => {
+    await expect(control.getByRole('radio', { name, exact: true })).toBeChecked();
+  };
+
+  const before = await hunter();
+  const damage = await marchFigure(page, 'Damage');
+  expect(before, 'the plan fielded no mercenary to raise').toBeGreaterThan(0);
+
+  await press('Most');
+
+  // The counts moved and the figures followed: a race against nothing but the replay.
+  await expect.poll(hunter, { message: 'the mercenary count did not go up' }).toBeGreaterThan(before);
+  expect(await marchFigure(page, 'Damage'), 'the figures did not follow the counts').not.toBe(damage);
+  // And the March says what it did, in the ink every other line about the march is written in.
+  await expect(march.getByText(/Raised to what the troops shelter/)).toBeVisible();
+  await expectChosen('Most');
+
+  // **The fourth position promises damage, not units** (S-143): it fields at least the plan's own count and
+  // never more than `Most`, and it says so in its own sentence rather than in `Most`'s.
+  const most = await hunter();
+  await press('Best');
+  await expect(march.getByText(/hits hardest with under the troops/)).toBeVisible();
+  const best = await hunter();
+  expect(best, 'Best fell below the plan’s own count').toBeGreaterThanOrEqual(before);
+  expect(best, 'Best went past what Most fields').toBeLessThanOrEqual(most);
+  await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
+  // Back to `Most` for the rest of the journey: the positions are one control, and this is the one the
+  // Generate below is asked to remember.
+  await press('Most');
+  await expectChosen('Most');
+
+  // **The accessibility floor**, on the one control the app-wide pass never sees: that pass runs no plan.
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).include('#march').analyze();
+  expect(axe.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+
+  // Generate again: the position outlives the run it was set in.
+  await generateButton(page).click();
+  await settle(page);
+  await dismissMarchSheet(page);
+  await expectChosen('Most');
+
+  // And the new march really is raised: put the position back to the generated counts and compare.
+  await press('As is');
+  const generated = await hunter();
+  await press('Most');
+  await expect
+    .poll(hunter, { message: 'the second march came back at its generated counts' })
+    .toBeGreaterThan(generated);
 
   expect(problems).toEqual([]);
 });

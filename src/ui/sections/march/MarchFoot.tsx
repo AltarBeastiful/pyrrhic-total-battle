@@ -234,19 +234,43 @@ export function MarchActions() {
 }
 
 /**
- * **What a hand edit did to the figures**, under them, and only while it is true (design rule 15). It
- * used to hang under the row of buttons at the foot of the page; the row is a toolbar on the heading now
- * and a sentence cannot live on a heading line, so the line moved to the one place it is about — the
- * figures it explains (`MarchSection.tsx`, part 1).
+ * **What the March's own edits did to the figures**, under them, and only while they are true (design
+ * rule 15). It used to hang under the row of buttons at the foot of the page; the row is a toolbar on the
+ * heading now and a sentence cannot live on a heading line, so the line moved to the one place it is about
+ * — the figures it explains (`MarchSection.tsx`, part 1).
+ *
+ * **Two edits, two sentences** (S-142). Typed counts and a raise are both "the march on screen is not the
+ * one the engine answered with", and they are not the same fact: one is the player's own figure, the other
+ * is a position he left standing, and the second one *is* the reason the shelter line is silent while it is
+ * on — so it is the sentence that has to carry that fact, once, in the muted ink every other line about the
+ * march is written in.
+ *
+ * **And the two positions say two different things** (S-143). `Most` and `Most, in tens` stand every stack
+ * just under the line, so the near tie is the thing to say. `Best` stands them where the march hits hardest,
+ * which is often lower down and not a tie at all: what it promises is that every stack still falls after
+ * the troops, and it says exactly that and no more.
  */
 export function MarchEditedNote() {
-  const { edited } = useMarch();
-  if (!edited) return null;
+  const { edited, raiseModes } = useMarch();
+  const raising = raiseModes.authority !== 'off' || raiseModes.dominance !== 'off';
+  const best = raiseModes.authority === 'best' || raiseModes.dominance === 'best';
+  if (!edited && !raising) return null;
   return (
-    <Text className={classes.meta} c="dimmed">
-      Counts edited by hand. The figures are recomputed on them; nothing is re-sized, so the housing is yours
-      to balance.
-    </Text>
+    <Stack gap={2}>
+      {edited && (
+        <Text className={classes.meta} c="dimmed">
+          Counts edited by hand. The figures are recomputed on them; nothing is re-sized, so the housing is
+          yours to balance.
+        </Text>
+      )}
+      {raising && (
+        <Text className={classes.meta} c="dimmed">
+          {best
+            ? 'Raised to the counts this march hits hardest with under the troops: every stack still falls after your lowest troop stack. Nothing is re-sized; the figures are recomputed on these counts.'
+            : 'Raised to what the troops shelter: each hired stack stands just under your lowest troop stack, and the game decides a near tie. Nothing is re-sized; the figures are recomputed on these counts.'}
+        </Text>
+      )}
+    </Stack>
   );
 }
 

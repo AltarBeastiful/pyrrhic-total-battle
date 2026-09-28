@@ -14,6 +14,8 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
 import { applyCounts, hasEdits } from './manual';
+import { raisedCounts, troopFloor } from './raise';
+import type { RaiseModes } from './raise';
 import { leftOutOf, marchRows, poolRows } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { setupFingerprint, useRunStore } from './runStore';
@@ -37,6 +39,18 @@ export interface MarchView {
   edited: boolean;
   /** Pools the hand-edited counts no longer fit in. */
   overflow: Pool[];
+  /**
+   * **The position of each hired pool's sheltered-raise control** (S-142), as the player left it. A standing
+   * rule: it survives a Generate, and `useMarch` applies it to whatever march is on screen.
+   */
+  raiseModes: RaiseModes;
+  /**
+   * Whether the raise is offered on this march at all — the run is a **plan's**, and there are troops to
+   * shelter by. The sizer methods have nothing to give (their exact fill already takes the pool, the stock
+   * and the shelter — `stacker.ts:81-98`), so the control is not drawn there (design rule 15), and a raise
+   * left on from a plan is not applied to them either: one rule, the control and its effect together.
+   */
+  canRaise: boolean;
   rows: MarchStackRow[];
   /** The army as pills, one block per housing pool (design plan §5.5). */
   pools: PoolRow[];
@@ -62,6 +76,12 @@ export function useMarch(): MarchView {
   // Counts are being typed into the pills (`MarchCountsBar`), which changes what the *army* looks
   // like, never what the figures are computed from.
   const editing = useRunStore((state) => state.editingCounts);
+  // The sheltered raise (S-142): the position of each hired pool's control, read as the object it is (a
+  // selector on a field would keep re-rendering the five components that call this).
+  const raiseModes = useRunStore((state) => state.raiseModes);
+  // **Where the raise is offered**: a plan's own march, whose counts are the plan's trade and sit below
+  // what the shelter allows. A sizer's march has nothing left to give (`stacker.ts:81-98`).
+  const planned = useRunStore((state) => state.plan !== null);
 
   // The store hands out the same profile and setup objects until one of them is edited, so this is
   // rebuilt only when something a march is actually computed from moved.
@@ -78,14 +98,32 @@ export function useMarch(): MarchView {
         stale: false,
         edited: false,
         overflow: [],
+        raiseModes,
+        canRaise: false,
         rows: [],
         pools: [],
         leftOut: [],
       };
     }
 
-    const edits = hasEdits(snapshot.result, counts)
-      ? applyCounts(snapshot.request, snapshot.result, counts)
+    /**
+     * **The raise, then the typing over it** (S-142). The positions are a standing rule the player set, so
+     * they are applied to the march on screen every time — a Generate, another stop, a put-back — and never
+     * written into `manualCounts`, which is why nothing here can go stale and why `Undo` (and the sentence
+     * that says "counts edited by hand") keeps meaning exactly what it meant.
+     *
+     * A count typed by hand is the player's own last word on that one stack, so it is merged **over** the
+     * raise. `effective` is what is really on the field; `edits` and `edited` are two different questions
+     * asked of it — "is there anything to replay?" and "did the player type?" — because the first draws the
+     * figures and the second draws the Undo mark and the note.
+     */
+    const canRaise = planned && troopFloor(snapshot.result) !== null;
+    const raised = canRaise ? raisedCounts(snapshot.request, snapshot.result, raiseModes) : null;
+    const effective = raised === null ? counts : { ...raised, ...counts };
+    const edited = hasEdits(snapshot.result, counts);
+
+    const edits = hasEdits(snapshot.result, effective)
+      ? applyCounts(snapshot.request, snapshot.result, effective)
       : null;
     const result = edits?.result ?? snapshot.result;
     const summary = edits?.summary ?? snapshot.summary;
@@ -108,7 +146,9 @@ export function useMarch(): MarchView {
       ? {
           ...result,
           stacks: snapshot.result.stacks.map((stack) => {
-            const typed = counts[stack.unitId];
+            // `effective` and not `counts`: with a raise on, a stack the player has not typed into still
+            // shows the count it is fielded at, and the field agrees with the figures above it.
+            const typed = effective[stack.unitId];
             return typed === undefined ? stack : { ...stack, count: Math.max(0, Math.round(typed)) };
           }),
         }
@@ -120,8 +160,10 @@ export function useMarch(): MarchView {
       summary,
       previous,
       stale,
-      edited: edits !== null,
+      edited,
       overflow: edits?.overflow ?? [],
+      raiseModes,
+      canRaise,
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
       pools: poolRows({
         result: army,
@@ -131,5 +173,5 @@ export function useMarch(): MarchView {
       }),
       leftOut: leftOutOf(snapshot.request.units, army, leftOutByPlayer, editing),
     };
-  }, [snapshot, counts, editing, leftOutByPlayer, previous, stale]);
+  }, [snapshot, counts, editing, leftOutByPlayer, previous, stale, raiseModes, planned]);
 }
