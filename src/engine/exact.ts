@@ -73,12 +73,16 @@ export interface ExactAnswer {
   scored: number;
 }
 
-const DEFAULTS = {
+/**
+ * **The shipped defaults**, exported so the kernel's own copy of this search can be held to them
+ * (`src/kernel/raise.ts` hands them to the wasm rather than repeating the numbers there).
+ */
+export const EXACT_DEFAULTS = {
   walkCap: 300_000,
   restarts: 64,
   maxSweeps: 24,
   seed: 20_260_929,
-};
+} as const;
 
 /**
  * A deterministic generator. **An unseeded restart column is a coin flip, not a measurement**: experiment
@@ -203,10 +207,10 @@ export function exactSearch(
   score: (vector: BoxVector) => number,
   options: ExactOptions = {},
 ): ExactAnswer | null {
-  const walkCap = options.walkCap ?? DEFAULTS.walkCap;
-  const restarts = options.restarts ?? DEFAULTS.restarts;
-  const maxSweeps = options.maxSweeps ?? DEFAULTS.maxSweeps;
-  const random = randomFrom(options.seed ?? DEFAULTS.seed);
+  const walkCap = options.walkCap ?? EXACT_DEFAULTS.walkCap;
+  const restarts = options.restarts ?? EXACT_DEFAULTS.restarts;
+  const maxSweeps = options.maxSweeps ?? EXACT_DEFAULTS.maxSweeps;
+  const random = randomFrom(options.seed ?? EXACT_DEFAULTS.seed);
 
   const slots = slotsIn.filter((slot) => slot.to > slot.from);
   if (slots.length === 0) return null;

@@ -341,3 +341,63 @@ prints is each position against the climb rather than against `Best` — and it 
 The doc above is kept as it was written — it is the reasoning of S-143b and S-144 and the numbers are still
 the numbers — with `Best` read as **the climb** wherever it is the seed, and as **a segment that no longer
 exists** wherever it is a position.
+
+## 12. Where it landed: the kernel, and the trades under the plan (S-147, 2026-09-29)
+
+Owner, 2026-09-29: *"take all positions remaining and implement them in assemblyscript. Goal is to offer them
+as precomputed with the trades they offer visible to the user. for now you'll output the trades in a table
+below the plan slider table and keep the slider leading to the ts version in the summary defaulting it to as
+is to avoid duplication."* §3 named this destination for `src/engine/exact.ts` — *"the AssemblyScript kernel,
+where a few million vectors is milliseconds"* — and this is that move, with §3's own packaging kept: the
+algorithm is `src/engine/exact.ts`, the march-level half is `src/ui/sections/march/exact.ts` and `raise.ts`,
+and the kernel is a third path beside them rather than a rewrite of either.
+
+**The door.** `RaiseKernel` in `src/engine/fast.ts`, next to `PlanKernel` and asked the same way:
+`positions.ts` calls `raiseKernel()?.position(...)` and falls back to the March's own TypeScript when the host
+has no kernel — which, on the main thread, it never has. The kernel implements it in `src/kernel/raise.ts`
+over one packed table per **(request, base march)**: the request as `packRequest` builds it, plus the raise's
+own tie-break column.
+
+**The tie-break is the port's one real decision.** §5 left "which tie rule is right" open: `applyCounts`
+breaks a total-HP tie by base-stack index, `marchOf` by `buildKillOrder`'s rank. A position is *read* through
+`applyCounts`, so a kernel scoring with its own battle would answer a different march — on the monster camp
+that is ~1.8 % of damage, and it is exactly the class of defect a port must not introduce. So the packed table
+carries `T.order` (each type's place in `base.stacks`) and the kernel's scorer sorts by it: the same march,
+the same box, the same seed, and — because `ExactAnswer.scored` is now carried out of `exactRaise` — the same
+route to the answer. `tests/kernel/raise-kernel.test.ts` holds every count, `how`, `space` and `scored` of
+both paths together on the 18 benchmark armies.
+
+**What it costs.** Experiment 184 (`out/184-the-positions-on-the-kernel.md`), every stop of every benchmark
+army, all five positions on one march, both paths side by side:
+
+| path | median ms a march | worst ms a march |
+|---|---|---|
+| the kernel | **0.6** | **2 347** |
+| the March's TypeScript | 2.3 | 197 158 |
+
+That is the whole reason the block can price five positions before they are asked; a platform that cannot run
+a worker is not offered it at all (`positionsSearch.ts`), rather than freezing the page for minutes.
+
+**The block** (`PositionTrade.tsx`, drawn by `PlanPanel` under the trade) prices the five on the stop the bar
+is standing on: **damage, silver, gold and the mercenaries burnt**, each with its change against the plan's
+own march under it, the baseline row left out because the bar's own row is one block above. Units are not a
+column (owner, 2026-09-29: *"i don't care about units, they're cheap. I care about silver, gold and merc"*),
+and gold is drawn only where a march pays any (design rule 15). **The whole bar is priced, not one stop of
+it** (owner, same day: *"all those should have their table when clicking on the plan slider. Best is to
+compute it ahead for all like the slider spots"*): one job a stop, the stop on screen first, so a press on the
+slide is another table rather than another wait — 2 ms median and 2 108 ms worst a bar, against 33 ms and
+197 s in TypeScript. It is the only place the five can be compared, and it is read rather than pressed: the
+summary's control is where a press acts, and it is unchanged — *"keep the slider leading to the ts version"* —
+including opening on `As is`.
+
+**Two defects the real corpus caught** that the synthetic one could not, both worth writing down because they
+are what a port gets wrong:
+
+1. **`scored` counts what the scorer was asked, not what it fought.** `counting` wraps the caller's score, so
+   a vector the housing refuses is a call the engine pays for; the kernel counted only the vectors that
+   reached a battle, and reported 82 where the TypeScript reported 345 281.
+2. **The two pools' climbs merge per pool.** `raisedCounts` merges what each `climbedCounts` answers; the
+   kernel's climb wrote its whole vector back, so the dominance climb put its own answer over the authority
+   one — leaving `Safe`'s cap at the *plan's* burn instead of the climb's, worth a −60-count answer on the
+   monster camp's `burn-saver`. The synthetic corpus could not see it: its marches had the mercenaries already
+   at their cap, so the authority pool had nothing to move.

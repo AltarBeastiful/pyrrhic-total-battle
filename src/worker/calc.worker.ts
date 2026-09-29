@@ -9,12 +9,13 @@
  * than a `kind` on this one — it is the only job measured in tens of seconds, and on this thread it would
  * sit in front of the next Generate (`raiseSearch.ts`).
  */
-import { runPlan, runRaise, runResize, runSearch, runStack } from './jobs';
+import { runPlan, runPositions, runRaise, runResize, runSearch, runStack } from './jobs';
 import { errorPayload, isCalcRequestMessage } from './protocol';
 import type { CalcRequestMessage, CalcResponseMessage } from './protocol';
-import { setKernel } from '@/engine/fast';
+import { setKernel, setRaiseKernel } from '@/engine/fast';
 import type { SearchProgress } from '@/engine/types';
 import { createPlanKernel } from '@/kernel/plan';
+import { createRaiseKernel } from '@/kernel/raise';
 // Built by `pnpm kernel:build` (the `dev` and `build` scripts run it first); emitted beside the worker.
 import kernelUrl from '../../kernel/build/kernel.wasm?url';
 
@@ -41,9 +42,15 @@ async function compileKernel(): Promise<WebAssembly.Module> {
 const kernelReady: Promise<void> = (async () => {
   try {
     if (typeof WebAssembly === 'undefined') return;
-    setKernel(createPlanKernel(await compileKernel()));
+    const module = await compileKernel();
+    setKernel(createPlanKernel(module));
+    // **The raise positions, on the same module** (S-147): the box search a press of the control runs, priced
+    // for every position at once. A kernel that fails to load leaves both unset and both run their own
+    // TypeScript, exactly as the plan does.
+    setRaiseKernel(createRaiseKernel(module));
   } catch {
     setKernel(null);
+    setRaiseKernel(null);
   }
 })();
 
@@ -89,6 +96,10 @@ function run(message: Exclude<CalcRequestMessage, { kind: 'cancel' }>): void {
     }
     if (message.kind === 'raise') {
       post({ kind: 'raise', id, result: runRaise(message.request) });
+      return;
+    }
+    if (message.kind === 'positions') {
+      post({ kind: 'positions', id, result: runPositions(message.request) });
       return;
     }
     if (message.kind === 'plan') {

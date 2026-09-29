@@ -37,6 +37,12 @@ export function packRequest(
   rates: MarkerRates,
   /** `effectiveTable(request)` already built (the plan's hot path binds the table it built). */
   table: readonly Effective[] = effectiveTable(request),
+  /**
+   * **The raise's tie-break** (`T.order`, S-147): each type's place in the **base march's own stack order**
+   * (`StackResult.stacks`, which is kill order), by row. Left out, every row carries `-1`, which is what every
+   * caller but the raise wants — the kernel's own battle breaks a tie by `T.rank`.
+   */
+  order?: ArrayLike<number>,
 ): PackedRequest {
   const ids = table.map((entry) => entry.id);
   if (new Set(ids).size !== ids.length) throw new Error('packRequest: two unit types share an id');
@@ -85,6 +91,7 @@ export function packRequest(
     out[row + T.tier] = unit.tier;
     out[row + T.familyRevived] = revived.has(family) ? 1 : 0;
     out[row + T.eliteRank] = eliteRank.get(unit) ?? 0;
+    out[row + T.order] = order === undefined ? -1 : (order[index] ?? -1);
   });
   return { table: out, ids };
 }

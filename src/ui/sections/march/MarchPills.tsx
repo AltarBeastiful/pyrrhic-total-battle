@@ -39,6 +39,7 @@ import { copyText } from '@/ui/profile/download';
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
 import { amount, bonusLines } from './format';
 import classes from './march.module.css';
+import { RAISE_CHOICES } from './choices';
 import { isExhaustive, raisesPool } from './raise';
 import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 import { countsText, resizeWords } from './rows';
@@ -85,39 +86,8 @@ export interface MarchPillsProps {
   onRaise: (pool: RaisedPool, mode: RaiseMode) => void;
 }
 
-/** What each position of the raise control is called, and the one line that explains it (rule 26). */
-const RAISE_CHOICES: readonly { mode: RaiseMode; label: string; help: string }[] = [
-  {
-    mode: 'off',
-    label: 'As is',
-    help: 'The counts the march was generated with.',
-  },
-  {
-    mode: 'tens',
-    label: 'Most, in tens',
-    help: 'Every stack as high as it can go and still fall after your troops, in tens of units.',
-  },
-  {
-    mode: 'most',
-    label: 'Most',
-    help: 'Every stack as high as it can go and still fall after your troops.',
-  },
-  {
-    mode: 'v2',
-    label: 'Best v2',
-    help: 'The counts this march hits hardest with under your troops, searched exhaustively over the mercenaries and the monsters together. Slower, and never worse than the counts drawn while it runs.',
-  },
-  {
-    mode: 'safe',
-    label: 'Safe',
-    help: 'Best v2 held to the mercenary stock the march already burns on screen: no extra chunks of hired units, and never worse than those counts.',
-  },
-  {
-    mode: 'tight',
-    label: 'Tight',
-    help: 'Best v2 held to the stock the march was generated with — not one extra chunk — so it can only improve on those counts.',
-  },
-];
+// What the six segments are called, and the one line each explains itself with: `./choices`, read by this
+// control and by the table under the plan that prices the same five positions (`PositionTrade.tsx`).
 
 /** What the control is called, per pool: the group carries the pool's own name. */
 const RAISE_LABEL: Record<RaisedPool, string> = {

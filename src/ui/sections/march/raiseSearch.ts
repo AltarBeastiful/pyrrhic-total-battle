@@ -61,8 +61,12 @@ import type { RaiseModes } from './raise';
 const resultIds = new WeakMap<StackResult, number>();
 let lastResultId = 0;
 
-/** The number of one result object, handed out the first time it is seen. */
-function resultId(result: StackResult): number {
+/**
+ * **The number of one result object**, handed out the first time it is seen. The March's identity is the
+ * identity of its result and not the stamp on the snapshot (see `raiseSearchKey`), so everything keyed by a
+ * march asks this — the exhaustive raise here, and the positions priced beside it (`positionsSearch.ts`).
+ */
+export function marchId(result: StackResult): number {
   const known = resultIds.get(result);
   if (known !== undefined) return known;
   lastResultId += 1;
@@ -76,7 +80,7 @@ function resultId(result: StackResult): number {
  * is the same object across a re-size, and everything else on the snapshot is provenance.
  */
 export function raiseSearchKey(result: StackResult, modes: RaiseModes): string {
-  return `${String(resultId(result))}|${modes.authority}|${modes.dominance}`;
+  return `${String(marchId(result))}|${modes.authority}|${modes.dominance}`;
 }
 
 /** The one answer the March may be showing, and what it is about. */

@@ -50,6 +50,7 @@ import {
   T_FAMILY,
   T_FAMILY_REVIVED,
   T_ELITE_RANK,
+  T_ORDER,
   T_HAS_TRAINING,
   T_HP,
   T_POOL,
@@ -101,6 +102,7 @@ export {
   T_FAMILY,
   T_FAMILY_REVIVED,
   T_ELITE_RANK,
+  T_ORDER,
   T_HAS_TRAINING,
   T_HP,
   T_POOL,
@@ -1597,3 +1599,639 @@ export function ladderFinale(
   }
   return best;
 }
+
+
+// ---- the sheltered raise (`raise.ts` / `exact.ts` of `src/ui/sections/march`; S-147) ----------------------
+
+/**
+ * **Which count every hired stack is raised to** (S-147): `raisedCounts` and `exactRaise` of the March's own
+ * modules, in the kernel, so the app can price **every position at once** instead of one player's press at a
+ * time. It is the destination `docs/plans/best-v2.md` §3 named for `src/engine/exact.ts`, which is the same
+ * box search this section runs.
+ *
+ * The five positions are two questions and one box:
+ *
+ *  - `RAISE_TENS` · `RAISE_MOST` promise **units** — every live stack of a pool as high as the troops still
+ *    shelter it, paid out of the spare housing from the bottom of the kill order up, rounded to a chunk of ten
+ *    or exact (`raiseUnits`);
+ *  - `RAISE_V2` · `RAISE_SAFE` · `RAISE_TIGHT` promise **damage**, answered exhaustively (`raiseSearch`): the
+ *    climb (`raiseClimb`) is the seed, `RAISE_SAFE` may not burn more authority chunks than that seed and
+ *    `RAISE_TIGHT` not more than the plan's own counts, and the box is walked whole where it fits and searched
+ *    to convergence where it does not.
+ *
+ * **The score is the march's worst opening, read the way the March reads it** — `applyCounts`' own battle:
+ * total HP descending with **the base march's own stack order** breaking a tie (`T_ORDER`), which is the one
+ * place the app's two replays disagree (`docs/plans/best-v2.md` §5). Everything else — `hitDamage`, the attack
+ * order, the enemy-first journal — is `battle`'s own arithmetic, unchanged.
+ *
+ * The answer is the **merge the March draws**, `{...raisedCounts, ...exactRaise}`, written as a count per type.
+ */
+
+/** The five positions, as `src/engine/fast.ts` numbers them (`RAISE_*`). */
+export const RAISE_OFF: i32 = 0;
+export const RAISE_TENS: i32 = 1;
+export const RAISE_MOST: i32 = 2;
+export const RAISE_V2: i32 = 3;
+export const RAISE_SAFE: i32 = 4;
+export const RAISE_TIGHT: i32 = 5;
+
+/** `raise.ts`'s own two bounds on the climb: how many counts a sweep samples, and how many sweeps it makes. */
+const CLIMB_SAMPLES: f64 = 16.0;
+const CLIMB_PASSES: i32 = 3;
+
+/** `Number.MAX_SAFE_INTEGER`, the cap of a type the account may hire without limit (`?? MAX_SAFE_INTEGER`). */
+const MAX_SAFE: f64 = 9007199254740991.0;
+
+/** `CHUNK` of `src/engine/recovery.ts` — the ten units a revival works in. */
+const CHUNK_TEN: f64 = 10.0;
+
+// One scratch per thing the raise works on, reserved by `raiseAlloc` on the first call over an instance.
+let rReady: bool = false;
+let rRows: usize = 0; // i32 × types: each type's own row, the scorer's row list
+let rBase: usize = 0; // f64 × types: the plan's own counts, the march everything is measured against
+let rCaps: usize = 0; // f64 × types: the stock, `MAX_SAFE` where the account may hire without limit
+let rSeed: usize = 0; // f64 × types: `raisedCounts`' answer — the climb for a damage position, units otherwise
+let rHeld: usize = 0; // f64 × types: the search's held vector — every stack the search does not walk
+let rWork: usize = 0; // f64 × types: the candidate a score is asked about
+let rPoint: usize = 0; // f64 × types: the search's current vector, per movable slot
+let rFound: usize = 0; // f64 × types: the best vector the search has found
+let rFrom: usize = 0; // f64 × types: a slot's floor — the plan's own count
+let rTo: usize = 0; // f64 × types: a slot's ceiling — `min(shelter ceiling, owned stock)`
+let rClimb: usize = 0; // f64 × types: the climb's own working vector for one pool
+let rSlots: usize = 0; // i32 × rN: the types the search may move, in the base march's own order
+let rSlotOf: usize = 0; // i32 × types: a type's slot number, −1 when it cannot move
+let rOrder: usize = 0; // i32 × types: the type at base-order position `i` (the inverse of `T_ORDER`)
+let rBases: i32 = 0; // how many stacks the base march fields: the width of `rOrder`
+let rN: i32 = 0; // how many slots the search may move
+let rSpace: f64 = 0; // the vectors in the box
+let rHow: i32 = 0; // 0 no search ran, 1 walked whole, 2 searched to convergence
+let rScored: f64 = 0; // how many vectors the search's own scorer was asked about
+let rCap: f64 = Infinity; // the burn budget, `Infinity` for none
+let rWalkCap: f64 = 0; // a box of at most this many vectors is walked whole
+let rRestarts: i32 = 0; // seeded starts the multistart search takes
+let rSweeps: i32 = 0; // a sweep that improves nothing has converged
+let rState: f64 = 0; // the restart generator's own state
+let rBest: f64 = 0; // the best score the search has found
+let rAuth: i32 = 0; // the mercenaries' position, and whether its pool is walked
+let rDom: i32 = 0; // the monsters'
+
+/** Reserve the raise's scratch, once per instance. */
+function raiseAlloc(): void {
+  if (rReady) return;
+  rReady = true;
+  const n = <usize>max(types, 1);
+  rRows = heap.alloc(n << 2);
+  for (let t = 0; t < types; t += 1) store<i32>(rRows + ((<usize>t) << 2), t);
+  rBase = heap.alloc(n << 3);
+  rCaps = heap.alloc(n << 3);
+  rSeed = heap.alloc(n << 3);
+  rHeld = heap.alloc(n << 3);
+  rWork = heap.alloc(n << 3);
+  rPoint = heap.alloc(n << 3);
+  rFound = heap.alloc(n << 3);
+  rFrom = heap.alloc(n << 3);
+  rTo = heap.alloc(n << 3);
+  rClimb = heap.alloc(n << 3);
+  rSlots = heap.alloc(n << 2);
+  rSlotOf = heap.alloc(n << 2);
+  rOrder = heap.alloc(n << 2);
+}
+
+@inline function countAt(at: usize, t: i32): f64 {
+  return f64At(at, t);
+}
+
+@inline function hpPer(t: i32): f64 {
+  return cell(t, T_HP);
+}
+
+@inline function costPer(t: i32): f64 {
+  return cell(t, T_COST);
+}
+
+/** 0 leadership, 1 authority, 2 dominance. */
+@inline function poolPer(t: i32): i32 {
+  return <i32>cell(t, T_POOL);
+}
+
+/** The type's place in the base march's own stack order — the tie `applyCounts` breaks by (`T_ORDER`). */
+@inline function orderPer(t: i32): i32 {
+  return <i32>cell(t, T_ORDER);
+}
+
+/** The housing a pool pays for what it fields. */
+@inline function housingOf(pool: i32): f64 {
+  return pool == 1 ? header(H_HOUSING_AUTHORITY) : header(H_HOUSING_DOMINANCE);
+}
+
+/** Whether this pool is one the exhaustive positions walk. */
+@inline function walkedPool(pool: i32): bool {
+  return pool == 1 ? rAuth >= RAISE_V2 : pool == 2 ? rDom >= RAISE_V2 : false;
+}
+
+/** The position a pool stands on. */
+@inline function modeOf(pool: i32): i32 {
+  return pool == 1 ? rAuth : rDom;
+}
+
+/** `raise.ts`'s `shelterCeiling`: the most units of a type that sit **strictly** under the troop floor. */
+@inline function raiseCeiling(floor: f64, hp: f64): f64 {
+  if (!(floor > 0) || !(hp > 0)) return 0.0;
+  return Math.max(0.0, Math.ceil(floor / hp) - 1.0);
+}
+
+/**
+ * **The march's worst opening for one count vector** — `applyCounts`' own replay: the fielded stacks in
+ * total HP order with the base march's stack order breaking a tie (`T_ORDER`), the attack order as
+ * `attackOrder` builds it, and the enemy-first journal's total.
+ */
+function raiseScore(countsPtr: usize): f64 {
+  const k = killOrderBy(types, rRows, countsPtr, T_ORDER);
+  attackOrderOf(k);
+  return journalDamage(k, false);
+}
+
+/** `burnOf`: Σ chunks(n) over the **authority** stacks — a property of the counts and not of the fight. */
+function raiseBurn(countsPtr: usize): f64 {
+  let burned: f64 = 0.0;
+  for (let t = 0; t < types; t += 1) {
+    if (poolPer(t) != 1) continue;
+    burned += chunks(max(0.0, f64At(countsPtr, t)));
+  }
+  return burned;
+}
+
+/** `poolUsage`: Σ count × cost over one pool's types, in row order. */
+function raiseUsed(countsPtr: usize, pool: i32): f64 {
+  let used: f64 = 0.0;
+  for (let t = 0; t < types; t += 1) {
+    if (poolPer(t) != pool) continue;
+    used += f64At(countsPtr, t) * costPer(t);
+  }
+  return used;
+}
+
+/** `troopFloor`: the lowest living troop stack's total HP, or −1 when the march fields no troop at all. */
+function raiseFloor(): f64 {
+  let low: f64 = Infinity;
+  for (let t = 0; t < types; t += 1) {
+    if (poolPer(t) != 0) continue;
+    const count = countAt(rBase, t);
+    if (!(count > 0)) continue;
+    low = min(low, count * hpPer(t));
+  }
+  return low > 0 && low < Infinity ? low : -1.0;
+}
+
+/** Copy the plan's own counts into `dst`. */
+function raiseBaseInto(dst: usize): void {
+  memory.copy(dst, rBase, (<usize>types) << 3);
+}
+
+/**
+ * **A pool's units answer** (`raisedCounts`'s arithmetic half): every live stack as high as the shelter and
+ * the stock allow, paid out of the spare housing **from the bottom of the kill order up** — the last to fall
+ * strikes most, which is the stack that pool would spend its spare on. Writes into `dst`, answers whether it
+ * moved anything.
+ */
+function raiseUnits(pool: i32, mode: i32, floor: f64, dst: usize): bool {
+  // What the march has already spent comes off the stacks it is raising; the capacity is the request's own.
+  let spare = Math.max(0.0, housingOf(pool) - raiseUsed(rBase, pool));
+  let moved = false;
+  for (let i = rBases - 1; i >= 0; i -= 1) {
+    const t = i32At(rOrder, i);
+    if (poolPer(t) != pool) continue;
+    const count = countAt(rBase, t);
+    if (!(count > 0)) continue;
+    const cost = costPer(t);
+    const allowed = Math.min(raiseCeiling(floor, hpPer(t)), f64At(rCaps, t));
+    // **The tens rule rounds the count and not only the ceiling**: a stock of 83 is a cap like any other.
+    const wanted = mode == RAISE_TENS ? Math.floor(allowed / CHUNK_TEN) * CHUNK_TEN : allowed;
+    if (!(wanted > count)) continue;
+    // A type that costs nothing is bounded by its ceiling alone (`unitsForTarget` drops a non-positive cost).
+    const room = cost > 0 ? Math.floor(spare / cost) : MAX_SAFE;
+    const next = Math.min(wanted, count + room);
+    if (!(next > count)) continue;
+    spare -= (next - count) * cost;
+    store<f64>(dst + ((<usize>t) << 3), next);
+    moved = true;
+  }
+  return moved;
+}
+
+/** The candidate `at` with stack `t` at `n`, scored — or `-Infinity` when its pool cannot pay for it (`fits`). */
+function raiseTry(pool: i32, t: i32, n: f64, at: usize): f64 {
+  memory.copy(rWork, at, (<usize>types) << 3);
+  store<f64>(rWork + ((<usize>t) << 3), n);
+  if (raiseUsed(rWork, pool) > housingOf(pool)) return -Infinity;
+  return raiseScore(rWork);
+}
+
+/**
+ * `climbedCounts`: the sampled coordinate climb — the seed of every exhaustive position, the vector the
+ * search falls back to, and the march the March draws while it runs. One stack at a time, two samples a
+ * coarse step and a step-1 refinement either side of the winner, up to three sweeps; **only improvements are
+ * ever taken**, so it can never lose the damage it started from.
+ */
+function raiseClimb(pool: i32, floor: f64, dst: usize): bool {
+  const counts = rClimb;
+  raiseBaseInto(counts);
+  let best = raiseScore(counts);
+  let moved = false;
+  for (let pass = 0; pass < CLIMB_PASSES; pass += 1) {
+    let improved = false;
+    // From the bottom of the kill order up (`most`'s own order).
+    for (let i = rBases - 1; i >= 0; i -= 1) {
+      const t = i32At(rOrder, i);
+      if (poolPer(t) != pool) continue;
+      if (!(countAt(rBase, t) > 0)) continue;
+      const from = countAt(counts, t);
+      const to = Math.min(raiseCeiling(floor, hpPer(t)), f64At(rCaps, t));
+      if (!(to > from)) continue;
+
+      let winner = from;
+      let winnerDamage = best;
+      const step = Math.max(1.0, Math.ceil((to - from) / CLIMB_SAMPLES));
+      let last = from;
+      let n = from + step;
+      while (n <= to) {
+        const damage = raiseTry(pool, t, n, counts);
+        if (damage > winnerDamage) {
+          winner = n;
+          winnerDamage = damage;
+        }
+        last = n;
+        n += step;
+      }
+      if (last != to) {
+        const damage = raiseTry(pool, t, to, counts);
+        if (damage > winnerDamage) {
+          winner = to;
+          winnerDamage = damage;
+        }
+      }
+      if (winner > from) {
+        let refined = Math.max(from + 1.0, winner - step);
+        const refinedTo = Math.min(to, winner + step);
+        while (refined <= refinedTo) {
+          const damage = raiseTry(pool, t, refined, counts);
+          if (damage > winnerDamage) {
+            winner = refined;
+            winnerDamage = damage;
+          }
+          refined += 1.0;
+        }
+      }
+      if (winner > from) {
+        store<f64>(counts + ((<usize>t) << 3), winner);
+        best = winnerDamage;
+        improved = true;
+        moved = true;
+      }
+    }
+    if (!improved) break;
+  }
+  /**
+   * **Only this pool's stacks** — the merge is per pool, exactly as `raisedCounts` merges what each
+   * `climbedCounts` answers (`Object.assign(out, climbed)`): the authority climb runs first and the
+   * dominance one after it, and a whole-vector copy here would put the second pool's answer back over the
+   * first's. What it costs is nothing: an unmoved stack of this pool holds the plan's own count in `counts`
+   * already, so writing it is writing what is there.
+   */
+  if (moved) {
+    for (let i = 0; i < rBases; i += 1) {
+      const t = i32At(rOrder, i);
+      if (poolPer(t) != pool) continue;
+      store<f64>(dst + ((<usize>t) << 3), f64At(counts, t));
+    }
+  }
+  return moved;
+}
+
+/** One pool's seed: the units answer, or the climb where the position is one of the three exhaustive ones. */
+function raisePool(pool: i32, mode: i32, floor: f64, dst: usize): bool {
+  if (mode >= RAISE_V2) return raiseClimb(pool, floor, dst);
+  return raiseUnits(pool, mode, floor, dst);
+}
+
+/**
+ * **The candidate the search is standing on**: the held vector with every slot's own count over it, then the
+ * two bounds `exactSearch`'s scorer keeps — the housing over **every unit of the pool** (never only the
+ * movable ones, which is the bug the plan's first draft was built on) and the burn budget of a capped
+ * position, which refuses an over-budget vector exactly as the housing refuses one.
+ */
+function raisePointScore(): f64 {
+  // **Counted here and not at the battle**: the engine counts what its scorer was *asked* about
+  // (`counting` in `src/engine/exact.ts`), a vector the housing refuses included — so a kernel that
+  // counted only the battles would report a different cost for the same search.
+  rScored += 1.0;
+  memory.copy(rWork, rHeld, (<usize>types) << 3);
+  for (let s = 0; s < rN; s += 1) {
+    const t = i32At(rSlots, s);
+    store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
+  }
+  if (raiseUsed(rWork, 1) > header(H_HOUSING_AUTHORITY) || raiseUsed(rWork, 2) > header(H_HOUSING_DOMINANCE))
+    return -Infinity;
+  const damage = raiseScore(rWork);
+  if (rCap < Infinity && raiseBurn(rWork) > rCap) return -Infinity;
+  return damage;
+}
+
+/** One vector, taken as the best when it **strictly** improves (`exactSearch` takes improvements only). */
+function raiseTake(): void {
+  const value = raisePointScore();
+  if (value > rBest) {
+    rBest = value;
+    memory.copy(rFound, rPoint, (<usize>types) << 3);
+  }
+}
+
+/**
+ * `exactSearch`'s `climb`: the shipped neighbourhood, walked rather than sampled, to convergence. **Its best
+ * is its own** and not the search's (`rBest`): the engine's `climb` is handed a start and climbs from *that*
+ * vector, so a candidate is taken when it beats where this walk stands — anchoring it to the best found so far
+ * would let a restart explore a different route entirely, which is the divergence `scored` caught.
+ */
+function raiseClimbSearch(): void {
+  let best = raisePointScore();
+  for (let sweep = 0; sweep < rSweeps; sweep += 1) {
+    let improved = false;
+    for (let s = 0; s < rN; s += 1) {
+      const t = i32At(rSlots, s);
+      const from = f64At(rFrom, t);
+      const to = f64At(rTo, t);
+      let winner = f64At(rPoint, t);
+      let winnerScore = best;
+      let n = from;
+      while (n <= to) {
+        store<f64>(rPoint + ((<usize>t) << 3), n);
+        const value = raisePointScore();
+        if (value > winnerScore) {
+          winner = n;
+          winnerScore = value;
+        }
+        n += 1.0;
+      }
+      store<f64>(rPoint + ((<usize>t) << 3), winner);
+      if (winnerScore > best) {
+        best = winnerScore;
+        improved = true;
+      }
+    }
+    if (!improved) return;
+  }
+}
+
+/**
+ * `exactSearch`'s `pairwise`: every pair of slots, exhaustively — the neighbourhood a climb cannot see. Its
+ * best is its own, for `raiseClimbSearch`'s reason.
+ */
+function raisePairwise(): void {
+  let best = raisePointScore();
+  for (let sweep = 0; sweep < rSweeps; sweep += 1) {
+    let improved = false;
+    for (let i = 0; i < rN; i += 1) {
+      for (let j = i + 1; j < rN; j += 1) {
+        const one = i32At(rSlots, i);
+        const other = i32At(rSlots, j);
+        let winnerOne = f64At(rPoint, one);
+        let winnerOther = f64At(rPoint, other);
+        let winnerScore = best;
+        const oneTo = f64At(rTo, one);
+        const otherTo = f64At(rTo, other);
+        let a = f64At(rFrom, one);
+        while (a <= oneTo) {
+          let b = f64At(rFrom, other);
+          while (b <= otherTo) {
+            store<f64>(rPoint + ((<usize>one) << 3), a);
+            store<f64>(rPoint + ((<usize>other) << 3), b);
+            const value = raisePointScore();
+            if (value > winnerScore) {
+              winnerOne = a;
+              winnerOther = b;
+              winnerScore = value;
+            }
+            b += 1.0;
+          }
+          a += 1.0;
+        }
+        store<f64>(rPoint + ((<usize>one) << 3), winnerOne);
+        store<f64>(rPoint + ((<usize>other) << 3), winnerOther);
+        if (winnerScore > best) {
+          best = winnerScore;
+          improved = true;
+        }
+      }
+    }
+    if (!improved) return;
+  }
+}
+
+/**
+ * The walk: **every vector in the box**, enumerated in the slots' own order. It is the only case where the
+ * answer is the optimum rather than the best a search found, and it is the control the search is trusted on.
+ */
+function raiseWalk(s: i32): void {
+  if (s == rN) {
+    raiseTake();
+    return;
+  }
+  const t = i32At(rSlots, s);
+  const to = f64At(rTo, t);
+  let n = f64At(rFrom, t);
+  while (n <= to) {
+    store<f64>(rPoint + ((<usize>t) << 3), n);
+    raiseWalk(s + 1);
+    n += 1.0;
+  }
+}
+
+/** `randomFrom`: the deterministic generator an unseeded restart is not (`src/engine/exact.ts`). */
+@inline function raiseRandom(): f64 {
+  rState = (rState * 1664525.0 + 1013904223.0) % 4294967296.0;
+  return rState / 4294967296.0;
+}
+
+/**
+ * **The best vector in the box** (`exactSearch`): walked whole where the box fits, and otherwise searched to
+ * convergence from the caller's own vector and `restarts` seeded ones. Answers whether it found a feasible
+ * vector at all — a box where every vector is refused has no answer, which is not the same as "the start is
+ * the best".
+ */
+function raiseSearch(): bool {
+  // The caller's own vector, clipped into the box. **A `tight` pool starts at the plan's own counts** and not
+  // at the seed: a slot left out of `start` is its floor, which is the plan's count — and the promise "tight
+  // cannot lose to the plan's own march" holds only because the seed and the cap are the same vector.
+  memory.copy(rPoint, rBase, (<usize>types) << 3);
+  for (let s = 0; s < rN; s += 1) {
+    const t = i32At(rSlots, s);
+    if (modeOf(poolPer(t)) == RAISE_TIGHT) continue;
+    const from = f64At(rFrom, t);
+    const to = f64At(rTo, t);
+    store<f64>(rPoint + ((<usize>t) << 3), Math.min(to, Math.max(from, jsRound(f64At(rSeed, t)))));
+  }
+  rBest = raisePointScore();
+  memory.copy(rFound, rPoint, (<usize>types) << 3);
+
+  if (rSpace <= rWalkCap) {
+    rHow = 1;
+    raiseWalk(0);
+    return rBest > -Infinity;
+  }
+
+  rHow = 2;
+  for (let attempt = 0; attempt <= rRestarts; attempt += 1) {
+    if (attempt > 0) {
+      for (let s = 0; s < rN; s += 1) {
+        const t = i32At(rSlots, s);
+        const from = f64At(rFrom, t);
+        const span = f64At(rTo, t) - from;
+        store<f64>(rPoint + ((<usize>t) << 3), from + Math.floor(raiseRandom() * (span + 1.0)));
+      }
+    }
+    raisePairwise();
+    raiseClimbSearch();
+    const value = raisePointScore();
+    if (value > rBest) {
+      rBest = value;
+      memory.copy(rFound, rPoint, (<usize>types) << 3);
+    }
+  }
+  return rBest > -Infinity;
+}
+
+/**
+ * **The counts a position stands every hired stack at** (S-147), over both pools at once, written to `outPtr`
+ * as a count per type (`f64 × types`): the plan's own counts, raised by `raisedCounts` where a pool stands on
+ * the climb or on a unit answer, and by the exhaustive search where it stands on one of the three damage
+ * positions — `{...raisedCounts, ...exactRaise}`, the merge the March draws.
+ *
+ * `basePtr` is the plan's own counts, `capsPtr` the stock (`MAX_SAFE` where unlimited); the table must carry
+ * `T_ORDER` (the base march's own stack order, the tie `applyCounts` breaks by). `statsPtr` (`f64 × 4`) is
+ * written `[how, space, scored, 0]`, `how` 0 when no search ran.
+ *
+ * Answers 1 when the table can be read, 0 when it cannot (no type at all).
+ */
+export function raise(
+  authMode: i32,
+  domMode: i32,
+  basePtr: usize,
+  capsPtr: usize,
+  outPtr: usize,
+  statsPtr: usize,
+  walkCap: f64,
+  restarts: i32,
+  maxSweeps: i32,
+  rngSeed: f64,
+): i32 {
+  if (types <= 0) return 0;
+  raiseAlloc();
+  memory.copy(rBase, basePtr, (<usize>types) << 3);
+  memory.copy(rCaps, capsPtr, (<usize>types) << 3);
+  rAuth = authMode;
+  rDom = domMode;
+  rScored = 0.0;
+  rHow = 0;
+  rSpace = 0.0;
+  rCap = Infinity;
+  rWalkCap = walkCap;
+  rRestarts = restarts;
+  rSweeps = maxSweeps;
+  // The generator is folded into `[0, 2^32)` **before** anything is drawn: a negative seed would otherwise
+  // put every restart vector below its slot's floor, outside the box the caller described.
+  rState = ((Math.trunc(rngSeed) % 4294967296.0) + 4294967296.0) % 4294967296.0;
+
+  // The base march's own order, inverted: `rOrder[i]` is the type the base fields at kill position `i`, which
+  // is the order the raise walks (`base.stacks` is that order, and `T_ORDER` is a type's place in it).
+  rBases = 0;
+  for (let t = 0; t < types; t += 1) {
+    store<i32>(rSlotOf + ((<usize>t) << 2), -1);
+    store<i32>(rOrder + ((<usize>t) << 2), -1);
+  }
+  for (let t = 0; t < types; t += 1) {
+    const ord = orderPer(t);
+    if (ord < 0) continue;
+    store<i32>(rOrder + ((<usize>ord) << 2), t);
+    if (ord + 1 > rBases) rBases = ord + 1;
+  }
+
+  const floor = raiseFloor();
+  raiseBaseInto(rSeed);
+  if (floor > 0) {
+    if (authMode != RAISE_OFF) raisePool(1, authMode, floor, rSeed);
+    if (domMode != RAISE_OFF) raisePool(2, domMode, floor, rSeed);
+  }
+
+  let answered = false;
+  if (floor > 0 && (rAuth >= RAISE_V2 || rDom >= RAISE_V2)) {
+    /**
+     * **The two caps** (`burnCap`): `RAISE_SAFE` may not burn more authority chunks than the climb it
+     * replaces, `RAISE_TIGHT` not more than the plan's own counts — not one extra chunk. Only the
+     * mercenaries' block can cap anything (S-102: a trained monster is a price, not a stock).
+     */
+    if (rAuth == RAISE_SAFE) rCap = raiseBurn(rSeed);
+    else if (rAuth == RAISE_TIGHT) rCap = raiseBurn(rBase);
+
+    // The stacks the search does not walk stay where the **seed** put them, so every vector is scored as the
+    // whole army it would field: the housing is paid by all of it and the battle is fought by all of it.
+    raiseBaseInto(rHeld);
+    for (let i = 0; i < rBases; i += 1) {
+      const t = i32At(rOrder, i);
+      if (!(countAt(rBase, t) > 0)) continue;
+      if (walkedPool(poolPer(t))) continue;
+      store<f64>(rHeld + ((<usize>t) << 3), f64At(rSeed, t));
+    }
+
+    // The slots: the plan's own count as the floor, `min(shelter ceiling, owned stock)` as the ceiling, and
+    // only the ones that can actually move — `exactSearch` drops the rest before it searches.
+    rN = 0;
+    rSpace = 1.0;
+    for (let i = 0; i < rBases; i += 1) {
+      const t = i32At(rOrder, i);
+      const count = countAt(rBase, t);
+      if (!(count > 0)) continue;
+      if (!walkedPool(poolPer(t))) continue;
+      const to = Math.min(raiseCeiling(floor, hpPer(t)), f64At(rCaps, t));
+      store<f64>(rFrom + ((<usize>t) << 3), count);
+      store<f64>(rTo + ((<usize>t) << 3), to);
+      if (!(to > count)) continue;
+      store<i32>(rSlotOf + ((<usize>t) << 2), rN);
+      store<i32>(rSlots + ((<usize>rN) << 2), t);
+      rN += 1;
+      rSpace *= to - count + 1.0;
+    }
+
+    if (rN > 0) {
+      rScored = 0.0;
+      answered = raiseSearch();
+    }
+  }
+
+  /**
+   * **The merge.** Where the search answered, every slot takes its count from the search's own vector and the
+   * rest of the army from the seed; where it did not (no slot could move, or every vector was refused), the
+   * walked pools take the seed's counts too — which is exactly what `raisedCounts` answers an exhaustive
+   * position with, and what the March draws while a search runs.
+   */
+  memory.copy(outPtr, rBase, (<usize>types) << 3);
+  for (let i = 0; i < rBases; i += 1) {
+    const t = i32At(rOrder, i);
+    if (!(countAt(rBase, t) > 0)) continue;
+    if (walkedPool(poolPer(t))) continue;
+    store<f64>(outPtr + ((<usize>t) << 3), f64At(rSeed, t));
+  }
+  if (answered) {
+    for (let s = 0; s < rN; s += 1) {
+      const t = i32At(rSlots, s);
+      store<f64>(outPtr + ((<usize>t) << 3), f64At(rFound, t));
+    }
+  }
+
+  store<f64>(statsPtr, <f64>rHow);
+  store<f64>(statsPtr + 8, rSpace);
+  store<f64>(statsPtr + 16, rScored);
+  store<f64>(statsPtr + 24, answered ? 1.0 : 0.0);
+  return 1;
+}
+
+

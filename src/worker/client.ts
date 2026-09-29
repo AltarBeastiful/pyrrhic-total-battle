@@ -8,14 +8,16 @@
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, StackRequest, SearchResult } from '@/engine/types';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
+import type { PositionTrades } from '@/ui/sections/march/positions';
 
-import { runPlan, runRaise, runResize, runSearch, runStack } from './jobs';
+import { runPlan, runPositions, runRaise, runResize, runSearch, runStack } from './jobs';
 import {
   errorPayload,
   isCalcResponseMessage,
   nextJobId,
   type CalcRequestMessage,
   type JobId,
+  type PositionsInput,
   type ResizeInput,
   type StackOutcome,
 } from './protocol';
@@ -36,6 +38,12 @@ export interface CalcClient {
    * seconds, and the reason `raiseSearch.ts` gives it a client of its own.
    */
   raise(request: ExactRaiseInput, signal?: AbortSignal): Promise<ExactRaiseAnswer | null>;
+  /**
+   * S-147: every raise position priced on one march — its counts and its trade (damage, mercenaries burnt,
+   * units fielded). Five answers, so `positionsSearch.ts` gives it a client of its own rather than sharing
+   * the one the exhaustive raise uses.
+   */
+  positions(request: PositionsInput, signal?: AbortSignal): Promise<PositionTrades>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -90,6 +98,7 @@ function createWorkerClient(worker: Worker): CalcClient {
       case 'plan':
       case 'resize':
       case 'raise':
+      case 'positions':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -148,6 +157,8 @@ function createWorkerClient(worker: Worker): CalcClient {
       send<ResizedMarch | null>({ kind: 'resize', id: nextJobId('resize'), request }, signal),
     raise: (request, signal) =>
       send<ExactRaiseAnswer | null>({ kind: 'raise', id: nextJobId('raise'), request }, signal),
+    positions: (request, signal) =>
+      send<PositionTrades>({ kind: 'positions', id: nextJobId('positions'), request }, signal),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -196,6 +207,7 @@ export function createInlineClient(): CalcClient {
       run(() => runPlan(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }), signal),
     resize: (request, signal) => run(() => runResize(request), signal),
     raise: (request, signal) => run(() => runRaise(request), signal),
+    positions: (request, signal) => run(() => runPositions(request), signal),
     dispose() {
       disposed = true;
     },

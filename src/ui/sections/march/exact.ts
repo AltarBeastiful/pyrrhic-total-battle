@@ -104,6 +104,13 @@ export interface ExactRaiseAnswer {
   how: 'walked' | 'searched';
   /** The vectors in the box — how much space the search was allowed, reported rather than hidden. */
   space: number;
+  /**
+   * **How many vectors the search actually scored** — what the answer cost, in the only unit that matters
+   * (`ExactAnswer.scored`). Carried out of the search since S-147, where the kernel answers the same box and
+   * the same seed: two paths that agree on the answer *and* on this figure took the same route to it, which is
+   * what `tests/kernel/raise-kernel.test.ts` holds them to.
+   */
+  scored: number;
 }
 
 /** The pools whose own control stands on an exhaustive position: the stacks this search may move. */
@@ -253,5 +260,5 @@ export function exactRaise(
    */
   const counts: Record<string, number> = {};
   for (const slot of slots) counts[slot.id] = answer.counts[slot.id] ?? slot.from;
-  return { counts, how: answer.how, space: answer.space };
+  return { counts, how: answer.how, space: answer.space, scored: answer.scored };
 }

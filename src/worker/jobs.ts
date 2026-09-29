@@ -2,13 +2,22 @@
  * The job bodies, shared by the worker and by the main-thread fallback so both compute exactly the
  * same thing. Everything here is pure: the transport lives in `calc.worker.ts` / `client.ts`.
  */
-import { planCampaign, resizeMarchOver, searchPriority, simulateBattle, sizeStacks } from '@/engine';
+import {
+  planCampaign,
+  planMarch,
+  resizeMarchOver,
+  searchPriority,
+  simulateBattle,
+  sizeStacks,
+} from '@/engine';
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, SearchResult, StackRequest } from '@/engine/types';
 import { exactRaise } from '@/ui/sections/march/exact';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
+import { positionTrades } from '@/ui/sections/march/positions';
+import type { PositionTrades } from '@/ui/sections/march/positions';
 
-import type { ResizeInput, StackOutcome } from './protocol';
+import type { PositionsInput, ResizeInput, StackOutcome } from './protocol';
 
 /** Message shown when a search is asked for before S-40 wires the search engine in. */
 
@@ -55,4 +64,17 @@ export function runResize(input: ResizeInput): ResizedMarch | null {
  */
 export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
   return exactRaise(input.request, input.base, input.modes);
+}
+
+/**
+ * **Every raise position, priced at once** (S-147), on one stop of a plan. Five questions where a press of
+ * the control used to be one, each answered by the kernel when the host has one (`liftedCounts`) and by the
+ * March's own TypeScript otherwise — which is why this is a job rather than a render: on the widest box a
+ * single position is tens of seconds of sampled walking.
+ *
+ * The stop's march is `planMarch`, the engine's own reading of those counts — the very result the pane draws
+ * for that stop — so the block prices the march a player would be looking at rather than one built twice.
+ */
+export function runPositions(input: PositionsInput): PositionTrades {
+  return positionTrades(input.request, planMarch(input.request, input.counts).result);
 }

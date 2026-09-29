@@ -7,6 +7,7 @@
  * call it yet. The TypeScript engine is the reference; `tests/kernel/parity.test.ts` holds every output of
  * the kernel `===` to it.
  */
+import { RAISE_MOST, RAISE_OFF, RAISE_SAFE, RAISE_TENS, RAISE_TIGHT, RAISE_V2 } from '../engine/fast';
 import type { MarkerRates } from '../engine/rating';
 import type { StackRequest } from '../engine/types';
 
@@ -243,10 +244,25 @@ export function createKernel(module: WebAssembly.Module, request: StackRequest, 
   };
 }
 
-/** The TS layout, named the way the wasm exports it, for the parity test's layout check. */
+/**
+ * The TS constants the wasm exports as globals, named the way it exports them, for the parity test's layout
+ * check: the table's own slots (`./layout.ts`), and the **raise's five positions** (`RAISE_*`,
+ * `src/engine/fast.ts`) — the codes cross the door as numbers, so the two sides have to be held to each
+ * other the same way the layout is.
+ */
 export function expectedLayout(): Record<string, number> {
   const snake = (name: string): string => name.replace(/[A-Z]/g, (c) => `_${c}`).toUpperCase();
-  const out: Record<string, number> = { HEADER_SIZE, TYPE_STRIDE, RECORD_SIZE };
+  const out: Record<string, number> = {
+    HEADER_SIZE,
+    TYPE_STRIDE,
+    RECORD_SIZE,
+    RAISE_OFF,
+    RAISE_TENS,
+    RAISE_MOST,
+    RAISE_V2,
+    RAISE_SAFE,
+    RAISE_TIGHT,
+  };
   for (const [name, slot] of Object.entries(H)) out[`H_${snake(name)}`] = slot;
   for (const [name, slot] of Object.entries(T)) out[`T_${snake(name)}`] = slot;
   for (const [name, slot] of Object.entries(R)) out[`R_${snake(name)}`] = slot;

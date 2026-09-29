@@ -78,6 +78,13 @@ export const T = {
    * list (step 3). `rank` above is `buildKillOrder` under the request's own options, which may be custom.
    */
   eliteRank: 17,
+  /**
+   * **The raise's tie-break**: the type's place in the **base march's own stack order** (`StackResult.stacks`,
+   * which is kill order), which is what `applyCounts` breaks a total-HP tie by — the hand-edit replay the
+   * raise and every position are scored through. `-1` outside a raise: every other caller reads `rank`, and
+   * only `killOrderBy(..., T_ORDER)` inside the kernel's raise section reads this.
+   */
+  order: 18,
 } as const;
 export const TYPE_STRIDE = 20;
 

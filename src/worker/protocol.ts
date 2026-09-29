@@ -2,13 +2,14 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise', id, request }  and  { kind: 'cancel', id }
+ * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise' | 'positions', id, request }  and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
  *           { kind: 'progress', id, progress }   (searches only, zero or more)
  *           { kind: 'search', id, result }
  *           { kind: 'plan', id, result }
  *           { kind: 'resize', id, result }   (`null` when no shape could be built)
  *           { kind: 'raise', id, result }    (`null` when there is no box to search)
+ *           { kind: 'positions', id, result }  (`PositionTrades`, S-147)
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message } }
  *
@@ -26,6 +27,7 @@ import type {
   StackResult,
 } from '@/engine/types';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
+import type { PositionTrades } from '@/ui/sections/march/positions';
 
 export type JobId = string;
 
@@ -83,13 +85,36 @@ export interface RaiseJob {
   request: ExactRaiseInput;
 }
 
+/**
+ * **The five raise positions, priced at once** (S-147): what each of them makes of **one stop of a plan** —
+ * its counts, the damage the march would hit for and what it is paid with. It is a job of its own because it
+ * is five searches where a press of the control used to be one, and one job **per stop of the bar** is what
+ * lets the block under the plan have every stop's table ready before the player moves the bar.
+ */
+export interface PositionsJob {
+  kind: 'positions';
+  id: JobId;
+  request: PositionsInput;
+}
+
+export interface PositionsInput {
+  request: StackRequest;
+  /**
+   * The stop's own counts, as the plan carries them (`PlanRow.counts`). The march they describe is the one
+   * the pane draws for that stop (`planMarch`, `marchResult`), so the job builds it itself rather than being
+   * handed a result — one description of a stop, not two.
+   */
+  counts: Record<string, number>;
+}
+
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
 export interface CancelJob {
   kind: 'cancel';
   id: JobId;
 }
 
-export type CalcRequestMessage = StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | CancelJob;
+export type CalcRequestMessage =
+  StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | PositionsJob | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -141,6 +166,13 @@ export interface RaiseDoneMessage {
   result: ExactRaiseAnswer | null;
 }
 
+/** Every raise position, priced on one march (`positionTrades`), in the control's own order. */
+export interface PositionsDoneMessage {
+  kind: 'positions';
+  id: JobId;
+  result: PositionTrades;
+}
+
 export type CalcResponseMessage =
   | StackDoneMessage
   | SearchProgressMessage
@@ -148,6 +180,7 @@ export type CalcResponseMessage =
   | PlanDoneMessage
   | ResizeDoneMessage
   | RaiseDoneMessage
+  | PositionsDoneMessage
   | CancelledMessage
   | ErrorMessage;
 
@@ -189,6 +222,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
     case 'plan':
     case 'resize':
     case 'raise':
+    case 'positions':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -207,6 +241,7 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
       return isRecord(value.progress);
     case 'search':
     case 'plan':
+    case 'positions':
       return isRecord(value.result);
     // The two answers that may be nothing: an army with no troop type to field over gets no march at all,
     // and a raise with no stack it may move gets no better counts than the ones already on screen.

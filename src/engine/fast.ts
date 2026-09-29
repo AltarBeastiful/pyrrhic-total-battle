@@ -14,7 +14,14 @@
 import type { Effective } from './plan';
 import type { Bill } from './rating';
 import type { UnitDef } from '../data/types';
-import type { Housing, RecoveryCost, RecoverySettings, StackRequest, StackingOptions } from './types';
+import type {
+  Housing,
+  RecoveryCost,
+  RecoverySettings,
+  StackRequest,
+  StackResult,
+  StackingOptions,
+} from './types';
 
 /** `marchOf`'s figures (`src/engine/plan.ts`), without its `Stack[]`. */
 export interface MarchFigures {
@@ -181,7 +188,56 @@ export interface PlanKernel {
   ): LadderKernel | null;
 }
 
+/** The five raise positions, as the kernel numbers them (`RAISE_*` in `kernel/assembly/index.ts`). */
+export const RAISE_OFF = 0;
+export const RAISE_TENS = 1;
+export const RAISE_MOST = 2;
+export const RAISE_V2 = 3;
+export const RAISE_SAFE = 4;
+export const RAISE_TIGHT = 5;
+
+/** What one raise position stands the hired stacks at, over both pools at once (S-147). */
+export interface RaiseAnswer {
+  /**
+   * A count for every type the answer fields, by unit id (0 for one it does not): the plan's own counts with
+   * the raise applied — `{...raisedCounts, ...exactRaise}`, the merge the March itself draws.
+   */
+  counts: Record<string, number>;
+  /** How an exhaustive position found its answer; `null` when no search ran. */
+  how: 'walked' | 'searched' | null;
+  /** The vectors in the box, `0` when no search ran. */
+  space: number;
+  /** How many vectors the search's scorer was asked about, `0` when no search ran. */
+  scored: number;
+}
+
+/** What a raise position is asked over: the march on screen, in full (`ExactRaiseInput`'s own two fields). */
+export interface RaiseInput {
+  request: StackRequest;
+  base: StackResult;
+  /** The position each hired pool stands on, as `RAISE_*` (`raise.ts`'s `RaiseModes`, as numbers). */
+  modes: { authority: number; dominance: number };
+}
+
+/**
+ * **The raise's own door to a faster arithmetic** (S-147), the way `PlanKernel` is the plan's.
+ *
+ * The raise is the one search in the app whose box is measured in hundreds of thousands of vectors, so it is
+ * the one that cannot be priced on the main thread: the kernel answers it in a worker, and this is the whole
+ * of what the March has to know about that. A host that has no kernel (`raiseKernel()` answers `null` — the
+ * default: vitest in jsdom, SSR, a browser where the wasm did not load) runs the March's TypeScript instead,
+ * which stays the reference.
+ */
+export interface RaiseKernel {
+  /**
+   * The counts one position stands every hired stack at, over both pools at once, or `null` when the kernel
+   * cannot answer (a request it cannot pack) and the caller runs its TypeScript.
+   */
+  position(input: RaiseInput): RaiseAnswer | null;
+}
+
 let current: PlanKernel | null = null;
+let currentRaise: RaiseKernel | null = null;
 
 /** Set (or, with `null`, clear) the kernel the engine's hot path may use. */
 export function setKernel(kernel: PlanKernel | null): void {
@@ -191,4 +247,14 @@ export function setKernel(kernel: PlanKernel | null): void {
 /** The kernel set by the host, or `null`: the engine then runs its TypeScript. */
 export function planKernel(): PlanKernel | null {
   return current;
+}
+
+/** Set (or, with `null`, clear) the kernel the raise positions are answered by. */
+export function setRaiseKernel(kernel: RaiseKernel | null): void {
+  currentRaise = kernel;
+}
+
+/** The raise kernel set by the host, or `null`: the raise then runs the March's own TypeScript. */
+export function raiseKernel(): RaiseKernel | null {
+  return currentRaise;
 }

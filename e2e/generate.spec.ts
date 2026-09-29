@@ -726,6 +726,25 @@ test('a second Generate opens the plan bar on the stop the player last read', as
     'aria-label',
     new RegExp(`^${wanted}`),
   );
+  /**
+   * **Every stop of the bar has its own table** (S-147): the block under the trade prices the five positions
+   * for the stop the bar is on, and — since the owner asked for it (*"all those should have their table when
+   * clicking on the plan slider"*) — for the rest of the bar ahead of the press, so this slide is another
+   * table rather than another wait.
+   */
+  const priced = march.getByRole('table', { name: /What each raise position makes/ });
+  await expect(priced).toBeVisible({ timeout: 60_000 });
+  await expect(priced.getByRole('rowheader')).toHaveText([
+    'Most, in tens',
+    'Most',
+    'Best v2',
+    'Safe',
+    'Tight',
+  ]);
+  await stops.first().click();
+  await expect(priced).toBeVisible({ timeout: 10_000 });
+  // Back on the dearest stop, which is where this test has to leave the bar.
+  await dearest.click();
   const bar = march.getByRole('slider', { name: 'Where on the trade to read the plan' });
   const thumb = await bar.getAttribute('aria-valuenow');
 
@@ -787,6 +806,25 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
   const expectChosen = async (name: string): Promise<void> => {
     await expect(control.getByRole('radio', { name, exact: true })).toBeChecked();
   };
+
+  /**
+   * **The five positions, priced before they are asked** (S-147). The block under the plan's own trade
+   * answers the same question the control does, on the march the bar is on: one row a position, with the
+   * damage a march would hit for, the mercenaries it would burn for good and the hired units it would field.
+   * It is priced by the AssemblyScript kernel, in a worker of its own, so it arrives *after* the Generate
+   * rather than with it — and the baseline is the march the bar is on, so it is not drawn again as a row
+   * (design rule 5).
+   */
+  const priced = march.getByRole('table', { name: /What each raise position makes/ });
+  await expect(priced).toBeVisible({ timeout: 60_000 });
+  await expect(priced.getByRole('rowheader')).toHaveText([
+    'Most, in tens',
+    'Most',
+    'Best v2',
+    'Safe',
+    'Tight',
+  ]);
+  await expect(priced.getByRole('rowheader', { name: 'As is' })).toHaveCount(0);
 
   const before = await hunter();
   const damage = await marchFigure(page, 'Damage');
