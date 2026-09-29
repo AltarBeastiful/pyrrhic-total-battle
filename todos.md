@@ -17,10 +17,10 @@ A few ideas in random order, to verify plan and validate:
 - UI: [Equipment] Revamp so preview is not so crowded, show an example of an actual usage.
   - ![alt text](image.png) on this picture two heroes have a 3 set equipement qui different quality each
   - Sets can be unequiped and requipped on another hero and usually are as we usually only keep a max of 9 items at high level and more probably a 3piece set very high and the rest a lit bit less
-  - Change badge to display equipement grade (poor, uncommon...) using a letter and maybe code color ? 
+  - Change badge to display equipement grade (poor, uncommon...) using a letter and maybe code color ?
   - Don't show the bonus on the pill, show it on hover and when clicking on configure on the badge
   - Basically we could have sets (for each hero) that could be enabled or disabled toether but the UI would be complex. Or keep one item at a time, or somehting else if we find
-- Long term: sliding leadership and dominance to check if we have high points in some markers. 
+- Long term: sliding leadership and dominance to check if we have high points in some markers.
   - We can even use actual planning algorithm as it's pretty fast now
   - One problem that could be addressed when doing this: With high dominance there seems to be a pattern of silver saving which keep minimal merc stack (usually 10 or under) and other plans which all pretty much fill dominance getting some pretty unequal stacks.
   - We could solve this by keeping track of monster spent, maybe making it less important using ranking (0.5 monster/dmg, 1 merc/dmg)
