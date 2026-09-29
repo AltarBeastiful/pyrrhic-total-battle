@@ -6,6 +6,7 @@ import {
   contrastPairs,
   documentColorSchemeManager,
   inkOn,
+  LAYERS,
   ramp,
   resolveTheme,
   SEEDS,
@@ -164,6 +165,28 @@ test('a subscriber that writes back settles instead of looping', () => {
   expect(document.documentElement.dataset.theme).toBe('dark');
   expect(calls).toBe(0);
   manager.unsubscribe();
+});
+
+// ---- the stacking ladder -------------------------------------------------------------------
+
+test('a dropdown opens above the container it was raised from', () => {
+  // The defect the owner found on 2026-09-28: on the equipment sheet, neither the type nor the
+  // quality list could be filled in. A `Select` renders a portalled Mantine `Popover`, and Mantine's
+  // own default z-index for one is 300 — *below* the sheet's 320 — so the list opened behind the
+  // sheet, its overlay took every click meant for an option, and nothing happened at all. The steps
+  // are one object and the popover step is a theme default, so no editor has to remember it.
+  expect(LAYERS.dialog).toBeGreaterThan(LAYERS.sheet);
+  expect(LAYERS.sheet).toBeGreaterThan(LAYERS.marchSheet);
+  // The command bars are CSS (`shell.module.css`, 250): the March sheet is raised over them.
+  expect(LAYERS.marchSheet).toBeGreaterThan(250);
+  // The popover is above every container a control can open one from, which is the invariant.
+  expect(LAYERS.popover).toBeGreaterThan(LAYERS.dialog);
+
+  const popover = theme.components?.Popover?.defaultProps as { zIndex?: number } | undefined;
+  expect(popover?.zIndex).toBe(LAYERS.popover);
+  // A tooltip is not a `Popover` and carries Mantine's own 300 unless it is told otherwise.
+  const tooltip = theme.components?.Tooltip?.defaultProps as { zIndex?: number } | undefined;
+  expect(tooltip?.zIndex).toBe(LAYERS.popover);
 });
 
 test('the troop tiers are the group hues, not a second green and a second blue', () => {

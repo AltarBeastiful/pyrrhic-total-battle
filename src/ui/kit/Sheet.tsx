@@ -3,16 +3,18 @@
  * component, anchored where the screen has room. Mantine returns focus to whatever opened it when it
  * closes, which is the one behaviour a sheet must never get wrong.
  *
- * It is portalled to `document.body` and stacked at 320, over every bar this app pins to an edge and
- * over the March sheet a phone opens it from (`theme.ts` carries the whole ladder). Left at
- * Mantine's own 200 it opened *behind* the command bar on a desktop and behind the March sheet on a
- * phone, which is the defect the owner found on 2026-09-13: the actions on it could not be reached.
- * Both are set here as well as in the theme, because a sheet that loses this is a sheet nobody can
- * use, and a default is easier to lose than a prop.
+ * It is portalled to `document.body` and stacked at the ladder's sheet step — over every bar this
+ * app pins to an edge and over the March sheet a phone opens it from (`LAYERS`, `theme.ts`). Left
+ * at Mantine's own 200 it opened *behind* the command bar on a desktop and behind the March sheet
+ * on a phone, which is the defect the owner found on 2026-09-13: the actions on it could not be
+ * reached. That number lives in one place, because the step above it matters as much: a `Select`
+ * opened inside this sheet needs a dropdown that clears it too (2026-09-28).
  */
 import { Box, Divider, Drawer, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import type { ReactNode } from 'react';
+
+import { LAYERS } from '@/ui/theme';
 
 import { useOpenEditor } from './openEditors';
 
@@ -29,9 +31,6 @@ export interface SheetProps {
 }
 
 const SIZE = { sm: '20rem', md: '26rem', lg: '34rem' } as const;
-
-/** Over the command bar (250) and over the March sheet a phone raises this one from (300). */
-export const SHEET_Z_INDEX = 320;
 
 export function Sheet({ opened, onClose, title, description, children, footer, size = 'md' }: SheetProps) {
   // `getInitialValueInEffect: false` so the first paint is already the right anchor; jsdom has no
@@ -53,7 +52,7 @@ export function Sheet({ opened, onClose, title, description, children, footer, s
       radius="md"
       padding="md"
       withinPortal
-      zIndex={SHEET_Z_INDEX}
+      zIndex={LAYERS.sheet}
       closeButtonProps={{ 'aria-label': 'Close' }}
     >
       {description !== undefined && (

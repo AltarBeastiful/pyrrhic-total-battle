@@ -24,6 +24,7 @@ import { useDrag, useReducedMotion } from '@mantine/hooks';
 import { useEffect, useRef } from 'react';
 
 import { MarchSection } from '@/ui/sections/march';
+import { LAYERS } from '@/ui/theme';
 
 import classes from './shell.module.css';
 
@@ -108,9 +109,9 @@ export function MarchSheet({ opened, onClose }: MarchSheetProps) {
       size="calc(100dvh - var(--pyr-appbar-height))"
       radius={0}
       padding="lg"
-      // Over both bars (250) and under a kit `Sheet` (320), so a unit sheet raised from the March
-      // inside this one lands on top of it rather than behind it (`theme.ts`).
-      zIndex={300}
+      // Over both bars (250) and under a kit `Sheet`, so a unit sheet raised from the March inside
+      // this one lands on top of it rather than behind it (`LAYERS`, `theme.ts`).
+      zIndex={LAYERS.marchSheet}
     >
       <Drawer.Overlay />
       {/* The sheet is the March pane's own material, with 20 px on its two top corners alone

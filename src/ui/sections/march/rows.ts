@@ -10,6 +10,7 @@ import type {
   BattleSummary,
   BonusTotals,
   Pool,
+  ResolvedSource,
   Stack,
   StackRequest,
   StackResult,
@@ -37,6 +38,70 @@ export interface UnitBonus {
 
 export function unitBonus(unit: UnitDef, totals: BonusTotals): UnitBonus {
   return { health: healthPercent(unit, totals), strength: strengthPercent(unit, totals) };
+}
+
+/**
+ * **Where one type's bonuses come from**, source by source (owner, 2026-09-28: *"in the troop detail, add
+ * a field that details where they get their bonuses from for a troop, listing the bonuses applied source
+ * and amount"*). The unit sheet's own copy of the Bonuses Summary, narrowed to one type: the key each
+ * source feeds is turned into what that source gives **this** type.
+ *
+ * Read off the march's own `totals` — the object that moved the two bars — so the amounts add up to the
+ * percentages printed above them, and off the resolved sources only for the names and the order the feeds
+ * are explained in. The event bracket is added from the source itself, because it is one number per source
+ * rather than a key of the breakdown (`aggregateBonuses`), and it reaches every type.
+ *
+ * A source the totals know but the resolved list does not — an entry deleted since the run — keeps its own
+ * id as its name, which is what the Summary's contributors do with the same case.
+ */
+export interface UnitBonusSource {
+  /** `ResolvedSource.id`, the React key too. */
+  id: string;
+  /** What the source is called: "Beowulf L20 ★3", "Army Modernization". */
+  label: string;
+  /** What it adds to this type, "as entered" (43.5 is +43.5 %). Zero when it feeds none of its keys. */
+  health: number;
+  strength: number;
+}
+
+export function unitBonusSources(
+  unit: UnitDef,
+  totals: BonusTotals,
+  sources: readonly ResolvedSource[],
+): UnitBonusSource[] {
+  /** What the breakdown says each source gives the keys this type answers to, summed. */
+  const found = new Map<string, { health: number; strength: number }>();
+  const bump = (id: string, key: 'health' | 'strength', value: number): void => {
+    const entry = found.get(id) ?? { health: 0, strength: 0 };
+    entry[key] += value;
+    found.set(id, entry);
+  };
+  // Once per key *occurrence*, which is how `healthPercent` adds them up: a type that answers to one key
+  // twice gets that bonus twice, and this list has to say the same thing the bar above it does.
+  for (const key of unit.keys) {
+    for (const contributor of totals.breakdown.health[key] ?? []) {
+      bump(contributor.sourceId, 'health', contributor.value);
+    }
+    for (const contributor of totals.breakdown.strength[key] ?? []) {
+      bump(contributor.sourceId, 'strength', contributor.value);
+    }
+  }
+
+  const out: UnitBonusSource[] = [];
+  const named = new Set<string>();
+  for (const source of sources) {
+    const value = found.get(source.id);
+    const health = value?.health ?? 0;
+    const strength = (value?.strength ?? 0) + (source.eventStrength ?? 0);
+    if (health === 0 && strength === 0) continue;
+    named.add(source.id);
+    out.push({ id: source.id, label: source.label, health, strength });
+  }
+  for (const [id, value] of found) {
+    if (named.has(id) || (value.health === 0 && value.strength === 0)) continue;
+    out.push({ id, label: id, health: value.health, strength: value.strength });
+  }
+  return out;
 }
 
 // ---- The march as pills, one block per pool ------------------------------------------------------

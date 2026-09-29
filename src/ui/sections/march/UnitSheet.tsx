@@ -9,7 +9,7 @@ import { Alert, Button, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 import { healthMultiplier, strengthMultiplier } from '@/engine';
-import type { BonusTotals, UnitDef } from '@/engine/types';
+import type { BonusTotals, ResolvedSource, UnitDef } from '@/engine/types';
 import {
   facetWords,
   GROUP_LABEL,
@@ -19,13 +19,13 @@ import {
   unitGroupOf,
   UnitTile,
 } from '@/ui/domain';
-import { Sections, Sheet } from '@/ui/kit';
+import { Figures, Sections, Sheet } from '@/ui/kit';
 
 import classes from './march.module.css';
 
 import { putBackInMarch, removeFromFormation } from './formation';
 import { amount, duration, percent, ratio, signedPercent } from './format';
-import { unitBonus, type MarchStackRow } from './rows';
+import { unitBonus, unitBonusSources, type MarchStackRow, type UnitBonusSource } from './rows';
 
 /**
  * One part of the sheet: the same head every figure on the page wears — **12 px muted above what it
@@ -44,6 +44,18 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/**
+ * What one source is worth to the type, in the two words the bars above are labelled with: "+50% health /
+ * +12% strength". A source that feeds only one of the two says only that one — a "+0%" beside a name would
+ * be a figure the reader has to subtract.
+ */
+function feedAmount(feed: UnitBonusSource): string {
+  const parts: string[] = [];
+  if (feed.health !== 0) parts.push(`${signedPercent(feed.health)} health`);
+  if (feed.strength !== 0) parts.push(`${signedPercent(feed.strength)} strength`);
+  return parts.join(' / ');
+}
+
 export interface UnitSheetProps {
   /** The type the sheet is about; `null` closes it. */
   unit: UnitDef | null;
@@ -54,6 +66,12 @@ export interface UnitSheetProps {
    * they give **this** type — the two figures beside its bars, and the tooltip on the pill that opens it.
    */
   totals: BonusTotals;
+  /**
+   * The march's own sources, resolved the way the Bonuses card resolves them, for the names and the order
+   * of the list under the bars (`unitBonusSources`). Only the labels are read off them: the amounts come
+   * from the totals above.
+   */
+  sources: readonly ResolvedSource[];
   /** Damage of the whole march, so the stack's share can be said as a share. */
   totalDamage: number;
   onClose: () => void;
@@ -61,7 +79,7 @@ export interface UnitSheetProps {
   onEditCount: () => void;
 }
 
-export function UnitSheet({ unit, row, totals, totalDamage, onClose, onEditCount }: UnitSheetProps) {
+export function UnitSheet({ unit, row, totals, sources, totalDamage, onClose, onEditCount }: UnitSheetProps) {
   if (unit === null) return null;
 
   const group = unitGroupOf(unit);
@@ -88,6 +106,8 @@ export function UnitSheet({ unit, row, totals, totalDamage, onClose, onEditCount
    * also answers to — the ones a bonus can be bought for.
    */
   const facets = facetWords(unit);
+  /** The two bars above, source by source (`unitBonusSources`). */
+  const feeds = unitBonusSources(unit, totals, sources);
 
   return (
     <Sheet
@@ -197,6 +217,26 @@ export function UnitSheet({ unit, row, totals, totalDamage, onClose, onEditCount
               format={ratio}
             />
           </Stack>
+        </Block>
+
+        {/* **Where those two figures come from** (owner, 2026-09-28: *"add a field that details where they
+            get their bonuses from for a troop, listing the bonuses applied source and amount"*). The
+            Summary block of the Bonuses card, narrowed to the keys this type answers to, so a player
+            reconciling a battle report reads the same names in the same order for one stack. The amounts
+            are read off the march's own totals, so they add up to the percentages on the two bars above. */}
+        <Block title="Where the bonuses come from">
+          {feeds.length === 0 ? (
+            <Text size="sm">No bonus source on this march reaches this type.</Text>
+          ) : (
+            <Figures
+              label="Where the bonuses come from"
+              items={feeds.map((feed) => ({
+                key: feed.id,
+                label: feed.label,
+                value: feedAmount(feed),
+              }))}
+            />
+          )}
         </Block>
       </Sections>
     </Sheet>

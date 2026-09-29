@@ -57,6 +57,19 @@ export function EquipmentSheet({ profile, entryId, summary, onClose }: Equipment
             data={equipmentTable.map((piece) => ({ value: piece.id, label: piece.name }))}
             value={entry.equipmentId}
             allowDeselect={false}
+            // Typed, not scrolled (rule 11): a player knows the name of the piece on the captain,
+            // and the twelve sets run from "Emerald Guardian" to "Warrior of Ragnarök" — three
+            // letters land on one of them.
+            //
+            // The whole value is selected on focus, the rule every typed figure on this page already
+            // follows (rule 9, `NumberInput`): a searchable `Select` holds the chosen label in its
+            // field, so typing without this *appends* to it — "guard" over "Emerald Guardian" filters
+            // on "Emerald Guardianguard" and the list comes back empty.
+            searchable
+            onFocus={(event) => {
+              event.currentTarget.select();
+            }}
+            nothingFoundMessage="No piece by that name"
             onChange={(next) => {
               const equipmentId = next ?? entry.equipmentId;
               const swapped = equipmentRecord(equipmentId);

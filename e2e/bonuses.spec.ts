@@ -115,6 +115,49 @@ test('a captain enlisted and levelled through its gear moves the TOTAL', async (
   expect(problems).toEqual([]);
 });
 
+test('a piece of equipment is filled in from its sheet, and the card wears it', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+
+  // Nothing is equipped yet, so the family is one Add line (rule 12); the piece is created and its
+  // own sheet opens on it.
+  await bonusesCard(page).getByRole('button', { name: 'Add equipment' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toHaveAccessibleName('Emerald Guardian');
+
+  // **The defect the owner found on 2026-09-28** (theme.ts, `LAYERS`): a `Select`'s list is a
+  // portalled Mantine popover, and Mantine's own z-index for one is 300 — under the sheet's 320 — so
+  // the list opened *behind* the sheet and the sheet's overlay swallowed every click. Neither the
+  // type nor the quality could be filled in. These two clicks are the guard: when the ladder slips,
+  // the pointer lands on the overlay and Playwright refuses the click as intercepted. Nothing in
+  // jsdom can see this — it is layout and paint, not markup.
+  await sheet.getByRole('combobox', { name: 'Equipment type' }).click();
+  // The list is *typed into* (rule 11): the field selects its own value on focus, the rule every
+  // figure on this page follows, so these letters replace the piece instead of appending to it —
+  // "guardian" over "Emerald Guardian" filtered on "Emerald Guardianguard" and found nothing at all.
+  await sheet.getByRole('combobox', { name: 'Equipment type' }).pressSequentially('guardian');
+  await expect(page.getByRole('option', { name: "Guardsmen's Courage" })).toBeHidden();
+  await page.getByRole('option', { name: 'Guardian of Justice' }).click();
+  await expect(sheet).toHaveAccessibleName('Guardian of Justice');
+
+  await sheet.getByRole('combobox', { name: 'Quality' }).click();
+  await page.getByRole('option', { name: 'Godlike' }).click();
+  // What the sheet says the piece is worth now, straight off the quality table.
+  await expect(sheet.getByText('Guardsmen +85.3 % health / +85.3 % strength')).toBeVisible();
+
+  await sheet.getByRole('button', { name: 'Done' }).click();
+
+  // The chip is the form (rule 6): it wears the piece's name and what it is worth.
+  const chip = bonusesCard(page).getByRole('checkbox', { name: /Guardian of Justice/ });
+  await expect(chip).toBeChecked();
+  const id = await chip.getAttribute('id');
+  await expect(bonusesCard(page).locator(`label[for="${String(id)}"]`)).toContainText(
+    '+85.3 % health and strength (guardsmen)',
+  );
+
+  expect(problems).toEqual([]);
+});
+
 test('the fourth captain is refused, in one line', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);

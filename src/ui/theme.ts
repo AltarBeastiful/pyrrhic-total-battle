@@ -99,6 +99,39 @@ const INTER =
   "'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 const FRAUNCES = "'Fraunces Variable', ui-serif, Georgia, 'Iowan Old Style', 'Times New Roman', serif";
 
+// ---- the stacking ladder -----------------------------------------------------------------------
+
+/**
+ * **One ladder, in one place** — the sheets and dialogs as steps of it, and every Mantine popover
+ * above all of them.
+ *
+ * A control the player opens inside a sheet *is a popover*: `Select` (the equipment editor's type
+ * and quality, the custom mercenary's role and race, …) renders a portalled `Popover` whose
+ * z-index Mantine hard-codes at 300. That was below the sheet's own 320, so the list opened **behind
+ * the sheet it was raised from**: the sheet's overlay took every click meant for an option and the
+ * two selects of the equipment editor could not be filled at all (owner, 2026-09-28, having just
+ * added a piece — "the select for equipment type is not clickable… quality has the same problem").
+ * No amount of styling or a prop on one `Select` fixes a class of them, so the popover step is set
+ * once, in the theme, above every container a control can open one from.
+ *
+ * The steps the app paints itself are read from here, never repeated: `Sheet`, `Dialog` and
+ * `MarchSheet` take their z-index from this object, and a test holds the popover above all of them.
+ * The page's edges are CSS (`shell.module.css`, `kit.module.css`) and are named so the whole ladder
+ * reads in one place: app bar 100, command bars 250 (below `marchSheet`, which is raised over a
+ * phone's), the skip link 400 — the only thing above a popover, and only for the frame in which a
+ * keyboard is on it.
+ */
+export const LAYERS = {
+  /** The phone's March sheet, raised from the bottom over the command bars. */
+  marchSheet: 300,
+  /** A kit `Sheet`: every setup editor. */
+  sheet: 320,
+  /** A kit `Dialog`: the one thing allowed to interrupt a sheet. */
+  dialog: 340,
+  /** Every popover, tooltip and dropdown — Mantine's own default is 300, which is *behind* a sheet. */
+  popover: 360,
+} as const;
+
 // ---- the theme ---------------------------------------------------------------------------------
 
 /**
@@ -292,13 +325,25 @@ export const theme: MantineThemeOverride = createTheme({
     // which is the ≥ 3:1 edge a control wears and reads as a border round a block.
     Divider: { styles: { root: { borderColor: 'var(--pyr-hairline)' } } },
     Menu: { styles: { divider: { borderColor: 'var(--pyr-hairline)' } } },
-    Popover: { defaultProps: { shadow: 'md', withArrow: false } },
+    // Every dropdown in the app is a `Popover` underneath — `Select`, `MultiSelect`, `Autocomplete`,
+    // `TagsInput`, `Combobox`, `Menu`, `HoverCard` — so the ladder's popover step is set here once
+    // and no editor has to remember it (`LAYERS`). A component that passes its own `zIndex` still
+    // wins: Mantine merges the theme's defaults *under* the props.
+    Popover: { defaultProps: { shadow: 'md', withArrow: false, zIndex: LAYERS.popover } },
     // A tooltip is a small sheet, not an inverted black box (owner, 2026-09-17: "more mellow, more
     // blending in"): the sheet surface, the pane's own hairline and shadow, the page's ink, 8 × 12 of
     // padding. And it waits half a second, so a cursor crossing a row of chips on its way somewhere
-    // else raises nothing; the one that stops gets its answer.
+    // else raises nothing; the one that stops gets its answer. It is not a `Popover` and carries
+    // Mantine's 300 of its own, so it takes the ladder's popover step here too (`LAYERS`): a chip's
+    // tooltip inside a sheet was hidden behind it for the same reason a dropdown was.
     Tooltip: {
-      defaultProps: { openDelay: 500, radius: 'sm', withArrow: false, transitionProps: { duration: 120 } },
+      defaultProps: {
+        openDelay: 500,
+        radius: 'sm',
+        withArrow: false,
+        transitionProps: { duration: 120 },
+        zIndex: LAYERS.popover,
+      },
       styles: {
         tooltip: {
           background: 'var(--mantine-color-default)',

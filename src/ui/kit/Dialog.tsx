@@ -14,6 +14,8 @@
 import { Box, Divider, Modal, Text } from '@mantine/core';
 import { useCallback, type ReactNode } from 'react';
 
+import { LAYERS } from '@/ui/theme';
+
 export interface DialogProps {
   opened: boolean;
   onClose: () => void;
@@ -30,12 +32,10 @@ export interface DialogProps {
 const SIZE = { sm: '22rem', md: '30rem', lg: '40rem' } as const;
 
 /**
- * One step above a `Sheet` (320): a dialog is the one thing allowed to interrupt one — "Save this
- * march" is raised from inside the phone's March sheet — and it is portalled for the same reason a
- * sheet is. `theme.ts` carries the whole ladder and the defect that wrote it.
+ * One step above a `Sheet` (`LAYERS.sheet`): a dialog is the one thing allowed to interrupt one —
+ * "Save this march" is raised from inside the phone's March sheet — and it is portalled for the same
+ * reason a sheet is. Both steps and the popover above them are `LAYERS` in `theme.ts`.
  */
-export const DIALOG_Z_INDEX = 340;
-
 export function Dialog({
   opened,
   onClose,
@@ -66,7 +66,7 @@ export function Dialog({
       padding="md"
       centered
       withinPortal
-      zIndex={DIALOG_Z_INDEX}
+      zIndex={LAYERS.dialog}
       closeOnClickOutside={!alert}
       closeOnEscape={!alert}
       withCloseButton={!alert}
