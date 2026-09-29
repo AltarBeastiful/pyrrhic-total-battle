@@ -439,8 +439,16 @@ export function PlanFold() {
         <Text size="sm" c="dimmed">
           {/* The campaign's own training queue rides with its silver, for the same reason the march's does
               on the line above: `PlanTotals.seconds` is every march of the plan plus its finale, which is
-              the figure that says whether a plan is a fortnight or a season. */}
-          {`Fought to the end: ${amount(plan.totalDamage)} damage and ${amount(
+              the figure that says whether a plan is a fortnight or a season.
+
+              **The two totals wear the short notation** (S-148; the owner, 2026-09-29: *"to show the big
+              numbers, we should use the shorter notation we've introduced already. Take this opportunity to
+              add it to other big numbers in the pane"*), and `compact` is the function the trade's own cells
+              use (`PlanTrade`) because this line stands directly under them: the same campaign's damage a
+              row above is "6.8M" here and "29 691 713" there was two shapes for one figure (design rule 5).
+              The **counts stay exact** — "4 marches" and the mercenaries gone — since a count is not a
+              magnitude, exactly as the unit sheet's counts do. */}
+          {`Fought to the end: ${compact(plan.totalDamage)} damage and ${compact(
             plan.silver,
           )} silver over ${amount(plan.marches)} marches, ${duration(plan.seconds)} of training${
             // The clause that closes the line is what the campaign spends for good, and a campaign that
@@ -541,6 +549,13 @@ export function PlanFold() {
                   <Table.Tbody>
                     {sampledCurve(plan.curve).map((point) => (
                       <Table.Tr key={point.silver}>
+                        {/* **This table's figures stay exact, and it is the one place in the fold that does**
+                            (S-148): the silver column *is* the row's key — the levels the plan was sampled at,
+                            which the sentence under the table and the reader's own eye both compare by level
+                            — and two sampled levels whose short forms collide ("19M" for 19 200 000 and for
+                            19 400 000) would be two rows a reader cannot tell apart. A magnitude the
+                            notation rounds is a figure; a magnitude something is *identified* by is a
+                            number. */}
                         <Table.Td>{amount(point.silver)}</Table.Td>
                         <Table.Td ta="end">{amount(point.damage)}</Table.Td>
                         <Table.Td ta="end">{ratio(point.damagePerSilver)}</Table.Td>

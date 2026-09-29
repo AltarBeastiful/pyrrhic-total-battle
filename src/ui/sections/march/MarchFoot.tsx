@@ -37,7 +37,7 @@ import { MARCH_FOOT_ANCHOR } from '@/ui/shell/march';
 import { DamageSplit } from './DamageSplit';
 import { MarchAction, MarchCountsBar } from './MarchPills';
 import classes from './march.module.css';
-import { amount } from './format';
+import { amount, compactTwo } from './format';
 import { isExhaustive } from './raise';
 import { TradeoffStrip } from './TradeoffStrip';
 import { useRunStore } from './runStore';
@@ -222,7 +222,11 @@ export function MarchActions() {
             title="Save this march"
             description="It is kept inside the active profile, with the march it came from."
             confirmLabel="Save this march"
-            initialName={`${setup?.name ?? 'March'}, ${amount(summary.avgDamage)} expected`}
+            // **The seed name carries the figure in the owner's notation** (S-148): a march is named after the
+            // damage it was generated for, the field is a plain input a player types in (design rule 9), and
+            // "8.34M expected" reads at a glance where eight digits do not. Two decimals, the pane's budget —
+            // what is typed in the field is a name, not a count to paste into the game.
+            initialName={`${setup?.name ?? 'March'}, ${compactTwo(summary.avgDamage, 2)} expected`}
             onConfirm={saveMarch}
             onCancel={() => {
               setSaving(false);

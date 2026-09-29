@@ -7,14 +7,15 @@
  * explains the counts, it is not one of them.
  *
  * The bars use a square-root scale so a 260 K troop stack stays visible next to a 6.5 M mercenary
- * one; the figures beside them are exact.
+ * one; the figures beside them are what tells the two apart, written short since S-148 ("6.5M" in the
+ * 96 px box) with the exact count left to the bar's own `aria-valuetext`.
  */
 import { Group, Progress, Stack, Text } from '@mantine/core';
 
 import type { Stack as StackType, UnitDef } from '@/engine/types';
 import { groupInk, unitGroupOf, UnitTile } from '@/ui/domain';
 
-import { amount } from './format';
+import { amount, compactTwo } from './format';
 import { findUnit } from './units';
 
 export interface HpProfileProps {
@@ -42,9 +43,13 @@ export function HpProfile({ stacks, units }: HpProfileProps) {
         HP profile
       </Text>
       <Stack component="figure" gap="xs" m={0}>
+        {/* The caption **no longer promises exact figures** (S-148): the health beside each bar is printed in
+            the owner's short notation since then ("6.5M" in a 96 px box), and a caption claiming the digits
+            were exact would be the block arguing with its own figures. What the list is and how the bars are
+            scaled is what is left to say, and it is what a reader cannot read off the bars themselves. */}
         <Text component="figcaption" size="xs" c="dimmed">
           Total health per stack, first to fall on top. The bars are drawn on a square-root scale so the small
-          stacks stay visible; the figures beside them are exact.
+          stacks stay visible.
         </Text>
         <Stack component="ul" gap={4} aria-label="Total HP per stack, first to fall first">
           {rows.map(({ stack, unit }) => {
@@ -67,6 +72,10 @@ export function HpProfile({ stacks, units }: HpProfileProps) {
                   aria-valuemin={0}
                   aria-valuemax={widest}
                   aria-valuenow={stack.totalHp}
+                  // **Exact, where the label beside it is short** (S-148, and for `format.ts`'s own reason):
+                  // a screen reader has no 96 px box to save, so a value it reads out is better read in full
+                  // — the same call the unit sheet's counts and the clipboard text take. The notation is a
+                  // *width* decision, and this is the one reader who pays no width for it.
                   aria-valuetext={amount(stack.totalHp)}
                 >
                   <Progress.Section
@@ -76,8 +85,16 @@ export function HpProfile({ stacks, units }: HpProfileProps) {
                     data-hp-bar={String(width)}
                   />
                 </Progress.Root>
+                {/* **The bar's own figure, in the short notation since S-148** (the owner's 2026-09-29 ask:
+                    *"to show the big numbers, we should use the shorter notation we've introduced already"*).
+                    It stands in a **96 px box** at 12 px, dimmed — the tightest room on the sheet — so it
+                    takes the tight budget of one decimal: "6.5M" where the exact count would push the row's
+                    own tile sideways. The full figure is not lost with it: the bar's `aria-valuetext` above
+                    carries it to the one reader who has no width to save, and the unit sheet's "Why this
+                    size" sentence prints the stack's total health at the pane's two-decimal budget for
+                    whoever wants it written out. */}
                 <Text span size="xs" c="dimmed" ta="right" w={96}>
-                  {amount(stack.totalHp)}
+                  {compactTwo(stack.totalHp, 1)}
                 </Text>
               </Group>
             );

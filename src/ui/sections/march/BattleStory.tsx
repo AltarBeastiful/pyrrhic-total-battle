@@ -14,7 +14,7 @@ import type { BattleSummary, StackRequest } from '@/engine/types';
 import { Disclosure } from '@/ui/kit';
 import { copyText } from '@/ui/profile/download';
 
-import { amount } from './format';
+import { compactTwo } from './format';
 import { journalHeader, journalText, storyLines } from './journal';
 import { unitLabel } from './units';
 
@@ -67,7 +67,12 @@ export function BattleStory({ request, summary }: BattleStoryProps) {
         ))}
       </Stack>
 
-      <Disclosure title="Raw journal" summary={`${amount(journal.totalDamage)} damage in all`}>
+      {/* **The journal's own total, in the owner's notation** (S-148: *"you can add this to other big numbers
+          in the pane and in the battle summary"*). It is a **total** the player reads and compares, never a
+          count they retype, so it takes `compactTwo` at the pane's full budget of two decimals ("8.34M")
+          rather than the exact digits a counts table would keep. The story under it stays in whole numbers:
+          those are the round-by-round hits the in-game report is checked against, one hit at a time. */}
+      <Disclosure title="Raw journal" summary={`${compactTwo(journal.totalDamage, 2)} damage in all`}>
         <Stack gap="xs">
           <Table.ScrollContainer minWidth={360} type="native">
             <Table verticalSpacing={4} horizontalSpacing="xs">

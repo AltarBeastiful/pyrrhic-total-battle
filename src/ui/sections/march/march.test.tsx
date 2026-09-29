@@ -15,7 +15,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { unitById } from '@/data';
-import { largestSustained, planRepeats } from '@/engine';
+import { largestSustained, lastsMarches, planRepeats } from '@/engine';
 import type { Objective, UnitDef } from '@/engine/types';
 import { updateSources } from '@/state/actions/bonuses';
 import { newRoot } from '@/state/defaults';
@@ -27,14 +27,15 @@ import type * as WorkerClient from '@/worker/client';
 
 import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
-import { amount, bonusLines, compactTwo, duration, ratio, signedPercent } from './format';
+import { amount, bonusLines, compactRatio, compactTwo, duration, ratio, signedPercent } from './format';
 import { MarchRaiseControl } from './MarchPills';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
-import { hiredLost } from './hired';
+import { UnitSheet } from './UnitSheet';
+import { hiredLost, stockRun } from './hired';
 import { raiseSearchKey, useRaiseSearchStore } from './raiseSearch';
 import { burnOf, countsOf, raisedCounts } from './raise';
-import { unitBonus } from './rows';
+import { marchRows, unitBonus } from './rows';
 import { pickOf, useRunStore } from './runStore';
 import { worstDamageByPool } from './worst';
 
@@ -150,7 +151,9 @@ test('the recap is the figures a march is compared by, the expected damage first
   await generate();
 
   const summary = lastResult()?.summary;
-  expect(screen.getByText(amount(summary?.avgDamage ?? 0))).toBeTruthy();
+  // The hero, in the notes' own notation since S-148: two decimals, and the grouped figure one hover away
+  // (`DeltaText`'s `exact`, on the hero's own `Text`).
+  expect(screen.getByText(compactTwo(summary?.avgDamage ?? 0, 2))).toBeTruthy();
   for (const label of [
     // "Worst opening" until 2026-09-21; the figure is the same enemy-first journal's (owner: one word).
     'Damage',
@@ -172,7 +175,16 @@ test('the recap is the figures a march is compared by, the expected damage first
   const perSilver = screen.getByText('Damage per silver').closest('dt')?.nextElementSibling;
   const silver = summary?.recovery.silver ?? 0;
   expect(silver).toBeGreaterThan(0);
-  expect(perSilver?.textContent).toContain(ratio((summary?.minDamage ?? 0) / silver));
+  // `compactRatio` and not `ratio` since S-148: below 100 the two are the same string, and above it the
+  // ratio takes the notation the plan's own trade prints for the same figure (`format.ts`, rule 5).
+  expect(perSilver?.textContent).toContain(compactRatio((summary?.minDamage ?? 0) / silver));
+  // **And the digits the notation rounds are this row's own**, not the grid's (`DeltaText`'s `exact`, S-148):
+  // a rate's full form is `ratio` — two decimals below 100 — where a total's is `amount`'s grouped integer.
+  // The single shared writer this shipped with first put a "3" in the title of a line reading "2.91", which
+  // is a figure contradicting the line under it; the adversarial review caught it and this is what holds it.
+  expect(perSilver?.querySelector('[title]')?.getAttribute('title')).toBe(
+    ratio((summary?.minDamage ?? 0) / silver),
+  );
   expect(summary?.damagePerSilver).toBeGreaterThan((summary?.minDamage ?? 0) / silver);
   // How many times the army swings is a fact about a stack, so it is said in the unit sheet alone
   // (owner, 2026-09-13) and never in the recap.
@@ -224,12 +236,12 @@ test('the recap says the dragon coins a monster march costs, and what they bough
   expect(coins, 'a march that houses 900 dominance trains monsters back').toBeGreaterThan(0);
   const figures = screen.getByLabelText('March figures');
   const cost = within(figures).getByText('Dragon coins to recover').closest('dt')?.nextElementSibling;
-  expect(cost?.textContent).toContain(amount(coins));
+  expect(cost?.textContent).toContain(compactTwo(coins, 2));
   // **On the worst opening, like the plan's** (S-108): `summary.damagePerDragonCoin` divides the midpoint
   // of the two openings, which is TotalStack's reading of its Battle Summary and the priority search's own
   // objective; the recap divides the figure it prints two rows above, so the two screens agree.
   const per = within(figures).getByText('Damage per dragon coin').closest('dt')?.nextElementSibling;
-  expect(per?.textContent).toContain(ratio((summary?.minDamage ?? 0) / coins));
+  expect(per?.textContent).toContain(compactRatio((summary?.minDamage ?? 0) / coins));
   expect(summary?.minDamage).toBeLessThan(summary?.avgDamage ?? 0);
 });
 
@@ -1786,3 +1798,231 @@ test('the capped positions are the same joint search, and Safe spends no more st
     burnOf(filed.result, { ...own, ...shipped }),
   );
 }, 60_000);
+
+// ---- What the stock buys (S-148) -----------------------------------------------------------------
+/**
+ * **What a hired stack burns of the account's stock, and what that buys** (owner, 2026-09-29: *"I need a way
+ * to understand which merc is doing most damage using all my stock over a few marches until it runs out…
+ * what would be good for me is to know how much damage a stack does, we can add this to the troop detail
+ * pane. And maybe add a small calculation there, computing how much similar march I can do with my stock and
+ * showing the total damages."*).
+ *
+ * The test's job is the **copy branches**, not the arithmetic: the chunks a march burns and the marches a
+ * stock carries are `chunks` and `lastsMarches` (`./hired`, held against the engine's own in `hired.test.ts`),
+ * and every figure asserted below is read back through the same function the sheet calls. What is pinned here
+ * is the shape of the sentence — an English plural for two marches and up, the pointed "this march and no
+ * more" for exactly one, and the plain fact for a count the stock cannot field once.
+ */
+
+/** A type's sheet, opened the way a player opens it: the mark in its pill's corner. */
+async function openSheet(unitId: string): Promise<HTMLElement> {
+  const unit = unitById(unitId);
+  if (unit === undefined) throw new Error(`${unitId} is not in the tables`);
+  fireEvent.click(detailsButtons(unit)[0] as HTMLElement);
+  return screen.findByRole('dialog', { name: unit.name });
+}
+
+/**
+ * The harness of the three stock cases: one hired type the account owns a count of, sized by an authority
+ * pool the caller picks. A **small** pool is what puts the generated count under the cap — and that is the
+ * case the owner asked about, since a stock only runs over several marches when a march fields less of it
+ * than the account holds.
+ */
+function stockedAccount(authority: number, cap: number, leadership = 4_100): void {
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup({ housing: { leadership, authority, dominance: 0 } });
+  });
+}
+
+/** The stock run the sheet's block is drawn from, read the way the component reads it. */
+function stockOf(unitId: string): {
+  row: ReturnType<typeof marchRows>[number];
+  held: number;
+  run: ReturnType<typeof stockRun>;
+} {
+  const snapshot = lastResult();
+  if (snapshot === null) throw new Error('no march was generated');
+  const row = marchRows(snapshot.request, snapshot.result, snapshot.result, snapshot.summary).find(
+    (one) => one.unit.id === unitId,
+  );
+  if (row === undefined) throw new Error(`${unitId} is not marching`);
+  const held = snapshot.request.caps[unitId];
+  if (held === undefined) throw new Error(`${unitId} has no cap on this account`);
+  return {
+    row,
+    held,
+    run: stockRun(held, row.stack.count, row.damage, snapshot.summary.journals.enemyFirst.totalDamage),
+  };
+}
+
+test('the unit sheet says how many marches the stock lasts, and what they come to', async () => {
+  // 40 authority and 92 owned: the march fields far fewer than the account holds, which is the whole
+  // question the block answers.
+  stockedAccount(40, 92, 12_000);
+  renderWithTheme(<Page />);
+  await generate();
+
+  const { row, held, run } = stockOf('epic-monster-hunter-6');
+  const unit = row.unit;
+  // The two totals this assertion rests on are genuinely two: the stack's own damage and the whole march's,
+  // so a transposition of the two arguments to `stockWords` cannot pass (the brief's own requirement).
+  expect(run.marches).toBeGreaterThan(1);
+  expect(row.damage).toBeGreaterThan(0);
+  expect(run.stackDamage).not.toBe(run.marchDamage);
+  // And the count of marches is the engine's own, not a second opinion the sheet keeps.
+  expect(run.marches).toBe(lastsMarches(held, row.stack.count));
+
+  const sheet = await openSheet(unit.id);
+  expect(within(sheet).getByText('How many marches the stock lasts')).toBeTruthy();
+  expect(
+    within(sheet).getByText(
+      `You own ${amount(held)} ${unit.name}, and a march of this size burns ${amount(
+        run.burn,
+      )} of them for good.`,
+    ),
+  ).toBeTruthy();
+  expect(
+    within(sheet).getByText(
+      `That is ${amount(run.marches)} marches like this one: ${compactTwo(
+        run.stackDamage,
+        2,
+      )} damage from this stack, ${compactTwo(run.marchDamage, 2)} from the march in all.`,
+    ),
+  ).toBeTruthy();
+  // The block sits between the two it continues and explains, in the sheet's own rhythm.
+  const titles = [...sheet.querySelectorAll('h4')].map((node) => node.textContent);
+  expect(titles).toEqual([
+    'In this march',
+    'How many marches the stock lasts',
+    'Why this size',
+    'Unit',
+    'Where the bonuses come from',
+  ]);
+}, 20_000);
+
+test('a stock that fields the count once says so, rather than pluralising one march', async () => {
+  // The cap is what the marched count is here (2000 authority, 92 owned): `lastsMarches`' own `+ 1` is the
+  // one march the count itself pays for, and the sentence says it in its own words.
+  stockedAccount(2_000, 92);
+  renderWithTheme(<Page />);
+  await generate();
+
+  const { row, held, run } = stockOf('epic-monster-hunter-6');
+  expect(held).toBe(row.stack.count);
+  expect(run.marches).toBe(1);
+
+  const sheet = await openSheet(row.unit.id);
+  expect(
+    within(sheet).getByText(
+      `That is this march and no more: ${compactTwo(run.stackDamage, 2)} damage from this stack, ${compactTwo(
+        run.marchDamage,
+        2,
+      )} from the march.`,
+    ),
+  ).toBeTruthy();
+  // …and never the plural the same figures would have produced.
+  expect(within(sheet).queryByText(/marches like this one/)).toBeNull();
+}, 20_000);
+
+test('a count typed past the stock says the march runs past it, and promises nothing', async () => {
+  // A hand-typed count can exceed the cap while the counts are edited (owner, 2026-09-21), and `marches`
+  // comes back **unclamped** so this case is reachable rather than theoretical (`./hired`). Both damage
+  // totals would be a fiction about marches nothing can field, so the block says the fact instead.
+  stockedAccount(2_000, 92);
+  renderWithTheme(<Page />);
+  await generate();
+
+  act(() => {
+    useResultStore.getState().editCount('epic-monster-hunter-6', 96);
+  });
+  await waitFor(() => {
+    expect(useResultStore.getState().manualCounts['epic-monster-hunter-6']).toBe(96);
+  });
+
+  const sheet = await openSheet('epic-monster-hunter-6');
+  expect(
+    within(sheet).getByText('You field 96 and own 92, so this march runs past your stock.'),
+  ).toBeTruthy();
+  expect(within(sheet).queryByText(/damage from this stack/)).toBeNull();
+}, 20_000);
+
+test('the stock block is not drawn for a troop, whose count is a price and never a stock', async () => {
+  // A troop is retrained: no cap is ever written for it (`buildUnits`, `state/derive.ts:505` — `caps` comes
+  // from `profile.mercenaries.selected` alone), and the engine's own reason is S-102's: only hired units are
+  // rationed. The block is design rule 15's — nothing on screen without value.
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+
+  const sheet = await openSheet(unit.id);
+  expect(within(sheet).getByText('In this march')).toBeTruthy();
+  expect(within(sheet).queryByText('How many marches the stock lasts')).toBeNull();
+  expect(lastResult()?.request.caps[unit.id]).toBeUndefined();
+});
+
+test('the stock block is not drawn for an uncapped mercenary, whose run-out cannot be counted', async () => {
+  // "Unlimited" is a mercenary the player entered no owned count for: absent from `caps` by construction,
+  // so there is no denominator and no run-out — the same line the recap's hired row reads as held.
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: null }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup({ housing: { leadership: 4_100, authority: 2_000, dominance: 0 } });
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  const sheet = await openSheet('epic-monster-hunter-6');
+  expect(within(sheet).getByText('In this march')).toBeTruthy();
+  expect(within(sheet).queryByText('How many marches the stock lasts')).toBeNull();
+  expect(lastResult()?.request.caps['epic-monster-hunter-6']).toBeUndefined();
+}, 20_000);
+
+test('the stock block is drawn only for a stack the march fields', async () => {
+  // A type left out of the march has no stack to repeat, and one edited to nothing has none either: the
+  // sheet is reachable for the first only by being put back (the left-out row's pill is the press that
+  // returns it), so the case is drawn directly here — with the same totals a real run carries.
+  renderWithTheme(<Page />);
+  await generate();
+  const totals = lastResult()?.request.totals;
+  if (totals === undefined) throw new Error('a run carries the bonuses it was computed under');
+  const unit = unitById('epic-monster-hunter-6');
+  if (unit === undefined) throw new Error('the monster hunter is not in the tables');
+  cleanup();
+
+  renderWithTheme(
+    <UnitSheet
+      unit={unit}
+      totals={totals}
+      sources={[]}
+      totalDamage={0}
+      held={92}
+      onClose={() => undefined}
+      onEditCount={() => undefined}
+    />,
+  );
+  expect(screen.getByText(/^Left out of this march/)).toBeTruthy();
+  expect(screen.queryByText('How many marches the stock lasts')).toBeNull();
+
+  // And no stock at all is the other absence: an account that owns none of the type has nothing to run out.
+  cleanup();
+  renderWithTheme(
+    <UnitSheet
+      unit={unit}
+      totals={totals}
+      sources={[]}
+      totalDamage={0}
+      held={0}
+      onClose={() => undefined}
+      onEditCount={() => undefined}
+    />,
+  );
+  expect(screen.queryByText('How many marches the stock lasts')).toBeNull();
+});

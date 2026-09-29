@@ -26,7 +26,7 @@ import type { BattleSummary } from '@/engine/types';
 import { DeltaText, Glyph } from '@/ui/domain';
 import { Figures } from '@/ui/kit';
 
-import { amount, compactTwo, duration, ratio } from './format';
+import { amount, compactRatio, compactTwo, duration, ratio } from './format';
 import { hiredLost, hiredStock } from './hired';
 import { worstDamageByPool, worstPer } from './worst';
 import classes from './march.module.css';
@@ -37,6 +37,25 @@ import { useMarch } from './useMarch';
  * still the one place that decides what "better" means for a figure, which is the point.
  */
 const CHANGE_ONLY = (): string => '';
+
+/**
+ * **How this block writes a figure** (S-148): the owner's short notation (`compactTwo`), at the budget the
+ * room allows — **2 here**, because the hero stands at 36 px and the figure grid's values at 15, and the
+ * owner's own parameter says so (*"set it to 2 where text can be large and 1 where text needs to be small.
+ * Still the same rounding as before"*, 2026-09-29).
+ *
+ * It is bound here rather than passed straight as `format: compactTwo` for one reason: the parameter's
+ * default is the tight line's **1** (`format.ts`), so a direct reference would print "8.3M" where the owner
+ * asked for "8.34M" — a budget the notation spends only where the magnitude needs it.
+ *
+ * **What does not take the notation on this card**, and each for the rule that decides it (S-148): the
+ * "Merc lost" count is a figure the player **retypes into the game** (it is the count of hired units to buy
+ * back), so it stays `amount` — the same rule the unit sheet's stack count and the pills' pool figures
+ * follow; `duration` is a training queue and has a shape of its own. The two **ratios** take `compactRatio`
+ * instead of this, which is `ratio`'s decimals below 100 and this shape above it, exactly as the plan's
+ * trade prints the same figure (`PlanTrade.tsx:418`, design rule 5).
+ */
+const figure = (value: number): string => compactTwo(value, 2);
 
 export function MarchRecap() {
   const { snapshot, result, summary, previous, stale } = useMarch();
@@ -82,7 +101,8 @@ export function MarchRecap() {
       label: 'Damage',
       value: summary.minDamage,
       previous: was((value) => value.minDamage),
-      format: amount,
+      format: figure,
+      exact: amount,
       betterWhen: 'higher' as const,
       glyph: <Glyph kind="minimumDamage" />,
     },
@@ -91,7 +111,8 @@ export function MarchRecap() {
       label: 'Silver to recover',
       value: summary.recovery.silver,
       previous: was((value) => value.recovery.silver),
-      format: amount,
+      format: figure,
+      exact: amount,
       betterWhen: 'lower' as const,
       glyph: <Glyph kind="silver" />,
     },
@@ -100,7 +121,8 @@ export function MarchRecap() {
       label: 'Gold to recover',
       value: summary.recovery.gold,
       previous: was((value) => value.recovery.gold),
-      format: amount,
+      format: figure,
+      exact: amount,
       betterWhen: 'lower' as const,
       glyph: <Glyph kind="gold" />,
     },
@@ -113,7 +135,7 @@ export function MarchRecap() {
             label: 'Dragon coins to recover',
             value: coins,
             previous: was((value) => value.recovery.dragonCoins),
-            format: amount,
+            format: figure,
             betterWhen: 'lower' as const,
             glyph: <Glyph kind="dragonCoin" />,
           },
@@ -155,7 +177,11 @@ export function MarchRecap() {
       label: 'Damage per silver',
       value: worstPer(summary, summary.recovery.silver),
       previous: was((value) => worstPer(value, value.recovery.silver)),
-      format: ratio,
+      format: compactRatio,
+      // A rate's own full form is `ratio` and not `amount`: two decimals while it is small (the figure the
+      // line already shows, so the title repeats it and claims nothing) and the grouped integer once it is
+      // past 100, which is exactly where `compactRatio` starts shortening it.
+      exact: ratio,
       betterWhen: 'higher' as const,
     },
     // Beside "Damage per silver" and read exactly as it is: what the rarest of the three purses bought.
@@ -166,7 +192,9 @@ export function MarchRecap() {
             label: 'Damage per dragon coin',
             value: worstPer(summary, coins),
             previous: was((value) => worstPer(value, value.recovery.dragonCoins)),
-            format: ratio,
+            format: compactRatio,
+            // The same writer as "Damage per silver" above, for the same reason: one reading, one shape.
+            exact: ratio,
             betterWhen: 'higher' as const,
           },
         ]
@@ -236,9 +264,16 @@ export function MarchRecap() {
         <Stack gap={2}>
           {/* The hero figure: one size at every width now (36 px), Inter at 700, and free to break
               rather than to push the pane sideways — it is the widest thing in a 360 dp pane. The
-              numerals and the tracking are the class's (`march.module.css`, `.hero`). */}
-          <Text fz="2.25rem" lh={1} fw={700} className={classes.hero}>
-            {amount(summary.avgDamage)}
+              numerals and the tracking are the class's (`march.module.css`, `.hero`).
+
+              **In the short notation, with the digits one hover away** (S-148). The hero is the figure two
+              runs are compared by, and the notation is lossy on purpose: 8 338 153 and 8 341 200 both read
+              "8.34M" while the change beside them is rounded to a whole percent and says "0 %" — so the
+              grouped figure is the `title` of this very `Text` (`amount`, the same figure the counts-to-copy
+              side of the app writes). The hero carries it directly rather than through `DeltaText`, because
+              the `DeltaText` on this row draws the **change** and nothing else (`CHANGE_ONLY`). */}
+          <Text fz="2.25rem" lh={1} fw={700} className={classes.hero} title={amount(summary.avgDamage)}>
+            {figure(summary.avgDamage)}
           </Text>
           <Group gap="xs" wrap="nowrap">
             {/* The one figure that carried no mark while every figure under it did (rule 21). */}
@@ -276,6 +311,17 @@ export function MarchRecap() {
                   {...(figure.previous === undefined ? {} : { previous: figure.previous })}
                   format={figure.format}
                   betterWhen={figure.betterWhen}
+                  // **The digits, one hover away** (S-148): the figures of this grid are drawn in the short
+                  // notation and compared against the previous run's, so the ones the notation rounds are
+                  // exactly the ones a player needs the full figure for. **The writer is the row's own**
+                  // (`figure.exact`) and never one shape for all of them: a total's digits are `amount`, a
+                  // rate's are `ratio`'s own decimals, and the queue has no shorter form to undo
+                  // (`duration` *is* the figure) so it carries none. A single `amount` over the whole grid
+                  // was the first cut and it put a "3" over a "2.91" and a bare second count over a
+                  // "13d 16h" — a title that contradicts the line under it is worse than no title. The
+                  // "Merc lost" item below is not in this map either: its figure is a count the player
+                  // retypes into the game, printed exact already, so a title would repeat the line.
+                  {...(figure.exact === undefined ? {} : { exact: figure.exact(figure.value) })}
                 />
               ),
             })),

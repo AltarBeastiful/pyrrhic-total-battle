@@ -15,8 +15,50 @@ export function amount(value: number): string {
   return count(Math.round(value));
 }
 
-const COMPACT_WHOLE = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
 const COMPACT_TENTH = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+
+/** The decimal budget every caller who says nothing gets: the one `compactTwo` shipped with. */
+const COMPACT_DECIMALS = 1;
+
+/**
+ * The `Intl.NumberFormat` instances `compactTwo` prints through, **one per decimal budget**, built once.
+ *
+ * Constructing a formatter is the expensive half of an `Intl` call — it is where the locale, the notation
+ * and the rounding are resolved — and the March prints these figures on every keystroke the setup takes
+ * (the recap's "a merc" line, the plan's tables). One formatter per budget rather than one per call is the
+ * whole of the fix for that, and the key space is the count of budgets the panes ask for: two today, the
+ * sheet's and the tight line's.
+ */
+const COMPACT_AT = new Map<number, Intl.NumberFormat>();
+
+/**
+ * The compact formatter for a decimal budget. The key is read out of the cache and **is always a whole
+ * number**: `compactTwo` floors the parameter and answers a non-finite one with the default before it gets
+ * here, so a caller passing 2.5 or `NaN` cannot seed the map with a key no other call would ever look up.
+ */
+function compactAt(decimals: number): Intl.NumberFormat {
+  let formatter = COMPACT_AT.get(decimals);
+  if (formatter === undefined) {
+    formatter = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: decimals });
+    COMPACT_AT.set(decimals, formatter);
+  }
+  return formatter;
+}
+
+/**
+ * The decimals a call asked for, floored into a whole count, a non-finite argument reading as the default,
+ * and **clamped at both ends**. The floor keeps the cache key a whole number; the ceiling is not decoration:
+ * `Intl.NumberFormat` throws a `RangeError` past its own limit, and a budget computed rather than written
+ * (`compactTwo(value, digitsFor(width))`) would take the pane down with it. Twenty is far above any budget
+ * a figure can use — past three decimals the notation is not a notation — and far below the limit.
+ */
+function decimalsOf(maxDecimals: number): number {
+  if (!Number.isFinite(maxDecimals)) return COMPACT_DECIMALS;
+  return Math.min(MAX_DECIMALS, Math.max(0, Math.floor(maxDecimals)));
+}
+
+/** The most decimals a budget may ask for; see `decimalsOf` for why there is a ceiling at all. */
+const MAX_DECIMALS = 20;
 
 /**
  * The same figure with the digits a glance needs: "1.7M", "890K". Only for places where the line
@@ -37,12 +79,39 @@ export function compact(value: number): string {
  * is not simply `compact` is the reason `ratio` carries decimals (S-59): a figure a player *compares*
  * against the last run has to be printed to where two runs differ. "432K" differs from "418K"; "1M" does
  * not differ from "1M", so a million-sized ratio is the one place the decimal has to be spent.
+ *
+ * **`maxDecimals` is the decimal budget, and the owner asked for it as a parameter** (2026-09-29: *"for
+ * panes where text is large, lets add a parameter that is max decimal number allowed and set it to 2 where
+ * text can be large and 1 where text needs to be small. Still the same rounding as before."*).
+ *
+ * **What it does, exactly**, because the two branches are easy to state wrongly: the whole-digit form is
+ * used when it *already carries two digits*, and otherwise the figure is written at **up to** `maxDecimals`
+ * decimals. So the rule the figure has to clear does not move with the budget — two digits, as before — and
+ * what the budget widens is how much precision the fallback may use: "8M" is a one-digit whole form, so
+ * 8 338 153 becomes **"8.34M"** at a budget of two and "8.3M" at one, while 325 000 is "325K" at both
+ * because its whole form already says enough. `Intl` drops a trailing zero, so an exact power stays "1M"
+ * whatever the budget: there is no digit to buy there.
+ *
+ * **What the budget is for is the room the figure stands in.** A figure the pane can afford — one standing
+ * alone, at the unit sheet's 15 px or in the recap's 36 px hero (`MarchRecap`) — can take two decimals and
+ * be read as a figure; the same figure sharing a 12–13 px line with prose (the recap's "· 325K a merc"
+ * beside its label, the saved marches' meta line) has only the one, because a second decimal there buys
+ * less than the room it costs and design rule 19 keeps that line readable. The default is the tight line's,
+ * which is what every call site written before today meant.
+ *
+ * **The rule this leaves alone, and it is the owner's own** (2026-09-20, quoted above): a two-digit whole
+ * form is *enough*, so a figure whose mantissa is already two digits prints without decimals at any budget
+ * — 10 360 000 is "10M" and 29 691 713 is "30M" at a budget of two, exactly as they were at one. That is
+ * the rule the owner asked to keep ("still the same rounding as before"), and `compact` is the formatter
+ * for a figure that needs finer reading than that (its one decimal, always), which is why the plan's
+ * seven-figure columns and the campaign's own total use it.
  */
-export function compactTwo(value: number): string {
+export function compactTwo(value: number, maxDecimals = COMPACT_DECIMALS): string {
   if (!Number.isFinite(value)) return '—';
-  const whole = COMPACT_WHOLE.format(Math.round(value));
+  const rounded = Math.round(value);
+  const whole = compactAt(0).format(rounded);
   const digits = whole.replace(/\D/gu, '').length;
-  return digits >= 2 ? whole : COMPACT_TENTH.format(Math.round(value));
+  return digits >= 2 ? whole : compactAt(decimalsOf(maxDecimals)).format(rounded);
 }
 
 /**

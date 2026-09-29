@@ -286,6 +286,11 @@ export function MarchSection() {
           totals={snapshot.request.totals}
           sources={sources}
           totalDamage={summary.journals.enemyFirst.totalDamage}
+          // The account's own stock of the type the sheet is about, for its "How many marches the stock
+          // lasts" block (S-148). `caps` is the request's own record of the owned counts the Mercenaries
+          // card wrote (`state/derive.ts:505`) — the account's, never the march's — and it is `undefined`
+          // for every type the account holds no count of, which the sheet draws nothing for.
+          held={snapshot.request.caps[sheetUnit?.id ?? '']}
           onClose={() => {
             setSheetUnit(null);
           }}

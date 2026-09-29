@@ -63,6 +63,34 @@ test('compactTwo spends a decimal only where it buys a second digit', () => {
   // Nothing to divide by prints as an em dash, as everywhere else in the file.
   expect(compactTwo(Number.NaN)).toBe('—');
   expect(compactTwo(Number.POSITIVE_INFINITY)).toBe('—');
+
+  // **The decimal budget is the caller's** (owner, 2026-09-29: "lets add a parameter that is max decimal
+  // number allowed and set it to 2 where text can be large and 1 where text needs to be small. Still the
+  // same rounding as before"). Two decimals, on a figure whose first decimal left it one digit short.
+  expect(compactTwo(8_338_153, 2)).toBe('8.34M');
+  expect(compactTwo(7_732_100, 2)).toBe('7.73M');
+  expect(compactTwo(1_240_000, 2)).toBe('1.24M');
+  // And the rule is a *budget*, not a demand: where the whole-decimal form already reached two digits the
+  // second decimal is not spent, because the digits it would buy are digits the magnitude does not need.
+  expect(compactTwo(325_000, 2)).toBe('325K');
+  expect(compactTwo(12_345_678, 2)).toBe('12M');
+  // A budget of one is the default the file shipped with, so a caller who asks for it by hand gets the
+  // same string as the caller who says nothing — there is no second path through this function.
+  expect(compactTwo(8_338_153, 1)).toBe('8.3M');
+  expect(compactTwo(8_338_153, 1)).toBe(compactTwo(8_338_153));
+  expect(compactTwo(94, 2)).toBe('94');
+
+  // **The budget is floored into a whole count, and a non-finite one reads as the default**: it is a cache
+  // key as well as a rounding, so 2.5 must not seed a key nothing else looks up. Pinned here as
+  // implemented — `NaN` and the infinities take the default of one, and a negative clamps to nought
+  // (whole digits only), which is the guard written beside the parameter.
+  expect(compactTwo(9_400, 2.5)).toBe('9.4K');
+  expect(compactTwo(9_400, Number.NaN)).toBe(compactTwo(9_400));
+  expect(compactTwo(9_400, Number.POSITIVE_INFINITY)).toBe(compactTwo(9_400));
+  expect(compactTwo(9_400, -2)).toBe('9K');
+  // The guard is the parameter's and not the figure's: a budget the parameter pushed down to nought still
+  // answers the digit rule first, so a three-digit whole form is untouched by it.
+  expect(compactTwo(325_000, -2)).toBe('325K');
 });
 
 test('compactRatio is a ratio below a hundred and a compact figure above it', () => {

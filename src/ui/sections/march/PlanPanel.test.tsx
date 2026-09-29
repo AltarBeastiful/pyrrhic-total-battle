@@ -862,8 +862,14 @@ test('the all-in stop says it is a sequence, on the bar and on the row the fold 
 
   // "Fought to the end" is unmoved: it is the campaign's own totals, not the stop's — and it names the
   // reading the plan is on since S-94, the same "worst opening" the trade's own column head carries.
+  // **Printed short since S-148**, in the notation the trade's own cells use and this line stands under
+  // (`compact`, rule 5): the campaign's damage was "29 691 713" here while the row above said "6.8M".
   expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
-    `${amount(BURN.totalDamage)} damage`,
+    `${compact(BURN.totalDamage)} damage`,
+  );
+  // The campaign's own count of marches stays a plain count: a count is not a magnitude.
+  expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
+    `${amount(BURN.marches)} marches`,
   );
 });
 

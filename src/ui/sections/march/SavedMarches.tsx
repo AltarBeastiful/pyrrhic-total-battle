@@ -14,7 +14,7 @@ import type { Profile, SavedStack } from '@/state/schema';
 import { useStore } from '@/state/store';
 import { Dialog } from '@/ui/kit';
 
-import { amount, duration, ratio } from './format';
+import { amount, compactRatio, compactTwo, duration } from './format';
 import { unitLabel } from './units';
 
 const DATE = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
@@ -107,6 +107,26 @@ function bestIndexes(row: Row): Set<number> {
   return winners;
 }
 
+/**
+ * **How the comparison writes a figure** (S-148): the owner's short notation at the full budget of two
+ * decimals, exactly as the recap's figures write theirs (`MarchRecap`'s `figure`) — the two screens compare
+ * the same marches by the same figures, so they print them in one shape (design rule 5). Two decimals and not
+ * the tight line's one: these cells stand alone in a table at 14 px, the room `format.ts`'s parameter calls
+ * "where text can be large".
+ *
+ * **What stays exact here**, and it is the same cut the unit sheet takes: the "Stacks" row and every "Unit
+ * counts" row are the counts a player **retypes into the game**, which is the whole reason the saved march is
+ * kept — a "1.2K" there would be a figure nobody can type back in. `duration` is a queue, read in days and
+ * hours.
+ *
+ * **The three rate rows take `compactRatio`, like the recap's two** (`MarchRecap`): below 100 it *is*
+ * `ratio` to the last digit, so the ordinary case is the string the column always printed, and above it the
+ * rate takes the shape the plan's trade, the damage split and the recap all print the same reading in
+ * (design rule 5, one figure one shape). Leaving it on `ratio` while the recap's own rate moved would have
+ * been two shapes for one reading on two screens a player reads side by side.
+ */
+const figure = (value: number): string => compactTwo(value, 2);
+
 function compareRows(stacks: SavedStack[]): { metrics: Row[]; counts: Row[] } {
   const pick = (
     label: string,
@@ -117,15 +137,15 @@ function compareRows(stacks: SavedStack[]): { metrics: Row[]; counts: Row[] } {
 
   const metrics: Row[] = [
     pick('Stacks', (stack) => stack.counts.length, amount, 'none'),
-    pick('Expected damage', (stack) => stack.summary.avgDamage, amount, 'high'),
-    pick('Damage', (stack) => stack.summary.minDamage, amount, 'high'),
-    pick('Best opening', (stack) => stack.summary.maxDamage, amount, 'high'),
-    pick('Damage per silver', (stack) => stack.summary.damagePerSilver, ratio, 'high'),
-    pick('Damage per gold', (stack) => stack.summary.damagePerGold, ratio, 'high'),
-    pick('Damage per dragon coin', (stack) => stack.summary.damagePerDragonCoin, ratio, 'high'),
-    pick('Silver to recover', (stack) => stack.summary.recovery.silver, amount, 'low'),
-    pick('Gold to recover', (stack) => stack.summary.recovery.gold, amount, 'low'),
-    pick('Dragon coins to recover', (stack) => stack.summary.recovery.dragonCoins, amount, 'low'),
+    pick('Expected damage', (stack) => stack.summary.avgDamage, figure, 'high'),
+    pick('Damage', (stack) => stack.summary.minDamage, figure, 'high'),
+    pick('Best opening', (stack) => stack.summary.maxDamage, figure, 'high'),
+    pick('Damage per silver', (stack) => stack.summary.damagePerSilver, compactRatio, 'high'),
+    pick('Damage per gold', (stack) => stack.summary.damagePerGold, compactRatio, 'high'),
+    pick('Damage per dragon coin', (stack) => stack.summary.damagePerDragonCoin, compactRatio, 'high'),
+    pick('Silver to recover', (stack) => stack.summary.recovery.silver, figure, 'low'),
+    pick('Gold to recover', (stack) => stack.summary.recovery.gold, figure, 'low'),
+    pick('Dragon coins to recover', (stack) => stack.summary.recovery.dragonCoins, figure, 'low'),
     pick('Time to recover', (stack) => stack.summary.recovery.seconds, duration, 'low'),
   ];
 
@@ -237,8 +257,15 @@ export function SavedMarchesPanel({ profile }: SavedMarchesPanelProps) {
                       toggle(stack.id);
                     }}
                   />
+                  {/* **The saved march's own damage, in the notation** (S-148, and the same figure the
+                      compare table's "Expected damage" row prints): the row is the one line a player reads
+                      to tell one saved march from another, and eight digits of it are the least of what
+                      tells them apart. This is a 12 px dimmed line, so the budget is the tight one, one
+                      decimal (`compactTwo`), where the table's cells stand alone at 14 px and take two.
+                      The march's name above it and its stack count after it are not figures the notation
+                      touches: one is a name and the other is a count. */}
                   <Text span size="xs" c="dimmed" truncate>
-                    {`${DATE.format(stack.createdAt)}, ${amount(stack.summary.avgDamage)} expected damage, ${String(stack.counts.length)} stacks`}
+                    {`${DATE.format(stack.createdAt)}, ${compactTwo(stack.summary.avgDamage, 1)} expected damage, ${String(stack.counts.length)} stacks`}
                   </Text>
                 </Stack>
                 <ActionIcon

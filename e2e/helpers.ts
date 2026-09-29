@@ -672,14 +672,40 @@ export async function marchStackCount(page: Page): Promise<number> {
   return (await marchStackLabels(page)).length;
 }
 
+/** What the compact notation's suffixes are worth: K thousand, M million, B billion (`Intl`'s own). */
+const MULTIPLIER = { K: 1e3, M: 1e6, B: 1e9 } as const;
+
 /**
- * A figure, whatever separator it is written with: the app groups thousands with a space, the way
- * the number fields do ("19 639 721"), and a ratio keeps its decimals. `\s` covers every space the
- * formatter may put there, the non-breaking ones included.
+ * A figure, whatever shape it is written in: the app groups thousands with a space, the way the number
+ * fields do ("19 639 721"), a ratio keeps its decimals, and since S-148 a **total or a cost** is printed
+ * in the owner's short notation ("8.34M", "325K", "1.2B").
+ *
+ * The suffix is why this helper had to learn the notation: the pattern it used before matched the digits
+ * and stopped at the point, so **"8.34M" parsed as 8.34** — a figure of eight million read as eight. Every
+ * `.not.toBe` and `toBeGreaterThan` in `generate.spec.ts` that holds a figure before an edit and compares
+ * it after is only as sharp as this number, and a helper that answers 8.34 for eight million cannot tell
+ * two marches apart: two runs half a million apart would both "read" as 8.34. The multiplier is what keeps
+ * those assertions meaning what they say.
+ *
+ * "19 639 721" and "26" come out exactly as they did, and the separator stays covered: `\s` takes every
+ * space the formatter may put in — the non-breaking ones included.
  */
 function figureNumber(text: string): number {
-  const match = /\d[\d\s]*(\.\d+)?/.exec(text);
-  return match === null ? Number.NaN : Number(match[0].replace(/\s/g, ''));
+  // The suffix only counts when it is a **suffix**: "M" in "8.34M" multiplies, the "M" that opens
+  // "marches" beside a count does not (the lookahead is the whole of that distinction, and without it
+  // "9 marches" would read as nine million).
+  //
+  // **And it is case-sensitive**, because the app writes its suffixes in upper case (`Intl`'s `en-US`
+  // compact notation: "8.34M", "325K") while `duration` writes a lower-case "m" for minutes: "12m" is a
+  // twelve-minute queue, and a case-insensitive pattern read it as twelve million. No live call site
+  // reads a `duration` through here today — `marchFigureWords` is what the queue is asserted with — but
+  // the helper is one call away from answering a figure a million times too big, which is the whole
+  // failure it was taught the notation to prevent.
+  const match = /(\d[\d\s]*(?:\.\d+)?)\s*(?:([KMB])(?![A-Za-z]))?/.exec(text);
+  if (match === null) return Number.NaN;
+  const digits = Number(match[1]?.replace(/\s/g, '') ?? Number.NaN);
+  const suffix = (match[2] ?? '') as keyof typeof MULTIPLIER | '';
+  return suffix === '' ? digits : digits * MULTIPLIER[suffix];
 }
 
 /**
