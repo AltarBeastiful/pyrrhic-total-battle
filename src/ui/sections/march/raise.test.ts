@@ -15,7 +15,6 @@ import { raiseSearchKey } from './raiseSearch';
 import { applyCounts } from './manual';
 import {
   EXHAUSTIVE_MODES,
-  RAISE_DAMAGE_POSITIONS,
   burnOf,
   inTens,
   isExhaustive,
@@ -86,8 +85,13 @@ function request(overrides: Partial<StackRequest> = {}): StackRequest {
 const MOST: RaiseModes = { authority: 'most', dominance: 'off' };
 const TENS: RaiseModes = { authority: 'tens', dominance: 'off' };
 const MONSTERS: RaiseModes = { authority: 'off', dominance: 'most' };
-const BEST: RaiseModes = { authority: 'best', dominance: 'off' };
-/** The fifth position, on both pools — what pressing the segment anywhere puts the control into. */
+/**
+ * **The damage climb, on the mercenaries' pool alone** (S-145). It is what an exhaustive position draws
+ * from the first frame and what its search is seeded with; it was the `Best` segment until the benchmark
+ * showed it never beat `safe`, so it is read out through an exhaustive mode rather than as a position.
+ */
+const CLIMB: RaiseModes = { authority: 'v2', dominance: 'off' };
+/** The exhaustive search, on both pools — what pressing any of the three damage segments puts the control into. */
 const V2: RaiseModes = { authority: 'v2', dominance: 'v2' };
 /** The two capped readings of it (S-144): the same search under a budget of authority chunks. */
 const SAFE: RaiseModes = { authority: 'safe', dominance: 'safe' };
@@ -178,14 +182,14 @@ test('the spare housing goes to the stack that strikes most: the last to fall', 
   expect(raisedCounts(request({ housing }), base, MOST)).toEqual({ [small.unitId]: 14 });
 });
 
-test('the best position never loses damage, and never leaves the bounds', () => {
+test('the damage climb never loses damage, and never leaves the bounds', () => {
   const base = marchOf([...TROOPS, stack(HUNTER, 'authority', 5, 30_000)]);
   const counts = { [HUNTER]: 5 } as Record<string, number>;
   const at = (next: Record<string, number>): number =>
     applyCounts(request(), base, { ...counts, ...next }).summary.minDamage;
 
   const before = at({});
-  const climbed = raisedCounts(request(), base, BEST);
+  const climbed = raisedCounts(request(), base, CLIMB);
   expect(climbed).not.toBeNull();
   const after = at(climbed ?? {});
   // The whole promise of the position (owner, 2026-09-29: *"defer the best damage option"*).
@@ -202,19 +206,19 @@ test('the best position never loses damage, and never leaves the bounds', () => 
   expect(climbed).toEqual(raisedCounts(request(), base, MOST));
 });
 
-test('the best position moves nothing when the stack is already at its ceiling', () => {
+test('the damage climb moves nothing when the stack is already at its ceiling', () => {
   const base = marchOf([...TROOPS, stack(HUNTER, 'authority', 33, 30_000)]);
-  expect(raisedCounts(request(), base, BEST)).toBeNull();
+  expect(raisedCounts(request(), base, CLIMB)).toBeNull();
 });
 
-test('the best position respects the stock and the pool like every other position', () => {
+test('the damage climb respects the stock and the pool like every other position', () => {
   const base = marchOf([...TROOPS, stack(HUNTER, 'authority', 5, 30_000)]);
-  const held = raisedCounts(request({ caps: { [HUNTER]: 12 } }), base, BEST)?.[HUNTER] ?? 0;
+  const held = raisedCounts(request({ caps: { [HUNTER]: 12 } }), base, CLIMB)?.[HUNTER] ?? 0;
   expect(held).toBeGreaterThanOrEqual(5);
   expect(held).toBeLessThanOrEqual(12);
   // A pool with no room at all: nothing to climb into.
   const none = request({ housing: { ...HOUSING, authority: costOf(HUNTER) * 5 } });
-  expect(raisedCounts(none, base, BEST)).toBeNull();
+  expect(raisedCounts(none, base, CLIMB)).toBeNull();
 });
 
 test('the raise only ever goes up', () => {
@@ -282,20 +286,38 @@ test('the exhaustive position is only asked for where a control stands on it', (
   expect(exhaustivePools(V2)).toEqual(['authority', 'dominance']);
   // One pool on it: the search walks that pool's stacks and holds the other where its own position put it.
   expect(exhaustivePools({ authority: 'v2', dominance: 'most' })).toEqual(['authority']);
-  // None: the four shipped positions are answered without a search, so there is nothing to ask for.
-  for (const mode of ['off', 'tens', 'most', 'best'] as const) {
+  // None: the three unit positions are answered without a search, so there is nothing to ask for.
+  for (const mode of ['off', 'tens', 'most'] as const) {
     expect(exhaustivePools({ authority: mode, dominance: mode })).toEqual([]);
   }
 });
 
-test('the four synchronous positions never come out of a v2 control, and never below Best', () => {
+test('an exhaustive position draws the climb from its first frame, and the search is never below it', () => {
   const base = BOTH_HIRED();
-  // **`raisedCounts` reads `v2` as `best`** (S-143b): that is what the March draws from the first frame,
-  // while the search is out. It is a legal march rather than a placeholder, and it is the search's own seed.
-  expect(raisedCounts(request(), base, V2)).toEqual(
-    raisedCounts(request(), base, { authority: 'best', dominance: 'best' }),
-  );
-  expect(exhaustivePools({ authority: 'best', dominance: 'off' })).toEqual([]);
+  /**
+   * **`raisedCounts` answers an exhaustive mode with the damage climb** (S-143b, S-145): that is what the
+   * March draws while the search is out. It is a legal march and not a placeholder — every stack at or above
+   * the plan's own count, and never past what `Most` fields — and it is the search's own seed.
+   */
+  const drawn = raisedCounts(request(), base, V2);
+  expect(drawn).not.toBeNull();
+  const most = raisedCounts(request(), base, { authority: 'most', dominance: 'most' }) ?? {};
+  for (const one of base.stacks) {
+    const count = drawn?.[one.unitId] ?? one.count;
+    expect(count).toBeGreaterThanOrEqual(one.count);
+    expect(count).toBeLessThanOrEqual(most[one.unitId] ?? one.count);
+  }
+
+  const found = exactRaise(request(), base, V2);
+  expect(found).not.toBeNull();
+  if (found === null) return;
+  const whole = (moves: Record<string, number> | null): Record<string, number> => ({
+    ...marchCounts(base),
+    ...moves,
+  });
+  const at = (moves: Record<string, number> | null): number =>
+    applyCounts(request(), base, whole(moves)).summary.minDamage;
+  expect(at({ ...drawn, ...found.counts })).toBeGreaterThanOrEqual(at(drawn));
 });
 
 test('the search walks both hired pools at once, and answers with a legal march', () => {
@@ -326,21 +348,21 @@ test('the search walks both hired pools at once, and answers with a legal march'
   }
 });
 
-test('the exhaustive answer never loses damage to the shipped Best it is seeded with', () => {
+test('the exhaustive answer never loses damage to the climb it is seeded with', () => {
   const base = BOTH_HIRED();
   const at = (moves: Record<string, number> | null): number =>
     applyCounts(request(), base, { ...marchCounts(base), ...moves }).summary.minDamage;
 
-  const shipped = raisedCounts(request(), base, { authority: 'best', dominance: 'best' });
+  const shipped = raisedCounts(request(), base, V2);
   const found = exactRaise(request(), base, V2);
-  // The seed is the shipped answer and the search takes strict improvements only, so this cannot be lower —
+  // The seed is the climb and the search takes strict improvements only, so this cannot be lower —
   // which is the promise the March leans on while the search is out (`raiseSearch.ts`).
   expect(at({ ...shipped, ...found?.counts })).toBeGreaterThanOrEqual(at(shipped));
 });
 
 test('the exhaustive position asks for nothing where there is nothing to move', () => {
   // No pool on it: the control was never drawn on `v2`.
-  expect(exactRaise(request(), BOTH_HIRED(), BEST)).toBeNull();
+  expect(exactRaise(request(), BOTH_HIRED(), MOST)).toBeNull();
   // No troops to shelter under: the same rule the other four positions live by.
   expect(exactRaise(request(), marchOf([stack(HUNTER, 'authority', 5, 30_000)]), V2)).toBeNull();
   // Every stack already at its ceiling.
@@ -353,10 +375,6 @@ test('the same march answers the same counts every time', () => {
   const first = exactRaise(request(), base, V2);
   const second = exactRaise(request(), base, V2);
   expect(first?.counts).toEqual(second?.counts);
-});
-
-test('the damage positions are named once, for the control and for the March’s silence', () => {
-  expect([...RAISE_DAMAGE_POSITIONS]).toEqual(['best', 'v2', 'safe', 'tight'] satisfies RaiseMode[]);
 });
 
 /** The counts of a whole march, as `exactRaise` reads them — the test's own copy of `countsOf`. */
@@ -372,7 +390,7 @@ test('the exhaustive answer carries every stack it walked, not only the ones it 
    * diffed against the **plan's** own counts — but the March merges it over the shipped **`Best`**'s answer,
    * so wherever the search decided to come back *down* to the plan's count the seed's higher one silently
    * stayed. That is precisely the "two stacks only improve together" move the pairwise neighbourhood exists
-   * for, so the vector on screen could be one the search never scored, and could sit below the `Best` it was
+   * for, so the vector on screen could be one the search never scored, and could sit below the climb it was
    * seeded with. Every walked stack is named now, moved or not.
    */
   const base = BOTH_HIRED();
@@ -411,7 +429,7 @@ test('a march edit does not reuse the previous march’s answer', () => {
   // The march's own object is stable across renders, so the key is stable where the March has not moved.
   expect(raiseSearchKey(before, V2)).toBe(raiseSearchKey(before, V2));
   // And the position is part of it: moving the control is a different question and a different answer.
-  expect(raiseSearchKey(before, V2)).not.toBe(raiseSearchKey(before, BEST));
+  expect(raiseSearchKey(before, V2)).not.toBe(raiseSearchKey(before, MOST));
 });
 
 /**
@@ -430,7 +448,7 @@ test('Safe never burns more than the Best it replaces, and never loses to it', (
   const at = (moves: Record<string, number> | null): number =>
     applyCounts(request(), base, whole(moves)).summary.minDamage;
 
-  const shipped = raisedCounts(request(), base, { authority: 'best', dominance: 'best' });
+  const shipped = raisedCounts(request(), base, { authority: 'v2', dominance: 'v2' });
   const found = exactRaise(request(), base, SAFE);
   expect(found).not.toBeNull();
   if (found === null) return;
@@ -485,7 +503,7 @@ test('the burn is the mercenaries’ pool’s, so a cap on the monsters alone bo
 test('all three exhaustive positions are named by one question, and all three are the worker’s', () => {
   expect(EXHAUSTIVE_MODES).toEqual(['v2', 'safe', 'tight'] satisfies RaiseMode[]);
   for (const mode of EXHAUSTIVE_MODES) expect(isExhaustive(mode)).toBe(true);
-  for (const mode of ['off', 'tens', 'most', 'best'] as const) expect(isExhaustive(mode)).toBe(false);
+  for (const mode of ['off', 'tens', 'most'] as const) expect(isExhaustive(mode)).toBe(false);
   // A mixed control: one block on a cap, the other on the plain search — both are walked, which is what the
   // worker's one search does with them.
   expect(exhaustivePools({ authority: 'safe', dominance: 'v2' })).toEqual(['authority', 'dominance']);

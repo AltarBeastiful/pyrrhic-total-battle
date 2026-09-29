@@ -1535,32 +1535,39 @@ test('“as is” puts the generated counts back, and the raise is one replay, n
   expect(screen.queryByText(/Raised to what the troops shelter/)).toBeNull();
 });
 
-test('the best position is a raise too, and it adds no line to the pane', async () => {
+test('the damage positions are raises too, and they add no line to the pane', async () => {
   await generateFromAPlan();
   const control = raiseControl('Mercenary');
   const plan = shownCounts();
 
-  fireEvent.click(within(control).getByRole('radio', { name: 'Best' }));
-  await waitFor(() => {
-    expect(control.querySelector<HTMLInputElement>('input[value="best"]')?.checked).toBe(true);
-  });
-  // The position that promises **damage** and not units: what it fields is at least the plan's own counts
-  // (it is a raise, never a cut) and never more than `Most` would field (the same ceiling bounds it).
-  const best = shownCounts();
-  // **And the March says nothing about it** (owner, 2026-09-29: *"it moves the ui its unpleasant"*): the
-  // segment and its tooltip are the disclosure, and neither `Most`'s sentence nor a new one is drawn.
-  expect(screen.queryByText(/Raised to what the troops shelter/)).toBeNull();
-  expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
+  // **The control offers six segments** (S-145): `Best` is gone, and what it drew is what the exhaustive
+  // positions draw from their first frame and while their search runs.
+  expect(within(control).getAllByRole('radio')).toHaveLength(6);
+  expect(within(control).queryByRole('radio', { name: 'Best' })).toBeNull();
 
+  // `Most` first, so the comparison below has the ceiling to measure the damage answer against — and so the
+  // pane is in the state the sentence is drawn in before a damage position suppresses it (`MarchFoot.tsx`).
   fireEvent.click(within(control).getByRole('radio', { name: 'Most' }));
   await waitFor(() => {
     expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
   });
   const most = shownCounts();
+
+  fireEvent.click(within(control).getByRole('radio', { name: 'Best v2' }));
+  await waitFor(() => {
+    expect(control.querySelector<HTMLInputElement>('input[value="v2"]')?.checked).toBe(true);
+  });
+  // The position that promises **damage** and not units: what it fields is at least the plan's own counts
+  // (it is a raise, never a cut) and never more than `Most` would field (the same ceiling bounds it).
+  const best = shownCounts();
   for (const [label, count] of Object.entries(best)) {
     expect(count, `${label} fell below the plan's own count`).toBeGreaterThanOrEqual(plan[label] ?? 0);
     expect(count, `${label} went past what Most fields`).toBeLessThanOrEqual(most[label] ?? count);
   }
+  // **And the March says nothing about it** (owner, 2026-09-29: *"it moves the ui its unpleasant"*): the
+  // segment and its tooltip are the disclosure, and neither `Most`'s sentence nor a new one is drawn.
+  expect(screen.queryByText(/Raised to what the troops shelter/)).toBeNull();
+  expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
 }, 30_000);
 
 test('the position is remembered: the next Generate arrives already raised', async () => {
@@ -1647,7 +1654,7 @@ test('the exhaustive position is one position over both blocks, and draws no lin
   });
   // **And it really is the search's answer and not the seed still standing**: the entry is settled for the
   // march and position on screen, which is the state the loader in the segment stops on. A test that only
-  // looked at the figures could pass on the shipped `Best` counts alone.
+  // looked at the figures could pass on the climb's counts alone.
   const { entry } = useRaiseSearchStore.getState();
   const filed = useResultStore.getState().last;
   expect(entry?.status).toBe('done');
@@ -1661,7 +1668,7 @@ test('the exhaustive position is one position over both blocks, and draws no lin
   expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
 }, 60_000);
 
-test('the fifth segment carries the wait itself, and the control says it is busy', () => {
+test('the chosen segment carries the wait itself, and the control says it is busy', () => {
   /**
    * **The one state the journeys cannot reach** (S-143b): the e2e's army has a box of a few dozen vectors,
    * so `Best v2` answers before a frame is painted and the loader is never seen. It is the state a real
@@ -1732,7 +1739,7 @@ test('a March edit asks the search again rather than merging the previous march�
   });
 
   // The answer that belonged to the previous march is gone with it: the new march re-asks, under a new key,
-  // and until it lands the pane draws the shipped `Best`'s counts on the *new* march — never the old ones.
+  // and until it lands the pane draws the climb's counts on the *new* march — never the old ones.
   expect(useRaiseSearchStore.getState().entry?.key ?? null).not.toBe(before);
   const { hired, floor } = shelterNow();
   expect(hired).toBeLessThan(floor);
@@ -1744,7 +1751,7 @@ test('the capped positions are the same joint search, and Safe spends no more st
    * safe best-v2 that is bestv2 but accounting for merc lost and dmg/merc"*). `safe` is `v2`'s own search under
    * a budget of authority chunks — the burn `marchOf` counts — so the promise is checked on the march the pane
    * is actually showing: **a raise**, never below the plan's own count, and **never burning more of the hired
-   * stock than the shipped `Best`** on the same march. What is asserted here is the promise and not a figure,
+   * stock than the climb** on the same march. What is asserted here is the promise and not a figure,
    * because the figure moves with the army while the promise is the position.
    */
   await generateFromAPlan();
@@ -1763,7 +1770,7 @@ test('the capped positions are the same joint search, and Safe spends no more st
   const filed = lastResult();
   expect(filed).not.toBeNull();
   if (filed === null) return;
-  // The answer is the capped search's own and not `Best`'s still standing: filed under the safe key.
+  // The answer is the capped search's own and not the climb still standing: filed under the safe key.
   expect(useRaiseSearchStore.getState().entry?.key).toBe(
     raiseSearchKey(filed.result, { authority: 'safe', dominance: 'safe' }),
   );
@@ -1774,7 +1781,7 @@ test('the capped positions are the same joint search, and Safe spends no more st
   }
 
   const own = countsOf(filed.result);
-  const shipped = raisedCounts(filed.request, filed.result, { authority: 'best', dominance: 'best' }) ?? {};
+  const shipped = raisedCounts(filed.request, filed.result, { authority: 'v2', dominance: 'v2' }) ?? {};
   expect(burnOf(filed.result, { ...own, ...shown })).toBeLessThanOrEqual(
     burnOf(filed.result, { ...own, ...shipped }),
   );

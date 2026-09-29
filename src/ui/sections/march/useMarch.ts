@@ -53,9 +53,9 @@ export interface MarchView {
    */
   canRaise: boolean;
   /**
-   * **A `Best v2` search is in flight for this march** (S-143b). The counts on screen are the shipped
-   * `Best`'s until it lands — a march the game would take, and the seed the search starts from — so this
-   * only says whether the control is still waiting for the exhaustive answer (`raiseSearch.ts`).
+   * **An exhaustive position's search is in flight for this march** (S-143b). The counts on screen are the
+   * damage climb's until it lands — a march the game would take, and the seed the search starts from — so
+   * this only says whether the control is still waiting for the exhaustive answer (`raiseSearch.ts`).
    */
   searching: boolean;
   rows: MarchStackRow[];
@@ -141,10 +141,10 @@ export function useMarch(): MarchView {
      */
     const raised = canRaise ? raisedCounts(snapshot.request, snapshot.result, raiseModes) : null;
     /**
-     * **The exhaustive answer, over the shipped one** (S-143b). `raisedCounts` reads `v2` as `best`, so
-     * `raised` is the seed the search started from and is a march the game would take; the search's own
-     * counts are merged over it exactly as a hand edit is, and they can only ever add damage — the search
-     * was seeded with these counts and takes strict improvements.
+     * **The exhaustive answer, over the climb** (S-143b, S-145). `raisedCounts` answers an exhaustive
+     * position with the damage climb, so `raised` is the seed the search started from and is a march the
+     * game would take; the search's own counts are merged over it exactly as a hand edit is, and they can
+     * only ever add damage — the search was seeded with these counts and takes strict improvements.
      *
      * Two things this must not do, and the review of 2026-09-29 caught both. It must **not** be skipped when
      * `raised` is `null`: the sampled climb can find nothing on a stop where the exhaustive search finds

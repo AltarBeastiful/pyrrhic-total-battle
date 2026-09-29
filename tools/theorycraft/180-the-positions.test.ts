@@ -2,27 +2,32 @@
  * 180 — **every position, over the benchmark's own armies** (S-142/S-143/S-143b; owner, 2026-09-29:
  * *"benchmark the 4 positions on the benchmark usecases to assert all the criterias if they were improved or
  * decreased by each position"*, then *"redo the benchmark comparing all positions including best and best
- * v2 over all benchmark usecases"*).
+ * v2 over all benchmark usecases"*; and on 2026-09-29, *"take all positions against all benchmark cases and
+ * remove the ones that never improves of the other"* — which is how the `Best` segment left, S-145).
  *
- * Seven answers to the same march, priced side by side on **every stop of every benchmark army**:
+ * Six answers to the same march, priced side by side on **every stop of every benchmark army**:
  *
  *   - `As is` — the plan's own counts;
  *   - `Most, in tens` · `Most` — every hired stack as high as the troops still shelter it, rounded and exact;
- *   - `Best` — the shipped climb (`raise.ts`), which samples its box because it runs on the main thread;
- *   - **`Best v2`** — the exhaustive search as it ships (`@/ui/sections/march/exact`, S-143b): the same
- *     seed and the same box, walked whole where the box fits and searched to convergence where it does not;
+ *   - **`Best v2`** — the exhaustive search as it ships (`@/ui/sections/march/exact`, S-143b): the climb's
+ *     seed and box, walked whole where the box fits and searched to convergence where it does not;
  *   - **`Safe`** · **`Tight`** — that same search under a cap on the rare stock (S-144): `Safe` may not burn
- *     more authority chunks than `Best`, `Tight` not more than the plan's own counts.
+ *     more authority chunks than the climb, `Tight` not more than the plan's own counts.
+ *
+ * **The climb is the reference and not a column any more** (S-145): `raisedCounts` answers an exhaustive
+ * position with it, it is what the March draws while a search runs, and it is the vector every exhaustive
+ * search starts from. It is priced on every stop below as `The climb`, and the promises of `v2`, `Safe` and
+ * `Tight` are held against it here and not against a segment.
  *
  * **What must hold, and is asserted** — the positions are promises, and a promise that fails on one army is
  * a defect:
  *
- *   1. **`Best` and `Best v2` never lose damage.** Both only ever take a count that improves the march's
- *      worst opening, so their damage is at least the plan's own on every army, every stop — and `Best v2`,
- *      which searches the same box the climb samples, is never *below* `Best`. **`Safe` and `Tight` are held
- *      to their own pair of promises**: never below the march they are seeded with (`Best` and the plan's own
- *      counts) and never burning more of the stock than it does.
- *   2. **`Most` fields the most units** — never fewer than the plan, and never fewer than either `Best`,
+ *   1. **`Best v2` never loses damage.** It only ever takes a count that improves the march's worst opening,
+ *      so its damage is at least the plan's own on every army, every stop — and, since it is seeded with the
+ *      climb, never *below the climb* either. **`Safe` and `Tight` are held to their own pair of promises**:
+ *      never below the march they are seeded with (the climb and the plan's own counts) and never burning
+ *      more of the stock than it does.
+ *   2. **`Most` fields the most units** — never fewer than the plan, and never fewer than `Best v2`,
  *      which is the whole of what the position claims.
  *   3. **Every raised stack is still sheltered**: strictly under the lowest troop stack, on every stop, at
  *      every position. That is what `shelterUnder` means, and the margin is printed so a thin promise is
@@ -54,19 +59,21 @@ import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
 import { Report, n } from './harness';
 
 /**
- * The five, in the order the segments carry them. `Best v2` **is** what ships (S-143b): the segment runs
- * `exactRaise` through the worker, and this file reads the same function the worker runs.
+ * The five positions, in the order the control carries them. `Best v2` **is** what ships (S-143b): the
+ * segment runs `exactRaise` through the worker, and this file reads the same function the worker runs.
  */
 type PositionKey = Exclude<RaiseMode, 'off'>;
 
 const POSITIONS: readonly { key: PositionKey; label: string }[] = [
   { key: 'tens', label: 'Most, in tens' },
   { key: 'most', label: 'Most' },
-  { key: 'best', label: 'Best' },
+  // **`best` was the fourth and is gone** (S-145): the benchmark is what removed it — on every stop of every
+  // army it moved, `safe` matched or beat it on damage and never burnt more stock. The climb it answered
+  // with is still what the three exhaustive positions draw while they search, so nothing it computed is lost.
   { key: 'v2', label: 'Best v2' },
-  // **The two capped readings of `Best v2`** (S-144): the same search, held to the burn `Best` already
+  // **The two capped readings of `Best v2`** (S-144): the same search, held to the burn the climb already
   // spends (`Safe`) and to the burn the plan's own counts spend (`Tight`), so both are held here to a
-  // promise the other five do not make — see the checks below.
+  // promise the others do not make — see the checks below.
   { key: 'safe', label: 'Safe' },
   { key: 'tight', label: 'Tight' },
 ];
@@ -197,17 +204,18 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
     const report = new Report('180-the-positions');
     report.add(
       [
-        'Every stop of every benchmark army, read four ways: the plan’s own counts, then `Most, in tens`,',
-        '`Most` and `Best`. The four promises are asserted (the damage `Best` keeps, the units `Most` fields,',
-        'the shelter that must still hold, the housing that must still pay); the ten readings are **reported**,',
-        'with the direction each one moved against the plan’s own march.',
+        'Every stop of every benchmark army, read six ways: the plan’s own counts, the climb that an',
+        'exhaustive position draws while it searches, then `Most, in tens`, `Most`, `Best v2`, `Safe` and',
+        '`Tight`. The promises are asserted (the damage an exhaustive answer keeps over the climb, the units',
+        '`Most` fields, the shelter that must still hold, the housing that must still pay); the ten readings',
+        'are **reported**, with the direction each one moved against the plan’s own march.',
       ].join(' '),
     );
 
     const blank = (): Map<string, Tally> =>
       new Map<string, Tally>(CRITERIA.map((criterion) => [criterion.label, { up: 0, same: 0, down: 0 }]));
     const tally = new Map<string, Map<string, Tally>>(POSITIONS.map((position) => [position.label, blank()]));
-    /** The same readings, each position against **`Best`** rather than against the plan's own march. */
+    /** The same readings, each position against **the climb** rather than against the plan's own march. */
     const against = new Map<string, Map<string, Tally>>(
       POSITIONS.map((position) => [position.label, blank()]),
     );
@@ -274,6 +282,18 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
         };
         line('As is', own);
 
+        /**
+         * **The climb, priced like a position though it is none** (S-145). `raisedCounts` answers an
+         * exhaustive mode with it, it is what the March draws from the first frame while a search runs, and
+         * it is the vector every exhaustive search starts from — so it is the march `v2`, `Safe` and `Tight`
+         * are held to. It is computed with the both-pools modes those three are read with, which is the
+         * configuration the control puts the two blocks into when either segment is pressed.
+         */
+        const climbCounts = raisedCounts(scenario.request, base, { authority: 'v2', dominance: 'v2' });
+        const climbRow =
+          climbCounts === null ? own : read(scenario.request, { ...stop.counts, ...climbCounts }, base);
+        if (climbCounts !== null) line('The climb', climbRow);
+
         const byLabel = new Map<string, Reading>([['As is', own]]);
         for (const position of POSITIONS) {
           const found = movesOf(scenario.request, base, position.key);
@@ -305,33 +325,31 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
             }
             pools[unit.pool === 'dominance' ? 'dominance' : 'authority'] += 1;
           }
-          // **The damage promises.** `Most` is the units answer and is not held to this; the two damage
-          // positions are, and `Best v2` — which searches the same box `Best` samples — is never below it.
-          if (position.key === 'best' && reading.damage < own.damage) {
-            here.push(`Best lost damage (${n(reading.damage)} against ${n(own.damage)})`);
-          }
+          // **The damage promises.** `Most` is the units answer and is not held to this; the three damage
+          // positions are, and each — seeded with the climb — is never below it.
           if (position.key === 'v2' && reading.damage < own.damage) {
             here.push(`Best v2 lost damage (${n(reading.damage)} against ${n(own.damage)})`);
           }
-          const bestRow = byLabel.get('Best');
-          if (position.key === 'v2' && bestRow !== undefined && reading.damage < bestRow.damage) {
-            here.push(`Best v2 came out below Best (${n(reading.damage)} against ${n(bestRow.damage)})`);
+          if (position.key === 'v2' && reading.damage < climbRow.damage) {
+            here.push(
+              `Best v2 came out below the climb (${n(reading.damage)} against ${n(climbRow.damage)})`,
+            );
           }
           /**
            * **The two caps are promises about the rare stock** (S-144), and this is where they are held on
-           * every army: `Safe` may not burn more authority chunks than the `Best` it replaces, `Tight` not
+           * every army: `Safe` may not burn more authority chunks than the climb it replaces, `Tight` not
            * more than the plan's own counts — and each is seeded at exactly that march, so each must also
            * **never lose the damage** it is measured against. A burn is `Σ chunks(n)` over the authority
            * stacks (`burnOf`, `marchOf`'s own `mercLost`), which is a property of the counts and not of the
            * fight; the reading is already computed for every column, so the check costs nothing.
            */
-          if (position.key === 'safe' && bestRow !== undefined) {
-            if (reading.damage < bestRow.damage) {
-              here.push(`Safe came out below Best (${n(reading.damage)} against ${n(bestRow.damage)})`);
+          if (position.key === 'safe') {
+            if (reading.damage < climbRow.damage) {
+              here.push(`Safe came out below the climb (${n(reading.damage)} against ${n(climbRow.damage)})`);
             }
-            if (reading.burn > bestRow.burn) {
+            if (reading.burn > climbRow.burn) {
               here.push(
-                `Safe burned more than Best (${String(reading.burn)} against ${String(bestRow.burn)})`,
+                `Safe burned more than the climb (${String(reading.burn)} against ${String(climbRow.burn)})`,
               );
             }
           }
@@ -351,23 +369,20 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
           if (position.key !== 'most' && mostRow !== undefined && reading.hired > mostRow.hired) {
             here.push(`${position.label} fielded more units than Most`);
           }
-          if (position.key === 'most') {
-            const bestSeen = byLabel.get('Best');
-            if (bestSeen !== undefined && reading.hired < bestSeen.hired) {
-              here.push('Most fielded fewer units than Best');
-            }
+          if (position.key === 'most' && reading.hired < climbRow.hired) {
+            here.push('Most fielded fewer units than the climb');
           }
         }
 
         for (const problem of here) broken.push(`${scenario.label} · ${stop.pick}: ${problem}`);
 
         // The criteria: every position against the plan's own march, reading by reading — and against
-        // **`Best`**, which is the comparison that says what `Best v2` buys over what ships.
+        // **the climb**, which is the comparison that says what the exhaustive search buys over what the
+        // control already draws.
         for (const [label, reading] of byLabel) {
           if (label === 'As is') continue;
           const per = tally.get(label);
           const versusBest = against.get(label);
-          const bestRow = byLabel.get('Best');
           for (const criterion of CRITERIA) {
             const way = direction(own[criterion.key], reading[criterion.key]);
             const slot = per?.get(criterion.label);
@@ -378,8 +393,8 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
               else if (worse) slot.down += 1;
               else slot.same += 1;
             }
-            if (bestRow === undefined || versusBest === undefined) continue;
-            const againstBest = direction(bestRow[criterion.key], reading[criterion.key]);
+            if (versusBest === undefined) continue;
+            const againstBest = direction(climbRow[criterion.key], reading[criterion.key]);
             const slot2 = versusBest.get(criterion.label);
             if (slot2 === undefined) continue;
             const up = criterion.better === 'higher' ? againstBest > 0 : againstBest < 0;
@@ -405,7 +420,7 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
     }
     report.add('');
 
-    report.h('Each position against `Best`: what the extra search buys');
+    report.h('Each position against the climb: what the extra search buys');
     report.add('');
     report.add('| criterion | position | improved | unchanged | decreased |');
     report.add('|---|---|---|---|---|');
@@ -421,10 +436,11 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
     report.add('');
     report.add(
       [
-        '`Best v2` searches the same box `Best` samples — walked whole where the box is small, a seeded',
-        'multi-start search where it is not — and it is seeded with `Best`’s own answer, so it can never come',
-        'out below it. **Where the two differ, that is the gain the extra search is worth**, and the rows above',
-        'are the price of getting it: more units fielded and more stock burnt wherever it moves a count.',
+        'Each exhaustive position searches the same box the climb samples — walked whole where the box is',
+        'small, a seeded multi-start search where it is not — and it is seeded with the climb’s own counts, so',
+        'it can never come out below it. **Where the two differ, that is the gain the extra search is worth**,',
+        'and the rows above are the price of getting it: more units fielded and more stock burnt wherever it',
+        'moves a count.',
       ].join(' '),
     );
     report.add('');

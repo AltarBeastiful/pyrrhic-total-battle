@@ -22,7 +22,7 @@
  * `raiseSearchKey`, and re-asked only when that string really moves. A job that lands after its key has
  * been replaced is dropped rather than written: the March is already showing a different march.
  *
- * **What the March shows while it runs**: `raise.ts` reads `v2` as `best`, so the counts, the figures and
+ * **What the March shows while it runs**: `raise.ts` answers an exhaustive position with the climb, so the counts, the figures and
  * every sentence are drawn from a march the game would take, from the first frame. The exhaustive answer
  * replaces them when it lands, and it is seeded with exactly those counts (`exact.ts`), so it can only ever
  * *raise* the damage — there is no window in which the pane shows something worse than `Best`.
@@ -163,7 +163,7 @@ function ask(key: string, snapshot: ResultSnapshot, modes: RaiseModes): void {
       },
       (error: unknown) => {
         // A cancelled job is not a failure and has already been forgotten; anything else is settled as
-        // "no answer", which leaves the March on the shipped `Best` counts rather than on nothing.
+        // "no answer", which leaves the March on the climb's counts rather than on nothing.
         if (isAbortError(error)) return;
         useRaiseSearchStore.getState().settle(key, null);
       },

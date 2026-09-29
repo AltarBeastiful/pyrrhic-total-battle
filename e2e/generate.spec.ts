@@ -801,21 +801,18 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
   await expect(march.getByText(/Raised to what the troops shelter/)).toBeVisible();
   await expectChosen('Most');
 
-  // **The fourth position promises damage, not units** (S-143): it fields at least the plan's own count and
-  // never more than `Most` — and it adds **no line to the pane** (owner, 2026-09-29: *"it moves the ui its
-  // unpleasant"*), so neither `Most`'s sentence nor any other is drawn under the figures.
+  // **The damage positions are raises under the same ceiling** (S-143, S-143b, S-145): each fields at least
+  // the plan's own count and never more than `Most` — and none of them adds **a line to the pane** (owner,
+  // 2026-09-29: *"it moves the ui its unpleasant"*), so neither `Most`'s sentence nor any other is drawn
+  // under the figures. The control is **six segments** since S-145: the `Best` segment is gone, and the
+  // climb it answered with is what the three exhaustive positions draw while their search runs.
   const most = await hunter();
-  await press('Best');
-  await expectChosen('Best');
-  const best = await hunter();
-  expect(best, 'Best fell below the plan’s own count').toBeGreaterThanOrEqual(before);
-  expect(best, 'Best went past what Most fields').toBeLessThanOrEqual(most);
-  await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
-  await expect(march.getByText(/hits hardest with under the troops/)).toHaveCount(0);
+  await expect(control.getByRole('radio')).toHaveCount(6);
+  await expect(control.getByRole('radio', { name: 'Best', exact: true })).toHaveCount(0);
 
-  // **The fifth position is the same answer, searched exhaustively** (S-143b): it is a raise under the same
-  // ceiling and the same stock, and the search that answers it runs in a worker — so the figures arrive
-  // *after* the press, from a client, and the segment carries the wait (`aria-busy`) until they do.
+  // **The first of the three is the exhaustive answer** (S-143b): it is a raise under the same ceiling and
+  // the same stock, and the search that answers it runs in a worker — so the figures arrive *after* the
+  // press, from a client, and the segment carries the wait (`aria-busy`) until they do.
   await press('Best v2');
   await expectChosen('Best v2');
   await expect
@@ -825,9 +822,9 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
   await expect(control).toHaveAttribute('aria-busy', 'false');
   await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
 
-  // **The sixth and seventh are that same search under a cap on the hired stock** (S-144): `Safe` may not
-  // burn more chunks of mercenaries than the `Best` above it, `Tight` not more than the plan's own counts —
-  // so `Tight` cannot go below the plan's own count on this stack, and neither may pass what `Most` fields.
+  // **The other two are that same search under a cap on the hired stock** (S-144): `Safe` may not burn more
+  // chunks of mercenaries than the climb it replaces, `Tight` not more than the plan's own counts — so
+  // `Tight` cannot go below the plan's own count on this stack, and neither may pass what `Most` fields.
   // Both are raises under the same ceiling, and both are answered by the worker, so both carry the wait.
   for (const position of ['Safe', 'Tight']) {
     await press(position);

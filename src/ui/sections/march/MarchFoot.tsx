@@ -38,7 +38,7 @@ import { DamageSplit } from './DamageSplit';
 import { MarchAction, MarchCountsBar } from './MarchPills';
 import classes from './march.module.css';
 import { amount } from './format';
-import { RAISE_DAMAGE_POSITIONS } from './raise';
+import { isExhaustive } from './raise';
 import { TradeoffStrip } from './TradeoffStrip';
 import { useRunStore } from './runStore';
 import { useMarch } from './useMarch';
@@ -246,24 +246,25 @@ export function MarchActions() {
  * on — so it is the sentence that has to carry that fact, once, in the muted ink every other line about the
  * march is written in.
  *
- * **`Best` says nothing here, on purpose** (S-143; owner, 2026-09-29: *"remove the text Raised to the counts
- * this march hits hardest with … it moves the ui its unpleasant"*). The sentence earns its line where the
- * raise leaves a near tie to warn about; `Best` stands the stacks where the march hits hardest, which is
- * often lower down and no tie at all, so the line was a paragraph about nothing that also shifted the pane
- * every time the position changed. The segment the player pressed and its tooltip already say which answer
- * the counts are — rule 15, nothing on screen without value, read the other way round for once.
+ * **The damage positions say nothing here, on purpose** (S-143; owner, 2026-09-29: *"remove the text Raised
+ * to the counts this march hits hardest with … it moves the ui its unpleasant"*). The sentence earns its
+ * line where the raise leaves a near tie to warn about; a damage position stands the stacks where the march
+ * hits hardest, which is often lower down and no tie at all, so the line was a paragraph about nothing that
+ * also shifted the pane every time the position changed. The segment the player pressed and its tooltip
+ * already say which answer the counts are — rule 15, nothing on screen without value, read the other way
+ * round for once. **That is one question and not two** (S-145): every position that promises damage is an
+ * exhaustive one, so `raise.ts` names the set once (`isExhaustive`) and this asks it.
  */
 export function MarchEditedNote() {
   const { edited, raiseModes } = useMarch();
   const raising = raiseModes.authority !== 'off' || raiseModes.dominance !== 'off';
-  // **Both damage positions are silent here** — `Best` (S-143) and `Best v2` (S-143b), for the same reason
-  // and in the same words: they stand the stacks where the march hits hardest, which is often lower down
-  // and no near tie at all, so the sentence would be a paragraph about nothing that also shifted the pane
-  // every time the position changed.
-  const best = RAISE_DAMAGE_POSITIONS.some(
-    (mode) => raiseModes.authority === mode || raiseModes.dominance === mode,
-  );
-  if (!edited && (!raising || best)) return null;
+  // **Every damage position is silent here** — `Best v2` (S-143b) and its two capped readings (S-144), and
+  // the `Best` segment that preceded them (S-145), for one reason and in one sentence: they stand the stacks
+  // where the march hits hardest, which is often lower down and no near tie at all, so the line would be a
+  // paragraph about nothing that also shifted the pane every time the position changed. Since S-145 the
+  // damage positions *are* the exhaustive ones, which is why the question is `isExhaustive` and asked once.
+  const damagePosition = isExhaustive(raiseModes.authority) || isExhaustive(raiseModes.dominance);
+  if (!edited && (!raising || damagePosition)) return null;
   return (
     <Stack gap={2}>
       {edited && (
@@ -272,7 +273,7 @@ export function MarchEditedNote() {
           yours to balance.
         </Text>
       )}
-      {raising && !best && (
+      {raising && !damagePosition && (
         <Text className={classes.meta} c="dimmed">
           Raised to what the troops shelter: each hired stack stands just under your lowest troop stack, and
           the game decides a near tie. Nothing is re-sized; the figures are recomputed on these counts.

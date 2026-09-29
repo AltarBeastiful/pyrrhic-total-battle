@@ -1,5 +1,5 @@
 /**
- * **The exhaustive raise** (S-143b): `Best` with the sampling taken out, as the app's own march.
+ * **The exhaustive raise** (S-143b): the climb with the sampling taken out, as the app's own march.
  *
  * The algorithm is `src/engine/exact.ts` and knows nothing about battles. This file is the half that does:
  * what a slot is on a march (a hired stack, from the plan's own count up to `min(shelter ceiling, owned
@@ -30,7 +30,7 @@
  * own control stands on `v2`, and no other. With both on `v2` — which is what pressing the segment does —
  * it is **one search over the mercenaries and the monsters together**, and that is the configuration
  * experiment 181 measured: the joint answer is worth a median +2.80 % and up to +5.45 % of damage over the
- * shipped `Best`, on 10 of the 43 stops where a position moves a count at all. A pool standing on another
+ * climb (the segment S-145 removed), on 10 of the 43 stops where a position moves a count at all. A pool standing on another
  * position is **held at that position's counts** while the others are walked, so a mixed control answers the
  * question it looks like it is asking.
  *
@@ -94,10 +94,10 @@ export interface ExactRaiseAnswer {
   /**
    * **A count for every stack the search walked, and not only the ones it moved.** The distinction is not
    * cosmetic and the sparse version was a bug: a record diffed against the *plan's* own counts and then
-   * merged over the shipped `Best`'s answer — which is how the March merges it — silently keeps the seed's
+   * merged over the climb's answer — which is how the March merges it — silently keeps the seed's
    * count wherever the search decided to come back **down** to the plan's. That is exactly the "two stacks
    * only improve together" move the pairwise neighbourhood exists for, so the vector on screen would be one
-   * the search never scored, and it could sit below the `Best` it was seeded with.
+   * the search never scored, and it could sit below the climb it was seeded with.
    */
   counts: Record<string, number>;
   /** `walked` when the whole box was enumerated, `searched` when the multistart search answered. */
@@ -119,7 +119,7 @@ export function exhaustivePools(modes: RaiseModes): RaisedPool[] {
  * stacks), it is a property of the counts and not of the fight, and it is **the authority pool's alone**
  * (S-102 — a trained monster is a price in silver, queue and dragon coins, and not a stock that drains). So
  * only the mercenaries' control can cap anything, and the two caps are the two marches a player can compare
- * himself with: `safe` may not burn more than the shipped `Best` it replaces (its counts are exactly what
+ * himself with: `safe` may not burn more than the climb the March draws while it searches (its counts are exactly what
  * `raisedCounts` answers with, which is also the pane's own first frame), `tight` may not burn more than the
  * **plan's own counts** — the march before any position moved a count, so not one extra chunk.
  *
@@ -136,7 +136,7 @@ function burnCap(base: StackResult, modes: RaiseModes, seed: Record<string, numb
  * **The best this box has**, or `null` when there is nothing to search: no pool stands on `v2`, the march
  * fields no troop to shelter under, or every stack of a `v2` pool is already at its ceiling or its stock.
  * `null` is not "the plan's counts are the answer" — a caller that gets `null` falls back to what
- * `raisedCounts` says, which is the shipped `Best` and is what the March was drawing anyway.
+ * `raisedCounts` says, which is the climb and is what the March was drawing anyway.
  */
 export function exactRaise(
   request: StackRequest,
@@ -146,7 +146,7 @@ export function exactRaise(
    * How to price a vector. Left out, this is `byDamage` — the position the interface ships — and a policy
    * changes *which* of this box's vectors wins, never which vectors are in it: the slots, the bounds, the
    * housing check and the seed are the same ones either way, so a ranked search is still a raise, still legal
-   * and still never below the `Best` it starts from.
+   * and still never below the climb it starts from.
    */
   rank: RaiseRank = byDamage,
 ): ExactRaiseAnswer | null {
@@ -156,7 +156,7 @@ export function exactRaise(
   if (floor === null) return null;
 
   /**
-   * **The seed, and the fallback**: `raisedCounts` reads `v2` as `best`, so this one call is both the vector
+   * **The seed, and the fallback**: `raisedCounts` answers an exhaustive position with the climb, so this one call is both the vector
    * the search starts from and the counts the March shows while the search runs. One arithmetic, two uses —
    * which is what makes the promise "`Best v2` never loses to `Best`" true by construction rather than by
    * testing.
@@ -191,11 +191,11 @@ export function exactRaise(
     });
     /**
      * **A `Tight` block starts at the plan's own counts** — the march it promises not to cost more than —
-     * where a `safe` or `v2` block starts where the shipped `Best` put it. A slot left out of `start` is its
+     * where a `safe` or `v2` block starts where the climb put it. A slot left out of `start` is its
      * `from`, which is the plan's count, so `tight` is the same statement made by leaving it out; it is
      * spelled here because the *promise* has to be visible: the answer can only improve on where it starts,
      * so `tight` cannot lose to the plan's own march, by construction, exactly as `safe` cannot lose to
-     * `Best`.
+     * the climb.
      */
     if (modes[stack.pool as RaisedPool] === 'tight') continue;
     const wanted = seed[stack.unitId];

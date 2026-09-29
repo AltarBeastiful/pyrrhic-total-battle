@@ -45,7 +45,8 @@ import { raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/ra
 import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
 import { Report, n } from './harness';
 
-const BEST = { authority: 'best', dominance: 'best' } as const;
+/** The climb on both hired pools (S-145): what an exhaustive position draws while its search runs. */
+const CLIMB = { authority: 'v2', dominance: 'v2' } as const;
 /** The fifth position, on both pools: what the March presses when it asks for the shipped search. */
 const V2 = { authority: 'v2', dominance: 'v2' } as const;
 
@@ -273,7 +274,7 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
         if (slots.length === 0) continue;
         const score = scorerOf(scenario.request, base);
 
-        const appRun = timed(() => raisedCounts(scenario.request, base, BEST) ?? {});
+        const appRun = timed(() => raisedCounts(scenario.request, base, CLIMB) ?? {});
         const app = appRun.value;
         const appDamage = score(app);
 

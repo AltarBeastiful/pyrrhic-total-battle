@@ -95,14 +95,13 @@ const BOTH: Record<RaiseMode, RaiseModes> = {
   off: { authority: 'off', dominance: 'off' },
   tens: { authority: 'tens', dominance: 'tens' },
   most: { authority: 'most', dominance: 'most' },
-  best: { authority: 'best', dominance: 'best' },
-  // The exhaustive positions read as `best` in `raisedCounts` (S-143b, S-144): their answers are the
-  // worker's, and this file is about what the four synchronous positions promise. `safe` and `tight` are
-  // `v2` under a cap on the stock, so on this file's reading — the counts the pane draws first — they are the
-  // same answer, and that is exactly the promise they make: no worse than the `Best` drawn here.
-  v2: { authority: 'best', dominance: 'best' },
-  safe: { authority: 'best', dominance: 'best' },
-  tight: { authority: 'best', dominance: 'best' },
+  // The exhaustive positions read as the climb in `raisedCounts` (S-143b, S-144, S-145): their answers are
+  // the worker's, and this file is about what the synchronous positions promise. `safe` and `tight` are `v2`
+  // under a cap on the stock, so on this file's reading — the counts the pane draws first — they are the
+  // same answer, and that is exactly the promise they make: no worse than the climb drawn here.
+  v2: { authority: 'v2', dominance: 'v2' },
+  safe: { authority: 'v2', dominance: 'v2' },
+  tight: { authority: 'v2', dominance: 'v2' },
 };
 
 /** What the two hired pools have left to spend, in housing points. */

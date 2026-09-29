@@ -31,8 +31,9 @@ import { raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/ra
 import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
 import { Report, n } from './harness';
 
-const BEST = { authority: 'best', dominance: 'best' } as const;
-/** The fifth position, on both pools: what pressing `Best v2` anywhere puts the control into. */
+/** The climb on both hired pools (S-145): what an exhaustive position draws while its search runs. */
+const CLIMB = { authority: 'v2', dominance: 'v2' } as const;
+/** The exhaustive search, on both pools: what pressing `Best v2` anywhere puts the control into. */
 const V2 = { authority: 'v2', dominance: 'v2' } as const;
 
 /**
@@ -106,7 +107,7 @@ describe.skipIf(!process.env.THEORY)('what Best v2 costs', () => {
         const ms = performance.now() - started;
 
         const appStarted = performance.now();
-        const app = raisedCounts(scenario.request, base, BEST) ?? {};
+        const app = raisedCounts(scenario.request, base, CLIMB) ?? {};
         const appMs = performance.now() - appStarted;
 
         const counts = found?.counts ?? {};

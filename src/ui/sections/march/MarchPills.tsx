@@ -103,19 +103,14 @@ const RAISE_CHOICES: readonly { mode: RaiseMode; label: string; help: string }[]
     help: 'Every stack as high as it can go and still fall after your troops.',
   },
   {
-    mode: 'best',
-    label: 'Best',
-    help: 'The counts this march hits hardest with under your troops, which can be fewer units than Most.',
-  },
-  {
     mode: 'v2',
     label: 'Best v2',
-    help: 'The same answer searched exhaustively, over the mercenaries and the monsters together. Slower, and never worse than Best.',
+    help: 'The counts this march hits hardest with under your troops, searched exhaustively over the mercenaries and the monsters together. Slower, and never worse than the counts drawn while it runs.',
   },
   {
     mode: 'safe',
     label: 'Safe',
-    help: 'Best v2 held to the mercenary stock Best already spends: no extra chunks of hired units, and never worse than Best.',
+    help: 'Best v2 held to the mercenary stock the march already burns on screen: no extra chunks of hired units, and never worse than those counts.',
   },
   {
     mode: 'tight',
@@ -137,19 +132,22 @@ const isRaiseMode = (value: string): value is RaiseMode =>
  * **How high this pool's stacks are asked to stand** (S-142; owner, 2026-09-29: *"a slider with three
  * options: default count, maximize number and spent (rounding to the nearest 10 number that's still
  * shielded), maximize global (going to nearest count that's still shielded not caring about rounding to
- * 10)"*), and the fourth the owner added the same day — *"give both positions but defer the best damage
- * option to after the most is implemented as a second step"* (S-143).
+ * 10)"*), and the three damage positions the owner added the same day — *"give both positions but defer the
+ * best damage option to after the most is implemented as a second step"* (S-143), then *"implement best V2
+ * and add it to the interface"* (S-143b) and *"we could have a safe best-v2 that is bestv2 but accounting
+ * for merc lost and dmg/merc"* (S-144).
  *
  * It sits under the pool's own figure and above its pills, so it is read with the stacks it moves, on the
  * mercenaries' block and the monsters' block and nowhere else — the troops are what shelters, never what is
- * sheltered. Stock Mantine, four short segments, no custom CSS (rule 23); each segment names itself in one
+ * sheltered. Stock Mantine, six short segments, no custom CSS (rule 23); each segment names itself in one
  * sentence for a pointer or a keyboard (the tooltip), and the group says the same thing once for a reader
  * that never sees it (the hidden line below).
  *
- * `Best` is a **different promise** and not a better `Most`: `Most` fields the most units the troops
- * shelter, `Best` fields the counts that hit hardest, which can be fewer (a stack with more total HP climbs
- * the kill order and strikes in fewer rounds — see `raise.ts`). Both are raises, because the march on screen
- * is always the floor they start from.
+ * The damage positions are a **different promise** and not a better `Most`: `Most` fields the most units the
+ * troops shelter, the three answer with the counts that hit hardest, which can be fewer (a stack with more
+ * total HP climbs the kill order and strikes in fewer rounds — see `raise.ts`). All of them are raises,
+ * because the march on screen is always the floor they start from. **The climb that used to be the `Best`
+ * segment is still what they draw while their search runs** (S-145).
  *
  * Nothing here computes anything: the position is run state (`runStore.raiseModes`) and the counts it means
  * are derived from the march in `useMarch`, which is what lets the position survive a Generate.
@@ -188,7 +186,7 @@ export function MarchRaiseControl({
                 keeps its box, so choosing an exhaustive position shifts nothing while the search runs,
                 however long it takes. **The mark goes in the segment that is chosen** and not in all three
                 exhaustive ones — the control only ever reports a wait for the position standing on it — so
-                the other six are drawn exactly as they were; a stock `Group` rather than a CSS rule, because
+                the other five are drawn exactly as they were; a stock `Group` rather than a CSS rule, because
                 a row with a mark in it is what the kit is for (design rule 23).
               */}
               {choice.mode === value && searching ? (

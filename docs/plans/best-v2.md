@@ -301,8 +301,9 @@ one axis that matters (does a capped position still keep every promise the uncap
 1. **The spinner was drawn in all three exhaustive segments**, because the wrapper asked `isExhaustive(mode)`
    and not "is this the segment that is chosen". With three positions the defect the S-143b review had
    already fixed once could come back a different way — three spinners on a control that is searching once.
-   It is `choice.mode === value` now, and the UI test that holds it (`the fifth segment carries the wait
-   itself`) is unchanged and still passes, which is why it was the one that caught this.
+   It is `choice.mode === value` now, and the UI test that holds it (named `the fifth segment carries the wait
+   itself` when this was written, `the chosen segment carries the wait itself` since S-145) is unchanged and
+   still passes, which is why it was the one that caught this.
 2. **`Tight`'s seed had to be the plan's own counts and not `Best`'s.** `exactSearch` fills a slot left out
    of `start` with its `from`, which on this box *is* the plan's count — so the promise "`Tight` cannot lose
    to the plan's own march" holds by construction, and it holds only because the seed and the cap are the
@@ -314,3 +315,29 @@ one axis that matters (does a capped position still keep every promise the uncap
 4. **`isExhaustive` replaced three `=== 'v2'` comparisons** (the control's spinner, the pane's silence, the
    store's "one standing rule") before any of them could be forgotten, which is the same mistake S-143b's
    own review made with `searching`.
+
+## 11. What S-145 removed: the `Best` segment (2026-09-29)
+
+The owner, on the finished control: *"take all positions against all benchmark cases and remove the ones that
+never improves of the other, trying to simplify the slider without losing upgrading a march over different
+criterias for cheap and all usecases"*. Experiment 180 is the answer to the first half — it prices every
+position on **every stop of every benchmark army, all six plan-slider options**, and the second table it
+prints is each position against the climb rather than against `Best` — and it is what removed the segment:
+
+- **`Best` never beat `Safe`.** On the 41 stops the two both answered, `Safe`'s damage was equal or above on
+  **41** and its burn equal or below on **41** — 9 damage gains, 1 chunk saved, none lost either way. That is
+  not a benchmark coincidence: `Safe` is seeded with the climb's counts and accepts only vectors whose burn
+  is at most the climb's, so the promise holds by construction (§3.1).
+- **None of it is lost.** `raisedCounts` answers an exhaustive mode with the climb — that is what the March
+  draws from the first frame and what every search is seeded with — so the segment's only unique offer was
+  answering *without* the worker wait. The four unit answers, the three exhaustive ones and `As is` are the
+  six segments now (`MarchPills.tsx`), and `RaiseMode` no longer names `best` at all.
+- **It also closes S-144's open width defect.** Measured in a real browser at 390 px wide (a one-off
+  Playwright spec, run and deleted like S-144's own): the seven segments were **370 px inside a 358 px
+  control — 14 px over**, the last segment's right padding cut; the six are **350 px in the same 358 px
+  control**, 8 px to spare, every label whole (`/tmp/raise-390-after.png`). The one-line `Most, in tens` →
+  `Tens` refactor S-144 priced at 59 px is therefore no longer needed.
+
+The doc above is kept as it was written — it is the reasoning of S-143b and S-144 and the numbers are still
+the numbers — with `Best` read as **the climb** wherever it is the seed, and as **a segment that no longer
+exists** wherever it is a position.

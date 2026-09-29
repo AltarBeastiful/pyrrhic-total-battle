@@ -35,7 +35,12 @@ import { burnOf, raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/
 import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
 import { Report, n } from './harness';
 
-const BEST = { authority: 'best', dominance: 'best' } as const;
+/**
+ * **The climb on both hired pools** (S-145): `raisedCounts` answers an exhaustive mode with it, so this is
+ * the march the control draws while a search runs and the vector every search below is seeded with. It was
+ * the `Best` segment until the benchmark showed `Safe` never lost to it.
+ */
+const CLIMB = { authority: 'v2', dominance: 'v2' } as const;
 const V2 = { authority: 'v2', dominance: 'v2' } as const;
 
 /** The most burn a rank may accept: anything over the cap is refused, exactly as the housing refuses a vector. */
@@ -138,7 +143,7 @@ describe.skipIf(!process.env.THEORY)('the raise that pays for its damage in stoc
           };
         };
 
-        const shipped = raisedCounts(scenario.request, base, BEST) ?? {};
+        const shipped = raisedCounts(scenario.request, base, CLIMB) ?? {};
         const bestReading = read(shipped);
 
         /** One search of the shipped box under one rank — `space` comes off the answer, not a second search. */

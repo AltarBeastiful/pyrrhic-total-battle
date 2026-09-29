@@ -28,7 +28,7 @@ import { applyCounts } from './manual';
 
 /**
  * How many counts one sweep samples across a stack's whole range before refining, and how many sweeps the
- * `best` climb may make. Bounded on purpose: this is derived on the main thread every time the March
+ * damage climb may make. Bounded on purpose: this is derived on the main thread every time the March
  * re-derives, and a walk that has stopped improving has finished (see `climbedCounts`).
  */
 const COARSE_SAMPLES = 16;
@@ -45,34 +45,40 @@ export type RaiseRequest = Pick<StackRequest, 'units' | 'caps' | 'housing'>;
  * What one pool is asked for. `off` is the generated counts, and the state every march opens in — which is
  * why `raisedCounts` answers `null` when both pools are off: a mode nobody moved changes nothing at all.
  *
- * `most` and `tens` promise **units** — the most the shelter allows. `best` promises **damage**, which is a
- * different thing on purpose (S-143; owner, 2026-09-29: *"give both positions but defer the best damage
- * option to after the most is implemented as a second step"*): a stack with more units has more total HP, so
- * it climbs the kill order and survives fewer rounds, and the units bought can be paid for with a round of
- * strikes. His own battle report of 2026-09-29 is the proof of the mechanic — 14 stacks, 28 hits, each
- * stack's hits being its kill position — and experiment 142 priced it: on his account `Most` never *lost*
- * damage over 16 readings, but the mechanism is real and is what this position exists to make safe.
+ * `most` and `tens` promise **units** — the most the shelter allows. The other three promise **damage**,
+ * which is a different thing on purpose (S-143; owner, 2026-09-29: *"give both positions but defer the best
+ * damage option to after the most is implemented as a second step"*): a stack with more units has more total
+ * HP, so it climbs the kill order and survives fewer rounds, and the units bought can be paid for with a
+ * round of strikes. His own battle report of 2026-09-29 is the proof of the mechanic — 14 stacks, 28 hits,
+ * each stack's hits being its kill position — and experiment 142 priced it: on his account `Most` never
+ * *lost* damage over 16 readings, but the mechanism is real.
  *
- * **`v2` is the same promise with the sampling taken out** (S-143b; owner, 2026-09-29: *"implement best V2
- * and add it to the interface"*). It is not a fifth kind of answer — it is `best` answered exhaustively, and
- * it is a separate position rather than a replacement because of what it costs: `climbedCounts` samples
- * because it runs on the main thread, and this one walks a box of up to a million vectors in the worker
- * (measured: 0 ms on a small box, **46 s** on the widest). Its own module is `exact.ts`, its own job is
- * `raise` (`src/worker/protocol.ts`), and **it is not answered by `raisedCounts`**: this function cannot run
- * a search, so it reads `v2` as `best` — the answer the March shows until the exhaustive one lands, which
- * the search can only improve on (see `exactRaise`).
+ * **`v2` is that damage answered exhaustively** (S-143b; owner, 2026-09-29: *"implement best V2 and add it to
+ * the interface"*). Its own module is `exact.ts`, its own job is `raise` (`src/worker/protocol.ts`), and it
+ * walks a box of up to a million vectors in the worker (measured: 0 ms on a small box, **46 s** on the
+ * widest). **It is not answered by `raisedCounts`**: this function cannot run a search, so it reads `v2` as
+ * **the climb** — `climbedCounts`, the sampled walk that is both the seed the search starts from and the
+ * answer the March draws while it runs, which the search can only improve on (see `exactRaise`).
  *
  * **`safe` and `tight` are that same search under a cap on the rare stock** (S-144; owner, 2026-09-29:
  * *"we could have a safe best-v2 that is bestv2 but accounting for merc lost and dmg/merc"*). A mercenary is
  * the one thing a march does not get back, so the two ask the exhaustive question under a **burn budget**:
- * `safe` may not burn more authority chunks than the `Best` it replaces, `tight` may not burn more than the
- * **plan's own counts** — not one extra chunk. Measured (experiment 183, `out/183-safe-raise.md`): `safe`
- * keeps 9 of `v2`'s 10 gains and never spends a chunk for them, and `tight` beats the plan's own march by
- * +3.85 % median on 28 of 45 stops at the same stock. **Ranking on damage a mercenary outright is a trap**
- * — measured at −7.25 % median damage, and investigation 0019's own finding — so neither position optimises
+ * `safe` may not burn more authority chunks than the climb, `tight` may not burn more than the **plan's own
+ * counts** — not one extra chunk. Measured (experiment 183, `out/183-safe-raise.md`): `safe` keeps 9 of
+ * `v2`'s 10 gains and never spends a chunk for them, and `tight` beats the plan's own march by +3.85 %
+ * median on 28 of 45 stops at the same stock. **Ranking on damage a mercenary outright is a trap** —
+ * measured at −7.25 % median damage, and investigation 0019's own finding — so neither position optimises
  * that ratio; they bound the stock instead, which is the same promise without the trap.
+ *
+ * **`best` was a fourth damage position and is gone** (S-145; owner, 2026-09-29: *"remove the ones that never
+ * improves of the other"*). It was this same climb, shipped as a segment of its own, and the benchmark that
+ * prices every position on every stop of every army (`out/180-the-positions.md`) found it **never better
+ * than `safe`**: on the 41 stops it moved, damage equal or above on 41, the stock burnt equal or below on 41.
+ * The climb is not lost by the removal — it is what the three exhaustive positions draw from their first
+ * frame and the vector their search starts from — so the segment's only unique offer was answering without
+ * the worker's wait, which the control gets anyway: the climb is drawn the moment the segment is pressed.
  */
-export type RaiseMode = 'off' | 'tens' | 'most' | 'best' | 'v2' | 'safe' | 'tight';
+export type RaiseMode = 'off' | 'tens' | 'most' | 'v2' | 'safe' | 'tight';
 
 /** The two pools a hired stack is paid out of — the ones this control speaks for. */
 export interface RaiseModes {
@@ -91,8 +97,16 @@ export type RaisedPool = (typeof RAISED_POOLS)[number];
 /**
  * **The positions answered by the worker's search and not by arithmetic in a render** (S-143b, S-144):
  * `v2` and the two burn-capped readings of it. Named once so that everything which has to tell them apart
- * from the four shipped positions — the control's spinner, the pane's own sentence, the search's key — asks
- * one question rather than three.
+ * from the positions answered in the render — the control's spinner, the search's key, the store's *"one
+ * standing rule over both blocks"*, the pane's own silence — asks one question rather than four.
+ *
+ * **They are also the positions that promise damage rather than units**, and that is one fact and not two
+ * since S-145: `best` was the fourth, the only damage answer that needed no search, and removing it left the
+ * two sets equal. `safe` and `tight` promise damage **under a cap on the stock**, which is still damage and
+ * not units: what they will not do is buy it with more chunks than the climb (`safe`) or than the plan's own
+ * counts (`tight`). So `MarchFoot.tsx` asks *this* when it decides the pane's sentence is not earned —
+ * a damage position stands the stacks where the march hits hardest, which is often lower down and no near
+ * tie at all, and a line about a near tie would be a paragraph about nothing.
  */
 export const EXHAUSTIVE_MODES = ['v2', 'safe', 'tight'] as const satisfies readonly RaiseMode[];
 
@@ -100,16 +114,6 @@ export const EXHAUSTIVE_MODES = ['v2', 'safe', 'tight'] as const satisfies reado
 export function isExhaustive(mode: RaiseMode): boolean {
   return (EXHAUSTIVE_MODES as readonly RaiseMode[]).includes(mode);
 }
-
-/**
- * **The positions that promise damage rather than units** — `best` and its three exhaustive siblings
- * (S-143, S-143b, S-144). Named once because two places ask the same question: which answers are not the
- * shelter line stood at its highest. The March's sentence stays silent under all four (`MarchFoot.tsx`), and
- * the bench labels them together. `safe` and `tight` promise damage **under a cap on the stock**, which is
- * still damage and not units: what they will not do is buy it with more chunks than the position they
- * replace (`safe`) or than the plan's own counts (`tight`).
- */
-export const RAISE_DAMAGE_POSITIONS = ['best', 'v2', 'safe', 'tight'] as const satisfies readonly RaiseMode[];
 
 /**
  * The troop floor: the lowest troop stack's total HP, which is the line every hired stack must stay under.
@@ -184,14 +188,17 @@ export function burnOf(base: StackResult, counts: Record<string, number>): numbe
 }
 
 /**
- * **The best damage under the shelter** (`best`), for one pool: the counts the march hits hardest with.
+ * **The best damage under the shelter, for one pool** — the counts the march hits hardest with. It is what
+ * the March draws while an exhaustive position's search is out, and the seed that search starts from
+ * (`exactRaise`), which is why it is not a position of its own since S-145: as a segment it was `safe`'s
+ * equal or worse on every stop of every benchmark army (`out/180-the-positions.md`).
  *
  * A coordinate climb, the shape `relaxPreservation` already uses (`stacker.ts:180`): one stack at a time,
  * every count from what the plan fields to that stack's ceiling — under the stock and the housing, exactly
  * as `most` — keeping the count that gives the march its best **worst opening**, the reading the plan itself
  * is ranked on (S-108, *"damage is the worst opening, never the average"*), and sweeping again while a sweep
- * still improves. **Only improvements are ever taken**, so this position can never lose damage; it can
- * field fewer units than `Most` and never fewer than the plan's own count.
+ * still improves. **Only improvements are ever taken**, so it can never lose damage; it can field fewer
+ * units than `Most` and never fewer than the plan's own count.
  *
  * **Two samples per range, and a cap on the sweeps.** This runs on the main thread every time the March
  * re-derives, so the walk is bounded rather than exhaustive: a coarse walk of the whole range finds the
@@ -304,8 +311,9 @@ function damageOf(request: StackRequest, base: StackResult, counts: Record<strin
  * 4. A stack is only ever **raised**: one already at or above its ceiling — a hand-typed count, a march the
  *    shelter does not reach — keeps what it has. The control promises more units, never fewer.
  *
- * `best` answers a different question and walks differently (S-143): see `climbedCounts`.
- *
+ * The three exhaustive positions answer a different question and walk differently (S-143b, S-144): they are
+ * seeded by `climbedCounts` here, and the search that improves on that seed is `exactRaise`'s.
+ * *
  * The stock bound is the account's own (`request.caps`, absent = unlimited) and not the per-march ration a
  * re-size applies (`largestSustained`): the owner asked for *"the maximum number available"*, and spending
  * one march's worth of a stock the plan spreads over four is a decision the player is making on purpose.
@@ -321,22 +329,22 @@ export function raisedCounts(
 
   let out: Record<string, number> | null = null;
   for (const pool of RAISED_POOLS) {
-    // **The three exhaustive positions are answered by `best` here** (S-143b, S-144). This function samples
-    // because it runs on the main thread between two keystrokes, and the exhaustive answers are `exactRaise`'s,
-    // in the worker. Reading them as `best` is what gives the March a legal, never-worse march from the first
-    // frame — the search is seeded with exactly this and takes strict improvements only, so it can only raise
-    // the damage above what is drawn now. For `safe` and `tight` the drawn march is also the **cap's own
-    // reading**: `safe` may not burn more than this answer, and this answer is what it is measured against.
-    const mode = isExhaustive(modes[pool]) ? 'best' : modes[pool];
+    const mode = modes[pool];
     if (mode === 'off') continue;
     // The live stacks of this pool; `base.stacks` is in kill order, first to fall first.
     const stacks = base.stacks.filter((stack) => stack.pool === pool && stack.count > 0);
     if (stacks.length === 0) continue;
 
-    // **`best` is its own walk** (S-143): the counts the march hits hardest with, which is not the same
-    // question as the most units that fit, and it is answered by replaying the battle rather than by
-    // arithmetic (`climbedCounts`).
-    if (mode === 'best') {
+    /**
+     * **The three exhaustive positions are answered by the climb here** (S-143b, S-144). This function
+     * samples because it runs on the main thread between two keystrokes, and the exhaustive answers are
+     * `exactRaise`'s, in the worker. The climb is what gives the March a legal, never-worse march from the
+     * first frame — the search is seeded with exactly this and takes strict improvements only, so it can
+     * only raise the damage above what is drawn now. For `safe` and `tight` the drawn march is also the
+     * **cap's own reading**: `safe` may not burn more than this answer, and this answer is what it is
+     * measured against.
+     */
+    if (isExhaustive(mode)) {
       const climbed = climbedCounts(request, base, stacks, floor, pool);
       if (climbed !== null) {
         out ??= {};

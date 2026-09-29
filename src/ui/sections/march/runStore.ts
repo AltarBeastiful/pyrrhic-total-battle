@@ -371,7 +371,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
          * mercenaries and the monsters **together** — that is the configuration experiment 181 measured, and
          * the joint answer is worth up to +5.45 % where two separate searches are not — so pressing the
          * segment on either block puts both of them on it. The two controls are two views of one rule, and
-         * they say so. The cap is the mercenaries' own (`burnCap`): `safe` bounds it at what `Best` spends
+         * they say so. The cap is the mercenaries' own (`burnCap`): `safe` bounds it at what the climb spends
          * and `tight` at what the plan's counts spend, and on the monsters' block alone neither is reachable,
          * which is S-102's rule that a trained monster is a price and not a stock.
          */

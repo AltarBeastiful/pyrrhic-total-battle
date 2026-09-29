@@ -10,7 +10,7 @@
  * has any business importing a UI module. The march that decides what a slot and a score *are* is
  * `src/ui/sections/march/exact.ts`.
  *
- * **Why not a plain coordinate climb.** The shipped `Best` climbs one stack at a time and samples each
+ * **Why not a plain coordinate climb.** The climb climbs one stack at a time and samples each
  * stack's whole range at 16 points (`raise.ts`, `climbedCounts`) because it runs on the main thread between
  * two keystrokes. Measured (experiment 181, `tools/theorycraft/out/181-best-headroom.md`), that leaves a
  * real gap on 10 of the 43 stops where a position moves a count at all — median +2.80 %, worst +5.45 % —
@@ -25,7 +25,7 @@
  * **every single stack**, to convergence — restarted from seeded starts so a basin the caller's own answer
  * sits in is not the only one visited. **Only strict improvements are ever taken**, which is what makes the
  * search incapable of coming out below the vector it started from — the promise the March leans on
- * (a `Best v2` can never be worse than the `Best` it was seeded with).
+ * (a `Best v2` can never be worse than the climb it was seeded with, S-145).
  *
  * The cost is not bounded here on purpose (the owner, 2026-09-29: *"no cost limit as it's experimental for
  * now"*). A box of a few hundred vectors is instant; the widest one measured, 908 684 vectors, takes ~50 s,
