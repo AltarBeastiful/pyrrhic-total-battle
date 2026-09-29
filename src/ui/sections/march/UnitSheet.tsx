@@ -78,11 +78,12 @@ function feedAmount(feed: UnitBonusSource): string {
  * prints and no further. Both wear the pane's full budget of two decimals (`compactTwo`, S-148's parameter):
  * the extra digit is what tells the stack's own millions from the march's tens of millions at a glance.
  *
- * **And "to the digit the notation prints" is the honest bound, not a hedge**: the owner's own digit rule
- * spends a decimal only where the whole figure would otherwise carry a single digit, so a total of 10 360 000
- * prints "10M" while the sentence above it prints "2.59M" — the product reads to two digits, which is what
- * that rule asks for and not an error in this one. A reader checking the arithmetic is checking it to the
- * figure the sheet prints.
+ * **And "to the digit the notation prints" is the honest bound, not a hedge**: a figure is printed to the
+ * digits its room allows (S-148's parameter, and the owner's amendment of it on 2026-09-30 — *"lets keep 30M
+ * and 12K for tight line, longer version for large text only"*), so a total of 10 360 000 prints "10.4M" here
+ * while the sentence above it prints "2.59M". A reader checking the arithmetic divides to the figure the
+ * sheet prints and lands within the rounding of the last digit, which is what the rule asks for and not an
+ * error in this one.
  *
  * **Three branches, and the one-march case is written rather than pluralised.** A stock that fields the count
  * exactly once is `lastsMarches`' own `+ 1`, which is the whole point of that arithmetic: the first march is

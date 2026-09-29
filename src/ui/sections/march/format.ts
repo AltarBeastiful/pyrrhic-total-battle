@@ -71,47 +71,54 @@ export function compact(value: number): string {
 }
 
 /**
- * The shortest compact figure that still says something: **two digits at least, and no more than the
- * magnitude needs** — "325K", "12K", "1.2M".
+ * **The digits a compact figure carries are the caller's, and the budget is how it says so**: a budget of
+ * `n` decimals asks the figure to carry `n + 1` digits. The whole-digit form is used when it already has
+ * that many; otherwise the figure spends the decimals that reach them, capped by the budget itself.
  *
- * The rule is the owner's, for the recap's damage a hired unit (2026-09-20: *"simplify … with only 325k,
- * no commas needed there. Only for 1.2m you need comma so at least you get 2 numbers"*), and the reason it
- * is not simply `compact` is the reason `ratio` carries decimals (S-59): a figure a player *compares*
- * against the last run has to be printed to where two runs differ. "432K" differs from "418K"; "1M" does
- * not differ from "1M", so a million-sized ratio is the one place the decimal has to be spent.
+ * Two rules of the owner's meet in that sentence, and the second amended the first the day after it landed:
  *
- * **`maxDecimals` is the decimal budget, and the owner asked for it as a parameter** (2026-09-29: *"for
- * panes where text is large, lets add a parameter that is max decimal number allowed and set it to 2 where
- * text can be large and 1 where text needs to be small. Still the same rounding as before."*).
+ *  - 2026-09-20, on the recap's damage a hired unit: *"simplify … with only 325k, no commas needed there.
+ *    Only for 1.2m you need comma so at least you get 2 numbers"* — a whole form that already says enough
+ *    digits needs no decimal, one that says fewer does. At the default budget that is the two digits this
+ *    function shipped with, and **it is unchanged**: 325 000 is "325K", 12 400 is "12K", 29 691 713 is
+ *    "30M", exactly as before.
+ *  - **2026-09-30: *"it seems 29.7M would be more informative… lets keep 30M and 12K for tight line,
+ *    longer version for large text only"***. So the digit floor is the caller's, not a constant of the
+ *    notation: where the pane's text is large enough to afford two decimals it asks for **three digits**,
+ *    and 29 691 713 becomes **"29.7M"** and 12 400 becomes **"12.4K"** — "30M" cannot be told from 30.4M,
+ *    which is the one failure this function exists to prevent (the same argument S-59 makes for `ratio`'s
+ *    decimals: a figure a player *compares* has to be printed to where two runs differ). Where the text is
+ *    tight the extra digit is not worth the room, and the tight shape stays exactly as it was.
  *
- * **What it does, exactly**, because the two branches are easy to state wrongly: the whole-digit form is
- * used when it *already carries two digits*, and otherwise the figure is written at **up to** `maxDecimals`
- * decimals. So the rule the figure has to clear does not move with the budget — two digits, as before — and
- * what the budget widens is how much precision the fallback may use: "8M" is a one-digit whole form, so
- * 8 338 153 becomes **"8.34M"** at a budget of two and "8.3M" at one, while 325 000 is "325K" at both
- * because its whole form already says enough. `Intl` drops a trailing zero, so an exact power stays "1M"
- * whatever the budget: there is no digit to buy there.
+ * **`maxDecimals` is the budget** (owner, 2026-09-29: *"for panes where text is large, lets add a parameter
+ * that is max decimal number allowed and set it to 2 where text can be large and 1 where text needs to be
+ * small. Still the same rounding as before."*), and it is a *cap* on that digit rule as well as the shape
+ * of it: a one-digit mantissa buys two digits with two decimals at a budget of two ("8.34M") and only one
+ * at a budget of one ("8.3M"), because the budget is the most decimals there is. `Intl` drops a trailing
+ * zero, so an exact power stays "1M" at any budget: there is no digit to buy there.
  *
  * **What the budget is for is the room the figure stands in.** A figure the pane can afford — one standing
- * alone, at the unit sheet's 15 px or in the recap's 36 px hero (`MarchRecap`) — can take two decimals and
- * be read as a figure; the same figure sharing a 12–13 px line with prose (the recap's "· 325K a merc"
+ * alone, at the unit sheet's 14–15 px or in the recap's 36 px hero (`MarchRecap`) — can take two decimals
+ * and be read as a figure; the same figure sharing a 12–13 px line with prose (the recap's "· 325K a merc"
  * beside its label, the saved marches' meta line) has only the one, because a second decimal there buys
  * less than the room it costs and design rule 19 keeps that line readable. The default is the tight line's,
- * which is what every call site written before today meant.
+ * which is what every call site written before the parameter meant.
  *
- * **The rule this leaves alone, and it is the owner's own** (2026-09-20, quoted above): a two-digit whole
- * form is *enough*, so a figure whose mantissa is already two digits prints without decimals at any budget
- * — 10 360 000 is "10M" and 29 691 713 is "30M" at a budget of two, exactly as they were at one. That is
- * the rule the owner asked to keep ("still the same rounding as before"), and `compact` is the formatter
- * for a figure that needs finer reading than that (its one decimal, always), which is why the plan's
- * seven-figure columns and the campaign's own total use it.
+ * `compact` is the other shape and is not this one: it *always* spends a decimal, so for a seven-figure
+ * magnitude it is finer than either budget ("6.83M" where three digits would say "6.8M"). The plan's own
+ * columns and the campaign's total use it, and they are not affected by any of this.
  */
 export function compactTwo(value: number, maxDecimals = COMPACT_DECIMALS): string {
   if (!Number.isFinite(value)) return '—';
   const rounded = Math.round(value);
+  const budget = decimalsOf(maxDecimals);
   const whole = compactAt(0).format(rounded);
   const digits = whole.replace(/\D/gu, '').length;
-  return digits >= 2 ? whole : compactAt(decimalsOf(maxDecimals)).format(rounded);
+  // The digits this budget asks of a figure: one more than the decimals it may spend, since the decimal
+  // before the magnitude is a digit like any other ("1.2M" is two).
+  const wanted = budget + 1;
+  if (digits >= wanted) return whole;
+  return compactAt(Math.min(budget, wanted - digits)).format(rounded);
 }
 
 /**

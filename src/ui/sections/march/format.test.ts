@@ -43,14 +43,15 @@ test('a unit’s two brackets read as two lines, and a type no bonus touches rea
   expect(bonusLines(Number.NaN, 5)).toEqual(['Health: —', 'Strength: +5%']);
 });
 
-test('compactTwo spends a decimal only where it buys a second digit', () => {
+test('compactTwo spends a decimal only where it buys the digits the caller asked for', () => {
   // The owner's own examples (2026-09-20): "only 325k, no commas needed there. Only for 1.2m you need
-  // comma so at least you get 2 numbers".
+  // comma so at least you get 2 numbers". **The tight line is untouched by everything below**: at the
+  // default budget the digit rule is the two digits it has always been.
   expect(compactTwo(325_000)).toBe('325K');
   expect(compactTwo(1_230_000)).toBe('1.2M');
-  // Three digits and two digits both say enough on their own; one does not.
   expect(compactTwo(431_781)).toBe('432K');
   expect(compactTwo(12_400)).toBe('12K');
+  expect(compactTwo(29_691_713)).toBe('30M');
   expect(compactTwo(9_400)).toBe('9.4K');
   expect(compactTwo(940)).toBe('940');
   expect(compactTwo(94)).toBe('94');
@@ -64,16 +65,23 @@ test('compactTwo spends a decimal only where it buys a second digit', () => {
   expect(compactTwo(Number.NaN)).toBe('—');
   expect(compactTwo(Number.POSITIVE_INFINITY)).toBe('—');
 
-  // **The decimal budget is the caller's** (owner, 2026-09-29: "lets add a parameter that is max decimal
-  // number allowed and set it to 2 where text can be large and 1 where text needs to be small. Still the
-  // same rounding as before"). Two decimals, on a figure whose first decimal left it one digit short.
+  // **The budget is the caller's, and what it buys is a digit** (owner, 2026-09-29: "lets add a parameter
+  // that is max decimal number allowed and set it to 2 where text can be large and 1 where text needs to be
+  // small. Still the same rounding as before"), then amended the next day on the figure this is all for —
+  // *"it seems 29.7M would be more informative… lets keep 30M and 12K for tight line, longer version for
+  // large text only"*. A budget of two asks for **three** digits, so a two-digit mantissa spends exactly
+  // one decimal: 29 691 713 and 30 400 000 no longer both read "30M", and 12 400 stops reading "12K".
   expect(compactTwo(8_338_153, 2)).toBe('8.34M');
   expect(compactTwo(7_732_100, 2)).toBe('7.73M');
   expect(compactTwo(1_240_000, 2)).toBe('1.24M');
-  // And the rule is a *budget*, not a demand: where the whole-decimal form already reached two digits the
-  // second decimal is not spent, because the digits it would buy are digits the magnitude does not need.
+  expect(compactTwo(29_691_713, 2)).toBe('29.7M');
+  expect(compactTwo(30_400_000, 2)).toBe('30.4M');
+  expect(compactTwo(10_360_000, 2)).toBe('10.4M');
+  expect(compactTwo(12_400, 2)).toBe('12.4K');
+  expect(compactTwo(43_700, 2)).toBe('43.7K');
+  // A whole form that already carries the digits the budget asks for is left alone by it: 325 000 has
+  // three, which is what a budget of two wants, so no decimal is spent there at either setting.
   expect(compactTwo(325_000, 2)).toBe('325K');
-  expect(compactTwo(12_345_678, 2)).toBe('12M');
   // A budget of one is the default the file shipped with, so a caller who asks for it by hand gets the
   // same string as the caller who says nothing — there is no second path through this function.
   expect(compactTwo(8_338_153, 1)).toBe('8.3M');
@@ -91,6 +99,7 @@ test('compactTwo spends a decimal only where it buys a second digit', () => {
   // The guard is the parameter's and not the figure's: a budget the parameter pushed down to nought still
   // answers the digit rule first, so a three-digit whole form is untouched by it.
   expect(compactTwo(325_000, -2)).toBe('325K');
+  expect(compactTwo(29_691_713, -2)).toBe('30M');
 });
 
 test('compactRatio is a ratio below a hundred and a compact figure above it', () => {
