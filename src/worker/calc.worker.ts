@@ -1,10 +1,15 @@
 /// <reference lib="webworker" />
 /**
- * Calculation worker (S-25). Keeps sizing, simulation, the priority search and the campaign search
- * (S-54) off the main thread so the UI never freezes. It imports nothing but the engine and this folder's protocol: no React, no
- * store, no DOM.
+ * Calculation worker (S-25). Keeps sizing, simulation, the priority search, the campaign search (S-54) and
+ * the exhaustive raise (S-143b) off the main thread so the UI never freezes. It imports nothing but the
+ * engine, this folder's protocol, and the march's two pure modules (`raise.ts`, `exact.ts` — plain
+ * TypeScript with no React, no store and no DOM in them): no React, no store, no DOM.
+ *
+ * **Jobs run one at a time here**, which is exactly why the exhaustive raise gets a worker of its own rather
+ * than a `kind` on this one — it is the only job measured in tens of seconds, and on this thread it would
+ * sit in front of the next Generate (`raiseSearch.ts`).
  */
-import { runPlan, runResize, runSearch, runStack } from './jobs';
+import { runPlan, runRaise, runResize, runSearch, runStack } from './jobs';
 import { errorPayload, isCalcRequestMessage } from './protocol';
 import type { CalcRequestMessage, CalcResponseMessage } from './protocol';
 import { setKernel } from '@/engine/fast';
@@ -80,6 +85,10 @@ function run(message: Exclude<CalcRequestMessage, { kind: 'cancel' }>): void {
     }
     if (message.kind === 'resize') {
       post({ kind: 'resize', id, result: runResize(message.request) });
+      return;
+    }
+    if (message.kind === 'raise') {
+      post({ kind: 'raise', id, result: runRaise(message.request) });
       return;
     }
     if (message.kind === 'plan') {

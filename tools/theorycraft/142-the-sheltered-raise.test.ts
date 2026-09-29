@@ -96,6 +96,9 @@ const BOTH: Record<RaiseMode, RaiseModes> = {
   tens: { authority: 'tens', dominance: 'tens' },
   most: { authority: 'most', dominance: 'most' },
   best: { authority: 'best', dominance: 'best' },
+  // `v2` reads as `best` in `raisedCounts` (S-143b): the exhaustive answer is the worker's, and this file
+  // is about what the four synchronous positions promise.
+  v2: { authority: 'best', dominance: 'best' },
 };
 
 /** What the two hired pools have left to spend, in housing points. */

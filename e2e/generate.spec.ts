@@ -812,6 +812,19 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
   expect(best, 'Best went past what Most fields').toBeLessThanOrEqual(most);
   await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
   await expect(march.getByText(/hits hardest with under the troops/)).toHaveCount(0);
+
+  // **The fifth position is the same answer, searched exhaustively** (S-143b): it is a raise under the same
+  // ceiling and the same stock, and the search that answers it runs in a worker — so the figures arrive
+  // *after* the press, from a client, and the segment carries the wait (`aria-busy`) until they do.
+  await press('Best v2');
+  await expectChosen('Best v2');
+  await expect
+    .poll(hunter, { message: 'the exhaustive answer never arrived' })
+    .toBeGreaterThanOrEqual(before);
+  expect(await hunter(), 'Best v2 went past what Most fields').toBeLessThanOrEqual(most);
+  await expect(control).toHaveAttribute('aria-busy', 'false');
+  await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
+
   // Back to `Most` for the rest of the journey: the positions are one control, and this is the one the
   // Generate below is asked to remember.
   await press('Most');

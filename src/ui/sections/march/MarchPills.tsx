@@ -20,6 +20,7 @@ import {
   ActionIcon,
   Button,
   Group,
+  Loader,
   SegmentedControl,
   Stack,
   Text,
@@ -79,6 +80,8 @@ export interface MarchPillsProps {
   /** The sheltered raise (S-142): the position of each hired pool's control, and whether it is offered. */
   raiseModes: RaiseModes;
   canRaise: boolean;
+  /** A `Best v2` search is in flight (`raiseSearch.ts`): the position is chosen, the answer is not in. */
+  searching: boolean;
   onRaise: (pool: RaisedPool, mode: RaiseMode) => void;
 }
 
@@ -103,6 +106,11 @@ const RAISE_CHOICES: readonly { mode: RaiseMode; label: string; help: string }[]
     mode: 'best',
     label: 'Best',
     help: 'The counts this march hits hardest with under your troops, which can be fewer units than Most.',
+  },
+  {
+    mode: 'v2',
+    label: 'Best v2',
+    help: 'The same answer searched exhaustively, over the mercenaries and the monsters together. Slower, and never worse than Best.',
   },
 ];
 
@@ -139,10 +147,13 @@ const isRaiseMode = (value: string): value is RaiseMode =>
 export function MarchRaiseControl({
   pool,
   value,
+  searching,
   onChange,
 }: {
   pool: RaisedPool;
   value: RaiseMode;
+  /** The exhaustive search is still running: `Best v2` is chosen, and its answer is not in yet. */
+  searching: boolean;
   onChange: (mode: RaiseMode) => void;
 }) {
   const helpId = useId();
@@ -155,11 +166,28 @@ export function MarchRaiseControl({
         value={value}
         aria-label={RAISE_LABEL[pool]}
         aria-describedby={helpId}
+        // A search in flight is a state of this control and of nothing else on the page.
+        aria-busy={searching}
         data={RAISE_CHOICES.map((choice) => ({
           value: choice.mode,
           label: (
             <Tooltip label={choice.help} withinPortal withArrow>
-              <span>{choice.label}</span>
+              {/*
+                **The wait is drawn inside the segment, not beside it** (design rule 15: a state the player
+                needs, and S-142's own note that a line arriving under the figures "moves the ui"): the label
+                keeps its box, so choosing `Best v2` shifts nothing while the search runs, however long it
+                takes. Only this one segment's label is wrapped, so the other four are drawn exactly as they
+                were — and a stock `Group` rather than a CSS rule, because a row with a mark in it is what
+                the kit is for (design rule 23).
+              */}
+              {choice.mode === 'v2' && searching ? (
+                <Group gap={4} wrap="nowrap" component="span">
+                  {choice.label}
+                  <Loader size={10} aria-hidden />
+                </Group>
+              ) : (
+                <span>{choice.label}</span>
+              )}
             </Tooltip>
           ),
         }))}
@@ -169,6 +197,7 @@ export function MarchRaiseControl({
       />
       <VisuallyHidden id={helpId}>
         {RAISE_CHOICES.map((choice) => `${choice.label}: ${choice.help}`).join(' ')}
+        {searching ? ' Searching every combination.' : ''}
       </VisuallyHidden>
     </>
   );
@@ -186,6 +215,7 @@ export function MarchPills({
   onDetails,
   raiseModes,
   canRaise,
+  searching,
   onRaise,
 }: MarchPillsProps) {
   return (
@@ -244,6 +274,11 @@ export function MarchPills({
               <MarchRaiseControl
                 pool={raisable}
                 value={raiseModes[raisable]}
+                // **Only the control whose pool is being searched says it is waiting.** The search walks the
+                // pools standing on `Best v2`, and a mixed control (the mercenaries on it, the monsters on
+                // `Most`) still runs one — so a plain `searching` here put a spinner, `aria-busy` and the
+                // hidden "Searching every combination." on a block that was not the one being searched.
+                searching={searching && raiseModes[raisable] === 'v2'}
                 onChange={(mode) => {
                   onRaise(raisable, mode);
                 }}

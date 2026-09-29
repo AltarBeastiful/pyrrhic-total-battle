@@ -52,8 +52,17 @@ export type RaiseRequest = Pick<StackRequest, 'units' | 'caps' | 'housing'>;
  * strikes. His own battle report of 2026-09-29 is the proof of the mechanic — 14 stacks, 28 hits, each
  * stack's hits being its kill position — and experiment 142 priced it: on his account `Most` never *lost*
  * damage over 16 readings, but the mechanism is real and is what this position exists to make safe.
+ *
+ * **`v2` is the same promise with the sampling taken out** (S-143b; owner, 2026-09-29: *"implement best V2
+ * and add it to the interface"*). It is not a fifth kind of answer — it is `best` answered exhaustively, and
+ * it is a separate position rather than a replacement because of what it costs: `climbedCounts` samples
+ * because it runs on the main thread, and this one walks a box of up to a million vectors in the worker
+ * (measured: 0 ms on a small box, **46 s** on the widest). Its own module is `exact.ts`, its own job is
+ * `raise` (`src/worker/protocol.ts`), and **it is not answered by `raisedCounts`**: this function cannot run
+ * a search, so it reads `v2` as `best` — the answer the March shows until the exhaustive one lands, which
+ * the search can only improve on (see `exactRaise`).
  */
-export type RaiseMode = 'off' | 'tens' | 'most' | 'best';
+export type RaiseMode = 'off' | 'tens' | 'most' | 'best' | 'v2';
 
 /** The two pools a hired stack is paid out of — the ones this control speaks for. */
 export interface RaiseModes {
@@ -68,6 +77,14 @@ export const RAISED_POOLS = ['authority', 'dominance'] as const;
 
 /** One of the two pools a hired stack is paid out of. */
 export type RaisedPool = (typeof RAISED_POOLS)[number];
+
+/**
+ * **The positions that promise damage rather than units** — `best` and its exhaustive sibling `v2`
+ * (S-143, S-143b). Named once because two places ask the same question: which answers are not the shelter
+ * line stood at its highest. The March's sentence stays silent under both (`MarchFoot.tsx`), and the bench
+ * labels them together.
+ */
+export const RAISE_DAMAGE_POSITIONS = ['best', 'v2'] as const satisfies readonly RaiseMode[];
 
 /**
  * The troop floor: the lowest troop stack's total HP, which is the line every hired stack must stay under.
@@ -112,7 +129,7 @@ function costOf(request: RaiseRequest, unitId: string): number {
 }
 
 /** The counts of a whole march, as `applyCounts` reads them. */
-function countsOf(base: StackResult): Record<string, number> {
+export function countsOf(base: StackResult): Record<string, number> {
   const out: Record<string, number> = {};
   for (const stack of base.stacks) out[stack.unitId] = stack.count;
   return out;
@@ -256,7 +273,12 @@ export function raisedCounts(
 
   let out: Record<string, number> | null = null;
   for (const pool of RAISED_POOLS) {
-    const mode = modes[pool];
+    // **`v2` is answered by `best` here** (S-143b). This function samples because it runs on the main
+    // thread between two keystrokes, and the exhaustive answer is `exactRaise`'s, in the worker. Reading the
+    // position as `best` is what gives the March a legal, never-worse march from the first frame — the
+    // search is seeded with exactly this and takes strict improvements only, so it can only raise the
+    // damage above what is drawn now.
+    const mode = modes[pool] === 'v2' ? 'best' : modes[pool];
     if (mode === 'off') continue;
     // The live stacks of this pool; `base.stacks` is in kill order, first to fall first.
     const stacks = base.stacks.filter((stack) => stack.pool === pool && stack.count > 0);

@@ -9,8 +9,8 @@
  *   - `As is` — the plan's own counts;
  *   - `Most, in tens` · `Most` — every hired stack as high as the troops still shelter it, rounded and exact;
  *   - `Best` — the shipped climb (`raise.ts`), which samples its box because it runs on the main thread;
- *   - **`Best v2`** — the research search (`exact-best.ts`): the same seed and the same box, walked whole
- *     where the box fits and searched to convergence where it does not.
+ *   - **`Best v2`** — the exhaustive search as it ships (`@/ui/sections/march/exact`, S-143b): the same
+ *     seed and the same box, walked whole where the box fits and searched to convergence where it does not.
  *
  * **What must hold, and is asserted** — the positions are promises, and a promise that fails on one army is
  * a defect:
@@ -39,6 +39,7 @@ import { CAMPAIGN } from '@/config';
 import { planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan } from '@/engine/plan';
 import type { StackRequest } from '@/engine/types';
+import { exactRaise } from '@/ui/sections/march/exact';
 import { applyCounts } from '@/ui/sections/march/manual';
 import { hiredLost } from '@/ui/sections/march/hired';
 import { raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/raise';
@@ -46,12 +47,11 @@ import type { RaiseMode } from '@/ui/sections/march/raise';
 import { worstDamageByPool } from '@/ui/sections/march/worst';
 
 import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
-import { bestV2 } from './exact-best';
 import { Report, n } from './harness';
 
 /**
- * The five, in the order the segments carry them (the last is not in the app: `Best v2` is the research
- * search, `exact-best.ts`, and this file is where it is priced against what does ship).
+ * The five, in the order the segments carry them. `Best v2` **is** what ships (S-143b): the segment runs
+ * `exactRaise` through the worker, and this file reads the same function the worker runs.
  */
 type PositionKey = Exclude<RaiseMode, 'off'> | 'v2';
 
@@ -67,14 +67,16 @@ function movesOf(
   request: StackRequest,
   base: Parameters<typeof raisedCounts>[1],
   key: PositionKey,
-): { moves: Record<string, number>; how: string } | null {
+): { counts: Record<string, number>; how: string } | null {
   if (key !== 'v2') {
     const modes = { authority: key, dominance: key } as const;
-    const moves = raisedCounts(request, base, modes);
-    return moves === null ? null : { moves, how: key };
+    const counts = raisedCounts(request, base, modes);
+    return counts === null ? null : { counts, how: key };
   }
-  const found = bestV2(request, base);
-  return found === null ? null : { moves: found.moves, how: `${found.how}, box ${n(found.space)}` };
+  // **The shipped module, not a copy of it**: this column is the control that says what the app ships
+  // (S-143b), so it reads `exactRaise` — the same function the worker runs — and not a research twin.
+  const found = exactRaise(request, base, { authority: 'v2', dominance: 'v2' });
+  return found === null ? null : { counts: found.counts, how: `${found.how}, box ${n(found.space)}` };
 }
 
 /** Every reading one march is judged on. */
@@ -268,7 +270,7 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
             report.add(`| ${stop.pick} | ${position.label} | — | — | — | — | — | — | — | — | — | — |`);
             continue;
           }
-          const counts = found.moves;
+          const counts = found.counts;
           movedReadings += 1;
           const reading = read(scenario.request, { ...stop.counts, ...counts }, base);
           byLabel.set(position.label, reading);

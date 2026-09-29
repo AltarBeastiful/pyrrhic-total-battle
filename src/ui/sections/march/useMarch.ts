@@ -16,6 +16,7 @@ import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 import { applyCounts, hasEdits } from './manual';
 import { raisedCounts, troopFloor } from './raise';
 import type { RaiseModes } from './raise';
+import { useRaiseSearch } from './raiseSearch';
 import { leftOutOf, marchRows, poolRows } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { setupFingerprint, useRunStore } from './runStore';
@@ -51,6 +52,12 @@ export interface MarchView {
    * left on from a plan is not applied to them either: one rule, the control and its effect together.
    */
   canRaise: boolean;
+  /**
+   * **A `Best v2` search is in flight for this march** (S-143b). The counts on screen are the shipped
+   * `Best`'s until it lands — a march the game would take, and the seed the search starts from — so this
+   * only says whether the control is still waiting for the exhaustive answer (`raiseSearch.ts`).
+   */
+  searching: boolean;
   rows: MarchStackRow[];
   /** The army as pills, one block per housing pool (design plan §5.5). */
   pools: PoolRow[];
@@ -88,6 +95,20 @@ export function useMarch(): MarchView {
   const fingerprint = useMemo(() => setupFingerprint(profile, setup), [profile, setup]);
   const stale = snapshot !== null && lastRunFingerprint !== null && lastRunFingerprint !== fingerprint;
 
+  /**
+   * Whether the raise is offered at all, read here rather than inside the memo below because **the
+   * exhaustive search is a hook and has to be asked above the early return** — hooks do not run on a branch.
+   * It is the same two conditions the memo asks (`raise.ts` has the long form): a plan's own march, with
+   * troops to shelter by.
+   */
+  const canRaise = planned && snapshot !== null && troopFloor(snapshot.result) !== null;
+  /**
+   * **The one asynchronous reading in the March** (S-143b): `counts` is `null` until the search answers.
+   * Read out as two values rather than as the object the hook returns — a fresh object every render would
+   * be a new dependency every render, and the memo below would never hold.
+   */
+  const { counts: exhaustiveCounts, running: searching } = useRaiseSearch(snapshot, raiseModes, canRaise);
+
   return useMemo(() => {
     if (snapshot === null) {
       return {
@@ -100,6 +121,7 @@ export function useMarch(): MarchView {
         overflow: [],
         raiseModes,
         canRaise: false,
+        searching: false,
         rows: [],
         pools: [],
         leftOut: [],
@@ -117,9 +139,21 @@ export function useMarch(): MarchView {
      * asked of it — "is there anything to replay?" and "did the player type?" — because the first draws the
      * figures and the second draws the Undo mark and the note.
      */
-    const canRaise = planned && troopFloor(snapshot.result) !== null;
     const raised = canRaise ? raisedCounts(snapshot.request, snapshot.result, raiseModes) : null;
-    const effective = raised === null ? counts : { ...raised, ...counts };
+    /**
+     * **The exhaustive answer, over the shipped one** (S-143b). `raisedCounts` reads `v2` as `best`, so
+     * `raised` is the seed the search started from and is a march the game would take; the search's own
+     * counts are merged over it exactly as a hand edit is, and they can only ever add damage — the search
+     * was seeded with these counts and takes strict improvements.
+     *
+     * Two things this must not do, and the review of 2026-09-29 caught both. It must **not** be skipped when
+     * `raised` is `null`: the sampled climb can find nothing on a stop where the exhaustive search finds
+     * something — that is the whole gap this position closes — and the old guard threw that answer away. And
+     * it must be merged over `raised` on **every** slot the search walked and not only the ones it moved, or
+     * a stack it decided to bring back down to the plan's count would keep the seed's higher one.
+     */
+    const lifted = exhaustiveCounts === null ? raised : { ...raised, ...exhaustiveCounts };
+    const effective = lifted === null ? counts : { ...lifted, ...counts };
     const edited = hasEdits(snapshot.result, counts);
 
     const edits = hasEdits(snapshot.result, effective)
@@ -164,6 +198,7 @@ export function useMarch(): MarchView {
       overflow: edits?.overflow ?? [],
       raiseModes,
       canRaise,
+      searching,
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
       pools: poolRows({
         result: army,
@@ -173,5 +208,16 @@ export function useMarch(): MarchView {
       }),
       leftOut: leftOutOf(snapshot.request.units, army, leftOutByPlayer, editing),
     };
-  }, [snapshot, counts, editing, leftOutByPlayer, previous, stale, raiseModes, planned]);
+  }, [
+    snapshot,
+    counts,
+    editing,
+    leftOutByPlayer,
+    previous,
+    stale,
+    raiseModes,
+    canRaise,
+    exhaustiveCounts,
+    searching,
+  ]);
 }

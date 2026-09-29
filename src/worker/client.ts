@@ -7,8 +7,9 @@
  */
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, StackRequest, SearchResult } from '@/engine/types';
+import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
 
-import { runPlan, runResize, runSearch, runStack } from './jobs';
+import { runPlan, runRaise, runResize, runSearch, runStack } from './jobs';
 import {
   errorPayload,
   isCalcResponseMessage,
@@ -30,6 +31,11 @@ export interface CalcClient {
   plan(request: CampaignInput, signal?: AbortSignal): Promise<CampaignPlan>;
   /** S-104: one stop of a plan re-sized over the troop types that are in, inside the plan's own rules. */
   resize(request: ResizeInput, signal?: AbortSignal): Promise<ResizedMarch | null>;
+  /**
+   * S-143b: the exhaustive raise — `Best` with the sampling taken out. The one job here measured in tens of
+   * seconds, and the reason `raiseSearch.ts` gives it a client of its own.
+   */
+  raise(request: ExactRaiseInput, signal?: AbortSignal): Promise<ExactRaiseAnswer | null>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -83,6 +89,7 @@ function createWorkerClient(worker: Worker): CalcClient {
       case 'search':
       case 'plan':
       case 'resize':
+      case 'raise':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -139,6 +146,8 @@ function createWorkerClient(worker: Worker): CalcClient {
     plan: (request, signal) => send<CampaignPlan>({ kind: 'plan', id: nextJobId('plan'), request }, signal),
     resize: (request, signal) =>
       send<ResizedMarch | null>({ kind: 'resize', id: nextJobId('resize'), request }, signal),
+    raise: (request, signal) =>
+      send<ExactRaiseAnswer | null>({ kind: 'raise', id: nextJobId('raise'), request }, signal),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -186,6 +195,7 @@ export function createInlineClient(): CalcClient {
     plan: (request, signal) =>
       run(() => runPlan(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }), signal),
     resize: (request, signal) => run(() => runResize(request), signal),
+    raise: (request, signal) => run(() => runRaise(request), signal),
     dispose() {
       disposed = true;
     },

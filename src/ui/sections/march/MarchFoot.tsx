@@ -38,6 +38,7 @@ import { DamageSplit } from './DamageSplit';
 import { MarchAction, MarchCountsBar } from './MarchPills';
 import classes from './march.module.css';
 import { amount } from './format';
+import { RAISE_DAMAGE_POSITIONS } from './raise';
 import { TradeoffStrip } from './TradeoffStrip';
 import { useRunStore } from './runStore';
 import { useMarch } from './useMarch';
@@ -255,7 +256,13 @@ export function MarchActions() {
 export function MarchEditedNote() {
   const { edited, raiseModes } = useMarch();
   const raising = raiseModes.authority !== 'off' || raiseModes.dominance !== 'off';
-  const best = raiseModes.authority === 'best' || raiseModes.dominance === 'best';
+  // **Both damage positions are silent here** — `Best` (S-143) and `Best v2` (S-143b), for the same reason
+  // and in the same words: they stand the stacks where the march hits hardest, which is often lower down
+  // and no near tie at all, so the sentence would be a paragraph about nothing that also shifted the pane
+  // every time the position changed.
+  const best = RAISE_DAMAGE_POSITIONS.some(
+    (mode) => raiseModes.authority === mode || raiseModes.dominance === mode,
+  );
   if (!edited && (!raising || best)) return null;
   return (
     <Stack gap={2}>

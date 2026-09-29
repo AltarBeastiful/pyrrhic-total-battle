@@ -363,8 +363,21 @@ export const useRunStore = create<RunState>()((set, get) => ({
     set({ includedUnitIds, leftOutByPlayer, resize: null });
   },
   setRaiseMode: (pool, mode) => {
-    // A **new object**: the March reads this through a selector, and writing in place would never reach it.
-    set((state) => ({ raiseModes: { ...state.raiseModes, [pool]: mode } }));
+    set((state) => ({
+      raiseModes:
+        /**
+         * **`Best v2` is one position, not two** (S-143b; owner, 2026-09-29: *"give another options for
+         * both"*). The exhaustive search walks the mercenaries and the monsters **together** — that is the
+         * configuration experiment 181 measured, and the joint answer is worth up to +5.45 % where two
+         * separate searches are not — so pressing the segment on either block puts both of them on it. The
+         * two controls are two views of one standing rule, and they say so.
+         */
+        mode === 'v2'
+          ? { authority: 'v2', dominance: 'v2' }
+          : // A **new object**: the March reads this through a selector, and writing in place would never
+            // reach it.
+            { ...state.raiseModes, [pool]: mode },
+    }));
   },
   cancel: () => {
     get().controller?.abort();

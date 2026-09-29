@@ -26,13 +26,19 @@
  * Everything is the app's own arithmetic: the raise is `raisedCounts`, and every reading is a replay of the
  * battle (`applyCounts`) scored on the march's **worst opening**, the figure the plan is ranked on.
  *
+ * **A sixth column is a gate and not a reading** (S-143b): the same walk, run against the search the March
+ * itself presses (`Best v2`, `@/ui/sections/march/exact`). On every stop small enough to walk here, that
+ * search must *be* the optimum — `docs/plans/best-v2.md` §6, gate 1 — and the file asserts it rather than
+ * reporting it.
+ *
  * `THEORY=1 pnpm vitest run tools/theorycraft/181-best-headroom.test.ts`
  */
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { planCampaign, planMarch } from '@/engine';
 import type { StackRequest, StackResult } from '@/engine/types';
+import { exactRaise } from '@/ui/sections/march/exact';
 import { applyCounts } from '@/ui/sections/march/manual';
 import { raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/raise';
 
@@ -40,6 +46,8 @@ import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
 import { Report, n } from './harness';
 
 const BEST = { authority: 'best', dominance: 'best' } as const;
+/** The fifth position, on both pools: what the March presses when it asks for the shipped search. */
+const V2 = { authority: 'v2', dominance: 'v2' } as const;
 
 /** How much work each stronger reading is allowed on one stop — the experiment's own budget, not the app's. */
 const PAIR_BUDGET = 30_000;
@@ -202,6 +210,8 @@ interface Row {
   pair: number | null;
   restart: number;
   exact: number | null;
+  /** The shipped `Best v2`'s damage, wherever the walk above could be taken — gate 1's own reading. */
+  shipped: number | null;
   lower: number;
   cost: Cost;
 }
@@ -323,6 +333,18 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
         const open = slots.map((slot) => ({ ...slot, from: 0 }));
         const lowerRun = timed(() => score(climbFrom(open, score, app, 4)));
 
+        /**
+         * **The acceptance test of the shipped search** (S-143b, gate 1): `Best v2`'s own answer against
+         * the walk, wherever the box is small enough to walk *here*. Every box this file can enumerate, the
+         * March enumerates too — `exactSearch`'s `WALK_CAP` is 300 000 against this file's `EXACT_BUDGET` of
+         * 200 000, so the walked set here is a subset of the walked set there — and on those stops the two
+         * answers must be **the same number**, not merely close ones.
+         */
+        const shipped =
+          exactRun === null
+            ? null
+            : timed(() => score({ ...app, ...(exactRaise(scenario.request, base, V2)?.counts ?? {}) })).value;
+
         rows.push({
           army: scenario.label,
           stop: stop.pick,
@@ -332,6 +354,7 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
           pair: pairRun?.value ?? null,
           restart: restartRun.value,
           exact: exactRun?.value ?? null,
+          shipped,
           lower: lowerRun.value,
           cost: {
             app: appRun.ms,
@@ -348,16 +371,19 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
     report.h(`${String(rows.length)} stops where a raise can move a count`);
     report.add('');
     report.add(
-      '| army · stop | space | app’s answer | one stack, exhaustive | pairwise | restarts | exhaustive | lowered |',
+      '| army · stop | space | app’s answer | one stack, exhaustive | pairwise | restarts | exhaustive | `Best v2` | lowered |',
     );
-    report.add('|---|---|---|---|---|---|---|---|');
+    report.add('|---|---|---|---|---|---|---|---|---|');
     for (const row of rows) {
       report.add(
         `| ${row.army} · ${row.stop} | ${n(row.space)} | ${n(row.app)} | ${better(row.app, row.one)} | ${
           row.pair === null ? 'over budget' : better(row.app, row.pair)
         } | ${better(row.app, row.restart)} | ${
           row.exact === null ? 'over budget' : better(row.app, row.exact)
-        } | ${better(row.app, row.lower)} |`,
+        } | ${row.shipped === null ? 'not walked' : better(row.app, row.shipped)} | ${better(
+          row.app,
+          row.lower,
+        )} |`,
       );
     }
 
@@ -415,6 +441,23 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
         positives((row) => row.exact),
       ).toFixed(2)} %.`,
     );
+    /**
+     * **Gate 1, and it is asserted rather than reported** (S-143b): on every stop this file can walk whole,
+     * the March's own `Best v2` must *be* the walk's answer. Not near it — the same number. The stops it
+     * cannot walk are not evidence of anything here, so they are counted and left out.
+     */
+    const walked = rows.filter((row) => row.exact !== null && row.shipped !== null);
+    const short = walked.filter((row) => row.shipped !== row.exact);
+    report.add(
+      `- **The shipped \`Best v2\`** against the walk, on the ${String(walked.length)} stops small enough for both: ` +
+        `${String(walked.length - short.length)} are the optimum to the unit` +
+        (short.length === 0
+          ? ', none is short — **the enumeration and the shipped search agree everywhere they can be compared**.'
+          : `, and **${String(short.length)} are short**: ${short
+              .map((row) => `${row.army} · ${row.stop} (${n(row.shipped ?? 0)} against ${n(row.exact ?? 0)})`)
+              .join('; ')}.`),
+    );
+    report.add('');
     report.add(
       `- **The promise** (the climb allowed down to zero): helps on ${String(
         wins((row) => row.lower),
@@ -444,6 +487,12 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
     }
     report.add('');
     report.save();
+
+    // **Gate 1** (S-143b, `docs/plans/best-v2.md` §6): the shipped search *is* the walk on every stop small
+    // enough to walk. A `Best v2` that came out short of a known optimum would be a defect and not a gap.
+    expect(
+      short.map((row) => `${row.army} · ${row.stop}: ${n(row.shipped ?? 0)} against ${n(row.exact ?? 0)}`),
+    ).toEqual([]);
   }, 1_800_000);
 });
 

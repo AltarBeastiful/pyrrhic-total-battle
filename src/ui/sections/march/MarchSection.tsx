@@ -186,6 +186,7 @@ export function MarchSection() {
             onDetails={setSheetUnit}
             raiseModes={march.raiseModes}
             canRaise={march.canRaise}
+            searching={march.searching}
             onRaise={(pool, mode) => {
               useRunStore.getState().setRaiseMode(pool, mode);
             }}

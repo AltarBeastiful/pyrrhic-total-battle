@@ -5,6 +5,8 @@
 import { planCampaign, resizeMarchOver, searchPriority, simulateBattle, sizeStacks } from '@/engine';
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, SearchResult, StackRequest } from '@/engine/types';
+import { exactRaise } from '@/ui/sections/march/exact';
+import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
 
 import type { ResizeInput, StackOutcome } from './protocol';
 
@@ -43,4 +45,14 @@ export function runPlan(request: CampaignInput, context: JobContext): CampaignPl
  */
 export function runResize(input: ResizeInput): ResizedMarch | null {
   return resizeMarchOver(input.request, input.within);
+}
+
+/**
+ * **The exhaustive raise** (S-143b): `Best` with the sampling taken out. Not cancellable and not
+ * time-boxed, and deliberately so — the owner's call is that there is no cost limit on this one (*"no cost
+ * limit as it's experimental for now"*), and the way it is kept out of the way is `raiseSearch.ts` giving it
+ * a worker of its own rather than by cutting the search short.
+ */
+export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
+  return exactRaise(input.request, input.base, input.modes);
 }

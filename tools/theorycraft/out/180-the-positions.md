@@ -379,12 +379,12 @@ Every stop of every benchmark army, read four ways: the plan’s own counts, the
 | sweet-spot | Most, in tens | — | — | — | — | — | — | — | — | — | — |
 | sweet-spot | Most | — | — | — | — | — | — | — | — | — | — |
 | sweet-spot | Best | — | — | — | — | — | — | — | — | — | — |
-| sweet-spot | Best v2 | — | — | — | — | — | — | — | — | — | — |
+| sweet-spot | Best v2 | 69 | 1.36 % | 2,104,714 | 0.995 | 110,308.8 | 2,115,100 | 352 | 960 | 539,475 | 5 |
 | steady-max | As is | 82 | 0.28 % | 2,168,812 | 0.970 | 99,696 | 2,235,700 | 440 | 960 | 646,050 | 7 |
 | steady-max | Most, in tens | — | — | — | — | — | — | — | — | — | — |
 | steady-max | Most | — | — | — | — | — | — | — | — | — | — |
 | steady-max | Best | — | — | — | — | — | — | — | — | — | — |
-| steady-max | Best v2 | — | — | — | — | — | — | — | — | — | — |
+| steady-max | Best v2 | 82 | 0.28 % | 2,168,812 | 0.970 | 99,696 | 2,235,700 | 440 | 960 | 646,050 | 7 |
 
 ## **his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)** — 3 stops
 
@@ -400,12 +400,12 @@ Every stop of every benchmark army, read four ways: the plan’s own counts, the
 | sweet-spot | Most, in tens | — | — | — | — | — | — | — | — | — | — |
 | sweet-spot | Most | — | — | — | — | — | — | — | — | — | — |
 | sweet-spot | Best | — | — | — | — | — | — | — | — | — | — |
-| sweet-spot | Best v2 | — | — | — | — | — | — | — | — | — | — |
+| sweet-spot | Best v2 | 47 | 0.91 % | 2,941,677 | 1.448 | 461,104.5 | 2,031,600 | 136 | 1,560 | 460,950 | 2 |
 | steady-max | As is | 71 | 1.25 % | 3,031,810 | 1.357 | 258,865.5 | 2,233,600 | 224 | 1,080 | 648,090 | 4 |
 | steady-max | Most, in tens | — | — | — | — | — | — | — | — | — | — |
 | steady-max | Most | — | — | — | — | — | — | — | — | — | — |
 | steady-max | Best | — | — | — | — | — | — | — | — | — | — |
-| steady-max | Best v2 | — | — | — | — | — | — | — | — | — | — |
+| steady-max | Best v2 | 71 | 1.25 % | 3,031,810 | 1.357 | 258,865.5 | 2,233,600 | 224 | 1,080 | 648,090 | 4 |
 
 ## **his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)** — 2 stops
 
@@ -481,7 +481,7 @@ Every stop draws the same march whichever path replays it.
 ## What each position did to each criterion
 
 
-63 stops, 155 moved by a position, 0 armies the plan refuses outright (320 readings on the mercenaries’ block, 21 on the monsters’).
+63 stops, 159 moved by a position, 0 armies the plan refuses outright (341 readings on the mercenaries’ block, 76 on the monsters’).
 
 | criterion | position | improved | unchanged | decreased |
 |---|---|---|---|---|
@@ -515,16 +515,16 @@ Every stop draws the same march whichever path replays it.
 | Merc lost | Best | 0 | 4 | 37 |
 | Hired units fielded | Best | 41 | 0 | 0 |
 | Shelter margin | Best | 0 | 13 | 28 |
-| Damage a march | Best v2 | 41 | 0 | 0 |
-| Damage a silver | Best v2 | 41 | 0 | 0 |
-| Damage a hired | Best v2 | 14 | 0 | 27 |
-| Silver | Best v2 | 0 | 39 | 2 |
-| Gold | Best v2 | 0 | 0 | 41 |
-| Dragon coins | Best v2 | 0 | 39 | 2 |
-| Training queue | Best v2 | 0 | 39 | 2 |
-| Merc lost | Best v2 | 0 | 4 | 37 |
-| Hired units fielded | Best v2 | 41 | 0 | 0 |
-| Shelter margin | Best v2 | 0 | 12 | 29 |
+| Damage a march | Best v2 | 41 | 4 | 0 |
+| Damage a silver | Best v2 | 41 | 4 | 0 |
+| Damage a hired | Best v2 | 14 | 4 | 27 |
+| Silver | Best v2 | 0 | 43 | 2 |
+| Gold | Best v2 | 0 | 4 | 41 |
+| Dragon coins | Best v2 | 0 | 43 | 2 |
+| Training queue | Best v2 | 0 | 43 | 2 |
+| Merc lost | Best v2 | 0 | 8 | 37 |
+| Hired units fielded | Best v2 | 41 | 4 | 0 |
+| Shelter margin | Best v2 | 0 | 16 | 29 |
 
 **How to read the directions.** A raise buys damage with the stock — `Merc lost` and the gold to bring them back go **up** wherever the position moved the counts, which is the trade the owner asked for (*"use most mercs you can"*) — and the shelter margin goes **down** wherever it stands a stack at the line. Silver is the troops’ own bill and barely moves: what the hired counts pay with is the authority pool and the stock, not silver.
 

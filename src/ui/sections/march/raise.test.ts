@@ -10,9 +10,11 @@ import { getUnits } from '@/data';
 import { emptyTotals, shelterCounts, sizeStacks } from '@/engine';
 import type { Pool, Stack, StackRequest, StackResult } from '@/engine/types';
 
+import { exactRaise, exhaustivePools } from './exact';
+import { raiseSearchKey } from './raiseSearch';
 import { applyCounts } from './manual';
-import { inTens, raisedCounts, shelterCeiling, troopFloor } from './raise';
-import type { RaiseModes } from './raise';
+import { RAISE_DAMAGE_POSITIONS, inTens, raisedCounts, shelterCeiling, troopFloor } from './raise';
+import type { RaiseMode, RaiseModes } from './raise';
 
 const UNITS = getUnits();
 const RD1 = 'rider-1';
@@ -76,6 +78,8 @@ const MOST: RaiseModes = { authority: 'most', dominance: 'off' };
 const TENS: RaiseModes = { authority: 'tens', dominance: 'off' };
 const MONSTERS: RaiseModes = { authority: 'off', dominance: 'most' };
 const BEST: RaiseModes = { authority: 'best', dominance: 'off' };
+/** The fifth position, on both pools — what pressing the segment anywhere puts the control into. */
+const V2: RaiseModes = { authority: 'v2', dominance: 'v2' };
 
 /** Two troop stacks of 1 000 000 HP apiece, so the floor every case stands under is 1 000 000. */
 const TROOPS = [stack(RD3, 'leadership', 500, 2_000), stack(RD1, 'leadership', 400, 2_500)];
@@ -252,4 +256,148 @@ test('the ceiling is the same number the engine’s own shelter lowers a stack t
     housing,
   );
   expect(raisedCounts(request({ housing }), below, MOST)).toEqual({ [HUNTER]: ceiling });
+});
+
+// ---- The exhaustive position, `Best v2` (S-143b) ---------------------------------------------------
+/**
+ * A march with a hired stack of each pool, so the search has something to trade: two troops whose floor is
+ * 1 000 000, one mercenary under it (a ceiling of 33) and one monster (a ceiling of 2).
+ */
+const BOTH_HIRED = (): StackResult =>
+  marchOf([...TROOPS, stack(HUNTER, 'authority', 5, 30_000), stack(MONSTER, 'dominance', 1, 400_000)]);
+
+test('the exhaustive position is only asked for where a control stands on it', () => {
+  expect(exhaustivePools(V2)).toEqual(['authority', 'dominance']);
+  // One pool on it: the search walks that pool's stacks and holds the other where its own position put it.
+  expect(exhaustivePools({ authority: 'v2', dominance: 'most' })).toEqual(['authority']);
+  // None: the four shipped positions are answered without a search, so there is nothing to ask for.
+  for (const mode of ['off', 'tens', 'most', 'best'] as const) {
+    expect(exhaustivePools({ authority: mode, dominance: mode })).toEqual([]);
+  }
+});
+
+test('the four synchronous positions never come out of a v2 control, and never below Best', () => {
+  const base = BOTH_HIRED();
+  // **`raisedCounts` reads `v2` as `best`** (S-143b): that is what the March draws from the first frame,
+  // while the search is out. It is a legal march rather than a placeholder, and it is the search's own seed.
+  expect(raisedCounts(request(), base, V2)).toEqual(
+    raisedCounts(request(), base, { authority: 'best', dominance: 'best' }),
+  );
+  expect(exhaustivePools({ authority: 'best', dominance: 'off' })).toEqual([]);
+});
+
+test('the search walks both hired pools at once, and answers with a legal march', () => {
+  const base = BOTH_HIRED();
+  const found = exactRaise(request(), base, V2);
+  expect(found).not.toBeNull();
+  if (found === null) return;
+
+  // **One box over both pools** — the joint search the owner asked for ("give another options for both"),
+  // and the configuration experiment 181 measured.
+  const mercCeiling = shelterCeiling(1_000_000, 30_000);
+  const monsterCeiling = shelterCeiling(1_000_000, 400_000);
+  expect(found.space).toBe((mercCeiling - 5 + 1) * (monsterCeiling - 1 + 1));
+  expect(found.how).toBe('walked');
+
+  // It is a raise under the same bounds as every other position: never fewer units than the plan's own,
+  // never over a ceiling, never over the stock, never over the housing.
+  const counts = { ...raisedCounts(request(), base, V2), ...found.counts };
+  expect(counts[HUNTER] ?? 5).toBeGreaterThanOrEqual(5);
+  expect(counts[HUNTER] ?? 5).toBeLessThanOrEqual(mercCeiling);
+  expect(counts[MONSTER] ?? 1).toBeGreaterThanOrEqual(1);
+  expect(counts[MONSTER] ?? 1).toBeLessThanOrEqual(monsterCeiling);
+  const whole = { ...marchCounts(base), ...counts };
+  for (const pool of ['authority', 'dominance'] as const) {
+    let used = 0;
+    for (const unit of UNITS) if (unit.pool === pool) used += (whole[unit.id] ?? 0) * unit.cost;
+    expect(used).toBeLessThanOrEqual(HOUSING[pool]);
+  }
+});
+
+test('the exhaustive answer never loses damage to the shipped Best it is seeded with', () => {
+  const base = BOTH_HIRED();
+  const at = (moves: Record<string, number> | null): number =>
+    applyCounts(request(), base, { ...marchCounts(base), ...moves }).summary.minDamage;
+
+  const shipped = raisedCounts(request(), base, { authority: 'best', dominance: 'best' });
+  const found = exactRaise(request(), base, V2);
+  // The seed is the shipped answer and the search takes strict improvements only, so this cannot be lower —
+  // which is the promise the March leans on while the search is out (`raiseSearch.ts`).
+  expect(at({ ...shipped, ...found?.counts })).toBeGreaterThanOrEqual(at(shipped));
+});
+
+test('the exhaustive position asks for nothing where there is nothing to move', () => {
+  // No pool on it: the control was never drawn on `v2`.
+  expect(exactRaise(request(), BOTH_HIRED(), BEST)).toBeNull();
+  // No troops to shelter under: the same rule the other four positions live by.
+  expect(exactRaise(request(), marchOf([stack(HUNTER, 'authority', 5, 30_000)]), V2)).toBeNull();
+  // Every stack already at its ceiling.
+  const full = marchOf([...TROOPS, stack(HUNTER, 'authority', 33, 30_000)]);
+  expect(exactRaise(request(), full, V2)).toBeNull();
+});
+
+test('the same march answers the same counts every time', () => {
+  const base = BOTH_HIRED();
+  const first = exactRaise(request(), base, V2);
+  const second = exactRaise(request(), base, V2);
+  expect(first?.counts).toEqual(second?.counts);
+});
+
+test('the damage positions are named once, for the control and for the March’s silence', () => {
+  expect([...RAISE_DAMAGE_POSITIONS]).toEqual(['best', 'v2'] satisfies RaiseMode[]);
+});
+
+/** The counts of a whole march, as `exactRaise` reads them — the test's own copy of `countsOf`. */
+function marchCounts(base: StackResult): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const one of base.stacks) out[one.unitId] = one.count;
+  return out;
+}
+
+test('the exhaustive answer carries every stack it walked, not only the ones it moved', () => {
+  /**
+   * **A defect the adversarial review of 2026-09-29 found** (S-143b). The answer used to be a *sparse* record,
+   * diffed against the **plan's** own counts — but the March merges it over the shipped **`Best`**'s answer,
+   * so wherever the search decided to come back *down* to the plan's count the seed's higher one silently
+   * stayed. That is precisely the "two stacks only improve together" move the pairwise neighbourhood exists
+   * for, so the vector on screen could be one the search never scored, and could sit below the `Best` it was
+   * seeded with. Every walked stack is named now, moved or not.
+   */
+  const base = BOTH_HIRED();
+  const found = exactRaise(request(), base, V2);
+  expect(found).not.toBeNull();
+  if (found === null) return;
+
+  const seed = raisedCounts(request(), base, V2) ?? {};
+  const walked = base.stacks
+    .filter((one) => one.pool !== 'leadership' && one.count > 0)
+    .map((one) => one.unitId);
+  expect(walked.length).toBeGreaterThan(0);
+  for (const unitId of walked) {
+    // Named in the answer, so merging it over the seed replaces the seed's count rather than deferring to it.
+    expect(found.counts).toHaveProperty(unitId);
+    expect(found.counts[unitId]).toBeGreaterThanOrEqual(
+      base.stacks.find((one) => one.unitId === unitId)?.count ?? 0,
+    );
+    // And the merged vector is what `exactRaise` itself scored: merging the answer over the seed cannot leave
+    // a seed count standing where the search put a lower one.
+    const merged = { ...seed, ...found.counts };
+    expect(merged[unitId]).toBe(found.counts[unitId]);
+  }
+});
+
+test('a march edit does not reuse the previous march’s answer', () => {
+  /**
+   * **The key names the result, not the run's stamp** (S-143b; `raiseSearch.ts`). `raiseSearchKey` is the one
+   * comparison that decides whether a search is started, so this pins the property the March depends on: two
+   * different results are two different keys **even when they carry the same `at`** — which is exactly what
+   * `resizeMarch` produces, deliberately (*"the same run, re-sized"*).
+   */
+  const before = BOTH_HIRED();
+  const after = marchOf([...TROOPS, stack(HUNTER, 'authority', 5, 30_000)]);
+  expect(raiseSearchKey(before, V2)).not.toBe(raiseSearchKey(after, V2));
+  // The march's own object is stable across renders, so the key is stable where the March has not moved.
+  expect(raiseSearchKey(before, V2)).toBe(raiseSearchKey(before, V2));
+  // And the position is part of it: moving the control is a different question and a different answer.
+  expect(raiseSearchKey(before, V2)).not.toBe(raiseSearchKey(before, BEST));
 });

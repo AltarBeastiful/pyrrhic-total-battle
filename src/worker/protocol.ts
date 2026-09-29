@@ -2,12 +2,13 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize', id, request }  and  { kind: 'cancel', id }
+ * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise', id, request }  and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
  *           { kind: 'progress', id, progress }   (searches only, zero or more)
  *           { kind: 'search', id, result }
  *           { kind: 'plan', id, result }
  *           { kind: 'resize', id, result }   (`null` when no shape could be built)
+ *           { kind: 'raise', id, result }    (`null` when there is no box to search)
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message } }
  *
@@ -24,6 +25,7 @@ import type {
   StackRequest,
   StackResult,
 } from '@/engine/types';
+import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
 
 export type JobId = string;
 
@@ -65,13 +67,29 @@ export interface ResizeJob {
   request: ResizeInput;
 }
 
+/**
+ * **The exhaustive raise** (S-143b): `Best` with the sampling taken out, over the pools whose control
+ * stands on `v2`. It is a job of its own and not an option on `stack` because it is a different computation
+ * on a different thread — it walks up to a million count vectors and can take tens of seconds, where every
+ * other job here answers in milliseconds.
+ *
+ * That cost is also why the March asks for it through a **second** client (`raiseSearch.ts`,
+ * `getRaiseClient`): a job of this length on the page's one worker would sit in front of the next Generate
+ * and hold it there.
+ */
+export interface RaiseJob {
+  kind: 'raise';
+  id: JobId;
+  request: ExactRaiseInput;
+}
+
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
 export interface CancelJob {
   kind: 'cancel';
   id: JobId;
 }
 
-export type CalcRequestMessage = StackJob | SearchJob | PlanJob | ResizeJob | CancelJob;
+export type CalcRequestMessage = StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -116,12 +134,20 @@ export interface ErrorMessage {
   error: { message: string };
 }
 
+/** The exhaustive raise's answer, or `null` when the box had nothing in it to search (`exactRaise`). */
+export interface RaiseDoneMessage {
+  kind: 'raise';
+  id: JobId;
+  result: ExactRaiseAnswer | null;
+}
+
 export type CalcResponseMessage =
   | StackDoneMessage
   | SearchProgressMessage
   | SearchDoneMessage
   | PlanDoneMessage
   | ResizeDoneMessage
+  | RaiseDoneMessage
   | CancelledMessage
   | ErrorMessage;
 
@@ -162,6 +188,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
     case 'search':
     case 'plan':
     case 'resize':
+    case 'raise':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -181,8 +208,10 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'search':
     case 'plan':
       return isRecord(value.result);
-    // The one answer that may be nothing: an army with no troop type to field over gets no march at all.
+    // The two answers that may be nothing: an army with no troop type to field over gets no march at all,
+    // and a raise with no stack it may move gets no better counts than the ones already on screen.
     case 'resize':
+    case 'raise':
       return value.result === null || isRecord(value.result);
     case 'cancelled':
       return true;

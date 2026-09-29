@@ -28,9 +28,11 @@ import type * as WorkerClient from '@/worker/client';
 import { DamageSplit } from './DamageSplit';
 import { restoreLastResult } from './generate';
 import { amount, bonusLines, compactTwo, duration, ratio, signedPercent } from './format';
+import { MarchRaiseControl } from './MarchPills';
 import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
 import { hiredLost } from './hired';
+import { raiseSearchKey, useRaiseSearchStore } from './raiseSearch';
 import { unitBonus } from './rows';
 import { pickOf, useRunStore } from './runStore';
 import { worstDamageByPool } from './worst';
@@ -1621,3 +1623,116 @@ test('a sizer’s march offers no raise: its exact fill has already taken the po
   expect(shownStacks().some((stack) => stack.pool === 'authority')).toBe(true);
   expect(screen.queryByRole('radiogroup', { name: 'Mercenary counts' })).toBeNull();
 }, 30_000);
+
+test('the exhaustive position is one position over both blocks, and draws no line either', async () => {
+  await generateFromAPlan();
+  const control = raiseControl('Mercenary');
+  const plan = shownCounts();
+
+  fireEvent.click(within(control).getByRole('radio', { name: 'Best v2' }));
+  // **One position, not two** (S-143b; owner, 2026-09-29: *"give another options for both"*): the search
+  // walks the mercenaries and the monsters together, so pressing the segment on either block puts both of
+  // them on it and the two controls are two views of one standing rule.
+  await waitFor(() => {
+    expect(useRunStore.getState().raiseModes).toEqual({ authority: 'v2', dominance: 'v2' });
+  });
+
+  // The answer arrives from the client and it is a raise on the same bounds as the four shipped positions:
+  // never below the plan's own count for that stack.
+  await waitFor(() => {
+    for (const [label, count] of Object.entries(shownCounts())) {
+      expect(count, `${label} fell below the plan’s own count`).toBeGreaterThanOrEqual(plan[label] ?? 0);
+    }
+  });
+  // **And it really is the search's answer and not the seed still standing**: the entry is settled for the
+  // march and position on screen, which is the state the loader in the segment stops on. A test that only
+  // looked at the figures could pass on the shipped `Best` counts alone.
+  const { entry } = useRaiseSearchStore.getState();
+  const filed = useResultStore.getState().last;
+  expect(entry?.status).toBe('done');
+  expect(filed).not.toBeNull();
+  if (filed !== null) {
+    expect(entry?.key).toBe(raiseSearchKey(filed.result, { authority: 'v2', dominance: 'v2' }));
+  }
+  // **And it says nothing in the pane**, for `Best`'s reason and in `Best`'s own words: the segment and its
+  // tooltip are the disclosure, and a line that appeared with every press would move the pane.
+  expect(screen.queryByText(/Raised to what the troops shelter/)).toBeNull();
+  expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
+}, 60_000);
+
+test('the fifth segment carries the wait itself, and the control says it is busy', () => {
+  /**
+   * **The one state the journeys cannot reach** (S-143b): the e2e's army has a box of a few dozen vectors,
+   * so `Best v2` answers before a frame is painted and the loader is never seen. It is the state a real
+   * account sits in for up to fifty seconds, so it is drawn here directly — inside the segment's own label,
+   * which is what keeps the pane from shifting while the search runs.
+   */
+  const { container, rerender } = renderWithTheme(
+    <MarchRaiseControl pool="authority" value="v2" searching onChange={() => undefined} />,
+  );
+  const control = screen.getByRole('radiogroup', { name: 'Mercenary counts' });
+  expect(control.getAttribute('aria-busy')).toBe('true');
+  // The mark is *in* the segment the player pressed, and it goes when the answer does. `toBeTruthy` and not
+  // `not.toBeNull`: a selector that matched nothing at all would satisfy the latter.
+  expect(container.querySelectorAll('.mantine-Loader-root')).toHaveLength(1);
+  // **In the `Best v2` segment and nowhere else**: the mark belongs in the box the player pressed, since a
+  // line of text arriving under the figures is the thing this control is not allowed to do.
+  const mark = container.querySelector('.mantine-Loader-root');
+  expect(mark?.closest('.mantine-SegmentedControl-control')?.textContent).toContain('Best v2');
+
+  rerender(<MarchRaiseControl pool="authority" value="v2" searching={false} onChange={() => undefined} />);
+  expect(control.getAttribute('aria-busy')).toBe('false');
+  expect(container.querySelectorAll('.mantine-Loader-root')).toHaveLength(0);
+});
+
+test('a March edit asks the search again rather than merging the previous march’s answer', async () => {
+  /**
+   * **The defect the adversarial review of 2026-09-29 found** (S-143b). `resizeMarch` re-files the re-sized
+   * march under the **same stamp** on purpose (*"the same run, re-sized"*, `generate.ts`), so a search key
+   * built on `snapshot.at` let an answer asked about the march *before* a put-back be merged into the march
+   * *after* it — silently, `status` already `done`, with the shelter line suppressed because a raise is on.
+   * The troops that come back lower the floor, so those counts can sit over the new ceiling and under the
+   * new plan's own count. The key names the result object now, and this holds it there.
+   */
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [
+    { id: 'epic-monster-hunter-6', cap: 92 },
+    { id: 'arbalester-6', cap: 76 },
+    { id: 'legionary-6', cap: 72 },
+    { id: 'chariot-6', cap: 37 },
+  ];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 4_100, authority: 2_000, dominance: 0 },
+      options: { ...current.options, method: 'plan' },
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  const generated = lastResult();
+  if (!generated) throw new Error('the plan method answered with no march');
+  const marching = new Set(generated.result.stacks.map((stack) => stack.unitId));
+  const absent = generated.request.units.find((unit) => unit.pool === 'leadership' && !marching.has(unit.id));
+  if (!absent) throw new Error('this plan fields every troop type: nothing to put back');
+
+  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Best v2' }));
+  await waitFor(() => {
+    expect(useRaiseSearchStore.getState().entry?.status).toBe('done');
+  });
+  const before = useRaiseSearchStore.getState().entry?.key;
+
+  fireEvent.click(leftOutPill(absent, 'the search'));
+  await waitFor(() => {
+    expect(useRunStore.getState().resize).not.toBeNull();
+  });
+
+  // The answer that belonged to the previous march is gone with it: the new march re-asks, under a new key,
+  // and until it lands the pane draws the shipped `Best`'s counts on the *new* march — never the old ones.
+  expect(useRaiseSearchStore.getState().entry?.key ?? null).not.toBe(before);
+  const { hired, floor } = shelterNow();
+  expect(hired).toBeLessThan(floor);
+}, 60_000);
