@@ -13,7 +13,16 @@ import type { Pool, Stack, StackRequest, StackResult } from '@/engine/types';
 import { exactRaise, exhaustivePools } from './exact';
 import { raiseSearchKey } from './raiseSearch';
 import { applyCounts } from './manual';
-import { RAISE_DAMAGE_POSITIONS, inTens, raisedCounts, shelterCeiling, troopFloor } from './raise';
+import {
+  EXHAUSTIVE_MODES,
+  RAISE_DAMAGE_POSITIONS,
+  burnOf,
+  inTens,
+  isExhaustive,
+  raisedCounts,
+  shelterCeiling,
+  troopFloor,
+} from './raise';
 import type { RaiseMode, RaiseModes } from './raise';
 
 const UNITS = getUnits();
@@ -80,6 +89,9 @@ const MONSTERS: RaiseModes = { authority: 'off', dominance: 'most' };
 const BEST: RaiseModes = { authority: 'best', dominance: 'off' };
 /** The fifth position, on both pools — what pressing the segment anywhere puts the control into. */
 const V2: RaiseModes = { authority: 'v2', dominance: 'v2' };
+/** The two capped readings of it (S-144): the same search under a budget of authority chunks. */
+const SAFE: RaiseModes = { authority: 'safe', dominance: 'safe' };
+const TIGHT: RaiseModes = { authority: 'tight', dominance: 'tight' };
 
 /** Two troop stacks of 1 000 000 HP apiece, so the floor every case stands under is 1 000 000. */
 const TROOPS = [stack(RD3, 'leadership', 500, 2_000), stack(RD1, 'leadership', 400, 2_500)];
@@ -344,7 +356,7 @@ test('the same march answers the same counts every time', () => {
 });
 
 test('the damage positions are named once, for the control and for the March’s silence', () => {
-  expect([...RAISE_DAMAGE_POSITIONS]).toEqual(['best', 'v2'] satisfies RaiseMode[]);
+  expect([...RAISE_DAMAGE_POSITIONS]).toEqual(['best', 'v2', 'safe', 'tight'] satisfies RaiseMode[]);
 });
 
 /** The counts of a whole march, as `exactRaise` reads them — the test's own copy of `countsOf`. */
@@ -400,4 +412,82 @@ test('a march edit does not reuse the previous march’s answer', () => {
   expect(raiseSearchKey(before, V2)).toBe(raiseSearchKey(before, V2));
   // And the position is part of it: moving the control is a different question and a different answer.
   expect(raiseSearchKey(before, V2)).not.toBe(raiseSearchKey(before, BEST));
+});
+
+/**
+ * **The two capped positions** (S-144). `safe` and `tight` are the same search as `v2` under a budget of
+ * authority chunks — the burn `marchOf` counts and the plan itself is ordered on — so each is held here to the
+ * two things it promises: **it never spends more of the rare stock than the march it replaces** (`Best` for
+ * `safe`, the plan's own counts for `tight`) and **it never loses damage to that same march**, because the
+ * budget's own answer is where the search starts and the search takes strict improvements only.
+ */
+test('Safe never burns more than the Best it replaces, and never loses to it', () => {
+  const base = BOTH_HIRED();
+  const whole = (moves: Record<string, number> | null): Record<string, number> => ({
+    ...marchCounts(base),
+    ...moves,
+  });
+  const at = (moves: Record<string, number> | null): number =>
+    applyCounts(request(), base, whole(moves)).summary.minDamage;
+
+  const shipped = raisedCounts(request(), base, { authority: 'best', dominance: 'best' });
+  const found = exactRaise(request(), base, SAFE);
+  expect(found).not.toBeNull();
+  if (found === null) return;
+  const counts = whole({ ...shipped, ...found.counts });
+
+  expect(burnOf(base, counts)).toBeLessThanOrEqual(burnOf(base, whole(shipped)));
+  expect(at({ ...shipped, ...found.counts })).toBeGreaterThanOrEqual(at(shipped));
+});
+
+test('Tight never burns more than the plan’s own counts, and never loses to the plan’s own march', () => {
+  const base = BOTH_HIRED();
+  const whole = (moves: Record<string, number> | null): Record<string, number> => ({
+    ...marchCounts(base),
+    ...moves,
+  });
+  const at = (moves: Record<string, number> | null): number =>
+    applyCounts(request(), base, whole(moves)).summary.minDamage;
+
+  const found = exactRaise(request(), base, TIGHT);
+  expect(found).not.toBeNull();
+  if (found === null) return;
+
+  // The plan's own march is five hunters and one monster: one chunk. The cap is that, so the search may not
+  // reach a second chunk however much damage is behind it — and on this fixture it is a real bound: `v2`
+  // answers the ceiling (33 hunters, four chunks) where `Tight` stops at ten.
+  const own = marchCounts(base);
+  expect(found.counts[HUNTER]).toBe(10);
+  expect(found.counts[MONSTER]).toBe(2);
+  expect(burnOf(base, whole(found.counts))).toBeLessThanOrEqual(burnOf(base, own));
+  expect(at(found.counts)).toBeGreaterThanOrEqual(at(own));
+  // And it is a **raise**: never fewer units than the plan fields, exactly as the other six positions — held
+  // below the plain search by its budget rather than by anything about the counts themselves.
+  const plain = exactRaise(request(), base, V2);
+  if (plain !== null) {
+    for (const one of base.stacks) {
+      expect(found.counts[one.unitId] ?? one.count).toBeGreaterThanOrEqual(one.count);
+    }
+    expect(at(found.counts)).toBeLessThan(at(plain.counts));
+  }
+});
+
+test('the burn is the mercenaries’ pool’s, so a cap on the monsters alone bounds nothing', () => {
+  // S-102: a trained monster is a price paid in silver, queue and dragon coins, and not a stock that drains,
+  // so `burnOf` counts authority chunks and a `safe`/`tight` on the dominance block is the plain `v2`.
+  const base = BOTH_HIRED();
+  const monsters = (mode: RaiseMode): Record<string, number> | null =>
+    exactRaise(request(), base, { authority: 'off', dominance: mode })?.counts ?? null;
+  expect(monsters('safe')).toEqual(monsters('v2'));
+  expect(monsters('tight')).toEqual(monsters('v2'));
+});
+
+test('all three exhaustive positions are named by one question, and all three are the worker’s', () => {
+  expect(EXHAUSTIVE_MODES).toEqual(['v2', 'safe', 'tight'] satisfies RaiseMode[]);
+  for (const mode of EXHAUSTIVE_MODES) expect(isExhaustive(mode)).toBe(true);
+  for (const mode of ['off', 'tens', 'most', 'best'] as const) expect(isExhaustive(mode)).toBe(false);
+  // A mixed control: one block on a cap, the other on the plain search — both are walked, which is what the
+  // worker's one search does with them.
+  expect(exhaustivePools({ authority: 'safe', dominance: 'v2' })).toEqual(['authority', 'dominance']);
+  expect(exhaustivePools({ authority: 'tight', dominance: 'most' })).toEqual(['authority']);
 });

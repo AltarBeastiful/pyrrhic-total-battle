@@ -112,7 +112,7 @@ the one who decides it). Built as follows, in `src/`:
 |---|---|
 | the algorithm | `src/engine/exact.ts` — `exactSearch(slots, score)`, a box and a scorer and **nothing else**: no battle, no march, no housing. It is written to be the thing the kernel or the plan's own search would run, and moving it there changes no caller |
 | what a slot and a score *are* | `src/ui/sections/march/exact.ts` — the bounds are `raise.ts`'s own (`troopFloor`, `shelterCeiling`, the housing counted over every unit of the pool), the score is the app's own replay (`applyCounts`), and the seed is `raisedCounts`' own answer |
-| the position | `RaiseMode` gains `v2`. It is drawn on **both hired blocks**, and pressing it on either sets both: the search is one search over the mercenaries and the monsters together (*"give another options for both"*) |
+| the position | `RaiseMode` gains `v2`, `safe` and `tight` — the same search under no cap, under `Best`'s own burn and under the plan's own counts (§3.1). All three are drawn on **both hired blocks**, and pressing any of them on either sets both: the search is one search over the mercenaries and the monsters together (*"give another options for both"*) |
 | where it runs | `src/worker/` — a `raise` job, on a **worker of its own** (`raiseSearch.ts`): a worker runs one job at a time, and this is the only job in the app measured in tens of seconds |
 | what the pane shows while it runs | `raisedCounts` reads `v2` as `best`, so the counts, the figures and the sentences are a march the game would take from the first frame. The search is seeded with exactly those counts and takes strict improvements only, so the answer can only ever raise the damage over what is drawn |
 | the wait | a stock Mantine `Loader` **inside the `Best v2` segment** and `aria-busy` on the control. Nothing else moves, on the owner's own rule about this control (*"it moves the ui its unpleasant"*) |
@@ -122,6 +122,34 @@ The cost is real and was not hidden: measured over every stop of every benchmark
 **51 s** at the worst, the owner's live camp of 2026-09-18 at its `more-mercs` stop, a box of 908 684 vectors
 and one of the three stops it has to *search* rather than walk (their median is **15 s**). That is why it is a
 position the player presses on purpose and not the fourth segment's own answer.
+
+### 3.1 The two capped readings: `Safe` and `Tight` (S-144)
+
+Owner, 2026-09-29: *"we could have a safe best-v2 that is bestv2 but accounting for merc lost and dmg/merc.
+build it and benchmark it"*. The premise was checked before anything was built (`out/183-safe-raise.md`,
+experiment 183, one pass over every stop of every benchmark army), and it turned out to be **mostly wrong in
+the good direction**: `Best v2` is already close to stock-neutral. Its ten gains over `Best` cost extra
+mercenary chunks on **one stop of forty-five** (the 7 000 export's `silver-saver`, +2.84 % damage for +2
+chunks) and *save* one chunk on another.
+
+What the measurement did find is two promises worth a position each, both of them the same search under a cap
+on the burn — `Σ chunks(n)` over the authority stacks, `marchOf`'s own `mercLost`, pinned to the plan's own
+figure on every stop by experiment 183:
+
+| the position | what it may spend | over `Best` | over the plan's own counts |
+|---|---|---|---|
+| `Safe` | no more than the `Best` it replaces | 9 of 45 gains, +1.77 % median, **0 stops burning more** | 41 gained, 37 burning more (it is a raise) |
+| `Tight` | no more than the plan's own counts — **not one extra chunk** | 0 gains (it is below `Best` by design) | **28 of 45 gained, +3.85 % median, +19.59 % at the best, and the burn is identical on all 45** |
+
+`Tight`'s gain is not a contradiction: the plan sizes its hired stacks to a **trade**, not to tens, so a
+count that sits inside a chunk can rise to the chunk's top for nothing — and on the dominance side the burn
+does not move at all (S-102: a trained monster is a price, not a stock), which is where most of the 28 are.
+
+**`damage a mercenary` is bounded, never maximised.** Ranking on `hiredDamage / mercLost` outright costs
+**7.25 % median damage** (48.26 % at the worst) — investigation 0019's "trap", reproduced as one number — so
+neither position optimises that ratio; they bound the stock and rank on damage, which is the same intent
+without the trap. The two caps are implemented as one line of policy in `exact.ts` (`burnCap` + `RaiseRank`),
+which is what keeps the three exhaustive positions one search and one box rather than three of each.
 
 The two destinations this section named before are still open and still better homes for the *same* code:
 the **plan's own search**, where a precomputation can afford a walk per candidate shape, and the
@@ -263,3 +291,26 @@ the module states, so both are held.
 **What the review did not change**: the walk, the seeded multistart, the strict-improvement rule, the bounds,
 or any figure in §1–§6. It is the same search; it is the *plumbing between the search and the pane* that was
 wrong, which is the part no experiment in `tools/theorycraft/` drives.
+
+## 10. What the second review of the *shipped* code changed (S-144)
+
+The two capped positions reuse everything §3 built — the box, the bounds, the housing check, the seed, the
+climb — and the only new machinery is a cap and a rank. Reviewed against that claim before the commit, on the
+one axis that matters (does a capped position still keep every promise the uncapped one makes?):
+
+1. **The spinner was drawn in all three exhaustive segments**, because the wrapper asked `isExhaustive(mode)`
+   and not "is this the segment that is chosen". With three positions the defect the S-143b review had
+   already fixed once could come back a different way — three spinners on a control that is searching once.
+   It is `choice.mode === value` now, and the UI test that holds it (`the fifth segment carries the wait
+   itself`) is unchanged and still passes, which is why it was the one that caught this.
+2. **`Tight`'s seed had to be the plan's own counts and not `Best`'s.** `exactSearch` fills a slot left out
+   of `start` with its `from`, which on this box *is* the plan's count — so the promise "`Tight` cannot lose
+   to the plan's own march" holds by construction, and it holds only because the seed and the cap are the
+   same vector. Seeding it with `Best`'s counts would have left the promise resting on the search finding its
+   way back down to a feasible vector, which the walk does and the multistart search does not owe anyone.
+3. **The cap is the authority pool's alone**, because the burn is (`burnOf`, S-102). `safe` and `tight` on the
+   monsters' block therefore answer exactly what `v2` answers — held by a test rather than left as a comment,
+   since a reader who expects a cap there would be reading a bug into a working control.
+4. **`isExhaustive` replaced three `=== 'v2'` comparisons** (the control's spinner, the pane's silence, the
+   store's "one standing rule") before any of them could be forgotten, which is the same mistake S-143b's
+   own review made with `searching`.

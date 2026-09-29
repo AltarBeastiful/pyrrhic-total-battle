@@ -39,7 +39,7 @@ import { copyText } from '@/ui/profile/download';
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
 import { amount, bonusLines } from './format';
 import classes from './march.module.css';
-import { raisesPool } from './raise';
+import { isExhaustive, raisesPool } from './raise';
 import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
@@ -112,6 +112,16 @@ const RAISE_CHOICES: readonly { mode: RaiseMode; label: string; help: string }[]
     label: 'Best v2',
     help: 'The same answer searched exhaustively, over the mercenaries and the monsters together. Slower, and never worse than Best.',
   },
+  {
+    mode: 'safe',
+    label: 'Safe',
+    help: 'Best v2 held to the mercenary stock Best already spends: no extra chunks of hired units, and never worse than Best.',
+  },
+  {
+    mode: 'tight',
+    label: 'Tight',
+    help: 'Best v2 held to the stock the march was generated with — not one extra chunk — so it can only improve on those counts.',
+  },
 ];
 
 /** What the control is called, per pool: the group carries the pool's own name. */
@@ -175,12 +185,13 @@ export function MarchRaiseControl({
               {/*
                 **The wait is drawn inside the segment, not beside it** (design rule 15: a state the player
                 needs, and S-142's own note that a line arriving under the figures "moves the ui"): the label
-                keeps its box, so choosing `Best v2` shifts nothing while the search runs, however long it
-                takes. Only this one segment's label is wrapped, so the other four are drawn exactly as they
-                were — and a stock `Group` rather than a CSS rule, because a row with a mark in it is what
-                the kit is for (design rule 23).
+                keeps its box, so choosing an exhaustive position shifts nothing while the search runs,
+                however long it takes. **The mark goes in the segment that is chosen** and not in all three
+                exhaustive ones — the control only ever reports a wait for the position standing on it — so
+                the other six are drawn exactly as they were; a stock `Group` rather than a CSS rule, because
+                a row with a mark in it is what the kit is for (design rule 23).
               */}
-              {choice.mode === 'v2' && searching ? (
+              {choice.mode === value && searching ? (
                 <Group gap={4} wrap="nowrap" component="span">
                   {choice.label}
                   <Loader size={10} aria-hidden />
@@ -275,10 +286,11 @@ export function MarchPills({
                 pool={raisable}
                 value={raiseModes[raisable]}
                 // **Only the control whose pool is being searched says it is waiting.** The search walks the
-                // pools standing on `Best v2`, and a mixed control (the mercenaries on it, the monsters on
-                // `Most`) still runs one — so a plain `searching` here put a spinner, `aria-busy` and the
-                // hidden "Searching every combination." on a block that was not the one being searched.
-                searching={searching && raiseModes[raisable] === 'v2'}
+                // pools standing on an exhaustive position, and a mixed control (the mercenaries on one of
+                // them, the monsters on `Most`) still runs one — so a plain `searching` here put a spinner,
+                // `aria-busy` and the hidden "Searching every combination." on a block that was not the one
+                // being searched.
+                searching={searching && isExhaustive(raiseModes[raisable])}
                 onChange={(mode) => {
                   onRaise(raisable, mode);
                 }}

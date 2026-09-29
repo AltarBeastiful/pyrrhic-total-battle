@@ -21,7 +21,7 @@
  * own health, the authority or dominance the housing pays, the mercenary stock the account owns — so it can
  * never produce a march the game would refuse.
  */
-import { CHUNK } from '@/engine';
+import { CHUNK, chunks } from '@/engine';
 import type { Pool, Stack, StackRequest, StackResult } from '@/engine/types';
 
 import { applyCounts } from './manual';
@@ -61,8 +61,18 @@ export type RaiseRequest = Pick<StackRequest, 'units' | 'caps' | 'housing'>;
  * `raise` (`src/worker/protocol.ts`), and **it is not answered by `raisedCounts`**: this function cannot run
  * a search, so it reads `v2` as `best` — the answer the March shows until the exhaustive one lands, which
  * the search can only improve on (see `exactRaise`).
+ *
+ * **`safe` and `tight` are that same search under a cap on the rare stock** (S-144; owner, 2026-09-29:
+ * *"we could have a safe best-v2 that is bestv2 but accounting for merc lost and dmg/merc"*). A mercenary is
+ * the one thing a march does not get back, so the two ask the exhaustive question under a **burn budget**:
+ * `safe` may not burn more authority chunks than the `Best` it replaces, `tight` may not burn more than the
+ * **plan's own counts** — not one extra chunk. Measured (experiment 183, `out/183-safe-raise.md`): `safe`
+ * keeps 9 of `v2`'s 10 gains and never spends a chunk for them, and `tight` beats the plan's own march by
+ * +3.85 % median on 28 of 45 stops at the same stock. **Ranking on damage a mercenary outright is a trap**
+ * — measured at −7.25 % median damage, and investigation 0019's own finding — so neither position optimises
+ * that ratio; they bound the stock instead, which is the same promise without the trap.
  */
-export type RaiseMode = 'off' | 'tens' | 'most' | 'best' | 'v2';
+export type RaiseMode = 'off' | 'tens' | 'most' | 'best' | 'v2' | 'safe' | 'tight';
 
 /** The two pools a hired stack is paid out of — the ones this control speaks for. */
 export interface RaiseModes {
@@ -79,12 +89,27 @@ export const RAISED_POOLS = ['authority', 'dominance'] as const;
 export type RaisedPool = (typeof RAISED_POOLS)[number];
 
 /**
- * **The positions that promise damage rather than units** — `best` and its exhaustive sibling `v2`
- * (S-143, S-143b). Named once because two places ask the same question: which answers are not the shelter
- * line stood at its highest. The March's sentence stays silent under both (`MarchFoot.tsx`), and the bench
- * labels them together.
+ * **The positions answered by the worker's search and not by arithmetic in a render** (S-143b, S-144):
+ * `v2` and the two burn-capped readings of it. Named once so that everything which has to tell them apart
+ * from the four shipped positions — the control's spinner, the pane's own sentence, the search's key — asks
+ * one question rather than three.
  */
-export const RAISE_DAMAGE_POSITIONS = ['best', 'v2'] as const satisfies readonly RaiseMode[];
+export const EXHAUSTIVE_MODES = ['v2', 'safe', 'tight'] as const satisfies readonly RaiseMode[];
+
+/** Whether this position's answer comes from the worker's exhaustive search rather than from the render. */
+export function isExhaustive(mode: RaiseMode): boolean {
+  return (EXHAUSTIVE_MODES as readonly RaiseMode[]).includes(mode);
+}
+
+/**
+ * **The positions that promise damage rather than units** — `best` and its three exhaustive siblings
+ * (S-143, S-143b, S-144). Named once because two places ask the same question: which answers are not the
+ * shelter line stood at its highest. The March's sentence stays silent under all four (`MarchFoot.tsx`), and
+ * the bench labels them together. `safe` and `tight` promise damage **under a cap on the stock**, which is
+ * still damage and not units: what they will not do is buy it with more chunks than the position they
+ * replace (`safe`) or than the plan's own counts (`tight`).
+ */
+export const RAISE_DAMAGE_POSITIONS = ['best', 'v2', 'safe', 'tight'] as const satisfies readonly RaiseMode[];
 
 /**
  * The troop floor: the lowest troop stack's total HP, which is the line every hired stack must stay under.
@@ -133,6 +158,29 @@ export function countsOf(base: StackResult): Record<string, number> {
   const out: Record<string, number> = {};
   for (const stack of base.stacks) out[stack.unitId] = stack.count;
   return out;
+}
+
+/**
+ * **The authority chunks a march's counts burn** — the number the plan itself is ordered on
+ * (`PlanRepeat.mercLost`, `marchOf` in `engine/plan.ts`), read here off the counts alone.
+ *
+ * It is `Σ chunks(n)` over the **authority** stacks and nothing else (S-102: a trained monster is a price paid
+ * in silver, queue and dragon coins, not a stock that drains, so the dominance pool left this axis), and it is
+ * **a property of the counts rather than of the fight**: a hired stack the enemy destroys costs its chunks and
+ * one it never reaches costs exactly the same (S-88b). That is what makes it a reading the raise's own search
+ * can rank on — it costs one multiplication a stack and no battle at all — and it is why the exhaustive
+ * answer can be held to a burn budget without replaying anything.
+ *
+ * `chunks` is the engine's own `ceil(n / 10)` (`engine/recovery.ts`), so this cannot drift from the bill the
+ * Temple charges or from the plan's `mercLost`; a test holds the two to each other on real stops.
+ */
+export function burnOf(base: StackResult, counts: Record<string, number>): number {
+  let burned = 0;
+  for (const stack of base.stacks) {
+    if (stack.pool !== 'authority') continue;
+    burned += chunks(Math.max(0, counts[stack.unitId] ?? stack.count));
+  }
+  return burned;
 }
 
 /**
@@ -273,12 +321,13 @@ export function raisedCounts(
 
   let out: Record<string, number> | null = null;
   for (const pool of RAISED_POOLS) {
-    // **`v2` is answered by `best` here** (S-143b). This function samples because it runs on the main
-    // thread between two keystrokes, and the exhaustive answer is `exactRaise`'s, in the worker. Reading the
-    // position as `best` is what gives the March a legal, never-worse march from the first frame — the
-    // search is seeded with exactly this and takes strict improvements only, so it can only raise the
-    // damage above what is drawn now.
-    const mode = modes[pool] === 'v2' ? 'best' : modes[pool];
+    // **The three exhaustive positions are answered by `best` here** (S-143b, S-144). This function samples
+    // because it runs on the main thread between two keystrokes, and the exhaustive answers are `exactRaise`'s,
+    // in the worker. Reading them as `best` is what gives the March a legal, never-worse march from the first
+    // frame — the search is seeded with exactly this and takes strict improvements only, so it can only raise
+    // the damage above what is drawn now. For `safe` and `tight` the drawn march is also the **cap's own
+    // reading**: `safe` may not burn more than this answer, and this answer is what it is measured against.
+    const mode = isExhaustive(modes[pool]) ? 'best' : modes[pool];
     if (mode === 'off') continue;
     // The live stacks of this pool; `base.stacks` is in kill order, first to fall first.
     const stacks = base.stacks.filter((stack) => stack.pool === pool && stack.count > 0);

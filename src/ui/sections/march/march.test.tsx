@@ -33,6 +33,7 @@ import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
 import { hiredLost } from './hired';
 import { raiseSearchKey, useRaiseSearchStore } from './raiseSearch';
+import { burnOf, countsOf, raisedCounts } from './raise';
 import { unitBonus } from './rows';
 import { pickOf, useRunStore } from './runStore';
 import { worstDamageByPool } from './worst';
@@ -1735,4 +1736,46 @@ test('a March edit asks the search again rather than merging the previous march�
   expect(useRaiseSearchStore.getState().entry?.key ?? null).not.toBe(before);
   const { hired, floor } = shelterNow();
   expect(hired).toBeLessThan(floor);
+}, 60_000);
+
+test('the capped positions are the same joint search, and Safe spends no more stock than Best', async () => {
+  /**
+   * **The two positions S-144 adds, driven the way a player drives them** (owner, 2026-09-29: *"we could have a
+   * safe best-v2 that is bestv2 but accounting for merc lost and dmg/merc"*). `safe` is `v2`'s own search under
+   * a budget of authority chunks — the burn `marchOf` counts — so the promise is checked on the march the pane
+   * is actually showing: **a raise**, never below the plan's own count, and **never burning more of the hired
+   * stock than the shipped `Best`** on the same march. What is asserted here is the promise and not a figure,
+   * because the figure moves with the army while the promise is the position.
+   */
+  await generateFromAPlan();
+  const control = raiseControl('Mercenary');
+  const plan = shownCounts();
+
+  fireEvent.click(within(control).getByRole('radio', { name: 'Safe' }));
+  // One standing rule over both blocks, exactly as `Best v2` is (S-143b): the search walks them together.
+  await waitFor(() => {
+    expect(useRunStore.getState().raiseModes).toEqual({ authority: 'safe', dominance: 'safe' });
+  });
+  await waitFor(() => {
+    expect(useRaiseSearchStore.getState().entry?.status).toBe('done');
+  });
+
+  const filed = lastResult();
+  expect(filed).not.toBeNull();
+  if (filed === null) return;
+  // The answer is the capped search's own and not `Best`'s still standing: filed under the safe key.
+  expect(useRaiseSearchStore.getState().entry?.key).toBe(
+    raiseSearchKey(filed.result, { authority: 'safe', dominance: 'safe' }),
+  );
+
+  const shown = shownCounts();
+  for (const [label, count] of Object.entries(shown)) {
+    expect(count, `${label} fell below the plan’s own count`).toBeGreaterThanOrEqual(plan[label] ?? 0);
+  }
+
+  const own = countsOf(filed.result);
+  const shipped = raisedCounts(filed.request, filed.result, { authority: 'best', dominance: 'best' }) ?? {};
+  expect(burnOf(filed.result, { ...own, ...shown })).toBeLessThanOrEqual(
+    burnOf(filed.result, { ...own, ...shipped }),
+  );
 }, 60_000);

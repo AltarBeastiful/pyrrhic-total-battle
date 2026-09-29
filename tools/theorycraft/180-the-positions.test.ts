@@ -4,20 +4,24 @@
  * decreased by each position"*, then *"redo the benchmark comparing all positions including best and best
  * v2 over all benchmark usecases"*).
  *
- * Five answers to the same march, priced side by side on **every stop of every benchmark army**:
+ * Seven answers to the same march, priced side by side on **every stop of every benchmark army**:
  *
  *   - `As is` — the plan's own counts;
  *   - `Most, in tens` · `Most` — every hired stack as high as the troops still shelter it, rounded and exact;
  *   - `Best` — the shipped climb (`raise.ts`), which samples its box because it runs on the main thread;
  *   - **`Best v2`** — the exhaustive search as it ships (`@/ui/sections/march/exact`, S-143b): the same
- *     seed and the same box, walked whole where the box fits and searched to convergence where it does not.
+ *     seed and the same box, walked whole where the box fits and searched to convergence where it does not;
+ *   - **`Safe`** · **`Tight`** — that same search under a cap on the rare stock (S-144): `Safe` may not burn
+ *     more authority chunks than `Best`, `Tight` not more than the plan's own counts.
  *
  * **What must hold, and is asserted** — the positions are promises, and a promise that fails on one army is
  * a defect:
  *
  *   1. **`Best` and `Best v2` never lose damage.** Both only ever take a count that improves the march's
  *      worst opening, so their damage is at least the plan's own on every army, every stop — and `Best v2`,
- *      which searches the same box the climb samples, is never *below* `Best`.
+ *      which searches the same box the climb samples, is never *below* `Best`. **`Safe` and `Tight` are held
+ *      to their own pair of promises**: never below the march they are seeded with (`Best` and the plan's own
+ *      counts) and never burning more of the stock than it does.
  *   2. **`Most` fields the most units** — never fewer than the plan, and never fewer than either `Best`,
  *      which is the whole of what the position claims.
  *   3. **Every raised stack is still sheltered**: strictly under the lowest troop stack, on every stop, at
@@ -42,7 +46,7 @@ import type { StackRequest } from '@/engine/types';
 import { exactRaise } from '@/ui/sections/march/exact';
 import { applyCounts } from '@/ui/sections/march/manual';
 import { hiredLost } from '@/ui/sections/march/hired';
-import { raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/raise';
+import { isExhaustive, raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/raise';
 import type { RaiseMode } from '@/ui/sections/march/raise';
 import { worstDamageByPool } from '@/ui/sections/march/worst';
 
@@ -53,13 +57,18 @@ import { Report, n } from './harness';
  * The five, in the order the segments carry them. `Best v2` **is** what ships (S-143b): the segment runs
  * `exactRaise` through the worker, and this file reads the same function the worker runs.
  */
-type PositionKey = Exclude<RaiseMode, 'off'> | 'v2';
+type PositionKey = Exclude<RaiseMode, 'off'>;
 
 const POSITIONS: readonly { key: PositionKey; label: string }[] = [
   { key: 'tens', label: 'Most, in tens' },
   { key: 'most', label: 'Most' },
   { key: 'best', label: 'Best' },
   { key: 'v2', label: 'Best v2' },
+  // **The two capped readings of `Best v2`** (S-144): the same search, held to the burn `Best` already
+  // spends (`Safe`) and to the burn the plan's own counts spend (`Tight`), so both are held here to a
+  // promise the other five do not make — see the checks below.
+  { key: 'safe', label: 'Safe' },
+  { key: 'tight', label: 'Tight' },
 ];
 
 /** What a position does to a march: the counts it moves, and how it found them. */
@@ -68,14 +77,16 @@ function movesOf(
   base: Parameters<typeof raisedCounts>[1],
   key: PositionKey,
 ): { counts: Record<string, number>; how: string } | null {
-  if (key !== 'v2') {
+  if (!isExhaustive(key)) {
     const modes = { authority: key, dominance: key } as const;
     const counts = raisedCounts(request, base, modes);
     return counts === null ? null : { counts, how: key };
   }
-  // **The shipped module, not a copy of it**: this column is the control that says what the app ships
-  // (S-143b), so it reads `exactRaise` — the same function the worker runs — and not a research twin.
-  const found = exactRaise(request, base, { authority: 'v2', dominance: 'v2' });
+  // **The shipped module, not a copy of it**: these columns are the control that says what the app ships
+  // (S-143b, S-144), so they read `exactRaise` — the same function the worker runs, told which position it is
+  // answering by the modes — and not a research twin. `safe` and `tight` are the same box and the same seed
+  // under the cap their own mode sets, which is why one call covers all three.
+  const found = exactRaise(request, base, { authority: key, dominance: key });
   return found === null ? null : { counts: found.counts, how: `${found.how}, box ${n(found.space)}` };
 }
 
@@ -305,6 +316,34 @@ describe.skipIf(!process.env.THEORY)('every position, over the benchmark armies'
           const bestRow = byLabel.get('Best');
           if (position.key === 'v2' && bestRow !== undefined && reading.damage < bestRow.damage) {
             here.push(`Best v2 came out below Best (${n(reading.damage)} against ${n(bestRow.damage)})`);
+          }
+          /**
+           * **The two caps are promises about the rare stock** (S-144), and this is where they are held on
+           * every army: `Safe` may not burn more authority chunks than the `Best` it replaces, `Tight` not
+           * more than the plan's own counts — and each is seeded at exactly that march, so each must also
+           * **never lose the damage** it is measured against. A burn is `Σ chunks(n)` over the authority
+           * stacks (`burnOf`, `marchOf`'s own `mercLost`), which is a property of the counts and not of the
+           * fight; the reading is already computed for every column, so the check costs nothing.
+           */
+          if (position.key === 'safe' && bestRow !== undefined) {
+            if (reading.damage < bestRow.damage) {
+              here.push(`Safe came out below Best (${n(reading.damage)} against ${n(bestRow.damage)})`);
+            }
+            if (reading.burn > bestRow.burn) {
+              here.push(
+                `Safe burned more than Best (${String(reading.burn)} against ${String(bestRow.burn)})`,
+              );
+            }
+          }
+          if (position.key === 'tight') {
+            if (reading.damage < own.damage) {
+              here.push(`Tight came out below the plan (${n(reading.damage)} against ${n(own.damage)})`);
+            }
+            if (reading.burn > own.burn) {
+              here.push(
+                `Tight burned more than the plan (${String(reading.burn)} against ${String(own.burn)})`,
+              );
+            }
           }
           // `Most` fields the most: the two damage positions never field more than it does — they never go
           // above the same ceiling, and it takes the ceiling itself.

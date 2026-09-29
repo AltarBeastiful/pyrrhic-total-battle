@@ -96,9 +96,13 @@ const BOTH: Record<RaiseMode, RaiseModes> = {
   tens: { authority: 'tens', dominance: 'tens' },
   most: { authority: 'most', dominance: 'most' },
   best: { authority: 'best', dominance: 'best' },
-  // `v2` reads as `best` in `raisedCounts` (S-143b): the exhaustive answer is the worker's, and this file
-  // is about what the four synchronous positions promise.
+  // The exhaustive positions read as `best` in `raisedCounts` (S-143b, S-144): their answers are the
+  // worker's, and this file is about what the four synchronous positions promise. `safe` and `tight` are
+  // `v2` under a cap on the stock, so on this file's reading — the counts the pane draws first — they are the
+  // same answer, and that is exactly the promise they make: no worse than the `Best` drawn here.
   v2: { authority: 'best', dominance: 'best' },
+  safe: { authority: 'best', dominance: 'best' },
+  tight: { authority: 'best', dominance: 'best' },
 };
 
 /** What the two hired pools have left to spend, in housing points. */

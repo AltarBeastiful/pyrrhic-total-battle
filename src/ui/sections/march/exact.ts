@@ -8,6 +8,12 @@
  * `shelterCeiling` and housing check the four shipped positions live under — so **every vector this can
  * answer with is a march the game would take**, and the bounds have one definition rather than two.
  *
+ * **The score is a policy** (S-144, 2026-09-29). A vector is replayed once and read three ways — the worst
+ * opening, the authority chunks it burns and what the hired stacks struck for in that opening — and the
+ * caller's `RaiseRank` decides which number the climb maximises. `byDamage` is the shipped `Best v2`; a rank
+ * that must not spend more of the rare stock prices the same box differently without moving a bound, so the
+ * two positions differ by one visible line and share everything that would be expensive to get wrong.
+ *
  * Three things make it *the answer* rather than another heuristic, and each is a promise the benchmark
  * asserts on every stop of every army (`tools/theorycraft/180-the-positions.test.ts`):
  *
@@ -37,8 +43,44 @@ import type { SearchSlot } from '@/engine/exact';
 import type { StackRequest, StackResult } from '@/engine/types';
 
 import { applyCounts } from './manual';
-import { RAISED_POOLS, countsOf, raisedCounts, shelterCeiling, troopFloor } from './raise';
+import {
+  RAISED_POOLS,
+  burnOf,
+  countsOf,
+  isExhaustive,
+  raisedCounts,
+  shelterCeiling,
+  troopFloor,
+} from './raise';
 import type { RaiseModes, RaisedPool } from './raise';
+import { worstDamageByPool } from './worst';
+
+/**
+ * **What one candidate vector is worth** — every reading a caller is allowed to rank it on, and all three off
+ * one replay. A vector the housing cannot pay for is not scored at all (the rank never sees it).
+ */
+export interface RaiseFacts {
+  /** The march's worst opening — the figure the plan itself is ranked on (S-108). */
+  damage: number;
+  /** The authority chunks the vector burns: `Σ chunks(n)`, a property of the counts and not of the fight. */
+  mercLost: number;
+  /** What the hired stacks themselves strike for in that opening — `damage`'s authority term (S-105). */
+  hiredDamage: number;
+}
+
+/**
+ * **How a caller prices a vector.** The search itself is blind to this — it climbs whatever number the rank
+ * hands back — which is what lets a policy that must not spend more of the rare stock reuse the shipped
+ * algorithm, the shipped box and the shipped seed rather than a second copy of them.
+ */
+export type RaiseRank = (facts: RaiseFacts) => number;
+
+/**
+ * **The shipped position's own rank: damage, and nothing else** (S-143b). It is the default so that every
+ * caller written before a policy existed keeps the answer it had, and it is a function rather than a branch so
+ * that the difference between the positions is one visible line.
+ */
+export const byDamage: RaiseRank = (facts) => facts.damage;
 
 /** What the search needs to reproduce the march it was asked about — the pane's own snapshot, in full. */
 export interface ExactRaiseInput {
@@ -64,9 +106,30 @@ export interface ExactRaiseAnswer {
   space: number;
 }
 
-/** The pools whose own control stands on `v2`: the stacks this search may move. */
+/** The pools whose own control stands on an exhaustive position: the stacks this search may move. */
 export function exhaustivePools(modes: RaiseModes): RaisedPool[] {
-  return RAISED_POOLS.filter((pool) => modes[pool] === 'v2');
+  return RAISED_POOLS.filter((pool) => isExhaustive(modes[pool]));
+}
+
+/**
+ * **The most of the rare stock the authority block may spend** — the whole of what `safe` and `tight` add to
+ * this search (S-144).
+ *
+ * The reading is the engine's own: `burnOf` is `marchOf`'s `mercLost` (`Σ chunks(n)` over the authority
+ * stacks), it is a property of the counts and not of the fight, and it is **the authority pool's alone**
+ * (S-102 — a trained monster is a price in silver, queue and dragon coins, and not a stock that drains). So
+ * only the mercenaries' control can cap anything, and the two caps are the two marches a player can compare
+ * himself with: `safe` may not burn more than the shipped `Best` it replaces (its counts are exactly what
+ * `raisedCounts` answers with, which is also the pane's own first frame), `tight` may not burn more than the
+ * **plan's own counts** — the march before any position moved a count, so not one extra chunk.
+ *
+ * `null` is no cap at all: `v2`, and every control standing on `off`, `tens` or `most`, which is also why a
+ * `safe` on the monsters' block alone changes nothing — there is no burn there to bound.
+ */
+function burnCap(base: StackResult, modes: RaiseModes, seed: Record<string, number>): number | null {
+  if (modes.authority === 'safe') return burnOf(base, seed);
+  if (modes.authority === 'tight') return burnOf(base, countsOf(base));
+  return null;
 }
 
 /**
@@ -79,6 +142,13 @@ export function exactRaise(
   request: StackRequest,
   base: StackResult,
   modes: RaiseModes,
+  /**
+   * How to price a vector. Left out, this is `byDamage` — the position the interface ships — and a policy
+   * changes *which* of this box's vectors wins, never which vectors are in it: the slots, the bounds, the
+   * housing check and the seed are the same ones either way, so a ranked search is still a raise, still legal
+   * and still never below the `Best` it starts from.
+   */
+  rank: RaiseRank = byDamage,
 ): ExactRaiseAnswer | null {
   const pools = exhaustivePools(modes);
   if (pools.length === 0) return null;
@@ -92,6 +162,9 @@ export function exactRaise(
    * testing.
    */
   const seed = raisedCounts(request, base, modes) ?? {};
+
+  /** What this position may spend, in chunks — `null` for `v2`, and for a block with no burn to bound. */
+  const cap = burnCap(base, modes, seed);
 
   /**
    * **The pools the search does not walk stay where that seed put them**, so every vector is scored as the
@@ -116,11 +189,34 @@ export function exactRaise(
       from: stack.count,
       to: Math.min(shelterCeiling(floor, stack.hpPerUnit), cap),
     });
+    /**
+     * **A `Tight` block starts at the plan's own counts** — the march it promises not to cost more than —
+     * where a `safe` or `v2` block starts where the shipped `Best` put it. A slot left out of `start` is its
+     * `from`, which is the plan's count, so `tight` is the same statement made by leaving it out; it is
+     * spelled here because the *promise* has to be visible: the answer can only improve on where it starts,
+     * so `tight` cannot lose to the plan's own march, by construction, exactly as `safe` cannot lose to
+     * `Best`.
+     */
+    if (modes[stack.pool as RaisedPool] === 'tight') continue;
     const wanted = seed[stack.unitId];
     if (wanted !== undefined) start[stack.unitId] = wanted;
   }
 
-  /** The march's worst opening on a vector — the figure the plan itself is ranked on (S-108). */
+  /**
+   * **A capped position refuses a vector the way the housing refuses one**: `-Infinity`, which the search
+   * reads as "not an answer" and never returns. That is the whole of the cap — a burn over the budget is not
+   * a worse march, it is a march this position will not field — and it is why the seed has to be feasible:
+   * `safe`'s seed *is* its cap, and `tight`'s seed is the plan's own counts, which is the cap by definition.
+   */
+  const ranked: RaiseRank =
+    cap === null ? rank : (facts) => (facts.mercLost <= cap ? rank(facts) : Number.NEGATIVE_INFINITY);
+
+  /**
+   * **The three readings of one vector, and the two the rank may not need are lazy.** `damage` is one replay
+   * and is what the shipped position ranks on; the burn is arithmetic over the counts and the hired share is
+   * one pass over the journal `damage`'s own replay already built — both nearly free, but a box of 908 684
+   * vectors is a box of 908 684 of them, so a rank that reads only the damage pays only for the damage.
+   */
   const score = (vector: Record<string, number>): number => {
     const candidate = { ...held, ...vector };
     // **Every unit of the pool, not only the ones being moved**: a stack pinned at its ceiling or its stock
@@ -134,7 +230,18 @@ export function exactRaise(
     if (used.authority > request.housing.authority || used.dominance > request.housing.dominance) {
       return Number.NEGATIVE_INFINITY;
     }
-    return applyCounts(request, base, candidate).summary.minDamage;
+
+    const played = applyCounts(request, base, candidate);
+    const facts: RaiseFacts = {
+      damage: played.summary.minDamage,
+      get mercLost(): number {
+        return burnOf(base, candidate);
+      },
+      get hiredDamage(): number {
+        return worstDamageByPool(played.summary.journals.enemyFirst, played.result.stacks).authority;
+      },
+    };
+    return ranked(facts);
   };
 
   const answer = exactSearch(slots, score, { start });

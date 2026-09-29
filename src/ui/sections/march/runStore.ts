@@ -15,7 +15,7 @@ import type { CampaignPlan, PlanPick, PlanRow } from '@/engine/plan';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
-import { NO_RAISE } from './raise';
+import { NO_RAISE, isExhaustive } from './raise';
 import type { RaiseMode, RaiseModes } from './raise';
 
 /**
@@ -366,14 +366,17 @@ export const useRunStore = create<RunState>()((set, get) => ({
     set((state) => ({
       raiseModes:
         /**
-         * **`Best v2` is one position, not two** (S-143b; owner, 2026-09-29: *"give another options for
-         * both"*). The exhaustive search walks the mercenaries and the monsters **together** — that is the
-         * configuration experiment 181 measured, and the joint answer is worth up to +5.45 % where two
-         * separate searches are not — so pressing the segment on either block puts both of them on it. The
-         * two controls are two views of one standing rule, and they say so.
+         * **The exhaustive positions are one standing rule, not two** (S-143b, S-144; owner, 2026-09-29:
+         * *"give another options for both"*). Each of `v2`, `safe` and `tight` is a single search walking the
+         * mercenaries and the monsters **together** — that is the configuration experiment 181 measured, and
+         * the joint answer is worth up to +5.45 % where two separate searches are not — so pressing the
+         * segment on either block puts both of them on it. The two controls are two views of one rule, and
+         * they say so. The cap is the mercenaries' own (`burnCap`): `safe` bounds it at what `Best` spends
+         * and `tight` at what the plan's counts spend, and on the monsters' block alone neither is reachable,
+         * which is S-102's rule that a trained monster is a price and not a stock.
          */
-        mode === 'v2'
-          ? { authority: 'v2', dominance: 'v2' }
+        isExhaustive(mode)
+          ? { authority: mode, dominance: mode }
           : // A **new object**: the March reads this through a selector, and writing in place would never
             // reach it.
             { ...state.raiseModes, [pool]: mode },

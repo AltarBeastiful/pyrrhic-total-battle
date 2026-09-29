@@ -825,6 +825,19 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
   await expect(control).toHaveAttribute('aria-busy', 'false');
   await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
 
+  // **The sixth and seventh are that same search under a cap on the hired stock** (S-144): `Safe` may not
+  // burn more chunks of mercenaries than the `Best` above it, `Tight` not more than the plan's own counts —
+  // so `Tight` cannot go below the plan's own count on this stack, and neither may pass what `Most` fields.
+  // Both are raises under the same ceiling, and both are answered by the worker, so both carry the wait.
+  for (const position of ['Safe', 'Tight']) {
+    await press(position);
+    await expectChosen(position);
+    await expect.poll(hunter, { message: `${position} never answered` }).toBeGreaterThanOrEqual(before);
+    expect(await hunter(), `${position} went past what Most fields`).toBeLessThanOrEqual(most);
+    await expect(control).toHaveAttribute('aria-busy', 'false');
+    await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
+  }
+
   // Back to `Most` for the rest of the journey: the positions are one control, and this is the one the
   // Generate below is asked to remember.
   await press('Most');
