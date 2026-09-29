@@ -1,164 +1,179 @@
-# `Best` v2 — the space, what the climb misses, and what to do about it (S-143b)
+# `Best` v2 — the plan's counts as a seed, its limits as the box (S-143b)
 
 Owner, 2026-09-29: *"is there still room for improvement for the best selector? are we trying every possible
-combination in the space we have (max dominance/authority and merc stock?)"*.
+combination in the space we have (max dominance/authority and merc stock?)"* — and then, on what to do with
+the answer: *"no cost limit as it's experimental for now and will be moved to assemblyscript for
+precomputations or improving the results. Basically in the planner we've narrowed the field of research now we
+can hammer down to find the few percentage left of gain if the user needs it."*
 
-**Short answer: no, and the room is real — but less than a first draft of this plan claimed, and the cheapest
-fix is not the one it first proposed.** `Best` is a **coordinate climb**: one stack at a time, the plan's own
-counts as the only start, **16 samples a stack** plus a step-1 refinement, at most three sweeps. The space it
-climbs in is right — every count vector from the plan's own counts up to `min(shelter ceiling, owned stock)`
-per fielded hired type, under the authority or dominance the housing pays — but it samples that space instead
-of walking it, and it can only move one stack at a time. Measured on the 18 benchmark armies the app's own
-criteria use: **on the stops where a raise can move at all, a stronger reading of the same space finds 3.9 %
-more damage at the median and 27.3 % at the worst, on ~a third of them.**
-`tools/theorycraft/out/181-best-headroom.md` (experiment 181).
+So this is no longer a UI question with a frame budget. **The plan's own march is the seed, and the plan's own
+limits are the box**: every count vector from what the plan fields up to `min(shelter ceiling, owned stock)` a
+hired type, under the authority or dominance the housing pays. The question is only how much of that box the
+shipped `Best` leaves, and what it costs to take the rest.
+
+**Answer: 10 of the 43 stops where a position moves anything give up between 0.41 % and 5.45 % of damage
+(median 2.29 %), and `Best v2` — built as a research module and benchmarked against everything that ships —
+takes all of it without ever coming out below `Best`.** Measured in `tools/theorycraft/out/180-the-positions.md`
+(all positions, every stop of every benchmark army) and `out/181-best-headroom.md` (the exposure study).
 
 ## 1. The space, and what `Best` spends on it
 
 | | measured |
 |---|---|
 | stops where a raise can move a count at all | **45** |
-| the space — vectors in the box, per stop | **median 144**, max **908 684** |
-| what `Best` evaluates | `Σ stacks` of ~16 coarse samples + a ±step refinement, ≤ 3 sweeps — a few hundred replays |
-| what that costs | **0.4 ms** median, **3.1 ms** worst, on one stop |
+| the box — vectors per stop | **median 144**, max **908 684** |
+| what `Best` evaluates | ~16 samples a stack + a ±step refinement, ≤ 3 sweeps — a few hundred replays |
+| what that costs | **0.5 ms** median, **3.3 ms** worst, on one stop |
 
-The median space is smaller than a grid: three or four hired types, spans of a few counts each. That is what
-the plan's own bar leaves — the plan trades the stock over four marches, the raise takes it back.
+The median box is tiny — three or four hired types, spans of a few counts each — which is what the plan's own
+trade leaves for the raise to take back. The cost limit is gone by the owner's own call, so nothing below is
+chosen for being cheap.
 
-## 2. Five readings of the same space, and the gap to each
+## 2. What the extra search is worth
 
-Experiment 181 walks the same box five stronger ways, each starting from or including the app's own answer and
-scored the app's way (`applyCounts` → the march's **worst opening**, the figure the plan is ranked on). Every
-one of them is bounded by the same ceiling, owned stock and housing as the app, so every win is a march the
-game would take.
+**The exposure study** (experiment 181) climbs the same box five stronger ways, each bounded exactly as the
+app is — the same ceiling, the same stock, the same housing — so every win is a march the game would take:
 
-| reading | beats `Best` on | median gain | worst | cost, median / worst |
+| reading | beats `Best` on | median gain | worst |
+|---|---|---|---|
+| one stack, exhaustive — *the sampling fix alone* | 6 of 45 | +1.15 % | +3.90 % |
+| pairwise — every pair, exhaustively | 8 of 44 | +2.23 % | +5.45 % |
+| seeded restarts | 10 of 45 | +2.71 % | +5.45 % |
+| **exhaustive — the control** | **10 of 42** | **+2.80 %** | **+5.45 %** |
+| lowered — allowed *below* the plan's counts | 6 of 45 | +1.15 % | +3.90 % |
+
+The control matters in both directions: it is what makes the other four trustworthy (on the stops small enough
+to walk whole, the optimum is *known*, not argued), and it is the ceiling on the whole exercise — **10 stops is
+all there is** on this corpus, and the search's own 10 (the restarts) reach it. The gaps are concentrated: his
+`live account, evening` (three stops), the 2026-09-17 export at 7 000 and 12 000 leadership (three), the
+4 000-leadership case, his live camp of 2026-09-18, his usual setup of 2026-09-19 and the monster camp (one
+each).
+
+**`Best v2` against everything that ships** (experiment 180, every stop, every army). Over the 43 stops where
+a position moves a count:
+
+| | improved | unchanged | decreased |
+|---|---|---|---|
+| **Damage a march, `Best v2` vs `Best`** | **10** | 31 | **0** |
+| Damage a silver, same comparison | 10 | 31 | 0 |
+| Damage a hired | 6 | 32 | 3 |
+| Silver | 0 | 41 | 0 |
+| Gold | 4 | 32 | 5 |
+| Dragon coins · Training queue | 0 | 41 | 0 |
+| Merc lost | 1 | 39 | 1 |
+| Hired units fielded | 4 | 31 | 6 |
+| Shelter margin | 6 | 33 | 2 |
+
+Damage gains: **+5.45 % at the best stop, +2.29 % median, +0.41 % at the smallest** — and never a loss. The
+price is the same trade the positions have always made, in miniature: it fields **four** stops' worth of extra
+units and **six** stops' worth of fewer (it is a damage answer, not a units answer), and the stock burnt and
+the gold to revive them move with them. Silver, the coins and the training queue do not move at all.
+
+**Every position against the plan's own march**, for the whole picture (63 stops, 155 position-readings):
+
+| criterion | `Most, in tens` | `Most` | `Best` | `Best v2` |
 |---|---|---|---|---|
-| **one stack, exhaustive** — the app's own neighbourhood and sweeps, every count walked | 10 of 45 | **+3.90 %** | +27.30 % | 0.4 / **6.9 ms** |
-| **pairwise** — every pair, exhaustively, until no pair improves | 12 of 44 | +3.90 % | +27.30 % | 1.9 / 177.8 ms |
-| **restarts** — the same climb from 12 seeded random starts | 14 of 45 | +3.88 % | +27.30 % | 9.9 / 119.7 ms |
-| **exhaustive** — every vector, on the stops small enough (the **control**) | 14 of 42 | +3.88 % | +27.30 % | 2.1 / 3344 ms |
-| **lowered** — the climb allowed *down* to zero, same bounds | 10 of 45 | +3.90 % | +27.30 % | 1.5 / 14.4 ms |
+| Damage a march | 31 ↑ / 1 ↓ | 39 ↑ / 2 ↓ | 41 ↑ / 0 ↓ | 41 ↑ / 0 ↓ |
+| Damage a hired | 17 ↑ / 10 ↓ | 10 ↑ / 31 ↓ | 13 ↑ / 28 ↓ | 14 ↑ / 27 ↓ |
+| Silver | 0 ↑ / 1 ↓ | 0 ↑ / 2 ↓ | 0 ↑ / 2 ↓ | 0 ↑ / 2 ↓ |
+| Gold | 0 ↑ / 30 ↓ | 0 ↑ / 41 ↓ | 0 ↑ / 41 ↓ | 0 ↑ / 41 ↓ |
+| Merc lost | 0 ↑ / 24 ↓ | 0 ↑ / 37 ↓ | 0 ↑ / 37 ↓ | 0 ↑ / 37 ↓ |
+| Hired units fielded | 32 ↑ | 41 ↑ | 41 ↑ | 41 ↑ |
+| Shelter margin | 9 = / 23 ↓ | 7 = / 34 ↓ | 13 = / 28 ↓ | 12 = / 29 ↓ |
 
-Three things to read out of that table, and the first one is the finding that changed this plan:
+Read the directions, not a score: a raise buys damage with the stock (`Merc lost`, gold and the queue go up),
+and every one of them is *supposed* to. What `Best v2` adds to `Best` is only the 10 damage rows above.
 
-1. **Most of the gap is sampling, not the neighbourhood.** Walking every count instead of 16 samples, with
-   the app's own one-stack-at-a-time climb, already closes **10 of the 14** gaps the full enumeration proves
-   exist — at **0.4 ms median and 6.9 ms worst**, i.e. for almost nothing. The pairwise neighbourhood adds
-   **2** more, and costs 178 ms at its worst.
-2. **The enumeration is the control, not a candidate.** On the 42 stops whose box fits in 200 000 vectors,
-   walking all of them improves on 14 — so the gaps are optima the climb misses, not artefacts of a luckier
-   heuristic. The exhaustive method itself is far too slow to ship (3.3 s worst).
-3. **The promise costs nothing measurable.** Letting the climb go *down* as well as up helps on 10 of 45
-   stops — but never more than the pairwise reading does on the same stop, and strictly less on three. Once
-   Step 1 is in, **the raise-only rule is free.**
+## 3. What `Best v2` is
 
-**Why the climb misses, opened up on the worst case.** That stop's box is five hired types, three of which
-cannot move (two at their stock, one at its ceiling):
+`tools/theorycraft/exact-best.ts`, and the two things that make it the answer rather than another heuristic:
 
-```
-stone-gargoyle 12..12 · epic-monster-hunter-6 19..19 · emerald-dragon 13..13
-battle-boar 1..15 · water-elemental 2..32
-```
+- **The seed is the shipped answer.** `Best`'s own counts are one of the vectors it starts from, so `Best v2`
+  is at least `Best` **by construction**, on every stop — the benchmark asserts it.
+- **Two ways to the optimum, and which one a stop got is reported.** A box of `≤ 300 000` vectors is **walked
+  whole** (the only place an optimum is known); a larger one gets a deterministic multi-start search —
+  pairwise neighbourhood then one-stack, to convergence, from 64 seeded starts — which experiment 181 measured
+  reaching the walked optimum on every stop where the two could be compared.
 
-`Best` answers **nothing** — the plan's counts exactly as they are (2 941 677) — while the pair move
-`battle-boar 15 · water-elemental 31` is worth **3 744 681, +27.30 %**, a march that out-hits that same bar's
-`steady-max` stop (3 031 810). Neither stack alone improves anything: raising one grows its total HP, so it
-climbs the kill order and loses a round of strikes, and the units bought do not pay for the round; raising
-**both** keeps their order among themselves and pays for both. The shipped position is not *wrong* here, only
-short — what it leaves is the plan's own counts.
+The walk's share is real: 42 of the 63 stops have a box small enough to enumerate, which is why the "control"
+column and `Best v2`'s answer agree. The 11-type monster camp is where the box explodes (908 684 at its
+widest) and where the search has to carry it.
 
-## 3. What v2 should be, in order of what it buys per millisecond
+**Where this ships is not the March.** Two destinations, both open, both the owner's: the **plan's own
+search** (the engine, where a precomputation can afford an exhaustive walk per candidate shape) and the
+**AssemblyScript kernel** (`src/kernel/`, where a full walk over a few million vectors is milliseconds). The
+UI's `Best` — a position the player presses between two keystrokes — is the one place this shape does not
+belong as it stands, which is why the module lives in `tools/theorycraft/` for now and nothing in `src/`
+imports it.
 
-**Step 1 — walk every count (the sampling fix).** Replace the 16-sample grid with an exhaustive walk of each
-stack's range, keeping the app's one-stack sweep. Measured: **10 of the 14 known gaps, +3.90 % median, 6.9 ms
-worst.** This is the first thing to build because it is nearly free and it is most of the gap.
+## 4. The raise-only promise: keep it
 
-**Step 2 — the pairwise pass, sampled the way a single stack is.** One pair at a time, walking that pair's box
-coarsely and refining around the best sample, sweeps until no pair improves. Measured gain: the **2** further
-stops nothing else reaches (+1.76 % on the 4 000-leadership case, +2.84 % on the 7 000 export's silver saver).
-**The cost is the design problem**: an exhaustive pair pass costs **177.8 ms** at its worst — and the boxes
-grow as `k²/2` pairs, with **11 hired types** on the monster camp's widest stop (measured below). So the pair
-box must be sampled, capped and budgeted exactly as the single-stack one is, and the budget has to be
-documented (today the whole position costs 3.1 ms worst; a pairwise pass must be given a number the owner
-accepts, in the same way `COARSE_SAMPLES` and `MAX_CLIMB_PASSES` are documented).
+`Best` never goes below the plan's own counts. The alternative was priced again after the correction below:
+letting the climb go down to zero helps on **6 of 45** stops (median +1.15 %, worst +3.90 %) — and on the six
+stops where both a downward move and a pairwise move were available, **the pairwise reading is better on 3 and
+the downward one on none**. So the promise costs nothing measurable, it keeps `Best` comparable with `Most`
+and with the plan, and it saves the March a sentence saying it cut a count.
 
-**Step 3 — restarts, only if Steps 1–2 still leave gaps.** 12 seeded starts find **14 of 45** — the control's
-own set — but at 9.9 ms median and 119.7 ms worst, so a small seed count (2–4) with a budget is the most this
-can be worth. *Seeded*: an unseeded version of this very experiment changed its headline between two runs of
-the same code (13 of 45 → 14 of 45) — a benchmark that answers differently on the same input measures the dice.
+## 5. What must not break — and one thing the benchmark found
 
-**Step 4 — the exact answer, where the type count allows it.** `summary.minDamage` is the **enemy-first
-journal's own total**, a plain sum of the per-hit damages of the stacks that act (`battle.ts:226`, `:294`) —
-*not* the lesser of the two journals. On any cell where **both orders the battle walks are fixed** — the kill
-order (total HP descending) and the attack order (base damage descending over *all* stacks) — the objective
-and every constraint are affine in the counts (bounds, stock, housing, and the two orders' inequalities), so
-the optimum of that cell is at a **vertex**, reachable by a bounded enumeration of breakpoints. The number of
-cells is the number of (kill order × attack order) pairs: **k! × k!** *interleavings with the troops' own
-order* — 576 at k = 4, astronomically more at k = 11. So this is only on the table for the small-type armies
-(his four-type plan runs), and it is the only reading that would let `Best` say "the best" in the strict
-sense. Say "affine **up to the per-hit rounding**": `damagePerHit = round(count × strength × …)`, so each term
-is a staircase, and the linear relaxation bounds the optimum from above rather than equalling it.
-
-**Step 1 alone is worth shipping on its own.** Steps 2–4 are each a separate measurement, and the gate below is
-the same for all of them.
-
-## 4. The raise-only promise: keep it (measured, not assumed)
-
-`Best` today never goes below the plan's own count. The alternative was priced: a climb allowed down to **zero**
-inside the same bounds is better on 10 of 45 stops (**+3.90 %** median, +27.30 % worst) — but it is never
-*more* than the pairwise reading on any stop, and strictly less on three (`12 000 leadership · silver-saver`
-+0.49 % against +2.80 %, `evening · burn-saver` +0.35 % against +5.45 %, `evening · silver-saver` +1.15 %
-against +3.88 %). **So: keep the promise.** It costs nothing measurable once Step 1 is in, it keeps `Best`
-comparable with `Most` and with the plan ("it fields at least what the plan fields"), and it saves the March a
-sentence saying it cut a count — on a pane the owner has already asked to stop moving. A fifth position for a
-"fewer units, more damage" march stays a design question, not a priced one, and this experiment is the reason.
-
-## 5. What v2 must not break
-
-- **The bounds are the space.** Ceiling = `ceil(troopFloor / hpPerUnit) − 1`, the expression `shelterUnder`
-  uses (`raise.test.ts` pins the two together); the owned stock; the spare housing. Experiment 180 asserts
-  every stop of every benchmark army is sheltered and inside its housing — v2 inherits that assertion.
-- **It never loses damage.** Every reading here takes only strict improvements; v2's neighbourhoods must keep
-  that by construction (an exhaustive pass does).
-- **Main thread, and bounded.** The March re-derives on Generate, on a stop change, on a put-back and on a
-  keystroke; the raise is arithmetic plus replays, never a worker. Today it costs 0.4 ms median / 3.1 ms worst
-  — the budget v2 may spend is the owner's call, and it must be documented where the caps are today.
-- **No engine change.** Nothing under `src/engine` imports `raise.ts`, so `pnpm bench:baseline` cannot move.
+- **The bounds are the box.** Ceiling = `ceil(troopFloor / hpPerUnit) − 1`, the expression `shelterUnder`
+  uses (`raise.test.ts` pins the two together); the owned stock; the spare housing, **counted over every unit
+  of the pool and not only the movable ones** (see §8 — this is the bug the first draft was built on).
+  Experiment 180 asserts, per stop and per position, that no stack is over its ceiling, no pool over its
+  housing and no stack over its stock.
+- **It never loses damage.** Every neighbourhood takes strict improvements only; `Best v2` additionally starts
+  from `Best`'s answer.
+- **One march, one arithmetic.** Experiment 180 found that the app draws **two different battles from the same
+  counts**: `planMarch` (the engine's result, what the pane shows for a plan stop) and `applyCounts` (the
+  hand-edit replay, what it shows for a count edit) break a **total-HP tie** differently — `buildKillOrder`'s
+  ranking against the base march's stack order — and that is worth **~1.8 % of damage** on the monster camp.
+  Both paths agree on the plan's own counts, so nothing on screen is wrong today; they part company the moment
+  a raise moves a count, and the benchmark had to read every position through the path the pane would use. A
+  story of its own: one tie rule, in one place. (`manual.ts` against `plan.ts`.)
+- **No engine change yet**: nothing under `src/engine` imports the raise, so `pnpm bench:baseline` cannot move
+  — and if this moves into the plan's search, that gate becomes the thing to watch.
 
 ## 6. Gate
 
-1. **The enumeration is the acceptance test**: re-run experiment 181 with v2 in place, and the exhaustive
-   column must show **no gap at all** — on every stop small enough to walk whole, v2's answer must equal the
-   walk's. (The five readings above are the before picture: 10 / 12 / 14 / 14 / 10 of 45 or 42.)
-2. **Non-regression**: experiment 180's four-position table re-run, no stop may lose damage, and `Best`'s
-   damage column must be at least today's on every stop.
-3. **`raise.test.ts`** gains the 465-vector box as a fixture: the two-stack move that the 1-opt cannot see must
-   come out of v2.
-4. `pnpm test`, `pnpm typecheck`, `pnpm lint`, `prettier --check`, the e2e journey on a fresh build, and
-   `pnpm bench:baseline` (readings unmoved).
+1. **The enumeration is the acceptance test.** With `Best v2` in place, the exhaustive column of experiment
+   181 must show no gap at all: on every stop small enough to walk whole, the search's answer must equal the
+   walk's.
+2. **The promises, on every stop of every army** (experiment 180): `Best v2` not below `Best`; not below the
+   plan; never over a ceiling, a stock or a housing; `Most` still the units answer.
+3. **Non-regression**: experiment 180's `Best` column must not move, and `pnpm bench:baseline`'s readings must
+   stay unmoved while nothing under `src/engine` imports any of this.
+4. `pnpm test`, `pnpm typecheck`, `pnpm lint`, `prettier --check`, the e2e journey on a fresh build.
 
 ## 7. Open questions
 
-- **Is the cell argument airtight?** On integer counts the two orders are total, so every point of the box
-  lies in exactly one cell — but at a cell's boundary the walk's tie-breaking picks an order whose value may
-  be *lower* than that cell's affine extension. So the best cell-vertex is an upper bound. The 42 enumerable
-  stops can decide it directly: does the walk's optimum ever sit strictly below the best cell value?
-- **What is the budget?** Steps 2–3 want 100+ ms at their worst; the position is on the main thread. What is
-  the number the owner will accept for a press of `Best`?
-- **Is the plan's own march the right *only* start?** Restarts find 14 of 45 — is that the same interaction
-  problem seen from another angle (in which case Step 2 subsumes it), or a genuine basin problem?
-- **Does any of this belong in the engine** (`shelterCounts`' neighbourhood), so the plan's own search can use
-  it and the bar stops leaving the room the raise exists to take?
+- **The cell argument** (from the first draft, still unbuilt): `minDamage` is the enemy-first journal's own
+  total, affine in the counts on any cell where the kill order and the attack order are both fixed — so the
+  optimum of a cell is at a vertex and the whole box is `k! × k!` cells. It would make `Best` provable rather
+  than walked-and-searched, and it is the natural thing to port to the kernel. The rounding of `damagePerHit`
+  makes it "affine up to the per-hit rounding", so a cell's vertex is an upper bound to check, not the answer.
+- **Which tie rule is right** — the app's two replays disagree (§5), and until that is settled a search's
+  numbers depend on which one scores it.
+- **Where the gain is worth having**: it is 10 stops of 43, concentrated in four armies, all of them multi-type
+  plan runs. Is that "the few percent the user needs", or is the answer "the plan's own shape search should
+  own this" — i.e. should the *plan* spend the stock the raise spends?
+- **Does the raise belong in the plan at all?** Everything here spends stock the plan deliberately saved over
+  four marches. A plan that fielded the raised counts from the start would score better than the bar does
+  today; the reason it does not is `largestSustained`, which is a rationing rule, not a bound of the game.
 
-## 8. What the independent review changed
+## 8. What the review and the benchmark changed
 
-This plan was reviewed adversarially before it was kept, and the review was right on four things that are now
-fixed in it: the first draft claimed the pairwise reading "already finds the whole of the measured gap" (**it
-finds 12 of 14**) and made that the gate; it quoted the report's "0.1 ms median" (a bug — `timed[0]` is the
-**minimum**; the median is 0.4 ms) in §1 and §5; it quoted the restarts column as a measurement when it was
-unseeded `Math.random()` (a re-run moved it 13 → 14 of 45, now seeded); and it priced "field fewer units"
-against the *old* `Best` rather than against v2, which reverses the §4 recommendation. The review also caught
-that the space is over **fielded** types only, that the worst case is 465 vectors with three types pinned,
-that 11 hired types are reachable on the monster camp, and that `minDamage`'s definition needed the right
-citation.
+The first draft of this plan claimed a much larger gap, and it was wrong twice over:
+
+- **An independent adversarial review** (2026-09-29) caught four things, all fixed: the draft said the pairwise
+  reading closes the whole gap (it does not — 8 of the 10), quoted its own report's "0.1 ms median" (a bug:
+  `timed[0]` is the *minimum*; the median is 0.5 ms), quoted an unseeded `Math.random()` column as a
+  measurement (seeded now), and priced the "field fewer units" option against the old `Best` rather than
+  against v2.
+- **The benchmark's own promise assertions caught a worse one.** The first version of the exposure study
+  counted the housing against the **movable stacks only**, so a reading could spend the same dominance twice:
+  its headline "+27.30 %" wins were **infeasible** (the stop already uses 199 of its 200 dominance), and
+  `Best v2` — built on the same bug — came out *below* `Best` on the monster camp and over the housing in four
+  places. With the fix the true exposure is **10 of 45 stops, median +2.80 %, worst +5.45 %** where the draft
+  had said 14 of 42 and +27.30 %. The first draft's whole §2 was re-derived; §4's recommendation survived,
+  and the ordering of §3 changed (the sampling fix is the cheap half after all, but with no cost limit the
+  whole search ships as one).

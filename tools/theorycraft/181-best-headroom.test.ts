@@ -90,14 +90,23 @@ function slotsOf(request: StackRequest, base: StackResult, floor: number): Slot[
 }
 
 /** A scorer for one stop: a move record in, the march's worst opening out, `-Infinity` when it does not fit. */
-function scorerOf(request: StackRequest, base: StackResult, slots: readonly Slot[]) {
+function scorerOf(request: StackRequest, base: StackResult) {
   const counts: Record<string, number> = {};
   for (const stack of base.stacks) counts[stack.unitId] = stack.count;
   const capacity = { authority: request.housing.authority, dominance: request.housing.dominance };
   return (moves: Record<string, number>): number => {
     const used = { authority: 0, dominance: 0 };
     const candidate = { ...counts, ...moves };
-    for (const slot of slots) used[slot.pool] += (candidate[slot.unitId] ?? 0) * slot.cost;
+    // **Every unit of the pool, not only the movable ones.** The first version of this file counted the
+    // `slots` — the stacks a raise may move — and a stack pinned at its ceiling or its stock pays for the
+    // housing it occupies just the same. The error was not conservative: it let a reading spend the same
+    // dominance twice, and the "+27.30 %" it reported on his usual setup's sweet spot is **infeasible**
+    // (that stop already uses 199 of its 200 dominance). Corrected 2026-09-29, and with it the answer the
+    // first draft of `docs/plans/best-v2.md` was built on.
+    for (const unit of request.units) {
+      if (unit.pool === 'leadership') continue;
+      used[unit.pool] += (candidate[unit.id] ?? 0) * unit.cost;
+    }
     if (used.authority > capacity.authority || used.dominance > capacity.dominance) {
       return Number.NEGATIVE_INFINITY;
     }
@@ -223,9 +232,11 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
       [
         '`climbedCounts` is a **coordinate climb**: one stack at a time, 16 samples a stack plus a step-1',
         'refinement, at most three sweeps. The space is every count vector between the plan’s own counts and',
-        '`min(shelter ceiling, stock)` per type, under the housing — and this measures the gap to four',
+        '`min(shelter ceiling, stock)` per type, under the housing — and this measures the gap to five',
         'stronger readings of that same space, on every stop of every benchmark army where a raise can move a',
-        'count at all.',
+        'count at all. **Every reading is bounded by the same ceiling, stock and housing the app is**, counted',
+        'over every unit of the pool: the first version of this file counted the movable stacks only, which let',
+        'a reading spend the same dominance twice and reported wins that were not playable marches.',
       ].join(' '),
     );
 
@@ -250,7 +261,7 @@ describe.skipIf(!process.env.THEORY)('what Best leaves on the table', () => {
         if (floor === null) continue;
         const slots = slotsOf(scenario.request, base, floor).filter((slot) => slot.to > slot.from);
         if (slots.length === 0) continue;
-        const score = scorerOf(scenario.request, base, slots);
+        const score = scorerOf(scenario.request, base);
 
         const appRun = timed(() => raisedCounts(scenario.request, base, BEST) ?? {});
         const app = appRun.value;
