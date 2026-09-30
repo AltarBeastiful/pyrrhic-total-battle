@@ -11,8 +11,13 @@
  * owner asked for the bar rather than one stop (*"all those should have their table when clicking on the plan
  * slider. Best is to compute it ahead for all like the slider spots"*) — **every other stop of the bar is
  * priced too**, so a press on the slide is another table rather than another wait (`positionsSearch.ts`).
- * So the control keeps its job (choosing, and re-drawing the march) and this table takes the other one
- * (saying what the choice is worth), and nothing is computed twice.
+ *
+ * **And the control reads it** (S-149; owner, 2026-09-30: *"make the positions selector (as is, tight…) use
+ * the already computed assemblyscript values (should be same as engine/TS)"*): a press lands on the row of the
+ * stop and the position on screen, so the search behind that press is not run a second time. What the table
+ * says and what a press does are one answer — the same counts the March's own path produces, held to each
+ * other on every stop of every benchmark army (experiment 184) — and the control keeps its other job, the one
+ * this table cannot do: standing the march's stacks where the row says.
  *
  * **The columns are the trade and not a score**: *Damage* — the march's worst opening, the figure every other
  * block on the page is ranked on (S-94, S-108) — then the three things it is paid with, *Silver*, *Gold* and

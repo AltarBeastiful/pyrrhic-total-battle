@@ -81,10 +81,13 @@ const PLAN = { alternatives: [{ pick: 'sweet-spot' as const, counts: {} }] } as 
 
 /**
  * Plant the priced bar: the plan the fixture holds has one stop, so the block's stop is entry 0. `gold` is
- * what the fixture's march pays the Temple.
+ * what the fixture's march pays the Temple, and the **army** the key carries (S-149) is the one the fixture's
+ * march was generated from — the request the result store is holding.
  */
 function plant(gold: number): void {
-  usePositionsStore.setState({ entry: { key: positionsKey(PLAN), stops: [trades(gold)] } });
+  const request = useResultStore.getState().last?.request;
+  if (request === undefined) throw new Error('the fixture has no march');
+  usePositionsStore.setState({ entry: { key: positionsKey(PLAN, request), stops: [trades(gold)] } });
 }
 
 beforeEach(() => {

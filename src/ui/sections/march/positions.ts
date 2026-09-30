@@ -22,6 +22,13 @@
  *
  * Nothing here computes a battle the March would not: every reading is `applyCounts` on the counts a press of
  * the control would stand the stacks at.
+ *
+ * **And a press takes the row rather than the calculation** (S-149; owner, 2026-09-30: *"make the positions
+ * selector (as is, tight…) use the already computed assemblyscript values (should be same as engine/TS)"*).
+ * `pricedRaise` is that rule — the row of the stop and the position on screen, under the conditions that make
+ * it this march's answer — and `positionsSearch.ts` is where the control reads it. The two paths answer the
+ * same counts, and `tools/theorycraft/184-the-positions-on-the-kernel.test.ts` is what holds them together on
+ * every stop of every benchmark army.
  */
 import {
   RAISE_MOST,
@@ -37,7 +44,7 @@ import type { StackRequest, StackResult } from '@/engine/types';
 import { exhaustivePools, exactRaise } from './exact';
 import { applyCounts } from './manual';
 import { hiredLost } from './hired';
-import { countsOf, raisedCounts } from './raise';
+import { countsOf, raisedCounts, sameCounts } from './raise';
 import type { RaiseMode, RaiseModes } from './raise';
 import { worstDamageByPool } from './worst';
 
@@ -182,4 +189,36 @@ export function positionTrades(request: StackRequest, base: StackResult): Positi
     };
   });
   return { own: read(request, base, own), rows };
+}
+
+/**
+ * **The counts a position stands the march on, as the plan's own table already priced them** — or `null` when
+ * the table does not describe the march on screen (S-149).
+ *
+ * This is the rule by which the control in the battle summary reads a row instead of computing it again: the
+ * press lands on a value already in hand, and every condition under which it may is spelled out here rather
+ * than at the call site.
+ *
+ *  - **The march on screen is the plan's own stop, count for count** (`sameCounts`). A row is priced on
+ *    `planMarch(request, stop.counts)` — the very result the pane draws for that stop — so its counts are the
+ *    counts a press would land on. A March edit re-files a re-sized march under **the same request and stamp**
+ *    (`generate.ts`, *"the same run, re-sized"*), and the row is then a raise of a march that is not on screen,
+ *    over a shelter the edit may have moved.
+ *  - **The tables are this army's** — the other half of that guard, and it is the key rather than a second
+ *    comparison: a table is filed under the plan *and* the request it was priced with (`positionsKey`,
+ *    `positionsSearch.ts`).
+ *  - **One segment over both hired blocks.** That is the configuration every row is priced in, and the one the
+ *    control now is (`runStore.setRaiseMode`); a mixed control is a question no row answers.
+ *  - **A position at all.** `As is` moves no count, so the table does not price it: there is no row to read,
+ *    and the March's own path — which is nothing at all — answers it.
+ */
+export function pricedRaise(
+  result: StackResult,
+  counts: Record<string, number>,
+  trades: PositionTrades | null,
+  modes: RaiseModes,
+): Record<string, number> | null {
+  if (trades === null || modes.authority !== modes.dominance) return null;
+  if (!sameCounts(result, counts)) return null;
+  return trades.rows.find((row) => row.mode === modes.authority)?.counts ?? null;
 }

@@ -165,6 +165,25 @@ export function countsOf(base: StackResult): Record<string, number> {
 }
 
 /**
+ * **Whether two counts are the same march** — every type, an absent one counting as zero. `countsOf`'s own
+ * partner: one reads a march's counts, this one compares two of them.
+ *
+ * It exists for the one question the plan's own table has to be asked before the control may read it (S-149,
+ * `pricedRaise` in `positions.ts`): every row under the plan is priced on the **plan's own stop**, so it
+ * describes the
+ * march on screen only while the march on screen **is** that stop. A March edit re-files a re-sized march
+ * under the same stamp on purpose (`generate.ts`, *"the same run, re-sized"*), and the counts the table holds
+ * are then a raise of a march that is not on screen — over a shelter the edit may have moved.
+ */
+export function sameCounts(base: StackResult, counts: Record<string, number>): boolean {
+  const mine = countsOf(base);
+  for (const id of new Set([...Object.keys(mine), ...Object.keys(counts)])) {
+    if ((mine[id] ?? 0) !== (counts[id] ?? 0)) return false;
+  }
+  return true;
+}
+
+/**
  * **The authority chunks a march's counts burn** — the number the plan itself is ordered on
  * (`PlanRepeat.mercLost`, `marchOf` in `engine/plan.ts`), read here off the counts alone.
  *

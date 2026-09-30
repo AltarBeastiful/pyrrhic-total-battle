@@ -7,6 +7,13 @@
  * a render, cannot be awaited in one, and must not be allowed to freeze the page. This file is the whole of
  * what that costs the rest of the app: a hook the March calls, a store holding one answer, and a worker.
  *
+ * **It is the second source, not the first** (S-149). When the plan's own table has already priced the
+ * position — which is every press of the control in the battle summary on a host with a worker and the bar
+ * priced, the case `positionsSearch.ts` is built for — the March reads that row and this search is never
+ * asked. What is left for it is the march the table does not describe: a March edit, a bar still being
+ * priced, and every position on a platform with no worker (where the block is not offered at all and this is
+ * the only way a `Best v2` answers).
+ *
  * **Why a worker of its own** (`createCalcClient`, not the page's shared `getCalcClient`): a worker runs one
  * job at a time, and this is the only job in the app measured in tens of seconds. On the page's worker a
  * `Best v2` press would sit in front of the next Generate and hold it there — the player would wait for a

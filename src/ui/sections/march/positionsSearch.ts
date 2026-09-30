@@ -21,16 +21,27 @@
  *
  * **Nothing is drawn while a stop is still being priced**: the block is the foot of the plan's fold, and a
  * table that appeared row by row would move the layout under a reader.
+ *
+ * **And the control in the battle summary reads them** (S-149; owner, 2026-09-30: *"make the positions
+ * selector (as is, tight…) use the already computed assemblyscript values (should be same as engine/TS)"*).
+ * A press of that control used to answer the same question the table had already answered — one position at a
+ * time, through the exhaustive raise's own search, measured at 2.7 ms median and **51 s** worst a press
+ * (`out/182-v2-cost.md`) — so this module also hands the March the row it has already paid for
+ * (`usePricedRaise`). Nothing is computed twice, and nothing a player presses waits.
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 
 import type { CampaignPlan } from '@/engine/plan';
+import type { StackRequest } from '@/engine/types';
 import type { ResultSnapshot } from '@/ui/resultStore';
 import { createCalcClient, isAbortError } from '@/worker/client';
 import type { CalcClient } from '@/worker/client';
 
 import type { PositionTrades } from './positions';
+import { pricedRaise } from './positions';
+import type { RaiseModes } from './raise';
+import { pickOf } from './runStore';
 
 /**
  * **The plan's identity**, the way `marchId` is the march's (`raiseSearch.ts`): a `CampaignPlan` is written
@@ -51,14 +62,22 @@ function planId(plan: CampaignPlan): number {
 /**
  * The key of one plan's tables, as one string — the plan's identity, which is what an answer belongs to
  * (`marchId`'s own trick, one level up). Exported so a test can file an answer under the plan it is about.
+ *
+ * **The army rides with it, and by value rather than by identity** (S-149). Since a row is priced on a
+ * **march of one army** (`planMarch(request, stop.counts)`), a table is only about the marches on screen while
+ * the request is the one it was priced with — and since the control now lands on those counts, using another
+ * request's answer would move the hired stacks under a shelter nobody measured. A **slide** rebuilds the
+ * request object (`PlanPanel`'s `read`) with the same figures in it, and the same string comes out of it, so
+ * moving the bar still asks for nothing; a setup edited under a standing plan is a different army, and the bar
+ * is priced again rather than left describing the account it no longer holds.
  */
-export function positionsKey(plan: CampaignPlan): string {
-  return String(planId(plan));
+export function positionsKey(plan: CampaignPlan, request: StackRequest): string {
+  return `${String(planId(plan))}|${JSON.stringify(request)}`;
 }
 
 /** The tables of one plan, in the bar's own order, and the plan they are about. */
 export interface PositionsEntry {
-  /** `planId` of the plan the bar is showing. */
+  /** `positionsKey` of the plan and the army the bar is showing. */
   key: string;
   /** One entry per stop of the plan, in its order; `null` for a stop still being priced (or that failed). */
   stops: (PositionTrades | null)[];
@@ -156,8 +175,16 @@ export function usePositions(
   position: number,
   canRaise: boolean,
 ): PositionTrades | null {
-  const wanted = snapshot !== null && plan !== null && canRaise;
-  const key = wanted && plan !== null ? positionsKey(plan) : null;
+  const request = snapshot?.request ?? null;
+  /**
+   * **The key, taken once for the plan and the request it is made of**: `positionsKey` reads the whole army
+   * to compare it, and this hook runs on every render of the pane — the plan and the request are two objects
+   * the stores hand out unchanged until one of them really moves.
+   */
+  const key = useMemo(
+    () => (plan !== null && request !== null && canRaise ? positionsKey(plan, request) : null),
+    [plan, request, canRaise],
+  );
   const entry = usePositionsStore((state) => state.entry);
 
   useEffect(() => {
@@ -184,4 +211,32 @@ export function usePositions(
 
   if (key === null || entry === null || entry.key !== key) return null;
   return entry.stops[position] ?? null;
+}
+
+/**
+ * **The raised counts the March is to draw, when the plan's own table already holds them** (S-149; owner,
+ * 2026-09-30: *"make the positions selector (as is, tight…) use the already computed assemblyscript values
+ * (should be same as engine/TS)"*).
+ *
+ * The block under the plan prices the five positions on **every stop of the bar** before a player asks for any
+ * of them, in the wasm — and until this hook existed a press answered the same question again, one position at
+ * a time, through the exhaustive raise's own search. Same counts (experiment 184 holds the two paths together
+ * on every stop of every benchmark army), and the press paid for them twice. This is the source the March
+ * reads first now: `liftedCounts`'s own row, for the stop and the position on screen.
+ *
+ * `null` — and the March keeps its own path, the climb and then the search — while the bar is still being
+ * priced, on `As is`, and on any march the plan did not size (`pricedRaise`). It is also the hook that starts
+ * the pricing: the control lives in the battle summary and the table at the foot of the plan's fold, and the
+ * two are never apart, so the answer is asked for wherever either of them is drawn and the other reads it.
+ */
+export function usePricedRaise(
+  snapshot: ResultSnapshot | null,
+  plan: CampaignPlan | null,
+  position: number,
+  modes: RaiseModes,
+  canRaise: boolean,
+): Record<string, number> | null {
+  const trades = usePositions(snapshot, plan, position, canRaise);
+  if (snapshot === null || plan === null) return null;
+  return pricedRaise(snapshot.result, pickOf(plan, position).counts, trades, modes);
 }

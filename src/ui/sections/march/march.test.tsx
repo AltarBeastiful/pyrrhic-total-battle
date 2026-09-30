@@ -33,6 +33,8 @@ import { MarchQuickSummary } from './MarchQuickSummary';
 import { MarchSection } from './MarchSection';
 import { UnitSheet } from './UnitSheet';
 import { hiredLost, stockRun } from './hired';
+import type { PositionTrades } from './positions';
+import { positionsKey, usePositionsStore } from './positionsSearch';
 import { raiseSearchKey, useRaiseSearchStore } from './raiseSearch';
 import { burnOf, countsOf, raisedCounts } from './raise';
 import { marchRows, unitBonus } from './rows';
@@ -1582,6 +1584,32 @@ test('the damage positions are raises too, and they add no line to the pane', as
   expect(screen.queryByText(/hits hardest with under the troops/)).toBeNull();
 }, 30_000);
 
+test('one position over both hired blocks, for every segment and not only the searched ones', async () => {
+  /**
+   * **The two controls are two views of one rule** (S-149; owner, 2026-09-30: *"make it linked between monsters
+   * and merc (it's already the case for tight normally)"*). `Best v2`, `Safe` and `Tight` always were — each is
+   * one search walking both pools — and the unit positions were not: a press on the mercenaries' block left the
+   * monsters where they stood. The owner asked for the same rule on all six, which is also what every row
+   * under the plan is priced as (`positions.ts`), so the press and the table now mean one thing.
+   */
+  await generateFromAPlan();
+  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Most' }));
+  await waitFor(() => {
+    expect(useRunStore.getState().raiseModes).toEqual({ authority: 'most', dominance: 'most' });
+  });
+
+  // The block a press lands on is not part of the question: the store has no pool to write over, so the two
+  // entries cannot come apart — which is the whole of the promise, and why `setRaiseMode` takes no pool.
+  act(() => {
+    useRunStore.getState().setRaiseMode('tight');
+  });
+  expect(useRunStore.getState().raiseModes).toEqual({ authority: 'tight', dominance: 'tight' });
+  act(() => {
+    useRunStore.getState().setRaiseMode('off');
+  });
+  expect(useRunStore.getState().raiseModes).toEqual({ authority: 'off', dominance: 'off' });
+}, 30_000);
+
 test('the position is remembered: the next Generate arrives already raised', async () => {
   await generateFromAPlan();
   fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Most' }));
@@ -1591,8 +1619,9 @@ test('the position is remembered: the next Generate arrives already raised', asy
 
   await generate();
 
-  // The rule outlived the run it was set in — the owner's *"remember position when clicking generate again"*.
-  expect(useRunStore.getState().raiseModes.authority).toBe('most');
+  // The rule outlived the run it was set in — the owner's *"remember position when clicking generate again"* —
+  // and it is one rule: both hired pools carry it (S-149).
+  expect(useRunStore.getState().raiseModes).toEqual({ authority: 'most', dominance: 'most' });
   const filed = lastResult();
   const counts = shownCounts();
   const raised = (filed?.result.stacks ?? []).some(
@@ -1797,6 +1826,115 @@ test('the capped positions are the same joint search, and Safe spends no more st
   expect(burnOf(filed.result, { ...own, ...shown })).toBeLessThanOrEqual(
     burnOf(filed.result, { ...own, ...shipped }),
   );
+}, 60_000);
+
+/**
+ * **A position the plan has already priced** (S-149; owner, 2026-09-30: *"make the positions selector (as is,
+ * tight…) use the already computed assemblyscript values (should be same as engine/TS)"*).
+ *
+ * The block under the plan prices the five positions on every stop of the bar, in the wasm, before a player
+ * presses anything — and a press used to answer the same question again through the exhaustive raise's search,
+ * measured at 2.7 ms median and up to 51 s (`out/182-v2-cost.md`). The suite's own client is the inline one,
+ * where the block is deliberately not priced at all (`positionsSearch.ts` stops on a client with no worker, and
+ * a whole bar of positions there is minutes), so the table is planted here the way the worker would file it —
+ * and what is asserted is the **asking**: the press lands on that row, and no search is started for an answer
+ * already in hand.
+ */
+function pricedBar(counts: Record<string, number>): PositionTrades {
+  const zero = { damage: 0, mercLost: 0, units: 0, silver: 0, gold: 0, hiredDamage: 0 };
+  return {
+    own: zero,
+    rows: (['tens', 'most', 'v2', 'safe', 'tight'] as const).map((mode) => ({
+      mode,
+      counts,
+      how: null,
+      space: 0,
+      scored: 0,
+      ...zero,
+    })),
+  };
+}
+
+/** Plant the bar's tables for the run on screen: every stop of it, priced as the worker would have. */
+function plantPricedBar(counts: Record<string, number>): void {
+  const snapshot = lastResult();
+  const plan = useRunStore.getState().plan;
+  if (snapshot === null || plan === null) throw new Error('the plan method filed no plan and no march');
+  const at = useRunStore.getState().planPick;
+  usePositionsStore.setState({
+    entry: {
+      key: positionsKey(plan, snapshot.request),
+      stops: plan.alternatives.map((_row, index) => (index === at ? pricedBar(counts) : null)),
+    },
+  });
+}
+
+test('a position the plan has already priced is landed on, and nothing is searched for it', async () => {
+  await generateFromAPlan();
+  const hunter = unitById('epic-monster-hunter-6');
+  if (hunter === undefined) throw new Error('the hunter is not in the tables');
+  const before = shownCounts()[hunter.label] ?? 0;
+  expect(before, 'the plan fielded no mercenary to raise').toBeGreaterThan(0);
+
+  // The bar as the block under the plan holds it: the stop on screen, with the hunter five higher — the
+  // counts a press lands on, and a number nothing else in this fixture produces.
+  const shown = lastResult();
+  if (shown === null) throw new Error('the plan method answered with no march');
+  plantPricedBar({ ...countsOf(shown.result), [hunter.id]: before + 5 });
+
+  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Most' }));
+  await waitFor(() => {
+    expect(shownCounts()[hunter.label]).toBe(before + 5);
+  });
+  // **The whole of the promise**: the answer was already in hand, so no search was asked for — the control
+  // has no wait to draw, and the entry the search files is never written.
+  expect(useRaiseSearchStore.getState().entry).toBeNull();
+}, 30_000);
+
+test('a march the plan did not size is not read off the table, and is searched instead', async () => {
+  // The re-size re-files the march under the **same request and stamp** (`generate.ts`), so the table under
+  // the plan is still the one it was — and it is now a raise of a march that is not on screen, over a shelter
+  // the edit moved. The guard is the counts, and this is what it is for.
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [
+    { id: 'epic-monster-hunter-6', cap: 92 },
+    { id: 'arbalester-6', cap: 76 },
+    { id: 'legionary-6', cap: 72 },
+    { id: 'chariot-6', cap: 37 },
+  ];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 4_100, authority: 2_000, dominance: 0 },
+      options: { ...current.options, method: 'plan' },
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  const generated = lastResult();
+  if (generated === null) throw new Error('the plan method answered with no march');
+  plantPricedBar(countsOf(generated.result));
+
+  // A March edit: a troop type the plan left out goes back in, and the march on screen is re-sized.
+  const marching = new Set(generated.result.stacks.map((stack) => stack.unitId));
+  const absent = generated.request.units.find((unit) => unit.pool === 'leadership' && !marching.has(unit.id));
+  if (absent === undefined) throw new Error('this plan fields every troop type: nothing to put back');
+  fireEvent.click(leftOutPill(absent, 'the search'));
+  await waitFor(() => {
+    expect(useRunStore.getState().resize).not.toBeNull();
+  });
+
+  // The table stands — the plan has not moved — and the control does **not** land on it: the March's own
+  // path answers, which is the climb first and the search behind it.
+  const before = useRaiseSearchStore.getState().entry;
+  expect(before).toBeNull();
+  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Best v2' }));
+  await waitFor(() => {
+    expect(useRaiseSearchStore.getState().entry?.status).toBe('done');
+  });
 }, 60_000);
 
 // ---- What the stock buys (S-148) -----------------------------------------------------------------

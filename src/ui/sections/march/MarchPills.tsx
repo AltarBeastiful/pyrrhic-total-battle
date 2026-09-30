@@ -83,7 +83,11 @@ export interface MarchPillsProps {
   canRaise: boolean;
   /** A `Best v2` search is in flight (`raiseSearch.ts`): the position is chosen, the answer is not in. */
   searching: boolean;
-  onRaise: (pool: RaisedPool, mode: RaiseMode) => void;
+  /**
+   * A segment was pressed. **No pool rides with it** (S-149): a position is one standing rule over both hired
+   * blocks (`runStore.setRaiseMode`), so the block it was pressed on changes nothing about the answer.
+   */
+  onRaise: (mode: RaiseMode) => void;
 }
 
 // What the six segments are called, and the one line each explains itself with: `./choices`, read by this
@@ -120,7 +124,10 @@ const isRaiseMode = (value: string): value is RaiseMode =>
  * segment is still what they draw while their search runs** (S-145).
  *
  * Nothing here computes anything: the position is run state (`runStore.raiseModes`) and the counts it means
- * are derived from the march in `useMarch`, which is what lets the position survive a Generate.
+ * are derived in `useMarch`, which is what lets the position survive a Generate. **Those counts are the plan's
+ * own table's when it has already priced the position** (S-149; `positionsSearch.ts`): the block under the
+ * plan answers the same question for all five positions on every stop of the bar, in the wasm, so a press
+ * lands on a value already in hand rather than on a search of up to 51 s.
  */
 export function MarchRaiseControl({
   pool,
@@ -259,9 +266,9 @@ export function MarchPills({
                 // `aria-busy` and the hidden "Searching every combination." on a block that was not the one
                 // being searched.
                 searching={searching && isExhaustive(raiseModes[raisable])}
-                onChange={(mode) => {
-                  onRaise(raisable, mode);
-                }}
+                // The block the press landed on is not part of the question (S-149): the position is one
+                // standing rule, and `setRaiseMode` writes it over both hired pools.
+                onChange={onRaise}
               />
             )}
             {row.entries.length > 0 && (

@@ -22,6 +22,10 @@
  *      with, `Tight` never below the plan's own march, no capped position burning past its cap, no position
  *      fielding more units than `Most`. Experiment 180 asserts the same set over the same stops with the
  *      sampled climb as its reference row; this one reads the climb through `raisedCounts`.
+ *   4. **What a press reads, and what it may not** (S-149). The control in the battle summary takes the row of
+ *      the stop and the position on screen rather than running the same search again, and the guard that makes
+ *      a row *this* march's answer is asserted on the corpus: the stop's own march is read, a march with one
+ *      troop type lowered by a unit is refused.
  *
  * `THEORY=1 pnpm vitest run tools/theorycraft/184-the-positions-on-the-kernel.test.ts`
  */
@@ -35,9 +39,10 @@ import { setRaiseKernel } from '@/engine/fast';
 import type { StackRequest, StackResult } from '@/engine/types';
 import { createRaiseKernel } from '@/kernel/raise';
 import { applyCounts } from '@/ui/sections/march/manual';
-import { positionTrades } from '@/ui/sections/march/positions';
+import { positionTrades, pricedRaise } from '@/ui/sections/march/positions';
 import type { PositionTrade, PositionTrades } from '@/ui/sections/march/positions';
 import { burnOf, countsOf, raisedCounts } from '@/ui/sections/march/raise';
+import type { RaiseModes } from '@/ui/sections/march/raise';
 
 import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
 import { loadKernelModule } from '../../tests/kernel/load';
@@ -108,6 +113,10 @@ describe.skipIf(!process.env.THEORY)('the raise positions on the kernel', () => 
     let stops = 0;
     let refusals = 0;
     let readings = 0;
+    /** What a press reads off the bar (S-149), and what the guard refuses to let it read. */
+    let pressable = 0;
+    let refused = 0;
+    let mixed = 0;
 
     for (const scenario of criteriaScenarios()) {
       let plan;
@@ -214,6 +223,39 @@ describe.skipIf(!process.env.THEORY)('the raise positions on the kernel', () => 
             )} |`,
           );
         }
+
+        /**
+         * 4. **What a press lands on, and when the table may not be read at all** (S-149). The control in the
+         * battle summary takes the row of the stop and the position on screen (`pricedRaise`) instead of
+         * running the search again, and the guard that makes a row *this* march's answer is what this asserts
+         * on the real corpus: the stop's own march is read, and a march with one troop type lowered by a single
+         * unit — what a March edit leaves on screen — is refused, on every stop of every army.
+         */
+        for (const mode of ['most', 'v2', 'tight'] as const) {
+          const its = fast.rows.find((one) => one.mode === mode) as PositionTrade;
+          const linked: RaiseModes = { authority: mode, dominance: mode };
+          expect(
+            pricedRaise(base, planCounts, fast, linked),
+            `${stop.pick} · ${mode}: what a press lands on`,
+          ).toStrictEqual(its.counts);
+          pressable += 1;
+          const troop = base.stacks.find((stack) => stack.pool === 'leadership');
+          if (troop !== undefined) {
+            const edited = applyCounts(request, base, {
+              ...planCounts,
+              [troop.unitId]: troop.count - 1,
+            }).result;
+            expect(
+              pricedRaise(edited, planCounts, fast, linked),
+              `${stop.pick} · ${mode}: a re-sized march was handed the table's answer`,
+            ).toBeNull();
+            refused += 1;
+          }
+        }
+        // The two questions no row answers: a control whose two blocks stand on different segments, and `As is`.
+        expect(pricedRaise(base, planCounts, fast, { authority: 'most', dominance: 'v2' })).toBeNull();
+        expect(pricedRaise(base, planCounts, fast, { authority: 'off', dominance: 'off' })).toBeNull();
+        mixed += 1;
       }
       if (plan.alternatives.length > 1) {
         bars.kernel.push(barKernel);
@@ -295,6 +337,29 @@ wait.`,
         'The counts are the same five the control in the battle summary offers, so a row here is what a press',
         'of that segment would put on screen — and the block under the plan draws exactly these figures, from',
         'exactly these calls (`PositionTrade.tsx`).',
+      ].join(' '),
+    );
+    report.add('');
+
+    report.h('What a press lands on (S-149)');
+    report.add('');
+    report.add(
+      [
+        `**${n(pressable)} of ${n(pressable)} readings** — three positions on every one of the ${n(stops)}`,
+        'stops — take the row the bar printed, count for count, and the counts they land on are the ones the',
+        'March’s own TypeScript produces for the same stop and the same position, which is what the parity',
+        'above asserts of every row. A march the plan did not size is refused the table on every one of those',
+        `readings (${n(refused)}), so a March edit cannot be handed a raise priced for the march before it, and`,
+        `so are the two questions no row answers — a mixed control and \`As is\` (${n(mixed)} stops).`,
+      ].join(' '),
+    );
+    report.add('');
+    report.add(
+      [
+        'What that removes is the search a press used to run: `Best v2`, `Safe` and `Tight` are the three',
+        'positions whose answer is a walk of the box, measured at **2.7 ms median and 51 s at its worst** on the',
+        'stops where a position moves a count at all (`out/182-v2-cost.md`) — the wait the row replaces, and',
+        'the reason the block is priced once per bar rather than once per press.',
       ].join(' '),
     );
     report.add('');

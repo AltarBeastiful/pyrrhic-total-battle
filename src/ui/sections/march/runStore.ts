@@ -15,7 +15,7 @@ import type { CampaignPlan, PlanPick, PlanRow } from '@/engine/plan';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
-import { NO_RAISE, isExhaustive } from './raise';
+import { NO_RAISE } from './raise';
 import type { RaiseMode, RaiseModes } from './raise';
 
 /**
@@ -268,10 +268,13 @@ export interface RunState {
    */
   chosenStop: ChosenStop | null;
   /**
-   * **How high the hired stacks are asked to stand** (S-142): one position per hired pool, `off` until the
-   * player moves it. The owner asked for a **standing rule** and not a one-shot — *"also remember position
-   * when clicking generate again"* (2026-09-29) — so it outlives every run the way `chosenStop` does: a new
-   * march arrives already raised, whichever stop or method produced it.
+   * **How high the hired stacks are asked to stand** (S-142): the position of the control under the hired
+   * pools, `off` until the player moves it. The owner asked for a **standing rule** and not a one-shot —
+   * *"also remember position when clicking generate again"* (2026-09-29) — so it outlives every run the way
+   * `chosenStop` does: a new march arrives already raised, whichever stop or method produced it.
+   *
+   * One rule over both hired pools since S-149 (see `setRaiseMode`), which is why the two entries always hold
+   * the same word — the pair is the shape the engine prices a position in (`positions.ts`), not two answers.
    *
    * It lives here rather than with the counts it moves (`useResultStore.manualCounts`) precisely because
    * those are cleared by every new result: this is the *instruction*, the raise is derived fresh from it on
@@ -279,7 +282,7 @@ export interface RunState {
    * cleared only by `reset()` — so a reload opens on the generated counts again.
    */
   raiseModes: RaiseModes;
-  setRaiseMode: (pool: keyof RaiseModes, mode: RaiseMode) => void;
+  setRaiseMode: (mode: RaiseMode) => void;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
@@ -362,25 +365,31 @@ export const useRunStore = create<RunState>()((set, get) => ({
   setIncluded: (includedUnitIds, leftOutByPlayer) => {
     set({ includedUnitIds, leftOutByPlayer, resize: null });
   },
-  setRaiseMode: (pool, mode) => {
-    set((state) => ({
-      raiseModes:
-        /**
-         * **The exhaustive positions are one standing rule, not two** (S-143b, S-144; owner, 2026-09-29:
-         * *"give another options for both"*). Each of `v2`, `safe` and `tight` is a single search walking the
-         * mercenaries and the monsters **together** — that is the configuration experiment 181 measured, and
-         * the joint answer is worth up to +5.45 % where two separate searches are not — so pressing the
-         * segment on either block puts both of them on it. The two controls are two views of one rule, and
-         * they say so. The cap is the mercenaries' own (`burnCap`): `safe` bounds it at what the climb spends
-         * and `tight` at what the plan's counts spend, and on the monsters' block alone neither is reachable,
-         * which is S-102's rule that a trained monster is a price and not a stock.
-         */
-        isExhaustive(mode)
-          ? { authority: mode, dominance: mode }
-          : // A **new object**: the March reads this through a selector, and writing in place would never
-            // reach it.
-            { ...state.raiseModes, [pool]: mode },
-    }));
+  /**
+   * **One position, both blocks** (S-142, S-143b, S-144; S-149 and the owner, 2026-09-30: *"make it linked
+   * between monsters and merc (it's already the case for tight normally)"*).
+   *
+   * A segment pressed on either hired block puts **both** of them on it. That was already true of the three
+   * exhaustive positions — each is a single search walking the mercenaries and the monsters **together**,
+   * which is the configuration experiment 181 measured and is worth up to +5.45 % where two separate searches
+   * are not (owner, 2026-09-29: *"give another options for both"*) — and the owner asked for the same rule on
+   * the rest. Two reasons, and they agree:
+   *
+   *  - the two controls are **two views of one rule**, which is what they have always said they were: the four
+   *    unit positions are the same question (*"how high should the hired stacks stand"*) asked of two pools
+   *    that the shelter and the housing bound the same way, and a mixed control was never a choice the pane
+   *    could explain;
+   *  - every position is now **priced as one configuration** before it is pressed (`positions.ts` prices each
+   *    row over both pools at once, `positionsSearch.ts` hands the March that row), and a mixed control would
+   *    be a question no row answers — the pane would go back to the 51-second search it no longer waits on.
+   *
+   * The cap stays the mercenaries' own (`burnCap`): `safe` bounds it at what the climb spends and `tight` at
+   * what the plan's counts spend, and on the monsters' block alone neither is reachable, which is S-102's rule
+   * that a trained monster is a price and not a stock.
+   */
+  setRaiseMode: (mode) => {
+    // A **new object**: the March reads this through a selector, and writing in place would never reach it.
+    set({ raiseModes: { authority: mode, dominance: mode } });
   },
   cancel: () => {
     get().controller?.abort();

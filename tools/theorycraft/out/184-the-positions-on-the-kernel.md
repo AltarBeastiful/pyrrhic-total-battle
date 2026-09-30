@@ -90,7 +90,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 7,973,870 | — | 8,513,200 | 592 | 9 | 0 | 0 |
 | all-in | Tight | 7,973,870 | — | 8,513,200 | 592 | 9 | 0 | 0 |
 
-**The whole bar, priced ahead**: 2 ms on the kernel against 11 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 2 ms on the kernel against 13 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)** — 5 stops
@@ -124,7 +124,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 26,479,061 | — | 9,190,100 | 4,800 | 10 | 0 | 0 |
 | all-in | Tight | 26,479,061 | — | 9,190,100 | 4,800 | 10 | 0 | 0 |
 
-**The whole bar, priced ahead**: 11 ms on the kernel against 278 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 11 ms on the kernel against 282 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)** — 3 stops
@@ -148,7 +148,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 2,577,346 | — | 1,521,100 | 408 | 7 | 0 | 0 |
 | all-in | Tight | 2,577,346 | — | 1,521,100 | 408 | 7 | 0 | 0 |
 
-**The whole bar, priced ahead**: 2 ms on the kernel against 48 ms in TypeScript, over its 3 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 3 ms on the kernel against 51 ms in TypeScript, over its 3 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **2026-09-17 export, its setup (7 000 leadership)** — 5 stops
@@ -182,7 +182,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 6,550,179 | — | 3,717,800 | 1,640 | 22 | 0 | 0 |
 | all-in | Tight | 6,550,179 | — | 3,717,800 | 1,640 | 22 | 0 | 0 |
 
-**The whole bar, priced ahead**: 107 ms on the kernel against 7576 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 106 ms on the kernel against 8316 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **2026-09-17 export, 12 000 leadership** — 4 stops
@@ -211,7 +211,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | steady-max | Safe | 9,444,926 | +7.37 % | 5,340,800 | 1,736 | 24 | 495 | 496 |
 | steady-max | Tight | 9,139,710 | +3.90 % | 5,340,800 | 1,656 | 22 | 495 | 496 |
 
-**The whole bar, priced ahead**: 662 ms on the kernel against 50607 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 633 ms on the kernel against 47523 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **live account of 2026-09-18 (one hired type, 20 000 leadership)** — 4 stops
@@ -240,7 +240,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 7,840,310 | — | 7,732,100 | 592 | 9 | 0 | 0 |
 | all-in | Tight | 7,840,310 | — | 7,732,100 | 592 | 9 | 0 | 0 |
 
-**The whole bar, priced ahead**: 2 ms on the kernel against 7 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 1 ms on the kernel against 7 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)** — 5 stops
@@ -274,7 +274,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 9,336,448 | — | 4,979,300 | 1,816 | 25 | 0 | 0 |
 | all-in | Tight | 9,336,448 | — | 4,979,300 | 1,816 | 25 | 0 | 0 |
 
-**The whole bar, priced ahead**: 206 ms on the kernel against 15420 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 189 ms on the kernel against 14493 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)** — 4 stops
@@ -303,7 +303,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 5,372,331 | — | 2,705,900 | 1,816 | 26 | 0 | 0 |
 | all-in | Tight | 5,372,331 | — | 2,705,900 | 1,816 | 26 | 0 | 0 |
 
-**The whole bar, priced ahead**: 2 ms on the kernel against 18 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 2 ms on the kernel against 24 ms in TypeScript, over its 4 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)** — 5 stops
@@ -337,7 +337,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | steady-max | Safe | 13,519,295 | +8.73 % | 3,481,800 | 13,464 | 95 | 83 | 84 |
 | steady-max | Tight | 12,526,070 | +0.75 % | 3,481,800 | 12,928 | 87 | 83 | 84 |
 
-**The whole bar, priced ahead**: 2108 ms on the kernel against 197401 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 2167 ms on the kernel against 184260 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)** — 5 stops
@@ -371,7 +371,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | steady-max | Safe | 7,280,595 | +20.32 % | 3,346,000 | 3,240 | 45 | 77 | 78 |
 | steady-max | Tight | 6,148,058 | +1.60 % | 3,346,000 | 2,736 | 38 | 77 | 78 |
 
-**The whole bar, priced ahead**: 2 ms on the kernel against 7 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 1 ms on the kernel against 8 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)** — 5 stops
@@ -405,7 +405,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | all-in | Safe | 3,160,727 | — | 2,776,000 | 792 | 11 | 0 | 0 |
 | all-in | Tight | 3,160,727 | — | 2,776,000 | 792 | 11 | 0 | 0 |
 
-**The whole bar, priced ahead**: 1 ms on the kernel against 4 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 1 ms on the kernel against 3 ms in TypeScript, over its 5 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)** — 3 stops
@@ -429,7 +429,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | steady-max | Safe | 2,168,812 | — | 2,235,700 | 440 | 7 | 351,900 | 259,936 |
 | steady-max | Tight | 2,168,812 | — | 2,235,700 | 440 | 7 | 351,900 | 259,936 |
 
-**The whole bar, priced ahead**: 58 ms on the kernel against 800 ms in TypeScript, over its 3 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 55 ms on the kernel against 752 ms in TypeScript, over its 3 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)** — 3 stops
@@ -453,7 +453,7 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 | steady-max | Safe | 3,031,810 | — | 2,233,600 | 224 | 4 | 162,792 | 162,793 |
 | steady-max | Tight | 3,031,810 | — | 2,233,600 | 224 | 4 | 162,792 | 162,793 |
 
-**The whole bar, priced ahead**: 27 ms on the kernel against 420 ms in TypeScript, over its 3 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
+**The whole bar, priced ahead**: 26 ms on the kernel against 385 ms in TypeScript, over its 3 stops — one job a stop, which is what makes a press on the slide another table rather than another wait.
 
 
 ## **his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)** — 2 stops
@@ -482,10 +482,10 @@ Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`
 
 | path | median ms a march | worst ms a march |
 |---|---|---|
-| the kernel | 0.6 | 2103 |
-| the March’s TypeScript | 2.4 | 197135 |
+| the kernel | 0.7 | 2162 |
+| the March’s TypeScript | 2.3 | 183973 |
 
-A whole **bar** — every stop of the plan, priced ahead so a press on the slide is another table rather than another wait — is **2 ms** median and **2108 ms** at its worst on the kernel, against 33 ms and 197401 ms in TypeScript, over bars of 2 to 5 stops.
+A whole **bar** — every stop of the plan, priced ahead so a press on the slide is another table rather than another wait — is **3 ms** median and **2167 ms** at its worst on the kernel, against 37 ms and 184260 ms in TypeScript, over bars of 2 to 5 stops.
 
 Over the **three exhaustive positions** — the two unit answers search nothing — the box comes to median 144 vectors a position and 908,684 at its widest, and a position scores median 145 vectors before it answers. The TypeScript column is what a platform without a kernel would pay for the same table, and it is why the block is not offered there at all (`positionsSearch.ts`).
 
@@ -502,4 +502,12 @@ Over the **three exhaustive positions** — the two unit answers search nothing 
 | Most, in tens | 32 | 31 | 1 | 9.71 % | 94.72 % |
 
 The counts are the same five the control in the battle summary offers, so a row here is what a press of that segment would put on screen — and the block under the plan draws exactly these figures, from exactly these calls (`PositionTrade.tsx`).
+
+
+## What a press lands on (S-149)
+
+
+**189 of 189 readings** — three positions on every one of the 63 stops — take the row the bar printed, count for count, and the counts they land on are the ones the March’s own TypeScript produces for the same stop and the same position, which is what the parity above asserts of every row. A march the plan did not size is refused the table on every one of those readings (189), so a March edit cannot be handed a raise priced for the march before it, and so are the two questions no row answers — a mixed control and `As is` (63 stops).
+
+What that removes is the search a press used to run: `Best v2`, `Safe` and `Tight` are the three positions whose answer is a walk of the box, measured at **2.7 ms median and 51 s at its worst** on the stops where a position moves a count at all (`out/182-v2-cost.md`) — the wait the row replaces, and the reason the block is priced once per bar rather than once per press.
 

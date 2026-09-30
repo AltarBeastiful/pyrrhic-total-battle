@@ -387,8 +387,10 @@ it** (owner, same day: *"all those should have their table when clicking on the 
 compute it ahead for all like the slider spots"*): one job a stop, the stop on screen first, so a press on the
 slide is another table rather than another wait — 2 ms median and 2 108 ms worst a bar, against 33 ms and
 197 s in TypeScript. It is the only place the five can be compared, and it is read rather than pressed: the
-summary's control is where a press acts, and it is unchanged — *"keep the slider leading to the ts version"* —
-including opening on `As is`.
+summary's control is where a press acts, and it shipped unchanged — *"keep the slider leading to the ts
+version"* — including opening on `As is`. **It has read this very table since 2026-09-30**: §13 is the story
+of the control landing on the row instead of searching for it, which is the duplication that sentence left
+standing.
 
 **Two defects the real corpus caught** that the synthetic one could not, both worth writing down because they
 are what a port gets wrong:
@@ -401,3 +403,53 @@ are what a port gets wrong:
    one — leaving `Safe`'s cap at the *plan's* burn instead of the climb's, worth a −60-count answer on the
    monster camp's `burn-saver`. The synthetic corpus could not see it: its marches had the mercenaries already
    at their cap, so the authority pool had nothing to move.
+
+## 13. What a press lands on: the control reads the bar (S-149, 2026-09-30)
+
+Owner, 2026-09-30: *"make the positions selector (as is, tight…) use the already computed assemblyscript
+values (should be same as engine/TS) and make it linked between monsters and merc (it's already the case for
+tight normally)"*. §12 left the two sides computing the same answer on purpose — *"keep the slider leading to
+the ts version in the summary defaulting it to as is to avoid duplication"* — and the duplication that
+remained was the expensive half of it: a press asked the exhaustive raise's own search for a vector the block
+under the plan had already priced, in the wasm, on every stop of the bar. That search is measured at **2.7 ms
+median and 51 s at its worst** (`out/182-v2-cost.md`), and it was paid *again* on the position the player was
+looking at — the row of which was on screen, one block down.
+
+**The rule is one function** (`pricedRaise`, `positions.ts`), and the March asks it before anything else
+(`usePricedRaise`, `positionsSearch.ts`; `useMarch` reads it). It answers the counts of the row for the stop
+and the position on screen, under four conditions — each of which is a way the table could be about a march
+that is not the one in front of the player:
+
+  - **the march on screen is the plan's own stop, count for count** (`sameCounts`). A row is priced on
+    `planMarch(request, stop.counts)`, which *is* the result the pane draws for that stop; a March edit
+    re-files a re-sized march under the same request and stamp (*"the same run, re-sized"*, `generate.ts`),
+    and the row would then be a raise of the march before the edit, over a shelter the edit may have moved.
+  - **the tables are this army's.** `positionsKey` now carries the request by value as well as the plan's
+    identity: a **slide** rebuilds the request object from the same profile and setup, so the string does not
+    move and moving the bar still asks for nothing (the S-147 property, held by `positionsSearch.test.tsx`),
+    while a setup edited under a standing plan is another army, and the bar is priced again rather than left
+    describing an account the page no longer holds.
+  - **one segment over both hired blocks** — the configuration every row is priced in, and now the only one
+    the control can be in (below).
+  - **a position at all**: `As is` moves no count, the table prices the five that do, and the March's own path
+    answers it (which is nothing at all).
+
+**Linked, for every position and not only the searched ones** (the owner's second sentence). `v2`, `safe` and
+`tight` always were one standing rule, because each is a single search walking the mercenaries and the
+monsters together (§3.1) — *"give another options for both"*. The owner asked for the same rule on the unit
+positions, and `setRaiseMode` now takes **no pool** at all: the two controls are two views of one rule, which
+is what the pane has always said they were, and a mixed control is a question no row of the table answers.
+
+**What is left of the March's own path**: the climb (`raisedCounts`) and the search behind it
+(`raiseSearch.ts`), which answer a press whenever the table cannot — a March edit, a platform with no worker
+(where the bar is deliberately not priced at all, §12), and the first moments of a bar whose jobs have not
+landed. So the control is never worse than it was, and it is instant whenever the table is there: the counts
+are read out of the store, and `searching` is `false` by construction, so the segment draws no wait for an
+answer already in hand.
+
+**Held to the two paths, on the corpus.** Experiment 184 (`out/184-the-positions-on-the-kernel.md`) gains a
+fourth block: on every stop of every benchmark army, three positions are taken off the bar exactly as
+`pricedRaise` takes them, and the vector they land on is the one the March's own TypeScript produces for the
+same stop and position — the parity block 1 asserts of every row, read through the door the control now uses.
+The same block asserts the guard's refusals: a march with one troop type lowered by a single unit is refused
+the table, on every stop of every army.

@@ -187,8 +187,9 @@ export function MarchSection() {
             raiseModes={march.raiseModes}
             canRaise={march.canRaise}
             searching={march.searching}
-            onRaise={(pool, mode) => {
-              useRunStore.getState().setRaiseMode(pool, mode);
+            onRaise={(mode) => {
+              // No pool: a position is one standing rule over both hired blocks (S-149, `setRaiseMode`).
+              useRunStore.getState().setRaiseMode(mode);
             }}
           />
           {/* How safely the troops shelter the hired stacks, read off the march on screen — generated or

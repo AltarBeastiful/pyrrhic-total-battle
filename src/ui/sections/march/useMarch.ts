@@ -14,6 +14,7 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
 import { applyCounts, hasEdits } from './manual';
+import { usePricedRaise } from './positionsSearch';
 import { raisedCounts, troopFloor } from './raise';
 import type { RaiseModes } from './raise';
 import { useRaiseSearch } from './raiseSearch';
@@ -56,6 +57,9 @@ export interface MarchView {
    * **An exhaustive position's search is in flight for this march** (S-143b). The counts on screen are the
    * damage climb's until it lands — a march the game would take, and the seed the search starts from — so
    * this only says whether the control is still waiting for the exhaustive answer (`raiseSearch.ts`).
+   *
+   * It is `false` whenever the plan's own table already holds the answer (S-149): a position the wasm priced
+   * before the press is not waited for, and the control says so by drawing no wait at all.
    */
   searching: boolean;
   rows: MarchStackRow[];
@@ -87,8 +91,11 @@ export function useMarch(): MarchView {
   // selector on a field would keep re-rendering the five components that call this).
   const raiseModes = useRunStore((state) => state.raiseModes);
   // **Where the raise is offered**: a plan's own march, whose counts are the plan's trade and sit below
-  // what the shelter allows. A sizer's march has nothing left to give (`stacker.ts:81-98`).
-  const planned = useRunStore((state) => state.plan !== null);
+  // what the shelter allows. A sizer's march has nothing left to give (`stacker.ts:81-98`). The plan itself
+  // is read as the object it is — its identity is what the tables under it are filed under, one level down
+  // (`positionsSearch.ts`), and `null` is the whole of what the two lines below need from it.
+  const plan = useRunStore((state) => state.plan);
+  const planned = plan !== null;
 
   // The store hands out the same profile and setup objects until one of them is edited, so this is
   // rebuilt only when something a march is actually computed from moved.
@@ -106,8 +113,26 @@ export function useMarch(): MarchView {
    * **The one asynchronous reading in the March** (S-143b): `counts` is `null` until the search answers.
    * Read out as two values rather than as the object the hook returns — a fresh object every render would
    * be a new dependency every render, and the memo below would never hold.
+   *
+   * **`priced` is what the plan's own table has already answered** (S-149), and it is asked first: it starts
+   * the bar's pricing as well, so the block under the fold and the control in the summary are answered by one
+   * run of one job a stop.
    */
-  const { counts: exhaustiveCounts, running: searching } = useRaiseSearch(snapshot, raiseModes, canRaise);
+  const position = useRunStore((state) => state.planPick);
+  const priced = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
+  const { counts: exhaustiveCounts, running: waiting } = useRaiseSearch(
+    /**
+     * **A search the plan's own table has already answered is not asked again** (S-149; owner, 2026-09-30:
+     * *"make the positions selector (as is, tight…) use the already computed assemblyscript values"*). The row
+     * under the plan is the same counts — the wasm answered that question for all five positions on every stop
+     * of the bar, before this press — so the wait, and the search behind it, are the second computation of an
+     * answer already in hand. `null` is this hook's own "off the march" state, and the job in flight is
+     * stopped with it: the table's answer supersedes it either way.
+     */
+    priced === null ? snapshot : null,
+    raiseModes,
+    canRaise,
+  );
 
   return useMemo(() => {
     if (snapshot === null) {
@@ -139,20 +164,24 @@ export function useMarch(): MarchView {
      * asked of it — "is there anything to replay?" and "did the player type?" — because the first draws the
      * figures and the second draws the Undo mark and the note.
      */
-    const raised = canRaise ? raisedCounts(snapshot.request, snapshot.result, raiseModes) : null;
+    const raised =
+      canRaise && priced === null ? raisedCounts(snapshot.request, snapshot.result, raiseModes) : null;
     /**
-     * **The exhaustive answer, over the climb** (S-143b, S-145). `raisedCounts` answers an exhaustive
-     * position with the damage climb, so `raised` is the seed the search started from and is a march the
-     * game would take; the search's own counts are merged over it exactly as a hand edit is, and they can
-     * only ever add damage — the search was seeded with these counts and takes strict improvements.
+     * **The plan's own answer, or the climb with the search over it** (S-143b, S-145, S-149).
      *
-     * Two things this must not do, and the review of 2026-09-29 caught both. It must **not** be skipped when
-     * `raised` is `null`: the sampled climb can find nothing on a stop where the exhaustive search finds
-     * something — that is the whole gap this position closes — and the old guard threw that answer away. And
-     * it must be merged over `raised` on **every** slot the search walked and not only the ones it moved, or
-     * a stack it decided to bring back down to the plan's count would keep the seed's higher one.
+     * `priced` is the row under the plan — the same question the control asks, answered ahead of the press by
+     * the wasm, and the raise whole: the climb's counts are inside it and the search's own counts are on top
+     * of them (`positions.ts`), which is why `raisedCounts` is not run for it at all.
+     *
+     * Without it — no plan, the bar still being priced, a march the plan did not size — this is the March's
+     * own path, and the two things it must not do were caught by the review of 2026-09-29. It must **not** be
+     * skipped when `raised` is `null`: the sampled climb can find nothing on a stop where the exhaustive
+     * search finds something — that is the whole gap this position closes — and the old guard threw that
+     * answer away. And the search's counts must be merged over `raised` on **every** slot it walked and not
+     * only the ones it moved, or a stack it decided to bring back down to the plan's count would keep the
+     * seed's higher one.
      */
-    const lifted = exhaustiveCounts === null ? raised : { ...raised, ...exhaustiveCounts };
+    const lifted = priced ?? (exhaustiveCounts === null ? raised : { ...raised, ...exhaustiveCounts });
     const effective = lifted === null ? counts : { ...lifted, ...counts };
     const edited = hasEdits(snapshot.result, counts);
 
@@ -198,7 +227,8 @@ export function useMarch(): MarchView {
       overflow: edits?.overflow ?? [],
       raiseModes,
       canRaise,
-      searching,
+      // Nothing is waited for while the plan's own table answers: the counts are already in hand (S-149).
+      searching: priced === null && waiting,
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
       pools: poolRows({
         result: army,
@@ -217,7 +247,8 @@ export function useMarch(): MarchView {
     stale,
     raiseModes,
     canRaise,
+    priced,
     exhaustiveCounts,
-    searching,
+    waiting,
   ]);
 }
