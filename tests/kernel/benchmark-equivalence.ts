@@ -48,7 +48,10 @@ function stripClock(value: unknown): unknown {
 
 /** One army measured on the path currently set, less everything that reads a clock. */
 function measured(scenario: Scenario): unknown {
-  const one = measure(scenario, UNBUDGETED);
+  // **One `planCampaign` call, not the benchmark's warm-up + median of three** (W16 E4): this suite strips
+  // every timing field before comparing (`TIMING_FIELDS` below), so a trustworthy `planMs` buys it nothing
+  // and would only triple its own cost over every army on both engine paths.
+  const one = measure(scenario, UNBUDGETED, 1);
   const figures: Record<string, unknown> = { ...figuresOf(scenario.label, one) };
   for (const field of TIMING_FIELDS) delete figures[field];
   return {

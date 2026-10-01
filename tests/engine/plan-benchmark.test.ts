@@ -136,6 +136,7 @@ import type { Measured, Verdict } from './plan-measure';
 import {
   asBaseline,
   figuresOf,
+  isContended,
   measure,
   perDragonCoin,
   perHired,
@@ -719,6 +720,7 @@ describe('the standing at matched spend, over every army above', () => {
       scenarios: {
         label: string;
         planMs: number;
+        planCpuMs: number;
         searchMs: number;
         searchCalls: number;
         planBudgetMs: number;
@@ -809,8 +811,21 @@ describe('the standing at matched spend, over every army above', () => {
         'it ran out of clock rather than out of ideas, so making it faster buys a **better plan**; ' +
         'everywhere else a speed-up buys the same plan sooner and nothing more.',
       '',
-      '| army | planner | of its budget | bound? | search, all calls | a call | of its budget |',
-      '|---|---|---|---|---|---|---|',
+      '**How `planner` below is measured** (W16 E4, 2026-10-01): a single wall-clock sample once read the ' +
+        'monster camp at 4,290 ms here while `pnpm test` ran dozens of other files beside this one — against ' +
+        '0.45–0.9 s run alone — because the OS gave this process less than a full core for part of that call, ' +
+        'not because `planCampaign` did more work. `planMs` is now one discarded warm-up call (so a cold JIT ' +
+        'is never the number reported) followed by `PLAN_TIMING_RUNS` (3) timed calls, **the median by wall ' +
+        'time**; `planCpuMs` is that same run’s own process CPU time (`process.cpuUsage`, user + system), ' +
+        'which tracks the wall clock closely when this process had a core to itself and falls behind it when ' +
+        'something else was also running. `contended?` is `planMs` more than 1.25× `planCpuMs` — direct ' +
+        'evidence of the first case, not a guess about whether this file ran alone or as part of `pnpm test`’s ' +
+        'full, file-parallel suite. `planCampaign` is pure, so repeating the call to time it changes no reading ' +
+        '(`docs/plans/refactor-speed.md` §0’s own rule); only which of the three calls the clock happened ' +
+        'to read moves.',
+      '',
+      '| army | planner (median of 3) | cpu time | contended? | of its budget | bound? | search, all calls | a call | of its budget |',
+      '|---|---|---|---|---|---|---|---|---|',
       ...figures.scenarios.map((one) => {
         const planShare = ((one.planMs / Math.max(1, one.planBudgetMs)) * 100).toFixed(0);
         // The search budget is **per call** and `searchMs` is the sum of forty of them, so the share is
@@ -818,7 +833,8 @@ describe('the standing at matched spend, over every army above', () => {
         const perCall = one.searchMs / Math.max(1, one.searchCalls);
         const searchShare = ((perCall / Math.max(1, one.searchBudgetMs)) * 100).toFixed(0);
         return (
-          `| ${one.label} | ${n(one.planMs)} ms | ${planShare} % | ` +
+          `| ${one.label} | ${n(one.planMs)} ms | ${n(one.planCpuMs)} ms | ` +
+          `${isContended(one.planMs, one.planCpuMs) ? '**yes**' : 'no'} | ${planShare} % | ` +
           `${one.planBudgetBound ? '**yes**' : 'no'} | ${n(one.searchMs)} ms over ${String(one.searchCalls)} | ` +
           `${n(perCall)} ms | ${searchShare} % |`
         );
@@ -827,6 +843,17 @@ describe('the standing at matched spend, over every army above', () => {
       `**${String(bound.length)} of ${String(figures.scenarios.length)}** armies leave the planner ` +
         `budget-bound${bound.length > 0 ? `: ${bound.map((one) => one.label).join('; ')}` : ''}, and the ` +
         'priority search is bound on none of them either.',
+      '',
+      (() => {
+        const contended = figures.scenarios.filter((one) => isContended(one.planMs, one.planCpuMs));
+        return (
+          `**${String(contended.length)} of ${String(figures.scenarios.length)}** armies are flagged ` +
+          `**contended** on this run${contended.length > 0 ? `: ${contended.map((one) => one.label).join('; ')}` : ''}` +
+          ' — read their `planner` figures as an upper bound, not a clean measurement; the other armies’ ' +
+          'wall and CPU time agree, which is what a single-file run against an otherwise idle machine looks ' +
+          'like.'
+        );
+      })(),
       '',
       '**So on this table a speed-up buys latency and not answer quality**, and that is worth stating ' +
         'plainly because it is the opposite of what the engine felt like. The one army measured to fill ' +

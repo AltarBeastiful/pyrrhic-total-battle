@@ -109,8 +109,26 @@ export interface Measured {
    * rows beside it. Carried into `benchmark-latest.json` beside the stops (owner, 2026-09-18: a proposal that
    * widens the search has to say what it costs), so a later run compares against a measured number rather
    * than against a memory of how long the suite felt.
+   *
+   * **The median of `PLAN_TIMING_RUNS` timed calls, after one discarded warm-up** (W16 E4, 2026-10-01). A
+   * single wall-clock sample once read the monster camp at 4,290 ms here while `pnpm test` ran dozens of
+   * other files beside it — the OS gave this process less than a full core for part of that call — against
+   * 0.45–0.9 s run alone: a single reading cannot tell a slow machine from a slow neighbour. Repeating the
+   * call and taking the middle one does not remove contention, but it stops one unlucky scheduling slice
+   * from being the number this file reports.
    */
   planMs: number;
+  /**
+   * **The same median run's own process CPU time** (`process.cpuUsage`, user + system), in milliseconds
+   * (W16 E4). Read beside `planMs`: a process that had a core to itself for the whole call has the two
+   * agree; one preempted by sibling work (another vitest file, another worker) spends wall time it was not
+   * actually running on, so `planMs` pulls ahead of `planCpuMs` — `planMs` more than `PLAN_CONTENTION_RATIO`×
+   * `planCpuMs` is direct evidence of that, which `isContended` (below `figuresOf`) and the report both read
+   * straight off these two fields rather than off a third one, precisely so there is no boolean here for a
+   * before/after diff to trip on (`planMs`/`planCpuMs` are both measured-duration fields the diff already
+   * knows to ignore by name).
+   */
+  planCpuMs: number;
   /**
    * **Wall time spent inside `searchPriority`** on this army, summed over the ten Generate rows that call it
    * (S-124, 2026-09-22; the owner: *"pin where we spend time and especially where we're constrained by a
@@ -139,6 +157,66 @@ export interface Measured {
 }
 
 /**
+ * **How many timed `planCampaign` calls `measure` medians over** (W16 E4), beside the one discarded warm-up.
+ * Three is the smallest odd count that has a middle reading at all, so the benchmark's own runtime grows by
+ * roughly `PLAN_TIMING_RUNS` planner calls an army rather than by a multiple chosen to average out noise —
+ * the median does that instead.
+ */
+const PLAN_TIMING_RUNS = 3;
+/**
+ * **How far `planMs` may run ahead of `planCpuMs` before a reading counts as contended** (W16 E4). A process
+ * with a core to itself tracks its own CPU accounting closely; 1.25 gives headroom for `process.cpuUsage`'s
+ * own coarseness without needing much of a contention episode to trip it. Exported so `plan-benchmark.test.ts`
+ * reads the same number rather than a second copy of it.
+ */
+export const PLAN_CONTENTION_RATIO = 1.25;
+/**
+ * **Was a `planMs`/`planCpuMs` pair measured under contention?** (W16 E4). Kept as a function of the two
+ * stored fields rather than as a boolean field of its own: both inputs end in `Ms` and a before/after
+ * `bench-diff` already knows to ignore a measured duration by that suffix, where a bare boolean would read as
+ * a new reading on every comparison and need naming around the diff instead of a name that says what it is.
+ */
+export const isContended = (planMs: number, planCpuMs: number): boolean =>
+  planCpuMs > 0 && planMs > planCpuMs * PLAN_CONTENTION_RATIO;
+
+/** One timed attempt at `planCampaign`, wall and CPU time alike (W16 E4; see `measure`). */
+interface PlanAttempt {
+  plan: CampaignPlan | null;
+  refusal: string | null;
+  wallMs: number;
+  cpuMs: number;
+}
+
+/**
+ * **One `planCampaign` call, timed both ways** (W16 E4). `planCampaign` is a pure function of `request` and
+ * `budgets` — the refactor phase's own rule (`docs/plans/refactor-speed.md` §0) is that nothing here may
+ * change what a plan computes — so calling it more than once to time it changes only which call the clock
+ * reads, never the answer.
+ */
+function runPlanOnce(request: StackRequest, budgets: Budgets): PlanAttempt {
+  const startedAt = performance.now();
+  const startedCpu = process.cpuUsage();
+  let plan: CampaignPlan | null = null;
+  let refusal: string | null = null;
+  try {
+    plan = planCampaign({
+      request,
+      marchTarget: HORIZON,
+      ...(budgets.plan === undefined ? {} : { budgetMs: budgets.plan }),
+      ...CAMPAIGN.planFixes,
+      // The put-back pass, at the app's own rates (`CAMPAIGN.putBack`): this file measures the plan the app
+      // ships, so a stop here is the march the player would be offered, low tiers put back and all.
+      putBack: CAMPAIGN.putBack,
+    });
+  } catch (error) {
+    refusal = error instanceof Error ? error.message : String(error);
+  }
+  const wallMs = performance.now() - startedAt;
+  const cpu = process.cpuUsage(startedCpu);
+  return { plan, refusal, wallMs, cpuMs: (cpu.user + cpu.system) / 1000 };
+}
+
+/**
  * The clocks `measure` runs under: the app's own (`CAMPAIGN.budgets`) by default, which is what the benchmark
  * measures. `UNBUDGETED` lifts both, so no deadline makes an answer depend on the machine's speed or load —
  * how `benchmark-equivalence.*.test.ts` compares the two engine paths (no army here is budget-bound, S-124, so
@@ -153,7 +231,18 @@ export interface Budgets {
 export const APP_BUDGETS: Budgets = { search: SEARCH_BUDGET_MS, plan: CAMPAIGN.budgets.plan };
 export const UNBUDGETED: Budgets = { search: 0, plan: undefined };
 
-export function measure(scenario: Scenario, budgets: Budgets = APP_BUDGETS): Measured {
+/**
+ * @param timingRuns How many times `planCampaign` is called to read `planMs`/`planCpuMs` (W16 E4): the
+ *   default medians over `PLAN_TIMING_RUNS` timed calls behind one discarded warm-up, for a caller that
+ *   reports the timing. `1` skips the warm-up and times a single call — the pre-W16-E4 cost — for a caller
+ *   like `benchmark-equivalence.ts` that strips every timing field before comparing and so has no use for a
+ *   trustworthy one; this keeps that suite's own runtime exactly where it was.
+ */
+export function measure(
+  scenario: Scenario,
+  budgets: Budgets = APP_BUDGETS,
+  timingRuns: number = PLAN_TIMING_RUNS,
+): Measured {
   const { request } = scenario;
   const rows: Campaign[] = [];
   // Every call into the priority search on this army, timed (S-124). It is wrapped here rather than inside
@@ -233,26 +322,27 @@ export function measure(scenario: Scenario, budgets: Budgets = APP_BUDGETS): Mea
     expect(names.has(row.name), `two rows on ${scenario.label} are both called "${row.name}"`).toBe(false);
     names.add(row.name);
   }
-  let plan: CampaignPlan | null = null;
-  let refusal: string | null = null;
   // Which stop each plan row is, by object identity: the row's `name` is prose and the baseline is keyed on
   // the engine's own `pick`.
   const picks = new Map<Campaign, string>();
-  const startedAt = performance.now();
-  try {
-    plan = planCampaign({
-      request,
-      marchTarget: HORIZON,
-      ...(budgets.plan === undefined ? {} : { budgetMs: budgets.plan }),
-      ...CAMPAIGN.planFixes,
-      // The put-back pass, at the app's own rates (`CAMPAIGN.putBack`): this file measures the plan the app
-      // ships, so a stop here is the march the player would be offered, low tiers put back and all.
-      putBack: CAMPAIGN.putBack,
-    });
-  } catch (error) {
-    refusal = error instanceof Error ? error.message : String(error);
-  }
-  const planMs = Math.round(performance.now() - startedAt);
+  // **The planner's timing, robust to CPU contention** (W16 E4, 2026-10-01). When `timingRuns > 1` one
+  // warm-up call is run and thrown away — not timed, not kept — so a cold JIT is never the number this file
+  // reports; then `timingRuns` calls are timed and the run whose *wall* time sits in the middle is reported,
+  // together with that same run's own process CPU time. `planCampaign` is pure (`runPlanOnce`'s own comment),
+  // so the `plan` kept for everything below is the median run's and could be any of the `N` without changing
+  // a reading — only which call the clock happened to read moves. `timingRuns <= 1` (`benchmark-
+  // equivalence.ts`) skips the warm-up and times the one call the pre-W16-E4 code made.
+  const runs = Math.max(1, Math.trunc(timingRuns));
+  if (runs > 1) runPlanOnce(request, budgets);
+  const attempts: PlanAttempt[] = [];
+  for (let i = 0; i < runs; i++) attempts.push(runPlanOnce(request, budgets));
+  attempts.sort((a, b) => a.wallMs - b.wallMs);
+  const median = attempts[Math.floor(attempts.length / 2)];
+  if (!median) throw new Error('measure() left no timed planCampaign run to report');
+  const plan = median.plan;
+  const refusal = median.refusal;
+  const planMs = Math.round(median.wallMs);
+  const planCpuMs = Math.round(median.cpuMs);
   if (plan) {
     for (const stop of plan.alternatives) {
       // The campaign a stop actually plays: its own sequence, or its repeated march as many times as its
@@ -274,7 +364,17 @@ export function measure(scenario: Scenario, budgets: Budgets = APP_BUDGETS): Mea
       rows.push(campaign);
     }
   }
-  return { rows, plan, refusal, planMs, searchMs: Math.round(searchMs), searchCalls, picks, request };
+  return {
+    rows,
+    plan,
+    refusal,
+    planMs,
+    planCpuMs,
+    searchMs: Math.round(searchMs),
+    searchCalls,
+    picks,
+    request,
+  };
 }
 
 /**
@@ -446,6 +546,10 @@ export function figuresOf(label: string, measured: Measured, verdict: Verdict = 
     refusal: measured.refusal,
     stops: measured.plan?.alternatives.map((stop) => stop.pick) ?? [],
     planMs: measured.planMs,
+    // **The same median run's own process CPU time** (W16 E4). A reader who wants to know whether `planMs`
+    // is trustworthy reads it beside `planMs` — `isContended(planMs, planCpuMs)` says so — rather than taking
+    // the wall clock on faith; no boolean is stored here for the reason at `Measured.planCpuMs`.
+    planCpuMs: measured.planCpuMs,
     // **Where the time went, and whether a clock was binding** (S-124). Timings are machine-dependent and
     // nothing here is asserted on them; what is worth recording is the *shape* — which of the two searches
     // spent the time, and whether either of them ran out of budget rather than out of ideas.
@@ -520,4 +624,4 @@ export function figuresOf(label: string, measured: Measured, verdict: Verdict = 
 }
 
 /** The fields of `figuresOf` that read a clock (S-124), and so differ between two runs of the same engine. */
-export const TIMING_FIELDS = ['planMs', 'searchMs', 'planBudgetBound'] as const;
+export const TIMING_FIELDS = ['planMs', 'planCpuMs', 'searchMs', 'planBudgetBound'] as const;

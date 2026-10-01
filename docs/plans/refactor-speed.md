@@ -140,6 +140,22 @@ reads over the benchmark, **0** whose final march differed in damage or silver (
 march was kept never changed that march). The trade C1 feared is empty on the benchmark; the fix is a correctness
 guard. Planner time unchanged within noise (kernel total 2 567 → 2 371 ms, TS 13 187 → 13 079 ms, single runs).
 
+**E4 (2026-10-01, at 7183e98).** The benchmark's own timing table was the thing not to trust: a single
+`performance.now()` sample around `planCampaign` (`plan-measure.ts`) reads whatever the OS scheduler gave this
+process that millisecond, and `pnpm test` runs dozens of other files' workers at the same time — the monster
+camp's 4,290 ms against a 0.45–0.9 s alone reading is that, not the planner doing more work. Fix: one warm-up
+call (discarded) then three timed calls, the **median by wall time** kept as `planMs`; `process.cpuUsage` on the
+same three calls gives `planCpuMs` beside it, and `isContended(planMs, planCpuMs)` — `planMs` over 1.25×
+`planCpuMs` — is read off those two rather than stored as a third field, so a before/after `bench-diff` has
+nothing new to trip on (both fields end in `Ms`, already ignored by name). `measure()` takes an optional
+`timingRuns`, defaulting to the three above; `benchmark-equivalence.ts` passes `1` since it strips every timing
+field before comparing and gets no benefit from a trustworthy one, so its own runtime is unchanged. Gate green on
+both projects (ts, kernel); bench-diff OK on both (the committed `benchmark-latest.json` and a kept local
+`.kernel.json` snapshot), confirming the four extra `planCampaign` calls an army move no reading — only which of
+them the clock read. Runtime: `plan-benchmark.test.ts` alone, ts 185 s → 221 s (+19 %), kernel 55 s → 81 s
+(+47 %); the report itself now says in prose how the timing was taken and prints `planCpuMs`/`contended?` beside
+`planMs` so a reader does not have to take the wall clock on faith.
+
 ## 4. Round 2 (owner, 2026-10-01)
 
 *"do 1, checking benchmarks and ensuring no regressions. For 2, do you mean some kind of cache? delegate a subagent
