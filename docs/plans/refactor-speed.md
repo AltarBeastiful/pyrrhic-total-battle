@@ -107,3 +107,11 @@ widest benchmark box).
 benchmark-equivalence 7 + 11, raise-kernel 109, raise-positions 18 × 2, plan-benchmark 19 × 2, experiment 184 (needs
 `THEORY=1`); the regenerated benchmark JSON identical to HEAD apart from `run`, `planMs`, `searchMs`. ~20 min
 sequential. The "WIP pin" lines in the benchmark log are soft readings inside passing tests, not reds.
+
+**C1 (3140985).** `evaluateVector`'s derived calls memoised per rung orders learned and `winnerRungs`, side effects
+replayed (`record`, `consider(tight)`, the kept final march restored); `summarise` bills a march once; `sameCounts`
+caches its JSON. 18 armies × both paths byte-identical; gate green. Planner: monster camp kernel 1.01 → ~0.7 s
+(TS 8.5 → ~5.7 s), TotalStack profile 300 → 210 ms, usual setup 365 → 275 ms (shared machine, medians).
+**Found, not changed (a trade for the owner):** the scorer's kept final march is keyed on the vector alone, so
+after a rung order is learned it answers **stale** — 624 of the monster camp's 800 first scorings read one. The
+memo reproduces that faithfully; fixing it would move readings and must be measured as an experiment.
