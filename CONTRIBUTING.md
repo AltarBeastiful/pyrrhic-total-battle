@@ -81,12 +81,16 @@ pnpm test                                   # the whole suite, on the kernel
 pnpm vitest run tests/engine/plan.test.ts   # one engine file, same way
 ```
 
-The TypeScript engine is kept as a reference while the rest of E3 retires it, and `tests/kernel/**` holds the
+The TypeScript engine is kept as a reference for the decline paths a real account can still reach (a custom
+kill order, training cost reductions/speed) while the rest of E3 retires it, and `tests/kernel/**` holds the
 two paths to each other in one process, each file toggling `setKernel`/`setRaiseKernel` explicitly around
 the calls it compares rather than relying on which project ran it: entry-point parity on seeded random
-inputs (`parity.test.ts`), the plan deep-equal on every benchmark army (`plan-equivalence`), and the
-benchmark's whole table measured both ways and compared figure for figure (`benchmark-equivalence.*`). The
-benchmark itself (`tests/engine/plan-benchmark.test.ts`) now runs once, on the kernel, and writes the
+inputs (`parity.test.ts`), the decline-ported doors (`ported-declines.test.ts`). The whole-plan and
+whole-benchmark comparisons that once ran both paths end to end (`plan-equivalence`,
+`benchmark-equivalence.*`) were retired W16 E3 S4: `tests/golden/plans.json`, captured once when both paths
+still agreed, is now the floor `tests/kernel/golden-capture.test.ts` holds the kernel alone to, and the
+committed `benchmark-latest.json` (now kernel-generated) plus the registered baseline is `plan-benchmark`'s.
+The benchmark itself (`tests/engine/plan-benchmark.test.ts`) now runs once, on the kernel, and writes the
 committed `benchmark-latest.*` directly.
 
 **The rule while both paths exist: a test is written once.** Only the implementation is duplicated. Never

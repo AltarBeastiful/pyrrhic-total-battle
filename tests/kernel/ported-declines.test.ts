@@ -15,8 +15,13 @@
  *    order (the bill `marchOf` makes under `SEARCH_RECOVERY`, which this test checks first);
  *  - `ladders` under the same recoveries: a ladder shape's march figures against that same reference;
  *  - **the whole plan** (`planCampaign`) on armies whose own options carry a custom kill order and whose own
- *    recovery carries training reductions and speeds, kernel against TypeScript, with every kernel door
- *    counted: not one declines.
+ *    recovery carries training reductions and speeds, with every kernel door counted: not one declines. This
+ *    used to also hold the kernel's plan deep-equal to a zero-kernel TypeScript one; `sizeStacks` became
+ *    kernel-only (W16 E3 S5a) and `planCampaign` has no global switch narrow enough to keep *only* that door
+ *    on TypeScript while the rest of the plan ran it, so a true zero-kernel `planCampaign` is no longer
+ *    buildable here. The per-door comparisons above (`sizeStacks`, `march`, `ladders`) still hold each door
+ *    to the TypeScript it stands in for; what is left here is that the whole orchestration reaches every one
+ *    of them on these feature combinations, with nothing left over for TypeScript to answer.
  */
 /// <reference types="node" />
 import { afterEach, describe, expect, it } from 'vitest';
@@ -184,11 +189,16 @@ describe('the ported declines', () => {
               monstersLast: random() < 0.5,
               strictMercsAboveMonsters: random() < 0.5,
             };
-            setKernel(null);
+            // `sizeStacks`'s own orchestration is still TypeScript; only its inner bisection is kernel-only
+            // now (W16 E3 S5a), and that door is held `Object.is` to the body it replaced elsewhere
+            // (`pool-bisection.test.ts`, `tests/golden/sizepool.json`) — setting the kernel on here does not
+            // weaken what `ts` answers, and `kernel.sizeStacks` below is still the genuinely separate thing.
+            setKernel(kernel);
             const ts = sizeStacks({ ...request, units, caps, options }).stacks.map((stack) => ({
               unitId: stack.unitId,
               count: stack.count,
             }));
+            setKernel(null);
             const fast = kernel.sizeStacks(request, units, caps, options);
             expect(fast, `${custom.label} #${String(i)}`).toStrictEqual(ts);
             compared += 1;
@@ -411,7 +421,7 @@ describe('planCampaign on an account with a custom kill order or training bonuse
     'army %i: %s',
     (_index, _label, base) => {
       it.each(accounts.map((a) => [a.label, a.request] as const))(
-        '%s: the kernel answers every door, and the plan is the TypeScript’s',
+        '%s: the kernel answers every door, none declining',
         (_account, account) => {
           const request = account(base);
           const input: CampaignInput = {
@@ -420,14 +430,15 @@ describe('planCampaign on an account with a custom kill order or training bonuse
             ...CAMPAIGN.planFixes,
             putBack: CAMPAIGN.putBack,
           };
-          setKernel(null);
-          const reference = plan(input);
+          // No zero-kernel `reference` any more (see the module comment): `sizeStacks` is kernel-only since
+          // W16 E3 S5a, and `planCampaign` has one global switch for every door, not one narrow enough to
+          // keep only that door on TypeScript. What this still holds: the whole orchestration reaches every
+          // door on these feature combinations and none of them declines.
           const { kernel, declines } = counted(createPlanKernel(module));
           setKernel(kernel);
           const fast = plan(input);
           setKernel(null);
-          expect(reference.plan ?? reference.refused).toBeDefined();
-          expect(fast).toStrictEqual(reference);
+          expect(fast.plan ?? fast.refused).toBeDefined();
           expect(declines).toStrictEqual({});
         },
         600_000,

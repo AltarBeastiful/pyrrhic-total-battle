@@ -8,9 +8,9 @@
  *    stacks above troops, single stacks), each **in several stack orders** (a tie the rank does not break
  *    falls by the caller's order), every figure compared;
  *  - `bill` against `recoveryCosts(...).plan` over the same stacks in the same orders;
- *  - `marchBill` (the re-typing's battle and bill) against the engine's, on the same marches;
- *  - `sizePool` through `sizeStacks` — the whole `StackResult`, deep-equal — under both sizer methods,
- *    relaxed or not, in tens or not, monsters last, strict mercenaries above monsters, with seeded caps;
+ *  - `marchBill` (the re-typing's battle and bill) against the engine's (`tsMarchBill` below — `marchResult`
+ *    stays TypeScript, so this is the body `./retype.ts`'s own `marchBill` had before it became kernel-only,
+ *    W16 E3 S5a), on the same marches;
  *  - `sizeStacks` (step 3, the whole sizer in the kernel) against the TypeScript `sizeStacks`' stacks — unit,
  *    order and count, `Object.is` — on seeded subsets and caps under every option, against every enemy
  *    category alone and the army's own formation, with the swarm event on and off, and with two hired
@@ -18,6 +18,14 @@
  *
  * And the fallbacks: entries no bound table built, entries from two tables, and a recovery that is not the
  * bound request's are all answered `null`, so the engine runs its TypeScript.
+ *
+ * **`sizePool` is kernel-only since W16 E3 S5a**, so `sizeStacks`'s inner bisection can no longer run with no
+ * kernel at all — the micro-door and the TypeScript bisection it replaced were already held `Object.is` over
+ * 20 000 seeded pools (`pool-bisection.test.ts`) and the golden `tests/golden/sizepool.json`, so the
+ * `sizeStacks` comparison below sets the kernel on both sides rather than toggling it off: what it still
+ * holds is the kernel's own **separate** full reimplementation (`kernel.sizeStacks`) against this file's
+ * hand-written orchestration (ranking, three pools, ceilings, relaxed preservation), not the bisection twice
+ * over.
  */
 /// <reference types="node" />
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -29,10 +37,10 @@ import { mulberry32 } from '@/engine';
 import { enemySquadCount } from '@/engine/battle';
 import { setKernel } from '@/engine/fast';
 import type { Effective } from '@/engine/plan';
-import { effectiveTable, marchOf, planCampaign, undominatedRows } from '@/engine/plan';
+import { effectiveTable, marchOf, marchResult, planCampaign, undominatedRows } from '@/engine/plan';
 import type { PlanTotals } from '@/engine/plan';
-import { recoveryCosts } from '@/engine/recovery';
-import { marchBill } from '@/engine/retype';
+import { chunks, recoveryCosts } from '@/engine/recovery';
+import type { Bill } from '@/engine/rating';
 import { sizeStacks } from '@/engine/stacker';
 import type { EnemyFormation, RecoverySettings, Stack, StackRequest, StackingOptions } from '@/engine/types';
 import { SWARM_EVENT_IDS } from '@/engine/units';
@@ -158,6 +166,25 @@ const figures = (m: ReturnType<typeof marchOf>): number[] => [
   m.strikes,
 ];
 
+/**
+ * `retype.ts`'s `marchBill`, before it became kernel-only (W16 E3 S5a): `marchResult` stays TypeScript (with
+ * the global kernel cleared, as every call below has it), so this is still the TypeScript answer, just read
+ * here rather than through a door that now throws with no kernel set.
+ */
+function tsMarchBill(request: StackRequest, counts: Record<string, number>): Bill {
+  const { summary } = marchResult(request, counts);
+  let hired = 0;
+  for (const unit of request.units) if (unit.pool === 'authority') hired += chunks(counts[unit.id] ?? 0);
+  return {
+    damage: summary.minDamage,
+    silver: summary.recovery.silver,
+    gold: summary.recovery.gold,
+    hired,
+    dragonCoins: summary.recovery.dragonCoins,
+    seconds: summary.recovery.seconds,
+  };
+}
+
 const profile = ownerProfile();
 const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
 
@@ -184,7 +211,7 @@ describe('the plan kernel', () => {
           for (const march of marches) {
             // `marchBill` (the re-typing's battle): the kernel's step-1 record against the engine's.
             const counts = Object.fromEntries(march.map((s) => [s.entry.id, s.count]));
-            const tsBill = marchBill(request, counts);
+            const tsBill = tsMarchBill(request, counts);
             const fastBill = kernel.marchBill(request, counts);
             if (
               !fastBill ||
@@ -243,53 +270,12 @@ describe('the plan kernel', () => {
         expect(compared).toBeGreaterThan(RANDOM_PER_ARMY);
       }, 600_000);
 
-      it('sizes every pool exactly as the engine does', () => {
-        const random = mulberry32(0x512e + index);
-        const requests: StackRequest[] = [];
-        for (const method of ['ms', 'elite'] as const) {
-          for (const flags of [0, 1, 2, 3, 4, 5, 6, 7]) {
-            const caps: Record<string, number> = { ...base.caps };
-            if (flags & 4)
-              for (const u of base.units) if (random() < 0.4) caps[u.id] = Math.floor(random() * 400);
-            requests.push({
-              ...base,
-              caps,
-              options: {
-                ...base.options,
-                method,
-                relaxedPreservation: (flags & 1) !== 0,
-                roundTo10: (flags & 2) !== 0,
-                monstersLast: random() < 0.5,
-                strictMercsAboveMonsters: random() < 0.5,
-              },
-            });
-          }
-        }
-        // A handful of the plan's own shapes: a subset of the troops, the hired capped at a random stock.
-        for (let i = 0; i < 12; i += 1) {
-          const caps: Record<string, number> = { ...base.caps };
-          for (const u of base.units) if (u.pool !== 'leadership') caps[u.id] = Math.floor(random() * 600);
-          requests.push({
-            ...base,
-            caps,
-            units: base.units.filter((u) => u.pool !== 'leadership' || random() < 0.7),
-            options: {
-              ...base.options,
-              method: i % 3 === 0 ? 'elite' : 'ms',
-              relaxedPreservation: i % 3 === 2,
-            },
-          });
-        }
-        const kernel = createPlanKernel(loadKernelModule());
-        for (const request of requests) {
-          setKernel(null);
-          const ts = sizeStacks(request);
-          setKernel(kernel);
-          const fast = sizeStacks(request);
-          setKernel(null);
-          expect(fast).toEqual(ts);
-        }
-      }, 600_000);
+      // A test once stood here comparing `sizeStacks(request)` run with no kernel against the same call
+      // with the kernel set — i.e. the TypeScript bisection against the kernel's `sizePool` micro-door,
+      // through real seeded `StackRequest`s (method, relaxation, rounding, monster/mercenary ceilings,
+      // caps). Deleted W16 E3 S5a: `sizePool` has no TypeScript body to toggle off any more, and the
+      // comparison it made is `pool-bisection.test.ts`'s (20 000 seeded pools, `Object.is`) and the golden
+      // `tests/golden/sizepool.json` (1 500 of the same, captured once against the body before deletion).
     },
   );
 
@@ -365,8 +351,15 @@ describe('the plan kernel', () => {
             if (random() < 0.2) housing.dominance = 0;
             const request: StackRequest = { ...base, enemy, activeEvents, housing };
             for (const input of sizerCases(request, random, SIZER_CASES)) {
-              setKernel(null);
+              // `sizeStacks`'s own orchestration (ranking, three pools, ceilings, relaxed preservation) is
+              // still TypeScript; only its inner bisection is kernel-only now (W16 E3 S5a), and that door is
+              // held `Object.is` to the body it replaced elsewhere (`pool-bisection.test.ts`,
+              // `tests/golden/sizepool.json`) — so setting the kernel on here does not weaken what this
+              // reference answers, and `kernel.sizeStacks` below stays the genuinely separate thing it holds
+              // this comparison to: the kernel's own wholesale reimplementation of the whole sizer.
+              setKernel(kernel);
               const reference = sizeStacks({ ...request, ...input });
+              setKernel(null);
               if (reference.warnings.some((line) => line.includes(' tie at '))) ties += 1;
               const ts = reference.stacks.map((stack) => [stack.unitId, stack.count]);
               const got = kernel.sizeStacks(request, input.units, input.caps, input.options);
@@ -405,8 +398,12 @@ describe('the plan kernel', () => {
     expect(kernel.sizeStacks(request, [{ ...(units[0] as UnitDef) }], {}, options)).toBeNull();
     // A custom kill order is the kernel's too (W16 E3 port; `./ported-declines.test.ts`).
     const custom = { ...options, method: 'custom' as const, customOrder: units.map((u) => u.id).reverse() };
+    // `sizeStacks`'s inner bisection needs the kernel (W16 E3 S5a) — set here since `beforeEach` clears it.
+    setKernel(kernel);
+    const tsCustom = sizeStacks({ ...request, units, caps: {}, options: custom });
+    setKernel(null);
     expect(kernel.sizeStacks(request, units, {}, custom)).toStrictEqual(
-      sizeStacks({ ...request, units, caps: {}, options: custom }).stacks.map((stack) => ({
+      tsCustom.stacks.map((stack) => ({
         unitId: stack.unitId,
         count: stack.count,
       })),

@@ -6,8 +6,8 @@
  * which reads one property and does nothing else. An experiment sets a sink, plans, and reads back what each
  * step of the re-typing pass (`retypeOne`, `retypeRowNow`, `foldFinale`, `keepReadings`, the hand-backs,
  * S-94, the fold, the own-ladder finale) did to which march. The sink only receives copies of what the engine
- * already computed; it never feeds anything back, so no output can depend on it
- * (`tests/kernel/plan-equivalence.test.ts` and `tests/engine/plan.test.ts` hold that).
+ * already computed; it never feeds anything back, so no output can depend on it (`planTrace.sink` is `null`
+ * on every `planCampaign` call the gate makes, `tests/kernel/golden-capture.test.ts` included).
  */
 export type PlanTraceEvent =
   | {

@@ -4,9 +4,10 @@
  * figures `benchmark-run.json` records for it), lifted out of `plan-benchmark.test.ts` so a second reading of
  * the same armies is the same code (the precedent is `plan-campaign.ts`, S-131).
  *
- * The second reading is `tests/kernel/benchmark-equivalence.*.test.ts`: every army measured once on the
- * TypeScript engine and once with the plan kernel set, and the two `figuresOf` payloads held equal except for
- * the wall-clock fields (`TIMING_FIELDS`). Nothing here changed in the move.
+ * A second reading once ran every army on the TypeScript engine and once with the plan kernel set
+ * (`tests/kernel/benchmark-equivalence.*.test.ts`), the two `figuresOf` payloads held equal except for the
+ * wall-clock fields (`TIMING_FIELDS`); retired W16 E3 S4 — the committed `benchmark-latest.json` (now
+ * kernel-generated) plus the registered baseline is the floor now. Nothing here changed in the move.
  */
 import { expect } from 'vitest';
 
@@ -219,8 +220,8 @@ function runPlanOnce(request: StackRequest, budgets: Budgets): PlanAttempt {
 /**
  * The clocks `measure` runs under: the app's own (`CAMPAIGN.budgets`) by default, which is what the benchmark
  * measures. `UNBUDGETED` lifts both, so no deadline makes an answer depend on the machine's speed or load —
- * how `benchmark-equivalence.*.test.ts` compares the two engine paths (no army here is budget-bound, S-124, so
- * the answers are the same ones).
+ * how the now-retired `benchmark-equivalence.*.test.ts` compared the two engine paths (no army here is
+ * budget-bound, S-124, so the answers were the same ones either way).
  */
 export interface Budgets {
   /** Per `searchPriority` call; `0` is no deadline. */
@@ -235,8 +236,8 @@ export const UNBUDGETED: Budgets = { search: 0, plan: undefined };
  * @param timingRuns How many times `planCampaign` is called to read `planMs`/`planCpuMs` (W16 E4): the
  *   default medians over `PLAN_TIMING_RUNS` timed calls behind one discarded warm-up, for a caller that
  *   reports the timing. `1` skips the warm-up and times a single call — the pre-W16-E4 cost — for a caller
- *   like `benchmark-equivalence.ts` that strips every timing field before comparing and so has no use for a
- *   trustworthy one; this keeps that suite's own runtime exactly where it was.
+ *   that strips every timing field before comparing and so has no use for a trustworthy one (the now-retired
+ *   `benchmark-equivalence.ts`; this default still serves no other caller that needs the cheaper read).
  */
 export function measure(
   scenario: Scenario,

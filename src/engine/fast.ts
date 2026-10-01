@@ -1,15 +1,18 @@
 /**
  * **The engine's one door to a faster arithmetic** (AssemblyScript roadmap, step 2).
  *
- * The engine does not depend on the kernel: it asks `planKernel()` and, when nothing is set (the default —
- * vitest in jsdom, SSR, a Node script, a browser where the wasm did not load), it runs its own TypeScript,
- * which stays the reference. A host that has the kernel compiled (`src/worker/calc.worker.ts`) calls
- * `setKernel(createPlanKernel(module))` once (`src/kernel/plan.ts`).
+ * Most methods still ask `planKernel()` and, when nothing is set, run their own TypeScript, which stays the
+ * reference for the decline paths a real account can still reach (a custom kill order, training cost
+ * reductions/speed — `docs/plans/refactor-speed.md` §4, E3 S1 census). A host that has the kernel compiled
+ * (`src/worker/calc.worker.ts`, `src/kernel/boot.ts`) calls `setKernel(createPlanKernel(module))` once.
  *
- * Every method answers **exactly** what the TypeScript it stands in for answers (`Object.is` on every figure;
- * `tests/kernel/plan-kernel.test.ts` and `tests/kernel/plan-equivalence.test.ts` hold it), or `null` when it
- * cannot — then the caller runs its TypeScript. Only figures cross: anything the UI draws (`Stack[]`,
- * journals) is still built by the engine.
+ * **Two doors are mandatory instead** (W16 E3 S5a): `sizePool` (`./stacker.ts`) and `marchBill`
+ * (`./retype.ts`) throw when no kernel is set rather than falling back — the census found them never once
+ * declining over the benchmark, and the kernel is mandatory at every runtime entry since S2.
+ *
+ * Every other method answers **exactly** what the TypeScript it stands in for answers (`Object.is` on every
+ * figure; `tests/kernel/plan-kernel.test.ts` holds it), or `null` when it cannot — then the caller runs its
+ * TypeScript. Only figures cross: anything the UI draws (`Stack[]`, journals) is still built by the engine.
  */
 import type { Effective } from './plan';
 import type { Bill } from './rating';
@@ -145,12 +148,14 @@ export interface PlanKernel {
   ): RecoveryCost | null;
   /**
    * `marchBill(request, counts)` (`./retype.ts`) — the step-1 battle and bill of `marchResult` — or `null` when
-   * the request cannot be packed. The request is packed once and known by identity after.
+   * the request cannot be packed. The request is packed once and known by identity after; the caller has no
+   * TypeScript of its own to fall back to any more (W16 E3 S5a) and throws instead.
    */
   marchBill(request: StackRequest, counts: Record<string, number>): Bill | null;
   /**
    * `sizePool`'s whole arithmetic after its early return: writes every slot's `count` and answers the
-   * housing used, or `null` to let the engine do it.
+   * housing used. `null` only where the kernel itself cannot (step 5's own guards); the caller has no
+   * TypeScript of its own to fall back to any more (W16 E3 S5a) and throws instead.
    */
   sizePool(
     slots: readonly PoolSlot[],

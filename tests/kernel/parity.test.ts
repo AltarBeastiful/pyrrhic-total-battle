@@ -19,7 +19,7 @@ import { effectiveTable, marchResult, planCampaign } from '@/engine/plan';
 import type { PlanTotals } from '@/engine/plan';
 import type { Bill } from '@/engine/rating';
 import { rate } from '@/engine/rating';
-import { marchBill } from '@/engine/retype';
+import { chunks } from '@/engine/recovery';
 import type { RecoverySettings, StackRequest } from '@/engine/types';
 import { UNIT_FAMILIES } from '@/engine/types';
 import { ALL_COSTS, createKernel, expectedLayout, POOL_BITS, R, RECORD_SIZE } from '@/kernel';
@@ -31,11 +31,15 @@ import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../engin
 import { loadKernelModule } from './load';
 
 /**
- * **The reference side stays the TypeScript engine** (W16 E3 S3): `marchBill` and `marchOf`/`marchResult`
- * ask `planKernel()` first (`src/engine/fast.ts`), and the suite now installs it for every file
- * (`with-kernel.setup.ts`). This file builds its own `Kernel`/`PlanKernel` objects below and calls them
- * directly for the "kernel" side of every comparison, so the global kernel is never wanted here — clearing
- * it keeps `reference()` what its name says, rather than the kernel compared with itself.
+ * **The reference side stays the TypeScript engine** (W16 E3 S3): `marchOf`/`marchResult` ask `planKernel()`
+ * first (`src/engine/fast.ts`), and the suite now installs it for every file (`with-kernel.setup.ts`). This
+ * file builds its own `Kernel`/`PlanKernel` objects below and calls them directly for the "kernel" side of
+ * every comparison, so the global kernel is never wanted here — clearing it keeps `reference()` what its
+ * name says, rather than the kernel compared with itself.
+ *
+ * `retype.ts`'s `marchBill` is kernel-only since W16 E3 S5a, so it is no longer called with the global
+ * kernel cleared; `reference()` and `enumerateReference` below inline the body it had before that (a hired
+ * count summed from `counts`, chunked) over `marchResult`, which still answers on the TypeScript here.
  */
 setKernel(null);
 
@@ -43,10 +47,25 @@ const RATES = CAMPAIGN.markerRates;
 const RANDOM_PER_ARMY = 3_000;
 const COSTS = ['silver', 'gold', 'hired', 'dragonCoins', 'seconds'] as const;
 
+/** `retype.ts`'s `marchBill`, before it became kernel-only (W16 E3 S5a) — see the module comment above. */
+function tsMarchBill(request: StackRequest, counts: Record<string, number>): Bill {
+  const { summary } = marchResult(request, counts);
+  let hired = 0;
+  for (const unit of request.units) if (unit.pool === 'authority') hired += chunks(counts[unit.id] ?? 0);
+  return {
+    damage: summary.minDamage,
+    silver: summary.recovery.silver,
+    gold: summary.recovery.gold,
+    hired,
+    dragonCoins: summary.recovery.dragonCoins,
+    seconds: summary.recovery.seconds,
+  };
+}
+
 /** The TS reference, in the record's own slots. */
 function reference(request: StackRequest, counts: Record<string, number>): Float64Array {
   const { result, summary } = marchResult(request, counts);
-  const bill = marchBill(request, counts);
+  const bill = tsMarchBill(request, counts);
   const out = new Float64Array(RECORD_SIZE);
   out[R.minDamage] = summary.minDamage;
   out[R.silver] = summary.recovery.silver;
@@ -63,7 +82,7 @@ function reference(request: StackRequest, counts: Record<string, number>): Float
   out[R.damagePerGold] = summary.damagePerGold;
   out[R.damagePerDragonCoin] = summary.damagePerDragonCoin;
   out[R.stackCount] = summary.stackCount;
-  // The bill `marchBill` returns must be the record's first six slots.
+  // The bill `tsMarchBill` returns must be the record's first six slots.
   if (
     bill.damage !== summary.minDamage ||
     bill.silver !== summary.recovery.silver ||
@@ -71,7 +90,7 @@ function reference(request: StackRequest, counts: Record<string, number>): Float
     bill.dragonCoins !== summary.recovery.dragonCoins ||
     bill.seconds !== summary.recovery.seconds
   )
-    throw new Error('marchBill and marchResult disagree');
+    throw new Error('tsMarchBill and marchResult disagree');
   return out;
 }
 
@@ -421,7 +440,7 @@ function enumerateReference(
     }
     out.battles += 1;
     const march = Object.fromEntries(ids.map((id, t) => [id, counts[t] ?? 0]));
-    const bill = marchBill(request, march);
+    const bill = tsMarchBill(request, march);
     if (bill.damage > out.damage.damage) out.damage = { damage: bill.damage, assignment: [...assign] };
     if (bill.damage < base.damage - 1e-6) return;
     out.admissible += 1;

@@ -42,65 +42,25 @@ interface PoolOptions {
   ceiling?: number;
 }
 
-function unitsForTarget(slot: Slot, target: number): number {
-  if (slot.hp <= 0 || slot.cost <= 0) return 0;
-  return Math.max(0, Math.min(Math.floor(target / slot.hp), slot.cap));
-}
-
 /**
  * Size one pool. `slots` must already be in rank order (first to die first); the returned counts are written
  * back onto the slots.
+ *
+ * **The kernel's search and fill, unconditionally** (W16 E3 S5a): the 200-halving bisection and the exact-fill
+ * pass that used to live here as TypeScript are the kernel's alone now (`./fast.ts`'s `PlanKernel.sizePool`,
+ * `kernel/assembly/index.ts`). The kernel is mandatory at every runtime entry since S2, and the census (E3 S1,
+ * `docs/plans/refactor-speed.md` §4) found this door never once declining over the benchmark — a missing
+ * kernel is a boot failure (`WasmRequired`), not a case this function still has its own arithmetic for.
  */
 function sizePool(slots: Slot[], capacity: number, options: PoolOptions): number {
   for (const slot of slots) slot.count = 0;
   if (slots.length === 0 || capacity <= 0) return 0;
   const { ceiling } = options;
-  // AssemblyScript roadmap, step 2: the same search and fill in the kernel when the host set one (`./fast.ts`).
   const fast = planKernel()?.sizePool(slots, capacity, ceiling, RANK_SPREAD);
   if (fast !== undefined && fast !== null) return fast;
-
-  const countsAt = (ceilingHp: number): number[] => {
-    const delta = RANK_SPREAD * ceilingHp;
-    return slots.map((slot, index) => unitsForTarget(slot, ceilingHp - index * delta));
-  };
-  const usedBy = (counts: number[]): number =>
-    counts.reduce((sum, count, index) => sum + count * (slots[index]?.cost ?? 0), 0);
-
-  const maxHp = Math.max(...slots.map((slot) => slot.hp));
-  let low = 0;
-  let high = ceiling ?? (capacity + 1) * Math.max(maxHp, 1);
-  if (ceiling !== undefined && usedBy(countsAt(ceiling)) <= capacity) low = ceiling;
-  else {
-    for (let step = 0; step < 200; step += 1) {
-      const mid = (low + high) / 2;
-      if (usedBy(countsAt(mid)) <= capacity) low = mid;
-      else high = mid;
-    }
-  }
-
-  const counts = countsAt(low);
-  let rest = capacity - usedBy(counts);
-
-  // Exact fill: single-unit passes from the first-to-die stack down.
-  let changed = true;
-  while (changed && rest > 0) {
-    changed = false;
-    for (let index = 0; index < slots.length; index += 1) {
-      const slot = slots[index];
-      if (!slot || slot.hp <= 0) continue;
-      const next = (counts[index] ?? 0) + 1;
-      if (slot.cost > rest || next > slot.cap) continue;
-      if (ceiling !== undefined && next * slot.hp > ceiling) continue;
-      counts[index] = next;
-      rest -= slot.cost;
-      changed = true;
-    }
-  }
-
-  slots.forEach((slot, index) => {
-    slot.count = counts[index] ?? 0;
-  });
-  return capacity - rest;
+  // `kernel/boot.ts` sets the kernel before anything plans; importing its `KernelUnavailableError` here would
+  // cycle back (it loads `kernel/plan.ts`, which reads `RANK_SPREAD` above) — a plain error says the same.
+  throw new Error('sizePool: no calculation kernel is set.');
 }
 
 /**

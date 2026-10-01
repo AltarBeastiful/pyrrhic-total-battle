@@ -171,8 +171,9 @@ const OUT = new URL('../../tools/theorycraft/out/', import.meta.url);
  * and `kernel` projects collapsed to one, the kernel installed for every test by
  * `tests/kernel/with-kernel.setup.ts`), so this file's single run **is** the kernel's, and writes the
  * committed `benchmark-latest.*` directly — no `.kernel` suffix, no second gitignored pair. The two paths'
- * figures were held equal while both existed (`tests/kernel/benchmark-equivalence.*.test.ts`); that file still
- * runs, TS against the kernel in one process, for however long the TS engine itself stays in the tree.
+ * figures were held equal while both existed (`tests/kernel/benchmark-equivalence.*.test.ts`, deleted W16 E3
+ * S4): the committed `benchmark-latest.json` this file writes — now kernel-generated — plus the registered
+ * baseline is the non-regression floor in its place.
  */
 const REPORT = new URL(`benchmark-run.md`, OUT);
 const FIGURES = new URL(`benchmark-run.json`, OUT);

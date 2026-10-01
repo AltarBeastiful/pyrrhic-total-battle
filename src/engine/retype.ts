@@ -22,7 +22,6 @@ import { marchResult, effectiveTable, rankTroops } from './plan';
 import type { Bill, MarkerRates } from './rating';
 import { rate } from './rating';
 import { planKernel } from './fast';
-import { chunks } from './recovery';
 import type { StackRequest } from './types';
 
 /** Up to this many assignments are tried one by one; above it, the swap/replace climb. */
@@ -81,22 +80,20 @@ export interface Retyped {
   seed?: RetypeSeed | undefined;
 }
 
-/** A march's bill, the battle's way: worst-opening damage and every cost its recovery carries. */
+/**
+ * A march's bill, the battle's way: worst-opening damage and every cost its recovery carries.
+ *
+ * **The kernel's battle and bill, unconditionally** (W16 E3 S5a): the step-1 record this used to build from
+ * `marchResult` when the kernel declined is the kernel's alone now (`./fast.ts`'s `PlanKernel.marchBill`,
+ * `kernel/plan.ts`). The kernel is mandatory at every runtime entry since S2, and the census (E3 S1,
+ * `docs/plans/refactor-speed.md` §4) found this door never once declining over the benchmark.
+ */
 export function marchBill(request: StackRequest, counts: Record<string, number>): Bill {
-  // The kernel's battle and bill when the host set one (`./fast.ts`; AssemblyScript roadmap, step 2).
   const fast = planKernel()?.marchBill(request, counts);
   if (fast) return fast;
-  const { summary } = marchResult(request, counts);
-  let hired = 0;
-  for (const unit of request.units) if (unit.pool === 'authority') hired += chunks(counts[unit.id] ?? 0);
-  return {
-    damage: summary.minDamage,
-    silver: summary.recovery.silver,
-    gold: summary.recovery.gold,
-    hired,
-    dragonCoins: summary.recovery.dragonCoins,
-    seconds: summary.recovery.seconds,
-  };
+  // `kernel/boot.ts`'s `KernelUnavailableError` would cycle back here (it loads `kernel/plan.ts`, which
+  // loads `./plan`, which imports this function) — a plain error says the same thing.
+  throw new Error('marchBill: no calculation kernel is set.');
 }
 
 /**
