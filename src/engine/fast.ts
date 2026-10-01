@@ -201,7 +201,7 @@ export const RAISE_TIGHT = 5;
 export interface RaiseAnswer {
   /**
    * A count for every type the answer fields, by unit id (0 for one it does not): the plan's own counts with
-   * the raise applied — `{...raisedCounts, ...exactRaise}`, the merge the March itself draws.
+   * the raise applied — `{...raisedCounts, ...the search}`, the merge the March itself draws.
    */
   counts: Record<string, number>;
   /** How an exhaustive position found its answer; `null` when no search ran. */
@@ -225,14 +225,15 @@ export interface RaiseInput {
  *
  * The raise is the one search in the app whose box is measured in hundreds of thousands of vectors, so it is
  * the one that cannot be priced on the main thread: the kernel answers it in a worker, and this is the whole
- * of what the March has to know about that. A host that has no kernel (`raiseKernel()` answers `null` — the
- * default: vitest in jsdom, SSR, a browser where the wasm did not load) runs the March's TypeScript instead,
- * which stays the reference.
+ * of what the March has to know about that. **There is no other path** since W16 E3 S5b retired the March's
+ * TypeScript search: a host that has no kernel (`raiseKernel()` answers `null`) is refused by `liftedCounts`
+ * (`src/ui/sections/march/positions.ts`) rather than answered, and the kernel is loaded before the app and
+ * the worker run (`src/kernel/boot.ts`).
  */
 export interface RaiseKernel {
   /**
    * The counts one position stands every hired stack at, over both pools at once, or `null` when the kernel
-   * cannot answer (a request it cannot pack) and the caller runs its TypeScript.
+   * cannot answer (a request it cannot pack) and the caller answers with the climb alone.
    */
   position(input: RaiseInput): RaiseAnswer | null;
 }
@@ -255,7 +256,7 @@ export function setRaiseKernel(kernel: RaiseKernel | null): void {
   currentRaise = kernel;
 }
 
-/** The raise kernel set by the host, or `null`: the raise then runs the March's own TypeScript. */
+/** The raise kernel set by the host, or `null` — a host the raise refuses (`liftedCounts`). */
 export function raiseKernel(): RaiseKernel | null {
   return currentRaise;
 }

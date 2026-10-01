@@ -7,8 +7,8 @@
  */
 import { expect, test } from 'vitest';
 
-import { boxSize, exactSearch } from './exact';
-import type { BoxVector, SearchSlot } from './exact';
+import { boxSize, exactSearch } from './exact-search';
+import type { BoxVector, SearchSlot } from './exact-search';
 
 const slots = (...ranges: [string, number, number][]): SearchSlot[] =>
   ranges.map(([id, from, to]) => ({ id, from, to }));

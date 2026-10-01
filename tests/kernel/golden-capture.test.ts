@@ -13,7 +13,8 @@
  *    no machine's clock can move a march), wall-clock fields stripped.
  *  - `raise.json` — experiment 184's own setup (`criteriaScenarios()`, the app's own `planCampaign` call,
  *    `positionTrades` per stop): every stop of every army, its five positions' `counts`, `how`, `space` and
- *    `scored` (the figures the port promises and the ones a press reads, S-149).
+ *    `scored` (the figures the port promises and the ones a press reads, S-149). Since W16 E3 S5b retired the
+ *    TypeScript raise, a capture writes this one from the kernel alone.
  *  - `sizepool.json` — `pool-bisection`'s seeded generator (same seed, a smaller sample), each trial's pool and
  *    the bisection's answer.
  *
@@ -221,7 +222,7 @@ function toRow(request: StackRequest, own: Record<string, number>, row: Position
 }
 
 /** Every stop of every benchmark army, the app's own plan call (experiment 184's), positions read off it. */
-function buildRaise(onKernel: boolean): RaiseEntry[] {
+function buildRaise(): RaiseEntry[] {
   const entries: RaiseEntry[] = [];
   for (const scenario of criteriaScenarios()) {
     let campaign;
@@ -240,7 +241,7 @@ function buildRaise(onKernel: boolean): RaiseEntry[] {
     for (const stop of campaign.alternatives) {
       const base = planMarch(scenario.request, stop.counts).result;
       const own = countsOf(base);
-      setRaiseKernel(onKernel ? raiseKernel : null);
+      setRaiseKernel(raiseKernel);
       const trades = positionTrades(scenario.request, base);
       setRaiseKernel(null);
       entries.push({
@@ -355,11 +356,9 @@ describe('the golden capture (E3 S0)', () => {
       expect(planKernel).toStrictEqual(planTs);
       writeGolden('plans.json', planKernel);
 
-      // raise.json
-      const raiseTs = buildRaise(false);
-      const raiseKernelEntries = buildRaise(true);
-      expect(raiseKernelEntries).toStrictEqual(raiseTs);
-      writeGolden('raise.json', raiseKernelEntries);
+      // raise.json — the kernel's alone: the TypeScript raise search is retired (W16 E3 S5b), so a capture
+      // here is a re-base and not a second testimony.
+      writeGolden('raise.json', buildRaise());
 
       // sizepool.json
       const trials = poolTrials(POOL_SAMPLE);
@@ -398,7 +397,7 @@ describe('the golden capture (E3 S0)', () => {
 
     it('raise.json: the kernel alone answers every stop’s five positions', () => {
       const golden = readGolden<RaiseEntry[]>('raise.json');
-      expect(buildRaise(true)).toStrictEqual(golden);
+      expect(buildRaise()).toStrictEqual(golden);
     }, 60_000);
 
     it('sizepool.json: the kernel alone answers the seeded pools', () => {

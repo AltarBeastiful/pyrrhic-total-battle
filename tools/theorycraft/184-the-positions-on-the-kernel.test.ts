@@ -7,17 +7,19 @@
  * million count vectors — measured at **2.7 ms median and 51 s worst** on the stops where a raise can move a
  * count at all (`out/182-v2-cost.md`). Pricing all five *before* they are asked is five of those searches, and
  * that is only affordable if the box search runs in the wasm: `src/kernel/raise.ts` is `raisedCounts` and
- * `exactRaise` ported, `positions.ts` asks it through `raiseKernel()`, and the March's own TypeScript is the
- * fallback — the reference this file holds the port to.
+ * the March's exhaustive search ported, and `positions.ts` asks it through `raiseKernel()`. Until W16 E3 S5b
+ * the March's own TypeScript was the fallback and this file priced every stop on both paths; that search is
+ * retired now (the owner, 2026-10-01: *"retire the ts version"*), and what it answered is kept as
+ * `tests/golden/raise.json` — this file's own corpus, captured on both paths while both were alive.
  *
  * On every stop of every benchmark army:
  *
- *   1. **The two paths answer the same five positions** — every count, every trade figure, the box and the
- *      scoring count, per stop per position. That is the whole of what the port promises, and it is asserted.
- *   2. **What the kernel buys** — the same five positions priced end to end on each path, reported as the two
- *      distributions. The kernel's number is what the block under the plan costs a browser; the TypeScript's is
- *      what a platform without a kernel would pay for the same table, and it is why the block is not offered
- *      there (`positionsSearch.ts`).
+ *   1. **The kernel answers what the TypeScript did** — every count, how the search found it, the box and the
+ *      scoring count, per stop per position, against the golden. The trade figures are the app's replay of
+ *      those counts (`applyCounts`), so equal counts are equal figures.
+ *   2. **What the kernel costs** — the five positions priced end to end, reported as a distribution: what the
+ *      block under the plan costs a browser. (The TypeScript column this table carried until S5b read
+ *      2.3 ms median and 10 304 ms worst a march, against the kernel's 0.7 ms and 649 ms, on the run before.)
  *   3. **The promises hold on the real corpus** — `Best v2` and `Safe` never below the climb they are seeded
  *      with, `Tight` never below the plan's own march, no capped position burning past its cap, no position
  *      fielding more units than `Most`. Experiment 180 asserts the same set over the same stops with the
@@ -29,18 +31,18 @@
  *
  * `THEORY=1 pnpm vitest run tools/theorycraft/184-the-positions-on-the-kernel.test.ts`
  */
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { planCampaign, planMarch } from '@/engine';
 import { setRaiseKernel } from '@/engine/fast';
-import type { StackRequest, StackResult } from '@/engine/types';
+import type { StackRequest } from '@/engine/types';
 import { createRaiseKernel } from '@/kernel/raise';
 import { applyCounts } from '@/ui/sections/march/manual';
 import { positionTrades, pricedRaise } from '@/ui/sections/march/positions';
-import type { PositionTrade, PositionTrades } from '@/ui/sections/march/positions';
+import type { PositionTrade } from '@/ui/sections/march/positions';
 import { burnOf, countsOf, raisedCounts } from '@/ui/sections/march/raise';
 import type { RaiseModes } from '@/ui/sections/march/raise';
 
@@ -80,23 +82,35 @@ function effective(request: StackRequest, own: Record<string, number>, counts: R
   return Object.fromEntries(request.units.map((unit) => [unit.id, merged[unit.id] ?? 0]));
 }
 
-/** The same five answers, priced with the kernel cleared: the reference the port is held to. */
-function reference(request: StackRequest, base: StackResult): PositionTrades {
-  setRaiseKernel(null);
-  const trades = positionTrades(request, base);
-  setRaiseKernel(kernel);
-  return trades;
+/** One stop's five positions as the March's retired TypeScript answered them (`tests/golden/raise.json`). */
+interface GoldenRow {
+  mode: PositionTrade['mode'];
+  counts: Record<string, number>;
+  how: 'walked' | 'searched' | null;
+  space: number;
+  scored: number;
 }
 
+const GOLDEN = new Map(
+  (
+    JSON.parse(readFileSync(new URL('../../tests/golden/raise.json', import.meta.url), 'utf8')) as {
+      army: string;
+      stop: string;
+      rows: GoldenRow[];
+    }[]
+  ).map((entry) => [`${entry.army}|${entry.stop}`, entry.rows]),
+);
+
 describe.skipIf(!process.env.THEORY)('the raise positions on the kernel', () => {
-  it('prices every position on every stop, on both paths', () => {
+  it('prices every position on every stop, and holds the kernel to the golden', () => {
+    setRaiseKernel(kernel);
     const report = new Report('184-the-positions-on-the-kernel');
     report.add(
       [
         'Every stop of every benchmark army, priced five ways — `Most, in tens`, `Most`, `Best v2`, `Safe` and',
-        '`Tight` — twice: once by the March’s own TypeScript (the reference) and once by the kernel',
-        '(`src/kernel/raise.ts`). The two agree on every count and every trade figure, which is asserted; what',
-        'each position offers over the plan’s own march is reported, and so is what the two paths cost.',
+        '`Tight` — by the kernel (`src/kernel/raise.ts`), and held to what the March’s retired TypeScript',
+        'answered (`tests/golden/raise.json`): every count, the box and the scoring count, which is asserted;',
+        'what each position offers over the plan’s own march is reported, and so is what the kernel costs.',
       ].join(' '),
     );
 
@@ -105,8 +119,8 @@ describe.skipIf(!process.env.THEORY)('the raise positions on the kernel', () => 
     const gained = new Map<string, number[]>();
     const lost = new Map<string, number>();
     /** One stop's five positions (the block's cost), and one **bar**'s — every stop of it, priced ahead. */
-    const times = { kernel: [] as number[], slow: [] as number[] };
-    const bars = { kernel: [] as number[], slow: [] as number[], stops: [] as number[] };
+    const times = { kernel: [] as number[] };
+    const bars = { kernel: [] as number[], stops: [] as number[] };
     /** The three exhaustive positions' boxes only: `Most` and `Most, in tens` search nothing. */
     const spaces: number[] = [];
     const scoreCounts: number[] = [];
@@ -139,7 +153,6 @@ describe.skipIf(!process.env.THEORY)('the raise positions on the kernel', () => 
       report.h(`**${scenario.label}** — ${String(plan.alternatives.length)} stops`);
       report.add('');
       let barKernel = 0;
-      let barSlow = 0;
       report.add('| stop | position | damage | vs plan | silver | gold | merc | box | scored |');
       report.add('|---|---|---|---|---|---|---|---|---|');
 
@@ -154,32 +167,17 @@ describe.skipIf(!process.env.THEORY)('the raise positions on the kernel', () => 
         const fastMs = performance.now() - fastStart;
         times.kernel.push(fastMs);
         barKernel += fastMs;
-        const slowStart = performance.now();
-        const slow = reference(request, base);
-        const slowMs = performance.now() - slowStart;
-        times.slow.push(slowMs);
-        barSlow += slowMs;
-
-        // 1. **The two paths.** Every figure the block draws, on every position.
+        // 1. **The golden.** Every count, and how the search found it, on every position.
         expect(fast.rows.length).toBe(5);
-        expect(slow.own.damage).toBe(fast.own.damage);
-        expect(slow.own.mercLost).toBe(fast.own.mercLost);
-        expect(slow.own.units).toBe(fast.own.units);
+        const golden = GOLDEN.get(`${scenario.label}|${stop.pick}`);
+        expect(golden, `${scenario.label} · ${stop.pick}: a stop the golden does not have`).toBeDefined();
         for (let index = 0; index < fast.rows.length; index += 1) {
           const one = fast.rows[index] as PositionTrade;
-          const other = slow.rows[index] as PositionTrade;
+          const other = golden?.[index] as GoldenRow;
           readings += 1;
           const where = `${scenario.label} · ${stop.pick} · ${one.mode}`;
-          if (one.mode !== other.mode) broken.push(`${where}: the two paths priced different positions`);
-          expect(effective(request, planCounts, one.counts), `${where}: counts`).toStrictEqual(
-            effective(request, planCounts, other.counts),
-          );
-          expect(one.damage, `${where}: damage`).toBe(other.damage);
-          expect(one.mercLost, `${where}: mercs`).toBe(other.mercLost);
-          expect(one.units, `${where}: units`).toBe(other.units);
-          expect(one.silver, `${where}: silver`).toBe(other.silver);
-          expect(one.gold, `${where}: gold`).toBe(other.gold);
-          expect(one.hiredDamage, `${where}: hired damage`).toBe(other.hiredDamage);
+          if (one.mode !== other.mode) broken.push(`${where}: the golden priced a different position`);
+          expect(effective(request, planCounts, one.counts), `${where}: counts`).toStrictEqual(other.counts);
           expect(one.how, `${where}: how`).toBe(other.how);
           expect(one.space, `${where}: box`).toBe(other.space);
           expect(one.scored, `${where}: scored`).toBe(other.scored);
@@ -259,15 +257,12 @@ describe.skipIf(!process.env.THEORY)('the raise positions on the kernel', () => 
       }
       if (plan.alternatives.length > 1) {
         bars.kernel.push(barKernel);
-        bars.slow.push(barSlow);
         bars.stops.push(plan.alternatives.length);
       }
       report.add('');
       if (plan.alternatives.length > 1) {
         report.add(
-          `**The whole bar, priced ahead**: ${barKernel.toFixed(0)} ms on the kernel against ${barSlow.toFixed(
-            0,
-          )} ms in TypeScript, over its ${String(
+          `**The whole bar, priced ahead**: ${barKernel.toFixed(0)} ms on the kernel, over its ${String(
             plan.alternatives.length,
           )} stops — one job a stop, which is what makes a press on the slide another table rather than another \
 wait.`,
@@ -291,16 +286,12 @@ wait.`,
     report.add(
       `| the kernel | ${median(times.kernel).toFixed(1)} | ${Math.max(...times.kernel, 0).toFixed(0)} |`,
     );
-    report.add(
-      `| the March’s TypeScript | ${median(times.slow).toFixed(1)} | ${Math.max(...times.slow, 0).toFixed(0)} |`,
-    );
     report.add('');
     report.add(
       [
         `A whole **bar** — every stop of the plan, priced ahead so a press on the slide is another table rather`,
         `than another wait — is **${median(bars.kernel).toFixed(0)} ms** median and`,
-        `**${Math.max(...bars.kernel, 0).toFixed(0)} ms** at its worst on the kernel, against`,
-        `${median(bars.slow).toFixed(0)} ms and ${Math.max(...bars.slow, 0).toFixed(0)} ms in TypeScript, over`,
+        `**${Math.max(...bars.kernel, 0).toFixed(0)} ms** at its worst on the kernel, over`,
         `bars of ${String(Math.min(...bars.stops))} to ${String(Math.max(...bars.stops))} stops.`,
       ].join(' '),
     );
@@ -309,9 +300,7 @@ wait.`,
       [
         `Over the **three exhaustive positions** — the two unit answers search nothing — the box comes to`,
         `median ${n(median(spaces))} vectors a position and ${n(Math.max(...spaces, 0))} at its widest, and a`,
-        `position scores median ${n(median(scoreCounts))} vectors before it answers. The TypeScript column is`,
-        'what a platform without a kernel would pay for the same table, and it is why the block is not offered',
-        'there at all (`positionsSearch.ts`).',
+        `position scores median ${n(median(scoreCounts))} vectors before it answers.`,
       ].join(' '),
     );
     report.add('');
@@ -347,7 +336,7 @@ wait.`,
       [
         `**${n(pressable)} of ${n(pressable)} readings** — three positions on every one of the ${n(stops)}`,
         'stops — take the row the bar printed, count for count, and the counts they land on are the ones the',
-        'March’s own TypeScript produces for the same stop and the same position, which is what the parity',
+        'March’s retired TypeScript produced for the same stop and the same position, which is what the golden',
         'above asserts of every row. A march the plan did not size is refused the table on every one of those',
         `readings (${n(refused)}), so a March edit cannot be handed a raise priced for the march before it, and`,
         `so are the two questions no row answers — a mixed control and \`As is\` (${n(mixed)} stops).`,

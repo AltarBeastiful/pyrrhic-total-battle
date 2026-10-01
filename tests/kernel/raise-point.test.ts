@@ -10,8 +10,9 @@
  *    out of both — the verdict (`Object.is`, bit for bit, the refusals included) and the memo index each
  *    would have read, the slots-only one carried from sample to sample as the search carries it (`raiseSet`);
  *  - **the guard**: a mercenary cost of x.5 (a custom cost is user input) sends the box down the whole-roster
- *    path, and the answer is still the March's own TypeScript one; and on integer costs, an instance forced
- *    down the whole-roster path answers every position exactly as the slots-only one, `scored` included.
+ *    path, and the answer is still the one the March's retired TypeScript gave
+ *    (`tests/golden/raise-kernel.json`); and on integer costs, an instance forced down the whole-roster path
+ *    answers every position exactly as the slots-only one, `scored` included.
  */
 /// <reference types="node" />
 import { afterEach, describe, expect, it } from 'vitest';
@@ -124,21 +125,17 @@ describe('the slots-only point', () => {
         const fast = kernel.position({ request, base: march, modes: modesOf(mode) });
         if (!fast?.how) continue;
         expect(kernel.fastPath(request, march), `${scenario.label} / ${mode}`).toBe(false);
+        // The answer itself is held to the March's retired TypeScript by `tests/golden/raise-kernel.json` (its
+        // "a fractional mercenary cost" marches, W16 E3 S5b); here, the app's own door answers the same box.
         const modes = { authority: mode, dominance: mode } as const;
-        setRaiseKernel(null);
-        const reference = liftedCounts(request, march, modes);
         setRaiseKernel(createRaiseKernel(loadKernelModule()));
         const door = liftedCounts(request, march, modes);
         setRaiseKernel(null);
         const here = countsOf(march);
         const at = (counts: Record<string, number> | undefined) =>
           request.units.map((unit) => ({ ...here, ...counts })[unit.id] ?? 0);
-        expect(at(door?.counts), `${scenario.label} / ${mode}`).toStrictEqual(at(reference?.counts));
-        expect([door?.how, door?.space, door?.scored]).toStrictEqual([
-          reference?.how,
-          reference?.space,
-          reference?.scored,
-        ]);
+        expect(at(door?.counts), `${scenario.label} / ${mode}`).toStrictEqual(at(fast.counts));
+        expect([door?.how, door?.space, door?.scored]).toStrictEqual([fast.how, fast.space, fast.scored]);
         checked += 1;
       }
       // And the integer army takes the slots-only point.

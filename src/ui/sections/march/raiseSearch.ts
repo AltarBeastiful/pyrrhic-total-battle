@@ -3,7 +3,8 @@
  *
  * Every other raise position is arithmetic over the march on screen and is derived during render
  * (`raise.ts`, a millisecond at worst). `Best v2` is a search over up to a million count vectors, measured
- * from ~1 ms to **~50 s** (experiment 182, `tools/theorycraft/out/182-v2-cost.md`), so it cannot be derived in
+ * from ~1 ms to **~50 s** in TypeScript (experiment 182) and still hundreds of milliseconds on the kernel that
+ * answers it now (experiment 184, W16 E3 S5b), so it cannot be derived in
  * a render, cannot be awaited in one, and must not be allowed to freeze the page. This file is the whole of
  * what that costs the rest of the app: a hook the March calls, a store holding one answer, and a worker.
  *
@@ -23,10 +24,9 @@
  * job at a time, and this is the only job in the app measured in tens of seconds. On the page's worker a
  * `Best v2` press would sit in front of the next Generate and hold it there — the player would wait for a
  * search they had already stopped looking at before the button they just pressed did anything. Two workers
- * cost a second wasm kernel load and nothing else. **The refactor this is packaged for**: when the search
- * moves into the plan's own shape search or the AssemblyScript kernel (`docs/plans/best-v2.md` §3), the
- * caller is this hook and the answer is a count per walked stack — neither the March nor the bench has to
- * change.
+ * cost a second wasm kernel load and nothing else. **The refactor this was packaged for** has happened: the
+ * search moved into the AssemblyScript kernel (`runRaise` → `liftedCounts`, W16 E3 S5b) and neither this hook
+ * nor the March changed.
  *
  * **The key, and why there is one.** An answer belongs to one march *and* one position: the stop on screen
  * and which pools stand on `v2`. Every tick of the count editor and every keystroke in the setup form
@@ -36,7 +36,7 @@
  *
  * **What the March shows while it runs**: `raise.ts` answers an exhaustive position with the climb, so the counts, the figures and
  * every sentence are drawn from a march the game would take, from the first frame. The exhaustive answer
- * replaces them when it lands, and it is seeded with exactly those counts (`exact.ts`), so it can only ever
+ * replaces them when it lands, and it is seeded with exactly those counts (the kernel's `raise`), so it can only ever
  * *raise* the damage — there is no window in which the pane shows something worse than `Best`.
  *
  * **One caveat, inherited from the app's own client and worth stating where it bites hardest.**
@@ -128,7 +128,7 @@ function calc(): CalcClient {
 }
 
 /**
- * **`terminate` is the only way to interrupt a search that is already inside the box.** `exactSearch` has no
+ * **`terminate` is the only way to interrupt a search that is already inside the box.** The kernel's search has no
  * checkpoint to poll — it is a walk of a box, not a loop with a shape the caller can cut short — and the
  * client's own `cancel` merely settles the promise locally while the worker keeps churning. Throwing the
  * worker away costs one restart on the next press, against a search measured in tens of seconds.

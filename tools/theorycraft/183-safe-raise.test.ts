@@ -27,8 +27,8 @@ import { describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { planCampaign, planMarch } from '@/engine';
-import { byDamage, exactRaise } from '@/ui/sections/march/exact';
-import type { RaiseRank } from '@/ui/sections/march/exact';
+import { byDamage, exactRaise } from './exact-raise';
+import type { RaiseRank } from './exact-raise';
 import { applyCounts } from '@/ui/sections/march/manual';
 import { burnOf, raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/raise';
 

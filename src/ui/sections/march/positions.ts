@@ -9,7 +9,7 @@
  * existed the only way to learn what one of them was worth was to press it and read the pane.
  *
  * So this is the same five answers, priced **side by side on the march on screen**: for each of them the
- * counts (`liftedCounts` — the climb, the search over it, and the kernel when the host has one) and the three
+ * counts (`liftedCounts` — the kernel's climb and the kernel's search over it) and the three
  * figures a player decides by — the damage the march would hit for, the mercenaries it would burn for good,
  * and the units it would field. `tools/theorycraft/180-the-positions.test.ts` measures the same ten readings
  * on every stop of every benchmark army; these are the three the block under the plan draws.
@@ -26,9 +26,9 @@
  * **And a press takes the row rather than the calculation** (S-149; owner, 2026-09-30: *"make the positions
  * selector (as is, tight…) use the already computed assemblyscript values (should be same as engine/TS)"*).
  * `pricedRaise` is that rule — the row of the stop and the position on screen, under the conditions that make
- * it this march's answer — and `positionsSearch.ts` is where the control reads it. The two paths answer the
- * same counts, and `tools/theorycraft/184-the-positions-on-the-kernel.test.ts` is what holds them together on
- * every stop of every benchmark army.
+ * it this march's answer — and `positionsSearch.ts` is where the control reads it. The kernel answers the
+ * counts the March's retired TypeScript did, which `tests/golden/raise.json` holds on every stop of every
+ * benchmark army (`tests/kernel/golden-capture.test.ts`, experiment 184).
  */
 import {
   RAISE_MOST,
@@ -40,8 +40,8 @@ import {
   raiseKernel,
 } from '@/engine/fast';
 import type { StackRequest, StackResult } from '@/engine/types';
+import { KernelUnavailableError } from '@/kernel/boot';
 
-import { exhaustivePools, exactRaise } from './exact';
 import { applyCounts } from './manual';
 import { hiredLost } from './hired';
 import { countsOf, raisedCounts, sameCounts } from './raise';
@@ -85,29 +85,29 @@ export interface PositionCounts {
  * for an exhaustive position, the search's own counts merged over it — `useMarch`'s own expression
  * (`{...raised, ...exhaustiveCounts}`), which is what makes the counts here the counts a press would land on.
  *
- * **The kernel answers it when the host has one** (`raiseKernel()`, S-147) — a box of a million vectors is
- * hundreds of milliseconds there and tens of seconds in TypeScript, which is the whole reason this block can
- * afford to price five positions at once. With no kernel the March's own arithmetic runs, and the two answer
- * exactly the same counts (`tests/engine/raise-kernel.test.ts`).
+ * **The kernel answers it, and only the kernel** (`raiseKernel()`, S-147; W16 E3 S5b) — a box of a million
+ * vectors is hundreds of milliseconds there, which is the whole reason this block can afford to price five
+ * positions at once. The kernel is loaded before the app renders and before the worker takes a job
+ * (`src/kernel/boot.ts`), so a host without one is a broken host and this says so rather than answering on
+ * a path that no longer exists. A request the kernel cannot pack — never once on the benchmark or on
+ * experiment 184's corpus (`docs/plans/refactor-speed.md`, the E3 S1 census) — is answered with the climb
+ * alone: a march the game would take, with no search over it.
  */
 export function liftedCounts(
   request: StackRequest,
   base: StackResult,
   modes: RaiseModes,
 ): PositionCounts | null {
-  const fast = raiseKernel()?.position({
+  const kernel = raiseKernel();
+  if (kernel === null) throw new KernelUnavailableError('The raise kernel is not loaded.');
+  const fast = kernel.position({
     request,
     base,
     modes: { authority: raiseCode(modes.authority), dominance: raiseCode(modes.dominance) },
   });
-  if (fast !== null && fast !== undefined) {
-    return { counts: fast.counts, how: fast.how, space: fast.space, scored: fast.scored };
-  }
+  if (fast !== null) return { counts: fast.counts, how: fast.how, space: fast.space, scored: fast.scored };
   const raised = raisedCounts(request, base, modes);
-  const found = exhaustivePools(modes).length === 0 ? null : exactRaise(request, base, modes);
-  const counts = found === null ? raised : { ...raised, ...found.counts };
-  if (counts === null) return null;
-  return { counts, how: found?.how ?? null, space: found?.space ?? 0, scored: found?.scored ?? 0 };
+  return raised === null ? null : { counts: raised, how: null, space: 0, scored: 0 };
 }
 
 /**

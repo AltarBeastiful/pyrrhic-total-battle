@@ -4,13 +4,20 @@
  * the engine's own shelter (`shelterCounts`), so the line a stack is raised to and the line the plan lowers
  * a stack to cannot drift apart.
  */
-import { expect, test } from 'vitest';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import { getUnits } from '@/data';
 import { emptyTotals, shelterCounts, sizeStacks } from '@/engine';
+import { setRaiseKernel } from '@/engine/fast';
+import { marchResult } from '@/engine/plan';
 import type { Pool, Stack, StackRequest, StackResult } from '@/engine/types';
+import { createRaiseKernel } from '@/kernel/raise';
+import { runRaise } from '@/worker/jobs';
 
-import { exactRaise, exhaustivePools } from './exact';
+import { loadKernelModule } from '../../../../tests/kernel/load';
+
+import { exhaustivePools } from './exact';
+import type { ExactRaiseAnswer } from './exact';
 import { raiseSearchKey } from './raiseSearch';
 import { applyCounts } from './manual';
 import {
@@ -23,6 +30,22 @@ import {
   troopFloor,
 } from './raise';
 import type { RaiseMode, RaiseModes } from './raise';
+
+/**
+ * **The exhaustive positions are the kernel's** (W16 E3 S5b): the TypeScript search these tests were first
+ * written against is retired, and the same promises are asked of the job the worker runs (`runRaise`).
+ */
+beforeAll(() => {
+  setRaiseKernel(createRaiseKernel(loadKernelModule()));
+});
+afterAll(() => {
+  setRaiseKernel(null);
+});
+
+/** The exhaustive raise, as the March's worker answers it. */
+function exactRaise(request: StackRequest, base: StackResult, modes: RaiseModes): ExactRaiseAnswer | null {
+  return runRaise({ request, base, modes });
+}
 
 const UNITS = getUnits();
 const RD1 = 'rider-1';
@@ -277,10 +300,21 @@ test('the ceiling is the same number the engine’s own shelter lowers a stack t
 // ---- The exhaustive position, `Best v2` (S-143b) ---------------------------------------------------
 /**
  * A march with a hired stack of each pool, so the search has something to trade: two troops whose floor is
- * 1 000 000, one mercenary under it (a ceiling of 33) and one monster (a ceiling of 2).
+ * 1 800 000 (6 000 riders I), one mercenary under it (a ceiling of 295) and one monster (a ceiling of 2).
+ *
+ * **An engine march, not a hand-built one** (W16 E3 S5b): the search is the kernel's, and the kernel reads
+ * every unit's health and strength off the request's own table rather than off the stacks it is handed, so
+ * a fixture whose stacks carry made-up health would be a question about a march nobody fields.
  */
 const BOTH_HIRED = (): StackResult =>
-  marchOf([...TROOPS, stack(HUNTER, 'authority', 5, 30_000), stack(MONSTER, 'dominance', 1, 400_000)]);
+  marchResult(request(), { [RD3]: 8_000, [RD1]: 6_000, [HUNTER]: 5, [MONSTER]: 1 }).result;
+
+/** What one stack of a march is, by id. */
+function stackOf(base: StackResult, unitId: string): Stack {
+  const found = base.stacks.find((one) => one.unitId === unitId);
+  if (found === undefined) throw new Error(`no ${unitId} in the march`);
+  return found;
+}
 
 test('the exhaustive position is only asked for where a control stands on it', () => {
   expect(exhaustivePools(V2)).toEqual(['authority', 'dominance']);
@@ -328,8 +362,11 @@ test('the search walks both hired pools at once, and answers with a legal march'
 
   // **One box over both pools** — the joint search the owner asked for ("give another options for both"),
   // and the configuration experiment 181 measured.
-  const mercCeiling = shelterCeiling(1_000_000, 30_000);
-  const monsterCeiling = shelterCeiling(1_000_000, 400_000);
+  const floor = troopFloor(base) ?? 0;
+  expect(floor).toBe(1_800_000);
+  const mercCeiling = shelterCeiling(floor, stackOf(base, HUNTER).hpPerUnit);
+  const monsterCeiling = shelterCeiling(floor, stackOf(base, MONSTER).hpPerUnit);
+  expect([mercCeiling, monsterCeiling]).toEqual([295, 2]);
   expect(found.space).toBe((mercCeiling - 5 + 1) * (monsterCeiling - 1 + 1));
   expect(found.how).toBe('walked');
 
@@ -366,7 +403,7 @@ test('the exhaustive position asks for nothing where there is nothing to move', 
   // No troops to shelter under: the same rule the other four positions live by.
   expect(exactRaise(request(), marchOf([stack(HUNTER, 'authority', 5, 30_000)]), V2)).toBeNull();
   // Every stack already at its ceiling.
-  const full = marchOf([...TROOPS, stack(HUNTER, 'authority', 33, 30_000)]);
+  const full = marchResult(request(), { [RD3]: 8_000, [RD1]: 6_000, [HUNTER]: 295 }).result;
   expect(exactRaise(request(), full, V2)).toBeNull();
 });
 
@@ -377,7 +414,7 @@ test('the same march answers the same counts every time', () => {
   expect(first?.counts).toEqual(second?.counts);
 });
 
-/** The counts of a whole march, as `exactRaise` reads them — the test's own copy of `countsOf`. */
+/** The counts of a whole march, as the search reads them — the test's own copy of `countsOf`. */
 function marchCounts(base: StackResult): Record<string, number> {
   const out: Record<string, number> = {};
   for (const one of base.stacks) out[one.unitId] = one.count;
@@ -409,7 +446,7 @@ test('the exhaustive answer carries every stack it walked, not only the ones it 
     expect(found.counts[unitId]).toBeGreaterThanOrEqual(
       base.stacks.find((one) => one.unitId === unitId)?.count ?? 0,
     );
-    // And the merged vector is what `exactRaise` itself scored: merging the answer over the seed cannot leave
+    // And the merged vector is what the search itself scored: merging the answer over the seed cannot leave
     // a seed count standing where the search put a lower one.
     const merged = { ...seed, ...found.counts };
     expect(merged[unitId]).toBe(found.counts[unitId]);
@@ -473,7 +510,7 @@ test('Tight never burns more than the plan’s own counts, and never loses to th
 
   // The plan's own march is five hunters and one monster: one chunk. The cap is that, so the search may not
   // reach a second chunk however much damage is behind it — and on this fixture it is a real bound: `v2`
-  // answers the ceiling (33 hunters, four chunks) where `Tight` stops at ten.
+  // answers the ceiling (295 hunters, thirty chunks) where `Tight` stops at ten.
   const own = marchCounts(base);
   expect(found.counts[HUNTER]).toBe(10);
   expect(found.counts[MONSTER]).toBe(2);

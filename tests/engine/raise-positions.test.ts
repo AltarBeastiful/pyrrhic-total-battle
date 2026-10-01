@@ -1,9 +1,8 @@
 /**
- * **The five raise positions keep their promises, on whichever path computes them** (S-147).
- *
- * Written once and run twice (`vite.config.ts`: the `ts` project on the March's own TypeScript, the `kernel`
- * project with `setRaiseKernel` set) — so a defect in the port is a failure here and not only in
- * `tests/kernel/raise-kernel.test.ts`, which holds the two *answers* to each other.
+ * **The five raise positions keep their promises** (S-147), on the kernel — the only path that computes them
+ * since W16 E3 S5b retired the March's TypeScript search. `tests/kernel/raise-kernel.test.ts` holds the
+ * kernel's *answers* to that TypeScript's testimony (`tests/golden/raise-kernel.json`); this file holds them to
+ * the promises, so a defect that a golden capture would have baked in is still a failure here.
  *
  * The promises are the ones the control makes and the ones `docs/plans/best-v2.md` §5 lists, measured on
  * every benchmark army from the sizer's own march and three seeded ones:
@@ -18,22 +17,33 @@
  *   4. **`Most` fields the most units** — no other position fields more than it does.
  *
  * `tools/theorycraft/180-the-positions.test.ts` asserts the same list over the whole corpus, every stop of
- * every plan; this file is the same gate the suite runs on both paths, on marches that cost milliseconds.
+ * every plan; this file is the same gate the suite runs, on marches that cost milliseconds.
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { mulberry32 } from '@/engine';
+import { setRaiseKernel } from '@/engine/fast';
 import { marchResult } from '@/engine/plan';
 import { sizeStacks } from '@/engine/stacker';
 import type { StackRequest, StackResult } from '@/engine/types';
+import { createRaiseKernel } from '@/kernel/raise';
 import { applyCounts } from '@/ui/sections/march/manual';
 import { positionTrades } from '@/ui/sections/march/positions';
 import type { PositionTrade } from '@/ui/sections/march/positions';
 import { burnOf, countsOf, raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/raise';
 
+import { loadKernelModule } from '../kernel/load';
+
 import { criteriaScenarios } from './plan-scenarios';
 
 const SEEDED = 3;
+
+beforeAll(() => {
+  setRaiseKernel(createRaiseKernel(loadKernelModule()));
+});
+afterAll(() => {
+  setRaiseKernel(null);
+});
 
 /**
  * The plan's own lowering (`shelterUnder`), applied to a march: every hired stack capped at

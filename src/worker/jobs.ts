@@ -12,9 +12,9 @@ import {
 } from '@/engine';
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, SearchResult, StackRequest } from '@/engine/types';
-import { exactRaise } from '@/ui/sections/march/exact';
+import { exhaustivePools } from '@/ui/sections/march/exact';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
-import { positionTrades } from '@/ui/sections/march/positions';
+import { liftedCounts, positionTrades } from '@/ui/sections/march/positions';
 import type { PositionTrades } from '@/ui/sections/march/positions';
 
 import type { PositionsInput, ResizeInput, StackOutcome } from './protocol';
@@ -57,20 +57,26 @@ export function runResize(input: ResizeInput): ResizedMarch | null {
 }
 
 /**
- * **The exhaustive raise** (S-143b): `Best` with the sampling taken out. Not cancellable and not
- * time-boxed, and deliberately so — the owner's call is that there is no cost limit on this one (*"no cost
- * limit as it's experimental for now"*), and the way it is kept out of the way is `raiseSearch.ts` giving it
- * a worker of its own rather than by cutting the search short.
+ * **The exhaustive raise** (S-143b): `Best` with the sampling taken out, on the kernel (W16 E3 S5b — the
+ * same `liftedCounts` the positions block prices with, so a March edit and a row of the block are one
+ * answer). Not cancellable and not time-boxed, and deliberately so — the owner's call is that there is no
+ * cost limit on this one (*"no cost limit as it's experimental for now"*), and the way it is kept out of the
+ * way is `raiseSearch.ts` giving it a worker of its own rather than by cutting the search short.
+ *
+ * `null` when no search ran — no pool on an exhaustive position, no troop to shelter under, every stack
+ * already at its ceiling or its stock — which the March reads as "the climb is the answer".
  */
 export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
-  return exactRaise(input.request, input.base, input.modes);
+  if (exhaustivePools(input.modes).length === 0) return null;
+  const lifted = liftedCounts(input.request, input.base, input.modes);
+  if (lifted === null || lifted.how === null) return null;
+  return { counts: lifted.counts, how: lifted.how, space: lifted.space, scored: lifted.scored };
 }
 
 /**
  * **Every raise position, priced at once** (S-147), on one stop of a plan. Five questions where a press of
- * the control used to be one, each answered by the kernel when the host has one (`liftedCounts`) and by the
- * March's own TypeScript otherwise — which is why this is a job rather than a render: on the widest box a
- * single position is tens of seconds of sampled walking.
+ * the control used to be one, each answered by the kernel (`liftedCounts`) — and still a job rather than a
+ * render, because the widest box is a million vectors even there.
  *
  * The stop's march is `planMarch`, the engine's own reading of those counts — the very result the pane draws
  * for that stop — so the block prices the march a player would be looking at rather than one built twice.

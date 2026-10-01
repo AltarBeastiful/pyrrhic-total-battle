@@ -1,6 +1,7 @@
 /**
- * **The raise positions on the kernel** (S-147): `raise.ts`'s `raisedCounts` and the March's `exactRaise`,
- * in the wasm, behind `RaiseKernel` (`src/engine/fast.ts`).
+ * **The raise positions on the kernel** (S-147): `raise.ts`'s `raisedCounts` and the March's exhaustive
+ * search, in the wasm, behind `RaiseKernel` (`src/engine/fast.ts`) — the only raise search the app runs since
+ * W16 E3 S5b retired the TypeScript one.
  *
  * The `RaiseKernel` the worker sets, one instance over one `WebAssembly.Module`:
  *
@@ -12,11 +13,10 @@
  *  - the counts come back as a vector over the table's rows, which this file turns into the record the March
  *    reads (`counts`, by unit id) plus how the search found it (`how`, `space`, `scored`).
  *
- * It answers exactly what the March's TypeScript answers, on every army and every position
- * (`tests/engine/raise-kernel.test.ts`, one test over both paths) — the tie-break included, which is the one
- * place the app's two replays disagree (`docs/plans/best-v2.md` §5).
+ * It answers exactly what the March's TypeScript answered, on every army and every position — the tie-break
+ * included, which is the one place the app's two replays disagree (`docs/plans/best-v2.md` §5) — held to that
+ * TypeScript's testimony by `tests/golden/raise.json` and `tests/golden/raise-kernel.json`.
  */
-import { EXACT_DEFAULTS } from '../engine/exact';
 import type { RaiseAnswer, RaiseInput, RaiseKernel } from '../engine/fast';
 import type { StackRequest, StackResult } from '../engine/types';
 
@@ -59,6 +59,20 @@ export interface RaiseKernelProbe extends RaiseKernel {
 }
 
 const STATS = 4;
+
+/**
+ * **The box search's defaults** (S-143b): a box of at most `walkCap` vectors is walked whole (the optimum);
+ * a wider one is searched from `restarts` seeded starts, each sweep bounded by `maxSweeps`, the restart
+ * generator seeded by `seed` — an unseeded search is not a result. Handed to the wasm rather than repeated
+ * there; they lived in `src/engine/exact.ts` until the TypeScript search was retired (W16 E3 S5b), and the
+ * research copy in `tools/theorycraft/exact-search.ts` reads them from here.
+ */
+export const EXACT_DEFAULTS = {
+  walkCap: 300_000,
+  restarts: 64,
+  maxSweeps: 24,
+  seed: 20_260_929,
+} as const;
 
 /** `march`/`bill` never read the rates (only `rate` does); the header wants numbers all the same. */
 const NO_RATES = { silver: 1, gold: 1, hired: 1, dragonCoins: 1, seconds: 1 };

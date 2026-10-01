@@ -54,11 +54,11 @@ export type RaiseRequest = Pick<StackRequest, 'units' | 'caps' | 'housing'>;
  * *lost* damage over 16 readings, but the mechanism is real.
  *
  * **`v2` is that damage answered exhaustively** (S-143b; owner, 2026-09-29: *"implement best V2 and add it to
- * the interface"*). Its own module is `exact.ts`, its own job is `raise` (`src/worker/protocol.ts`), and it
+ * the interface"*). Its search is the kernel's (`src/kernel/raise.ts`), its own job is `raise` (`src/worker/protocol.ts`), and it
  * walks a box of up to a million vectors in the worker (measured: 0 ms on a small box, **46 s** on the
  * widest). **It is not answered by `raisedCounts`**: this function cannot run a search, so it reads `v2` as
  * **the climb** — `climbedCounts`, the sampled walk that is both the seed the search starts from and the
- * answer the March draws while it runs, which the search can only improve on (see `exactRaise`).
+ * answer the March draws while it runs, which the search can only improve on (the worker's `runRaise`).
  *
  * **`safe` and `tight` are that same search under a cap on the rare stock** (S-144; owner, 2026-09-29:
  * *"we could have a safe best-v2 that is bestv2 but accounting for merc lost and dmg/merc"*). A mercenary is
@@ -209,7 +209,7 @@ export function burnOf(base: StackResult, counts: Record<string, number>): numbe
 /**
  * **The best damage under the shelter, for one pool** — the counts the march hits hardest with. It is what
  * the March draws while an exhaustive position's search is out, and the seed that search starts from
- * (`exactRaise`), which is why it is not a position of its own since S-145: as a segment it was `safe`'s
+ * (the kernel's, `runRaise`), which is why it is not a position of its own since S-145: as a segment it was `safe`'s
  * equal or worse on every stop of every benchmark army (`out/180-the-positions.md`).
  *
  * A coordinate climb, the shape `relaxPreservation` already uses (`stacker.ts:180`): one stack at a time,
@@ -331,7 +331,7 @@ function damageOf(request: StackRequest, base: StackResult, counts: Record<strin
  *    shelter does not reach — keeps what it has. The control promises more units, never fewer.
  *
  * The three exhaustive positions answer a different question and walk differently (S-143b, S-144): they are
- * seeded by `climbedCounts` here, and the search that improves on that seed is `exactRaise`'s.
+ * seeded by `climbedCounts` here, and the search that improves on that seed is the kernel's (`runRaise`).
  * *
  * The stock bound is the account's own (`request.caps`, absent = unlimited) and not the per-march ration a
  * re-size applies (`largestSustained`): the owner asked for *"the maximum number available"*, and spending
@@ -357,7 +357,7 @@ export function raisedCounts(
     /**
      * **The three exhaustive positions are answered by the climb here** (S-143b, S-144). This function
      * samples because it runs on the main thread between two keystrokes, and the exhaustive answers are
-     * `exactRaise`'s, in the worker. The climb is what gives the March a legal, never-worse march from the
+     * the kernel's, in the worker (`runRaise`). The climb is what gives the March a legal, never-worse march from the
      * first frame — the search is seeded with exactly this and takes strict improvements only, so it can
      * only raise the damage above what is drawn now. For `safe` and `tight` the drawn march is also the
      * **cap's own reading**: `safe` may not burn more than this answer, and this answer is what it is

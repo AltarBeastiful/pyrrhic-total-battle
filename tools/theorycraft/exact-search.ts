@@ -2,13 +2,17 @@
  * **The exhaustive box search** (S-143b): the best vector in a box, walked whole where the box is small
  * enough and searched to convergence where it is not.
  *
+ * **The research copy** (moved here from `src/engine/exact.ts` by W16 E3 S5b, 2026-10-01): the app's raise is
+ * the kernel's port of this search (`kernel/assembly`, `src/kernel/raise.ts`) and nothing under `src/` runs
+ * this one any more. It stays for experiments 180–183, through `exact-raise.ts` beside it.
+ *
  * It knows nothing about battles, marches, mercenaries or housing. A caller hands it **slots** (an id, the
  * count to start from, the count it may go up to) and a **scorer** (a vector in, a number out, `-Infinity`
  * for a vector the caller refuses), and it answers the vector with the highest score. That is the whole
  * contract, and it is deliberate: the same search is what a port to the AssemblyScript kernel
  * (`src/kernel/`) or a precomputation inside the plan's own shape search would run, and neither of those
  * has any business importing a UI module. The march that decides what a slot and a score *are* is
- * `src/ui/sections/march/exact.ts`.
+ * `exact-raise.ts`.
  *
  * **Why not a plain coordinate climb.** The climb climbs one stack at a time and samples each
  * stack's whole range at 16 points (`raise.ts`, `climbedCounts`) because it runs on the main thread between
@@ -31,6 +35,8 @@
  * now"*). A box of a few hundred vectors is instant; the widest one measured, 908 684 vectors, takes ~50 s,
  * which is why the March runs this off the main thread (`src/worker/jobs.ts`).
  */
+// The kernel's own defaults (`src/kernel/raise.ts`), so this copy searches the box the app does.
+import { EXACT_DEFAULTS } from '@/kernel/raise';
 
 /** One count the search may move: where it starts, and the highest it may go. */
 export interface SearchSlot {
@@ -72,17 +78,6 @@ export interface ExactAnswer {
   /** How many vectors the scorer was asked about. What the answer cost, in the only unit that matters. */
   scored: number;
 }
-
-/**
- * **The shipped defaults**, exported so the kernel's own copy of this search can be held to them
- * (`src/kernel/raise.ts` hands them to the wasm rather than repeating the numbers there).
- */
-export const EXACT_DEFAULTS = {
-  walkCap: 300_000,
-  restarts: 64,
-  maxSweeps: 24,
-  seed: 20_260_929,
-} as const;
 
 /**
  * A deterministic generator. **An unseeded restart column is a coin flip, not a measurement**: experiment

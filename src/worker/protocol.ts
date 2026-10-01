@@ -166,7 +166,7 @@ export interface ErrorMessage {
   error: { message: string; code?: ErrorCode };
 }
 
-/** The exhaustive raise's answer, or `null` when the box had nothing in it to search (`exactRaise`). */
+/** The exhaustive raise's answer, or `null` when the box had nothing in it to search (`runRaise`). */
 export interface RaiseDoneMessage {
   kind: 'raise';
   id: JobId;

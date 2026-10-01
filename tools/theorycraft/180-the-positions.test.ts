@@ -48,7 +48,7 @@ import { CAMPAIGN } from '@/config';
 import { planCampaign, planMarch } from '@/engine';
 import type { CampaignPlan } from '@/engine/plan';
 import type { StackRequest } from '@/engine/types';
-import { exactRaise } from '@/ui/sections/march/exact';
+import { exactRaise } from './exact-raise';
 import { applyCounts } from '@/ui/sections/march/manual';
 import { hiredLost } from '@/ui/sections/march/hired';
 import { isExhaustive, raisedCounts, shelterCeiling, troopFloor } from '@/ui/sections/march/raise';
