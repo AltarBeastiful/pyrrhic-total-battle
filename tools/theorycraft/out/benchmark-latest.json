@@ -1,5 +1,5 @@
 {
- "run": "2026-09-30T20:54:03.443Z",
+ "run": "2026-10-01T10:17:02.174Z",
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -7,8 +7,8 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 88,
-   "searchMs": 6322,
+   "planMs": 63,
+   "searchMs": 4300,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -558,8 +558,8 @@
    "stops": [
     "sweet-spot"
    ],
-   "planMs": 113,
-   "searchMs": 5773,
+   "planMs": 90,
+   "searchMs": 4113,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -1110,8 +1110,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 98,
-   "searchMs": 5684,
+   "planMs": 68,
+   "searchMs": 4049,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -1870,8 +1870,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 145,
-   "searchMs": 5728,
+   "planMs": 100,
+   "searchMs": 3914,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -2628,8 +2628,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 295,
-   "searchMs": 5694,
+   "planMs": 203,
+   "searchMs": 3874,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -3471,8 +3471,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 10872,
-   "searchMs": 110051,
+   "planMs": 3436,
+   "searchMs": 77719,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -4234,8 +4234,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 938,
-   "searchMs": 13673,
+   "planMs": 654,
+   "searchMs": 9223,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -5093,8 +5093,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 8519,
-   "searchMs": 36783,
+   "planMs": 983,
+   "searchMs": 4070,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -5973,8 +5973,8 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 1475,
-   "searchMs": 4751,
+   "planMs": 1151,
+   "searchMs": 4068,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -6813,8 +6813,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 154,
-   "searchMs": 479,
+   "planMs": 151,
+   "searchMs": 468,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -7656,8 +7656,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1084,
-   "searchMs": 4647,
+   "planMs": 727,
+   "searchMs": 3992,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -8538,8 +8538,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 1085,
-   "searchMs": 10334,
+   "planMs": 525,
+   "searchMs": 8534,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -9381,8 +9381,8 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 687,
-   "searchMs": 2395,
+   "planMs": 415,
+   "searchMs": 1942,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -10096,8 +10096,8 @@
     "more-mercs",
     "steady-max"
    ],
-   "planMs": 188,
-   "searchMs": 535,
+   "planMs": 141,
+   "searchMs": 421,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -10807,8 +10807,8 @@
     "steady-max",
     "all-in"
    ],
-   "planMs": 152,
-   "searchMs": 534,
+   "planMs": 106,
+   "searchMs": 428,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -11516,8 +11516,8 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 3227,
-   "searchMs": 9467,
+   "planMs": 1249,
+   "searchMs": 7322,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -12197,8 +12197,8 @@
     "sweet-spot",
     "steady-max"
    ],
-   "planMs": 4040,
-   "searchMs": 9688,
+   "planMs": 1593,
+   "searchMs": 7207,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -13053,8 +13053,8 @@
     "sweet-spot",
     "all-in"
    ],
-   "planMs": 3078,
-   "searchMs": 13611,
+   "planMs": 1424,
+   "searchMs": 10241,
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,

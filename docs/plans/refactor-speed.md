@@ -129,6 +129,17 @@ TotalStack profile ~190 → ~160 ms (TS ~1.9 → ~1.4 s), usual setup ~233 → ~
 What is left on the kernel path is mostly real work: the sizer's own wasm (12 k distinct calls), the ladder grid,
 the march battles, and GC ~14 %.
 
+**E1 (2026-10-01, at e075c63).** The scorer's kept final march is keyed on the rung orders it was walked under as
+well as the vector (one walked while an order was learned matches nothing), so it is walked again after an order
+is learned instead of answered stale; the kept final march lives in the TS scorer on both paths (the kernel's
+`ladderFinale` is called from inside the walk and keeps nothing), so it is one fix. C1's replay drops its stale
+matching (`staleReads`, `finaleFresh`, `holdsFinale`, `DerivedScore.stale`): the orders are the whole condition.
+Measured as an experiment: the 19 benchmark cases on both paths, **every figure identical** to HEAD (no reading
+moved, better or worse), kernel and TS equal. Why: a probe re-walked each stale read and compared it — 98 stale
+reads over the benchmark, **0** whose final march differed in damage or silver (the orders learned after a final
+march was kept never changed that march). The trade C1 feared is empty on the benchmark; the fix is a correctness
+guard. Planner time unchanged within noise (kernel total 2 567 → 2 371 ms, TS 13 187 → 13 079 ms, single runs).
+
 ## 4. Round 2 (owner, 2026-10-01)
 
 *"do 1, checking benchmarks and ensuring no regressions. For 2, do you mean some kind of cache? delegate a subagent

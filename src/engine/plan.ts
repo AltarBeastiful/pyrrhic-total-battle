@@ -1725,26 +1725,21 @@ export type ShapeScorer = ((
 };
 
 /**
- * **The two things a scorer remembers between calls** (W16 C1), which is all that makes its answer for one
- * vector depend on anything but the vector: the rung orders it has learned (`orderFor`), and the one final march
- * it keeps (`finish`), which is keyed on the vector alone — so a final march read before an order was learned is
- * answered again after it, *stale*. A caller that replays a vector's answers instead of asking again
- * (`planCampaign`'s derived vectors) may only do so under the same orders and over a final march that answers as
- * it did — fresh, or the very stale one the asking read — and leaves the kept final march as the asking would have.
+ * **What a scorer remembers between calls** (W16 C1, E1): the rung orders it has learned (`orderFor`) — the one
+ * thing besides the vector its answer depends on — and the one final march it keeps (`finish`), keyed on the
+ * vector **and** the orders it was walked under, so it never answers across an order learned since (W16 E1: it
+ * was keyed on the vector alone, and 624 of the monster camp's 800 first scorings read one walked under older
+ * orders). A caller that replays a vector's answers instead of asking again (`planCampaign`'s derived vectors)
+ * may only do so under the same orders, and leaves the kept final march as the asking would have — which moves
+ * no answer, only what the next shape finds kept.
  */
 export interface ScorerState {
   /** How many rung orders have been learned so far. */
   learned: () => number;
-  /** How many kept final marches were answered stale so far. */
-  staleReads: () => number;
   /** How many shapes read the kept final march so far (a hit or a fresh walk). */
   finaleReads: () => number;
-  /** Whether a read of the kept final march now would answer what a fresh walk answers. */
-  finaleFresh: () => boolean;
   saveFinale: () => FinaleKept;
   restoreFinale: (kept: FinaleKept) => void;
-  /** Whether the kept final march is still this very one: its key, its orders and the same answer object. */
-  holdsFinale: (kept: FinaleKept) => boolean;
 }
 
 /** The scorer's kept final march (`ScorerState.saveFinale`): its key, its answer, and the orders it was read under. */
@@ -1841,19 +1836,25 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
   //
   // The key is `marches` and the vector's counts, compared the way their joined string compared them until
   // step 3 (`${marches}|${counts.join(',')}`): a number's string is its value's, so `===`, with NaN equal to
-  // NaN — and without writing the string on every call.
+  // NaN — and without writing the string on every call — and the rung orders the final march was walked
+  // under (W16 E1): the walk reads them (`orderFor`), so one kept from before an order was learned is walked
+  // again, not answered stale.
   let cachedValid = false;
   let cachedMarches = 0;
   const cachedCounts: number[] = [];
   let cachedFinale: ScoredShape['finale'] = null;
-  // The orders the kept final march was walked under (`-1`: an order was learned during the walk), and the
-  // reads counted for `ScorerState` (W16 C1). Neither changes an answer.
+  // The orders the kept final march was walked under (`-1`: an order was learned during the walk, which
+  // nothing matches), and the reads counted for `ScorerState` (W16 C1).
   let cachedLearned = -1;
-  let staleReads = 0;
   let finaleReads = 0;
   const sameNumber = (a: number, b: number): boolean => a === b || (a !== a && b !== b);
   const cacheHit = (marches: number, vector: readonly { count: number }[]): boolean => {
-    if (!cachedValid || !sameNumber(marches, cachedMarches) || vector.length !== cachedCounts.length)
+    if (
+      !cachedValid ||
+      cachedLearned !== ordersLearned ||
+      !sameNumber(marches, cachedMarches) ||
+      vector.length !== cachedCounts.length
+    )
       return false;
     for (let i = 0; i < vector.length; i += 1) {
       if (!sameNumber((vector[i] as { count: number }).count, cachedCounts[i] as number)) return false;
@@ -1965,8 +1966,6 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
         const before = ordersLearned;
         cachedFinale = finaleFor(marches, fieldedOf(), undefined);
         cachedLearned = ordersLearned === before ? before : -1;
-      } else if (cachedLearned !== ordersLearned) {
-        staleReads += 1;
       }
       finale = cachedFinale;
     } else {
@@ -2252,9 +2251,7 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
   };
   scorer.state = {
     learned: () => ordersLearned,
-    staleReads: () => staleReads,
     finaleReads: () => finaleReads,
-    finaleFresh: () => !cachedValid || cachedLearned === ordersLearned,
     saveFinale: () => ({
       valid: cachedValid,
       marches: cachedMarches,
@@ -2270,13 +2267,6 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       cachedFinale = kept.finale;
       cachedLearned = kept.learned;
     },
-    holdsFinale: (kept) =>
-      cachedValid === kept.valid &&
-      cachedFinale === kept.finale &&
-      cachedLearned === kept.learned &&
-      sameNumber(cachedMarches, kept.marches) &&
-      cachedCounts.length === kept.counts.length &&
-      cachedCounts.every((count, i) => sameNumber(count, kept.counts[i] as number)),
   };
   return scorer;
 }
@@ -3739,9 +3729,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * state (`ScorerState`) alone; its effects are the shapes it books (`record`) and its tight shape (`consider`),
    * in that order. So the shapes are kept, and a repeat books fresh copies of them in the same order, considers
    * the same one, and leaves the scorer's kept final march where the scoring left it. Nothing is replayed across
-   * a rung order learned, nor onto a stale final march other than the one the scoring read (`ScorerState`):
-   * those calls are scored again, as before. A stale read is common, not a corner — 624 of the monster camp's
-   * 800 first scorings made one — so it is kept and matched rather than refused.
+   * a rung order learned: that call is scored again, as before. (Until W16 E1 the kept final march could answer
+   * stale across an order learned, and a replay had to match the very stale one the scoring read; it is keyed on
+   * the orders now, so the orders are the whole condition.)
    */
   interface DerivedScore {
     learned: number;
@@ -3751,8 +3741,6 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     tight: number;
     /** The kept final march the scoring left, or `null` when it read none. */
     finale: FinaleKept | null;
-    /** The stale final march the scoring read (`ScorerState`), which a replay must find kept as it was. */
-    stale: FinaleKept | null;
   }
   const derivedMemo = new Map<string, DerivedScore>();
   /** The sizer's depths then the ladders' (`SIZER_DEPTHS` keys as numbers, then `DEPTHS`), built once. */
@@ -3831,15 +3819,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const state = laddersOnly && !only ? score.state : undefined;
     let memoKey: string | undefined;
     let booked: Candidate[] | undefined;
-    let before: { learned: number; stale: number; reads: number; kept: FinaleKept } | undefined;
+    let before: { learned: number; reads: number } | undefined;
     if (state) {
       memoKey = vector.map((merc) => `${merc.entry.id}:${merc.count}`).join(',');
       const kept = derivedMemo.get(memoKey);
       if (
         kept !== undefined &&
         kept.learned === state.learned() &&
-        kept.winner === winnerRungs &&
-        (kept.stale ? state.holdsFinale(kept.stale) : state.finaleFresh())
+        kept.winner === winnerRungs
       ) {
         const shapes = kept.shapes;
         const copies: (Candidate | undefined)[] = [];
@@ -3850,12 +3837,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         return kept.pick < 0 ? null : replayed(shapes[kept.pick] as Candidate, copies, kept.pick);
       }
       booked = [];
-      before = {
-        learned: state.learned(),
-        stale: state.staleReads(),
-        reads: state.finaleReads(),
-        kept: state.saveFinale(),
-      };
+      before = { learned: state.learned(), reads: state.finaleReads() };
     }
     let pick: Candidate | null = null;
     /**
@@ -3925,8 +3907,6 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         pick: pick ? booked.indexOf(pick) : -1,
         tight: tight ? booked.indexOf(tight) : -1,
         finale: state.finaleReads() === before.reads ? null : state.saveFinale(),
-        // A stale read can only be of the final march kept before the call: one walked during it is fresh.
-        stale: state.staleReads() === before.stale ? null : before.kept,
       });
     }
     if (!laddersOnly && derived.length > 0) {
