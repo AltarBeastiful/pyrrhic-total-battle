@@ -115,7 +115,9 @@ describe('the slots-only point', () => {
       // The same army with that mercenary at half a unit more, over the same base march.
       const request: StackRequest = {
         ...scenario.request,
-        units: scenario.request.units.map((unit) => (unit.id === hired.unitId ? { ...unit, cost: unit.cost + 0.5 } : unit)),
+        units: scenario.request.units.map((unit) =>
+          unit.id === hired.unitId ? { ...unit, cost: unit.cost + 0.5 } : unit,
+        ),
       };
       const march = marchResult(request, countsOf(base)).result;
       for (const mode of EXHAUSTIVE) {
@@ -132,12 +134,17 @@ describe('the slots-only point', () => {
         const at = (counts: Record<string, number> | undefined) =>
           request.units.map((unit) => ({ ...here, ...counts })[unit.id] ?? 0);
         expect(at(door?.counts), `${scenario.label} / ${mode}`).toStrictEqual(at(reference?.counts));
-        expect([door?.how, door?.space, door?.scored]).toStrictEqual([reference?.how, reference?.space, reference?.scored]);
+        expect([door?.how, door?.space, door?.scored]).toStrictEqual([
+          reference?.how,
+          reference?.space,
+          reference?.scored,
+        ]);
         checked += 1;
       }
       // And the integer army takes the slots-only point.
       kernel.position({ request: scenario.request, base, modes: modesOf('v2') });
-      if (kernel.probe(scenario.request, base, 0, 0) === 0) expect(kernel.fastPath(scenario.request, base)).toBe(true);
+      if (kernel.probe(scenario.request, base, 0, 0) === 0)
+        expect(kernel.fastPath(scenario.request, base)).toBe(true);
     }
     expect(checked).toBeGreaterThan(0);
   }, 600_000);

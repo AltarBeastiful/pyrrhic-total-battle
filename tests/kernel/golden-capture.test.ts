@@ -39,7 +39,13 @@ import { positionTrades } from '@/ui/sections/march/positions';
 import type { PositionTrade } from '@/ui/sections/march/positions';
 import { countsOf } from '@/ui/sections/march/raise';
 
-import { HORIZON, commonScenarios, criteriaScenarios, ownerProfile, ownerScenarios } from '../engine/plan-scenarios';
+import {
+  HORIZON,
+  commonScenarios,
+  criteriaScenarios,
+  ownerProfile,
+  ownerScenarios,
+} from '../engine/plan-scenarios';
 
 import { loadKernelModule } from './load';
 
@@ -166,7 +172,11 @@ function buildPlans(onKernel: boolean): PlanEntry[] {
   for (const scenario of planScenarios) {
     for (const variant of planVariants) {
       setKernel(onKernel ? kernel : null);
-      entries.push({ army: scenario.label, variant: variant.label, result: plan(variant.input(scenario.request)) });
+      entries.push({
+        army: scenario.label,
+        variant: variant.label,
+        result: plan(variant.input(scenario.request)),
+      });
       setKernel(null);
     }
   }
@@ -309,7 +319,9 @@ const POOL_SEED = 0x5e5;
 const POOL_SAMPLE = 1_500;
 
 /** The same generator `pool-bisection.test.ts` walks, kept to the trials both paths agree answer something. */
-function poolTrials(sample: number): { slots: PoolSlotIn[]; capacity: number; ceiling: number | undefined }[] {
+function poolTrials(
+  sample: number,
+): { slots: PoolSlotIn[]; capacity: number; ceiling: number | undefined }[] {
   const random = mulberry32(POOL_SEED);
   const pick = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)] as T;
   const hps = [0, 1, 3, 7.5, 120, 1_200, 45_000, 2e6, 1e15, 1e300, Infinity];
@@ -326,7 +338,8 @@ function poolTrials(sample: number): { slots: PoolSlotIn[]; capacity: number; ce
       cap: extreme || random() < 0.3 ? pick(caps) : Number.MAX_SAFE_INTEGER,
     }));
     const capacity = extreme ? pick(capacities) : 1 + Math.floor(random() * 20_000);
-    const ceiling = random() < 0.4 ? (extreme ? pick([0, 1, 1e6, 1e300, Infinity]) : random() * 3e6) : undefined;
+    const ceiling =
+      random() < 0.4 ? (extreme ? pick([0, 1, 1e6, 1e300, Infinity]) : random() * 3e6) : undefined;
     out.push({ slots, capacity, ceiling });
   }
   return out;
@@ -334,50 +347,46 @@ function poolTrials(sample: number): { slots: PoolSlotIn[]; capacity: number; ce
 
 describe('the golden capture (E3 S0)', () => {
   if (CAPTURE) {
-    it(
-      'runs both paths, asserts them equal, and writes the goldens',
-      () => {
-        // plans.json
-        if (profile) expect(planScenarios.length).toBe(18);
-        const planTs = buildPlans(false);
-        const planKernel = buildPlans(true);
-        expect(planKernel).toStrictEqual(planTs);
-        writeGolden('plans.json', planKernel);
+    it('runs both paths, asserts them equal, and writes the goldens', () => {
+      // plans.json
+      if (profile) expect(planScenarios.length).toBe(18);
+      const planTs = buildPlans(false);
+      const planKernel = buildPlans(true);
+      expect(planKernel).toStrictEqual(planTs);
+      writeGolden('plans.json', planKernel);
 
-        // raise.json
-        const raiseTs = buildRaise(false);
-        const raiseKernelEntries = buildRaise(true);
-        expect(raiseKernelEntries).toStrictEqual(raiseTs);
-        writeGolden('raise.json', raiseKernelEntries);
+      // raise.json
+      const raiseTs = buildRaise(false);
+      const raiseKernelEntries = buildRaise(true);
+      expect(raiseKernelEntries).toStrictEqual(raiseTs);
+      writeGolden('raise.json', raiseKernelEntries);
 
-        // sizepool.json
-        const trials = poolTrials(POOL_SAMPLE);
-        const results: PoolTrial[] = [];
-        for (const trial of trials) {
-          const reference = referencePool(
-            trial.slots.map((slot) => ({ ...slot, count: -1 })),
-            trial.capacity,
-            trial.ceiling,
-          );
-          if (reference === 'none') continue;
-          const mine = trial.slots.map((slot) => ({ ...slot, count: -1 }));
-          const used = kernel.sizePool(mine, trial.capacity, trial.ceiling, RANK_SPREAD);
-          if (used === null) continue;
-          const got = [...mine.map((slot) => slot.count), used];
-          expect(got).toStrictEqual(reference);
-          results.push({
-            slots: trial.slots,
-            capacity: trial.capacity,
-            ceiling: trial.ceiling,
-            counts: got.slice(0, -1),
-            used: got[got.length - 1] as number,
-          });
-        }
-        expect(results.length).toBeGreaterThan(POOL_SAMPLE / 2);
-        writeGolden('sizepool.json', results);
-      },
-      600_000,
-    );
+      // sizepool.json
+      const trials = poolTrials(POOL_SAMPLE);
+      const results: PoolTrial[] = [];
+      for (const trial of trials) {
+        const reference = referencePool(
+          trial.slots.map((slot) => ({ ...slot, count: -1 })),
+          trial.capacity,
+          trial.ceiling,
+        );
+        if (reference === 'none') continue;
+        const mine = trial.slots.map((slot) => ({ ...slot, count: -1 }));
+        const used = kernel.sizePool(mine, trial.capacity, trial.ceiling, RANK_SPREAD);
+        if (used === null) continue;
+        const got = [...mine.map((slot) => slot.count), used];
+        expect(got).toStrictEqual(reference);
+        results.push({
+          slots: trial.slots,
+          capacity: trial.capacity,
+          ceiling: trial.ceiling,
+          counts: got.slice(0, -1),
+          used: got[got.length - 1] as number,
+        });
+      }
+      expect(results.length).toBeGreaterThan(POOL_SAMPLE / 2);
+      writeGolden('sizepool.json', results);
+    }, 600_000);
   } else {
     it('plans.json: the kernel alone answers what the TypeScript once did', () => {
       const golden = readGolden<PlanEntry[]>('plans.json');

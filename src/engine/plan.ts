@@ -2414,7 +2414,9 @@ function sizerSame(
   depth: number | undefined,
 ): boolean {
   if (kept.method !== method || kept.ids.length !== mercs.length) return false;
-  if (depth === undefined ? kept.depth !== undefined : kept.depth === undefined || !Object.is(kept.depth, depth))
+  if (
+    depth === undefined ? kept.depth !== undefined : kept.depth === undefined || !Object.is(kept.depth, depth)
+  )
     return false;
   for (let i = 0; i < mercs.length; i += 1) {
     const merc = mercs[i] as { entry: Effective; count: number };
@@ -3766,7 +3768,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * hands out has had `record` read its ratios, so it carries them, as `ratioOf` left them; `withRatios` false
    * is the one moment `record` spreads a copy before reading them (`light`, by the silver it spends).
    */
-  const replayed = (shape: Candidate, copies: (Candidate | undefined)[], i: number, withRatios = true): Candidate => {
+  const replayed = (
+    shape: Candidate,
+    copies: (Candidate | undefined)[],
+    i: number,
+    withRatios = true,
+  ): Candidate => {
     let copy = copies[i];
     if (copy === undefined) {
       copy = replayShape(shape);
@@ -3823,11 +3830,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (state) {
       memoKey = vector.map((merc) => `${merc.entry.id}:${merc.count}`).join(',');
       const kept = derivedMemo.get(memoKey);
-      if (
-        kept !== undefined &&
-        kept.learned === state.learned() &&
-        kept.winner === winnerRungs
-      ) {
+      if (kept !== undefined && kept.learned === state.learned() && kept.winner === winnerRungs) {
         const shapes = kept.shapes;
         const copies: (Candidate | undefined)[] = [];
         for (let i = 0; i < shapes.length; i += 1) recordReplay(shapes[i] as Candidate, copies, i);
@@ -3859,7 +3862,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     for (const merc of vector) counts[merc.entry.id] = merc.count;
     // A depth of 0 or less is the sizer's own shape under one method (`SIZER_DEPTHS`), scored once a vector
     // (its scale means nothing) when the flag is on.
-    const depths: readonly number[] = only ? [only.depth] : sizerShape && !laddersOnly ? sizersThenLadders : DEPTHS;
+    const depths: readonly number[] = only
+      ? [only.depth]
+      : sizerShape && !laddersOnly
+        ? sizersThenLadders
+        : DEPTHS;
     /**
      * A sizer shape may field fewer mercenaries than the vector it was given (Military Science does), and
      * that smaller vector is one the grid never holds — so the ladders were never scored on it. Measured on

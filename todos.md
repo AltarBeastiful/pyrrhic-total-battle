@@ -3,6 +3,10 @@ A few ideas in random order, to verify plan and validate:
 - plan table could show a hue around the sweet spot (and we could checkk that it's the best rated)
 - [done — S-142] Mercs and monsters can be raised to what the troops still shelter, in tens or exactly, from the
   army block (a per-pool three-position control; the "best damage" position is written up as the next step).
+  - [Ref] We still get some scenarios, especially without monsters where we could add more mercs while still protecting them without augmenting silver:
+  - maybe somehting to consider when planning
+  - OR let the user choose and add a small button on a stack of mercs that could be up, or a global button to say "in this config of troops, for that silver, use most mercs you can"
+  - One last option would be to consider rouding to the nearest 10 when its still shielded.
 - UI: When editiing counts, validate with enter key
 - UI: Same in popup validate on entry
 - Long term: Offer advices on what could improve greatly the plan, ex: "up the dominance..." or "add a monster..."
@@ -25,4 +29,24 @@ A few ideas in random order, to verify plan and validate:
   - One problem that could be addressed when doing this: With high dominance there seems to be a pattern of silver saving which keep minimal merc stack (usually 10 or under) and other plans which all pretty much fill dominance getting some pretty unequal stacks.
   - We could solve this by keeping track of monster spent, maybe making it less important using ranking (0.5 monster/dmg, 1 merc/dmg)
 - UI [Mobile]: Press back on mobile closes popup (like troop settings..)
-- We also have problems with higher troops depending on bonuses. adding ARC3 on my profile decreases rating of marches
+- We also have problems with higher troops depending on bonuses. adding ARC3 on my profile decreases rating of marches. See reference march below
+- coulb be a safe push numbers of mercs or monsters to fill the stack
+- Fill vip table with game data for each level
+- Fix hall of fame form to match the actual game bonuses
+
+Reference march
+SP1 1377
+SW1 2655
+RD1 605
+RD2 336
+ARC1 1372
+RD3 188
+ARC2 759
+SP3 424
+SP2 751
+EMH6 30
+BB 18
+SG 17
+ED 19
+WE 40
+28/09 22:43
