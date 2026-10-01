@@ -156,3 +156,44 @@ improve anywhere."*
   against the registered baseline. Planned first, built after E1.
 - **E4** the benchmark's timing table measured so contention cannot write it.
 - **E5** last: raise the compute budgets and measure what more the plan solves.
+
+**E3 S1 census (2026-10-01).** How often the kernel declines (`null` / `LADDER_ENGINE`) and the TS engine answers
+instead, counted with a temporary env-gated counter at every decline site in `src/kernel/plan.ts` and
+`src/kernel/raise.ts` (not committed; reverted after this measurement), one tag per site, run over
+`vitest run --project kernel tests/engine/plan-benchmark.test.ts` (19 scenario tests, the 18 benchmark armies ×
+the Tier ladder / Troops first / Complete optimization methods each runs) and, separately,
+`THEORY=1 vitest run tools/theorycraft/184-the-positions-on-the-kernel.test.ts` (63 stops × 5 positions, raise
+kernel). The sanity check first: a forced custom-kill-order call through the same counter prints its tag, so a
+silent zero means no decline, not a broken counter.
+
+| reason | kernel lines | plan benchmark | experiment 184 |
+|---|---|---|---|
+| custom kill order | `plan.ts:434` | 0 | — |
+| training cost reduction / speed | `plan.ts:377, 494` | 0 | — |
+| unpackable request | `plan.ts:286` | 0 | — |
+| unbound entry | `plan.ts:333, 335, 337, 343, 415, 443, 498, 513, 519` | 0 | — |
+| rung-order learning (`LADDER_ENGINE`) | `plan.ts:569, 571, 599` | 0 | — |
+| other guard (enemy-stack bounds, grid/depth limits, NaN ceiling) | `plan.ts:381, 447, 454, 479, 495, 502, 503, 504, 682` | 0 | — |
+| unpackable raise | `raise.ts:102` (`raise.ts:134` is the same event, propagated) | — | 0 |
+| raise search declined (`answered !== 1`) | `raise.ts:155` | — | 0 |
+
+**Zero, every reason, on both runs.** Across the full plan benchmark (sizers and plans both — the 19 tests cover
+far more than 19 `planCampaign` calls once Tier ladder / Troops first / Complete optimization are each counted)
+and every stop × position experiment 184 prices, the kernel never once falls through to TS. This is the
+precondition S5a named ("after S1, zero declines") for dropping the stacker/retype TS bodies behind a hard
+throw rather than a renamed fallback.
+
+**But the benchmark and the owner's account never ask the two reasons that matter.** `tests/engine/
+plan-scenarios.ts` sets no `customOrder` and no non-empty `trainingCostReduction`/`trainingSpeed` anywhere in
+its 18 scenarios, and neither does any of the owner's six saved exports
+(`tests/fixtures/pyrrhic-my-account-*.json`): every one reads `trainingCostReduction: {}`,
+`trainingSpeed: {}`, and `options.method` is always `elite` / `plan` / `ms`, never `custom`. Both are real UI
+features all the same — `BattleSection.tsx`'s kill-order editor sets `method: 'custom'` with a `customOrder`
+list, and the profile schema carries per-group training reduction/speed — and the decline code is exercised
+directly in unit tests (`tests/kernel/plan-kernel.test.ts`, `tests/engine/killOrder.test.ts`, and others), so it
+is live, correct, and simply untried by anyone's real army. **Recommendation:** keep these two as named,
+explicit TS fallbacks (`…Declined`) rather than deleting them with S5a's hard throw — a real player could reach
+either from the Battle section today, and the census has nothing to say about what happens when one does. The
+remaining reasons (unpackable request/raise, unbound entry, rung-order learning, the other guards) are internal
+invariants with no UI path to them at all on a request the app itself built; S5a's hard-throw plan stands for
+those.
