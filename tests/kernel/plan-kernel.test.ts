@@ -20,7 +20,7 @@
  * bound request's are all answered `null`, so the engine runs its TypeScript.
  */
 /// <reference types="node" />
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { CATEGORIES } from '@/data/types';
@@ -55,6 +55,14 @@ const SEARCH_RECOVERY: RecoverySettings = {
   plan: { mode: 'retrain' },
 };
 
+/**
+ * **The global kernel is never wanted here** (W16 E3 S3): the suite now installs it for every file
+ * (`with-kernel.setup.ts`), but `marchOf`/`marchBill` below are meant to answer on the TypeScript engine — the
+ * "kernel" side of every comparison in this file is a `PlanKernel` built and called directly, not the global
+ * one. `beforeEach` closes the one gap `afterEach` alone leaves (the very first test in the file, before any
+ * of its own `setKernel` calls run); every other test already toggles explicitly.
+ */
+beforeEach(() => setKernel(null));
 afterEach(() => setKernel(null));
 
 type Fielded = { entry: Effective; count: number }[];

@@ -1,8 +1,9 @@
 /**
- * **Run any test file with the kernels set** (AssemblyScript roadmap, step 2; the raise since S-147): a vitest
- * setup file, off by default — `vitest run <file> --setupFiles tests/kernel/with-kernel.setup.ts`. It is how
- * the benchmark is held to the same numbers with the kernel on, and how the `kernel` project runs every
- * engine test a second time on the fast path (`vite.config.ts`).
+ * **Every test file runs with the kernels set** (AssemblyScript roadmap, step 2; the raise since S-147;
+ * global since W16 E3 S3, 2026-10-01): `vite.config.ts`'s `setupFiles` loads this before every test file in
+ * the suite, so the kernel is mandatory the same way `src/main.tsx` makes it mandatory at runtime (S2). A
+ * file that wants the TypeScript engine instead — `tests/kernel/**`'s own comparisons — clears it with
+ * `setKernel(null)`/`setRaiseKernel(null)` itself and is responsible for setting back whatever it needs.
  */
 /// <reference types="node" />
 import { setKernel, setRaiseKernel } from '@/engine/fast';

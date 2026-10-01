@@ -68,36 +68,30 @@ House rules that reviewers do check:
 - TypeScript strict, no `any`; the engine (`src/engine/`) stays free of React, the store and the DOM.
 - Comments explain _why_, not _what_.
 
-## Two engine paths, one test suite
+## One engine path, with the TypeScript kept as a reference
 
-The plan engine exists twice: the TypeScript engine (`src/engine/`, the reference) and the AssemblyScript
-kernel (`kernel/assembly/`, set with `setKernel` in `src/engine/fast.ts`). They must never drift apart, and
-the tests check that on every `pnpm test`, in two vitest projects (`vite.config.ts`):
-
-- **`ts`** runs every test in the repository on the TypeScript path.
-- **`kernel`** runs every engine-level test file again (`tests/engine/**`, `src/engine/**`) with the kernel
-  set for the whole file (`tests/kernel/with-kernel.setup.ts`). A failure is prefixed with its project name,
-  `[ts]` or `[kernel]`, so it says which path broke.
-- `tests/kernel/**` (in `ts` only) holds the two paths to each other in one process: entry-point parity on
-  seeded random inputs, the plan deep-equal on every benchmark army (`plan-equivalence`), and the benchmark's
-  whole table measured both ways and compared figure for figure (`benchmark-equivalence.*`).
+The plan engine exists twice: the TypeScript engine (`src/engine/`) and the AssemblyScript kernel
+(`kernel/assembly/`, set with `setKernel` in `src/engine/fast.ts`). The kernel is the only engine the app
+runs (mandatory at every real entry point since W16 E3 S2 — `src/kernel/boot.ts`), and since W16 E3 S3 it is
+also the only one the test suite runs by default: `pnpm test` is one vitest project, the kernel installed
+for every file (`tests/kernel/with-kernel.setup.ts`, loaded as `setupFiles` in `vite.config.ts`).
 
 ```bash
-pnpm test                                   # both paths
-pnpm vitest run --project ts                # the TypeScript path alone
-pnpm vitest run --project kernel            # the kernel path alone
-pnpm vitest run --project kernel tests/engine/plan.test.ts   # one engine file on the kernel
+pnpm test                                   # the whole suite, on the kernel
+pnpm vitest run tests/engine/plan.test.ts   # one engine file, same way
 ```
 
-The benchmark (`tests/engine/plan-benchmark.test.ts`) runs in both projects; the kernel's run writes
-`tools/theorycraft/out/benchmark-*.kernel.{md,json}` (gitignored), and only the TypeScript run updates the
-committed `benchmark-latest.*`.
+The TypeScript engine is kept as a reference while the rest of E3 retires it, and `tests/kernel/**` holds the
+two paths to each other in one process, each file toggling `setKernel`/`setRaiseKernel` explicitly around
+the calls it compares rather than relying on which project ran it: entry-point parity on seeded random
+inputs (`parity.test.ts`), the plan deep-equal on every benchmark army (`plan-equivalence`), and the
+benchmark's whole table measured both ways and compared figure for figure (`benchmark-equivalence.*`). The
+benchmark itself (`tests/engine/plan-benchmark.test.ts`) now runs once, on the kernel, and writes the
+committed `benchmark-latest.*` directly.
 
-**The rule: a test is written once and runs on both paths.** Only the implementation is duplicated. Never
-write a kernel copy of an engine test; put the test under `tests/engine/` and it runs on both. A new engine
-behaviour is test-first: the new test must go **red on both paths** (`[ts]` and `[kernel]`), then pass on
-both once the change is made in the TypeScript and in the kernel. Both paths must always have the same set
-of failing tests; a test that fails on only one path is drift, whatever the test is about.
+**The rule while both paths exist: a test is written once.** Only the implementation is duplicated. Never
+write a kernel copy of an engine test; put the test under `tests/engine/` and it runs on the kernel, with
+`tests/kernel/**` the one place the TypeScript is still asked directly.
 
 ## Reporting a problem
 

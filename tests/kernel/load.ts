@@ -6,11 +6,16 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { compileKernel } from '@/kernel';
 
-const ROOT = fileURLToPath(new URL('../../', import.meta.url));
+// **`process.cwd()`, not `import.meta.url`** (W16 E3 S3): the kernel is now installed for jsdom test files
+// too (`with-kernel.setup.ts`, global `setupFiles`), and a module that imports a Node builtin (here
+// `node:child_process`) is served to a jsdom test file through a different Vite pipeline than a plain
+// `node`-environment one takes — `import.meta.url` there is not a `file:` URL, and `fileURLToPath` rejects
+// it. Every script in this repo is run from the repo root (`pnpm <script>`, CI, `gate.sh`'s own `cd`), so
+// the cwd is the root this file otherwise walked up to from its own path — with no pipeline to go through.
+const ROOT = process.cwd();
 const WASM = join(ROOT, 'kernel/build/kernel.wasm');
 
 function newestSource(dir: string): number {

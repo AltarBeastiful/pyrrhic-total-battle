@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { mulberry32 } from '@/engine';
+import { setKernel } from '@/engine/fast';
 import { effectiveTable, marchResult, planCampaign } from '@/engine/plan';
 import type { PlanTotals } from '@/engine/plan';
 import type { Bill } from '@/engine/rating';
@@ -28,6 +29,15 @@ import { marchesOf } from '../engine/plan-campaign';
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../engine/plan-scenarios';
 
 import { loadKernelModule } from './load';
+
+/**
+ * **The reference side stays the TypeScript engine** (W16 E3 S3): `marchBill` and `marchOf`/`marchResult`
+ * ask `planKernel()` first (`src/engine/fast.ts`), and the suite now installs it for every file
+ * (`with-kernel.setup.ts`). This file builds its own `Kernel`/`PlanKernel` objects below and calls them
+ * directly for the "kernel" side of every comparison, so the global kernel is never wanted here — clearing
+ * it keeps `reference()` what its name says, rather than the kernel compared with itself.
+ */
+setKernel(null);
 
 const RATES = CAMPAIGN.markerRates;
 const RANDOM_PER_ARMY = 3_000;

@@ -113,8 +113,6 @@
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
-import { planKernel } from '@/engine/fast';
-
 // The scenarios themselves, and their pins, live beside this file (`plan-scenarios.ts`) since S-87, so that
 // `plan-criteria.test.ts` can hold the shelter criterion on every army this benchmark builds.
 import type { Baseline } from './plan-baseline';
@@ -169,17 +167,17 @@ const OUT = new URL('../../tools/theorycraft/out/', import.meta.url);
  * them.
  */
 /**
- * **The kernel's run writes files of its own** (both paths in `pnpm test`, 2026-09-24). `pnpm test` runs this
- * file twice at once — the `ts` project on the TypeScript engine, the `kernel` project with the plan
- * kernel set (`tests/kernel/with-kernel.setup.ts`) — so the kernel's run is `benchmark-run.kernel.*` and is
- * promoted to `benchmark-latest.kernel.*`, both gitignored: the committed pair stays the TypeScript run's.
- * Whether the two runs' figures agree is `tests/kernel/benchmark-equivalence.*.test.ts`, in one process.
+ * **One path now runs here** (W16 E3 S3, 2026-10-01): the kernel is the only engine (`vite.config.ts`'s `ts`
+ * and `kernel` projects collapsed to one, the kernel installed for every test by
+ * `tests/kernel/with-kernel.setup.ts`), so this file's single run **is** the kernel's, and writes the
+ * committed `benchmark-latest.*` directly — no `.kernel` suffix, no second gitignored pair. The two paths'
+ * figures were held equal while both existed (`tests/kernel/benchmark-equivalence.*.test.ts`); that file still
+ * runs, TS against the kernel in one process, for however long the TS engine itself stays in the tree.
  */
-const SUFFIX = planKernel() ? '.kernel' : '';
-const REPORT = new URL(`benchmark-run${SUFFIX}.md`, OUT);
-const FIGURES = new URL(`benchmark-run${SUFFIX}.json`, OUT);
-const FINAL_REPORT = new URL(`benchmark-latest${SUFFIX}.md`, OUT);
-const FINAL_FIGURES = new URL(`benchmark-latest${SUFFIX}.json`, OUT);
+const REPORT = new URL(`benchmark-run.md`, OUT);
+const FIGURES = new URL(`benchmark-run.json`, OUT);
+const FINAL_REPORT = new URL(`benchmark-latest.md`, OUT);
+const FINAL_FIGURES = new URL(`benchmark-latest.json`, OUT);
 const n = (value: number): string => Math.round(value).toLocaleString('en-US');
 
 // ---- the owner's goal: Total Optimization on the three rare readings (S-101) --------------------------------

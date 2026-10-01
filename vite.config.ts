@@ -101,36 +101,22 @@ export default defineConfig({
     // UI tests opt into jsdom with a `// @vitest-environment jsdom` docblock
     // (see src/App.test.tsx); `environmentMatchGlobs` was removed in Vitest 4.
     environment: 'node',
+    include: ['tests/**/*.test.ts', 'tools/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
     restoreMocks: true,
     globalSetup: ['tests/kernel/build.global.ts'],
     /**
-     * **Two engine paths, one suite** (2026-09-24). The plan engine has a TypeScript path and an
-     * AssemblyScript kernel (`src/engine/fast.ts` `setKernel`); every test is written once and runs on both:
+     * **One engine path, one suite** (W16 E3 S3, 2026-10-01; was "two engine paths, one suite", 2026-09-24,
+     * when `src/engine/fast.ts`'s `setKernel` chose between the TypeScript engine and the AssemblyScript
+     * kernel, and the `ts`/`kernel` projects ran every test once on each). The kernel is now mandatory at
+     * every real entry point (`src/kernel/boot.ts`, W16 E3 S2) and the census found no live path still takes
+     * the TypeScript decline (`docs/plans/refactor-speed.md` §4) — so every test runs once, with the kernel
+     * installed for the whole file (`tests/kernel/with-kernel.setup.ts`).
      *
-     *  - `ts` — every test in the repo, the engine on its TypeScript path (no kernel set);
-     *  - `kernel` — every engine-level test file again, with the plan kernel set for the whole file
-     *    (`tests/kernel/with-kernel.setup.ts`). A failure names its project, so it says which path broke.
-     *
-     * `tests/kernel/**` is `ts`-only: those files set and clear the kernel themselves (parity, and the two
-     * paths held to each other in one process). `vitest run --project kernel` runs one path alone.
+     * `tests/kernel/**` still holds the TypeScript engine (kept as reference, pending the rest of E3) to the
+     * kernel: those files toggle `setKernel`/`setRaiseKernel` themselves around the calls they compare,
+     * explicitly, rather than relying on which project they ran under.
      */
-    projects: [
-      {
-        extends: true,
-        test: {
-          name: 'ts',
-          include: ['tests/**/*.test.ts', 'tools/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: 'kernel',
-          include: ['tests/engine/**/*.test.ts', 'src/engine/**/*.test.ts'],
-          setupFiles: ['tests/kernel/with-kernel.setup.ts'],
-        },
-      },
-    ],
+    setupFiles: ['tests/kernel/with-kernel.setup.ts'],
   },
 });
