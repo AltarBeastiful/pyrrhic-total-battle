@@ -100,6 +100,35 @@ const RETYPE_SHARE = 0.05;
  * `planCampaign`, which would otherwise be `5ⁿ` and never come back on an account that fields monsters.
  */
 const CROSSED_TYPES = 4;
+/**
+ * **The plan's count-based search limits** (W16 E5), gathered so an experiment can raise them without the
+ * app's defaults moving: `CampaignInput.limits` overrides any of them for one call, and the app passes none,
+ * so every plan it offers is searched under exactly these. Raising them is a reading change, a trade for the
+ * owner (`tools/theorycraft/out/186-a-bigger-compute-budget.md` measures it); they are not a config.
+ */
+export interface PlanLimits {
+  /** Mercenary types the grid crosses (`CROSSED_TYPES`). */
+  crossedTypes: number;
+  /** Grid plans hill-climbed on counts and ladder, one per march count, the best this many. */
+  climbSeeds: number;
+  /** Rounds of each seed's climb. */
+  climbRounds: number;
+  /** Rounds of the depth/scale walk each swept vector gets. */
+  sweepRounds: number;
+  /** The re-typing's share of `budgetMs` (`RETYPE_SHARE`). */
+  retypeShare: number;
+  /** Assignments the re-typing walks one by one before it climbs; unset, `retype.ts`'s own `EXHAUSTIVE`. */
+  retypeExhaustive?: number | undefined;
+  /** The re-typing climb's step cap; unset, `retype.ts`'s own `CLIMB_STEPS`. */
+  retypeClimbSteps?: number | undefined;
+}
+export const PLAN_LIMITS: Readonly<PlanLimits> = {
+  crossedTypes: CROSSED_TYPES,
+  climbSeeds: 8,
+  climbRounds: 16,
+  sweepRounds: 16,
+  retypeShare: RETYPE_SHARE,
+};
 /** Ladder depths tried, in troop rungs. */
 export const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
@@ -394,6 +423,11 @@ export interface CampaignInput {
    * answer. Omitted: the search runs to completion (tens of seconds on a full account).
    */
   budgetMs?: number;
+  /**
+   * The search's count-based limits, any of them raised or lowered for this call (W16 E5, experiments only);
+   * omitted, `PLAN_LIMITS`.
+   */
+  limits?: Partial<PlanLimits>;
   /** Polled between candidates; when it turns true the search stops and returns the best plan so far. */
   shouldStop?: () => boolean;
 }
@@ -3288,6 +3322,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const { request } = input;
   const deadline = input.budgetMs === undefined ? Infinity : Date.now() + input.budgetMs;
   const outOfTime = (): boolean => Date.now() > deadline;
+  const limits: PlanLimits = { ...PLAN_LIMITS, ...input.limits };
   const stop = (): boolean => outOfTime() || (input.shouldStop?.() ?? false);
   const gap = input.gap ?? DEFAULT_GAP;
   // S-58, the two candidate fixes for "the plan drops a whole hired type". Both off unless a caller — the
@@ -3523,7 +3558,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const crossed = mercTypes
       .map((_entry, index) => index)
       .sort((a, b) => (maxima[b] ?? 0) * (mercTypes[b]?.hp ?? 0) - (maxima[a] ?? 0) * (mercTypes[a]?.hp ?? 0))
-      .slice(0, CROSSED_TYPES);
+      .slice(0, limits.crossedTypes);
     const isCrossed = new Set(crossed);
     const riding = mercTypes.map((_entry, index) => index).filter((index) => !isCrossed.has(index));
     const lists = crossed.map((index) => {
@@ -4187,7 +4222,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const current = byMarches.get(candidate.marches);
     if (!current || candidate.total > current.total) byMarches.set(candidate.marches, candidate);
   }
-  const seeds = [...byMarches.values()].sort((a, b) => b.total - a.total).slice(0, 8);
+  const seeds = [...byMarches.values()].sort((a, b) => b.total - a.total).slice(0, limits.climbSeeds);
   /** Relative steps the ladder's scale is walked by, geometrically so they read the same at 1.5 and at 9. */
   const SCALE_STEPS = [
     0.005, -0.005, 0.01, -0.01, 0.025, -0.025, 0.05, -0.05, 0.1, -0.1, 0.2, -0.2, 0.35, -0.35,
@@ -4207,7 +4242,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const where = (v: typeof vector, d: number, s: number): string =>
       `${v.map((merc) => merc.count).join('/')}|${d}|${s.toFixed(3)}`;
     const visited = new Set<string>([where(vector, depth, scale)]);
-    for (let round = 0; round < 16; round += 1) {
+    for (let round = 0; round < limits.climbRounds; round += 1) {
       if (stop()) break;
       let moved = false;
       // the mercenary counts, re-scored over the whole ladder grid so a smaller stack still gets the ladder
@@ -4345,7 +4380,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       // the grid's coarse scales alone loses to it — measured on the owner's live account, the 60-hunter march
       // came out at 7 170 113 for 8 229 200 silver, a dearer and barely stronger march than the 48-hunter one,
       // and was dominated off the frontier. So each swept vector gets the same walk over depth and scale.
-      for (let round = 0; round < 16; round += 1) {
+      for (let round = 0; round < limits.sweepRounds; round += 1) {
         let improved: Candidate | null = null;
         const { depth, scale } = candidate;
         const trials: { depth: number; scale: number }[] = [];
@@ -6491,7 +6526,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * `tools/theorycraft/out/160-the-retype-shipped.md`.
    */
   const retypeRates = input.retype === 'rated' ? input.putBack?.rates : undefined;
-  const retypeDeadline = input.budgetMs === undefined ? Infinity : Date.now() + input.budgetMs * RETYPE_SHARE;
+  const retypeDeadline =
+    input.budgetMs === undefined ? Infinity : Date.now() + input.budgetMs * limits.retypeShare;
   const retypeLog = { marches: 0, retyped: 0, cut: false };
   const retypeCache = new Map<string, Record<string, number>>();
   const leadershipIds = new Set(
@@ -6529,6 +6565,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     retypeLog.marches += 1;
     const found = retypeMarch(request, counts, retypeRates, {
       deadline: retypeDeadline,
+      exhaustive: limits.retypeExhaustive,
+      climbSteps: limits.retypeClimbSteps,
       ...(input.tierCandidate === true ? { tierCandidate: true } : {}),
       ...(holdSilver ? { silverCeiling: marchBill(request, counts).silver, holdDamagePerSilver: true } : {}),
       ...(holdQueue ? { secondsCeiling: marchBill(request, counts).seconds } : {}),

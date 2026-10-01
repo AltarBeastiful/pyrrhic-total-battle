@@ -74,6 +74,14 @@ export const EXACT_DEFAULTS = {
   seed: 20_260_929,
 } as const;
 
+/** The box search's four numbers (`EXACT_DEFAULTS`' shape), for an experiment that raises them (W16 E5). */
+export interface ExactSearch {
+  readonly walkCap: number;
+  readonly restarts: number;
+  readonly maxSweeps: number;
+  readonly seed: number;
+}
+
 /** `march`/`bill` never read the rates (only `rate` does); the header wants numbers all the same. */
 const NO_RATES = { silver: 1, gold: 1, hired: 1, dragonCoins: 1, seconds: 1 };
 
@@ -109,12 +117,19 @@ function views(bound: Bound): void {
   bound.statsView = new Float64Array(buffer, bound.statsPtr, STATS);
 }
 
-export function createRaiseKernel(module: WebAssembly.Module): RaiseKernel {
-  const { position } = createRaiseKernelProbe(module);
+/** @param search The box search's limits; the app passes none and searches under `EXACT_DEFAULTS`. */
+export function createRaiseKernel(
+  module: WebAssembly.Module,
+  search: ExactSearch = EXACT_DEFAULTS,
+): RaiseKernel {
+  const { position } = createRaiseKernelProbe(module, search);
   return { position };
 }
 
-export function createRaiseKernelProbe(module: WebAssembly.Module): RaiseKernelProbe {
+export function createRaiseKernelProbe(
+  module: WebAssembly.Module,
+  search: ExactSearch = EXACT_DEFAULTS,
+): RaiseKernelProbe {
   /**
    * One instance per base march. A `StackResult` is written once and never edited, so its identity *is* the
    * march (`raiseSearch.ts` files its answers the same way); a bound instance is kept while its request is
@@ -195,10 +210,10 @@ export function createRaiseKernelProbe(module: WebAssembly.Module): RaiseKernelP
         bound.capsPtr,
         bound.outPtr,
         bound.statsPtr,
-        EXACT_DEFAULTS.walkCap,
-        EXACT_DEFAULTS.restarts,
-        EXACT_DEFAULTS.maxSweeps,
-        EXACT_DEFAULTS.seed,
+        search.walkCap,
+        search.restarts,
+        search.maxSweeps,
+        search.seed,
       );
       if (answered !== 1) return null;
       // **The memory may have grown under the views**: the first search over a wide box reserves its score

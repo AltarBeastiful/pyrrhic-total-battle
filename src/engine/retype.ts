@@ -27,7 +27,7 @@ import type { StackRequest } from './types';
 /** Up to this many assignments are tried one by one; above it, the swap/replace climb. */
 export const EXHAUSTIVE = 5_000;
 /** The climb's step cap (157's). */
-const CLIMB_STEPS = 60;
+export const CLIMB_STEPS = 60;
 
 export interface RetypeOptions {
   /**
@@ -35,6 +35,10 @@ export interface RetypeOptions {
    * it the search stops and returns the best assignment found so far (W11 §3.5).
    */
   deadline?: number | undefined;
+  /** Assignments walked one by one before the climb takes over (W16 E5, experiments); default `EXHAUSTIVE`. */
+  exhaustive?: number | undefined;
+  /** The climb's step cap (W16 E5, experiments); default `CLIMB_STEPS`. */
+  climbSteps?: number | undefined;
   /**
    * **Tier order as a candidate, and three seeds** (W13 §2 step 1, `docs/plans/every-ordering.md`, experiment
    * 169; `CAMPAIGN.planFixes.tierCandidate`). The march's own types in S-22's kill order over its own slots —
@@ -175,7 +179,7 @@ export function retypeMarch(
   const m = table.length;
   let perms = 1;
   for (let i = 0; i < k; i += 1) perms *= m - i;
-  const exhaustive = perms <= EXHAUSTIVE;
+  const exhaustive = perms <= (options.exhaustive ?? EXHAUSTIVE);
   const asIs = troopStacks.map((s) => table.findIndex((t) => t.id === s.unitId));
   let tier = asIs;
   let ranking = asIs;
@@ -221,7 +225,7 @@ export function retypeMarch(
     const climb = (start: number[], startScore: number): void => {
       let current = start;
       let currentScore = startScore;
-      for (let step = 0; step < CLIMB_STEPS && !outOfTime(); step += 1) {
+      for (let step = 0; step < (options.climbSteps ?? CLIMB_STEPS) && !outOfTime(); step += 1) {
         let moved: { types: number[]; score: number } | null = null;
         const neighbours: number[][] = [];
         for (let a = 0; a < k; a += 1) {

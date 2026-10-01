@@ -156,6 +156,42 @@ them the clock read. Runtime: `plan-benchmark.test.ts` alone, ts 185 s → 221 s
 (+47 %); the report itself now says in prose how the timing was taken and prints `planCpuMs`/`contended?` beside
 `planMs` so a reader does not have to take the wall clock on faith.
 
+**E5 (2026-10-02, at c2224cb; experiment 186, `tools/theorycraft/out/186-a-bigger-compute-budget*.md`).** The
+compute budgets raised in an experiment only — **no shipped default moved**. Made injectable for it, defaults
+unchanged (bench-diff OK): `CampaignInput.limits` over `PLAN_LIMITS` (`src/engine/plan.ts`; `RetypeOptions`
+`exhaustive`/`climbSteps` under it) and `createRaiseKernel(module, search = EXACT_DEFAULTS)`.
+
+*The budgets.* Wall clock: `CAMPAIGN.budgets.plan` 40 s (`config.ts:267`) and the re-typing's 5 % of it
+(`RETYPE_SHARE`, `plan.ts:96`); `budgets.search` 8 s (`config.ts:241`), `COMPARE_BUDGET_MS` 4 s
+(`objectiveCompare.ts:40`). Counts: the seed climb's 8 seeds × 16 rounds and the sweep's 16 rounds
+(`PLAN_LIMITS`, `plan.ts:125`; used at 4245/4383), `CROSSED_TYPES` 4 (`plan.ts:102`), `MAX_MARCHES` 12 (unused
+at a fixed horizon), `DEPTHS`/`LADDER_GROWTHS`/`MERC_FRACTIONS`/`MAX_SCALE` (the grid's shape), the re-typing's
+`EXHAUSTIVE` 5 000 and `CLIMB_STEPS` 60 (`retype.ts:28, 30`), the raise box search's `walkCap` 300 000 /
+`restarts` 64 / `maxSweeps` 24 (`kernel/raise.ts:71`) under `MEMO_CAP` 2²² (`kernel/assembly/index.ts:1720`),
+the raise seed climb's 16 samples × 3 passes (wasm constants), the priority search's `EXHAUSTIVE_LIMIT` 12 /
+`MAX_RESTARTS` 64 / `SHORTLIST` 8 (`search.ts:38, 44`, `campaign.ts:202`), `MAX_RELAX_STEPS` 500
+(`stacker.ts:102`). The rung-order climb runs to convergence (no cap). **No wall clock binds any more** — not
+even on the 20 000-dominance camp, which now plans in **1.4–1.7 s** (4 % of its clock; experiment 129's 40.9 s
+was the TS engine), so it could now be registered as a benchmark army. What binds is two counts.
+
+*What moves* (single-file runs, load ≈ 2). Over the 18 benchmark armies (63 stops) and the 20 000 camp:
+- `budgetMs` ×4, `crossedTypes` 5, `climbSeeds` 32, `sweepRounds` 64, `retypeClimbSteps` 240: **nothing**.
+- `retypeExhaustive` 5 000 → 10 000: **12 stops better, 0 worse** (rated +0.04…+0.35, e.g. the live account's
+  sweet spot 28,384,288 → 28,463,764 for −0.42 % silver), saturated at 10 000 (20 000 and 40 000 read the
+  same); costs +0.1–0.3 s on the armies it touches (planner total over 18 armies 2,335 → 3,752 ms).
+- `climbRounds` 16 → 32 (no benchmark army moves): the 20 000 camp's bar 4 → 5 stops, steady max
+  881,449,780 → **1,704,237,793** (+93 %, silver +33 %), sweet spot +47 % damage for −17 % burn, all-in 1,916,899,710 → 1,924,929,114 for
+  −2.2 % silver (rated −0.72: gold +13 %); 1,661 → 1,818 ms. 24 moves nothing; 32 alone does it.
+  At 64 the evening account's bar re-folds (a 43.2 M steady max burning 331, its all-in dropped: most damage +24 %, dmg/silver −0.28 %). **At 256 and beyond it regresses**:
+  the 900-dominance camp loses 6.9 % most damage, 9 % dmg/hired; at 1 024 Aydae-alone re-folds too. The climb's winner seeds
+  the burn-level sweep after it, so the bar is not monotone in the climb's length.
+- Raise positions: `walkCap` 1 048 576 / 4 194 304 walks the 9 boxes the search used to search — **all 189
+  `Best v2`/`Safe`/`Tight` answers identical**; 382 → 473 ms over every stop.
+
+*Recommendation (the owner's trade).* `retypeExhaustive` 10 000 (+0.1–0.3 s a Generate, 12 stops better, none
+worse); `climbRounds` 32 only with the 20 000 camp registered, since it is the only army it moves; leave the
+clocks, the raise search and the other counts as they are.
+
 ## 4. Round 2 (owner, 2026-10-01)
 
 *"do 1, checking benchmarks and ensuring no regressions. For 2, do you mean some kind of cache? delegate a subagent
