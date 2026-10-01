@@ -128,3 +128,20 @@ one pass, the sizer-shape count scan, `countsKey`). 18 armies × both paths byte
 TotalStack profile ~190 → ~160 ms (TS ~1.9 → ~1.4 s), usual setup ~233 → ~206 ms (TS ~2.35 → ~1.78 s).
 What is left on the kernel path is mostly real work: the sizer's own wasm (12 k distinct calls), the ladder grid,
 the march battles, and GC ~14 %.
+
+## 4. Round 2 (owner, 2026-10-01)
+
+*"do 1, checking benchmarks and ensuring no regressions. For 2, do you mean some kind of cache? delegate a subagent
+to create a plan and validate it independently. 3. don't bother cleanup, first task will be to retire the ts
+version; we've kept it for too long now and most of our users have webassembly. 4. fix it. 5. when all is done, as
+we've improved massively speed, we could try raising our compute budget to check if that solves more cases or
+improve anywhere."*
+
+- **E1** the stale kept final march, fixed as an experiment: a reading change, so the benchmark decides — any
+  scenario worse is a trade for the owner, not a merge.
+- **E2** cheaper battles for the raise search (reuse across neighbouring vectors): a plan, then an independent
+  validation of it, before any code.
+- **E3** retire the TypeScript engine path: the kernel becomes the only engine; the gate becomes kernel-only
+  against the registered baseline. Planned first, built after E1.
+- **E4** the benchmark's timing table measured so contention cannot write it.
+- **E5** last: raise the compute budgets and measure what more the plan solves.
