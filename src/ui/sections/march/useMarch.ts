@@ -116,10 +116,10 @@ export function useMarch(): MarchView {
    *
    * **`priced` is what the plan's own table has already answered** (S-149), and it is asked first: it starts
    * the bar's pricing as well, so the block under the fold and the control in the summary are answered by one
-   * run of one job a stop.
+   * run of one job a stop. `pricing` is the table **on its way**, which is a fact of its own (`PricedRaise`).
    */
   const position = useRunStore((state) => state.planPick);
-  const priced = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
+  const { counts: priced, pricing } = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
   const { counts: exhaustiveCounts, running: waiting } = useRaiseSearch(
     /**
      * **A search the plan's own table has already answered is not asked again** (S-149; owner, 2026-09-30:
@@ -128,8 +128,17 @@ export function useMarch(): MarchView {
      * of the bar, before this press — so the wait, and the search behind it, are the second computation of an
      * answer already in hand. `null` is this hook's own "off the march" state, and the job in flight is
      * stopped with it: the table's answer supersedes it either way.
+     *
+     * **And neither is it asked while that table is still coming** (S-149's follow-up; the owner, 2026-10-01:
+     * *"it seems when clicking again on generate, we're still using ts tight version instead of assembly
+     * script"*). A Generate re-prices the bar — a new plan, a new army — and in the frames before its rows land
+     * there is no answer to read, which used to be read as "the table will not answer" and started the search
+     * the wasm was about to make unnecessary: measured at one dispatched search a Generate, up to 51 s of
+     * walking, stopped the moment the row landed. The climb stands on screen for those frames instead, exactly
+     * as it does while the exhaustive search runs, and the search is left for the marches the table really
+     * cannot describe: one the plan did not size, a stop whose job failed, and a host with no worker at all.
      */
-    priced === null ? snapshot : null,
+    priced === null && !pricing ? snapshot : null,
     raiseModes,
     canRaise,
   );

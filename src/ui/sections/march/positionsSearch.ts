@@ -28,6 +28,13 @@
  * time, through the exhaustive raise's own search, measured at 2.7 ms median and **51 s** worst a press
  * (`out/182-v2-cost.md`) — so this module also hands the March the row it has already paid for
  * (`usePricedRaise`). Nothing is computed twice, and nothing a player presses waits.
+ *
+ * **A table that is still coming is not a table that will not answer** (the follow-up the owner found the next
+ * morning: *"it seems when clicking again on generate, we're still using ts tight version instead of assembly
+ * script"*). A Generate re-prices the whole bar, and in the frames before its rows land the March read "no
+ * row" as "no row coming" and started the search the wasm was about to answer — one dispatched search per
+ * Generate. The store holds the three states that tell the difference (`PositionsStop`), so the March can wait
+ * for what is coming and take its own path only for what is not.
  */
 import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
@@ -75,12 +82,25 @@ export function positionsKey(plan: CampaignPlan, request: StackRequest): string 
   return `${String(planId(plan))}|${JSON.stringify(request)}`;
 }
 
+/**
+ * **One stop of the bar, as the store holds it**: its table once the job has landed, `null` when the job
+ * failed, and `'out'` while it is still on its way.
+ *
+ * Three states and not two, because **"a job that is coming" and "a job that will never answer" are different
+ * facts to the March** (S-149's follow-up, owner, 2026-10-01: *"it seems when clicking again on generate, we're
+ * still using ts tight version instead of assembly script"*). A press of Generate prices the whole bar again —
+ * a new plan, a new army — and its rows land a frame later; a March that cannot tell that frame from a failure
+ * dispatches the exhaustive raise's own search in it, which is up to 51 s of walking for an answer the wasm is
+ * about to hand over (`usePricedRaise`).
+ */
+export type PositionsStop = PositionTrades | null | 'out';
+
 /** The tables of one plan, in the bar's own order, and the plan they are about. */
 export interface PositionsEntry {
   /** `positionsKey` of the plan and the army the bar is showing. */
   key: string;
-  /** One entry per stop of the plan, in its order; `null` for a stop still being priced (or that failed). */
-  stops: (PositionTrades | null)[];
+  /** One entry per stop of the plan, in its order, in the three states of `PositionsStop`. */
+  stops: PositionsStop[];
 }
 
 export interface PositionsState {
@@ -97,8 +117,26 @@ export interface PositionsState {
 let client: CalcClient | null = null;
 let controller: AbortController | null = null;
 
+/**
+ * **What a client of this module is** — the one fact the March has to know **during a render**: while an ask
+ * is on its way it waits for the table rather than starting the exhaustive raise's own search (`PricedRaise`),
+ * and on a host with no worker that wait would be for nothing.
+ *
+ * It is what the client says it is, remembered — a client that has been thrown away (`stop`) does not change
+ * what the next one will be, and the March asks between the two — and the platform's own guess until one has
+ * been built: `typeof Worker`, which is exactly what decides `createCalcClient`'s branch, and which a platform
+ * that has a `Worker` it will not start (a `file://` page, a strict CSP) corrects by handing back the inline
+ * client. **Read during a render and never through `calc()`**, which is a `new Worker`.
+ */
+let backed: boolean | null = null;
+
+function canPrice(): boolean {
+  return backed ?? typeof Worker !== 'undefined';
+}
+
 function calc(): CalcClient {
   client ??= createCalcClient();
+  backed = client.mode === 'worker';
   return client;
 }
 
@@ -116,7 +154,8 @@ function kill(): void {
 export const usePositionsStore = create<PositionsState>()((set, get) => ({
   entry: null,
   begin: (key, stops) => {
-    set({ entry: { key, stops: Array.from({ length: stops }, () => null) } });
+    // Every stop starts **out**: one job each has just been handed to the worker, in the bar's own order.
+    set({ entry: { key, stops: Array.from({ length: stops }, () => 'out' as const) } });
   },
   settle: (key, index, trades) => {
     const entry = get().entry;
@@ -165,6 +204,26 @@ function ask(key: string, snapshot: ResultSnapshot, plan: CampaignPlan, first: n
 }
 
 /**
+ * **The key of the tables the March is to read** — `positionsKey` of the plan and the army on screen, or
+ * `null` when there is no bar to price at all.
+ *
+ * Taken **once for the two objects it is made of**: `positionsKey` reads the whole army to compare it, and
+ * these hooks run on every render of the pane, where the plan and the request are two objects the stores hand
+ * out unchanged until one of them really moves.
+ */
+function usePositionsKey(
+  snapshot: ResultSnapshot | null,
+  plan: CampaignPlan | null,
+  canRaise: boolean,
+): string | null {
+  const request = snapshot?.request ?? null;
+  return useMemo(
+    () => (plan !== null && request !== null && canRaise ? positionsKey(plan, request) : null),
+    [plan, request, canRaise],
+  );
+}
+
+/**
  * **The five positions of the stop on screen**, priced ahead with the rest of the bar. The two conditions are
  * `useMarch`'s own (`canRaise`): a plan's march, with troops to shelter a hired stack by — the same two facts
  * the control itself is drawn on, so the block and the control are never on screen without each other.
@@ -175,16 +234,7 @@ export function usePositions(
   position: number,
   canRaise: boolean,
 ): PositionTrades | null {
-  const request = snapshot?.request ?? null;
-  /**
-   * **The key, taken once for the plan and the request it is made of**: `positionsKey` reads the whole army
-   * to compare it, and this hook runs on every render of the pane — the plan and the request are two objects
-   * the stores hand out unchanged until one of them really moves.
-   */
-  const key = useMemo(
-    () => (plan !== null && request !== null && canRaise ? positionsKey(plan, request) : null),
-    [plan, request, canRaise],
-  );
+  const key = usePositionsKey(snapshot, plan, canRaise);
   const entry = usePositionsStore((state) => state.entry);
 
   useEffect(() => {
@@ -210,7 +260,21 @@ export function usePositions(
   }, [key, snapshot, plan, position]);
 
   if (key === null || entry === null || entry.key !== key) return null;
-  return entry.stops[position] ?? null;
+  const stop = entry.stops[position];
+  // **`'out'` draws nothing, like `null`** — a table that appeared row by row would move the layout under a
+  // reader — and which of the two it is is the March's question, not this one's (`usePricedRaise`).
+  return stop === undefined || stop === 'out' ? null : stop;
+}
+
+/** Where the raise the March is to draw comes from, and whether it is still coming. */
+export interface PricedRaise {
+  /** The row's counts for the stop and the position on screen, or `null` while the plan's table has none. */
+  counts: Record<string, number> | null;
+  /**
+   * **A table for this stop is on its way** — its job is out and has not landed. The March draws the climb
+   * while it comes and asks nothing else; a job that *failed* is not this (`PositionsStop`).
+   */
+  pricing: boolean;
 }
 
 /**
@@ -224,10 +288,16 @@ export function usePositions(
  * on every stop of every benchmark army), and the press paid for them twice. This is the source the March
  * reads first now: `liftedCounts`'s own row, for the stop and the position on screen.
  *
- * `null` — and the March keeps its own path, the climb and then the search — while the bar is still being
- * priced, on `As is`, and on any march the plan did not size (`pricedRaise`). It is also the hook that starts
- * the pricing: the control lives in the battle summary and the table at the foot of the plan's fold, and the
- * two are never apart, so the answer is asked for wherever either of them is drawn and the other reads it.
+ * `counts: null` — and the March keeps its own path, the climb and then the search — on `As is`, on any march
+ * the plan did not size (`pricedRaise`), and while the bar is still being priced. **The last of those is the
+ * one that had to be told apart from the others** (S-149's follow-up, the owner the next morning: *"it seems
+ * when clicking again on generate, we're still using ts tight version instead of assembly script"*): a Generate
+ * re-prices the bar, and in the frames before its rows land the March was starting the exhaustive search it
+ * had just paid the wasm not to need. `pricing` is that fact, so the March waits instead.
+ *
+ * It is also the hook that starts the pricing: the control lives in the battle summary and the table at the
+ * foot of the plan's fold, and the two are never apart — so the answer is asked for wherever either of them is
+ * drawn, and the other reads it.
  */
 export function usePricedRaise(
   snapshot: ResultSnapshot | null,
@@ -235,8 +305,21 @@ export function usePricedRaise(
   position: number,
   modes: RaiseModes,
   canRaise: boolean,
-): Record<string, number> | null {
+): PricedRaise {
+  const key = usePositionsKey(snapshot, plan, canRaise);
   const trades = usePositions(snapshot, plan, position, canRaise);
-  if (snapshot === null || plan === null) return null;
-  return pricedRaise(snapshot.result, pickOf(plan, position).counts, trades, modes);
+  const pricing = usePositionsStore((state) => {
+    const entry = state.entry;
+    if (key === null || !canPrice()) return false;
+    // **Nothing is settled for this key yet.** Either the store holds another plan's bar (which is what a
+    // Generate leaves in it for the frame before its own ask goes out, `ask`), or this stop's own job is still
+    // out — and both mean a table is coming, which is the whole of what `pricing` says.
+    if (entry === null || entry.key !== key) return true;
+    return entry.stops[position] === 'out';
+  });
+  if (snapshot === null || plan === null) return { counts: null, pricing: false };
+  return {
+    counts: pricedRaise(snapshot.result, pickOf(plan, position).counts, trades, modes),
+    pricing,
+  };
 }

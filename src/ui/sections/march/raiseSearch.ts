@@ -10,9 +10,14 @@
  * **It is the second source, not the first** (S-149). When the plan's own table has already priced the
  * position — which is every press of the control in the battle summary on a host with a worker and the bar
  * priced, the case `positionsSearch.ts` is built for — the March reads that row and this search is never
- * asked. What is left for it is the march the table does not describe: a March edit, a bar still being
- * priced, and every position on a platform with no worker (where the block is not offered at all and this is
- * the only way a `Best v2` answers).
+ * asked. What is left for it is the march the table does not describe: a March edit, a stop whose job failed,
+ * and every position on a platform with no worker at all (where the block is not offered and this is the only
+ * way a `Best v2` answers).
+ *
+ * **A bar that is still being priced is not one of those cases** (the owner, 2026-10-01: *"it seems when
+ * clicking again on generate, we're still using ts tight version instead of assembly script"*): a Generate
+ * re-prices every stop, and while those rows are on their way the March draws the climb and **holds this
+ * search back**, rather than starting a walk the wasm is about to finish for it.
  *
  * **Why a worker of its own** (`createCalcClient`, not the page's shared `getCalcClient`): a worker runs one
  * job at a time, and this is the only job in the app measured in tens of seconds. On the page's worker a

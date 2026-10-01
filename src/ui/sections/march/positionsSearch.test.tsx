@@ -14,7 +14,7 @@
  * (`tests/engine/raise-positions.test.ts`, `tests/kernel/raise-kernel.test.ts`), and what this file is about is
  * the asking — how many jobs, in what order, and what the hook hands back for a stop it has.
  */
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { CampaignPlan } from '@/engine/plan';
@@ -173,8 +173,10 @@ describe('the priced bar', () => {
   });
 
   test('a stop that is still being priced draws nothing, and one that failed draws nothing either', async () => {
+    // The two states a bar can hold a stop in, and the reason they are told apart (`PositionsStop`): the block
+    // waits for the first and gives up on the second, and neither draws anything meanwhile.
     usePositionsStore.setState({
-      entry: { key: positionsKey(PLAN, SNAPSHOT.request), stops: [null, null, null] },
+      entry: { key: positionsKey(PLAN, SNAPSHOT.request), stops: ['out', null, null] },
     });
     const { result } = renderHook(() => usePositions(SNAPSHOT, PLAN, 0, true));
     expect(result.current).toBeNull();
@@ -202,7 +204,8 @@ describe('the priced bar', () => {
 /**
  * **What the control in the battle summary reads out of the bar** (S-149). The four questions the guard asks
  * before the March may stand its stacks on a row the plan priced: is the march on screen the plan's own stop,
- * is the table one of this army's, is the position one segment over both blocks, and is it a position at all.
+ * is the table one of this army's, is the position one segment over both blocks, and is it a position at all —
+ * and, over all four, whether a table is **still coming**, which is not a refusal (`PricedRaise`).
  */
 describe('the raise the plan has already priced', () => {
   const linked = { authority: 'most', dominance: 'most' } as const;
@@ -212,26 +215,58 @@ describe('the raise the plan has already priced', () => {
     // The stop on screen is the bar's first — its counts are the march's own, count for count — and the
     // fixture's rows are the stop's counts raised by a hundred, which nothing else here produces.
     await waitFor(() => {
-      expect(result.current).toEqual({ 'unit-1': 101 });
+      expect(result.current.counts).toEqual({ 'unit-1': 101 });
     });
+    expect(result.current.pricing, 'a settled bar is not "still coming"').toBe(false);
+  });
+
+  test('a bar that has not landed yet is "coming", and is not read as a refusal', async () => {
+    // The frame the owner found (2026-10-01): a press of Generate prices the whole bar again, and until its
+    // rows land there is nothing to read — which the March must tell from "the table will not answer", since
+    // the first means the climb stands for a moment and the second means the exhaustive search is asked for.
+    usePositionsStore.setState({
+      entry: { key: positionsKey(PLAN, SNAPSHOT.request), stops: ['out', 'out', 'out'] },
+    });
+    const { result } = renderHook(() => usePricedRaise(SNAPSHOT, PLAN, 0, linked, true));
+    // The client is built by the first ask, so the hook can price at all: see `canPrice` in the hook's docs.
+    expect(result.current.counts).toBeNull();
+    expect(result.current.pricing).toBe(true);
+
+    // And a **failed** job is the other fact: settled, so the March takes its own path.
+    act(() => {
+      usePositionsStore.setState({
+        entry: { key: positionsKey(PLAN, SNAPSHOT.request), stops: [null, null, null] },
+      });
+    });
+    expect(result.current.counts).toBeNull();
+    expect(result.current.pricing).toBe(false);
   });
 
   test('a march the plan did not size is not read off a row priced for another one', async () => {
     // The same table, the same position — but the bar is on a stop whose counts are not the march's, which
     // is what a March edit leaves behind (`resizeMarch`: *"the same run, re-sized"*).
     const { result } = renderHook(() => usePricedRaise(SNAPSHOT, PLAN, 1, linked, true));
-    expect(result.current).toBeNull();
+    await waitFor(() => {
+      expect(result.current.pricing).toBe(false);
+    });
+    expect(result.current.counts).toBeNull();
   });
 
   test('a mixed control, and `As is`, are questions no row answers', async () => {
     const mixed = renderHook(() =>
       usePricedRaise(SNAPSHOT, PLAN, 0, { authority: 'most', dominance: 'v2' }, true),
     );
-    expect(mixed.result.current).toBeNull();
+    await waitFor(() => {
+      expect(mixed.result.current.pricing).toBe(false);
+    });
+    expect(mixed.result.current.counts).toBeNull();
     const off = renderHook(() =>
       usePricedRaise(SNAPSHOT, PLAN, 0, { authority: 'off', dominance: 'off' }, true),
     );
-    expect(off.result.current).toBeNull();
+    await waitFor(() => {
+      expect(off.result.current.pricing).toBe(false);
+    });
+    expect(off.result.current.counts).toBeNull();
   });
 
   test('another army’s table is not this march’s', async () => {
@@ -246,7 +281,7 @@ describe('the raise the plan has already priced', () => {
     // The March asks again rather than reading it (`usePositions`), so the planted table is replaced by the
     // one this army's own job answers — and the answer is the same shape, from the job and not from the plant.
     await waitFor(() => {
-      expect(result.current).toEqual({ 'unit-1': 101 });
+      expect(result.current.counts).toEqual({ 'unit-1': 101 });
     });
     expect(usePositionsStore.getState().entry?.key).toBe(positionsKey(PLAN, SNAPSHOT.request));
   });

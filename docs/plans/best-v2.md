@@ -453,3 +453,21 @@ fourth block: on every stop of every benchmark army, three positions are taken o
 same stop and position — the parity block 1 asserts of every row, read through the door the control now uses.
 The same block asserts the guard's refusals: a march with one troop type lowered by a single unit is refused
 the table, on every stop of every army.
+
+**The next morning, on the owner's own report** (2026-10-01: *"it seems when clicking again on generate, we're
+still using ts tight version instead of assembly script"*). He was right, and the seam was the one §13 built: a
+press of Generate re-prices the **whole bar** — a new plan, a new army — and in the frames before its rows land
+there is nothing to read, which `useMarch` took for *"the table will not answer"* and answered with the very
+search the wasm was about to finish for it. Measured: a harness that records what the page dispatches reports
+`positions 5, raise 1` on the second Generate with a position standing, against `positions 5, raise 0` on the
+first — one dispatched search a Generate, up to 51 s of walking, stopped the moment the row landed.
+
+`PositionsStop` is the fix, and it is one word: a stop of the bar is its table, `null` when its job **failed**,
+or `'out'` while it is still on its way. That third state is what `null` could not say, and `usePricedRaise`
+hands it to the March as `pricing` — so while an answer is coming the March draws the climb and asks nothing
+(exactly what it does while an exhaustive search runs), and the search is left for the marches the table really
+cannot describe: one the plan did not size, a stop whose job failed, and a host with no worker at all. It also
+needs one thing a render can read: whether this module can price at all (`canPrice` — the client's own answer,
+remembered, and the platform's `typeof Worker` until there is a client, since calling `calc()` from a render
+would build a `Worker`). `raiseSource.test.tsx` holds both halves — the Generate that searches nothing and the
+March edit that is searched, about the march on screen — and both were run red first.
