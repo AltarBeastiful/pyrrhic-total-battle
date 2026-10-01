@@ -17,8 +17,7 @@
  *  - **the whole plan** (`planCampaign`) on armies whose own options carry a custom kill order and whose own
  *    recovery carries training reductions and speeds, with every kernel door counted: not one declines. This
  *    used to also hold the kernel's plan deep-equal to a zero-kernel TypeScript one; `sizeStacks` became
- *    kernel-only (W16 E3 S5a) and `planCampaign` has no global switch narrow enough to keep *only* that door
- *    on TypeScript while the rest of the plan ran it, so a true zero-kernel `planCampaign` is no longer
+ *    kernel-only (W16 E3 S5a) and the kernel mandatory (S5c), so a zero-kernel `planCampaign` is no longer
  *    buildable here. The per-door comparisons above (`sizeStacks`, `march`, `ladders`) still hold each door
  *    to the TypeScript it stands in for; what is left here is that the whole orchestration reaches every one
  *    of them on these feature combinations, with nothing left over for TypeScript to answer.
@@ -43,9 +42,13 @@ import { createPlanKernel } from '@/kernel/plan';
 
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../engine/plan-scenarios';
 
+import { decliningKernel } from './declining';
 import { loadKernelModule } from './load';
 
-afterEach(() => setKernel(null));
+/** The engine with every kernel door declined: the TypeScript reference (`./declining.ts`). */
+const DECLINING = decliningKernel();
+
+afterEach(() => setKernel(DECLINING));
 
 const module = loadKernelModule();
 const profile = ownerProfile();
@@ -116,7 +119,7 @@ function referenceMarch(
   enemyStacks: number,
   recovery: RecoverySettings,
 ): MarchFigures {
-  setKernel(null);
+  setKernel(DECLINING);
   const ts = marchOf(stacks, enemyStacks);
   const unitOf = new Map(stacks.map((stack) => [stack.entry.id, stack.entry.unit]));
   let silver = 0;
@@ -198,7 +201,7 @@ describe('the ported declines', () => {
               unitId: stack.unitId,
               count: stack.count,
             }));
-            setKernel(null);
+            setKernel(DECLINING);
             const fast = kernel.sizeStacks(request, units, caps, options);
             expect(fast, `${custom.label} #${String(i)}`).toStrictEqual(ts);
             compared += 1;
@@ -215,7 +218,7 @@ describe('the ported declines', () => {
         const all = marches(request, table, 0x7ea + index, 60);
         // The reference is the engine's own bill where the search prices it (`SEARCH_RECOVERY`).
         for (const march of all.slice(0, 10)) {
-          setKernel(null);
+          setKernel(DECLINING);
           const ts = marchOf(march, enemy);
           expect(referenceMarch(march, enemy, SEARCH_RECOVERY)).toStrictEqual(figuresOf(ts));
         }
@@ -231,7 +234,7 @@ describe('the ported declines', () => {
         }
         // And back to the search's own recovery on the same instance: nothing of the last one stays.
         for (const march of all.slice(0, 10)) {
-          setKernel(null);
+          setKernel(DECLINING);
           const ts = marchOf(march, enemy);
           expect(kernel.march(march, enemy, SEARCH_RECOVERY)).toStrictEqual(figuresOf(ts));
         }
@@ -437,7 +440,7 @@ describe('planCampaign on an account with a custom kill order or training bonuse
           const { kernel, declines } = counted(createPlanKernel(module));
           setKernel(kernel);
           const fast = plan(input);
-          setKernel(null);
+          setKernel(DECLINING);
           expect(fast.plan ?? fast.refused).toBeDefined();
           expect(declines).toStrictEqual({});
         },

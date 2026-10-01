@@ -113,9 +113,9 @@ export default defineConfig({
      * the TypeScript decline (`docs/plans/refactor-speed.md` §4) — so every test runs once, with the kernel
      * installed for the whole file (`tests/kernel/with-kernel.setup.ts`).
      *
-     * `tests/kernel/**` still holds the TypeScript engine (kept as reference, pending the rest of E3) to the
-     * kernel: those files toggle `setKernel`/`setRaiseKernel` themselves around the calls they compare,
-     * explicitly, rather than relying on which project they ran under.
+     * `tests/kernel/**` still holds each kernel door to the TypeScript it replaced: those files set the
+     * declining kernel (`tests/kernel/declining.ts`, W16 E3 S5c) around the reference calls, explicitly —
+     * the kernel is mandatory, and `setKernel(null)` leaves an engine that throws.
      */
     setupFiles: ['tests/kernel/with-kernel.setup.ts'],
   },

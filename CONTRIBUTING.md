@@ -68,34 +68,37 @@ House rules that reviewers do check:
 - TypeScript strict, no `any`; the engine (`src/engine/`) stays free of React, the store and the DOM.
 - Comments explain _why_, not _what_.
 
-## One engine path, with the TypeScript kept as a reference
+## One engine: the kernel
 
-The plan engine exists twice: the TypeScript engine (`src/engine/`) and the AssemblyScript kernel
-(`kernel/assembly/`, set with `setKernel` in `src/engine/fast.ts`). The kernel is the only engine the app
-runs (mandatory at every real entry point since W16 E3 S2 — `src/kernel/boot.ts`), and since W16 E3 S3 it is
-also the only one the test suite runs by default: `pnpm test` is one vitest project, the kernel installed
-for every file (`tests/kernel/with-kernel.setup.ts`, loaded as `setupFiles` in `vite.config.ts`).
+The plan's arithmetic runs on the AssemblyScript kernel (`kernel/assembly/`, behind the doors in
+`src/engine/fast.ts`), and on nothing else (owner, 2026-10-01: "retire the ts version"). It is mandatory: the
+app and the worker load it before anything plans (`src/kernel/boot.ts`), a browser without WebAssembly gets
+`WasmRequired` instead of the app, and the engine asks it through `requiredPlanKernel()`, which throws
+`KernelUnavailableError` when nothing set it. `pnpm test` is one vitest project with the kernel installed for
+every file (`tests/kernel/with-kernel.setup.ts`, `setupFiles` in `vite.config.ts`).
 
 ```bash
 pnpm test                                   # the whole suite, on the kernel
 pnpm vitest run tests/engine/plan.test.ts   # one engine file, same way
 ```
 
-The TypeScript engine is kept as a reference for the decline paths a real account can still reach (a custom
-kill order, training cost reductions/speed) while the rest of E3 retires it, and `tests/kernel/**` holds the
-two paths to each other in one process, each file toggling `setKernel`/`setRaiseKernel` explicitly around
-the calls it compares rather than relying on which project ran it: entry-point parity on seeded random
-inputs (`parity.test.ts`), the decline-ported doors (`ported-declines.test.ts`). The whole-plan and
-whole-benchmark comparisons that once ran both paths end to end (`plan-equivalence`,
-`benchmark-equivalence.*`) were retired W16 E3 S4: `tests/golden/plans.json`, captured once when both paths
-still agreed, is now the floor `tests/kernel/golden-capture.test.ts` holds the kernel alone to, and the
-committed `benchmark-latest.json` (now kernel-generated) plus the registered baseline is `plan-benchmark`'s.
-The benchmark itself (`tests/engine/plan-benchmark.test.ts`) now runs once, on the kernel, and writes the
-committed `benchmark-latest.*` directly.
+What stays TypeScript in `src/engine/` is what the kernel does not do: the battle that builds the stacks and
+journals the UI draws (`battle.ts`, `marchOfTs`, `marchResult`), the recap's bill (`recoveryCosts`), the
+sizer's pools and warnings (`sizeStacks`), the rating, the re-typing enumeration, and the plan's
+orchestration. A kernel door may still **decline** a call it was not built for (an entry not bound to its
+table, a march with no stacks, units out of order, a bill under another recovery, a rung order still being
+learned); `plan.ts` then runs a TypeScript path named `…Declined` for it. The census (`docs/plans/
+refactor-speed.md` §4) found none taken over the benchmark.
 
-**The rule while both paths exist: a test is written once.** Only the implementation is duplicated. Never
-write a kernel copy of an engine test; put the test under `tests/engine/` and it runs on the kernel, with
-`tests/kernel/**` the one place the TypeScript is still asked directly.
+The non-regression floor is `tests/golden/*.json` (the plans, the raise positions and the pool bisection,
+captured while the TypeScript engine still answered them; `tests/kernel/golden-capture.test.ts` holds the
+kernel to them) and the committed `benchmark-latest.json` with the registered baseline
+(`tests/engine/plan-benchmark.test.ts`). `tests/kernel/**` still compares each door to the TypeScript it
+replaced, on seeded inputs: its reference side is the engine on a kernel that declines every door it may
+(`tests/kernel/declining.ts`), never `setKernel(null)`.
+
+**A test is written once**, under `tests/engine/` or beside the code, and runs on the kernel. Never write a
+kernel copy of an engine test.
 
 ## Reporting a problem
 

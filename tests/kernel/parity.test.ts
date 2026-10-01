@@ -28,20 +28,25 @@ import type { Enumeration, EnumerationSpec, Kernel } from '@/kernel';
 import { marchesOf } from '../engine/plan-campaign';
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../engine/plan-scenarios';
 
+import { decliningKernel } from './declining';
 import { loadKernelModule } from './load';
 
+/** The engine with every kernel door declined: the TypeScript reference (`./declining.ts`). */
+const DECLINING = decliningKernel();
+
 /**
- * **The reference side stays the TypeScript engine** (W16 E3 S3): `marchOf`/`marchResult` ask `planKernel()`
- * first (`src/engine/fast.ts`), and the suite now installs it for every file (`with-kernel.setup.ts`). This
- * file builds its own `Kernel`/`PlanKernel` objects below and calls them directly for the "kernel" side of
- * every comparison, so the global kernel is never wanted here — clearing it keeps `reference()` what its
- * name says, rather than the kernel compared with itself.
+ * **The reference side stays the TypeScript engine** (W16 E3 S3): `marchOf` asks the kernel first
+ * (`src/engine/fast.ts`), and the suite installs it for every file (`with-kernel.setup.ts`). This file builds
+ * its own `Kernel`/`PlanKernel` objects below and calls them directly for the "kernel" side of every
+ * comparison, so the global kernel is never wanted here — the kernel is mandatory since W16 E3 S5c, so the
+ * global one is a kernel that declines every door (`./declining.ts`), which keeps `reference()` what its name
+ * says, rather than the kernel compared with itself.
  *
- * `retype.ts`'s `marchBill` is kernel-only since W16 E3 S5a, so it is no longer called with the global
- * kernel cleared; `reference()` and `enumerateReference` below inline the body it had before that (a hired
- * count summed from `counts`, chunked) over `marchResult`, which still answers on the TypeScript here.
+ * `retype.ts`'s `marchBill` is kernel-only since W16 E3 S5a; `reference()` and `enumerateReference` below
+ * inline the body it had before that (a hired count summed from `counts`, chunked) over `marchResult`, which
+ * answers on the TypeScript.
  */
-setKernel(null);
+setKernel(DECLINING);
 
 const RATES = CAMPAIGN.markerRates;
 const RANDOM_PER_ARMY = 3_000;

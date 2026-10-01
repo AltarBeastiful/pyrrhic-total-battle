@@ -8,18 +8,13 @@
  * the file missing, a compile refused — rejects, and the caller says so rather than running the TypeScript.
  * `src/main.tsx` renders `WasmRequired` instead of the app; the worker answers every job `kernel-unavailable`.
  */
-import { setKernel, setRaiseKernel } from '@/engine/fast';
+import { KernelUnavailableError, setKernel, setRaiseKernel } from '@/engine/fast';
 
 import { createPlanKernel } from './plan';
 import { createRaiseKernel } from './raise';
 
-/** The kernel could not be loaded on this platform; `cause` is what the browser threw. */
-export class KernelUnavailableError extends Error {
-  constructor(message = 'WebAssembly is not available here.', options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = 'KernelUnavailableError';
-  }
-}
+/** The kernel could not be loaded on this platform; `cause` is what the browser threw (`@/engine/fast`). */
+export { KernelUnavailableError };
 
 async function compile(url: string): Promise<WebAssembly.Module> {
   try {

@@ -213,3 +213,15 @@ either from the Battle section today, and the census has nothing to say about wh
 remaining reasons (unpackable request/raise, unbound entry, rung-order learning, the other guards) are internal
 invariants with no UI path to them at all on a request the app itself built; S5a's hard-throw plan stands for
 those.
+
+**E3 S5c/S6 (2026-10-01).** The kernel is mandatory at every door of `src/engine/plan.ts`:
+`requiredPlanKernel()` (`src/engine/fast.ts`) throws `KernelUnavailableError` — now defined beside the doors
+and re-exported by `src/kernel/boot.ts`, which removes the import cycle S5a worked around — and `sizePool`/
+`marchBill` use it too. The custom kill order and the training reductions were ported to the kernel before
+this step (the decline port), so what still declines is internal: an entry not bound to the kernel's table or
+an empty march (`marchOfDeclined`), a bill under another recovery (`marchRecoveryDeclined`), units out of the
+request's order or a sizer refusal (`sizedCountsDeclined`), and the scorer's ladders where a rung order is
+still being learned (`LADDER_ENGINE`) or `ladders` cannot bind — `orderFor`'s climb is orchestration and
+stays TypeScript. No TypeScript computation became unreachable: each decline path is the TS a door replaced.
+`tests/kernel/**` take their reference on a kernel that declines every door it may (`tests/kernel/
+declining.ts`) instead of `setKernel(null)`. Experiments 176/177/178 lost their TS toggles and TS columns.

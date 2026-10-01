@@ -2,6 +2,11 @@
 
 Status: Accepted (2026-09-12)
 
+Amended (2026-10-01, W16 E3): the engine's arithmetic now runs on a mandatory AssemblyScript kernel
+(`kernel/assembly/`, behind `src/engine/fast.ts`); `src/engine` keeps the battle the UI draws, the recap, the
+sizer's pools and the orchestration in TypeScript, and there is no TypeScript fallback for a platform without
+WebAssembly (`src/kernel/boot.ts`, `WasmRequired`). `CONTRIBUTING.md`, "One engine: the kernel".
+
 ## Context
 TotalStack computes on its server, so its algorithm is unknown; we only have inputs, outputs and help texts. We
 must design our own algorithm and prove it matches observed in-game behaviour. Some operations (priority search)

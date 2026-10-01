@@ -5,8 +5,8 @@
  * is retired.
  *
  * `CAPTURE=1 pnpm vitest run tests/kernel/golden-capture.test.ts` runs **both** paths the way `plan-equivalence`,
- * `benchmark-equivalence` and experiment 184 do — `setKernel`/`setRaiseKernel` toggled around the same calls —
- * asserts they agree, and writes the kernel's own answer (the two are equal, so either would do) to
+ * `benchmark-equivalence` and experiment 184 did — `setKernel`/`setRaiseKernel` toggled around the same calls;
+ * since W16 E3 S5c the plan's "TS path" is the kernel declining every door (`./declining.ts`) — asserts they agree, and writes the kernel's own answer (the two are equal, so either would do) to
  * `tests/golden/*.json`:
  *
  *  - `plans.json` — `plan-equivalence`'s 18 benchmark armies × its four variants, unbudgeted (no `budgetMs`, so
@@ -48,7 +48,11 @@ import {
   ownerScenarios,
 } from '../engine/plan-scenarios';
 
+import { decliningKernel } from './declining';
 import { loadKernelModule } from './load';
+
+/** The engine with every kernel door declined: the TypeScript reference (`./declining.ts`). */
+const DECLINING = decliningKernel();
 
 const CAPTURE = process.env.CAPTURE === '1';
 
@@ -109,7 +113,7 @@ const kernel = createPlanKernel(loadKernelModule());
 const raiseKernel = createRaiseKernel(loadKernelModule());
 
 afterEach(() => {
-  setKernel(null);
+  setKernel(DECLINING);
   setRaiseKernel(null);
 });
 
@@ -172,13 +176,13 @@ function buildPlans(onKernel: boolean): PlanEntry[] {
   const entries: PlanEntry[] = [];
   for (const scenario of planScenarios) {
     for (const variant of planVariants) {
-      setKernel(onKernel ? kernel : null);
+      setKernel(onKernel ? kernel : DECLINING);
       entries.push({
         army: scenario.label,
         variant: variant.label,
         result: plan(variant.input(scenario.request)),
       });
-      setKernel(null);
+      setKernel(DECLINING);
     }
   }
   return entries;

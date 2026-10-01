@@ -50,7 +50,11 @@ import { createPlanKernel } from '@/kernel/plan';
 import { marchesOf } from '../engine/plan-campaign';
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../engine/plan-scenarios';
 
+import { decliningKernel } from './declining';
 import { loadKernelModule } from './load';
+
+/** The engine with every kernel door declined: the TypeScript reference (`./declining.ts`). */
+const DECLINING = decliningKernel();
 
 const RANDOM_PER_ARMY = 1_500;
 const ORDERS = 3;
@@ -64,14 +68,15 @@ const SEARCH_RECOVERY: RecoverySettings = {
 };
 
 /**
- * **The global kernel is never wanted here** (W16 E3 S3): the suite now installs it for every file
- * (`with-kernel.setup.ts`), but `marchOf`/`marchBill` below are meant to answer on the TypeScript engine — the
- * "kernel" side of every comparison in this file is a `PlanKernel` built and called directly, not the global
- * one. `beforeEach` closes the one gap `afterEach` alone leaves (the very first test in the file, before any
- * of its own `setKernel` calls run); every other test already toggles explicitly.
+ * **The global kernel is never wanted here** (W16 E3 S3): the suite installs it for every file
+ * (`with-kernel.setup.ts`), but `marchOf` below is meant to answer on the TypeScript engine — the "kernel"
+ * side of every comparison in this file is a `PlanKernel` built and called directly, not the global one. The
+ * kernel is mandatory since W16 E3 S5c, so the reference is the engine on a kernel that declines every door
+ * (`./declining.ts`): its named `…Declined` paths, which are that TypeScript. `beforeEach` closes the one gap
+ * `afterEach` alone leaves (the very first test in the file, before any of its own `setKernel` calls run).
  */
-beforeEach(() => setKernel(null));
-afterEach(() => setKernel(null));
+beforeEach(() => setKernel(DECLINING));
+afterEach(() => setKernel(DECLINING));
 
 type Fielded = { entry: Effective; count: number }[];
 
@@ -167,9 +172,8 @@ const figures = (m: ReturnType<typeof marchOf>): number[] => [
 ];
 
 /**
- * `retype.ts`'s `marchBill`, before it became kernel-only (W16 E3 S5a): `marchResult` stays TypeScript (with
- * the global kernel cleared, as every call below has it), so this is still the TypeScript answer, just read
- * here rather than through a door that now throws with no kernel set.
+ * `retype.ts`'s `marchBill`, before it became kernel-only (W16 E3 S5a): `marchResult` stays TypeScript, so this
+ * is still the TypeScript answer, just read here rather than through a door with no TypeScript behind it.
  */
 function tsMarchBill(request: StackRequest, counts: Record<string, number>): Bill {
   const { summary } = marchResult(request, counts);
@@ -359,7 +363,7 @@ describe('the plan kernel', () => {
               // this comparison to: the kernel's own wholesale reimplementation of the whole sizer.
               setKernel(kernel);
               const reference = sizeStacks({ ...request, ...input });
-              setKernel(null);
+              setKernel(DECLINING);
               if (reference.warnings.some((line) => line.includes(' tie at '))) ties += 1;
               const ts = reference.stacks.map((stack) => [stack.unitId, stack.count]);
               const got = kernel.sizeStacks(request, input.units, input.caps, input.options);
@@ -398,10 +402,10 @@ describe('the plan kernel', () => {
     expect(kernel.sizeStacks(request, [{ ...(units[0] as UnitDef) }], {}, options)).toBeNull();
     // A custom kill order is the kernel's too (W16 E3 port; `./ported-declines.test.ts`).
     const custom = { ...options, method: 'custom' as const, customOrder: units.map((u) => u.id).reverse() };
-    // `sizeStacks`'s inner bisection needs the kernel (W16 E3 S5a) — set here since `beforeEach` clears it.
+    // `sizeStacks` on the real kernel here (its inner bisection is kernel-only since W16 E3 S5a).
     setKernel(kernel);
     const tsCustom = sizeStacks({ ...request, units, caps: {}, options: custom });
-    setKernel(null);
+    setKernel(DECLINING);
     expect(kernel.sizeStacks(request, units, {}, custom)).toStrictEqual(
       tsCustom.stacks.map((stack) => ({
         unitId: stack.unitId,

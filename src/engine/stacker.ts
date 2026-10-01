@@ -17,7 +17,7 @@
 import type { Pool, UnitDef } from '../data/types';
 import { simulateBattle } from './battle';
 import { buildKillOrder } from './killOrder';
-import { planKernel } from './fast';
+import { requiredPlanKernel } from './fast';
 import { CHUNK } from './recovery';
 import { effectiveUnit, hitDamage, type EffectiveUnit } from './units';
 import type { Stack, StackRequest, StackResult, PoolUsage } from './types';
@@ -56,11 +56,10 @@ function sizePool(slots: Slot[], capacity: number, options: PoolOptions): number
   for (const slot of slots) slot.count = 0;
   if (slots.length === 0 || capacity <= 0) return 0;
   const { ceiling } = options;
-  const fast = planKernel()?.sizePool(slots, capacity, ceiling, RANK_SPREAD);
-  if (fast !== undefined && fast !== null) return fast;
-  // `kernel/boot.ts` sets the kernel before anything plans; importing its `KernelUnavailableError` here would
-  // cycle back (it loads `kernel/plan.ts`, which reads `RANK_SPREAD` above) — a plain error says the same.
-  throw new Error('sizePool: no calculation kernel is set.');
+  const fast = requiredPlanKernel().sizePool(slots, capacity, ceiling, RANK_SPREAD);
+  if (fast !== null) return fast;
+  // The kernel's own guard (a NaN ceiling): no request the app builds reaches it, and no TypeScript is left.
+  throw new Error('sizePool: the kernel declined this pool (a NaN ceiling).');
 }
 
 /**

@@ -4,7 +4,7 @@
  * `src/engine/fast.ts`, their use in `makeScorer`).
  *
  * On every benchmark army, under three recovery plans (the bill the kernel prices beside the march), two
- * scorers are built over one context — one asked with no kernel set (the TypeScript, the reference), one with
+ * scorers are built over one context — one asked on the declining kernel (`./declining.ts`: the TypeScript, the reference), one with
  * the kernel — and fed the same seeded calls:
  *
  *  - **a vector's whole grid, armed** (`arm`, every depth × growth in `evaluateVector`'s order: `ladderGrid`);
@@ -33,13 +33,17 @@ import { createPlanKernel } from '@/kernel/plan';
 
 import { commonScenarios, ownerProfile, ownerScenarios } from '../engine/plan-scenarios';
 
+import { decliningKernel } from './declining';
 import { loadKernelModule } from './load';
+
+/** The engine with every kernel door declined: the TypeScript reference (`./declining.ts`). */
+const DECLINING = decliningKernel();
 
 /** Vectors per scorer pair (half asked as a whole armed grid, half as single shapes). */
 const VECTORS = 80;
 const SINGLES_PER_VECTOR = 6;
 
-afterEach(() => setKernel(null));
+afterEach(() => setKernel(DECLINING));
 
 const kernel = createPlanKernel(loadKernelModule());
 const profile = ownerProfile();
@@ -172,11 +176,11 @@ describe('the scorer’s ladders on the kernel', () => {
               on: boolean,
               args: Parameters<ShapeScorer>,
             ): ScoredShape | null => {
-              setKernel(on ? kernel : null);
+              setKernel(on ? kernel : DECLINING);
               try {
                 return scorer(...args);
               } finally {
-                setKernel(null);
+                setKernel(DECLINING);
               }
             };
             const compare = (args: Parameters<ShapeScorer>): void => {

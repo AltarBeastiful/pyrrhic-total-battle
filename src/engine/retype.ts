@@ -21,7 +21,7 @@ import { buildKillOrder } from './killOrder';
 import { marchResult, effectiveTable, rankTroops } from './plan';
 import type { Bill, MarkerRates } from './rating';
 import { rate } from './rating';
-import { planKernel } from './fast';
+import { requiredPlanKernel } from './fast';
 import type { StackRequest } from './types';
 
 /** Up to this many assignments are tried one by one; above it, the swap/replace climb. */
@@ -89,11 +89,10 @@ export interface Retyped {
  * `docs/plans/refactor-speed.md` §4) found this door never once declining over the benchmark.
  */
 export function marchBill(request: StackRequest, counts: Record<string, number>): Bill {
-  const fast = planKernel()?.marchBill(request, counts);
+  const fast = requiredPlanKernel().marchBill(request, counts);
   if (fast) return fast;
-  // `kernel/boot.ts`'s `KernelUnavailableError` would cycle back here (it loads `kernel/plan.ts`, which
-  // loads `./plan`, which imports this function) — a plain error says the same thing.
-  throw new Error('marchBill: no calculation kernel is set.');
+  // The kernel could not pack the request: an invariant the app's own requests never break, no TypeScript left.
+  throw new Error('marchBill: the kernel could not pack this request.');
 }
 
 /**

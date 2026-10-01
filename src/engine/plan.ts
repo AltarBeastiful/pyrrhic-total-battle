@@ -45,7 +45,7 @@ import type { Bill, MarkerRates } from './rating';
 import { rate, saved } from './rating';
 import { marchBill, retypeMarch } from './retype';
 import { planTrace } from './plan-trace';
-import { LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, planKernel } from './fast';
+import { LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, requiredPlanKernel } from './fast';
 import type { LadderKernel, MarchFigures, PlanKernel } from './fast';
 import type {
   BattleSummary,
@@ -955,9 +955,10 @@ export function effectiveTable(request: StackRequest): Effective[] {
       unit,
     };
   });
-  // AssemblyScript roadmap, step 2: a kernel set by the host (`./fast.ts`) packs this request once and knows
-  // these entries, so `marchOf` and `priceMarch` can ask it for their figures. Nothing set, nothing happens.
-  planKernel()?.bindTable(request, table);
+  // The kernel (`./fast.ts`, mandatory) packs this request once and knows these entries, so `marchOf`,
+  // `priceMarch` and the scorer's ladders ask it for their figures. A request it cannot pack binds nothing:
+  // every later call over these entries is then declined, and each place that takes a decline names it.
+  requiredPlanKernel().bindTable(request, table);
   return table;
 }
 
@@ -1098,13 +1099,20 @@ export function rankHired(request: StackRequest, table: Effective[] = effectiveT
  */
 export function marchOf(stacks: { entry: Effective; count: number }[], enemyStacks: number): MarchOf {
   /**
-   * **The figures from the kernel when the host set one** (AssemblyScript roadmap, step 2; `./fast.ts`):
-   * `Object.is` to what `marchOfTs` computes (`tests/kernel/plan-kernel.test.ts`, and the whole plan in
-   * `tests/kernel/plan-equivalence.test.ts`). The `Stack[]` — which only `marchResult` reads, and it calls
-   * `marchOfTs` itself — is built here, by the TypeScript, the first time anything asks for it.
+   * **The figures from the kernel** (`./fast.ts`, mandatory): `Object.is` to what `marchOfTs` computes
+   * (`tests/kernel/plan-kernel.test.ts`, `tests/golden/plans.json`). The `Stack[]` — which only `marchResult`
+   * reads, and it calls `marchOfTs` itself — is built here, by the TypeScript, the first time anything asks.
    */
-  const fast = planKernel()?.march(stacks, enemyStacks, SEARCH_RECOVERY);
+  const fast = requiredPlanKernel().march(stacks, enemyStacks, SEARCH_RECOVERY);
   if (fast) return new KernelMarch(fast, stacks, enemyStacks);
+  return marchOfDeclined(stacks, enemyStacks);
+}
+
+/**
+ * **`marchOf` where the kernel declined**: a march with no stacks, or an entry no bound `effectiveTable` built
+ * (a request the kernel could not pack, or stacks from two tables). The census found none (E3 S1).
+ */
+function marchOfDeclined(stacks: { entry: Effective; count: number }[], enemyStacks: number): MarchOf {
   return marchOfTs(stacks, enemyStacks);
 }
 
@@ -1783,8 +1791,8 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     const leftoverHp = Math.max(...leftovers.map((merc) => merc.count * merc.entry.hp));
     const finaleBudget = silverLeft === undefined ? Infinity : silverLeft;
     let finale: ScoredShape['finale'] = null;
-    // The whole ladder grid in one kernel call when the host set one (step 4), else — or when a rung order
-    // would be learned inside it — the loop below, which is the reference.
+    // The whole ladder grid in one kernel call (step 4). **Declined** — the entries are not one bound table's
+    // (`ladders` answered `null`), or a depth's learned order cannot be read — the loop below walks it.
     const lk = laddersNow();
     const fast = lk ? finaleOnKernel(lk, spentStock, finaleBudget) : undefined;
     if (fast !== undefined) finale = fast;
@@ -1988,25 +1996,25 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
    * **The ladder shapes on the kernel** (AssemblyScript roadmap, step 4; `./fast.ts`): a depth of 1 or more is
    * checked against the stock, laddered, sheltered, housed, marched and billed in one kernel call, and only the
    * shape the scorer hands back is built here. The kernel answers exactly what the TypeScript below computes
-   * (`tests/kernel/ladder-kernel.test.ts`), or hands the shape back to it — where a rung order would be learned
-   * (`orderFor` stays here, with its climb and its log), or when no kernel is set.
+   * (`tests/kernel/ladder-kernel.test.ts`), or **declines** and hands the shape back to it: `LADDER_ENGINE`
+   * where a rung order would be learned (`orderFor` stays here, with its climb and its log — orchestration,
+   * not arithmetic), and `null` from `ladders` when the troops and hired types are not one bound table's.
    */
-  let laddersOf: PlanKernel | null | undefined;
+  let laddersOf: PlanKernel | undefined;
   let ladderKernel: LadderKernel | null = null;
   const laddersNow = (): LadderKernel | null => {
-    const kernel = planKernel();
+    const kernel = requiredPlanKernel();
     if (kernel !== laddersOf) {
       laddersOf = kernel;
-      ladderKernel =
-        kernel?.ladders(
-          troops,
-          mercTypes,
-          enemyStacks,
-          SEARCH_RECOVERY,
-          Array.from({ length: 64 }, (_, k) => rungPower(k)),
-          DEPTHS,
-          LADDER_GROWTHS,
-        ) ?? null;
+      ladderKernel = kernel.ladders(
+        troops,
+        mercTypes,
+        enemyStacks,
+        SEARCH_RECOVERY,
+        Array.from({ length: 64 }, (_, k) => rungPower(k)),
+        DEPTHS,
+        LADDER_GROWTHS,
+      );
     }
     return ladderKernel;
   };
@@ -2161,6 +2169,8 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
         if (fast !== undefined) return fast;
       }
     }
+    // Below: a ladder the kernel **declined** (a rung order to learn, or `ladders` answered `null`), and every
+    // sizer shape (a depth of 0 or less — orchestration over `sizedCounts`, which is the kernel's sizer).
     let vector = mercTypes.map((entry) => ({
       entry,
       count: Math.max(0, Math.floor(counts[entry.id] ?? 0)),
@@ -2302,17 +2312,24 @@ function marchRecovery(
   mercs: { entry: Effective; count: number }[],
 ): RecoveryCost {
   const fielded = [...rungs, ...mercs].filter((stack) => stack.count > 0);
-  // `recoveryCosts` reads a stack's id and its count and nothing else of it; the rest of `Stack` is the
-  // battle's business and no part of a bill (`engine/recovery.ts`).
-  // The kernel's bill when the host set one (`./fast.ts`), summed in this same order; else the engine's.
-  return (
-    planKernel()?.bill(fielded, recovery) ??
-    recoveryCosts(
-      fielded.map((stack) => ({ unitId: stack.entry.unit.id, count: stack.count }) as Stack),
-      fielded.map((stack) => stack.entry.unit),
-      recovery,
-    ).plan
-  );
+  // The kernel's bill (`./fast.ts`), summed in this same order.
+  return requiredPlanKernel().bill(fielded, recovery) ?? marchRecoveryDeclined(recovery, fielded);
+}
+
+/**
+ * **`marchRecovery` where the kernel declined**: a recovery other than the bound request's own, or an entry
+ * no bound table built. `recoveryCosts` reads a stack's id and its count and nothing else of it; the rest of
+ * `Stack` is the battle's business and no part of a bill (`engine/recovery.ts`).
+ */
+function marchRecoveryDeclined(
+  recovery: RecoverySettings,
+  fielded: { entry: Effective; count: number }[],
+): RecoveryCost {
+  return recoveryCosts(
+    fielded.map((stack) => ({ unitId: stack.entry.unit.id, count: stack.count }) as Stack),
+    fielded.map((stack) => stack.entry.unit),
+    recovery,
+  ).plan;
 }
 
 function priceMarch(
@@ -2354,8 +2371,8 @@ function priceMarch(
 
 /**
  * **`sizeStacks(...).stacks` as the plan reads it — the unit and the count of each, in the sizer's order**,
- * from the kernel when the host set one (AssemblyScript roadmap, step 3; `./fast.ts`), else from `sizeStacks`
- * itself. Both callers read nothing else off the result: not the pools, the drop reasons or the warnings.
+ * from the kernel (`./fast.ts`, step 3). Both callers read nothing else off the result: not the pools, the
+ * drop reasons or the warnings.
  */
 function sizedCounts(
   request: StackRequest,
@@ -2364,9 +2381,22 @@ function sizedCounts(
   options: StackingOptions,
 ): readonly { unitId: string; count: number }[] {
   return (
-    planKernel()?.sizeStacks(request, units, caps, options) ??
-    sizeStacks({ ...request, units, caps, options }).stacks
+    requiredPlanKernel().sizeStacks(request, units, caps, options) ??
+    sizedCountsDeclined(request, units, caps, options)
   );
+}
+
+/**
+ * **`sizedCounts` where the kernel declined**: `units` not `request.units` filtered in its order, a request
+ * the kernel cannot pack, or its sizer refusing the call (`k < 0`) — the TypeScript sizer answers.
+ */
+function sizedCountsDeclined(
+  request: StackRequest,
+  units: UnitDef[],
+  caps: Record<string, number>,
+  options: StackingOptions,
+): readonly { unitId: string; count: number }[] {
+  return sizeStacks({ ...request, units, caps, options }).stacks;
 }
 
 /**

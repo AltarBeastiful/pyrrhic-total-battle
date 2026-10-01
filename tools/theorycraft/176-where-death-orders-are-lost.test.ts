@@ -11,16 +11,15 @@
  *    d (`retypeOne`'s hired / shelter guard), e (the finale's own ladder, band rows), or the search's own gap.
  *  - **B. The HEAD baseline** of §2 (`tools/theorycraft/plan-report.ts`, written to `out/176-baseline.json`).
  *
- * The plan kernel is set for speed (`setKernel`, as `tests/kernel/with-kernel.setup.ts` does); `TS176=<label
- * fragments, comma-separated>` re-plans those armies on the TypeScript path and holds the trace and the bar equal.
+ * The plan runs on the kernel the suite installs (`tests/kernel/with-kernel.setup.ts`), the only engine since
+ * W16 E3; the `TS176` switch that re-planned armies on the TypeScript path went with it (S6).
  *
- * `THEORY=1 npx vitest run --project ts tools/theorycraft/176-where-death-orders-are-lost.test.ts`
+ * `THEORY=1 npx vitest run tools/theorycraft/176-where-death-orders-are-lost.test.ts`
  */
 /// <reference types="node" />
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 
 import { CAMPAIGN } from '../../src/config';
-import { setKernel } from '../../src/engine/fast';
 import type { CampaignPlan, PlanTotals } from '../../src/engine/plan';
 import { effectiveTable, marchResult, planCampaign } from '../../src/engine/plan';
 import type { PlanTraceEvent } from '../../src/engine/plan-trace';
@@ -28,7 +27,6 @@ import { planTrace } from '../../src/engine/plan-trace';
 import { EXHAUSTIVE, retypeMarch } from '../../src/engine/retype';
 import type { StackRequest } from '../../src/engine/types';
 import { POOL_BITS, createKernel } from '../../src/kernel';
-import { createPlanKernel } from '../../src/kernel/plan';
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../../tests/engine/plan-scenarios';
 import { loadKernelModule } from '../../tests/kernel/load';
 import { OUT_DIR, Report, n } from './harness';
@@ -159,8 +157,6 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
   it('traces every gaining march and writes the HEAD baseline', () => {
     const began = performance.now();
     const module = loadKernelModule();
-    const planKernel = createPlanKernel(module);
-    const tsCheck = (process.env.TS176 ?? '').split(',').filter(Boolean);
     const profile = ownerProfile();
     const only = process.env.SCEN176;
     const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])].filter(
@@ -169,29 +165,13 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
     const report = new Report('176-where-death-orders-are-lost');
     const rows: Row[] = [];
     const baseline: ArmyReport[] = [];
-    const tsLines: string[] = [];
     let marches = 0;
     let walked = 0;
 
     for (const scenario of scenarios) {
       const request = scenario.request;
       const label = scenario.label.slice(0, 44);
-      setKernel(planKernel);
       const { plan: planned, events, ms } = plan(request);
-      setKernel(null);
-      if (tsCheck.some((f) => scenario.label.includes(f))) {
-        const ts = plan(request);
-        const bar = (p: CampaignPlan | string): string =>
-          typeof p === 'string'
-            ? p
-            : JSON.stringify([p.alternatives, p.counts, p.finaleCounts, p.totalDamage]);
-        const samePlan = bar(ts.plan) === bar(planned);
-        const sameTrace = JSON.stringify(ts.events) === JSON.stringify(events);
-        tsLines.push(
-          `| ${label} | ${String(events.length)} | ${samePlan ? 'same' : '**differs**'} | ${sameTrace ? 'same' : '**differs**'} | ${n(Math.round(ms))} | ${n(Math.round(ts.ms))} |`,
-        );
-        expect(samePlan && sameTrace, `TS path differs on ${label}`).toBe(true);
-      }
       const rechosen: string[] = [];
       for (const e of events) {
         if (e.step === 'fold' && e.band.length > 0)
@@ -249,11 +229,9 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
         if (!(a.best.rating > TOL)) continue;
         let space = 1;
         for (let i = 0; i < slots.length; i += 1) space *= candidates.length - i;
-        setKernel(planKernel);
         const found = retypeMarch(request, counts, RATES, {
           tierCandidate: CAMPAIGN.planFixes.tierCandidate,
         });
-        setKernel(null);
         const engine = found?.rating ?? 0;
         const reached = engine >= a.best.rating - 5e-4;
         const c = classify(counts, [...stops], events, reached);
@@ -323,10 +301,6 @@ describe.skipIf(!process.env.THEORY)('where the death orders are lost', () => {
     for (const r of rows)
       report.add(
         `| ${r.army} | ${r.stops} | ${r.roles} | ${r.path} | **${sgn(r.gain)}** | ${r.letter}: ${r.cause} | ${r.detail || '—'} | ${sgn(r.engine)} | ${sgn(r.guarded)} |`,
-      );
-    if (tsLines.length > 0)
-      report.add(
-        `\n## The TypeScript path\n\n| army | trace events | plan | trace | kernel ms | TS ms |\n|---|---:|---|---|---:|---:|\n${tsLines.join('\n')}`,
       );
     const ts = baseline.reduce(
       (t, a) => ({

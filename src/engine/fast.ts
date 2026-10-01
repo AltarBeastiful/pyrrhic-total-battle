@@ -1,18 +1,21 @@
 /**
- * **The engine's one door to a faster arithmetic** (AssemblyScript roadmap, step 2).
+ * **The engine's one door to its arithmetic**: the AssemblyScript kernel (`src/kernel/`), the only engine
+ * since W16 E3 (owner, 2026-10-01: "retire the ts version").
  *
- * Most methods still ask `planKernel()` and, when nothing is set, run their own TypeScript, which stays the
- * reference for the decline paths a real account can still reach (a custom kill order, training cost
- * reductions/speed — `docs/plans/refactor-speed.md` §4, E3 S1 census). A host that has the kernel compiled
- * (`src/worker/calc.worker.ts`, `src/kernel/boot.ts`) calls `setKernel(createPlanKernel(module))` once.
+ * The kernel is **mandatory**. `src/kernel/boot.ts` compiles it and calls `setKernel`/`setRaiseKernel` before
+ * the app renders and before the worker answers a job; a platform without WebAssembly gets `WasmRequired`,
+ * never a TypeScript fallback. The engine reads it through `requiredPlanKernel()`, which throws a
+ * `KernelUnavailableError` when nothing is set — a boot failure or a test that cleared it, not a case the
+ * engine answers by itself.
  *
- * **Two doors are mandatory instead** (W16 E3 S5a): `sizePool` (`./stacker.ts`) and `marchBill`
- * (`./retype.ts`) throw when no kernel is set rather than falling back — the census found them never once
- * declining over the benchmark, and the kernel is mandatory at every runtime entry since S2.
- *
- * Every other method answers **exactly** what the TypeScript it stands in for answers (`Object.is` on every
- * figure; `tests/kernel/plan-kernel.test.ts` holds it), or `null` when it cannot — then the caller runs its
- * TypeScript. Only figures cross: anything the UI draws (`Stack[]`, journals) is still built by the engine.
+ * Every method answers **exactly** what the TypeScript it replaced answered (`Object.is` on every figure;
+ * `tests/kernel/plan-kernel.test.ts`, `tests/golden/`). Some may still **decline** (`null`, or
+ * `LADDER_ENGINE`) on a call they were not built for — an entry not bound to the kernel's table, a march with
+ * no stacks, units out of the request's order, a bill under another recovery, a rung order still being
+ * learned — and the caller then runs a TypeScript path named `…Declined` for it (`./plan.ts`). The census
+ * (`docs/plans/refactor-speed.md` §4, E3 S1) found none of them taken over the benchmark. Only figures cross:
+ * anything the UI draws (`Stack[]`, journals, warnings) is still built by the TypeScript engine (`battle.ts`,
+ * `marchOfTs`, `recoveryCosts`, `sizeStacks`).
  */
 import type { Effective } from './plan';
 import type { Bill } from './rating';
@@ -243,6 +246,18 @@ export interface RaiseKernel {
   position(input: RaiseInput): RaiseAnswer | null;
 }
 
+/**
+ * The kernel is not loaded: no WebAssembly on this platform, the module could not be had, or nothing set it.
+ * Lives here, beside the doors, so the engine can throw it without importing `src/kernel/boot.ts` (which
+ * loads `src/kernel/plan.ts`, which loads the engine back); `boot.ts` re-exports it.
+ */
+export class KernelUnavailableError extends Error {
+  constructor(message = 'WebAssembly is not available here.', options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'KernelUnavailableError';
+  }
+}
+
 let current: PlanKernel | null = null;
 let currentRaise: RaiseKernel | null = null;
 
@@ -251,8 +266,14 @@ export function setKernel(kernel: PlanKernel | null): void {
   current = kernel;
 }
 
-/** The kernel set by the host, or `null`: the engine then runs its TypeScript. */
+/** The kernel set by the host, or `null` when none is (a boot that failed, or a test that cleared it). */
 export function planKernel(): PlanKernel | null {
+  return current;
+}
+
+/** The kernel the engine runs on; a `KernelUnavailableError` when none is set — there is no other engine. */
+export function requiredPlanKernel(): PlanKernel {
+  if (current === null) throw new KernelUnavailableError('The calculation kernel is not loaded.');
   return current;
 }
 

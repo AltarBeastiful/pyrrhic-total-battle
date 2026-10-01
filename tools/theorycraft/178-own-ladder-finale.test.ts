@@ -2,7 +2,8 @@
  * 178 — **the own-ladder finale, re-typed** (W14 step 3, `docs/plans/every-death-order.md` §3.3; experiment 176,
  * cause e: the finale sized on the march's own ladder is built after the re-typing pass and was never re-typed).
  *
- * Variants, each measured on every benchmark army with `budgetMs` off, on both paths:
+ * Variants, each measured on every benchmark army with `budgetMs` off, on the kernel (the only engine since W16
+ * E3; the TS columns this report carried went with the TS path, S6):
  *  - none: HEAD's logic (the control, timed in the same process);
  *  - (i) each finale the own ladders size is re-typed before it is rated, inside the own-ladder block (`retypeOne`,
  *    its guards and cache; a silver saver under step 2's holds); a re-typed finale is taken over the sized one only
@@ -14,10 +15,10 @@
  * §2's report, for the variant kept (`VARIANT178`, default `i`): every army, every stop, every march, every
  * criterion, compared with both HEAD before W14 (`out/176-baseline.json`) and step 2's state (`out/177-silver-saver-
  * per-march.json`); better / equal / worse; every worse figure; the ten readings; the bar criteria; TotalStack at
- * matched spend; which of 176's "not a fixed point" marches each variant picks up; plan time on both paths (best
+ * matched spend; which of 176's "not a fixed point" marches each variant picks up; plan time on the kernel (best
  * of `REPS178`); the full-criteria recap of every silver saver.
  *
- * `THEORY=1 npx vitest run --project ts tools/theorycraft/178-own-ladder-finale.test.ts`
+ * `THEORY=1 npx vitest run tools/theorycraft/178-own-ladder-finale.test.ts`
  *
  * The variants are chosen through a temporary switch (`globalThis.__w14`) that is **not** in the shipped engine,
  * which keeps (i) alone: apply `docs/research/patches/178-variants.patch` to `src/engine/plan.ts` at 19d1efc to
@@ -29,15 +30,12 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'vitest';
 
 import { CAMPAIGN } from '../../src/config';
-import { setKernel } from '../../src/engine/fast';
 import type { CampaignPlan } from '../../src/engine/plan';
 import { planCampaign } from '../../src/engine/plan';
 import { planTrace } from '../../src/engine/plan-trace';
 import type { PlanTraceEvent } from '../../src/engine/plan-trace';
 import { rate } from '../../src/engine/rating';
-import { createPlanKernel } from '../../src/kernel/plan';
 import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from '../../tests/engine/plan-scenarios';
-import { loadKernelModule } from '../../tests/kernel/load';
 import { OUT_DIR, Report } from './harness';
 import type { ArmyReport, Figures } from './plan-report';
 import {
@@ -194,8 +192,6 @@ const notFixedPoints = (): { army: string; stop: string; role: string; gain: num
 
 describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', () => {
   it('reports every march use case against 176 and 177, for each variant', () => {
-    const module = loadKernelModule();
-    const planKernel = createPlanKernel(module);
     const profile = ownerProfile();
     const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
     const name = process.env.OUT178 ?? '178-own-ladder-finale';
@@ -204,37 +200,23 @@ describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', 
     const base177 = loadJson(new URL('177-silver-saver-per-march.json', OUT_DIR)).armies;
     const fixed = notFixedPoints();
 
-    const runs = new Map<
-      string,
-      { after: ArmyReport[]; times: { label: string; kernel: number; ts: number; same: boolean }[] }
-    >();
+    const runs = new Map<string, { after: ArmyReport[]; times: { label: string; kernel: number }[] }>();
     for (const variant of VARIANTS) {
       setVariant(variant);
       const after: ArmyReport[] = [];
-      const times: { label: string; kernel: number; ts: number; same: boolean }[] = [];
+      const times: { label: string; kernel: number }[] = [];
       for (const scenario of scenarios) {
         const request = scenario.request;
         let kernelMs = Infinity;
-        let tsMs = Infinity;
         let planned: CampaignPlan | string = '';
         let events: PlanTraceEvent[] = [];
-        let tsPlan: CampaignPlan | string = '';
         for (let r = 0; r < REPS; r += 1) {
-          setKernel(planKernel);
           const k = planOnce(request);
-          setKernel(null);
           kernelMs = Math.min(kernelMs, k.ms);
           planned = k.plan;
           events = k.events;
-          const t = planOnce(request);
-          tsMs = Math.min(tsMs, t.ms);
-          tsPlan = t.plan;
         }
-        const bar = (p: CampaignPlan | string): string =>
-          typeof p === 'string'
-            ? p
-            : JSON.stringify([p.alternatives, p.counts, p.finaleCounts, p.totalDamage]);
-        times.push({ label: scenario.label, kernel: kernelMs, ts: tsMs, same: bar(planned) === bar(tsPlan) });
+        times.push({ label: scenario.label, kernel: kernelMs });
         const rechosen: string[] = [];
         for (const e of events) {
           if (e.step === 'fold' && e.band.length > 0)
@@ -253,7 +235,7 @@ describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', 
       }
       runs.set(variant.name, { after, times });
       process.stderr.write(
-        `178 ${variant.name}: kernel Σ ${times.reduce((s, t) => s + t.kernel, 0).toFixed(0)} ms, TS Σ ${times.reduce((s, t) => s + t.ts, 0).toFixed(0)} ms\n`,
+        `178 ${variant.name}: kernel Σ ${times.reduce((s, t) => s + t.kernel, 0).toFixed(0)} ms\n`,
       );
     }
     setVariant(VARIANTS.find((v) => v.name === KEPT) ?? (VARIANTS[1] as Variant));
@@ -267,22 +249,21 @@ describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', 
     const readingsWorse = (c: ReturnType<typeof compareReports>): string =>
       c.perArmy.flatMap((a) => a.readingsWorse.map((r) => `${a.label.slice(0, 44)}: ${r}`)).join('; ') ||
       'none';
-    const none = runs.get('none') as { times: { kernel: number; ts: number }[] };
-    const sum = (t: { kernel: number; ts: number }[], k: 'kernel' | 'ts'): number =>
-      t.reduce((s, x) => s + x[k], 0);
+    const none = runs.get('none') as { times: { kernel: number }[] };
+    const sum = (t: { kernel: number }[]): number => t.reduce((s, x) => s + x.kernel, 0);
 
     report.add('# 178 — the own-ladder finale, re-typed (W14 step 3)\n');
     report.add(
       'The finale sized on a stop’s own ladder (`plan.ts`, trace step `ownLadderFinale`) was built after the re-typing ' +
         'pass and never re-typed (176, cause e: 5 marches, +28.65). Every benchmark army planned with `budgetMs` off, the ' +
-        'plan kernel set (the TS path planned too and compared bar for bar); compared with HEAD before W14 ' +
+        'plan on the kernel; compared with HEAD before W14 ' +
         '(`out/176-baseline.json`) and with step 2’s state (`out/177-silver-saver-per-march.json`) by `plan-report.ts`. ' +
         `Every figure measured. Kept: **${KEPT}**.\n`,
     );
 
     // The variants side by side.
     report.add(
-      `## The variants\n\n| variant | stops vs 177 (b/e/w) | stops vs 176 (b/e/w) | marches vs 177 (b/e/w) | Σ rating vs 177 | readings worse vs 177 | criteria broken | TotalStack | 162 | kernel Σ ms (+ vs none) | TS Σ ms (+ vs none) | TS = kernel |\n|---|---|---|---|---:|---|---|---|---:|---:|---:|---|`,
+      `## The variants\n\n| variant | stops vs 177 (b/e/w) | stops vs 176 (b/e/w) | marches vs 177 (b/e/w) | Σ rating vs 177 | readings worse vs 177 | criteria broken | TotalStack | 162 | kernel Σ ms (+ vs none) |\n|---|---|---|---|---:|---|---|---|---:|---:|`,
     );
     for (const variant of VARIANTS) {
       const run = runs.get(variant.name);
@@ -290,8 +271,7 @@ describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', 
       const c7 = compareReports(base177, run.after);
       const c6 = compareReports(base176, run.after);
       const m7 = compareMarches(base177, run.after);
-      const k = sum(run.times, 'kernel');
-      const t = sum(run.times, 'ts');
+      const k = sum(run.times);
       report.add(
         `| ${variant.name} | ${String(c7.total.better)}/${String(c7.total.equal)}/${String(c7.total.worse)} | ` +
           `${String(c6.total.better)}/${String(c6.total.equal)}/${String(c6.total.worse)} | ` +
@@ -300,7 +280,7 @@ describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', 
             3,
           )} | ` +
           `${readingsWorse(c7)} | ${criteriaOf(run.after).join('; ') || 'none'} | ${c7.total.tsAfter} | ${String(c7.total.kept162After)} | ` +
-          `${fmt(k)} (${fmt(k - sum(none.times, 'kernel'))}) | ${fmt(t)} (${fmt(t - sum(none.times, 'ts'))}) | ${run.times.every((x) => x.same) ? 'same' : '**differs**'} |`,
+          `${fmt(k)} (${fmt(k - sum(none.times))}) |`,
       );
     }
 
@@ -332,10 +312,7 @@ describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', 
       `\nPicked up (> 0.01): ${VARIANTS.map((v) => `${v.name} ${String(pickedUp.get(v.name)?.n ?? 0)} (+${fmt(pickedUp.get(v.name)?.sum ?? 0, 3)})`).join(', ')}.`,
     );
 
-    const kept = runs.get(KEPT) as {
-      after: ArmyReport[];
-      times: { label: string; kernel: number; ts: number; same: boolean }[];
-    };
+    const kept = runs.get(KEPT) as { after: ArmyReport[]; times: { label: string; kernel: number }[] };
     const after = kept.after;
     for (const [tag, before] of [
       ['177 (step 2, the new “before”)', base177],
@@ -401,14 +378,12 @@ describe.skipIf(!process.env.THEORY)('178 — the own-ladder finale, re-typed', 
 
     report.add(
       `\n## Plan time (best of ${String(REPS)}), variant ${KEPT} against none (HEAD’s logic, same process)\n\n` +
-        `kernel Σ ${fmt(sum(kept.times, 'kernel'))} ms against ${fmt(sum(none.times, 'kernel'))}; TS Σ ${fmt(sum(kept.times, 'ts'))} ms against ${fmt(sum(none.times, 'ts'))}.\n\n` +
-        '| army | kernel ms (none) | TS ms (none) | same plan |\n|---|---:|---:|---|',
+        `kernel Σ ${fmt(sum(kept.times))} ms against ${fmt(sum(none.times))}.\n\n` +
+        '| army | kernel ms (none) |\n|---|---:|',
     );
     kept.times.forEach((t, i) => {
-      const n = (none.times[i] ?? { kernel: 0, ts: 0 }) as { kernel: number; ts: number };
-      report.add(
-        `| ${t.label.slice(0, 60)} | ${fmt(t.kernel)} (${fmt(n.kernel)}) | ${fmt(t.ts)} (${fmt(n.ts)}) | ${t.same ? 'same' : '**differs**'} |`,
-      );
+      const n = none.times[i] ?? { kernel: 0 };
+      report.add(`| ${t.label.slice(0, 60)} | ${fmt(t.kernel)} (${fmt(n.kernel)}) |`);
     });
     report.add('\n## After: every army, every stop, every march, every criterion\n');
     report.add(renderBaseline(after));
