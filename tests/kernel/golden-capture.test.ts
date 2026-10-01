@@ -223,6 +223,9 @@ function toRow(request: StackRequest, own: Record<string, number>, row: Position
 
 /** Every stop of every benchmark army, the app's own plan call (experiment 184's), positions read off it. */
 function buildRaise(): RaiseEntry[] {
+  // The plan under every row is the kernel's too: since S5a the TypeScript sizer is gone, and the golden was
+  // captured with both paths answering the same plan.
+  setKernel(kernel);
   const entries: RaiseEntry[] = [];
   for (const scenario of criteriaScenarios()) {
     let campaign;
