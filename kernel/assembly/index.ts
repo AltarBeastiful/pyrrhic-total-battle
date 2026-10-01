@@ -1693,6 +1693,26 @@ let rMemoTo: usize = 0; // f64 × types: each slot's ceiling, as it was
 let rMemoSlots: usize = 0; // i32 × types: the slots, as they were
 let rMemoN: i32 = -1; // how many there were
 
+/**
+ * **The point, slots only** (W16 E2a). Between two vectors of one search only the slots move, so what the
+ * held stacks contribute — their entries of `rWork`, their burn, their housing per pool — is laid down once
+ * a `raise()` (`raisePrime`) and each vector writes and adds its slots' own terms. Exact because every term
+ * is an integer and every sum stays under 2^53, so the summation order cannot move a bit; a box where that
+ * cannot be shown (a custom mercenary cost of 2.5, say) keeps the whole-roster point (`raisePointWhole`).
+ */
+let rFast: bool = false; // whether this box takes the slots-only point
+let rSlotFrom: usize = 0; // f64 × rN: each slot's floor
+let rSlotCost: usize = 0; // f64 × rN: each slot's cost
+let rSlotPool: usize = 0; // i32 × rN: each slot's pool
+let rSlotStride: usize = 0; // i32 × rN: each slot's weight in the memo index, 0 when the box has no memo
+let rHeldBurn: f64 = 0; // Σ chunks over the held authority stacks
+let rHeldUsed1: f64 = 0; // Σ count × cost over the held authority stacks
+let rHeldUsed2: f64 = 0; // Σ count × cost over the held dominance stacks
+let rAt: i32 = 0; // the memo index of the last point scored (read by `raiseProbe`)
+let rPointAt: i32 = 0; // the memo index of `rPoint`, kept as its slots move (`raiseSet`)
+let rPointBurn: f64 = 0; // Σ chunks over `rPoint`'s authority slots, kept the same way
+let rForceWhole: bool = false; // test hook: every box takes the whole-roster point
+
 /** Reserve the raise's scratch, once per instance. */
 function raiseAlloc(): void {
   if (rReady) return;
@@ -1717,6 +1737,10 @@ function raiseAlloc(): void {
   rMemoFrom = heap.alloc(n << 3);
   rMemoTo = heap.alloc(n << 3);
   rMemoSlots = heap.alloc(n << 2);
+  rSlotFrom = heap.alloc(n << 3);
+  rSlotCost = heap.alloc(n << 3);
+  rSlotPool = heap.alloc(n << 2);
+  rSlotStride = heap.alloc(n << 2);
 }
 
 /**
@@ -1982,31 +2006,196 @@ function raisePointScore(): f64 {
   // (`counting` in `src/engine/exact.ts`), a vector the housing refuses included — so a kernel that
   // counted only the battles would report a different cost for the same search.
   rScored += 1.0;
+  return rFast ? raisePointSlots(rMemo) : raisePointWhole(rMemo);
+}
+
+/**
+ * The point over the slots alone (`rFast`): `rWork` already holds the held vector (`raisePrime`), so only the
+ * slots' entries are written, and the burn, the memo index and the two housings are the held sums plus the
+ * slots' own terms — the same verdicts, in the same order, as `raisePointWhole`.
+ */
+function raisePointSlots(memo: usize): f64 {
+  // The index and the burn were kept as the slots moved (`raiseSet`), so the cap and a memo hit cost nothing
+  // per slot; only a vector that is not known yet is written out and housed.
+  const at = rPointAt;
+  rAt = at;
+  if (rHeldBurn + rPointBurn > rCap) return -Infinity;
+  const slot = memo + ((<usize>at) << 3);
+  if (memo != 0) {
+    const known = load<f64>(slot);
+    if (known == known) return known;
+  }
+  let used1: f64 = rHeldUsed1;
+  let used2: f64 = rHeldUsed2;
+  for (let s = 0; s < rN; s += 1) {
+    const t = i32At(rSlots, s);
+    const n = f64At(rPoint, t);
+    store<f64>(rWork + ((<usize>t) << 3), n);
+    const used = n * f64At(rSlotCost, s);
+    if (i32At(rSlotPool, s) == 1) used1 += used;
+    else used2 += used;
+  }
+  let value: f64 = -Infinity;
+  if (!(used1 > header(H_HOUSING_AUTHORITY) || used2 > header(H_HOUSING_DOMINANCE))) value = raiseScore(rWork);
+  if (memo != 0) store<f64>(slot, value);
+  return value;
+}
+
+/**
+ * **Move one slot** of the search's vector: slot `s` (type `t`) to `n`, the memo index and the burn moved
+ * with it on the slots-only point. Both stay exact — the index is an i32 under `MEMO_CAP`, the burn a sum of
+ * integers under 2^53 (`raisePrime`'s guard) — so a kept sum is the sum `raisePointWhole` would take.
+ */
+@inline function raiseSet(s: i32, t: i32, n: f64): void {
+  if (rFast) {
+    const old = f64At(rPoint, t);
+    rPointAt += <i32>(n - old) * i32At(rSlotStride, s);
+    if (i32At(rSlotPool, s) == 1) rPointBurn += chunks(max(0.0, n)) - chunks(max(0.0, old));
+  }
+  store<f64>(rPoint + ((<usize>t) << 3), n);
+}
+
+/** The memo index and the burn of `rPoint` from scratch, after the search wrote it whole. */
+function raiseResync(): void {
+  let at: i32 = 0;
+  let burn: f64 = 0.0;
+  for (let s = 0; s < rN; s += 1) {
+    const t = i32At(rSlots, s);
+    const n = f64At(rPoint, t);
+    at += <i32>(n - f64At(rSlotFrom, s)) * i32At(rSlotStride, s);
+    if (i32At(rSlotPool, s) == 1) burn += chunks(max(0.0, n));
+  }
+  rPointAt = at;
+  rPointBurn = burn;
+}
+
+/** Whether `x` is an integer JavaScript would call one (`Number.isInteger`): finite, no fraction. */
+@inline function isWhole(x: f64): bool {
+  return x == Math.trunc(x) && x - x == 0.0;
+}
+
+/**
+ * **Lay the held vector down once** for the slots-only point, and decide whether this box may take it: every
+ * cost and count of either pool an integer, and each pool's Σ |count × cost| (a slot at its widest) and the
+ * authority Σ chunks under 2^53 — then every partial sum either order takes is the exact integer, and the two
+ * orders agree to the bit. Run on every `raise()` after the slots are known: the held vector moves with the
+ * position, and the climb that seeds it (`raiseTry`) writes over `rWork`.
+ */
+function raisePrime(): void {
+  memory.copy(rWork, rHeld, (<usize>types) << 3);
+  let whole = !rForceWhole;
+  let stride: i32 = 1;
+  for (let s = rN - 1; s >= 0; s -= 1) {
+    const t = i32At(rSlots, s);
+    const from = f64At(rFrom, t);
+    const to = f64At(rTo, t);
+    store<f64>(rSlotFrom + ((<usize>s) << 3), from);
+    store<f64>(rSlotCost + ((<usize>s) << 3), costPer(t));
+    store<i32>(rSlotPool + ((<usize>s) << 2), poolPer(t));
+    // The same index `raisePointWhole` builds in Horner form, its weights laid out: only a box the memo holds
+    // has one, and that box is under `MEMO_CAP`, so no weight and no index leaves the i32.
+    store<i32>(rSlotStride + ((<usize>s) << 2), rSpace <= MEMO_CAP ? stride : 0);
+    if (rSpace <= MEMO_CAP) stride *= <i32>(to - from + 1.0);
+    whole = whole && isWhole(from) && isWhole(to);
+  }
+  rHeldBurn = 0.0;
+  rHeldUsed1 = 0.0;
+  rHeldUsed2 = 0.0;
+  let bound1: f64 = 0.0;
+  let bound2: f64 = 0.0;
+  let boundBurn: f64 = 0.0;
+  for (let t = 0; t < types; t += 1) {
+    const pool = poolPer(t);
+    if (pool != 1 && pool != 2) continue;
+    const cost = costPer(t);
+    const slot = i32At(rSlotOf, t) >= 0;
+    const count = f64At(rHeld, t);
+    const widest = slot ? max(Math.abs(f64At(rFrom, t)), Math.abs(f64At(rTo, t))) : Math.abs(count);
+    whole = whole && isWhole(cost) && isWhole(count);
+    if (pool == 1) {
+      bound1 += widest * Math.abs(cost);
+      boundBurn += chunks(widest);
+    } else bound2 += widest * Math.abs(cost);
+    if (slot) continue;
+    if (pool == 1) {
+      rHeldBurn += chunks(max(0.0, count));
+      rHeldUsed1 += count * cost;
+    } else rHeldUsed2 += count * cost;
+  }
+  rFast = whole && bound1 < MAX_SAFE && bound2 < MAX_SAFE && boundBurn < MAX_SAFE;
+}
+
+/**
+ * The point over the whole roster, as it was before W16 E2a: the held vector copied under the slots, then the
+ * burn and the two housings summed over every type in row order. The path a box `raisePrime` cannot prove
+ * exact takes, and the reference `raiseProbe` holds the slots-only point to.
+ */
+function raisePointWhole(memo: usize): f64 {
   memory.copy(rWork, rHeld, (<usize>types) << 3);
   let at: i32 = 0;
   for (let s = 0; s < rN; s += 1) {
     const t = i32At(rSlots, s);
     const n = f64At(rPoint, t);
     store<f64>(rWork + ((<usize>t) << 3), n);
-    if (rMemo != 0) {
+    if (rSpace <= MEMO_CAP) {
       const from = f64At(rFrom, t);
       at = at * <i32>(f64At(rTo, t) - from + 1.0) + <i32>(n - from);
     }
   }
+  rAt = at;
   // **The cap before the battle** (W16 B): the burn is arithmetic over the counts, so an over-budget vector
   // is refused whatever it would strike for — the verdict the battle-first order gave, without the battle.
   if (rCap < Infinity && raiseBurn(rWork) > rCap) return -Infinity;
   // **And one battle a vector a march**: what a vector fights for does not depend on the position.
-  const slot = rMemo + ((<usize>at) << 3);
-  if (rMemo != 0) {
+  const slot = memo + ((<usize>at) << 3);
+  if (memo != 0) {
     const known = load<f64>(slot);
     if (known == known) return known;
   }
   let value: f64 = -Infinity;
   if (!(raiseUsed(rWork, 1) > header(H_HOUSING_AUTHORITY) || raiseUsed(rWork, 2) > header(H_HOUSING_DOMINANCE)))
     value = raiseScore(rWork);
-  if (rMemo != 0) store<f64>(slot, value);
+  if (memo != 0) store<f64>(slot, value);
   return value;
+}
+
+/**
+ * **Test only** (`tests/kernel/raise-point.test.ts`): after a `raise()`, `samples` random vectors of its box,
+ * each scored by the slots-only point and by the whole-roster one with the memo out of both, the two verdicts
+ * and the two memo indices held to each other bit for bit. Answers how many differed, or −1 when the box did
+ * not take the slots-only point. Leaves `rPoint`, `rScored` and the memo as they were.
+ */
+export function raiseProbe(samples: i32, seed: f64): f64 {
+  if (!rFast || rN <= 0) return -1.0;
+  memory.copy(rClimb, rPoint, (<usize>types) << 3);
+  let state = ((Math.trunc(seed) % 4294967296.0) + 4294967296.0) % 4294967296.0;
+  let differ: f64 = 0.0;
+  for (let i = 0; i < samples; i += 1) {
+    for (let s = 0; s < rN; s += 1) {
+      const t = i32At(rSlots, s);
+      const from = f64At(rFrom, t);
+      state = (state * 1664525.0 + 1013904223.0) % 4294967296.0;
+      raiseSet(s, t, from + Math.floor((state / 4294967296.0) * (f64At(rTo, t) - from + 1.0)));
+    }
+    const fast = raisePointSlots(0);
+    const fastAt = rAt;
+    const whole = raisePointWhole(0);
+    if (reinterpret<u64>(fast) != reinterpret<u64>(whole) || fastAt != rAt) differ += 1.0;
+  }
+  // `rWork` is left the held vector under the last sample's slots, which is what the slots-only point wants.
+  memory.copy(rPoint, rClimb, (<usize>types) << 3);
+  raiseResync();
+  return differ;
+}
+
+/** **Test only**: whether the last `raise()` took the slots-only point (1) or the whole-roster one (0). */
+export function raiseFastPath(): i32 {
+  return rFast ? 1 : 0;
+}
+
+/** **Test only**: make every box take the whole-roster point (1), or let `raisePrime` decide (0). */
+export function raiseForceWhole(on: i32): void {
+  rForceWhole = on != 0;
 }
 
 /** One vector, taken as the best when it **strictly** improves (`exactSearch` takes improvements only). */
@@ -2036,7 +2225,7 @@ function raiseClimbSearch(): void {
       let winnerScore = best;
       let n = from;
       while (n <= to) {
-        store<f64>(rPoint + ((<usize>t) << 3), n);
+        raiseSet(s, t, n);
         const value = raisePointScore();
         if (value > winnerScore) {
           winner = n;
@@ -2044,7 +2233,7 @@ function raiseClimbSearch(): void {
         }
         n += 1.0;
       }
-      store<f64>(rPoint + ((<usize>t) << 3), winner);
+      raiseSet(s, t, winner);
       if (winnerScore > best) {
         best = winnerScore;
         improved = true;
@@ -2075,8 +2264,8 @@ function raisePairwise(): void {
         while (a <= oneTo) {
           let b = f64At(rFrom, other);
           while (b <= otherTo) {
-            store<f64>(rPoint + ((<usize>one) << 3), a);
-            store<f64>(rPoint + ((<usize>other) << 3), b);
+            raiseSet(i, one, a);
+            raiseSet(j, other, b);
             const value = raisePointScore();
             if (value > winnerScore) {
               winnerOne = a;
@@ -2087,8 +2276,8 @@ function raisePairwise(): void {
           }
           a += 1.0;
         }
-        store<f64>(rPoint + ((<usize>one) << 3), winnerOne);
-        store<f64>(rPoint + ((<usize>other) << 3), winnerOther);
+        raiseSet(i, one, winnerOne);
+        raiseSet(j, other, winnerOther);
         if (winnerScore > best) {
           best = winnerScore;
           improved = true;
@@ -2112,7 +2301,7 @@ function raiseWalk(s: i32): void {
   const to = f64At(rTo, t);
   let n = f64At(rFrom, t);
   while (n <= to) {
-    store<f64>(rPoint + ((<usize>t) << 3), n);
+    raiseSet(s, t, n);
     raiseWalk(s + 1);
     n += 1.0;
   }
@@ -2142,6 +2331,7 @@ function raiseSearch(): bool {
     const to = f64At(rTo, t);
     store<f64>(rPoint + ((<usize>t) << 3), Math.min(to, Math.max(from, jsRound(f64At(rSeed, t)))));
   }
+  raiseResync();
   rBest = raisePointScore();
   memory.copy(rFound, rPoint, (<usize>types) << 3);
 
@@ -2160,6 +2350,7 @@ function raiseSearch(): bool {
         const span = f64At(rTo, t) - from;
         store<f64>(rPoint + ((<usize>t) << 3), from + Math.floor(raiseRandom() * (span + 1.0)));
       }
+      raiseResync();
     }
     raisePairwise();
     raiseClimbSearch();
@@ -2205,6 +2396,8 @@ export function raise(
   rScored = 0.0;
   rHow = 0;
   rSpace = 0.0;
+  rN = 0;
+  rFast = false;
   rCap = Infinity;
   rWalkCap = walkCap;
   rRestarts = restarts;
@@ -2275,6 +2468,7 @@ export function raise(
 
     if (rN > 0) {
       rScored = 0.0;
+      raisePrime();
       raiseMemo();
       answered = raiseSearch();
     }

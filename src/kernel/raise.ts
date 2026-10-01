@@ -39,6 +39,23 @@ interface RaiseExports {
     maxSweeps: number,
     rngSeed: number,
   ): number;
+  /** Test only (W16 E2a): the slots-only point against the whole-roster one, on random vectors of the box. */
+  raiseProbe(samples: number, seed: number): number;
+  raiseFastPath(): number;
+  raiseForceWhole(on: number): void;
+}
+
+/**
+ * **Test only** (`tests/kernel/raise-point.test.ts`): the kernel's own `RaiseKernel` and, over the instance a
+ * march is bound to, the hooks that hold the slots-only point (W16 E2a) to the whole-roster one.
+ */
+export interface RaiseKernelProbe extends RaiseKernel {
+  /** After a `position` of this march: how many of `samples` random box vectors scored differently (−1: no box). */
+  probe(request: StackRequest, base: StackResult, samples: number, seed: number): number;
+  /** Whether the last `position` of this march took the slots-only point. */
+  fastPath(request: StackRequest, base: StackResult): boolean;
+  /** Make every box of this march take the whole-roster point. */
+  forceWhole(request: StackRequest, base: StackResult, on: boolean): void;
 }
 
 const STATS = 4;
@@ -79,6 +96,11 @@ function views(bound: Bound): void {
 }
 
 export function createRaiseKernel(module: WebAssembly.Module): RaiseKernel {
+  const { position } = createRaiseKernelProbe(module);
+  return { position };
+}
+
+export function createRaiseKernelProbe(module: WebAssembly.Module): RaiseKernelProbe {
   /**
    * One instance per base march. A `StackResult` is written once and never edited, so its identity *is* the
    * march (`raiseSearch.ts` files its answers the same way); a bound instance is kept while its request is
@@ -128,7 +150,19 @@ export function createRaiseKernel(module: WebAssembly.Module): RaiseKernel {
     return bound;
   };
 
+  /** The instance a march is bound to, for the test hooks: it must have been asked a position already. */
+  const bound = (request: StackRequest, base: StackResult): RaiseExports => {
+    const held = byBase.get(base);
+    if (held === undefined || held.request !== request) throw new Error('no position asked of this march');
+    return held.raw;
+  };
+
   return {
+    probe: (request, base, samples, seed) => bound(request, base).raiseProbe(samples, seed),
+    fastPath: (request, base) => bound(request, base).raiseFastPath() === 1,
+    forceWhole: (request, base, on) => {
+      bound(request, base).raiseForceWhole(on ? 1 : 0);
+    },
     position({ request, base, modes }: RaiseInput): RaiseAnswer | null {
       const bound = bind(request, base);
       if (bound === null) return null;
