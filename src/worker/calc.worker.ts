@@ -12,47 +12,23 @@
 import { runPlan, runPositions, runRaise, runResize, runSearch, runStack } from './jobs';
 import { errorPayload, isCalcRequestMessage } from './protocol';
 import type { CalcRequestMessage, CalcResponseMessage } from './protocol';
-import { setKernel, setRaiseKernel } from '@/engine/fast';
 import type { SearchProgress } from '@/engine/types';
-import { createPlanKernel } from '@/kernel/plan';
-import { createRaiseKernel } from '@/kernel/raise';
+import { loadKernel } from '@/kernel/boot';
 // Built by `pnpm kernel:build` (the `dev` and `build` scripts run it first); emitted beside the worker.
 import kernelUrl from '../../kernel/build/kernel.wasm?url';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
 /**
- * **The AssemblyScript kernel, loaded once at worker start** (AssemblyScript roadmap, step 2): the plan's hot
- * path asks it for its figures (`src/engine/fast.ts`), which are exactly the TypeScript's. Any failure — no
- * WebAssembly, the file missing, a server that does not send `application/wasm` and a compile that fails
- * even from the bytes — leaves the kernel unset and the engine runs its own TypeScript, silently. Jobs wait
- * for this to settle, so a plan never starts on one path and could have started on the other.
+ * **The AssemblyScript kernel, loaded once at worker start** (`src/kernel/boot.ts`, shared with the main
+ * thread). It is mandatory (W16 E3 S2): when it does not load — no WebAssembly, the file missing, a compile
+ * refused — this worker runs no job at all and answers each one with a `kernel-unavailable` error, rather
+ * than the TypeScript it used to fall back on silently. Jobs wait for this to settle, in order.
  */
-async function compileKernel(): Promise<WebAssembly.Module> {
-  try {
-    return await WebAssembly.compileStreaming(fetch(kernelUrl));
-  } catch {
-    // A server without the wasm MIME type: compile from the bytes instead.
-    const response = await fetch(kernelUrl);
-    if (!response.ok) throw new Error(`kernel: ${String(response.status)}`);
-    return WebAssembly.compile(await response.arrayBuffer());
-  }
-}
-
-const kernelReady: Promise<void> = (async () => {
-  try {
-    if (typeof WebAssembly === 'undefined') return;
-    const module = await compileKernel();
-    setKernel(createPlanKernel(module));
-    // **The raise positions, on the same module** (S-147): the box search a press of the control runs, priced
-    // for every position at once. A kernel that fails to load leaves both unset and both run their own
-    // TypeScript, exactly as the plan does.
-    setRaiseKernel(createRaiseKernel(module));
-  } catch {
-    setKernel(null);
-    setRaiseKernel(null);
-  }
-})();
+const kernelReady: Promise<string | null> = loadKernel(kernelUrl).then(
+  () => null,
+  (error: unknown) => errorPayload(error).message,
+);
 
 /** Ids cancelled while their job was queued or running. */
 const cancelled = new Set<string>();
@@ -70,8 +46,13 @@ ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
     return;
   }
   // Every job waits for the kernel to settle (at once after the first); the order of the jobs is kept.
-  void kernelReady.then(() => {
-    run(message);
+  void kernelReady.then((unavailable) => {
+    if (unavailable === null) {
+      run(message);
+      return;
+    }
+    cancelled.delete(message.id);
+    post({ kind: 'error', id: message.id, error: { message: unavailable, code: 'kernel-unavailable' } });
   });
 });
 

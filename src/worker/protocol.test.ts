@@ -58,11 +58,17 @@ describe('response guard', () => {
     expect(isCalcResponseMessage({ kind: 'search', id: 'a', result: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'cancelled', id: 'a' })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: { message: 'no' } })).toBe(true);
+    expect(
+      isCalcResponseMessage({ kind: 'error', id: 'a', error: { message: 'no', code: 'kernel-unavailable' } }),
+    ).toBe(true);
   });
 
   test('rejects malformed responses', () => {
     expect(isCalcResponseMessage({ kind: 'stack', id: 'a', result: {} })).toBe(false);
     expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: {} })).toBe(false);
+    expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: { message: 'no', code: 'other' } })).toBe(
+      false,
+    );
     expect(isCalcResponseMessage({ kind: 'unknown', id: 'a' })).toBe(false);
     expect(isCalcResponseMessage('stack')).toBe(false);
   });

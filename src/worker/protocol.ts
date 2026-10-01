@@ -11,7 +11,7 @@
  *           { kind: 'raise', id, result }    (`null` when there is no box to search)
  *           { kind: 'positions', id, result }  (`PositionTrades`, S-147)
  *           { kind: 'cancelled', id }
- *           { kind: 'error', id, error: { message } }
+ *           { kind: 'error', id, error: { message, code? } }   (`code: 'kernel-unavailable'`: the worker has no kernel)
  *
  * `id` pairs a response with its request, so one worker can serve several concurrent jobs. Errors are
  * flattened to `{ message }`: an `Error` does not survive `postMessage` in every browser, and the stack
@@ -153,10 +153,17 @@ export interface CancelledMessage {
   id: JobId;
 }
 
+/**
+ * Why a job failed when the reason is the platform rather than the job (W16 E3 S2): `kernel-unavailable` is
+ * the worker's answer to every job when the wasm kernel did not load in it. There is no TypeScript to fall
+ * back on any more, so the client rejects with a `KernelUnavailableError` the page can name.
+ */
+export type ErrorCode = 'kernel-unavailable';
+
 export interface ErrorMessage {
   kind: 'error';
   id: JobId;
-  error: { message: string };
+  error: { message: string; code?: ErrorCode };
 }
 
 /** The exhaustive raise's answer, or `null` when the box had nothing in it to search (`exactRaise`). */
@@ -251,7 +258,11 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'cancelled':
       return true;
     case 'error':
-      return isRecord(value.error) && typeof value.error.message === 'string';
+      return (
+        isRecord(value.error) &&
+        typeof value.error.message === 'string' &&
+        (value.error.code === undefined || value.error.code === 'kernel-unavailable')
+      );
     default:
       return false;
   }

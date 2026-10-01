@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { getUnits } from '@/data';
 import { emptyTotals } from '@/engine';
 import type { StackRequest } from '@/engine/types';
+import { KernelUnavailableError } from '@/kernel/boot';
 
 import { createCalcClient, createInlineClient, isAbortError } from './client';
 
@@ -212,4 +213,35 @@ describe('createCalcClient', () => {
       delete globals.Worker;
     }
   }, 20_000);
+
+  test('rejects with a KernelUnavailableError when the worker has no kernel (W16 E3 S2)', async () => {
+    // The worker answers every job `kernel-unavailable` when the wasm did not load in it; there is no
+    // TypeScript left to fall back on, so the client must say so rather than resolve.
+    const globals = globalThis as { Worker?: unknown };
+    class NoKernelWorker {
+      private readonly listeners: ((event: { data: unknown }) => void)[] = [];
+      addEventListener(type: string, listener: (event: { data: unknown }) => void): void {
+        if (type === 'message') this.listeners.push(listener);
+      }
+      terminate(): void {
+        /* nothing to unwind */
+      }
+      postMessage(message: { id: string }): void {
+        const data = {
+          kind: 'error',
+          id: message.id,
+          error: { message: 'WebAssembly is not available here.', code: 'kernel-unavailable' },
+        };
+        for (const listener of this.listeners) listener({ data });
+      }
+    }
+    globals.Worker = NoKernelWorker as never;
+    try {
+      const client = createCalcClient();
+      await expect(client.plan({ request: smallRequest() })).rejects.toBeInstanceOf(KernelUnavailableError);
+      client.dispose();
+    } finally {
+      delete globals.Worker;
+    }
+  });
 });

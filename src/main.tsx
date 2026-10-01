@@ -13,11 +13,20 @@ import { trackAccountChanges, useAccountStore } from '@/account/state';
 import { captureInstallPrompt } from '@/pwa/install';
 import { requestPersistentStorage } from '@/pwa/persist';
 import { registerServiceWorker } from '@/pwa/register';
+import { loadKernel } from '@/kernel/boot';
 import { createLocalStorageAdapter } from '@/state/storage';
 import { initPersistence, useStore } from '@/state/store';
 import { consumeShareFragment } from '@/ui/shareFragment';
 import { applyTheme, cssVariablesResolver, documentColorSchemeManager, theme } from '@/ui/theme';
 import { trackUnsavedChanges, withSaveTracking } from '@/ui/uiStore';
+import { WasmRequired } from '@/ui/WasmRequired';
+// Built by `pnpm kernel:build` (the `dev` and `build` scripts run it first); the worker loads the same file.
+import kernelUrl from '../kernel/build/kernel.wasm?url';
+
+// **The kernel, before the app** (W16 E3 S2): the engine runs on WebAssembly only, and the page plans at
+// render time too (`planMarch` in the plan bar and the March), so the main thread loads it as the worker
+// does. Started first, so the fetch and compile overlap the store's load below; `mount` waits for it.
+const kernel = loadKernel(kernelUrl);
 
 // `initPersistence` runs `loadStore(adapter)` (migrate, validate, quarantine a corrupt document) and
 // then keeps writing the document back, debounced. The wrapper adds the "saved / unsaved" signal.
@@ -62,8 +71,21 @@ function render(node: ReactNode): void {
   );
 }
 
+/**
+ * The app once the kernel is set, or the one panel that says it cannot run here (`WasmRequired`). The
+ * callback pages below do not wait: they compute nothing, and the one-time token must leave the address bar
+ * first.
+ */
 function mount(): void {
-  render(<App />);
+  void kernel.then(
+    () => {
+      render(<App />);
+    },
+    (error: unknown) => {
+      console.warn('[pyrrhic] WebAssembly kernel unavailable', error);
+      render(<WasmRequired />);
+    },
+  );
 }
 
 /**

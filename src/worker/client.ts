@@ -10,6 +10,8 @@ import type { SearchProgress, SearchRequest, StackRequest, SearchResult } from '
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
 import type { PositionTrades } from '@/ui/sections/march/positions';
 
+import { KernelUnavailableError } from '@/kernel/boot';
+
 import { runPlan, runPositions, runRaise, runResize, runSearch, runStack } from './jobs';
 import {
   errorPayload,
@@ -105,7 +107,11 @@ function createWorkerClient(worker: Worker): CalcClient {
         entry.reject(abortError());
         return;
       case 'error':
-        entry.reject(new Error(message.error.message));
+        entry.reject(
+          message.error.code === 'kernel-unavailable'
+            ? new KernelUnavailableError(message.error.message)
+            : new Error(message.error.message),
+        );
     }
   });
 
@@ -174,7 +180,8 @@ function createWorkerClient(worker: Worker): CalcClient {
 /**
  * Same interface, same job bodies, no worker. Used by tests, by browsers without workers, and when the
  * worker fails to start (a `file://` page, a strict CSP). Jobs are still asynchronous so that callers
- * cannot accidentally depend on synchronous completion.
+ * cannot accidentally depend on synchronous completion. The jobs run on the kernel the main thread loaded
+ * before it rendered the app (`src/main.tsx`, `loadKernel`), exactly as they do in the worker.
  */
 export function createInlineClient(): CalcClient {
   let disposed = false;
