@@ -2179,8 +2179,20 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       if (!context.sizer) return null;
       const sized = context.sizer(fielded, sizerMethod, prefix);
       sizedRungs = sized.rungs;
-      const byId = new Map(sized.mercs.map((merc) => [merc.entry.id, merc.count]));
-      vector = mercTypes.map((entry) => ({ entry, count: Math.max(0, byId.get(entry.id) ?? 0) }));
+      // Each type's count in the sizer's answer, the last stack of that id winning as a `Map` built over the
+      // answer would have it (W16 C2: a scan, the answer holding a handful of stacks).
+      const sizedMercs = sized.mercs;
+      vector = mercTypes.map((entry) => {
+        let count: number | undefined;
+        for (let i = sizedMercs.length - 1; i >= 0; i -= 1) {
+          const merc = sizedMercs[i] as { entry: Effective; count: number };
+          if (merc.entry.id === entry.id) {
+            count = merc.count;
+            break;
+          }
+        }
+        return { entry, count: Math.max(0, count ?? 0) };
+      });
       fielded = vector.filter((merc) => merc.count > 0);
       if (fielded.length === 0) return null;
     }
@@ -2368,20 +2380,75 @@ function sizedCounts(
 }
 
 /**
- * The key of one `planCampaign` sizer call (step 5): the method, the prefix (`u` for none) and every merc's
- * id and count in order — exactly what `sizedShape` reads of them. A count is written so that no two numbers
- * `Object.is` tells apart share a key (`-0` has its own).
+ * One `planCampaign` sizer call as its memo holds it (step 5): the method, the prefix (`undefined` for none)
+ * and every merc's id and count in order — exactly what `sizedShape` reads of them — beside its answer.
  */
-function sizerKey(
+interface SizerKept {
+  method: SizerMethod;
+  depth: number | undefined;
+  ids: string[];
+  counts: number[];
+  rungs: { entry: Effective; count: number }[];
+  mercs: { entry: Effective; count: number }[];
+}
+
+/**
+ * The bucket of one sizer call in its memo (W16 C2). Until then the memo was keyed on a string written out of
+ * the method, the prefix and every id and count, and hashing that string was a fifth of the sizer's own time
+ * on the monster camp; this is a number read off the same fields, and `sizerSame` tells the calls of a bucket
+ * apart, so the memo answers exactly the calls the string answered.
+ */
+function sizerHash(
   mercs: readonly { entry: Effective; count: number }[],
   method: SizerMethod,
   depth: number | undefined,
-): string {
-  let key = `${method}|${depth === undefined ? 'u' : Object.is(depth, -0) ? '-0' : depth}`;
-  for (const merc of mercs) {
-    key += `|${merc.entry.id}:${Object.is(merc.count, -0) ? '-0' : merc.count}`;
+): number {
+  let hash = method === 'elite' ? 1 : method === 'ms' ? 2 : 3;
+  hash = Math.imul(hash ^ (depth === undefined ? 0x5bd1e995 : depth | 0), 0x9e3779b1);
+  hash = Math.imul(hash ^ mercs.length, 0x85ebca6b);
+  for (let i = 0; i < mercs.length; i += 1) {
+    hash = Math.imul(hash ^ ((mercs[i] as { count: number }).count | 0), 0xc2b2ae35);
+    hash ^= hash >>> 15;
   }
-  return key;
+  return hash;
+}
+
+/**
+ * The same call as `kept`: what the string key compared — the method, the prefix and every id and count, a
+ * number by its string, which is `Object.is` (`-0` had its own spelling, NaN equals NaN).
+ */
+function sizerSame(
+  kept: SizerKept,
+  mercs: readonly { entry: Effective; count: number }[],
+  method: SizerMethod,
+  depth: number | undefined,
+): boolean {
+  if (kept.method !== method || kept.ids.length !== mercs.length) return false;
+  if (depth === undefined ? kept.depth !== undefined : kept.depth === undefined || !Object.is(kept.depth, depth))
+    return false;
+  for (let i = 0; i < mercs.length; i += 1) {
+    const merc = mercs[i] as { entry: Effective; count: number };
+    if (kept.ids[i] !== merc.entry.id || !Object.is(kept.counts[i], merc.count)) return false;
+  }
+  return true;
+}
+
+/** The one scale a sizer shape is scored at (its scale means nothing), shared rather than built per vector. */
+const ONE_SCALE: readonly number[] = [1];
+
+/**
+ * Whether two vectors' counts joined by commas are the same string (W16 C2), without writing either: as many
+ * counts, and each pair the same number's string — `===`, which reads `-0` as `0` as `String` does, or both
+ * NaN.
+ */
+function sameJoinedCounts(a: readonly { count: number }[], b: readonly { count: number }[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const x = (a[i] as { count: number }).count;
+    const y = (b[i] as { count: number }).count;
+    if (x !== y && !(x !== x && y !== y)) return false;
+  }
+  return true;
 }
 
 /** Fresh stacks with the same entries and counts. */
@@ -2447,15 +2514,16 @@ function sizedShape(
       relaxedPreservation: method === 'msRelaxed',
     },
   );
-  const stacks = sized
-    .filter((stack) => stack.count > 0)
-    .map((stack) => ({ entry: byId.get(stack.unitId), count: stack.count }))
-    .filter((rung): rung is { entry: Effective; count: number } => rung.entry !== undefined);
-  const rungs = stacks.filter((stack) => stack.entry.pool === 'leadership');
-  const sheltered = shelterUnder(
-    rungs,
-    stacks.filter((stack) => stack.entry.pool !== 'leadership'),
-  ).filter((stack) => stack.count > 0);
+  // The fielded stacks of a known type, troops and hired apart, each in the sizer's order (one pass, W16 C2).
+  const rungs: { entry: Effective; count: number }[] = [];
+  const hired: { entry: Effective; count: number }[] = [];
+  for (const stack of sized) {
+    if (!(stack.count > 0)) continue;
+    const entry = byId.get(stack.unitId);
+    if (entry === undefined) continue;
+    (entry.pool === 'leadership' ? rungs : hired).push({ entry, count: stack.count });
+  }
+  const sheltered = shelterUnder(rungs, hired).filter((stack) => stack.count > 0);
   return { rungs, mercs: sheltered };
 }
 
@@ -3554,11 +3622,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     tierBattles: 0,
   };
   const seeded = tierSeed ? { tierSeed, rungOrderLog } : {};
-  /** The sizer's answers of this search, by `sizerKey` (step 5); never handed out, only copied. */
-  const sizerMemo = new Map<
-    string,
-    { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] }
-  >();
+  /** The sizer's answers of this search, by `sizerHash` (step 5, W16 C2); never handed out, only copied. */
+  const sizerMemo = new Map<number, SizerKept[]>();
   /**
    * The Elite sizer over every troop type, the hired counts as caps — what the March pane draws after a
    * put-back, scored inside the search so the plan can find it itself (`CampaignInput.sizerShape`).
@@ -3582,10 +3647,22 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // answer is a function of what the key holds alone (`sizedShape` reads each merc's id and count, the
     // method and the prefix, over this search's fixed `request`). Every call answers fresh arrays and fresh
     // stacks, as the uncached call did, so no caller can reach the kept copy.
-    const key = sizerKey(mercs, method, depth);
-    let kept = sizerMemo.get(key);
+    const hash = sizerHash(mercs, method, depth);
+    let bucket = sizerMemo.get(hash);
+    let kept: SizerKept | undefined;
+    if (bucket !== undefined) {
+      for (const each of bucket) {
+        if (sizerSame(each, mercs, method, depth)) {
+          kept = each;
+          break;
+        }
+      }
+    } else {
+      bucket = [];
+      sizerMemo.set(hash, bucket);
+    }
     if (kept === undefined) {
-      kept = sizedShape(
+      const sized = sizedShape(
         request,
         byId,
         mercs,
@@ -3594,7 +3671,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         // per HP first, so its last `depth` entries are the strongest `depth` types.
         depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id)),
       );
-      sizerMemo.set(key, kept);
+      kept = {
+        method,
+        depth,
+        ids: mercs.map((merc) => merc.entry.id),
+        counts: mercs.map((merc) => merc.count),
+        rungs: sized.rungs,
+        mercs: sized.mercs,
+      };
+      bucket.push(kept);
     }
     return { rungs: copyStacks(kept.rungs), mercs: copyStacks(kept.mercs) };
   };
@@ -3670,6 +3755,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     stale: FinaleKept | null;
   }
   const derivedMemo = new Map<string, DerivedScore>();
+  /** The sizer's depths then the ladders' (`SIZER_DEPTHS` keys as numbers, then `DEPTHS`), built once. */
+  const sizersThenLadders: readonly number[] = [...Object.keys(SIZER_DEPTHS).map(Number), ...DEPTHS];
   const replayShape = (shape: Candidate): Candidate => ({
     marches: shape.marches,
     mercs: shape.mercs,
@@ -3682,6 +3769,54 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     depth: shape.depth,
     scale: shape.scale,
   });
+
+  /**
+   * **A replayed shape's fresh copy, built only where it is kept** (W16 C2). A replay booked a fresh copy of
+   * every kept shape (`replayShape`) and `record` priced each one again, though only the copies the peaks keep,
+   * the tight shape and the pick ever leave the replay: on the monster camp that was 225 000 copies a plan, and
+   * their ratios, for a few dozen kept. `copies[i]` is shape `i`'s copy once one is built. Every copy a replay
+   * hands out has had `record` read its ratios, so it carries them, as `ratioOf` left them; `withRatios` false
+   * is the one moment `record` spreads a copy before reading them (`light`, by the silver it spends).
+   */
+  const replayed = (shape: Candidate, copies: (Candidate | undefined)[], i: number, withRatios = true): Candidate => {
+    let copy = copies[i];
+    if (copy === undefined) {
+      copy = replayShape(shape);
+      copies[i] = copy;
+    }
+    if (withRatios && copy.ratios === undefined) {
+      const ratios = ratioOf(shape);
+      copy.ratios = { silver: ratios.silver, mercs: ratios.mercs, hired: ratios.hired };
+    }
+    return copy;
+  };
+  /**
+   * `record(replayShape(shape))`, reading the figures off the kept shape — whose ratios are the copy's, the
+   * same function of the same march, stacks and final march — and building the copy only where `record` keeps
+   * it (W16 C2).
+   */
+  const recordReplay = (shape: Candidate, copies: (Candidate | undefined)[], i: number): void => {
+    const { total } = shape;
+    const spent = marchedSilver(shape);
+    const lightSpent = light?.spent ?? 0;
+    if (spent > 0 && (!light || total / spent > light.total / lightSpent)) {
+      light = { ...replayed(shape, copies, i, false), spent };
+    }
+    const { silver: pointSilver, mercs: pointMercs, hired: pointHired } = ratioOf(shape);
+    // `record` priced the copy here: one built above carries its ratios from now on, as it did.
+    if (copies[i] !== undefined) replayed(shape, copies, i);
+    if (pointSilver <= 0 || pointMercs <= 0) return;
+    const perSilver = total / pointSilver;
+    const perMerc = pointHired / pointMercs;
+    if (perSilver > peakSilver) {
+      peakSilver = perSilver;
+      light = { ...replayed(shape, copies, i), spent: pointSilver };
+    }
+    if (perMerc > peakMercenary) {
+      peakMercenary = perMerc;
+      heavy = replayed(shape, copies, i);
+    }
+  };
 
   /**
    * Score one mercenary vector. The ladder grid is the full `DEPTHS × LADDER_GROWTHS`; `only` pins it to a
@@ -3706,11 +3841,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         kept.winner === winnerRungs &&
         (kept.stale ? state.holdsFinale(kept.stale) : state.finaleFresh())
       ) {
-        const shapes = kept.shapes.map(replayShape);
-        for (const shape of shapes) record(shape);
-        if (kept.tight >= 0 && kept.tight !== kept.pick) consider(shapes[kept.tight] as Candidate);
+        const shapes = kept.shapes;
+        const copies: (Candidate | undefined)[] = [];
+        for (let i = 0; i < shapes.length; i += 1) recordReplay(shapes[i] as Candidate, copies, i);
+        if (kept.tight >= 0 && kept.tight !== kept.pick)
+          consider(replayed(shapes[kept.tight] as Candidate, copies, kept.tight));
         if (kept.finale) state.restoreFinale(kept.finale);
-        return kept.pick < 0 ? null : (shapes[kept.pick] as Candidate);
+        return kept.pick < 0 ? null : replayed(shapes[kept.pick] as Candidate, copies, kept.pick);
       }
       booked = [];
       before = {
@@ -3740,11 +3877,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     for (const merc of vector) counts[merc.entry.id] = merc.count;
     // A depth of 0 or less is the sizer's own shape under one method (`SIZER_DEPTHS`), scored once a vector
     // (its scale means nothing) when the flag is on.
-    const depths: readonly number[] = only
-      ? [only.depth]
-      : sizerShape && !laddersOnly
-        ? [...Object.keys(SIZER_DEPTHS).map(Number), ...DEPTHS]
-        : DEPTHS;
+    const depths: readonly number[] = only ? [only.depth] : sizerShape && !laddersOnly ? sizersThenLadders : DEPTHS;
     /**
      * A sizer shape may field fewer mercenaries than the vector it was given (Military Science does), and
      * that smaller vector is one the grid never holds — so the ladders were never scored on it. Measured on
@@ -3757,7 +3890,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // The whole ladder grid of this vector in one kernel call (step 4); `counts` is not written again.
     if (!only) score.arm?.(marches, counts, input.silverBudget);
     for (const depth of depths) {
-      for (const scale of only ? [only.scale] : depth <= 0 ? [1] : LADDER_GROWTHS) {
+      for (const scale of only ? [only.scale] : depth <= 0 ? ONE_SCALE : LADDER_GROWTHS) {
         const scored = score(marches, counts, depth, scale, input.silverBudget);
         if (!scored) continue;
         const candidate: Candidate = {
@@ -3797,11 +3930,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       });
     }
     if (!laddersOnly && derived.length > 0) {
-      const seen = new Set<string>([vector.map((merc) => merc.count).join(',')]);
+      // The vectors already scored here, compared as their counts joined by commas compared them (W16 C2).
+      const seen: { count: number }[][] = [vector];
       for (const mercs of derived) {
-        const key = mercs.map((merc) => merc.count).join(',');
-        if (seen.has(key)) continue;
-        seen.add(key);
+        if (seen.some((each) => sameJoinedCounts(each, mercs))) continue;
+        seen.push(mercs);
         const candidate = evaluateVector(mercs, undefined, true);
         if (candidate && (!pick || candidate.total > pick.total)) pick = candidate;
       }
@@ -4477,19 +4610,23 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * two arrays is the same bill. Everything else of the row is built fresh, as before.
    */
   const bills = new WeakMap<object, { mercs: object; bill: RecoveryCost }>();
-  const billedMarch = (
+  const billedOf = (
     rungs: { entry: Effective; count: number }[],
     mercs: { entry: Effective; count: number }[],
-    totals: ReturnType<typeof marchOf>,
-  ): PlanMarch => {
+  ): RecoveryCost => {
     const held = bills.get(rungs);
     let bill = held !== undefined && held.mercs === mercs ? held.bill : undefined;
     if (bill === undefined) {
       bill = marchRecovery(request.recovery, rungs, mercs);
       bills.set(rungs, { mercs, bill });
     }
-    return priceMarch(request.recovery, rungs, mercs, totals, bill);
+    return bill;
   };
+  const billedMarch = (
+    rungs: { entry: Effective; count: number }[],
+    mercs: { entry: Effective; count: number }[],
+    totals: ReturnType<typeof marchOf>,
+  ): PlanMarch => priceMarch(request.recovery, rungs, mercs, totals, billedOf(rungs, mercs));
   const summarise = (candidate: Candidate): TradeRow => {
     const m = billedMarch(candidate.rungs, candidate.mercs, candidate.march);
     // The finale, priced the same way — built once here rather than twice, because its counts and its
@@ -4567,8 +4704,34 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       damagePerDragonCoin: dragonCoins > 0 ? candidate.total / dragonCoins : Infinity,
     };
   };
-  const all = frontier.map(summarise);
-  const undominated = undominatedRows(all);
+  /**
+   * **The three figures the frontier is thinned on, before any row is built** (W16 C2). `summarise` prices
+   * every march of a row and writes its counts, its label and its ratios, and the frontier holds thousands of
+   * candidates of which a few dozen are undominated: the rows were a tenth of the plan's wall time on the
+   * monster camp. These are `summarise`'s own `silver`, `mercLost` and `totalDamage`, the same sums of the same
+   * bills (`priceMarch` rounds the bill's silver), asked of the bills in the same order; only the rows that are
+   * kept are built, in the frontier's order, which is the order `undominatedRows` answers in. The caller who
+   * asked for the whole frontier (`CampaignInput.withFrontier`) gets every row built, as before: its
+   * diagnostic matches the undominated rows among them by identity.
+   */
+  const all: TradeRow[] | undefined = input.withFrontier === true ? frontier.map(summarise) : undefined;
+  const figuresOf = (candidate: Candidate) => {
+    const repeatSilver = Math.round(billedOf(candidate.rungs, candidate.mercs).silver);
+    const finaleSilver =
+      candidate.finale === null
+        ? null
+        : Math.round(billedOf(candidate.finaleRungs, candidate.finaleMercs).silver);
+    return {
+      candidate,
+      silver: candidate.marches * repeatSilver + (finaleSilver ?? 0),
+      mercLost: candidate.marches * candidate.march.mercLost + (candidate.finale?.mercLost ?? 0),
+      totalDamage: Math.round(candidate.total),
+    };
+  };
+  const undominated =
+    all !== undefined
+      ? undominatedRows(all)
+      : undominatedRows(frontier.map(figuresOf)).map((figures) => summarise(figures.candidate));
   undominated.sort((a, b) => a.silver - b.silver || a.mercLost - b.mercLost || a.totalDamage - b.totalDamage);
   const chosenPoint = summarise(chosen);
 
@@ -7296,12 +7459,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * their keys were written in. `sameCounts` above compares the objects' JSON and is key-order dependent; it
    * is left exactly as it is, because changing what `offer` deduplicates by would be a change to the bar.
    */
-  const countsKey = (counts: Record<string, number>): string =>
-    Object.entries(counts)
-      .filter(([, count]) => count > 0)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([id, count]) => `${id}:${count}`)
-      .join(',');
+  const countsKey = (counts: Record<string, number>): string => {
+    // The ids are the object's own keys, so no two compare equal and the sort has one answer (W16 C2: the
+    // same string, written without an entry pair per key).
+    const ids = Object.keys(counts)
+      .filter((id) => (counts[id] as number) > 0)
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    return ids.map((id) => `${id}:${counts[id]}`).join(',');
+  };
   /**
    * **The plans the bar may offer** — the set the reference table under it is drawn over (S-88).
    *
@@ -7424,7 +7589,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
               ...(generatorOf !== undefined ? { generatorOf } : {}),
             };
           };
-          const held = new Set<PlanTotals>(all);
+          const rows = all as TradeRow[];
+          const held = new Set<PlanTotals>(rows);
           /**
            * **The marches the bar offers that the search never summarised**: a stop the put-back pass
            * re-sized after it was chosen, and the `all-in`, built march by march outside the frontier. They
@@ -7442,7 +7608,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
            * what the search found, and a stop's tailed campaign is on `alternatives` where the bar reads it.
            */
           const searched = (row: PlanTotals): PlanTotals => tailedFrom.get(row) ?? row;
-          const onFrontier: PlanFrontierRow[] = all.map((row) => decorate(row, true));
+          const onFrontier: PlanFrontierRow[] = rows.map((row) => decorate(row, true));
           const offFrontier: PlanFrontierRow[] = offered
             .filter((row) => !held.has(searched(row)))
             .map((row) => decorate(searched(row) as TradeRow, false));

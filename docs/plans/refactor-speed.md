@@ -115,3 +115,16 @@ caches its JSON. 18 armies × both paths byte-identical; gate green. Planner: mo
 **Found, not changed (a trade for the owner):** the scorer's kept final march is keyed on the vector alone, so
 after a rung order is learned it answers **stale** — 624 of the monster camp's 800 first scorings read one. The
 memo reproduces that faithfully; fixing it would move readings and must be measured as an experiment.
+
+**C2 (2026-10-01, re-profiled at 1ada9f1).** After C1 the grid's shape objects are no longer hot: of 333 k scorer
+calls on the monster camp 292 k are empty grid cells and only 27 k build a shape. What was hot: the sizer's memo
+(its string key hashed on 19 k calls, a fifth of the sizer), the 225 k shape copies a derived-vector replay booked
+and re-priced to keep a few dozen, and `summarise` building a row for every frontier candidate when a few dozen
+survive `undominatedRows`. Changed: the sizer memo keyed on a number with an exact compare; a replay builds a copy
+only where `record` keeps it, its ratios read off the kept shape; the frontier thinned on `summarise`'s own three
+figures before any row is built (every row still built under `withFrontier`); a few allocation cuts (`sizedShape`
+one pass, the sizer-shape count scan, `countsKey`). 18 armies × both paths byte-identical (with and without
+`withFrontier`); gate green. Planner, interleaved medians: monster camp kernel ~575 → ~450 ms (TS ~5.5 → ~3.7 s),
+TotalStack profile ~190 → ~160 ms (TS ~1.9 → ~1.4 s), usual setup ~233 → ~206 ms (TS ~2.35 → ~1.78 s).
+What is left on the kernel path is mostly real work: the sizer's own wasm (12 k distinct calls), the ladder grid,
+the march battles, and GC ~14 %.
