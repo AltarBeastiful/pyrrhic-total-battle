@@ -1720,7 +1720,41 @@ export type ShapeScorer = ((
    */
   arm?: (marches: number, counts: Record<string, number>, silverBudget: number | undefined) => void;
   disarm?: () => void;
+  /** What a caller replaying a vector it scored before must check and restore (`ScorerState`, W16 C1). */
+  state?: ScorerState;
 };
+
+/**
+ * **The two things a scorer remembers between calls** (W16 C1), which is all that makes its answer for one
+ * vector depend on anything but the vector: the rung orders it has learned (`orderFor`), and the one final march
+ * it keeps (`finish`), which is keyed on the vector alone — so a final march read before an order was learned is
+ * answered again after it, *stale*. A caller that replays a vector's answers instead of asking again
+ * (`planCampaign`'s derived vectors) may only do so under the same orders and over a final march that answers as
+ * it did — fresh, or the very stale one the asking read — and leaves the kept final march as the asking would have.
+ */
+export interface ScorerState {
+  /** How many rung orders have been learned so far. */
+  learned: () => number;
+  /** How many kept final marches were answered stale so far. */
+  staleReads: () => number;
+  /** How many shapes read the kept final march so far (a hit or a fresh walk). */
+  finaleReads: () => number;
+  /** Whether a read of the kept final march now would answer what a fresh walk answers. */
+  finaleFresh: () => boolean;
+  saveFinale: () => FinaleKept;
+  restoreFinale: (kept: FinaleKept) => void;
+  /** Whether the kept final march is still this very one: its key, its orders and the same answer object. */
+  holdsFinale: (kept: FinaleKept) => boolean;
+}
+
+/** The scorer's kept final march (`ScorerState.saveFinale`): its key, its answer, and the orders it was read under. */
+export interface FinaleKept {
+  valid: boolean;
+  marches: number;
+  counts: number[];
+  finale: ScoredShape['finale'];
+  learned: number;
+}
 
 /** The scorer of an account whose table is already built, so a sweep does not rebuild it per shape. */
 export function makeScorer(context: ShapeContext): ShapeScorer {
@@ -1812,6 +1846,11 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
   let cachedMarches = 0;
   const cachedCounts: number[] = [];
   let cachedFinale: ScoredShape['finale'] = null;
+  // The orders the kept final march was walked under (`-1`: an order was learned during the walk), and the
+  // reads counted for `ScorerState` (W16 C1). Neither changes an answer.
+  let cachedLearned = -1;
+  let staleReads = 0;
+  let finaleReads = 0;
   const sameNumber = (a: number, b: number): boolean => a === b || (a !== a && b !== b);
   const cacheHit = (marches: number, vector: readonly { count: number }[]): boolean => {
     if (!cachedValid || !sameNumber(marches, cachedMarches) || vector.length !== cachedCounts.length)
@@ -1917,12 +1956,17 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     if (noFinale) {
       finale = null;
     } else if (silverBudget === undefined) {
+      finaleReads += 1;
       if (!cacheHit(marches, vector)) {
         cachedValid = true;
         cachedMarches = marches;
         cachedCounts.length = vector.length;
         for (let i = 0; i < vector.length; i += 1) cachedCounts[i] = (vector[i] as { count: number }).count;
+        const before = ordersLearned;
         cachedFinale = finaleFor(marches, fieldedOf(), undefined);
+        cachedLearned = ordersLearned === before ? before : -1;
+      } else if (cachedLearned !== ordersLearned) {
+        staleReads += 1;
       }
       finale = cachedFinale;
     } else {
@@ -2194,6 +2238,34 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     armed = null;
     gridSerial = -1;
   };
+  scorer.state = {
+    learned: () => ordersLearned,
+    staleReads: () => staleReads,
+    finaleReads: () => finaleReads,
+    finaleFresh: () => !cachedValid || cachedLearned === ordersLearned,
+    saveFinale: () => ({
+      valid: cachedValid,
+      marches: cachedMarches,
+      counts: [...cachedCounts],
+      finale: cachedFinale,
+      learned: cachedLearned,
+    }),
+    restoreFinale: (kept) => {
+      cachedValid = kept.valid;
+      cachedMarches = kept.marches;
+      cachedCounts.length = 0;
+      cachedCounts.push(...kept.counts);
+      cachedFinale = kept.finale;
+      cachedLearned = kept.learned;
+    },
+    holdsFinale: (kept) =>
+      cachedValid === kept.valid &&
+      cachedFinale === kept.finale &&
+      cachedLearned === kept.learned &&
+      sameNumber(cachedMarches, kept.marches) &&
+      cachedCounts.length === kept.counts.length &&
+      cachedCounts.every((count, i) => sameNumber(count, kept.counts[i] as number)),
+  };
   return scorer;
 }
 
@@ -2246,6 +2318,8 @@ function priceMarch(
   rungs: { entry: Effective; count: number }[],
   mercs: { entry: Effective; count: number }[],
   totals: ReturnType<typeof marchOf>,
+  /** `marchRecovery` of these very arrays, when the caller already has it (W16 C1). */
+  bill: RecoveryCost = marchRecovery(recovery, rungs, mercs),
 ): PlanMarch {
   const counts: Record<string, number> = {};
   for (const rung of rungs) counts[rung.entry.id] = rung.count;
@@ -2256,7 +2330,7 @@ function priceMarch(
       mercFielded[merc.entry.id] = merc.count;
     }
   }
-  const { silver, seconds, gold, dragonCoins } = marchRecovery(recovery, rungs, mercs);
+  const { silver, seconds, gold, dragonCoins } = bill;
   return {
     counts,
     damage: Math.round(totals.damage),
@@ -3573,6 +3647,43 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
 
   /**
+   * **A derived vector is scored once per rung orders** (W16 C1). The vectors a sizer shape settles on
+   * (`derived` below) come back again and again — measured on the monster camp (tiers 3–5 at 900 dominance),
+   * 96 % of those calls repeated an earlier one exactly, and they were over a third of the plan's wall time. The
+   * answer of such a call is the vector's ladder grid, which is a function of its counts and of the scorer's
+   * state (`ScorerState`) alone; its effects are the shapes it books (`record`) and its tight shape (`consider`),
+   * in that order. So the shapes are kept, and a repeat books fresh copies of them in the same order, considers
+   * the same one, and leaves the scorer's kept final march where the scoring left it. Nothing is replayed across
+   * a rung order learned, nor onto a stale final march other than the one the scoring read (`ScorerState`):
+   * those calls are scored again, as before. A stale read is common, not a corner — 624 of the monster camp's
+   * 800 first scorings made one — so it is kept and matched rather than refused.
+   */
+  interface DerivedScore {
+    learned: number;
+    winner: { entry: Effective; count: number }[];
+    shapes: Candidate[];
+    pick: number;
+    tight: number;
+    /** The kept final march the scoring left, or `null` when it read none. */
+    finale: FinaleKept | null;
+    /** The stale final march the scoring read (`ScorerState`), which a replay must find kept as it was. */
+    stale: FinaleKept | null;
+  }
+  const derivedMemo = new Map<string, DerivedScore>();
+  const replayShape = (shape: Candidate): Candidate => ({
+    marches: shape.marches,
+    mercs: shape.mercs,
+    rungs: shape.rungs,
+    march: shape.march,
+    finale: shape.finale,
+    finaleRungs: shape.finaleRungs,
+    finaleMercs: shape.finaleMercs,
+    total: shape.total,
+    depth: shape.depth,
+    scale: shape.scale,
+  });
+
+  /**
    * Score one mercenary vector. The ladder grid is the full `DEPTHS × LADDER_GROWTHS`; `only` pins it to a
    * single rung count and scale instead, which is what the refinement pass below uses — re-scoring one
    * shape costs one shape, where the whole grid costs eighty.
@@ -3582,6 +3693,33 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     only?: { depth: number; scale: number },
     laddersOnly = false,
   ): Candidate | null => {
+    const state = laddersOnly && !only ? score.state : undefined;
+    let memoKey: string | undefined;
+    let booked: Candidate[] | undefined;
+    let before: { learned: number; stale: number; reads: number; kept: FinaleKept } | undefined;
+    if (state) {
+      memoKey = vector.map((merc) => `${merc.entry.id}:${merc.count}`).join(',');
+      const kept = derivedMemo.get(memoKey);
+      if (
+        kept !== undefined &&
+        kept.learned === state.learned() &&
+        kept.winner === winnerRungs &&
+        (kept.stale ? state.holdsFinale(kept.stale) : state.finaleFresh())
+      ) {
+        const shapes = kept.shapes.map(replayShape);
+        for (const shape of shapes) record(shape);
+        if (kept.tight >= 0 && kept.tight !== kept.pick) consider(shapes[kept.tight] as Candidate);
+        if (kept.finale) state.restoreFinale(kept.finale);
+        return kept.pick < 0 ? null : (shapes[kept.pick] as Candidate);
+      }
+      booked = [];
+      before = {
+        learned: state.learned(),
+        stale: state.staleReads(),
+        reads: state.finaleReads(),
+        kept: state.saveFinale(),
+      };
+    }
     let pick: Candidate | null = null;
     /**
      * The vector's **tight** shape, kept beside its strongest: the ladder at scale 1 — every rung just above
@@ -3638,6 +3776,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         if (!pick || candidate.total > pick.total) pick = candidate;
         if (depth > 0 && scale === 1 && (!tight || depth > tight.depth)) tight = candidate;
         record(candidate);
+        booked?.push(candidate);
         if (depth <= 0 && scored.mercs.some((merc, index) => merc.count !== vector[index]?.count)) {
           derived.push(scored.mercs);
         }
@@ -3645,6 +3784,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     }
     if (!only) score.disarm?.();
     if (tight && tight !== pick) consider(tight);
+    if (state && booked && before && memoKey !== undefined && state.learned() === before.learned) {
+      derivedMemo.set(memoKey, {
+        learned: before.learned,
+        winner: winnerRungs,
+        shapes: booked,
+        pick: pick ? booked.indexOf(pick) : -1,
+        tight: tight ? booked.indexOf(tight) : -1,
+        finale: state.finaleReads() === before.reads ? null : state.saveFinale(),
+        // A stale read can only be of the final march kept before the call: one walked during it is fresh.
+        stale: state.staleReads() === before.stale ? null : before.kept,
+      });
+    }
     if (!laddersOnly && derived.length > 0) {
       const seen = new Set<string>([vector.map((merc) => merc.count).join(',')]);
       for (const mercs of derived) {
@@ -4318,14 +4469,35 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const finale = chosen.finale ? toMarch(chosen.finaleRungs, chosen.finaleMercs, chosen.finale) : undefined;
   // The frontier the UI shows: only the plans nothing else beats on every resource at once, thinned to a
   // readable number. This is also where the recommendation comes from when no silver budget was given.
+  /**
+   * **A bill is asked once per pair of arrays** (W16 C1). The frontier holds thousands of candidates and many
+   * share their stacks: a replayed derived vector's shapes (`derivedMemo`) are the very arrays of the first
+   * scoring, and every candidate of one vector carries the same kept final march. `marchRecovery` reads the
+   * stacks' ids and counts alone, and no stack is written once it is in a candidate, so the bill of the same
+   * two arrays is the same bill. Everything else of the row is built fresh, as before.
+   */
+  const bills = new WeakMap<object, { mercs: object; bill: RecoveryCost }>();
+  const billedMarch = (
+    rungs: { entry: Effective; count: number }[],
+    mercs: { entry: Effective; count: number }[],
+    totals: ReturnType<typeof marchOf>,
+  ): PlanMarch => {
+    const held = bills.get(rungs);
+    let bill = held !== undefined && held.mercs === mercs ? held.bill : undefined;
+    if (bill === undefined) {
+      bill = marchRecovery(request.recovery, rungs, mercs);
+      bills.set(rungs, { mercs, bill });
+    }
+    return priceMarch(request.recovery, rungs, mercs, totals, bill);
+  };
   const summarise = (candidate: Candidate): TradeRow => {
-    const m = toMarch(candidate.rungs, candidate.mercs, candidate.march);
+    const m = billedMarch(candidate.rungs, candidate.mercs, candidate.march);
     // The finale, priced the same way — built once here rather than twice, because its counts and its
     // recovery time are both read below.
     const last =
       candidate.finale === null
         ? null
-        : toMarch(candidate.finaleRungs, candidate.finaleMercs, candidate.finale);
+        : billedMarch(candidate.finaleRungs, candidate.finaleMercs, candidate.finale);
     // The finale's silver is the recap's own (`last`, priced under the account's temple level and training
     // discounts like every repeat), not the search's raw `marchOf` figure (S-91, 2026-09-18): every profile
     // in the repo has no discount, so the two agreed to the unit until the criterion was run under one —
@@ -5707,8 +5879,18 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
   const allIn = buildAllIn();
 
-  const sameCounts = (a: PlanTotals, b: PlanTotals): boolean =>
-    JSON.stringify(a.counts) === JSON.stringify(b.counts);
+  // Each counts object's JSON written once (W16 C1): `sameCounts` runs inside quadratic filters, and a row's
+  // counts are never written after the row is built.
+  const countsJson = new WeakMap<Record<string, number>, string>();
+  const jsonOf = (counts: Record<string, number>): string => {
+    let json = countsJson.get(counts);
+    if (json === undefined) {
+      json = JSON.stringify(counts);
+      countsJson.set(counts, json);
+    }
+    return json;
+  };
+  const sameCounts = (a: PlanTotals, b: PlanTotals): boolean => jsonOf(a.counts) === jsonOf(b.counts);
   const stops: PlanRow[] = [];
   const offer = (row: TradeRow | undefined, pick: PlanPick): void => {
     if (row === undefined) return;
