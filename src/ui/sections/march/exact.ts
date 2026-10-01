@@ -38,7 +38,7 @@
  * takes ~50 s (experiment 182). The March asks for it through the worker (`raiseSearch.ts`), shows
  * `raisedCounts`' own answer until it lands, and gets this one in place of it.
  */
-import { exactSearch } from '@/engine/exact';
+import { BoxMemo, exactSearch } from '@/engine/exact';
 import type { SearchSlot } from '@/engine/exact';
 import type { StackRequest, StackResult } from '@/engine/types';
 
@@ -209,46 +209,36 @@ export function exactRaise(
     if (wanted !== undefined) start[stack.unitId] = wanted;
   }
 
-  /**
-   * **A capped position refuses a vector the way the housing refuses one**: `-Infinity`, which the search
-   * reads as "not an answer" and never returns. That is the whole of the cap — a burn over the budget is not
-   * a worse march, it is a march this position will not field — and it is why the seed has to be feasible:
-   * `safe`'s seed *is* its cap, and `tight`'s seed is the plan's own counts, which is the cap by definition.
-   */
-  const ranked: RaiseRank =
-    cap === null ? rank : (facts) => (facts.mercLost <= cap ? rank(facts) : Number.NEGATIVE_INFINITY);
+  /** What this box's vectors were already found to be worth — this march's, shared by its positions. */
+  const memo = memoFor(request, base, rank, held, slots);
 
   /**
    * **The three readings of one vector, and the two the rank may not need are lazy.** `damage` is one replay
    * and is what the shipped position ranks on; the burn is arithmetic over the counts and the hired share is
    * one pass over the journal `damage`'s own replay already built — both nearly free, but a box of 908 684
    * vectors is a box of 908 684 of them, so a rank that reads only the damage pays only for the damage.
+   *
+   * **A capped position refuses a vector the way the housing refuses one**: `-Infinity`, which the search
+   * reads as "not an answer" and never returns. That is the whole of the cap — a burn over the budget is not
+   * a worse march, it is a march this position will not field — and it is why the seed has to be feasible:
+   * `safe`'s seed *is* its cap, and `tight`'s seed is the plan's own counts, which is the cap by definition.
+   *
+   * **The cap is tested before the battle, and a battle is fought once per march** (W16 B). The burn is
+   * arithmetic over the counts, so a vector over the budget is refused whatever it would have struck for —
+   * fighting it first was nearly all of `Tight`'s cost on the owner's live camp (839 340 of its 839 420 battles
+   * thrown away, step A2). What is left does not depend on the position, so it is kept in `memo` and the three
+   * exhaustive positions of a march read it: the search still *asks* every score it asked (`scored` is
+   * unchanged), it only stops re-fighting the ones it has seen.
    */
   const score = (vector: Record<string, number>): number => {
-    const candidate = { ...held, ...vector };
-    // **Every unit of the pool, not only the ones being moved**: a stack pinned at its ceiling or its stock
-    // pays for the housing it occupies just the same, and counting only the slots let a vector spend the
-    // same dominance twice.
-    const used = { authority: 0, dominance: 0 };
-    for (const unit of request.units) {
-      if (unit.pool === 'leadership') continue;
-      used[unit.pool] += (candidate[unit.id] ?? 0) * unit.cost;
-    }
-    if (used.authority > request.housing.authority || used.dominance > request.housing.dominance) {
-      return Number.NEGATIVE_INFINITY;
-    }
-
-    const played = applyCounts(request, base, candidate);
-    const facts: RaiseFacts = {
-      damage: played.summary.minDamage,
-      get mercLost(): number {
-        return burnOf(base, candidate);
-      },
-      get hiredDamage(): number {
-        return worstDamageByPool(played.summary.journals.enemyFirst, played.result.stacks).authority;
-      },
-    };
-    return ranked(facts);
+    if (cap !== null && burnOf(base, { ...held, ...vector }) > cap) return Number.NEGATIVE_INFINITY;
+    if (memo === null) return fought(request, base, { ...held, ...vector }, rank);
+    const at = memo.index(vector);
+    const known = memo.get(at);
+    if (!Number.isNaN(known)) return known;
+    const value = fought(request, base, { ...held, ...vector }, rank);
+    memo.set(at, value);
+    return value;
   };
 
   const answer = exactSearch(slots, score, { start });
@@ -261,4 +251,81 @@ export function exactRaise(
   const counts: Record<string, number> = {};
   for (const slot of slots) counts[slot.id] = answer.counts[slot.id] ?? slot.from;
   return { counts, how: answer.how, space: answer.space, scored: answer.scored };
+}
+
+/**
+ * **One vector, fought**: the housing over every unit of the pool, then the replay, read through the rank —
+ * everything about a vector that does not depend on the position, which is what lets it be remembered.
+ */
+function fought(
+  request: StackRequest,
+  base: StackResult,
+  candidate: Record<string, number>,
+  rank: RaiseRank,
+): number {
+  // **Every unit of the pool, not only the ones being moved**: a stack pinned at its ceiling or its stock
+  // pays for the housing it occupies just the same, and counting only the slots let a vector spend the
+  // same dominance twice.
+  const used = { authority: 0, dominance: 0 };
+  for (const unit of request.units) {
+    if (unit.pool === 'leadership') continue;
+    used[unit.pool] += (candidate[unit.id] ?? 0) * unit.cost;
+  }
+  if (used.authority > request.housing.authority || used.dominance > request.housing.dominance) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const played = applyCounts(request, base, candidate);
+  return rank({
+    damage: played.summary.minDamage,
+    get mercLost(): number {
+      return burnOf(base, candidate);
+    },
+    get hiredDamage(): number {
+      return worstDamageByPool(played.summary.journals.enemyFirst, played.result.stacks).authority;
+    },
+  });
+}
+
+/** One march's memo, and what it was built for. */
+interface KeptMemo {
+  request: StackRequest;
+  rank: RaiseRank;
+  key: string;
+  memo: BoxMemo;
+}
+
+/**
+ * **The memos, one per base march** — the kernel keeps its own the same way, in the wasm instance it binds to
+ * one `StackResult` (`src/kernel/raise.ts`). A `StackResult` is never edited, so its identity is the march;
+ * the request, the rank and the box (the held vector and every slot's range) must match as well, or the memo
+ * is another search's.
+ */
+const memos = new WeakMap<StackResult, KeptMemo>();
+
+/**
+ * **The memo a search over this box reads and fills**, shared by every search of the same march over the
+ * same box — which is what `Best v2`, `Safe` and `Tight` are when the block under the plan prices them
+ * (`positionTrades`): the same held vector, the same slots, a different cap. `null` when the box is wider
+ * than `MEMO_CAP`.
+ */
+function memoFor(
+  request: StackRequest,
+  base: StackResult,
+  rank: RaiseRank,
+  held: Record<string, number>,
+  slots: readonly SearchSlot[],
+): BoxMemo | null {
+  const key = [
+    request.units.map((unit) => String(held[unit.id] ?? 0)).join(','),
+    slots.map((slot) => `${slot.id}:${String(slot.from)}:${String(slot.to)}`).join(','),
+  ].join('|');
+  const kept = memos.get(base);
+  if (kept !== undefined && kept.request === request && kept.rank === rank && kept.key === key) {
+    return kept.memo;
+  }
+  const memo = BoxMemo.create(slots);
+  if (memo === null) memos.delete(base);
+  else memos.set(base, { request, rank, key, memo });
+  return memo;
 }

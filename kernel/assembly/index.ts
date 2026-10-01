@@ -1675,6 +1675,24 @@ let rBest: f64 = 0; // the best score the search has found
 let rAuth: i32 = 0; // the mercenaries' position, and whether its pool is walked
 let rDom: i32 = 0; // the monsters'
 
+/**
+ * **The score memo** (W16 B, `BoxMemo` of `src/engine/exact.ts`): one `f64` a vector of the box, indexed by
+ * the vector read in mixed radix over the slots, `NaN` where no battle has been fought. It is the instance's,
+ * and an instance is one base march (`src/kernel/raise.ts`), so the three exhaustive positions of a march read
+ * the same memo — kept while the box is the same box (the held vector and every slot's range), cleared when it
+ * is not. A box wider than `MEMO_CAP` is searched without one.
+ */
+const MEMO_CAP: f64 = 4194304.0;
+let rMemoMem: usize = 0; // the region reserved for the memo, 0 until a box first needs one
+let rMemoRoom: f64 = 0; // how many entries that region holds
+let rMemo: usize = 0; // f64 × rMemoSize: what each vector fought for, `NaN` for one not yet fought; 0 when off
+let rMemoSize: f64 = 0; // the box the memo describes, 0 when it describes none
+let rMemoHeld: usize = 0; // f64 × types: the held vector the memo was filled under
+let rMemoFrom: usize = 0; // f64 × types: each slot's floor, as it was
+let rMemoTo: usize = 0; // f64 × types: each slot's ceiling, as it was
+let rMemoSlots: usize = 0; // i32 × types: the slots, as they were
+let rMemoN: i32 = -1; // how many there were
+
 /** Reserve the raise's scratch, once per instance. */
 function raiseAlloc(): void {
   if (rReady) return;
@@ -1695,6 +1713,45 @@ function raiseAlloc(): void {
   rSlots = heap.alloc(n << 2);
   rSlotOf = heap.alloc(n << 2);
   rOrder = heap.alloc(n << 2);
+  rMemoHeld = heap.alloc(n << 3);
+  rMemoFrom = heap.alloc(n << 3);
+  rMemoTo = heap.alloc(n << 3);
+  rMemoSlots = heap.alloc(n << 2);
+}
+
+/**
+ * **The memo this search reads** — the one already filled when the box is the box it was filled for, a
+ * cleared one otherwise, and none (`rMemo` 0) when the box is wider than `MEMO_CAP`. The region is reserved
+ * at the widest box the instance has met (the heap only grows), and a re-fill clears only what it uses.
+ */
+function raiseMemo(): void {
+  if (rSpace > MEMO_CAP) {
+    rMemo = 0;
+    rMemoSize = 0;
+    return;
+  }
+  let same = rMemo != 0 && rMemoSize == rSpace && rMemoN == rN;
+  for (let t = 0; same && t < types; t += 1) same = f64At(rMemoHeld, t) == f64At(rHeld, t);
+  for (let s = 0; same && s < rN; s += 1) {
+    const t = i32At(rSlots, s);
+    same =
+      i32At(rMemoSlots, s) == t && f64At(rMemoFrom, t) == f64At(rFrom, t) && f64At(rMemoTo, t) == f64At(rTo, t);
+  }
+  if (same) return;
+
+  if (rSpace > rMemoRoom) {
+    rMemoMem = heap.alloc((<usize>rSpace) << 3);
+    rMemoRoom = rSpace;
+  }
+  rMemo = rMemoMem;
+  const size = <i32>rSpace;
+  for (let i = 0; i < size; i += 1) store<f64>(rMemo + ((<usize>i) << 3), NaN);
+  rMemoSize = rSpace;
+  rMemoN = rN;
+  memory.copy(rMemoHeld, rHeld, (<usize>types) << 3);
+  memory.copy(rMemoFrom, rFrom, (<usize>types) << 3);
+  memory.copy(rMemoTo, rTo, (<usize>types) << 3);
+  memory.copy(rMemoSlots, rSlots, (<usize>rN) << 2);
 }
 
 @inline function countAt(at: usize, t: i32): f64 {
@@ -1926,15 +1983,30 @@ function raisePointScore(): f64 {
   // counted only the battles would report a different cost for the same search.
   rScored += 1.0;
   memory.copy(rWork, rHeld, (<usize>types) << 3);
+  let at: i32 = 0;
   for (let s = 0; s < rN; s += 1) {
     const t = i32At(rSlots, s);
-    store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
+    const n = f64At(rPoint, t);
+    store<f64>(rWork + ((<usize>t) << 3), n);
+    if (rMemo != 0) {
+      const from = f64At(rFrom, t);
+      at = at * <i32>(f64At(rTo, t) - from + 1.0) + <i32>(n - from);
+    }
   }
-  if (raiseUsed(rWork, 1) > header(H_HOUSING_AUTHORITY) || raiseUsed(rWork, 2) > header(H_HOUSING_DOMINANCE))
-    return -Infinity;
-  const damage = raiseScore(rWork);
+  // **The cap before the battle** (W16 B): the burn is arithmetic over the counts, so an over-budget vector
+  // is refused whatever it would strike for — the verdict the battle-first order gave, without the battle.
   if (rCap < Infinity && raiseBurn(rWork) > rCap) return -Infinity;
-  return damage;
+  // **And one battle a vector a march**: what a vector fights for does not depend on the position.
+  const slot = rMemo + ((<usize>at) << 3);
+  if (rMemo != 0) {
+    const known = load<f64>(slot);
+    if (known == known) return known;
+  }
+  let value: f64 = -Infinity;
+  if (!(raiseUsed(rWork, 1) > header(H_HOUSING_AUTHORITY) || raiseUsed(rWork, 2) > header(H_HOUSING_DOMINANCE)))
+    value = raiseScore(rWork);
+  if (rMemo != 0) store<f64>(slot, value);
+  return value;
 }
 
 /** One vector, taken as the best when it **strictly** improves (`exactSearch` takes improvements only). */
@@ -2203,6 +2275,7 @@ export function raise(
 
     if (rN > 0) {
       rScored = 0.0;
+      raiseMemo();
       answered = raiseSearch();
     }
   }

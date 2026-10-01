@@ -6,7 +6,9 @@
  *
  *  - every request **and its base march** is packed once (`packRequest`, with the raise's own tie-break
  *    column — `T.order`, the type's place in `base.stacks`), into a wasm instance of its own, because one
- *    `raise` over the widest box walks nearly a million vectors and nothing may allocate inside it;
+ *    `raise` over the widest box walks nearly a million vectors and nothing may allocate inside it — and
+ *    because the instance keeps the march's **score memo** (W16 B): `Best v2`, `Safe` and `Tight` asked of
+ *    the same march search the same box, and the second and third read the battles the first one fought;
  *  - the counts come back as a vector over the table's rows, which this file turns into the record the March
  *    reads (`counts`, by unit id) plus how the search found it (`how`, `space`, `scored`).
  *
@@ -151,6 +153,9 @@ export function createRaiseKernel(module: WebAssembly.Module): RaiseKernel {
         EXACT_DEFAULTS.seed,
       );
       if (answered !== 1) return null;
+      // **The memory may have grown under the views**: the first search over a wide box reserves its score
+      // memo (W16 B), and a grown memory is a new buffer.
+      views(bound);
       const how = bound.statsView[0] as number;
       const counts: Record<string, number> = {};
       for (let row = 0; row < bound.types; row += 1) {

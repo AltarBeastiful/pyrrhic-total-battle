@@ -105,6 +105,59 @@ export function boxSize(slots: readonly SearchSlot[]): number {
 }
 
 /**
+ * **The widest box a score memo is kept for** (W16 B): 2²² vectors, 32 MB of scores. The widest box the
+ * benchmark has is 908 684; a wider one is searched without a memo, which costs time and never an answer.
+ */
+export const MEMO_CAP = 4_194_304;
+
+/**
+ * **A score per vector of one box, asked once** (W16 B). The search re-asks the same vectors from every
+ * restart — on the owner's live camp of 2026-09-18 `Best v2` asked 5 977 076 scores for 207 386 distinct
+ * vectors (step A2, `docs/plans/refactor-speed.md`) — and the scorer is a pure function of the vector, so
+ * remembering what it answered cannot move an answer, only the clock.
+ *
+ * It is a dense table over the box, indexed by the vector read as a number in mixed radix (one digit a slot,
+ * `count − from`), with `NaN` for a vector not yet scored. It knows nothing about what a score means: the
+ * caller decides what it stores (the march stores the battle, and applies a position's cap before it reads).
+ * `null` from `create` when the box is wider than `MEMO_CAP` or has nothing to move.
+ */
+export class BoxMemo {
+  private readonly slots: readonly SearchSlot[];
+  private readonly values: Float64Array;
+
+  private constructor(slots: readonly SearchSlot[], size: number) {
+    this.slots = slots;
+    this.values = new Float64Array(size).fill(Number.NaN);
+  }
+
+  /** A memo over the movable slots of this box — the slots `exactSearch` itself searches. */
+  static create(slotsIn: readonly SearchSlot[]): BoxMemo | null {
+    const slots = slotsIn.filter((slot) => slot.to > slot.from);
+    const size = boxSize(slots);
+    if (slots.length === 0 || size > MEMO_CAP) return null;
+    return new BoxMemo(slots, size);
+  }
+
+  /** The vector's place in the table. */
+  index(vector: BoxVector): number {
+    let at = 0;
+    for (const slot of this.slots) {
+      at = at * (slot.to - slot.from + 1) + ((vector[slot.id] ?? slot.from) - slot.from);
+    }
+    return at;
+  }
+
+  /** What was stored at `at`, `NaN` when nothing was. */
+  get(at: number): number {
+    return this.values[at] as number;
+  }
+
+  set(at: number, value: number): void {
+    this.values[at] = value;
+  }
+}
+
+/**
  * Wrap a scorer so the call count is known. The count is what the answer cost, and it is the number every
  * budget in this file would be written in if there were one.
  */
