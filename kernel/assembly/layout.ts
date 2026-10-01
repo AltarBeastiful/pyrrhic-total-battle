@@ -37,6 +37,8 @@ export const T_FAMILY_REVIVED: i32 = 16;
 export const T_ELITE_RANK: i32 = 17;
 /** The raise's tie-break: the type's index in the base march's own stack order, −1 outside a raise. */
 export const T_ORDER: i32 = 18;
+/** The sizer's rank under a custom kill order, written by `sizeStacks` itself for the rows it sizes. */
+export const T_SIZER_RANK: i32 = 19;
 export const TYPE_STRIDE: i32 = 20;
 
 // Record

@@ -14,6 +14,10 @@
  *    of it, `T.eliteRank`), found by the request or by any bound request with the same units, totals, enemy
  *    and events, and packs the request itself when none is bound.
  *
+ * A custom kill order (`sizeStacks` ranks by `buildKillOrder` then) and a search recovery with training cost
+ * reductions (`march` and `ladders` bill with them; a training speed reaches no figure they report) are the
+ * kernel's too since W16 E3 port (`tests/kernel/ported-declines.test.ts`).
+ *
  * `march` and `bill` read a packed request (`packRequest`), one wasm instance per request, bound when
  * `effectiveTable` builds the entries the plan then passes around: an entry is known by identity, so a march
  * of entries from two tables, or from a table nothing bound, is answered `null` and the engine runs its own
@@ -22,6 +26,7 @@
 import type { UnitDef } from '../data/types';
 import type { LadderKernel, MarchFigures, PlanKernel, PoolSlot } from '../engine/fast';
 import { LADDER_ENGINE } from '../engine/fast';
+import { buildKillOrder } from '../engine/killOrder';
 import type { Effective } from '../engine/plan';
 import { effectiveTable } from '../engine/plan';
 import type { Bill, MarkerRates } from '../engine/rating';
@@ -57,7 +62,9 @@ interface PlanExports {
     spread: number,
     outRowsPtr: number,
     outCountsPtr: number,
+    ranksPtr: number,
   ): number;
+  setSearchReduction(ptr: number): void;
   sizePool(
     n: number,
     hpPtr: number,
@@ -231,11 +238,20 @@ interface Bound {
   counts: Float64Array;
   out: Float64Array;
   /** The sizer's scratch (`sizeStacks`): rows and caps in, rows and counts out, `types` each. */
-  sizerPtrs: { rows: number; caps: number; outRows: number; outCounts: number };
+  sizerPtrs: { rows: number; caps: number; outRows: number; outCounts: number; ranks: number };
   sizerRows: Int32Array;
   sizerCaps: Float64Array;
   sizerOutRows: Int32Array;
   sizerOutCounts: Float64Array;
+  /** The sizer's ranks under a custom kill order, one per slot (`sizeStacks`). */
+  sizerRanks: Float64Array;
+  /**
+   * The search recovery's reduction, one per row (`setSearchReduction`), and the `trainingCostReduction` map
+   * it was laid from — `null` while the instance bills with none (the pointer is 0).
+   */
+  reductionPtr: number;
+  reduction: Float64Array;
+  reductionOf: object | null;
   /** Row of each unit of `request.units`, by identity. */
   rowOfUnit: Map<UnitDef, number>;
   /** The ladders' scratch (step 4), reserved on the first `ladders` over this instance. */
@@ -255,12 +271,47 @@ function views(bound: Bound): void {
   bound.sizerCaps = new Float64Array(buffer, p.caps, n);
   bound.sizerOutRows = new Int32Array(buffer, p.outRows, n);
   bound.sizerOutCounts = new Float64Array(buffer, p.outCounts, n);
+  bound.sizerRanks = new Float64Array(buffer, p.ranks, n);
+  bound.reduction = new Float64Array(buffer, bound.reductionPtr, n);
+}
+
+/**
+ * Bill `bound`'s marches with `recovery`'s training cost reductions: each row's `1 − percent / 100`, exactly as
+ * `retrainOne` computes it, or none (the kernel's own `1`) when the map is empty. A training speed reaches no
+ * figure the march reports, and the temple divisor is passed with each call.
+ */
+function searchReduction(bound: Bound, recovery: RecoverySettings): void {
+  const map = recovery.trainingCostReduction;
+  if (bound.reductionOf === map) return;
+  if (isEmpty(map)) {
+    if (bound.reductionOf === null) return;
+    bound.reductionOf = null;
+    bound.raw.setSearchReduction(0);
+    return;
+  }
+  views(bound);
+  const into = bound.reduction;
+  bound.request.units.forEach((unit, row) => {
+    const group = unit.group;
+    into[row] = 1 - (group === undefined ? 0 : (map[group] ?? 0)) / 100;
+  });
+  bound.reductionOf = map;
+  bound.raw.setSearchReduction(bound.reductionPtr);
 }
 
 function sameTable(a: Float64Array, b: Float64Array): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) if (!Object.is(a[i], b[i])) return false;
   return true;
+}
+
+/**
+ * `enemySquadCount(request.enemy)` is a sum of whole squads: anything else is a caller's bug, not a request the
+ * TypeScript could answer instead.
+ */
+function checkEnemy(enemyStacks: number): void {
+  if (!Number.isInteger(enemyStacks) || enemyStacks < 0 || enemyStacks > 0x7fffffff)
+    throw new Error(`plan kernel: the enemy's squads must be a whole number, got ${String(enemyStacks)}`);
 }
 
 function isEmpty(map: object): boolean {
@@ -311,11 +362,16 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         caps: raw.alloc(8 * n),
         outRows: raw.alloc(4 * n),
         outCounts: raw.alloc(8 * n),
+        ranks: raw.alloc(8 * n),
       },
       sizerRows: new Int32Array(0),
       sizerCaps: new Float64Array(0),
       sizerOutRows: new Int32Array(0),
       sizerOutCounts: new Float64Array(0),
+      sizerRanks: new Float64Array(0),
+      reductionPtr: raw.alloc(8 * n),
+      reduction: new Float64Array(0),
+      reductionOf: null,
       rowOfUnit: new Map(request.units.map((unit, row) => [unit, row])),
       ladder: null,
     };
@@ -373,14 +429,13 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
 
     march(stacks, enemyStacks, recovery): MarchFigures | null {
       if (recovery !== searchRecovery) {
-        // The kernel bills `retrainOne` with no reduction and no speed: any other settings go to the engine.
-        if (!isEmpty(recovery.trainingCostReduction) || !isEmpty(recovery.trainingSpeed)) return null;
         searchRecovery = recovery;
         searchTemple = templeDivisor(recovery.templeLevel);
       }
-      if (!Number.isInteger(enemyStacks) || enemyStacks < 0 || enemyStacks > 0x7fffffff) return null;
+      checkEnemy(enemyStacks);
       const bound = lay(stacks);
       if (!bound) return null;
+      searchReduction(bound, recovery);
       bound.raw.march(stacks.length, bound.rowsPtr, bound.countsPtr, enemyStacks, searchTemple, bound.outPtr);
       const out = bound.out;
       return {
@@ -431,7 +486,6 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
     },
 
     sizeStacks(request, units, caps, options: StackingOptions) {
-      if (options.method === 'custom' && (options.customOrder?.length ?? 0) > 0) return null;
       const sameArmy = (held: Bound): boolean =>
         held.request.totals === request.totals &&
         held.request.enemy === request.enemy &&
@@ -463,6 +517,15 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         (options.monstersLast ? SIZER_FLAGS.monstersLast : 0) |
         (options.strictMercsAboveMonsters ? SIZER_FLAGS.strict : 0);
       const p = bound.sizerPtrs;
+      // A custom kill order ranks the slots by `buildKillOrder(units, options)` (`stacker.ts`'s `buildOrderIndex`
+      // over the sized units): the kernel takes each slot's place in it.
+      let ranksPtr = 0;
+      if (options.method === 'custom' && (options.customOrder?.length ?? 0) > 0) {
+        const place = new Map(buildKillOrder(units as UnitDef[], options).map((id, index) => [id, index]));
+        for (let i = 0; i < n; i += 1)
+          bound.sizerRanks[i] = place.get((units[i] as UnitDef).id) ?? Number.MAX_SAFE_INTEGER;
+        ranksPtr = p.ranks;
+      }
       const housing = request.housing;
       const k = bound.raw.sizeStacks(
         n,
@@ -475,6 +538,7 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         RANK_SPREAD,
         p.outRows,
         p.outCounts,
+        ranksPtr,
       );
       if (k < 0) return null;
       // Its first call reserves the sizer's scratch, which may have grown the memory: read through fresh views.
@@ -491,8 +555,7 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
     },
 
     ladders(troops, mercTypes, enemyStacks, recovery, powers, depths, growths): LadderKernel | null {
-      if (!isEmpty(recovery.trainingCostReduction) || !isEmpty(recovery.trainingSpeed)) return null;
-      if (!Number.isInteger(enemyStacks) || enemyStacks < 0 || enemyStacks > 0x7fffffff) return null;
+      checkEnemy(enemyStacks);
       const firstEntry = troops[0] ?? mercTypes[0];
       const first = firstEntry && rowOf.get(firstEntry);
       if (!first) return null;
@@ -500,8 +563,13 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
       const m = mercTypes.length;
       if (troops.length + m > bound.types || troops.length > POWER_COUNT || powers.length < POWER_COUNT)
         return null;
-      if (depths.length > GRID || growths.length > GRID) return null;
-      if (!depths.every((depth) => Number.isInteger(depth) && depth >= 1)) return null;
+      // The finale's grid is the engine's `DEPTHS` × `LADDER_GROWTHS`, constants that fit the kernel's scratch.
+      if (depths.length > GRID || growths.length > GRID)
+        throw new Error(
+          `plan kernel: a finale grid of ${String(depths.length)} × ${String(growths.length)} exceeds ${String(GRID)} × ${String(GRID)}`,
+        );
+      if (!depths.every((depth) => Number.isInteger(depth) && depth >= 1))
+        throw new Error(`plan kernel: finale depths must be integers of 1 or more, got ${depths.join(', ')}`);
       // Every entry one row of this instance, no row twice: a march then never fields more stacks than the
       // table has types, the bound the kernel's scratch is sized by.
       const mercRows = new Int32Array(m);
@@ -566,7 +634,11 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         out: new Float64Array(0),
         recovery: bound.request.recovery,
         shape(marches, depth, scale, order, gap, leadership, housing, budgetPerMarch) {
-          if (!Number.isInteger(depth) || depth < 1) return LADDER_ENGINE;
+          // The scorer asks the kernel for a depth of 1 or more only (a lower depth is the sizer's march).
+          if (!Number.isInteger(depth) || depth < 1)
+            throw new Error(
+              `plan kernel: a ladder shape needs an integer depth of 1 or more, got ${String(depth)}`,
+            );
           const rows = order === undefined ? ranking(depth) : rowsOfOrder(order);
           if (rows === null) return LADDER_ENGINE;
           activate();
@@ -659,8 +731,12 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         }
         return true;
       };
-      /** Fresh views, and this kernel's hired types, powers and grid in the instance's scratch. */
+      /**
+       * Fresh views, this kernel's hired types, powers and grid in the instance's scratch, and its recovery's
+       * reductions on the instance's march (`march` may have billed another one there since).
+       */
       const activate = (): void => {
+        searchReduction(bound, recovery);
         ladderViews(raw, scratch, bound.types);
         if (scratch.owner !== kernel) {
           scratch.owner = kernel;

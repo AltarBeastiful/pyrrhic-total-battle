@@ -85,6 +85,12 @@ export const T = {
    * only `killOrderBy(..., T_ORDER)` inside the kernel's raise section reads this.
    */
   order: 18,
+  /**
+   * **The sizer's rank under a custom kill order**: the type's place in `buildKillOrder(units, options)` of one
+   * `sizeStacks` call, written by the kernel's `sizeStacks` itself for the rows it sizes (from the ranks the
+   * caller passes) and read by nothing else. `packRequest` leaves it 0; a non-custom call ranks by `eliteRank`.
+   */
+  sizerRank: 19,
 } as const;
 export const TYPE_STRIDE = 20;
 

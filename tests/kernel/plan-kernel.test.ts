@@ -395,9 +395,14 @@ describe('the plan kernel', () => {
     // Out of `request.units`' order, or a unit it does not hold.
     if (units.length >= 2) expect(kernel.sizeStacks(request, [...units].reverse(), {}, options)).toBeNull();
     expect(kernel.sizeStacks(request, [{ ...(units[0] as UnitDef) }], {}, options)).toBeNull();
-    // A custom kill order.
+    // A custom kill order is the kernel's too (W16 E3 port; `./ported-declines.test.ts`).
     const custom = { ...options, method: 'custom' as const, customOrder: units.map((u) => u.id).reverse() };
-    expect(kernel.sizeStacks(request, units, {}, custom)).toBeNull();
+    expect(kernel.sizeStacks(request, units, {}, custom)).toStrictEqual(
+      sizeStacks({ ...request, units, caps: {}, options: custom }).stacks.map((stack) => ({
+        unitId: stack.unitId,
+        count: stack.count,
+      })),
+    );
   });
 
   it('keeps exactly the rows the n² scan keeps, in their order (undominatedRows, step 3)', () => {
@@ -448,12 +453,9 @@ describe('the plan kernel', () => {
     // A recovery that is not the bound request's.
     expect(kernel.bill(bound, { ...request.recovery })).toBeNull();
     expect(kernel.bill(bound, request.recovery)).not.toBeNull();
-    // A search recovery with a reduction.
+    // A search recovery with a reduction is the kernel's too (W16 E3 port; `./ported-declines.test.ts`).
     expect(
-      kernel.march(bound, 1, {
-        ...SEARCH_RECOVERY,
-        trainingCostReduction: { infantry: 5 },
-      } as RecoverySettings),
-    ).toBeNull();
+      kernel.march(bound, 1, { ...SEARCH_RECOVERY, trainingCostReduction: { guardsmen: 5 } }),
+    ).not.toBeNull();
   });
 });

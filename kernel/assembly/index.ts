@@ -51,6 +51,7 @@ import {
   T_FAMILY_REVIVED,
   T_ELITE_RANK,
   T_ORDER,
+  T_SIZER_RANK,
   T_HAS_TRAINING,
   T_HP,
   T_POOL,
@@ -103,6 +104,7 @@ export {
   T_FAMILY_REVIVED,
   T_ELITE_RANK,
   T_ORDER,
+  T_SIZER_RANK,
   T_HAS_TRAINING,
   T_HP,
   T_POOL,
@@ -391,8 +393,10 @@ export function battleMany(n: i32, countsPtr: usize, outPtr: usize): void {
  * `marchOf` sorts them (total HP descending, the rank breaking a tie, stable over the caller's order), so a tie
  * the rank does not break falls exactly where it falls in the engine. Writes, from `outPtr` (f64):
  * 0 `round(enemy-first damage)`, 1 `round(hired share of it)`, 2 the silver, 3 the gold, 4 the chunks of
- * mercenaries lost, 5 the army lines of that journal — the bill `retrainOne` makes under `SEARCH_RECOVERY`
- * (no reduction, no speed, temple divisor `searchTemple`).
+ * mercenaries lost, 5 the army lines of that journal — the bill `retrainOne` makes under the search's recovery:
+ * temple divisor `searchTemple`, and each row's training cost reduction from `setSearchReduction` (none —
+ * `SEARCH_RECOVERY`'s — until one is set). A training speed reaches none of these figures: it only divides
+ * the queue, which the march does not report.
  */
 export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, searchTemple: f64, outPtr: usize): void {
   const k = killOrder(n, rowsPtr, countsPtr);
@@ -442,8 +446,10 @@ export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, sear
     const count = f64At(stackCount, s);
     const pool = <i32>cell(type, T_POOL);
     const billed = pool == 0 ? count : chunks(count);
-    // `cost.silver = billed × training.silver × reduction`, the reduction `1 − 0 / 100`; 0 without training.
-    silver += cell(type, T_HAS_TRAINING) != 0 ? billed * cell(type, T_TRAINING_SILVER) * 1.0 : 0.0;
+    // `cost.silver = billed × training.silver × reduction`, the reduction `1 − percent / 100` of the search's
+    // recovery (`1 − 0 / 100` under `SEARCH_RECOVERY`); 0 without training.
+    const reduction: f64 = searchReduction == 0 ? 1.0 : f64At(searchReduction, type);
+    silver += cell(type, T_HAS_TRAINING) != 0 ? billed * cell(type, T_TRAINING_SILVER) * reduction : 0.0;
     if (pool != 0) {
       gold +=
         pool == 1 ? Math.ceil(((count - chunks(count)) * cell(type, T_REVIVAL_GOLD)) / searchTemple) : 0.0;
@@ -456,6 +462,17 @@ export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, sear
   store<f64>(outPtr + 24, gold);
   store<f64>(outPtr + 32, mercLost);
   store<f64>(outPtr + 40, hits);
+}
+
+/**
+ * The search recovery's training cost reduction, one f64 a row (`1 − trainingCostReduction[group] / 100`, as
+ * `retrainOne` computes it), that `march` bills its silver with; 0 for none (`SEARCH_RECOVERY`, every row 1).
+ * The request's own reductions are the table's (`T_REDUCTION`, `bill`): this is the yardstick the search
+ * prices a march at, which the engine may set apart from the account's.
+ */
+let searchReduction: usize = 0;
+export function setSearchReduction(ptr: usize): void {
+  searchReduction = ptr;
 }
 
 /**
@@ -666,6 +683,8 @@ let zCost: usize = 0; // f64
 let zCap: usize = 0; // f64
 let zCount: usize = 0; // f64
 let zSpread: f64 = 0;
+/** The rank slot the sizer orders by: `T_ELITE_RANK`, or `T_SIZER_RANK` under a custom kill order. */
+let zRankSlot: i32 = T_ELITE_RANK;
 let zAvg: f64 = 0;
 let zMin: f64 = 0;
 
@@ -708,7 +727,7 @@ function killOrderBy(n: i32, rowsPtr: usize, countsPtr: usize, rankSlot: i32): i
  * order (total HP descending, the Elite rank on a tie), the two journal totals — into `zAvg` and `zMin`.
  */
 function sizerScore(n: i32): void {
-  const k = killOrderBy(n, zRow, zCount, T_ELITE_RANK);
+  const k = killOrderBy(n, zRow, zCount, zRankSlot);
   attackOrderOf(k);
   const minimum = journalDamage(k, false);
   const maximum = journalDamage(k, true);
@@ -755,11 +774,14 @@ function usageOf(from: i32, to: i32): f64 {
  * **`sizeStacks(request).stacks`, the unit and the count of each** (`src/engine/stacker.ts`), on the `n` types of
  * `rowsPtr` (i32 rows of the bound table, `request.units` order) with their caps at `capsPtr` (f64,
  * `caps[id] ?? MAX_SAFE_INTEGER`), the three housings, the option bits `flags` (`F_*`) and `spread` the
- * engine's `RANK_SPREAD`. The slots are ranked by the table's Elite rank (`T_ELITE_RANK`), each pool sized by
- * `sizePool`, the ceilings, the tens and the relaxed-preservation walk exactly as the engine does them; the
- * stacks are written in `buildStacks`' order (total HP descending, the rank on a tie): row at `outRowsPtr`
- * (i32), count at `outCountsPtr` (f64). Answers the number of stacks, or −1 when it cannot answer the way the
- * engine would (a ceiling that is NaN, or a rank order whose pools are not contiguous).
+ * engine's `RANK_SPREAD`. The slots are ranked by the table's Elite rank (`T_ELITE_RANK`) or, under a custom
+ * kill order, by the ranks at `ranksPtr` (f64, one per type in `rowsPtr`'s order: its place in
+ * `buildKillOrder(units, options)`; 0 for none), which the sizer writes into `T_SIZER_RANK` of those rows;
+ * each pool is sized by `sizePool` in rank order (`byPool`: the slots stably grouped by pool, so a custom
+ * list that interleaves the pools sizes each pool in its own order), the ceilings, the tens and the
+ * relaxed-preservation walk exactly as the engine does them; the stacks are written in `buildStacks`' order
+ * (total HP descending, the rank on a tie): row at `outRowsPtr` (i32), count at `outCountsPtr` (f64).
+ * Answers the number of stacks, or −1 when it cannot answer the way the engine would (a NaN in a slot).
  */
 export function sizeStacks(
   n: i32,
@@ -772,6 +794,7 @@ export function sizeStacks(
   spread: f64,
   outRowsPtr: usize,
   outCountsPtr: usize,
+  ranksPtr: usize,
 ): i32 {
   if (zRow == 0) {
     const size = <usize>max(types, 1);
@@ -782,13 +805,28 @@ export function sizeStacks(
     zCount = heap.alloc(size << 3);
   }
   zSpread = spread;
-  // The slots, rank order (`slots.sort((a, b) => a.rank - b.rank)`): insertion by the Elite rank.
+  zRankSlot = T_ELITE_RANK;
+  if (ranksPtr != 0) {
+    zRankSlot = T_SIZER_RANK;
+    for (let i = 0; i < n; i += 1) {
+      const at = table + ((<usize>(HEADER_SIZE + i32At(rowsPtr, i) * TYPE_STRIDE + T_SIZER_RANK)) << 3);
+      store<f64>(at, f64At(ranksPtr, i));
+    }
+  }
+  const rankSlot = zRankSlot;
+  // The slots in rank order (`slots.sort((a, b) => a.rank - b.rank)`), then grouped by pool, keeping that
+  // order inside each (`byPool`): insertion by pool, then rank. The Elite rank's first key is the pool, so
+  // under it the grouping changes nothing; a custom list may interleave the pools.
   for (let i = 0; i < n; i += 1) {
     const row = i32At(rowsPtr, i);
     const cap = f64At(capsPtr, i);
-    const rank = cell(row, T_ELITE_RANK);
+    const rank = cell(row, rankSlot);
+    const pool = cell(row, T_POOL);
     let j = i - 1;
-    while (j >= 0 && cell(i32At(zRow, j), T_ELITE_RANK) > rank) {
+    while (j >= 0) {
+      const before = i32At(zRow, j);
+      const beforePool = cell(before, T_POOL);
+      if (!(beforePool > pool || (beforePool == pool && cell(before, rankSlot) > rank))) break;
       store<i32>(zRow + ((<usize>(j + 1)) << 2), i32At(zRow, j));
       store<f64>(zCap + ((<usize>(j + 1)) << 3), f64At(zCap, j));
       j -= 1;
@@ -796,15 +834,12 @@ export function sizeStacks(
     store<i32>(zRow + ((<usize>(j + 1)) << 2), row);
     store<f64>(zCap + ((<usize>(j + 1)) << 3), cap);
   }
-  // Pools in rank order are contiguous (the Elite key's first term is the pool): find the two boundaries.
+  // The pools are contiguous now: find the two boundaries.
   let endLeadership = 0;
   let endAuthority = 0;
-  let previous = 0;
   for (let i = 0; i < n; i += 1) {
     const row = i32At(zRow, i);
     const pool = <i32>cell(row, T_POOL);
-    if (pool < previous) return -1;
-    previous = pool;
     if (pool == 0) endLeadership = i + 1;
     if (pool <= 1) endAuthority = i + 1;
     const hp = cell(row, T_HP);
@@ -885,7 +920,7 @@ export function sizeStacks(
   }
 
   // `buildStacks`: the live slots, total HP descending, the rank on a tie.
-  const k = killOrderBy(n, zRow, zCount, T_ELITE_RANK);
+  const k = killOrderBy(n, zRow, zCount, rankSlot);
   for (let s = 0; s < k; s += 1) {
     store<i32>(outRowsPtr + ((<usize>s) << 2), i32At(stackType, s));
     store<f64>(outCountsPtr + ((<usize>s) << 3), f64At(stackCount, s));

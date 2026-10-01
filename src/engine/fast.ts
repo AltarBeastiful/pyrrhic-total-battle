@@ -162,7 +162,8 @@ export interface PlanKernel {
    * **What `sizeStacks` fields, and nothing it writes for a reader** (step 3): the unit and the count of every
    * stack of `sizeStacks({ ...request, units, caps, options }).stacks`, in that order, or `null` to let the
    * engine size it. `units` must be `request.units` filtered in order (the kernel ranks them by the Elite
-   * order of `request.units`); a custom kill order, or a request the kernel cannot pack, answers `null`.
+   * order of `request.units`, or by `buildKillOrder(units, options)` under a custom kill order); a request the
+   * kernel cannot pack answers `null`.
    * The pools, the drop reasons and the warnings are the engine's alone: a caller that reads them sizes with
    * `sizeStacks`.
    */
