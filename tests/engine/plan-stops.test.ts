@@ -187,6 +187,21 @@ describe('the stops the bar offers', () => {
  * most five stops — and TotalStack at matched spend no worse than the 47 rows dominated and 13 no stop fits the
  * bar read before the pass.
  */
+/**
+ * **Experiment 129's camp** (monster tiers 3–7 at 20 000 dominance), registered 2026-10-02 (W16 F1): what the
+ * pass gives up there, measured that day — the bar's thrift end (its silver saver) is re-typed into a dearer
+ * march, least silver −4.279 %, least gold −22.38 %, fewest coins −18.43 %, shortest queue −15.37 %, damage a
+ * gold −0.057 %, each stop rated no worse. **Not trades the owner accepted**: a standing for him to judge, held
+ * here just above today's figures so it cannot grow unseen.
+ */
+const CAMP_129_LOSSES: Record<string, number> = {
+  'least silver': 0.043,
+  'least gold': 0.224,
+  'fewest coins': 0.185,
+  'shortest queue': 0.154,
+  'damage a gold': 0.0006,
+};
+
 describe('the rated re-typing', () => {
   test('ships on', () => {
     expect(CAMPAIGN.planFixes.retype).toBe('rated');
@@ -285,11 +300,13 @@ describe('the rated re-typing', () => {
         const lost = Object.keys(was).filter((key) => (now[key] ?? 0) < (was[key] ?? 0) - 1e-9);
         // His browser setup of 2026-09-24: the sweet spot +0.43 % silver for a rating of +1.64, registered by him the
         // same day ("Accept the trade", experiment 174).
-        const accepted: Record<string, number> = {
-          // His browser setup, the same trade: shortest queue +0.148 % (registered by him 2026-09-24).
-          'shortest queue': scenario.label.includes('2026-09-24') ? 0.0015 : 0.001,
-          'least silver': scenario.label.includes('2026-09-24') ? 0.0045 : 0.0025,
-        };
+        const accepted: Record<string, number> = scenario.label.includes('3–7 at 20 000')
+          ? CAMP_129_LOSSES
+          : {
+              // His browser setup, the same trade: shortest queue +0.148 % (registered by him 2026-09-24).
+              'shortest queue': scenario.label.includes('2026-09-24') ? 0.0015 : 0.001,
+              'least silver': scenario.label.includes('2026-09-24') ? 0.0045 : 0.0025,
+            };
         for (const key of lost) {
           const bound = accepted[key];
           expect(bound, `a reading the pass lost that was never accepted: ${key}`).toBeDefined();

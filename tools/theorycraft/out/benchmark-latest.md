@@ -12,7 +12,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-10-01T18:38:33.249Z, commit (working tree)
+Run: 2026-10-02T00:52:33.982Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 
@@ -236,6 +236,37 @@ The plan offers 5 stops.
 **The six markers**, our best against theirs on each alone: damage ✓, silver ✗, burned ✗, gold ✗, dragonCoins ✗, seconds ✗.
 
 **Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.229** ✓, damage a hired soldier **1.525** ✓, damage a monster **2.375** ✓. All three are at or above the goal. And the fourth currency, where one is spent: **damage a dragon coin 1.516** ✓ — the monsters’ own price (S-102).
+
+## first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)
+
+The plan offers 5 stops.
+
+| sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Tier ladder · all types | 4 | 10 · 20,000 | 1,720,194,630 | 66,887,200 | 42,848 | 34 | 25.72 | 976,667 | 30 | 1,044 | 366,720 | 927,370 | 1,549,704 | 4,691 |
+| Tier ladder · Generate (average damage) | 4 | 3 · 20,000 | 2,804,986,074 | 106,136,000 | 1,150,176 | 34 | 26.43 | 278,349 | 30 | 200 | 334,240 | 270,583 | 13,785,828 | 8,392 |
+| Tier ladder · Generate (best worst case) | 4 | 2 · 20,000 | 3,349,313,919 | 103,460,000 | 399,712 | 34 | 32.37 | 417,524 | 30 | 244 | 345,440 | 405,874 | 13,351,610 | 9,696 |
+| Tier ladder · Generate (damage per silver) | 4 | **none** | 3,265,910,282 | 47,460,000 | 399,712 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
+| Tier ladder · Generate (damage per gold) | 4 | 2 · 20,000 | 1,268,850,628 | 88,110,400 | 8,640 | 0 | 14.40 | 0 | 0 | 1,060 | 356,320 | 0 | 1,182,191 | 3,561 |
+| Tier ladder · Generate (damage per dragon coin) | 4 | 2 · 20,000 | 3,349,313,919 | 103,460,000 | 399,712 | 34 | 32.37 | 417,524 | 30 | 244 | 345,440 | 405,874 | 13,351,610 | 9,696 |
+| Troops first · all types | 4 | 10 · 20,000 | 207,058,163 | 38,919,200 | 4,192 | 33 | 5.32 | 693,826 | 29 | 136 | 62,080 | 634,768 | 1,254,214 | 3,335 |
+| Troops first · Generate (average damage) | 4 | **none** | 2,760,551,141 | 50,136,000 | 1,150,176 | 34 | 55.06 | 139,175 | 30 | 200 | 334,240 | 135,291 | 13,782,462 | 8,259 |
+| Troops first · Generate (best worst case) | 4 | **none** | 3,265,910,282 | 47,460,000 | 399,712 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
+| Troops first · Generate (damage per silver) | 4 | **none** | 3,265,910,282 | 47,460,000 | 399,712 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
+| Troops first · Generate (damage per gold) | 4 | 3 · 20,000 | 768,551,272 | 65,593,600 | 2,752 | 0 | 11.72 | 0 | 0 | 564 | 189,280 | 0 | 1,332,862 | 4,060 |
+| Troops first · Generate (damage per dragon coin) | 4 | 10 · 20,000 | 37,003,229 | 32,712,800 | 10,848 | 33 | 1.13 | 418,401 | 29 | 8 | 2,080 | 406,470 | 892,350 | 17,790 |
+| Troops first · allow damage trades | 4 | 10 · 20,000 | 282,891,430 | 43,071,200 | 4,192 | 33 | 6.57 | 833,293 | 29 | 152 | 89,760 | 770,258 | 1,522,410 | 3,152 |
+| Tier ladder · monsters after troops | 4 | 10 · 20,000 | 202,818,501 | 38,919,200 | 4,256 | 34 | 5.21 | 509,173 | 30 | 136 | 62,080 | 427,463 | 1,256,373 | 3,267 |
+| Troops first · monsters after mercenaries | 4 | 10 · 20,000 | 111,509,009 | 36,239,200 | 5,888 | 33 | 3.08 | 418,401 | 29 | 94 | 38,400 | 406,470 | 868,559 | 2,904 |
+| Complete optimization · silver-saver | 4 | 2 · 10,604 | 758,014,640 | 46,561,600 | 12,512 | 16 | 16.28 | 716,694 | 12 | 328 | 164,480 | 805,992 | 2,255,821 | 4,609 |
+| Complete optimization · sweet-spot | 4 | 2 · 19,998 | 1,132,374,984 | 76,544,800 | 23,936 | 20 | 14.79 | 780,610 | 16 | 444 | 208,320 | 863,562 | 2,483,456 | 5,436 |
+| Complete optimization · more-mercs | 4 | 2 · 19,998 | 1,591,128,864 | 84,032,000 | 36,192 | 28 | 18.93 | 824,031 | 24 | 644 | 291,520 | 849,169 | 2,414,356 | 5,458 |
+| Complete optimization · steady-max | 4 | 2 · 20,000 | 1,704,237,793 | 82,375,400 | 39,672 | 32 | 20.69 | 831,119 | 28 | 698 | 304,440 | 829,636 | 2,385,130 | 5,598 |
+| Complete optimization · all-in | 4 | 2 · 20,000 | 1,924,929,114 | 88,360,000 | 48,544 | 34 | 21.79 | 835,048 | 30 | 740 | 336,480 | 811,748 | 2,546,660 | 5,721 |
+
+**Matched spend — not measured**: no comparable march from a calculator outside this repo on this army, so there is nothing to be better or worse than.
+
+No comparable `TotalStack · Total Optimization` row on this army, so the owner’s goal (*"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*) is not measured here.
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
 
@@ -754,28 +785,29 @@ Not asserted, and deliberately — a timing floor would be red on a slow machine
 
 | army | planner (median of 3) | cpu time | contended? | of its budget | bound? | search, all calls | a call | of its budget |
 |---|---|---|---|---|---|---|---|---|
-| first-run army, Bear V ×1 (20 000 leadership) | 11 ms | 22 ms | no | 0 % | no | 1,479 ms over 40 | 37 ms | 0 % |
-| first-run army, Bear V ×2 (20 000 leadership) | 17 ms | 34 ms | no | 0 % | no | 1,276 ms over 40 | 32 ms | 0 % |
-| first-run army, Bear V ×3 (20 000 leadership) | 11 ms | 35 ms | no | 0 % | no | 1,282 ms over 40 | 32 ms | 0 % |
-| first-run army, Bear V ×10 (20 000 leadership) | 21 ms | 63 ms | no | 0 % | no | 1,193 ms over 40 | 30 ms | 0 % |
-| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 42 ms | 104 ms | no | 0 % | no | 1,306 ms over 40 | 33 ms | 0 % |
-| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 494 ms | 712 ms | no | 1 % | no | 27,576 ms over 40 | 689 ms | 9 % |
-| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 85 ms | 170 ms | no | 0 % | no | 3,770 ms over 40 | 94 ms | 1 % |
-| 2026-09-17 export, its setup (7 000 leadership) | 150 ms | 315 ms | no | 0 % | no | 1,482 ms over 40 | 37 ms | 0 % |
-| 2026-09-17 export, 12 000 leadership | 152 ms | 233 ms | no | 0 % | no | 1,457 ms over 40 | 36 ms | 0 % |
-| live account of 2026-09-18 (one hired type, 20 000 leadership) | 32 ms | 46 ms | no | 0 % | no | 147 ms over 40 | 4 ms | 0 % |
-| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 125 ms | 233 ms | no | 0 % | no | 1,368 ms over 40 | 34 ms | 0 % |
-| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 83 ms | 159 ms | no | 0 % | no | 2,928 ms over 40 | 73 ms | 1 % |
-| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 80 ms | 111 ms | no | 0 % | no | 673 ms over 40 | 17 ms | 0 % |
-| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 36 ms | 49 ms | no | 0 % | no | 144 ms over 40 | 4 ms | 0 % |
-| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 33 ms | 36 ms | no | 0 % | no | 142 ms over 40 | 4 ms | 0 % |
-| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 178 ms | 438 ms | no | 0 % | no | 2,533 ms over 40 | 63 ms | 1 % |
-| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 210 ms | 357 ms | no | 1 % | no | 2,782 ms over 40 | 70 ms | 1 % |
-| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 198 ms | 305 ms | no | 0 % | no | 3,150 ms over 40 | 79 ms | 1 % |
+| first-run army, Bear V ×1 (20 000 leadership) | 39 ms | 62 ms | no | 0 % | no | 4,399 ms over 40 | 110 ms | 1 % |
+| first-run army, Bear V ×2 (20 000 leadership) | 57 ms | 55 ms | no | 0 % | no | 3,720 ms over 40 | 93 ms | 1 % |
+| first-run army, Bear V ×3 (20 000 leadership) | 63 ms | 54 ms | no | 0 % | no | 3,754 ms over 40 | 94 ms | 1 % |
+| first-run army, Bear V ×10 (20 000 leadership) | 137 ms | 199 ms | no | 0 % | no | 3,698 ms over 40 | 92 ms | 1 % |
+| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 221 ms | 341 ms | no | 1 % | no | 4,138 ms over 40 | 103 ms | 1 % |
+| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 730 ms | 897 ms | no | 2 % | no | 72,674 ms over 40 | 1,817 ms | 23 % |
+| first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) | 2,117 ms | 2,746 ms | no | 5 % | no | 113,208 ms over 40 | 2,830 ms | 35 % |
+| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 81 ms | 179 ms | no | 0 % | no | 3,799 ms over 40 | 95 ms | 1 % |
+| 2026-09-17 export, its setup (7 000 leadership) | 157 ms | 240 ms | no | 0 % | no | 1,403 ms over 40 | 35 ms | 0 % |
+| 2026-09-17 export, 12 000 leadership | 150 ms | 218 ms | no | 0 % | no | 1,351 ms over 40 | 34 ms | 0 % |
+| live account of 2026-09-18 (one hired type, 20 000 leadership) | 29 ms | 33 ms | no | 0 % | no | 140 ms over 40 | 4 ms | 0 % |
+| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 137 ms | 230 ms | no | 0 % | no | 1,325 ms over 40 | 33 ms | 0 % |
+| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 94 ms | 175 ms | no | 0 % | no | 2,777 ms over 40 | 69 ms | 1 % |
+| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 90 ms | 158 ms | no | 0 % | no | 669 ms over 40 | 17 ms | 0 % |
+| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 34 ms | 37 ms | no | 0 % | no | 136 ms over 40 | 3 ms | 0 % |
+| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 46 ms | 155 ms | no | 0 % | no | 144 ms over 40 | 4 ms | 0 % |
+| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 174 ms | 285 ms | no | 0 % | no | 2,547 ms over 40 | 64 ms | 1 % |
+| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 214 ms | 324 ms | no | 1 % | no | 2,409 ms over 40 | 60 ms | 1 % |
+| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 211 ms | 379 ms | no | 1 % | no | 2,923 ms over 40 | 73 ms | 1 % |
 
-**0 of 18** armies leave the planner budget-bound, and the priority search is bound on none of them either.
+**0 of 19** armies leave the planner budget-bound, and the priority search is bound on none of them either.
 
-**0 of 18** armies are flagged **contended** on this run — read their `planner` figures as an upper bound, not a clean measurement; the other armies’ wall and CPU time agree, which is what a single-file run against an otherwise idle machine looks like.
+**0 of 19** armies are flagged **contended** on this run — read their `planner` figures as an upper bound, not a clean measurement; the other armies’ wall and CPU time agree, which is what a single-file run against an otherwise idle machine looks like.
 
 **So on this table a speed-up buys latency and not answer quality**, and that is worth stating plainly because it is the opposite of what the engine felt like. The one army measured to fill its clock is the **20 000-dominance camp** (experiment 129: 40,843–40,934 ms against a 40,000 ms cap), and it is not a scenario here *precisely because* it does not converge — which is what W3 is for. Until W3 registers it, "faster means better answers" is a claim about **one army, and it is not on this table**.
 

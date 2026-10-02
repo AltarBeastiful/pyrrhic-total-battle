@@ -125,7 +125,8 @@ export interface PlanLimits {
 export const PLAN_LIMITS: Readonly<PlanLimits> = {
   crossedTypes: CROSSED_TYPES,
   climbSeeds: 8,
-  climbRounds: 16,
+  // 16 → 32 on 2026-10-02 (W16 F1, experiment 186 E): moves only the 20 000-dominance camp, registered with it.
+  climbRounds: 32,
   sweepRounds: 16,
   retypeShare: RETYPE_SHARE,
 };

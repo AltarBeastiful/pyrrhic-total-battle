@@ -357,7 +357,7 @@ describe('the golden capture (E3 S0)', () => {
   if (CAPTURE) {
     it('runs both paths, asserts them equal, and writes the goldens', () => {
       // plans.json
-      if (profile) expect(planScenarios.length).toBe(18);
+      if (profile) expect(planScenarios.length).toBe(19);
       const planTs = buildPlans(false);
       const planKernel = buildPlans(true);
       expect(planKernel).toStrictEqual(planTs);
@@ -405,7 +405,9 @@ describe('the golden capture (E3 S0)', () => {
     it('raise.json: the kernel alone answers every stop’s five positions', () => {
       const golden = readGolden<RaiseEntry[]>('raise.json');
       expect(buildRaise()).toStrictEqual(golden);
-    }, 60_000);
+      // 60 s → 300 s on 2026-10-02 (W16 F1): experiment 129's camp, five stops of twenty monster types, takes
+      // about 100 s of positions on its own.
+    }, 300_000);
 
     it('sizepool.json: the kernel alone answers the seeded pools', () => {
       const golden = readGolden<PoolTrial[]>('sizepool.json');

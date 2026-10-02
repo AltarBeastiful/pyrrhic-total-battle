@@ -162,8 +162,8 @@ function marches(request: StackRequest, table: Effective[], seed: number, total:
 }
 
 describe('the ported declines', () => {
-  it('runs over all 18 benchmark armies where the owner’s export is present', () => {
-    if (profile) expect(scenarios.length).toBe(18);
+  it('runs over all 19 benchmark armies where the owner’s export is present', () => {
+    if (profile) expect(scenarios.length).toBe(19);
   });
 
   describe.each(scenarios.map((s, i) => [i, s.label, s.request] as const))(
@@ -251,6 +251,7 @@ describe('the ported declines', () => {
         const powers = Array.from({ length: 64 }, (_unused, k) => 1.02 ** k);
         const random = mulberry32(0x1add + index);
         let shapes = 0;
+        const shelterHp = (request.housing.leadership * Math.min(...troops.map((entry) => entry.hp))) / 8;
         for (const [t, training] of TRAININGS.entries()) {
           const recovery = recoveryOf(training, t * 7);
           const lk = kernel.ladders(troops, mercTypes, enemy, recovery, powers, DEPTHS, LADDER_GROWTHS);
@@ -259,9 +260,15 @@ describe('the ported declines', () => {
           for (let trial = 0; trial < 24; trial += 1) {
             for (let i = 0; i < mercTypes.length; i += 1) {
               const entry = mercTypes[i] as Effective;
+              // A quarter of the pool a type, or its share where more than four types share it, and no more
+              // HP than an eighth of the leadership's weakest troops could shelter: experiment 129's camp
+              // (twenty dominance types, monster stacks of millions of HP) overfilled its pool and outgrew
+              // every troop rung on every trial otherwise, so no shape ever came back to compare.
+              const sharing = mercTypes.filter((other) => other.pool === entry.pool).length;
               const room = Math.min(
                 request.caps[entry.id] ?? 200,
-                request.housing[entry.pool] / Math.max(1, entry.cost) / 4,
+                request.housing[entry.pool] / Math.max(1, entry.cost) / Math.max(4, sharing),
+                shelterHp / Math.max(1, entry.hp),
               );
               const count = random() < 0.4 ? 0 : 1 + Math.floor(random() * Math.max(1, Math.min(200, room)));
               ladder.vector[i] = count;

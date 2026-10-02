@@ -41,8 +41,9 @@
  *  - a first-run army that has unlocked the **monster tiers** — 12 dominance types over tiers 3–5 against a
  *    900 dominance pool, experiment 110's camp (added 2026-09-19, S-96: the first scenario here with a pool
  *    other than leadership and authority in it, and the one that holds the plan to fielding and sheltering
- *    the monsters it can house). Its 20 000-dominance sibling is not here because its search does not
- *    finish inside `CAMPAIGN.budgets.plan` — see `monsterCamp` in `plan-scenarios.ts`;
+ *    the monsters it can house). Its 20 000-dominance sibling (tiers 3–7, experiment 129's) joined it on
+ *    2026-10-02 (W16 F1), once the kernel planned it in ≈2 s of the 40 s budget — see `monsterCamp` in
+ *    `plan-scenarios.ts`;
  *  - the 4 000-leadership case of 2026-09-15, the one case two other calculators answered;
  *  - **his three camps** (added 2026-09-19, S-101): the live camp of 2026-09-18 (arbalesters 485,
  *    legionaries 1 002, bears unlimited) and his camp of 2026-09-19 at both readings of the Battle card
@@ -692,8 +693,9 @@ describe.skipIf(!existsSync(OWNER_EXPORT))('the same, on the owner’s account',
  * is red and the owner registers it if the trade is one he wants.
  */
 // 17 → 18 on 2026-09-24 (experiment 174): his browser setup of that day, which carries no captured row and so
-// no matched-spend reading — the two floors below count the same seventeen armies.
-const ARMIES_MEASURED = 18;
+// no matched-spend reading — the two floors below count the same seventeen armies. 18 → 19 on 2026-10-02 (W16
+// F1): experiment 129's 20 000-dominance camp, no captured row either, so the same seventeen again.
+const ARMIES_MEASURED = 19;
 /**
  * **Armies where our best stop beats their best comparable march on that marker alone** — measured on the
  * payload of 2026-09-22, never taken from the plan's prose.

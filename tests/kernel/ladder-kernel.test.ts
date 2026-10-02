@@ -134,8 +134,8 @@ const newLog = (): RungOrderLog => ({
 });
 
 describe('the scorer’s ladders on the kernel', () => {
-  it('runs over all 18 benchmark armies where the owner’s export is present', () => {
-    if (profile) expect(scenarios.length).toBe(18);
+  it('runs over all 19 benchmark armies where the owner’s export is present', () => {
+    if (profile) expect(scenarios.length).toBe(19);
   });
 
   describe.each(scenarios.map((s, i) => [i, s.label, s.request] as const))(

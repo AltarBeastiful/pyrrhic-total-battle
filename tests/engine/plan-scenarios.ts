@@ -201,8 +201,8 @@ function firstRun(hired: { id: string; cap: number }, leadership: number): Stack
  * holds a dominance unit at all — the benchmark's ten armies are mercenaries and troops — so nothing in this
  * file exercised the monster pool before it.
  *
- * **Experiment 110's other monster camp — tiers 3–7 at 20 000 dominance — is deliberately *not* registered
- * here, and the reason is a finding of its own.** It is the larger picture (20 monster types, four stops, all
+ * **Experiment 110's other monster camp — tiers 3–7 at 20 000 dominance — was left out until 2026-10-02**
+ * (W16 F1, `TWENTY_THOUSAND_CAMP_PINS`: the kernel plans it in ≈2 s, so the paragraph below is history). It is the larger picture (20 monster types, four stops, all
  * twenty fielded and sheltered on each of them), but its search **does not finish inside the app's own plan
  * budget**: `CAMPAIGN.budgets.plan` is 25 000 ms and that camp's search ran **25 846 to 28 009 ms** in every
  * run measured on 2026-09-19 — alone and inside this suite alike — so it is always cut off and the bar it
@@ -230,18 +230,18 @@ function firstRun(hired: { id: string; cap: number }, leadership: number): Stack
  * shape of the finding is that the page fills the pool to the unit at either size, which is the one thing
  * the 900 camp below already shows against a bar that finishes.
  */
-function monsterCamp(): StackRequest {
+function monsterCamp(max = 5, dominance = 900): StackRequest {
   const profile = newProfile('first run');
   profile.mercenaries.selected = [
     { id: 'epic-monster-hunter-6', cap: 83 },
     { id: 'bear-5', cap: 6 },
   ];
-  profile.troops.monsters = { min: 3, max: 5 };
+  profile.troops.monsters = { min: 3, max };
   const setup = profile.setups[0];
   if (!setup) throw new Error('no setup');
   return buildStackRequest(profile, {
     ...setup,
-    housing: { leadership: 20_000, authority: 2_180, dominance: 900 },
+    housing: { leadership: 20_000, authority: 2_180, dominance },
   });
 }
 
@@ -747,6 +747,36 @@ export function ownerScenarios(profile: Profile): Scenario[] {
 }
 
 /** The cases that need no export: a first-run army with one hired type, and the 4 000 case two calculators answered. */
+/**
+ * **Experiment 129's camp — monster tiers 3–7 at 20 000 dominance — registered 2026-10-02 (W16 F1)**, the
+ * owner: *"register the 20 000 camp too"*. The reason the docstring of `monsterCamp` gave for leaving it out —
+ * its search never finished inside the plan's clock — is gone: on the kernel it plans in **≈1.9 s** of the 40 s
+ * budget (E5, experiment 186 B), so its bar is the engine's answer and not the clock's. It is registered with
+ * `PLAN_LIMITS.climbRounds` 32 (16 before), the one lever E5 found to move it and the only army it moves:
+ * five stops where 16 rounds offered four, the steady max 881 449 780 → 1 704 237 793.
+ *
+ * **Measured, never aspirational** (the rule `Pinned` states), and what it measures is a gap: the bar is
+ * far behind the Battle card's Generate rows on this camp. The plan's hardest campaign, the all-in's
+ * 1 924 929 114 for 88 360 000 silver, is **0.686** of the best sizer sequence (Tier ladder · Generate, best
+ * worst case, 3 349 313 919 for 103 460 000) and its best a silver (21.79) **0.396** of theirs (68.81, the
+ * damage-per-silver Generate rows at 47 460 000 silver) — the Generate searches field 200–244 monster units
+ * that hit far harder than the 328–740 the plan trains. Its best a hired (835 048) is behind Tier ladder ·
+ * all types (976 667), and a sizer sequence is at least the sweet spot on both ratios. So the floors sit just
+ * under today's figures: a non-regression line on the one army that fills twenty uncapped types, and a
+ * standing for the search to close. No calculator outside this repo answered tiers 3–7 (TotalStack's
+ * captures of 2026-09-19 are tiers 3–5 and 3–9 at 20 000), so there are no external rows or floors.
+ */
+const TWENTY_THOUSAND_CAMP_PINS: Pinned = {
+  refuses: false,
+  stops: 5,
+  sweetNotAheadOnEither: true,
+  // 0.6862 measured (1 924 929 114 / 3 349 313 919).
+  damageFloor: 0.68,
+  winsHired: false,
+  // 0.3956 measured (21.79 / 68.81): far under the file's ordinary 95 %, for the reason above.
+  silverFloor: 0.39,
+};
+
 export function commonScenarios(): Scenario[] {
   return [
     {
@@ -1171,6 +1201,13 @@ export function commonScenarios(): Scenario[] {
         // Only the delta is pinned, and only where a stop fits — `Pinned.matched` says why.
         matched: { fits: false },
       },
+    },
+    {
+      label:
+        'first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)',
+      request: monsterCamp(7, 20_000),
+      externals: [],
+      pinned: TWENTY_THOUSAND_CAMP_PINS,
     },
     fourThousand(),
   ];
