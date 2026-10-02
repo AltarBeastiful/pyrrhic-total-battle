@@ -25,7 +25,7 @@ import { requiredPlanKernel } from './fast';
 import type { StackRequest } from './types';
 
 /** Up to this many assignments are tried one by one; above it, the swap/replace climb. */
-export const EXHAUSTIVE = 5_000;
+export const EXHAUSTIVE = 10_000;
 /** The climb's step cap (157's). */
 export const CLIMB_STEPS = 60;
 

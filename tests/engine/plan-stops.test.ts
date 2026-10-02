@@ -304,7 +304,15 @@ describe('the rated re-typing', () => {
           ? CAMP_129_LOSSES
           : {
               // His browser setup, the same trade: shortest queue +0.148 % (registered by him 2026-09-24).
-              'shortest queue': scenario.label.includes('2026-09-24') ? 0.0015 : 0.001,
+              // owner accepted 2026-10-02, retype 10 000 (W16 F1): shortest queue −0.536 % on his live camp of
+              // 2026-09-18, −0.199 % on the localStorage camp.
+              'shortest queue': scenario.label.startsWith('the owner’s live camp of 2026-09-18')
+                ? 0.00536
+                : scenario.label.includes('the localStorage dump')
+                  ? 0.00199
+                  : scenario.label.includes('2026-09-24')
+                    ? 0.0015
+                    : 0.001,
               'least silver': scenario.label.includes('2026-09-24') ? 0.0045 : 0.0025,
             };
         for (const key of lost) {

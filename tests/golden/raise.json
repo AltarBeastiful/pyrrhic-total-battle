@@ -4101,14 +4101,14 @@
     "rows": [
       {
         "counts": {
-          "archer-1": 2257,
-          "archer-2": 1158,
+          "archer-1": 2085,
+          "archer-2": 1112,
           "epic-monster-hunter-6": 40,
-          "rider-1": 903,
-          "rider-2": 454,
+          "rider-1": 886,
+          "rider-2": 502,
           "rider-3": 260,
-          "spearman-1": 1690,
-          "spearman-2": 959
+          "spearman-1": 1794,
+          "spearman-2": 940
         },
         "how": null,
         "mode": "tens",
@@ -4117,14 +4117,14 @@
       },
       {
         "counts": {
-          "archer-1": 2257,
-          "archer-2": 1158,
+          "archer-1": 2085,
+          "archer-2": 1112,
           "epic-monster-hunter-6": 49,
-          "rider-1": 903,
-          "rider-2": 454,
+          "rider-1": 886,
+          "rider-2": 502,
           "rider-3": 260,
-          "spearman-1": 1690,
-          "spearman-2": 959
+          "spearman-1": 1794,
+          "spearman-2": 940
         },
         "how": null,
         "mode": "most",
@@ -4133,14 +4133,14 @@
       },
       {
         "counts": {
-          "archer-1": 2257,
-          "archer-2": 1158,
+          "archer-1": 2085,
+          "archer-2": 1112,
           "epic-monster-hunter-6": 49,
-          "rider-1": 903,
-          "rider-2": 454,
+          "rider-1": 886,
+          "rider-2": 502,
           "rider-3": 260,
-          "spearman-1": 1690,
-          "spearman-2": 959
+          "spearman-1": 1794,
+          "spearman-2": 940
         },
         "how": "walked",
         "mode": "v2",
@@ -4149,14 +4149,14 @@
       },
       {
         "counts": {
-          "archer-1": 2257,
-          "archer-2": 1158,
+          "archer-1": 2085,
+          "archer-2": 1112,
           "epic-monster-hunter-6": 49,
-          "rider-1": 903,
-          "rider-2": 454,
+          "rider-1": 886,
+          "rider-2": 502,
           "rider-3": 260,
-          "spearman-1": 1690,
-          "spearman-2": 959
+          "spearman-1": 1794,
+          "spearman-2": 940
         },
         "how": "walked",
         "mode": "safe",
@@ -4165,14 +4165,14 @@
       },
       {
         "counts": {
-          "archer-1": 2257,
-          "archer-2": 1158,
+          "archer-1": 2085,
+          "archer-2": 1112,
           "epic-monster-hunter-6": 40,
-          "rider-1": 903,
-          "rider-2": 454,
+          "rider-1": 886,
+          "rider-2": 502,
           "rider-3": 260,
-          "spearman-1": 1690,
-          "spearman-2": 959
+          "spearman-1": 1794,
+          "spearman-2": 940
         },
         "how": "walked",
         "mode": "tight",
@@ -4187,14 +4187,14 @@
     "rows": [
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 80,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "tens",
@@ -4203,14 +4203,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "most",
@@ -4219,14 +4219,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": "walked",
         "mode": "v2",
@@ -4235,14 +4235,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": "walked",
         "mode": "safe",
@@ -4251,14 +4251,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 60,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": "walked",
         "mode": "tight",
@@ -4273,14 +4273,14 @@
     "rows": [
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 80,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "tens",
@@ -4289,14 +4289,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "most",
@@ -4305,14 +4305,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": "walked",
         "mode": "v2",
@@ -4321,14 +4321,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": "walked",
         "mode": "safe",
@@ -4337,14 +4337,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 70,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": "walked",
         "mode": "tight",
@@ -4359,14 +4359,14 @@
     "rows": [
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "tens",
@@ -4375,14 +4375,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "most",
@@ -4391,14 +4391,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "v2",
@@ -4407,14 +4407,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "safe",
@@ -4423,14 +4423,14 @@
       },
       {
         "counts": {
-          "archer-1": 4843,
-          "archer-2": 2485,
+          "archer-1": 4473,
+          "archer-2": 2388,
           "epic-monster-hunter-6": 83,
-          "rider-1": 1938,
-          "rider-2": 975,
+          "rider-1": 1900,
+          "rider-2": 1078,
           "rider-3": 559,
-          "spearman-1": 3626,
-          "spearman-2": 2057
+          "spearman-1": 3849,
+          "spearman-2": 2017
         },
         "how": null,
         "mode": "tight",
@@ -4446,16 +4446,16 @@
       {
         "counts": {
           "arbalester-6": 50,
-          "archer-1": 2306,
-          "archer-2": 1183,
+          "archer-1": 2130,
+          "archer-2": 1137,
           "chariot-6": 10,
           "epic-monster-hunter-6": 50,
           "legionary-6": 40,
           "rider-1": 905,
-          "rider-2": 464,
+          "rider-2": 513,
           "rider-3": 266,
-          "spearman-1": 1727,
-          "spearman-2": 1000
+          "spearman-1": 1833,
+          "spearman-2": 961
         },
         "how": null,
         "mode": "tens",
@@ -4465,16 +4465,16 @@
       {
         "counts": {
           "arbalester-6": 53,
-          "archer-1": 2306,
-          "archer-2": 1183,
+          "archer-1": 2130,
+          "archer-2": 1137,
           "chariot-6": 10,
           "epic-monster-hunter-6": 51,
           "legionary-6": 42,
           "rider-1": 905,
-          "rider-2": 464,
+          "rider-2": 513,
           "rider-3": 266,
-          "spearman-1": 1727,
-          "spearman-2": 1000
+          "spearman-1": 1833,
+          "spearman-2": 961
         },
         "how": null,
         "mode": "most",
@@ -4483,17 +4483,17 @@
       },
       {
         "counts": {
-          "arbalester-6": 52,
-          "archer-1": 2306,
-          "archer-2": 1183,
+          "arbalester-6": 53,
+          "archer-1": 2130,
+          "archer-2": 1137,
           "chariot-6": 10,
           "epic-monster-hunter-6": 49,
           "legionary-6": 42,
           "rider-1": 905,
-          "rider-2": 464,
+          "rider-2": 513,
           "rider-3": 266,
-          "spearman-1": 1727,
-          "spearman-2": 1000
+          "spearman-1": 1833,
+          "spearman-2": 961
         },
         "how": "walked",
         "mode": "v2",
@@ -4502,17 +4502,17 @@
       },
       {
         "counts": {
-          "arbalester-6": 52,
-          "archer-1": 2306,
-          "archer-2": 1183,
+          "arbalester-6": 53,
+          "archer-1": 2130,
+          "archer-2": 1137,
           "chariot-6": 10,
           "epic-monster-hunter-6": 49,
           "legionary-6": 42,
           "rider-1": 905,
-          "rider-2": 464,
+          "rider-2": 513,
           "rider-3": 266,
-          "spearman-1": 1727,
-          "spearman-2": 1000
+          "spearman-1": 1833,
+          "spearman-2": 961
         },
         "how": "walked",
         "mode": "safe",
@@ -4522,16 +4522,16 @@
       {
         "counts": {
           "arbalester-6": 10,
-          "archer-1": 2306,
-          "archer-2": 1183,
+          "archer-1": 2130,
+          "archer-2": 1137,
           "chariot-6": 10,
           "epic-monster-hunter-6": 10,
           "legionary-6": 10,
           "rider-1": 905,
-          "rider-2": 464,
+          "rider-2": 513,
           "rider-3": 266,
-          "spearman-1": 1727,
-          "spearman-2": 1000
+          "spearman-1": 1833,
+          "spearman-2": 961
         },
         "how": "walked",
         "mode": "tight",
@@ -4648,16 +4648,16 @@
       {
         "counts": {
           "arbalester-6": 60,
-          "archer-1": 2668,
-          "archer-2": 1369,
+          "archer-1": 2465,
+          "archer-2": 1316,
           "chariot-6": 10,
           "epic-monster-hunter-6": 50,
           "legionary-6": 40,
-          "rider-1": 1067,
-          "rider-2": 537,
+          "rider-1": 1047,
+          "rider-2": 594,
           "rider-3": 308,
-          "spearman-1": 1998,
-          "spearman-2": 1133
+          "spearman-1": 2121,
+          "spearman-2": 1112
         },
         "how": null,
         "mode": "tens",
@@ -4667,16 +4667,16 @@
       {
         "counts": {
           "arbalester-6": 60,
-          "archer-1": 2668,
-          "archer-2": 1369,
+          "archer-1": 2465,
+          "archer-2": 1316,
           "chariot-6": 10,
           "epic-monster-hunter-6": 59,
           "legionary-6": 49,
-          "rider-1": 1067,
-          "rider-2": 537,
+          "rider-1": 1047,
+          "rider-2": 594,
           "rider-3": 308,
-          "spearman-1": 1998,
-          "spearman-2": 1133
+          "spearman-1": 2121,
+          "spearman-2": 1112
         },
         "how": null,
         "mode": "most",
@@ -4686,16 +4686,16 @@
       {
         "counts": {
           "arbalester-6": 60,
-          "archer-1": 2668,
-          "archer-2": 1369,
+          "archer-1": 2465,
+          "archer-2": 1316,
           "chariot-6": 10,
           "epic-monster-hunter-6": 56,
-          "legionary-6": 48,
-          "rider-1": 1067,
-          "rider-2": 537,
+          "legionary-6": 49,
+          "rider-1": 1047,
+          "rider-2": 594,
           "rider-3": 308,
-          "spearman-1": 1998,
-          "spearman-2": 1133
+          "spearman-1": 2121,
+          "spearman-2": 1112
         },
         "how": "walked",
         "mode": "v2",
@@ -4705,16 +4705,16 @@
       {
         "counts": {
           "arbalester-6": 60,
-          "archer-1": 2668,
-          "archer-2": 1369,
+          "archer-1": 2465,
+          "archer-2": 1316,
           "chariot-6": 10,
           "epic-monster-hunter-6": 56,
-          "legionary-6": 48,
-          "rider-1": 1067,
-          "rider-2": 537,
+          "legionary-6": 49,
+          "rider-1": 1047,
+          "rider-2": 594,
           "rider-3": 308,
-          "spearman-1": 1998,
-          "spearman-2": 1133
+          "spearman-1": 2121,
+          "spearman-2": 1112
         },
         "how": "walked",
         "mode": "safe",
@@ -4724,16 +4724,16 @@
       {
         "counts": {
           "arbalester-6": 40,
-          "archer-1": 2668,
-          "archer-2": 1369,
+          "archer-1": 2465,
+          "archer-2": 1316,
           "chariot-6": 10,
           "epic-monster-hunter-6": 47,
           "legionary-6": 40,
-          "rider-1": 1067,
-          "rider-2": 537,
+          "rider-1": 1047,
+          "rider-2": 594,
           "rider-3": 308,
-          "spearman-1": 1998,
-          "spearman-2": 1133
+          "spearman-1": 2121,
+          "spearman-2": 1112
         },
         "how": "walked",
         "mode": "tight",
@@ -5375,14 +5375,14 @@
       {
         "counts": {
           "arbalester-6": 20,
-          "archer-1": 1107,
-          "archer-2": 568,
+          "archer-1": 1023,
+          "archer-2": 547,
           "bear-5": 2,
           "legionary-6": 20,
-          "rider-1": 443,
-          "rider-2": 226,
-          "rider-3": 126,
-          "spearman-1": 846,
+          "rider-1": 435,
+          "rider-2": 247,
+          "rider-3": 127,
+          "spearman-1": 880,
           "spearman-2": 462
         },
         "how": null,
@@ -5392,15 +5392,15 @@
       },
       {
         "counts": {
-          "arbalester-6": 26,
-          "archer-1": 1107,
-          "archer-2": 568,
+          "arbalester-6": 25,
+          "archer-1": 1023,
+          "archer-2": 547,
           "bear-5": 2,
           "legionary-6": 20,
-          "rider-1": 443,
-          "rider-2": 226,
-          "rider-3": 126,
-          "spearman-1": 846,
+          "rider-1": 435,
+          "rider-2": 247,
+          "rider-3": 127,
+          "spearman-1": 880,
           "spearman-2": 462
         },
         "how": null,
@@ -5411,56 +5411,56 @@
       {
         "counts": {
           "arbalester-6": 20,
-          "archer-1": 1107,
-          "archer-2": 568,
+          "archer-1": 1023,
+          "archer-2": 547,
           "bear-5": 2,
-          "legionary-6": 20,
-          "rider-1": 443,
-          "rider-2": 226,
-          "rider-3": 126,
-          "spearman-1": 846,
+          "legionary-6": 18,
+          "rider-1": 435,
+          "rider-2": 247,
+          "rider-3": 127,
+          "spearman-1": 880,
           "spearman-2": 462
         },
         "how": "walked",
         "mode": "v2",
-        "scored": 188,
-        "space": 187
+        "scored": 177,
+        "space": 176
       },
       {
         "counts": {
           "arbalester-6": 20,
-          "archer-1": 1107,
-          "archer-2": 568,
+          "archer-1": 1023,
+          "archer-2": 547,
           "bear-5": 2,
-          "legionary-6": 20,
-          "rider-1": 443,
-          "rider-2": 226,
-          "rider-3": 126,
-          "spearman-1": 846,
+          "legionary-6": 18,
+          "rider-1": 435,
+          "rider-2": 247,
+          "rider-3": 127,
+          "spearman-1": 880,
           "spearman-2": 462
         },
         "how": "walked",
         "mode": "safe",
-        "scored": 188,
-        "space": 187
+        "scored": 177,
+        "space": 176
       },
       {
         "counts": {
           "arbalester-6": 10,
-          "archer-1": 1107,
-          "archer-2": 568,
+          "archer-1": 1023,
+          "archer-2": 547,
           "bear-5": 2,
           "legionary-6": 10,
-          "rider-1": 443,
-          "rider-2": 226,
-          "rider-3": 126,
-          "spearman-1": 846,
+          "rider-1": 435,
+          "rider-2": 247,
+          "rider-3": 127,
+          "spearman-1": 880,
           "spearman-2": 462
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 188,
-        "space": 187
+        "scored": 177,
+        "space": 176
       }
     ],
     "stop": "burn-saver"
@@ -5854,14 +5854,14 @@
     "rows": [
       {
         "counts": {
-          "archer-1": 1208,
-          "archer-2": 620,
+          "archer-1": 1116,
+          "archer-2": 596,
           "epic-monster-hunter-6": 20,
           "rider-1": 475,
-          "rider-2": 248,
-          "rider-3": 137,
-          "spearman-1": 904,
-          "spearman-2": 523
+          "rider-2": 269,
+          "rider-3": 139,
+          "spearman-1": 960,
+          "spearman-2": 503
         },
         "how": null,
         "mode": "tens",
@@ -5870,14 +5870,14 @@
       },
       {
         "counts": {
-          "archer-1": 1208,
-          "archer-2": 620,
+          "archer-1": 1116,
+          "archer-2": 596,
           "epic-monster-hunter-6": 26,
           "rider-1": 475,
-          "rider-2": 248,
-          "rider-3": 137,
-          "spearman-1": 904,
-          "spearman-2": 523
+          "rider-2": 269,
+          "rider-3": 139,
+          "spearman-1": 960,
+          "spearman-2": 503
         },
         "how": null,
         "mode": "most",
@@ -5886,14 +5886,14 @@
       },
       {
         "counts": {
-          "archer-1": 1208,
-          "archer-2": 620,
+          "archer-1": 1116,
+          "archer-2": 596,
           "epic-monster-hunter-6": 26,
           "rider-1": 475,
-          "rider-2": 248,
-          "rider-3": 137,
-          "spearman-1": 904,
-          "spearman-2": 523
+          "rider-2": 269,
+          "rider-3": 139,
+          "spearman-1": 960,
+          "spearman-2": 503
         },
         "how": "walked",
         "mode": "v2",
@@ -5902,14 +5902,14 @@
       },
       {
         "counts": {
-          "archer-1": 1208,
-          "archer-2": 620,
+          "archer-1": 1116,
+          "archer-2": 596,
           "epic-monster-hunter-6": 26,
           "rider-1": 475,
-          "rider-2": 248,
-          "rider-3": 137,
-          "spearman-1": 904,
-          "spearman-2": 523
+          "rider-2": 269,
+          "rider-3": 139,
+          "spearman-1": 960,
+          "spearman-2": 503
         },
         "how": "walked",
         "mode": "safe",
@@ -5918,14 +5918,14 @@
       },
       {
         "counts": {
-          "archer-1": 1208,
-          "archer-2": 620,
+          "archer-1": 1116,
+          "archer-2": 596,
           "epic-monster-hunter-6": 10,
           "rider-1": 475,
-          "rider-2": 248,
-          "rider-3": 137,
-          "spearman-1": 904,
-          "spearman-2": 523
+          "rider-2": 269,
+          "rider-3": 139,
+          "spearman-1": 960,
+          "spearman-2": 503
         },
         "how": "walked",
         "mode": "tight",
@@ -6370,14 +6370,14 @@
     "rows": [
       {
         "counts": {
-          "archer-1": 1128,
-          "archer-2": 579,
+          "archer-1": 1043,
+          "archer-2": 556,
           "epic-monster-hunter-6": 20,
-          "rider-1": 434,
-          "rider-2": 227,
+          "rider-1": 452,
+          "rider-2": 247,
           "rider-3": 130,
-          "spearman-1": 862,
-          "spearman-2": 489
+          "spearman-1": 897,
+          "spearman-2": 470
         },
         "how": null,
         "mode": "tens",
@@ -6386,14 +6386,14 @@
       },
       {
         "counts": {
-          "archer-1": 1128,
-          "archer-2": 579,
+          "archer-1": 1043,
+          "archer-2": 556,
           "epic-monster-hunter-6": 24,
-          "rider-1": 434,
-          "rider-2": 227,
+          "rider-1": 452,
+          "rider-2": 247,
           "rider-3": 130,
-          "spearman-1": 862,
-          "spearman-2": 489
+          "spearman-1": 897,
+          "spearman-2": 470
         },
         "how": null,
         "mode": "most",
@@ -6402,14 +6402,14 @@
       },
       {
         "counts": {
-          "archer-1": 1128,
-          "archer-2": 579,
+          "archer-1": 1043,
+          "archer-2": 556,
           "epic-monster-hunter-6": 24,
-          "rider-1": 434,
-          "rider-2": 227,
+          "rider-1": 452,
+          "rider-2": 247,
           "rider-3": 130,
-          "spearman-1": 862,
-          "spearman-2": 489
+          "spearman-1": 897,
+          "spearman-2": 470
         },
         "how": "walked",
         "mode": "v2",
@@ -6418,14 +6418,14 @@
       },
       {
         "counts": {
-          "archer-1": 1128,
-          "archer-2": 579,
+          "archer-1": 1043,
+          "archer-2": 556,
           "epic-monster-hunter-6": 24,
-          "rider-1": 434,
-          "rider-2": 227,
+          "rider-1": 452,
+          "rider-2": 247,
           "rider-3": 130,
-          "spearman-1": 862,
-          "spearman-2": 489
+          "spearman-1": 897,
+          "spearman-2": 470
         },
         "how": "walked",
         "mode": "safe",
@@ -6434,14 +6434,14 @@
       },
       {
         "counts": {
-          "archer-1": 1128,
-          "archer-2": 579,
+          "archer-1": 1043,
+          "archer-2": 556,
           "epic-monster-hunter-6": 20,
-          "rider-1": 434,
-          "rider-2": 227,
+          "rider-1": 452,
+          "rider-2": 247,
           "rider-3": 130,
-          "spearman-1": 862,
-          "spearman-2": 489
+          "spearman-1": 897,
+          "spearman-2": 470
         },
         "how": "walked",
         "mode": "tight",
