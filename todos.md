@@ -9,6 +9,7 @@ A few ideas in random order, to verify plan and validate:
   - One last option would be to consider rouding to the nearest 10 when its still shielded.
 - UI: When editiing counts, validate with enter key
 - UI: Same in popup validate on entry
+- UI: Help to know which hero is at what level. For now we have to click to see level and stars. Could at least be on hover. Would be best visually but might be too much. Perhaps the level could be in hte badge and entered hero woudl have a small icon with the star number. It would double as an indicator of any hero with the level entered. To design in an artifact first as we don't want to crowd the UI.
 - Long term: Offer advices on what could improve greatly the plan, ex: "up the dominance..." or "add a monster..."
   - Could help the user tweak the marches even more or guide his next best moves in terms of research or training
 - We should check again, on the cases with aydea, varying some parameters doesn't seem to produce linear results:
@@ -16,7 +17,6 @@ A few ideas in random order, to verify plan and validate:
   - upping army modernization strength (when monsters added), needs to be checked again if no dominance is selected
 - Long term: Offer a quick way to use less monsters, we already have using less mercs in the plan table and thats mainly from my point of gaming. maybe user feedback could help there
 - Long term: offer account with googlelogin, already planned and partly deployed (backend at lezast I think)
-- UI: Help to know which hero is at what level. For now we have to click to see level and stars. Could at least be on hover. Would be best visually but might be too much. Perhaps the level could be in hte badge and entered hero woudl have a small icon with the star number. It would double as an indicator of any hero with the level entered. To design in an artifact first as we don't want to crowd the UI.
 - UI: Remove em dashes in the UI (and possibly every files)
 - UI: [Equipment] Revamp so preview is not so crowded, show an example of an actual usage.
   - ![alt text](image.png) on this picture two heroes have a 3 set equipement qui different quality each
@@ -29,10 +29,59 @@ A few ideas in random order, to verify plan and validate:
   - One problem that could be addressed when doing this: With high dominance there seems to be a pattern of silver saving which keep minimal merc stack (usually 10 or under) and other plans which all pretty much fill dominance getting some pretty unequal stacks.
   - We could solve this by keeping track of monster spent, maybe making it less important using ranking (0.5 monster/dmg, 1 merc/dmg)
 - UI [Mobile]: Press back on mobile closes popup (like troop settings..)
-- We also have problems with higher troops depending on bonuses. adding ARC3 on my profile decreases rating of marches. See reference march below
 - coulb be a safe push numbers of mercs or monsters to fill the stack
-- Fill vip table with game data for each level
-- Fix hall of fame form to match the actual game bonuses
+- [game] Fill vip table with game data for each level
+- [game] Fix hall of fame form to match the actual game bonuses
+- We also have problems with higher troops depending on bonuses. adding ARC3 on my profile decreases rating of marches. See reference march below
+- With the new positions, I sometimes get amazing trades (at least right now as I'm pretty flush in gold) using tight on the lowest merc positions. And the slider now uses too many mercs on the other becaus eI have some stock. just got Tight	22.4M
++74.4%
+4.1M
++3.9%
+6.2K
++204.4%
+8
+
+For a march using tight (22.4)
+SW1 3024
+ARC1 1827
+SP1 1671
+RD1 797
+ARC2 1008
+SP2 924
+RD2 440
+ARC3 564
+SP3 516
+RD3 246
+BB 27
+ED 27
+SG 23
+WE 59
+SPX6 3
+CHR6 10
+LGN6 20
+EMH6 20
+ABT6 19
+
+And with as is (12.8):
+SW1 3024
+ARC1 1827
+SP1 1671
+RD1 797
+ARC2 1008
+SP2 924
+RD2 440
+ARC3 564
+SP3 516
+RD3 246
+ED 9
+LGN6 13
+ABT6 14
+EMH6 13
+WE 20
+CHR6 6
+BB 8
+SG 7
+SPX6 1
 
 Reference march
 SP1 1377
