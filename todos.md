@@ -33,13 +33,13 @@ A few ideas in random order, to verify plan and validate:
 - [game] Fill vip table with game data for each level
 - [game] Fix hall of fame form to match the actual game bonuses
 - We also have problems with higher troops depending on bonuses. adding ARC3 on my profile decreases rating of marches. See reference march below
-- With the new positions, I sometimes get amazing trades (at least right now as I'm pretty flush in gold) using tight on the lowest merc positions. And the slider now uses too many mercs on the other becaus eI have some stock. just got Tight	22.4M
-+74.4%
-4.1M
-+3.9%
-6.2K
-+204.4%
-8
+- With the new positions, I sometimes get amazing trades (at least right now as I'm pretty flush in gold) using tight on the lowest merc positions. And the slider now uses too many mercs on the other becaus eI have some stock. just got Tight 22.4M
+  +74.4%
+  4.1M
+  +3.9%
+  6.2K
+  +204.4%
+  8
 
 For a march using tight (22.4)
 SW1 3024
