@@ -267,3 +267,11 @@ export const CAMPAIGN = {
     plan: 40_000,
   },
 } as const;
+
+/**
+ * How many stars a captain chip draws as icons (owner, 2026-10-02; artifact "Captain Level Badges", proposal
+ * G). Up to this count the stars sit after the name as a cluster — one, two in a row, then two rows: 2 over 1,
+ * 2 over 2, 2 over 3. Above it the chip writes the count before one star ("6★"), because a third row would not
+ * fit under the level badge and three in a row would widen thirty chips for a figure.
+ */
+export const CAPTAIN_STAR_ICONS_UP_TO = 5;

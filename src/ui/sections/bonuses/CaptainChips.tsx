@@ -5,8 +5,9 @@
  *
  * Two targets on a chip, never one. The chip body enlists; the gear on its top-right corner opens an
  * anchored popover with the level and the stars and nothing else, so a player correcting a level
- * never discovers they also sent somebody on the march. A chip whose level is set wears a dot after
- * the name, and the fourth enlistment is refused — TotalStack refuses it in silence, we add one
+ * never discovers they also sent somebody on the march. A chip whose level is set shows it: the level
+ * replaces the gear on the corner and the stars follow the name (owner, 2026-10-02, proposal G of the
+ * "Captain Level Badges" artifact), and the fourth enlistment is refused — TotalStack refuses it in silence, we add one
  * polite sentence in a live region, because silence reads as a broken button.
  *
  * Only the captains that can change a stack carry a gear: ten of the thirty grant nothing a stack
@@ -203,6 +204,8 @@ const EnlistChip = memo(function EnlistChip({
       name={chip.name}
       enlisted={chip.enlisted}
       levelSet={chip.levelSet}
+      level={chip.level}
+      star={chip.star}
       onToggle={() => {
         onToggle(chip.target);
       }}

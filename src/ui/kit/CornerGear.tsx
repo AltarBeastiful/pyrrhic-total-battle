@@ -4,9 +4,9 @@
  * and must never be the thing that toggles the chip under it, so it is a sibling target with its own
  * name rather than a mark inside the chip's own label.
  */
-import { ActionIcon, Indicator, Popover } from '@mantine/core';
+import { ActionIcon, Indicator, Popover, VisuallyHidden } from '@mantine/core';
 import { Settings } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import classes from './kit.module.css';
 import { isCommitEnter } from './enterCommits';
@@ -21,6 +21,14 @@ export interface CornerGearProps {
   /** Filled while the thing under it is chosen, so the mark keeps up with the chip. */
   active?: boolean;
   size?: number;
+  /**
+   * A short figure worn in place of the gear: a captain's level (owner, 2026-10-02, proposal G of the
+   * "Captain Level Badges" artifact). The badge is then 20 px, 3 px higher on the corner, as wide as its
+   * digits, and the chip under it ends 7 px after its last mark instead of keeping the gear's 14 px strip.
+   */
+  figure?: string;
+  /** What the mark stands for, read after the button's name: "Level 60, 3 stars". */
+  description?: string;
   /**
    * The editor the gear opens. Given, `CornerGear` owns the popover and anchors it on the gear's own
    * button — which is the only correct anchor: `Popover.Target` stamps `aria-expanded` onto whatever
@@ -37,7 +45,9 @@ export function CornerGear({
   onPress,
   children,
   active = false,
-  size = 18,
+  size: sizeProp,
+  figure,
+  description,
   dropdown,
   opened,
   onOpenedChange,
@@ -49,21 +59,31 @@ export function CornerGear({
     onOpenedChange?.(false);
   });
 
+  const descriptionId = useId();
+  const size = sizeProp ?? (figure === undefined ? 18 : 20);
+  // Two widths, not a measure: up to two digits the badge is its own height, three take 28 px. How far
+  // it reaches past the chip is then known, and so is the gap the next chip keeps (`kit.module.css`).
+  const digits = figure === undefined ? undefined : figure.length > 2 ? '3' : '2';
+
   const gear = (
     <ActionIcon
       size={size}
       radius="xl"
       variant={active ? 'filled' : 'default'}
       aria-label={label}
+      {...(description === undefined ? {} : { 'aria-describedby': descriptionId })}
+      className={figure === undefined ? undefined : classes.figure}
+      data-digits={digits}
       onClick={onPress}
     >
-      <Settings size={Math.round(size * 0.6)} aria-hidden />
+      {figure ?? <Settings size={Math.round(size * 0.6)} aria-hidden />}
     </ActionIcon>
   );
 
   const badge = (
     <Indicator
-      className={classes.cornerGear}
+      className={figure === undefined ? classes.cornerGear : `${classes.cornerGear} ${classes.cornerFigure}`}
+      data-digits={digits}
       position="top-end"
       // Centred on the corner itself, as TotalStack's gear is (investigation 0006: "overlapping the
       // top-right corner"). It used to sit 2 px in, which is 2 px more of the chip's last letters
@@ -74,6 +94,7 @@ export function CornerGear({
       label={dropdown === undefined ? gear : <Popover.Target>{gear}</Popover.Target>}
     >
       {children}
+      {description !== undefined && <VisuallyHidden id={descriptionId}>{description}</VisuallyHidden>}
     </Indicator>
   );
 

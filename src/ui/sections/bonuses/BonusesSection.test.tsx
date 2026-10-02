@@ -272,7 +272,7 @@ test('the gear opens an anchored popover with the level and the stars, and never
   expect((captainChip('Aydae') as HTMLInputElement).checked).toBe(false);
 });
 
-test('the popover computes the bonus live and the chip takes a dot once a level is set', async () => {
+test('the popover computes the bonus live and the chip wears the level once it is set', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
   fireEvent.click(captainChip('Aydae'));
@@ -284,9 +284,13 @@ test('the popover computes the bonus live and the chip takes a dot once a level 
   expect(screen.getByText('+20 % health and strength (guardsmen)')).toBeTruthy();
   expect(totals(card()).Health).toBe('0 %');
 
-  // The gear renames itself once there is something to change, and the chip wears the dot.
-  expect(within(card()).getByRole('button', { name: 'Change Aydae’s level' })).toBeTruthy();
-  expect(chipLabel(captainChip('Aydae')).querySelector('[class*="chipDot"]')).not.toBeNull();
+  // The gear renames itself once there is something to change, and the level takes its place on the
+  // corner: the row says who is at what level without a tap (owner, 2026-10-02).
+  const gear = within(card()).getByRole('button', { name: 'Change Aydae’s level' });
+  expect(gear.textContent).toBe('20');
+  expect(gear.getAttribute('aria-describedby')).not.toBeNull();
+  expect(document.getElementById(gear.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Level 20');
+  expect(chipLabel(captainChip('Aydae')).querySelector('[class*="chipDot"]')).toBeNull();
 });
 
 test('the popover lists every line a captain is worth, never "and 1 more"', async () => {

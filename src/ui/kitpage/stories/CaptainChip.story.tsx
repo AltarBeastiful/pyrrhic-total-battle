@@ -66,6 +66,44 @@ function Live() {
   );
 }
 
-const story: KitStory = { name: 'CaptainChip', group: 'domain', render: () => <Live /> };
+/**
+ * Every case of a recorded level (owner, 2026-10-02, proposal G): no star to ★6 at a one-, two- and
+ * three-digit level, riding and not. Each chip ends the same distance after its last mark.
+ */
+function Levels() {
+  return (
+    <Stack gap="md">
+      {[0, 1, 2, 3, 4, 5, 6].map((star) => (
+        <Group key={star} gap={8} wrap="wrap" style={{ rowGap: '1rem' }} data-star-row={star}>
+          {[7, 45, 120].flatMap((level) =>
+            [false, true].map((enlisted) => (
+              <CaptainChip
+                key={`${String(level)}-${String(enlisted)}`}
+                name="Heimdall"
+                enlisted={enlisted}
+                levelSet
+                level={level}
+                star={star}
+                onToggle={() => {}}
+                onEditLevel={() => {}}
+              />
+            )),
+          )}
+        </Group>
+      ))}
+    </Stack>
+  );
+}
+
+const story: KitStory = {
+  name: 'CaptainChip',
+  group: 'domain',
+  render: () => (
+    <Stack gap="xl">
+      <Live />
+      <Levels />
+    </Stack>
+  ),
+};
 
 export default story;

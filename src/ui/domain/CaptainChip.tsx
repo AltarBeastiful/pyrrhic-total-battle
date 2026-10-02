@@ -1,8 +1,10 @@
 /**
  * A captain, as TotalStack draws one (investigation 0006, design plan §7.3): a dense chip that
  * toggles whether the captain rides with this march, a gear on its top-right corner that opens the
- * level editor, and a dot once a level has been recorded — in the gear's own strip, so a chip with a
- * level is no wider than one without (`kit/ChipDot.tsx`).
+ * level editor. Once a level is recorded the level takes the gear's place on the corner and the stars
+ * follow the name (owner, 2026-10-02: "for now we have to click to see level and stars"; proposal G of
+ * the "Captain Level Badges" artifact), so the row says who is at what level without a tap. A chip with
+ * something recorded and nothing to draw — the hero, whose gear picks who leads — keeps its dot.
  *
  * Two targets, never one. The chip enlists; the gear edits. A player correcting a level must not
  * discover they also enlisted somebody, so the gear is a sibling button with its own name — which is
@@ -13,7 +15,9 @@ import { Chip, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 import { ChipDot } from '../kit/ChipDot';
+import { CaptainStars } from './CaptainStars';
 import { CornerGear } from '../kit/CornerGear';
+import classes from './domain.module.css';
 import { Glyph } from './Glyph';
 import type { GlyphKind } from './glyphs';
 
@@ -28,6 +32,10 @@ export interface CaptainChipProps {
   onToggle: () => void;
   /** A level has been recorded; the name gets a dot. */
   levelSet?: boolean;
+  /** The recorded level: worn on the corner in place of the gear. */
+  level?: number;
+  /** The recorded stars: drawn after the name. */
+  star?: number;
   /** Opens the level editor. Left out for a captain with nothing to set. */
   onEditLevel?: () => void;
   /** The editor itself. `CornerGear` anchors it on the gear's own button, never on the chip. */
@@ -44,6 +52,8 @@ export function CaptainChip({
   enlisted,
   onToggle,
   levelSet = false,
+  level = 0,
+  star = 0,
   onEditLevel,
   levelEditor,
   levelEditorOpened,
@@ -61,9 +71,10 @@ export function CaptainChip({
       <Group gap={5} wrap="nowrap" component="span">
         {bonusKey !== undefined && <Glyph kind={bonusKey} />}
         <Stack gap={0} component="span">
-          <Text span inherit>
+          <Text span inherit className={star > 0 ? classes.nameLine : undefined}>
             {name}
-            {levelSet && <ChipDot />}
+            <CaptainStars star={star} />
+            {levelSet && level <= 0 && star <= 0 && <ChipDot />}
           </Text>
           {bonus !== undefined && (
             <Text span size="xs" c="dimmed">
@@ -81,6 +92,8 @@ export function CaptainChip({
     <CornerGear
       label={`${levelSet ? 'Change' : 'Set'} ${name}’s level`}
       active={enlisted}
+      {...(level > 0 ? { figure: String(level) } : {})}
+      {...(level > 0 || star > 0 ? { description: describeLevel(level, star) } : {})}
       onPress={onEditLevel}
       {...(levelEditor === undefined ? {} : { dropdown: levelEditor })}
       {...(levelEditorOpened === undefined ? {} : { opened: levelEditorOpened })}
@@ -89,4 +102,11 @@ export function CaptainChip({
       {chip}
     </CornerGear>
   );
+}
+
+/** "Level 60, 3 stars", "Level 12", "1 star": what the badge and the stars say, for a screen reader. */
+function describeLevel(level: number, star: number): string {
+  const stars = star > 0 ? `${String(star)} star${star === 1 ? '' : 's'}` : '';
+  if (level <= 0) return stars;
+  return stars === '' ? `Level ${String(level)}` : `Level ${String(level)}, ${stars}`;
 }

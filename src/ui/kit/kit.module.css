@@ -51,6 +51,46 @@
   padding-inline-end: 0.875rem;
 }
 
+/* The level worn in place of the gear (`CornerGear`'s `figure`; owner, 2026-10-02, proposal G of the
+   "Captain Level Badges" artifact). Three changes from the gear, each one a term of the sum written at
+   `domain.module.css`, `.stars`:
+   - the badge is 20 px with an 11.1 px figure, and as wide as its digits (two or fewer: 20 px; three: 28 px);
+   - it sits 3 px higher on the corner, so its lower edge is 7 px below the chip's top and the stars on the
+     name's line can pass under it — which is what lets every chip with a level end the same way;
+   - the chip ends 7 px after its last mark (the name or the stars), not with the gear's 14 px strip.
+   The badge reaches half its width past the chip, so the chip after it starts 2 px clear of it: the
+   row's 8 px gap plus 4 px behind a 20 px badge, 8 px behind a 28 px one. */
+.cornerFigure :global(.mantine-Indicator-indicator) {
+  transform: translate(50%, calc(-50% - 0.1875rem));
+}
+
+.cornerGear.cornerFigure :global(.mantine-Chip-label) {
+  padding-inline-end: 0.4375rem;
+}
+
+.cornerFigure {
+  margin-inline-end: 0.25rem;
+}
+
+.cornerFigure[data-digits='3'] {
+  margin-inline-end: 0.5rem;
+}
+
+.cornerFigure .figure {
+  width: auto;
+  min-width: var(--ai-size);
+  padding-inline: 0.125rem;
+  font-family: inherit;
+  font-size: 0.694rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.cornerFigure .figure[data-digits='3'] {
+  min-width: 1.75rem;
+}
+
 /* The dot a chip wears once something is recorded on it (`ChipDot.tsx`): a 5 px disc in the chip's
    dimmed ink — which the checked chip re-mixes for its own tinted ground (`theme.module.css`) — and
    a fallback place after the name for a chip that has no gear to make room for it. */

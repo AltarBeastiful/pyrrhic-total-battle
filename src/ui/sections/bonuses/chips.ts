@@ -34,6 +34,9 @@ export interface CaptainChipRow {
   enlisted: boolean;
   /** A level is recorded (or a hero is chosen): the name gets a dot, as TotalStack's does. */
   levelSet: boolean;
+  /** The recorded level and star count, drawn on the chip itself (0 when nothing is recorded; the hero has neither). */
+  level: number;
+  star: number;
   /** The captain carries a health or a strength block, so the gear has something to open. */
   hasEditor: boolean;
   target: CaptainTarget;
@@ -52,6 +55,8 @@ export function captainChips(profile: Profile, setup: BattleSetup): CaptainChipR
     name: hero?.name ?? 'Hero',
     enlisted: setup.active.hero && hero !== undefined,
     levelSet: hero !== undefined,
+    level: 0,
+    star: 0,
     hasEditor: true,
     target: { kind: 'hero' },
   };
@@ -65,6 +70,8 @@ export function captainChips(profile: Profile, setup: BattleSetup): CaptainChipR
         name: record.name,
         enlisted: entry !== undefined && active.includes(entry.id),
         levelSet: entry !== undefined && (entry.level > 0 || entry.star > 0),
+        level: entry?.level ?? 0,
+        star: entry?.star ?? 0,
         hasEditor: hasStackEffect(record),
         target: { kind: 'captain' as const, captainId: record.id },
       } satisfies CaptainChipRow;
