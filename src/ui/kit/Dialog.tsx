@@ -16,6 +16,8 @@ import { useCallback, type ReactNode } from 'react';
 
 import { LAYERS } from '@/ui/theme';
 
+import { useBackCloses } from './backCloses';
+
 export interface DialogProps {
   opened: boolean;
   onClose: () => void;
@@ -55,6 +57,8 @@ export function Dialog({
   );
 
   const alert = role === 'alertdialog';
+  // The phone's Back is its Escape (`backCloses.ts`): a question you can walk away from, and only that.
+  useBackCloses(opened && !alert, onClose);
 
   return (
     <Modal

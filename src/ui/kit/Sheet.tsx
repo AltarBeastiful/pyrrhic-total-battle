@@ -12,10 +12,11 @@
  */
 import { Box, Divider, Drawer, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 
 import { LAYERS } from '@/ui/theme';
 
+import { isCommitEnter, nextTypedField } from './enterCommits';
 import { useOpenEditor } from './openEditors';
 
 export interface SheetProps {
@@ -28,11 +29,26 @@ export interface SheetProps {
   /** A bar at the foot of the sheet: the one action it exists for. */
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
+  /**
+   * What Enter does in the sheet's last field. A sheet that saves as it is typed closes, which is the
+   * default; one whose figures wait for a button (the custom mercenary's *Add*) says what that button
+   * does instead.
+   */
+  onEnter?: () => void;
 }
 
 const SIZE = { sm: '20rem', md: '26rem', lg: '34rem' } as const;
 
-export function Sheet({ opened, onClose, title, description, children, footer, size = 'md' }: SheetProps) {
+export function Sheet({
+  opened,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+  size = 'md',
+  onEnter,
+}: SheetProps) {
   // `getInitialValueInEffect: false` so the first paint is already the right anchor; jsdom has no
   // `matchMedia`, and the fallback there is the phone shape, which is the one we test.
   const wide = useMediaQuery('(min-width: 48em)', false, { getInitialValueInEffect: false });
@@ -41,6 +57,21 @@ export function Sheet({ opened, onClose, title, description, children, footer, s
   // (`openEditors.ts`). Everything on one saves as it is typed — the footer's only word is Done —
   // so there is nothing for the close to lose.
   useOpenEditor(opened, onClose);
+
+  // **Enter finishes a figure** (owner, 2026-10-02; `enterCommits.ts`): it walks to the next field of
+  // the sheet, and on the last one it does what the footer's main button does — Done for a sheet that
+  // saves as it is typed. A sheet of one field therefore closes on the first Enter.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (!isCommitEnter(event)) return;
+    const field = event.target as HTMLInputElement;
+    event.preventDefault();
+    const next = nextTypedField(event.currentTarget, field);
+    if (next !== null) {
+      next.focus();
+      return;
+    }
+    (onEnter ?? onClose)();
+  };
 
   return (
     <Drawer
@@ -60,7 +91,7 @@ export function Sheet({ opened, onClose, title, description, children, footer, s
           {description}
         </Text>
       )}
-      {children}
+      <Box onKeyDown={onKeyDown}>{children}</Box>
       {/* The sheet's last part, told apart the way every card's parts are: one hairline with 16 px
           above and below (docs/design.md §4). It was 16 above and 8 below, which read as the footer
           hanging off the rule rather than as a part of its own. */}

@@ -96,6 +96,8 @@ export function CustomMercenarySheet({ opened, initial, onSubmit, onClose }: Cus
       title={editing ? 'Edit custom mercenary' : 'Custom mercenary'}
       description="Copy the numbers straight off the mercenary's card in game."
       size="lg"
+      // Enter on the last field is the main button, not a close: these figures wait for it.
+      onEnter={save}
       footer={
         <Group justify="flex-end" gap="xs">
           <Button variant="default" onClick={onClose}>

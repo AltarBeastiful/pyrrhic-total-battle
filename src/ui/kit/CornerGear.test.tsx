@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { Chip } from '@mantine/core';
-import { act, cleanup, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 
@@ -71,4 +71,32 @@ test('an uncontrolled gear registers nothing: its popover is Mantine’s to clos
   );
 
   expect(closeOpenEditors()).toBe(false);
+});
+
+test('Enter in the editor’s field closes it; Enter in a list stays the list’s', () => {
+  // Owner, 2026-10-02: *"same in popup, validate on entry."*
+  const onOpenedChange = vi.fn();
+  renderWithTheme(
+    <CornerGear
+      label="Set Aydae’s level"
+      onPress={() => {}}
+      dropdown={
+        <>
+          <input aria-label="Base level" />
+          <input aria-label="Star level" aria-haspopup="listbox" />
+        </>
+      }
+      opened
+      onOpenedChange={onOpenedChange}
+    >
+      <Chip checked={false} onChange={() => {}}>
+        Aydae
+      </Chip>
+    </CornerGear>,
+  );
+
+  fireEvent.keyDown(screen.getByLabelText('Star level'), { key: 'Enter' });
+  expect(onOpenedChange).not.toHaveBeenCalled();
+  fireEvent.keyDown(screen.getByLabelText('Base level'), { key: 'Enter' });
+  expect(onOpenedChange).toHaveBeenCalledWith(false);
 });

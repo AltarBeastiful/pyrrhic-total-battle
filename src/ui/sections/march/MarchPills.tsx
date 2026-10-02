@@ -34,6 +34,7 @@ import type { ReactNode } from 'react';
 import type { StackResult, UnitDef } from '@/engine/types';
 import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
+import { isCommitEnter } from '@/ui/kit';
 import { copyText } from '@/ui/profile/download';
 
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
@@ -218,7 +219,10 @@ export function MarchPills({
       onKeyDown={
         editing
           ? (event) => {
-              if (event.key !== 'Escape') return;
+              // Enter in a count field is "Done editing" too (owner, 2026-10-02): the figure is written,
+              // and Enter is how a typed number is finished (`kit/enterCommits.ts`).
+              if (event.key !== 'Escape' && !isCommitEnter(event)) return;
+              event.preventDefault();
               event.stopPropagation();
               useRunStore.getState().setEditingCounts(false);
             }

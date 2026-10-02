@@ -9,6 +9,7 @@ import { Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import classes from './kit.module.css';
+import { isCommitEnter } from './enterCommits';
 import { useOpenEditor } from './openEditors';
 
 export interface CornerGearProps {
@@ -86,7 +87,17 @@ export function CornerGear({
       {...(onOpenedChange === undefined ? {} : { onChange: onOpenedChange })}
     >
       {badge}
-      <Popover.Dropdown>{dropdown}</Popover.Dropdown>
+      <Popover.Dropdown
+        // Enter in the editor's field closes it (owner, 2026-10-02; `enterCommits.ts`): the figure is
+        // already written, and Enter is how a typed number is finished — the cap popover's rule too.
+        onKeyDown={(event) => {
+          if (!isCommitEnter(event) || onOpenedChange === undefined) return;
+          event.preventDefault();
+          onOpenedChange(false);
+        }}
+      >
+        {dropdown}
+      </Popover.Dropdown>
     </Popover>
   );
 }

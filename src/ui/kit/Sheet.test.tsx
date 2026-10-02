@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { Button } from '@mantine/core';
-import { act, cleanup, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 
 import { closeOpenEditors } from './openEditors';
 import { Sheet } from './Sheet';
@@ -93,4 +93,23 @@ test('the march shortcut closes it: a sheet is a setup editor, and it is over th
     expect(screen.queryByRole('dialog')).toBeNull();
   });
   expect(closeOpenEditors()).toBe(false);
+});
+
+test('Enter walks the sheet’s fields, and on the last one does what the sheet’s button does', async () => {
+  // Owner, 2026-10-02: *"same in popup, validate on entry."* A figure is written as it is typed, so
+  // Enter's job is to move on — to the next field, then out.
+  const onEnter = vi.fn();
+  renderWithTheme(
+    <Sheet opened onClose={() => {}} onEnter={onEnter} title="Recovery">
+      <input aria-label="Hospital" />
+      <input aria-label="Temple" />
+    </Sheet>,
+  );
+  const first = await screen.findByLabelText('Hospital');
+  fireEvent.keyDown(first, { key: 'Enter' });
+  expect(document.activeElement).toBe(screen.getByLabelText('Temple'));
+  expect(onEnter).not.toHaveBeenCalled();
+
+  fireEvent.keyDown(screen.getByLabelText('Temple'), { key: 'Enter' });
+  expect(onEnter).toHaveBeenCalledTimes(1);
 });

@@ -643,6 +643,19 @@ test('editing counts is a mode, and Undo puts the generated ones back', async ()
   // Three battles are played out here (the run, the edit, the undo): a busy machine needs the room.
 }, 20_000);
 
+test('Enter in a count field is Done editing, as Escape is', async () => {
+  // Owner, 2026-10-02: *"when editing counts, validate with enter key."*
+  renderWithTheme(<Page />);
+  await generate();
+  const { unit } = stackAt();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Edit counts' }));
+  fireEvent.keyDown(screen.getByLabelText(`${unit.name} count`), { key: 'Enter' });
+
+  expect(screen.queryAllByLabelText(`${unit.name} count`)).toHaveLength(0);
+  expect(screen.getByRole('button', { name: 'Edit counts' }).getAttribute('aria-pressed')).toBe('false');
+});
+
 test('an emptied count keeps its pill until the mode is left', async () => {
   // Owner, 2026-09-21: *"if I erase the content of the field of a merc, the merc is deleted. It should
   // only be deleted on done editing cause it can prevent me from typing."* Erasing is the first half of

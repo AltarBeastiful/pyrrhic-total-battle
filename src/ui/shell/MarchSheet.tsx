@@ -24,6 +24,7 @@ import { useDrag, useReducedMotion } from '@mantine/hooks';
 import { useEffect, useRef } from 'react';
 
 import { MarchSection } from '@/ui/sections/march';
+import { useBackCloses } from '@/ui/kit/backCloses';
 import { LAYERS } from '@/ui/theme';
 
 import classes from './shell.module.css';
@@ -44,6 +45,9 @@ export interface MarchSheetProps {
 export function MarchSheet({ opened, onClose }: MarchSheetProps) {
   const sheet = useRef<HTMLDivElement>(null);
   const stillness = useReducedMotion();
+  // Not a setup editor — Ctrl+Enter leaves it up to show the answer — but Back still puts it down
+  // (owner, 2026-10-02; `kit/backCloses.ts`).
+  useBackCloses(opened, onClose);
 
   /**
    * Move the sheet down by `to` pixels, or put it back where it belongs.

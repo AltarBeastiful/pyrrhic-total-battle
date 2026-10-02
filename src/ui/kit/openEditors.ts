@@ -18,6 +18,8 @@
  */
 import { useEffect, useRef } from 'react';
 
+import { useBackCloses } from './backCloses';
+
 const open = new Set<() => void>();
 
 /** Register an open editor; call what comes back when it closes. */
@@ -45,6 +47,9 @@ export function closeOpenEditors(): boolean {
  * re-register the editor on every render of it.
  */
 export function useOpenEditor(opened: boolean, close: () => void): void {
+  // Every editor that Ctrl+Enter shuts is one the phone's Back shuts too (`backCloses.ts`).
+  useBackCloses(opened, close);
+
   const latest = useRef(close);
   useEffect(() => {
     latest.current = close;

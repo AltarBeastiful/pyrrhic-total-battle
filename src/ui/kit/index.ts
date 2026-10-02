@@ -13,6 +13,7 @@ export type { CornerGearProps } from './CornerGear';
 export { Dialog } from './Dialog';
 export type { DialogProps } from './Dialog';
 export { Disclosure, DisclosureGroup } from './Disclosure';
+export { isCommitEnter, isTypedField, nextTypedField } from './enterCommits';
 export type { DisclosureGroupItem, DisclosureGroupProps, DisclosureProps } from './Disclosure';
 export { Figures } from './Figures';
 export type { Figure, FiguresProps } from './Figures';
