@@ -100,3 +100,23 @@ test('Enter in the editor’s field closes it; Enter in a list stays the list’
   fireEvent.keyDown(screen.getByLabelText('Base level'), { key: 'Enter' });
   expect(onOpenedChange).toHaveBeenCalledWith(false);
 });
+
+test('Escape in the editor closes it', () => {
+  const onOpenedChange = vi.fn();
+  renderWithTheme(
+    <CornerGear
+      label="Set Aydae’s level"
+      onPress={() => {}}
+      dropdown={<input aria-label="Base level" />}
+      opened
+      onOpenedChange={onOpenedChange}
+    >
+      <Chip checked={false} onChange={() => {}}>
+        Aydae
+      </Chip>
+    </CornerGear>,
+  );
+
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'Base level' }), { key: 'Escape' });
+  expect(onOpenedChange).toHaveBeenCalledWith(false);
+});

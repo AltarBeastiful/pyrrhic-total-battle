@@ -6,7 +6,7 @@
  */
 import { ActionIcon, Indicator, Popover, VisuallyHidden } from '@mantine/core';
 import { Settings } from 'lucide-react';
-import { useId, type ReactNode } from 'react';
+import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 import classes from './kit.module.css';
 import { isCommitEnter } from './enterCommits';
@@ -61,6 +61,32 @@ export function CornerGear({
   });
 
   const descriptionId = useId();
+  const gearRef = useRef<HTMLButtonElement>(null);
+  // Whether the editor was opened with a pointer or from the keyboard: it decides whether the gear wears
+  // its focus ring once the editor shuts.
+  const openedByPointer = useRef(false);
+
+  // Shutting the editor hands focus back to the gear, so a keyboard player is where they were. Mantine
+  // does that on Escape too, but from inside a key press, which the browser counts as keyboard focus: a
+  // gear opened with a click came back wearing the brass ring (owner, 2026-10-02: "we shouldn't have a
+  // yellow circle around the badge… clicking on a badge and typing esc"). Here the ring shows only when
+  // the editor was opened from the keyboard: a gear opened with a pointer gets focus back marked
+  // `data-pointer-focus`, which hides the ring (`kit.module.css`) until the next key or until focus
+  // leaves. Chromium ignores `focus({ focusVisible: false })`, so the mark is ours. After the dropdown
+  // is gone, and only if focus went nowhere: a click outside that lands on something focusable keeps it.
+  const close = (): void => {
+    onOpenedChange?.(false);
+    requestAnimationFrame(() => {
+      const gearButton = gearRef.current;
+      const current = document.activeElement;
+      if (gearButton === null || (current !== null && current !== document.body)) return;
+      if (openedByPointer.current) gearButton.dataset.pointerFocus = '';
+      gearButton.focus();
+    });
+  };
+  const forgetPointerFocus = (): void => {
+    if (gearRef.current !== null) delete gearRef.current.dataset.pointerFocus;
+  };
   // Two widths, not a measure: up to two digits the badge is its own height, three take 28 px. How far
   // it reaches past the chip is then known, and so is the gap the next chip keeps (`kit.module.css`).
   const digits = figure === undefined ? undefined : figure.length > 2 ? '3' : '2';
@@ -74,6 +100,15 @@ export function CornerGear({
       {...(description === undefined ? {} : { 'aria-describedby': descriptionId })}
       className={figure === undefined ? undefined : classes.figure}
       data-digits={digits}
+      ref={gearRef}
+      onPointerDown={() => {
+        openedByPointer.current = true;
+      }}
+      onKeyDown={() => {
+        openedByPointer.current = false;
+        forgetPointerFocus();
+      }}
+      onBlur={forgetPointerFocus}
       onClick={onPress}
     >
       {figure ?? <Settings size={Math.round(size * 0.6)} aria-hidden />}
@@ -104,6 +139,8 @@ export function CornerGear({
     <Popover
       position="bottom-end"
       trapFocus
+      // Escape is ours when the caller drives the popover (`close` above); left uncontrolled, Mantine's.
+      closeOnEscape={onOpenedChange === undefined}
       {...(opened === undefined ? {} : { opened })}
       {...(onOpenedChange === undefined ? {} : { onChange: onOpenedChange })}
     >
@@ -111,10 +148,11 @@ export function CornerGear({
       <Popover.Dropdown
         // Enter in the editor's field closes it (owner, 2026-10-02; `enterCommits.ts`): the figure is
         // already written, and Enter is how a typed number is finished — the cap popover's rule too.
-        onKeyDown={(event) => {
-          if (!isCommitEnter(event) || onOpenedChange === undefined) return;
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+          if (onOpenedChange === undefined) return;
+          if (event.key !== 'Escape' && !isCommitEnter(event)) return;
           event.preventDefault();
-          onOpenedChange(false);
+          close();
         }}
       >
         {dropdown}

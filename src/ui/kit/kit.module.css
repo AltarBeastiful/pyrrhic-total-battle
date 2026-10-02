@@ -35,6 +35,13 @@
   margin-inline-end: 0.5rem;
 }
 
+/* Focus handed back to a gear whose editor was opened with a pointer (`CornerGear.tsx`, `close`): no
+   ring, because nobody is steering with the keyboard (owner, 2026-10-02). The next key clears the mark
+   and the ring comes back. */
+.cornerGear button[data-pointer-focus]:focus-visible {
+  outline: none;
+}
+
 /* …but it does need somewhere to sit. A 20 px gear on the corner reaches 10 px into the chip under
    it, which on a short name is the name itself — the owner photographed the gear sitting on the
    word "Hero" on 2026-09-13. The chip a gear rides gives that strip back as padding, so the label

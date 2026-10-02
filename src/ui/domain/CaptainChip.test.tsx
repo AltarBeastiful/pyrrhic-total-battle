@@ -81,3 +81,27 @@ test('stars without a level keep the gear, and a chip with nothing recorded draw
   renderWithTheme(<CaptainChip name="Skadi" enlisted={false} onToggle={() => {}} onEditLevel={() => {}} />);
   expect(document.querySelector('[data-shape]')).toBeNull();
 });
+
+test('hovering a chip with a level says the level and the stars in words', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(
+    <CaptainChip
+      name="Aydae"
+      enlisted={false}
+      onToggle={() => {}}
+      level={60}
+      star={3}
+      onEditLevel={() => {}}
+    />,
+  );
+  await user.hover(screen.getByText('Aydae'));
+  expect((await screen.findByRole('tooltip')).textContent).toBe('Level 60, 3 stars');
+});
+
+test('a chip with nothing recorded has no tooltip', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<CaptainChip name="Aydae" enlisted={false} onToggle={() => {}} onEditLevel={() => {}} />);
+  await user.hover(screen.getByText('Aydae'));
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  expect(screen.queryByRole('tooltip')).toBeNull();
+});

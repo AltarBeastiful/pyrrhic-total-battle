@@ -11,7 +11,7 @@
  * also why the popover it opens is anchored on a real `<button>` and never on the chip's label
  * (investigation 0007: `Popover.Target` stamps `aria-expanded` on whatever it wraps).
  */
-import { Chip, Group, Stack, Text } from '@mantine/core';
+import { Box, Chip, Group, Stack, Text, Tooltip } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 import { ChipDot } from '../kit/ChipDot';
@@ -86,7 +86,27 @@ export function CaptainChip({
     </Chip>
   );
 
-  if (onEditLevel === undefined) return chip;
+  // The level and the stars in words, on hover and on focus (owner, 2026-10-02: "build the hover tooltip
+  // for heroes"): the badge and the stars say it at a glance, the tooltip says it plainly for a player
+  // who has not learnt what two over one means. Built as the artifact chips build theirs
+  // (`SourceChip.tsx`): the target is a box around the chip, because Mantine's `Chip` hands its props to
+  // the hidden input; in a portal; the theme's look and half-second delay.
+  const described =
+    level > 0 || star > 0 ? (
+      <Tooltip
+        label={describeLevel(level, star)}
+        events={{ hover: true, focus: true, touch: false }}
+        withinPortal
+      >
+        <Box component="span" display="inline-block">
+          {chip}
+        </Box>
+      </Tooltip>
+    ) : (
+      chip
+    );
+
+  if (onEditLevel === undefined) return described;
 
   return (
     <CornerGear
@@ -99,7 +119,7 @@ export function CaptainChip({
       {...(levelEditorOpened === undefined ? {} : { opened: levelEditorOpened })}
       {...(onLevelEditorChange === undefined ? {} : { onOpenedChange: onLevelEditorChange })}
     >
-      {chip}
+      {described}
     </CornerGear>
   );
 }
