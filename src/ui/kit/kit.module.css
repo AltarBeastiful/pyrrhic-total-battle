@@ -13,20 +13,35 @@
 }
 
 /* The gear that overlaps a chip's corner needs no ground of its own: the button inside it is the
-   whole mark (investigation 0007's best find). */
+   whole mark (investigation 0007's best find). It is 20 px, the level badge's own size, and sits where
+   the badge sits: 1 px higher than centred on the corner, 9 px into the chip and 11 px above it. */
 .cornerGear :global(.mantine-Indicator-indicator) {
   padding: 0;
   background: transparent;
   border: none;
+  transform: translate(50%, calc(-50% - 0.0625rem));
 }
 
-/* …but it does need somewhere to sit. An 18 px gear centred on the corner reaches 9 px into the
-   chip under it, which on a short name is the name itself — the owner photographed the gear sitting
-   on the word "Hero" on 2026-09-13. The chip a gear rides gives that strip back as padding, so the
-   label always ends before the mark starts: 14 px, the 9 the gear covers and 5 of air, against the
-   9 px the other side keeps. It was 20 px over a gear inset 2 px, and thirty-one captains at 6 px
-   too wide each read as "a bit too wide, maybe because of the config badge" (owner, 2026-09-17);
-   the gear is a circle, so at the height of the letters it is further away than its box. */
+/* Half the mark hangs past the chip's edge, 10 px, which the row's 8 px gap alone does not hold: an
+   18 px gear with no margin sat 1 px over the next chip (owner, 2026-10-02: "too close to the next
+   pill, I don't see that on badge with level entered"). So every corner mark, gear or level, carries
+   the margin that leaves the next chip 2 px clear of it: 4 px behind a 20 px mark, 8 px behind the
+   28 px of a three-digit level. */
+.cornerGear {
+  margin-inline-end: 0.25rem;
+}
+
+.cornerGear[data-digits='3'] {
+  margin-inline-end: 0.5rem;
+}
+
+/* …but it does need somewhere to sit. A 20 px gear on the corner reaches 10 px into the chip under
+   it, which on a short name is the name itself — the owner photographed the gear sitting on the
+   word "Hero" on 2026-09-13. The chip a gear rides gives that strip back as padding, so the label
+   always ends before the mark starts: 14 px, the 10 the gear covers and 4 of air, against the 9 px
+   the other side keeps. It was 20 px over a gear inset 2 px, and thirty-one captains at 6 px too
+   wide each read as "a bit too wide, maybe because of the config badge" (owner, 2026-09-17); the
+   gear is a circle, so at the height of the letters it is further away than its box. */
 /* A badge on a pill's corner (`CornerPill`): the same transparent indicator as the gear's, but
    **right-aligned on the corner and hung above it** — its right edge 4 px past the pill's, and
    seven tenths of it above the pill's top edge, so it reaches 6 px into the pill: the pill's own
@@ -52,31 +67,17 @@
 }
 
 /* The level worn in place of the gear (`CornerGear`'s `figure`; owner, 2026-10-02, proposal G of the
-   "Captain Level Badges" artifact). Three changes from the gear, each one a term of the sum written at
-   `domain.module.css`, `.stars`:
-   - the badge is 20 px with an 11.1 px figure, and as wide as its digits (two or fewer: 20 px; three: 28 px);
-   - it sits 1 px higher than centred on the corner, so it reaches 9 px into the chip and stands 11 px above
-     it: it reads as the chip's own mark, and the row gap keeps 5 px between it and the line above (owner,
-     2026-10-02: "lower the level badge just a bit into the pill… a significant gap between lines"; it was
-     3 px higher). The stars on the name's line still pass under it, which is what lets every chip with a
-     level end the same way;
-   - the chip ends 7 px after its last mark (the name or the stars), not with the gear's 14 px strip.
-   The badge reaches half its width past the chip, so the chip after it starts 2 px clear of it: the
-   row's 8 px gap plus 4 px behind a 20 px badge, 8 px behind a 28 px one. */
-.cornerFigure :global(.mantine-Indicator-indicator) {
-  transform: translate(50%, calc(-50% - 0.0625rem));
-}
-
+   "Captain Level Badges" artifact). It is the gear's mark with two changes, each a term of the clearance
+   written at `domain.module.css`, `.stars`:
+   - it is as wide as its digits (two or fewer: the gear's 20 px; three: 28 px), with an 11.1 px figure;
+   - the chip ends 7 px after its last mark (the name or the stars), not with the gear's 14 px strip:
+     the stars on the name's line pass under the badge, which is what lets every chip with a level end
+     the same way.
+   Its place on the corner — 1 px higher than centred, 9 px into the chip and 11 px above it (owner,
+   2026-10-02: "lower the level badge just a bit into the pill… a significant gap between lines"; it was
+   3 px higher) — and the gap after it are the gear's (`.cornerGear` above). */
 .cornerGear.cornerFigure :global(.mantine-Chip-label) {
   padding-inline-end: 0.4375rem;
-}
-
-.cornerFigure {
-  margin-inline-end: 0.25rem;
-}
-
-.cornerFigure[data-digits='3'] {
-  margin-inline-end: 0.5rem;
 }
 
 .cornerFigure .figure {

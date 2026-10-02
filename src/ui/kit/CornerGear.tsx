@@ -23,8 +23,9 @@ export interface CornerGearProps {
   size?: number;
   /**
    * A short figure worn in place of the gear: a captain's level (owner, 2026-10-02, proposal G of the
-   * "Captain Level Badges" artifact). The badge is then 20 px, 1 px higher than centred on the corner, as wide as its
-   * digits, and the chip under it ends 7 px after its last mark instead of keeping the gear's 14 px strip.
+   * "Captain Level Badges" artifact). The badge is then as wide as its digits, and the chip under it ends
+   * 7 px after its last mark instead of keeping the gear's 14 px strip. Its size, its place on the corner
+   * and the gap after it are the gear's own (`kit.module.css`, `.cornerGear`), so the two read as one mark.
    */
   figure?: string;
   /** What the mark stands for, read after the button's name: "Level 60, 3 stars". */
@@ -45,7 +46,7 @@ export function CornerGear({
   onPress,
   children,
   active = false,
-  size: sizeProp,
+  size = 20,
   figure,
   description,
   dropdown,
@@ -60,7 +61,6 @@ export function CornerGear({
   });
 
   const descriptionId = useId();
-  const size = sizeProp ?? (figure === undefined ? 18 : 20);
   // Two widths, not a measure: up to two digits the badge is its own height, three take 28 px. How far
   // it reaches past the chip is then known, and so is the gap the next chip keeps (`kit.module.css`).
   const digits = figure === undefined ? undefined : figure.length > 2 ? '3' : '2';
