@@ -36,6 +36,8 @@ export interface CaptainChipProps {
   level?: number;
   /** The recorded stars: drawn after the name. */
   star?: number;
+  /** What the captain is worth as recorded, one line each: shown on hover and on focus. */
+  details?: string[];
   /** Opens the level editor. Left out for a captain with nothing to set. */
   onEditLevel?: () => void;
   /** The editor itself. `CornerGear` anchors it on the gear's own button, never on the chip. */
@@ -54,6 +56,7 @@ export function CaptainChip({
   levelSet = false,
   level = 0,
   star = 0,
+  details = [],
   onEditLevel,
   levelEditor,
   levelEditorOpened,
@@ -86,17 +89,28 @@ export function CaptainChip({
     </Chip>
   );
 
-  // The level and the stars in words, on hover and on focus (owner, 2026-10-02: "build the hover tooltip
-  // for heroes"): the badge and the stars say it at a glance, the tooltip says it plainly for a player
-  // who has not learnt what two over one means. Built as the artifact chips build theirs
-  // (`SourceChip.tsx`): the target is a box around the chip, because Mantine's `Chip` hands its props to
-  // the hidden input; in a portal; the theme's look and half-second delay.
+  // What the captain is worth, on hover and on focus (owner, 2026-10-02: "the tooltip should show
+  // information that's not on the screen already, a quick summary of the bonuses"): the badge and the
+  // stars already say the level, so the tooltip says what that level buys, the popover's own lines.
+  // Built as the artifact chips build theirs (`SourceChip.tsx`): the target is a box around the chip,
+  // because Mantine's `Chip` hands its props to the hidden input; in a portal; the theme's look and
+  // half-second delay.
   const described =
-    level > 0 || star > 0 ? (
+    details.length > 0 ? (
       <Tooltip
-        label={describeLevel(level, star)}
+        label={
+          <Stack gap={2}>
+            {details.map((line) => (
+              <Text key={line} size="xs">
+                {line}
+              </Text>
+            ))}
+          </Stack>
+        }
         events={{ hover: true, focus: true, touch: false }}
         withinPortal
+        multiline
+        maw={280}
       >
         <Box component="span" display="inline-block">
           {chip}

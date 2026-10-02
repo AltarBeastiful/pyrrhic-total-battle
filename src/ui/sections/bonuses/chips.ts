@@ -37,6 +37,8 @@ export interface CaptainChipRow {
   /** The recorded level and star count, drawn on the chip itself (0 when nothing is recorded; the hero has neither). */
   level: number;
   star: number;
+  /** What the captain (or the hero) is worth as recorded, one line per block: the chip's tooltip. */
+  details: string[];
   /** The captain carries a health or a strength block, so the gear has something to open. */
   hasEditor: boolean;
   target: CaptainTarget;
@@ -57,6 +59,7 @@ export function captainChips(profile: Profile, setup: BattleSetup): CaptainChipR
     levelSet: hero !== undefined,
     level: 0,
     star: 0,
+    details: hero === undefined ? [] : describeContribution(hero.bonus),
     hasEditor: true,
     target: { kind: 'hero' },
   };
@@ -72,6 +75,10 @@ export function captainChips(profile: Profile, setup: BattleSetup): CaptainChipR
         levelSet: entry !== undefined && (entry.level > 0 || entry.star > 0),
         level: entry?.level ?? 0,
         star: entry?.star ?? 0,
+        details:
+          entry === undefined || (entry.level <= 0 && entry.star <= 0)
+            ? []
+            : captainBonusLines(record.id, entry.level, entry.star),
         hasEditor: hasStackEffect(record),
         target: { kind: 'captain' as const, captainId: record.id },
       } satisfies CaptainChipRow;

@@ -82,7 +82,7 @@ test('stars without a level keep the gear, and a chip with nothing recorded draw
   expect(document.querySelector('[data-shape]')).toBeNull();
 });
 
-test('hovering a chip with a level says the level and the stars in words', async () => {
+test('hovering a chip says what the captain is worth, one line per block', async () => {
   const user = userEvent.setup();
   renderWithTheme(
     <CaptainChip
@@ -91,16 +91,20 @@ test('hovering a chip with a level says the level and the stars in words', async
       onToggle={() => {}}
       level={60}
       star={3}
+      details={['+20 % health (guardsmen)', '+35 % strength (guardsmen)']}
       onEditLevel={() => {}}
     />,
   );
   await user.hover(screen.getByText('Aydae'));
-  expect((await screen.findByRole('tooltip')).textContent).toBe('Level 60, 3 stars');
+  const tooltip = await screen.findByRole('tooltip');
+  expect(tooltip.textContent).toBe('+20 % health (guardsmen)+35 % strength (guardsmen)');
 });
 
-test('a chip with nothing recorded has no tooltip', async () => {
+test('a chip with nothing to say has no tooltip', async () => {
   const user = userEvent.setup();
-  renderWithTheme(<CaptainChip name="Aydae" enlisted={false} onToggle={() => {}} onEditLevel={() => {}} />);
+  renderWithTheme(
+    <CaptainChip name="Aydae" enlisted={false} onToggle={() => {}} level={60} onEditLevel={() => {}} />,
+  );
   await user.hover(screen.getByText('Aydae'));
   await new Promise((resolve) => setTimeout(resolve, 600));
   expect(screen.queryByRole('tooltip')).toBeNull();

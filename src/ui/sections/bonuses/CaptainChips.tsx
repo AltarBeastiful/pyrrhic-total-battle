@@ -206,6 +206,7 @@ const EnlistChip = memo(function EnlistChip({
       levelSet={chip.levelSet}
       level={chip.level}
       star={chip.star}
+      details={chip.details}
       onToggle={() => {
         onToggle(chip.target);
       }}
