@@ -23,7 +23,7 @@ export interface CornerGearProps {
   size?: number;
   /**
    * A short figure worn in place of the gear: a captain's level (owner, 2026-10-02, proposal G of the
-   * "Captain Level Badges" artifact). The badge is then 20 px, 3 px higher on the corner, as wide as its
+   * "Captain Level Badges" artifact). The badge is then 20 px, 1 px higher than centred on the corner, as wide as its
    * digits, and the chip under it ends 7 px after its last mark instead of keeping the gear's 14 px strip.
    */
   figure?: string;

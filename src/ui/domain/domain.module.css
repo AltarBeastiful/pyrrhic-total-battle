@@ -250,12 +250,13 @@
    Badges" artifact). 6 px after the name, in the chip's own ink, centred on the name's line.
 
    The sizes are one sum, not taste. The tallest thing on the line is a two-row cluster, and its top row sits
-   under the level badge (`kit.module.css`, `.cornerFigure`). On the 30 px chip the badge's lower edge is
-   20 / 2 - 3 = 7 px below the chip's top, and the tip of the top row is 15 - 7 - (-1) / 2 + 0.075 * 7 = 9.0 px
-   below it (a star's tip starts 7.5 % into its icon): 2 px of air. With the rows at their natural spacing it
-   would be 1.5 px. Too close is not a matter of looks: the chip would have to widen until the cluster cleared
-   the badge sideways, the jump the artifact measured (8 px after the stars became 18). A change to the star
-   size, the row overlap, the badge height or its lift has to keep that sum at 2 px or more. */
+   under the level badge (`kit.module.css`, `.cornerFigure`). What has to stay clear is the badge's round
+   outline, not its box: the stars sit under its left end, where it curves up. Measured in the kit story
+   (`CaptainChip`, every star count at levels 7, 45 and 120), the nearest point of any star is 2.5 px from
+   the badge's outline as it sits now; 4.2 px when it was 3 px higher, 1.7 px if it were centred on the
+   corner. Too close is not a matter of looks: the chip would have to widen until the cluster cleared the
+   badge sideways, the jump the artifact measured (8 px after the stars became 18). A change to the star
+   size, the row overlap, the badge height or its lift has to keep that distance at 2 px or more. */
 .stars {
   display: inline-flex;
   flex-direction: column;
@@ -291,8 +292,9 @@
   gap: 1px;
 }
 
-/* The second row 1 px into the first: the stars still keep about 0.3 px of air between the rows (their
-   points do not meet), and the cluster is 13 px tall instead of 15, which is the 2 px of the sum above. */
+/* The second row 1 px into the first: the lower row's points still stop 1.3 px short of the notch between
+   the upper row's legs, and the cluster is 13 px tall instead of 14, which keeps its top row further under
+   the badge (the distance above). */
 .starRow + .starRow {
   margin-top: -1px;
 }
