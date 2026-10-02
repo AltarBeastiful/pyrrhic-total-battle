@@ -35,19 +35,24 @@ export function hiredStock(request: Pick<StackRequest, 'units' | 'caps'>): numbe
   return stock;
 }
 
-/** What a stock of `held` buys one stack: the chunks a march burns, the marches left, and the two totals. */
+/** What a stock of `held` buys one stack: the chunks a march burns, the marches left, and what they strike for. */
 export interface StockRun {
   burn: number; // chunks(count): the one-in-ten a march loses for good
   marches: number; // lastsMarches(held, count): identical marches the stock carries
-  stackDamage: number; // marches × this stack's own damage
-  marchDamage: number; // marches × the whole march's damage
+  stackDamage: number; // marches × this stack's own damage: everything this type does with the stock
 }
 
 /**
  * **What a stock of hired units buys**: what one march burns of it for good, how many identical marches the
- * stock still carries, and the damage those marches come to — this stack's own and the whole march's. It is
- * the answer to the question a player asks while looking at one hired stack, and it is drawn on the unit
- * sheet where the stack is (S-148).
+ * stock still carries, and the damage **this stack** comes to over them. It is the answer to the question a
+ * player asks while looking at one hired stack, and it is drawn on the unit sheet where the stack is (S-148).
+ *
+ * **The stack's own total and nothing else** (the owner, 2026-10-02: *"remove the total damage 570M from the
+ * march in all. its not helpful. I'm only interested in the damage the specific merc can do in total using all
+ * its remaining quota"*). The whole march's total was the sheet's second figure when the block shipped and he
+ * has since said no to it: the question here is what this hired type buys with the stock it has left, and the
+ * march's own figure answers a different one the pane already answers twice (the recap's Damage, the plan's
+ * trade).
  *
  * `held` is **the account's own stock** for that unit: the cap the request carries, `request.caps[unitId]`
  * (`buildUnits`, `state/derive.ts:505`), which is the owned count the Mercenaries card records — the same
@@ -70,7 +75,7 @@ export interface StockRun {
  * already owes 310 units the account does not have. The caller draws on `marches >= 1`, and that guard is
  * the one place the case is refused: clamping here to 0 would hand the caller a figure that reads like a
  * stock of nothing rather than like a count nothing can field, which is the difference between "you have run
- * out" and "you never had it". The totals follow the same number, so a negative run is a negative total and
+ * out" and "you never had it". The total follows the same number, so a negative run is a negative total and
  * not a silent nought either.
  *
  * A **count of zero** is the engine's other end: `chunks(0)` is nought chunks burned and `lastsMarches`
@@ -78,8 +83,8 @@ export interface StockRun {
  * That is a stack the sheet does not draw at all, and passing one here is a caller error rather than a case
  * to paper over with a second guard.
  */
-export function stockRun(held: number, count: number, damage: number, marchDamage: number): StockRun {
+export function stockRun(held: number, count: number, damage: number): StockRun {
   const burn = chunks(count);
   const marches = lastsMarches(held, count);
-  return { burn, marches, stackDamage: marches * damage, marchDamage: marches * marchDamage };
+  return { burn, marches, stackDamage: marches * damage };
 }

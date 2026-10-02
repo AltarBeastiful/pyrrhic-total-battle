@@ -66,17 +66,19 @@ function feedAmount(feed: UnitBonusSource): string {
  * Two lines because they answer two questions, and the second is the arithmetic the first sets up: the first
  * says what the account owns and what one march of this size burns of it **for good** (a hired unit never
  * comes back — the Temple gives nine in ten back, so every march loses its chunk of ten to the ground,
- * `chunks`), the second says what the marches it still carries come to. **Both totals, and that is the
- * owner's own choice** (his answer
- * of 2026-09-29 to the question the block left open): this stack's own damage, and the whole march's, because
- * the one decides whether *this* hired type earns its stock and the other is what each march of the run
- * really hits for.
+ * `chunks`), the second says what the marches it still carries come to. **One total, and it is this stack's
+ * own** — what the type does with the stock it has left, which is the question the block exists to answer.
+ * It carried the whole march's total beside it when the block shipped (his own choice then, 2026-09-29) and
+ * he retired it on 2026-10-02: *"remove the total damage 570M from the march in all. its not helpful. I'm only
+ * interested in the damage the specific merc can do in total using all its remaining quota."* The march's own
+ * figure is one the pane already prints twice (the recap's Damage, the plan's trade), and a reader of *this*
+ * sentence is asking what the hired type is worth, not what the march hits for.
  *
  * **The figures are the sheet's own, counted `marches` times** (design rule 27, *unit details read as
- * sentences*): each total is a figure printed above it — this stack's damage in this march, and the march's
- * own — so a reader who divides either by the count of marches lands back on it, to the digit the notation
- * prints and no further. Both wear the pane's full budget of two decimals (`compactTwo`, S-148's parameter):
- * the extra digit is what tells the stack's own millions from the march's tens of millions at a glance.
+ * sentences*): the total is the figure the block above it prints — this stack's damage in one march — so a
+ * reader who divides it by the count of marches lands back on that figure, to the digit the notation prints
+ * and no further. It wears the pane's full budget of two decimals (`compactTwo`, S-148's parameter), because
+ * it is the one figure in the block and the millions it speaks in are the reason to read it.
  *
  * **And "to the digit the notation prints" is the honest bound, not a hedge**: a figure is printed to the
  * digits its room allows (S-148's parameter, and the owner's amendment of it on 2026-09-30 — *"lets keep 30M
@@ -87,12 +89,12 @@ function feedAmount(feed: UnitBonusSource): string {
  *
  * **Three branches, and the one-march case is written rather than pluralised.** A stock that fields the count
  * exactly once is `lastsMarches`' own `+ 1`, which is the whole point of that arithmetic: the first march is
- * the one the count itself pays for. "1 marches like this one" beside two totals would be a plural the
- * sentence does not mean, so the pointed answer says *that this is the last one* instead. The **negative**
- * run is the other end and it says the fact rather than the arithmetic: `marches` is deliberately unclamped
- * (`./hired`), a hand-typed count above the cap is reachable while the counts are edited, and both totals
- * would then be a fiction about marches nothing can field. `null` for the second line is that case, and the
- * caller draws the one sentence it gets.
+ * the one the count itself pays for. "1 marches like this one" beside a total would be a plural the sentence
+ * does not mean, so the pointed answer says *that this is the last one* instead. The **negative** run is the
+ * other end and it says the fact rather than the arithmetic: `marches` is deliberately unclamped (`./hired`),
+ * a hand-typed count above the cap is reachable while the counts are edited, and the total would then be a
+ * fiction about marches nothing can field. `null` for the second line is that case, and the caller draws the
+ * one sentence it gets.
  */
 function stockWords(unit: UnitDef, held: number, count: number, run: StockRun): [string, string | null] {
   if (run.marches < 1) {
@@ -103,14 +105,11 @@ function stockWords(unit: UnitDef, held: number, count: number, run: StockRun): 
   )} of them for good.`;
   const tail =
     run.marches === 1
-      ? `That is this march and no more: ${compactTwo(run.stackDamage, 2)} damage from this stack, ${compactTwo(
-          run.marchDamage,
-          2,
-        )} from the march.`
+      ? `That is this march and no more: ${compactTwo(run.stackDamage, 2)} damage from this stack.`
       : `That is ${amount(run.marches)} marches like this one: ${compactTwo(
           run.stackDamage,
           2,
-        )} damage from this stack, ${compactTwo(run.marchDamage, 2)} from the march in all.`;
+        )} damage from this stack in all.`;
   return [head, tail];
 }
 
@@ -181,7 +180,7 @@ export function UnitSheet({
    */
   const stock =
     held !== undefined && held > 0 && row !== undefined && row.stack.count > 0
-      ? { held, count: row.stack.count, run: stockRun(held, row.stack.count, row.damage, totalDamage) }
+      ? { held, count: row.stack.count, run: stockRun(held, row.stack.count, row.damage) }
       : null;
   const stockLines = stock === null ? null : stockWords(unit, stock.held, stock.count, stock.run);
   /**

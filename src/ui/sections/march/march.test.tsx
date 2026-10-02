@@ -1994,7 +1994,7 @@ function stockOf(unitId: string): {
   return {
     row,
     held,
-    run: stockRun(held, row.stack.count, row.damage, snapshot.summary.journals.enemyFirst.totalDamage),
+    run: stockRun(held, row.stack.count, row.damage),
   };
 }
 
@@ -2007,11 +2007,12 @@ test('the unit sheet says how many marches the stock lasts, and what they come t
 
   const { row, held, run } = stockOf('epic-monster-hunter-6');
   const unit = row.unit;
-  // The two totals this assertion rests on are genuinely two: the stack's own damage and the whole march's,
-  // so a transposition of the two arguments to `stockWords` cannot pass (the brief's own requirement).
+  // **The total is the stack's own over the run** (the owner, 2026-10-02: *"remove the total damage 570M from
+  // the march in all. its not helpful"*): the marches counted times this stack's damage in one march, and no
+  // figure of the march's at all — so the sentence below can hold the count and the total to each other.
   expect(run.marches).toBeGreaterThan(1);
   expect(row.damage).toBeGreaterThan(0);
-  expect(run.stackDamage).not.toBe(run.marchDamage);
+  expect(run.stackDamage).toBe(run.marches * row.damage);
   // And the count of marches is the engine's own, not a second opinion the sheet keeps.
   expect(run.marches).toBe(lastsMarches(held, row.stack.count));
 
@@ -2029,7 +2030,7 @@ test('the unit sheet says how many marches the stock lasts, and what they come t
       `That is ${amount(run.marches)} marches like this one: ${compactTwo(
         run.stackDamage,
         2,
-      )} damage from this stack, ${compactTwo(run.marchDamage, 2)} from the march in all.`,
+      )} damage from this stack in all.`,
     ),
   ).toBeTruthy();
   // The block sits between the two it continues and explains, in the sheet's own rhythm.
@@ -2057,14 +2058,13 @@ test('a stock that fields the count once says so, rather than pluralising one ma
   const sheet = await openSheet(row.unit.id);
   expect(
     within(sheet).getByText(
-      `That is this march and no more: ${compactTwo(run.stackDamage, 2)} damage from this stack, ${compactTwo(
-        run.marchDamage,
-        2,
-      )} from the march.`,
+      `That is this march and no more: ${compactTwo(run.stackDamage, 2)} damage from this stack.`,
     ),
   ).toBeTruthy();
-  // …and never the plural the same figures would have produced.
+  // …and never the plural the same figure would have produced.
   expect(within(sheet).queryByText(/marches like this one/)).toBeNull();
+  // And the march's own total is nowhere in the block: the sentence is about this stack (S-148, amended).
+  expect(sheet.textContent).not.toContain('from the march');
 }, 20_000);
 
 test('a count typed past the stock says the march runs past it, and promises nothing', async () => {
