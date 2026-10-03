@@ -54,9 +54,8 @@ function worthItems(lines: string[], label: string, empty: string): Figure[] {
   }));
 }
 
-/** "—" then ★1…★6: the seven steps the captain tables carry, by their index in the star table. */
-const NO_STAR = '—';
-const STAR_OPTIONS = [NO_STAR, ...Array.from({ length: MAX_CAPTAIN_STAR }, (_, i) => `★${String(i + 1)}`)];
+/** ★1…★7, the game's own count: the first is the default and adds nothing, so the seven steps the captain tables carry are stored 0…6. */
+const STAR_OPTIONS = Array.from({ length: MAX_CAPTAIN_STAR + 1 }, (_, i) => `★${String(i + 1)}`);
 
 // ---- the two editors a gear opens ---------------------------------------------------------------
 /**
@@ -104,13 +103,13 @@ function CaptainLevelEditor({ captainId }: { captainId: string }) {
           label="Star level"
           size="xs"
           data={STAR_OPTIONS}
-          value={STAR_OPTIONS[star] ?? NO_STAR}
+          value={STAR_OPTIONS[star] ?? null}
           allowDeselect={false}
           // Inside the popover, not in a portal: a click on a portalled option counts as a click
           // outside the popover and would close the editor before the pick landed.
           comboboxProps={{ withinPortal: false }}
           onChange={(next) => {
-            patch({ star: Math.max(0, STAR_OPTIONS.indexOf(String(next ?? NO_STAR))) });
+            patch({ star: Math.max(0, STAR_OPTIONS.indexOf(next ?? '')) });
           }}
         />
       </Stack>

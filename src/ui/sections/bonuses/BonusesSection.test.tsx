@@ -281,7 +281,7 @@ test('the popover computes the bonus live and the chip wears the level once it i
 
   expect(profile()?.sources.captains[0]?.level).toBe(20);
   // Aydae boosts guardsmen only, so the whole-army figure does not move; the footer says what does.
-  expect(screen.getByText('+20 % health and strength (guardsmen)')).toBeTruthy();
+  expect(screen.getByText('Level 20: +20 % health and strength (guardsmen)')).toBeTruthy();
   expect(totals(card()).Health).toBe('0 %');
 
   // The gear renames itself once there is something to change, and the level takes its place on the
@@ -298,15 +298,15 @@ test('the popover lists every line a captain is worth, never "and 1 more"', asyn
   renderWithTheme(<BonusesSection />);
   await user.click(captainGear('Aydae'));
   typeNumber(document.body, 'Base level', '20');
-  // Aydae's two blocks do not move together at ★1 — 20 % health against 35 % strength — so a row
+  // Aydae's two blocks do not move together at ★2 — 20 % health against 35 % strength — so a row
   // summary would say "+20 % health (guardsmen) and 1 more" (owner, 2026-09-28: *"at this level should
   // always show all rows"*). The popover says both, in its own two rows.
-  await chooseIn(user, document.body, 'Star level', '★1');
+  await chooseIn(user, document.body, 'Star level', '★2');
 
   const worth = screen.getByLabelText('What this captain adds');
   expect([...worth.querySelectorAll('dd')].map((node) => node.textContent)).toEqual([
-    '+20 % health (guardsmen)',
-    '+35 % strength (guardsmen)',
+    'Level 20: +20 % health and strength (guardsmen)',
+    '2 stars: +15 % strength (guardsmen)',
   ]);
   // The label is worn by the first row alone: the block reads as one figure with two lines.
   expect(screen.getByText('At this level')).toBeTruthy();
@@ -321,7 +321,7 @@ test('a levelled captain moves the TOTAL, stars included', async () => {
   typeNumber(document.body, 'Base level', '20');
   expect(totals(card()).Health).toBe('+20 %');
 
-  await chooseIn(user, document.body, 'Star level', '★3');
+  await chooseIn(user, document.body, 'Star level', '★4');
 
   expect(profile()?.sources.captains[0]?.star).toBe(3);
   expect(totals(card()).Health).toBe('+230 %');

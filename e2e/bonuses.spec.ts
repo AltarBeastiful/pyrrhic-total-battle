@@ -90,7 +90,7 @@ test('a captain enlisted and levelled through its gear moves the TOTAL', async (
   expect(await bonusTotal(page, 'Health')).toBe('+20 %');
 
   await page.getByRole('combobox', { name: 'Star level' }).click();
-  await page.getByRole('option', { name: '★3' }).click();
+  await page.getByRole('option', { name: '★4' }).click();
   await page.keyboard.press('Escape');
 
   expect(await bonusTotal(page, 'Health')).toBe('+230 %');

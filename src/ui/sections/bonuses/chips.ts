@@ -21,7 +21,7 @@ import type { BattleSetup, Profile } from '@/state/schema';
 import { chipValue, describeContribution, rowLines, rowValue } from './labels';
 import { artifactWorth, captainEntryFor, captainWorth, hasStackEffect } from './rows';
 
-/** The highest star rating a captain's table carries: none, then ★1…★6. */
+/** The highest stored star step a captain's table carries: 0 is the game's one star (no bonus), 6 its seven. */
 export const MAX_CAPTAIN_STAR = 6;
 
 /** What a tap on a captain chip acts on: the hero leads the row and is not a captain. */
@@ -198,13 +198,19 @@ export function titleChips(setup: BattleSetup): TitleFamilyRow[] {
 }
 
 /**
- * What a captain is worth at this level and star rating, as the popover says it: **one entry per
- * line**, never "and 1 more". A captain's health and strength blocks move on different star tables
- * (Aydae's are 20 and 35 at ★1), so the two lines are what the player is looking for when they set
- * the star.
+ * What a captain is worth at this level and star rating, as the popover and the chip's tooltip say it:
+ * **one entry per line**, never "and 1 more", and the share of the level and the share of the stars on
+ * lines of their own, never summed (owner, 2026-10-03). A captain's health and strength blocks move on
+ * different star tables (Aydae's are 20 and 35 at ★2), so the lines are what the player is looking for
+ * when they set the star. A rating of one star (stored 0) adds nothing, so it has no star lines.
  */
 export function captainBonusLines(captainId: string, level: number, star: number): string[] {
   const record = captainTable.find((entry) => entry.id === captainId);
   if (record === undefined) return [];
-  return rowLines(captainWorth(record, { id: '', captainId, level, star }));
+  const fromLevel = rowLines(captainWorth(record, { id: '', captainId, level, star: 0 }));
+  const fromStars = rowLines(captainWorth(record, { id: '', captainId, level: 0, star }));
+  return [
+    ...fromLevel.map((line) => `Level ${String(level)}: ${line}`),
+    ...fromStars.map((line) => `${String(star + 1)} stars: ${line}`),
+  ];
 }

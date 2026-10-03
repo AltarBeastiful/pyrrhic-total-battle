@@ -138,9 +138,9 @@ export function CaptainChip({
   );
 }
 
-/** "Level 60, 3 stars", "Level 12", "1 star": what the badge and the stars say, for a screen reader. */
+/** "Level 60, 3 stars", "Level 12": what the badge and the stars say, for a screen reader. The default one star is not said. */
 function describeLevel(level: number, star: number): string {
-  const stars = star > 0 ? `${String(star)} star${star === 1 ? '' : 's'}` : '';
+  const stars = star > 0 ? `${String(star + 1)} stars` : '';
   if (level <= 0) return stars;
   return stars === '' ? `Level ${String(level)}` : `Level ${String(level)}, ${stars}`;
 }

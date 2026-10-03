@@ -45,7 +45,7 @@ test('a recorded level is worn on the corner and the stars follow the name', () 
       enlisted={false}
       onToggle={() => {}}
       level={60}
-      star={3}
+      star={2}
       onEditLevel={() => {}}
     />,
   );
@@ -62,7 +62,7 @@ test('a recorded level is worn on the corner and the stars follow the name', () 
 
 test('a three-digit level widens the badge, and stars above the icon limit are written as a count', () => {
   renderWithTheme(
-    <CaptainChip name="Heimdall" enlisted onToggle={() => {}} level={120} star={6} onEditLevel={() => {}} />,
+    <CaptainChip name="Heimdall" enlisted onToggle={() => {}} level={120} star={5} onEditLevel={() => {}} />,
   );
   const gear = screen.getByRole('button', { name: 'Set Heimdall’s level' });
   expect(gear.getAttribute('data-digits')).toBe('3');
@@ -76,8 +76,14 @@ test('stars without a level keep the gear, and a chip with nothing recorded draw
     <CaptainChip name="Skadi" enlisted={false} onToggle={() => {}} star={1} onEditLevel={() => {}} />,
   );
   expect(screen.getByRole('button', { name: 'Set Skadi’s level' }).querySelector('svg')).not.toBeNull();
-  expect(document.querySelector('[data-shape="one"]')).not.toBeNull();
+  expect(document.querySelector('[data-shape="row"]')).not.toBeNull();
   unmount();
+  // The default one star (stored 0) is never drawn, and draws no gear dot either.
+  const { unmount: unmountDefault } = renderWithTheme(
+    <CaptainChip name="Skadi" enlisted={false} onToggle={() => {}} star={0} onEditLevel={() => {}} />,
+  );
+  expect(document.querySelector('[data-shape]')).toBeNull();
+  unmountDefault();
   renderWithTheme(<CaptainChip name="Skadi" enlisted={false} onToggle={() => {}} onEditLevel={() => {}} />);
   expect(document.querySelector('[data-shape]')).toBeNull();
 });
@@ -90,7 +96,7 @@ test('hovering a chip says what the captain is worth, one line per block', async
       enlisted={false}
       onToggle={() => {}}
       level={60}
-      star={3}
+      star={2}
       details={['+20 % health (guardsmen)', '+35 % strength (guardsmen)']}
       onEditLevel={() => {}}
     />,

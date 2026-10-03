@@ -1,6 +1,6 @@
 /**
  * A captain's stars, drawn after the name on its chip (owner, 2026-10-02; artifact "Captain Level Badges",
- * proposal G). One star, two in a row, then two rows — 2 over 1, 2 over 2, 2 over 3 — and above
+ * proposal G). Nothing for the default one star (owner, 2026-10-03), then two in a row, then two rows — 2 over 1, 2 over 2, 2 over 3 — and above
  * `CAPTAIN_STAR_ICONS_UP_TO` the count written before a single star ("6★"), so the star separates it from
  * the level on the badge above.
  *
@@ -27,11 +27,13 @@ function Star() {
 }
 
 export interface CaptainStarsProps {
+  /** The stored step: 0 is the game's one star, which the chip never draws; 1 is its second star. */
   star: number;
 }
 
-export function CaptainStars({ star }: CaptainStarsProps) {
-  if (star <= 0) return null;
+export function CaptainStars({ star: step }: CaptainStarsProps) {
+  if (step <= 0) return null;
+  const star = step + 1;
   const rows = ROWS[star];
   if (star > CAPTAIN_STAR_ICONS_UP_TO || rows === undefined) {
     return (
