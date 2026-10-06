@@ -107,6 +107,16 @@ test('the sign-in dialog draws the providers the server lists, and no email form
   expect(within(dialog).queryByRole('button', { name: /Sign in with email/ })).toBeNull();
 });
 
+test('a server that offers no way in says so rather than showing an empty dialog', async () => {
+  onRequest('listAuthMethods', () => ({
+    password: { enabled: false },
+    oauth2: { enabled: true, providers: [] },
+  }));
+  useAccountStore.setState({ dialog: 'signin' });
+  renderWithTheme(<AccountDialogs />);
+  expect(await screen.findByText('Sign-in is not available on this server right now.')).toBeTruthy();
+});
+
 test('a provider button signs in through the popup and takes the account', async () => {
   const user = userEvent.setup();
   onRequest('listAuthMethods', () => serverMethods(false));

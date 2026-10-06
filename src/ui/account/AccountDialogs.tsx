@@ -186,6 +186,9 @@ function SignInDialog() {
       >
         <Stack gap="sm" align="stretch">
           {methods === null && methodsError === '' && <Text size="sm">Asking the account server…</Text>}
+          {methods !== null && methods.providers.length === 0 && !methods.password && (
+            <Text size="sm">Sign-in is not available on this server right now.</Text>
+          )}
           {methods?.providers.map((provider) => (
             <Button
               key={provider.name}
