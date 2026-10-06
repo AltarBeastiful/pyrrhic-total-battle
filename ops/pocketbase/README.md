@@ -58,7 +58,7 @@ settings (inside `pb_data`), and tokens only in the operator's shell.
 ## Owner decisions still open
 
 1. **SMTP** (step 9a), the day password sign-in comes back (Gmail app password, owner 2026-10-07).
-   Then: Collections → `users` → Options → enable *Identity/Password*, and the app draws the email
+   Then: Collections → `users` → Options → enable _Identity/Password_, and the app draws the email
    form again by itself.
 2. Off-host backups (an rclone line in `backup-history.sh`), if losing the VPS ever stops being an
    acceptable risk.
