@@ -4,7 +4,7 @@ This phase builds the advisor's engine: pure probes that turn a march request in
 
 ## Tasks
 
-- [ ] Read `src/engine/types.ts`, `units.ts` (`effectiveUnit`), `battle.ts`, `rating.ts`, `campaign.ts`, `src/kernel/` plan bindings and `src/worker/jobs.ts`. Then implement `src/engine/probes.ts` with pure probe builders that NEVER mutate (the kernel recognises tables by identity, so build new objects: `{...req, totals: {...totals, health: {...totals.health, [key]: v + delta}}}`):
+- [x] Read `src/engine/types.ts`, `units.ts` (`effectiveUnit`), `battle.ts`, `rating.ts`, `campaign.ts`, `src/kernel/` plan bindings and `src/worker/jobs.ts`. Then implement `src/engine/probes.ts` with pure probe builders that NEVER mutate (the kernel recognises tables by identity, so build new objects: `{...req, totals: {...totals, health: {...totals.health, [key]: v + delta}}}`):
   - health % probe for each of the 13 bonus keys, strength % probe for the same 13, housing probes for leadership, authority and dominance (delta = +1 % of the current pool)
   - default delta +1 % on a bonus; a typed `Probe` shape `{ id, family, label, apply(req) }` that later phases (user-entered upgrades, captains) extend
   - unit tests proving inputs are not mutated and ids are unique and stable
