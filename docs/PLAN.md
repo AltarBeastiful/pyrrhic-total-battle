@@ -388,6 +388,7 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-50 PWA / offline / install prompt | done | hand-written service worker, no PWA dependency |
 | S-52 Accessibility and mobile layout pass | done | axe zero on the kit page and the app in both schemes; `pnpm contrast` over 176 pairs |
 | S-49a Account sync backend | in progress | groundwork done and verified: `ops/pocketbase/` (PocketBase 0.40.4 compose, Caddy site, save hook, `profiles` migration, smoke script), every spec `[verify]` answered in investigation 0012, hosting in investigation 0010. **Deployment is pending the owner** (Dynu hostname, the two-line philou change, the Google OAuth client, the backup target) |
+| S-49c Accounts by SSO | in progress | `docs/plans/sso-accounts.md` (2026-10-07): Google + Discord through the SDK popup (PKCE redirect and `/oauth-callback` deleted), password sign-in off on the server with the code kept, backend renamed `pyrrhic-backend.freeddns.org`, `smoke.sh` by impersonation, `backup-history.sh` on main. Steps 1–3 done; the OAuth consoles, the deploy and the phone tests remain |
 | S-49b Account sync client | done | `src/account/**`, `src/ui/account/**`, ADR-0009, `/oauth-callback` + `404.html` copy, SW NetworkOnly for the backend, `storage.persist()`; e2e `e2e/account.spec.ts` against a local 0.40.4 container. Hidden until the owner sets `VITE_BACKEND_ORIGIN` |
 | S-53 Left-out troops without pins | done | schema v3 drops `BattleSetup.pinnedUnitIds` and `excludedUnitIds`, the sizer and the search lose their pinned paths, and the March keeps `includedUnitIds` with the result (§3.4 rewritten); owner's story of 2026-09-13 below the table |
 | S-54 Complete optimization | done, superseded | `src/engine/campaign.ts` (`simulateCampaign`, `searchComplete`, 22 tests); the fourth method on the Battle card with *Marches planned* / *Silver budget*, the `complete` worker job, and the March's sizing line + folded Campaign section (`ui/sections/march/campaign.ts`, `CampaignPanel.tsx`); investigation 0014 §5. **Removed by S-56 (2026-09-15)**: the method, its two fields and both panels are gone, and schema v4 reads a stored `complete` as `plan` |
@@ -925,8 +926,14 @@ waiting on people, not on code.
 **S-48 best captains is written up (§3.7) but delayed by the owner; not scheduled** (rule 33: engine stories
 wait until the UI is right).
 
-### M8 — Signed-in account sync (S-49, two parts, in progress) — replaces Gist sync (S-45) and the QR/share-link
+### M8 — Signed-in account sync (S-49, three parts, in progress) — replaces Gist sync (S-45) and the QR/share-link
 device hand-off once live
+
+**2026-10-07, S-49c (`docs/plans/sso-accounts.md`) changes what follows:** sign-in is Google and Discord via the
+PocketBase SDK's popup (the backend's `/api/oauth2-redirect` is the registered redirect, so the PKCE redirect
+and `/oauth-callback` below are gone), password sign-in is off on the server until SMTP exists, the backend is
+`pyrrhic-backend.freeddns.org`, and backups are a deduplicated history on main. ADR-0009 is Accepted with an
+amendment.
 
 Owner's spec: `docs/research/pocketbase-profile-sync-spec.md` (a self-hosted PocketBase behind Caddy; Google
 OAuth with a frontend-hosted redirect so only the GitHub Pages origin is ever registered with Google; one
@@ -987,6 +994,12 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-10-07 — **S-49c accounts by SSO, planned and started.** Owner: *"add accounts using sso with the leanest
+  code possible."* Plan `docs/plans/sso-accounts.md`, each assumption checked on a local PocketBase 0.40.4
+  (providers, passwords off → 403, backup settings, impersonation for the smoke test). Backend served as
+  `pyrrhic-backend.freeddns.org` (Let's Encrypt), sslip.io kept one release; migration `1791331200_sso.js`;
+  client: one *Sign in…* row, a dialog drawing the server's providers, the SDK popup; PKCE code deleted;
+  `backup-history.sh` written and tested (dedupe + 7/8/12 retention). ADR-0009 → Accepted with an amendment.
 - 2026-09-20 — **S-112 the plan block speaks the army's own resources, and the recap says what a hired unit
   bought.** S-111 gave an army that hires nothing a bar of its own and the review found eleven places still
   telling it about a stock it does not hold — *"spending 0.0 of the hired stock"*, a **Hired lost** column of

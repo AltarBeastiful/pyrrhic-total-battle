@@ -1,6 +1,6 @@
 # Sync across devices (optional account)
 
-Story S-49, [ADR-0009](decisions/0009-optional-account-sync.md), spec
+Stories S-49 and S-49c ([plan](plans/sso-accounts.md)), [ADR-0009](decisions/0009-optional-account-sync.md), spec
 [`research/pocketbase-profile-sync-spec.md`](research/pocketbase-profile-sync-spec.md), backend
 runbook [`ops/pocketbase/README.md`](../ops/pocketbase/README.md).
 
@@ -22,16 +22,20 @@ If the build you are using has no backend configured, the account rows are simpl
 
 ## Signing in
 
-**With Google.** One press, Google's own consent screen, back to Pyrrhic. The app asks for `openid`,
-`email` and `profile` and nothing more. The redirect comes back to the app's own address
-(`…/oauth-callback`), never to the backend, so the backend's hostname appears nowhere in Google's
-configuration.
+Open the menu, choose **Sign in…**, and pick a provider: **Google** or **Discord** (the buttons are the
+ones the server offers, so the list can change without a new build). A small window opens on the
+provider's own consent screen and closes again once you have agreed; you are back in Pyrrhic, signed in.
+Pyrrhic asks Google for `openid`, `email` and `profile`, and Discord for `identify` and `email` — nothing
+more. If the same address signs in through both, it is the same account.
 
-**With an email and a password.** Open *Sign in with email…*, turn on **Create account** the first
-time. Passwords must be at least 10 characters. Pyrrhic then says *Check your inbox to confirm your
-address*, because the server refuses to save profiles for an address nobody has confirmed — open the
-link in that email, and the account is ready. Until you do, the account menu carries a **Confirm your
-email address** row that sends the email again.
+**With an email and a password** — *switched off for now* (S-49c: the server has no mailer yet). The
+code is kept; when it comes back, a *Sign in with email…* button appears under the providers, and
+everything below applies.
+
+Turn on **Create account** the first time. Passwords must be at least 10 characters. Pyrrhic then says
+*Check your inbox to confirm your address*, because the server refuses to save profiles for an address
+nobody has confirmed — open the link in that email, and the account is ready. Until you do, the account
+menu carries a **Confirm your email address** row that sends the email again.
 
 **If you forget the password.** *Forgot your password?* in the same dialog sends a link that opens
 Pyrrhic at *Choose a new password*. The answer is the same whether or not the address has an account
@@ -47,7 +51,7 @@ is kept to four rows.
 
 | Button | What it does |
 | --- | --- |
-| **Change password…** | Asks for the current password and the new one twice. Every other device is signed out and will ask for the new password; this browser stays signed in. For accounts made with an email — a Google account's password belongs to Google. |
+| **Change password…** | Only while the server takes passwords. Asks for the current password and the new one twice. Every other device is signed out and will ask for the new password; this browser stays signed in. A Google or Discord account's password belongs to that provider. |
 | **Delete account…** | Deletes the account and the copy of your profiles saved on it, for good. **Your profiles in this browser are not touched**, and Pyrrhic keeps working exactly as it does without an account. |
 
 ## Saving and loading
@@ -89,17 +93,16 @@ In this browser:
 | `pyrrhic.v1` | Your profiles — the source of truth, with or without an account. |
 | `pyrrhic.account.v1` | The session token, so you are not asked to sign in on every visit. |
 | `pyrrhic.account.device.v1` | This browser's device id and the version it last saw. Never uploaded. |
-| `pyrrhic.account.pkce` (**sessionStorage**) | The one-time sign-in verifier, for the length of the Google redirect only. |
 
-## The three addresses Pyrrhic answers besides its own
+## The two addresses Pyrrhic answers besides its own
 
-A link in an email, or Google coming back, opens Pyrrhic at a path rather than at the app itself. The
+A link in an email opens Pyrrhic at a path rather than at the app itself (the provider sign-in comes
+back to the account server, in its own window, not to the app). The
 one-time token in the address is used and then removed from the address bar before the app starts, so
 it cannot be copied out of a shared screen or a browser history.
 
 | Path | What it is |
 | --- | --- |
-| `…/oauth-callback` | Google, coming back from its consent screen. |
 | `…/password-reset?token=…` | The *Choose a new password* page, from a reset email. |
 | `…/verify-email?token=…` | Confirms the address, from a confirmation email. |
 

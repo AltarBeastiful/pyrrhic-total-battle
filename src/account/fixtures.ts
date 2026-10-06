@@ -154,13 +154,9 @@ class FakeCollection {
     return this.auth('authWithPassword', [identity, password]);
   }
 
-  authWithOAuth2Code(
-    provider: string,
-    code: string,
-    codeVerifier: string,
-    redirectURL: string,
-  ): Promise<unknown> {
-    return this.auth('authWithOAuth2Code', [provider, code, codeVerifier, redirectURL]);
+  /** The SDK's popup flow, reduced to its answer: the provider is the whole request worth checking. */
+  authWithOAuth2(options: { provider: string }): Promise<unknown> {
+    return this.auth('authWithOAuth2', [options.provider]);
   }
 
   authRefresh(): Promise<unknown> {

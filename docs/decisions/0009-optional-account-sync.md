@@ -1,6 +1,6 @@
 # ADR-0009 — Optional signed-in account sync (self-hosted PocketBase)
 
-Status: Proposed (2026-09-13)
+Status: Accepted (2026-10-07), amended by S-49c — see the end. Proposed 2026-09-13.
 
 Supersedes the sync half of ADR-0002 only. Everything else in ADR-0002 still holds.
 
@@ -106,3 +106,23 @@ feature that one person uses. Share links stay: they carry a march, not an accou
 - The stored blob is the whole root document, so a schema migration that the client can read is also
   what a second device receives. `src/state/migrations.ts` runs on a pulled blob exactly as it runs on
   a document read from `localStorage`.
+
+## Amendment — S-49c, accounts by SSO (2026-10-07)
+
+Owner's decision (`docs/plans/sso-accounts.md`): the leanest SSO that reuses what the libraries already do.
+
+- **Sign-in is Google and Discord**, through the PocketBase SDK's own popup flow
+  (`authWithOAuth2({ provider })`). Our hand-written PKCE redirect, the `…/oauth-callback` path and its
+  `sessionStorage` verifier are deleted: the SDK and the server do the PKCE and the `state` check.
+- **This reverses one line above**: "the redirect never names the backend host". The registered redirect
+  is now the backend's `https://pyrrhic-backend.freeddns.org/api/oauth2-redirect`, so moving the backend
+  means editing two redirect URIs. The backend therefore has a stable name (Dynu's `freeddns.org` is on
+  the Public Suffix List) instead of the sslip.io address that embeds the IP.
+- **Email/password is switched off on the server** (migration `1791331200_sso.js`) until an SMTP account
+  exists; the client code stays and draws the email form only when `auth-methods` says passwords are on.
+  The `…/password-reset` and `…/verify-email` paths, and the `404.html` copy they need, stay with it.
+- The client keeps no list of providers: the sign-in dialog draws whatever `auth-methods` returns, when it
+  opens (a user action, so constraint 1 holds).
+- Backups: PocketBase's nightly backup (one kept) plus a deduplicated history on the same host
+  (`ops/pocketbase/backup-history.sh`). There is no off-host copy; the owner accepted that.
+

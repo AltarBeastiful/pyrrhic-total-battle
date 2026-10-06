@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 import '@mantine/core/styles.css';
 import '@/ui/global.css';
 import { App } from '@/App';
-import { accountErrorMessage, appRootUrl, isAccountConfigured, readCallback } from '@/account/client';
+import { appRootUrl, isAccountConfigured, readCallback } from '@/account/client';
 import { trackAccountChanges, useAccountStore } from '@/account/state';
 import { captureInstallPrompt } from '@/pwa/install';
 import { requestPersistentStorage } from '@/pwa/persist';
@@ -100,12 +100,11 @@ function backToApp(): void {
 }
 
 /**
- * The three addresses that are an answer to something the account started elsewhere (S-49b, spec
- * §5.2): Google coming back, and the two links the backend's emails carry.
+ * The two addresses that are an answer to something the account started elsewhere (S-49b): the
+ * links the backend's emails carry. (SSO comes back to the backend, in a popup: S-49c.)
  *
  * They are real paths, served by the build-time copy of `index.html` to `404.html`
- * (`scripts/postbuild-404.mjs`) — Google forbids a fragment in a redirect URI, and a link in an
- * email should not carry one either. They are handled here rather than in a component because there
+ * (`scripts/postbuild-404.mjs`): a link in an email should not carry a fragment. They are handled here rather than in a component because there
  * is no router in this app and because the one-time token must leave the address bar before anything
  * can copy it.
  *
@@ -117,20 +116,6 @@ if (callback === null) {
   mount();
   // Revalidate a stored token (spec §5.1). Does nothing, and loads nothing, without one.
   void useAccountStore.getState().restore();
-} else if (callback.kind === 'oauth') {
-  void (async () => {
-    try {
-      const { completeGoogleSignIn } = await import('@/account/auth');
-      const user = await completeGoogleSignIn();
-      window.history.replaceState(null, '', appRootUrl());
-      await useAccountStore.getState().adopt(user);
-    } catch (error) {
-      window.history.replaceState(null, '', appRootUrl());
-      useAccountStore.setState({ error: accountErrorMessage(error) });
-    } finally {
-      mount();
-    }
-  })();
 } else {
   // A page with one question in it, in place of the app. The chunk is fetched only here, so a normal
   // start never pays for it.

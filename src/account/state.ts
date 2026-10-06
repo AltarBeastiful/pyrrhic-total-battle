@@ -24,6 +24,8 @@ import {
   loadDeviceState,
   saveDeviceState,
 } from './client';
+import type * as Auth from './auth';
+import type { SignInMethods } from './auth';
 import type { AccountUser } from './schema';
 import { pull, push, type RemoteProfile } from './sync';
 
@@ -60,6 +62,8 @@ export interface AccountState {
   dialog: AccountDialog;
   /** A blob already fetched (the first pull after sign-in), waiting for the player to confirm. */
   pending: RemoteProfile | null;
+  /** What the server offers (S-49c), read once by the first dialog that needs it; `null` until then. */
+  methods: SignInMethods | null;
 
   setDialog: (dialog: AccountDialog) => void;
   clearMessages: () => void;
@@ -79,9 +83,21 @@ export interface AccountState {
   signOut: () => Promise<void>;
   /** Revalidate a stored token on start-up; does nothing when there is none. */
   restore: () => Promise<void>;
+  /** Fill `methods` once; a failure is the dialog's `error`, and the next open tries again. */
+  loadMethods: () => Promise<void>;
+  /**
+   * SSO through the SDK's popup. Synchronous up to the SDK call, so it must be wired straight to a
+   * click, and only once `methods` is in (which means the auth code is loaded): Safari blocks a
+   * popup opened after an `await`. No `busy` state: a popup the player closes never answers, and the
+   * buttons must stay pressable for a second try.
+   */
+  signInWith: (provider: string) => void;
 }
 
 const device = loadDeviceState();
+
+/** The auth module once `loadMethods` has imported it, for the one call that cannot wait for it. */
+let auth: typeof Auth | null = null;
 
 export const useAccountStore = create<AccountState>()((set, get) => {
   /** Remember the version this device is now level with, across reloads. */
@@ -127,6 +143,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     verificationSent: false,
     dialog: null,
     pending: null,
+    methods: null,
 
     setDialog: (dialog) => {
       set({ dialog, error: '' });
@@ -326,6 +343,27 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       } catch {
         /* offline, or a backend that is down: the app does not care */
       }
+    },
+
+    loadMethods: async () => {
+      if (get().methods !== null) return;
+      auth = await import('./auth');
+      try {
+        set({ methods: await auth.signInMethods() });
+      } catch (error) {
+        set({ error: accountErrorMessage(error) });
+      }
+    },
+
+    signInWith: (provider) => {
+      if (auth === null) return;
+      set({ error: '' });
+      auth.signInWithProvider(provider).then(
+        (user) => get().adopt(user),
+        (error: unknown) => {
+          set({ error: accountErrorMessage(error) });
+        },
+      );
     },
   };
 });

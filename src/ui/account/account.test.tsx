@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { resetClient } from '@/account/client';
-import { onRequest, resetFakePocketBase } from '@/account/fixtures';
+import { FakeResponseError, onRequest, resetFakePocketBase } from '@/account/fixtures';
 import { useAccountStore } from '@/account/state';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
@@ -40,7 +40,22 @@ const BASE = {
   verificationSent: false,
   dialog: null,
   pending: null,
+  methods: null,
 } as const;
+
+/** What the production server offers since S-49c: two providers and no passwords. */
+function serverMethods(password: boolean): unknown {
+  return {
+    password: { enabled: password, identityFields: ['email'] },
+    oauth2: {
+      enabled: true,
+      providers: [
+        { name: 'google', displayName: 'Google', state: 's', codeVerifier: 'v', authURL: 'https://g/' },
+        { name: 'discord', displayName: 'Discord', state: 's', codeVerifier: 'v', authURL: 'https://d/' },
+      ],
+    },
+  };
+}
 
 beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());
@@ -76,10 +91,36 @@ test('a build with no backend has no account rows at all', async () => {
   expect(within(menu).queryByText('Account')).toBeNull();
 });
 
-test('signed out, the menu offers the two ways in', async () => {
+test('signed out, the menu offers one way in', async () => {
   const menu = await openMenu();
-  expect(within(menu).getByRole('menuitem', { name: /^Sign in with Google/ })).toBeTruthy();
-  expect(within(menu).getByRole('menuitem', { name: /^Sign in with email/ })).toBeTruthy();
+  expect(within(menu).getByRole('menuitem', { name: /^Sign in…/ })).toBeTruthy();
+});
+
+test('the sign-in dialog draws the providers the server lists, and no email form when passwords are off', async () => {
+  onRequest('listAuthMethods', () => serverMethods(false));
+  useAccountStore.setState({ dialog: 'signin' });
+  renderWithTheme(<AccountDialogs />);
+
+  const dialog = await screen.findByRole('dialog');
+  expect(await within(dialog).findByRole('button', { name: 'Continue with Google' })).toBeTruthy();
+  expect(within(dialog).getByRole('button', { name: 'Continue with Discord' })).toBeTruthy();
+  expect(within(dialog).queryByRole('button', { name: /Sign in with email/ })).toBeNull();
+});
+
+test('a provider button signs in through the popup and takes the account', async () => {
+  const user = userEvent.setup();
+  onRequest('listAuthMethods', () => serverMethods(false));
+  onRequest('authWithOAuth2', () => ({ token: 'tok', record: USER }));
+  onRequest('getFirstListItem', () => {
+    throw new FakeResponseError(404);
+  });
+  useAccountStore.setState({ dialog: 'signin' });
+  renderWithTheme(<AccountDialogs />);
+
+  await user.click(await screen.findByRole('button', { name: 'Continue with Discord' }));
+  await vi.waitFor(() => {
+    expect(useAccountStore.getState().user).toEqual(USER);
+  });
 });
 
 test('signed in, the menu says who you are and what you can do about it', async () => {
@@ -109,14 +150,16 @@ test('saving is offered only when there is something to save, and says so once i
   expect(within(menu).getByRole('menuitem', { name: /^Save to account/ }).textContent).toContain('Saved');
 });
 
-test('the email row opens a dialog with a create-account toggle', async () => {
+test('with passwords on, the email form is one more step, with a create-account toggle', async () => {
   const user = userEvent.setup();
+  onRequest('listAuthMethods', () => serverMethods(true));
   const menu = await openMenu();
-  await user.click(within(menu).getByRole('menuitem', { name: /^Sign in with email/ }));
+  await user.click(within(menu).getByRole('menuitem', { name: /^Sign in…/ }));
   expect(useAccountStore.getState().dialog).toBe('signin');
 
   cleanup();
   renderWithTheme(<AccountDialogs />);
+  await user.click(await screen.findByRole('button', { name: 'Sign in with email…' }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByLabelText('Email')).toBeTruthy();
   expect(within(dialog).getByLabelText('Password')).toBeTruthy();
@@ -181,9 +224,11 @@ test('a confirmed account is never asked to confirm anything', async () => {
 test('a forgotten password is answered the same way whether or not the address exists', async () => {
   const user = userEvent.setup();
   useAccountStore.setState({ dialog: 'signin' });
+  onRequest('listAuthMethods', () => serverMethods(true));
   onRequest('requestPasswordReset', () => true);
   renderWithTheme(<AccountDialogs />);
 
+  await user.click(await screen.findByRole('button', { name: 'Sign in with email…' }));
   const dialog = await screen.findByRole('dialog');
   await user.click(within(dialog).getByRole('button', { name: 'Forgot your password?' }));
   await user.type(await screen.findByLabelText('Email'), 'player@example.com');
@@ -203,10 +248,25 @@ test('the row naming the account leads to the two errands the menu does not carr
   expect(useAccountStore.getState().dialog).toBe('account');
 
   cleanup();
+  onRequest('listAuthMethods', () => serverMethods(true));
   renderWithTheme(<AccountDialogs />);
   const dialog = await screen.findByRole('dialog');
+  // Offered only where the server takes passwords at all.
+  expect(await within(dialog).findByRole('button', { name: 'Change password…' })).toBeTruthy();
   await user.click(within(dialog).getByRole('button', { name: 'Delete account…' }));
   expect(useAccountStore.getState().dialog).toBe('delete');
+});
+
+test('with passwords off, the account dialog does not offer to change one', async () => {
+  onRequest('listAuthMethods', () => serverMethods(false));
+  useAccountStore.setState({ user: USER, dialog: 'account' });
+  renderWithTheme(<AccountDialogs />);
+  const dialog = await screen.findByRole('dialog');
+  await vi.waitFor(() => {
+    expect(useAccountStore.getState().methods).not.toBeNull();
+  });
+  expect(within(dialog).queryByRole('button', { name: 'Change password…' })).toBeNull();
+  expect(within(dialog).getByRole('button', { name: 'Delete account…' })).toBeTruthy();
 });
 
 test('two new passwords that differ are refused before the server is asked', async () => {

@@ -11,9 +11,8 @@
  * beside it (design rule 15 — nothing on screen without value). When the build carries no backend
  * origin the section is `null` and the menu is exactly what it was before.
  */
-import { CloudDownload, CloudUpload, LogIn, LogOut, Mail, MailCheck, UserRound } from 'lucide-react';
+import { CloudDownload, CloudUpload, LogIn, LogOut, MailCheck, UserRound } from 'lucide-react';
 
-import { accountErrorMessage } from '@/account/client';
 import { useAccountStore } from '@/account/state';
 
 import type { AppMenuEntry, AppMenuSection } from '../kit';
@@ -30,6 +29,7 @@ export function useAccountSection(): AppMenuSection | null {
   const error = useAccountStore((state) => state.error);
   const conflict = useAccountStore((state) => state.conflict);
   const verificationSent = useAccountStore((state) => state.verificationSent);
+  const passwords = useAccountStore((state) => state.methods?.password ?? false);
 
   if (!enabled) return null;
 
@@ -38,26 +38,10 @@ export function useAccountSection(): AppMenuSection | null {
   if (user === null) {
     const entries: AppMenuEntry[] = [
       {
-        id: 'account-google',
-        label: 'Sign in with Google',
+        id: 'account-signin',
+        label: 'Sign in…',
         description: error === '' ? 'Keep a copy of your profiles on your account' : error,
         icon: <LogIn size={ICON} aria-hidden />,
-        disabled: working,
-        onSelect: () => {
-          void (async () => {
-            try {
-              const { startGoogleSignIn } = await import('@/account/auth');
-              await startGoogleSignIn();
-            } catch (cause) {
-              useAccountStore.setState({ error: accountErrorMessage(cause) });
-            }
-          })();
-        },
-      },
-      {
-        id: 'account-email',
-        label: 'Sign in with email…',
-        icon: <Mail size={ICON} aria-hidden />,
         disabled: working,
         onSelect: () => {
           useAccountStore.getState().setDialog('signin');
@@ -78,7 +62,7 @@ export function useAccountSection(): AppMenuSection | null {
     {
       id: 'account-user',
       label: `Signed in as ${user.email === '' ? 'your account' : user.email}`,
-      description: 'Change your password, or delete this account',
+      description: passwords ? 'Change your password, or delete this account' : 'Delete this account',
       icon: <UserRound size={ICON} aria-hidden />,
       disabled: working,
       onSelect: () => {

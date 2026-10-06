@@ -1,36 +1,17 @@
 /**
- * Signing in (S-49b, spec §5.2). Two ways in, one way out.
+ * Signing in (S-49b, S-49c). Two ways in, one way out.
  *
- * Google uses a **frontend-hosted redirect**: the only host Google ever sees is the one serving the
- * app, so the backend can move without touching the OAuth client (spec §2.1). PocketBase hands us
- * the PKCE verifier and the anti-CSRF `state` with the provider list; both have to survive a full
- * page navigation, so they go to `sessionStorage` and are checked on the way back. The state check
- * is not optional — without it the callback is open to CSRF.
+ * SSO is whatever providers the server lists (Google and Discord in production), through the SDK's
+ * popup flow: PocketBase does the PKCE and the `state` check itself, so nothing here does.
  *
- * Email/password is the fallback for a player who does not want a Google account, and the only way
- * the e2e suite can drive the flow without a browser leaving the machine. It brings four more
+ * Email/password is switched off in production until SMTP exists (docs/plans/sso-accounts.md); the
+ * code stays, and the e2e suite keeps it covered against a local server that switches it on. It brings four more
  * errands with it — confirm the address, forget the password, change the password, delete the
  * account — and every one of them is a single call PocketBase already implements; what is written
  * here is the wording and the session bookkeeping around them.
  */
-import {
-  AccountError,
-  getClient,
-  oauthRedirectUrl,
-  PKCE_SESSION_KEY,
-  readSession,
-  USERS_COLLECTION,
-  writeSession,
-} from './client';
+import { AccountError, getClient, loadedClient, USERS_COLLECTION } from './client';
 import { authUserSchema, type AccountUser } from './schema';
-
-export const GOOGLE_PROVIDER = 'google';
-
-interface PkceState {
-  codeVerifier: string;
-  state: string;
-  redirectUrl: string;
-}
 
 /** The status a PocketBase `ClientResponseError` carries, without importing the class at run time. */
 function statusOf(error: unknown): number {
@@ -67,76 +48,45 @@ function toUser(record: unknown): AccountUser {
   return parsed.data;
 }
 
-// ---- Google ------------------------------------------------------------------------------------
-/**
- * Step 1: ask PocketBase for the provider (it mints the PKCE pair), park what must survive the
- * redirect, and leave.
- *
- * `authURL` already ends with `redirect_uri=`, so the redirect is *appended*, raw, exactly as
- * PocketBase's own docs and SDK do it (investigation 0012, item 8).
- */
-export async function startGoogleSignIn(): Promise<void> {
+// ---- Providers (S-49c) -------------------------------------------------------------------------
+/** What the server offers, read when the sign-in dialog opens: the client keeps no list of its own. */
+export interface SignInMethods {
+  providers: { name: string; displayName: string }[];
+  /** Off in production until SMTP exists; the email form is drawn only when this is true. */
+  password: boolean;
+}
+
+export async function signInMethods(): Promise<SignInMethods> {
   const pb = await getClient();
-  let providers;
   try {
     const methods = await pb.collection(USERS_COLLECTION).listAuthMethods();
-    providers = methods.oauth2.providers;
+    return {
+      providers: methods.oauth2.enabled
+        ? methods.oauth2.providers.map(({ name, displayName }) => ({ name, displayName }))
+        : [],
+      password: methods.password.enabled,
+    };
   } catch (error) {
     throw asAccountError(error, 'Sign-in is unavailable right now.');
   }
-  const google = providers.find((provider) => provider.name === GOOGLE_PROVIDER);
-  if (!google) {
-    throw new AccountError('auth', 'Google sign-in is not enabled on this server.');
-  }
-
-  const redirectUrl = oauthRedirectUrl();
-  const pkce: PkceState = { codeVerifier: google.codeVerifier, state: google.state, redirectUrl };
-  writeSession(PKCE_SESSION_KEY, JSON.stringify(pkce));
-  window.location.assign(`${google.authURL}${redirectUrl}`);
-}
-
-function readPkce(): PkceState | null {
-  const raw = readSession(PKCE_SESSION_KEY);
-  if (raw === null) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return null;
-    const { codeVerifier, state, redirectUrl } = parsed as Record<string, unknown>;
-    if (typeof codeVerifier !== 'string' || typeof state !== 'string' || typeof redirectUrl !== 'string') {
-      return null;
-    }
-    return { codeVerifier, state, redirectUrl };
-  } catch {
-    return null;
-  }
 }
 
 /**
- * Step 2, on `…/oauth-callback`: check the state, exchange the code, forget the PKCE pair. The
- * redirect URL sent here is the one that was stored, so it is byte-identical to step 1 even if the
- * page is reached by a different path.
+ * The SDK's own popup flow: it opens the window, waits for the provider's answer over realtime and
+ * exchanges the code. The redirect is the backend's `/api/oauth2-redirect`, which is what the Google
+ * and Discord consoles register.
+ *
+ * Call it **straight from the click**, after `signInMethods()` has loaded the client: the SDK opens
+ * its popup before its first `await`, and Safari blocks a popup opened any later than that.
  */
-export async function completeGoogleSignIn(): Promise<AccountUser> {
-  const params = new URLSearchParams(window.location.search);
-  const stored = readPkce();
-  writeSession(PKCE_SESSION_KEY, null);
-
-  if (params.get('error') !== null) {
-    throw new AccountError('oauth', 'Google did not complete the sign-in.');
-  }
-  const code = params.get('code');
-  if (code === null || stored === null || params.get('state') !== stored.state) {
-    throw new AccountError('oauth', 'This sign-in could not be verified. Start it again.');
-  }
-
-  const pb = await getClient();
+export async function signInWithProvider(provider: string): Promise<AccountUser> {
+  const pb = loadedClient();
+  if (pb === null) throw new AccountError('auth', 'Sign-in is unavailable right now.');
   try {
-    const result = await pb
-      .collection(USERS_COLLECTION)
-      .authWithOAuth2Code(GOOGLE_PROVIDER, code, stored.codeVerifier, stored.redirectUrl);
+    const result = await pb.collection(USERS_COLLECTION).authWithOAuth2({ provider });
     return toUser(result.record);
   } catch (error) {
-    throw asAccountError(error, 'Google sign-in was refused.');
+    throw asAccountError(error, 'The sign-in was not completed.');
   }
 }
 

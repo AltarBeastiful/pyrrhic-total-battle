@@ -1,25 +1,25 @@
 // @vitest-environment jsdom
 /**
- * Signing in (S-49b, spec §5.2). The two things worth testing here are the ones a mistake makes
- * invisible: that the PKCE state is *checked* on the way back, and that the redirect URL sent to the
- * provider is byte-identical to the one sent to the exchange.
+ * Signing in (S-49b, S-49c). SSO is the SDK's popup flow, so what is ours to test is the reading of
+ * the server's methods and the sentence a failure becomes; the email flows are kept, switched off in
+ * production, and tested here as they were.
  */
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { AUTH_STORAGE_KEY, PKCE_SESSION_KEY, resetClient } from './client';
+import { AUTH_STORAGE_KEY, resetClient } from './client';
 import {
   changePassword,
-  completeGoogleSignIn,
   confirmPasswordReset,
   confirmVerification,
   deleteAccount,
   refreshSession,
   requestPasswordReset,
   resendVerification,
+  signInMethods,
   signInWithPassword,
+  signInWithProvider,
   signOut,
   signUpWithPassword,
-  startGoogleSignIn,
 } from './auth';
 import { fakeCalls, FakeResponseError, onRequest, resetFakePocketBase } from './fixtures';
 
@@ -30,118 +30,59 @@ vi.mock('pocketbase', async () => {
 
 const USER = { id: 'u1', email: 'player@example.com', verified: false };
 
-/**
- * jsdom refuses a real navigation, so `assign` is replaced by a recorder — the URL it was handed is
- * the whole assertion. Everything else still reads through to the real `Location`, which follows
- * `history.replaceState`; that is what lets a test move the page to the callback path.
- */
-let assigned = '';
-const realLocation = window.location;
-Object.defineProperty(window, 'location', {
-  configurable: true,
-  value: {
-    get href() {
-      return realLocation.href;
-    },
-    get origin() {
-      return realLocation.origin;
-    },
-    get search() {
-      return realLocation.search;
-    },
-    assign: (url: string) => {
-      assigned = url;
-    },
-  },
-});
-
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   resetClient();
   resetFakePocketBase();
-  assigned = '';
   vi.stubEnv('VITE_BACKEND_ORIGIN', 'https://backend.test');
   window.history.replaceState(null, '', '/pyrrhic/');
 });
 
-function googleProvider(): unknown {
+function methods(): unknown {
   return {
+    password: { enabled: false, identityFields: ['email'] },
     oauth2: {
       enabled: true,
       providers: [
-        {
-          name: 'google',
-          displayName: 'Google',
-          state: 'state-123',
-          codeVerifier: 'verifier-123',
-          authURL: 'https://accounts.google.com/o/oauth2/auth?client_id=x&redirect_uri=',
-        },
+        { name: 'google', displayName: 'Google', state: 's', codeVerifier: 'v', authURL: 'https://g/' },
+        { name: 'discord', displayName: 'Discord', state: 's', codeVerifier: 'v', authURL: 'https://d/' },
       ],
     },
   };
 }
 
-test('starting Google sign-in parks the PKCE pair and leaves for the provider', async () => {
-  onRequest('listAuthMethods', () => googleProvider());
-  await startGoogleSignIn();
-
-  expect(JSON.parse(sessionStorage.getItem(PKCE_SESSION_KEY) ?? '{}')).toEqual({
-    codeVerifier: 'verifier-123',
-    state: 'state-123',
-    redirectUrl: 'http://localhost:3000/pyrrhic/oauth-callback',
-  });
-  // `authURL` already ends with `redirect_uri=`; the redirect is appended raw (investigation 0012).
-  expect(assigned).toBe(
-    'https://accounts.google.com/o/oauth2/auth?client_id=x&redirect_uri=http://localhost:3000/pyrrhic/oauth-callback',
-  );
-});
-
-test('a server with no Google provider says so instead of failing obscurely', async () => {
-  onRequest('listAuthMethods', () => ({ oauth2: { enabled: false, providers: [] } }));
-  await expect(startGoogleSignIn()).rejects.toMatchObject({
-    kind: 'auth',
-    message: 'Google sign-in is not enabled on this server.',
+test('the server says which providers to offer, and whether the email form is drawn', async () => {
+  onRequest('listAuthMethods', () => methods());
+  await expect(signInMethods()).resolves.toEqual({
+    providers: [
+      { name: 'google', displayName: 'Google' },
+      { name: 'discord', displayName: 'Discord' },
+    ],
+    password: false,
   });
 });
 
-test('the callback exchanges the code with the same redirect URL it left with', async () => {
-  onRequest('listAuthMethods', () => googleProvider());
-  await startGoogleSignIn();
-
-  window.history.replaceState(null, '', '/pyrrhic/oauth-callback?code=the-code&state=state-123');
-  onRequest('authWithOAuth2Code', () => ({ token: 'tok', record: USER }));
-
-  await expect(completeGoogleSignIn()).resolves.toEqual(USER);
-  expect(fakeCalls.at(-1)).toEqual({
-    collection: 'users',
-    method: 'authWithOAuth2Code',
-    args: ['google', 'the-code', 'verifier-123', 'http://localhost:3000/pyrrhic/oauth-callback'],
+test('an unreachable server is a sentence when the dialog asks for the methods', async () => {
+  onRequest('listAuthMethods', () => {
+    throw new FakeResponseError(0, 'offline');
   });
-  // The verifier is single-use: it must not survive the exchange.
-  expect(sessionStorage.getItem(PKCE_SESSION_KEY)).toBeNull();
+  await expect(signInMethods()).rejects.toMatchObject({ kind: 'network' });
 });
 
-test('a state that does not match is refused, and nothing is exchanged', async () => {
-  onRequest('listAuthMethods', () => googleProvider());
-  await startGoogleSignIn();
+test('a provider sign-in stores the session, through the client the dialog already loaded', async () => {
+  onRequest('listAuthMethods', () => methods());
+  await signInMethods();
+  onRequest('authWithOAuth2', () => ({ token: 'tok', record: USER }));
 
-  window.history.replaceState(null, '', '/pyrrhic/oauth-callback?code=the-code&state=forged');
-  await expect(completeGoogleSignIn()).rejects.toMatchObject({ kind: 'oauth' });
-  expect(fakeCalls.some((call) => call.method === 'authWithOAuth2Code')).toBe(false);
+  await expect(signInWithProvider('discord')).resolves.toEqual(USER);
+  expect(fakeCalls.at(-1)).toEqual({ collection: 'users', method: 'authWithOAuth2', args: ['discord'] });
+  expect(localStorage.getItem(AUTH_STORAGE_KEY)).toContain('tok');
 });
 
-test('a callback with no parked verifier is refused', async () => {
-  window.history.replaceState(null, '', '/pyrrhic/oauth-callback?code=the-code&state=state-123');
-  await expect(completeGoogleSignIn()).rejects.toMatchObject({ kind: 'oauth' });
-});
-
-test('a refusal from Google is a sentence, not a crash', async () => {
-  window.history.replaceState(null, '', '/pyrrhic/oauth-callback?error=access_denied');
-  await expect(completeGoogleSignIn()).rejects.toMatchObject({
-    kind: 'oauth',
-    message: 'Google did not complete the sign-in.',
-  });
+test('a provider sign-in before the client is loaded refuses instead of opening a blocked popup', async () => {
+  await expect(signInWithProvider('google')).rejects.toMatchObject({ kind: 'auth' });
+  expect(fakeCalls).toEqual([]);
 });
 
 test('email and password sign-in stores the session', async () => {

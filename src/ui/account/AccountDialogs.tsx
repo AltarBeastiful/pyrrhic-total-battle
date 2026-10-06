@@ -12,7 +12,7 @@
  * them says "Submit" (design rules 25 and 26).
  */
 import { Alert, Anchor, Button, Group, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { accountErrorMessage } from '@/account/client';
 import { useAccountStore } from '@/account/state';
@@ -65,13 +65,15 @@ function ErrorPanel({ message, onResend }: { message: string; onResend?: (() => 
   );
 }
 
-/** Which panel the one email dialog is showing. */
-type SignInView = 'form' | 'forgot' | 'forgot-sent' | 'created';
+/** Which panel the sign-in dialog is showing: the server's providers first, then the email ones. */
+type SignInView = 'choose' | 'form' | 'forgot' | 'forgot-sent' | 'created';
 
 function SignInDialog() {
   const open = useAccountStore((state) => state.dialog) === 'signin';
   const busy = useAccountStore((state) => state.busy) !== 'none';
-  const [view, setView] = useState<SignInView>('form');
+  const methods = useAccountStore((state) => state.methods);
+  const methodsError = useAccountStore((state) => state.error);
+  const [view, setView] = useState<SignInView>('choose');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [creating, setCreating] = useState(false);
@@ -85,7 +87,7 @@ function SignInDialog() {
     setPassword('');
     setError('');
     setUnconfirmed(false);
-    setView('form');
+    setView('choose');
     setCreated(null);
     // An account is created once; the next time this dialog opens it is to sign in, not to make a
     // second account. Leaving the switch on is how a returning player meets "email already in use".
@@ -161,6 +163,57 @@ function SignInDialog() {
       }
     })();
   };
+
+  useEffect(() => {
+    if (open) void useAccountStore.getState().loadMethods();
+  }, [open]);
+
+  if (view === 'choose') {
+    return (
+      <Dialog
+        opened={open}
+        onClose={close}
+        title="Sign in"
+        size="sm"
+        description="Your profiles stay in this browser; the account only holds the copy you choose to save."
+        footer={
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={close}>
+              Cancel
+            </Button>
+          </Group>
+        }
+      >
+        <Stack gap="sm" align="stretch">
+          {methods === null && methodsError === '' && <Text size="sm">Asking the account server…</Text>}
+          {methods?.providers.map((provider) => (
+            <Button
+              key={provider.name}
+              variant="default"
+              disabled={busy}
+              onClick={() => {
+                useAccountStore.getState().signInWith(provider.name);
+              }}
+            >
+              {`Continue with ${provider.displayName}`}
+            </Button>
+          ))}
+          {methods?.password === true && (
+            <Button
+              variant="subtle"
+              disabled={busy}
+              onClick={() => {
+                setView('form');
+              }}
+            >
+              Sign in with email…
+            </Button>
+          )}
+          <ErrorPanel message={methodsError} />
+        </Stack>
+      </Dialog>
+    );
+  }
 
   if (view === 'created') {
     return (
@@ -266,8 +319,14 @@ function SignInDialog() {
       description="Your profiles stay in this browser; the account only holds the copy you choose to save."
       footer={
         <Group justify="flex-end" gap="sm">
-          <Button variant="default" onClick={close}>
-            Cancel
+          <Button
+            variant="default"
+            onClick={() => {
+              setView('choose');
+              setError('');
+            }}
+          >
+            Back
           </Button>
           <Button disabled={email.trim() === '' || password === '' || working || busy} onClick={submit}>
             {creating ? 'Create account' : 'Sign in'}
@@ -336,6 +395,11 @@ function YourAccountDialog() {
   const open = useAccountStore((state) => state.dialog) === 'account';
   const user = useAccountStore((state) => state.user);
   const busy = useAccountStore((state) => state.busy) !== 'none';
+  const passwords = useAccountStore((state) => state.methods?.password ?? false);
+
+  useEffect(() => {
+    if (open) void useAccountStore.getState().loadMethods();
+  }, [open]);
 
   const close = (): void => {
     useAccountStore.getState().setDialog(null);
@@ -361,15 +425,17 @@ function YourAccountDialog() {
       }
     >
       <Stack gap="sm" align="stretch">
-        <Button
-          variant="default"
-          disabled={busy}
-          onClick={() => {
-            useAccountStore.getState().setDialog('password');
-          }}
-        >
-          Change password…
-        </Button>
+        {passwords && (
+          <Button
+            variant="default"
+            disabled={busy}
+            onClick={() => {
+              useAccountStore.getState().setDialog('password');
+            }}
+          >
+            Change password…
+          </Button>
+        )}
         <Button
           variant="default"
           color="danger"

@@ -1,7 +1,7 @@
 /**
  * The account, end to end against a real PocketBase (S-49b, ADR-0009).
  *
- * Email/password rather than Google: the OAuth round trip leaves the machine, and what has to be
+ * Email/password rather than SSO: the provider round trip leaves the machine, and what has to be
  * proved here is the part we wrote — sign up, the confirmation the server insists on, save, reload,
  * load, the 409 that a stale version produces, changing a password and deleting the account.
  *
@@ -16,7 +16,7 @@
  *
  *   docker network create deploy_default                       # once
  *   docker compose -f ops/pocketbase/docker-compose.yml \
- *                  -f ops/pocketbase/docker-compose.local.yml up -d
+ *                  -f ops/pocketbase/docker-compose.local.yml up -d   # passwords on (S-49c)
  *   VITE_BACKEND_ORIGIN=http://127.0.0.1:8090 pnpm exec playwright test e2e/account.spec.ts
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -85,9 +85,10 @@ test.beforeEach(async () => {
 /** Sign up through the menu's email dialog and wait for the account rows to appear. */
 async function signUp(page: Page, email: string, password: string): Promise<void> {
   const menu = await openAccountMenu(page);
-  await menu.getByRole('menuitem', { name: /^Sign in with email/ }).click();
+  await menu.getByRole('menuitem', { name: /^Sign in…/ }).click();
 
   const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Sign in with email…' }).click();
   await dialog.getByLabel('Email').fill(email);
   await dialog.getByRole('textbox', { name: 'Password' }).fill(password);
   await dialog.getByRole('switch', { name: 'Create account' }).click();
@@ -120,8 +121,9 @@ async function signUpConfirmed(page: Page, email: string, password: string): Pro
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {
   const menu = await openAccountMenu(page);
-  await menu.getByRole('menuitem', { name: /^Sign in with email/ }).click();
+  await menu.getByRole('menuitem', { name: /^Sign in…/ }).click();
   const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Sign in with email…' }).click();
   await dialog.getByLabel('Email').fill(email);
   await dialog.getByRole('textbox', { name: 'Password' }).fill(password);
   await dialog.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -142,6 +144,35 @@ async function chooseAccountRow(page: Page, name: RegExp): Promise<void> {
   await menu.getByRole('menuitem', { name }).click();
   await expect(page.getByRole('menu')).toBeHidden();
 }
+
+test('the sign-in dialog offers what the server lists, and no email form when passwords are off', async ({
+  page,
+}) => {
+  // Production's answer since S-49c, served in place of the local container's (which keeps passwords
+  // on for the tests below). The popup itself leaves the machine, so it is not driven here.
+  await page.route('**/api/collections/users/auth-methods*', (route) =>
+    route.fulfill({
+      json: {
+        password: { enabled: false, identityFields: ['email'] },
+        oauth2: {
+          enabled: true,
+          providers: [
+            { name: 'google', displayName: 'Google', state: 's', codeVerifier: 'v', authURL: 'https://g/' },
+            { name: 'discord', displayName: 'Discord', state: 's', codeVerifier: 'v', authURL: 'https://d/' },
+          ],
+        },
+      },
+    }),
+  );
+  await openApp(page);
+  const menu = await openAccountMenu(page);
+  await menu.getByRole('menuitem', { name: /^Sign in…/ }).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Continue with Discord' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Sign in with email…' })).toHaveCount(0);
+});
 
 test('sign up, save, reload, load back', async ({ page }) => {
   const problems = watchConsole(page);
@@ -307,7 +338,7 @@ test('deleting the account leaves this browser exactly as it was', async ({ page
 
   // Signed out, with the way back in offered again — and the profile still here.
   const menu = await openAccountMenu(page);
-  await expect(menu.getByRole('menuitem', { name: /^Sign in with email/ })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: /^Sign in…/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(accountButton(page)).toHaveAccessibleName('Account: Mine to keep');
 

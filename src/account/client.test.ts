@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 /**
  * The plumbing the rest of the account rests on (S-49b): a build with no backend has no feature, the
- * device id is minted once and kept, and the two URLs the OAuth round trip has to agree on resolve
- * the same from the app root and from the callback path.
+ * device id is minted once and kept, and the email-link paths are told apart from a normal start.
  */
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -16,9 +15,7 @@ import {
   getClient,
   hasStoredSession,
   isAccountConfigured,
-  isOAuthCallback,
   loadDeviceState,
-  oauthRedirectUrl,
   readCallback,
   resetClient,
   saveDeviceState,
@@ -95,28 +92,9 @@ test('a stored session is recognised without loading the SDK', () => {
   expect(hasStoredSession()).toBe(true);
 });
 
-test('the redirect URL is the same string from the app root and from the callback itself', () => {
-  at('/pyrrhic/');
-  const fromRoot = oauthRedirectUrl();
-  at('/pyrrhic/oauth-callback?code=x&state=y');
-  expect(oauthRedirectUrl()).toBe(fromRoot);
-  expect(fromRoot).toBe('http://localhost:3000/pyrrhic/oauth-callback');
-});
-
-test('the app root is where the callback sends the address bar back to', () => {
-  at('/pyrrhic/oauth-callback?code=x&state=y');
+test('the app root is where a callback page sends the address bar back to', () => {
+  at('/pyrrhic/password-reset?token=x');
   expect(appRootUrl()).toBe('http://localhost:3000/pyrrhic/');
-});
-
-test('a callback is recognised by its query, a normal start is not', () => {
-  at('/pyrrhic/');
-  expect(isOAuthCallback()).toBe(false);
-  at('/pyrrhic/#c=share-payload');
-  expect(isOAuthCallback()).toBe(false);
-  at('/pyrrhic/oauth-callback?code=abc&state=def');
-  expect(isOAuthCallback()).toBe(true);
-  at('/pyrrhic/oauth-callback?error=access_denied');
-  expect(isOAuthCallback()).toBe(true);
 });
 
 test('the two links in the backend emails are recognised by their path, with their token', () => {
@@ -134,8 +112,9 @@ test('the two links in the backend emails are recognised by their path, with the
   at('/pyrrhic/password-reset');
   expect(readCallback()).toEqual({ kind: 'password-reset', token: '' });
 
+  // SSO lands on the backend now (S-49c): a provider's query on the app is not ours.
   at('/pyrrhic/oauth-callback?code=abc&state=def');
-  expect(readCallback()).toEqual({ kind: 'oauth' });
+  expect(readCallback()).toBeNull();
 });
 
 test('every failure has a sentence, never a stack', () => {

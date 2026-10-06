@@ -1,14 +1,19 @@
-# Pyrrhic profile-sync backend (S-49a)
+# Pyrrhic profile-sync backend (S-49a, S-49c)
 
-**Live since 2026-09-13** at `https://pyrrhic-backend.92.5.91.253.sslip.io` (Let's Encrypt certificate; a Dynu
-name can replace it later by editing `/home/ubuntu/caddy-sites/pyrrhic.caddy`, the `--origins`/`PYRRHIC_APP_URL`
-values in `/home/ubuntu/pyrrhic/docker-compose.yml`, and the mail templates in the admin UI). Server paths:
-`/home/ubuntu/pyrrhic/` (compose, hooks, migrations, `smoke.sh`, and `.superuser` — mode 600, the generated
-superuser credentials; rotate them from the admin UI), `/home/ubuntu/caddy-sites/pyrrhic.caddy` (imported by
-philou's Caddy from `/etc/caddy-sites/*.caddy`; philou commits 840a6e9 and 934dd24). Admin UI at `/_/` is
-denied by default: put your public IP in the `not remote_ip` matcher of the site file and
-`docker exec philou-web caddy reload --config /etc/caddy/Caddyfile`. Still to do in the admin UI: Google
-OAuth client (owner), SMTP (owner), backup target.
+**Live since 2026-09-13**, at **`https://pyrrhic-backend.freeddns.org`** since 2026-10-07 (a Dynu
+name, on the Public Suffix List; the old `pyrrhic-backend.92.5.91.253.sslip.io` is still served by the
+same site block for one release, then dropped). Server paths: `/home/ubuntu/pyrrhic/` (compose, hooks,
+migrations, `smoke.sh`, `backup-history.sh`, and `.superuser`, mode 600: the generated superuser
+credentials; rotate them from the admin UI), `/home/ubuntu/caddy-sites/pyrrhic.caddy` (imported by
+philou's Caddy from `/etc/caddy-sites/*.caddy`; philou commits 840a6e9 and 934dd24),
+`/home/ubuntu/pyrrhic-backups/` (the deduplicated history, step 10). Admin UI at `/_/` is denied by
+default: put your public IP in the `not remote_ip` matcher of the site file and
+`docker exec philou-web caddy reload --config /etc/caddy/Caddyfile`.
+
+Sign-in is **Google and Discord** (S-49c, `docs/plans/sso-accounts.md`): the SDK's popup flow, with
+the backend's `/api/oauth2-redirect` as the registered redirect. **Password sign-in is off**
+(`pb_migrations/1791331200_sso.js`) until an SMTP account exists; everything about it below (9a–9c)
+applies again the day it is switched back on.
 
 Self-hosted PocketBase behind philou's Caddy on the "main" server, for the signed-in
 account sync in `docs/PLAN.md` § M8.
@@ -42,7 +47,9 @@ caddy/pyrrhic.caddy           site block for philou's sites-enabled directory
 pb_hooks/main.pb.js           POST /api/app/profile — the only write path
 pb_migrations/1789300800_profiles.js   the `profiles` collection, fields, index, rules
 pb_migrations/1789315200_account_hardening.js   password minimum, mail templates, rate limits
+pb_migrations/1791331200_sso.js   OAuth2 on, password sign-in off (unless PYRRHIC_PASSWORD_AUTH=on), nightly backup
 smoke.sh                      curl-based acceptance checks (spec §7) + the account checks
+backup-history.sh             host cron: copies the nightly backup out, deduplicated history
 ```
 
 No secrets are committed. The Google client secret lives only in PocketBase's
@@ -50,22 +57,14 @@ settings (inside `pb_data`), and tokens only in the operator's shell.
 
 ## Owner decisions still open
 
-1. The exact Dynu hostname. Everything here says **`pyrrhic-backend.dynu.net`**; if you
-   pick a different Dynu domain, change it in `caddy/pyrrhic.caddy` and in `smoke.sh`'s
-   default `PB_URL`.
-2. Approval of the two-line philou change (step 2).
-3. Whether the admin UI stays IP-restricted (`caddy/pyrrhic.caddy` denies `/_/*` to
-   everyone by default; you open it to your IP while administering).
-4. Backup target: PocketBase's built-in S3 backups (Backblaze B2 / Scaleway) or a
-   nightly pull to your machine (step 10 has both).
-5. Whether email/password sign-in stays enabled on the `users` collection. It is on by
-   default and is useful for `smoke.sh`; disable it later if you want Google only.
-6. **The SMTP account** (step 9a). Without one, PocketBase still answers every request
-   normally — it simply never sends a confirmation or a reset email, and nobody can
-   confirm an address, which means nobody can save. This is the one setting the app
-   genuinely needs from you.
-7. Whether to go further and refuse _sign-in itself_ to unconfirmed accounts
-   (step 9c). Off by default, on purpose.
+1. **SMTP** (step 9a), the day password sign-in comes back (Gmail app password, owner 2026-10-07).
+   Then: Collections → `users` → Options → enable *Identity/Password*, and the app draws the email
+   form again by itself.
+2. Off-host backups (an rclone line in `backup-history.sh`), if losing the VPS ever stops being an
+   acceptable risk.
+
+Settled on 2026-10-07: the backend name (`pyrrhic-backend.freeddns.org`), Google + Discord, password
+sign-in off, backups on the host. Earlier: the philou change, the admin UI IP-restricted.
 
 ## Deployment
 
@@ -73,12 +72,12 @@ Everything runs as `ubuntu` on `main` (92.5.91.253). Nothing here needs `root`.
 
 ### 1. DNS
 
-In the Dynu dashboard, create `pyrrhic-backend.dynu.net` as an **A record → 92.5.91.253**.
+In the Dynu dashboard, create `pyrrhic-backend.freeddns.org` as an **A record → 92.5.91.253**.
 Wait for it to resolve before step 5, or Caddy will fail the ACME challenge and retry
 with backoff.
 
 ```bash
-dig +short pyrrhic-backend.dynu.net      # must print 92.5.91.253
+dig +short pyrrhic-backend.freeddns.org      # must print 92.5.91.253
 ```
 
 ### 2. The two-line philou change
@@ -123,6 +122,7 @@ Resulting layout:
 /home/ubuntu/pyrrhic/pb_hooks/main.pb.js
 /home/ubuntu/pyrrhic/pb_migrations/1789300800_profiles.js
 /home/ubuntu/pyrrhic/pb_migrations/1789315200_account_hardening.js
+/home/ubuntu/pyrrhic/pb_migrations/1791331200_sso.js
 /home/ubuntu/caddy-sites/pyrrhic.caddy
 ```
 
@@ -153,12 +153,12 @@ There is deliberately **no `ports:` mapping**. 8090 exists only on `deploy_defau
 
 ```bash
 docker exec philou-web caddy reload --config /etc/caddy/Caddyfile
-curl -s https://pyrrhic-backend.dynu.net/api/health
+curl -s https://pyrrhic-backend.freeddns.org/api/health
 ```
 
 The first request may take a few seconds while Caddy obtains the certificate.
-`dynu.net` is on the Public Suffix List, so the Let's Encrypt rate limits are counted
-per `pyrrhic-backend.dynu.net`, not shared with strangers as they are on sslip.io.
+`freeddns.org` (a Dynu domain) is on the Public Suffix List, so the Let's Encrypt rate limits are counted
+per `pyrrhic-backend.freeddns.org`, not shared with strangers as they are on sslip.io.
 
 ### 6. Create the superuser
 
@@ -189,49 +189,44 @@ sed -i 's/203\.0\.113\.1/<your.ip.here>/' /home/ubuntu/caddy-sites/pyrrhic.caddy
 docker exec philou-web caddy reload --config /etc/caddy/Caddyfile
 ```
 
-Then open `https://pyrrhic-backend.dynu.net/_/` and sign in as the superuser.
+Then open `https://pyrrhic-backend.freeddns.org/_/` and sign in as the superuser.
 **Put `203.0.113.1` back and reload again when you are done** (203.0.113.0/24 is
 TEST-NET-3 and belongs to nobody, so the matcher denies everyone).
 
-### 8. Google OAuth
+### 8. Google and Discord OAuth (S-49c)
 
-Google only ever sees the **GitHub Pages** origin — the backend hostname appears
-nowhere in the Google console (spec §2.1), so you can rename the backend later
-without touching the OAuth client.
+The app uses the SDK's popup flow, so both providers redirect to **the backend**:
+`https://pyrrhic-backend.freeddns.org/api/oauth2-redirect`, byte-identical, no trailing slash.
+Renaming the backend means editing this URI in both consoles.
 
-In the Google Cloud console:
+**Google Cloud console** (APIs & Services / Google Auth Platform):
 
-1. New project → **OAuth client ID**, type _Web application_.
-2. Authorized JavaScript origins: `https://altarbeastiful.github.io`
-3. Authorized redirect URIs: `https://altarbeastiful.github.io/pyrrhic-total-battle/oauth-callback`
-   — byte-identical to the client's `redirectUrl`, **no trailing slash**.
-   The spec's alternative hash route (`#/oauth-callback`) is **not usable with Google**:
-   "Redirect URIs cannot contain the fragment component"
-   (<https://developers.google.com/identity/protocols/oauth2/web-server>). S-49b must
-   therefore copy `index.html` to `404.html` at build time and let the router resolve
-   the path client-side — GitHub Pages serves `/pyrrhic-total-battle/404.html` for that
-   URL. Keep the URI without a trailing slash so Vite's relative asset paths
-   (`base: './'`) still resolve against `/pyrrhic-total-battle/`.
-4. Consent screen: External; scopes `openid`, `email`, `profile` only (non-sensitive,
-   so no Google verification review).
-5. Verify `altarbeastiful.github.io` in Search Console (HTML-file upload into the repo)
-   and add it to the authorized domains.
+1. Project `pyrrhic`. Consent screen: _External_, app name `Pyrrhic`, home page
+   `https://altarbeastiful.github.io/pyrrhic-total-battle/`, authorized domains
+   `pyrrhic-backend.freeddns.org` and `altarbeastiful.github.io`, scopes `openid`,
+   `userinfo.email`, `userinfo.profile` only (non-sensitive: no review), **no logo** (a logo
+   triggers brand verification). Audience: **Publish app** (in _Testing_ only listed users can sign in).
+2. Clients → _Web application_ `Pyrrhic PocketBase`; JavaScript origins: none; redirect URI above.
 
-In the PocketBase admin UI: **Collections → `users` → gear → Options → OAuth2 →
-enable → Google**, paste the client ID and client secret, save.
+**Discord developer portal**: New Application `Pyrrhic` → OAuth2 → add the redirect URI above;
+copy the client id and reset/copy the client secret. No bot. PocketBase asks for `identify email`.
 
-Check it from a browser (no auth needed):
+**PocketBase admin UI**: Collections → `users` → gear → Options → OAuth2 → add **Google** and
+**Discord** with their id and secret, save. The secrets live only in `pb_data`.
+
+Check it (no auth needed):
 
 ```bash
-curl -s https://pyrrhic-backend.dynu.net/api/collections/users/auth-methods \
-  | jq '.oauth2.providers[] | {name, displayName}'
+curl -s https://pyrrhic-backend.freeddns.org/api/collections/users/auth-methods \
+  | jq '{password: .password.enabled, providers: [.oauth2.providers[].name]}'
+# {"password": false, "providers": ["google", "discord"]}
 ```
 
 ### 9. Other PocketBase settings
 
 Still in the admin UI, **Settings → Application**:
 
-- _Application URL_: `https://pyrrhic-backend.dynu.net`
+- _Application URL_: `https://pyrrhic-backend.freeddns.org`
 - _Application name_: `Pyrrhic` — it is the `{APP_NAME}` in every email subject and body.
 - _Proxy_ → tick "use a proxy header" and set it to **`X-Forwarded-For`**. Caddy sets
   that header; without this, every request looks like it comes from the Caddy
@@ -331,6 +326,18 @@ currently `https://altarbeastiful.github.io,http://localhost:5180`
 
 ### 10. Backups
 
+**As deployed (S-49c):** the migration `1791331200_sso.js` turns on PocketBase's own nightly
+backup (`0 3 * * *`, one archive kept, inside the volume), and `backup-history.sh`, from the
+`ubuntu` crontab at 03:30, copies it to `/home/ubuntu/pyrrhic-backups/`: deduplicated on the
+hash of `data.db` (a quiet day stores nothing) and thinned to 7 daily, 8 weekly and 12 monthly
+archives (≈ 25 files of a few hundred kB). Install:
+
+```bash
+crontab -l | { cat; echo '30 3 * * * /home/ubuntu/pyrrhic/backup-history.sh >> /home/ubuntu/pyrrhic-backups/history.log 2>&1'; } | crontab -
+```
+
+Everything below still holds for an off-host copy and for restores.
+
 `pb_data` is the entire state. **The image has no `sqlite3` binary**, so the spec's
 `sqlite3 ".backup"` command does not work here — use PocketBase's own backup engine,
 which takes a consistent snapshot of the live database.
@@ -342,7 +349,7 @@ about nothing at this volume).
 Or, off-host and credential-free, from your own machine:
 
 ```bash
-PB=https://pyrrhic-backend.dynu.net
+PB=https://pyrrhic-backend.freeddns.org
 TOKEN=$(curl -s -X POST "$PB/api/collections/_superusers/auth-with-password" \
   -H 'Content-Type: application/json' \
   -d '{"identity":"you@example.com","password":"…"}' | jq -r .token)
@@ -371,14 +378,15 @@ ss -tlnp | grep 8090            # expect: nothing
 
 ```bash
 # read-only checks
-./smoke.sh https://pyrrhic-backend.dynu.net
+./smoke.sh https://pyrrhic-backend.freeddns.org
 
-# with the write path (use a throwaway account, not your own profile)
-PB_TOKEN=$(curl -s -X POST https://pyrrhic-backend.dynu.net/api/collections/users/auth-with-password \
+# with the write path: two throwaway accounts, made and deleted by the script,
+# signed in by superuser impersonation (password sign-in is off)
+PB_SUPERUSER_TOKEN=$(curl -s -X POST https://pyrrhic-backend.freeddns.org/api/collections/_superusers/auth-with-password \
   -H 'Content-Type: application/json' \
-  -d '{"identity":"test@example.com","password":"…"}' | jq -r .token) \
+  -d '{"identity":"…","password":"…"}' | jq -r .token) \
 PB_HOST=92.5.91.253 \
-./smoke.sh https://pyrrhic-backend.dynu.net
+./smoke.sh https://pyrrhic-backend.freeddns.org
 ```
 
 It covers spec §7 items that can be scripted: health, CORS allow/deny, an
@@ -387,7 +395,9 @@ first save at version 1 returning 200, a replayed version returning a determinis
 409 with `serverVersion`, a direct `PATCH` refused, cross-account isolation, and 8090
 being closed to the internet.
 
-Checks 12-15 cover the email/password account: a password under the collection's
+Check 16 reads `auth-methods`: the providers in `PB_PROVIDERS` (default `google discord`)
+and whether password sign-in is on. With it off, check 12 proves a password sign-in is
+refused (403) and 13-15 are skipped. With it on, checks 12-15 cover the email/password account: a password under the collection's
 minimum refused with `validation_min_text_constraint`, a fresh account signing in, its
 save refused with `403 {"data":{"reason":"email_not_verified"}}`, and a reset request
 answering `204` for a registered address and an unknown one alike. They create one
