@@ -10,7 +10,7 @@
 # `pocketbase` resolves on the shared `deploy_default` network. If the container
 # name differs from the service name, use `pyrrhic-pocketbase:8090` instead.
 
-pyrrhic-backend.dynu.net {
+pyrrhic-backend.freeddns.org, pyrrhic-backend.92.5.91.253.sslip.io {
 	encode zstd gzip
 
 	# --- Admin UI ---------------------------------------------------------

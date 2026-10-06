@@ -6,18 +6,26 @@
 #   ./smoke.sh [BASE_URL]
 #
 # Environment:
-#   PB_URL        base URL (default: https://pyrrhic-backend.dynu.net, or $1)
+#   PB_URL        base URL (default: https://pyrrhic-backend.freeddns.org, or $1)
 #   PB_TOKEN      a *user* auth token; enables the write checks (5-9)
 #   PB_TOKEN_B    a second user's token; enables the cross-account leak check (10)
+#   PB_SUPERUSER_TOKEN
+#                 a superuser token. When PB_TOKEN / PB_TOKEN_B are unset, the script makes
+#                 two throwaway accounts with it, signs in as them by impersonation (no
+#                 password needed, so this works with password sign-in switched off), and
+#                 deletes them at the end.
+#   PB_PROVIDERS  the OAuth2 providers auth-methods must list (default: "google discord";
+#                 "" locally, where no client id is configured)
 #   PB_HOST       host/IP to probe for a publicly exposed 8090 (check 11)
 #   PB_ORIGIN     expected CORS origin (default: https://altarbeastiful.github.io)
 #   PB_EMAIL      an address the reset check may ask a mail for (default: a throwaway
 #                 pyrrhic.test address, which exists nowhere and must still answer 204)
 #
-# Checks 12-15 create one throwaway account (`smoke-<timestamp>@pyrrhic.test`) to prove
+# Check 16 reads auth-methods. When password sign-in is on, checks 12-15 create one throwaway account (`smoke-<timestamp>@pyrrhic.test`) to prove
 # the email/password hardening: the minimum password length, the 403 an unconfirmed
 # address gets from the save route, and the neutral answer to a reset request. The
 # account is deleted again at the end, and with it the profile row it never wrote.
+# When it is off (the production default since S-49c), check 12 proves it is refused.
 #
 # Getting a token for a test account:
 #   curl -s -X POST "$PB_URL/api/collections/users/auth-with-password" \
@@ -32,10 +40,12 @@
 
 set -uo pipefail
 
-PB_URL="${1:-${PB_URL:-https://pyrrhic-backend.dynu.net}}"
+PB_URL="${1:-${PB_URL:-https://pyrrhic-backend.freeddns.org}}"
 PB_URL="${PB_URL%/}"
 PB_TOKEN="${PB_TOKEN:-}"
 PB_TOKEN_B="${PB_TOKEN_B:-}"
+PB_SUPERUSER_TOKEN="${PB_SUPERUSER_TOKEN:-}"
+PB_PROVIDERS="${PB_PROVIDERS-google discord}"
 PB_HOST="${PB_HOST:-}"
 PB_ORIGIN="${PB_ORIGIN:-https://altarbeastiful.github.io}"
 PB_EMAIL="${PB_EMAIL:-nobody-has-this-address@pyrrhic.test}"
@@ -131,6 +141,41 @@ if [ "$STATUS" = "401" ]; then
 	ok "4b. unauthenticated save is 401"
 else
 	bad "4b. unauthenticated save is 401" "got $STATUS: $BODY"
+fi
+
+# ------------------------------------------------------------- sign-in methods
+section "Sign-in methods"
+
+call GET /api/collections/users/auth-methods
+providers="$(jq -r '[.oauth2.providers[].name] | sort | join(" ")' <<<"$BODY" 2>/dev/null)"
+expected="$(tr ' ' '\n' <<<"$PB_PROVIDERS" | grep -v '^$' | sort | paste -sd' ')"
+password_on="$(jq -r '.password.enabled' <<<"$BODY" 2>/dev/null)"
+if [ "$STATUS" = "200" ] && [ "$providers" = "$expected" ]; then
+	ok "16. auth-methods lists the providers '${expected}'"
+else
+	bad "16. auth-methods lists the providers '${expected}'" "got $STATUS: providers '${providers}'"
+fi
+note "password sign-in is ${password_on}"
+
+# Throwaway accounts made as superuser, signed in by impersonation (S-49c).
+throwaway_ids=()
+# Sets $THROWAWAY to a token for a fresh, confirmed account (a plain function, not a
+# subshell, so the id reaches throwaway_ids and is deleted at the end).
+throwaway_token() {
+	local email="smoke-$1-$(date -u +%Y%m%d%H%M%S)@pyrrhic.test" pass id
+	pass="smoke-$(date +%s%N)"
+	THROWAWAY=""
+	call POST /api/collections/users/records "$PB_SUPERUSER_TOKEN" \
+		"{\"email\":\"${email}\",\"password\":\"${pass}\",\"passwordConfirm\":\"${pass}\",\"verified\":true}"
+	id="$(jq -r '.id // empty' <<<"$BODY" 2>/dev/null)"
+	[ -n "$id" ] || return 0
+	throwaway_ids+=("$id")
+	call POST "/api/collections/users/impersonate/${id}" "$PB_SUPERUSER_TOKEN" '{"duration":600}'
+	THROWAWAY="$(jq -r '.token // empty' <<<"$BODY" 2>/dev/null)"
+}
+if [ -n "$PB_SUPERUSER_TOKEN" ]; then
+	[ -n "$PB_TOKEN" ] || { throwaway_token a; PB_TOKEN="$THROWAWAY"; }
+	[ -n "$PB_TOKEN_B" ] || { throwaway_token b; PB_TOKEN_B="$THROWAWAY"; }
 fi
 
 # ------------------------------------------------------------------ save path
@@ -242,6 +287,16 @@ fi
 # ------------------------------------------------------- email/password hardening
 section "Email, password and confirmation"
 
+if [ "$password_on" != "true" ]; then
+	call POST /api/collections/users/auth-with-password "" \
+		'{"identity":"nobody@pyrrhic.test","password":"whatever-password"}'
+	if [ "$STATUS" = "403" ]; then
+		ok "12. password sign-in is switched off (403)"
+	else
+		bad "12. password sign-in is switched off" "got $STATUS: $BODY"
+	fi
+	warn "13-15. password checks (password sign-in is off)"
+else
 STAMP="$(date -u +%Y%m%d%H%M%S)"
 SMOKE_EMAIL="smoke-${STAMP}@pyrrhic.test"
 SMOKE_PASSWORD="smoke-password-${STAMP}"
@@ -304,9 +359,15 @@ if [ -n "$smoke_id" ] && [ -n "$smoke_token" ]; then
 	call DELETE "/api/collections/users/records/${smoke_id}" "$smoke_token"
 	note "restored: deleted the throwaway account ${SMOKE_EMAIL} (HTTP $STATUS)"
 fi
+fi
+
+for id in "${throwaway_ids[@]+"${throwaway_ids[@]}"}"; do
+	call DELETE "/api/collections/users/records/${id}" "$PB_SUPERUSER_TOKEN"
+	note "restored: deleted throwaway account ${id} (HTTP $STATUS)"
+done
 
 printf '\n%s passed, %s failed, %s skipped\n' "$pass" "$fail" "$skip"
-printf 'Not scriptable, do these by hand: Google sign-in on two devices, the conflict\n'
+printf 'Not scriptable, do these by hand: Google and Discord sign-in on two devices, the conflict\n'
 printf 'modal, the cascade delete of a users record, a real reset or confirmation email\n'
 printf 'opening the app at /password-reset and /verify-email, and a restored backup.\n'
 

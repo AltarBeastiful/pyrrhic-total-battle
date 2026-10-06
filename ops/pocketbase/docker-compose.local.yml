@@ -20,6 +20,9 @@ services:
       # Local only, and read once by the hardening migration: the rate limiter ignores
       # this machine, so a Playwright run is never throttled. Production leaves it unset.
       PYRRHIC_RATE_LIMIT_EXCLUDE: 127.0.0.1,::1,172.16.0.0/12
+      # Read once, by pb_migrations/1791331200_sso.js: production switches password sign-in
+      # off (S-49c); here it stays on so e2e keeps covering the dormant password flows.
+      PYRRHIC_PASSWORD_AUTH: "on"
     command:
       - serve
       - --http=0.0.0.0:8090
