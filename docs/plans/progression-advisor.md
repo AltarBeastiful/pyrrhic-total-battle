@@ -3,7 +3,8 @@
 **Status: proposed 2026-10-03, reviewed the same day (verdict: sound with fixes; fixes folded in below:
 A0, probe immutability, re-priced is not a floor, C5-0 captain conditions, measured timings).
 Validated by the owner 2026-10-07 (answers in §7; Tight baseline and the loss flag folded into C3). Progress:
-C1's probes shipped (`src/engine/probes.ts`, 3575369), ahead of A0/A, which are next.** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
+C1's probes shipped (`src/engine/probes.ts`, 3575369); A0 and A shipped 2026-10-08 (S-150; speed-up in
+`tools/theorycraft/out/190-the-pool.md`). Next: C3, the reading.** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
 expanding the scope of search if it leads to better result; then start to produce recommendations for future
 marches: check which talent point where would improve the march […], or where the next modernization of army
 points could be spent, or other questions. […] helper for the player progression would be more interesting at
