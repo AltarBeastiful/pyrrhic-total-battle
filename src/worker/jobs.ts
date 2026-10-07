@@ -14,7 +14,7 @@ import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, SearchResult, StackRequest } from '@/engine/types';
 import { exhaustivePools } from '@/ui/sections/march/exact';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
-import { liftedCounts, positionTrades } from '@/ui/sections/march/positions';
+import { liftedCounts, OFFERED_POSITIONS, positionTrades } from '@/ui/sections/march/positions';
 import type { PositionTrades } from '@/ui/sections/march/positions';
 
 import type { PositionsInput, ResizeInput, StackOutcome } from './protocol';
@@ -82,5 +82,5 @@ export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
  * for that stop — so the block prices the march a player would be looking at rather than one built twice.
  */
 export function runPositions(input: PositionsInput): PositionTrades {
-  return positionTrades(input.request, planMarch(input.request, input.counts).result);
+  return positionTrades(input.request, planMarch(input.request, input.counts).result, OFFERED_POSITIONS);
 }

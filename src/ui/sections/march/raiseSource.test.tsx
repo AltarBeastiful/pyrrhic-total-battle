@@ -26,6 +26,8 @@ import type * as WorkerClient from '@/worker/client';
 
 import { MarchSection } from './MarchSection';
 import type { PositionTrades } from './positions';
+import { usePositionsStore } from './positionsSearch';
+import { NO_RAISE } from './raise';
 import { useRunStore } from './runStore';
 
 /** The page's own client: the engine on the main thread, as every UI suite here runs it. */
@@ -136,6 +138,8 @@ beforeEach(() => {
   window.localStorage.clear();
   useResultStore.getState().clear();
   useRunStore.getState().reset();
+  // Written on `As is`, the start of a run until 2026-10-07 (a run starts on `Tight` now, `DEFAULT_RAISE`).
+  useRunStore.setState({ raiseModes: NO_RAISE });
   searches.length = 0;
   bars.length = 0;
   stockedAccount();
@@ -161,11 +165,20 @@ test('a Generate re-prices the bar, and the raise it draws is the table’s — 
   searches.length = 0;
   bars.length = 0;
   await clicked();
-  // The march arrives already raised (the standing rule), the table lands a frame later, and the March draws
-  // the **climb** in between: a march the game would take, and never a search for the answer on its way.
-  await waitFor(() => {
-    expect(hunterCount()).toBe(7);
-  });
+  /**
+   * **The march arrives already on Tight** (owner, 2026-10-07: *"for now it generates then jump to tight. it
+   * should be tight already"*): the Generate prices its opening stop on its own client — the real engine here,
+   * not the double — and files that row before it draws, so the first frame is the row's counts and neither
+   * the plan's own nor the climb's. The rest of the bar is still asked of the double behind it.
+   */
+  const entry = usePositionsStore.getState().entry;
+  const opening = entry?.stops[useRunStore.getState().planPick];
+  const primed = opening === undefined || opening === null || opening === 'out' ? null : opening;
+  expect(primed, 'the Generate did not price its opening stop').not.toBeNull();
+  const tight = primed?.rows.find((row) => row.mode === 'tight')?.counts['epic-monster-hunter-6'];
+  expect(tight).toBeDefined();
+  expect(tight).not.toBe(7);
+  expect(hunterCount()).toBe(tight);
   expect(searches, 'a Generate started the exhaustive search again').toEqual([]);
   expect(bars.length, 'the new bar was never asked for').toBeGreaterThan(0);
 }, 60_000);

@@ -59,6 +59,7 @@ const LABEL: Record<PositionTrade['mode'], string> = {
   v2: 'Best v2',
   safe: 'Safe',
   tight: 'Tight',
+  tightOld: 'Tight (old)',
 };
 
 /** A tenth of a percent is a rounding, not a move. */

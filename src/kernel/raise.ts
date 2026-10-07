@@ -20,6 +20,8 @@
 import type { RaiseAnswer, RaiseInput, RaiseKernel } from '../engine/fast';
 import type { StackRequest, StackResult } from '../engine/types';
 
+import { CAMPAIGN } from '../config';
+
 import { packRequest } from './pack';
 
 /** `raise`'s own signature (`kernel/assembly/index.ts`); the stats block is `[how, space, scored, answered]`. */
@@ -82,8 +84,11 @@ export interface ExactSearch {
   readonly seed: number;
 }
 
-/** `march`/`bill` never read the rates (only `rate` does); the header wants numbers all the same. */
-const NO_RATES = { silver: 1, gold: 1, hired: 1, dragonCoins: 1, seconds: 1 };
+/**
+ * The owner's rates, which `Tight` ranks by (experiment 188, owner 2026-10-07): the table's header carries
+ * them and `raiseRating` reads them. `march`/`bill` never read them.
+ */
+const RATES = CAMPAIGN.markerRates;
 
 /** `Number.MAX_SAFE_INTEGER`: the cap of a type the account may hire without limit (`?? MAX_SAFE_INTEGER`). */
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
@@ -144,7 +149,7 @@ export function createRaiseKernelProbe(
     try {
       packed = packRequest(
         request,
-        NO_RATES,
+        RATES,
         undefined,
         // The raise's tie-break: the type's place in the base march's own stack order.
         orderByRow(request, base),

@@ -36,7 +36,8 @@ import { hiredLost, stockRun } from './hired';
 import type { PositionTrades } from './positions';
 import { positionsKey, usePositionsStore } from './positionsSearch';
 import { raiseSearchKey, useRaiseSearchStore } from './raiseSearch';
-import { burnOf, countsOf, raisedCounts } from './raise';
+import { burnOf, countsOf, DEFAULT_RAISE, NO_RAISE, raisedCounts } from './raise';
+import type { RaiseMode } from './raise';
 import { marchRows, unitBonus } from './rows';
 import { pickOf, useRunStore } from './runStore';
 import { worstDamageByPool } from './worst';
@@ -82,8 +83,22 @@ beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());
   useResultStore.getState().clear();
   useRunStore.getState().reset();
+  // **These tests were written on `As is`**, the start of a run until 2026-10-07; a run starts on `Tight` now
+  // (`DEFAULT_RAISE`, tested below) and they put it back to the start they describe.
+  useRunStore.setState({ raiseModes: NO_RAISE });
   setLeadership(4100);
 });
+
+/**
+ * **A position the control no longer offers** (owner, 2026-10-07: only `As is` and `Tight` are segments), put
+ * the way a press used to: the run store's own rule over both hired blocks (`setRaiseMode`). The kernel and the
+ * arithmetic behind `Most`, `Best v2` and `Safe` are unchanged, and these tests are about that arithmetic.
+ */
+function chooseRaise(mode: RaiseMode): void {
+  act(() => {
+    useRunStore.getState().setRaiseMode(mode);
+  });
+}
 
 afterEach(() => {
   cleanup();
@@ -1524,13 +1539,12 @@ test('the raise is offered on a hired pool, and lifts the counts where the troop
   const before = shownCounts();
   expect(Object.keys(before).length, 'the plan fields no hired stack to raise').toBeGreaterThan(0);
 
-  const mercenaries = raiseControl('Mercenary');
   // A march with no monsters has no monsters' control, and the troops are what shelters: never raised.
   expect(screen.queryByRole('radiogroup', { name: 'Monster counts' })).toBeNull();
   expect(screen.queryByRole('radiogroup', { name: 'Troop counts' })).toBeNull();
 
   const filed = lastResult();
-  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'Most' }));
+  chooseRaise('most');
   await waitFor(() => {
     expect(shownCounts()).not.toEqual(before);
   });
@@ -1548,7 +1562,7 @@ test('“as is” puts the generated counts back, and the raise is one replay, n
   const generated = shownCounts();
   const mercenaries = raiseControl('Mercenary');
 
-  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'Most' }));
+  chooseRaise('most');
   await waitFor(() => {
     expect(shownCounts()).not.toEqual(generated);
   });
@@ -1567,22 +1581,22 @@ test('the damage positions are raises too, and they add no line to the pane', as
   const control = raiseControl('Mercenary');
   const plan = shownCounts();
 
-  // **The control offers six segments** (S-145): `Best` is gone, and what it drew is what the exhaustive
-  // positions draw from their first frame and while their search runs.
-  expect(within(control).getAllByRole('radio')).toHaveLength(6);
+  // **The control offers three segments** (owner, 2026-10-07): `As is`, `Tight`, and `Tight (old)` beside it
+  // for the comparison.
+  expect(within(control).getAllByRole('radio')).toHaveLength(3);
   expect(within(control).queryByRole('radio', { name: 'Best' })).toBeNull();
 
   // `Most` first, so the comparison below has the ceiling to measure the damage answer against — and so the
   // pane is in the state the sentence is drawn in before a damage position suppresses it (`MarchFoot.tsx`).
-  fireEvent.click(within(control).getByRole('radio', { name: 'Most' }));
+  chooseRaise('most');
   await waitFor(() => {
     expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
   });
   const most = shownCounts();
 
-  fireEvent.click(within(control).getByRole('radio', { name: 'Best v2' }));
+  chooseRaise('v2');
   await waitFor(() => {
-    expect(control.querySelector<HTMLInputElement>('input[value="v2"]')?.checked).toBe(true);
+    expect(useRunStore.getState().raiseModes).toEqual({ authority: 'v2', dominance: 'v2' });
   });
   // The position that promises **damage** and not units: what it fields is at least the plan's own counts
   // (it is a raise, never a cut) and never more than `Most` would field (the same ceiling bounds it).
@@ -1606,7 +1620,7 @@ test('one position over both hired blocks, for every segment and not only the se
    * under the plan is priced as (`positions.ts`), so the press and the table now mean one thing.
    */
   await generateFromAPlan();
-  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Most' }));
+  chooseRaise('most');
   await waitFor(() => {
     expect(useRunStore.getState().raiseModes).toEqual({ authority: 'most', dominance: 'most' });
   });
@@ -1625,7 +1639,7 @@ test('one position over both hired blocks, for every segment and not only the se
 
 test('the position is remembered: the next Generate arrives already raised', async () => {
   await generateFromAPlan();
-  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Most' }));
+  chooseRaise('most');
   await waitFor(() => {
     expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
   });
@@ -1646,8 +1660,7 @@ test('the position is remembered: the next Generate arrives already raised', asy
 
 test('a count typed by hand is the player’s last word, and wins over the raise', async () => {
   await generateFromAPlan();
-  const mercenaries = raiseControl('Mercenary');
-  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'Most' }));
+  chooseRaise('most');
   await waitFor(() => {
     expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
   });
@@ -1688,10 +1701,9 @@ test('a sizer’s march offers no raise: its exact fill has already taken the po
 
 test('the exhaustive position is one position over both blocks, and draws no line either', async () => {
   await generateFromAPlan();
-  const control = raiseControl('Mercenary');
   const plan = shownCounts();
 
-  fireEvent.click(within(control).getByRole('radio', { name: 'Best v2' }));
+  chooseRaise('v2');
   // **One position, not two** (S-143b; owner, 2026-09-29: *"give another options for both"*): the search
   // walks the mercenaries and the monsters together, so pressing the segment on either block puts both of
   // them on it and the two controls are two views of one standing rule.
@@ -1730,7 +1742,7 @@ test('the chosen segment carries the wait itself, and the control says it is bus
    * which is what keeps the pane from shifting while the search runs.
    */
   const { container, rerender } = renderWithTheme(
-    <MarchRaiseControl pool="authority" value="v2" searching onChange={() => undefined} />,
+    <MarchRaiseControl pool="authority" value="tight" searching trades={null} onChange={() => undefined} />,
   );
   const control = screen.getByRole('radiogroup', { name: 'Mercenary counts' });
   expect(control.getAttribute('aria-busy')).toBe('true');
@@ -1740,9 +1752,17 @@ test('the chosen segment carries the wait itself, and the control says it is bus
   // **In the `Best v2` segment and nowhere else**: the mark belongs in the box the player pressed, since a
   // line of text arriving under the figures is the thing this control is not allowed to do.
   const mark = container.querySelector('.mantine-Loader-root');
-  expect(mark?.closest('.mantine-SegmentedControl-control')?.textContent).toContain('Best v2');
+  expect(mark?.closest('.mantine-SegmentedControl-control')?.textContent).toContain('Tight');
 
-  rerender(<MarchRaiseControl pool="authority" value="v2" searching={false} onChange={() => undefined} />);
+  rerender(
+    <MarchRaiseControl
+      pool="authority"
+      value="tight"
+      searching={false}
+      trades={null}
+      onChange={() => undefined}
+    />,
+  );
   expect(control.getAttribute('aria-busy')).toBe('false');
   expect(container.querySelectorAll('.mantine-Loader-root')).toHaveLength(0);
 });
@@ -1781,7 +1801,7 @@ test('a March edit asks the search again rather than merging the previous march�
   const absent = generated.request.units.find((unit) => unit.pool === 'leadership' && !marching.has(unit.id));
   if (!absent) throw new Error('this plan fields every troop type: nothing to put back');
 
-  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Best v2' }));
+  chooseRaise('v2');
   await waitFor(() => {
     expect(useRaiseSearchStore.getState().entry?.status).toBe('done');
   });
@@ -1809,10 +1829,9 @@ test('the capped positions are the same joint search, and Safe spends no more st
    * because the figure moves with the army while the promise is the position.
    */
   await generateFromAPlan();
-  const control = raiseControl('Mercenary');
   const plan = shownCounts();
 
-  fireEvent.click(within(control).getByRole('radio', { name: 'Safe' }));
+  chooseRaise('safe');
   // One standing rule over both blocks, exactly as `Best v2` is (S-143b): the search walks them together.
   await waitFor(() => {
     expect(useRunStore.getState().raiseModes).toEqual({ authority: 'safe', dominance: 'safe' });
@@ -1895,7 +1914,7 @@ test('a position the plan has already priced is landed on, and nothing is search
   if (shown === null) throw new Error('the plan method answered with no march');
   plantPricedBar({ ...countsOf(shown.result), [hunter.id]: before + 5 });
 
-  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Most' }));
+  chooseRaise('most');
   await waitFor(() => {
     expect(shownCounts()[hunter.label]).toBe(before + 5);
   });
@@ -1944,7 +1963,7 @@ test('a march the plan did not size is not read off the table, and is searched i
   // path answers, which is the climb first and the search behind it.
   const before = useRaiseSearchStore.getState().entry;
   expect(before).toBeNull();
-  fireEvent.click(within(raiseControl('Mercenary')).getByRole('radio', { name: 'Best v2' }));
+  chooseRaise('v2');
   await waitFor(() => {
     expect(useRaiseSearchStore.getState().entry?.status).toBe('done');
   });
@@ -2176,4 +2195,60 @@ test('the stock block is drawn only for a stack the march fields', async () => {
     />,
   );
   expect(screen.queryByText('How many marches the stock lasts')).toBeNull();
+});
+
+test('a run starts on Tight over both hired blocks, and Reset puts it back there', () => {
+  // Owner, 2026-10-07: *"lets move it as default"*.
+  useRunStore.setState({ raiseModes: NO_RAISE });
+  useRunStore.getState().reset();
+  expect(useRunStore.getState().raiseModes).toEqual(DEFAULT_RAISE);
+  expect(DEFAULT_RAISE).toEqual({ authority: 'tight', dominance: 'tight' });
+});
+
+test('hovering As is previews the trade it offers against Tight, and says nothing under the chosen one', async () => {
+  const reading = (damage: number, silver: number, gold: number) => ({
+    damage,
+    silver,
+    gold,
+    mercLost: 0,
+    units: 0,
+    hiredDamage: 0,
+  });
+  const trades: PositionTrades = {
+    own: reading(900, 80, 10),
+    rows: [{ mode: 'tight', counts: {}, how: 'searched', space: 1, scored: 1, ...reading(1000, 100, 20) }],
+  };
+  renderWithTheme(
+    <MarchRaiseControl
+      pool="authority"
+      value="tight"
+      searching={false}
+      trades={trades}
+      onChange={() => undefined}
+    />,
+  );
+  const asIs = screen.getByText('As is');
+  fireEvent.focus(asIs);
+  fireEvent.mouseEnter(asIs);
+  const tip = await screen.findByRole('tooltip');
+  expect(tip.textContent).toContain('The counts the march was generated with.');
+  expect(tip.textContent).toContain('Damage 900');
+  expect(tip.textContent).toContain('Silver 80');
+  expect(tip.textContent).toContain('Gold 10');
+  // Against Tight: 900 of 1000 is -10 %, 80 of 100 is -20 %, 10 of 20 is -50 %.
+  expect(tip.textContent).toContain('-10%');
+  expect(tip.textContent).toContain('-20%');
+  expect(tip.textContent).toContain('-50%');
+  // The accessible description carries the same figures, for a reader that never sees the tooltip.
+  expect(
+    screen.getByRole('radiogroup', { name: 'Mercenary counts' }).getAttribute('aria-describedby'),
+  ).not.toBeNull();
+  expect(document.body.textContent).toContain(
+    'As is: The counts the march was generated with. Damage 900 (-10%)',
+  );
+  // Tight is the chosen one: its figures, with no change beside them.
+  expect(document.body.textContent).toContain(
+    'Tight: Raises the hired stacks without burning one more chunk of mercs',
+  );
+  expect(document.body.textContent).toContain('Silver 100, Gold 20.');
 });

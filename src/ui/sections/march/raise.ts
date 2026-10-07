@@ -78,7 +78,7 @@ export type RaiseRequest = Pick<StackRequest, 'units' | 'caps' | 'housing'>;
  * frame and the vector their search starts from — so the segment's only unique offer was answering without
  * the worker's wait, which the control gets anyway: the climb is drawn the moment the segment is pressed.
  */
-export type RaiseMode = 'off' | 'tens' | 'most' | 'v2' | 'safe' | 'tight';
+export type RaiseMode = 'off' | 'tens' | 'most' | 'v2' | 'safe' | 'tight' | 'tightOld';
 
 /** The two pools a hired stack is paid out of — the ones this control speaks for. */
 export interface RaiseModes {
@@ -87,6 +87,13 @@ export interface RaiseModes {
 }
 
 export const NO_RAISE: RaiseModes = { authority: 'off', dominance: 'off' };
+
+/**
+ * **Where a run starts, and where Reset puts it back** (owner, 2026-10-07: *"Tight almost always feels better
+ * than as is [...] lets move it as default"*): `Tight` over both hired pools. `NO_RAISE` stays the "nothing
+ * raised" value the arithmetic compares against.
+ */
+export const DEFAULT_RAISE: RaiseModes = { authority: 'tight', dominance: 'tight' };
 
 /** The pools the control is drawn on, in the card's own order. Leadership is what shelters, never what is sheltered. */
 export const RAISED_POOLS = ['authority', 'dominance'] as const;
@@ -108,7 +115,7 @@ export type RaisedPool = (typeof RAISED_POOLS)[number];
  * a damage position stands the stacks where the march hits hardest, which is often lower down and no near
  * tie at all, and a line about a near tie would be a paragraph about nothing.
  */
-export const EXHAUSTIVE_MODES = ['v2', 'safe', 'tight'] as const satisfies readonly RaiseMode[];
+export const EXHAUSTIVE_MODES = ['v2', 'safe', 'tight', 'tightOld'] as const satisfies readonly RaiseMode[];
 
 /** Whether this position's answer comes from the worker's exhaustive search rather than from the render. */
 export function isExhaustive(mode: RaiseMode): boolean {

@@ -67,6 +67,10 @@ export interface RaiseFacts {
   mercLost: number;
   /** What the hired stacks themselves strike for in that opening — `damage`'s authority term (S-105). */
   hiredDamage: number;
+  /** The silver the march's losses cost to bring back (experiment 188's rated `Tight`). */
+  silver: number;
+  /** The Temple's gold for the same losses. */
+  gold: number;
 }
 
 /**
@@ -248,6 +252,12 @@ function fought(
     },
     get hiredDamage(): number {
       return worstDamageByPool(played.summary.journals.enemyFirst, played.result.stacks).authority;
+    },
+    get silver(): number {
+      return played.summary.recovery.silver;
+    },
+    get gold(): number {
+      return played.summary.recovery.gold;
     },
   });
 }

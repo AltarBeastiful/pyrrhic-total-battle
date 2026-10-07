@@ -7,13 +7,14 @@
  * the counts the player edited by hand applied on top of it, the two readings of the formation
  * (tiles and rows) and the run before this one to compare against.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import type { BattleSummary, Pool, StackResult } from '@/engine/types';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
 import { applyCounts, hasEdits } from './manual';
+import type { PositionTrades } from './positions';
 import { usePricedRaise } from './positionsSearch';
 import { raisedCounts, troopFloor } from './raise';
 import type { RaiseModes } from './raise';
@@ -62,6 +63,8 @@ export interface MarchView {
    * before the press is not waited for, and the control says so by drawing no wait at all.
    */
   searching: boolean;
+  /** The stop's priced positions, which the raise control's hover previews; `null` while they are coming. */
+  trades: PositionTrades | null;
   rows: MarchStackRow[];
   /** The army as pills, one block per housing pool (design plan §5.5). */
   pools: PoolRow[];
@@ -119,7 +122,7 @@ export function useMarch(): MarchView {
    * run of one job a stop. `pricing` is the table **on its way**, which is a fact of its own (`PricedRaise`).
    */
   const position = useRunStore((state) => state.planPick);
-  const { counts: priced, pricing } = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
+  const { counts: priced, trades, pricing } = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
   const { counts: exhaustiveCounts, running: waiting } = useRaiseSearch(
     /**
      * **A search the plan's own table has already answered is not asked again** (S-149; owner, 2026-09-30:
@@ -143,7 +146,7 @@ export function useMarch(): MarchView {
     canRaise,
   );
 
-  return useMemo(() => {
+  const march = useMemo(() => {
     if (snapshot === null) {
       return {
         snapshot: null,
@@ -156,6 +159,7 @@ export function useMarch(): MarchView {
         raiseModes,
         canRaise: false,
         searching: false,
+        trades: null,
         rows: [],
         pools: [],
         leftOut: [],
@@ -238,6 +242,7 @@ export function useMarch(): MarchView {
       canRaise,
       // Nothing is waited for while the plan's own table answers: the counts are already in hand (S-149).
       searching: priced === null && waiting,
+      trades,
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
       pools: poolRows({
         result: army,
@@ -257,7 +262,20 @@ export function useMarch(): MarchView {
     raiseModes,
     canRaise,
     priced,
+    trades,
     exhaustiveCounts,
     waiting,
   ]);
+
+  /**
+   * **What the March draws is what the next Generate compares against** (owner, 2026-10-07: *"the default
+   * (tight) changes the reference used to compute the percent"*). The recap's notes are read against the
+   * previous run, and with Tight on by default the previous run on screen was a raised march: comparing the
+   * next one against the snapshot under it would credit Tight's own gain to the new march every time.
+   */
+  useEffect(() => {
+    useRunStore.getState().showSummary(march.summary);
+  }, [march.summary]);
+
+  return march;
 }

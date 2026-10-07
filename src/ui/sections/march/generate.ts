@@ -22,6 +22,8 @@ import { isAbortError } from '@/worker/client';
 
 import { openingPosition, pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 import type { MarchResize } from './runStore';
+import { primePositions } from './positionsSearch';
+import { troopFloor } from './raise';
 
 /**
  * The two wall-clock budgets, as `src/config.ts` sets them. They are re-exported under the names the March
@@ -45,8 +47,10 @@ export async function runGenerate(): Promise<void> {
   }
 
   // What is on screen now becomes "the previous run" the moment a new result lands, and only then:
-  // a cancelled or failed run must not make the recap compare a result with itself.
-  const previous = results.last?.summary ?? null;
+  // a cancelled or failed run must not make the recap compare a result with itself. **On screen** is the
+  // March's own reading, the raise included (`shownSummary`, owner 2026-10-07): Tight is the default, so the
+  // snapshot under it is a march the player was not reading.
+  const previous = useRunStore.getState().shownSummary ?? results.last?.summary ?? null;
 
   const run = useRunStore.getState();
   run.cancel();
@@ -102,6 +106,25 @@ export async function runGenerate(): Promise<void> {
        * the stop (`pickOf(plan, planPick).counts`).
        */
       const marchRequest: StackRequest = withMethod(request, 'elite');
+      /**
+       * **The opening stop is priced before it is drawn** (owner, 2026-10-07: *"for now it generates then jump
+       * to tight. it should be tight already"*). Tight is the default position, and its counts come from the
+       * bar's pricing job, which used to start only once the march was on screen — so the first frame was the
+       * plan's own counts and Tight landed a moment later. One job of a few milliseconds, on the run's own
+       * client and under its own signal; a failure here is not the run's, and leaves the March to price the
+       * bar the way it always has.
+       */
+      if (useRunStore.getState().raiseModes.authority !== 'off' && troopFloor(itsMarch.result) !== null) {
+        try {
+          const trades = await client.positions(
+            { request: marchRequest, counts: chosen.counts },
+            controller.signal,
+          );
+          primePositions(planned, marchRequest, at, trades);
+        } catch (error) {
+          if (isAbortError(error)) throw error;
+        }
+      }
       useRunStore.getState().rememberPrevious(previous);
       useResultStore.getState().setResult({ ...common, request: marchRequest, ...itsMarch });
       useRunStore.getState().finish(Object.keys(chosen.counts), null, planned);

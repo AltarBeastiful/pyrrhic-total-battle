@@ -238,6 +238,69 @@ function journalDamage(k: i32, armyFirst: bool): f64 {
   return Math.ceil(((count - chunks(count)) * cell(type, T_REVIVAL_GOLD)) / templeDivisor);
 }
 
+/** What `recoveryOf` bills: the march's recovery, silver, gold, dragon coins and queue seconds, rounded. */
+let bSilver: f64 = 0.0;
+let bGold: f64 = 0.0;
+let bDragonCoins: f64 = 0.0;
+let bSeconds: f64 = 0.0;
+
+/** The recovery bill of the `k` stacks in `stackType`/`stackCount`, kill order, under the plan's mode (`recoveryCosts`); into `bSilver` and its three. */
+function recoveryOf(k: i32): void {
+  // Recovery, the plan's mode, summed stack by stack in kill order (`recoveryCosts`).
+  if (mode == 2) {
+    for (let f = 0; f < FAMILIES; f += 1) store<f64>(topTier + ((<usize>f) << 3), -Infinity);
+    for (let s = 0; s < k; s += 1) {
+      const type = i32At(stackType, s);
+      if (cell(type, T_FAMILY_REVIVED) == 0) continue;
+      const slot = topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3);
+      const tier = cell(type, T_TIER);
+      if (tier > load<f64>(slot)) store<f64>(slot, tier);
+    }
+  }
+  let silver: f64 = 0.0;
+  let gold: f64 = 0.0;
+  let dragonCoins: f64 = 0.0;
+  let seconds: f64 = 0.0;
+  for (let s = 0; s < k; s += 1) {
+    const type = i32At(stackType, s);
+    const count = f64At(stackCount, s);
+    const pool = <i32>cell(type, T_POOL);
+    const trained = cell(type, T_HAS_TRAINING) != 0;
+    let revive = mode == 1;
+    if (mode == 2) {
+      revive =
+        cell(type, T_FAMILY_REVIVED) != 0 &&
+        load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER);
+    }
+    if (revive) {
+      // `reviveOne`
+      const c = chunks(count);
+      silver += trained ? c * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION) : 0.0;
+      gold += reviveGold(type, count);
+      dragonCoins += pool == 2 ? c * cell(type, T_TRAINING_DRAGON_COINS) : 0.0;
+      seconds += trained ? (c * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED) : 0.0;
+    } else {
+      // `retrainOne`
+      const billed = pool == 0 ? count : chunks(count);
+      // Without a training block silver, coins and queue are nought, and `x + 0` is `x`.
+      if (trained) {
+        silver += billed * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION);
+        dragonCoins += billed * cell(type, T_TRAINING_DRAGON_COINS);
+        seconds += (billed * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED);
+      }
+      gold += pool == 1 ? reviveGold(type, count) : 0.0;
+    }
+  }
+  silver = jsRound(silver);
+  gold = jsRound(gold);
+  dragonCoins = jsRound(dragonCoins);
+  seconds = jsRound(seconds);
+  bSilver = silver;
+  bGold = gold;
+  bDragonCoins = dragonCoins;
+  bSeconds = seconds;
+}
+
 /** One battle: counts at `countsPtr` (f64 × types), a record at `outPtr` (f64 × RECORD_SIZE). */
 export function battle(countsPtr: usize, outPtr: usize): void {
   // Fielded stacks, table order (`marchResult`'s `picked`).
@@ -307,55 +370,11 @@ export function battle(countsPtr: usize, outPtr: usize): void {
   const minimum = journalDamage(k, false);
   const maximum = journalDamage(k, true);
 
-  // Recovery, the plan's mode, summed stack by stack in kill order (`recoveryCosts`).
-  if (mode == 2) {
-    for (let f = 0; f < FAMILIES; f += 1) store<f64>(topTier + ((<usize>f) << 3), -Infinity);
-    for (let s = 0; s < k; s += 1) {
-      const type = i32At(stackType, s);
-      if (cell(type, T_FAMILY_REVIVED) == 0) continue;
-      const slot = topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3);
-      const tier = cell(type, T_TIER);
-      if (tier > load<f64>(slot)) store<f64>(slot, tier);
-    }
-  }
-  let silver: f64 = 0.0;
-  let gold: f64 = 0.0;
-  let dragonCoins: f64 = 0.0;
-  let seconds: f64 = 0.0;
-  for (let s = 0; s < k; s += 1) {
-    const type = i32At(stackType, s);
-    const count = f64At(stackCount, s);
-    const pool = <i32>cell(type, T_POOL);
-    const trained = cell(type, T_HAS_TRAINING) != 0;
-    let revive = mode == 1;
-    if (mode == 2) {
-      revive =
-        cell(type, T_FAMILY_REVIVED) != 0 &&
-        load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER);
-    }
-    if (revive) {
-      // `reviveOne`
-      const c = chunks(count);
-      silver += trained ? c * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION) : 0.0;
-      gold += reviveGold(type, count);
-      dragonCoins += pool == 2 ? c * cell(type, T_TRAINING_DRAGON_COINS) : 0.0;
-      seconds += trained ? (c * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED) : 0.0;
-    } else {
-      // `retrainOne`
-      const billed = pool == 0 ? count : chunks(count);
-      // Without a training block silver, coins and queue are nought, and `x + 0` is `x`.
-      if (trained) {
-        silver += billed * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION);
-        dragonCoins += billed * cell(type, T_TRAINING_DRAGON_COINS);
-        seconds += (billed * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED);
-      }
-      gold += pool == 1 ? reviveGold(type, count) : 0.0;
-    }
-  }
-  silver = jsRound(silver);
-  gold = jsRound(gold);
-  dragonCoins = jsRound(dragonCoins);
-  seconds = jsRound(seconds);
+  recoveryOf(k);
+  const silver = bSilver;
+  const gold = bGold;
+  const dragonCoins = bDragonCoins;
+  const seconds = bSeconds;
 
   // `scoreOf`
   const average = jsRound((minimum + maximum) / 2.0);
@@ -1659,6 +1678,11 @@ export function ladderFinale(
  * place the app's two replays disagree (`docs/plans/best-v2.md` §5). Everything else — `hitDamage`, the attack
  * order, the enemy-first journal — is `battle`'s own arithmetic, unchanged.
  *
+ * **`RAISE_TIGHT` ranks by the owner's rating, not by damage alone** (owner 2026-10-07, experiment 188): a
+ * vector scores `rate(as is, {damage, silver, gold, hired})` over the table's rates (`raiseRating`), so an
+ * extra unit is taken only when its damage is worth the silver, gold and hired burn it adds. The memo still
+ * holds what a vector fights for — the position does not change that — and the rating is read off it.
+ *
  * The answer is the **merge the March draws**, `{...raisedCounts, ...exactRaise}`, written as a count per type.
  */
 
@@ -1669,6 +1693,18 @@ export const RAISE_MOST: i32 = 2;
 export const RAISE_V2: i32 = 3;
 export const RAISE_SAFE: i32 = 4;
 export const RAISE_TIGHT: i32 = 5;
+/**
+ * **`Tight (old)`: the same box, cap and seed as `RAISE_TIGHT`, ranked on damage alone** — the position as it
+ * shipped before experiment 188, kept beside the rated one so the owner can compare the two (2026-10-07: *"add
+ * tight-old using previous way to compute tight (only added damage) so we can compare"*). It differs from
+ * `RAISE_TIGHT` by one fact, `rRated`, and nothing else.
+ */
+export const RAISE_TIGHT_DAMAGE: i32 = 6;
+
+/** Either `Tight`: the two positions that start at, and are capped by, the plan's own counts. */
+@inline function isTight(mode: i32): bool {
+  return mode == RAISE_TIGHT || mode == RAISE_TIGHT_DAMAGE;
+}
 
 /** `raise.ts`'s own two bounds on the climb: how many counts a sweep samples, and how many sweeps it makes. */
 const CLIMB_SAMPLES: f64 = 16.0;
@@ -1707,6 +1743,11 @@ let rRestarts: i32 = 0; // seeded starts the multistart search takes
 let rSweeps: i32 = 0; // a sweep that improves nothing has converged
 let rState: f64 = 0; // the restart generator's own state
 let rBest: f64 = 0; // the best score the search has found
+let rRated: bool = false; // whether a vector is ranked by the owner's rating and not by damage (`RAISE_TIGHT`)
+let rAsDamage: f64 = 0; // the plan's own march: its damage,
+let rAsSilver: f64 = 0; // its silver,
+let rAsGold: f64 = 0; // its gold
+let rAsHired: f64 = 0; // and its hired burn, what `raiseRating` measures against
 let rAuth: i32 = 0; // the mercenaries' position, and whether its pool is walked
 let rDom: i32 = 0; // the monsters'
 
@@ -1875,6 +1916,23 @@ function raiseBurn(countsPtr: usize): f64 {
     burned += chunks(max(0.0, f64At(countsPtr, t)));
   }
   return burned;
+}
+
+/**
+ * **The owner's rating of one vector against the plan's own march** (experiment 188, owner 2026-10-07: `Tight`
+ * should trade better, not only hit harder): `rate(asIs, {damage, silver, gold, hired}, markerRates)` of
+ * `rating.ts`, its operations in its order so the floats are the research copy's own. `damage` is what the
+ * vector fights for (the memo's figure), the bill is the counts' own — the recovery of the stacks in the
+ * march's kill order (`recoveryOf`) and the authority chunks (`raiseBurn`). The seed rates exactly 0.
+ */
+function raiseRating(damage: f64): f64 {
+  const k = killOrderBy(types, rRows, rWork, T_ORDER);
+  recoveryOf(k);
+  let score = rAsDamage > 0 ? ((damage - rAsDamage) / rAsDamage) * 100.0 : 0.0;
+  score += saved(rAsSilver, bSilver) / header(H_RATE_SILVER);
+  score += saved(rAsGold, bGold) / header(H_RATE_GOLD);
+  score += saved(rAsHired, raiseBurn(rWork)) / header(H_RATE_HIRED);
+  return score;
 }
 
 /** `poolUsage`: Σ count × cost over one pool's types, in row order. */
@@ -2058,7 +2116,17 @@ function raisePointSlots(memo: usize): f64 {
   const slot = memo + ((<usize>at) << 3);
   if (memo != 0) {
     const known = load<f64>(slot);
-    if (known == known) return known;
+    if (known == known) {
+      // A known damage is a rated vector's damage too; only the bill of its counts is still to be read.
+      if (rRated && known > -Infinity) {
+        for (let s = 0; s < rN; s += 1) {
+          const t = i32At(rSlots, s);
+          store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
+        }
+        return raiseRating(known);
+      }
+      return known;
+    }
   }
   let used1: f64 = rHeldUsed1;
   let used2: f64 = rHeldUsed2;
@@ -2073,7 +2141,7 @@ function raisePointSlots(memo: usize): f64 {
   let value: f64 = -Infinity;
   if (!(used1 > header(H_HOUSING_AUTHORITY) || used2 > header(H_HOUSING_DOMINANCE))) value = raiseScore(rWork);
   if (memo != 0) store<f64>(slot, value);
-  return value;
+  return rRated && value > -Infinity ? raiseRating(value) : value;
 }
 
 /**
@@ -2185,13 +2253,13 @@ function raisePointWhole(memo: usize): f64 {
   const slot = memo + ((<usize>at) << 3);
   if (memo != 0) {
     const known = load<f64>(slot);
-    if (known == known) return known;
+    if (known == known) return rRated && known > -Infinity ? raiseRating(known) : known;
   }
   let value: f64 = -Infinity;
   if (!(raiseUsed(rWork, 1) > header(H_HOUSING_AUTHORITY) || raiseUsed(rWork, 2) > header(H_HOUSING_DOMINANCE)))
     value = raiseScore(rWork);
   if (memo != 0) store<f64>(slot, value);
-  return value;
+  return rRated && value > -Infinity ? raiseRating(value) : value;
 }
 
 /**
@@ -2361,7 +2429,7 @@ function raiseSearch(): bool {
   memory.copy(rPoint, rBase, (<usize>types) << 3);
   for (let s = 0; s < rN; s += 1) {
     const t = i32At(rSlots, s);
-    if (modeOf(poolPer(t)) == RAISE_TIGHT) continue;
+    if (isTight(modeOf(poolPer(t)))) continue;
     const from = f64At(rFrom, t);
     const to = f64At(rTo, t);
     store<f64>(rPoint + ((<usize>t) << 3), Math.min(to, Math.max(from, jsRound(f64At(rSeed, t)))));
@@ -2433,6 +2501,7 @@ export function raise(
   rSpace = 0.0;
   rN = 0;
   rFast = false;
+  rRated = false;
   rCap = Infinity;
   rWalkCap = walkCap;
   rRestarts = restarts;
@@ -2470,7 +2539,16 @@ export function raise(
      * mercenaries' block can cap anything (S-102: a trained monster is a price, not a stock).
      */
     if (rAuth == RAISE_SAFE) rCap = raiseBurn(rSeed);
-    else if (rAuth == RAISE_TIGHT) rCap = raiseBurn(rBase);
+    else if (isTight(rAuth)) rCap = raiseBurn(rBase);
+    // `Tight` is ranked by the rating, against the plan's own march, whose bill is read once here.
+    rRated = rAuth == RAISE_TIGHT;
+    if (rRated) {
+      rAsDamage = raiseScore(rBase);
+      recoveryOf(killOrderBy(types, rRows, rBase, T_ORDER));
+      rAsSilver = bSilver;
+      rAsGold = bGold;
+      rAsHired = raiseBurn(rBase);
+    }
 
     // The stacks the search does not walk stay where the **seed** put them, so every vector is scored as the
     // whole army it would field: the housing is paid by all of it and the battle is fought by all of it.

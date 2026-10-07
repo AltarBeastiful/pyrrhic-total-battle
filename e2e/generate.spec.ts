@@ -726,23 +726,7 @@ test('a second Generate opens the plan bar on the stop the player last read', as
     'aria-label',
     new RegExp(`^${wanted}`),
   );
-  /**
-   * **Every stop of the bar has its own table** (S-147): the block under the trade prices the five positions
-   * for the stop the bar is on, and — since the owner asked for it (*"all those should have their table when
-   * clicking on the plan slider"*) — for the rest of the bar ahead of the press, so this slide is another
-   * table rather than another wait.
-   */
-  const priced = march.getByRole('table', { name: /What each raise position makes/ });
-  await expect(priced).toBeVisible({ timeout: 60_000 });
-  await expect(priced.getByRole('rowheader')).toHaveText([
-    'Most, in tens',
-    'Most',
-    'Best v2',
-    'Safe',
-    'Tight',
-  ]);
   await stops.first().click();
-  await expect(priced).toBeVisible({ timeout: 10_000 });
   // Back on the dearest stop, which is where this test has to leave the bar.
   await dearest.click();
   const bar = march.getByRole('slider', { name: 'Where on the trade to read the plan' });
@@ -808,93 +792,44 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
   };
 
   /**
-   * **The five positions, priced before they are asked** (S-147). The block under the plan's own trade
-   * answers the same question the control does, on the march the bar is on: one row a position, with the
-   * damage a march would hit for, the mercenaries it would burn for good and the hired units it would field.
-   * It is priced by the AssemblyScript kernel, in a worker of its own, so it arrives *after* the Generate
-   * rather than with it — and the baseline is the march the bar is on, so it is not drawn again as a row
-   * (design rule 5).
+   * **A run starts on `Tight`, and the control offers three positions** (`Tight (old)` is the comparison) (owner, 2026-10-07: *"Tight almost
+   * always feels better than as is [...] lets move it as default; removing the table and other options on
+   * the selector"*). The five-row table under the plan is gone; the priced figures are read off the hover.
    */
-  const priced = march.getByRole('table', { name: /What each raise position makes/ });
-  await expect(priced).toBeVisible({ timeout: 60_000 });
-  await expect(priced.getByRole('rowheader')).toHaveText([
-    'Most, in tens',
-    'Most',
-    'Best v2',
-    'Safe',
-    'Tight',
-  ]);
-  await expect(priced.getByRole('rowheader', { name: 'As is' })).toHaveCount(0);
+  await expect(control.getByRole('radio')).toHaveCount(3);
+  await expectChosen('Tight');
+  await expect(march.getByRole('table', { name: /What each raise position makes/ })).toHaveCount(0);
 
+  // `As is` is the generated counts: what the plan fielded, and the floor `Tight` can only improve on.
+  const damageTight = await marchFigure(page, 'Damage');
+  await press('As is');
+  await expectChosen('As is');
   const before = await hunter();
-  const damage = await marchFigure(page, 'Damage');
   expect(before, 'the plan fielded no mercenary to raise').toBeGreaterThan(0);
 
-  await press('Most');
+  // **The hover previews the trade the other position offers** — damage, silver and gold, with the change
+  // against the position on screen — once the bar has been priced by the worker.
+  await control.getByText('Tight', { exact: true }).hover();
+  await expect(page.getByRole('tooltip')).toContainText(/Damage/, { timeout: 60_000 });
+  await expect(page.getByRole('tooltip')).toContainText(/Silver/);
 
-  // The counts moved and the figures followed: a race against nothing but the replay.
-  await expect.poll(hunter, { message: 'the mercenary count did not go up' }).toBeGreaterThan(before);
-  expect(await marchFigure(page, 'Damage'), 'the figures did not follow the counts').not.toBe(damage);
-  // And the March says what it did, in the ink every other line about the march is written in.
-  await expect(march.getByText(/Raised to what the troops shelter/)).toBeVisible();
-  await expectChosen('Most');
-
-  // **The damage positions are raises under the same ceiling** (S-143, S-143b, S-145): each fields at least
-  // the plan's own count and never more than `Most` — and none of them adds **a line to the pane** (owner,
-  // 2026-09-29: *"it moves the ui its unpleasant"*), so neither `Most`'s sentence nor any other is drawn
-  // under the figures. The control is **six segments** since S-145: the `Best` segment is gone, and the
-  // climb it answered with is what the three exhaustive positions draw while their search runs.
-  const most = await hunter();
-  await expect(control.getByRole('radio')).toHaveCount(6);
-  await expect(control.getByRole('radio', { name: 'Best', exact: true })).toHaveCount(0);
-
-  // **The first of the three is the exhaustive answer** (S-143b): it is a raise under the same ceiling and
-  // the same stock, and the search that answers it runs in a worker — so the figures arrive *after* the
-  // press, from a client, and the segment carries the wait (`aria-busy`) until they do.
-  await press('Best v2');
-  await expectChosen('Best v2');
-  await expect
-    .poll(hunter, { message: 'the exhaustive answer never arrived' })
-    .toBeGreaterThanOrEqual(before);
-  expect(await hunter(), 'Best v2 went past what Most fields').toBeLessThanOrEqual(most);
+  // `Tight` is the plan's own stock raised as far as the shelter allows: never fewer than the generated count.
+  await press('Tight');
+  await expectChosen('Tight');
+  await expect.poll(hunter, { message: 'Tight never answered' }).toBeGreaterThanOrEqual(before);
   await expect(control).toHaveAttribute('aria-busy', 'false');
-  await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
-
-  // **The other two are that same search under a cap on the hired stock** (S-144): `Safe` may not burn more
-  // chunks of mercenaries than the climb it replaces, `Tight` not more than the plan's own counts — so
-  // `Tight` cannot go below the plan's own count on this stack, and neither may pass what `Most` fields.
-  // Both are raises under the same ceiling, and both are answered by the worker, so both carry the wait.
-  for (const position of ['Safe', 'Tight']) {
-    await press(position);
-    await expectChosen(position);
-    await expect.poll(hunter, { message: `${position} never answered` }).toBeGreaterThanOrEqual(before);
-    expect(await hunter(), `${position} went past what Most fields`).toBeLessThanOrEqual(most);
-    await expect(control).toHaveAttribute('aria-busy', 'false');
-    await expect(march.getByText(/Raised to what the troops shelter/)).toHaveCount(0);
-  }
-
-  // Back to `Most` for the rest of the journey: the positions are one control, and this is the one the
-  // Generate below is asked to remember.
-  await press('Most');
-  await expectChosen('Most');
+  expect(await marchFigure(page, 'Damage')).toBe(damageTight);
 
   // **The accessibility floor**, on the one control the app-wide pass never sees: that pass runs no plan.
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).include('#march').analyze();
   expect(axe.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
 
-  // Generate again: the position outlives the run it was set in.
+  // Generate again: the position outlives the run it was set in, and a Reset-less run still starts on Tight.
+  await press('As is');
   await generateButton(page).click();
   await settle(page);
   await dismissMarchSheet(page);
-  await expectChosen('Most');
-
-  // And the new march really is raised: put the position back to the generated counts and compare.
-  await press('As is');
-  const generated = await hunter();
-  await press('Most');
-  await expect
-    .poll(hunter, { message: 'the second march came back at its generated counts' })
-    .toBeGreaterThan(generated);
+  await expectChosen('As is');
 
   expect(problems).toEqual([]);
 });

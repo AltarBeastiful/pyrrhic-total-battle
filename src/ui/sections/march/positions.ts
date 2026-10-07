@@ -12,7 +12,7 @@
  * counts (`liftedCounts` — the kernel's climb and the kernel's search over it) and the three
  * figures a player decides by — the damage the march would hit for, the mercenaries it would burn for good,
  * and the units it would field. `tools/theorycraft/180-the-positions.test.ts` measures the same ten readings
- * on every stop of every benchmark army; these are the three the block under the plan draws.
+ * on every stop of every benchmark army; these are the figures the control's hover previews.
  *
  * **The base is the plan's own march and the comparison is the raise's own reading of it** — not the
  * `repeat.damage` the trade above prints. The two are the same number wherever no two stacks tie in total HP,
@@ -36,6 +36,7 @@ import {
   RAISE_SAFE,
   RAISE_TENS,
   RAISE_TIGHT,
+  RAISE_TIGHT_DAMAGE,
   RAISE_V2,
   raiseKernel,
 } from '@/engine/fast';
@@ -58,10 +59,22 @@ const CODES: readonly { mode: Exclude<RaiseMode, 'off'>; code: number }[] = [
   { mode: 'v2', code: RAISE_V2 },
   { mode: 'safe', code: RAISE_SAFE },
   { mode: 'tight', code: RAISE_TIGHT },
+  { mode: 'tightOld', code: RAISE_TIGHT_DAMAGE },
 ];
 
-/** The five positions this module prices, in the order the control carries them. */
-export const POSITIONS: readonly Exclude<RaiseMode, 'off'>[] = CODES.map((entry) => entry.mode);
+/**
+ * **The five positions the goldens and experiments 180/184 price**, in the control's historical order —
+ * `positionTrades`' default. `tightOld` is not among them: it is the comparison position (2026-10-07), the
+ * damage-ranked Tight the goldens already held under `tight` before the rating, and only the app asks for it.
+ */
+export const POSITIONS: readonly Exclude<RaiseMode, 'off'>[] = ['tens', 'most', 'v2', 'safe', 'tight'];
+
+/**
+ * **The positions the control offers, and so the ones the worker prices** (owner, 2026-10-07: *"removing the
+ * table and other options on the selector"*): `Tight` alone, so a bar is priced about five times faster.
+ * The other four stay in the kernel for experiments 180 and 184, which call `positionTrades` without a list.
+ */
+export const OFFERED_POSITIONS: readonly Exclude<RaiseMode, 'off'>[] = ['tight', 'tightOld'];
 
 /** The kernel's number for a position (`RAISE_OFF` for the state that moves nothing). */
 export function raiseCode(mode: RaiseMode): number {
@@ -113,8 +126,8 @@ export function liftedCounts(
 /**
  * **What one march is read on** — the figures experiment 180 prices every position by, kept whole so the
  * block and the benchmark mean the same thing by "the trade" (the shape `TradeoffFigures` has in the run
- * store). The table under the plan draws three of them: the damage, the mercenaries burnt and the units
- * fielded. The other two are what the same reading prints there, and what the parity check in
+ * store). The control's hover draws three of them: the damage, the silver and the gold. The others are what
+ * the same reading carries for experiments, and what the parity check in
  * `tools/theorycraft/184-the-positions-on-the-kernel.test.ts` holds the two paths together on.
  */
 export interface PositionReading {
@@ -167,14 +180,18 @@ function read(request: StackRequest, base: StackResult, counts: Record<string, n
 }
 
 /**
- * **The five positions, priced on one march** — the whole of what the block under the plan draws, computed
- * once per march rather than once per press. Every pool of every position stands on the same segment (the
+ * **The positions, priced on one march** — all five by default, only the listed ones when the caller asks
+ * (`OFFERED_POSITIONS`), computed once per march rather than once per press. Every pool of every position stands on the same segment (the
  * configuration the control puts both blocks into when a segment is pressed,
  * `runStore.setRaiseMode`), so a row is one answer a player can reach.
  */
-export function positionTrades(request: StackRequest, base: StackResult): PositionTrades {
+export function positionTrades(
+  request: StackRequest,
+  base: StackResult,
+  modes: readonly Exclude<RaiseMode, 'off'>[] = POSITIONS,
+): PositionTrades {
   const own = countsOf(base);
-  const rows = CODES.map(({ mode }) => {
+  const rows = CODES.filter(({ mode }) => modes.includes(mode)).map(({ mode }) => {
     const lifted = liftedCounts(request, base, { authority: mode, dominance: mode });
     // A position that moves nothing is the plan's own march: the row is drawn with its figures unchanged
     // rather than left out, because "this one changes nothing here" is an answer a player is owed.

@@ -510,9 +510,11 @@ test('Tight never burns more than the plan’s own counts, and never loses to th
 
   // The plan's own march is five hunters and one monster: one chunk. The cap is that, so the search may not
   // reach a second chunk however much damage is behind it — and on this fixture it is a real bound: `v2`
-  // answers the ceiling (295 hunters, thirty chunks) where `Tight` stops at ten.
+  // answers the ceiling (295 hunters, thirty chunks) where `Tight` stops at ten. **And Tight is rated now**
+  // (owner, 2026-10-07; experiment 188): ten hunters struck 5,905,127 for 72 gold, five strike 5,833,164 for
+  // 32 — 1.2 % of damage for 125 % more gold is a trade the owner's rating refuses, so the hunters stay put.
   const own = marchCounts(base);
-  expect(found.counts[HUNTER]).toBe(10);
+  expect(found.counts[HUNTER]).toBe(5);
   expect(found.counts[MONSTER]).toBe(2);
   expect(burnOf(base, whole(found.counts))).toBeLessThanOrEqual(burnOf(base, own));
   expect(at(found.counts)).toBeGreaterThanOrEqual(at(own));
@@ -537,8 +539,9 @@ test('the burn is the mercenaries’ pool’s, so a cap on the monsters alone bo
   expect(monsters('tight')).toEqual(monsters('v2'));
 });
 
-test('all three exhaustive positions are named by one question, and all three are the worker’s', () => {
-  expect(EXHAUSTIVE_MODES).toEqual(['v2', 'safe', 'tight'] satisfies RaiseMode[]);
+test('the exhaustive positions are named by one question, and all of them are the worker’s', () => {
+  // `tightOld` is the damage-ranked Tight kept for comparison (owner, 2026-10-07): the same search.
+  expect(EXHAUSTIVE_MODES).toEqual(['v2', 'safe', 'tight', 'tightOld'] satisfies RaiseMode[]);
   for (const mode of EXHAUSTIVE_MODES) expect(isExhaustive(mode)).toBe(true);
   for (const mode of ['off', 'tens', 'most'] as const) expect(isExhaustive(mode)).toBe(false);
   // A mixed control: one block on a cap, the other on the plain search — both are walked, which is what the

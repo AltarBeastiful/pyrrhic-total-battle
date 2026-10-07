@@ -187,6 +187,7 @@ export function MarchSection() {
             raiseModes={march.raiseModes}
             canRaise={march.canRaise}
             searching={march.searching}
+            trades={march.trades}
             onRaise={(mode) => {
               // No pool: a position is one standing rule over both hired blocks (S-149, `setRaiseMode`).
               useRunStore.getState().setRaiseMode(mode);

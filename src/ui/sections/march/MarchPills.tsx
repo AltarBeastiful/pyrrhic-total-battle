@@ -38,9 +38,10 @@ import { isCommitEnter } from '@/ui/kit';
 import { copyText } from '@/ui/profile/download';
 
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
-import { amount, bonusLines } from './format';
+import { amount, bonusLines, compact, signedPercent } from './format';
 import classes from './march.module.css';
 import { RAISE_CHOICES } from './choices';
+import type { PositionReading, PositionTrades } from './positions';
 import { isExhaustive, raisesPool } from './raise';
 import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 import { countsText, resizeWords } from './rows';
@@ -84,6 +85,8 @@ export interface MarchPillsProps {
   canRaise: boolean;
   /** A `Best v2` search is in flight (`raiseSearch.ts`): the position is chosen, the answer is not in. */
   searching: boolean;
+  /** The stop's priced positions, for the hover preview of each segment; `null` while they are coming. */
+  trades: PositionTrades | null;
   /**
    * A segment was pressed. **No pool rides with it** (S-149): a position is one standing rule over both hired
    * blocks (`runStore.setRaiseMode`), so the block it was pressed on changes nothing about the answer.
@@ -91,14 +94,65 @@ export interface MarchPillsProps {
   onRaise: (mode: RaiseMode) => void;
 }
 
-// What the six segments are called, and the one line each explains itself with: `./choices`, read by this
-// control and by the table under the plan that prices the same five positions (`PositionTrade.tsx`).
+// What the two segments are called, and the one line each explains itself with: `./choices`.
 
 /** What the control is called, per pool: the group carries the pool's own name. */
 const RAISE_LABEL: Record<RaisedPool, string> = {
   authority: 'Mercenary counts',
   dominance: 'Monster counts',
 };
+
+/** The reading a segment previews: `As is` is the plan's own march, any other position is its priced row. */
+function readingOf(trades: PositionTrades | null, mode: RaiseMode): PositionReading | null {
+  if (trades === null) return null;
+  return mode === 'off' ? trades.own : (trades.rows.find((row) => row.mode === mode) ?? null);
+}
+
+/** One figure of a preview, and how it moves against the position on screen: nothing when it does not. */
+interface PreviewFigure {
+  kind: 'minimumDamage' | 'silver' | 'gold';
+  label: string;
+  value: string;
+  /** A signed percentage against the chosen position, or `null` on the chosen one and where nothing moved. */
+  change: string | null;
+}
+
+/**
+ * **What a segment would make of the march, in the three figures the owner asked for** (2026-10-07: *"a hover
+ * to preview the trade it offers (usually a bit less gold and less damage), showing only silver, gold and
+ * damage"*). Gold only where either reading pays any (design rule 15). The change is read against the
+ * position on screen, and a percentage for the reason the plan's trade gives: three units, one shape.
+ */
+function previewOf(shown: PositionReading, chosen: PositionReading, isChosen: boolean): PreviewFigure[] {
+  const change = (to: number, from: number): string | null =>
+    isChosen || to === from || from === 0 ? null : signedPercent(((to - from) / from) * 100);
+  const figures: PreviewFigure[] = [
+    {
+      kind: 'minimumDamage',
+      label: 'Damage',
+      value: compact(shown.damage),
+      change: change(shown.damage, chosen.damage),
+    },
+    {
+      kind: 'silver',
+      label: 'Silver',
+      value: compact(shown.silver),
+      change: change(shown.silver, chosen.silver),
+    },
+  ];
+  if (shown.gold > 0 || chosen.gold > 0) {
+    figures.push({
+      kind: 'gold',
+      label: 'Gold',
+      value: compact(shown.gold),
+      change: change(shown.gold, chosen.gold),
+    });
+  }
+  return figures;
+}
+
+const figureWords = (figure: PreviewFigure): string =>
+  `${figure.label} ${figure.value}${figure.change === null ? '' : ` (${figure.change})`}`;
 
 const isRaiseMode = (value: string): value is RaiseMode =>
   RAISE_CHOICES.some((choice) => choice.mode === value);
@@ -134,15 +188,28 @@ export function MarchRaiseControl({
   pool,
   value,
   searching,
+  trades,
   onChange,
 }: {
   pool: RaisedPool;
   value: RaiseMode;
   /** The exhaustive search is still running: `Best v2` is chosen, and its answer is not in yet. */
   searching: boolean;
+  /** The stop's priced positions: each segment's tooltip previews its row against the chosen one. */
+  trades: PositionTrades | null;
   onChange: (mode: RaiseMode) => void;
 }) {
   const helpId = useId();
+  const chosen = readingOf(trades, value);
+  const previews = new Map(
+    RAISE_CHOICES.map((choice) => {
+      const shown = readingOf(trades, choice.mode);
+      return [
+        choice.mode,
+        shown === null || chosen === null ? [] : previewOf(shown, chosen, choice.mode === value),
+      ] as const;
+    }),
+  );
   return (
     <>
       <SegmentedControl
@@ -157,7 +224,32 @@ export function MarchRaiseControl({
         data={RAISE_CHOICES.map((choice) => ({
           value: choice.mode,
           label: (
-            <Tooltip label={choice.help} withinPortal withArrow>
+            <Tooltip
+              label={
+                <Stack gap={2}>
+                  <Text size="xs">{choice.help}</Text>
+                  {/* The three figures of the position, read off the row already priced; none while it is
+                      still coming, and no note under the position already chosen. Stock Mantine (rule 23). */}
+                  {(previews.get(choice.mode) ?? []).map((figure) => (
+                    <Group key={figure.kind} gap={6} wrap="nowrap">
+                      <Glyph kind={figure.kind} />
+                      <Text span size="xs">
+                        {figure.label} {figure.value}
+                      </Text>
+                      {figure.change !== null && (
+                        <Text span size="xs" c="dimmed">
+                          {figure.change}
+                        </Text>
+                      )}
+                    </Group>
+                  ))}
+                </Stack>
+              }
+              multiline
+              maw={280}
+              withinPortal
+              withArrow
+            >
               {/*
                 **The wait is drawn inside the segment, not beside it** (design rule 15: a state the player
                 needs, and S-142's own note that a line arriving under the figures "moves the ui"): the label
@@ -183,7 +275,10 @@ export function MarchRaiseControl({
         }}
       />
       <VisuallyHidden id={helpId}>
-        {RAISE_CHOICES.map((choice) => `${choice.label}: ${choice.help}`).join(' ')}
+        {RAISE_CHOICES.map((choice) => {
+          const figures = (previews.get(choice.mode) ?? []).map(figureWords).join(', ');
+          return `${choice.label}: ${choice.help}${figures === '' ? '' : ` ${figures}.`}`;
+        }).join(' ')}
         {searching ? ' Searching every combination.' : ''}
       </VisuallyHidden>
     </>
@@ -203,6 +298,7 @@ export function MarchPills({
   raiseModes,
   canRaise,
   searching,
+  trades,
   onRaise,
 }: MarchPillsProps) {
   return (
@@ -270,6 +366,7 @@ export function MarchPills({
                 // `aria-busy` and the hidden "Searching every combination." on a block that was not the one
                 // being searched.
                 searching={searching && isExhaustive(raiseModes[raisable])}
+                trades={trades}
                 // The block the press landed on is not part of the question (S-149): the position is one
                 // standing rule, and `setRaiseMode` writes it over both hired pools.
                 onChange={onRaise}

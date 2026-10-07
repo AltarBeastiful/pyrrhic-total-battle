@@ -204,6 +204,8 @@ export const RAISE_MOST = 2;
 export const RAISE_V2 = 3;
 export const RAISE_SAFE = 4;
 export const RAISE_TIGHT = 5;
+/** `Tight (old)`: Tight ranked on damage alone, as it shipped before experiment 188 (owner, 2026-10-07). */
+export const RAISE_TIGHT_DAMAGE = 6;
 
 /** What one raise position stands the hired stacks at, over both pools at once (S-147). */
 export interface RaiseAnswer {

@@ -21,9 +21,6 @@
  * - **the trade** (`PlanTrade.tsx`): one row per stop, named, with what a march of it hits for, costs in
  *   silver and burns of the hired stock, and a muted note on the two stops that are the bar's best damage
  *   a silver and its best damage a hired unit. That is the question the method exists to answer;
- * - **the raise positions, priced** (`PositionTrade.tsx`, S-147): the five the summary's control offers,
- *   each with the damage it makes of the march the bar is on, the mercenaries it burns and the units it
- *   fields — the second question a player asks of the same march, answered before it is asked;
  * - **one line of totals**, "Fought to the end", because a player who has read the trade still asks what the
  *   whole sequence comes to;
  * - **the reference tail, folded** (the owner, 2026-09-16: the prose goes). What silver buys — the plans the
@@ -56,7 +53,6 @@ import { useResultStore } from '@/ui/resultStore';
 
 import { PlanBar } from './PlanBar';
 import { PlanTrade } from './PlanTrade';
-import { PositionTable } from './PositionTrade';
 import { amount, compact, compactRatio, duration, ratio } from './format';
 import { putBackWords, sequenceWords, spendsStock } from './picks';
 
@@ -426,12 +422,6 @@ export function PlanFold() {
         )}
 
         <PlanTrade rows={rows} position={position} hovered={hovered} onSelect={read} />
-
-        {/* **What the raise control is offering, priced** (S-147). It sits under the trade because it is the
-            same question one level down: the table above prices the *plans* the bar offers, this one prices
-            the five positions the summary's own control asks for, both against the march on screen — and the
-            row the bar is on is the baseline of every note in it. */}
-        <PositionTable />
 
         {/* What the sequence adds up to if it is fought to the end — one line, not a headline: nobody commits
             to a hundred marches at once, and the figures above are the ones they march. It is the one line of

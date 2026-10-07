@@ -15,7 +15,7 @@ import type { CampaignPlan, PlanPick, PlanRow } from '@/engine/plan';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
-import { NO_RAISE } from './raise';
+import { DEFAULT_RAISE } from './raise';
 import type { RaiseMode, RaiseModes } from './raise';
 
 /**
@@ -230,6 +230,13 @@ export interface RunState {
    */
   previousSummary: BattleSummary | null;
   /**
+   * **The summary the March is drawing** — the generated march with the raise and any hand edit over it
+   * (`useMarch`). A Generate makes it the previous run (owner, 2026-10-07: *"the default (tight) changes the
+   * reference used to compute the percent"*): the recap's notes compare against what the player was reading,
+   * Tight included, and not against the unraised snapshot under it.
+   */
+  shownSummary: BattleSummary | null;
+  /**
    * The setup fingerprint the last run was started with; `null` when nothing has run yet or the run
    * was cancelled. A different fingerprint now means the result on screen is stale.
    */
@@ -297,6 +304,8 @@ export interface RunState {
   cancel: () => void;
   /** Keep the summary a new result replaces; called with `null` when there is nothing to keep. */
   rememberPrevious: (summary: BattleSummary | null) => void;
+  /** What the March draws now (`useMarch`), so the next Generate compares against it. */
+  showSummary: (summary: BattleSummary | null) => void;
   reset: () => void;
 }
 
@@ -304,6 +313,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   progress: null,
   editingCounts: false,
   previousSummary: null,
+  shownSummary: null,
   lastRunFingerprint: null,
   includedUnitIds: [],
   leftOutByPlayer: [],
@@ -312,7 +322,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   plan: null,
   planPick: 0,
   chosenStop: null,
-  raiseModes: NO_RAISE,
+  raiseModes: DEFAULT_RAISE,
   controller: null,
   setResize: (resize) => {
     set({ resize });
@@ -400,11 +410,15 @@ export const useRunStore = create<RunState>()((set, get) => ({
   rememberPrevious: (summary) => {
     set({ previousSummary: summary });
   },
+  showSummary: (summary) => {
+    if (get().shownSummary !== summary) set({ shownSummary: summary });
+  },
   reset: () => {
     set({
       progress: null,
       editingCounts: false,
       previousSummary: null,
+      shownSummary: null,
       lastRunFingerprint: null,
       includedUnitIds: [],
       leftOutByPlayer: [],
@@ -415,7 +429,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       // Another account is another army, so the stop it would open on means nothing here — and neither
       // does a count the previous one asked to raise its hired stacks to.
       chosenStop: null,
-      raiseModes: NO_RAISE,
+      raiseModes: DEFAULT_RAISE,
       controller: null,
     });
   },

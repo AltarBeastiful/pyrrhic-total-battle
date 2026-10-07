@@ -102,6 +102,7 @@ const BOTH: Record<RaiseMode, RaiseModes> = {
   v2: { authority: 'v2', dominance: 'v2' },
   safe: { authority: 'v2', dominance: 'v2' },
   tight: { authority: 'v2', dominance: 'v2' },
+  tightOld: { authority: 'v2', dominance: 'v2' },
 };
 
 /** What the two hired pools have left to spend, in housing points. */

@@ -176,19 +176,27 @@ export const usePositionsStore = create<PositionsState>()((set, get) => ({
  * Ask for the whole bar. The stop on screen goes first — it is the one a player is looking at — and the rest
  * behind it in the bar's own order, so a slide to a neighbour finds its table already there.
  */
-function ask(key: string, snapshot: ResultSnapshot, plan: CampaignPlan, first: number): void {
+function ask(
+  key: string,
+  request: StackRequest,
+  plan: CampaignPlan,
+  first: number,
+  known?: PositionTrades,
+): void {
   kill();
   controller = new AbortController();
   const { signal } = controller;
   const count = plan.alternatives.length;
   usePositionsStore.getState().begin(key, count);
   const onScreen = Math.max(0, Math.min(count - 1, Math.round(first)));
+  // **A stop already priced is filed, not asked again** (`primePositions`): the Generate paid for it.
+  if (known !== undefined) usePositionsStore.getState().settle(key, onScreen, known);
   const rest = Array.from({ length: count }, (_unused, index) => index).filter((index) => index !== onScreen);
-  for (const index of [onScreen, ...rest]) {
+  for (const index of known === undefined ? [onScreen, ...rest] : rest) {
     const row = plan.alternatives[index];
     if (row === undefined) continue;
     calc()
-      .positions({ request: snapshot.request, counts: row.counts }, signal)
+      .positions({ request, counts: row.counts }, signal)
       .then(
         (trades) => {
           usePositionsStore.getState().settle(key, index, trades);
@@ -201,6 +209,31 @@ function ask(key: string, snapshot: ResultSnapshot, plan: CampaignPlan, first: n
         },
       );
   }
+}
+
+/**
+ * **The stop a Generate opens on, priced before the march is drawn** (owner, 2026-10-07: *"for now it generates
+ * then jump to tight. it should be tight already"*). `runGenerate` asks for the opening stop's positions on its
+ * own client and files the answer here **before** it publishes the march, so the March's first frame is
+ * already Tight; the rest of the bar is asked for behind it, exactly as `usePositions` would have. On a host
+ * with no worker the rest is filed as "no table" rather than left on its way, which is what `usePositions`
+ * would have decided for the whole bar.
+ */
+export function primePositions(
+  plan: CampaignPlan,
+  request: StackRequest,
+  index: number,
+  trades: PositionTrades,
+): void {
+  const key = positionsKey(plan, request);
+  if (calc().mode === 'worker') {
+    ask(key, request, plan, index, trades);
+    return;
+  }
+  kill();
+  usePositionsStore.setState({
+    entry: { key, stops: plan.alternatives.map((_row, at) => (at === index ? trades : null)) },
+  });
 }
 
 /**
@@ -256,7 +289,7 @@ export function usePositions(
       usePositionsStore.getState().stop();
       return;
     }
-    ask(key, snapshot, plan, position);
+    ask(key, snapshot.request, plan, position);
   }, [key, snapshot, plan, position]);
 
   if (key === null || entry === null || entry.key !== key) return null;
@@ -270,6 +303,8 @@ export function usePositions(
 export interface PricedRaise {
   /** The row's counts for the stop and the position on screen, or `null` while the plan's table has none. */
   counts: Record<string, number> | null;
+  /** The stop's priced positions, `null` while they are coming or when the job failed (the hover preview). */
+  trades: PositionTrades | null;
   /**
    * **A table for this stop is on its way** — its job is out and has not landed. The March draws the climb
    * while it comes and asks nothing else; a job that *failed* is not this (`PositionsStop`).
@@ -295,9 +330,9 @@ export interface PricedRaise {
  * re-prices the bar, and in the frames before its rows land the March was starting the exhaustive search it
  * had just paid the wasm not to need. `pricing` is that fact, so the March waits instead.
  *
- * It is also the hook that starts the pricing: the control lives in the battle summary and the table at the
- * foot of the plan's fold, and the two are never apart — so the answer is asked for wherever either of them is
- * drawn, and the other reads it.
+ * It is also the hook that starts the pricing, from the battle summary's control, and it hands the priced
+ * stop (`trades`) to the control's hover preview. The table that used to ask for it under the plan is gone
+ * (owner, 2026-10-07).
  */
 export function usePricedRaise(
   snapshot: ResultSnapshot | null,
@@ -317,9 +352,10 @@ export function usePricedRaise(
     if (entry === null || entry.key !== key) return true;
     return entry.stops[position] === 'out';
   });
-  if (snapshot === null || plan === null) return { counts: null, pricing: false };
+  if (snapshot === null || plan === null) return { counts: null, trades: null, pricing: false };
   return {
     counts: pricedRaise(snapshot.result, pickOf(plan, position).counts, trades, modes),
+    trades,
     pricing,
   };
 }
