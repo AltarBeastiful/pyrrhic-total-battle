@@ -1,7 +1,9 @@
 # More calculations: a worker pool, a wider search, and a progression advisor (W17)
 
 **Status: proposed 2026-10-03, reviewed the same day (verdict: sound with fixes; fixes folded in below:
-A0, probe immutability, re-priced is not a floor, C5-0 captain conditions, measured timings).** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
+A0, probe immutability, re-priced is not a floor, C5-0 captain conditions, measured timings).
+Validated by the owner 2026-10-07 (answers in §7; Tight baseline and the loss flag folded into C3). Progress:
+C1's probes shipped (`src/engine/probes.ts`, 3575369), ahead of A0/A, which are next.** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
 expanding the scope of search if it leads to better result; then start to produce recommendations for future
 marches: check which talent point where would improve the march […], or where the next modernization of army
 points could be spent, or other questions. […] helper for the player progression would be more interesting at
@@ -152,6 +154,17 @@ For each probe and each stop of the current bar:
    re-planned < re-priced, `reorder` when the re-priced march's death order changed. They also measure the
    search's own noise, which is worth keeping.
 
+**The baseline is Tight, as shown** (owner, 2026-10-07). Since 1cb2ac9 the March shows each stop raised by
+Tight, which is applied after the plan (the worker's positions step, `OFFERED_POSITIONS`), not inside
+`planCampaign`. So "current", "re-priced" and "re-planned" are each read **after Tight** on that stop: the
+re-planned stop is Tight-priced under the upgraded request, as the March would show it after the upgrade. That
+costs one Tight pricing per probe and stop read, inside the same pool job.
+
+**A loss is shown, not hidden** (owner, 2026-10-07, todo of the same day: an upgraded research that halves the
+damage after a re-Generate). The ranking still reads "no gain" for such a probe, but the row carries a visible
+`worse` flag with the re-planned figure (*"the plan gets worse here: search issue"*), so the case can be
+reported and reproduced. `worse` = re-planned (after Tight) < current.
+
 Headline: the gain on the stop the player has selected on the bar (default: the sweet spot); the other stops are
 behind a disclosure.
 
@@ -227,6 +240,10 @@ Each of these is a set of probes or a sweep over one. None is designed here:
 - **Horizon** (`CAMPAIGN.marches` 3/4/5…) as a probe instead of a config read (experiment 73 did this offline).
 - **Marginal value of silver** (`silverBudget ± δ`).
 
+**A step back, owed before C4 ships** (owner, 2026-10-07): once the pool and the probes are measured, take a
+step back and think about *how the player uses* this machinery (which questions, where in the page, what a
+player does with an answer) before the card's shape is fixed.
+
 ## 6. Order and size
 
 | step | what | size | depends on |
@@ -245,12 +262,13 @@ Each of these is a set of probes or a sweep over one. None is designed here:
 C goes before B because it's what the owner wants most and it can't regress the bar. B1 can run alongside C in
 a worker branch.
 
-## 7. Open questions for the owner
+## 7. The owner's answers (2026-10-07)
 
-1. The advisor's headline stop: the sweet spot, the stop selected on the bar, or the best rated?
-2. `δ` for v1: +1 % (a per-percent ranking) or a typical step size per source (e.g. a talent tier)?
-3. Is the 20 s budget for the advisor alone, or shared with the portfolio when both run after a Generate?
-4. Captains: is the trio fixed per march type (solo vs group march), and should C5 suggest swapping the trio
-   on the bar's stops, or only report it?
-5. Should the advisor run automatically after each Generate (warm pool, ~10 s of CPU every time), or only on a
-   button?
+1. Headline stop: the stop selected on the bar (the sweet spot by default); the others behind a disclosure.
+2. `δ` for v1: +1 % on each bonus line, +1 % of each housing pool.
+3. The 20 s budget is the advisor's alone.
+4. Captains: the trio is fixed per march type (solo / group / epic, C5-0); the advisor **suggests** the best
+   trio and its gain and never swaps the active trio itself.
+5. On a button ("Compute") only, never automatically after a Generate.
+6. (new) Baseline: Tight as shown, see C3.
+7. (new) A re-plan that comes out worse is shown as "no gain" with a visible `worse` flag, see C3.

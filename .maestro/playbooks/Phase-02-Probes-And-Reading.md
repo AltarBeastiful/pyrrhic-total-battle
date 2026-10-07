@@ -10,10 +10,12 @@ This phase builds the advisor's engine: pure probes that turn a march request in
   - unit tests proving inputs are not mutated and ids are unique and stable
 
 - [ ] Implement the reading in `src/engine/advisor.ts` following C3 exactly, with these pieces:
+  - **Baseline is Tight, as shown** (owner, 2026-10-07): current, re-priced and re-planned are each read after the Tight raise on that stop (the worker's positions step, `OFFERED_POSITIONS`), one Tight pricing per probe and stop inside the same job
   - **Re-priced**: the current stop's counts battled again under the upgraded request, no search
   - **Re-planned**: the upgraded request planned in full and the same stop taken from its bar
   - **Gain** = max(re-priced, re-planned, current) minus current, read with `rate()` and `CAMPAIGN.markerRates`, so a probe is never reported as a loss; a probe whose gain is 0 only because of the clamp is reported as "no gain", not dropped
   - diagnostics flags `noise` (re-planned < re-priced) and `reorder` (death order of the re-priced march changed)
+  - a visible `worse` flag (re-planned after Tight < current) carried on the row with the re-planned figure, so a search regression is shown and reportable (owner, 2026-10-07)
   - the baseline is re-planned under the same settings as the probes, never taken from the main plan
   - per stop of the bar, with the headline stop selectable (default: the sweet spot)
 
