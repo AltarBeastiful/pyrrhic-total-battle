@@ -33,13 +33,13 @@ const BASE = {
   remoteVersion: 0,
   deviceId: 'this-device',
   dirty: false,
+  syncState: 'saved',
   busy: 'none',
-  notice: '',
   error: '',
-  conflict: null,
   verificationSent: false,
   dialog: null,
-  pending: null,
+  merged: null,
+  leftReason: null,
   methods: null,
 } as const;
 
@@ -133,31 +133,42 @@ test('a provider button signs in through the popup and takes the account', async
   });
 });
 
-test('signed in, the menu says who you are and what you can do about it', async () => {
+test('signed in, the menu says who you are, and has no save or load row to press', async () => {
   useAccountStore.setState({ user: USER, dirty: true });
   const menu = await openMenu();
   expect(within(menu).getByRole('menuitem', { name: /Signed in as player@example\.com/ })).toBeTruthy();
-  expect(within(menu).getByRole('menuitem', { name: /^Save to account/ })).toBeTruthy();
-  expect(within(menu).getByRole('menuitem', { name: /^Load from account/ })).toBeTruthy();
   expect(within(menu).getByRole('menuitem', { name: /^Sign out/ })).toBeTruthy();
+  expect(within(menu).queryByRole('menuitem', { name: /^Save to account/ })).toBeNull();
+  expect(within(menu).queryByRole('menuitem', { name: /^Load from account/ })).toBeNull();
 });
 
-test('saving is offered only when there is something to save, and says so once it is done', async () => {
-  useAccountStore.setState({ user: USER, dirty: false, notice: '' });
+test('the profile row says where the profile is saved, signed in or not', async () => {
   let menu = await openMenu();
-  // Mantine marks a disabled menu item with `data-disabled`, which is what stops the click.
-  expect(
-    within(menu)
-      .getByRole('menuitem', { name: /^Save to account/ })
-      .hasAttribute('data-disabled'),
-  ).toBe(true);
-  expect(within(menu).getByText('Up to date')).toBeTruthy();
+  expect(within(menu).getByText('Saved in this browser only')).toBeTruthy();
 
   cleanup();
-  useAccountStore.setState({ user: USER, dirty: false, notice: 'Saved' });
+  useAccountStore.setState({ user: USER, syncState: 'saving' });
   menu = await openMenu();
-  // "Saved" also names the storage state under the profile's own row; this one is the account's.
-  expect(within(menu).getByRole('menuitem', { name: /^Save to account/ }).textContent).toContain('Saved');
+  expect(within(menu).getByText('Saving to your account…')).toBeTruthy();
+
+  cleanup();
+  useAccountStore.setState({ user: USER, syncState: 'offline' });
+  menu = await openMenu();
+  expect(within(menu).getByText('Offline: saves when back online')).toBeTruthy();
+});
+
+test('signed out, the account button says the profile is this browser’s only', () => {
+  renderWithTheme(<AccountMenu />);
+  expect(
+    screen.getByRole('button', { name: /^Account: /, description: /saved in this browser only/ }),
+  ).toBeTruthy();
+
+  cleanup();
+  useAccountStore.setState({ user: USER });
+  renderWithTheme(<AccountMenu />);
+  expect(
+    screen.queryByRole('button', { name: /^Account: /, description: /saved in this browser only/ }),
+  ).toBeNull();
 });
 
 test('with passwords on, the email form is one more step, with a create-account toggle', async () => {
@@ -178,36 +189,29 @@ test('with passwords on, the email form is one more step, with a create-account 
   expect(await screen.findByRole('button', { name: 'Create account' })).toBeTruthy();
 });
 
-test('the conflict names both losses, and offers a JSON export before either', async () => {
+test('signing in says which of this browser’s profiles joined the account, and which were renamed', async () => {
   useAccountStore.setState({
     user: USER,
-    remoteVersion: 3,
-    conflict: { serverVersion: 5, updated: '2026-09-13 04:26:09.794Z' },
-    dialog: 'conflict',
+    dialog: 'merged',
+    merged: { added: ['Main (local)', 'Alt'], renamed: [{ from: 'Main', to: 'Main (local)' }] },
   });
   renderWithTheme(<AccountDialogs />);
 
-  const dialog = await screen.findByRole('alertdialog');
-  expect(within(dialog).getByText(/Both ways out lose something/)).toBeTruthy();
-  expect(within(dialog).getByText(/since version 3 is discarded/)).toBeTruthy();
-  expect(within(dialog).getByText(/\(version 5\) is replaced by/)).toBeTruthy();
-  expect(within(dialog).getByRole('button', { name: 'Export JSON first' })).toBeTruthy();
-  expect(within(dialog).getByRole('button', { name: /^Load the other device/ })).toBeTruthy();
-  expect(within(dialog).getByRole('button', { name: 'Overwrite with this device' })).toBeTruthy();
+  const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByText(/The 2 profiles you made in this browser are now saved/)).toBeTruthy();
+  expect(within(dialog).getByText('“Main” is now “Main (local)”')).toBeTruthy();
 });
 
-test('loading over unsaved work asks first', async () => {
+test('an expired session says why the account’s profiles left, and offers the way back', async () => {
   const user = userEvent.setup();
-  useAccountStore.setState({ user: USER, dirty: true });
-  const menu = await openMenu();
-  await user.click(within(menu).getByRole('menuitem', { name: /^Load from account/ }));
-  expect(useAccountStore.getState().dialog).toBe('load');
-
-  cleanup();
+  onRequest('listAuthMethods', () => serverMethods(false));
+  useAccountStore.setState({ dialog: 'left', leftReason: 'expired' });
   renderWithTheme(<AccountDialogs />);
-  const dialog = await screen.findByRole('alertdialog');
-  expect(within(dialog).getByText(/replaced by the copy saved on your account/)).toBeTruthy();
-  expect(within(dialog).getByRole('button', { name: 'Keep this browser' })).toBeTruthy();
+
+  const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByText(/Your session has ended/)).toBeTruthy();
+  await user.click(within(dialog).getByRole('button', { name: 'Sign in' }));
+  expect(useAccountStore.getState().dialog).toBe('signin');
 });
 
 test('an unconfirmed address gets a row that explains the refusal and sends the email again', async () => {

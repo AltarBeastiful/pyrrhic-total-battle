@@ -15,10 +15,14 @@ function fixture(): { profile: Profile; setup: BattleSetup } {
   return { profile, setup };
 }
 
-test('the save state is one word, and a conflict outranks a pending write', () => {
-  expect(saveStatus({ dirty: false, conflict: false })).toBe('Saved');
-  expect(saveStatus({ dirty: true, conflict: false })).toBe('Saving…');
-  expect(saveStatus({ dirty: true, conflict: true })).toBe('Sync conflict');
+test('the save state says where the profile is saved, in a few words', () => {
+  expect(saveStatus({ dirty: false, account: null })).toBe('Saved');
+  expect(saveStatus({ dirty: true, account: null })).toBe('Saving…');
+  // With an account in the build, a signed-out profile says it lives nowhere else (S-49d).
+  expect(saveStatus({ dirty: false, account: 'signed-out' })).toBe('Saved in this browser only');
+  expect(saveStatus({ dirty: false, account: 'saved' })).toBe('Saved to your account');
+  expect(saveStatus({ dirty: true, account: 'saving' })).toBe('Saving to your account…');
+  expect(saveStatus({ dirty: true, account: 'offline' })).toBe('Offline: saves when back online');
 });
 
 test('a march is blocked by whatever the player has not filled in yet', () => {

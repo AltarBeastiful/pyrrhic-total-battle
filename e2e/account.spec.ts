@@ -21,7 +21,14 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
-import { accountButton, openAccountMenu, openApp, renameProfile, watchConsole } from './helpers';
+import {
+  accountButton,
+  openAccountMenu,
+  openApp,
+  switchProfileNames,
+  renameProfile,
+  watchConsole,
+} from './helpers';
 
 const BACKEND = process.env.VITE_BACKEND_ORIGIN ?? '';
 /** The local container's superuser, as `ops/pocketbase/README.md` creates it. */
@@ -174,82 +181,122 @@ test('the sign-in dialog offers what the server lists, and no email form when pa
   await expect(dialog.getByRole('button', { name: 'Sign in with email…' })).toHaveCount(0);
 });
 
-test('sign up, save, reload, load back', async ({ page }) => {
-  const problems = watchConsole(page);
+/** Wait until the profile row says the account has it (S-49d: nothing to press). */
+async function waitForAccountSaved(page: Page): Promise<void> {
+  await expect(async () => {
+    const menu = await openAccountMenu(page);
+    try {
+      await expect(menu.getByText('Saved to your account', { exact: true })).toBeVisible({ timeout: 2_000 });
+    } finally {
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu')).toBeHidden();
+    }
+  }).toPass({ timeout: 20_000 });
+}
+
+/** Stand in for the player coming back to the tab: the app pulls and merges on its own. */
+async function comeBack(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const view = globalThis as unknown as { document: { dispatchEvent: (event: Event) => boolean } };
+    view.document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
+async function createProfile(page: Page, name: string): Promise<void> {
+  await chooseAccountRow(page, /^New profile/);
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Profile name').fill(name);
+  await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(accountButton(page)).toHaveAccessibleName(`Account: ${name}`);
+}
+
+test('an edit saves itself, and another browser that signs in has it', async ({ browser }) => {
   const { email, password } = newCredentials();
 
-  await openApp(page);
-  await renameProfile(page, 'On the account');
-  await signUpConfirmed(page, email, password);
+  const first = await browser.newContext();
+  const deviceA = await first.newPage();
+  const problems = watchConsole(deviceA);
+  await openApp(deviceA);
+  await renameProfile(deviceA, 'On the account');
+  await signUpConfirmed(deviceA, email, password);
+  await renameProfile(deviceA, 'Edited, never saved by hand');
+  await waitForAccountSaved(deviceA);
 
-  await chooseAccountRow(page, /^Save to account/);
-  const afterSave = await openAccountMenu(page);
-  await expect(afterSave.getByRole('menuitem', { name: /^Save to account/ })).toContainText('Saved', {
+  const second = await browser.newContext();
+  const deviceB = await second.newPage();
+  await openApp(deviceB);
+  await signIn(deviceB, email, password);
+  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Edited, never saved by hand', {
     timeout: 15_000,
   });
-  await page.keyboard.press('Escape');
-
-  // A genuinely empty browser: nothing of the profile is left, only the account.
-  await page.evaluate(() => {
-    const view = globalThis as unknown as { localStorage: Storage };
-    view.localStorage.removeItem('pyrrhic.v1');
-    view.localStorage.removeItem('pyrrhic.account.device.v1');
-  });
-  await page.reload();
-  await expect(accountButton(page)).not.toHaveAccessibleName('Account: On the account');
-
-  await chooseAccountRow(page, /^Load from account/);
-  await expect(accountButton(page)).toHaveAccessibleName('Account: On the account', { timeout: 15_000 });
+  // B's own untouched start profile was not worth adding to the account.
+  expect(await switchProfileNames(deviceB)).toEqual(['Edited, never saved by hand']);
 
   expect(problems).toEqual([]);
+  await first.close();
+  await second.close();
 });
 
-test('a save made from a stale version shows the conflict question', async ({ browser }) => {
+test('two browsers editing different profiles both keep both, with no question asked', async ({
+  browser,
+}) => {
   const { email, password } = newCredentials();
 
   const first = await browser.newContext();
   const deviceA = await first.newPage();
   await openApp(deviceA);
-  await renameProfile(deviceA, 'Device A');
+  await renameProfile(deviceA, 'Profile A');
   await signUpConfirmed(deviceA, email, password);
-  await chooseAccountRow(deviceA, /^Save to account/);
-  await expect(
-    (await openAccountMenu(deviceA)).getByRole('menuitem', { name: /^Save to account/ }),
-  ).toContainText('Saved', { timeout: 15_000 });
-  await deviceA.keyboard.press('Escape');
+  await renameProfile(deviceA, 'Profile A, saved');
+  await waitForAccountSaved(deviceA);
 
-  // A second browser signs in, takes the account's copy, edits it and saves: the account moves to
-  // version 2 while device A still believes it holds version 1.
   const second = await browser.newContext();
   const deviceB = await second.newPage();
   await openApp(deviceB);
   await signIn(deviceB, email, password);
-  const loadQuestion = deviceB.getByRole('alertdialog');
-  await expect(loadQuestion).toBeVisible({ timeout: 15_000 });
-  await loadQuestion.getByRole('button', { name: 'Load from account' }).click();
-  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Device A', { timeout: 15_000 });
-  await renameProfile(deviceB, 'Device B');
-  await chooseAccountRow(deviceB, /^Save to account/);
-  await expect(
-    (await openAccountMenu(deviceB)).getByRole('menuitem', { name: /^Save to account/ }),
-  ).toContainText('Saved', { timeout: 15_000 });
+  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Profile A, saved', { timeout: 15_000 });
+  await createProfile(deviceB, 'Profile B');
+  await waitForAccountSaved(deviceB);
 
-  // Back on A: an edit and a save on top of a version the account has already moved past.
-  await renameProfile(deviceA, 'Device A again');
-  await chooseAccountRow(deviceA, /^Save to account/);
+  // A has not looked since: its next save meets B's, and merges it instead of asking.
+  await renameProfile(deviceA, 'Profile A, edited again');
+  await waitForAccountSaved(deviceA);
+  await expect
+    .poll(() => switchProfileNames(deviceA), { timeout: 15_000 })
+    .toEqual(['Profile A, edited again', 'Profile B']);
+  await expect(deviceA.getByRole('alertdialog')).toHaveCount(0);
 
-  const conflict = deviceA.getByRole('alertdialog');
-  await expect(conflict).toBeVisible({ timeout: 15_000 });
-  await expect(conflict).toContainText('Both ways out lose something');
-  await expect(conflict.getByRole('button', { name: 'Export JSON first' })).toBeVisible();
-  await expect(conflict.getByRole('button', { name: /^Load the other device/ })).toBeVisible();
-
-  // Taking the other device's copy leaves both at the same version with the same data.
-  await conflict.getByRole('button', { name: /^Load the other device/ }).click();
-  await expect(accountButton(deviceA)).toHaveAccessibleName('Account: Device B', { timeout: 15_000 });
+  // And B picks A's edit up as soon as it is looked at again.
+  await comeBack(deviceB);
+  await expect
+    .poll(() => switchProfileNames(deviceB), { timeout: 15_000 })
+    .toEqual(['Profile A, edited again', 'Profile B']);
 
   await first.close();
   await second.close();
+});
+
+test('signing out takes the account’s profiles off this browser, and signing in brings them back', async ({
+  page,
+}) => {
+  const { email, password } = newCredentials();
+
+  await openApp(page);
+  await renameProfile(page, 'The account’s');
+  await signUpConfirmed(page, email, password);
+  await renameProfile(page, 'The account’s, edited');
+  await waitForAccountSaved(page);
+
+  await chooseAccountRow(page, /^Sign out/);
+  await expect(accountButton(page)).toHaveAccessibleName('Account: My account', { timeout: 15_000 });
+  await expect(accountButton(page)).toHaveAccessibleDescription(/saved in this browser only/);
+
+  await signIn(page, email, password);
+  await expect(accountButton(page)).toHaveAccessibleName('Account: The account’s, edited', {
+    timeout: 15_000,
+  });
+  expect(await switchProfileNames(page)).toEqual(['The account’s, edited']);
 });
 
 test('a new account cannot save until its address is confirmed', async ({ page }) => {
@@ -264,23 +311,13 @@ test('a new account cannot save until its address is confirmed', async ({ page }
   await expect(menu.getByRole('menuitem', { name: /^Confirm your email address/ })).toContainText(
     'Saving needs a confirmed address',
   );
-  await page.keyboard.press('Escape');
-
-  await chooseAccountRow(page, /^Save to account/);
-  await expect(
-    (await openAccountMenu(page)).getByRole('menuitem', { name: /^Save to account/ }),
-  ).toContainText('Confirm your email address first', { timeout: 15_000 });
+  await expect(menu.getByText('Not saved to your account yet: will retry')).toBeVisible({ timeout: 15_000 });
   await page.keyboard.press('Escape');
 
   // The link in the email, as an operator would do it; the app learns about it on its own.
   await confirmAddress(email);
   await page.reload();
-  await renameProfile(page, 'After confirming');
-
-  await chooseAccountRow(page, /^Save to account/);
-  await expect(
-    (await openAccountMenu(page)).getByRole('menuitem', { name: /^Save to account/ }),
-  ).toContainText('Saved', { timeout: 15_000 });
+  await waitForAccountSaved(page);
   await expect(page.getByRole('menuitem', { name: /^Confirm your email address/ })).toBeHidden();
 });
 
@@ -320,11 +357,8 @@ test('deleting the account leaves this browser exactly as it was', async ({ page
   await openApp(page);
   await renameProfile(page, 'Mine to keep');
   await signUpConfirmed(page, email, password);
-  await chooseAccountRow(page, /^Save to account/);
-  await expect(
-    (await openAccountMenu(page)).getByRole('menuitem', { name: /^Save to account/ }),
-  ).toContainText('Saved', { timeout: 15_000 });
-  await page.keyboard.press('Escape');
+  await renameProfile(page, 'Mine to keep, saved');
+  await waitForAccountSaved(page);
 
   await openYourAccount(page);
   await page.getByRole('button', { name: 'Delete account…' }).click();
@@ -340,7 +374,7 @@ test('deleting the account leaves this browser exactly as it was', async ({ page
   const menu = await openAccountMenu(page);
   await expect(menu.getByRole('menuitem', { name: /^Sign in…/ })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(accountButton(page)).toHaveAccessibleName('Account: Mine to keep');
+  await expect(accountButton(page)).toHaveAccessibleName('Account: Mine to keep, saved');
 
   // And the account really is gone: the same password no longer signs anybody in.
   await signIn(page, email, password);

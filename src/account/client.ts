@@ -9,10 +9,17 @@
  */
 import type PocketBaseClient from 'pocketbase';
 
+import { authUserSchema, type AccountUser } from './schema';
+
 /** The PocketBase auth token (JSON, written by the SDK's `LocalAuthStore`). */
 export const AUTH_STORAGE_KEY = 'pyrrhic.account.v1';
-/** `{ deviceId, remoteVersion }` — device-private, never part of the synced blob. */
+/** `{ deviceId, remoteVersion, owner }` — device-private, never part of the synced blob. */
 export const DEVICE_STORAGE_KEY = 'pyrrhic.account.device.v1';
+/**
+ * `{ owner, doc }`: an account's profiles taken off the screen when its session ended without a
+ * sign-out (expiry), unsaved edits included, until the same account signs in again (S-49d).
+ */
+export const CACHE_STORAGE_KEY = 'pyrrhic.account.cache.v1';
 /**
  * The two paths the backend's emails point at, relative to the app root. PocketBase's own templates
  * open its dashboard; `ops/pocketbase/pb_migrations/1789315200_account_hardening.js` rewrites them to
@@ -124,6 +131,11 @@ export interface DeviceState {
   deviceId: string;
   /** The version last pulled or pushed; `0` for an account that has never saved (spec §5.4). */
   remoteVersion: number;
+  /**
+   * The account the document on screen belongs to, or `null` when it is this browser's alone
+   * (S-49d). Kept apart from the session so a session that vanished is noticed even offline.
+   */
+  owner: string | null;
 }
 
 /**
@@ -137,7 +149,7 @@ export function loadDeviceState(): DeviceState {
     try {
       const parsed: unknown = JSON.parse(raw);
       if (typeof parsed === 'object' && parsed !== null) {
-        const { deviceId, remoteVersion } = parsed as Record<string, unknown>;
+        const { deviceId, remoteVersion, owner } = parsed as Record<string, unknown>;
         if (typeof deviceId === 'string' && deviceId !== '') {
           return {
             deviceId,
@@ -145,6 +157,7 @@ export function loadDeviceState(): DeviceState {
               typeof remoteVersion === 'number' && Number.isInteger(remoteVersion) && remoteVersion >= 0
                 ? remoteVersion
                 : 0,
+            owner: typeof owner === 'string' && owner !== '' ? owner : null,
           };
         }
       }
@@ -152,13 +165,53 @@ export function loadDeviceState(): DeviceState {
       /* fall through and mint a new one */
     }
   }
-  const state: DeviceState = { deviceId: crypto.randomUUID(), remoteVersion: 0 };
+  const state: DeviceState = { deviceId: crypto.randomUUID(), remoteVersion: 0, owner: null };
   saveDeviceState(state);
   return state;
 }
 
 export function saveDeviceState(state: DeviceState): void {
   writeLocal(DEVICE_STORAGE_KEY, JSON.stringify(state));
+}
+
+// ---- The expired-session cache (S-49d) ------------------------------------------------------------
+export interface AccountCache {
+  owner: string;
+  /** A root document, unvalidated here: `migrate()` reads it, as it reads anything stored. */
+  doc: unknown;
+}
+
+export function readCache(): AccountCache | null {
+  const raw = readLocal(CACHE_STORAGE_KEY);
+  if (raw === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const { owner, doc } = parsed as Record<string, unknown>;
+    return typeof owner === 'string' && owner !== '' ? { owner, doc } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeCache(cache: AccountCache | null): void {
+  writeLocal(CACHE_STORAGE_KEY, cache === null ? null : JSON.stringify(cache));
+}
+
+/**
+ * The user record the SDK's `LocalAuthStore` keeps beside the token, read without the SDK: the
+ * account rows draw "Signed in as …" on the first frame, offline included, and the token is checked
+ * with the server just after (`restore`).
+ */
+export function readStoredUser(): AccountUser | null {
+  const raw = readLocal(AUTH_STORAGE_KEY);
+  if (raw === null) return null;
+  try {
+    const parsed = authUserSchema.safeParse((JSON.parse(raw) as { record?: unknown }).record);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---- URLs --------------------------------------------------------------------------------------

@@ -290,10 +290,15 @@ export async function refreshSession(): Promise<AccountUser | null> {
     const result = await pb.collection(USERS_COLLECTION).authRefresh();
     return toUser(result.record);
   } catch (error) {
-    // Offline is not a reason to sign somebody out; a rejected token is.
-    if (statusOf(error) === 0) return currentUser(pb.authStore.record);
-    pb.authStore.clear();
-    return null;
+    // Only a rejected token signs somebody out. Offline, or a server having a bad minute, is not a
+    // reason to: the account's profiles would leave the screen for nothing (S-49d).
+    const status = statusOf(error);
+    if (status === 401 || status === 403 || status === 404) {
+      pb.authStore.clear();
+      return null;
+    }
+    if (status === 0) return currentUser(pb.authStore.record);
+    throw asAccountError(error, 'The account server refused the request.');
   }
 }
 

@@ -9,7 +9,7 @@ import '@mantine/core/styles.css';
 import '@/ui/global.css';
 import { App } from '@/App';
 import { appRootUrl, isAccountConfigured, readCallback } from '@/account/client';
-import { trackAccountChanges, useAccountStore } from '@/account/state';
+import { trackAccountChanges, useAccountStore, watchAccountSync } from '@/account/state';
 import { captureInstallPrompt } from '@/pwa/install';
 import { requestPersistentStorage } from '@/pwa/persist';
 import { registerServiceWorker } from '@/pwa/register';
@@ -33,8 +33,10 @@ const kernel = loadKernel(kernelUrl);
 const adapter = withSaveTracking(createLocalStorageAdapter());
 initPersistence(adapter);
 trackUnsavedChanges();
-// After the document is loaded, so the load itself is not mistaken for an edit (S-49b).
+// After the document is loaded, so the load itself is not mistaken for an edit (S-49b). A signed-in
+// browser then saves itself after edits and catches up when it comes back (S-49d).
 trackAccountChanges();
+if (isAccountConfigured()) watchAccountSync();
 applyTheme(useStore.getState().doc.ui.theme);
 
 // Offline support (S-50): the worker is registered on `load` and skipped in `pnpm dev` unless

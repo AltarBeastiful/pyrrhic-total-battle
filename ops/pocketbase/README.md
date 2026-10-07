@@ -48,6 +48,7 @@ pb_hooks/main.pb.js           POST /api/app/profile — the only write path
 pb_migrations/1789300800_profiles.js   the `profiles` collection, fields, index, rules
 pb_migrations/1789315200_account_hardening.js   password minimum, mail templates, rate limits
 pb_migrations/1791331200_sso.js   OAuth2 on, password sign-in off (unless PYRRHIC_PASSWORD_AUTH=on), nightly backup
+pb_migrations/1791400000_session_30_days.js   sessions last 30 days (S-49d: autosave, sign in and forget it)
 smoke.sh                      curl-based acceptance checks (spec §7) + the account checks
 backup-history.sh             host cron: copies the nightly backup out, deduplicated history
 ```
@@ -123,6 +124,7 @@ Resulting layout:
 /home/ubuntu/pyrrhic/pb_migrations/1789300800_profiles.js
 /home/ubuntu/pyrrhic/pb_migrations/1789315200_account_hardening.js
 /home/ubuntu/pyrrhic/pb_migrations/1791331200_sso.js
+/home/ubuntu/pyrrhic/pb_migrations/1791400000_session_30_days.js
 /home/ubuntu/caddy-sites/pyrrhic.caddy
 ```
 

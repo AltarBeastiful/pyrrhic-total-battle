@@ -137,3 +137,54 @@ provider path only. That is why step 3 deletes code but step 5 is what proves th
 - Phone test in step 5: **iPhone Safari and Android Chrome**.
 - Implementation starts at once, in the order of §3, stopping at every gate and before every production or
   Chrome step.
+
+## 6. S-49d — sign in and forget it: autosave, per-profile merge, profiles that belong to the account
+
+Owner, 2026-10-07, after the first Google sign-in worked: *"I would prefer it saves automatically … just
+login and forget about it, then take back the work on any of my devices"*; *"let me create things and when I
+log in, warn me if there's already a profile with the same name and generate unique names that are still
+readable"*; *"avoid users opening a previously saved profile in their account unidentified"* (a session that
+expires must not leave the account's profiles on screen, editable, as if they were local).
+
+This reverses ADR-0009 constraint 1 ("only on an explicit press") for a signed-in player; the app is unchanged
+for everyone else.
+
+**Ownership.** Signed in, every profile on screen belongs to the account. Signed out, every profile on screen
+belongs to this browser alone. The device state remembers which account the document on screen belongs to
+(`owner`), so a session that is gone, whether it expired or was cleared, is noticed at start-up even offline.
+
+**Sync = merge, never replace.** `src/account/merge.ts` is pure: profiles are united by id, the newer
+`updatedAt` wins (then `rev`), marches (setups) and saved marches are merged the same way inside a profile, and
+tombstones (already in the document) remove what was deleted anywhere. Device-local fields (`deviceId`,
+`deviceName`, `activeProfileId`, `ui`) stay this browser's.
+
+- **Autosave:** 3 s after the last edit, and at once when the page is hidden (`fetch` with `keepalive`).
+  The push carries the version this device last saw; on a 409, pull, merge, push again (at most 3 times).
+- **Auto-load:** on start, on sign-in, when the tab becomes visible, and when the connection comes back:
+  pull, merge, and push back if the merge added something the server did not have.
+- **The one lossy case:** the same profile field edited on two devices between two syncs (both offline,
+  typically). The newer edit wins at profile granularity, or at march granularity for march fields. No
+  dialog: the owner accepted it as the price of "never click".
+- **Removed:** the *Save to account* and *Load from account* rows, the Load and Conflict dialogs.
+
+**Signing in.** Profiles this browser made while signed out (touched ones only: an untouched default profile
+is dropped) are added to the account. A name the account already uses gets the readable suffix the import
+already uses: `Main (local)`, then `Main (local 2)`. A dialog lists what was added and what was renamed.
+
+**Leaving.** *Sign out* saves first, then removes the account's profiles from this browser and leaves a fresh
+local profile. If the save fails (offline), they are kept in a local cache and the dialog says so. **Expiry**
+(the server rejects the token): the account's profiles move to that cache (`pyrrhic.account.cache.v1`), unsaved
+edits included, the screen shows a fresh local profile, a dialog says why, and signing in again brings them
+back and saves them. Sessions last **30 days** (migration; PocketBase's default is 5) and are renewed at every
+start, so an active player never sees an expiry.
+
+**Showing it.** Signed out, the account button carries a *This browser only* marker and the profile row says
+*Saved in this browser only*. Signed in: *Saved to your account*, *Saving…*, or *Offline: will save when
+back online*.
+
+**Account deletion** keeps this browser's profiles, now as local ones (as ADR-0009 promised).
+
+**Gates:** merge unit tests (disjoint edits on two devices both survive; deletions win; renames on sign-in;
+untouched default dropped); state tests with the fake client (autosave debounce, 409 retry, expiry to cache and
+back); e2e against the local container with two browser contexts: edit on A, open B, see it; edit different
+profiles on A and B, both survive; sign out hides; then the owner's phone test.

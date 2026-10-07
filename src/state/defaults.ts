@@ -164,6 +164,15 @@ export function uniqueProfileName(name: string, taken: Iterable<string>, suffix 
   }
 }
 
+/** The name *New profile* suggests: "Account 3", or the next number nobody uses yet. */
+export function nextProfileName(taken: readonly string[]): string {
+  const used = new Set(taken);
+  for (let index = taken.length + 1; ; index += 1) {
+    const candidate = `Account ${String(index)}`;
+    if (!used.has(candidate)) return candidate;
+  }
+}
+
 export function newRoot(deviceName = ''): RootDocument {
   const deviceId = uuid();
   const profile = newProfile('My account', deviceId);

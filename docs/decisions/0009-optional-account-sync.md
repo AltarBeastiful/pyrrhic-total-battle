@@ -1,6 +1,6 @@
 # ADR-0009 — Optional signed-in account sync (self-hosted PocketBase)
 
-Status: Accepted (2026-10-07), amended by S-49c — see the end. Proposed 2026-09-13.
+Status: Accepted (2026-10-07), amended by S-49c and S-49d — see the end. Proposed 2026-09-13.
 
 Supersedes the sync half of ADR-0002 only. Everything else in ADR-0002 still holds.
 
@@ -125,4 +125,24 @@ Owner's decision (`docs/plans/sso-accounts.md`): the leanest SSO that reuses wha
   opens (a user action, so constraint 1 holds).
 - Backups: PocketBase's nightly backup (one kept) plus a deduplicated history on the same host
   (`ops/pocketbase/backup-history.sh`). There is no off-host copy; the owner accepted that.
+
+## Amendment — S-49d, sign in and forget it (2026-10-07)
+
+Owner, after the first Google sign-in: *"I would prefer it saves automatically … just login and forget
+about it, then take back the work on any of my devices."* (`docs/plans/sso-accounts.md` §6.)
+
+- **Constraint 1 is reversed for a signed-in player**: a change is pushed 3 s after the last edit and when
+  the page is hidden; the account is pulled on start, on returning to the tab and on coming back online.
+  For everybody else nothing moves, exactly as before; the app stays fully usable offline and anonymous.
+- **No conflict dialog, no load dialog.** Sync merges record by record (`src/account/merge.ts`): profiles,
+  and inside them marches and saved marches, by id; the later `updatedAt` wins; tombstones delete
+  everywhere. The one accepted loss is the older of two edits to the same record between two syncs.
+- **Profiles belong to the account or to the browser, never both.** Signed in, everything on screen is the
+  account's; signed out, everything is the browser's. Signing in adds the browser's own profiles to the
+  account, renamed `Name (local)` on a clash. Signing out or an expired session takes the account's profiles
+  off the screen (an expired session or a failed final save keeps them in a local cache until the same
+  account signs in again).
+- Sessions last 30 days (migration `1791400000_session_30_days.js`) and are renewed at every start; a 5xx
+  or a network error never signs anybody out, only a rejected token does.
+- Deleting the account leaves the profiles on screen, now as the browser's own.
 

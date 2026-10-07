@@ -5,20 +5,23 @@ Stories S-49 and S-49c ([plan](plans/sso-accounts.md)), [ADR-0009](decisions/000
 runbook [`ops/pocketbase/README.md`](../ops/pocketbase/README.md).
 
 **Pyrrhic works with no account, offline, exactly as before.** Everything is calculated and stored in
-your browser. An account adds two buttons — *Save to account* and *Load from account* — and nothing
-else. Nothing is sent anywhere unless you press one of them.
+your browser. Sign in, and your profiles follow you to every device you sign in on: there is nothing to
+press, ever (S-49d).
 
 If the build you are using has no backend configured, the account rows are simply not there.
 
 ## What it does, and what it deliberately does not
 
-- One **copy** of everything (every profile, every march setup, every saved march), stored as one
-  opaque blob on the server. It is overwritten whole on every save.
-- **No background sync.** No auto-push after an edit, no auto-pull on start, no polling, no realtime.
-- **No merging.** Two devices that both changed something are a question you answer, not a guess the
-  app makes.
-- **Nothing else leaves the browser.** ADR-0002 still holds for every other code path: no telemetry,
-  no error reporting, no third-party CDN. The service worker is forbidden from caching the backend.
+- **Saves by itself.** While you are signed in, every change is saved to your account 3 seconds after you
+  stop, and at once when you leave the page.
+- **Catches up by itself.** Opening Pyrrhic, coming back to its tab, or coming back online fetches what
+  your other devices saved and merges it in.
+- **Merges, one profile at a time.** A profile edited on your phone and another edited on your PC both
+  survive; so do two marches of the same profile. Deleting a profile deletes it everywhere.
+- **Nothing for anybody who is not signed in.** Signed out, the profiles on screen are this browser's
+  alone, and the account button says so (a crossed-out cloud: *saved in this browser only*).
+- **Nothing else leaves the browser.** ADR-0002 still holds for every other code path: no telemetry, no
+  error reporting, no third-party CDN. The service worker is forbidden from caching the backend.
 
 ## Signing in
 
@@ -54,26 +57,30 @@ is kept to four rows.
 | **Change password…** | Only while the server takes passwords. Asks for the current password and the new one twice. Every other device is signed out and will ask for the new password; this browser stays signed in. A Google or Discord account's password belongs to that provider. |
 | **Delete account…** | Deletes the account and the copy of your profiles saved on it, for good. **Your profiles in this browser are not touched**, and Pyrrhic keeps working exactly as it does without an account. |
 
-## Saving and loading
+## Signing in on a browser that already has profiles
 
-| Row | What it does |
-| --- | --- |
-| **Save to account** | Uploads everything in this browser, overwriting the account's copy. Offered only when there is something new to save; it says *Saved* when it has. |
-| **Load from account** | Replaces everything in this browser with the account's copy. Asks first whenever this browser has unsaved changes. |
+The profiles you made in that browser are **added** to your account; nothing is replaced. If your account
+already has a profile with the same name, the one from this browser is renamed in a way you can still read
+(`Main` becomes `Main (local)`, then `Main (local 2)`), and a short message lists what was added and what was
+renamed. The untouched profile a new browser starts with is not added.
 
-The first time you sign in on a new device, the account's copy is fetched and you are **asked**
-before it is applied — signing in never overwrites what is on screen.
+## Signing out, and sessions that end
 
-## When two devices disagree
+- **Sign out** saves what is not saved yet, then takes your account's profiles off this browser and leaves
+  a fresh profile of its own. If it cannot save (offline), your last changes are kept here, put away, and
+  saved the next time you sign in; a message says so.
+- **A session that ends** (you have not opened Pyrrhic for 30 days, or the account was signed out
+  elsewhere) does the same: your account's profiles are put away with every change you made, a message
+  says why, and signing in again brings them back. Each visit renews the session.
+- Offline but signed in, you stay signed in: saving waits for the connection, and the profile row says
+  *Offline: saves when back online*.
 
-Every save carries a version number, one higher than the version this browser last saw. If another
-device has saved in between, the server refuses with a conflict and Pyrrhic asks:
+## When two devices change the same thing
 
-- **Load the other device's copy** — what you changed here since the last save is discarded.
-- **Overwrite with this device** — what the other device saved is replaced by what is here.
-
-Both lose something, which is why the dialog says so and offers **Export JSON first**. There is no
-third answer: merging two armies field by field would be a guess.
+There is no question to answer. Changes are merged profile by profile (and march by march); only if the
+**same** profile was changed on two devices between two syncs (typically both offline) does the later
+change win and the earlier one get lost. With a save every few seconds and a sync every time you come
+back to the tab, that takes two devices offline at once.
 
 ## What is stored, and where
 
@@ -82,9 +89,9 @@ On the server, one record per account:
 | Field | Content |
 | --- | --- |
 | `user` | The account it belongs to. Deleting the account deletes the record with it. |
-| `data` | The whole root document, as your browser wrote it. The server never looks inside. |
+| `data` | Every profile of the account, as your browsers merged them. The server never looks inside. |
 | `version` | The optimistic counter. |
-| `updatedBy` | An opaque device id, used only to word the conflict message. |
+| `updatedBy` | An opaque device id. |
 
 In this browser:
 
@@ -92,7 +99,8 @@ In this browser:
 | --- | --- |
 | `pyrrhic.v1` | Your profiles — the source of truth, with or without an account. |
 | `pyrrhic.account.v1` | The session token, so you are not asked to sign in on every visit. |
-| `pyrrhic.account.device.v1` | This browser's device id and the version it last saw. Never uploaded. |
+| `pyrrhic.account.device.v1` | This browser's device id, the version it last saw, and which account the profiles on screen belong to. Never uploaded. |
+| `pyrrhic.account.cache.v1` | Only after a session ended or an offline sign-out: the account's profiles, put away until you sign in again. |
 
 ## The two addresses Pyrrhic answers besides its own
 
@@ -108,8 +116,9 @@ it cannot be copied out of a shared screen or a browser history.
 
 ## Limitations
 
-- Saving offline fails and the Save button stays enabled. There is no queue and no replay.
-- The unit is the **whole document**: profiles cannot be sent one at a time.
+- Saving offline waits; it is retried when the connection comes back, or at the next change.
+- Each save uploads every profile of the account (merging happens in the browser, the server only keeps
+  the latest copy).
 - An account cannot be shared with another player. Share links are for that, and they carry a march,
   not an account.
 - Browsers evict storage. `navigator.storage.persist()` is requested on first load, and on iOS the

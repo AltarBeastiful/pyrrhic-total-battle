@@ -1,8 +1,9 @@
 /**
- * The account's rows in the account menu (S-49b), in the order a player meets them: who you are,
- * the address that still needs confirming, put a copy on the account, take the copy back, leave.
+ * The account's rows in the account menu (S-49b, S-49d), in the order a player meets them: who you
+ * are, the address that still needs confirming, leave. Saving and loading have no row: a signed-in
+ * browser keeps itself in step, and the profile row says where that stands.
  *
- * Four rows, five while an address is unconfirmed — and no more. Changing a password and deleting
+ * Two rows, three while an address is unconfirmed — and no more. Changing a password and deleting
  * the account are errands of a different rhythm, so they live behind the row that names the account,
  * which every site with accounts makes the way in. A menu that outgrows the window is a menu whose
  * last rows cannot be pressed (design rule 15, and Mantine's dropdown does not scroll).
@@ -11,7 +12,7 @@
  * beside it (design rule 15 — nothing on screen without value). When the build carries no backend
  * origin the section is `null` and the menu is exactly what it was before.
  */
-import { CloudDownload, CloudUpload, LogIn, LogOut, MailCheck, UserRound } from 'lucide-react';
+import { LogIn, LogOut, MailCheck, UserRound } from 'lucide-react';
 
 import { useAccountStore } from '@/account/state';
 
@@ -23,11 +24,8 @@ const ICON = 15;
 export function useAccountSection(): AppMenuSection | null {
   const enabled = useAccountStore((state) => state.enabled);
   const user = useAccountStore((state) => state.user);
-  const dirty = useAccountStore((state) => state.dirty);
   const busy = useAccountStore((state) => state.busy);
-  const notice = useAccountStore((state) => state.notice);
   const error = useAccountStore((state) => state.error);
-  const conflict = useAccountStore((state) => state.conflict);
   const verificationSent = useAccountStore((state) => state.verificationSent);
   const passwords = useAccountStore((state) => state.methods?.password ?? false);
 
@@ -50,13 +48,6 @@ export function useAccountSection(): AppMenuSection | null {
     ];
     return { id: 'account', title: 'Account', entries };
   }
-
-  const saveDescription = ((): string | undefined => {
-    if (error !== '') return error;
-    if (conflict !== null) return 'Saved on another device since';
-    if (notice !== '') return notice;
-    return dirty ? undefined : 'Up to date';
-  })();
 
   const entries: AppMenuEntry[] = [
     {
@@ -87,28 +78,6 @@ export function useAccountSection(): AppMenuSection | null {
             },
           } satisfies AppMenuEntry,
         ]),
-    {
-      id: 'account-save',
-      label: 'Save to account',
-      ...(saveDescription === undefined ? {} : { description: saveDescription }),
-      icon: <CloudUpload size={ICON} aria-hidden />,
-      disabled: working || !dirty,
-      onSelect: () => {
-        void useAccountStore.getState().save();
-      },
-    },
-    {
-      id: 'account-load',
-      label: 'Load from account',
-      description: 'Replaces everything in this browser',
-      icon: <CloudDownload size={ICON} aria-hidden />,
-      disabled: working,
-      onSelect: () => {
-        // Unsaved work is never thrown away without a question; a clean browser has nothing to lose.
-        if (dirty) useAccountStore.getState().setDialog('load');
-        else void useAccountStore.getState().load();
-      },
-    },
     {
       id: 'account-signout',
       label: 'Sign out',

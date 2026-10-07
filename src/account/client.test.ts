@@ -74,16 +74,16 @@ test('the device id is minted once and survives a reload', () => {
   expect(first.remoteVersion).toBe(0);
   expect(loadDeviceState().deviceId).toBe(first.deviceId);
 
-  saveDeviceState({ deviceId: first.deviceId, remoteVersion: 4 });
-  expect(loadDeviceState()).toEqual({ deviceId: first.deviceId, remoteVersion: 4 });
+  saveDeviceState({ deviceId: first.deviceId, remoteVersion: 4, owner: 'u1' });
+  expect(loadDeviceState()).toEqual({ deviceId: first.deviceId, remoteVersion: 4, owner: 'u1' });
 });
 
 test('a device record that has been tampered with is replaced, not trusted', () => {
   localStorage.setItem(DEVICE_STORAGE_KEY, '{not json');
   expect(loadDeviceState().deviceId).not.toBe('');
 
-  localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify({ deviceId: 'kept', remoteVersion: -3 }));
-  expect(loadDeviceState()).toEqual({ deviceId: 'kept', remoteVersion: 0 });
+  localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify({ deviceId: 'kept', remoteVersion: -3, owner: 7 }));
+  expect(loadDeviceState()).toEqual({ deviceId: 'kept', remoteVersion: 0, owner: null });
 });
 
 test('a stored session is recognised without loading the SDK', () => {

@@ -7,10 +7,22 @@ import type { BattleSetup, Profile } from '@/state/schema';
 
 export type FabState = 'ready' | 'stale' | 'running' | 'blocked';
 
-/** The one-word save state that replaced "Saved in this browser" (design plan §5.2, R5). */
-export function saveStatus(options: { dirty: boolean; conflict: boolean }): string {
-  if (options.conflict) return 'Sync conflict';
-  return options.dirty ? 'Saving…' : 'Saved';
+/**
+ * Where the profile is saved, in a few words (design plan §5.2, R5; S-49d). `account` is `null` in a
+ * build with no account, `'signed-out'` when it has one and nobody is signed in — then the profile is
+ * this browser's alone, and the row says so — or the account's sync state.
+ */
+export function saveStatus(options: {
+  dirty: boolean;
+  account: null | 'signed-out' | 'saved' | 'saving' | 'offline' | 'error';
+}): string {
+  const { dirty, account } = options;
+  if (account === null) return dirty ? 'Saving…' : 'Saved';
+  if (account === 'signed-out') return dirty ? 'Saving…' : 'Saved in this browser only';
+  if (account === 'saving') return 'Saving to your account…';
+  if (account === 'offline') return 'Offline: saves when back online';
+  if (account === 'error') return 'Not saved to your account yet: will retry';
+  return 'Saved to your account';
 }
 
 /**

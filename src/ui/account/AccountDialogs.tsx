@@ -1,12 +1,11 @@
 /**
- * Everything the account asks in a modal (S-49b): sign in or create an account, the forgotten
- * password, what the account itself offers, may I replace what is in this browser, the 409, a new
- * password, and leaving for good.
+ * Everything the account says in a modal (S-49b, S-49d): sign in or create an account, the forgotten
+ * password, what the account itself offers, what signing in added, why the account's profiles left
+ * the screen, a new password, and leaving for good.
  *
- * The conflict one is the only interesting one. Both ways out lose something, so the dialog says
- * which, in words, and offers a JSON export first so that a player who picks the wrong one can get
- * their work back (spec §5.5). It is an `alertdialog`: no Escape, no click-outside — this is not a
- * question you walk away from with a save half-done. Deleting the account is the other one.
+ * There is no conflict dialog any more: profiles are merged one by one, and the later edit wins
+ * (docs/plans/sso-accounts.md §6). Deleting the account is the one `alertdialog`, with a JSON export
+ * offered first.
  *
  * Every panel that can fail ends in a sentence saying what happened and what to do next, and none of
  * them says "Submit" (design rules 25 and 26).
@@ -26,11 +25,6 @@ import { downloadJson } from '../profile/download';
 
 /** Kept in step with the `users` collection's own floor (the hardening migration sets 10). */
 const PASSWORD_MIN = 10;
-
-/** "2026-09-13 04:26:09.794Z" is PocketBase's own format: shown as it comes, never parsed. */
-function whenLine(updated: string): string {
-  return updated === '' ? '' : updated.replace('T', ' ').replace(/\.\d+Z?$/, ' UTC');
-}
 
 /** The escape hatch offered before either lossy branch: this browser's active profile, as a file. */
 function ExportFirstButton() {
@@ -454,110 +448,80 @@ function YourAccountDialog() {
   );
 }
 
-function LoadDialog() {
-  const open = useAccountStore((state) => state.dialog) === 'load';
-  const pending = useAccountStore((state) => state.pending);
-  const busy = useAccountStore((state) => state.busy) !== 'none';
-
-  const when = pending === null ? '' : whenLine(pending.updated);
-
+/**
+ * Signing in added this browser's own profiles to the account (S-49d). Said once, because a renamed
+ * profile is a profile the player will look for under its old name.
+ */
+function MergedDialog() {
+  const open = useAccountStore((state) => state.dialog) === 'merged';
+  const merged = useAccountStore((state) => state.merged);
+  const close = (): void => {
+    useAccountStore.setState({ dialog: null, merged: null });
+  };
+  const count = merged?.added.length ?? 0;
   return (
     <Dialog
-      role="alertdialog"
-      opened={open}
-      onClose={() => {
-        useAccountStore.getState().setDialog(null);
-      }}
-      title="Load from account"
+      opened={open && merged !== null}
+      onClose={close}
+      title="Added to your account"
+      size="sm"
+      description={`${count === 1 ? 'The profile' : `The ${String(count)} profiles`} you made in this browser ${count === 1 ? 'is' : 'are'} now saved to your account too.`}
+      footer={
+        <Group justify="flex-end">
+          <Button onClick={close}>Done</Button>
+        </Group>
+      }
+    >
+      {merged !== null && merged.renamed.length > 0 && (
+        <Stack gap={4}>
+          <Text size="sm">
+            Your account already had a profile with the same name, so this one was renamed:
+          </Text>
+          {merged.renamed.map(({ from, to }) => (
+            <Text key={to} size="sm">
+              {`“${from}” is now “${to}”`}
+            </Text>
+          ))}
+        </Stack>
+      )}
+    </Dialog>
+  );
+}
+
+/** The account's profiles left the screen without a sign-out of the player's own, or before a save. */
+function LeftDialog() {
+  const open = useAccountStore((state) => state.dialog) === 'left';
+  const reason = useAccountStore((state) => state.leftReason);
+  const close = (): void => {
+    useAccountStore.setState({ dialog: null, leftReason: null });
+  };
+  return (
+    <Dialog
+      opened={open && reason !== null}
+      onClose={close}
+      title={reason === 'expired' ? 'Signed out' : 'Not saved to your account yet'}
       size="sm"
       description={
-        pending === null
-          ? 'Everything in this browser is replaced by the copy saved on your account. Changes made here since the last save are lost.'
-          : `Your account holds a copy saved${when === '' ? '' : ` on ${when}`}. Loading it replaces everything in this browser, including changes made here since the last save.`
+        reason === 'expired'
+          ? 'Your session has ended, so your account’s profiles are put away. Sign in again to get them back, with every change you made here. What you see now is this browser’s alone.'
+          : 'This browser could not reach the account, so your last changes are kept here, put away, and saved the next time you sign in. What you see now is this browser’s alone.'
       }
       footer={
         <Group justify="flex-end" gap="sm">
-          <ExportFirstButton />
-          <Button
-            variant="default"
-            onClick={() => {
-              useAccountStore.setState({ pending: null, dialog: null });
-            }}
-          >
-            Keep this browser
+          <Button variant="default" onClick={close}>
+            Close
           </Button>
           <Button
-            disabled={busy}
             onClick={() => {
-              void useAccountStore.getState().load();
+              useAccountStore.setState({ leftReason: null });
+              useAccountStore.getState().setDialog('signin');
             }}
           >
-            Load from account
+            Sign in
           </Button>
         </Group>
       }
     />
-  );
-}
-
-function ConflictDialog() {
-  const conflict = useAccountStore((state) => state.conflict);
-  const open = useAccountStore((state) => state.dialog) === 'conflict' && conflict !== null;
-  const busy = useAccountStore((state) => state.busy) !== 'none';
-  const version = useAccountStore((state) => state.remoteVersion);
-
-  const when = conflict === null ? '' : whenLine(conflict.updated);
-
-  return (
-    <Dialog
-      role="alertdialog"
-      opened={open}
-      onClose={() => {
-        useAccountStore.getState().setDialog(null);
-      }}
-      title="Saved on another device"
-      size="sm"
-      description={`Another device saved to this account${when === '' ? '' : ` on ${when}`}, after this browser last loaded it. Both ways out lose something, so export first if you want to keep both.`}
-      footer={
-        <Group justify="flex-end" gap="sm" wrap="wrap">
-          <ExportFirstButton />
-          <Button
-            variant="default"
-            disabled={busy}
-            onClick={() => {
-              void useAccountStore.getState().resolveConflict('server');
-            }}
-          >
-            Load the other device's copy
-          </Button>
-          <Button
-            color="danger"
-            disabled={busy}
-            onClick={() => {
-              void useAccountStore.getState().resolveConflict('device');
-            }}
-          >
-            Overwrite with this device
-          </Button>
-        </Group>
-      }
-    >
-      <Stack gap={4}>
-        <Text size="sm">
-          <Text span fw={600} inherit>
-            Load the other device&rsquo;s copy
-          </Text>
-          : everything changed in this browser since version {version} is discarded.
-        </Text>
-        <Text size="sm">
-          <Text span fw={600} inherit>
-            Overwrite with this device
-          </Text>
-          : everything the other device saved (version {conflict?.serverVersion ?? 0}) is replaced by what is
-          here.
-        </Text>
-      </Stack>
-    </Dialog>
   );
 }
 
@@ -756,8 +720,8 @@ export function AccountDialogs() {
     <>
       <SignInDialog />
       <YourAccountDialog />
-      <LoadDialog />
-      <ConflictDialog />
+      <MergedDialog />
+      <LeftDialog />
       <ChangePasswordDialog />
       <DeleteAccountDialog />
     </>

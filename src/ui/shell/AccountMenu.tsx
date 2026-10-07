@@ -10,10 +10,20 @@
  * The menu itself is kit's `AppMenu`, so the shell cannot invent a shape: every row is an action,
  * a segmented row or a section heading, and each kind has one appearance.
  */
-import { Avatar, Button, Group, Text, TextInput, UnstyledButton, useMantineColorScheme } from '@mantine/core';
+import {
+  Avatar,
+  Button,
+  Group,
+  Text,
+  TextInput,
+  UnstyledButton,
+  useMantineColorScheme,
+  VisuallyHidden,
+} from '@mantine/core';
 import {
   Check,
   ChevronDown,
+  CloudOff,
   Copy,
   Download,
   Info,
@@ -34,6 +44,7 @@ import { applyUpdate, isUpdateReady, subscribeToUpdate } from '@/pwa/register';
 import { buildBattleLink, buildProfileLink } from '@/share/codec';
 import { applyImport, exportProfileFile, parseImport } from '@/share/exportImport';
 import type { ImportMode, ParsedImport } from '@/share/exportImport';
+import { nextProfileName, uniqueProfileName } from '@/state/defaults';
 import { THEMES, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
 
@@ -144,7 +155,10 @@ export function AccountMenu() {
   const setActiveProfile = useStore((state) => state.setActiveProfile);
   const result = useResultStore((state) => state.last);
   const dirty = useUiStore((state) => state.dirty);
-  const conflict = useAccountStore((state) => state.conflict) !== null;
+  const accountStatus = useAccountStore((state) =>
+    state.enabled ? (state.user === null ? 'signed-out' : state.syncState) : null,
+  );
+  const browserOnly = accountStatus === 'signed-out';
   const accountDialog = useAccountStore((state) => state.dialog);
   const accountSection = useAccountSection();
   const { setColorScheme } = useMantineColorScheme();
@@ -271,7 +285,7 @@ export function AccountMenu() {
         {
           id: 'rename',
           label: 'Rename profile',
-          description: saveStatus({ dirty, conflict }),
+          description: saveStatus({ dirty, account: accountStatus }),
           icon: <Pencil size={ICON} aria-hidden />,
           onSelect: () => {
             setDialog('rename');
@@ -372,7 +386,7 @@ export function AccountMenu() {
           title="New profile"
           description="A profile is one game account: its tiers, mercenaries and bonus values."
           confirmLabel="Create"
-          initialName={`Account ${String(profiles.length + 1)}`}
+          initialName={nextProfileName(profiles.map((candidate) => candidate.name))}
           onCancel={close}
           onConfirm={(name) => {
             createProfile(name);
@@ -401,7 +415,11 @@ export function AccountMenu() {
           title="Duplicate profile"
           description="The copy gets its own identity, so editing it never touches the original."
           confirmLabel="Duplicate"
-          initialName={`${profile.name} (copy)`}
+          initialName={uniqueProfileName(
+            profile.name,
+            profiles.map((candidate) => candidate.name),
+            'copy',
+          )}
           onCancel={close}
           onConfirm={(name) => {
             duplicateProfile(profile.id, name);
@@ -420,7 +438,11 @@ export function AccountMenu() {
         width={260}
         sections={sections}
         trigger={
-          <UnstyledButton className={themeClasses.accountPill} aria-label={`Account: ${profile.name}`}>
+          <UnstyledButton
+            className={themeClasses.accountPill}
+            aria-label={`Account: ${profile.name}`}
+            aria-describedby={browserOnly ? 'account-browser-only' : undefined}
+          >
             <Avatar size={28} radius="xl" color="brass" variant="filled">
               {initial === '' ? '?' : initial}
             </Avatar>
@@ -430,6 +452,17 @@ export function AccountMenu() {
               </Text>
               <ChevronDown size={14} aria-hidden />
             </Group>
+            {/* Not signed in: what is on screen is saved nowhere else (S-49d). */}
+            {browserOnly && (
+              <span
+                id="account-browser-only"
+                title="Not signed in: saved in this browser only"
+                style={{ display: 'inline-flex' }}
+              >
+                <CloudOff size={14} aria-hidden />
+                <VisuallyHidden>Not signed in: saved in this browser only</VisuallyHidden>
+              </span>
+            )}
           </UnstyledButton>
         }
       />

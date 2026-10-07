@@ -71,6 +71,7 @@ export async function push(
   document: RootDocument,
   baseVersion: number,
   deviceId: string,
+  options: { keepalive?: boolean } = {},
 ): Promise<PushResult> {
   const pb = await getClient();
   const token = pb.authStore.token;
@@ -79,12 +80,16 @@ export async function push(
   }
 
   const version = baseVersion + 1;
+  const body = JSON.stringify({ data: document, version, deviceId });
   let response: Response;
   try {
     response = await fetch(`${backendOrigin()}${PROFILE_ENDPOINT}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: token },
-      body: JSON.stringify({ data: document, version, deviceId }),
+      body,
+      // The save made as the page is hidden must outlive the tab; browsers cap such a body at
+      // 64 kB, so a larger document goes out as a plain request and takes its chance.
+      keepalive: options.keepalive === true && body.length < 60_000,
     });
   } catch (error) {
     throw new AccountError('network', 'The account server could not be reached.', { cause: error });

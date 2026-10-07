@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StoreApi } from 'zustand';
 
-import { newRoot, newSavedStack } from './defaults';
+import { newRoot, newSavedStack, nextProfileName, uniqueProfileName } from './defaults';
 import { createMemoryAdapter } from './storage';
 import {
   createAppStore,
@@ -295,5 +295,16 @@ describe('persistence', () => {
     vi.advanceTimersByTime(PERSIST_DEBOUNCE_MS);
     expect(JSON.parse(adapter.load() ?? '{}').ui.theme).toBe('light');
     dispose();
+  });
+});
+
+describe('profile names', () => {
+  it('the names New and Duplicate suggest are never ones already in use, and stay readable', () => {
+    expect(nextProfileName(['My account'])).toBe('Account 2');
+    expect(nextProfileName(['My account', 'Account 2', 'Account 3'])).toBe('Account 4');
+    expect(nextProfileName(['Account 2'])).toBe('Account 3');
+    expect(uniqueProfileName('Main', ['Main'], 'copy')).toBe('Main (copy)');
+    expect(uniqueProfileName('Main', ['Main', 'Main (copy)'], 'copy')).toBe('Main (copy 2)');
+    expect(uniqueProfileName('Main', ['Main'], 'local')).toBe('Main (local)');
   });
 });
