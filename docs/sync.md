@@ -14,10 +14,12 @@ If the build you are using has no backend configured, the account rows are simpl
 
 - **Saves by itself.** While you are signed in, every change is saved to your account 3 seconds after you
   stop, and at once when you leave the page.
-- **Catches up by itself.** Opening Pyrrhic, coming back to its tab, or coming back online fetches what
-  your other devices saved and merges it in.
-- **Merges, one profile at a time.** A profile edited on your phone and another edited on your PC both
-  survive; so do two marches of the same profile. Deleting a profile deletes it everywhere.
+- **Live on every open screen.** When one device saves, every other device that has Pyrrhic open hears
+  about it within a second and merges it in: no reload. Opening Pyrrhic, coming back to its tab, focusing
+  its window, or coming back online catches up too.
+- **Merges, piece by piece.** A profile edited on your phone and another edited on your PC both survive;
+  so do the troops changed on one and the bonuses changed on the other in the *same* profile, and two
+  marches of the same profile. Deleting a profile deletes it everywhere.
 - **Nothing for anybody who is not signed in.** Signed out, the profiles on screen are this browser's
   alone, and the account button says so (a crossed-out cloud: *saved in this browser only*).
 - **Nothing else leaves the browser.** ADR-0002 still holds for every other code path: no telemetry, no
@@ -77,10 +79,10 @@ renamed. The untouched profile a new browser starts with is not added.
 
 ## When two devices change the same thing
 
-There is no question to answer. Changes are merged profile by profile (and march by march); only if the
-**same** profile was changed on two devices between two syncs (typically both offline) does the later
-change win and the earlier one get lost. With a save every few seconds and a sync every time you come
-back to the tab, that takes two devices offline at once.
+There is no question to answer. Changes are merged piece by piece: each profile's name, troops,
+mercenaries, bonus sources and recovery settings, each march, each saved march. Only if the **same** piece
+was changed on two devices within the same few seconds (or while both were offline) does the later change
+win and the earlier one get lost.
 
 ## What is stored, and where
 

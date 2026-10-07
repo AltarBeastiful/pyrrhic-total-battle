@@ -16,6 +16,7 @@
  * What describes *this browser* stays this browser's: `deviceId`, `deviceName`, the active profile,
  * the theme.
  */
+import { PROFILE_SECTIONS } from '@/state/schema';
 import type { BattleSetup, Profile, RootDocument, SavedStack, SyncMeta, Tombstone } from '@/state/schema';
 
 /** `a` if it was edited after `b`; the counter breaks a tie of clocks. */
@@ -52,9 +53,35 @@ function mergeTombstones(local: Tombstone[], remote: Tombstone[]): Tombstone[] {
   return [...byId.values()];
 }
 
-/** The newer profile's own fields, with both copies' marches and saved marches united. */
+/**
+ * When `profile` last changed `section`; `0` for a section no edit has stamped (one older than
+ * S-49e), so that a section really edited on one side beats one merely left alone on the other.
+ * Two unstamped sections tie, and the newer profile keeps its own.
+ */
+function sectionTime(profile: Profile, section: (typeof PROFILE_SECTIONS)[number]): number {
+  return profile.sectionUpdatedAt?.[section] ?? 0;
+}
+
+/**
+ * Section by section, the copy that edited it last (S-49e): troops changed on the phone and bonuses
+ * changed on the PC both survive. Marches and saved marches are united record by record.
+ */
 function combineProfiles(deleted: Set<string>) {
-  return (winner: Profile, other: Profile): Profile => {
+  return (newest: Profile, other: Profile): Profile => {
+    const winner: Profile = { ...newest };
+    const times: NonNullable<Profile['sectionUpdatedAt']> = {};
+    for (const section of PROFILE_SECTIONS) {
+      const mine = sectionTime(newest, section);
+      const theirs = sectionTime(other, section);
+      if (theirs > mine) {
+        // Each section's value with its own type, copied across as one.
+        Object.assign(winner, { [section]: other[section] });
+      }
+      const latest = Math.max(mine, theirs);
+      if (latest > 0) times[section] = latest;
+    }
+    // Only a profile that has stamps carries the field, so unstamped copies stay byte-identical.
+    if (Object.keys(times).length > 0) winner.sectionUpdatedAt = times;
     const setups = unite<BattleSetup>(winner.setups, other.setups, deleted);
     const savedStacks = unite<SavedStack>(winner.savedStacks, other.savedStacks, deleted);
     // A profile always keeps one march (ADR-0004); both copies cannot have lost all of theirs.

@@ -15,7 +15,13 @@ import type { RootDocument } from '@/state/schema';
 import { useStore } from '@/state/store';
 
 import { CACHE_STORAGE_KEY, DEVICE_STORAGE_KEY, resetClient } from './client';
-import { FakeResponseError, onRequest, resetFakePocketBase } from './fixtures';
+import {
+  emitRealtime,
+  FakeResponseError,
+  onRequest,
+  realtimeListeners,
+  resetFakePocketBase,
+} from './fixtures';
 import { AUTOSAVE_MS, resetAccountModule, trackAccountChanges, useAccountStore } from './state';
 
 vi.mock('pocketbase', async () => {
@@ -190,6 +196,36 @@ test('coming back to the app brings in what another device saved, and saves noth
   expect(names()).toEqual(['Main', 'From the phone']);
   expect(server?.version).toBe(before);
   expect(useAccountStore.getState().dirty).toBe(false);
+});
+
+test('another device’s save, heard over realtime, appears here without a reload', async () => {
+  renameActive('Main');
+  await signIn();
+  await vi.waitFor(() => {
+    expect(realtimeListeners()).toBe(1);
+  });
+  anotherDeviceAdds('From the phone');
+
+  emitRealtime({ version: server?.version });
+
+  await vi.waitFor(() => {
+    expect(names()).toEqual(['Main', 'From the phone']);
+  });
+  // This device's own save echoes back too, at a version it already has: nothing to fetch.
+  const calls = useAccountStore.getState().remoteVersion;
+  emitRealtime({ version: calls });
+  expect(useAccountStore.getState().syncState).toBe('saved');
+});
+
+test('signing out stops listening', async () => {
+  await signIn();
+  await vi.waitFor(() => {
+    expect(realtimeListeners()).toBe(1);
+  });
+  await useAccountStore.getState().signOut();
+  await vi.waitFor(() => {
+    expect(realtimeListeners()).toBe(0);
+  });
 });
 
 test('an expired session puts the account away, edits included, and the next sign-in brings it back', async () => {

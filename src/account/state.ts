@@ -9,9 +9,10 @@
  * account's profiles never stay on screen, editable, for somebody who is not signed in.
  *
  * **Sync.** An edit saves itself 3 s later (and at once when the page is hidden); opening the app,
- * coming back to the tab and coming back online pull and merge. A save is a push of the whole document
- * at the version this device last saw; a 409 is answered by pulling, merging (`merge.ts`) and pushing
- * again. There is no question to answer: the merge is per record, and the later edit wins.
+ * coming back to or focusing the tab, coming back online, and another device's save (heard over
+ * realtime, S-49e) pull and merge. A save is a push of the whole document at the version this device
+ * last saw; a 409 is answered by pulling, merging (`merge.ts`) and pushing again. There is no question
+ * to answer: the merge is per record and per profile section, and the later edit wins.
  *
  * This module must not import the PocketBase SDK — `client.ts` loads it behind a dynamic import, and
  * the account rows are part of the first load.
@@ -40,7 +41,7 @@ import type * as Auth from './auth';
 import type { SignInMethods } from './auth';
 import { mergeDocuments, sameContent } from './merge';
 import type { AccountUser } from './schema';
-import { pull, push, type RemoteProfile } from './sync';
+import { pull, push, watchRemote, type RemoteProfile } from './sync';
 
 /** How long after the last edit the account is saved. */
 export const AUTOSAVE_MS = 3000;
@@ -117,6 +118,8 @@ let auth: typeof Auth | null = null;
 let applying = false;
 let autosave: ReturnType<typeof setTimeout> | null = null;
 let running: Promise<void> | null = null;
+/** Stops the realtime subscription; `null` while nobody is signed in. */
+let stopWatching: Promise<() => Promise<void>> | null = null;
 let again: { pull: boolean; keepalive: boolean } | null = null;
 
 function rememberDevice(patch: Partial<DeviceState>): void {
@@ -155,6 +158,12 @@ function withAProfile(doc: RootDocument): RootDocument {
   return { ...doc, profiles: [profile], activeProfileId: profile.id };
 }
 
+function unwatch(): void {
+  const stopping = stopWatching;
+  stopWatching = null;
+  void stopping?.then((stop) => stop()).catch(() => undefined);
+}
+
 function cancelAutosave(): boolean {
   if (autosave === null) return false;
   clearTimeout(autosave);
@@ -174,9 +183,25 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     return remoteDoc;
   };
 
+  /**
+   * Another device saved: its version arrives over realtime, and anything ahead of what this device
+   * has seen is pulled and merged at once — so two open screens stay in step without a reload.
+   */
+  const watch = (): void => {
+    if (stopWatching !== null) return;
+    stopWatching = watchRemote((version) => {
+      if (version > get().remoteVersion) void get().sync({ pull: true });
+    });
+    // No realtime (an old proxy, a flaky network): focus, visibility and reconnect still catch up.
+    stopWatching.catch(() => {
+      stopWatching = null;
+    });
+  };
+
   /** The account's profiles leave the screen; a fresh local profile takes their place. */
   const leave = async (keep: boolean): Promise<void> => {
     cancelAutosave();
+    unwatch();
     const current = useStore.getState().doc;
     writeCache(keep && device.owner !== null ? { owner: device.owner, doc: current } : null);
     apply(freshLocal(current));
@@ -365,7 +390,14 @@ export const useAccountStore = create<AccountState>()((set, get) => {
           mine.push(profile);
         } else {
           summary.renamed.push({ from: profile.name, to: name });
-          mine.push({ ...profile, name, rev: profile.rev + 1, updatedAt: Date.now() });
+          const now = Date.now();
+          mine.push({
+            ...profile,
+            name,
+            rev: profile.rev + 1,
+            updatedAt: now,
+            sectionUpdatedAt: { ...profile.sectionUpdatedAt, name: now },
+          });
         }
       }
       const local: RootDocument = { ...current, profiles: mine };
@@ -394,6 +426,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         merged: worthSaying ? summary : null,
         dialog: worthSaying ? 'merged' : null,
       });
+      watch();
       await get().sync();
     },
 
@@ -448,6 +481,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         return false;
       }
       cancelAutosave();
+      unwatch();
       writeCache(null);
       rememberDevice({ owner: null, remoteVersion: 0 });
       set({
@@ -506,6 +540,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       }
       if (device.owner === user.id) {
         set({ user });
+        watch();
         await get().sync({ pull: true });
         return;
       }
@@ -569,9 +604,12 @@ export function watchAccountSync(): () => void {
     if (account.user !== null) void account.sync({ pull: true });
   };
   document.addEventListener('visibilitychange', onVisibility);
+  // Two windows side by side are both visible: focus is what says the player moved to this one.
+  window.addEventListener('focus', onOnline);
   window.addEventListener('online', onOnline);
   return () => {
     document.removeEventListener('visibilitychange', onVisibility);
+    window.removeEventListener('focus', onOnline);
     window.removeEventListener('online', onOnline);
   };
 }
@@ -579,6 +617,7 @@ export function watchAccountSync(): () => void {
 /** Tests only: forget the module's timers and the device state read at import. */
 export function resetAccountModule(): void {
   cancelAutosave();
+  unwatch();
   running = null;
   again = null;
   auth = null;

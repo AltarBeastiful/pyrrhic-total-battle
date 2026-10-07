@@ -388,6 +388,7 @@ listed below with one pointer to the commit subject, plan section or investigati
 | S-50 PWA / offline / install prompt | done | hand-written service worker, no PWA dependency |
 | S-52 Accessibility and mobile layout pass | done | axe zero on the kit page and the app in both schemes; `pnpm contrast` over 176 pairs |
 | S-49a Account sync backend | in progress | groundwork done and verified: `ops/pocketbase/` (PocketBase 0.40.4 compose, Caddy site, save hook, `profiles` migration, smoke script), every spec `[verify]` answered in investigation 0012, hosting in investigation 0010. **Deployment is pending the owner** (Dynu hostname, the two-line philou change, the Google OAuth client, the backup target) |
+| S-49e Live sync and per-section merge | done | `docs/plans/sso-accounts.md` §7: realtime subscription to the account's record (another device's save merged within a second), pull on window focus, `Profile.sectionUpdatedAt` stamped by the store and merged section by section |
 | S-49d Sign in and forget it | in progress | `docs/plans/sso-accounts.md` §6 (2026-10-07): autosave (3 s, and on page hide), pull on start/focus/online, per-record merge (`src/account/merge.ts`) instead of load/conflict dialogs, profiles belong to the account or the browser (signing in adds the browser's own, renamed `(local)` on a clash; sign-out/expiry takes the account's off screen, cached when unsaved), *This browser only* marker, 30-day sessions, unique suggested names |
 | S-49c Accounts by SSO | in progress | `docs/plans/sso-accounts.md` (2026-10-07): Google + Discord through the SDK popup (PKCE redirect and `/oauth-callback` deleted), password sign-in off on the server with the code kept, backend renamed `pyrrhic-backend.freeddns.org`, `smoke.sh` by impersonation, `backup-history.sh` on main. Steps 1–3 done; the OAuth consoles, the deploy and the phone tests remain |
 | S-49b Account sync client | done | `src/account/**`, `src/ui/account/**`, ADR-0009, `/oauth-callback` + `404.html` copy, SW NetworkOnly for the backend, `storage.persist()`; e2e `e2e/account.spec.ts` against a local 0.40.4 container. Hidden until the owner sets `VITE_BACKEND_ORIGIN` |
@@ -995,6 +996,11 @@ order, manual counts) so adding them later is UI work, not a redesign.
 6. (answered) Unwanted features are listed under "Deferred" in the backlog, not dropped.
 
 ## 7. Review log
+- 2026-10-07 — **S-49e two open screens in step.** Owner asked what happens with both devices open: S-49d only
+  caught up on focus/visibility and merged a profile's settings as one block. Now realtime (the account's record,
+  SDK subscription) merges another device's save within a second, focus pulls, and each profile section has its
+  own edit time, so troops edited on one device and bonuses on the other both survive. e2e: two open browsers,
+  an edit on one shows on the other with no reload.
 - 2026-10-07 — **S-49d sign in and forget it.** Owner: *"I would prefer it saves automatically … login and forget
   about it"*, and profiles that are *added* on sign-in, renamed readably on a clash, and never left on screen
   for somebody signed out. Built: `merge.ts` (per profile, per march, tombstones), autosave and pull-on-focus in

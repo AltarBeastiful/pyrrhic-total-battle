@@ -136,3 +136,17 @@ async function readJson(response: Response): Promise<unknown> {
     return null;
   }
 }
+
+/**
+ * Hear about another device's save as it happens (S-49e): PocketBase's realtime stream, which the
+ * collection's list rule already limits to the account's own record. `onVersion` gets the version
+ * the server now holds; the caller pulls and merges when it is ahead of what this device has seen.
+ * Resolves to the function that stops listening.
+ */
+export async function watchRemote(onVersion: (version: number) => void): Promise<() => Promise<void>> {
+  const pb = await getClient();
+  return pb.collection(PROFILES_COLLECTION).subscribe('*', (event) => {
+    const version = (event.record as { version?: unknown }).version;
+    if (typeof version === 'number') onVersion(version);
+  });
+}

@@ -277,6 +277,35 @@ test('two browsers editing different profiles both keep both, with no question a
   await second.close();
 });
 
+test('two open screens stay in step: an edit on one appears on the other without a reload', async ({
+  browser,
+}) => {
+  const { email, password } = newCredentials();
+
+  const first = await browser.newContext();
+  const deviceA = await first.newPage();
+  await openApp(deviceA);
+  await renameProfile(deviceA, 'Live');
+  await signUpConfirmed(deviceA, email, password);
+  await renameProfile(deviceA, 'Live, saved');
+  await waitForAccountSaved(deviceA);
+
+  const second = await browser.newContext();
+  const deviceB = await second.newPage();
+  await openApp(deviceB);
+  await signIn(deviceB, email, password);
+  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Live, saved', { timeout: 15_000 });
+
+  // Nothing is done on B: no reload, no tab switch. Realtime brings A's edit over.
+  await renameProfile(deviceA, 'Live, edited on A');
+  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Live, edited on A', {
+    timeout: 15_000,
+  });
+
+  await first.close();
+  await second.close();
+});
+
 test('signing out takes the account’s profiles off this browser, and signing in brings them back', async ({
   page,
 }) => {

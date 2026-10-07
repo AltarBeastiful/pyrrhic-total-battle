@@ -1,6 +1,6 @@
 # ADR-0009 — Optional signed-in account sync (self-hosted PocketBase)
 
-Status: Accepted (2026-10-07), amended by S-49c and S-49d — see the end. Proposed 2026-09-13.
+Status: Accepted (2026-10-07), amended by S-49c, S-49d and S-49e — see the end. Proposed 2026-09-13.
 
 Supersedes the sync half of ADR-0002 only. Everything else in ADR-0002 still holds.
 
@@ -145,4 +145,11 @@ about it, then take back the work on any of my devices."* (`docs/plans/sso-accou
 - Sessions last 30 days (migration `1791400000_session_30_days.js`) and are renewed at every start; a 5xx
   or a network error never signs anybody out, only a rejected token does.
 - Deleting the account leaves the profiles on screen, now as the browser's own.
+
+## Amendment — S-49e, realtime and per-section merge (2026-10-07)
+
+A signed-in browser also subscribes to the account's record over PocketBase realtime and merges another
+device's save as it arrives; window focus pulls too. The merge is now per profile section (`name`, `troops`,
+`mercenaries`, `sources`, `recovery`, `activeSetupId`, each with its own edit time in `sectionUpdatedAt`), so
+the only loss left is the same section edited on two devices within a few seconds.
 

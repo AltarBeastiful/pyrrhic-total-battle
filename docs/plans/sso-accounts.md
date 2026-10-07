@@ -188,3 +188,22 @@ back online*.
 untouched default dropped); state tests with the fake client (autosave debounce, 409 retry, expiry to cache and
 back); e2e against the local container with two browser contexts: edit on A, open B, see it; edit different
 profiles on A and B, both survive; sign out hides; then the owner's phone test.
+
+## 7. S-49e — two open screens in step, and a finer merge (2026-10-07)
+
+Owner: *"when I have both devices opened on my account, what will happen if I make a change … what if I do a
+change on the other device in the meantime?"* — S-49d answered only on focus/visibility, and merged a profile's
+own settings as one block (troops edited on A lost to bonuses edited on B). Both fixed:
+
+- **Realtime.** While signed in, the app subscribes to the account's `profiles` record (the SDK's realtime,
+  already used by the OAuth popup; the list rule limits events to the owner). An event at a version ahead of
+  the device's is pulled and merged at once; the device's own save echoes at a version it has, and is ignored.
+  Window `focus` also pulls (two windows side by side are both "visible"). Realtime through philou's Caddy
+  checked on main (`PB_CONNECT` arrives at once, with or without gzip).
+- **Per-section merge.** `Profile.sectionUpdatedAt` (optional, so no schema version bump) records when each of
+  `name`, `troops`, `mercenaries`, `sources`, `recovery`, `activeSetupId` was last edited; the store stamps the
+  sections an edit changes. The merge takes each section from the copy that edited it last; an unstamped
+  section counts as never edited, so an edit beats a leftover. Marches and saved marches stay record by record.
+- The remaining loss: the same section of the same profile changed on two devices within the debounce (3 s)
+  plus one round trip, or while both are offline.
+

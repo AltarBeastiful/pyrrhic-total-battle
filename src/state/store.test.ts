@@ -307,4 +307,17 @@ describe('profile names', () => {
     expect(uniqueProfileName('Main', ['Main', 'Main (copy)'], 'copy')).toBe('Main (copy 2)');
     expect(uniqueProfileName('Main', ['Main'], 'local')).toBe('Main (local)');
   });
+
+  it('an edit stamps the profile sections it changed, and only those (S-49e)', () => {
+    const store = createAppStore();
+    const id = store.getState().doc.activeProfileId;
+    store.getState().renameProfile(id, 'Main');
+    const afterRename = store.getState().doc.profiles[0]?.sectionUpdatedAt ?? {};
+    expect(Object.keys(afterRename)).toEqual(['name']);
+
+    store.getState().updateProfile(id, (profile) => ({ troops: { ...profile.troops, guardsmen: null } }));
+    const afterTroops = store.getState().doc.profiles[0]?.sectionUpdatedAt ?? {};
+    expect(Object.keys(afterTroops).sort()).toEqual(['name', 'troops']);
+    expect(afterTroops.name).toBe(afterRename.name);
+  });
 });

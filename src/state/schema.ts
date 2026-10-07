@@ -336,6 +336,21 @@ export const savedStackSchema = syncMetaSchema.extend({
 export type SavedStack = z.infer<typeof savedStackSchema>;
 
 // ---- Profile --------------------------------------------------------------------------------------
+/**
+ * The parts of a profile two devices can change independently (S-49e). Each gets its own edit time in
+ * `sectionUpdatedAt`, so the account merge keeps troops changed on one device *and* bonuses changed on
+ * the other. Marches and saved marches carry their own sync metadata and are merged record by record.
+ */
+export const PROFILE_SECTIONS = [
+  'name',
+  'troops',
+  'mercenaries',
+  'sources',
+  'recovery',
+  'activeSetupId',
+] as const;
+export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
+
 export const profileSchema = syncMetaSchema.extend({
   name: z.string(),
   createdAt: timestamp,
@@ -347,6 +362,8 @@ export const profileSchema = syncMetaSchema.extend({
   setups: z.array(battleSetupSchema),
   activeSetupId: z.uuid(),
   savedStacks: z.array(savedStackSchema),
+  /** When each section was last edited; absent on a profile no edit has stamped yet (S-49e). */
+  sectionUpdatedAt: z.partialRecord(z.enum(PROFILE_SECTIONS), timestamp).optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 

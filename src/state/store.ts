@@ -15,6 +15,7 @@ import type { StateCreator, StoreApi } from 'zustand';
 import { cloneProfileWithNewIds, defaultSetup, newProfile, newRoot, uuid } from './defaults';
 import { migrate } from './migrations';
 import type { StorageAdapter } from './storage';
+import { PROFILE_SECTIONS } from './schema';
 import type { BattleSetup, Profile, RootDocument, SavedStack, SyncMeta, Theme } from './schema';
 
 /** ADR-0004: writes are debounced by 300 ms. */
@@ -130,13 +131,32 @@ export function selectTheme(state: StoreState): Theme {
 const initializer =
   (initial: RootDocument): StateCreator<StoreState> =>
   (set, get) => {
-    /** Edit the profile with `id` (default: the active one) and stamp it. */
+    /**
+     * Edit the profile with `id` (default: the active one) and stamp it — the profile, and each of its
+     * sections the edit changed, so the account merge can keep two devices' edits to different
+     * sections of one profile (S-49e).
+     */
     const editProfile = (id: string | null, update: (profile: Profile) => Partial<Profile>): void => {
       const { doc } = get();
       const targetId = id ?? doc.activeProfileId;
       const profile = doc.profiles.find((candidate) => candidate.id === targetId);
       if (!profile) return;
-      const next = touch(profile, update(profile), doc.deviceId);
+      const patch = update(profile);
+      const now = Date.now();
+      const changed = PROFILE_SECTIONS.filter(
+        (section) => section in patch && patch[section] !== profile[section],
+      );
+      const stamped: Partial<Profile> =
+        changed.length === 0
+          ? patch
+          : {
+              ...patch,
+              sectionUpdatedAt: {
+                ...profile.sectionUpdatedAt,
+                ...Object.fromEntries(changed.map((section) => [section, now])),
+              },
+            };
+      const next = touch(profile, stamped, doc.deviceId);
       set({ doc: { ...doc, profiles: replaceById(doc.profiles, next) } });
     };
 

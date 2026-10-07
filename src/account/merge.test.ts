@@ -108,3 +108,55 @@ test('an active profile deleted elsewhere falls back to one that is still there'
   };
   expect(mergeDocuments(onPhone, deleted).activeProfileId).toBe(phone.profiles[0]?.id);
 });
+
+test('troops changed on one device and bonuses on the other, in the same profile, both survive', () => {
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  if (!base) throw new Error('no profile');
+  const t = base.updatedAt;
+  const onPhone = edit(
+    base,
+    { troops: { ...base.troops, guardsmen: null }, sectionUpdatedAt: { troops: t + 10 } },
+    t + 10,
+  );
+  const onPc = edit(
+    base,
+    {
+      sources: { ...base.sources, vipLevel: 7 },
+      name: 'Renamed on the PC',
+      sectionUpdatedAt: { sources: t + 20, name: t + 20 },
+    },
+    t + 20,
+  );
+
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),
+    mergeDocuments({ ...pc, profiles: [onPc] }, { ...phone, profiles: [onPhone] }),
+  ]) {
+    const [profile] = merged.profiles;
+    expect(profile?.troops.guardsmen).toBeNull(); // the phone's troops
+    expect(profile?.name).toBe('Renamed on the PC'); // the PC's name…
+    expect(profile?.sources.vipLevel).toBe(7); // …and its bonuses
+    expect(profile?.sectionUpdatedAt).toEqual({ troops: t + 10, sources: t + 20, name: t + 20 });
+  }
+});
+
+test('the same section changed on both devices keeps the later change', () => {
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  if (!base) throw new Error('no profile');
+  const t = base.updatedAt;
+  const early = edit(base, { name: 'Early', sectionUpdatedAt: { name: t + 10 } }, t + 30);
+  const late = edit(base, { name: 'Late', sectionUpdatedAt: { name: t + 20 } }, t + 20);
+  // The profile edited last overall is `early`, but its name is the older one.
+  expect(mergeDocuments({ ...phone, profiles: [early] }, { ...pc, profiles: [late] }).profiles[0]?.name).toBe(
+    'Late',
+  );
+});
+
+test('profiles no edit has stamped yet merge as before, and stay unstamped', () => {
+  const { phone, pc } = twoDevices();
+  const merged = mergeDocuments(phone, pc);
+  expect(merged.profiles[0]?.sectionUpdatedAt).toBeUndefined();
+  expect(sameContent(merged, phone)).toBe(true);
+});

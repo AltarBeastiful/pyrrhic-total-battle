@@ -78,6 +78,17 @@ export class FakeAuthStore {
 
 /** Every answer the tests set up, and every call they want to assert on. */
 const responders = new Map<string, Responder>();
+const listeners = new Set<(event: { record: unknown }) => void>();
+
+/** Play the server telling every subscriber that a record changed. */
+export function emitRealtime(record: unknown): void {
+  for (const listener of listeners) listener({ record });
+}
+
+/** How many realtime subscriptions are open right now. */
+export function realtimeListeners(): number {
+  return listeners.size;
+}
 export const fakeCalls: FakeCall[] = [];
 
 /** `on('authWithPassword', …)` — return a value, or throw a `FakeResponseError` from inside it. */
@@ -86,6 +97,7 @@ export function onRequest(method: string, responder: Responder): void {
 }
 
 export function resetFakePocketBase(): void {
+  listeners.clear();
   responders.clear();
   fakeCalls.length = 0;
   FakePocketBase.last = null;
@@ -105,6 +117,16 @@ class FakeCollection {
     const responder = responders.get(method);
     if (!responder) throw new FakeResponseError(500, `no fake answer for ${method}`);
     return responder(...args);
+  }
+
+  /** Realtime, reduced to what the app uses: one `'*'` subscription per collection. */
+  subscribe(_topic: string, callback: (event: { record: unknown }) => void): Promise<() => Promise<void>> {
+    fakeCalls.push({ collection: this.name, method: 'subscribe', args: [_topic] });
+    listeners.add(callback);
+    return Promise.resolve(() => {
+      listeners.delete(callback);
+      return Promise.resolve();
+    });
   }
 
   listAuthMethods(): Promise<unknown> {
