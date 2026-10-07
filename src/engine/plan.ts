@@ -880,6 +880,14 @@ export interface CampaignPlan extends PlanTotals {
    */
   retype?: { ms: number; marches: number; retyped: number; cut: boolean } | undefined;
   /**
+   * **The clock cut this plan** (W17 A0): `budgetMs` ran out in the search or in the re-typing, so the answer
+   * is the machine's as much as the engine's. Absent when the plan ran to the end of its count limits
+   * (`PLAN_LIMITS`, `retype.ts`'s `EXHAUSTIVE` and `CLIMB_STEPS`), which is always the case without a
+   * `budgetMs`. That is how the advisor's pool keeps its answers machine-independent: its jobs pass no
+   * `budgetMs`, and its 20 s safety cut is the pool's, reported per job.
+   */
+  budgetBound?: true | undefined;
+  /**
    * **What the tier seed did to the rung order** (`CampaignInput.tierSeed`) — a diagnostic, present only when
    * the seed is on: `RungOrderLog`, over every scorer the plan built.
    */
@@ -3322,7 +3330,12 @@ function planTroopsOnly(input: CampaignInput): CampaignPlan {
 export function planCampaign(input: CampaignInput): CampaignPlan {
   const { request } = input;
   const deadline = input.budgetMs === undefined ? Infinity : Date.now() + input.budgetMs;
-  const outOfTime = (): boolean => Date.now() > deadline;
+  // Sticky once past, as the clock it reads is: `budgetBound` reports it.
+  let clockCut = false;
+  const outOfTime = (): boolean => {
+    if (!clockCut && Date.now() > deadline) clockCut = true;
+    return clockCut;
+  };
   const limits: PlanLimits = { ...PLAN_LIMITS, ...input.limits };
   const stop = (): boolean => outOfTime() || (input.shouldStop?.() ?? false);
   const gap = input.gap ?? DEFAULT_GAP;
@@ -7691,6 +7704,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     },
     alternatives,
     leftOut,
+    ...(clockCut || retypeLog.cut ? { budgetBound: true as const } : {}),
     ...(retypeRates !== undefined
       ? {
           retype: {

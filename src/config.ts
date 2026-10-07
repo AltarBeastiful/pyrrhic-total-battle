@@ -245,19 +245,12 @@ export const CAMPAIGN = {
      *
      * **40 s since 2026-09-22 (S-119), raised from 25 s at the owner's word** (*"raise budget"*).
      *
-     * **What it does not do is let the 20 000-dominance camp finish, and that was the premise** — measured
-     * in `tools/theorycraft/129-the-big-monster-camp.test.ts`. Experiment 110's larger camp (monster tiers
-     * 3–7, twenty uncapped types) was read on 2026-09-19 as running **25 846–28 009 ms** against a 25 000 ms
-     * cap, which looked like a search that just overran. It is not: at a 40 000 ms cap it runs **40 843–
-     * 40 934 ms**. The search is **budget-bound at every budget** — it fills whatever clock it is given — so
-     * that camp still cannot be registered as a benchmark scenario, because its bar would be the machine's
-     * rather than the engine's. Making it converge is engine work, not a number here.
-     *
-     * **The raise is kept because a longer clock is a strictly better bar on it** (§B of the same
-     * experiment): at 25 s that camp offers **2** stops and a hardest campaign of 1,916,803,326 for
-     * 89,969,600 silver; at 40 s it offers **4** — a silver saver at 24 chunks and a steady max at 32 join
-     * it — and 1,924,609,434 for **88,360,000**, more damage for less silver. The cap is not a duration, so
-     * a player who does not own a five-figure dominance pool never meets it.
+     * **No account this repo measures reaches it any more** (corrected 2026-10-08, W17 A0). Until the kernel
+     * port, experiment 129 found the 20 000-dominance camp (monster tiers 3–7, twenty uncapped types)
+     * budget-bound at every cap: 25 846–28 009 ms at 25 s, 40 843–40 934 ms at 40 s. On the kernel, with the
+     * search bounded by counts (`PLAN_LIMITS`), it runs to the end of its limits in **1,865 ms** (experiment
+     * 187, `climbRounds` 32, `tools/theorycraft/out/187-climb-rounds-and-dominance.md`). The cap is now only
+     * a guard for a slow device, and a plan it cuts says so (`CampaignPlan.budgetBound`).
      *
      * **It costs an ordinary account nothing, and that is measured rather than argued.** The slowest of the
      * seventeen benchmark armies is the **900**-dominance camp at 8 598–8 750 ms, and every army he actually
@@ -265,6 +258,13 @@ export const CAMPAIGN = {
      * player will meet.
      */
     plan: 40_000,
+    /**
+     * **The advisor's whole extra pass** (W17, `docs/plans/progression-advisor.md` §1; the owner, 2026-10-03:
+     * *"we can go up to 20 s"*, and 2026-10-07: the advisor's alone). Unlike the two above it is never handed
+     * to the engine: the pool's jobs plan with no `budgetMs`, so their answers are the same on every device,
+     * and this clock only stops the pass and reports each job it did not finish as cut.
+     */
+    extra: 20_000,
   },
 } as const;
 
