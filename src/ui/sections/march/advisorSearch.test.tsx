@@ -5,22 +5,33 @@
  * reads `failed`. The pass itself is a double here — what it computes is held in `src/worker/advisor.test.ts`;
  * what this file is about is the states and the keys.
  */
-import { act, renderHook } from '@testing-library/react';
+import { act, cleanup, renderHook, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { AdvisorRow, ProbeInfo } from '@/engine/advisor';
+import {
+  probeInfo,
+  type AdvisorRow,
+  type ProbeInfo,
+  type ShownMarch,
+  type StopAdvice,
+} from '@/engine/advisor';
 import type { CampaignInput, CampaignPlan } from '@/engine/plan';
+import type { Probe } from '@/engine/probes';
 import { newRoot } from '@/state/defaults';
-import { useStore } from '@/state/store';
+import { selectActiveProfile, useStore } from '@/state/store';
+import { renderWithTheme } from '@/ui/kit/testRender';
 import type { AdvisorOptions, AdvisorResult } from '@/worker/advisor';
 import { abortError } from '@/worker/client';
 import type { CalcPool } from '@/worker/pool';
 
+import { AdvisorFold } from './AdvisorCard';
 import { advisorKey, computeAdvice, setAdvisorPool, useAdvisor, useAdvisorStore } from './advisorSearch';
 import { useRunStore } from './runStore';
 
 /** One pass the double was asked for, held open until the test answers it. */
 interface Pass {
+  probes: Probe[];
   options: AdvisorOptions;
   resolve: (result: AdvisorResult) => void;
   reject: (error: Error) => void;
@@ -28,13 +39,13 @@ interface Pass {
 const passes: Pass[] = [];
 
 vi.mock('@/worker/advisor', () => ({
-  runAdvisor: (_input: unknown, _probes: unknown, _pool: unknown, options: AdvisorOptions) =>
+  runAdvisor: (_input: unknown, probes: Probe[], _pool: unknown, options: AdvisorOptions) =>
     new Promise<AdvisorResult>((resolve, reject) => {
       // The real pass rejects with an AbortError when its signal fires; so does the double.
       options.signal?.addEventListener('abort', () => {
         reject(abortError());
       });
-      passes.push({ options, resolve, reject });
+      passes.push({ probes, options, resolve, reject });
     }),
 }));
 
@@ -73,6 +84,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   setAdvisorPool(null);
 });
 
@@ -195,5 +207,78 @@ describe('the hook', () => {
     expect(view.current.status).toBe('idle');
     expect(view.current.rows).toEqual([]);
     expect(useAdvisorStore.getState().entry).toBeNull();
+  });
+});
+
+describe('a typed upgrade, from the profile to the ranked card', () => {
+  const march = (damage: number): ShownMarch => ({
+    counts: {},
+    bill: { damage, silver: 0, gold: 0, hired: 0, dragonCoins: 0, seconds: 0 },
+    deaths: [],
+  });
+  /** One stop as the pass reads it: what the card draws needs the marches, not only the gain. */
+  const read = (gain: number): StopAdvice => ({
+    pick: 'sweet-spot',
+    current: march(8_000_000),
+    repriced: march(8_000_000 * (1 + gain / 100)),
+    replanned: null,
+    repricedRating: gain,
+    replannedRating: null,
+    gain,
+    from: 'repriced',
+    clamped: false,
+    damagePercent: gain,
+    noise: false,
+    reorder: false,
+    worse: false,
+  });
+
+  test('the pass reads it as a probe, and the card ranks it first with its gain per cost', async () => {
+    const user = userEvent.setup();
+    const profile = selectActiveProfile(useStore.getState());
+    if (profile === undefined) throw new Error('the default document has no profile');
+    act(() => {
+      useStore.getState().updateProfile(profile.id, () => ({
+        upgrades: [
+          {
+            id: 'upgrade-talent',
+            label: 'Talent: army health III',
+            deltas: { health: { army: 2 } },
+            cost: { amount: 4, unit: 'talent points' },
+          },
+        ],
+      }));
+    });
+    useRunStore.setState({ plan: PLAN, planPick: 0 });
+    renderWithTheme(<AdvisorFold />);
+    await user.click(screen.getByRole('button', { name: 'Compute' }));
+
+    const typed = passes[0]?.probes.find((probe) => probe.family === 'user');
+    expect(typed).toMatchObject({
+      id: 'user:upgrade-talent',
+      label: 'Talent: army health III',
+      cost: { amount: 4, unit: 'talent points' },
+    });
+    // A generic probe that gains more: with a cost typed, the costed row still comes first (its own group).
+    const generic = passes[0]?.probes.find((probe) => probe.family !== 'user');
+    const rows: AdvisorRow[] = [
+      { ...probeInfo(generic!), stops: [read(5)] },
+      { ...probeInfo(typed!), stops: [read(2)] },
+    ];
+    await act(async () => {
+      passes[0]?.resolve({ baseline: [], rows, cut: [], failed: [] });
+      await Promise.resolve();
+    });
+
+    const region = screen.getByRole('region', { name: 'What to upgrade next' });
+    const shown = within(region).getAllByTestId('advisor-row');
+    expect(shown[0]?.textContent).toContain('Talent: army health III+2% worth');
+    expect(within(shown[0]!).getByTestId('advisor-per-cost').textContent).toBe(
+      '+0.5% per talent points, costs 4 talent points',
+    );
+    expect(shown[1]?.textContent).toContain('+5% worth');
+    expect(within(region).getByTestId('advisor-ordering').textContent).toBe(
+      'Upgrades with a cost first, by gain per talent points; the others after, by gain.',
+    );
   });
 });

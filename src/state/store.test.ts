@@ -296,6 +296,27 @@ describe('persistence', () => {
     expect(JSON.parse(adapter.load() ?? '{}').ui.theme).toBe('light');
     dispose();
   });
+
+  it('a typed upgrade survives a reload, cost and all (W17 C2)', () => {
+    const adapter = createMemoryAdapter();
+    const store = makeStore();
+    const dispose = persist(store, adapter);
+    const upgrade = {
+      id: 'upgrade-talent',
+      label: 'Talent: army health III',
+      deltas: { health: { army: 2.5 }, housing: { leadership: 500 } },
+      cost: { amount: 4, unit: 'talent points' },
+    };
+    store.getState().updateProfile(activeProfile(store).id, () => ({ upgrades: [upgrade] }));
+    vi.advanceTimersByTime(PERSIST_DEBOUNCE_MS);
+    dispose();
+
+    // The next visit: a fresh store, hydrated from what the first one wrote.
+    const reloaded = makeStore();
+    const disposeReloaded = initPersistence(adapter, reloaded);
+    expect(activeProfile(reloaded).upgrades).toEqual([upgrade]);
+    disposeReloaded();
+  });
 });
 
 describe('profile names', () => {

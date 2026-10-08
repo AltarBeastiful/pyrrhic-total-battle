@@ -553,6 +553,23 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
   expect(cardBox, 'the card has to be on screen').not.toBeNull();
   expect((planBox?.y ?? 0) < (cardBox?.y ?? 0), 'the card is drawn under the plan').toBe(true);
 
+  // The player's own upgrade (W17 C2): the next talent tier, typed once with what it costs. Its taps are
+  // not counted — it is set up once, not done on every visit — and Enter on the last field saves it.
+  await card.getByRole('button', { name: /^Your own upgrades/ }).click();
+  await card.getByRole('button', { name: 'Add an upgrade' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Add an upgrade' });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole('textbox', { name: 'Name' }).fill('Talent: army strength III');
+  await sheet.getByRole('combobox', { name: 'What line 1 changes' }).fill('Army strength');
+  await page.getByRole('option', { name: 'Army strength', exact: true }).click();
+  await sheet.getByRole('textbox', { name: 'What Army strength adds' }).fill('10');
+  await sheet.getByRole('textbox', { name: 'Cost' }).fill('4');
+  const unit = sheet.getByRole('textbox', { name: 'Counted in' });
+  await unit.fill('talent points');
+  await unit.press('Enter');
+  await expect(sheet).toBeHidden();
+  await expect(card.getByTestId('typed-upgrade')).toContainText('costs 4 talent points');
+
   await taps.tap(card.getByRole('button', { name: 'Compute' }));
   // The pass is cut at 20 s whatever happens; the rows come once it has answered.
   await expect(card.getByRole('button', { name: 'Compute again' })).toBeVisible({ timeout: 60_000 });
@@ -567,6 +584,16 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
     expect(text).not.toMatch(/(^|\s)[-−][\d.]+% worth/);
   }
   record('J7 upgrades on the headline stop', count, null);
+
+  // The typed upgrade has a cost, so it heads the list with its gain per cost, and the ordering is stated.
+  const first = rows.first();
+  await expect(first).toContainText('Talent: army strength III');
+  await expect(first.getByTestId('advisor-per-cost')).toHaveText(
+    /^((\+[\d.]+%|under 0\.1%) per talent points, )?costs 4 talent points$/,
+  );
+  await expect(card.getByTestId('advisor-ordering')).toHaveText(
+    'Upgrades with a cost first, by gain per talent points; the others after, by gain.',
+  );
 
   if (phone) {
     // 390 px: the card fits its column, and nothing in the sheet scrolls sideways.
