@@ -4,9 +4,17 @@ This phase puts the advisor in front of the player: a card under the plan with a
 
 ## Tasks
 
-<!-- MAESTRO:HITL reason="Owner step back before the card (docs/plans/progression-advisor.md §5): talk with the owner about how the player uses the advisor (which questions, where on the page, what they do with an answer), with Phase 02's experiment the what-a-percent-is-worth report in tools/theorycraft/out in hand. Fold the answers into this document before resuming." -->
+**Owner answers (2026-10-08), resolved from the step-back:**
 
-- [ ] Read `docs/design-rules.md`, `docs/design.md`, `src/ui/` (find the plan panel, `positionsSearch.ts`, the raise control's hover preview in the March section (the positions table `PositionTrade.tsx` was removed in 1cb2ac9), `DeltaText`, the compact number formatters) and the store in `src/state/`. Write a short design note at `docs/plans/advisor-card.md` (front matter: type plan, tags advisor/ui, related `[[Progression-Advisor-Plan]]`) listing the rule numbers that apply, the existing components to reuse, and the state shape. Keep it to what an implementer needs.
+- **Questions the card answers.** Globally: "what should I upgrade first to get better marches; what has the most impact on my marches with equivalent resources?" The upgrade can be any bonus, a hero level-up or star-up, swapping to a different trio of heroes for the march for more damage than the selected one, or a large damage gain from raising leadership or dominance. The card covers all of these probes and guides where the player goes next in the game.
+- **Placement.** Below the battle summary for now. It shows what could be improved and what each change would bring.
+- **Increments.** Probes use fixed increments for now. In the game the real step depends on where the player is in the talent/research tree; that is **deferred** (state it in the story row's "left open").
+- **Use of an answer.** The player steers his progress with it: it tells him what to do next. Upgrades take time anyway, so the information only matters for future marches, not the one on screen. Wording and layout should read as "next investment", not "change this march now".
+
+Where a task below says "under the plan panel", read it as "below the battle summary".
+
+- [x] Read `docs/design-rules.md`, `docs/design.md`, `src/ui/` (find the plan panel, `positionsSearch.ts`, the raise control's hover preview in the March section (the positions table `PositionTrade.tsx` was removed in 1cb2ac9), `DeltaText`, the compact number formatters) and the store in `src/state/`. Write a short design note at `docs/plans/advisor-card.md` (front matter: type plan, tags advisor/ui, related `[[Progression-Advisor-Plan]]`) listing the rule numbers that apply, the existing components to reuse, and the state shape. Keep it to what an implementer needs.
+  - Done 2026-10-08: `docs/plans/advisor-card.md` — placement as a `MarchSection` part right after `<PlanFold />`; rules 1, 3, 4, 5, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28; reuse map (positionsSearch.ts shape, runAdvisor/genericProbes/buildPlanRequest, createCalcPool, rankAdvice/headlineOf, compactTwo/signedPercent/amount, MarchPills tooltip look, Disclosure); state shape with headline derived from `planPick`, not stored. No pool is used in `src/ui/` yet: the card's hook builds the first one.
 
 - [ ] Add advisor state: a store slice (or hook beside `positionsSearch.ts`) holding status (idle / running / done / cut / cancelled / failed), progress `n / total`, rows keyed by the plan's identity, and the selected headline stop. Computation runs ON DEMAND only (button), never on Generate; a new Generate or profile change cancels a running pass through the pool's signal and invalidates stale rows. Wire it to `runAdvisor` from Phase 02 and the pool from Phase 01. Unit-test the state machine (cancel, stale invalidation, cut, failure).
 
