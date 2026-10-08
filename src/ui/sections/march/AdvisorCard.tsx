@@ -2,6 +2,10 @@
  * **The "What to upgrade next" card** (W17 C4, `docs/plans/advisor-card.md`): the advisor's pass on a button,
  * its progress, Cancel, and the upgrades ranked on the stop the bar is showing.
  *
+ * **Two buttons, two passes** (owner, 2026-10-08, Phase 04b): "Compute my upgrades" reads the typed list alone,
+ * "Compute default upgrades" the 29 generic probes at their default increase. Each has its own progress,
+ * Cancel, cut note, failure line and ranked list, under its own small heading shown once it has been computed.
+ *
  * It is a **next-investment** card (owner, 2026-10-08): an upgrade takes time in the game, so what a row says
  * is what that upgrade would bring to the marches after it, never "change this march now". The words follow.
  *
@@ -15,7 +19,9 @@
  * 17 (no inner scroller), 18–19 (one column of two-line rows that fits 390 px), 20 and 22 (no new colour: dimmed
  * text, red only for a failure), 21 (game glyphs through `Glyph`), 23 (stock Mantine and the kit's
  * `Disclosure`), 24 (a gain is a sign and a word; the progress is `aria-live`), 26 (sentence case, our words),
- * 28 (the recap's compact notation, the exact figure on hover).
+ * 28 (the recap's compact notation, the exact figure on hover). Rule 15 again for the two buttons: "my
+ * upgrades" with nothing typed is disabled beside the one dimmed line that says why, and a heading appears
+ * only once its list does.
  */
 import { Button, Group, Stack, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
@@ -30,20 +36,18 @@ import {
   type StopAdvice,
 } from '@/engine/advisor';
 import type { PlanPick } from '@/engine/plan';
+import { PROBE_BONUS_DELTA, PROBE_HOUSING_PERCENT } from '@/engine/probes';
 import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
 
-import { canAdvise, useAdvisor, type AdvisorView } from './advisorSearch';
+import { canAdvise, useAdvisor, type AdvisorKindView, type AdvisorView } from './advisorSearch';
 import { amount, compactTwo, signedPercent } from './format';
 import { planWords } from './picks';
 import { TypedUpgrades } from './TypedUpgrades';
 import classes from './march.module.css';
 
-export type AdvisorCardProps = Pick<
-  AdvisorView,
-  'status' | 'done' | 'total' | 'headline' | 'rows' | 'result' | 'error' | 'compute' | 'cancel'
-> & {
-  /** The player's own upgrades and their form (`TypedUpgrades`), read by the pass beside the generic probes. */
+export type AdvisorCardProps = Pick<AdvisorView, 'headline' | 'typed' | 'mine' | 'default'> & {
+  /** The player's own upgrades and their form (`TypedUpgrades`), read by the "my upgrades" pass. */
   upgrades?: ReactNode;
 };
 
@@ -157,7 +161,7 @@ function orderingWords(rows: readonly AdvisorRow[]): string | null {
 }
 
 /** What the pass's state says, in one line, beside the button. */
-function statusWords(status: AdvisorCardProps['status'], done: number, total: number): string | null {
+function statusWords(status: AdvisorKindView['status'], done: number, total: number): string | null {
   switch (status) {
     case 'running':
       return `${String(done)} / ${String(total)} done`;
@@ -168,21 +172,32 @@ function statusWords(status: AdvisorCardProps['status'], done: number, total: nu
   }
 }
 
-export function AdvisorCard({
-  status,
-  done,
-  total,
-  headline,
-  rows,
-  result,
-  error,
-  compute,
-  cancel,
-  upgrades,
-}: AdvisorCardProps) {
+/** What "default increase" means, from the probes' own constants (`src/engine/probes.ts`). */
+const DEFAULT_INCREASE = `Default increase: +${String(PROBE_BONUS_DELTA)} point on a health or strength line, +${String(PROBE_HOUSING_PERCENT)}% of a housing pool.`;
+
+interface PassSectionProps {
+  /** The button's words. */
+  compute: string;
+  /** What the pass reads, for Cancel's name and the failure line. */
+  noun: string;
+  /** The list's heading, shown once the list is. */
+  heading: string;
+  view: AdvisorKindView;
+  headline: PlanPick | null;
+  /** Why the button is off, when it is: shown as the one dimmed line. */
+  blocked?: string | undefined;
+  /** A dimmed line saying what the pass reads. */
+  note?: string | undefined;
+  /** Whether this list states its ordering (a typed cost is the only thing that changes the order). */
+  ordering?: boolean | undefined;
+}
+
+/** One pass: its button, progress, Cancel, notes and the list it ranked, with its heading once there is one. */
+function PassSection({ compute, noun, heading, view, headline, blocked, note, ordering }: PassSectionProps) {
+  const { status, done, total, rows, result, error } = view;
   const running = status === 'running';
   const words = statusWords(status, done, total);
-  const ordering = orderingWords(rows);
+  const orderingLine = ordering === true ? orderingWords(rows) : null;
   const read = result !== null && result.baseline !== null && rows.length > 0;
   // The bar's other stops, in its own order, each ranked on itself: a move of the bar needs no new pass.
   const others = (result?.baseline ?? []).map((stop) => stop.pick).filter((pick) => pick !== headline);
@@ -190,37 +205,35 @@ export function AdvisorCard({
   const failedCount = result?.failed.length ?? 0;
 
   return (
-    <Stack gap="sm" aria-label="What to upgrade next" role="region">
-      <Stack gap={2}>
-        <Text size="sm" fw={500}>
-          What to upgrade next
-        </Text>
-        <Text className={classes.meta} c="dimmed">
-          What each upgrade would bring to your next marches
-          {headline === null ? '' : `, read on the ${planWords({ pick: headline })} stop`}.
-        </Text>
-      </Stack>
-
-      {upgrades}
-
+    <Stack gap="xs" data-testid={`advisor-pass-${noun}`}>
       <Group gap="sm" wrap="nowrap">
         {running ? (
-          <Button size="xs" variant="default" onClick={cancel}>
+          <Button size="xs" variant="default" onClick={view.cancel} aria-label={`Cancel ${noun}`}>
             Cancel
           </Button>
         ) : (
-          <Button size="xs" variant="default" onClick={compute}>
-            {result === null ? 'Compute' : 'Compute again'}
+          <Button size="xs" variant="default" onClick={view.compute} disabled={blocked !== undefined}>
+            {result === null ? compute : `${compute} again`}
           </Button>
         )}
         <Text className={classes.meta} c="dimmed" aria-live="polite">
           {words ?? ''}
         </Text>
       </Group>
+      {blocked !== undefined && (
+        <Text className={classes.meta} c="dimmed">
+          {blocked}
+        </Text>
+      )}
+      {note !== undefined && (
+        <Text className={classes.meta} c="dimmed">
+          {note}
+        </Text>
+      )}
 
       {status === 'failed' && error !== null && (
         <Text size="sm" c="red">
-          The upgrades could not be read: {error}
+          The {noun} could not be read: {error}
         </Text>
       )}
 
@@ -240,9 +253,12 @@ export function AdvisorCard({
 
       {read && (
         <>
-          {ordering !== null && (
+          <Text size="sm" fw={500}>
+            {heading}
+          </Text>
+          {orderingLine !== null && (
             <Text className={classes.meta} c="dimmed" data-testid="advisor-ordering">
-              {ordering}
+              {orderingLine}
             </Text>
           )}
           <StopList rows={rows} pick={headline} />
@@ -265,6 +281,42 @@ export function AdvisorCard({
           )}
         </>
       )}
+    </Stack>
+  );
+}
+
+export function AdvisorCard({ headline, typed, mine, default: generic, upgrades }: AdvisorCardProps) {
+  return (
+    <Stack gap="sm" aria-label="What to upgrade next" role="region">
+      <Stack gap={2}>
+        <Text size="sm" fw={500}>
+          What to upgrade next
+        </Text>
+        <Text className={classes.meta} c="dimmed">
+          What each upgrade would bring to your next marches
+          {headline === null ? '' : `, read on the ${planWords({ pick: headline })} stop`}.
+        </Text>
+      </Stack>
+
+      {upgrades}
+
+      <PassSection
+        compute="Compute my upgrades"
+        noun="my upgrades"
+        heading="Your upgrades"
+        view={mine}
+        headline={headline}
+        blocked={typed === 0 ? 'Type an upgrade first.' : undefined}
+        ordering
+      />
+      <PassSection
+        compute="Compute default upgrades"
+        noun="default upgrades"
+        heading="Default upgrades"
+        view={generic}
+        headline={headline}
+        note={DEFAULT_INCREASE}
+      />
     </Stack>
   );
 }
