@@ -570,30 +570,43 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
   await expect(sheet).toBeHidden();
   await expect(card.getByTestId('typed-upgrade')).toContainText('costs 4 talent points');
 
-  await taps.tap(card.getByRole('button', { name: 'Compute' }));
-  // The pass is cut at 20 s whatever happens; the rows come once it has answered.
-  await expect(card.getByRole('button', { name: 'Compute again' })).toBeVisible({ timeout: 60_000 });
-  await expect(card.getByText(/^The upgrades could not be read/)).toHaveCount(0);
+  // Two buttons, two passes (Phase 04b): the typed list alone first, then the generic probes.
+  await taps.tap(card.getByRole('button', { name: 'Compute my upgrades' }));
+  await expect(card.getByRole('button', { name: 'Compute my upgrades again' })).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(card.getByText(/could not be read/)).toHaveCount(0);
+  await expect(card.getByText('Your upgrades', { exact: true })).toBeVisible();
+  await expect(card.getByText('Default upgrades', { exact: true })).toHaveCount(0);
+  // Only the typed upgrade is read, with its gain per cost, and the ordering is stated.
+  await expect(rows.filter({ visible: true })).toHaveCount(1);
+  await expect(rows.first()).toContainText('Talent: army strength III');
+  await expect(rows.first().getByTestId('advisor-per-cost')).toHaveText(
+    /^((\+[\d.]+%|under 0\.1%) per talent points, )?costs 4 talent points$/,
+  );
+  await expect(card.getByTestId('advisor-ordering')).toHaveText(
+    'Upgrades with a cost first, by gain per talent points.',
+  );
 
-  // The ranked list: every upgrade is kept, each with a gain or "no gain", never a loss.
-  // Every row, the folded other stops' included, is checked; the count printed is the headline list's.
+  await taps.tap(card.getByRole('button', { name: 'Compute default upgrades' }));
+  // The pass is cut at 20 s whatever happens; the rows come once it has answered.
+  await expect(card.getByRole('button', { name: 'Compute default upgrades again' })).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(card.getByText(/could not be read/)).toHaveCount(0);
+  await expect(card.getByText('Default upgrades', { exact: true })).toBeVisible();
+
+  // The ranked lists: every upgrade is kept, each with a gain or "no gain", never a loss.
+  // Every row, the folded other stops' included, is checked; the count printed is the headline lists'.
   const count = await rows.filter({ visible: true }).count();
-  expect(count).toBeGreaterThan(0);
+  expect(count).toBeGreaterThan(1);
   for (const text of await rows.allTextContents()) {
     expect(text).toMatch(/(\+[\d.]+%|under 0\.1%) worth|no gain/);
     expect(text).not.toMatch(/(^|\s)[-−][\d.]+% worth/);
   }
   record('J7 upgrades on the headline stop', count, null);
-
-  // The typed upgrade has a cost, so it heads the list with its gain per cost, and the ordering is stated.
-  const first = rows.first();
-  await expect(first).toContainText('Talent: army strength III');
-  await expect(first.getByTestId('advisor-per-cost')).toHaveText(
-    /^((\+[\d.]+%|under 0\.1%) per talent points, )?costs 4 talent points$/,
-  );
-  await expect(card.getByTestId('advisor-ordering')).toHaveText(
-    'Upgrades with a cost first, by gain per talent points; the others after, by gain.',
-  );
+  // The typed list is still first and untouched by the second pass.
+  await expect(rows.first()).toContainText('Talent: army strength III');
 
   if (phone) {
     // 390 px: the card fits its column, and nothing in the sheet scrolls sideways.

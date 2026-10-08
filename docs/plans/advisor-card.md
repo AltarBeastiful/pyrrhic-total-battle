@@ -133,3 +133,14 @@ One row per probe, ranked on the headline stop:
 Left open (for the story row): increments are fixed (+1 point, +1 % of a pool); the real step in the game
 depends on the talent/research tree and is deferred. Hero level/star, trio swap and leadership/dominance
 large-step probes are later probe families (C2, C5), and the card takes them as more rows with no change.
+
+## 6. Two passes (Phase 04b, owner 2026-10-08)
+
+The card has **two buttons and two independent passes**: "Compute my upgrades" (the typed list alone) and
+"Compute default upgrades" (the 29 generic probes at their default increase: +1 point on a bonus line, +1 % of a
+housing pool, read from `PROBE_BONUS_DELTA` / `PROBE_HOUSING_PERCENT`). `advisorSearch.ts` holds
+`entries: { mine, default }`, each with its own key, `AbortController`, progress, answer, cut and failed lists;
+they share the one pool, which queues their jobs. A new Generate, a profile switch or an account edit stops and
+forgets both; a typed-list edit changes only the key of `mine`. Cancel is per kind. Each list sits under its own
+heading ("Your upgrades", "Default upgrades") shown once it has rows; the ordering line stays on "Your upgrades".
+"Compute my upgrades" with nothing typed is disabled beside one dimmed line, "Type an upgrade first."

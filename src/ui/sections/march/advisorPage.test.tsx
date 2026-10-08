@@ -13,8 +13,9 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { AdvisorRow, ProbeInfo, ShownMarch, StopAdvice } from '@/engine/advisor';
 import type { PlanPick } from '@/engine/plan';
+import type { Probe } from '@/engine/probes';
 import { newRoot } from '@/state/defaults';
-import { useStore } from '@/state/store';
+import { selectActiveProfile, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 import { useResultStore } from '@/ui/resultStore';
 import type { AdvisorOptions, AdvisorResult } from '@/worker/advisor';
@@ -45,6 +46,7 @@ vi.mock('@/ui/calcClient', async () => {
 
 /** One pass the card asked for, held open until the test answers it. */
 interface Pass {
+  probes: Probe[];
   options: AdvisorOptions;
   resolve: (result: AdvisorResult) => void;
 }
@@ -53,14 +55,14 @@ const passes: Pass[] = [];
 vi.mock('@/worker/advisor', async () => {
   const { abortError } = await vi.importActual<typeof WorkerClient>('@/worker/client');
   return {
-    runAdvisor: (_input: unknown, _probes: unknown, _pool: unknown, options: AdvisorOptions) =>
+    runAdvisor: (_input: unknown, probes: Probe[], _pool: unknown, options: AdvisorOptions) =>
       new Promise<AdvisorResult>((resolve, reject) => {
         events.push('advisor');
         // The real pass rejects with an AbortError when its signal fires; so does the double.
         options.signal?.addEventListener('abort', () => {
           reject(abortError());
         });
-        passes.push({ options, resolve });
+        passes.push({ probes, options, resolve });
       }),
   };
 });
@@ -164,7 +166,7 @@ const card = () => screen.getByRole('region', { name: 'What to upgrade next' });
 
 /** Press Compute and answer the pass it started. */
 async function computeAndAnswer(result: () => AdvisorResult): Promise<void> {
-  fireEvent.click(within(card()).getByRole('button', { name: 'Compute' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Compute default upgrades' }));
   expect(passes).toHaveLength(1);
   await act(async () => {
     passes[0]?.resolve(result());
@@ -180,7 +182,7 @@ test('Compute shows the rows, ranked on the stop the bar shows, and Generate nev
   expect(passes).toHaveLength(0);
   expect(within(card()).queryAllByTestId('advisor-row')).toHaveLength(0);
 
-  fireEvent.click(within(card()).getByRole('button', { name: 'Compute' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Compute default upgrades' }));
   const plan = useRunStore.getState().plan;
   if (plan === null) throw new Error('Generate left no plan');
   expect(passes[0]?.options.headline).toBe(pickOf(plan, useRunStore.getState().planPick).pick);
@@ -188,7 +190,7 @@ test('Compute shows the rows, ranked on the stop the bar shows, and Generate nev
     passes[0]?.options.onProgress?.(12, 30);
   });
   expect(within(card()).getByText('12 / 30 done')).toBeTruthy();
-  expect(within(card()).getByRole('button', { name: 'Cancel' })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Cancel default upgrades' })).toBeTruthy();
 
   await act(async () => {
     passes[0]?.resolve(answer());
@@ -199,25 +201,25 @@ test('Compute shows the rows, ranked on the stop the bar shows, and Generate nev
     expect.stringContaining('Strength +1 % guardsmen+3% worth'),
     expect.stringContaining('Health +1 % ranged+1% worth'),
   ]);
-  expect(within(card()).getByRole('button', { name: 'Compute again' })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Compute default upgrades again' })).toBeTruthy();
   expect(screen.queryByText(/cut stopped/u)).toBeNull();
 }, 30_000);
 
 test('Cancel stops the pass through its signal and says where it stopped', async () => {
   renderWithTheme(<MarchSection />);
   await generate();
-  fireEvent.click(within(card()).getByRole('button', { name: 'Compute' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Compute default upgrades' }));
   act(() => {
     passes[0]?.options.onProgress?.(3, 30);
   });
   await act(async () => {
-    fireEvent.click(within(card()).getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(within(card()).getByRole('button', { name: 'Cancel default upgrades' }));
     await Promise.resolve();
   });
   expect(passes[0]?.options.signal?.aborted).toBe(true);
   expect(within(card()).getByText('Cancelled at 3 / 30')).toBeTruthy();
   expect(within(card()).queryAllByTestId('advisor-row')).toHaveLength(0);
-  expect(within(card()).getByRole('button', { name: 'Compute' })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
 }, 30_000);
 
 test('a new Generate forgets the rows, and the card waits on its button again', async () => {
@@ -228,10 +230,10 @@ test('a new Generate forgets the rows, and the card waits on its button again', 
 
   await generate();
   expect(within(card()).queryAllByTestId('advisor-row')).toHaveLength(0);
-  expect(within(card()).getByRole('button', { name: 'Compute' })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
   // The second Generate started no pass of its own either.
   expect(passes).toHaveLength(1);
-  expect(useAdvisorStore.getState().entry).toBeNull();
+  expect(useAdvisorStore.getState().entries.default).toBeNull();
 }, 60_000);
 
 test('a pass the clock cut is labelled', async () => {
@@ -246,7 +248,7 @@ test('a pass the clock cut is labelled', async () => {
 test('Generate is never delayed by a running pass: it plans first, on its own client, and stops the pass', async () => {
   renderWithTheme(<MarchSection />);
   await generate();
-  fireEvent.click(within(card()).getByRole('button', { name: 'Compute' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Compute default upgrades' }));
   expect(events).toEqual(['plan', 'advisor']);
 
   // The pass is never answered: the plan lands all the same, so nothing in Generate waits on it.
@@ -255,5 +257,47 @@ test('Generate is never delayed by a running pass: it plans first, on its own cl
   expect(passes[0]?.options.signal?.aborted).toBe(true);
   expect(passes).toHaveLength(1);
   expect(within(card()).queryByText(/done$/u)).toBeNull();
-  expect(within(card()).getByRole('button', { name: 'Compute' })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
 }, 60_000);
+
+test('each button computes only its own list, on the page', async () => {
+  renderWithTheme(<MarchSection />);
+  await generate();
+  const profile = selectActiveProfile(useStore.getState());
+  if (profile === undefined) throw new Error('the default document has a profile');
+  // Nothing typed: "my upgrades" is off and says why; the default pass is not.
+  expect(
+    (within(card()).getByRole('button', { name: 'Compute my upgrades' }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(within(card()).getByText('Type an upgrade first.')).toBeTruthy();
+  act(() => {
+    useStore.getState().updateProfile(profile.id, () => ({
+      upgrades: [{ id: 'talent', label: 'Talent: army health III', deltas: { health: { army: 2 } } }],
+    }));
+  });
+  expect(within(card()).queryByText('Type an upgrade first.')).toBeNull();
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Compute my upgrades' }));
+  expect(passes).toHaveLength(1);
+  expect(passes[0]?.probes.map((probe) => probe.id)).toEqual(['user:talent']);
+  fireEvent.click(within(card()).getByRole('button', { name: 'Compute default upgrades' }));
+  expect(passes).toHaveLength(2);
+  expect(passes[1]?.probes).toHaveLength(29);
+
+  // Cancel is per kind: the default pass goes on while the typed one stops.
+  await act(async () => {
+    fireEvent.click(within(card()).getByRole('button', { name: 'Cancel my upgrades' }));
+    await Promise.resolve();
+  });
+  expect(passes[0]?.options.signal?.aborted).toBe(true);
+  expect(passes[1]?.options.signal?.aborted).toBe(false);
+  expect(within(card()).getByRole('button', { name: 'Cancel default upgrades' })).toBeTruthy();
+  expect(within(card()).getByRole('button', { name: 'Compute my upgrades' })).toBeTruthy();
+
+  await act(async () => {
+    passes[1]?.resolve(answer());
+    await Promise.resolve();
+  });
+  expect(within(card()).getByText('Default upgrades')).toBeTruthy();
+  expect(within(card()).queryByText('Your upgrades')).toBeNull();
+}, 30_000);

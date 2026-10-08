@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * **The "What to upgrade next" card's drawing** (W17 C4): the button, the progress, Cancel, the cut note, the
+ * **The "What to upgrade next" card's drawing** (W17 C4, two passes from Phase 04b): the two buttons, the progress, Cancel, the cut note, the
  * ranked rows on the headline stop, "no gain" kept on the list, the faint `worse` line, and the other stops
  * folded. The card is handed a view here; the state behind it is `advisorSearch.test.tsx`'s.
  */
@@ -17,7 +17,7 @@ import type { AdvisorResult } from '@/worker/advisor';
 import type { CalcPool } from '@/worker/pool';
 
 import { AdvisorCard, AdvisorFold, type AdvisorCardProps } from './AdvisorCard';
-import { setAdvisorPool } from './advisorSearch';
+import { setAdvisorPool, type AdvisorKindView } from './advisorSearch';
 import { useRunStore } from './runStore';
 
 afterEach(cleanup);
@@ -81,45 +81,111 @@ const RESULT: AdvisorResult = {
   failed: [],
 };
 
-function props(over: Partial<AdvisorCardProps> = {}): AdvisorCardProps {
-  return {
-    status: 'idle',
-    done: 0,
-    total: 0,
-    headline: 'sweet-spot',
-    rows: [],
-    result: null,
-    error: null,
-    compute: vi.fn(),
-    cancel: vi.fn(),
-    ...over,
-  };
-}
-
-const done = (over: Partial<AdvisorCardProps> = {}): AdvisorCardProps =>
-  props({ status: 'done', done: 4, total: 4, rows: rankAdvice(ROWS, 'sweet-spot'), result: RESULT, ...over });
-
-test('idle: one Compute button and no rows', async () => {
-  const compute = vi.fn();
-  renderWithTheme(<AdvisorCard {...props({ compute })} />);
-  expect(screen.getByText('What to upgrade next')).toBeTruthy();
-  expect(screen.queryAllByTestId('advisor-row')).toHaveLength(0);
-  await userEvent.click(screen.getByRole('button', { name: 'Compute' }));
-  expect(compute).toHaveBeenCalledOnce();
+const kind = (over: Partial<AdvisorKindView> = {}): AdvisorKindView => ({
+  status: 'idle',
+  done: 0,
+  total: 0,
+  rows: [],
+  result: null,
+  error: null,
+  compute: vi.fn(),
+  cancel: vi.fn(),
+  ...over,
 });
 
-test('running: the progress is spoken and the button is Cancel', async () => {
+function props(over: Partial<AdvisorCardProps> = {}): AdvisorCardProps {
+  return { headline: 'sweet-spot', typed: 0, mine: kind(), default: kind(), ...over };
+}
+
+/** The default pass done, as the generic probes read. */
+const doneKind = (over: Partial<AdvisorKindView> = {}): AdvisorKindView =>
+  kind({ status: 'done', done: 4, total: 4, rows: rankAdvice(ROWS, 'sweet-spot'), result: RESULT, ...over });
+
+/** The default pass done. */
+const done = (over: Partial<AdvisorKindView> = {}): AdvisorCardProps => props({ default: doneKind(over) });
+
+test('idle: two Compute buttons, no rows, and no heading before a list', async () => {
+  const mine = kind();
+  const generic = kind();
+  renderWithTheme(<AdvisorCard {...props({ typed: 1, mine, default: generic })} />);
+  expect(screen.getByText('What to upgrade next')).toBeTruthy();
+  expect(screen.queryAllByTestId('advisor-row')).toHaveLength(0);
+  expect(screen.queryByText('Your upgrades')).toBeNull();
+  expect(screen.queryByText('Default upgrades')).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Compute default upgrades' }));
+  expect(generic.compute).toHaveBeenCalledOnce();
+  expect(mine.compute).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole('button', { name: 'Compute my upgrades' }));
+  expect(mine.compute).toHaveBeenCalledOnce();
+  expect(generic.compute).toHaveBeenCalledOnce();
+});
+
+test('nothing typed: "my upgrades" is off, with its one reason', () => {
+  renderWithTheme(<AdvisorCard {...props({ typed: 0 })} />);
+  const button = screen.getByRole('button', { name: 'Compute my upgrades' });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText('Type an upgrade first.')).toBeTruthy();
+  expect(
+    (screen.getByRole('button', { name: 'Compute default upgrades' }) as HTMLButtonElement).disabled,
+  ).toBe(false);
+});
+
+test('something typed: no reason line, and the button is on', () => {
+  renderWithTheme(<AdvisorCard {...props({ typed: 2 })} />);
+  expect((screen.getByRole('button', { name: 'Compute my upgrades' }) as HTMLButtonElement).disabled).toBe(
+    false,
+  );
+  expect(screen.queryByText('Type an upgrade first.')).toBeNull();
+});
+
+test('the default increase is said in one dimmed line, from the probes own constants', () => {
+  renderWithTheme(<AdvisorCard {...props()} />);
+  expect(
+    screen.getByText('Default increase: +1 point on a health or strength line, +1% of a housing pool.'),
+  ).toBeTruthy();
+});
+
+test('running: the progress is spoken and the button is Cancel, per kind', async () => {
   const cancel = vi.fn();
-  renderWithTheme(<AdvisorCard {...props({ status: 'running', done: 12, total: 30, cancel })} />);
+  const other = kind();
+  renderWithTheme(
+    <AdvisorCard
+      {...props({
+        typed: 1,
+        mine: other,
+        default: kind({ status: 'running', done: 12, total: 30, cancel }),
+      })}
+    />,
+  );
   expect(screen.getByText('12 / 30 done').getAttribute('aria-live')).toBe('polite');
-  expect(screen.queryByRole('button', { name: 'Compute' })).toBeNull();
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('button', { name: 'Compute default upgrades' })).toBeNull();
+  // The other pass is untouched: still offered.
+  expect(screen.getByRole('button', { name: 'Compute my upgrades' })).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel default upgrades' }));
   expect(cancel).toHaveBeenCalledOnce();
+  expect(other.cancel).not.toHaveBeenCalled();
+});
+
+test('both running: each has its own progress and its own Cancel', () => {
+  renderWithTheme(
+    <AdvisorCard
+      {...props({
+        typed: 1,
+        mine: kind({ status: 'running', done: 1, total: 2 }),
+        default: kind({ status: 'running', done: 12, total: 30 }),
+      })}
+    />,
+  );
+  expect(screen.getByText('1 / 2 done')).toBeTruthy();
+  expect(screen.getByText('12 / 30 done')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Cancel my upgrades' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Cancel default upgrades' })).toBeTruthy();
 });
 
 test('done: rows ranked on the headline stop, "no gain" kept, no minus anywhere', () => {
   renderWithTheme(<AdvisorCard {...done()} />);
   const region = screen.getByRole('region', { name: 'What to upgrade next' });
+  expect(within(region).getByText('Default upgrades')).toBeTruthy();
   // The headline list comes first; the other stops are folded below it.
   const rows = within(region).getAllByTestId('advisor-row').slice(0, 3);
   expect(rows.map((one) => one.textContent)).toEqual([
@@ -129,10 +195,26 @@ test('done: rows ranked on the headline stop, "no gain" kept, no minus anywhere'
   ]);
   expect(rows[0]?.textContent).toContain('+2.4% damage, 8.2M a march');
   expect(region.textContent).not.toMatch(/-\d/u);
-  expect(screen.getByRole('button', { name: 'Compute again' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Compute default upgrades again' })).toBeTruthy();
 });
 
-test('a typed cost: its gain per cost on the row and the ordering stated; none while no cost is typed', () => {
+test('each list sits under its own heading, shown only once it has rows', () => {
+  const row = ROWS[1]!;
+  renderWithTheme(
+    <AdvisorCard
+      {...props({
+        typed: 1,
+        mine: doneKind({ rows: [row], result: { ...RESULT, rows: [row] } }),
+        default: kind(),
+      })}
+    />,
+  );
+  expect(screen.getByText('Your upgrades')).toBeTruthy();
+  expect(screen.queryByText('Default upgrades')).toBeNull();
+  expect(screen.getAllByTestId('advisor-row')).toHaveLength(2);
+});
+
+test('a typed cost: its gain per cost on the row and the ordering stated, on "Your upgrades" only', () => {
   const talent: AdvisorRow = {
     id: 'user:talent',
     family: 'user',
@@ -144,7 +226,10 @@ test('a typed cost: its gain per cost on the row and the ordering stated; none w
   expect(screen.queryByTestId('advisor-ordering')).toBeNull();
   expect(screen.queryByTestId('advisor-per-cost')).toBeNull();
   unmount();
-  renderWithTheme(<AdvisorCard {...done({ rows: rankAdvice([...ROWS, talent], 'sweet-spot') })} />);
+  const rows = rankAdvice([...ROWS, talent], 'sweet-spot');
+  renderWithTheme(
+    <AdvisorCard {...props({ typed: 1, mine: doneKind({ rows, result: { ...RESULT, rows } }) })} />,
+  );
   expect(screen.getByTestId('advisor-ordering').textContent).toBe(
     'Upgrades with a cost first, by gain per talent points; the others after, by gain.',
   );
@@ -204,15 +289,32 @@ test('a cut pass is labelled, and no cut note otherwise', () => {
   expect(screen.getByText('The 20 s cut stopped 2 upgrades before they finished.')).toBeTruthy();
 });
 
-test('a failed pass says why in one line', () => {
-  renderWithTheme(<AdvisorCard {...props({ status: 'failed', error: 'baseline broke' })} />);
-  expect(screen.getByText('The upgrades could not be read: baseline broke')).toBeTruthy();
+test('a failed pass says why in one line, under its own kind', () => {
+  renderWithTheme(
+    <AdvisorCard {...props({ default: kind({ status: 'failed', error: 'baseline broke' }) })} />,
+  );
+  expect(screen.getByText('The default upgrades could not be read: baseline broke')).toBeTruthy();
+  expect(screen.queryByText(/my upgrades could not be read/u)).toBeNull();
+});
+
+test('a failed or cut pass of one kind says nothing under the other', () => {
+  renderWithTheme(
+    <AdvisorCard
+      {...props({
+        typed: 1,
+        mine: kind({ status: 'failed', error: 'boom' }),
+        default: doneKind({ status: 'cut', result: { ...RESULT, cut: [ROWS[0]!] } }),
+      })}
+    />,
+  );
+  expect(screen.getAllByText(/could not be read: boom/u)).toHaveLength(1);
+  expect(screen.getAllByText(/cut stopped/u)).toHaveLength(1);
 });
 
 test('cancelled: the progress it reached, and Compute offered again', () => {
-  renderWithTheme(<AdvisorCard {...props({ status: 'cancelled', done: 3, total: 30 })} />);
+  renderWithTheme(<AdvisorCard {...props({ default: kind({ status: 'cancelled', done: 3, total: 30 }) })} />);
   expect(screen.getByText('Cancelled at 3 / 30')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Compute' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
 });
 
 test('no per-cost column: no v1 probe has a cost', () => {
@@ -248,7 +350,8 @@ describe('where the March mounts it', () => {
     useRunStore.setState({ plan: PLAN, planPick: 0 });
     renderWithTheme(<AdvisorFold />);
     expect(screen.getByRole('region', { name: 'What to upgrade next' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Compute' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Compute my upgrades' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
   });
 
   test('a plan on a platform with no worker: one line says why, no button', () => {
@@ -256,7 +359,7 @@ describe('where the March mounts it', () => {
     useRunStore.setState({ plan: PLAN, planPick: 0 });
     renderWithTheme(<AdvisorFold />);
     expect(screen.getByText(/needs a browser that can compute in the background/u)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Compute' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Compute/ })).toBeNull();
     vi.unstubAllGlobals();
   });
 });
