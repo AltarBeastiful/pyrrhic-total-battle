@@ -1,0 +1,17 @@
+# Phase 04: User-entered upgrades (W17 C2)
+
+This phase lets the player type the next step of a real source (a talent tier, an army modernization step) with an optional cost, so the advisor answers "what does my next point actually give" and ranks by gain per cost. It adds a stored shape, so it needs a schema bump, a migration and a fixture test. Source: `docs/plans/progression-advisor.md` §4 C2. Constraints as in Phase 01 (benchmark never regresses, kernel path tests, reuse, UI cites `docs/design-rules.md`, "merc" not "hired", commit per task with `Co-Authored-By: deepseek-flash <noreply@deepseek.com>`). No talent-tree or modernization table goes into `src/data/`; the player types the numbers.
+
+## Tasks
+
+- [ ] Read `docs/decisions/0004-local-persistence-and-schema.md`, `src/state/` (schema, migrations, existing fixtures and migration tests), `src/account/` (sync, the per-section merge) and `src/share/` (share-link encoding, ADR 0005). Define the stored shape in the existing zod schema: per profile, a list of `{ id, label, deltas: { health?: Partial<Record<BonusKey, number>>, strength?: Partial<Record<BonusKey, number>>, housing?: {...} }, cost?: { amount: number, unit: string } }`. Bump the schema version, write the migration, add a fixture for the old version and a migration test, and make sure export/import JSON and the share link either carry or explicitly ignore the field (follow what ADR 0005 and the existing tests require). **Account sync (S-49d/e, since 2026-10-07):** a new stored field must also go through the sync merge: stamp it in the store's `sectionUpdatedAt` like the other profile sections, merge it section by section (`src/account/`), and add a merge test (two devices editing it, the later stamp wins, the other sections untouched).
+
+- [ ] Extend the probe model from Phase 02 with a `userProbe(entry)` builder that applies an entry's deltas without mutating, producing one `Probe` per entry. Tests: each key family applies to the right totals, an entry with no deltas is rejected by the schema, ids are stable.
+
+- [ ] Extend ranking: sort by gain, or by gain per cost when a cost is typed (entries without cost are listed after by gain, never mixed into a per-cost ordering silently; state the ordering in the card). Unit tests for mixed lists.
+
+- [ ] Build the entry UI inside or beside the advisor card: an "Add an upgrade" form (label, the bonus lines it changes with values, optional cost), edit and delete, validation messages following the existing form kit, Enter validates the edit (matches the owner's todo about Enter-to-validate). Cite `docs/design-rules.md` rule numbers in the story row. Ship crowded, test at 390 px.
+
+- [ ] Tests: component tests for add, edit, delete and validation, an integration test that a typed upgrade appears in the ranked list with its per-cost figure, and persistence across reload (follow the existing store persistence tests). E2E step added to the advisor journey; `pnpm build` before `pnpm e2e`.
+
+- [ ] Run the full gate (`pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm build && pnpm e2e`), confirm the benchmark and goldens moved nothing, add the `S-nn` row to `docs/PLAN.md`, commit.
