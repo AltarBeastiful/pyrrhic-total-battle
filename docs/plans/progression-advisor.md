@@ -5,8 +5,8 @@ A0, probe immutability, re-priced is not a floor, C5-0 captain conditions, measu
 Validated by the owner 2026-10-07 (answers in §7; Tight baseline and the loss flag folded into C3). Progress:
 C1's probes shipped (`src/engine/probes.ts`, 3575369); A0 and A shipped 2026-10-08 (S-150; speed-up in
 `tools/theorycraft/out/190-the-pool.md`); C3's reading in `src/engine/advisor.ts` and its pool job (`runProbe`
-in `src/worker/jobs.ts`, the pass `runAdvisor` in `src/worker/advisor.ts`) 2026-10-08. Next: C3's tests and the
-experiment `what-a-percent-is-worth`.** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
+in `src/worker/jobs.ts`, the pass `runAdvisor` in `src/worker/advisor.ts`) 2026-10-08. C3's tests and experiment 191
+(`tools/theorycraft/out/191-what-a-percent-is-worth.md`) 2026-10-08.** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
 expanding the scope of search if it leads to better result; then start to produce recommendations for future
 marches: check which talent point where would improve the march […], or where the next modernization of army
 points could be spent, or other questions. […] helper for the player progression would be more interesting at
