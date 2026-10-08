@@ -232,6 +232,17 @@ export const CAMPAIGN = {
    */
   shelterWarning: 0.02,
   /**
+   * **When the advisor prints a change of training time** (W17 C4, Phase 04b; owner, 2026-10-08: beside its
+   * damage, each upgrade shows what it adds to the march's bill, *"silver, gold, and the training time only
+   * when it is outstanding"*). Silver and gold are printed whenever they move by a figure the card can show;
+   * the queue only when its change is larger than `share` of the current march's queue **and** larger than
+   * `seconds`, so ten minutes on a day of training says nothing (design rule 15: nothing without value).
+   *
+   * Ten percent and an hour are the defaults the phase took, held until the owner judges them on measured
+   * figures. Display only: no rating, ranking or plan reads them (`outstandingSeconds`, `engine/advisor.ts`).
+   */
+  outstandingTraining: { share: 0.1, seconds: 3_600 },
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

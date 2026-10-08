@@ -22,7 +22,12 @@
  * current)` is 0, so no probe is ever reported as a loss — the search is not monotone (`climbRounds ≥ 256` is
  * worse), and a re-planned +1 % can come out lower by noise alone. A probe whose two readings both rate below
  * current gains 0 by the clamp and says so (`clamped`); it is "no gain", never dropped.
+ *
+ * **What the gain costs the march** (Phase 04b, owner 2026-10-08: damage alone is not enough) is read off the
+ * same reading the gain is, in the bill's own units (`costChange`, `outstandingSeconds`). It is display only:
+ * the gain already weighs those costs through `rate()`, and no rating or ranking reads the change.
  */
+import { CAMPAIGN } from '../config';
 import type { PlanPick } from './plan';
 import type { Probe } from './probes';
 import { rate } from './rating';
@@ -217,4 +222,56 @@ export function rankingOrder(rows: readonly AdvisorRow[]): string[] {
   for (const row of rows)
     if (row.cost !== undefined && !units.includes(row.cost.unit)) units.push(row.cost.unit);
   return units;
+}
+
+/**
+ * **The march the gain is read from**: the re-planned stop where it is the gain, the re-priced one otherwise,
+ * `null` with no gain. What a row says beside its gain (the damage it reaches, what it costs the march) comes
+ * off this march, so the figures and the gain are always one reading.
+ */
+export function gainReading(stop: StopAdvice): ShownMarch | null {
+  return stop.from === 'replanned' ? stop.replanned : stop.from === 'repriced' ? stop.repriced : null;
+}
+
+/** What an upgrade changes in one march's bill: raw amounts, per march; a cost that falls is negative. */
+export interface CostChange {
+  silver: number;
+  gold: number;
+  seconds: number;
+}
+
+/**
+ * **What the upgrade costs the march**: the bill of the reading the gain is (`gainReading`) minus the current
+ * march's, in silver, gold and training seconds. `null` on a row with no gain, which prints no cost.
+ */
+export function costChange(stop: StopAdvice): CostChange | null {
+  const reading = gainReading(stop);
+  if (reading === null) return null;
+  const before = stop.current.bill;
+  return {
+    silver: reading.bill.silver - before.silver,
+    gold: reading.bill.gold - before.gold,
+    seconds: reading.bill.seconds - before.seconds,
+  };
+}
+
+/** When a training-time change is worth printing: a share of the current queue, and a floor in seconds. */
+export interface TrainingBound {
+  share: number;
+  seconds: number;
+}
+
+/**
+ * **The training-time change worth printing**: `change.seconds` when it is larger than `bound.share` of the
+ * current march's queue and larger than `bound.seconds`, whichever way it goes (a saving counts as much as a
+ * rise); `null` otherwise, and the card prints no time (design rule 15). The bound is the owner's
+ * (`CAMPAIGN.outstandingTraining`); an experiment may hand over another.
+ */
+export function outstandingSeconds(
+  current: Pick<ShownBill, 'seconds'>,
+  change: Pick<CostChange, 'seconds'>,
+  bound: TrainingBound = CAMPAIGN.outstandingTraining,
+): number | null {
+  const size = Math.abs(change.seconds);
+  return size > bound.share * current.seconds && size > bound.seconds ? change.seconds : null;
 }

@@ -144,3 +144,19 @@ they share the one pool, which queues their jobs. A new Generate, a profile swit
 forgets both; a typed-list edit changes only the key of `mine`. Cancel is per kind. Each list sits under its own
 heading ("Your upgrades", "Default upgrades") shown once it has rows; the ordering line stays on "Your upgrades".
 "Compute my upgrades" with nothing typed is disabled beside one dimmed line, "Type an upgrade first."
+
+## 7. What the gain costs the march (Phase 04b, engine side)
+
+Display only: no rating, ranking or plan reads it, and the benchmark and goldens moved nothing when it landed.
+In `src/engine/advisor.ts`:
+
+- `gainReading(stop)`: the march the gain is read from, `replanned` where `from === 'replanned'`, `repriced`
+  where `from === 'repriced'`, `null` with no gain. The card's damage line (`reachedDamage`) reads it too, so
+  the damage and the cost a row prints are always one reading.
+- `costChange(stop)`: `{ silver, gold, seconds }`, that reading's bill minus the current march's, raw amounts
+  per march, negative where a cost falls; `null` on a row with no gain (clamped, or nothing moved), which
+  prints no cost line.
+- `outstandingSeconds(current.bill, change)`: `change.seconds` when its size is **larger than** both
+  `share` of the current queue and `seconds`, a saving as much as a rise, else `null`. The bound is
+  `CAMPAIGN.outstandingTraining` (`src/config.ts`, 10 % and 3 600 s); a change of exactly 10 % or exactly an
+  hour is not printed. A third argument hands over another bound (for the experiment).

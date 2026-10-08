@@ -2,15 +2,19 @@
  * W17 C3 — **the advisor's reading** (`src/engine/advisor.ts`, `docs/plans/progression-advisor.md` §4), on
  * hand-built marches: the gain is the best of re-priced, re-planned and current on the owner's rating, so it is
  * never a loss; the clamp reads "no gain" and is said; `noise`, `reorder` and `worse` say what the three
- * readings did; a row is read stop by stop and headlined on the selected stop.
+ * readings did; a row is read stop by stop and headlined on the selected stop. Phase 04b: what the gain costs
+ * the march is read off the same reading the gain is, and its training time is printed only past the bound.
  */
 import { describe, expect, test } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { mulberry32 } from '@/engine';
 import {
+  costChange,
   gainPerCost,
+  gainReading,
   headlineOf,
+  outstandingSeconds,
   probeInfo,
   rankAdvice,
   rankingOrder,
@@ -20,6 +24,7 @@ import {
   type ShownBill,
   type ShownMarch,
   type ShownStop,
+  type StopAdvice,
 } from '@/engine/advisor';
 import type { PlanPick } from '@/engine/plan';
 import { bonusProbe, userProbe } from '@/engine/probes';
@@ -258,5 +263,173 @@ describe('headline and ranking', () => {
     expect('cost' in probeInfo(free)).toBe(false);
     const read = readProbe(probe, [CURRENT], [CURRENT], () => march(), RATES);
     expect(structuredClone(read).cost).toEqual({ amount: 5, unit: 'talent points' });
+  });
+});
+
+describe('the march cost: what the gain costs the march, read off the reading the gain is', () => {
+  test('the re-planned stop where it is the gain, the re-priced one where the re-plan is noise', () => {
+    const repriced = march({ damage: 1_010_000, silver: 101_000 });
+    const replanned = march({ damage: 1_300_000, silver: 120_000, gold: 1_500, seconds: 7_200 });
+    const planned = readStop(CURRENT, repriced, replanned, RATES);
+    expect(planned.from).toBe('replanned');
+    expect(gainReading(planned)).toBe(replanned);
+    expect(costChange(planned)).toEqual({ silver: 20_000, gold: 500, seconds: 3_600 });
+    // A re-plan below the re-priced reading is noise: the gain, and so its cost, is the re-priced march, whatever
+    // the re-plan would have spent.
+    const noisy = readStop(
+      CURRENT,
+      repriced,
+      march({ damage: 1_005_000, silver: 150_000, gold: 9_000 }),
+      RATES,
+    );
+    expect(noisy.from).toBe('repriced');
+    expect(gainReading(noisy)).toBe(repriced);
+    expect(costChange(noisy)).toEqual({ silver: 1_000, gold: 0, seconds: 0 });
+  });
+
+  test('with no re-planned stop the cost is the re-priced reading', () => {
+    const read = readStop(CURRENT, march({ damage: 1_030_000, gold: 1_100 }), null, RATES);
+    expect(read.from).toBe('repriced');
+    expect(costChange(read)).toEqual({ silver: 0, gold: 100, seconds: 0 });
+  });
+
+  test('a cost that falls is a negative change, said as much as a rise', () => {
+    const read = readStop(
+      CURRENT,
+      march({ damage: 1_020_000, silver: 80_000, gold: 700, seconds: 1_800 }),
+      null,
+      RATES,
+    );
+    expect(costChange(read)).toEqual({ silver: -20_000, gold: -300, seconds: -1_800 });
+  });
+
+  test('a row with no gain has no march cost: neither the clamp nor a probe that moves nothing', () => {
+    // Both readings below current, the re-priced one dearer: no gain, so no cost either, whatever the bills say.
+    const clamped = readStop(
+      CURRENT,
+      march({ damage: 990_000, silver: 101_000 }),
+      march({ damage: 500_000 }),
+      RATES,
+    );
+    expect(clamped.clamped).toBe(true);
+    expect(gainReading(clamped)).toBeNull();
+    expect(costChange(clamped)).toBeNull();
+    const still = readStop(CURRENT, march(), march(), RATES);
+    expect(still.from).toBeNull();
+    expect(costChange(still)).toBeNull();
+  });
+
+  test('the cost and the damage the row prints are one reading, on every draw', () => {
+    const random = mulberry32(20_261_009);
+    const vary = (): ShownMarch =>
+      march({
+        damage: 1_000_000 * (0.8 + 0.4 * random()),
+        silver: Math.round(100_000 * (0.5 + random())),
+        gold: Math.round(1_000 * (0.5 + random())),
+        seconds: Math.round(3_600 * (0.5 + random())),
+      });
+    for (let trial = 0; trial < 500; trial += 1) {
+      const current = stop('sweet-spot', vary());
+      const read = readStop(current, vary(), random() < 0.2 ? null : vary(), RATES);
+      const reading = gainReading(read);
+      const change = costChange(read);
+      if (reading === null) {
+        expect(read.gain).toBe(0);
+        expect(change).toBeNull();
+        continue;
+      }
+      const before = current.march.bill;
+      expect(read.damagePercent).toBe(((reading.bill.damage - before.damage) / before.damage) * 100);
+      expect(change).toEqual({
+        silver: reading.bill.silver - before.silver,
+        gold: reading.bill.gold - before.gold,
+        seconds: reading.bill.seconds - before.seconds,
+      });
+    }
+  });
+
+  test('reads and never writes the advice it is handed', () => {
+    // A ten-day queue, so a re-plan that adds a day to it still rates above the re-priced reading.
+    const read = readStop(
+      stop('sweet-spot', march({ seconds: 864_000 })),
+      march({ damage: 1_010_000, seconds: 864_000 }),
+      march({ damage: 1_300_000, silver: 130_000, seconds: 964_000 }),
+      RATES,
+    );
+    const frozen = structuredClone(read);
+    const deepFreeze = (value: unknown): void => {
+      if (value && typeof value === 'object') {
+        Object.freeze(value);
+        Object.values(value).forEach(deepFreeze);
+      }
+    };
+    deepFreeze(read);
+    expect(read.from).toBe('replanned');
+    const change = costChange(read);
+    expect(change).toEqual({ silver: 30_000, gold: 0, seconds: 100_000 });
+    expect(outstandingSeconds(read.current.bill, change!)).toBe(100_000);
+    expect(gainReading(read)).toBe(read.replanned);
+    expect(read).toEqual(frozen);
+  });
+});
+
+describe('outstandingSeconds: the training time is printed only past both bounds', () => {
+  /** The phase's numbers, handed over so the rule is read on its own: 10 % of the current queue, and an hour. */
+  const BOUND = { share: 0.1, seconds: 3_600 };
+  /** 100 h of queue: its 10 % is 10 h, so the share is the bound that binds. */
+  const LONG = { seconds: 360_000 };
+  /** 5 h of queue: its 10 % is 30 min, so the hour is the bound that binds. */
+  const SHORT = { seconds: 18_000 };
+  const shown = (current: Pick<ShownBill, 'seconds'>, seconds: number): number | null =>
+    outstandingSeconds(current, { seconds }, BOUND);
+
+  test('the share of the queue: just under 10 % is not printed, just over is, a saving as much as a rise', () => {
+    expect(shown(LONG, 35_999)).toBeNull();
+    expect(shown(LONG, 36_000)).toBeNull();
+    expect(shown(LONG, 36_001)).toBe(36_001);
+    expect(shown(LONG, -35_999)).toBeNull();
+    expect(shown(LONG, -36_001)).toBe(-36_001);
+  });
+
+  test('the hour: more than 10 % of a short queue is still not printed under an hour', () => {
+    expect(shown(SHORT, 1_801)).toBeNull();
+    expect(shown(SHORT, 3_599)).toBeNull();
+    expect(shown(SHORT, 3_600)).toBeNull();
+    expect(shown(SHORT, 3_601)).toBe(3_601);
+    expect(shown(SHORT, -3_599)).toBeNull();
+    expect(shown(SHORT, -3_601)).toBe(-3_601);
+  });
+
+  test('a march with no queue yet: the hour alone decides', () => {
+    expect(shown({ seconds: 0 }, 3_600)).toBeNull();
+    expect(shown({ seconds: 0 }, 3_601)).toBe(3_601);
+    expect(shown({ seconds: 0 }, 0)).toBeNull();
+  });
+
+  test("with no bound handed over it reads the owner's, CAMPAIGN.outstandingTraining", () => {
+    const { share, seconds } = CAMPAIGN.outstandingTraining;
+    // A queue whose share is ten times the floor, so the share binds, and no queue at all, so the floor does.
+    const queue = { seconds: (10 * seconds) / share };
+    const edge = share * queue.seconds;
+    expect(outstandingSeconds(queue, { seconds: edge })).toBeNull();
+    expect(outstandingSeconds(queue, { seconds: edge + 1 })).toBe(edge + 1);
+    expect(outstandingSeconds({ seconds: 0 }, { seconds })).toBeNull();
+    expect(outstandingSeconds({ seconds: 0 }, { seconds: seconds + 1 })).toBe(seconds + 1);
+  });
+
+  test("a row's change reads through: a day more on a ten-day queue is printed, ten minutes on an hour is not", () => {
+    const advice: StopAdvice = readStop(
+      stop('sweet-spot', march({ seconds: 864_000 })),
+      march({ damage: 1_100_000, seconds: 964_000 }),
+      null,
+      RATES,
+    );
+    const change = costChange(advice);
+    expect(change).toEqual({ silver: 0, gold: 0, seconds: 100_000 });
+    expect(outstandingSeconds(advice.current.bill, change!, BOUND)).toBe(100_000);
+    // Ten minutes more on a one-hour march is over its 10 % but under the hour: nothing to print.
+    const small = costChange(readStop(CURRENT, march({ damage: 1_100_000, seconds: 4_200 }), null, RATES));
+    expect(small?.seconds).toBe(600);
+    expect(outstandingSeconds(CURRENT.march.bill, small!, BOUND)).toBeNull();
   });
 });

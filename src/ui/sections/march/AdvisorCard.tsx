@@ -29,6 +29,7 @@ import type { ReactNode } from 'react';
 import { CAMPAIGN } from '@/config';
 import {
   gainPerCost,
+  gainReading,
   headlineOf,
   rankAdvice,
   rankingOrder,
@@ -66,8 +67,7 @@ function glyphOf(row: Pick<AdvisorRow, 'id' | 'family'>): GlyphKind | null {
 
 /** The damage a march would reach after the upgrade: the reading the gain is taken from. */
 function reachedDamage(stop: StopAdvice): number | null {
-  const march = stop.from === 'replanned' ? stop.replanned : stop.from === 'repriced' ? stop.repriced : null;
-  return march === null ? null : march.bill.damage;
+  return gainReading(stop)?.bill.damage ?? null;
 }
 
 /** A compact figure, with its digits on hover only where the notation rounded them (rule 28). */
