@@ -58,7 +58,8 @@ import { pickOf } from './runStore';
 const planIds = new WeakMap<CampaignPlan, number>();
 let lastPlanId = 0;
 
-function planId(plan: CampaignPlan): number {
+/** Exported for the advisor card (`advisorSearch.ts`), whose answers belong to the same plan. */
+export function planId(plan: CampaignPlan): number {
   const known = planIds.get(plan);
   if (known !== undefined) return known;
   lastPlanId += 1;
