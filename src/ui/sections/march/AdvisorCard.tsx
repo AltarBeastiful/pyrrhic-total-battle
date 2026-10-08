@@ -36,8 +36,10 @@ export type AdvisorCardProps = Pick<
 
 const SECONDS = Math.round(CAMPAIGN.budgets.extra / 1000);
 
-/** The probe's own mark: the bonus key's glyph for a health or strength line, the pool's for housing. */
+/** The probe's own mark: the bonus key's glyph for a health or strength line, the pool's for housing, none for a typed upgrade. */
 function glyphOf(row: Pick<AdvisorRow, 'id' | 'family'>): GlyphKind | null {
+  // A typed upgrade's id is the player's, never a bonus key: it can change several lines at once.
+  if (row.family === 'user') return null;
   const key = row.id.slice(row.id.indexOf(':') + 1);
   if (row.family === 'housing') {
     return key === 'leadership' || key === 'authority' || key === 'dominance' ? key : null;

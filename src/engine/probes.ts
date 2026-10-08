@@ -14,10 +14,13 @@ export const PROBE_BONUS_DELTA = 1;
 /** Default rise of a housing pool, as a percent of the current pool. */
 export const PROBE_HOUSING_PERCENT = 1;
 
-export type ProbeFamily = 'health' | 'strength' | 'housing';
+export type ProbeFamily = 'health' | 'strength' | 'housing' | 'user';
 
 export interface Probe {
-  /** Stable and unique: `health:<key>`, `strength:<key>`, `housing:<pool>`. Later phases add their own families. */
+  /**
+   * Stable and unique: `health:<key>`, `strength:<key>`, `housing:<pool>`, `user:<upgrade id>`. Later phases add
+   * their own families.
+   */
   id: string;
   family: ProbeFamily;
   label: string;
@@ -69,4 +72,66 @@ export function genericProbes(): Probe[] {
     ...BONUS_KEYS.map((key) => bonusProbe('strength', key)),
     ...HOUSING_KEYS.map((pool) => housingProbe(pool)),
   ];
+}
+
+/**
+ * What one typed upgrade changes (W17 C2): points on bonus lines, as entered, and housing **slots** (not a
+ * percent). Structurally the stored `UserUpgrade` of `src/state/schema.ts`, whose schema refuses an entry that
+ * changes nothing; the engine does not import the state layer.
+ */
+export interface UserUpgradeEntry {
+  id: string;
+  label: string;
+  deltas: {
+    health?: Partial<Record<BonusKey, number>> | undefined;
+    strength?: Partial<Record<BonusKey, number>> | undefined;
+    housing?: { [pool in keyof Housing]?: number | undefined } | undefined;
+  };
+}
+
+function addBonuses(
+  line: Record<BonusKey, number>,
+  deltas: Partial<Record<BonusKey, number>> | undefined,
+): Record<BonusKey, number> {
+  if (deltas === undefined || Object.keys(deltas).length === 0) return line;
+  const out = { ...line };
+  for (const [key, delta] of Object.entries(deltas) as [BonusKey, number][]) out[key] += delta;
+  return out;
+}
+
+/**
+ * One probe per typed upgrade: every delta of the entry at once, on top of the request, a pool never below 0
+ * slots. Levels the entry does not touch are shared with the input, as for the generic probes.
+ */
+export function userProbe(entry: UserUpgradeEntry): Probe {
+  const { health, strength, housing } = entry.deltas;
+  const touchesTotals = [health, strength].some((map) => map !== undefined && Object.keys(map).length > 0);
+  const touchesHousing = housing !== undefined && Object.keys(housing).length > 0;
+  return {
+    id: `user:${entry.id}`,
+    family: 'user',
+    label: entry.label,
+    apply: (req) => {
+      let out: StackRequest = { ...req };
+      if (touchesTotals) {
+        out = {
+          ...out,
+          totals: {
+            ...req.totals,
+            health: addBonuses(req.totals.health, health),
+            strength: addBonuses(req.totals.strength, strength),
+          },
+        };
+      }
+      if (touchesHousing) {
+        const pools = { ...req.housing };
+        for (const pool of HOUSING_KEYS) {
+          const slots = housing[pool];
+          if (slots !== undefined) pools[pool] = Math.max(0, pools[pool] + slots);
+        }
+        out = { ...out, housing: pools };
+      }
+      return out;
+    },
+  };
 }
