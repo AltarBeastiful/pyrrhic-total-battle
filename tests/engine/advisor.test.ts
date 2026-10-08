@@ -9,9 +9,11 @@ import { describe, expect, test } from 'vitest';
 import { CAMPAIGN } from '@/config';
 import { mulberry32 } from '@/engine';
 import {
+  gainPerCost,
   headlineOf,
   probeInfo,
   rankAdvice,
+  rankingOrder,
   readProbe,
   readStop,
   type AdvisorRow,
@@ -20,7 +22,7 @@ import {
   type ShownStop,
 } from '@/engine/advisor';
 import type { PlanPick } from '@/engine/plan';
-import { bonusProbe } from '@/engine/probes';
+import { bonusProbe, userProbe } from '@/engine/probes';
 
 const RATES = CAMPAIGN.markerRates;
 const ORDER = ['rider', 'spearman', 'hunter'];
@@ -195,5 +197,66 @@ describe('headline and ranking', () => {
     expect(rankAdvice(rows).map((advice) => advice.id)).toEqual(['big', 'small', 'none', 'tie']);
     expect(rankAdvice(rows, 'all-in').map((advice) => advice.id)).toEqual(['none', 'tie', 'big', 'small']);
     expect(rows.map((advice) => advice.id)).toEqual(['none', 'small', 'tie', 'big']);
+  });
+
+  const costed = (id: string, gain: number, amount: number, unit: string): AdvisorRow => ({
+    ...row(id, { 'sweet-spot': gain }),
+    family: 'user',
+    cost: { amount, unit },
+  });
+
+  test('a typed cost ranks by gain per cost, the rows with no cost after by gain, never mixed', () => {
+    const rows = [
+      row('generic-big', { 'sweet-spot': 5 }),
+      costed('cheap', 1, 1, 'points'),
+      row('generic-small', { 'sweet-spot': 1 }),
+      costed('dear', 4, 10, 'points'),
+      costed('slow', 3, 2, 'days'),
+      costed('mid', 3, 2, 'points'),
+      costed('quick', 2, 0.5, 'days'),
+    ];
+    // points first (its first row was given first), then days, then the generic probes by gain.
+    expect(rankAdvice(rows).map((advice) => advice.id)).toEqual([
+      'mid',
+      'cheap',
+      'dear',
+      'quick',
+      'slow',
+      'generic-big',
+      'generic-small',
+    ]);
+    expect(rankingOrder(rows)).toEqual(['points', 'days']);
+    expect(gainPerCost(rows[3]!)).toBeCloseTo(0.4, 6);
+    expect(gainPerCost(rows[0]!)).toBeNull();
+  });
+
+  test('with no cost typed, the ranking is by gain alone and states no unit', () => {
+    const rows = [row('a', { 'sweet-spot': 1 }), row('b', { 'sweet-spot': 2 })];
+    expect(rankingOrder(rows)).toEqual([]);
+    expect(rankAdvice(rows).map((advice) => advice.id)).toEqual(['b', 'a']);
+  });
+
+  test('costed rows tie in the order they were given, and a no-gain costed row stays in its group', () => {
+    const rows = [costed('x', 2, 2, 'gold'), costed('none', 0, 1, 'gold'), costed('y', 1, 1, 'gold')];
+    expect(rankAdvice(rows).map((advice) => advice.id)).toEqual(['x', 'y', 'none']);
+  });
+
+  test('a typed cost travels from the entry through probeInfo onto the row', () => {
+    const probe = userProbe({
+      id: 'talent',
+      label: 'Talent tier 3',
+      deltas: { health: { mounted: 2 } },
+      cost: { amount: 5, unit: 'talent points' },
+    });
+    expect(probeInfo(probe)).toEqual({
+      id: 'user:talent',
+      family: 'user',
+      label: 'Talent tier 3',
+      cost: { amount: 5, unit: 'talent points' },
+    });
+    const free = userProbe({ id: 'free', label: 'Free', deltas: { health: { mounted: 1 } } });
+    expect('cost' in probeInfo(free)).toBe(false);
+    const read = readProbe(probe, [CURRENT], [CURRENT], () => march(), RATES);
+    expect(structuredClone(read).cost).toEqual({ amount: 5, unit: 'talent points' });
   });
 });

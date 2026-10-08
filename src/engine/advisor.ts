@@ -59,10 +59,15 @@ export interface ShownStop {
 }
 
 /** A probe as a reading carries it: without `apply`, because a row crosses `postMessage`. */
-export type ProbeInfo = Pick<Probe, 'id' | 'family' | 'label'>;
+export type ProbeInfo = Pick<Probe, 'id' | 'family' | 'label' | 'cost'>;
 
 export function probeInfo(probe: ProbeInfo): ProbeInfo {
-  return { id: probe.id, family: probe.family, label: probe.label };
+  return {
+    id: probe.id,
+    family: probe.family,
+    label: probe.label,
+    ...(probe.cost === undefined ? {} : { cost: { amount: probe.cost.amount, unit: probe.cost.unit } }),
+  };
 }
 
 /** One probe, read on one stop of the bar. */
@@ -179,8 +184,37 @@ export function headlineOf(row: AdvisorRow, pick: PlanPick = 'sweet-spot'): Stop
   );
 }
 
-/** Rows ranked by their headline's gain, highest first; ties keep the order the probes were given in. */
+/** A costed row's headline gain per unit of its cost; `null` for a row with no cost. */
+export function gainPerCost(row: AdvisorRow, pick?: PlanPick): number | null {
+  if (row.cost === undefined) return null;
+  return (headlineOf(row, pick)?.gain ?? 0) / row.cost.amount;
+}
+
+/**
+ * **Rows ranked on the headline stop** (`docs/plans/progression-advisor.md` §4 C2): by gain, or by gain per cost
+ * when a cost is typed. A gain per talent point and a gain per day cannot be compared, so the rows with a cost
+ * come first, one group per unit in the order its first row was given, each ranked by gain per cost; the rows
+ * with no cost follow, ranked by gain. Ties keep the order the probes were given in. `rankingOrder` says the
+ * ordering the card must state.
+ */
 export function rankAdvice(rows: readonly AdvisorRow[], pick?: PlanPick): AdvisorRow[] {
   const gainOf = (row: AdvisorRow): number => headlineOf(row, pick)?.gain ?? 0;
-  return [...rows].sort((a, b) => gainOf(b) - gainOf(a));
+  const units = rankingOrder(rows);
+  const unitOf = (row: AdvisorRow): number =>
+    row.cost === undefined ? units.length : units.indexOf(row.cost.unit);
+  return [...rows].sort(
+    (a, b) =>
+      unitOf(a) - unitOf(b) ||
+      (a.cost === undefined
+        ? gainOf(b) - gainOf(a)
+        : (gainPerCost(b, pick) ?? 0) - (gainPerCost(a, pick) ?? 0)),
+  );
+}
+
+/** The cost units the ranking groups by, in the order `rankAdvice` lists them; empty when it is by gain alone. */
+export function rankingOrder(rows: readonly AdvisorRow[]): string[] {
+  const units: string[] = [];
+  for (const row of rows)
+    if (row.cost !== undefined && !units.includes(row.cost.unit)) units.push(row.cost.unit);
+  return units;
 }

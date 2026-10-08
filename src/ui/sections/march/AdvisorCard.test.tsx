@@ -132,6 +132,29 @@ test('done: rows ranked on the headline stop, "no gain" kept, no minus anywhere'
   expect(screen.getByRole('button', { name: 'Compute again' })).toBeTruthy();
 });
 
+test('a typed cost: its gain per cost on the row and the ordering stated; none while no cost is typed', () => {
+  const talent: AdvisorRow = {
+    id: 'user:talent',
+    family: 'user',
+    label: 'Talent tier 3',
+    cost: { amount: 4, unit: 'talent points' },
+    stops: [stop('sweet-spot', 2, { damagePercent: 2 })],
+  };
+  const { unmount } = renderWithTheme(<AdvisorCard {...done()} />);
+  expect(screen.queryByTestId('advisor-ordering')).toBeNull();
+  expect(screen.queryByTestId('advisor-per-cost')).toBeNull();
+  unmount();
+  renderWithTheme(<AdvisorCard {...done({ rows: rankAdvice([...ROWS, talent], 'sweet-spot') })} />);
+  expect(screen.getByTestId('advisor-ordering').textContent).toBe(
+    'Upgrades with a cost first, by gain per talent points; the others after, by gain.',
+  );
+  const first = screen.getAllByTestId('advisor-row')[0];
+  expect(first?.textContent).toContain('Talent tier 3+2% worth');
+  expect(within(first!).getByTestId('advisor-per-cost').textContent).toBe(
+    '+0.5% per talent points, costs 4 talent points',
+  );
+});
+
 test('a gain too small for the tenth reads "under 0.1%", never "0% worth"', () => {
   // Found by the e2e journey (J7): a real pass priced Health +1 % army at a 0.04 % gain, printed "0% worth".
   const tiny: AdvisorRow = { ...ROWS[0]!, stops: [stop('sweet-spot', 0.04, { damagePercent: 0.1 })] };

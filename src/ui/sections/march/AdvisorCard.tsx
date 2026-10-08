@@ -9,8 +9,9 @@
  * on the page; mounting it, and its visibility, are the March section's.
  *
  * Design rules (`docs/design-rules.md`): 1 (under the plan, never before it), 3–4 (idle until asked, the other
- * stops folded), 5 (only deltas, never the recap's figures), 15 (no per-cost column while no probe has a cost —
- * none of the v1 probes does, so the column is absent, head included; the cut note only when the cut fired),
+ * stops folded), 5 (only deltas, never the recap's figures), 15 (no per-cost line while no probe has a cost —
+ * none of the generic probes does, so a typed upgrade with a cost is the only row that carries one, and the
+ * ordering note shows only then; the cut note only when the cut fired),
  * 17 (no inner scroller), 18–19 (one column of two-line rows that fits 390 px), 20 and 22 (no new colour: dimmed
  * text, red only for a failure), 21 (game glyphs through `Glyph`), 23 (stock Mantine and the kit's
  * `Disclosure`), 24 (a gain is a sign and a word; the progress is `aria-live`), 26 (sentence case, our words),
@@ -19,7 +20,14 @@
 import { Button, Group, Stack, Text } from '@mantine/core';
 
 import { CAMPAIGN } from '@/config';
-import { headlineOf, rankAdvice, type AdvisorRow, type StopAdvice } from '@/engine/advisor';
+import {
+  gainPerCost,
+  headlineOf,
+  rankAdvice,
+  rankingOrder,
+  type AdvisorRow,
+  type StopAdvice,
+} from '@/engine/advisor';
 import type { PlanPick } from '@/engine/plan';
 import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
@@ -104,6 +112,12 @@ function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
           {signedPercent(stop.damagePercent)} damage, <Figure value={reached} /> a march
         </Text>
       )}
+      {row.cost !== undefined && (
+        <Text className={classes.meta} c="dimmed" data-testid="advisor-per-cost">
+          {gains ? `${gainWords(gainPerCost(row, stop.pick) ?? 0)} per ${row.cost.unit}, ` : ''}costs{' '}
+          {amount(row.cost.amount)} {row.cost.unit}
+        </Text>
+      )}
       {stop.worse && stop.replanned !== null && (
         <Text className={classes.meta} c="dimmed">
           the plan gets worse here: search issue (re-planned <Figure value={stop.replanned.bill.damage} />)
@@ -123,6 +137,18 @@ function StopList({ rows, pick }: { rows: readonly AdvisorRow[]; pick: PlanPick 
       })}
     </Stack>
   );
+}
+
+/**
+ * **The ordering, said** (`rankAdvice`): nothing while every row ranks by gain; with a cost typed, that the
+ * costed upgrades come first by gain per cost, one group per unit, and the others after by gain.
+ */
+function orderingWords(rows: readonly AdvisorRow[]): string | null {
+  const units = rankingOrder(rows);
+  if (units.length === 0) return null;
+  const per = units.map((unit) => `per ${unit}`).join(', then ');
+  const rest = rows.some((row) => row.cost === undefined) ? '; the others after, by gain' : '';
+  return `Upgrades with a cost first, by gain ${per}${rest}.`;
 }
 
 /** What the pass's state says, in one line, beside the button. */
@@ -150,6 +176,7 @@ export function AdvisorCard({
 }: AdvisorCardProps) {
   const running = status === 'running';
   const words = statusWords(status, done, total);
+  const ordering = orderingWords(rows);
   const read = result !== null && result.baseline !== null && rows.length > 0;
   // The bar's other stops, in its own order, each ranked on itself: a move of the bar needs no new pass.
   const others = (result?.baseline ?? []).map((stop) => stop.pick).filter((pick) => pick !== headline);
@@ -205,6 +232,11 @@ export function AdvisorCard({
 
       {read && (
         <>
+          {ordering !== null && (
+            <Text className={classes.meta} c="dimmed" data-testid="advisor-ordering">
+              {ordering}
+            </Text>
+          )}
           <StopList rows={rows} pick={headline} />
           {others.length > 0 && (
             <Disclosure

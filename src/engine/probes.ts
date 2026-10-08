@@ -16,6 +16,12 @@ export const PROBE_HOUSING_PERCENT = 1;
 
 export type ProbeFamily = 'health' | 'strength' | 'housing' | 'user';
 
+/** What a typed upgrade costs in the game, in the player's own unit ("talent points", "gold", "days"). */
+export interface ProbeCost {
+  amount: number;
+  unit: string;
+}
+
 export interface Probe {
   /**
    * Stable and unique: `health:<key>`, `strength:<key>`, `housing:<pool>`, `user:<upgrade id>`. Later phases add
@@ -24,6 +30,8 @@ export interface Probe {
   id: string;
   family: ProbeFamily;
   label: string;
+  /** Only a typed upgrade with a cost has one: the ranking then reads its gain per cost (`rankAdvice`). */
+  cost?: ProbeCost;
   apply(req: StackRequest): StackRequest;
 }
 
@@ -87,6 +95,7 @@ export interface UserUpgradeEntry {
     strength?: Partial<Record<BonusKey, number>> | undefined;
     housing?: { [pool in keyof Housing]?: number | undefined } | undefined;
   };
+  cost?: ProbeCost | undefined;
 }
 
 function addBonuses(
@@ -111,6 +120,7 @@ export function userProbe(entry: UserUpgradeEntry): Probe {
     id: `user:${entry.id}`,
     family: 'user',
     label: entry.label,
+    ...(entry.cost === undefined ? {} : { cost: { amount: entry.cost.amount, unit: entry.cost.unit } }),
     apply: (req) => {
       let out: StackRequest = { ...req };
       if (touchesTotals) {
