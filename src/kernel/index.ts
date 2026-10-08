@@ -7,7 +7,15 @@
  * call it yet. The TypeScript engine is the reference; `tests/kernel/parity.test.ts` holds every output of
  * the kernel `===` to it.
  */
-import { RAISE_MOST, RAISE_OFF, RAISE_SAFE, RAISE_TENS, RAISE_TIGHT, RAISE_V2 } from '../engine/fast';
+import {
+  RAISE_MOST,
+  RAISE_OFF,
+  RAISE_SAFE,
+  RAISE_TENS,
+  RAISE_TIGHT,
+  RAISE_TIGHT_DAMAGE,
+  RAISE_V2,
+} from '../engine/fast';
 import type { MarkerRates } from '../engine/rating';
 import type { StackRequest } from '../engine/types';
 
@@ -262,6 +270,7 @@ export function expectedLayout(): Record<string, number> {
     RAISE_V2,
     RAISE_SAFE,
     RAISE_TIGHT,
+    RAISE_TIGHT_DAMAGE,
   };
   for (const [name, slot] of Object.entries(H)) out[`H_${snake(name)}`] = slot;
   for (const [name, slot] of Object.entries(T)) out[`T_${snake(name)}`] = slot;

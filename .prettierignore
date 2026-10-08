@@ -22,3 +22,5 @@ tools/theorycraft/out/
 
 # AssemblyScript sources: decorators on top-level functions (`@inline`) are not TypeScript Prettier parses.
 kernel/assembly/
+
+.maestro
