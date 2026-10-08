@@ -205,4 +205,150 @@ describe('runAdvisor: the pass over the pool', () => {
     },
     TIMEOUT,
   );
+
+  /** Inline clients that report a worker, so the pool really runs `size` lanes; `wrap` can replace `probe`. */
+  function poolOf(size: number, wrap?: (client: CalcClient) => Partial<CalcClient>) {
+    return createCalcPool({
+      size,
+      createClient: (): CalcClient => {
+        const inline = createInlineClient();
+        return { ...inline, mode: 'worker', ...wrap?.(inline) };
+      },
+    });
+  }
+
+  function probesOf(input: CampaignInput): Probe[] {
+    return [
+      bonusProbe('health', inertKey(input.request)),
+      bonusProbe('strength', 'army'),
+      housingProbe('leadership'),
+    ];
+  }
+
+  test(
+    'the pass reads its input and probes without mutating them',
+    async () => {
+      const input = campaign();
+      const probes = probesOf(input);
+      const before = structuredClone(input);
+      const { request } = input;
+      const { totals, housing } = request;
+      const pool = poolOf(2);
+      await runAdvisor(input, probes, pool);
+      pool.dispose();
+      expect(input).toEqual(before);
+      expect(input.request).toBe(request);
+      expect(input.request.totals).toBe(totals);
+      expect(input.request.housing).toBe(housing);
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'one worker and three give the same baseline, rows and ranking',
+    async () => {
+      const input = campaign();
+      const probes = probesOf(input);
+      const answers = [];
+      for (const size of [1, 3]) {
+        const pool = poolOf(size);
+        answers.push(await runAdvisor(input, probes, pool));
+        pool.dispose();
+      }
+      expect(answers[1]).toEqual(answers[0]);
+      expect(answers[0]?.rows).toHaveLength(probes.length);
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'every row of the pass is read on every stop, never as a loss, and a stop without gain says so',
+    async () => {
+      const input = campaign();
+      const pool = poolOf(2);
+      const { rows, baseline } = await runAdvisor(input, probesOf(input), pool);
+      pool.dispose();
+      for (const row of rows) {
+        expect(row.stops.map((advice) => advice.pick)).toEqual(baseline?.map((stop) => stop.pick));
+        for (const advice of row.stops) {
+          expect(advice.gain).toBeGreaterThanOrEqual(0);
+          // No gain is said as `from: null`, whether the probe changed nothing or the clamp held it at 0.
+          if (advice.gain === 0) expect(advice.from).toBeNull();
+        }
+      }
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'a probe the clock stops is reported cut, in probe order, and the ones that finished are kept',
+    async () => {
+      const input = campaign();
+      const probes = probesOf(input);
+      const hung = probes[1];
+      const pool = poolOf(2, (inline) => ({
+        probe: (probeInput, signal) =>
+          probeInput.against?.probe.id === hung?.id
+            ? new Promise((_resolve, reject) => {
+                signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+              })
+            : inline.probe(probeInput, signal),
+      }));
+      const result = await runAdvisor(input, probes, pool, { budgetMs: 4_000 });
+      pool.dispose();
+      expect(result.baseline).not.toBeNull();
+      expect(result.cut.map((info) => info.id)).toEqual([hung?.id]);
+      expect(result.failed).toEqual([]);
+      expect(result.rows.map((row) => row.id).sort()).toEqual(
+        probes
+          .filter((probe) => probe !== hung)
+          .map((probe) => probe.id)
+          .sort(),
+      );
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'a baseline the clock stops leaves no rows and every probe cut',
+    async () => {
+      const input = campaign();
+      const probes = probesOf(input);
+      const pool = poolOf(2, () => ({
+        probe: (_input, signal) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+          }),
+      }));
+      const result = await runAdvisor(input, probes, pool, { budgetMs: 50 });
+      pool.dispose();
+      expect(result.baseline).toBeNull();
+      expect(result.rows).toEqual([]);
+      expect(result.cut.map((info) => info.id)).toEqual(probes.map((probe) => probe.id));
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'a probe that throws is reported failed with its message and the others are read',
+    async () => {
+      const input = campaign();
+      const probes = probesOf(input);
+      const broken = probes[0];
+      const pool = poolOf(2, (inline) => ({
+        probe: (probeInput, signal) =>
+          probeInput.against?.probe.id === broken?.id
+            ? Promise.reject(new Error('kernel said no'))
+            : inline.probe(probeInput, signal),
+      }));
+      const result = await runAdvisor(input, probes, pool);
+      pool.dispose();
+      expect(result.failed.map((failure) => [failure.probe.id, failure.message])).toEqual([
+        [broken?.id, 'kernel said no'],
+      ]);
+      expect(result.rows).toHaveLength(probes.length - 1);
+      expect(result.cut).toEqual([]);
+    },
+    TIMEOUT,
+  );
 });
