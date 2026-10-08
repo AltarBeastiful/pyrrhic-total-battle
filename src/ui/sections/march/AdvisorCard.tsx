@@ -63,6 +63,14 @@ function Figure({ value }: { value: number }) {
 }
 
 /**
+ * A gain at the tenth the card prints, and a positive one too small for it as "under 0.1%": `signedPercent`
+ * rounds 0.04 % to "0%", which beside "worth" reads as no gain while the row still ranks above one.
+ */
+function gainWords(gain: number): string {
+  return signedPercent(gain) === '0%' ? 'under 0.1%' : signedPercent(gain);
+}
+
+/**
  * **One upgrade, read on one stop.** Two lines: the upgrade and what it is worth on the owner's rating (the
  * yardstick the bar and Tight use), then the damage it would bring. A clamped or zero reading is "no gain" —
  * kept on the list, never a minus (`StopAdvice.gain` is never below 0). A `worse` re-plan adds a faint line
@@ -81,7 +89,7 @@ function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
         </Group>
         {gains ? (
           <Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>
-            {signedPercent(stop.gain)} worth
+            {gainWords(stop.gain)} worth
           </Text>
         ) : (
           <Text size="sm" c="dimmed" style={{ whiteSpace: 'nowrap' }}>

@@ -132,6 +132,16 @@ test('done: rows ranked on the headline stop, "no gain" kept, no minus anywhere'
   expect(screen.getByRole('button', { name: 'Compute again' })).toBeTruthy();
 });
 
+test('a gain too small for the tenth reads "under 0.1%", never "0% worth"', () => {
+  // Found by the e2e journey (J7): a real pass priced Health +1 % army at a 0.04 % gain, printed "0% worth".
+  const tiny: AdvisorRow = { ...ROWS[0]!, stops: [stop('sweet-spot', 0.04, { damagePercent: 0.1 })] };
+  renderWithTheme(<AdvisorCard {...done({ rows: [tiny] })} />);
+  const row = screen.getAllByTestId('advisor-row')[0];
+  expect(row?.textContent).toContain('under 0.1% worth');
+  expect(row?.textContent).not.toContain('0% worth');
+  expect(row?.textContent).toContain('+0.1% damage');
+});
+
 test('the exact figure is one hover away where the notation rounds', () => {
   renderWithTheme(<AdvisorCard {...done()} />);
   expect(screen.getAllByTitle('8 192 000').length).toBeGreaterThan(0);

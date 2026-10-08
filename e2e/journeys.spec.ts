@@ -513,6 +513,85 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   expect(taps.count).toBeLessThanOrEqual(5);
 }
 
+/**
+ * J7 — what to upgrade next (W17 C4, `docs/plans/advisor-card.md`). After a plan, the player asks which
+ * investment would raise the marches after this one: the card under the plan, its Compute button, and the
+ * upgrades ranked on the bar's stop once the pass has read them all.
+ *
+ * The pass is the real one — the module pool's workers, every probe re-planned — so the wait is the
+ * advisor's own 20 s safety cut and not a guess. No tap budget is set yet (the card is new); the count is
+ * printed so a later budget has a figure to start from. On a phone the card must fit the 390 px sheet with
+ * no sideways scroll (design rules 17-19).
+ */
+async function journey7(page: Page, phone: boolean): Promise<void> {
+  await seedHiredStock(page);
+  await toTop(page);
+
+  const taps = new Taps();
+  const battle = page.locator('#battle');
+  if (phone) await taps.tap(battle.getByRole('button', { name: 'Change Stacking method' }));
+  await taps.tap(battle.getByRole('radio', { name: 'Complete optimization' }));
+  await taps.tap(generateButton(page).first());
+  await settle(page);
+
+  const march = phone ? page.getByRole('dialog', { name: 'March' }) : page.locator('#march');
+  await expect(march).toBeVisible();
+
+  // Idle until asked (design rules 3-4): a button, no rows, and it reads as the next investment.
+  const card = march.getByRole('region', { name: 'What to upgrade next' });
+  await expect(card).toBeVisible();
+  await expect(
+    card.getByText(/^What each upgrade would bring to your next marches, read on the /),
+  ).toBeVisible();
+  const rows = card.getByTestId('advisor-row');
+  await expect(rows).toHaveCount(0);
+
+  // The card sits under the plan, never before it (design rule 1).
+  const planBox = await march.getByRole('button', { name: /^Plan / }).boundingBox();
+  const cardBox = await card.boundingBox();
+  expect(planBox, 'the plan has to be on screen').not.toBeNull();
+  expect(cardBox, 'the card has to be on screen').not.toBeNull();
+  expect((planBox?.y ?? 0) < (cardBox?.y ?? 0), 'the card is drawn under the plan').toBe(true);
+
+  await taps.tap(card.getByRole('button', { name: 'Compute' }));
+  // The pass is cut at 20 s whatever happens; the rows come once it has answered.
+  await expect(card.getByRole('button', { name: 'Compute again' })).toBeVisible({ timeout: 60_000 });
+  await expect(card.getByText(/^The upgrades could not be read/)).toHaveCount(0);
+
+  // The ranked list: every upgrade is kept, each with a gain or "no gain", never a loss.
+  // Every row, the folded other stops' included, is checked; the count printed is the headline list's.
+  const count = await rows.filter({ visible: true }).count();
+  expect(count).toBeGreaterThan(0);
+  for (const text of await rows.allTextContents()) {
+    expect(text).toMatch(/(\+[\d.]+%|under 0\.1%) worth|no gain/);
+    expect(text).not.toMatch(/(^|\s)[-−][\d.]+% worth/);
+  }
+  record('J7 upgrades on the headline stop', count, null);
+
+  if (phone) {
+    // 390 px: the card fits its column, and nothing in the sheet scrolls sideways.
+    const fit = await card.evaluate((node) => {
+      const element = node as unknown as { scrollWidth: number; clientWidth: number };
+      const doc = (
+        globalThis as unknown as {
+          document: { documentElement: { scrollWidth: number; clientWidth: number } };
+        }
+      ).document.documentElement;
+      return {
+        card: element.scrollWidth <= element.clientWidth,
+        page: doc.scrollWidth <= doc.clientWidth,
+      };
+    });
+    expect(fit.card, 'the card scrolls sideways at 390 px').toBe(true);
+    expect(fit.page, 'the page scrolls sideways at 390 px').toBe(true);
+    const box = await card.boundingBox();
+    expect((box?.x ?? 0) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= PHONE.width).toBe(true);
+    await closeMarchSheet(page);
+  }
+
+  record('J7 taps', taps.count, null);
+}
+
 /** J5 — share this march: the account menu, the item, the word that says it is on the clipboard. */
 async function journey5(page: Page): Promise<void> {
   const taps = new Taps();
@@ -564,6 +643,13 @@ test.describe('phone 390×844', () => {
     await journey6(page, true);
     expect(problems).toEqual([]);
   });
+
+  test('J7 what to upgrade next', async ({ page }) => {
+    test.setTimeout(150_000);
+    const problems = watchConsole(page);
+    await journey7(page, true);
+    expect(problems).toEqual([]);
+  });
 });
 
 test.describe('desktop 1400×900', () => {
@@ -601,6 +687,13 @@ test.describe('desktop 1400×900', () => {
   test('J6 plan a campaign: ≤ 5 taps', async ({ page }) => {
     const problems = watchConsole(page);
     await journey6(page, false);
+    expect(problems).toEqual([]);
+  });
+
+  test('J7 what to upgrade next', async ({ page }) => {
+    test.setTimeout(150_000);
+    const problems = watchConsole(page);
+    await journey7(page, false);
     expect(problems).toEqual([]);
   });
 });
