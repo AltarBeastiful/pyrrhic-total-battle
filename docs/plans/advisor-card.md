@@ -176,3 +176,8 @@ headline list and on every folded stop, read off `costChange(stop)` (the same re
   ("March cost: -300 400 silver, -64 gold, -3d 20h training"), so a typed upgrade's own price ("costs 4 talent
   points", the per-cost line under it) is never read as this one.
 - **Rules**: 5, 15, 19, 20–24, 26, 28. Display only: no rating, ranking or plan reads it.
+- **Measured** in experiment 192 (`tools/theorycraft/out/192-the-upgrade-cost-readout.md`, the default pass
+  on 19 armies and the owner's account of 2026-10-07): a line under 69 of the 153 top-10 gaining rows; the 84
+  others leave the bill exactly as it is (none rounds away). The 10 % / 1 h bound prints the time on 3 of 153
+  (2.0 %) and on 30 of 605 readings over every stop (5.0 %), the share deciding; half the printed silver
+  figures are under 0.1 % of the march. The best gain is the costliest in silver or gold on 12 of 19 armies.
