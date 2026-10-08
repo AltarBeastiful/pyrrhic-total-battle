@@ -155,6 +155,14 @@ function withoutSelectiveTop(setup: unknown): unknown {
   return { ...setup, recoveryPlan };
 }
 
+/**
+ * `6 → 7` for one profile (W17 C2): the player can type upgrades for the advisor to weigh. A document
+ * written before has none, so the list starts empty; nothing else moves.
+ */
+export function addUpgradeList(profile: Record<string, unknown>): Record<string, unknown> {
+  return Array.isArray(profile.upgrades) ? profile : { ...profile, upgrades: [] };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -168,6 +176,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `3 → 4`: the `complete` method becomes `plan` and the setup's `campaign` is dropped (S-56).
  * `4 → 5`: the unexplained remainder is dropped, both what was typed and whether it counted.
  * `5 → 6`: a selective recovery is chosen in families, so the count of top types is dropped.
+ * `6 → 7`: every profile gains an empty list of user-entered upgrades (W17 C2).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -176,6 +185,7 @@ export const migrations: MigrationTable = {
   3: (doc) => ({ ...doc, schemaVersion: 4, profiles: migrateProfiles(doc, dropCompleteMethod) }),
   4: (doc) => ({ ...doc, schemaVersion: 5, profiles: migrateProfiles(doc, dropUnexplainedRemainder) }),
   5: (doc) => ({ ...doc, schemaVersion: 6, profiles: migrateProfiles(doc, dropSelectiveTop) }),
+  6: (doc) => ({ ...doc, schemaVersion: 7, profiles: migrateProfiles(doc, addUpgradeList) }),
 };
 
 /**
@@ -193,6 +203,7 @@ export const profileMigrations: MigrationTable = {
   3: dropCompleteMethod,
   4: dropUnexplainedRemainder,
   5: dropSelectiveTop,
+  6: addUpgradeList,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5` and `5 → 6` reach inside it: the same
@@ -209,6 +220,7 @@ export const savedStackMigrations: MigrationTable = {
   3: migrateSavedStackSetup,
   4: (doc) => ({ ...doc, setup: withoutRemainderFlag(doc.setup) }),
   5: (doc) => ({ ...doc, setup: withoutSelectiveTop(doc.setup) }),
+  6: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

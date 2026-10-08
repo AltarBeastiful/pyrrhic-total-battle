@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -335,6 +335,39 @@ export const savedStackSchema = syncMetaSchema.extend({
 });
 export type SavedStack = z.infer<typeof savedStackSchema>;
 
+// ---- User-entered upgrades (W17 C2) -----------------------------------------------------------------
+/**
+ * What one typed upgrade changes: points on bonus lines, as entered (`+1.5` = +1.5 %), and housing slots.
+ * No talent-tree or modernization table exists in `src/data`; the player types the numbers.
+ */
+export const upgradeDeltasSchema = z
+  .object({
+    health: bonusMapSchema.optional(),
+    strength: bonusMapSchema.optional(),
+    housing: housingSchema.partial().optional(),
+  })
+  .refine(
+    (deltas) =>
+      [deltas.health, deltas.strength, deltas.housing].some(
+        (map) => map !== undefined && Object.keys(map).length > 0,
+      ),
+    { message: 'An upgrade changes at least one bonus line or housing pool.' },
+  );
+export type UpgradeDeltas = z.infer<typeof upgradeDeltasSchema>;
+
+/**
+ * The next step of a real source (a talent tier, a modernization step) typed by the player, so the
+ * advisor answers "what does my next point give" — per cost when a cost is typed (`docs/plans/
+ * progression-advisor.md` §4 C2). `unit` is free text ("talent points", "gold", "days").
+ */
+export const userUpgradeSchema = z.object({
+  id: nonEmpty,
+  label: z.string(),
+  deltas: upgradeDeltasSchema,
+  cost: z.object({ amount: z.number().positive(), unit: z.string() }).optional(),
+});
+export type UserUpgrade = z.infer<typeof userUpgradeSchema>;
+
 // ---- Profile --------------------------------------------------------------------------------------
 /**
  * The parts of a profile two devices can change independently (S-49e). Each gets its own edit time in
@@ -348,6 +381,7 @@ export const PROFILE_SECTIONS = [
   'sources',
   'recovery',
   'activeSetupId',
+  'upgrades',
 ] as const;
 export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 
@@ -362,6 +396,8 @@ export const profileSchema = syncMetaSchema.extend({
   setups: z.array(battleSetupSchema),
   activeSetupId: z.uuid(),
   savedStacks: z.array(savedStackSchema),
+  /** Upgrades the player typed for the advisor to weigh (schema v7, W17 C2). */
+  upgrades: z.array(userUpgradeSchema),
   /** When each section was last edited; absent on a profile no edit has stamped yet (S-49e). */
   sectionUpdatedAt: z.partialRecord(z.enum(PROFILE_SECTIONS), timestamp).optional(),
 });

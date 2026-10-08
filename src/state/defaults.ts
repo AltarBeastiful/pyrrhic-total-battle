@@ -143,6 +143,7 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
     setups: [setup],
     activeSetupId: setup.id,
     savedStacks: [],
+    upgrades: [],
   };
 }
 

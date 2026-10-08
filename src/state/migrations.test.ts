@@ -128,6 +128,22 @@ function v1Fixture(): Record<string, unknown> {
   };
 }
 
+/**
+ * The same account as written by a v6 build: the v1 fixture with every field v2–v6 removed taken out,
+ * and no `upgrades` list, which v7 adds (W17 C2).
+ */
+function v6Fixture(): Record<string, unknown> {
+  const fixture = v1Fixture();
+  const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+  const sources = profile.sources as Record<string, unknown>;
+  delete sources.unknown;
+  for (const setup of profile.setups as Record<string, Record<string, unknown>>[]) {
+    delete setup.active!.unknown;
+    setup.recoveryPlan = { mode: 'selective', reviveFamilies: ['monsters'] };
+  }
+  return { ...fixture, schemaVersion: 6 };
+}
+
 describe('readSchemaVersion', () => {
   it('reads an integer version and falls back to 0', () => {
     expect(readSchemaVersion({ schemaVersion: 3 })).toBe(3);
@@ -302,6 +318,37 @@ describe('migrate', () => {
     expect(migrated.setup.recoveryPlan).toEqual({ mode: 'selective' });
   });
 
+  it('v6 → v7 gives every profile an empty list of typed upgrades, and moves nothing else', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fixture = v6Fixture();
+    const migrated = migrate(fixture);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+    expect(migrated.schemaVersion).toBe(7);
+    expect(migrated.profiles[0]?.upgrades).toEqual([]);
+    // The same document written at v7 with the empty list already there: the migration adds only that.
+    const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+    expect(migrated).toEqual(
+      migrate({ ...fixture, schemaVersion: 7, profiles: [{ ...profile, upgrades: [] }] }),
+    );
+  });
+
+  it('keeps a typed upgrade through a load, and refuses one that changes nothing', () => {
+    const doc = migrate(v6Fixture());
+    const upgrade = {
+      id: 'upgrade-1',
+      label: 'Talent tier 4',
+      deltas: { health: { army: 1.5 }, housing: { leadership: 200 } },
+      cost: { amount: 3, unit: 'talent points' },
+    };
+    const stored = { ...doc, profiles: [{ ...doc.profiles[0]!, upgrades: [upgrade] }] };
+    expect(migrate(JSON.parse(JSON.stringify(stored))).profiles[0]?.upgrades).toEqual([upgrade]);
+
+    const empty = { ...upgrade, deltas: { health: {} } };
+    const broken = { ...doc, profiles: [{ ...doc.profiles[0]!, upgrades: [empty] }] };
+    expect(() => migrate(broken)).toThrow(/at least one bonus line/);
+  });
+
   it('round-trips a freshly created document', () => {
     const root = newRoot('desktop');
     expect(migrate(JSON.parse(JSON.stringify(root)))).toEqual(root);
@@ -363,6 +410,11 @@ describe('migrateProfile', () => {
     // the setups: an imported profile arrives with the army the account owns and no march decision.
     expect(migrated.troops.excludedUnitIds).toEqual(['magic-dragon']);
     expect(migrated.setups[0]).not.toHaveProperty('excludedUnitIds');
+  });
+
+  it('gives a v6 profile an empty upgrade list on import', () => {
+    const profile = (v6Fixture().profiles as Record<string, unknown>[])[0]!;
+    expect(migrateProfile(profile, 6).upgrades).toEqual([]);
   });
 
   it('drops a v2 profile’s pins on import', () => {

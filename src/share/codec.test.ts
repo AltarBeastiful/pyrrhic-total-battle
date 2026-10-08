@@ -208,6 +208,33 @@ describe('profile links', () => {
     expect(decoded.profile).toEqual(profile);
   });
 
+  it('carries the upgrades the player typed (W17 C2), and a v6 link arrives with none', async () => {
+    const profile = realisticProfile();
+    profile.upgrades = [
+      {
+        id: 'u1',
+        label: 'Talent tier 4',
+        deltas: { health: { army: 1.5 }, housing: { leadership: 200 } },
+        cost: { amount: 3, unit: 'talent points' },
+      },
+    ];
+    const decoded = await decodeShare(await buildProfileLink(profile));
+    if (decoded.kind !== 'profile') throw new Error('wrong kind');
+    expect(decoded.profile.upgrades).toEqual(profile.upgrades);
+
+    const { upgrades: _upgrades, ...v6 } = newProfile('Old link', DEVICE);
+    const old = await decodeShare(
+      await encodeShare({
+        kind: 'profile',
+        schemaVersion: 6,
+        dataVersion: CURRENT_DATA_VERSION,
+        profile: v6 as Profile,
+      }),
+    );
+    if (old.kind !== 'profile') throw new Error('wrong kind');
+    expect(old.profile.upgrades).toEqual([]);
+  });
+
   it('accepts a full URL and prefixes a base URL', async () => {
     const profile = newProfile('Link', DEVICE);
     const link = await buildProfileLink(profile, { baseUrl: 'https://example.com/pyrrhic/#stale' });

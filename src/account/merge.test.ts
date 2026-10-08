@@ -160,3 +160,46 @@ test('profiles no edit has stamped yet merge as before, and stay unstamped', () 
   expect(merged.profiles[0]?.sectionUpdatedAt).toBeUndefined();
   expect(sameContent(merged, phone)).toBe(true);
 });
+
+test('upgrades typed on one device and troops changed on the other both survive; the later list wins', () => {
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  if (!base) throw new Error('no profile');
+  const t = base.updatedAt;
+  const talent = { id: 'u1', label: 'Talent tier 4', deltas: { health: { army: 1 } } };
+  const modernization = {
+    id: 'u2',
+    label: 'Modernization step',
+    deltas: { strength: { melee: 2 } },
+    cost: { amount: 5, unit: 'days' },
+  };
+  const onPhone = edit(
+    base,
+    {
+      upgrades: [talent],
+      troops: { ...base.troops, guardsmen: null },
+      sectionUpdatedAt: { upgrades: t + 10, troops: t + 10 },
+    },
+    t + 10,
+  );
+  const onPc = edit(
+    base,
+    {
+      upgrades: [modernization],
+      sources: { ...base.sources, vipLevel: 7 },
+      sectionUpdatedAt: { upgrades: t + 20, sources: t + 20 },
+    },
+    t + 20,
+  );
+
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),
+    mergeDocuments({ ...pc, profiles: [onPc] }, { ...phone, profiles: [onPhone] }),
+  ]) {
+    const [profile] = merged.profiles;
+    expect(profile?.upgrades).toEqual([modernization]); // the PC typed its list last
+    expect(profile?.troops.guardsmen).toBeNull(); // the phone's troops are untouched…
+    expect(profile?.sources.vipLevel).toBe(7); // …and so are the PC's bonuses
+    expect(profile?.sectionUpdatedAt).toEqual({ upgrades: t + 20, troops: t + 10, sources: t + 20 });
+  }
+});

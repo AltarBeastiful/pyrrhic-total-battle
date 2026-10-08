@@ -320,4 +320,14 @@ describe('profile names', () => {
     expect(Object.keys(afterTroops).sort()).toEqual(['name', 'troops']);
     expect(afterTroops.name).toBe(afterRename.name);
   });
+
+  it('typing an upgrade stamps the upgrades section, and only that one (W17 C2)', () => {
+    const store = createAppStore();
+    const id = store.getState().doc.activeProfileId;
+    const upgrade = { id: 'u1', label: 'Talent tier 4', deltas: { strength: { army: 1 } } };
+    store.getState().updateProfile(id, (profile) => ({ upgrades: [...profile.upgrades, upgrade] }));
+    const profile = store.getState().doc.profiles[0];
+    expect(profile?.upgrades).toEqual([upgrade]);
+    expect(Object.keys(profile?.sectionUpdatedAt ?? {})).toEqual(['upgrades']);
+  });
 });

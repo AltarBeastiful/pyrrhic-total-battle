@@ -72,6 +72,21 @@ describe('parseImport', () => {
     });
   });
 
+  it('carries the upgrades the player typed through a file (W17 C2)', () => {
+    const profile = sampleProfile();
+    profile.upgrades = [
+      {
+        id: 'u1',
+        label: 'Modernization step',
+        deltas: { strength: { melee: 2 } },
+        cost: { amount: 5, unit: 'days' },
+      },
+    ];
+    const parsed = parseImport(exportProfileFile(profile, 1, DATE).json);
+    if (parsed.kind !== 'profile') throw new Error('wrong kind');
+    expect(parsed.payload.upgrades).toEqual(profile.upgrades);
+  });
+
   it('validates a stack file and previews it', () => {
     const parsed = parseImport(exportStackFile(sampleStack(), 1, DATE).json);
     if (parsed.kind !== 'stack') throw new Error('wrong kind');
