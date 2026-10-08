@@ -29,6 +29,7 @@ import { useResultStore } from '@/ui/resultStore';
 import { MARCH_ANCHOR } from '@/ui/shell/march';
 import { TWO_PANES, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
+import { AdvisorFold } from './AdvisorCard';
 import { PlanFold } from './PlanPanel';
 import { amount } from './format';
 import {
@@ -225,6 +226,11 @@ export function MarchSection() {
           between the answer and the army. It draws nothing at any other method: `PlanFold` is null without a
           plan, and `Sections` gives a part that is not on screen no line to take with it. */}
       <PlanFold />
+
+      {/* 4b — what to upgrade next (W17 C4, `docs/plans/advisor-card.md`): under the plan it reads, before the
+          notices. A next-investment card, computed on its own button and never on Generate; null without a
+          plan, like `PlanFold`, so it takes no line at any other method. */}
+      <AdvisorFold />
 
       {/* 5 — anything worth a look about this particular march. Alerts are the one tinted block the
           design still allows (docs/design.md §2), and they are gathered into one part so they never

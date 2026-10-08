@@ -6,14 +6,19 @@
  */
 import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { rankAdvice, type AdvisorRow, type ShownMarch, type StopAdvice } from '@/engine/advisor';
-import type { PlanPick } from '@/engine/plan';
+import type { CampaignPlan, PlanPick } from '@/engine/plan';
+import { newRoot } from '@/state/defaults';
+import { useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 import type { AdvisorResult } from '@/worker/advisor';
+import type { CalcPool } from '@/worker/pool';
 
-import { AdvisorCard, type AdvisorCardProps } from './AdvisorCard';
+import { AdvisorCard, AdvisorFold, type AdvisorCardProps } from './AdvisorCard';
+import { setAdvisorPool } from './advisorSearch';
+import { useRunStore } from './runStore';
 
 afterEach(cleanup);
 
@@ -180,4 +185,45 @@ test('cancelled: the progress it reached, and Compute offered again', () => {
 test('no per-cost column: no v1 probe has a cost', () => {
   renderWithTheme(<AdvisorCard {...done()} />);
   expect(screen.queryByText(/per cost|a silver/iu)).toBeNull();
+});
+
+describe('where the March mounts it', () => {
+  const PLAN = {
+    alternatives: [
+      { pick: 'sweet-spot', counts: {} },
+      { pick: 'all-in', counts: {} },
+    ],
+  } as unknown as CampaignPlan;
+
+  beforeEach(() => {
+    useStore.getState().replaceDocument(newRoot());
+    useRunStore.getState().reset();
+  });
+  afterEach(() => {
+    setAdvisorPool(null);
+  });
+
+  test('no plan, no card', () => {
+    setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+    renderWithTheme(<AdvisorFold />);
+    expect(screen.queryByRole('region', { name: 'What to upgrade next' })).toBeNull();
+    expect(screen.queryByText(/upgrade next/u)).toBeNull();
+  });
+
+  test('a plan and a worker: the card, idle on its button', () => {
+    setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+    useRunStore.setState({ plan: PLAN, planPick: 0 });
+    renderWithTheme(<AdvisorFold />);
+    expect(screen.getByRole('region', { name: 'What to upgrade next' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Compute' })).toBeTruthy();
+  });
+
+  test('a plan on a platform with no worker: one line says why, no button', () => {
+    vi.stubGlobal('Worker', undefined);
+    useRunStore.setState({ plan: PLAN, planPick: 0 });
+    renderWithTheme(<AdvisorFold />);
+    expect(screen.getByText(/needs a browser that can compute in the background/u)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Compute' })).toBeNull();
+    vi.unstubAllGlobals();
+  });
 });

@@ -24,7 +24,7 @@ import type { PlanPick } from '@/engine/plan';
 import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
 
-import type { AdvisorView } from './advisorSearch';
+import { canAdvise, useAdvisor, type AdvisorView } from './advisorSearch';
 import { amount, compactTwo, signedPercent } from './format';
 import { planWords } from './picks';
 import classes from './march.module.css';
@@ -217,4 +217,23 @@ export function AdvisorCard({
       )}
     </Stack>
   );
+}
+
+/**
+ * **The card where the March section mounts it**, under the plan (part 4b, `MarchSection.tsx`). It goes by the
+ * plan's own condition: no plan, no card — `null`, so `Sections` gives it no line (as `PlanFold` does). On a
+ * platform with no `Worker` the pass would run 30 whole plans on the page's own thread, so the card says why
+ * in one line instead of offering a button that freezes the page (design rule 15: one dimmed line, no block).
+ */
+export function AdvisorFold() {
+  const view = useAdvisor();
+  if (view.headline === null) return null;
+  if (!canAdvise()) {
+    return (
+      <Text className={classes.meta} c="dimmed">
+        What to upgrade next needs a browser that can compute in the background; this one cannot.
+      </Text>
+    );
+  }
+  return <AdvisorCard {...view} />;
 }
