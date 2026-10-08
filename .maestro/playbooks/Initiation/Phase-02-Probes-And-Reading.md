@@ -1,6 +1,6 @@
 # Phase 02: Generic probes and the noise-robust reading (W17 C1 and C3)
 
-This phase builds the advisor's engine: pure probes that turn a march request into an upgraded request, and the reading that compares each upgraded plan to the current one without ever reporting a loss. It ends with a measured experiment ranking "what a percent is worth" on the 18 benchmark armies. No UI yet. Source: `docs/plans/progression-advisor.md` §4 C1 and C3. The same constraints as Phase 01 apply (benchmark never regresses, kernel path tests, reuse existing patterns, one commit per task with `Co-Authored-By: deepseek-flash <noreply@deepseek.com>`, no re-basing of pins).
+This phase builds the advisor's engine: pure probes that turn a march request into an upgraded request, and the reading that compares each upgraded plan to the current one without ever reporting a loss. It ends with a measured experiment ranking "what a percent is worth" on the 18 benchmark armies. No UI yet. Source: `docs/plans/progression-advisor.md` §4 C1 and C3. Constraints: the rules listed under "Rules for every task" in `.maestro/playbooks/Initiation/Phase-01-Worker-Pool.md` (read them first; each task runs in a fresh session) (benchmark never regresses, kernel path tests, reuse existing patterns, one commit per task with `Co-Authored-By: deepseek-flash <noreply@deepseek.com>`, no re-basing of pins).
 
 ## Tasks
 
@@ -11,7 +11,10 @@ This phase builds the advisor's engine: pure probes that turn a march request in
 
 > Note (task 1): `src/engine/probes.ts` ships `Probe`, `bonusProbe`, `housingProbe`, `genericProbes()` (13 health + 13 strength + 3 housing, ids `health:<key>` / `strength:<key>` / `housing:<pool>`); housing delta is 1 % of the pool, rounded, minimum one slot. Tests in `tests/engine/probes.test.ts`.
 
+<!-- MAESTRO:MODEL tier="high" effort="high" reason="The reading and the probe job decide every figure the advisor shows; a wrong baseline or clamp silently misleads the player." -->
+
 - [ ] Implement the reading in `src/engine/advisor.ts` following C3 exactly, with these pieces:
+  - `advisor.ts` stays pure engine and never imports `src/ui/`: it takes the Tight-priced figures as input. The Tight pricing itself (`positionTrades`, `OFFERED_POSITIONS` from `src/ui/sections/march/positions.ts`) runs in the worker job of the next task, as `src/worker/jobs.ts` already does for `runPositions`
   - **Baseline is Tight, as shown** (owner, 2026-10-07): current, re-priced and re-planned are each read after the Tight raise on that stop (the worker's positions step, `OFFERED_POSITIONS`), one Tight pricing per probe and stop inside the same job
   - **Re-priced**: the current stop's counts battled again under the upgraded request, no search
   - **Re-planned**: the upgraded request planned in full and the same stop taken from its bar
@@ -22,6 +25,8 @@ This phase builds the advisor's engine: pure probes that turn a march request in
   - per stop of the bar, with the headline stop selectable (the stop selected on the bar; sweet spot by default)
 
 - [ ] Add a job type in `src/worker/jobs.ts` / `protocol.ts` / `client.ts` for one probe that does, in ONE worker round trip, the plan of the upgraded request (no `budgetMs`, W17 A0) and the Tight pricing of the stops read (`runPositions` with `OFFERED_POSITIONS`), returning the advisor row; the baseline is the same job with no probe. The pool (`src/worker/pool.ts`) takes jobs as `(client, signal) => Promise<T>`, so each probe is `(client, signal) => client.probe(…, signal)`; the 20 s is `pool.map(jobs, { budgetMs: CAMPAIGN.budgets.extra })` and unfinished jobs come back `{ kind: 'cut' }`. Add `src/engine/advisor.run.ts` (or equivalent) exposing `runAdvisor(input, probes, pool, { signal, onProgress })` returning ranked rows with progress callbacks (n / total).
+
+<!-- MAESTRO:MODEL tier="medium" effort="medium" -->
 
 - [ ] Write tests (kernel path): non-mutation, gain never negative, clamp-to-zero reported as no gain, `noise`/`reorder` flags on a hand-built case, deterministic results across pool sizes (N = 1 and 3 give identical output), cut reporting. Run them and fix failures in the code, not the expectations.
 

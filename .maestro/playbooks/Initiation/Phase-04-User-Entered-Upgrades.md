@@ -1,6 +1,6 @@
 # Phase 04: User-entered upgrades (W17 C2)
 
-This phase lets the player type the next step of a real source (a talent tier, an army modernization step) with an optional cost, so the advisor answers "what does my next point actually give" and ranks by gain per cost. It adds a stored shape, so it needs a schema bump, a migration and a fixture test. Source: `docs/plans/progression-advisor.md` §4 C2. Constraints as in Phase 01 (benchmark never regresses, kernel path tests, reuse, UI cites `docs/design-rules.md`, "merc" not "hired", commit per task with `Co-Authored-By: deepseek-flash <noreply@deepseek.com>`). No talent-tree or modernization table goes into `src/data/`; the player types the numbers.
+This phase lets the player type the next step of a real source (a talent tier, an army modernization step) with an optional cost, so the advisor answers "what does my next point actually give" and ranks by gain per cost. It adds a stored shape, so it needs a schema bump, a migration and a fixture test. Source: `docs/plans/progression-advisor.md` §4 C2. Constraints: the rules listed under "Rules for every task" in `.maestro/playbooks/Initiation/Phase-01-Worker-Pool.md` (read them first; each task runs in a fresh session) (benchmark never regresses, kernel path tests, reuse, UI cites `docs/design-rules.md`, "merc" not "hired", commit per task with `Co-Authored-By: deepseek-flash <noreply@deepseek.com>`). No talent-tree or modernization table goes into `src/data/`; the player types the numbers.
 
 ## Tasks
 

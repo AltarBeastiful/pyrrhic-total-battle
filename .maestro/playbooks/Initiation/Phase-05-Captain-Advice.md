@@ -1,6 +1,6 @@
 # Phase 05: Captain advice, the best trio and the next star (W17 C5-0, C5a, C5b)
 
-This phase answers "which captains should I march with" and "where does my next star go". It first adds the march-type input and captain conditions (C5-0), then the trio search, then the star/level probes. Source: `docs/plans/progression-advisor.md` §4 C5. Constraints as in Phase 01 (benchmark never regresses, kernel path tests, reuse, UI cites `docs/design-rules.md`, commit per task with `Co-Authored-By: deepseek-flash <noreply@deepseek.com>`).
+This phase answers "which captains should I march with" and "where does my next star go". It first adds the march-type input and captain conditions (C5-0), then the trio search, then the star/level probes. Source: `docs/plans/progression-advisor.md` §4 C5. Constraints: the rules listed under "Rules for every task" in `.maestro/playbooks/Initiation/Phase-01-Worker-Pool.md` (read them first; each task runs in a fresh session) (benchmark never regresses, kernel path tests, reuse, UI cites `docs/design-rules.md`, commit per task with `Co-Authored-By: deepseek-flash <noreply@deepseek.com>`).
 
 **Owner's-trade guard:** applying captain conditions changes today's readings for accounts with Amanitore or Hercules, and only the owner accepts that. So C5-0 ships the march-type input with a default that reproduces today's behaviour byte-for-byte (conditions NOT applied until the player picks a march type). The benchmark and goldens must show no moved reading; if they move, stop and fix the default.
 
