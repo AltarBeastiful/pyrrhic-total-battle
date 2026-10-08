@@ -18,6 +18,7 @@
  * 28 (the recap's compact notation, the exact figure on hover).
  */
 import { Button, Group, Stack, Text } from '@mantine/core';
+import type { ReactNode } from 'react';
 
 import { CAMPAIGN } from '@/config';
 import {
@@ -35,12 +36,16 @@ import { Disclosure } from '@/ui/kit';
 import { canAdvise, useAdvisor, type AdvisorView } from './advisorSearch';
 import { amount, compactTwo, signedPercent } from './format';
 import { planWords } from './picks';
+import { TypedUpgrades } from './TypedUpgrades';
 import classes from './march.module.css';
 
 export type AdvisorCardProps = Pick<
   AdvisorView,
   'status' | 'done' | 'total' | 'headline' | 'rows' | 'result' | 'error' | 'compute' | 'cancel'
->;
+> & {
+  /** The player's own upgrades and their form (`TypedUpgrades`), read by the pass beside the generic probes. */
+  upgrades?: ReactNode;
+};
 
 const SECONDS = Math.round(CAMPAIGN.budgets.extra / 1000);
 
@@ -173,6 +178,7 @@ export function AdvisorCard({
   error,
   compute,
   cancel,
+  upgrades,
 }: AdvisorCardProps) {
   const running = status === 'running';
   const words = statusWords(status, done, total);
@@ -194,6 +200,8 @@ export function AdvisorCard({
           {headline === null ? '' : `, read on the ${planWords({ pick: headline })} stop`}.
         </Text>
       </Stack>
+
+      {upgrades}
 
       <Group gap="sm" wrap="nowrap">
         {running ? (
@@ -277,5 +285,5 @@ export function AdvisorFold() {
       </Text>
     );
   }
-  return <AdvisorCard {...view} />;
+  return <AdvisorCard {...view} upgrades={<TypedUpgrades />} />;
 }

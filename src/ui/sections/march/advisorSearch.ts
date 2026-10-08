@@ -24,7 +24,7 @@ import { create } from 'zustand';
 
 import { rankAdvice, type AdvisorRow } from '@/engine/advisor';
 import type { CampaignInput, CampaignPlan, PlanPick } from '@/engine/plan';
-import { genericProbes } from '@/engine/probes';
+import { genericProbes, userProbe, type UserUpgradeEntry } from '@/engine/probes';
 import { buildPlanRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { runAdvisor, type AdvisorResult } from '@/worker/advisor';
@@ -67,8 +67,13 @@ export interface AdvisorState {
  * **The identity of one pass's question** — the plan on screen and the account the baseline is planned from.
  * The input goes by value: a profile edit under a standing plan is another account and the rows are stale.
  */
-export function advisorKey(plan: CampaignPlan, input: CampaignInput): string {
-  return `${String(planId(plan))}|${JSON.stringify(input)}`;
+export function advisorKey(
+  plan: CampaignPlan,
+  input: CampaignInput,
+  upgrades: readonly UserUpgradeEntry[] = [],
+): string {
+  const typed = upgrades.length === 0 ? '' : `|${JSON.stringify(upgrades)}`;
+  return `${String(planId(plan))}|${JSON.stringify(input)}${typed}`;
 }
 
 /** Module state, not store state: a pool and an `AbortController` are nothing a component re-renders on. */
@@ -133,14 +138,19 @@ export const useAdvisorStore = create<AdvisorState>()((set, get) => {
 });
 
 /**
- * Start a pass for `key`: the baseline and every generic probe, ranked on `headline`. Any pass already out is
- * aborted first — one pass at a time, the latest question wins.
+ * Start a pass for `key`: the baseline, every generic probe and every upgrade the player typed (`userProbe`),
+ * ranked on `headline`. Any pass already out is aborted first — one pass at a time, the latest question wins.
  */
-export async function computeAdvice(key: string, input: CampaignInput, headline?: PlanPick): Promise<void> {
+export async function computeAdvice(
+  key: string,
+  input: CampaignInput,
+  headline?: PlanPick,
+  upgrades: readonly UserUpgradeEntry[] = [],
+): Promise<void> {
   abort();
   const own = new AbortController();
   controller = own;
-  const probes = genericProbes();
+  const probes = [...genericProbes(), ...upgrades.map(userProbe)];
   const store = useAdvisorStore.getState();
   store.begin(key, probes.length + 1);
   pool ??= createCalcPool();
@@ -193,9 +203,11 @@ export function useAdvisor(): AdvisorView {
     () => (profile !== undefined && setup !== undefined ? buildPlanRequest(profile, setup) : null),
     [profile, setup],
   );
+  // A typed upgrade added, edited or deleted is another question: the rows go, as for any other edit.
+  const upgrades = profile?.upgrades;
   const key = useMemo(
-    () => (plan !== null && input !== null ? advisorKey(plan, input) : null),
-    [plan, input],
+    () => (plan !== null && input !== null ? advisorKey(plan, input, upgrades) : null),
+    [plan, input, upgrades],
   );
   const headline = plan === null ? null : pickOf(plan, position).pick;
   const stored = useAdvisorStore((state) => state.entry);
@@ -213,8 +225,8 @@ export function useAdvisor(): AdvisorView {
   );
   const compute = useCallback(() => {
     if (key === null || input === null) return;
-    void computeAdvice(key, input, headline ?? undefined);
-  }, [key, input, headline]);
+    void computeAdvice(key, input, headline ?? undefined, upgrades);
+  }, [key, input, headline, upgrades]);
   const cancel = useCallback(() => {
     useAdvisorStore.getState().cancel();
   }, []);
