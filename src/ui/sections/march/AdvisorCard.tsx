@@ -21,16 +21,20 @@
  * `Disclosure`), 24 (a gain is a sign and a word; the progress is `aria-live`), 26 (sentence case, our words),
  * 28 (the recap's compact notation, the exact figure on hover). Rule 15 again for the two buttons: "my
  * upgrades" with nothing typed is disabled beside the one dimmed line that says why, and a heading appears
- * only once its list does.
+ * only once its list does. The march cost under each gain (`MarchCost`) answers to rules 5, 15, 19, 20–24,
+ * 26 and 28 too: a change and never the recap's bill, no line where nothing shows, the purses' glyphs in stock
+ * Mantine text, a saving said by a word.
  */
 import { Button, Group, Stack, Text } from '@mantine/core';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import { CAMPAIGN } from '@/config';
 import {
+  costChange,
   gainPerCost,
   gainReading,
   headlineOf,
+  outstandingSeconds,
   rankAdvice,
   rankingOrder,
   type AdvisorRow,
@@ -42,7 +46,7 @@ import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain
 import { Disclosure } from '@/ui/kit';
 
 import { canAdvise, useAdvisor, type AdvisorKindView, type AdvisorView } from './advisorSearch';
-import { amount, compactTwo, signedPercent } from './format';
+import { amount, compactTwo, delta, duration, signedPercent } from './format';
 import { planWords } from './picks';
 import { TypedUpgrades } from './TypedUpgrades';
 import classes from './march.module.css';
@@ -89,11 +93,100 @@ function gainWords(gain: number): string {
   return signedPercent(gain) === '0%' ? 'under 0.1%' : signedPercent(gain);
 }
 
+/** One figure of the march cost: a purse or the queue, by how much it moves, and which way. */
+interface CostFigure {
+  kind: 'silver' | 'gold' | 'time';
+  /** The size of the change as the line prints it: the recap's notation for a purse, the queue's own shape. */
+  short: string;
+  /** The change in full and signed, for the hover. */
+  exact: string;
+  word: string;
+  /** The march costs more of it; otherwise the upgrade saves some. */
+  rises: boolean;
+}
+
+const PURSES = ['silver', 'gold'] as const;
+
+/**
+ * **What the upgrade changes in the march's bill**, figure by figure, off the reading the gain is
+ * (`costChange`): silver and gold where the change shows in the recap's notation, the training queue only where
+ * it is outstanding (`outstandingSeconds`, the owner's bound in `CAMPAIGN.outstandingTraining`). Empty with no
+ * gain, and where every figure rounds away: the card then prints no line at all, never "same cost" (rule 15).
+ */
+function costFigures(stop: StopAdvice): CostFigure[] {
+  const change = costChange(stop);
+  if (change === null) return [];
+  const figures: CostFigure[] = [];
+  for (const kind of PURSES) {
+    const value = change[kind];
+    const short = compactTwo(Math.abs(value));
+    if (short !== '0') {
+      figures.push({ kind, short, exact: `${delta(value)} ${kind}`, word: kind, rises: value > 0 });
+    }
+  }
+  const seconds = outstandingSeconds(stop.current.bill, change);
+  if (seconds !== null) {
+    // The queue's own shape is already its full figure (`duration`), so the hover repeats it with its sign.
+    const short = duration(Math.abs(seconds));
+    figures.push({
+      kind: 'time',
+      short,
+      exact: `${seconds > 0 ? '+' : '-'}${short} training`,
+      word: 'training',
+      rises: seconds > 0,
+    });
+  }
+  return figures;
+}
+
+/**
+ * **What the upgrade costs the march** (Phase 04b; owner, 2026-10-08: damage alone is not enough, each row
+ * shows *"silver, gold, and the training time only when it is outstanding"*). One dimmed line under the damage,
+ * read off the same march, so the gain, the damage and the cost a row prints are one reading. What rises follows
+ * "costs" with its plus, what falls follows "saves": a word, never a colour (rules 20, 24). Each figure wears
+ * its purse's glyph as the recap draws it (rule 21), and the two never part where the line wraps at 390 px
+ * (rule 19). The hover gives the figures in full (rule 28) and names them the **march cost**, so a
+ * typed upgrade's own price — "costs 4 talent points", on the line under this one — is never read as it.
+ * Display only: no rating or ranking reads it.
+ */
+function MarchCost({ stop }: { stop: StopAdvice }) {
+  const figures = costFigures(stop);
+  if (figures.length === 0) return null;
+  const groups = [
+    { verb: 'costs', sign: '+', figures: figures.filter((figure) => figure.rises) },
+    { verb: 'saves', sign: '', figures: figures.filter((figure) => !figure.rises) },
+  ].filter((group) => group.figures.length > 0);
+  return (
+    <Text
+      className={classes.meta}
+      c="dimmed"
+      data-testid="advisor-march-cost"
+      title={`March cost: ${figures.map((figure) => figure.exact).join(', ')}`}
+    >
+      {groups.map((group, index) => (
+        <Fragment key={group.verb}>
+          {index > 0 ? '; ' : ''}
+          {`${group.verb} `}
+          {group.figures.map((figure, at) => (
+            <Fragment key={figure.kind}>
+              {at > 0 ? ', ' : ''}
+              <Text span inherit style={{ whiteSpace: 'nowrap' }}>
+                <Glyph kind={figure.kind} /> {`${group.sign}${figure.short} ${figure.word}`}
+              </Text>
+            </Fragment>
+          ))}
+        </Fragment>
+      ))}
+    </Text>
+  );
+}
+
 /**
  * **One upgrade, read on one stop.** Two lines: the upgrade and what it is worth on the owner's rating (the
- * yardstick the bar and Tight use), then the damage it would bring. A clamped or zero reading is "no gain" —
- * kept on the list, never a minus (`StopAdvice.gain` is never below 0). A `worse` re-plan adds a faint line
- * with the re-planned figure, so a search regression is reported rather than read as a fact of the game.
+ * yardstick the bar and Tight use), then the damage it would bring, and under it what it costs the march when
+ * that moves (`MarchCost`). A clamped or zero reading is "no gain" — kept on the list, never a minus
+ * (`StopAdvice.gain` is never below 0), and with no cost line. A `worse` re-plan adds a faint line with the
+ * re-planned figure, so a search regression is reported rather than read as a fact of the game.
  */
 function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
   const glyph = glyphOf(row);
@@ -121,6 +214,7 @@ function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
           {signedPercent(stop.damagePercent)} damage, <Figure value={reached} /> a march
         </Text>
       )}
+      <MarchCost stop={stop} />
       {row.cost !== undefined && (
         <Text className={classes.meta} c="dimmed" data-testid="advisor-per-cost">
           {gains ? `${gainWords(gainPerCost(row, stop.pick) ?? 0)} per ${row.cost.unit}, ` : ''}costs{' '}

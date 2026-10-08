@@ -160,3 +160,19 @@ In `src/engine/advisor.ts`:
   `share` of the current queue and `seconds`, a saving as much as a rise, else `null`. The bound is
   `CAMPAIGN.outstandingTraining` (`src/config.ts`, 10 % and 3 600 s); a change of exactly 10 % or exactly an
   hour is not printed. A third argument hands over another bound (for the experiment).
+
+## 8. The march cost on the card (Phase 04b, card side)
+
+`MarchCost` in `AdvisorCard.tsx`: one dimmed meta line under the damage line of every row with a gain, on the
+headline list and on every folded stop, read off `costChange(stop)` (the same reading the damage line reads).
+
+- **Words**: what rises follows "costs" with its plus, what falls follows "saves" with no minus, the two groups
+  joined by "; " ("costs 🪙 +81K silver; saves 💰 64 gold"). Silver and gold in `compactTwo`, printed only when
+  the change does not round to "0" there; the training time in the recap's `duration` shape ("⏳ +2d 3h
+  training") only when `outstandingSeconds` returns it. Each figure wears the recap's glyph (silver, gold,
+  time) and never wraps apart from it.
+- **Nothing printed** on a "no gain" row, or when every figure rounds away: no "same cost" line (rule 15).
+- **Hover**: the whole line's `title` names it the march cost and gives every printed figure in full and signed
+  ("March cost: -300 400 silver, -64 gold, -3d 20h training"), so a typed upgrade's own price ("costs 4 talent
+  points", the per-cost line under it) is never read as this one.
+- **Rules**: 5, 15, 19, 20–24, 26, 28. Display only: no rating, ranking or plan reads it.

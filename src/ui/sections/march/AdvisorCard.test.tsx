@@ -8,10 +8,17 @@ import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { rankAdvice, type AdvisorRow, type ShownMarch, type StopAdvice } from '@/engine/advisor';
+import {
+  rankAdvice,
+  type AdvisorRow,
+  type ShownBill,
+  type ShownMarch,
+  type StopAdvice,
+} from '@/engine/advisor';
 import type { CampaignPlan, PlanPick } from '@/engine/plan';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
+import { GLYPHS } from '@/ui/domain';
 import { renderWithTheme } from '@/ui/kit/testRender';
 import type { AdvisorResult } from '@/worker/advisor';
 import type { CalcPool } from '@/worker/pool';
@@ -320,6 +327,163 @@ test('cancelled: the progress it reached, and Compute offered again', () => {
 test('no per-cost column: no v1 probe has a cost', () => {
   renderWithTheme(<AdvisorCard {...done()} />);
   expect(screen.queryByText(/per cost|a silver/iu)).toBeNull();
+});
+
+describe('what an upgrade costs the march (Phase 04b)', () => {
+  const bill = (over: Partial<ShownBill> = {}): ShownBill => ({
+    damage: 8_000_000,
+    silver: 5_000_000,
+    gold: 1_000_000,
+    hired: 0,
+    dragonCoins: 0,
+    seconds: 1_000_000,
+    ...over,
+  });
+  const shown = (over: Partial<ShownBill> = {}): ShownMarch => ({ counts: {}, bill: bill(over), deaths: [] });
+
+  /** A row gaining 2 % on the sweet spot, re-priced into a march billed `after`, from one billed `before`. */
+  function costed(
+    after: Partial<ShownBill>,
+    before: Partial<ShownBill> = {},
+    extra: Partial<StopAdvice> = {},
+  ): AdvisorRow {
+    return {
+      id: 'strength:guardsmen',
+      family: 'strength',
+      label: 'Strength +1 % guardsmen',
+      stops: [
+        stop('sweet-spot', 2, {
+          current: shown(before),
+          repriced: shown({ ...before, damage: 8_160_000, ...after }),
+          ...extra,
+        }),
+      ],
+    };
+  }
+
+  /** The default pass done with this one row, on a bar of one stop: one row on screen, no fold. */
+  function draw(row: AdvisorRow): HTMLElement {
+    const result: AdvisorResult = {
+      ...RESULT,
+      baseline: [{ pick: 'sweet-spot', counts: {}, march: march(8_000_000) }],
+      rows: [row],
+    };
+    renderWithTheme(<AdvisorCard {...done({ rows: [row], result })} />);
+    return screen.getByTestId('advisor-row');
+  }
+
+  const costLine = (row: HTMLElement): HTMLElement | null => within(row).queryByTestId('advisor-march-cost');
+
+  test('silver alone: "costs" and the rise in the recap notation, with the silver glyph; no gold', () => {
+    const line = costLine(draw(costed({ silver: 6_234_567 })));
+    expect(line?.textContent).toBe(`costs ${GLYPHS.silver} +1.2M silver`);
+    expect(line?.textContent).not.toContain('gold');
+  });
+
+  test('silver and gold: one line, each behind its glyph', () => {
+    const line = costLine(draw(costed({ silver: 6_234_567, gold: 1_340_123 })));
+    expect(line?.textContent).toBe(`costs ${GLYPHS.silver} +1.2M silver, ${GLYPHS.gold} +340K gold`);
+  });
+
+  test('a cost that falls reads "saves", a word and never a minus', () => {
+    const line = costLine(draw(costed({ silver: 4_599_877 })));
+    expect(line?.textContent).toBe(`saves ${GLYPHS.silver} 400K silver`);
+    expect(line?.textContent).not.toMatch(/[-−]/u);
+  });
+
+  test('a rise and a saving on one row: each under its own verb', () => {
+    const line = costLine(draw(costed({ silver: 6_234_567, gold: 659_877 })));
+    expect(line?.textContent).toBe(`costs ${GLYPHS.silver} +1.2M silver; saves ${GLYPHS.gold} 340K gold`);
+  });
+
+  test('the training time is printed past both bounds, a rise or a saving', () => {
+    // 183 600 s is 2 d 3 h: over 10 % of a 1 000 000 s queue and over an hour.
+    const line = costLine(draw(costed({ seconds: 1_183_600 })));
+    expect(line?.textContent).toBe(`costs ${GLYPHS.time} +2d 3h training`);
+    cleanup();
+    expect(costLine(draw(costed({ seconds: 816_400 })))?.textContent).toBe(
+      `saves ${GLYPHS.time} 2d 3h training`,
+    );
+  });
+
+  test('a time change under either bound is not printed', () => {
+    // 9 % of the queue, though 25 hours: under the share.
+    expect(costLine(draw(costed({ seconds: 1_090_000 })))).toBeNull();
+    cleanup();
+    // 15 % of the queue, though under an hour: under the floor.
+    expect(costLine(draw(costed({ seconds: 23_000 }, { seconds: 20_000 })))).toBeNull();
+    cleanup();
+    // Beside a purse that moved, the line carries the purse alone.
+    const line = costLine(draw(costed({ silver: 6_234_567, seconds: 1_090_000 })));
+    expect(line?.textContent).toBe(`costs ${GLYPHS.silver} +1.2M silver`);
+  });
+
+  test('no cost line on a "no gain" row, however its bill moved', () => {
+    const none: AdvisorRow = {
+      ...costed({}),
+      stops: [
+        stop('sweet-spot', 0, {
+          clamped: true,
+          current: shown(),
+          repriced: shown({ silver: 9_000_000, gold: 2_000_000, seconds: 2_000_000 }),
+        }),
+      ],
+    };
+    const row = draw(none);
+    expect(row.textContent).toContain('no gain');
+    expect(costLine(row)).toBeNull();
+  });
+
+  test('every figure rounding away prints no line, and never "same cost"', () => {
+    expect(costLine(draw(costed({})))).toBeNull();
+    cleanup();
+    const row = draw(costed({ silver: 5_000_000.4, gold: 999_999.7, seconds: 1_000_010 }));
+    expect(costLine(row)).toBeNull();
+    expect(screen.queryByText(/same cost/iu)).toBeNull();
+  });
+
+  test('the exact figures are one hover away, named the march cost', () => {
+    const line = costLine(draw(costed({ silver: 6_234_567, gold: 659_877, seconds: 1_183_600 })));
+    expect(line?.getAttribute('title')).toBe('March cost: +1 234 567 silver, -340 123 gold, +2d 3h training');
+    expect(line?.textContent).toBe(
+      `costs ${GLYPHS.silver} +1.2M silver, ${GLYPHS.time} +2d 3h training; saves ${GLYPHS.gold} 340K gold`,
+    );
+  });
+
+  test('read off the march the gain is: a re-planned gain prices the re-planned march', () => {
+    const replanned = costed(
+      { silver: 6_234_567 },
+      {},
+      {
+        from: 'replanned',
+        replanned: shown({ damage: 8_200_000, silver: 7_500_000 }),
+        replannedRating: 2.5,
+      },
+    );
+    const row = draw(replanned);
+    expect(costLine(row)?.textContent).toBe(`costs ${GLYPHS.silver} +2.5M silver`);
+    // The damage line and the cost line are one reading.
+    expect(row.textContent).toContain('8.2M a march');
+  });
+
+  test("a typed upgrade's own price stays on its own line, apart from the march cost", () => {
+    const talent: AdvisorRow = {
+      ...costed({ silver: 6_234_567 }),
+      id: 'user:talent',
+      family: 'user',
+      label: 'Talent tier 3',
+      cost: { amount: 4, unit: 'talent points' },
+    };
+    const row = draw(talent);
+    const marchCost = costLine(row);
+    const own = within(row).getByTestId('advisor-per-cost');
+    expect(marchCost?.textContent).toBe(`costs ${GLYPHS.silver} +1.2M silver`);
+    expect(marchCost?.getAttribute('title')).toMatch(/^March cost: /u);
+    expect(own.textContent).toBe('+0.5% per talent points, costs 4 talent points');
+    expect(own.getAttribute('title')).toBeNull();
+    // The march cost sits under the damage, before the upgrade's own price.
+    expect(marchCost?.compareDocumentPosition(own)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });
 
 describe('where the March mounts it', () => {

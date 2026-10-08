@@ -608,6 +608,21 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
   // The typed list is still first and untouched by the second pass.
   await expect(rows.first()).toContainText('Talent: army strength III');
 
+  // What each gain costs the march (Phase 04b): "costs …" for what rises, "saves …" for what falls, named the
+  // march cost on hover; never on a "no gain" row and never "same cost" (rule 15). At least one row carries
+  // one, or the list is honestly cost-free: no row has a gain for a cost to be read on.
+  const costs = card.getByTestId('advisor-march-cost');
+  const costLines = await costs.allTextContents();
+  for (const text of costLines) expect(text).toMatch(/^(costs|saves) .+ (silver|gold|training)$/u);
+  for (const line of await costs.all()) expect(await line.getAttribute('title')).toMatch(/^March cost: /u);
+  await expect(rows.filter({ hasText: 'no gain' }).getByTestId('advisor-march-cost')).toHaveCount(0);
+  await expect(card.getByText(/same cost/iu)).toHaveCount(0);
+  const gaining = await rows.filter({ hasText: / worth/u }).count();
+  record('J7 rows with a march cost', costLines.length, null);
+  expect(costLines.length > 0 || gaining === 0, 'rows gain, yet none says what it costs the march').toBe(
+    true,
+  );
+
   if (phone) {
     // 390 px: the card fits its column, and nothing in the sheet scrolls sideways.
     const fit = await card.evaluate((node) => {
