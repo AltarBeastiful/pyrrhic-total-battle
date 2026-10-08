@@ -12,7 +12,7 @@ import type { PositionTrades } from '@/ui/sections/march/positions';
 
 import { KernelUnavailableError } from '@/kernel/boot';
 
-import { runPlan, runPositions, runRaise, runResize, runSearch, runStack } from './jobs';
+import { runPlan, runPositions, runProbe, runRaise, runResize, runSearch, runStack } from './jobs';
 import {
   errorPayload,
   isCalcResponseMessage,
@@ -20,6 +20,8 @@ import {
   type CalcRequestMessage,
   type JobId,
   type PositionsInput,
+  type ProbeAnswer,
+  type ProbeInput,
   type ResizeInput,
   type StackOutcome,
 } from './protocol';
@@ -46,6 +48,11 @@ export interface CalcClient {
    * the one the exhaustive raise uses.
    */
   positions(request: PositionsInput, signal?: AbortSignal): Promise<PositionTrades>;
+  /**
+   * W17 C3: one job of the progression advisor — a campaign planned in full and its bar read as the March shows
+   * it, and the probe read against the baseline's bar when one is given. The advisor's pool runs many at once.
+   */
+  probe(request: ProbeInput, signal?: AbortSignal): Promise<ProbeAnswer>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -101,6 +108,7 @@ function createWorkerClient(worker: Worker): CalcClient {
       case 'resize':
       case 'raise':
       case 'positions':
+      case 'probe':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -165,6 +173,7 @@ function createWorkerClient(worker: Worker): CalcClient {
       send<ExactRaiseAnswer | null>({ kind: 'raise', id: nextJobId('raise'), request }, signal),
     positions: (request, signal) =>
       send<PositionTrades>({ kind: 'positions', id: nextJobId('positions'), request }, signal),
+    probe: (request, signal) => send<ProbeAnswer>({ kind: 'probe', id: nextJobId('probe'), request }, signal),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -215,6 +224,8 @@ export function createInlineClient(): CalcClient {
     resize: (request, signal) => run(() => runResize(request), signal),
     raise: (request, signal) => run(() => runRaise(request), signal),
     positions: (request, signal) => run(() => runPositions(request), signal),
+    probe: (request, signal) =>
+      run(() => runProbe(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }), signal),
     dispose() {
       disposed = true;
     },

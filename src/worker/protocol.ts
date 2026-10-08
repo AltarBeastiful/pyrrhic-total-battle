@@ -2,7 +2,8 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise' | 'positions', id, request }  and  { kind: 'cancel', id }
+ * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise' | 'positions' | 'probe', id, request }
+ *           and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
  *           { kind: 'progress', id, progress }   (searches only, zero or more)
  *           { kind: 'search', id, result }
@@ -10,6 +11,7 @@
  *           { kind: 'resize', id, result }   (`null` when no shape could be built)
  *           { kind: 'raise', id, result }    (`null` when there is no box to search)
  *           { kind: 'positions', id, result }  (`PositionTrades`, S-147)
+ *           { kind: 'probe', id, result }      (`ProbeAnswer`, W17 C3)
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message, code? } }   (`code: 'kernel-unavailable'`: the worker has no kernel)
  *
@@ -17,7 +19,9 @@
  * flattened to `{ message }`: an `Error` does not survive `postMessage` in every browser, and the stack
  * trace of a worker frame is useless to the user anyway.
  */
+import type { AdvisorRow, ProbeInfo, ShownStop } from '@/engine/advisor';
 import type { CampaignInput, CampaignPlan, MarchWithin, ResizedMarch } from '@/engine/plan';
+import type { MarkerRates } from '@/engine/rating';
 import type {
   BattleSummary,
   SearchProgress,
@@ -107,6 +111,34 @@ export interface PositionsInput {
   counts: Record<string, number>;
 }
 
+/**
+ * **One job of the progression advisor** (W17 C3, `docs/plans/progression-advisor.md` §4): a campaign planned in
+ * full and every stop of its bar read as the March shows it (Tight), in one round trip — and, given the
+ * baseline's bar, the probe read against it. The advisor's pool runs many of these side by side
+ * (`src/worker/advisor.ts`); the baseline is this job with nothing to read against.
+ */
+export interface ProbeJob {
+  kind: 'probe';
+  id: JobId;
+  request: ProbeInput;
+}
+
+export interface ProbeInput {
+  /**
+   * The campaign to plan — the account's own for the baseline, the probe's upgraded request otherwise — with
+   * **no `budgetMs`** (W17 A0), so the answer is the same on every device: the pass's clock is the pool's.
+   */
+  plan: CampaignInput;
+  /** Absent on the baseline job: the probe, the baseline's bar it is read against, and the owner's rating. */
+  against?: { probe: ProbeInfo; baseline: ShownStop[]; rates: MarkerRates } | undefined;
+}
+
+/** What one advisor job answers: its own bar as shown, and the probe read against the baseline when one was given. */
+export interface ProbeAnswer {
+  stops: ShownStop[];
+  row: AdvisorRow | null;
+}
+
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
 export interface CancelJob {
   kind: 'cancel';
@@ -114,7 +146,7 @@ export interface CancelJob {
 }
 
 export type CalcRequestMessage =
-  StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | PositionsJob | CancelJob;
+  StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | PositionsJob | ProbeJob | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -180,6 +212,13 @@ export interface PositionsDoneMessage {
   result: PositionTrades;
 }
 
+/** The advisor's job, answered (`runProbe`). */
+export interface ProbeDoneMessage {
+  kind: 'probe';
+  id: JobId;
+  result: ProbeAnswer;
+}
+
 export type CalcResponseMessage =
   | StackDoneMessage
   | SearchProgressMessage
@@ -188,6 +227,7 @@ export type CalcResponseMessage =
   | ResizeDoneMessage
   | RaiseDoneMessage
   | PositionsDoneMessage
+  | ProbeDoneMessage
   | CancelledMessage
   | ErrorMessage;
 
@@ -230,6 +270,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
     case 'resize':
     case 'raise':
     case 'positions':
+    case 'probe':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -249,6 +290,7 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'search':
     case 'plan':
     case 'positions':
+    case 'probe':
       return isRecord(value.result);
     // The two answers that may be nothing: an army with no troop type to field over gets no march at all,
     // and a raise with no stack it may move gets no better counts than the ones already on screen.

@@ -203,11 +203,12 @@ describe('createCalcClient', () => {
         ['stack', client.stack(smallRequest())],
         ['search', client.search({} as never)],
         ['plan', client.plan({ request: smallRequest() })],
+        ['probe', client.probe({ plan: { request: smallRequest() } })],
       ];
       for (const [kind, job] of jobs) {
         await expect(withDeadline(job, kind)).resolves.toBeDefined();
       }
-      expect(seen).toEqual(['stack', 'search', 'plan']);
+      expect(seen).toEqual(['stack', 'search', 'plan', 'probe']);
       client.dispose();
     } finally {
       delete globals.Worker;

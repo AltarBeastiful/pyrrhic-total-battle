@@ -9,15 +9,21 @@ import {
   searchPriority,
   simulateBattle,
   sizeStacks,
+  withMethod,
 } from '@/engine';
+import { readProbe } from '@/engine/advisor';
+import type { ShownMarch } from '@/engine/advisor';
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, SearchResult, StackRequest } from '@/engine/types';
 import { exhaustivePools } from '@/ui/sections/march/exact';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
+import { hiredLost } from '@/ui/sections/march/hired';
+import { applyCounts } from '@/ui/sections/march/manual';
 import { liftedCounts, OFFERED_POSITIONS, positionTrades } from '@/ui/sections/march/positions';
 import type { PositionTrades } from '@/ui/sections/march/positions';
+import { countsOf, troopFloor } from '@/ui/sections/march/raise';
 
-import type { PositionsInput, ResizeInput, StackOutcome } from './protocol';
+import type { PositionsInput, ProbeAnswer, ProbeInput, ResizeInput, StackOutcome } from './protocol';
 
 /** Message shown when a search is asked for before S-40 wires the search engine in. */
 
@@ -83,4 +89,87 @@ export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
  */
 export function runPositions(input: PositionsInput): PositionTrades {
   return positionTrades(input.request, planMarch(input.request, input.counts).result, OFFERED_POSITIONS);
+}
+
+/**
+ * **The position the advisor reads every march at** (owner, 2026-10-07: the advisor's baseline is *Tight, as
+ * shown*) — the one the March opens on (`DEFAULT_RAISE`), priced by the positions step's own `positionTrades`.
+ * Alone, because `OFFERED_POSITIONS` also prices `tightOld`, the comparison segment no reading here looks at,
+ * and a Tight row is the same priced alone or beside it (the kernel's memo shares battles, not answers).
+ */
+const SHOWN = ['tight'] as const;
+
+/**
+ * **A stop's counts, as the March shows them**: raised by Tight where the march has troops to shelter a hired
+ * stack by — the March offers no raise otherwise (`troopFloor`, the condition `runGenerate` primes the opening
+ * stop on) — and battled through the March's own replay (`applyCounts`, which `positionTrades` reads its rows
+ * with), so every figure is the one the pane would print. `request` is the March's: `withMethod(…, 'elite')`.
+ */
+function shownMarch(request: StackRequest, counts: Record<string, number>): ShownMarch {
+  const base = planMarch(request, counts).result;
+  const raised =
+    troopFloor(base) === null
+      ? countsOf(base)
+      : (positionTrades(request, base, SHOWN).rows[0]?.counts ?? countsOf(base));
+  const { result, summary } = applyCounts(request, base, raised);
+  return {
+    counts: raised,
+    bill: {
+      damage: summary.minDamage,
+      silver: summary.recovery.silver,
+      gold: summary.recovery.gold,
+      hired: hiredLost(result.stacks),
+      dragonCoins: summary.recovery.dragonCoins,
+      seconds: summary.recovery.seconds,
+    },
+    deaths: result.stacks.map((stack) => stack.unitId),
+  };
+}
+
+/** A march's identity within one job: its fielded counts, sorted by id (`planCampaign`'s own `countsKey`). */
+function countsKey(counts: Record<string, number>): string {
+  return Object.keys(counts)
+    .filter((id) => (counts[id] ?? 0) > 0)
+    .sort()
+    .map((id) => `${id}:${String(counts[id])}`)
+    .join(',');
+}
+
+/**
+ * **One job of the progression advisor** (W17 C3, `docs/plans/progression-advisor.md` §4), in one round trip:
+ * the campaign planned in full — with no `budgetMs` in `input.plan`, so its answer is the same on every device
+ * (W17 A0) — and every stop of its bar read as the March shows it (`shownMarch`). Given the baseline's bar, the
+ * job also reads its probe against it, stop by stop (`readProbe`): the re-planned stop is the stop of the same
+ * kind on this bar, the re-priced one the baseline stop's counts under this request. The baseline is the same
+ * job with nothing to read against.
+ *
+ * **A march is read once a job**: a re-priced stop whose counts the re-plan lands on again is the same march
+ * under the same request, and one Tight pricing costs seconds on a wide box (12.7 s a stop on the
+ * 20 000-dominance camp, 2026-10-08).
+ */
+export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
+  // A job cancelled while it waited or while it planned is not read: the worker answers `cancelled` whatever
+  // comes back, and a plan stopped before its first candidate has nothing to read (it throws).
+  if (context.cancelled()) return { stops: [], row: null };
+  const plan = planCampaign({ ...input.plan, shouldStop: context.cancelled });
+  if (context.cancelled()) return { stops: [], row: null };
+  const request = withMethod(input.plan.request, 'elite');
+  const read = new Map<string, ShownMarch>();
+  const show = (counts: Record<string, number>): ShownMarch => {
+    const key = countsKey(counts);
+    const known = read.get(key);
+    if (known !== undefined) return known;
+    const march = shownMarch(request, counts);
+    read.set(key, march);
+    return march;
+  };
+  const stops = plan.alternatives.map((row) => ({
+    pick: row.pick,
+    counts: row.counts,
+    march: show(row.counts),
+  }));
+  const { against } = input;
+  if (against === undefined) return { stops, row: null };
+  const row = readProbe(against.probe, against.baseline, stops, (stop) => show(stop.counts), against.rates);
+  return { stops, row };
 }

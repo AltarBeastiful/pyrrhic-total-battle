@@ -1,0 +1,208 @@
+/**
+ * W17 C3 — **the advisor's job and pass** (`runProbe` in `jobs.ts`, `runAdvisor` in `advisor.ts`), on the kernel:
+ * the baseline job reads every stop of its plan as the positions step prices it (Tight); a probe job reads its
+ * probe against that baseline in one round trip; the pass runs the baseline first and every probe after it on
+ * the pool, with no clock in any job, and ranks what it read.
+ */
+import { describe, expect, test } from 'vitest';
+
+import { CAMPAIGN } from '@/config';
+import { getUnits } from '@/data';
+import { BONUS_KEYS, type BonusKey } from '@/data/types';
+import { emptyTotals, planCampaign, planMarch, withMethod } from '@/engine';
+import { headlineOf, probeInfo } from '@/engine/advisor';
+import type { CampaignInput } from '@/engine/plan';
+import { bonusProbe, housingProbe, type Probe } from '@/engine/probes';
+import type { StackRequest } from '@/engine/types';
+import { OFFERED_POSITIONS, positionTrades } from '@/ui/sections/march/positions';
+
+import { runAdvisor } from './advisor';
+import { createInlineClient, type CalcClient } from './client';
+import { runProbe, type JobContext } from './jobs';
+import { createCalcPool } from './pool';
+import type { ProbeInput } from './protocol';
+
+/** The planner's small army (`plan-fixes.test.ts`): four troop types and three hired soldiers with a stock. */
+function request(): StackRequest {
+  const all = getUnits();
+  const troops = all.filter((unit) => unit.pool === 'leadership' && unit.tier <= 3).slice(0, 4);
+  const mercs = all.filter((unit) => unit.pool === 'authority' && unit.health <= 20_000).slice(0, 3);
+  const caps: Record<string, number> = {};
+  for (const merc of mercs) caps[merc.id] = 30;
+  return {
+    units: [...troops, ...mercs],
+    caps,
+    housing: { leadership: 4_000, authority: 2_000, dominance: 0 },
+    totals: emptyTotals(),
+    options: { method: 'elite', strictMercsAboveMonsters: false, monstersLast: false, roundTo10: false },
+    enemy: { melee: 1, ranged: 1, mounted: 1, flying: 1 },
+    activeEvents: [],
+    recovery: { templeLevel: 0, trainingCostReduction: {}, trainingSpeed: {}, plan: { mode: 'retrain' } },
+  };
+}
+
+/** What the app plans under (`buildPlanRequest`), with no clock. */
+function campaign(): CampaignInput {
+  return {
+    request: request(),
+    marchTarget: CAMPAIGN.marches,
+    ...CAMPAIGN.planFixes,
+    putBack: CAMPAIGN.putBack,
+  };
+}
+
+/** A bonus line no unit of the army reads: a probe on it changes nothing the engine looks at. */
+function inertKey(req: StackRequest): BonusKey {
+  const key = BONUS_KEYS.find((candidate) => req.units.every((unit) => !unit.keys.includes(candidate)));
+  if (key === undefined) throw new Error('every bonus line touches this army');
+  return key;
+}
+
+const RUNNING: JobContext = { onProgress: () => undefined, cancelled: () => false };
+const RATES = CAMPAIGN.markerRates;
+const TIMEOUT = 120_000;
+
+describe('runProbe: one job of the advisor', () => {
+  test(
+    'the baseline job reads every stop of its plan at the Tight the positions step prices',
+    () => {
+      const input = campaign();
+      const answer = runProbe({ plan: input }, RUNNING);
+      const plan = planCampaign(input);
+      expect(answer.row).toBeNull();
+      expect(answer.stops.map((stop) => stop.pick)).toEqual(plan.alternatives.map((row) => row.pick));
+      const shown = withMethod(input.request, 'elite');
+      plan.alternatives.forEach((row, index) => {
+        const stop = answer.stops[index];
+        const trades = positionTrades(shown, planMarch(shown, row.counts).result, OFFERED_POSITIONS);
+        const tight = trades.rows.find((priced) => priced.mode === 'tight');
+        expect(stop?.counts).toEqual(row.counts);
+        expect(stop?.march.counts).toEqual(tight?.counts);
+        expect(stop?.march.bill).toMatchObject({
+          damage: tight?.damage,
+          silver: tight?.silver,
+          gold: tight?.gold,
+          hired: tight?.mercLost,
+        });
+      });
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'a probe on a line the army never reads re-plans the same bar and gains nothing, with no flag',
+    () => {
+      const input = campaign();
+      const baseline = runProbe({ plan: input }, RUNNING).stops;
+      const probe = bonusProbe('health', inertKey(input.request));
+      const answer = runProbe(
+        {
+          plan: { ...input, request: probe.apply(input.request) },
+          against: { probe: probeInfo(probe), baseline, rates: RATES },
+        },
+        RUNNING,
+      );
+      expect(answer.stops).toEqual(baseline);
+      expect(answer.row?.stops).toHaveLength(baseline.length);
+      for (const advice of answer.row?.stops ?? []) {
+        expect(advice.repriced).toEqual(advice.current);
+        expect(advice.replanned).toEqual(advice.current);
+        expect(advice).toMatchObject({
+          gain: 0,
+          from: null,
+          clamped: false,
+          noise: false,
+          reorder: false,
+          worse: false,
+        });
+      }
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'a probe job reads every baseline stop, against its own march, and never as a loss',
+    () => {
+      const input = campaign();
+      const baseline = runProbe({ plan: input }, RUNNING).stops;
+      const probe = bonusProbe('strength', 'army');
+      const answer = runProbe(
+        {
+          plan: { ...input, request: probe.apply(input.request) },
+          against: { probe: probeInfo(probe), baseline, rates: RATES },
+        },
+        RUNNING,
+      );
+      const row = answer.row;
+      expect(row).toMatchObject({ id: 'strength:army', family: 'strength' });
+      expect(row?.stops.map((advice) => advice.pick)).toEqual(baseline.map((stop) => stop.pick));
+      row?.stops.forEach((advice, index) => {
+        expect(advice.current).toEqual(baseline[index]?.march);
+        expect(advice.gain).toBeGreaterThanOrEqual(0);
+      });
+      // A point of strength on every unit is worth something on the stop the advisor headlines.
+      expect(row && headlineOf(row)?.gain).toBeGreaterThan(0);
+      expect(structuredClone(answer)).toEqual(answer);
+    },
+    TIMEOUT,
+  );
+
+  test('a job cancelled before it ran reads nothing', () => {
+    expect(runProbe({ plan: campaign() }, { ...RUNNING, cancelled: () => true })).toEqual({
+      stops: [],
+      row: null,
+    });
+  });
+});
+
+describe('runAdvisor: the pass over the pool', () => {
+  test(
+    'the baseline first, then every probe on the pool, with no clock in any job, ranked and counted',
+    async () => {
+      const sent: ProbeInput[] = [];
+      // Inline clients that report a worker, so the pool really runs two lanes.
+      const lanes = (): CalcClient => {
+        const inline = createInlineClient();
+        return {
+          ...inline,
+          mode: 'worker',
+          probe: (input, signal) => {
+            sent.push(input);
+            return inline.probe(input, signal);
+          },
+        };
+      };
+      const pool = createCalcPool({ size: 2, createClient: lanes });
+      const input = campaign();
+      const probes: Probe[] = [
+        bonusProbe('health', inertKey(input.request)),
+        bonusProbe('strength', 'army'),
+        housingProbe('leadership'),
+      ];
+      const progress: [number, number][] = [];
+      const result = await runAdvisor({ ...input, budgetMs: 1 }, probes, pool, {
+        onProgress: (done, total) => progress.push([done, total]),
+      });
+      pool.dispose();
+
+      expect(result.cut).toEqual([]);
+      expect(result.failed).toEqual([]);
+      expect(result.baseline?.map((stop) => stop.pick)).toEqual(
+        planCampaign(input).alternatives.map((row) => row.pick),
+      );
+      expect(result.rows.map((row) => row.id).sort()).toEqual(probes.map((probe) => probe.id).sort());
+      const gains = result.rows.map((row) => headlineOf(row)?.gain ?? 0);
+      expect(gains).toEqual([...gains].sort((a, b) => b - a));
+      // One job for the baseline and one a probe, each counted once, out of the pass's whole.
+      expect(progress).toEqual([1, 2, 3, 4].map((done) => [done, 4]));
+      expect(sent).toHaveLength(4);
+      expect(sent[0]?.against).toBeUndefined();
+      for (const job of sent) {
+        expect(job.plan.budgetMs).toBeUndefined();
+        expect(job.plan.shouldStop).toBeUndefined();
+      }
+      for (const job of sent.slice(1)) expect(job.against?.baseline).toEqual(result.baseline);
+    },
+    TIMEOUT,
+  );
+});
