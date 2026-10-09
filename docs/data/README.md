@@ -97,6 +97,10 @@ A captain gives `level × perLevel + stars[star]` percent on one key, separately
 - `special` uses the same shape for a special-strength key, e.g. Hercules'
   `armyStrengthAgainstEpicMonsters`.
 - `note` carries a restriction the game states, e.g. "only on group marches".
+- `onlyOn` is that restriction in a form the app applies: the one kind of march (`solo`, `group` or `epic`)
+  the bonus counts on. Amanitore carries `"group"` and Hercules `"epic"`. Once a march names its type, a
+  captain whose `onlyOn` differs adds nothing to it; a march with no type counts every captain, as before
+  (W17 C5-0). A `note` that states a march restriction needs the matching `onlyOn` (`data.test.ts` checks it).
 - A captain the game has but whose numbers nobody has read yet is listed with **no** progression, so the
   picker still shows it. Filling one in is the easiest possible first contribution.
 

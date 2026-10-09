@@ -123,7 +123,7 @@ const SHAPES: Record<TableFile, (value: Json) => Json> = {
   'monsters.json': (value) => unit(value, MONSTER_KEYS),
   'mercenaries.json': (value) => unit(value, MERCENARY_KEYS),
   'captains.json': (value) => {
-    const out = order(value, ['id', 'name', 'health', 'strength', 'special', 'note']) as JsonObject;
+    const out = order(value, ['id', 'name', 'health', 'strength', 'special', 'onlyOn', 'note']) as JsonObject;
     for (const key of ['health', 'strength', 'special'] as const) {
       if (key in out) out[key] = order(out[key] as Json, ['key', 'perLevel', 'stars']);
     }

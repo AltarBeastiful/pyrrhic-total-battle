@@ -456,6 +456,16 @@ describe('parity with docs/research/totalstack-data', () => {
     }
   });
 
+  it('gives the two captains the game limits to one kind of march their condition (W17 C5-0)', () => {
+    const conditional = captains.filter((captain) => captain.onlyOn !== undefined);
+    expect(conditional.map((captain) => [captain.id, captain.onlyOn])).toEqual([
+      ['amanitore', 'group'],
+      ['hercules', 'epic'],
+    ]);
+    // Every note is one of those restrictions, so no captain states a condition the derivation misses.
+    expect(captains.filter((captain) => captain.note !== undefined)).toEqual(conditional);
+  });
+
   it('lists the captains that have no progression yet', () => {
     const known = new Set(Object.keys(research<Record<string, ResearchCaptain>>(researchCaptainsJson)));
     const empty = captains.filter((captain) => !captain.health && !captain.strength && !captain.special);

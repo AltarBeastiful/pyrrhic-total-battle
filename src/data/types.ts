@@ -134,12 +134,21 @@ export interface CaptainProgression {
   perLevel: number;
   stars: number[]; // 7 entries, index = star level 0..6
 }
+/**
+ * The kinds of march a bonus can be limited to (W17 C5-0): `solo` (one player's own march), `group`
+ * (group marches, reinforcements and raids: Amanitore) and `epic` (battles against epic monsters:
+ * Hercules).
+ */
+export const MARCH_TYPES = ['solo', 'group', 'epic'] as const;
+export type MarchType = (typeof MARCH_TYPES)[number];
 export interface CaptainRecord {
   id: string;
   name: string;
   health?: CaptainProgression;
   strength?: CaptainProgression;
   special?: { key: SpecialKey; perLevel: number; stars: number[] };
+  /** The one kind of march the bonus applies on, the restriction `note` states in the game's words. */
+  onlyOn?: MarchType;
   note?: string; // e.g. "applies only against epic monsters"
 }
 

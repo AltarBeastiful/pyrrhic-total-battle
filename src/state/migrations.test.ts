@@ -144,6 +144,42 @@ function v6Fixture(): Record<string, unknown> {
   return { ...fixture, schemaVersion: 6 };
 }
 
+/**
+ * The same account as written by a v7 build: the v6 fixture with its `upgrades` list, plus a saved
+ * march whose captured setup was written at v7 too. No setup names a march type, which v8 adds (W17
+ * C5-0).
+ */
+function v7Fixture(): Record<string, unknown> {
+  const fixture = v6Fixture();
+  const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+  profile.upgrades = [];
+  const [first] = profile.setups as Record<string, unknown>[];
+  profile.savedStacks = [
+    {
+      id: '55555555-5555-4555-8555-555555555555',
+      updatedAt: 1_757_000_000_000,
+      rev: 1,
+      deviceId: 'device-a',
+      name: 'Bear, saved',
+      createdAt: 1_757_000_000_000,
+      setup: structuredClone(first),
+      totals: { health: { army: 3 }, strength: {}, special: {} },
+      counts: [{ unitId: 'archer-1', count: 930 }],
+      summary: {
+        minDamage: 1,
+        maxDamage: 3,
+        avgDamage: 2,
+        damagePerSilver: 0,
+        damagePerGold: 0,
+        damagePerDragonCoin: 0,
+        recovery: { silver: 0, gold: 0, dragonCoins: 0, seconds: 0 },
+      },
+      dataVersion: 1,
+    },
+  ];
+  return { ...fixture, schemaVersion: 7 };
+}
+
 describe('readSchemaVersion', () => {
   it('reads an integer version and falls back to 0', () => {
     expect(readSchemaVersion({ schemaVersion: 3 })).toBe(3);
@@ -318,13 +354,19 @@ describe('migrate', () => {
     expect(migrated.setup.recoveryPlan).toEqual({ mode: 'selective' });
   });
 
+  it('v7 → v8 reaches inside an exported saved stack, whose captured setup named no march type', () => {
+    const raw = (v7Fixture().profiles as Record<string, unknown>[])[0]!.savedStacks as unknown[];
+    expect(migrateSavedStack(raw[0], 7).setup.marchType).toBe('unspecified');
+  });
+
   it('v6 → v7 gives every profile an empty list of typed upgrades, and moves nothing else', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const fixture = v6Fixture();
     const migrated = migrate(fixture);
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
-    expect(migrated.schemaVersion).toBe(7);
+    expect(migrations[6]?.(fixture).schemaVersion).toBe(7);
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
     expect(migrated.profiles[0]?.upgrades).toEqual([]);
     // The same document written at v7 with the empty list already there: the migration adds only that.
     const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
@@ -347,6 +389,58 @@ describe('migrate', () => {
     const empty = { ...upgrade, deltas: { health: {} } };
     const broken = { ...doc, profiles: [{ ...doc.profiles[0]!, upgrades: [empty] }] };
     expect(() => migrate(broken)).toThrow(/at least one bonus line/);
+  });
+
+  it('v7 → v8 names no march type on any setup, saved ones included, and moves nothing else', () => {
+    // W17 C5-0: a march that names no type counts every captain, which is what a v7 document did, so
+    // `'unspecified'` is the migration and every reading stays where it was.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fixture = v7Fixture();
+    const migrated = migrate(fixture);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+    expect(migrations[7]?.(fixture).schemaVersion).toBe(8);
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
+    const [profile] = migrated.profiles;
+    expect(profile?.setups.map((setup) => setup.marchType)).toEqual(['unspecified', 'unspecified']);
+    expect(profile?.savedStacks[0]?.setup.marchType).toBe('unspecified');
+
+    // The same document written at v8 with the type already there: the migration adds only that.
+    const raw = (fixture.profiles as Record<string, unknown>[])[0]!;
+    const named = (setup: unknown) => ({ ...(setup as Record<string, unknown>), marchType: 'unspecified' });
+    const asV8 = {
+      ...raw,
+      setups: (raw.setups as unknown[]).map(named),
+      savedStacks: (raw.savedStacks as Record<string, unknown>[]).map((stack) => ({
+        ...stack,
+        setup: named(stack.setup),
+      })),
+    };
+    expect(migrated).toEqual(migrate({ ...fixture, schemaVersion: 8, profiles: [asV8] }));
+  });
+
+  it('keeps the march type a march names through a load, and refuses one it does not know', () => {
+    const doc = migrate(v7Fixture());
+    const profile = doc.profiles[0]!;
+    const [first, second] = profile.setups;
+    if (first === undefined || second === undefined) throw new Error('the fixture has two setups');
+    const stored = {
+      ...doc,
+      profiles: [
+        {
+          ...profile,
+          setups: [
+            { ...first, marchType: 'epic' },
+            { ...second, marchType: 'group' },
+          ],
+        },
+      ],
+    };
+    const loaded = migrate(JSON.parse(JSON.stringify(stored)));
+    expect(loaded.profiles[0]?.setups.map((setup) => setup.marchType)).toEqual(['epic', 'group']);
+
+    const broken = { ...doc, profiles: [{ ...profile, setups: [{ ...first, marchType: 'raid' }] }] };
+    expect(() => migrate(broken)).toThrow();
   });
 
   it('round-trips a freshly created document', () => {
@@ -415,6 +509,13 @@ describe('migrateProfile', () => {
   it('gives a v6 profile an empty upgrade list on import', () => {
     const profile = (v6Fixture().profiles as Record<string, unknown>[])[0]!;
     expect(migrateProfile(profile, 6).upgrades).toEqual([]);
+  });
+
+  it('gives a v7 profile’s marches, saved ones included, no march type on import', () => {
+    const profile = (v7Fixture().profiles as Record<string, unknown>[])[0]!;
+    const migrated = migrateProfile(profile, 7);
+    expect(migrated.setups.map((setup) => setup.marchType)).toEqual(['unspecified', 'unspecified']);
+    expect(migrated.savedStacks[0]?.setup.marchType).toBe('unspecified');
   });
 
   it('drops a v2 profile’s pins on import', () => {

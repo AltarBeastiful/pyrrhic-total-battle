@@ -1055,6 +1055,8 @@ export interface CompareResult {
 const OURS_ONLY: Partial<Record<TableName, readonly string[]>> = {
   // Which event a mercenary belongs to is read from the game's event screen, not from TotalStack.
   'mercenaries.json': ['event'],
+  // The kind of march a captain is limited to restates its `note` for the derivation (W17 C5-0).
+  'captains.json': ['onlyOn'],
 };
 
 function flatten(value: Json | undefined, prefix: string, out: Map<string, Json>): void {

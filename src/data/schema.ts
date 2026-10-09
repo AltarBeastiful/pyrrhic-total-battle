@@ -15,6 +15,7 @@ import {
   BONUS_KEYS,
   CATEGORIES,
   GROUPS,
+  MARCH_TYPES,
   QUALITIES,
   RACES,
   SPECIAL_KEYS,
@@ -178,6 +179,7 @@ export const captainSchema = z.strictObject({
   health: progressionSchema.optional(),
   strength: progressionSchema.optional(),
   special: specialProgressionSchema.optional(),
+  onlyOn: z.enum(MARCH_TYPES).optional(),
   note: z.string().min(1).optional(),
 }) satisfies z.ZodType<Loose<CaptainRecord>>;
 

@@ -87,6 +87,26 @@ describe('parseImport', () => {
     expect(parsed.payload.upgrades).toEqual(profile.upgrades);
   });
 
+  it('carries the march type through a file, and reads a v7 file’s marches as naming none (W17 C5-0)', () => {
+    const profile = sampleProfile();
+    profile.setups = profile.setups.map((setup) => ({ ...setup, marchType: 'epic' }));
+    const parsed = parseImport(exportProfileFile(profile, 1, DATE).json);
+    if (parsed.kind !== 'profile') throw new Error('wrong kind');
+    expect(parsed.payload.setups.map((setup) => setup.marchType)).toEqual(['epic']);
+
+    const file = JSON.parse(exportProfileFile(sampleProfile(), 1, DATE).json);
+    for (const setup of file.payload.setups) delete setup.marchType;
+    const old = parseImport(JSON.stringify({ ...file, schemaVersion: 7 }));
+    if (old.kind !== 'profile') throw new Error('wrong kind');
+    expect(old.payload.setups.map((setup) => setup.marchType)).toEqual(['unspecified']);
+
+    const stack = JSON.parse(exportStackFile(sampleStack(), 1, DATE).json);
+    delete stack.payload.setup.marchType;
+    const oldStack = parseImport(JSON.stringify({ ...stack, schemaVersion: 7 }));
+    if (oldStack.kind !== 'stack') throw new Error('wrong kind');
+    expect(oldStack.payload.setup.marchType).toBe('unspecified');
+  });
+
   it('validates a stack file and previews it', () => {
     const parsed = parseImport(exportStackFile(sampleStack(), 1, DATE).json);
     if (parsed.kind !== 'stack') throw new Error('wrong kind');

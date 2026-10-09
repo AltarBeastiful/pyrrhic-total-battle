@@ -71,6 +71,9 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
       dragon: false,
       custom: [],
     },
+    // No type named: every captain counts and Amanitore's and Hercules' restrictions stay caveats,
+    // today's readings exactly. Applying them is the player's choice (W17 C5-0, an owner's trade).
+    marchType: 'unspecified',
     housing: defaultHousing(),
     enemy: defaultEnemyFormation(),
     options: {

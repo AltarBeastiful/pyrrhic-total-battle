@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { BONUS_KEYS, SPECIAL_KEYS } from '../data/types';
+import { captains as captainTable } from '../data';
+import { BONUS_KEYS, MARCH_TYPES, SPECIAL_KEYS } from '../data/types';
 import { CAMPAIGN } from '../config';
 import { aggregateBonuses } from '../engine/bonuses';
 import { defaultSetup, newProfile } from './defaults';
@@ -8,7 +9,9 @@ import {
   buildPlanRequest,
   buildStackRequest,
   buildUnits,
+  captainCounts,
   captainValue,
+  DEFAULT_TABLES,
   describeTotals,
   engineMethod,
   eventEnemyFormation,
@@ -101,6 +104,115 @@ describe('resolveSources — captains', () => {
   it('exposes the captain formula on its own', () => {
     expect(captainValue({ perLevel: 2, stars: [0, 140, 280] }, 10, 2)).toBe(300);
     expect(captainValue({ perLevel: 1, stars: [0] }, 20, 3)).toBe(20); // missing star row = 0
+  });
+});
+
+describe('resolveSources — the march type and the captains it limits (W17 C5-0)', () => {
+  /** Amanitore (group marches only), Hercules (epic monsters only) and Aydae (no restriction), all on. */
+  function threeCaptains(): { profile: Profile; setup: BattleSetup } {
+    const { profile, setup } = fixture();
+    profile.sources.captains = [
+      { id: 'c1', captainId: 'amanitore', level: 10, star: 1 },
+      { id: 'c2', captainId: 'hercules', level: 10, star: 1 },
+      { id: 'c3', captainId: 'aydae', level: 20, star: 0 },
+    ];
+    setup.active.captains = ['c1', 'c2', 'c3'];
+    return { profile, setup };
+  }
+
+  /** The tables as they stood before C5-0: the same numbers, no captain limited to any march. */
+  const UNRESTRICTED = {
+    ...DEFAULT_TABLES,
+    captains: captainTable.map(({ onlyOn: _onlyOn, ...record }) => record),
+  };
+
+  it('names no type on a new march, and then counts every captain exactly as before', () => {
+    const { profile, setup } = threeCaptains();
+    expect(setup.marchType).toBe('unspecified');
+
+    const sources = resolveSources(profile, setup);
+    expect(sources.filter((source) => source.kind === 'captain').map((source) => source.id)).toEqual([
+      'captain:amanitore',
+      'captain:hercules',
+      'captain:aydae',
+    ]);
+    expect(sources).toEqual(resolveSources(profile, setup, UNRESTRICTED));
+    expect(buildPlanRequest(profile, setup)).toEqual(buildPlanRequest(profile, setup, UNRESTRICTED));
+    const totals = aggregateBonuses(sources);
+    expect(totals.strength.army).toBe(30); // Amanitore 10 × 1.5 + 15
+    expect(totals.special.armyStrengthAgainstEpicMonsters).toBe(50); // Hercules 10 × 2 + 30
+    expect(totals.strength.guardsmen).toBe(20); // Aydae 20 × 1
+
+    // Both restrictions stay what they were: text for the player, in the game's own words.
+    expect(sourceCaveats(profile, setup)).toEqual([
+      'Amanitore: These bonuses only apply on group marches, in reinforcements, and in raids.',
+      'Hercules: These bonuses only apply on battles against epic monsters.',
+    ]);
+  });
+
+  it.each([
+    ['solo', ['captain:aydae']],
+    ['group', ['captain:amanitore', 'captain:aydae']],
+    ['epic', ['captain:hercules', 'captain:aydae']],
+  ] as const)('on a %s march counts only the captains the game grants there', (marchType, counted) => {
+    const { profile, setup } = threeCaptains();
+    setup.marchType = marchType;
+
+    const sources = resolveSources(profile, setup);
+    expect(sources.filter((source) => source.kind === 'captain').map((source) => source.id)).toEqual(counted);
+    const totals = aggregateBonuses(sources);
+    expect(totals.strength.army).toBe(marchType === 'group' ? 30 : 0);
+    expect(totals.health.army).toBe(marchType === 'group' ? 30 : 0);
+    expect(totals.special.armyStrengthAgainstEpicMonsters).toBe(marchType === 'epic' ? 50 : 0);
+    expect(totals.strength.guardsmen).toBe(20); // a captain with no restriction counts on every march
+
+    // What reaches the engine is the same derivation: the plan request carries these totals.
+    expect(buildPlanRequest(profile, setup).request.totals).toEqual(totals);
+  });
+
+  it('says which captain a typed march leaves out, and nothing for a restriction it meets', () => {
+    const { profile, setup } = threeCaptains();
+    const caveats = (marchType: BattleSetup['marchType']) =>
+      sourceCaveats(profile, { ...setup, marchType }).filter((caveat) => !caveat.startsWith('Aydae'));
+    expect(caveats('solo')).toEqual([
+      'Amanitore is not counted on a solo march. These bonuses only apply on group marches, in reinforcements, and in raids.',
+      'Hercules is not counted on a solo march. These bonuses only apply on battles against epic monsters.',
+    ]);
+    expect(caveats('group')).toEqual([
+      'Hercules is not counted on a group march. These bonuses only apply on battles against epic monsters.',
+    ]);
+    expect(caveats('epic')).toEqual([
+      'Amanitore is not counted on a march against epic monsters. These bonuses only apply on group marches, in reinforcements, and in raids.',
+    ]);
+  });
+
+  it('moves nothing for an army that marches no restricted captain, whatever the type', () => {
+    const { profile, setup } = fixture();
+    profile.sources.captains = [
+      { id: 'c1', captainId: 'aydae', level: 50, star: 3 },
+      { id: 'c2', captainId: 'skadi', level: 10, star: 2 },
+      // Owned but not marching: a restriction on a captain who stays home changes nothing.
+      { id: 'c3', captainId: 'amanitore', level: 30, star: 4 },
+    ];
+    setup.active.captains = ['c1', 'c2'];
+    const unspecified = buildPlanRequest(profile, setup);
+    for (const marchType of MARCH_TYPES) {
+      expect(buildPlanRequest(profile, { ...setup, marchType })).toEqual(unspecified);
+      expect(sourceCaveats(profile, { ...setup, marchType })).toEqual(sourceCaveats(profile, setup));
+    }
+  });
+
+  it('decides each captain by its own restriction, and an unknown captain counts as before', () => {
+    const amanitore = captainTable.find((record) => record.id === 'amanitore');
+    const hercules = captainTable.find((record) => record.id === 'hercules');
+    const aydae = captainTable.find((record) => record.id === 'aydae');
+    expect([amanitore?.onlyOn, hercules?.onlyOn, aydae?.onlyOn]).toEqual(['group', 'epic', undefined]);
+    for (const marchType of ['unspecified', ...MARCH_TYPES] as const) {
+      expect(captainCounts(amanitore, marchType)).toBe(marchType === 'unspecified' || marchType === 'group');
+      expect(captainCounts(hercules, marchType)).toBe(marchType === 'unspecified' || marchType === 'epic');
+      expect(captainCounts(aydae, marchType)).toBe(true);
+      expect(captainCounts(undefined, marchType)).toBe(true);
+    }
   });
 });
 

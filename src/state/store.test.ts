@@ -141,6 +141,22 @@ describe('sync metadata', () => {
     expect(setupAfter.housing.leadership).toBe(500);
     expect(activeProfile(store).rev).toBe(before.rev + 1);
   });
+
+  it('choosing a march type stamps the march itself, and no profile section (W17 C5-0)', () => {
+    const store = makeStore();
+    const setupBefore = selectActiveSetup(store.getState())!;
+    expect(setupBefore.marchType).toBe('unspecified');
+    vi.advanceTimersByTime(1_000);
+
+    store.getState().updateActiveSetup({ marchType: 'group' });
+
+    const setupAfter = selectActiveSetup(store.getState())!;
+    expect(setupAfter.marchType).toBe('group');
+    expect(setupAfter.rev).toBe(setupBefore.rev + 1);
+    expect(setupAfter.updatedAt).toBeGreaterThan(setupBefore.updatedAt);
+    // A march is its own sync record, merged by id (`account/merge.ts`), not a section of the profile.
+    expect(activeProfile(store).sectionUpdatedAt).toBeUndefined();
+  });
 });
 
 describe('setup actions', () => {
@@ -315,6 +331,20 @@ describe('persistence', () => {
     const reloaded = makeStore();
     const disposeReloaded = initPersistence(adapter, reloaded);
     expect(activeProfile(reloaded).upgrades).toEqual([upgrade]);
+    disposeReloaded();
+  });
+
+  it('a march type survives a reload (W17 C5-0)', () => {
+    const adapter = createMemoryAdapter();
+    const store = makeStore();
+    const dispose = persist(store, adapter);
+    store.getState().updateActiveSetup({ marchType: 'epic' });
+    vi.advanceTimersByTime(PERSIST_DEBOUNCE_MS);
+    dispose();
+
+    const reloaded = makeStore();
+    const disposeReloaded = initPersistence(adapter, reloaded);
+    expect(selectActiveSetup(reloaded.getState())?.marchType).toBe('epic');
     disposeReloaded();
   });
 });

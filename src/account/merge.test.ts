@@ -203,3 +203,46 @@ test('upgrades typed on one device and troops changed on the other both survive;
     expect(profile?.sectionUpdatedAt).toEqual({ upgrades: t + 20, troops: t + 10, sources: t + 20 });
   }
 });
+
+test('a march type chosen on one device and captains levelled on the other both survive (W17 C5-0)', () => {
+  // The type belongs to the march (`BattleSetup.marchType`), which carries its own sync stamp and is
+  // merged record by record; the captains' levels are the profile's `sources`, a section of its own.
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  const [march] = base?.setups ?? [];
+  if (!base || !march) throw new Error('no profile');
+  const t = base.updatedAt;
+  const captain = { id: 'c1', captainId: 'hercules', level: 10, star: 1 };
+  const onPhone = edit(
+    base,
+    { setups: [{ ...march, marchType: 'epic', updatedAt: t + 10, rev: march.rev + 1 }] },
+    t + 10,
+  );
+  const onPc = edit(
+    base,
+    {
+      sources: { ...base.sources, captains: [captain] },
+      sectionUpdatedAt: { sources: t + 20 },
+    },
+    t + 20,
+  );
+
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),
+    mergeDocuments({ ...pc, profiles: [onPc] }, { ...phone, profiles: [onPhone] }),
+  ]) {
+    const [profile] = merged.profiles;
+    expect(profile?.setups.map((setup) => setup.marchType)).toEqual(['epic']); // the phone's choice…
+    expect(profile?.sources.captains).toEqual([captain]); // …and the PC's captain
+  }
+
+  // The same march given a type on both devices keeps the later choice.
+  const early = edit(base, { setups: [{ ...march, marchType: 'solo', updatedAt: t + 30 }] }, t + 30);
+  const late = edit(base, { setups: [{ ...march, marchType: 'group', updatedAt: t + 40 }] }, t + 40);
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [early] }, { ...pc, profiles: [late] }),
+    mergeDocuments({ ...pc, profiles: [late] }, { ...phone, profiles: [early] }),
+  ]) {
+    expect(merged.profiles[0]?.setups[0]?.marchType).toBe('group');
+  }
+});

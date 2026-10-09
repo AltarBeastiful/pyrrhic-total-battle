@@ -6,7 +6,8 @@ Validated by the owner 2026-10-07 (answers in §7; Tight baseline and the loss f
 C1's probes shipped (`src/engine/probes.ts`, 3575369); A0 and A shipped 2026-10-08 (S-150; speed-up in
 `tools/theorycraft/out/190-the-pool.md`); C3's reading in `src/engine/advisor.ts` and its pool job (`runProbe`
 in `src/worker/jobs.ts`, the pass `runAdvisor` in `src/worker/advisor.ts`) 2026-10-08. C3's tests and experiment 191
-(`tools/theorycraft/out/191-what-a-percent-is-worth.md`) 2026-10-08.** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
+(`tools/theorycraft/out/191-what-a-percent-is-worth.md`) 2026-10-08. C5-0's stored march type and the captain
+conditions behind it 2026-10-09 (applied only once a march names its type; see §4 C5).** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
 expanding the scope of search if it leads to better result; then start to produce recommendations for future
 marches: check which talent point where would improve the march […], or where the next modernization of army
 points could be spent, or other questions. […] helper for the player progression would be more interesting at
@@ -203,6 +204,16 @@ there is no march-type field to gate on. (`aloneOnly` belongs to a **hero**, Svy
 **C5-0** first: a march-type input (solo / group / epic monsters) and the derivation applying the conditions.
 Without it, the advisor would happily recommend Amanitore for solo marches. That is a change to today's readings
 for the accounts that have those captains → owner's trade.
+
+> **C5-0, state and derivation, 2026-10-09.** `BattleSetup.marchType` (`'unspecified'` | `solo` | `group` |
+> `epic`, schema v8, migration `7 → 8` on every setup and every saved march) and `onlyOn` on the two captains
+> in `captains.json` (Amanitore `group`, Hercules `epic`). `captainCounts` (`derive.ts`) drops a captain
+> limited to another kind of march from `resolveSources`, and its caveat says it is not counted; a restriction
+> the march meets prints nothing. **The default `'unspecified'` applies no condition**, so every reading stays
+> where it was (benchmark and goldens identical): the owner's trade is only taken by a player who picks a type.
+> The three types are exclusive, as listed here; whether a group march against an epic monster should count
+> both captains is the owner's to say. Svyatogor's `aloneOnly` (a hero) is not gated. The control on the setup
+> card is the next task.
 
 **Where it runs**: the worker only gets `CampaignInput` with totals already summed, and `derive.ts` imports the
 tables, the store schema and config. Each trio's totals are built on the **main thread** (`resolveSources` +

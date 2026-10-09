@@ -16,7 +16,10 @@
  * - VIP falls back to `sources.vipManual` whenever the table has no row for the level or the row is all
  *   zeroes (today `vip.json` is a placeholder: every level is 0).
  * - Conditional sources (Svyatogor "alone only", Amanitore "group marches only", Hercules "epic monsters
- *   only") are always applied; the condition is surfaced as text by `sourceCaveats()` for the UI to show.
+ *   only") are applied whenever they are switched on; the condition is surfaced as text by
+ *   `sourceCaveats()` for the UI to show. The one exception is a march that names its type (W17 C5-0):
+ *   a captain limited to another kind of march (`onlyOn`) then adds nothing (`captainCounts`). A march
+ *   with no type, the default, counts every captain as before.
  */
 import {
   artifacts as artifactTable,
@@ -61,7 +64,7 @@ import type {
   StackingOptions,
   StackRequest,
 } from '../engine/types';
-import type { BattleSetup, Profile, ProfileTroops, SetupMethod } from './schema';
+import type { BattleSetup, Profile, ProfileTroops, SetupMarchType, SetupMethod } from './schema';
 
 // ---- Tables ---------------------------------------------------------------------------------------
 /** The game tables the derive layer reads. Injectable so tests can pin values without touching `src/data`. */
@@ -184,6 +187,22 @@ const captainLabel = (
   entry: { captainId: string; level: number; star: number },
 ): string => `${record?.name ?? entry.captainId} L${entry.level} ★${entry.star}`;
 
+/**
+ * Does this captain's bonus count on this kind of march? Always, when the march names no type (the
+ * default, today's readings) or the captain has no restriction; otherwise only on the one kind its
+ * `onlyOn` names: Amanitore on a group march, Hercules against epic monsters (W17 C5-0).
+ */
+export function captainCounts(record: CaptainRecord | undefined, marchType: SetupMarchType): boolean {
+  return marchType === 'unspecified' || record?.onlyOn === undefined || record.onlyOn === marchType;
+}
+
+/** The kind of march, as the caveat names it. */
+const MARCH_TYPE_PHRASES: Record<Exclude<SetupMarchType, 'unspecified'>, string> = {
+  solo: 'a solo march',
+  group: 'a group march',
+  epic: 'a march against epic monsters',
+};
+
 // ---- Artifacts -------------------------------------------------------------------------------------
 /** Prefix of a random-bonus option id → the bonus key it feeds (`guardsmanStrength` → `guardsmen`). */
 const RANDOM_OPTION_KEYS: Record<string, BonusKey> = {
@@ -281,9 +300,10 @@ export function resolveSources(
     out.push(toSource(nextId(`permanent:${entry.id}`), entry.name || entry.id, 'permanent', value));
   }
 
-  // Captains (up to 3 marching).
+  // Captains (up to 3 marching); one limited to another kind of march than this one adds nothing.
   for (const entry of activeEntries(sources.captains, active.captains)) {
     const record = byId(tables.captains, entry.captainId);
+    if (!captainCounts(record, setup.marchType)) continue;
     const value = draft();
     if (record?.health)
       addKey(value.health, record.health.key, captainValue(record.health, entry.level, entry.star));
@@ -414,8 +434,10 @@ export function resolveSources(
 
 // ---- Caveats ----------------------------------------------------------------------------------------
 /**
- * Human-readable conditions attached to the active sources. The bonuses themselves are always applied —
- * the game only grants them in some situations, and only the player knows which march this is.
+ * Human-readable conditions attached to the active sources. The bonuses themselves are applied — the
+ * game only grants them in some situations, and only the player knows which march this is. A march that
+ * names its type has said so, and a captain restricted to another kind is not counted (`captainCounts`):
+ * its line says that instead, and a restriction the march meets needs no line at all.
  */
 export function sourceCaveats(
   profile: Profile,
@@ -427,7 +449,13 @@ export function sourceCaveats(
 
   for (const entry of activeEntries(sources.captains, setup.active.captains)) {
     const record = byId(tables.captains, entry.captainId);
-    if (record?.note) notes.push(`${record.name}: ${record.note}`);
+    if (!record?.note) continue;
+    const { marchType } = setup;
+    if (marchType === 'unspecified' || record.onlyOn === undefined) {
+      notes.push(`${record.name}: ${record.note}`);
+    } else if (!captainCounts(record, marchType)) {
+      notes.push(`${record.name} is not counted on ${MARCH_TYPE_PHRASES[marchType]}. ${record.note}`);
+    }
   }
 
   for (const entry of activeEntries(sources.artifacts, setup.active.artifacts)) {

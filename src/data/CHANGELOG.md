@@ -6,6 +6,15 @@ a renamed or removed `id` must be called out explicitly.
 
 How to read a line: **what changed** — how it was verified.
 
+## v1, amended 2026-10-09 (no bump)
+
+- **Captains** — Amanitore carries `"onlyOn": "group"` and Hercules `"onlyOn": "epic"`: the restriction
+  their `note` already stated, in a form the derivation applies once a march names its type (W17 C5-0).
+  No number and no id changed, so `dataVersion` stays 1, on purpose against the "any change bumps" rule of
+  `docs/data/README.md`: a bump makes every older share link say its values may have changed, and none
+  did. The owner decides whether it should be bumped anyway. Verified against the two notes; `data.test.ts` checks that
+  every note is one of these restrictions.
+
 ## v1 — 2026-09-12
 
 First set of tables (S-02). Reshaped from the research capture in `docs/research/totalstack-data/`, which

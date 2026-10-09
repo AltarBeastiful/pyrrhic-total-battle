@@ -17,13 +17,13 @@
  */
 import { z } from 'zod';
 
-import { BONUS_KEYS, CATEGORIES, GROUPS, QUALITIES, RACES, SPECIAL_KEYS } from '../data/types';
+import { BONUS_KEYS, CATEGORIES, GROUPS, MARCH_TYPES, QUALITIES, RACES, SPECIAL_KEYS } from '../data/types';
 import type { BonusMap, Category, SpecialMap } from '../data/types';
 import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -281,9 +281,19 @@ export const activeSourcesSchema = z.object({
 });
 export type ActiveSources = z.infer<typeof activeSourcesSchema>;
 
+/**
+ * What kind of march this is (schema v8, W17 C5-0), for the captains the game limits to one kind
+ * (`onlyOn` in `captains.json`: Amanitore on group marches, Hercules against epic monsters).
+ * `'unspecified'` is the default and changes nothing: every captain switched on counts and each
+ * restriction is only a caveat, exactly as before the field existed. Naming a type applies them.
+ */
+export const SETUP_MARCH_TYPES = ['unspecified', ...MARCH_TYPES] as const;
+export type SetupMarchType = (typeof SETUP_MARCH_TYPES)[number];
+
 export const battleSetupSchema = syncMetaSchema.extend({
   name: z.string(),
   active: activeSourcesSchema,
+  marchType: z.enum(SETUP_MARCH_TYPES),
   housing: housingSchema,
   enemy: enemyFormationSchema,
   options: stackingOptionsSchema,

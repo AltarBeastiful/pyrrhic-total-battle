@@ -96,6 +96,8 @@ field as `path | ours | theirs`.
   follows the reference when the same chunk assigns it (that is how `heart-of-the-forest` is compared in
   full); otherwise the record is listed under "Not comparable" and its other fields are still compared.
 - `mercenaries.json` → `event`: which event a mercenary belongs to is read from the game, not from them.
+- `captains.json` → `onlyOn`: the kind of march a captain is limited to, our structured copy of its `note`
+  for the derivation (W17 C5-0); the bundle only has the sentence.
 
 ## Tests
 

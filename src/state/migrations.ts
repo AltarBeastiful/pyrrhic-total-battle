@@ -163,6 +163,29 @@ export function addUpgradeList(profile: Record<string, unknown>): Record<string,
   return Array.isArray(profile.upgrades) ? profile : { ...profile, upgrades: [] };
 }
 
+/**
+ * `7 → 8` for one profile (W17 C5-0): a march can name its type, so the captains the game limits to
+ * one kind of march (Amanitore, Hercules) can be applied as the game applies them. A document written
+ * before named none, and `'unspecified'` is what it meant: every captain counts, as it did. Every setup,
+ * and the whole setup inside every saved stack.
+ */
+export function addMarchType(profile: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...profile };
+  if (Array.isArray(out.setups)) out.setups = out.setups.map(withMarchType);
+  if (Array.isArray(out.savedStacks)) {
+    out.savedStacks = out.savedStacks.map((stack) =>
+      isPlainObject(stack) ? { ...stack, setup: withMarchType(stack.setup) } : stack,
+    );
+  }
+  return out;
+}
+
+/** One setup: the type it never named, unless it already carries one. */
+function withMarchType(setup: unknown): unknown {
+  if (!isPlainObject(setup) || typeof setup.marchType === 'string') return setup;
+  return { ...setup, marchType: 'unspecified' };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -177,6 +200,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `4 → 5`: the unexplained remainder is dropped, both what was typed and whether it counted.
  * `5 → 6`: a selective recovery is chosen in families, so the count of top types is dropped.
  * `6 → 7`: every profile gains an empty list of user-entered upgrades (W17 C2).
+ * `7 → 8`: every setup gains an unspecified march type, so no captain restriction applies (W17 C5-0).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -186,6 +210,7 @@ export const migrations: MigrationTable = {
   4: (doc) => ({ ...doc, schemaVersion: 5, profiles: migrateProfiles(doc, dropUnexplainedRemainder) }),
   5: (doc) => ({ ...doc, schemaVersion: 6, profiles: migrateProfiles(doc, dropSelectiveTop) }),
   6: (doc) => ({ ...doc, schemaVersion: 7, profiles: migrateProfiles(doc, addUpgradeList) }),
+  7: (doc) => ({ ...doc, schemaVersion: 8, profiles: migrateProfiles(doc, addMarchType) }),
 };
 
 /**
@@ -204,10 +229,11 @@ export const profileMigrations: MigrationTable = {
   4: dropUnexplainedRemainder,
   5: dropSelectiveTop,
   6: addUpgradeList,
+  7: addMarchType,
 };
 /**
- * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5` and `5 → 6` reach inside it: the same
- * edits as a profile's, applied to `setup` rather than to every entry of `setups`.
+ * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
+ * same edits as a profile's, applied to `setup` rather than to every entry of `setups`.
  */
 const migrateSavedStackSetup: Migration = (doc) => {
   const setup = doc.setup;
@@ -221,6 +247,7 @@ export const savedStackMigrations: MigrationTable = {
   4: (doc) => ({ ...doc, setup: withoutRemainderFlag(doc.setup) }),
   5: (doc) => ({ ...doc, setup: withoutSelectiveTop(doc.setup) }),
   6: identity,
+  7: (doc) => ({ ...doc, setup: withMarchType(doc.setup) }),
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

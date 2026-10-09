@@ -118,7 +118,9 @@ export function restoreDefaults<T>(stripped: unknown, defaults: T): T {
  *
  * Only the *setup* template is versioned. v5 drops `sources.unknown` without changing a default: a
  * link that stripped it restores nothing, and one that carried a figure has it dropped by
- * `dropUnexplainedRemainder`, which is the point of removing it.
+ * `dropUnexplainedRemainder`, which is the point of removing it. v8 adds `marchType` (W17 C5-0) the way
+ * v2 added its fields: its default, `'unspecified'`, is what an older link meant by not having one, so
+ * it restores against today's template, and a march that names no type sends nothing extra.
  */
 function packSetup(setup: BattleSetup): unknown {
   return stripDefaults(setup, SHARE_SETUP_TEMPLATE) ?? {};

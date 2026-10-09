@@ -370,6 +370,61 @@ describe('a link written before v5', () => {
   });
 });
 
+describe('the march type (schema v8, W17 C5-0)', () => {
+  it('travels in battle and profile links once named, and adds nothing to a link while it is not', async () => {
+    const { setup, counts } = battleFixture();
+    const epic: BattleSetup = { ...setup, marchType: 'epic' };
+    const battle = await decodeShare(await buildBattleLink(epic, counts));
+    if (battle.kind !== 'battle') throw new Error('wrong kind');
+    expect(battle.setup).toEqual(epic);
+
+    const profile = realisticProfile();
+    profile.setups = profile.setups.map((one, index) => (index === 0 ? { ...one, marchType: 'group' } : one));
+    const shared = await decodeShare(await buildProfileLink(profile));
+    if (shared.kind !== 'profile') throw new Error('wrong kind');
+    expect(shared.profile.setups.map((one) => one.marchType)).toEqual(['group', 'unspecified']);
+
+    // A march that names no type sends exactly the link it sent before the field existed.
+    const { marchType: _marchType, ...unnamed } = setup;
+    expect(await buildBattleLink(setup, counts)).toBe(
+      await buildBattleLink(unnamed as unknown as BattleSetup, counts),
+    );
+  });
+
+  it('reads a v7 link, written before marches had a type, as naming none', async () => {
+    const { setup, counts } = battleFixture();
+    const { marchType: _marchType, ...v7 } = setup;
+    const battle = await decodeShare(
+      await encodeShare({
+        kind: 'battle',
+        schemaVersion: 7,
+        dataVersion: CURRENT_DATA_VERSION,
+        setup: v7 as unknown as BattleSetup,
+        counts,
+        summary: null,
+      }),
+    );
+    if (battle.kind !== 'battle') throw new Error('wrong kind');
+    expect(battle.setup.marchType).toBe('unspecified');
+
+    const profile = realisticProfile();
+    const old = await decodeShare(
+      await encodeShare({
+        kind: 'profile',
+        schemaVersion: 7,
+        dataVersion: CURRENT_DATA_VERSION,
+        profile: {
+          ...profile,
+          setups: profile.setups.map(({ marchType: _type, ...one }) => one),
+        } as unknown as Profile,
+      }),
+    );
+    if (old.kind !== 'profile') throw new Error('wrong kind');
+    expect(old.profile.setups.map((one) => one.marchType)).toEqual(['unspecified', 'unspecified']);
+    expect(old.profile.setups).toEqual(profile.setups);
+  });
+});
+
 describe('malformed links', () => {
   it('rejects an empty payload', async () => {
     await expect(decodeShare('')).rejects.toThrow(/empty/);
