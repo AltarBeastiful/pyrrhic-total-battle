@@ -4,7 +4,8 @@ This phase reviews every idea in `todos.md` and decides, with evidence from the 
 
 ## Tasks
 
-- [ ] Read `todos.md` in full, `docs/PLAN.md` (the story table), `docs/design-rules.md`, `docs/plans/*.md` and `docs/research/` filenames. Produce an inventory file `docs/backlog/triage/00-inventory.md` with front matter (`type: analysis`, `title`, `created`, `tags: [backlog, triage]`, `related: ['[[Progression-Advisor-Plan]]']`) listing every idea as an id `T-01`, `T-02`... in the order of `todos.md`, with the original wording quoted. Split compound bullets (for instance the Equipment revamp sub-bullets, the raise-positions reference with its sample marches) into separate ids where they are separate asks.
+- [x] Read `todos.md` in full, `docs/PLAN.md` (the story table), `docs/design-rules.md`, `docs/plans/*.md` and `docs/research/` filenames. Produce an inventory file `docs/backlog/triage/00-inventory.md` with front matter (`type: analysis`, `title`, `created`, `tags: [backlog, triage]`, `related: ['[[Progression-Advisor-Plan]]']`) listing every idea as an id `T-01`, `T-02`... in the order of `todos.md`, with the original wording quoted. Split compound bullets (for instance the Equipment revamp sub-bullets, the raise-positions reference with its sample marches) into separate ids where they are separate asks.
+  - Done 2026-10-09: inventory written to `docs/backlog/triage/00-inventory.md` (35 ids, T-01 to T-35; compound bullets split).
 
 - [ ] For each inventoried idea, check the code and docs to classify it as `relevant`, `done` (cite the story or commit), `partly-done`, `obsolete` or `needs-owner` (the owner must decide), and note evidence. Specific checks to run rather than assume:
   - the sweet-spot hue on the plan table and whether the sweet spot is the best rated (search `src/ui/` and the plan's stop definitions)
