@@ -7,7 +7,7 @@ C1's probes shipped (`src/engine/probes.ts`, 3575369); A0 and A shipped 2026-10-
 `tools/theorycraft/out/190-the-pool.md`); C3's reading in `src/engine/advisor.ts` and its pool job (`runProbe`
 in `src/worker/jobs.ts`, the pass `runAdvisor` in `src/worker/advisor.ts`) 2026-10-08. C3's tests and experiment 191
 (`tools/theorycraft/out/191-what-a-percent-is-worth.md`) 2026-10-08. C5-0's stored march type and the captain
-conditions behind it 2026-10-09 (applied only once a march names its type; see §4 C5).** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
+conditions behind it 2026-10-09 (applied only once a march names its type; see §4 C5). Step D shipped 2026-10-09 (S-158): sweeps, experiment 194, the "other questions" card on its own button; B1 measured in experiment 195 (B2 not recommended as proposed).** Owner, 2026-10-03: *"the end goal is to produce way more calculations, first
 expanding the scope of search if it leads to better result; then start to produce recommendations for future
 marches: check which talent point where would improve the march […], or where the next modernization of army
 points could be spent, or other questions. […] helper for the player progression would be more interesting at
@@ -291,7 +291,9 @@ over the profile's current one. Cost must fit the 20 s with the other probes, or
 
 ## 5. Step D — later questions on the same machinery
 
-Each of these is a set of probes or a sweep over one. None is designed here:
+**Shipped 2026-10-09 (S-158)**: design `docs/plans/advisor-step-d.md`, sweeps in `src/engine/advisor-sweeps.ts`, measured in `tools/theorycraft/out/194-the-other-questions.md`, card section on its own button. B1 portfolio: `tools/theorycraft/out/195-the-portfolio.md`; B2/B3 are the owner's call.
+
+Each of these is a set of probes or a sweep over one:
 
 - **Trades the owner hinted at:** +X dominance → how much more damage, swept over X, which reaches the peak
   ("reaching a peak" = where the curve flattens).
