@@ -37,7 +37,7 @@ const jobs: Record<string, number>[] = [];
  */
 function priced(counts: Record<string, number>): PositionTrades {
   const mark = counts['unit-1'] ?? 0;
-  const own = { damage: mark, mercLost: 0, units: 0, silver: 0, gold: 0, hiredDamage: 0 };
+  const own = { damage: mark, mercLost: 0, units: 0, silver: 0, gold: 0, seconds: 0, hiredDamage: 0 };
   return {
     own,
     rows: (['tens', 'most', 'v2', 'safe', 'tight'] as const).map((mode) => ({

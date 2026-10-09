@@ -22,7 +22,7 @@ import { isAbortError } from '@/worker/client';
 
 import { openingPosition, pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 import type { MarchResize } from './runStore';
-import { primePositions } from './positionsSearch';
+import { primeBar, primePositions } from './positionsSearch';
 import { troopFloor } from './raise';
 
 /**
@@ -116,11 +116,26 @@ export async function runGenerate(): Promise<void> {
        */
       if (useRunStore.getState().raiseModes.authority !== 'off' && troopFloor(itsMarch.result) !== null) {
         try {
-          const trades = await client.positions(
-            { request: marchRequest, counts: chosen.counts },
-            controller.signal,
-          );
-          primePositions(planned, marchRequest, at, trades);
+          if (client.mode === 'worker') {
+            // The whole bar, before the march is drawn: nothing is left to land behind it.
+            const tables = await Promise.all(
+              planned.alternatives.map((row) =>
+                client
+                  .positions({ request: marchRequest, counts: row.counts }, controller.signal)
+                  .catch((error: unknown) => {
+                    if (isAbortError(error)) throw error;
+                    return null;
+                  }),
+              ),
+            );
+            primeBar(planned, marchRequest, tables);
+          } else {
+            const trades = await client.positions(
+              { request: marchRequest, counts: chosen.counts },
+              controller.signal,
+            );
+            primePositions(planned, marchRequest, at, trades);
+          }
         } catch (error) {
           if (isAbortError(error)) throw error;
         }

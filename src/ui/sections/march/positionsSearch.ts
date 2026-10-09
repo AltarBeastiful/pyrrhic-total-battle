@@ -238,6 +238,20 @@ export function primePositions(
 }
 
 /**
+ * **The whole bar, priced inside the Generate** (owner, 2026-10-09: *"I'd like tight to be computed
+ * synchronously during generate so we don't get changing numbers"*): every stop's table is filed before the
+ * March is drawn, so nothing lands behind it and no figure moves. A stop whose job failed is filed as "no table".
+ */
+export function primeBar(
+  plan: CampaignPlan,
+  request: StackRequest,
+  tables: readonly (PositionTrades | null)[],
+): void {
+  kill();
+  usePositionsStore.setState({ entry: { key: positionsKey(plan, request), stops: [...tables] } });
+}
+
+/**
  * **The key of the tables the March is to read** — `positionsKey` of the plan and the army on screen, or
  * `null` when there is no bar to price at all.
  *

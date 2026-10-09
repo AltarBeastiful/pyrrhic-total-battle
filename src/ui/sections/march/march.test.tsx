@@ -1873,7 +1873,7 @@ test('the capped positions are the same joint search, and Safe spends no more st
  * already in hand.
  */
 function pricedBar(counts: Record<string, number>): PositionTrades {
-  const zero = { damage: 0, mercLost: 0, units: 0, silver: 0, gold: 0, hiredDamage: 0 };
+  const zero = { damage: 0, mercLost: 0, units: 0, silver: 0, gold: 0, seconds: 0, hiredDamage: 0 };
   return {
     own: zero,
     rows: (['tens', 'most', 'v2', 'safe', 'tight'] as const).map((mode) => ({
@@ -2210,6 +2210,7 @@ test('hovering As is previews the trade it offers against Tight, and says nothin
     damage,
     silver,
     gold,
+    seconds: 0,
     mercLost: 0,
     units: 0,
     hiredDamage: 0,

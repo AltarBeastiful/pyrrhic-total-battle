@@ -48,7 +48,7 @@ const bars: number[] = [];
  * engine. What the real rows are is held elsewhere (`tests/kernel/raise-kernel.test.ts`, experiment 184).
  */
 function marker(): PositionTrades {
-  const zero = { damage: 1, mercLost: 1, units: 7, silver: 1, gold: 0, hiredDamage: 1 };
+  const zero = { damage: 1, mercLost: 1, units: 7, silver: 1, gold: 0, seconds: 0, hiredDamage: 1 };
   const counts = { 'epic-monster-hunter-6': 7 };
   return {
     own: zero,

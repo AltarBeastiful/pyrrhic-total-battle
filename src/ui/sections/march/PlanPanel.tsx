@@ -41,7 +41,7 @@
  */
 import { ActionIcon, Group, Popover, Stack, Table, Text, VisuallyHidden } from '@mantine/core';
 import { Info } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { planMarch, withMethod } from '@/engine';
@@ -56,6 +56,7 @@ import { PlanTrade } from './PlanTrade';
 import { amount, compact, compactRatio, duration, ratio } from './format';
 import { putBackWords, sequenceWords, spendsStock } from './picks';
 
+import { positionsKey, usePositionsStore } from './positionsSearch';
 import { pickOf, sweetSpotOf, useRunStore } from './runStore';
 
 /**
@@ -249,12 +250,30 @@ export function PlanFold() {
   // thing (invariants 0020 §D-2): the bar says which plan, the table says what it is worth, and the two
   // must be reading the same row.
   const [hovered, setHovered] = useState<number | null>(null);
+  // The raise on screen, priced per stop: the table shows that march, not the plan's As-is one.
+  const modes = useRunStore((state) => state.raiseModes);
+  const request = useResultStore((state) => state.last?.request ?? null);
+  const key = useMemo(
+    () => (plan !== null && request !== null ? positionsKey(plan, request) : null),
+    [plan, request],
+  );
+  const priced = usePositionsStore((state) =>
+    key !== null && state.entry?.key === key ? state.entry.stops : null,
+  );
   const [whyOpen, setWhyOpen] = useState(false);
   const whyId = useId();
   if (plan === null) return null;
 
   const shown = pickOf(plan, position);
-  const rows = plan.alternatives;
+  const rows = plan.alternatives.map((row, index) => {
+    const stop = priced?.[index];
+    const mode = modes.authority;
+    if (mode === 'off' || mode !== modes.dominance || stop == null || stop === 'out') return row;
+    const traded = stop.rows.find((entry) => entry.mode === mode);
+    if (traded === undefined) return row;
+    const { damage, silver, gold, seconds, mercLost, hiredDamage } = traded;
+    return { ...row, repeat: { ...row.repeat, damage, silver, gold, seconds, mercLost, hiredDamage } };
+  });
   /**
    * **Whether this plan trades a hired stock at all** (S-112, `spendsStock` in `./picks`) — the one reading
    * every hired word in this block turns on. An army that hires nothing has had a bar since S-111, and the

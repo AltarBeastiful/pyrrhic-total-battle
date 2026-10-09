@@ -141,6 +141,8 @@ export interface PositionReading {
   silver: number;
   /** The Temple's gold for the same losses — what a monster costs to revive and a mercenary to retrain. */
   gold: number;
+  /** The training queue the same losses take to bring back, in seconds (the plan table's recovery time). */
+  seconds: number;
   /** What the hired stacks themselves struck for in that opening (the trade's own "Per merc" numerator). */
   hiredDamage: number;
 }
@@ -175,6 +177,7 @@ function read(request: StackRequest, base: StackResult, counts: Record<string, n
     units: hired.reduce((sum, stack) => sum + stack.count, 0),
     silver: summary.recovery.silver,
     gold: summary.recovery.gold,
+    seconds: summary.recovery.seconds,
     hiredDamage: worstDamageByPool(summary.journals.enemyFirst, result.stacks).authority,
   };
 }
