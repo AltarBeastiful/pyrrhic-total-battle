@@ -7,13 +7,14 @@ This phase finishes "all types of advice": more dominance (swept to where the cu
 - [x] Read the step D list in `docs/plans/progression-advisor.md`, `docs/investigations/` and `docs/research/` for experiment 73 (horizon) and the dominance/leadership sweep notes, and `src/config.ts` (`CAMPAIGN.marches`, caps, silver budget). Write a short design note `docs/plans/advisor-step-d.md` (front matter, `[[Progression-Advisor-Plan]]` link) fixing, for each question, the probe or sweep, the unit it is reported in, and its cost; keep each section to what an implementer needs.
   - Done: wrote `docs/plans/advisor-step-d.md` (dominance sweep with a `flattenBelow` constant, next tier, merc stock, horizon, silver; units and plan counts per question).
 
-- [ ] Implement the sweeps in `src/engine/advisor-sweeps.ts` as pool jobs reusing Phase 02's reading:
+- [x] Implement the sweeps in `src/engine/advisor-sweeps.ts` as pool jobs reusing Phase 02's reading:
   - **Dominance / leadership sweep**: gain as a function of +X, returning the curve and the point where it flattens ("peak" = marginal gain per step falls under a stated threshold held in `src/config.ts`)
   - **Next troop tier unlocked**: a new unit added to `units`
   - **More merc stock**: raised `caps` by a step
   - **Horizon**: `CAMPAIGN.marches` 3/4/5 as a probe through the request, not a config edit; the config value is read only for the baseline
   - **Marginal value of silver**: `silverBudget` plus or minus delta
   - Tests on synthetic requests: curve monotone-or-flagged, peak detection on a hand-built curve, gain never negative, determinism across pool sizes
+  - Done: `src/engine/advisor-sweeps.ts` (campaign-level `CampaignProbe`s: `housingSweep` + `sweepCurve`/`curveOfRows` peak on the running maximum, `nextTierProbes`, `mercStockProbes`, `horizonProbes`, `silverProbes`); `CAMPAIGN.advisorSweep` in `src/config.ts` (`flattenBelow` 0.05 and the steps); `runAdvisor` now takes `Probe | CampaignProbe` so every question is a pool job on the existing pass. Tests: `src/engine/advisor-sweeps.test.ts` (9), `src/worker/advisorSweeps.test.ts` (1 vs 3 lanes identical, gains >= 0). Not done: the horizon's campaign length (`plan.marches`) is not carried by `ProbeAnswer`; left to the experiment/UI tasks.
 
 - [ ] Write experiment `out/<n>-the-other-questions.md` over the 18 benchmark armies: per question the measured gains, the cost in wall and CPU time, and whether it fits the 20 s budget or needs its own button. Quote measured figures only (never recompute from memory). Link back to the plan.
 

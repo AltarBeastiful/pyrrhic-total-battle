@@ -17,6 +17,7 @@
 import { CAMPAIGN } from '@/config';
 import { probeInfo, rankAdvice, type AdvisorRow, type ProbeInfo, type ShownStop } from '@/engine/advisor';
 import type { CampaignInput, PlanPick } from '@/engine/plan';
+import { isCampaignProbe, type CampaignProbe } from '@/engine/advisor-sweeps';
 import type { Probe } from '@/engine/probes';
 import type { MarkerRates } from '@/engine/rating';
 
@@ -66,7 +67,7 @@ function settingsOf(input: CampaignInput): CampaignInput {
  */
 export async function runAdvisor(
   input: CampaignInput,
-  probes: readonly Probe[],
+  probes: readonly (Probe | CampaignProbe)[],
   pool: CalcPool,
   options: AdvisorOptions = {},
 ): Promise<AdvisorResult> {
@@ -95,7 +96,9 @@ export async function runAdvisor(
       (client, jobSignal) =>
         client.probe(
           {
-            plan: { ...settings, request: probe.apply(settings.request) },
+            plan: isCampaignProbe(probe)
+              ? probe.applyInput(settings)
+              : { ...settings, request: probe.apply(settings.request) },
             against: { probe: probeInfo(probe), baseline, rates },
           },
           jobSignal,

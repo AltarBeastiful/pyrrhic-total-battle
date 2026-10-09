@@ -243,6 +243,24 @@ export const CAMPAIGN = {
    */
   outstandingTraining: { share: 0.1, seconds: 3_600 },
   /**
+   * **The advisor's other questions** (W17 step D, `docs/plans/advisor-step-d.md`). Held until the owner judges
+   * them on measured figures; work counts and thresholds, never durations.
+   *
+   * - `flattenBelow` — a sweep's curve is flat from the first step whose marginal gain falls under this many
+   *   gain-percent per extra percent of the pool (the owner's "reach a peak").
+   * - `dominanceSteps` — the rises of a pool swept, in percent of the current pool.
+   * - `mercSteps` — the rises of the merc stock, in percent of each cap.
+   * - `horizons` — the campaign lengths probed through the request; `marches` above is read only as the baseline.
+   * - `silverShare` — the plus and minus of the silver probe, as a share of the baseline's silver bill.
+   */
+  advisorSweep: {
+    flattenBelow: 0.05,
+    dominanceSteps: [2, 4, 8, 16, 32],
+    mercSteps: [10, 25, 50],
+    horizons: [3, 4, 5],
+    silverShare: 0.1,
+  },
+  /**
    * How many screened trios the captain advice plans in full besides the current trio (W17 C5a, a work count and
    * never a duration). 8 is the plan's first figure (`docs/plans/progression-advisor.md` §4 C5), kept by
    * experiment 193: with the re-priced screen's shortlist, 8 finds the best trio on 32 of 35 stops and loses 0.3 %
