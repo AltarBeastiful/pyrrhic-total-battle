@@ -39,7 +39,7 @@ related:
 
 Ordered by likely impact. Each is discovery-only: find WHERE, not WHAT to fix.
 
-### Tactic 1: Pool vs main-thread contention and oversubscription
+### [EXECUTED] Tactic 1: Pool vs main-thread contention and oversubscription
 - **Target:** CPU oversubscription and scheduling: pool of up to 6 workers + the page's main calc worker + raise
   clients + UI thread all share `hardwareConcurrency` cores; a pass "never sits in front of a Generate" only if
   cores are free. Also job granularity (a whole plan per job) and tail latency (one long job after the rest idle).
