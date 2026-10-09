@@ -226,10 +226,18 @@ for the accounts that have those captains → owner's trade.
 > best stop. Measured once: 1 140 trios x (1 sized + 5 stops) on the planner's small army, 0.39 s on the kernel.
 
 > **C5a confirm, 2026-10-09.** `runCaptainAdvice` (`src/worker/captainAdvice.ts`): the current trio's plan, the screen, then
-> the first `CAMPAIGN.captainConfirm` (8) trios of the screen (`shortlistTrios`; both screens in turn by default) each
+> the first `CAMPAIGN.captainConfirm` (8) trios of the screen (`shortlistTrios`; the re-priced screen by default since experiment 193, `both` stays an option) each
 > planned in full as one pool job and read as a probe (`readProbe`). The answer is the best trio per stop with its gain,
 > the current trio where none gains (never worse), and it lists the trios the clock cut or whose job failed. No job
 > carries a clock; the order of the answer does not depend on the pool's size.
+
+> **C5a experiment 193, 2026-10-09** (`tools/theorycraft/out/193-the-captain-trio.md`). No benchmark army has more than three
+> captains, so the armies are the owner's 2026-10-07 roster (8 captains, 56 trios) as the app plans it and laid on the
+> 2026-09-17 army: 7 armies, 35 stops, a better trio on 32. The sized screen's top-1 is the best trio on 4 of 35 stops, the
+> re-priced screen's on 20 of 35; **k stays 8** (top-3 loses 4.4 % of the rating, 8 loses 0.3 %) and the shortlist is taken from the
+> re-priced screen alone (finds the best on 32 of 35 against `both`'s 32 and loses 1.61 against 3.70). The captain pass costs
+> 3.4-5.7 s wall on one lane; with the advisor's default pass (10.1-17.8 s) it is 13.5-23.0 s, over the 20 s on 3 of 7
+> armies, so **C5 gets its own "Compute captains" button** and clock.
 
 **Where it runs**: the worker only gets `CampaignInput` with totals already summed, and `derive.ts` imports the
 tables, the store schema and config. Each trio's totals are built on the **main thread** (`resolveSources` +

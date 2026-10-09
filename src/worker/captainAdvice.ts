@@ -41,7 +41,7 @@ export interface CaptainAdviceOptions {
   rates?: MarkerRates | undefined;
   /** Trios planned in full besides the current one; `CAMPAIGN.captainConfirm` by default. */
   confirm?: number | undefined;
-  /** Which screen the shortlist is taken from; both, in turn, by default. */
+  /** Which screen the shortlist is taken from; the re-priced one by default (experiment 193). */
   from?: ShortlistFrom | undefined;
 }
 
@@ -174,7 +174,7 @@ export async function runCaptainAdvice(
   if (screened?.kind !== 'done' || screened.value.screens.length < trios.length) return withBaseline;
   const { screens } = screened.value;
 
-  const confirmed = shortlistTrios(screens, currentKey, confirm, options.from);
+  const confirmed = shortlistTrios(screens, currentKey, confirm, options.from ?? 'repriced');
   const jobs = confirmed.map((key): PoolJob<ProbeAnswer> => {
     const trio = trios.find((candidate) => candidate.key === key);
     if (trio === undefined) throw new Error(`The shortlisted trio ${key} is not among the trios given.`);

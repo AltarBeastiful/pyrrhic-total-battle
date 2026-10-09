@@ -244,8 +244,9 @@ export const CAMPAIGN = {
   outstandingTraining: { share: 0.1, seconds: 3_600 },
   /**
    * How many screened trios the captain advice plans in full besides the current trio (W17 C5a, a work count and
-   * never a duration). 8 is the plan's first figure (`docs/plans/progression-advisor.md` §4 C5); experiment
-   * "the captain trio" says whether 3 does.
+   * never a duration). 8 is the plan's first figure (`docs/plans/progression-advisor.md` §4 C5), kept by
+   * experiment 193: with the re-priced screen's shortlist, 8 finds the best trio on 32 of 35 stops and loses 0.3 %
+   * of the rating, 3 loses 4.4 %.
    */
   captainConfirm: 8,
   /**
