@@ -117,6 +117,45 @@ test('a captain enlisted and levelled through its gear moves the TOTAL', async (
   expect(problems).toEqual([]);
 });
 
+test('the march type is chosen under the captains and survives a reload', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+
+  const control = bonusesCard(page).getByRole('radiogroup', { name: 'March type' });
+  await expect(control.getByRole('radio', { name: 'Any' })).toBeChecked();
+
+  // The segments are stock Mantine labels over hidden inputs: tap the label, as a player does.
+  await control.getByText('Group', { exact: true }).click();
+  await expect(control.getByRole('radio', { name: 'Group' })).toBeChecked();
+
+  await tapCaptain(page, 'Hercules');
+  await expect(bonusesCard(page).getByText(/Hercules is not counted on a group march/)).toBeVisible();
+
+  // Phone width (rule 18): the control keeps its four segments inside the screen, on one line.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const box = await control.boundingBox();
+  expect(box).not.toBeNull();
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+  expect(box?.height ?? 99).toBeLessThan(40);
+
+  // The document is written back debounced: wait for the type to land before reloading.
+  await page.waitForFunction(
+    () => {
+      const view = globalThis as unknown as { localStorage: { getItem: (k: string) => string | null } };
+      return (view.localStorage.getItem('pyrrhic.v1') ?? '').includes('"marchType":"group"');
+    },
+    undefined,
+    { timeout: 10_000 },
+  );
+
+  await page.reload();
+  await expect(
+    bonusesCard(page).getByRole('radiogroup', { name: 'March type' }).getByRole('radio', { name: 'Group' }),
+  ).toBeChecked();
+
+  expect(problems).toEqual([]);
+});
+
 test('a piece of equipment is filled in from its sheet, and the card wears it', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);

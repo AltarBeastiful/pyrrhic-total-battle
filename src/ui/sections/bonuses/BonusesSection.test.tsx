@@ -258,6 +258,50 @@ test('the fourth captain is refused, in one line, and the chip stays off', () =>
   expect(within(card()).queryByText(CAPTAIN_CAP_MESSAGE)).toBeNull();
 });
 
+test('the march type sits under the chips, starts on Any, and a pick is stored on the setup', () => {
+  renderWithTheme(<BonusesSection />);
+  const control = within(card()).getByRole('radiogroup', { name: 'March type' });
+  const radios = within(control).getAllByRole('radio');
+  expect(radios.map((radio) => radio.getAttribute('value'))).toEqual([
+    'unspecified',
+    'solo',
+    'group',
+    'epic',
+  ]);
+  expect((within(control).getByRole('radio', { name: 'Any' }) as HTMLInputElement).checked).toBe(true);
+  expect(setup()?.marchType).toBe('unspecified');
+
+  fireEvent.click(within(control).getByRole('radio', { name: 'Epic' }));
+  expect(setup()?.marchType).toBe('epic');
+  expect((within(control).getByRole('radio', { name: 'Epic' }) as HTMLInputElement).checked).toBe(true);
+});
+
+test('choosing a march type gates the captains: a group-only captain is not counted on a solo march', () => {
+  renderWithTheme(<BonusesSection />);
+  const control = within(card()).getByRole('radiogroup', { name: 'March type' });
+  fireEvent.click(captainChip('Amanitore'));
+
+  // Any: today's behaviour, the restriction is a note and nothing is gated.
+  expect(within(card()).getByText(/^Amanitore: /)).toBeTruthy();
+  expect(within(card()).queryByText(/Amanitore is not counted/)).toBeNull();
+
+  fireEvent.click(within(control).getByRole('radio', { name: 'Solo' }));
+  expect(within(card()).getByText(/Amanitore is not counted on a solo march/)).toBeTruthy();
+
+  // On a group march the restriction is met and the card says nothing about it.
+  fireEvent.click(within(control).getByRole('radio', { name: 'Group' }));
+  expect(within(card()).queryByText(/^Amanitore: |Amanitore is not counted/)).toBeNull();
+});
+
+test('each segment says, in its tooltip, which captains the march type leaves out', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const control = within(card()).getByRole('radiogroup', { name: 'March type' });
+
+  await user.hover(within(control).getByText('Solo'));
+  expect(await screen.findByText(/Amanitore and Hercules are not counted/)).toBeTruthy();
+});
+
 test('the gear opens an anchored popover with the level and the stars, and never enlists anybody', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);

@@ -21,12 +21,13 @@
  * walk the chips, `Space` enlists, and the gear of the chip you are on is the next `Tab` — every
  * other gear is out of the tab order.
  */
-import { Group, Select, Stack, Text } from '@mantine/core';
+import { Group, SegmentedControl, Select, Stack, Text, Tooltip } from '@mantine/core';
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { heroes as heroTable } from '@/data';
 import { setActiveFlag, updateSources } from '@/state/actions/bonuses';
+import type { SetupMarchType } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { CaptainChip } from '@/ui/domain';
 import { Figures, NumberField, Sections, useRovingTabs, type Figure } from '@/ui/kit';
@@ -34,6 +35,7 @@ import { Figures, NumberField, Sections, useRovingTabs, type Figure } from '@/ui
 import classes from './bonuses.module.css';
 import { captainBonusLines, MAX_CAPTAIN_STAR, type CaptainChipRow, type CaptainTarget } from './chips';
 import { describeContribution } from './labels';
+import { MARCH_TYPE_CHOICES } from './marchType';
 import { captainEntryFor, captainRecord } from './rows';
 
 /** What the card says when a fourth captain is tapped. One line, and never more than one. */
@@ -237,11 +239,21 @@ export interface CaptainChipsProps {
   onEnlist: (target: CaptainTarget) => void;
   /** Mints the entry a level is recorded on, and says which chip's popover is open. */
   onConfigure: (target: CaptainTarget) => void;
+  /** The kind of march the active setup is, and the way to change it. */
+  marchType: SetupMarchType;
+  onMarchType: (next: SetupMarchType) => void;
 }
 
 const keyOf = (target: CaptainTarget): string => (target.kind === 'hero' ? 'hero' : target.captainId);
 
-export function CaptainChips({ chips, isRefused, onEnlist, onConfigure }: CaptainChipsProps) {
+export function CaptainChips({
+  chips,
+  isRefused,
+  onEnlist,
+  onConfigure,
+  marchType,
+  onMarchType,
+}: CaptainChipsProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const roving = useRovingTabs();
 
@@ -292,6 +304,28 @@ export function CaptainChips({ chips, isRefused, onEnlist, onConfigure }: Captai
       <Text role="status" size="xs" c="dimmed" mih="1.125rem">
         {isRefused ? CAPTAIN_CAP_MESSAGE : ''}
       </Text>
+      {/* The kind of march decides which captains count (Amanitore: group; Hercules: epic monsters).
+          "Any" is today's behaviour, so a player who never touches it sees nothing change. Tooltips
+          say what each kind does, the way the raise control's do (rule 23: stock Mantine). */}
+      <SegmentedControl
+        size="xs"
+        fullWidth
+        maw={320}
+        aria-label="March type"
+        value={marchType}
+        data={MARCH_TYPE_CHOICES.map((choice) => ({
+          value: choice.value,
+          label: (
+            <Tooltip label={choice.help} multiline maw={280} withinPortal withArrow>
+              <span>{choice.label}</span>
+            </Tooltip>
+          ),
+        }))}
+        onChange={(next) => {
+          const choice = MARCH_TYPE_CHOICES.find((entry) => entry.value === next);
+          if (choice !== undefined) onMarchType(choice.value);
+        }}
+      />
     </Stack>
   );
 }

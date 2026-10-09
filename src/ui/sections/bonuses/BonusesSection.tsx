@@ -224,6 +224,10 @@ export function BonusesSection() {
           isRefused={refusedCaptain && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS}
           onEnlist={enlist}
           onConfigure={configureCaptain}
+          marchType={setup.marchType}
+          onMarchType={(marchType) => {
+            useStore.getState().updateActiveSetup(() => ({ marchType }));
+          }}
         />
       ),
     },
