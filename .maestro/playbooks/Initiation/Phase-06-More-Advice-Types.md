@@ -4,7 +4,8 @@ This phase finishes "all types of advice": more dominance (swept to where the cu
 
 ## Tasks
 
-- [ ] Read the step D list in `docs/plans/progression-advisor.md`, `docs/investigations/` and `docs/research/` for experiment 73 (horizon) and the dominance/leadership sweep notes, and `src/config.ts` (`CAMPAIGN.marches`, caps, silver budget). Write a short design note `docs/plans/advisor-step-d.md` (front matter, `[[Progression-Advisor-Plan]]` link) fixing, for each question, the probe or sweep, the unit it is reported in, and its cost; keep each section to what an implementer needs.
+- [x] Read the step D list in `docs/plans/progression-advisor.md`, `docs/investigations/` and `docs/research/` for experiment 73 (horizon) and the dominance/leadership sweep notes, and `src/config.ts` (`CAMPAIGN.marches`, caps, silver budget). Write a short design note `docs/plans/advisor-step-d.md` (front matter, `[[Progression-Advisor-Plan]]` link) fixing, for each question, the probe or sweep, the unit it is reported in, and its cost; keep each section to what an implementer needs.
+  - Done: wrote `docs/plans/advisor-step-d.md` (dominance sweep with a `flattenBelow` constant, next tier, merc stock, horizon, silver; units and plan counts per question).
 
 - [ ] Implement the sweeps in `src/engine/advisor-sweeps.ts` as pool jobs reusing Phase 02's reading:
   - **Dominance / leadership sweep**: gain as a function of +X, returning the curve and the point where it flattens ("peak" = marginal gain per step falls under a stated threshold held in `src/config.ts`)
