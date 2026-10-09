@@ -250,6 +250,13 @@ export const CAMPAIGN = {
    */
   captainConfirm: 8,
   /**
+   * How many of the trios fielding a benched captain the upgrade pass plans in full (W17 C5b, a work count). A
+   * captain in the lead trio is tried in that trio alone, so this only bounds the captains outside it. Two is the
+   * phase's first figure, not yet measured: the screen's top-1 is the best trio on 20 of 35 stops and its top-8
+   * on 32 (experiment 193), and an upgrade has far fewer trios to choose among (C(n-1, 2) of them).
+   */
+  captainUpgradeConfirm: 2,
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

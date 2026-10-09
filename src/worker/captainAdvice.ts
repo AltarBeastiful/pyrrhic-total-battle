@@ -73,6 +73,11 @@ export interface CaptainAdviceResult {
   confirmed: string[];
   /** One row per confirmed trio that finished (`id` is the trio's key), in `confirmed` order. */
   rows: AdvisorRow[];
+  /**
+   * Every plan the pass finished, as the March shows it, by trio key: the current trio's baseline and each
+   * confirmed trio that finished. The upgrade pass reads its lead trio's bar from here.
+   */
+  plans: Record<string, ShownStop[]>;
   /** The best trio per stop of the baseline bar, in the bar's order; never below the current trio. */
   best: TrioStopAdvice[];
   /** The confirmed trios the pass's clock stopped before they finished. */
@@ -140,6 +145,7 @@ export async function runCaptainAdvice(
     screenCut: true,
     confirmed: [],
     rows: [],
+    plans: {},
     best: [],
     cut: [],
     failed: [],
@@ -151,7 +157,12 @@ export async function runCaptainAdvice(
   if (first?.kind === 'error') throw new Error(first.message);
   if (first?.kind !== 'done') return empty;
   const baseline = first.value.stops;
-  const withBaseline = { ...empty, baseline, best: bestPerStop(baseline, currentKey, []) };
+  const withBaseline = {
+    ...empty,
+    baseline,
+    plans: { [currentKey]: baseline },
+    best: bestPerStop(baseline, currentKey, []),
+  };
 
   const screenJob: PoolJob<CaptainScreenAnswer> = (client, jobSignal) =>
     client.captains(
@@ -194,6 +205,7 @@ export async function runCaptainAdvice(
       : jobs.map(() => ({ kind: 'cut' }));
 
   const rows: AdvisorRow[] = [];
+  const plans: Record<string, ShownStop[]> = { [currentKey]: baseline };
   const cut: string[] = [];
   const failed: CaptainAdviceFailure[] = [];
   outcomes.forEach((outcome, index) => {
@@ -202,7 +214,10 @@ export async function runCaptainAdvice(
     if (outcome.kind === 'error') failed.push({ trio, message: outcome.message });
     // A job cancelled inside its worker answers with no row: it did not finish, which is what a cut is.
     else if (outcome.kind === 'cut' || outcome.value.row === null) cut.push(trio);
-    else rows.push(outcome.value.row);
+    else {
+      rows.push(outcome.value.row);
+      plans[trio] = outcome.value.stops;
+    }
   });
   return {
     currentKey,
@@ -211,6 +226,7 @@ export async function runCaptainAdvice(
     screenCut: false,
     confirmed,
     rows,
+    plans,
     best: bestPerStop(baseline, currentKey, rows),
     cut,
     failed,

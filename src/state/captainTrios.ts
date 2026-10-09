@@ -25,6 +25,17 @@ export interface TrioCandidate {
   totals: BonusTotals;
 }
 
+/** The totals the march would carry if it fielded exactly these captains, every other source as it has it. */
+export function trioTotals(
+  profile: Profile,
+  setup: BattleSetup,
+  entryIds: readonly string[],
+  tables: DeriveTables = DEFAULT_TABLES,
+): BonusTotals {
+  const swapped: BattleSetup = { ...setup, active: { ...setup.active, captains: [...entryIds] } };
+  return aggregateBonuses(resolveSources(profile, swapped, tables));
+}
+
 export interface CaptainTrios {
   /** Key of the current trio: always one of `trios`, always the first. */
   currentKey: string;
@@ -63,13 +74,12 @@ export function captainTrios(
     const key = trioKey(captainIds);
     if (key === now.key) continue;
     const entryIds = trio.map((entry) => entry.id);
-    const swapped: BattleSetup = { ...setup, active: { ...setup.active, captains: entryIds } };
     trios.push({
       key,
       entryIds,
       captainIds,
       current: false,
-      totals: aggregateBonuses(resolveSources(profile, swapped, tables)),
+      totals: trioTotals(profile, setup, entryIds, tables),
     });
   }
   return { currentKey: now.key, trios };

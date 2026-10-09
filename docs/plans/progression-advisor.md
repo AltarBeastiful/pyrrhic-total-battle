@@ -239,6 +239,18 @@ for the accounts that have those captains → owner's trade.
 > 3.4-5.7 s wall on one lane; with the advisor's default pass (10.1-17.8 s) it is 13.5-23.0 s, over the 20 s on 3 of 7
 > armies, so **C5 gets its own "Compute captains" button** and clock.
 
+> **C5b, 2026-10-09.** `src/engine/captainUpgrades.ts` lists the upgrades (`star + 1`, `level + 1`, `level + 10` of each
+> distinct owned captain the march type counts; stars stop at 6; one that adds nothing to the captain's lines is not
+> asked) and the membership logic: `leadTrio` (the trio winning the most gain over the bar, the current one on a tie or
+> when none gains), `inLeadTrio`, `trioContaining`. `src/state/captainUpgrades.ts` builds the totals on the main thread
+> with the upgrade applied: a captain **in the lead trio** is tried in that trio alone, a **benched** one in every trio
+> that fields it. `runCaptainUpgrades` (`src/worker/captainUpgrades.ts`) reads each upgrade **against the lead trio's
+> plan**, not the current one, so a row is the star's own worth and never the swap of trio; an ask with more trios than
+> `CAMPAIGN.captainUpgradeConfirm` (2, a work count, not yet measured) is screened (one pool job) and its best planned in
+> full; a row takes the best trio per stop and never reads as a loss. A typed cost per upgrade is carried through
+> (`UpgradeAsk.cost`), so `rankAdvice` ranks by gain per cost when there is one and by gain alone otherwise.
+> `captainAdvice` now keeps every finished plan by trio (`plans`) so the lead's bar is at hand.
+
 **Where it runs**: the worker only gets `CampaignInput` with totals already summed, and `derive.ts` imports the
 tables, the store schema and config. Each trio's totals are built on the **main thread** (`resolveSources` +
 `aggregateBonuses` with `active.captains` swapped, deduplicated by `captainId`, since the same captain can be

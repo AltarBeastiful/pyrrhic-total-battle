@@ -112,6 +112,9 @@ describe('runCaptainAdvice: the pass over the pool', () => {
         expect(stop.advice?.gain).toBe(stop.gain);
       }
       expect(progress).toEqual([1, 2, 3, 4, 5].map((done) => [done, 5]));
+      // Every finished plan is kept by trio, as the March shows it: the baseline under the current key.
+      expect(Object.keys(result.plans).sort()).toEqual(['best', 'better', 'now', 'weaker']);
+      expect(result.plans['now']).toEqual(result.baseline);
     },
     TIMEOUT,
   );
