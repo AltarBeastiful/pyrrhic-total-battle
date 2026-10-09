@@ -215,6 +215,16 @@ for the accounts that have those captains → owner's trade.
 > both captains is the owner's to say. Svyatogor's `aloneOnly` (a hero) is not gated. The control on the setup
 > card is the next task.
 
+> **C5a screen, 2026-10-09.** `src/engine/captains.ts`: `allowedTrios` (distinct by `captainId`, the strongest entry
+> of a duplicate, the march type's conditions applied through a predicate, fewer than three allowed captains make the
+> one set of them), `screenTrios` and `rankTrios`. `src/state/captainTrios.ts` builds each trio's totals on the main
+> thread (`resolveSources` + `aggregateBonuses` with `active.captains` swapped); the **current trio comes first with
+> the march's own totals untouched**, so it rates 0 against itself and is never listed twice. The screen is ONE
+> worker job (`kind: 'captains'`, `runCaptainScreen`): both readings per trio, without the Tight raise (the confirm
+> step's), rated with `rate()` against the current trio's under the same pricing. (a) is `sizeStacks` under the
+> March's `elite` method, (b) the current plan's stop counts battled again (`planMarch`); a trio's score on (b) is its
+> best stop. Measured once: 1 140 trios x (1 sized + 5 stops) on the planner's small army, 0.39 s on the kernel.
+
 **Where it runs**: the worker only gets `CampaignInput` with totals already summed, and `derive.ts` imports the
 tables, the store schema and config. Each trio's totals are built on the **main thread** (`resolveSources` +
 `aggregateBonuses` with `active.captains` swapped, deduplicated by `captainId`, since the same captain can be

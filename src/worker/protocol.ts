@@ -2,7 +2,7 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise' | 'positions' | 'probe', id, request }
+ * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise' | 'positions' | 'probe' | 'captains', id, request }
  *           and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
  *           { kind: 'progress', id, progress }   (searches only, zero or more)
@@ -12,6 +12,7 @@
  *           { kind: 'raise', id, result }    (`null` when there is no box to search)
  *           { kind: 'positions', id, result }  (`PositionTrades`, S-147)
  *           { kind: 'probe', id, result }      (`ProbeAnswer`, W17 C3)
+ *           { kind: 'captains', id, result }   (`CaptainScreenAnswer`, W17 C5a)
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message, code? } }   (`code: 'kernel-unavailable'`: the worker has no kernel)
  *
@@ -20,6 +21,8 @@
  * trace of a worker frame is useless to the user anyway.
  */
 import type { AdvisorRow, ProbeInfo, ShownStop } from '@/engine/advisor';
+import type { CompleteMethod } from '@/engine/campaign';
+import type { ScreenStop, ScreenTrio, TrioScreen } from '@/engine/captains';
 import type { CampaignInput, CampaignPlan, MarchWithin, ResizedMarch } from '@/engine/plan';
 import type { MarkerRates } from '@/engine/rating';
 import type {
@@ -139,6 +142,36 @@ export interface ProbeAnswer {
   row: AdvisorRow | null;
 }
 
+/**
+ * **The captain screen** (W17 C5a, `docs/plans/progression-advisor.md` §4 C5): every allowed trio priced two
+ * ways against the current one, as one job. The totals of each trio are built on the main thread
+ * (`src/state/captainTrios.ts`), because the derive layer reads the tables and the store schema.
+ */
+export interface CaptainsJob {
+  kind: 'captains';
+  id: JobId;
+  request: CaptainScreenInput;
+}
+
+export interface CaptainScreenInput {
+  /** The march's own request; the `totals` it carries are not read — every trio brings its own. */
+  request: StackRequest;
+  /** The current trio and every other allowed one, in the order the answer comes back in. */
+  trios: ScreenTrio[];
+  /** Which of `trios` the march fields now: the screen rates every other against it. */
+  currentKey: string;
+  /** The stops of the current trio's plan, whose counts are re-priced under each trio. */
+  stops: ScreenStop[];
+  /** The sizing the screen prices with; `elite`, the March's own, by default. */
+  method?: CompleteMethod | undefined;
+  rates: MarkerRates;
+}
+
+export interface CaptainScreenAnswer {
+  /** One per trio, in `trios` order (fewer when the job was cancelled part way). */
+  screens: TrioScreen[];
+}
+
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
 export interface CancelJob {
   kind: 'cancel';
@@ -146,7 +179,7 @@ export interface CancelJob {
 }
 
 export type CalcRequestMessage =
-  StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | PositionsJob | ProbeJob | CancelJob;
+  StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | PositionsJob | ProbeJob | CaptainsJob | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -219,6 +252,13 @@ export interface ProbeDoneMessage {
   result: ProbeAnswer;
 }
 
+/** The captain screen, answered (`runCaptainScreen`). */
+export interface CaptainsDoneMessage {
+  kind: 'captains';
+  id: JobId;
+  result: CaptainScreenAnswer;
+}
+
 export type CalcResponseMessage =
   | StackDoneMessage
   | SearchProgressMessage
@@ -228,6 +268,7 @@ export type CalcResponseMessage =
   | RaiseDoneMessage
   | PositionsDoneMessage
   | ProbeDoneMessage
+  | CaptainsDoneMessage
   | CancelledMessage
   | ErrorMessage;
 
@@ -271,6 +312,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
     case 'raise':
     case 'positions':
     case 'probe':
+    case 'captains':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -291,6 +333,7 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'plan':
     case 'positions':
     case 'probe':
+    case 'captains':
       return isRecord(value.result);
     // The two answers that may be nothing: an army with no troop type to field over gets no march at all,
     // and a raise with no stack it may move gets no better counts than the ones already on screen.

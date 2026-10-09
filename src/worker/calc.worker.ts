@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 /**
  * Calculation worker (S-25). Keeps sizing, simulation, the priority search, the campaign search (S-54), the
- * exhaustive raise (S-143b) and the advisor's probes (W17 C3) off the main thread so the UI never freezes. It imports nothing but the
+ * exhaustive raise (S-143b), the advisor's probes (W17 C3) and the captain screen (W17 C5a) off the main thread so the UI never freezes. It imports nothing but the
  * engine, this folder's protocol, and the march's two pure modules (`raise.ts`, `exact.ts` — plain
  * TypeScript with no React, no store and no DOM in them): no React, no store, no DOM.
  *
@@ -9,7 +9,16 @@
  * than a `kind` on this one — it is the only job measured in tens of seconds, and on this thread it would
  * sit in front of the next Generate (`raiseSearch.ts`).
  */
-import { runPlan, runPositions, runProbe, runRaise, runResize, runSearch, runStack } from './jobs';
+import {
+  runCaptainScreen,
+  runPlan,
+  runPositions,
+  runProbe,
+  runRaise,
+  runResize,
+  runSearch,
+  runStack,
+} from './jobs';
 import { errorPayload, isCalcRequestMessage } from './protocol';
 import type { CalcRequestMessage, CalcResponseMessage } from './protocol';
 import type { SearchProgress } from '@/engine/types';
@@ -91,6 +100,11 @@ function run(message: Exclude<CalcRequestMessage, { kind: 'cancel' }>): void {
     if (message.kind === 'probe') {
       const result = runProbe(message.request, context);
       post(cancelled.has(id) ? { kind: 'cancelled', id } : { kind: 'probe', id, result });
+      return;
+    }
+    if (message.kind === 'captains') {
+      const result = runCaptainScreen(message.request, context);
+      post(cancelled.has(id) ? { kind: 'cancelled', id } : { kind: 'captains', id, result });
       return;
     }
     const result = runSearch(message.request, context);

@@ -12,12 +12,23 @@ import type { PositionTrades } from '@/ui/sections/march/positions';
 
 import { KernelUnavailableError } from '@/kernel/boot';
 
-import { runPlan, runPositions, runProbe, runRaise, runResize, runSearch, runStack } from './jobs';
+import {
+  runCaptainScreen,
+  runPlan,
+  runPositions,
+  runProbe,
+  runRaise,
+  runResize,
+  runSearch,
+  runStack,
+} from './jobs';
 import {
   errorPayload,
   isCalcResponseMessage,
   nextJobId,
   type CalcRequestMessage,
+  type CaptainScreenAnswer,
+  type CaptainScreenInput,
   type JobId,
   type PositionsInput,
   type ProbeAnswer,
@@ -53,6 +64,11 @@ export interface CalcClient {
    * it, and the probe read against the baseline's bar when one is given. The advisor's pool runs many at once.
    */
   probe(request: ProbeInput, signal?: AbortSignal): Promise<ProbeAnswer>;
+  /**
+   * W17 C5a: the captain screen — every allowed trio priced against the current one, as one job. The totals of
+   * each trio are built by the caller (`src/state/captainTrios.ts`).
+   */
+  captains(request: CaptainScreenInput, signal?: AbortSignal): Promise<CaptainScreenAnswer>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -109,6 +125,7 @@ function createWorkerClient(worker: Worker): CalcClient {
       case 'raise':
       case 'positions':
       case 'probe':
+      case 'captains':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -174,6 +191,8 @@ function createWorkerClient(worker: Worker): CalcClient {
     positions: (request, signal) =>
       send<PositionTrades>({ kind: 'positions', id: nextJobId('positions'), request }, signal),
     probe: (request, signal) => send<ProbeAnswer>({ kind: 'probe', id: nextJobId('probe'), request }, signal),
+    captains: (request, signal) =>
+      send<CaptainScreenAnswer>({ kind: 'captains', id: nextJobId('captains'), request }, signal),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -226,6 +245,11 @@ export function createInlineClient(): CalcClient {
     positions: (request, signal) => run(() => runPositions(request), signal),
     probe: (request, signal) =>
       run(() => runProbe(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }), signal),
+    captains: (request, signal) =>
+      run(
+        () => runCaptainScreen(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }),
+        signal,
+      ),
     dispose() {
       disposed = true;
     },

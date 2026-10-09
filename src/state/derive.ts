@@ -94,7 +94,10 @@ const byId = <T extends { id: string }>(rows: readonly T[], id: string): T | und
   rows.find((row) => row.id === id);
 
 /** Entries of a profile list, in the order the setup activated them; unknown ids are dropped. */
-function activeEntries<T extends { id: string }>(entries: readonly T[], activeIds: readonly string[]): T[] {
+export function activeEntries<T extends { id: string }>(
+  entries: readonly T[],
+  activeIds: readonly string[],
+): T[] {
   const index = new Map(entries.map((entry) => [entry.id, entry]));
   return activeIds.flatMap((id) => {
     const entry = index.get(id);

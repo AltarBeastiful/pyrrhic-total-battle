@@ -12,9 +12,19 @@ import {
   withMethod,
 } from '@/engine';
 import { readProbe } from '@/engine/advisor';
-import type { ShownMarch } from '@/engine/advisor';
+import type { ShownBill, ShownMarch } from '@/engine/advisor';
+import { screenTrios } from '@/engine/captains';
+import type { Pricer } from '@/engine/captains';
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
-import type { SearchProgress, SearchRequest, SearchResult, StackRequest } from '@/engine/types';
+import type {
+  BattleSummary,
+  BonusTotals,
+  SearchProgress,
+  SearchRequest,
+  SearchResult,
+  StackRequest,
+  StackResult,
+} from '@/engine/types';
 import { exhaustivePools } from '@/ui/sections/march/exact';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
 import { hiredLost } from '@/ui/sections/march/hired';
@@ -23,7 +33,15 @@ import { liftedCounts, OFFERED_POSITIONS, positionTrades } from '@/ui/sections/m
 import type { PositionTrades } from '@/ui/sections/march/positions';
 import { countsOf, troopFloor } from '@/ui/sections/march/raise';
 
-import type { PositionsInput, ProbeAnswer, ProbeInput, ResizeInput, StackOutcome } from './protocol';
+import type {
+  CaptainScreenAnswer,
+  CaptainScreenInput,
+  PositionsInput,
+  ProbeAnswer,
+  ProbeInput,
+  ResizeInput,
+  StackOutcome,
+} from './protocol';
 
 /** Message shown when a search is asked for before S-40 wires the search engine in. */
 
@@ -114,15 +132,20 @@ function shownMarch(request: StackRequest, counts: Record<string, number>): Show
   const { result, summary } = applyCounts(request, base, raised);
   return {
     counts: raised,
-    bill: {
-      damage: summary.minDamage,
-      silver: summary.recovery.silver,
-      gold: summary.recovery.gold,
-      hired: hiredLost(result.stacks),
-      dragonCoins: summary.recovery.dragonCoins,
-      seconds: summary.recovery.seconds,
-    },
+    bill: billOf(result, summary),
     deaths: result.stacks.map((stack) => stack.unitId),
+  };
+}
+
+/** What the owner's rating reads off a battled march: the worst opening and the five costs the recap prints. */
+function billOf(result: StackResult, summary: BattleSummary): ShownBill {
+  return {
+    damage: summary.minDamage,
+    silver: summary.recovery.silver,
+    gold: summary.recovery.gold,
+    hired: hiredLost(result.stacks),
+    dragonCoins: summary.recovery.dragonCoins,
+    seconds: summary.recovery.seconds,
   };
 }
 
@@ -172,4 +195,48 @@ export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
   if (against === undefined) return { stops, row: null };
   const row = readProbe(against.probe, against.baseline, stops, (stop) => show(stop.counts), against.rates);
   return { stops, row };
+}
+
+/**
+ * **A trio's bill, priced two ways** (W17 C5a): its own sizing (`sizeStacks`), or counts given battled under its
+ * totals (`planMarch`) — both on the kernel, both without the Tight raise, which is the confirm step's. A trio's
+ * request is built once and shared by every reading of it, since the kernel keys its tables on the request.
+ */
+export function trioPricer(request: StackRequest, method: CaptainScreenInput['method'] = 'elite'): Pricer {
+  const base = withMethod(request, method);
+  const requests = new WeakMap<BonusTotals, StackRequest>();
+  const requestFor = (totals: BonusTotals): StackRequest => {
+    const known = requests.get(totals);
+    if (known !== undefined) return known;
+    const built = { ...base, totals };
+    requests.set(totals, built);
+    return built;
+  };
+  return (totals, counts) => {
+    const priced = requestFor(totals);
+    if (counts === null) {
+      const result = sizeStacks(priced);
+      return billOf(result, simulateBattle(result, priced));
+    }
+    const { result, summary } = planMarch(priced, counts);
+    return billOf(result, summary);
+  };
+}
+
+/**
+ * **The captain screen** (W17 C5a): every trio's two ratings against the current trio's, as ONE job — a bill
+ * costs 0.05–0.14 ms on the kernel, so chunking the 1 140 trios of a 20-captain account buys nothing. Cancellable
+ * between trios; a cancelled job answers nothing the worker would send.
+ */
+export function runCaptainScreen(input: CaptainScreenInput, context: JobContext): CaptainScreenAnswer {
+  return {
+    screens: screenTrios(
+      input.trios,
+      input.currentKey,
+      input.stops,
+      trioPricer(input.request, input.method),
+      input.rates,
+      { shouldStop: context.cancelled },
+    ),
+  };
 }

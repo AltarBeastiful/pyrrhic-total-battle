@@ -42,6 +42,9 @@ describe('request guard', () => {
     expect(
       isCalcRequestMessage({ kind: 'probe', id: 'e', request: { plan: { request: stackRequest } } }),
     ).toBe(true);
+    expect(isCalcRequestMessage({ kind: 'captains', id: 'f', request: { request: stackRequest } })).toBe(
+      true,
+    );
     expect(isCalcRequestMessage({ kind: 'cancel', id: 'c' })).toBe(true);
   });
 
@@ -51,6 +54,7 @@ describe('request guard', () => {
     expect(isCalcRequestMessage({ kind: 'stack', id: '', request: stackRequest })).toBe(false);
     expect(isCalcRequestMessage({ kind: 'stack', id: 'a' })).toBe(false);
     expect(isCalcRequestMessage({ kind: 'probe', id: 'a' })).toBe(false);
+    expect(isCalcRequestMessage({ kind: 'captains', id: 'a' })).toBe(false);
     expect(isCalcRequestMessage({ kind: 'vite:hmr', id: 'a' })).toBe(false);
   });
 });
@@ -61,6 +65,7 @@ describe('response guard', () => {
     expect(isCalcResponseMessage({ kind: 'progress', id: 'a', progress: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'search', id: 'a', result: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'probe', id: 'a', result: { stops: [], row: null } })).toBe(true);
+    expect(isCalcResponseMessage({ kind: 'captains', id: 'a', result: { screens: [] } })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'cancelled', id: 'a' })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: { message: 'no' } })).toBe(true);
     expect(
@@ -71,6 +76,7 @@ describe('response guard', () => {
   test('rejects malformed responses', () => {
     expect(isCalcResponseMessage({ kind: 'stack', id: 'a', result: {} })).toBe(false);
     expect(isCalcResponseMessage({ kind: 'probe', id: 'a', result: null })).toBe(false);
+    expect(isCalcResponseMessage({ kind: 'captains', id: 'a', result: null })).toBe(false);
     expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: {} })).toBe(false);
     expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: { message: 'no', code: 'other' } })).toBe(
       false,
