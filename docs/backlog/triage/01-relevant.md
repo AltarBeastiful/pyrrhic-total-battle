@@ -3,7 +3,7 @@ type: analysis
 title: Todos triage, ideas still relevant (relevant and partly-done)
 created: 2026-10-09
 tags: [backlog, triage]
-related: ['[[00-inventory]]', '[[02-done-or-obsolete]]', '[[03-needs-owner]]', '[[Progression-Advisor-Plan]]']
+related: ['[[00-inventory]]', '[[02-done-or-obsolete]]', '[[03-needs-owner]]', '[[progression-advisor]]']
 ---
 
 # Still relevant

@@ -3,12 +3,12 @@ type: analysis
 title: Todos triage, inventory of ideas in todos.md
 created: 2026-10-09
 tags: [backlog, triage]
-related: ['[[Progression-Advisor-Plan]]']
+related: ['[[progression-advisor]]']
 ---
 
 # Inventory of `todos.md`
 
-Source: `todos.md` (105 lines, last entry dated 28/09 22:43). Every idea is numbered `T-nn` in file order, with the original wording quoted. Compound bullets are split where they are separate asks; the parent is named in the "Part of" column. Classification comes in the next step of the triage ([[01-relevant]], [[02-done-or-obsolete]], [[03-needs-owner]]); this file only lists. Context read: `docs/PLAN.md` story table (S-01 to S-158), `docs/design-rules.md` (sections 1 to 7), `docs/plans/*.md` (19 plans, see [[Progression-Advisor-Plan]] at `docs/plans/progression-advisor.md`), and the 16 entries of `docs/research/`.
+Source: `todos.md` (105 lines, last entry dated 28/09 22:43). Every idea is numbered `T-nn` in file order, with the original wording quoted. Compound bullets are split where they are separate asks; the parent is named in the "Part of" column. Classification comes in the next step of the triage ([[01-relevant]], [[02-done-or-obsolete]], [[03-needs-owner]]); this file only lists. Context read: `docs/PLAN.md` story table (S-01 to S-158), `docs/design-rules.md` (sections 1 to 7), `docs/plans/*.md` (19 plans, see [[progression-advisor]] at `docs/plans/progression-advisor.md`), and the 16 entries of `docs/research/`.
 
 | Id | Part of | Area | Original wording (quoted) |
 | --- | --- | --- | --- |

@@ -3,7 +3,7 @@ type: analysis
 title: Todos triage, ideas already done or obsolete
 created: 2026-10-09
 tags: [backlog, triage]
-related: ['[[00-inventory]]', '[[01-relevant]]', '[[03-needs-owner]]', '[[Progression-Advisor-Plan]]']
+related: ['[[00-inventory]]', '[[01-relevant]]', '[[03-needs-owner]]', '[[progression-advisor]]']
 ---
 
 # Done or obsolete
@@ -14,7 +14,7 @@ related: ['[[00-inventory]]', '[[01-relevant]]', '[[03-needs-owner]]', '[[Progre
 | T-05 round to the nearest 10 while shielded | done | S-142 carries the `Most, in tens` position; the plan itself ignores `roundTo10` on purpose (benchmark scenario 18, commit `d19aa5b`). |
 | T-06 Enter validates count edits | done | Commit `6a1a27d` (2026-10-02); `src/ui/kit/enterCommits.ts`, used by `CornerGear.tsx`, `Sheet.tsx`, `MarchPills.tsx`. |
 | T-07 Enter validates in popups | done | Same commit and files; `Sheet` walks to the next typed field and closes on the last. |
-| T-09 advice on what would improve the plan | done | S-150 to S-158: advisor pool, probes, "What to upgrade next" card (`AdvisorCard.tsx`), typed upgrades, captain advice, other questions. Overlaps [[Progression-Advisor-Plan]] Phases 01 to 06. |
+| T-09 advice on what would improve the plan | done | S-150 to S-158: advisor pool, probes, "What to upgrade next" card (`AdvisorCard.tsx`), typed upgrades, captain advice, other questions. Overlaps [[progression-advisor]] Phases 01 to 06. |
 | T-10 guide next moves in research or training | done | S-153 (typed upgrades ranked by gain per cost), S-157 (next star or level), S-158 (next tier, merc stock, horizon). |
 | T-14 account with Google login | done | S-49c, S-49d, S-49e: commits `c308f14`, `fea7eaf`, `2c129b4`; ADR `docs/decisions/0009-optional-account-sync.md`, plan `docs/plans/sso-accounts.md`. Remaining operations items (Discord secret, rotate a leaked secret, phone tests) are listed in that plan, not a todo of this file. |
 | T-17 picture of two heroes with different quality 3-sets | obsolete | An illustration, not an ask; the image file `image.png` is not in the repo. Its content is carried by T-18. |

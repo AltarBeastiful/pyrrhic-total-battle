@@ -3,7 +3,7 @@ type: analysis
 title: Todos triage, summary and index
 created: 2026-10-09
 tags: [backlog, triage]
-related: ['[[00-inventory]]', '[[01-relevant]]', '[[02-done-or-obsolete]]', '[[03-needs-owner]]', '[[Progression-Advisor-Plan]]']
+related: ['[[00-inventory]]', '[[01-relevant]]', '[[02-done-or-obsolete]]', '[[03-needs-owner]]', '[[progression-advisor]]']
 ---
 
 # Triage of `todos.md`: summary
@@ -32,7 +32,7 @@ T-15 (em dashes) is `relevant` but its scope also sits in [[03-needs-owner]], so
 
 ## Overlap with the advisor playbook (do not backlog twice)
 
-Phases 01 to 06 of the advisor playbook shipped as S-150 to S-158 (see [[Progression-Advisor-Plan]]).
+Phases 01 to 06 of the advisor playbook shipped as S-150 to S-158 (see [[progression-advisor]]).
 
 - Already delivered by it: T-09 (advice on what would improve the plan), T-10 (next moves in research or training), T-22 (sliding leadership and dominance), T-23 (real planning algorithm for sweeps).
 - Open items that should be answered with its sweeps, not new features: T-11 (leadership non-linearity), T-12 (army modernization strength), T-13 (fewer monsters, a monster-count probe in `advisor-sweeps.ts`), T-29 (spike check on merc deaths before any control).

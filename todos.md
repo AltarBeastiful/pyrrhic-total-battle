@@ -99,3 +99,5 @@ SG 17
 ED 19
 WE 40
 28/09 22:43
+
+See docs/backlog/README.md for these ideas refined into backlog items.
