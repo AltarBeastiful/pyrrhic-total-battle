@@ -1,7 +1,15 @@
 import { describe, expect, test } from 'vitest';
 
 import { CAMPAIGN } from '../config';
-import { allowedTrios, distinctCaptains, rankTrios, screenScore, screenTrios, trioKey } from './captains';
+import {
+  allowedTrios,
+  distinctCaptains,
+  rankTrios,
+  screenScore,
+  screenTrios,
+  shortlistTrios,
+  trioKey,
+} from './captains';
 import type { Pricer, ScreenTrio } from './captains';
 import { emptyTotals } from './bonuses';
 import type { BonusTotals } from './types';
@@ -174,5 +182,33 @@ describe('rankTrios', () => {
       { key: 'r', sized: 9, repriced: [] },
     ];
     expect(rankTrios(tied, 'sized').map((screen) => screen.key)).toEqual(['r', 'p', 'q']);
+  });
+});
+
+describe('shortlistTrios', () => {
+  const screens = [
+    { key: 'now', sized: 0, repriced: [0] },
+    { key: 'a', sized: 5, repriced: [1] },
+    { key: 'b', sized: 4, repriced: [9] },
+    { key: 'c', sized: 3, repriced: [8] },
+    { key: 'd', sized: 2, repriced: [2] },
+  ];
+
+  test('never lists the current trio, whatever it ranks', () => {
+    const all = shortlistTrios([{ key: 'now', sized: 50, repriced: [50] }, ...screens.slice(1)], 'now', 9);
+    expect(all).not.toContain('now');
+    expect(all).toHaveLength(4);
+  });
+
+  test('takes one ranking, or both in turn with a trio counted once', () => {
+    expect(shortlistTrios(screens, 'now', 2, 'sized')).toEqual(['a', 'b']);
+    expect(shortlistTrios(screens, 'now', 2, 'repriced')).toEqual(['b', 'c']);
+    expect(shortlistTrios(screens, 'now', 3)).toEqual(['a', 'b', 'c']);
+    expect(shortlistTrios(screens, 'now', 4)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  test('is a count: zero asks for none, a large one for every other trio', () => {
+    expect(shortlistTrios(screens, 'now', 0)).toEqual([]);
+    expect(shortlistTrios(screens, 'now', 99)).toHaveLength(4);
   });
 });

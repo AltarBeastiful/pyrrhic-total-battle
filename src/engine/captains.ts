@@ -174,3 +174,33 @@ export function rankTrios(screens: readonly TrioScreen[], kind: ScreenKind): Tri
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map((entry) => entry.screen);
 }
+
+// ---- The shortlist ----------------------------------------------------------------------------------
+/** Which ranking the shortlist is taken from: one screen, or both of them taken in turn. */
+export type ShortlistFrom = ScreenKind | 'both';
+
+/**
+ * **The trios worth planning in full**: the first `count` of the screen's ranking, never the current trio (it is
+ * planned anyway, as the baseline). With `both`, the two rankings are taken in turn, the sized one first, a trio
+ * both rank high counted once, so a trio only one screen likes still gets its plan. The current trio is the one
+ * whose key is `currentKey`; ties keep the screened order, so the list is the same whatever ran the screen.
+ */
+export function shortlistTrios(
+  screens: readonly TrioScreen[],
+  currentKey: string,
+  count: number,
+  from: ShortlistFrom = 'both',
+): string[] {
+  const lists = (from === 'both' ? (['sized', 'repriced'] as const) : ([from] as const)).map((kind) =>
+    rankTrios(screens, kind)
+      .map((screen) => screen.key)
+      .filter((key) => key !== currentKey),
+  );
+  const out: string[] = [];
+  for (let at = 0; out.length < count && lists.some((list) => at < list.length); at += 1)
+    for (const list of lists) {
+      const key = list[at];
+      if (key !== undefined && out.length < count && !out.includes(key)) out.push(key);
+    }
+  return out;
+}

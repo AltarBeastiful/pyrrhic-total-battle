@@ -225,6 +225,12 @@ for the accounts that have those captains → owner's trade.
 > March's `elite` method, (b) the current plan's stop counts battled again (`planMarch`); a trio's score on (b) is its
 > best stop. Measured once: 1 140 trios x (1 sized + 5 stops) on the planner's small army, 0.39 s on the kernel.
 
+> **C5a confirm, 2026-10-09.** `runCaptainAdvice` (`src/worker/captainAdvice.ts`): the current trio's plan, the screen, then
+> the first `CAMPAIGN.captainConfirm` (8) trios of the screen (`shortlistTrios`; both screens in turn by default) each
+> planned in full as one pool job and read as a probe (`readProbe`). The answer is the best trio per stop with its gain,
+> the current trio where none gains (never worse), and it lists the trios the clock cut or whose job failed. No job
+> carries a clock; the order of the answer does not depend on the pool's size.
+
 **Where it runs**: the worker only gets `CampaignInput` with totals already summed, and `derive.ts` imports the
 tables, the store schema and config. Each trio's totals are built on the **main thread** (`resolveSources` +
 `aggregateBonuses` with `active.captains` swapped, deduplicated by `captainId`, since the same captain can be

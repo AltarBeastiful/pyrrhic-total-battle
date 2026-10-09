@@ -14,7 +14,7 @@ export const PROBE_BONUS_DELTA = 1;
 /** Default rise of a housing pool, as a percent of the current pool. */
 export const PROBE_HOUSING_PERCENT = 1;
 
-export type ProbeFamily = 'health' | 'strength' | 'housing' | 'user';
+export type ProbeFamily = 'health' | 'strength' | 'housing' | 'captains' | 'user';
 
 /** What a typed upgrade costs in the game, in the player's own unit ("talent points", "gold", "days"). */
 export interface ProbeCost {
