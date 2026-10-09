@@ -25,10 +25,10 @@ Implement ONE performance fix from `/home/remi/projects/pyrrhic-totalbattle/.mae
 
 ## Task
 
-- [x] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
+- [ ] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
   - Note: no `[AUTO_IMPLEMENT_COMPLEXITY]` / `[AUTO_IMPLEMENT_GAIN]` values in the agent prompt; no policy filter applied (same as earlier docs).
 
-- [x] **Implement one PENDING fix (or skip if none)**: Read /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_PLAN.md. If the file doesn't exist OR contains no items with status exactly `PENDING`, mark this task complete without changes. Otherwise, find an item with status exactly `PENDING`, implement the fix, log to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/PERF_LOG_pyrrhic_2026-10-09.md, and mark as IMPLEMENTED in /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_PLAN.md.
+- [ ] **Implement one PENDING fix (or skip if none)**: Read /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_PLAN.md. If the file doesn't exist OR contains no items with status exactly `PENDING`, mark this task complete without changes. Otherwise, find an item with status exactly `PENDING`, implement the fix, log to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/PERF_LOG_pyrrhic_2026-10-09.md, and mark as IMPLEMENTED in /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_PLAN.md.
   - Note: `LOOP_00001_PLAN.md` has no item with status exactly `PENDING` (only Finding 2, WON'T DO). No code changed; logged "No PENDING fixes available" in `PERF_LOG_pyrrhic_2026-10-09.md`.
 
 ## Implementation Checklist

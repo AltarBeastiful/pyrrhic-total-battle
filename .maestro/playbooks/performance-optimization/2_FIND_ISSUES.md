@@ -21,10 +21,10 @@ Execute ONE tactic from `/home/remi/projects/pyrrhic-totalbattle/.maestro/playbo
 
 ## Task
 
-- [x] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
+- [ ] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
   - Note: neither placeholder is present in this run's prompt; no policy filter applied (recorded in CANDIDATES).
 
-- [x] **Execute one tactic (or mark exhausted)**: Read /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_GAME_PLAN.md and check for unexecuted tactics. If ALL tactics are already marked `[EXECUTED]`, append a section `## ALL_TACTICS_EXHAUSTED` to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_CANDIDATES.md and mark this task complete. Otherwise, pick one unexecuted tactic, search the codebase for matching issues, append findings to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_CANDIDATES.md, and mark the tactic as `[EXECUTED]` in the game plan.
+- [ ] **Execute one tactic (or mark exhausted)**: Read /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_GAME_PLAN.md and check for unexecuted tactics. If ALL tactics are already marked `[EXECUTED]`, append a section `## ALL_TACTICS_EXHAUSTED` to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_CANDIDATES.md and mark this task complete. Otherwise, pick one unexecuted tactic, search the codebase for matching issues, append findings to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_CANDIDATES.md, and mark the tactic as `[EXECUTED]` in the game plan.
 
 ## Output Format
 

@@ -25,10 +25,10 @@ Analyze the codebase to identify **categories of potential performance issues** 
 
 ## Analysis Checklist
 
-- [x] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
+- [ ] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
   - Note: no `[AUTO_IMPLEMENT_COMPLEXITY]` or `[AUTO_IMPLEMENT_GAIN]` values appeared in the agent prompt; no policy filter applied, recorded in the game plan.
 
-- [x] **Survey codebase (if needed)**: First check if `/home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_GAME_PLAN.md` already exists with at least one tactic defined. If it does, skip the survey and mark this task complete—the game plan is already in place. If it doesn't exist, examine project structure, identify framework(s) and language(s) used, find main entry points and largest files. Note any performance-related libraries or patterns already in use.
+- [ ] **Survey codebase (if needed)**: First check if `/home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_GAME_PLAN.md` already exists with at least one tactic defined. If it does, skip the survey and mark this task complete—the game plan is already in place. If it doesn't exist, examine project structure, identify framework(s) and language(s) used, find main entry points and largest files. Note any performance-related libraries or patterns already in use.
   - Done: surveyed kernel (AssemblyScript, 2617 lines), src/kernel loaders, src/worker pool and engine; wrote 9 tactics to `LOOP_00001_GAME_PLAN.md`.
 
 ## Output Format

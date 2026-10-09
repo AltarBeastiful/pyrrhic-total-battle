@@ -25,10 +25,10 @@ Evaluate candidates from `/home/remi/projects/pyrrhic-totalbattle/.maestro/playb
 
 ## Task
 
-- [x] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
+- [ ] **Read configured values**: Read the agent prompt for `[AUTO_IMPLEMENT_COMPLEXITY]` and `[AUTO_IMPLEMENT_GAIN]`. Use these values throughout this playbook wherever you see the corresponding placeholders.
   - Note: neither value appeared in the agent prompt; no policy filter applied (same as loop docs 1-2).
 
-- [x] **Evaluate one candidate (or skip if empty)**: Read /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_CANDIDATES.md. If it contains no findings OR all findings have already been evaluated in LOOP_00001_PLAN.md, mark this task complete without changes. Otherwise, pick one unevaluated finding, investigate the fix, assess complexity/gain, and append to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_PLAN.md.
+- [ ] **Evaluate one candidate (or skip if empty)**: Read /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_CANDIDATES.md. If it contains no findings OR all findings have already been evaluated in LOOP_00001_PLAN.md, mark this task complete without changes. Otherwise, pick one unevaluated finding, investigate the fix, assess complexity/gain, and append to /home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/LOOP_00001_PLAN.md.
   - Done: evaluated Finding 2 (eager boot of all pool workers) -> WON'T DO - Low impact; boots are hidden behind the one-job baseline, lazy start would put them on the fan-out's critical path. Findings 1, 3-6 remain unevaluated.
 
 ## Rating Criteria
