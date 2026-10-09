@@ -21,10 +21,12 @@ import { useStore } from '@/state/store';
 import { GLYPHS } from '@/ui/domain';
 import { renderWithTheme } from '@/ui/kit/testRender';
 import type { AdvisorResult } from '@/worker/advisor';
+import type { CaptainAdviceResult } from '@/worker/captainAdvice';
 import type { CalcPool } from '@/worker/pool';
 
 import { AdvisorCard, AdvisorFold, type AdvisorCardProps } from './AdvisorCard';
 import { setAdvisorPool, type AdvisorKindView } from './advisorSearch';
+import type { CaptainPassResult, CaptainView } from './captainSearch';
 import { useRunStore } from './runStore';
 
 afterEach(cleanup);
@@ -525,5 +527,190 @@ describe('where the March mounts it', () => {
     expect(screen.getByText(/needs a browser that can compute in the background/u)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Compute/ })).toBeNull();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('the captain section', () => {
+  const CURRENT = 'aydae,skadi,sofia';
+  const BEST = 'aydae,beowulf,skadi';
+
+  const captains = (over: Partial<CaptainView> = {}): CaptainView => ({
+    owned: 4,
+    status: 'idle',
+    done: 0,
+    total: 0,
+    result: null,
+    rows: [],
+    error: null,
+    compute: vi.fn(),
+    cancel: vi.fn(),
+    ...over,
+  });
+
+  /** The advice: the best trio gains on the all-in stop, the current one is best on the sweet spot. */
+  const advice = (over: Partial<CaptainAdviceResult> = {}): CaptainAdviceResult => ({
+    currentKey: CURRENT,
+    baseline: RESULT.baseline,
+    screens: [],
+    screenCut: false,
+    confirmed: [BEST],
+    rows: [],
+    plans: {},
+    best: [
+      { pick: 'sweet-spot', trio: CURRENT, gain: 0, advice: null },
+      { pick: 'all-in', trio: BEST, gain: 3, advice: stop('all-in', 3) },
+    ],
+    cut: [],
+    failed: [],
+    ...over,
+  });
+
+  const read = (
+    over: Partial<CaptainView> = {},
+    pass: Partial<CaptainPassResult> = {},
+    adviceOver: Partial<CaptainAdviceResult> = {},
+  ): CaptainView =>
+    captains({
+      status: 'done',
+      done: 9,
+      total: 9,
+      result: {
+        advice: advice(adviceOver),
+        upgrades: { lead: BEST, rows: [], cut: [], failed: [] },
+        lead: BEST,
+        ...pass,
+      },
+      rows: rankAdvice(ROWS, 'sweet-spot'),
+      ...over,
+    });
+
+  const draw = (view: CaptainView, headline: PlanPick = 'sweet-spot') =>
+    renderWithTheme(<AdvisorCard {...props({ headline, captains: view })} />);
+
+  test('no captain owned, no captain section', () => {
+    draw(captains({ owned: 0 }));
+    expect(screen.queryByTestId('advisor-pass-captains')).toBeNull();
+    expect(screen.queryByRole('button', { name: /captains/u })).toBeNull();
+  });
+
+  test('without the view, the card is the two passes it was', () => {
+    renderWithTheme(<AdvisorCard {...props()} />);
+    expect(screen.queryByTestId('advisor-pass-captains')).toBeNull();
+  });
+
+  test('idle: its own button, no list and no headings before one', async () => {
+    const view = captains();
+    draw(view);
+    expect(screen.queryByText('Best captains')).toBeNull();
+    expect(screen.queryByText('Next captain upgrades')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Compute captains' }));
+    expect(view.compute).toHaveBeenCalledOnce();
+  });
+
+  test('running: the progress is spoken and the button is Cancel', async () => {
+    const view = captains({ status: 'running', done: 4, total: 9 });
+    draw(view);
+    expect(screen.getByText('4 / 9 done').getAttribute('aria-live')).toBe('polite');
+    expect(screen.queryByRole('button', { name: 'Compute captains' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel captains' }));
+    expect(view.cancel).toHaveBeenCalledOnce();
+  });
+
+  test('done: the best trio per stop, by the captains names, with its gain and its damage', () => {
+    draw(read());
+    expect(screen.getByText('Best captains')).toBeTruthy();
+    expect(screen.getByText('A suggestion: your march keeps the captains you chose.')).toBeTruthy();
+    const [sweet, allIn] = screen.getAllByTestId('captain-trio');
+    expect(sweet?.textContent).toContain('your captains');
+    expect(sweet?.textContent).toContain('Aydae, Skadi, Sofia');
+    expect(sweet?.textContent).not.toContain('worth');
+    expect(allIn?.textContent).toContain('+3% worth');
+    expect(allIn?.textContent).toContain('Aydae, Beowulf, Skadi');
+    expect(allIn?.textContent).toContain('+3% damage');
+    // Never a minus.
+    expect(screen.getByTestId('advisor-pass-captains').textContent).not.toMatch(/[-−]\d/u);
+  });
+
+  test('done: the upgrades ranked on the headline stop, "no gain" kept, the lead trio said', () => {
+    draw(read());
+    expect(screen.getByText('Next captain upgrades')).toBeTruthy();
+    expect(screen.getByTestId('captain-lead').textContent).toBe(
+      'Read with Aydae, Beowulf, Skadi, the best trio.',
+    );
+    const rows = screen.getAllByTestId('advisor-row').slice(0, 3);
+    expect(rows.map((one) => one.textContent)).toEqual([
+      expect.stringContaining('Strength +1 % guardsmen+2.4% worth'),
+      expect.stringContaining('Health +1 % rangedno gain'),
+      expect.stringContaining('Leadership +1 %no gain'),
+    ]);
+  });
+
+  test('the other stops are folded, ranked on themselves, under their own name', async () => {
+    draw(read());
+    const fold = screen.getByRole('button', { name: /Other stops \(captains\)/u });
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+    await userEvent.click(fold);
+    expect(screen.getAllByTestId('advisor-row').length).toBeGreaterThan(3);
+  });
+
+  test('the current trio the best everywhere: no "read with" line, only the upgrades', () => {
+    draw(
+      read(
+        {},
+        { lead: CURRENT },
+        {
+          best: [
+            { pick: 'sweet-spot', trio: CURRENT, gain: 0, advice: null },
+            { pick: 'all-in', trio: CURRENT, gain: 0, advice: null },
+          ],
+        },
+      ),
+    );
+    expect(screen.queryByTestId('captain-lead')).toBeNull();
+    expect(screen.getAllByText('your captains')).toHaveLength(2);
+    expect(screen.getByText('Next captain upgrades')).toBeTruthy();
+  });
+
+  test('no upgrade row, no upgrade heading', () => {
+    draw(read({ rows: [] }));
+    expect(screen.getByText('Best captains')).toBeTruthy();
+    expect(screen.queryByText('Next captain upgrades')).toBeNull();
+  });
+
+  test('cut: said with the clock, the list kept; a baseline cut reads before the march was read', () => {
+    draw(read({ status: 'cut' }, {}, { cut: [BEST] }));
+    expect(
+      screen.getByText('The 20 s cut stopped the pass before it read everything (1 unfinished).'),
+    ).toBeTruthy();
+    expect(screen.getByText('Best captains')).toBeTruthy();
+    cleanup();
+    draw(
+      captains({
+        status: 'cut',
+        result: { advice: advice({ baseline: null }), upgrades: null, lead: CURRENT },
+      }),
+    );
+    expect(screen.getByText('The 20 s cut stopped the pass before the current march was read.')).toBeTruthy();
+    expect(screen.queryByText('Best captains')).toBeNull();
+  });
+
+  test('failed: one red line with the reason', () => {
+    draw(captains({ status: 'failed', error: 'baseline broke' }));
+    expect(screen.getByText('The captains could not be read: baseline broke')).toBeTruthy();
+  });
+
+  test('the fold mounts it: the card carries the captains button beside the two passes', () => {
+    useStore.getState().replaceDocument(newRoot());
+    useRunStore.getState().reset();
+    setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+    useRunStore.setState({
+      plan: { alternatives: [{ pick: 'sweet-spot', counts: {} }] } as unknown as CampaignPlan,
+      planPick: 0,
+    });
+    renderWithTheme(<AdvisorFold />);
+    // The default document owns no captain: the section stays out of the card.
+    expect(screen.queryByRole('button', { name: 'Compute captains' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
+    setAdvisorPool(null);
   });
 });

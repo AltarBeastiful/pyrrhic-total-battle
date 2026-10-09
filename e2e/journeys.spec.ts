@@ -525,6 +525,11 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
  */
 async function journey7(page: Page, phone: boolean): Promise<void> {
   await seedHiredStock(page);
+  // Three captains on the march (set up once, like the stock: not counted), so the card has a captain section.
+  for (const name of ['Beowulf', 'Aydae', 'Skadi']) {
+    await (await chipLabel(page, name)).click();
+    await expect(captainChip(page, name)).toBeChecked();
+  }
   await toTop(page);
 
   const taps = new Taps();
@@ -622,6 +627,26 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
   expect(costLines.length > 0 || gaining === 0, 'rows gain, yet none says what it costs the march').toBe(
     true,
   );
+
+  // The captains (W17 C5) have a button of their own: the pass is 3-6 s alone and over the 20 s cut beside the
+  // others (experiment 193). With three captains there is one trio, so every stop reads "your captains"; the
+  // next star or level of each is listed on the headline stop. Never a loss, never a trio the march does not own.
+  await taps.tap(card.getByRole('button', { name: 'Compute captains' }));
+  await expect(card.getByRole('button', { name: 'Compute captains again' })).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(card.getByText(/could not be read/)).toHaveCount(0);
+  await expect(card.getByText('Best captains', { exact: true })).toBeVisible();
+  const trios = card.getByTestId('captain-trio');
+  expect(await trios.count()).toBeGreaterThan(0);
+  for (const text of await trios.allTextContents()) {
+    expect(text).toMatch(/(\+[\d.]+%|under 0\.1%) worth|your captains/);
+    expect(text).not.toMatch(/(^|\s)[-−][\d.]+% worth/);
+  }
+  await expect(card.getByText('A suggestion: your march keeps the captains you chose.')).toBeVisible();
+  // Beowulf, Aydae and Skadi each add to the army at level 0 and star 0, so a star or a level is worth asking.
+  await expect(card.getByText('Next captain upgrades', { exact: true })).toBeVisible();
+  await expect(card.getByTestId('advisor-row').filter({ hasText: /^Beowulf ★0 → ★1/ })).not.toHaveCount(0);
 
   if (phone) {
     // 390 px: the card fits its column, and nothing in the sheet scrolls sideways.

@@ -251,6 +251,15 @@ for the accounts that have those captains → owner's trade.
 > (`UpgradeAsk.cost`), so `rankAdvice` ranks by gain per cost when there is one and by gain alone otherwise.
 > `captainAdvice` now keeps every finished plan by trio (`plans`) so the lead's bar is at hand.
 
+> **C5 card, 2026-10-09.** The captain section of the advisor card (`AdvisorCard.tsx` `CaptainSection`, state in
+> `captainSearch.ts`): one "Compute captains" button, progress and Cancel, its own 20 s clock, the pool of the other two
+> passes. The pass is `runCaptainAdvice`, then `runCaptainUpgrades` against `leadTrio(best, currentKey)` with what is left
+> of the clock (none left: the upgrades are not started and the pass reads cut). It lists the best trio per stop of the bar
+> ("your captains" where none gains, never a loss; "a suggestion: your march keeps the captains you chose") and the next
+> star/level ranked on the headline stop, the other stops folded. The key carries the roster by value and the march type,
+> so a level typed on a benched captain stales the answer. Not in: a typed cost per captain upgrade (the pass carries
+> `UpgradeAsk.cost`; no field types one yet).
+
 **Where it runs**: the worker only gets `CampaignInput` with totals already summed, and `derive.ts` imports the
 tables, the store schema and config. Each trio's totals are built on the **main thread** (`resolveSources` +
 `aggregateBonuses` with `active.captains` swapped, deduplicated by `captainId`, since the same captain can be

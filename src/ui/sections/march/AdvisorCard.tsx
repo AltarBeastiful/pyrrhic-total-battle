@@ -6,6 +6,10 @@
  * "Compute default upgrades" the 29 generic probes at their default increase. Each has its own progress,
  * Cancel, cut note, failure line and ranked list, under its own small heading shown once it has been computed.
  *
+ * **Captains** (W17 C5) are a third pass beside the two, on a button of their own (`CaptainSection`,
+ * `captainSearch.ts`): experiment 193 put the pass over the 20 s cut when run together with the others. It lists
+ * the best trio per stop and the next star or level of each captain; only with a captain owned (rule 15).
+ *
  * It is a **next-investment** card (owner, 2026-10-08): an upgrade takes time in the game, so what a row says
  * is what that upgrade would bring to the marches after it, never "change this march now". The words follow.
  *
@@ -42,10 +46,13 @@ import {
 } from '@/engine/advisor';
 import type { PlanPick } from '@/engine/plan';
 import { PROBE_BONUS_DELTA, PROBE_HOUSING_PERCENT } from '@/engine/probes';
+import { DEFAULT_TABLES } from '@/state/derive';
 import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
+import type { TrioStopAdvice } from '@/worker/captainAdvice';
 
 import { canAdvise, useAdvisor, type AdvisorKindView, type AdvisorView } from './advisorSearch';
+import { useCaptainAdvice, type CaptainView } from './captainSearch';
 import { amount, compactTwo, delta, duration, signedPercent } from './format';
 import { planWords } from './picks';
 import { TypedUpgrades } from './TypedUpgrades';
@@ -54,6 +61,8 @@ import classes from './march.module.css';
 export type AdvisorCardProps = Pick<AdvisorView, 'headline' | 'typed' | 'mine' | 'default'> & {
   /** The player's own upgrades and their form (`TypedUpgrades`), read by the "my upgrades" pass. */
   upgrades?: ReactNode;
+  /** The captain section (`captainSearch.ts`): the best trio and the next star; left out, the card has none. */
+  captains?: CaptainView;
 };
 
 const SECONDS = Math.round(CAMPAIGN.budgets.extra / 1000);
@@ -379,7 +388,164 @@ function PassSection({ compute, noun, heading, view, headline, blocked, note, or
   );
 }
 
-export function AdvisorCard({ headline, typed, mine, default: generic, upgrades }: AdvisorCardProps) {
+/** A trio's key (`aydae,beowulf,skadi`) in the captains' own names. */
+function trioWords(key: string): string {
+  return key
+    .split(',')
+    .map((id) => DEFAULT_TABLES.captains.find((record) => record.id === id)?.name ?? id)
+    .join(', ');
+}
+
+/**
+ * **The best trio on one stop of the bar**: the stop, what the trio is worth on the owner's rating, and under
+ * it the captains with the damage they would bring. Where no trio gains the line says the march's own is the
+ * best ("your captains"), never a loss: `bestPerStop` keeps the current trio on a gain of 0.
+ */
+function TrioLine({ stop }: { stop: TrioStopAdvice }) {
+  const gains = stop.gain > 0 && stop.advice !== null;
+  const reached = stop.advice === null ? null : reachedDamage(stop.advice);
+  return (
+    <Stack gap={0} data-testid="captain-trio">
+      <Group justify="space-between" wrap="nowrap" gap="sm" align="baseline">
+        <Text size="sm">{planWords({ pick: stop.pick })}</Text>
+        {gains ? (
+          <Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>
+            {gainWords(stop.gain)} worth
+          </Text>
+        ) : (
+          <Text size="sm" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+            your captains
+          </Text>
+        )}
+      </Group>
+      <Text className={classes.meta} c="dimmed">
+        {trioWords(stop.trio)}
+        {gains && stop.advice !== null && reached !== null && (
+          <>
+            , {signedPercent(stop.advice.damagePercent)} damage, <Figure value={reached} /> a march
+          </>
+        )}
+      </Text>
+    </Stack>
+  );
+}
+
+/**
+ * **The captain section** (W17 C5): its own button and clock (experiment 193: the pass costs 3–6 s on its own
+ * and over the 20 s cut beside the other two), its progress and Cancel, then the best trio per stop and the next
+ * star or level of each captain, ranked on the stop the bar shows. The trio is a suggestion: the march keeps the
+ * captains the player chose, and the line under the heading says so (rule 15: said once, only with a list).
+ * Nothing at all with no captain owned.
+ */
+function CaptainSection({ view, headline }: { view: CaptainView; headline: PlanPick | null }) {
+  const { status, done, total, result, rows, error } = view;
+  if (view.owned === 0) return null;
+  const running = status === 'running';
+  const words = statusWords(status, done, total);
+  const advice = result?.advice ?? null;
+  const read = advice !== null && advice.baseline !== null;
+  const cut = result?.upgrades?.cut.length ?? 0;
+  const confirmedCut = advice?.cut.length ?? 0;
+  const lead = result?.lead;
+  const others = (advice?.baseline ?? []).map((stop) => stop.pick).filter((pick) => pick !== headline);
+  const failed = (advice?.failed.length ?? 0) + (result?.upgrades?.failed.length ?? 0);
+
+  return (
+    <Stack gap="xs" data-testid="advisor-pass-captains">
+      <Group gap="sm" wrap="nowrap">
+        {running ? (
+          <Button size="xs" variant="default" onClick={view.cancel} aria-label="Cancel captains">
+            Cancel
+          </Button>
+        ) : (
+          <Button size="xs" variant="default" onClick={view.compute}>
+            {result === null ? 'Compute captains' : 'Compute captains again'}
+          </Button>
+        )}
+        <Text className={classes.meta} c="dimmed" aria-live="polite">
+          {words ?? ''}
+        </Text>
+      </Group>
+
+      {status === 'failed' && error !== null && (
+        <Text size="sm" c="red">
+          The captains could not be read: {error}
+        </Text>
+      )}
+
+      {status === 'cut' && (
+        <Text size="sm" c="dimmed">
+          {advice === null || advice.baseline === null
+            ? `The ${String(SECONDS)} s cut stopped the pass before the current march was read.`
+            : `The ${String(SECONDS)} s cut stopped the pass before it read everything${
+                confirmedCut + cut > 0 ? ` (${String(confirmedCut + cut)} unfinished)` : ''
+              }.`}
+        </Text>
+      )}
+
+      {failed > 0 && (
+        <Text size="sm" c="dimmed">
+          {failed} trio{failed === 1 ? '' : 's'} or upgrade{failed === 1 ? '' : 's'} could not be read.
+        </Text>
+      )}
+
+      {read && (
+        <>
+          <Text size="sm" fw={500}>
+            Best captains
+          </Text>
+          <Text className={classes.meta} c="dimmed">
+            A suggestion: your march keeps the captains you chose.
+          </Text>
+          <Stack gap="xs">
+            {advice.best.map((stop) => (
+              <TrioLine key={stop.pick} stop={stop} />
+            ))}
+          </Stack>
+          {rows.length > 0 && result !== null && (
+            <>
+              <Text size="sm" fw={500}>
+                Next captain upgrades
+              </Text>
+              {lead !== undefined && lead !== advice.currentKey && (
+                <Text className={classes.meta} c="dimmed" data-testid="captain-lead">
+                  Read with {trioWords(lead)}, the best trio.
+                </Text>
+              )}
+              <StopList rows={rows} pick={headline} />
+              {others.length > 0 && (
+                <Disclosure
+                  title="Other stops (captains)"
+                  summary={`${String(others.length)} stop${others.length === 1 ? '' : 's'}`}
+                >
+                  <Stack gap="md">
+                    {others.map((pick) => (
+                      <Stack key={pick} gap="xs">
+                        <Text size="sm" fw={500}>
+                          {planWords({ pick })}
+                        </Text>
+                        <StopList rows={rankAdvice(rows, pick)} pick={pick} />
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Disclosure>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </Stack>
+  );
+}
+
+export function AdvisorCard({
+  headline,
+  typed,
+  mine,
+  default: generic,
+  upgrades,
+  captains,
+}: AdvisorCardProps) {
   return (
     <Stack gap="sm" aria-label="What to upgrade next" role="region">
       <Stack gap={2}>
@@ -411,6 +577,7 @@ export function AdvisorCard({ headline, typed, mine, default: generic, upgrades 
         headline={headline}
         note={DEFAULT_INCREASE}
       />
+      {captains !== undefined && <CaptainSection view={captains} headline={headline} />}
     </Stack>
   );
 }
@@ -423,6 +590,7 @@ export function AdvisorCard({ headline, typed, mine, default: generic, upgrades 
  */
 export function AdvisorFold() {
   const view = useAdvisor();
+  const captains = useCaptainAdvice();
   if (view.headline === null) return null;
   if (!canAdvise()) {
     return (
@@ -431,5 +599,5 @@ export function AdvisorFold() {
       </Text>
     );
   }
-  return <AdvisorCard {...view} upgrades={<TypedUpgrades />} />;
+  return <AdvisorCard {...view} captains={captains} upgrades={<TypedUpgrades />} />;
 }

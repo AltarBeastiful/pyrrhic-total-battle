@@ -102,6 +102,12 @@ export function setAdvisorPool(next: CalcPool | null): void {
   pool = next;
 }
 
+/** The one pool the card's passes queue on, made on first use (the captain pass, `captainSearch.ts`, shares it). */
+export function advisorPool(): CalcPool {
+  pool ??= createCalcPool();
+  return pool;
+}
+
 /**
  * **A pass is offered only off the main thread.** The pool falls back to one inline client when the platform
  * has no `Worker`, and 30 whole plans on the page's own thread is a frozen page; the card says why instead.
@@ -177,9 +183,8 @@ export async function computeAdvice(
   controllers[kind] = own;
   const store = useAdvisorStore.getState();
   store.begin(kind, key, probes.length + 1);
-  pool ??= createCalcPool();
   try {
-    const result = await runAdvisor(input, probes, pool, {
+    const result = await runAdvisor(input, probes, advisorPool(), {
       signal: own.signal,
       headline,
       onProgress: (done, total) => {
