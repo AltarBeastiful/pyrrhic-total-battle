@@ -2,6 +2,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { getUnits } from '@/data';
+import type { UnitDef } from '@/data/types';
 import { emptyTotals } from '@/engine';
 import type { CampaignInput } from '@/engine/plan';
 
@@ -14,6 +15,7 @@ import {
   nextTierProbes,
   silverProbes,
   sweepCurve,
+  tierUnlocks,
 } from './advisor-sweeps';
 import type { StackRequest } from './types';
 
@@ -120,5 +122,27 @@ describe('campaign probes', () => {
     expect(only).toHaveLength(1);
     expect(only[0]!.applyInput(input()).silverBudget).toBe(900);
     expect(silverProbes({}, 5, 1_000)[0]!.applyInput(input()).silverBudget).toBe(0);
+  });
+});
+
+describe('tierUnlocks', () => {
+  const unit = (id: string, kind: UnitDef['kind'], tier: number, group?: UnitDef['group']): UnitDef =>
+    ({ id, kind, tier, ...(group === undefined ? {} : { group }) }) as UnitDef;
+  const all = [
+    unit('g3', 'troop', 3, 'guardsmen'),
+    unit('g4', 'troop', 4, 'guardsmen'),
+    unit('g5', 'troop', 5, 'guardsmen'),
+    unit('s4', 'troop', 4, 'specialist'),
+    unit('m1', 'mercenary', 1),
+    unit('m2', 'mercenary', 2),
+  ];
+
+  test('one tier above the highest fielded, per kind and group', () => {
+    const unlocks = tierUnlocks([all[0] as UnitDef, all[1] as UnitDef], all);
+    expect(unlocks.map((u) => u.units.map((x) => x.id))).toEqual([['g5']]);
+  });
+
+  test('a group at the top of the data, and mercenaries, give no unlock', () => {
+    expect(tierUnlocks([all[2] as UnitDef, all[4] as UnitDef], all)).toEqual([]);
   });
 });

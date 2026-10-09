@@ -115,6 +115,22 @@ export interface TierUnlock {
   cost?: { amount: number; unit: string };
 }
 
+/**
+ * The troops one tier above what the request fields, per kind and group: `have` is the request's units, `all` the
+ * data's. No unit is invented, a kind or group without a higher tier gives no unlock, and mercenaries are left alone.
+ */
+export function tierUnlocks(have: readonly UnitDef[], all: readonly UnitDef[]): TierUnlock[] {
+  const keyOf = (unit: UnitDef): string => `${unit.kind}:${unit.group ?? ''}`;
+  const keys = new Set(have.filter((unit) => unit.kind !== 'mercenary').map(keyOf));
+  const out: TierUnlock[] = [];
+  for (const key of keys) {
+    const top = Math.max(...have.filter((unit) => keyOf(unit) === key).map((unit) => unit.tier));
+    const units = all.filter((unit) => keyOf(unit) === key && unit.tier === top + 1);
+    if (units.length > 0) out.push({ label: `${key.replace(':', ' ')} tier ${String(top + 1)}`, units });
+  }
+  return out;
+}
+
 /** Add the unlock's units to the request; a unit already in it is not added twice. */
 export function nextTierProbes(unlocks: readonly TierUnlock[]): CampaignProbe[] {
   return unlocks
@@ -192,6 +208,11 @@ export function horizonProbes(
 
 // ---- 5. marginal value of silver -------------------------------------------------------------------
 
+/** The silver a probe moves: a tenth of the baseline's bill, at least `minDelta`. */
+export function silverDelta(silverBill: number, minDelta = 1, share: number = SWEEP.silverShare): number {
+  return Math.max(minDelta, Math.round(silverBill * share));
+}
+
 /**
  * Silver plus and minus a tenth of the baseline's bill (`silverBill`), at least `minDelta` (one training chunk's
  * worth). With no budget set the baseline spends what it can, so there is nothing to raise: only the minus side,
@@ -203,7 +224,7 @@ export function silverProbes(
   minDelta = 1,
   share: number = SWEEP.silverShare,
 ): CampaignProbe[] {
-  const delta = Math.max(minDelta, Math.round(silverBill * share));
+  const delta = silverDelta(silverBill, minDelta, share);
   const base = input.silverBudget ?? silverBill;
   const side = (sign: 1 | -1): CampaignProbe => ({
     id: `campaign:silver:${sign > 0 ? 'plus' : 'minus'}`,

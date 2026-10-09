@@ -10,6 +10,11 @@
  * `captainSearch.ts`): experiment 193 put the pass over the 20 s cut when run together with the others. It lists
  * the best trio per stop and the next star or level of each captain; only with a captain owned (rule 15).
  *
+ * **The other questions** (W17 step D) are a fourth pass on a button of their own (`OtherSection`,
+ * `otherSearch.ts`; experiment 194 put them over the 20 s cut beside the generic probes): the dominance and
+ * leadership sweeps as a small ranked list of steps with the flattening point marked (no chart: the kit has
+ * none), the next troop tier, more merc stock, the horizon as a trade side by side and the value of silver.
+ *
  * It is a **next-investment** card (owner, 2026-10-08): an upgrade takes time in the game, so what a row says
  * is what that upgrade would bring to the marches after it, never "change this march now". The words follow.
  *
@@ -51,8 +56,11 @@ import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain
 import { Disclosure } from '@/ui/kit';
 import type { TrioStopAdvice } from '@/worker/captainAdvice';
 
+import { curveOfRows, type SweepCurve } from '@/engine/advisor-sweeps';
+
 import { canAdvise, useAdvisor, type AdvisorKindView, type AdvisorView } from './advisorSearch';
 import { useCaptainAdvice, type CaptainView } from './captainSearch';
+import { silverSlope, useOtherAdvice, type OtherView } from './otherSearch';
 import { amount, compactTwo, delta, duration, signedPercent } from './format';
 import { planWords } from './picks';
 import { TypedUpgrades } from './TypedUpgrades';
@@ -63,6 +71,8 @@ export type AdvisorCardProps = Pick<AdvisorView, 'headline' | 'typed' | 'mine' |
   upgrades?: ReactNode;
   /** The captain section (`captainSearch.ts`): the best trio and the next star; left out, the card has none. */
   captains?: CaptainView;
+  /** The other questions section (`otherSearch.ts`): sweeps, next tier, merc stock, horizon, silver. */
+  other?: OtherView;
 };
 
 const SECONDS = Math.round(CAMPAIGN.budgets.extra / 1000);
@@ -538,6 +548,223 @@ function CaptainSection({ view, headline }: { view: CaptainView; headline: PlanP
   );
 }
 
+/** A slope to the hundredth, signed: the per-point and per-silver figures are small. */
+function slopeWords(value: number): string {
+  const rounded = Math.round(value * 100) / 100;
+  return `${rounded > 0 ? '+' : rounded < 0 ? '-' : ''}${Math.abs(rounded).toFixed(2)}%`;
+}
+
+/**
+ * **One pool's sweep**, a ranked list of steps (rule 18: two-line rows, no chart): each rise with what it is
+ * worth on the sweet spot, the marginal gain a point of the pool brings under it, and the step where the curve
+ * flattens marked in words. The peak line says which rise is worth reaching; a curve that dips is said, not hidden.
+ */
+function SweepList({ pool, curve }: { pool: 'dominance' | 'leadership'; curve: SweepCurve }) {
+  const pools = pool === 'dominance' ? 'Dominance' : 'Leadership';
+  return (
+    <Stack gap="xs" data-testid={`other-sweep-${pool}`}>
+      <Group gap={6} wrap="nowrap">
+        <Glyph kind={pool} />
+        <Text size="sm" fw={500}>
+          {pools}
+        </Text>
+      </Group>
+      <Text className={classes.meta} c="dimmed" data-testid="other-sweep-peak">
+        {curve.peakPercent === null
+          ? `Still climbing at +${String(curve.points.at(-1)?.percent ?? 0)}%: the peak is further.`
+          : curve.peakPercent === 0
+            ? 'No rise of the pool is worth it on this march.'
+            : `Worth reaching: +${String(curve.peakPercent)}%. Beyond it a point of the pool adds under ${String(CAMPAIGN.advisorSweep.flattenBelow)}%.`}
+        {curve.monotone ? '' : ' The curve dips between steps: the search is noisy here.'}
+      </Text>
+      {curve.points.map((point, index) => (
+        <Stack key={point.percent} gap={0} data-testid="other-sweep-step">
+          <Group justify="space-between" wrap="nowrap" gap="sm" align="baseline">
+            <Text size="sm">
+              +{point.percent}% {pool}
+            </Text>
+            {point.gain > 0 ? (
+              <Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>
+                {gainWords(point.gain)} worth
+              </Text>
+            ) : (
+              <Text size="sm" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+                no gain
+              </Text>
+            )}
+          </Group>
+          <Text className={classes.meta} c="dimmed">
+            {slopeWords(point.marginal)} a point of the pool
+            {curve.flatAt === index ? ', flattens here' : ''}
+          </Text>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
+/** The silver probe's sides, in % of the damage per million silver: what the next silver buys, what the last costs. */
+function SilverLines({ view }: { view: OtherView }) {
+  const rows = view.rows.silver;
+  const facts = view.result?.facts;
+  if (rows.length === 0 || facts === undefined) return null;
+  return (
+    <Stack gap="xs" data-testid="other-silver">
+      <Text size="sm" fw={500}>
+        Silver
+      </Text>
+      <Text className={classes.meta} c="dimmed">
+        {facts.silverBudgeted
+          ? `Each side moves ${amount(facts.silverDelta)} silver.`
+          : `No silver budget is set, so only the loss side is read: ${amount(facts.silverDelta)} silver less.`}
+      </Text>
+      {rows.map((row) => {
+        const stop = headlineOf(row);
+        const slope = stop === undefined ? null : silverSlope(stop, facts.silverDelta);
+        const plus = row.id.endsWith(':plus');
+        return (
+          <Stack key={row.id} gap={0} data-testid="other-silver-side">
+            <Group justify="space-between" wrap="nowrap" gap="sm" align="baseline">
+              <Group gap={6} wrap="nowrap">
+                <Glyph kind="silver" />
+                <Text size="sm">{plus ? 'The next silver' : 'The last silver you spend'}</Text>
+              </Group>
+              <Text
+                size="sm"
+                fw={500}
+                {...(slope === 0 ? { c: 'dimmed' as const } : {})}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {slope === null ? 'no reading' : `${slopeWords(slope)} per million`}
+              </Text>
+            </Group>
+            {plus && slope !== null && slope < 0.005 && (
+              <Text className={classes.meta} c="dimmed">
+                Silver is not binding: more of it buys nothing.
+              </Text>
+            )}
+          </Stack>
+        );
+      })}
+    </Stack>
+  );
+}
+
+/**
+ * **The other questions' section** (W17 step D): its own button and clock, progress and Cancel, then one
+ * sub-list per question that has rows (rule 15: nothing for a question with no rows — no merc stock, no higher
+ * tier). The horizon is a trade, three horizons side by side with the baseline named, never a "best".
+ */
+function OtherSection({ view, headline }: { view: OtherView; headline: PlanPick | null }) {
+  const { status, done, total, result, rows, error } = view;
+  const running = status === 'running';
+  const words = statusWords(status, done, total);
+  const read = result !== null && result.baseline !== null;
+  const cutCount = result?.cut.length ?? 0;
+  const failedCount = result?.failed.length ?? 0;
+  const steps = CAMPAIGN.advisorSweep.dominanceSteps;
+  const facts = result?.facts;
+
+  return (
+    <Stack gap="xs" data-testid="advisor-pass-other">
+      <Group gap="sm" wrap="nowrap">
+        {running ? (
+          <Button size="xs" variant="default" onClick={view.cancel} aria-label="Cancel other questions">
+            Cancel
+          </Button>
+        ) : (
+          <Button size="xs" variant="default" onClick={view.compute}>
+            {result === null ? 'Compute other questions' : 'Compute other questions again'}
+          </Button>
+        )}
+        <Text className={classes.meta} c="dimmed" aria-live="polite">
+          {words ?? ''}
+        </Text>
+      </Group>
+
+      {status === 'failed' && error !== null && (
+        <Text size="sm" c="red">
+          The other questions could not be read: {error}
+        </Text>
+      )}
+
+      {status === 'cut' && (
+        <Text size="sm" c="dimmed">
+          {result?.baseline === null
+            ? `The ${String(SECONDS)} s cut stopped the pass before the current march was read.`
+            : `The ${String(SECONDS)} s cut stopped ${String(cutCount)} question${cutCount === 1 ? '' : 's'} before ${cutCount === 1 ? 'it' : 'they'} finished.`}
+        </Text>
+      )}
+
+      {failedCount > 0 && (
+        <Text size="sm" c="dimmed">
+          {failedCount} question{failedCount === 1 ? '' : 's'} could not be read.
+        </Text>
+      )}
+
+      {read && facts !== undefined && (
+        <>
+          {(['dominance', 'leadership'] as const).map((pool) =>
+            rows[pool].length === 0 ? null : (
+              <SweepList key={pool} pool={pool} curve={curveOfRows(rows[pool], steps)} />
+            ),
+          )}
+          {rows.tier.length > 0 && (
+            <Stack gap="xs" data-testid="other-tier">
+              <Text size="sm" fw={500}>
+                Next troop tier
+              </Text>
+              <StopList rows={rows.tier} pick={headline} />
+            </Stack>
+          )}
+          {rows.merc.length > 0 && (
+            <Stack gap="xs" data-testid="other-merc">
+              <Text size="sm" fw={500}>
+                More merc stock
+              </Text>
+              {rows.merc.map((row) => {
+                const stop = headlineOf(row, headline ?? undefined);
+                const added = facts.mercAdded[row.id];
+                return stop === undefined ? null : (
+                  <Stack key={row.id} gap={0}>
+                    <AdvisorRowLine row={row} stop={stop} />
+                    {added !== undefined && (
+                      <Text className={classes.meta} c="dimmed">
+                        {amount(added)} more merc
+                      </Text>
+                    )}
+                  </Stack>
+                );
+              })}
+            </Stack>
+          )}
+          {rows.horizon.length > 0 && (
+            <Stack gap="xs" data-testid="other-horizon">
+              <Text size="sm" fw={500}>
+                Horizon
+              </Text>
+              <Text className={classes.meta} c="dimmed">
+                A trade, not a ranking: your plan plays {String(facts.horizon)} marches; each line is the same
+                account over another number.
+              </Text>
+              <StopList
+                rows={[...rows.horizon].sort((a, b) => horizonOf(a.id) - horizonOf(b.id))}
+                pick={headline}
+              />
+            </Stack>
+          )}
+          <SilverLines view={view} />
+        </>
+      )}
+    </Stack>
+  );
+}
+
+/** The horizon a probe id names (`campaign:horizon:5`). */
+function horizonOf(id: string): number {
+  return Number(id.slice(id.lastIndexOf(':') + 1));
+}
+
 export function AdvisorCard({
   headline,
   typed,
@@ -545,6 +772,7 @@ export function AdvisorCard({
   default: generic,
   upgrades,
   captains,
+  other,
 }: AdvisorCardProps) {
   return (
     <Stack gap="sm" aria-label="What to upgrade next" role="region">
@@ -578,6 +806,7 @@ export function AdvisorCard({
         note={DEFAULT_INCREASE}
       />
       {captains !== undefined && <CaptainSection view={captains} headline={headline} />}
+      {other !== undefined && <OtherSection view={other} headline={headline} />}
     </Stack>
   );
 }
@@ -591,6 +820,7 @@ export function AdvisorCard({
 export function AdvisorFold() {
   const view = useAdvisor();
   const captains = useCaptainAdvice();
+  const other = useOtherAdvice();
   if (view.headline === null) return null;
   if (!canAdvise()) {
     return (
@@ -599,5 +829,5 @@ export function AdvisorFold() {
       </Text>
     );
   }
-  return <AdvisorCard {...view} captains={captains} upgrades={<TypedUpgrades />} />;
+  return <AdvisorCard {...view} captains={captains} other={other} upgrades={<TypedUpgrades />} />;
 }

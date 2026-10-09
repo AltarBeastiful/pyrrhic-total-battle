@@ -27,6 +27,7 @@ import type { CalcPool } from '@/worker/pool';
 import { AdvisorCard, AdvisorFold, type AdvisorCardProps } from './AdvisorCard';
 import { setAdvisorPool, type AdvisorKindView } from './advisorSearch';
 import type { CaptainPassResult, CaptainView } from './captainSearch';
+import type { OtherFacts, OtherView } from './otherSearch';
 import { useRunStore } from './runStore';
 
 afterEach(cleanup);
@@ -712,5 +713,184 @@ describe('the captain section', () => {
     expect(screen.queryByRole('button', { name: 'Compute captains' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
     setAdvisorPool(null);
+  });
+});
+
+describe('the other questions section', () => {
+  const sweepRow = (pool: 'dominance' | 'leadership', percent: number, gain: number): AdvisorRow => ({
+    id: `sweep:${pool}:${String(percent)}`,
+    family: 'sweep',
+    label: `${pool} +${String(percent)} %`,
+    stops: [stop('sweet-spot', gain)],
+  });
+  const FACTS: OtherFacts = {
+    mercAdded: { 'campaign:merc:10': 400 },
+    silverDelta: 2_000_000,
+    silverBudgeted: false,
+    horizon: 4,
+  };
+  const emptyRows = (): OtherView['rows'] => ({
+    dominance: [],
+    leadership: [],
+    tier: [],
+    merc: [],
+    horizon: [],
+    silver: [],
+  });
+  const other = (over: Partial<OtherView> = {}): OtherView => ({
+    status: 'idle',
+    done: 0,
+    total: 0,
+    result: null,
+    rows: emptyRows(),
+    error: null,
+    compute: vi.fn(),
+    cancel: vi.fn(),
+    ...over,
+  });
+  const read = (rows: Partial<OtherView['rows']>, over: Partial<OtherView> = {}): OtherView =>
+    other({
+      status: 'done',
+      done: 9,
+      total: 9,
+      result: { ...RESULT, rows: [], facts: FACTS },
+      rows: { ...emptyRows(), ...rows },
+      ...over,
+    });
+  const draw = (view: OtherView) =>
+    renderWithTheme(<AdvisorCard {...props({ headline: 'sweet-spot', other: view })} />);
+
+  test('idle: its own button, no list; the click asks for the pass', async () => {
+    const view = other();
+    draw(view);
+    await userEvent.click(screen.getByRole('button', { name: 'Compute other questions' }));
+    expect(view.compute).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId('other-sweep-dominance')).toBeNull();
+  });
+
+  test('no section without a view', () => {
+    renderWithTheme(<AdvisorCard {...props()} />);
+    expect(screen.queryByTestId('advisor-pass-other')).toBeNull();
+  });
+
+  test('running: progress and Cancel replace the button', async () => {
+    const view = other({ status: 'running', done: 3, total: 12 });
+    draw(view);
+    expect(screen.getByText('3 / 12 done')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Compute other questions' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel other questions' }));
+    expect(view.cancel).toHaveBeenCalledOnce();
+  });
+
+  test('the sweep is a list of steps with the flattening point marked and the peak said', () => {
+    const rows = [sweepRow('dominance', 2, 1), sweepRow('dominance', 4, 1.9), sweepRow('dominance', 8, 1.92)];
+    draw(read({ dominance: rows }));
+    const sweep = screen.getByTestId('other-sweep-dominance');
+    const steps = within(sweep).getAllByTestId('other-sweep-step');
+    expect(steps).toHaveLength(5);
+    expect(steps[0]?.textContent).toContain('+2% dominance');
+    expect(steps[0]?.textContent).toContain('worth');
+    // 16 and 32 were never read: no gain, flat from the third step on the running maximum.
+    expect(steps[2]?.textContent).toContain('flattens here');
+    expect(steps.filter((step) => step.textContent?.includes('flattens here'))).toHaveLength(1);
+    expect(within(sweep).getByTestId('other-sweep-peak').textContent).toContain('Worth reaching: +4%');
+  });
+
+  test('a sweep that still climbs says the peak is further; a dip is said', () => {
+    const climbing = [2, 4, 8, 16, 32].map((p) => sweepRow('leadership', p, p));
+    draw(read({ leadership: climbing }));
+    expect(screen.getByTestId('other-sweep-peak').textContent).toContain('Still climbing at +32%');
+    cleanup();
+    const dips = [sweepRow('leadership', 2, 3), sweepRow('leadership', 4, 2)];
+    draw(read({ leadership: dips }));
+    expect(screen.getByTestId('other-sweep-peak').textContent).toContain('dips between steps');
+  });
+
+  test('a question with no rows has no sub-list (no tier, no merc stock)', () => {
+    draw(read({ dominance: [sweepRow('dominance', 2, 1)] }));
+    expect(screen.queryByTestId('other-tier')).toBeNull();
+    expect(screen.queryByTestId('other-merc')).toBeNull();
+    expect(screen.queryByTestId('other-horizon')).toBeNull();
+    expect(screen.queryByTestId('other-silver')).toBeNull();
+  });
+
+  test('merc stock: the merc each step adds is said under its gain', () => {
+    const row: AdvisorRow = {
+      id: 'campaign:merc:10',
+      family: 'campaign',
+      label: 'Merc stock +10 %',
+      stops: [stop('sweet-spot', 1.5)],
+    };
+    draw(read({ merc: [row] }));
+    expect(screen.getByTestId('other-merc').textContent).toContain('400 more merc');
+    expect(screen.getByTestId('other-merc').textContent).toContain('Merc stock +10 %');
+  });
+
+  test('the horizon is a trade in horizon order, never a ranking', () => {
+    const at = (marches: number, gain: number): AdvisorRow => ({
+      id: `campaign:horizon:${String(marches)}`,
+      family: 'campaign',
+      label: `${String(marches)} marches`,
+      stops: [stop('sweet-spot', gain)],
+    });
+    draw(read({ horizon: [at(5, 0), at(3, 2)] }));
+    const horizon = screen.getByTestId('other-horizon');
+    expect(horizon.textContent).toContain('A trade, not a ranking: your plan plays 4 marches');
+    const lines = within(horizon).getAllByTestId('advisor-row');
+    expect(lines[0]?.textContent).toContain('3 marches');
+    expect(lines[1]?.textContent).toContain('5 marches');
+  });
+
+  test('silver with no budget set reads the loss side only and says so', () => {
+    const minus: AdvisorRow = {
+      id: 'campaign:silver:minus',
+      family: 'campaign',
+      label: 'Silver −2000000',
+      stops: [stop('sweet-spot', 0, { replanned: march(7_600_000) })],
+    };
+    draw(read({ silver: [minus] }));
+    const silver = screen.getByTestId('other-silver');
+    expect(silver.textContent).toContain('No silver budget is set, so only the loss side is read');
+    expect(within(silver).getAllByTestId('other-silver-side')).toHaveLength(1);
+    // 8.0M -> 7.6M is -5 % over 2 000 000 silver: -2.5 % per million.
+    expect(silver.textContent).toContain('The last silver you spend');
+    expect(silver.textContent).toContain('-2.50% per million');
+  });
+
+  test('a flat plus side says silver is not binding', () => {
+    const plus: AdvisorRow = {
+      id: 'campaign:silver:plus',
+      family: 'campaign',
+      label: 'Silver +2000000',
+      stops: [stop('sweet-spot', 0)],
+    };
+    draw(
+      read(
+        { silver: [plus] },
+        { result: { ...RESULT, rows: [], facts: { ...FACTS, silverBudgeted: true } } },
+      ),
+    );
+    expect(screen.getByText('Silver is not binding: more of it buys nothing.')).toBeTruthy();
+  });
+
+  test('cut and failure lines', () => {
+    draw(
+      read(
+        {},
+        {
+          status: 'cut',
+          result: {
+            ...RESULT,
+            rows: [],
+            cut: [{ id: 'sweep:dominance:32', family: 'sweep', label: 'x' }],
+            facts: FACTS,
+          },
+        },
+      ),
+    );
+    expect(screen.getByText(/The 20 s cut stopped 1 question before it finished/u)).toBeTruthy();
+    cleanup();
+    draw(other({ status: 'failed', error: 'boom' }));
+    expect(screen.getByText('The other questions could not be read: boom')).toBeTruthy();
   });
 });

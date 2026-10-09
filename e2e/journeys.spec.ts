@@ -648,6 +648,20 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
   await expect(card.getByText('Next captain upgrades', { exact: true })).toBeVisible();
   await expect(card.getByTestId('advisor-row').filter({ hasText: /^Beowulf ★0 → ★1/ })).not.toHaveCount(0);
 
+  // The other questions (W17 step D) have a button of their own too (experiment 194: over the 20 s cut beside
+  // the generic probes). The dominance and leadership sweeps are lists of steps with the peak said, never a loss.
+  await taps.tap(card.getByRole('button', { name: 'Compute other questions' }));
+  await expect(card.getByRole('button', { name: 'Compute other questions again' })).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(card.getByText(/could not be read/)).toHaveCount(0);
+  const other = card.getByTestId('advisor-pass-other');
+  const sweep = other.getByTestId('other-sweep-dominance');
+  await expect(sweep).toBeVisible();
+  await expect(sweep.getByTestId('other-sweep-step')).toHaveCount(5);
+  await expect(sweep.getByTestId('other-sweep-peak')).toHaveText(/^(Still climbing|Worth reaching|No rise)/u);
+  for (const text of await other.allTextContents()) expect(text).not.toMatch(/(^|\s)[-−][\d.]+% worth/u);
+
   if (phone) {
     // 390 px: the card fits its column, and nothing in the sheet scrolls sideways.
     const fit = await card.evaluate((node) => {
