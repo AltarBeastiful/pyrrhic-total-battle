@@ -20,7 +20,8 @@ This phase reviews every idea in `todos.md` and decides, with evidence from the 
   Write one file per classification group, `docs/backlog/triage/01-relevant.md`, `02-done-or-obsolete.md`, `03-needs-owner.md`, each with front matter and `[[wiki-links]]` to the inventory ids and stories.
   - Done 2026-10-09: three files written. 12 relevant, 3 partly-done (in 01), 14 done and 1 obsolete (in 02), 5 needs-owner (in 03; T-15 also listed there for its scope). Em dash counts measured: 2,483 in `src/` (1,089 in `src/ui` non-test, about 120 on non-comment lines), 2,642 in `docs/`. VIP table is all-zero placeholders. T-34 (ARC3) was not reproduced offline: it needs the owner's full profile, only the untracked export exists.
 
-- [ ] Write `docs/backlog/triage/README.md` (front matter, links to every triage file) summarising the counts per classification, the ideas that overlap with the advisor playbook (Phases 01-06) so they are not backlogged twice, and the ideas that conflict with a design rule (name the rule). Run `pnpm format:check` on the new files (fix with `pnpm prettier --write` on those files only), and commit.
+- [x] Write `docs/backlog/triage/README.md` (front matter, links to every triage file) summarising the counts per classification, the ideas that overlap with the advisor playbook (Phases 01-06) so they are not backlogged twice, and the ideas that conflict with a design rule (name the rule). Run `pnpm format:check` on the new files (fix with `pnpm prettier --write` on those files only), and commit.
+  - Done 2026-10-09: README written (counts 12 relevant, 3 partly-done, 14 done, 1 obsolete, 5 needs-owner; advisor overlaps; rule conflicts). Format check clean on triage files (only the untracked export warns).
 
 ## Manual Follow-Up (not executed by Auto Run)
 
