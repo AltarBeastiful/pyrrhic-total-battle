@@ -302,7 +302,9 @@ test('an expired session puts the account away, edits included, and the next sig
 
   expect(useAccountStore.getState()).toMatchObject({ user: null, dialog: 'left', leftReason: 'expired' });
   expect(names()).toEqual(['My account']); // nothing of the account's on screen
+  // Unlike a clean sign-out, expiry keeps the account's copy in the cache for the next sign-in.
   expect(localStorage.getItem(CACHE_STORAGE_KEY)).toContain('Edited before the session ended');
+  expect(JSON.parse(localStorage.getItem(DEVICE_STORAGE_KEY) ?? '{}')).toMatchObject({ owner: null });
 
   refuseWith = null;
   await signIn();
@@ -342,7 +344,14 @@ test('signing out saves first, then takes the account’s profiles off this brow
 
   expect(names(server?.data)).toEqual(['Saved on the way out']);
   expect(names()).toEqual(['My account']);
+  // Nothing of the account's is left on this browser: not on screen, not in the cache.
+  const accountIds = (server?.data.profiles ?? []).map((profile) => profile.id);
+  expect(useStore.getState().doc.profiles.some((profile) => accountIds.includes(profile.id))).toBe(false);
   expect(localStorage.getItem(CACHE_STORAGE_KEY)).toBeNull();
+  expect(JSON.parse(localStorage.getItem(DEVICE_STORAGE_KEY) ?? '{}')).toMatchObject({
+    owner: null,
+    remoteVersion: 0,
+  });
   expect(useAccountStore.getState()).toMatchObject({ user: null, dialog: null });
 });
 
