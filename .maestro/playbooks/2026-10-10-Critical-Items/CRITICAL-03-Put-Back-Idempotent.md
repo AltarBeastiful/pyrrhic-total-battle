@@ -24,7 +24,7 @@ Source: `todos.md`, entry "putback shoudld follow tight rules but keeping the tr
 
 - [x] Reproduce on the owner's export, write the findings. Turn `pyrrhic-my-account-2026-10-07.json` into a read-only reproduction using the existing theorycraft tooling (see `tools/theorycraft/` for how a fixture is loaded). Reproduce two marches: (a) the Tight march with SP3 and SW1 left out, and (b) the same march with SW1 put back. Record in Notes the damage, silver, mercs and monsters of each, and which stops the plan table offers. Do not change code in this task.
 
-- [ ] Write the failing tests first, on both the TypeScript and kernel paths (rule: "one test, both paths"). Add a test file that asserts three properties for the reproduced march: (1) **Tight rule**: after a put-back, the counts equal what the Tight raise gives for the same set of types; (2) **same set**: the set of troop types, mercenary stacks and monsters is unchanged except for the type put back; (3) **idempotent**: `removeFromFormation(x)` after `putBackInMarch(x)` restores the exact counts of the step before, and a second `putBackInMarch(x)` changes nothing. Run them and confirm they are red for the right reason. Do not loosen an assertion to get a green result.
+- [x] Write the failing tests first, on both the TypeScript and kernel paths (rule: "one test, both paths"). Add a test file that asserts three properties for the reproduced march: (1) **Tight rule**: after a put-back, the counts equal what the Tight raise gives for the same set of types; (2) **same set**: the set of troop types, mercenary stacks and monsters is unchanged except for the type put back; (3) **idempotent**: `removeFromFormation(x)` after `putBackInMarch(x)` restores the exact counts of the step before, and a second `putBackInMarch(x)` changes nothing. Run them and confirm they are red for the right reason. Do not loosen an assertion to get a green result.
 
 - [ ] Make the put-back follow Tight in the kernel. In `kernel/assembly` (and `src/kernel/raise.ts` for the TypeScript mirror), make the put-back sizing call the same Tight ranking as the raise position, without the put-back pass changing the set of other types. Keep the `resizeMarch` contract: it still takes `putBack`, but the sizer must size only the put-back type under Tight. The change must not touch the benchmark rating: check `tools/theorycraft/out/benchmark-latest.md` before and after, and the benchmark rating must not regress for any scenario (feedback rule: a scenario must never get worse).
 
@@ -76,3 +76,25 @@ Findings:
 5. **The walk is already idempotent at the engine level**: (c) = (a) and (d) = (b), count for count. Out → back → out → back cycles between the same two marches. What is *not* restored is the opening stop: (b) is not the sweet spot (27.04M vs 28.14M with Tight), because the re-size keeps SP3 out and re-sizes every stack. If task 2's idempotence test is pinned to these engine calls it may already be green; the red has to come from the UI path (`resizeMarch` / `planStopAgain`, run store state) or from the Tight-rule assertion (counts must equal the Tight raise on the same set, which here they do). Task 2 should check this before writing a test it expects red.
 6. **"No tight trade at that point"**: the plan table is the Generate-time table over the whole army; after an edit the bar still shows the five stops above, none of which is the edited set, so no row matches the 27M march. That is a table/explanation issue, not a sizing bug.
 
+
+### Task 2: the failing tests (2026-10-10)
+
+`src/ui/sections/march/putBack.test.ts` drives the real presses (`removeFromFormation`, `putBackInMarch`) on the stores and the inline calc client, after a real `runGenerate` on the owner's export (read in place, read only; skipped when the file is absent, so it is skipped on any other machine). What it reads is what `useMarch` draws under the default position: the filed march with `liftedCounts(…, Tight)` over it. **Both paths**: the whole file runs on the plan kernel and on `decliningKernel` (TypeScript sizer and march); `Tight` is the kernel's on both, as the TS raise search is retired. Run: `pnpm vitest run src/ui/sections/march/putBack.test.ts` (~25 s).
+
+Each of the five stops (chosen through `chosenStop`, so the bar opens on it) is walked with SW1 and SP3: a stop that fields the type takes it out and puts it back, a stop that leaves it out puts it back and takes it out.
+
+Result: **12 red, 32 green, the same 6 reds on each path with the same counts.**
+
+| stop | SW1 / SP3 in stop | round trip back to the stop (Tight rule) | same set | idempotent after the first edit |
+|---|---|---|---|---|
+| burn-saver | yes / yes | **red** (SW1 2 211 → 2 122; mercs 10 → 28 each) | green | green |
+| silver-saver | no / no | **red** (lands on the "both out" re-size: archer-1 1 668 vs 1 138) | green | green |
+| sweet-spot | yes / yes | green | green | green |
+| more-mercs | yes / yes | green | green | green |
+| steady-max | no / yes | **red** (lands on the full-set re-size: archer-1 1 579 vs 1 638) | green | green |
+
+What the red says (the right reason): **the first edit leaves the stop and never comes back.** Any edit, put-back or take-out, replaces the stop's own march by the re-size of the new set (`planStopAgain` → `resizeMarchOver`), and the inverse edit gives the re-size of the stop's own set, which is not the stop. Sweet spot and more-mercs pass only because the re-size of their own set happens to pick the `stop` shape (S-117). After the first edit the walk is a function of the set alone: out/back cycles are exact, and a second put-back is a no-op (the sweet-spot `idempotent` tests are green). The set is kept on every walk. So tasks 3–4 should make the re-size of the stop's own set return the stop's own counts (and the burn-saver case shows the hired caps: the re-size raises mercs from the stop's 10 to 28 because `capOf` is the stock bound, not the stop's count).
+
+Earlier draft finding, kept for the record: on the sweet-spot stop alone (experiment 201's walk), all three properties were already green; the red only appears on the other stops, which is why the test walks all five.
+
+The test is committed red, as the TDD cycle asks; it is skipped wherever the export is absent, so CI is unaffected.
