@@ -5,6 +5,7 @@
  * the components below stay declarative and the reasoning that decides "this type is in the march,
  * that one is left out" is testable on its own.
  */
+import { battleSelection } from '@/data';
 import { healthPercent, retrainOne, reviveOne, strengthPercent } from '@/engine';
 import type {
   BattleSummary,
@@ -114,7 +115,7 @@ interface PillEntry {
   bonus: UnitBonus;
 }
 
-/** One housing pool: what it paid for, and the stacks it is paying for, in kill order. */
+/** One housing pool: what it paid for, and the stacks it is paying for, in the order asked for (`PillOrder`). */
 export interface PoolRow {
   pool: Pool;
   used: number;
@@ -124,6 +125,30 @@ export interface PoolRow {
 
 /** The pools in the order the Battle card asks for them. */
 const POOL_ORDER: readonly Pool[] = ['leadership', 'authority', 'dominance'];
+
+/**
+ * **How the pills of a pool are ordered** (Critical 04, owner 2026-10-10): `battle` is the order the game's
+ * battle selection screen lists the types in, so the march reads the way it is entered in the game; `health`
+ * is the kill order the engine returned, the stack with the most health first, the order they fall.
+ */
+export type PillOrder = 'battle' | 'health';
+
+/**
+ * Each type's place on the battle selection screen: monsters first, then troops, as the screen lists them.
+ * The order is game data (`src/data/tables/battleSelection.json`), never written here.
+ */
+const BATTLE_RANK: ReadonlyMap<string, number> = new Map(
+  [...battleSelection.monsters, ...battleSelection.troops].map((id, index) => [id, index]),
+);
+
+/**
+ * A type the battle selection does not list (a mercenary, or a table unit the owner's copy left out) has no
+ * place there, so it falls back to the kill order: it ranks after every listed type, and the sort being
+ * stable keeps such types in the order the engine returned them.
+ */
+function battleRank(unitId: string): number {
+  return BATTLE_RANK.get(unitId) ?? BATTLE_RANK.size;
+}
 
 interface PoolRowsInput {
   /** The result on screen: its stacks are already in kill order, first to fall first. */
@@ -143,11 +168,14 @@ interface PoolRowsInput {
    * mode is left, not between two keystrokes.
    */
   keepEmpty?: boolean;
+  /** How the pills are ordered; the battle selection's own order unless the player asked for health. */
+  order?: PillOrder;
 }
 
 /**
  * One block per housing pool (design plan §5.5): the pool's own figure, then the stacks it houses
- * as pills **in kill order** — the order the engine returned them in, which is the order they fall.
+ * as pills **in battle selection order** by default (`PillOrder`), or in kill order (the order the engine
+ * returned them in, which is the order they fall) when the player orders them by health.
  *
  * Only what is marching (owner, 2026-09-13): a type the search or the player left out is not a
  * stack, so it does not take a stack's space. `leftOutOf` below gathers those into the small row
@@ -155,7 +183,13 @@ interface PoolRowsInput {
  *
  * A pool with no stacks and no capacity is left out of the list rather than drawn empty.
  */
-export function poolRows({ result, units, totals, keepEmpty = false }: PoolRowsInput): PoolRow[] {
+export function poolRows({
+  result,
+  units,
+  totals,
+  keepEmpty = false,
+  order = 'battle',
+}: PoolRowsInput): PoolRow[] {
   const byPool = new Map<Pool, PillEntry[]>();
 
   for (const stack of result.stacks) {
@@ -170,7 +204,11 @@ export function poolRows({ result, units, totals, keepEmpty = false }: PoolRowsI
 
   const rows: PoolRow[] = [];
   for (const pool of POOL_ORDER) {
-    const entries = byPool.get(pool) ?? [];
+    const killOrder = byPool.get(pool) ?? [];
+    const entries =
+      order === 'health'
+        ? killOrder
+        : [...killOrder].sort((left, right) => battleRank(left.unit.id) - battleRank(right.unit.id));
     const usage = result.pools[pool];
     if (entries.length === 0 && usage.capacity <= 0 && usage.used <= 0) continue;
     rows.push({ pool, used: usage.used, capacity: usage.capacity, entries });

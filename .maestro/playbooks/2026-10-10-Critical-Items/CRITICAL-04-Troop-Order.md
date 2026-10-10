@@ -24,7 +24,7 @@ Source: `todos.md`, entry "[UI] order troops as they appear in the battle select
 
 - [x] Add the battle selection order as data, not as code. Put the ordered unit ids in `src/data/` as a small table (a JSON file in the same style as `src/data/tables/*.json`), with a source note saying the order was read from the game's battle selection screen, on 2026-10-10 or the date in Notes. Do not hard-code the order in `rows.ts`. Add a `src/data/CHANGELOG.md` entry for the new table.
 
-- [ ] Use that order in the Troops card. In `src/ui/sections/troops/rows.ts`, make the display order come from the table; keep `sortForDisplay` only as the fallback for a unit id missing from the table, and say so in a comment. Do not change the group order in `rows.ts` line 18 unless task 1 showed the battle selection uses a different group order.
+- [x] Use that order in the Troops card. In `src/ui/sections/troops/rows.ts`, make the display order come from the table; keep `sortForDisplay` only as the fallback for a unit id missing from the table, and say so in a comment. Do not change the group order in `rows.ts` line 18 unless task 1 showed the battle selection uses a different group order.
 
 - [ ] Add the order-by-health switch to the battle summary. In `src/ui/sections/bonuses/TotalsFigures.tsx` (or the component that renders the battle summary, found with `grep -rn "summary.health" src/ui`), add a control that switches the troop list order between "battle selection" (default) and "health". The health order sorts by the unit's health, lowest first. The switch is a UI preference: keep it in local component state, not in the saved profile, and do not add a new store field. Use an accessible name on the control and a label that says what the list is ordered by. Follow `docs/design-rules.md` (rule 26 for wording; no em dashes in new user-visible text).
 
@@ -103,3 +103,12 @@ Consequences for the remaining tasks:
 - `src/data/CHANGELOG.md`: "v1, amended 2026-10-10 (no bump)". `dataVersion` stays 1, as with the 2026-10-09 amendment (display-only table, no value changed). The owner decides whether to bump anyway.
 - Note for task 4: the march test spec lists **monsters first, then troops**. Concatenate `battleSelection.monsters` then `battleSelection.troops`.
 - Checks: `vitest run src/data` 54/54, typecheck and eslint clean, prettier clean, `data:check` "15 tables valid and canonical". `pnpm data:check` fails in this shell because Node 22 has no `.ts` support (this was already true before the change). I ran it with `npx tsx scripts/data-check.ts` instead.
+
+### Task 4 (2026-10-10, pyrrhic): the March pills follow the table
+
+Applied where Task 2 pointed (the March pills), not in `src/ui/sections/troops/rows.ts`, which has no per-type list.
+
+- `src/ui/sections/march/rows.ts`: new `PillOrder = 'battle' | 'health'` and an `order` option on `poolRows` (default `'battle'`). The rank is built from `battleSelection.monsters` then `battleSelection.troops` (`@/data`); nothing is hard-coded. A type the table does not list ranks after every listed one and the stable sort keeps it in kill order (comment on `battleRank`). `'health'` returns the engine's kill order untouched. `useMarch.ts` still calls `poolRows` without `order`, so the default applies; Task 5 passes the switch's value.
+- `march.test.tsx`: "every stack has a pill, in kill order" became "... in battle selection order", pool by pool.
+- `vitest run src/ui/sections/march`: 324 pass, 2 red, both only for the missing "Battle" / "Health" radios (Task 5). The order assertion of "the pills follow the battle selection order by default" now passes. Typecheck, eslint and prettier clean on the changed files.
+

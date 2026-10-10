@@ -599,15 +599,17 @@ test('a type the sizer dropped is offered again when it is put back, and stays o
   expect(lastResult()?.result.stacks.some((stack) => stack.unitId === unit.id)).toBe(false);
 }, 15_000);
 
-test('every stack has a pill, in kill order, and there is no table under them', async () => {
+test('every stack has a pill, in battle selection order, and there is no table under them', async () => {
   renderWithTheme(<Page />);
   await generate();
 
   const pills = [...document.querySelectorAll('[data-stack]')];
   expect(pills).toHaveLength(lastResult()?.result.stacks.length ?? 0);
-  // Kill order, first to fall first — the order the engine returned the stacks in.
+  // Pool by pool, each pool's stacks in the battle selection's order (Critical 04), not the kill order.
   expect(pills.map((node) => node.getAttribute('data-stack'))).toEqual(
-    (lastResult()?.result.stacks ?? []).map((stack) => unitById(stack.unitId)?.label ?? ''),
+    ['Leadership', 'Authority', 'Dominance']
+      .flatMap((pool) => inBattleOrder(killOrderIds(pool)))
+      .map((id) => unitById(id)?.label ?? ''),
   );
   // The per-stack table is gone: the pills are the counts (owner, 2026-09-13).
   expect(screen.queryByRole('table', { name: /in the order the stacks fall/ })).toBeNull();
