@@ -12,7 +12,7 @@ kernel is exact only when done op for op, as the kernel port was (`project-kerne
 
 ## Tasks
 
-- [ ] Profile `planCampaign` alone on the timing fixture. Write `tools/theorycraft/197-the-planner-on-the-owner.test.ts`
+- [x] Profile `planCampaign` alone on the timing fixture. Write `tools/theorycraft/197-the-planner-on-the-owner.test.ts`
   that plans the timing fixture's setup (and the exactness fixture's) with the probes' settings, under
   `node --cpu-prof` (or vitest's `--inspect` profile), and writes a self/inclusive-time table of the JS functions
   (wasm frames grouped) to `tools/theorycraft/out/197-the-planner-on-the-owner.md`, with the GC share, the number of
@@ -39,3 +39,32 @@ kernel is exact only when done op for op, as the kernel port was (`project-kerne
   note and change nothing.
 
 ## Notes
+
+### Experiment 197 (2026-10-11), `tools/theorycraft/out/197-the-planner-on-the-owner.md`
+
+`THEORY=1 pnpm vitest run tools/theorycraft/197-the-planner-on-the-owner.test.ts` (~10 s). In-process, no
+`--cpu-prof` flag needed: `node:inspector/promises` runs the sampling profiler (100 µs, 5 plans) and the sampling
+heap profiler (collected objects kept, one plan) around `planCampaign`; a separate counted plan wraps every
+`PlanKernel` / `LadderKernel` door and observes GC. Every pass is checked to give the same alternatives. Shares
+exclude the inspector's own frames (its `Profiler.stop` serialisation was 24 % of the raw samples).
+
+| Per plan | Timing fixture (2026-10-07) | Exactness fixture (2026-09-17) |
+|---|---:|---:|
+| Profiled planner time | 489 ms | 515 ms |
+| JS self / wasm self / GC self | 55.0 / 29.8 / 15.3 % | 72.2 / 18.4 / 9.4 % |
+| GC pauses (observer) | 30, 77 ms | 23, 61 ms |
+| Kernel crossings (real wasm calls, `gridView` excluded) | 68,644 (+295,170 `gridView` JS reads) | 120,820 (+106,683 `gridView`) |
+| Busiest door | `march` 22,900, `bill` 20,310, `sizeStacks` 12,045 | `marchBill` 90,699 |
+| Allocated (sampled) | 367 MiB (751 MiB/s) | 255 MiB (495 MiB/s) |
+
+Candidates ranked by self time (timing fixture): evaluateVector 7.0 % › scorer 4.2 › sizedShape 3.9 › sizer 2.9 ›
+finaleFor 2.2 › sizeStacks (kernel wrapper) 1.9 › gridOnKernel · finish · countsKey · build · sizedCounts ·
+prefixFielded · copyStacks · retypeRow (all < 1 %); `sizeStacks` of `engine/stacker.ts` never runs. On the
+exactness fixture the re-typing is the other half: `retypeRow` 35.5 % inclusive, `build` (retype.ts) 2nd by self,
+`walk` (retype.ts) 22 % of the bytes, `marchBill` 90 k calls.
+
+Top allocators (timing fixture): `shapeOf` 12.9 %, `scorer` 12.7 %, `sizedShape` 10.9 %, `finaleFor` 8.1 %,
+`sizer` 6.3 %, `evaluateVector` 6.3 %, iterator `next` 5.6 %, `record` 4.2 %. `countsKey` is ~1 % of bytes and
+< 1 % of time: a numeric key would buy little. The JS chain evaluateVector → sizer → sizedShape → sizedCounts:
+evaluateVector 58 % inclusive / 31 % JS-under-it; sizer 26 % / 9.3 %; sizedShape 23 % / 6.2 %; sizedCounts 19 % / 0.7 %.
+
