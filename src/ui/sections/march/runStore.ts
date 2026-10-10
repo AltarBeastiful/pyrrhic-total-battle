@@ -144,6 +144,13 @@ export interface MarchResize {
    */
   inPlan: boolean;
   /**
+   * **The answer is the selected stop's own march, count for count** (Critical 03). An edit and its inverse
+   * land back on the stop (`resizeMarchOver`, `sameSetAsStop`), and then nothing was re-sized: the line
+   * says the march is the plan's again, and the plan fold drops its "has changed" warning. `false` on a
+   * sizer run, which has no stop.
+   */
+  onStop: boolean;
+  /**
    * **The share of the leadership pool the answer was sized against**, as a percentage (S-117,
    * `ResizedMarch.fill`). `100` on all but the few edits where a smaller pool answered with at least the
    * damage for no more silver and no more hired burnt, which is the only case the engine takes one. It is

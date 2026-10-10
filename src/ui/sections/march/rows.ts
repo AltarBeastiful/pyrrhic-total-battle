@@ -233,6 +233,9 @@ export function leftOutOf(
  * named rather than left to reappear in the left-out row without a word.
  */
 export function resizeWords(resize: MarchResize, units: readonly UnitDef[]): string {
+  // **Back on the stop** (Critical 03): an edit and its inverse land on the plan's own march, and nothing was
+  // re-sized, so the line must not promise a re-size. The pills already say which types are in.
+  if (resize.onStop) return "Back on the plan's march, count for count.";
   const name = (id: string): string => findUnit(id, units)?.name ?? id;
   // Two names read; three is a list nobody reads, so it becomes a count.
   const names = (ids: readonly string[]): string =>

@@ -423,6 +423,9 @@ async function planStopAgain(
   const inStop = new Set(Object.keys(stop.counts).filter((id) => (stop.counts[id] ?? 0) > 0));
   const putBack = request.units.map((unit) => unit.id).filter((id) => included.has(id) && !inStop.has(id));
   const named = new Set(noStock);
+  const fielded = Object.keys(answer.counts).filter((id) => (answer.counts[id] ?? 0) > 0);
+  const onStop =
+    fielded.length === inStop.size && fielded.every((id) => answer.counts[id] === stop.counts[id]);
   return {
     result,
     summary,
@@ -436,6 +439,7 @@ async function planStopAgain(
       ].filter((id) => !named.has(id)),
       noStock: noStock.filter((id) => (answer.counts[id] ?? 0) <= 0),
       inPlan: true,
+      onStop,
       fill: answer.fill,
       ...(answer.traded === undefined ? {} : { traded: answer.traded }),
     },
@@ -471,6 +475,7 @@ async function sizedAgain(
       // There is no stop on this path, so nothing can be short of the stock a stop decided to spend.
       noStock: [],
       inPlan: false,
+      onStop: false,
       // The sizer fills the pool, as it always has: the dial is the plan's re-size and not this one (S-117).
       fill: 100,
     },

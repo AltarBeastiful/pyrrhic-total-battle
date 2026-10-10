@@ -238,14 +238,17 @@ export function PlanFold() {
   const plan = useRunStore((state) => state.plan);
   const position = useRunStore((state) => state.planPick);
   const setPlanPick = useRunStore((state) => state.setPlanPick);
-  // The march on screen is not the one the plan sized: a type was left out by hand, or a raise is standing
-  // (S-142 — the same fact, and the plan's own figures say neither).
-  const edited = useRunStore(
-    (state) =>
-      state.leftOutByPlayer.length > 0 ||
-      state.raiseModes.authority !== 'off' ||
-      state.raiseModes.dominance !== 'off',
+  // The march on screen is not the one the plan sized: a type was left out or put back by hand, or a raise
+  // is standing (S-142 — the same fact, and the plan's own figures say neither). An edit read off its own
+  // answer (`RunState.resize`): a put-back of a type the stop leaves out is a change too, and an edit and its
+  // inverse land back on the stop, which is no change at all (Critical 03, `MarchResize.onStop`).
+  const byHand = useRunStore((state) =>
+    state.resize !== null ? !state.resize.onStop : state.leftOutByPlayer.length > 0,
   );
+  const raised = useRunStore(
+    (state) => state.raiseModes.authority !== 'off' || state.raiseModes.dominance !== 'off',
+  );
+  const edited = byHand || raised;
   // Which of the trade's rows the bar's pointer is on. It lives here because the bar and the table are one
   // thing (invariants 0020 §D-2): the bar says which plan, the table says what it is worth, and the two
   // must be reading the same row.
@@ -294,7 +297,9 @@ export function PlanFold() {
    */
   const sequence = sequenceWords(shown);
   const best = sweet === null ? null : (rows[sweet] ?? null);
-  const putBack = putBackWords(shown);
+  // The plan's put-back is a fact about the stop's own march; once a hand edit has replaced that march it
+  // describes nothing on screen, and the "has changed" line below says so instead (Critical 03).
+  const putBack = byHand ? null : putBackWords(shown);
 
   /**
    * Reading the plan another way puts *that* plan's march on screen: every plan on the frontier is computed

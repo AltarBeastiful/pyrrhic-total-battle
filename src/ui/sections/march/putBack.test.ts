@@ -153,7 +153,10 @@ describe.skipIf(profile === null).each(PATHS)(
           const stop = await generate(kind);
           const { edit, inverse, words } = editOf(stop, unitId);
           await press(edit, unitId);
+          // The line under the pills says what the press did: off the stop, then back on it (`resizeWords`).
+          expect(useRunStore.getState().resize?.onStop, `${unitId} ${words}`).toBe(false);
           expect(await press(inverse, unitId), `${unitId} ${words}`).toEqual(stop);
+          expect(useRunStore.getState().resize?.onStop, `${unitId} ${words}`).toBe(true);
         },
         600_000,
       );

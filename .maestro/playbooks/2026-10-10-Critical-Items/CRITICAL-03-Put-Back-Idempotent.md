@@ -30,7 +30,7 @@ Source: `todos.md`, entry "putback shoudld follow tight rules but keeping the tr
 
 - [x] Make take-out and put-back a pair. Ensure `removeFromFormation` and `putBackInMarch` are inverses over the march: the counts after take-out then put-back equal the counts before take-out, and the reverse. If the existing put-back pass in `src/engine/plan.ts` replaces the stop instead of sizing one type, make the UI path (`resizeMarch`) skip that replacement when the edit is a `putBack` on the current march. Add a comment that states this rule where it is enforced.
 
-- [ ] Make the put-back sentence match the new behaviour. In `src/ui/sections/march/picks.ts` `putBackWords`, the sentence must describe the change to the march that actually happened. No new wording rules: follow design rules 15 and 26 in `docs/design-rules.md`.
+- [x] Make the put-back sentence match the new behaviour. In `src/ui/sections/march/picks.ts` `putBackWords`, the sentence must describe the change to the march that actually happened. No new wording rules: follow design rules 15 and 26 in `docs/design-rules.md`.
 
 - [ ] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, `pnpm test` and the kernel test (`pnpm kernel:build` followed by the kernel test path). All must be green. Run the benchmark (`pnpm bench:baseline` or the existing benchmark test) and compare with `tools/theorycraft/out/benchmark-latest.md`. Record the counts and any change in the ratings in Notes. If something was red before this phase, name it and do not fix it here.
 
@@ -119,3 +119,16 @@ Task 4 (take-out and put-back as a pair) is now green in the test as well; it re
 No engine change was needed after task 3. The pair holds because `planStopAgain` (`src/ui/sections/march/generate.ts`) always re-sizes **the stop** over the set that is in, never the march the last press left, so the answer is a function of the set alone, and the stop's own set answers with the stop (`sameSetAsStop`). The plan's put-back pass (`putBackOn`, which can swap a stop at Generate time) is never run on an edit; the only put-back rule an edit sees is the `CAMPAIGN.putBack` fill trade inside `resizeMarchOver`, itself a function of the set. Nothing had to be skipped. The rule is now stated in a comment on `planStopAgain`, where it is enforced.
 
 Reverse direction off the stop: a new test in `putBack.test.ts` takes SP3 and SW1 out of the sweet spot, then for each puts it back and takes it out again, and checks the counts equal the step before. `pnpm vitest run src/ui/sections/march/putBack.test.ts`: **46/46 green** on both paths. Typecheck, eslint, prettier clean on the two changed files.
+
+
+### Task 5: the put-back sentence (2026-10-10)
+
+Two sentences speak about a put-back, and both could say something that had not happened after task 3:
+
+- **The line under the pills** (`resizeWords`, `src/ui/sections/march/rows.ts`), written after every press. A press whose inverse lands back on the stop used to read "Re-sized … your merc stacks are re-sized to what the troops shelter", while the march is the stop's own, untouched. `MarchResize` now carries `onStop` (set in `planStopAgain` when the answer equals the stop count for count; always `false` on a sizer run), and the line then reads **"Back on the plan's march, count for count."**
+- **The plan fold** (`PlanFold`, `PlanPanel.tsx`). `putBackWords` (`picks.ts`) describes the plan's Generate-time put-back on the stop, so it is now drawn only while the stop's march is on screen; a hand edit that leaves the stop replaces it with the existing "has changed" line. That warning used to key on `leftOutByPlayer` alone, so a put-back of a type the stop leaves out (steady max + SW1) showed no warning, and a round trip back to the stop kept one. It now reads the edit's own answer (`resize.onStop`), falling back to `leftOutByPlayer` when no edit has been computed; a standing raise still counts as a change (S-142), which with the Tight default means the warning stays up under Tight, as before.
+
+No new wording rules (design rules 15 and 26): one existing line is swapped for a shorter true one, and one line is hidden when it describes nothing on screen.
+
+Tests: `rows.test.ts` (the on-stop line), `PlanPanel.test.tsx` (the fold's two lines under an off-stop put-back and back on the stop; `resize` now reset in `beforeEach`), and `putBack.test.ts` checks `onStop` is `false` after the first press and `true` after its inverse on every stop, on both paths. `src/ui/sections/march/`: 324/324 green; `putBack.test.ts` 46/46; typecheck, eslint, prettier clean on the changed files.
+

@@ -200,6 +200,10 @@ export function sequenceWords(
  * the clause a reader would take the percentages for a change to the stop they are looking at, which is the
  * one thing they are not (design rule 5: a figure says what it is a figure of).
  *
+ * **It is a fact about the stop's own march**, so the fold draws it only while that march is on screen: a
+ * hand edit that leaves the stop replaces it with the "has changed" line, and the press's own sentence is
+ * `resizeWords` under the pills (Critical 03, `MarchResize.onStop`).
+ *
  * One sentence in one place, like every other row's words here: the fold draws it, and the tests read it from
  * this function rather than retyping it.
  */

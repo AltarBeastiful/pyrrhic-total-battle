@@ -24,6 +24,7 @@ const note = (over: Partial<MarchResize>): MarchResize => ({
   unfielded: [],
   noStock: [],
   inPlan: true,
+  onStop: false,
   fill: 100,
   ...over,
 });
@@ -98,4 +99,10 @@ test('a win at a smaller pool still reads as a win, not as a price', () => {
   const words = resizeWords(note({ tookOut: [idOf(1)], fill: 96 }), UNITS);
   expect(words).toContain('the rest bought no damage and cost silver');
   expect(words).not.toContain('at your own rates');
+});
+
+test('an edit that lands back on the stop says so, and promises no re-size', () => {
+  const words = resizeWords(note({ onStop: true }), UNITS);
+  expect(words).toBe("Back on the plan's march, count for count.");
+  expect(words).not.toContain('re-sized');
 });

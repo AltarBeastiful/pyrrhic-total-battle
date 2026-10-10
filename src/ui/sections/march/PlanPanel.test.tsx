@@ -141,6 +141,7 @@ beforeEach(() => {
     chosenStop: null,
     includedUnitIds: [],
     leftOutByPlayer: [],
+    resize: null,
   });
 });
 
@@ -997,6 +998,43 @@ test('the fold says which low tier went back into the march, and only on the sto
   renderWithTheme(<PlanFold />);
   expect(putBackWords(PUT_BACK[0] as PlanRow)).toBeNull();
   expect(screen.queryByText(/put back/)).toBeNull();
+});
+
+test("the fold's lines follow the march a hand edit left on screen", () => {
+  const CHANGED = 'The march on screen has changed since it was planned; the plan behind it has not moved.';
+  const words = putBackWords(PUT_BACK[1] as PlanRow) as string;
+  const edit = {
+    putBack: ['swordsman-1'],
+    tookOut: [],
+    unfielded: [],
+    noStock: [],
+    inPlan: true,
+    onStop: false,
+    fill: 100,
+  };
+  // No raise standing, so the warning is the hand edit's alone (a raise is a change of its own, S-142).
+  const raiseModes = { authority: 'off', dominance: 'off' } as const;
+
+  // A put-back of a type the stop leaves out is a change, though nothing is left out by hand: the plan's own
+  // put-back sentence is about a march no longer on screen, so it gives way to the warning.
+  useRunStore.setState({ plan: WITH_PUT_BACK, planPick: 1, leftOutByPlayer: [], resize: edit, raiseModes });
+  renderWithTheme(<PlanFold />);
+  expect(screen.getByText(CHANGED)).toBeTruthy();
+  expect(screen.queryByText(words)).toBeNull();
+
+  // The inverse press lands back on the stop: no change at all, though the type it left out is on the
+  // player's list, and the stop's sentence is true again.
+  cleanup();
+  useRunStore.setState({
+    plan: WITH_PUT_BACK,
+    planPick: 1,
+    leftOutByPlayer: ['swordsman-1'],
+    resize: { ...edit, putBack: [], onStop: true },
+    raiseModes,
+  });
+  renderWithTheme(<PlanFold />);
+  expect(screen.queryByText(CHANGED)).toBeNull();
+  expect(screen.getByText(words)).toBeTruthy();
 });
 
 test('the best figure in each column is marked, and Per merc never is', () => {
