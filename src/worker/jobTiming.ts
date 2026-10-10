@@ -14,6 +14,8 @@
  * branches in `calc.worker.ts` that read it. Build with `VITE_PROFILING=1` to have it in a build; take that
  * variable away, or do not run `pnpm dev`, to have none of it.
  */
+import { startCensus, type CensusNote } from './census';
+
 export const DEEP_PROFILING: boolean =
   import.meta.env.MODE !== 'test' && (import.meta.env.DEV || import.meta.env.VITE_PROFILING === '1');
 
@@ -25,6 +27,8 @@ export interface JobTiming {
   kind: string;
   ms: number;
   at: number;
+  /** What the job noted for the cache census (`census.ts`), when it noted anything. */
+  census?: CensusNote[];
 }
 
 const isTiming = (value: unknown): value is JobTiming =>
@@ -42,7 +46,12 @@ let workerName: string | null = null;
 let channel: BroadcastChannel | null = null;
 
 /** Tell the page a span of this worker's time: also a measure on the worker's own Timings track. */
-export function reportTiming(kind: string, began: number, enabled: boolean = DEEP_PROFILING): void {
+export function reportTiming(
+  kind: string,
+  began: number,
+  enabled: boolean = DEEP_PROFILING,
+  census: CensusNote[] = [],
+): void {
   if (!enabled) return;
   const ended = performance.now();
   performance.measure(`job:${kind}`, { start: began, end: ended });
@@ -53,18 +62,20 @@ export function reportTiming(kind: string, began: number, enabled: boolean = DEE
     kind,
     ms: ended - began,
     at: performance.timeOrigin + ended,
+    ...(census.length > 0 ? { census } : {}),
   };
   channel.postMessage(timing);
 }
 
-/** Run `work` and report how long it took, even when it throws. */
+/** Run `work` and report how long it took and what it noted for the census, even when it throws. */
 export function timedJob<T>(kind: string, work: () => T, enabled: boolean = DEEP_PROFILING): T {
   if (!enabled) return work();
   const began = performance.now();
+  const census = startCensus();
   try {
     return work();
   } finally {
-    reportTiming(kind, began, enabled);
+    reportTiming(kind, began, enabled, census.stop());
   }
 }
 

@@ -33,6 +33,7 @@ import { liftedCounts, OFFERED_POSITIONS, positionTrades } from '@/ui/sections/m
 import type { PositionTrades } from '@/ui/sections/march/positions';
 import { countsOf, troopFloor } from '@/ui/sections/march/raise';
 
+import { CENSUS, countShows } from './census';
 import type {
   CaptainScreenAnswer,
   CaptainScreenInput,
@@ -150,7 +151,7 @@ function billOf(result: StackResult, summary: BattleSummary): ShownBill {
 }
 
 /** A march's identity within one job: its fielded counts, sorted by id (`planCampaign`'s own `countsKey`). */
-function countsKey(counts: Record<string, number>): string {
+export function countsKey(counts: Record<string, number>): string {
   return Object.keys(counts)
     .filter((id) => (counts[id] ?? 0) > 0)
     .sort()
@@ -178,7 +179,7 @@ export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
   if (context.cancelled()) return { stops: [], row: null };
   const request = withMethod(input.plan.request, 'elite');
   const read = new Map<string, ShownMarch>();
-  const show = (counts: Record<string, number>): ShownMarch => {
+  const showOnce = (counts: Record<string, number>): ShownMarch => {
     const key = countsKey(counts);
     const known = read.get(key);
     if (known !== undefined) return known;
@@ -186,6 +187,8 @@ export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
     read.set(key, march);
     return march;
   };
+  // Counted in a profiling build only (`census.ts`); a production build folds this to `showOnce`.
+  const show = CENSUS ? countShows(request, countsKey, (key) => read.has(key), showOnce) : showOnce;
   const stops = plan.alternatives.map((row) => ({
     pick: row.pick,
     counts: row.counts,

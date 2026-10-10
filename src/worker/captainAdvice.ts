@@ -27,6 +27,7 @@ import { shortlistTrios, type ScreenTrio, type ShortlistFrom, type TrioScreen } 
 import type { CampaignInput, PlanPick } from '@/engine/plan';
 import type { MarkerRates } from '@/engine/rating';
 
+import { CENSUS, noteCensus, stableKey } from './census';
 import type { CalcPool, PoolJob, PoolOutcome } from './pool';
 import type { CaptainScreenAnswer, ProbeAnswer } from './protocol';
 
@@ -151,6 +152,8 @@ export async function runCaptainAdvice(
     failed: [],
   };
 
+  // The baseline's settings, for the profiling run's census only (`census.ts`).
+  if (CENSUS) noteCensus(() => ({ kind: 'baseline', pass: 'captains', key: stableKey(settings) }));
   const baselineJob: PoolJob<ProbeAnswer> = (client, jobSignal) =>
     client.probe({ plan: settings }, jobSignal);
   const [first] = await pool.map([baselineJob], { budgetMs, signal, onSettled });

@@ -18,7 +18,9 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { getCalcClient } from '@/ui/calcClient';
 import { readStoredResult, useResultStore } from '@/ui/resultStore';
 import { CAMPAIGN } from '@/config';
+import { CENSUS, noteCensus, pricingKey } from '@/worker/census';
 import { isAbortError } from '@/worker/client';
+import { countsKey } from '@/worker/jobs';
 
 import { openingPosition, pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 import type { MarchResize } from './runStore';
@@ -116,6 +118,14 @@ export async function runGenerate(): Promise<void> {
        */
       if (useRunStore.getState().raiseModes.authority !== 'off' && troopFloor(itsMarch.result) !== null) {
         try {
+          // What the bar prices, for the profiling run's census only (`census.ts`).
+          if (CENSUS) {
+            const priced = client.mode === 'worker' ? planned.alternatives : [chosen];
+            noteCensus(() => ({
+              kind: 'bar',
+              keys: priced.map((row) => pricingKey(marchRequest, countsKey(row.counts))),
+            }));
+          }
           if (client.mode === 'worker') {
             // The whole bar, before the march is drawn: nothing is left to land behind it.
             const tables = await Promise.all(

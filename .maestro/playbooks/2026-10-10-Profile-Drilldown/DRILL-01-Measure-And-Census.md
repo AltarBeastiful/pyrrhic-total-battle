@@ -74,7 +74,7 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   Read them in `src/kernel/raise.ts` into an optional `census` field, absent in release. Run the gate script; the
   goldens must not move.
 
-- [ ] Add census counters to the JS layer, profile build only (behind `DEEP_PROFILING` from `src/worker/jobTiming.ts`).
+- [x] Add census counters to the JS layer, profile build only (behind `DEEP_PROFILING` from `src/worker/jobTiming.ts`).
   Count, per job: in `runProbe` (`src/worker/jobs.ts`) the `show` calls, the hits of its `read` map, and for every
   `shownMarch` a key of (request fingerprint, `countsKey(counts)`) where the request fingerprint is a stable hash
   of the elite request's JSON. Report the keys with the job's timing message so the page can see repeats **across
@@ -201,4 +201,44 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   `pnpm test` 298 s, plan-benchmark 164 s, bench-diff vs HEAD no difference, 184 143 s. Goldens unmoved. Note: a
   gate run killed by a tool timeout (10 min) did **not** restore `benchmark-latest.*` (the trap did not fire);
   restored by hand from `benchmark-pre-w18.*` — always run the gate with `nohup … &`.
+
+### Owner's steering (2026-10-10, 19:25) — applies to the rest of W18
+
+- *"If we add code for profiling it should not be present when we disable it in production and avoid cluttering
+  the code too much."* Every profiling hook must fold out of `pnpm build` (check the `dist/` bundle for a string
+  of the new code, not just the source), and a hot function gets at most a line or two; the logic lives in a
+  profiling module (`src/worker/census.ts`, `src/worker/jobTiming.ts`).
+- Found doing so: Rolldown folds a module's **own** constant before it splits chunks, but an **imported** one
+  (`DEEP_PROFILING`, `CENSUS`) only at minify time, after the chunks are linked — a helper the lazy `profileRun`
+  chunk imports from the main chunk stays exported (dead) in production. Hot paths in one chunk fold fine; for a
+  cross-chunk use, read the env in the module itself (`COUNTING` in `profileRun.ts`).
+
+### P0.2b JS census counters (2026-10-10)
+
+- **`src/worker/census.ts`** (new): `CENSUS` = dev / `VITE_PROFILING=1` / Vitest; folds to `false` in a production
+  build. Code writes notes (`noteCensus(() => note)`, built only when someone listens); a listener is
+  `startCensus()` → `stop()` (nests). Notes: `probe` (per `runProbe` job: `shows`, `hits` of its `read` map,
+  `priced: {key, ms}[]` with key = `stableKey(elite request)|countsKey(counts)` and the measured cost of that
+  `shownMarch`), `baseline` (`pass: advisor | captains`, `stableKey(settings)`), `bar` (Generate's Tight pricing
+  keys: every stop on a worker client, the chosen one inline). `stableKey` = cyrb53 of sorted-key JSON.
+  `summariseCensus(notes)` → jobs, shows, readHits, priced, distinctPriced, repricedAcrossJobs (+ ms, K3),
+  baselines / repeatedBaselines (K4), barPricings / barRepricedByProbes (K5).
+- **Hooks**: `runProbe` one line (`show = CENSUS ? countShows(…, showOnce) : showOnce`); `runAdvisor` and
+  `runCaptainAdvice` one `if (CENSUS) noteCensus(…)` each before the baseline job; `generate.ts` one block before
+  the bar's pricing. `countsKey` is now exported from `jobs.ts` (Generate uses it for the key).
+- **Transport**: `timedJob` listens for the job's length and `reportTiming` adds `census` to the job's
+  `JobTiming` message when non-empty; the profiling run listens on the page for its whole length, merges page and
+  worker notes, prints `console.table(census)` and puts `census` on `pyrrhicProfile`.
+- **Production bundle checked**: `pnpm build` → no `repricedAcrossJobs` / `summariseCensus` / `priced:[]` in any
+  `dist/assets/*.js` (main, lazy `profileRun`, `calc.worker`); `VITE_PROFILING=1 pnpm build` has them.
+- **Test** `src/worker/census.test.ts` (7 tests, ~1.4 s): stable key order-free, nesting listeners, counted show
+  identical to plain and counts right, summary arithmetic, `runProbe` counted == uncounted, two `runAdvisor`
+  passes on one input → 1 repeated baseline and every march re-priced across jobs.
+- **Early finding for experiment 196**: a probe on a bonus line no unit reads still changes `request.totals`, so
+  its request key differs and K3 as keyed (whole elite request) sees **no** repeat with the baseline even though
+  the marches are identical. 196 should report K3 both ways (exact request key, and the key of the request with
+  the probe's unread change normalised) or say the exact key under-counts.
+- **Gate** (`gate-20261010-195829.log`), all **PASS**: kernel:build 3 s, typecheck 0 s, lint 21 s, `pnpm test`
+  306 s, plan-benchmark 165 s, bench-diff vs HEAD no difference, 184 141 s. Goldens (raise, advisor) unmoved;
+  `benchmark-latest.*` byte-checked restored.
 

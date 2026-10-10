@@ -21,6 +21,7 @@ import { isCampaignProbe, type CampaignProbe } from '@/engine/advisor-sweeps';
 import type { Probe } from '@/engine/probes';
 import type { MarkerRates } from '@/engine/rating';
 
+import { CENSUS, noteCensus, stableKey } from './census';
 import type { CalcPool, PoolJob, PoolOutcome } from './pool';
 import type { ProbeAnswer } from './protocol';
 
@@ -84,6 +85,8 @@ export async function runAdvisor(
   };
   const began = performance.now();
 
+  // The baseline's settings, for the profiling run's census only (`census.ts`).
+  if (CENSUS) noteCensus(() => ({ kind: 'baseline', pass: 'advisor', key: stableKey(settings) }));
   const baselineJob: PoolJob<ProbeAnswer> = (client, jobSignal) =>
     client.probe({ plan: settings }, jobSignal);
   const [first] = await pool.map([baselineJob], { budgetMs, signal, onSettled });

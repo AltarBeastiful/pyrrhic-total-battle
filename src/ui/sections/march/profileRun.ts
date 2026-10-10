@@ -24,6 +24,7 @@
 import { distinctCaptains } from '@/engine/captains';
 import { buildPlanRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { startCensus, summariseCensus, type CensusNote, type CensusSummary } from '@/worker/census';
 import {
   collectJobTimings,
   DEEP_PROFILING,
@@ -46,7 +47,15 @@ export interface ProfileReport {
   phases: PhaseRow[];
   /** The workers' jobs summed per phase and kind (empty unless the build has the deep profiling in it). */
   jobs: JobRow[];
+  /** The cache census of the run (`worker/census.ts`), in a build with the deep profiling only. */
+  census?: CensusSummary;
 }
+
+/**
+ * `DEEP_PROFILING`, read here rather than imported for the census: the bundler folds a module's own constant
+ * before it splits chunks, an imported one only after, which would leave the census helpers in production.
+ */
+const COUNTING = import.meta.env.DEV || import.meta.env.VITE_PROFILING === '1';
 
 async function phase(name: string, spans: PhaseSpan[], work: () => Promise<void>): Promise<void> {
   const began = performance.now();
@@ -98,15 +107,18 @@ async function runPhases(spans: PhaseSpan[]): Promise<void> {
 export async function profileEverything(): Promise<ProfileReport> {
   const spans: PhaseSpan[] = [];
   const collector = collectJobTimings();
+  const pageCensus = COUNTING ? startCensus() : null;
   let heard: JobTiming[];
+  let noted: CensusNote[];
   try {
     await runPhases(spans);
   } finally {
     // The last worker messages can land a moment after the last `await`.
     await new Promise((resolve) => setTimeout(resolve, 150));
     heard = collector.stop();
+    noted = pageCensus?.stop() ?? [];
   }
-  const report = summarise(spans, heard);
+  const report: ProfileReport = summarise(spans, heard);
   // eslint-disable-next-line no-console -- the tables are the report
   console.table(report.phases);
   if (DEEP_PROFILING) {
@@ -117,6 +129,11 @@ export async function profileEverything(): Promise<ProfileReport> {
     console.info(
       'Pyrrhic profile: no per-job table; this build has no worker timing (pnpm dev, or VITE_PROFILING=1).',
     );
+  }
+  if (COUNTING) {
+    report.census = summariseCensus([...noted, ...heard.flatMap((one) => one.census ?? [])]);
+    // eslint-disable-next-line no-console -- the tables are the report
+    console.table(report.census);
   }
   // The trace: every worker's jobs and the page's phases, as a file for the Performance panel (Load profile…)
   // or https://ui.perfetto.dev. the pool is not on the page's thread.
