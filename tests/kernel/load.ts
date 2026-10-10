@@ -4,7 +4,8 @@
  */
 /// <reference types="node" />
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { compileKernel } from '@/kernel';
@@ -54,4 +55,23 @@ export function loadKernelModule(): WebAssembly.Module {
   buildKernelIfStale();
   compiled = compileKernel(readFileSync(WASM));
   return compiled;
+}
+
+/**
+ * **The profile kernel** (W18 census, `kernel/asconfig.json`'s `profile` target), compiled to a temporary file so
+ * `kernel/build/kernel.wasm` stays the release build every other test file loads.
+ */
+export function loadProfileKernelModule(): WebAssembly.Module {
+  const dir = mkdtempSync(join(tmpdir(), 'pyrrhic-census-'));
+  try {
+    const out = join(dir, 'kernel.wasm');
+    execFileSync(
+      join(ROOT, 'node_modules/.bin/asc'),
+      ['kernel/assembly/index.ts', '--config', 'kernel/asconfig.json', '--target', 'profile', '-o', out],
+      { cwd: ROOT, stdio: 'inherit' },
+    );
+    return compileKernel(readFileSync(out));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }

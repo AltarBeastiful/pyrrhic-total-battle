@@ -10,46 +10,25 @@
  *    march is rated once before a `Tight` search, and only `Tight` rates.
  */
 /// <reference types="node" />
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { sizeStacks } from '@/engine/stacker';
-import { compileKernel } from '@/kernel';
 import { createRaiseKernel } from '@/kernel/raise';
 import { raiseCode } from '@/ui/sections/march/positions';
 import type { RaiseMode } from '@/ui/sections/march/raise';
 
 import { criteriaScenarios } from '../engine/plan-scenarios';
 
-import { loadKernelModule } from './load';
+import { loadKernelModule, loadProfileKernelModule } from './load';
 
 const EXHAUSTIVE: readonly RaiseMode[] = ['v2', 'safe', 'tight'];
 
 const modesOf = (mode: RaiseMode) => ({ authority: raiseCode(mode), dominance: raiseCode(mode) });
 
-function profileModule(): WebAssembly.Module {
-  const dir = mkdtempSync(join(tmpdir(), 'pyrrhic-census-'));
-  try {
-    const out = join(dir, 'kernel.wasm');
-    execFileSync(
-      join(process.cwd(), 'node_modules/.bin/asc'),
-      ['kernel/assembly/index.ts', '--config', 'kernel/asconfig.json', '--target', 'profile', '-o', out],
-      { cwd: process.cwd(), stdio: 'inherit' },
-    );
-    return compileKernel(readFileSync(out));
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-
 describe('the raise census', () => {
   it('is counted on the profile build only, and moves no answer', () => {
     const release = createRaiseKernel(loadKernelModule());
-    const profile = createRaiseKernel(profileModule());
+    const profile = createRaiseKernel(loadProfileKernelModule());
     let rated = 0;
     let hits = 0;
     for (const scenario of criteriaScenarios()) {

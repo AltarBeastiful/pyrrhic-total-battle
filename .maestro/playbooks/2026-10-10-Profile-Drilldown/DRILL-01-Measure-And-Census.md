@@ -85,7 +85,7 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   does for the bar, so overlap between Generate and the advisor baselines can be counted. No answer may change;
   run the gate script.
 
-- [ ] Run the census as experiment 196. Create `tools/theorycraft/196-the-cache-census.test.ts` (style of experiment
+- [x] Run the census as experiment 196. Create `tools/theorycraft/196-the-cache-census.test.ts` (style of experiment
   194) that runs the same work as the profiling run on the exactness fixture, in-process, single worker, with the
   kernel census on (build with `pnpm kernel:build:profile` first; rebuild release with `pnpm kernel:build` after).
   If `pyrrhic-my-account-2026-10-07.json` is at the repo root, run it on that account too (path from an env var,
@@ -241,4 +241,36 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
 - **Gate** (`gate-20261010-195829.log`), all **PASS**: kernel:build 3 s, typecheck 0 s, lint 21 s, `pnpm test`
   306 s, plan-benchmark 165 s, bench-diff vs HEAD no difference, 184 141 s. Goldens (raise, advisor) unmoved;
   `benchmark-latest.*` byte-checked restored.
+
+### P0.3 experiment 196, the cache census (2026-10-10)
+
+- `tools/theorycraft/196-the-cache-census.test.ts` → `tools/theorycraft/out/196-the-cache-census.md`
+  (`THEORY=1`, ~85 s for both fixtures). The profile kernel is compiled to a temp dir (`loadProfileKernelModule`,
+  now shared in `tests/kernel/load.ts` with `raise-census.test.ts`), so `kernel/build/kernel.wasm` is never
+  swapped and no release rebuild is needed. Same work as the advisor golden (one inline lane, no clock, every
+  `cut` asserted empty); the bar's 5 tables are priced one after the other so each is timed.
+- How the costs are read: a raise call is timed around `position()`; job times by a timed lane; the sizer count
+  from every kernel instance's `raiseCensus[5]` (WeakRef sweep after each job). A rating's cost is fitted over the
+  Tight searches (ms = a + b·battles + c·ratings); on the exactness fixture the fit is not positive (tiny searches)
+  and the trace share is used. K2/K6 split a cost with the trace's shares, measured by
+  `.maestro/playbooks/Working/w18/k-shares.py` (raiseRating 38.4 % of Tight, its kill order 18.0 %; sizerScore
+  0.40 % of busy pool CPU, its journals 0.25 %).
+- **Figures** (run CPU in-process: exactness 34.0 s, timing 87.4 s):
+
+  | candidate | exactness: hits / entry, saving | timing: hits / entry, saving |
+  | --- | --- | --- |
+  | K1 rated value memo | 0.05, 0.01 % | 0.59 (4.84 M hits / 8.22 M), 2.21 % |
+  | K2 shared kill order | 7 369 dups, 0.09 % | 8.22 M dups, 1.76 % |
+  | K3 exact key / kernel key | 0.14 → 0.12 % / 0.56 → 0.19 % | 0.07 → 0.97 % / 0.09 → 1.20 % |
+  | K4 baseline × 3 passes | 2.00, **2.66 %** (452 ms × 2) | 2.00, 1.39 % (609 ms × 2) |
+  | K5 exact / kernel key | 1.0 → 0.01 % / 22 → 0.14 % | 1.0 → 0.00 % / 8 → 1.05 % |
+  | K6 sizer journals | 0.13 % ceiling | 0.13 % ceiling |
+
+- **The surprise**: in-process the Tight raise is **13.3 %** of the timing account's CPU (0.55 % on the exactness
+  fixture); in the owner's trace it was **49.1 %** of pool CPU. Same account, same 83 probes + 3 baselines. Not
+  settled here; most likely the trace's wasm ran slower than in Node (DevTools profiling can keep wasm on the
+  Liftoff tier, and `dev:profile` builds with debug info), so the trace over-weights every kernel cost. P0.4
+  should check this before any kernel work is ranked on the trace's shares: time a worker job in the browser
+  with no profiler attached.
+- No commit-worthy production change: test-side only (`tests/kernel/load.ts`, `raise-census.test.ts` reuse).
 
