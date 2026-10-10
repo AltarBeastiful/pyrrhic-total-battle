@@ -37,6 +37,7 @@ import {
 import { advisorKey, canAdvise, computeAdvice } from './advisorSearch';
 import { captainKey, computeCaptains } from './captainSearch';
 import { runGenerate } from './generate';
+import { downloadTrace, traceOf } from './profileTrace';
 import { computeOther, otherKey } from './otherSearch';
 import { pickOf, useRunStore } from './runStore';
 
@@ -123,7 +124,11 @@ export async function profileEverything(): Promise<ProfileReport> {
       'Pyrrhic profile: no per-job table; this build has no worker timing (pnpm dev, or VITE_PROFILING=1).',
     );
   }
+  // The trace: every worker's jobs and the page's phases, as a file for the Performance panel (Load profile…)
+  // or https://ui.perfetto.dev. `console.profile` alone cannot show the pool, which is not on the page's thread.
+  const trace = traceOf(spans, heard);
+  if (DEEP_PROFILING) downloadTrace(trace);
   // Also on `window`, so the numbers can be read back from the console or a script.
-  Object.assign(globalThis, { pyrrhicProfile: report });
+  Object.assign(globalThis, { pyrrhicProfile: report, pyrrhicTrace: trace });
   return report;
 }
