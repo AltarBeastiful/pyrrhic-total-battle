@@ -11,7 +11,7 @@
  * half of the page, and everything it reads or writes already lives in a store.
  */
 import { largestSustained, planMarch, planRepeats, shelterCounts, withMethod } from '@/engine';
-import type { CampaignPlan } from '@/engine/plan';
+import type { CampaignPlan, PlanRow } from '@/engine/plan';
 import type { BattleSummary, StackRequest, StackResult } from '@/engine/types';
 import { buildPlanRequest, buildStackRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
@@ -19,9 +19,12 @@ import { getCalcClient } from '@/ui/calcClient';
 import { readStoredResult, useResultStore } from '@/ui/resultStore';
 import { CAMPAIGN } from '@/config';
 import { CENSUS, noteCensus, pricingKey } from '@/worker/census';
-import { isAbortError } from '@/worker/client';
+import { isAbortError, type CalcClient } from '@/worker/client';
 import { countsKey } from '@/worker/jobs';
+import type { CalcPool, PoolJob } from '@/worker/pool';
 
+import { advisorPoolIfIdle } from './advisorSearch';
+import type { PositionTrades } from './positions';
 import { openingPosition, pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 import type { MarchResize } from './runStore';
 import { primeBar, primePositions } from './positionsSearch';
@@ -36,6 +39,39 @@ import { troopFloor } from './raise';
  */
 export const SEARCH_BUDGET_MS = CAMPAIGN.budgets.search;
 const PLAN_BUDGET_MS = CAMPAIGN.budgets.plan;
+
+/**
+ * **The bar's Tight tables, one per stop, in stop order** (W18 P1.5): side by side over the advisor's pool when
+ * a pass has made one and none is running, else on the run's one client, which takes them one after another. The pool is never made here: a page that never asked for advice
+ * keeps one worker. A stop whose pricing fails is `null` ("no table"); a cancel rejects.
+ */
+export async function priceBar(
+  client: CalcClient,
+  pool: CalcPool | null,
+  request: StackRequest,
+  rows: readonly PlanRow[],
+  signal: AbortSignal,
+): Promise<(PositionTrades | null)[]> {
+  if (pool !== null) {
+    const outcomes = await pool.map(
+      rows.map(
+        (row): PoolJob<PositionTrades> =>
+          (worker, jobSignal) =>
+            worker.positions({ request, counts: row.counts }, jobSignal),
+      ),
+      { signal },
+    );
+    return outcomes.map((outcome) => (outcome.kind === 'done' ? outcome.value : null));
+  }
+  return Promise.all(
+    rows.map((row) =>
+      client.positions({ request, counts: row.counts }, signal).catch((error: unknown) => {
+        if (isAbortError(error)) throw error;
+        return null;
+      }),
+    ),
+  );
+}
 
 /** Size the stacks for the active march (running a priority search first when one is selected). */
 export async function runGenerate(): Promise<void> {
@@ -128,15 +164,12 @@ export async function runGenerate(): Promise<void> {
           }
           if (client.mode === 'worker') {
             // The whole bar, before the march is drawn: nothing is left to land behind it.
-            const tables = await Promise.all(
-              planned.alternatives.map((row) =>
-                client
-                  .positions({ request: marchRequest, counts: row.counts }, controller.signal)
-                  .catch((error: unknown) => {
-                    if (isAbortError(error)) throw error;
-                    return null;
-                  }),
-              ),
+            const tables = await priceBar(
+              client,
+              advisorPoolIfIdle(),
+              marchRequest,
+              planned.alternatives,
+              controller.signal,
             );
             primeBar(planned, marchRequest, tables);
           } else {

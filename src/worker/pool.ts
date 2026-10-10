@@ -40,6 +40,8 @@ export interface CalcPool {
   map<T>(jobs: readonly PoolJob<T>[], options?: PoolMapOptions<T>): Promise<PoolOutcome<T>[]>;
   /** Workers currently alive (0 before the first pass and after the idle timeout). */
   readonly alive: number;
+  /** A pass is running or waiting: a new `map` would queue behind it. */
+  readonly busy: boolean;
   dispose(): void;
 }
 
@@ -71,6 +73,7 @@ export function createCalcPool(options: PoolOptions = {}): CalcPool {
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
   let queue: Promise<unknown> = Promise.resolve();
   let disposed = false;
+  let pending = 0;
 
   const stopAll = (): void => {
     for (const client of clients) client.dispose();
@@ -150,7 +153,12 @@ export function createCalcPool(options: PoolOptions = {}): CalcPool {
 
   return {
     map<T>(jobs: readonly PoolJob<T>[], mapOptions: PoolMapOptions<T> = {}) {
+      pending += 1;
       const result = queue.then(() => run(jobs, mapOptions));
+      const settled = (): void => {
+        pending -= 1;
+      };
+      result.then(settled, settled);
       queue = result.then(
         () => undefined,
         () => undefined,
@@ -164,6 +172,9 @@ export function createCalcPool(options: PoolOptions = {}): CalcPool {
     },
     get alive() {
       return clients.length;
+    },
+    get busy() {
+      return pending > 0;
     },
     dispose() {
       disposed = true;

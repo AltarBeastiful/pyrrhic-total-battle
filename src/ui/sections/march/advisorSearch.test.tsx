@@ -77,7 +77,12 @@ const INPUT = {} as CampaignInput;
 
 beforeEach(() => {
   passes.length = 0;
-  setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+  setAdvisorPool({
+    map: () => Promise.resolve([]),
+    alive: 0,
+    busy: false,
+    dispose: () => undefined,
+  } as CalcPool);
   useStore.getState().replaceDocument(newRoot());
   useRunStore.getState().reset();
   useAdvisorStore.getState().stop();

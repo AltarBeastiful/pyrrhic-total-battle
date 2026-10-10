@@ -52,7 +52,7 @@ changes which rows a slow device shows).
   see which step needs which answer; put every job that does not depend on another into one `pool.map` so the
   pool stays busy. Keep the results merged by index. Advisor golden identical. Commit: `Captains: one queue, no barrier (W18 P1.4)`.
 
-- [ ] Generate's Tight pricings in parallel. In `src/ui/sections/march/generate.ts` (around line 120), the bar's
+- [x] Generate's Tight pricings in parallel. In `src/ui/sections/march/generate.ts` (around line 120), the bar's
   `client.positions` calls all go to the run's one `client`, so they run one after another on one worker. Send them
   over the advisor pool (or a pool sized to the bar) when it exists, keeping the answer order by stop. The opening
   stop's pricing must still land before the march is drawn (comment in that block). Unit tests in
@@ -155,3 +155,22 @@ changes which rows a slow device shows).
 - **Cut set at a binding clock changes**: at 2 s every upgrade is cut either way; at **3 s** before cuts the 3
   `minamoto` rows, after cuts those **and `captain:bernard:level10`** (3/3 runs each). One more row lost on a slow
   device for nothing: recommend dropping the branch.
+
+### P1.5 Generate prices the bar in parallel (2026-10-11)
+
+- **How**: `priceBar(client, pool, request, rows, signal)` in `generate.ts` (exported, unit-tested) returns the
+  bar's Tight tables in stop order: over the advisor pool (`pool.map`, one `positions` job a stop; `error` → `null`,
+  "no table", as before) when there is one, else on the run's client as before. The pool comes from
+  `advisorPoolIfIdle()` (`advisorSearch.ts`): the card's pool **only if a pass has made it and none is running**,
+  so Generate never makes a pool (a page that never asked for advice keeps one worker) and never queues behind a
+  20 s pass. For that, `CalcPool` gained `busy` (a pass running or waiting). Still awaited before
+  `primeBar` and `setResult`, so the opening stop's pricing lands before the march is drawn. The inline branch
+  (no worker: the chosen stop only) is unchanged.
+- **No clock in it**, so no cut set to compare; the tables are the same jobs (`runPositions`) on other workers.
+- **Measured** (`Working/w18/bar.mjs`, headless Chromium, warm, min of 3): timing fixture 5 stops, **141 → 100 ms**,
+  tables identical; exactness fixture 4 → 3 ms. Small: the bar's 5 tables are short on these accounts; it pays
+  on a wide box (12.7 s a stop on the 20 000-dominance camp).
+- **Tests**: `pool.test.ts` (busy), `generate.test.ts` (pool side by side, stop order, failure → null; no pool →
+  run client; cancel rejects); the fake pools of four card tests gained `busy: false`. `src/ui/sections/march` +
+  `src/worker` 411 tests pass; `pnpm lint` clean; `pnpm test` 145 files / 1 775 tests pass (advisor golden
+  included); `pnpm build` then `pnpm e2e` 65 passed, 10 skipped.

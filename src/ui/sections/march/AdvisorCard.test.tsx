@@ -506,14 +506,24 @@ describe('where the March mounts it', () => {
   });
 
   test('no plan, no card', () => {
-    setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+    setAdvisorPool({
+      map: () => Promise.resolve([]),
+      alive: 0,
+      busy: false,
+      dispose: () => undefined,
+    } as CalcPool);
     renderWithTheme(<AdvisorFold />);
     expect(screen.queryByRole('region', { name: 'What to upgrade next' })).toBeNull();
     expect(screen.queryByText(/upgrade next/u)).toBeNull();
   });
 
   test('a plan and a worker: the card, idle on its button', () => {
-    setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+    setAdvisorPool({
+      map: () => Promise.resolve([]),
+      alive: 0,
+      busy: false,
+      dispose: () => undefined,
+    } as CalcPool);
     useRunStore.setState({ plan: PLAN, planPick: 0 });
     renderWithTheme(<AdvisorFold />);
     expect(screen.getByRole('region', { name: 'What to upgrade next' })).toBeTruthy();
@@ -703,7 +713,12 @@ describe('the captain section', () => {
   test('the fold mounts it: the card carries the captains button beside the two passes', () => {
     useStore.getState().replaceDocument(newRoot());
     useRunStore.getState().reset();
-    setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+    setAdvisorPool({
+      map: () => Promise.resolve([]),
+      alive: 0,
+      busy: false,
+      dispose: () => undefined,
+    } as CalcPool);
     useRunStore.setState({
       plan: { alternatives: [{ pick: 'sweet-spot', counts: {} }] } as unknown as CampaignPlan,
       planPick: 0,

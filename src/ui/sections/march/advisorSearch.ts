@@ -18,7 +18,8 @@
  *
  * A new Generate sets the plan to `null` (`useRunStore.start`), and a profile switch changes the account: either
  * way the key moves, the hook stops the pass through its signal and forgets the rows. Generate never waits on
- * the card, whose pool shares nothing with `getCalcClient()`.
+ * the card: its pool shares nothing with `getCalcClient()`, and Generate prices its bar on it only when no pass
+ * is running (`advisorPoolIfIdle`).
  *
  * **The headline stop is not stored**: it is the stop selected on the bar (`pickOf(plan, planPick).pick`), read
  * at render, so a move of the bar re-ranks the same rows (`rankAdvice`) without a new pass.
@@ -106,6 +107,14 @@ export function setAdvisorPool(next: CalcPool | null): void {
 export function advisorPool(): CalcPool {
   pool ??= createCalcPool();
   return pool;
+}
+
+/**
+ * The card's pool when a pass has made it and none is running, else `null` (W18 P1.5): Generate prices its bar
+ * on it, but never makes one and never queues behind a pass.
+ */
+export function advisorPoolIfIdle(): CalcPool | null {
+  return pool !== null && !pool.busy ? pool : null;
 }
 
 /**

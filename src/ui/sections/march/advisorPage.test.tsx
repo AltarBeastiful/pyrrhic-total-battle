@@ -120,7 +120,12 @@ beforeEach(() => {
   events.length = 0;
   passes.length = 0;
   window.localStorage.clear();
-  setAdvisorPool({ map: () => Promise.resolve([]), alive: 0, dispose: () => undefined } as CalcPool);
+  setAdvisorPool({
+    map: () => Promise.resolve([]),
+    alive: 0,
+    busy: false,
+    dispose: () => undefined,
+  } as CalcPool);
   // A plan needs a mercenary stock to plan from (`planCampaign` refuses an army with none), as the
   // Mercenaries card would give it; the setup is `march.test.tsx`'s plan test.
   const root = newRoot();

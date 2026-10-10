@@ -125,6 +125,19 @@ describe('the calculation pool', () => {
     pool.dispose();
   });
 
+  test('is busy while a pass runs or waits, idle once every pass has settled', async () => {
+    const pool = createCalcPool({ size: 1, createClient: () => fakeClient() });
+    expect(pool.busy).toBe(false);
+    const first = pool.map([after(5, 1)]);
+    const second = pool.map([() => Promise.reject(new Error('no'))]);
+    expect(pool.busy).toBe(true);
+    await first;
+    expect(pool.busy).toBe(true);
+    await second;
+    expect(pool.busy).toBe(false);
+    pool.dispose();
+  });
+
   test('starts lazily and terminates its workers once idle', async () => {
     vi.useFakeTimers();
     const made: CalcClient[] = [];
