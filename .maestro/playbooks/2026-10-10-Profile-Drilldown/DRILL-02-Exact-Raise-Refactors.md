@@ -43,7 +43,7 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   moves, revert and record why in Notes. Record `pnpm kernel:bench`, experiment 184 timing and the experiment 196
   rerun (CPU in `killOrderBy`) in Notes. Commit: `Kernel: incremental kill order in the raise search (W18 P2.1)`.
 
-- [ ] Fuse the sizer's two journals only if the census says so (K6). Read Drill 01's Notes for K6; if `WON'T DO`, tick
+- [x] Fuse the sizer's two journals only if the census says so (K6). Read Drill 01's Notes for K6; if `WON'T DO`, tick
   with a note. Otherwise, in `sizerScore` (around line 748) and the twin around line 371, both journals use the same
   `k`, kill order and attack order (`attackOrderOf` runs once already). The raise uses one journal only, so this is
   plan-side. A fusion is exact only if each total receives the same additions in the same order: keep two
@@ -130,3 +130,8 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   exact by the same check. That is K2's saving and more, and K2 is recorded `WON'T DO`, so it is left for the
   owner to re-open.
 
+### K6 the sizer's two journals fused (2026-10-10) — skipped, census says WON'T DO
+
+- Drill 01's verdict: **K6 WON'T DO** (0.13 % ceiling on both fixtures, under the 2 % refactor bar;
+  `docs/plans/profile-drilldown.md` §5). K6 is sizer time, not raise time, so the trace's Tight share does not scale
+  it and there is no re-open condition. Ticked with no code change, as the task says; no bench figures recorded.
