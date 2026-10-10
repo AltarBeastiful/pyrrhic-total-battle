@@ -78,13 +78,16 @@ export async function signInMethods(): Promise<SignInMethods> {
  *
  * Call it **straight from the click**, after `signInMethods()` has loaded the client: the SDK opens
  * its popup before its first `await`, and Safari blocks a popup opened any later than that.
+ *
+ * `created` is PocketBase's `meta.isNew`: true when this sign-in made the `users` record, which is
+ * the one case where the browser's own profiles are copied into the account.
  */
-export async function signInWithProvider(provider: string): Promise<AccountUser> {
+export async function signInWithProvider(provider: string): Promise<{ user: AccountUser; created: boolean }> {
   const pb = loadedClient();
   if (pb === null) throw new AccountError('auth', 'Sign-in is unavailable right now.');
   try {
     const result = await pb.collection(USERS_COLLECTION).authWithOAuth2({ provider });
-    return toUser(result.record);
+    return { user: toUser(result.record), created: result.meta?.isNew === true };
   } catch (error) {
     throw asAccountError(error, 'The sign-in was not completed.');
   }

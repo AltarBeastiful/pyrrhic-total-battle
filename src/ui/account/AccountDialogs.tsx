@@ -115,7 +115,7 @@ function SignInDialog() {
         }
         const user = await auth.signInWithPassword(email.trim(), password);
         setPassword('');
-        await useAccountStore.getState().adopt(user);
+        await useAccountStore.getState().adopt(user, { created: false });
       } catch (cause) {
         fail(cause);
       } finally {
@@ -226,7 +226,7 @@ function SignInDialog() {
               onClick={() => {
                 const user = created;
                 close();
-                if (user !== null) void useAccountStore.getState().adopt(user);
+                if (user !== null) void useAccountStore.getState().adopt(user, { created: true });
               }}
             >
               Continue

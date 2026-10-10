@@ -5,7 +5,8 @@
  * past the server's version, or it is a 409) — so what is tested is the flow, not a mock of it.
  *
  * The rules that matter: an edit saves itself; a 409 is merged, never asked; this browser's own
- * profiles join the account on sign-in, renamed when the name is taken; and the account's profiles
+ * profiles join the account on sign-up only, renamed when the name is taken (a sign-in replaces
+ * them); and the account's profiles
  * never stay on screen for somebody who is not signed in.
  */
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
@@ -82,10 +83,15 @@ function renameActive(name: string): void {
   useStore.getState().renameProfile(useStore.getState().doc.activeProfileId, name);
 }
 
-async function signIn(): Promise<void> {
+async function signIn({ created = false }: { created?: boolean } = {}): Promise<void> {
   onRequest('authWithPassword', () => ({ token: 'raw-token', record: USER }));
   const { signInWithPassword } = await import('./auth');
-  await useAccountStore.getState().adopt(await signInWithPassword(USER.email, 'password123'));
+  await useAccountStore.getState().adopt(await signInWithPassword(USER.email, 'password123'), { created });
+}
+
+/** The account is made by this sign-in (the *Account created* dialog's Continue). */
+async function signUp(): Promise<void> {
+  await signIn({ created: true });
 }
 
 let stopTracking: () => void = () => undefined;
@@ -120,7 +126,7 @@ afterEach(() => {
 
 test('the first sign-in makes the account’s first copy out of what this browser has', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
 
   expect(server?.version).toBe(1);
   expect(names(server?.data)).toEqual(['Main']);
@@ -131,9 +137,25 @@ test('the first sign-in makes the account’s first copy out of what this browse
   });
 });
 
-test('signing in adds this browser’s profiles to the account, renaming a name the account uses', async () => {
+test('signing up adds this browser’s profiles to the new account, renaming a name it already uses', async () => {
+  // The account already holds a "Main" (the server's copy, as an OAuth sign-up into it would find).
+  server = { version: 1, data: { ...newRoot(), profiles: [newProfile('Main', 'the-other-device')] } };
   renameActive('Main');
-  await signIn();
+  useStore.getState().createProfile('Alt');
+
+  await signUp();
+
+  expect(new Set(names())).toEqual(new Set(['Main', 'Main (local)', 'Alt']));
+  expect(new Set(names(server.data))).toEqual(new Set(['Main', 'Main (local)', 'Alt']));
+  expect(useAccountStore.getState()).toMatchObject({
+    dialog: 'merged',
+    merged: { added: ['Main (local)', 'Alt'], renamed: [{ from: 'Main', to: 'Main (local)' }] },
+  });
+});
+
+test('signing in to an existing account replaces this browser’s profiles, silently', async () => {
+  renameActive('Main');
+  await signUp();
   // Another browser, signed out, made its own "Main" and an "Alt".
   await useAccountStore.getState().signOut();
   renameActive('Main');
@@ -141,17 +163,24 @@ test('signing in adds this browser’s profiles to the account, renaming a name 
 
   await signIn();
 
-  expect(new Set(names())).toEqual(new Set(['Main', 'Main (local)', 'Alt']));
-  expect(new Set(names(server?.data))).toEqual(new Set(['Main', 'Main (local)', 'Alt']));
-  expect(useAccountStore.getState()).toMatchObject({
-    dialog: 'merged',
-    merged: { added: ['Main (local)', 'Alt'], renamed: [{ from: 'Main', to: 'Main (local)' }] },
-  });
+  expect(names()).toEqual(['Main']);
+  expect(names(server?.data)).toEqual(['Main']);
+  expect(useAccountStore.getState()).toMatchObject({ dialog: null, merged: null });
+});
+
+test('signing in to an account with no profiles still leaves one on screen, not the browser’s own', async () => {
+  renameActive('Mine');
+
+  await signIn();
+
+  expect(names()).toEqual(['My account']);
+  expect(names(server?.data)).toEqual(['My account']);
+  expect(useAccountStore.getState().dialog).toBeNull();
 });
 
 test('an untouched default profile is not added to an account that has profiles', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   await useAccountStore.getState().signOut();
 
   await signIn();
@@ -160,7 +189,7 @@ test('an untouched default profile is not added to an account that has profiles'
 });
 
 test('an edit saves itself once the player has stopped for a moment', async () => {
-  await signIn();
+  await signUp();
   vi.useFakeTimers();
   renameActive('Edited');
   expect(useAccountStore.getState().syncState).toBe('saving');
@@ -174,7 +203,7 @@ test('an edit saves itself once the player has stopped for a moment', async () =
 
 test('a save that meets another device’s save merges it, and both profiles survive', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   anotherDeviceAdds('From the phone');
   renameActive('Main, edited here');
 
@@ -187,7 +216,7 @@ test('a save that meets another device’s save merges it, and both profiles sur
 
 test('coming back to the app brings in what another device saved, and saves nothing back', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   anotherDeviceAdds('From the phone');
   const before = server?.version;
 
@@ -200,7 +229,7 @@ test('coming back to the app brings in what another device saved, and saves noth
 
 test('another device’s save, heard over realtime, appears here without a reload', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   await vi.waitFor(() => {
     expect(realtimeListeners()).toBe(1);
   });
@@ -218,7 +247,7 @@ test('another device’s save, heard over realtime, appears here without a reloa
 });
 
 test('signing out stops listening', async () => {
-  await signIn();
+  await signUp();
   await vi.waitFor(() => {
     expect(realtimeListeners()).toBe(1);
   });
@@ -230,7 +259,7 @@ test('signing out stops listening', async () => {
 
 test('an expired session puts the account away, edits included, and the next sign-in brings it back', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   renameActive('Edited before the session ended');
   refuseWith = 401;
 
@@ -249,7 +278,7 @@ test('an expired session puts the account away, edits included, and the next sig
 
 test('a start-up with the account’s profiles on screen but no session puts them away at once', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   localStorage.removeItem('pyrrhic.account.v1'); // the session is gone, offline or not
 
   await useAccountStore.getState().restore();
@@ -259,7 +288,7 @@ test('a start-up with the account’s profiles on screen but no session puts the
 });
 
 test('offline, the save waits and says so, and the profiles stay', async () => {
-  await signIn();
+  await signUp();
   refuseWith = 0;
   renameActive('Edited offline');
 
@@ -271,7 +300,7 @@ test('offline, the save waits and says so, and the profiles stay', async () => {
 
 test('signing out saves first, then takes the account’s profiles off this browser', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   renameActive('Saved on the way out');
 
   await useAccountStore.getState().signOut();
@@ -284,7 +313,7 @@ test('signing out saves first, then takes the account’s profiles off this brow
 
 test('signing out offline keeps the unsaved work put away, and says so', async () => {
   renameActive('Main');
-  await signIn();
+  await signUp();
   refuseWith = 0;
   renameActive('Not saved yet');
 
@@ -297,7 +326,7 @@ test('signing out offline keeps the unsaved work put away, and says so', async (
 
 test('deleting the account keeps the profiles, now as this browser’s own', async () => {
   renameActive('Mine');
-  await signIn();
+  await signUp();
   onRequest('delete', () => true);
 
   await expect(useAccountStore.getState().deleteAccount()).resolves.toBe(true);
@@ -308,7 +337,7 @@ test('deleting the account keeps the profiles, now as this browser’s own', asy
 });
 
 test('an account the server would not delete stays signed in, with a sentence', async () => {
-  await signIn();
+  await signUp();
   onRequest('delete', () => {
     throw new FakeResponseError(403);
   });
@@ -319,7 +348,7 @@ test('an account the server would not delete stays signed in, with a sentence', 
 });
 
 test('asking for another confirmation email says a mail is on its way', async () => {
-  await signIn();
+  await signUp();
   useAccountStore.setState({ user: { ...USER, verified: false } });
   onRequest('requestVerification', () => true);
 
@@ -329,7 +358,7 @@ test('asking for another confirmation email says a mail is on its way', async ()
 });
 
 test('changing the password keeps the session and answers true', async () => {
-  await signIn();
+  await signUp();
   onRequest('update', () => ({ ...USER }));
   onRequest('authWithPassword', () => ({ token: 'fresh-token', record: USER }));
 
@@ -338,7 +367,7 @@ test('changing the password keeps the session and answers true', async () => {
 });
 
 test('a refused password change answers false and says why', async () => {
-  await signIn();
+  await signUp();
   onRequest('update', () => {
     throw new FakeResponseError(400);
   });

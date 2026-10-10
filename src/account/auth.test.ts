@@ -75,9 +75,17 @@ test('a provider sign-in stores the session, through the client the dialog alrea
   await signInMethods();
   onRequest('authWithOAuth2', () => ({ token: 'tok', record: USER }));
 
-  await expect(signInWithProvider('discord')).resolves.toEqual(USER);
+  await expect(signInWithProvider('discord')).resolves.toEqual({ user: USER, created: false });
   expect(fakeCalls.at(-1)).toEqual({ collection: 'users', method: 'authWithOAuth2', args: ['discord'] });
   expect(localStorage.getItem(AUTH_STORAGE_KEY)).toContain('tok');
+});
+
+test('a provider sign-in that made the account says so, from PocketBase’s meta.isNew', async () => {
+  onRequest('listAuthMethods', () => methods());
+  await signInMethods();
+  onRequest('authWithOAuth2', () => ({ token: 'tok', record: USER, meta: { isNew: true } }));
+
+  await expect(signInWithProvider('google')).resolves.toEqual({ user: USER, created: true });
 });
 
 test('a provider sign-in before the client is loaded refuses instead of opening a blocked popup', async () => {

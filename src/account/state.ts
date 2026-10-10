@@ -87,8 +87,11 @@ export interface AccountState {
   setDialog: (dialog: AccountDialog) => void;
   /** Called on every local edit; schedules the autosave while signed in. */
   markDirty: () => void;
-  /** Just signed in: bring the account's profiles in and add this browser's own to them. */
-  adopt: (user: AccountUser) => Promise<void>;
+  /**
+   * Just signed in: bring the account's profiles in. `created` is set by the caller that knows the
+   * account was made by this very sign-up; only then are this browser's own profiles added to it.
+   */
+  adopt: (user: AccountUser, how: { created: boolean }) => Promise<void>;
   /** Pull (when asked), merge, push what the account does not have. Safe to call at any time. */
   sync: (options?: { pull?: boolean; keepalive?: boolean }) => Promise<void>;
   resendVerification: () => Promise<void>;
@@ -348,11 +351,13 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     },
 
     /**
-     * The account's profiles come in (from the server, and from the cache an expired session left);
-     * this browser's own profiles are added to them, renamed when the account already uses the name.
-     * The untouched profile a browser starts with is not worth adding. Then one save makes the account whole.
+     * The account's profiles come in (from the server, and from the cache an expired session left).
+     * On sign-up (`created`) this browser's own profiles are added to them, renamed when the account
+     * already uses the name; the untouched profile a browser starts with is not worth adding. On a
+     * sign-in to an existing account they are not: the account's profiles replace the screen,
+     * silently. Then one save makes the account whole.
      */
-    adopt: async (user) => {
+    adopt: async (user, { created }) => {
       set({ user, busy: 'signin', error: '', dialog: null, verificationSent: false, syncState: 'saving' });
       const cache = readCache();
       const cached = cache !== null && cache.owner === user.id ? readDocument(cache.doc) : null;
@@ -382,7 +387,8 @@ export const useAccountStore = create<AccountState>()((set, get) => {
           mine.push(profile); // the account's own, still on screen (an update from an older build)
           continue;
         }
-        if (untouchedStart) continue;
+        // Signing in to an existing account: this browser's own profiles stay out of it.
+        if (!created || untouchedStart) continue;
         const name = uniqueProfileName(profile.name, taken, 'local');
         taken.add(name);
         summary.added.push(name);
@@ -402,8 +408,9 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       }
       const local: RootDocument = { ...current, profiles: mine };
       let next = base === null ? local : mergeDocuments(local, base);
-      // Nothing anywhere yet: the untouched profile on screen becomes the account's first.
-      if (next.profiles.length === 0) next = { ...next, profiles: current.profiles };
+      // A new account with nothing anywhere yet: the untouched profile on screen becomes its first.
+      // On sign-in, `withAProfile` below gives an empty account a fresh one instead.
+      if (created && next.profiles.length === 0) next = { ...next, profiles: current.profiles };
       if (!next.profiles.some((profile) => profile.id === next.activeProfileId)) {
         const preferred = cached?.activeProfileId;
         next = {
@@ -547,7 +554,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       // Signed in, but the document on screen is not this account's yet: an older build, which
       // kept no owner, or another account's leftovers. Either way, the sign-in flow sorts it.
       if (device.owner !== null) await leave(true);
-      await get().adopt(user);
+      await get().adopt(user, { created: false });
     },
 
     loadMethods: async () => {
@@ -564,7 +571,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       if (auth === null) return;
       set({ error: '' });
       auth.signInWithProvider(provider).then(
-        (user) => get().adopt(user),
+        ({ user, created }) => get().adopt(user, { created }),
         (error: unknown) => {
           set({ error: accountErrorMessage(error) });
         },
