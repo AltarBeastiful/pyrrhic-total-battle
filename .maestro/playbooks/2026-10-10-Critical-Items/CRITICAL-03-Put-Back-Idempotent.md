@@ -32,7 +32,7 @@ Source: `todos.md`, entry "putback shoudld follow tight rules but keeping the tr
 
 - [x] Make the put-back sentence match the new behaviour. In `src/ui/sections/march/picks.ts` `putBackWords`, the sentence must describe the change to the march that actually happened. No new wording rules: follow design rules 15 and 26 in `docs/design-rules.md`.
 
-- [ ] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, `pnpm test` and the kernel test (`pnpm kernel:build` followed by the kernel test path). All must be green. Run the benchmark (`pnpm bench:baseline` or the existing benchmark test) and compare with `tools/theorycraft/out/benchmark-latest.md`. Record the counts and any change in the ratings in Notes. If something was red before this phase, name it and do not fix it here.
+- [x] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, `pnpm test` and the kernel test (`pnpm kernel:build` followed by the kernel test path). All must be green. Run the benchmark (`pnpm bench:baseline` or the existing benchmark test) and compare with `tools/theorycraft/out/benchmark-latest.md`. Record the counts and any change in the ratings in Notes. If something was red before this phase, name it and do not fix it here.
 
 - [ ] Commit this phase only. Stage only the files this phase changed (`git status --short` first). Do **not** stage `pyrrhic-my-account-2026-10-07.json`, `tools/theorycraft/out/benchmark-latest.*` (unless this phase regenerated them and the owner has not asked otherwise: if regenerated, do not stage them and say so in Notes), `.maestro/playbooks/performance-optimization/`, or `todos.md`. Commit message: `Put-back follows Tight on the same set and is idempotent with take-out`. End the commit message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
@@ -131,4 +131,15 @@ Two sentences speak about a put-back, and both could say something that had not 
 No new wording rules (design rules 15 and 26): one existing line is swapped for a shorter true one, and one line is hidden when it describes nothing on screen.
 
 Tests: `rows.test.ts` (the on-stop line), `PlanPanel.test.tsx` (the fold's two lines under an off-stop put-back and back on the stop; `resize` now reset in `beforeEach`), and `putBack.test.ts` checks `onStop` is `false` after the first press and `true` after its inverse on every stop, on both paths. `src/ui/sections/march/`: 324/324 green; `putBack.test.ts` 46/46; typecheck, eslint, prettier clean on the changed files.
+
+
+### Task 6: the gate (2026-10-10)
+
+All green; nothing was red before this phase.
+
+- `pnpm typecheck`: clean. `pnpm lint`: clean. `pnpm exec prettier --check` on the 11 non-playbook files this phase changed (`git diff --name-only 55e32db HEAD`): clean.
+- `pnpm kernel:build`: ok. Kernel tests (`pnpm vitest run tests/kernel`): **218 passed, 1 skipped** (9 files).
+- `pnpm test`: **139 files passed, 177 skipped; 1 746 tests passed, 492 skipped, 0 failed** (257 s). `putBack.test.ts` alone: 46/46 (it runs here because the owner's export is present).
+- Benchmark (`tests/engine/plan-benchmark.test.ts`, 20/20): compared with `Working/bench-compare.mjs` (timings stripped, 12 231 leaf values, 19 scenarios) against both the copy taken before task 3 (`Working/c03-bench-before.json`) and the copy taken just before this run (`Working/c03-gate-bench-before.json`): **IDENTICAL**. No rating changed, no scenario got worse. Only the run stamp and timing table differ. The regenerated `benchmark-latest.*` were saved as `Working/c03-gate-bench-after.*` and the tracked files were restored to their pre-run contents (they carry uncommitted changes that predate this phase), so they are not part of this phase's commit.
+- Logs: `Working/c03-{typecheck,lint,format,kernel,kernel-test,test,gate-bench}.log`.
 
