@@ -157,7 +157,7 @@ describe('runProbe: one job of the advisor', () => {
 
 describe('runAdvisor: the pass over the pool', () => {
   test(
-    'the baseline first, then every probe on the pool, with no clock in any job, ranked and counted',
+    'the baseline first, the probes beside it on the pool, with no clock in any job, ranked and counted',
     async () => {
       const sent: ProbeInput[] = [];
       // Inline clients that report a worker, so the pool really runs two lanes.
@@ -195,13 +195,18 @@ describe('runAdvisor: the pass over the pool', () => {
       expect(gains).toEqual([...gains].sort((a, b) => b - a));
       // One job for the baseline and one a probe, each counted once, out of the pass's whole.
       expect(progress).toEqual([1, 2, 3, 4].map((done) => [done, 4]));
-      expect(sent).toHaveLength(4);
+      // The baseline goes first; a probe started before it is known plans first and reads in a second call.
       expect(sent[0]?.against).toBeUndefined();
+      expect(sent[0]?.shown).toBeUndefined();
+      const reads = sent.filter((job) => job.against !== undefined);
+      expect(reads).toHaveLength(probes.length);
+      expect(sent).toHaveLength(1 + probes.length + reads.filter((job) => job.shown !== undefined).length);
+      expect(reads.some((job) => job.shown !== undefined)).toBe(true);
       for (const job of sent) {
         expect(job.plan.budgetMs).toBeUndefined();
         expect(job.plan.shouldStop).toBeUndefined();
       }
-      for (const job of sent.slice(1)) expect(job.against?.baseline).toEqual(result.baseline);
+      for (const job of reads) expect(job.against?.baseline).toEqual(result.baseline);
     },
     TIMEOUT,
   );
@@ -325,6 +330,26 @@ describe('runAdvisor: the pass over the pool', () => {
       expect(result.baseline).toBeNull();
       expect(result.rows).toEqual([]);
       expect(result.cut.map((info) => info.id)).toEqual(probes.map((probe) => probe.id));
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'a baseline that throws fails the pass with its message and stops the probes started beside it',
+    async () => {
+      const input = campaign();
+      let reads = 0;
+      const pool = poolOf(2, (inline) => ({
+        probe: (probeInput, signal) => {
+          if (probeInput.against !== undefined) reads += 1;
+          return probeInput.plan.request === input.request
+            ? Promise.reject(new Error('baseline said no'))
+            : inline.probe(probeInput, signal);
+        },
+      }));
+      await expect(runAdvisor(input, probesOf(input), pool)).rejects.toThrow('baseline said no');
+      pool.dispose();
+      expect(reads).toBe(0);
     },
     TIMEOUT,
   );

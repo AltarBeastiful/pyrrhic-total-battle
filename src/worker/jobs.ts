@@ -170,15 +170,21 @@ export function countsKey(counts: Record<string, number>): string {
  * **A march is read once a job**: a re-priced stop whose counts the re-plan lands on again is the same march
  * under the same request, and one Tight pricing costs seconds on a wide box (12.7 s a stop on the
  * 20 000-dominance camp, 2026-10-08).
+ *
+ * **In two calls when the baseline is not known yet** (W18 P1.2): the probe plans and shows its bar with nothing
+ * to read against, and a second call, given that bar as `shown`, only reads it against the baseline — on a memo
+ * seeded with the bar's marches, so it prices exactly what the one-call job would.
  */
 export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
   // A job cancelled while it waited or while it planned is not read: the worker answers `cancelled` whatever
   // comes back, and a plan stopped before its first candidate has nothing to read (it throws).
   if (context.cancelled()) return { stops: [], row: null };
-  const plan = planCampaign({ ...input.plan, shouldStop: context.cancelled });
+  const plan =
+    input.shown === undefined ? planCampaign({ ...input.plan, shouldStop: context.cancelled }) : null;
   if (context.cancelled()) return { stops: [], row: null };
   const request = withMethod(input.plan.request, 'elite');
-  const read = new Map<string, ShownMarch>();
+  // A bar shown by this probe's first call carries its marches over: the memo is the one that call ended with.
+  const read = new Map<string, ShownMarch>(input.shown?.map((stop) => [countsKey(stop.counts), stop.march]));
   const showOnce = (counts: Record<string, number>): ShownMarch => {
     const key = countsKey(counts);
     const known = read.get(key);
@@ -189,11 +195,13 @@ export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
   };
   // Counted in a profiling build only (`census.ts`); a production build folds this to `showOnce`.
   const show = CENSUS ? countShows(request, countsKey, (key) => read.has(key), showOnce) : showOnce;
-  const stops = plan.alternatives.map((row) => ({
-    pick: row.pick,
-    counts: row.counts,
-    march: show(row.counts),
-  }));
+  const stops =
+    input.shown ??
+    (plan?.alternatives ?? []).map((row) => ({
+      pick: row.pick,
+      counts: row.counts,
+      march: show(row.counts),
+    }));
   const { against } = input;
   if (against === undefined) return { stops, row: null };
   const row = readProbe(against.probe, against.baseline, stops, (stop) => show(stop.counts), against.rates);

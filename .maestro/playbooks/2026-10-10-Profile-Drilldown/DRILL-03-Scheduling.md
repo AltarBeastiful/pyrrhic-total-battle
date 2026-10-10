@@ -25,7 +25,7 @@ changes which rows a slow device shows).
   skip their baseline job when given one. The `onProgress` totals must stay right. Gate script; the advisor golden
   must be identical. Commit: `Advisor: one baseline per run (W18 K4)`.
 
-- [ ] Start the probes while the baseline plans. Today `runAdvisor` awaits the baseline job before it starts any
+- [x] Start the probes while the baseline plans. Today `runAdvisor` awaits the baseline job before it starts any
   probe, because a probe job reads its stops against the baseline (`readProbe` in `src/engine/advisor.ts`, called at
   the end of `runProbe` in `src/worker/jobs.ts`). Split the probe job so its `planCampaign` and its own `show`
   pricings start at once, and the `readProbe` step runs once the baseline is known: either a second small job per
@@ -69,3 +69,40 @@ changes which rows a slow device shows).
   **WON'T DO** and "P1.1 dropped" (`docs/plans/profile-drilldown.md` §5). The playbook's rule "no cache without a
   census" decides: no baseline cache is built. K4's cost is wall time (the serial baseline head of each pass),
   which P1.2 below recovers without a cache. Ticked with no code change.
+
+### P1.2 probes start while the baseline plans (2026-10-11)
+
+- **How**: `runAdvisor` sends the baseline and every probe as **one** `pool.map` (baseline at index 0, so the
+  merge by probe index and the `onProgress` total, probes + 1, are unchanged). A probe job that starts while the
+  baseline is unknown makes two calls on its own lane: `client.probe({ plan })` (plan + show its bar), then, once
+  the baseline resolves, `client.probe({ plan, against, shown })`. The new `ProbeInput.shown` (protocol) makes
+  `runProbe` skip `planCampaign` and seed its `read` memo with the bar's marches by `countsKey`, i.e. exactly the
+  memo the one-call job held when it reached `readProbe`, so it prices the same marches (carried over, not kept on
+  a worker). A probe started after the baseline is known is one call, as before. A failed baseline aborts the
+  pass at once and `runAdvisor` rethrows its error (new unit test: no probe reads after it); a cut baseline still
+  answers `baseline: null` with every probe cut.
+- **Captains: nothing to overlap.** In `runCaptainAdvice` every job after the baseline needs it before it can
+  start: the screen prices the baseline's stop counts, and the confirm trios are the screen's shortlist. The
+  barrier between screen and probes is P1.4's.
+- **Answers identical**: the advisor golden passes, now run on **three** interleaved inline lanes (it was one, which
+  never takes the split path); the browser run below hashes every pass's answer the same before and after
+  (`a9612b9ca0a9`).
+- **Wall time**: experiment 190 times `client.plan` jobs only, not the passes, so the passes were timed by a
+  scratch runner in its style, `.maestro/playbooks/Working/w18/passes.mjs` (real pool of 6 module workers,
+  headless Chromium, Vite dev, timing fixture, no clock, min of 2 runs after a warm-up; 16-thread Ryzen):
+
+  | pass | before | after |
+  | --- | --- | --- |
+  | upgrades (29 generic probes) | 3 978 ms | 3 841 ms |
+  | captain advice (baseline, screen, confirm) | 1 628 ms | 1 714 ms (code unchanged: noise) |
+  | captains incl. upgrades | 4 998 ms | 5 216 ms (unchanged code: noise) |
+  | other (17 probes) | 3 308 ms | 3 124 ms |
+
+  Gain about 140–180 ms a pass, not the ~600 ms of a whole baseline: the probe that started beside the baseline
+  still waits for it before reading, and the end of the pass is set by its slowest jobs (P1.3).
+- **When the clock binds**: probes start earlier, in the same list order, so the cut set is a tail of probe order
+  that can only get shorter (a subset of what was cut before); a probe that was read before is still read. If the
+  baseline is cut, every probe is cut, as before, even ones whose own bar was ready.
+- **Gate** (`gate-20261011-*.log.summary`): kernel:build, typecheck, `pnpm test` 271 s, plan-benchmark 158 s,
+  bench-diff none, 184 108 s all PASS. Lint FAILED only on a Drill 02 scratch file the linter picks up
+  (`Working/w18/tmp/index.p21.ts`), renamed `.ts.txt`; `pnpm lint` then passes.

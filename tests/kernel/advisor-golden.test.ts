@@ -12,8 +12,9 @@
  * The UI functions run these under the 20 s clock (`CAMPAIGN.budgets.extra`, and `budgets.plan` for the plan),
  * so they are called here at the worker level with **no clock**: the plan has no `budgetMs`, each pass gets a
  * clock no run reaches, and every `cut` list is asserted empty, so the answer cannot depend on machine speed.
- * One inline lane, in-process, as experiment 194 runs it. The fixture's `upgrades` list is empty, so the
- * profiling run's `upgrades-mine` phase has nothing to ask and is not here either.
+ * Three inline lanes on one thread, in-process, so the jobs interleave (one lane, as experiment 194 runs it,
+ * gives the same pin). The fixture's `upgrades` list is empty, so the profiling run's `upgrades-mine` phase has
+ * nothing to ask and is not here either.
  *
  * `CAPTURE=1 pnpm vitest run tests/kernel/advisor-golden.test.ts` writes the file; without it, the test compares.
  * Skipped when the owner's export is missing.
@@ -59,7 +60,8 @@ async function capture(): Promise<unknown> {
   const input = buildPlanRequest(profile, setup);
   const request = buildStackRequest(profile, setup);
   const client = lane();
-  const pool: CalcPool = createCalcPool({ size: 1, createClient: lane });
+  // Three lanes on one thread: the jobs interleave, so the pin also holds the merge by probe (any order, any split).
+  const pool: CalcPool = createCalcPool({ size: 3, createClient: lane });
   try {
     // 1. generate: the plan, its opening stop, and the bar's Tight tables (`runGenerate`, worker mode).
     const plan = await client.plan(input);

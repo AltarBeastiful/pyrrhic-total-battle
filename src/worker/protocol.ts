@@ -134,6 +134,11 @@ export interface ProbeInput {
   plan: CampaignInput;
   /** Absent on the baseline job: the probe, the baseline's bar it is read against, and the owner's rating. */
   against?: { probe: ProbeInfo; baseline: ShownStop[]; rates: MarkerRates } | undefined;
+  /**
+   * This probe's own bar, already planned and shown by an earlier call with nothing to read against (W18 P1.2):
+   * the job does not plan again, it reads the bar against `against`, re-using its marches.
+   */
+  shown?: ShownStop[] | undefined;
 }
 
 /** What one advisor job answers: its own bar as shown, and the probe read against the baseline when one was given. */

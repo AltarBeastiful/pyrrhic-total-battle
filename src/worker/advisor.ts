@@ -7,8 +7,9 @@
  * pass needs both — `CAMPAIGN.budgets.extra` and `CAMPAIGN.markerRates`, and a pool to run on.
  *
  * - **The baseline is planned here, first**, under the probes' own settings (owner, 2026-10-07), never taken
- *   from the main plan: every probe job reads its stops against it, so it is one job ahead of the others, and
- *   each probe is then one round trip.
+ *   from the main plan: every probe job reads its stops against it. It is the pass's first job, not a step of
+ *   its own (W18 P1.2): the probes the other workers start meanwhile plan and show their bars, and read them
+ *   once the baseline is known; every later probe is one round trip.
  * - **No job carries a clock** (W17 A0): `budgetMs` is taken off the input, so a phone and a desktop give one
  *   answer. The 20 s is the pool's, for the whole pass, and every job it did not finish is reported cut.
  * - **Results are merged by probe, never by arrival** (§1 rule 2), and ranked with ties in probe order, so one
@@ -63,7 +64,8 @@ function settingsOf(input: CampaignInput): CampaignInput {
 }
 
 /**
- * Run the advisor over `probes`: the baseline first, then every probe as one pool job, all under one clock.
+ * Run the advisor over `probes`: the baseline first, then every probe as one pool job, all in one pass under
+ * one clock.
  * Rejects when the baseline itself fails (nothing can be read without it) or when `signal` aborts.
  */
 export async function runAdvisor(
@@ -83,40 +85,72 @@ export async function runAdvisor(
     done += 1;
     onProgress?.(done, total);
   };
-  const began = performance.now();
 
   // The baseline's settings, for the profiling run's census only (`census.ts`).
   if (CENSUS) noteCensus(() => ({ kind: 'baseline', pass: 'advisor', key: stableKey(settings) }));
-  const baselineJob: PoolJob<ProbeAnswer> = (client, jobSignal) =>
-    client.probe({ plan: settings }, jobSignal);
-  const [first] = await pool.map([baselineJob], { budgetMs, signal, onSettled });
-  if (first?.kind === 'error') throw new Error(first.message);
+  // The baseline and the probes go out as one pass (W18 P1.2): a probe started before the baseline is known
+  // plans and shows its bar at once, and reads it against the baseline in a second call once it is.
+  let known: ShownStop[] | null = null;
+  const failure: { error?: Error } = {};
+  let baselineIs!: (stops: ShownStop[]) => void;
+  let baselineFails!: (error: unknown) => void;
+  const baselineReady = new Promise<ShownStop[]>((resolve, reject) => {
+    baselineIs = resolve;
+    baselineFails = reject;
+  });
+  baselineReady.catch(() => undefined);
+  // A failed baseline stops the pass at once: nothing can be read without it.
+  const stopPass = new AbortController();
+  const onCancel = (): void => stopPass.abort();
+  signal?.addEventListener('abort', onCancel, { once: true });
+  if (signal?.aborted === true) stopPass.abort();
+
+  const baselineJob: PoolJob<ProbeAnswer> = async (client, jobSignal) => {
+    try {
+      const answer = await client.probe({ plan: settings }, jobSignal);
+      known = answer.stops;
+      baselineIs(answer.stops);
+      return answer;
+    } catch (error) {
+      baselineFails(error);
+      if (!jobSignal.aborted) {
+        failure.error = error instanceof Error ? error : new Error(String(error));
+        stopPass.abort();
+      }
+      throw error;
+    }
+  };
+  const probeJobs = probes.map((probe): PoolJob<ProbeAnswer> => {
+    const plan = isCampaignProbe(probe)
+      ? probe.applyInput(settings)
+      : { ...settings, request: probe.apply(settings.request) };
+    const info = probeInfo(probe);
+    return async (client, jobSignal) => {
+      if (known !== null)
+        return client.probe({ plan, against: { probe: info, baseline: known, rates } }, jobSignal);
+      const own = await client.probe({ plan }, jobSignal);
+      const baseline = await baselineReady;
+      return client.probe({ plan, against: { probe: info, baseline, rates }, shown: own.stops }, jobSignal);
+    };
+  });
+
+  let outcomes: PoolOutcome<ProbeAnswer>[];
+  try {
+    outcomes = await pool.map([baselineJob, ...probeJobs], { budgetMs, signal: stopPass.signal, onSettled });
+  } catch (error) {
+    throw failure.error ?? error;
+    throw error;
+  } finally {
+    signal?.removeEventListener('abort', onCancel);
+  }
+  const [first, ...probed] = outcomes;
   if (first?.kind !== 'done') return { baseline: null, rows: [], cut: infos, failed: [] };
   const baseline = first.value.stops;
-
-  const jobs = probes.map(
-    (probe): PoolJob<ProbeAnswer> =>
-      (client, jobSignal) =>
-        client.probe(
-          {
-            plan: isCampaignProbe(probe)
-              ? probe.applyInput(settings)
-              : { ...settings, request: probe.apply(settings.request) },
-            against: { probe: probeInfo(probe), baseline, rates },
-          },
-          jobSignal,
-        ),
-  );
-  const left = budgetMs - (performance.now() - began);
-  const outcomes: PoolOutcome<ProbeAnswer>[] =
-    left > 0
-      ? await pool.map(jobs, { budgetMs: left, signal, onSettled })
-      : jobs.map(() => ({ kind: 'cut' }));
 
   const rows: AdvisorRow[] = [];
   const cut: ProbeInfo[] = [];
   const failed: AdvisorFailure[] = [];
-  outcomes.forEach((outcome, index) => {
+  probed.forEach((outcome, index) => {
     const probe = infos[index];
     if (probe === undefined) return;
     if (outcome.kind === 'error') failed.push({ probe, message: outcome.message });
