@@ -14,6 +14,8 @@ import { createServer } from 'vite';
 const text = readFileSync(process.argv[2], 'utf8');
 const SIZE = Number(process.argv[3] ?? 6);
 const RUNS = Number(process.argv[4] ?? 2);
+// BUDGET=<ms>: the timed runs get that pass clock (the warm-up none) and the cut ids are printed.
+const BUDGET = process.env.BUDGET ? Number(process.env.BUDGET) : null;
 
 const server = await createServer({ server: { port: 5198, strictPort: true }, logLevel: 'error' });
 await server.listen();
@@ -24,7 +26,7 @@ await page.goto('http://localhost:5198/');
 await page.waitForTimeout(1500);
 
 const measured = await page.evaluate(
-  async ({ text, size, runs }) => {
+  async ({ text, size, runs, budget }) => {
     const { parseImport } = await import('/src/share/exportImport.ts');
     const { buildPlanRequest } = await import('/src/state/derive.ts');
     const { genericProbes } = await import('/src/engine/probes.ts');
@@ -50,11 +52,12 @@ const measured = await page.evaluate(
     const headline = pickOf(plan, openingPosition(plan, null)).pick;
     const pool = createCalcPool({ size });
 
+    let clock = NO_CLOCK;
     const once = async () => {
       const t = {};
       const answers = {};
       let began = performance.now();
-      answers.upgrades = await runAdvisor(input, genericProbes(), pool, { headline, budgetMs: NO_CLOCK });
+      answers.upgrades = await runAdvisor(input, genericProbes(), pool, { headline, budgetMs: clock });
       t.upgrades = performance.now() - began;
       began = performance.now();
       const { currentKey, trios } = captainTrios(profile, setup);
@@ -63,7 +66,7 @@ const measured = await page.evaluate(
         trios.map(({ key, totals }) => ({ key, totals })),
         currentKey,
         pool,
-        { budgetMs: NO_CLOCK },
+        { budgetMs: clock },
       );
       t.captainAdvice = performance.now() - began;
       const lead = leadTrio(advice.best, currentKey);
@@ -78,24 +81,31 @@ const measured = await page.evaluate(
         { key: lead, totals: leadCandidate.totals, stops: advice.plans[lead] },
         asks,
         pool,
-        { budgetMs: NO_CLOCK },
+        { budgetMs: clock },
       );
       t.captains = performance.now() - began;
       answers.captains = { advice, upgrades };
       began = performance.now();
       const { probes } = otherProbes(input, plan.silver);
-      answers.other = await runAdvisor(input, probes, pool, { headline, budgetMs: NO_CLOCK });
+      answers.other = await runAdvisor(input, probes, pool, { headline, budgetMs: clock });
       t.other = performance.now() - began;
       const cuts = [answers.upgrades.cut, advice.cut, upgrades.cut, answers.other.cut].flat().length;
-      return { t, answers: JSON.stringify(answers), cuts, screenCut: advice.screenCut };
+      const cutIds = {
+        upgrades: answers.upgrades.cut.map((p) => p.id),
+        confirm: advice.cut,
+        captainUpgrades: upgrades.cut.map((p) => p.id ?? p),
+        other: answers.other.cut.map((p) => p.id),
+      };
+      return { t, answers: JSON.stringify(answers), cuts, screenCut: advice.screenCut, cutIds };
     };
     await once();
+    if (budget !== null) clock = budget;
     const out = [];
     for (let run = 0; run < runs; run += 1) out.push(await once());
     pool.dispose();
     return { out, cores: navigator.hardwareConcurrency };
   },
-  { text, size: SIZE, runs: RUNS },
+  { text, size: SIZE, runs: RUNS, budget: BUDGET },
 );
 
 await browser.close();
@@ -112,3 +122,4 @@ const total = measured.out.map((run) => keys.reduce((a, k) => a + run.t[k], 0));
 console.log(`all passes: min ${Math.round(Math.min(...total))} ms`);
 console.log(`cuts ${measured.out.map((r) => r.cuts).join(',')}, screenCut ${measured.out.map((r) => r.screenCut)}`);
 console.log(`answer hash ${[...new Set(measured.out.map((r) => hash(r.answers)))].join(' ')}`);
+if (BUDGET !== null) for (const run of measured.out) console.log(JSON.stringify(run.cutIds));

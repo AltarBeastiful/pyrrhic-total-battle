@@ -13,7 +13,8 @@
  * - **No job carries a clock** (W17 A0): `budgetMs` is taken off the input, so a phone and a desktop give one
  *   answer. The 20 s is the pool's, for the whole pass, and every job it did not finish is reported cut.
  * - **Results are merged by probe, never by arrival** (§1 rule 2), and ranked with ties in probe order, so one
- *   worker and six give the same list.
+ *   worker and six give the same list. The probes **start longest first** (`jobOrder.ts`, W18 P1.3), which only
+ *   changes which probes a binding clock cuts.
  */
 import { CAMPAIGN } from '@/config';
 import { probeInfo, rankAdvice, type AdvisorRow, type ProbeInfo, type ShownStop } from '@/engine/advisor';
@@ -23,6 +24,7 @@ import type { Probe } from '@/engine/probes';
 import type { MarkerRates } from '@/engine/rating';
 
 import { CENSUS, noteCensus, stableKey } from './census';
+import { expectedCosts, longestFirst, mapInOrder, planSize, timeInto, type JobTimes } from './jobOrder';
 import type { CalcPool, PoolJob, PoolOutcome } from './pool';
 import type { ProbeAnswer } from './protocol';
 
@@ -54,6 +56,9 @@ export interface AdvisorFailure {
   probe: ProbeInfo;
   message: string;
 }
+
+/** Each probe's job time on the last pass that ran it, by probe id: the start order of the next (W18 P1.3). */
+const PROBE_TIMES: JobTimes = new Map();
 
 /** The settings every job of a pass plans under: the input's own, with no clock and nothing a worker can't take. */
 function settingsOf(input: CampaignInput): CampaignInput {
@@ -120,23 +125,52 @@ export async function runAdvisor(
       throw error;
     }
   };
-  const probeJobs = probes.map((probe): PoolJob<ProbeAnswer> => {
-    const plan = isCampaignProbe(probe)
+  const oneCall =
+    (
+      plan: CampaignInput,
+      info: ProbeInfo,
+      baseline: ShownStop[],
+      shown?: ShownStop[],
+    ): PoolJob<ProbeAnswer> =>
+    (client, jobSignal) =>
+      client.probe({ plan, against: { probe: info, baseline, rates }, shown }, jobSignal);
+  const plans = probes.map((probe) =>
+    isCampaignProbe(probe)
       ? probe.applyInput(settings)
-      : { ...settings, request: probe.apply(settings.request) };
+      : { ...settings, request: probe.apply(settings.request) },
+  );
+  const probeJobs = probes.map((probe, index): PoolJob<ProbeAnswer> => {
+    const plan = plans[index] ?? settings;
     const info = probeInfo(probe);
     return async (client, jobSignal) => {
+      // Timed without its wait for the baseline: the next pass orders on the probe's own work.
       if (known !== null)
-        return client.probe({ plan, against: { probe: info, baseline: known, rates } }, jobSignal);
+        return timeInto(oneCall(plan, info, known), info.id, PROBE_TIMES)(client, jobSignal);
+      const began = performance.now();
       const own = await client.probe({ plan }, jobSignal);
+      const planned = performance.now() - began;
       const baseline = await baselineReady;
-      return client.probe({ plan, against: { probe: info, baseline, rates }, shown: own.stops }, jobSignal);
+      const read = timeInto(oneCall(plan, info, baseline, own.stops), info.id, PROBE_TIMES);
+      const answer = await read(client, jobSignal);
+      PROBE_TIMES.set(info.id, planned + (PROBE_TIMES.get(info.id) ?? 0));
+      return answer;
     };
   });
+  // Longest probes first (W18 P1.3), the baseline ahead of them all: every probe waits on it.
+  const costs = expectedCosts(
+    infos.map((info) => info.id),
+    PROBE_TIMES,
+    plans.map(planSize),
+  );
+  const order = [0, ...longestFirst(costs).map((index) => index + 1)];
 
   let outcomes: PoolOutcome<ProbeAnswer>[];
   try {
-    outcomes = await pool.map([baselineJob, ...probeJobs], { budgetMs, signal: stopPass.signal, onSettled });
+    outcomes = await mapInOrder(pool, [baselineJob, ...probeJobs], order, {
+      budgetMs,
+      signal: stopPass.signal,
+      onSettled,
+    });
   } catch (error) {
     throw failure.error ?? error;
     throw error;

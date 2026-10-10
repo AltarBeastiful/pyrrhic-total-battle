@@ -28,6 +28,7 @@ import type { CampaignInput, PlanPick } from '@/engine/plan';
 import type { MarkerRates } from '@/engine/rating';
 
 import { CENSUS, noteCensus, stableKey } from './census';
+import { expectedCosts, longestFirst, mapInOrder, planSize, timeInto, type JobTimes } from './jobOrder';
 import type { CalcPool, PoolJob, PoolOutcome } from './pool';
 import type { CaptainScreenAnswer, ProbeAnswer } from './protocol';
 
@@ -94,6 +95,9 @@ function settingsOf(input: CampaignInput): CampaignInput {
   delete settings.shouldStop;
   return settings;
 }
+
+/** Each confirmed trio's job time on the last pass that ran it, by trio key: the start order of the next. */
+const CONFIRM_TIMES: JobTimes = new Map();
 
 function infoOf(key: string): ProbeInfo {
   return { id: key, family: 'captains', label: key };
@@ -189,22 +193,28 @@ export async function runCaptainAdvice(
   const { screens } = screened.value;
 
   const confirmed = shortlistTrios(screens, currentKey, confirm, options.from ?? 'repriced');
-  const jobs = confirmed.map((key): PoolJob<ProbeAnswer> => {
+  const inputs = confirmed.map((key): CampaignInput => {
     const trio = trios.find((candidate) => candidate.key === key);
     if (trio === undefined) throw new Error(`The shortlisted trio ${key} is not among the trios given.`);
-    return (client, jobSignal) =>
-      client.probe(
-        {
-          plan: { ...settings, request: { ...settings.request, totals: trio.totals } },
-          against: { probe: probeInfo(infoOf(key)), baseline, rates },
-        },
-        jobSignal,
-      );
+    return { ...settings, request: { ...settings.request, totals: trio.totals } };
   });
+  const jobs = confirmed.map((key, index): PoolJob<ProbeAnswer> =>
+    timeInto(
+      (client, jobSignal) =>
+        client.probe(
+          { plan: inputs[index] ?? settings, against: { probe: probeInfo(infoOf(key)), baseline, rates } },
+          jobSignal,
+        ),
+      key,
+      CONFIRM_TIMES,
+    ),
+  );
+  // Longest trios first (W18 P1.3); answers stay in shortlist order.
+  const order = longestFirst(expectedCosts(confirmed, CONFIRM_TIMES, inputs.map(planSize)));
   const left = budgetMs - (performance.now() - began);
   const outcomes: PoolOutcome<ProbeAnswer>[] =
     left > 0 && jobs.length > 0
-      ? await pool.map(jobs, { budgetMs: left, signal, onSettled })
+      ? await mapInOrder(pool, jobs, order, { budgetMs: left, signal, onSettled })
       : jobs.map(() => ({ kind: 'cut' }));
 
   const rows: AdvisorRow[] = [];
