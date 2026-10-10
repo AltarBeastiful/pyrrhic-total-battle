@@ -98,7 +98,22 @@ export function MarchRecap() {
       key: 'worst',
       // **"Damage"** (owner, 2026-09-21: the same cut the trade's head took the same day — the figure is
       // the enemy-first journal's either way, and "worst opening" was a term a player had to learn).
-      label: 'Damage',
+      label: (
+        <>
+          Damage{' '}
+          {/* **Said once, where the two figures meet** (owner, 2026-10-10: the expected damage above and this
+              one read as the same number twice): the hero is the average of the two openings, this is the
+              harder one — the enemy striking first — so a player reads the gap as the cost of not opening. */}
+          <Text
+            span
+            inherit
+            c="dimmed"
+            title="The damage if the enemy strikes first: the harder of the two openings"
+          >
+            · enemy first
+          </Text>
+        </>
+      ),
       value: summary.minDamage,
       previous: was((value) => value.minDamage),
       format: figure,
@@ -278,8 +293,14 @@ export function MarchRecap() {
           <Group gap="xs" wrap="nowrap">
             {/* The one figure that carried no mark while every figure under it did (rule 21). */}
             <Glyph kind="averageDamage" />
-            <Text span size="sm" c="dimmed">
-              Expected damage
+            {/* The average of the two openings: you striking first and the enemy striking first. */}
+            <Text
+              span
+              size="sm"
+              c="dimmed"
+              title="The average of the two openings: you striking first and the enemy striking first"
+            >
+              Average damage
             </Text>
             {previous !== null && (
               <DeltaText

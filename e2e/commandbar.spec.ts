@@ -268,7 +268,7 @@ test.describe('on a desktop', () => {
     await settle(page);
     await expect(generateState(page)).toHaveAttribute('data-state', 'ready');
     // A march came back: the pane carries its figures.
-    await expect(marchSection(page).getByText('Expected damage', { exact: true })).toBeVisible();
+    await expect(marchSection(page).getByText('Average damage', { exact: true })).toBeVisible();
 
     // The keypad a phone would open on this field, and the pool's ceiling, said once above the row.
     expect(await field.getAttribute('inputmode')).toBe('numeric');

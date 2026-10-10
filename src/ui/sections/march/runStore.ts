@@ -243,6 +243,8 @@ export interface RunState {
    * Tight included, and not against the unraised snapshot under it.
    */
   shownSummary: BattleSummary | null;
+  /** The run `shownSummary` was taken from (`ResultSnapshot.at`); a new stamp is a new reference. */
+  shownAt: number | null;
   /**
    * The setup fingerprint the last run was started with; `null` when nothing has run yet or the run
    * was cancelled. A different fingerprint now means the result on screen is stale.
@@ -311,8 +313,12 @@ export interface RunState {
   cancel: () => void;
   /** Keep the summary a new result replaces; called with `null` when there is nothing to keep. */
   rememberPrevious: (summary: BattleSummary | null) => void;
-  /** What the March draws now (`useMarch`), so the next Generate compares against it. */
-  showSummary: (summary: BattleSummary | null) => void;
+  /**
+   * What the March drew the moment a run landed (`useMarch`), so the next Generate compares against it. `at` is
+   * the run's own stamp: a put-back, a hand edit or a move of the Tight selector keeps it, and so keeps the
+   * reference (`shownSummary`) where the run first put it.
+   */
+  showSummary: (summary: BattleSummary | null, at: number | null) => void;
   reset: () => void;
 }
 
@@ -321,6 +327,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   editingCounts: false,
   previousSummary: null,
   shownSummary: null,
+  shownAt: null,
   lastRunFingerprint: null,
   includedUnitIds: [],
   leftOutByPlayer: [],
@@ -417,8 +424,12 @@ export const useRunStore = create<RunState>()((set, get) => ({
   rememberPrevious: (summary) => {
     set({ previousSummary: summary });
   },
-  showSummary: (summary) => {
-    if (get().shownSummary !== summary) set({ shownSummary: summary });
+  showSummary: (summary, at) => {
+    // **The reference is the march the run produced, and it stays** (owner, 2026-10-10: *"it should update the
+    // reference number but not change the march we have as reference"*). Edits, put-backs and the As is | Tight
+    // selector all recompute the figures on screen against it; only a new run (a new stamp) moves it.
+    if (get().shownAt === at && summary !== null) return;
+    set({ shownSummary: summary, shownAt: at });
   },
   reset: () => {
     set({
@@ -426,6 +437,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       editingCounts: false,
       previousSummary: null,
       shownSummary: null,
+      shownAt: null,
       lastRunFingerprint: null,
       includedUnitIds: [],
       leftOutByPlayer: [],

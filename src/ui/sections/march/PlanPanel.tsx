@@ -54,7 +54,7 @@ import { useResultStore } from '@/ui/resultStore';
 import { PlanBar } from './PlanBar';
 import { PlanTrade } from './PlanTrade';
 import { amount, compact, compactRatio, duration, ratio } from './format';
-import { putBackWords, sequenceWords, spendsStock } from './picks';
+import { putBackWords, spendsStock } from './picks';
 
 import { positionsKey, usePositionsStore } from './positionsSearch';
 import { pickOf, sweetSpotOf, useRunStore } from './runStore';
@@ -191,49 +191,7 @@ function bindingSentence(binding: CampaignPlan['binding']): string {
   return 'Nothing binds yet: the plan stops where more troops stop paying for themselves.';
 }
 
-/**
- * The thesis, behind the glyph that explains the line beside it (S-59, `docs/investigations/0020` §D-4).
- *
- * The owner asked for this paragraph on 2026-09-15 (`0018-plan-horizon-and-the-fold.md:8`) and cut it back
- * the next day — *"The text above is wayyy too big and might even be unecessary if the form itself is
- * clear"* — so it is moved rather than deleted: it is the answer to "why weigh silver against mercenaries
- * at all", which is a question the figures on the trade cannot state, and it is asked rarely enough to be
- * behind a glyph. Unchanged, sentence for sentence.
- */
-const WHY = [
-  'Damage is paid for twice over: with silver, which you earn back, and with the merc stock, which is gone',
-  'for good. Silver buys a deeper march: more of it, and every march hits harder for it. The merc stock',
-  'hits harder still and takes no leadership, but a stack loses a tenth of itself every march it is fielded,',
-  'so the same stock is worth more spent thinly over many marches than all at once. Which of the two runs out',
-  'first is only visible over a whole sequence of marches, and planning the sequence is what this method does.',
-  // The fifth stop, added 2026-09-18, is the one plan that argues with the paragraph above it: it spends the
-  // stock as fast as the troops can shelter it. Saying so is design rule 29 — an objective the page offers is
-  // described honestly, including the case against it.
-  'The far end is the exception: it repeats no march at all, but shelters every mercenary it can on the first',
-  'and marches on whatever the stock has left, which spends that stock fastest.',
-  // One sentence added on 2026-09-17, when the bar became the hired stock's: the paragraph said why the two
-  // resources are weighed and never what the control under it is ordered by. The owner's own words that
-  // day — the bar is *"about balancing between burning silver efficiently, which is constrained, and
-  // burning mercs efficiently, which is constrained as well"* — and the two efficiencies are notes on the
-  // stops that have them rather than stops of their own (`PlanRow.bestFor`, `PlanTrade.tsx`).
-  'The bar runs along that stock, fewest mercs lost to most, and each plan says whether it is the one that',
-  'does most with a silver or the one that does most with a merc unit.',
-].join(' ');
-
-/**
- * **The same question, for an army that hires nothing** (S-112). The paragraph above is five sentences about
- * rationing a stock over a sequence; on a bar with no stock on it, four of them are about a resource the
- * account does not hold and the fifth names an axis the bar is not ordered by. What is left is a real
- * trade and a short one — which is the whole of what changes when nothing drains.
- */
-const WHY_TROOPS_ONLY = [
-  'With no merc in the march there is only one thing to weigh: a bigger march hits harder and costs',
-  'more silver and more days in the training queue to bring back. Nothing here is spent for good, so every',
-  'plan on the bar is a march you can repeat as often as you like; the bar runs from the least silver to',
-  'the most damage, and each plan says what it hits for and what it costs to stand back up.',
-].join(' ');
-
-/** The plan, open when it arrives and still collapsible: it is part of the answer (design rule 1). */
+/** The plan, always on screen: it is part of the answer (design rule 1). */
 export function PlanFold() {
   const plan = useRunStore((state) => state.plan);
   const position = useRunStore((state) => state.planPick);
@@ -286,16 +244,6 @@ export function PlanFold() {
   const spendsHired = spendsStock(rows);
   const sweet = sweetSpotOf(plan);
   const each = shown.repeat;
-  /**
-   * **How the stop on screen is fought**, in the one sentence that stop's own shape allows.
-   *
-   * A stop that is simply a march repeated and a last one to spend the remainder counts its repeats here and
-   * says "+ a last one". Two shapes need more than that count and say so in their own words (`./picks`): the
-   * `all-in`, which is a **sequence** — every mercenary the troops can shelter on the first march, then what
-   * the stock has left, then troops alone once it is spent — and, since S-89, any repeated stop the horizon
-   * outruns, which plays the marches left over on troops alone too (`PlanTotals.sequence` and `.tail`).
-   */
-  const sequence = sequenceWords(shown);
   const best = sweet === null ? null : (rows[sweet] ?? null);
   // The plan's put-back is a fact about the stop's own march; once a hand edit has replaced that march it
   // describes nothing on screen, and the "has changed" line below says so instead (Critical 03).
@@ -331,86 +279,76 @@ export function PlanFold() {
     });
   };
 
+  /**
+   * **What the plan did for *this* army, in its own figures** (S-59), the third price said in the same breath as
+   * the other two (owner, 2026-09-18: *"troops of higher tier are longer to train"*): a march is paid for in
+   * silver, in hired units that do not come back, and in the days its losses sit in the training queue.
+   * `repeat.seconds` is the march this line is describing, the same one the trade's own rows print.
+   */
+  const found =
+    best === null ? (
+      <>
+        It spends the silver box you set: <Figure>{compact(each.damage)}</Figure> damage a march, spending{' '}
+        {sentenceList(spentOn(shown, spendsHired))} each time.
+      </>
+    ) : (
+      <>
+        The sweet spot it found for this army is <Figure>{compact(best.repeat.damage)}</Figure> damage a
+        march, spending {sentenceList(spentOn(best, spendsHired))} each time.
+      </>
+    );
+
   return (
     // The row describes the plan the fold is *reading*, not the one the search settled on: the two are
     // different plans as soon as the control moves, and a headline that outlives its body is a lie. It is
     // written a march at a time like everything else: the figure a player commits to is one march's.
-    <Disclosure
-      title="Plan"
-      defaultOpened
-      /**
-       * **The damage a march, and nothing after it** (owner, 2026-09-21). A plain count of marches rode here
-       * behind a `·` — "3 marches + a last one" — which is the *campaign's* shape on a line that names one
-       * march's figure, and the campaign line under the table says it in full (design rule 5).
-       *
-       * A stop that is **not** simply that march repeated still says so, because that is not a count but the
-       * only place its shape is written: the `all-in`'s sequence, and a stop the horizon outruns (S-74,
-       * S-89, `sequenceWords`). Every other stop now reads as one figure.
-       */
-      summary={`${compact(each.damage)} damage a march${sequence === null ? '' : ` · ${sequence}`}`}
-    >
-      <Stack gap="md">
-        {/* What the plan did for *this* army, in its own figures, with the general why behind the glyph
-            (S-59). The ⓘ is interface chrome and not a game glyph, so it is a Lucide icon rather than a
-            `Glyph` (design rule 21). */}
-        <Group gap="xs" align="flex-start" wrap="nowrap">
-          <Text size="sm" c="dimmed">
-            {/* **The third price, said in the same breath as the other two** (owner, 2026-09-18: *"troops
-                of higher tier are longer to train"*). A march is paid for in silver, in hired units that do
-                not come back, and in the days its losses sit in the training queue — and the third is the
-                one a player cannot read off the counts, because it is a fact about the *tiers* fielded
-                rather than about how many. `repeat.seconds` is the march this line is describing, the same
-                one the trade's own rows print (`PlanRepeat.seconds`). */}
-            {best === null ? (
-              <>
-                It spends the silver box you set: <Figure>{compact(each.damage)}</Figure> damage a march,
-                spending {sentenceList(spentOn(shown, spendsHired))} each time.
-              </>
-            ) : (
-              <>
-                The sweet spot it found for this army is <Figure>{compact(best.repeat.damage)}</Figure> damage
-                a march, spending {sentenceList(spentOn(best, spendsHired))} each time.
-              </>
-            )}
-          </Text>
-          {/* **A popover and not a tooltip** (design rules 18 and 24). It was a `Tooltip` with
-              `touch: false`, which on a phone — the frame this app is designed at first — meant the
-              paragraph the owner asked for on 2026-09-15 could not be reached at all: hover is not a
-              thing a thumb has. A `Popover` opens on the press, closes on a press outside it or on
-              Escape, and works identically for a pointer, a thumb and a keyboard. The words are still
-              carried beside the button as its description, because a popover's contents are not in the
-              accessibility tree until it is open. */}
-          <Popover
-            opened={whyOpen}
-            onChange={setWhyOpen}
-            width={320}
-            position="bottom-end"
-            withArrow
-            shadow="md"
-            withinPortal
-          >
-            <Popover.Target>
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="sm"
-                aria-label="Why the plan weighs silver against the hired stock"
-                aria-describedby={whyId}
-                onClick={() => {
-                  setWhyOpen((open) => !open);
-                }}
-              >
-                <Info size={16} aria-hidden />
-              </ActionIcon>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Text size="sm">{spendsHired ? WHY : WHY_TROOPS_ONLY}</Text>
-            </Popover.Dropdown>
-          </Popover>
-          <VisuallyHidden id={whyId}>{spendsHired ? WHY : WHY_TROOPS_ONLY}</VisuallyHidden>
-        </Group>
+    <Stack gap="md">
+      {/* **Out of its fold, and its sentence in the glyph** (owner, 2026-10-10: *"move the plan table out of the
+          hider … we want to show him each time and move the text above the table in the tooltip, replacing its
+          existing text … to lower the number of line in the battle summary"*). The bar and the trade are the
+          answer to "which plan", so they are drawn each time; the line that read above them — the sweet spot, in
+          this army's own figures — is the popover's text now, and the general why it replaced is gone. The row
+          keeps the damage a march (which was the fold's summary) so the head still names the plan on screen. */}
+      <Group gap="xs" wrap="nowrap" align="center" justify="space-between">
+        <Text span size="sm" fw={500}>
+          Plan
+        </Text>
 
-        {/* **The low tier that went back into the march**, on the one stop that has one (owner, 2026-09-18:
+        {/* **A popover and not a tooltip** (design rules 18 and 24): a press opens it, a press outside or
+            Escape closes it, identically for a pointer, a thumb and a keyboard. The words are also carried
+            beside the button as its description, because a popover's contents are not in the accessibility
+            tree until it is open. */}
+        <Popover
+          opened={whyOpen}
+          onChange={setWhyOpen}
+          width={320}
+          position="bottom-end"
+          withArrow
+          shadow="md"
+          withinPortal
+        >
+          <Popover.Target>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              aria-label="What the plan found for this army"
+              aria-describedby={whyId}
+              onClick={() => {
+                setWhyOpen((open) => !open);
+              }}
+            >
+              <Info size={16} aria-hidden />
+            </ActionIcon>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <Text size="sm">{found}</Text>
+          </Popover.Dropdown>
+        </Popover>
+        <VisuallyHidden id={whyId}>{found}</VisuallyHidden>
+      </Group>
+
+      {/* **The low tier that went back into the march**, on the one stop that has one (owner, 2026-09-18:
             *"generation sometimes skips low-level stacks and misses some damage that seems cheap … troops of
             higher tier are longer to train"*; `PlanRow.putBack`, `CAMPAIGN.putBack`).
 
@@ -424,34 +362,34 @@ export function PlanFold() {
             three percentages are measured against — the same march sized without that type — because the
             pass re-keys the rungs by what they burn, so they are not a change to the row beside it on the
             bar (`putBackWords`, `./picks`). */}
-        {putBack !== null && (
-          <Text size="sm" c="dimmed">
-            {putBack}
-          </Text>
-        )}
+      {putBack !== null && (
+        <Text size="sm" c="dimmed">
+          {putBack}
+        </Text>
+      )}
 
-        {/* One control over the whole trade: the frontier *is* the axis — the hired units a march burns,
+      {/* One control over the whole trade: the frontier *is* the axis — the hired units a march burns,
             fewest at one end and most at the other (owner, 2026-09-17) — so a position on it is the choice.
             The two words under the bar name that resource (`BAR_ENDS`, `./picks`), never silver on a list
             silver does not order. */}
-        {rows.length > 1 && (
-          <PlanBar
-            rows={rows}
-            position={position}
-            hovered={hovered}
-            onHover={setHovered}
-            onSelect={read}
-            sweet={sweet}
-          />
-        )}
+      {rows.length > 1 && (
+        <PlanBar
+          rows={rows}
+          position={position}
+          hovered={hovered}
+          onHover={setHovered}
+          onSelect={read}
+          sweet={sweet}
+        />
+      )}
 
-        <PlanTrade rows={rows} position={position} hovered={hovered} onSelect={read} />
+      <PlanTrade rows={rows} position={position} hovered={hovered} onSelect={read} />
 
-        {/* What the sequence adds up to if it is fought to the end — one line, not a headline: nobody commits
+      {/* What the sequence adds up to if it is fought to the end — one line, not a headline: nobody commits
             to a hundred marches at once, and the figures above are the ones they march. It is the one line of
             the old tail that stays out of the fold below, because it answers a question the trade raises. */}
-        <Text size="sm" c="dimmed">
-          {/* The campaign's own training queue rides with its silver, for the same reason the march's does
+      <Text size="sm" c="dimmed">
+        {/* The campaign's own training queue rides with its silver, for the same reason the march's does
               on the line above: `PlanTotals.seconds` is every march of the plan plus its finale, which is
               the figure that says whether a plan is a fortnight or a season.
 
@@ -462,65 +400,65 @@ export function PlanFold() {
               row above is "6.8M" here and "29 691 713" there was two shapes for one figure (design rule 5).
               The **counts stay exact** — "4 marches" and the mercenaries gone — since a count is not a
               magnitude, exactly as the unit sheet's counts do. */}
-          {`Fought to the end: ${compact(plan.totalDamage)} damage and ${compact(
-            plan.silver,
-          )} silver over ${amount(plan.marches)} marches, ${duration(plan.seconds)} of training${
-            // The clause that closes the line is what the campaign spends for good, and a campaign that
-            // spends nothing for good says nothing there rather than "0 of the hired stock gone" (S-112).
-            spendsHired ? `, with ${amount(plan.mercLost)} of the merc stock gone.` : '.'
-          }`}
-        </Text>
+        {`Fought to the end: ${compact(plan.totalDamage)} damage and ${compact(
+          plan.silver,
+        )} silver over ${amount(plan.marches)} marches, ${duration(plan.seconds)} of training${
+          // The clause that closes the line is what the campaign spends for good, and a campaign that
+          // spends nothing for good says nothing there rather than "0 of the hired stock gone" (S-112).
+          spendsHired ? `, with ${amount(plan.mercLost)} of the merc stock gone.` : '.'
+        }`}
+      </Text>
 
-        {/* **The prose goes behind a chevron** (the owner, 2026-09-16; design rule 4 — fold what is read
+      {/* **The prose goes behind a chevron** (the owner, 2026-09-16; design rule 4 — fold what is read
             once). Four dimmed paragraphs and a table stood under the trade: how to read a row, how many
             plans the band refused, what the plan ran out of, what silver buys along the curve and where it
             stops buying. None of them is the answer and all of them are true, so they are folded rather than
             cut, closed until a player asks — which is the same treatment the bonus sources and the battle
             story get. */}
-        <Disclosure title="Reference">
-          <Stack gap="md">
-            {/* Every plan is fought over the same marches — the horizon `src/config.ts` sets — so the table
+      <Disclosure title="Reference">
+        <Stack gap="md">
+          {/* Every plan is fought over the same marches — the horizon `src/config.ts` sets — so the table
                 needs no column for length: a row is *the march you repeat*, which is the march the recap
                 above is drawing, and the two ratio columns weigh that one march. */}
-            <Text size="sm" c="dimmed">
-              {spendsHired
-                ? `Every plan here is fought over the same marches, the horizon the app plans over, so a ` +
-                  `row is the march you repeat: what it hits for, what it costs in silver and what it burns ` +
-                  `of the merc stock for good. Per silver divides that one march's damage by its own ` +
-                  `silver; Per merc divides what its merc stacks themselves hit for by the merc units it ` +
-                  `loses for good.`
-                : // The two stock columns are not drawn on this bar, so the sentence that explains them is
-                  // not written either (S-112, design rule 5: the caption describes the table on screen).
-                  `Every plan here is fought over the same marches, the horizon the app plans over, so a ` +
-                  `row is the march you repeat: what it hits for, what it costs in silver, and how long its ` +
-                  `losses sit in the training queue. Per silver divides that one march's damage by its own ` +
-                  `silver.`}
-            </Text>
+          <Text size="sm" c="dimmed">
+            {spendsHired
+              ? `Every plan here is fought over the same marches, the horizon the app plans over, so a ` +
+                `row is the march you repeat: what it hits for, what it costs in silver and what it burns ` +
+                `of the merc stock for good. Per silver divides that one march's damage by its own ` +
+                `silver; Per merc divides what its merc stacks themselves hit for by the merc units it ` +
+                `loses for good.`
+              : // The two stock columns are not drawn on this bar, so the sentence that explains them is
+                // not written either (S-112, design rule 5: the caption describes the table on screen).
+                `Every plan here is fought over the same marches, the horizon the app plans over, so a ` +
+                `row is the march you repeat: what it hits for, what it costs in silver, and how long its ` +
+                `losses sit in the training queue. Per silver divides that one march's damage by its own ` +
+                `silver.`}
+          </Text>
 
-            {/* The extremes are not offered (owner, 2026-09-15: "just don't show the extremes"), so the fold
+          {/* The extremes are not offered (owner, 2026-09-15: "just don't show the extremes"), so the fold
                 says what was cut rather than letting the bar look like the whole trade. The count is the
                 engine's (`CampaignPlan.leftOut`); the words are ours. */}
-            {plan.leftOut > 0 && (
-              <Text size="sm" c="dimmed">
-                {spendsHired
-                  ? `${amount(plan.leftOut)} of the plans the search kept are off the goal: a march that ` +
-                    `fields a token share of the merc stock, or silver spent far past what it returns. ` +
-                    `They are not offered here.`
-                  : // The reasons a plan is left off differ with the axis: with no stock to field a token
-                    // share of, what is cut is the thrift end that buys almost nothing for its silver
-                    // (`planTroopsOnly`'s band rule) and the levels between two stops (S-112).
-                    `${amount(plan.leftOut)} of the plans the search kept are not offered here: the ` +
-                    `cheapest ones buy too little for their silver to be worth standing on, and the rest sit ` +
-                    `between the stops above.`}
-              </Text>
-            )}
-
-            {/* What the plan ran out of — the one thing a player would otherwise have to work out. */}
+          {plan.leftOut > 0 && (
             <Text size="sm" c="dimmed">
-              {bindingSentence(plan.binding)}
+              {spendsHired
+                ? `${amount(plan.leftOut)} of the plans the search kept are off the goal: a march that ` +
+                  `fields a token share of the merc stock, or silver spent far past what it returns. ` +
+                  `They are not offered here.`
+                : // The reasons a plan is left off differ with the axis: with no stock to field a token
+                  // share of, what is cut is the thrift end that buys almost nothing for its silver
+                  // (`planTroopsOnly`'s band rule) and the levels between two stops (S-112).
+                  `${amount(plan.leftOut)} of the plans the search kept are not offered here: the ` +
+                  `cheapest ones buy too little for their silver to be worth standing on, and the rest sit ` +
+                  `between the stops above.`}
             </Text>
+          )}
 
-            {/* **The plans this bar may offer, by what they cost**: what N silver buys, and what it buys a
+          {/* What the plan ran out of — the one thing a player would otherwise have to work out. */}
+          <Text size="sm" c="dimmed">
+            {bindingSentence(plan.binding)}
+          </Text>
+
+          {/* **The plans this bar may offer, by what they cost**: what N silver buys, and what it buys a
                 mercenary. The owner read this table on 2026-09-18, saw a row at 2.91 damage a silver — better
                 than anything his bar offered — and asked why it was not a stop. It could not have been: the
                 engine bucketed it over every shape its search priced, and that row was a one-troop-stack
@@ -534,95 +472,93 @@ export function PlanFold() {
                 table is drawn from two up, where it used to need three; the band is narrow and two to four
                 rows is what it comes to. A single row is the bar's own figures said twice (rule 5), and is
                 not drawn. */}
-            {plan.curve.length > 1 && (
-              <>
-                <Table horizontalSpacing={6} verticalSpacing={4} captionSide="top">
-                  <Table.Caption>
-                    Every plan this bar may offer, at the silver it costs: the levels the stops are chosen
-                    from.
-                  </Table.Caption>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th scope="col">Silver</Table.Th>
-                      <Table.Th scope="col" ta="end">
-                        Worst opening
-                      </Table.Th>
-                      <Table.Th scope="col" ta="end">
-                        A silver
-                      </Table.Th>
-                      {/* The fourth column is a stock reading, so it goes the way the trade's two do on a
+          {plan.curve.length > 1 && (
+            <>
+              <Table horizontalSpacing={6} verticalSpacing={4} captionSide="top">
+                <Table.Caption>
+                  Every plan this bar may offer, at the silver it costs: the levels the stops are chosen from.
+                </Table.Caption>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th scope="col">Silver</Table.Th>
+                    <Table.Th scope="col" ta="end">
+                      Worst opening
+                    </Table.Th>
+                    <Table.Th scope="col" ta="end">
+                      A silver
+                    </Table.Th>
+                    {/* The fourth column is a stock reading, so it goes the way the trade's two do on a
                           bar with no stock on it (S-112): it was a head reading "A mercenary" over a column
                           of noughts. */}
-                      {spendsHired && (
-                        <Table.Th scope="col" ta="end">
-                          A mercenary
-                        </Table.Th>
-                      )}
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {sampledCurve(plan.curve).map((point) => (
-                      <Table.Tr key={point.silver}>
-                        {/* **This table's figures stay exact, and it is the one place in the fold that does**
+                    {spendsHired && (
+                      <Table.Th scope="col" ta="end">
+                        A mercenary
+                      </Table.Th>
+                    )}
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {sampledCurve(plan.curve).map((point) => (
+                    <Table.Tr key={point.silver}>
+                      {/* **This table's figures stay exact, and it is the one place in the fold that does**
                             (S-148): the silver column *is* the row's key — the levels the plan was sampled at,
                             which the sentence under the table and the reader's own eye both compare by level
                             — and two sampled levels whose short forms collide ("19M" for 19 200 000 and for
                             19 400 000) would be two rows a reader cannot tell apart. A magnitude the
                             notation rounds is a figure; a magnitude something is *identified* by is a
                             number. */}
-                        <Table.Td>{amount(point.silver)}</Table.Td>
-                        <Table.Td ta="end">{amount(point.damage)}</Table.Td>
-                        <Table.Td ta="end">{ratio(point.damagePerSilver)}</Table.Td>
-                        {/* **The hired stacks' own damage over the hired units lost** (S-105), the same
+                      <Table.Td>{amount(point.silver)}</Table.Td>
+                      <Table.Td ta="end">{amount(point.damage)}</Table.Td>
+                      <Table.Td ta="end">{ratio(point.damagePerSilver)}</Table.Td>
+                      {/* **The hired stacks' own damage over the hired units lost** (S-105), the same
                             reading the trade's "Per hired" prints: the column divided the whole campaign's
                             damage by its burn until 2026-09-19, which credited the stock with every point
                             the troops and the troops-only tail struck for (design rule 5). Printed the same
                             way the trade prints it, too — `compactRatio` ("137K"), since a six-figure rate
                             is a figure a glance cannot take in (owner, 2026-09-28). */}
-                        {spendsHired && (
-                          <Table.Td ta="end">
-                            {compactRatio(point.hiredDamage / Math.max(1, point.mercLost))}
-                          </Table.Td>
-                        )}
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-                {/* Said only where the table **shows** the slope falling: the ceiling read off it is under
+                      {spendsHired && (
+                        <Table.Td ta="end">
+                          {compactRatio(point.hiredDamage / Math.max(1, point.mercLost))}
+                        </Table.Td>
+                      )}
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+              {/* Said only where the table **shows** the slope falling: the ceiling read off it is under
                     its own dearest row. On a band whose every level still returns a damage a silver the
                     ceiling is that dearest row, and the sentence would be claiming something about a level
                     the table does not reach — so it goes (rule 15: nothing on screen without value).
                     Measured on the thirteen scenarios of `tests/engine/plan-scenarios.ts`: it is said on
                     eleven of them. */}
-                {/* The ceiling is read off the rows the table draws (`sampledCurve`), so the sentence never names a
+              {/* The ceiling is read off the rows the table draws (`sampledCurve`), so the sentence never names a
                     level the reader cannot see (rule 15). */}
-                {efficientCeiling(sampledCurve(plan.curve)) <
-                  (plan.curve[plan.curve.length - 1]?.silver ?? 0) && (
-                  <Text size="sm" c="dimmed">
-                    {`Past about ${amount(efficientCeiling(sampledCurve(plan.curve)))} silver, the next plan on this list buys less than one damage a silver${
-                      // What the extra silver is buying instead: the hired stock's damage where there is a
-                      // stock, and higher tiers — dearer to bring back, slower in the queue — where there is
-                      // not (S-112).
-                      spendsHired
-                        ? '. Beyond that the plan is buying damage with the hired stock rather than with silver.'
-                        : '. Beyond that the extra silver is going into higher tiers, which cost more to bring back and sit longer in the queue.'
-                    }`}
-                  </Text>
-                )}
-              </>
-            )}
-          </Stack>
-        </Disclosure>
+              {efficientCeiling(sampledCurve(plan.curve)) <
+                (plan.curve[plan.curve.length - 1]?.silver ?? 0) && (
+                <Text size="sm" c="dimmed">
+                  {`Past about ${amount(efficientCeiling(sampledCurve(plan.curve)))} silver, the next plan on this list buys less than one damage a silver${
+                    // What the extra silver is buying instead: the hired stock's damage where there is a
+                    // stock, and higher tiers — dearer to bring back, slower in the queue — where there is
+                    // not (S-112).
+                    spendsHired
+                      ? '. Beyond that the plan is buying damage with the hired stock rather than with silver.'
+                      : '. Beyond that the extra silver is going into higher tiers, which cost more to bring back and sit longer in the queue.'
+                  }`}
+                </Text>
+              )}
+            </>
+          )}
+        </Stack>
+      </Disclosure>
 
-        {/* Not folded: a warning behind a chevron is not a warning. The figures above are of a march the
+      {/* Not folded: a warning behind a chevron is not a warning. The figures above are of a march the
             player has since changed — by hand, or by a raise left standing (S-142) — which is the one thing
             on this block that can be out of date. */}
-        {edited && (
-          <Text size="sm" c="dimmed">
-            The march on screen has changed since it was planned; the plan behind it has not moved.
-          </Text>
-        )}
-      </Stack>
-    </Disclosure>
+      {edited && (
+        <Text size="sm" c="dimmed">
+          The march on screen has changed since it was planned; the plan behind it has not moved.
+        </Text>
+      )}
+    </Stack>
   );
 }

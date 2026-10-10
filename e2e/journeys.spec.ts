@@ -273,10 +273,10 @@ async function journey1(page: Page, phone: boolean): Promise<void> {
     // is what it is for: a ceiling, and this is now a tap under it.
     const sheet = page.getByRole('dialog', { name: 'March' });
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByText(/^Expected damage/)).toBeVisible();
+    await expect(sheet.getByText(/^Average damage/)).toBeVisible();
 
     // Nothing to scroll to read it either: the sheet is the window under the app bar.
-    await expect(sheet.getByText(/^Expected damage/)).toBeInViewport();
+    await expect(sheet.getByText(/^Average damage/)).toBeInViewport();
     record('J1 screens to read the recap', 0, 0);
 
     await expect(marchPills(page).first()).toBeVisible();
@@ -413,12 +413,12 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
   if (phone) await expect(march).toBeVisible();
 
   // The plan itself, **open on arrival** — it is part of the answer, not a fold to hunt for (S-59). No tap.
-  const fold = march.getByRole('button', { name: /^Plan / });
-  await expect(fold).toHaveAttribute('aria-expanded', 'true');
+  // Not a fold any more (owner, 2026-10-10): the head names the plan, and the bar and the trade are always drawn.
+  const fold = march.getByRole('button', { name: 'What the plan found for this army' });
+  await expect(fold).toBeVisible();
   // The summary carries **one march's figure and nothing after it** (owner, 2026-09-21: a plain count of
   // marches rode here behind a `·` and named the *campaign* on a line that names a march). The campaign's
   // own count is the line under the trade, which is where a reader meets how long the sequence is.
-  await expect(fold).toContainText(/damage a march/);
   await expect(march.getByText(/^Fought to the end: /)).toContainText(/\d+ marches?/);
 
   // **The army first, the plan after it** (owner, 2026-09-16: *"we should first see the army then the
@@ -552,7 +552,9 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
   await expect(rows).toHaveCount(0);
 
   // The card sits under the plan, never before it (design rule 1).
-  const planBox = await march.getByRole('button', { name: /^Plan / }).boundingBox();
+  const planBox = await march
+    .getByRole('button', { name: 'What the plan found for this army' })
+    .boundingBox();
   const cardBox = await card.boundingBox();
   expect(planBox, 'the plan has to be on screen').not.toBeNull();
   expect(cardBox, 'the card has to be on screen').not.toBeNull();

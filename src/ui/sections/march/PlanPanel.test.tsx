@@ -296,26 +296,19 @@ test('the tip still arrives when the system asks for no motion', () => {
   expect(tip()?.textContent ?? '').toContain(planWords(wanted));
 });
 
-test('the block opens on its own — the plan is part of the answer, not a fold to hunt for', () => {
+test('the block is always on screen — the plan is part of the answer, not a fold to hunt for', () => {
   renderWithTheme(<PlanFold />);
-  // No click: it arrives open (0020 §D-5), and the chevron stays, because closing it is how a player whose
-  // pane no longer sticks gets one that does.
-  const fold = screen.getByRole('button', { name: /^Plan/ });
-  expect(fold.getAttribute('aria-expanded')).toBe('true');
-  // The row still carries the plan the block is *reading* — where the bar opens, which is the plan the engine
-  // recommends — and not the one its search settled on: the two part company as soon as the bar moves, and a
-  // headline that describes a plan the body is not showing is a lie. Read the way the owner asked for it: a
-  // march at a time, not a campaign total.
+  // No fold at all (owner, 2026-10-10): the bar and the trade are drawn each time, under a head that names the plan.
+  expect(screen.queryByRole('button', { name: /^Plan/ })).toBeNull();
+  // The head names the plan; its figures live in the info popover's description, which is always in the tree.
   const shown = pickOf(PLAN, defaultPlanPosition(PLAN));
-  expect(fold.textContent).toContain('damage a march');
-  // **And nothing after it** (owner, 2026-09-21): the count of marches this row carried behind a `·` is the
-  // campaign's shape on a line that names one march's figure, and the campaign line under the table says it
-  // in full. A stop whose shape is *not* that march repeated still says so — that is `sequenceWords`, tested
-  // on the all-in below — but this one is, so the row is one figure.
-  const repeated = shown.marches - (shown.finaleCounts ? 1 : 0);
-  expect(fold.textContent).not.toContain(
-    `${repeated} ${repeated === 1 ? 'march' : 'marches'}${shown.finaleCounts ? ' + a last one' : ''}`,
+  expect(screen.getByRole('button', { name: 'What the plan found for this army' })).toBeTruthy();
+  const description = document.getElementById(
+    screen
+      .getByRole('button', { name: 'What the plan found for this army' })
+      .getAttribute('aria-describedby') ?? '',
   );
+  expect(description?.textContent ?? '').toContain(`${compact(shown.repeat.damage)} damage a march`);
 });
 
 test('the whole row is the target: a press anywhere on it reads that plan', () => {
@@ -425,16 +418,11 @@ test('opened, it says what the plan did for this army and reads the trade a marc
   const plan = useRunStore.getState().plan;
   if (!plan) throw new Error('no plan to draw');
 
-  // One line in the muted ink, about *this* army — and the general why behind the glyph beside it, where the
-  // owner's "wayyy too big" paragraph was **moved** rather than deleted (0020 §D-4).
-  expect(screen.getByText(/^The sweet spot it found for this army is /)).toBeTruthy();
-  // The owner's paragraph is not prose on the screen any more. "Moved, not deleted" is exact: its words are
-  // still in the document, and the only place they are is the glyph's own description.
-  const moved = screen.getByText(/^Damage is paid for twice over:/);
-  expect(moved.closest('.mantine-VisuallyHidden-root')).not.toBeNull();
-  const why = screen.getByRole('button', { name: 'Why the plan weighs silver against the hired stock' });
-  // Reachable by keyboard, and its words are the button's description as well as its tooltip: Mantine's
-  // `Tooltip` links nothing for a screen reader on its own.
+  // The line about *this* army is the glyph's own text now (owner, 2026-10-10), replacing the general why, so
+  // it is carried beside the button as its description and not drawn as prose.
+  const found = screen.getByText(/^The sweet spot it found for this army is /);
+  expect(found.closest('.mantine-VisuallyHidden-root')).not.toBeNull();
+  const why = screen.getByRole('button', { name: 'What the plan found for this army' });
   expect(why.getAttribute('aria-describedby')).not.toBeNull();
 
   // The trade table. Queried through the DOM rather than by role: jsdom keeps the folded panel's table out of
@@ -525,13 +513,13 @@ test('the why is a popover a thumb can open, not a tooltip only a pointer can ho
 
   // It was a `Tooltip` with `touch: false`, which put the owner's own paragraph out of reach on the frame
   // this app is designed at first (design rules 18 and 24). A press opens it, a press outside closes it.
-  const why = screen.getByRole('button', { name: 'Why the plan weighs silver against the hired stock' });
-  expect(screen.getAllByText(/^Damage is paid for twice over:/)).toHaveLength(1);
+  const why = screen.getByRole('button', { name: 'What the plan found for this army' });
+  expect(screen.getAllByText(/^The sweet spot it found for this army is /)).toHaveLength(1);
   await user.click(why);
-  expect(screen.getAllByText(/^Damage is paid for twice over:/).length).toBeGreaterThan(1);
+  expect(screen.getAllByText(/^The sweet spot it found for this army is /).length).toBeGreaterThan(1);
   // …and a press outside it puts it away again, which is the half a tooltip could not do on a phone.
   await user.click(document.body);
-  expect(screen.getAllByText(/^Damage is paid for twice over:/)).toHaveLength(1);
+  expect(screen.getAllByText(/^The sweet spot it found for this army is /)).toHaveLength(1);
 }, 60_000);
 
 /**
@@ -767,7 +755,7 @@ test('every stop says how long its march takes to recover, under the silver it c
 
   // The line over the bar says it for the plan the fold is reading, and "Fought to the end" for the whole
   // campaign — the same two places its silver is said (design rule 5: one name, said where it is expected).
-  expect(screen.getByText(/sweet spot it found/).textContent ?? '').toContain(
+  expect(screen.getAllByText(/sweet spot it found/)[0]?.textContent ?? '').toContain(
     `${duration((BURN_ROWS[1] as PlanRow).repeat.seconds)} of training`,
   );
   expect(screen.getByText(/^Fought to the end: /).textContent ?? '').toContain(
@@ -846,9 +834,6 @@ test('the all-in stop says it is a sequence, on the bar and on the row the fold 
   // march's, so the row that says how the plan is fought may not count repeats of it.
   const words = sequenceWords(BURN_ROWS[last] as PlanRow);
   expect(words).toBe('4 marches, each on what the last one left');
-  const fold = screen.getByRole('button', { name: /^Plan/ });
-  expect(fold.textContent).toContain(words);
-  expect(fold.textContent).not.toContain('+ a last one');
 
   // On the bar, in the same words (design rule 5), and in the thumb's value text because the tip is
   // `aria-hidden` decoration (design rule 24).
@@ -941,10 +926,8 @@ test('a repeated stop with a tail counts the marches it fights on troops alone',
   const plan: CampaignPlan = { ...BURN, alternatives: [tailed], recommend: tailed };
   useRunStore.setState({ plan, planPick: 0, includedUnitIds: [], leftOutByPlayer: [] });
   renderWithTheme(<PlanFold />);
-  const fold = screen.getByRole('button', { name: /^Plan/ });
-  expect(fold.textContent).toContain('1 march, then 3 on troops alone');
-  // The old line counted the tail as another march of the row above, which is the one thing it is not.
-  expect(fold.textContent).not.toContain('4 marches');
+  // The head no longer carries the sequence (owner, 2026-10-10); the bar's tip and the trade do.
+  expect(screen.getByRole('button', { name: 'What the plan found for this army' })).toBeTruthy();
 });
 
 /**

@@ -19,6 +19,7 @@
 import {
   ActionIcon,
   Button,
+  Checkbox,
   Group,
   Loader,
   SegmentedControl,
@@ -76,6 +77,9 @@ function useFlash(): [string, (message: string) => void] {
 
 export interface MarchPillsProps {
   rows: PoolRow[];
+  /** The stacks are drawn in the kill order rather than the battle selection's; a view preference. */
+  byHealth: boolean;
+  onByHealth: (byHealth: boolean) => void;
   editing: boolean;
   onCount: (unitId: string, count: number) => void;
   /** A pill's corner mark: the unit sheet for that one type. */
@@ -213,9 +217,10 @@ export function MarchRaiseControl({
   return (
     <>
       <SegmentedControl
+        // Small and grey, out of the way (owner, 2026-10-10): not full width and the smallest size.
         size="xs"
-        fullWidth
-        maw={360}
+        w="fit-content"
+        fz="xs"
         value={value}
         aria-label={RAISE_LABEL[pool]}
         aria-describedby={helpId}
@@ -292,6 +297,8 @@ export function MarchRaiseControl({
  */
 export function MarchPills({
   rows,
+  byHealth,
+  onByHealth,
   editing,
   onCount,
   onDetails,
@@ -301,6 +308,10 @@ export function MarchPills({
   trades,
   onRaise,
 }: MarchPillsProps) {
+  // The pool the one raise control speaks for, or `null` when there is none to draw: a hired pool with a
+  // stack to raise, on a plan's march.
+  const hiredRow = canRaise ? rows.find((row) => raisesPool(row.pool) && row.entries.length > 0) : undefined;
+  const raisable = hiredRow !== undefined && raisesPool(hiredRow.pool) ? hiredRow.pool : null;
   return (
     <Stack
       gap="lg"
@@ -325,53 +336,54 @@ export function MarchPills({
           : undefined
       }
     >
-      {rows.map((row) => {
+      {rows.map((row, index) => {
         const over = row.used > row.capacity;
-        // The pool this row's raise control speaks for, or `null` when there is none to draw — a named
-        // `const` because a narrowing on `row.pool` does not survive into the control's own callbacks.
-        const raisable = canRaise && raisesPool(row.pool) && row.entries.length > 0 ? row.pool : null;
         return (
           <Stack key={row.pool} gap="xs">
             {/* The pool line, to the spacing contract (`MarchPaneSpacing.dc.html`, `.pool`): the
                 figure **22/700** in the pool's colour, the glyph in a 20 px box, and "of 20 000
                 leadership" at 12 px muted — the pool's *name*, which the line never said, so three
                 figures over three grids of pills were told apart by an emoji alone. */}
-            <Group gap={8} wrap="nowrap" align="center">
-              <Text
-                span
-                fz="1.375rem"
-                lh={1}
-                fw={700}
-                className={classes.poolFigure}
-                c={over ? 'var(--mantine-color-danger-filled)' : poolInk(row.pool)}
-              >
-                {amount(row.used)}
-              </Text>
-              <Text span fz="1.25rem" lh={1}>
-                <Glyph kind={row.pool} label={POOL_LABEL[row.pool]} />
-              </Text>
-              <Text span className={classes.meta} c="dimmed">
-                {`of ${amount(row.capacity)} ${POOL_LABEL[row.pool].toLowerCase()}`}
-              </Text>
+            <Group justify="space-between" wrap="nowrap" align="center" gap={8}>
+              <Group gap={8} wrap="nowrap" align="center">
+                <Text
+                  span
+                  fz="1.375rem"
+                  lh={1}
+                  fw={700}
+                  className={classes.poolFigure}
+                  c={over ? 'var(--mantine-color-danger-filled)' : poolInk(row.pool)}
+                >
+                  {amount(row.used)}
+                </Text>
+                <Text span fz="1.25rem" lh={1}>
+                  <Glyph kind={row.pool} label={POOL_LABEL[row.pool]} />
+                </Text>
+                <Text span className={classes.meta} c="dimmed">
+                  {`of ${amount(row.capacity)} ${POOL_LABEL[row.pool].toLowerCase()}`}
+                </Text>
+              </Group>
+              {/* **Top right of the first pool, on the pool's own line** (owner, 2026-10-10: *"on the same line as
+                  the leadership number … to avoid new line … lower the size of font and check box again"*): a
+                  quiet 11 px grey check, the exception to the battle selection order, costing no line of its own. */}
+              {index === 0 && (
+                <Checkbox
+                  size="14px"
+                  label="Order by health"
+                  checked={byHealth}
+                  onChange={(event) => {
+                    onByHealth(event.currentTarget.checked);
+                  }}
+                  styles={{
+                    label: {
+                      color: 'var(--mantine-color-dimmed)',
+                      fontSize: '0.6875rem',
+                      paddingInlineStart: 6,
+                    },
+                  }}
+                />
+              )}
             </Group>
-            {/* How high these stacks are asked to stand, read with the stacks it moves (S-142). Drawn on the
-                hired pools of a plan's march only, and only while there is a stack to raise. */}
-            {raisable !== null && (
-              <MarchRaiseControl
-                pool={raisable}
-                value={raiseModes[raisable]}
-                // **Only the control whose pool is being searched says it is waiting.** The search walks the
-                // pools standing on an exhaustive position, and a mixed control (the mercenaries on one of
-                // them, the monsters on `Most`) still runs one — so a plain `searching` here put a spinner,
-                // `aria-busy` and the hidden "Searching every combination." on a block that was not the one
-                // being searched.
-                searching={searching && isExhaustive(raiseModes[raisable])}
-                trades={trades}
-                // The block the press landed on is not part of the question (S-149): the position is one
-                // standing rule, and `setRaiseMode` writes it over both hired pools.
-                onChange={onRaise}
-              />
-            )}
             {row.entries.length > 0 && (
               <div
                 className={domainClasses.pillGrid}
@@ -403,6 +415,20 @@ export function MarchPills({
           </Stack>
         );
       })}
+      {/* **One control for the whole army, at the foot of the list** (owner, 2026-10-10: *"don't duplicate as is
+          tight.. selector and make it minimal and out of the way, maybe on the bottom of the troops list"*). The
+          position is one standing rule over both hired pools (S-149), so a copy under each pool said the same
+          thing twice (design rule 5). It is named for the first hired pool the march has a stack in. */}
+      {raisable !== null && (
+        <MarchRaiseControl
+          pool={raisable}
+          value={raiseModes[raisable]}
+          // Only while a pool on an exhaustive position is the one being searched (see `isExhaustive`).
+          searching={searching && isExhaustive(raiseModes[raisable])}
+          trades={trades}
+          onChange={onRaise}
+        />
+      )}
     </Stack>
   );
 }

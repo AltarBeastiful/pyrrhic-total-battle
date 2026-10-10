@@ -151,7 +151,7 @@ test('the marks are on the heading, then the recap, then the pills', async () =>
 
   const stacks = screen.getByText(/^\d[\d\s]* stacks$/);
   const copyAll = screen.getByRole('button', { name: 'Copy all counts' });
-  const recap = screen.getByText(/^Expected damage/);
+  const recap = screen.getByText(/^Average damage/);
   const pills = screen.getByRole('group', { name: 'Leadership stacks' });
 
   const follows = (first: Element, second: Element): boolean =>
@@ -300,6 +300,23 @@ test('the recap says which way every figure moved since the previous run', async
   // Half the housing is less damage, and the recap says so in its own words.
   expect(screen.getAllByText('worse').length).toBeGreaterThan(0);
 }, 15_000);
+
+test('the reference the next Generate compares against is the march the run landed, whatever the selector does', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+  await waitFor(() => {
+    expect(useRunStore.getState().shownSummary).not.toBeNull();
+  });
+  const reference = useRunStore.getState().shownSummary;
+
+  act(() => {
+    useRunStore
+      .getState()
+      .setRaiseMode(useRunStore.getState().raiseModes.authority === 'off' ? 'tight' : 'off');
+  });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(useRunStore.getState().shownSummary).toBe(reference);
+});
 
 test('the pool says what the march spent, over the stacks it paid for', async () => {
   renderWithTheme(<Page />);
@@ -723,19 +740,19 @@ test('the pills follow the battle selection order by default, not the kill order
   expect(inBattleOrder(drawn)).not.toEqual(killOrderIds('Leadership'));
 
   expect(drawn).toEqual(inBattleOrder(killOrderIds('Leadership')));
-  expect(screen.getByRole('radio', { name: 'Battle' })).toHaveProperty('checked', true);
+  expect(screen.getByRole('checkbox', { name: 'Order by health' })).toHaveProperty('checked', false);
 });
 
 test('a switch orders the pills by health, as the battle summary does, and back', async () => {
   renderWithTheme(<Page />);
   await generate();
 
-  const control = screen.getByRole('radiogroup', { name: 'Order the stacks by' });
-  fireEvent.click(within(control).getByRole('radio', { name: 'Health' }));
+  const box = screen.getByRole('checkbox', { name: 'Order by health' });
+  fireEvent.click(box);
   // By health is the kill order: the stack with the most health first, the order they fall.
   expect(pillIds('Leadership')).toEqual(killOrderIds('Leadership'));
 
-  fireEvent.click(within(control).getByRole('radio', { name: 'Battle' }));
+  fireEvent.click(box);
   expect(pillIds('Leadership')).toEqual(inBattleOrder(killOrderIds('Leadership')));
   // A view preference: nothing about it reaches the saved account.
   expect(JSON.stringify(profile())).not.toMatch(/stackOrder|orderBy/);
@@ -1115,11 +1132,9 @@ test('complete optimization answers with a plan, and the March draws it instead 
   // No sizing line under the figures (owner, 2026-09-17): the Plan block below says what sized it.
   expect(screen.queryByText(/^Planned from the army:/)).toBeNull();
 
-  // **Open on arrival** (S-59: the owner's 2026-09-16 review — "it becomes a new part of the recap"), with
-  // the answer's headline on the row either way.
-  const fold = screen.getByRole('button', { name: /^Plan/ });
-  expect(fold.getAttribute('aria-expanded')).toBe('true');
-  expect(fold.textContent).toContain('damage a march');
+  // **Always drawn** (owner, 2026-10-10): no fold to open, with the answer's headline on its head.
+  expect(screen.queryByRole('button', { name: /^Plan/ })).toBeNull();
+  expect(screen.getByRole('button', { name: 'What the plan found for this army' })).toBeTruthy();
 
   // The trade the plan chose from, one row per answer the engine offers: a plan the player may be asked to
   // march.
@@ -1129,14 +1144,6 @@ test('complete optimization answers with a plan, and the March draws it instead 
     name: 'Every plan on the trade, one repeated march each',
   });
   expect(within(trade).getAllByRole('row').length).toBeGreaterThan(2);
-
-  // And it folds away on request: the chevron is how a player whose pane no longer sticks gets one that
-  // does, and what is left on the row is still the answer.
-  fireEvent.click(fold);
-  await waitFor(() => {
-    expect(fold.getAttribute('aria-expanded')).toBe('false');
-  });
-  expect(fold.textContent).toContain('damage a march');
 
   // And it *replaces* the objectives comparison: five more searches to compare one battle would explain
   // nothing that a plan over ten marches has not already said.
@@ -1341,12 +1348,12 @@ test('the recap is the figures alone, and the section under it carries the pools
 
   // The figures, once (design rule 5): the hero, the five comparisons and nothing else.
   const recap = screen.getByLabelText('This march in figures');
-  expect(within(recap).getByText(/^Expected damage/)).toBeTruthy();
+  expect(within(recap).getByText(/^Average damage/)).toBeTruthy();
   expect(within(recap).queryByRole('group', { name: 'Leadership stacks' })).toBeNull();
 
   // The pools and the army are the section's own, and each is there exactly once.
   expect(screen.getAllByRole('group', { name: 'Leadership stacks' })).toHaveLength(1);
-  expect(screen.getAllByText(/^Expected damage/)).toHaveLength(1);
+  expect(screen.getAllByText(/^Average damage/)).toHaveLength(1);
 }, 15_000);
 
 test('a march can be saved, and is found again under the fold', async () => {

@@ -278,10 +278,17 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
    * (tight) changes the reference used to compute the percent"*). The recap's notes are read against the
    * previous run, and with Tight on by default the previous run on screen was a raised march: comparing the
    * next one against the snapshot under it would credit Tight's own gain to the new march every time.
+   *
+   * **And it is the march the run put on screen, held for the run** (owner, 2026-10-10): a put-back, a hand edit
+   * or the As is | Tight selector recompute the figures against that reference and never replace it
+   * (`runStore.showSummary`).
    */
   useEffect(() => {
-    useRunStore.getState().showSummary(march.summary);
-  }, [march.summary]);
+    // Not while the run's own raise is still being priced or searched: the reference is the march the player
+    // is first shown, Tight included, and not the plan's counts that stand there for the frames before it.
+    if (pricing || waiting) return;
+    useRunStore.getState().showSummary(march.summary, snapshot?.at ?? null);
+  }, [march.summary, snapshot?.at, pricing, waiting]);
 
   return march;
 }

@@ -206,9 +206,10 @@ test('the plan method’s March is taller than its room, and sticks at both ends
   await page.locator('#battle').getByRole('radio', { name: 'Complete optimization' }).click();
   await generate(page, { leadership: 20_000 });
 
-  // It arrives open: no tap, which is what the journey's budget now relies on.
-  const fold = marchSection(page).getByRole('button', { name: /^Plan / });
-  await expect(fold).toHaveAttribute('aria-expanded', 'true');
+  // It is always drawn, with no fold to open (owner, 2026-10-10).
+  await expect(
+    marchSection(page).getByRole('button', { name: 'What the plan found for this army' }),
+  ).toBeVisible();
 
   const open = await paneFrame(page);
   const withPlan = `height ${String(open.height)} px, room ${String(open.room)} px`;
@@ -238,24 +239,7 @@ test('the plan method’s March is taller than its room, and sticks at both ends
   const atEnd = await paneFrame(page);
   expect(atEnd.bottom, 'the tail is not on its line').toBeLessThanOrEqual(16 + atEnd.room + 1);
 
-  // And closing the block — the chevron's whole purpose — shortens the March, if not to its room:
-  // measured on this account, what is left is still taller than 740 px.
-  await fold.click();
-  await expect(fold).toHaveAttribute('aria-expanded', 'false');
-  // The fold animates its own height, so the shorter March arrives a few frames later rather than on the
-  // click: polled, the way the pane's own decision is.
-  await expect
-    .poll(async () => (await paneFrame(page)).height, {
-      message: 'closing the plan did not shorten the March — the fold is not the plan block',
-    })
-    .toBeLessThan(open.height);
-  const closed = await paneFrame(page);
-  const withoutPlan = `height ${String(closed.height)} px, room ${String(closed.room)} px`;
-  test.info().annotations.push({ type: 'measured', description: `plan closed — ${withoutPlan}` });
-  process.stdout.write(`  measured — plan closed: ${withoutPlan}\n`);
-
-  // Neither state ever takes a scroll of its own (design rule 17).
-  expect(closed.scrollers).toEqual([]);
+  // It never takes a scroll of its own (design rule 17).
   expect(open.scrollers).toEqual([]);
 
   expect(problems).toEqual([]);
@@ -587,7 +571,7 @@ test('mobile: the bar carries the answer, and the recap is one tap away', async 
   // a trap that does not hold. So the bar goes under the scrim and the sheet carries its own
   // Generate, and the answer and the action still travel together.
   const recap = await openMarchSheet(page);
-  await expect(recap.getByText(/^Expected damage/)).toBeVisible();
+  await expect(recap.getByText(/^Average damage/)).toBeVisible();
   await expect(recap.getByRole('group', { name: 'Leadership stacks' })).toBeVisible();
   await expect(recap.getByRole('button', { name: /^Generate march/ })).toBeVisible();
   await expect(marchPills(page).first()).toBeVisible();
@@ -625,7 +609,7 @@ test('mobile: a finished Generate opens the recap, and a swipe down puts it away
   await generateButton(page).click();
   await settle(page);
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByText(/^Expected damage/)).toBeVisible();
+  await expect(sheet.getByText(/^Average damage/)).toBeVisible();
 
   // The slide-up has to *finish* before the header can be measured: for its first 300 ms the sheet
   // is still below the window, and a drag started at those coordinates lands on the page behind it.

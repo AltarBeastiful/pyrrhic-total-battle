@@ -137,7 +137,7 @@ function compareRows(stacks: SavedStack[]): { metrics: Row[]; counts: Row[] } {
 
   const metrics: Row[] = [
     pick('Stacks', (stack) => stack.counts.length, amount, 'none'),
-    pick('Expected damage', (stack) => stack.summary.avgDamage, figure, 'high'),
+    pick('Average damage', (stack) => stack.summary.avgDamage, figure, 'high'),
     pick('Damage', (stack) => stack.summary.minDamage, figure, 'high'),
     pick('Best opening', (stack) => stack.summary.maxDamage, figure, 'high'),
     pick('Damage per silver', (stack) => stack.summary.damagePerSilver, compactRatio, 'high'),
@@ -258,14 +258,14 @@ export function SavedMarchesPanel({ profile }: SavedMarchesPanelProps) {
                     }}
                   />
                   {/* **The saved march's own damage, in the notation** (S-148, and the same figure the
-                      compare table's "Expected damage" row prints): the row is the one line a player reads
+                      compare table's "Average damage" row prints): the row is the one line a player reads
                       to tell one saved march from another, and eight digits of it are the least of what
                       tells them apart. This is a 12 px dimmed line, so the budget is the tight one, one
                       decimal (`compactTwo`), where the table's cells stand alone at 14 px and take two.
                       The march's name above it and its stack count after it are not figures the notation
                       touches: one is a name and the other is a count. */}
                   <Text span size="xs" c="dimmed" truncate>
-                    {`${DATE.format(stack.createdAt)}, ${compactTwo(stack.summary.avgDamage, 1)} expected damage, ${String(stack.counts.length)} stacks`}
+                    {`${DATE.format(stack.createdAt)}, ${compactTwo(stack.summary.avgDamage, 1)} average damage, ${String(stack.counts.length)} stacks`}
                   </Text>
                 </Stack>
                 <ActionIcon
