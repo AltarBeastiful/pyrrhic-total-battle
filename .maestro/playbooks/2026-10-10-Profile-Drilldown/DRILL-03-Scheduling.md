@@ -45,6 +45,7 @@ changes which rows a slow device shows).
   or use 5 s). If the cut set changes, this is a trade: leave the change on a branch and put a HITL note in
   Notes instead of committing to main. Otherwise commit: `Advisor: longest probes first (W18 P1.3)`.
 
+<!-- MAESTRO:HITL reason="P1.4 is a trade with no measured gain: one more upgrade row cut at a binding clock. Branch w18-p14-captains-one-queue (Notes, P1.4); recommendation: drop it and tick" -->
 - [ ] Remove the barrier in the captains pass. In `src/worker/captainAdvice.ts`, the screen job (`pool.map([screenJob])`,
   around line 178) and the probe jobs (around line 204) are awaited one after the other, and
   `src/ui/sections/march/captainSearch.ts` then runs `runCaptainUpgrades` after `runCaptainAdvice`. Read the code to
@@ -134,3 +135,23 @@ changes which rows a slow device shows).
     rows on a slow device.
 - **Owner's call**: merge `w18-p13-longest-first` (a slow phone shows a different set of rows, ~12 % faster
   "other" pass on desktop), or drop it. Not on main.
+
+### P1.4 captains: one queue (2026-10-11) — no gain, a trade, left on branch `w18-p14-captains-one-queue` (b93dfe8)
+
+- **Who needs what**: `runCaptainAdvice` is a true chain — the screen prices the baseline's stop counts, the
+  confirm trios are the screen's shortlist; `runCaptainUpgrades` needs the lead trio (`leadTrio(advice.best)`, i.e.
+  every confirm row) and its bar. The only jobs that did not depend on others were **inside**
+  `runCaptainUpgrades`: an ask with ≤ `confirm` trios (a captain of the lead trio) plans at once, and a screened
+  ask's plans need its own screen, not all nine. The branch puts the screens, then every ask's plan slots, in one
+  `pool.map`; a screened slot awaits its ask's shortlist (screens listed first, so a lane has always started the
+  screen a slot waits on). Merge unchanged: screen failures, then plan outcomes in (ask, trio) order.
+- **Answers with no clock: identical** (worker tests, advisor golden on three lanes, browser hash
+  `a9612b9ca0a9`). One unit test asserted the send order (`sent[1]` was the screened ask's plan); it now checks
+  the plan is sent at all.
+- **Wall: no gain.** Three interleaved A/B rounds (`Working/w18/d03-p14-ab.txt`, 6 workers, timing fixture), the
+  upgrade part (captains − captain advice): before 3 300 / 3 483 / 3 354 ms, after 3 413 / 3 384 / 3 327 ms
+  (means 3 379 vs 3 375). The three lead-trio plans move into the first wave and push three screens to the
+  second, so the screened plans start no earlier.
+- **Cut set at a binding clock changes**: at 2 s every upgrade is cut either way; at **3 s** before cuts the 3
+  `minamoto` rows, after cuts those **and `captain:bernard:level10`** (3/3 runs each). One more row lost on a slow
+  device for nothing: recommend dropping the branch.
