@@ -17,7 +17,7 @@ changes which rows a slow device shows).
 
 ## Tasks
 
-- [ ] One baseline per run (census item K4). Read Drill 01's Notes for K4. If the passes' baseline settings were not
+- [x] One baseline per run (census item K4). Read Drill 01's Notes for K4. If the passes' baseline settings were not
   identical, tick with a note and do nothing. Otherwise add a small cache of the baseline answer keyed by the
   baseline's settings fingerprint (the same hash the census used), held by the module that owns the advisor pool
   (`advisorPool()` in `src/ui/sections/march/advisorSearch.ts`) and cleared on a new Generate and when the pool is
@@ -61,3 +61,11 @@ changes which rows a slow device shows).
   `docs/plans/profile-drilldown.md` §3. Commit the doc: `W18: Drill 03 measured`.
 
 ## Notes
+
+### P1.1 one baseline per run (2026-10-10) — skipped, census says WON'T DO
+
+- Drill 01's K4: the three passes' baseline settings **are** identical (2.00 hits per entry), but the projected
+  saving is **2.66 % / 1.39 %** of run CPU (exactness / timing), under the 3 % cache bar, so the verdict is
+  **WON'T DO** and "P1.1 dropped" (`docs/plans/profile-drilldown.md` §5). The playbook's rule "no cache without a
+  census" decides: no baseline cache is built. K4's cost is wall time (the serial baseline head of each pass),
+  which P1.2 below recovers without a cache. Ticked with no code change.
