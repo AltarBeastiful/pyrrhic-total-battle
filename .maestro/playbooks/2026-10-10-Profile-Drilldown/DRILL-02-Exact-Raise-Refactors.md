@@ -30,7 +30,7 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   on the profile build with the check on, and is skipped on the release build. It must pass on the current code
   (the check compares the sort with itself), which proves the harness works. Commit: `Kernel: shadow check for the kill order (W18)`.
 
-- [ ] Make the raise's kill order incremental. In the raise searches (`raisePairwise` around line 2353,
+- [x] Make the raise's kill order incremental. In the raise searches (`raisePairwise` around line 2353,
   `raiseClimbSearch` around line 2319, and `raiseWalk`), a scored vector differs from the last one by one or two
   slots, yet `raiseScore` rebuilds and insertion-sorts every live stack. Keep the sorted roster from the previous
   score and, when a slot's count changes, move only that stack: remove it, recompute its HP (`count * cell(t, T_HP)`),
@@ -94,3 +94,39 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   be > 0. **Both pass** on the current code.
 - Gate: not the full script — the release wasm is byte-identical, so no reading can move; ran `pnpm typecheck`,
   `pnpm lint`, prettier, `raise-census.test.ts` (pass).
+
+### P2.1 the incremental kill order (2026-10-10)
+
+- **Kernel** (`kernel/assembly/index.ts`): `raiseScore` now calls `raiseKillOrder(counts)` instead of
+  `killOrderBy(types, rRows, counts, T_ORDER)`. The raise keeps **its own copy** of the last roster it fought
+  (`rkType`/`rkCount`/`rkHp`, length `rkK`) and the counts it was built from (`rkLast`); nothing else writes
+  those buffers, so the sizer, `raiseRating` or `battle` writing `stackType` cannot stale it, and no search
+  needs a hook. Each score diffs the counts against `rkLast` bit for bit (`i64`) and moves only the changed
+  types (`raiseMove`: remove by type, recompute `count × cell(t, T_HP)`, insert at the first stack it sorts
+  before under the key HP desc → `T_ORDER` asc → type index asc — `killOrderBy`'s stable insertion sort on
+  `rRows` = identity gives exactly that key), then copies the roster into `stackType`/`stackCount`/`stackHp`.
+  Full `killOrderBy` (and a fresh copy) at the start of every `raise()` (`rkK = -1`), when more than
+  `KEEP_MOVES` = 4 types changed, and whenever an HP or rank is NaN (the sort then follows no key). Not tuned.
+- **Shadow check** (`KILL_CHECK=1 pnpm vitest run tests/kernel/kill-order.test.ts`): **pass**, 2 tests,
+  308 s — every scored vector of 184's corpus (all five positions) and the exactness fixture's Generate bar
+  held bit for bit to a fresh `killOrderBy`, answers held to the release kernel.
+- **Gate** (`gate-20261010-205449.log.summary`), all **PASS**: kernel:build 2 s, typecheck 1 s, lint 19 s,
+  `pnpm test` 282 s, plan-benchmark 157 s, bench-diff vs HEAD no difference, 184 109 s. Goldens (raise,
+  advisor, `scored`) unmoved; prettier clean. Nothing moved, so nothing reverted.
+- **Experiment 184, raise timing** (`times.kernel`, 68 raises, `p21-measure.sh`): sum **129.7 s → 110.7 s
+  (−14.6 %)**; the big walk 103.7 s → 88.9 s; the other 67 raises 25.9 s → 21.8 s (−15.7 %); median 0.61 →
+  0.75 ms (sub-ms raises, noise).
+- **`pnpm kernel:bench`** (battleMany, a path this change does not touch): before 1 071 885 / 366 010
+  battles/s, after 870 549 / 296 889 — the TS reference fell by the same 19–22 % in the same run, so this is
+  machine load, not the kernel (ratios ×36.3 / ×34.8 → ×37.9 / ×34.0).
+- **Experiment 196 rerun** with `--execArgv=--cpu-prof` on both fixtures (profile kernel, self time,
+  `.maestro/playbooks/Working/w18/cpuprof-self.mjs`): `killOrderBy` **5 008 ms → 3 800 ms** of 83.1 / 81.7 s;
+  the new `raiseMove` 586 ms (`raiseKillOrder` is inlined into `raiseScore`, 293 ms); net kill-order cost
+  ≈ −0.6 s (≈ 0.75 % of the run). Census counts unchanged (`cKillOrdersScore` still counts one per battle).
+  What is left in `killOrderBy` is mostly `raiseRating` (13.1 M on the timing fixture vs 8.3 M battles) and
+  the sizer (5.6 M).
+- **Follow-up, not built (needs the owner):** `raiseRating` could call `raiseKillOrder(rWork)` too — on a miss
+  `rWork` is the vector just scored (zero moves, three copies), on a memo hit it differs by the slots moved —
+  exact by the same check. That is K2's saving and more, and K2 is recorded `WON'T DO`, so it is left for the
+  owner to re-open.
+

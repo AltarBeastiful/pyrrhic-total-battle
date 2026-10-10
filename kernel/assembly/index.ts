@@ -1828,6 +1828,10 @@ function raiseAlloc(): void {
   rTo = heap.alloc(n << 3);
   rClimb = heap.alloc(n << 3);
   rSlots = heap.alloc(n << 2);
+  rkType = heap.alloc(n << 2);
+  rkCount = heap.alloc(n << 3);
+  rkHp = heap.alloc(n << 3);
+  rkLast = heap.alloc(n << 3);
   rSlotOf = heap.alloc(n << 2);
   rOrder = heap.alloc(n << 2);
   rMemoHeld = heap.alloc(n << 3);
@@ -1928,10 +1932,98 @@ function raiseScore(countsPtr: usize): f64 {
     cBattles += 1.0;
     cKillOrdersScore += 1.0;
   }
-  const k = killOrderBy(types, rRows, countsPtr, T_ORDER);
+  const k = raiseKillOrder(countsPtr);
   if (isDefined(KILL_CHECK)) killOrderCheck(k, countsPtr);
   attackOrderOf(k);
   return journalDamage(k, false);
+}
+
+/**
+ * **The kill order, kept** (W18 P2.1): a vector the search scores differs from the last one by a slot or two,
+ * so the roster `raiseScore` last fought is kept — its own copy, which nothing else writes — with the counts
+ * it was built from, and a changed type's stack is taken out and put back at its place. `killOrderBy` sorts
+ * by total HP descending, then `T_ORDER` ascending, then row order (its insertion sort is stable, and the row
+ * of type `t` is `t`): one key, so the stack's place under that key is the place the sort gives it, and the
+ * roster comes out bit for bit the same (`killOrderCheck`). Rebuilt whole at the start of a `raise()`, when
+ * more than `KEEP_MOVES` types changed, and when an HP or a rank is NaN (the sort then follows no key).
+ */
+let rkType: usize = 0; // i32 × types: the roster, kill order
+let rkCount: usize = 0; // f64 × types: its counts
+let rkHp: usize = 0; // f64 × types: its total HP
+let rkLast: usize = 0; // f64 × types: the counts it was built from
+let rkK: i32 = -1; // its length, −1 when there is none to start from
+const KEEP_MOVES = 4;
+
+/** `killOrderBy(types, rRows, countsPtr, T_ORDER)` into `stackType`/`stackCount`/`stackHp`, from the kept roster. */
+function raiseKillOrder(countsPtr: usize): i32 {
+  if (rkK >= 0) {
+    let moves = 0;
+    let kept = true;
+    for (let t = 0; t < types && kept; t += 1) {
+      const at = (<usize>t) << 3;
+      const bits = load<i64>(countsPtr + at);
+      if (bits == load<i64>(rkLast + at)) continue;
+      moves += 1;
+      kept = moves <= KEEP_MOVES && raiseMove(t, load<f64>(rkLast + at), load<f64>(countsPtr + at));
+      store<i64>(rkLast + at, bits);
+    }
+    if (kept) {
+      memory.copy(stackType, rkType, (<usize>rkK) << 2);
+      memory.copy(stackCount, rkCount, (<usize>rkK) << 3);
+      memory.copy(stackHp, rkHp, (<usize>rkK) << 3);
+      return rkK;
+    }
+  }
+  const k = killOrderBy(types, rRows, countsPtr, T_ORDER);
+  memory.copy(rkType, stackType, (<usize>k) << 2);
+  memory.copy(rkCount, stackCount, (<usize>k) << 3);
+  memory.copy(rkHp, stackHp, (<usize>k) << 3);
+  memory.copy(rkLast, countsPtr, (<usize>types) << 3);
+  rkK = k;
+  for (let s = 0; s < k; s += 1) {
+    const hp = f64At(rkHp, s);
+    const rank = cell(i32At(rkType, s), T_ORDER);
+    if (hp != hp || rank != rank) rkK = -1;
+  }
+  return k;
+}
+
+/** Type `t`'s stack in the kept roster from `before` units to `after`; false when it cannot be placed by key. */
+function raiseMove(t: i32, before: f64, after: f64): bool {
+  if (before > 0) {
+    let i = 0;
+    while (i < rkK && i32At(rkType, i) != t) i += 1;
+    if (i == rkK) return false;
+    const tail = <usize>(rkK - i - 1);
+    memory.copy(rkType + ((<usize>i) << 2), rkType + ((<usize>(i + 1)) << 2), tail << 2);
+    memory.copy(rkCount + ((<usize>i) << 3), rkCount + ((<usize>(i + 1)) << 3), tail << 3);
+    memory.copy(rkHp + ((<usize>i) << 3), rkHp + ((<usize>(i + 1)) << 3), tail << 3);
+    rkK -= 1;
+  }
+  if (!(after > 0)) return true;
+  const hp = after * cell(t, T_HP);
+  const rank = cell(t, T_ORDER);
+  if (hp != hp || rank != rank) return false;
+  let p = 0;
+  while (p < rkK) {
+    const prevHp = f64At(rkHp, p);
+    if (hp > prevHp) break;
+    if (hp == prevHp) {
+      const other = i32At(rkType, p);
+      const prevRank = cell(other, T_ORDER);
+      if (prevRank > rank || (prevRank == rank && other > t)) break;
+    }
+    p += 1;
+  }
+  const tail = <usize>(rkK - p);
+  memory.copy(rkType + ((<usize>(p + 1)) << 2), rkType + ((<usize>p) << 2), tail << 2);
+  memory.copy(rkCount + ((<usize>(p + 1)) << 3), rkCount + ((<usize>p) << 3), tail << 3);
+  memory.copy(rkHp + ((<usize>(p + 1)) << 3), rkHp + ((<usize>p) << 3), tail << 3);
+  store<i32>(rkType + ((<usize>p) << 2), t);
+  store<f64>(rkCount + ((<usize>p) << 3), after);
+  store<f64>(rkHp + ((<usize>p) << 3), hp);
+  rkK += 1;
+  return true;
 }
 
 /**
@@ -2581,6 +2673,7 @@ export function raise(
   rAuth = authMode;
   rDom = domMode;
   rScored = 0.0;
+  rkK = -1;
   if (isDefined(CENSUS)) {
     cBattles = 0.0;
     cRatings = 0.0;
