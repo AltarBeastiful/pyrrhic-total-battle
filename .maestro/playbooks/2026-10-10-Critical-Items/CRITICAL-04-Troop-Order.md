@@ -28,7 +28,7 @@ Source: `todos.md`, entry "[UI] order troops as they appear in the battle select
 
 - [x] Add the order-by-health switch to the battle summary. In `src/ui/sections/bonuses/TotalsFigures.tsx` (or the component that renders the battle summary, found with `grep -rn "summary.health" src/ui`), add a control that switches the troop list order between "battle selection" (default) and "health". The health order sorts by the unit's health, lowest first. The switch is a UI preference: keep it in local component state, not in the saved profile, and do not add a new store field. Use an accessible name on the control and a label that says what the list is ordered by. Follow `docs/design-rules.md` (rule 26 for wording; no em dashes in new user-visible text).
 
-- [ ] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, and `pnpm test -- src/ui/sections/troops src/ui/sections/bonuses`. Then `pnpm test`. All must be green. Record counts in Notes. If the e2e suite covers the troops card, run `pnpm build` first (see the memory note: a running preview serves a stale build), then `pnpm e2e`.
+- [x] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, and `pnpm test -- src/ui/sections/troops src/ui/sections/bonuses`. Then `pnpm test`. All must be green. Record counts in Notes. If the e2e suite covers the troops card, run `pnpm build` first (see the memory note: a running preview serves a stale build), then `pnpm e2e`.
 
 - [ ] Commit this phase only. Stage only the files this phase changed (`git status --short` first). Do not stage `todos.md`, `.maestro/playbooks/performance-optimization/`, `tools/theorycraft/out/`, or `pyrrhic-my-account-2026-10-07.json`. Commit message: `Troops follow the battle selection order and can be ordered by health`. End the commit message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
@@ -121,3 +121,11 @@ Placed where Task 2 pointed (the March pills), not in `TotalsFigures.tsx`.
 - `src/ui/sections/march/useMarch.ts`: `useMarch(pillOrder = 'battle')` passes the order to `poolRows` (and into the memo deps). The other five callers keep the default.
 - "Health" is the kill order (most health first), per the Task 2 decision, not "lowest first" as this task's text said. Owner to confirm (Manual Follow-Up).
 - `vitest run src/ui/sections/march`: 20 files, 326/326 pass (both Critical 04 tests green). Typecheck, eslint and prettier clean on the changed files.
+
+### Task 6 (2026-10-10, pyrrhic): the gate is green
+
+- `pnpm typecheck`: clean. `pnpm lint`: clean.
+- `pnpm exec prettier --check` on the 11 changed source/data files: all formatted.
+- Scoped run (`pnpm test -- src/ui/sections/troops src/ui/sections/bonuses src/ui/sections/march src/data`): green. Note that `pnpm test -- <paths>` runs the whole suite here, because the script is plain `vitest run`.
+- `pnpm test`: 139 files passed, 177 skipped (316). 1750 tests passed, 492 skipped (2242). Nothing failed. The skips are the suites that skip by default; this change added none.
+- `pnpm build` then `pnpm e2e`: 65 passed, 10 skipped. Nothing failed (`troops.spec.ts`, `battle.spec.ts` and `journeys.spec.ts` included).
