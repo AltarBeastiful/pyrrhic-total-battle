@@ -30,7 +30,7 @@ commit message: what the key covers, what else the value depends on, and why tha
   (4,839,797 / 8,222,922) timing — under 2 on both; projected saving 4 ms = 0.01 % / 1,925 ms = 2.21 % — under 3 %.
   Nothing changed. See Notes.
 
-- [ ] K3, `shownMarch` across jobs. Only if the verdict holds. In `src/worker/jobs.ts`, `runProbe` keeps a `read` map
+- [x] K3, `shownMarch` across jobs. Only if the verdict holds. In `src/worker/jobs.ts`, `runProbe` keeps a `read` map
   per job. Move it to a per-worker LRU keyed by (request fingerprint, `countsKey`), bounded by entry count (size it
   from the census: the number of distinct keys of one full run, plus margin), cleared when the worker receives a
   new run id or a new data version. The fingerprint must cover the whole elite request (every field `shownMarch`
@@ -38,6 +38,8 @@ commit message: what the key covers, what else the value depends on, and why tha
   with the same fingerprint are deep-equal. Hits depend on which worker gets which job, so the hit count varies run
   to run; the answers must not. Advisor golden identical with one worker and with six (run the golden test with
   both pool sizes). Commit: `Worker: Tight pricings shared across jobs (W18 K3)`.
+  **WON'T DO (2026-10-11, 196 rerun on HEAD 05ab2d6).** Exact request key: 0.14 / 0.07 hits per entry, 0.11 % /
+  0.94 %; kernel input key: 0.56 / 0.09, 0.20 % / 1.14 % (exactness / timing). Fails both bars. Nothing changed.
 
 - [ ] K5, Generate's pricings reused by the advisor baseline. Only if the verdict holds and K4 (Drill 03) did not
   already remove these hits. Send the Tight pricings Generate made (`primeBar` in `src/ui/sections/march/generate.ts`)
@@ -58,3 +60,5 @@ commit message: what the key covers, what else the value depends on, and why tha
   `.maestro/playbooks/Working/w18/d04-196-the-cache-census.md`, `d04-196.log`; the committed census stays the record
   (the rewritten `tools/theorycraft/out/196-the-cache-census.md` was restored).
 - **K1**: 0.05 / 0.59 hits per entry; 0.01 % / 2.21 % → `WON'T DO`.
+- **K3**: exact key 0.14 / 0.07 hits per entry, 37 ms 0.11 % / 814 ms 0.94 %; kernel key 0.56 / 0.09, 66 ms 0.20 % /
+  989 ms 1.14 % → `WON'T DO`.
