@@ -155,6 +155,13 @@ describe('integrity', () => {
     expect(vip.map((row) => row.level)).toEqual(vip.map((_row, index) => index));
   });
 
+  it('has the owner VIP bonuses from level 0 to 25, health and strength alike', () => {
+    const at = (level: number) => vip[level]?.bonus.health?.army;
+    expect(vip).toHaveLength(26);
+    expect([at(0), at(1), at(8), at(9), at(24), at(25)]).toEqual([0, 0.5, 4, 5, 20, 25]);
+    for (const row of vip) expect(row.bonus.strength?.army).toBe(row.bonus.health?.army);
+  });
+
   it('lists every troop exactly once in the default kill order', () => {
     expect([...orders.troops].sort()).toEqual(troops.map((troop) => troop.id).sort());
   });

@@ -262,20 +262,31 @@ describe('resolveSources — permanent, titles, hero, pills, VIP, dragon, custom
     expect(sourceCaveats(profile, setup)).toContain('Svyatogor: applies only when marching alone.');
   });
 
-  it('falls back to the hand-typed VIP values when the table row is zero', () => {
+  it('reads the VIP bonus from the table for a level it lists', () => {
     const { profile, setup } = fixture();
     profile.sources.vipLevel = 12;
+    setup.active.vip = true;
+
+    expect(vipNeedsManual(profile)).toBe(false);
+    const vip = sourceById(resolveSources(profile, setup), 'vip');
+    expect(vip?.health).toEqual({ army: 8 });
+    expect(vip?.strength).toEqual({ army: 8 });
+  });
+
+  it('falls back to the hand-typed VIP values for a level the table does not list', () => {
+    const { profile, setup } = fixture();
+    profile.sources.vipLevel = 30;
     profile.sources.vipManual = { health: 40, strength: 45 };
     setup.active.vip = true;
 
     expect(vipNeedsManual(profile)).toBe(true);
     const vip = sourceById(resolveSources(profile, setup), 'vip');
     expect(vip?.kind).toBe('vip');
-    expect(vip?.label).toBe('VIP 12');
+    expect(vip?.label).toBe('VIP 30');
     expect(vip?.health).toEqual({ army: 40 });
     expect(vip?.strength).toEqual({ army: 45 });
     expect(sourceCaveats(profile, setup)).toContain(
-      'VIP 12 is not in the table — the values you typed are used.',
+      'VIP 30 is not in the table — the values you typed are used.',
     );
   });
 

@@ -8,6 +8,9 @@ How to read a line: **what changed** — how it was verified.
 
 ## v1, amended 2026-10-10 (no bump)
 
+- **VIP** — `vip.json` now runs from level 0 to 25 with real values, the same for army health and army
+  strength: 0.5 % a level up to level 8 (4 %), 1 % a level from 9 (5 %) to 24 (20 %), 25 % at level 25. Read
+  from the VIP screen by the owner. Replaces the all-zero placeholders for levels 0 to 15.
 - **Battle selection order** — new table `battleSelection.json`: the 61 troops and 20 monsters in the
   order the game's battle selection screen lists them, top to bottom, for the March's pills (Critical 04).
   Read by the owner from the screen on 2026-10-10; the counts shown beside each name were dropped. The
@@ -46,7 +49,6 @@ in `docs/data/README.md`.
   and Ragnarok - Fenrir (+130 % strength).
 - **Temple** — revival-cost divisor for levels 1 to 45.
 - **Orders** — default troop and monster kill orders, captain picker order.
-- **VIP** — levels 0 to 15 as placeholders, all zero: the capture had no VIP table. Contributions welcome,
-  read from the VIP screen in game.
+- **VIP** — levels 0 to 15 as placeholders, all zero (filled 2026-10-10, see above).
 
 Player-versus-player values present in the capture were dropped on purpose: PvP is out of scope (PLAN §1).

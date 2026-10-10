@@ -51,7 +51,7 @@ export const MAX_ACTIVE_ARTIFACTS = 3;
 /** Three captains carry five pieces each, so a profile never holds more than fifteen. */
 export const MAX_EQUIPMENT = 15;
 /** The highest VIP level the game currently sells. */
-export const MAX_VIP_LEVEL = 15;
+export const MAX_VIP_LEVEL = 25;
 
 type CaptainEntry = ProfileSources['captains'][number];
 type EquipmentEntry = ProfileSources['equipment'][number];
