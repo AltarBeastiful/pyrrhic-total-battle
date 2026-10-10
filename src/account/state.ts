@@ -124,6 +124,12 @@ let running: Promise<void> | null = null;
 /** Stops the realtime subscription; `null` while nobody is signed in. */
 let stopWatching: Promise<() => Promise<void>> | null = null;
 let again: { pull: boolean; keepalive: boolean } | null = null;
+/**
+ * The profile a sign-in put on screen because the account could not be read: a stand-in, not the
+ * account's. Until the account's copy has been read it is dropped from the first merge that brings
+ * profiles in, unless the player has edited it by then.
+ */
+let standIn: string | null = null;
 
 function rememberDevice(patch: Partial<DeviceState>): void {
   device = { ...device, ...patch };
@@ -180,9 +186,18 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     const remoteDoc = readDocument(remote.data);
     if (remoteDoc === null)
       throw new AccountError('format', 'The account holds a copy this version cannot read.');
-    const current = useStore.getState().doc;
+    let current = useStore.getState().doc;
+    const dropped = standIn;
+    standIn = null;
+    if (dropped !== null && remoteDoc.profiles.length > 0) {
+      const untouched = (profile: Profile) =>
+        profile.id === dropped && profile.rev === 0 && !remoteDoc.profiles.some((r) => r.id === dropped);
+      if (current.profiles.some(untouched)) {
+        current = { ...current, profiles: current.profiles.filter((profile) => !untouched(profile)) };
+      }
+    }
     const merged = withAProfile(mergeDocuments(current, remoteDoc));
-    if (!sameContent(merged, current)) apply(merged);
+    if (!sameContent(merged, useStore.getState().doc)) apply(merged);
     return remoteDoc;
   };
 
@@ -205,6 +220,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
   const leave = async (keep: boolean): Promise<void> => {
     cancelAutosave();
     unwatch();
+    standIn = null;
     const current = useStore.getState().doc;
     writeCache(keep && device.owner !== null ? { owner: device.owner, doc: current } : null);
     apply(freshLocal(current));
@@ -266,6 +282,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         set({ dirty: false });
         const result = await push(useStore.getState().doc, base, get().deviceId, { keepalive });
         if (result.ok) {
+          standIn = null; // saved: whatever was on screen is the account's copy now
           rememberDevice({ remoteVersion: result.version });
           set({ remoteVersion: result.version, syncState: get().dirty ? 'saving' : 'saved', error: '' });
           return;
@@ -406,7 +423,16 @@ export const useAccountStore = create<AccountState>()((set, get) => {
           });
         }
       }
-      const local: RootDocument = { ...current, profiles: mine };
+      // The rule of a sign-in (`created: false`) is enforced here: the account's copy, read from the
+      // server and from the cache (which only ever holds an account's document, never this
+      // browser's), is the base, and nothing of this browser's own profiles goes into what the
+      // first save pushes — not a profile (skipped above), not a tombstone. Only the device's own
+      // fields (`deviceId`, `deviceName`, `ui`) come from the screen.
+      const local: RootDocument = {
+        ...current,
+        profiles: mine,
+        tombstones: created ? current.tombstones : [],
+      };
       let next = base === null ? local : mergeDocuments(local, base);
       // A new account with nothing anywhere yet: the untouched profile on screen becomes its first.
       // On sign-in, `withAProfile` below gives an empty account a fresh one instead.
@@ -421,20 +447,25 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         };
       }
       const worthSaying = summary.added.length > 0 && (base?.profiles.length ?? 0) > 0;
-      apply(withAProfile(next));
+      const shown = withAProfile(next);
+      // A sign-in that could not read the account shows a fresh profile; it must not join the
+      // account as if it were the account's, so the first sync reads before it saves anything.
+      const unread = !created && base === null && !reached;
+      standIn = unread && next.profiles.length === 0 ? shown.activeProfileId : null;
+      apply(shown);
       writeCache(null);
       const remoteVersion = remote?.version ?? (reached ? 0 : device.remoteVersion);
       rememberDevice({ owner: user.id, remoteVersion });
       set({
         remoteVersion,
         busy: 'none',
-        dirty: true,
+        dirty: !unread,
         // Said only when the account already held profiles: joining an empty one changes nothing.
         merged: worthSaying ? summary : null,
         dialog: worthSaying ? 'merged' : null,
       });
       watch();
-      await get().sync();
+      await get().sync({ pull: unread });
     },
 
     /**
@@ -627,6 +658,7 @@ export function resetAccountModule(): void {
   unwatch();
   running = null;
   again = null;
+  standIn = null;
   auth = null;
   device = loadDeviceState();
 }

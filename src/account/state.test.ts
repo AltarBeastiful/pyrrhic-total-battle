@@ -178,6 +178,41 @@ test('signing in to an account with no profiles still leaves one on screen, not 
   expect(useAccountStore.getState().dialog).toBeNull();
 });
 
+test('a sign-in pushes nothing of this browser’s own, not even what it deleted', async () => {
+  renameActive('Main');
+  await signUp();
+  await useAccountStore.getState().signOut();
+  // Signed out, this browser makes a profile and deletes it: a tombstone of its own.
+  useStore.getState().createProfile('Gone');
+  const gone = useStore.getState().doc.activeProfileId;
+  useStore.getState().deleteProfile(gone);
+
+  await signIn();
+
+  expect(names(server?.data)).toEqual(['Main']);
+  expect(server?.data.tombstones.map((tombstone) => tombstone.id)).not.toContain(gone);
+  expect(localStorage.getItem(CACHE_STORAGE_KEY)).toBeNull();
+});
+
+test('a sign-in that cannot read the account yet does not save its stand-in profile into it', async () => {
+  renameActive('Main');
+  await signUp();
+  await useAccountStore.getState().signOut();
+  renameActive('Mine');
+  refuseWith = 0; // signed in, then the network drops before the account's copy is read
+
+  await signIn();
+  expect(names()).toEqual(['My account']);
+  expect(names(server?.data)).toEqual(['Main']);
+
+  refuseWith = null;
+  await useAccountStore.getState().sync();
+
+  expect(names()).toEqual(['Main']);
+  expect(names(server?.data)).toEqual(['Main']);
+  expect(useAccountStore.getState().syncState).toBe('saved');
+});
+
 test('an untouched default profile is not added to an account that has profiles', async () => {
   renameActive('Main');
   await signUp();
