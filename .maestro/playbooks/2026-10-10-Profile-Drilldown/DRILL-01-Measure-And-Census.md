@@ -42,7 +42,7 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   output as `.maestro/playbooks/Working/w18/trace-0-baseline.md`; check the totals match §0.1 of the plan
   (23.1 s wall, about 106 s pool CPU, Tight raise about 49 % of pool CPU). Commit: `Add the perf-trace analysis tool (W18 P0.1)`.
 
-- [ ] Pin the advisor's answers before anything moves. Write `tests/kernel/advisor-golden.test.ts`, in the style of
+- [x] Pin the advisor's answers before anything moves. Write `tests/kernel/advisor-golden.test.ts`, in the style of
   `tests/kernel/golden-capture.test.ts` (with `CAPTURE=1` it writes, otherwise it compares). It runs, in-process on
   the exactness fixture (`ownerProfile()`; skip the test when it returns null): `runGenerate`'s plan for the
   fixture's setup, then the three advisor passes the profiling run makes (`src/ui/sections/march/profileRun.ts`:
@@ -131,3 +131,17 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   6), so busy samples are 508 k, not 503 k. Table 2 gives shares only: the median sample gap is ~170 µs and V8
   samples unevenly, so samples × gap (86 s) under-reads the slice CPU (106 s). Table 4 is rooted at the main
   thread's `(root)`: `(program)` 47.8 %, as in §0.4.
+
+### W18 gate: the advisor golden (2026-10-10)
+
+- `tests/kernel/advisor-golden.test.ts` → `tests/golden/advisor.json` (762 KB). Worker-level calls, not the UI
+  functions (they run under the 20 s clock): `client.plan` with no `budgetMs`, the bar's 5 Tight tables
+  (`client.positions` per stop, elite request), `runAdvisor` × 29 generic probes, `runCaptainAdvice` +
+  `runCaptainUpgrades` on the lead trio, `runAdvisor` × `otherProbes` (17). Each pass gets `budgetMs: 1e9`
+  (`Infinity` would make `setTimeout` fire at once); every `cut` list and `screenCut` is asserted empty.
+- Fixture facts: 5 stops, opening at index 2 (sweet spot); the owner owns 3 captains, so the trio screen has
+  **1** trio (the current one), 0 confirmed rows, 9 upgrade rows; no typed upgrades, so no `upgrades-mine`.
+- Golden helpers moved to `tests/kernel/golden-io.ts` (shared with `golden-capture.test.ts`, which still passes).
+- **Run time ~27 s** (one inline lane, in-process): capture 27.0 s, compare 27.1 s and 26.2 s — both compares
+  pass, so the pin is deterministic.
+
