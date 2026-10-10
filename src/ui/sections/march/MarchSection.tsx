@@ -40,6 +40,7 @@ import {
   MarchSavedFold,
 } from './MarchFoot';
 import { MarchGenerateButton } from './MarchGenerateButton';
+import { ProfileAllButton } from './ProfileAllButton';
 import { MarchLeftOut, MarchPills, MarchResized, MarchShelterNote } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
 import type { PillOrder } from './rows';
@@ -178,6 +179,8 @@ export function MarchSection() {
             sheet it stays, because the sheet is a focus trap over the bar and the answer and the
             action travel together (design rule 2). */}
         {!twoPanes && <MarchGenerateButton fullWidth />}
+        {/* Dev and opt-in builds only (`profiling.ts`): Generate plus every advisor question, profiled. */}
+        <ProfileAllButton />
       </Stack>
 
       {/* 2 — the army: the pools and the stacks they paid for. The army steps back with the figures while the
