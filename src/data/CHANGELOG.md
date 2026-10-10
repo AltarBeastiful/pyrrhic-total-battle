@@ -6,6 +6,17 @@ a renamed or removed `id` must be called out explicitly.
 
 How to read a line: **what changed** — how it was verified.
 
+## v1, amended 2026-10-10 (no bump)
+
+- **Battle selection order** — new table `battleSelection.json`: the 61 troops and 20 monsters in the
+  order the game's battle selection screen lists them, top to bottom, for the March's pills (Critical 04).
+  Read by the owner from the screen on 2026-10-10; the counts shown beside each name were dropped. The
+  screen did not list `corax-1/2`, `royal-lion-1/2`, `devastator-1/2`, `fire-phoenix-1/2`, `kraken-1/2`
+  and `trickster-1/2`, so the table leaves them out rather than guessing a place. Display only: the
+  engine never reads it and no value changed, so `dataVersion` stays 1, as for the 2026-10-09 amendment;
+  the owner decides whether it should be bumped anyway. Verified by `data.test.ts`: every id is a known
+  unit, listed once.
+
 ## v1, amended 2026-10-09 (no bump)
 
 - **Captains** — Amanitore carries `"onlyOn": "group"` and Hercules `"onlyOn": "epic"`: the restriction

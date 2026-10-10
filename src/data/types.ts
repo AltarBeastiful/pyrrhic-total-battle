@@ -238,6 +238,17 @@ export interface OrderTables {
   captains: string[]; // display order of captains in the picker
 }
 
+/**
+ * The order the game's battle selection screen lists unit types in, top to bottom. Display only: the
+ * engine never reads it. Units the screen did not list are absent, and callers keep their own order
+ * for them.
+ */
+export interface BattleSelectionOrder {
+  source: string; // where and when the order was read
+  troops: string[];
+  monsters: string[];
+}
+
 // ---- Engine-facing unified unit -------------------------------------------------------------------
 export type Pool = 'leadership' | 'authority' | 'dominance';
 export type UnitKind = 'troop' | 'monster' | 'mercenary';

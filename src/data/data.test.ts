@@ -26,6 +26,7 @@ import researchTitlesJson from '../../docs/research/totalstack-data/titles.json'
 import researchTroopsJson from '../../docs/research/totalstack-data/troops.json';
 import {
   artifacts,
+  battleSelection,
   captains,
   customMercenaryToUnit,
   equipment,
@@ -49,6 +50,7 @@ import { QUALITIES, type Quality } from './types.ts';
 
 const TABLES: Record<TableFile, unknown> = {
   'artifacts.json': artifacts,
+  'battleSelection.json': battleSelection,
   'captains.json': captains,
   'equipment.json': equipment,
   'events.json': events,
@@ -159,6 +161,20 @@ describe('integrity', () => {
 
   it('lists every monster exactly once in the default kill order', () => {
     expect([...orders.monsters].sort()).toEqual(monsters.map((monster) => monster.id).sort());
+  });
+
+  it('lists only known units, each once, in the battle selection order', () => {
+    for (const [label, listed, known] of [
+      ['troops', battleSelection.troops, troops],
+      ['monsters', battleSelection.monsters, monsters],
+    ] as const) {
+      const ids = new Set(known.map((unit) => unit.id));
+      expect(
+        listed.filter((unitId) => !ids.has(unitId)),
+        label,
+      ).toEqual([]);
+      expect(new Set(listed).size, label).toBe(listed.length);
+    }
   });
 
   it('lists every captain exactly once in the picker order', () => {

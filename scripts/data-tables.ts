@@ -188,6 +188,7 @@ const SHAPES: Record<TableFile, (value: Json) => Json> = {
     return out;
   },
   'orders.json': (value) => order(value, ['troops', 'monsters', 'captains']),
+  'battleSelection.json': (value) => order(value, ['source', 'troops', 'monsters']),
   'version.json': (value) => order(value, ['dataVersion', 'verifiedOn', 'notes']),
 };
 

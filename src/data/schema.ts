@@ -23,6 +23,7 @@ import {
 } from './types.ts';
 import type {
   ArtifactRecord,
+  BattleSelectionOrder,
   BonusContribution,
   BonusMap,
   CaptainProgression,
@@ -252,6 +253,12 @@ export const ordersSchema = z.strictObject({
   captains: z.array(id),
 }) satisfies z.ZodType<Loose<OrderTables>>;
 
+export const battleSelectionSchema = z.strictObject({
+  source: z.string().min(1),
+  troops: z.array(id),
+  monsters: z.array(id),
+}) satisfies z.ZodType<Loose<BattleSelectionOrder>>;
+
 export const versionSchema = z.strictObject({
   dataVersion: z.int().positive(),
   verifiedOn: z.iso.date(),
@@ -278,6 +285,7 @@ export const vipTableSchema = z.array(vipSchema);
  */
 export const TABLE_SCHEMAS = {
   'artifacts.json': artifactsTableSchema,
+  'battleSelection.json': battleSelectionSchema,
   'captains.json': captainsTableSchema,
   'equipment.json': equipmentTableSchema,
   'events.json': eventsTableSchema,

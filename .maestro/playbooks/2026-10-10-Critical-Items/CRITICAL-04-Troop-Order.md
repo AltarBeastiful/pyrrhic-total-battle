@@ -22,7 +22,7 @@ Source: `todos.md`, entry "[UI] order troops as they appear in the battle select
 
 - [x] Write the failing test for the new order. In `src/ui/sections/troops/TroopsSection.test.tsx`, add a test that the troop rows render in the battle selection order from task 1 (same test shape as the existing ones in that file). Add a second test that the battle summary's order-by-health switch reorders the rows by health (lowest first) and that switching back restores the battle selection order. Run the test and confirm it is red for the right reason.
 
-- [ ] Add the battle selection order as data, not as code. Put the ordered unit ids in `src/data/` as a small table (a JSON file in the same style as `src/data/tables/*.json`), with a source note saying the order was read from the game's battle selection screen, on 2026-10-10 or the date in Notes. Do not hard-code the order in `rows.ts`. Add a `src/data/CHANGELOG.md` entry for the new table.
+- [x] Add the battle selection order as data, not as code. Put the ordered unit ids in `src/data/` as a small table (a JSON file in the same style as `src/data/tables/*.json`), with a source note saying the order was read from the game's battle selection screen, on 2026-10-10 or the date in Notes. Do not hard-code the order in `rows.ts`. Add a `src/data/CHANGELOG.md` entry for the new table.
 
 - [ ] Use that order in the Troops card. In `src/ui/sections/troops/rows.ts`, make the display order come from the table; keep `sortForDisplay` only as the fallback for a unit id missing from the table, and say so in a comment. Do not change the group order in `rows.ts` line 18 unless task 1 showed the battle selection uses a different group order.
 
@@ -94,3 +94,12 @@ Consequences for the remaining tasks:
 - Task 4: apply the order in `poolRows` (`src/ui/sections/march/rows.ts`), not in `src/ui/sections/troops/rows.ts`. Keep the engine (kill) order as the fallback for ids missing from the table. Update the old test "every stack has a pill, in kill order" to the new default (it pins the old order and goes red once task 4 lands).
 - Task 5: the switch goes on the March pane next to the pills (a `SegmentedControl` like `MarchRaiseControl`, label "Order the stacks by", options "Battle" | "Health"), local component state only. `TotalsFigures.tsx` is not touched.
 
+
+### Task 3 (2026-10-10, pyrrhic): the order is a data table
+
+- `src/data/tables/battleSelection.json`: `{ source, troops (61), monsters (20) }`, copied from the Task 1 lists. `source` says it was read from the battle selection screen on 2026-10-10 and that unlisted units are left out on purpose.
+- Wired like every other table: `BattleSelectionOrder` type (`src/data/types.ts`), strict `battleSelectionSchema` in `TABLE_SCHEMAS` (`src/data/schema.ts`), canonical key order in `scripts/data-tables.ts`, loader `battleSelection` exported from `src/data/index.ts`.
+- New integrity test in `src/data/data.test.ts`: every listed id is a known troop/monster, each once.
+- `src/data/CHANGELOG.md`: "v1, amended 2026-10-10 (no bump)". `dataVersion` stays 1, as with the 2026-10-09 amendment (display-only table, no value changed). The owner decides whether to bump anyway.
+- Note for task 4: the march test spec lists **monsters first, then troops**. Concatenate `battleSelection.monsters` then `battleSelection.troops`.
+- Checks: `vitest run src/data` 54/54, typecheck and eslint clean, prettier clean, `data:check` "15 tables valid and canonical". `pnpm data:check` fails in this shell because Node 22 has no `.ts` support (this was already true before the change). I ran it with `npx tsx scripts/data-check.ts` instead.

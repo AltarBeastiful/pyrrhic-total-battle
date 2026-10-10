@@ -6,6 +6,7 @@
  * engine needs about a unit is flattened into `UnitDef` by `getUnits()`.
  */
 import artifactsJson from './tables/artifacts.json';
+import battleSelectionJson from './tables/battleSelection.json';
 import captainsJson from './tables/captains.json';
 import equipmentJson from './tables/equipment.json';
 import eventsJson from './tables/events.json';
@@ -22,6 +23,7 @@ import vipJson from './tables/vip.json';
 import { CATEGORIES, GROUPS, RACES } from './types.ts';
 import type {
   ArtifactRecord,
+  BattleSelectionOrder,
   BonusKey,
   CaptainRecord,
   Category,
@@ -66,6 +68,7 @@ export const events = table<EventRecord[]>(eventsJson);
 export const vip = table<VipRecord[]>(vipJson);
 export const temple = table<TempleTable>(templeJson);
 export const orders = table<OrderTables>(ordersJson);
+export const battleSelection = table<BattleSelectionOrder>(battleSelectionJson);
 export const version = table<DataVersion>(versionJson);
 
 // ---- Unified units --------------------------------------------------------------------------------
