@@ -27,7 +27,7 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
 
 ## Tasks
 
-- [ ] Commit the trace analysis as a tool. Create `tools/perf-trace/analyse.py` (Python 3, standard library plus the
+- [x] Commit the trace analysis as a tool. Create `tools/perf-trace/analyse.py` (Python 3, standard library plus the
   `perfetto` and `pandas` packages) that takes a `.pftrace` or `.pftrace.gz` path and prints four Markdown tables:
   (1) the `pyrrhic:*` phase slices (wall ms) with the `job:*` slices inside each (count, CPU sum, min/avg/max, how
   many tracks were busy, idle share = 1 − CPU / (wall × tracks)); (2) pool-worker CPU from
@@ -117,3 +117,17 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
 ## Notes
 
 (Each task writes its results here: figures, gate times, verdicts K1 to K6.)
+
+### P0.1 trace tool (2026-10-10)
+
+- `tools/perf-trace/analyse.py` + `README.md`. Run with the existing venv `/tmp/pfvenv/bin/python` (perfetto + pandas;
+  rebuild it per the README if /tmp was cleared); it picks up
+  `~/.local/share/perfetto/prebuilts/trace_processor_shell-55ba613fc6d4f71d`. ~9 s on the 100 MB trace.
+- Output on the owner's trace: `.maestro/playbooks/Working/w18/trace-0-baseline.md`. **Matches §0.1**: phases 956 /
+  7 021 / 8 312 / 6 860 ms = **23 149 ms** wall; pool CPU (job slices) **106.3 s**; Tight raise **49.1 %** of busy
+  pool samples, planCampaign 47.5 % (JS 29.2, wasm 12.7, unnamed 5.5), GC 2.7 %. Idle share: upgrades 15.2 %,
+  captains 22.7 %, other 23.9 %; generate ran all 5 jobs on 1 track.
+- Differences from the hand analysis: the tool finds **7** pool samplers (utid 58 also runs `timedJob`; the plan used
+  6), so busy samples are 508 k, not 503 k. Table 2 gives shares only: the median sample gap is ~170 µs and V8
+  samples unevenly, so samples × gap (86 s) under-reads the slice CPU (106 s). Table 4 is rooted at the main
+  thread's `(root)`: `(program)` 47.8 %, as in §0.4.
