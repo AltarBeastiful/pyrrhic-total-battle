@@ -19,6 +19,7 @@ import {
   runSearch,
   runStack,
 } from './jobs';
+import { DEEP_PROFILING, reportTiming, timedJob } from './jobTiming';
 import { errorPayload, isCalcRequestMessage } from './protocol';
 import type { CalcRequestMessage, CalcResponseMessage } from './protocol';
 import type { SearchProgress } from '@/engine/types';
@@ -34,8 +35,13 @@ const ctx = self as unknown as DedicatedWorkerGlobalScope;
  * refused — this worker runs no job at all and answers each one with a `kernel-unavailable` error, rather
  * than the TypeScript it used to fall back on silently. Jobs wait for this to settle, in order.
  */
+const kernelBegan = DEEP_PROFILING ? performance.now() : 0;
 const kernelReady: Promise<string | null> = loadKernel(kernelUrl).then(
-  () => null,
+  () => {
+    // The compile is real work the pool pays once per worker; the profiling run reports it as `boot`.
+    if (DEEP_PROFILING) reportTiming('boot', kernelBegan);
+    return null;
+  },
   (error: unknown) => errorPayload(error).message,
 );
 
@@ -57,7 +63,15 @@ ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
   // Every job waits for the kernel to settle (at once after the first); the order of the jobs is kept.
   void kernelReady.then((unavailable) => {
     if (unavailable === null) {
-      run(message);
+      // Timed only in a dev or `VITE_PROFILING=1` build (`jobTiming.ts`); the test is at the call so a
+      // production build, where it is `false`, drops the timing code altogether.
+      if (DEEP_PROFILING) {
+        timedJob(message.kind, () => {
+          run(message);
+        });
+      } else {
+        run(message);
+      }
       return;
     }
     cancelled.delete(message.id);

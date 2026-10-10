@@ -87,14 +87,15 @@ beforeEach(() => {
   // jsdom's console has neither; a browser's has both.
   Object.assign(console, { profile: vi.fn(), profileEnd: vi.fn() });
   vi.spyOn(console, 'table').mockImplementation(() => undefined);
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
 });
 
 test('one profile wraps Generate and the passes there is something to ask, in order', async () => {
   const { profileEverything } = await import('./profileRun');
-  const times = await profileEverything();
+  const report = await profileEverything();
   // No typed upgrade and no captain owned: those two phases are skipped, not run empty.
   expect(calls).toEqual(['generate', 'advice:default', 'other']);
-  expect(times.map((one) => one.phase)).toEqual(['generate', 'upgrades-default', 'other']);
+  expect(report.phases.map((one) => one.phase)).toEqual(['generate', 'upgrades-default', 'other']);
   // eslint-disable-next-line no-console -- the spies are the assertion
   expect(console.profile).toHaveBeenCalledTimes(1);
   // eslint-disable-next-line no-console -- the spies are the assertion
