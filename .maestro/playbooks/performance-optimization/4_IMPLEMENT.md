@@ -34,9 +34,9 @@ Implement ONE performance fix from `/home/remi/projects/pyrrhic-totalbattle/.mae
 ## Implementation Checklist
 
 Before implementing, verify:
-- [ ] The status is exactly `PENDING` (not `PENDING - MANUAL REVIEW`)
-- [ ] The fix is clearly specified with before/after code
-- [ ] No other changes are required (no dependencies)
+- The status is exactly `PENDING` (not `PENDING - MANUAL REVIEW`)
+- The fix is clearly specified with before/after code
+- No other changes are required (no dependencies)
 
 ## Output Format
 
@@ -71,9 +71,9 @@ Append to `/home/remi/projects/pyrrhic-totalbattle/.maestro/playbooks/PERF_LOG_p
 [Brief description of expected performance improvement]
 
 ### Verification
-- [ ] Code compiles/parses without errors
-- [ ] No linter errors introduced
-- [ ] Change matches the proposed fix from LOOP_00001_PLAN.md
+- Code compiles/parses without errors
+- No linter errors introduced
+- Change matches the proposed fix from LOOP_00001_PLAN.md
 ```
 
 ## Guidelines
