@@ -59,15 +59,25 @@ export function loadKernelModule(): WebAssembly.Module {
 
 /**
  * **The profile kernel** (W18 census, `kernel/asconfig.json`'s `profile` target), compiled to a temporary file so
- * `kernel/build/kernel.wasm` stays the release build every other test file loads.
+ * `kernel/build/kernel.wasm` stays the release build every other test file loads. `killCheck` adds `KILL_CHECK`
+ * on top of the target: every battle's kill order is held to a fresh sort, and a difference traps (W18 P2.1).
  */
-export function loadProfileKernelModule(): WebAssembly.Module {
+export function loadProfileKernelModule(options: { killCheck?: boolean } = {}): WebAssembly.Module {
   const dir = mkdtempSync(join(tmpdir(), 'pyrrhic-census-'));
   try {
     const out = join(dir, 'kernel.wasm');
     execFileSync(
       join(ROOT, 'node_modules/.bin/asc'),
-      ['kernel/assembly/index.ts', '--config', 'kernel/asconfig.json', '--target', 'profile', '-o', out],
+      [
+        'kernel/assembly/index.ts',
+        '--config',
+        'kernel/asconfig.json',
+        '--target',
+        'profile',
+        '-o',
+        out,
+        ...(options.killCheck === true ? ['--use', 'KILL_CHECK=1'] : []),
+      ],
       { cwd: ROOT, stdio: 'inherit' },
     );
     return compileKernel(readFileSync(out));

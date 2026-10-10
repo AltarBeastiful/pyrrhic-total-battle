@@ -188,6 +188,11 @@ export function setTable(ptr: usize): void {
   dead = heap.alloc(n);
   acted = heap.alloc(n);
   topTier = heap.alloc(<usize>FAMILIES << 3);
+  if (isDefined(KILL_CHECK)) {
+    kcType = heap.alloc(n << 2);
+    kcCount = heap.alloc(n << 3);
+    kcHp = heap.alloc(n << 3);
+  }
 }
 
 // ---- the battle ------------------------------------------------------------------------------------------
@@ -1924,8 +1929,41 @@ function raiseScore(countsPtr: usize): f64 {
     cKillOrdersScore += 1.0;
   }
   const k = killOrderBy(types, rRows, countsPtr, T_ORDER);
+  if (isDefined(KILL_CHECK)) killOrderCheck(k, countsPtr);
   attackOrderOf(k);
   return journalDamage(k, false);
+}
+
+/**
+ * **The kill order's shadow check** (W18 P2.1, written before the incremental kill order it guards): the
+ * roster the raise is about to fight — `k` and `stackType`/`stackCount`/`stackHp` — against a fresh
+ * `killOrderBy` of the same counts into scratch, bit for bit, trapping on any difference. Compiled only when
+ * `KILL_CHECK` is defined, which `tests/kernel/kill-order.test.ts` adds on top of the profile target; the
+ * release and profile builds carry none of it.
+ */
+let kcType: usize = 0; // i32 scratch: the fresh kill order's types,
+let kcCount: usize = 0; // f64: counts,
+let kcHp: usize = 0; // f64: and total HP
+let cKillChecks: f64 = 0; // checks the last `raise()` passed (census slot 6)
+
+function killOrderCheck(k: i32, countsPtr: usize): void {
+  const liveType = stackType;
+  const liveCount = stackCount;
+  const liveHp = stackHp;
+  stackType = kcType;
+  stackCount = kcCount;
+  stackHp = kcHp;
+  const fresh = killOrderBy(types, rRows, countsPtr, T_ORDER);
+  stackType = liveType;
+  stackCount = liveCount;
+  stackHp = liveHp;
+  if (fresh != k) unreachable();
+  for (let i = 0; i < k; i += 1) {
+    if (i32At(kcType, i) != i32At(stackType, i)) unreachable();
+    if (load<i64>(kcCount + ((<usize>i) << 3)) != load<i64>(stackCount + ((<usize>i) << 3))) unreachable();
+    if (load<i64>(kcHp + ((<usize>i) << 3)) != load<i64>(stackHp + ((<usize>i) << 3))) unreachable();
+  }
+  cKillChecks += 1.0;
 }
 
 /** `burnOf`: Σ chunks(n) over the **authority** stacks — a property of the counts and not of the fight. */
@@ -2320,9 +2358,10 @@ export function raiseProbe(samples: i32, seed: f64): f64 {
 }
 
 /**
- * **The census of the last `raise()`** (profile build only), written to `outPtr` (`f64 × 6`): `[battles,
- * ratings, ratingsOnHit, killOrdersScore, killOrdersRating, killOrdersSizer]`. Answers 1 when the build
- * counts, 0 (and writes nothing) when it does not — the release build.
+ * **The census of the last `raise()`** (profile build only), written to `outPtr` (`f64 × 7`): `[battles,
+ * ratings, ratingsOnHit, killOrdersScore, killOrdersRating, killOrdersSizer, killOrderChecks]`, the last −1
+ * when the build has no `KILL_CHECK`. Answers 1 when the build counts, 0 (and writes nothing) when it does
+ * not — the release build.
  */
 export function raiseCensus(outPtr: usize): i32 {
   if (!isDefined(CENSUS)) return 0;
@@ -2332,6 +2371,7 @@ export function raiseCensus(outPtr: usize): i32 {
   store<f64>(outPtr + 24, cKillOrdersScore);
   store<f64>(outPtr + 32, cKillOrdersRating);
   store<f64>(outPtr + 40, cKillOrdersSizer);
+  store<f64>(outPtr + 48, isDefined(KILL_CHECK) ? cKillChecks : -1.0);
   return 1;
 }
 
@@ -2548,6 +2588,7 @@ export function raise(
     cKillOrdersScore = 0.0;
     cKillOrdersRating = 0.0;
   }
+  if (isDefined(KILL_CHECK)) cKillChecks = 0.0;
   rHow = 0;
   rSpace = 0.0;
   rN = 0;

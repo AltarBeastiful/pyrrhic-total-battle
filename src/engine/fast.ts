@@ -239,6 +239,8 @@ export interface RaiseCensus {
   killOrdersScore: number;
   /** `killOrderBy` calls from the ratings and the plan's own bill (candidate K2: a miss pays both). */
   killOrdersRating: number;
+  /** Kill orders the shadow check held to a fresh `killOrderBy` (W18 P2.1); only on a `KILL_CHECK` build. */
+  killOrderChecks?: number;
 }
 
 /** What a raise position is asked over: the march on screen, in full (`ExactRaiseInput`'s own two fields). */

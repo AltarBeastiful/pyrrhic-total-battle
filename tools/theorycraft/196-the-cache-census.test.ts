@@ -217,7 +217,7 @@ function instanceCounter(): { sweep: () => void; total: () => number; restore: (
       }
       let at = scratch.get(raw);
       if (at === undefined) {
-        at = raw.alloc(48);
+        at = raw.alloc(56);
         scratch.set(raw, at);
       }
       if (raw.raiseCensus(at) !== 1) continue;
@@ -425,8 +425,10 @@ function report(run: RunCensus): { markdown: string; rows: Verdictable[] } {
   const fit = fitCosts(tight);
   const tightMs = sum(tight.map((call) => call.ms));
   const raiseMs = sum(run.raises.map((call) => call.ms));
-  const c = (key: keyof RaiseCensus, calls: readonly RaiseCall[] = run.raises): number =>
-    sum(calls.map((call) => call.census[key]));
+  const c = (
+    key: Exclude<keyof RaiseCensus, 'killOrderChecks'>,
+    calls: readonly RaiseCall[] = run.raises,
+  ): number => sum(calls.map((call) => call.census[key]));
   const ratings = c('ratings', tight);
   const onHit = c('ratingsOnHit', tight);
   const ratingMsFit = fit.c;
@@ -553,7 +555,8 @@ function report(run: RunCensus): { markdown: string; rows: Verdictable[] } {
   lines.push('### The raise searches\n');
   lines.push('| | all | Tight |');
   lines.push('|---|---:|---:|');
-  const both = (key: keyof RaiseCensus): string => `${f(c(key))} | ${f(c(key, tight))}`;
+  const both = (key: Exclude<keyof RaiseCensus, 'killOrderChecks'>): string =>
+    `${f(c(key))} | ${f(c(key, tight))}`;
   lines.push(`| calls | ${String(run.raises.length)} | ${String(tight.length)} |`);
   lines.push(
     `| scored (vectors asked) | ${f(sum(run.raises.map((r) => r.scored)))} | ${f(sum(tight.map((r) => r.scored)))} |`,

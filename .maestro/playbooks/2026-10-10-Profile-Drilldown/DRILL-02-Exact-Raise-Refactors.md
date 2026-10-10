@@ -22,7 +22,7 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   script. Every golden, the advisor golden and `scored` must be identical. Record `pnpm kernel:bench` and the raise
   part of experiment 184's timing before and after in Notes. Commit: `Kernel: one kill order per rated battle (W18 K2)`.
 
-- [ ] Write a shadow check for an incremental kill order, before writing the incremental code. In
+- [x] Write a shadow check for an incremental kill order, before writing the incremental code. In
   `kernel/assembly/index.ts`, add a profile-target-only function `killOrderCheck` that compares the current
   `stackType`/`stackCount`/`stackHp` arrays and `k` with a fresh `killOrderBy` run into scratch buffers, and traps
   (`unreachable()`) on any difference. Add a test in `tests/kernel/raise-kernel.test.ts` (or a new
@@ -72,3 +72,25 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   trace's 49.1 % Tight share (vs 13.3 % in-process), K2 scales to ≈ 5.6 % and should be built then. That run has
   not been done (it is P0.4 / the owner's new trace in Manual Follow-Up), so the condition is not met yet.
 - No `pnpm kernel:bench` / experiment 184 figures recorded: nothing changed.
+
+### P2.1a the kill order's shadow check (2026-10-10)
+
+- **Kernel**: `killOrderCheck(k, countsPtr)` in `kernel/assembly/index.ts`, called from `raiseScore` right after
+  the kill order is built (one line, `if (isDefined(KILL_CHECK))`). It swaps the `stackType`/`stackCount`/`stackHp`
+  pointers to scratch (`kcType`/`kcCount`/`kcHp`, reserved in `setTable` only under `KILL_CHECK`), reruns
+  `killOrderBy` on the same counts, restores them, and traps (`unreachable()`) unless `k` and every entry match
+  **bit for bit** (counts and HP compared as `i64`). The checks passed go to census slot 6 (`raiseCensus` now
+  writes `f64 × 7`; −1 on a build without the check), surfaced as optional `RaiseCensus.killOrderChecks`
+  (`src/kernel/raise.ts` `CENSUS = 7`; experiment 196's scratch `alloc(48)` → `alloc(56)`).
+- **Flag**: `KILL_CHECK` is not in the profile target either, so `pnpm dev:profile` traces carry no check;
+  `loadProfileKernelModule({ killCheck: true })` (`tests/kernel/load.ts`) adds `--use KILL_CHECK=1` on top of the
+  profile target (asc appends CLI `use` to the target's). **Release wasm byte-identical to HEAD's** (`cmp` of a
+  HEAD-source build vs the new one), and the plain profile wat has no `killOrderCheck`.
+- **Test** `tests/kernel/kill-order.test.ts`, on request only (~5 min, both kernels over 184's corpus):
+  `KILL_CHECK=1 pnpm vitest run tests/kernel/kill-order.test.ts`. Skipped without the flag, and skipped when the
+  loaded kernel reports no check count. (1) every stop of every criteria army (184's `planCampaign` call), all five
+  `POSITIONS`, 312.5 s; (2) the exactness fixture's Generate bar (`runPlan` + `runPositions` per stop on the elite
+  request), 0.5 s. Each answer is also held to the release kernel's (`scored` included), and the check count must
+  be > 0. **Both pass** on the current code.
+- Gate: not the full script — the release wasm is byte-identical, so no reading can move; ran `pnpm typecheck`,
+  `pnpm lint`, prettier, `raise-census.test.ts` (pass).
