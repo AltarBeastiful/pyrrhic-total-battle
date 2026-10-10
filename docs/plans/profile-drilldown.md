@@ -180,6 +180,16 @@ goldens in `tests/golden/` byte-identical, `benchmark-latest.json` unchanged exc
 | step | before | after | commit |
 |---|---|---|---|
 | — | 23.1 s wall, 106 s pool CPU, 76 % pool efficiency | | |
+| K2 one kill order per rated battle (Drill 02) | census: 1.76 % of the timing fixture's CPU, under the 2 % bar | not built (`WON'T DO`; re-open if a profiler-free browser run confirms the trace's Tight share) | 3ca36be |
+| P2.1a kill-order shadow check (`KILL_CHECK` build only) | — | release wasm byte-identical; check passes on every scored vector of 184 + the exactness fixture's bar | 6385674 |
+| P2.1 incremental kill order in the raise | 184 raise sum 129.7 s; 196 timing fixture Tight raise 11,621 ms (13.30 % of 87.4 s); `killOrderBy` self 5,008 ms (cpu-prof) | 110.7 s (−14.6 %); 10,867 ms (−6.5 %, 12.90 % of 84.2 s); `killOrderBy` 3,800 ms + `raiseMove` 586 ms. Every count, golden and `scored` unchanged | e2c03f5 |
+| K6 sizer journals fused (Drill 02) | census: 0.13 % ceiling, under the 2 % bar | not built (`WON'T DO`) | 1ebb705 |
+
+Drill 02 re-measure (2026-10-10, experiment 196 rerun on HEAD 1ebb705, profile kernel, one lane): every census count
+identical to the committed report; exactness fixture 33.96 s → 33.45 s run CPU (raise 0.56 % of it, so noise),
+timing fixture 87.40 s → 84.21 s (−3.6 %, of which the Tight raise −0.75 s). No new owner trace yet, so `analyse.py`
+was not rerun; the trace figures in the first row still stand. Rerun report:
+`.maestro/playbooks/Working/w18/d02-196-the-cache-census.md` (the committed census stays the record).
 
 ## 4. Rough target
 

@@ -51,7 +51,7 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   is not clearly faster on `pnpm kernel:bench` (≥ 5 % on the sizer bench), revert and say so. Gate script.
   Commit: `Kernel: one walk for the sizer's two journals (W18 K6)`.
 
-- [ ] Re-measure this phase. Run experiment 196 again (release counters off, timings on) and
+- [x] Re-measure this phase. Run experiment 196 again (release counters off, timings on) and
   `tools/perf-trace/analyse.py` on a new trace if the owner has recorded one (see Manual Follow-Up). Add a row per
   committed step to the progress table in `docs/plans/profile-drilldown.md` §3 (before, after, commit).
   Commit the doc: `W18: Drill 02 measured`.
@@ -135,3 +135,14 @@ vectors scored, the same comparisons in the same order, and the same floating-po
 - Drill 01's verdict: **K6 WON'T DO** (0.13 % ceiling on both fixtures, under the 2 % refactor bar;
   `docs/plans/profile-drilldown.md` §5). K6 is sizer time, not raise time, so the trace's Tight share does not scale
   it and there is no re-open condition. Ticked with no code change, as the task says; no bench figures recorded.
+
+### Drill 02 measured (2026-10-10)
+
+- Experiment 196 rerun on HEAD 1ebb705 (`THEORY=1 pnpm vitest run tools/theorycraft/196-the-cache-census.test.ts`,
+  82 s, pass): every count identical to the committed census (battles, ratings, kill orders, JS census hits).
+  Timing fixture run CPU 87.40 s → 84.21 s, Tight raise 11,621 → 10,867 ms (−6.5 %); exactness fixture
+  33.96 → 33.45 s (raise 0.57 % of it, noise). Report kept in `.maestro/playbooks/Working/w18/d02-196-the-cache-census.md`;
+  the committed `tools/theorycraft/out/196-the-cache-census.md` was restored (it stays the census of record).
+- No new owner trace exists (only `chrome-202696-18048.pftrace.gz`), so `analyse.py` was not rerun — Manual
+  Follow-Up still open.
+- §3 of `docs/plans/profile-drilldown.md` has one row per Drill 02 step (K2, P2.1a, P2.1, K6) with before, after, commit.
