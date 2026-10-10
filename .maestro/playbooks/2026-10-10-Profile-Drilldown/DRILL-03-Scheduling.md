@@ -36,6 +36,7 @@ changes which rows a slow device shows).
   record the wall time of each pass before and after (experiment 190 `tools/theorycraft/190-the-pool.test.ts`
   measures the pool) in Notes. Commit: `Advisor: probes start while the baseline plans (W18 P1.2)`.
 
+<!-- MAESTRO:HITL reason="P1.3 is a trade: at a binding pass clock it changes which probes are cut. Review branch w18-p13-longest-first (Notes, P1.3); merge it and tick, or tick to drop it" -->
 - [ ] Longest jobs first. In `runAdvisor` and `runCaptainAdvice`, start the jobs in order of expected cost, longest
   first, while keeping the merge by probe index. Expected cost: the probe's time from the previous run of the same
   pass if known (kept in memory by probe id), else the plan input's size (stack types × leadership) as a proxy.
@@ -106,3 +107,30 @@ changes which rows a slow device shows).
 - **Gate** (`gate-20261011-*.log.summary`): kernel:build, typecheck, `pnpm test` 271 s, plan-benchmark 158 s,
   bench-diff none, 184 108 s all PASS. Lint FAILED only on a Drill 02 scratch file the linter picks up
   (`Working/w18/tmp/index.p21.ts`), renamed `.ts.txt`; `pnpm lint` then passes.
+
+### P1.3 longest probes first (2026-10-11) — a trade, left on branch `w18-p13-longest-first` (a1a6393)
+
+- **How** (on the branch only): new `src/worker/jobOrder.ts` (+ test): `longestFirst(costs)` (ties in order),
+  `expectedCosts(ids, times, proxy)`, `timeInto(job, id, times)`, `mapInOrder(pool, jobs, order)` (starts the jobs
+  in `order`, answers and `onSettled` indices back in the caller's order). `runAdvisor` keeps the baseline first
+  and starts the probes longest first; `runCaptainAdvice` does the same for its confirm trios. Expected cost =
+  each probe's own job time on the last pass (module-level map by probe id / trio key; a split probe is timed
+  without its wait for the baseline), used only when **every** probe of the pass has one (a time and a proxy are
+  not on one scale); else stack types × leadership of the probe's plan.
+- **Answers whenever nothing is cut: identical.** Advisor golden on three lanes passes; browser hash
+  `a9612b9ca0a9` (no clock and 5 s clock) equals before.
+- **Wall** (6 workers, timing fixture, min of 2): upgrades 3 827 → 3 911 ms, captains 5 147 → 5 097, other
+  3 159 → 2 782 ms (−12 %); all four 13 808 → 13 542 ms. Small: the advisor's probes cost about the same
+  (experiment 190 had said so), the other pass's sweeps and campaign probes do not.
+- **Which probes a binding clock cuts** (`passes.mjs` with `BUDGET`, 6 workers; outputs
+  `Working/w18/d03-p13-cut-{before,after}.txt`):
+  - **5 s clock**: nothing cut, before or after (the passes take 2.8–3.9 s on this desktop).
+  - **2 s clock** (a device ~2.5× slower than this one at 20 s): ~50 probes cut either way, and **the set
+    changes**. Before, the tail of list order is cut (upgrades: `health:dragon` … `housing:*`; other: the
+    leadership sweeps, the three next-tier probes, merc, horizon, silver). After, the longest start first, so
+    the cut tail is the cheapest probes' instead: other now cuts the **dominance** sweeps and keeps the
+    three next-tier probes and `horizon:5`; upgrades keeps `strength:ranged`, `housing:leadership`; confirm
+    keeps `aydae,ingrid,minamoto` and cuts `aydae,carter,ingrid` instead. Same count (48/53 → 47/52), different
+    rows on a slow device.
+- **Owner's call**: merge `w18-p13-longest-first` (a slow phone shows a different set of rows, ~12 % faster
+  "other" pass on desktop), or drop it. Not on main.
