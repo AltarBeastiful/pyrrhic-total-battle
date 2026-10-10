@@ -19,7 +19,7 @@ import { usePricedRaise } from './positionsSearch';
 import { raisedCounts, troopFloor } from './raise';
 import type { RaiseModes } from './raise';
 import { useRaiseSearch } from './raiseSearch';
-import { leftOutOf, marchRows, poolRows } from './rows';
+import { leftOutOf, marchRows, poolRows, type PillOrder } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { setupFingerprint, useRunStore } from './runStore';
 
@@ -75,7 +75,11 @@ export interface MarchView {
   leftOut: LeftOutUnit[];
 }
 
-export function useMarch(): MarchView {
+/**
+ * `pillOrder` is how the March's pills are ordered (Critical 04): a view preference held by the one
+ * component that draws the switch, never by a store, so every other caller gets the battle selection order.
+ */
+export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
   const snapshot = useResultStore((state) => state.last);
   // Manual edits live in the result store so they survive a reload with the result they belong to.
   const counts = useResultStore((state) => state.manualCounts);
@@ -249,6 +253,7 @@ export function useMarch(): MarchView {
         units: snapshot.request.units,
         totals: snapshot.request.totals,
         keepEmpty: editing,
+        order: pillOrder,
       }),
       leftOut: leftOutOf(snapshot.request.units, army, leftOutByPlayer, editing),
     };
@@ -265,6 +270,7 @@ export function useMarch(): MarchView {
     trades,
     exhaustiveCounts,
     waiting,
+    pillOrder,
   ]);
 
   /**

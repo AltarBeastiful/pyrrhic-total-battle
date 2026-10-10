@@ -18,7 +18,7 @@
  * resolved on 2026-09-13): it is not drawn in the page a second time, so the answer is written once
  * and the page never has to travel to it.
  */
-import { Alert, Group, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
+import { Alert, Group, SegmentedControl, Stack, Text, Title, VisuallyHidden } from '@mantine/core';
 import { useId, useMemo, useState } from 'react';
 
 import type { Pool, UnitDef } from '@/engine/types';
@@ -42,6 +42,7 @@ import {
 import { MarchGenerateButton } from './MarchGenerateButton';
 import { MarchLeftOut, MarchPills, MarchResized, MarchShelterNote } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
+import type { PillOrder } from './rows';
 import { useRunStore } from './runStore';
 import { UnitSheet } from './UnitSheet';
 import { useMarch } from './useMarch';
@@ -53,8 +54,17 @@ const POOL_LABELS: Record<Pool, string> = {
   dominance: 'dominance',
 };
 
+/** The two orders the pills can be drawn in (Critical 04): the game's battle selection, or the kill order. */
+const PILL_ORDERS: { value: PillOrder; label: string }[] = [
+  { value: 'battle', label: 'Battle' },
+  { value: 'health', label: 'Health' },
+];
+
 export function MarchSection() {
-  const march = useMarch();
+  // How the pills are ordered (owner, 2026-10-10: *"order troops as they appear in the battle selection. and
+  // allow to switch to order by health"*). A view preference: this component's own state, never the profile.
+  const [pillOrder, setPillOrder] = useState<PillOrder>('battle');
+  const march = useMarch(pillOrder);
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   // The recap travels with Generate: in the pane's header on a desktop, here on one column.
@@ -67,6 +77,7 @@ export function MarchSection() {
   // A March edit has been computed, so the pane has a line to write under the pills (S-104).
   const resized = useRunStore((state) => state.resize !== null);
   const titleId = useId();
+  const pillOrderId = useId();
 
   const { snapshot, result, summary } = march;
   // A raise is on: the hired stacks are standing as high as the troops still shelter them (S-142).
@@ -178,6 +189,20 @@ export function MarchSection() {
           data-stale={String(march.stale)}
           className={march.stale ? classes.outOfDate : undefined}
         >
+          <Group gap={8} wrap="nowrap" align="center">
+            <Text span size="xs" c="dimmed" id={pillOrderId}>
+              Order the stacks by
+            </Text>
+            <SegmentedControl
+              size="xs"
+              aria-labelledby={pillOrderId}
+              value={pillOrder}
+              data={PILL_ORDERS}
+              onChange={(next) => {
+                setPillOrder(next === 'health' ? 'health' : 'battle');
+              }}
+            />
+          </Group>
           <MarchPills
             rows={march.pools}
             editing={editing}

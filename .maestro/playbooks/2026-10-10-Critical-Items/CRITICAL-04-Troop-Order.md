@@ -26,7 +26,7 @@ Source: `todos.md`, entry "[UI] order troops as they appear in the battle select
 
 - [x] Use that order in the Troops card. In `src/ui/sections/troops/rows.ts`, make the display order come from the table; keep `sortForDisplay` only as the fallback for a unit id missing from the table, and say so in a comment. Do not change the group order in `rows.ts` line 18 unless task 1 showed the battle selection uses a different group order.
 
-- [ ] Add the order-by-health switch to the battle summary. In `src/ui/sections/bonuses/TotalsFigures.tsx` (or the component that renders the battle summary, found with `grep -rn "summary.health" src/ui`), add a control that switches the troop list order between "battle selection" (default) and "health". The health order sorts by the unit's health, lowest first. The switch is a UI preference: keep it in local component state, not in the saved profile, and do not add a new store field. Use an accessible name on the control and a label that says what the list is ordered by. Follow `docs/design-rules.md` (rule 26 for wording; no em dashes in new user-visible text).
+- [x] Add the order-by-health switch to the battle summary. In `src/ui/sections/bonuses/TotalsFigures.tsx` (or the component that renders the battle summary, found with `grep -rn "summary.health" src/ui`), add a control that switches the troop list order between "battle selection" (default) and "health". The health order sorts by the unit's health, lowest first. The switch is a UI preference: keep it in local component state, not in the saved profile, and do not add a new store field. Use an accessible name on the control and a label that says what the list is ordered by. Follow `docs/design-rules.md` (rule 26 for wording; no em dashes in new user-visible text).
 
 - [ ] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, and `pnpm test -- src/ui/sections/troops src/ui/sections/bonuses`. Then `pnpm test`. All must be green. Record counts in Notes. If the e2e suite covers the troops card, run `pnpm build` first (see the memory note: a running preview serves a stale build), then `pnpm e2e`.
 
@@ -112,3 +112,12 @@ Applied where Task 2 pointed (the March pills), not in `src/ui/sections/troops/r
 - `march.test.tsx`: "every stack has a pill, in kill order" became "... in battle selection order", pool by pool.
 - `vitest run src/ui/sections/march`: 324 pass, 2 red, both only for the missing "Battle" / "Health" radios (Task 5). The order assertion of "the pills follow the battle selection order by default" now passes. Typecheck, eslint and prettier clean on the changed files.
 
+
+### Task 5 (2026-10-10, pyrrhic): the Battle | Health switch on the March pane
+
+Placed where Task 2 pointed (the March pills), not in `TotalsFigures.tsx`.
+
+- `src/ui/sections/march/MarchSection.tsx`: `useState<PillOrder>('battle')`, and above the pills a dimmed label "Order the stacks by" with a stock `SegmentedControl` ("Battle" | "Health") labelled by it (`aria-labelledby`). Local component state only: no store field, nothing in the profile.
+- `src/ui/sections/march/useMarch.ts`: `useMarch(pillOrder = 'battle')` passes the order to `poolRows` (and into the memo deps). The other five callers keep the default.
+- "Health" is the kill order (most health first), per the Task 2 decision, not "lowest first" as this task's text said. Owner to confirm (Manual Follow-Up).
+- `vitest run src/ui/sections/march`: 20 files, 326/326 pass (both Critical 04 tests green). Typecheck, eslint and prettier clean on the changed files.
