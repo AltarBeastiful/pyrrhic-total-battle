@@ -166,7 +166,8 @@ describe('runCaptainUpgrades', () => {
         expect(job.against?.baseline).toEqual(lead.stops);
       }
       expect(result.rows.find((row) => row.id === 'captain:bench:star')?.planned).toEqual(['t2']);
-      expect(sent[1]?.plan.request.totals).toEqual(withArmy(300));
+      // One queue (W18 P1.4): the kept trio's plan goes out after its screen, whatever its place among the sends.
+      expect(sent.map((job) => job.plan.request.totals)).toContainEqual(withArmy(300));
     },
     TIMEOUT,
   );

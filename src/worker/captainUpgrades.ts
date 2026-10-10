@@ -11,7 +11,8 @@
  *     has them screened against the lead trio, each ask one pool job (`client.captains`), and the first
  *     `confirm` of the re-priced ranking kept. An upgrade with `confirm` trios or fewer (a captain in the lead
  *     trio: the lead trio alone) skips the screen.
- *  2. **Plan** — each kept trio planned in full as one pool job and read against the lead trio's bar.
+ *  2. **Plan** — each kept trio planned in full as one pool job and read against the lead trio's bar. The screens
+ *     and the plans are one queue (W18 P1.4): an ask's plans wait on its own screen, not on every screen.
  *
  * An upgrade's row takes, stop by stop, the best of its trios (the first on a tie), so it is never below 0 and
  * never reads as a loss. Results are merged by position, never by arrival, and no job carries a clock, so one
@@ -139,98 +140,116 @@ export async function runCaptainUpgrades(
     done += 1;
     onProgress?.(done, total);
   };
-  const began = performance.now();
   const leadTrio: ScreenTrio = { key: lead.key, totals: lead.totals };
 
-  // 1. Screen the asks with more trios than will be planned.
+  // One queue (W18 P1.4): every screen first, then every ask's plans. An ask with no screen knows its trios now;
+  // a screened ask's plans wait on its own screen only, so the pool plans while the other screens run. The
+  // screens must come first: a plan job waits on a screen a lane has already started.
+  const shortlists: (Promise<string[] | null> | null)[] = asks.map(() => null);
   const screenJobs: PoolJob<CaptainScreenAnswer>[] = [];
   const screenOf: number[] = [];
   asks.forEach((ask, index) => {
     if (!screened[index]) return;
+    let keep!: (keys: string[] | null) => void;
+    let drop!: (error: unknown) => void;
+    const shortlist = new Promise<string[] | null>((resolve, reject) => {
+      keep = resolve;
+      drop = reject;
+    });
+    shortlist.catch(() => undefined);
+    shortlists[index] = shortlist;
     screenOf.push(index);
-    screenJobs.push((client, jobSignal) =>
-      client.captains(
-        {
-          request: settings.request,
-          trios: [leadTrio, ...ask.trios],
-          currentKey: lead.key,
-          stops: lead.stops.map((stop) => ({ pick: stop.pick, counts: stop.counts })),
-          rates,
-        },
-        jobSignal,
-      ),
-    );
+    screenJobs.push(async (client, jobSignal) => {
+      try {
+        const answer = await client.captains(
+          {
+            request: settings.request,
+            trios: [leadTrio, ...ask.trios],
+            currentKey: lead.key,
+            stops: lead.stops.map((stop) => ({ pick: stop.pick, counts: stop.counts })),
+            rates,
+          },
+          jobSignal,
+        );
+        // A screen cancelled inside its worker answers part of the trios: not a ranking to take a shortlist from.
+        keep(
+          answer.screens.length < ask.trios.length + 1
+            ? null
+            : shortlistTrios(answer.screens, lead.key, confirm, 'repriced'),
+        );
+        return answer;
+      } catch (error) {
+        // Cut: its plans are cut with it. Failed: they have nothing to plan.
+        if (jobSignal.aborted) drop(error);
+        else keep(null);
+        throw error;
+      }
+    });
   });
-  const screenOutcomes =
-    screenJobs.length > 0 ? await pool.map(screenJobs, { budgetMs, signal, onSettled }) : [];
 
-  // The keys each ask plans, in the order they are tried; an ask whose screen did not finish plans none.
-  const keysOf: string[][] = asks.map((ask, index) =>
-    screened[index] ? [] : ask.trios.slice(0, confirm).map((trio) => trio.key),
-  );
+  // Each ask's plans, one job a trio it may keep, read against the lead trio's bar.
+  const planOf: number[] = [];
+  const planJobs: PoolJob<{ key: string; answer: ProbeAnswer } | null>[] = [];
+  asks.forEach((ask, index) => {
+    const probe = probeInfo({
+      id: ask.id,
+      family: 'captains',
+      label: ask.label,
+      ...(ask.cost === undefined ? {} : { cost: ask.cost }),
+    });
+    const known = screened[index] ? null : ask.trios.slice(0, confirm).map((trio) => trio.key);
+    const count = known?.length ?? confirm;
+    for (let at = 0; at < count; at += 1) {
+      planOf.push(index);
+      planJobs.push(async (client, jobSignal) => {
+        const key = known === null ? (await shortlists[index])?.[at] : known[at];
+        if (key === undefined) return null;
+        const trio = ask.trios.find((candidate) => candidate.key === key);
+        if (trio === undefined) throw new Error(`The kept trio ${key} is not among the trios of ${ask.id}.`);
+        const answer = await client.probe(
+          {
+            plan: { ...settings, request: { ...settings.request, totals: trio.totals } },
+            against: { probe, baseline: lead.stops, rates },
+          },
+          jobSignal,
+        );
+        return { key, answer };
+      });
+    }
+  });
+
+  const jobs: PoolJob<CaptainScreenAnswer | { key: string; answer: ProbeAnswer } | null>[] = [
+    ...screenJobs,
+    ...planJobs,
+  ];
+  const outcomes = jobs.length > 0 ? await pool.map(jobs, { budgetMs, signal, onSettled }) : [];
+  const screenOutcomes = outcomes.slice(0, screenJobs.length) as PoolOutcome<CaptainScreenAnswer>[];
+  const planOutcomes = outcomes.slice(screenJobs.length) as PoolOutcome<{
+    key: string;
+    answer: ProbeAnswer;
+  } | null>[];
+
   const cut = new Set<string>();
   const failed: CaptainUpgradeFailure[] = [];
   screenOutcomes.forEach((outcome, at) => {
     const index = screenOf[at];
     const ask = index === undefined ? undefined : asks[index];
     if (index === undefined || ask === undefined) return;
-    if (outcome.kind === 'error') {
-      failed.push({ id: ask.id, message: outcome.message });
-      return;
-    }
-    // A screen cancelled inside its worker answers part of the trios: not a ranking to take a shortlist from.
-    if (outcome.kind === 'cut' || outcome.value.screens.length < ask.trios.length + 1) {
-      cut.add(ask.id);
-      return;
-    }
-    keysOf[index] = shortlistTrios(outcome.value.screens, lead.key, confirm, 'repriced');
+    if (outcome.kind === 'error') failed.push({ id: ask.id, message: outcome.message });
+    else if (outcome.kind === 'cut' || outcome.value.screens.length < ask.trios.length + 1) cut.add(ask.id);
   });
-
-  // 2. Plan the kept trios in full, each read against the lead trio's bar.
-  const planJobs: PoolJob<ProbeAnswer>[] = [];
-  const planOf: { index: number; key: string }[] = [];
-  asks.forEach((ask, index) => {
-    for (const key of keysOf[index] ?? []) {
-      const trio = ask.trios.find((candidate) => candidate.key === key);
-      if (trio === undefined) throw new Error(`The kept trio ${key} is not among the trios of ${ask.id}.`);
-      planOf.push({ index, key });
-      planJobs.push((client, jobSignal) =>
-        client.probe(
-          {
-            plan: { ...settings, request: { ...settings.request, totals: trio.totals } },
-            against: {
-              probe: probeInfo({
-                id: ask.id,
-                family: 'captains',
-                label: ask.label,
-                ...(ask.cost === undefined ? {} : { cost: ask.cost }),
-              }),
-              baseline: lead.stops,
-              rates,
-            },
-          },
-          jobSignal,
-        ),
-      );
-    }
-  });
-  const left = budgetMs - (performance.now() - began);
-  const planOutcomes: PoolOutcome<ProbeAnswer>[] =
-    left > 0 && planJobs.length > 0
-      ? await pool.map(planJobs, { budgetMs: left, signal, onSettled })
-      : planJobs.map(() => ({ kind: 'cut' }));
 
   const finished: { keys: string[]; rows: AdvisorRow[] }[] = asks.map(() => ({ keys: [], rows: [] }));
   planOutcomes.forEach((outcome, at) => {
-    const planned = planOf[at];
-    const ask = planned === undefined ? undefined : asks[planned.index];
-    if (planned === undefined || ask === undefined) return;
+    const index = planOf[at];
+    const ask = index === undefined ? undefined : asks[index];
+    if (index === undefined || ask === undefined) return;
     if (outcome.kind === 'error') failed.push({ id: ask.id, message: outcome.message });
     // A job cancelled inside its worker answers with no row: it did not finish, which is what a cut is.
-    else if (outcome.kind === 'cut' || outcome.value.row === null) cut.add(ask.id);
-    else {
-      finished[planned.index]?.keys.push(planned.key);
-      finished[planned.index]?.rows.push(outcome.value.row);
+    else if (outcome.kind === 'cut' || outcome.value?.answer.row === null) cut.add(ask.id);
+    else if (outcome.value !== null) {
+      finished[index]?.keys.push(outcome.value.key);
+      finished[index]?.rows.push(outcome.value.answer.row);
     }
   });
 
