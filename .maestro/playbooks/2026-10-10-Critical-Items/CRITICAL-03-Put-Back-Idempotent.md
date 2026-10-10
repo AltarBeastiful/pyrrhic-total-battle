@@ -28,7 +28,7 @@ Source: `todos.md`, entry "putback shoudld follow tight rules but keeping the tr
 
 - [x] Make the put-back follow Tight in the kernel. In `kernel/assembly` (and `src/kernel/raise.ts` for the TypeScript mirror), make the put-back sizing call the same Tight ranking as the raise position, without the put-back pass changing the set of other types. Keep the `resizeMarch` contract: it still takes `putBack`, but the sizer must size only the put-back type under Tight. The change must not touch the benchmark rating: check `tools/theorycraft/out/benchmark-latest.md` before and after, and the benchmark rating must not regress for any scenario (feedback rule: a scenario must never get worse).
 
-- [ ] Make take-out and put-back a pair. Ensure `removeFromFormation` and `putBackInMarch` are inverses over the march: the counts after take-out then put-back equal the counts before take-out, and the reverse. If the existing put-back pass in `src/engine/plan.ts` replaces the stop instead of sizing one type, make the UI path (`resizeMarch`) skip that replacement when the edit is a `putBack` on the current march. Add a comment that states this rule where it is enforced.
+- [x] Make take-out and put-back a pair. Ensure `removeFromFormation` and `putBackInMarch` are inverses over the march: the counts after take-out then put-back equal the counts before take-out, and the reverse. If the existing put-back pass in `src/engine/plan.ts` replaces the stop instead of sizing one type, make the UI path (`resizeMarch`) skip that replacement when the edit is a `putBack` on the current march. Add a comment that states this rule where it is enforced.
 
 - [ ] Make the put-back sentence match the new behaviour. In `src/ui/sections/march/picks.ts` `putBackWords`, the sentence must describe the change to the march that actually happened. No new wording rules: follow design rules 15 and 26 in `docs/design-rules.md`.
 
@@ -112,3 +112,10 @@ On the instruction "the sizer must size only the put-back type under Tight": exp
 
 Task 4 (take-out and put-back as a pair) is now green in the test as well; it remains for the next run to add the rule comment in the UI path and check the reverse direction on a non-stop march.
 
+
+
+### Task 4: take-out and put-back as a pair (2026-10-10)
+
+No engine change was needed after task 3. The pair holds because `planStopAgain` (`src/ui/sections/march/generate.ts`) always re-sizes **the stop** over the set that is in, never the march the last press left, so the answer is a function of the set alone, and the stop's own set answers with the stop (`sameSetAsStop`). The plan's put-back pass (`putBackOn`, which can swap a stop at Generate time) is never run on an edit; the only put-back rule an edit sees is the `CAMPAIGN.putBack` fill trade inside `resizeMarchOver`, itself a function of the set. Nothing had to be skipped. The rule is now stated in a comment on `planStopAgain`, where it is enforced.
+
+Reverse direction off the stop: a new test in `putBack.test.ts` takes SP3 and SW1 out of the sweet spot, then for each puts it back and takes it out again, and checks the counts equal the step before. `pnpm vitest run src/ui/sections/march/putBack.test.ts`: **46/46 green** on both paths. Typecheck, eslint, prettier clean on the two changed files.

@@ -194,5 +194,15 @@ describe.skipIf(profile === null).each(PATHS)(
       await press(removeFromFormation, SW1);
       expect(await press(putBackInMarch, SW1)).toEqual(before);
     }, 600_000);
+
+    test('a pair off the stop: both types out, each put back and taken out again, restores the step before', async () => {
+      await generate('sweet-spot');
+      await press(removeFromFormation, SP3);
+      const out = await press(removeFromFormation, SW1);
+      for (const unitId of [SP3, SW1]) {
+        await press(putBackInMarch, unitId);
+        expect(await press(removeFromFormation, unitId), `${unitId} back then out`).toEqual(out);
+      }
+    }, 600_000);
   },
 );

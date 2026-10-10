@@ -322,6 +322,17 @@ export async function resizeMarch(
  * complaining about a no-op: taking a troop type out gives its leadership back to the stacks that are left,
  * which raises the troop floor, which shelters **more** hired units than the stop was standing under it, and
  * a ceiling at the stop's count throws every one of them away. See `capOf` below for what replaces it.
+ *
+ * **A take-out and a put-back are a pair** (Critical 03, backlog B-10; the owner, 2026-10-10: *"put back and
+ * keep away a troop or contrary should end up idempotent"*). The rule is kept here, and only here: the answer
+ * is always the re-size of **the stop** over the types that are in, never of the march the last press left
+ * on screen, so it is a function of the set alone, and the stop's own set answers with the stop itself
+ * (`resizeMarchOver`, `sameSetAsStop`). Take a type out and put it back, or put it back and take it out, and
+ * the set is the one before, so the counts are the ones before; a put-back of a type already in asks for the
+ * same set and changes nothing. Nothing may chain an edit on the previous answer, and the plan's put-back pass
+ * (`putBackOn`, which may swap a stop for another at Generate time) is never run on an edit: the only
+ * put-back rule an edit sees is `CAMPAIGN.putBack`'s fill trade below, itself a function of the set
+ * (`src/ui/sections/march/putBack.test.ts`).
  */
 async function planStopAgain(
   request: StackRequest,
