@@ -11,7 +11,7 @@ vectors scored, the same comparisons in the same order, and the same floating-po
 
 ## Tasks
 
-- [ ] Share the kill order between the score and the rating (census item K2). Read Drill 01's Notes for K2's verdict;
+- [x] Share the kill order between the score and the rating (census item K2). Read Drill 01's Notes for K2's verdict;
   if it is `WON'T DO`, tick this task with a note and do nothing. Otherwise: in `kernel/assembly/index.ts`, on a memo
   miss under `rRated`, `raisePointSlots` (around line 2110) and its twin around line 2256 call `raiseScore(rWork)`
   (which runs `killOrderBy(types, rRows, rWork, T_ORDER)`) then `raiseRating(value)` (which runs the same
@@ -62,3 +62,13 @@ vectors scored, the same comparisons in the same order, and the same floating-po
   first one, so the next phase can quote it.
 
 ## Notes
+
+### K2 one kill order per rated battle (2026-10-10) — skipped, census says WON'T DO
+
+- Drill 01's verdict: **K2 WON'T DO** (in-process saving 0.09 % on the exactness fixture, 1.76 % on the timing
+  fixture, under the 2 % refactor bar; `docs/plans/profile-drilldown.md` §5). Ticked with no code change, as the
+  task says.
+- The verdict carries a re-open condition: if a browser run of a worker job with no profiler attached confirms the
+  trace's 49.1 % Tight share (vs 13.3 % in-process), K2 scales to ≈ 5.6 % and should be built then. That run has
+  not been done (it is P0.4 / the owner's new trace in Manual Follow-Up), so the condition is not met yet.
+- No `pnpm kernel:bench` / experiment 184 figures recorded: nothing changed.
