@@ -1,6 +1,6 @@
 /**
- * **Generate, then every question the advisor can ask, under one `console.profile`** (owner, 2026-10-10: *"a
- * generate with all questions options … a simple profiling in devtools"*). Loaded on the press of the profiling
+ * **Generate, then every question the advisor can ask, measured** (owner, 2026-10-10: *"a generate with all
+ * questions options … a simple profiling in devtools"*). Loaded on the press of the profiling
  * button (`ProfileAllButton.tsx`), never otherwise.
  *
  * The phases run **one after the other**, not together, so each reads as its own stretch of the profile and of
@@ -12,8 +12,8 @@
  *  4. `captains`: the trio screen and the star / level pass, when a captain is owned;
  *  5. `other`: the dominance and leadership sweeps, next tier, merc stock, horizon, silver.
  *
- * `console.profile` records the **page's thread**; the pool's workers are their own threads, so their time shows
- * in a Performance-panel recording and as the wall time each phase's `await` spends, not inside the profile.
+ * There is no `console.profile` any more (owner, 2026-10-10: Chrome's own saved profile was empty and buggy; it
+ * only sees the page's thread, which idles while the pool works). The report is the tables and the trace file.
  * **The workers and the kernel**: each worker times its jobs and reports them (`worker/jobTiming.ts`, dev or
  * `VITE_PROFILING=1` builds only), so the second table adds the workers' CPU per job kind and how many were busy.
  * Run `pnpm dev:profile` to have the kernel's functions named in the Performance panel (`kernel/asconfig.json`).
@@ -47,8 +47,6 @@ export interface ProfileReport {
   /** The workers' jobs summed per phase and kind (empty unless the build has the deep profiling in it). */
   jobs: JobRow[];
 }
-
-const LABEL = 'Pyrrhic: generate and every question';
 
 async function phase(name: string, spans: PhaseSpan[], work: () => Promise<void>): Promise<void> {
   const began = performance.now();
@@ -93,7 +91,7 @@ async function runPhases(spans: PhaseSpan[]): Promise<void> {
 }
 
 /**
- * Run everything once and print the report: the page's `console.profile`, then a table of the phases and one of
+ * Run everything once and print the report: a table of the phases and one of
  * the workers' jobs. A phase with nothing to ask is skipped. The jobs table is empty in a build without the deep
  * profiling (`DEEP_PROFILING`, `jobTiming.ts`), and the table says so.
  */
@@ -101,13 +99,9 @@ export async function profileEverything(): Promise<ProfileReport> {
   const spans: PhaseSpan[] = [];
   const collector = collectJobTimings();
   let heard: JobTiming[];
-  // eslint-disable-next-line no-console -- the profile is the point
-  console.profile(LABEL);
   try {
     await runPhases(spans);
   } finally {
-    // eslint-disable-next-line no-console -- the profile is the point
-    console.profileEnd(LABEL);
     // The last worker messages can land a moment after the last `await`.
     await new Promise((resolve) => setTimeout(resolve, 150));
     heard = collector.stop();
@@ -125,7 +119,7 @@ export async function profileEverything(): Promise<ProfileReport> {
     );
   }
   // The trace: every worker's jobs and the page's phases, as a file for the Performance panel (Load profile…)
-  // or https://ui.perfetto.dev. `console.profile` alone cannot show the pool, which is not on the page's thread.
+  // or https://ui.perfetto.dev. the pool is not on the page's thread.
   const trace = traceOf(spans, heard);
   if (DEEP_PROFILING) downloadTrace(trace);
   // Also on `window`, so the numbers can be read back from the console or a script.

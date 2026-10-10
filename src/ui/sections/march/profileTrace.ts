@@ -1,7 +1,7 @@
 /**
  * **The profiling run as a trace file** (owner, 2026-10-10: *"chrome asks to load the profile, it loads but it's
- * empty … maybe downloading the profile could solve the issue"*). `console.profile` records the page's own
- * thread, which is idle while the pool computes, so what DevTools saved had nothing in it. This writes what the
+ * empty … maybe downloading the profile could solve the issue"*). `console.profile` (removed since) records only
+ * the page's own thread, which is idle while the pool computes, so what DevTools saved had nothing in it. This writes what the
  * run did know — the phases on the page and every job on every worker — as Chrome trace events, which the
  * Performance panel's "Load profile…" and https://ui.perfetto.dev both open: one track per worker, one for the
  * phases, a bar per job.

@@ -1,5 +1,5 @@
 /**
- * **The profiling run's button**: Generate plus every advisor question, under one `console.profile` (see
+ * **The profiling run's button**: Generate plus every advisor question, measured (see
  * `profileRun.ts`). Drawn only where `profilingEnabled()` says so (`pnpm dev`, or a build the owner switched it
  * on in), as a quiet text button under the Generate in the March sheet; the answer is in the browser console.
  */

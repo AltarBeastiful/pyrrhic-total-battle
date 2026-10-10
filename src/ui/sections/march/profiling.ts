@@ -1,6 +1,6 @@
 /**
  * **Is the profiling run on offer?** (owner, 2026-10-10: a Generate that also asks every question, wrapped in
- * `console.profile`, guarded out of production and overridable when he wants it there.)
+ * a measured run, guarded out of production and overridable when he wants it there.)
  *
  * On in `pnpm dev`; off in a production build and in the unit tests. Switched on in a build by any one of:
  *

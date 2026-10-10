@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 /**
  * The profiling run's gate (`profiling.ts`) and its order (`profileRun.ts`): off in the tests and in a
- * production build, on by `?profiling=1`, by the stored flag or by `VITE_PROFILING`, and one `console.profile`
- * wraps Generate and the advisor's passes in the order the card offers them.
+ * production build, on by `?profiling=1`, by the stored flag or by `VITE_PROFILING`, and Generate runs before the
+ * advisor's passes, in the order the card offers them (with no Chrome profile started).
  */
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -84,20 +84,16 @@ vi.mock('@/state/store', () => ({
 
 beforeEach(() => {
   calls.length = 0;
-  // jsdom's console has neither; a browser's has both.
-  Object.assign(console, { profile: vi.fn(), profileEnd: vi.fn() });
   vi.spyOn(console, 'table').mockImplementation(() => undefined);
   vi.spyOn(console, 'info').mockImplementation(() => undefined);
 });
 
-test('one profile wraps Generate and the passes there is something to ask, in order', async () => {
+test('Generate and the passes there is something to ask, in order', async () => {
   const { profileEverything } = await import('./profileRun');
   const report = await profileEverything();
   // No typed upgrade and no captain owned: those two phases are skipped, not run empty.
   expect(calls).toEqual(['generate', 'advice:default', 'other']);
   expect(report.phases.map((one) => one.phase)).toEqual(['generate', 'upgrades-default', 'other']);
-  // eslint-disable-next-line no-console -- the spies are the assertion
-  expect(console.profile).toHaveBeenCalledTimes(1);
-  // eslint-disable-next-line no-console -- the spies are the assertion
-  expect(console.profileEnd).toHaveBeenCalledTimes(1);
+  // No Chrome profile is started: it only sees the idle page thread (owner, 2026-10-10).
+  expect('profile' in console).toBe(false);
 });
