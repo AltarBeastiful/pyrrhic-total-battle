@@ -63,7 +63,7 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   `pnpm vitest run tools/theorycraft/184-the-positions-on-the-kernel.test.ts`. Write the full gate as a script,
   `.maestro/playbooks/Working/w18/gate.sh`, that every later phase runs. Restore the two benchmark files afterwards.
 
-- [ ] Add census counters to the kernel's raise search, profile build only. In `kernel/assembly/index.ts`, beside
+- [x] Add census counters to the kernel's raise search, profile build only. In `kernel/assembly/index.ts`, beside
   `rScored`, count per raise call: `rBattles` (calls to `raiseScore`), `rRatings` (calls to `raiseRating`),
   `rRatingsOnHit` (calls to `raiseRating` from a memo hit, lines around `raisePointSlots` and the
   `raisePointWhole` twin near line 2256), `rKillOrders` (calls to `killOrderBy`, split by caller: score, rating,
@@ -174,3 +174,31 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   camp sweet-spot Tight 24,423,790 committed vs 23,620,690 now). That is a stale artefact, not a W18 move — the test
   holds the kernel to its golden and passes. The gate snapshots both files and puts them back; do not re-base them.
 - The advisor golden alone: 27.1 s, passes (it runs inside `pnpm test`; it is not skipped).
+
+### P0.2a kernel census counters (2026-10-10)
+
+- **Flag**: the `profile` target in `kernel/asconfig.json` now has `"use": ["abort=", "CENSUS=1"]`; the kernel guards
+  every count with `if (isDefined(CENSUS))`, a compile-time fold. The release wat differs from HEAD's by **one
+  function only**: the new export `raiseCensus` returning 0 (plus type renumbering) — no global, no instruction in
+  any hot path. Profile wasm 37 KB (debug info), release 29 KB.
+- **Counters** (`kernel/assembly/index.ts`, beside `rScored`, reset at the top of each `raise()`): `cBattles`
+  (`raiseScore` calls), `cRatings` (`raiseRating`), `cRatingsOnHit` (the two memo-hit paths: `raisePointSlots` and
+  `raisePointWhole`), `cKillOrdersScore`, `cKillOrdersRating` (includes the plan's own bill read once before a
+  `Tight` search), `cKillOrdersSizer` (`sizerScore` + `buildStacks`; instance total, **never reset** — the sizer runs
+  in the plan instance, not in a raise instance, so experiment 196 reads it as a difference). Every count includes
+  the plan's own march (one battle, one bill) rated before a `Tight` search.
+- **Read**: new export `raiseCensus(ptr)` → `f64 × 6` `[battles, ratings, ratingsOnHit, killOrdersScore,
+  killOrdersRating, killOrdersSizer]`, 1 on profile / 0 on release. The pinned stats block `[how, space, scored,
+  answered]` is untouched. `src/kernel/raise.ts` adds `census?: RaiseCensus` (type in `src/engine/fast.ts`) to the
+  `RaiseAnswer` only when the build counts; a release answer has no `census` key.
+- **Test** `tests/kernel/raise-census.test.ts` (5 s; compiles the profile target to a temp dir): on every criteria
+  army × `v2`/`safe`/`tight`, the profile kernel's answer equals the release one exactly (counts, how, space,
+  scored), release has no census, `killOrdersScore == battles`, `ratingsOnHit ≤ ratings`, Tight
+  `killOrdersRating == ratings + 1`, non-Tight rates nothing, and Tight memo hits occur.
+- **`pnpm kernel:bench`** (battleMany, not raise; release): before 1 047 337 / 369 048 battles/s, after
+  1 076 158 / 353 278 — noise (the release code paths are identical).
+- **Gate** (`gate-20261010-193850.log.summary`), all **PASS**: kernel:build 2 s, typecheck 1 s, lint 20 s,
+  `pnpm test` 298 s, plan-benchmark 164 s, bench-diff vs HEAD no difference, 184 143 s. Goldens unmoved. Note: a
+  gate run killed by a tool timeout (10 min) did **not** restore `benchmark-latest.*` (the trap did not fire);
+  restored by hand from `benchmark-pre-w18.*` — always run the gate with `nohup … &`.
+

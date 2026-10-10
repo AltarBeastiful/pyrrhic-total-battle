@@ -746,6 +746,7 @@ function killOrderBy(n: i32, rowsPtr: usize, countsPtr: usize, rankSlot: i32): i
  * order (total HP descending, the Elite rank on a tie), the two journal totals — into `zAvg` and `zMin`.
  */
 function sizerScore(n: i32): void {
+  if (isDefined(CENSUS)) cKillOrdersSizer += 1.0;
   const k = killOrderBy(n, zRow, zCount, zRankSlot);
   attackOrderOf(k);
   const minimum = journalDamage(k, false);
@@ -939,6 +940,7 @@ export function sizeStacks(
   }
 
   // `buildStacks`: the live slots, total HP descending, the rank on a tie.
+  if (isDefined(CENSUS)) cKillOrdersSizer += 1.0;
   const k = killOrderBy(n, zRow, zCount, rankSlot);
   for (let s = 0; s < k; s += 1) {
     store<i32>(outRowsPtr + ((<usize>s) << 2), i32At(stackType, s));
@@ -1752,6 +1754,20 @@ let rAuth: i32 = 0; // the mercenaries' position, and whether its pool is walked
 let rDom: i32 = 0; // the monsters'
 
 /**
+ * **The census** (W18 P0.2, experiment 196): what one `raise()` spent its time on — the battles, the ratings
+ * (and how many of those a memo hit asked for), the kill orders by caller. Profile build only: the `profile`
+ * target defines `CENSUS` (`kernel/asconfig.json`), and without it `isDefined(CENSUS)` folds every count
+ * away, so the release wasm is the one it was. Read by `raiseCensus`; the stats block `raise` writes is untouched.
+ */
+let cBattles: f64 = 0; // calls to `raiseScore`
+let cRatings: f64 = 0; // calls to `raiseRating`
+let cRatingsOnHit: f64 = 0; // of those, the ones a memo hit asked for
+let cKillOrdersScore: f64 = 0; // `killOrderBy` from `raiseScore`
+let cKillOrdersRating: f64 = 0; // `killOrderBy` from `raiseRating` and the plan's own bill
+/** `killOrderBy` from the sizer (`sizerScore`, `buildStacks`): the instance's own total, never reset. */
+let cKillOrdersSizer: f64 = 0;
+
+/**
  * **The score memo** (W16 B, `BoxMemo` of `src/engine/exact.ts`): one `f64` a vector of the box, indexed by
  * the vector read in mixed radix over the slots, `NaN` where no battle has been fought. It is the instance's,
  * and an instance is one base march (`src/kernel/raise.ts`), so the three exhaustive positions of a march read
@@ -1903,6 +1919,10 @@ function raiseMemo(): void {
  * `attackOrder` builds it, and the enemy-first journal's total.
  */
 function raiseScore(countsPtr: usize): f64 {
+  if (isDefined(CENSUS)) {
+    cBattles += 1.0;
+    cKillOrdersScore += 1.0;
+  }
   const k = killOrderBy(types, rRows, countsPtr, T_ORDER);
   attackOrderOf(k);
   return journalDamage(k, false);
@@ -1926,6 +1946,10 @@ function raiseBurn(countsPtr: usize): f64 {
  * march's kill order (`recoveryOf`) and the authority chunks (`raiseBurn`). The seed rates exactly 0.
  */
 function raiseRating(damage: f64): f64 {
+  if (isDefined(CENSUS)) {
+    cRatings += 1.0;
+    cKillOrdersRating += 1.0;
+  }
   const k = killOrderBy(types, rRows, rWork, T_ORDER);
   recoveryOf(k);
   let score = rAsDamage > 0 ? ((damage - rAsDamage) / rAsDamage) * 100.0 : 0.0;
@@ -2123,6 +2147,7 @@ function raisePointSlots(memo: usize): f64 {
           const t = i32At(rSlots, s);
           store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
         }
+        if (isDefined(CENSUS)) cRatingsOnHit += 1.0;
         return raiseRating(known);
       }
       return known;
@@ -2253,7 +2278,10 @@ function raisePointWhole(memo: usize): f64 {
   const slot = memo + ((<usize>at) << 3);
   if (memo != 0) {
     const known = load<f64>(slot);
-    if (known == known) return rRated && known > -Infinity ? raiseRating(known) : known;
+    if (known == known) {
+      if (isDefined(CENSUS) && rRated && known > -Infinity) cRatingsOnHit += 1.0;
+      return rRated && known > -Infinity ? raiseRating(known) : known;
+    }
   }
   let value: f64 = -Infinity;
   if (!(raiseUsed(rWork, 1) > header(H_HOUSING_AUTHORITY) || raiseUsed(rWork, 2) > header(H_HOUSING_DOMINANCE)))
@@ -2289,6 +2317,22 @@ export function raiseProbe(samples: i32, seed: f64): f64 {
   memory.copy(rPoint, rClimb, (<usize>types) << 3);
   raiseResync();
   return differ;
+}
+
+/**
+ * **The census of the last `raise()`** (profile build only), written to `outPtr` (`f64 × 6`): `[battles,
+ * ratings, ratingsOnHit, killOrdersScore, killOrdersRating, killOrdersSizer]`. Answers 1 when the build
+ * counts, 0 (and writes nothing) when it does not — the release build.
+ */
+export function raiseCensus(outPtr: usize): i32 {
+  if (!isDefined(CENSUS)) return 0;
+  store<f64>(outPtr, cBattles);
+  store<f64>(outPtr + 8, cRatings);
+  store<f64>(outPtr + 16, cRatingsOnHit);
+  store<f64>(outPtr + 24, cKillOrdersScore);
+  store<f64>(outPtr + 32, cKillOrdersRating);
+  store<f64>(outPtr + 40, cKillOrdersSizer);
+  return 1;
 }
 
 /** **Test only**: whether the last `raise()` took the slots-only point (1) or the whole-roster one (0). */
@@ -2497,6 +2541,13 @@ export function raise(
   rAuth = authMode;
   rDom = domMode;
   rScored = 0.0;
+  if (isDefined(CENSUS)) {
+    cBattles = 0.0;
+    cRatings = 0.0;
+    cRatingsOnHit = 0.0;
+    cKillOrdersScore = 0.0;
+    cKillOrdersRating = 0.0;
+  }
   rHow = 0;
   rSpace = 0.0;
   rN = 0;
@@ -2544,6 +2595,7 @@ export function raise(
     rRated = rAuth == RAISE_TIGHT;
     if (rRated) {
       rAsDamage = raiseScore(rBase);
+      if (isDefined(CENSUS)) cKillOrdersRating += 1.0;
       recoveryOf(killOrderBy(types, rRows, rBase, T_ORDER));
       rAsSilver = bSilver;
       rAsGold = bGold;

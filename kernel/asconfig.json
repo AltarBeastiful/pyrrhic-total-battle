@@ -18,7 +18,7 @@
       "noAssert": true,
       "runtime": "stub",
       "exportRuntime": false,
-      "use": ["abort="],
+      "use": ["abort=", "CENSUS=1"],
       "debug": true
     }
   },

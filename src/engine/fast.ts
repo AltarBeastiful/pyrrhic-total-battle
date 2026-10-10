@@ -220,6 +220,25 @@ export interface RaiseAnswer {
   space: number;
   /** How many vectors the search's scorer was asked about, `0` when no search ran. */
   scored: number;
+  /** W18 census of the call (profile kernel build only; absent on release): see `RaiseCensus`. */
+  census?: RaiseCensus;
+}
+
+/**
+ * **What one raise call spent its time on** (W18 P0.2, experiment 196), read from the profile kernel's
+ * `raiseCensus`. Every count includes the plan's own march, rated once before a `Tight` search starts.
+ */
+export interface RaiseCensus {
+  /** Battles fought (`raiseScore` calls): memo misses that passed the housing, plus the plan's own march. */
+  battles: number;
+  /** Ratings taken (`raiseRating` calls), `Tight` only. */
+  ratings: number;
+  /** Of `ratings`, the ones a memo hit asked for (candidate K1). */
+  ratingsOnHit: number;
+  /** `killOrderBy` calls from the battles. */
+  killOrdersScore: number;
+  /** `killOrderBy` calls from the ratings and the plan's own bill (candidate K2: a miss pays both). */
+  killOrdersRating: number;
 }
 
 /** What a raise position is asked over: the march on screen, in full (`ExactRaiseInput`'s own two fields). */

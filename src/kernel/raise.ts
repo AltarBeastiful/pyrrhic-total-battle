@@ -45,6 +45,8 @@ interface RaiseExports {
   raiseProbe(samples: number, seed: number): number;
   raiseFastPath(): number;
   raiseForceWhole(on: number): void;
+  /** W18 census: the last `raise()`'s counts into `f64 × CENSUS`; 1 on the profile build, 0 on release. */
+  raiseCensus(outPtr: number): number;
 }
 
 /**
@@ -61,6 +63,8 @@ export interface RaiseKernelProbe extends RaiseKernel {
 }
 
 const STATS = 4;
+/** `raiseCensus`' block: `[battles, ratings, ratingsOnHit, killOrdersScore, killOrdersRating, killOrdersSizer]`. */
+const CENSUS = 6;
 
 /**
  * **The box search's defaults** (S-143b): a box of at most `walkCap` vectors is walked whole (the optimum);
@@ -104,6 +108,7 @@ interface Bound {
   capsPtr: number;
   outPtr: number;
   statsPtr: number;
+  censusPtr: number;
   buffer: ArrayBuffer | null;
   baseView: Float64Array;
   capsView: Float64Array;
@@ -173,6 +178,7 @@ export function createRaiseKernelProbe(
       capsPtr: raw.alloc(8 * n),
       outPtr: raw.alloc(8 * n),
       statsPtr: raw.alloc(8 * STATS),
+      censusPtr: raw.alloc(8 * CENSUS),
       buffer: null,
       baseView: new Float64Array(0),
       capsView: new Float64Array(0),
@@ -229,12 +235,24 @@ export function createRaiseKernelProbe(
       for (let row = 0; row < bound.types; row += 1) {
         counts[bound.ids[row] as string] = bound.outView[row] as number;
       }
-      return {
+      const answer: RaiseAnswer = {
         counts,
         how: how === 1 ? 'walked' : how === 2 ? 'searched' : null,
         space: how === 0 ? 0 : (bound.statsView[1] as number),
         scored: how === 0 ? 0 : (bound.statsView[2] as number),
       };
+      // The census (W18): only the profile build counts, so a release answer carries no `census` at all.
+      if (bound.raw.raiseCensus(bound.censusPtr) === 1) {
+        const c = new Float64Array(bound.raw.memory.buffer, bound.censusPtr, CENSUS);
+        answer.census = {
+          battles: c[0] as number,
+          ratings: c[1] as number,
+          ratingsOnHit: c[2] as number,
+          killOrdersScore: c[3] as number,
+          killOrdersRating: c[4] as number,
+        };
+      }
+      return answer;
     },
   };
 }
