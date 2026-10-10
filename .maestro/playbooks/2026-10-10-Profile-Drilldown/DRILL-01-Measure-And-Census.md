@@ -1,0 +1,119 @@
+# Drill 01: Make the drill-down repeatable, pin the answers, count the cache hits
+
+Playbook: `2026-10-10-Profile-Drilldown` (W18). Agent: pyrrhic. Project: `/home/remi/projects/pyrrhic-totalbattle`.
+Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured figures from the owner's trace).
+
+## The rules of the whole playbook
+
+- **Nothing moves but the clock.** Every plan, stop, position row, advisor row, `scored` count and benchmark figure
+  must stay byte-identical. A change that moves any reading is a *trade*: stop, write it in Notes, and leave it for
+  the owner. Never re-base a pin or a golden.
+- **No cache without a census.** A cache is only built after this phase has counted, on real data, how often it
+  would be hit and what each hit saves. Refactors that keep the answers exact may come before that.
+- `scored` (the raise search's "vectors asked" counter) is pinned in `tests/golden/raise*.json`. New counters are
+  added beside it; it is never changed.
+- Do not stage `tools/theorycraft/out/benchmark-latest.*` unless a task says so, `todos.md`,
+  `.maestro/playbooks/performance-optimization/`, or any `pyrrhic-my-account-*.json` at the repo root (personal data).
+- Scratch output goes to `.maestro/playbooks/Working/w18/`.
+
+## The two fixtures
+
+- **Exactness fixture** (committed): the owner's export `tests/fixtures/pyrrhic-my-account-2026-09-17 (2).json`, read by
+  `ownerProfile()` in `tests/engine/plan-scenarios.ts`. Experiments 190 to 195 run the advisor on it in-process
+  (`createInlineClient` from `src/worker/client.ts`, `createCalcPool` from `src/worker/pool.ts`; see
+  `tools/theorycraft/194-the-other-questions.test.ts` for the pattern).
+- **Timing fixture** (the account the owner profiled, not committed): `pyrrhic-my-account-2026-10-07.json` at the repo
+  root. Read it only when present; never copy it into the tree.
+
+## Tasks
+
+- [ ] Commit the trace analysis as a tool. Create `tools/perf-trace/analyse.py` (Python 3, standard library plus the
+  `perfetto` and `pandas` packages) that takes a `.pftrace` or `.pftrace.gz` path and prints four Markdown tables:
+  (1) the `pyrrhic:*` phase slices (wall ms) with the `job:*` slices inside each (count, CPU sum, min/avg/max, how
+  many tracks were busy, idle share = 1 − CPU / (wall × tracks)); (2) pool-worker CPU from
+  `cpu_profile_stack_sample` on the threads whose samples contain `timedJob`, split by whether the stack contains
+  `positionTrades` (Tight raise), `planCampaign`, else other, and within each by leaf kind (`kernel/` wasm, JS,
+  unnamed, `(garbage collector)`); (3) an inclusive-time call tree under `runProbe`, depth 7, frames ≥ 1 %;
+  (4) the same for the main thread (the `CrRendererMain` sampler, the thread whose samples contain
+  `performWorkUntilDeadline`). Inclusive time walks `stack_profile_callsite.parent_id`. Use
+  `perfetto.trace_processor.TraceProcessor`; if `~/.local/share/perfetto/prebuilts/trace_processor_shell-*`
+  exists, pass it as `bin_path`. Add `tools/perf-trace/README.md` (how to install into a venv, how to run, what each
+  table means). Run it on `/home/remi/Downloads/chrome-202696-18048.pftrace.gz` if that file exists and save the
+  output as `.maestro/playbooks/Working/w18/trace-0-baseline.md`; check the totals match §0.1 of the plan
+  (23.1 s wall, about 106 s pool CPU, Tight raise about 49 % of pool CPU). Commit: `Add the perf-trace analysis tool (W18 P0.1)`.
+
+- [ ] Pin the advisor's answers before anything moves. Write `tests/kernel/advisor-golden.test.ts`, in the style of
+  `tests/kernel/golden-capture.test.ts` (with `CAPTURE=1` it writes, otherwise it compares). It runs, in-process on
+  the exactness fixture (`ownerProfile()`; skip the test when it returns null): `runGenerate`'s plan for the
+  fixture's setup, then the three advisor passes the profiling run makes (`src/ui/sections/march/profileRun.ts`:
+  `computeAdvice('default')`, `computeCaptains`, `computeOther`), or their worker-level equivalents (`runAdvisor`,
+  `runCaptainAdvice`, `runCaptainUpgrades` in `src/worker/`) when the UI functions need the stores. Store every
+  row, every stop, every gain, every `ShownMarch` (counts, bill, deaths), the baseline bars and the `cut`/`failed`
+  lists in `tests/golden/advisor.json`. Pass no clock: assert every `cut` list is empty, so the answer cannot
+  depend on machine speed. Capture on HEAD, then run it twice in compare mode to prove it is deterministic.
+  Note its run time in Notes. Commit: `Pin the advisor passes on the owner fixture (W18 gate)`.
+
+- [ ] Record the gate's own baseline. Copy the working-tree `tools/theorycraft/out/benchmark-latest.json` and `.md`
+  to `.maestro/playbooks/Working/w18/benchmark-pre-w18.*` (they carry uncommitted changes of the owner; they must be
+  restored from this copy after every gate run). Then run, and record pass/fail and time of each in Notes:
+  `pnpm kernel:build`, `pnpm typecheck`, `pnpm lint`, `pnpm test` (it includes the golden-capture compare and the
+  new advisor golden), `pnpm vitest run tests/engine/plan-benchmark.test.ts` alone (then diff the regenerated
+  `benchmark-latest.json` against `git show HEAD:tools/theorycraft/out/benchmark-latest.json` ignoring timing and
+  stamp fields; save the diff command as `.maestro/playbooks/Working/w18/bench-diff.sh`), and
+  `pnpm vitest run tools/theorycraft/184-the-positions-on-the-kernel.test.ts`. Write the full gate as a script,
+  `.maestro/playbooks/Working/w18/gate.sh`, that every later phase runs. Restore the two benchmark files afterwards.
+
+- [ ] Add census counters to the kernel's raise search, profile build only. In `kernel/assembly/index.ts`, beside
+  `rScored`, count per raise call: `rBattles` (calls to `raiseScore`), `rRatings` (calls to `raiseRating`),
+  `rRatingsOnHit` (calls to `raiseRating` from a memo hit, lines around `raisePointSlots` and the
+  `raisePointWhole` twin near line 2256), `rKillOrders` (calls to `killOrderBy`, split by caller: score, rating,
+  sizer). Expose them through a new export (do not widen the pinned stats block read by `src/kernel/raise.ts`, or
+  widen it only at the end and keep `scored` at index 2). Gate them so the release build compiles them out or they
+  cost nothing (an AssemblyScript global flag set by the `profile` target in `kernel/asconfig.json`, or a cheap
+  always-on counter if a flag is not possible; measure `pnpm kernel:bench` before and after and record it).
+  Read them in `src/kernel/raise.ts` into an optional `census` field, absent in release. Run the gate script; the
+  goldens must not move.
+
+- [ ] Add census counters to the JS layer, profile build only (behind `DEEP_PROFILING` from `src/worker/jobTiming.ts`).
+  Count, per job: in `runProbe` (`src/worker/jobs.ts`) the `show` calls, the hits of its `read` map, and for every
+  `shownMarch` a key of (request fingerprint, `countsKey(counts)`) where the request fingerprint is a stable hash
+  of the elite request's JSON. Report the keys with the job's timing message so the page can see repeats **across
+  jobs** (same key priced in two probes, or in the baseline and a probe) and across passes. Also report the
+  baseline input key of each pass (`runAdvisor` in `src/worker/advisor.ts`, `runCaptainAdvice` in
+  `src/worker/captainAdvice.ts`): a stable hash of the `settings` sent to the baseline job. And in
+  `src/ui/sections/march/generate.ts`, the keys (request fingerprint, counts) of the Tight pricing `client.positions`
+  does for the bar, so overlap between Generate and the advisor baselines can be counted. No answer may change;
+  run the gate script.
+
+- [ ] Run the census as experiment 196. Create `tools/theorycraft/196-the-cache-census.test.ts` (style of experiment
+  194) that runs the same work as the profiling run on the exactness fixture, in-process, single worker, with the
+  kernel census on (build with `pnpm kernel:build:profile` first; rebuild release with `pnpm kernel:build` after).
+  If `pyrrhic-my-account-2026-10-07.json` is at the repo root, run it on that account too (path from an env var,
+  default that file; skip when absent) and report both. Write `tools/theorycraft/out/196-the-cache-census.md` with,
+  for each candidate cache below: entries stored, total hits, hits per entry (mean, median, max), the measured cost
+  of one miss (time the call it would replace, median of the real calls), and the **projected saving** = hits ×
+  miss cost, as ms and as a share of the run's total CPU. Candidates:
+  - **K1 rated value memo**: inside one raise search, a memo hit under `rRated` still calls `raiseRating`
+    (`killOrderBy` + `recoveryOf` + `raiseBurn`). Entries = distinct vectors rated; hits = `rRatingsOnHit`.
+  - **K2 shared kill order**: on a memo miss under `rRated`, `raiseScore` and `raiseRating` both call
+    `killOrderBy(types, rRows, …, T_ORDER)` on the same vector. Not a cache: count the duplicated calls.
+  - **K3 `shownMarch` across jobs**: same (request, counts) priced in more than one job on the same pass or run.
+  - **K4 baseline across passes**: identical baseline settings in the default, captains and other passes.
+  - **K5 Generate ↔ baseline**: Tight pricings Generate already did that the advisor baseline repeats.
+  - **K6 sizer's two journals**: in `sizerScore` (`kernel/assembly/index.ts` near line 748) and the twin near line
+    371, `journalDamage(k, false)` and `journalDamage(k, true)` share `killOrderBy` and `attackOrderOf`; count the
+    calls and time the shared part (a fusion candidate, not a cache).
+  Also report, for the raise searches of the run: scored, distinct vectors, battles, ratings, kill orders, and the
+  share of the rated searches' time spent in `raiseRating`. Run it, commit the test and the report:
+  `Experiment 196: the cache census (W18 P0.3)`.
+
+- [ ] Write the census verdict. In `docs/plans/profile-drilldown.md`, add a section `## 5. The census (experiment 196)`
+  with one row per candidate K1 to K6: projected saving, hits per entry, and a verdict by this rule, written in the
+  section: **a cache is built only when it is hit on average at least twice per stored entry and its projected saving
+  is at least 3 % of the run's CPU on either fixture**; a refactor (K2, K6) is done when it saves at least 2 %.
+  Everything else is `WON'T DO` with its figures. Copy the verdicts into Notes below, since later phases read them
+  from here. Commit: `W18: census verdicts`.
+
+## Notes
+
+(Each task writes its results here: figures, gate times, verdicts K1 to K6.)

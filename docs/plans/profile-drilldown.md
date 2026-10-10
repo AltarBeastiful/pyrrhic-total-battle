@@ -1,0 +1,192 @@
+# The profile drill-down: where "Profile everything" spends its 23 s (W18)
+
+**Status: proposed 2026-10-10.** Owner, 2026-10-10: *"I've done a trace using perfetto for the profile everything
+task, plan a full optimization drill down using this trace as a base"* — `chrome-202696-18048.pftrace.gz`
+(100 MB, 28.4 s, the owner's real account, `pnpm dev:profile`: dev React, kernel built with function names).
+
+**The rule is W16's: nothing moves but the clock** (`docs/plans/refactor-speed.md` §2). Every step leaves every
+plan, stop, position row, advisor row and benchmark figure **byte-identical**; a step that changes a reading is a
+trade and goes to the owner. Steps marked **trade** below are listed so the owner can decide on them, not to be
+done by default.
+
+## 0. What the trace says
+
+Read with Perfetto's trace processor (SQL over the trace's slices and its 2.49 M V8 CPU samples, ~140 µs apart, on
+every thread). Figures are from this one trace; §1 P0 makes them repeatable.
+
+### 0.1 The phases
+
+| phase | wall | pool jobs | worker CPU | workers busy |
+|---|---:|---|---:|---:|
+| generate | 956 ms | 1 plan (382 ms) + 4 positions (344 ms) | 0.73 s | 1 of 6 |
+| upgrades-default | 7 021 ms | 1 baseline + 29 probes, 575–1 895 ms each | 35.7 s | 91 % |
+| captains | 8 312 ms | 1 baseline + 7 screen + 29 probes | 38.5 s | 74 % |
+| other | 6 860 ms | 1 baseline + 19 probes, 641–2 918 ms each | 31.3 s | 73 % |
+| **total** | **23.1 s** | 80 probes | **106 s** | |
+
+With 6 workers, 106 s of CPU is **17.7 s** of wall at best: **5.4 s (23 %) is scheduling**, the rest is compute.
+A probe on this account costs 0.6–2.9 s (the seeded army of the first profiling run: ~96 ms), so the account
+size, not the probe count, is what makes the run long.
+
+### 0.2 Where a probe's CPU goes (all pool workers, idle removed)
+
+```mermaid
+pie showData
+  title Pool worker CPU (samples, 503 k)
+  "Tight raise, shownMarch → positionTrades (wasm)" : 247
+  "planCampaign, JS side" : 145
+  "planCampaign, kernel (wasm)" : 64
+  "planCampaign, unnamed builtins (alloc, Map, sort)" : 28
+  "garbage collector" : 13
+  "other" : 6
+```
+
+**The Tight raise is half of everything (49 %).** `runProbe` prices every stop *as the March shows it*
+(`shownMarch`, `src/worker/jobs.ts:126`): the probe's own stops (30 % of probe CPU) and the baseline's counts
+re-priced under the probe (`readProbe`, 20 %). Inside it, the battle loop of the raise search:
+
+| kernel function | share of the Tight raise | what it is |
+|---|---:|---|
+| `killOrderBy` | 34.5 % | rebuild + insertion-sort of the stacks, every battle |
+| `journalDamage` | 19.5 % | the journal, run twice (army first, not first) |
+| `recoveryOf` | 16.3 % | the recovery bill, every battle |
+| `attackOrderOf` | 12.8 % | the attack order, every battle |
+| `raisePairwise` / `raiseRating` / `raisePointSlots` | 14.8 % | the search itself |
+
+`raisePairwise` moves **two** slots per scored vector, yet `killOrderBy` rebuilds and re-sorts the whole roster
+each time.
+
+**`planCampaign` is the other half (48 %), and 60 % of it is still JS**: `evaluateVector` → `scorer` → `sizer`
+→ `sizedShape` → `sizedCounts` → `sizeStacks`, `gridOnKernel`, `finish`/`finaleFor`, `retypeRow` (5 %),
+`walkDown`/`sweep` (2 %). The unnamed frames (5.5 %) sit under `build`, `copyStacks`, `countsKey`,
+`prefixFielded`: allocation and string keys. GC is 2.7 %; the long *Sweeping* / *Incremental Mark-Compact*
+slices on the workers are concurrent spans, not CPU.
+
+### 0.3 Where the wall clock is lost (the 5.4 s)
+
+1. **A serial baseline at the head of every pass**: `runAdvisor` and `runCaptainAdvice` plan the baseline alone
+   (`pool.map([baselineJob])`, `src/worker/advisor.ts:89`, `captainAdvice.ts:156`), 575–642 ms with five
+   workers idle — three times, on what is likely the same baseline (same input, same settings).
+2. **A barrier inside the captains pass**: the trio screen waits for the first probes to drain, then the
+   upgrades pass starts its own fan-out (workers half idle from ~2.1 s to 3.3 s into the phase).
+3. **Tails**: jobs are dispatched in probe order; with 0.6–2.9 s jobs, the last one decides the phase
+   (`other`: a 2 918 ms probe started at 2.5 s).
+4. **Generate runs its four positions jobs one after another on one worker** (all on one track, 419–766 ms),
+   then ~190 ms of rendering.
+
+### 0.4 The main thread
+
+It is **100 % busy** for the whole run, but most of it is not the app's real cost:
+
+- 33 % is `performance.measure` called by React's **dev-only** Performance Tracks (`logComponentRender`), and
+  47.8 % is `(program)` that this trace cannot attribute (the `devtools.timeline` category was not recorded, so
+  there is no layout, style or paint).
+- What is real: **one full re-render per settled job**: `AdvisorCard` rendered 93 times, 28 600 Mantine `Box`
+  renders, `StopList`, `PassSection`, `CaptainSection` re-rendering on every probe answer.
+- It does not starve the pool: a worker's next job starts 2–8 ms after its last one ends.
+
+So the page has to be measured again on a production build before anything on it is chosen (P0).
+
+## 1. Steps
+
+Each step: the measurement, the change, the gate (§2), one commit. Order is by measured gain over risk.
+Estimates are marked as such; each step records its measured figure in §3 before the next starts.
+
+### P0. Make the drill-down repeatable (no engine change)
+
+- **P0.1** Commit the analysis as a tool, `tools/perf-trace/`: load a `.pftrace` with Perfetto's trace processor
+  and print the four tables of §0 (phases, per-job, pool CPU tree split Tight / plan / wasm / JS, main-thread
+  tree). Every later step quotes it before and after.
+- **P0.2** A second trace on a **production** build (`VITE_PROFILING=1 pnpm build && pnpm preview`, so no dev
+  React), with `devtools.timeline` on, to price the real main-thread cost.
+- **P0.3** Counters in the profile build only: battles fought per probe, distinct vectors, memo hits, and
+  whether the three baselines are byte-identical inputs (settles §0.3.1).
+- **P0.4** A fixed fixture for the run: the owner's account export as a test profile (the 2026-10-07 export in the
+  tree, if the owner agrees), so the before/after are the same account.
+
+### P1. Scheduling: the 5.4 s of idle workers (est. −3 to −4 s wall, readings unchanged)
+
+- **P1.1** **One baseline per run**: cache the baseline answer by its input key across the advisor, captains and
+  other passes (if P0.3 shows they are identical). Saves two ~600 ms serial heads.
+- **P1.2** **No serial head at all**: start the probes' `planCampaign` while the baseline is still running; a
+  probe only needs the baseline for `readProbe`. Either two-step jobs (plan + own stops first, the read once the
+  baseline lands) or the baseline sent to the workers as a message. The answer is the same; only the order of work
+  moves.
+- **P1.3** **Longest first**: dispatch probes by expected cost (last run's per-probe time, else the box size) to
+  cut the tails. Results are already merged by probe, never by arrival (`advisor.ts` header), so the list cannot
+  change.
+- **P1.4** **No barrier in the captains pass**: let the trio screen and the upgrades fan-out share one queue.
+- **P1.5** **Generate's positions in parallel** on the pool (four jobs, one track today).
+
+### P2. The Tight raise: half the CPU
+
+Corrected 2026-10-10 after reading the kernel (`kernel/assembly/index.ts`). The raise scores a vector with
+`raiseScore` (kill order, attack order, **one** journal) and, under Tight's rating, `raiseRating` (the kill order
+**again**, the recovery bill, the burn). A memo hit still calls `raiseRating`. Not every item in the first draft
+was exact:
+
+| item | exact? | why |
+|---|---|---|
+| P2.1 incremental kill order | yes, with care | ties (equal HP, equal rank) must keep row order; checked by a shadow sort on every vector |
+| P2.2 fused journals | **not in the raise** | the raise runs one journal; the two-journal walk is the sizer's (plan side), census item K6 |
+| P2.3 skip the recovery bill | **no, dropped** | the rating adds saved silver, gold and hired to the damage term, so a lower damage can rate higher |
+| K2 one kill order per rated battle | yes | `raiseScore` and `raiseRating` sort the same vector twice on a memo miss |
+| K1 memo the rated value | yes, if the census pays | the rating is fixed for one raise call; today a memo hit recomputes it |
+| P2.4 Tight pricings across jobs (K3) | yes, if the census pays | pure in (request, counts); hits vary with job placement, answers do not |
+| P2.5 warm start from the baseline | **no: trade** | the search may land elsewhere |
+
+Two more places where speed itself can move an answer, both outside P2: the pool's 20 s pass clock (which probes are
+cut depends on job order and speed, P1.3) and Generate's 8 s / 40 s clocks (only where they bind; none did here).
+
+**No cache without a census** (owner, 2026-10-10): experiment 196 counts hits per stored entry and the projected
+saving for K1 to K6 before any cache is built (rule in §5). Exact refactors (K2, P2.1) may come first.
+
+The steps are the playbook `.maestro/playbooks/2026-10-10-Profile-Drilldown/` (DRILL-01 to DRILL-06).
+
+### P3. `planCampaign`'s JS half (est. −10 to −20 % of pool CPU)
+
+- **P3.1** Re-profile `planCampaign` on this account alone (W16 A1's method) — the W16 breakdown is from the
+  benchmark armies, not this one.
+- **P3.2** Port the `evaluateVector` → `scorer` → `sizer` → `sizedShape` → `sizedCounts` chain to the kernel
+  (it calls `sizeStacks` on the kernel already; the JS around it is the cost), or batch it into one crossing.
+- **P3.3** Allocation: numeric keys instead of `countsKey` strings, reused buffers in `build` / `copyStacks` /
+  `prefixFielded`, no spread copies in hot loops.
+
+### P4. The page (sized by P0.2 first)
+
+- **P4.1** Progress renders at most once a frame (`requestAnimationFrame`-coalesced `onProgress`), the rows
+  once a pass settles, not once a probe.
+- **P4.2** Memoise the advisor rows (`AdvisorRowLine`, `StopList`, `MarchCost`) on their row identity so a new
+  answer re-renders one row, not the card.
+- **P4.3** Only if P0.2 shows style/layout cost: fewer Mantine `Box` wrappers in the rows.
+
+### P5. Measure again
+
+The same run on the same fixture, prod and dev traces, P0.1's tables side by side, the benchmark timing table, and
+an entry in the performance log (`.maestro/playbooks/PERF_LOG_pyrrhic_*.md`).
+
+## 2. The gate (every step)
+
+W16's gate (`docs/plans/refactor-speed.md` §2), kernel only since E3: build, typecheck, lint, kernel tests,
+goldens in `tests/golden/` byte-identical, `benchmark-latest.json` unchanged except timings, plus:
+
+- the advisor rows of the P0.4 fixture byte-identical (every pass, every stop, every gain);
+- P0.1's tables before and after, the step's own counter (battles, crossings, idle) quoted;
+- a step that changes any reading stops and goes to the owner as a trade
+  (the benchmark is non-regression: only the owner registers a new baseline, workers never re-base pins).
+
+## 3. Progress
+
+| step | before | after | commit |
+|---|---|---|---|
+| — | 23.1 s wall, 106 s pool CPU, 76 % pool efficiency | | |
+
+## 4. Rough target
+
+| | today | after P1 | after P1 + P2 + P3 (est.) |
+|---|---:|---:|---:|
+| pool CPU | 106 s | 106 s | ~55–70 s |
+| pool efficiency | 76 % | ~90 % | ~90 % |
+| wall, this account | 23.1 s | ~19.5 s | **~10–13 s** |
+
+The estimates are arithmetic on §0's shares, not measurements; §3 replaces them step by step.
