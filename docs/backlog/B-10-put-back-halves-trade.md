@@ -10,6 +10,8 @@ related: ['[[00-inventory]]', 'T-30', '[[the-rated-retyping]]']
 
 ## Context
 
+Status 2026-10-10: Critical 03 reproduced the SW1 put-back on this export (experiment 201, `tools/theorycraft/201-put-back.test.ts`, reads the file from the repo root, skipped where absent) and made put-back follow Tight on the same set, idempotent with take-out. The export is still untracked and not a fixture (no consent recorded). Remaining: the owner retests his march; if the trade now appears, close this item; if not, narrow it to the explanation text.
+
 Data: the untracked `pyrrhic-my-account-2026-10-07.json` at the repo root (kind/payload export, not a fixture). Overlaps S-80 (put-back pass), S-141 (shelter margin patch) and the Tight default.
 
 ## Problem

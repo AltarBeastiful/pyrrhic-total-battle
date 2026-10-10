@@ -8,9 +8,23 @@ related: ['[[00-inventory]]', 'T-34']
 
 # B-11 Adding ARC3 to the profile lowers the rating of marches
 
+**Dropped 2026-10-10.** The owner can no longer find the case. Experiment 202 found no regression on the 2026-10-07 export (kept below for the record); its test file was removed.
+
 ## Context
 
+Status 2026-10-10: deferred by the owner (`.maestro/playbooks/2026-10-10-Critical-Items/DEFERRED-02-ARC3-Rating.md`). Unblocked: experiment 201 already loads the export, so a 202 can reuse its loader without committing the file. Priority 1 in the backlog because a higher tier lowering a rating may be a wrong number.
+
 Not reproduced offline. The owner's reference march is counts only; a rating needs the full profile. The only profile at hand is the untracked export of 2026-10-07.
+
+## Result of experiment 202 (2026-10-10)
+
+`tools/theorycraft/202-arc3-regression.test.ts`, report `tools/theorycraft/out/202-arc3-regression.md`, on the 2026-10-07 export (read only, not committed). Planned with ARC3, without it (`topTierExcluded.guardsmen = ['ranged']`) and capped at tier 2:
+
+- ARC3 raises damage on every stop: sweet spot 28.08M against 26.80M, steady max 31.59M against 29.71M. Rated stop for stop (`rate`, `CAMPAIGN.markerRates`) ARC3 wins on 4 of 5 stops (+7.4 to +10.3). The one loss is the silver saver, -0.6: it spends 1.90M silver against 1.80M and loses one fewer merc, for +0.66M damage.
+- The no-ARC3 profile has no "more mercs" stop twin at the same silver (more-mercs equals sweet spot in silver), so the pairing by pick name is approximate there.
+- The reference march priced under both profiles gives identical damage, silver and gold (13.25M), so ARC3 does not change the derivation, only what the search can field.
+
+So the regression is **not reproduced** on this export. Either it lives in the owner's later profile (his reference march is 28/09, the Tight 22.4M march needs his current bonuses), or what he sees is the silver-saver-class trade (a tiny negative rating at a stop), not a lower damage. Needs his current export or the two profile states.
 
 ## Problem
 
@@ -46,4 +60,4 @@ Same fixture as B-10.
 
 ## Open questions for the owner
 
-1. Is ARC3 available with the full profile at that time (28/09 22:43)?
+1. Can the owner supply a fresh export of the profile where ARC3 made ratings fall (and say which stop and which two numbers)?

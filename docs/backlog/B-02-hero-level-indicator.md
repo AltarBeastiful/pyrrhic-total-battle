@@ -8,6 +8,10 @@ related: ['[[00-inventory]]', 'T-08']
 
 # B-02 Hero level and stars at a glance
 
+## Status (2026-10-10)
+
+The owner says the hero level and stars indicator is good as it stands (the badge reads "Level 20, 4 stars", S-152 notes). Closed; nothing to build unless the owner reopens it.
+
 ## Context
 
 Commits `61f04e3` (level in a tooltip), `f22c47d` (the tooltip says what the level buys), `e78d153` and `0da57a5` (level badge corner mark) shipped part of this. The captain chips live in `src/ui/sections/troops/` and the captain editor in the badge popover.

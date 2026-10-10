@@ -8,6 +8,10 @@ related: ['[[00-inventory]]', 'T-15']
 
 # B-06 Remove em dashes from the UI (and perhaps every file)
 
+## Decision (2026-10-10)
+
+UI strings only. Comments and docs are out of scope; phase two is dropped.
+
 ## Context
 
 Measured 2026-10-09: 2,483 em dashes in `src/`, 1,089 in `src/ui` non-test code, about 120 on lines that are not obvious comments (JSX text and strings); 2,642 in `docs/*.md`; 1 in `todos.md`.
