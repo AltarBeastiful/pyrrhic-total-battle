@@ -41,10 +41,14 @@ commit message: what the key covers, what else the value depends on, and why tha
   **WON'T DO (2026-10-11, 196 rerun on HEAD 05ab2d6).** Exact request key: 0.14 / 0.07 hits per entry, 0.11 % /
   0.94 %; kernel input key: 0.56 / 0.09, 0.20 % / 1.14 % (exactness / timing). Fails both bars. Nothing changed.
 
-- [ ] K5, Generate's pricings reused by the advisor baseline. Only if the verdict holds and K4 (Drill 03) did not
+- [x] K5, Generate's pricings reused by the advisor baseline. Only if the verdict holds and K4 (Drill 03) did not
   already remove these hits. Send the Tight pricings Generate made (`primeBar` in `src/ui/sections/march/generate.ts`)
   to the baseline job as known answers, keyed exactly like K3, only when the request fingerprints match. Advisor
   golden identical. Commit: `Advisor: the baseline reuses Generate's pricings (W18 K5)`.
+  **WON'T DO (2026-10-11, 196 rerun on HEAD 05ab2d6).** Exact key: 1.0 hit per entry (5 / 5), 0.01 % / 0.02 %;
+  kernel input key: 22 / 8 hits per entry but 50 ms 0.15 % / 857 ms 0.99 % — under 3 %. Nothing changed. The plan's
+  re-open condition (trace's 49 % Tight share confirmed off-profiler, ≈ 3.9 %) is still unmet: in-process the Tight
+  raise is 12.84 % of the timing run.
 
 - [ ] Re-measure this phase: experiment 196 on HEAD (hits now taken versus projected), and the progress table in
   `docs/plans/profile-drilldown.md` §3, one row per committed cache with its measured saving next to the census's
@@ -62,3 +66,5 @@ commit message: what the key covers, what else the value depends on, and why tha
 - **K1**: 0.05 / 0.59 hits per entry; 0.01 % / 2.21 % → `WON'T DO`.
 - **K3**: exact key 0.14 / 0.07 hits per entry, 37 ms 0.11 % / 814 ms 0.94 %; kernel key 0.56 / 0.09, 66 ms 0.20 % /
   989 ms 1.14 % → `WON'T DO`.
+- **K5**: exact key 1.0 per entry, 0.01 % / 0.02 %; kernel key 22 / 8 per entry, 0.15 % / 0.99 % → `WON'T DO`
+  (re-open only with K2, if a profiler-free browser run confirms the trace's Tight share).
