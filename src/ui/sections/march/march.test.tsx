@@ -613,6 +613,132 @@ test('every stack has a pill, in kill order, and there is no table under them', 
   expect(screen.queryByRole('table', { name: /in the order the stacks fall/ })).toBeNull();
 });
 
+/**
+ * **The battle selection order** (Critical 04, owner 2026-10-10): the game's battle selection screen lists the
+ * troops and the monsters in one fixed order, and the pills follow it so the march reads the way it is entered in
+ * the game. These two lists are the owner's paste, kept here as the test's own statement of the order; the app
+ * reads it from its data table.
+ */
+const BATTLE_SELECTION_ORDER: readonly string[] = [
+  // Monsters, as the battle selection lists them.
+  ...[
+    'wind-lord',
+    'black-dragon',
+    'destructive-colossus',
+    'ancient-terror',
+    'ruby-golem',
+    'jungle-destroyer',
+  ],
+  ...['crystal-dragon', 'troll-rider', 'ettin', 'fearsome-manticore', 'flaming-centaur', 'desert-vanquisher'],
+  ...[
+    'ice-phoenix',
+    'magic-dragon',
+    'many-armed-guardian',
+    'gorgon-medusa',
+    'stone-gargoyle',
+    'emerald-dragon',
+  ],
+  ...['battle-boar', 'water-elemental'],
+  // Troops, as the battle selection lists them.
+  ...['battle-griffin-7', 'josephine-2', 'battle-griffin-6', 'josephine-1', 'smiter-2', 'whitemane-2'],
+  ...['battle-griffin-5', 'siege-ballistae-7', 'smiter-1', 'whitemane-1', 'purifier-2', 'punisher-2'],
+  ...['legitimist-2', 'duelist-2', 'siege-ballistae-6', 'mounted-knight-7', 'lion-rider-7', 'purifier-1'],
+  ...[
+    'punisher-1',
+    'legitimist-1',
+    'duelist-1',
+    'catapult-5',
+    'mounted-knight-6',
+    'lion-rider-6',
+    'vulture-7',
+  ],
+  ...['heavy-arbalester-7', 'heavy-halberdier-7', 'heavy-knight-7', 'deadshot-7', 'catapult-4', 'rider-5'],
+  ...[
+    'lion-rider-5',
+    'vulture-6',
+    'heavy-arbalester-6',
+    'heavy-halberdier-6',
+    'heavy-knight-6',
+    'deadshot-6',
+  ],
+  ...[
+    'catapult-3',
+    'rider-4',
+    'archer-5',
+    'spearman-5',
+    'swordsman-5',
+    'vulture-5',
+    'deadshot-5',
+    'catapult-2',
+  ],
+  ...['rider-3', 'archer-4', 'spearman-4', 'swordsman-4', 'catapult-1', 'rider-2', 'archer-3', 'spearman-3'],
+  ...[
+    'swordsman-3',
+    'rider-1',
+    'archer-2',
+    'spearman-2',
+    'swordsman-2',
+    'archer-1',
+    'spearman-1',
+    'swordsman-1',
+  ],
+];
+
+/** The unit ids of one pool's pills, in the order they are drawn. */
+function pillIds(pool: string): string[] {
+  const byLabel = new Map(
+    (lastResult()?.result.stacks ?? []).map((stack) => [unitById(stack.unitId)?.label ?? '', stack.unitId]),
+  );
+  const group = screen.getByRole('group', { name: `${pool} stacks` });
+  return [...group.querySelectorAll('[data-stack]')].map(
+    (node) => byLabel.get(node.getAttribute('data-stack') ?? '') ?? '',
+  );
+}
+
+/** One pool's stacks as the engine returned them: the kill order, the stack with the most health first. */
+function killOrderIds(pool: string): string[] {
+  return (lastResult()?.result.stacks ?? [])
+    .filter((stack) => stack.pool === pool.toLowerCase() && stack.count > 0)
+    .map((stack) => stack.unitId);
+}
+
+/** The ids in battle selection order; a type the selection does not list keeps its place after them. */
+function inBattleOrder(ids: readonly string[]): string[] {
+  const rank = (id: string): number => {
+    const at = BATTLE_SELECTION_ORDER.indexOf(id);
+    return at < 0 ? BATTLE_SELECTION_ORDER.length : at;
+  };
+  return [...ids].sort((left, right) => rank(left) - rank(right));
+}
+
+test('the pills follow the battle selection order by default, not the kill order', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+
+  const drawn = pillIds('Leadership');
+  // The march has to have something to order, and the two orders have to differ, or this proves nothing.
+  expect(drawn.length).toBeGreaterThan(2);
+  expect(inBattleOrder(drawn)).not.toEqual(killOrderIds('Leadership'));
+
+  expect(drawn).toEqual(inBattleOrder(killOrderIds('Leadership')));
+  expect(screen.getByRole('radio', { name: 'Battle' })).toHaveProperty('checked', true);
+});
+
+test('a switch orders the pills by health, as the battle summary does, and back', async () => {
+  renderWithTheme(<Page />);
+  await generate();
+
+  const control = screen.getByRole('radiogroup', { name: 'Order the stacks by' });
+  fireEvent.click(within(control).getByRole('radio', { name: 'Health' }));
+  // By health is the kill order: the stack with the most health first, the order they fall.
+  expect(pillIds('Leadership')).toEqual(killOrderIds('Leadership'));
+
+  fireEvent.click(within(control).getByRole('radio', { name: 'Battle' }));
+  expect(pillIds('Leadership')).toEqual(inBattleOrder(killOrderIds('Leadership')));
+  // A view preference: nothing about it reaches the saved account.
+  expect(JSON.stringify(profile())).not.toMatch(/stackOrder|orderBy/);
+});
+
 test('Copy all counts writes one line per stack, in the game’s own shorthand', async () => {
   renderWithTheme(<Page />);
   await generate();

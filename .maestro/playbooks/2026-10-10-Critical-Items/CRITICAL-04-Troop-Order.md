@@ -18,9 +18,9 @@ Source: `todos.md`, entry "[UI] order troops as they appear in the battle select
 ## Tasks
 
 <!-- MAESTRO:HITL reason="Owner to supply the battle selection order: a screenshot of the game's battle selection screen, or the ordered list of unit ids. Record it in Notes, then tick this box." -->
-- [ ] Find the battle selection order. Search `src/data/` and `docs/reference/` for the in-game order of unit types shown on the battle selection screen (`grep -rni "battle" src/data docs/reference`). If an order is recorded, write it in Notes as a list of unit ids in order. If none is recorded, write in Notes: "The battle selection order is not in the repo. Owner to supply it: a screenshot of the battle selection, or the ordered list of unit ids." Then stop this playbook at this task (do not invent an order).
+- [x] Find the battle selection order. Search `src/data/` and `docs/reference/` for the in-game order of unit types shown on the battle selection screen (`grep -rni "battle" src/data docs/reference`). If an order is recorded, write it in Notes as a list of unit ids in order. If none is recorded, write in Notes: "The battle selection order is not in the repo. Owner to supply it: a screenshot of the battle selection, or the ordered list of unit ids." Then stop this playbook at this task (do not invent an order).
 
-- [ ] Write the failing test for the new order. In `src/ui/sections/troops/TroopsSection.test.tsx`, add a test that the troop rows render in the battle selection order from task 1 (same test shape as the existing ones in that file). Add a second test that the battle summary's order-by-health switch reorders the rows by health (lowest first) and that switching back restores the battle selection order. Run the test and confirm it is red for the right reason.
+- [x] Write the failing test for the new order. In `src/ui/sections/troops/TroopsSection.test.tsx`, add a test that the troop rows render in the battle selection order from task 1 (same test shape as the existing ones in that file). Add a second test that the battle summary's order-by-health switch reorders the rows by health (lowest first) and that switching back restores the battle selection order. Run the test and confirm it is red for the right reason.
 
 - [ ] Add the battle selection order as data, not as code. Put the ordered unit ids in `src/data/` as a small table (a JSON file in the same style as `src/data/tables/*.json`), with a source note saying the order was read from the game's battle selection screen, on 2026-10-10 or the date in Notes. Do not hard-code the order in `rows.ts`. Add a `src/data/CHANGELOG.md` entry for the new table.
 
@@ -36,6 +36,7 @@ Source: `todos.md`, entry "[UI] order troops as they appear in the battle select
 
 - Owner to compare the troop list order with the battle selection screen in the game.
 - Owner to confirm the health switch works on a phone-sized screen.
+- Owner to confirm "Health" should read most health first (the kill order), as built, rather than lowest first.
 
 ## Notes
 
@@ -50,5 +51,46 @@ What was searched:
 - `src/data/tables/orders.json` `troops` (65 ids) is the **default kill order** (first to die first, `OrderTables` in `src/data/types.ts`), used by the custom-order editor. It is not the battle selection order, so it was not reused.
 - `docs/research/totalstack-review.md` line 111 notes TotalStack's "Reset order" (drag to match in-game order) but records no order.
 
-Tasks 2 to 7 wait on this. Once the order is in Notes, tick task 1 and the run resumes at task 2.
+Owner supplied the order on 2026-10-10: the troop and monster lists below, copied from the battle selection screen. The owner said to take the order and disregard the numbers shown beside each name (those are counts, not part of the order). Each name is mapped to its unit id in the table; every name matched a table id.
+
+Monsters (20, in game order):
+
+```json
+["wind-lord","black-dragon","destructive-colossus","ancient-terror","ruby-golem","jungle-destroyer","crystal-dragon","troll-rider","ettin","fearsome-manticore","flaming-centaur","desert-vanquisher","ice-phoenix","magic-dragon","many-armed-guardian","gorgon-medusa","stone-gargoyle","emerald-dragon","battle-boar","water-elemental"]
+```
+
+Troops (61, in game order):
+
+```json
+["battle-griffin-7","josephine-2","battle-griffin-6","josephine-1","smiter-2","whitemane-2","battle-griffin-5","siege-ballistae-7","smiter-1","whitemane-1","purifier-2","punisher-2","legitimist-2","duelist-2","siege-ballistae-6","mounted-knight-7","lion-rider-7","purifier-1","punisher-1","legitimist-1","duelist-1","catapult-5","mounted-knight-6","lion-rider-6","vulture-7","heavy-arbalester-7","heavy-halberdier-7","heavy-knight-7","deadshot-7","catapult-4","rider-5","lion-rider-5","vulture-6","heavy-arbalester-6","heavy-halberdier-6","heavy-knight-6","deadshot-6","catapult-3","rider-4","archer-5","spearman-5","swordsman-5","vulture-5","deadshot-5","catapult-2","rider-3","archer-4","spearman-4","swordsman-4","catapult-1","rider-2","archer-3","spearman-3","swordsman-3","rider-1","archer-2","spearman-2","swordsman-2","archer-1","spearman-1","swordsman-1"]
+```
+
+Table units absent from the owner's list (left out of the order, not invented a position): troops `corax-1`, `corax-2`, `royal-lion-1`, `royal-lion-2`; monsters `devastator-1`, `devastator-2`, `fire-phoenix-1`, `fire-phoenix-2`, `kraken-1`, `kraken-2`, `trickster-1`, `trickster-2`. Owner to say whether these appear on the battle selection screen and, if so, where.
+
+Working files: `.maestro/playbooks/Working/order/` (the raw paste and the mapping).
+
+Task 1 is ticked. Tasks 2 to 7 resume from here.
+
+### Task 2 (2026-10-10, pyrrhic): the tests target the March pills, not the Troops card
+
+**Read this before tasks 3 to 5.** The task text pointed at `TroopsSection.test.tsx` and at `TotalsFigures.tsx`, but neither holds a per-type troop list:
+
+- The Troops card draws four group rows (two tier steppers each) and the top tier's chips. There is no list of troop types to put in battle selection order.
+- `TotalsFigures.tsx` is the Bonuses card's army bonus totals (health %, strength %), not a battle summary.
+- The per-type list that reads like the battle selection is **the March's pills** (`src/ui/sections/march/MarchPills.tsx`, built by `poolRows` in `src/ui/sections/march/rows.ts`). Today they are drawn in **kill order**, the order the engine returns the stacks in (most total health first, the order they fall; see `manual.ts` line 65 and the test "every stack has a pill, in kill order").
+
+So the two tests went into `src/ui/sections/march/march.test.tsx`, after "every stack has a pill, in kill order":
+
+1. "the pills follow the battle selection order by default, not the kill order": the Leadership pills are drawn in the owner's battle selection order (the list is written into the test as the spec, `BATTLE_SELECTION_ORDER`); a type the selection does not list (mercenaries, the 12 unlisted table units) keeps its kill-order place after the listed ones. Guards check the march has more than 2 stacks and that the two orders differ. Also expects a radio named "Battle" checked by default.
+2. "a switch orders the pills by health, as the battle summary does, and back": a `radiogroup` named "Order the stacks by" with radios "Battle" and "Health". Health = the kill order (most health first), Battle restores the selection order, and nothing about the choice reaches the saved profile.
+
+Decision taken without the owner: **"Health" means the existing kill order (most total health first)**, not "lowest first" as task 5 says. Reason: the owner's words are "order by health from the battle summary", i.e. the game's own health order, and the pills already draw that order; keeping it as the switch's other side loses nothing. Owner to confirm the direction (Manual Follow-Up).
+
+Red, for the right reason (`pnpm exec vitest run src/ui/sections/march/march.test.tsx -t "battle selection order by default|orders the pills by health"`): test 1 fails at the order assertion (drawn `swordsman-1, archer-1, ...` = kill order, expected `rider-3, rider-2, ...`); test 2 fails because no "Order the stacks by" radiogroup exists. Typecheck and eslint clean on the test file.
+
+Consequences for the remaining tasks:
+
+- Task 3 (data table): unchanged.
+- Task 4: apply the order in `poolRows` (`src/ui/sections/march/rows.ts`), not in `src/ui/sections/troops/rows.ts`. Keep the engine (kill) order as the fallback for ids missing from the table. Update the old test "every stack has a pill, in kill order" to the new default (it pins the old order and goes red once task 4 lands).
+- Task 5: the switch goes on the March pane next to the pills (a `SegmentedControl` like `MarchRaiseControl`, label "Order the stacks by", options "Battle" | "Health"), local component state only. `TotalsFigures.tsx` is not touched.
 
