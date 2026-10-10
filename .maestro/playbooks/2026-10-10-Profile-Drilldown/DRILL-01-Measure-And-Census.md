@@ -53,7 +53,7 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   depend on machine speed. Capture on HEAD, then run it twice in compare mode to prove it is deterministic.
   Note its run time in Notes. Commit: `Pin the advisor passes on the owner fixture (W18 gate)`.
 
-- [ ] Record the gate's own baseline. Copy the working-tree `tools/theorycraft/out/benchmark-latest.json` and `.md`
+- [x] Record the gate's own baseline. Copy the working-tree `tools/theorycraft/out/benchmark-latest.json` and `.md`
   to `.maestro/playbooks/Working/w18/benchmark-pre-w18.*` (they carry uncommitted changes of the owner; they must be
   restored from this copy after every gate run). Then run, and record pass/fail and time of each in Notes:
   `pnpm kernel:build`, `pnpm typecheck`, `pnpm lint`, `pnpm test` (it includes the golden-capture compare and the
@@ -145,3 +145,32 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
 - **Run time ~27 s** (one inline lane, in-process): capture 27.0 s, compare 27.1 s and 26.2 s — both compares
   pass, so the pin is deterministic.
 
+
+### W18 gate: the baseline run (2026-10-10)
+
+- The owner's uncommitted `benchmark-latest.{json,md}` (timings and the `run` stamp only, 19 × planMs/planCpuMs/searchMs)
+  are copied to `.maestro/playbooks/Working/w18/benchmark-pre-w18.*`; `gate.sh` copies them back on exit (trap, also
+  on SIGTERM), and the files were byte-checked restored after both runs.
+- **`gate.sh`** (`bash .maestro/playbooks/Working/w18/gate.sh`, ~13 min, run it with a ≥ 15 min timeout or
+  `nohup … &`): steps below, one line each to `gate-<stamp>.log.summary`, full output in `gate-<stamp>.log`, exit 1 if
+  any step fails. **`bench-diff.sh`**: `jq -S` both sides with `run`, `planMs`, `planCpuMs`, `searchMs` deleted
+  (`planBudgetMs`/`searchBudgetMs` are config and kept), then `diff`; empty output = identical.
+- Baseline on HEAD e2c5437, all **PASS**:
+
+  | step | result | time |
+  | --- | --- | --- |
+  | `pnpm kernel:build` | PASS | 3 s |
+  | `pnpm typecheck` | PASS | 1 s (tsc -b incremental) |
+  | `pnpm lint` | PASS | 20 s |
+  | `pnpm test` (incl. golden-capture + advisor golden) | PASS, 143 files / 1 763 tests, 177 files skipped | 295 s (314 s on run 2) |
+  | `plan-benchmark.test.ts` alone | PASS, 20 tests | 170 s |
+  | `bench-diff.sh` vs HEAD | PASS, no difference | 0 s |
+  | `184-the-positions-on-the-kernel` | PASS (with `THEORY=1`) | 143 s |
+
+- Two traps found and handled in the script: (1) experiment 184 is `describe.skipIf(!process.env.THEORY)`, so the
+  plain command only *skips*; the gate sets `THEORY=1`. (2) 184 rewrites its committed report
+  `tools/theorycraft/out/184-the-positions-on-the-kernel.md` (+ `184-timings.json`): the committed copy dates from
+  2026-10-01, before Tight by rating (1cb2ac9, 2026-10-07), so its Tight rows differ from a fresh run (e.g. tiers 3–5
+  camp sweet-spot Tight 24,423,790 committed vs 23,620,690 now). That is a stale artefact, not a W18 move — the test
+  holds the kernel to its golden and passes. The gate snapshots both files and puts them back; do not re-base them.
+- The advisor golden alone: 27.1 s, passes (it runs inside `pnpm test`; it is not skipped).
