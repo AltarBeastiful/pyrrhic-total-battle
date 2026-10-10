@@ -50,9 +50,11 @@ commit message: what the key covers, what else the value depends on, and why tha
   re-open condition (trace's 49 % Tight share confirmed off-profiler, ≈ 3.9 %) is still unmet: in-process the Tight
   raise is 12.84 % of the timing run.
 
-- [ ] Re-measure this phase: experiment 196 on HEAD (hits now taken versus projected), and the progress table in
+- [x] Re-measure this phase: experiment 196 on HEAD (hits now taken versus projected), and the progress table in
   `docs/plans/profile-drilldown.md` §3, one row per committed cache with its measured saving next to the census's
   projection. Commit the doc: `W18: Drill 04 measured`.
+  Done 2026-10-11: no cache committed, so §3 gets one `WON'T DO` row for K1/K3/K5 with the rerun figures and a
+  Drill 04 re-measure paragraph (counts identical, clock noise only).
 
 ## Notes
 

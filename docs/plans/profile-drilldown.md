@@ -189,6 +189,7 @@ goldens in `tests/golden/` byte-identical, `benchmark-latest.json` unchanged exc
 | P1.3 longest probes first | other pass 3,159 ms | 2,782 ms (−12 %); answers identical with no cut, but **the cut set changes at a binding clock**: a trade, on branch `w18-p13-longest-first` | branch a1a6393 |
 | P1.4 captains: one queue | upgrade part 3,379 ms (mean of 3 A/B) | 3,375 ms (no gain); one more row cut at a 3 s clock: a trade, on branch `w18-p14-captains-one-queue`, recommended dropped | branch b93dfe8 |
 | P1.5 Generate prices the bar in parallel | bar on the run's client 141 ms (timing fixture, 5 stops) | 100 ms on the advisor pool when idle; tables identical | fbb01c7 |
+| K1 / K3 / K5 caches (Drill 04) | census rerun on 05ab2d6: K1 0.59 hits per entry, 2.21 %; K3 ≤ 0.56, ≤ 1.14 %; K5 22 / 8 per entry, ≤ 0.99 % | none built (`WON'T DO`, all under the 3 % bar; K1 and K3 also under 2 hits per entry) | c1d9b09 |
 
 Drill 02 re-measure (2026-10-10, experiment 196 rerun on HEAD 1ebb705, profile kernel, one lane): every census count
 identical to the committed report; exactness fixture 33.96 s → 33.45 s run CPU (raise 0.56 % of it, so noise),
@@ -209,6 +210,12 @@ so no scheduling change applies): every count identical; run CPU 33.45 → 29.45
 1,860 → 1,720 ms (×4.06), plans 19/19 identical at every N. Reruns: `Working/w18/d03-196-the-cache-census.md`,
 `Working/w18/d03-190-the-pool.md` (the committed reports stay the record). A new owner trace is what would show
 whether the trace's 23 % pool idle has moved.
+
+Drill 04 re-measure (2026-10-11, HEAD 05ab2d6). No cache was committed, so there is no hit taken to set against a
+projection. **Experiment 196** (one lane, in-process, profile kernel): every count identical to the Drill 03 rerun and
+to the committed census; run CPU 29.45 → 33.15 s / 78.14 → 86.92 s, machine noise (no work changed). Tight raise
+0.57 % / 12.84 % of the run, still far from the trace's 49.1 %, so K2 and K5's re-open condition is unmet. Rerun:
+`.maestro/playbooks/Working/w18/d04-196-the-cache-census.md`.
 
 ## 4. Rough target
 
