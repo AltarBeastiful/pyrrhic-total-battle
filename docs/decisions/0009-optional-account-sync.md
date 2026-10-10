@@ -138,8 +138,9 @@ about it, then take back the work on any of my devices."* (`docs/plans/sso-accou
   and inside them marches and saved marches, by id; the later `updatedAt` wins; tombstones delete
   everywhere. The one accepted loss is the older of two edits to the same record between two syncs.
 - **Profiles belong to the account or to the browser, never both.** Signed in, everything on screen is the
-  account's; signed out, everything is the browser's. Signing in adds the browser's own profiles to the
-  account, renamed `Name (local)` on a clash. Signing out or an expired session takes the account's profiles
+  account's; signed out, everything is the browser's. Creating the account adds the browser's own
+  profiles to it, renamed `Name (local)` on a clash; a later sign-in adds nothing and silently shows the
+  account's profiles (amended 2026-10-10, playbook Critical 01). Signing out or an expired session takes the account's profiles
   off the screen (an expired session or a failed final save keeps them in a local cache until the same
   account signs in again).
 - Sessions last 30 days (migration `1791400000_session_30_days.js`) and are renewed at every start; a 5xx

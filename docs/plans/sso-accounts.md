@@ -167,9 +167,13 @@ tombstones (already in the document) remove what was deleted anywhere. Device-lo
   dialog: the owner accepted it as the price of "never click".
 - **Removed:** the *Save to account* and *Load from account* rows, the Load and Conflict dialogs.
 
-**Signing in.** Profiles this browser made while signed out (touched ones only: an untouched default profile
-is dropped) are added to the account. A name the account already uses gets the readable suffix the import
-already uses: `Main (local)`, then `Main (local 2)`. A dialog lists what was added and what was renamed.
+**Signing in.** Amended 2026-10-10 (owner, `todos.md`; playbook Critical 01): a sign-in **replaces** the
+on-screen profiles with the account's, silently: nothing of this browser's own is copied into the account,
+no dialog opens, and an account with no profiles gets a fresh one. Only **creating** the account (email
+sign-up, or an OAuth sign-in whose answer says `meta.isNew`) copies the profiles this browser made while
+signed out (touched ones only: an untouched default profile is dropped). A name the account already uses gets
+the readable suffix the import already uses: `Main (local)`, then `Main (local 2)`, and a dialog lists what
+was added and what was renamed.
 
 **Leaving.** *Sign out* saves first, then removes the account's profiles from this browser and leaves a fresh
 local profile. If the save fails (offline), they are kept in a local cache and the dialog says so. **Expiry**

@@ -61,10 +61,12 @@ is kept to four rows.
 
 ## Signing in on a browser that already has profiles
 
-The profiles you made in that browser are **added** to your account; nothing is replaced. If your account
-already has a profile with the same name, the one from this browser is renamed in a way you can still read
-(`Main` becomes `Main (local)`, then `Main (local 2)`), and a short message lists what was added and what was
-renamed. The untouched profile a new browser starts with is not added.
+**Signing in** shows your account's profiles in place of this browser's own; nothing from this browser is
+added to your account. **Creating** an account is the one time the profiles you made in that browser are
+**added** to it. If the new account already has a profile with the same name, the one from this browser is
+renamed in a way you can still read (`Main` becomes `Main (local)`, then `Main (local 2)`), and a short
+message lists what was added and what was renamed. The untouched profile a new browser starts with is not
+added.
 
 ## Signing out, and sessions that end
 

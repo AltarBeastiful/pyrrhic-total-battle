@@ -30,7 +30,7 @@ Source: `todos.md`, entry "when logged out and logged in don't import the local 
 
 - [x] Run the full gate. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` on the changed files only (`pnpm exec prettier --check <files>`), and `pnpm test`. All must pass. Record the exact counts in Notes. If an unrelated test was already red before this phase, say so with its name and do not fix it here.
 
-- [ ] Commit this phase only. Stage only the files this phase changed (list them with `git status --short`). The working tree already has other people's uncommitted changes (for example `.maestro/playbooks/performance-optimization/`, `tools/theorycraft/out/`, `todos.md`, `pyrrhic-my-account-2026-10-07.json`). Do not `git add -A` and do not stage those. Commit message: `Sign-in adopts the account's profiles; local profiles are copied only on sign-up`. End the commit message with `Co-Authored-By:` naming the model that is actually running this task.
+- [x] Commit this phase only. Stage only the files this phase changed (list them with `git status --short`). The working tree already has other people's uncommitted changes (for example `.maestro/playbooks/performance-optimization/`, `tools/theorycraft/out/`, `todos.md`, `pyrrhic-my-account-2026-10-07.json`). Do not `git add -A` and do not stage those. Commit message: `Sign-in adopts the account's profiles; local profiles are copied only on sign-up`. End the commit message with `Co-Authored-By:` naming the model that is actually running this task.
 
 ## Manual Follow-Up (not executed by Auto Run)
 
@@ -92,3 +92,7 @@ The owner's `todos.md` entry (newer than both, 2026-10-07 specs vs. the 2026-10-
 - `pnpm exec prettier --check` on the five files this phase changed (`src/account/auth.ts`, `src/account/auth.test.ts`, `src/account/state.ts`, `src/account/state.test.ts`, `src/ui/account/AccountDialogs.tsx`): all use Prettier style.
 - `pnpm test`: **138 test files passed, 176 skipped (314); 1698 tests passed, 491 skipped (2189)**, 0 failed, 244.9 s. The skips are the opt-in theorycraft experiments under `tools/theorycraft/` (`skipIf`-gated), not something this phase turned off. No test was red before or after.
 - Logs: `.maestro/playbooks/Working/c01-{typecheck,lint,format,test}.log`.
+
+### Task 7: commit (2026-10-10)
+
+- The code, tests and notes were already committed one task at a time (4b664fa, dc65f4f, 7989bd8, 30b820a, bd740c8, all `src/account/*`, `src/ui/account/AccountDialogs.tsx` and this file). This last commit carries the spec amendment the findings called for, so code and docs agree: `docs/plans/sso-accounts.md` §6 "Signing in", the ADR-0009 S-49d amendment, and the user-facing `docs/sync.md` "Signing in on a browser that already has profiles". Other people's uncommitted files (`todos.md`, `tools/theorycraft/out/`, `.maestro/playbooks/performance-optimization/`, `pyrrhic-my-account-2026-10-07.json`, the other Critical playbooks) were not staged. Owner sign-off on the amended sign-in rule stays in Manual Follow-Up.
