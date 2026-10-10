@@ -37,7 +37,8 @@ changes which rows a slow device shows).
   measures the pool) in Notes. Commit: `Advisor: probes start while the baseline plans (W18 P1.2)`.
 
 <!-- MAESTRO:HITL reason="P1.3 is a trade: at a binding pass clock it changes which probes are cut. Review branch w18-p13-longest-first (Notes, P1.3); merge it and tick, or tick to drop it" -->
-- [ ] Longest jobs first. In `runAdvisor` and `runCaptainAdvice`, start the jobs in order of expected cost, longest
+- [x] Human step done: P1.3 is a trade: at a binding pass clock it changes which probes are cut. Review branch w18-p13-longest-first (Notes, P1.3); merge it and tick, or tick to drop it
+- [x] Longest jobs first. In `runAdvisor` and `runCaptainAdvice`, start the jobs in order of expected cost, longest
   first, while keeping the merge by probe index. Expected cost: the probe's time from the previous run of the same
   pass if known (kept in memory by probe id), else the plan input's size (stack types × leadership) as a proxy.
   Answers identical whenever nothing is cut. In Notes, write which probes a 20 s clock would cut before and after
@@ -135,6 +136,10 @@ changes which rows a slow device shows).
     rows on a slow device.
 - **Owner's call**: merge `w18-p13-longest-first` (a slow phone shows a different set of rows, ~12 % faster
   "other" pass on desktop), or drop it. Not on main.
+- **Owner's decision (2026-10-11): dropped.** The gate was ticked without a merge (`a1a6393` is not an ancestor
+  of main), which the gate reads as "drop it". Main keeps list order, so a slow device cuts the same tail as
+  before. Branch `w18-p13-longest-first` is left in place (local + origin) for reference; nothing committed to main
+  but this note.
 
 ### P1.4 captains: one queue (2026-10-11) — no gain, a trade, left on branch `w18-p14-captains-one-queue` (b93dfe8)
 
