@@ -45,8 +45,8 @@ The boundary has three parts, and each is measured separately, not summed by gue
 
 - [ ] Rank the breakdown. Write, in Notes, one table ordering every function that carries ≥ 2 % of the planner's wall
   time on the timing fixture, by its self time, its glue share (from the previous tasks), and its kind: kernel compute,
-  kernel glue, JavaScript compute, allocation, or GC. This is Drill 05's input (experiment 197 in Drill 05 must agree with it)
-  is written later from the same kind of run (Drill 05, task 1), and must agree with this table. Commit the doc: `W18: Drill 04b measured`.
+  kernel glue, JavaScript compute, allocation, or GC. This is Drill 05's input: Drill 05's experiment 197 profiles the
+  same planner, and its ranking must agree with this table. Commit the doc: `W18: Drill 04b measured`.
 
 - [ ] Decide the boundary's fix, or write that none is needed. If the glue of a door is ≥ 10 % of the planner's wall
   time, or the instance count is more than one per distinct request, write a short plan in Notes: which door, which
@@ -54,4 +54,22 @@ The boundary has three parts, and each is measured separately, not summed by gue
   goes to Drill 05 as its first item, ahead of the JavaScript half. If no door reaches 10 %, write "boundary not a
   lever" with the figures and tick. Commit with the Notes: `W18: Drill 04b decision`.
 
+**Run order (decided 2026-10-11, owner):** Drill 04 (caches, verdicts re-checked first) → **04b (this drill)** → Drill 05
+(planner JS, with the boundary fix first if 198 says so) → Drill 06 (page). Drill 06 is deferred until 05 is done, because
+its page figures depend on how much of the planner's work survives the owner's planned cuts.
+
 ## Notes
+
+### Findings carried in (2026-10-11, from the conversation that wrote this drill)
+
+- **Not measured yet, hypothesis only:** the kernel boundary may cost time. Code reading found: `bind()` in
+  `src/kernel/plan.ts` (~line 337) and `src/kernel/raise.ts` (~line 153) allocate a `WebAssembly.Instance` and copy a
+  table per request object; the bound-request cache is a `WeakMap` keyed by identity, so a planner that builds a new
+  request per candidate pays that every time. `lay()` does a `Map` lookup per stack; `march`/`bill` allocate a result
+  object per call; `orderByRow` builds a `Map` and an `Int32Array` per bind.
+- **The Tight share is still unresolved:** trace 49 % of pool CPU, in-process 13 % of run CPU (experiment 196). The
+  rerun of 196 on HEAD confirms 13.5 %, so the gap is not a stale figure.
+- **Drill 04 verdicts (earlier, on the Drill 03 HEAD rerun):** K1 2.4 % / 0.59 hits per entry, K3 ≤ 1.2 %, K5 ≤ 1.0 %,
+  K4 1.3–2.6 % with its wall cost already removed by P1.2. None meets the cache rule on the in-process figures; Drill 04
+  must still re-check them on its own HEAD before ticking `WON'T DO`.
+- Experiment numbers: 197 is Drill 05's planner profile; this drill uses 198 and 198b.

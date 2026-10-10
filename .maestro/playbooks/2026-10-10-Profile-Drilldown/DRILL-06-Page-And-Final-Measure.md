@@ -4,6 +4,10 @@ Playbook: `2026-10-10-Profile-Drilldown` (W18). Agent: pyrrhic. Project: `/home/
 Plan: `docs/plans/profile-drilldown.md` §0.4. Rules: top of `DRILL-01-Measure-And-Census.md` in this folder. UI work
 follows `docs/design-rules.md`.
 
+**Deferred (owner, 2026-10-11):** run this drill only after Drill 05. Its figures depend on how much planner work
+remains after the owner's planned cuts, so measuring the page now would measure a set of calculations that is about to
+change.
+
 In the dev trace the main thread was always busy, but a third of that was React's dev-only Performance Tracks
 (`logComponentRender` → `performance.measure`), and layout and paint were not recorded. What looked real: one full
 re-render of the advisor card per settled probe (`AdvisorCard` 93 renders, about 28 600 Mantine `Box` renders). This
