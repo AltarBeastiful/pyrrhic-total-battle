@@ -26,7 +26,7 @@ Source: `todos.md`, entry "putback shoudld follow tight rules but keeping the tr
 
 - [x] Write the failing tests first, on both the TypeScript and kernel paths (rule: "one test, both paths"). Add a test file that asserts three properties for the reproduced march: (1) **Tight rule**: after a put-back, the counts equal what the Tight raise gives for the same set of types; (2) **same set**: the set of troop types, mercenary stacks and monsters is unchanged except for the type put back; (3) **idempotent**: `removeFromFormation(x)` after `putBackInMarch(x)` restores the exact counts of the step before, and a second `putBackInMarch(x)` changes nothing. Run them and confirm they are red for the right reason. Do not loosen an assertion to get a green result.
 
-- [ ] Make the put-back follow Tight in the kernel. In `kernel/assembly` (and `src/kernel/raise.ts` for the TypeScript mirror), make the put-back sizing call the same Tight ranking as the raise position, without the put-back pass changing the set of other types. Keep the `resizeMarch` contract: it still takes `putBack`, but the sizer must size only the put-back type under Tight. The change must not touch the benchmark rating: check `tools/theorycraft/out/benchmark-latest.md` before and after, and the benchmark rating must not regress for any scenario (feedback rule: a scenario must never get worse).
+- [x] Make the put-back follow Tight in the kernel. In `kernel/assembly` (and `src/kernel/raise.ts` for the TypeScript mirror), make the put-back sizing call the same Tight ranking as the raise position, without the put-back pass changing the set of other types. Keep the `resizeMarch` contract: it still takes `putBack`, but the sizer must size only the put-back type under Tight. The change must not touch the benchmark rating: check `tools/theorycraft/out/benchmark-latest.md` before and after, and the benchmark rating must not regress for any scenario (feedback rule: a scenario must never get worse).
 
 - [ ] Make take-out and put-back a pair. Ensure `removeFromFormation` and `putBackInMarch` are inverses over the march: the counts after take-out then put-back equal the counts before take-out, and the reverse. If the existing put-back pass in `src/engine/plan.ts` replaces the stop instead of sizing one type, make the UI path (`resizeMarch`) skip that replacement when the edit is a `putBack` on the current march. Add a comment that states this rule where it is enforced.
 
@@ -98,3 +98,17 @@ What the red says (the right reason): **the first edit leaves the stop and never
 Earlier draft finding, kept for the record: on the sweet-spot stop alone (experiment 201's walk), all three properties were already green; the red only appears on the other stops, which is why the test walks all five.
 
 The test is committed red, as the TDD cycle asks; it is skipped wherever the export is absent, so CI is unaffected.
+
+
+### Task 3: the put-back follows Tight on the same set (2026-10-10)
+
+The fix sits where task 2's red pointed: the re-size of the stop's own set. `resizeMarchOver` (`src/engine/plan.ts`, the plan's re-size, which the `resize` job runs on both paths; the sizer under it is the kernel's) now answers with **the stop's own march, untouched**, when the types it is asked for are exactly the ids of the stop's counts (`sameSetAsStop`: troops + hired, no more, no less, every stop hired count within its cap). Before, the stop shape was ranked by damage against the re-sized shapes, so an edit and its inverse landed on a re-size of the stop's set instead of the stop (burn saver: mercs 10 → 28; silver saver and steady max: another troop split). Nothing else changes: any other set is re-sized as before, so a put-back still adds the one type to the set on screen, and the stop's march with Tight on top is the march the bar opened on (the "Tight rule" of the test).
+
+On the instruction "the sizer must size only the put-back type under Tight": experiment 201 showed Tight moves nothing after an edit (the re-sized march already sits on the shelter ceiling), so the re-sized counts *are* the Tight counts on that set; no separate Tight sizing was added, and `src/kernel/raise.ts` / `kernel/assembly` are unchanged. The re-size itself is not ported to AssemblyScript (it never was); the one new rule lives in the engine function both paths call.
+
+- `pnpm vitest run src/ui/sections/march/putBack.test.ts`: **44/44 green** (was 12 red), on the kernel and the TypeScript path.
+- `tests/engine/plan-resize.test.ts` + `src/ui/sections/march/`: 351/351 green. Typecheck, eslint and prettier clean on `plan.ts`.
+- Benchmark (`tests/engine/plan-benchmark.test.ts`, 20/20): `benchmark-latest.md` differs from the copy taken before the change only in the run stamp and the timing table; every rating row is identical (the benchmark does not call `resizeMarchOver`). The two `benchmark-latest.*` files were restored to their pre-run contents (they already carried uncommitted changes that are not this phase's) and are not staged. Before/after copies: `Working/c03-bench-before.*`, log `Working/c03-bench.log`.
+
+Task 4 (take-out and put-back as a pair) is now green in the test as well; it remains for the next run to add the rule comment in the UI path and check the reverse direction on a non-stop march.
+

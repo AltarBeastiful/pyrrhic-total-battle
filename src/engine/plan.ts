@@ -2719,6 +2719,20 @@ export interface ResizedMarch extends PlanMarch {
 }
 
 /**
+ * Whether the types a re-size is asked for are exactly the stop's own — every id the stop's counts name, and
+ * no other — with every hired count the stop fields still within its cap, so the stop's march is one the
+ * re-size may answer with untouched.
+ */
+function sameSetAsStop(within: MarchWithin): boolean {
+  const stop = within.stop;
+  if (stop === undefined) return false;
+  const asked = new Set([...within.troopIds, ...Object.keys(within.hired)]);
+  const own = Object.keys(stop);
+  if (asked.size !== own.length || own.some((id) => !asked.has(id))) return false;
+  return Object.entries(within.hired).every(([id, cap]) => (stop[id] ?? 0) <= cap);
+}
+
+/**
  * **Putting a type back re-sizes the selected stop inside the plan's rules** (S-104, 2026-09-19).
  *
  * The owner, for the third time that day: *"Adding back troops doesn't shield the mercs"* — and what he
@@ -2904,6 +2918,22 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
     }
     return best;
   };
+
+  /**
+   * **The stop's own set is the stop** (Critical 03, backlog B-10; the owner, 2026-10-10: *"put back and keep
+   * away a troop or contrary should end up idempotent"*). An edit and its inverse — SW1 out then back, or back
+   * then out — hand this function the very types the stop was planned over, and nothing about the march has
+   * been edited any more: the answer is the stop, not the best shape of a family that never built it. Ranking
+   * it against the re-sized shapes is what moved the burn saver off itself on the 2026-10-07 export (mercs
+   * 10 → 28 after SW1 out and back) and the silver saver and steady max onto a re-size of their own set
+   * (`src/ui/sections/march/putBack.test.ts`). With this, a take-out and a put-back are inverses on the stop,
+   * and every other walk was already a function of the set alone (experiment 201).
+   */
+  if (within.stop !== undefined && sameSetAsStop(within)) {
+    const own = stopShape();
+    const answer = own === null ? null : priceShape(own, request.housing.leadership, 100);
+    if (answer !== null) return answer;
+  }
 
   const full = bestAt(100);
   if (full === null || within.fills === undefined) return full;
