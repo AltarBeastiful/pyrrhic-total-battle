@@ -34,7 +34,7 @@ Source: `todos.md`, entry "putback shoudld follow tight rules but keeping the tr
 
 - [x] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, `pnpm test` and the kernel test (`pnpm kernel:build` followed by the kernel test path). All must be green. Run the benchmark (`pnpm bench:baseline` or the existing benchmark test) and compare with `tools/theorycraft/out/benchmark-latest.md`. Record the counts and any change in the ratings in Notes. If something was red before this phase, name it and do not fix it here.
 
-- [ ] Commit this phase only. Stage only the files this phase changed (`git status --short` first). Do **not** stage `pyrrhic-my-account-2026-10-07.json`, `tools/theorycraft/out/benchmark-latest.*` (unless this phase regenerated them and the owner has not asked otherwise: if regenerated, do not stage them and say so in Notes), `.maestro/playbooks/performance-optimization/`, or `todos.md`. Commit message: `Put-back follows Tight on the same set and is idempotent with take-out`. End the commit message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- [x] Commit this phase only. Stage only the files this phase changed (`git status --short` first). Do **not** stage `pyrrhic-my-account-2026-10-07.json`, `tools/theorycraft/out/benchmark-latest.*` (unless this phase regenerated them and the owner has not asked otherwise: if regenerated, do not stage them and say so in Notes), `.maestro/playbooks/performance-optimization/`, or `todos.md`. Commit message: `Put-back follows Tight on the same set and is idempotent with take-out`. End the commit message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Manual Follow-Up (not executed by Auto Run)
 
@@ -143,3 +143,7 @@ All green; nothing was red before this phase.
 - Benchmark (`tests/engine/plan-benchmark.test.ts`, 20/20): compared with `Working/bench-compare.mjs` (timings stripped, 12 231 leaf values, 19 scenarios) against both the copy taken before task 3 (`Working/c03-bench-before.json`) and the copy taken just before this run (`Working/c03-gate-bench-before.json`): **IDENTICAL**. No rating changed, no scenario got worse. Only the run stamp and timing table differ. The regenerated `benchmark-latest.*` were saved as `Working/c03-gate-bench-after.*` and the tracked files were restored to their pre-run contents (they carry uncommitted changes that predate this phase), so they are not part of this phase's commit.
 - Logs: `Working/c03-{typecheck,lint,format,kernel,kernel-test,test,gate-bench}.log`.
 
+
+### Task 7: the commit (2026-10-10)
+
+The phase's code and tests were already committed one task per commit (`32307cc`, `bb7128a`, `d5f8f62`, `1868d7b`, `485f51b`, `1864cc9`, all on `main` after `55e32db`). `git status --short` showed nothing else of this phase's left to stage: the only changes were `pyrrhic-my-account-2026-10-07.json` (untracked), `tools/theorycraft/out/benchmark-latest.*` (changes from before this phase; the gate's regenerated copies were restored and saved under `Working/`), `.maestro/playbooks/performance-optimization/`, `todos.md`, the next playbook documents and `Working/`. None of them were staged. This closing commit carries only this document, under the requested message.
