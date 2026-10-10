@@ -30,7 +30,7 @@ Source: `todos.md`, entry "[UI] order troops as they appear in the battle select
 
 - [x] Run the gate. `pnpm typecheck`, `pnpm lint`, `pnpm exec prettier --check` on changed files, and `pnpm test -- src/ui/sections/troops src/ui/sections/bonuses`. Then `pnpm test`. All must be green. Record counts in Notes. If the e2e suite covers the troops card, run `pnpm build` first (see the memory note: a running preview serves a stale build), then `pnpm e2e`.
 
-- [ ] Commit this phase only. Stage only the files this phase changed (`git status --short` first). Do not stage `todos.md`, `.maestro/playbooks/performance-optimization/`, `tools/theorycraft/out/`, or `pyrrhic-my-account-2026-10-07.json`. Commit message: `Troops follow the battle selection order and can be ordered by health`. End the commit message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- [x] Commit this phase only. Stage only the files this phase changed (`git status --short` first). Do not stage `todos.md`, `.maestro/playbooks/performance-optimization/`, `tools/theorycraft/out/`, or `pyrrhic-my-account-2026-10-07.json`. Commit message: `Troops follow the battle selection order and can be ordered by health`. End the commit message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Manual Follow-Up (not executed by Auto Run)
 
@@ -129,3 +129,8 @@ Placed where Task 2 pointed (the March pills), not in `TotalsFigures.tsx`.
 - Scoped run (`pnpm test -- src/ui/sections/troops src/ui/sections/bonuses src/ui/sections/march src/data`): green. Note that `pnpm test -- <paths>` runs the whole suite here, because the script is plain `vitest run`.
 - `pnpm test`: 139 files passed, 177 skipped (316). 1750 tests passed, 492 skipped (2242). Nothing failed. The skips are the suites that skip by default; this change added none.
 - `pnpm build` then `pnpm e2e`: 65 passed, 10 skipped. Nothing failed (`troops.spec.ts`, `battle.spec.ts` and `journeys.spec.ts` included).
+
+### Task 7 (2026-10-10, pyrrhic): the phase is committed
+
+- The phase's changes were already committed one task per commit (the Auto Run rule): `ad5e690` (task 1), `df3b359` (task 2, red tests), `981fb58` (task 3, data table), `ca50df7` (task 4, pills follow the table), `9a99a27` (task 5, Battle | Health switch), `9ea3d7f` (task 6, gate). `git status --short` showed no phase file left unstaged.
+- This commit carries only this note and the ticked box, under the requested message "Troops follow the battle selection order and can be ordered by health". Left unstaged as asked: `todos.md`, `.maestro/playbooks/performance-optimization/`, `tools/theorycraft/out/`, `pyrrhic-my-account-2026-10-07.json`, plus the unrelated `docs/backlog/`, `DEFERRED-02-ARC3-Rating.md` and `Working/`.
