@@ -59,7 +59,7 @@ changes which rows a slow device shows).
   `src/ui/sections/march/*.test.ts` and the e2e suite (`pnpm build` first: a running preview serves a stale build)
   must pass. Commit: `Generate: price the bar in parallel (W18 P1.5)`.
 
-- [ ] Re-measure this phase: experiment 190 and 196 timings, and the progress table in
+- [x] Re-measure this phase: experiment 190 and 196 timings, and the progress table in
   `docs/plans/profile-drilldown.md` §3. Commit the doc: `W18: Drill 03 measured`.
 
 ## Notes
@@ -174,3 +174,11 @@ changes which rows a slow device shows).
   run client; cancel rejects); the fake pools of four card tests gained `busy: false`. `src/ui/sections/march` +
   `src/worker` 411 tests pass; `pnpm lint` clean; `pnpm test` 145 files / 1 775 tests pass (advisor golden
   included); `pnpm build` then `pnpm e2e` 65 passed, 10 skipped.
+
+### Drill 03 re-measure (2026-10-11)
+
+- Written into `docs/plans/profile-drilldown.md` §3 (rows P1.1–P1.5 and a paragraph). In short: on main (P1.2 +
+  P1.5) the four passes take 13,986 ms against 13,911 ms before the drill on this desktop, i.e. **no measurable wall
+  gain** (±300 ms noise per pass); answers hash-identical. Experiment 196: every count identical, CPU lower by
+  machine noise only. Experiment 190: 19/19 plans identical at N = 1…6, ×1.88 / ×4.06. The only real lever left in
+  scheduling is P1.3 (−12 % on the other pass), which is the owner's trade (HITL above).

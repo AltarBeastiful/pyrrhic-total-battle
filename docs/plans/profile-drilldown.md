@@ -184,12 +184,31 @@ goldens in `tests/golden/` byte-identical, `benchmark-latest.json` unchanged exc
 | P2.1a kill-order shadow check (`KILL_CHECK` build only) | — | release wasm byte-identical; check passes on every scored vector of 184 + the exactness fixture's bar | 6385674 |
 | P2.1 incremental kill order in the raise | 184 raise sum 129.7 s; 196 timing fixture Tight raise 11,621 ms (13.30 % of 87.4 s); `killOrderBy` self 5,008 ms (cpu-prof) | 110.7 s (−14.6 %); 10,867 ms (−6.5 %, 12.90 % of 84.2 s); `killOrderBy` 3,800 ms + `raiseMove` 586 ms. Every count, golden and `scored` unchanged | e2c03f5 |
 | K6 sizer journals fused (Drill 02) | census: 0.13 % ceiling, under the 2 % bar | not built (`WON'T DO`) | 1ebb705 |
+| P1.1 one baseline per run (K4, Drill 03) | census: 2.66 % / 1.39 % of run CPU, under the 3 % cache bar | not built (`WON'T DO`); its wall is P1.2's | a67ab26 |
+| P1.2 probes start while the baseline plans | passes (6 workers, timing fixture, browser): upgrades 3,978 ms, other 3,308 ms | 3,841 ms, 3,124 ms (−140 to −180 ms a pass); answers identical, cut set only shrinks | af932e0 |
+| P1.3 longest probes first | other pass 3,159 ms | 2,782 ms (−12 %); answers identical with no cut, but **the cut set changes at a binding clock**: a trade, on branch `w18-p13-longest-first` | branch a1a6393 |
+| P1.4 captains: one queue | upgrade part 3,379 ms (mean of 3 A/B) | 3,375 ms (no gain); one more row cut at a 3 s clock: a trade, on branch `w18-p14-captains-one-queue`, recommended dropped | branch b93dfe8 |
+| P1.5 Generate prices the bar in parallel | bar on the run's client 141 ms (timing fixture, 5 stops) | 100 ms on the advisor pool when idle; tables identical | fbb01c7 |
 
 Drill 02 re-measure (2026-10-10, experiment 196 rerun on HEAD 1ebb705, profile kernel, one lane): every census count
 identical to the committed report; exactness fixture 33.96 s → 33.45 s run CPU (raise 0.56 % of it, so noise),
 timing fixture 87.40 s → 84.21 s (−3.6 %, of which the Tight raise −0.75 s). No new owner trace yet, so `analyse.py`
 was not rerun; the trace figures in the first row still stand. Rerun report:
 `.maestro/playbooks/Working/w18/d02-196-the-cache-census.md` (the committed census stays the record).
+
+Drill 03 re-measure (2026-10-11, HEAD fbb01c7, P1.3 and P1.4 not merged). **Passes in the browser** (scratch
+`.maestro/playbooks/Working/w18/passes.mjs`: real pool of 6 module workers, headless Chromium, timing fixture, no
+clock, min of 3; this desktop runs the four passes in ~14 s, not the trace's 22 s): before the drill 13,911 ms (upgrades
+3,978 · captains 4,998 · other 3,308), after 13,986 ms (3,885 · 5,182 · 3,182), answer hash unchanged
+(`a9612b9ca0a9`). Run-to-run noise on this machine is ±300 ms per pass, so **no wall gain is measurable on main** here:
+the serial heads P1.2 removes cost ~600 ms on the trace's slow profiled workers, about a third of that here, and
+the rest of the idle time is the tail of the slowest probes (P1.3, a trade). **Experiment 196** (one lane, in-process,
+so no scheduling change applies): every count identical; run CPU 33.45 → 29.45 s / 84.21 → 78.14 s, machine noise
+(no work changed on one lane). **Experiment 190** (pool of `client.plan` jobs; untouched by this drill but for
+`CalcPool.busy`): benchmark set N = 1 / 6 4,085 → 3,709 ms / 2,014 → 1,971 ms (×1.88), advisor shape 7,303 → 6,990 /
+1,860 → 1,720 ms (×4.06), plans 19/19 identical at every N. Reruns: `Working/w18/d03-196-the-cache-census.md`,
+`Working/w18/d03-190-the-pool.md` (the committed reports stay the record). A new owner trace is what would show
+whether the trace's 23 % pool idle has moved.
 
 ## 4. Rough target
 
