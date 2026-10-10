@@ -15,7 +15,7 @@ commit message: what the key covers, what else the value depends on, and why tha
 
 ## Tasks
 
-- [ ] K1, the rated value memo. In `kernel/assembly/index.ts`, the raise memo stores a vector's damage; under
+- [x] K1, the rated value memo. In `kernel/assembly/index.ts`, the raise memo stores a vector's damage; under
   `rRated` a memo hit still calls `raiseRating(known)` (`killOrderBy` + `recoveryOf` + `raiseBurn`), in
   `raisePointSlots` (around line 2126) and its twin (around line 2256). The rating depends on the vector and on the
   raise call's rated context (`rAsDamage`, `rAsSilver`, `rAsGold`, `rAsHired`, the three `H_RATE_*` header cells,
@@ -26,6 +26,9 @@ commit message: what the key covers, what else the value depends on, and why tha
   Memory: the damage memo can be 2²² entries; check the kernel's memory growth and `MEMO_CAP`, and allocate the
   rating array lazily, only for rated calls. Gate script, advisor golden identical; record `pnpm kernel:bench`,
   experiment 184 and experiment 196 figures before and after. Commit: `Kernel: memo the rated value of a vector (W18 K1)`.
+  **WON'T DO (2026-10-11, 196 rerun on HEAD 05ab2d6).** Hits per entry 0.05 (376 / 7,369) exactness, 0.59
+  (4,839,797 / 8,222,922) timing — under 2 on both; projected saving 4 ms = 0.01 % / 1,925 ms = 2.21 % — under 3 %.
+  Nothing changed. See Notes.
 
 - [ ] K3, `shownMarch` across jobs. Only if the verdict holds. In `src/worker/jobs.ts`, `runProbe` keeps a `read` map
   per job. Move it to a per-worker LRU keyed by (request fingerprint, `countsKey`), bounded by entry count (size it
@@ -46,3 +49,12 @@ commit message: what the key covers, what else the value depends on, and why tha
   projection. Commit the doc: `W18: Drill 04 measured`.
 
 ## Notes
+
+### Verdicts re-checked on HEAD 05ab2d6 (2026-10-11)
+
+- Experiment 196 rerun (`THEORY=1`, 83 s, profile kernel compiled to a temp dir, one lane): every census count is
+  identical to the Drill 03 rerun and to the committed report; only the clock moved (run CPU 33.1 s exactness,
+  86.9 s timing; Tight raise 0.57 % / 12.84 % of it). Rerun report and log:
+  `.maestro/playbooks/Working/w18/d04-196-the-cache-census.md`, `d04-196.log`; the committed census stays the record
+  (the rewritten `tools/theorycraft/out/196-the-cache-census.md` was restored).
+- **K1**: 0.05 / 0.59 hits per entry; 0.01 % / 2.21 % → `WON'T DO`.
