@@ -299,6 +299,9 @@ function searchReduction(bound: Bound, recovery: RecoverySettings): void {
   bound.raw.setSearchReduction(bound.reductionPtr);
 }
 
+/** The bounds `sizeStacks` may find by units alone; older ones live only while their request does. */
+const UNIT_SIBLINGS = 8;
+
 function sameTable(a: Float64Array, b: Float64Array): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) if (!Object.is(a[i], b[i])) return false;
@@ -324,7 +327,9 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
   /**
    * The bounds by `request.units`, for the sizer: its rows depend on the units, the totals, the enemy and the
    * events alone (`effectiveUnit`, `eliteOrder`, `enemySquadCount`), so a request spread from a bound one with
-   * other caps, housing or options sizes on the bound table.
+   * other caps, housing or options sizes on the bound table. The most recent `UNIT_SIBLINGS` only: every
+   * bound holds a wasm memory of its own, and a captain screen binds one per trio (1 140 for 20 captains) on
+   * the same units — kept all, they ran the browser out of wasm memory.
    */
   const byUnits = new WeakMap<readonly UnitDef[], Bound[]>();
   const rowOf = new WeakMap<Effective, { bound: Bound; row: number }>();
@@ -378,8 +383,10 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
     views(bound);
     byRequest.set(request, bound);
     const siblings = byUnits.get(request.units);
-    if (siblings) siblings.push(bound);
-    else byUnits.set(request.units, [bound]);
+    if (siblings) {
+      siblings.push(bound);
+      if (siblings.length > UNIT_SIBLINGS) siblings.shift();
+    } else byUnits.set(request.units, [bound]);
     return bound;
   };
 

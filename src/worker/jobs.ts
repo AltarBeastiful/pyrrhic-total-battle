@@ -203,17 +203,16 @@ export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
 /**
  * **A trio's bill, priced two ways** (W17 C5a): its own sizing (`sizeStacks`), or counts given battled under its
  * totals (`planMarch`) — both on the kernel, both without the Tight raise, which is the confirm step's. A trio's
- * request is built once and shared by every reading of it, since the kernel keys its tables on the request.
+ * request is built once and shared by every reading of it, since the kernel keys its tables on the request — and
+ * only the trio being priced is kept: the screen reads one trio at a time, and a request held is a wasm instance
+ * held, so a cache by totals kept every trio's alive until the browser had no wasm memory left.
  */
 export function trioPricer(request: StackRequest, method: CaptainScreenInput['method'] = 'elite'): Pricer {
   const base = withMethod(request, method);
-  const requests = new WeakMap<BonusTotals, StackRequest>();
+  let last: StackRequest | null = null;
   const requestFor = (totals: BonusTotals): StackRequest => {
-    const known = requests.get(totals);
-    if (known !== undefined) return known;
-    const built = { ...base, totals };
-    requests.set(totals, built);
-    return built;
+    if (last?.totals !== totals) last = { ...base, totals };
+    return last;
   };
   return (totals, counts) => {
     const priced = requestFor(totals);
