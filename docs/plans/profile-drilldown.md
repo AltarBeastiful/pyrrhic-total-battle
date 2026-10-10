@@ -190,3 +190,39 @@ goldens in `tests/golden/` byte-identical, `benchmark-latest.json` unchanged exc
 | wall, this account | 23.1 s | ~19.5 s | **~10–13 s** |
 
 The estimates are arithmetic on §0's shares, not measurements; §3 replaces them step by step.
+
+## 5. The census (experiment 196)
+
+Report: `tools/theorycraft/out/196-the-cache-census.md` (2026-10-10). Same work as the profiling run, in-process,
+one lane, no clock, profile kernel; two fixtures — **exactness** (owner export 2026-09-17, run CPU 34.0 s) and
+**timing** (the 2026-10-07 account the owner profiled, not committed, run CPU 87.4 s).
+
+**The rule** (owner, 2026-10-10: no cache without a census): **a cache is built only when it is hit on average at
+least twice per stored entry and its projected saving is at least 3 % of the run's CPU on either fixture**; a
+refactor (K2, K6) is done when it saves at least 2 %. Everything else is `WON'T DO` with its figures.
+
+| candidate | kind | hits per entry (exactness / timing) | projected saving (exactness / timing) | verdict |
+|---|---|---|---|---|
+| K1 rated value memo | cache | 0.05 / 0.59 | 3 ms, 0.01 % / 1 934 ms, 2.21 % | **WON'T DO** — fails both bars |
+| K2 one kill order per rated battle | refactor | 1 duplicate per rated miss | 32 ms, 0.09 % / 1 540 ms, 1.76 % | **WON'T DO** — under 2 % (see the caveat) |
+| K3 `shownMarch` across jobs (exact key / kernel input key) | cache | 0.14 / 0.07 — 0.56 / 0.09 | 0.12 % / 0.97 % — 0.19 % / 1.20 % | **WON'T DO** — fails both bars |
+| K4 one baseline across the three passes | cache | 2.00 / 2.00 | 903 ms, 2.66 % / 1 218 ms, 1.39 % | **WON'T DO** — hits pass, saving under 3 % |
+| K5 Generate's bar ↔ advisor (exact key / kernel input key) | cache | 1.0 / 1.0 — 22 / 8 | 0.01 % / 0.00 % — 0.14 % / 1.05 % | **WON'T DO** — kernel key hits pass, saving under 3 % |
+| K6 the sizer's two journals fused | refactor | — (5.55 M sizer kill orders, timing) | 0.13 % / 0.13 % (ceiling) | **WON'T DO** — under 2 % |
+
+No cache and no census refactor passes. Consequences for the steps above:
+
+- **P1.1 (one baseline per run) is dropped as a cache.** K4's inputs are byte-identical (2 repeats out of 3, both
+  fixtures), but two baselines are 1.4–2.7 % of the CPU. Their cost is wall time — each is a serial head while the
+  pool idles — so **P1.2** (no serial head) is the step that recovers it, without a cache.
+- **P2's K1, K2, P2.4 (K3) are not built.** P2.1 (incremental kill order) is not a census item and stays open, to
+  be sized by its own measurement.
+
+**Caveat: the trace and the census disagree on the Tight raise.** In-process the Tight raise is 13.3 % of the
+timing account's CPU (0.55 % on the exactness fixture); in the owner's trace it is 49.1 % of busy pool CPU — same
+account, same 83 probes and 3 baselines. Every verdict above is on the in-process clock. If a browser run with no
+profiler attached (P0.4 / the next drill) confirms the trace's share, K2 scales to about 49.1 % × 18.0 % (kill
+order share of the Tight raise) × 0.63 (rated misses / ratings) ≈ **5.6 %** of pool CPU and passes its 2 % bar —
+re-open K2 then. The same scaling (49.1 / 13.3 ≈ 3.7×) takes K5 on the kernel input key from 1.05 % to about
+**3.9 %** with 8 hits per entry — it would pass, so re-open it too. K1 (0.59) and K3 (0.09 on the timing fixture)
+fail on hits per entry whatever the clock; K4 and K6 are not raise time and do not scale.

@@ -107,7 +107,7 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   share of the rated searches' time spent in `raiseRating`. Run it, commit the test and the report:
   `Experiment 196: the cache census (W18 P0.3)`.
 
-- [ ] Write the census verdict. In `docs/plans/profile-drilldown.md`, add a section `## 5. The census (experiment 196)`
+- [x] Write the census verdict. In `docs/plans/profile-drilldown.md`, add a section `## 5. The census (experiment 196)`
   with one row per candidate K1 to K6: projected saving, hits per entry, and a verdict by this rule, written in the
   section: **a cache is built only when it is hit on average at least twice per stored entry and its projected saving
   is at least 3 % of the run's CPU on either fixture**; a refactor (K2, K6) is done when it saves at least 2 %.
@@ -274,3 +274,20 @@ Plan: `docs/plans/profile-drilldown.md` (read §0 first: it holds the measured f
   with no profiler attached.
 - No commit-worthy production change: test-side only (`tests/kernel/load.ts`, `raise-census.test.ts` reuse).
 
+
+### Census verdicts K1 to K6 (2026-10-10) — later phases read these
+
+Rule: a cache only when hits per entry ≥ 2 **and** projected saving ≥ 3 % of run CPU on either fixture; a refactor
+(K2, K6) when it saves ≥ 2 %. Full table: `docs/plans/profile-drilldown.md` §5.
+
+- **K1 rated value memo — WON'T DO.** 0.05 / 0.59 hits per entry; 0.01 % / 2.21 %.
+- **K2 one kill order per rated battle — WON'T DO** (in-process). 0.09 % / 1.76 % < 2 %. **Re-open** if a browser
+  run without the profiler confirms the trace's 49.1 % Tight share: it scales to ≈ 5.6 %.
+- **K3 `shownMarch` across jobs — WON'T DO.** 0.14 / 0.07 (exact), 0.56 / 0.09 (kernel key) hits per entry;
+  ≤ 1.20 %.
+- **K4 one baseline across passes — WON'T DO** as a cache. 2.00 hits per entry, but 2.66 % / 1.39 % < 3 %. Its cost
+  is wall (serial heads): P1.2 (no serial head) recovers it. P1.1 dropped.
+- **K5 Generate ↔ advisor — WON'T DO** (in-process). Exact key 1.0 per entry; kernel key 22 / 8 per entry but
+  0.14 % / 1.05 %. **Re-open** with K2 if the trace's share holds (≈ 3.9 %).
+- **K6 sizer journals fused — WON'T DO.** 0.13 % ceiling on both.
+- No cache, no census refactor is built. P2.1 (incremental kill order) is not a census item and stays open.
