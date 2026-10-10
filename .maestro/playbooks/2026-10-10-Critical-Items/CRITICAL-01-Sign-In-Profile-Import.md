@@ -28,7 +28,7 @@ Source: `todos.md`, entry "when logged out and logged in don't import the local 
 
 - [x] Update tests. In `src/account/state.test.ts` add or change cases: (a) sign-up with local profiles copies them with the `local` suffix and reports `merged`; (b) sign-in with local profiles adds nothing and reports no `merged` dialog; (c) sign-in with an account that has no profiles keeps a usable profile; (d) sign-out leaves a fresh local profile and no account profile on screen. Run `pnpm test -- src/account` and make it green. Do not loosen an existing assertion to make a test pass: if one fails for a reason you do not understand, stop and write the failure into Notes.
 
-- [ ] Run the full gate. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` on the changed files only (`pnpm exec prettier --check <files>`), and `pnpm test`. All must pass. Record the exact counts in Notes. If an unrelated test was already red before this phase, say so with its name and do not fix it here.
+- [x] Run the full gate. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` on the changed files only (`pnpm exec prettier --check <files>`), and `pnpm test`. All must pass. Record the exact counts in Notes. If an unrelated test was already red before this phase, say so with its name and do not fix it here.
 
 - [ ] Commit this phase only. Stage only the files this phase changed (list them with `git status --short`). The working tree already has other people's uncommitted changes (for example `.maestro/playbooks/performance-optimization/`, `tools/theorycraft/out/`, `todos.md`, `pyrrhic-my-account-2026-10-07.json`). Do not `git add -A` and do not stage those. Commit message: `Sign-in adopts the account's profiles; local profiles are copied only on sign-up`. End the commit message with `Co-Authored-By:` naming the model that is actually running this task.
 
@@ -84,3 +84,11 @@ The owner's `todos.md` entry (newer than both, 2026-10-07 specs vs. the 2026-10-
 
 - All four cases were already in `src/account/state.test.ts` from tasks 2–4, so no test code changed: (a) "signing up adds this browser's profiles to the new account, renaming a name it already uses" (`Main (local)`, `merged` dialog); (b) "signing in to an existing account replaces this browser's profiles, silently" (only the account's `Main`, `dialog: null`, `merged: null`); (c) "signing in to an account with no profiles still leaves one on screen, not the browser's own" (`My account`); (d) "signing out saves first, then takes the account's profiles off this browser" (fresh `My account`, no account profile id on screen, cache cleared, `owner: null`). No assertion was loosened.
 - `pnpm exec vitest run src/account`: 5 files, 80 tests passed. Note: `pnpm test -- src/account` as written did not filter (the `--` reaches vitest and it ran the whole suite, timing out after 2 min); use `pnpm exec vitest run src/account` or `pnpm test src/account`.
+
+### Task 6: full gate (2026-10-10)
+
+- `pnpm typecheck` (`tsc -b --noEmit`): exit 0, no errors.
+- `pnpm lint` (`eslint .`): exit 0, no warnings or errors.
+- `pnpm exec prettier --check` on the five files this phase changed (`src/account/auth.ts`, `src/account/auth.test.ts`, `src/account/state.ts`, `src/account/state.test.ts`, `src/ui/account/AccountDialogs.tsx`): all use Prettier style.
+- `pnpm test`: **138 test files passed, 176 skipped (314); 1698 tests passed, 491 skipped (2189)**, 0 failed, 244.9 s. The skips are the opt-in theorycraft experiments under `tools/theorycraft/` (`skipIf`-gated), not something this phase turned off. No test was red before or after.
+- Logs: `.maestro/playbooks/Working/c01-{typecheck,lint,format,test}.log`.
