@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "pnpm kernel:build && vite",
+    "dev:profile": "pnpm kernel:build:profile && vite",
     "build": "pnpm kernel:build && vite build && node scripts/postbuild-404.mjs",
     "preview": "vite preview",
     "test": "vitest run",
@@ -31,6 +32,7 @@
     "test:visual:update": "playwright test --config playwright.visual.config.ts --update-snapshots",
     "size": "size-limit",
     "kernel:build": "asc kernel/assembly/index.ts --config kernel/asconfig.json --target release",
+    "kernel:build:profile": "asc kernel/assembly/index.ts --config kernel/asconfig.json --target profile",
     "kernel:bench": "KERNEL_BENCH=1 vitest run tests/kernel/bench.test.ts"
   },
   "dependencies": {
