@@ -29,7 +29,7 @@ The boundary has three parts, and each is measured separately, not summed by gue
   bound request versus a fresh one. Write `tools/theorycraft/out/198-the-boundary.md`. Commit: `Experiment 198: the
   kernel boundary on the owner's account (W18 P3.0)`.
 
-- [ ] Time the glue. In the same test (or `tools/theorycraft/198b-the-glue.test.ts` if 198 grows), time each door with
+- [x] Time the glue. In the same test (or `tools/theorycraft/198b-the-glue.test.ts` if 198 grows), time each door with
   `performance.now()` around the wasm call alone and around the whole wrapper, over the same plans, and report the glue
   share per door as a percentage of the planner's wall time. Do not add timers to `src/`: wrap the exports object the
   test receives from `createPlanKernel` (or time from outside through `planCampaign`). Record the figures in 198's
@@ -100,3 +100,32 @@ instance, and every `march`/`bill` lands on it. The cost per plan is the packed 
 the 75 repeat `bindTable` calls (`packRequest` runs before the `byRequest` lookup), a few KiB per crossing, and one
 result object per `march`/`bill`/`marchBill` call. Each probe plan builds its own request, so a worker pays one
 instance per probe, not per candidate. Whether the 68 k crossings cost time is 198b's question.
+
+### Experiment 198b, the glue timed (2026-10-11)
+
+`tools/theorycraft/198b-the-glue.test.ts` → `tools/theorycraft/out/198b-the-glue.md`, summary appended to
+`198-the-boundary.md`. A fresh plan kernel, its raw exports (wrapped `WebAssembly.Instance`) and its doors (a `Proxy`)
+timed with `performance.now()`; one cold plan untimed, then 7 warm timed plans, each interleaved with an untimed plan
+on the release kernel (the denominator). Glue = a door's wrapper time, exclusive of doors it opens, minus its wasm
+calls; the timers' own cost (54 ns inside an empty door, ~200 ns per timed raw call, ~41 ns inside the raw timer) is
+calibrated from the doors' own records and taken off. The upper bound takes nothing off. Answers equal the release
+kernel's on every timed plan.
+
+| Per plan, share of the untimed planner wall | Timing fixture (397.9 ms) | Exactness fixture (375.4 ms) |
+|---|---:|---:|
+| Inside wasm, all doors | 34.6 % (197's profiler: 31.5 %) | 21.9 % |
+| **Glue, all doors** | **8.1 %** (≤ 16.4 %) | **11.3 %** (≤ 21.0 %) |
+| `sizeStacks` glue | **2.6 %** (≤ 3.3 %), 865 ns a call | 0.8 % |
+| `march` glue | 1.7 % (≤ 2.9 %), 292 ns a call | 0.6 % |
+| `bill` glue | 1.1 % (≤ 2.2 %), 218 ns a call | 0.3 % |
+| `marchBill` glue | 1.0 % (≤ 1.3 %), 723 ns a call | **7.9 %** (≤ 13.0 %), 90,699 calls at 325 ns |
+| `bindTable` glue (the dropped `packRequest`) | 0.6 %, 30 µs a call | 1.2 %, 22 µs a call |
+| `ladder.finale` / `ladder.grid` / `ladder.shape` | 0.5 / 0.4 / 0.1 % | 0.4 / 0.2 / 0.1 % |
+| `ladder.gridView` (pure view read) | ≈ 0 (≤ 4.0 %) | ≈ 0 (≤ 1.5 %) |
+
+Reading: on the timing fixture no door's glue reaches 3 % of the planner's wall, even uncorrected; the boundary as a
+whole is 8 % (≤ 16 %), spread over four doors. On the exactness fixture one door stands out: `marchBill`, 90 k calls
+(the counts→row loop over `ids`, the record read, the result object) at 7.9 % corrected, 13.0 % uncorrected. That
+fixture is not the one the next tasks rank on, but the decision task should name it. Timed plans run ~1.5× the
+untimed wall (instrumentation), so per-door figures carry that noise; the calibrated column is the estimate,
+the upper bound the ceiling.

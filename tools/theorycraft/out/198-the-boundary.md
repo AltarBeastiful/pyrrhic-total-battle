@@ -244,3 +244,19 @@ W18 Drill 04b, P3.0 (`docs/plans/profile-drilldown.md` §3). Run 2026-10-11, nod
 | Calls on the busiest instance | 19,369 |
 | Median calls per serving instance | 19,369 |
 | … on an instance the cold plan bound (alive across plans) | 19,369 (100.0 %) |
+
+## 198b — the glue, timed (2026-10-11)
+
+From [[198b-the-glue]] (`tools/theorycraft/198b-the-glue.test.ts`, same plans; this section is not rewritten by 198's
+test, rerun 198b to refresh it). Per plan, warm kernel, shares of the **untimed** planner wall; "glue" is a door's
+wrapper time minus its wasm calls, timer cost taken off by calibration; the upper bound takes none off.
+
+| Figure | Timing fixture | Exactness fixture |
+|---|---:|---:|
+| Planner wall per plan, untimed (median of 7) | 397.9 ms | 375.4 ms |
+| Time inside wasm (all doors) | 137.5 ms (34.6 %) | 82.1 ms (21.9 %) |
+| **Glue, all doors** | **32.2 ms (8.1 %)**, upper bound 16.4 % | **42.6 ms (11.3 %)**, upper bound 21.0 % |
+| Largest door glue | `sizeStacks` 2.6 % (≤ 3.3 %) | `marchBill` 7.9 % (≤ 13.0 %) |
+| Next | `march` 1.7 %, `bill` 1.1 %, `marchBill` 1.0 % | `bindTable` 1.2 %, `sizeStacks` 0.8 % |
+| `bindTable` glue (75 of 76 / 202 of 203 calls rebuild a dropped `packRequest`) | 30 µs a call, 0.6 % | 22 µs a call, 1.2 % |
+| `ladder.gridView` (295 k / 107 k calls, a view read) | ≈ 0 corrected, ≤ 4.0 % | ≈ 0 corrected, ≤ 1.5 % |
