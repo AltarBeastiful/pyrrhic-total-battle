@@ -152,6 +152,76 @@ The steps are the playbook `.maestro/playbooks/2026-10-10-Profile-Drilldown/` (D
 - **P3.3** Allocation: numeric keys instead of `countsKey` strings, reused buffers in `build` / `copyStacks` /
   `prefixFielded`, no spread copies in hot loops.
 
+#### P3.4 The planner port, planned (Drill 05, 2026-10-11; not started, waits on the owner)
+
+**What is left after P3.3** (experiment 197 on 9c96e15, `tools/theorycraft/out/197-the-planner-on-the-owner.md`;
+call counts from a one-off counted run, instrumentation not committed). Shares are of `planCampaign`'s own CPU
+(197's "JS under it" divided by `planCampaign` inclusive):
+
+| JS under… | Timing fixture | Exactness fixture |
+|---|---:|---:|
+| `evaluateVector` (the whole chain) | **38.1 %** | 13.6 % |
+| `scorer` | 27.4 % | 9.1 % |
+| `sizer` | 11.7 % | 2.8 % |
+| `sizedShape` | 7.7 % | 1.7 % |
+| `sizedCounts` | 2.4 % | 0.7 % |
+| `retypeRow` (not in the chain) | 7.0 % | **32.1 %** |
+
+| Per plan | Timing | Exactness |
+|---|---:|---:|
+| `evaluateVector` calls (of which derived-memo replays) | 9,532 (4,408) | 3,834 (1,029) |
+| `scorer` calls (≈ per scored vector) | 304,564 (59) | 111,594 (40) |
+| `sizer` calls (memo misses) | 22,732 (12,031) | 11,210 (4,842) |
+| Real kernel crossings per `evaluateVector` call | 7.2 (+31 `gridView` reads) | 7.9 without `marchBill`'s 90,699, most of them re-typing's |
+
+The chain is over Drill 05's 15 % bar on the owner's timing account, under it on the exactness export (where
+re-typing is the JS half). The sizer branch crosses once per memo miss (`sizeStacks` 12,045 ≈ 12,031 misses),
+then once more per shape for its march (`march` 22,900); every ladder shape read off the grid crosses once to
+bill (`bill` 20,310). So the cost is not the crossings: it is the JS built around each one (caps and options
+spreads, the unit filter, `byId` lookups, two `shelterUnder`s, the vector scan, `KernelMarch`, `finish`).
+
+**What to port, in order** (each one its own step, gate, commit; stop after any step that buys under 3 % of the
+timing fixture's planner CPU):
+
+1. **The sizer shape, one door** (`sizerShape` on the ladder kernel). Ports `sizedShape` + `sizedCounts`'s
+   request building + the scorer's sizer branch up to the priced march: caps over the hired counts, the unit
+   filter (leadership units in the prefix, hired units fielded), the method and `relaxedPreservation`, the kernel
+   sizer already there, rungs/hired split in the sizer's order, `shelterUnder` and its filter, the
+   last-stack-wins scan back onto `mercTypes`, `lastsMarches`, the second `shelterUnder`, `fitsHousing`, the
+   march and its bill, the budget check. Answers into the ladder kernel's `rungs` / `sheltered` / `out` views as
+   `ladder.shape` does, or `-1` for "no shape" and `null` for "declined" (the TS path then runs, as
+   `sizedCountsDeclined` does). The sizer memo stays in JS, keyed as today: a hit costs no crossing.
+   *Ceiling*: `sizer` 11.7 % plus the scorer's sizer branch, ~12–15 % of the timing fixture's planner.
+   *Kernel-side data*: the bound request (`packRequest` already packs units, caps, options; `bindTable` the
+   effective table), the troop ranking (`troops`, prefix = its last `depth`), the merc-type index map,
+   `sustain` per merc type, housing, gap, the per-march budget, the enemy stacks (already bound for `march`).
+2. **The grid billed in the grid call.** `lk.grid` bills every shape it lays (what `KernelMarch.bill` asks the
+   kernel for later, one crossing a shape), so `shapeOf` reads figures and does not cross. Removes the `bill`
+   crossings and part of `gridOnKernel` / `shapeOf` (4.7 % JS under / 4.1 % inclusive on the timing fixture).
+3. **`finish` / `finaleFor`** (4.8 % / 3.8 % JS): only if 1–2 left the chain ≥ 15 %. The finale grid is on the
+   kernel already (`ladder.finale`); the port is the spent-stock bookkeeping and the total around it.
+
+**Not ported**: `evaluateVector`'s own orchestration (`record`, `consider`, the derived memo, the candidate
+objects; 7.6 % self) — it is the search's bookkeeping, it holds JS objects other passes keep, and its replay
+already skips 46 % of the calls. Re-typing (`retypeRow`, the exactness export's 32 %) is a separate question,
+not this chain.
+
+**The op-for-op rule** (as the kernel port, `project-kernel-port`: bit-identical ×24): every statement of the TS
+body translated in its order — the same f64 operations in the same association, `Math.floor` / `Math.max` /
+`Math.min` where the TS has them, the sizer's stack order, the last-stack-wins scan from the end, no fused or
+reordered arithmetic, no early exit the TS does not take. The TS body stays as the reference behind the door
+(the `…Declined` pattern), unchanged.
+
+**The parity test, red then green** (`tests/kernel/sizer-shape-parity.test.ts`, one test both paths):
+
+- `tests/kernel/declining.ts` gains `sizerShape: () => null`, so the declining kernel runs the TS reference.
+- Door level: on every benchmark army (`commonScenarios` + `ownerScenarios`) and both fixtures (the timing one
+  skipped when absent, as 197 does), record every `(counts, method, depth)` the sizer is asked in one plan, and
+  compare the door's rungs, sheltered counts and every march figure against the TS with `Object.is`.
+- Plan level: `planCampaign` alternatives JSON identical under the declining and the real kernel on the same set.
+- Then the gate: goldens byte-identical, `benchmark-latest.json` unchanged except timings, the advisor golden,
+  197 before and after.
+
 ### P4. The page (sized by P0.2 first)
 
 - **P4.1** Progress renders at most once a frame (`requestAnimationFrame`-coalesced `onProgress`), the rows

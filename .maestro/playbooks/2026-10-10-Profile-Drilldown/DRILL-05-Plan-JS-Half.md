@@ -25,7 +25,7 @@ kernel is exact only when done op for op, as the kernel port was (`project-kerne
   change must keep iteration orders (a `Map`'s insertion order, a sort's comparator and stability). Gate script.
   Record 197's figures before and after. Commit: `Planner: less allocation in the hot loop (W18 P3.3)`.
 
-- [ ] Decide the port. From 197, write in Notes the JS share left in `evaluateVector` → `sizer` → `sizedShape` →
+- [x] Decide the port. From 197, write in Notes the JS share left in `evaluateVector` → `sizer` → `sizedShape` →
   `sizedCounts` and the number of kernel crossings per call. If the chain is still ≥ 15 % of the planner's CPU,
   write a port plan in `docs/plans/profile-drilldown.md` (new subsection under P3): which functions, the data they
   need on the kernel side, the op-for-op rule, and a parity test that runs the TS reference (`tests/kernel/declining.ts`
@@ -100,3 +100,26 @@ Gate (2026-10-11): kernel:build, typecheck, lint, `pnpm test` (295 s, advisor go
 alone (162 s), benchmark diff vs HEAD (empty), 184 (110 s, run alone after the tool's 10-minute limit cut the
 gate script on its last step): all PASS. Logs `.maestro/playbooks/Working/w18/p33-*`, `197-before-*`, `197-final-*`.
 
+
+### The port, decided (2026-10-11): plan written, waits on the owner
+
+From 197 on 9c96e15 (after P3.3), as shares of `planCampaign`'s CPU (JS under each frame ÷ `planCampaign`
+inclusive):
+
+| JS under | Timing fixture | Exactness fixture |
+|---|---:|---:|
+| `evaluateVector` (the chain) | **38.1 %** | 13.6 % |
+| `sizer` | 11.7 % | 2.8 % |
+| `sizedShape` | 7.7 % | 1.7 % |
+| `sizedCounts` | 2.4 % | 0.7 % |
+
+Kernel crossings per `evaluateVector` call: **7.2** real calls (+31 `gridView` reads) on the timing fixture
+(68,644 over 9,532 calls, 4,408 of them derived-memo replays); 7.9 on the exactness export without the 90,699
+`marchBill` calls, most of them re-typing's. One `sizeStacks` crossing per sizer memo miss (12,045 vs 12,031).
+Counts from a one-off instrumented run of 197 (counters reverted, nothing committed).
+
+The chain is ≥ 15 % on the owner's account, so the port plan is written: `docs/plans/profile-drilldown.md`
+§P3.4 — (1) the sizer shape as one kernel door, (2) the grid billed inside `lk.grid`, (3) `finish`/`finaleFor`
+only if still ≥ 15 %; `evaluateVector`'s bookkeeping and re-typing not in it; op-for-op rule; parity test
+`tests/kernel/sizer-shape-parity.test.ts` (declining kernel vs real, door and plan level, benchmark armies +
+both fixtures). Nothing ported.
