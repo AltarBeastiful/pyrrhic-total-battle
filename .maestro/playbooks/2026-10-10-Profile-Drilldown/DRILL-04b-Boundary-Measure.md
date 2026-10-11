@@ -43,7 +43,7 @@ The boundary has three parts, and each is measured separately, not summed by gue
   could not be measured. Record both numbers in Notes and in `docs/plans/profile-drilldown.md` §0.2 (a new paragraph,
   do not overwrite the trace's figures). No commit to `src/`.
 
-- [ ] Rank the breakdown. Write, in Notes, one table ordering every function that carries ≥ 2 % of the planner's wall
+- [x] Rank the breakdown. Write, in Notes, one table ordering every function that carries ≥ 2 % of the planner's wall
   time on the timing fixture, by its self time, its glue share (from the previous tasks), and its kind: kernel compute,
   kernel glue, JavaScript compute, allocation, or GC. This is Drill 05's input: Drill 05's experiment 197 profiles the
   same planner, and its ranking must agree with this table. Commit the doc: `W18: Drill 04b measured`.
@@ -172,3 +172,40 @@ sampling), not the production cost. Consequences: the planner (`planCampaign`, 7
 is Drill 05's premise; on the browser clock K2 scales to ≈ 22.7 % × 18.0 % × 0.63 ≈ **2.6 %** of pool CPU (over its
 2 % refactor bar, if the trace's kill-order share holds on the release kernel; worth re-checking before re-opening),
 and K5 on the kernel input key to ≈ 1.05 % × 22.7 / 12.8 ≈ **1.9 %**, still under the 3 % cache bar.
+
+### The breakdown, ranked (2026-10-11)
+
+Sources, all on the same HEAD (no `src/` change since `9c96e15`): **197** re-run on HEAD for this table
+(`Working/w18/d04b-197.md`, `.log`; the committed `out/197-the-planner-on-the-owner.md` was left as is, every row
+below moves ≤ 0.4 pt between the two), CPU profiler at 100 µs, shares of the profiled planner time (430.7 ms a plan,
+GC included); **198b** for the per-door split of wasm and glue, shares of the untimed planner wall (397.9 ms a plan).
+The two denominators differ by 8 %; each row says which it uses. Timing fixture, release kernel, in-process.
+"Bytes" is the function's share of the bytes allocated per plan (197's sampling heap profiler, 366 MiB a plan).
+
+| # | Function / door | Self time | Glue share | Bytes | Kind |
+|---:|---|---:|---:|---:|---|
+| 1 | `sizeStacks` door, inside wasm (the sizer kernel) | **20.0 %** (198b, 79.4 ms) | — | — | kernel compute |
+| 2 | `(garbage collector)` | **12.0 %** (197; 11.7 % committed) | — | — | GC (paid for rows 3, 5, 7, 8, 11 and `shapeOf`) |
+| 3 | `evaluateVector` (engine/plan.ts) | **8.0 %** (197) | — | 6.1 % | JavaScript compute |
+| 4 | `ladder.grid` door, inside wasm | **6.4 %** (198b, 25.6 ms) | — | — | kernel compute |
+| 5 | `sizedShape` (engine/plan.ts) | **4.4 %** (197) | — | 10.8 % | JavaScript compute + allocation |
+| 6 | `march` door, inside wasm | **4.3 %** (198b, 17.1 ms) | — | — | kernel compute |
+| 7 | `scorer` (engine/plan.ts) | **4.1 %** (197) | — | 12.5 % | JavaScript compute + allocation |
+| 8 | `sizer` (engine/plan.ts) | **3.2 %** (197) | — | 6.1 % | JavaScript compute + allocation |
+| 9 | `sizeStacks` door, glue (kernel/plan.ts wrapper: `lay`, result object) | 1.9 % (197 self) | **2.6 %** (198b; ≤ 3.3 %) | 3.4 % | kernel glue |
+| 10 | `planCampaign` (engine/plan.ts, own body) | **2.2 %** (197) | — | < 1 % | JavaScript compute |
+| 11 | `finaleFor` (engine/plan.ts) | **2.1 %** (197) | — | 7.2 % | JavaScript compute + allocation |
+| — | *all doors' glue together* (sizeStacks 2.6 · march 1.7 · bill 1.1 · marchBill 1.0 · bindTable 0.6 · finale 0.5 · grid 0.4) | — | **8.1 %** (≤ 16.4 %) | — | kernel glue, spread over 7 doors |
+| — | *all of wasm together* | 30.9 % (197) / 34.6 % (198b) | — | — | kernel compute |
+
+Below the 2 % line, named because they matter for Drill 05: `shapeOf` (1.4 % self but **12.4 % of the bytes**, the
+largest allocator with `scorer`, so its cost lands in row 2), `retype.ts@76` 1.35 %, `undominatedRows` 1.2 %,
+`priceMarch` 1.0 %, `march`/`bill`/`marchBill` wrappers 1.0 / 0.8 / 0.7 % (their glue is in the aggregate row).
+
+Reading: the planner's wall is about **one third kernel compute** (the sizer alone is a fifth), **one third JavaScript
+compute** in five engine functions (`evaluateVector`, `sizedShape`, `scorer`, `sizer`, `finaleFor` ≈ 22 % self),
+**one eighth GC** fed by the same five plus `shapeOf` (≈ 55 % of the bytes), and **one twelfth boundary glue** with no
+door above 3 %. Drill 05's 197 must rank the same way: on this HEAD it does (it is the source of rows 2, 3, 5, 7, 8,
+10, 11); if Drill 05 re-runs 197 after a change, the rows above are its baseline. The browser run above adds one
+fact the in-process table cannot: in the production page the planner is 76 % of pool CPU, so each point here is
+≈ 0.76 pt of pool CPU.
