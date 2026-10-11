@@ -152,7 +152,7 @@ The steps are the playbook `.maestro/playbooks/2026-10-10-Profile-Drilldown/` (D
 - **P3.3** Allocation: numeric keys instead of `countsKey` strings, reused buffers in `build` / `copyStacks` /
   `prefixFielded`, no spread copies in hot loops.
 
-#### P3.4 The planner port, planned (Drill 05, 2026-10-11; not started, waits on the owner)
+#### P3.4 The planner port, planned (Drill 05, 2026-10-11; owner said yes 2026-10-11)
 
 **What is left after P3.3** (experiment 197 on 9c96e15, `tools/theorycraft/out/197-the-planner-on-the-owner.md`;
 call counts from a one-off counted run, instrumentation not committed). Shares are of `planCampaign`'s own CPU
