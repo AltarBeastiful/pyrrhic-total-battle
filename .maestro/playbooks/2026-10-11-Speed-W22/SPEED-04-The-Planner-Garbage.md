@@ -26,7 +26,7 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
   site's own parity test if it is a kernel door). A/B in-process (≥ 30 rounds interleaved, GC pause ms and planner
   CPU): keep at ≥ 2 % of the planner. Commit: `Planner: <site> without garbage (W22 step 4a)`.
 
-- [ ] Fix the second site, the same way. Commit: `Planner: <site> without garbage (W22 step 4b)`.
+- [x] Fix the second site, the same way. Commit: `Planner: <site> without garbage (W22 step 4b)`.
 
 - [ ] Fix the third site only if 206 projects it ≥ 2 % of the planner. Commit: `(W22 step 4c)`.
 
@@ -49,3 +49,8 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
   interleaved, two runs: wall −6.6 / −8.2 %, first quartile −3.9 / −3.6 %, GC pauses 12 → 11 per plan (−8.3 %);
   CPU −3.8 / +8.0 % (all threads, too noisy). Answers equal arm to arm; gate: typecheck, lint, tests, plan
   benchmark, bench diff, 184 all pass.
+- Step 4b (`marchRecovery`'s `[...rungs, ...mercs].filter` replaced by a module scratch array, experiment 210 label
+  `bill`/`bill2`, 60 rounds interleaved each): run 1 CPU −2.6 %, wall −8.1 % (q1 −2.7 %), GC 28.2 → 28.2 ms; run 2
+  CPU +26.8 % (noise), wall −4.4 % (q1 +0.9 %), GC −3.0 %. Not reproducible, GC pauses unchanged at 11: reverted
+  (WON'T DO, under the 2 % bar). The remaining top sites are either memoised results (`sizerShape` door, `sizerKeptOf`
+  kept records: retained, not garbage) or each ≤ 1.9 % of allocation, so 4c (needs ≥ 2 % projected) is also WON'T DO.
