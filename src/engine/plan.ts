@@ -1687,6 +1687,12 @@ export interface ShapeContext {
         prefix?: number,
       ) => { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] })
     | undefined;
+  /**
+   * `sizer`'s memo entry itself, not copies of it (W19): the scorer reads its figures off it and copies only the
+   * stacks of a shape something keeps. The entry is never written by the scorer but for its `tail` and
+   * `finaleMarch`, and never handed out.
+   */
+  sizerKept?: ((mercs: { entry: Effective; count: number }[], method: SizerMethod) => SizerKept) | undefined;
   /** The troop stacks scored at `WINNER_RUNGS_DEPTH`: the search's winner, once there is one. */
   winnerRungs?: (() => { entry: Effective; count: number }[]) | undefined;
   /**
@@ -1763,6 +1769,33 @@ export interface ScoredShape {
 }
 
 /** Scores one shape: `marches` repeats of `counts` behind a ladder of `depth` rungs scaled by `scale`. */
+/** One ladder shape's numbers (`ShapeScorer.row`): what `record` and the pick read of a `Candidate`. */
+export interface RowFigures {
+  total: number;
+  /** The repeated march's silver, as `march.silver`. */
+  marchSilver: number;
+  /** The kernel's bill for it, before rounding (`KernelMarch.billedSilver`). */
+  billed: number;
+  mercLost: number;
+  hiredDamage: number;
+  /** The final march's silver, mercenaries lost and hired damage; 0 where there is none. */
+  finaleSilver: number;
+  finaleMercLost: number;
+  finaleHired: number;
+}
+const rowFigures: RowFigures = {
+  total: 0,
+  marchSilver: 0,
+  billed: 0,
+  mercLost: 0,
+  hiredDamage: 0,
+  finaleSilver: 0,
+  finaleMercLost: 0,
+  finaleHired: 0,
+};
+/** Test hook: `on: false` makes the planner build every shape's objects, as it did before W19. */
+export const scorerRows = { on: true, finale: true };
+
 export type ShapeScorer = ((
   marches: number,
   counts: Record<string, number>,
@@ -1784,6 +1817,19 @@ export type ShapeScorer = ((
    */
   arm?: (marches: number, counts: Record<string, number>, silverBudget: number | undefined) => void;
   disarm?: () => void;
+  /**
+   * An armed, budget-free ladder shape's **figures** without its objects (W19): `null` where `scorer` answers
+   * `null`, `undefined` where `scorer` must be asked. The figures are reused by the next call; `rowShape`
+   * builds the shape of the last row, the very `ScoredShape` `scorer` would have answered.
+   */
+  row?: (
+    marches: number,
+    counts: Record<string, number>,
+    depth: number,
+    scale: number,
+    silverBudget?: number,
+  ) => RowFigures | null | undefined;
+  rowShape?: () => ScoredShape;
   /** What a caller replaying a vector it scored before must check and restore (`ScorerState`, W16 C1). */
   state?: ScorerState;
 };
@@ -1830,6 +1876,13 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
    */
   /** `finaleFor`'s spent stock, by hired id: every hired type's entry is written before it is read. */
   const finaleScratch: Record<string, number> = {};
+  /**
+   * The final march's attempt over a sizer answer's own stacks (W19), marched once per answer instead of once
+   * per call: `null` when the answer has no troops or no hired stacks. A function of the answer and of this
+   * scorer's enemy alone.
+   */
+  const finaleMarchOf = new WeakMap<SizerKept, MarchOfLike | null>();
+
   const finaleFor = (
     marches: number,
     fielded: { entry: Effective; count: number }[],
@@ -1894,6 +1947,24 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     // 3 893 700 silver burning 24, the sizer under MS relaxed for 6 079 432 at 2 739 400 burning 14).
     if (context.sizer) {
       for (const method of Object.values(SIZER_DEPTHS)) {
+        if (scorerRows.on && scorerRows.finale && context.sizerKept) {
+          // The answer's own stacks are marched once (`finaleMarch`) and copied only when the attempt is taken.
+          const kept = context.sizerKept(leftovers, method);
+          if (!finaleMarchOf.has(kept)) {
+            finaleMarchOf.set(
+              kept,
+              kept.rungs.length === 0 || kept.mercs.length === 0
+                ? null
+                : marchOf([...kept.rungs, ...kept.mercs], enemyStacks),
+            );
+          }
+          const attempt = finaleMarchOf.get(kept) as MarchOfLike | null;
+          if (attempt === null || attempt.silver > finaleBudget) continue;
+          if (!finale || attempt.damage > finale.march.damage) {
+            finale = { rungs: copyStacks(kept.rungs), mercs: copyStacks(kept.mercs), march: attempt };
+          }
+          continue;
+        }
         const sized = context.sizer(leftovers, method);
         if (sized.rungs.length === 0 || sized.mercs.length === 0) continue;
         const attempt = marchOf([...sized.rungs, ...sized.mercs], enemyStacks);
@@ -1933,6 +2004,22 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       return false;
     for (let i = 0; i < vector.length; i += 1) {
       if (!sameNumber((vector[i] as { count: number }).count, cachedCounts[i] as number)) return false;
+    }
+    return true;
+  };
+
+  /** `cacheHit` for a vector held as the kernel's sheltered counts from `at` (`mercTypes` order). */
+  const cacheHitAt = (marches: number, counts: ArrayLike<number>, at: number): boolean => {
+    const n = mercTypes.length;
+    if (
+      !cachedValid ||
+      cachedLearned !== ordersLearned ||
+      !sameNumber(marches, cachedMarches) ||
+      n !== cachedCounts.length
+    )
+      return false;
+    for (let i = 0; i < n; i += 1) {
+      if (!sameNumber(counts[at + i] as number, cachedCounts[i] as number)) return false;
     }
     return true;
   };
@@ -2046,18 +2133,28 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     } else {
       finale = finaleFor(marches, fieldedOf(), silverBudget - marches * march.silver);
     }
-    return {
-      marches,
-      mercs: vector,
-      counts,
-      rungs,
-      march,
-      finale,
-      total: marches * march.damage + (finale?.march.damage ?? 0),
-      silver: marches * march.silver + (finale?.march.silver ?? 0),
-      mercLost: marches * march.mercLost + (finale?.march.mercLost ?? 0),
-    };
+    return assemble(marches, counts, rungs, vector, march, finale);
   };
+
+  /** A shape from its parts: the campaign's three sums over the repeated march and the final march. */
+  const assemble = (
+    marches: number,
+    counts: Record<string, number>,
+    rungs: { entry: Effective; count: number }[],
+    vector: { entry: Effective; count: number }[],
+    march: ReturnType<typeof marchOf>,
+    finale: ScoredShape['finale'],
+  ): ScoredShape => ({
+    marches,
+    mercs: vector,
+    counts,
+    rungs,
+    march,
+    finale,
+    total: marches * march.damage + (finale?.march.damage ?? 0),
+    silver: marches * march.silver + (finale?.march.silver ?? 0),
+    mercLost: marches * march.mercLost + (finale?.march.mercLost ?? 0),
+  });
 
   /**
    * **The ladder shapes on the kernel** (AssemblyScript roadmap, step 4; `./fast.ts`): a depth of 1 or more is
@@ -2152,6 +2249,27 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
   let gridSerial = -1;
   let gridLearned = -1;
 
+  /** The armed vector's kernel grid, run once per vector and per order learned; `null` when it cannot be. */
+  const gridFor = (
+    lk: LadderKernel,
+    marches: number,
+    counts: Record<string, number>,
+    silverBudget: number | undefined,
+  ): ReturnType<LadderKernel['gridView']> | null => {
+    let view = lk.gridView();
+    if (gridSerial < 0 || view.serial !== gridSerial || gridLearned !== ordersLearned) {
+      layVector(lk, counts);
+      const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
+      const orders = DEPTHS.map((each) => rungOrders.get(each));
+      const serial = lk.grid(marches, orders, gap, leadership, context.housing, budgetPerMarch);
+      if (serial < 0) return null;
+      gridSerial = serial;
+      gridLearned = ordersLearned;
+      view = lk.gridView();
+    }
+    return view;
+  };
+
   /** An armed ladder shape from the vector's kernel grid, run once per vector and per order learned. */
   const gridOnKernel = (
     lk: LadderKernel,
@@ -2164,17 +2282,8 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     const j = (DEPTHS as readonly number[]).indexOf(depth);
     const g = (LADDER_GROWTHS as readonly number[]).indexOf(scale);
     if (j < 0 || g < 0) return ladderOnKernel(lk, marches, counts, depth, scale, silverBudget);
-    let view = lk.gridView();
-    if (gridSerial < 0 || view.serial !== gridSerial || gridLearned !== ordersLearned) {
-      layVector(lk, counts);
-      const budgetPerMarch = silverBudget === undefined ? undefined : silverBudget / marches;
-      const orders = DEPTHS.map((each) => rungOrders.get(each));
-      const serial = lk.grid(marches, orders, gap, leadership, context.housing, budgetPerMarch);
-      if (serial < 0) return ladderOnKernel(lk, marches, counts, depth, scale, silverBudget);
-      gridSerial = serial;
-      gridLearned = ordersLearned;
-      view = lk.gridView();
-    }
+    const view = gridFor(lk, marches, counts, silverBudget);
+    if (view === null) return ladderOnKernel(lk, marches, counts, depth, scale, silverBudget);
     const s = j * LADDER_GROWTHS.length + g;
     const status = view.status[s];
     if (status === LADDER_NONE) return null;
@@ -2255,9 +2364,9 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
       if (!context.sizer) return null;
       const sized = context.sizer(fielded, sizerMethod, prefix);
       sizedRungs = sized.rungs;
+      const sizedMercs = sized.mercs;
       // Each type's count in the sizer's answer, the last stack of that id winning as a `Map` built over the
       // answer would have it (W16 C2: a scan, the answer holding a handful of stacks).
-      const sizedMercs = sized.mercs;
       vector = mercTypes.map((entry) => {
         let count: number | undefined;
         for (let i = sizedMercs.length - 1; i >= 0; i -= 1) {
@@ -2317,6 +2426,125 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
     const march = marchOf([...rungs, ...vector], enemyStacks);
     if (budgetPerMarch !== undefined && march.silver > budgetPerMarch) return null;
     return finish(marches, counts, rungs, vector, march, silverBudget);
+  };
+  /**
+   * **A ladder shape's figures, before any object is built for it** (W19). `row` does what `scorer` does for an
+   * armed, budget-free ladder shape — the kernel grid's figures, the final march (the same cache, read and
+   * written in the same order) — and keeps the shape's numbers in `rowFigures` instead of building its rungs,
+   * its vector, its march and its `ScoredShape`. `rowShape` builds that shape, as `scorer` would have returned
+   * it; the grid it reads is the one `row` read, and nothing between the two may run another. `row` answers
+   * `undefined` where `scorer` has to be asked (it does the same work there), and `null` where `scorer` would.
+   */
+  let rowAt = {
+    marches: 0,
+    counts: {} as Record<string, number>,
+    order: [] as readonly Effective[],
+    s: 0,
+  };
+  const rowFinale: { value: ScoredShape['finale'] } = { value: null };
+  /** `finish`'s final march for a row: the same cache, read and written in the same order. */
+  const finaleOfRow = (marches: number, held: ArrayLike<number>, at: number): ScoredShape['finale'] => {
+    if (noFinale) return null;
+    finaleReads += 1;
+    if (!cacheHitAt(marches, held, at)) {
+      const vector: { entry: Effective; count: number }[] = [];
+      for (let i = 0; i < mercTypes.length; i += 1) {
+        vector.push({ entry: mercTypes[i] as Effective, count: held[at + i] as number });
+      }
+      cachedValid = true;
+      cachedMarches = marches;
+      cachedCounts.length = vector.length;
+      for (let i = 0; i < vector.length; i += 1) cachedCounts[i] = (vector[i] as { count: number }).count;
+      const before = ordersLearned;
+      cachedFinale = finaleFor(
+        marches,
+        vector.filter((merc) => merc.count > 0),
+        undefined,
+      );
+      cachedLearned = ordersLearned === before ? before : -1;
+    }
+    return cachedFinale;
+  };
+  /** The row's numbers from a repeated march's figures and the final march. */
+  const figuresOfRow = (
+    marches: number,
+    damage: number,
+    marchSilver: number,
+    mercLost: number,
+    hiredDamage: number,
+    billed: number,
+    finale: ScoredShape['finale'],
+  ): RowFigures => {
+    const f = finale?.march;
+    rowFigures.total = marches * damage + (f?.damage ?? 0);
+    rowFigures.marchSilver = marchSilver;
+    rowFigures.billed = billed;
+    rowFigures.mercLost = mercLost;
+    rowFigures.hiredDamage = hiredDamage;
+    rowFigures.finaleSilver = f?.silver ?? 0;
+    rowFigures.finaleMercLost = f?.mercLost ?? 0;
+    rowFigures.finaleHired = f?.hiredDamage ?? 0;
+    rowFinale.value = finale;
+    return rowFigures;
+  };
+  scorer.row = (marches, counts, depth, scale, silverBudget) => {
+    if (!scorerRows.on || silverBudget !== undefined) return undefined;
+    if (!Number.isInteger(depth) || depth < 1) return undefined;
+    if (
+      armed === null ||
+      counts !== armed.counts ||
+      !Object.is(marches, armed.marches) ||
+      silverBudget !== armed.silverBudget
+    )
+      return undefined;
+    const lk = laddersNow();
+    if (!lk) return undefined;
+    const j = (DEPTHS as readonly number[]).indexOf(depth);
+    const g = (LADDER_GROWTHS as readonly number[]).indexOf(scale);
+    if (j < 0 || g < 0) return undefined;
+    const view = gridFor(lk, marches, counts, silverBudget);
+    if (view === null) return undefined;
+    const s = j * LADDER_GROWTHS.length + g;
+    const status = view.status[s];
+    if (status === LADDER_NONE) return null;
+    const order = rungOrders.get(depth);
+    if (status !== LADDER_SHAPE || order === undefined) return undefined;
+    const at = s * view.stride;
+    const figures = s * 8;
+    const out = view.out;
+    const finale = finaleOfRow(marches, view.sheltered, at);
+    rowAt = { marches, counts, order, s };
+    return figuresOfRow(
+      marches,
+      out[figures] as number,
+      out[figures + 2] as number,
+      out[figures + 4] as number,
+      out[figures + 1] as number,
+      out[figures + 6] as number,
+      finale,
+    );
+  };
+  scorer.rowShape = () => {
+    const lk = laddersNow() as LadderKernel;
+    const view = lk.gridView();
+    const { marches, counts, order, s } = rowAt;
+    const at = s * view.stride;
+    const figuresAt = s * 8;
+    const rungs: { entry: Effective; count: number }[] = [];
+    for (let i = 0; i < order.length; i += 1) {
+      rungs.push({ entry: order[i] as Effective, count: view.rungs[at + i] as number });
+    }
+    const vector: { entry: Effective; count: number }[] = [];
+    for (let i = 0; i < mercTypes.length; i += 1) {
+      vector.push({ entry: mercTypes[i] as Effective, count: view.sheltered[at + i] as number });
+    }
+    const march = new KernelMarch(view.out, rungs, enemyStacks, figuresAt, vector).bill(
+      view.out[figuresAt + 6] as number,
+      lk.recovery,
+      rungs,
+      vector,
+    );
+    return assemble(marches, counts, rungs, vector, march, rowFinale.value);
   };
   scorer.arm = (marches, counts, silverBudget) => {
     armed = { marches, counts, silverBudget };
@@ -2478,6 +2706,9 @@ interface SizerKept {
   rungs: { entry: Effective; count: number }[];
   mercs: { entry: Effective; count: number }[];
 }
+
+/** `marchOf`'s answer, as the scorer's caches hold it. */
+type MarchOfLike = ReturnType<typeof marchOf>;
 
 /**
  * The bucket of one sizer call in its memo (W16 C2). Until then the memo was keyed on a string written out of
@@ -3796,6 +4027,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
      */
     depth?: number,
   ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } => {
+    const kept = sizerKeptOf(mercs, method, depth);
+    return { rungs: copyStacks(kept.rungs), mercs: copyStacks(kept.mercs) };
+  };
+  const sizerKeptOf = (
+    mercs: { entry: Effective; count: number }[],
+    method: SizerMethod,
+    depth?: number,
+  ): SizerKept => {
     // **Asked once per exact input** (AssemblyScript roadmap, step 5): about half the sizer's calls in one
     // search repeat an earlier one — the finale's leftovers, a derived vector, a prefix's anchors — and the
     // answer is a function of what the key holds alone (`sizedShape` reads each merc's id and count, the
@@ -3835,7 +4074,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       };
       bucket.push(kept);
     }
-    return { rungs: copyStacks(kept.rungs), mercs: copyStacks(kept.mercs) };
+    return kept;
   };
   let winnerRungs: { entry: Effective; count: number }[] = [];
   const score = makeScorer({
@@ -3847,7 +4086,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     enemyStacks,
     gap,
     finale: planned !== 1,
-    ...(sizerShape ? { sizer } : {}),
+    ...(sizerShape
+      ? {
+          sizer,
+          sizerKept: (mercs: { entry: Effective; count: number }[], method: SizerMethod) =>
+            sizerKeptOf(mercs, method),
+        }
+      : {}),
     winnerRungs: () => winnerRungs,
     sustain,
     ...seeded,
@@ -3905,6 +4150,14 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     tight: number;
     /** The kept final march the scoring left, or `null` when it read none. */
     finale: FinaleKept | null;
+    /**
+     * The best of the booked shapes by each of `record`'s three tests (W19): damage a silver spent, damage a
+     * silver and damage a mercenary over the ratios. A replay whose peaks already stand at or above all three
+     * changes nothing and is not walked.
+     */
+    maxLight: number;
+    maxPerSilver: number;
+    maxPerMerc: number;
   }
   const derivedMemo = new Map<string, DerivedScore>();
   /** The sizer's depths then the ladders' (`SIZER_DEPTHS` keys as numbers, then `DEPTHS`), built once. */
@@ -3976,6 +4229,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   };
 
   /**
+   * Whether `record` would keep a shape of these numbers (W19): `light` by damage a silver, then the two peaks
+   * over the shape's ratios. The same comparisons in the same arithmetic as `record` and `ratioOf`.
+   */
+  const keeps = (row: RowFigures, marches: number): boolean => {
+    const { total } = row;
+    const spent = marches * row.marchSilver + row.finaleSilver;
+    if (spent > 0 && (!light || total / spent > light.total / (light.spent ?? 0))) return true;
+    const pointSilver = marches * Math.round(row.billed) + row.finaleSilver;
+    const pointMercs = marches * row.mercLost + row.finaleMercLost;
+    const pointHired = marches * Math.round(row.hiredDamage) + row.finaleHired;
+    if (pointSilver <= 0 || pointMercs <= 0) return false;
+    return total / pointSilver > peakSilver || pointHired / pointMercs > peakMercenary;
+  };
+
+  /**
    * Score one mercenary vector. The ladder grid is the full `DEPTHS × LADDER_GROWTHS`; `only` pins it to a
    * single rung count and scale instead, which is what the refinement pass below uses — re-scoring one
    * shape costs one shape, where the whole grid costs eighty.
@@ -3995,7 +4263,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       if (kept !== undefined && kept.learned === state.learned() && kept.winner === winnerRungs) {
         const shapes = kept.shapes;
         const copies: (Candidate | undefined)[] = [];
-        for (let i = 0; i < shapes.length; i += 1) recordReplay(shapes[i] as Candidate, copies, i);
+        if (
+          !scorerRows.on ||
+          light === null ||
+          kept.maxLight > light.total / (light.spent ?? 0) ||
+          kept.maxPerSilver > peakSilver ||
+          kept.maxPerMerc > peakMercenary
+        ) {
+          for (let i = 0; i < shapes.length; i += 1) recordReplay(shapes[i] as Candidate, copies, i);
+        }
         if (kept.tight >= 0 && kept.tight !== kept.pick)
           consider(replayed(shapes[kept.tight] as Candidate, copies, kept.tight));
         if (kept.finale) state.restoreFinale(kept.finale);
@@ -4042,7 +4318,25 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (!only) score.arm?.(marches, counts, input.silverBudget);
     for (const depth of depths) {
       for (const scale of only ? [only.scale] : depth <= 0 ? ONE_SCALE : LADDER_GROWTHS) {
-        const scored = score(marches, counts, depth, scale, input.silverBudget);
+        // **A shape nothing keeps builds no objects** (W19): when the scorer can answer with the shape's numbers,
+        // `record`'s test, the pick's and the tight shape's are asked of the numbers, and only a shape one of
+        // them takes is built — then booked exactly as before. (A vector whose shapes the memo keeps builds
+        // them all.) `keeps` may say yes where `record` would then keep nothing, never no where it would.
+        let scored: ScoredShape | null;
+        const row =
+          booked === undefined ? score.row?.(marches, counts, depth, scale, input.silverBudget) : undefined;
+        if (row === null) continue;
+        if (row !== undefined) {
+          if (
+            !(!pick || row.total > pick.total) &&
+            !(depth > 0 && scale === 1 && (!tight || depth > tight.depth)) &&
+            !keeps(row, marches)
+          )
+            continue;
+          scored = (score.rowShape as () => ScoredShape)();
+        } else {
+          scored = score(marches, counts, depth, scale, input.silverBudget);
+        }
         if (!scored) continue;
         const candidate: Candidate = {
           marches,
@@ -4069,7 +4363,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     if (!only) score.disarm?.();
     if (tight && tight !== pick) consider(tight);
     if (state && booked && before && memoKey !== undefined && state.learned() === before.learned) {
+      let maxLight = -Infinity;
+      let maxPerSilver = -Infinity;
+      let maxPerMerc = -Infinity;
+      for (const shape of booked) {
+        const spent = marchedSilver(shape);
+        if (spent > 0 && shape.total / spent > maxLight) maxLight = shape.total / spent;
+        const { silver, mercs, hired } = ratioOf(shape);
+        if (silver <= 0 || mercs <= 0) continue;
+        if (shape.total / silver > maxPerSilver) maxPerSilver = shape.total / silver;
+        if (hired / mercs > maxPerMerc) maxPerMerc = hired / mercs;
+      }
       derivedMemo.set(memoKey, {
+        maxLight,
+        maxPerSilver,
+        maxPerMerc,
         learned: before.learned,
         winner: winnerRungs,
         shapes: booked,

@@ -1149,6 +1149,11 @@ let eBestGuarded: f64 = -Infinity;
 let eBestDamage: f64 = -Infinity;
 let eAdmissible: f64 = 0;
 let ePositive: f64 = 0;
+// `retypeMarch`'s `overCeiling` (W18 P3.5): silver at most `eSilverCeiling`, damage per silver not below the
+// base's when `eHoldPerSilver`, queue seconds at most `eSecondsCeiling`; Infinity / false hold nothing.
+let eSilverCeiling: f64 = Infinity;
+let eHoldPerSilver: bool = false;
+let eSecondsCeiling: f64 = Infinity;
 let eLead: f64 = 0;
 let eAuth: f64 = 0;
 let eDom: f64 = 0;
@@ -1173,6 +1178,14 @@ function eLeaf(): void {
   }
   // `retypeMarch`: admissible when it deals at least the march's worst-opening damage.
   if (damage < baseDamage - 1e-6) return;
+  const silver = load<f64>(eRec + ((<usize>R_SILVER) << 3));
+  const baseSilver = load<f64>(eBase + ((<usize>R_SILVER) << 3));
+  if (
+    silver > eSilverCeiling + 1e-6 ||
+    (eHoldPerSilver && damage * baseSilver < baseDamage * silver - 1e-6) ||
+    load<f64>(eRec + ((<usize>R_SECONDS) << 3)) > eSecondsCeiling + 1e-6
+  )
+    return;
   eAdmissible += 1.0;
   const score = rate(eBase, eRec, 0b11111);
   if (score > 1e-9) ePositive += 1.0;
@@ -1180,8 +1193,7 @@ function eLeaf(): void {
     eBestRating = score;
     copyAssign(0);
   }
-  const silver = load<f64>(eRec + ((<usize>R_SILVER) << 3));
-  if (silver <= load<f64>(eBase + ((<usize>R_SILVER) << 3)) && score > eBestGuarded) {
+  if (silver <= baseSilver && score > eBestGuarded) {
     eBestGuarded = score;
     copyAssign(1);
   }
@@ -1265,7 +1277,8 @@ function eWalk(slot: i32, unplaced: i32): void {
  * `assignPtr`: the best rating with damage held, the same with silver not rising, the most damage (any cost).
  * Also stops after 16 × `maxBattles` inner nodes of the walk (a required candidate left without a slot it
  * fits prunes its branch — and, slots biggest first, one where Hall's condition fails for them; the node cap
- * bounds a walk that prunes without battling).
+ * bounds a walk that prunes without battling). `guardPtr` (0: none) is `retypeMarch`'s `overCeiling`: f64 × 3,
+ * the silver ceiling, 1 when damage per silver is held, the queue-seconds ceiling.
  */
 export function enumerate(
   nSlots: i32,
@@ -1280,6 +1293,7 @@ export function enumerate(
   maxBattles: f64,
   outPtr: usize,
   assignPtr: usize,
+  guardPtr: usize,
 ): void {
   if (eCounts == 0) {
     const n = <usize>max(types, 1);
@@ -1305,6 +1319,10 @@ export function enumerate(
   eNodes = 0;
   eBattles = 0;
   eAbort = false;
+  // `guardPtr` (0: none) holds f64 × 3: silver ceiling, damage per silver held (1/0), queue seconds ceiling.
+  eSilverCeiling = guardPtr == 0 ? Infinity : f64At(guardPtr, 0);
+  eHoldPerSilver = guardPtr != 0 && f64At(guardPtr, 1) != 0.0;
+  eSecondsCeiling = guardPtr == 0 ? Infinity : f64At(guardPtr, 2);
   eBestRating = -Infinity;
   eBestGuarded = -Infinity;
   eBestDamage = -Infinity;

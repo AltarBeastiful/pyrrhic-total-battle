@@ -203,22 +203,42 @@ export function retypeMarch(
   }
   if (exhaustive) {
     from = 'exhaustive';
-    const walk = (acc: number[], used: Set<number>): void => {
-      if (outOfTime()) return;
-      if (acc.length === k) {
-        consider(acc);
-        return;
-      }
-      for (let i = 0; i < m; i += 1) {
-        if (used.has(i)) continue;
-        used.add(i);
-        acc.push(i);
-        walk(acc, used);
-        acc.pop();
-        used.delete(i);
-      }
-    };
-    walk([], new Set());
+    // The kernel walks the whole space in one call (`PlanKernel.retypeWalk`); a clock cannot be honoured there,
+    // so a deadline keeps the TypeScript walk, which is also the reference the door is held to.
+    const walked =
+      deadline === Infinity
+        ? requiredPlanKernel().retypeWalk(request, rates, table, slots, hired, base, {
+            silverCeiling: ceiling,
+            holdDamagePerSilver: holdPerSilver,
+            secondsCeiling: options.secondsCeiling,
+          })
+        : null;
+    if (walked) {
+      // The tier order was battled above and the walk reaches it again: it is counted once, and cannot win a tie.
+      tried += walked.tried - (tierCandidate && build(tier) !== null ? 1 : 0);
+      const kept = best as { counts: Record<string, number>; rating: number; seed?: RetypeSeed } | null;
+      if (walked.counts && walked.rating > 1e-9 && (!kept || walked.rating > kept.rating))
+        best = tierCandidate
+          ? { counts: walked.counts, rating: walked.rating, seed: from }
+          : { counts: walked.counts, rating: walked.rating };
+    } else {
+      const walk = (acc: number[], used: Set<number>): void => {
+        if (outOfTime()) return;
+        if (acc.length === k) {
+          consider(acc);
+          return;
+        }
+        for (let i = 0; i < m; i += 1) {
+          if (used.has(i)) continue;
+          used.add(i);
+          acc.push(i);
+          walk(acc, used);
+          acc.pop();
+          used.delete(i);
+        }
+      };
+      walk([], new Set());
+    }
   } else {
     // A best-improvement climb from the march as it stands (rating 0 against itself): swap two slots, or put
     // an unused type in a slot; move to the best neighbour while it rates higher than where the climb stands.

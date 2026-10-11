@@ -58,3 +58,17 @@ trees (default 7). A 100 MB trace takes about 10 s.
 6. **The main thread's JS per phase** (JSON traces). Its samples, weighted by the gap to the next: React render
    (the stack holds `renderWithHooks`; the component is the frame it called), React commit, other JS,
    `(program)`, GC; then React render by component.
+
+## `subtree.py`: where one JS subtree's CPU goes (W19)
+
+Standard library only, Chrome JSON traces. Answers "is the cost in the JS around a kernel call or in the kernel?":
+
+```sh
+python3 tools/perf-trace/subtree.py trace.json.gz --frames planCampaign evaluateVector scorer sizer \
+    --under evaluateVector [--maps dist/assets] [--top 25]
+```
+
+1. self time by function (all pool samples);
+2. per frame: inclusive share split into JS, builtins (unnamed leaves), wasm, GC, plus its own self share;
+3. kernel self by nearest JS caller under `--under` (`js-to-wasm` glue frames skipped);
+4. builtins and GC by nearest JS frame under `--under`.

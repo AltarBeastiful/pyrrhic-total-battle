@@ -19,7 +19,9 @@
       "runtime": "stub",
       "exportRuntime": false,
       "use": ["abort=", "CENSUS=1"],
-      "debug": true
+      "debug": true,
+      "sourceMap": true,
+      "nameSection": true
     }
   },
   "options": {

@@ -47,7 +47,7 @@ changes which rows a slow device shows).
   Notes instead of committing to main. Otherwise commit: `Advisor: longest probes first (W18 P1.3)`.
 
 <!-- MAESTRO:HITL reason="P1.4 is a trade with no measured gain: one more upgrade row cut at a binding clock. Branch w18-p14-captains-one-queue (Notes, P1.4); recommendation: drop it and tick" -->
-- [ ] Remove the barrier in the captains pass. In `src/worker/captainAdvice.ts`, the screen job (`pool.map([screenJob])`,
+- [x] Remove the barrier in the captains pass. In `src/worker/captainAdvice.ts`, the screen job (`pool.map([screenJob])`,
   around line 178) and the probe jobs (around line 204) are awaited one after the other, and
   `src/ui/sections/march/captainSearch.ts` then runs `runCaptainUpgrades` after `runCaptainAdvice`. Read the code to
   see which step needs which answer; put every job that does not depend on another into one `pool.map` so the

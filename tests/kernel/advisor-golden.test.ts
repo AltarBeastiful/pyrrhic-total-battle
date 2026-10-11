@@ -178,7 +178,10 @@ describe.skipIf(profile === null)('the screened advisor pass on the owner fixtur
       const pool: CalcPool = createCalcPool({ size: 3, createClient: lane });
       try {
         const whole = await runAdvisor(input, genericProbes(), pool, { budgetMs: NO_CLOCK, screen: null });
-        const screened = await runAdvisor(input, genericProbes(), pool, { budgetMs: NO_CLOCK });
+        const screened = await runAdvisor(input, genericProbes(), pool, {
+          budgetMs: NO_CLOCK,
+          screen: { top: 5, share: 0.25 },
+        });
         expect(screened.cut).toEqual([]);
         expect(screened.failed).toEqual([]);
         expect(screened.baseline).toEqual(whole.baseline);

@@ -47,6 +47,7 @@ interface KernelExports {
     maxBattles: number,
     outPtr: number,
     assignPtr: number,
+    guardPtr: number,
   ): void;
 }
 
@@ -228,6 +229,7 @@ export function createKernel(module: WebAssembly.Module, request: StackRequest, 
         spec.maxBattles ?? Infinity,
         outPtr,
         assignPtr,
+        0,
       );
       const out = f64(outPtr, ENUMERATION.size).slice();
       const assign = new Int32Array(raw.memory.buffer, assignPtr, 3 * k).slice();

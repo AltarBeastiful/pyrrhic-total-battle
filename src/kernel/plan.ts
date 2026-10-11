@@ -34,7 +34,7 @@ import { templeDivisor } from '../engine/recovery';
 import { RANK_SPREAD } from '../engine/stacker';
 import type { RecoveryCost, RecoverySettings, StackRequest, StackingOptions } from '../engine/types';
 
-import { HEADER_SIZE, R, RECORD_SIZE, T, TYPE_STRIDE } from './layout';
+import { H, HEADER_SIZE, R, RECORD_SIZE, T, TYPE_STRIDE } from './layout';
 import { packRequest } from './pack';
 
 interface PlanExports {
@@ -65,6 +65,21 @@ interface PlanExports {
     ranksPtr: number,
   ): number;
   setSearchReduction(ptr: number): void;
+  enumerate(
+    nSlots: number,
+    slotsPtr: number,
+    nCand: number,
+    candPtr: number,
+    requiredPtr: number,
+    fixedPtr: number,
+    capsPtr: number,
+    pools: number,
+    basePtr: number,
+    maxBattles: number,
+    outPtr: number,
+    assignPtr: number,
+    guardPtr: number,
+  ): void;
   sizerShapeScratch(slot: number): number;
   sizerShape(
     prefixAll: number,
@@ -289,6 +304,8 @@ interface Bound {
   request: StackRequest;
   table: Float64Array;
   raw: PlanExports;
+  /** Where the table sits in the instance's memory (the header's rates are laid there per `retypeWalk`). */
+  tablePtr: number;
   types: number;
   ids: readonly string[];
   rowsPtr: number;
@@ -396,6 +413,8 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
    */
   const byUnits = new WeakMap<readonly UnitDef[], Bound[]>();
   const rowOf = new WeakMap<Effective, { bound: Bound; row: number }>();
+  /** Each instance's `retypeWalk` scratch. */
+  const walkScratch = new WeakMap<Bound, { ptr: number; bytes: number }>();
 
   const bind = (request: StackRequest, table: readonly Effective[]): Bound | null => {
     let packed;
@@ -416,6 +435,7 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
       request,
       table: packed.table,
       raw,
+      tablePtr,
       types,
       ids: packed.ids,
       rowsPtr: raw.alloc(4 * n),
@@ -539,6 +559,99 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
   let poolView = new Float64Array(0);
 
   return {
+    retypeWalk(request, rates, troops, slots, hired, base, guard) {
+      let bound = byRequest.get(request);
+      if (!bound) {
+        effectiveTable(request);
+        bound = byRequest.get(request);
+        if (!bound) return null;
+      }
+      const { raw, ids } = bound;
+      const k = slots.length;
+      const m = troops.length;
+      const rows = troops.map((entry) => ids.indexOf(entry.id));
+      if (k === 0 || m === 0 || rows.some((row) => row < 0)) return null;
+      // The rates the walk rates with: the header's, laid for this call (no other door reads them).
+      const header = new Float64Array(raw.memory.buffer, bound.tablePtr, HEADER_SIZE);
+      header[H.rateSilver] = rates.silver;
+      header[H.rateGold] = rates.gold;
+      header[H.rateHired] = rates.hired;
+      header[H.rateDragonCoins] = rates.dragonCoins;
+      header[H.rateSeconds] = rates.seconds;
+      const n = Math.max(1, bound.types);
+      const bytes = 8 * (k + n + n + RECORD_SIZE + 8 + 3) + 4 * (m + 3 * k) + m + 16;
+      // Scratch reserved once per instance and grown only when a walk needs more (the bump allocator never frees).
+      let scratch = walkScratch.get(bound);
+      if (!scratch || scratch.bytes < bytes) {
+        scratch = { ptr: raw.alloc(bytes), bytes };
+        walkScratch.set(bound, scratch);
+      }
+      let cursor = scratch.ptr;
+      const take = (size: number): number => {
+        const ptr = cursor;
+        cursor += size;
+        return ptr;
+      };
+      const slotsPtr = take(8 * k);
+      const fixedPtr = take(8 * n);
+      const capsPtr = take(8 * n);
+      const basePtr = take(8 * RECORD_SIZE);
+      const outPtr = take(8 * 8);
+      const guardPtr = take(8 * 3);
+      const candPtr = take(4 * m);
+      const assignPtr = take(4 * 3 * k);
+      const requiredPtr = take(m);
+      const buffer = raw.memory.buffer;
+      new Float64Array(buffer, slotsPtr, k).set(slots);
+      const fixed = new Float64Array(buffer, fixedPtr, n);
+      const caps = new Float64Array(buffer, capsPtr, n);
+      for (let t = 0; t < bound.types; t += 1) {
+        fixed[t] = hired[ids[t] as string] ?? 0;
+        caps[t] = Infinity;
+      }
+      const record = new Float64Array(buffer, basePtr, RECORD_SIZE);
+      record[R.minDamage] = base.damage;
+      record[R.silver] = base.silver ?? 0;
+      record[R.gold] = base.gold ?? 0;
+      record[R.hired] = base.hired ?? 0;
+      record[R.dragonCoins] = base.dragonCoins ?? 0;
+      record[R.seconds] = base.seconds ?? 0;
+      const guarded = new Float64Array(buffer, guardPtr, 3);
+      guarded[0] = guard.silverCeiling ?? Infinity;
+      guarded[1] = guard.holdDamagePerSilver === true ? 1 : 0;
+      guarded[2] = guard.secondsCeiling ?? Infinity;
+      new Int32Array(buffer, candPtr, m).set(rows);
+      new Uint8Array(buffer, requiredPtr, m).fill(0);
+      raw.enumerate(
+        k,
+        slotsPtr,
+        m,
+        candPtr,
+        requiredPtr,
+        fixedPtr,
+        capsPtr,
+        1,
+        basePtr,
+        Infinity,
+        outPtr,
+        assignPtr,
+        guardPtr,
+      );
+      const out = new Float64Array(raw.memory.buffer, outPtr, 8);
+      const tried = out[0] as number;
+      const rating = out[2] as number;
+      const assignment = new Int32Array(raw.memory.buffer, assignPtr, k);
+      let counts: Record<string, number> | null = null;
+      if (Number.isFinite(rating) && assignment[0]! >= 0) {
+        counts = { ...hired };
+        for (let slot = 0; slot < k; slot += 1) {
+          const t = troops[assignment[slot] as number] as Effective;
+          counts[t.id] = Math.ceil((slots[slot] as number) / t.hp);
+        }
+      }
+      return { tried, rating, counts };
+    },
+
     bindTable(request, table) {
       const bound = bind(request, table);
       if (!bound) return;

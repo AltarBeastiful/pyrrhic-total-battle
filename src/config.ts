@@ -264,9 +264,12 @@ export const CAMPAIGN = {
    * **The advisor's screen** (owner, 2026-10-11, `docs/plans/screen-then-tight.md`, experiment 202): every probe
    * is first read As is, and only the probes that gain the most are read again by Tight. A probe goes on when it
    * is among the `top` best by its best stop or gains at least `share` of the best probe's gain, and never when
-   * it gains nothing. Counts of probes and a share, never a duration. `null` reads every probe by Tight.
+   * it gains nothing. Counts of probes and a share, never a duration. **`null` (off) reads every probe by Tight, and
+   * is the shipped value**: experiment 202 found the As-is reading drops the best probe on 3 of 20 armies, so
+   * turning it on is the owner's call (`docs/plans/screen-then-tight.md` §4); `{ top: 5, share: 0.25 }` is the
+   * rule to try.
    */
-  advisorScreen: { top: 10, share: 0.25 } as { top: number; share: number } | null,
+  advisorScreen: null as { top: number; share: number } | null,
   /**
    * How many screened trios the captain advice plans in full besides the current trio (W17 C5a, a work count and
    * never a duration). 8 is the plan's first figure (`docs/plans/progression-advisor.md` §4 C5), kept by

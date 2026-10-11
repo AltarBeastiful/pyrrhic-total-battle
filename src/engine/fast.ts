@@ -156,6 +156,26 @@ export interface PlanKernel {
    */
   marchBill(request: StackRequest, counts: Record<string, number>): Bill | null;
   /**
+   * **The exhaustive walk of `retypeMarch`, whole** (W18 P3.5): every injective assignment of `troops` to the
+   * `slots` (each type sized `ceil(slotHp / hp)`, the leadership within housing, the hired counts kept as they
+   * are), battled and rated by `rates` against `base`, admissible as `retypeMarch` says (damage held, the
+   * `guard`'s ceilings). `tried` = assignments battled; `counts` = the first best-rated, or `null` when none
+   * (the caller still checks `rating > 1e-9`). `null` where the request cannot be packed.
+   */
+  retypeWalk(
+    request: StackRequest,
+    rates: MarkerRates,
+    troops: readonly Effective[],
+    slots: readonly number[],
+    hired: Record<string, number>,
+    base: Bill,
+    guard: {
+      silverCeiling?: number | undefined;
+      holdDamagePerSilver?: boolean | undefined;
+      secondsCeiling?: number | undefined;
+    },
+  ): { tried: number; rating: number; counts: Record<string, number> | null } | null;
+  /**
    * `sizePool`'s whole arithmetic after its early return: writes every slot's `count` and answers the
    * housing used. `null` only where the kernel itself cannot (step 5's own guards); the caller has no
    * TypeScript of its own to fall back to any more (W16 E3 S5a) and throws instead.

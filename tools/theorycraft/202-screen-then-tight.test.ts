@@ -230,6 +230,7 @@ describe.skipIf(!process.env.THEORY)('202 — screen with As is, then Tight', ()
           if (top !== undefined && bestGain(top) >= WORTH && !kept.has(top.id)) p.topMiss += 1;
         });
         void topT;
+        // eslint-disable-next-line no-console -- progress of a long experiment
         console.log(
           `202 done: ${army.label} rho=${f(spearman(bt, ba), 2)} tight ${f(tight.wall, 0)} ms as-is ${f(asIs.wall, 0)} ms worthy ${worthy}`,
         );

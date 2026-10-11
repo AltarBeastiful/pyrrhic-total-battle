@@ -1,6 +1,6 @@
 # Screen with As is, then read the survivors with Tight
 
-**Status: implemented 2026-10-11** (experiment 202; `CAMPAIGN.advisorScreen`). Owner, 2026-10-11: *"right now
+**Status: built, switched off 2026-10-11** (experiment 202; `CAMPAIGN.advisorScreen = null`; the owner decides). Owner, 2026-10-11: *"right now
 profile everything computes marches using Tight to match the current battle settings and tight computations are
 responsible for a big amount of computations. But in the end, the computations behind profile everything are there
 to find possible leads, and just a few of them are interesting. One idea would be to do the whole computation using
@@ -35,7 +35,19 @@ gains and sweet-spot gains, the number of worthwhile probes (gain ≥ 0.25 ratin
 any stop. Then candidate survivor rules are scored against the Tight answer: do they keep the Tight top 5, every
 worthwhile probe, and how much of the total Tight gain would they miss.
 
-Results: see `tools/theorycraft/out/202-screen-then-tight.md` and §4.
+Results (20 armies, `tools/theorycraft/out/202-screen-then-tight.md`):
+
+- **Tight is a small part of the wall on most armies.** As-is costs 0.89–1.00 of Tight on 15 of 20 (no stop has a
+  troop floor to shelter by, so the raise does nothing), 0.72 on the 2026-10-07 account and on one 2026-09-18
+  camp. The saving is real only on the heavy armies: the 20 000-dominance camp is 5 116 s by Tight and 59 s
+  As is (86×).
+- **As is ranks the probes like Tight on most armies and not on the ones where Tight matters.** Spearman ρ on
+  the best-stop gain: 1.00 on 12 armies, 0.97–0.99 on four more, but 0.85 (live camp 2026-09-18, 4 000 case),
+  0.79 (monsters 3–5 at 900 dominance) and **0.17** (the 20 000-dominance camp). Largest per-stop gap 40.6.
+- **No rule is safe.** Pooled over 104 worthwhile Tight gains (≥ 0.25): `top 12` keeps 92 and misses 18 % of the
+  gain; `gain > 0` keeps 94 (41 % of probes read) and misses 7 %; `top 5 ∪ ≥ 0.25 × best` keeps 78 (19 %) and
+  misses 22 %. **The Tight-best probe is dropped on 2–4 of 20 armies under every rule**, because the shelter
+  turns a small As-is gain into the big Tight one (and the reverse).
 
 ## 3. Design
 
@@ -51,7 +63,18 @@ Results: see `tools/theorycraft/out/202-screen-then-tight.md` and §4.
 - **Not touched**: the captain passes (`runCaptainAdvice`, `runCaptainUpgrades`) call `client.probe` themselves
   and still read by Tight; the March's own plan and bar; every figure of a survivor.
 
-## 4. Gates
+## 4. Verdict and the switch
+
+The idea holds where Tight is cheap and fails where it is dear: the armies that would save the most are the ones
+whose As-is reading ranks the probes worst. Since a screen that can drop the best lead is a regression against
+`feedback-benchmark-non-regression`, the mechanism ships **off** (`CAMPAIGN.advisorScreen: null`, every row read
+by Tight, every golden byte-identical). To try it, set `advisorScreen: { top: 5, share: 0.25 }` in `src/config.ts`
+(measured: ~16 % of the owner account's pass; far more on heavy camps; leads missed as above). Rows the screen
+dropped are flagged `screened` in `AdvisorRow`; the card does not yet show the flag. A safer screen would need a
+reading that sees the shelter without paying for the search (e.g. the Tight raise on the sweet-spot stop only);
+not built.
+
+## 5. Gates
 
 - `tests/golden/advisor.json` is read with `screen: null` and is **byte-identical** (no pin moved).
 - A new golden-fixture test: on the owner export, every row the screened pass read by Tight equals the all-Tight
