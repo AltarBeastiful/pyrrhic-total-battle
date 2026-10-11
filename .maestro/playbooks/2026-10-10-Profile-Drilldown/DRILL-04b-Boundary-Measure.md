@@ -22,7 +22,7 @@ The boundary has three parts, and each is measured separately, not summed by gue
 
 ## Tasks
 
-- [ ] Count the boundary. Write `tools/theorycraft/198-the-boundary.test.ts` (`THEORY=1`, skipped otherwise, like 196)
+- [x] Count the boundary. Write `tools/theorycraft/198-the-boundary.test.ts` (`THEORY=1`, skipped otherwise, like 196)
   that plans the timing fixture's setup and the exactness fixture's, in-process on one inline lane with no clock, and
   counts: calls per kernel door per plan, `new WebAssembly.Instance` per plan (wrap the constructor in the test, do not
   change production code), bytes copied in and out of wasm memory per plan, and how many `march`/`bill` calls share a
@@ -73,3 +73,30 @@ its page figures depend on how much of the planner's work survives the owner's p
   K4 1.3–2.6 % with its wall cost already removed by P1.2. None meets the cache rule on the in-process figures; Drill 04
   must still re-check them on its own HEAD before ticking `WON'T DO`.
 - Experiment numbers: 197 is Drill 05's planner profile; this drill uses 198 and 198b.
+
+### Experiment 198, the boundary counted (2026-10-11)
+
+`tools/theorycraft/198-the-boundary.test.ts` → `tools/theorycraft/out/198-the-boundary.md`. One plan per fixture on a
+fresh plan kernel (cold), then the same input again on that kernel (warm); answers equal the release kernel's. The
+door totals equal 197's exactly (363,814 crossings on the timing fixture), so the wrapping counts what 197 counted.
+
+| Per plan | Timing fixture | Exactness fixture |
+|---|---:|---:|
+| `new WebAssembly.Instance` (cold / warm) | **1 / 0** | **1 / 0** |
+| … the sizer's own (`sizePool`) | 0 (`sizePool` is never called: the sizer runs whole in `sizeStacks`) | 0 |
+| `bindTable` calls / distinct requests / distinct packed tables | 76 / 1 / 1 | 203 / 1 / 1 |
+| Raw JS → wasm calls (`ladder.gridView` enters no wasm) | 68,591 | 120,636 |
+| … `march` / `bill` / `marchBill`(`battle`) / `sizeStacks` | 22,900 / 20,310 / 5,560 / 12,045 | 11,489 / 7,880 / 90,699 / 4,847 |
+| … `ladder.grid` / `finale` / `shape` | 3,650 / 3,200 / 898 | 1,323 / 2,094 / 2,276 |
+| Bytes into wasm memory (`set` measured + element loops counted) | 13.5 MiB (1.7 + 11.8) | 11.3 MiB (0.8 + 10.5) |
+| Bytes read back out | 4.3 MiB | 5.5 MiB |
+| `packRequest` tables built by `bindTable` (75 of 76 dropped, request already bound) | 223 KiB | 374 KiB |
+| Result objects the doors allocate | 270,282 | 165,909 |
+| `march`/`bill` on a shared bound request / a fresh one | 100 % / 0 % | 100 % / 0 % |
+| Raise `position` calls | 0 | 0 |
+
+Reading: the instance hypothesis carried in is **refuted for the planner**: one plan binds one request, once, into one
+instance, and every `march`/`bill` lands on it. The cost per plan is the packed table rebuilt and dropped on each of
+the 75 repeat `bindTable` calls (`packRequest` runs before the `byRequest` lookup), a few KiB per crossing, and one
+result object per `march`/`bill`/`marchBill` call. Each probe plan builds its own request, so a worker pays one
+instance per probe, not per candidate. Whether the 68 k crossings cost time is 198b's question.
