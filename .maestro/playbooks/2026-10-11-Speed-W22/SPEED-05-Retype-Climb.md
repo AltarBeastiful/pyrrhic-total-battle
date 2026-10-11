@@ -24,7 +24,7 @@ kernel's march. High effort (a new door), so it comes after the cheaper steps, a
   in the step, then green. Gates: plan JSON, advisor golden, plan benchmark diff none. A/B in-process, keep at ≥ 2 %
   of the planner. Commit: `Kernel: retype climb as one door (W22 step 5)`.
 
-- [ ] Fill "after 5" in `docs/plans/next-speed.md` §3 (production split harness ×3, hash unchanged). Commit the doc:
+- [x] Fill "after 5" in `docs/plans/next-speed.md` §3 (production split harness ×3, hash unchanged). Commit the doc:
   `W22: the retype climb measured`.
 
 ## Notes
@@ -52,3 +52,6 @@ kernel's march. High effort (a new door), so it comes after the cheaper steps, a
   not reached there); green after. Gate (`Working/w22/gate.sh`): all PASS (plan benchmark diff none, 184 positions
   on the kernel pass). A/B (experiment 212, 40 and 60 rounds interleaved, door declined against on): wall −7.4 % and
   −5.7 % of the planner (q1 −4.9 / −3.5 %), CPU −13.6 / −4.1 %: kept (≥ 2 %).
+- Step 3 (docs): after 5 production, 3 runs: min wall 12 606 ms, pool CPU 68.8–73.4 s, Tight 35.7–37.9 s, planner
+  30.9–33.3 s; hash `a9c9defd5d22` on run 2 (the harness prints three hashes here, as it did in the baseline and
+  after step 3 with unchanged code: clock-bounded pass, see the plan's note). `Working/w22/prod-after-05.txt`.

@@ -149,11 +149,11 @@ The first column is the 10-07 export; every later column is the 10-11 export. (R
 
 | | 6c932f8 (10-07) | 6c932f8, 10-11 | after 1 | after 2 | after 3 | after 4 | after 5 | after 6 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | 12 096 ms* | 12 096 ms* | 13 057 ms* | 13 577 ms** | | |
-| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | 70.9–72.3 s* | 73.7–76.5 s** | | |
-| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | 35.2–35.5 s* | 37.5–38.6 s** | | |
-| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | 33.7–34.7 s* | 34.0–35.8 s** | | |
-| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | same | same | | |
+| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | 12 096 ms* | 12 096 ms* | 13 057 ms* | 13 577 ms** | 12 606 ms*** | |
+| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | 70.9–72.3 s* | 73.7–76.5 s** | 68.8–73.4 s*** | |
+| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | 35.2–35.5 s* | 37.5–38.6 s** | 35.7–37.9 s*** | |
+| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | 33.7–34.7 s* | 34.0–35.8 s** | 30.9–33.3 s*** | |
+| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | same | same | same, run 2 of 3**** | |
 
 \* **After 1 and after 2 are the same kernel as the 10-11 column: both steps are WON'T DO** (below). The figures differ
 from the 10-11 column by the machine alone (a re-run of unchanged code, `Working/w22/prod-after-02.txt`: 12 096 ms,
@@ -164,6 +164,16 @@ is kept; 4b and 4c are WON'T DO. 4a is in-process −3.6 to −8 % wall on the p
 (−8.3 %); in production it is inside the machine's noise (this run's machine was slower than the 12 096 ms re-run).
 Allocation per plan on the 10-11 fixture: 182.6 MiB sampled (exp 206; the 368 MiB above was the older figure), GC 12.2
 pauses = 32.3 ms a plan before, 11 pauses after. The rest of the allocation is memoised results or sites each ≤ 1.9 %.
+
+\*\*\* **After 5**: `Working/w22/prod-after-05.txt` (3 runs). The `retypeClimb` door (SPEED-05): the census (experiment 211)
+found 6 climbs a plan of 11 × 11 at 600 candidates each, 17.9 ms = 6.4 % of the planner; the door takes the planner
+−5.7 to −7.4 % wall in-process (experiment 212, 40 and 60 rounds, answers equal). Production wall 12 606 ms against
+13 577 ms after 4 (the machine is noisy: read against the 12 096 ms re-run, the gain is inside it, as for 4a).
+
+\*\*\*\* The harness prints three hashes on this machine (`4df3a63e2136 a9c9defd5d22 577b2565ab90`, Tight calls 907 / 916 / 909):
+only run 2 gives the reference hash and 916 calls. The baseline printed two (`a9c9defd5d22 427cfa3135cd`) and
+`prod-after-03.txt` two others with unchanged code, so the wobble comes from the pass whose work is bounded by the
+clock, not from this step; every in-process answer (plan JSON, advisor golden, benchmark diff) is byte-identical.
 
 ### Step 3: WON'T DO (experiment 209, 2026-10-12)
 
