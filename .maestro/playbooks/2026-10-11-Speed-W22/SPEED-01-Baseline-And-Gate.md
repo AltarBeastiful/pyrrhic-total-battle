@@ -34,13 +34,13 @@ Plan: `docs/plans/next-speed.md` (read §0 first: the measured figures and why t
 
 ## Tasks
 
-- [ ] Write the W22 gate. Copy `.maestro/playbooks/Working/w18/gate.sh` and `bench-diff.sh` to
+- [x] Write the W22 gate. Copy `.maestro/playbooks/Working/w18/gate.sh` and `bench-diff.sh` to
   `.maestro/playbooks/Working/w22/`. Change the restore: snapshot `tools/theorycraft/out/benchmark-latest.{json,md}`
   **at the start of the run** (into a `mktemp -d`) and put that snapshot back at exit, instead of copying
   `benchmark-pre-w18.*` (stale now). Log to `Working/w22/`. Run it once on HEAD; record pass/fail and time of each
   step in Notes. No commit (scratch).
 
-- [ ] Record the production baseline. `pnpm kernel:build`, then
+- [x] Record the production baseline. `pnpm kernel:build`, then
   `SPLIT=1 node .maestro/playbooks/Working/w18/prod/run.mjs pyrrhic-my-account-2026-10-11.json 6 3`; save the output
   as `Working/w22/prod-baseline-1011.txt`. Once more on the 10-07 export (`prod-baseline-1007.txt`, expected hash
   `a9612b9ca0a9`, ≈ 11.0 s) to tie it to the W20 figures. Note in Notes for each: min wall per pass, pool CPU, Tight
@@ -71,3 +71,40 @@ Plan: `docs/plans/next-speed.md` (read §0 first: the measured figures and why t
   `W22: per-job timings and their inputs`.
 
 ## Notes
+
+### Task 1: the gate (done)
+
+`Working/w22/gate.sh` and `bench-diff.sh` copied from w18. The restore now snapshots `benchmark-latest.{json,md}`
+into a `mktemp -d` at the start and puts them back at exit (no `benchmark-pre-w18.*`). Logs go to `Working/w22/`.
+First run on HEAD (9e052a8), all PASS, ~9m56 wall:
+
+| step | result | time |
+| --- | --- | --- |
+| pnpm kernel:build | PASS | 2 s |
+| pnpm typecheck | PASS | 1 s |
+| pnpm lint | PASS | 23 s |
+| pnpm test | PASS | 295 s |
+| plan-benchmark alone | PASS | 159 s |
+| benchmark diff vs HEAD | PASS | 0 s |
+| 184 positions on the kernel | PASS | 115 s |
+
+Tree unchanged after the run (only the untracked personal files). Scratch, not committed.
+
+### Task 2: production baseline (done)
+
+`pnpm kernel:build` (release), then the SPLIT harness, 6 workers, 3 runs. Files in `Working/w22/`.
+
+| export | min wall, all passes | per pass (upgrades / captainAdvice / captains / other) | pool CPU | Tight CPU | planner CPU | hash |
+| --- | ---: | --- | ---: | ---: | ---: | --- |
+| 10-11 (`prod-baseline-1011.txt`) | 13 832 ms | 2791 / 1330 / 8679 / 2334 | 75.1–77.2 s (142 jobs) | 37.1–38.2 s (908–916 calls, ≈ 40.7 ms each) | 35.8–36.7 s | `a9c9defd5d22 427cfa3135cd` |
+| 10-07 (`prod-baseline-1007.txt`) | 12 620 ms | 4023 / 1752 / 5332 / 3194 | 65.8–68.5 s (106 jobs) | 15.7–16.4 s | 49.5–51.5 s | `a9612b9ca0a9` (matches) |
+
+The 10-07 hash ties to W20; wall and CPU run ~15 % above the recorded 11.0 s / 57–59 s (machine slower today, same
+code), so this session's own figures are the reference. **The 10-11 hash is the one every later step keeps.** On the
+10-11 export Tight is half the pool CPU (49 %), the planner 48 %.
+
+In-process, 10-11 export: `197-baseline.md` (`PLANNER_ACCOUNT=pyrrhic-my-account-2026-10-11.json`): 1 030 ms CPU /
+426 ms wall per plan, 285 180 kernel crossings, 16 GC pauses = 40.3 ms (3.9 % of CPU), **179.5 MiB allocated per
+plan**. `184-baseline.md` (`THEORY=1`; 184 runs on the benchmark armies, not the account): 68 stops, 340
+readings, one march all five positions median 0.7 ms, worst 86 013 ms. Plan §3 has the new column. The tracked
+`out/197…`, `out/184…` files were restored with `git checkout` after copying.

@@ -139,12 +139,12 @@ in-process A/B (arms interleaved in one process, ≥ 30 rounds, median and min) 
 
 ## 3. Progress
 
-10-07 export until SPEED-01 adds the 10-11 column; every later column is the 10-11 export.
+The first column is the 10-07 export; every later column is the 10-11 export. (Re-measured 2026-10-11 the 10-07 export gave 12.6 s wall, 65.8–68.5 s pool CPU, hash unchanged: the machine was slower than at W20.)
 
-| | 6c932f8 (10-07) | after 1 | after 2 | after 3 | after 4 | after 5 | after 6 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| prod wall, four passes (min of 3) | 10 994 ms | | | | | | |
-| prod pool CPU | 57.1–59.4 s | | | | | | |
-| prod Tight CPU | 13.6–14.1 s | | | | | | |
-| prod planner CPU | 42.9–44.9 s | | | | | | |
-| answer hash | a9612b9ca0a9 | | | | | | |
+| | 6c932f8 (10-07) | 6c932f8, 10-11 | after 1 | after 2 | after 3 | after 4 | after 5 | after 6 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | | | | | | |
+| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | | | | | | |
+| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | | | | | | |
+| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | | | | | | |
+| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | | | | | | |
