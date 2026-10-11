@@ -426,7 +426,7 @@ function report(run: RunCensus): { markdown: string; rows: Verdictable[] } {
   const tightMs = sum(tight.map((call) => call.ms));
   const raiseMs = sum(run.raises.map((call) => call.ms));
   const c = (
-    key: Exclude<keyof RaiseCensus, 'killOrderChecks'>,
+    key: Exclude<keyof RaiseCensus, 'killOrderChecks' | 'ratingsMoved'>,
     calls: readonly RaiseCall[] = run.raises,
   ): number => sum(calls.map((call) => call.census[key]));
   const ratings = c('ratings', tight);
@@ -555,7 +555,7 @@ function report(run: RunCensus): { markdown: string; rows: Verdictable[] } {
   lines.push('### The raise searches\n');
   lines.push('| | all | Tight |');
   lines.push('|---|---:|---:|');
-  const both = (key: Exclude<keyof RaiseCensus, 'killOrderChecks'>): string =>
+  const both = (key: Exclude<keyof RaiseCensus, 'killOrderChecks' | 'ratingsMoved'>): string =>
     `${f(c(key))} | ${f(c(key, tight))}`;
   lines.push(`| calls | ${String(run.raises.length)} | ${String(tight.length)} |`);
   lines.push(

@@ -273,6 +273,13 @@ export interface RaiseCensus {
   killOrdersScore: number;
   /** `killOrderBy` calls from the ratings and the plan's own bill (candidate K2: a miss pays both). */
   killOrdersRating: number;
+  /** W22 (experiment 205): ratings that ask for the same counts, bit for bit, as the `raiseScore` just before. */
+  ratingsSameAsScore: number;
+  /** Ratings by how many types changed since the previous rating: 0, 1, 2, 3 or more. */
+  ratingsMoved: [number, number, number, number];
+  /** Stacks `recoveryOf` was asked to bill, and those whose type had the same count in its previous call. */
+  recoveryStacks: number;
+  recoveryStacksSame: number;
   /** Kill orders the shadow check held to a fresh `killOrderBy` (W18 P2.1); only on a `KILL_CHECK` build. */
   killOrderChecks?: number;
 }

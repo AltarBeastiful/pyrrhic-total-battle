@@ -49,7 +49,7 @@ Plan: `docs/plans/next-speed.md` (read §0 first: the measured figures and why t
   MiB per plan) and experiment 184 (`THEORY=1`, Tight per call). Save them as `Working/w22/197-baseline.md`,
   `184-baseline.md`. Add a "6c932f8, 10-11" column to `docs/plans/next-speed.md` §3 and fill it.
 
-- [ ] Count the raise's kill orders and bills by caller, on the profile kernel. Experiment 196's counters exist
+- [x] Count the raise's kill orders and bills by caller, on the profile kernel. Experiment 196's counters exist
   (`cKillOrdersScore`, `cKillOrdersRating`, `cKillOrdersSizer`, `cRatings`). Add a small theory file
   `tools/theorycraft/205-the-rating-census.test.ts` (`THEORY=1`, profile kernel, timing fixture, one advisor run
   in-process as 196 does) that reports per Tight raise: `raiseScore` calls, `raiseRating` calls, how many ratings
@@ -108,3 +108,26 @@ In-process, 10-11 export: `197-baseline.md` (`PLANNER_ACCOUNT=pyrrhic-my-account
 plan**. `184-baseline.md` (`THEORY=1`; 184 runs on the benchmark armies, not the account): 68 stops, 340
 readings, one march all five positions median 0.7 ms, worst 86 013 ms. Plan §3 has the new column. The tracked
 `out/197…`, `out/184…` files were restored with `git checkout` after copying.
+
+### Task 3: the rating census, experiment 205 (done)
+
+Profile-only counters beside `cKillOrdersRating` (`kernel/assembly/index.ts`, folded out of the release by
+`isDefined(CENSUS)`; `raiseCensus` now writes 15 f64, read in `src/kernel/raise.ts`, typed in `RaiseCensus`).
+`tools/theorycraft/205-the-rating-census.test.ts` (`THEORY=1`, ~80 s) writes `out/205-the-rating-census.md`.
+Release kernel rebuilt after the profile build; `raise-census` test green; typecheck and lint clean.
+
+On the 10-11 export, 921 Tight raises:
+
+- `raiseScore` 22.45 M (24 377 per raise), `raiseRating` 35.06 M (38 069 per raise), 12.64 M of those on a memo hit.
+- **Every rating that follows a battle asks for the same counts bit for bit as that battle** (22.42 M, 100 % of the
+  misses, 63.9 % of all ratings): its `killOrderBy` is a rebuild of the one `raiseScore` just built, so SPEED-02 step 1
+  (share the roster) can serve all of them. The memo-hit ratings (36 %) have no battle before them, but they still
+  pay a kill order.
+- Between consecutive ratings 92.5 % change one type, 7.1 % two, 0.4 % three or more, 0 % none: a kept roster
+  moved by one slot (as `raiseKillOrder` does for the battle) covers 99.6 %.
+- `recoveryOf`: 405 M stacks billed, **90.7 % have the same (type, count) as in the previous call** of the same
+  search: an incremental bill (subtract and re-add the changed stack) is a real lever.
+- Exactness fixture (420 raises): same shape, 100 % of ratings equal the preceding battle's counts (a memo-hit
+  rating may also repeat the previous battle's vector, so the share of misses reads 105 % there), 78.9 % one type
+  moved, 83.8 % of recovery stacks unchanged.
+- 196 only had its type list adjusted for the new fields.

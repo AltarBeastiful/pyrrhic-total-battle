@@ -65,9 +65,10 @@ export interface RaiseKernelProbe extends RaiseKernel {
 const STATS = 4;
 /**
  * `raiseCensus`' block: `[battles, ratings, ratingsOnHit, killOrdersScore, killOrdersRating, killOrdersSizer,
- * killOrderChecks]`, the last −1 on a build without the kill-order shadow check.
+ * killOrderChecks, sameAsScore, moved0, moved1, moved2, moved3, recoveryStacks, recoveryStacksSame]`,
+ * killOrderChecks −1 on a build without the kill-order shadow check.
  */
-const CENSUS = 7;
+const CENSUS = 15;
 
 /**
  * **The box search's defaults** (S-143b): a box of at most `walkCap` vectors is walked whole (the optimum);
@@ -253,6 +254,10 @@ export function createRaiseKernelProbe(
           ratingsOnHit: c[2] as number,
           killOrdersScore: c[3] as number,
           killOrdersRating: c[4] as number,
+          ratingsSameAsScore: c[7] as number,
+          ratingsMoved: [c[8] as number, c[9] as number, c[10] as number, c[11] as number],
+          recoveryStacks: c[12] as number,
+          recoveryStacksSame: c[13] as number,
         };
         if ((c[6] as number) >= 0) answer.census.killOrderChecks = c[6] as number;
       }

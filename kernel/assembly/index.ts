@@ -253,6 +253,16 @@ let bSeconds: f64 = 0.0;
 
 /** The recovery bill of the `k` stacks in `stackType`/`stackCount`, kill order, under the plan's mode (`recoveryCosts`); into `bSilver` and its three. */
 function recoveryOf(k: i32): void {
+  if (isDefined(CENSUS) && cRecPrev != 0) {
+    for (let s = 0; s < k; s += 1) {
+      const type = i32At(stackType, s);
+      cRecStacks += 1.0;
+      if (cRecSeen && f64At(cRecPrev, type) == f64At(stackCount, s)) cRecSame += 1.0;
+    }
+    for (let t = 0; t < types; t += 1) store<f64>(cRecPrev + ((<usize>t) << 3), -1.0);
+    for (let s = 0; s < k; s += 1) store<f64>(cRecPrev + ((<usize>i32At(stackType, s)) << 3), f64At(stackCount, s));
+    cRecSeen = true;
+  }
   // Recovery, the plan's mode, summed stack by stack in kill order (`recoveryCosts`).
   if (mode == 2) {
     for (let f = 0; f < FAMILIES; f += 1) store<f64>(topTier + ((<usize>f) << 3), -Infinity);
@@ -2122,6 +2132,25 @@ let cKillOrdersScore: f64 = 0; // `killOrderBy` from `raiseScore`
 let cKillOrdersRating: f64 = 0; // `killOrderBy` from `raiseRating` and the plan's own bill
 /** `killOrderBy` from the sizer (`sizerScore`, `buildStacks`): the instance's own total, never reset. */
 let cKillOrdersSizer: f64 = 0;
+/**
+ * **The rating census** (W22, experiment 205): how much of a rating's kill order and bill repeats the work just
+ * before it. `cSameAsScore` counts ratings that ask for the counts, bit for bit, of the last `raiseScore`;
+ * `cMoved0..3` the types that changed between consecutive ratings (0, 1, 2, 3 or more); `cRecStacks` the stacks
+ * `recoveryOf` bills and `cRecSame` those whose type had the same count in its previous call.
+ */
+let cSameAsScore: f64 = 0;
+let cMoved0: f64 = 0;
+let cMoved1: f64 = 0;
+let cMoved2: f64 = 0;
+let cMoved3: f64 = 0;
+let cRecStacks: f64 = 0;
+let cRecSame: f64 = 0;
+let cScoreLast: usize = 0; // f64 × types: the counts of the last `raiseScore`
+let cRatePrev: usize = 0; // f64 × types: the counts of the previous rating
+let cRecPrev: usize = 0; // f64 × types: each type's count in the previous `recoveryOf`, −1 when not fielded
+let cScoreSeen = false;
+let cRateSeen = false;
+let cRecSeen = false;
 
 /**
  * **The score memo** (W16 B, `BoxMemo` of `src/engine/exact.ts`): one `f64` a vector of the box, indexed by
@@ -2183,6 +2212,11 @@ function raiseAlloc(): void {
   rkCount = heap.alloc(n << 3);
   rkHp = heap.alloc(n << 3);
   rkLast = heap.alloc(n << 3);
+  if (isDefined(CENSUS)) {
+    cScoreLast = heap.alloc(n << 3);
+    cRatePrev = heap.alloc(n << 3);
+    cRecPrev = heap.alloc(n << 3);
+  }
   rSlotOf = heap.alloc(n << 2);
   rOrder = heap.alloc(n << 2);
   rMemoHeld = heap.alloc(n << 3);
@@ -2282,6 +2316,8 @@ function raiseScore(countsPtr: usize): f64 {
   if (isDefined(CENSUS)) {
     cBattles += 1.0;
     cKillOrdersScore += 1.0;
+    memory.copy(cScoreLast, countsPtr, (<usize>types) << 3);
+    cScoreSeen = true;
   }
   const k = raiseKillOrder(countsPtr);
   if (isDefined(KILL_CHECK)) killOrderCheck(k, countsPtr);
@@ -2430,6 +2466,27 @@ function raiseRating(damage: f64): f64 {
   if (isDefined(CENSUS)) {
     cRatings += 1.0;
     cKillOrdersRating += 1.0;
+    if (cScoreSeen) {
+      let same = true;
+      for (let t = 0; t < types && same; t += 1) {
+        const at = (<usize>t) << 3;
+        if (load<i64>(rWork + at) != load<i64>(cScoreLast + at)) same = false;
+      }
+      if (same) cSameAsScore += 1.0;
+    }
+    if (cRateSeen) {
+      let moved = 0;
+      for (let t = 0; t < types; t += 1) {
+        const at = (<usize>t) << 3;
+        if (load<i64>(rWork + at) != load<i64>(cRatePrev + at)) moved += 1;
+      }
+      if (moved == 0) cMoved0 += 1.0;
+      else if (moved == 1) cMoved1 += 1.0;
+      else if (moved == 2) cMoved2 += 1.0;
+      else cMoved3 += 1.0;
+    }
+    memory.copy(cRatePrev, rWork, (<usize>types) << 3);
+    cRateSeen = true;
   }
   const k = killOrderBy(types, rRows, rWork, T_ORDER);
   recoveryOf(k);
@@ -2801,8 +2858,9 @@ export function raiseProbe(samples: i32, seed: f64): f64 {
 }
 
 /**
- * **The census of the last `raise()`** (profile build only), written to `outPtr` (`f64 × 7`): `[battles,
- * ratings, ratingsOnHit, killOrdersScore, killOrdersRating, killOrdersSizer, killOrderChecks]`, the last −1
+ * **The census of the last `raise()`** (profile build only), written to `outPtr` (`f64 × 15`): `[battles,
+ * ratings, ratingsOnHit, killOrdersScore, killOrdersRating, killOrdersSizer, killOrderChecks, sameAsScore,
+ * moved0, moved1, moved2, moved3, recoveryStacks, recoveryStacksSame]`, killOrderChecks −1
  * when the build has no `KILL_CHECK`. Answers 1 when the build counts, 0 (and writes nothing) when it does
  * not — the release build.
  */
@@ -2815,6 +2873,13 @@ export function raiseCensus(outPtr: usize): i32 {
   store<f64>(outPtr + 32, cKillOrdersRating);
   store<f64>(outPtr + 40, cKillOrdersSizer);
   store<f64>(outPtr + 48, isDefined(KILL_CHECK) ? cKillChecks : -1.0);
+  store<f64>(outPtr + 56, cSameAsScore);
+  store<f64>(outPtr + 64, cMoved0);
+  store<f64>(outPtr + 72, cMoved1);
+  store<f64>(outPtr + 80, cMoved2);
+  store<f64>(outPtr + 88, cMoved3);
+  store<f64>(outPtr + 96, cRecStacks);
+  store<f64>(outPtr + 104, cRecSame);
   return 1;
 }
 
@@ -3031,6 +3096,16 @@ export function raise(
     cRatingsOnHit = 0.0;
     cKillOrdersScore = 0.0;
     cKillOrdersRating = 0.0;
+    cSameAsScore = 0.0;
+    cMoved0 = 0.0;
+    cMoved1 = 0.0;
+    cMoved2 = 0.0;
+    cMoved3 = 0.0;
+    cRecStacks = 0.0;
+    cRecSame = 0.0;
+    cScoreSeen = false;
+    cRateSeen = false;
+    cRecSeen = false;
   }
   if (isDefined(KILL_CHECK)) cKillChecks = 0.0;
   rHow = 0;
