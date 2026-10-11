@@ -20,7 +20,7 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
   judge by; sampled heap bytes are too noisy to judge a change). Write `tools/theorycraft/out/206-the-planner-garbage.md`.
   Commit: `Experiment 206: where the planner allocates (W22)`.
 
-- [ ] Fix the largest site. Pick the top site from 206 whose fix is local: reuse a buffer held by the memo or the
+- [x] Fix the largest site. Pick the top site from 206 whose fix is local: reuse a buffer held by the memo or the
   scratch (as `finaleFor` does), build a result lazily when its caller only reads a field, or return a typed view
   instead of an array of objects. Answers byte-identical (plan JSON, advisor golden, plan benchmark diff none, the
   site's own parity test if it is a kernel door). A/B in-process (≥ 30 rounds interleaved, GC pause ms and planner
@@ -41,3 +41,11 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
   `sizerShape` kernel door (from `sizerKeptOf`) 8.9 MiB; `evaluateVector` itself 8.0 MiB; `marchRecovery` (from `record`)
   6.0 MiB; `replayed` 3.5; `sizerKeptOf` 3.5; `finaleFor` 3.5; `countsKey` 3.0. Full table in
   `tools/theorycraft/out/206-the-planner-garbage.md`. Steps 4a–4c start from `scorer` and the `next` iterator.
+- Step 4a (`evaluateVector` loops, experiment 210, `tools/theorycraft/210-the-planner-garbage-ab.test.ts`): the
+  top sites were `scorer` and the `next` iterator; with `--no-turbo-inlining` the `scorer` self share fell to
+  17.7 MiB and `copyStacks` showed 13 MiB. First try (the scorer reads the sizer's mercs off the memo entry,
+  saving one `copyStacks`) was ≈ 3 MiB, inside the noise (±5 % CPU, ±1.5 % wall in an old-against-old run):
+  reverted. Kept: indexed loops in place of `for…of` in `evaluateVector` (the `next` site). 60 rounds
+  interleaved, two runs: wall −6.6 / −8.2 %, first quartile −3.9 / −3.6 %, GC pauses 12 → 11 per plan (−8.3 %);
+  CPU −3.8 / +8.0 % (all threads, too noisy). Answers equal arm to arm; gate: typecheck, lint, tests, plan
+  benchmark, bench diff, 184 all pass.

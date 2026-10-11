@@ -4297,7 +4297,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const marches = repeatsFor(fielded);
     if (marches < 1) return null;
     const counts: Record<string, number> = {};
-    for (const merc of vector) counts[merc.entry.id] = merc.count;
+    for (let i = 0; i < vector.length; i += 1) {
+      const merc = vector[i] as { entry: Effective; count: number };
+      counts[merc.entry.id] = merc.count;
+    }
     // A depth of 0 or less is the sizer's own shape under one method (`SIZER_DEPTHS`), scored once a vector
     // (its scale means nothing) when the flag is on.
     const depths: readonly number[] = only
@@ -4316,8 +4319,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     const derived: { entry: Effective; count: number }[][] = [];
     // The whole ladder grid of this vector in one kernel call (step 4); `counts` is not written again.
     if (!only) score.arm?.(marches, counts, input.silverBudget);
-    for (const depth of depths) {
-      for (const scale of only ? [only.scale] : depth <= 0 ? ONE_SCALE : LADDER_GROWTHS) {
+    // Indexed loops: `for…of` over an array allocates an iterator result per step in code V8 has not optimised.
+    const onlyScales = only ? [only.scale] : undefined;
+    for (let d = 0; d < depths.length; d += 1) {
+      const depth = depths[d] as number;
+      const scales: readonly number[] = onlyScales ?? (depth <= 0 ? ONE_SCALE : LADDER_GROWTHS);
+      for (let k = 0; k < scales.length; k += 1) {
+        const scale = scales[k] as number;
         // **A shape nothing keeps builds no objects** (W19): when the scorer can answer with the shape's numbers,
         // `record`'s test, the pick's and the tight shape's are asked of the numbers, and only a shape one of
         // them takes is built — then booked exactly as before. (A vector whose shapes the memo keeps builds
@@ -4366,7 +4374,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       let maxLight = -Infinity;
       let maxPerSilver = -Infinity;
       let maxPerMerc = -Infinity;
-      for (const shape of booked) {
+      for (let i = 0; i < booked.length; i += 1) {
+        const shape = booked[i] as Candidate;
         const spent = marchedSilver(shape);
         if (spent > 0 && shape.total / spent > maxLight) maxLight = shape.total / spent;
         const { silver, mercs, hired } = ratioOf(shape);
