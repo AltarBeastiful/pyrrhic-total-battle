@@ -12,7 +12,7 @@ kernel's march. High effort (a new door), so it comes after the cheaper steps, a
 
 ## Tasks
 
-- [ ] Census. On the timing fixture, in-process, count per plan: `retypeMarch` calls, how many take the
+- [x] Census. On the timing fixture, in-process, count per plan: `retypeMarch` calls, how many take the
   `retypeWalk` door and how many climb in JS (and why: a clock, a declining kernel, a shape the door does not take),
   the `climb` steps per call, and the time under each path (experiment 197's profiler). Write the table into Notes.
   If the JS climb is below 2 % of the planner, tick the next task `WON'T DO` with the figures.
@@ -28,3 +28,16 @@ kernel's march. High effort (a new door), so it comes after the cheaper steps, a
   `W22: the retype climb measured`.
 
 ## Notes
+
+- Step 1 (census, experiment 211, `tools/theorycraft/211-the-retype-census.test.ts`, needs the patch
+  `Working/w22/211-retype-census.patch` on `src/engine/retype.ts`; table in `tools/theorycraft/out/211-the-retype-census.md`;
+  10-11 fixture, 3 plans in-process, planner 278 ms wall per plan):
+
+  | Path | Calls/plan | ms/plan | % of planner | Steps/call | Battled/call |
+  |---|---:|---:|---:|---:|---:|
+  | `retypeWalk` door | 5.0 | 3.1 | 1.1 % | – | 1 (3 × 11) |
+  | JS climb (11 × 11, perms > 10 000; no clock, so none by deadline, none declined) | 6.0 | 17.9 | 6.4 % | 13.0 | 600 |
+
+  Inside the JS climb (ms/plan): `build` 6.2, kernel battles (`marchBill`) 4.7, the rest 7.0 (neighbour arrays,
+  `join` keys and the `seen` map, rate). Every climb is tierCandidate (three starts sharing one `seen`). Above the
+  2 % bar, so the door is ported: the kernel climbs, builds, battles and rates; JS keeps `outOfTime` (deadline ⇒ JS).
