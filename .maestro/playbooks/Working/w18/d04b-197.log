@@ -1,0 +1,10 @@
+
+ RUN  v5.0.0 /home/remi/projects/pyrrhic-totalbattle
+
+with-kernel.setup: the plan kernel is set, and the raise kernel with it
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  10:58:53
+   Duration  9.13s (tests 94%, transform 4%, import 1%, setup 1%)
+
