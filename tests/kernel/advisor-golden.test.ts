@@ -5,7 +5,8 @@
  *
  *  1. **generate**: the plan for the fixture's setup and the bar's Tight tables, as `runGenerate` asks them
  *     (`client.plan`, then `client.positions` per stop on the elite request);
- *  2. **upgrades-default**: `runAdvisor` over the 29 generic probes, headlined on the opening stop;
+ *  2. **upgrades-default**: `runAdvisor` (every probe read by Tight: `screen: null`, the screened pass is the second
+ *     test below) over the 29 generic probes, headlined on the opening stop;
  *  3. **captains**: `runCaptainAdvice` over every allowed trio, then `runCaptainUpgrades` against its lead trio;
  *  4. **other**: `runAdvisor` over the sweeps, next tier, merc stock, horizon and silver (`otherProbes`).
  *
@@ -77,7 +78,11 @@ async function capture(): Promise<unknown> {
     const headline = chosen.pick;
 
     // 2. upgrades-default: the generic probes.
-    const upgradesDefault = await runAdvisor(input, genericProbes(), pool, { headline, budgetMs: NO_CLOCK });
+    const upgradesDefault = await runAdvisor(input, genericProbes(), pool, {
+      headline,
+      budgetMs: NO_CLOCK,
+      screen: null,
+    });
 
     // 3. captains: the trio screen, then the lead trio's next stars and levels.
     const { currentKey, trios } = captainTrios(profile, setup);
@@ -109,7 +114,11 @@ async function capture(): Promise<unknown> {
 
     // 4. other: the five questions.
     const { probes, facts } = otherProbes(input, plan.silver);
-    const other = await runAdvisor(input, probes, pool, { headline, budgetMs: NO_CLOCK });
+    const other = await runAdvisor(input, probes, pool, {
+      headline,
+      budgetMs: NO_CLOCK,
+      screen: null,
+    });
 
     return stripClock({
       generate: { plan, at, headline, tables },
@@ -153,6 +162,39 @@ describe.skipIf(profile === null)('the advisor passes on the owner fixture', () 
       else expect(encoded(answer)).toEqual(readEncoded(GOLDEN));
       // eslint-disable-next-line no-console -- the gate's own time, read into the playbook's notes
       console.log(`advisor golden: ${(performance.now() - began).toFixed(0)} ms`);
+    },
+    30 * 60_000,
+  );
+});
+
+describe.skipIf(profile === null)('the screened advisor pass on the owner fixture', () => {
+  it(
+    'gives the golden\'s rows for every probe it read by Tight, and flags the others',
+    async () => {
+      if (profile === null) throw new Error('no owner export');
+      const setup = profile.setups.find((one) => one.id === profile.activeSetupId);
+      if (setup === undefined) throw new Error('the owner export has no active setup');
+      const input = buildPlanRequest(profile, setup);
+      const pool: CalcPool = createCalcPool({ size: 3, createClient: lane });
+      try {
+        const whole = await runAdvisor(input, genericProbes(), pool, { budgetMs: NO_CLOCK, screen: null });
+        const screened = await runAdvisor(input, genericProbes(), pool, { budgetMs: NO_CLOCK });
+        expect(screened.cut).toEqual([]);
+        expect(screened.failed).toEqual([]);
+        expect(screened.baseline).toEqual(whole.baseline);
+        expect(screened.rows.map((row) => row.id).sort()).toEqual(whole.rows.map((row) => row.id).sort());
+        const kept = screened.rows.filter((row) => row.screened !== true);
+        expect(kept.length).toBeGreaterThan(0);
+        expect(kept.length).toBeLessThan(screened.rows.length);
+        for (const row of kept) expect(row).toEqual(whole.rows.find((one) => one.id === row.id));
+        // The probes the screen dropped are the ones the full Tight reading would not have ranked first.
+        const best = (stops: { gain: number }[]): number => Math.max(0, ...stops.map((stop) => stop.gain));
+        const top = best(whole.rows.flatMap((row) => row.stops));
+        const bestKept = Math.max(...kept.map((row) => best(row.stops)));
+        expect(bestKept).toBe(top);
+      } finally {
+        pool.dispose();
+      }
     },
     30 * 60_000,
   );

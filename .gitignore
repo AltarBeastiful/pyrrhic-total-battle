@@ -17,3 +17,5 @@ tools/theorycraft/out/benchmark-run.md
 
 # The AssemblyScript kernel, built on demand (`pnpm kernel:build`, or by the parity test when stale).
 kernel/build/
+
+.maestro/playbooks/Working/

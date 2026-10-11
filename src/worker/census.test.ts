@@ -146,8 +146,8 @@ describe('the census on the advisor', () => {
       });
       const census = startCensus();
       try {
-        await runAdvisor(input, [], pool, { budgetMs: 1e9 });
-        await runAdvisor(input, [], pool, { budgetMs: 1e9 });
+        await runAdvisor(input, [], pool, { budgetMs: 1e9, screen: null });
+        await runAdvisor(input, [], pool, { budgetMs: 1e9, screen: null });
       } finally {
         pool.dispose();
       }

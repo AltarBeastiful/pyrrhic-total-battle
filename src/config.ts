@@ -261,6 +261,13 @@ export const CAMPAIGN = {
     silverShare: 0.1,
   },
   /**
+   * **The advisor's screen** (owner, 2026-10-11, `docs/plans/screen-then-tight.md`, experiment 202): every probe
+   * is first read As is, and only the probes that gain the most are read again by Tight. A probe goes on when it
+   * is among the `top` best by its best stop or gains at least `share` of the best probe's gain, and never when
+   * it gains nothing. Counts of probes and a share, never a duration. `null` reads every probe by Tight.
+   */
+  advisorScreen: { top: 10, share: 0.25 } as { top: number; share: number } | null,
+  /**
    * How many screened trios the captain advice plans in full besides the current trio (W17 C5a, a work count and
    * never a duration). 8 is the plan's first figure (`docs/plans/progression-advisor.md` §4 C5), kept by
    * experiment 193: with the re-priced screen's shortlist, 8 finds the best trio on 32 of 35 stops and loses 0.3 %

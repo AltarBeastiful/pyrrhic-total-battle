@@ -181,6 +181,7 @@ describe('runAdvisor: the pass over the pool', () => {
       ];
       const progress: [number, number][] = [];
       const result = await runAdvisor({ ...input, budgetMs: 1 }, probes, pool, {
+        screen: null,
         onProgress: (done, total) => progress.push([done, total]),
       });
       pool.dispose();
@@ -229,6 +230,54 @@ describe('runAdvisor: the pass over the pool', () => {
       housingProbe('leadership'),
     ];
   }
+
+  test(
+    'a screened pass reads the survivors by Tight on the screen\'s own bars, exactly as an unscreened pass does',
+    async () => {
+      const input = campaign();
+      const probes = probesOf(input);
+      const sent: ProbeInput[] = [];
+      const pool = poolOf(2, (inline) => ({
+        probe: (job, signal) => {
+          sent.push(job);
+          return inline.probe(job, signal);
+        },
+      }));
+      const whole = await runAdvisor(input, probes, pool, { screen: null });
+      sent.length = 0;
+      const progress: [number, number][] = [];
+      const screened = await runAdvisor(input, probes, pool, {
+        screen: { top: 1, share: 1 },
+        onProgress: (done, total) => progress.push([done, total]),
+      });
+      pool.dispose();
+
+      expect(screened.cut).toEqual([]);
+      expect(screened.failed).toEqual([]);
+      expect(screened.baseline).toEqual(whole.baseline);
+      expect(screened.rows).toHaveLength(whole.rows.length);
+      const kept = screened.rows.filter((row) => row.screened !== true);
+      // `top: 1, share: 1` keeps the best probe (and any tie of it), never one that gains nothing.
+      expect(kept.length).toBeGreaterThanOrEqual(1);
+      expect(kept.length).toBeLessThan(probes.length + 1);
+      for (const row of kept) expect(row).toEqual(whole.rows.find((one) => one.id === row.id));
+      for (const row of screened.rows.filter((one) => one.screened === true)) {
+        const best = Math.max(0, ...row.stops.map((stop) => stop.gain));
+        const top = Math.max(0, ...kept.flatMap((one) => one.stops.map((stop) => stop.gain)));
+        expect(best).toBeLessThanOrEqual(top);
+      }
+      // The second stage never plans: every job that reads Tight is a reread of a bar the first stage planned.
+      const tight = sent.filter((job) => job.reading === 'tight');
+      expect(tight.length).toBeGreaterThan(0);
+      for (const job of tight) {
+        expect(job.reread === true || job.shown !== undefined).toBe(true);
+      }
+      expect(sent.filter((job) => job.reading === 'as-is').length).toBeGreaterThanOrEqual(1 + probes.length);
+      // One bar to settle, then the survivors' bar beside it: the total grows once, after the screen.
+      expect(progress.at(-1)?.[0]).toBe(progress.at(-1)?.[1]);
+    },
+    TIMEOUT,
+  );
 
   test(
     'the pass reads its input and probes without mutating them',

@@ -111,6 +111,11 @@ export interface StopAdvice {
 /** One probe, read on every stop of the baseline bar, in the bar's order. */
 export interface AdvisorRow extends ProbeInfo {
   stops: StopAdvice[];
+  /**
+   * Read **As is** only: the screen (`runAdvisor`, `CAMPAIGN.advisorScreen`) found the probe too small to be
+   * worth a Tight reading, so its figures are the plan's counts battled untouched, not raised by Tight.
+   */
+  screened?: true;
 }
 
 function sameOrder(a: readonly string[], b: readonly string[]): boolean {

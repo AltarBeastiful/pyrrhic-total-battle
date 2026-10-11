@@ -126,6 +126,12 @@ export interface ProbeJob {
   request: ProbeInput;
 }
 
+/**
+ * How a march is read: `tight` is the March's own (raised by Tight, then battled); `as-is` battles the plan's
+ * counts untouched, which is what the advisor's screening stage reads (`docs/plans/screen-then-tight.md`).
+ */
+export type ProbeReading = 'tight' | 'as-is';
+
 export interface ProbeInput {
   /**
    * The campaign to plan — the account's own for the baseline, the probe's upgraded request otherwise — with
@@ -139,6 +145,13 @@ export interface ProbeInput {
    * the job does not plan again, it reads the bar against `against`, re-using its marches.
    */
   shown?: ShownStop[] | undefined;
+  /** How every march of this job is read; `tight` when absent. */
+  reading?: ProbeReading | undefined;
+  /**
+   * With `shown`: keep its stops' counts but read their marches again under `reading` (the second stage of a
+   * screened pass), rather than trusting the marches `shown` carries. No planning either way.
+   */
+  reread?: boolean | undefined;
 }
 
 /** What one advisor job answers: its own bar as shown, and the probe read against the baseline when one was given. */

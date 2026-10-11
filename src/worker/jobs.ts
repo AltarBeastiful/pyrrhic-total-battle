@@ -40,6 +40,7 @@ import type {
   PositionsInput,
   ProbeAnswer,
   ProbeInput,
+  ProbeReading,
   ResizeInput,
   StackOutcome,
 } from './protocol';
@@ -124,10 +125,14 @@ const SHOWN = ['tight'] as const;
  * stop on) — and battled through the March's own replay (`applyCounts`, which `positionTrades` reads its rows
  * with), so every figure is the one the pane would print. `request` is the March's: `withMethod(…, 'elite')`.
  */
-function shownMarch(request: StackRequest, counts: Record<string, number>): ShownMarch {
+function shownMarch(
+  request: StackRequest,
+  counts: Record<string, number>,
+  reading: ProbeReading = 'tight',
+): ShownMarch {
   const base = planMarch(request, counts).result;
   const raised =
-    troopFloor(base) === null
+    reading === 'as-is' || troopFloor(base) === null
       ? countsOf(base)
       : (positionTrades(request, base, SHOWN).rows[0]?.counts ?? countsOf(base));
   const { result, summary } = applyCounts(request, base, raised);
@@ -183,20 +188,25 @@ export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
     input.shown === undefined ? planCampaign({ ...input.plan, shouldStop: context.cancelled }) : null;
   if (context.cancelled()) return { stops: [], row: null };
   const request = withMethod(input.plan.request, 'elite');
+  const reading = input.reading ?? 'tight';
   // A bar shown by this probe's first call carries its marches over: the memo is the one that call ended with.
-  const read = new Map<string, ShownMarch>(input.shown?.map((stop) => [countsKey(stop.counts), stop.march]));
+  const read = new Map<string, ShownMarch>(
+    input.reread === true ? [] : input.shown?.map((stop) => [countsKey(stop.counts), stop.march]),
+  );
   const showOnce = (counts: Record<string, number>): ShownMarch => {
     const key = countsKey(counts);
     const known = read.get(key);
     if (known !== undefined) return known;
-    const march = shownMarch(request, counts);
+    const march = shownMarch(request, counts, reading);
     read.set(key, march);
     return march;
   };
   // Counted in a profiling build only (`census.ts`); a production build folds this to `showOnce`.
   const show = CENSUS ? countShows(request, countsKey, (key) => read.has(key), showOnce) : showOnce;
   const stops =
-    input.shown ??
+    (input.reread === true
+      ? input.shown?.map((stop) => ({ ...stop, march: show(stop.counts) }))
+      : input.shown) ??
     (plan?.alternatives ?? []).map((row) => ({
       pick: row.pick,
       counts: row.counts,
