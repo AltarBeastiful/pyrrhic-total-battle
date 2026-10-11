@@ -18,7 +18,7 @@
  * `marchOfTs`, `recoveryCosts`, `sizeStacks`).
  */
 import type { Effective, SizerMethod } from './plan';
-import type { Bill } from './rating';
+import type { Bill, MarkerRates } from './rating';
 import type { UnitDef } from '../data/types';
 import type {
   Housing,

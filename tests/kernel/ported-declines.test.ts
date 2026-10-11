@@ -360,6 +360,11 @@ function counted(kernel: PlanKernel): { kernel: PlanKernel; declines: Record<str
       note('marchBill', out === null);
       return out;
     },
+    retypeWalk: (request, rates, troops, slots, hired, base, guard) => {
+      const out = kernel.retypeWalk(request, rates, troops, slots, hired, base, guard);
+      note('retypeWalk', out === null);
+      return out;
+    },
     sizePool: (slots, capacity, ceiling, spread) => {
       const out = kernel.sizePool(slots, capacity, ceiling, spread);
       note('sizePool', out === null);
