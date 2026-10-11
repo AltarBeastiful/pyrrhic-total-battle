@@ -1,0 +1,114 @@
+diff --git a/kernel/assembly/index.ts b/kernel/assembly/index.ts
+index 3c93b7d..e305376 100644
+--- a/kernel/assembly/index.ts
++++ b/kernel/assembly/index.ts
+@@ -189,6 +189,7 @@ export function setTable(ptr: usize): void {
+   attackers = heap.alloc(n << 2);
+   dead = heap.alloc(n);
+   acted = heap.alloc(n);
++  actedB = heap.alloc(n);
+   topTier = heap.alloc(<usize>FAMILIES << 3);
+   if (isDefined(KILL_CHECK)) {
+     kcType = heap.alloc(n << 2);
+@@ -212,6 +213,73 @@ function attack(k: i32): f64 {
+   return 0.0;
+ }
+ 
++let actedB: usize = 0;
++let gDamage: f64 = 0.0;
++/** `attack()` over an explicit `acted` array: the cursor it leaves, the damage it found (0 when none) in `gDamage`. */
++@inline function attackIn(marks: usize, at: i32, k: i32): i32 {
++  let c = at;
++  gDamage = 0.0;
++  while (c < k) {
++    const index = i32At(attackers, c);
++    if (load<u8>(dead + <usize>index) == 0 && load<u8>(marks + <usize>index) == 0) {
++      store<u8>(marks + <usize>index, 1);
++      gDamage = f64At(stackDamage, index);
++      return c;
++    }
++    c += 1;
++  }
++  return c;
++}
++let bothMin: f64 = 0.0;
++let bothMax: f64 = 0.0;
++/** Both orientations of `journalDamage` in one walk: the kill sequence is shared, each total takes its own values in its own order. */
++function journalBoth(k: i32): void {
++  bothMin = 0.0;
++  bothMax = 0.0;
++  if (k <= 0 || enemySquads <= 0) return;
++  memory.fill(dead, 0, <usize>k);
++  memory.fill(acted, 0, <usize>k);
++  memory.fill(actedB, 0, <usize>k);
++  let cA = 0;
++  let cB = 0;
++  let lo: f64 = 0.0;
++  let hi: f64 = 0.0;
++  cB = attackIn(actedB, cB, k);
++  hi += gDamage;
++  let killed = 0;
++  while (killed < k) {
++    for (let e = 0; e < enemySquads && killed < k; e += 1) {
++      store<u8>(dead + <usize>killed, 1);
++      killed += 1;
++      if (e < enemySquads - 1 && killed < k) {
++        cA = attackIn(acted, cA, k);
++        lo += gDamage;
++        cB = attackIn(actedB, cB, k);
++        hi += gDamage;
++      }
++    }
++    for (let j = 0; j < k; j += 1) {
++      const index = i32At(attackers, j);
++      if (load<u8>(dead + <usize>index) == 0) {
++        const d = f64At(stackDamage, index);
++        if (load<u8>(acted + <usize>index) == 0) lo += d;
++        if (load<u8>(actedB + <usize>index) == 0) hi += d;
++      }
++    }
++    memory.fill(acted, 0, <usize>k);
++    memory.fill(actedB, 0, <usize>k);
++    cA = 0;
++    cB = 0;
++  }
++  bothMin = lo;
++  bothMax = hi;
++}
++let abMask: i32 = 0;
++let nMarch: f64 = 0.0;
++let nSizer: f64 = 0.0;
++export function journalAb(mask: i32): void { abMask = mask; nMarch = 0.0; nSizer = 0.0; }
++export function journalCount(which: i32): f64 { return which == 0 ? nMarch : nSizer; }
++
+ /** `journalDamage`: the army lines of one orientation, summed in journal order. */
+ function journalDamage(k: i32, armyFirst: bool): f64 {
+   if (k <= 0 || enemySquads <= 0) return 0.0;
+@@ -384,8 +452,11 @@ export function battle(countsPtr: usize, outPtr: usize): void {
+     store<i32>(attackers + ((<usize>(j + 1)) << 2), i);
+   }
+ 
+-  const minimum = journalDamage(k, false);
+-  const maximum = journalDamage(k, true);
++  let minimum: f64;
++  let maximum: f64;
++  if ((abMask & 4) != 0) { journalBoth(k); minimum = bothMin; maximum = bothMax; }
++  else { minimum = journalDamage(k, false); maximum = journalDamage(k, true); }
++  nMarch += 1.0;
+ 
+   recoveryOf(k);
+   const silver = bSilver;
+@@ -914,8 +985,11 @@ function sizerScore(n: i32): void {
+   }
+   const k = killOrderBy(n, zRow, zCount, zRankSlot);
+   attackOrderOf(k);
+-  const minimum = journalDamage(k, false);
+-  const maximum = journalDamage(k, true);
++  let minimum: f64;
++  let maximum: f64;
++  if ((abMask & 4) != 0) { journalBoth(k); minimum = bothMin; maximum = bothMax; }
++  else { minimum = journalDamage(k, false); maximum = journalDamage(k, true); }
++  nSizer += 1.0;
+   zMin = minimum;
+   zAvg = jsRound((minimum + maximum) / 2.0);
+ }

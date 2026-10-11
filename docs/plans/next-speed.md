@@ -149,15 +149,24 @@ The first column is the 10-07 export; every later column is the 10-11 export. (R
 
 | | 6c932f8 (10-07) | 6c932f8, 10-11 | after 1 | after 2 | after 3 | after 4 | after 5 | after 6 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | 12 096 ms* | 12 096 ms* | | | | |
-| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | | | | |
-| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | | | | |
-| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | | | | |
-| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | | | | |
+| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | 12 096 ms* | 12 096 ms* | 13 057 ms* | | | |
+| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | 70.9–72.3 s* | | | |
+| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | 35.2–35.5 s* | | | |
+| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | 33.7–34.7 s* | | | |
+| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | same | | | |
 
 \* **After 1 and after 2 are the same kernel as the 10-11 column: both steps are WON'T DO** (below). The figures differ
 from the 10-11 column by the machine alone (a re-run of unchanged code, `Working/w22/prod-after-02.txt`: 12 096 ms,
 65.4–69.0 s pool CPU, Tight 49.4–49.6 %, hash unchanged); read later columns against this re-run too.
+
+### Step 3: WON'T DO (experiment 209, 2026-10-12)
+
+\* After 3 is the same kernel again (the fusion was reverted; probe in `docs/research/patches/w22-209-journal-probe.patch`;
+`Working/w22/prod-after-03b.txt`, machine slower than the 12 096 ms re-run). Per `planCampaign` on the 10-11 export:
+19 080 `sizerScore` pairs and 3 242 sizer-march pairs. One extra pair costs **+4.1 %** (sizer) and **+3.1 %** (march)
+of the planner, so all pairs are ≈ 7 % of the planner ≈ 3.4 % of pool CPU, and fusing can only save part of that.
+Built `journalBoth` (one kill sequence, two `acted` arrays, two cursors; plans identical): −0.3 to −2.1 % of the
+planner over three A/Bs (30–60 plans, interleaved) ≈ 0.4 % of pool CPU, under the 2 % bar. Reverted.
 
 ### Steps 1 and 2: WON'T DO (experiment 208, 2026-10-12)
 
