@@ -1,0 +1,34 @@
+diff --git a/kernel/assembly/index.ts b/kernel/assembly/index.ts
+index 3c93b7d..266ff97 100644
+--- a/kernel/assembly/index.ts
++++ b/kernel/assembly/index.ts
+@@ -2340,6 +2340,10 @@ let rkHp: usize = 0; // f64 × types: its total HP
+ let rkLast: usize = 0; // f64 × types: the counts it was built from
+ let rkK: i32 = -1; // its length, −1 when there is none to start from
+ const KEEP_MOVES = 4;
++let abOld: bool = false; // test only
++export function raiseAb(mask: i32): void {
++  abOld = (mask & 1) != 0;
++}
+ 
+ /** `killOrderBy(types, rRows, countsPtr, T_ORDER)` into `stackType`/`stackCount`/`stackHp`, from the kept roster. */
+ function raiseKillOrder(countsPtr: usize): i32 {
+@@ -2488,7 +2492,8 @@ function raiseRating(damage: f64): f64 {
+     memory.copy(cRatePrev, rWork, (<usize>types) << 3);
+     cRateSeen = true;
+   }
+-  const k = killOrderBy(types, rRows, rWork, T_ORDER);
++  const k = abOld ? killOrderBy(types, rRows, rWork, T_ORDER) : raiseKillOrder(rWork);
++  if (isDefined(KILL_CHECK) && !abOld) killOrderCheck(k, rWork);
+   recoveryOf(k);
+   let score = rAsDamage > 0 ? ((damage - rAsDamage) / rAsDamage) * 100.0 : 0.0;
+   score += saved(rAsSilver, bSilver) / header(H_RATE_SILVER);
+@@ -3156,7 +3161,7 @@ export function raise(
+     if (rRated) {
+       rAsDamage = raiseScore(rBase);
+       if (isDefined(CENSUS)) cKillOrdersRating += 1.0;
+-      recoveryOf(killOrderBy(types, rRows, rBase, T_ORDER));
++      recoveryOf(abOld ? killOrderBy(types, rRows, rBase, T_ORDER) : raiseKillOrder(rBase));
+       rAsSilver = bSilver;
+       rAsGold = bGold;
+       rAsHired = raiseBurn(rBase);

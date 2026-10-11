@@ -149,8 +149,27 @@ The first column is the 10-07 export; every later column is the 10-11 export. (R
 
 | | 6c932f8 (10-07) | 6c932f8, 10-11 | after 1 | after 2 | after 3 | after 4 | after 5 | after 6 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | | | | | | |
-| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | | | | | | |
-| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | | | | | | |
-| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | | | | | | |
-| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | | | | | | |
+| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | 12 096 ms* | 12 096 ms* | | | | |
+| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | | | | |
+| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | | | | |
+| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | | | | |
+| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | | | | |
+
+\* **After 1 and after 2 are the same kernel as the 10-11 column: both steps are WON'T DO** (below). The figures differ
+from the 10-11 column by the machine alone (a re-run of unchanged code, `Working/w22/prod-after-02.txt`: 12 096 ms,
+65.4–69.0 s pool CPU, Tight 49.4–49.6 %, hash unchanged); read later columns against this re-run too.
+
+### Steps 1 and 2: WON'T DO (experiment 208, 2026-10-12)
+
+The profile build's shares (`killOrderBy` 28 %, `recoveryOf` 24 % of the Tight raise) were wasm-in-`dev:profile`
+inflation. Measured on the release kernel, 199 Tight searches captured from the 10-11 account's generic-probe pass,
+replayed in-process, arms interleaved, 30 rounds (`tools/theorycraft/208-the-rating-ab.test.ts`, with a temporary
+`raiseAb` switch: `docs/research/patches/w22-208-rating-kept-order.patch`):
+
+- **Step 1** (the rating reads the kept kill order, built and shadow-checked red then green on `KILL_CHECK`, exact on
+  every golden): new 3 240.5 ms, old 3 318.4 ms, median **−2.4 % of the raise**, ≈ 1.2 % of pool CPU (Tight is 49 %
+  of it on this account). Below the 2 % bar: reverted.
+- **Step 2** (the bill from per-type terms): not built. Twenty extra `recoveryOf` calls per rating cost 3 767 ms on a
+  3 378 ms raise, so one `recoveryOf` is **5.6 % of the raise** (≈ 2.7 % of pool CPU). Even a free bill stays under the
+  bar's 8 % of the raise; a cache that still sums the four terms in kill order recovers about half of that. WON'T DO.
+
