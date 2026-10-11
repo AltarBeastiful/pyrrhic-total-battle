@@ -58,9 +58,9 @@ no history, no device) so a given account always gets the same order and the sam
   measures and cut-set diff. Otherwise tick with the figure that rules it out.
 
 <!-- MAESTRO:HITL reason="Ordering by the estimated cost changes which probes a slow device cuts when the pass clock binds. Read SPEED-06 Notes (207's ranking quality, wall gained per export, cut-set diffs at 2 s and 3 s). Merge w22-cost-order (and w22-tail-split if built) into main and tick, or tick to drop" -->
-- [ ] Human step: merge `w22-cost-order` (and `w22-tail-split` if built), or drop.
+- [x] Human step: merge `w22-cost-order` (and `w22-tail-split` if built), or drop.
 
-- [ ] If merged: gate, fill "after 6" in `docs/plans/next-speed.md` §3 (production split harness ×3 on the 10-11
+- [x] If merged: gate, fill "after 6" in `docs/plans/next-speed.md` §3 (production split harness ×3 on the 10-11
   export), commit the doc: `W22: the tail measured`. Otherwise write "dropped by the owner" in the plan and tick.
 
 ## Notes

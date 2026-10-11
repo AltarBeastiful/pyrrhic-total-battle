@@ -135,6 +135,12 @@ before it runs**, so jobs go out longest first from the first Generate:
   no clock; at a binding clock the cut set changes, so the merge is the owner's, with the cut-set diff at 2 s and 3 s.
 - **Split the big probe** only if one job alone outlasts the pass's CPU / workers even when started first.
 
+**Outcome (2026-10-12): WON'T DO, dropped by the owner.** An input-only estimate does not rank jobs: a per-class median
+fitted on one export and tested on the other gives ρ 0.15–0.24 (per kind 0.07–0.13), far under the 0.6 bar. A job's
+cost is its Tight bill (ρ 0.96), set by the raise space of the plan the probe produces, an output. No job alone sets
+the end of a pass (longest 1.3 s against a ~5.4 s lane). `jobCost.ts`, experiment 207 and `w22-cost-order` were not
+built; nothing merged. Notes: `SPEED-06-The-Tail.md`.
+
 ## 2. Gates (every step)
 
 `.maestro/playbooks/Working/w22/gate.sh` (W18's gate, snapshotting the benchmark files at its start instead of the
@@ -153,7 +159,7 @@ The first column is the 10-07 export; every later column is the 10-11 export. (R
 | prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | 70.9–72.3 s* | 73.7–76.5 s** | 68.8–73.4 s*** | |
 | prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | 35.2–35.5 s* | 37.5–38.6 s** | 35.7–37.9 s*** | |
 | prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | 33.7–34.7 s* | 34.0–35.8 s** | 30.9–33.3 s*** | |
-| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | same | same | same, run 2 of 3**** | |
+| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | same | same | same, run 2 of 3**** | no change (step 6 dropped) |
 
 \* **After 1 and after 2 are the same kernel as the 10-11 column: both steps are WON'T DO** (below). The figures differ
 from the 10-11 column by the machine alone (a re-run of unchanged code, `Working/w22/prod-after-02.txt`: 12 096 ms,
