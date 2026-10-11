@@ -1180,7 +1180,12 @@ class KernelMarch implements MarchOf {
    * The rounded plan silver the kernel priced with the march (step 4, the scorer's ladders): what
    * `marchRecovery(recovery, rungs, mercs).silver` answers for these very arrays, and for nothing else.
    */
-  #billed: { silver: number; recovery: RecoverySettings; rungs: object; mercs: object } | undefined;
+  #billed = false;
+  // Its four fields, held flat rather than in an object per march (W18 P3.3).
+  #billedSilver = 0;
+  #billedRecovery: RecoverySettings | undefined;
+  #billedRungs: object | undefined;
+  #billedMercs: object | undefined;
 
   /** `figures` a `MarchFigures`, or the kernel's six figures in that order from `at` (`LadderKernel.out`). */
   constructor(
@@ -1214,15 +1219,23 @@ class KernelMarch implements MarchOf {
 
   /** Keep the bill the kernel priced beside the march, for `rungs` and `mercs` under `recovery`. */
   bill(silver: number, recovery: RecoverySettings, rungs: object, mercs: object): this {
-    this.#billed = { silver, recovery, rungs, mercs };
+    this.#billed = true;
+    this.#billedSilver = silver;
+    this.#billedRecovery = recovery;
+    this.#billedRungs = rungs;
+    this.#billedMercs = mercs;
     return this;
   }
 
   /** That bill's silver, when it was priced for these very arrays under `recovery`; else `undefined`. */
   billedSilver(recovery: RecoverySettings, rungs: object, mercs: object): number | undefined {
-    const billed = this.#billed;
-    if (billed && billed.recovery === recovery && billed.rungs === rungs && billed.mercs === mercs) {
-      return billed.silver;
+    if (
+      this.#billed &&
+      this.#billedRecovery === recovery &&
+      this.#billedRungs === rungs &&
+      this.#billedMercs === mercs
+    ) {
+      return this.#billedSilver;
     }
     return undefined;
   }
@@ -1815,23 +1828,34 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
    * planner tries, and this walks it once instead of eighty times. (With a budget it cannot: what is left
    * depends on what each ladder cost.) That is the whole reason it is a function here rather than inline.
    */
+  /** `finaleFor`'s spent stock, by hired id: every hired type's entry is written before it is read. */
+  const finaleScratch: Record<string, number> = {};
   const finaleFor = (
     marches: number,
     fielded: { entry: Effective; count: number }[],
     silverLeft: number | undefined,
   ): ScoredShape['finale'] => {
     if (silverLeft !== undefined && silverLeft <= 0) return null;
-    const spentStock: Record<string, number> = { ...stock };
+    // The stock the repeats leave, read for the hired types only — all that is read of it below — rather than
+    // a copy of the whole stock per call (W18 P3.3).
+    const spentStock = finaleScratch;
+    for (const entry of mercTypes) spentStock[entry.id] = stock[entry.id] as number;
     for (const merc of fielded)
       spentStock[merc.entry.id] =
         (sustain[merc.entry.id] ?? 0) === Infinity
           ? (stock[merc.entry.id] ?? 0)
           : (stock[merc.entry.id] ?? 0) - marches * chunks(merc.count);
-    const leftovers = mercTypes
-      .map((entry) => ({ entry, count: Math.max(0, spentStock[entry.id] ?? 0) }))
-      .filter((merc) => merc.count > 0);
+    const leftovers: { entry: Effective; count: number }[] = [];
+    // `Math.max(...hps)`, folded one at a time.
+    let leftoverHp = -Infinity;
+    for (const entry of mercTypes) {
+      const count = Math.max(0, spentStock[entry.id] ?? 0);
+      if (count > 0) {
+        leftovers.push({ entry, count });
+        leftoverHp = Math.max(leftoverHp, count * entry.hp);
+      }
+    }
     if (leftovers.length === 0) return null;
-    const leftoverHp = Math.max(...leftovers.map((merc) => merc.count * merc.entry.hp));
     const finaleBudget = silverLeft === undefined ? Infinity : silverLeft;
     let finale: ScoredShape['finale'] = null;
     // The whole ladder grid in one kernel call (step 4). **Declined** — the entries are not one bound table's
@@ -3725,6 +3749,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
   const seeded = tierSeed ? { tierSeed, rungOrderLog } : {};
   /** The sizer's answers of this search, by `sizerHash` (step 5, W16 C2); never handed out, only copied. */
   const sizerMemo = new Map<number, SizerKept[]>();
+  /** Each prefix's id set, built once per depth (W18 P3.3): `sizedShape` only reads it. */
+  const prefixSets = new Map<number, ReadonlySet<string>>();
+  const prefixIds = (depth: number): ReadonlySet<string> => {
+    let ids = prefixSets.get(depth);
+    if (ids === undefined) {
+      ids = new Set(troops.slice(-depth).map((entry) => entry.id));
+      prefixSets.set(depth, ids);
+    }
+    return ids;
+  };
   /**
    * The Elite sizer over every troop type, the hired counts as caps — what the March pane draws after a
    * put-back, scored inside the search so the plan can find it itself (`CampaignInput.sizerShape`).
@@ -3770,7 +3804,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         method,
         // The prefix as a set of ids, which is what `sizedShape` filters on: `troops` is the ranking, weakest
         // per HP first, so its last `depth` entries are the strongest `depth` types.
-        depth === undefined ? undefined : new Set(troops.slice(-depth).map((entry) => entry.id)),
+        depth === undefined ? undefined : prefixIds(depth),
       );
       kept = {
         method,

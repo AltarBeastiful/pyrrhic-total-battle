@@ -19,7 +19,7 @@ kernel is exact only when done op for op, as the kernel port was (`project-kerne
   kernel crossings per plan and the allocation rate (`--heap-prof` or `performance.measureUserAgentSpecificMemory`
   where available). Rank the candidates below by measured self time. Commit: `Experiment 197: the planner on the owner's account`.
 
-- [ ] Remove allocation in the hottest frames only, by 197's ranking. Typical targets: `countsKey` string keys
+- [x] Remove allocation in the hottest frames only, by 197's ranking. Typical targets: `countsKey` string keys
   (`src/worker/jobs.ts`, and `planCampaign`'s own in `src/engine/plan.ts`) replaced by a numeric key where the key
   set allows it, reused scratch arrays in `build` / `copyStacks` / `prefixFielded`, no object spreads in loops. Each
   change must keep iteration orders (a `Map`'s insertion order, a sort's comparator and stability). Gate script.
@@ -67,4 +67,36 @@ Top allocators (timing fixture): `shapeOf` 12.9 %, `scorer` 12.7 %, `sizedShape`
 `sizer` 6.3 %, `evaluateVector` 6.3 %, iterator `next` 5.6 %, `record` 4.2 %. `countsKey` is ~1 % of bytes and
 < 1 % of time: a numeric key would buy little. The JS chain evaluateVector → sizer → sizedShape → sizedCounts:
 evaluateVector 58 % inclusive / 31 % JS-under-it; sizer 26 % / 9.3 %; sizedShape 23 % / 6.2 %; sizedCounts 19 % / 0.7 %.
+
+### P3.3 less allocation (2026-10-11)
+
+Kept, all exact (no iteration order touched; `src/engine/plan.ts`):
+
+- `KernelMarch` holds the kernel's bill in four private fields instead of a `{ silver, recovery, rungs, mercs }`
+  object per march: one object less on every ladder shape, and those marches live on in `derivedMemo`.
+- `finaleFor` writes the spent stock of the hired types into one scratch record instead of copying the whole
+  `stock` per call, and folds `leftoverHp` instead of `Math.max(...map)` over a `map().filter()`.
+- `sizer` builds each prefix's id set once per depth instead of per memo miss.
+
+Tried and reverted (measured worse): caps built key by key over the sized units only in `sizedShape` (the
+object spread is V8's fast clone; reordering the spread after the filter alone raised `sizedShape`'s sampled
+bytes 38 → 49 MiB), and the derived-memo key concatenated in a loop instead of `map().join()` (cons strings,
+`evaluateVector` 21 → 24 MiB). `countsKey`, `build`, `copyStacks`, `prefixFielded` were left: < 1 % each in 197.
+
+197 before (2 runs on HEAD 44605fd) → after (3 runs), per plan:
+
+| Figure | Timing before | Timing after | Exactness before | Exactness after |
+|---|---:|---:|---:|---:|
+| GC pauses (observer) | 30, 81–88 ms | 29, 57–60 ms | 22, 40–41 ms | 19, 28–29 ms |
+| GC share of profiled samples | 15.1–15.9 % | 11.7–11.8 % | 9.7–10.1 % | 7.8–8.2 % |
+| CPU per plan (counted pass, process) | 1,223–1,321 ms | 1,100–1,143 ms | 626–682 ms | 601–630 ms |
+| Profiled planner time | 495–540 ms | 470–497 ms | 488–500 ms | 473–507 ms |
+| Allocated (sampled, one plan) | 354 MiB | 368–371 MiB | 256 MiB | 253–255 MiB |
+
+The sampled byte count does not move beyond its noise (and attribution shifts with inlining); the GC time is
+the reading that moved, about −30 % on both fixtures. Profiled time is within run-to-run noise.
+
+Gate (2026-10-11): kernel:build, typecheck, lint, `pnpm test` (295 s, advisor golden included), plan-benchmark
+alone (162 s), benchmark diff vs HEAD (empty), 184 (110 s, run alone after the tool's 10-minute limit cut the
+gate script on its last step): all PASS. Logs `.maestro/playbooks/Working/w18/p33-*`, `197-before-*`, `197-final-*`.
 
