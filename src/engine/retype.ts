@@ -240,6 +240,47 @@ export function retypeMarch(
       walk([], new Set());
     }
   } else {
+    const SEEDS: RetypeSeed[] = ['as-is', 'tier', 'ranking'];
+    /** The whole climb on the kernel; `false` when it declines, with nothing of `best` or `tried` touched. */
+    const climbOnKernel = (): boolean => {
+      const same = (a: number[], b: number[]): boolean => a.every((t, i) => t === b[i]);
+      const tierScore = tierCandidate ? (seen.get(tier.join(',')) ?? -Infinity) : 0;
+      const starts: { types: number[]; score: number | null; seed: number }[] = [
+        { types: asIs, score: 0, seed: 0 },
+      ];
+      if (tierCandidate) {
+        if (!same(tier, asIs)) starts.push({ types: tier, score: tierScore, seed: 1 });
+        if (!same(ranking, asIs) && !same(ranking, tier))
+          starts.push({ types: ranking, score: null, seed: 2 });
+      }
+      const door = requiredPlanKernel().retypeClimb(
+        request,
+        rates,
+        table,
+        slots,
+        hired,
+        base,
+        {
+          silverCeiling: ceiling,
+          holdDamagePerSilver: holdPerSilver,
+          secondsCeiling: options.secondsCeiling,
+        },
+        starts,
+        tierCandidate ? { types: tier, score: tierScore } : null,
+        tierCandidate,
+        options.climbSteps ?? CLIMB_STEPS,
+        best === null ? -Infinity : (best as { rating: number }).rating,
+      );
+      if (!door) return false;
+      tried += door.tried;
+      if (door.improved) {
+        const counts = build(door.types) as Record<string, number>;
+        best = tierCandidate
+          ? { counts, rating: door.rating, seed: SEEDS[door.seed] as RetypeSeed }
+          : { counts, rating: door.rating };
+      }
+      return true;
+    };
     // A best-improvement climb from the march as it stands (rating 0 against itself): swap two slots, or put
     // an unused type in a slot; move to the best neighbour while it rates higher than where the climb stands.
     const climb = (start: number[], startScore: number): void => {
@@ -271,7 +312,12 @@ export function retypeMarch(
         currentScore = moved.score;
       }
     };
-    if (!tierCandidate) climb(asIs, 0);
+    // The kernel climbs the same climbs in one call (`PlanKernel.retypeClimb`); a clock cannot be honoured there,
+    // so a deadline keeps the TypeScript climb, which is also the reference the door is held to.
+    const climbed = deadline === Infinity ? climbOnKernel() : false;
+    if (climbed) {
+      // Done by the door.
+    } else if (!tierCandidate) climb(asIs, 0);
     else {
       const same = (a: number[], b: number[]): boolean => a.every((t, i) => t === b[i]);
       const tierScore = seen.get(tier.join(',')) ?? -Infinity;

@@ -25,6 +25,7 @@ export function decliningKernel(real: PlanKernel = createPlanKernel(loadKernelMo
     bill: () => null,
     marchBill: (request, counts) => real.marchBill(request, counts),
     retypeWalk: () => null,
+    retypeClimb: () => null,
     sizePool: (slots, capacity, ceiling, spread) => real.sizePool(slots, capacity, ceiling, spread),
     sizeStacks: () => null,
     sizerShape: () => null,

@@ -80,6 +80,26 @@ interface PlanExports {
     assignPtr: number,
     guardPtr: number,
   ): void;
+  retypeClimb(
+    k: number,
+    slotsPtr: number,
+    m: number,
+    candPtr: number,
+    fixedPtr: number,
+    basePtr: number,
+    guardPtr: number,
+    startsPtr: number,
+    nStarts: number,
+    startScoresPtr: number,
+    seedsPtr: number,
+    knownPtr: number,
+    knownScore: number,
+    useSeen: number,
+    steps: number,
+    bestIn: number,
+    outPtr: number,
+    assignPtr: number,
+  ): void;
   sizerShapeScratch(slot: number): number;
   sizerShape(
     prefixAll: number,
@@ -558,68 +578,125 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
   let capView = new Float64Array(0);
   let poolView = new Float64Array(0);
 
+  type RetypeGuard = Parameters<PlanKernel['retypeWalk']>[6];
+  /**
+   * What `retypeWalk` and `retypeClimb` lay alike: the rates in the header, the slots, the hired counts as the
+   * fixed counts (no caps), the march's record, the guards and the troop rows, in the instance's scratch.
+   */
+  const layRetype = (
+    request: StackRequest,
+    rates: MarkerRates,
+    troops: readonly Effective[],
+    slots: readonly number[],
+    hired: Record<string, number>,
+    base: Bill,
+    guard: RetypeGuard,
+  ) => {
+    let bound = byRequest.get(request);
+    if (!bound) {
+      effectiveTable(request);
+      bound = byRequest.get(request);
+      if (!bound) return null;
+    }
+    const { raw, ids } = bound;
+    const k = slots.length;
+    const m = troops.length;
+    const rows = troops.map((entry) => ids.indexOf(entry.id));
+    if (k === 0 || m === 0 || rows.some((row) => row < 0)) return null;
+    // The rates the walk rates with: the header's, laid for this call (no other door reads them).
+    const header = new Float64Array(raw.memory.buffer, bound.tablePtr, HEADER_SIZE);
+    header[H.rateSilver] = rates.silver;
+    header[H.rateGold] = rates.gold;
+    header[H.rateHired] = rates.hired;
+    header[H.rateDragonCoins] = rates.dragonCoins;
+    header[H.rateSeconds] = rates.seconds;
+    const n = Math.max(1, bound.types);
+    const bytes = 8 * (k + n + n + RECORD_SIZE + 8 + 3 + 3) + 4 * (m + 3 * k + 3 * k + 3 + k) + m + 16;
+    // Scratch reserved once per instance and grown only when a call needs more (the bump allocator never frees).
+    let scratch = walkScratch.get(bound);
+    if (!scratch || scratch.bytes < bytes) {
+      scratch = { ptr: raw.alloc(bytes), bytes };
+      walkScratch.set(bound, scratch);
+    }
+    let cursor = scratch.ptr;
+    const take = (size: number): number => {
+      const ptr = cursor;
+      cursor += size;
+      return ptr;
+    };
+    const slotsPtr = take(8 * k);
+    const fixedPtr = take(8 * n);
+    const capsPtr = take(8 * n);
+    const basePtr = take(8 * RECORD_SIZE);
+    const outPtr = take(8 * 8);
+    const guardPtr = take(8 * 3);
+    const startScoresPtr = take(8 * 3);
+    const candPtr = take(4 * m);
+    const assignPtr = take(4 * 3 * k);
+    const startsPtr = take(4 * 3 * k);
+    const seedsPtr = take(4 * 3);
+    const knownPtr = take(4 * k);
+    const requiredPtr = take(m);
+    const buffer = raw.memory.buffer;
+    new Float64Array(buffer, slotsPtr, k).set(slots);
+    const fixed = new Float64Array(buffer, fixedPtr, n);
+    const caps = new Float64Array(buffer, capsPtr, n);
+    for (let t = 0; t < bound.types; t += 1) {
+      fixed[t] = hired[ids[t] as string] ?? 0;
+      caps[t] = Infinity;
+    }
+    const record = new Float64Array(buffer, basePtr, RECORD_SIZE);
+    record[R.minDamage] = base.damage;
+    record[R.silver] = base.silver ?? 0;
+    record[R.gold] = base.gold ?? 0;
+    record[R.hired] = base.hired ?? 0;
+    record[R.dragonCoins] = base.dragonCoins ?? 0;
+    record[R.seconds] = base.seconds ?? 0;
+    const guarded = new Float64Array(buffer, guardPtr, 3);
+    guarded[0] = guard.silverCeiling ?? Infinity;
+    guarded[1] = guard.holdDamagePerSilver === true ? 1 : 0;
+    guarded[2] = guard.secondsCeiling ?? Infinity;
+    return {
+      raw,
+      k,
+      m,
+      rows,
+      slotsPtr,
+      fixedPtr,
+      capsPtr,
+      basePtr,
+      outPtr,
+      guardPtr,
+      candPtr,
+      assignPtr,
+      requiredPtr,
+      startScoresPtr,
+      startsPtr,
+      seedsPtr,
+      knownPtr,
+    };
+  };
+
   return {
     retypeWalk(request, rates, troops, slots, hired, base, guard) {
-      let bound = byRequest.get(request);
-      if (!bound) {
-        effectiveTable(request);
-        bound = byRequest.get(request);
-        if (!bound) return null;
-      }
-      const { raw, ids } = bound;
-      const k = slots.length;
-      const m = troops.length;
-      const rows = troops.map((entry) => ids.indexOf(entry.id));
-      if (k === 0 || m === 0 || rows.some((row) => row < 0)) return null;
-      // The rates the walk rates with: the header's, laid for this call (no other door reads them).
-      const header = new Float64Array(raw.memory.buffer, bound.tablePtr, HEADER_SIZE);
-      header[H.rateSilver] = rates.silver;
-      header[H.rateGold] = rates.gold;
-      header[H.rateHired] = rates.hired;
-      header[H.rateDragonCoins] = rates.dragonCoins;
-      header[H.rateSeconds] = rates.seconds;
-      const n = Math.max(1, bound.types);
-      const bytes = 8 * (k + n + n + RECORD_SIZE + 8 + 3) + 4 * (m + 3 * k) + m + 16;
-      // Scratch reserved once per instance and grown only when a walk needs more (the bump allocator never frees).
-      let scratch = walkScratch.get(bound);
-      if (!scratch || scratch.bytes < bytes) {
-        scratch = { ptr: raw.alloc(bytes), bytes };
-        walkScratch.set(bound, scratch);
-      }
-      let cursor = scratch.ptr;
-      const take = (size: number): number => {
-        const ptr = cursor;
-        cursor += size;
-        return ptr;
-      };
-      const slotsPtr = take(8 * k);
-      const fixedPtr = take(8 * n);
-      const capsPtr = take(8 * n);
-      const basePtr = take(8 * RECORD_SIZE);
-      const outPtr = take(8 * 8);
-      const guardPtr = take(8 * 3);
-      const candPtr = take(4 * m);
-      const assignPtr = take(4 * 3 * k);
-      const requiredPtr = take(m);
+      const laid = layRetype(request, rates, troops, slots, hired, base, guard);
+      if (!laid) return null;
+      const {
+        raw,
+        k,
+        m,
+        rows,
+        slotsPtr,
+        fixedPtr,
+        capsPtr,
+        basePtr,
+        outPtr,
+        guardPtr,
+        candPtr,
+        assignPtr,
+        requiredPtr,
+      } = laid;
       const buffer = raw.memory.buffer;
-      new Float64Array(buffer, slotsPtr, k).set(slots);
-      const fixed = new Float64Array(buffer, fixedPtr, n);
-      const caps = new Float64Array(buffer, capsPtr, n);
-      for (let t = 0; t < bound.types; t += 1) {
-        fixed[t] = hired[ids[t] as string] ?? 0;
-        caps[t] = Infinity;
-      }
-      const record = new Float64Array(buffer, basePtr, RECORD_SIZE);
-      record[R.minDamage] = base.damage;
-      record[R.silver] = base.silver ?? 0;
-      record[R.gold] = base.gold ?? 0;
-      record[R.hired] = base.hired ?? 0;
-      record[R.dragonCoins] = base.dragonCoins ?? 0;
-      record[R.seconds] = base.seconds ?? 0;
-      const guarded = new Float64Array(buffer, guardPtr, 3);
-      guarded[0] = guard.silverCeiling ?? Infinity;
-      guarded[1] = guard.holdDamagePerSilver === true ? 1 : 0;
-      guarded[2] = guard.secondsCeiling ?? Infinity;
       new Int32Array(buffer, candPtr, m).set(rows);
       new Uint8Array(buffer, requiredPtr, m).fill(0);
       raw.enumerate(
@@ -650,6 +727,67 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         }
       }
       return { tried, rating, counts };
+    },
+
+    retypeClimb(
+      request,
+      rates,
+      troops,
+      slots,
+      hired,
+      base,
+      guard,
+      starts,
+      known,
+      useSeen,
+      steps,
+      bestRating,
+    ) {
+      const k = slots.length;
+      if (k > 16 || troops.length > 255 || starts.length > 3) return null;
+      const laid = layRetype(request, rates, troops, slots, hired, base, guard);
+      if (!laid) return null;
+      const { raw, m, rows, slotsPtr, fixedPtr, basePtr, outPtr, guardPtr, candPtr, assignPtr } = laid;
+      const buffer = raw.memory.buffer;
+      new Int32Array(buffer, candPtr, m).set(rows);
+      const startsView = new Int32Array(buffer, laid.startsPtr, starts.length * k);
+      const scores = new Float64Array(buffer, laid.startScoresPtr, starts.length);
+      const seeds = new Int32Array(buffer, laid.seedsPtr, starts.length);
+      starts.forEach((start, i) => {
+        startsView.set(start.types, i * k);
+        scores[i] = start.score === null ? NaN : start.score;
+        seeds[i] = start.seed;
+      });
+      if (known) new Int32Array(buffer, laid.knownPtr, k).set(known.types);
+      raw.retypeClimb(
+        k,
+        slotsPtr,
+        m,
+        candPtr,
+        fixedPtr,
+        basePtr,
+        guardPtr,
+        laid.startsPtr,
+        starts.length,
+        laid.startScoresPtr,
+        laid.seedsPtr,
+        known ? laid.knownPtr : 0,
+        known ? known.score : 0,
+        useSeen ? 1 : 0,
+        steps,
+        bestRating,
+        outPtr,
+        assignPtr,
+      );
+      const out = new Float64Array(raw.memory.buffer, outPtr, 8);
+      if (out[4] !== 0) return null;
+      return {
+        tried: out[0] as number,
+        improved: out[1] === 1,
+        rating: out[2] as number,
+        seed: out[3] as number,
+        types: Array.from(new Int32Array(raw.memory.buffer, assignPtr, k)),
+      };
     },
 
     bindTable(request, table) {

@@ -17,7 +17,7 @@ kernel's march. High effort (a new door), so it comes after the cheaper steps, a
   the `climb` steps per call, and the time under each path (experiment 197's profiler). Write the table into Notes.
   If the JS climb is below 2 % of the planner, tick the next task `WON'T DO` with the figures.
 
-- [ ] Port the paid part. Either widen `retypeWalk` to the cases that still climb in JS, or add a `retypeClimb` door
+- [x] Port the paid part. Either widen `retypeWalk` to the cases that still climb in JS, or add a `retypeClimb` door
   that runs `climb`'s loop in the kernel with the march it already has (read `retypeWalk`'s door for the pattern:
   header word for the rates, scratch per instance). TypeScript kept as the declining reference. One parity test on
   both paths (every recorded `retypeMarch` call, `Object.is` on every field), red first on a deliberate off-by-one
@@ -41,3 +41,14 @@ kernel's march. High effort (a new door), so it comes after the cheaper steps, a
   Inside the JS climb (ms/plan): `build` 6.2, kernel battles (`marchBill`) 4.7, the rest 7.0 (neighbour arrays,
   `join` keys and the `seen` map, rate). Every climb is tierCandidate (three starts sharing one `seen`). Above the
   2 % bar, so the door is ported: the kernel climbs, builds, battles and rates; JS keeps `outOfTime` (deadline ⇒ JS).
+- Step 2 (the `retypeClimb` door): `kernel/assembly/index.ts` `retypeClimb` runs the three climbs of `retypeMarch` in
+  one call (build, battle, rate, the seen table as an open-addressed hash with a stamp per call, same neighbour order
+  and tie rules); `PlanKernel.retypeClimb` (`src/engine/fast.ts`, `src/kernel/plan.ts`, whose `layRetype` now lays
+  both `retypeWalk` and `retypeClimb`); `retypeMarch` uses it when there is no deadline and falls back to the
+  TypeScript climb (the reference) when the door declines (k > 16, m > 255, or the table 3/4 full). Parity
+  `tests/kernel/retype-climb-parity.test.ts` (door against a plain TypeScript climb on every recorded call, also under
+  step caps 1 and 2 since the planner's cap of 60 is never reached; plan JSON door against declined). Red first on a
+  deliberate off-by-one (`step <= steps`): 22 failures at door level (the plan-level test stays green, as the cap is
+  not reached there); green after. Gate (`Working/w22/gate.sh`): all PASS (plan benchmark diff none, 184 positions
+  on the kernel pass). A/B (experiment 212, 40 and 60 rounds interleaved, door declined against on): wall −7.4 % and
+  −5.7 % of the planner (q1 −4.9 / −3.5 %), CPU −13.6 / −4.1 %: kept (≥ 2 %).

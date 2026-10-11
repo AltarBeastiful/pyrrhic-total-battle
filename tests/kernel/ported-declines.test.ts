@@ -365,6 +365,11 @@ function counted(kernel: PlanKernel): { kernel: PlanKernel; declines: Record<str
       note('retypeWalk', out === null);
       return out;
     },
+    retypeClimb: (...args) => {
+      const out = kernel.retypeClimb(...args);
+      note('retypeClimb', out === null);
+      return out;
+    },
     sizePool: (slots, capacity, ceiling, spread) => {
       const out = kernel.sizePool(slots, capacity, ceiling, spread);
       note('sizePool', out === null);

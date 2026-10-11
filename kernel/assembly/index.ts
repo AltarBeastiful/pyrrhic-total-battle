@@ -1384,6 +1384,18 @@ let eDom: f64 = 0;
   memory.copy(to, eAssign, (<usize>eN) << 2);
 }
 
+function eEnsure(): void {
+  if (eCounts == 0) {
+    const n = <usize>max(types, 1);
+    eCounts = heap.alloc(n << 3);
+    eUsed = heap.alloc(n);
+    eAssign = heap.alloc(n << 2);
+    eLast = heap.alloc(n << 2);
+    eFirst = heap.alloc(n << 2);
+    eRec = heap.alloc(<usize>RECORD_SIZE << 3);
+  }
+}
+
 function eLeaf(): void {
   if (eBattles >= eMax) {
     eAbort = true;
@@ -1516,15 +1528,7 @@ export function enumerate(
   assignPtr: usize,
   guardPtr: usize,
 ): void {
-  if (eCounts == 0) {
-    const n = <usize>max(types, 1);
-    eCounts = heap.alloc(n << 3);
-    eUsed = heap.alloc(n);
-    eAssign = heap.alloc(n << 2);
-    eLast = heap.alloc(n << 2);
-    eFirst = heap.alloc(n << 2);
-    eRec = heap.alloc(<usize>RECORD_SIZE << 3);
-  }
+  eEnsure();
   eSlots = slotsPtr;
   eCands = candPtr;
   eRequired = requiredPtr;
@@ -1587,6 +1591,229 @@ export function enumerate(
   store<f64>(outPtr + ((<usize>E_BEST_DAMAGE) << 3), eBestDamage);
   store<f64>(outPtr + ((<usize>E_ADMISSIBLE) << 3), eAdmissible);
   store<f64>(outPtr + ((<usize>E_POSITIVE) << 3), ePositive);
+}
+
+// ---- the re-typing's climb (`retypeMarch`'s best-improvement climb; W22 step 5) --------------------------
+//
+// From each start, swap two slots or put an unused type in a slot, and move to the best neighbour rating above
+// where the climb stands. Every assignment is built (each type `ceil(slotHp / hp)`, the leadership within
+// housing), battled and rated as `retypeMarch`'s `consider` does, in `consider`'s order; with `useSeen` an
+// assignment already battled is answered from the table (the three climbs of `tierCandidate` share it).
+
+const CL_KEY = 16; // an assignment is at most this many slots, each type under 256
+const CL_BITS = 15;
+const CL_ENTRY = 32; // key u8 × 16, score f64, stamp u32
+const CL_STATUS_FULL = 1;
+
+let clTable: usize = 0;
+let clStamp: u32 = 0;
+let clCur: usize = 0; // i32 × CL_KEY
+let clNext: usize = 0;
+let clMoved: usize = 0;
+let clBest: usize = 0;
+let clKey: usize = 0; // u8 × CL_KEY
+let clK: i32 = 0;
+let clM: i32 = 0;
+let clCands: usize = 0;
+let clSlots: usize = 0;
+let clFixed: usize = 0;
+let clUseSeen: bool = false;
+let clTried: f64 = 0;
+let clFilled: i32 = 0;
+let clFull: bool = false;
+let clBestRating: f64 = -Infinity;
+let clBestSeed: i32 = 0;
+let clImproved: bool = false;
+let clSeed: i32 = 0;
+
+function clSlot(): usize {
+  let h: u32 = 2166136261;
+  for (let i = 0; i < clK; i += 1) h = (h ^ <u32>load<u8>(clKey + <usize>i)) * 16777619;
+  return <usize>(h & ((1 << CL_BITS) - 1));
+}
+
+/** The entry of the key at `clKey`: its address, found (stamp current and key equal) or the free slot to fill. */
+function clFind(): usize {
+  let at = clSlot();
+  while (true) {
+    const entry = clTable + at * <usize>CL_ENTRY;
+    if (load<u32>(entry + 24) != clStamp) return entry;
+    if (memory.compare(entry, clKey, <usize>CL_KEY) == 0) return entry;
+    at = (at + 1) & ((1 << CL_BITS) - 1);
+  }
+}
+
+function clKeyOf(assign: usize): void {
+  memory.fill(clKey, 0, <usize>CL_KEY);
+  for (let i = 0; i < clK; i += 1) store<u8>(clKey + <usize>i, <u8>i32At(assign, i));
+}
+
+function clStore(score: f64): void {
+  const entry = clFind();
+  memory.copy(entry, clKey, <usize>CL_KEY);
+  store<f64>(entry + 16, score);
+  store<u32>(entry + 24, clStamp);
+  clFilled += 1;
+  if (clFilled > (1 << (CL_BITS - 1)) + (1 << (CL_BITS - 2))) clFull = true;
+}
+
+/** `retypeMarch`'s `consider`: the assignment's rating, −∞ when it does not fit or deals less / costs more. */
+function clConsider(assign: usize): f64 {
+  if (clUseSeen) {
+    clKeyOf(assign);
+    const entry = clFind();
+    if (load<u32>(entry + 24) == clStamp) return load<f64>(entry + 16);
+  }
+  memory.copy(eCounts, clFixed, (<usize>types) << 3);
+  let lead: f64 = 0;
+  for (let slot = 0; slot < clK; slot += 1) {
+    const type = i32At(clCands, i32At(assign, slot));
+    const count = Math.ceil(f64At(clSlots, slot) / cell(type, T_HP));
+    store<f64>(eCounts + ((<usize>type) << 3), count);
+    lead += count * cell(type, T_COST);
+  }
+  if (!(lead <= header(H_HOUSING_LEADERSHIP))) {
+    if (clUseSeen) clStore(-Infinity);
+    return -Infinity;
+  }
+  clTried += 1.0;
+  battle(eCounts, eRec);
+  const damage = load<f64>(eRec + ((<usize>R_MIN_DAMAGE) << 3));
+  const baseDamage = load<f64>(eBase + ((<usize>R_MIN_DAMAGE) << 3));
+  const silver = load<f64>(eRec + ((<usize>R_SILVER) << 3));
+  const baseSilver = load<f64>(eBase + ((<usize>R_SILVER) << 3));
+  let score: f64 = -Infinity;
+  if (
+    !(damage < baseDamage - 1e-6) &&
+    !(silver > eSilverCeiling + 1e-6) &&
+    !(eHoldPerSilver && damage * baseSilver < baseDamage * silver - 1e-6) &&
+    !(load<f64>(eRec + ((<usize>R_SECONDS) << 3)) > eSecondsCeiling + 1e-6)
+  )
+    score = rate(eBase, eRec, 0b11111);
+  if (clUseSeen) clStore(score);
+  if (score > 1e-9 && score > clBestRating) {
+    clBestRating = score;
+    clBestSeed = clSeed;
+    clImproved = true;
+    memory.copy(clBest, assign, (<usize>clK) << 2);
+  }
+  return score;
+}
+
+function clContains(assign: usize, t: i32): bool {
+  for (let i = 0; i < clK; i += 1) if (i32At(assign, i) == t) return true;
+  return false;
+}
+
+function clClimb(startScore: f64, steps: i32): void {
+  let currentScore = startScore;
+  for (let step = 0; step < steps && !clFull; step += 1) {
+    let moved = false;
+    let movedScore: f64 = -Infinity;
+    for (let a = 0; a < clK; a += 1) {
+      for (let b = a + 1; b < clK; b += 1) {
+        memory.copy(clNext, clCur, (<usize>clK) << 2);
+        store<i32>(clNext + ((<usize>a) << 2), i32At(clCur, b));
+        store<i32>(clNext + ((<usize>b) << 2), i32At(clCur, a));
+        const s = clConsider(clNext);
+        if (s > currentScore + 1e-6 && (!moved || s > movedScore)) {
+          moved = true;
+          movedScore = s;
+          memory.copy(clMoved, clNext, (<usize>clK) << 2);
+        }
+      }
+      for (let t = 0; t < clM; t += 1) {
+        if (clContains(clCur, t)) continue;
+        memory.copy(clNext, clCur, (<usize>clK) << 2);
+        store<i32>(clNext + ((<usize>a) << 2), t);
+        const s = clConsider(clNext);
+        if (s > currentScore + 1e-6 && (!moved || s > movedScore)) {
+          moved = true;
+          movedScore = s;
+          memory.copy(clMoved, clNext, (<usize>clK) << 2);
+        }
+      }
+    }
+    if (!moved) break;
+    memory.copy(clCur, clMoved, (<usize>clK) << 2);
+    currentScore = movedScore;
+  }
+}
+
+/**
+ * **`retypeMarch`'s climb, whole** (W22 step 5): `nStarts` starts (`startsPtr`: i32 × k each, indices into the
+ * `m` troop rows of `candPtr`), each with the score it stands on (`startScoresPtr` f64; NaN: rate the start
+ * first, as `consider(ranking)` does) and the seed code it is credited with (`seedsPtr` i32). `knownPtr` (0:
+ * none) is one assignment already rated by the caller, `knownScore`, put in the seen table before the first
+ * climb. With `useSeen` an assignment is never battled twice. `bestIn` is the rating the caller's best stands
+ * on; a candidate rating above 1e-9 and above it is kept. Writes f64 × 8 at `outPtr` — battles, improved (0/1),
+ * best rating, best seed, status (1: the table filled up, the caller climbs in TypeScript) — and the best
+ * assignment (i32 × k) at `assignPtr`. Guards are `enumerate`'s (`guardPtr`), the base record at `basePtr`.
+ */
+export function retypeClimb(
+  k: i32,
+  slotsPtr: usize,
+  m: i32,
+  candPtr: usize,
+  fixedPtr: usize,
+  basePtr: usize,
+  guardPtr: usize,
+  startsPtr: usize,
+  nStarts: i32,
+  startScoresPtr: usize,
+  seedsPtr: usize,
+  knownPtr: usize,
+  knownScore: f64,
+  useSeen: i32,
+  steps: i32,
+  bestIn: f64,
+  outPtr: usize,
+  assignPtr: usize,
+): void {
+  eEnsure();
+  if (clTable == 0) {
+    clTable = heap.alloc(<usize>CL_ENTRY << CL_BITS);
+    memory.fill(clTable, 0, <usize>CL_ENTRY << CL_BITS);
+    clCur = heap.alloc(<usize>CL_KEY << 2);
+    clNext = heap.alloc(<usize>CL_KEY << 2);
+    clMoved = heap.alloc(<usize>CL_KEY << 2);
+    clBest = heap.alloc(<usize>CL_KEY << 2);
+    clKey = heap.alloc(<usize>CL_KEY);
+  }
+  clStamp += 1;
+  clFilled = 0;
+  clFull = false;
+  clK = k;
+  clM = m;
+  clCands = candPtr;
+  clSlots = slotsPtr;
+  clFixed = fixedPtr;
+  clUseSeen = useSeen != 0;
+  clTried = 0;
+  clBestRating = bestIn;
+  clBestSeed = 0;
+  clImproved = false;
+  eBase = basePtr;
+  eSilverCeiling = guardPtr == 0 ? Infinity : f64At(guardPtr, 0);
+  eHoldPerSilver = guardPtr != 0 && f64At(guardPtr, 1) != 0.0;
+  eSecondsCeiling = guardPtr == 0 ? Infinity : f64At(guardPtr, 2);
+  if (clUseSeen && knownPtr != 0) {
+    clKeyOf(knownPtr);
+    clStore(knownScore);
+  }
+  for (let s = 0; s < nStarts && !clFull; s += 1) {
+    memory.copy(clCur, startsPtr + ((<usize>(s * k)) << 2), (<usize>k) << 2);
+    clSeed = i32At(seedsPtr, s);
+    let score = f64At(startScoresPtr, s);
+    if (isNaN(score)) score = clConsider(clCur);
+    clClimb(score, steps);
+  }
+  memory.copy(assignPtr, clBest, (<usize>k) << 2);
+  store<f64>(outPtr, clTried);
+  store<f64>(outPtr + 8, clImproved ? 1.0 : 0.0);
+  store<f64>(outPtr + 16, clBestRating);
+  store<f64>(outPtr + 24, <f64>clBestSeed);
+  store<f64>(outPtr + 32, clFull ? <f64>CL_STATUS_FULL : 0.0);
 }
 
 // ---- the scorer's ladders (`makeScorer`, `src/engine/plan.ts`; AssemblyScript roadmap, step 4) -------------

@@ -176,6 +176,33 @@ export interface PlanKernel {
     },
   ): { tried: number; rating: number; counts: Record<string, number> | null } | null;
   /**
+   * **The climb of `retypeMarch`, whole** (W22 step 5): from each of `starts` (assignments of `troops` to the
+   * `slots`, the score it stands on or `null` to rate it first, the seed code it is credited with) the
+   * best-improvement climb of swaps and replacements, `steps` at most, every assignment built, battled and rated as
+   * `retypeWalk` does. `known` is one assignment already rated by the caller; with `useSeen` no assignment is
+   * battled twice. A candidate rating above 1e-9 and above `bestRating` is kept: `improved`, its `rating`,
+   * `seed` and `types`, and `tried` counts the battles. `null` where the request cannot be packed or the
+   * kernel's table of assignments filled up (the caller climbs in TypeScript, the reference).
+   */
+  retypeClimb(
+    request: StackRequest,
+    rates: MarkerRates,
+    troops: readonly Effective[],
+    slots: readonly number[],
+    hired: Record<string, number>,
+    base: Bill,
+    guard: {
+      silverCeiling?: number | undefined;
+      holdDamagePerSilver?: boolean | undefined;
+      secondsCeiling?: number | undefined;
+    },
+    starts: readonly { types: readonly number[]; score: number | null; seed: number }[],
+    known: { types: readonly number[]; score: number } | null,
+    useSeen: boolean,
+    steps: number,
+    bestRating: number,
+  ): { tried: number; improved: boolean; rating: number; seed: number; types: number[] } | null;
+  /**
    * `sizePool`'s whole arithmetic after its early return: writes every slot's `count` and answers the
    * housing used. `null` only where the kernel itself cannot (step 5's own guards); the caller has no
    * TypeScript of its own to fall back to any more (W16 E3 S5a) and throws instead.
