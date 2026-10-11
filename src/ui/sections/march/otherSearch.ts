@@ -37,6 +37,7 @@ import { runAdvisor, type AdvisorResult } from '@/worker/advisor';
 import { isAbortError } from '@/worker/client';
 
 import { advisorKey, advisorPool, type AdvisorStatus } from './advisorSearch';
+import { frameBatch, type FrameBatch } from './frameBatch';
 import { pickOf, useRunStore } from './runStore';
 
 /** The five questions, in the order the card draws them. */
@@ -103,10 +104,14 @@ export function otherKey(plan: CampaignPlan, input: CampaignInput): string {
 }
 
 let controller: AbortController | null = null;
+/** The pass's progress, written to the store at most once a frame (`frameBatch`, W18 P4). */
+let tick: FrameBatch<[number, number]> | null = null;
 
 function abort(): void {
   controller?.abort();
   controller = null;
+  tick?.drop();
+  tick = null;
 }
 
 export const useOtherStore = create<OtherState>()((set, get) => {
@@ -135,6 +140,8 @@ export const useOtherStore = create<OtherState>()((set, get) => {
       if (entry !== null) set({ entry: { ...entry, status: 'failed', error: message } });
     },
     cancel: () => {
+      // The count reached is the one Cancel reports.
+      tick?.flush();
       abort();
       const entry = get().entry;
       if (entry?.status === 'running') set({ entry: { ...entry, status: 'cancelled' } });
@@ -188,22 +195,28 @@ export async function computeOther(
   abort();
   const own = new AbortController();
   controller = own;
+  const ownTick = frameBatch((done: number, total: number) => {
+    useOtherStore.getState().progress(key, done, total);
+  });
+  tick = ownTick;
   useOtherStore.getState().begin(key, probes.length + 1);
   try {
     const result = await runAdvisor(input, probes, advisorPool(), {
       signal: own.signal,
       headline,
-      onProgress: (done, total) => {
-        useOtherStore.getState().progress(key, done, total);
-      },
+      onProgress: ownTick.push,
     });
+    ownTick.flush();
     useOtherStore.getState().settle(key, { ...result, facts });
   } catch (error) {
     // A cancel or a stop has already said what happened to this pass.
     if (isAbortError(error)) return;
+    ownTick.flush();
     useOtherStore.getState().fail(key, error instanceof Error ? error.message : String(error));
   } finally {
+    ownTick.drop();
     if (controller === own) controller = null;
+    if (tick === ownTick) tick = null;
   }
 }
 

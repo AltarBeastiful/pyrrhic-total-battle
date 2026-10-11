@@ -25,7 +25,7 @@ phase first measures a production build, then fixes only what that shows.
   in Notes and as `tools/theorycraft/out/198-the-page-in-production.md`. Commit the script as
   `e2e/profile-trace.spec.ts` (skipped unless `PYRRHIC_TRACE=1`). Commit: `Experiment 198: the page in production`.
 
-- [ ] If 198 shows the main thread busy more than 20 % of a phase, coalesce the advisor's updates. `onProgress` and the
+- [x] If 198 shows the main thread busy more than 20 % of a phase, coalesce the advisor's updates. `onProgress` and the
   row results of `computeAdvice`, `computeCaptains` and `computeOther` (`src/ui/sections/march/advisorSearch.ts`,
   `captainSearch.ts`, `otherSearch.ts`) update the store once per settled job. Batch them to at most one store update
   per animation frame, and the rows once per pass. Then memoise the row components (`AdvisorRowLine`, `StopList`,
@@ -85,4 +85,35 @@ Main thread, busy share of each phase (union of its trace events; idle = the res
   upgrades-default, with fewer probes.
 - Pool: 93.5 % of its CPU is `planCampaign` (re-typing, `retypeRow`, 35 % of `runProbe`); the Tight raise is
   1.0 % on this fixture (the owner's 49 % was the timing fixture, dev build, before Drills 02–05).
+
+### W18 P4, the advisor card one render a frame (2026-10-11)
+
+200 put captains (28–29 %) and other (39–40 %) over the 20 % bar, so the coalescing was built.
+
+- **What was per job:** only the progress. The rows of `computeAdvice`, `computeCaptains` and `computeOther` were
+  already one store write per pass (`settle`), so "rows once per pass" needed no change.
+- **`src/ui/sections/march/frameBatch.ts`** (new): keeps the latest `(done, total)` and applies it once on the
+  next animation frame (a 16 ms timer without `requestAnimationFrame`); `flush` before settle, fail and Cancel (so
+  Cancel still reports the count reached), `drop` on abort and stop. Wired into the three searches.
+- **`memo`** on `AdvisorRowLine`, `StopList` and `MarchCost` (`AdvisorCard.tsx`): an answer is kept whole, so a
+  row and its stops keep their identity while another pass's progress re-renders the card.
+- Tests: `frameBatch.test.ts` (3), a burst of 29 progress reports is one store write (`advisorSearch.test.tsx`);
+  four existing progress assertions now wait a frame. typecheck, lint, format, `vitest` (all but the benchmark:
+  1 801 passed), `pnpm build` then `pnpm e2e` (65 passed, 11 skipped) green.
+
+Re-run of 200 (three runs, `Working/w18/trace-p4-{1,2,3}.json.gz`, `p4-analyse-{1,2,3}.md`), busy share:
+
+| phase | before | after |
+|---|---|---|
+| generate | 23.7 / 22.5 / 22.8 % | 22.4 / 24.1 / 23.2 % |
+| upgrades-default | 10.7 / 9.9 / 9.4 % | 9.6 / 9.5 / 12.0 % |
+| captains | 29.4 / 28.1 / 28.6 % | **13.9 / 13.2 / 13.2 %** |
+| other | 40.4 / 40.5 / 38.6 % | **13.7 / 14.2 / 14.9 %** |
+| the run | 23.8 / 22.9 / 22.6 % | **12.5 / 12.7 / 13.8 %** |
+
+Run 1: scripting 1 385 → 567 ms, React render 899 → 317 ms, `_Box` 417 → 123 ms. Generate stays ~23 %: the plan's
+own render, not the advisor's. Recorded in `tools/theorycraft/out/200-the-page-in-production.md` (section "After
+W18 P4"). The run-1 *before* trace file was overwritten by the first re-run (the spec's default output path); its
+tables survive in `Working/w18/200-analyse.md`. Pass `PYRRHIC_TRACE_OUT` for a re-run. `dist` was rebuilt without
+profiling afterwards (the preview on 4173, from 2026-10-10, serves it).
 

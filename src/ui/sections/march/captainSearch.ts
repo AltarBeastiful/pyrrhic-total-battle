@@ -43,6 +43,7 @@ import { runCaptainUpgrades, type CaptainUpgradeResult, type UpgradeAsk } from '
 import { isAbortError } from '@/worker/client';
 
 import { advisorKey, advisorPool, type AdvisorStatus } from './advisorSearch';
+import { frameBatch, type FrameBatch } from './frameBatch';
 import { pickOf, useRunStore } from './runStore';
 
 /** What a finished captain pass holds: the trio advice, and the upgrades read against its lead trio. */
@@ -90,10 +91,14 @@ export function captainKey(
 }
 
 let controller: AbortController | null = null;
+/** The pass's progress, written to the store at most once a frame (`frameBatch`, W18 P4). */
+let tick: FrameBatch<[number, number]> | null = null;
 
 function abort(): void {
   controller?.abort();
   controller = null;
+  tick?.drop();
+  tick = null;
 }
 
 /** True when the pass did not read everything it set out to: the clock (or a cancel inside a worker). */
@@ -132,6 +137,8 @@ export const useCaptainStore = create<CaptainState>()((set, get) => {
       if (entry !== null) set({ entry: { ...entry, status: 'failed', error: message } });
     },
     cancel: () => {
+      // The count reached is the one Cancel reports.
+      tick?.flush();
       abort();
       const entry = get().entry;
       if (entry?.status === 'running') set({ entry: { ...entry, status: 'cancelled' } });
@@ -157,6 +164,10 @@ export async function computeCaptains(
   abort();
   const own = new AbortController();
   controller = own;
+  const ownTick = frameBatch((done: number, total: number) => {
+    useCaptainStore.getState().progress(key, done, total);
+  });
+  tick = ownTick;
   useCaptainStore.getState().begin(key);
   const began = performance.now();
   // The progress of both worker passes as one count: the second one's jobs follow the first's.
@@ -171,7 +182,7 @@ export async function computeCaptains(
       {
         signal: own.signal,
         onProgress: (done, total) => {
-          useCaptainStore.getState().progress(key, done, total);
+          ownTick.push(done, total);
           offset = total;
         },
       },
@@ -199,18 +210,22 @@ export async function computeCaptains(
           signal: own.signal,
           budgetMs: left,
           onProgress: (done, total) => {
-            useCaptainStore.getState().progress(key, offset + done, offset + total);
+            ownTick.push(offset + done, offset + total);
           },
         },
       );
     }
+    ownTick.flush();
     useCaptainStore.getState().settle(key, { advice, upgrades, lead });
   } catch (error) {
     // A cancel or a stop has already said what happened to this pass.
     if (isAbortError(error)) return;
+    ownTick.flush();
     useCaptainStore.getState().fail(key, error instanceof Error ? error.message : String(error));
   } finally {
+    ownTick.drop();
     if (controller === own) controller = null;
+    if (tick === ownTick) tick = null;
   }
 }
 

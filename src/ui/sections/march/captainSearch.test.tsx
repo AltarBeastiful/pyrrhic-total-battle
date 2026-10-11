@@ -178,7 +178,10 @@ describe('the pass', () => {
     expect(upgrades).toHaveLength(0);
 
     advices[0]?.options.onProgress?.(3, 5);
-    expect(useCaptainStore.getState().entry).toMatchObject({ done: 3, total: 5 });
+    // The progress reaches the store at most once a frame (W18 P4).
+    await vi.waitFor(() => {
+      expect(useCaptainStore.getState().entry).toMatchObject({ done: 3, total: 5 });
+    });
     advices[0]?.resolve(adviceOf());
     await vi.waitFor(() => {
       expect(upgrades).toHaveLength(1);
@@ -196,7 +199,9 @@ describe('the pass', () => {
 
     // Their progress follows the advice's, on one count.
     upgrades[0]?.options.onProgress?.(2, 6);
-    expect(useCaptainStore.getState().entry).toMatchObject({ done: 7, total: 11 });
+    await vi.waitFor(() => {
+      expect(useCaptainStore.getState().entry).toMatchObject({ done: 7, total: 11 });
+    });
     upgrades[0]?.resolve(upgradesOf());
     await pass;
     const entry = useCaptainStore.getState().entry;

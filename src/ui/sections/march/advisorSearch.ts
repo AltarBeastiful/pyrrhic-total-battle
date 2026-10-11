@@ -36,6 +36,7 @@ import { runAdvisor, type AdvisorResult } from '@/worker/advisor';
 import { isAbortError } from '@/worker/client';
 import { createCalcPool, type CalcPool } from '@/worker/pool';
 
+import { frameBatch, type FrameBatch } from './frameBatch';
 import { planId } from './positionsSearch';
 import { pickOf, useRunStore } from './runStore';
 
@@ -90,10 +91,14 @@ export function advisorKey(
 /** Module state, not store state: a pool and an `AbortController` are nothing a component re-renders on. */
 let pool: CalcPool | null = null;
 const controllers: Record<AdvisorKind, AbortController | null> = { mine: null, default: null };
+/** Each pass's progress, written to the store at most once a frame (`frameBatch`, W18 P4). */
+const ticks: Record<AdvisorKind, FrameBatch<[number, number]> | null> = { mine: null, default: null };
 
 function abort(kind: AdvisorKind): void {
   controllers[kind]?.abort();
   controllers[kind] = null;
+  ticks[kind]?.drop();
+  ticks[kind] = null;
 }
 
 /** For tests: the pool the passes run on. Disposes the one before it. */
@@ -154,6 +159,8 @@ export const useAdvisorStore = create<AdvisorState>()((set, get) => {
       if (entry !== null) write(kind, { ...entry, status: 'failed', error: message });
     },
     cancel: (kind) => {
+      // The count reached is the one Cancel reports.
+      ticks[kind]?.flush();
       abort(kind);
       const entry = get().entries[kind];
       if (entry?.status === 'running') write(kind, { ...entry, status: 'cancelled' });
@@ -190,23 +197,29 @@ export async function computeAdvice(
   abort(kind);
   const own = new AbortController();
   controllers[kind] = own;
+  const tick = frameBatch((done: number, total: number) => {
+    useAdvisorStore.getState().progress(kind, key, done, total);
+  });
+  ticks[kind] = tick;
   const store = useAdvisorStore.getState();
   store.begin(kind, key, probes.length + 1);
   try {
     const result = await runAdvisor(input, probes, advisorPool(), {
       signal: own.signal,
       headline,
-      onProgress: (done, total) => {
-        useAdvisorStore.getState().progress(kind, key, done, total);
-      },
+      onProgress: tick.push,
     });
+    tick.flush();
     useAdvisorStore.getState().settle(kind, key, result);
   } catch (error) {
     // A cancel or a stop has already said what happened to this pass.
     if (isAbortError(error)) return;
+    tick.flush();
     useAdvisorStore.getState().fail(kind, key, error instanceof Error ? error.message : String(error));
   } finally {
+    tick.drop();
     if (controllers[kind] === own) controllers[kind] = null;
+    if (ticks[kind] === tick) ticks[kind] = null;
   }
 }
 

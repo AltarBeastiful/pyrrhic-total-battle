@@ -194,7 +194,8 @@ test('Compute shows the rows, ranked on the stop the bar shows, and Generate nev
   act(() => {
     passes[0]?.options.onProgress?.(12, 30);
   });
-  expect(within(card()).getByText('12 / 30 done')).toBeTruthy();
+  // The progress reaches the store at most once a frame (W18 P4).
+  expect(await within(card()).findByText('12 / 30 done')).toBeTruthy();
   expect(within(card()).getByRole('button', { name: 'Cancel default upgrades' })).toBeTruthy();
 
   await act(async () => {

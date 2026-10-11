@@ -104,10 +104,32 @@ describe('the store', () => {
       total: 30,
     });
     passes[0]?.options.onProgress?.(12, 30);
-    expect(useAdvisorStore.getState().entries.default).toMatchObject({ done: 12, total: 30 });
+    // The progress reaches the store at most once a frame (W18 P4).
+    await vi.waitFor(() => {
+      expect(useAdvisorStore.getState().entries.default).toMatchObject({ done: 12, total: 30 });
+    });
     passes[0]?.resolve(result());
     await pass;
     expect(useAdvisorStore.getState().entries.default?.status).toBe('done');
+  });
+
+  test('a burst of progress is one store write a frame, and the pass settles on the last count', async () => {
+    const key = advisorKey(PLAN, INPUT);
+    const pass = computeAdvice('default', key, INPUT);
+    let writes = 0;
+    const unsubscribe = useAdvisorStore.subscribe(() => {
+      writes += 1;
+    });
+    for (let done = 1; done <= 29; done += 1) passes[0]?.options.onProgress?.(done, 30);
+    await vi.waitFor(() => {
+      expect(useAdvisorStore.getState().entries.default).toMatchObject({ done: 29, total: 30 });
+    });
+    expect(writes).toBe(1);
+    passes[0]?.options.onProgress?.(30, 30);
+    passes[0]?.resolve(result());
+    await pass;
+    unsubscribe();
+    expect(useAdvisorStore.getState().entries.default).toMatchObject({ status: 'done', done: 30 });
   });
 
   test('a pass the clock cut reads cut', async () => {
@@ -295,8 +317,10 @@ describe('two passes: my upgrades and the default ones', () => {
       passes[0]?.options.onProgress?.(1, 2);
       passes[1]?.options.onProgress?.(9, 30);
     });
-    expect(view.current.mine).toMatchObject({ done: 1, total: 2 });
-    expect(view.current.default).toMatchObject({ done: 9, total: 30 });
+    await vi.waitFor(() => {
+      expect(view.current.mine).toMatchObject({ done: 1, total: 2 });
+      expect(view.current.default).toMatchObject({ done: 9, total: 30 });
+    });
     act(() => {
       view.current.mine.cancel();
     });

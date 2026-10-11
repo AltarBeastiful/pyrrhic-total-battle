@@ -35,7 +35,7 @@
  * Mantine text, a saving said by a word.
  */
 import { Button, Group, Stack, Text } from '@mantine/core';
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, memo, type ReactNode } from 'react';
 
 import { CAMPAIGN } from '@/config';
 import {
@@ -166,9 +166,9 @@ function costFigures(stop: StopAdvice): CostFigure[] {
  * its purse's glyph as the recap draws it (rule 21), and the two never part where the line wraps at 390 px
  * (rule 19). The hover gives the figures in full (rule 28) and names them the **march cost**, so a
  * typed upgrade's own price — "costs 4 talent points", on the line under this one — is never read as it.
- * Display only: no rating or ranking reads it.
+ * Display only: no rating or ranking reads it. Memoised on the stop (W18 P4), like the row and the list.
  */
-function MarchCost({ stop }: { stop: StopAdvice }) {
+const MarchCost = memo(function MarchCost({ stop }: { stop: StopAdvice }) {
   const figures = costFigures(stop);
   if (figures.length === 0) return null;
   const groups = [
@@ -198,7 +198,7 @@ function MarchCost({ stop }: { stop: StopAdvice }) {
       ))}
     </Text>
   );
-}
+});
 
 /**
  * **One upgrade, read on one stop.** Two lines: the upgrade and what it is worth on the owner's rating (the
@@ -206,8 +206,11 @@ function MarchCost({ stop }: { stop: StopAdvice }) {
  * that moves (`MarchCost`). A clamped or zero reading is "no gain" — kept on the list, never a minus
  * (`StopAdvice.gain` is never below 0), and with no cost line. A `worse` re-plan adds a faint line with the
  * re-planned figure, so a search regression is reported rather than read as a fact of the game.
+ *
+ * **Memoised on row identity** (W18 P4, experiment 200): a pass's answer is kept whole, so a row and its stops
+ * keep their identity while another pass's progress re-renders the card; only a new answer draws it again.
  */
-function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
+const AdvisorRowLine = memo(function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
   const glyph = glyphOf(row);
   const gains = stop.gain > 0;
   const reached = reachedDamage(stop);
@@ -247,10 +250,16 @@ function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
       )}
     </Stack>
   );
-}
+});
 
 /** Every row on one stop, ranked on it. */
-function StopList({ rows, pick }: { rows: readonly AdvisorRow[]; pick: PlanPick | null }) {
+const StopList = memo(function StopList({
+  rows,
+  pick,
+}: {
+  rows: readonly AdvisorRow[];
+  pick: PlanPick | null;
+}) {
   return (
     <Stack gap="xs">
       {rows.map((row) => {
@@ -259,7 +268,7 @@ function StopList({ rows, pick }: { rows: readonly AdvisorRow[]; pick: PlanPick 
       })}
     </Stack>
   );
-}
+});
 
 /**
  * **The ordering, said** (`rankAdvice`): nothing while every row ranks by gain; with a cost typed, that the

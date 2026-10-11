@@ -36,6 +36,31 @@ Reading:
 - The pool is untouched by the page: 93.5 % of pool CPU is `planCampaign` (re-typing 35 % of `runProbe`), the
   Tight raise 1.0 % on this fixture.
 
+## After W18 P4: one store write a frame, rows memoised
+
+Re-run 2026-10-11 on the working tree over 065d364 + the advisor coalescing (`frameBatch`, the progress of
+`computeAdvice`, `computeCaptains` and `computeOther` written at most once an animation frame; the rows were
+already written once per pass) and `memo` on `AdvisorRowLine`, `StopList` and `MarchCost`. Same build, server and
+spec. Traces: `.maestro/playbooks/Working/w18/trace-p4-{1,2,3}.json.gz`, tables `p4-analyse-{1,2,3}.md` (the
+run-1 *before* trace was overwritten by this re-run; its tables are above and in `200-analyse.md`).
+
+Main thread, busy share per phase, before (runs 1–3 above) → after (runs 1–3):
+
+| phase | before | after | after, scripting ms (run 1) |
+|---|---|---|---:|
+| generate | 23.7 / 22.5 / 22.8 % | 22.4 / 24.1 / 23.2 % | 78 |
+| upgrades-default | 10.7 / 9.9 / 9.4 % | 9.6 / 9.5 / 12.0 % | 178 |
+| captains | 29.4 / 28.1 / 28.6 % | **13.9 / 13.2 / 13.2 %** | 129 (was 360) |
+| other | 40.4 / 40.5 / 38.6 % | **13.7 / 14.2 / 14.9 %** | 182 (was 761) |
+| the run | 23.8 / 22.9 / 22.6 % | **12.5 / 12.7 / 13.8 %** | 567 (was 1 385) |
+| (wall of the run, ms) | 7 900 / 9 376 / 10 482 | 8 421 / 8 134 / 8 537 | |
+
+Over the run (run 1), React render 899 → 317 ms, commit 168 → 90 ms, sampled JS 1 990 → 1 182 ms; Mantine's
+`_Box` 417 → 123 ms; `AdvisorRowLine` 21.2 → under 1 ms, `MarchCost` 16.3 → under 1 ms, `Figure` 18.3 → 2.1 ms.
+Captains and other are now under the 20 % bar. Generate stays at ~23 %: it is the plan's own render (the recap
+and the bar on a new plan), not the advisor's, and out of P4's scope. The pool's wall and CPU are unchanged
+within the machine's noise (pool CPU 40.3 / 38.7 / 41.0 s against 37.4 / 44.5 / 50.3 s).
+
 ## Run 1, full tables
 
 ### 1. Phases and pool jobs
