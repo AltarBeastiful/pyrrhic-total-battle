@@ -22,7 +22,17 @@ downloaded.
 ~/.venvs/perf-trace/bin/python tools/perf-trace/analyse.py ~/Downloads/chrome-202696-18048.pftrace.gz > trace.md
 ```
 
-It takes a `.pftrace` or a `.pftrace.gz` (unzipped to a temporary file). `--depth N` sets the depth of the two call
+It takes a `.pftrace` or a `.pftrace.gz` (unzipped to a temporary file), or a Chrome JSON trace (`.json`,
+`.json.gz`), such as the one `e2e/profile-trace.spec.ts` records from a production build:
+
+```sh
+python3 tools/perf-trace/analyse.py .maestro/playbooks/Working/w18/trace-prod.json.gz [--maps dist/assets]
+```
+
+A JSON trace is read by `chrome_json.py` with the standard library only (no venv needed): Perfetto reads its slices
+but not its V8 samples. Frame names of a minified build come back from the build's source maps (`--maps`, default
+`dist/assets`; the trace must come from that same build): the name is read off the original source at the frame's
+mapped position, so React's own pre-minified production bundle resolves too. `--depth N` sets the depth of the two call
 trees (default 7). A 100 MB trace takes about 10 s.
 
 ## The tables
@@ -42,3 +52,9 @@ trees (default 7). A 100 MB trace takes about 10 s.
 4. **Call tree of the main thread.** The same for the renderer's main thread (`CrRendererMain`, found as the sampler
    whose stacks contain `performWorkUntilDeadline`), from its `(root)` frame. In a dev build most of it is React's
    dev-only Performance Tracks and `(program)`; take a prod trace to size the page's real cost.
+5. **The main thread's own time per phase** (JSON traces with `devtools.timeline`). Exclusive time of the main
+   thread's events clipped to each phase, by category: scripting, GC, style (`UpdateLayoutTree`), layout, paint
+   (`PrePaint`, `Paint`, `Layerize`, `Commit`), other; busy is their union, idle the rest of the wall.
+6. **The main thread's JS per phase** (JSON traces). Its samples, weighted by the gap to the next: React render
+   (the stack holds `renderWithHooks`; the component is the frame it called), React commit, other JS,
+   `(program)`, GC; then React render by component.

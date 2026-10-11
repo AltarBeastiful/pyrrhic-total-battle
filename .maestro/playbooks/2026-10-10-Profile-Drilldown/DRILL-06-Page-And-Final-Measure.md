@@ -15,7 +15,7 @@ phase first measures a production build, then fixes only what that shows.
 
 ## Tasks
 
-- [ ] Measure the page on a production build. Build with `VITE_PROFILING=1 pnpm build`, serve with `pnpm preview`, and
+- [x] Measure the page on a production build. Build with `VITE_PROFILING=1 pnpm build`, serve with `pnpm preview`, and
   with Playwright (the repo's e2e setup; see `playwright.config.ts`) load the exactness fixture's profile, press the
   "Profile everything" button (`src/ui/sections/march/ProfileAllButton.tsx`), and record a Chrome trace through CDP
   (`Tracing.start` with categories `devtools.timeline,blink.user_timing,v8.execute,disabled-by-default-v8.cpu_profiler`).
@@ -49,3 +49,40 @@ phase first measures a production build, then fixes only what that shows.
   and 03 and are not built by this playbook.
 
 ## Notes
+
+### Experiment 200, the page in production (2026-10-11, HEAD 065d364)
+
+**Numbering:** this drill's "198" is experiment **200** (`198-the-boundary` and `198b-the-glue` are Drill 04b's,
+199 is reserved by backlog B-08). Read "198" in the tasks below as 200: `tools/theorycraft/out/200-the-page-in-production.md`.
+
+Run: `VITE_PROFILING=1 pnpm build`, `pnpm preview --port 4174` (4173 was held by a preview running since
+2026-10-10, left alone), `PYRRHIC_TRACE=1 PYRRHIC_TRACE_URL=http://127.0.0.1:4174 pnpm exec playwright test
+e2e/profile-trace.spec.ts` (~16 s), then `python3 tools/perf-trace/analyse.py <trace>.json.gz`. Three runs:
+`Working/w18/trace-prod{,-2,-3}.json.gz`, tables in `Working/w18/200-analyse{,-2,-3}.md`.
+
+`analyse.py` could not read the JSON trace's samples (Perfetto imports its slices, not its `ProfileChunk`s, and
+the frames are minified), so it gained a stdlib-only JSON path (`tools/perf-trace/chrome_json.py`): frame names
+from the build's source maps (read off the original source, so React's pre-minified bundle resolves too), and two
+tables, 5 (main-thread own time by category per phase) and 6 (React render by component, commit, other JS). The
+Perfetto path is unchanged: re-run on the owner's first trace, identical to `trace-0-baseline.md`.
+
+Main thread, busy share of each phase (union of its trace events; idle = the rest):
+
+| phase | run 1 | run 2 | run 3 | scripting / GC / style / layout / paint, run 1, ms |
+|---|---:|---:|---:|---|
+| generate | 23.7 % | 22.5 % | 22.8 % | 83 / 0 / 8 / 34 / 12 |
+| upgrades-default | 10.7 % | 9.9 % | 9.4 % | 181 / 21 / 10 / 16 / 126 |
+| captains | 29.4 % | 28.1 % | 28.6 % | 360 / 17 / 4 / 6 / 48 |
+| other | 40.4 % | 40.5 % | 38.6 % | 761 / 36 / 5 / 20 / 98 |
+| the run (wall 7.9 / 9.4 / 10.5 s) | 23.8 % | 22.9 % | 22.6 % | 1 385 / 74 / 26 / 77 / 283 |
+
+- **Over the 20 % bar in captains and other** (and generate, which is the plan's own render, not the advisor):
+  the next task's coalescing applies.
+- The cost is scripting, mostly React: render 899 ms, commit 168 ms of 1 990 ms sampled (run 1). Style 26 ms and
+  layout 77 ms over the run: P4.3 (fewer `Box` wrappers for layout's sake) is not called for.
+- Render by component: Mantine's `_Box` / `factory` / `polymorphicFactory` 725 of 899 ms; ours `AdvisorRowLine`
+  21, `Figure` 18, `MarchCost` 16, `StopList` 9 ms. Captains and other render 248 and 507 ms against 92 ms for
+  upgrades-default, with fewer probes.
+- Pool: 93.5 % of its CPU is `planCampaign` (re-typing, `retypeRow`, 35 % of `runProbe`); the Tight raise is
+  1.0 % on this fixture (the owner's 49 % was the timing fixture, dev build, before Drills 02–05).
+
