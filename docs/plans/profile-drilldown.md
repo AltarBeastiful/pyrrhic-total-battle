@@ -210,6 +210,22 @@ timing fixture's planner CPU):
 3. **`finish` / `finaleFor`** (4.8 % / 3.8 % JS): only if 1–2 left the chain ≥ 15 %. The finale grid is on the
    kernel already (`ladder.finale`); the port is the spent-stock bookkeeping and the total around it.
 
+**Step 1 done (2026-10-11, Drill 05).** The door is `sizerShape` (`kernel/assembly/index.ts`), behind
+`PlanKernel.sizerShape` (`src/engine/fast.ts`, `src/kernel/plan.ts`), and it is asked by `sizedShape` itself, so
+every caller (the search's sizer, the re-size's shapes, the subset sizing) takes it; the TypeScript body is
+`sizedShapeDeclined`. It is **narrower than written above**: `sizedShape` + `sizedCounts`'s request building, in
+one crossing that replaces the `sizeStacks` one (12,031 per timing plan, `sizeStacks` itself 14 left). The
+scorer's sizer branch after the memo (the last-stack-wins scan, `lastsMarches`, the second `shelterUnder`,
+`fitsHousing`, the march and its bill) stays in JS: it runs on memo hits too (22,732 calls against 12,031
+misses), so it wants a door of its own that takes the memo's answer, not this one; it is the next candidate
+if the planner is reopened (`sizer` 6.2 % and `scorer` 21 % JS-under left on the timing fixture). Measured:
+197's JS under `sizedShape` 7.1 / 6.8 % → 2.6–2.8 % of profiled planner time (timing), 1.8 / 1.6 % → 0.5–0.6 %
+(exactness); sampled allocation 366 → 313–316 MiB a plan (timing), 296 / 254 → 242 MiB (exactness). In-process
+A/B (door against door declined, same process, 40 alternating rounds, 3 runs): plan wall median **−7.6 to
+−8.3 %** on the timing fixture (process CPU −14 to −16 %), −3.3 to −4.1 % on the exactness fixture. Parity
+`tests/kernel/sizer-shape-parity.test.ts`: 42/42 (every benchmark army and both fixtures, door and plan level);
+a deliberately broken door (no shelter) fails 32 of them.
+
 **Not ported**: `evaluateVector`'s own orchestration (`record`, `consider`, the derived memo, the candidate
 objects; 7.6 % self) — it is the search's bookkeeping, it holds JS objects other passes keep, and its replay
 already skips 46 % of the calls. Re-typing (`retypeRow`, the exactness export's 32 %) is a separate question,
@@ -269,6 +285,7 @@ goldens in `tests/golden/` byte-identical, `benchmark-latest.json` unchanged exc
 | P1.4 captains: one queue | upgrade part 3,379 ms (mean of 3 A/B) | 3,375 ms (no gain); one more row cut at a 3 s clock: a trade, on branch `w18-p14-captains-one-queue`, recommended dropped | branch b93dfe8 |
 | P1.5 Generate prices the bar in parallel | bar on the run's client 141 ms (timing fixture, 5 stops) | 100 ms on the advisor pool when idle; tables identical | fbb01c7 |
 | K1 / K3 / K5 caches (Drill 04) | census rerun on 05ab2d6: K1 0.59 hits per entry, 2.21 %; K3 ≤ 0.56, ≤ 1.14 %; K5 22 / 8 per entry, ≤ 0.99 % | none built (`WON'T DO`, all under the 3 % bar; K1 and K3 also under 2 hits per entry) | c1d9b09 |
+| P3.4 step 1: the sizer shape, one kernel door (Drill 05) | timing plan wall median 447.6–470.5 ms (door declined, A/B); JS under `sizedShape` 7.1 % | 410.5–432.7 ms: −7.6 to −8.3 % wall, −14 to −16 % process CPU (exactness −3.3 to −4.1 %); 2.6 % JS under `sizedShape`; every answer, golden and benchmark figure unchanged | this commit |
 
 Drill 02 re-measure (2026-10-10, experiment 196 rerun on HEAD 1ebb705, profile kernel, one lane): every census count
 identical to the committed report; exactness fixture 33.96 s → 33.45 s run CPU (raise 0.56 % of it, so noise),

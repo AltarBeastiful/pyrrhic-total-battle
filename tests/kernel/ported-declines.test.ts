@@ -370,6 +370,11 @@ function counted(kernel: PlanKernel): { kernel: PlanKernel; declines: Record<str
       note('sizeStacks', out === null);
       return out;
     },
+    sizerShape: (request, byId, mercs, method, troopIds) => {
+      const out = kernel.sizerShape(request, byId, mercs, method, troopIds);
+      note('sizerShape', out === null);
+      return out;
+    },
     ladders: (...args) => {
       const out = kernel.ladders(...args);
       note('ladders', out === null);

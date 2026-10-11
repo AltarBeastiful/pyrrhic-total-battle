@@ -17,7 +17,7 @@
  * anything the UI draws (`Stack[]`, journals, warnings) is still built by the TypeScript engine (`battle.ts`,
  * `marchOfTs`, `recoveryCosts`, `sizeStacks`).
  */
-import type { Effective } from './plan';
+import type { Effective, SizerMethod } from './plan';
 import type { Bill } from './rating';
 import type { UnitDef } from '../data/types';
 import type {
@@ -181,6 +181,20 @@ export interface PlanKernel {
     caps: Record<string, number>,
     options: StackingOptions,
   ): { unitId: string; count: number }[] | null;
+  /**
+   * **`sizedShape`, whole, in one call** (W18 P3.4 step 1): the caps over the hired counts, the unit filter
+   * (`troopIds` for the leadership units, every one when left out; the hired units fielded), the method's
+   * options, the sizer, the troops and hired stacks apart in its order and the hired ones sheltered under the
+   * troops (`shelterUnder`), those above 0. Entries are `byId`'s. `null` where the engine must size it: a
+   * request the kernel cannot pack, a row `byId` does not know, or the sizer's own decline (`sizeStacks`).
+   */
+  sizerShape(
+    request: StackRequest,
+    byId: ReadonlyMap<string, Effective>,
+    mercs: readonly { entry: Effective; count: number }[],
+    method: SizerMethod,
+    troopIds: ReadonlySet<string> | undefined,
+  ): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } | null;
   /**
    * The scorer's ladders (step 4) over `troops` (the ranking, weakest first) and `mercTypes`, marched against
    * `enemyStacks` under `recovery` (the engine's `SEARCH_RECOVERY`), with `powers[k]` the engine's

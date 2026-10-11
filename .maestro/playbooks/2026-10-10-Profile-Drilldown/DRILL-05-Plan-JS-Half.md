@@ -35,7 +35,7 @@ kernel is exact only when done op for op, as the kernel port was (`project-kerne
 <!-- MAESTRO:HITL reason="Owner to read the planner port plan in docs/plans/profile-drilldown.md (P3) and say whether to port. Tick when decided; write the decision in Notes." artifact="docs/plans/profile-drilldown.md" -->
 
 - [x] Human step done: Owner to read the planner port plan in docs/plans/profile-drilldown.md (P3) and say whether to port. Tick when decided; write the decision in Notes.
-- [ ] If the owner said yes in Notes, port the first function of the plan's list to the kernel, op for op, with its
+- [x] If the owner said yes in Notes, port the first function of the plan's list to the kernel, op for op, with its
   parity test red first then green, then the gate script. If the owner said no or nothing is written, tick with a
   note and change nothing.
 
@@ -136,3 +136,46 @@ tick with a note and change nothing"), nothing was ported. To port later: write 
 Owner, 2026-10-11: yes to the planner port of `docs/plans/profile-drilldown.md` §P3.4. Port the first function
 of the plan's list (the sizer shape as one kernel door), op for op, parity test red first then green, then the
 gate script. Task re-opened.
+
+### The port, step 1 done (2026-10-11): the sizer shape, one kernel door
+
+Ported: `sizedShape` + `sizedCounts`'s request building, op for op, as the kernel export `sizerShape`
+(`kernel/assembly/index.ts`: caps over the hired counts, the unit filter, the method's option bits, the kernel's
+own `sizeStacks`, troops and hired split in the sizer's order, `shelterUnder` and its filter), behind
+`PlanKernel.sizerShape` (`src/engine/fast.ts`, `src/kernel/plan.ts`; base caps, `byId`'s entries and each prefix's
+mask read once and kept per request / map / set). `sizedShape` asks it first, so every caller takes it; the TS
+body is now `sizedShapeDeclined`, unchanged. One crossing replaces the `sizeStacks` one (timing plan: 12,031
+`sizerShape`, 14 `sizeStacks` left; the total crossing count is unchanged at 363,814).
+
+**Narrower than the plan's step 1**: the scorer's sizer branch after the memo (scan, `lastsMarches`, second
+shelter, housing, march, bill) is not in the door, because it also runs on the memo's hits (22,732 calls against
+12,031 misses) and needs a door that takes the memo's answer. It is the next candidate (`sizer` 6.2 %, `scorer`
+21 % JS-under left on the timing fixture); not started.
+
+Parity, `tests/kernel/sizer-shape-parity.test.ts` (one test, both paths): every benchmark army + both fixtures,
+door level (up to 1,500 recorded calls a plan, the door must not decline, entries and `Object.is` counts against
+the declining kernel's TS) and plan level (plan JSON with the door and with it declined, `ms` aside). Red: the
+loader rebuilds the wasm itself, so the first run already had the door; a deliberately broken door (no shelter)
+failed 32 of 42 (`Working/w18/p34-parity-red-broken.log`); green 42/42. `ported-declines.test.ts` counts the
+new door too (no decline on any feature combination).
+
+197 before (2 runs, 2a558ca) → after (3 runs), per plan:
+
+| Figure | Timing before | Timing after | Exactness before | Exactness after |
+|---|---:|---:|---:|---:|
+| JS under `sizedShape` | 7.06 / 6.80 % | 2.56–2.77 % | 1.83 / 1.64 % | 0.53–0.60 % |
+| JS under `sizer` | 10.30 / 10.37 % | 6.16–6.23 % | 2.71 / 2.51 % | 1.35–1.64 % |
+| Allocated (sampled) | 366 / 368 MiB | 313–316 MiB | 296 / 254 MiB | 242 MiB |
+| GC share of samples | 11.4 / 12.4 % | 11.5–12.3 % | 8.2 / 8.3 % | 7.4–7.8 % |
+| Profiled planner time | 475 / 449 ms | 482–488 ms | 453 / 444 ms | 438–439 ms |
+
+197's profiled time spreads ±6 % between identical runs, so the clock was read by an in-process A/B instead
+(`Working/w18/p34-ab.test.ts.txt`, `p34-ab.txt`: door vs door declined, same process, 40 alternating rounds,
+3 runs): timing plan wall median 447.6–470.5 → 410.5–432.7 ms (**−7.6 to −8.3 %**), process CPU 735–753 →
+619–645 ms (−14 to −16 %); exactness 409.0–433.6 → 393.9–419.5 ms (−3.3 to −4.1 %). Over the plan's 3 % bar.
+
+Gate (2026-10-11): kernel:build, typecheck, lint, plan-benchmark alone (171 s), benchmark diff vs HEAD (empty),
+184 (122 s): PASS (`Working/w18/gate-20261011-112428.log`). Its `pnpm test` failed on two monster camps of the
+new parity test hitting vitest's 5 s default under the parallel suite (not a parity failure); with a 300 s
+timeout, typecheck, lint and `pnpm test` re-run: PASS, 1,817 tests, 312 s (advisor golden and every
+`tests/golden/` pin included, none touched) (`Working/w18/p34-test.log`).

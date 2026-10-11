@@ -34,7 +34,7 @@ import { templeDivisor } from '../engine/recovery';
 import { RANK_SPREAD } from '../engine/stacker';
 import type { RecoveryCost, RecoverySettings, StackRequest, StackingOptions } from '../engine/types';
 
-import { R, RECORD_SIZE } from './layout';
+import { HEADER_SIZE, R, RECORD_SIZE, T, TYPE_STRIDE } from './layout';
 import { packRequest } from './pack';
 
 interface PlanExports {
@@ -65,6 +65,15 @@ interface PlanExports {
     ranksPtr: number,
   ): number;
   setSearchReduction(ptr: number): void;
+  sizerShapeScratch(slot: number): number;
+  sizerShape(
+    prefixAll: number,
+    housingLeadership: number,
+    housingAuthority: number,
+    housingDominance: number,
+    flags: number,
+    spread: number,
+  ): number;
   sizePool(
     n: number,
     hpPtr: number,
@@ -217,6 +226,58 @@ function ladderViews(raw: PlanExports, scratch: LadderScratch, types: number): v
   };
 }
 
+/** The sizer shape's scratch slots, mirrored from `S_*` in `kernel/assembly/index.ts`. */
+const S = {
+  mark: 0,
+  merc: 1,
+  cap: 2,
+  prefix: 3,
+  rungRows: 8,
+  rungCounts: 9,
+  hiredRows: 10,
+  hiredCounts: 11,
+  hiredLen: 12,
+} as const;
+
+/** One instance's sizer-shape scratch (W18 P3.4), reserved on the first `sizerShape` over it. */
+interface ShapeScratch {
+  ptr: Record<keyof typeof S, number>;
+  mark: Int32Array;
+  merc: Float64Array;
+  cap: Float64Array;
+  prefix: Int32Array;
+  rungRows: Int32Array;
+  rungCounts: Float64Array;
+  hiredRows: Int32Array;
+  hiredCounts: Float64Array;
+  hiredLen: Int32Array;
+  /** Row of each unit id. */
+  rowOfId: Map<string, number>;
+  /** `request.caps[id] ?? MAX_SAFE_INTEGER` by row, per request (a request's caps are read once). */
+  capsOf: WeakMap<StackRequest, Float64Array>;
+  /** `byId`'s entry of each row, per map, or `null` when one row has none (or not this table's). */
+  entriesOf: WeakMap<ReadonlyMap<string, Effective>, readonly Effective[] | null>;
+  /** 1 for each row a troop-id set names, per set. */
+  prefixOf: WeakMap<ReadonlySet<string>, Int32Array>;
+}
+
+function shapeViews(raw: PlanExports, shape: ShapeScratch, types: number): void {
+  // A view over a buffer the memory grew out of is detached, and a detached view has no length.
+  if (shape.mark.length !== 0) return;
+  const buffer = raw.memory.buffer;
+  const n = Math.max(1, types);
+  const p = shape.ptr;
+  shape.mark = new Int32Array(buffer, p.mark, n);
+  shape.merc = new Float64Array(buffer, p.merc, n);
+  shape.cap = new Float64Array(buffer, p.cap, n);
+  shape.prefix = new Int32Array(buffer, p.prefix, n);
+  shape.rungRows = new Int32Array(buffer, p.rungRows, n);
+  shape.rungCounts = new Float64Array(buffer, p.rungCounts, n);
+  shape.hiredRows = new Int32Array(buffer, p.hiredRows, n);
+  shape.hiredCounts = new Float64Array(buffer, p.hiredCounts, n);
+  shape.hiredLen = new Int32Array(buffer, p.hiredLen, 1);
+}
+
 /** `sizeStacks`' option bits, mirrored from `F_*` in `kernel/assembly/index.ts`. */
 const SIZER_FLAGS = { ms: 1, relaxed: 2, roundTo10: 4, monstersLast: 8, strict: 16 } as const;
 
@@ -256,6 +317,8 @@ interface Bound {
   rowOfUnit: Map<UnitDef, number>;
   /** The ladders' scratch (step 4), reserved on the first `ladders` over this instance. */
   ladder: LadderScratch | null;
+  /** The sizer shape's scratch (W18 P3.4), reserved on the first `sizerShape` over this instance. */
+  shape: ShapeScratch | null;
 }
 
 function views(bound: Bound): void {
@@ -379,6 +442,7 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
       reductionOf: null,
       rowOfUnit: new Map(request.units.map((unit, row) => [unit, row])),
       ladder: null,
+      shape: null,
     };
     views(bound);
     byRequest.set(request, bound);
@@ -408,6 +472,53 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
       counts[i] = stack.count;
     }
     return bound;
+  };
+
+  /**
+   * The bound the sizer sizes `request` on: its own, or a bound request's with the same units, totals, enemy
+   * and events (its rows depend on nothing else), or the request packed here, once (a host sizing before
+   * planning, or a test).
+   */
+  const sizerBound = (request: StackRequest): Bound | null => {
+    const sameArmy = (held: Bound): boolean =>
+      held.request.totals === request.totals &&
+      held.request.enemy === request.enemy &&
+      held.request.activeEvents === request.activeEvents;
+    let bound = byRequest.get(request);
+    if (!bound || !sameArmy(bound)) bound = byUnits.get(request.units)?.find(sameArmy);
+    bound ??= bind(request, effectiveTable(request)) ?? undefined;
+    return bound ?? null;
+  };
+
+  /** `bound`'s sizer-shape scratch, reserved on first use, with views fresh at the call. */
+  const shapeScratch = (bound: Bound): ShapeScratch => {
+    let shape = bound.shape;
+    if (shape === null) {
+      const raw = bound.raw;
+      const ptr = {} as Record<keyof typeof S, number>;
+      for (const key of Object.keys(S) as (keyof typeof S)[]) ptr[key] = raw.sizerShapeScratch(S[key]);
+      const none = new Int32Array(0);
+      const noneF = new Float64Array(0);
+      shape = {
+        ptr,
+        mark: none,
+        merc: noneF,
+        cap: noneF,
+        prefix: none,
+        rungRows: none,
+        rungCounts: noneF,
+        hiredRows: none,
+        hiredCounts: noneF,
+        hiredLen: none,
+        rowOfId: new Map(bound.ids.map((id, row) => [id, row])),
+        capsOf: new WeakMap(),
+        entriesOf: new WeakMap(),
+        prefixOf: new WeakMap(),
+      };
+      bound.shape = shape;
+    }
+    shapeViews(bound.raw, shape, bound.types);
+    return shape;
   };
 
   // `SEARCH_RECOVERY` is one object; its temple divisor is read once.
@@ -493,14 +604,7 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
     },
 
     sizeStacks(request, units, caps, options: StackingOptions) {
-      const sameArmy = (held: Bound): boolean =>
-        held.request.totals === request.totals &&
-        held.request.enemy === request.enemy &&
-        held.request.activeEvents === request.activeEvents;
-      let bound = byRequest.get(request);
-      if (!bound || !sameArmy(bound)) bound = byUnits.get(request.units)?.find(sameArmy);
-      // Not bound yet (a host sizing before planning, or a test): pack it here, once.
-      bound ??= bind(request, effectiveTable(request)) ?? undefined;
+      const bound = sizerBound(request);
       if (!bound) return null;
       views(bound);
       const { rowOfUnit, sizerRows, sizerCaps } = bound;
@@ -559,6 +663,95 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
         };
       }
       return out;
+    },
+
+    sizerShape(request, byId, mercs, method, troopIds) {
+      const bound = sizerBound(request);
+      if (!bound) return null;
+      const shape = shapeScratch(bound);
+      const { ids, types } = bound;
+      let entries = shape.entriesOf.get(byId);
+      if (entries === undefined) {
+        // Each row's entry, and only where it is this table's own unit at this table's HP: the split reads
+        // the entry's pool and the shelter its HP, where the kernel reads the row's.
+        const units = bound.request.units;
+        const list: Effective[] = [];
+        for (let row = 0; row < types; row += 1) {
+          const entry = byId.get(ids[row] as string);
+          const unit = units[row] as UnitDef;
+          if (
+            entry === undefined ||
+            entry.unit !== unit ||
+            entry.pool !== unit.pool ||
+            !Object.is(entry.hp, bound.table[HEADER_SIZE + row * TYPE_STRIDE + T.hp])
+          ) {
+            entries = null;
+            break;
+          }
+          list.push(entry);
+        }
+        if (entries === undefined) entries = list;
+        shape.entriesOf.set(byId, entries);
+      }
+      if (entries === null) return null;
+      let caps = shape.capsOf.get(request);
+      if (caps === undefined) {
+        caps = new Float64Array(types);
+        for (let row = 0; row < types; row += 1)
+          caps[row] = request.caps[ids[row] as string] ?? Number.MAX_SAFE_INTEGER;
+        shape.capsOf.set(request, caps);
+      }
+      shape.cap.set(caps);
+      const { mark, merc } = shape;
+      mark.fill(0);
+      for (let i = 0; i < mercs.length; i += 1) {
+        const stack = mercs[i] as { entry: Effective; count: number };
+        const row = shape.rowOfId.get(stack.entry.id);
+        if (row === undefined) continue;
+        // `caps[id] = count` (the last one written wins) and the fielded ids those above 0.
+        mark[row] = (mark[row] as number) | (stack.count > 0 ? 3 : 1);
+        merc[row] = stack.count;
+      }
+      if (troopIds !== undefined) {
+        let mask = shape.prefixOf.get(troopIds);
+        if (mask === undefined) {
+          mask = new Int32Array(types);
+          for (let row = 0; row < types; row += 1) mask[row] = troopIds.has(ids[row] as string) ? 1 : 0;
+          shape.prefixOf.set(troopIds, mask);
+        }
+        shape.prefix.set(mask);
+      }
+      const options = request.options;
+      const flags =
+        (method === 'elite' ? 0 : SIZER_FLAGS.ms) |
+        (method === 'msRelaxed' ? SIZER_FLAGS.relaxed : 0) |
+        (options.roundTo10 ? SIZER_FLAGS.roundTo10 : 0) |
+        (options.monstersLast ? SIZER_FLAGS.monstersLast : 0) |
+        (options.strictMercsAboveMonsters ? SIZER_FLAGS.strict : 0);
+      const housing = request.housing;
+      const r = bound.raw.sizerShape(
+        troopIds === undefined ? 1 : 0,
+        housing.leadership,
+        housing.authority,
+        housing.dominance,
+        flags,
+        RANK_SPREAD,
+      );
+      if (r < 0) return null;
+      const rungs: { entry: Effective; count: number }[] = new Array(r);
+      for (let i = 0; i < r; i += 1)
+        rungs[i] = {
+          entry: entries[shape.rungRows[i] as number] as Effective,
+          count: shape.rungCounts[i] as number,
+        };
+      const h = shape.hiredLen[0] as number;
+      const hired: { entry: Effective; count: number }[] = new Array(h);
+      for (let i = 0; i < h; i += 1)
+        hired[i] = {
+          entry: entries[shape.hiredRows[i] as number] as Effective,
+          count: shape.hiredCounts[i] as number,
+        };
+      return { rungs, mercs: hired };
     },
 
     ladders(troops, mercTypes, enemyStacks, recovery, powers, depths, growths): LadderKernel | null {

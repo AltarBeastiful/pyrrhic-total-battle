@@ -2578,7 +2578,26 @@ function copyStacks(
  * **Every pool but `leadership`** (S-96): the rule is about what the enemy kills first, which knows nothing
  * about pools, and a dominance monster is the rarest stock on the field of all.
  */
-function sizedShape(
+export function sizedShape(
+  request: StackRequest,
+  byId: Map<string, Effective>,
+  mercs: { entry: Effective; count: number }[],
+  method: SizerMethod,
+  troopIds?: ReadonlySet<string>,
+): { rungs: { entry: Effective; count: number }[]; mercs: { entry: Effective; count: number }[] } {
+  // The whole of it in one kernel call (W18 P3.4 step 1), or the TypeScript below where the kernel declines.
+  return (
+    requiredPlanKernel().sizerShape(request, byId, mercs, method, troopIds) ??
+    sizedShapeDeclined(request, byId, mercs, method, troopIds)
+  );
+}
+
+/**
+ * **`sizedShape` where the kernel declined** (`PlanKernel.sizerShape`): a request it cannot pack, a `byId` whose
+ * entries are not its table's, or its sizer refusing the call. The reference the door is held `Object.is` to
+ * (`tests/kernel/sizer-shape-parity.test.ts`).
+ */
+function sizedShapeDeclined(
   request: StackRequest,
   byId: Map<string, Effective>,
   mercs: { entry: Effective; count: number }[],

@@ -954,6 +954,128 @@ export function sizeStacks(
   return k;
 }
 
+// ---- the sizer's shape (`sizedShape`, `src/engine/plan.ts`; W18 P3.4 step 1) -------------------------------
+
+const S_MARK = 0; // i32 × types: bit 1 a hired count is given for this row (its cap), bit 2 it is above 0
+const S_MERC = 1; // f64 × types: that count
+const S_CAP = 2; // f64 × types: `request.caps[id] ?? MAX_SAFE_INTEGER`
+const S_PREFIX = 3; // i32 × types: 1 when a leadership row may be fielded (the prefix of the troop ranking)
+const S_ROWS = 4; // i32 × types: the sized units' rows (scratch)
+const S_CAPS = 5; // f64 × types: their caps (scratch)
+const S_SIZED_ROWS = 6; // i32 × types: the sizer's stacks (scratch)
+const S_SIZED_COUNTS = 7; // f64 × types
+const S_RUNG_ROWS = 8; // i32 × types: the troop stacks, the sizer's order (out)
+const S_RUNG_COUNTS = 9; // f64 × types
+const S_HIRED_ROWS = 10; // i32 × types: the hired stacks sheltered, the sizer's order, those above 0 (out)
+const S_HIRED_COUNTS = 11; // f64 × types
+const S_HIRED_LEN = 12; // i32 × 1: how many hired stacks were written (out)
+const S_SLOTS = 13;
+
+let sDir: usize = 0;
+
+@inline function sPtr(slot: i32): usize {
+  return load<usize>(sDir + ((<usize>slot) << 2));
+}
+
+/** Reserve the sizer shape's scratch once per instance (after `setTable`); answers the pointer of `slot`. */
+export function sizerShapeScratch(slot: i32): usize {
+  if (sDir == 0) {
+    const n = <usize>max(types, 1);
+    sDir = heap.alloc(<usize>S_SLOTS << 2);
+    for (let s = 0; s < S_SLOTS; s += 1) {
+      const bytes: usize = s == S_HIRED_LEN ? 4 : s == S_MERC || s == S_CAP || s == S_CAPS || s == S_SIZED_COUNTS || s == S_RUNG_COUNTS || s == S_HIRED_COUNTS ? n << 3 : n << 2;
+      store<usize>(sDir + ((<usize>s) << 2), heap.alloc(bytes));
+    }
+    // The sizer's own scratch, reserved now so no later call grows the memory under the caller's views.
+    if (zRow == 0) {
+      zRow = heap.alloc(n << 2);
+      zHp = heap.alloc(n << 3);
+      zCost = heap.alloc(n << 3);
+      zCap = heap.alloc(n << 3);
+      zCount = heap.alloc(n << 3);
+    }
+  }
+  return sPtr(slot);
+}
+
+/**
+ * **The sizer's shape for one set of hired counts** (`sizedShape`), every statement in its order:
+ *
+ *  - `caps = { ...request.caps }`, each hired count written over its type's (`S_MARK` bit 1, `S_MERC`), the
+ *    fielded ids those above 0 (bit 2);
+ *  - the units: `request.units` in order (the rows), a leadership unit where the prefix has it (`S_PREFIX`,
+ *    or every one with `prefixAll`), any other where it is fielded; each at `caps[id] ?? MAX_SAFE_INTEGER`;
+ *  - `sizeStacks` on them with the method's and the request's option bits (`flags`), the request's housing;
+ *  - the stacks above 0 split into troops (`T_POOL` 0) and hired, each in the sizer's order;
+ *  - `shelterUnder(rungs, hired)`, then the hired stacks above 0.
+ *
+ * Answers the number of troop stacks (at `S_RUNG_*`; the hired ones at `S_HIRED_*`, their number at
+ * `S_HIRED_LEN`), or −1 where `sizeStacks` answers −1 (the engine then runs the TypeScript).
+ */
+export function sizerShape(prefixAll: i32, hL: f64, hA: f64, hD: f64, flags: i32, spread: f64): i32 {
+  const mark = sPtr(S_MARK);
+  const merc = sPtr(S_MERC);
+  const baseCap = sPtr(S_CAP);
+  const prefix = sPtr(S_PREFIX);
+  const rows = sPtr(S_ROWS);
+  const caps = sPtr(S_CAPS);
+  let n = 0;
+  for (let row = 0; row < types; row += 1) {
+    const marked = i32At(mark, row);
+    const fielded = <i32>cell(row, T_POOL) == 0 ? prefixAll != 0 || i32At(prefix, row) != 0 : (marked & 2) != 0;
+    if (!fielded) continue;
+    store<i32>(rows + ((<usize>n) << 2), row);
+    store<f64>(caps + ((<usize>n) << 3), (marked & 1) != 0 ? f64At(merc, row) : f64At(baseCap, row));
+    n += 1;
+  }
+  const sizedRows = sPtr(S_SIZED_ROWS);
+  const sizedCounts = sPtr(S_SIZED_COUNTS);
+  const k = sizeStacks(n, rows, caps, hL, hA, hD, flags, spread, sizedRows, sizedCounts, 0);
+  if (k < 0) return -1;
+  const rungRows = sPtr(S_RUNG_ROWS);
+  const rungCounts = sPtr(S_RUNG_COUNTS);
+  const hiredRows = sPtr(S_HIRED_ROWS);
+  const hiredCounts = sPtr(S_HIRED_COUNTS);
+  let r = 0;
+  let h = 0;
+  for (let s = 0; s < k; s += 1) {
+    const count = f64At(sizedCounts, s);
+    if (!(count > 0)) continue;
+    const row = i32At(sizedRows, s);
+    if (<i32>cell(row, T_POOL) == 0) {
+      store<i32>(rungRows + ((<usize>r) << 2), row);
+      store<f64>(rungCounts + ((<usize>r) << 3), count);
+      r += 1;
+    } else {
+      store<i32>(hiredRows + ((<usize>h) << 2), row);
+      store<f64>(hiredCounts + ((<usize>h) << 3), count);
+      h += 1;
+    }
+  }
+  // `shelterUnder(rungs, hired).filter((stack) => stack.count > 0)`, written over the hired stacks in place.
+  let lower = false;
+  let floor: f64 = Infinity;
+  if (r != 0 && h != 0) {
+    for (let i = 0; i < r; i += 1) floor = Math.min(floor, f64At(rungCounts, i) * cell(i32At(rungRows, i), T_HP));
+    lower = isFinite<f64>(floor) && floor > 0;
+  }
+  let kept = 0;
+  for (let i = 0; i < h; i += 1) {
+    const row = i32At(hiredRows, i);
+    let count = f64At(hiredCounts, i);
+    if (lower) {
+      const hp = cell(row, T_HP);
+      if (!(count * hp < floor || hp <= 0)) count = Math.max(0.0, Math.ceil(floor / hp) - 1.0);
+    }
+    if (!(count > 0)) continue;
+    store<i32>(hiredRows + ((<usize>kept) << 2), row);
+    store<f64>(hiredCounts + ((<usize>kept) << 3), count);
+    kept += 1;
+  }
+  store<i32>(sPtr(S_HIRED_LEN), kept);
+  return r;
+}
+
 // ---- the owner's rating ----------------------------------------------------------------------------------
 
 /** `saved` (`rating.ts`): percent saved on a cost, 0 on a bill of nothing. */
