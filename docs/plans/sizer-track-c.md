@@ -1,6 +1,6 @@
 # Track C: the sizer's kernel cost (W20)
 
-**Status: proposed 2026-10-11.** Follows `docs/plans/scorer-in-the-kernel.md` §6.1, which found that after the scorer
+**Status: C0 and C1 done 2026-10-11; C2–C5 not built (below the 3 % line, §5).** Follows `docs/plans/scorer-in-the-kernel.md` §6.1, which found that after the scorer
 work the largest block left in the planner is the sizer's wasm, not any JavaScript around it.
 
 **The rule is W16's, W18's and W19's:** nothing moves but the clock. Every step leaves every plan, stop, row and
@@ -141,9 +141,9 @@ and `profile` kernel builds both rebuilt and committed together if `kernel/build
 
 | | HEAD 8f6b546 | after C1 | after C2 | after C3 | after C4 | after C5 |
 |---|---:|---:|---:|---:|---:|---:|
-| timing plan, in-process median / min (ms) | 311 / 302 | | | | | |
-| `sizerShape` inclusive (197) | 95.7 ms | | | | | |
-| kernel wasm self (197) | 143 ms | | | | | |
+| timing plan, in-process median / min (ms), cache off → on (204, 30 plans an arm, interleaved) | 335.6 / 321.9 | **314.8 / 300.5** (−6.2 % / −6.7 %) | not built | not built | not built | not built |
+| `sizerShape` inclusive (197) | 95.7 ms | not re-profiled | | | | |
+| kernel wasm self (197) | 143 ms | not re-profiled | | | | |
 
 **Expectation (a ceiling):** `sizerShape` 25 % → 10–15 % of the profiled time, planner wall −10 to −15 % on this
 account. The honest risk is C3 (exactness of a different trajectory) and C4 (a kill-order shadow that must stay
@@ -158,3 +158,43 @@ Not in this plan: the Tight raise's `recoveryOf` / `killOrderBy` (24.6 % of pool
 first, `scorer-in-the-kernel.md` §3 Track B), the scorer's JS (W19, done: what is left is < 1 % in the ladder path),
 `retypeRow` (6 %), `undominatedRows` (1 %), GC (12 %: allocation per plan is 250 MiB, of which the scorer's
 sizer-depth shapes are 57 MiB and are rebuilt per memo miss), and the page's main thread.
+
+## 5. Outcome (2026-10-11)
+
+**C0, census** (`tools/theorycraft/203-sizer-census.test.ts`, `tools/theorycraft/out/203-sizer-census.md`; profile kernel
+counters `sizerCensus`). Timing fixture, one plan: 12 031 `sizerShape` misses (4 743 elite, 3 644 ms, 3 644 msRelaxed).
+Under `sizerShape` 23.2 % of the sampled planner time: `sizePool` 7.3 %, `journalDamage` 6.8 %, `killOrderBy` 2.8 %,
+`attackOrderOf` 2.1 %, the JS wrapper 2.0 %, `sizeStacks` 1.2 %.
+
+| key | calls | distinct | hits |
+|---|---:|---:|---:|
+| `sizePool` pool 0 (troops) | 12 045 | 15 | **99.9 %** (802 per entry); 59 bisection steps a call, 58 % of all steps |
+| `sizePool` pool 1 (authority) | 12 045 | 1 398 | 88.4 % (7.6 per entry); 43 % of steps in 1 and 2 together |
+| `sizePool` pool 2 (dominance) | 12 045 | 1 932 | 83.4 % (5.0 per entry) |
+| `sizeStacks` result | 12 045 | 2 409 | 80 % repeat the same **answer** |
+| `sizeStacks` whole **input** | 12 045 | 11 831 | 1.8 % |
+| relax start state | 3 644 | 360 | 90 % |
+| relax walk input (start state, caps, housing, step) | 3 644 | 3 583 | 1.7 % |
+
+The relaxed walk: 2.5 attempts and 14.5 `sizerScore` calls a walk; 18 % accept nothing. The answers repeat but the hired
+caps in the inputs differ, so no whole-call or whole-walk cache pays (≈ 2 %).
+
+**C1 built:** `sizeTroops`, a 16-entry round-robin table keyed on the bits of the slots' HP, cost and cap, the capacity
+and the spread; a hit copies the counts. `sizerPoolCache(mode)` / `sizerPoolCacheFlush()` are test-only exports (one
+binary, both arms). Gates: `tests/kernel/sizer-pool-cache-parity.test.ts` (42 cases: warm against flushed, door level;
+plan JSON cache on against off); red first on a key without caps and capacity in `plan-kernel.test.ts`' seeded
+`sizeStacks` cases (19 red), green restored; full suite 1 929 passed, no benchmark file changed. 204 A/B: **−6.2 % median**.
+
+**Not built, by the 3 % rule** (shares of the planner, timing fixture):
+
+- **C2** pools 1 and 2: 0.88 × 0.21 × 7.3 % + 0.83 × 0.22 × 7.3 % ≈ **2.7 %**.
+- **C3** bracketed bisection: after C1 only pools 1 and 2 bisect (≈ 3 % of the planner in total, a good part of it
+  ceiling shortcuts of ~22 steps): ≤ 1.5 %.
+- **C4** incremental kill and attack order in the walk: the two are 4.9 % of the planner whole, so ≈ 2–3 % realised;
+  the journals (6.8 %) stay. No bound-pruning proof exists.
+- **C5** the wrapper: 2.0 % self, an upper bound.
+
+**Leads the census opened (each wants its own story, none started):** (a) the two journal walks of `sizerScore` fused
+into one pass (`journalDamage` is 6.8 % and is called twice a score; the K6 idea, 196); (b) a relax-walk cache keyed on
+caps that cannot bind (the start state repeats 90 %, the full key 1.7 %: a key on the *effective* caps might); (c)
+`killOrderBy` at the end of every `sizeStacks` is half of the 12 045 results that repeat.

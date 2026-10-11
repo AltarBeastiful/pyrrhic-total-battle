@@ -178,6 +178,8 @@ export function setTable(ptr: usize): void {
   enemySquads = <i32>header(H_ENEMY_SQUADS);
   mode = <i32>header(H_MODE);
   templeDivisor = header(H_TEMPLE_DIVISOR);
+  pcLen = 0;
+  pcNext = 0;
   const n = <usize>max(types, 1);
   stackType = heap.alloc(n << 2);
   stackCount = heap.alloc(n << 3);
@@ -604,6 +606,69 @@ function recoveryBill(k: i32, outPtr: usize): void {
   store<f64>(outPtr + 24, jsRound(seconds));
 }
 
+// ---- the sizer's census (W20 C0, experiment 203) ----------------------------------------------------------
+//
+// Profile build only: `isDefined(CENSUS)` folds every line below away in the release wasm. Counts what the sizer
+// does per plan — calls by method, the bisection's steps, the relaxed walk — and logs one 64-bit hash per
+// `sizePool` input, per `sizeStacks` input and result, per relaxed-walk input, so the experiment can count distinct inputs (hits = calls −
+// distinct). The logs are reserved by `sizerShapeScratch` (a later grow would detach the caller's views).
+
+const CENSUS_LOGS: i32 = 7; // pool 0, 1, 2 inputs, results, relax start states, whole-call inputs, relax-walk inputs
+const CENSUS_LOG: i32 = 1 << 17; // hashes a log holds; a call past it is counted but not logged
+// scalar counters: 0..2 shape calls by method (elite, ms, msRelaxed), 3 shape calls with prefixAll,
+// 4..6 sizePool calls by pool, 7..9 bisection steps by pool, 10..12 fixed-point breaks by pool,
+// 13..15 ceiling shortcuts by pool, 16 relax calls, 17 attempts, 18 sizerScore calls (all but the opening),
+// 19 relax calls whose first attempt picks nothing, 20 relax calls whose first attempt does not improve,
+// 21 accepted attempts, 22 relax calls that accepted none, 23 sizeStacks results, 24 sizePool calls on 0 slots,
+// 25 troop-pool cache hits
+const CENSUS_COUNTERS: i32 = 26;
+let cnt: usize = 0; // f64 × CENSUS_COUNTERS
+let cLogs: usize = 0; // u64 × CENSUS_LOG × 5: pool 0, 1, 2 inputs, sizeStacks results, relax start states
+let cLogLen: usize = 0; // i32 × 5
+let cPool: i32 = -1; // the pool `sizePool` is sizing for `sizeStacks`, −1 outside it
+
+@inline function bump(i: i32): void {
+  if (isDefined(CENSUS) && cnt != 0) store<f64>(cnt + ((<usize>i) << 3), load<f64>(cnt + ((<usize>i) << 3)) + 1.0);
+}
+
+function censusReserve(): void {
+  if (!isDefined(CENSUS) || cnt != 0) return;
+  cnt = heap.alloc(<usize>CENSUS_COUNTERS << 3);
+  memory.fill(cnt, 0, <usize>CENSUS_COUNTERS << 3);
+  cLogs = heap.alloc((<usize>CENSUS_LOG * <usize>CENSUS_LOGS) << 3);
+  cLogLen = heap.alloc(<usize>CENSUS_LOGS << 2);
+  memory.fill(cLogLen, 0, <usize>CENSUS_LOGS << 2);
+}
+
+@inline function mix(h: u64, bits: u64): u64 {
+  return (h ^ bits) * 0x100000001b3;
+}
+
+function censusLog(log: i32, h: u64): void {
+  if (!isDefined(CENSUS) || cnt == 0) return;
+  const at = cLogLen + ((<usize>log) << 2);
+  const len = load<i32>(at);
+  if (len >= CENSUS_LOG) return;
+  store<u64>(cLogs + ((<usize>log * <usize>CENSUS_LOG + <usize>len) << 3), h);
+  store<i32>(at, len + 1);
+}
+
+/** **Test only** (profile build): zero the sizer's counters and logs. */
+export function sizerCensusReset(): i32 {
+  if (!isDefined(CENSUS) || cnt == 0) return 0;
+  memory.fill(cnt, 0, <usize>CENSUS_COUNTERS << 3);
+  memory.fill(cLogLen, 0, <usize>CENSUS_LOGS << 2);
+  return 1;
+}
+
+/** **Test only** (profile build): `[counters…]` at `outPtr`; answers the log base (u64 × CENSUS_LOG × 5), 0 if none. */
+export function sizerCensus(outPtr: usize): usize {
+  if (!isDefined(CENSUS) || cnt == 0) return 0;
+  memory.copy(outPtr, cnt, <usize>CENSUS_COUNTERS << 3);
+  memory.copy(outPtr + (<usize>CENSUS_COUNTERS << 3), cLogLen, <usize>CENSUS_LOGS << 2);
+  return cLogs;
+}
+
 // ---- the sizer's pool (`sizePool`, `src/engine/stacker.ts`) --------------------------------------------------
 
 /**
@@ -627,9 +692,12 @@ export function sizePool(
   for (let i = 0; i < n; i += 1) maxHp = max(maxHp, f64At(hpPtr, i));
   let low: f64 = 0;
   let high: f64 = hasCeiling ? ceiling : (capacity + 1) * max(maxHp, 1.0);
-  if (hasCeiling && usedAt(n, hpPtr, costPtr, capPtr, ceiling, spread) <= capacity) low = ceiling;
-  else {
+  if (hasCeiling && usedAt(n, hpPtr, costPtr, capPtr, ceiling, spread) <= capacity) {
+    low = ceiling;
+    if (isDefined(CENSUS) && cPool >= 0) bump(13 + cPool);
+  } else {
     for (let step = 0; step < 200; step += 1) {
+      if (isDefined(CENSUS) && cPool >= 0) bump(7 + cPool);
       const mid = (low + high) / 2;
       const wasLow = low;
       const wasHigh = high;
@@ -640,8 +708,10 @@ export function sizePool(
       if (
         reinterpret<u64>(low) == reinterpret<u64>(wasLow) &&
         reinterpret<u64>(high) == reinterpret<u64>(wasHigh)
-      )
+      ) {
+        if (isDefined(CENSUS) && cPool >= 0) bump(10 + cPool);
         break;
+      }
     }
   }
   const delta = spread * low;
@@ -685,6 +755,83 @@ function usedAt(n: i32, hpPtr: usize, costPtr: usize, capPtr: usize, ceilingHp: 
     sum = sum + count * f64At(costPtr, i);
   }
   return sum;
+}
+
+// ---- the troop pool, once per prefix (W20 C1, `docs/plans/sizer-track-c.md`) -------------------------------
+//
+// Pool 0 is sized the same way under every method and whatever the hired counts: its answer is a function of the
+// slots' HP, cost and cap, the capacity and the rank spread alone. A dozen distinct inputs meet 12 000 calls on the
+// timing fixture (experiment 203), so the counts are kept in a small table and copied on a hit. The key is the
+// input's bits, compared word for word, so a hit is the answer `sizePool` would have written; the cache is only
+// ever a copy.
+
+const POOL_CACHE_ENTRIES: i32 = 16;
+let pcOff: bool = false; // test only: `sizerPoolCache(1)` answers every call by `sizePool`
+let pcKey: usize = 0; // u64 × (3 + 3 × types) × entries: n, capacity, spread, then HP, cost, cap of each slot
+let pcCounts: usize = 0; // f64 × types × entries
+let pcLen: i32 = 0; // entries held
+let pcNext: i32 = 0; // the entry the next miss replaces (round robin)
+let pcWords: i32 = 0; // key words an entry holds
+
+/** **Test only**: 0 answers pool 0 through the cache (the default), 1 by `sizePool` every time. */
+export function sizerPoolCache(mode: i32): void {
+  pcOff = mode != 0;
+  pcLen = 0;
+  pcNext = 0;
+}
+
+/** **Test only**: forget every entry. */
+export function sizerPoolCacheFlush(): void {
+  pcLen = 0;
+  pcNext = 0;
+}
+
+function poolCacheReserve(n: usize): void {
+  if (pcKey != 0) return;
+  pcWords = 3 + <i32>(n * 3);
+  pcKey = heap.alloc((<usize>pcWords * (<usize>POOL_CACHE_ENTRIES + 1)) << 3); // the last is the probe
+  pcCounts = heap.alloc((n * <usize>POOL_CACHE_ENTRIES) << 3);
+}
+
+/** Pool 0 (`from = 0`, `n` slots) by the cache, or by `sizePoolOf` on a miss. */
+function sizeTroops(n: i32, capacity: f64): void {
+  if (pcOff || n == 0 || capacity <= 0) {
+    sizePoolOf(0, n, capacity, NaN, 0);
+    return;
+  }
+  // The key of this call, in the probe past the entries; a miss copies it over the entry it replaces.
+  const slot = pcNext;
+  const words = <usize>pcWords;
+  const key = pcKey + ((<usize>POOL_CACHE_ENTRIES * words) << 3);
+  store<u64>(key, <u64>n);
+  store<u64>(key + 8, reinterpret<u64>(capacity));
+  store<u64>(key + 16, reinterpret<u64>(zSpread));
+  for (let i = 0; i < n; i += 1) {
+    const at = key + ((3 + (<usize>i) * 3) << 3);
+    store<u64>(at, reinterpret<u64>(f64At(zHp, i)));
+    store<u64>(at + 8, reinterpret<u64>(f64At(zCost, i)));
+    store<u64>(at + 16, reinterpret<u64>(f64At(zCap, i)));
+  }
+  const used = <usize>(3 + n * 3);
+  for (let e = 0; e < pcLen; e += 1) {
+    const other = pcKey + ((<usize>e * words) << 3);
+    let same = true;
+    for (let w: usize = 0; w < used; w += 1) {
+      if (load<u64>(other + (w << 3)) != load<u64>(key + (w << 3))) {
+        same = false;
+        break;
+      }
+    }
+    if (!same) continue;
+    memory.copy(zCount, pcCounts + ((<usize>e * <usize>max(types, 1)) << 3), <usize>n << 3);
+    if (isDefined(CENSUS)) bump(25);
+    return;
+  }
+  sizePoolOf(0, n, capacity, NaN, 0);
+  memory.copy(pcKey + ((<usize>slot * words) << 3), key, used << 3);
+  memory.copy(pcCounts + ((<usize>slot * <usize>max(types, 1)) << 3), zCount, <usize>n << 3);
+  if (slot == pcLen) pcLen += 1;
+  pcNext = pcNext + 1 == POOL_CACHE_ENTRIES ? 0 : pcNext + 1;
 }
 
 // ---- the whole sizer (`sizeStacks`, `src/engine/stacker.ts`; AssemblyScript roadmap, step 3) -----------------
@@ -751,7 +898,10 @@ function killOrderBy(n: i32, rowsPtr: usize, countsPtr: usize, rankSlot: i32): i
  * order (total HP descending, the Elite rank on a tie), the two journal totals — into `zAvg` and `zMin`.
  */
 function sizerScore(n: i32): void {
-  if (isDefined(CENSUS)) cKillOrdersSizer += 1.0;
+  if (isDefined(CENSUS)) {
+    cKillOrdersSizer += 1.0;
+    bump(18);
+  }
   const k = killOrderBy(n, zRow, zCount, zRankSlot);
   attackOrderOf(k);
   const minimum = journalDamage(k, false);
@@ -773,11 +923,29 @@ function lowestOf(from: i32, to: i32): f64 {
 }
 
 /** `sizePool(slots, capacity, { ceiling })` on the slots `from … to − 1` (ceiling NaN for none). */
-function sizePoolOf(from: i32, to: i32, capacity: f64, ceiling: f64): void {
+function sizePoolOf(from: i32, to: i32, capacity: f64, ceiling: f64, pool: i32): void {
   for (let i = from; i < to; i += 1) store<f64>(zCount + ((<usize>i) << 3), 0.0);
-  if (to - from == 0 || capacity <= 0) return;
+  if (isDefined(CENSUS)) bump(4 + pool);
+  if (to - from == 0 || capacity <= 0) {
+    if (isDefined(CENSUS)) bump(24);
+    return;
+  }
   const off = <usize>from << 3;
+  if (isDefined(CENSUS)) {
+    let h: u64 = 0xcbf29ce484222325;
+    h = mix(h, <u64>(to - from));
+    for (let i = from; i < to; i += 1) {
+      h = mix(h, reinterpret<u64>(f64At(zHp, i)));
+      h = mix(h, reinterpret<u64>(f64At(zCost, i)));
+      h = mix(h, reinterpret<u64>(f64At(zCap, i)));
+    }
+    h = mix(h, reinterpret<u64>(capacity));
+    h = mix(h, reinterpret<u64>(ceiling));
+    censusLog(pool, h);
+    cPool = pool;
+  }
   sizePool(to - from, zHp + off, zCost + off, zCap + off, capacity, ceiling, zSpread, zCount + off);
+  if (isDefined(CENSUS)) cPool = -1;
 }
 
 /** `roundDownToChunks`: every count of the slots `from … to − 1` down to a multiple of ten. */
@@ -828,6 +996,14 @@ export function sizeStacks(
     zCost = heap.alloc(size << 3);
     zCap = heap.alloc(size << 3);
     zCount = heap.alloc(size << 3);
+    poolCacheReserve(size);
+  }
+  if (isDefined(CENSUS)) {
+    let h: u64 = 0xcbf29ce484222325;
+    h = mix(mix(mix(h, <u64>n), <u64>flags), reinterpret<u64>(spread));
+    h = mix(mix(mix(h, reinterpret<u64>(housingLeadership)), reinterpret<u64>(housingAuthority)), reinterpret<u64>(housingDominance));
+    for (let i = 0; i < n; i += 1) h = mix(mix(h, <u64>i32At(rowsPtr, i)), reinterpret<u64>(f64At(capsPtr, i)));
+    censusLog(5, h);
   }
   zSpread = spread;
   zRankSlot = T_ELITE_RANK;
@@ -878,11 +1054,11 @@ export function sizeStacks(
   const ms = (flags & F_MS) != 0;
   const roundTo10 = (flags & F_ROUND_TO_10) != 0;
 
-  sizePoolOf(0, endLeadership, housingLeadership, NaN);
+  sizeTroops(endLeadership, housingLeadership);
   const troopFloor = lowestOf(0, endLeadership);
   const hasFloor = !isNaN(troopFloor);
   const mercCeiling: f64 = ms && hasFloor ? troopFloor - 1 : NaN;
-  sizePoolOf(endLeadership, endAuthority, housingAuthority, mercCeiling);
+  sizePoolOf(endLeadership, endAuthority, housingAuthority, mercCeiling, 1);
   if (roundTo10) roundDownOf(endLeadership, endAuthority);
 
   let monsterCeiling: f64 = NaN;
@@ -901,7 +1077,7 @@ export function sizeStacks(
       hasMonsterCeiling = true;
     }
   }
-  sizePoolOf(endAuthority, n, housingDominance, monsterCeiling);
+  sizePoolOf(endAuthority, n, housingDominance, monsterCeiling, 2);
   if (roundTo10) roundDownOf(endAuthority, n);
 
   if (ms && (flags & F_RELAXED) != 0 && endLeadership < n) {
@@ -909,10 +1085,24 @@ export function sizeStacks(
     const step: f64 = roundTo10 ? CHUNK : 1;
     let usedAuthority = usageOf(endLeadership, endAuthority);
     let usedDominance = usageOf(endAuthority, n);
+    if (isDefined(CENSUS)) {
+      bump(16);
+      let h: u64 = 0xcbf29ce484222325;
+      for (let i = 0; i < n; i += 1) h = mix(mix(h, <u64>i32At(zRow, i)), reinterpret<u64>(f64At(zCount, i)));
+      censusLog(4, h);
+      for (let i = 0; i < n; i += 1) h = mix(h, reinterpret<u64>(f64At(zCap, i)));
+      h = mix(mix(h, reinterpret<u64>(housingAuthority)), reinterpret<u64>(housingDominance));
+      h = mix(h, <u64>endLeadership);
+      h = mix(h, <u64>endAuthority);
+      h = mix(h, reinterpret<u64>(step));
+      censusLog(6, h);
+    }
     sizerScore(n);
     let currentAvg = zAvg;
     let currentMin = zMin;
+    let accepted = 0;
     for (let attempt = 0; attempt < MAX_RELAX_STEPS; attempt += 1) {
+      if (isDefined(CENSUS)) bump(17);
       let chosen = -1;
       let chosenAvg: f64 = 0;
       let chosenMin: f64 = 0;
@@ -933,8 +1123,16 @@ export function sizeStacks(
           chosenMin = zMin;
         }
       }
-      if (chosen < 0) break;
-      if (chosenAvg <= currentAvg || chosenMin <= currentMin) break;
+      if (chosen < 0) {
+        if (isDefined(CENSUS) && attempt == 0) bump(19);
+        break;
+      }
+      if (chosenAvg <= currentAvg || chosenMin <= currentMin) {
+        if (isDefined(CENSUS) && attempt == 0) bump(20);
+        break;
+      }
+      accepted += 1;
+      if (isDefined(CENSUS)) bump(21);
       const at = zCount + ((<usize>chosen) << 3);
       store<f64>(at, load<f64>(at) + step);
       if (chosen < endAuthority) usedAuthority += f64At(zCost, chosen) * step;
@@ -942,11 +1140,18 @@ export function sizeStacks(
       currentAvg = chosenAvg;
       currentMin = chosenMin;
     }
+    if (isDefined(CENSUS) && accepted == 0) bump(22);
   }
 
   // `buildStacks`: the live slots, total HP descending, the rank on a tie.
   if (isDefined(CENSUS)) cKillOrdersSizer += 1.0;
   const k = killOrderBy(n, zRow, zCount, rankSlot);
+  if (isDefined(CENSUS)) {
+    bump(23);
+    let h: u64 = 0xcbf29ce484222325;
+    for (let s = 0; s < k; s += 1) h = mix(mix(h, <u64>i32At(stackType, s)), reinterpret<u64>(f64At(stackCount, s)));
+    censusLog(3, h);
+  }
   for (let s = 0; s < k; s += 1) {
     store<i32>(outRowsPtr + ((<usize>s) << 2), i32At(stackType, s));
     store<f64>(outCountsPtr + ((<usize>s) << 3), f64At(stackCount, s));
@@ -986,6 +1191,7 @@ export function sizerShapeScratch(slot: i32): usize {
       const bytes: usize = s == S_HIRED_LEN ? 4 : s == S_MERC || s == S_CAP || s == S_CAPS || s == S_SIZED_COUNTS || s == S_RUNG_COUNTS || s == S_HIRED_COUNTS ? n << 3 : n << 2;
       store<usize>(sDir + ((<usize>s) << 2), heap.alloc(bytes));
     }
+    censusReserve();
     // The sizer's own scratch, reserved now so no later call grows the memory under the caller's views.
     if (zRow == 0) {
       zRow = heap.alloc(n << 2);
@@ -994,6 +1200,7 @@ export function sizerShapeScratch(slot: i32): usize {
       zCap = heap.alloc(n << 3);
       zCount = heap.alloc(n << 3);
     }
+    poolCacheReserve(n);
   }
   return sPtr(slot);
 }
@@ -1013,6 +1220,10 @@ export function sizerShapeScratch(slot: i32): usize {
  * `S_HIRED_LEN`), or −1 where `sizeStacks` answers −1 (the engine then runs the TypeScript).
  */
 export function sizerShape(prefixAll: i32, hL: f64, hA: f64, hD: f64, flags: i32, spread: f64): i32 {
+  if (isDefined(CENSUS)) {
+    bump((flags & F_MS) == 0 ? 0 : (flags & F_RELAXED) == 0 ? 1 : 2);
+    if (prefixAll != 0) bump(3);
+  }
   const mark = sPtr(S_MARK);
   const merc = sPtr(S_MERC);
   const baseCap = sPtr(S_CAP);
