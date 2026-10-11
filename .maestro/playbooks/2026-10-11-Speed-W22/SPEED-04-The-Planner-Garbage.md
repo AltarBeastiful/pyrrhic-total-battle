@@ -28,9 +28,9 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
 
 - [x] Fix the second site, the same way. Commit: `Planner: <site> without garbage (W22 step 4b)`.
 
-- [ ] Fix the third site only if 206 projects it ≥ 2 % of the planner. Commit: `(W22 step 4c)`.
+- [x] Fix the third site only if 206 projects it ≥ 2 % of the planner. Commit: `(W22 step 4c)`. WON'T DO: no remaining site projects ≥ 2 % (see Notes).
 
-- [ ] Fill "after 4" in `docs/plans/next-speed.md` §3 (production split harness ×3, hash unchanged), and the
+- [x] Fill "after 4" in `docs/plans/next-speed.md` §3 (production split harness ×3, hash unchanged), and the
   allocated MiB per plan and GC pause ms before and after in Notes. Commit the doc: `W22: the planner's garbage measured`.
 
 ## Notes
@@ -54,3 +54,5 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
   CPU +26.8 % (noise), wall −4.4 % (q1 +0.9 %), GC −3.0 %. Not reproducible, GC pauses unchanged at 11: reverted
   (WON'T DO, under the 2 % bar). The remaining top sites are either memoised results (`sizerShape` door, `sizerKeptOf`
   kept records: retained, not garbage) or each ≤ 1.9 % of allocation, so 4c (needs ≥ 2 % projected) is also WON'T DO.
+- Step 5 (docs): after 4 production, 3 runs: min wall 13 577 ms, pool CPU 73.7–76.5 s, Tight 37.5–38.6 s, planner 34.0–35.8 s,
+  hash a9c9defd5d22 unchanged (`Working/w22/prod-after-04.txt`; machine slower than earlier re-runs, so 4a's in-process gain is not visible at this noise).
