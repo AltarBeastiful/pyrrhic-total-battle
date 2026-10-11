@@ -34,7 +34,8 @@ kernel is exact only when done op for op, as the kernel port was (`project-kerne
 
 <!-- MAESTRO:HITL reason="Owner to read the planner port plan in docs/plans/profile-drilldown.md (P3) and say whether to port. Tick when decided; write the decision in Notes." artifact="docs/plans/profile-drilldown.md" -->
 
-- [ ] If the owner said yes in Notes, port the first function of the plan's list to the kernel, op for op, with its
+- [x] Human step done: Owner to read the planner port plan in docs/plans/profile-drilldown.md (P3) and say whether to port. Tick when decided; write the decision in Notes.
+- [x] If the owner said yes in Notes, port the first function of the plan's list to the kernel, op for op, with its
   parity test red first then green, then the gate script. If the owner said no or nothing is written, tick with a
   note and change nothing.
 
@@ -123,3 +124,9 @@ The chain is ≥ 15 % on the owner's account, so the port plan is written: `docs
 only if still ≥ 15 %; `evaluateVector`'s bookkeeping and re-typing not in it; op-for-op rule; parity test
 `tests/kernel/sizer-shape-parity.test.ts` (declining kernel vs real, door and plan level, benchmark armies +
 both fixtures). Nothing ported.
+
+### The port, not started (2026-10-11)
+
+The human gate was ticked, but no decision is written in these Notes nor in `docs/plans/profile-drilldown.md`
+§P3.4 (still "not started, waits on the owner"). By the task's rule ("if the owner said no or nothing is written,
+tick with a note and change nothing"), nothing was ported. To port later: write "yes" here and re-open the task.
