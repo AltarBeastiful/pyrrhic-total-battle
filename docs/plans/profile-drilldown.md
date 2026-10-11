@@ -62,6 +62,15 @@ each time.
 `prefixFielded`: allocation and string keys. GC is 2.7 %; the long *Sweeping* / *Incremental Mark-Compact*
 slices on the workers are concurrent spans, not CPU.
 
+**Re-measured without a profiler (Drill 04b, 2026-10-11).** The same four passes on the timing fixture, production
+`vite build` (release kernel, census and `DEEP_PROFILING` folded out) served by `vite preview`, headless Chromium,
+6 workers, no profiler attached, a `performance.now()` split around each job, `positionTrades` and `planCampaign`
+(harness in `.maestro/playbooks/Working/w18/prod/`, no change to `src/`): four passes **11,231 ms** wall (min of 3,
+answer hash `a9612b9ca0a9`), pool CPU 62.8–64.9 s, of which the **Tight raise is 14.5–14.7 s = 22.6–23.0 %** and
+`planCampaign` **76.2–76.6 %**. In-process (experiment 196, profile kernel) Tight is 12.8 %. The trace's 49 % above is
+an artefact of the `dev:profile` build under sampling; the planner is the larger lever. No census-free flag turns
+Tight off, so no Tight-off run was made. Details: `DRILL-04b-Boundary-Measure.md` Notes.
+
 ### 0.3 Where the wall clock is lost (the 5.4 s)
 
 1. **A serial baseline at the head of every pass**: `runAdvisor` and `runCaptainAdvice` plan the baseline alone

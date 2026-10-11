@@ -35,7 +35,7 @@ The boundary has three parts, and each is measured separately, not summed by gue
   test receives from `createPlanKernel` (or time from outside through `planCampaign`). Record the figures in 198's
   report. Commit with the test: `Experiment 198b: the glue of each kernel door (W18 P3.0)`.
 
-- [ ] Settle the Tight share. Run the profiler-free browser timing that `docs/plans/profile-drilldown.md` §0.2 asks for:
+- [x] Settle the Tight share. Run the profiler-free browser timing that `docs/plans/profile-drilldown.md` §0.2 asks for:
   `.maestro/playbooks/Working/w18/passes.mjs` on the timing fixture (no `--cpu-prof`, no `dev:profile` build: the
   production `pnpm build` served by `pnpm preview` on a free port), and a second run with the Tight raise disabled
   through the census-free flag only if one exists (otherwise compare with 196's figures and say so). Write the Tight
@@ -129,3 +129,46 @@ whole is 8 % (≤ 16 %), spread over four doors. On the exactness fixture one do
 fixture is not the one the next tasks rank on, but the decision task should name it. Timed plans run ~1.5× the
 untimed wall (instrumentation), so per-door figures carry that noise; the calibrated column is the estimate,
 the upper bound the ceiling.
+
+### The Tight share, settled in a profiler-free browser run (2026-10-11)
+
+`passes.mjs` imports `/src/…` modules, which only Vite's dev server serves, so the same page body was built as a
+**production harness**: `.maestro/playbooks/Working/w18/prod/run.mjs` runs `vite build` in mode `production`
+(minified, `import.meta.env.DEV` false, no `VITE_PROFILING`, so `DEEP_PROFILING` and the census fold out; release
+kernel from `pnpm kernel:build`, sha256 `27add2d6…`), serves it with `vite preview` on a free port, and drives it in
+headless Chromium with no profiler attached. Timing fixture, real pool of 6 module workers, no clock, one warm-up then
+3 runs. `SPLIT=1` builds the same harness with three `resolveId` swaps (no change to `src/`): `calc.worker.ts`'s
+`./jobs` → a wrapper timing each job, and `jobs.ts`'s `positionTrades` (the Tight raise, `shownMarch`) and
+`planCampaign` → `performance.now()`-timed wrappers; each job broadcasts its split on a `BroadcastChannel`.
+Outputs: `Working/w18/d04b-prod-plain.txt`, `Working/w18/d04b-prod-split.txt`.
+
+| Timing fixture, production build, browser | Plain build | Split build |
+|---|---:|---:|
+| Four passes, wall (min of 3) | **11,231 ms** (upgrades 3,520 · captains 4,829 · other 2,883) | 12,124 ms (3,874 · 5,136 · 3,115) |
+| Answer hash / cuts | `a9612b9ca0a9` (= Drill 03) / 0 | `a9612b9ca0a9` / 0 |
+| Pool CPU (Σ job time, 106 jobs a run) | — | 62.8 – 64.9 s |
+| **Tight raise (`positionTrades`)** | — | **14.5 – 14.7 s = 22.6 – 23.0 % of pool CPU** (685 calls, 21 ms a call) |
+| … per pass | — | upgrades 23.4 – 24.0 % · captains 18.6 – 19.0 % · other 27.2 – 28.2 % |
+| `planCampaign` | — | 47.8 – 49.7 s = **76.2 – 76.6 %** |
+| Rest (job glue, `readProbe` outside Tight, captain screen) | — | 0.8 % |
+
+The split build is ~8 % slower in wall than the plain one (only ~1,000 timer pairs a run, so mostly run-to-run noise
+plus the broadcast); the shares are what it is for, the plain wall is the production figure.
+
+**No census-free flag disables the Tight raise** (Tight is only switched off through the census or the stores), so the
+second run was not made; the comparison is with 196's in-process figures instead:
+
+| Where | Tight raise | Its denominator | Share |
+|---|---:|---|---:|
+| Owner's trace (dev React, `dev:profile` kernel, DevTools sampling) | — | busy pool CPU, samples | **49.1 %** |
+| **Browser, production build, no profiler (this run)** | **14.6 s** | pool CPU 64 s | **22.7 %** |
+| 196 in-process, Drill 04 rerun (profile kernel, one lane) | 11.2 s | run CPU 86.9 s | 12.8 % |
+
+Reading: the Tight raise costs about the same absolute time in the browser and in-process (14.6 s vs 11.2 s, 690 vs
+685 calls), but the **planner is far cheaper on the release kernel in the browser** (48 s vs ~70 s of the in-process
+run on the profile kernel, which carries the census hooks), so Tight's share is 22.7 %, between the two earlier
+figures. The trace's 49 % is a profiler artefact of the `dev:profile` build (named, unoptimised kernel under
+sampling), not the production cost. Consequences: the planner (`planCampaign`, 76 %) is still the larger lever, which
+is Drill 05's premise; on the browser clock K2 scales to ≈ 22.7 % × 18.0 % × 0.63 ≈ **2.6 %** of pool CPU (over its
+2 % refactor bar, if the trace's kill-order share holds on the release kernel; worth re-checking before re-opening),
+and K5 on the kernel input key to ≈ 1.05 % × 22.7 / 12.8 ≈ **1.9 %**, still under the 3 % cache bar.

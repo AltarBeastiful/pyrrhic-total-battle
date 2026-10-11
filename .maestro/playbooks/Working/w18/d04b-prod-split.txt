@@ -1,0 +1,21 @@
+SPLIT build (mode production, dev false), http://127.0.0.1:33533/
+pool size 6, 3 runs after a warm-up, cores 16
+upgrades: min 3874 ms (3874 · 3922 · 4009)
+captainAdvice: min 1742 ms (1759 · 1764 · 1742)
+captains: min 5136 ms (5136 · 5228 · 5215)
+other: min 3115 ms (3115 · 3242 · 3211)
+all passes: min 12124 ms (12124 · 12392 · 12435)
+cuts 0,0,0, screenCut false,false,false
+answer hash a9612b9ca0a9
+run 1 upgrades: 34 jobs, pool CPU 21813 ms; Tight 5197 ms (23.8 %, 186 calls); planCampaign 16537 ms (75.8 %); rest 0.4 %
+run 1 captains: 46 jobs, pool CPU 24877 ms; Tight 4737 ms (19.0 %, 330 calls); planCampaign 19765 ms (79.5 %); rest 1.5 %
+run 1 other: 26 jobs, pool CPU 16100 ms; Tight 4532 ms (28.2 %, 169 calls); planCampaign 11513 ms (71.5 %); rest 0.3 %
+run 1 all: 106 jobs, pool CPU 62790 ms; Tight 14467 ms (23.0 %, 685 calls); planCampaign 47815 ms (76.2 %); rest 0.8 %
+run 2 upgrades: 34 jobs, pool CPU 22018 ms; Tight 5280 ms (24.0 %, 186 calls); planCampaign 16662 ms (75.7 %); rest 0.3 %
+run 2 captains: 46 jobs, pool CPU 25736 ms; Tight 4796 ms (18.6 %, 330 calls); planCampaign 20556 ms (79.9 %); rest 1.5 %
+run 2 other: 26 jobs, pool CPU 16752 ms; Tight 4560 ms (27.2 %, 169 calls); planCampaign 12132 ms (72.4 %); rest 0.4 %
+run 2 all: 106 jobs, pool CPU 64506 ms; Tight 14636 ms (22.7 %, 685 calls); planCampaign 49350 ms (76.5 %); rest 0.8 %
+run 3 upgrades: 34 jobs, pool CPU 22725 ms; Tight 5324 ms (23.4 %, 186 calls); planCampaign 17324 ms (76.2 %); rest 0.3 %
+run 3 captains: 46 jobs, pool CPU 25441 ms; Tight 4722 ms (18.6 %, 330 calls); planCampaign 20315 ms (79.9 %); rest 1.6 %
+run 3 other: 26 jobs, pool CPU 16756 ms; Tight 4627 ms (27.6 %, 169 calls); planCampaign 12074 ms (72.1 %); rest 0.3 %
+run 3 all: 106 jobs, pool CPU 64921 ms; Tight 14673 ms (22.6 %, 685 calls); planCampaign 49713 ms (76.6 %); rest 0.8 %
