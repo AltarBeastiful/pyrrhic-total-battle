@@ -101,7 +101,8 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
   // what the shelter allows. A sizer's march has nothing left to give (`stacker.ts:81-98`). The plan itself
   // is read as the object it is — its identity is what the tables under it are filed under, one level down
   // (`positionsSearch.ts`), and `null` is the whole of what the two lines below need from it.
-  const plan = useRunStore((state) => state.plan);
+  // While a Generate runs, the march still on screen is read against the plan it came from (`shownPlan`).
+  const plan = useRunStore((state) => state.plan ?? state.shownPlan?.plan ?? null);
   const planned = plan !== null;
 
   // The store hands out the same profile and setup objects until one of them is edited, so this is
@@ -125,7 +126,9 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
    * the bar's pricing as well, so the block under the fold and the control in the summary are answered by one
    * run of one job a stop. `pricing` is the table **on its way**, which is a fact of its own (`PricedRaise`).
    */
-  const position = useRunStore((state) => state.planPick);
+  const position = useRunStore((state) =>
+    state.plan === null && state.shownPlan !== null ? state.shownPlan.planPick : state.planPick,
+  );
   const { counts: priced, trades, pricing } = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
   const { counts: exhaustiveCounts, running: waiting } = useRaiseSearch(
     /**

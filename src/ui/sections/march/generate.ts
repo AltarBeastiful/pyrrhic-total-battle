@@ -220,11 +220,13 @@ export async function runGenerate(): Promise<void> {
       baseline: tradeoffFigures(found.baseline.summary),
     });
   } catch (error) {
-    useRunStore.getState().finish([]);
     if (isAbortError(error)) {
-      useResultStore.getState().setRunning(false);
+      // A run that was stopped leaves the march on screen as it was, Tight included: `finish` would drop the
+      // plan it is read against (`shownPlan`) — and, when a newer Generate is what stopped it, that run's own.
+      if (useRunStore.getState().controller === null) useResultStore.getState().setRunning(false);
       return;
     }
+    useRunStore.getState().finish([]);
     useResultStore.getState().setError(refusalOf(error));
   }
 }

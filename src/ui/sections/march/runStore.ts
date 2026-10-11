@@ -278,6 +278,14 @@ export interface RunState {
   planPick: PlanPosition;
   setPlanPick: (pick: PlanPosition) => void;
   /**
+   * **The plan the march on screen was drawn from, held while a Generate runs** (owner, 2026-10-11: *"the
+   * battle summary switches to as-is numbers while the generation is going on even if tight is selected"*).
+   * `start` clears `plan`, which stops the passes that hang off it, but the previous march stays on screen
+   * until the new one lands — and without its plan the March cannot read its Tight row and falls back to the
+   * plan's own counts. The March alone reads this (`useMarch`); `finish` and `reset` drop it.
+   */
+  shownPlan: { plan: CampaignPlan; planPick: PlanPosition } | null;
+  /**
    * The stop the player last moved the bar to, and what kind of answer it was (`openingPosition`). It
    * outlives the run it was chosen in — that is the whole of its job — and, like the rest of this store, it
    * is never stored, shared or synced: a reload opens on the engine's recommendation again.
@@ -335,6 +343,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   tradeoff: null,
   plan: null,
   planPick: 0,
+  shownPlan: null,
   chosenStop: null,
   raiseModes: DEFAULT_RAISE,
   controller: null,
@@ -342,7 +351,10 @@ export const useRunStore = create<RunState>()((set, get) => ({
     set({ resize });
   },
   start: (controller, fingerprint) => {
+    const { plan, planPick, shownPlan } = get();
     set({
+      // A run started over another one still in flight keeps the plan of the march that is on screen.
+      shownPlan: plan === null ? shownPlan : { plan, planPick },
       controller,
       progress: null,
       // A fresh solve is not an edit of the previous one, so the mode the last one left on goes off
@@ -372,6 +384,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       resize: null,
       tradeoff,
       plan,
+      shownPlan: null,
       // A fresh plan opens where the player last left the bar, and on the one the engine recommends until
       // they have moved it at all (`openingPosition`) — never at the cheap end of the frontier.
       planPick: plan === null ? 0 : openingPosition(plan, get().chosenStop),
@@ -445,6 +458,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       tradeoff: null,
       plan: null,
       planPick: 0,
+      shownPlan: null,
       // Another account is another army, so the stop it would open on means nothing here — and neither
       // does a count the previous one asked to raise its hired stacks to.
       chosenStop: null,

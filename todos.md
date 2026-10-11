@@ -35,6 +35,41 @@ A few ideas in random order, to verify plan and validate:
 - maybe creating a quick change to numbers of mercs dying, at least giving some options. sometimes a heroe level increase or more leadership just make the merc dies go up too much and I would like to fine tune it sometimes. Only give me the best options tough and don't let me get lower than merc saver. Lets first check if theres spikes when moving that number
 - Teaking the melee health, I discovered that sometimes we offer a way lesser trade, for example using the json below, I get a march with spIII and SW1 left out, if I add back SW1 I get 27M damage for dominance (so gold for reviving), mercs and silver. And the only way to get this trade tight now, is moving up the ladder in the table to next trade for more mercs. SO it might not be a problem but putting back troops seems to stack way too much mercs. and the only way to get good damage is to up hte mercs dead by 2-4 using the table. Might be linked to the mercs slider, but also users might feel that its hard to obtain. Maybe solution would be to help the user with another list of trades ? or an alternative one to let him understand why that trade can't be made with those settings. Its just weird as a user to improve a research, regenrate and get its damage cut in half in a seamlinglt bad trade. 
 [text](pyrrhic-my-account-2026-10-07.json)
+- UI sometimes on mobile, hearoe tooltip opens and closes immediatly
+- when clicking generate, battle summary quickly changes to other numbers when waiting the generation
+- few times, adding one merc is still possible and adds a ton of damage (ex: 20 to 30 1m damage no loss on other criterias so not enough mercs were sheltered, maybe something to try SP1 1468
+SW2 1391
+SW1 2497
+SP2 812
+RD1 856
+SP3 455
+ARC2 949
+ARC1 1703
+RD2 472
+ARC3 531
+RD3 264
+SG 21
+ED 24
+WE 52
+BB 25
+EMH6 30)
+
+again with this march, tweaked SP3 864
+RD2 691
+RD1 1219
+SW2 2714
+ARC1 2666
+RD3 359
+ARC3 801
+ARC2 1397
+ED 37
+SG 32
+WE 80
+BB 31
+EMH6 47
+- UI: minus/plus buttons for heroe level
+- Not sure best captains is wht were looking for, we dont want to change captain with the same march, we want to generate march with each captain combination to get the best ones across the board
+- with the new propositions, we sometimes get the plan gets worse here: search issue (re-planned 19M) wht is it and how to fix it or is there something to fix?
 - [done, tight default 1cb2ac9] Tight almost alwyas feels better than as is and no other even compares as they always use more mercs. Lets first check if we cna optimize tight further to get better trades, then lets move it as default; removing the table and other options on the selector; lets keep as is for now, but lets add a hover to preview the trade it offers (usually a bit less gold and less damage), showing only silver, gold and damage.
 - [done 2026-10-10, Critical 04; 12 units open as B-13] [UI] order troops as they appear in the battle selection. and allow to switch to order by health from hte battle summary.
 - [done 2026-10-10, Critical 01] when logged out and logged in don't import the local profile each time. If possible lets import only if we create an account, lot when logging in. Logging in should just silently overwrite the profile with the account profile. Logging out should just puts us back to a new profile.
