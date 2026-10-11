@@ -232,7 +232,7 @@ describe('runAdvisor: the pass over the pool', () => {
   }
 
   test(
-    'a screened pass reads the survivors by Tight on the screen\'s own bars, exactly as an unscreened pass does',
+    "a screened pass reads the survivors by Tight on the screen's own bars, exactly as an unscreened pass does",
     async () => {
       const input = campaign();
       const probes = probesOf(input);

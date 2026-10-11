@@ -290,14 +290,18 @@ export async function runAdvisor(
   });
   const tight = sortOutcomes(second.probed, picked, infos);
   const rows = new Map<number, AdvisorRow>();
-  for (const [index, row] of sorted.rows) rows.set(index, tight.rows.get(index) ?? { ...row, screened: true });
+  for (const [index, row] of sorted.rows)
+    rows.set(index, tight.rows.get(index) ?? { ...row, screened: true });
   // A survivor the clock or a failure stopped in the second stage did not finish: cut or failed, not screened.
   for (const index of [...tight.cut, ...tight.failed.map((one) => one.index)]) rows.delete(index);
   if (second.first?.kind !== 'done') {
     // No Tight baseline to read against: the screen's rows stand, each marked as screened.
     return {
       baseline: first.first.value.stops,
-      rows: rankAdvice(inOrder(new Map([...sorted.rows].map(([i, row]) => [i, { ...row, screened: true }]))), options.headline),
+      rows: rankAdvice(
+        inOrder(new Map([...sorted.rows].map(([i, row]) => [i, { ...row, screened: true }]))),
+        options.headline,
+      ),
       cut: cutOf(),
       failed: failedOf(),
     };
