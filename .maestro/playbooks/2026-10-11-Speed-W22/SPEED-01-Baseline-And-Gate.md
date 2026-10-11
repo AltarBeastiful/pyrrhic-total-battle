@@ -59,7 +59,7 @@ Plan: `docs/plans/next-speed.md` (read §0 first: the measured figures and why t
   `tools/theorycraft/out/205-the-rating-census.md`. This sizes SPEED-02's two steps. Commit:
   `Experiment 205: the rating's kill orders and bills, counted (W22)`.
 
-- [ ] Time every job, and name the tail. On the 10-11 export, in-process (one lane, no clock), time every job of
+- [x] Time every job, and name the tail. On the 10-11 export, in-process (one lane, no clock), time every job of
   every pass (`runProbe`, the captains jobs, the baselines) with `performance.now()`, split into `planCampaign` and
   `positionTrades`. Save one row per job to `Working/w22/job-times-1011.json`: pass, probe id, kind, total ms, plan
   ms, Tight ms, Tight calls, plus **every input feature that could predict the cost** (the probe's plan input:
@@ -131,3 +131,25 @@ On the 10-11 export, 921 Tight raises:
   rating may also repeat the previous battle's vector, so the share of misses reads 105 % there), 78.9 % one type
   moved, 83.8 % of recovery stacks unchanged.
 - 196 only had its type list adjusted for the new fields.
+
+### Task 4: per-job times and inputs, experiment 206 (done)
+
+`tools/theorycraft/206-the-job-times.test.ts` (`THEORY=1`, release kernel, one inline lane, no clock; `vi.mock`
+wraps `planCampaign` and `positionTrades` and the lane resets the two sums per job, as the production split does).
+Rows: pass, kind, probe id and family, total / plan / Tight ms and Tight calls, `inputs` (plan features: unit types,
+hired types and stock, leadership / authority / dominance, horizon, silver budget, flags; bar stops, reading,
+reread, changes-the-troop-set, trios and stops for the captain screen) and `observed` (stops, types fielded). Files
+(scratch, not committed): `Working/w22/job-times-1011.json`, `job-times-1007.json`.
+
+| export | jobs | median | longest | longest ÷ median | per pass: jobs / sum / longest (ms) |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 10-11 | 138 | 394 ms | 1 279 ms | 3.2× | upgrades 30 / 10 645 / 640 · captains 82 / 33 336 / 1 279 · other 20 / 9 124 / 689 |
+| 10-07 | 102 | 499 ms | 889 ms | 1.8× | upgrades 30 / 15 975 / 625 · captains 46 / 17 486 / 698 · other 20 / 11 063 / 889 |
+
+The 10 longest on 10-11 (ms: total · plan · Tight in calls), all captain-upgrade probes: `captain:alexander:level10`
+1 279 · 272 · 1 001 (9); `captain:bernard:level` 943 · 215 · 726 (9); `captain:alexander:level` 828 · 276 · 550 (10);
+`captain:aydae:star` 749 · 377 · 370 (10); `captain:bernard:star` 732 · 250 · 480 (10); `captain:beowulf:star`
+727 · 192 · 534 (7); `captain:minamoto:level` 717 · 291 · 424 (9); `captain:brunhild:level10` 712 · 187 · 524 (10);
+`captain:minamoto:star` 707 · 241 · 461 (8); `captain:leonidas:level10` 701 · 275 · 425 (10). The tail is the
+captains pass (59 upgrade probes + 22 screen jobs); in-process job sums (53.7 s) sit under the 83 s CPU because the
+CPU figure also counts scoring and GC outside the jobs. The longest is written into plan §1 step 6.

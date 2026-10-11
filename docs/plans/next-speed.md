@@ -122,6 +122,12 @@ before it runs**, so jobs go out longest first from the first Generate:
 
 - **Time every job** with its input features on the 10-11 export, the 10-07 export and the benchmark armies
   (SPEED-01).
+  **Measured (experiment 206, 2026-10-12, in-process, one lane, release kernel):** 138 jobs on the 10-11 export,
+  median 394 ms, **longest 1 279 ms (`captain:alexander:level10`, captain upgrades, 3.2× the median;** plan 272 ms,
+  Tight 1 001 ms in 9 calls); next `captain:bernard:level` 943 ms, `captain:alexander:level` 828 ms. The 10-07
+  export: 102 jobs, median 499 ms, longest 889 ms (1.8×). Rows: `Working/w22/job-times-{1011,1007}.json`. The longest
+  job is far below its pass's CPU / workers (captains 33.3 s / 6 = 5.6 s), so the "split the big probe" clause does
+  not apply to these two accounts; the tail is a matter of order, not of a big job.
 - **Fit `estimateCost`** (`src/worker/jobCost.ts`): pure, cheap, a ranking not a duration. Fitted on the 10-11
   export and the armies, checked on the held-out 10-07 export (experiment 207): Spearman ρ, the measured top 3 in
   the estimated top 6, and the simulated wall against list order and the measured-longest-first ideal.
