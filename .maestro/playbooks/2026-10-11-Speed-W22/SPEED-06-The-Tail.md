@@ -29,7 +29,7 @@ no history, no device) so a given account always gets the same order and the sam
   stops, whether the probe changes the troop set, the job kind (probe, captains screen, confirm trio, baseline).
   Write in Notes the 3 longest jobs of the 10-11 export, what they ask, and which features set them apart. No code.
 
-- [ ] Write the estimate. `src/worker/jobCost.ts`: `estimateCost(job: ProbeInput | …): number`, a relative cost
+- [x] Write the estimate. `src/worker/jobCost.ts`: `estimateCost(job: ProbeInput | …): number`, a relative cost
   from the features above, kept simple (a product or sum of a few terms with fitted exponents or weights, written
   as constants with a comment saying where they were fitted), cheap (well under 1 ms a job, computed on the main
   thread before dispatch), and pure. Fit it on the 10-11 export and the benchmark armies; **hold out the 10-07
@@ -42,7 +42,7 @@ no history, no device) so a given account always gets the same order and the sam
   Unit tests for `estimateCost` (monotone in each feature it uses, deterministic). Commit:
   `Worker: a relative cost estimate per advisor job, fitted (W22, experiment 207)`.
 
-- [ ] Order the passes by it, on a branch `w22-cost-order`. Reuse the order plumbing of `w18-p13-longest-first`
+- [x] Order the passes by it, on a branch `w22-cost-order`. Reuse the order plumbing of `w18-p13-longest-first`
   (`src/worker/jobOrder.ts`: `longestFirst`, `mapInOrder`, answers and `onSettled` indices back in the caller's
   order), but take the costs from `estimateCost` only, never from past times. Apply it in `runAdvisor` (the baseline
   first, then probes longest first) and `runCaptainAdvice` (confirm trios), and in `runCaptainUpgrades` if 207
@@ -51,7 +51,7 @@ no history, no device) so a given account always gets the same order and the sam
   them beside 207's simulated walls. Then `passes.mjs` with `BUDGET=2000` and `BUDGET=3000`, before and after, on
   the 10-11 export, and diff the cut ids: write in Notes which rows a slow device gains and loses.
 
-- [ ] Optional, only if 207 shows one job alone sets the end of a pass even when started first (its time above the
+- [x] Optional, only if 207 shows one job alone sets the end of a pass even when started first (its time above the
   pass's CPU / workers): split it, on a branch `w22-tail-split`. If that probe's own Tight pricings (`shownMarch` per
   stop) are a large part of it, price them as separate pool jobs after its plan, as P1.2 split the probe job
   (`ProbeInput.shown`, `src/worker/jobs.ts`, `src/worker/advisor.ts`); merged by probe index and stop. Same
@@ -122,3 +122,29 @@ estimate has to include something cheap that predicts the raise space from input
 modifier mix; for an upgrade: the share of the army in the upgraded type). Task 2 starts by adding those two features
 to the harness (`captainStops`, army share) and refits; if it still stays under rho 0.6 on the held-out 10-07, it
 reports that the estimate is not worth shipping and stops there, which is the finding the owner asked to see.
+
+### Task 2: the estimate is not worth shipping (no code written)
+
+Task 1 set the rule: if an input-only estimate stays under rho 0.6 on the held-out export, report it and stop. Measured
+on the recorded features (pass, kind, family, and for upgrades the troop type; probes + baselines, 132 jobs on 10-11,
+96 on 10-07), a per-class median fitted on one export and tested on the other:
+
+| fit -> test | per (pass, kind, family, type) median | per (pass, kind) median |
+| --- | --- | --- |
+| 10-11 -> 10-07 | rho 0.15 | 0.07 |
+| 10-07 -> 10-11 | rho 0.24 | 0.13 |
+
+Both are far under 0.6, and the plan-input features (bar stops, leadership, horizon, unit types) were already at 0.35 to
+0.39 on 10-11 and about 0 on 10-07 (Task 1). The captain modifier mix and the army share were not recorded by the harness
+and would have to be added for a refit, but the cost is the Tight bill (rho 0.96), set by the raise space of the plan the
+probe produces, which is an output; a cheap input-only proxy for it is not in sight, and a bad ordering is worse than
+list order for nothing. Also the 22 confirm-trio jobs are 21 to 35 ms (one 133 ms), so `runCaptainAdvice` has nothing to
+gain from an order. `src/worker/jobCost.ts`, theory 207 and the `w22-cost-order` branch were not built.
+
+### Task 3 and 4: not built
+
+- Task 3 (order by the estimate) needs the estimate; there is none worth ordering by. No branch, no cut-set diff.
+- Task 4 (split a lone tail job): the longest job of the 10-11 pass is 1.3 s against a ~5.4 s lane (pass CPU 32 s / 6), so
+  no job alone sets the end of a pass; ruled out by Task 1's figure.
+
+The HITL step below is left for the owner to confirm the drop (tick it); there is nothing to merge.
