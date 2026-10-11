@@ -76,22 +76,23 @@ interface Rule {
   keep: (asIs: AdvisorRow[]) => Set<string>;
 }
 const RULES: Rule[] = [
-  ...[3, 5, 8, 12].map(
-    (k): Rule => ({
-      name: `top ${k}`,
-      keep: (rows) =>
-        new Set([...rows].sort((a, b) => bestGain(b) - bestGain(a)).slice(0, k).map((r) => r.id)),
-    }),
-  ),
-  ...[0.25, 0.5].map(
-    (share): Rule => ({
-      name: `gain ≥ ${share} × best`,
-      keep: (rows) => {
-        const top = Math.max(0, ...rows.map(bestGain));
-        return new Set(rows.filter((r) => bestGain(r) >= share * top && bestGain(r) > 0).map((r) => r.id));
-      },
-    }),
-  ),
+  ...[3, 5, 8, 12].map((k): Rule => ({
+    name: `top ${k}`,
+    keep: (rows) =>
+      new Set(
+        [...rows]
+          .sort((a, b) => bestGain(b) - bestGain(a))
+          .slice(0, k)
+          .map((r) => r.id),
+      ),
+  })),
+  ...[0.25, 0.5].map((share): Rule => ({
+    name: `gain ≥ ${share} × best`,
+    keep: (rows) => {
+      const top = Math.max(0, ...rows.map(bestGain));
+      return new Set(rows.filter((r) => bestGain(r) >= share * top && bestGain(r) > 0).map((r) => r.id));
+    },
+  })),
   {
     name: 'gain > 0 (any)',
     keep: (rows) => new Set(rows.filter((r) => bestGain(r) > 0).map((r) => r.id)),
@@ -158,8 +159,22 @@ describe.skipIf(!process.env.THEORY)('202 — screen with As is, then Tight', ()
       report.add(
         `Generic probes on one inline lane, no clock. Worth = a gain of at least ${WORTH} (rating points ≈ % damage). Gains are the rows' best stop gain unless a pick is named.\n`,
       );
-      const per: string[] = ['| army | probes | wall tight (ms) | wall as-is (ms) | as-is / tight | ρ best gain | ρ sweet-spot | worthy (tight) | top-gain gap |', '|---|---:|---:|---:|---:|---:|---:|---:|---:|'];
-      const pooled = RULES.map(() => ({ worthy: 0, hit: 0, top5: 0, top5Hit: 0, kept: 0, total: 0, lostGain: 0, allGain: 0, topMiss: 0, armies: 0 }));
+      const per: string[] = [
+        '| army | probes | wall tight (ms) | wall as-is (ms) | as-is / tight | ρ best gain | ρ sweet-spot | worthy (tight) | top-gain gap |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|',
+      ];
+      const pooled = RULES.map(() => ({
+        worthy: 0,
+        hit: 0,
+        top5: 0,
+        top5Hit: 0,
+        kept: 0,
+        total: 0,
+        lostGain: 0,
+        allGain: 0,
+        topMiss: 0,
+        armies: 0,
+      }));
       const gaps: number[] = [];
       let wallT = 0;
       let wallA = 0;
@@ -179,7 +194,9 @@ describe.skipIf(!process.env.THEORY)('202 — screen with As is, then Tight', ()
         const st = pairs.map(([x]) => gainAt(x, 'sweet-spot'));
         const sa = pairs.map(([, y]) => gainAt(y, 'sweet-spot'));
         const topT = Math.max(...bt);
-        const gap = Math.max(...pairs.flatMap(([x, y]) => x.stops.map((s, i) => Math.abs(s.gain - (y.stops[i]?.gain ?? 0)))));
+        const gap = Math.max(
+          ...pairs.flatMap(([x, y]) => x.stops.map((s, i) => Math.abs(s.gain - (y.stops[i]?.gain ?? 0)))),
+        );
         gaps.push(gap);
         wallT += tight.wall;
         wallA += asIs.wall;
@@ -193,7 +210,10 @@ describe.skipIf(!process.env.THEORY)('202 — screen with As is, then Tight', ()
           p.armies += 1;
           p.total += t.length;
           p.kept += kept.size;
-          const topIds = [...t].sort((x, y) => bestGain(y) - bestGain(x)).slice(0, 5).map((r) => r.id);
+          const topIds = [...t]
+            .sort((x, y) => bestGain(y) - bestGain(x))
+            .slice(0, 5)
+            .map((r) => r.id);
           for (const id of topIds) {
             p.top5 += 1;
             if (kept.has(id)) p.top5Hit += 1;
@@ -210,12 +230,16 @@ describe.skipIf(!process.env.THEORY)('202 — screen with As is, then Tight', ()
           if (top !== undefined && bestGain(top) >= WORTH && !kept.has(top.id)) p.topMiss += 1;
         });
         void topT;
-        console.log(`202 done: ${army.label} rho=${f(spearman(bt, ba), 2)} tight ${f(tight.wall, 0)} ms as-is ${f(asIs.wall, 0)} ms worthy ${worthy}`);
+        console.log(
+          `202 done: ${army.label} rho=${f(spearman(bt, ba), 2)} tight ${f(tight.wall, 0)} ms as-is ${f(asIs.wall, 0)} ms worthy ${worthy}`,
+        );
       }
       report.h('Per army');
       report.add(per.join('\n'));
       report.h('Survivor rules against the Tight answer (pooled over the armies)');
-      report.add('| rule | probes kept / read | Tight top 5 kept | worthy kept | gain missed | best probe missed in |');
+      report.add(
+        '| rule | probes kept / read | Tight top 5 kept | worthy kept | gain missed | best probe missed in |',
+      );
       report.add('|---|---:|---:|---:|---:|---:|');
       RULES.forEach((rule, i) => {
         const p = pooled[i]!;
@@ -223,7 +247,9 @@ describe.skipIf(!process.env.THEORY)('202 — screen with As is, then Tight', ()
           `| ${rule.name} | ${p.kept} / ${p.total} (${f((100 * p.kept) / Math.max(1, p.total), 0)} %) | ${p.top5Hit} / ${p.top5} | ${p.hit} / ${p.worthy} | ${f((100 * p.lostGain) / Math.max(1e-9, p.allGain), 1)} % | ${p.topMiss} / ${p.armies} armies |`,
         );
       });
-      report.add(`\nTotal wall: Tight ${f(wallT, 0)} ms, As is ${f(wallA, 0)} ms (${f(wallA / Math.max(1, wallT), 2)}×). Largest per-stop gain gap anywhere: ${f(Math.max(0, ...gaps), 2)}.`);
+      report.add(
+        `\nTotal wall: Tight ${f(wallT, 0)} ms, As is ${f(wallA, 0)} ms (${f(wallA / Math.max(1, wallT), 2)}×). Largest per-stop gain gap anywhere: ${f(Math.max(0, ...gaps), 2)}.`,
+      );
       report.save();
       expect(gaps.length).toBeGreaterThan(0);
     },

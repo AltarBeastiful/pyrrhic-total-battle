@@ -169,7 +169,7 @@ describe.skipIf(profile === null)('the advisor passes on the owner fixture', () 
 
 describe.skipIf(profile === null)('the screened advisor pass on the owner fixture', () => {
   it(
-    'gives the golden\'s rows for every probe it read by Tight, and flags the others',
+    "gives the golden's rows for every probe it read by Tight, and flags the others",
     async () => {
       if (profile === null) throw new Error('no owner export');
       const setup = profile.setups.find((one) => one.id === profile.activeSetupId);
