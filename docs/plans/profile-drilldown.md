@@ -1,6 +1,6 @@
 # The profile drill-down: where "Profile everything" spends its 23 s (W18)
 
-**Status: proposed 2026-10-10.** Owner, 2026-10-10: *"I've done a trace using perfetto for the profile everything
+**Status: done 2026-10-11** (proposed 2026-10-10; final measure §3–§4). Owner, 2026-10-10: *"I've done a trace using perfetto for the profile everything
 task, plan a full optimization drill down using this trace as a base"* — `chrome-202696-18048.pftrace.gz`
 (100 MB, 28.4 s, the owner's real account, `pnpm dev:profile`: dev React, kernel built with function names).
 
@@ -285,7 +285,8 @@ goldens in `tests/golden/` byte-identical, `benchmark-latest.json` unchanged exc
 | P1.4 captains: one queue | upgrade part 3,379 ms (mean of 3 A/B) | 3,375 ms (no gain); one more row cut at a 3 s clock: a trade, on branch `w18-p14-captains-one-queue`, recommended dropped | branch b93dfe8 |
 | P1.5 Generate prices the bar in parallel | bar on the run's client 141 ms (timing fixture, 5 stops) | 100 ms on the advisor pool when idle; tables identical | fbb01c7 |
 | K1 / K3 / K5 caches (Drill 04) | census rerun on 05ab2d6: K1 0.59 hits per entry, 2.21 %; K3 ≤ 0.56, ≤ 1.14 %; K5 22 / 8 per entry, ≤ 0.99 % | none built (`WON'T DO`, all under the 3 % bar; K1 and K3 also under 2 hits per entry) | c1d9b09 |
-| P3.4 step 1: the sizer shape, one kernel door (Drill 05) | timing plan wall median 447.6–470.5 ms (door declined, A/B); JS under `sizedShape` 7.1 % | 410.5–432.7 ms: −7.6 to −8.3 % wall, −14 to −16 % process CPU (exactness −3.3 to −4.1 %); 2.6 % JS under `sizedShape`; every answer, golden and benchmark figure unchanged | this commit |
+| P3.4 step 1: the sizer shape, one kernel door (Drill 05) | timing plan wall median 447.6–470.5 ms (door declined, A/B); JS under `sizedShape` 7.1 % | 410.5–432.7 ms: −7.6 to −8.3 % wall, −14 to −16 % process CPU (exactness −3.3 to −4.1 %); 2.6 % JS under `sizedShape`; every answer, golden and benchmark figure unchanged | 065d364 |
+| P4.1 / P4.2 the advisor card one render a frame (Drill 06) | experiment 200 (prod trace, exactness fixture): main thread busy 22.6–23.8 % of the run, captains 28–29 %, other 39–40 % | 12.5–13.8 % of the run, captains 13–14 %, other 14–15 %; React render 899 → 317 ms (run 1). P4.3 not called for (style + layout 103 ms a run) | 42e131a |
 
 Drill 02 re-measure (2026-10-10, experiment 196 rerun on HEAD 1ebb705, profile kernel, one lane): every census count
 identical to the committed report; exactness fixture 33.96 s → 33.45 s run CPU (raise 0.56 % of it, so noise),
@@ -313,15 +314,57 @@ to the committed census; run CPU 29.45 → 33.15 s / 78.14 → 86.92 s, machine 
 0.57 % / 12.84 % of the run, still far from the trace's 49.1 %, so K2 and K5's re-open condition is unmet. Rerun:
 `.maestro/playbooks/Working/w18/d04-196-the-cache-census.md`.
 
+Final measure (Drill 06, 2026-10-11, HEAD 42e131a; this desktop was loaded, load average ~6 from other
+applications, so every clock below reads a few per cent slow: the Tight raise, whose code no step after Drill 04b
+touched, went 14.5–14.7 s → 15.4–15.7 s of pool CPU between the two production runs).
+
+- **Production browser, timing fixture, four passes** (Drill 04b's harness `Working/w18/prod/run.mjs`, 6 workers,
+  min of 3): 11,231 ms on Drill 04b → **12,007 / 12,014 ms** (two runs), answer hash unchanged `a9612b9ca0a9`,
+  no cut. Split build: pool CPU 62.8–64.9 → 66.1–66.9 s, Tight 22.6–23.0 → 23.3–23.7 %, `planCampaign` 76.2–76.6
+  → 75.6–75.9 %. Against the unchanged Tight raise as the control, `planCampaign` is 3.31 → 3.21–3.24 × Tight
+  (−2 to −3 %): the sizer door's −8 % plan wall (in-process A/B) does not show above this machine's noise in the
+  browser. `Working/w18/final-prod-plain{,-2}.txt`, `final-prod-split.txt`.
+- **Experiment 200, the page** (prod trace, exactness fixture, 3 runs, `Working/w18/final-200-analyse-{1,2,3}.md`):
+  run wall 9.08 / 9.05 / 9.17 s, pool CPU 43.5–43.8 s, main thread busy **12.3 / 13.1 / 13.7 %** (generate 21.6–22.6 %,
+  upgrades-default 9.6–11.0 %, captains 12.1–12.9 %, other 14.0–14.6 %); scripting 613–683 ms, style 28–34, layout
+  75–81, paint 322–358 ms a run. Pool: `planCampaign` 93.9 %, Tight raise 0.9 % of busy samples.
+- **Experiment 197, the planner** (`Working/w18/final-197.md`; the committed report is 9c96e15's, before P3.4):
+  timing fixture profiled planner time 488.2 → **461.3 ms** a plan, JS under `sizedShape` 6.74 → 2.67 %, JS under
+  `evaluateVector` 33.41 → 31.09 %, allocated 368.3 → 314.1 MiB a plan, crossings 363,814 (unchanged: the door
+  replaced `sizeStacks` one for one); exactness fixture 507.0 → **417.0 ms**, `retypeRow` still 37.97 %
+  inclusive there (the largest JS cost left on that account, not a W18 step).
+- **Experiment 196, the census** (`Working/w18/final-196-the-cache-census.md`): every count identical to the committed
+  census; run CPU 33,961 → 33,627 ms (exactness), 87,398 → 85,764 ms (timing), Tight raise 13.28 % of the timing run.
+- **Experiment 190, the pool** (`Working/w18/final-190-the-pool.md`): benchmark set N = 1 / 6 4,037 / 2,154 ms
+  (×1.87), advisor shape 7,635 / 2,061 ms (×3.70), plans 19/19 identical at every N (committed: 4,085 / 2,014 ms,
+  7,303 / 1,860 ms; the same within this machine's noise).
+- **Benchmark** (`plan-benchmark.test.ts` alone): every figure but the timings identical to the owner's pre-W18
+  file (`jq` diff with `run`, `planMs`, `planCpuMs`, `searchMs` stripped). Planner, sum of the 19 armies
+  (median of 3 each): 8,454 → **5,356 ms**; search, all calls: 260.4 → 140.8 s. The pre-W18 file was run on
+  2026-10-10 under unknown load and some armies drop ×3–4, more than any W18 step measured alone, so read the sum as
+  machine state plus W18, not W18 alone. The owner's files were restored from `benchmark-pre-w18.*` afterwards.
+  `Working/w18/final-benchmark.{json,md}`.
+
 ## 4. Rough target
 
-| | today | after P1 | after P1 + P2 + P3 (est.) |
-|---|---:|---:|---:|
-| pool CPU | 106 s | 106 s | ~55–70 s |
-| pool efficiency | 76 % | ~90 % | ~90 % |
-| wall, this account | 23.1 s | ~19.5 s | **~10–13 s** |
+Measured (2026-10-11), replacing the estimates. The owner's trace was a `dev:profile` build under a sampling
+profiler; the two production columns are the same account (the timing fixture), the same four passes, with no
+profiler attached (§3).
 
-The estimates are arithmetic on §0's shares, not measurements; §3 replaces them step by step.
+| | owner's trace, dev:profile (2026-10-10) | production, Drill 04b (before P3.4) | production, final HEAD 42e131a | estimate was |
+|---|---:|---:|---:|---:|
+| pool CPU | 106 s | 62.8–64.9 s | 66.1–66.9 s (machine ~6 % slow, see §3) | ~55–70 s |
+| pool efficiency (CPU / wall × 6) | 76 % | 86 % | 87 % | ~90 % |
+| wall, this account | 23.1 s | 11.2 s | 12.0 s | ~10–13 s |
+| Tight raise, share of pool CPU | 49 % | 22.6–23.0 % | 23.3–23.7 % | — |
+| main thread busy, the run (exactness fixture, 200) | — | 22.6–23.8 % (before P4) | 12.3–13.7 % | — |
+
+**Reading it.** The run is in the estimate's range, but most of the way from 23.1 s to ~12 s is the build, not
+W18: a production build with no profiler was already 11.2 s before the planner door (Drill 04b). What W18 itself
+bought, measured where it was measurable: the Tight raise −14.6 % (P2.1, experiment 184), one plan −7.6 to −8.3 %
+wall (P3.4 step 1, in-process A/B), Generate's bar 141 → 100 ms (P1.5), the serial baseline heads −140 to −180 ms
+a pass (P1.2), the page's main thread halved (P4). None of it moved a reading. The two scheduling trades
+(P1.3 longest first, P1.4 one captains queue) are on branches for the owner.
 
 ## 5. The census (experiment 196)
 

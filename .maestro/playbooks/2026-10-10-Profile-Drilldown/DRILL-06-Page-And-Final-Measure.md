@@ -33,7 +33,7 @@ phase first measures a production build, then fixes only what that shows.
   Otherwise tick with the 198 figures and `WON'T DO`. Unit tests and e2e green (`pnpm build` first). Re-run 198 and
   record before and after. Commit: `Advisor card: one render a frame (W18 P4)`.
 
-- [ ] Final measure. On HEAD: experiment 196 (timings and hits), 197, 198, experiment 190 (pool wall per pass), and the
+- [x] Final measure. On HEAD: experiment 196 (timings and hits), 197, 198, experiment 190 (pool wall per pass), and the
   benchmark timing table (`pnpm vitest run tests/engine/plan-benchmark.test.ts` alone; restore the owner's benchmark
   files after, from `.maestro/playbooks/Working/w18/benchmark-pre-w18.*`). Fill `docs/plans/profile-drilldown.md` §3
   and replace §4's estimates with measured figures. Append an entry to the performance log
@@ -117,3 +117,23 @@ W18 P4"). The run-1 *before* trace file was overwritten by the first re-run (the
 tables survive in `Working/w18/200-analyse.md`. Pass `PYRRHIC_TRACE_OUT` for a re-run. `dist` was rebuilt without
 profiling afterwards (the preview on 4173, from 2026-10-10, serves it).
 
+
+### Final measure (2026-10-11, HEAD 42e131a)
+
+Machine loaded (load average ~6 from other applications): the Tight raise, unchanged since Drill 04b, read
+14.5–14.7 → 15.4–15.7 s of pool CPU, so every clock here reads a few per cent slow. All reruns in `Working/w18/final-*`;
+the committed experiment reports were left as the record (each rerun's output copied out and the report restored).
+
+| measure | before | final |
+|---|---|---|
+| 196 run CPU, exactness / timing | 33,961 / 87,398 ms (committed) | 33,627 / 85,764 ms; every count identical |
+| 197 profiled planner a plan, timing / exactness | 488.2 / 507.0 ms (9c96e15) | 461.3 / 417.0 ms; `sizedShape` JS-under 6.74 → 2.67 %; 368 → 314 MiB |
+| 200 main thread busy, the run | 22.6–23.8 % (065d364) | 12.3 / 13.1 / 13.7 %; pool CPU 43.5–43.8 s |
+| 190 benchmark set N = 1 / 6; advisor shape | 4,085 / 2,014; 7,303 / 1,860 ms | 4,037 / 2,154; 7,635 / 2,061 ms; 19/19 identical |
+| prod browser, timing fixture, four passes (04b harness) | 11,231 ms | 12,007 / 12,014 ms; hash `a9612b9ca0a9`; pool CPU 66.1–66.9 s, Tight 23.3–23.7 % |
+| benchmark planner sum / search sum | 8,454 ms / 260.4 s (pre-W18 file) | 5,356 ms / 140.8 s; every non-timing figure identical |
+
+Owner's benchmark files restored from `Working/w18/benchmark-pre-w18.*` (byte-identical, `cmp`). `dist` rebuilt
+without profiling afterwards; the 4174 preview stopped, the owner's 4173 preview left alone. Filled
+`docs/plans/profile-drilldown.md` §3 (P3.4 row's commit, P4 row, final-measure paragraph) and §4 (measured
+table), status "done 2026-10-11"; entry appended to `PERF_LOG_pyrrhic_2026-10-09.md`.

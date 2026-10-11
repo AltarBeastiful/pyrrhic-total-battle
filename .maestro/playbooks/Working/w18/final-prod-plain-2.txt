@@ -1,0 +1,9 @@
+PLAIN build (mode production, dev false), http://127.0.0.1:35933/
+pool size 6, 3 runs after a warm-up, cores 16
+upgrades: min 3744 ms (3744 · 3821 · 4015)
+captainAdvice: min 1720 ms (1740 · 1720 · 1739)
+captains: min 5129 ms (5129 · 5264 · 5185)
+other: min 3141 ms (3141 · 3244 · 3253)
+all passes: min 12014 ms (12014 · 12329 · 12453)
+cuts 0,0,0, screenCut false,false,false
+answer hash a9612b9ca0a9
