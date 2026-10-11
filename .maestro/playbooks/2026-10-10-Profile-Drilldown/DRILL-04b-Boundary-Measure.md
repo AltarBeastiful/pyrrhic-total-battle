@@ -48,7 +48,7 @@ The boundary has three parts, and each is measured separately, not summed by gue
   kernel glue, JavaScript compute, allocation, or GC. This is Drill 05's input: Drill 05's experiment 197 profiles the
   same planner, and its ranking must agree with this table. Commit the doc: `W18: Drill 04b measured`.
 
-- [ ] Decide the boundary's fix, or write that none is needed. If the glue of a door is ≥ 10 % of the planner's wall
+- [x] Decide the boundary's fix, or write that none is needed. If the glue of a door is ≥ 10 % of the planner's wall
   time, or the instance count is more than one per distinct request, write a short plan in Notes: which door, which
   copy or instance it removes, and the op-for-op argument that the answer does not move. Do not implement it here; it
   goes to Drill 05 as its first item, ahead of the JavaScript half. If no door reaches 10 %, write "boundary not a
@@ -209,3 +209,32 @@ door above 3 %. Drill 05's 197 must rank the same way: on this HEAD it does (it 
 10, 11); if Drill 05 re-runs 197 after a change, the rows above are its baseline. The browser run above adds one
 fact the in-process table cannot: in the production page the planner is 76 % of pool CPU, so each point here is
 ≈ 0.76 pt of pool CPU.
+
+### The boundary's fix: boundary not a lever (2026-10-11)
+
+**Boundary not a lever.** Both triggers checked against 198 and 198b:
+
+| Trigger | Rule | Timing fixture | Exactness fixture | Met? |
+|---|---|---:|---:|---|
+| Glue of one door, share of planner wall | ≥ 10 % | max `sizeStacks` **2.6 %** (ceiling 3.3 %) | max `marchBill` **7.9 %** (ceiling 13.0 %) | no (calibrated) |
+| Wasm instances per distinct request | > 1 | 1 per plan, 1 distinct request (0 warm) | 1 per plan, 1 distinct request (0 warm) | no |
+| *All doors' glue together, for scale* | — | 8.1 % (≤ 16.4 %) | 11.3 % (≤ 21.0 %) | spread over 7 doors |
+
+So Drill 05 starts with the JavaScript half, not a boundary fix: on the fixture it ranks on, the largest door's glue
+is a quarter of the bar, and the whole boundary (8 %) is smaller than `evaluateVector` + `sizedShape` alone (12.4 %)
+or GC (12 %). The instance hypothesis carried in is refuted (198).
+
+Two items are named for Drill 05 as **optional trims below the JavaScript half**, not its first item, so they are not
+lost; neither is planned to land unless Drill 05's re-run of 198b moves them over the bar:
+
+1. **`marchBill` on the exactness fixture** (`src/kernel/plan.ts` ~line 471): only its uncorrected ceiling (13.0 %)
+   crosses 10 %; the calibrated figure is 7.9 %. If a later re-run puts the calibrated figure ≥ 10 %, the copy to
+   remove is the per-call `counts[ids[t]]` string-keyed loop and the result object: the caller hands a
+   `Float64Array` in the bound's id order (or the planner keeps its counts in that order), and the door returns the
+   record view. Op for op the same `battle(countsPtr, outPtr)` call runs on the same counts, so the answer cannot
+   move; the gate's answer hash checks it.
+2. **`bindTable`'s dropped `packRequest`** (0.6 % timing, 1.2 % exactness; 75 of 76 tables built and thrown away):
+   `bind` packs before it looks up `byRequest`. Remembering the source `table` array on the bound and returning
+   `held` when `held.request === request && held.source === table` skips the pack; `packRequest` is a pure function
+   of `(request, NO_RATES, table)`, so the same inputs give the same packed table `sameTable` would have accepted, and
+   the bound returned is the one returned today. Under every bar; a one-line trim if Drill 05 touches the file anyway.
