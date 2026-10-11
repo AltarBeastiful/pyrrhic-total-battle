@@ -14,7 +14,7 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
 
 ## Tasks
 
-- [ ] Census of allocation sites. Extend experiment 197 (or add `tools/theorycraft/206-the-planner-garbage.test.ts`)
+- [x] Census of allocation sites. Extend experiment 197 (or add `tools/theorycraft/206-the-planner-garbage.test.ts`)
   to print, on the timing fixture, the sampled heap profile's top 15 allocation sites by MiB per plan (bottom-up:
   the JS function that allocated, its caller), and the GC pause ms per plan (`PerformanceObserver`, the figure to
   judge by; sampled heap bytes are too noisy to judge a change). Write `tools/theorycraft/out/206-the-planner-garbage.md`.
@@ -34,3 +34,10 @@ Notes list two attempts that measured worse (key-by-key caps object, string conc
   allocated MiB per plan and GC pause ms before and after in Notes. Commit the doc: `W22: the planner's garbage measured`.
 
 ## Notes
+
+- Step 1 (census, `tools/theorycraft/206-the-planner-garbage.test.ts`, 10-11 fixture): 182.6 MiB sampled per plan
+  (197 read 179.5; the 368 MiB quoted in the plan is the older figure), GC 12.2 pauses = 32.3 ms per plan, CPU 468 ms.
+  Top sites: `scorer` (called by `evaluateVector`) 38.8 MiB 21 %; `next` (iterator, from `evaluateVector`) 15.1 MiB 8 %;
+  `sizerShape` kernel door (from `sizerKeptOf`) 8.9 MiB; `evaluateVector` itself 8.0 MiB; `marchRecovery` (from `record`)
+  6.0 MiB; `replayed` 3.5; `sizerKeptOf` 3.5; `finaleFor` 3.5; `countsKey` 3.0. Full table in
+  `tools/theorycraft/out/206-the-planner-garbage.md`. Steps 4a–4c start from `scorer` and the `next` iterator.
