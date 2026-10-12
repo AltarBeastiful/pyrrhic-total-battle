@@ -60,7 +60,9 @@ describe.skipIf(!process.env.THEORY || !existsSync(ACCOUNT))('210 — the planne
       const run = (on: boolean): { cpu: number; wall: number; gc: number; answer: string } => {
         const cpu0 = process.cpuUsage();
         const wall0 = performance.now();
-        const answer = JSON.stringify((on && !process.env.AB_AA ? planNew : planOld)(input).alternatives.map((row) => row.counts));
+        const answer = JSON.stringify(
+          (on && !process.env.AB_AA ? planNew : planOld)(input).alternatives.map((row) => row.counts),
+        );
         const wall = performance.now() - wall0;
         const used = process.cpuUsage(cpu0);
         return { cpu: (used.user + used.system) / 1000, wall, gc: 0, answer };

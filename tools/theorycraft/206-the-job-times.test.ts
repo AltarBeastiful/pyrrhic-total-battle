@@ -217,7 +217,8 @@ async function jobTimes(profile: Profile): Promise<{ rows: JobRow[]; cpuMs: numb
       async probe(request, signal) {
         const began = start();
         const against = request.against;
-        const kind = against === undefined ? 'baseline' : request.shown === undefined ? 'probe' : 'probe-read';
+        const kind =
+          against === undefined ? 'baseline' : request.shown === undefined ? 'probe' : 'probe-read';
         const answer = await inner.probe(request, signal);
         const fielded = new Set<string>();
         for (const stop of answer.stops)
@@ -270,7 +271,8 @@ async function jobTimes(profile: Profile): Promise<{ rows: JobRow[]; cpuMs: numb
     const chosen = pickOf(planned, openingPosition(planned, null));
     const marchRequest = withMethod(request, 'elite');
     if (troopFloor(planMarch(request, chosen.counts).result) !== null)
-      for (const row of planned.alternatives) await client.positions({ request: marchRequest, counts: row.counts });
+      for (const row of planned.alternatives)
+        await client.positions({ request: marchRequest, counts: row.counts });
     const headline = chosen.pick;
 
     pass = 'upgrades';

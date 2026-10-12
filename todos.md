@@ -69,6 +69,7 @@ BB 31
 EMH6 47
 - UI: minus/plus buttons for heroe level
 - Not sure best captains is wht were looking for, we dont want to change captain with the same march, we want to generate march with each captain combination to get the best ones across the board
+- Why are some plans so different when activating an army strength boost
 - with the new propositions, we sometimes get the plan gets worse here: search issue (re-planned 19M) wht is it and how to fix it or is there something to fix?
 - [done, tight default 1cb2ac9] Tight almost alwyas feels better than as is and no other even compares as they always use more mercs. Lets first check if we cna optimize tight further to get better trades, then lets move it as default; removing the table and other options on the selector; lets keep as is for now, but lets add a hover to preview the trade it offers (usually a bit less gold and less damage), showing only silver, gold and damage.
 - [done 2026-10-10, Critical 04; 12 units open as B-13] [UI] order troops as they appear in the battle selection. and allow to switch to order by health from hte battle summary.

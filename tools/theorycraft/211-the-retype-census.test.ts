@@ -75,7 +75,11 @@ describe.skipIf(!process.env.THEORY || !existsSync(ACCOUNT))('211 — the retype
         );
       }
       const all = sum(calls, (c) => c.total) / PLANS;
-      lines.push('', `All \`retypeMarch\`: ${f(calls.length / PLANS, 1)} calls, ${f(all, 1)} ms per plan (${f((100 * all) / wall, 1)} % of the planner).`, '');
+      lines.push(
+        '',
+        `All \`retypeMarch\`: ${f(calls.length / PLANS, 1)} calls, ${f(all, 1)} ms per plan (${f((100 * all) / wall, 1)} % of the planner).`,
+        '',
+      );
       const out = lines.join('\n');
       writeFileSync(OUT, out);
       // eslint-disable-next-line no-console -- the experiment's own report

@@ -49,7 +49,9 @@ function label(callFrame: HeapNode['callFrame']): string {
   const name = callFrame.functionName || '(anonymous)';
   if (callFrame.url === '') return name;
   const file = shortFile(callFrame.url);
-  return callFrame.functionName === '' ? `${name} ${file}@${String(callFrame.lineNumber + 1)}` : `${name} ${file}`;
+  return callFrame.functionName === ''
+    ? `${name} ${file}@${String(callFrame.lineNumber + 1)}`
+    : `${name} ${file}`;
 }
 
 /** The sites that allocate: each node's self bytes by (function, caller), the caller being the node's parent. */
@@ -122,7 +124,9 @@ describe.skipIf(!process.env.THEORY || !existsSync(ACCOUNT))('206 — the planne
         includeObjectsCollectedByMinorGC: true,
       });
       for (let i = 0; i < HEAP_PLANS; i += 1) expect(answerOf(input)).toBe(answer);
-      const { profile } = (await session.post('HeapProfiler.stopSampling')) as { profile: { head: HeapNode } };
+      const { profile } = (await session.post('HeapProfiler.stopSampling')) as {
+        profile: { head: HeapNode };
+      };
       await session.post('HeapProfiler.disable');
       session.disconnect();
       const alloc = sites(profile.head);

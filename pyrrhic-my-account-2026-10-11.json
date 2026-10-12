@@ -1,0 +1,628 @@
+{
+  "schemaVersion": 8,
+  "dataVersion": 1,
+  "kind": "profile",
+  "payload": {
+    "id": "313daacc-8ebc-45a9-bc00-c57d095d46b3",
+    "updatedAt": 1791753360707,
+    "rev": 54,
+    "deviceId": "154c139e-6892-43e1-98a8-771995fb349d",
+    "name": "My account",
+    "createdAt": 1789836753014,
+    "troops": {
+      "guardsmen": {
+        "min": 1,
+        "max": 3
+      },
+      "specialists": {
+        "min": 1,
+        "max": 2
+      },
+      "engineers": null,
+      "monsters": {
+        "min": 3,
+        "max": 3
+      },
+      "topTierExcluded": {
+        "guardsmen": [],
+        "specialists": []
+      },
+      "excludedUnitIds": []
+    },
+    "mercenaries": {
+      "selected": [
+        {
+          "id": "epic-monster-hunter-6",
+          "cap": 145
+        }
+      ],
+      "custom": []
+    },
+    "sources": {
+      "permanent": [
+        {
+          "id": "heroTalents",
+          "name": "Hero Talents",
+          "builtin": "heroTalents",
+          "health": {
+            "guardsmen": 65
+          },
+          "strength": {
+            "guardsmen": 65,
+            "monster": 65,
+            "specialist": 1
+          },
+          "special": {
+            "guardsmenDoubleDamageChance": 3
+          }
+        },
+        {
+          "id": "hallOfFame",
+          "name": "Hall of Fame",
+          "builtin": "hallOfFame",
+          "health": {
+            "army": 15
+          },
+          "strength": {
+            "army": 18.75
+          }
+        },
+        {
+          "id": "customization",
+          "name": "Customization",
+          "builtin": "customization",
+          "health": {
+            "army": 5
+          },
+          "strength": {}
+        },
+        {
+          "id": "armyModernization",
+          "name": "Army Modernization",
+          "builtin": "armyModernization",
+          "health": {
+            "army": 19,
+            "melee": 17,
+            "mounted": 2,
+            "ranged": 2
+          },
+          "strength": {
+            "army": 19,
+            "melee": 32,
+            "mounted": 32,
+            "ranged": 32
+          }
+        },
+        {
+          "id": "monstersBoost",
+          "name": "Monsters Boost",
+          "builtin": "monstersBoost",
+          "health": {},
+          "strength": {}
+        },
+        {
+          "id": "clanTechnologies",
+          "name": "Clan Technologies",
+          "builtin": "clanTechnologies",
+          "health": {},
+          "strength": {}
+        },
+        {
+          "id": "clanCapitalAppearance",
+          "name": "Clan Capital Appearance",
+          "builtin": "clanCapitalAppearance",
+          "health": {},
+          "strength": {}
+        },
+        {
+          "id": "unionOfTriumph",
+          "name": "Union of Triumph",
+          "builtin": "unionOfTriumph",
+          "health": {},
+          "strength": {}
+        },
+        {
+          "id": "288o2ww8",
+          "name": "New permanent source",
+          "health": {},
+          "strength": {}
+        }
+      ],
+      "captains": [
+        {
+          "id": "fmsva8n7",
+          "captainId": "aydae",
+          "level": 69,
+          "star": 3
+        },
+        {
+          "id": "myi2ef0v",
+          "captainId": "leonidas",
+          "level": 45,
+          "star": 0
+        },
+        {
+          "id": "l6unmpkw",
+          "captainId": "alexander",
+          "level": 50,
+          "star": 1
+        },
+        {
+          "id": "wj6zgxg1",
+          "captainId": "carter",
+          "level": 0,
+          "star": 0
+        },
+        {
+          "id": "ptnkknfj",
+          "captainId": "helen",
+          "level": 0,
+          "star": 0
+        },
+        {
+          "id": "jpqniawv",
+          "captainId": "ingrid",
+          "level": 50,
+          "star": 1
+        },
+        {
+          "id": "76vxsa2s",
+          "captainId": "bernard",
+          "level": 22,
+          "star": 0
+        },
+        {
+          "id": "pm6f09l7",
+          "captainId": "minamoto",
+          "level": 28,
+          "star": 0
+        },
+        {
+          "id": "gz4kcog6",
+          "captainId": "amanitore",
+          "level": 1,
+          "star": 0
+        },
+        {
+          "id": "5zw4pf3n",
+          "captainId": "brunhild",
+          "level": 0,
+          "star": 0
+        },
+        {
+          "id": "8htfw2ix",
+          "captainId": "brann",
+          "level": 0,
+          "star": 0
+        },
+        {
+          "id": "687hvssn",
+          "captainId": "logos",
+          "level": 0,
+          "star": 0
+        },
+        {
+          "id": "t0r555kk",
+          "captainId": "beowulf",
+          "level": 0,
+          "star": 0
+        }
+      ],
+      "equipment": [
+        {
+          "id": "pl3njq9e",
+          "equipmentId": "guardsmens-courage",
+          "quality": "uncommon"
+        },
+        {
+          "id": "xs0sb63f",
+          "equipmentId": "guardsmens-courage",
+          "quality": "rare"
+        },
+        {
+          "id": "4hogjiww",
+          "equipmentId": "guardsmens-courage",
+          "quality": "uncommon"
+        },
+        {
+          "id": "bl67bsnj",
+          "equipmentId": "guardsmens-courage",
+          "quality": "poor"
+        },
+        {
+          "id": "7cxf7b4r",
+          "equipmentId": "guardsmens-courage",
+          "quality": "poor"
+        },
+        {
+          "id": "rgdvcsy8",
+          "equipmentId": "guardsmens-courage",
+          "quality": "poor",
+          "name": ""
+        }
+      ],
+      "artifacts": [],
+      "titles": [],
+      "vipLevel": 7,
+      "vipManual": {
+        "health": 3.5,
+        "strength": 3.5
+      },
+      "dragon": {
+        "health": {
+          "army": 30
+        },
+        "strength": {
+          "army": 30
+        }
+      },
+      "custom": []
+    },
+    "recovery": {
+      "templeLevel": 19,
+      "trainingCostReduction": {
+        "guardsmen": 25,
+        "specialist": 11.5
+      },
+      "trainingSpeed": {
+        "guardsmen": 35,
+        "specialist": 34.2
+      },
+      "plan": {
+        "mode": "retrain"
+      }
+    },
+    "setups": [
+      {
+        "id": "3029889c-96c6-4bbd-ae97-321f0d275feb",
+        "updatedAt": 1791753360707,
+        "rev": 876,
+        "deviceId": "154c139e-6892-43e1-98a8-771995fb349d",
+        "name": "Default",
+        "active": {
+          "captains": ["fmsva8n7"],
+          "equipment": ["pl3njq9e", "xs0sb63f", "4hogjiww"],
+          "artifacts": [],
+          "titles": [],
+          "hero": true,
+          "events": [],
+          "otherPills": ["clan-strength-bonus"],
+          "vip": true,
+          "dragon": true,
+          "custom": []
+        },
+        "marchType": "solo",
+        "housing": {
+          "leadership": 7000,
+          "authority": 2000,
+          "dominance": 1200
+        },
+        "enemy": {
+          "melee": 1,
+          "ranged": 1,
+          "mounted": 1,
+          "flying": 1
+        },
+        "options": {
+          "method": "plan",
+          "strictMercsAboveMonsters": false,
+          "monstersLast": false,
+          "roundTo10": false,
+          "relaxedPreservation": false
+        },
+        "priority": "none",
+        "recoveryPlan": {
+          "mode": "selective",
+          "reviveFamilies": ["monsters"]
+        }
+      }
+    ],
+    "activeSetupId": "3029889c-96c6-4bbd-ae97-321f0d275feb",
+    "savedStacks": [
+      {
+        "id": "49bb5b3b-b1e3-431f-aabe-f11b96567737",
+        "updatedAt": 1790628218069,
+        "rev": 0,
+        "deviceId": "75d6b539-5ba7-46c9-a381-b87181b73b79",
+        "name": "check",
+        "createdAt": 1790628218069,
+        "setup": {
+          "id": "3029889c-96c6-4bbd-ae97-321f0d275feb",
+          "updatedAt": 1790627769963,
+          "rev": 376,
+          "deviceId": "75d6b539-5ba7-46c9-a381-b87181b73b79",
+          "name": "Default",
+          "active": {
+            "captains": ["fmsva8n7", "wj6zgxg1", "l6unmpkw"],
+            "equipment": ["pl3njq9e", "4hogjiww", "7cxf7b4r", "rgdvcsy8", "bl67bsnj", "xs0sb63f"],
+            "artifacts": [],
+            "titles": [],
+            "hero": true,
+            "events": [],
+            "otherPills": ["clan-strength-bonus"],
+            "vip": false,
+            "dragon": true,
+            "custom": []
+          },
+          "marchType": "unspecified",
+          "housing": {
+            "leadership": 9600,
+            "authority": 2000,
+            "dominance": 500
+          },
+          "enemy": {
+            "melee": 1,
+            "ranged": 1,
+            "mounted": 1,
+            "flying": 1
+          },
+          "options": {
+            "method": "plan",
+            "strictMercsAboveMonsters": false,
+            "monstersLast": false,
+            "roundTo10": false,
+            "relaxedPreservation": false
+          },
+          "priority": "none",
+          "recoveryPlan": {
+            "mode": "selective",
+            "reviveFamilies": ["monsters"]
+          }
+        },
+        "totals": {
+          "health": {
+            "army": 65,
+            "guardsmen": 156.5,
+            "melee": 3,
+            "mounted": 46.5,
+            "ranged": 1.5
+          },
+          "strength": {
+            "army": 89,
+            "guardsmen": 156.5,
+            "melee": 31,
+            "monster": 38,
+            "mounted": 122,
+            "ranged": 32,
+            "specialist": 1
+          },
+          "special": {
+            "guardsmenDoubleDamageChance": 4.3
+          }
+        },
+        "counts": [
+          {
+            "unitId": "spearman-1",
+            "count": 1377
+          },
+          {
+            "unitId": "swordsman-1",
+            "count": 2655
+          },
+          {
+            "unitId": "rider-1",
+            "count": 605
+          },
+          {
+            "unitId": "rider-2",
+            "count": 336
+          },
+          {
+            "unitId": "archer-1",
+            "count": 1372
+          },
+          {
+            "unitId": "rider-3",
+            "count": 188
+          },
+          {
+            "unitId": "archer-2",
+            "count": 759
+          },
+          {
+            "unitId": "spearman-3",
+            "count": 424
+          },
+          {
+            "unitId": "spearman-2",
+            "count": 751
+          },
+          {
+            "unitId": "epic-monster-hunter-6",
+            "count": 30
+          },
+          {
+            "unitId": "battle-boar",
+            "count": 18
+          },
+          {
+            "unitId": "stone-gargoyle",
+            "count": 17
+          },
+          {
+            "unitId": "emerald-dragon",
+            "count": 19
+          },
+          {
+            "unitId": "water-elemental",
+            "count": 40
+          }
+        ],
+        "summary": {
+          "minDamage": 9475228,
+          "maxDamage": 9475228,
+          "avgDamage": 9475228,
+          "damagePerSilver": 3.1572958603265917,
+          "damagePerGold": 1297.2656078860898,
+          "damagePerDragonCoin": 4386.67962962963,
+          "recovery": {
+            "silver": 3001058,
+            "gold": 7304,
+            "dragonCoins": 2160,
+            "seconds": 704207
+          }
+        },
+        "dataVersion": 1
+      },
+      {
+        "id": "a631f0aa-8be9-403e-baa3-8fce9c35aecb",
+        "updatedAt": 1790860485292,
+        "rev": 0,
+        "deviceId": "edfd6d6b-73e9-4c18-83ac-7b2da3768fa7",
+        "name": "Default, 13M expected",
+        "createdAt": 1790860485292,
+        "setup": {
+          "id": "3029889c-96c6-4bbd-ae97-321f0d275feb",
+          "updatedAt": 1790801024461,
+          "rev": 575,
+          "deviceId": "429afa0d-081c-42d5-8bf2-1c11ef892250",
+          "name": "Default",
+          "active": {
+            "captains": ["fmsva8n7", "jpqniawv", "wj6zgxg1"],
+            "equipment": ["pl3njq9e", "4hogjiww", "xs0sb63f", "bl67bsnj", "rgdvcsy8", "7cxf7b4r"],
+            "artifacts": [],
+            "titles": [],
+            "hero": true,
+            "events": [],
+            "otherPills": ["kingdom-strength-bonus", "personal-strength-bonus"],
+            "vip": true,
+            "dragon": true,
+            "custom": []
+          },
+          "marchType": "unspecified",
+          "housing": {
+            "leadership": 7000,
+            "authority": 2000,
+            "dominance": 1200
+          },
+          "enemy": {
+            "melee": 1,
+            "ranged": 1,
+            "mounted": 1,
+            "flying": 1
+          },
+          "options": {
+            "method": "plan",
+            "strictMercsAboveMonsters": false,
+            "monstersLast": false,
+            "roundTo10": false,
+            "relaxedPreservation": false
+          },
+          "priority": "none",
+          "recoveryPlan": {
+            "mode": "selective",
+            "reviveFamilies": ["monsters"]
+          }
+        },
+        "totals": {
+          "health": {
+            "army": 68.5,
+            "guardsmen": 159.5,
+            "melee": 31,
+            "monster": 39,
+            "mounted": 1.5,
+            "ranged": 1.5
+          },
+          "strength": {
+            "army": 117.5,
+            "guardsmen": 159.5,
+            "melee": 31,
+            "monster": 104,
+            "mounted": 32,
+            "ranged": 32,
+            "specialist": 1
+          },
+          "special": {
+            "guardsmenDoubleDamageChance": 4.299999999999999
+          }
+        },
+        "counts": [
+          {
+            "unitId": "spearman-3",
+            "count": 534
+          },
+          {
+            "unitId": "rider-3",
+            "count": 286
+          },
+          {
+            "unitId": "archer-2",
+            "count": 994
+          },
+          {
+            "unitId": "rider-2",
+            "count": 488
+          },
+          {
+            "unitId": "rider-1",
+            "count": 860
+          },
+          {
+            "unitId": "archer-3",
+            "count": 527
+          },
+          {
+            "unitId": "archer-1",
+            "count": 1654
+          },
+          {
+            "unitId": "stone-gargoyle",
+            "count": 20
+          },
+          {
+            "unitId": "epic-monster-hunter-6",
+            "count": 30
+          },
+          {
+            "unitId": "emerald-dragon",
+            "count": 20
+          },
+          {
+            "unitId": "battle-boar",
+            "count": 20
+          },
+          {
+            "unitId": "water-elemental",
+            "count": 40
+          },
+          {
+            "unitId": "legionary-6",
+            "count": 20
+          },
+          {
+            "unitId": "arbalester-6",
+            "count": 20
+          },
+          {
+            "unitId": "chariot-6",
+            "count": 10
+          }
+        ],
+        "summary": {
+          "minDamage": 13037147,
+          "maxDamage": 13037147,
+          "avgDamage": 13037147,
+          "damagePerSilver": 5.201490968211696,
+          "damagePerGold": 2690.290342550557,
+          "damagePerDragonCoin": 6035.716203703703,
+          "recovery": {
+            "silver": 2506425,
+            "gold": 4846,
+            "dragonCoins": 2160,
+            "seconds": 898920
+          }
+        },
+        "dataVersion": 1
+      }
+    ],
+    "upgrades": [],
+    "sectionUpdatedAt": {
+      "troops": 1791730426995,
+      "mercenaries": 1791730426995,
+      "sources": 1791743746476,
+      "recovery": 1791730426995,
+      "activeSetupId": 1791730426995,
+      "upgrades": 1791730426995
+    }
+  }
+}
