@@ -2268,6 +2268,15 @@ export function ladderFinale(
  *    `RAISE_TIGHT` not more than the plan's own counts, and the box is walked whole where it fits and searched
  *    to convergence where it does not.
  *
+ * **The box carries only what a bound can accept** (investigation 0026, 2026-10-12; experiments 216, 218). A
+ * slot's ceiling is `min(shelter ceiling, stock)` **clamped by the two bounds every vector of the box is
+ * already held to** — the pool's spare housing, and, for `Tight`, the mercenary stack's own `10·⌈from / 10⌉`
+ * chunk top — so a position no longer spends its box on vectors it will refuse. The clamps remove **only
+ * refused vectors**, so nothing a return can be measured against moves; a box they pull under `walkCap` is
+ * answered by a full walk, which is the optimum of the bounds' own feasible set. On the owner's live export
+ * that turns 333 of the 418 boxes the multistart search used to take into walks, for 43.9 % of the raise's own
+ * wall. See the slot loop in `raise()` for the two derivations.
+ *
  * **The score is the march's worst opening, read the way the March reads it** — `applyCounts`' own battle:
  * total HP descending with **the base march's own stack order** breaking a tie (`T_ORDER`), which is the one
  * place the app's two replays disagree (`docs/plans/best-v2.md` §5). Everything else — `hitDamage`, the attack
@@ -3399,6 +3408,34 @@ export function raise(
       store<f64>(rHeld + ((<usize>t) << 3), f64At(rSeed, t));
     }
 
+    /**
+     * **The two exact clamps** (investigation 0026, experiments 216/218): the box a capped or a
+     * housing-bound position can never leave, laid on the slot's ceiling so the search does not enumerate
+     * vectors every one of its own bounds refuses. Neither one moves a count: they remove vectors and
+     * nothing else, so a box walked whole answers the identical vector, and a box the clamp pulls under
+     * `walkCap` is then answered **exactly** rather than by the multistart search.
+     *
+     *  - **the housing spare** (`spare1` / `spare2`) holds for **every** position, `v2` and `most` included:
+     *    a vector's counts are all at or above the plan's own (this is a raise), so
+     *    `Σ (nᵢ − fromᵢ)·costᵢ ≤ housing − Σ baseᵢ·costᵢ` forces `nᵢ ≤ fromᵢ + ⌊spare / costᵢ⌋` — a relaxation
+     *    over one slot at a time, and a sound one, since every term of the sum is non-negative. It is
+     *    computed over the **base** counts, so it is the plan's own usage the spare comes off, exactly as
+     *    `raiseUsed` reads it in the refusal;
+     *  - **the chunk top** holds for the two `Tight` positions and the mercenaries' block alone: their cap is
+     *    `raiseBurn(rBase)`, the plan's own burn, and every slot's floor *is* the plan's own count — so
+     *    `Σ chunks(nᵢ) ≤ Σ chunks(planᵢ)` with each `chunks(nᵢ) ≥ chunks(planᵢ)` forces
+     *    `chunks(nᵢ) = chunks(planᵢ)` for every stack, i.e. `nᵢ ≤ 10·⌈planᵢ / 10⌉`. A mercenary stack whose
+     *    plan count is a multiple of ten therefore cannot move at all under `Tight`, which is what the
+     *    position means: not one extra chunk.
+     *
+     * **The seed is untouched** — `raiseClimb` reads `raiseCeiling` and `rCaps` itself and never `rTo` — so a
+     * clamped search still starts from the vector `raisedCounts` answers with, and the promise "a `Tight`
+     * cannot come out below the plan's own march" holds however narrow the box becomes.
+     */
+    const spare1 = housingOf(1) - raiseUsed(rBase, 1);
+    const spare2 = housingOf(2) - raiseUsed(rBase, 2);
+    const tightAuth = isTight(rAuth);
+
     // The slots: the plan's own count as the floor, `min(shelter ceiling, owned stock)` as the ceiling, and
     // only the ones that can actually move — `exactSearch` drops the rest before it searches.
     rN = 0;
@@ -3407,8 +3444,13 @@ export function raise(
       const t = i32At(rOrder, i);
       const count = countAt(rBase, t);
       if (!(count > 0)) continue;
-      if (!walkedPool(poolPer(t))) continue;
-      const to = Math.min(raiseCeiling(floor, hpPer(t)), f64At(rCaps, t));
+      const pool = poolPer(t);
+      if (!walkedPool(pool)) continue;
+      const cost = costPer(t);
+      let to = Math.min(raiseCeiling(floor, hpPer(t)), f64At(rCaps, t));
+      if (cost > 0) to = Math.min(to, count + Math.floor((pool == 1 ? spare1 : spare2) / cost));
+      if (tightAuth && pool == 1) to = Math.min(to, CHUNK_TEN * chunks(count));
+      if (to < count) to = count;
       store<f64>(rFrom + ((<usize>t) << 3), count);
       store<f64>(rTo + ((<usize>t) << 3), to);
       if (!(to > count)) continue;

@@ -1325,7 +1325,9 @@
     "army": "first-run army, Bear V ×2 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "bear-5": 2
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -1334,28 +1336,34 @@
     "army": "first-run army, Bear V ×2 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 2
+    },
+    "how": "walked",
+    "space": 2,
+    "scored": 3
   },
   {
     "army": "first-run army, Bear V ×2 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 2
+    },
+    "how": "walked",
+    "space": 2,
+    "scored": 3
   },
   {
     "army": "first-run army, Bear V ×2 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 2
+    },
+    "how": "walked",
+    "space": 2,
+    "scored": 3
   },
   {
     "army": "first-run army, Bear V ×3 (20 000 leadership)",
@@ -2008,7 +2016,9 @@
     "army": "first-run army, Bear V ×3 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "bear-5": 3
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -2017,28 +2027,34 @@
     "army": "first-run army, Bear V ×3 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 3
+    },
+    "how": "walked",
+    "space": 3,
+    "scored": 4
   },
   {
     "army": "first-run army, Bear V ×3 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 3
+    },
+    "how": "walked",
+    "space": 3,
+    "scored": 4
   },
   {
     "army": "first-run army, Bear V ×3 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 3
+    },
+    "how": "walked",
+    "space": 3,
+    "scored": 4
   },
   {
     "army": "first-run army, Bear V ×10 (20 000 leadership)",
@@ -2683,7 +2699,9 @@
     "army": "first-run army, Bear V ×10 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "bear-5": 6
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -2692,28 +2710,32 @@
     "army": "first-run army, Bear V ×10 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 6
+    },
+    "how": "walked",
+    "space": 4,
+    "scored": 5
   },
   {
     "army": "first-run army, Bear V ×10 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "bear-5": 6
+    },
+    "how": "walked",
+    "space": 4,
+    "scored": 5
   },
   {
     "army": "first-run army, Bear V ×10 (20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "tight",
     "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "how": "walked",
+    "space": 4,
+    "scored": 5
   },
   {
     "army": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
@@ -3035,8 +3057,8 @@
     "position": "tight",
     "moved": {},
     "how": "walked",
-    "space": 26,
-    "scored": 27
+    "space": 7,
+    "scored": 8
   },
   {
     "army": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
@@ -3357,7 +3379,9 @@
     "army": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 70
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -3366,7 +3390,9 @@
     "army": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 73
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -3375,28 +3401,34 @@
     "army": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 73
+    },
+    "how": "walked",
+    "space": 38,
+    "scored": 39
   },
   {
     "army": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 73
+    },
+    "how": "walked",
+    "space": 38,
+    "scored": 39
   },
   {
     "army": "first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 40
+    },
+    "how": "walked",
+    "space": 5,
+    "scored": 6
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
@@ -3421,27 +3453,27 @@
     "march": "the sizer’s own march",
     "position": "v2",
     "moved": {},
-    "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
     "march": "the sizer’s own march",
     "position": "safe",
     "moved": {},
-    "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
     "march": "the sizer’s own march",
     "position": "tight",
     "moved": {},
-    "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
@@ -3466,27 +3498,27 @@
     "march": "seeded march 0",
     "position": "v2",
     "moved": {},
-    "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
     "march": "seeded march 0",
     "position": "safe",
     "moved": {},
-    "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
     "march": "seeded march 0",
     "position": "tight",
     "moved": {},
-    "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
@@ -4036,31 +4068,122 @@
     "march": "a raised march",
     "position": "v2",
     "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "march": "a raised march",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "march": "a raised march",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "march": "a fractional mercenary cost",
+    "position": "tens",
+    "moved": {
+      "battle-boar": 18,
+      "emerald-dragon": 30,
+      "epic-monster-hunter-6": 70,
+      "gorgon-medusa": 10,
+      "many-armed-guardian": 10,
+      "stone-gargoyle": 20
+    },
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "march": "a fractional mercenary cost",
+    "position": "most",
+    "moved": {
+      "bear-5": 6,
+      "emerald-dragon": 19,
+      "epic-monster-hunter-6": 73,
+      "gorgon-medusa": 12,
+      "ice-phoenix": 8,
+      "magic-dragon": 9,
+      "many-armed-guardian": 11,
+      "water-elemental": 24
+    },
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "march": "a fractional mercenary cost",
+    "position": "v2",
+    "moved": {
+      "bear-5": 6,
+      "desert-vanquisher": 3,
+      "epic-monster-hunter-6": 65,
+      "ettin": 3,
+      "fearsome-manticore": 3,
+      "flaming-centaur": 3,
+      "gorgon-medusa": 11,
+      "ice-phoenix": 8,
+      "magic-dragon": 9
+    },
     "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "space": 51081601536000,
+    "scored": 4292906
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
-    "march": "a raised march",
+    "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
+    "moved": {
+      "bear-5": 6,
+      "desert-vanquisher": 3,
+      "epic-monster-hunter-6": 65,
+      "ettin": 3,
+      "fearsome-manticore": 3,
+      "flaming-centaur": 3,
+      "gorgon-medusa": 11,
+      "ice-phoenix": 8,
+      "magic-dragon": 9
+    },
     "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "space": 51081601536000,
+    "scored": 4292906
   },
   {
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
-    "march": "a raised march",
+    "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
+    "moved": {
+      "battle-boar": 15,
+      "emerald-dragon": 12,
+      "epic-monster-hunter-6": 40,
+      "gorgon-medusa": 11,
+      "ice-phoenix": 8,
+      "magic-dragon": 9,
+      "many-armed-guardian": 11,
+      "stone-gargoyle": 11,
+      "water-elemental": 28
+    },
     "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "space": 6721263360000,
+    "scored": 3707325
   },
   {
-    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
-    "march": "a fractional mercenary cost",
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "the sizer’s own march",
     "position": "tens",
     "moved": {},
     "how": null,
@@ -4068,8 +4191,8 @@
     "scored": 0
   },
   {
-    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
-    "march": "a fractional mercenary cost",
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "the sizer’s own march",
     "position": "most",
     "moved": {},
     "how": null,
@@ -4077,706 +4200,727 @@
     "scored": 0
   },
   {
-    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
-    "march": "a fractional mercenary cost",
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "the sizer’s own march",
     "position": "v2",
     "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "the sizer’s own march",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "the sizer’s own march",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 0",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 0",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 0",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 0",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 0",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 1",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 1",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 1",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 1",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 1",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 2",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 2",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 2",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 2",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 2",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 3",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 3",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 3",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 3",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 3",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 4",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 4",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 4",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 4",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 4",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 5",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 5",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 5",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 5",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 5",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 6",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 6",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 6",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 6",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 6",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 7",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 7",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 7",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 7",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 7",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 8",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 8",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 8",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 8",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 8",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 9",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 9",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 9",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 9",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 9",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 10",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 10",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 10",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 10",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 10",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 11",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 11",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 11",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 11",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "seeded march 11",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a raised march",
+    "position": "tens",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a raised march",
+    "position": "most",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a raised march",
+    "position": "v2",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a raised march",
+    "position": "safe",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a raised march",
+    "position": "tight",
+    "moved": {},
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a fractional mercenary cost",
+    "position": "tens",
+    "moved": {
+      "battle-boar": 30,
+      "emerald-dragon": 30,
+      "epic-monster-hunter-6": 70,
+      "gorgon-medusa": 10,
+      "many-armed-guardian": 10,
+      "stone-gargoyle": 20,
+      "water-elemental": 70
+    },
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a fractional mercenary cost",
+    "position": "most",
+    "moved": {
+      "battle-boar": 38,
+      "bear-5": 6,
+      "desert-vanquisher": 3,
+      "emerald-dragon": 33,
+      "epic-monster-hunter-6": 73,
+      "ettin": 3,
+      "fearsome-manticore": 3,
+      "flaming-centaur": 3,
+      "gorgon-medusa": 12,
+      "ice-phoenix": 8,
+      "magic-dragon": 9,
+      "many-armed-guardian": 11,
+      "stone-gargoyle": 28,
+      "water-elemental": 78
+    },
+    "how": null,
+    "space": 0,
+    "scored": 0
+  },
+  {
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "march": "a fractional mercenary cost",
+    "position": "v2",
+    "moved": {
+      "battle-boar": 38,
+      "bear-5": 6,
+      "desert-vanquisher": 3,
+      "emerald-dragon": 33,
+      "epic-monster-hunter-6": 62,
+      "ettin": 3,
+      "fearsome-manticore": 3,
+      "flaming-centaur": 3,
+      "gorgon-medusa": 12,
+      "ice-phoenix": 8,
+      "magic-dragon": 9,
+      "many-armed-guardian": 11,
+      "stone-gargoyle": 28,
+      "water-elemental": 78
+    },
     "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "space": 3909306240000,
+    "scored": 1661076
   },
   {
-    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
+    "moved": {
+      "battle-boar": 38,
+      "bear-5": 6,
+      "desert-vanquisher": 3,
+      "emerald-dragon": 33,
+      "epic-monster-hunter-6": 62,
+      "ettin": 3,
+      "fearsome-manticore": 3,
+      "flaming-centaur": 3,
+      "gorgon-medusa": 12,
+      "ice-phoenix": 8,
+      "magic-dragon": 9,
+      "many-armed-guardian": 11,
+      "stone-gargoyle": 28,
+      "water-elemental": 78
+    },
     "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
+    "space": 3909306240000,
+    "scored": 1661076
   },
   {
-    "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
+    "moved": {
+      "battle-boar": 38,
+      "desert-vanquisher": 3,
+      "emerald-dragon": 33,
+      "ettin": 3,
+      "fearsome-manticore": 3,
+      "flaming-centaur": 3,
+      "gorgon-medusa": 12,
+      "ice-phoenix": 8,
+      "magic-dragon": 9,
+      "many-armed-guardian": 11,
+      "stone-gargoyle": 28,
+      "water-elemental": 78
+    },
     "how": "searched",
-    "space": 5316597000,
-    "scored": 345281
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "the sizer’s own march",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "the sizer’s own march",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "the sizer’s own march",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "the sizer’s own march",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "the sizer’s own march",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 0",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 0",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 0",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 0",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 0",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 1",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 1",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 1",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 1",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 1",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 2",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 2",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 2",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 2",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 2",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 3",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 3",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 3",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 3",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 3",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 4",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 4",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 4",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 4",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 4",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 5",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 5",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 5",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 5",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 5",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 6",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 6",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 6",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 6",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 6",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 7",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 7",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 7",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 7",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 7",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 8",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 8",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 8",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 8",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 8",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 9",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 9",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 9",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 9",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 9",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 10",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 10",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 10",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 10",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 10",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 11",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 11",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 11",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 11",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "seeded march 11",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a raised march",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a raised march",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a raised march",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a raised march",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a raised march",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a fractional mercenary cost",
-    "position": "tens",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a fractional mercenary cost",
-    "position": "most",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a fractional mercenary cost",
-    "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a fractional mercenary cost",
-    "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
-  },
-  {
-    "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
-    "march": "a fractional mercenary cost",
-    "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "space": 514382400000,
+    "scored": 1084071
   },
   {
     "army": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
@@ -5412,7 +5556,11 @@
     "army": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 10,
+      "epic-monster-hunter-6": 10,
+      "legionary-6": 10
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -5421,7 +5569,12 @@
     "army": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 15,
+      "chariot-6": 8,
+      "epic-monster-hunter-6": 14,
+      "legionary-6": 14
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -5430,28 +5583,43 @@
     "army": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 15,
+      "chariot-6": 8,
+      "epic-monster-hunter-6": 14,
+      "legionary-6": 14
+    },
+    "how": "walked",
+    "space": 2880,
+    "scored": 2881
   },
   {
     "army": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 15,
+      "chariot-6": 8,
+      "epic-monster-hunter-6": 14,
+      "legionary-6": 14
+    },
+    "how": "walked",
+    "space": 2880,
+    "scored": 2881
   },
   {
     "army": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 10,
+      "chariot-6": 6,
+      "epic-monster-hunter-6": 10,
+      "legionary-6": 10
+    },
+    "how": "walked",
+    "space": 320,
+    "scored": 321
   },
   {
     "army": "2026-09-17 export, its setup (7 000 leadership)",
@@ -6115,7 +6283,12 @@
     "army": "2026-09-17 export, its setup (7 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 40,
+      "chariot-6": 10,
+      "epic-monster-hunter-6": 30,
+      "legionary-6": 30
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -6124,7 +6297,12 @@
     "army": "2026-09-17 export, its setup (7 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 40,
+      "chariot-6": 18,
+      "epic-monster-hunter-6": 38,
+      "legionary-6": 33
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -6133,28 +6311,42 @@
     "army": "2026-09-17 export, its setup (7 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 40,
+      "chariot-6": 18,
+      "epic-monster-hunter-6": 38,
+      "legionary-6": 33
+    },
+    "how": "walked",
+    "space": 75600,
+    "scored": 75601
   },
   {
     "army": "2026-09-17 export, its setup (7 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 40,
+      "chariot-6": 18,
+      "epic-monster-hunter-6": 38,
+      "legionary-6": 33
+    },
+    "how": "walked",
+    "space": 75600,
+    "scored": 75601
   },
   {
     "army": "2026-09-17 export, its setup (7 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "chariot-6": 10,
+      "epic-monster-hunter-6": 20,
+      "legionary-6": 20
+    },
+    "how": "walked",
+    "space": 20,
+    "scored": 21
   },
   {
     "army": "2026-09-17 export, 12 000 leadership",
@@ -6486,8 +6678,8 @@
       "legionary-6": 10
     },
     "how": "walked",
-    "space": 14,
-    "scored": 15
+    "space": 9,
+    "scored": 10
   },
   {
     "army": "2026-09-17 export, 12 000 leadership",
@@ -6541,8 +6733,8 @@
       "arbalester-6": 10
     },
     "how": "walked",
-    "space": 10,
-    "scored": 11
+    "space": 2,
+    "scored": 3
   },
   {
     "army": "2026-09-17 export, 12 000 leadership",
@@ -6780,8 +6972,8 @@
       "chariot-6": 8
     },
     "how": "walked",
-    "space": 55,
-    "scored": 56
+    "space": 15,
+    "scored": 16
   },
   {
     "army": "2026-09-17 export, 12 000 leadership",
@@ -6832,7 +7024,12 @@
     "army": "2026-09-17 export, 12 000 leadership",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 50,
+      "chariot-6": 20,
+      "epic-monster-hunter-6": 60,
+      "legionary-6": 40
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -6841,7 +7038,12 @@
     "army": "2026-09-17 export, 12 000 leadership",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 50,
+      "chariot-6": 20,
+      "epic-monster-hunter-6": 66,
+      "legionary-6": 42
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -6850,28 +7052,42 @@
     "army": "2026-09-17 export, 12 000 leadership",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 50,
+      "chariot-6": 20,
+      "epic-monster-hunter-6": 66,
+      "legionary-6": 42
+    },
+    "how": "walked",
+    "space": 213928,
+    "scored": 213929
   },
   {
     "army": "2026-09-17 export, 12 000 leadership",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 50,
+      "chariot-6": 20,
+      "epic-monster-hunter-6": 66,
+      "legionary-6": 42
+    },
+    "how": "walked",
+    "space": 213928,
+    "scored": 213929
   },
   {
     "army": "2026-09-17 export, 12 000 leadership",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 30,
+      "epic-monster-hunter-6": 40,
+      "legionary-6": 30
+    },
+    "how": "walked",
+    "space": 480,
+    "scored": 481
   },
   {
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
@@ -7148,8 +7364,8 @@
     "position": "tight",
     "moved": {},
     "how": "walked",
-    "space": 52,
-    "scored": 53
+    "space": 8,
+    "scored": 9
   },
   {
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
@@ -7381,8 +7597,8 @@
     "position": "tight",
     "moved": {},
     "how": "walked",
-    "space": 51,
-    "scored": 52
+    "space": 8,
+    "scored": 9
   },
   {
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
@@ -7523,7 +7739,9 @@
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 80
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -7532,7 +7750,9 @@
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 83
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -7541,28 +7761,34 @@
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 83
+    },
+    "how": "walked",
+    "space": 43,
+    "scored": 44
   },
   {
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 83
+    },
+    "how": "walked",
+    "space": 43,
+    "scored": 44
   },
   {
     "army": "live account of 2026-09-18 (one hired type, 20 000 leadership)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 50
+    },
+    "how": "walked",
+    "space": 10,
+    "scored": 11
   },
   {
     "army": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
@@ -8187,8 +8413,8 @@
       "chariot-6": 6
     },
     "how": "walked",
-    "space": 35,
-    "scored": 36
+    "space": 5,
+    "scored": 6
   },
   {
     "army": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
@@ -8239,7 +8465,12 @@
     "army": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 60,
+      "chariot-6": 10,
+      "epic-monster-hunter-6": 60,
+      "legionary-6": 50
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -8248,7 +8479,12 @@
     "army": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 60,
+      "chariot-6": 10,
+      "epic-monster-hunter-6": 62,
+      "legionary-6": 52
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -8257,28 +8493,42 @@
     "army": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 60,
+      "chariot-6": 10,
+      "epic-monster-hunter-6": 61,
+      "legionary-6": 52
+    },
+    "how": "walked",
+    "space": 160704,
+    "scored": 160705
   },
   {
     "army": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 60,
+      "chariot-6": 10,
+      "epic-monster-hunter-6": 61,
+      "legionary-6": 52
+    },
+    "how": "walked",
+    "space": 160704,
+    "scored": 160705
   },
   {
     "army": "live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "chariot-6": 10,
+      "epic-monster-hunter-6": 40,
+      "legionary-6": 29
+    },
+    "how": "walked",
+    "space": 300,
+    "scored": 301
   },
   {
     "army": "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)",
@@ -8914,7 +9164,11 @@
     "army": "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 10,
+      "epic-monster-hunter-6": 10,
+      "legionary-6": 10
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -8923,7 +9177,12 @@
     "army": "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 19,
+      "chariot-6": 9,
+      "epic-monster-hunter-6": 18,
+      "legionary-6": 19
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -8932,28 +9191,43 @@
     "army": "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 18,
+      "chariot-6": 9,
+      "epic-monster-hunter-6": 18,
+      "legionary-6": 19
+    },
+    "how": "walked",
+    "space": 7260,
+    "scored": 7261
   },
   {
     "army": "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 18,
+      "chariot-6": 9,
+      "epic-monster-hunter-6": 18,
+      "legionary-6": 19
+    },
+    "how": "walked",
+    "space": 7260,
+    "scored": 7261
   },
   {
     "army": "Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 10,
+      "chariot-6": 9,
+      "epic-monster-hunter-6": 10,
+      "legionary-6": 10
+    },
+    "how": "walked",
+    "space": 48,
+    "scored": 49
   },
   {
     "army": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
@@ -9589,7 +9863,10 @@
     "army": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 30,
+      "legionary-6": 20
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -9598,7 +9875,11 @@
     "army": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "arbalester-6": 30,
+      "bear-5": 2,
+      "legionary-6": 23
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -9607,28 +9888,40 @@
     "army": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 28,
+      "bear-5": 2,
+      "legionary-6": 23
+    },
+    "how": "walked",
+    "space": 416,
+    "scored": 417
   },
   {
     "army": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 28,
+      "bear-5": 2,
+      "legionary-6": 23
+    },
+    "how": "walked",
+    "space": 416,
+    "scored": 417
   },
   {
     "army": "the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "arbalester-6": 20,
+      "bear-5": 2,
+      "legionary-6": 20
+    },
+    "how": "walked",
+    "space": 120,
+    "scored": 121
   },
   {
     "army": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
@@ -10280,7 +10573,9 @@
     "army": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 20
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -10289,7 +10584,9 @@
     "army": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 28
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -10298,28 +10595,34 @@
     "army": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 28
+    },
+    "how": "walked",
+    "space": 15,
+    "scored": 16
   },
   {
     "army": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 28
+    },
+    "how": "walked",
+    "space": 15,
+    "scored": 16
   },
   {
     "army": "his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 20
+    },
+    "how": "walked",
+    "space": 7,
+    "scored": 8
   },
   {
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
@@ -10598,8 +10901,8 @@
       "epic-monster-hunter-6": 10
     },
     "how": "walked",
-    "space": 9,
-    "scored": 10
+    "space": 6,
+    "scored": 7
   },
   {
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
@@ -10833,8 +11136,8 @@
       "epic-monster-hunter-6": 10
     },
     "how": "walked",
-    "space": 9,
-    "scored": 10
+    "space": 6,
+    "scored": 7
   },
   {
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
@@ -10975,7 +11278,9 @@
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 20
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -10984,7 +11289,9 @@
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "epic-monster-hunter-6": 29
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -10993,28 +11300,34 @@
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 29
+    },
+    "how": "walked",
+    "space": 16,
+    "scored": 17
   },
   {
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 29
+    },
+    "how": "walked",
+    "space": 16,
+    "scored": 17
   },
   {
     "army": "his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "epic-monster-hunter-6": 20
+    },
+    "how": "walked",
+    "space": 7,
+    "scored": 8
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
@@ -11039,27 +11352,27 @@
     "march": "the sizer’s own march",
     "position": "v2",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "the sizer’s own march",
     "position": "safe",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "the sizer’s own march",
     "position": "tight",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
@@ -11084,27 +11397,27 @@
     "march": "seeded march 0",
     "position": "v2",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "seeded march 0",
     "position": "safe",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "seeded march 0",
     "position": "tight",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
@@ -11652,33 +11965,36 @@
     "march": "a raised march",
     "position": "v2",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "a raised march",
     "position": "safe",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "a raised march",
     "position": "tight",
     "moved": {},
-    "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "emerald-dragon": 9,
+      "epic-monster-hunter-5": 30
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -11687,7 +12003,10 @@
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "emerald-dragon": 9,
+      "epic-monster-hunter-5": 37
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -11696,28 +12015,39 @@
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
+    "moved": {
+      "emerald-dragon": 7,
+      "epic-monster-hunter-5": 37,
+      "stone-gargoyle": 3
+    },
     "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "space": 288000,
+    "scored": 288001
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
+    "moved": {
+      "emerald-dragon": 7,
+      "epic-monster-hunter-5": 37,
+      "stone-gargoyle": 3
+    },
     "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "space": 288000,
+    "scored": 288001
   },
   {
     "army": "his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
+    "moved": {
+      "emerald-dragon": 7,
+      "stone-gargoyle": 3
+    },
     "how": "walked",
-    "space": 27324,
-    "scored": 27325
+    "space": 43200,
+    "scored": 43201
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
@@ -11742,27 +12072,27 @@
     "march": "the sizer’s own march",
     "position": "v2",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "the sizer’s own march",
     "position": "safe",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "the sizer’s own march",
     "position": "tight",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
@@ -11787,27 +12117,27 @@
     "march": "seeded march 0",
     "position": "v2",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "seeded march 0",
     "position": "safe",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "seeded march 0",
     "position": "tight",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
@@ -12339,33 +12669,38 @@
     "march": "a raised march",
     "position": "v2",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "a raised march",
     "position": "safe",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "a raised march",
     "position": "tight",
     "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "how": null,
+    "space": 0,
+    "scored": 0
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "battle-boar": 5,
+      "emerald-dragon": 10,
+      "epic-monster-hunter-6": 10,
+      "stone-gargoyle": 9
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -12374,7 +12709,11 @@
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "emerald-dragon": 13,
+      "epic-monster-hunter-6": 19,
+      "stone-gargoyle": 7
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -12383,28 +12722,43 @@
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "moved": {
+      "emerald-dragon": 7,
+      "epic-monster-hunter-6": 19,
+      "stone-gargoyle": 12,
+      "water-elemental": 10
+    },
+    "how": "searched",
+    "space": 348480,
+    "scored": 328758
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "moved": {
+      "emerald-dragon": 7,
+      "epic-monster-hunter-6": 19,
+      "stone-gargoyle": 12,
+      "water-elemental": 10
+    },
+    "how": "searched",
+    "space": 348480,
+    "scored": 328758
   },
   {
     "army": "his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
+    "moved": {
+      "battle-boar": 5,
+      "emerald-dragon": 8,
+      "stone-gargoyle": 7,
+      "water-elemental": 19
+    },
     "how": "walked",
-    "space": 5880,
-    "scored": 5881
+    "space": 63360,
+    "scored": 63361
   },
   {
     "army": "his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)",
@@ -13076,7 +13430,13 @@
     "army": "his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)",
     "march": "a fractional mercenary cost",
     "position": "tens",
-    "moved": {},
+    "moved": {
+      "battle-boar": 20,
+      "emerald-dragon": 20,
+      "epic-monster-hunter-6": 10,
+      "stone-gargoyle": 10,
+      "water-elemental": 40
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -13085,7 +13445,13 @@
     "army": "his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)",
     "march": "a fractional mercenary cost",
     "position": "most",
-    "moved": {},
+    "moved": {
+      "battle-boar": 23,
+      "emerald-dragon": 20,
+      "epic-monster-hunter-6": 14,
+      "stone-gargoyle": 17,
+      "water-elemental": 48
+    },
     "how": null,
     "space": 0,
     "scored": 0
@@ -13094,28 +13460,46 @@
     "army": "his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)",
     "march": "a fractional mercenary cost",
     "position": "v2",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "battle-boar": 23,
+      "emerald-dragon": 20,
+      "epic-monster-hunter-6": 14,
+      "stone-gargoyle": 17,
+      "water-elemental": 48
+    },
+    "how": "walked",
+    "space": 286000,
+    "scored": 286001
   },
   {
     "army": "his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)",
     "march": "a fractional mercenary cost",
     "position": "safe",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "battle-boar": 23,
+      "emerald-dragon": 20,
+      "epic-monster-hunter-6": 14,
+      "stone-gargoyle": 17,
+      "water-elemental": 48
+    },
+    "how": "walked",
+    "space": 286000,
+    "scored": 286001
   },
   {
     "army": "his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)",
     "march": "a fractional mercenary cost",
     "position": "tight",
-    "moved": {},
-    "how": null,
-    "space": 0,
-    "scored": 0
+    "moved": {
+      "battle-boar": 23,
+      "emerald-dragon": 20,
+      "epic-monster-hunter-6": 10,
+      "stone-gargoyle": 17,
+      "water-elemental": 48
+    },
+    "how": "walked",
+    "space": 143000,
+    "scored": 143001
   },
   {
     "army": "first-run army, Bear V ×1 (20 000 leadership)",

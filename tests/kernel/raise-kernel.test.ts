@@ -34,10 +34,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { mulberry32 } from '@/engine';
 import { setRaiseKernel } from '@/engine/fast';
-import { marchResult } from '@/engine/plan';
-import { sizeStacks } from '@/engine/stacker';
 import type { Stack, StackRequest, StackResult } from '@/engine/types';
 import { createRaiseKernel } from '@/kernel/raise';
 import { POSITIONS, liftedCounts } from '@/ui/sections/march/positions';
@@ -47,10 +44,10 @@ import type { RaiseMode } from '@/ui/sections/march/raise';
 import { criteriaScenarios } from '../engine/plan-scenarios';
 
 import { loadKernelModule } from './load';
+import { marchesOf, roomyBase } from './seeded-marches';
 
 const CAPTURE = process.env.CAPTURE === '1';
 const GOLDEN = fileURLToPath(new URL('../golden/raise-kernel.json', import.meta.url));
-const RANDOM_BASES = 12;
 
 /** One position on one march: the counts that **differ** from the march's own, and how they were found. */
 interface Answer {
@@ -103,67 +100,6 @@ function answer(
   };
 }
 
-/** Seeded marches within housing, some of them with hired stacks above the troops. */
-function randomCounts(
-  request: StackRequest,
-  seed: number,
-  total: number,
-  start: Record<string, number>,
-): Record<string, number>[] {
-  const random = mulberry32(seed);
-  const int = (max: number): number => Math.floor(random() * (max + 1));
-  const out: Record<string, number>[] = [start];
-  while (out.length < total) {
-    const counts: Record<string, number> = {};
-    for (const unit of request.units) {
-      if (random() < 0.35) continue;
-      const room = request.housing[unit.pool] / Math.max(1, unit.cost) / Math.max(2, request.units.length);
-      const cap = request.caps[unit.id] ?? Math.max(1, Math.floor(room));
-      const count = int(Math.min(cap, Math.max(1, Math.floor(room))));
-      if (count > 0) counts[unit.id] = count;
-    }
-    out.push(counts);
-  }
-  return out;
-}
-
-/** Every march of one army the corpus asks about, by the name its golden entries carry. */
-function marchesOf(request: StackRequest): { name: string; request: StackRequest; base: StackResult }[] {
-  const own = sizeStacks(request);
-  const out = [
-    { name: 'the sizer’s own march', request, base: own },
-    ...randomCounts(request, 0x51771, RANDOM_BASES, countsOf(own)).map((counts, index) => ({
-      name: `seeded march ${String(index)}`,
-      request,
-      base: marchResult(request, counts).result,
-    })),
-  ];
-  // A march a position already moved: the shape a caller pricing the positions one after another hands over.
-  const raised = liftedCounts(request, own, { authority: 'v2', dominance: 'v2' });
-  out.push({
-    name: 'a raised march',
-    request,
-    // Over the march's own counts: an answer is a raise of the pools it walked, not a whole march.
-    base: raised === null ? own : marchResult(request, { ...countsOf(own), ...raised.counts }).result,
-  });
-  // The whole-roster path: one mercenary at half a unit more, over the same base march.
-  const hired = own.stacks.find((stack) => stack.pool === 'authority');
-  if (hired !== undefined) {
-    const fractional: StackRequest = {
-      ...request,
-      units: request.units.map((unit) =>
-        unit.id === hired.unitId ? { ...unit, cost: unit.cost + 0.5 } : unit,
-      ),
-    };
-    out.push({
-      name: 'a fractional mercenary cost',
-      request: fractional,
-      base: marchResult(fractional, countsOf(own)).result,
-    });
-  }
-  return out;
-}
-
 /** The whole corpus, asked of the kernel in the golden's own order. */
 function corpus(): Answer[] {
   const out: Answer[] = [];
@@ -172,10 +108,11 @@ function corpus(): Answer[] {
       for (const position of POSITIONS) out.push(answer(scenario.label, name, request, base, position));
     }
   }
-  // The tie-break: the first army's sizer march with its stack order reversed.
+  // The tie-break: the first army's march, **with room in it**, and its stack order reversed — the sizer's own
+  // has nothing to move since the box's two clamps (2026-10-12, investigation 0026).
   const first = criteriaScenarios()[0];
   if (first !== undefined) {
-    const sized = sizeStacks(first.request);
+    const sized = roomyBase(first.request);
     const reversed: StackResult = { ...sized, stacks: [...sized.stacks].reverse() as Stack[] };
     for (const position of POSITIONS) {
       out.push(

@@ -89,13 +89,26 @@ export function runResize(input: ResizeInput): ResizedMarch | null {
  * cost limit on this one (*"no cost limit as it's experimental for now"*), and the way it is kept out of the
  * way is `raiseSearch.ts` giving it a worker of its own rather than by cutting the search short.
  *
- * `null` when no search ran — no pool on an exhaustive position, no troop to shelter under, every stack
- * already at its ceiling or its stock — which the March reads as "the climb is the answer".
+ * `null` when the position was **not asked** — no pool stands on an exhaustive position, no troop shelters a
+ * hired stack, or a march the kernel cannot pack — which the March reads as "the climb is the answer".
+ *
+ * **A box with nothing left in it to search is an answer and not a `null`** (2026-10-12, investigation 0026).
+ * It used to be handed back as `null` as well, which the March reads as "no search ran, keep the climb"; that
+ * was fair while a box was the whole shelter range, because a box with no movable stack was then a march where
+ * the *climb* had nothing to move either. The raise's own box now carries **only what the bounds accept** —
+ * the pool's spare housing, and for `Tight` the mercenary stack's chunk top — so "no movable stack" is a
+ * common and *successful* reading, and it is exactly where the climb of an uncapped position may sit **above**
+ * what the position promises: `Tight`'s climb is bounded by neither the burn nor the plan's counts. Handing
+ * that back as `null` would leave the March drawing a march `Tight` would not field; the pool's own units
+ * answer (for `Tight`, the plan's own counts) is the answer, and it is the one the kernel merges.
  */
 export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
   if (exhaustivePools(input.modes).length === 0) return null;
+  // No troop to shelter under is the rule that keeps the position off a march with nothing to hide behind
+  // (`troopFloor`, the condition the control is drawn on) — a pre-condition, and not a reading of the box.
+  if (troopFloor(input.base) === null) return null;
   const lifted = liftedCounts(input.request, input.base, input.modes);
-  if (lifted === null || lifted.how === null) return null;
+  if (lifted === null) return null;
   return { counts: lifted.counts, how: lifted.how, space: lifted.space, scored: lifted.scored };
 }
 

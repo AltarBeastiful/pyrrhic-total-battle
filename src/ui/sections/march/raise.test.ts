@@ -397,14 +397,21 @@ test('the exhaustive answer never loses damage to the climb it is seeded with', 
   expect(at({ ...shipped, ...found?.counts })).toBeGreaterThanOrEqual(at(shipped));
 });
 
-test('the exhaustive position asks for nothing where there is nothing to move', () => {
+test('the exhaustive position answers only where it is asked, and a box with nothing in it is an answer', () => {
   // No pool on it: the control was never drawn on `v2`.
   expect(exactRaise(request(), BOTH_HIRED(), MOST)).toBeNull();
   // No troops to shelter under: the same rule the other four positions live by.
   expect(exactRaise(request(), marchOf([stack(HUNTER, 'authority', 5, 30_000)]), V2)).toBeNull();
-  // Every stack already at its ceiling.
+  /**
+   * **Every stack already at its ceiling is an answer, not a `null`** (2026-10-12, investigation 0026). The
+   * box holds only vectors the bounds accept, so "nothing can move" is a reading the March must be told: a
+   * `null` reads as "no search ran, keep the climb", and `Tight`'s climb is bounded by neither the burn nor
+   * the plan's counts. The answer is the march's own counts, which is what the pane merges.
+   */
   const full = marchResult(request(), { [RD3]: 8_000, [RD1]: 6_000, [HUNTER]: 295 }).result;
-  expect(exactRaise(request(), full, V2)).toBeNull();
+  const answer = exactRaise(request(), full, V2);
+  expect(answer?.how).toBeNull();
+  for (const [id, count] of Object.entries(marchCounts(full))) expect(answer?.counts[id]).toBe(count);
 });
 
 test('the same march answers the same counts every time', () => {

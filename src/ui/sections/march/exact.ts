@@ -37,8 +37,12 @@ export interface ExactRaiseAnswer {
    * search came back **down** to the plan's — a vector the search never scored, possibly below the climb.
    */
   counts: Record<string, number>;
-  /** `walked` when the whole box was enumerated, `searched` when the multistart search answered. */
-  how: 'walked' | 'searched';
+  /**
+   * `walked` when the whole box was enumerated, `searched` when the multistart search answered, and `null`
+   * when the box held nothing to search (`raise`'s two clamps, investigation 0026) — the counts are still the
+   * position's answer, the pool's own units answer over the plan's march, and `space` and `scored` are 0.
+   */
+  how: 'walked' | 'searched' | null;
   /** The vectors in the box — how much space the search was allowed, reported rather than hidden. */
   space: number;
   /** How many vectors the search actually scored — what the answer cost, in the only unit that matters. */

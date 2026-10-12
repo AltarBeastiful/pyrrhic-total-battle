@@ -12,7 +12,6 @@
 /// <reference types="node" />
 import { describe, expect, it } from 'vitest';
 
-import { sizeStacks } from '@/engine/stacker';
 import { createRaiseKernel } from '@/kernel/raise';
 import { raiseCode } from '@/ui/sections/march/positions';
 import type { RaiseMode } from '@/ui/sections/march/raise';
@@ -20,6 +19,7 @@ import type { RaiseMode } from '@/ui/sections/march/raise';
 import { criteriaScenarios } from '../engine/plan-scenarios';
 
 import { loadKernelModule, loadProfileKernelModule } from './load';
+import { seededBases } from './seeded-marches';
 
 const EXHAUSTIVE: readonly RaiseMode[] = ['v2', 'safe', 'tight'];
 
@@ -32,31 +32,36 @@ describe('the raise census', () => {
     let rated = 0;
     let hits = 0;
     for (const scenario of criteriaScenarios()) {
-      const base = sizeStacks(scenario.request);
-      for (const mode of EXHAUSTIVE) {
-        const input = { request: scenario.request, base, modes: modesOf(mode) };
-        const plain = release.position(input);
-        const counted = profile.position(input);
-        expect(plain?.census, scenario.label).toBeUndefined();
-        if (plain === null || counted === null) {
-          expect(counted, scenario.label).toBe(plain);
-          continue;
-        }
-        const { census, ...answer } = counted;
-        expect(answer, `${scenario.label} ${mode}`).toStrictEqual(plain);
-        expect(census, scenario.label).toBeDefined();
-        if (census === undefined) continue;
-        expect(census.killOrdersScore).toBe(census.battles);
-        expect(census.ratingsOnHit).toBeLessThanOrEqual(census.ratings);
-        if (mode === 'tight' && plain.how !== null) {
-          // The plan's own march: one battle and one bill before the search, then a rating a vector it priced.
-          expect(census.killOrdersRating).toBe(census.ratings + 1);
-          expect(census.battles).toBeGreaterThanOrEqual(1);
-          rated += 1;
-          hits += census.ratingsOnHit;
-        } else {
-          expect(census.ratings).toBe(0);
-          expect(census.ratingsOnHit).toBe(0);
+      // **The corpus has to have room in it** (2026-10-12, investigation 0026): the sizer's own march fills
+      // the housing to the last point, so since the box's two clamps no position has anything to search on it
+      // and there would be no rating to count. Its seeded marches are the shape a raise is for — and most of
+      // them have no movable stack either, which is why the count is generous.
+      for (const base of seededBases(scenario.request, 13)) {
+        for (const mode of EXHAUSTIVE) {
+          const input = { request: scenario.request, base, modes: modesOf(mode) };
+          const plain = release.position(input);
+          const counted = profile.position(input);
+          expect(plain?.census, scenario.label).toBeUndefined();
+          if (plain === null || counted === null) {
+            expect(counted, scenario.label).toBe(plain);
+            continue;
+          }
+          const { census, ...answer } = counted;
+          expect(answer, `${scenario.label} ${mode}`).toStrictEqual(plain);
+          expect(census, scenario.label).toBeDefined();
+          if (census === undefined) continue;
+          expect(census.killOrdersScore).toBe(census.battles);
+          expect(census.ratingsOnHit).toBeLessThanOrEqual(census.ratings);
+          if (mode === 'tight' && plain.how !== null) {
+            // The plan's own march: one battle and one bill before the search, then a rating a vector it priced.
+            expect(census.killOrdersRating).toBe(census.ratings + 1);
+            expect(census.battles).toBeGreaterThanOrEqual(1);
+            rated += 1;
+            hits += census.ratingsOnHit;
+          } else {
+            expect(census.ratings).toBe(0);
+            expect(census.ratingsOnHit).toBe(0);
+          }
         }
       }
     }

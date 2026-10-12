@@ -249,7 +249,7 @@ export interface ErrorMessage {
   error: { message: string; code?: ErrorCode };
 }
 
-/** The exhaustive raise's answer, or `null` when the box had nothing in it to search (`runRaise`). */
+/** The exhaustive raise's answer, or `null` when there was no question to ask (`runRaise`). */
 export interface RaiseDoneMessage {
   kind: 'raise';
   id: JobId;

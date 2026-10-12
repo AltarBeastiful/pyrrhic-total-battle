@@ -6466,13 +6466,13 @@
             "damage": 3203983,
             "gold": 360,
             "hiredDamage": 1630727,
-            "how": "walked",
+            "how": null,
             "mercLost": 4,
             "mode": "tight",
-            "scored": 71137,
+            "scored": 0,
             "seconds": 597945,
             "silver": 2482500,
-            "space": 71136,
+            "space": 0,
             "units": 40
           },
           {
@@ -6492,13 +6492,13 @@
             "damage": 3203983,
             "gold": 360,
             "hiredDamage": 1630727,
-            "how": "walked",
+            "how": null,
             "mercLost": 4,
             "mode": "tightOld",
-            "scored": 71137,
+            "scored": 0,
             "seconds": 597945,
             "silver": 2482500,
-            "space": 71136,
+            "space": 0,
             "units": 40
           }
         ]
@@ -6531,13 +6531,13 @@
             "damage": 3549139,
             "gold": 504,
             "hiredDamage": 2291406,
-            "how": "walked",
+            "how": null,
             "mercLost": 6,
             "mode": "tight",
-            "scored": 2458,
+            "scored": 0,
             "seconds": 477945,
             "silver": 1985200,
-            "space": 2457,
+            "space": 0,
             "units": 60
           },
           {
@@ -6557,13 +6557,13 @@
             "damage": 3549139,
             "gold": 504,
             "hiredDamage": 2291406,
-            "how": "walked",
+            "how": null,
             "mercLost": 6,
             "mode": "tightOld",
-            "scored": 2458,
+            "scored": 0,
             "seconds": 477945,
             "silver": 1985200,
-            "space": 2457,
+            "space": 0,
             "units": 60
           }
         ]
@@ -6596,13 +6596,13 @@
             "damage": 4442817,
             "gold": 576,
             "hiredDamage": 2718054,
-            "how": "walked",
+            "how": null,
             "mercLost": 7,
             "mode": "tight",
-            "scored": 31009,
+            "scored": 0,
             "seconds": 655425,
             "silver": 2722500,
-            "space": 31008,
+            "space": 0,
             "units": 70
           },
           {
@@ -6622,13 +6622,13 @@
             "damage": 4442817,
             "gold": 576,
             "hiredDamage": 2718054,
-            "how": "walked",
+            "how": null,
             "mercLost": 7,
             "mode": "tightOld",
-            "scored": 31009,
+            "scored": 0,
             "seconds": 655425,
             "silver": 2722500,
-            "space": 31008,
+            "space": 0,
             "units": 70
           }
         ]

@@ -110,38 +110,42 @@ describe('the slots-only point', () => {
     const kernel = createRaiseKernelProbe(loadKernelModule());
     let checked = 0;
     for (const scenario of criteriaScenarios()) {
-      const base = sizeStacks(scenario.request);
-      const hired = base.stacks.find((stack) => stack.pool === 'authority');
-      if (hired === undefined) continue;
-      // The same army with that mercenary at half a unit more, over the same base march.
-      const request: StackRequest = {
-        ...scenario.request,
-        units: scenario.request.units.map((unit) =>
-          unit.id === hired.unitId ? { ...unit, cost: unit.cost + 0.5 } : unit,
-        ),
-      };
-      const march = marchResult(request, countsOf(base)).result;
-      for (const mode of EXHAUSTIVE) {
-        const fast = kernel.position({ request, base: march, modes: modesOf(mode) });
-        if (!fast?.how) continue;
-        expect(kernel.fastPath(request, march), `${scenario.label} / ${mode}`).toBe(false);
-        // The answer itself is held to the March's retired TypeScript by `tests/golden/raise-kernel.json` (its
-        // "a fractional mercenary cost" marches, W16 E3 S5b); here, the app's own door answers the same box.
-        const modes = { authority: mode, dominance: mode } as const;
-        setRaiseKernel(createRaiseKernel(loadKernelModule()));
-        const door = liftedCounts(request, march, modes);
-        setRaiseKernel(null);
-        const here = countsOf(march);
-        const at = (counts: Record<string, number> | undefined) =>
-          request.units.map((unit) => ({ ...here, ...counts })[unit.id] ?? 0);
-        expect(at(door?.counts), `${scenario.label} / ${mode}`).toStrictEqual(at(fast.counts));
-        expect([door?.how, door?.space, door?.scored]).toStrictEqual([fast.how, fast.space, fast.scored]);
-        checked += 1;
+      // **A base with room in it** (2026-10-12, investigation 0026): the sizer's own march fills the housing,
+      // so since the box's two clamps it has no movable count at all and no box would be sent down either
+      // path. The seeded march beside it is what the guard is for.
+      for (const base of basesOf(scenario.request).slice(0, 2)) {
+        const hired = base.stacks.find((stack) => stack.pool === 'authority');
+        if (hired === undefined) continue;
+        // The same army with that mercenary at half a unit more, over the same base march.
+        const request: StackRequest = {
+          ...scenario.request,
+          units: scenario.request.units.map((unit) =>
+            unit.id === hired.unitId ? { ...unit, cost: unit.cost + 0.5 } : unit,
+          ),
+        };
+        const march = marchResult(request, countsOf(base)).result;
+        for (const mode of EXHAUSTIVE) {
+          const fast = kernel.position({ request, base: march, modes: modesOf(mode) });
+          if (!fast?.how) continue;
+          expect(kernel.fastPath(request, march), `${scenario.label} / ${mode}`).toBe(false);
+          // The answer itself is held to the March's retired TypeScript by `tests/golden/raise-kernel.json`
+          // (its "a fractional mercenary cost" marches, W16 E3 S5b); here, the app's own door answers the same box.
+          const modes = { authority: mode, dominance: mode } as const;
+          setRaiseKernel(createRaiseKernel(loadKernelModule()));
+          const door = liftedCounts(request, march, modes);
+          setRaiseKernel(null);
+          const here = countsOf(march);
+          const at = (counts: Record<string, number> | undefined) =>
+            request.units.map((unit) => ({ ...here, ...counts })[unit.id] ?? 0);
+          expect(at(door?.counts), `${scenario.label} / ${mode}`).toStrictEqual(at(fast.counts));
+          expect([door?.how, door?.space, door?.scored]).toStrictEqual([fast.how, fast.space, fast.scored]);
+          checked += 1;
+        }
+        // And the integer army takes the slots-only point.
+        kernel.position({ request: scenario.request, base, modes: modesOf('v2') });
+        if (kernel.probe(scenario.request, base, 0, 0) === 0)
+          expect(kernel.fastPath(scenario.request, base)).toBe(true);
       }
-      // And the integer army takes the slots-only point.
-      kernel.position({ request: scenario.request, base, modes: modesOf('v2') });
-      if (kernel.probe(scenario.request, base, 0, 0) === 0)
-        expect(kernel.fastPath(scenario.request, base)).toBe(true);
     }
     expect(checked).toBeGreaterThan(0);
   }, 600_000);

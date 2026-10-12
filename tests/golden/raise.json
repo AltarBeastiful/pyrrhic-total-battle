@@ -698,10 +698,10 @@
           "spearman-3": 942,
           "swordsman-1": 3048
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 65,
-        "space": 64
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "burn-saver"
@@ -799,10 +799,10 @@
           "spearman-3": 942,
           "swordsman-1": 3048
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 15,
-        "space": 14
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "sweet-spot"
@@ -902,8 +902,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 6,
-        "space": 5
+        "scored": 3,
+        "space": 2
       }
     ],
     "stop": "steady-max"
@@ -1169,8 +1169,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 1153,
-        "space": 1152
+        "scored": 19,
+        "space": 18
       }
     ],
     "stop": "burn-saver"
@@ -1271,8 +1271,8 @@
         },
         "how": "walked",
         "mode": "v2",
-        "scored": 5161,
-        "space": 5160
+        "scored": 216,
+        "space": 215
       },
       {
         "counts": {
@@ -1303,8 +1303,8 @@
         },
         "how": "walked",
         "mode": "safe",
-        "scored": 5161,
-        "space": 5160
+        "scored": 216,
+        "space": 215
       },
       {
         "counts": {
@@ -1335,8 +1335,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 5161,
-        "space": 5160
+        "scored": 51,
+        "space": 50
       }
     ],
     "stop": "sweet-spot"
@@ -1437,8 +1437,8 @@
         },
         "how": "walked",
         "mode": "v2",
-        "scored": 2497,
-        "space": 2496
+        "scored": 105,
+        "space": 104
       },
       {
         "counts": {
@@ -1469,8 +1469,8 @@
         },
         "how": "walked",
         "mode": "safe",
-        "scored": 2497,
-        "space": 2496
+        "scored": 105,
+        "space": 104
       },
       {
         "counts": {
@@ -1501,8 +1501,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 2497,
-        "space": 2496
+        "scored": 13,
+        "space": 12
       }
     ],
     "stop": "more-mercs"
@@ -1667,8 +1667,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 46,
-        "space": 45
+        "scored": 7,
+        "space": 6
       }
     ],
     "stop": "steady-max"
@@ -2039,8 +2039,8 @@
         },
         "how": "searched",
         "mode": "tight",
-        "scored": 5352296,
-        "space": 3770700595200000
+        "scored": 2808728,
+        "space": 202001817600000
       }
     ],
     "stop": "silver-saver"
@@ -2245,8 +2245,8 @@
         },
         "how": "searched",
         "mode": "tight",
-        "scored": 42200735,
-        "space": 1.969786133308715e25
+        "scored": 31983121,
+        "space": 4.476786666610716e23
       }
     ],
     "stop": "sweet-spot"
@@ -2451,8 +2451,8 @@
         },
         "how": "searched",
         "mode": "tight",
-        "scored": 6603725,
-        "space": 625881398688000000
+        "scored": 5196306,
+        "space": 50070511895040000
       }
     ],
     "stop": "more-mercs"
@@ -2657,8 +2657,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 46,
-        "space": 45
+        "scored": 7,
+        "space": 6
       }
     ],
     "stop": "steady-max"
@@ -3075,8 +3075,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 361,
-        "space": 360
+        "scored": 13,
+        "space": 12
       }
     ],
     "stop": "sweet-spot"
@@ -3280,10 +3280,10 @@
           "spearman-1": 1218,
           "spearman-2": 664
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 71137,
-        "space": 71136
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "burn-saver"
@@ -3381,10 +3381,10 @@
           "spearman-1": 975,
           "spearman-2": 531
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 2458,
-        "space": 2457
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "silver-saver"
@@ -3482,10 +3482,10 @@
           "spearman-1": 1337,
           "spearman-2": 728
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 31009,
-        "space": 31008
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "sweet-spot"
@@ -3785,10 +3785,10 @@
           "spearman-1": 2145,
           "spearman-2": 1169
         },
-        "how": "searched",
+        "how": null,
         "mode": "tight",
-        "scored": 426818,
-        "space": 729267
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "burn-saver"
@@ -3888,8 +3888,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 4901,
-        "space": 4900
+        "scored": 631,
+        "space": 630
       }
     ],
     "stop": "silver-saver"
@@ -3989,8 +3989,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 496,
-        "space": 495
+        "scored": 36,
+        "space": 35
       }
     ],
     "stop": "sweet-spot"
@@ -4090,8 +4090,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 496,
-        "space": 495
+        "scored": 36,
+        "space": 35
       }
     ],
     "stop": "steady-max"
@@ -4174,10 +4174,10 @@
           "spearman-1": 1794,
           "spearman-2": 940
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 11,
-        "space": 10
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "silver-saver"
@@ -4260,10 +4260,10 @@
           "spearman-1": 3849,
           "spearman-2": 2017
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 25,
-        "space": 24
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "sweet-spot"
@@ -4348,8 +4348,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 17,
-        "space": 16
+        "scored": 4,
+        "space": 3
       }
     ],
     "stop": "steady-max"
@@ -4535,8 +4535,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 182953,
-        "space": 182952
+        "scored": 4,
+        "space": 3
       }
     ],
     "stop": "burn-saver"
@@ -4636,8 +4636,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 7057,
-        "space": 7056
+        "scored": 589,
+        "space": 588
       }
     ],
     "stop": "silver-saver"
@@ -4737,8 +4737,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 21601,
-        "space": 21600
+        "scored": 361,
+        "space": 360
       }
     ],
     "stop": "sweet-spot"
@@ -4838,8 +4838,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 67,
-        "space": 66
+        "scored": 7,
+        "space": 6
       }
     ],
     "stop": "steady-max"
@@ -5045,8 +5045,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 145,
-        "space": 144
+        "scored": 4,
+        "space": 3
       }
     ],
     "stop": "burn-saver"
@@ -5257,8 +5257,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 25,
-        "space": 24
+        "scored": 4,
+        "space": 3
       }
     ],
     "stop": "steady-max"
@@ -5457,10 +5457,10 @@
           "spearman-1": 880,
           "spearman-2": 462
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 177,
-        "space": 176
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "burn-saver"
@@ -5555,8 +5555,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 5701,
-        "space": 5700
+        "scored": 31,
+        "space": 30
       }
     ],
     "stop": "silver-saver"
@@ -5745,10 +5745,10 @@
           "spearman-1": 0,
           "spearman-2": 0
         },
-        "how": "searched",
+        "how": "walked",
         "mode": "tight",
-        "scored": 4696776,
-        "space": 908684
+        "scored": 81,
+        "space": 80
       }
     ],
     "stop": "more-mercs"
@@ -5843,8 +5843,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 84,
-        "space": 83
+        "scored": 9,
+        "space": 8
       }
     ],
     "stop": "steady-max"
@@ -5929,8 +5929,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 19,
-        "space": 18
+        "scored": 3,
+        "space": 2
       }
     ],
     "stop": "burn-saver"
@@ -6013,10 +6013,10 @@
           "spearman-1": 0,
           "spearman-2": 719
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 9,
-        "space": 8
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "silver-saver"
@@ -6101,8 +6101,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 11,
-        "space": 10
+        "scored": 4,
+        "space": 3
       }
     ],
     "stop": "sweet-spot"
@@ -6273,8 +6273,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 78,
-        "space": 77
+        "scored": 8,
+        "space": 7
       }
     ],
     "stop": "steady-max"
@@ -6357,10 +6357,10 @@
           "spearman-1": 1143,
           "spearman-2": 599
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 24,
-        "space": 23
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "burn-saver"
@@ -6443,10 +6443,10 @@
           "spearman-1": 897,
           "spearman-2": 470
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 6,
-        "space": 5
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "silver-saver"
@@ -6772,8 +6772,8 @@
         },
         "how": "walked",
         "mode": "v2",
-        "scored": 81,
-        "space": 80
+        "scored": 9,
+        "space": 8
       },
       {
         "counts": {
@@ -6793,8 +6793,8 @@
         },
         "how": "walked",
         "mode": "safe",
-        "scored": 81,
-        "space": 80
+        "scored": 9,
+        "space": 8
       },
       {
         "counts": {
@@ -6814,8 +6814,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 81,
-        "space": 80
+        "scored": 3,
+        "space": 2
       }
     ],
     "stop": "silver-saver"
@@ -6881,10 +6881,10 @@
           "swordsman-1": 0,
           "water-elemental": 10
         },
-        "how": "walked",
+        "how": null,
         "mode": "v2",
-        "scored": 127297,
-        "space": 127296
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -6902,10 +6902,10 @@
           "swordsman-1": 0,
           "water-elemental": 10
         },
-        "how": "walked",
+        "how": null,
         "mode": "safe",
-        "scored": 127297,
-        "space": 127296
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -6923,10 +6923,10 @@
           "swordsman-1": 0,
           "water-elemental": 10
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 127297,
-        "space": 127296
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "sweet-spot"
@@ -6992,10 +6992,10 @@
           "swordsman-1": 0,
           "water-elemental": 10
         },
-        "how": "searched",
+        "how": null,
         "mode": "v2",
-        "scored": 259936,
-        "space": 351900
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -7013,10 +7013,10 @@
           "swordsman-1": 0,
           "water-elemental": 10
         },
-        "how": "searched",
+        "how": null,
         "mode": "safe",
-        "scored": 259936,
-        "space": 351900
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -7034,10 +7034,10 @@
           "swordsman-1": 0,
           "water-elemental": 10
         },
-        "how": "searched",
+        "how": null,
         "mode": "tight",
-        "scored": 259936,
-        "space": 351900
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "steady-max"
@@ -7147,8 +7147,8 @@
         },
         "how": "walked",
         "mode": "tight",
-        "scored": 1189,
-        "space": 1188
+        "scored": 397,
+        "space": 396
       }
     ],
     "stop": "burn-saver"
@@ -7214,10 +7214,10 @@
           "swordsman-1": 1253,
           "water-elemental": 2
         },
-        "how": "walked",
+        "how": null,
         "mode": "v2",
-        "scored": 466,
-        "space": 465
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -7235,10 +7235,10 @@
           "swordsman-1": 1253,
           "water-elemental": 2
         },
-        "how": "walked",
+        "how": null,
         "mode": "safe",
-        "scored": 466,
-        "space": 465
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -7256,10 +7256,10 @@
           "swordsman-1": 1253,
           "water-elemental": 2
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 466,
-        "space": 465
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "sweet-spot"
@@ -7325,10 +7325,10 @@
           "swordsman-1": 0,
           "water-elemental": 18
         },
-        "how": "walked",
+        "how": null,
         "mode": "v2",
-        "scored": 162793,
-        "space": 162792
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -7346,10 +7346,10 @@
           "swordsman-1": 0,
           "water-elemental": 18
         },
-        "how": "walked",
+        "how": null,
         "mode": "safe",
-        "scored": 162793,
-        "space": 162792
+        "scored": 0,
+        "space": 0
       },
       {
         "counts": {
@@ -7367,10 +7367,10 @@
           "swordsman-1": 0,
           "water-elemental": 18
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 162793,
-        "space": 162792
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "steady-max"
@@ -7473,10 +7473,10 @@
           "stone-gargoyle": 17,
           "water-elemental": 48
         },
-        "how": "walked",
+        "how": null,
         "mode": "tight",
-        "scored": 6,
-        "space": 5
+        "scored": 0,
+        "space": 0
       }
     ],
     "stop": "sweet-spot"
