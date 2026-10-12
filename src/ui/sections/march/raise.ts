@@ -102,6 +102,22 @@ export const RAISED_POOLS = ['authority', 'dominance'] as const;
 export type RaisedPool = (typeof RAISED_POOLS)[number];
 
 /**
+ * **Whether each hired pool is pushed to the most its kill order takes** (S-159; owner, 2026-10-12: *"we're just
+ * raising the merc count while preserving the kill order computed by tight … push a merc or monster resource to
+ * the max while keeping the same kill order"*), and the state every march opens in.
+ *
+ * A **standing rule of the same species as `RaiseModes`**, for the same reason: the counts it means are derived
+ * from the march on screen every time (`useMarch`), so a press of the pool line's own button can put it back and
+ * it outlives a Generate (`runStore.pushed`).
+ */
+export const NO_PUSH: Record<RaisedPool, boolean> = { authority: false, dominance: false };
+
+/** The pools a push record has on, in the card's own order. One reading, so two callers cannot filter two ways. */
+export function pushedOn(pushed: Record<RaisedPool, boolean>): RaisedPool[] {
+  return RAISED_POOLS.filter((pool) => pushed[pool]);
+}
+
+/**
  * **The positions answered by the worker's search and not by arithmetic in a render** (S-143b, S-144):
  * `v2` and the two burn-capped readings of it. Named once so that everything which has to tell them apart
  * from the positions answered in the render — the control's spinner, the search's key, the store's *"one
@@ -403,6 +419,178 @@ export function raisedCounts(
     }
   }
   return out;
+}
+
+/**
+ * **The most units a pool can take without moving the kill order** (S-159; owner, 2026-10-12: *"we're just
+ * raising the merc count while preserving the kill order computed by tight … push a merc or monster resource to
+ * the max while keeping the same kill order and same optimization for stacking"*).
+ *
+ * The complaint it answers is the plan's own trade: the sizer stops the hired stacks below the line the shelter
+ * draws (`raisedCounts`' own doc), and the only lever that bought the rest was moving up the bar, which pays for
+ * them in silver. This is the other lever, and it changes nothing that is there: it reads the march on screen,
+ * adds units to the stacks of the pools asked for, and leaves every other count, and the plan itself, alone.
+ *
+ * **The line it lifts a stack to is its neighbour's, not the troops'.** The enemy kills the highest-HP living
+ * stack first (`engine/battle.ts`), so the order on screen survives exactly while every stack stands **strictly
+ * under** the total HP of the one above it — that is the whole of the promise, and it is `shelterCeiling`, the
+ * same expression the shelter applies to the troop floor (`raise.ts`, `engine/plan.ts`'s `shelterUnder`), with
+ * the stack above in place of the floor. **Strictly**, because a tie is not preservation: `applyCounts` breaks a
+ * tie by the base index and not by the order on screen (`manual.ts`), so a stack raised to exactly its
+ * neighbour's health can swap places with it — and a tie is not shelter there either.
+ *
+ * **Two walks and a loop**, none of them a battle, because the two bounds pull in opposite directions: a stack's
+ * ceiling is read **top-down** (the stack above is what it must stay under) while the pool's spare housing is
+ * spent **bottom-up** (the owner's own rule for the sheltered raise: *"fill the stack that strikes most first"*,
+ * `raisedCounts` step 3 — the last to fall strikes most). One pass therefore counts each stack against the
+ * **achieved** health of the stack above it, which is the answer to "may it move at all"; the raising that pass
+ * buys then *opens* the line under it, and the next pass takes that room in turn. The loop stops when a pass
+ * moves nothing, and one pass per stack of the march is a bound rather than a budget: the room a stack opens can
+ * only travel one link down the kill order a pass.
+ *
+ * Every intermediate vector is legal, so the answer is: a stack only ever rises to a ceiling read off health the
+ * march really has, and the health it must stay under only ever rises with it.
+ *
+ * **It only ever adds**: a stack at or above its ceiling — an unsheltered march, a count typed by hand, a stock
+ * below the ceiling — keeps what it has. Answers `null` when nothing moves, which is the state the pool line's
+ * own button is hidden in.
+ *
+ * `start` is the march **on screen** (`applyCounts` over the raise and the typing, `useMarch`), never the
+ * generated result: a standing `tight` raise on the other block has to be visible to this pool's chain, or a
+ * mercenary stack is pushed straight through a raised monster stack, and the spare housing has to be read off
+ * what is really fielded.
+ */
+export function pushedCounts(
+  request: RaiseRequest,
+  start: StackResult,
+  pools: readonly RaisedPool[],
+): Record<string, number> | null {
+  if (pools.length === 0) return null;
+  /**
+   * **No troops, no push** — the same rule the sheltered raise answers by (`raisedCounts`, *"there is then
+   * nothing to shelter a hired stack"*). It is also the guard that keeps the open end of the chain finite: the
+   * first stack of a march with no troop under it has nothing over it, and a pool with no line at all is not a
+   * march a plan makes — the control is not drawn there either (`canRaise`, `useMarch`).
+   */
+  if (troopFloor(start) === null) return null;
+  /**
+   * The stacks the push may move, and the two reasons it may not: an empty stack is not on the field (it is not
+   * in `start.stacks` at all), and a type the game gives no health cannot be ceiled — its total HP is nought
+   * whatever its count, so it would carry nought down to everything below it and stop the pool dead.
+   */
+  const pushing = (stack: Stack): boolean =>
+    stack.count > 0 && stack.hpPerUnit > 0 && (pools as readonly Pool[]).includes(stack.pool);
+  const capOf = (unitId: string): number => request.caps[unitId] ?? Number.MAX_SAFE_INTEGER;
+
+  const counts: Record<string, number> = {};
+  for (const stack of start.stacks) counts[stack.unitId] = stack.count;
+
+  for (let pass = 0; pass <= start.stacks.length; pass += 1) {
+    // The line each pushed stack stands under, in kill order, first to fall first: the health of the stack
+    // above as the march stands now. `Infinity` above the first, since nothing is over it.
+    const ceilings = new Map<string, number>();
+    let limit = Number.POSITIVE_INFINITY;
+    for (const stack of start.stacks) {
+      const now = counts[stack.unitId] ?? stack.count;
+      if (pushing(stack)) {
+        // `shelterCeiling` is the strict form (`ceil(L/h) - 1`), and the strictness is the promise itself: a
+        // tie is not preservation, because `applyCounts` breaks one by the base index and not by the order on
+        // screen. `max(now, …)` is the other half — a stack already over its line keeps what it has.
+        const top = Math.min(capOf(stack.unitId), shelterCeiling(limit, stack.hpPerUnit));
+        ceilings.set(stack.unitId, Math.max(now, top));
+      }
+      // What stands here is what everything below is ceiled against; a stack the game gives no health is
+      // skipped rather than passing nought down.
+      if (now * stack.hpPerUnit > 0) limit = now * stack.hpPerUnit;
+    }
+
+    // The pool's spare housing, from the bottom of the kill order up: the last to fall strikes most, so it is
+    // the stack the spare is worth most on. The stock bound is the account's own (`request.caps`), which only a
+    // mercenary has: a monster is trained, so it is bounded by the housing and the line, as the sizer bounds it.
+    const next: Record<string, number> = {};
+    for (const pool of pools) {
+      // Read off the counts **as they stand this pass**, not off the march the push started from: a previous
+      // pass has already spent part of the pool, and the housing is a bound on what is fielded, not on what this
+      // pass adds.
+      let used = 0;
+      for (const stack of start.stacks) {
+        if (stack.pool === pool)
+          used += (counts[stack.unitId] ?? stack.count) * costOf(request, stack.unitId);
+      }
+      let spare = Math.max(0, request.housing[pool] - used);
+      for (const stack of [...start.stacks].reverse()) {
+        if (stack.pool !== pool || !pushing(stack)) continue;
+        const now = counts[stack.unitId] ?? stack.count;
+        const ceiling = Math.max(now, ceilings.get(stack.unitId) ?? now);
+        // A type that costs nothing is bounded by its ceiling alone: the sizer never fields one, so this is a
+        // guard and not a case (`raisedCounts` makes the same one).
+        const cost = costOf(request, stack.unitId);
+        const room = cost > 0 ? Math.floor(spare / cost) : Number.MAX_SAFE_INTEGER;
+        const wanted = Math.min(ceiling, now + room);
+        if (wanted <= now) continue;
+        spare -= (wanted - now) * cost;
+        next[stack.unitId] = wanted;
+      }
+    }
+
+    let moved = false;
+    for (const [unitId, wanted] of Object.entries(next)) {
+      if (wanted === counts[unitId]) continue;
+      counts[unitId] = wanted;
+      moved = true;
+    }
+    if (!moved) break;
+  }
+
+  const answer: Record<string, number> = {};
+  for (const stack of start.stacks) {
+    const now = counts[stack.unitId];
+    if (now !== undefined && now !== stack.count) answer[stack.unitId] = now;
+  }
+  return Object.keys(answer).length === 0 ? null : answer;
+}
+
+/**
+ * **What a push costs and buys on one march**, so the pool line can say it before it is pressed: the worst
+ * opening after (`positions.ts`' own reading, S-108), the same figure before, and the units the pool adds —
+ * which is every unit it loses as well, because the model plays the battle to the end of the army
+ * (`rows.ts`'s `lost`).
+ */
+export interface PushTrade {
+  /** The march's worst opening under the pushed counts, or the one on screen when nothing moves. */
+  damage: number;
+  /** The worst opening of the march the push starts from: what its percentage is read against. */
+  before: number;
+  /**
+   * **What the push costs this pool for good** (owner, 2026-10-12: *"the tooltip reads numbers of merc died, it
+   * should be additional merc lost (that cannot be revived)"*). The mercenaries' own reading is the **stock** the
+   * march spends (`hiredLost`, one in every ten, `./hired`), which is the figure the plan's trade prints as
+   * "Merc" and the recap as "Merc lost" — not the units fielded, which the model loses whole whether they are
+   * pushed or not. A monster has no such stock: it is trained and revived with gold (S-102), so its loss is the
+   * units themselves.
+   */
+  lost: number;
+}
+
+/**
+ * **Whether a pool's line draws its push at all** — the owner's own rule (2026-10-12), and two rules in one
+ * answer:
+ *
+ *  - *"hidden if all mercs that could be entered without changing kill order has already been done"*: a push
+ *    that moves no unit is a mark with nothing behind it (design rule 15);
+ *  - **and hidden where the push loses damage.** Preserving the kill order is not preserving the *strike* order
+ *    — that one is by `count × strengthPerUnit` (`engine/battle.ts`), so on 3 stops of the benchmark's 68
+ *    raising the mercenaries moves a stack up it and a stack behind loses a round: the worst opening falls by
+ *    4.4 % to 8.4 % (`tools/theorycraft/out/225-the-push.md`). The owner read those three and asked for the mark
+ *    to be hidden there rather than to offer the loss, so the button has one meaning — more mercs, more damage,
+ *    the same order.
+ *
+ * **A pool standing pushed keeps its mark whatever the trade says**: the press is the only way back, so the
+ * honest figure is drawn and the name says which way it goes.
+ */
+export function offersPush(trade: PushTrade | null, pressed: boolean): boolean {
+  if (trade === null) return false;
+  return pressed || trade.damage > trade.before;
 }
 
 /** Whether this pool is one the control is drawn on at all: a hired pool with a living stack. */

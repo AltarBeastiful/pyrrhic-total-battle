@@ -13,15 +13,30 @@ import type { BattleSummary, Pool, StackResult } from '@/engine/types';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
+import { hiredLost } from './hired';
 import { applyCounts, hasEdits } from './manual';
 import type { PositionTrades } from './positions';
 import { usePricedRaise } from './positionsSearch';
-import { raisedCounts, troopFloor } from './raise';
-import type { RaiseModes } from './raise';
+import { pushedCounts, pushedOn, raisedCounts, troopFloor } from './raise';
+import type { PushTrade, RaiseModes, RaisedPool } from './raise';
 import { useRaiseSearch } from './raiseSearch';
 import { leftOutOf, marchRows, poolRows, type PillOrder } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { setupFingerprint, useRunStore } from './runStore';
+
+/**
+ * **What one hired pool's push is worth on the march on screen** (S-159), which is what that pool's own line
+ * says beside its button.
+ */
+export interface PushOffer {
+  /** Whether this pool is standing pushed, which is what the button's filled state and its name say. */
+  pressed: boolean;
+  /** The trade the push offers, or `null` when it would add nothing here — the state the button is hidden in. */
+  trade: PushTrade | null;
+}
+
+/** No offer on either pool: the March view with nothing on screen, before any march has been computed. */
+const NO_OFFERS: Record<RaisedPool, PushOffer | null> = { authority: null, dominance: null };
 
 export interface MarchView {
   /** The generated result as it came out of the engine, with the request it belongs to. */
@@ -54,6 +69,12 @@ export interface MarchView {
    * left on from a plan is not applied to them either: one rule, the control and its effect together.
    */
   canRaise: boolean;
+  /**
+   * **What each hired pool's push is worth here** (S-159), or `null` where the pool cannot be pushed at all — a
+   * sizer's march, or a pool with no living stack. Read once, so the pool lines of one March cannot disagree
+   * about the trade they offer.
+   */
+  push: Record<RaisedPool, PushOffer | null>;
   /**
    * **An exhaustive position's search is in flight for this march** (S-143b). The counts on screen are the
    * damage climb's until it lands — a march the game would take, and the seed the search starts from — so
@@ -97,6 +118,9 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
   // The sheltered raise (S-142): the position of each hired pool's control, read as the object it is (a
   // selector on a field would keep re-rendering the five components that call this).
   const raiseModes = useRunStore((state) => state.raiseModes);
+  // Which hired pools stand pushed to the most their kill order takes (S-159), the same species of standing
+  // rule and read the same way.
+  const pushed = useRunStore((state) => state.pushed);
   // **Where the raise is offered**: a plan's own march, whose counts are the plan's trade and sit below
   // what the shelter allows. A sizer's march has nothing left to give (`stacker.ts:81-98`). The plan itself
   // is read as the object it is — its identity is what the tables under it are filed under, one level down
@@ -165,6 +189,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
         overflow: [],
         raiseModes,
         canRaise: false,
+        push: NO_OFFERS,
         searching: false,
         trades: null,
         rows: [],
@@ -205,11 +230,83 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
     const effective = lifted === null ? counts : { ...lifted, ...counts };
     const edited = hasEdits(snapshot.result, counts);
 
-    const edits = hasEdits(snapshot.result, effective)
+    /**
+     * **The push, over the raise and under the typing** (S-159). The two books it has to keep are the reason it
+     * is read here rather than inside `raisedCounts`:
+     *
+     *  - it starts from **the march on screen** — the raise, the search and the typing already in it. A standing
+     *    `tight` on the monsters' block has raised their health, and a mercenary stack pushed against the
+     *    *generated* counts instead would be pushed straight through them;
+     *  - a count typed by hand is the player's last word, so the push goes **under** it: what the player typed
+     *    wins on the stack the player typed into, exactly as it wins over the raise.
+     *
+     * Re-deriving it every time (never writing counts into a store) is also what makes the pool line's own button
+     * a toggle: put back, another stop, a fresh Generate — the push is recomputed from whatever is on screen, and
+     * switching it off is exact.
+     */
+    const beforePush = hasEdits(snapshot.result, effective)
       ? applyCounts(snapshot.request, snapshot.result, effective)
       : null;
+    const start = beforePush?.result ?? snapshot.result;
+    /** The same march as a *reading*: what every offer's percentage is measured against (`summary` is that, plus the push). */
+    const earlier = beforePush?.summary ?? snapshot.summary;
+    const standing = pushedOn(pushed);
+    const pushedMoves = standing.length === 0 ? null : pushedCounts(snapshot.request, start, standing);
+    const composed = { ...(lifted ?? {}), ...(pushedMoves ?? {}), ...counts };
+
+    /**
+     * **No pool pushed, and the replay above already is this one**: `composed` and `effective` are then the same
+     * counts, so the battle is not fought twice for one march — which is every march the player has not pushed, and
+     * this memo runs on every render of the March.
+     */
+    const edits =
+      pushedMoves === null
+        ? beforePush
+        : hasEdits(snapshot.result, composed)
+          ? applyCounts(snapshot.request, snapshot.result, composed)
+          : null;
     const result = edits?.result ?? snapshot.result;
     const summary = edits?.summary ?? snapshot.summary;
+
+    /**
+     * **What one pool's push is worth here** (S-159), for the button and its tooltip. Each pool is asked **on its
+     * own**, so the mercenaries' line never credits the monsters' push; each answer is the counts a press would
+     * land on, read through the same replay the pane draws with.
+     *
+     * The trade is the honest one, loss included: **what is drawn and what is hidden is `offersPush`' rule and
+     * not this reading** (`raise.ts` — the owner's ask of 2026-10-12, after experiment 225 found 3 stops of 68
+     * where the push moves the *strike* order and loses damage). One place decides, so the pool line and the
+     * arithmetic cannot come to different conclusions about the same march.
+     */
+    const offer = (pool: RaisedPool): PushOffer | null => {
+      if (!canRaise) return null;
+      if (!start.stacks.some((stack) => stack.pool === pool && stack.count > 0)) return null;
+      const pressed = pushed[pool];
+      const moved = pushedCounts(snapshot.request, start, [pool]);
+      if (moved === null) return { pressed, trade: null };
+      const after = applyCounts(snapshot.request, snapshot.result, { ...effective, ...moved });
+      /**
+       * **What the pool loses for good** (owner, 2026-10-12: *"it should be additional merc lost (that cannot be
+       * revived)"*) — the mercenaries' own reading and not a count of units, because every unit of a stack is
+       * lost whether the stack was pushed or not. It is `hiredLost`'s one-in-ten **stock** the trade above prints
+       * as "Merc" and the recap as "Merc lost", read as the difference between the two marches. A monster has no
+       * stock to spend (S-102: it is trained and revived with gold), so its loss is the units it gains.
+       */
+      let lost = 0;
+      if (pool === 'authority') {
+        lost = hiredLost(after.result.stacks) - hiredLost(start.stacks);
+      } else {
+        for (const stack of start.stacks) {
+          if (stack.pool !== pool) continue;
+          lost += (moved[stack.unitId] ?? stack.count) - (effective[stack.unitId] ?? stack.count);
+        }
+      }
+      return { pressed, trade: { damage: after.summary.minDamage, before: earlier.minDamage, lost } };
+    };
+    const push: Record<RaisedPool, PushOffer | null> = {
+      authority: offer('authority'),
+      dominance: offer('dominance'),
+    };
 
     /**
      * **While the counts are being edited by hand, the pills are the fields** (owner, 2026-09-21: *"it
@@ -247,6 +344,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
       overflow: edits?.overflow ?? [],
       raiseModes,
       canRaise,
+      push,
       // Nothing is waited for while the plan's own table answers: the counts are already in hand (S-149).
       searching: priced === null && waiting,
       trades,
@@ -269,6 +367,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
     stale,
     raiseModes,
     canRaise,
+    pushed,
     priced,
     trades,
     exhaustiveCounts,

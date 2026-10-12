@@ -28,7 +28,7 @@ import {
   Tooltip,
   VisuallyHidden,
 } from '@mantine/core';
-import { Copy, Pencil, Undo2 } from 'lucide-react';
+import { ChevronsUp, Copy, Pencil, Undo2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -39,16 +39,17 @@ import { isCommitEnter } from '@/ui/kit';
 import { copyText } from '@/ui/profile/download';
 
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
-import { amount, bonusLines, compact, signedPercent } from './format';
+import { amount, bonusLines, compact, signedCompact, signedPercent } from './format';
 import classes from './march.module.css';
 import { RAISE_CHOICES } from './choices';
 import type { PositionReading, PositionTrades } from './positions';
-import { isExhaustive, raisesPool } from './raise';
+import { isExhaustive, offersPush, raisesPool } from './raise';
 import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
 import { useRunStore } from './runStore';
 import { shelterNote } from './shelter';
+import type { PushOffer } from './useMarch';
 
 /** How long "Copied" stays on screen. */
 const COPIED_MS = 1500;
@@ -96,7 +97,16 @@ export interface MarchPillsProps {
    * blocks (`runStore.setRaiseMode`), so the block it was pressed on changes nothing about the answer.
    */
   onRaise: (mode: RaiseMode) => void;
+  /**
+   * **What each hired pool's push offers here** (S-159), and a press of the mark on that pool's own line. Per
+   * pool, unlike the position above it: the two buttons sit on their own lines and move one resource each.
+   */
+  push: Record<RaisedPool, PushOffer | null>;
+  onPush: (pool: RaisedPool) => void;
 }
+
+/** What a pool's units are called in a sentence, where the plan's trade says "Merc" and the raise says "Mercenary counts". */
+const POOL_NOUN: Record<RaisedPool, string> = { authority: 'mercs', dominance: 'monsters' };
 
 // What the two segments are called, and the one line each explains itself with: `./choices`.
 
@@ -291,6 +301,95 @@ export function MarchRaiseControl({
 }
 
 /**
+ * **The pool's push, at the end of its own line** (S-159; owner, 2026-10-12: *"a button on the right of the merc
+ * line … the position can be switched back by pressing again on the button"*).
+ *
+ * It is the sheltered raise's own extreme, asked one resource at a time: the most units of this pool that leave
+ * the **kill order** exactly as it stands (`pushedCounts`). The plan stops the hired stacks at its trade, and the
+ * only lever that bought the rest was moving up the bar — which pays for them in silver. This is the other lever,
+ * and it changes nothing that is there.
+ *
+ * **A toggle**, so the mark carries `aria-pressed` and one name that says which way it goes; a filled mark while
+ * on, the theme's own treatment and never colour alone (rule 24). Its **name carries the trade** — the signed
+ * damage and the loss — because a thumb has no hover (rule 18), and the tooltip repeats the same two
+ * figures for a pointer in the shape the raise control's own previews use. Chrome is Lucide, the figures wear the
+ * game's own glyphs (rule 21); stock Mantine only (rule 23).
+ *
+ * It draws nothing at all where the push would add nothing, or where it would cost damage — the two states a
+ * mark here would be a mark with nothing behind it (rule 15, and `useMarch`'s own offer holds both rules).
+ */
+export function MarchPushControl({
+  pool,
+  offer,
+  onPush,
+}: {
+  pool: RaisedPool;
+  offer: PushOffer;
+  onPush: () => void;
+}) {
+  const trade = offer.trade;
+  if (!offersPush(trade, offer.pressed)) return null;
+  const gain = trade === null || trade.before <= 0 ? 0 : ((trade.damage - trade.before) / trade.before) * 100;
+  /**
+   * **What the push adds, and never the march's total** (owner, 2026-10-12: *"change the tooltip to show additional
+   * damage only not total"*). The two figures are the same addition twice — the thousands and the percentage —
+   * which is what makes the trade readable against any march: the total beside it said what the march hits for,
+   * a number two blocks up the same screen already answers (`MarchRecap`), and rule 5 is one figure in one place.
+   */
+  const adds = trade === null ? '0' : signedCompact(trade.damage - trade.before);
+  const figures =
+    trade === null
+      ? ''
+      : `: ${adds} damage, ${signedPercent(gain)}, ${amount(trade.lost)} ${POOL_NOUN[pool]} lost`;
+  const name = offer.pressed
+    ? `Take the push off ${POOL_NOUN[pool]}${figures}.`
+    : `Push ${POOL_NOUN[pool]} to the most the kill order allows${figures}.`;
+  return (
+    <Tooltip
+      label={
+        <Stack gap={2}>
+          {trade !== null && (
+            <>
+              <Group gap={6} wrap="nowrap">
+                <Glyph kind="minimumDamage" />
+                <Text span size="xs">
+                  {`Damage ${adds}`}
+                </Text>
+                <Text span size="xs" c="dimmed">
+                  {signedPercent(gain)}
+                </Text>
+              </Group>
+              <Group gap={6} wrap="nowrap">
+                <Glyph kind={pool} />
+                <Text span size="xs">
+                  {`+${amount(trade.lost)} ${POOL_NOUN[pool]} lost`}
+                </Text>
+              </Group>
+            </>
+          )}
+          {offer.pressed && <Text size="xs">{`Press again to put ${POOL_NOUN[pool]} back.`}</Text>}
+        </Stack>
+      }
+      multiline
+      maw={260}
+      withinPortal
+      withArrow
+    >
+      <ActionIcon
+        size="sm"
+        variant={offer.pressed ? 'filled' : 'subtle'}
+        {...(offer.pressed ? {} : { color: 'gray' })}
+        aria-label={name}
+        aria-pressed={offer.pressed}
+        onClick={onPush}
+      >
+        <ChevronsUp size={16} aria-hidden />
+      </ActionIcon>
+    </Tooltip>
+  );
+}
+
+/**
  * The march at a glance: the pools, their stacks, and what was left out. On a desktop the whole
  * pane stays on screen while the setup scrolls past it (`shell/MarchPane.tsx`), so this block and
  * the whole-march actions under it travel together and neither can cover the other.
@@ -307,6 +406,8 @@ export function MarchPills({
   searching,
   trades,
   onRaise,
+  push,
+  onPush,
 }: MarchPillsProps) {
   // The pool the one raise control speaks for, or `null` when there is none to draw: a hired pool with a
   // stack to raise, on a plan's march.
@@ -338,6 +439,10 @@ export function MarchPills({
     >
       {rows.map((row, index) => {
         const over = row.used > row.capacity;
+        // The pool as the push reads it: `null` on the leadership block, which is what shelters and never what
+        // is sheltered (`raisesPool`).
+        const pool = raisesPool(row.pool) ? row.pool : null;
+        const offer = pool === null ? null : push[pool];
         return (
           <Stack key={row.pool} gap="xs">
             {/* The pool line, to the spacing contract (`MarchPaneSpacing.dc.html`, `.pool`): the
@@ -366,23 +471,37 @@ export function MarchPills({
               {/* **Top right of the first pool, on the pool's own line** (owner, 2026-10-10: *"on the same line as
                   the leadership number … to avoid new line … lower the size of font and check box again"*): a
                   quiet 11 px grey check, the exception to the battle selection order, costing no line of its own. */}
-              {index === 0 && (
-                <Checkbox
-                  size="14px"
-                  label="Order by health"
-                  checked={byHealth}
-                  onChange={(event) => {
-                    onByHealth(event.currentTarget.checked);
-                  }}
-                  styles={{
-                    label: {
-                      color: 'var(--mantine-color-dimmed)',
-                      fontSize: '0.6875rem',
-                      paddingInlineStart: 6,
-                    },
-                  }}
-                />
-              )}
+              {/* **And the hired pools' push beside it** (S-159), in the same right-hand group rather than a line of
+                  its own — a march whose first drawn pool is a hired one has the two on one line, which is what
+                  this group is for. A pool with nothing to push draws neither: the offer is `null` there. */}
+              <Group gap={6} wrap="nowrap" align="center">
+                {index === 0 && (
+                  <Checkbox
+                    size="14px"
+                    label="Order by health"
+                    checked={byHealth}
+                    onChange={(event) => {
+                      onByHealth(event.currentTarget.checked);
+                    }}
+                    styles={{
+                      label: {
+                        color: 'var(--mantine-color-dimmed)',
+                        fontSize: '0.6875rem',
+                        paddingInlineStart: 6,
+                      },
+                    }}
+                  />
+                )}
+                {pool !== null && offer !== null && offersPush(offer.trade, offer.pressed) && (
+                  <MarchPushControl
+                    pool={pool}
+                    offer={offer}
+                    onPush={() => {
+                      onPush(pool);
+                    }}
+                  />
+                )}
+              </Group>
             </Group>
             {row.entries.length > 0 && (
               <div

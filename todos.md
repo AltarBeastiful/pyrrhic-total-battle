@@ -7,6 +7,11 @@ A few ideas in random order, to verify plan and validate:
   - maybe somehting to consider when planning
   - OR let the user choose and add a small button on a stack of mercs that could be up, or a global button to say "in this config of troops, for that silver, use most mercs you can"
   - One last option would be to consider rouding to the nearest 10 when its still shielded.
+- [done — S-159] A mark on each hired pool's own line pushes that pool to the most the kill order takes (same
+  order, same stacking), with the damage and the mercs lost for good on hover, hidden where it would add nothing
+  or lose damage, and a second press puts it back. Per pool rather than per stack; measured on every benchmark
+  stop (experiment 225: 38 of 68 stops gain, median +6.99 %; the monsters' mark has nothing to add - the plan
+  never rations a monster, so they already stand at their line).
 - UI: When editiing counts, validate with enter key
 - UI: Same in popup validate on entry
 - UI: Help to know which hero is at what level. For now we have to click to see level and stars. Could at least be on hover. Would be best visually but might be too much. Perhaps the level could be in hte badge and entered hero woudl have a small icon with the star number. It would double as an indicator of any hero with the level entered. To design in an artifact first as we don't want to crowd the UI.
@@ -71,6 +76,7 @@ EMH6 47
 - Not sure best captains is wht were looking for, we dont want to change captain with the same march, we want to generate march with each captain combination to get the best ones across the board
 - Why are some plans so different when activating an army strength boost
 - with the new propositions, we sometimes get the plan gets worse here: search issue (re-planned 19M) wht is it and how to fix it or is there something to fix?
+- gitbisect the performance improvements to check hte trend over a few cases
 - [done, tight default 1cb2ac9] Tight almost alwyas feels better than as is and no other even compares as they always use more mercs. Lets first check if we cna optimize tight further to get better trades, then lets move it as default; removing the table and other options on the selector; lets keep as is for now, but lets add a hover to preview the trade it offers (usually a bit less gold and less damage), showing only silver, gold and damage.
 - [done 2026-10-10, Critical 04; 12 units open as B-13] [UI] order troops as they appear in the battle selection. and allow to switch to order by health from hte battle summary.
 - [done 2026-10-10, Critical 01] when logged out and logged in don't import the local profile each time. If possible lets import only if we create an account, lot when logging in. Logging in should just silently overwrite the profile with the account profile. Logging out should just puts us back to a new profile.

@@ -22,9 +22,13 @@ import { raiseSearchKey } from './raiseSearch';
 import { applyCounts } from './manual';
 import {
   EXHAUSTIVE_MODES,
+  NO_PUSH,
   burnOf,
   inTens,
   isExhaustive,
+  offersPush,
+  pushedCounts,
+  pushedOn,
   raisedCounts,
   shelterCeiling,
   troopFloor,
@@ -555,4 +559,178 @@ test('the exhaustive positions are named by one question, and all of them are th
   // worker's one search does with them.
   expect(exhaustivePools({ authority: 'safe', dominance: 'v2' })).toEqual(['authority', 'dominance']);
   expect(exhaustivePools({ authority: 'tight', dominance: 'most' })).toEqual(['authority']);
+});
+
+// ---- The push (S-159) ------------------------------------------------------------------------------
+/**
+ * **What the push promises** (S-159): the most units a pool takes without moving the kill order. `marchOf`
+ * keeps the order it is handed, so a fixture says the kill order out loud — first to fall first.
+ */
+const CHAINED = (): StackResult =>
+  marchOf([
+    stack(RD3, 'leadership', 500, 2_000),
+    stack(MONSTER, 'dominance', 8, 100_000),
+    stack(HUNTER, 'authority', 10, 30_000),
+  ]);
+
+test('the push ceils a stack against the one above it, and a tie is not preservation', () => {
+  /**
+   * **One troop behind a stack that stands under it on the field** — and given *first*, so the base index
+   * (`applyCounts`' tie-break) and the kill order disagree. That is the whole reason the bound is
+   * `shelterCeiling`'s strict `ceil(L/h) − 1` and not a plain `floor(L/h)`: at 4 units of 250 000 the
+   * mercenaries tie the troop at 1 000 000, and the tie is broken by the base index, which puts them **first**
+   * — the order on screen, reversed.
+   */
+  const base = marchOf([stack(HUNTER, 'authority', 2, 250_000), stack(RD3, 'leadership', 500, 2_000)]);
+  const start = applyCounts(request(), base, {}).result;
+  expect(start.stacks.map((one) => one.unitId)).toEqual([RD3, HUNTER]);
+
+  expect(pushedCounts(request(), start, ['authority'])).toEqual({ [HUNTER]: 3 });
+  expect(
+    applyCounts(request(), base, { [RD3]: 500, [HUNTER]: 4 }).result.stacks.map((one) => one.unitId),
+  ).toEqual([HUNTER, RD3]);
+});
+
+test('the push keeps the kill order and never takes a unit away', () => {
+  const base = BOTH_HIRED();
+  const start = applyCounts(request(), base, {}).result;
+  const order = start.stacks.map((one) => one.unitId);
+  const pushed = pushedCounts(request(), start, ['authority']);
+  expect(pushed).not.toBeNull();
+  const after = applyCounts(request(), base, { ...marchCounts(start), ...pushed });
+  expect(after.result.stacks.map((one) => one.unitId)).toEqual(order);
+  for (const one of start.stacks) {
+    const next = pushed?.[one.unitId] ?? one.count;
+    expect(next).toBeGreaterThanOrEqual(one.count);
+    // The stock the account owns is the mercenaries' bound, and it is never crossed.
+    if (one.pool === 'authority') expect(next).toBeLessThanOrEqual(request().caps[one.unitId] ?? next);
+  }
+});
+
+test('the two hired pools are one chain: a mercenary stack stays under a monster it cannot pass', () => {
+  const base = CHAINED();
+  const floor = troopFloor(base) ?? 0;
+  expect(floor).toBe(1_000_000);
+
+  // On its own the mercenary stack is ceiled by the monster standing over it (800 000 → 26).
+  expect(pushedCounts(request(), base, ['authority'])).toEqual({ [HUNTER]: 26 });
+  // On its own the monster is ceiled by the troop floor, exactly as the raise ceils it (… − 1 = 9).
+  expect(pushedCounts(request(), base, ['dominance'])).toEqual({ [MONSTER]: 9 });
+  // Together the monster opens the room it takes (900 000), and the mercenary stack takes it: 29.
+  expect(pushedCounts(request(), base, ['authority', 'dominance'])).toEqual({ [HUNTER]: 29, [MONSTER]: 9 });
+});
+
+test('the push spends the pool’s spare the way the raise does: on the stack that strikes most', () => {
+  // Two mercenary types, 30 000 HP a unit, room for five units only. The last to fall is served first, and
+  // what it leaves the stack above it raises the line under *it* in turn.
+  const big = stack('epic-monster-hunter-5', 'authority', 8, 30_000);
+  const small = stack(HUNTER, 'authority', 4, 30_000);
+  const base = marchOf([stack(RD3, 'leadership', 500, 2_000), big, small]);
+  const housing = { ...HOUSING, authority: base.pools.authority.used + 5 * costOf(HUNTER) };
+  expect(pushedCounts(request({ housing }), base, ['authority'])).toEqual({
+    [big.unitId]: 10,
+    [small.unitId]: 7,
+  });
+});
+
+test('the same net between every health step the push touches: strictly under the stack above', () => {
+  /**
+   * **The owner's own reading of the promise** (2026-10-12: *"we still need to ensure the same safety net between
+   * each hp"*): it is not only the topmost hired stack that stands under the line — **every** stack the push
+   * moves stands strictly under the one above it, one health step at a time, which is what the chain in
+   * `pushedCounts` walks. A pair the push did not touch may already tie (the sizer gives equal ceilings to two
+   * stacks of the same type), and that order is the engine's own and not this function's business.
+   */
+  for (const base of [BOTH_HIRED(), CHAINED()]) {
+    const start = applyCounts(request(), base, {}).result;
+    const pushed = pushedCounts(request(), start, ['authority', 'dominance']);
+    if (pushed === null) continue;
+    const after = applyCounts(request(), base, { ...marchCounts(start), ...pushed }).result;
+    after.stacks.forEach((stack, at) => {
+      const above = after.stacks[at - 1];
+      if (above === undefined || pushed[stack.unitId] === undefined) return;
+      expect(stack.totalHp, `${stack.unitId} is not strictly under ${above.unitId}`).toBeLessThan(
+        above.totalHp,
+      );
+    });
+  }
+});
+
+test('no stack the push leaves can take one more unit, on either pool', () => {
+  /**
+   * **The biggest safe push, falsified the other way round** (the same check experiment 225 runs over every
+   * benchmark stop, where it came back with one stack of 102 — a tie the strict rule refuses, the owner's call
+   * of 2026-10-12): take each stack the answer leaves standing and add **one** unit. One more unit either moves
+   * the kill order, leaves the stock or leaves the pool — there is no fourth answer, so one that survives all
+   * three bounds is a push that stopped short.
+   */
+  const fits = (counts: Record<string, number>): boolean => {
+    let used = 0;
+    for (const unit of UNITS) {
+      if (unit.pool === 'authority') used += (counts[unit.id] ?? 0) * unit.cost;
+    }
+    return used <= HOUSING.authority;
+  };
+  for (const base of [BOTH_HIRED(), CHAINED()]) {
+    const start = applyCounts(request(), base, {}).result;
+    const pushed = pushedCounts(request(), start, ['authority']) ?? {};
+    const whole = { ...marchCounts(start), ...pushed };
+    const order = applyCounts(request(), base, whole).result.stacks.map((one) => one.unitId);
+    for (const stack of start.stacks) {
+      if (stack.pool !== 'authority' || pushed[stack.unitId] === undefined) continue;
+      const wanted = (whole[stack.unitId] ?? stack.count) + 1;
+      const cap = request().caps[stack.unitId];
+      if (cap !== undefined && wanted > cap) continue;
+      const more = { ...whole, [stack.unitId]: wanted };
+      if (!fits(more)) continue;
+      expect(
+        applyCounts(request(), base, more).result.stacks.map((one) => one.unitId),
+        `${stack.unitId} could take a ${String(wanted)}th unit`,
+      ).not.toEqual(order);
+    }
+  }
+});
+
+test('the push asks for nothing where it can add nothing', () => {
+  // At the neighbour’s ceiling already.
+  expect(
+    pushedCounts(
+      request(),
+      marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 33, 30_000)]),
+      ['authority'],
+    ),
+  ).toBeNull();
+  // A pool with no spare housing: the same bound the raise lives under.
+  const full = request({ housing: { ...HOUSING, authority: costOf(HUNTER) * 10 } });
+  expect(
+    pushedCounts(full, marchOf([...TROOPS, stack(HUNTER, 'authority', 10, 30_000)]), ['authority']),
+  ).toBeNull();
+  // No troops to shelter by, and no pool asked for: the state the button is hidden in.
+  expect(pushedCounts(request(), marchOf([stack(HUNTER, 'authority', 5, 30_000)]), ['authority'])).toBeNull();
+  expect(pushedCounts(request(), CHAINED(), [])).toBeNull();
+  expect(pushedOn(NO_PUSH)).toEqual([]);
+});
+
+test('the push is a fixed point: pushing the pushed march adds nothing', () => {
+  const base = BOTH_HIRED();
+  const start = applyCounts(request(), base, {}).result;
+  const pushed = pushedCounts(request(), start, ['authority']);
+  expect(pushed).not.toBeNull();
+  const once = applyCounts(request(), base, { ...marchCounts(start), ...pushed }).result;
+  // Which is what makes the pool line’s button a toggle: the second press is the answer «nothing left».
+  expect(pushedCounts(request(), once, ['authority'])).toBeNull();
+});
+
+test('the button is hidden where the push adds nothing or buys no damage', () => {
+  // Nothing to move: no mark at all (the owner: *"hidden if all mercs that could be entered without changing
+  // kill order has already been done"*).
+  expect(offersPush(null, false)).toBe(false);
+  // A push that **loses** the worst opening: his answer of 2026-10-12 to experiment 225's three falling stops —
+  // the mark has one meaning (more mercs, more damage, the same order), so a loss is not offered.
+  expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2 }, false)).toBe(false);
+  // A wash is not a gain either: more units for the same damage is more silver for nothing.
+  expect(offersPush({ damage: 1_000, before: 1_000, lost: 2 }, false)).toBe(false);
+  expect(offersPush({ damage: 1_253_159, before: 1_148_381, lost: 2 }, false)).toBe(true);
+  // And a pool standing pushed keeps its mark whatever the trade reads: the press is the only way back.
+  expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2 }, true)).toBe(true);
 });

@@ -2388,3 +2388,111 @@ test('hovering As is previews the trade it offers against Tight, and says nothin
   );
   expect(document.body.textContent).toContain('Silver 100, Gold 20.');
 });
+
+// ---- The push (S-159) --------------------------------------------------------------------------------
+/**
+ * **The push mark on a hired pool's own line** (S-159): "Push mercs to the most the kill order allows…", or
+ * "Take the push off mercs…" once it stands. `null` where the line draws no mark at all.
+ */
+const pushMark = (pool = 'mercs'): HTMLElement | null =>
+  screen.queryByRole('button', {
+    name: new RegExp(`(Push ${pool} to the most|Take the push off ${pool})`),
+  });
+
+/** The same mark, where the test has already said it is there. */
+function pushButton(pool = 'mercs'): HTMLElement {
+  const mark = pushMark(pool);
+  if (mark === null) throw new Error(`no push mark is drawn on the ${pool} line`);
+  return mark;
+}
+
+/**
+ * **The order the march on screen would die in**: highest total HP first, with ties keeping the filed order —
+ * `applyCounts`' own sort key (`manual.ts`), read off what is drawn rather than off the filed result.
+ */
+function shownKillOrder(): string[] {
+  return [...shownStacks()]
+    .filter((one) => one.count > 0)
+    .sort((left, right) => right.hp * right.count - left.hp * left.count)
+    .map((one) => one.label);
+}
+
+test('the push sits on the hired pool’s own line, and a press keeps the kill order', async () => {
+  await generateFromAPlan();
+  const mark = pushMark();
+  expect(mark).not.toBeNull();
+  // **The name carries the trade** (design rules 18 and 24: a thumb has no hover, and the name is not colour):
+  // the damage it buys and the **stock** it spends (owner, 2026-10-12: *"it should be additional merc lost (that
+  // cannot be revived)"*), not the units fielded.
+  expect(pushButton().getAttribute('aria-label')).toMatch(
+    /^Push mercs to the most the kill order allows: \+[\d.]+[KM]? damage, \+[\d.]+%, [\d,]+ mercs lost\.$/,
+  );
+  expect(pushButton().getAttribute('aria-pressed')).toBe('false');
+  // The plan fields no monster and the pool has no room for one, so its line draws no mark at all.
+  expect(pushMark('monsters')).toBeNull();
+
+  const before = shownCounts();
+  const filed = lastResult();
+  const order = shownKillOrder();
+  fireEvent.click(pushButton());
+  await waitFor(() => {
+    expect(shownCounts()).not.toEqual(before);
+  });
+
+  // **A replay, not a solve**: the filed answer is the same object, untouched.
+  expect(lastResult()).toBe(filed);
+  // The promise: the sequence of deaths is the one it was, and the hired stacks stand under the troop floor.
+  expect(shownKillOrder()).toEqual(order);
+  const { hired, floor } = shelterNow();
+  expect(hired).toBeLessThan(floor);
+  // And the mark says which way the press now goes.
+  expect(pushButton().getAttribute('aria-pressed')).toBe('true');
+  expect(pushButton().getAttribute('aria-label')).toMatch(/^Take the push off mercs: /);
+});
+
+test('a second press puts the mercenaries back, count for count', async () => {
+  await generateFromAPlan();
+  const before = shownCounts();
+  fireEvent.click(pushButton());
+  await waitFor(() => {
+    expect(shownCounts()).not.toEqual(before);
+  });
+  fireEvent.click(pushButton());
+  await waitFor(() => {
+    expect(shownCounts()).toEqual(before);
+  });
+  expect(pushButton().getAttribute('aria-pressed')).toBe('false');
+});
+
+test('the tooltip says the damage the push adds, and the mercenaries lost for good', async () => {
+  await generateFromAPlan();
+  fireEvent.mouseEnter(pushButton());
+  const tip = await screen.findByRole('tooltip');
+  // **What the push adds, and never the march's total** (owner, 2026-10-12): the damage figure on this line is a
+  // signed addition, and the percentage beside it is the same addition read against the march on screen.
+  expect(tip.textContent).toMatch(/Damage \+[\d.]+[KM]?\s*\+[\d.]+%/);
+  expect(tip.textContent).toMatch(/\+[\d,]+ mercs lost/);
+});
+
+test('the push is a plan’s own control, and a sizer’s march draws neither it nor the raise', async () => {
+  const root = newRoot();
+  const stocked = root.profiles[0];
+  if (stocked === undefined) throw new Error('newRoot() must create one profile');
+  stocked.mercenaries.selected = [{ id: 'epic-monster-hunter-6', cap: 92 }];
+  act(() => {
+    useStore.getState().replaceDocument(root);
+    useStore.getState().updateActiveSetup((current) => ({
+      housing: { leadership: 12_000, authority: 2_000, dominance: 0 },
+      options: { ...current.options, method: 'elite' },
+    }));
+  });
+  renderWithTheme(<Page />);
+  await generate();
+
+  // The army really does hire: the check below is about the control, not about an empty pool.
+  expect(shownCounts()['EMH6'] ?? 0).toBeGreaterThan(0);
+  // The sizer's exact fill already takes the pool, the stock and the shelter (`stacker.ts`), and the raise is
+  // not offered on it either — one rule, the control and its effect together.
+  expect(pushMark()).toBeNull();
+  expect(screen.queryByRole('radiogroup', { name: 'Mercenary counts' })).toBeNull();
+});

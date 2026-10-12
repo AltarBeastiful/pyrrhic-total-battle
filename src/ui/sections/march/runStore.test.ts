@@ -31,3 +31,20 @@ test('a Generate holds the plan and stop on screen until its own plan lands', ()
   expect(useRunStore.getState().plan).toBe(NEW);
   expect(useRunStore.getState().shownPlan).toBeNull();
 });
+
+test('the push is one pool at a time, a standing rule over a Generate, and Reset puts it back off', () => {
+  expect(useRunStore.getState().pushed).toEqual({ authority: false, dominance: false });
+
+  useRunStore.getState().setPushed('authority', true);
+  expect(useRunStore.getState().pushed).toEqual({ authority: true, dominance: false });
+
+  // **A standing rule, like the raise position** (owner, 2026-09-29: *"also remember position when clicking
+  // generate again"*): a new run arrives with it on, whichever stop or method produced the march.
+  useRunStore.getState().start(new AbortController(), 'f');
+  useRunStore.getState().finish([], null, NEW);
+  expect(useRunStore.getState().pushed.authority).toBe(true);
+
+  // Another account is another army, so the push goes back off with everything else the run held.
+  useRunStore.getState().reset();
+  expect(useRunStore.getState().pushed).toEqual({ authority: false, dominance: false });
+});

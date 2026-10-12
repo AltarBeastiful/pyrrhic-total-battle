@@ -74,8 +74,13 @@ export function MarchSection() {
   const titleId = useId();
 
   const { snapshot, result, summary } = march;
-  // A raise is on: the hired stacks are standing as high as the troops still shelter them (S-142).
-  const raising = march.raiseModes.authority !== 'off' || march.raiseModes.dominance !== 'off';
+  // A raise is on: the hired stacks are standing as high as the troops still shelter them (S-142) — or a push
+  // is (S-159), which is the same statement taken one resource further, so the shelter note stays silent for it
+  // too (see the note's own call below).
+  const raising =
+    march.raiseModes.authority !== 'off' ||
+    march.raiseModes.dominance !== 'off' ||
+    Object.values(march.push).some((offer) => offer?.pressed === true);
 
   // A result that belongs to another profile or another march entirely — a different fact from
   // "the setup moved", which the recap says in one line of its own now (owner, 2026-09-13: the
@@ -203,6 +208,12 @@ export function MarchSection() {
             onRaise={(mode) => {
               // No pool: a position is one standing rule over both hired blocks (S-149, `setRaiseMode`).
               useRunStore.getState().setRaiseMode(mode);
+            }}
+            push={march.push}
+            onPush={(pool) => {
+              // **A toggle** (owner, 2026-10-12): the mark says which way it goes, so the press is the opposite
+              // of what is drawn — and one pool only, the one whose own line was pressed (S-159).
+              useRunStore.getState().setPushed(pool, !(march.push[pool]?.pressed ?? false));
             }}
           />
           {/* How safely the troops shelter the hired stacks, read off the march on screen — generated or

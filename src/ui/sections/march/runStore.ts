@@ -15,8 +15,8 @@ import type { CampaignPlan, PlanPick, PlanRow } from '@/engine/plan';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
 import type { BattleSetup, Profile } from '@/state/schema';
 
-import { DEFAULT_RAISE } from './raise';
-import type { RaiseMode, RaiseModes } from './raise';
+import { DEFAULT_RAISE, NO_PUSH } from './raise';
+import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 
 /**
  * Where on the bar the March is read (S-55; one control since the owner's review of 2026-09-14).
@@ -307,6 +307,22 @@ export interface RunState {
    */
   raiseModes: RaiseModes;
   setRaiseMode: (mode: RaiseMode) => void;
+  /**
+   * **Whether each hired pool is pushed to the most its kill order takes** (S-159; owner, 2026-10-12: *"a simple
+   * button to push a merc or monster resource to the max while keeping the same kill order … the position can be
+   * switched back by pressing again on the button"*).
+   *
+   * A **standing rule of the same species as `raiseModes`** and for the same reason: it is an instruction and
+   * not a count, so the counts are derived from the march on screen every time (`useMarch`) — which is exactly
+   * what lets the pool's own button put it back, and what makes a Generate arrive with it applied rather than
+   * with a count nobody can account for. Cleared only by `reset()`.
+   *
+   * It is **per pool**, unlike the raise position: the two buttons sit on their own lines, and the owner's ask
+   * was one resource at a time (*"I'm happy with the silver cost and dominance but I could be using more
+   * mercs"*).
+   */
+  pushed: Record<RaisedPool, boolean>;
+  setPushed: (pool: RaisedPool, pushed: boolean) => void;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
@@ -346,6 +362,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   shownPlan: null,
   chosenStop: null,
   raiseModes: DEFAULT_RAISE,
+  pushed: NO_PUSH,
   controller: null,
   setResize: (resize) => {
     set({ resize });
@@ -428,6 +445,15 @@ export const useRunStore = create<RunState>()((set, get) => ({
     // A **new object**: the March reads this through a selector, and writing in place would never reach it.
     set({ raiseModes: { authority: mode, dominance: mode } });
   },
+  /**
+   * One pool's push, and the same rule the raise position keeps: the object is rewritten and never written into,
+   * because the March reads it through a selector. Setting the pool that is already where it is asked puts a new
+   * object on the store and re-renders the March for a state that did not change — the button answers `onClick`
+   * with the opposite of what it draws, so it cannot.
+   */
+  setPushed: (pool, pushed) => {
+    set({ pushed: { ...get().pushed, [pool]: pushed } });
+  },
   cancel: () => {
     get().controller?.abort();
     // A cancelled run produced no result, so the fingerprint it was started with means nothing: the
@@ -463,6 +489,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       // does a count the previous one asked to raise its hired stacks to.
       chosenStop: null,
       raiseModes: DEFAULT_RAISE,
+      pushed: NO_PUSH,
       controller: null,
     });
   },

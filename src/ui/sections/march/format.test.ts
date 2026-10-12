@@ -11,7 +11,7 @@
  */
 import { expect, test } from 'vitest';
 
-import { bonusLines, compact, compactRatio, compactTwo, signedPercent } from './format';
+import { bonusLines, compact, compactRatio, compactTwo, signedCompact, signedPercent } from './format';
 
 test('signedPercent wears its sign, rounds to the tenth it prints, and claims no direction at zero', () => {
   // A gain and a loss, at the one decimal `percent` gives a fractional figure.
@@ -121,4 +121,14 @@ test('compactRatio is a ratio below a hundred and a compact figure above it', ()
   // Nothing to divide by prints as an em dash, as everywhere else in the file.
   expect(compactRatio(Number.NaN)).toBe('—');
   expect(compactRatio(Number.POSITIVE_INFINITY)).toBe('—');
+});
+
+test('signedCompact is the addition the push tooltip prints, never the total', () => {
+  // The owner's ask of 2026-10-12: *"change the tooltip to show additional damage only not total"*. A seven-figure
+  // addition beside a mark the size of a thumb is the number nobody reads, so it wears `compact`'s notation with
+  // `delta`'s sign — and a figure that moved nothing is a nought rather than a "+0".
+  expect(signedCompact(570_000)).toBe('+570K');
+  expect(signedCompact(-2_100_000)).toBe('-2.1M');
+  expect(signedCompact(0)).toBe('0');
+  expect(signedCompact(Number.NaN)).toBe('—');
 });
