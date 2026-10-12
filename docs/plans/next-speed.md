@@ -1,6 +1,6 @@
 # Next speed pass (W22): the Tight raise's bill, the journals, the planner's garbage, the re-typing, the tail
 
-**Status: proposed 2026-10-11.** From the owner's trace `Trace-20261011T214044.json.gz` (a `dev:profile` run) and a
+**Status: done 2026-10-12 at HEAD `9f30a45` (SPEED-07 final measure; steps 1, 2, 3 and 6 WON'T DO, 4a and 5 kept).** From the owner's trace `Trace-20261011T214044.json.gz` (a `dev:profile` run) and a
 production re-measure at `6c932f8`. Playbook: `.maestro/playbooks/2026-10-11-Speed-W22/`.
 
 **The rule is W16's, W18's, W19's and W20's:** nothing moves but the clock. Every plan, stop, position row, advisor row,
@@ -153,13 +153,13 @@ in-process A/B (arms interleaved in one process, ≥ 30 rounds, median and min) 
 
 The first column is the 10-07 export; every later column is the 10-11 export. (Re-measured 2026-10-11 the 10-07 export gave 12.6 s wall, 65.8–68.5 s pool CPU, hash unchanged: the machine was slower than at W20.)
 
-| | 6c932f8 (10-07) | 6c932f8, 10-11 | after 1 | after 2 | after 3 | after 4 | after 5 | after 6 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | 12 096 ms* | 12 096 ms* | 13 057 ms* | 13 577 ms** | 12 606 ms*** | |
-| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | 70.9–72.3 s* | 73.7–76.5 s** | 68.8–73.4 s*** | |
-| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | 35.2–35.5 s* | 37.5–38.6 s** | 35.7–37.9 s*** | |
-| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | 33.7–34.7 s* | 34.0–35.8 s** | 30.9–33.3 s*** | |
-| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | same | same | same, run 2 of 3**** | no change (step 6 dropped) |
+| | 6c932f8 (10-07) | 6c932f8, 10-11 | after 1 | after 2 | after 3 | after 4 | after 5 | after 6 | final (7), 10-11 | final (7), 10-07 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| prod wall, four passes (min of 3) | 10 994 ms | 13 832 ms | 12 096 ms* | 12 096 ms* | 13 057 ms* | 13 577 ms** | 12 606 ms*** | no change (step 6 dropped) | 11 742 ms | 10 986 ms |
+| prod pool CPU | 57.1–59.4 s | 75.1–77.2 s | 65.4–69.0 s* | 65.4–69.0 s* | 70.9–72.3 s* | 73.7–76.5 s** | 68.8–73.4 s*** | no change (step 6 dropped) | 63.6–64.6 s | 57.4–58.3 s |
+| prod Tight CPU | 13.6–14.1 s | 37.1–38.2 s | 32.3–34.1 s* | 32.3–34.1 s* | 35.2–35.5 s* | 37.5–38.6 s** | 35.7–37.9 s*** | no change (step 6 dropped) | 32.9–33.2 s | 14.8–15.0 s |
+| prod planner CPU | 42.9–44.9 s | 35.8–36.7 s | 31.3–33.0 s* | 31.3–33.0 s* | 33.7–34.7 s* | 34.0–35.8 s** | 30.9–33.3 s*** | no change (step 6 dropped) | 28.7–29.4 s | 42.0–42.8 s |
+| answer hash | a9612b9ca0a9 | a9c9defd5d22 427cfa3135cd | same | same | same | same | same, run 2 of 3**** | no change (step 6 dropped) | `a9c9defd5d22` (same) | `a9612b9ca0a9` (same) |
 
 \* **After 1 and after 2 are the same kernel as the 10-11 column: both steps are WON'T DO** (below). The figures differ
 from the 10-11 column by the machine alone (a re-run of unchanged code, `Working/w22/prod-after-02.txt`: 12 096 ms,
@@ -204,3 +204,52 @@ replayed in-process, arms interleaved, 30 rounds (`tools/theorycraft/208-the-rat
   3 378 ms raise, so one `recoveryOf` is **5.6 % of the raise** (≈ 2.7 % of pool CPU). Even a free bill stays under the
   bar's 8 % of the raise; a cache that still sums the four terms in kill order recovers about half of that. WON'T DO.
 
+### Reading it (SPEED-07, 2026-10-12)
+
+Final measure on the release kernel, `Working/w22/prod-final-1011.txt` and `prod-final-1007.txt` (3 runs each), gate
+all PASS (kernel:build 3 s, typecheck 0 s, lint 25 s, test 322 s, plan-benchmark 164 s, benchmark diff 0 s, exp 184
+114 s). `grep` of `dist/` for `KILL_CHECK`, `cKillOrders`, `cRatings`, `CENSUS`, `killOrderCheck`: no hit in any `.js`
+or in the wasm (only the W18 export stubs `raiseCensus` / `sizerCensus`, which return 0 in release).
+
+- **Answers.** 10-11 hash `a9c9defd5d22` (the harness wobbles between two or three hashes on this account, see
+  \*\*\*\* above; the reference one is present), 10-07 `a9612b9ca0a9` unchanged; the advisor golden, raise goldens
+  and benchmark diff are byte-identical. Experiment 184: position rows identical; one march 0.7 ms median, a bar 3 ms
+  median.
+- **What it bought.** Against the first 10-11 column, wall 13 832 → 11 742 ms (−15 %) and pool CPU 75.1–77.2 →
+  63.6–64.6 s (−15 %); but the machine was slower for that first run: against the unchanged-code re-run (12 096 ms,
+  65.4–69.0 s) the gain is ≈ −3 % wall and ≈ −5 % CPU, which is what 4a plus 5 are worth (planner CPU 35.8–36.7 →
+  28.7–29.4 s, −19 %; on 10-07 planner 42.0–42.8 against 42.9–44.9 s, wall 10 986 against 10 994 ms, i.e. nothing
+  visible there). In-process, experiment 197 on the 10-11 export, before → after: CPU per plan 1 030 → 879 ms, wall
+  per plan 426 → 366 ms, profiled planner 294.1 → 261.1 ms, GC 16 pauses / 40.3 ms → 15 / 37.2 ms, allocation
+  179.5 → 156.5 MiB.
+- **Kept:** 4a (indexed loops in `evaluateVector`, −3.6 to −8 % of the planner) and 5 (the `retypeClimb` door, −5.7 to
+  −7.4 %).
+- **WON'T DO, with figures:** step 1 (rating reads the kept kill order) −2.4 % of the raise ≈ 1.2 % of pool CPU;
+  step 2 (bill from per-type terms) one `recoveryOf` is 5.6 % of the raise, ≈ 2.7 % of pool CPU at most, not built;
+  step 3 (fused journals) −0.3 to −2.1 % of the planner ≈ 0.4 % of pool CPU; 4b and 4c under the bar; step 6
+  (cost-ordered jobs) held-out ρ 0.15–0.24 against a 0.6 bar, dropped by the owner. The profile build's shares for
+  `killOrderBy` and `recoveryOf` were wasm-in-`dev:profile` inflation, which is why W22 judged on release only.
+- **Where W22 leaves the wall.** It is Tight (≈ 51 % of pool CPU on the 10-11 export) and the planner (≈ 45 %), in
+  roughly equal halves, both now flat: the remaining levers are the next section's.
+
+### Next candidates (trace of the final build, `Working/w22/trace-final.md`)
+
+A `VITE_PROFILING=1` production build on the exactness fixture (82 jobs, 21.6 s pool CPU, 4.8 s wall; planCampaign
+90.3 % of worker samples, JS 55.9 %, wasm 33.1 %, GC 5.6 %). Read for shape; inclusive shares of `runProbe`, self
+shares are spread thinner than every row below:
+
+| # | kind | candidate | share |
+|---|---|---|---:|
+| 1 | kernel | `retypeWalk` (wasm-function[60]) under `retypeRow` and `ownLadderCandidates` | ≈ 12.5 % (+ 8.2 % under the own-ladder candidates, overlapping) |
+| 2 | kernel | `grid` / `gridFor` (wasm-function[58]) in `row` and `ShapeScorer` | ≈ 4.6 % + 1.5 % |
+| 3 | kernel | `sizerShape` under `sizedShape` | 3.6 % |
+| 4 | kernel | `finale` / `finaleOnKernel` in `finaleFor` | ≈ 3.7 % |
+| 5 | kernel | `march` under `marchOf` | 1.4 % |
+| 1 | JS | `retypeRow` → `map` → `retypeOne` → `retypeMarch` frames outside the walk (≈ 18.6 % inclusive less 12.5 %) | ≈ 6 % |
+| 2 | JS | `ShapeScorer.finish` / `finaleFor` bookkeeping | ≈ 6.4 % inclusive |
+| 3 | JS | garbage collector | 5.6 % of busy samples |
+| 4 | JS | `sizer` / `sizerKeptOf` | 5.8 % inclusive |
+| 5 | JS | `undominatedRows`, `figuresOf` / `billedOf`, `buildAllIn` | 2.1 %, 2.0 %, 2.2 % |
+
+The re-typing walk is the one function the previous round did not touch (SPEED-05 ported the climb around it); a
+census of how many walks repeat the same row would be the first thing to measure before another door.
