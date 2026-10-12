@@ -1,0 +1,132 @@
+diff --git a/src/engine/plan.ts b/src/engine/plan.ts
+index 0d2d124..17f3fc5 100644
+--- a/src/engine/plan.ts
++++ b/src/engine/plan.ts
+@@ -58,6 +58,25 @@ import type {
+   StackResult,
+ } from './types';
+ 
++// --- 215 — the search-knob census (TEMPORARY: `tools/theorycraft/215-the-search-knobs.test.ts`; reverted after
++// the measurement, the patch is `docs/research/patches/215-search-knobs.patch`). Each knob is a module `let` at
++// its declaration so a caller may restrict it for one experiment and hand the shipped value back; `setKnobs215`
++// (module foot) restores the literals above, and the app never calls it. Nothing here changes a shipped default. ---
++export interface Knobs215 {
++  /** `DEPTHS` restricted. */
++  depths?: readonly number[];
++  /** `LADDER_GROWTHS` restricted. */
++  growths?: readonly number[];
++  /** `SIZER_DEPTHS` restricted (a method dropped by removing its key). */
++  sizerDepths?: Record<number, SizerMethod>;
++  /** `PLAN_LIMITS` overridden. */
++  limits?: Partial<PlanLimits>;
++  /** Drop the winner's-rungs shape (`WINNER_RUNGS_DEPTH`) from the search. */
++  dropWinnerRungs?: boolean;
++}
++const knobs215 = (): Knobs215 | undefined =>
++  (globalThis as unknown as { __knobs215?: Knobs215 }).__knobs215;
++
+ /**
+  * What the **search** prices a march's losses at: the bare game, no temple and no training discounts. The
+  * figures a plan *prints* are re-priced under the account's own `request.recovery` by `toMarch` (S-91), so
+@@ -79,7 +98,7 @@ export const DEFAULT_GAP = 0.25;
+  * it buys troop damage at the cost of silver. The plan's whole shape — how many marches, how big each is, how
+  * much the final march can afford — falls out of which of these the campaign can pay for.
+  */
+-export const LADDER_GROWTHS = [1, 1.25, 1.5, 1.8, 2.2, 2.6, 3.2, 4, 5, 6] as const;
++export let LADDER_GROWTHS: readonly number[] = [1, 1.25, 1.5, 1.8, 2.2, 2.6, 3.2, 4, 5, 6];
+ /** Between consecutive rungs, in HP — wide enough that rounding cannot re-order them. */
+ const RUNG_STEP = 1.02;
+ /** Fractions of the largest feasible count each mercenary type is offered, beside that count itself. */
+@@ -122,7 +141,7 @@ export interface PlanLimits {
+   /** The re-typing climb's step cap; unset, `retype.ts`'s own `CLIMB_STEPS`. */
+   retypeClimbSteps?: number | undefined;
+ }
+-export const PLAN_LIMITS: Readonly<PlanLimits> = {
++export let PLAN_LIMITS: Readonly<PlanLimits> = {
+   crossedTypes: CROSSED_TYPES,
+   climbSeeds: 8,
+   // 16 → 32 on 2026-10-02 (W16 F1, experiment 186 E): moves only the 20 000-dominance camp, registered with it.
+@@ -131,7 +150,7 @@ export const PLAN_LIMITS: Readonly<PlanLimits> = {
+   retypeShare: RETYPE_SHARE,
+ };
+ /** Ladder depths tried, in troop rungs. */
+-export const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
++export let DEPTHS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8];
+ 
+ /**
+  * **What a put-back is worth**, in the owner's own exchange rates — the policy the pass below is steered by
+@@ -1736,7 +1755,7 @@ export interface RungOrderLog {
+  * while burning fewer hired units — a march the Elite-only sizer shape could not reach.
+  */
+ export type SizerMethod = 'elite' | 'ms' | 'msRelaxed';
+-export const SIZER_DEPTHS: Record<number, SizerMethod> = { 0: 'elite', [-1]: 'ms', [-2]: 'msRelaxed' };
++export let SIZER_DEPTHS: Record<number, SizerMethod> = { 0: 'elite', [-1]: 'ms', [-2]: 'msRelaxed' };
+ /**
+  * The depth that names one more shape: **the winner's own troop stacks, with the mercenaries of the vector
+  * being scored**. The ladder sizes its rungs off the biggest hired stack, so fewer mercenaries shrink the
+@@ -4786,9 +4805,11 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       seen.add(key);
+       let candidate = evaluateVector(vector);
+       // The winner's own rungs with this vector's mercenaries (`WINNER_RUNGS_DEPTH`), the shape the search
+-      // could not reach from a merc-sized ladder.
+-      const kept = evaluateVector(vector, { depth: WINNER_RUNGS_DEPTH, scale: 1 });
+-      if (kept && (!candidate || kept.total > candidate.total)) candidate = kept;
++      // could not reach from a merc-sized ladder. (215: dropped when `__knobs215.dropWinnerRungs`.)
++      if (knobs215()?.dropWinnerRungs !== true) {
++        const kept = evaluateVector(vector, { depth: WINNER_RUNGS_DEPTH, scale: 1 });
++        if (kept && (!candidate || kept.total > candidate.total)) candidate = kept;
++      }
+       if (!candidate) return;
+       // The winner's shape was refined by the climb above (its depth and its scale); a swept vector scored on
+       // the grid's coarse scales alone loses to it — measured on the owner's live account, the 60-hunter march
+@@ -4933,7 +4954,8 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       one: ShelteredMax,
+       ladder: { depth: number; rungs: { entry: Effective; count: number }[] },
+     ): void => {
+-      if (ownLadderRates === undefined || ladder.rungs.length === 0) return;
++      if (ownLadderRates === undefined || ladder.rungs.length === 0 || knobs215()?.dropWinnerRungs === true)
++        return;
+       const counts: Record<string, number> = {};
+       for (const merc of one.vector) counts[merc.entry.id] = merc.count;
+       // The scorer's winner-rungs path, pointed at this ladder for the one call.
+@@ -6274,7 +6296,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+         let found = seed;
+         const depths = [
+           ...(sizerShape ? Object.keys(SIZER_DEPTHS).map(Number) : []),
+-          ...(winnerRungs.length > 0 ? [WINNER_RUNGS_DEPTH] : []),
++          ...(winnerRungs.length > 0 && knobs215()?.dropWinnerRungs !== true ? [WINNER_RUNGS_DEPTH] : []),
+           ...DEPTHS,
+         ];
+         for (const depth of depths) {
+@@ -8146,3 +8168,31 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       : {}),
+   };
+ }
++
++// --- 215 (continued): the shipped knobs captured once, the setter, and the load-time override. ---
++const SHIPPED_215 = {
++  depths: DEPTHS,
++  growths: LADDER_GROWTHS,
++  sizerDepths: SIZER_DEPTHS,
++  limits: PLAN_LIMITS,
++};
++/** Restrict the search's knobs for one experiment; called with nothing, restore the shipped values. */
++export function setKnobs215(knobs?: Knobs215): void {
++  DEPTHS = knobs?.depths ?? SHIPPED_215.depths;
++  LADDER_GROWTHS = knobs?.growths ?? SHIPPED_215.growths;
++  SIZER_DEPTHS = knobs?.sizerDepths ?? SHIPPED_215.sizerDepths;
++  PLAN_LIMITS = { ...SHIPPED_215.limits, ...knobs?.limits };
++  (globalThis as unknown as { __knobs215?: Knobs215 }).__knobs215 = knobs ?? {};
++}
++/**
++ * The benchmark half of the experiment runs the repo's own suite under one restriction, so it hands it in on
++ * the environment (`KNOBS215='{"depths":[1,2,3,4,5]}' pnpm vitest run tests/engine/plan-benchmark.test.ts`); the
++ * read is guarded so the browser bundle (no `process`) is a no-op.
++ */
++const envc215 = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
++if (envc215?.KNOBS215 !== undefined && envc215.KNOBS215 !== '')
++  setKnobs215(JSON.parse(envc215.KNOBS215) as Knobs215);
++// The test reaches the setter through this handle rather than importing it, the way experiment 213 reads its
++// census off `globalThis`: a file that imports a symbol only the patch defines would not typecheck on a tree
++// without the patch, and the patch is the artefact, not the tree.
++(globalThis as unknown as { __setKnobs215?: typeof setKnobs215 }).__setKnobs215 = setKnobs215;

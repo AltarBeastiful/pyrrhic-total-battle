@@ -1729,14 +1729,22 @@ export interface RungOrderLog {
 }
 
 /**
- * The stacking methods the sizer shape is scored with (`CampaignInput.sizerShape`), keyed by the depth that
- * names them in the shape scorer: `0` Elite, `-1` Military Science, `-2` Military Science relaxed. Measured
- * on the owner's export of 2026-09-17 (`tools/theorycraft/out/94-under-the-cap.md` §C): with the sweet spot's
- * own mercenary caps, Military Science over the same eight types hit for 5 770 261 against Elite's 5 736 190
- * while burning fewer hired units — a march the Elite-only sizer shape could not reach.
+ * The stacking methods the plan's sizer shape is scored with (`CampaignInput.sizerShape`), keyed by the depth
+ * that names them in the shape scorer: `0` Elite, `-1` Military Science, `-2` Military Science relaxed.
+ *
+ * **Elite alone since experiments 215 and 215b** (2026-10-12): the two Military Science depths are dropped
+ * from the plan's search. `94-under-the-cap.md` §C had put Military Science in — with the sweet spot's own
+ * mercenary caps it hit for 5 770 261 against Elite's 5 736 190 while burning fewer hired units — but
+ * **W11's rated re-typing** made its shapes redundant: each sizer method spawns a derived vector the ladder
+ * grid then scores, and the re-typing re-chooses the very troops the methods differ by. Measured: dropping
+ * them moves **no stop of the benchmark's 19 armies** (0 of 68, 8 readings compared each) and leaves the
+ * whole plan **byte-identical** on the owner's live account of 2026-10-11, for **−47.2 % of plan CPU**
+ * (329 → 174 ms a plan, interleaved medians) — `tools/theorycraft/out/215-the-search-knobs.md`,
+ * `out/215b-the-sizer-methods-audit.md`. `ms` and `msRelaxed` stay available to the March card's own method
+ * choice (`engine/campaign.ts`) and to `sizeStacks`; only the plan's search drops them.
  */
 export type SizerMethod = 'elite' | 'ms' | 'msRelaxed';
-export const SIZER_DEPTHS: Record<number, SizerMethod> = { 0: 'elite', [-1]: 'ms', [-2]: 'msRelaxed' };
+export const SIZER_DEPTHS: Record<number, SizerMethod> = { 0: 'elite' };
 /**
  * The depth that names one more shape: **the winner's own troop stacks, with the mercenaries of the vector
  * being scored**. The ladder sizes its rungs off the biggest hired stack, so fewer mercenaries shrink the
@@ -2966,7 +2974,7 @@ export interface MarchWithin {
 /** A march the March pane can draw, with how it was built and what it could not field. */
 export interface ResizedMarch extends PlanMarch {
   /**
-   * The sizer under one of its three methods, the tight ladder over the same types, or `stop` — the march
+   * The sizer under one of its methods, the tight ladder over the same types, or `stop` — the march
    * the player was looking at, with the edit applied and nothing else touched (S-117, `MarchWithin.stop`).
    */
   shape: SizerMethod | 'ladder' | 'stop';
@@ -3025,7 +3033,7 @@ function sameSetAsStop(within: MarchWithin): boolean {
  * **The rule this answers with.** Given the types to field and the stop's hired counts, the best march over
  * **exactly** those troop types:
  *
- *  - the sizer under each of its three methods (`SIZER_DEPTHS`) with those hired counts as caps, sheltered
+ *  - the sizer under each method it searches (`SIZER_DEPTHS`) with those hired counts as caps, sheltered
  *    (`sizedShape`) — S-93's own machinery, the family a player builds by hand;
  *  - the tight ladder over the same types, at each of the `LADDER_GROWTHS`, with the hired stacks sheltered
  *    under it — the shape the search reaches for when the sizer spends too much silver;
@@ -5691,7 +5699,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * for this."*).
    *
    * The same march, re-sized by the **sizer over a prefix of the troop ranking** — its own hired counts as the
-   * caps, one prefix at a time, under each of the three methods — and taken only when the result is at least
+   * caps, one prefix at a time, under each of its methods — and taken only when the result is at least
    * as good on **every one of the four readings the bar and the recap print**: damage, silver, the stock
    * burned and the training queue, with one of them strictly better. No exchange rate and no cap: this pass
    * has nothing to trade, because a march that is behind on none of the four is simply the same answer done

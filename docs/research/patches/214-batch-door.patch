@@ -1,0 +1,507 @@
+diff --git a/kernel/assembly/index.ts b/kernel/assembly/index.ts
+index 7581d66..090da91 100644
+--- a/kernel/assembly/index.ts
++++ b/kernel/assembly/index.ts
+@@ -500,6 +500,36 @@ export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, sear
+   store<f64>(outPtr + 40, hits);
+ }
+ 
++/**
++ * `n` marches in one crossing (experiment 214): each shape's stacks at `rowsPtr` (i32) and `countsPtr` (f64),
++ * `types` apart, and its six figures at `outPtr`, 6 f64 apart — the strides `battleMany` reads. A shape fields
++ * its stacks in the first slots and leaves the rest at count 0 (`killOrder` drops them, so the padding is the
++ * march of the slots it does field). The bounds are `march`'s: a caller that packs only bound entries pays one
++ * JS→wasm crossing for the whole batch instead of one a shape.
++ */
++export function marchMany(
++  n: i32,
++  rowsPtr: usize,
++  countsPtr: usize,
++  enemy: i32,
++  searchTemple: f64,
++  outPtr: usize,
++): void {
++  const rowStride = (<usize>types) << 2;
++  const countStride = (<usize>types) << 3;
++  const outStride: usize = 6 << 3;
++  for (let i = 0; i < n; i += 1) {
++    march(
++      types,
++      rowsPtr + <usize>i * rowStride,
++      countsPtr + <usize>i * countStride,
++      enemy,
++      searchTemple,
++      outPtr + <usize>i * outStride,
++    );
++  }
++}
++
+ /**
+  * The search recovery's training cost reduction, one f64 a row (`1 − trainingCostReduction[group] / 100`, as
+  * `retrainOne` computes it), that `march` bills its silver with; 0 for none (`SEARCH_RECOVERY`, every row 1).
+diff --git a/src/engine/fast.ts b/src/engine/fast.ts
+index b709d20..b8a92c5 100644
+--- a/src/engine/fast.ts
++++ b/src/engine/fast.ts
+@@ -141,6 +141,17 @@ export interface PlanKernel {
+     enemyStacks: number,
+     recovery: RecoverySettings,
+   ): MarchFigures | null;
++  /**
++   * **`march` over a batch of shapes, one crossing** (experiment 214, prototype): each shape a stack array as
++   * `march` takes; every shape on one bound table, or `null` (the caller runs its per-shape path). Answers the
++   * figures in the shapes' order. Batched by the kernel's `marchMany`, whose single-shape answers are
++   * byte-identical to `march`'s (`tests/kernel/parity.test.ts`).
++   */
++  marchMany(
++    shapes: readonly (readonly { entry: Effective; count: number }[])[],
++    enemyStacks: number,
++    recovery: RecoverySettings,
++  ): MarchFigures[] | null;
+   /**
+    * `recoveryCosts(stacks, units, recovery).plan` over `stacks` in that order (the rounded bill), or `null`
+    * unless every entry is bound to one request and `recovery` is that request's own.
+@@ -155,6 +166,12 @@ export interface PlanKernel {
+    * TypeScript of its own to fall back to any more (W16 E3 S5a) and throws instead.
+    */
+   marchBill(request: StackRequest, counts: Record<string, number>): Bill | null;
++  /**
++   * **`marchBill` over a batch of count vectors, one crossing** (experiment 214, prototype): the step-1 battle
++   * and bill of each vector, in their order, by the kernel's `battleMany`; `null` when the request cannot be
++   * packed. Each answer equals `marchBill(request, vector)`.
++   */
++  marchBillMany(request: StackRequest, countVectors: readonly Record<string, number>[]): Bill[] | null;
+   /**
+    * **The exhaustive walk of `retypeMarch`, whole** (W18 P3.5): every injective assignment of `troops` to the
+    * `slots` (each type sized `ceil(slotHp / hp)`, the leadership within housing, the hired counts kept as they
+@@ -357,6 +374,24 @@ export function setKernel(kernel: PlanKernel | null): void {
+   current = kernel;
+ }
+ 
++/**
++ * **The batch-door switch** (experiment 214, prototype): module-level and **off by default**, so the shipped
++ * path is exactly the pre-patch one. On, the loops that name it (`orderFor`'s climb, the re-typing walk) route
++ * their many-shape crossings through `marchMany`/`marchBillMany`; every answer is byte-identical either way
++ * (proven in `tools/theorycraft/214-the-batch-door-prototype.test.ts`). The prototype is measured, not merged.
++ */
++let batchDoors = false;
++
++/** Turn the batch-door prototype on (or off); the default path is unchanged. */
++export function setBatchDoors(on: boolean): void {
++  batchDoors = on;
++}
++
++/** Whether the batch-door prototype is on. */
++export function batchDoorsOn(): boolean {
++  return batchDoors;
++}
++
+ /** The kernel set by the host, or `null` when none is (a boot that failed, or a test that cleared it). */
+ export function planKernel(): PlanKernel | null {
+   return current;
+diff --git a/src/engine/plan.ts b/src/engine/plan.ts
+index 0d2d124..edf6249 100644
+--- a/src/engine/plan.ts
++++ b/src/engine/plan.ts
+@@ -45,7 +45,7 @@ import type { Bill, MarkerRates } from './rating';
+ import { rate, saved } from './rating';
+ import { marchBill, retypeMarch } from './retype';
+ import { planTrace } from './plan-trace';
+-import { LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, requiredPlanKernel } from './fast';
++import { batchDoorsOn, LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, requiredPlanKernel } from './fast';
+ import type { LadderKernel, MarchFigures, PlanKernel } from './fast';
+ import type {
+   BattleSummary,
+@@ -2048,19 +2048,56 @@ export function makeScorer(context: ShapeContext): ShapeScorer {
+       const rungs = ladder(troops, depth, mercenaryHp, gap, leadership, scale, candidate);
+       return rungs.length === 0 ? -Infinity : marchOf([...rungs, ...vector], enemyStacks).damage;
+     };
++    /**
++     * The damages of one step's trials: one `marchMany` crossing for the whole batch when the batch door is on
++     * (experiment 214), else `damageOf` a trial — the same figures, the same order, one crossing or many. Falls
++     * back to the per-trial path where the kernel cannot take the batch (an entry not on one bound table).
++     */
++    const damagesOf = (trials: Effective[][]): number[] => {
++      battles += trials.length;
++      const rungs = trials.map((candidate) => ladder(troops, depth, mercenaryHp, gap, leadership, scale, candidate));
++      if (batchDoorsOn()) {
++        const shapes: { entry: Effective; count: number }[][] = [];
++        const at: number[] = [];
++        for (let i = 0; i < rungs.length; i += 1) {
++          const one = rungs[i] as { entry: Effective; count: number }[];
++          if (one.length > 0) {
++            shapes.push([...one, ...vector]);
++            at.push(i);
++          }
++        }
++        if (shapes.length > 1) {
++          const figures = requiredPlanKernel().marchMany(shapes, enemyStacks, SEARCH_RECOVERY);
++          if (figures !== null) {
++            const damages: number[] = new Array<number>(trials.length).fill(-Infinity);
++            for (let p = 0; p < at.length; p += 1) damages[at[p] as number] = (figures[p] as MarchFigures).damage;
++            return damages;
++          }
++        }
++      }
++      return rungs.map((one) =>
++        one.length === 0 ? -Infinity : marchOf([...one, ...vector], enemyStacks).damage,
++      );
++    };
+     const climb = (start: Effective[], startDamage: number): { order: Effective[]; damage: number } => {
+       let order = start;
+       let current = startDamage;
+       for (;;) {
+-        let best: { order: Effective[]; damage: number } | undefined;
++        const trials: Effective[][] = [];
+         for (let i = 0; i < order.length; i += 1) {
+           for (let j = i + 1; j < order.length; j += 1) {
+             const trial = [...order];
+             [trial[i], trial[j]] = [trial[j] as Effective, trial[i] as Effective];
+-            const damage = damageOf(trial);
+-            if (damage > current && (!best || damage > best.damage)) best = { order: trial, damage };
++            trials.push(trial);
+           }
+         }
++        const damages = damagesOf(trials);
++        let best: { order: Effective[]; damage: number } | undefined;
++        for (let t = 0; t < trials.length; t += 1) {
++          const damage = damages[t] as number;
++          if (damage > current && (!best || damage > best.damage))
++            best = { order: trials[t] as Effective[], damage };
++        }
+         if (!best) break;
+         order = best.order;
+         current = best.damage;
+diff --git a/src/engine/retype.ts b/src/engine/retype.ts
+index d18afcf..071cf13 100644
+--- a/src/engine/retype.ts
++++ b/src/engine/retype.ts
+@@ -21,7 +21,7 @@ import { buildKillOrder } from './killOrder';
+ import { marchResult, effectiveTable, rankTroops } from './plan';
+ import type { Bill, MarkerRates } from './rating';
+ import { rate } from './rating';
+-import { requiredPlanKernel } from './fast';
++import { batchDoorsOn, requiredPlanKernel } from './fast';
+ import type { StackRequest } from './types';
+ 
+ /** Up to this many assignments are tried one by one; above it, the swap/replace climb. */
+@@ -152,6 +152,17 @@ export function retypeMarch(
+   let from: RetypeSeed | undefined;
+   /** Every assignment already battled, so three climbs never battle one twice (`tierCandidate` only). */
+   const seen = new Map<string, number>();
++  /** `consider`'s tail: rate a bill already in hand and keep it when it beats `best`. */
++  const finishConsider = (key: string, c: Record<string, number>, bill: Bill): number => {
++    tried += 1;
++    const score = bill.damage < base.damage - 1e-6 || overCeiling(bill) ? -Infinity : rate(base, bill, rates);
++    if (tierCandidate) seen.set(key, score);
++    if (score > 1e-9 && (!best || score > best.rating))
++      best = tierCandidate
++        ? { counts: c, rating: score, seed: from as RetypeSeed }
++        : { counts: c, rating: score };
++    return score;
++  };
+   /** The candidate's rating, or −∞ when it does not fit or deals less damage. */
+   const consider = (types: number[]): number => {
+     const key = tierCandidate ? types.join(',') : '';
+@@ -164,15 +175,39 @@ export function retypeMarch(
+       if (tierCandidate) seen.set(key, -Infinity);
+       return -Infinity;
+     }
+-    tried += 1;
+-    const bill = marchBill(request, c);
+-    const score = bill.damage < base.damage - 1e-6 || overCeiling(bill) ? -Infinity : rate(base, bill, rates);
+-    if (tierCandidate) seen.set(key, score);
+-    if (score > 1e-9 && (!best || score > best.rating))
+-      best = tierCandidate
+-        ? { counts: c, rating: score, seed: from as RetypeSeed }
+-        : { counts: c, rating: score };
+-    return score;
++    return finishConsider(key, c, marchBill(request, c));
++  };
++  /**
++   * `consider` over a whole step's candidates at once (experiment 214): the assignments that fit are billed in
++   * one `marchBillMany` crossing where the kernel takes them, then rated in the same order `consider` would — so
++   * every `best`/`seen`/`tried` move is the one the one-by-one path makes.
++   */
++  const considerMany = (typeLists: number[][]): number[] => {
++    const prepared = typeLists.map((types) => {
++      const key = tierCandidate ? types.join(',') : '';
++      if (tierCandidate) {
++        const hit = seen.get(key);
++        if (hit !== undefined) return { key, hit } as { key: string; hit?: number; counts?: Record<string, number> };
++      }
++      const counts = build(types);
++      if (!counts) {
++        if (tierCandidate) seen.set(key, -Infinity);
++        return { key, hit: -Infinity } as { key: string; hit?: number; counts?: Record<string, number> };
++      }
++      return { key, counts } as { key: string; hit?: number; counts?: Record<string, number> };
++    });
++    const pending = prepared.filter((one) => one.counts !== undefined);
++    let bills: (Bill | null)[] | null = null;
++    if (pending.length > 1)
++      bills = requiredPlanKernel().marchBillMany(request, pending.map((one) => one.counts as Record<string, number>));
++    let next = 0;
++    return prepared.map((one) => {
++      if (one.hit !== undefined) return one.hit;
++      const counts = one.counts as Record<string, number>;
++      const bill = bills !== null ? (bills[next] as Bill) : marchBill(request, counts);
++      next += 1;
++      return finishConsider(one.key, counts, bill);
++    });
+   };
+ 
+   const k = slots.length;
+@@ -221,6 +256,26 @@ export function retypeMarch(
+         best = tierCandidate
+           ? { counts: walked.counts, rating: walked.rating, seed: from }
+           : { counts: walked.counts, rating: walked.rating };
++    } else if (batchDoorsOn() && deadline === Infinity) {
++      // The same walk, its leaves billed in one crossing (experiment 214); the order of `consider` is the DFS
++      // order still, so `best`/`seen`/`tried` move exactly as the one-by-one walk moves them.
++      const leaves: number[][] = [];
++      const walk = (acc: number[], used: Set<number>): void => {
++        if (acc.length === k) {
++          leaves.push([...acc]);
++          return;
++        }
++        for (let i = 0; i < m; i += 1) {
++          if (used.has(i)) continue;
++          used.add(i);
++          acc.push(i);
++          walk(acc, used);
++          acc.pop();
++          used.delete(i);
++        }
++      };
++      walk([], new Set());
++      considerMany(leaves);
+     } else {
+       const walk = (acc: number[], used: Set<number>): void => {
+         if (outOfTime()) return;
+@@ -302,10 +357,21 @@ export function retypeMarch(
+             neighbours.push(next);
+           }
+         }
+-        for (const next of neighbours) {
+-          if (outOfTime()) break;
+-          const s = consider(next);
+-          if (s > currentScore + 1e-6 && (!moved || s > moved.score)) moved = { types: next, score: s };
++        if (batchDoorsOn() && deadline === Infinity && neighbours.length > 0) {
++          // One crossing for the whole step's neighbours (experiment 214); the scores are the ones `consider`
++          // answers, rated in the same order, so `moved` picks the same neighbour.
++          const scores = considerMany(neighbours);
++          for (let t = 0; t < neighbours.length; t += 1) {
++            const s = scores[t] as number;
++            if (s > currentScore + 1e-6 && (!moved || s > moved.score))
++              moved = { types: neighbours[t] as number[], score: s };
++          }
++        } else {
++          for (const next of neighbours) {
++            if (outOfTime()) break;
++            const s = consider(next);
++            if (s > currentScore + 1e-6 && (!moved || s > moved.score)) moved = { types: next, score: s };
++          }
+         }
+         if (!moved) break;
+         current = moved.types;
+diff --git a/src/kernel/plan.ts b/src/kernel/plan.ts
+index 31f250f..8781827 100644
+--- a/src/kernel/plan.ts
++++ b/src/kernel/plan.ts
+@@ -42,6 +42,7 @@ interface PlanExports {
+   alloc(bytes: number): number;
+   setTable(ptr: number): void;
+   battle(countsPtr: number, outPtr: number): void;
++  battleMany(n: number, countsPtr: number, outPtr: number): void;
+   march(
+     n: number,
+     rowsPtr: number,
+@@ -50,6 +51,14 @@ interface PlanExports {
+     searchTemple: number,
+     outPtr: number,
+   ): void;
++  marchMany(
++    n: number,
++    rowsPtr: number,
++    countsPtr: number,
++    enemy: number,
++    searchTemple: number,
++    outPtr: number,
++  ): void;
+   bill(n: number, rowsPtr: number, countsPtr: number, outPtr: number): void;
+   sizeStacks(
+     n: number,
+@@ -356,6 +365,19 @@ interface Bound {
+   ladder: LadderScratch | null;
+   /** The sizer shape's scratch (W18 P3.4), reserved on the first `sizerShape` over this instance. */
+   shape: ShapeScratch | null;
++  /** The batch scratch (experiment 214): `room` shapes of `types` stacks each, grown on demand. */
++  batch: {
++    room: number;
++    rowsPtr: number;
++    countsPtr: number;
++    marchOutPtr: number;
++    battleOutPtr: number;
++    buffer: ArrayBuffer | null;
++    rows: Int32Array;
++    counts: Float64Array;
++    marchOut: Float64Array;
++    battleOut: Float64Array;
++  };
+ }
+ 
+ function views(bound: Bound): void {
+@@ -375,6 +397,34 @@ function views(bound: Bound): void {
+   bound.reduction = new Float64Array(buffer, bound.reductionPtr, n);
+ }
+ 
++/**
++ * **The batch arena** (experiment 214): room for `n` shapes of `types` stacks each — rows (i32), counts (f64),
++ * `marchMany`'s six figures a shape and `battleMany`'s `RECORD_SIZE` — grown on demand, with views fresh at the
++ * call (a later `alloc` detaches the old buffer). One crossing reads the whole batch; nothing here is read by
++ * the single-shape doors, whose own `bound.rows`/`bound.counts` scratch it leaves alone.
++ */
++function batchScratch(bound: Bound, n: number): void {
++  const b = bound.batch;
++  if (n > b.room) {
++    b.room = Math.max(n, 2 * b.room, 8);
++    const raw = bound.raw;
++    const t = Math.max(1, bound.types);
++    b.rowsPtr = raw.alloc(4 * b.room * t);
++    b.countsPtr = raw.alloc(8 * b.room * t);
++    b.marchOutPtr = raw.alloc(8 * 6 * b.room);
++    b.battleOutPtr = raw.alloc(8 * RECORD_SIZE * b.room);
++    b.buffer = null;
++  }
++  const buffer = bound.raw.memory.buffer;
++  if (b.buffer === buffer) return;
++  b.buffer = buffer;
++  const t = Math.max(1, bound.types);
++  b.rows = new Int32Array(buffer, b.rowsPtr, b.room * t);
++  b.counts = new Float64Array(buffer, b.countsPtr, b.room * t);
++  b.marchOut = new Float64Array(buffer, b.marchOutPtr, b.room * 6);
++  b.battleOut = new Float64Array(buffer, b.battleOutPtr, b.room * RECORD_SIZE);
++}
++
+ /**
+  * Bill `bound`'s marches with `recovery`'s training cost reductions: each row's `1 − percent / 100`, exactly as
+  * `retrainOne` computes it, or none (the kernel's own `1`) when the map is empty. A training speed reaches no
+@@ -483,6 +533,18 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
+       rowOfUnit: new Map(request.units.map((unit, row) => [unit, row])),
+       ladder: null,
+       shape: null,
++      batch: {
++        room: 0,
++        rowsPtr: 0,
++        countsPtr: 0,
++        marchOutPtr: 0,
++        battleOutPtr: 0,
++        buffer: null,
++        rows: new Int32Array(0),
++        counts: new Float64Array(0),
++        marchOut: new Float64Array(0),
++        battleOut: new Float64Array(0),
++      },
+     };
+     views(bound);
+     byRequest.set(request, bound);
+@@ -817,6 +879,56 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
+       };
+     },
+ 
++    marchMany(shapes, enemyStacks, recovery) {
++      if (shapes.length === 0) return [];
++      if (recovery !== searchRecovery) {
++        searchRecovery = recovery;
++        searchTemple = templeDivisor(recovery.templeLevel);
++      }
++      checkEnemy(enemyStacks);
++      // Every shape on one bound, no shape empty, none wider than the table: the same guards `lay` takes,
++      // checked for the whole batch. A caller that hands one shape the kernel cannot take falls back whole.
++      const first = shapes[0] as readonly { entry: Effective; count: number }[];
++      const at0 = first.length === 0 ? undefined : rowOf.get((first[0] as { entry: Effective }).entry);
++      if (at0 === undefined) return null;
++      const bound = at0.bound;
++      for (const shape of shapes) if (shape.length === 0 || shape.length > bound.types) return null;
++      batchScratch(bound, shapes.length);
++      searchReduction(bound, recovery);
++      const b = bound.batch;
++      const types = bound.types;
++      const { rows, counts } = b;
++      // One bulk clear of the whole batch, then each shape's own stacks: the same reads `lay` makes, over the
++      // batch at once — no padding written a cell at a time (`killOrder` drops the 0 tail anyway).
++      counts.fill(0, 0, shapes.length * types);
++      for (let i = 0; i < shapes.length; i += 1) {
++        const shape = shapes[i] as readonly { entry: Effective; count: number }[];
++        const base = i * types;
++        for (let k = 0; k < shape.length; k += 1) {
++          const stack = shape[k] as { entry: Effective; count: number };
++          const at = rowOf.get(stack.entry);
++          if (at === undefined || at.bound !== bound) return null;
++          rows[base + k] = at.row;
++          counts[base + k] = stack.count;
++        }
++      }
++      bound.raw.marchMany(shapes.length, b.rowsPtr, b.countsPtr, enemyStacks, searchTemple, b.marchOutPtr);
++      const out = b.marchOut;
++      const figures: MarchFigures[] = new Array(shapes.length);
++      for (let i = 0; i < shapes.length; i += 1) {
++        const at = i * 6;
++        figures[i] = {
++          damage: out[at] as number,
++          hiredDamage: out[at + 1] as number,
++          silver: out[at + 2] as number,
++          gold: out[at + 3] as number,
++          mercLost: out[at + 4] as number,
++          strikes: out[at + 5] as number,
++        };
++      }
++      return figures;
++    },
++
+     bill(stacks, recovery): RecoveryCost | null {
+       const bound = lay(stacks);
+       if (!bound || recovery !== bound.request.recovery) return null;
+@@ -854,6 +966,41 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
+       };
+     },
+ 
++    marchBillMany(request, countVectors) {
++      if (countVectors.length === 0) return [];
++      let bound = byRequest.get(request);
++      if (!bound) {
++        effectiveTable(request);
++        bound = byRequest.get(request);
++        if (!bound) return null;
++      }
++      batchScratch(bound, countVectors.length);
++      const b = bound.batch;
++      const types = bound.types;
++      const ids = bound.ids;
++      const { counts } = b;
++      for (let i = 0; i < countVectors.length; i += 1) {
++        const vector = countVectors[i] as Record<string, number>;
++        const base = i * types;
++        for (let t = 0; t < types; t += 1) counts[base + t] = vector[ids[t] as string] ?? 0;
++      }
++      bound.raw.battleMany(countVectors.length, b.countsPtr, b.battleOutPtr);
++      const out = b.battleOut;
++      const bills: Bill[] = new Array(countVectors.length);
++      for (let i = 0; i < countVectors.length; i += 1) {
++        const at = i * RECORD_SIZE;
++        bills[i] = {
++          damage: out[at + R.minDamage] as number,
++          silver: out[at + R.silver] as number,
++          gold: out[at + R.gold] as number,
++          hired: out[at + R.hired] as number,
++          dragonCoins: out[at + R.dragonCoins] as number,
++          seconds: out[at + R.seconds] as number,
++        };
++      }
++      return bills;
++    },
++
+     sizeStacks(request, units, caps, options: StackingOptions) {
+       const bound = sizerBound(request);
+       if (!bound) return null;

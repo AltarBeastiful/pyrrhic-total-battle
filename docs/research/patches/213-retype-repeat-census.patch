@@ -1,0 +1,254 @@
+diff --git a/src/engine/plan.ts b/src/engine/plan.ts
+index 0d2d124..a93e8bc 100644
+--- a/src/engine/plan.ts
++++ b/src/engine/plan.ts
+@@ -58,6 +58,21 @@ import type {
+   StackResult,
+ } from './types';
+ 
++// --- 213 census only (experiment `tools/theorycraft/213-the-retype-repeat-census.test.ts`). Read-only: every value
++// below is recorded after it was computed; nothing here is read back, so no answer can depend on it. ---
++const cenCounts213 = (counts: Record<string, number>): string =>
++  Object.keys(counts)
++    .filter((id) => (counts[id] ?? 0) > 0)
++    .sort()
++    .map((id) => `${id}:${String(counts[id])}`)
++    .join(',');
++interface Cen213 {
++  one: { key: string; ms: number; hit: boolean }[];
++  rowNow: { key: string; ms: number; played: number; changed: number; findHits: number; findMisses: number }[];
++  row: { key: string; ms: number }[];
++}
++const cen213 = (): Cen213 | undefined => (globalThis as unknown as { __retype213?: Cen213 }).__retype213;
++
+ /**
+  * What the **search** prices a march's losses at: the bare game, no temple and no training discounts. The
+  * figures a plan *prints* are re-priced under the account's own `request.recovery` by `toMarch` (S-91), so
+@@ -6958,9 +6973,21 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+     holdQueue = false,
+   ): Record<string, number> => {
+     if (retypeRates === undefined) return counts;
++    const cen = cen213();
++    const cenT0 = performance.now();
++    const rec = cen
++      ? { key: `${holdSilver ? 'held|' : ''}${holdQueue ? 'queue|' : ''}${cenCounts213(counts)}`, ms: 0, hit: false }
++      : null;
++    if (cen && rec) cen.one.push(rec);
+     const key = `${holdSilver ? 'held|' : ''}${holdQueue ? 'queue|' : ''}${JSON.stringify(Object.entries(counts).sort())}`;
+     const hit = retypeCache.get(key);
+-    if (hit) return hit;
++    if (hit) {
++      if (rec) {
++        rec.hit = true;
++        rec.ms = performance.now() - cenT0;
++      }
++      return hit;
++    }
+     if (Date.now() > retypeDeadline) {
+       // Not reached: left as the search made it, and not cached, so it is counted once per ask.
+       retypeLog.cut = true;
+@@ -6974,6 +7001,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+         refused: null,
+         out: counts,
+       });
++      if (rec) rec.ms = performance.now() - cenT0;
+       return counts;
+     }
+     retypeLog.marches += 1;
+@@ -7031,6 +7059,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+         out,
+       });
+     retypeCache.set(key, out);
++    if (rec) rec.ms = performance.now() - cenT0;
+     return out;
+   };
+   /** A march from its counts, priced as every march of the bar is (`toMarch`). */
+@@ -7054,6 +7083,12 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+   const retypeRow = <T extends PlanTotals>(row: T): T => {
+     if (retypeRates === undefined) return row;
+     const began = Date.now();
++    const cen = cen213();
++    const cenT0 = performance.now();
++    const rec = cen
++      ? { key: `${cenCounts213(row.counts)}#${String((row as Partial<PlanRow>).pick)}#${String(row.marches)}`, ms: 0 }
++      : null;
++    if (cen && rec) cen.row.push(rec);
+     try {
+       const now = retypeRowNow(row);
+       const folded = foldFinale(now);
+@@ -7061,6 +7096,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       return folded;
+     } finally {
+       retypeMs += Date.now() - began;
++      if (rec) rec.ms = performance.now() - cenT0;
+     }
+   };
+   /**
+@@ -7120,6 +7156,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+   };
+   const retypeRowNow = <T extends PlanTotals>(row: T, queueHeld = false): T => {
+     if (retypeRates === undefined) return row;
++    const cen = cen213();
++    const cenT0 = performance.now();
++    const rec = cen ? { key: '', ms: 0, played: 0, changed: 0, findHits: 0, findMisses: 0 } : null;
++    if (cen && rec) cen.rowNow.push(rec);
+     const played: { counts: Record<string, number>; times: number }[] = [];
+     const tailed = row.tail?.marches ?? 0;
+     if (row.sequence) for (const counts of row.sequence) played.push({ counts, times: 1 });
+@@ -7128,6 +7168,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       if (row.finaleCounts) played.push({ counts: row.finaleCounts, times: 1 });
+       if (row.tail && tailed > 0) played.push({ counts: row.tail.counts, times: tailed });
+     }
++    if (rec) {
++      rec.key = `${played.map((march) => cenCounts213(march.counts)).join(',')}#${String((row as Partial<PlanRow>).pick)}#${String(row.marches)}`;
++      rec.played = played.length;
++    }
+     /** A silver saver stays one, march by march: each of its marches is re-typed with its silver held. */
+     const holdSilver = (row as Partial<PlanRow>).pick === 'silver-saver';
+     const othersQueue = Math.min(
+@@ -7143,7 +7187,9 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       next: retypeOne(counts, holdSilver, holdQueue),
+     }));
+     const changed = moved.filter((march) => march.next !== march.counts && march.times > 0);
+-    const traceRow = (silverSaverGuard: boolean): void =>
++    if (rec) rec.changed = changed.length;
++    const traceRow = (silverSaverGuard: boolean): void => {
++      if (rec) rec.ms = performance.now() - cenT0;
+       planTrace.sink?.({
+         step: 'retypeRowNow',
+         pick: (row as Partial<PlanRow>).pick,
+@@ -7151,6 +7197,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+         changed: changed.length,
+         silverSaverGuard,
+       });
++    };
+     if (changed.length === 0) {
+       traceRow(false);
+       return row;
+@@ -7167,8 +7214,15 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       delta.seconds += march.times * (now.seconds - was.seconds);
+       delta.mercLost += march.times * (now.mercLost - was.mercLost);
+     }
+-    const nextOf = (counts: Record<string, number>): Record<string, number> =>
+-      moved.find((march) => march.counts === counts)?.next ?? retypeOne(counts, holdSilver, holdQueue);
++    const nextOf = (counts: Record<string, number>): Record<string, number> => {
++      const found = moved.find((march) => march.counts === counts);
++      if (found) {
++        if (rec) rec.findHits += 1;
++        return found.next;
++      }
++      if (rec) rec.findMisses += 1;
++      return retypeOne(counts, holdSilver, holdQueue);
++    };
+     const counts = nextOf(row.counts);
+     const repeatMoved = counts !== row.counts;
+     const m = repeatMoved ? priceCounts(counts) : undefined;
+@@ -7259,7 +7313,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+       // marches are re-typed again with their queue seconds held too, and the row is handed back if even that
+       // loses it. `keepReadings` would buy the loss (worth ≤ 0.014 against a gain ≥ 0.35), but no bar
+       // reading may get worse for a silver saver's re-typing.
+-      if (!queueHeld) return retypeRowNow(row, true);
++      if (!queueHeld) {
++        if (rec) rec.ms = performance.now() - cenT0;
++        return retypeRowNow(row, true);
++      }
+       traceRow(true);
+       return row;
+     }
+diff --git a/src/engine/retype.ts b/src/engine/retype.ts
+index d18afcf..729bbf1 100644
+--- a/src/engine/retype.ts
++++ b/src/engine/retype.ts
+@@ -24,6 +24,21 @@ import { rate } from './rating';
+ import { requiredPlanKernel } from './fast';
+ import type { StackRequest } from './types';
+ 
++// --- 213 census only (experiment `tools/theorycraft/213-the-retype-repeat-census.test.ts`). Read-only: every value
++// below is recorded after it was computed; nothing here is read back, so no answer can depend on it. ---
++const cenCounts213 = (counts: Record<string, number>): string =>
++  Object.keys(counts)
++    .filter((id) => (counts[id] ?? 0) > 0)
++    .sort()
++    .map((id) => `${id}:${String(counts[id])}`)
++    .join(',');
++interface Cen213 {
++  march: { key: string; ms: number }[];
++  walk: { key: string; ckey: string; ms: number; ok: boolean }[];
++  climb: { key: string; ms: number; ok: boolean }[];
++}
++const cen213 = (): Cen213 | undefined => (globalThis as unknown as { __retype213?: Cen213 }).__retype213;
++
+ /** Up to this many assignments are tried one by one; above it, the swap/replace climb. */
+ export const EXHAUSTIVE = 10_000;
+ /** The climb's step cap (157's). */
+@@ -120,6 +135,10 @@ export function retypeMarch(
+   const troopStacks = result.stacks.filter((s) => s.pool === 'leadership');
+   const slots = troopStacks.map((s) => s.totalHp);
+   if (slots.length === 0) return null;
++  const cen = cen213();
++  const rec = cen ? { key: '', ms: 0 } : null;
++  if (cen && rec) cen.march.push(rec);
++  const cenT0 = performance.now();
+   const hired: Record<string, number> = {};
+   for (const s of result.stacks) if (s.pool !== 'leadership') hired[s.unitId] = s.count;
+   const base = marchBill(request, counts);
+@@ -148,6 +167,8 @@ export function retypeMarch(
+   let best: { counts: Record<string, number>; rating: number; seed?: RetypeSeed } | null = null;
+   let tried = 0;
+   const tierCandidate = options.tierCandidate === true;
++  if (rec)
++    rec.key = `${cenCounts213(counts)}|${String(ceiling)}|${String(holdPerSilver)}|${String(options.secondsCeiling)}|${String(tierCandidate)}|${String(deadline === Infinity)}`;
+   /** The start the search is climbing from, credited with any best it finds (`tierCandidate` only). */
+   let from: RetypeSeed | undefined;
+   /** Every assignment already battled, so three climbs never battle one twice (`tierCandidate` only). */
+@@ -205,6 +226,7 @@ export function retypeMarch(
+     from = 'exhaustive';
+     // The kernel walks the whole space in one call (`PlanKernel.retypeWalk`); a clock cannot be honoured there,
+     // so a deadline keeps the TypeScript walk, which is also the reference the door is held to.
++    const cenWalkT0 = performance.now();
+     const walked =
+       deadline === Infinity
+         ? requiredPlanKernel().retypeWalk(request, rates, table, slots, hired, base, {
+@@ -213,6 +235,13 @@ export function retypeMarch(
+             secondsCeiling: options.secondsCeiling,
+           })
+         : null;
++    if (cen && deadline === Infinity)
++      cen.walk.push({
++        key: `${slots.join(',')}|${cenCounts213(hired)}|${JSON.stringify(base)}|${String(ceiling)}|${String(holdPerSilver)}|${String(options.secondsCeiling)}`,
++        ckey: `${slots.join(',')}|${cenCounts213(hired)}|${String(ceiling)}|${String(holdPerSilver)}|${String(options.secondsCeiling)}`,
++        ms: performance.now() - cenWalkT0,
++        ok: walked !== null,
++      });
+     if (walked) {
+       // The tier order was battled above and the walk reaches it again: it is counted once, and cannot win a tie.
+       tried += walked.tried - (tierCandidate && build(tier) !== null ? 1 : 0);
+@@ -253,6 +282,7 @@ export function retypeMarch(
+         if (!same(ranking, asIs) && !same(ranking, tier))
+           starts.push({ types: ranking, score: null, seed: 2 });
+       }
++      const cenClimbT0 = performance.now();
+       const door = requiredPlanKernel().retypeClimb(
+         request,
+         rates,
+@@ -271,6 +301,12 @@ export function retypeMarch(
+         options.climbSteps ?? CLIMB_STEPS,
+         best === null ? -Infinity : (best as { rating: number }).rating,
+       );
++      if (cen)
++        cen.climb.push({
++          key: `${cenCounts213(counts)}|${JSON.stringify(starts)}|${String(tierCandidate)}|${String(options.climbSteps ?? CLIMB_STEPS)}|${String(best === null ? -Infinity : (best as { rating: number }).rating)}|${String(ceiling)}|${String(holdPerSilver)}|${String(options.secondsCeiling)}`,
++          ms: performance.now() - cenClimbT0,
++          ok: door !== null,
++        });
+       if (!door) return false;
+       tried += door.tried;
+       if (door.improved) {
+@@ -369,6 +405,7 @@ export function retypeMarch(
+       best = { counts: twin, rating: score, seed: 'tier' };
+     }
+   }
++  if (rec) rec.ms = performance.now() - cenT0;
+   const found = best as { counts: Record<string, number>; rating: number; seed?: RetypeSeed } | null;
+   if (!found) return null;
+   return tierCandidate
