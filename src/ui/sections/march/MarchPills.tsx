@@ -32,6 +32,7 @@ import { ChevronsUp, Copy, Pencil, Undo2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
+import { CAMPAIGN } from '@/config';
 import type { StackResult, UnitDef } from '@/engine/types';
 import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
@@ -537,8 +538,13 @@ export function MarchPills({
       {/* **One control for the whole army, at the foot of the list** (owner, 2026-10-10: *"don't duplicate as is
           tight.. selector and make it minimal and out of the way, maybe on the bottom of the troops list"*). The
           position is one standing rule over both hired pools (S-149), so a copy under each pool said the same
-          thing twice (design rule 5). It is named for the first hired pool the march has a stack in. */}
-      {raisable !== null && (
+          thing twice (design rule 5). It is named for the first hired pool the march has a stack in.
+
+          **And the selector is behind a config entry now** (owner, 2026-10-13: *"hide the selector for as is
+          tight and tight old. keep it as a config entry so I can enable it back"*): `CAMPAIGN.raiseControl`
+          off draws nothing here, and the March stands on `Tight`. The bar's tables are unaffected — it still
+          prices `Tight (old)` beside `Tight` (`OFFERED_POSITIONS`), so nothing under the plan moves. */}
+      {raisable !== null && CAMPAIGN.raiseControl && (
         <MarchRaiseControl
           pool={raisable}
           value={raiseModes[raisable]}
@@ -671,9 +677,11 @@ export interface MarchActionProps {
   onClick: () => void;
   /** A mode this mark switches: filled while it is on. */
   pressed?: boolean;
+  /** An action with a wait on it (the profiling run): the mark turns into a spinner while it lasts. */
+  loading?: boolean;
 }
 
-export function MarchAction({ label, icon, onClick, pressed }: MarchActionProps) {
+export function MarchAction({ label, icon, onClick, pressed, loading }: MarchActionProps) {
   return (
     <Tooltip label={label} withinPortal>
       <ActionIcon
@@ -682,6 +690,7 @@ export function MarchAction({ label, icon, onClick, pressed }: MarchActionProps)
         {...(pressed === true ? {} : { color: 'gray' })}
         aria-label={label}
         {...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
+        {...(loading === undefined ? {} : { loading })}
         onClick={onClick}
       >
         {icon}

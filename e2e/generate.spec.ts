@@ -750,6 +750,12 @@ test('the sheltered raise lifts the hired counts without a Generate, and the pos
 
   const march = marchSection(page);
   const control = march.getByRole('radiogroup', { name: 'Mercenary counts' });
+  /**
+   * **The selector is behind `CAMPAIGN.raiseControl` now** (owner, 2026-10-13: *"hide the selector for as is
+   * tight and tight old. keep it as a config entry so I can enable it back"*), and this whole test is about
+   * that control. Skipped — not deleted — while the entry is off, and back the moment it is flipped on.
+   */
+  test.skip((await control.count()) === 0, 'the raise selector is off (CAMPAIGN.raiseControl)');
   await expect(control).toBeVisible();
   // The troops are what shelters, never what is sheltered: there is no control of their own.
   await expect(march.getByRole('radiogroup', { name: 'Troop counts' })).toHaveCount(0);

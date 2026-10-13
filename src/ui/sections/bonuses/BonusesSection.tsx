@@ -37,6 +37,7 @@ import { FamilyRow } from './FamilyRow';
 import { artifactChips, captainChips, permanentChips, titleChips, type CaptainTarget } from './chips';
 import { EquipmentSheet } from './EquipmentSheet';
 import { CustomSheet, DragonSheet, PermanentSheet } from './FreeFormSheets';
+import { selectsRestrictedCaptain } from './marchType';
 import { VipSheet } from './OtherSheets';
 import { PermanentChips } from './PermanentChips';
 import { RecoverySheet } from './RecoverySheet';
@@ -228,6 +229,9 @@ export function BonusesSection() {
           onMarchType={(marchType) => {
             useStore.getState().updateActiveSetup(() => ({ marchType }));
           }}
+          // The control is drawn only when it can change a reading: a restricted captain (Amanitore, Hercules)
+          // is selected on this march. Owning one on the bench reads the same, so it would only take space.
+          showMarchType={selectsRestrictedCaptain(profile, setup)}
         />
       ),
     },

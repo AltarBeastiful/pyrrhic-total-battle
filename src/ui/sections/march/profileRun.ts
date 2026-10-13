@@ -9,7 +9,7 @@
  *  1. `generate`: the plan, the opening stop and the bar's Tight tables (`runGenerate`);
  *  2. `upgrades-default`: the generic probes (`computeAdvice('default')`);
  *  3. `upgrades-mine`: the typed upgrades, when any are typed;
- *  4. `captains`: the trio screen and the star / level pass, when a captain is owned;
+ *  4. `captains`: the lineup screen and the star / level pass, when a captain is owned;
  *  5. `other`: the dominance and leadership sweeps, next tier, merc stock, horizon, silver.
  *
  * There is no `console.profile` any more (owner, 2026-10-10: Chrome's own saved profile was empty and buggy; it

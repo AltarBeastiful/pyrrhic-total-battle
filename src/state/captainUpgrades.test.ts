@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { captains as captainTable } from '../data';
 import { aggregateBonuses } from '../engine/bonuses';
-import { trioKey } from '../engine/captains';
-import { captainTrios } from './captainTrios';
+import { lineupKey } from '../engine/captains';
+import { captainLineups } from './captainLineups';
 import { captainUpgradeCandidates } from './captainUpgrades';
 import { newProfile } from './defaults';
 import { resolveSources } from './derive';
@@ -25,57 +25,61 @@ function withRoster(captainIds: string[], active: string[], star = 1) {
 
 const OWNED = ['aydae', 'skadi', 'sofia', 'beowulf', 'alexander'];
 
+/** The upgrades of `setup`'s march at the march's own lineup size, as `computeCaptains` asks them. */
+function upgradesOf(profile: Profile, setup: BattleSetup) {
+  const { lineups, size } = captainLineups(profile, setup);
+  return captainUpgradeCandidates(profile, setup, lineups[0]!, size);
+}
+
 describe('captainUpgradeCandidates', () => {
   it('asks a star, a level and ten levels of each captain that gains from them', () => {
     const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2']);
-    const trios = captainTrios(profile, setup);
-    const candidates = captainUpgradeCandidates(profile, setup, trios.trios[0]!);
+    const candidates = upgradesOf(profile, setup);
     const beowulf = candidates.filter((candidate) => candidate.spec.captainId === 'beowulf');
     expect(beowulf.map((candidate) => candidate.spec.kind)).toEqual(['star', 'level', 'level10']);
     expect(beowulf.map((candidate) => candidate.change)).toEqual(['★1 → ★2', 'L13 → L14', 'L13 → L23']);
     expect(candidates.every((candidate) => candidate.name.length > 0)).toBe(true);
   });
 
-  it('a captain in the lead trio is tried in the lead trio alone, with the upgrade added', () => {
+  it('a captain in the lead lineup is tried in the lead lineup alone, with the upgrade added', () => {
     const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2']);
-    const lead = captainTrios(profile, setup).trios[0]!;
-    const star = captainUpgradeCandidates(profile, setup, lead).find(
+    const lead = captainLineups(profile, setup).lineups[0]!;
+    const star = upgradesOf(profile, setup).find(
       (candidate) => candidate.spec.captainId === 'skadi' && candidate.spec.kind === 'star',
     );
     expect(star?.where).toBe('lead');
-    expect(star?.trios).toHaveLength(1);
-    expect(star?.trios[0]?.key).toBe(lead.key);
-    expect(star?.trios[0]?.entryIds).toEqual(lead.entryIds);
-    // The totals are the lead trio's with only that captain's entry raised.
+    expect(star?.lineups).toHaveLength(1);
+    expect(star?.lineups[0]?.key).toBe(lead.key);
+    expect(star?.lineups[0]?.entryIds).toEqual(lead.entryIds);
+    // The totals are the lead lineup's with only that captain's entry raised.
     const raised = structuredClone(profile);
     raised.sources.captains[1]!.star = 2;
-    expect(star?.trios[0]?.totals).toEqual(aggregateBonuses(resolveSources(raised, setup)));
+    expect(star?.lineups[0]?.totals).toEqual(aggregateBonuses(resolveSources(raised, setup)));
   });
 
-  it('a benched captain is tried in every trio that fields it, each with the upgrade', () => {
+  it('a benched captain is tried in every lineup that fields it, each with the upgrade', () => {
     const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2']);
-    const lead = captainTrios(profile, setup).trios[0]!;
-    const level = captainUpgradeCandidates(profile, setup, lead).find(
+    const lead = captainLineups(profile, setup).lineups[0]!;
+    const level = upgradesOf(profile, setup).find(
       (candidate) => candidate.spec.captainId === 'beowulf' && candidate.spec.kind === 'level',
     );
     expect(level?.where).toBe('bench');
-    expect(level?.trios).toHaveLength(6);
-    expect(level?.trios.every((trio) => trio.captainIds.includes('beowulf'))).toBe(true);
-    expect(new Set(level?.trios.map((trio) => trio.key)).size).toBe(6);
-    expect(level?.trios.some((trio) => trio.key === lead.key)).toBe(false);
-    const trio = level?.trios.find((candidate) => candidate.key === trioKey(['beowulf', 'aydae', 'skadi']));
+    expect(level?.lineups).toHaveLength(6);
+    expect(level?.lineups.every((lineup) => lineup.captainIds.includes('beowulf'))).toBe(true);
+    expect(new Set(level?.lineups.map((lineup) => lineup.key)).size).toBe(6);
+    expect(level?.lineups.some((lineup) => lineup.key === lead.key)).toBe(false);
+    const lineup = level?.lineups.find(
+      (candidate) => candidate.key === lineupKey(['beowulf', 'aydae', 'skadi']),
+    );
     const raised = structuredClone(profile);
     raised.sources.captains[3]!.level = 14;
-    const swapped = { ...setup, active: { ...setup.active, captains: trio!.entryIds } };
-    expect(trio!.totals).toEqual(aggregateBonuses(resolveSources(raised, swapped)));
+    const swapped = { ...setup, active: { ...setup.active, captains: lineup!.entryIds } };
+    expect(lineup!.totals).toEqual(aggregateBonuses(resolveSources(raised, swapped)));
   });
 
   it('a captain at the top star has no star upgrade', () => {
     const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2'], 6);
-    const lead = captainTrios(profile, setup).trios[0]!;
-    const kinds = new Set(
-      captainUpgradeCandidates(profile, setup, lead).map((candidate) => candidate.spec.kind),
-    );
+    const kinds = new Set(upgradesOf(profile, setup).map((candidate) => candidate.spec.kind));
     expect(kinds.has('star')).toBe(false);
   });
 
@@ -83,18 +87,14 @@ describe('captainUpgradeCandidates', () => {
     const { profile, setup } = withRoster(['aurora', 'skadi', 'sofia', 'beowulf'], ['c1', 'c2', 'c3']);
     const bare = captainTable.find((record) => record.id === 'aurora');
     expect(bare?.health).toBeUndefined();
-    const lead = captainTrios(profile, setup).trios[0]!;
-    const asked = captainUpgradeCandidates(profile, setup, lead).map((candidate) => candidate.spec.captainId);
+    const asked = upgradesOf(profile, setup).map((candidate) => candidate.spec.captainId);
     expect(asked).not.toContain('aurora');
   });
 
   it('the march type leaves out a captain it does not count', () => {
     const { profile, setup } = withRoster(['amanitore', 'skadi', 'sofia', 'beowulf'], ['c1', 'c2', 'c3']);
     setup.marchType = 'solo';
-    const lead = captainTrios(profile, setup).trios[0]!;
-    const asked = new Set(
-      captainUpgradeCandidates(profile, setup, lead).map((candidate) => candidate.spec.captainId),
-    );
+    const asked = new Set(upgradesOf(profile, setup).map((candidate) => candidate.spec.captainId));
     expect(asked.has('amanitore')).toBe(false);
     expect(asked.has('skadi')).toBe(true);
   });
@@ -102,7 +102,7 @@ describe('captainUpgradeCandidates', () => {
   it('does not touch the profile it reads', () => {
     const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2']);
     const before = structuredClone(profile);
-    captainUpgradeCandidates(profile, setup, captainTrios(profile, setup).trios[0]!);
+    upgradesOf(profile, setup);
     expect(profile).toEqual(before);
   });
 });

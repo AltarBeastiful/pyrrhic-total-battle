@@ -13,29 +13,28 @@
  * Generate already relies on (design rule 5). Nothing here is drawn twice on one screen at any width.
  *
  * What stays in the pane is what the pane is *for*: the figures, the army, what it left at home, the
- * plan's own assessment (`PlanSizing`, `PlanFold`) — and, since 2026-09-21, the marks that copy, edit,
- * keep and send the march, which are on the March's heading at both widths and belong to no host but the
+ * plan's own assessment (`PlanSizing`, `PlanFold`) — and, since 2026-09-21, the marks that copy, edit
+ * and keep the march, which are on the March's heading at both widths and belong to no host but the
  * card itself (`MarchActions`). What is down here is reference: the objective comparison, the damage
  * split with the HP profile and the battle story, and the saved list.
  */
 import { Group, Stack, Text } from '@mantine/core';
-import { BookmarkPlus, Share2 } from 'lucide-react';
+import { BookmarkPlus } from 'lucide-react';
 import { lazy, useState } from 'react';
 
 import { version as gameData } from '@/data';
 import type { BonusKey, SpecialKey } from '@/engine/types';
-import { buildBattleLink } from '@/share/codec';
 import { newSavedStack } from '@/state/defaults';
 import type { SavedStack } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Disclosure, Panel, Sections } from '@/ui/kit';
 import { LazySurface } from '@/ui/lazy';
-import { copyText } from '@/ui/profile/download';
 import { resultCounts, toSavedSummary, useResultStore } from '@/ui/resultStore';
 import { MARCH_FOOT_ANCHOR } from '@/ui/shell/march';
 
 import { DamageSplit } from './DamageSplit';
 import { MarchAction, MarchCountsBar } from './MarchPills';
+import { ProfileAllButton } from './ProfileAllButton';
 import classes from './march.module.css';
 import { amount, compactTwo } from './format';
 import { isExhaustive } from './raise';
@@ -131,8 +130,8 @@ export function MarchSavedFold() {
 }
 
 /**
- * The things a player does with a whole march: copy every count, edit them by hand, keep the march,
- * send it. One toolbar, because they are one kind of thing.
+ * The things a player does with a whole march: copy every count, edit them by hand, keep the march. One
+ * toolbar, because they are one kind of thing.
  *
  * **Marks, on the March's own title line** (owner, 2026-09-21: *"editing count, copy and share could be
  * closer to summary and use icons to avoid crowding the ui"*). They were five labelled buttons at the
@@ -140,6 +139,10 @@ export function MarchSavedFold() {
  * reads the answer in the pane and had to travel to the other end of the page to copy it. As marks they
  * cost the pane no line at all: they sit beside the "12 stacks" meta on the March's heading
  * (`MarchSection.tsx`), at both widths, which is the one row on the card that was half empty.
+ *
+ * **The share mark is gone** (owner, 2026-10-13: *"remove the share march button"*): the account menu
+ * already offers "Share this march" (`shell/AccountMenu.tsx`), so the mark said the same thing twice on
+ * one screen (design rule 5). What is left is the four marks a player reaches for on the answer itself.
  *
  * The edit mode it switches lives in the run store, not here: the stack pills it turns into fields are
  * in the March pane, which is the other side of the page on a desktop (`runStore.ts`, `editingCounts`).
@@ -150,7 +153,6 @@ export function MarchActions() {
   const editing = useRunStore((state) => state.editingCounts);
   const setEditing = useRunStore((state) => state.setEditingCounts);
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState('');
   const { snapshot, result, summary } = march;
 
   const saveMarch = (name: string): void => {
@@ -171,27 +173,11 @@ export function MarchActions() {
     setSaving(false);
   };
 
-  const share = (): void => {
-    if (!setup || result === null || summary === null) return;
-    const baseUrl = typeof window === 'undefined' ? '' : window.location.href;
-    void buildBattleLink(setup, resultCounts(result), toSavedSummary(summary), {
-      baseUrl,
-      dataVersion: gameData.dataVersion,
-    })
-      .then(copyText)
-      .then((ok) => {
-        setNotice(ok ? 'Link copied' : 'The link could not be copied');
-      })
-      .catch(() => {
-        setNotice('The link could not be built');
-      });
-  };
-
   if (snapshot === null || result === null || summary === null) return null;
 
   return (
     // `nowrap`, and 4 px apart: a toolbar on a heading line that wrapped would push the title off its
-    // own row. Five marks are 170 px, which the 360 dp pane has beside "12 stacks".
+    // own row. Four marks are ~140 px, which the 360 dp pane has beside "12 stacks".
     <Group gap={4} wrap="nowrap">
       <MarchCountsBar
         countRows={march.rows}
@@ -211,10 +197,9 @@ export function MarchActions() {
           setSaving(true);
         }}
       />
-      <MarchAction label="Share" icon={<Share2 size={16} aria-hidden />} onClick={share} />
-      <Text span role="status" className={classes.meta} c="dimmed">
-        {notice}
-      </Text>
+      {/* The profiling run, when the build offers it (`profiling.ts`): the same kind of mark, so it
+          takes the same line — dev and opt-in builds only, and it draws nothing anywhere else. */}
+      <ProfileAllButton />
       {saving && (
         <LazySurface isOpen={saving}>
           <MarchNameDialog

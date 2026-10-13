@@ -17,6 +17,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { useEffect } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
+import { CAMPAIGN } from '@/config';
 import { unitById } from '@/data';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
@@ -152,8 +153,17 @@ afterEach(() => {
 test('a Generate re-prices the bar, and the raise it draws is the table’s — with no search asked for', async () => {
   renderWithTheme(<Page />);
   await clicked();
-  const control = await screen.findByRole('radiogroup', { name: 'Mercenary counts' });
-  fireEvent.click(within(control).getByRole('radio', { name: 'Tight' }));
+  // **`Tight` is the position the March is asked to stand on** — pressed on the selector where it is drawn,
+  // set on the store where it is not (`CAMPAIGN.raiseControl`, owner 2026-10-13). One standing rule either
+  // way (`runStore.setRaiseMode`), which is the thing this file is about.
+  if (CAMPAIGN.raiseControl) {
+    const control = await screen.findByRole('radiogroup', { name: 'Mercenary counts' });
+    fireEvent.click(within(control).getByRole('radio', { name: 'Tight' }));
+  } else {
+    act(() => {
+      useRunStore.getState().setRaiseMode('tight');
+    });
+  }
 
   // The bar is priced, so the press lands on the table's own row — the marker — and nothing is searched.
   await waitFor(() => {
@@ -202,8 +212,16 @@ test('a march the plan did not size is not read off the bar, and is searched ins
     expect(useRunStore.getState().resize).not.toBeNull();
   });
 
-  const control = await screen.findByRole('radiogroup', { name: 'Mercenary count' + 's' });
-  fireEvent.click(within(control).getByRole('radio', { name: 'Tight' }));
+  // Same press-or-store as the test above: the March is put on `Tight`, and every reason it may fall back to
+  // its own search is below.
+  if (CAMPAIGN.raiseControl) {
+    const control = await screen.findByRole('radiogroup', { name: 'Mercenary count' + 's' });
+    fireEvent.click(within(control).getByRole('radio', { name: 'Tight' }));
+  } else {
+    act(() => {
+      useRunStore.getState().setRaiseMode('tight');
+    });
+  }
   await waitFor(() => {
     expect(searches.length).toBe(1);
   });

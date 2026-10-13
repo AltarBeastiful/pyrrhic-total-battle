@@ -9,32 +9,32 @@
  * `AbortController` as module state, a key that is the question, an answer dropped when its key is no longer
  * on screen — and their pool (`advisorPool`).
  *
- * The pass is two worker passes under that one clock (the lead trio is the first one's answer, so they cannot
+ * The pass is two worker passes under that one clock (the lead lineup is the first one's answer, so they cannot
  * run side by side):
  *
- *  1. `runCaptainAdvice` — the current trio's plan, every allowed trio screened, the best planned in full: the
- *     best trio per stop of the bar, with its gain over the current one, never below it.
- *  2. `runCaptainUpgrades` — each owned captain's next star and next levels, read against the lead trio
- *     (`leadTrio`), so a row is the upgrade's own worth and not the swap of trio it might also bring.
+ *  1. `runCaptainAdvice` — the current lineup's plan, every allowed lineup screened, the best planned in full: the
+ *     best lineup per stop of the bar, with its gain over the current one, never below it.
+ *  2. `runCaptainUpgrades` — each owned captain's next star and next levels, read against the lead lineup
+ *     (`leadLineup`), so a row is the upgrade's own worth and not the swap of lineup it might also bring.
  *
- * Which trios there are, their totals and the upgrades are the main thread's (`captainTrios`,
- * `captainUpgradeCandidates`); the worker takes them as keys and totals. **The trio is a suggestion**
+ * Which lineups there are, their totals and the upgrades are the main thread's (`captainLineups`,
+ * `captainUpgradeCandidates`); the worker takes them as keys and totals. **The lineup is a suggestion**
  * (owner, 2026-10-07): the march keeps the captains the player chose.
  *
- * **The key carries the roster.** The plan's request already carries the active captains' totals, but a captain
- * on the bench, a level typed on it, or the march type changes which trios exist and what they are worth, so
- * they ride in the key by value.
+ * **The key carries the roster and the march's own lineup size.** The plan's request already carries the active
+ * captains' totals, but a captain on the bench, a level typed on it, the march type, or how many captains the
+ * march switches on changes which lineups exist and what they are worth, so they ride in the key by value.
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 
 import { CAMPAIGN } from '@/config';
 import { rankAdvice, type AdvisorRow } from '@/engine/advisor';
-import { leadTrio } from '@/engine/captainUpgrades';
+import { leadLineup } from '@/engine/captainUpgrades';
 import type { CampaignInput, CampaignPlan, PlanPick } from '@/engine/plan';
-import { distinctCaptains } from '@/engine/captains';
+import { distinctCaptains, LINEUP_SIZE } from '@/engine/captains';
 import { buildPlanRequest } from '@/state/derive';
-import { captainTrios } from '@/state/captainTrios';
+import { captainLineups, lineupSize } from '@/state/captainLineups';
 import { captainUpgradeCandidates } from '@/state/captainUpgrades';
 import type { BattleSetup, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
@@ -46,12 +46,12 @@ import { advisorKey, advisorPool, type AdvisorStatus } from './advisorSearch';
 import { frameBatch, type FrameBatch } from './frameBatch';
 import { pickOf, useRunStore } from './runStore';
 
-/** What a finished captain pass holds: the trio advice, and the upgrades read against its lead trio. */
+/** What a finished captain pass holds: the lineup advice, and the upgrades read against its lead lineup. */
 export interface CaptainPassResult {
   advice: CaptainAdviceResult;
   /** `null` when the clock was out before the upgrades could start. */
   upgrades: CaptainUpgradeResult | null;
-  /** Key of the trio the upgrades were read against. */
+  /** Key of the lineup the upgrades were read against. */
   lead: string;
 }
 
@@ -79,15 +79,17 @@ export interface CaptainState {
 
 /**
  * **The identity of the captain question**: the plan on screen, the account its baseline is planned from, the
- * captains owned (by value) and the march type.
+ * captains owned (by value), the march type, and **which captains the march switches on**. The last is load
+ * bearing: a captain switched on at `L0 ★0` adds nothing, so the totals — and `advisorKey` — do not move, but it
+ * changes the lineup size and so which lineups exist. Without it a stale answer would survive a switch-on.
  */
 export function captainKey(
   plan: CampaignPlan,
   input: CampaignInput,
   profile: Pick<Profile, 'sources'>,
-  setup: Pick<BattleSetup, 'marchType'>,
+  setup: Pick<BattleSetup, 'marchType' | 'active'>,
 ): string {
-  return `${advisorKey(plan, input)}|${setup.marchType}|${JSON.stringify(profile.sources.captains)}`;
+  return `${advisorKey(plan, input)}|${setup.marchType}|${JSON.stringify(setup.active.captains)}|${JSON.stringify(profile.sources.captains)}`;
 }
 
 let controller: AbortController | null = null;
@@ -160,7 +162,7 @@ export async function computeCaptains(
   profile: Profile,
   setup: BattleSetup,
 ): Promise<void> {
-  const { currentKey, trios } = captainTrios(profile, setup);
+  const { currentKey, lineups, size } = captainLineups(profile, setup);
   abort();
   const own = new AbortController();
   controller = own;
@@ -176,7 +178,7 @@ export async function computeCaptains(
     const pool = advisorPool();
     const advice = await runCaptainAdvice(
       input,
-      trios.map(({ key: trio, totals }) => ({ key: trio, totals })),
+      lineups.map(({ key: lineup, totals }) => ({ key: lineup, totals })),
       currentKey,
       pool,
       {
@@ -188,22 +190,22 @@ export async function computeCaptains(
       },
     );
 
-    const lead = leadTrio(advice.best, currentKey);
-    const leadTrioCandidate = trios.find((trio) => trio.key === lead);
+    const lead = leadLineup(advice.best, currentKey);
+    const leadLineupCandidate = lineups.find((lineup) => lineup.key === lead);
     const leadStops = advice.plans[lead];
     const left = CAMPAIGN.budgets.extra - (performance.now() - began);
     let upgrades: CaptainUpgradeResult | null = null;
-    if (leadTrioCandidate !== undefined && leadStops !== undefined && left > 0) {
-      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadTrioCandidate).map(
+    if (leadLineupCandidate !== undefined && leadStops !== undefined && left > 0) {
+      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadLineupCandidate, size).map(
         (candidate) => ({
           id: candidate.spec.id,
           label: `${candidate.name} ${candidate.change}`,
-          trios: candidate.trios.map(({ key: trio, totals }) => ({ key: trio, totals })),
+          lineups: candidate.lineups.map(({ key: lineup, totals }) => ({ key: lineup, totals })),
         }),
       );
       upgrades = await runCaptainUpgrades(
         input,
-        { key: lead, totals: leadTrioCandidate.totals, stops: leadStops },
+        { key: lead, totals: leadLineupCandidate.totals, stops: leadStops },
         asks,
         pool,
         {
@@ -233,6 +235,8 @@ export async function computeCaptains(
 export interface CaptainView {
   /** The captains the account owns, one per `captainId`: the section has nothing to say with none. */
   owned: number;
+  /** The lineup size the advice weighs: the distinct captains the march switches on (or `LINEUP_SIZE`), for wording. */
+  size: number;
   status: AdvisorStatus;
   done: number;
   total: number;
@@ -288,6 +292,7 @@ export function useCaptainAdvice(): CaptainView {
   }, []);
   return {
     owned: profile === undefined ? 0 : distinctCaptains(profile.sources.captains).length,
+    size: profile === undefined || setup === undefined ? LINEUP_SIZE : lineupSize(profile, setup),
     status: entry?.status ?? 'idle',
     done: entry?.done ?? 0,
     total: entry?.total ?? 0,

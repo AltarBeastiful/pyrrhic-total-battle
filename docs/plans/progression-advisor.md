@@ -260,6 +260,26 @@ for the accounts that have those captains → owner's trade.
 > so a level typed on a benched captain stales the answer. Not in: a typed cost per captain upgrade (the pass carries
 > `UpgradeAsk.cost`; no field types one yet).
 
+> **C5c — the lineup is the march's own size, and "trio" is renamed "lineup", 2026-10-13** (owner:
+> *"the best captain(s) producing better results for the same plan selection but not forcibly the exact same march …
+> when one, or two/three captains are selected, it would be better to get the best solo or trio of captain. Right now
+> even selecting one it's still the trio."*). The pass always weighed **trios** (sets of three), so a one-captain
+> march — the owner's live account — was read against C(8,3) = 56 trios: a question about *adding*, not *swapping*,
+> when his other captains march elsewhere. Now the enumeration's size is the march's own: **one captain on → the best
+> single captain, two → the best pair, three → the best trio**, and none on falls back to three so the card still says
+> which captains to add. `lineupSize` (`src/state/captainLineups.ts`) reads the **distinct** captains switched on (a
+> duplicate entry counts once, as `resolveSources` counts it twice but a lineup never fields one twice; `LINEUP_SIZE`
+> caps it). `captainUpgradeCandidates` and `lineupContaining` take that size, so a benched captain's upgrade is tried
+> in a lineup of the same size. Cost falls with the pool (his 1-active pass: 8 candidates, not 56). The concept is
+> renamed `trio` → **lineup** across engine, state, worker and card (files `captainTrios.ts` → `captainLineups.ts`),
+> because a "trio" of one is not a trio; the card's sentences follow the size ("the best captain / pair / trio").
+> `captainKey` now carries `active.captains` too: a captain switched on at `L0 ★0` adds nothing, so the totals — and
+> the old key — did not move, but the lineup size does, and a stale answer would have survived. The March-type control
+> is also drawn only when it can change a reading — a captain it gates (an `onlyOn` restriction: Amanitore, Hercules)
+> is **selected on the march** (`selectsRestrictedCaptain`, owner 2026-10-13: *"it shouldn't be owned it should be
+> selected"*) — so owning one on the bench, where every segment reads the same, leaves the control out (rule 15); a
+> type stored from an earlier march stays inert and resettable once the captain is selected again.
+
 **Where it runs**: the worker only gets `CampaignInput` with totals already summed, and `derive.ts` imports the
 tables, the store schema and config. Each trio's totals are built on the **main thread** (`resolveSources` +
 `aggregateBonuses` with `active.captains` swapped, deduplicated by `captainId`, since the same captain can be

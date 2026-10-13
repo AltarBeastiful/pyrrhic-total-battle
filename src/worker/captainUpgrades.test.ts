@@ -1,6 +1,6 @@
 /**
  * W17 C5b — **the upgrade pass** (`runCaptainUpgrades` in `captainUpgrades.ts`), on the kernel: each upgrade read
- * against the lead trio's plan, a captain in the lead trio tried in that trio alone, a benched captain's trios
+ * against the lead lineup's plan, a captain in the lead lineup tried in that lineup alone, a benched captain's lineups
  * screened and the best planned in full, with no clock in any job.
  */
 import { describe, expect, test } from 'vitest';
@@ -8,7 +8,7 @@ import { describe, expect, test } from 'vitest';
 import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { emptyTotals } from '@/engine';
-import type { ScreenTrio } from '@/engine/captains';
+import type { ScreenLineup } from '@/engine/captains';
 import type { CampaignInput } from '@/engine/plan';
 import type { BonusTotals, StackRequest } from '@/engine/types';
 
@@ -71,7 +71,7 @@ function hang<T>(signal?: AbortSignal): Promise<T> {
   });
 }
 
-/** The lead trio with its bar, planned through the captain pass as the card will. */
+/** The lead lineup with its bar, planned through the captain pass as the card will. */
 async function leadOf(): Promise<UpgradeLead> {
   const pool = poolOf(1);
   const advice = await runCaptainAdvice(campaign(), [{ key: 'now', totals: withArmy(20) }], 'now', pool);
@@ -81,25 +81,25 @@ async function leadOf(): Promise<UpgradeLead> {
   return { key: 'now', totals: withArmy(20), stops };
 }
 
-const trio = (key: string, points: number): ScreenTrio => ({ key, totals: withArmy(points) });
+const lineup = (key: string, points: number): ScreenLineup => ({ key, totals: withArmy(points) });
 
-/** A captain in the lead trio (one trio, upgraded), one that is not (five trios), and one that gains nothing. */
+/** A captain in the lead lineup (one lineup, upgraded), one that is not (five lineups), and one that gains nothing. */
 function asks(): UpgradeAsk[] {
   return [
-    { id: 'captain:in:star', label: 'In ★1 → ★2', trios: [trio('now', 80)] },
+    { id: 'captain:in:star', label: 'In ★1 → ★2', lineups: [lineup('now', 80)] },
     {
       id: 'captain:bench:star',
       label: 'Bench ★1 → ★2',
       cost: { amount: 40, unit: 'shards' },
-      trios: [trio('t0', 0), trio('t1', 10), trio('t2', 300), trio('t3', 60), trio('t4', 20)],
+      lineups: [lineup('t0', 0), lineup('t1', 10), lineup('t2', 300), lineup('t3', 60), lineup('t4', 20)],
     },
-    { id: 'captain:flat:level', label: 'Flat L5 → L6', trios: [trio('now', 20)] },
+    { id: 'captain:flat:level', label: 'Flat L5 → L6', lineups: [lineup('now', 20)] },
   ];
 }
 
 describe('runCaptainUpgrades', () => {
   test(
-    'reads each upgrade against the lead trio: a captain in it in that trio alone, a benched one in its best trio',
+    'reads each upgrade against the lead lineup: a captain in it in that lineup alone, a benched one in its best lineup',
     async () => {
       const lead = await leadOf();
       const pool = poolOf(2);
@@ -120,14 +120,14 @@ describe('runCaptainUpgrades', () => {
 
       const [inLead, bench, flat] = result.rows;
       expect(inLead?.planned).toEqual(['now']);
-      expect(inLead?.trios.every((key) => key === 'now')).toBe(true);
+      expect(inLead?.lineups.every((key) => key === 'now')).toBe(true);
       expect(inLead?.stops.every((stop) => stop.gain > 0)).toBe(true);
-      // The benched captain: five trios screened, two planned (the top of the re-priced screen), 300 points wins.
+      // The benched captain: five lineups screened, two planned (the top of the re-priced screen), 300 points wins.
       expect(bench?.planned).toHaveLength(CAMPAIGN.captainUpgradeConfirm);
       expect(bench?.planned).toContain('t2');
-      expect(bench?.trios.every((key) => key === 't2')).toBe(true);
+      expect(bench?.lineups.every((key) => key === 't2')).toBe(true);
       expect(bench?.cost).toEqual({ amount: 40, unit: 'shards' });
-      // The same totals as the lead trio gain nothing, and say so instead of reading as a loss or vanishing.
+      // The same totals as the lead lineup gain nothing, and say so instead of reading as a loss or vanishing.
       expect(flat?.stops.length).toBe(lead.stops.length);
       expect(flat?.stops.every((stop) => stop.gain === 0)).toBe(true);
       for (const row of result.rows)
@@ -139,7 +139,7 @@ describe('runCaptainUpgrades', () => {
   );
 
   test(
-    'the confirm count caps the plans, a lead-trio upgrade skips the screen, and no job carries a clock',
+    'the confirm count caps the plans, a lead-lineup upgrade skips the screen, and no job carries a clock',
     async () => {
       const lead = await leadOf();
       const sent: ProbeInput[] = [];

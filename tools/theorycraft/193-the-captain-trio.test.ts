@@ -27,15 +27,15 @@ import { describe, expect, it } from 'vitest';
 import { CAMPAIGN } from '../../src/config';
 import { genericProbes } from '../../src/engine/probes';
 import {
-  rankTrios,
-  shortlistTrios,
+  rankLineups,
+  shortlistLineups,
   type ScreenKind,
   type ShortlistFrom,
-  type TrioScreen,
+  type LineupScreen,
 } from '../../src/engine/captains';
 import { parseImport } from '../../src/share/exportImport';
 import { buildPlanRequest } from '../../src/state/derive';
-import { captainTrios } from '../../src/state/captainTrios';
+import { captainLineups } from '../../src/state/captainLineups';
 import type { BattleSetup, Profile } from '../../src/state/schema';
 import { runAdvisor } from '../../src/worker/advisor';
 import { runCaptainAdvice, type CaptainAdviceResult } from '../../src/worker/captainAdvice';
@@ -177,9 +177,9 @@ describe.skipIf(!process.env.THEORY)('193 — the captain trio', () => {
       const costRows: string[] = [];
 
       for (const army of list) {
-        const trios = captainTrios(army.profile, army.setup);
+        const trios = captainLineups(army.profile, army.setup);
         const input = buildPlanRequest(army.profile, army.setup);
-        const screen = trios.trios.map((trio) => ({ key: trio.key, totals: trio.totals }));
+        const screen = trios.lineups.map((trio) => ({ key: trio.key, totals: trio.totals }));
 
         // --- the oracle: every trio planned in full, no clock.
         const pool = createCalcPool({ size: 1, createClient: lanes });
@@ -213,21 +213,21 @@ describe.skipIf(!process.env.THEORY)('193 — the captain trio', () => {
 
         const cpuMs = (usage: NodeJS.CpuUsage): number => (usage.user + usage.system) / 1000;
         costRows.push(
-          `| ${army.label} | ${trios.trios.length} | ${f(oracleWall, 0)} | ${f(cpuMs(oracleCpu), 0)} | ${f(shippedWall, 0)} | ${f(cpuMs(shippedCpu), 0)} | ${shipped.cut.length} | ${f(advisorWall, 0)} | ${f(cpuMs(advisorCpu), 0)} | ${f((shippedWall + advisorWall) / 1000, 1)} |`,
+          `| ${army.label} | ${trios.lineups.length} | ${f(oracleWall, 0)} | ${f(cpuMs(oracleCpu), 0)} | ${f(shippedWall, 0)} | ${f(cpuMs(shippedCpu), 0)} | ${shipped.cut.length} | ${f(advisorWall, 0)} | ${f(cpuMs(advisorCpu), 0)} | ${f((shippedWall + advisorWall) / 1000, 1)} |`,
         );
 
         const stopCount = oracle.baseline?.length ?? 0;
-        const screens: TrioScreen[] = oracle.screens;
+        const screens: LineupScreen[] = oracle.screens;
         const out: string[] = [];
         out.push(`## ${army.label}\n`);
         out.push(
-          `${trios.trios.length} trios (current: ${names(trios.currentKey)}); ${stopCount} stops. Oracle: ${oracle.rows.length} trios planned in full (${oracle.cut.length} cut, ${oracle.failed.length} failed), ${f(oracleWall, 0)} ms wall. Shipped (k = ${CAMPAIGN.captainConfirm}, both screens): ${shipped.rows.length} planned, ${shipped.cut.length} cut, ${f(shippedWall, 0)} ms wall.\n`,
+          `${trios.lineups.length} trios (current: ${names(trios.currentKey)}); ${stopCount} stops. Oracle: ${oracle.rows.length} trios planned in full (${oracle.cut.length} cut, ${oracle.failed.length} failed), ${f(oracleWall, 0)} ms wall. Shipped (k = ${CAMPAIGN.captainConfirm}, both screens): ${shipped.rows.length} planned, ${shipped.cut.length} cut, ${f(shippedWall, 0)} ms wall.\n`,
         );
         out.push(
           '| stop | oracle best | gain | sized top-1 | repriced top-1 | oracle best at sized rank | at repriced rank | shipped best | shipped gain |\n|---|---|---|---|---|---|---|---|---|',
         );
         const rankOf = (kind: ScreenKind, key: string): number =>
-          rankTrios(screens, kind)
+          rankLineups(screens, kind)
             .map((one) => one.key)
             .filter((one) => one !== trios.currentKey)
             .indexOf(key) + 1;
@@ -239,17 +239,17 @@ describe.skipIf(!process.env.THEORY)('193 — the captain trio', () => {
           if (gained) stopsWithGain += 1;
           oracleTotal += best.gain;
           const sizedTop =
-            rankTrios(screens, 'sized').find((one) => one.key !== trios.currentKey)?.key ?? '—';
+            rankLineups(screens, 'sized').find((one) => one.key !== trios.currentKey)?.key ?? '—';
           const repricedTop =
-            rankTrios(screens, 'repriced').find((one) => one.key !== trios.currentKey)?.key ?? '—';
+            rankLineups(screens, 'repriced').find((one) => one.key !== trios.currentKey)?.key ?? '—';
           const ship = shipped.best[stop];
           shippedTotal += ship?.gain ?? 0;
           out.push(
-            `| ${oracle.baseline?.[stop]?.pick ?? stop} | ${gained ? names(best.trio) : 'current'} | ${f(best.gain, 4)} | ${names(sizedTop)} | ${names(repricedTop)} | ${gained ? rankOf('sized', best.trio) : '—'} | ${gained ? rankOf('repriced', best.trio) : '—'} | ${ship?.trio === trios.currentKey ? 'current' : names(ship?.trio ?? '—')} | ${f(ship?.gain ?? 0, 4)} |`,
+            `| ${oracle.baseline?.[stop]?.pick ?? stop} | ${gained ? names(best.trio) : 'current'} | ${f(best.gain, 4)} | ${names(sizedTop)} | ${names(repricedTop)} | ${gained ? rankOf('sized', best.trio) : '—'} | ${gained ? rankOf('repriced', best.trio) : '—'} | ${ship?.lineup === trios.currentKey ? 'current' : names(ship?.lineup ?? '—')} | ${f(ship?.gain ?? 0, 4)} |`,
           );
           for (const from of FROMS)
             for (const k of KS) {
-              const keys = new Set(shortlistTrios(screens, trios.currentKey, k, from));
+              const keys = new Set(shortlistLineups(screens, trios.currentKey, k, from));
               const got = bestAmong(oracle, keys, stop);
               bump(
                 `${from} k=${String(k)}`,
@@ -263,7 +263,7 @@ describe.skipIf(!process.env.THEORY)('193 — the captain trio', () => {
         out.push('');
         sections.push(out.join('\n'));
         summary.push(
-          `| ${army.label} | ${trios.trios.length} | ${stopCount} | ${oracle.best.filter((one) => one.trio !== trios.currentKey).length} | ${oracle.best.map((one) => f(one.gain, 3)).join(' · ')} |`,
+          `| ${army.label} | ${trios.lineups.length} | ${stopCount} | ${oracle.best.filter((one) => one.lineup !== trios.currentKey).length} | ${oracle.best.map((one) => f(one.gain, 3)).join(' · ')} |`,
         );
       }
 

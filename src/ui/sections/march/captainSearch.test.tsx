@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * **The captain section's state machine** (W17 C5): the pass starts on the button only, runs the advice and then
- * the upgrades against the *lead trio* the advice found, under one clock; Cancel stops it and says so; an answer
+ * the upgrades against the *lead lineup* the advice found, under one clock; Cancel stops it and says so; an answer
  * for a question no longer on screen is dropped; a roster or march-type edit makes the answer stale. Both worker
  * passes are doubles here — what they compute is held in `src/worker/captainAdvice.test.ts` and
  * `captainUpgrades.test.ts`; this file is about the order, the progress, the states and the key.
@@ -31,7 +31,7 @@ import { useRunStore } from './runStore';
 /** One advice pass the double was asked for, held open until the test answers it. */
 interface AdvicePass {
   currentKey: string;
-  trios: { key: string }[];
+  lineups: { key: string }[];
   options: CaptainAdviceOptions;
   resolve: (result: CaptainAdviceResult) => void;
   reject: (error: Error) => void;
@@ -49,7 +49,7 @@ const upgrades: UpgradePass[] = [];
 vi.mock('@/worker/captainAdvice', () => ({
   runCaptainAdvice: (
     _input: unknown,
-    trios: { key: string }[],
+    lineups: { key: string }[],
     currentKey: string,
     _pool: unknown,
     options: CaptainAdviceOptions,
@@ -58,7 +58,7 @@ vi.mock('@/worker/captainAdvice', () => ({
       options.signal?.addEventListener('abort', () => {
         reject(abortError());
       });
-      advices.push({ currentKey, trios, options, resolve, reject });
+      advices.push({ currentKey, lineups, options, resolve, reject });
     }),
 }));
 
@@ -93,7 +93,7 @@ const stops = [
   { pick: 'all-in', counts: {} },
 ] as unknown as ShownStop[];
 
-/** The advice the double answers with: the best trio on both stops of the bar is `BEST`. */
+/** The advice the double answers with: the best lineup on both stops of the bar is `BEST`. */
 function adviceOf(over: Partial<CaptainAdviceResult> = {}): CaptainAdviceResult {
   return {
     currentKey: CURRENT,
@@ -103,7 +103,7 @@ function adviceOf(over: Partial<CaptainAdviceResult> = {}): CaptainAdviceResult 
     confirmed: [BEST],
     rows: [],
     plans: { [CURRENT]: stops, [BEST]: stops },
-    best: stops.map((stop) => ({ pick: stop.pick, trio: BEST, gain: 3, advice: null })),
+    best: stops.map((stop) => ({ pick: stop.pick, lineup: BEST, gain: 3, advice: null })),
     cut: [],
     failed: [],
     ...over,
@@ -120,7 +120,7 @@ const upgradesOf = (over: Partial<CaptainUpgradeResult> = {}): CaptainUpgradeRes
 
 const INPUT = {} as CampaignInput;
 
-/** Four captains owned, the first three on the march: the current trio is `CURRENT`. */
+/** Four captains owned, the first three on the march: the current lineup is `CURRENT`. */
 function ownFour(): void {
   const profile = selectActiveProfile(useStore.getState());
   if (profile === undefined) throw new Error('the default document has no profile');
@@ -167,14 +167,14 @@ afterEach(() => {
 });
 
 describe('the pass', () => {
-  test('the advice goes out with every trio, the current one first; then the upgrades go against the lead trio', async () => {
+  test('the advice goes out with every lineup, the current one first; then the upgrades go against the lead lineup', async () => {
     const pass = start();
     expect(useCaptainStore.getState().entry).toMatchObject({ status: 'running', done: 0 });
     expect(advices).toHaveLength(1);
     expect(advices[0]?.currentKey).toBe(CURRENT);
-    expect(advices[0]?.trios[0]?.key).toBe(CURRENT);
-    // Four captains, three-sided: four trios.
-    expect(advices[0]?.trios).toHaveLength(4);
+    expect(advices[0]?.lineups[0]?.key).toBe(CURRENT);
+    // Four captains, three-sided: four lineups.
+    expect(advices[0]?.lineups).toHaveLength(4);
     expect(upgrades).toHaveLength(0);
 
     advices[0]?.options.onProgress?.(3, 5);
@@ -187,7 +187,7 @@ describe('the pass', () => {
       expect(upgrades).toHaveLength(1);
     });
 
-    // The upgrades are read against the best trio's own plan, with the clock that is left.
+    // The upgrades are read against the best lineup's own plan, with the clock that is left.
     expect(upgrades[0]?.lead.key).toBe(BEST);
     expect(upgrades[0]?.lead.stops).toBe(stops);
     expect(upgrades[0]?.options.budgetMs).toBeLessThanOrEqual(CAMPAIGN.budgets.extra);
@@ -209,11 +209,11 @@ describe('the pass', () => {
     expect(entry?.result?.lead).toBe(BEST);
   });
 
-  test('where no trio gains the upgrades are read against the current trio', async () => {
+  test('where no lineup gains the upgrades are read against the current lineup', async () => {
     const pass = start();
     advices[0]?.resolve(
       adviceOf({
-        best: stops.map((stop) => ({ pick: stop.pick, trio: CURRENT, gain: 0, advice: null })),
+        best: stops.map((stop) => ({ pick: stop.pick, lineup: CURRENT, gain: 0, advice: null })),
         plans: { [CURRENT]: stops },
       }),
     );
@@ -237,7 +237,7 @@ describe('the pass', () => {
     expect(entry?.result?.upgrades).toBeNull();
   });
 
-  test('an unfinished trio or upgrade reads cut; a baseline that failed reads failed', async () => {
+  test('an unfinished lineup or upgrade reads cut; a baseline that failed reads failed', async () => {
     const cut = start();
     advices[0]?.resolve(adviceOf({ cut: [BEST] }));
     await vi.waitFor(() => {
@@ -291,6 +291,7 @@ describe('the hook', () => {
     useRunStore.setState({ plan: PLAN, planPick: 0 });
     const { result: view } = renderHook(() => useCaptainAdvice());
     expect(view.current.owned).toBe(4);
+    expect(view.current.size).toBe(3);
     expect(view.current.status).toBe('idle');
     expect(advices).toHaveLength(0);
     act(() => {
@@ -298,6 +299,19 @@ describe('the hook', () => {
     });
     expect(advices).toHaveLength(1);
     expect(view.current.status).toBe('running');
+  });
+
+  test('the lineup size is the march’s own: one captain switched on reads size 1', () => {
+    useRunStore.setState({ plan: PLAN, planPick: 0 });
+    // One captain on the march (the beforeEach leaves three): the pass weighs single captains, not trios.
+    act(() => {
+      const setup = selectActiveSetup(useStore.getState());
+      if (setup === undefined) throw new Error('the default document has no setup');
+      useStore.getState().updateActiveSetup({ active: { ...setup.active, captains: ['c0'] } });
+    });
+    const { result: view } = renderHook(() => useCaptainAdvice());
+    expect(view.current.owned).toBe(4);
+    expect(view.current.size).toBe(1);
   });
 
   test('ranks the upgrade rows on the stop the bar shows, without a new pass', async () => {
@@ -310,7 +324,7 @@ describe('the hook', () => {
       id,
       family: 'captains' as const,
       label: id,
-      trios: [BEST, BEST],
+      lineups: [BEST, BEST],
       planned: [BEST],
       stops: [
         { pick: 'sweet-spot', gain: sweet },

@@ -22,7 +22,7 @@
  */
 import type { AdvisorRow, ProbeInfo, ShownStop } from '@/engine/advisor';
 import type { CompleteMethod } from '@/engine/campaign';
-import type { ScreenStop, ScreenTrio, TrioScreen } from '@/engine/captains';
+import type { ScreenStop, ScreenLineup, LineupScreen } from '@/engine/captains';
 import type { CampaignInput, CampaignPlan, MarchWithin, ResizedMarch } from '@/engine/plan';
 import type { MarkerRates } from '@/engine/rating';
 import type {
@@ -161,9 +161,9 @@ export interface ProbeAnswer {
 }
 
 /**
- * **The captain screen** (W17 C5a, `docs/plans/progression-advisor.md` §4 C5): every allowed trio priced two
- * ways against the current one, as one job. The totals of each trio are built on the main thread
- * (`src/state/captainTrios.ts`), because the derive layer reads the tables and the store schema.
+ * **The captain screen** (W17 C5a, `docs/plans/progression-advisor.md` §4 C5): every allowed lineup priced two
+ * ways against the current one, as one job. The totals of each lineup are built on the main thread
+ * (`src/state/captainLineups.ts`), because the derive layer reads the tables and the store schema.
  */
 export interface CaptainsJob {
   kind: 'captains';
@@ -172,13 +172,13 @@ export interface CaptainsJob {
 }
 
 export interface CaptainScreenInput {
-  /** The march's own request; the `totals` it carries are not read — every trio brings its own. */
+  /** The march's own request; the `totals` it carries are not read — every lineup brings its own. */
   request: StackRequest;
-  /** The current trio and every other allowed one, in the order the answer comes back in. */
-  trios: ScreenTrio[];
-  /** Which of `trios` the march fields now: the screen rates every other against it. */
+  /** The current lineup and every other allowed one, in the order the answer comes back in. */
+  lineups: ScreenLineup[];
+  /** Which of `lineups` the march fields now: the screen rates every other against it. */
   currentKey: string;
-  /** The stops of the current trio's plan, whose counts are re-priced under each trio. */
+  /** The stops of the current lineup's plan, whose counts are re-priced under each lineup. */
   stops: ScreenStop[];
   /** The sizing the screen prices with; `elite`, the March's own, by default. */
   method?: CompleteMethod | undefined;
@@ -186,8 +186,8 @@ export interface CaptainScreenInput {
 }
 
 export interface CaptainScreenAnswer {
-  /** One per trio, in `trios` order (fewer when the job was cancelled part way). */
-  screens: TrioScreen[];
+  /** One per lineup, in `lineups` order (fewer when the job was cancelled part way). */
+  screens: LineupScreen[];
 }
 
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */

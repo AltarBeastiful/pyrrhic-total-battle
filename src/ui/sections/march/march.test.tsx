@@ -1695,7 +1695,9 @@ test('the raise is offered on a hired pool, and lifts the counts where the troop
 test('“as is” puts the generated counts back, and the raise is one replay, not a solve', async () => {
   await generateFromAPlan();
   const generated = shownCounts();
-  const mercenaries = raiseControl('Mercenary');
+  // **Pressed on the control where the selector is drawn, and set on the store where it is not**
+  // (`CAMPAIGN.raiseControl`, owner 2026-10-13): the standing position is the same either way.
+  const mercenaries = CAMPAIGN.raiseControl ? raiseControl('Mercenary') : null;
 
   chooseRaise('most');
   await waitFor(() => {
@@ -1704,7 +1706,11 @@ test('“as is” puts the generated counts back, and the raise is one replay, n
   // The sentence under the figures says what happened, in the same muted ink as the hand-edit line.
   expect(screen.getByText(/Raised to what the troops shelter/)).toBeTruthy();
 
-  fireEvent.click(within(mercenaries).getByRole('radio', { name: 'As is' }));
+  if (mercenaries !== null) {
+    fireEvent.click(within(mercenaries).getByRole('radio', { name: 'As is' }));
+  } else {
+    chooseRaise('off');
+  }
   await waitFor(() => {
     expect(shownCounts()).toEqual(generated);
   });
@@ -1713,13 +1719,15 @@ test('“as is” puts the generated counts back, and the raise is one replay, n
 
 test('the damage positions are raises too, and they add no line to the pane', async () => {
   await generateFromAPlan();
-  const control = raiseControl('Mercenary');
+  // **The control offers three segments** (owner, 2026-10-07) — while the selector is drawn at all
+  // (`CAMPAIGN.raiseControl`, owner 2026-10-13): `As is`, `Tight`, and `Tight (old)` beside it for the
+  // comparison.
+  if (CAMPAIGN.raiseControl) {
+    const control = raiseControl('Mercenary');
+    expect(within(control).getAllByRole('radio')).toHaveLength(3);
+    expect(within(control).queryByRole('radio', { name: 'Best' })).toBeNull();
+  }
   const plan = shownCounts();
-
-  // **The control offers three segments** (owner, 2026-10-07): `As is`, `Tight`, and `Tight (old)` beside it
-  // for the comparison.
-  expect(within(control).getAllByRole('radio')).toHaveLength(3);
-  expect(within(control).queryByRole('radio', { name: 'Best' })).toBeNull();
 
   // `Most` first, so the comparison below has the ceiling to measure the damage answer against — and so the
   // pane is in the state the sentence is drawn in before a damage position suppresses it (`MarchFoot.tsx`).

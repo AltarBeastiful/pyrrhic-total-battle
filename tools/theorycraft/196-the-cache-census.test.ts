@@ -36,7 +36,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CAMPAIGN } from '../../src/config';
 import { planMarch, withMethod } from '../../src/engine';
-import { leadTrio } from '../../src/engine/captainUpgrades';
+import { leadLineup } from '../../src/engine/captainUpgrades';
 import {
   setKernel,
   setRaiseKernel,
@@ -49,7 +49,7 @@ import { packRequest } from '../../src/kernel/pack';
 import { createPlanKernel } from '../../src/kernel/plan';
 import { createRaiseKernel } from '../../src/kernel/raise';
 import { parseImport } from '../../src/share/exportImport';
-import { captainTrios } from '../../src/state/captainTrios';
+import { captainLineups } from '../../src/state/captainLineups';
 import { captainUpgradeCandidates } from '../../src/state/captainUpgrades';
 import { buildPlanRequest, buildStackRequest } from '../../src/state/derive';
 import type { Profile } from '../../src/state/schema';
@@ -353,24 +353,26 @@ async function censusOf(label: string, profile: Profile): Promise<RunCensus> {
 
     // 3. captains: the trio screen, then the lead trio's next stars and levels.
     await during('captains', async () => {
-      const { currentKey, trios } = captainTrios(profile, setup);
+      const { currentKey, lineups, size } = captainLineups(profile, setup);
       const advice = await runCaptainAdvice(
         input,
-        trios.map(({ key, totals }) => ({ key, totals })),
+        lineups.map(({ key, totals }) => ({ key, totals })),
         currentKey,
         pool,
         { budgetMs: NO_CLOCK },
       );
       expect(advice.cut, `${label} captains`).toEqual([]);
-      const lead = leadTrio(advice.best, currentKey);
-      const leadCandidate = trios.find((trio) => trio.key === lead);
+      const lead = leadLineup(advice.best, currentKey);
+      const leadCandidate = lineups.find((trio) => trio.key === lead);
       const leadStops = advice.plans[lead];
       if (leadCandidate === undefined || leadStops === undefined) return;
-      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate).map((candidate) => ({
-        id: candidate.spec.id,
-        label: `${candidate.name} ${candidate.change}`,
-        trios: candidate.trios.map(({ key, totals }) => ({ key, totals })),
-      }));
+      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map(
+        (candidate) => ({
+          id: candidate.spec.id,
+          label: `${candidate.name} ${candidate.change}`,
+          lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
+        }),
+      );
       const upgraded = await runCaptainUpgrades(
         input,
         { key: lead, totals: leadCandidate.totals, stops: leadStops },

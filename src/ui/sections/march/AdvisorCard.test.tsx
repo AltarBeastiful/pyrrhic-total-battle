@@ -547,6 +547,7 @@ describe('the captain section', () => {
 
   const captains = (over: Partial<CaptainView> = {}): CaptainView => ({
     owned: 4,
+    size: 3,
     status: 'idle',
     done: 0,
     total: 0,
@@ -558,7 +559,7 @@ describe('the captain section', () => {
     ...over,
   });
 
-  /** The advice: the best trio gains on the all-in stop, the current one is best on the sweet spot. */
+  /** The advice: the best lineup gains on the all-in stop, the current one is best on the sweet spot. */
   const advice = (over: Partial<CaptainAdviceResult> = {}): CaptainAdviceResult => ({
     currentKey: CURRENT,
     baseline: RESULT.baseline,
@@ -568,8 +569,8 @@ describe('the captain section', () => {
     rows: [],
     plans: {},
     best: [
-      { pick: 'sweet-spot', trio: CURRENT, gain: 0, advice: null },
-      { pick: 'all-in', trio: BEST, gain: 3, advice: stop('all-in', 3) },
+      { pick: 'sweet-spot', lineup: CURRENT, gain: 0, advice: null },
+      { pick: 'all-in', lineup: BEST, gain: 3, advice: stop('all-in', 3) },
     ],
     cut: [],
     failed: [],
@@ -627,11 +628,11 @@ describe('the captain section', () => {
     expect(view.cancel).toHaveBeenCalledOnce();
   });
 
-  test('done: the best trio per stop, by the captains names, with its gain and its damage', () => {
+  test('done: the best lineup per stop, by the captains names, with its gain and its damage', () => {
     draw(read());
     expect(screen.getByText('Best captains')).toBeTruthy();
     expect(screen.getByText('A suggestion: your march keeps the captains you chose.')).toBeTruthy();
-    const [sweet, allIn] = screen.getAllByTestId('captain-trio');
+    const [sweet, allIn] = screen.getAllByTestId('captain-lineup');
     expect(sweet?.textContent).toContain('your captains');
     expect(sweet?.textContent).toContain('Aydae, Skadi, Sofia');
     expect(sweet?.textContent).not.toContain('worth');
@@ -642,7 +643,7 @@ describe('the captain section', () => {
     expect(screen.getByTestId('advisor-pass-captains').textContent).not.toMatch(/[-−]\d/u);
   });
 
-  test('done: the upgrades ranked on the headline stop, "no gain" kept, the lead trio said', () => {
+  test('done: the upgrades ranked on the headline stop, "no gain" kept, the lead lineup said', () => {
     draw(read());
     expect(screen.getByText('Next captain upgrades')).toBeTruthy();
     expect(screen.getByTestId('captain-lead').textContent).toBe(
@@ -656,6 +657,13 @@ describe('the captain section', () => {
     ]);
   });
 
+  test('the lead lineup is named by the march’s own size: a solo reads "the best captain"', () => {
+    draw(read({ size: 1 }));
+    expect(screen.getByTestId('captain-lead').textContent).toBe(
+      'Read with Aydae, Beowulf, Skadi, the best captain.',
+    );
+  });
+
   test('the other stops are folded, ranked on themselves, under their own name', async () => {
     draw(read());
     const fold = screen.getByRole('button', { name: /Other stops \(captains\)/u });
@@ -664,15 +672,15 @@ describe('the captain section', () => {
     expect(screen.getAllByTestId('advisor-row').length).toBeGreaterThan(3);
   });
 
-  test('the current trio the best everywhere: no "read with" line, only the upgrades', () => {
+  test('the current lineup the best everywhere: no "read with" line, only the upgrades', () => {
     draw(
       read(
         {},
         { lead: CURRENT },
         {
           best: [
-            { pick: 'sweet-spot', trio: CURRENT, gain: 0, advice: null },
-            { pick: 'all-in', trio: CURRENT, gain: 0, advice: null },
+            { pick: 'sweet-spot', lineup: CURRENT, gain: 0, advice: null },
+            { pick: 'all-in', lineup: CURRENT, gain: 0, advice: null },
           ],
         },
       ),

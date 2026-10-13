@@ -1,21 +1,21 @@
 /**
  * **Where the next star (or level) goes** (W17 C5b, `docs/plans/progression-advisor.md` §4 C5): which upgrades
- * of an owned captain are worth asking about, and which trios each one has to be tried in.
+ * of an owned captain are worth asking about, and which lineups each one has to be tried in.
  *
  * Pure engine, like `captains.ts`: it reads no table and no profile. The caller (`src/state/captainUpgrades.ts`)
  * says what an upgrade is worth in bonus points (`worth`, read off `captains.json`, so nothing is typed) and
  * builds the totals; the pass over the pool (`src/worker/captainUpgrades.ts`) prices them.
  *
- * **The cheap form first.** An upgrade is read against the *lead trio* — the trio the captain advice found best
- * (`leadTrio`; the current one where none gains) — so what it reports is the star's own worth and never the swap
- * of trio it might also bring:
+ * **The cheap form first.** An upgrade is read against the *lead lineup* — the lineup the captain advice found best
+ * (`leadLineup`; the current one where none gains) — so what it reports is the star's own worth and never the swap
+ * of lineup it might also bring:
  *
- *  - the captain is in the lead trio → the one trio to try is the lead trio with the upgrade added;
- *  - the captain is not → only a trio that fields it can gain, so the trios that contain it (`trioContaining`)
+ *  - the captain is in the lead lineup → the one lineup to try is the lead lineup with the upgrade added;
+ *  - the captain is not → only a lineup that fields it can gain, so the lineups that contain it (`lineupContaining`)
  *    are re-screened and the best of them planned in full. A star on a captain who stays on the bench gains 0.
  */
 import type { RosterCaptain } from './captains';
-import { allowedTrios, distinctCaptains } from './captains';
+import { allowedLineups, distinctCaptains, LINEUP_SIZE } from './captains';
 
 /** Stars stop here (`captainEntrySchema`, `src/state/schema.ts`). */
 export const CAPTAIN_MAX_STAR = 6;
@@ -33,7 +33,7 @@ export interface CaptainUpgradeSpec {
   /** Stable and unique: `captain:<captainId>:<kind>`, the probe id of the row. */
   id: string;
   captainId: string;
-  /** The profile entry it raises: the strongest of the captain's entries, the one a trio fields. */
+  /** The profile entry it raises: the strongest of the captain's entries, the one a lineup fields. */
   entryId: string;
   kind: UpgradeKind;
   /** Level and star before and after. */
@@ -81,13 +81,13 @@ export function captainUpgrades<T extends RosterCaptain & { id: string }>(
 }
 
 /**
- * **The trio the upgrades are read against**: the one winning the most gain over the stops of the bar, the
- * current trio where no other trio gains and on every tie (the first trio to reach the highest total wins, the
- * current trio is counted first).
+ * **The lineup the upgrades are read against**: the one winning the most gain over the stops of the bar, the
+ * current lineup where no other lineup gains and on every tie (the first lineup to reach the highest total wins, the
+ * current lineup is counted first).
  */
-export function leadTrio(best: readonly { trio: string; gain: number }[], currentKey: string): string {
+export function leadLineup(best: readonly { lineup: string; gain: number }[], currentKey: string): string {
   const totals = new Map<string, number>([[currentKey, 0]]);
-  for (const stop of best) totals.set(stop.trio, (totals.get(stop.trio) ?? 0) + stop.gain);
+  for (const stop of best) totals.set(stop.lineup, (totals.get(stop.lineup) ?? 0) + stop.gain);
   let lead = currentKey;
   let most = 0;
   for (const [key, total] of totals)
@@ -98,8 +98,8 @@ export function leadTrio(best: readonly { trio: string; gain: number }[], curren
   return lead;
 }
 
-/** Is the captain one of the lead trio's? Then the upgrade is tried in that trio alone. */
-export function inLeadTrio(
+/** Is the captain one of the lead lineup's? Then the upgrade is tried in that lineup alone. */
+export function inLeadLineup(
   upgrade: Pick<CaptainUpgradeSpec, 'captainId'>,
   leadCaptainIds: readonly string[],
 ): boolean {
@@ -107,13 +107,18 @@ export function inLeadTrio(
 }
 
 /**
- * Every allowed trio that fields `captainId`, in index order: where an upgrade of a captain outside the lead
- * trio can pay. `owned` is the roster *after* the upgrade, so a trio's order and identity are the same as before.
+ * Every allowed lineup **of `size`** that fields `captainId`, in index order: where an upgrade of a captain
+ * outside the lead lineup can pay. `owned` is the roster *after* the upgrade, so a lineup's order and identity
+ * are the same as before. `size` is the march's own lineup size (`lineupSize`), so the swaps an upgrade is tried
+ * in are the same size as the march's set.
  */
-export function trioContaining<T extends RosterCaptain>(
+export function lineupContaining<T extends RosterCaptain>(
   owned: readonly T[],
   captainId: string,
   allowed: (captainId: string) => boolean,
+  size: number = LINEUP_SIZE,
 ): T[][] {
-  return allowedTrios(owned, allowed).filter((trio) => trio.some((entry) => entry.captainId === captainId));
+  return allowedLineups(owned, allowed, size).filter((lineup) =>
+    lineup.some((entry) => entry.captainId === captainId),
+  );
 }

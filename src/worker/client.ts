@@ -65,8 +65,8 @@ export interface CalcClient {
    */
   probe(request: ProbeInput, signal?: AbortSignal): Promise<ProbeAnswer>;
   /**
-   * W17 C5a: the captain screen — every allowed trio priced against the current one, as one job. The totals of
-   * each trio are built by the caller (`src/state/captainTrios.ts`).
+   * W17 C5a: the captain screen — every allowed lineup priced against the current one, as one job. The totals of
+   * each lineup are built by the caller (`src/state/captainLineups.ts`).
    */
   captains(request: CaptainScreenInput, signal?: AbortSignal): Promise<CaptainScreenAnswer>;
   /** Terminate the worker and reject every job still in flight. */

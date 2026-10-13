@@ -242,6 +242,8 @@ export interface CaptainChipsProps {
   /** The kind of march the active setup is, and the way to change it. */
   marchType: SetupMarchType;
   onMarchType: (next: SetupMarchType) => void;
+  /** Whether to draw the march-type control: only when it can change a reading (a restricted captain is owned). */
+  showMarchType: boolean;
 }
 
 const keyOf = (target: CaptainTarget): string => (target.kind === 'hero' ? 'hero' : target.captainId);
@@ -253,6 +255,7 @@ export function CaptainChips({
   onConfigure,
   marchType,
   onMarchType,
+  showMarchType,
 }: CaptainChipsProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const roving = useRovingTabs();
@@ -306,26 +309,29 @@ export function CaptainChips({
       </Text>
       {/* The kind of march decides which captains count (Amanitore: group; Hercules: epic monsters).
           "Any" is today's behaviour, so a player who never touches it sees nothing change. Tooltips
-          say what each kind does, the way the raise control's do (rule 23: stock Mantine). */}
-      <SegmentedControl
-        size="xs"
-        fullWidth
-        maw={320}
-        aria-label="March type"
-        value={marchType}
-        data={MARCH_TYPE_CHOICES.map((choice) => ({
-          value: choice.value,
-          label: (
-            <Tooltip label={choice.help} multiline maw={280} withinPortal withArrow>
-              <span>{choice.label}</span>
-            </Tooltip>
-          ),
-        }))}
-        onChange={(next) => {
-          const choice = MARCH_TYPE_CHOICES.find((entry) => entry.value === next);
-          if (choice !== undefined) onMarchType(choice.value);
-        }}
-      />
+          say what each kind does, the way the raise control's do (rule 23: stock Mantine). Drawn only
+          when the roster owns a restricted captain, or a type is already stored to reset (rule 15). */}
+      {showMarchType && (
+        <SegmentedControl
+          size="xs"
+          fullWidth
+          maw={320}
+          aria-label="March type"
+          value={marchType}
+          data={MARCH_TYPE_CHOICES.map((choice) => ({
+            value: choice.value,
+            label: (
+              <Tooltip label={choice.help} multiline maw={280} withinPortal withArrow>
+                <span>{choice.label}</span>
+              </Tooltip>
+            ),
+          }))}
+          onChange={(next) => {
+            const choice = MARCH_TYPE_CHOICES.find((entry) => entry.value === next);
+            if (choice !== undefined) onMarchType(choice.value);
+          }}
+        />
+      )}
     </Stack>
   );
 }

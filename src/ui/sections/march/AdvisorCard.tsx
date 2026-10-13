@@ -8,7 +8,7 @@
  *
  * **Captains** (W17 C5) are a third pass beside the two, on a button of their own (`CaptainSection`,
  * `captainSearch.ts`): experiment 193 put the pass over the 20 s cut when run together with the others. It lists
- * the best trio per stop and the next star or level of each captain; only with a captain owned (rule 15).
+ * the best lineup per stop and the next star or level of each captain; only with a captain owned (rule 15).
  *
  * **The other questions** (W17 step D) are a fourth pass on a button of their own (`OtherSection`,
  * `otherSearch.ts`; experiment 194 put them over the 20 s cut beside the generic probes): the dominance and
@@ -54,7 +54,7 @@ import { PROBE_BONUS_DELTA, PROBE_HOUSING_PERCENT } from '@/engine/probes';
 import { DEFAULT_TABLES } from '@/state/derive';
 import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain';
 import { Disclosure } from '@/ui/kit';
-import type { TrioStopAdvice } from '@/worker/captainAdvice';
+import type { LineupStopAdvice } from '@/worker/captainAdvice';
 
 import { curveOfRows, type SweepCurve } from '@/engine/advisor-sweeps';
 
@@ -69,7 +69,7 @@ import classes from './march.module.css';
 export type AdvisorCardProps = Pick<AdvisorView, 'headline' | 'typed' | 'mine' | 'default'> & {
   /** The player's own upgrades and their form (`TypedUpgrades`), read by the "my upgrades" pass. */
   upgrades?: ReactNode;
-  /** The captain section (`captainSearch.ts`): the best trio and the next star; left out, the card has none. */
+  /** The captain section (`captainSearch.ts`): the best lineup and the next star; left out, the card has none. */
   captains?: CaptainView;
   /** The other questions section (`otherSearch.ts`): sweeps, next tier, merc stock, horizon, silver. */
   other?: OtherView;
@@ -407,24 +407,29 @@ function PassSection({ compute, noun, heading, view, headline, blocked, note, or
   );
 }
 
-/** A trio's key (`aydae,beowulf,skadi`) in the captains' own names. */
-function trioWords(key: string): string {
+/** A lineup's key (`aydae,beowulf,skadi`) in the captains' own names. */
+function lineupWords(key: string): string {
   return key
     .split(',')
     .map((id) => DEFAULT_TABLES.captains.find((record) => record.id === id)?.name ?? id)
     .join(', ');
 }
 
+/** What a lineup of `size` captains is called, beside its names (rule 26, our own words): a solo, a pair, a trio. */
+function lineupNoun(size: number): string {
+  return size === 1 ? 'captain' : size === 2 ? 'pair' : 'trio';
+}
+
 /**
- * **The best trio on one stop of the bar**: the stop, what the trio is worth on the owner's rating, and under
- * it the captains with the damage they would bring. Where no trio gains the line says the march's own is the
- * best ("your captains"), never a loss: `bestPerStop` keeps the current trio on a gain of 0.
+ * **The best lineup on one stop of the bar**: the stop, what the lineup is worth on the owner's rating, and under
+ * it the captains with the damage they would bring. Where no lineup gains the line says the march's own is the
+ * best ("your captains"), never a loss: `bestPerStop` keeps the current lineup on a gain of 0.
  */
-function TrioLine({ stop }: { stop: TrioStopAdvice }) {
+function LineupLine({ stop }: { stop: LineupStopAdvice }) {
   const gains = stop.gain > 0 && stop.advice !== null;
   const reached = stop.advice === null ? null : reachedDamage(stop.advice);
   return (
-    <Stack gap={0} data-testid="captain-trio">
+    <Stack gap={0} data-testid="captain-lineup">
       <Group justify="space-between" wrap="nowrap" gap="sm" align="baseline">
         <Text size="sm">{planWords({ pick: stop.pick })}</Text>
         {gains ? (
@@ -438,7 +443,7 @@ function TrioLine({ stop }: { stop: TrioStopAdvice }) {
         )}
       </Group>
       <Text className={classes.meta} c="dimmed">
-        {trioWords(stop.trio)}
+        {lineupWords(stop.lineup)}
         {gains && stop.advice !== null && reached !== null && (
           <>
             , {signedPercent(stop.advice.damagePercent)} damage, <Figure value={reached} /> a march
@@ -451,8 +456,8 @@ function TrioLine({ stop }: { stop: TrioStopAdvice }) {
 
 /**
  * **The captain section** (W17 C5): its own button and clock (experiment 193: the pass costs 3–6 s on its own
- * and over the 20 s cut beside the other two), its progress and Cancel, then the best trio per stop and the next
- * star or level of each captain, ranked on the stop the bar shows. The trio is a suggestion: the march keeps the
+ * and over the 20 s cut beside the other two), its progress and Cancel, then the best lineup per stop and the next
+ * star or level of each captain, ranked on the stop the bar shows. The lineup is a suggestion: the march keeps the
  * captains the player chose, and the line under the heading says so (rule 15: said once, only with a list).
  * Nothing at all with no captain owned.
  */
@@ -468,6 +473,7 @@ function CaptainSection({ view, headline }: { view: CaptainView; headline: PlanP
   const lead = result?.lead;
   const others = (advice?.baseline ?? []).map((stop) => stop.pick).filter((pick) => pick !== headline);
   const failed = (advice?.failed.length ?? 0) + (result?.upgrades?.failed.length ?? 0);
+  const noun = lineupNoun(view.size);
 
   return (
     <Stack gap="xs" data-testid="advisor-pass-captains">
@@ -504,7 +510,8 @@ function CaptainSection({ view, headline }: { view: CaptainView; headline: PlanP
 
       {failed > 0 && (
         <Text size="sm" c="dimmed">
-          {failed} trio{failed === 1 ? '' : 's'} or upgrade{failed === 1 ? '' : 's'} could not be read.
+          {failed} {noun}
+          {failed === 1 ? '' : 's'} or upgrade{failed === 1 ? '' : 's'} could not be read.
         </Text>
       )}
 
@@ -518,7 +525,7 @@ function CaptainSection({ view, headline }: { view: CaptainView; headline: PlanP
           </Text>
           <Stack gap="xs">
             {advice.best.map((stop) => (
-              <TrioLine key={stop.pick} stop={stop} />
+              <LineupLine key={stop.pick} stop={stop} />
             ))}
           </Stack>
           {rows.length > 0 && result !== null && (
@@ -528,7 +535,7 @@ function CaptainSection({ view, headline }: { view: CaptainView; headline: PlanP
               </Text>
               {lead !== undefined && lead !== advice.currentKey && (
                 <Text className={classes.meta} c="dimmed" data-testid="captain-lead">
-                  Read with {trioWords(lead)}, the best trio.
+                  Read with {lineupWords(lead)}, the best {noun}.
                 </Text>
               )}
               <StopList rows={rows} pick={headline} />

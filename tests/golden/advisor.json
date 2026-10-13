@@ -261,32 +261,32 @@
         {
           "advice": null,
           "gain": 0,
-          "pick": "burn-saver",
-          "trio": "alexander,aydae,leonidas"
+          "lineup": "alexander,aydae,leonidas",
+          "pick": "burn-saver"
         },
         {
           "advice": null,
           "gain": 0,
-          "pick": "silver-saver",
-          "trio": "alexander,aydae,leonidas"
+          "lineup": "alexander,aydae,leonidas",
+          "pick": "silver-saver"
         },
         {
           "advice": null,
           "gain": 0,
-          "pick": "sweet-spot",
-          "trio": "alexander,aydae,leonidas"
+          "lineup": "alexander,aydae,leonidas",
+          "pick": "sweet-spot"
         },
         {
           "advice": null,
           "gain": 0,
-          "pick": "steady-max",
-          "trio": "alexander,aydae,leonidas"
+          "lineup": "alexander,aydae,leonidas",
+          "pick": "steady-max"
         },
         {
           "advice": null,
           "gain": 0,
-          "pick": "all-in",
-          "trio": "alexander,aydae,leonidas"
+          "lineup": "alexander,aydae,leonidas",
+          "pick": "all-in"
         }
       ],
       "confirmed": [],
@@ -571,6 +571,13 @@
           "family": "captains",
           "id": "captain:aydae:star",
           "label": "Aydae ★3 → ★4",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -1132,19 +1139,19 @@
               "repricedRating": -23.838982110259888,
               "worse": false
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:aydae:level",
           "label": "Aydae L39 → L40",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -1702,19 +1709,19 @@
               "repricedRating": 0.18439190745779618,
               "worse": true
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:aydae:level10",
           "label": "Aydae L39 → L49",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -2308,19 +2315,19 @@
               "repricedRating": -32.39693144263691,
               "worse": false
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:alexander:star",
           "label": "Alexander ★0 → ★1",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -2882,19 +2889,19 @@
               "repricedRating": -14.675354673513501,
               "worse": false
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:alexander:level",
           "label": "Alexander L19 → L20",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -3452,19 +3459,19 @@
               "repricedRating": -9.586171897540288,
               "worse": true
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:alexander:level10",
           "label": "Alexander L19 → L29",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -3991,19 +3998,19 @@
               "repricedRating": -18.740028608937028,
               "worse": false
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:leonidas:star",
           "label": "Leonidas ★0 → ★1",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -4561,19 +4568,19 @@
               "repricedRating": 1.950725316056248,
               "worse": true
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:leonidas:level",
           "label": "Leonidas L36 → L37",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -5135,19 +5142,19 @@
               "repricedRating": -7.638020273949765,
               "worse": false
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         },
         {
           "family": "captains",
           "id": "captain:leonidas:level10",
           "label": "Leonidas L36 → L46",
+          "lineups": [
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas",
+            "alexander,aydae,leonidas"
+          ],
           "planned": ["alexander,aydae,leonidas"],
           "stops": [
             {
@@ -5707,13 +5714,6 @@
               "repricedRating": -7.19943683981766,
               "worse": false
             }
-          ],
-          "trios": [
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas",
-            "alexander,aydae,leonidas"
           ]
         }
       ]

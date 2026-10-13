@@ -1,5 +1,5 @@
 /**
- * W17 C5a — **the captain screen job** (`runCaptainScreen` in `jobs.ts`), on the kernel: every trio priced two
+ * W17 C5a — **the captain screen job** (`runCaptainScreen` in `jobs.ts`), on the kernel: every lineup priced two
  * ways against the current one, as one round trip through the same client the pool hands out.
  */
 import { describe, expect, test } from 'vitest';
@@ -7,12 +7,12 @@ import { describe, expect, test } from 'vitest';
 import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { emptyTotals, planCampaign } from '@/engine';
-import { rankTrios } from '@/engine/captains';
+import { rankLineups } from '@/engine/captains';
 import type { ScreenStop } from '@/engine/captains';
 import type { BonusTotals, StackRequest } from '@/engine/types';
 
 import { createInlineClient } from './client';
-import { runCaptainScreen, trioPricer } from './jobs';
+import { runCaptainScreen, lineupPricer } from './jobs';
 import type { CaptainScreenInput } from './protocol';
 
 /** The planner's small army (`advisor.test.ts`): four troop types and three hired soldiers with a stock. */
@@ -51,7 +51,7 @@ function input(): CaptainScreenInput {
   const req = request();
   return {
     request: req,
-    trios: [
+    lineups: [
       { key: 'now', totals: withArmy(20) },
       { key: 'weaker', totals: withArmy(0) },
       { key: 'better', totals: withArmy(120) },
@@ -66,7 +66,7 @@ function input(): CaptainScreenInput {
 const never = { onProgress: () => undefined, cancelled: () => false };
 
 describe('runCaptainScreen', () => {
-  test('rates each trio against the current one, which rates 0, and ranks the stronger army first', () => {
+  test('rates each lineup against the current one, which rates 0, and ranks the stronger army first', () => {
     const job = input();
     expect(job.stops.length).toBeGreaterThan(0);
     const { screens } = runCaptainScreen(job, never);
@@ -77,7 +77,7 @@ describe('runCaptainScreen', () => {
     expect(better!.sized).toBeGreaterThan(0);
     expect(best!.sized).toBeGreaterThan(better!.sized);
     for (const kind of ['sized', 'repriced'] as const)
-      expect(rankTrios(screens, kind).map((screen) => screen.key)).toEqual([
+      expect(rankLineups(screens, kind).map((screen) => screen.key)).toEqual([
         'best',
         'better',
         'now',
@@ -90,9 +90,9 @@ describe('runCaptainScreen', () => {
     expect(runCaptainScreen(job, never)).toEqual(runCaptainScreen(job, never));
   });
 
-  test('a trio of the current captains’ totals rates 0 on both readings', () => {
+  test('a lineup of the current captains’ totals rates 0 on both readings', () => {
     const job = input();
-    job.trios.push({ key: 'twin', totals: withArmy(20) });
+    job.lineups.push({ key: 'twin', totals: withArmy(20) });
     const twin = runCaptainScreen(job, never).screens.find((screen) => screen.key === 'twin');
     expect(twin?.sized).toBe(0);
     expect(twin?.repriced.every((rating) => rating === 0)).toBe(true);
@@ -100,8 +100,8 @@ describe('runCaptainScreen', () => {
 
   test('the sized reading is a march of its own and the re-priced one keeps the plan’s counts', () => {
     const job = input();
-    const price = trioPricer(job.request);
-    const now = job.trios[0]!.totals;
+    const price = lineupPricer(job.request);
+    const now = job.lineups[0]!.totals;
     const a = price(now, null);
     const b = price(now, job.stops[0]!.counts);
     expect(a.damage).toBeGreaterThan(0);
@@ -110,14 +110,14 @@ describe('runCaptainScreen', () => {
     expect(price(now, job.stops[0]!.counts)).toEqual(b);
   });
 
-  test('a job cancelled before it starts prices no trio', () => {
+  test('a job cancelled before it starts prices no lineup', () => {
     const { screens } = runCaptainScreen(input(), { ...never, cancelled: () => true });
     expect(screens).toEqual([]);
   });
 
-  test('refuses a trio list without the current trio', () => {
+  test('refuses a lineup list without the current lineup', () => {
     const job = { ...input(), currentKey: 'missing' };
-    expect(() => runCaptainScreen(job, never)).toThrow(/current trio/);
+    expect(() => runCaptainScreen(job, never)).toThrow(/current lineup/);
   });
 });
 

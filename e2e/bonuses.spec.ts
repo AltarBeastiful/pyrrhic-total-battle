@@ -121,6 +121,11 @@ test('the march type is chosen under the captains and survives a reload', async 
   const problems = watchConsole(page);
   await openApp(page);
 
+  // No captain with a march-type restriction is on the march: the control changes nothing, so it is not drawn.
+  await expect(bonusesCard(page).getByRole('radiogroup', { name: 'March type' })).toHaveCount(0);
+
+  // Enlisting Hercules (epic-only) selects him, which brings the control in, on Any.
+  await tapCaptain(page, 'Hercules');
   const control = bonusesCard(page).getByRole('radiogroup', { name: 'March type' });
   await expect(control.getByRole('radio', { name: 'Any' })).toBeChecked();
 
@@ -128,7 +133,6 @@ test('the march type is chosen under the captains and survives a reload', async 
   await control.getByText('Group', { exact: true }).click();
   await expect(control.getByRole('radio', { name: 'Group' })).toBeChecked();
 
-  await tapCaptain(page, 'Hercules');
   await expect(bonusesCard(page).getByText(/Hercules is not counted on a group march/)).toBeVisible();
 
   // Phone width (rule 18): the control keeps its four segments inside the screen, on one line.

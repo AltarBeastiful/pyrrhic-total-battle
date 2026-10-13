@@ -218,6 +218,20 @@ export const CAMPAIGN = {
    */
   editFills: [98, 96, 94, 92, 90],
   /**
+   * **Whether the battle summary draws the raise selector** (owner, 2026-10-13: *"hide the selector for as is
+   * tight and tight old. keep it as a config entry so I can enable it back"*). `false` is the shipped value:
+   * the control (`MarchRaiseControl`) is not drawn, and the March stands on `Tight` (`DEFAULT_RAISE`) with
+   * nothing on screen to move it — the two comparison positions (`As is`, and `Tight (old)`, the damage-ranked
+   * Tight of 2026-10-07) go with it.
+   *
+   * **It draws the control and nothing else.** The bar's tables are still priced with `OFFERED_POSITIONS`
+   * (`sections/march/positions.ts`), which is untouched, so a Generate still prices `Tight (old)` beside
+   * `Tight` — and that second search a stop is on the Generate's own clock (`priceBar` is awaited before the
+   * March is drawn, `generate.ts`). Experiment 229 measures what dropping it would save; doing so also moves
+   * `tests/golden/advisor.json`, so it is the owner's call and not a worker's.
+   */
+  raiseControl: false,
+  /**
    * **How thin a shelter the March warns about** (S-141; owner, 2026-09-24: *"bank the margin in the backlog
    * for now. Let's perhaps add a faint warning ? at least if it at 0.01%"*), as a fraction of the lowest troop
    * stack's total HP.
@@ -271,17 +285,18 @@ export const CAMPAIGN = {
    */
   advisorScreen: null as { top: number; share: number } | null,
   /**
-   * How many screened trios the captain advice plans in full besides the current trio (W17 C5a, a work count and
+   * How many screened lineups the captain advice plans in full besides the current lineup (W17 C5a, a work count and
    * never a duration). 8 is the plan's first figure (`docs/plans/progression-advisor.md` §4 C5), kept by
-   * experiment 193: with the re-priced screen's shortlist, 8 finds the best trio on 32 of 35 stops and loses 0.3 %
-   * of the rating, 3 loses 4.4 %.
+   * experiment 193: with the re-priced screen's shortlist, 8 finds the best lineup on 32 of 35 stops and loses 0.3 %
+   * of the rating, 3 loses 4.4 %. A **cap**: the pool is now the lineups of the march's own size (C5c), so a
+   * one- or two-captain march has fewer candidates and the shortlist is simply all of them.
    */
   captainConfirm: 8,
   /**
-   * How many of the trios fielding a benched captain the upgrade pass plans in full (W17 C5b, a work count). A
-   * captain in the lead trio is tried in that trio alone, so this only bounds the captains outside it. Two is the
-   * phase's first figure, not yet measured: the screen's top-1 is the best trio on 20 of 35 stops and its top-8
-   * on 32 (experiment 193), and an upgrade has far fewer trios to choose among (C(n-1, 2) of them).
+   * How many of the lineups fielding a benched captain the upgrade pass plans in full (W17 C5b, a work count). A
+   * captain in the lead lineup is tried in that lineup alone, so this only bounds the captains outside it. Two is the
+   * phase's first figure, not yet measured: the screen's top-1 is the best lineup on 20 of 35 stops and its top-8
+   * on 32 (experiment 193), and an upgrade has far fewer lineups to choose among (of the lineup's own size, C5c).
    */
   captainUpgradeConfirm: 2,
   /**

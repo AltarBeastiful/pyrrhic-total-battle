@@ -7,7 +7,7 @@
  *     (`client.plan`, then `client.positions` per stop on the elite request);
  *  2. **upgrades-default**: `runAdvisor` (every probe read by Tight: `screen: null`, the screened pass is the second
  *     test below) over the 29 generic probes, headlined on the opening stop;
- *  3. **captains**: `runCaptainAdvice` over every allowed trio, then `runCaptainUpgrades` against its lead trio;
+ *  3. **captains**: `runCaptainAdvice` over every allowed lineup, then `runCaptainUpgrades` against its lead lineup;
  *  4. **other**: `runAdvisor` over the sweeps, next tier, merc stock, horizon and silver (`otherProbes`).
  *
  * The UI functions run these under the 20 s clock (`CAMPAIGN.budgets.extra`, and `budgets.plan` for the plan),
@@ -24,9 +24,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { planMarch, withMethod } from '@/engine';
-import { leadTrio } from '@/engine/captainUpgrades';
+import { leadLineup } from '@/engine/captainUpgrades';
 import { genericProbes } from '@/engine/probes';
-import { captainTrios } from '@/state/captainTrios';
+import { captainLineups } from '@/state/captainLineups';
 import { captainUpgradeCandidates } from '@/state/captainUpgrades';
 import { buildPlanRequest, buildStackRequest } from '@/state/derive';
 import { otherProbes } from '@/ui/sections/march/otherSearch';
@@ -84,25 +84,27 @@ async function capture(): Promise<unknown> {
       screen: null,
     });
 
-    // 3. captains: the trio screen, then the lead trio's next stars and levels.
-    const { currentKey, trios } = captainTrios(profile, setup);
+    // 3. captains: the lineup screen, then the lead lineup's next stars and levels.
+    const { currentKey, lineups, size } = captainLineups(profile, setup);
     const advice = await runCaptainAdvice(
       input,
-      trios.map(({ key, totals }) => ({ key, totals })),
+      lineups.map(({ key, totals }) => ({ key, totals })),
       currentKey,
       pool,
       { budgetMs: NO_CLOCK },
     );
-    const lead = leadTrio(advice.best, currentKey);
-    const leadCandidate = trios.find((trio) => trio.key === lead);
+    const lead = leadLineup(advice.best, currentKey);
+    const leadCandidate = lineups.find((lineup) => lineup.key === lead);
     const leadStops = advice.plans[lead];
     let upgrades: CaptainUpgradeResult | null = null;
     if (leadCandidate !== undefined && leadStops !== undefined) {
-      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate).map((candidate) => ({
-        id: candidate.spec.id,
-        label: `${candidate.name} ${candidate.change}`,
-        trios: candidate.trios.map(({ key, totals }) => ({ key, totals })),
-      }));
+      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map(
+        (candidate) => ({
+          id: candidate.spec.id,
+          label: `${candidate.name} ${candidate.change}`,
+          lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
+        }),
+      );
       upgrades = await runCaptainUpgrades(
         input,
         { key: lead, totals: leadCandidate.totals, stops: leadStops },

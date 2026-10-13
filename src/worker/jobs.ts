@@ -13,7 +13,7 @@ import {
 } from '@/engine';
 import { readProbe } from '@/engine/advisor';
 import type { ShownBill, ShownMarch } from '@/engine/advisor';
-import { screenTrios } from '@/engine/captains';
+import { screenLineups } from '@/engine/captains';
 import type { Pricer } from '@/engine/captains';
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type {
@@ -232,13 +232,13 @@ export function runProbe(input: ProbeInput, context: JobContext): ProbeAnswer {
 }
 
 /**
- * **A trio's bill, priced two ways** (W17 C5a): its own sizing (`sizeStacks`), or counts given battled under its
- * totals (`planMarch`) — both on the kernel, both without the Tight raise, which is the confirm step's. A trio's
+ * **A lineup's bill, priced two ways** (W17 C5a): its own sizing (`sizeStacks`), or counts given battled under its
+ * totals (`planMarch`) — both on the kernel, both without the Tight raise, which is the confirm step's. A lineup's
  * request is built once and shared by every reading of it, since the kernel keys its tables on the request — and
- * only the trio being priced is kept: the screen reads one trio at a time, and a request held is a wasm instance
- * held, so a cache by totals kept every trio's alive until the browser had no wasm memory left.
+ * only the lineup being priced is kept: the screen reads one lineup at a time, and a request held is a wasm instance
+ * held, so a cache by totals kept every lineup's alive until the browser had no wasm memory left.
  */
-export function trioPricer(request: StackRequest, method: CaptainScreenInput['method'] = 'elite'): Pricer {
+export function lineupPricer(request: StackRequest, method: CaptainScreenInput['method'] = 'elite'): Pricer {
   const base = withMethod(request, method);
   let last: StackRequest | null = null;
   const requestFor = (totals: BonusTotals): StackRequest => {
@@ -257,17 +257,17 @@ export function trioPricer(request: StackRequest, method: CaptainScreenInput['me
 }
 
 /**
- * **The captain screen** (W17 C5a): every trio's two ratings against the current trio's, as ONE job — a bill
- * costs 0.05–0.14 ms on the kernel, so chunking the 1 140 trios of a 20-captain account buys nothing. Cancellable
- * between trios; a cancelled job answers nothing the worker would send.
+ * **The captain screen** (W17 C5a): every lineup's two ratings against the current lineup's, as ONE job — a bill
+ * costs 0.05–0.14 ms on the kernel, so chunking the 1 140 lineups of a 20-captain account buys nothing. Cancellable
+ * between lineups; a cancelled job answers nothing the worker would send.
  */
 export function runCaptainScreen(input: CaptainScreenInput, context: JobContext): CaptainScreenAnswer {
   return {
-    screens: screenTrios(
-      input.trios,
+    screens: screenLineups(
+      input.lineups,
       input.currentKey,
       input.stops,
-      trioPricer(input.request, input.method),
+      lineupPricer(input.request, input.method),
       input.rates,
       { shouldStop: context.cancelled },
     ),

@@ -428,7 +428,7 @@ export function createPlanKernel(module: WebAssembly.Module): PlanKernel {
    * The bounds by `request.units`, for the sizer: its rows depend on the units, the totals, the enemy and the
    * events alone (`effectiveUnit`, `eliteOrder`, `enemySquadCount`), so a request spread from a bound one with
    * other caps, housing or options sizes on the bound table. The most recent `UNIT_SIBLINGS` only: every
-   * bound holds a wasm memory of its own, and a captain screen binds one per trio (1 140 for 20 captains) on
+   * bound holds a wasm memory of its own, and a captain screen binds one per lineup (1 140 for 20 captains) on
    * the same units — kept all, they ran the browser out of wasm memory.
    */
   const byUnits = new WeakMap<readonly UnitDef[], Bound[]>();

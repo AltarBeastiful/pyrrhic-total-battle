@@ -47,7 +47,7 @@ test('trace "Profile everything" on the exactness fixture', async ({ page }) => 
   await preview.getByRole('button', { name: 'Replace active' }).click();
   await expect(preview).toHaveCount(0);
 
-  const button = page.getByRole('button', { name: /^Profile: generate and ask every question/ });
+  const button = page.getByRole('button', { name: 'Profile everything' });
   await expect(button).toBeVisible();
   // Let the import's own renders and saves settle before the trace starts.
   await page.waitForTimeout(2_000);

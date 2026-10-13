@@ -21,12 +21,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type * as engine from '../../src/engine';
 import { planMarch, withMethod } from '../../src/engine';
-import { leadTrio } from '../../src/engine/captainUpgrades';
+import { leadLineup } from '../../src/engine/captainUpgrades';
 import type { CampaignInput } from '../../src/engine/plan';
 import { genericProbes } from '../../src/engine/probes';
 import type { StackRequest } from '../../src/engine/types';
 import { parseImport } from '../../src/share/exportImport';
-import { captainTrios } from '../../src/state/captainTrios';
+import { captainLineups } from '../../src/state/captainLineups';
 import { captainUpgradeCandidates } from '../../src/state/captainUpgrades';
 import { buildPlanRequest, buildStackRequest } from '../../src/state/derive';
 import type { Profile } from '../../src/state/schema';
@@ -114,7 +114,7 @@ interface JobRow {
     reread: boolean;
     /** The probe's unit list differs from the account's own (a probe that changes the troop set). */
     changesTroopSet: boolean | null;
-    trios: number | null;
+    lineups: number | null;
     captainStops: number | null;
   };
   observed: { stops: number | null; typesFielded: number | null };
@@ -169,7 +169,7 @@ async function jobTimes(profile: Profile): Promise<{ rows: JobRow[]; cpuMs: numb
         reading: null,
         reread: false,
         changesTroopSet: null,
-        trios: null,
+        lineups: null,
         captainStops: null,
       },
       observed: fields.observed ?? { stops: null, typesFielded: null },
@@ -200,7 +200,7 @@ async function jobTimes(profile: Profile): Promise<{ rows: JobRow[]; cpuMs: numb
               reading: null,
               reread: false,
               changesTroopSet: unitsKey(request.request) !== accountUnits,
-              trios: null,
+              lineups: null,
               captainStops: null,
             },
           });
@@ -232,7 +232,7 @@ async function jobTimes(profile: Profile): Promise<{ rows: JobRow[]; cpuMs: numb
             reading: request.reading ?? 'tight',
             reread: request.reread === true,
             changesTroopSet: accountUnits === null ? null : unitsKey(request.plan.request) !== accountUnits,
-            trios: null,
+            lineups: null,
             captainStops: null,
           },
           observed: { stops: answer.stops.length, typesFielded: fielded.size },
@@ -251,7 +251,7 @@ async function jobTimes(profile: Profile): Promise<{ rows: JobRow[]; cpuMs: numb
               reading: null,
               reread: false,
               changesTroopSet: null,
-              trios: request.trios.length,
+              lineups: request.lineups.length,
               captainStops: request.stops.length,
             },
           });
@@ -280,24 +280,26 @@ async function jobTimes(profile: Profile): Promise<{ rows: JobRow[]; cpuMs: numb
     expect(upgrades.cut).toEqual([]);
 
     pass = 'captains';
-    const { currentKey, trios } = captainTrios(profile, setup);
+    const { currentKey, lineups, size } = captainLineups(profile, setup);
     const advice = await runCaptainAdvice(
       input,
-      trios.map(({ key, totals }) => ({ key, totals })),
+      lineups.map(({ key, totals }) => ({ key, totals })),
       currentKey,
       pool,
       { budgetMs: NO_CLOCK },
     );
     expect(advice.cut).toEqual([]);
-    const lead = leadTrio(advice.best, currentKey);
-    const leadCandidate = trios.find((trio) => trio.key === lead);
+    const lead = leadLineup(advice.best, currentKey);
+    const leadCandidate = lineups.find((trio) => trio.key === lead);
     const leadStops = advice.plans[lead];
     if (leadCandidate !== undefined && leadStops !== undefined) {
-      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate).map((candidate) => ({
-        id: candidate.spec.id,
-        label: `${candidate.name} ${candidate.change}`,
-        trios: candidate.trios.map(({ key, totals }) => ({ key, totals })),
-      }));
+      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map(
+        (candidate) => ({
+          id: candidate.spec.id,
+          label: `${candidate.name} ${candidate.change}`,
+          lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
+        }),
+      );
       const upgraded = await runCaptainUpgrades(
         input,
         { key: lead, totals: leadCandidate.totals, stops: leadStops },

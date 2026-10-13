@@ -1,25 +1,25 @@
 /**
  * **The upgrade pass** (W17 C5b, `docs/plans/progression-advisor.md` §4 C5): where the next star, or the next
- * level, of a captain goes. Each upgrade is read as C3 reads a probe, against the plan of the *lead trio* (the
- * trio the captain advice found best, `leadTrio`), so a row is the upgrade's own worth and never the swap of trio
+ * level, of a captain goes. Each upgrade is read as C3 reads a probe, against the plan of the *lead lineup* (the
+ * lineup the captain advice found best, `leadLineup`), so a row is the upgrade's own worth and never the swap of lineup
  * it might also bring.
  *
- * Which trios an upgrade is tried in is the main thread's (`src/state/captainUpgrades.ts`, with the engine's
+ * Which lineups an upgrade is tried in is the main thread's (`src/state/captainUpgrades.ts`, with the engine's
  * membership logic in `src/engine/captainUpgrades.ts`). This pass takes them as keys and totals:
  *
- *  1. **Screen** — an upgrade with more trios than `confirm` (a captain on the bench: every trio that fields it)
- *     has them screened against the lead trio, each ask one pool job (`client.captains`), and the first
- *     `confirm` of the re-priced ranking kept. An upgrade with `confirm` trios or fewer (a captain in the lead
- *     trio: the lead trio alone) skips the screen.
- *  2. **Plan** — each kept trio planned in full as one pool job and read against the lead trio's bar.
+ *  1. **Screen** — an upgrade with more lineups than `confirm` (a captain on the bench: every lineup that fields it)
+ *     has them screened against the lead lineup, each ask one pool job (`client.captains`), and the first
+ *     `confirm` of the re-priced ranking kept. An upgrade with `confirm` lineups or fewer (a captain in the lead
+ *     lineup: the lead lineup alone) skips the screen.
+ *  2. **Plan** — each kept lineup planned in full as one pool job and read against the lead lineup's bar.
  *
- * An upgrade's row takes, stop by stop, the best of its trios (the first on a tie), so it is never below 0 and
+ * An upgrade's row takes, stop by stop, the best of its lineups (the first on a tie), so it is never below 0 and
  * never reads as a loss. Results are merged by position, never by arrival, and no job carries a clock, so one
  * worker and six give one answer; the pass has the one clock the pool gives it.
  */
 import { CAMPAIGN } from '@/config';
 import { probeInfo, type AdvisorRow, type ShownStop } from '@/engine/advisor';
-import { shortlistTrios, type ScreenTrio } from '@/engine/captains';
+import { shortlistLineups, type ScreenLineup } from '@/engine/captains';
 import type { CampaignInput } from '@/engine/plan';
 import type { ProbeCost } from '@/engine/probes';
 import type { MarkerRates } from '@/engine/rating';
@@ -28,11 +28,11 @@ import type { BonusTotals } from '@/engine/types';
 import type { CalcPool, PoolJob, PoolOutcome } from './pool';
 import type { CaptainScreenAnswer, ProbeAnswer } from './protocol';
 
-/** The trio every upgrade is read against: its key, its totals as the march carries them, and its bar. */
+/** The lineup every upgrade is read against: its key, its totals as the march carries them, and its bar. */
 export interface UpgradeLead {
   key: string;
   totals: BonusTotals;
-  /** The lead trio's plan as shown (`CaptainAdviceResult.plans`). */
+  /** The lead lineup's plan as shown (`CaptainAdviceResult.plans`). */
   stops: ShownStop[];
 }
 
@@ -43,8 +43,8 @@ export interface UpgradeAsk {
   label: string;
   /** What it costs in the game, when the player typed it: the ranking then reads gain per cost. */
   cost?: ProbeCost | undefined;
-  /** The trios it is tried in, with the upgrade applied; the lead trio alone for a captain in the lead trio. */
-  trios: ScreenTrio[];
+  /** The lineups it is tried in, with the upgrade applied; the lead lineup alone for a captain in the lead lineup. */
+  lineups: ScreenLineup[];
 }
 
 export interface CaptainUpgradeOptions {
@@ -56,15 +56,15 @@ export interface CaptainUpgradeOptions {
   budgetMs?: number | undefined;
   /** The owner's rating; `CAMPAIGN.markerRates` by default. */
   rates?: MarkerRates | undefined;
-  /** Trios planned in full per upgrade; `CAMPAIGN.captainUpgradeConfirm` by default. */
+  /** Lineups planned in full per upgrade; `CAMPAIGN.captainUpgradeConfirm` by default. */
   confirm?: number | undefined;
 }
 
-/** One upgrade, read on every stop of the lead trio's bar. */
+/** One upgrade, read on every stop of the lead lineup's bar. */
 export interface UpgradeRow extends AdvisorRow {
-  /** Key of the trio that gives each stop's gain, parallel to `stops`: the lead trio's own for a captain in it. */
-  trios: string[];
-  /** The trios planned in full for this upgrade, in the order they were tried. */
+  /** Key of the lineup that gives each stop's gain, parallel to `stops`: the lead lineup's own for a captain in it. */
+  lineups: string[];
+  /** The lineups planned in full for this upgrade, in the order they were tried. */
   planned: string[];
 }
 
@@ -110,7 +110,7 @@ function mergeRows(ask: UpgradeAsk, keys: readonly string[], rows: readonly Advi
       ...(ask.cost === undefined ? {} : { cost: ask.cost }),
     }),
     stops: stops.map((stop) => stop.advice),
-    trios: stops.map((stop) => stop.key),
+    lineups: stops.map((stop) => stop.key),
     planned: [...keys],
   };
 }
@@ -131,18 +131,19 @@ export async function runCaptainUpgrades(
   const rates = options.rates ?? CAMPAIGN.markerRates;
   const confirm = Math.max(0, options.confirm ?? CAMPAIGN.captainUpgradeConfirm);
   const settings = settingsOf(input);
-  const screened = asks.map((ask) => ask.trios.length > confirm);
+  const screened = asks.map((ask) => ask.lineups.length > confirm);
   const total =
-    screened.filter(Boolean).length + asks.reduce((sum, ask) => sum + Math.min(confirm, ask.trios.length), 0);
+    screened.filter(Boolean).length +
+    asks.reduce((sum, ask) => sum + Math.min(confirm, ask.lineups.length), 0);
   let done = 0;
   const onSettled = (): void => {
     done += 1;
     onProgress?.(done, total);
   };
   const began = performance.now();
-  const leadTrio: ScreenTrio = { key: lead.key, totals: lead.totals };
+  const leadLineup: ScreenLineup = { key: lead.key, totals: lead.totals };
 
-  // 1. Screen the asks with more trios than will be planned.
+  // 1. Screen the asks with more lineups than will be planned.
   const screenJobs: PoolJob<CaptainScreenAnswer>[] = [];
   const screenOf: number[] = [];
   asks.forEach((ask, index) => {
@@ -152,7 +153,7 @@ export async function runCaptainUpgrades(
       client.captains(
         {
           request: settings.request,
-          trios: [leadTrio, ...ask.trios],
+          lineups: [leadLineup, ...ask.lineups],
           currentKey: lead.key,
           stops: lead.stops.map((stop) => ({ pick: stop.pick, counts: stop.counts })),
           rates,
@@ -166,7 +167,7 @@ export async function runCaptainUpgrades(
 
   // The keys each ask plans, in the order they are tried; an ask whose screen did not finish plans none.
   const keysOf: string[][] = asks.map((ask, index) =>
-    screened[index] ? [] : ask.trios.slice(0, confirm).map((trio) => trio.key),
+    screened[index] ? [] : ask.lineups.slice(0, confirm).map((lineup) => lineup.key),
   );
   const cut = new Set<string>();
   const failed: CaptainUpgradeFailure[] = [];
@@ -178,26 +179,27 @@ export async function runCaptainUpgrades(
       failed.push({ id: ask.id, message: outcome.message });
       return;
     }
-    // A screen cancelled inside its worker answers part of the trios: not a ranking to take a shortlist from.
-    if (outcome.kind === 'cut' || outcome.value.screens.length < ask.trios.length + 1) {
+    // A screen cancelled inside its worker answers part of the lineups: not a ranking to take a shortlist from.
+    if (outcome.kind === 'cut' || outcome.value.screens.length < ask.lineups.length + 1) {
       cut.add(ask.id);
       return;
     }
-    keysOf[index] = shortlistTrios(outcome.value.screens, lead.key, confirm, 'repriced');
+    keysOf[index] = shortlistLineups(outcome.value.screens, lead.key, confirm, 'repriced');
   });
 
-  // 2. Plan the kept trios in full, each read against the lead trio's bar.
+  // 2. Plan the kept lineups in full, each read against the lead lineup's bar.
   const planJobs: PoolJob<ProbeAnswer>[] = [];
   const planOf: { index: number; key: string }[] = [];
   asks.forEach((ask, index) => {
     for (const key of keysOf[index] ?? []) {
-      const trio = ask.trios.find((candidate) => candidate.key === key);
-      if (trio === undefined) throw new Error(`The kept trio ${key} is not among the trios of ${ask.id}.`);
+      const lineup = ask.lineups.find((candidate) => candidate.key === key);
+      if (lineup === undefined)
+        throw new Error(`The kept lineup ${key} is not among the lineups of ${ask.id}.`);
       planOf.push({ index, key });
       planJobs.push((client, jobSignal) =>
         client.probe(
           {
-            plan: { ...settings, request: { ...settings.request, totals: trio.totals } },
+            plan: { ...settings, request: { ...settings.request, totals: lineup.totals } },
             against: {
               probe: probeInfo({
                 id: ask.id,

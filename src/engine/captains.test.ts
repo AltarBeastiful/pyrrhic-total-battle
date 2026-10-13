@@ -2,15 +2,15 @@ import { describe, expect, test } from 'vitest';
 
 import { CAMPAIGN } from '../config';
 import {
-  allowedTrios,
+  allowedLineups,
   distinctCaptains,
-  rankTrios,
+  rankLineups,
   screenScore,
-  screenTrios,
-  shortlistTrios,
-  trioKey,
+  screenLineups,
+  shortlistLineups,
+  lineupKey,
 } from './captains';
-import type { Pricer, ScreenTrio } from './captains';
+import type { Pricer, ScreenLineup } from './captains';
 import { emptyTotals } from './bonuses';
 import type { BonusTotals } from './types';
 
@@ -21,13 +21,13 @@ const entry = (captainId: string, level = 10, star = 0) => ({
   star,
 });
 const everyone = (): boolean => true;
-const ids = (trios: { captainId: string }[][]): string[] =>
-  trios.map((trio) => trio.map((c) => c.captainId).join('+'));
+const ids = (lineups: { captainId: string }[][]): string[] =>
+  lineups.map((lineup) => lineup.map((c) => c.captainId).join('+'));
 
-describe('trioKey', () => {
+describe('lineupKey', () => {
   test('is the same for the same captains in any order', () => {
-    expect(trioKey(['b', 'a', 'c'])).toBe(trioKey(['c', 'b', 'a']));
-    expect(trioKey(['a', 'b'])).not.toBe(trioKey(['a', 'c']));
+    expect(lineupKey(['b', 'a', 'c'])).toBe(lineupKey(['c', 'b', 'a']));
+    expect(lineupKey(['a', 'b'])).not.toBe(lineupKey(['a', 'c']));
   });
 });
 
@@ -48,39 +48,39 @@ describe('distinctCaptains', () => {
   });
 });
 
-describe('allowedTrios', () => {
+describe('allowedLineups', () => {
   test('lists every combination of three, once, in index order', () => {
     const owned = ['a', 'b', 'c', 'd', 'e'].map((id) => entry(id));
-    const trios = allowedTrios(owned, everyone);
-    expect(trios).toHaveLength(10);
-    expect(ids(trios).slice(0, 3)).toEqual(['a+b+c', 'a+b+d', 'a+b+e']);
-    expect(new Set(trios.map((trio) => trioKey(trio.map((c) => c.captainId)))).size).toBe(10);
+    const lineups = allowedLineups(owned, everyone);
+    expect(lineups).toHaveLength(10);
+    expect(ids(lineups).slice(0, 3)).toEqual(['a+b+c', 'a+b+d', 'a+b+e']);
+    expect(new Set(lineups.map((lineup) => lineupKey(lineup.map((c) => c.captainId)))).size).toBe(10);
   });
 
   test('twenty owned captains make the 1 140 the plan counts', () => {
     const owned = Array.from({ length: 20 }, (_, index) => entry(`c${String(index)}`));
-    expect(allowedTrios(owned, everyone)).toHaveLength(1_140);
+    expect(allowedLineups(owned, everyone)).toHaveLength(1_140);
   });
 
-  test('a captain entered twice is in a trio once, as its strongest entry', () => {
+  test('a captain entered twice is in a lineup once, as its strongest entry', () => {
     const owned = [entry('a', 5), entry('a', 8), entry('b'), entry('c'), entry('d')];
-    const trios = allowedTrios(owned, everyone);
-    expect(trios).toHaveLength(4);
-    for (const trio of trios) expect(new Set(trio.map((c) => c.captainId)).size).toBe(3);
-    expect(trios[0]?.[0]?.level).toBe(8);
+    const lineups = allowedLineups(owned, everyone);
+    expect(lineups).toHaveLength(4);
+    for (const lineup of lineups) expect(new Set(lineup.map((c) => c.captainId)).size).toBe(3);
+    expect(lineups[0]?.[0]?.level).toBe(8);
   });
 
   test('the march type keeps out the captains it does not admit', () => {
     const owned = ['a', 'amanitore', 'b', 'c'].map((id) => entry(id));
-    const trios = allowedTrios(owned, (id) => id !== 'amanitore');
-    expect(ids(trios)).toEqual(['a+b+c']);
+    const lineups = allowedLineups(owned, (id) => id !== 'amanitore');
+    expect(ids(lineups)).toEqual(['a+b+c']);
   });
 
-  test('fewer than three allowed captains make the one set of them all; none, no trio', () => {
-    expect(ids(allowedTrios([entry('a'), entry('b')], everyone))).toEqual(['a+b']);
-    expect(ids(allowedTrios([entry('a'), entry('b'), entry('c')], everyone))).toEqual(['a+b+c']);
-    expect(allowedTrios([entry('a')], () => false)).toEqual([]);
-    expect(allowedTrios([], everyone)).toEqual([]);
+  test('fewer than three allowed captains make the one set of them all; none, no lineup', () => {
+    expect(ids(allowedLineups([entry('a'), entry('b')], everyone))).toEqual(['a+b']);
+    expect(ids(allowedLineups([entry('a'), entry('b'), entry('c')], everyone))).toEqual(['a+b+c']);
+    expect(allowedLineups([entry('a')], () => false)).toEqual([]);
+    expect(allowedLineups([], everyone)).toEqual([]);
   });
 });
 
@@ -104,7 +104,7 @@ const pricer: Pricer = (totals, counts) => ({
   seconds: 100,
 });
 
-const trios: ScreenTrio[] = [
+const lineups: ScreenLineup[] = [
   { key: 'now', totals: marked(10) },
   { key: 'weaker', totals: marked(0) },
   { key: 'better', totals: marked(30) },
@@ -115,9 +115,9 @@ const stops = [
   { pick: 'all-in', counts: { a: 300 } },
 ];
 
-describe('screenTrios', () => {
-  test('rates every trio against the current one, which rates 0 on every reading', () => {
-    const screens = screenTrios(trios, 'now', stops, pricer, CAMPAIGN.markerRates);
+describe('screenLineups', () => {
+  test('rates every lineup against the current one, which rates 0 on every reading', () => {
+    const screens = screenLineups(lineups, 'now', stops, pricer, CAMPAIGN.markerRates);
     expect(screens.map((screen) => screen.key)).toEqual(['now', 'weaker', 'better', 'best']);
     expect(screens[0]).toEqual({ key: 'now', sized: 0, repriced: [0, 0] });
     const [, weaker, better, best] = screens;
@@ -128,41 +128,43 @@ describe('screenTrios', () => {
     expect(best!.repriced.every((rating) => rating > 0)).toBe(true);
   });
 
-  test('a cost the trio changes is weighed by the owner’s rates, not only the damage', () => {
+  test('a cost the lineup changes is weighed by the owner’s rates, not only the damage', () => {
     const dearer: Pricer = (totals, counts) => ({
       ...pricer(totals, counts),
       silver: totals.health.army === 30 ? 5_000 : 500,
     });
-    const cheap = screenTrios(trios, 'now', stops, pricer, CAMPAIGN.markerRates);
-    const dear = screenTrios(trios, 'now', stops, dearer, CAMPAIGN.markerRates);
+    const cheap = screenLineups(lineups, 'now', stops, pricer, CAMPAIGN.markerRates);
+    const dear = screenLineups(lineups, 'now', stops, dearer, CAMPAIGN.markerRates);
     expect(dear[2]!.sized).toBeLessThan(cheap[2]!.sized);
   });
 
-  test('refuses a set that does not hold the current trio', () => {
-    expect(() => screenTrios(trios, 'gone', stops, pricer, CAMPAIGN.markerRates)).toThrow(/current trio/);
+  test('refuses a set that does not hold the current lineup', () => {
+    expect(() => screenLineups(lineups, 'gone', stops, pricer, CAMPAIGN.markerRates)).toThrow(
+      /current lineup/,
+    );
   });
 
-  test('stops between trios when asked, keeping the ones it has priced', () => {
+  test('stops between lineups when asked, keeping the ones it has priced', () => {
     let polled = 0;
-    const screens = screenTrios(trios, 'now', stops, pricer, CAMPAIGN.markerRates, {
+    const screens = screenLineups(lineups, 'now', stops, pricer, CAMPAIGN.markerRates, {
       shouldStop: () => (polled += 1) > 2,
     });
     expect(screens.map((screen) => screen.key)).toEqual(['now', 'weaker']);
   });
 
   test('with no stops there is only the sized reading', () => {
-    const screens = screenTrios(trios, 'now', [], pricer, CAMPAIGN.markerRates);
+    const screens = screenLineups(lineups, 'now', [], pricer, CAMPAIGN.markerRates);
     expect(screens.every((screen) => screen.repriced.length === 0)).toBe(true);
     expect(screenScore(screens[3]!, 'repriced')).toBe(0);
   });
 });
 
-describe('rankTrios', () => {
-  const screens = screenTrios(trios, 'now', stops, pricer, CAMPAIGN.markerRates);
+describe('rankLineups', () => {
+  const screens = screenLineups(lineups, 'now', stops, pricer, CAMPAIGN.markerRates);
 
-  test('orders by the chosen reading, best first, the current trio among the rest at 0', () => {
+  test('orders by the chosen reading, best first, the current lineup among the rest at 0', () => {
     for (const kind of ['sized', 'repriced'] as const)
-      expect(rankTrios(screens, kind).map((screen) => screen.key)).toEqual([
+      expect(rankLineups(screens, kind).map((screen) => screen.key)).toEqual([
         'best',
         'better',
         'now',
@@ -170,7 +172,7 @@ describe('rankTrios', () => {
       ]);
   });
 
-  test('the repriced reading scores a trio by its best stop', () => {
+  test('the repriced reading scores a lineup by its best stop', () => {
     expect(screenScore({ key: 'x', sized: 1, repriced: [-2, 5, 3] }, 'repriced')).toBe(5);
     expect(screenScore({ key: 'x', sized: 1, repriced: [-2, 5, 3] }, 'sized')).toBe(1);
   });
@@ -181,11 +183,11 @@ describe('rankTrios', () => {
       { key: 'q', sized: 2, repriced: [] },
       { key: 'r', sized: 9, repriced: [] },
     ];
-    expect(rankTrios(tied, 'sized').map((screen) => screen.key)).toEqual(['r', 'p', 'q']);
+    expect(rankLineups(tied, 'sized').map((screen) => screen.key)).toEqual(['r', 'p', 'q']);
   });
 });
 
-describe('shortlistTrios', () => {
+describe('shortlistLineups', () => {
   const screens = [
     { key: 'now', sized: 0, repriced: [0] },
     { key: 'a', sized: 5, repriced: [1] },
@@ -194,21 +196,21 @@ describe('shortlistTrios', () => {
     { key: 'd', sized: 2, repriced: [2] },
   ];
 
-  test('never lists the current trio, whatever it ranks', () => {
-    const all = shortlistTrios([{ key: 'now', sized: 50, repriced: [50] }, ...screens.slice(1)], 'now', 9);
+  test('never lists the current lineup, whatever it ranks', () => {
+    const all = shortlistLineups([{ key: 'now', sized: 50, repriced: [50] }, ...screens.slice(1)], 'now', 9);
     expect(all).not.toContain('now');
     expect(all).toHaveLength(4);
   });
 
-  test('takes one ranking, or both in turn with a trio counted once', () => {
-    expect(shortlistTrios(screens, 'now', 2, 'sized')).toEqual(['a', 'b']);
-    expect(shortlistTrios(screens, 'now', 2, 'repriced')).toEqual(['b', 'c']);
-    expect(shortlistTrios(screens, 'now', 3)).toEqual(['a', 'b', 'c']);
-    expect(shortlistTrios(screens, 'now', 4)).toEqual(['a', 'b', 'c', 'd']);
+  test('takes one ranking, or both in turn with a lineup counted once', () => {
+    expect(shortlistLineups(screens, 'now', 2, 'sized')).toEqual(['a', 'b']);
+    expect(shortlistLineups(screens, 'now', 2, 'repriced')).toEqual(['b', 'c']);
+    expect(shortlistLineups(screens, 'now', 3)).toEqual(['a', 'b', 'c']);
+    expect(shortlistLineups(screens, 'now', 4)).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  test('is a count: zero asks for none, a large one for every other trio', () => {
-    expect(shortlistTrios(screens, 'now', 0)).toEqual([]);
-    expect(shortlistTrios(screens, 'now', 99)).toHaveLength(4);
+  test('is a count: zero asks for none, a large one for every other lineup', () => {
+    expect(shortlistLineups(screens, 'now', 0)).toEqual([]);
+    expect(shortlistLineups(screens, 'now', 99)).toHaveLength(4);
   });
 });

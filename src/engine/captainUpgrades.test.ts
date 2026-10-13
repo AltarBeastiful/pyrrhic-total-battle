@@ -3,12 +3,12 @@ import { describe, expect, test } from 'vitest';
 import {
   CAPTAIN_MAX_STAR,
   captainUpgrades,
-  inLeadTrio,
-  leadTrio,
-  trioContaining,
+  inLeadLineup,
+  leadLineup,
+  lineupContaining,
   upgradeId,
 } from './captainUpgrades';
-import { trioKey } from './captains';
+import { lineupKey } from './captains';
 
 const entry = (captainId: string, level = 10, star = 0) => ({
   id: `e-${captainId}-${String(level)}`,
@@ -65,51 +65,51 @@ describe('captainUpgrades', () => {
   });
 });
 
-describe('leadTrio', () => {
-  test('is the trio with the most gain over the stops', () => {
+describe('leadLineup', () => {
+  test('is the lineup with the most gain over the stops', () => {
     const best = [
-      { trio: 'b', gain: 2 },
-      { trio: 'c', gain: 3 },
-      { trio: 'b', gain: 2 },
+      { lineup: 'b', gain: 2 },
+      { lineup: 'c', gain: 3 },
+      { lineup: 'b', gain: 2 },
     ];
-    expect(leadTrio(best, 'now')).toBe('b');
+    expect(leadLineup(best, 'now')).toBe('b');
   });
 
-  test('is the current trio when no other gains', () => {
-    expect(leadTrio([{ trio: 'now', gain: 0 }], 'now')).toBe('now');
-    expect(leadTrio([], 'now')).toBe('now');
+  test('is the current lineup when no other gains', () => {
+    expect(leadLineup([{ lineup: 'now', gain: 0 }], 'now')).toBe('now');
+    expect(leadLineup([], 'now')).toBe('now');
   });
 
-  test('a tie goes to the trio reached first', () => {
+  test('a tie goes to the lineup reached first', () => {
     const best = [
-      { trio: 'x', gain: 5 },
-      { trio: 'y', gain: 5 },
+      { lineup: 'x', gain: 5 },
+      { lineup: 'y', gain: 5 },
     ];
-    expect(leadTrio(best, 'now')).toBe('x');
+    expect(leadLineup(best, 'now')).toBe('x');
   });
 });
 
-describe('trio membership', () => {
-  test('a captain in the lead trio is found, one outside it is not', () => {
-    expect(inLeadTrio({ captainId: 'a' }, ['a', 'b', 'c'])).toBe(true);
-    expect(inLeadTrio({ captainId: 'd' }, ['a', 'b', 'c'])).toBe(false);
+describe('lineup membership', () => {
+  test('a captain in the lead lineup is found, one outside it is not', () => {
+    expect(inLeadLineup({ captainId: 'a' }, ['a', 'b', 'c'])).toBe(true);
+    expect(inLeadLineup({ captainId: 'd' }, ['a', 'b', 'c'])).toBe(false);
   });
 
-  test('the trios that field a captain are those of the other captains’ pairs, once each', () => {
+  test('the lineups that field a captain are those of the other captains’ pairs, once each', () => {
     const owned = ['a', 'b', 'c', 'd', 'e'].map((id) => entry(id));
-    const trios = trioContaining(owned, 'c', everyone);
-    expect(trios).toHaveLength(6);
-    expect(trios.every((trio) => trio.some((c) => c.captainId === 'c'))).toBe(true);
-    expect(new Set(trios.map((trio) => trioKey(trio.map((c) => c.captainId)))).size).toBe(6);
+    const lineups = lineupContaining(owned, 'c', everyone);
+    expect(lineups).toHaveLength(6);
+    expect(lineups.every((lineup) => lineup.some((c) => c.captainId === 'c'))).toBe(true);
+    expect(new Set(lineups.map((lineup) => lineupKey(lineup.map((c) => c.captainId)))).size).toBe(6);
   });
 
   test('a small roster is the one set of all its captains', () => {
     const owned = ['a', 'b'].map((id) => entry(id));
-    expect(trioContaining(owned, 'b', everyone)).toHaveLength(1);
+    expect(lineupContaining(owned, 'b', everyone)).toHaveLength(1);
   });
 
-  test('a captain the march type does not count is in no trio', () => {
+  test('a captain the march type does not count is in no lineup', () => {
     const owned = ['a', 'b', 'c', 'd'].map((id) => entry(id));
-    expect(trioContaining(owned, 'a', (id) => id !== 'a')).toEqual([]);
+    expect(lineupContaining(owned, 'a', (id) => id !== 'a')).toEqual([]);
   });
 });

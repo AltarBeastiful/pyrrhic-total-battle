@@ -73,6 +73,11 @@ export const POSITIONS: readonly Exclude<RaiseMode, 'off'>[] = ['tens', 'most', 
  * **The positions the control offers, and so the ones the worker prices** (owner, 2026-10-07: *"removing the
  * table and other options on the selector"*): `Tight` alone, so a bar is priced about five times faster.
  * The other four stay in the kernel for experiments 180 and 184, which call `positionTrades` without a list.
+ *
+ * **Hiding the selector does not change this** (`CAMPAIGN.raiseControl`, owner 2026-10-13): the bar still
+ * prices `Tight (old)` beside `Tight`, exactly as it did. Dropping `tightOld` here would save the second
+ * search a stop — the figure experiment 229 measures — but it also moves `tests/golden/advisor.json` (the
+ * `bar` rows it pins), so it is the owner's call and not a worker's.
  */
 export const OFFERED_POSITIONS: readonly Exclude<RaiseMode, 'off'>[] = ['tight', 'tightOld'];
 

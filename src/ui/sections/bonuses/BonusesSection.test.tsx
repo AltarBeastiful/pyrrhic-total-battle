@@ -258,8 +258,13 @@ test('the fourth captain is refused, in one line, and the chip stays off', () =>
   expect(within(card()).queryByText(CAPTAIN_CAP_MESSAGE)).toBeNull();
 });
 
-test('the march type sits under the chips, starts on Any, and a pick is stored on the setup', () => {
+test('the march type is out of the way until a restricted captain is selected, then sits under the chips', () => {
   renderWithTheme(<BonusesSection />);
+  // No captain with a march-type restriction is on the march: the control would change nothing, so it is not drawn.
+  expect(within(card()).queryByRole('radiogroup', { name: 'March type' })).toBeNull();
+
+  // Selecting a restricted captain (Amanitore, group-only) brings it in, starting on Any.
+  fireEvent.click(captainChip('Amanitore'));
   const control = within(card()).getByRole('radiogroup', { name: 'March type' });
   const radios = within(control).getAllByRole('radio');
   expect(radios.map((radio) => radio.getAttribute('value'))).toEqual([
@@ -276,10 +281,20 @@ test('the march type sits under the chips, starts on Any, and a pick is stored o
   expect((within(control).getByRole('radio', { name: 'Epic' }) as HTMLInputElement).checked).toBe(true);
 });
 
+test('the control follows the selection: owning a restricted captain off the march is not enough', () => {
+  renderWithTheme(<BonusesSection />);
+  fireEvent.click(captainChip('Amanitore'));
+  expect(within(card()).getByRole('radiogroup', { name: 'March type' })).toBeTruthy();
+  // Taking him off the march leaves the entry owned but unselected: the control changes nothing, so it leaves.
+  fireEvent.click(captainChip('Amanitore'));
+  expect(within(card()).queryByRole('radiogroup', { name: 'March type' })).toBeNull();
+});
+
 test('choosing a march type gates the captains: a group-only captain is not counted on a solo march', () => {
   renderWithTheme(<BonusesSection />);
-  const control = within(card()).getByRole('radiogroup', { name: 'March type' });
+  // Enlisting Amanitore brings the control in; it is not there before (it could change nothing).
   fireEvent.click(captainChip('Amanitore'));
+  const control = within(card()).getByRole('radiogroup', { name: 'March type' });
 
   // Any: today's behaviour, the restriction is a note and nothing is gated.
   expect(within(card()).getByText(/^Amanitore: /)).toBeTruthy();
@@ -296,10 +311,24 @@ test('choosing a march type gates the captains: a group-only captain is not coun
 test('each segment says, in its tooltip, which captains the march type leaves out', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
+  fireEvent.click(captainChip('Amanitore'));
   const control = within(card()).getByRole('radiogroup', { name: 'March type' });
 
   await user.hover(within(control).getByText('Solo'));
   expect(await screen.findByText(/Amanitore and Hercules are not counted/)).toBeTruthy();
+});
+
+test('a type stored on an earlier march is out of the way while no restricted captain is selected', () => {
+  // The type is inert with no restricted captain to gate (nothing else reaches `onlyOn`), so the control stays
+  // out; it comes back with the captain, where it can be changed.
+  useStore.getState().updateActiveSetup(() => ({ marchType: 'group' }));
+  renderWithTheme(<BonusesSection />);
+  expect(within(card()).queryByRole('radiogroup', { name: 'March type' })).toBeNull();
+  fireEvent.click(captainChip('Amanitore'));
+  const control = within(card()).getByRole('radiogroup', { name: 'March type' });
+  expect((within(control).getByRole('radio', { name: 'Group' }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(within(control).getByRole('radio', { name: 'Any' }));
+  expect(setup()?.marchType).toBe('unspecified');
 });
 
 test('the gear opens an anchored popover with the level and the stars, and never enlists anybody', async () => {

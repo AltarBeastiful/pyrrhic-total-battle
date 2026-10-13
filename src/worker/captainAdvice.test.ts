@@ -1,13 +1,13 @@
 /**
  * W17 C5a — **the captain advice pass** (`runCaptainAdvice` in `captainAdvice.ts`), on the kernel: the current
- * trio's plan, the screen, and the shortlist planned in full on the pool, with no clock in any job.
+ * lineup's plan, the screen, and the shortlist planned in full on the pool, with no clock in any job.
  */
 import { describe, expect, test } from 'vitest';
 
 import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { emptyTotals, planCampaign } from '@/engine';
-import type { ScreenTrio } from '@/engine/captains';
+import type { ScreenLineup } from '@/engine/captains';
 import type { CampaignInput } from '@/engine/plan';
 import type { BonusTotals, StackRequest } from '@/engine/types';
 
@@ -54,7 +54,7 @@ function campaign(): CampaignInput {
   };
 }
 
-const trios: ScreenTrio[] = [
+const lineups: ScreenLineup[] = [
   { key: 'now', totals: withArmy(20) },
   { key: 'weaker', totals: withArmy(0) },
   { key: 'better', totals: withArmy(120) },
@@ -81,11 +81,11 @@ function hang<T>(signal?: AbortSignal): Promise<T> {
 
 describe('runCaptainAdvice: the pass over the pool', () => {
   test(
-    'the current trio is always there, no trio reads as a loss, and a stronger trio wins every stop',
+    'the current lineup is always there, no lineup reads as a loss, and a stronger lineup wins every stop',
     async () => {
       const pool = poolOf(2);
       const progress: [number, number][] = [];
-      const result = await runCaptainAdvice({ ...campaign(), budgetMs: 1 }, trios, 'now', pool, {
+      const result = await runCaptainAdvice({ ...campaign(), budgetMs: 1 }, lineups, 'now', pool, {
         onProgress: (done, total) => progress.push([done, total]),
       });
       pool.dispose();
@@ -95,7 +95,7 @@ describe('runCaptainAdvice: the pass over the pool', () => {
         planCampaign(campaign()).alternatives.map((row) => row.pick),
       );
       expect(result.screenCut).toBe(false);
-      expect(result.screens.map((screen) => screen.key)).toEqual(trios.map((trio) => trio.key));
+      expect(result.screens.map((screen) => screen.key)).toEqual(lineups.map((lineup) => lineup.key));
       expect(result.confirmed.sort()).toEqual(['best', 'better', 'weaker']);
       expect(result.confirmed).not.toContain('now');
       expect(result.cut).toEqual([]);
@@ -103,16 +103,16 @@ describe('runCaptainAdvice: the pass over the pool', () => {
       expect(result.rows.map((row) => row.id)).toEqual(result.confirmed);
       for (const row of result.rows)
         for (const stop of row.stops) expect(stop.gain).toBeGreaterThanOrEqual(0);
-      // One answer per stop of the bar, never below the current trio, and the 400-point trio gains on each.
+      // One answer per stop of the bar, never below the current lineup, and the 400-point lineup gains on each.
       expect(result.best.map((stop) => stop.pick)).toEqual(result.baseline?.map((stop) => stop.pick));
       for (const stop of result.best) {
         expect(stop.gain).toBeGreaterThanOrEqual(0);
-        expect(stop.trio).toBe('best');
+        expect(stop.lineup).toBe('best');
         expect(stop.gain).toBeGreaterThan(0);
         expect(stop.advice?.gain).toBe(stop.gain);
       }
       expect(progress).toEqual([1, 2, 3, 4, 5].map((done) => [done, 5]));
-      // Every finished plan is kept by trio, as the March shows it: the baseline under the current key.
+      // Every finished plan is kept by lineup, as the March shows it: the baseline under the current key.
       expect(Object.keys(result.plans).sort()).toEqual(['best', 'better', 'now', 'weaker']);
       expect(result.plans['now']).toEqual(result.baseline);
     },
@@ -120,27 +120,27 @@ describe('runCaptainAdvice: the pass over the pool', () => {
   );
 
   test(
-    'with nothing better, the answer is the current trio on every stop and a gain of 0',
+    'with nothing better, the answer is the current lineup on every stop and a gain of 0',
     async () => {
       const pool = poolOf(1);
-      const result = await runCaptainAdvice(campaign(), [trios[0]!, trios[1]!], 'now', pool);
+      const result = await runCaptainAdvice(campaign(), [lineups[0]!, lineups[1]!], 'now', pool);
       pool.dispose();
       expect(result.confirmed).toEqual(['weaker']);
       expect(result.best.length).toBeGreaterThan(0);
-      for (const stop of result.best) expect(stop).toMatchObject({ trio: 'now', gain: 0, advice: null });
+      for (const stop of result.best) expect(stop).toMatchObject({ lineup: 'now', gain: 0, advice: null });
     },
     TIMEOUT,
   );
 
   test(
-    'a lone trio is planned and screened and has nobody to confirm',
+    'a lone lineup is planned and screened and has nobody to confirm',
     async () => {
       const pool = poolOf(1);
-      const result = await runCaptainAdvice(campaign(), [trios[0]!], 'now', pool);
+      const result = await runCaptainAdvice(campaign(), [lineups[0]!], 'now', pool);
       pool.dispose();
       expect(result.confirmed).toEqual([]);
       expect(result.rows).toEqual([]);
-      expect(result.best.every((stop) => stop.trio === 'now' && stop.gain === 0)).toBe(true);
+      expect(result.best.every((stop) => stop.lineup === 'now' && stop.gain === 0)).toBe(true);
     },
     TIMEOUT,
   );
@@ -155,7 +155,7 @@ describe('runCaptainAdvice: the pass over the pool', () => {
           return inline.probe(input, signal);
         },
       }));
-      const result = await runCaptainAdvice({ ...campaign(), budgetMs: 1 }, trios, 'now', pool, {
+      const result = await runCaptainAdvice({ ...campaign(), budgetMs: 1 }, lineups, 'now', pool, {
         confirm: 1,
       });
       pool.dispose();
@@ -167,7 +167,9 @@ describe('runCaptainAdvice: the pass over the pool', () => {
         expect(job.plan.shouldStop).toBeUndefined();
       }
       expect(sent[1]?.against?.probe.id).toBe(result.confirmed[0]);
-      expect(sent[1]?.plan.request.totals).toEqual(trios.find((t) => t.key === result.confirmed[0])?.totals);
+      expect(sent[1]?.plan.request.totals).toEqual(
+        lineups.find((t) => t.key === result.confirmed[0])?.totals,
+      );
     },
     TIMEOUT,
   );
@@ -178,7 +180,7 @@ describe('runCaptainAdvice: the pass over the pool', () => {
       const answers = [];
       for (const size of [1, 3]) {
         const pool = poolOf(size);
-        answers.push(await runCaptainAdvice(campaign(), trios, 'now', pool));
+        answers.push(await runCaptainAdvice(campaign(), lineups, 'now', pool));
         pool.dispose();
       }
       expect(answers[1]).toEqual(answers[0]);
@@ -192,12 +194,12 @@ describe('runCaptainAdvice: the pass over the pool', () => {
     async () => {
       const input = campaign();
       const before = structuredClone(input);
-      const given = structuredClone(trios);
+      const given = structuredClone(lineups);
       const pool = poolOf(2);
-      await runCaptainAdvice(input, trios, 'now', pool);
+      await runCaptainAdvice(input, lineups, 'now', pool);
       pool.dispose();
       expect(input).toEqual(before);
-      expect(trios).toEqual(given);
+      expect(lineups).toEqual(given);
     },
     TIMEOUT,
   );
@@ -206,7 +208,7 @@ describe('runCaptainAdvice: the pass over the pool', () => {
     'a clock that runs out in the baseline reports the screen cut and nothing failed',
     async () => {
       const pool = poolOf(1, () => ({ probe: (_input, signal) => hang(signal) }));
-      const result = await runCaptainAdvice(campaign(), trios, 'now', pool, { budgetMs: 20 });
+      const result = await runCaptainAdvice(campaign(), lineups, 'now', pool, { budgetMs: 20 });
       pool.dispose();
       expect(result.baseline).toBeNull();
       expect(result.screenCut).toBe(true);
@@ -217,9 +219,9 @@ describe('runCaptainAdvice: the pass over the pool', () => {
   );
 
   test(
-    'a clock that runs out in the confirm lists the trios it stopped and keeps the baseline and the screen',
+    'a clock that runs out in the confirm lists the lineups it stopped and keeps the baseline and the screen',
     async () => {
-      // The baseline (the first probe) answers; every trio's plan hangs until the pass's clock cuts it.
+      // The baseline (the first probe) answers; every lineup's plan hangs until the pass's clock cuts it.
       let calls = 0;
       const pool = poolOf(1, (inline) => ({
         probe: (input, signal) => {
@@ -227,35 +229,35 @@ describe('runCaptainAdvice: the pass over the pool', () => {
           return calls === 1 ? inline.probe(input, signal) : hang(signal);
         },
       }));
-      const result = await runCaptainAdvice(campaign(), trios, 'now', pool, { budgetMs: 4_000 });
+      const result = await runCaptainAdvice(campaign(), lineups, 'now', pool, { budgetMs: 4_000 });
       pool.dispose();
       expect(result.baseline).not.toBeNull();
       expect(result.screenCut).toBe(false);
-      expect(result.screens).toHaveLength(trios.length);
+      expect(result.screens).toHaveLength(lineups.length);
       expect(result.confirmed).toHaveLength(3);
       expect(result.cut).toEqual(result.confirmed);
       expect(result.rows).toEqual([]);
       expect(result.failed).toEqual([]);
-      expect(result.best.every((stop) => stop.trio === 'now' && stop.gain === 0)).toBe(true);
+      expect(result.best.every((stop) => stop.lineup === 'now' && stop.gain === 0)).toBe(true);
     },
     TIMEOUT,
   );
 
   test(
-    'a trio whose plan throws is reported failed and the others are read',
+    'a lineup whose plan throws is reported failed and the others are read',
     async () => {
       let calls = 0;
       const pool = poolOf(1, (inline) => ({
         probe: (input, signal) => {
           calls += 1;
-          // The baseline is call 1; the first confirmed trio is call 2.
+          // The baseline is call 1; the first confirmed lineup is call 2.
           if (calls === 2) return Promise.reject(new Error('boom'));
           return inline.probe(input, signal);
         },
       }));
-      const result = await runCaptainAdvice(campaign(), trios, 'now', pool);
+      const result = await runCaptainAdvice(campaign(), lineups, 'now', pool);
       pool.dispose();
-      expect(result.failed).toEqual([{ trio: result.confirmed[0], message: 'boom' }]);
+      expect(result.failed).toEqual([{ lineup: result.confirmed[0], message: 'boom' }]);
       expect(result.rows).toHaveLength(2);
       expect(result.best.every((stop) => stop.gain >= 0)).toBe(true);
     },
@@ -267,7 +269,7 @@ describe('runCaptainAdvice: the pass over the pool', () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      runCaptainAdvice(campaign(), trios, 'now', pool, { signal: controller.signal }),
+      runCaptainAdvice(campaign(), lineups, 'now', pool, { signal: controller.signal }),
     ).rejects.toMatchObject({ name: 'AbortError' });
     pool.dispose();
   });
