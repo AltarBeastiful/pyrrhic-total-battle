@@ -262,3 +262,15 @@ npx vitest run tests/engine/plan-benchmark.test.ts tests/engine/plan-stops.test.
 **Definition of done:** the JSON and the summary are committed, the full table regenerates on demand, the plan
 benchmark and the goldens are untouched, and the next plan (the fifth stop) can read the JSON to choose its
 rung.
+
+---
+
+## Size gate result
+
+Measured 2026-10-14 on the owner's export of 2026-10-13 (one `planCampaign`, `withTrade` + `withFrontier`, 0.42 s) and a census of the 19 benchmark armies (`commonScenarios()` + `ownerScenarios(profile)`). Figures in `.maestro/playbooks/Working/march-horizon/size-gate.md` and `troops-only-census.txt`.
+
+1. **Row set: undominated frontier rows + offered stops.** The owner's army is 75 rows (71 undominated + the 4 stops, deduped by `keyOf`; raw 2,248 undominated) = 76 KB of pruned JSON, a fifth of the 400 KB ceiling. Across the 19 armies the row sets total about 875 rows, so about 0.9 MB; the largest army (monster tiers 3–7 at 20 000 dominance) is 176 rows, about 180 KB. The band-alone fallback is not needed, so no refused-undominated count is carried. **The stops are not in the band**: all four offered stops of the owner's army are off-frontier put-back / all-in re-sizes (`onFrontier = false`, `undominated = false`, `inBand = true`), found in `frontier` with `stop` set and in no `trade` row, so the library must add them to the row set explicitly.
+2. **`vsCheapest`: included.** It adds 19.2 % (band) and 18.8 % (undominated + stops) to the JSON, under the 25 % bar.
+3. **Troops-only fallback (`frontier === undefined`, use `trade`): exercised by no benchmark army.** All 19 return a `frontier` (3 rows for Bear V ×1 up to 6,677 for monster tiers 3-5 at 900 dominance), including the single-monster "first-run" armies. The branch exists in the engine (plan.ts, the troops-only return, which sets `trade` but never `frontier`) and the library keeps it, flagged in the census, but only a hand-built mercenary-free request would reach it.
+
+Open point for the library: `fifthCandidate` is defined as `undominated && inBand && stop === undefined`, which on the owner's army is the whole deduped band (37 rows) because no stop is a band row, and it includes one row that is the *generator* of the burn-saver. The library keeps the mark as defined and carries `generatorOf` beside it; the summary lists generator rows apart so a reader can discount them.
