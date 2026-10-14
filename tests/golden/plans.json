@@ -11408,6 +11408,90 @@
             },
             "counts": {
               "ancient-terror": 3,
+              "archer-3": 7500,
+              "battle-boar": 239,
+              "bear-5": 2,
+              "black-dragon": 3,
+              "crystal-dragon": 8,
+              "desert-vanquisher": 22,
+              "destructive-colossus": 3,
+              "emerald-dragon": 207,
+              "epic-monster-hunter-6": 40,
+              "ettin": 19,
+              "fearsome-manticore": 20,
+              "flaming-centaur": 21,
+              "gorgon-medusa": 78,
+              "ice-phoenix": 55,
+              "jungle-destroyer": 7,
+              "magic-dragon": 62,
+              "many-armed-guardian": 71,
+              "rider-3": 3825,
+              "ruby-golem": 7,
+              "stone-gargoyle": 179,
+              "troll-rider": 8,
+              "wind-lord": 3
+            },
+            "damagePerDragonCoin": 5225.405222403354,
+            "damagePerMercenary": 690919.6666666666,
+            "damagePerSilver": 15.757609186482577,
+            "dragonCoins": 171760,
+            "finaleCounts": {
+              "archer-1": 3042,
+              "archer-2": 1680,
+              "archer-3": 939,
+              "battle-boar": 38,
+              "bear-5": 3,
+              "crystal-dragon": 1,
+              "desert-vanquisher": 3,
+              "emerald-dragon": 33,
+              "epic-monster-hunter-6": 71,
+              "ettin": 3,
+              "fearsome-manticore": 3,
+              "flaming-centaur": 3,
+              "gorgon-medusa": 12,
+              "ice-phoenix": 8,
+              "jungle-destroyer": 1,
+              "magic-dragon": 9,
+              "many-armed-guardian": 11,
+              "rider-1": 1515,
+              "rider-2": 837,
+              "rider-3": 468,
+              "ruby-golem": 1,
+              "spearman-1": 3036,
+              "spearman-2": 1677,
+              "spearman-3": 938,
+              "stone-gargoyle": 28,
+              "swordsman-1": 3048,
+              "troll-rider": 1,
+              "water-elemental": 78
+            },
+            "gold": 18776,
+            "hiredDamage": 16582072,
+            "label": "2 stacks · 1057 hired · 15.7M silver a march",
+            "marches": 4,
+            "mercLost": 24,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 282129906,
+              "dragonCoins": 52080,
+              "gold": 5984,
+              "hiredDamage": 3903048,
+              "mercLost": 5,
+              "seconds": 8995800,
+              "silver": 15742600
+            },
+            "seconds": 30061200,
+            "shape": "ladder",
+            "silver": 56957600,
+            "totalDamage": 897515601
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "ancient-terror": 3,
               "archer-3": 9900,
               "battle-boar": 239,
               "bear-5": 2,
@@ -12023,7 +12107,7 @@
           "totalDamage": 1412150716
         },
         "label": "2 stacks · 1150 hired · 19.6M silver a march",
-        "leftOut": 2798,
+        "leftOut": 2797,
         "march": {
           "counts": {
             "ancient-terror": 4,
@@ -13083,6 +13167,91 @@
             },
             "counts": {
               "ancient-terror": 3,
+              "archer-3": 7265,
+              "battle-boar": 92,
+              "bear-5": 3,
+              "black-dragon": 3,
+              "crystal-dragon": 7,
+              "desert-vanquisher": 22,
+              "destructive-colossus": 3,
+              "emerald-dragon": 94,
+              "epic-monster-hunter-6": 50,
+              "ettin": 18,
+              "fearsome-manticore": 20,
+              "flaming-centaur": 20,
+              "gorgon-medusa": 75,
+              "ice-phoenix": 54,
+              "jungle-destroyer": 7,
+              "magic-dragon": 61,
+              "many-armed-guardian": 70,
+              "rider-3": 3705,
+              "ruby-golem": 7,
+              "stone-gargoyle": 90,
+              "troll-rider": 8,
+              "water-elemental": 126,
+              "wind-lord": 3
+            },
+            "damagePerDragonCoin": 5242.098485896017,
+            "damagePerMercenary": 794305.7692307692,
+            "damagePerSilver": 32.11790950256912,
+            "dragonCoins": 144640,
+            "finaleCounts": {
+              "archer-1": 3042,
+              "archer-2": 1680,
+              "archer-3": 939,
+              "battle-boar": 38,
+              "bear-5": 3,
+              "crystal-dragon": 1,
+              "desert-vanquisher": 3,
+              "emerald-dragon": 33,
+              "epic-monster-hunter-6": 68,
+              "ettin": 3,
+              "fearsome-manticore": 3,
+              "flaming-centaur": 3,
+              "gorgon-medusa": 12,
+              "ice-phoenix": 8,
+              "jungle-destroyer": 1,
+              "magic-dragon": 9,
+              "many-armed-guardian": 11,
+              "rider-1": 1515,
+              "rider-2": 837,
+              "rider-3": 468,
+              "ruby-golem": 1,
+              "spearman-1": 3036,
+              "spearman-2": 1677,
+              "spearman-3": 938,
+              "stone-gargoyle": 28,
+              "swordsman-1": 3048,
+              "troll-rider": 1,
+              "water-elemental": 78
+            },
+            "gold": 199024,
+            "hiredDamage": 20651950,
+            "label": "2 stacks · 836 hired · 5.5M silver a march",
+            "marches": 4,
+            "mercLost": 26,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 235530900,
+              "dragonCoins": 43040,
+              "gold": 59040,
+              "hiredDamage": 4991010,
+              "mercLost": 6,
+              "seconds": 2857500,
+              "silver": 5490700
+            },
+            "seconds": 10542135,
+            "shape": "ladder",
+            "silver": 23607300,
+            "totalDamage": 758217125
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "ancient-terror": 3,
               "archer-3": 9900,
               "battle-boar": 92,
               "bear-5": 3,
@@ -13725,7 +13894,7 @@
           "totalDamage": 1018135939
         },
         "label": "2 stacks · 1150 hired · 7M silver a march",
-        "leftOut": 823,
+        "leftOut": 822,
         "march": {
           "counts": {
             "ancient-terror": 4,
@@ -14104,6 +14273,65 @@
             },
             "counts": {
               "arbalester-6": 10,
+              "archer-1": 673,
+              "archer-2": 360,
+              "chariot-6": 6,
+              "epic-monster-hunter-6": 10,
+              "legionary-6": 10,
+              "rider-1": 318,
+              "rider-2": 191,
+              "rider-3": 103,
+              "spearman-1": 534,
+              "spearman-2": 291,
+              "swordsman-1": 545
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 293176.1052631579,
+            "damagePerSilver": 1.3934277525167638,
+            "dragonCoins": 0,
+            "finaleCounts": {
+              "arbalester-6": 12,
+              "archer-1": 752,
+              "archer-2": 416,
+              "chariot-6": 5,
+              "epic-monster-hunter-6": 11,
+              "legionary-6": 13,
+              "rider-1": 375,
+              "rider-2": 207,
+              "rider-3": 116,
+              "spearman-1": 562,
+              "spearman-2": 310,
+              "swordsman-1": 564
+            },
+            "gold": 1192,
+            "hiredDamage": 5570346,
+            "label": "8 stacks · 36 hired · 1.4M silver a march",
+            "marches": 4,
+            "mercLost": 19,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 1961382,
+              "dragonCoins": 0,
+              "gold": 296,
+              "hiredDamage": 1367952,
+              "mercLost": 4,
+              "seconds": 308280,
+              "silver": 1377100
+            },
+            "seconds": 1266900,
+            "shape": "ladder",
+            "silver": 5652100,
+            "totalDamage": 7875793
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "arbalester-6": 10,
               "archer-1": 747,
               "archer-2": 413,
               "chariot-6": 6,
@@ -14435,7 +14663,7 @@
           "totalDamage": 7645237
         },
         "label": "8 stacks · 37 hired · 1.5M silver a march",
-        "leftOut": 71,
+        "leftOut": 70,
         "march": {
           "counts": {
             "arbalester-6": 10,
@@ -14572,7 +14800,7 @@
         },
         "recommend": {
           "bestFor": {
-            "hired": true,
+            "hired": false,
             "silver": false
           },
           "counts": {
@@ -15658,7 +15886,7 @@
           {
             "bestFor": {
               "hired": false,
-              "silver": true
+              "silver": false
             },
             "counts": {
               "arbalester-6": 5,
@@ -15717,6 +15945,65 @@
           {
             "bestFor": {
               "hired": true,
+              "silver": true
+            },
+            "counts": {
+              "arbalester-6": 10,
+              "archer-1": 673,
+              "archer-2": 360,
+              "chariot-6": 6,
+              "epic-monster-hunter-6": 10,
+              "legionary-6": 10,
+              "rider-1": 318,
+              "rider-2": 191,
+              "rider-3": 103,
+              "spearman-1": 534,
+              "spearman-2": 291,
+              "swordsman-1": 545
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 293176.1052631579,
+            "damagePerSilver": 1.739737795449525,
+            "dragonCoins": 0,
+            "finaleCounts": {
+              "arbalester-6": 12,
+              "archer-1": 752,
+              "archer-2": 416,
+              "chariot-6": 5,
+              "epic-monster-hunter-6": 11,
+              "legionary-6": 13,
+              "rider-1": 375,
+              "rider-2": 207,
+              "rider-3": 116,
+              "spearman-1": 562,
+              "spearman-2": 310,
+              "swordsman-1": 564
+            },
+            "gold": 12140,
+            "hiredDamage": 5570346,
+            "label": "8 stacks · 36 hired · 1.1M silver a march",
+            "marches": 4,
+            "mercLost": 19,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 1961382,
+              "dragonCoins": 0,
+              "gold": 2992,
+              "hiredDamage": 1367952,
+              "mercLost": 4,
+              "seconds": 223650,
+              "silver": 1101300
+            },
+            "seconds": 918045,
+            "shape": "ladder",
+            "silver": 4527000,
+            "totalDamage": 7875793
+          },
+          {
+            "bestFor": {
+              "hired": false,
               "silver": false
             },
             "counts": {
@@ -16053,7 +16340,7 @@
           "totalDamage": 7645237
         },
         "label": "8 stacks · 37 hired · 1.2M silver a march",
-        "leftOut": 71,
+        "leftOut": 70,
         "march": {
           "counts": {
             "arbalester-6": 10,
@@ -16190,7 +16477,7 @@
         },
         "recommend": {
           "bestFor": {
-            "hired": true,
+            "hired": false,
             "silver": false
           },
           "counts": {
@@ -16399,6 +16686,63 @@
             "shape": "ladder",
             "silver": 8670400,
             "totalDamage": 16259746
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "arbalester-6": 20,
+              "archer-1": 1216,
+              "archer-2": 649,
+              "chariot-6": 10,
+              "epic-monster-hunter-6": 20,
+              "legionary-6": 20,
+              "rider-1": 553,
+              "rider-2": 313,
+              "rider-3": 166,
+              "spearman-1": 1069,
+              "spearman-2": 583
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 357359.6,
+            "damagePerSilver": 1.9151990728262627,
+            "dragonCoins": 0,
+            "finaleCounts": {
+              "arbalester-6": 40,
+              "archer-1": 1569,
+              "archer-2": 866,
+              "chariot-6": 17,
+              "epic-monster-hunter-6": 38,
+              "legionary-6": 33,
+              "rider-1": 696,
+              "rider-2": 384,
+              "rider-3": 215,
+              "spearman-1": 1272,
+              "spearman-2": 703
+            },
+            "gold": 2760,
+            "hiredDamage": 12507586,
+            "label": "7 stacks · 70 hired · 2.2M silver a march",
+            "marches": 4,
+            "mercLost": 35,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 4098844,
+              "dragonCoins": 0,
+              "gold": 576,
+              "hiredDamage": 2718054,
+              "mercLost": 7,
+              "seconds": 524745,
+              "silver": 2178700
+            },
+            "seconds": 2238990,
+            "shape": "ladder",
+            "silver": 9275500,
+            "totalDamage": 17764429
           },
           {
             "bestFor": {
@@ -16780,7 +17124,7 @@
           "totalDamage": 6955681
         },
         "label": "7 stacks · 127 hired · 2.7M silver a march",
-        "leftOut": 444,
+        "leftOut": 443,
         "march": {
           "counts": {
             "arbalester-6": 40,
@@ -18217,6 +18561,63 @@
             },
             "counts": {
               "arbalester-6": 20,
+              "archer-1": 1216,
+              "archer-2": 649,
+              "chariot-6": 10,
+              "epic-monster-hunter-6": 20,
+              "legionary-6": 20,
+              "rider-1": 553,
+              "rider-2": 313,
+              "rider-3": 166,
+              "spearman-1": 1069,
+              "spearman-2": 583
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 357359.6,
+            "damagePerSilver": 2.1199867533862404,
+            "dragonCoins": 0,
+            "finaleCounts": {
+              "arbalester-6": 40,
+              "archer-1": 1569,
+              "archer-2": 866,
+              "chariot-6": 17,
+              "epic-monster-hunter-6": 38,
+              "legionary-6": 33,
+              "rider-1": 696,
+              "rider-2": 384,
+              "rider-3": 215,
+              "spearman-1": 1272,
+              "spearman-2": 703
+            },
+            "gold": 7880,
+            "hiredDamage": 12507586,
+            "label": "7 stacks · 70 hired · 2M silver a march",
+            "marches": 4,
+            "mercLost": 35,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 4098844,
+              "dragonCoins": 0,
+              "gold": 1768,
+              "hiredDamage": 2718054,
+              "mercLost": 7,
+              "seconds": 399585,
+              "silver": 1970100
+            },
+            "seconds": 1701390,
+            "shape": "ladder",
+            "silver": 8379500,
+            "totalDamage": 17764429
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "arbalester-6": 20,
               "archer-1": 1520,
               "archer-2": 812,
               "chariot-6": 10,
@@ -18544,7 +18945,7 @@
           "totalDamage": 18893768
         },
         "label": "7 stacks · 127 hired · 2.5M silver a march",
-        "leftOut": 451,
+        "leftOut": 450,
         "march": {
           "counts": {
             "arbalester-6": 40,
@@ -20035,6 +20436,50 @@
             },
             "counts": {
               "arbalester-6": 30,
+              "archer-1": 2217,
+              "archer-2": 1184,
+              "chariot-6": 20,
+              "epic-monster-hunter-6": 40,
+              "legionary-6": 30,
+              "rider-1": 1008,
+              "rider-2": 571,
+              "rider-3": 302,
+              "spearman-1": 1950,
+              "spearman-2": 1063
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 375156,
+            "damagePerSilver": 1.7668599264890992,
+            "dragonCoins": 0,
+            "gold": 1008,
+            "hiredDamage": 4501872,
+            "label": "7 stacks · 120 hired · 4M silver a march",
+            "marches": 1,
+            "mercLost": 12,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 7018321,
+              "dragonCoins": 0,
+              "gold": 1008,
+              "hiredDamage": 4501872,
+              "mercLost": 12,
+              "seconds": 956445,
+              "silver": 3972200
+            },
+            "seconds": 956445,
+            "shape": "ladder",
+            "silver": 3972200,
+            "totalDamage": 7018321
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "arbalester-6": 30,
               "archer-1": 2614,
               "archer-2": 1396,
               "chariot-6": 20,
@@ -20278,7 +20723,7 @@
           "totalDamage": 6022955
         },
         "label": "7 stacks · 178 hired · 4.7M silver a march",
-        "leftOut": 212,
+        "leftOut": 211,
         "march": {
           "counts": {
             "arbalester-6": 50,
@@ -22226,7 +22671,7 @@
           {
             "bestFor": {
               "hired": false,
-              "silver": true
+              "silver": false
             },
             "counts": {
               "archer-1": 2596,
@@ -22267,6 +22712,47 @@
           {
             "bestFor": {
               "hired": true,
+              "silver": true
+            },
+            "counts": {
+              "archer-1": 4514,
+              "archer-2": 2317,
+              "epic-monster-hunter-6": 80,
+              "rider-1": 1806,
+              "rider-2": 909,
+              "rider-3": 521,
+              "spearman-1": 3381,
+              "spearman-2": 1918
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 323582,
+            "damagePerSilver": 1.0257809378468368,
+            "dragonCoins": 0,
+            "gold": 576,
+            "hiredDamage": 2588656,
+            "label": "7 stacks · 80 hired · 7.2M silver a march",
+            "marches": 1,
+            "mercLost": 8,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 7393829,
+              "dragonCoins": 0,
+              "gold": 576,
+              "hiredDamage": 2588656,
+              "mercLost": 8,
+              "seconds": 1699785,
+              "silver": 7208000
+            },
+            "seconds": 1699785,
+            "shape": "ladder",
+            "silver": 7208000,
+            "totalDamage": 7393829
+          },
+          {
+            "bestFor": {
+              "hired": false,
               "silver": false
             },
             "counts": {
@@ -22458,7 +22944,7 @@
           "totalDamage": 7672203
         },
         "label": "7 stacks · 83 hired · 7.7M silver a march",
-        "leftOut": 48,
+        "leftOut": 47,
         "march": {
           "counts": {
             "archer-1": 4848,
@@ -22553,7 +23039,7 @@
         },
         "recommend": {
           "bestFor": {
-            "hired": true,
+            "hired": false,
             "silver": false
           },
           "counts": {
@@ -23326,6 +23812,63 @@
             },
             "counts": {
               "arbalester-6": 37,
+              "archer-1": 2553,
+              "archer-2": 1310,
+              "chariot-6": 6,
+              "epic-monster-hunter-6": 45,
+              "legionary-6": 38,
+              "rider-1": 1021,
+              "rider-2": 514,
+              "rider-3": 294,
+              "spearman-1": 1912,
+              "spearman-2": 1084
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 285220.40983606555,
+            "damagePerSilver": 1.6809815423545151,
+            "dragonCoins": 0,
+            "finaleCounts": {
+              "arbalester-6": 48,
+              "archer-1": 2560,
+              "archer-2": 1414,
+              "chariot-6": 7,
+              "epic-monster-hunter-6": 62,
+              "legionary-6": 52,
+              "rider-1": 1040,
+              "rider-2": 575,
+              "rider-3": 322,
+              "spearman-1": 2030,
+              "spearman-2": 1122
+            },
+            "gold": 4056,
+            "hiredDamage": 17398445,
+            "label": "7 stacks · 126 hired · 4.1M silver a march",
+            "marches": 4,
+            "mercLost": 61,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 6972311,
+              "dragonCoins": 0,
+              "gold": 936,
+              "hiredDamage": 4257005,
+              "mercLost": 14,
+              "seconds": 960525,
+              "silver": 4074700
+            },
+            "seconds": 3915585,
+            "shape": "ladder",
+            "silver": 16518900,
+            "totalDamage": 27767966
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "arbalester-6": 37,
               "archer-1": 2465,
               "archer-2": 1316,
               "chariot-6": 6,
@@ -23691,7 +24234,7 @@
           "totalDamage": 8945483
         },
         "label": "7 stacks · 171 hired · 4.3M silver a march",
-        "leftOut": 233,
+        "leftOut": 232,
         "march": {
           "counts": {
             "arbalester-6": 50,
@@ -25183,6 +25726,63 @@
             },
             "counts": {
               "arbalester-6": 37,
+              "archer-1": 2553,
+              "archer-2": 1310,
+              "chariot-6": 6,
+              "epic-monster-hunter-6": 45,
+              "legionary-6": 38,
+              "rider-1": 1021,
+              "rider-2": 514,
+              "rider-3": 294,
+              "spearman-1": 1912,
+              "spearman-2": 1084
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 285220.40983606555,
+            "damagePerSilver": 1.8505192096231382,
+            "dragonCoins": 0,
+            "finaleCounts": {
+              "arbalester-6": 48,
+              "archer-1": 2560,
+              "archer-2": 1414,
+              "chariot-6": 7,
+              "epic-monster-hunter-6": 62,
+              "legionary-6": 52,
+              "rider-1": 1040,
+              "rider-2": 575,
+              "rider-3": 322,
+              "spearman-1": 2030,
+              "spearman-2": 1122
+            },
+            "gold": 12704,
+            "hiredDamage": 17398445,
+            "label": "7 stacks · 126 hired · 3.7M silver a march",
+            "marches": 4,
+            "mercLost": 61,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 6972311,
+              "dragonCoins": 0,
+              "gold": 3048,
+              "hiredDamage": 4257005,
+              "mercLost": 14,
+              "seconds": 738765,
+              "silver": 3705100
+            },
+            "seconds": 3007545,
+            "shape": "ladder",
+            "silver": 15005500,
+            "totalDamage": 27767966
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
+              "arbalester-6": 37,
               "archer-1": 2465,
               "archer-2": 1316,
               "chariot-6": 6,
@@ -25562,7 +26162,7 @@
           "totalDamage": 29015792
         },
         "label": "7 stacks · 171 hired · 3.9M silver a march",
-        "leftOut": 357,
+        "leftOut": 356,
         "march": {
           "counts": {
             "arbalester-6": 50,
@@ -28273,6 +28873,46 @@
               "silver": false
             },
             "counts": {
+              "arbalester-6": 60,
+              "bear-5": 6,
+              "legionary-6": 50,
+              "rider-2": 579,
+              "rider-3": 325,
+              "spearman-1": 2037,
+              "spearman-2": 1130
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 232599.16666666666,
+            "damagePerSilver": 1.7741871408533552,
+            "dragonCoins": 0,
+            "gold": 6368,
+            "hiredDamage": 11164760,
+            "label": "4 stacks · 116 hired · 2.2M silver a march",
+            "marches": 4,
+            "mercLost": 48,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 3921131,
+              "dragonCoins": 0,
+              "gold": 1592,
+              "hiredDamage": 2791190,
+              "mercLost": 12,
+              "seconds": 715395,
+              "silver": 2210100
+            },
+            "seconds": 2861580,
+            "shape": "elite",
+            "silver": 8840400,
+            "totalDamage": 15684524
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
               "arbalester-6": 76,
               "archer-2": 1625,
               "bear-5": 7,
@@ -28579,7 +29219,7 @@
           "totalDamage": 14130847
         },
         "label": "2 stacks · 100 hired · 2.8M silver a march",
-        "leftOut": 261,
+        "leftOut": 260,
         "march": {
           "counts": {
             "arbalester-6": 80,
@@ -29372,6 +30012,46 @@
               "silver": false
             },
             "counts": {
+              "arbalester-6": 60,
+              "bear-5": 6,
+              "legionary-6": 50,
+              "rider-2": 579,
+              "rider-3": 325,
+              "spearman-1": 2037,
+              "spearman-2": 1130
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 232599.16666666666,
+            "damagePerSilver": 1.7741871408533552,
+            "dragonCoins": 0,
+            "gold": 1592,
+            "hiredDamage": 2791190,
+            "label": "4 stacks · 116 hired · 2.2M silver a march",
+            "marches": 1,
+            "mercLost": 12,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 3921131,
+              "dragonCoins": 0,
+              "gold": 1592,
+              "hiredDamage": 2791190,
+              "mercLost": 12,
+              "seconds": 715395,
+              "silver": 2210100
+            },
+            "seconds": 715395,
+            "shape": "elite",
+            "silver": 2210100,
+            "totalDamage": 3921131
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
               "arbalester-6": 76,
               "archer-2": 1625,
               "bear-5": 7,
@@ -29523,14 +30203,14 @@
             "thriftyPerMercenary": 267678
           },
           {
-            "damage": 3760533,
-            "damagePerSilver": 1.4939349276974416,
-            "hiredDamage": 2743259,
-            "mercLost": 21,
-            "silver": 2517200,
-            "thriftyDamage": 2441288,
-            "thriftyMercLost": 6,
-            "thriftyPerMercenary": 227846.66666666666
+            "damage": 3921131,
+            "damagePerSilver": 1.7741871408533552,
+            "hiredDamage": 2791190,
+            "mercLost": 12,
+            "silver": 2210100,
+            "thriftyDamage": 3921131,
+            "thriftyMercLost": 12,
+            "thriftyPerMercenary": 232599.16666666666
           },
           {
             "damage": 9071106,
@@ -29598,7 +30278,7 @@
           "totalDamage": 831096
         },
         "label": "2 stacks · 110 hired · 2.8M silver a march",
-        "leftOut": 268,
+        "leftOut": 267,
         "march": {
           "counts": {
             "arbalester-6": 90,
@@ -31971,6 +32651,45 @@
               "silver": false
             },
             "counts": {
+              "archer-1": 1694,
+              "epic-monster-hunter-6": 40,
+              "rider-2": 382,
+              "rider-3": 214,
+              "spearman-1": 1343,
+              "spearman-2": 746
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 323582,
+            "damagePerSilver": 1.324122222877011,
+            "dragonCoins": 0,
+            "gold": 7296,
+            "hiredDamage": 5177312,
+            "label": "5 stacks · 40 hired · 1.7M silver a march",
+            "marches": 4,
+            "mercLost": 16,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 2246903,
+              "dragonCoins": 0,
+              "gold": 1824,
+              "hiredDamage": 1294328,
+              "mercLost": 4,
+              "seconds": 335835,
+              "silver": 1696900
+            },
+            "seconds": 1343340,
+            "shape": "elite",
+            "silver": 6787600,
+            "totalDamage": 8987612
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
               "archer-2": 1057,
               "epic-monster-hunter-6": 38,
               "rider-1": 792,
@@ -32210,9 +32929,9 @@
             "hiredDamage": 9351519,
             "mercLost": 57,
             "silver": 6916300,
-            "thriftyDamage": 8300982,
-            "thriftyMercLost": 12,
-            "thriftyPerMercenary": 318189
+            "thriftyDamage": 8987612,
+            "thriftyMercLost": 16,
+            "thriftyPerMercenary": 323582
           },
           {
             "damage": 10294068,
@@ -32314,7 +33033,7 @@
           "totalDamage": 4400709
         },
         "label": "3 stacks · 75 hired · 2M silver a march",
-        "leftOut": 86,
+        "leftOut": 85,
         "march": {
           "counts": {
             "archer-2": 2172,
@@ -32417,7 +33136,7 @@
         },
         "recommend": {
           "bestFor": {
-            "hired": true,
+            "hired": false,
             "silver": false
           },
           "counts": {
@@ -34175,6 +34894,45 @@
               "silver": false
             },
             "counts": {
+              "archer-1": 1737,
+              "epic-monster-hunter-6": 40,
+              "rider-2": 391,
+              "rider-3": 219,
+              "spearman-1": 1378,
+              "spearman-2": 765
+            },
+            "damagePerDragonCoin": {
+              "$num": "Infinity"
+            },
+            "damagePerMercenary": 323582,
+            "damagePerSilver": 1.3056308948700253,
+            "dragonCoins": 0,
+            "gold": 7456,
+            "hiredDamage": 5177312,
+            "label": "5 stacks · 40 hired · 1.7M silver a march",
+            "marches": 4,
+            "mercLost": 16,
+            "pick": "thrifty",
+            "repeat": {
+              "damage": 2270231,
+              "dragonCoins": 0,
+              "gold": 1864,
+              "hiredDamage": 1294328,
+              "mercLost": 4,
+              "seconds": 343665,
+              "silver": 1738800
+            },
+            "seconds": 1374660,
+            "shape": "elite",
+            "silver": 6955200,
+            "totalDamage": 9080924
+          },
+          {
+            "bestFor": {
+              "hired": false,
+              "silver": false
+            },
+            "counts": {
               "epic-monster-hunter-6": 100,
               "rider-3": 916,
               "spearman-2": 3184
@@ -34320,9 +35078,9 @@
             "hiredDamage": 6665790,
             "mercLost": 42,
             "silver": 7202200,
-            "thriftyDamage": 7597892,
-            "thriftyMercLost": 9,
-            "thriftyPerMercenary": 312796
+            "thriftyDamage": 9080924,
+            "thriftyMercLost": 16,
+            "thriftyPerMercenary": 323582
           },
           {
             "damage": 9185137,
@@ -34404,7 +35162,7 @@
           "totalDamage": 9920326
         },
         "label": "2 stacks · 100 hired · 1.8M silver a march",
-        "leftOut": 65,
+        "leftOut": 64,
         "march": {
           "counts": {
             "epic-monster-hunter-6": 100,

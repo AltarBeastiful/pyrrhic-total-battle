@@ -12,7 +12,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-10-14T17:30:56.649Z, commit (working tree)
+Run: 2026-10-14T23:10:20.224Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 
@@ -790,25 +790,25 @@ Not asserted, and deliberately — a timing floor would be red on a slow machine
 
 | army | planner (median of 3) | cpu time | contended? | of its budget | bound? | search, all calls | a call | of its budget |
 |---|---|---|---|---|---|---|---|---|
-| first-run army, Bear V ×1 (20 000 leadership) | 36 ms | 35 ms | no | 0 % | no | 3,979 ms over 40 | 99 ms | 1 % |
-| first-run army, Bear V ×2 (20 000 leadership) | 81 ms | 90 ms | no | 0 % | no | 3,462 ms over 40 | 87 ms | 1 % |
-| first-run army, Bear V ×3 (20 000 leadership) | 44 ms | 59 ms | no | 0 % | no | 3,423 ms over 40 | 86 ms | 1 % |
-| first-run army, Bear V ×10 (20 000 leadership) | 86 ms | 168 ms | no | 0 % | no | 3,188 ms over 40 | 80 ms | 1 % |
-| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 241 ms | 254 ms | no | 1 % | no | 3,171 ms over 40 | 79 ms | 1 % |
-| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 1,402 ms | 1,697 ms | no | 4 % | no | 82,405 ms over 40 | 2,060 ms | 26 % |
-| first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) | 604 ms | 763 ms | no | 2 % | no | 107,266 ms over 40 | 2,682 ms | 34 % |
-| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 106 ms | 256 ms | no | 0 % | no | 4,048 ms over 40 | 101 ms | 1 % |
-| 2026-09-17 export, its setup (7 000 leadership) | 340 ms | 488 ms | no | 1 % | no | 1,421 ms over 40 | 36 ms | 0 % |
-| 2026-09-17 export, 12 000 leadership | 358 ms | 439 ms | no | 1 % | no | 1,371 ms over 40 | 34 ms | 0 % |
-| live account of 2026-09-18 (one hired type, 20 000 leadership) | 219 ms | 222 ms | no | 1 % | no | 148 ms over 40 | 4 ms | 0 % |
-| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 345 ms | 400 ms | no | 1 % | no | 1,337 ms over 40 | 33 ms | 0 % |
-| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 87 ms | 214 ms | no | 0 % | no | 2,835 ms over 40 | 71 ms | 1 % |
-| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 167 ms | 256 ms | no | 0 % | no | 648 ms over 40 | 16 ms | 0 % |
-| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 124 ms | 138 ms | no | 0 % | no | 142 ms over 40 | 4 ms | 0 % |
-| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 108 ms | 117 ms | no | 0 % | no | 147 ms over 40 | 4 ms | 0 % |
-| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 96 ms | 203 ms | no | 0 % | no | 2,488 ms over 40 | 62 ms | 1 % |
-| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 133 ms | 246 ms | no | 0 % | no | 2,329 ms over 40 | 58 ms | 1 % |
-| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 213 ms | 351 ms | no | 1 % | no | 2,933 ms over 40 | 73 ms | 1 % |
+| first-run army, Bear V ×1 (20 000 leadership) | 7 ms | 16 ms | no | 0 % | no | 1,202 ms over 40 | 30 ms | 0 % |
+| first-run army, Bear V ×2 (20 000 leadership) | 17 ms | 32 ms | no | 0 % | no | 1,082 ms over 40 | 27 ms | 0 % |
+| first-run army, Bear V ×3 (20 000 leadership) | 9 ms | 35 ms | no | 0 % | no | 1,043 ms over 40 | 26 ms | 0 % |
+| first-run army, Bear V ×10 (20 000 leadership) | 22 ms | 43 ms | no | 0 % | no | 1,040 ms over 40 | 26 ms | 0 % |
+| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 46 ms | 98 ms | no | 0 % | no | 1,067 ms over 40 | 27 ms | 0 % |
+| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 320 ms | 478 ms | no | 1 % | no | 23,095 ms over 40 | 577 ms | 7 % |
+| first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) | 632 ms | 884 ms | no | 2 % | no | 76,744 ms over 40 | 1,919 ms | 24 % |
+| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 75 ms | 146 ms | no | 0 % | no | 3,857 ms over 40 | 96 ms | 1 % |
+| 2026-09-17 export, its setup (7 000 leadership) | 367 ms | 491 ms | no | 1 % | no | 1,324 ms over 40 | 33 ms | 0 % |
+| 2026-09-17 export, 12 000 leadership | 349 ms | 447 ms | no | 1 % | no | 1,371 ms over 40 | 34 ms | 0 % |
+| live account of 2026-09-18 (one hired type, 20 000 leadership) | 215 ms | 225 ms | no | 1 % | no | 147 ms over 40 | 4 ms | 0 % |
+| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 365 ms | 487 ms | no | 1 % | no | 1,353 ms over 40 | 34 ms | 0 % |
+| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 84 ms | 160 ms | no | 0 % | no | 2,825 ms over 40 | 71 ms | 1 % |
+| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 160 ms | 339 ms | no | 0 % | no | 669 ms over 40 | 17 ms | 0 % |
+| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 112 ms | 160 ms | no | 0 % | no | 142 ms over 40 | 4 ms | 0 % |
+| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 103 ms | 170 ms | no | 0 % | no | 143 ms over 40 | 4 ms | 0 % |
+| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 101 ms | 172 ms | no | 0 % | no | 2,504 ms over 40 | 63 ms | 1 % |
+| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 122 ms | 207 ms | no | 0 % | no | 2,404 ms over 40 | 60 ms | 1 % |
+| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 228 ms | 389 ms | no | 1 % | no | 2,941 ms over 40 | 74 ms | 1 % |
 
 **0 of 19** armies leave the planner budget-bound, and the priority search is bound on none of them either.
 

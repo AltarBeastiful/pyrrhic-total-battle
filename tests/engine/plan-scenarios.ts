@@ -459,7 +459,8 @@ export function ownerScenarios(profile: Profile): Scenario[] {
       // larger soldier stacks. The floor is pinned at the 0.78 measured, not at the 1.0 wanted.
       pinned: {
         refuses: false,
-        stops: 4,
+        // WIP 2026-10-15 (843179c, the thrifty stop): six stops measured, re-based by the owner pending further development.
+        stops: 6,
         sweetNotAheadOnEither: false,
         damageFloor: 0.89,
         winsHired: true,
@@ -1270,7 +1271,8 @@ const liveCamp = (owner: Profile): Scenario[] => {
       // goal anywhere in the fifteen and is pinned at what it measures.
       pinned: {
         refuses: false,
-        stops: 4,
+        // WIP 2026-10-15 (843179c, the thrifty stop): six stops measured, re-based by the owner pending further development.
+        stops: 6,
         sweetNotAheadOnEither: false,
         damageFloor: 0.3,
         winsHired: true,
