@@ -1,6 +1,6 @@
 # The march horizon — a reusable benchmark of every march the plan computes
 
-**Type:** plan (benchmark/tooling). **Status:** in progress. **Created:** 2026-10-14.
+**Type:** plan (benchmark/tooling). **Status:** shipped. **Created:** 2026-10-14.
 **Related:** `docs/plans/the-stops-the-bar-offers.md` (the band and the stops), `docs/backlog/B-10-put-back-halves-trade.md`, `docs/plans/beating-totalstack.md` (the benchmark's criteria), investigations 0025/0026.
 
 ---
@@ -274,3 +274,70 @@ Measured 2026-10-14 on the owner's export of 2026-10-13 (one `planCampaign`, `wi
 3. **Troops-only fallback (`frontier === undefined`, use `trade`): exercised by no benchmark army.** All 19 return a `frontier` (3 rows for Bear V ×1 up to 6,677 for monster tiers 3-5 at 900 dominance), including the single-monster "first-run" armies. The branch exists in the engine (plan.ts, the troops-only return, which sets `trade` but never `frontier`) and the library keeps it, flagged in the census, but only a hand-built mercenary-free request would reach it.
 
 Open point for the library: `fifthCandidate` is defined as `undominated && inBand && stop === undefined`, which on the owner's army is the whole deduped band (37 rows) because no stop is a band row, and it includes one row that is the *generator* of the burn-saver. The library keeps the mark as defined and carries `generatorOf` beside it; the summary lists generator rows apart so a reader can discount them.
+
+---
+
+## Result
+
+Measured 2026-10-14 from `tools/theorycraft/out/232-the-march-horizon.json` and the notes in
+`.maestro/playbooks/Working/march-horizon/` (`run.md`, `crosscheck.md`, `nothing-moved.md`). The run is
+`THEORY=1 pnpm vitest run tools/theorycraft/232-the-march-horizon.test.ts`: green, 152.8 s of vitest wall time
+(about 2 m 34 s with startup), 19 armies, no `budgetMs`, and byte-identical across two re-runs (JSON, summary
+and full report; the wall-clock `planMs` field was removed from `meta` to get there).
+
+**Rows per army:** min 3, median 32, max 176, total 875 (the size gate's estimate of "about 875" held).
+
+**JSON size:** 1,701,922 B committed form (indented), against the size gate's estimate of about 0.9 MB. The
+gap is the campaign totals the rows carry after the run-1 fix (a stop-marked row takes the stop's own
+`campaign`). The largest army (monster tiers 3–7 at 20 000 dominance) is 316,504 B compact, 79 % of the 400 KB
+ceiling. Summary: 48,019 B, 19 sections, longest 33 lines. Full report: 394,343 B, gitignored.
+
+| # | army | rows | stops | `fifthCandidate` |
+|--:|---|--:|--:|--:|
+| 1 | first-run, Bear V ×1 | 3 | 1 | 1 |
+| 2 | first-run, Bear V ×2 | 4 | 1 | 1 |
+| 3 | first-run, Bear V ×3 | 4 | 2 | 1 |
+| 4 | first-run, Bear V ×10 | 6 | 2 | 3 |
+| 5 | first-run, Epic Monster Hunter VI ×83 | 26 | 4 | 15 |
+| 6 | first-run, monster tiers 3–5 at 900 dominance | 55 | 5 | 23 |
+| 7 | first-run, monster tiers 3–7 at 20 000 dominance | 176 | 5 | 51 |
+| 8 | the 4 000-leadership case of 2026-09-15 | 40 | 3 | 11 |
+| 9 | 2026-09-17 export, its setup (7 000) | 59 | 5 | 33 |
+| 10 | 2026-09-17 export, 12 000 | 96 | 4 | 62 |
+| 11 | live account of 2026-09-18 (20 000) | 32 | 4 | 20 |
+| 12 | live account, evening (11 000) | 81 | 5 | 39 |
+| 13 | Aydae alone, 4 975 | 41 | 4 | 23 |
+| 14 | the owner's live camp of 2026-09-18 | 81 | 5 | 44 |
+| 15 | his camp of 2026-09-19, localStorage dump | 28 | 5 | 21 |
+| 16 | his camp of 2026-09-19, as his message reads it | 32 | 5 | 26 |
+| 17 | his TotalStack profile of 2026-09-19 | 49 | 3 | 22 |
+| 18 | his usual setup of 2026-09-19 | 31 | 3 | 17 |
+| 19 | his browser setup of 2026-09-24 | 31 | 2 | 19 |
+
+`fifthCandidate` is non-empty on all 19. The bar draws 1–5 stops (as §0 said) where the horizon lists 3–176
+rows.
+
+**Cross-check against 231** (owner's export of 2026-10-13, run with `PYRRHIC_HORIZON_EXPORT`, 20 armies,
+148.4 s; the committed outputs were backed up and restored byte-identical): all 4 distinct band rows of 231 and
+all 4 of its stops are present in the army's 75 rows, **0 mismatches**; `fifthCandidate` = 37, equal to the
+census figure (summarised 891, undominated 71, band 37; raw 5,757 / 2,248 / 1,795). The 7 d 9 h / 6.9 M /
+3-merc row (worst 6,909,026, silver 2,288,300) is present with `undominated`, `inBand` and `fifthCandidate`
+set, and **no `stop`**. That is right, not a gap: the bar's three-merc stop is the 18 d 14 h sweet spot
+(10,002,509), and this is the row the bar passes over. The playbook text and §11 expected a stop mark on it;
+§11 only requires "present and marked".
+
+**Nothing shipped moved:** `git status --short tests/ src/` and the `tests/golden` / `benchmark-latest.*` diff
+print nothing; `plan-benchmark` + `plan-stops` pass 81/81 unchanged. `pnpm typecheck`, eslint on the new files
+and the 4 library unit tests are clean.
+
+**What the fifth stop can read.** Each army in the JSON carries `rows` (every undominated frontier march plus the
+offered stops, deduped by `keyOf`), and every row carries its ten readings, its criteria, its `rating` and
+`vsCheapest` deltas against the sweet spot and the cheapest stop, its `campaign` totals, and its `marks`
+(`undominated`, `inBand`, `onFrontier`, `stop`, `generatorOf`, `fifthCandidate`). The next plan can filter
+`marks.fifthCandidate`, rank by the raw deltas (`dDamage`, `dSilver`, `dGold`, `dCoins`, `dQueue`; `rate` is
+degenerate on large deltas, §4), and pick the rung. One caveat from the size gate stands: `fifthCandidate` is
+the whole deduped band minus the stops, so it includes rows that are the `generatorOf` a stop (e.g. the
+burn-saver's generator on the owner's army); read `generatorOf` beside it. The stops themselves are not band
+rows (all four of the owner's are off-frontier put-back or all-in re-sizes), which is why the horizon adds
+them explicitly. The `census` per army gives the size of the deeper horizon that is not listed. The rung
+choice stays the owner's decision (§0, decision 3).
