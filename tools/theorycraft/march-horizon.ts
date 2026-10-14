@@ -254,6 +254,7 @@ export function dedupeRows(rows: HorizonRow[]): HorizonRow[] {
         ...(generatorOf !== undefined ? { generatorOf } : {}),
       }),
       criteria: { ...row.criteria, ...held.criteria },
+      campaign: held.marks.stop === undefined && row.marks.stop !== undefined ? row.campaign : held.campaign,
       ...(shelterMargin !== undefined ? { shelterMargin } : {}),
     });
   }
@@ -355,7 +356,10 @@ export function horizonOf(label: string, request: StackRequest): ArmyHorizon {
       const criteria: HorizonRow['criteria'] = { s58b: fieldsAll(row) };
       const margin = marks.stop !== undefined ? shelterOf.get(marks.stop) : undefined;
       if (margin !== undefined) criteria.shelter = margin > 1;
-      return rowOf(row, rowLabel, marks, against, criteria, margin);
+      const built = rowOf(row, rowLabel, marks, against, criteria, margin);
+      // A stop is priced by the bar with its tail and finale; the summarised row of the same march is not.
+      const stopRow = marks.stop !== undefined ? offered.find((o) => o.pick === marks.stop) : undefined;
+      return stopRow ? { ...built, campaign: campaignOf(stopRow) } : built;
     }),
   ).sort((a, b) => a.silver - b.silver || a.worst - b.worst);
 

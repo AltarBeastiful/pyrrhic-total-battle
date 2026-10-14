@@ -121,8 +121,15 @@ describe.skipIf(!process.env.THEORY)('232 — the march horizon', () => {
     for (const army of benchmark) {
       const mostDamage = army.readings.find((reading) => reading.head === 'most damage');
       if (!mostDamage) throw new Error(`${army.label}: no 'most damage' reading`);
+      // The bar's readings are campaign totals (`readingOf` over `StopReport.campaign`), a row's `worst` is one
+      // march: compare each on its own scale.
       const best = Math.max(...army.rows.map((row) => row.worst));
-      expect(best, `${army.label}: best row on worst vs the bar's most damage`).toBeGreaterThanOrEqual(mostDamage.value);
+      const bestStop = Math.max(...army.rows.filter((row) => row.marks.stop !== undefined).map((row) => row.worst));
+      expect(best, `${army.label}: best row on worst vs the best offered stop, a march`).toBeGreaterThanOrEqual(bestStop);
+      const bestCampaign = Math.max(...army.rows.map((row) => row.campaign.totalDamage));
+      expect(bestCampaign, `${army.label}: best row campaign vs the bar's most damage`).toBeGreaterThanOrEqual(
+        mostDamage.value,
+      );
       const { summarised, undominated, band } = army.census;
       expect(summarised, `${army.label}: summarised ≥ undominated`).toBeGreaterThanOrEqual(undominated);
       expect(undominated, `${army.label}: undominated ≥ band`).toBeGreaterThanOrEqual(band);
