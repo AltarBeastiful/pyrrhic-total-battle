@@ -90,8 +90,12 @@ describe('the stops the bar offers', () => {
         expect(worse, `readings the bar lost: ${worse.join(', ')}`).toEqual([]);
 
         const rows = after.alternatives;
+        // The thrifty stop (2026-10-14) stands outside the staircase: it burns more than the sweet spot and hits
+        // less, and it beats it on both ratios by definition (`engine/thriftyStop.ts`). The five-stop cap and the
+        // order below are the staircase's; the thrifty stop's own rule is held by `plan-fifth-stop.test.ts`.
+        const staircase = rows.filter((row) => row.pick !== 'thrifty');
         // At most five, each name once, the sweet spot among them and the plan's recommendation.
-        expect(rows.length).toBeLessThanOrEqual(5);
+        expect(staircase.length).toBeLessThanOrEqual(5);
         expect(new Set(rows.map((row) => row.pick)).size).toBe(rows.length);
         const sweet = rows.find((row) => row.pick === 'sweet-spot');
         expect(sweet).toBeDefined();
@@ -100,7 +104,7 @@ describe('the stops the bar offers', () => {
         const keys = rows.map((row) => JSON.stringify(row.counts));
         expect(new Set(keys).size).toBe(keys.length);
         // Ordered along the burn: every rung burns more and hits harder than the one to its left (S-61).
-        const rungs = rows.filter((row) => row.pick !== 'all-in');
+        const rungs = staircase.filter((row) => row.pick !== 'all-in');
         for (let index = 1; index < rungs.length; index += 1) {
           const previous = rungs[index - 1] as PlanRow;
           const current = rungs[index] as PlanRow;
@@ -323,11 +327,12 @@ describe('the rated re-typing', () => {
           expect(loss, `${key} lost ${(loss * 100).toFixed(3)} %`).toBeLessThanOrEqual(bound ?? 0);
         }
         const rows = on.alternatives;
-        expect(rows.length).toBeLessThanOrEqual(5);
+        const staircase = rows.filter((row) => row.pick !== 'thrifty');
+        expect(staircase.length).toBeLessThanOrEqual(5);
         for (const row of rows)
           for (const march of marchesOf(row as PlanTotals))
             expect(sheltered(scenario.request, march), `${row.pick} sheltered`).toBe(true);
-        const rungs = rows.filter((row) => row.pick !== 'all-in');
+        const rungs = staircase.filter((row) => row.pick !== 'all-in');
         for (let index = 1; index < rungs.length; index += 1) {
           const previous = rungs[index - 1] as PlanRow;
           const current = rungs[index] as PlanRow;

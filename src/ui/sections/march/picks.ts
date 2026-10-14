@@ -33,6 +33,9 @@ import { signedPercent } from './format';
  * under the bar read "Fewest mercs lost … Most mercs lost" and a stop named "Hired saver" standing between
  * them was the last place on the bar speaking of a stock in the other word (design rule 5: one name per
  * thing).
+ *
+ * **"Thrifty"** (2026-10-14) is the stop that beats the sweet spot on every cost — a shorter queue, less silver, gold and
+ * coins — and gives up some damage for it. A working name: the owner has not named it.
  */
 const PICK_WORD: Record<PlanPick, string> = {
   'burn-saver': 'Merc saver',
@@ -41,6 +44,7 @@ const PICK_WORD: Record<PlanPick, string> = {
   'more-mercs': 'More mercs',
   'steady-max': 'Steady max',
   'all-in': 'All in',
+  thrifty: 'Thrifty',
 };
 
 /**

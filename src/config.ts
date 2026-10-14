@@ -102,6 +102,39 @@ export const CAMPAIGN = {
     retype: 'rated' as const,
     tierCandidate: true,
     tierSeed: false,
+    /**
+     * **The thrifty stop** (owner, 2026-10-14; `CampaignInput.fifthStop`, `engine/thriftyStop.ts`; experiments 232–238,
+     * `tools/theorycraft/thrifty-stop.ts`): one more stop on the bar, read off the finished bar. Delete the entry and the
+     * bar is what it was; the numbers below are the whole rule.
+     *
+     * The rule infers the march the owner first asked for — one that beats the sweet spot on every cost and every ratio
+     * while taking a bit more burn (his 10-13 account: 9,471,089 against 10,002,509, burn 4 against 3, silver −11 %,
+     * gold −45 %, coins −46 %, queue −31 %, damage a silver ×1.06, a merc ×1.78, a gold ×1.72). A row the bar did not
+     * offer qualifies when its queue is **strictly shorter** than the sweet spot's, its silver no higher, its gold and
+     * coins no more than `goldTolerance` above, its damage a silver and a merc at least `silverFloor` / `mercFloor`
+     * times the sweet spot's, its burn **at most the next stop up's**, and its damage at least `damageFloor` of the sweet
+     * spot's. Of those, the most damage.
+     *
+     * - `damageFloor` — **0.8**: the stop may give up a fifth of the sweet spot's damage and no more (owner: *"80 %, and
+     *   make it configurable by the dev in config.ts"*). Without a floor the rule picked a row 45 % under the sweet spot
+     *   on the TotalStack profile and 22 % on the 2026-09-18 live account; at 80 % both go (that live row is 22.1 % under,
+     *   so a dev who wants it lowers this to 0.75). Measured on the 19 benchmark armies, experiment 238: 4 get a stop
+     *   (tiers 3–7, the 4 000 case, the 7 000 export, the evening account), 5 with the owner's 10-13 account.
+     * - `goldTolerance` — **0**: gold and dragon coins may not rise (a share: `0.2` lets them rise 20 %). Gold is the
+     *   lesser criterion for the owner (*"our bread and butter will always be monsters"*). Raising it to 1.0 added no army
+     *   at the 80 % floor in experiment 238, so it is a safety margin and not a lever today.
+     * - `silverFloor`, `mercFloor` — **1**: damage a silver and damage a merc may not fall below the sweet spot's. Never
+     *   rank on one ratio: the first draft bought damage with mercenaries (dmg/merc ×0.6–0.94) and the owner refused it.
+     * - `dropTypes` — **3**, `trims` — **2** (owner's 10-14 march, experiment 239): the pool also holds the marches
+     *   with up to three troop types taken out — the sizer's sheltered maximum over the rest — and each with its
+     *   capped mercenaries trimmed one and two chunks under that maximum. His 10-14 account: SW1 and ARC1 out, 40
+     *   hunters, 9,858,253 against the sweet spot's 9,778,542 for −5.5 % silver, −33 % gold, −30 % coins, −19 %
+     *   queue and one more chunk of burn. `0` turns the family off and the pool is the band, as first shipped.
+     *
+     * The burn may now reach the next stop up's (owner, 2026-10-14: *"below or equal more mercs"*); it was strictly
+     * below it.
+     */
+    fifthStop: { damageFloor: 0.8, goldTolerance: 0, silverFloor: 1, mercFloor: 1, dropTypes: 3, trims: 2 },
   },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band

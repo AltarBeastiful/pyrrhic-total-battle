@@ -307,3 +307,62 @@ Pins moved by it (not re-based), both on the live camp's already-red benchmark t
 against Total Optimization 1.94 → 1.924 (the accepted −0.5 %), and the margin inside TotalStack's hardest march
 −77.9 % → −83.0 % — the all-in was the only stop inside that row's 7.79M silver, and that row is the unsheltered
 one-march answer above. Suite 17 failed / 1 149 passed, the same failing tests as before the wall.
+
+---
+
+## 12. The thrifty stop (2026-10-14, shipped)
+
+The owner's first request in the horizon thread was a march that beats the sweet spot on **every** cost and ratio
+while taking a bit more burn — on his 10-13 account 9,471,089 against 10,002,509: silver −11 %, gold −45 %, coins
+−46 %, queue −31 %, damage a silver ×1.06, a merc ×1.78, for −5.3 % damage and one more chunk of burn. The bar could
+not show it: the sweet spot is the loudest row of its burn level (`sweetSpotBase`'s ladder keeps one row a level and
+never reads silver or queue), and S-61 refuses a stop that burns more and hits less.
+
+`CAMPAIGN.planFixes.fifthStop` (`src/config.ts`) → `CampaignInput.fifthStop` → `engine/thriftyStop.ts`, one pure
+function run on the finished bar: from the band, less the stops and the marches a pass re-sized into one, take the row
+with a strictly shorter queue, no more silver, gold or coins, damage a silver and a merc no lower, at least 80 % of
+the sweet spot's damage and a burn below the next stop up's; the most damage wins. Delete the config entry and the bar
+is what it was. The stop is `pick: 'thrifty'` ("Thrifty" in `picks.ts`, a working name), the one stop besides the
+`all-in` that sits outside the staircase.
+
+**Measured** (experiment 238, and `plan-fifth-stop.test.ts` on the engine): 4 of the 19 benchmark armies get one —
+monster tiers 3–7 (282,129,906, −0.3 % damage, queue −18.5 %), the 4 000 case (1,961,382, −7.7 %, −10.1 %), the 7 000
+export (4,098,844, −7.7 %, −19.9 %) and the evening account (6,972,311, −1.9 %, −4.9 %) — and his 10-13 account the
+9.47 M march. Every other stop is the march it was, in the same order (the test holds it). The engine and the
+experiment pick the same row on every army. The march is taken as the band holds it, without the put-back or the
+re-typing the stops go through.
+
+**Criteria that now exempt it**: `plan-stops` and `plan-criteria` hold the five-stop cap, the burn/damage order and
+"no stop beats the sweet spot on both ratios" over the staircase, `thrifty` apart (it beats the sweet spot on both
+ratios by definition, as the silver saver may).
+
+**Pins moved (not re-based)**: `plan-benchmark`'s stops count on the 7 000 export (pinned 4, the bar now carries 6),
+and the three goldens `tests/golden/{plans,raise,advisor}.json` — recaptured to a scratch copy and compared: `plans.json`
+differs only by the added stop, the `bestFor` flags and `leftOut` −1 on 11 of 76 entries; `raise.json` and
+`advisor.json` by the extra stop's rows. The owner registers them.
+
+### 12.1 The types taken out (2026-10-14, experiment 239)
+
+The owner's next march, on his 10-14 account — SP1 1624 · RD1 859 · SW2 1302 · ARC2 951 · SP2 896 · RD2 473 · ARC3 532
+· SP3 501 · RD3 265 · EMH6 42 · WE 50 · ED 21 · BB 24 · SG 18 — got no thrifty stop: it is not in the band. It is, to
+the unit, the Elite sizer's **sheltered maximum over every troop type but Swordsman I and Archer I**, the march the
+March pane builds when those two are taken out. Taking the cheapest-HP stacks out raises the troop floor and the floor
+shelters more hunters and monsters. The search sizes over every type or over a prefix of the troop ranking
+(SW1 · SP1 · SW2 · … weakest first), so it never asks for this set.
+
+The thrifty pass now also pools, for every set of up to `dropTypes` (3) troop types taken out, that sheltered maximum
+with the whole sustainable stock as caps, and the same with each capped mercenary trimmed 1 and 2 chunks (`trims`)
+under it. Each is played on every march of the horizon, no finale, and passes the stops' gates (two troop stacks, the
+shelter, the sustain, S-58 B). On 11 troop types that is 696 sizer calls, ≈ 60 ms on the kernel; the plan's wall clock
+did not move outside its noise over the 21 armies. The burn gate reads *at most* the next stop up's now (owner: *"below
+or equal more mercs"*); dmg/merc stays at the sweet spot's floor (he refused a dmg/merc trade before).
+
+On his 10-14 account the trim finds a better march than his: **9,858,253 at 40 hunters, burn 4** (his 42 burn 5 and
+hit 9,481,280): against the sweet spot +0.8 % damage, silver −5.5 %, gold −32.6 %, coins −30.0 %, queue −19.1 %,
+dmg/silver ×1.07, dmg/merc ×1.67, rating +6.0. Over the 19 benchmark armies, one more army gets a stop (his live
+camp of 2026-09-18, −10 % damage for −33 % queue, at `dropTypes` 3 only), no pick changes elsewhere, and every other
+stop is the same march under every pool (asserted). `tools/theorycraft/out/239-the-types-taken-out.md`.
+
+**Open.** The family beats the sweet spot outright on his 10-14 account (more damage, less of every cost but one chunk
+of burn), so the search itself is missing it, not only the thrifty stop. Feeding it to the frontier would let the
+other stops take it too; that moves stops and pins and is the owner's call.

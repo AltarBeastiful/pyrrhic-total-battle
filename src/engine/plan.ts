@@ -57,6 +57,8 @@ import type {
   StackRequest,
   StackResult,
 } from './types';
+import type { FifthStopRule } from './thriftyStop';
+import { thriftyStop } from './thriftyStop';
 
 /**
  * What the **search** prices a march's losses at: the bare game, no temple and no training discounts. The
@@ -286,6 +288,12 @@ export interface CampaignInput {
    * Meant with `burnSaver: 'silver'`: the fold, not the guard, decides where the hired saver stands.
    */
   foldTo?: number | undefined;
+  /**
+   * **The thrifty stop** (owner, 2026-10-14; `CAMPAIGN.planFixes.fifthStop`). Set, the bar gets one more stop after
+   * everything else has run: the band's march that beats the sweet spot on every cost and ratio under this rule
+   * (`thriftyStop`). It is read off the finished bar, so no other stop moves; omitted, the bar is what it was.
+   */
+  fifthStop?: FifthStopRule | undefined;
   /**
    * **The fewest troop stacks a plan the bar offers may stand on** — the band's third arm, experiment 72's
    * criterion. Omitted it is **2**, as it has always been. Exposed for experiment 151 (2026-09-23), which found
@@ -748,9 +756,15 @@ export interface PlanCurvePoint {
  *    cost: a stock smaller than a chunk burns the same whatever it fields, so 10 · 9 · 8 · 7 tied the steady
  *    max and was dropped as a duplicate of it, on the very armies where TotalStack's priority search answers
  *    26 486 216 over four marches (ten bears) and 25 439 016 (three) against this plan's 21 732 276 and
- *    19 115 768.
+ *    19 115 768;
+ *  - `thrifty` — offered when `CampaignInput.fifthStop` is set and the band holds a march that beats the sweet spot on
+ *    every cost and both ratios (`thriftyStop`, `engine/thriftyStop.ts`): a shorter queue, no more silver, gold or
+ *    coins, no less damage a silver or a merc, at the price of some damage and perhaps a few more units burned. It
+ *    is the one stop besides the `all-in` that may sit out of the bar's order: it burns more than the sweet spot
+ *    and hits less.
  */
-export type PlanPick = 'burn-saver' | 'silver-saver' | 'sweet-spot' | 'more-mercs' | 'steady-max' | 'all-in';
+export type PlanPick =
+  'burn-saver' | 'silver-saver' | 'sweet-spot' | 'more-mercs' | 'steady-max' | 'all-in' | 'thrifty';
 
 /**
  * A plan the bar offers: one of the four answers above, priced.
@@ -7900,6 +7914,130 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       const { next } = taken;
       planTrace.sink?.({ step: 'ownLadderFinale', pick: next.pick, counts: next.finaleCounts ?? {} });
       stops[index] = next;
+    }
+  }
+
+  /**
+   * **The thrifty stop, read off the finished bar** (`CampaignInput.fifthStop`; owner, 2026-10-14). It needs the
+   * sweet spot and the stop above it as they stand after every pass, so it runs after all of them and changes none.
+   * The pool is the band less the marches already on the bar and the ones a pass re-sized into a stop
+   * (`generatedOf`), priced over the horizon like the stops. The march is taken as the band holds it: it has not
+   * been through the put-back or the re-typing the stops went through (re-typing moved the owner's 10-13 march
+   * +0.6 % damage in a measurement, so a pass over it would only improve its figures).
+   *
+   * **And the marches with a few troop types taken out** (`FifthStopRule.dropTypes`; owner, 2026-10-14, experiment
+   * 239). His 10-14 march is the Elite sizer's sheltered maximum over every troop type but Swordsman I and Archer I —
+   * the march the March pane builds when he takes those two out of a stop. The search never asks for it: it sizes
+   * over every type, or over a prefix of the troop ranking, and dropping SW1 and ARC1 is neither. Taking the
+   * cheapest-HP types out raises the troop floor, the floor shelters more hunters and monsters, and the march hit
+   * **9,858,253** at 40 hunters against the sweet spot's 9,778,542, for less silver, gold, coins and queue and one more
+   * chunk of burn. So the pool also holds, for every set of up to `dropTypes` troop types taken out, the sizer's
+   * sheltered maximum with the whole sustainable stock as its caps, and the same with each capped mercenary trimmed
+   * `1 … trims` chunks under what that maximum fielded (a chunk is ten units and the burn is counted in chunks, so
+   * 42 hunters burn five and 40 burn four — and hit harder there, measured). Each is played on every march of the
+   * horizon, no finale, and passes the stops' own gates: two troop stacks at least, every hired stack under the
+   * lowest troop stack, every stock lasting the horizon, S-58 B.
+   */
+  if (input.fifthStop !== undefined) {
+    const sizedFrom = [...generatedOf.values()];
+    const typesOut = ((drop: number, trims: number): TradeRow[] => {
+      if (drop <= 0 || planned === undefined) return [];
+      const repeats = planned;
+      const caps = mercTypes.map((entry) => {
+        const held = sustain[entry.id] ?? 0;
+        return {
+          entry,
+          count: held === Infinity ? (stock[entry.id] ?? 0) : largestSustained(held, repeats),
+        };
+      });
+      if (caps.every((merc) => merc.count <= 0)) return [];
+      const rows: TradeRow[] = [];
+      const seen = new Set<string>();
+      const take = (sized: ReturnType<typeof sizedShape>): void => {
+        const rungs = sized.rungs.filter((rung) => rung.count > 0);
+        const mercs = sized.mercs.filter((merc) => merc.count > 0);
+        if (rungs.length < 2 || mercs.length === 0) return;
+        const floor = Math.min(...rungs.map((rung) => rung.count * rung.entry.hp));
+        if (mercs.some((merc) => merc.count * merc.entry.hp >= floor)) return;
+        if (mercs.some((merc) => lastsMarches(sustain[merc.entry.id] ?? 0, merc.count) < repeats)) return;
+        const counts: Record<string, number> = {};
+        for (const stack of [...rungs, ...mercs]) counts[stack.entry.id] = stack.count;
+        const key = jsonOf(counts);
+        if (seen.has(key)) return;
+        seen.add(key);
+        const march = toMarch(rungs, mercs, marchOf([...rungs, ...mercs], enemyStacks));
+        const totalDamage = repeats * march.damage;
+        const silver = repeats * march.silver;
+        const dragonCoins = repeats * march.dragonCoins;
+        const mercLost = repeats * march.mercLost;
+        const hiredDamage = repeats * march.hiredDamage;
+        const row: TradeRow = {
+          counts,
+          shape: 'elite',
+          label:
+            `${String(rungs.length)} stacks · ${String(mercs.reduce((sum, merc) => sum + merc.count, 0))} hired · ` +
+            `${compact(march.silver)} silver a march`,
+          totalDamage,
+          hiredDamage,
+          silver,
+          gold: repeats * march.gold,
+          dragonCoins,
+          seconds: repeats * march.seconds,
+          mercLost,
+          marches: repeats,
+          damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
+          damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
+          damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
+          repeat: {
+            damage: march.damage,
+            hiredDamage: march.hiredDamage,
+            silver: march.silver,
+            gold: march.gold,
+            dragonCoins: march.dragonCoins,
+            seconds: march.seconds,
+            mercLost: march.mercLost,
+          },
+        };
+        // S-58 B, as every stop is held to it: no hole above the cut.
+        if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(row, entry.id))) return;
+        rows.push(row);
+      };
+      const ids = troops.map((entry) => entry.id);
+      const out = (k: number, from: number, dropped: string[]): void => {
+        if (dropped.length === k) {
+          const kept = new Set(ids.filter((id) => !dropped.includes(id)));
+          const most = sizedShape(request, byId, caps, 'elite', kept);
+          take(most);
+          const fielded = new Map(most.mercs.map((merc) => [merc.entry.id, merc.count]));
+          for (let trim = 1; trim <= trims; trim += 1) {
+            const trimmed = caps.map((merc) =>
+              merc.entry.pool !== 'authority' || unlimited.has(merc.entry.id)
+                ? merc
+                : {
+                    entry: merc.entry,
+                    count: Math.min(merc.count, Math.max(0, chunks(fielded.get(merc.entry.id) ?? 0) - trim) * CHUNK),
+                  },
+            );
+            if (trimmed.every((merc, index) => merc.count === caps[index]?.count)) break;
+            take(sizedShape(request, byId, trimmed, 'elite', kept));
+          }
+          return;
+        }
+        for (let index = from; index < ids.length; index += 1) out(k, index + 1, [...dropped, ids[index] as string]);
+      };
+      for (let k = 1; k <= Math.min(drop, ids.length - 2); k += 1) out(k, 0, []);
+      return rows;
+    })(input.fifthStop.dropTypes ?? 0, input.fifthStop.trims ?? 0);
+    const found = thriftyStop(
+      stops,
+      [...candidates, ...typesOut].filter(
+        (row) => ![...stops, ...sizedFrom].some((other) => sameCounts(other, row)),
+      ),
+      input.fifthStop,
+    );
+    if (found) {
+      offer(withTail(found), 'thrifty');
+      stops.sort(byBurn);
     }
   }
 

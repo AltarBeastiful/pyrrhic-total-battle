@@ -12,7 +12,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-10-13T02:56:00.706Z, commit (working tree)
+Run: 2026-10-14T17:30:56.649Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 
@@ -239,7 +239,7 @@ The plan offers 5 stops.
 
 ## first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)
 
-The plan offers 5 stops.
+The plan offers 6 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -259,6 +259,7 @@ The plan offers 5 stops.
 | Tier ladder · monsters after troops | 4 | 10 · 20,000 | 202,818,501 | 38,919,200 | 4,256 | 34 | 5.21 | 509,173 | 30 | 136 | 62,080 | 427,463 | 1,256,373 | 3,267 |
 | Troops first · monsters after mercenaries | 4 | 10 · 20,000 | 111,509,009 | 36,239,200 | 5,888 | 33 | 3.08 | 418,401 | 29 | 94 | 38,400 | 406,470 | 868,559 | 2,904 |
 | Complete optimization · silver-saver | 4 | 2 · 10,604 | 758,014,640 | 46,561,600 | 12,512 | 16 | 16.28 | 716,694 | 12 | 328 | 164,480 | 805,992 | 2,255,821 | 4,609 |
+| Complete optimization · thrifty | 4 | 2 · 15,150 | 897,515,601 | 56,957,600 | 18,776 | 24 | 15.76 | 690,920 | 20 | 367 | 171,760 | 722,514 | 2,369,237 | 5,225 |
 | Complete optimization · sweet-spot | 4 | 2 · 19,998 | 1,132,374,984 | 76,544,800 | 23,936 | 20 | 14.79 | 780,610 | 16 | 444 | 208,320 | 863,562 | 2,483,456 | 5,436 |
 | Complete optimization · more-mercs | 4 | 2 · 19,998 | 1,591,128,864 | 84,032,000 | 36,192 | 28 | 18.93 | 824,031 | 24 | 644 | 291,520 | 849,169 | 2,414,356 | 5,458 |
 | Complete optimization · steady-max | 4 | 2 · 20,000 | 1,704,237,793 | 82,375,400 | 39,672 | 32 | 20.69 | 831,119 | 28 | 698 | 304,440 | 829,636 | 2,385,130 | 5,598 |
@@ -270,7 +271,7 @@ No comparable `TotalStack · Total Optimization` row on this army, so the owner�
 
 ## the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)
 
-The plan offers 3 stops.
+The plan offers 4 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -299,6 +300,7 @@ The plan offers 3 stops.
 | TotalStack · priority search under Elite (averageDamage) | 4 | 8 · 4,000 | 8,262,390 | 6,083,200 | 1,352 | 24 | 1.36 | 251,351 | 24 | 0 | 0 | 251,351 | 0 | 8,262,390 |
 | TotalStack · priority search under Elite (damagePerSilver) | 4 | 8 · 4,000 | 8,262,390 | 6,083,200 | 1,352 | 24 | 1.36 | 251,351 | 24 | 0 | 0 | 251,351 | 0 | 8,262,390 |
 | Complete optimization · silver-saver | 4 | 8 · 2,020 | 5,268,771 | 3,803,700 | 736 | 19 | 1.39 | 189,918 | 19 | 0 | 0 | 189,918 | 0 | 5,268,771 |
+| Complete optimization · thrifty | 4 | 8 · 3,627 | 7,875,793 | 5,652,100 | 1,192 | 19 | 1.39 | 293,176 | 19 | 0 | 0 | 293,176 | 0 | 7,875,793 |
 | Complete optimization · sweet-spot | 4 | 8 · 4,000 | 8,530,502 | 6,087,200 | 1,176 | 21 | 1.40 | 265,255 | 21 | 0 | 0 | 265,255 | 0 | 8,530,502 |
 | Complete optimization · all-in | 4 | 8 · 3,999 | 8,985,057 | 6,085,400 | 1,336 | 24 | 1.48 | 261,725 | 24 | 0 | 0 | 261,725 | 0 | 8,985,057 |
 
@@ -308,11 +310,11 @@ The plan offers 3 stops.
 
 **The six markers**, our best against theirs on each alone: damage ✓, silver ✓, burned ✓, gold ✓, dragonCoins =, seconds ✓.
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.072** ✓, damage a hired soldier **1.013** ✓, damage a monster —. All three are at or above the goal.
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.072** ✓, damage a hired soldier **1.120** ✓, damage a monster —. All three are at or above the goal.
 
 ## 2026-09-17 export, its setup (7 000 leadership)
 
-The plan offers 5 stops.
+The plan offers 6 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -340,6 +342,7 @@ The plan offers 5 stops.
 | TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 7,000 | 8,487,048 | 10,965,600 | 3,472 | 51 | 0.77 | 0 | 51 | 0 | 0 | 0 | 0 | 8,487,048 |
 | Complete optimization · burn-saver | 4 | 7 · 6,359 | 15,427,347 | 10,155,600 | 2,064 | 26 | 1.52 | 354,012 | 26 | 0 | 0 | 354,012 | 0 | 15,427,347 |
 | Complete optimization · silver-saver | 4 | 7 · 5,086 | 16,259,746 | 8,670,400 | 2,496 | 32 | 1.88 | 349,573 | 32 | 0 | 0 | 349,573 | 0 | 16,259,746 |
+| Complete optimization · thrifty | 4 | 7 · 5,581 | 17,764,429 | 9,275,500 | 2,760 | 35 | 1.92 | 357,360 | 35 | 0 | 0 | 357,360 | 0 | 17,764,429 |
 | Complete optimization · sweet-spot | 4 | 7 · 6,975 | 19,031,865 | 10,907,600 | 2,760 | 35 | 1.74 | 357,360 | 35 | 0 | 0 | 357,360 | 0 | 19,031,865 |
 | Complete optimization · steady-max | 4 | 7 · 6,999 | 24,300,698 | 10,958,900 | 4,000 | 55 | 2.22 | 340,059 | 55 | 0 | 0 | 340,059 | 0 | 24,300,698 |
 | Complete optimization · all-in | 4 | 4 · 6,998 | 24,945,884 | 12,717,200 | 5,360 | 73 | 1.96 | 253,556 | 73 | 0 | 0 | 253,556 | 0 | 24,945,884 |
@@ -436,7 +439,7 @@ The plan offers 4 stops.
 
 ## live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000)
 
-The plan offers 5 stops.
+The plan offers 6 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -464,6 +467,7 @@ The plan offers 5 stops.
 | TotalStack · priority search under Elite (damagePerSilver) | 4 | 4 · 11,000 | 22,905,506 | 16,332,000 | 62,136 | 868 | 1.40 | 16,768 | 868 | 0 | 0 | 16,768 | 0 | 22,905,506 |
 | Complete optimization · burn-saver | 4 | 7 · 9,429 | 20,397,713 | 15,244,600 | 2,264 | 30 | 1.34 | 349,739 | 30 | 0 | 0 | 349,739 | 0 | 20,397,713 |
 | Complete optimization · silver-saver | 4 | 7 · 6,921 | 21,718,706 | 12,300,400 | 3,032 | 48 | 1.77 | 289,672 | 48 | 0 | 0 | 289,672 | 0 | 21,718,706 |
+| Complete optimization · thrifty | 4 | 7 · 10,517 | 27,767,966 | 16,518,900 | 4,056 | 61 | 1.68 | 285,220 | 61 | 0 | 0 | 285,220 | 0 | 27,767,966 |
 | Complete optimization · sweet-spot | 4 | 7 · 10,912 | 29,309,669 | 16,975,300 | 4,024 | 59 | 1.73 | 309,154 | 59 | 0 | 0 | 309,154 | 0 | 29,309,669 |
 | Complete optimization · steady-max | 4 | 7 · 10,998 | 34,163,357 | 17,179,900 | 5,040 | 76 | 1.99 | 300,023 | 76 | 0 | 0 | 300,023 | 0 | 34,163,357 |
 | Complete optimization · all-in | 4 | 5 · 10,905 | 34,784,291 | 19,233,100 | 6,272 | 89 | 1.81 | 271,725 | 89 | 0 | 0 | 271,725 | 0 | 34,784,291 |
@@ -523,7 +527,7 @@ The plan offers 4 stops.
 
 ## the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited)
 
-The plan offers 5 stops.
+The plan offers 6 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -545,6 +549,7 @@ The plan offers 5 stops.
 | TotalStack · Elite Preservation | 4 | 7 · 4,975 | 49,229,801 | 7,794,000 | 59,176 | 374 | 6.32 | 109,269 | 346 | 28 | 0 | 118,111 | 0 | 49,229,801 |
 | Complete optimization · burn-saver | 4 | 7 · 4,530 | 8,833,940 | 7,227,400 | 1,448 | 16 | 1.22 | 257,643 | 12 | 4 | 0 | 260,363 | 249,480 | 8,833,940 |
 | Complete optimization · silver-saver | 4 | 2 · 2,774 | 8,947,961 | 6,704,900 | 5,480 | 34 | 1.33 | 171,510 | 30 | 4 | 0 | 138,938 | 415,800 | 8,947,961 |
+| Complete optimization · thrifty | 4 | 4 · 4,975 | 15,684,524 | 8,840,400 | 6,368 | 48 | 1.77 | 232,599 | 44 | 4 | 0 | 193,265 | 665,280 | 15,684,524 |
 | Complete optimization · sweet-spot | 4 | 4 · 4,975 | 16,776,469 | 9,957,500 | 7,224 | 57 | 1.68 | 208,269 | 53 | 4 | 0 | 169,593 | 720,720 | 16,776,469 |
 | Complete optimization · more-mercs | 4 | 1 · 4,882 | 31,715,963 | 13,734,000 | 30,120 | 218 | 2.31 | 145,486 | 204 | 14 | 0 | 125,033 | 443,520 | 31,715,963 |
 | Complete optimization · steady-max | 4 | 1 · 4,974 | 49,190,513 | 13,927,200 | 51,192 | 344 | 3.53 | 142,996 | 324 | 20 | 0 | 118,285 | 543,312 | 49,190,513 |
@@ -785,25 +790,25 @@ Not asserted, and deliberately — a timing floor would be red on a slow machine
 
 | army | planner (median of 3) | cpu time | contended? | of its budget | bound? | search, all calls | a call | of its budget |
 |---|---|---|---|---|---|---|---|---|
-| first-run army, Bear V ×1 (20 000 leadership) | 30 ms | 30 ms | no | 0 % | no | 4,409 ms over 40 | 110 ms | 1 % |
-| first-run army, Bear V ×2 (20 000 leadership) | 75 ms | 79 ms | no | 0 % | no | 3,789 ms over 40 | 95 ms | 1 % |
-| first-run army, Bear V ×3 (20 000 leadership) | 53 ms | 60 ms | no | 0 % | no | 4,022 ms over 40 | 101 ms | 1 % |
-| first-run army, Bear V ×10 (20 000 leadership) | 116 ms | 101 ms | no | 0 % | no | 3,397 ms over 40 | 85 ms | 1 % |
-| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 164 ms | 244 ms | no | 0 % | no | 3,655 ms over 40 | 91 ms | 1 % |
-| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 1,120 ms | 1,426 ms | no | 3 % | no | 79,462 ms over 40 | 1,987 ms | 25 % |
-| first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) | 586 ms | 727 ms | no | 1 % | no | 102,977 ms over 40 | 2,574 ms | 32 % |
-| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 84 ms | 165 ms | no | 0 % | no | 3,731 ms over 40 | 93 ms | 1 % |
-| 2026-09-17 export, its setup (7 000 leadership) | 351 ms | 492 ms | no | 1 % | no | 1,422 ms over 40 | 36 ms | 0 % |
-| 2026-09-17 export, 12 000 leadership | 333 ms | 363 ms | no | 1 % | no | 1,413 ms over 40 | 35 ms | 0 % |
-| live account of 2026-09-18 (one hired type, 20 000 leadership) | 220 ms | 230 ms | no | 1 % | no | 153 ms over 40 | 4 ms | 0 % |
-| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 365 ms | 450 ms | no | 1 % | no | 1,368 ms over 40 | 34 ms | 0 % |
-| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 73 ms | 162 ms | no | 0 % | no | 2,915 ms over 40 | 73 ms | 1 % |
-| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 158 ms | 185 ms | no | 0 % | no | 654 ms over 40 | 16 ms | 0 % |
-| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 118 ms | 161 ms | no | 0 % | no | 149 ms over 40 | 4 ms | 0 % |
-| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 106 ms | 134 ms | no | 0 % | no | 147 ms over 40 | 4 ms | 0 % |
-| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 93 ms | 131 ms | no | 0 % | no | 2,490 ms over 40 | 62 ms | 1 % |
-| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 117 ms | 176 ms | no | 0 % | no | 2,467 ms over 40 | 62 ms | 1 % |
-| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 197 ms | 285 ms | no | 0 % | no | 3,004 ms over 40 | 75 ms | 1 % |
+| first-run army, Bear V ×1 (20 000 leadership) | 36 ms | 35 ms | no | 0 % | no | 3,979 ms over 40 | 99 ms | 1 % |
+| first-run army, Bear V ×2 (20 000 leadership) | 81 ms | 90 ms | no | 0 % | no | 3,462 ms over 40 | 87 ms | 1 % |
+| first-run army, Bear V ×3 (20 000 leadership) | 44 ms | 59 ms | no | 0 % | no | 3,423 ms over 40 | 86 ms | 1 % |
+| first-run army, Bear V ×10 (20 000 leadership) | 86 ms | 168 ms | no | 0 % | no | 3,188 ms over 40 | 80 ms | 1 % |
+| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 241 ms | 254 ms | no | 1 % | no | 3,171 ms over 40 | 79 ms | 1 % |
+| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 1,402 ms | 1,697 ms | no | 4 % | no | 82,405 ms over 40 | 2,060 ms | 26 % |
+| first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) | 604 ms | 763 ms | no | 2 % | no | 107,266 ms over 40 | 2,682 ms | 34 % |
+| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 106 ms | 256 ms | no | 0 % | no | 4,048 ms over 40 | 101 ms | 1 % |
+| 2026-09-17 export, its setup (7 000 leadership) | 340 ms | 488 ms | no | 1 % | no | 1,421 ms over 40 | 36 ms | 0 % |
+| 2026-09-17 export, 12 000 leadership | 358 ms | 439 ms | no | 1 % | no | 1,371 ms over 40 | 34 ms | 0 % |
+| live account of 2026-09-18 (one hired type, 20 000 leadership) | 219 ms | 222 ms | no | 1 % | no | 148 ms over 40 | 4 ms | 0 % |
+| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 345 ms | 400 ms | no | 1 % | no | 1,337 ms over 40 | 33 ms | 0 % |
+| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 87 ms | 214 ms | no | 0 % | no | 2,835 ms over 40 | 71 ms | 1 % |
+| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 167 ms | 256 ms | no | 0 % | no | 648 ms over 40 | 16 ms | 0 % |
+| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 124 ms | 138 ms | no | 0 % | no | 142 ms over 40 | 4 ms | 0 % |
+| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 108 ms | 117 ms | no | 0 % | no | 147 ms over 40 | 4 ms | 0 % |
+| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 96 ms | 203 ms | no | 0 % | no | 2,488 ms over 40 | 62 ms | 1 % |
+| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 133 ms | 246 ms | no | 0 % | no | 2,329 ms over 40 | 58 ms | 1 % |
+| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 213 ms | 351 ms | no | 1 % | no | 2,933 ms over 40 | 73 ms | 1 % |
 
 **0 of 19** armies leave the planner budget-bound, and the priority search is bound on none of them either.
 

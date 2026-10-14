@@ -101,7 +101,9 @@ interface Floors {
 
 /** What every bar must satisfy, whatever the army: the criteria's own consistency. */
 function expectCriteria(plan: CampaignPlan, floors: Floors): void {
-  const rows = plan.alternatives;
+  // The thrifty stop (2026-10-14) is the one stop that stands outside the staircase: it burns more than the sweet
+  // spot and hits less. These criteria are the staircase's; its own rule is held by `plan-fifth-stop.test.ts`.
+  const rows = plan.alternatives.filter((row) => row.pick !== 'thrifty');
   expect(rows.length).toBeGreaterThanOrEqual(3);
   expect(rows.length).toBeLessThanOrEqual(5);
   const named = (pick: PlanRow['pick']): PlanRow | undefined => rows.find((row) => row.pick === pick);
@@ -374,7 +376,7 @@ describe.skipIf(!existsSync(OWNER_EXPORT))(
       // had **no** silver saver (the sweep's per-unit vectors gave it one at 7 burned), so the exception had
       // never applied here. What it is for is unchanged: no *other* stop may beat the recommendation on both.
       for (const other of plan.alternatives) {
-        if (other === sweet || other.pick === 'silver-saver') continue;
+        if (other === sweet || other.pick === 'silver-saver' || other.pick === 'thrifty') continue;
         const beats =
           other.damagePerSilver >= sweet.damagePerSilver &&
           other.damagePerMercenary >= sweet.damagePerMercenary &&
