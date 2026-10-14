@@ -124,7 +124,7 @@ export interface ArmyHorizon {
   /** The army's bar criteria and ten readings, as `reportArmy` reads them. */
   criteria: ArmyReport['criteria'];
   readings: ArmyReport['readings'];
-  meta: { planMs: number; marchTarget: number; budgetBound: boolean };
+  meta: { marchTarget: number; budgetBound: boolean };
 }
 
 // ---- the pure parts -------------------------------------------------------------------------------------
@@ -281,7 +281,6 @@ const distinct = (rows: { counts: Record<string, number> }[]): number =>
 
 /** The horizon of one army: ONE `planCampaign`, the row set of the module note, rated and marked. */
 export function horizonOf(label: string, request: StackRequest): ArmyHorizon {
-  const startedAt = performance.now();
   const refused = (why: string): ArmyHorizon => ({
     label,
     refused: why,
@@ -290,7 +289,7 @@ export function horizonOf(label: string, request: StackRequest): ArmyHorizon {
     stops: [],
     criteria: reportArmy(label, request, why).criteria,
     readings: [],
-    meta: { planMs: performance.now() - startedAt, marchTarget: HORIZON, budgetBound: false },
+    meta: { marchTarget: HORIZON, budgetBound: false },
   });
   let plan;
   try {
@@ -307,7 +306,6 @@ export function horizonOf(label: string, request: StackRequest): ArmyHorizon {
   } catch (error) {
     return refused(error instanceof Error ? error.message : String(error));
   }
-  const planMs = performance.now() - startedAt;
   const offered = plan.alternatives;
   const sweet = plan.recommend ?? offered.find((r) => r.pick === 'sweet-spot') ?? offered[0];
   const cheapest = offered[0];
@@ -386,7 +384,7 @@ export function horizonOf(label: string, request: StackRequest): ArmyHorizon {
     stops: offered.map((r) => ({ pick: r.pick, key: keyOf(r.counts), campaign: campaignOf(r) })),
     criteria: report.criteria,
     readings: report.readings,
-    meta: { planMs, marchTarget: HORIZON, budgetBound: plan.budgetBound === true },
+    meta: { marchTarget: HORIZON, budgetBound: plan.budgetBound === true },
   };
 }
 

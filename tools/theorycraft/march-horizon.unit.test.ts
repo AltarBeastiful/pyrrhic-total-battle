@@ -78,7 +78,7 @@ describe('march horizon, pure parts', () => {
       stops: [{ pick: 'sweet-spot', key: stop.key, campaign: stop.campaign }],
       criteria,
       readings: [],
-      meta: { planMs: 0, marchTarget: 4, budgetBound: false },
+      meta: { marchTarget: 4, budgetBound: false },
     } as unknown as ArmyHorizon;
     const text = renderSummary([army]);
     const [, offered = '', fifths = ''] = text.split(/\*\*Offered stops\*\*|\*\*Fifth candidates\*\*/);
