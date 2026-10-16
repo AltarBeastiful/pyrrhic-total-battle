@@ -295,6 +295,30 @@ export interface CampaignInput {
    */
   fifthStop?: FifthStopRule | undefined;
   /**
+   * **The types taken out, fed to the search itself** (owner, 2026-10-15; experiment 240). Set, the search also
+   * scores the Elite sizer's sheltered maximum over every set of up to `dropTypes` troop types taken out, and the
+   * same with each capped mercenary trimmed `1 … trims` chunks — the family the thrifty stop pools
+   * (`FifthStopRule.dropTypes`), put on the frontier where every stop can take it. Omitted, the search is what it was.
+   */
+  typesOutSearch?: { dropTypes: number; trims: number } | undefined;
+  /**
+   * **The rated stops** (owner, 2026-10-14; `docs/plans/the-rated-stops.md`, experiment 241). Set, each stop may
+   * take the march of its pool that rates above it by `minRating` and passes the bar's gates — see the pass. `rule`:
+   * `same-burn` looks at the stop's burn and one chunk under; `one-chunk` one chunk over as well. `typesOut` adds the
+   * thrifty stop's types-out family to the band (needs `fifthStop`). `damageFloor`: the share of the stop's damage the
+   * new march keeps at least. Omitted, the bar is what it was.
+   */
+  ratedStops?:
+    | {
+        rule: 'same-burn' | 'one-chunk';
+        minRating: number;
+        typesOut: boolean;
+        damageFloor?: number | undefined;
+        /** The bar the thrifty stop reads its sweet spot from: as the rated stops left it (default), or before. */
+        thriftyReads?: 'after' | 'before' | undefined;
+      }
+    | undefined;
+  /**
    * **The fewest troop stacks a plan the bar offers may stand on** — the band's third arm, experiment 72's
    * criterion. Omitted it is **2**, as it has always been. Exposed for experiment 151 (2026-09-23), which found
    * the owner's live camp's hardest sheltered plans — a single Rider III wall of 2 441 with every hired stack
@@ -877,6 +901,11 @@ export interface CampaignPlan extends PlanTotals {
    * draws the four answers and this is the set behind them.
    */
   trade?: PlanTotals[] | undefined;
+  /**
+   * **The types-out pool** the thrifty pass read beside the band (`FifthStopRule.dropTypes`/`trims`), priced like
+   * `trade`. Present only with `withTrade` and `fifthStop` set: experiment 241 rates the stops against it.
+   */
+  typesOut?: PlanTotals[] | undefined;
   /**
    * How many of the frontier's non-dominated plans the bar does **not** offer. The four answers above are
    * drawn from the plans inside the band — the marches that field a token share of the hired stock, spend
@@ -4032,6 +4061,13 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     return ids;
   };
   /**
+   * The troop sets the types-out pass sizes over (`CampaignInput.typesOutSearch`), named to the sizer by a
+   * negative depth: `-1` is the first set, `-2` the second. A positive depth is still a prefix of the ranking.
+   */
+  const troopSets: ReadonlySet<string>[] = [];
+  const troopIdsOf = (depth: number): ReadonlySet<string> | undefined =>
+    depth < 0 ? troopSets[-depth - 1] : prefixIds(depth);
+  /**
    * The Elite sizer over every troop type, the hired counts as caps — what the March pane draws after a
    * put-back, scored inside the search so the plan can find it itself (`CampaignInput.sizerShape`).
    */
@@ -4084,7 +4120,7 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
         method,
         // The prefix as a set of ids, which is what `sizedShape` filters on: `troops` is the ranking, weakest
         // per HP first, so its last `depth` entries are the strongest `depth` types.
-        depth === undefined ? undefined : prefixIds(depth),
+        depth === undefined ? undefined : troopIdsOf(depth),
       );
       kept = {
         method,
@@ -5082,6 +5118,75 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
       return !held || candidate.total > held.total ? candidate : held;
     }, null);
     if (prefixBest) walkDown(prefixBest.mercs, burnOf(prefixBest.mercs));
+    /**
+     * **The types taken out** (`CampaignInput.typesOutSearch`; owner, 2026-10-15, experiment 240), scored here and
+     * under the same freeze as the prefix family, for the same reason: a set of shapes the search was short of,
+     * not a different search. For every set of up to `dropTypes` troop types taken out, the Elite sizer's sheltered
+     * maximum over the rest with each type's anchor as its cap, and the same with each capped mercenary trimmed
+     * `1 … trims` chunks under what the maximum fielded.
+     */
+    if (input.typesOutSearch !== undefined && sizerShape) {
+      const { dropTypes, trims } = input.typesOutSearch;
+      const ids = troops.map((entry) => entry.id);
+      const pick = (k: number, from: number, dropped: string[]): void => {
+        if (dropped.length === k) {
+          troopSets.push(new Set(ids.filter((id) => !dropped.includes(id))));
+          return;
+        }
+        for (let index = from; index < ids.length; index += 1)
+          pick(k, index + 1, [...dropped, ids[index] as string]);
+      };
+      for (let k = 1; k <= Math.min(dropTypes, ids.length - 2); k += 1) pick(k, 0, []);
+      const scoreOne = (
+        marches: number,
+        vector: { entry: Effective; count: number }[],
+        code: number,
+      ): ScoredShape | null => {
+        const counts: Record<string, number> = {};
+        for (const merc of vector) counts[merc.entry.id] = merc.count;
+        const scored = score(marches, counts, 0, 1, input.silverBudget, code);
+        if (!scored || scored.rungs.length < 2) return null;
+        consider({
+          marches,
+          mercs: scored.mercs,
+          rungs: scored.rungs,
+          march: scored.march,
+          finale: scored.finale?.march ?? null,
+          finaleRungs: scored.finale?.rungs ?? [],
+          finaleMercs: scored.finale?.mercs ?? [],
+          total: scored.total,
+          depth: 0,
+          scale: 1,
+        });
+        return scored;
+      };
+      sets: for (let at = 0; at < troopSets.length; at += 1) {
+        const code = -(at + 1);
+        for (const marches of gridMarches) {
+          if (stop()) break sets;
+          const whole = mercTypes.map((entry) => ({ entry, count: anchorOf(entry.id, marches) }));
+          if (whole.every((merc) => merc.count <= 0)) continue;
+          const most = scoreOne(marches, whole, code);
+          if (!most) continue;
+          const fielded = new Map(most.mercs.map((merc) => [merc.entry.id, merc.count]));
+          for (let trim = 1; trim <= trims; trim += 1) {
+            const trimmed = whole.map((merc) =>
+              merc.entry.pool !== 'authority' || unlimited.has(merc.entry.id)
+                ? merc
+                : {
+                    entry: merc.entry,
+                    count: Math.min(
+                      merc.count,
+                      Math.max(0, chunks(fielded.get(merc.entry.id) ?? 0) - trim) * CHUNK,
+                    ),
+                  },
+            );
+            if (trimmed.every((merc, index) => merc.count === whole[index]?.count)) break;
+            scoreOne(marches, trimmed, code);
+          }
+        }
+      }
+    }
     best = frozen;
   }
 
@@ -7938,9 +8043,16 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
    * horizon, no finale, and passes the stops' own gates: two troop stacks at least, every hired stack under the
    * lowest troop stack, every stock lasting the horizon, S-58 B.
    */
-  if (input.fifthStop !== undefined) {
-    const sizedFrom = [...generatedOf.values()];
-    const typesOut = ((drop: number, trims: number): TradeRow[] => {
+  /**
+   * The types-out family (`FifthStopRule.dropTypes`/`trims`), built once a plan and read by the rated stops and the
+   * thrifty stop — the note above says what it holds and the gates it passes.
+   */
+  const typesOutMemo = new Map<string, TradeRow[]>();
+  const typesOutRows = (drop: number, trims: number): TradeRow[] => {
+    const memoKey = `${String(drop)}/${String(trims)}`;
+    const memo = typesOutMemo.get(memoKey);
+    if (memo) return memo;
+    const built = ((): TradeRow[] => {
       if (drop <= 0 || planned === undefined) return [];
       const repeats = planned;
       const caps = mercTypes.map((entry) => {
@@ -8015,7 +8127,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
                 ? merc
                 : {
                     entry: merc.entry,
-                    count: Math.min(merc.count, Math.max(0, chunks(fielded.get(merc.entry.id) ?? 0) - trim) * CHUNK),
+                    count: Math.min(
+                      merc.count,
+                      Math.max(0, chunks(fielded.get(merc.entry.id) ?? 0) - trim) * CHUNK,
+                    ),
                   },
             );
             if (trimmed.every((merc, index) => merc.count === caps[index]?.count)) break;
@@ -8023,13 +8138,147 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
           }
           return;
         }
-        for (let index = from; index < ids.length; index += 1) out(k, index + 1, [...dropped, ids[index] as string]);
+        for (let index = from; index < ids.length; index += 1)
+          out(k, index + 1, [...dropped, ids[index] as string]);
       };
       for (let k = 1; k <= Math.min(drop, ids.length - 2); k += 1) out(k, 0, []);
       return rows;
-    })(input.fifthStop.dropTypes ?? 0, input.fifthStop.trims ?? 0);
+    })();
+    typesOutMemo.set(memoKey, built);
+    return built;
+  };
+
+  /**
+   * **The rated stops** (`CampaignInput.ratedStops`; owner, 2026-10-14, *"there's rows with great rating still getting
+   * lost"*; `docs/plans/the-rated-stops.md`, experiment 241). Off by default. Each stop but the all-in, in turn, takes
+   * the march of its pool that rates highest against it, `rate(stop, march, markerRates)` on the repeated march, when
+   * that rating is above `minRating` and the march passes the bar's gates (§4): the names stay true, the staircase
+   * keeps its order (every stop to the right burns no less and hits harder), no march beats another outright, S-58 B,
+   * at least `damageFloor` of the stop's damage, a queue no longer than the stop's, and none of the ten readings is lost. The rates are the put-back's (`putBack.rates`, the owner's `markerRates`); without them the pass does nothing. `same-burn` (R2) looks at the
+   * stop's burn and one chunk under it; `one-chunk` (R3) one chunk over it as well. The pool is the band, plus the
+   * types-out family with `typesOut`.
+   */
+  /** The bar before the rated stops: the thrifty stop may read its sweet spot here (`ratedStops.thriftyReads`). */
+  const beforeRated = [...stops];
+  const ratedRates = input.putBack?.rates;
+  if (input.ratedStops !== undefined && ratedRates !== undefined) {
+    const rule = input.ratedStops;
+    const rates = ratedRates;
+    const sizedFrom = [...generatedOf.values()];
+    const fifth = input.fifthStop;
+    const pool = [
+      ...candidates,
+      ...(rule.typesOut && fifth !== undefined ? typesOutRows(fifth.dropTypes ?? 0, fifth.trims ?? 0) : []),
+    ];
+    const repeatBill = (row: PlanTotals): Bill => ({
+      damage: row.repeat.damage,
+      silver: row.repeat.silver,
+      gold: row.repeat.gold,
+      hired: row.repeat.mercLost,
+      dragonCoins: row.repeat.dragonCoins ?? 0,
+      seconds: row.repeat.seconds,
+    });
+    const outrightBeats = (x: PlanTotals, y: PlanTotals): boolean =>
+      x.totalDamage >= y.totalDamage &&
+      x.silver <= y.silver &&
+      x.mercLost <= y.mercLost &&
+      x.gold <= y.gold &&
+      (x.totalDamage > y.totalDamage || x.silver < y.silver || x.mercLost < y.mercLost || x.gold < y.gold);
+    const above = rule.rule === 'one-chunk' ? 1 : 0;
+    /** How many of a stop's best-rated candidates are re-typed before one is taken (each re-typing is a search). */
+    const RETYPE_TRIES = 3;
+    for (let index = 0; index < stops.length; index += 1) {
+      const current = stops[index] as PlanRow;
+      if (current.pick === 'all-in' || current.sequence !== undefined) continue;
+      const burn = current.repeat.mercLost;
+      const held = tenReadings(stops);
+      /** The bar's gates on `next` in `current`'s place, and its rating against `current` (undefined: refused). */
+      const admits = (next: PlanRow): number | undefined => {
+        const b = next.repeat.mercLost;
+        if (b < burn - 1 || b > burn + above) return undefined;
+        if (next.repeat.damage < current.repeat.damage * (rule.damageFloor ?? 0)) return undefined;
+        // The queue may not rise (owner, 2026-10-16: *"I'm worried it will end up costing a lot of training time"*).
+        if (next.repeat.seconds > current.repeat.seconds) return undefined;
+        const rating = rate(repeatBill(current), repeatBill(next), rates);
+        if (rating <= rule.minRating) return undefined;
+        const trial = stops.map((other) => (other === current ? next : other));
+        // The names.
+        if (next.pick === 'silver-saver' && trial.some((o) => o !== next && o.silver < next.silver))
+          return undefined;
+        if (next.pick === 'burn-saver' && trial.some((o) => o !== next && o.mercLost < next.mercLost))
+          return undefined;
+        if (
+          next.pick === 'steady-max' &&
+          trial.some((o) => o !== next && o.pick !== 'all-in' && o.totalDamage > next.totalDamage)
+        )
+          return undefined;
+        // The order (S-61): along the burn every stop of the staircase burns more and hits harder than the one to
+        // its left. The thrifty stop is not on the bar yet; the all-in stands apart.
+        const stair = trial.filter((o) => o.pick !== 'all-in').sort(byBurn);
+        if (
+          stair.some((o, at) => {
+            const left = stair[at - 1];
+            return (
+              left !== undefined &&
+              (o.repeat.mercLost <= left.repeat.mercLost || o.repeat.damage <= left.repeat.damage)
+            );
+          })
+        )
+          return undefined;
+        if (
+          trial.some(
+            (x) =>
+              x.pick !== 'all-in' &&
+              trial.some(
+                (y) => y !== x && y.pick !== 'all-in' && (x === next || y === next) && outrightBeats(x, y),
+              ),
+          )
+        )
+          return undefined;
+        if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(next, entry.id)))
+          return undefined;
+        if ([...stops, ...sizedFrom].some((other) => other !== current && sameCounts(other, next)))
+          return undefined;
+        const now = tenReadings(trial);
+        if (!now.every((value, at) => value >= (held[at] ?? 0) - Math.abs(held[at] ?? 0) * 1e-12))
+          return undefined;
+        return rating;
+      };
+      const ranked: { next: PlanRow; rating: number }[] = [];
+      for (const row of pool) {
+        const b = row.repeat.mercLost;
+        if (b < burn - 1 || b > burn + above) continue;
+        if ([...stops, ...sizedFrom].some((other) => sameCounts(other, row))) continue;
+        const next: PlanRow = {
+          ...withTail(row),
+          pick: current.pick,
+          bestFor: { silver: false, hired: false },
+        };
+        const rating = admits(next);
+        if (rating !== undefined) ranked.push({ next, rating });
+      }
+      ranked.sort((x, y) => y.rating - x.rating);
+      // The march is taken re-typed, as every stop of the bar has been (`retypeRowNow`; a silver saver's with its
+      // silver held), and the gates are read again on the re-typed march.
+      let taken: PlanRow | undefined;
+      for (const { next } of ranked.slice(0, RETYPE_TRIES)) {
+        const typed = retypeRowNow(next);
+        if (admits(typed) !== undefined) {
+          taken = typed;
+          break;
+        }
+      }
+      if (taken) stops[index] = taken;
+    }
+    stops.sort(byBurn);
+  }
+  let typesOutPool: TradeRow[] = [];
+  if (input.fifthStop !== undefined) {
+    const sizedFrom = [...generatedOf.values()];
+    const typesOut = typesOutRows(input.fifthStop.dropTypes ?? 0, input.fifthStop.trims ?? 0);
+    typesOutPool = typesOut;
     const found = thriftyStop(
-      stops,
+      input.ratedStops?.thriftyReads === 'before' ? beforeRated : stops,
       [...candidates, ...typesOut].filter(
         (row) => ![...stops, ...sizedFrom].some((other) => sameCounts(other, row)),
       ),
@@ -8272,7 +8521,10 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
     // repeated march, which the tail does not touch. The reference table (`curve`) is the one set priced *as
     // offered*, tail included, because it is the table drawn under the bar.
     ...(input.withTrade === true
-      ? { trade: [...candidates].sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage) }
+      ? {
+          trade: [...candidates].sort((a, b) => a.silver - b.silver || a.totalDamage - b.totalDamage),
+          ...(input.fifthStop !== undefined ? { typesOut: typesOutPool } : {}),
+        }
       : {}),
     // With no budget the recommendation is the sweet spot — the middle of the trade in hired stock, see
     // `sweetSpotBase` above. With a budget the plan *is* the answer and nothing is recommended beside it. The

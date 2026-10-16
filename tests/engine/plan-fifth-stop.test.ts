@@ -29,6 +29,8 @@ const plan = (request: StackRequest, fifthStop: boolean): CampaignPlan | undefin
       marchTarget: HORIZON,
       ...CAMPAIGN.planFixes,
       fifthStop: fifthStop ? CAMPAIGN.planFixes.fifthStop : undefined,
+      // The thrifty rule alone: the rated stops (which read the types-out pool through `fifthStop`) stay off.
+      ratedStops: undefined,
       putBack: CAMPAIGN.putBack,
     });
   } catch {
@@ -39,44 +41,50 @@ const plan = (request: StackRequest, fifthStop: boolean): CampaignPlan | undefin
 const identity = (row: PlanRow): string => `${row.pick}|${JSON.stringify(row.counts)}`;
 
 describe('the thrifty stop', () => {
-  test.each(scenarios.map((s) => [s.label, s] as const))('%s', (_label, scenario) => {
-    const off = plan(scenario.request, false);
-    const on = plan(scenario.request, true);
-    expect(off === undefined).toBe(on === undefined);
-    if (!off || !on) return;
+  test.each(scenarios.map((s) => [s.label, s] as const))(
+    '%s',
+    (_label, scenario) => {
+      const off = plan(scenario.request, false);
+      const on = plan(scenario.request, true);
+      expect(off === undefined).toBe(on === undefined);
+      if (!off || !on) return;
 
-    const others = on.alternatives.filter((row) => row.pick !== 'thrifty');
-    expect(others.map(identity), 'every other stop is the march it was, in its order').toEqual(
-      off.alternatives.map(identity),
-    );
-
-    const stop = on.alternatives.find((row) => row.pick === 'thrifty');
-    if (!stop) return;
-    const sweet = on.alternatives.find((row) => row.pick === 'sweet-spot');
-    expect(sweet, 'a thrifty stop is read against a sweet spot').toBeDefined();
-    if (!sweet) return;
-    const rule = CAMPAIGN.planFixes.fifthStop;
-    const r = stop.repeat;
-    const s = sweet.repeat;
-    expect(on.alternatives.filter((row) => row.pick === 'thrifty')).toHaveLength(1);
-    expect(r.seconds, 'queue').toBeLessThan(s.seconds);
-    expect(r.silver, 'silver').toBeLessThanOrEqual(s.silver);
-    expect(r.gold, 'gold').toBeLessThanOrEqual(s.gold * (1 + rule.goldTolerance));
-    expect(r.dragonCoins ?? 0, 'coins').toBeLessThanOrEqual((s.dragonCoins ?? 0) * (1 + rule.goldTolerance));
-    expect(r.damage / r.silver, 'damage a silver').toBeGreaterThanOrEqual(
-      (s.damage / s.silver) * rule.silverFloor,
-    );
-    expect(r.hiredDamage / Math.max(1, r.mercLost), 'damage a merc').toBeGreaterThanOrEqual(
-      (s.hiredDamage / Math.max(1, s.mercLost)) * rule.mercFloor,
-    );
-    expect(r.damage, 'damage floor').toBeGreaterThanOrEqual(s.damage * rule.damageFloor);
-    const above = on.alternatives.filter((row) => row.pick !== 'thrifty' && row.repeat.damage > s.damage);
-    if (above.length > 0)
-      expect(r.mercLost, 'burn at most the stop above the sweet spot').toBeLessThanOrEqual(
-        Math.min(...above.map((row) => row.repeat.mercLost)),
+      const others = on.alternatives.filter((row) => row.pick !== 'thrifty');
+      expect(others.map(identity), 'every other stop is the march it was, in its order').toEqual(
+        off.alternatives.map(identity),
       );
-    else
-      expect(r.mercLost, 'no stop above: no more burn than the sweet spot').toBeLessThanOrEqual(s.mercLost);
-    // Two whole plans an army, the monster camps at seconds each: the default 5 s is a full suite's load away.
-  }, 60_000);
+
+      const stop = on.alternatives.find((row) => row.pick === 'thrifty');
+      if (!stop) return;
+      const sweet = on.alternatives.find((row) => row.pick === 'sweet-spot');
+      expect(sweet, 'a thrifty stop is read against a sweet spot').toBeDefined();
+      if (!sweet) return;
+      const rule = CAMPAIGN.planFixes.fifthStop;
+      const r = stop.repeat;
+      const s = sweet.repeat;
+      expect(on.alternatives.filter((row) => row.pick === 'thrifty')).toHaveLength(1);
+      expect(r.seconds, 'queue').toBeLessThan(s.seconds);
+      expect(r.silver, 'silver').toBeLessThanOrEqual(s.silver);
+      expect(r.gold, 'gold').toBeLessThanOrEqual(s.gold * (1 + rule.goldTolerance));
+      expect(r.dragonCoins ?? 0, 'coins').toBeLessThanOrEqual(
+        (s.dragonCoins ?? 0) * (1 + rule.goldTolerance),
+      );
+      expect(r.damage / r.silver, 'damage a silver').toBeGreaterThanOrEqual(
+        (s.damage / s.silver) * rule.silverFloor,
+      );
+      expect(r.hiredDamage / Math.max(1, r.mercLost), 'damage a merc').toBeGreaterThanOrEqual(
+        (s.hiredDamage / Math.max(1, s.mercLost)) * rule.mercFloor,
+      );
+      expect(r.damage, 'damage floor').toBeGreaterThanOrEqual(s.damage * rule.damageFloor);
+      const above = on.alternatives.filter((row) => row.pick !== 'thrifty' && row.repeat.damage > s.damage);
+      if (above.length > 0)
+        expect(r.mercLost, 'burn at most the stop above the sweet spot').toBeLessThanOrEqual(
+          Math.min(...above.map((row) => row.repeat.mercLost)),
+        );
+      else
+        expect(r.mercLost, 'no stop above: no more burn than the sweet spot').toBeLessThanOrEqual(s.mercLost);
+      // Two whole plans an army, the monster camps at seconds each: the default 5 s is a full suite's load away.
+    },
+    60_000,
+  );
 });

@@ -103,6 +103,13 @@ describe('thrifty stop, pure parts', () => {
       dropTypes: 3,
       trims: 2,
     });
+    expect(CAMPAIGN.planFixes.ratedStops).toEqual({
+      rule: 'one-chunk',
+      minRating: 5,
+      typesOut: true,
+      damageFloor: 0.95,
+      thriftyReads: 'before',
+    });
     expect(improverRule().damageFloor).toBe(0.8);
     const UP = row('up', { worst: 1500, silver: 800, hired: 5, seconds: 6000, stop: 'all-in' });
     // Same dmg/silver (2.0) and dmg/merc as the sweet spot, queue and silver lower: `fine` keeps 85 % of the damage,

@@ -135,6 +135,32 @@ export const CAMPAIGN = {
      * below it.
      */
     fifthStop: { damageFloor: 0.8, goldTolerance: 0, silverFloor: 1, mercFloor: 1, dropTypes: 3, trims: 2 },
+    /**
+     * **The rated stops** (owner, 2026-10-16; `CampaignInput.ratedStops`, `docs/plans/the-rated-stops.md`, experiment
+     * 241): each stop but the all-in may take the march of its pool that the owner's rating (`markerRates`) puts above
+     * it, when the march passes the bar's gates (names, order, no outright beating, S-58 B, none of the ten readings
+     * lost) and trains no longer than the stop (owner, 2026-10-16, on training time). Delete the entry and the bar is
+     * what it was.
+     *
+     * - `rule` — **'one-chunk'**: the stop's burn, one chunk under it or one over (`'same-burn'`: not over).
+     * - `minRating` — **5**: the march rates more than 5 above the stop. At 0–2 every arm moved a stop to a worse one.
+     * - `typesOut` — **true**: the pool is the band plus the thrifty stop's types-out family (needs `fifthStop`).
+     * - `damageFloor` — **0.95**: the march keeps 95 % of the stop's damage at least. Without it the owner's 10-13 sweet
+     *   spot traded a quarter of its damage for half the queue (owner: *"doesn't sound good"*).
+     * - `thriftyReads` — **'before'**: the thrifty stop reads the sweet spot as it was before this pass; read after,
+     *   the owner's 10-14 thrifty march (9,858,253) left the bar.
+     *
+     * The march is taken re-typed, as every stop is. Measured on 21 armies (241 step 2): 2 stops better, 0 worse, 0
+     * readings lost — the owner's 10-14 sweet spot −4.4 % damage for −15 % silver, −36 % gold, −37 % coins, −33 %
+     * queue (17 d 0 h → 11 d 8 h a march); the 2026-09-18 live camp's silver saver +23.5 % damage, −66 % queue.
+     */
+    ratedStops: {
+      rule: 'one-chunk' as const,
+      minRating: 5,
+      typesOut: true,
+      damageFloor: 0.95,
+      thriftyReads: 'before' as const,
+    },
   },
   /**
    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
