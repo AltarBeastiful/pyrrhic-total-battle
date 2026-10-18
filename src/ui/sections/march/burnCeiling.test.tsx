@@ -5,7 +5,7 @@
  * The real March on the inline client (no worker in jsdom, so the bar is not priced and the raise under a ceiling
  * is the kernel's search, asked before the march or the ceiling is published). Five things are held:
  *
- *  1. the `Burn ≤` field is drawn on a plan's march, empty, with the march's burn as its placeholder and a help line;
+ *  1. the "Merc lost" figure takes the ceiling: no field until pressed, a help mark, and a mark that takes it off;
  *  2. a ceiling typed under that burn trims the march to it, and clearing it gives the march back;
  *  3. a Generate opens the pool line as the account's setting asks (`Neither` by default);
  *  4. a press of a pool line's round records `round` as the rule the setting opens with;
@@ -95,7 +95,16 @@ async function generate(): Promise<void> {
   });
 }
 
-const field = (): HTMLInputElement => screen.getByRole('textbox', { name: 'Most mercs lost' });
+/** The "Merc lost" figure is the control: no field until it is pressed (owner, 2026-10-19). */
+const openField = (): HTMLInputElement => {
+  fireEvent.click(screen.getByRole('button', { name: /^Merc lost.*press to set the most/ }));
+  return screen.getByRole('textbox', { name: 'Most mercs lost' });
+};
+const typeCeiling = (value: string): void => {
+  const input = openField();
+  fireEvent.change(input, { target: { value } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+};
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -119,15 +128,14 @@ test('the field is empty with the march’s burn as placeholder; a ceiling under
   });
   const burn = view?.burn ?? 0;
 
-  // 1 — empty, the burn on screen as the placeholder, and the one help line.
-  expect(field().value).toBe('');
-  expect(field().placeholder).toBe(String(burn));
-  expect(screen.getByText(/Most mercs this march may lose/)).toBeTruthy();
+  // 1 — no field while the ceiling is the plan's burn; a help mark says what the figure does.
+  expect(screen.queryByRole('textbox', { name: 'Most mercs lost' })).toBeNull();
+  expect(screen.getByLabelText(/cap the mercs this march may lose/)).toBeTruthy();
   expect(useRunStore.getState().burnCeiling).toBeNull();
 
-  // 2 — typed under the burn: the store takes it once the typing settles, and the march keeps under it.
+  // 2 — pressed and typed under the burn: the store takes it on Enter, and the march keeps under it.
   const ceiling = burn - 1;
-  fireEvent.change(field(), { target: { value: String(ceiling) } });
+  typeCeiling(String(ceiling));
   await waitFor(() => {
     expect(useRunStore.getState().burnCeiling).toBe(ceiling);
   });
@@ -137,7 +145,7 @@ test('the field is empty with the march’s burn as placeholder; a ceiling under
   expect(view?.burnCeiling).toBe(ceiling);
 
   // Cleared: no ceiling of the player's own, and the march stands at its own burn again.
-  fireEvent.change(field(), { target: { value: '' } });
+  fireEvent.click(screen.getByRole('button', { name: /Take the cap off/ }));
   await waitFor(() => {
     expect(useRunStore.getState().burnCeiling).toBeNull();
   });

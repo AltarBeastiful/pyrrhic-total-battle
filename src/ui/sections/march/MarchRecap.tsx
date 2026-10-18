@@ -30,6 +30,8 @@ import { amount, compactRatio, compactTwo, duration, ratio } from './format';
 import { hiredLost, hiredStock } from './hired';
 import { worstDamageByPool, worstPer } from './worst';
 import classes from './march.module.css';
+import { MarchBurnFigure, MercLostLabel } from './MarchBurnFigure';
+import { changeBurnCeiling } from './poolLine';
 import { useMarch } from './useMarch';
 
 /**
@@ -58,7 +60,7 @@ const CHANGE_ONLY = (): string => '';
 const figure = (value: number): string => compactTwo(value, 2);
 
 export function MarchRecap() {
-  const { snapshot, result, summary, previous, stale } = useMarch();
+  const { snapshot, result, summary, previous, stale, canRaise, burnCeiling } = useMarch();
 
   if (snapshot === null || result === null || summary === null) {
     return (
@@ -251,13 +253,23 @@ export function MarchRecap() {
   // `null` is *"a type is hired with no cap"* — an account that plainly holds stock — so it counts as held,
   // not as none. Reading it as zero would hide the row from exactly the players who spend the most of it.
   const holdsStock = stock === null || stock > 0 || lost > 0;
+  // **The ceiling is offered where the raise is** (a plan's march), and while one stands: a ceiling of 0 empties
+  // the mercs, and the figure must stay to take it back.
+  const burnable = canRaise && (burnCeiling !== null || lost > 0);
   const hired = {
     key: 'hired',
-    label: 'Merc lost',
+    label: <MercLostLabel editable={burnable} />,
     glyph: <Glyph kind="mercenaries" />,
     value: (
-      <Group gap={6} wrap="nowrap" align="baseline">
-        <DeltaText value={lost} format={amount} betterWhen="lower" />
+      <MarchBurnFigure
+        lost={<DeltaText value={lost} format={amount} betterWhen="lower" />}
+        burn={lost}
+        ceiling={burnCeiling}
+        editable={burnable}
+        onChange={(next) => {
+          void changeBurnCeiling(next);
+        }}
+      >
         {/* Drawn only while the march really lost some (design rule 15): with nothing burned there is no
             denominator, and "— a merc" beside a nought is a line about nothing. `compactTwo` is the
             owner's own notation for it — "325K", "1.2M": short, and never so short that two runs print the
@@ -267,7 +279,7 @@ export function MarchRecap() {
             {`· ${compactTwo(hiredDamage / lost)} a merc`}
           </Text>
         )}
-      </Group>
+      </MarchBurnFigure>
     ),
   };
 

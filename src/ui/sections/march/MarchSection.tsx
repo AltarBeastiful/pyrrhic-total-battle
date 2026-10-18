@@ -42,7 +42,7 @@ import {
 import { MarchGenerateButton } from './MarchGenerateButton';
 import { MarchLeftOut, MarchPills, MarchResized, MarchShelterNote } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
-import { changeBurnCeiling, pressPoolLine } from './poolLine';
+import { pressPoolLine } from './poolLine';
 import type { PillOrder } from './rows';
 import { useRunStore } from './runStore';
 import { UnitSheet } from './UnitSheet';
@@ -219,9 +219,6 @@ export function MarchSection() {
               // The push's sibling, and the same toggle: the press is the opposite of what is drawn.
               pressPoolLine(pool, 'round', !(march.round[pool]?.pressed ?? false));
             }}
-            burn={march.burn}
-            burnCeiling={march.burnCeiling}
-            onBurnCeiling={changeBurnCeiling}
           />
           {/* How safely the troops shelter the hired stacks, read off the march on screen — generated or
               edited by hand (S-141). Silent while the shelter is wide, and silent while the raise is on:
