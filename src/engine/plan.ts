@@ -3010,6 +3010,22 @@ export interface MarchWithin {
    * 124: 25 of 363 fills pass, worth up to **−2.8 % of the damage for −23.4 % of the silver**.
    */
   putBack?: PutBackPolicy;
+  /**
+   * **The most authority chunks the answer may burn** (`docs/plans/burn-ceiling.md` §3.2/§3.3; the owner,
+   * 2026-10-18: *"on the silver saver I know I can remove a weak stack like SW1 to put more monsters but this
+   * ups the merc burned automatically [...] there should be a way to conserve merc burns"*). Left out, nothing
+   * bounds the burn but the hired caps, which is what every re-size did until then.
+   *
+   * Experiment 242 found where the burn climbed: the hired caps are `largestSustained(stock, repeats)` (S-107),
+   * so a take-out that hands its leadership to the stacks that are left lets the sizer field every mercenary
+   * the higher floor shelters — SW1 out of the burn saver went from 7 chunks to 17. The caller passes the
+   * stop's own burn on a take-out (`planStopAgain`), and the player's ceiling when there is one.
+   *
+   * Given, a shape that burns more is **trimmed** to it before it is priced (`trimToBurn`: a chunk at a time,
+   * from the stack whose chunk costs the least damage), and `priceShape` refuses any march still over it —
+   * every shape, every fill, the stop's own included.
+   */
+  burnCap?: number;
   /** How much room the lowest rung leaves above the biggest hired stack; the plan's own by default. */
   gap?: number;
 }
@@ -3202,6 +3218,44 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
     return candidate.seconds < held.seconds;
   };
 
+  /** The burn ceiling, in whole chunks; `Infinity` where the caller set none (`MarchWithin.burnCap`). */
+  const burnCap = within.burnCap === undefined ? Infinity : Math.max(0, Math.floor(within.burnCap));
+
+  /**
+   * **A shape over the burn ceiling, trimmed to it** (`MarchWithin.burnCap`). Only the authority stacks are
+   * cut — a monster is a price, not a stock (S-102) — and a cut only ever lowers a hired stack, so the shape
+   * stays under its troop floor, inside its housing and under its stock; the shelter is read again over what
+   * is left all the same, so the march drawn is the one the fit would give. A shape already under the
+   * ceiling is handed back as it is, which is every shape when no ceiling was set.
+   */
+  const trimmed = (shape: Shape): Shape => {
+    if (burnCap === Infinity) return shape;
+    const rungs = shape.rungs.filter((rung) => rung.count > 0);
+    const authority: Record<string, number> = {};
+    let burn = 0;
+    for (const merc of shape.mercs) {
+      if (merc.entry.pool !== 'authority' || merc.count <= 0) continue;
+      authority[merc.entry.id] = merc.count;
+      burn += chunks(merc.count);
+    }
+    if (burn <= burnCap || rungs.length === 0) return shape;
+    const mercsAt = (counts: Record<string, number>): { entry: Effective; count: number }[] =>
+      shape.mercs
+        .map((merc) =>
+          merc.entry.pool === 'authority' ? { entry: merc.entry, count: counts[merc.entry.id] ?? 0 } : merc,
+        )
+        .filter((merc) => merc.count > 0);
+    const kept = trimToBurn(authority, burnCap, (counts) => {
+      const mercs = mercsAt(counts);
+      return marchOf([...rungs, ...mercs], enemyStacks).damage;
+    });
+    return {
+      rungs,
+      mercs: shelterUnder(rungs, mercsAt(kept)).filter((merc) => merc.count > 0),
+      shape: shape.shape,
+    };
+  };
+
   /** One shape priced, or `null` where it is not a march this camp can field. */
   const priceShape = (shape: Shape, leadership: number, fill: number): ResizedMarch | null => {
     const rungs = shape.rungs.filter((rung) => rung.count > 0);
@@ -3218,6 +3272,9 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
     const hiredTop = Math.max(0, ...mercs.map((merc) => merc.count * merc.entry.hp));
     if (mercs.length > 0 && floor <= hiredTop) return null;
     const march = priceMarch(request.recovery, rungs, mercs, marchOf([...rungs, ...mercs], enemyStacks));
+    // The burn ceiling, on every shape and every fill (`MarchWithin.burnCap`): `trimmed` has already cut a
+    // shape down to it, so this refuses only a march the cut could not bring under.
+    if (march.mercLost > burnCap) return null;
     return {
       ...march,
       shape: shape.shape,
@@ -3237,7 +3294,7 @@ export function resizeMarchOver(request: StackRequest, within: MarchWithin): Res
     }
     let best: ResizedMarch | null = null;
     for (const shape of shapes) {
-      const candidate = priceShape(shape, leadership, fill);
+      const candidate = priceShape(trimmed(shape), leadership, fill);
       if (candidate === null) continue;
       if (best === null || beats(candidate, best)) best = candidate;
     }
@@ -3355,6 +3412,59 @@ export function shelterCounts(request: StackRequest, counts: Record<string, numb
   const out: Record<string, number> = { ...counts };
   for (const stack of shelterUnder(rungs, hired)) out[stack.entry.id] = stack.count;
   return out;
+}
+
+/**
+ * **Mercenary counts cut down to a burn ceiling** (`docs/plans/burn-ceiling.md` §3.2: *"below the generated
+ * burn, the march is trimmed from the stacks with the worst damage per burned unit, so 'fewer mercs' becomes a
+ * direct request"*).
+ *
+ * `burning` is the authority stacks, by unit id; the answer is the same record with the burn
+ * (`Σ chunks(n)`, `PlanMarch.mercLost`) at or under `ceiling`. A greedy cut, one chunk a step: every stack
+ * offers its last chunk — the units over its last ten, or ten where it stands on a ten — and the one whose
+ * removal costs the march the least damage (`damageOf`, the caller's own reading of the whole march) goes. A
+ * step always burns exactly one chunk less, so "least damage lost" is "least damage lost per chunk", and a
+ * stack's odd units go before a whole ten of anyone's when they are worth less. A tie goes to the stack named
+ * first, so the cut is a function of its arguments.
+ *
+ * **The set is kept while the ceiling allows it** (the owner's *"without putting out another"*, S-104, and
+ * `putBack.test.ts`' same-set promise): a cut that would empty a stack is only taken when no other stack has a
+ * chunk left above its last one, so a ceiling of at least one chunk a stack keeps every stack on the field, and
+ * only a ceiling below that sends a type home.
+ *
+ * It only ever lowers a count, so every bound a march lives under — the troop floor, the housing, the stock —
+ * still holds. Counts already under the ceiling come back unchanged.
+ */
+export function trimToBurn(
+  burning: Readonly<Record<string, number>>,
+  ceiling: number,
+  damageOf: (counts: Record<string, number>) => number,
+): Record<string, number> {
+  const cap = Math.max(0, Math.floor(ceiling));
+  const counts: Record<string, number> = { ...burning };
+  let burn = 0;
+  for (const count of Object.values(counts)) burn += chunks(Math.max(0, count));
+  if (burn <= cap) return counts;
+  let here = damageOf(counts);
+  while (burn > cap) {
+    let pick: { id: string; count: number; damage: number } | null = null;
+    // Two rounds: the cuts that leave every stack standing, and only where there is none, the ones that empty one.
+    for (const emptying of [false, true]) {
+      for (const [id, count] of Object.entries(counts)) {
+        if (count <= 0) continue;
+        const next = count - (count % CHUNK === 0 ? CHUNK : count % CHUNK);
+        if (next <= 0 !== emptying) continue;
+        const damage = damageOf({ ...counts, [id]: next });
+        if (pick === null || here - damage < here - pick.damage) pick = { id, count: next, damage };
+      }
+      if (pick !== null) break;
+    }
+    if (pick === null) break;
+    counts[pick.id] = pick.count;
+    here = pick.damage;
+    burn -= 1;
+  }
+  return counts;
 }
 
 export function shapeScorer(request: StackRequest, gap: number = DEFAULT_GAP, finale = true): ShapeScorer {

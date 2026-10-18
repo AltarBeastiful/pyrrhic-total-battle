@@ -317,6 +317,12 @@ export interface RaiseInput {
   base: StackResult;
   /** The position each hired pool stands on, as `RAISE_*` (`raise.ts`'s `RaiseModes`, as numbers). */
   modes: { authority: number; dominance: number };
+  /**
+   * **The player's burn ceiling**, in authority chunks (`docs/plans/burn-ceiling.md` §3.2): `Safe` and `Tight`
+   * may burn no more than the lower of it and their own cap. Left out, each keeps its own cap. The base must
+   * already be at or under it (`liftedCounts` trims it first): a raise only ever adds.
+   */
+  burnCap?: number;
 }
 
 /**

@@ -112,6 +112,8 @@ export interface PositionsInput {
    * handed a result — one description of a stop, not two.
    */
   counts: Record<string, number>;
+  /** The player's burn ceiling in authority chunks (`positionTrades`); none when left out. */
+  burnCap?: number;
 }
 
 /**

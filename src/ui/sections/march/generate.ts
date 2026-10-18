@@ -28,6 +28,7 @@ import type { PositionTrades } from './positions';
 import { openingPosition, pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
 import type { MarchResize } from './runStore';
 import { primeBar, primePositions } from './positionsSearch';
+import { editBurnCap } from './hired';
 import { troopFloor } from './raise';
 
 /**
@@ -309,6 +310,8 @@ export async function resizeMarch(
   includedUnitIds: string[],
   leftOutByPlayer: string[],
   edit: MarchEdit = {},
+  /** The most authority chunks the re-size may burn (`editBurnCap`); no control sets it yet. */
+  burnCeiling?: number,
 ): Promise<void> {
   const snapshot = useResultStore.getState().last;
   if (snapshot === null) return;
@@ -326,7 +329,7 @@ export async function resizeMarch(
     const resized =
       plan === null
         ? await sizedAgain(snapshot.request, included, edit, controller.signal)
-        : await planStopAgain(snapshot.request, plan, position, included, controller.signal);
+        : await planStopAgain(snapshot.request, plan, position, included, controller.signal, burnCeiling);
     if (controller.signal.aborted) return;
     if (resized === null) {
       useResultStore
@@ -385,6 +388,7 @@ async function planStopAgain(
   position: number,
   included: Set<string>,
   signal: AbortSignal,
+  burnCeiling?: number,
 ): Promise<Resized | null> {
   const stop = pickOf(plan, position);
   const troopIds: string[] = [];
@@ -416,6 +420,7 @@ async function planStopAgain(
    * A type the bound puts at nothing — an empty stock, or one too small to last the repeats — is named in
    * the pane rather than left to bounce back without a word.
    */
+  const burnCap = editBurnCap(request, stop.counts, included, burnCeiling);
   const capOf = (unit: { id: string; pool: string; cost: number }): number => {
     if (unit.pool === 'dominance') {
       const inStop = stop.counts[unit.id] ?? 0;
@@ -457,6 +462,10 @@ async function planStopAgain(
         // the same `CAMPAIGN.putBack` the plan applies to a stop at Generate time. The answer carries
         // what the trade cost and the pane says it, because a trade is not a win and must not read as one.
         putBack: CAMPAIGN.putBack,
+        // The burn ceiling (`editBurnCap`): the player's own when he set one, and on a take-out the stop's
+        // own burn, so the chunks a stack taken out freed stay unspent (experiment 242: SW1 out of the burn
+        // saver spent 7 → 17 without it).
+        ...(burnCap === undefined ? {} : { burnCap }),
       },
     },
     signal,

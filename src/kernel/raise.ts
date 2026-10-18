@@ -40,6 +40,7 @@ interface RaiseExports {
     restarts: number,
     maxSweeps: number,
     rngSeed: number,
+    burnCap: number,
   ): number;
   /** Test only (W16 E2a): the slots-only point against the whole-roster one, on random vectors of the box. */
   raiseProbe(samples: number, seed: number): number;
@@ -207,7 +208,7 @@ export function createRaiseKernelProbe(
     forceWhole: (request, base, on) => {
       bound(request, base).raiseForceWhole(on ? 1 : 0);
     },
-    position({ request, base, modes }: RaiseInput): RaiseAnswer | null {
+    position({ request, base, modes, burnCap }: RaiseInput): RaiseAnswer | null {
       const bound = bind(request, base);
       if (bound === null) return null;
       views(bound);
@@ -229,6 +230,8 @@ export function createRaiseKernelProbe(
         search.restarts,
         search.maxSweeps,
         search.seed,
+        // The player's burn ceiling (`RaiseInput.burnCap`); `Infinity` leaves each position its own cap.
+        burnCap ?? Number.POSITIVE_INFINITY,
       );
       if (answered !== 1) return null;
       // **The memory may have grown under the views**: the first search over a wide box reserves its score

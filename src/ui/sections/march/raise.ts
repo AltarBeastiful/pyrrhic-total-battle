@@ -464,6 +464,12 @@ export function pushedCounts(
   request: RaiseRequest,
   start: StackResult,
   pools: readonly RaisedPool[],
+  /**
+   * The player's burn ceiling in authority chunks (`docs/plans/burn-ceiling.md` §3.2): the push may not take
+   * the mercenaries past it. Units inside a chunk already burnt are free, so a march over it may still fill
+   * its last tens; it may never open a new one. Left out, the housing, the stock and the line are the bounds.
+   */
+  burnCap?: number,
 ): Record<string, number> | null {
   if (pools.length === 0) return null;
   /**
@@ -518,6 +524,11 @@ export function pushedCounts(
           used += (counts[stack.unitId] ?? stack.count) * costOf(request, stack.unitId);
       }
       let spare = Math.max(0, request.housing[pool] - used);
+      // The chunks the ceiling still allows, read off the counts as they stand this pass (`burnCap`).
+      let burnRoom =
+        burnCap === undefined || pool !== 'authority'
+          ? Number.POSITIVE_INFINITY
+          : Math.max(0, Math.floor(burnCap) - burnOf(start, counts));
       for (const stack of [...start.stacks].reverse()) {
         if (stack.pool !== pool || !pushing(stack)) continue;
         const now = counts[stack.unitId] ?? stack.count;
@@ -526,9 +537,13 @@ export function pushedCounts(
         // guard and not a case (`raisedCounts` makes the same one).
         const cost = costOf(request, stack.unitId);
         const room = cost > 0 ? Math.floor(spare / cost) : Number.MAX_SAFE_INTEGER;
-        const wanted = Math.min(ceiling, now + room);
+        // The burn: the last ten this stack may reach without spending more chunks than the ceiling leaves.
+        const burnTop =
+          burnRoom === Number.POSITIVE_INFINITY ? Number.MAX_SAFE_INTEGER : CHUNK * (chunks(now) + burnRoom);
+        const wanted = Math.min(ceiling, now + room, burnTop);
         if (wanted <= now) continue;
         spare -= (wanted - now) * cost;
+        if (burnRoom !== Number.POSITIVE_INFINITY) burnRoom -= chunks(wanted) - chunks(now);
         next[stack.unitId] = wanted;
       }
     }
@@ -608,6 +623,10 @@ export function offersPush(trade: PushTrade | null, pressed: boolean): boolean {
  * **The best trade is the most damage, then the fewest lost** — the worst opening, as every other figure of the
  * pool line reads it, and on a tie the loss the tooltip prints. Past `ROUND_COMBINATIONS` the stacks are rounded
  * one at a time, the last to fall first, each against the others as they stand.
+ *
+ * **It never burns a chunk more, so no burn ceiling can bind it** (`docs/plans/burn-ceiling.md` §3.2): a count
+ * not in tens burns `⌊n/10⌋ + 1` chunks, which is exactly what its ten above burns, and its ten below burns one
+ * less. A rounding can keep the mercenaries' burn or lower it, never raise it.
  *
  * `base` is what `applyCounts` replays over (the generated result), `counts` the march on screen as counts, and
  * `start` that march replayed — the kill order to keep. Stacks in `fixed` (typed by hand) are left alone.

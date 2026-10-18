@@ -88,3 +88,32 @@ export function stockRun(held: number, count: number, damage: number): StockRun 
   const marches = lastsMarches(held, count);
   return { burn, marches, stackDamage: marches * damage };
 }
+
+/**
+ * **The burn a March edit on a plan's stop may spend** (`docs/plans/burn-ceiling.md` §3.3; the owner,
+ * 2026-10-18: *"I can remove a weak stack like SW1 to put more monsters but this ups the merc burned
+ * automatically"*), handed to the re-size as `MarchWithin.burnCap`.
+ *
+ *  - **A ceiling the player typed** is the answer, whatever the edit: it is the one number he asked the march
+ *    to keep to.
+ *  - **Otherwise a take-out keeps the stop's own burn** — `hiredLost` over the stop's counts, the "Merc" the
+ *    bar printed for it. Experiment 242 measured what it replaces: the hired caps are the stock's sustained
+ *    count (S-107), so the leadership a take-out hands back raised the floor and the sizer spent the burn the
+ *    stack freed and more (SW1 out of the burn saver: 7 chunks to 17). The burn freed now stays unspent.
+ *  - **A put-back of a mercenary is a request to spend**, so it is not capped (`undefined`): the player named a
+ *    stack the stop did not burn, and holding him to the stop's burn would trade his other mercenaries for it.
+ *    A troop or monster put back keeps the cap, since neither asks for a chunk.
+ */
+export function editBurnCap(
+  request: Pick<StackRequest, 'units'>,
+  stop: Readonly<Record<string, number>>,
+  included: ReadonlySet<string>,
+  burnCeiling?: number,
+): number | undefined {
+  if (burnCeiling !== undefined) return burnCeiling;
+  const mercs = (request.units as readonly Pick<UnitDef, 'id' | 'pool'>[]).filter(
+    (unit) => unit.pool === 'authority',
+  );
+  if (mercs.some((unit) => included.has(unit.id) && (stop[unit.id] ?? 0) <= 0)) return undefined;
+  return hiredLost(mercs.map((unit) => ({ pool: unit.pool, count: stop[unit.id] ?? 0 })));
+}

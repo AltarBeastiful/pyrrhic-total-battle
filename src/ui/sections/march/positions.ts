@@ -40,12 +40,13 @@ import {
   RAISE_V2,
   raiseKernel,
 } from '@/engine/fast';
+import { trimToBurn } from '@/engine';
 import type { StackRequest, StackResult } from '@/engine/types';
 import { KernelUnavailableError } from '@/kernel/boot';
 
 import { applyCounts } from './manual';
 import { hiredLost } from './hired';
-import { countsOf, raisedCounts, sameCounts } from './raise';
+import { burnOf, countsOf, raisedCounts, sameCounts } from './raise';
 import type { RaiseMode, RaiseModes } from './raise';
 import { worstDamageByPool } from './worst';
 
@@ -115,17 +116,70 @@ export function liftedCounts(
   request: StackRequest,
   base: StackResult,
   modes: RaiseModes,
+  /** The player's burn ceiling in authority chunks (`docs/plans/burn-ceiling.md` §3.2); none when left out. */
+  burnCap?: number,
 ): PositionCounts | null {
   const kernel = raiseKernel();
   if (kernel === null) throw new KernelUnavailableError('The raise kernel is not loaded.');
+  // **A ceiling under the march's own burn trims the march first** (`trimmedBase`): a raise only ever adds, so
+  // it is the trimmed march it raises, and the trim's counts are the answer wherever no position moves one.
+  const trim = burnCap === undefined ? null : trimmedBase(request, base, burnCap);
+  const from = trim?.result ?? base;
   const fast = kernel.position({
     request,
-    base,
+    base: from,
     modes: { authority: raiseCode(modes.authority), dominance: raiseCode(modes.dominance) },
+    ...(burnCap === undefined ? {} : { burnCap }),
   });
-  if (fast !== null) return { counts: fast.counts, how: fast.how, space: fast.space, scored: fast.scored };
-  const raised = raisedCounts(request, base, modes);
+  if (fast !== null) {
+    const counts = trim === null ? fast.counts : { ...trim.counts, ...fast.counts };
+    return { counts, how: fast.how, space: fast.space, scored: fast.scored };
+  }
+  const raised = raisedCounts(request, from, modes);
+  if (trim !== null) return { counts: { ...trim.counts, ...(raised ?? {}) }, how: null, space: 0, scored: 0 };
   return raised === null ? null : { counts: raised, how: null, space: 0, scored: 0 };
+}
+
+/** One trimmed march per march and ceiling, so the positions priced over it share one kernel instance. */
+const trims = new WeakMap<
+  StackResult,
+  Map<number, { counts: Record<string, number>; result: StackResult }>
+>();
+
+/**
+ * **The march on screen cut down to a burn ceiling** (`docs/plans/burn-ceiling.md` §3.2: *"below the generated
+ * burn, the march is trimmed from the stacks with the worst damage per burned unit"*), or `null` when it
+ * already burns no more — the case that leaves every position exactly as it was.
+ *
+ * The cut is the engine's (`trimToBurn`), a chunk at a time from the mercenary stack whose chunk costs the
+ * least worst opening, read through the replay the March draws with (`applyCounts`). It only lowers hired
+ * counts, so the trimmed march is still sheltered, housed and stocked; the counts come back whole, over every
+ * type the march fields, because they are what the March replays.
+ */
+function trimmedBase(
+  request: StackRequest,
+  base: StackResult,
+  burnCap: number,
+): { counts: Record<string, number>; result: StackResult } | null {
+  const own = countsOf(base);
+  if (burnOf(base, own) <= burnCap) return null;
+  const held = trims.get(base)?.get(burnCap);
+  if (held !== undefined) return held;
+  const burning: Record<string, number> = {};
+  for (const stack of base.stacks) {
+    if (stack.pool === 'authority' && stack.count > 0) burning[stack.unitId] = stack.count;
+  }
+  const kept = trimToBurn(
+    burning,
+    burnCap,
+    (counts) => applyCounts(request, base, { ...own, ...counts }).summary.minDamage,
+  );
+  const counts = { ...own, ...kept };
+  const trim = { counts, result: applyCounts(request, base, counts).result };
+  const byCap = trims.get(base) ?? new Map<number, { counts: Record<string, number>; result: StackResult }>();
+  byCap.set(burnCap, trim);
+  trims.set(base, byCap);
+  return trim;
 }
 
 /**
@@ -197,10 +251,12 @@ export function positionTrades(
   request: StackRequest,
   base: StackResult,
   modes: readonly Exclude<RaiseMode, 'off'>[] = POSITIONS,
+  /** The player's burn ceiling (`liftedCounts`); every row is priced under it, `own` stays the march as is. */
+  burnCap?: number,
 ): PositionTrades {
   const own = countsOf(base);
   const rows = CODES.filter(({ mode }) => modes.includes(mode)).map(({ mode }) => {
-    const lifted = liftedCounts(request, base, { authority: mode, dominance: mode });
+    const lifted = liftedCounts(request, base, { authority: mode, dominance: mode }, burnCap);
     // A position that moves nothing is the plan's own march: the row is drawn with its figures unchanged
     // rather than left out, because "this one changes nothing here" is an answer a player is owed.
     const counts = lifted?.counts ?? own;

@@ -3302,7 +3302,8 @@ function raiseSearch(): bool {
  *
  * `basePtr` is the plan's own counts, `capsPtr` the stock (`MAX_SAFE` where unlimited); the table must carry
  * `T_ORDER` (the base march's own stack order, the tie `applyCounts` breaks by). `statsPtr` (`f64 × 4`) is
- * written `[how, space, scored, 0]`, `how` 0 when no search ran.
+ * written `[how, space, scored, 0]`, `how` 0 when no search ran. `burnCap` is the player's burn ceiling in
+ * authority chunks, `Infinity` for none: the capped positions' budget is the lower of it and their own.
  *
  * Answers 1 when the table can be read, 0 when it cannot (no type at all).
  */
@@ -3317,6 +3318,7 @@ export function raise(
   restarts: i32,
   maxSweeps: i32,
   rngSeed: f64,
+  burnCap: f64,
 ): i32 {
   if (types <= 0) return 0;
   raiseAlloc();
@@ -3384,9 +3386,13 @@ export function raise(
      * **The two caps** (`burnCap`): `RAISE_SAFE` may not burn more authority chunks than the climb it
      * replaces, `RAISE_TIGHT` not more than the plan's own counts — not one extra chunk. Only the
      * mercenaries' block can cap anything (S-102: a trained monster is a price, not a stock).
+     *
+     * **And neither more than the player's ceiling** (`burnCap`, `docs/plans/burn-ceiling.md` §3.2):
+     * `Infinity` where he set none, so the cap is the position's own. It only ever lowers the cap, so the
+     * chunk top below stays sound — a lower budget refuses more vectors, it never admits one the top cut.
      */
-    if (rAuth == RAISE_SAFE) rCap = raiseBurn(rSeed);
-    else if (isTight(rAuth)) rCap = raiseBurn(rBase);
+    if (rAuth == RAISE_SAFE) rCap = Math.min(raiseBurn(rSeed), burnCap);
+    else if (isTight(rAuth)) rCap = Math.min(raiseBurn(rBase), burnCap);
     // `Tight` is ranked by the rating, against the plan's own march, whose bill is read once here.
     rRated = rAuth == RAISE_TIGHT;
     if (rRated) {

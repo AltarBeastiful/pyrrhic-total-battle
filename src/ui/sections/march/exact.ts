@@ -26,6 +26,8 @@ export interface ExactRaiseInput {
   request: StackRequest;
   base: StackResult;
   modes: RaiseModes;
+  /** The player's burn ceiling in authority chunks (`liftedCounts`); none when left out. */
+  burnCap?: number;
 }
 
 /** The exhaustive answer, in the app's own shape: a count per type, and how it was found. */

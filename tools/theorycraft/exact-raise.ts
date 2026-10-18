@@ -125,6 +125,11 @@ export function exactRaise(
    * and still never below the climb it starts from.
    */
   rank: RaiseRank = byDamage,
+  /**
+   * The player's burn ceiling in authority chunks (`docs/plans/burn-ceiling.md` §3.2), the kernel's own
+   * `burnCap`: a capped position's budget is the lower of it and its own. Left out, the position's own cap.
+   */
+  burnCeiling?: number,
 ): ExactRaiseAnswer | null {
   const pools = exhaustivePools(modes);
   if (pools.length === 0) return null;
@@ -140,7 +145,8 @@ export function exactRaise(
   const seed = raisedCounts(request, base, modes) ?? {};
 
   /** What this position may spend, in chunks — `null` for `v2`, and for a block with no burn to bound. */
-  const cap = burnCap(base, modes, seed);
+  const own = burnCap(base, modes, seed);
+  const cap = own === null || burnCeiling === undefined ? own : Math.min(own, burnCeiling);
 
   /**
    * **The pools the search does not walk stay where that seed put them**, so every vector is scored as the

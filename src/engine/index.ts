@@ -107,4 +107,6 @@ export type {
 export { DEFAULT_GAP, planCampaign, marchResult as planMarch } from './plan';
 // S-104 — one stop of a plan re-sized in place, and the shelter said about a march's counts.
 export { largestSustained, lastsMarches, planRepeats, resizeMarchOver, shelterCounts } from './plan';
+// The burn ceiling (`docs/plans/burn-ceiling.md`): mercenary counts cut down to a number of chunks.
+export { trimToBurn } from './plan';
 export type { CampaignInput, CampaignPlan, MarchWithin, PlanMarch, PlanTotals, ResizedMarch } from './plan';

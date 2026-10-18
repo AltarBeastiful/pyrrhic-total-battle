@@ -107,7 +107,7 @@ export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
   // No troop to shelter under is the rule that keeps the position off a march with nothing to hide behind
   // (`troopFloor`, the condition the control is drawn on) — a pre-condition, and not a reading of the box.
   if (troopFloor(input.base) === null) return null;
-  const lifted = liftedCounts(input.request, input.base, input.modes);
+  const lifted = liftedCounts(input.request, input.base, input.modes, input.burnCap);
   if (lifted === null) return null;
   return { counts: lifted.counts, how: lifted.how, space: lifted.space, scored: lifted.scored };
 }
@@ -121,7 +121,12 @@ export function runRaise(input: ExactRaiseInput): ExactRaiseAnswer | null {
  * for that stop — so the block prices the march a player would be looking at rather than one built twice.
  */
 export function runPositions(input: PositionsInput): PositionTrades {
-  return positionTrades(input.request, planMarch(input.request, input.counts).result, OFFERED_POSITIONS);
+  return positionTrades(
+    input.request,
+    planMarch(input.request, input.counts).result,
+    OFFERED_POSITIONS,
+    input.burnCap,
+  );
 }
 
 /**
