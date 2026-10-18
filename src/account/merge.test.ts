@@ -246,3 +246,28 @@ test('a march type chosen on one device and captains levelled on the other both 
     expect(merged.profiles[0]?.setups[0]?.marchType).toBe('group');
   }
 });
+
+test('the pool line chosen on one device and troops changed on the other both survive (schema v9)', () => {
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  if (!base) throw new Error('no profile');
+  const t = base.updatedAt;
+  const onPhone = edit(
+    base,
+    { troops: { ...base.troops, guardsmen: null }, sectionUpdatedAt: { troops: t + 10 } },
+    t + 10,
+  );
+  const onPc = edit(
+    base,
+    { settings: { poolLine: 'mercs', poolLineRule: 'round' }, sectionUpdatedAt: { settings: t + 20 } },
+    t + 20,
+  );
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),
+    mergeDocuments({ ...pc, profiles: [onPc] }, { ...phone, profiles: [onPhone] }),
+  ]) {
+    const [profile] = merged.profiles;
+    expect(profile?.settings).toEqual({ poolLine: 'mercs', poolLineRule: 'round' });
+    expect(profile?.troops.guardsmen).toBeNull();
+  }
+});

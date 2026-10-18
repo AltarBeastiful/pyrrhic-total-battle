@@ -5,13 +5,27 @@
  * with fixed ids and timestamps so they are deterministic.
  */
 import { BUILTIN_PERMANENT_SOURCES, SCHEMA_VERSION } from './schema';
-import type { BattleSetup, BuiltinPermanentSource, Profile, RootDocument, SavedStack } from './schema';
+import type {
+  BattleSetup,
+  BuiltinPermanentSource,
+  Profile,
+  ProfileSettings,
+  RootDocument,
+  SavedStack,
+} from './schema';
 
 /**
  * Game-table version the app currently ships. `src/data` is owned by another story; when it exports its
  * own `version.json` this constant becomes a re-export of it (see the report's open questions).
  */
 export const CURRENT_DATA_VERSION = 1;
+
+/**
+ * **The account's preferences as a new profile has them** (schema v9; `docs/plans/burn-ceiling.md` §3.1): a
+ * Generate opens no pool line — a first run shows the plan's own marches — and the rule a setting would open
+ * is the push, until the player switches the round on from a pool line.
+ */
+export const DEFAULT_SETTINGS: ProfileSettings = { poolLine: 'neither', poolLineRule: 'push' };
 
 export function uuid(): string {
   return crypto.randomUUID();
@@ -147,6 +161,7 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
     activeSetupId: setup.id,
     savedStacks: [],
     upgrades: [],
+    settings: { ...DEFAULT_SETTINGS },
   };
 }
 

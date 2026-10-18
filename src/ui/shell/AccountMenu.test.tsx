@@ -123,3 +123,19 @@ test('the theme row offers the three choices and writes the one that is picked',
   // choice, and that it does not walk away — kit's segmented row keeps the menu open.
   expect(screen.getByRole('menu')).toBeTruthy();
 });
+
+test('the pool line row opens on Neither and writes the pools a Generate opens with to the profile', async () => {
+  const user = userEvent.setup();
+  const menu = await openMenu();
+  const row = within(menu).getByRole('radiogroup', { name: 'Pool line on Generate' });
+  for (const name of ['Both', 'Mercs', 'Monsters', 'Neither']) {
+    expect(within(row).getByRole('radio', { name })).toBeTruthy();
+  }
+  expect(within(row).getByRole('radio', { name: 'Neither' })).toHaveProperty('checked', true);
+
+  await user.click(within(row).getByRole('radio', { name: 'Mercs' }));
+  await waitFor(() => {
+    expect(useStore.getState().doc.profiles[0]?.settings.poolLine).toBe('mercs');
+  });
+  expect(screen.getByRole('menu')).toBeTruthy();
+});

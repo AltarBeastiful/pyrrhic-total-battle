@@ -51,7 +51,7 @@ import { create } from 'zustand';
 
 import { createCalcClient, isAbortError } from '@/worker/client';
 import type { CalcClient } from '@/worker/client';
-import type { StackResult } from '@/engine/types';
+import type { StackRequest, StackResult } from '@/engine/types';
 import type { ResultSnapshot } from '@/ui/resultStore';
 
 import { exhaustivePools } from './exact';
@@ -91,8 +91,10 @@ export function marchId(result: StackResult): number {
  * the **result** rather than the whole snapshot because that is the whole of what it is about: the request
  * is the same object across a re-size, and everything else on the snapshot is provenance.
  */
-export function raiseSearchKey(result: StackResult, modes: RaiseModes): string {
-  return `${String(marchId(result))}|${modes.authority}|${modes.dominance}`;
+export function raiseSearchKey(result: StackResult, modes: RaiseModes, burnCap?: number): string {
+  // The burn ceiling is part of the question (`docs/plans/burn-ceiling.md` §3.2): another ceiling, another search.
+  const cap = burnCap === undefined ? '' : `|${String(burnCap)}`;
+  return `${String(marchId(result))}|${modes.authority}|${modes.dominance}${cap}`;
 }
 
 /** The one answer the March may be showing, and what it is about. */
@@ -166,13 +168,21 @@ export const useRaiseSearchStore = create<RaiseSearchState>()((set, get) => ({
  * `Best`'s counts, which is a march the game would take and one the search can only improve on; a pane that
  * shouted about a worker it could not reach would be worse than the figures it already has.
  */
-function ask(key: string, snapshot: ResultSnapshot, modes: RaiseModes): void {
+function ask(key: string, snapshot: ResultSnapshot, modes: RaiseModes, burnCap?: number): void {
   kill();
   controller = new AbortController();
   const { signal } = controller;
   useRaiseSearchStore.getState().begin(key);
   calc()
-    .raise({ request: snapshot.request, base: snapshot.result, modes }, signal)
+    .raise(
+      {
+        request: snapshot.request,
+        base: snapshot.result,
+        modes,
+        ...(burnCap === undefined ? {} : { burnCap }),
+      },
+      signal,
+    )
     .then(
       (answer) => {
         useRaiseSearchStore.getState().settle(key, answer);
@@ -184,6 +194,43 @@ function ask(key: string, snapshot: ResultSnapshot, modes: RaiseModes): void {
         useRaiseSearchStore.getState().settle(key, null);
       },
     );
+}
+
+/**
+ * **The raise of a march that is not on screen yet, asked before it is drawn** (`docs/plans/burn-ceiling.md`;
+ * owner, 2026-10-18: a put-back under a ceiling *"makes the damage flicker while the capped troops are
+ * recomputed"*). A March edit, or a new ceiling, used to put its march on screen first and let this hook ask
+ * for the raise behind it, so one press drew the un-raised march and then the raised one. This asks the same
+ * job — the kernel's raise, under the ceiling — on the same client, and hands back a `commit` that files the
+ * answer under the march's key: the caller runs it in the same tick it publishes the march, so the March's first
+ * frame of the new march is already Tight under the ceiling, and the hook finds its answer filed and asks
+ * nothing. `null` when there is nothing to raise (no exhaustive position on).
+ */
+export async function primeRaise(
+  request: StackRequest,
+  base: StackResult,
+  modes: RaiseModes,
+  burnCap: number | undefined,
+  signal: AbortSignal,
+): Promise<(() => void) | null> {
+  if (exhaustivePools(modes).length === 0) return null;
+  const key = raiseSearchKey(base, modes, burnCap);
+  // The search in flight is about the march this one replaces: stopped, so the worker takes this job now.
+  kill();
+  let answer: ExactRaiseAnswer | null = null;
+  try {
+    answer = await calc().raise(
+      { request, base, modes, ...(burnCap === undefined ? {} : { burnCap }) },
+      signal,
+    );
+  } catch (error) {
+    // The caller's own cancel is the caller's; anything else — a failed job, or the client thrown away under it
+    // — is "no answer", as `ask` settles it, and the March keeps its own path for this march.
+    if (signal.aborted) throw error;
+  }
+  return () => {
+    useRaiseSearchStore.setState({ entry: { key, answer, status: 'done' } });
+  };
 }
 
 export interface RaiseSearchView {
@@ -203,9 +250,11 @@ export function useRaiseSearch(
   snapshot: ResultSnapshot | null,
   modes: RaiseModes,
   canRaise: boolean,
+  /** The player's burn ceiling (`runStore.burnCeiling`): the search keeps under it. */
+  burnCap?: number,
 ): RaiseSearchView {
   const wanted = snapshot !== null && canRaise && exhaustivePools(modes).length > 0;
-  const key = wanted && snapshot !== null ? raiseSearchKey(snapshot.result, modes) : null;
+  const key = wanted && snapshot !== null ? raiseSearchKey(snapshot.result, modes, burnCap) : null;
   const entry = useRaiseSearchStore((state) => state.entry);
 
   useEffect(() => {
@@ -216,8 +265,8 @@ export function useRaiseSearch(
       return;
     }
     if (useRaiseSearchStore.getState().entry?.key === key) return;
-    ask(key, snapshot, modes);
-  }, [key, snapshot, modes]);
+    ask(key, snapshot, modes, burnCap);
+  }, [key, snapshot, modes, burnCap]);
 
   if (key === null || entry === null || entry.key !== key) return { counts: null, running: false };
   return {

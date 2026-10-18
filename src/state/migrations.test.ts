@@ -180,6 +180,22 @@ function v7Fixture(): Record<string, unknown> {
   return { ...fixture, schemaVersion: 7 };
 }
 
+/**
+ * The same account as written by a v8 build: the v7 fixture with every setup, saved ones included, naming
+ * its march type. No profile carries settings, which v9 adds (`docs/plans/burn-ceiling.md` §3.1).
+ */
+function v8Fixture(): Record<string, unknown> {
+  const fixture = v7Fixture();
+  const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+  const named = (setup: unknown) => ({ ...(setup as Record<string, unknown>), marchType: 'unspecified' });
+  profile.setups = (profile.setups as unknown[]).map(named);
+  profile.savedStacks = (profile.savedStacks as Record<string, unknown>[]).map((stack) => ({
+    ...stack,
+    setup: named(stack.setup),
+  }));
+  return { ...fixture, schemaVersion: 8 };
+}
+
 describe('readSchemaVersion', () => {
   it('reads an integer version and falls back to 0', () => {
     expect(readSchemaVersion({ schemaVersion: 3 })).toBe(3);
@@ -443,6 +459,32 @@ describe('migrate', () => {
     expect(() => migrate(broken)).toThrow();
   });
 
+  it('v8 → v9 gives every profile the default settings, and moves nothing else', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fixture = v8Fixture();
+    const migrated = migrate(fixture);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+    expect(migrations[8]?.(fixture).schemaVersion).toBe(9);
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(migrated.profiles[0]?.settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
+    // The same document written at v9 with the defaults already there: the migration adds only that.
+    const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+    const asV9 = { ...profile, settings: { poolLine: 'neither', poolLineRule: 'push' } };
+    expect(migrated).toEqual(migrate({ ...fixture, schemaVersion: 9, profiles: [asV9] }));
+  });
+
+  it('keeps the settings a profile chose through a load, and refuses a pool line it does not know', () => {
+    const doc = migrate(v8Fixture());
+    const profile = doc.profiles[0]!;
+    const chosen = { poolLine: 'mercs', poolLineRule: 'round' } as const;
+    const stored = { ...doc, profiles: [{ ...profile, settings: chosen }] };
+    expect(migrate(JSON.parse(JSON.stringify(stored))).profiles[0]?.settings).toEqual(chosen);
+
+    const broken = { ...doc, profiles: [{ ...profile, settings: { ...chosen, poolLine: 'some' } }] };
+    expect(() => migrate(broken)).toThrow();
+  });
+
   it('round-trips a freshly created document', () => {
     const root = newRoot('desktop');
     expect(migrate(JSON.parse(JSON.stringify(root)))).toEqual(root);
@@ -516,6 +558,13 @@ describe('migrateProfile', () => {
     const migrated = migrateProfile(profile, 7);
     expect(migrated.setups.map((setup) => setup.marchType)).toEqual(['unspecified', 'unspecified']);
     expect(migrated.savedStacks[0]?.setup.marchType).toBe('unspecified');
+  });
+
+  it('gives a v8 profile the default settings on import, and a v8 saved stack arrives unchanged', () => {
+    const profile = (v8Fixture().profiles as Record<string, unknown>[])[0]!;
+    expect(migrateProfile(profile, 8).settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
+    const [stack] = profile.savedStacks as unknown[];
+    expect(migrateSavedStack(stack, 8).setup.marchType).toBe('unspecified');
   });
 
   it('drops a v2 profile’s pins on import', () => {

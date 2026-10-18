@@ -30,14 +30,14 @@ import {
   VisuallyHidden,
 } from '@mantine/core';
 import { ChevronsUp, Copy, Pencil, Undo2 } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useEffectEvent, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { CAMPAIGN } from '@/config';
 import type { StackResult, UnitDef } from '@/engine/types';
 import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
-import { isCommitEnter } from '@/ui/kit';
+import { isCommitEnter, NumberField } from '@/ui/kit';
 import { copyText } from '@/ui/profile/download';
 
 import { putBackAllInMarch, putBackInMarch, removeFromFormation } from './formation';
@@ -108,6 +108,80 @@ export interface MarchPillsProps {
   /** **What rounding each hired pool to tens offers here** (owner, 2026-10-16), and a press of its mark. */
   round: Record<RaisedPool, PushOffer | null>;
   onRound: (pool: RaisedPool) => void;
+  /** The mercs the march on screen burns (`MarchView.burn`): the `Burn ≤` field's placeholder. */
+  burn?: number;
+  /** The player's burn ceiling, `null` for none (`runStore.burnCeiling`). */
+  burnCeiling?: number | null;
+  /** A ceiling was typed (or cleared, `null`). Absent, the field is not drawn. */
+  onBurnCeiling?: (ceiling: number | null) => void;
+}
+
+/** How long the `Burn ≤` field waits after the last keystroke before the march is re-read under it. */
+const BURN_SETTLE_MS = 400;
+
+/**
+ * **The burn ceiling, at the foot of the army** (`docs/plans/burn-ceiling.md` §3.2; owner, 2026-10-18: *"there
+ * should be a way to conserve merc burns"*). One plain number field (design rule 9), empty by default — the
+ * march keeps the burn it was generated with — with that burn as its placeholder, so the figure to type under is
+ * on screen. Typed, the march is trimmed to it and the raise, the push and a March edit keep under it.
+ *
+ * It sits where the raise selector does (hidden behind `CAMPAIGN.raiseControl` since 2026-10-13): one small row
+ * under the pools, out of the way (owner, 2026-10-10). A help line under it says what it does in one sentence
+ * (rule 26: our own words; "merc", never "hired"). Stock Mantine through the kit's `NumberField` (rule 23).
+ *
+ * **The figure settles before it is read** (`BURN_SETTLE_MS`): every keystroke would re-price the plan's bar, so
+ * the field keeps its draft and hands the ceiling over once the typing pauses, or at once on Enter.
+ */
+export function MarchBurnCeiling({
+  burn,
+  ceiling,
+  onChange,
+}: {
+  burn: number;
+  ceiling: number | null;
+  onChange: (ceiling: number | null) => void;
+}) {
+  const [draft, setDraft] = useState<number | null>(ceiling);
+  // **The store is the truth**: a reset (another account) puts the field back on it — adjusted during the
+  // render, React's own pattern for state that follows a prop.
+  const [seen, setSeen] = useState<number | null>(ceiling);
+  if (seen !== ceiling) {
+    setSeen(ceiling);
+    setDraft(ceiling);
+  }
+  // The handler read when the wait ends, so a parent's re-render does not restart it.
+  const commit = useEffectEvent((next: number | null) => {
+    onChange(next);
+  });
+  useEffect(() => {
+    if (draft === ceiling) return undefined;
+    const timer = globalThis.setTimeout(() => {
+      commit(draft);
+    }, BURN_SETTLE_MS);
+    return () => {
+      globalThis.clearTimeout(timer);
+    };
+  }, [draft, ceiling]);
+  return (
+    <div
+      onKeyDown={(event) => {
+        if (!isCommitEnter(event) || draft === ceiling) return;
+        onChange(draft);
+      }}
+    >
+      <NumberField
+        label="Burn ≤"
+        accessibleName="Most mercs lost"
+        value={draft}
+        onChange={setDraft}
+        allowEmpty
+        placeholder={amount(burn)}
+        enterKeyHint="done"
+        w={120}
+        description="Most mercs this march may lose. Empty keeps the burn it was generated with."
+      />
+    </div>
+  );
 }
 
 /** What a pool's units are called in a sentence, where the plan's trade says "Merc" and the raise says "Mercenary counts". */
@@ -483,11 +557,20 @@ export function MarchPills({
   onPush,
   round,
   onRound,
+  burn = 0,
+  burnCeiling = null,
+  onBurnCeiling,
 }: MarchPillsProps) {
   // The pool the one raise control speaks for, or `null` when there is none to draw: a hired pool with a
   // stack to raise, on a plan's march.
   const hiredRow = canRaise ? rows.find((row) => raisesPool(row.pool) && row.entries.length > 0) : undefined;
   const raisable = hiredRow !== undefined && raisesPool(hiredRow.pool) ? hiredRow.pool : null;
+  // **The ceiling is offered where the raise is, on a march with mercs** — and still while one stands, since a
+  // ceiling of 0 empties the mercs' block and the field must stay to take it back.
+  const burnable =
+    canRaise &&
+    onBurnCeiling !== undefined &&
+    (burnCeiling !== null || rows.some((row) => row.pool === 'authority' && row.entries.length > 0));
   return (
     <Stack
       gap="lg"
@@ -638,6 +721,7 @@ export function MarchPills({
           onChange={onRaise}
         />
       )}
+      {burnable && <MarchBurnCeiling burn={burn} ceiling={burnCeiling} onChange={onBurnCeiling} />}
     </Stack>
   );
 }

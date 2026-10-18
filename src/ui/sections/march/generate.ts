@@ -25,11 +25,19 @@ import type { CalcPool, PoolJob } from '@/worker/pool';
 
 import { advisorPoolIfIdle } from './advisorSearch';
 import type { PositionTrades } from './positions';
-import { openingPosition, pickOf, setupFingerprint, tradeoffFigures, useRunStore } from './runStore';
+import {
+  openingPosition,
+  pickOf,
+  setupFingerprint,
+  tradeoffFigures,
+  useRunStore,
+  wholeCeiling,
+} from './runStore';
 import type { MarchResize } from './runStore';
 import { primeBar, primePositions } from './positionsSearch';
 import { editBurnCap } from './hired';
 import { troopFloor } from './raise';
+import { primeRaise } from './raiseSearch';
 
 /**
  * The two wall-clock budgets, as `src/config.ts` sets them. They are re-exported under the names the March
@@ -93,6 +101,15 @@ export async function runGenerate(): Promise<void> {
 
   const run = useRunStore.getState();
   run.cancel();
+  /**
+   * **The pool line opens as the account's setting asks** (`docs/plans/burn-ceiling.md` §3.1), the moment the
+   * new march lands — never before, so the march still on screen keeps its own toggles while the run is out.
+   */
+  const openPoolLine = (): void => {
+    useRunStore.getState().openPoolLine(profile.settings);
+  };
+  /** The player's burn ceiling, read once for the run: the march it opens on is raised under it. */
+  const burnCap = run.burnCeiling ?? undefined;
   const controller = new AbortController();
   // Stamped at the start, not at the end: what the answer on screen belongs to is the setup the run
   // was launched with, so an edit made while the search runs already counts as stale.
@@ -184,7 +201,24 @@ export async function runGenerate(): Promise<void> {
           if (isAbortError(error)) throw error;
         }
       }
+      /**
+       * **Under a burn ceiling the march opens on the kernel's Tight with it** (`docs/plans/burn-ceiling.md`
+       * §3.2), asked here and filed with the march in one tick (`primeRaise`), as a March edit does. The bar's
+       * own tables stay the plan's, unceilinged: the ceiling is per march, and the bar's stops are untouched.
+       */
+      const commitRaise =
+        burnCap !== undefined && troopFloor(itsMarch.result) !== null
+          ? await primeRaise(
+              marchRequest,
+              itsMarch.result,
+              useRunStore.getState().raiseModes,
+              burnCap,
+              controller.signal,
+            )
+          : null;
       useRunStore.getState().rememberPrevious(previous);
+      openPoolLine();
+      commitRaise?.();
       useResultStore.getState().setResult({ ...common, request: marchRequest, ...itsMarch });
       useRunStore.getState().finish(Object.keys(chosen.counts), null, planned);
       return;
@@ -193,6 +227,7 @@ export async function runGenerate(): Promise<void> {
     if (setup.priority === 'none') {
       const { result, summary } = await client.stack(request, controller.signal);
       useRunStore.getState().rememberPrevious(previous);
+      openPoolLine();
       useResultStore.getState().setResult({ ...common, result, summary });
       // Every type the account can field was offered to the sizer; what it could not pay for is in
       // `result.dropped`, with the reason the left-out row shows.
@@ -210,6 +245,7 @@ export async function runGenerate(): Promise<void> {
     const kept = new Set(found.includedUnitIds);
     const left = request.units.map((unit) => unit.id).filter((id) => !kept.has(id));
     useRunStore.getState().rememberPrevious(previous);
+    openPoolLine();
     useResultStore.getState().setResult({ ...common, result: found.result, summary: found.summary });
     // The search's own first evaluation is the army with every type in it: keep it, it is the only way to
     // show what the winning selection gave up (PLAN §3.6).
@@ -310,12 +346,17 @@ export async function resizeMarch(
   includedUnitIds: string[],
   leftOutByPlayer: string[],
   edit: MarchEdit = {},
-  /** The most authority chunks the re-size may burn (`editBurnCap`); no control sets it yet. */
-  burnCeiling?: number,
+  /**
+   * The player's burn ceiling for this re-size (`editBurnCap`, the March's `Burn ≤` field): left out, the one on
+   * the store; given (a number, or `null` for none), it is **set on the store with the march it produced**, in
+   * one update (`changeBurnCeiling`).
+   */
+  burnCeiling?: number | null,
 ): Promise<void> {
   const snapshot = useResultStore.getState().last;
   if (snapshot === null) return;
   const run = useRunStore.getState();
+  const ceiling = burnCeiling === undefined ? run.burnCeiling : wholeCeiling(burnCeiling);
   const plan = run.plan;
   const position = run.planPick;
   run.setIncluded(includedUnitIds, leftOutByPlayer);
@@ -329,7 +370,14 @@ export async function resizeMarch(
     const resized =
       plan === null
         ? await sizedAgain(snapshot.request, included, edit, controller.signal)
-        : await planStopAgain(snapshot.request, plan, position, included, controller.signal, burnCeiling);
+        : await planStopAgain(
+            snapshot.request,
+            plan,
+            position,
+            included,
+            controller.signal,
+            ceiling ?? undefined,
+          );
     if (controller.signal.aborted) return;
     if (resized === null) {
       useResultStore
@@ -337,6 +385,26 @@ export async function resizeMarch(
         .setError('There is no march over those types: put a troop type back to size one.');
       return;
     }
+    /**
+     * **One update, not two** (owner, 2026-10-18: a put-back under a ceiling *"makes the damage flicker while the
+     * capped troops are recomputed"*). On a plan's march the raise the March draws over the new march — the
+     * kernel's Tight, under the ceiling — is asked **before** the march is published (`primeRaise`), and filed in
+     * the same tick as it: the first frame of the new march is already raised and capped, and no frame shows the
+     * re-size alone.
+     */
+    const commitRaise =
+      plan !== null && troopFloor(resized.result) !== null
+        ? await primeRaise(
+            snapshot.request,
+            resized.result,
+            useRunStore.getState().raiseModes,
+            ceiling ?? undefined,
+            controller.signal,
+          )
+        : null;
+    if (controller.signal.aborted) return;
+    commitRaise?.();
+    if (burnCeiling !== undefined) useRunStore.getState().setBurnCeiling(ceiling);
     useResultStore.getState().setResult({
       request: snapshot.request,
       result: resized.result,

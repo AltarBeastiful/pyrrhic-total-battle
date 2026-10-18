@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -378,6 +378,29 @@ export const userUpgradeSchema = z.object({
 });
 export type UserUpgrade = z.infer<typeof userUpgradeSchema>;
 
+// ---- Settings (schema v9) ------------------------------------------------------------------------------
+/**
+ * **Which hired pools a Generate opens with their pool-line rule on** (`docs/plans/burn-ceiling.md` §3.1; owner,
+ * 2026-10-18: *"That could be a setting (default: modify monster and merc, or monster or merc only, or
+ * neither)"*). `'neither'` is the default: a first run shows the plan's own marches.
+ */
+export const POOL_LINE_DEFAULTS = ['both', 'mercs', 'monsters', 'neither'] as const;
+export type PoolLineDefault = (typeof POOL_LINE_DEFAULTS)[number];
+
+/** The pool line's two standing rules: the push (S-159) and the round to tens. */
+export const POOL_LINE_RULES = ['push', 'round'] as const;
+export type PoolLineRule = (typeof POOL_LINE_RULES)[number];
+
+/**
+ * The account's preferences (schema v9): few knobs, sane defaults. `poolLineRule` is not chosen in a menu —
+ * it is the rule the player last switched on from a pool line, so the setting opens the one he uses.
+ */
+export const profileSettingsSchema = z.object({
+  poolLine: z.enum(POOL_LINE_DEFAULTS),
+  poolLineRule: z.enum(POOL_LINE_RULES),
+});
+export type ProfileSettings = z.infer<typeof profileSettingsSchema>;
+
 // ---- Profile --------------------------------------------------------------------------------------
 /**
  * The parts of a profile two devices can change independently (S-49e). Each gets its own edit time in
@@ -392,6 +415,7 @@ export const PROFILE_SECTIONS = [
   'recovery',
   'activeSetupId',
   'upgrades',
+  'settings',
 ] as const;
 export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 
@@ -408,6 +432,8 @@ export const profileSchema = syncMetaSchema.extend({
   savedStacks: z.array(savedStackSchema),
   /** Upgrades the player typed for the advisor to weigh (schema v7, W17 C2). */
   upgrades: z.array(userUpgradeSchema),
+  /** The account's preferences (schema v9): the pool line a Generate opens with. */
+  settings: profileSettingsSchema,
   /** When each section was last edited; absent on a profile no edit has stamped yet (S-49e). */
   sectionUpdatedAt: z.partialRecord(z.enum(PROFILE_SECTIONS), timestamp).optional(),
 });

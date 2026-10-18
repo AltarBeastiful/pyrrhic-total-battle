@@ -7,6 +7,7 @@
  * Unknown fields are never a crash: zod strips them and we log one console warning naming the paths.
  */
 import { unitById } from '../data';
+import { DEFAULT_SETTINGS } from './defaults';
 import { profileSchema, rootDocumentSchema, savedStackSchema, SCHEMA_VERSION } from './schema';
 import type { Profile, RootDocument, SavedStack } from './schema';
 
@@ -186,6 +187,15 @@ function withMarchType(setup: unknown): unknown {
   return { ...setup, marchType: 'unspecified' };
 }
 
+/**
+ * `8 → 9` for one profile (`docs/plans/burn-ceiling.md` §3.1): the account gains its preferences, at the
+ * defaults that leave every Generate as it was — no pool line opened, the push as the rule a setting would
+ * open. Nothing else moves.
+ */
+export function addSettings(profile: Record<string, unknown>): Record<string, unknown> {
+  return isPlainObject(profile.settings) ? profile : { ...profile, settings: { ...DEFAULT_SETTINGS } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -201,6 +211,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `5 → 6`: a selective recovery is chosen in families, so the count of top types is dropped.
  * `6 → 7`: every profile gains an empty list of user-entered upgrades (W17 C2).
  * `7 → 8`: every setup gains an unspecified march type, so no captain restriction applies (W17 C5-0).
+ * `8 → 9`: every profile gains its settings at the defaults (the pool line opens on neither pool).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -211,6 +222,7 @@ export const migrations: MigrationTable = {
   5: (doc) => ({ ...doc, schemaVersion: 6, profiles: migrateProfiles(doc, dropSelectiveTop) }),
   6: (doc) => ({ ...doc, schemaVersion: 7, profiles: migrateProfiles(doc, addUpgradeList) }),
   7: (doc) => ({ ...doc, schemaVersion: 8, profiles: migrateProfiles(doc, addMarchType) }),
+  8: (doc) => ({ ...doc, schemaVersion: 9, profiles: migrateProfiles(doc, addSettings) }),
 };
 
 /**
@@ -230,6 +242,7 @@ export const profileMigrations: MigrationTable = {
   5: dropSelectiveTop,
   6: addUpgradeList,
   7: addMarchType,
+  8: addSettings,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -248,6 +261,7 @@ export const savedStackMigrations: MigrationTable = {
   5: (doc) => ({ ...doc, setup: withoutSelectiveTop(doc.setup) }),
   6: identity,
   7: (doc) => ({ ...doc, setup: withMarchType(doc.setup) }),
+  8: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

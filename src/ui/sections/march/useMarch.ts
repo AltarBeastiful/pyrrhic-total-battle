@@ -9,12 +9,13 @@
  */
 import { useEffect, useMemo } from 'react';
 
-import type { BattleSummary, Pool, Stack, StackResult } from '@/engine/types';
+import type { BattleSummary, Pool, Stack, StackRequest, StackResult } from '@/engine/types';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
 import { hiredLost } from './hired';
 import { applyCounts, hasEdits } from './manual';
+import { liftedCounts } from './positions';
 import type { PositionTrades } from './positions';
 import { usePricedRaise } from './positionsSearch';
 import { pushedCounts, pushedOn, raisedCounts, roundedCounts, troopFloor } from './raise';
@@ -33,6 +34,25 @@ export interface PushOffer {
   pressed: boolean;
   /** The trade the push offers, or `null` when it would add nothing here — the state the button is hidden in. */
   trade: PushTrade | null;
+}
+
+/** The kernel's Tight under a ceiling, per march, held so a render asks it once (`useMarch`'s last resort). */
+const cappedLifts = new WeakMap<StackResult, Map<string, Record<string, number> | null>>();
+
+function cappedLift(
+  request: StackRequest,
+  base: StackResult,
+  modes: RaiseModes,
+  burnCap: number,
+): Record<string, number> | null {
+  const key = `${modes.authority}|${modes.dominance}|${String(burnCap)}`;
+  const held = cappedLifts.get(base);
+  if (held?.has(key) === true) return held.get(key) ?? null;
+  const counts = liftedCounts(request, base, modes, burnCap)?.counts ?? null;
+  const byKey = held ?? new Map<string, Record<string, number> | null>();
+  byKey.set(key, counts);
+  cappedLifts.set(base, byKey);
+  return counts;
 }
 
 /** No offer on either pool: the March view with nothing on screen, before any march has been computed. */
@@ -91,6 +111,13 @@ export interface MarchView {
   searching: boolean;
   /** The stop's priced positions, which the raise control's hover previews; `null` while they are coming. */
   trades: PositionTrades | null;
+  /**
+   * **The mercs the march on screen burns** (`hiredLost`, the recap's "Merc lost"): what the `Burn ≤` field shows
+   * as its placeholder while the player has typed no ceiling (`docs/plans/burn-ceiling.md` §3.2).
+   */
+  burn: number;
+  /** The player's burn ceiling (`runStore.burnCeiling`), `null` for none. */
+  burnCeiling: number | null;
   rows: MarchStackRow[];
   /** The army as pills, one block per housing pool (design plan §5.5). */
   pools: PoolRow[];
@@ -128,6 +155,12 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
   const pushed = useRunStore((state) => state.pushed);
   // And which are rounded to tens, over the push (owner, 2026-10-16).
   const rounded = useRunStore((state) => state.rounded);
+  /**
+   * **The player's burn ceiling** (`docs/plans/burn-ceiling.md` §3.2), in the recap's "Merc lost" unit. It binds
+   * where the raise is offered — a plan's march — and nowhere else, like the field that sets it: the raise's
+   * tables and search are asked under it, a march over it is trimmed, and the push may not pass it.
+   */
+  const burnCeiling = useRunStore((state) => state.burnCeiling);
   // **Where the raise is offered**: a plan's own march, whose counts are the plan's trade and sit below
   // what the shelter allows. A sizer's march has nothing left to give (`stacker.ts:81-98`). The plan itself
   // is read as the object it is — its identity is what the tables under it are filed under, one level down
@@ -148,6 +181,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
    * troops to shelter by.
    */
   const canRaise = planned && snapshot !== null && troopFloor(snapshot.result) !== null;
+  const burnCap = canRaise && burnCeiling !== null ? burnCeiling : undefined;
   /**
    * **The one asynchronous reading in the March** (S-143b): `counts` is `null` until the search answers.
    * Read out as two values rather than as the object the hook returns — a fresh object every render would
@@ -160,7 +194,18 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
   const position = useRunStore((state) =>
     state.plan === null && state.shownPlan !== null ? state.shownPlan.planPick : state.planPick,
   );
-  const { counts: priced, trades, pricing } = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
+  const {
+    counts: pricedRow,
+    trades,
+    pricing: barPricing,
+  } = usePricedRaise(snapshot, plan, position, raiseModes, canRaise);
+  /**
+   * **Under a burn ceiling the plan's table is not the answer** (`docs/plans/burn-ceiling.md` §3.2): its rows are
+   * the bar's, priced without one — the ceiling is per march and the bar's stops are untouched — so the March
+   * takes the kernel's raise asked under the ceiling instead (the search below, filed ahead by `primeRaise`).
+   */
+  const priced = burnCap === undefined ? pricedRow : null;
+  const pricing = burnCap === undefined && barPricing;
   const { counts: exhaustiveCounts, running: waiting } = useRaiseSearch(
     /**
      * **A search the plan's own table has already answered is not asked again** (S-149; owner, 2026-09-30:
@@ -182,6 +227,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
     priced === null && !pricing ? snapshot : null,
     raiseModes,
     canRaise,
+    burnCap,
   );
 
   const march = useMemo(() => {
@@ -200,6 +246,8 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
         round: NO_OFFERS,
         searching: false,
         trades: null,
+        burn: 0,
+        burnCeiling,
         rows: [],
         pools: [],
         leftOut: [],
@@ -218,23 +266,23 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
      * figures and the second draws the Undo mark and the note.
      */
     const raised =
-      canRaise && priced === null ? raisedCounts(snapshot.request, snapshot.result, raiseModes) : null;
+      canRaise && priced === null && burnCap === undefined
+        ? raisedCounts(snapshot.request, snapshot.result, raiseModes)
+        : null;
     /**
-     * **The plan's own answer, or the climb with the search over it** (S-143b, S-145, S-149).
-     *
-     * `priced` is the row under the plan — the same question the control asks, answered ahead of the press by
-     * the wasm, and the raise whole: the climb's counts are inside it and the search's own counts are on top
-     * of them (`positions.ts`), which is why `raisedCounts` is not run for it at all.
-     *
-     * Without it — no plan, the bar still being priced, a march the plan did not size — this is the March's
-     * own path, and the two things it must not do were caught by the review of 2026-09-29. It must **not** be
-     * skipped when `raised` is `null`: the sampled climb can find nothing on a stop where the exhaustive
-     * search finds something — that is the whole gap this position closes — and the old guard threw that
-     * answer away. And the search's counts must be merged over `raised` on **every** slot it walked and not
-     * only the ones it moved, or a stack it decided to bring back down to the plan's count would keep the
-     * seed's higher one.
+     * **Under a burn ceiling the march is the kernel's Tight with that ceiling, and nothing else** (owner,
+     * 2026-10-18; `docs/plans/burn-ceiling.md` §3.2). The answer comes from the plan's table priced under it
+     * (`priced`) or the raise search asked under it (`exhaustiveCounts`) — both filed before the march or the
+     * ceiling is published (`changeBurnCeiling`, `resizeMarch`), so neither is waited for. The climb above is
+     * never drawn under a ceiling: it knows nothing of one. Where neither answer is in hand — a march nobody
+     * primed — the same kernel call is made here, once per march, position and ceiling (`cappedLift`).
      */
-    const lifted = priced ?? (exhaustiveCounts === null ? raised : { ...raised, ...exhaustiveCounts });
+    const capped =
+      burnCap === undefined || !canRaise || priced !== null || exhaustiveCounts !== null
+        ? null
+        : cappedLift(snapshot.request, snapshot.result, raiseModes, burnCap);
+    const lifted =
+      priced ?? capped ?? (exhaustiveCounts === null ? raised : { ...raised, ...exhaustiveCounts });
     const effective = lifted === null ? counts : { ...lifted, ...counts };
     const edited = hasEdits(snapshot.result, counts);
 
@@ -259,7 +307,8 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
     /** The same march as a *reading*: what every offer's percentage is measured against (`summary` is that, plus the push). */
     const earlier = beforePush?.summary ?? snapshot.summary;
     const standing = pushedOn(pushed);
-    const pushedMoves = standing.length === 0 ? null : pushedCounts(snapshot.request, start, standing);
+    const pushedMoves =
+      standing.length === 0 ? null : pushedCounts(snapshot.request, start, standing, burnCap);
     const composed = { ...(lifted ?? {}), ...(pushedMoves ?? {}), ...counts };
 
     /**
@@ -318,7 +367,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
       if (!canRaise) return null;
       if (!start.stacks.some((stack) => stack.pool === pool && stack.count > 0)) return null;
       const pressed = pushed[pool];
-      const moved = pushedCounts(snapshot.request, start, [pool]);
+      const moved = pushedCounts(snapshot.request, start, [pool], burnCap);
       if (moved === null) return { pressed, trade: null };
       const after = applyCounts(snapshot.request, snapshot.result, { ...effective, ...moved });
       /**
@@ -415,6 +464,8 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
       // Nothing is waited for while the plan's own table answers: the counts are already in hand (S-149).
       searching: priced === null && waiting,
       trades,
+      burn: hiredLost(result.stacks),
+      burnCeiling,
       rows: marchRows(snapshot.request, snapshot.result, result, summary),
       pools: poolRows({
         result: army,
@@ -436,6 +487,8 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
     canRaise,
     pushed,
     rounded,
+    burnCap,
+    burnCeiling,
     priced,
     trades,
     exhaustiveCounts,

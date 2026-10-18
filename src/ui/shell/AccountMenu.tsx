@@ -45,7 +45,7 @@ import { buildBattleLink, buildProfileLink } from '@/share/codec';
 import { applyImport, exportProfileFile, parseImport } from '@/share/exportImport';
 import type { ImportMode, ParsedImport } from '@/share/exportImport';
 import { nextProfileName, uniqueProfileName } from '@/state/defaults';
-import { THEMES, type Theme } from '@/state/schema';
+import { POOL_LINE_DEFAULTS, THEMES, type PoolLineDefault, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
 
 import { useAccountSection } from '../account/section';
@@ -79,6 +79,22 @@ const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
+
+/**
+ * **Pool line on Generate** (`docs/plans/burn-ceiling.md` §3.1): which hired pools a Generate opens with their
+ * pool-line rule on — the push or the round, whichever the player last switched on. One setting, four words, set
+ * once and then forgotten like the theme beside it (design rule 15: preferences live in this menu).
+ */
+const POOL_LINE_OPTIONS: { value: PoolLineDefault; label: string }[] = [
+  { value: 'both', label: 'Both' },
+  { value: 'mercs', label: 'Mercs' },
+  { value: 'monsters', label: 'Monsters' },
+  { value: 'neither', label: 'Neither' },
+];
+
+function isPoolLineDefault(value: string): value is PoolLineDefault {
+  return (POOL_LINE_DEFAULTS as readonly string[]).includes(value);
+}
 
 const ICON = 15;
 
@@ -148,6 +164,7 @@ export function AccountMenu() {
   const setup = useStore(selectActiveSetup);
   const theme = useStore(selectTheme);
   const setTheme = useStore((state) => state.setTheme);
+  const updateProfile = useStore((state) => state.updateProfile);
   const createProfile = useStore((state) => state.createProfile);
   const duplicateProfile = useStore((state) => state.duplicateProfile);
   const renameProfile = useStore((state) => state.renameProfile);
@@ -358,6 +375,17 @@ export function AccountMenu() {
     {
       id: 'theme',
       entries: [
+        {
+          kind: 'segment',
+          id: 'pool-line',
+          label: 'Pool line on Generate',
+          value: profile.settings.poolLine,
+          options: POOL_LINE_OPTIONS,
+          onChange: (next) => {
+            if (!isPoolLineDefault(next)) return;
+            updateProfile(profile.id, (current) => ({ settings: { ...current.settings, poolLine: next } }));
+          },
+        },
         {
           kind: 'segment',
           id: 'theme',

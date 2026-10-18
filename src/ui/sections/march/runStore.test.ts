@@ -48,3 +48,29 @@ test('the push is one pool at a time, a standing rule over a Generate, and Reset
   useRunStore.getState().reset();
   expect(useRunStore.getState().pushed).toEqual({ authority: false, dominance: false });
 });
+
+test('the burn ceiling is a whole count, a standing rule over a Generate, and Reset clears it', () => {
+  expect(useRunStore.getState().burnCeiling).toBeNull();
+  useRunStore.getState().setBurnCeiling(7.6);
+  expect(useRunStore.getState().burnCeiling).toBe(7);
+  useRunStore.getState().setBurnCeiling(-3);
+  expect(useRunStore.getState().burnCeiling).toBe(0);
+
+  useRunStore.getState().start(new AbortController(), 'f');
+  useRunStore.getState().finish([], null, NEW);
+  expect(useRunStore.getState().burnCeiling).toBe(0);
+
+  useRunStore.getState().reset();
+  expect(useRunStore.getState().burnCeiling).toBeNull();
+});
+
+test('Reset opens the pool line as the setting asks, and every toggle off without one', () => {
+  useRunStore.getState().reset({ poolLine: 'both', poolLineRule: 'round' });
+  expect(useRunStore.getState().rounded).toEqual({ authority: true, dominance: true });
+  expect(useRunStore.getState().pushed).toEqual({ authority: false, dominance: false });
+  useRunStore.getState().openPoolLine({ poolLine: 'mercs', poolLineRule: 'push' });
+  expect(useRunStore.getState().pushed).toEqual({ authority: true, dominance: false });
+  expect(useRunStore.getState().rounded).toEqual({ authority: false, dominance: false });
+  useRunStore.getState().reset();
+  expect(useRunStore.getState().pushed).toEqual({ authority: false, dominance: false });
+});

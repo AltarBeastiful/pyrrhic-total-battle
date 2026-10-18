@@ -42,6 +42,7 @@ import {
 import { MarchGenerateButton } from './MarchGenerateButton';
 import { MarchLeftOut, MarchPills, MarchResized, MarchShelterNote } from './MarchPills';
 import { MarchRecap } from './MarchRecap';
+import { changeBurnCeiling, pressPoolLine } from './poolLine';
 import type { PillOrder } from './rows';
 import { useRunStore } from './runStore';
 import { UnitSheet } from './UnitSheet';
@@ -210,13 +211,17 @@ export function MarchSection() {
             onPush={(pool) => {
               // **A toggle** (owner, 2026-10-12): the mark says which way it goes, so the press is the opposite
               // of what is drawn — and one pool only, the one whose own line was pressed (S-159).
-              useRunStore.getState().setPushed(pool, !(march.push[pool]?.pressed ?? false));
+              // Switching it on is also the rule the *Pool line on Generate* setting opens with (`pressPoolLine`).
+              pressPoolLine(pool, 'push', !(march.push[pool]?.pressed ?? false));
             }}
             round={march.round}
             onRound={(pool) => {
               // The push's sibling, and the same toggle: the press is the opposite of what is drawn.
-              useRunStore.getState().setRounded(pool, !(march.round[pool]?.pressed ?? false));
+              pressPoolLine(pool, 'round', !(march.round[pool]?.pressed ?? false));
             }}
+            burn={march.burn}
+            burnCeiling={march.burnCeiling}
+            onBurnCeiling={changeBurnCeiling}
           />
           {/* How safely the troops shelter the hired stacks, read off the march on screen — generated or
               edited by hand (S-141). Silent while the shelter is wide, and silent while the raise is on:

@@ -372,6 +372,18 @@ describe('profile names', () => {
     expect(afterTroops.name).toBe(afterRename.name);
   });
 
+  it('choosing the pool line on Generate stamps the settings section, and only that one', () => {
+    const store = createAppStore();
+    const id = store.getState().doc.activeProfileId;
+    expect(store.getState().doc.profiles[0]?.settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
+    store
+      .getState()
+      .updateProfile(id, (profile) => ({ settings: { ...profile.settings, poolLine: 'both' } }));
+    const profile = store.getState().doc.profiles[0];
+    expect(profile?.settings.poolLine).toBe('both');
+    expect(Object.keys(profile?.sectionUpdatedAt ?? {})).toEqual(['settings']);
+  });
+
   it('typing an upgrade stamps the upgrades section, and only that one (W17 C2)', () => {
     const store = createAppStore();
     const id = store.getState().doc.activeProfileId;

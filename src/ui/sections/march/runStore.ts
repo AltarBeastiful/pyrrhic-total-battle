@@ -13,7 +13,7 @@ import { create } from 'zustand';
 
 import type { CampaignPlan, PlanPick, PlanRow } from '@/engine/plan';
 import type { BattleSummary, Objective, SearchProgress } from '@/engine/types';
-import type { BattleSetup, Profile } from '@/state/schema';
+import type { BattleSetup, Profile, ProfileSettings } from '@/state/schema';
 
 import { DEFAULT_RAISE, NO_PUSH } from './raise';
 import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
@@ -101,6 +101,29 @@ export function openingPosition(plan: CampaignPlan, chosen: ChosenStop | null): 
   const byKind = chosen.kind === null ? -1 : rows.findIndex((row) => row.pick === chosen.kind);
   if (byKind >= 0) return byKind;
   return Math.max(0, Math.min(rows.length - 1, chosen.at));
+}
+
+/**
+ * **The pool-line toggles a Generate opens with** (`docs/plans/burn-ceiling.md` §3.1): the setting's pools get
+ * the rule the player last switched on (push or round), every other toggle is off. `'neither'` — the default —
+ * is every toggle off, the march the plan sized.
+ */
+export function poolLineOpening(settings: Pick<ProfileSettings, 'poolLine' | 'poolLineRule'> | undefined): {
+  pushed: Record<RaisedPool, boolean>;
+  rounded: Record<RaisedPool, boolean>;
+} {
+  const line = settings?.poolLine ?? 'neither';
+  const on: Record<RaisedPool, boolean> = {
+    authority: line === 'both' || line === 'mercs',
+    dominance: line === 'both' || line === 'monsters',
+  };
+  const round = settings?.poolLineRule === 'round';
+  return { pushed: round ? NO_PUSH : on, rounded: round ? on : NO_PUSH };
+}
+
+/** A ceiling as the store holds it: a whole count of chunks, never negative; anything else is no ceiling. */
+export function wholeCeiling(ceiling: number | null): number | null {
+  return ceiling === null || !Number.isFinite(ceiling) ? null : Math.max(0, Math.floor(ceiling));
 }
 
 /** The handful of figures the trade-off table compares; everything else in a summary is noise there. */
@@ -315,7 +338,8 @@ export interface RunState {
    * A **standing rule of the same species as `raiseModes`** and for the same reason: it is an instruction and
    * not a count, so the counts are derived from the march on screen every time (`useMarch`) — which is exactly
    * what lets the pool's own button put it back, and what makes a Generate arrive with it applied rather than
-   * with a count nobody can account for. Cleared only by `reset()`.
+   * with a count nobody can account for. **A Generate opens it as the account's *Pool line on Generate* setting
+   * asks** (`openPoolLine`, `docs/plans/burn-ceiling.md` §3.1) — every toggle off by default — and so does `reset()`.
    *
    * It is **per pool**, unlike the raise position: the two buttons sit on their own lines, and the owner's ask
    * was one resource at a time (*"I'm happy with the silver cost and dominance but I could be using more
@@ -326,10 +350,24 @@ export interface RunState {
   /**
    * **Whether each hired pool is rounded to tens** (owner, 2026-10-16), up or down by the best trade
    * (`roundedCounts`). The push's sibling and the same species of standing rule: per pool, derived from the march
-   * on screen every time, cleared only by `reset()`.
+   * on screen every time, opened by a Generate and by `reset()` as the setting asks (`openPoolLine`).
    */
   rounded: Record<RaisedPool, boolean>;
   setRounded: (pool: RaisedPool, rounded: boolean) => void;
+  /**
+   * **Open the pool line as the account's setting asks** (`poolLineOpening`), which a Generate does as its march
+   * lands: the setting's pools get the rule last switched on, every other toggle goes off.
+   */
+  openPoolLine: (settings: ProfileSettings | undefined) => void;
+  /**
+   * **The most mercs the march on screen may burn** (`docs/plans/burn-ceiling.md` §3.2; owner, 2026-10-18:
+   * *"there should be a way to conserve merc burns"*), in the unit the recap prints as "Merc lost" (`hiredLost`,
+   * one per started ten). `null` — the default — is no ceiling of the player's own: the march keeps the burn it
+   * was generated with, which is Tight's own rule. A standing rule like `pushed`: it caps the raise, the push and
+   * the re-size of a March edit, it outlives a Generate, and only `reset()` clears it.
+   */
+  burnCeiling: number | null;
+  setBurnCeiling: (ceiling: number | null) => void;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
@@ -350,7 +388,8 @@ export interface RunState {
    * reference (`shownSummary`) where the run first put it.
    */
   showSummary: (summary: BattleSummary | null, at: number | null) => void;
-  reset: () => void;
+  /** Forget the run; the pool line opens as `settings` asks (`poolLineOpening`, every toggle off without one). */
+  reset: (settings?: ProfileSettings) => void;
 }
 
 export const useRunStore = create<RunState>()((set, get) => ({
@@ -371,6 +410,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   raiseModes: DEFAULT_RAISE,
   pushed: NO_PUSH,
   rounded: NO_PUSH,
+  burnCeiling: null,
   controller: null,
   setResize: (resize) => {
     set({ resize });
@@ -465,6 +505,14 @@ export const useRunStore = create<RunState>()((set, get) => ({
   setRounded: (pool, rounded) => {
     set({ rounded: { ...get().rounded, [pool]: rounded } });
   },
+  openPoolLine: (settings) => {
+    set(poolLineOpening(settings));
+  },
+  setBurnCeiling: (ceiling) => {
+    const whole = wholeCeiling(ceiling);
+    if (whole === get().burnCeiling) return;
+    set({ burnCeiling: whole });
+  },
   cancel: () => {
     get().controller?.abort();
     // A cancelled run produced no result, so the fingerprint it was started with means nothing: the
@@ -481,7 +529,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
     if (get().shownAt === at && summary !== null) return;
     set({ shownSummary: summary, shownAt: at });
   },
-  reset: () => {
+  reset: (settings) => {
     set({
       progress: null,
       editingCounts: false,
@@ -500,8 +548,8 @@ export const useRunStore = create<RunState>()((set, get) => ({
       // does a count the previous one asked to raise its hired stacks to.
       chosenStop: null,
       raiseModes: DEFAULT_RAISE,
-      pushed: NO_PUSH,
-      rounded: NO_PUSH,
+      ...poolLineOpening(settings),
+      burnCeiling: null,
       controller: null,
     });
   },
