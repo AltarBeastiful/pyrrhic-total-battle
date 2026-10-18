@@ -212,6 +212,11 @@ export function MarchSection() {
               // of what is drawn — and one pool only, the one whose own line was pressed (S-159).
               useRunStore.getState().setPushed(pool, !(march.push[pool]?.pressed ?? false));
             }}
+            round={march.round}
+            onRound={(pool) => {
+              // The push's sibling, and the same toggle: the press is the opposite of what is drawn.
+              useRunStore.getState().setRounded(pool, !(march.round[pool]?.pressed ?? false));
+            }}
           />
           {/* How safely the troops shelter the hired stacks, read off the march on screen — generated or
               edited by hand (S-141). Silent while the shelter is wide, and silent while the raise is on:

@@ -593,6 +593,116 @@ export function offersPush(trade: PushTrade | null, pressed: boolean): boolean {
   return pressed || trade.damage > trade.before;
 }
 
+/**
+ * **Every stack of one hired pool rounded to a ten, up or down, whichever trade is best** (owner, 2026-10-16:
+ * *"round to ten going upwards or downwards depending on the best trade. same properties as the other
+ * button"*). The push's own sibling at the end of the pool line, and a standing rule of the same species
+ * (`runStore.rounded`): re-derived from the march on screen every time, so a second press puts it back exactly.
+ *
+ * Each stack not yet in tens has two candidates, its ten below and its ten above, and every combination of
+ * them is **fought** — a round-up can be refused by three bounds the push already keeps (the pool's housing, the
+ * account's stock, the kill order) and a round-down by one (the kill order: a stack lowered under its neighbour
+ * swaps places with it), and only a replay answers the last one honestly; a tie with a neighbour is refused, as
+ * the push refuses one. A round-down never empties a stack, so that is not a candidate.
+ *
+ * **The best trade is the most damage, then the fewest lost** — the worst opening, as every other figure of the
+ * pool line reads it, and on a tie the loss the tooltip prints. Past `ROUND_COMBINATIONS` the stacks are rounded
+ * one at a time, the last to fall first, each against the others as they stand.
+ *
+ * `base` is what `applyCounts` replays over (the generated result), `counts` the march on screen as counts, and
+ * `start` that march replayed — the kill order to keep. Stacks in `fixed` (typed by hand) are left alone.
+ * Answers `null` when nothing is left to round or no legal rounding exists, the state the button is hidden in.
+ */
+export function roundedCounts(
+  request: StackRequest,
+  base: StackResult,
+  start: StackResult,
+  counts: Record<string, number>,
+  pool: RaisedPool,
+  fixed: ReadonlySet<string> = new Set(),
+): Record<string, number> | null {
+  const order = start.stacks.map((stack) => stack.unitId).join('|');
+  const candidates: { unitId: string; options: number[] }[] = [];
+  // From the bottom of the kill order up, the order the greedy fallback walks.
+  for (const stack of [...start.stacks].reverse()) {
+    if (stack.pool !== pool || stack.count <= 0 || stack.count % CHUNK === 0 || fixed.has(stack.unitId))
+      continue;
+    const down = inTens(stack.count);
+    const up = down + CHUNK;
+    const cap = request.caps[stack.unitId] ?? Number.MAX_SAFE_INTEGER;
+    const options = [...(up <= cap ? [up] : []), ...(down > 0 ? [down] : [])];
+    if (options.length > 0) candidates.push({ unitId: stack.unitId, options });
+  }
+  if (candidates.length === 0) return null;
+
+  const whole: Record<string, number> = { ...countsOf(start), ...counts };
+  // The housing bound: a march already over it (typed by hand) may not get worse, and may get better.
+  const usedOf = (moves: Record<string, number>): number => {
+    let used = 0;
+    for (const stack of start.stacks) {
+      if (stack.pool === pool) used += (moves[stack.unitId] ?? stack.count) * costOf(request, stack.unitId);
+    }
+    return used;
+  };
+  const housing = Math.max(request.housing[pool], usedOf({}));
+
+  /** The worst opening and the loss of one rounding, or `null` where it leaves a bound. */
+  const fight = (moves: Record<string, number>): { damage: number; lost: number } | null => {
+    if (usedOf(moves) > housing) return null;
+    const after = applyCounts(request, base, { ...whole, ...moves });
+    if (after.result.stacks.map((stack) => stack.unitId).join('|') !== order) return null;
+    // The push's safety net between every health step it touches: a moved stack stands strictly between its
+    // neighbours, because a tie is broken by the base index and not by the order on screen.
+    const strict = after.result.stacks.every((stack, at) => {
+      const above = after.result.stacks[at - 1];
+      if (above === undefined) return true;
+      const touched = moves[stack.unitId] !== undefined || moves[above.unitId] !== undefined;
+      return !touched || stack.totalHp < above.totalHp;
+    });
+    if (!strict) return null;
+    let lost = 0;
+    for (const stack of after.result.stacks) {
+      if (stack.pool === pool) lost += pool === 'authority' ? chunks(stack.count) : stack.count;
+    }
+    return { damage: after.summary.minDamage, lost };
+  };
+  const better = (
+    one: { damage: number; lost: number },
+    other: { damage: number; lost: number } | null,
+  ): boolean =>
+    other === null || one.damage > other.damage || (one.damage === other.damage && one.lost < other.lost);
+
+  type Reading = { damage: number; lost: number };
+  const combinations = candidates.reduce((product, one) => product * one.options.length, 1);
+  if (combinations <= ROUND_COMBINATIONS) {
+    let best: { moves: Record<string, number>; reading: Reading } | null = null;
+    const walk = (at: number, moves: Record<string, number>): void => {
+      const here = candidates[at];
+      if (here === undefined) {
+        const reading = fight(moves);
+        if (reading !== null && better(reading, best?.reading ?? null)) best = { moves, reading };
+        return;
+      }
+      for (const option of here.options) walk(at + 1, { ...moves, [here.unitId]: option });
+    };
+    walk(0, {});
+    return (best as { moves: Record<string, number> } | null)?.moves ?? null;
+  }
+  const moves: Record<string, number> = {};
+  for (const { unitId, options } of candidates) {
+    let pick: { option: number; reading: Reading } | null = null;
+    for (const option of options) {
+      const reading = fight({ ...moves, [unitId]: option });
+      if (reading !== null && better(reading, pick?.reading ?? null)) pick = { option, reading };
+    }
+    if (pick !== null) moves[unitId] = pick.option;
+  }
+  return Object.keys(moves).length === 0 ? null : moves;
+}
+
+/** Past this many combinations `roundedCounts` rounds one stack at a time: six stacks of a pool, both ways. */
+const ROUND_COMBINATIONS = 64;
+
 /** Whether this pool is one the control is drawn on at all: a hired pool with a living stack. */
 export function raisesPool(pool: Pool): pool is RaisedPool {
   return (RAISED_POOLS as readonly string[]).includes(pool);

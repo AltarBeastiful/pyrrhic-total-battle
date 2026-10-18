@@ -30,6 +30,7 @@ import {
   pushedCounts,
   pushedOn,
   raisedCounts,
+  roundedCounts,
   shelterCeiling,
   troopFloor,
 } from './raise';
@@ -733,4 +734,51 @@ test('the button is hidden where the push adds nothing or buys no damage', () =>
   expect(offersPush({ damage: 1_253_159, before: 1_148_381, lost: 2 }, false)).toBe(true);
   // And a pool standing pushed keeps its mark whatever the trade reads: the press is the only way back.
   expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2 }, true)).toBe(true);
+});
+
+/**
+ * **The rounding to tens** (owner, 2026-10-16: *"round to ten going upwards or downwards depending on the best
+ * trade"*): up where the ten above fits every bound the push keeps, down where it does not, never empty.
+ */
+function rounded(base: StackResult, overrides: Partial<StackRequest> = {}): Record<string, number> | null {
+  const start = applyCounts(request(overrides), base, {}).result;
+  return roundedCounts(request(overrides), base, start, marchCounts(start), 'authority');
+}
+
+test('the rounding goes up where the ten above stays under the stack above it', () => {
+  // 23 × 30 000 = 690 000; 30 stands at 900 000, still under the 1 000 000 troop.
+  expect(
+    rounded(marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 23, 30_000)])),
+  ).toEqual({ [HUNTER]: 30 });
+});
+
+test('the rounding goes down where the ten above would pass the stack above it, or tie it', () => {
+  // 40 would stand at 1 200 000, over the troop: the kill order moves, so 30.
+  expect(
+    rounded(marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 32, 30_000)])),
+  ).toEqual({ [HUNTER]: 30 });
+  // 20 × 50 000 ties the troop at 1 000 000: a tie is not preservation, so the ten below.
+  expect(
+    rounded(marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 13, 50_000)])),
+  ).toEqual({ [HUNTER]: 10 });
+});
+
+test('the rounding keeps the stock and the housing, and never empties a stack', () => {
+  const march = marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 23, 30_000)]);
+  expect(rounded(march, { caps: { [HUNTER]: 25 } })).toEqual({ [HUNTER]: 20 });
+  const housing = { ...HOUSING, authority: 25 * costOf(HUNTER) };
+  expect(rounded(march, { housing })).toEqual({ [HUNTER]: 20 });
+  // Seven owned of seven: the ten above is out of stock, the ten below is nothing at all.
+  const seven = marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 7, 30_000)]);
+  expect(rounded(seven, { caps: { [HUNTER]: 7 } })).toBeNull();
+});
+
+test('the rounding asks for nothing where the march is already in tens, or the stack was typed by hand', () => {
+  const tens = marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 20, 30_000)]);
+  expect(rounded(tens)).toBeNull();
+  const typed = marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 23, 30_000)]);
+  const start = applyCounts(request(), typed, {}).result;
+  expect(
+    roundedCounts(request(), typed, start, marchCounts(start), 'authority', new Set([HUNTER])),
+  ).toBeNull();
 });

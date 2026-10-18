@@ -323,6 +323,13 @@ export interface RunState {
    */
   pushed: Record<RaisedPool, boolean>;
   setPushed: (pool: RaisedPool, pushed: boolean) => void;
+  /**
+   * **Whether each hired pool is rounded to tens** (owner, 2026-10-16), up or down by the best trade
+   * (`roundedCounts`). The push's sibling and the same species of standing rule: per pool, derived from the march
+   * on screen every time, cleared only by `reset()`.
+   */
+  rounded: Record<RaisedPool, boolean>;
+  setRounded: (pool: RaisedPool, rounded: boolean) => void;
   /** Abort handle of the job in flight, so the Cancel button can stop it. */
   controller: AbortController | null;
   start: (controller: AbortController, fingerprint?: string) => void;
@@ -363,6 +370,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
   chosenStop: null,
   raiseModes: DEFAULT_RAISE,
   pushed: NO_PUSH,
+  rounded: NO_PUSH,
   controller: null,
   setResize: (resize) => {
     set({ resize });
@@ -454,6 +462,9 @@ export const useRunStore = create<RunState>()((set, get) => ({
   setPushed: (pool, pushed) => {
     set({ pushed: { ...get().pushed, [pool]: pushed } });
   },
+  setRounded: (pool, rounded) => {
+    set({ rounded: { ...get().rounded, [pool]: rounded } });
+  },
   cancel: () => {
     get().controller?.abort();
     // A cancelled run produced no result, so the fingerprint it was started with means nothing: the
@@ -490,6 +501,7 @@ export const useRunStore = create<RunState>()((set, get) => ({
       chosenStop: null,
       raiseModes: DEFAULT_RAISE,
       pushed: NO_PUSH,
+      rounded: NO_PUSH,
       controller: null,
     });
   },

@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo } from 'react';
 
-import type { BattleSummary, Pool, StackResult } from '@/engine/types';
+import type { BattleSummary, Pool, Stack, StackResult } from '@/engine/types';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { useResultStore, type ResultSnapshot } from '@/ui/resultStore';
 
@@ -17,7 +17,7 @@ import { hiredLost } from './hired';
 import { applyCounts, hasEdits } from './manual';
 import type { PositionTrades } from './positions';
 import { usePricedRaise } from './positionsSearch';
-import { pushedCounts, pushedOn, raisedCounts, troopFloor } from './raise';
+import { pushedCounts, pushedOn, raisedCounts, roundedCounts, troopFloor } from './raise';
 import type { PushTrade, RaiseModes, RaisedPool } from './raise';
 import { useRaiseSearch } from './raiseSearch';
 import { leftOutOf, marchRows, poolRows, type PillOrder } from './rows';
@@ -76,6 +76,11 @@ export interface MarchView {
    */
   push: Record<RaisedPool, PushOffer | null>;
   /**
+   * **What rounding each hired pool to tens is worth here** (owner, 2026-10-16), the push's sibling and read the
+   * same way: `null` where the pool has no living stack or the march is a sizer's.
+   */
+  round: Record<RaisedPool, PushOffer | null>;
+  /**
    * **An exhaustive position's search is in flight for this march** (S-143b). The counts on screen are the
    * damage climb's until it lands — a march the game would take, and the seed the search starts from — so
    * this only says whether the control is still waiting for the exhaustive answer (`raiseSearch.ts`).
@@ -121,6 +126,8 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
   // Which hired pools stand pushed to the most their kill order takes (S-159), the same species of standing
   // rule and read the same way.
   const pushed = useRunStore((state) => state.pushed);
+  // And which are rounded to tens, over the push (owner, 2026-10-16).
+  const rounded = useRunStore((state) => state.rounded);
   // **Where the raise is offered**: a plan's own march, whose counts are the plan's trade and sit below
   // what the shelter allows. A sizer's march has nothing left to give (`stacker.ts:81-98`). The plan itself
   // is read as the object it is — its identity is what the tables under it are filed under, one level down
@@ -190,6 +197,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
         raiseModes,
         canRaise: false,
         push: NO_OFFERS,
+        round: NO_OFFERS,
         searching: false,
         trades: null,
         rows: [],
@@ -259,12 +267,40 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
      * counts, so the battle is not fought twice for one march — which is every march the player has not pushed, and
      * this memo runs on every render of the March.
      */
-    const edits =
+    const pushedEdits =
       pushedMoves === null
         ? beforePush
         : hasEdits(snapshot.result, composed)
           ? applyCounts(snapshot.request, snapshot.result, composed)
           : null;
+    const beforeRound = pushedEdits?.result ?? snapshot.result;
+    const beforeRoundSummary = pushedEdits?.summary ?? snapshot.summary;
+
+    /**
+     * **The rounding, over the push and under the typing** (owner, 2026-10-16). A stack typed by hand is the
+     * player's last word, so it is never rounded; the two pools are rounded one after the other, the second over
+     * the first, so the kill order the second keeps is the one the first left.
+     */
+    const byHand = new Set(Object.keys(counts));
+    let roundedMoves: Record<string, number> | null = null;
+    let roundedMarch = beforeRound;
+    for (const pool of canRaise ? pushedOn(rounded) : []) {
+      const moves = roundedCounts(
+        snapshot.request,
+        snapshot.result,
+        roundedMarch,
+        { ...composed, ...(roundedMoves ?? {}) },
+        pool,
+        byHand,
+      );
+      if (moves === null) continue;
+      roundedMoves = { ...(roundedMoves ?? {}), ...moves };
+      roundedMarch = applyCounts(snapshot.request, snapshot.result, { ...composed, ...roundedMoves }).result;
+    }
+    const edits =
+      roundedMoves === null
+        ? pushedEdits
+        : applyCounts(snapshot.request, snapshot.result, { ...composed, ...roundedMoves, ...counts });
     const result = edits?.result ?? snapshot.result;
     const summary = edits?.summary ?? snapshot.summary;
 
@@ -309,6 +345,36 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
     };
 
     /**
+     * **What one pool's rounding is worth here**, read off the march before any rounding (the push's in it), so
+     * the figures say what this press does and the other pool's rounding is not credited to it. The loss is the
+     * push's own reading: the mercenaries' one-in-ten stock, the monsters' units.
+     */
+    const roundOffer = (pool: RaisedPool): PushOffer | null => {
+      if (!canRaise) return null;
+      if (!beforeRound.stacks.some((stack) => stack.pool === pool && stack.count > 0)) return null;
+      const pressed = rounded[pool];
+      const moved = roundedCounts(snapshot.request, snapshot.result, beforeRound, composed, pool, byHand);
+      if (moved === null) return { pressed, trade: null };
+      const after = applyCounts(snapshot.request, snapshot.result, { ...composed, ...moved, ...counts });
+      const lostOf = (stacks: readonly Stack[]): number =>
+        pool === 'authority'
+          ? hiredLost(stacks)
+          : stacks.reduce((sum, stack) => sum + (stack.pool === pool ? stack.count : 0), 0);
+      return {
+        pressed,
+        trade: {
+          damage: after.summary.minDamage,
+          before: beforeRoundSummary.minDamage,
+          lost: lostOf(after.result.stacks) - lostOf(beforeRound.stacks),
+        },
+      };
+    };
+    const round: Record<RaisedPool, PushOffer | null> = {
+      authority: roundOffer('authority'),
+      dominance: roundOffer('dominance'),
+    };
+
+    /**
      * **While the counts are being edited by hand, the pills are the fields** (owner, 2026-09-21: *"it
      * should only be deleted on done editing cause it can prevent me from typing"*).
      *
@@ -345,6 +411,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
       raiseModes,
       canRaise,
       push,
+      round,
       // Nothing is waited for while the plan's own table answers: the counts are already in hand (S-149).
       searching: priced === null && waiting,
       trades,
@@ -368,6 +435,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
     raiseModes,
     canRaise,
     pushed,
+    rounded,
     priced,
     trades,
     exhaustiveCounts,

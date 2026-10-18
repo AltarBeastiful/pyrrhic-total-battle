@@ -21,6 +21,7 @@ import {
   Button,
   Checkbox,
   Group,
+  Indicator,
   Loader,
   SegmentedControl,
   Stack,
@@ -104,6 +105,9 @@ export interface MarchPillsProps {
    */
   push: Record<RaisedPool, PushOffer | null>;
   onPush: (pool: RaisedPool) => void;
+  /** **What rounding each hired pool to tens offers here** (owner, 2026-10-16), and a press of its mark. */
+  round: Record<RaisedPool, PushOffer | null>;
+  onRound: (pool: RaisedPool) => void;
 }
 
 /** What a pool's units are called in a sentence, where the plan's trade says "Merc" and the raise says "Mercenary counts". */
@@ -391,6 +395,74 @@ export function MarchPushControl({
 }
 
 /**
+ * **The pool's rounding to tens, right of its push** (owner, 2026-10-16: *"the same button with badge 10 on it
+ * and put it to the right … same properties as the other button"*). The push's mark with a `10` on its corner:
+ * a toggle with `aria-pressed`, the trade in its name and its tooltip — the signed damage and the loss, which
+ * here can go either way, since a stack may be rounded down (`roundedCounts` takes the best trade). Drawn only
+ * where there is something to round, or while it stands pressed.
+ */
+export function MarchRoundControl({
+  pool,
+  offer,
+  onRound,
+}: {
+  pool: RaisedPool;
+  offer: PushOffer;
+  onRound: () => void;
+}) {
+  const trade = offer.trade;
+  if (trade === null) return null;
+  const gain = trade.before <= 0 ? 0 : ((trade.damage - trade.before) / trade.before) * 100;
+  const adds = signedCompact(trade.damage - trade.before);
+  const lost = `${trade.lost >= 0 ? '+' : '−'}${amount(Math.abs(trade.lost))}`;
+  const figures = `: ${adds} damage, ${signedPercent(gain)}, ${lost} ${POOL_NOUN[pool]} lost`;
+  const name = offer.pressed
+    ? `Take the rounding off ${POOL_NOUN[pool]}${figures}.`
+    : `Round ${POOL_NOUN[pool]} to tens, up or down by the best trade${figures}.`;
+  return (
+    <Tooltip
+      label={
+        <Stack gap={2}>
+          <Group gap={6} wrap="nowrap">
+            <Glyph kind="minimumDamage" />
+            <Text span size="xs">
+              {`Damage ${adds}`}
+            </Text>
+            <Text span size="xs" c="dimmed">
+              {signedPercent(gain)}
+            </Text>
+          </Group>
+          <Group gap={6} wrap="nowrap">
+            <Glyph kind={pool} />
+            <Text span size="xs">
+              {`${lost} ${POOL_NOUN[pool]} lost`}
+            </Text>
+          </Group>
+          {offer.pressed && <Text size="xs">{`Press again to put ${POOL_NOUN[pool]} back.`}</Text>}
+        </Stack>
+      }
+      multiline
+      maw={260}
+      withinPortal
+      withArrow
+    >
+      <Indicator label="10" size={12} offset={3} color="gray" styles={{ indicator: { fontSize: '0.5rem' } }}>
+        <ActionIcon
+          size="sm"
+          variant={offer.pressed ? 'filled' : 'subtle'}
+          {...(offer.pressed ? {} : { color: 'gray' })}
+          aria-label={name}
+          aria-pressed={offer.pressed}
+          onClick={onRound}
+        >
+          <ChevronsUp size={16} aria-hidden />
+        </ActionIcon>
+      </Indicator>
+    </Tooltip>
+  );
+}
+
+/**
  * The march at a glance: the pools, their stacks, and what was left out. On a desktop the whole
  * pane stays on screen while the setup scrolls past it (`shell/MarchPane.tsx`), so this block and
  * the whole-march actions under it travel together and neither can cover the other.
@@ -409,6 +481,8 @@ export function MarchPills({
   onRaise,
   push,
   onPush,
+  round,
+  onRound,
 }: MarchPillsProps) {
   // The pool the one raise control speaks for, or `null` when there is none to draw: a hired pool with a
   // stack to raise, on a plan's march.
@@ -444,6 +518,7 @@ export function MarchPills({
         // is sheltered (`raisesPool`).
         const pool = raisesPool(row.pool) ? row.pool : null;
         const offer = pool === null ? null : push[pool];
+        const rounding = pool === null ? null : round[pool];
         return (
           <Stack key={row.pool} gap="xs">
             {/* The pool line, to the spacing contract (`MarchPaneSpacing.dc.html`, `.pool`): the
@@ -499,6 +574,15 @@ export function MarchPills({
                     offer={offer}
                     onPush={() => {
                       onPush(pool);
+                    }}
+                  />
+                )}
+                {pool !== null && rounding !== null && rounding.trade !== null && (
+                  <MarchRoundControl
+                    pool={pool}
+                    offer={rounding}
+                    onRound={() => {
+                      onRound(pool);
                     }}
                   />
                 )}
