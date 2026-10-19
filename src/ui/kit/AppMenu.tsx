@@ -6,7 +6,7 @@
  * The menu is declared as data rather than as children so the shell cannot invent a shape: every
  * entry is one of three kinds and each kind has one appearance.
  */
-import { Menu, SegmentedControl, Text } from '@mantine/core';
+import { Menu, SegmentedControl, Text, VisuallyHidden } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 export interface AppMenuAction {
@@ -17,6 +17,8 @@ export interface AppMenuAction {
   icon?: ReactNode;
   danger?: boolean;
   disabled?: boolean;
+  /** A one-of-many row (a profile switcher): Mantine fixes the role, so the chosen one says "(active)" aloud. */
+  checked?: boolean;
   onSelect: () => void;
 }
 
@@ -29,7 +31,14 @@ export interface AppMenuSegment {
   options: { value: string; label: ReactNode }[];
 }
 
-export type AppMenuEntry = AppMenuAction | AppMenuSegment;
+/** A line of status the menu reports and nothing can be pressed on. */
+export interface AppMenuNote {
+  kind: 'note';
+  id: string;
+  label: string;
+}
+
+export type AppMenuEntry = AppMenuAction | AppMenuSegment | AppMenuNote;
 
 export interface AppMenuSection {
   id: string;
@@ -67,7 +76,11 @@ export function AppMenu({ label, trigger, sections, width = 240 }: AppMenuProps)
             {index > 0 && <Menu.Divider />}
             {section.title !== undefined && <Menu.Label>{section.title}</Menu.Label>}
             {section.entries.map((entry) =>
-              entry.kind === 'segment' ? (
+              entry.kind === 'note' ? (
+                <Text key={entry.id} size="xs" c="dimmed" px="sm" py={6} role="status">
+                  {entry.label}
+                </Text>
+              ) : entry.kind === 'segment' ? (
                 <Menu.Item key={entry.id} component="div" closeMenuOnClick={false}>
                   <Text size="xs" c="dimmed" mb={4}>
                     {entry.label}
@@ -90,6 +103,12 @@ export function AppMenu({ label, trigger, sections, width = 240 }: AppMenuProps)
                   onClick={entry.onSelect}
                 >
                   {entry.label}
+                  {entry.checked === true && (
+                    <>
+                      {' '}
+                      <VisuallyHidden>(active)</VisuallyHidden>
+                    </>
+                  )}
                   {entry.description !== undefined && (
                     <Text size="xs" c="dimmed">
                       {entry.description}

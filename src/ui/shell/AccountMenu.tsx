@@ -18,12 +18,9 @@ import {
   TextInput,
   UnstyledButton,
   useMantineColorScheme,
-  VisuallyHidden,
 } from '@mantine/core';
 import {
-  Check,
   ChevronDown,
-  CloudOff,
   Copy,
   Download,
   Info,
@@ -48,15 +45,12 @@ import { nextProfileName, uniqueProfileName } from '@/state/defaults';
 import { POOL_LINE_DEFAULTS, THEMES, type PoolLineDefault, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
 
-import { useAccountSection } from '../account/section';
 import { AppMenu, Dialog, type AppMenuEntry, type AppMenuSection } from '../kit';
 import { LazySurface } from '../lazy';
 import { copyText, downloadJson } from '../profile/download';
 import { ImportDialog } from '../profile/ImportDialog';
 import { resultCounts, toSavedSummary, useResultStore } from '../resultStore';
-import { useUiStore } from '../uiStore';
 import themeClasses from '../theme.module.css';
-import { saveStatus } from './state';
 
 // The account surfaces drag in the PocketBase SDK and About drags in the data notes; both are opened
 // once in a blue moon, so neither is in the first load (ui-foundation plan §6).
@@ -169,15 +163,8 @@ export function AccountMenu() {
   const duplicateProfile = useStore((state) => state.duplicateProfile);
   const renameProfile = useStore((state) => state.renameProfile);
   const deleteProfile = useStore((state) => state.deleteProfile);
-  const setActiveProfile = useStore((state) => state.setActiveProfile);
   const result = useResultStore((state) => state.last);
-  const dirty = useUiStore((state) => state.dirty);
-  const accountStatus = useAccountStore((state) =>
-    state.enabled ? (state.user === null ? 'signed-out' : state.syncState) : null,
-  );
-  const browserOnly = accountStatus === 'signed-out';
   const accountDialog = useAccountStore((state) => state.dialog);
-  const accountSection = useAccountSection();
   const { setColorScheme } = useMantineColorScheme();
 
   const installable = useSyncExternalStore(subscribeToInstall, isInstallAvailable, () => false);
@@ -248,15 +235,6 @@ export function AccountMenu() {
       });
   };
 
-  const switchEntries: AppMenuEntry[] = profiles.map((entry) => ({
-    id: entry.id,
-    label: entry.name,
-    ...(entry.id === profile.id ? { icon: <Check size={ICON} aria-hidden /> } : {}),
-    onSelect: () => {
-      setActiveProfile(entry.id);
-    },
-  }));
-
   const appEntries: AppMenuEntry[] = [
     ...(installable
       ? [
@@ -302,7 +280,6 @@ export function AccountMenu() {
         {
           id: 'rename',
           label: 'Rename profile',
-          description: saveStatus({ dirty, account: accountStatus }),
           icon: <Pencil size={ICON} aria-hidden />,
           onSelect: () => {
             setDialog('rename');
@@ -310,7 +287,6 @@ export function AccountMenu() {
         },
       ],
     },
-    { id: 'switch', title: 'Switch profile', entries: switchEntries },
     {
       id: 'this',
       title: 'This profile',
@@ -371,7 +347,6 @@ export function AccountMenu() {
         },
       ],
     },
-    ...(accountSection === null ? [] : [accountSection]),
     {
       id: 'theme',
       entries: [
@@ -469,7 +444,6 @@ export function AccountMenu() {
           <UnstyledButton
             className={themeClasses.accountPill}
             aria-label={`Account: ${profile.name}`}
-            aria-describedby={browserOnly ? 'account-browser-only' : undefined}
           >
             <Avatar size={28} radius="xl" color="brass" variant="filled">
               {initial === '' ? '?' : initial}
@@ -480,17 +454,6 @@ export function AccountMenu() {
               </Text>
               <ChevronDown size={14} aria-hidden />
             </Group>
-            {/* Not signed in: what is on screen is saved nowhere else (S-49d). */}
-            {browserOnly && (
-              <span
-                id="account-browser-only"
-                title="Not signed in: saved in this browser only"
-                style={{ display: 'inline-flex' }}
-              >
-                <CloudOff size={14} aria-hidden />
-                <VisuallyHidden>Not signed in: saved in this browser only</VisuallyHidden>
-              </span>
-            )}
           </UnstyledButton>
         }
       />
